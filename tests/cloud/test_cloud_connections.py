@@ -2307,3 +2307,30 @@ def test_native_workload_connection_dispatch_persists_result(tmp_path: Any, monk
     assert job.result["snowflake_cis_benchmark"]["total"] == 2
     assert _get_store().get(job_id, "other") is None
     assert conn.closed
+
+
+def test_databricks_create_encrypts_and_preserves_tenant_boundary() -> None:
+    from agent_bom.api.connection_store import get_connection_store
+
+    client = TestClient(_app())
+    body = dict(
+        provider="databricks",
+        display_name="Workspace",
+        role_ref="https://Example.cloud.databricks.com/",
+        external_id="workspace-private-token",
+        auto_scan_on_create=False,
+        scan_interval_minutes=60,
+    )
+    created = client.post("/v1/cloud/connections", json=body, headers=_proxy_headers())
+    assert created.status_code == 201
+    result = created.json()
+    assert result["role_ref"] == "https://example.cloud.databricks.com"
+    assert "workspace-private-token" not in created.text
+    record = get_connection_store().get("tenant-alpha", result["id"])
+    assert record is not None
+    assert record.external_id_encrypted != body["external_id"]
+    assert connection_crypto.decrypt_secret(record.external_id_encrypted) == body["external_id"]
+    assert client.get(f"/v1/cloud/connections/{record.id}", headers=_proxy_headers(tenant="other")).status_code == 404
+    for patch in ({"scan_mode": "continuous"}, {"inventory_scope": "organization"}):
+        assert client.patch(f"/v1/cloud/connections/{record.id}", json=patch, headers=_proxy_headers()).status_code == 400
+    assert client.post("/v1/cloud/connections", json=body, headers=_proxy_headers(role="viewer")).status_code == 403

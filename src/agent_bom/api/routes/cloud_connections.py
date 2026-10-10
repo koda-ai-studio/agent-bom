@@ -27,8 +27,9 @@ credentials; Snowflake key-pair connection) and runs the **same** inventory + CI
 discovery the sibling ``cloud`` routes use, against that session. Results persist
 through the existing scan/graph stores — no parallel persistence path — and the
 connection's lifecycle status is updated (``active`` + ``last_scan_at`` on
-success, ``error`` + ``status_detail`` on failure, never carrying a secret). All
-four providers (AWS, Azure, GCP, Snowflake) are broker-enabled. A connection may
+success, ``error`` + ``status_detail`` on failure, never carrying a secret).
+Databricks also uses a scoped workspace client for inventory and vendor
+security checks. A connection may
 also carry a ``scan_interval_minutes`` so the background scheduler
 (:mod:`agent_bom.api.connection_scheduler`) re-runs this same scan path when due.
 """
@@ -47,6 +48,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from agent_bom.api.audit_log import log_action
+from agent_bom.api.cloud_connection_models import CloudConnectionCreate, CloudConnectionUpdate
 from agent_bom.api.connection_crypto import ConnectionSecretError, connections_key_configured, encrypt_secret
 from agent_bom.api.connection_store import (
     INVENTORY_SCOPE_ACCOUNT,
@@ -91,54 +93,6 @@ _SCAN_DEP = require_authenticated_permission("scan")
 
 _REGION_RE = re.compile(r"[a-z]{2}(-gov)?-[a-z]+-\d{1,2}")
 _MAX_REGIONS = 50
-
-
-class CloudConnectionCreate(BaseModel):
-    """Request body for creating a connection. ``external_id`` is write-only.
-
-    ``scan_interval_minutes`` opts the connection into recurring background scans
-    (Phase B.2). Null (the default) means manual-only — the scheduler ignores it.
-    ``scan_mode`` is ``full`` (default) or ``continuous``; continuous drains
-    provider event queues on each scheduler tick when a queue env is set.
-    ``auto_scan_on_create`` defaults true and queues the brokered scan path
-    after persistence (a queue failure marks ``error``; the row is kept).
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    provider: str
-    display_name: str = Field(min_length=1, max_length=200)
-    role_ref: str = Field(min_length=1, max_length=2048)
-    external_id: str = Field(default="", max_length=8192)
-    regions: list[str] = Field(default_factory=list)
-    scan_interval_minutes: int | None = None
-    # Non-secret provider-specific params (Azure tenant/subscription, GCP
-    # project, Snowflake user/role/warehouse). Never a secret — the one secret is ``external_id``.
-    auth_params: dict[str, str] = Field(default_factory=dict)
-    # ``account`` (the default when omitted) = connected target only;
-    # ``organization`` = fan-out across member accounts / subscriptions /
-    # projects on Connections scan. Optional so an omitted field can still pick
-    # up a legacy ``auth_params["inventory_scope"]``; an explicit value here
-    # always wins and is what the stored column carries.
-    inventory_scope: str | None = None
-    scan_mode: str = SCAN_MODE_FULL
-    auto_scan_on_create: bool = True
-
-
-class CloudConnectionUpdate(BaseModel):
-    """Request body for updating a connection's recurring scan schedule.
-
-    ``scan_interval_minutes`` is set to the supplied value; null disables the
-    recurring scan (back to manual-only). Optional ``inventory_scope``,
-    ``scan_mode``, and ``auto_scan_on_create`` update when provided.
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    scan_interval_minutes: int | None = None
-    inventory_scope: str | None = None
-    scan_mode: str | None = None
-    auto_scan_on_create: bool | None = None
 
 
 class CloudConnectionScanAccepted(BaseModel):
@@ -640,6 +594,13 @@ def update_connection(
         next_interval = _validate_scan_interval(body.scan_interval_minutes)
     next_scope = _validate_inventory_scope(body.inventory_scope) if body.inventory_scope is not None else record.inventory_scope
     next_mode = _validate_scan_mode(body.scan_mode) if body.scan_mode is not None else record.scan_mode
+    if record.provider == "databricks":
+        from agent_bom.cloud.databricks_connection import validate_scan_options
+
+        try:
+            validate_scan_options(record.role_ref, next_scope, next_mode, record.regions)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail="Databricks supports workspace-scoped full scans only.") from exc
     enforce_connection_envelope(
         provider=record.provider,
         regions=record.regions,
@@ -1381,6 +1342,12 @@ def _run_database_connection_scan(
     }
 
 
+def _run_databricks_connection_scan(record: CloudConnectionRecord, tenant_id: str, *, queued_job: ScanJob | None = None) -> dict[str, Any]:
+    from agent_bom.api.databricks_connection_scan import run_databricks_connection_scan
+
+    return run_databricks_connection_scan(record, tenant_id, persist=_persist_connection_report, queued_job=queued_job)
+
+
 # Per-provider brokered-scan dispatch. Every entry is broker-enabled and runs the
 # same read-only inventory/discovery + CIS the sibling cloud routes use.
 _SCAN_RUNNERS: dict[str, Callable[..., dict[str, Any]]] = {
@@ -1389,6 +1356,7 @@ _SCAN_RUNNERS: dict[str, Callable[..., dict[str, Any]]] = {
     "gcp": _run_gcp_connection_scan,
     "snowflake": _run_snowflake_connection_scan,
     "database": _run_database_connection_scan,
+    "databricks": _run_databricks_connection_scan,
 }
 
 

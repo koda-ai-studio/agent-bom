@@ -177,6 +177,14 @@ export const PROVIDER_OPTIONS: ProviderOption[] = [
     ],
   },
   {
+    value: "databricks", label: "Databricks", tagline: "Workspace inventory & security checks",
+    permissions: "Scoped workspace reads; admin checks may be unavailable to a limited identity",
+    cli: "agent-bom connect databricks --host <workspace-url> --token-file <private-token-file>",
+    readiness: "live", roleField: { key: "role_ref", label: "Workspace URL", placeholder: "https://your-workspace.cloud.databricks.com", mono: true },
+    authFields: [], secretField: { key: "external_id", label: "Workspace token", placeholder: "••••••••••••", hint: "Use a dedicated, scoped identity. Stored encrypted; never returned by the API." },
+    usesRegions: false, setupSteps: ["Grant a dedicated identity read access to the clusters and serving endpoints you intend to scan.", "Create a scoped, expiring workspace token for that identity.", "Copy the HTTPS workspace URL and token into the next step. Denied checks remain unevaluated; checks do not change workspace resources."],
+  },
+  {
     value: "snowflake",
     label: "Snowflake",
     tagline: "Read-only account connection",

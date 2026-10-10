@@ -136,7 +136,7 @@ def _glob(pattern: str) -> list[str]:
 
 _DSPM_STORE_PROVIDER = {"s3": "aws", "gcs": "gcp", "azure_blob": "azure", "db": "database"}
 
-_P_ENTRY = f"{PKG}/cli/_entry_points.py"
+_P_ENTRY = f"{PKG}/cli/_connect_sources.py"
 _P_CONN = f"{PKG}/api/connection_store.py"
 _P_SCHED = f"{PKG}/api/connection_scheduler.py"
 _P_CLOUD = f"{PKG}/cloud/__init__.py"

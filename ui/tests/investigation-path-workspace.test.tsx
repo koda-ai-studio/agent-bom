@@ -37,6 +37,7 @@ function Harness() {
       onSelect={setSelectedKey}
       title="2 ranked paths"
       subtitle="Select a path to focus its graph and evidence."
+      coverageNotice="Fix guidance is unavailable."
       filters={<div>Severity and evidence filters</div>}
       detail={<div>{selectedKey === "path-a" ? "Graph for path A" : "Graph for path B"}</div>}
       sideRail={<div>Crown-jewel clusters</div>}
@@ -65,6 +66,17 @@ afterEach(() => {
 });
 
 describe("InvestigationPathWorkspace", () => {
+  it("starts with a full-width selected path and expands the queue on demand", () => {
+    render(<Harness />);
+    const workspace = screen.getByRole("region", { name: "Investigation workspace" });
+    expect(workspace).toHaveAttribute("data-layout", "focused-path");
+    expect(screen.getByRole("note")).toHaveTextContent("Fix guidance is unavailable.");
+    expect(screen.getByRole("note").closest("details")).toBeNull();
+    const summary = screen.getByText("Browse 2 paths & filters");
+    expect(summary.closest("details")).not.toHaveAttribute("open");
+    fireEvent.click(summary);
+    expect(summary.closest("details")).toHaveAttribute("open");
+  });
   it("gives a single path the full workspace and keeps filters available on demand", () => {
     render(<InvestigationPathWorkspace rows={rows.slice(0, 1)} selectedKey="path-a" onSelect={vi.fn()}
       title="1 ranked path" subtitle="Selected evidence" filters={<div>Severity filters</div>}
@@ -72,7 +84,7 @@ describe("InvestigationPathWorkspace", () => {
     expect(screen.getByRole("region", { name: "Investigation workspace" })).toHaveAttribute("data-layout", "focused-path");
     expect(screen.getByText("Selected path evidence")).toBeVisible();
     expect(screen.getByText("Severity filters")).not.toBeVisible();
-    const summary = screen.getByText("1 path selected · change focus or filters");
+    const summary = screen.getByText("Browse 1 path & filters");
     expect(summary.closest("details")).not.toHaveAttribute("open");
     fireEvent.click(summary);
     expect(screen.getByText("Filters & presets")).toBeVisible();
@@ -85,6 +97,7 @@ describe("InvestigationPathWorkspace", () => {
     expect(workspace).toHaveAttribute("data-mobile-panel", "path");
     fireEvent.click(screen.getByRole("button", { name: "Paths & filters (2)" }));
     expect(workspace).toHaveAttribute("data-mobile-panel", "queue");
+    fireEvent.click(screen.getByText("Browse 2 paths & filters"));
     fireEvent.click(screen.getByText("#2").closest("button")!);
     expect(workspace).toHaveAttribute("data-mobile-panel", "path");
     expect(screen.getByRole("button", { name: "Selected path" })).toHaveAttribute("aria-pressed", "true");
@@ -95,7 +108,7 @@ describe("InvestigationPathWorkspace", () => {
     render(<Harness />);
 
     const workspace = screen.getByRole("region", { name: "Investigation workspace" });
-    expect(workspace).toHaveAttribute("data-layout", "responsive-split");
+    expect(workspace).toHaveAttribute("data-layout", "focused-path");
     expect(within(workspace).getByLabelText("Attack path queue")).toBeInTheDocument();
     expect(within(workspace).getByRole("region", { name: "Selected path detail" })).toHaveTextContent(
       "Graph for path A",
@@ -112,6 +125,7 @@ describe("InvestigationPathWorkspace", () => {
     Element.prototype.scrollIntoView = scrollIntoView;
     render(<Harness />);
 
+    fireEvent.click(screen.getByText("Browse 2 paths & filters"));
     fireEvent.click(screen.getByText("#2").closest("button")!);
 
     expect(screen.getByRole("region", { name: "Selected path detail" })).toHaveTextContent(
@@ -135,9 +149,11 @@ describe("InvestigationPathWorkspace", () => {
     render(<Harness />);
     expect(scrollIntoView).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Paths & filters (2)" }));
+    fireEvent.click(screen.getByText("Browse 2 paths & filters"));
     fireEvent.click(screen.getByText("#2").closest("button")!);
     expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "instant", block: "start" });
     fireEvent.click(screen.getByRole("button", { name: "Paths & filters (2)" }));
+    fireEvent.click(screen.getByText("Browse 2 paths & filters"));
     fireEvent.click(screen.getByText("#2").closest("button")!);
     expect(scrollIntoView).toHaveBeenCalledTimes(2);
   });

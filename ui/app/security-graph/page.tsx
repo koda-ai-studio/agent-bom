@@ -823,45 +823,31 @@ function AttackPathInvestigationContent() {
 
   return (
     <div className={captureMode ? "space-y-2" : "space-y-4"}>
-      <header className="flex flex-wrap items-center justify-between gap-3">
+      <header className="flex flex-wrap items-baseline justify-between gap-2">
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">Investigation</h1>
-        {captureMode ? undefined : (
-          <div className="hidden flex-wrap items-center gap-2 sm:flex">
-            <InvestigationExportButton path={selectedExposurePath} scanId={selectedScanId} />
-            <Link
-              href={fullGraphHref}
-              className="sg-action"
-            >
-              Open lineage lens
-              <GitBranch className="h-4 w-4" />
-            </Link>
-            <Link
-              href="/remediation"
-              className="sg-action"
-            >
-              Remediation
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-          )}
+        <p className="text-sm text-ink-secondary">{focusLabel || (selectedScanId?.startsWith("current-estate:") ? "Current tenant estate" : "Selected scan snapshot")}</p>
       </header>
-
+      <details className="investigation-navigation rounded-lg border border-outline bg-surface px-3 py-2">
+        <summary className="cursor-pointer text-sm font-medium">Explore &amp; evidence <span className="ml-2 font-normal text-ink-tertiary">Scope, views and exports</span></summary>
+        <div className="mt-3 space-y-3">
       <div role="group" aria-label="Investigation starting questions" className="flex flex-wrap gap-2">
         <button type="button" className="sg-action" aria-pressed={!requestedQuestion} onClick={() => router.replace(investigationHref(pathname, searchParams.toString(), { question: null, selected_path: null }), { scroll: false })}>All ranked paths</button>
         <button type="button" className="sg-action" aria-pressed={requestedQuestion === "credentials"} onClick={() => router.replace(investigationHref(pathname, searchParams.toString(), { question: "credentials", selected_path: null }), { scroll: false })}>Credential exposure</button>
         <button type="button" className="sg-action" aria-pressed={requestedQuestion === "critical"} onClick={() => router.replace(investigationHref(pathname, searchParams.toString(), { question: "critical", selected_path: null }), { scroll: false })}>Critical dependencies</button>
         <button type="button" className="sg-action" onClick={() => setInvestigationStep("impact")}>Potential blast radius</button>
       </div>
-      {requestedQuestion && <p role="status" className="text-xs text-ink-secondary">Question filters apply to the loaded ranked paths. Load another page to widen this search; an empty page does not establish complete coverage.</p>}
-      <GraphSnapshotReceipt snapshot={selectedSnapshot} scanId={selectedScanId} />
-      <AdvisoryFreshness />
-      {requestedSelectedPath && graphData && !allAttackPaths.some(path => attackPathKey(path) === requestedSelectedPath) && <p role="status" className="graph-callout-amber">The shared path is not in this loaded queue page. Load more paths or inspect its retained evidence scope; the currently shown path is a different result.</p>}
-
-      <div className="hidden sm:block"><GraphLensSwitcher variant="compact" /></div>
-      <details className="rounded-lg border border-outline bg-surface p-3 sm:hidden">
-        <summary className="cursor-pointer text-sm">Graph lenses · Attack Paths</summary>
-        <div className="mt-2"><GraphLensSwitcher variant="compact" /></div>
+          <GraphLensSwitcher variant="compact" />
+          <GraphSnapshotReceipt snapshot={selectedSnapshot} scanId={selectedScanId} />
+          <AdvisoryFreshness />
+          <div className="flex flex-wrap gap-2">
+            <InvestigationExportButton path={selectedExposurePath} scanId={selectedScanId} />
+            <Link href={fullGraphHref} className="sg-action">Open lineage lens <GitBranch className="h-4 w-4" /></Link>
+            <Link href="/remediation" className="sg-action">Remediation <ArrowRight className="h-4 w-4" /></Link>
+          </div>
+        </div>
       </details>
+      {requestedQuestion && <p role="status" className="text-xs text-ink-secondary">Question filters apply to the loaded ranked paths. Load another page to widen this search; an empty page does not establish complete coverage.</p>}
+      {requestedSelectedPath && graphData && !allAttackPaths.some(path => attackPathKey(path) === requestedSelectedPath) && <p role="status" className="graph-callout-amber">The shared path is not in this loaded queue page. Load more paths or inspect its retained evidence scope; the currently shown path is a different result.</p>}
 
       {searchParams.get("related_finding") ? (
         <p role="note" aria-label="Finding association" className="graph-callout-sky">
@@ -1035,20 +1021,15 @@ function AttackPathInvestigationContent() {
             setPathView("path");
           }}
           title={`${pathQueueCounts.renderedRows} shown · ${pathQueueCounts.returnedRows} loaded paths`}
-          subtitle={`${pathQueueCounts.queueRows} from the path queue. ${pathQueueCounts.snapshotTotal} snapshot paths${pathQueueCounts.truncated ? "; more queue paths available" : ""}. Select a path to inspect.${
-            loadingFixFirst
-              ? " Ranked paths are ready; fix guidance is still loading."
-              : fixFirstLoadError
-                ? " Ranked paths are ready; fix guidance is temporarily unavailable."
-                : graphData?.count_metadata?.source === "persisted_graph_paths"
-                  ? " Ranked from persisted scan paths."
-                  : graphData?.count_metadata?.source === "derived_graph_paths"
-                    ? " Ranked from bounded graph traversal."
-                    : ""
-          } ${pathQueueCounts.materializedPaths} materialized · ${pathQueueCounts.derivedPaths} derived.${
-            selectedCampaign
-              ? ` Filtered to crown-jewel cluster “${selectedCampaign.crown_jewel_label || selectedCampaign.crown_jewel}”.`
-              : ""
+          coverageNotice={
+            loadingFixFirst ? "Ranked paths are ready; fix guidance is still loading."
+              : fixFirstLoadError ? "Ranked paths are ready; fix guidance is temporarily unavailable."
+                : pathQueueCounts.truncated ? "More paths are available. Open paths and filters to load the next page."
+                  : selectedCampaign ? `Filtered to ${selectedCampaign.crown_jewel_label || selectedCampaign.crown_jewel}.`
+                    : undefined
+          }
+          subtitle={`${pathQueueCounts.queueRows} from the path queue. ${pathQueueCounts.snapshotTotal} snapshot paths. ${pathQueueCounts.materializedPaths} materialized · ${pathQueueCounts.derivedPaths} derived. ${
+            graphData?.count_metadata?.source === "derived_graph_paths" ? "Ranked from bounded graph traversal." : "Ranked from persisted scan paths."
           }`}
           filters={
             <>

@@ -12,7 +12,7 @@ credentialed run against that provider.
 
 ## Cloud and AI-infrastructure providers
 
-18 providers × 11 lanes; 143 cells are gaps (—).
+18 providers × 11 lanes; 140 cells are gaps (—).
 
 Legend: `✓` declared · `—` not declared in that source · benchmark posture is
 `implemented/official` control count (`n/a` = official count withheld because the
@@ -28,7 +28,7 @@ Kubernetes control count.
 | coreweave | — | — | — | ✓ | — | — | — | — | — | — | — |
 | crusoe | — | — | — | ✓ | — | — | — | — | — | — | — |
 | database | — | ✓ | — | — | — | — | — | db | — | — | — |
-| databricks | — | — | — | ✓ | — | 12/n/a | — | — | — | — | — |
+| databricks | ✓ | ✓ | ✓ | ✓ | — | 12/n/a | — | — | — | — | — |
 | gcp | ✓ | ✓ | ✓ | ✓ | ✓ | 59/n/a | ✓ | gcs | shipped (no live smoke) | ✓ | ✓ |
 | huggingface | — | — | — | ✓ | — | — | — | — | — | — | — |
 | kubernetes | — | — | — | — | — | provenance; count n/a | — | — | — | — | — |
@@ -87,28 +87,19 @@ reconciled.
 | Provider | `connect` | `api_connection` | `scheduler` | `scan_scopes` |
 |---|:-:|:-:|:-:|:-:|
 | database | — | ✓ | — | — |
-| databricks | — | — | — | ✓ |
 | oci | — | — | — | ✓ |
 
-Lists: `connect` = `src/agent_bom/cli/_entry_points.py` `_CONNECT_SOURCES`; `api_connection` = `src/agent_bom/api/connection_store.py` `SUPPORTED_PROVIDERS`; `scheduler` = `src/agent_bom/api/connection_scheduler.py` `_SCHEDULABLE_PROVIDERS`; `scan_scopes` = `src/agent_bom/api/cloud_scan_scopes.py` `CLOUD_PROVIDERS`
+Lists: `connect` = `src/agent_bom/cli/_connect_sources.py` `_CONNECT_SOURCES`; `api_connection` = `src/agent_bom/api/connection_store.py` `SUPPORTED_PROVIDERS`; `scheduler` = `src/agent_bom/api/connection_scheduler.py` `_SCHEDULABLE_PROVIDERS`; `scan_scopes` = `src/agent_bom/api/cloud_scan_scopes.py` `CLOUD_PROVIDERS`
 
 ### Deep inventory vs connection lists
 
 | Provider | `deep_inventory_api` | `api_connection` | `scan_scopes` |
 |---|:-:|:-:|:-:|
 | database | — | ✓ | — |
-| databricks | — | — | ✓ |
+| databricks | — | ✓ | ✓ |
 | oci | — | — | ✓ |
 
 Lists: `deep_inventory_api` = `src/agent_bom/api/routes/cloud.py` `_INVENTORY_PROVIDERS`; `api_connection` = `src/agent_bom/api/connection_store.py` `SUPPORTED_PROVIDERS`; `scan_scopes` = `src/agent_bom/api/cloud_scan_scopes.py` `CLOUD_PROVIDERS`
-
-### Benchmark posture
-
-| Provider | `cis_api` | `benchmark_inventory` | `benchmark_provenance` |
-|---|:-:|:-:|:-:|
-| databricks | — | ✓ | ✓ |
-
-Lists: `cis_api` = `src/agent_bom/api/routes/cloud.py` `_CIS_PROVIDERS`; `benchmark_inventory` = `src/agent_bom/cloud/benchmark_inventory.json` `providers`; `benchmark_provenance` = `src/agent_bom/cloud/benchmark_provenance.py` `BENCHMARK_PROVENANCE`
 
 ### Side-scan
 
@@ -141,7 +132,7 @@ Lists: `scan_scopes` = `src/agent_bom/api/cloud_scan_scopes.py` `CLOUD_PROVIDERS
 
 Provider lanes:
 
-- Connect (CLI): `src/agent_bom/cli/_entry_points.py` `_CONNECT_SOURCES`
+- Connect (CLI): `src/agent_bom/cli/_connect_sources.py` `_CONNECT_SOURCES`
 - API connection: `src/agent_bom/api/connection_store.py` `SUPPORTED_PROVIDERS`
 - Scheduled scans: `src/agent_bom/api/connection_scheduler.py` `_SCHEDULABLE_PROVIDERS`
 - AI/agent discovery: `src/agent_bom/cloud/__init__.py` `_PROVIDERS`

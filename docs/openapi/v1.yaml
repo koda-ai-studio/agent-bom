@@ -17710,7 +17710,8 @@ paths:
       - cloud
   /v1/cloud/{provider}/cis-benchmark:
     get:
-      description: 'Run the CIS Foundations benchmark for a cloud provider over REST.
+      description: 'Run provider posture checks; Databricks uses vendor guidance,
+        not CIS.
 
 
         Calls the same provider ``run_benchmark`` functions the CLI and MCP
@@ -17726,13 +17727,13 @@ paths:
         schema:
           title: Provider
           type: string
-      - description: Optional comma-separated CIS check ids to scope the run.
+      - description: Optional comma-separated benchmark check ids to scope the run.
         in: query
         name: checks
         required: false
         schema:
           default: ''
-          description: Optional comma-separated CIS check ids to scope the run.
+          description: Optional comma-separated benchmark check ids to scope the run.
           title: Checks
           type: string
       - description: Optional AWS region (e.g. us-east-1).

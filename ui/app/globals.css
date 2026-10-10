@@ -408,7 +408,7 @@ body {
 .ep-metrics { @apply flex w-full flex-wrap gap-x-5 gap-y-2 text-[15px]; }
 .ep-view-row { @apply flex flex-wrap items-center justify-between gap-2; }
 .ep-view-toggle { @apply inline-flex items-center overflow-hidden rounded-lg border border-[color:var(--border-subtle)] bg-[color:var(--surface-elevated)]; }
-.ep-path-frame { @apply rounded-xl border border-[color:var(--border-subtle)] bg-[color:var(--surface-panel)] p-3; }
+.ep-path-frame { @apply rounded-lg bg-[color:var(--surface-panel)] p-3; }
 .ep-graph-hint { @apply rounded-2xl border border-dashed border-[color:var(--border-subtle)] bg-[color:var(--surface-elevated)]/60 px-4 py-6 text-center text-xs text-[color:var(--text-secondary)]; }
 .ep-primary-action { @apply inline-flex min-h-11 items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-[15px] font-semibold text-white transition hover:bg-emerald-700; }
 .ep-details { @apply rounded-xl border border-[color:var(--border-subtle)] bg-[color:var(--surface-elevated)]/70; }
@@ -868,7 +868,8 @@ main > div {
   .investigation-workspace[data-layout="responsive-split"] { grid-template-columns: minmax(16rem, 19rem) minmax(0, 1fr); align-items: start; }
   .investigation-workspace[data-mobile-panel] > .investigation-queue,
   .investigation-workspace[data-mobile-panel] > .investigation-selected-path { display: block; }
-  .investigation-queue { position: sticky; top: 5rem; }
+  .investigation-queue[open] { position: sticky; top: 5rem; }
+  .investigation-workspace[data-layout="focused-path"] > .investigation-queue { border: 0; background: transparent; padding: 0.25rem 0; }
 }
 
 .ep-root { container-type: inline-size; }
@@ -877,8 +878,8 @@ main > div {
 .ep-inspection-evidence { @apply min-w-0 space-y-2; }
 .ep-inspection-main > .ep-view-row { margin-bottom: 0.5rem; }
 @container (min-width: 800px) {
-  .ep-inspection-grid { grid-template-columns: minmax(0, 1fr) 17rem; align-items: start; }
-  .ep-inspection-evidence { max-height: 34rem; overflow-y: auto; }
+  .ep-inspection-evidence { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; align-items: start; }
+  .ep-inspection-evidence > * { margin-top: 0; }
 }
 
 /* Compact evidence remains visible while the graph gets the narrow viewport. */
@@ -887,7 +888,7 @@ main > div {
   .ep-assessment-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem; }
   .ep-assessment-grid > div { display: block; min-width: 0; }
   .ep-assessment-grid dt { min-height: 2.5rem; line-height: 1.25rem; }
-  .ep-metrics { flex-wrap: nowrap; overflow-x: auto; gap: 1rem; padding-bottom: 0.25rem; }
+  .ep-metrics { flex-wrap: wrap; gap: 0.375rem 1rem; padding-bottom: 0.25rem; }
   .ep-metrics > * { flex-shrink: 0; white-space: nowrap; }
   .ep-inspection-main > .ep-view-row .ep-view-label { display: none; }
   .ep-inspection-main > .ep-view-row { justify-content: flex-end; }
@@ -949,3 +950,6 @@ main > div {
 
 /* Scenario cards share width with the decision panel; keep metadata legible. */
 .scenario-context-canvas .react-flow__node :is(span, p, .text-xs) { font-size: max(16px, 1em); }
+
+.investigation-navigation summary:focus-visible,
+.investigation-queue summary:focus-visible { outline: 2px solid var(--foreground); outline-offset: 4px; border-radius: 0.25rem; }

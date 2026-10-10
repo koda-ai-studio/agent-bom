@@ -8,8 +8,9 @@ Based on Databricks Security Best Practices documentation.
 Note: Databricks does not have an official CIS Benchmark. These checks
 are derived from Databricks' own published security hardening guidance.
 
-Required permissions (all read-only):
-    CAN MANAGE on workspace (admin or security admin role) for full coverage.
+Permission boundary:
+    Calls are read-only; some admin APIs require a privileged workspace identity.
+    Such an identity is not itself a read-only credential.
     Non-admin users will see partial results (checks marked ERROR where
     insufficient permissions exist).
 
@@ -23,17 +24,14 @@ Install: ``pip install 'agent-bom[databricks]'``
 
 from __future__ import annotations
 
-import logging
 import os
 from dataclasses import dataclass, field
 from typing import Any
 
-from agent_bom.security import sanitize_text
+from agent_bom.security import sanitize_error
 
 from .aws_cis_benchmark import CheckStatus, CISCheckResult
 from .base import CloudDiscoveryError
-
-logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -92,20 +90,6 @@ class DatabricksSecurityReport:
 
 
 # ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def _safe(func: Any, *args: Any, **kwargs: Any) -> Any:
-    """Call a Databricks SDK method, returning None on permission/API errors."""
-    try:
-        return func(*args, **kwargs)
-    except Exception as exc:
-        logger.debug("Databricks API call failed: %s", sanitize_text(exc))
-        return None
-
-
-# ---------------------------------------------------------------------------
 # Section 1 — Identity and Access Management
 # ---------------------------------------------------------------------------
 
@@ -139,7 +123,7 @@ def _check_1_1(ws: Any) -> CISCheckResult:
             result.resource_ids = admin_users[:10]
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not enumerate users: {exc}"
+        result.evidence = f"Could not enumerate users: {sanitize_error(exc, generic=True)}"
     return result
 
 
@@ -155,7 +139,7 @@ def _check_1_2(ws: Any) -> CISCheckResult:
         "See: Settings > Security > IP Access List.",
     )
     try:
-        ip_lists = list(_safe(ws.ip_access_lists.list) or [])
+        ip_lists = list(ws.ip_access_lists.list() or [])
         enabled = [acl for acl in ip_lists if getattr(acl, "enabled", False)]
         if not ip_lists:
             result.status = CheckStatus.FAIL
@@ -170,7 +154,7 @@ def _check_1_2(ws: Any) -> CISCheckResult:
             result.resource_ids = [getattr(a, "label", str(i)) for i, a in enumerate(enabled[:5])]
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check IP access lists: {exc}"
+        result.evidence = f"Could not check IP access lists: {sanitize_error(exc, generic=True)}"
     return result
 
 
@@ -187,7 +171,7 @@ def _check_1_3(ws: Any) -> CISCheckResult:
     )
     try:
         # Try workspace settings API
-        settings = _safe(ws.settings.personal_access_token_expiry.get)
+        settings = ws.settings.personal_access_token_expiry.get()
         if settings is not None:
             max_lifetime = getattr(settings, "setting_value", None)
             if max_lifetime and max_lifetime != "0":
@@ -198,7 +182,7 @@ def _check_1_3(ws: Any) -> CISCheckResult:
                 result.evidence = "PAT expiry not enforced — tokens may never expire."
         else:
             # Fallback: check token list for tokens with no expiry
-            tokens = list(_safe(ws.token_management.list) or [])
+            tokens = list(ws.token_management.list() or [])
             non_expiring = [t for t in tokens if getattr(t, "expiry_time", -1) in (-1, None, 0)]
             if non_expiring:
                 result.status = CheckStatus.FAIL
@@ -209,7 +193,7 @@ def _check_1_3(ws: Any) -> CISCheckResult:
                 result.evidence = "All enumerable tokens have expiry dates set."
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check PAT policy: {exc}"
+        result.evidence = f"Could not check PAT policy: {sanitize_error(exc, generic=True)}"
     return result
 
 
@@ -224,7 +208,7 @@ def _check_1_4(ws: Any) -> CISCheckResult:
         recommendation="Replace long-lived service principal PATs with OAuth M2M tokens or workload identity federation where possible.",
     )
     try:
-        sps = list(_safe(ws.service_principals.list) or [])
+        sps = list(ws.service_principals.list() or [])
         if not sps:
             result.status = CheckStatus.PASS
             result.evidence = "No service principals found."
@@ -232,7 +216,7 @@ def _check_1_4(ws: Any) -> CISCheckResult:
         # Check tokens for service principals — look for tokens with distant expiry
         import time
 
-        tokens = list(_safe(ws.token_management.list) or [])
+        tokens = list(ws.token_management.list() or [])
         now_ms = int(time.time() * 1000)
         ninety_days_ms = 90 * 24 * 60 * 60 * 1000
         long_lived = [t for t in tokens if getattr(t, "expiry_time", 0) and (getattr(t, "expiry_time", 0) - now_ms) > ninety_days_ms]
@@ -245,7 +229,7 @@ def _check_1_4(ws: Any) -> CISCheckResult:
             result.evidence = f"{len(sps)} service principal(s) found — no long-lived tokens detected."
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check service principal tokens: {exc}"
+        result.evidence = f"Could not check service principal tokens: {sanitize_error(exc, generic=True)}"
     return result
 
 
@@ -268,7 +252,7 @@ def _check_2_1(ws: Any) -> CISCheckResult:
         "(recommended: 30-60 minutes). Job clusters terminate automatically.",
     )
     try:
-        clusters = list(_safe(ws.clusters.list) or [])
+        clusters = list(ws.clusters.list() or [])
         interactive = [c for c in clusters if getattr(c, "cluster_source", "") not in ("JOB", "PIPELINE")]
         no_term = [c for c in interactive if not getattr(c, "auto_termination_minutes", 0)]
         if not interactive:
@@ -283,7 +267,7 @@ def _check_2_1(ws: Any) -> CISCheckResult:
             result.evidence = f"All {len(interactive)} interactive cluster(s) have auto-termination configured."
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not enumerate clusters: {exc}"
+        result.evidence = f"Could not enumerate clusters: {sanitize_error(exc, generic=True)}"
     return result
 
 
@@ -299,7 +283,7 @@ def _check_2_2(ws: Any) -> CISCheckResult:
         "Avoid NONE (no-isolation) which allows cross-user data access.",
     )
     try:
-        clusters = list(_safe(ws.clusters.list) or [])
+        clusters = list(ws.clusters.list() or [])
         running = [c for c in clusters if getattr(c, "state", "") in ("RUNNING", "RESIZING", "RESTARTING")]
         no_isolation = [c for c in running if str(getattr(c, "data_security_mode", "NONE")).upper() in ("NONE", "LEGACY_PASSTHROUGH", "")]
         if not running:
@@ -314,7 +298,7 @@ def _check_2_2(ws: Any) -> CISCheckResult:
             result.evidence = f"All {len(running)} running cluster(s) use isolated data security mode."
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check cluster security modes: {exc}"
+        result.evidence = f"Could not check cluster security modes: {sanitize_error(exc, generic=True)}"
     return result
 
 
@@ -329,7 +313,7 @@ def _check_2_3(ws: Any) -> CISCheckResult:
         recommendation="Create cluster policies that enforce auto-termination, security mode, instance types, and other security controls.",
     )
     try:
-        policies = list(_safe(ws.cluster_policies.list) or [])
+        policies = list(ws.cluster_policies.list() or [])
         # Filter to non-default policies (user-created)
         custom = [p for p in policies if not getattr(p, "is_default", False)]
         if custom:
@@ -341,7 +325,7 @@ def _check_2_3(ws: Any) -> CISCheckResult:
             result.evidence = "No custom cluster policies configured — clusters can be created without security controls."
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check cluster policies: {exc}"
+        result.evidence = f"Could not check cluster policies: {sanitize_error(exc, generic=True)}"
     return result
 
 
@@ -357,7 +341,7 @@ def _check_2_4(ws: Any) -> CISCheckResult:
         "Clusters should not have public IP addresses.",
     )
     try:
-        clusters = list(_safe(ws.clusters.list) or [])
+        clusters = list(ws.clusters.list() or [])
         running = [c for c in clusters if getattr(c, "state", "") in ("RUNNING", "RESIZING")]
         public_ip = [c for c in running if getattr(c, "enable_elastic_disk", None) is not None and not getattr(c, "no_public_ips", False)]
         # Also check via AWS/Azure attributes
@@ -381,7 +365,7 @@ def _check_2_4(ws: Any) -> CISCheckResult:
             result.evidence = f"All {len(running)} running cluster(s) appear to use private networking."
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check cluster networking: {exc}"
+        result.evidence = f"Could not check cluster networking: {sanitize_error(exc, generic=True)}"
     return result
 
 
@@ -403,7 +387,7 @@ def _check_3_1(ws: Any) -> CISCheckResult:
         recommendation="Assign a Unity Catalog metastore to enable fine-grained data access controls, auditing, and lineage tracking.",
     )
     try:
-        metastore = _safe(ws.metastores.current)
+        metastore = ws.metastores.current()
         if metastore is not None and getattr(metastore, "metastore_id", None):
             result.status = CheckStatus.PASS
             result.evidence = (
@@ -414,7 +398,7 @@ def _check_3_1(ws: Any) -> CISCheckResult:
             result.evidence = "No Unity Catalog metastore assigned — workspace uses legacy Hive metastore without centralized governance."
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check metastore assignment: {exc}"
+        result.evidence = f"Could not check metastore assignment: {sanitize_error(exc, generic=True)}"
     return result
 
 
@@ -436,7 +420,7 @@ def _check_4_1(ws: Any) -> CISCheckResult:
         recommendation="Configure audit log delivery to S3, ADLS, or GCS. Enable workspace and account-level audit logs.",
     )
     try:
-        log_configs = list(_safe(ws.log_delivery.list) or [])
+        log_configs = list(ws.log_delivery.list() or [])
         audit_configs = [
             lc
             for lc in log_configs
@@ -454,7 +438,7 @@ def _check_4_1(ws: Any) -> CISCheckResult:
             result.evidence = "No log delivery configurations found — workspace activity is not being audited externally."
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check log delivery: {exc}"
+        result.evidence = f"Could not check log delivery: {sanitize_error(exc, generic=True)}"
     return result
 
 
@@ -477,7 +461,7 @@ def _check_5_1(ws: Any) -> CISCheckResult:
         "hardcoded credentials in notebooks or cluster environment variables.",
     )
     try:
-        scopes = list(_safe(ws.secrets.list_scopes) or [])
+        scopes = list(ws.secrets.list_scopes() or [])
         if scopes:
             result.status = CheckStatus.PASS
             scope_names = [getattr(s, "name", str(i)) for i, s in enumerate(scopes[:5])]
@@ -488,7 +472,7 @@ def _check_5_1(ws: Any) -> CISCheckResult:
             result.evidence = "No Databricks secret scopes configured — credentials may be hardcoded in notebooks or env vars."
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check secret scopes: {exc}"
+        result.evidence = f"Could not check secret scopes: {sanitize_error(exc, generic=True)}"
     return result
 
 
@@ -509,7 +493,7 @@ def _check_5_2(ws: Any) -> CISCheckResult:
         re.IGNORECASE,
     )
     try:
-        clusters = list(_safe(ws.clusters.list) or [])
+        clusters = list(ws.clusters.list() or [])
         exposed = []
         for cluster in clusters:
             env_vars: dict = getattr(cluster, "spark_env_vars", None) or {}
@@ -526,7 +510,7 @@ def _check_5_2(ws: Any) -> CISCheckResult:
             result.evidence = f"Checked {len(clusters)} cluster(s) — no plaintext credentials detected in environment variables."
     except Exception as exc:
         result.status = CheckStatus.ERROR
-        result.evidence = f"Could not check cluster environment variables: {exc}"
+        result.evidence = f"Could not check cluster environment variables: {sanitize_error(exc, generic=True)}"
     return result
 
 
@@ -553,6 +537,9 @@ _ALL_CHECKS = [
 def run_security_checks(
     host: str | None = None,
     token: str | None = None,
+    *,
+    workspace_client: Any = None,
+    checks: list[str] | None = None,
 ) -> DatabricksSecurityReport:
     """Run all Databricks security checks and return a benchmark report.
 
@@ -581,14 +568,17 @@ def run_security_checks(
         ws_kwargs["token"] = token
 
     try:
-        ws = WorkspaceClient(**ws_kwargs)
+        ws = workspace_client if workspace_client is not None else WorkspaceClient(**ws_kwargs)
     except Exception as exc:
-        raise CloudDiscoveryError(f"Could not connect to Databricks workspace: {exc}") from exc
+        raise CloudDiscoveryError(f"Could not connect to Databricks workspace: {sanitize_error(exc, generic=True)}") from exc
 
     resolved_host = host if host is not None else (os.environ.get("DATABRICKS_HOST") or "unknown")
     report = DatabricksSecurityReport(workspace_host=resolved_host)
 
     for check_fn in _ALL_CHECKS:
+        check_id = check_fn.__name__.replace("_check_", "").replace("_", ".")
+        if checks is not None and check_id not in checks:
+            continue
         try:
             result = check_fn(ws)
         except Exception as exc:
@@ -598,7 +588,7 @@ def run_security_checks(
                 title=f"Check {check_id}",
                 status=CheckStatus.ERROR,
                 severity="medium",
-                evidence=f"Unexpected error: {exc}",
+                evidence=f"Unexpected error: {sanitize_error(exc, generic=True)}",
             )
         report.checks.append(result)
 

@@ -605,6 +605,13 @@ test("Attack Paths keeps scenario state observed-only", async ({ page }) => {
   await expect(page).toHaveURL(/state=current/);
 });
 
+async function openPathQueue(page: Page) {
+  const mobile = page.getByRole("button", { name: /^Paths & filters/ });
+  if (await mobile.isVisible()) await mobile.click();
+  const queue = page.locator("#investigation-queue");
+  if (await queue.getAttribute("open") === null) await queue.locator(":scope > summary").click();
+}
+
 async function expectCockpitVisible(page: Page) {
   await expect(page.getByRole("heading", { name: "Investigation" })).toBeVisible();
   await expect(
@@ -704,6 +711,7 @@ test("ranked persisted paths render before slower fix guidance", async ({ page }
   await routeCockpit(page, undefined, { fixFirstDelayMs: 2_000 });
 
   await page.goto("/security-graph?lens=attack-path");
+  await openPathQueue(page);
   await expect(page.getByText("#1 fix first")).toBeVisible();
   await expect(page.getByText(/Ranked paths are ready; fix guidance is still loading/)).toBeVisible();
   await expect(page.getByText("agent → server → package → finding")).toBeVisible();
@@ -724,6 +732,7 @@ test("top-path deep links settle and keep subsequent queue selection interactive
   await expect(detail.getByTestId("exposure-path-primary-action")).toHaveAttribute(
     "href", `/remediation?scan=${scanId}&cve=CVE-2025-7783&package=form-data%404.0.0`,
   );
+  await openPathQueue(page);
   await page.getByLabel("Attack path queue").getByRole("button", { name: /#2/ }).click();
   await expect(page.getByRole("status")).toContainText("Focused path 2");
   // Let post-selection effects settle before checking that focus stays put.
@@ -741,6 +750,7 @@ test("ranked path selection opens the ordered path and can expand the interactiv
   await page.waitForLoadState("networkidle");
 
   const workspace = page.getByRole("region", { name: "Investigation workspace" });
+  await openPathQueue(page);
   const queue = workspace.getByLabel("Attack path queue");
   const detail = workspace.getByRole("region", { name: "Selected path detail" });
   const [queueBox, detailBox] = await Promise.all([workspace.locator(".investigation-queue").boundingBox(), detail.boundingBox()]);
@@ -782,6 +792,7 @@ test(`mobile ranked path selection moves the ordered path into view ${theme}`, a
     }
     await route.continue();
   });
+  await openPathQueue(page);
   const queue = page.getByLabel("Attack path queue");
   await queue.getByRole("button", { name: /#2/ }).click();
   const detail = page.getByRole("region", { name: "Selected path detail" });
@@ -810,7 +821,10 @@ test("priority enrichment cannot replace or inflate the authoritative path queue
   } }));
   await page.goto("/security-graph?lens=attack-path");
   await page.waitForLoadState("networkidle");
-  await expect(page.getByRole("heading", { name: "2 shown · 2 loaded paths" })).toBeVisible();
+  await openPathQueue(page);
+  await page.getByText("Queue coverage", { exact: true }).click();
+  await expect(page.getByText("2 shown · 2 loaded paths", { exact: true })).toBeVisible();
+  await openPathQueue(page);
   const queue = page.getByLabel("Attack path queue");
   await expect(queue.getByText("Outside repository", { exact: false })).toHaveCount(0);
   await queue.getByRole("button", { name: /#1 FIX FIRST/i }).click();
@@ -852,6 +866,7 @@ test(`a selected queue path missing from the canvas loads its exact graph in ${t
   await page.getByRole("button", { name: `Switch to ${theme} theme`, exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
   if (width < 1024) await page.getByRole("button", { name: /Paths & filters/ }).click();
+  await openPathQueue(page);
   await page.getByLabel("Attack path queue").getByRole("button", { name: /#1 FIX FIRST/i }).click();
   const detail = page.getByRole("region", { name: "Selected path detail" });
   await page.waitForLoadState("networkidle");
@@ -1032,9 +1047,9 @@ test("ranked paths reach the first viewport instead of sitting under a tower of 
   await page.goto("/security-graph?lens=attack-path");
   await page.waitForLoadState("networkidle");
 
-  const paths = page.getByText(/\d+ shown · \d+ loaded paths/).first();
+  const paths = page.getByTestId("selected-exposure-path");
   await expect(paths).toBeVisible();
-  await expect(page.getByText(/2 from the path queue/)).toBeVisible();
+  await expect(page.getByText("Browse 2 paths & filters", { exact: true })).toBeVisible();
   const box = await paths.boundingBox();
   expect(box).not.toBeNull();
   expect(box!.y).toBeLessThan(900);
@@ -1090,6 +1105,7 @@ for (const viewport of [
 
     await page.goto("/security-graph?lens=attack-path");
     await page.waitForLoadState("networkidle");
+    await openPathQueue(page);
     await page.getByLabel("Attack path queue").getByRole("button", { name: /#1/ }).click();
     const detail = page.getByRole("region", { name: "Selected path detail" });
     await detail.getByRole("button", { name: "Graph", exact: true }).click();
@@ -1126,6 +1142,7 @@ for (const viewport of [
     const savedTransform = await canvas.locator(".react-flow__viewport").getAttribute("style");
     await page.reload();
     await page.waitForLoadState("networkidle");
+    await openPathQueue(page);
     await page.getByLabel("Attack path queue").getByRole("button", { name: /#1/ }).click();
     await detail.getByRole("button", { name: "Graph", exact: true }).click();
     await expect(detail.getByTestId("security-graph-investigation")).toBeVisible();
@@ -1182,6 +1199,7 @@ test("selected paths 13 and 25 retain hydrated anchors beyond fix-first enrichme
     } });
   });
   await page.goto("/security-graph?lens=attack-path");
+  await openPathQueue(page);
   const queue = page.getByLabel("Attack path queue");
   await expect(queue.getByRole("button", { name: /#10\b/ })).toBeVisible();
   await page.getByRole("button", { name: "Show 2 more", exact: true }).click();
@@ -1279,8 +1297,11 @@ for (const theme of ["light", "dark"] as const) {
         total_neighbors: 1, truncated: false, neighbors: [job], edges: [edge(repo.id, job.id, "contains")] } });
     });
     await page.goto("/security-graph?lens=attack-path");
-    await expect(page.getByRole("heading", { name: "3 shown · 3 loaded paths" })).toBeVisible();
+    await openPathQueue(page);
+    await page.getByText("Queue coverage", { exact: true }).click();
+    await expect(page.getByText("3 shown · 3 loaded paths", { exact: true })).toBeVisible();
     await expect(page.getByText(/3 from the path queue/)).toBeVisible();
+    await openPathQueue(page);
     await page.getByLabel("Attack path queue").getByRole("button", { name: /#1 fix first/ }).click();
     await page.getByRole("button", { name: "List", exact: true }).click();
     const explorer = page.getByRole("region", { name: "Expand path neighbors" });
@@ -1442,14 +1463,15 @@ for (const theme of ["light", "dark"] as const) {
         await detail.getByRole("button", { name: "Previous path steps" }).click();
         await expect.poll(() => steps.evaluate(element => element.scrollLeft)).toBe(0);
       } else {
+        await openPathQueue(page);
         const [queueBox, detailBox] = await Promise.all([queue.boundingBox(), detail.boundingBox()]);
         expect(queueBox!.x + queueBox!.width).toBeLessThan(detailBox!.x);
         expect(queueBox!.height).toBeLessThanOrEqual(650);
         const graph = detail.getByRole("region", { name: "Selected exposure path graph", exact: true });
         const proof = detail.getByRole("complementary", { name: "Selected path evidence" });
         const [graphBox, proofBox] = await Promise.all([graph.boundingBox(), proof.boundingBox()]);
-        expect(proofBox!.x).toBeGreaterThan(graphBox!.x);
-        expect(Math.abs(proofBox!.y - graphBox!.y)).toBeLessThan(80);
+        expect(proofBox!.y).toBeGreaterThanOrEqual(graphBox!.y + graphBox!.height);
+        expect(proofBox!.width).toBeGreaterThan(0);
         expect(graphBox!.y + graphBox!.height).toBeLessThan(1000);
       }
       await expect(page.getByRole("button", { name: "Should I deploy?" })).toBeHidden();
@@ -1749,7 +1771,7 @@ for (const theme of ["light", "dark"] as const) {
       });
       await page.goto(`/security-graph?lens=attack-path&scan=${scanId}${mode === "finding" ? "&cve=page-finding-25" : ""}`);
       if (mode === "filter") {
-        if (width < 1024) await page.getByRole("button", { name: /Paths & filters/ }).click();
+        await openPathQueue(page);
         await page.getByText("Filters & presets", { exact: true }).click();
         await page.getByRole("button", { name: "Static", exact: true }).click();
       }
@@ -1760,12 +1782,11 @@ for (const theme of ["light", "dark"] as const) {
         await expect(page.getByRole("alert").filter({ hasText: "Loaded evidence is retained" })).toBeVisible();
         await page.getByRole("button", { name: "Load next 25 paths", exact: true }).click();
       }
-      const workspace = page.getByLabel("Investigation workspace");
-      if (width < 1024) await workspace.getByRole("button", { name: /Paths & filters/ }).click();
-      else await workspace.locator("summary").filter({ hasText: "1 path selected" }).click();
+      await openPathQueue(page);
       await expect(page.getByLabel("Attack path queue")).toContainText(/Page agent 25/i);
       expect(offsets).toEqual(theme === "dark" && width === 1440 ? [0, 25, 25] : [0, 25]);
       await expect(page.getByRole("button", { name: "Load next 25 paths", exact: true })).toHaveCount(0);
+      await openPathQueue(page);
       await page.getByLabel("Attack path queue").getByRole("button", { name: /Page agent 25/i }).click();
       await expect(page.getByTestId("selected-exposure-path")).toContainText(/Page agent 25/i);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -1811,5 +1832,39 @@ for (const estateSize of [10, 1_000, 10_000]) {
         await page.screenshot({ path: testInfo.outputPath(`bounded-${estateSize}-${theme}-${width}.png`), fullPage: true });
       });
     }
+  }
+}
+
+for (const theme of ["dark", "light"] as const) {
+  for (const width of [1440, 390]) {
+    test(`focused first view and keyboard queue ${theme} ${width}`, async ({ page }, testInfo) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.addInitScript(value => localStorage.setItem("agent-bom-theme", value), theme);
+      await routeCockpit(page);
+      await page.goto(`/security-graph?lens=attack-path&scan=${scanId}`);
+      const workspace = page.getByRole("region", { name: "Investigation workspace" });
+      await expect(workspace).toHaveAttribute("data-layout", "focused-path");
+      await expect(page.getByTestId("selected-exposure-path")).toBeVisible();
+      await expect(page.getByTestId("exposure-path-primary-action")).toHaveCount(1);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+      await page.screenshot({ path: testInfo.outputPath(`focused-first-${theme}-${width}.png`), fullPage: true });
+      await openPathQueue(page);
+      const first = page.getByLabel("Attack path queue").getByRole("button").first();
+      await first.focus();
+      await page.keyboard.press("ArrowRight");
+      await expect(page.getByRole("status")).toContainText("Focused path 2");
+      expect(new URL(page.url()).searchParams.get("scan")).toBe(scanId);
+    });
+  }
+  for (const status of [403, 503]) {
+    test(`investigation denied or unavailable ${theme} ${status}`, async ({ page }, testInfo) => {
+      await routeCockpit(page);
+      await page.addInitScript(value => localStorage.setItem("agent-bom-theme", value), theme);
+      await page.route("**/v1/graph/attack-paths?**", route => route.fulfill({ status, json: { detail: "Unavailable" } }));
+      await page.goto(`/security-graph?lens=attack-path&scan=${scanId}`);
+      await expect(page.getByText("Cannot load attack paths for this snapshot")).toBeVisible();
+      await expect(page.getByTestId("exposure-path-primary-action")).toHaveCount(0);
+      await page.screenshot({ path: testInfo.outputPath(`unavailable-${theme}-${status}.png`), fullPage: true });
+    });
   }
 }
