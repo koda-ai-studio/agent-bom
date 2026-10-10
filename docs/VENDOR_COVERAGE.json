@@ -1,12 +1,12 @@
 {
   "cloud_matrix": {
-    "gap_count": 143,
+    "gap_count": 140,
     "lanes": [
       {
         "id": "connect",
         "source": {
           "method": "ast",
-          "path": "src/agent_bom/cli/_entry_points.py",
+          "path": "src/agent_bom/cli/_connect_sources.py",
           "symbol": "_CONNECT_SOURCES"
         },
         "title": "Connect (CLI)"
@@ -150,7 +150,7 @@
             "display": "✓",
             "source": {
               "method": "ast",
-              "path": "src/agent_bom/cli/_entry_points.py",
+              "path": "src/agent_bom/cli/_connect_sources.py",
               "symbol": "_CONNECT_SOURCES"
             },
             "value": true
@@ -264,7 +264,7 @@
             "display": "✓",
             "source": {
               "method": "ast",
-              "path": "src/agent_bom/cli/_entry_points.py",
+              "path": "src/agent_bom/cli/_connect_sources.py",
               "symbol": "_CONNECT_SOURCES"
             },
             "value": true
@@ -373,7 +373,7 @@
             "display": "—",
             "source": {
               "method": "ast",
-              "path": "src/agent_bom/cli/_entry_points.py",
+              "path": "src/agent_bom/cli/_connect_sources.py",
               "symbol": "_CONNECT_SOURCES"
             },
             "value": false
@@ -477,7 +477,7 @@
             "display": "—",
             "source": {
               "method": "ast",
-              "path": "src/agent_bom/cli/_entry_points.py",
+              "path": "src/agent_bom/cli/_connect_sources.py",
               "symbol": "_CONNECT_SOURCES"
             },
             "value": false
@@ -581,7 +581,7 @@
             "display": "—",
             "source": {
               "method": "ast",
-              "path": "src/agent_bom/cli/_entry_points.py",
+              "path": "src/agent_bom/cli/_connect_sources.py",
               "symbol": "_CONNECT_SOURCES"
             },
             "value": false
@@ -657,13 +657,13 @@
             "value": true
           },
           "api_connection": {
-            "display": "—",
+            "display": "✓",
             "source": {
               "method": "ast",
               "path": "src/agent_bom/api/connection_store.py",
               "symbol": "SUPPORTED_PROVIDERS"
             },
-            "value": false
+            "value": true
           },
           "change_events": {
             "display": "—",
@@ -689,13 +689,13 @@
             }
           },
           "connect": {
-            "display": "—",
+            "display": "✓",
             "source": {
               "method": "ast",
-              "path": "src/agent_bom/cli/_entry_points.py",
+              "path": "src/agent_bom/cli/_connect_sources.py",
               "symbol": "_CONNECT_SOURCES"
             },
-            "value": false
+            "value": true
           },
           "data_dspm": {
             "display": "—",
@@ -734,13 +734,13 @@
             "value": false
           },
           "scheduled": {
-            "display": "—",
+            "display": "✓",
             "source": {
               "method": "ast",
               "path": "src/agent_bom/api/connection_scheduler.py",
               "symbol": "_SCHEDULABLE_PROVIDERS"
             },
-            "value": false
+            "value": true
           },
           "side_scan": {
             "display": "—",
@@ -801,7 +801,7 @@
             "display": "✓",
             "source": {
               "method": "ast",
-              "path": "src/agent_bom/cli/_entry_points.py",
+              "path": "src/agent_bom/cli/_connect_sources.py",
               "symbol": "_CONNECT_SOURCES"
             },
             "value": true
@@ -910,7 +910,7 @@
             "display": "—",
             "source": {
               "method": "ast",
-              "path": "src/agent_bom/cli/_entry_points.py",
+              "path": "src/agent_bom/cli/_connect_sources.py",
               "symbol": "_CONNECT_SOURCES"
             },
             "value": false
@@ -1019,7 +1019,7 @@
             "display": "—",
             "source": {
               "method": "ast",
-              "path": "src/agent_bom/cli/_entry_points.py",
+              "path": "src/agent_bom/cli/_connect_sources.py",
               "symbol": "_CONNECT_SOURCES"
             },
             "value": false
@@ -1123,7 +1123,7 @@
             "display": "—",
             "source": {
               "method": "ast",
-              "path": "src/agent_bom/cli/_entry_points.py",
+              "path": "src/agent_bom/cli/_connect_sources.py",
               "symbol": "_CONNECT_SOURCES"
             },
             "value": false
@@ -1227,7 +1227,7 @@
             "display": "—",
             "source": {
               "method": "ast",
-              "path": "src/agent_bom/cli/_entry_points.py",
+              "path": "src/agent_bom/cli/_connect_sources.py",
               "symbol": "_CONNECT_SOURCES"
             },
             "value": false
@@ -1331,7 +1331,7 @@
             "display": "—",
             "source": {
               "method": "ast",
-              "path": "src/agent_bom/cli/_entry_points.py",
+              "path": "src/agent_bom/cli/_connect_sources.py",
               "symbol": "_CONNECT_SOURCES"
             },
             "value": false
@@ -1435,7 +1435,7 @@
             "display": "—",
             "source": {
               "method": "ast",
-              "path": "src/agent_bom/cli/_entry_points.py",
+              "path": "src/agent_bom/cli/_connect_sources.py",
               "symbol": "_CONNECT_SOURCES"
             },
             "value": false
@@ -1539,7 +1539,7 @@
             "display": "—",
             "source": {
               "method": "ast",
-              "path": "src/agent_bom/cli/_entry_points.py",
+              "path": "src/agent_bom/cli/_connect_sources.py",
               "symbol": "_CONNECT_SOURCES"
             },
             "value": false
@@ -1643,7 +1643,7 @@
             "display": "—",
             "source": {
               "method": "ast",
-              "path": "src/agent_bom/cli/_entry_points.py",
+              "path": "src/agent_bom/cli/_connect_sources.py",
               "symbol": "_CONNECT_SOURCES"
             },
             "value": false
@@ -1752,7 +1752,7 @@
             "display": "✓",
             "source": {
               "method": "ast",
-              "path": "src/agent_bom/cli/_entry_points.py",
+              "path": "src/agent_bom/cli/_connect_sources.py",
               "symbol": "_CONNECT_SOURCES"
             },
             "value": true
@@ -1856,7 +1856,7 @@
             "display": "—",
             "source": {
               "method": "ast",
-              "path": "src/agent_bom/cli/_entry_points.py",
+              "path": "src/agent_bom/cli/_connect_sources.py",
               "symbol": "_CONNECT_SOURCES"
             },
             "value": false
@@ -1960,7 +1960,7 @@
             "display": "—",
             "source": {
               "method": "ast",
-              "path": "src/agent_bom/cli/_entry_points.py",
+              "path": "src/agent_bom/cli/_connect_sources.py",
               "symbol": "_CONNECT_SOURCES"
             },
             "value": false
@@ -2032,13 +2032,14 @@
           "members": [
             "aws",
             "azure",
+            "databricks",
             "gcp",
             "snowflake"
           ],
           "name": "connect",
           "source": {
             "method": "ast",
-            "path": "src/agent_bom/cli/_entry_points.py",
+            "path": "src/agent_bom/cli/_connect_sources.py",
             "symbol": "_CONNECT_SOURCES"
           }
         },
@@ -2047,6 +2048,7 @@
             "aws",
             "azure",
             "database",
+            "databricks",
             "gcp",
             "snowflake"
           ],
@@ -2061,6 +2063,7 @@
           "members": [
             "aws",
             "azure",
+            "databricks",
             "gcp",
             "snowflake"
           ],
@@ -2090,7 +2093,6 @@
       ],
       "providers_not_in_every_list": [
         "database",
-        "databricks",
         "oci"
       ],
       "title": "Connection onboarding and scan scope"
@@ -2117,6 +2119,7 @@
             "aws",
             "azure",
             "database",
+            "databricks",
             "gcp",
             "snowflake"
           ],
@@ -2150,59 +2153,6 @@
         "oci"
       ],
       "title": "Deep inventory vs connection lists"
-    },
-    {
-      "id": "benchmarks",
-      "lists": [
-        {
-          "members": [
-            "aws",
-            "azure",
-            "gcp",
-            "snowflake"
-          ],
-          "name": "cis_api",
-          "source": {
-            "method": "ast",
-            "path": "src/agent_bom/api/routes/cloud.py",
-            "symbol": "_CIS_PROVIDERS"
-          }
-        },
-        {
-          "members": [
-            "aws",
-            "azure",
-            "databricks",
-            "gcp",
-            "snowflake"
-          ],
-          "name": "benchmark_inventory",
-          "source": {
-            "method": "json",
-            "path": "src/agent_bom/cloud/benchmark_inventory.json",
-            "symbol": "providers"
-          }
-        },
-        {
-          "members": [
-            "aws",
-            "azure",
-            "databricks",
-            "gcp",
-            "snowflake"
-          ],
-          "name": "benchmark_provenance",
-          "source": {
-            "method": "ast",
-            "path": "src/agent_bom/cloud/benchmark_provenance.py",
-            "symbol": "BENCHMARK_PROVENANCE"
-          }
-        }
-      ],
-      "providers_not_in_every_list": [
-        "databricks"
-      ],
-      "title": "Benchmark posture"
     },
     {
       "id": "side_scan",

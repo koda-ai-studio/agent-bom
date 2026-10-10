@@ -265,13 +265,13 @@ def test_claim_prevents_double_run_sqlite(tmp_path: Any) -> None:
 def test_claim_due_connections_claims_all_providers() -> None:
     store = InMemoryConnectionStore()
     now = _now()
-    records = [_record(provider=p, last_scan_at=None) for p in ("aws", "azure", "gcp", "snowflake")]
+    records = [_record(provider=p, last_scan_at=None) for p in ("aws", "azure", "gcp", "snowflake", "databricks")]
     for record in records:
         store.put(record)
 
     claimed = claim_due_connections(store, now)
     # Every supported provider is broker-enabled and therefore claimed.
-    assert {r.provider for r in claimed} == {"aws", "azure", "gcp", "snowflake"}
+    assert {r.provider for r in claimed} == {"aws", "azure", "gcp", "snowflake", "databricks"}
 
 
 # --------------------------------------------------------------------------- #
@@ -565,13 +565,14 @@ async def test_drain_continuous_events_survives_a_raising_drain_task(
 
 
 @pytest.mark.asyncio
-async def test_run_once_queues_non_aws_provider(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize("provider", ["gcp", "databricks"])
+async def test_run_once_queues_non_aws_provider(monkeypatch: pytest.MonkeyPatch, provider: str) -> None:
     """The scheduler admits non-AWS providers to the same durable queue."""
     calls = _install_scan_mocks(monkeypatch)
 
     store = InMemoryConnectionStore()
     set_connection_store(store)
-    gcp = _record(provider="gcp", scan_interval_minutes=60, last_scan_at=None)
+    gcp = _record(provider=provider, scan_interval_minutes=60, last_scan_at=None)
     store.put(gcp)
 
     count = await run_due_scans_once(store, _now())

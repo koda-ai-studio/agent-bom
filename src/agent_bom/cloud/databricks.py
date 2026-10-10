@@ -27,6 +27,7 @@ from typing import Any, Optional
 
 from agent_bom.discovery_envelope import RedactionStatus, ScanMode, attach_envelope_to_agents
 from agent_bom.models import Agent, AgentType, MCPServer, Package, TransportType
+from agent_bom.security import sanitize_error
 
 from .base import CloudDiscoveryError
 from .normalization import build_cloud_origin, build_cloud_state, build_package_purl, normalize_cloud_lifecycle_state
@@ -37,6 +38,8 @@ logger = logging.getLogger(__name__)
 def discover(
     host: str | None = None,
     token: str | None = None,
+    *,
+    workspace_client: Any = None,
 ) -> tuple[list[Agent], list[str]]:
     """Discover AI agents from Databricks clusters and model serving endpoints.
 
@@ -65,9 +68,9 @@ def discover(
         ws_kwargs["token"] = token
 
     try:
-        ws = WorkspaceClient(**ws_kwargs)
+        ws = workspace_client if workspace_client is not None else WorkspaceClient(**ws_kwargs)
     except Exception as exc:
-        warnings.append(f"Could not connect to Databricks: {exc}")
+        warnings.append(f"Could not connect to Databricks: {sanitize_error(exc, generic=True)}")
         return agents, warnings
 
     resolved_host = host or os.environ.get("DATABRICKS_HOST", "")
@@ -110,7 +113,7 @@ def _discover_cluster_agents(
         warnings.append("Access denied for Databricks clusters API. Check workspace permissions.")
         clusters = []
     except Exception as exc:
-        warnings.append(f"Could not list Databricks clusters: {exc}")
+        warnings.append(f"Could not list Databricks clusters: {sanitize_error(exc, generic=True)}")
         clusters = []
 
     for cluster in clusters:
@@ -194,7 +197,7 @@ def _discover_serving_agents(
     except permission_denied:
         warnings.append("Access denied for Databricks model serving API.")
     except Exception as exc:
-        warnings.append(f"Could not list Databricks serving endpoints: {exc}")
+        warnings.append(f"Could not list Databricks serving endpoints: {sanitize_error(exc, generic=True)}")
     return agents
 
 
@@ -291,7 +294,7 @@ def _get_cluster_packages(
                     packages.append(pkg)
 
     except Exception as exc:
-        warnings.append(f"Could not get library status for cluster {cluster_id}: {exc}")
+        warnings.append(f"Could not get library status for cluster {cluster_id}: {sanitize_error(exc, generic=True)}")
 
     return packages
 

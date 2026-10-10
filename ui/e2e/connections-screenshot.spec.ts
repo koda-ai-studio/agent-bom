@@ -238,3 +238,28 @@ for (const theme of ["light", "dark"] as const) {
     });
   }
 }
+
+for (const theme of ["light", "dark"] as const) {
+  for (const width of [1440, 390]) {
+    test(`Databricks scoped workspace setup ${theme} ${width}`, async ({ page }, testInfo) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.addInitScript(value => localStorage.setItem("agent-bom-theme", value), theme);
+      await routeConnections(page);
+      await page.goto("/connections");
+      await page.getByRole("button", { name: "Add cloud account" }).click();
+      const wizard = page.getByRole("dialog", { name: "Add cloud account" });
+      await wizard.getByRole("button", { name: /Databricks/ }).click();
+      await wizard.getByRole("button", { name: "Next", exact: true }).click();
+      await expect(wizard.getByText("Verify your connection", { exact: true })).toBeVisible();
+      await expect(wizard.getByRole("button", { name: "Terraform", exact: true })).toHaveCount(0);
+      await wizard.getByRole("button", { name: "Next", exact: true }).click();
+      await wizard.getByPlaceholder("Production account").fill("Analytics workspace");
+      await wizard.getByLabel("Workspace URL", { exact: true }).fill("https://example.cloud.databricks.com");
+      await wizard.getByLabel("Workspace token", { exact: true }).fill("synthetic-browser-token");
+      await expect(wizard.getByTestId("wizard-scan-mode-continuous")).toBeDisabled();
+      await expect(wizard.getByText(/This provider supports full scans only/)).toBeVisible();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      await page.screenshot({ path: testInfo.outputPath(`databricks-${theme}-${width}.png`), fullPage: true });
+    });
+  }
+}

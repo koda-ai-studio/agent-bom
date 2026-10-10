@@ -26,107 +26,15 @@ additive aliases and guidance, not a restructure.
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
 from typing import Any
 
 import click
 
+from agent_bom.cli._connect_sources import _CONNECT_FIELDS, _CONNECT_SOURCES, _ConnectSource
+
 # ---------------------------------------------------------------------------
 # `connect` — read-only onboarding guidance + credential detection
 # ---------------------------------------------------------------------------
-
-
-@dataclass(frozen=True)
-class _ConnectSource:
-    """Static description of one connectable cloud/source.
-
-    All values are documentation pointers — ``connect`` never mutates anything
-    and never calls a cloud API. ``cred_env_vars`` are the standard provider
-    credential variables we look for to report whether a local scan will have
-    something to read.
-    """
-
-    name: str
-    title: str
-    terraform_module: str
-    provision_path: str
-    cli_hint: str
-    cloudshell_hint: str
-    inventory_env: str
-    inventory_value: str
-    cred_env_vars: tuple[str, ...]
-    scan_command: str
-    role_summary: str
-    audit_trail_note: str = ""
-
-
-# Ordered to match the documented onboarding story (cloud → data platforms).
-_CONNECT_SOURCES: dict[str, _ConnectSource] = {
-    "aws": _ConnectSource(
-        name="aws",
-        title="Amazon Web Services",
-        terraform_module="deploy/terraform/connect-aws",
-        provision_path="scripts/provision/aws_readonly_policy.json",
-        cli_hint="aws iam create-policy/role + SecurityAudit (see scripts/provision/README.md)",
-        cloudshell_hint="Open AWS CloudShell → paste the CLI grant (no local Terraform required)",
-        inventory_env="AGENT_BOM_AWS_INVENTORY",
-        inventory_value="1",
-        cred_env_vars=("AWS_PROFILE", "AWS_ACCESS_KEY_ID", "AWS_ROLE_ARN", "AWS_WEB_IDENTITY_TOKEN_FILE"),
-        scan_command="agent-bom scan --aws",
-        role_summary="IAM principal with AWS-managed SecurityAudit (+ ViewOnlyAccess). List/Describe/Get only.",
-        audit_trail_note=(
-            "Reuses this SAME SecurityAudit role — no new role. cloudtrail:LookupEvents is "
-            "already granted by the AWS-managed SecurityAudit policy, so enabling it adds zero new permission."
-        ),
-    ),
-    "azure": _ConnectSource(
-        name="azure",
-        title="Microsoft Azure",
-        terraform_module="deploy/terraform/connect-azure",
-        provision_path="scripts/provision/azure_readonly_role.json",
-        cli_hint="az ad sp create-for-rbac --role Reader (see scripts/provision/README.md)",
-        cloudshell_hint="Open Azure Cloud Shell → paste the az grant (no local Terraform required)",
-        inventory_env="AGENT_BOM_AZURE_INVENTORY",
-        inventory_value="1",
-        cred_env_vars=("AZURE_CLIENT_ID", "AZURE_TENANT_ID", "AZURE_SUBSCRIPTION_ID"),
-        scan_command="agent-bom scan --azure",
-        role_summary="Service principal with the built-in Reader role. Read-only; no write/delete grants.",
-        audit_trail_note=(
-            "Reuses this SAME Reader/Security Reader role — no new role. The Activity Log read "
-            "(Microsoft.Insights/eventtypes/values/read) sits inside the existing Reader grant in standard setups."
-        ),
-    ),
-    "gcp": _ConnectSource(
-        name="gcp",
-        title="Google Cloud Platform",
-        terraform_module="deploy/terraform/connect-gcp",
-        provision_path="scripts/provision/gcp_readonly_role.yaml",
-        cli_hint="gcloud iam service-accounts create + roles/viewer (see scripts/provision/README.md)",
-        cloudshell_hint="Open Google Cloud Shell → paste the gcloud grant (no local Terraform required)",
-        inventory_env="AGENT_BOM_GCP_INVENTORY",
-        inventory_value="1",
-        cred_env_vars=("GOOGLE_APPLICATION_CREDENTIALS", "GOOGLE_CLOUD_PROJECT", "CLOUDSDK_CORE_PROJECT"),
-        scan_command="agent-bom scan --gcp",
-        role_summary="Service account with roles/viewer (+ roles/iam.securityReviewer). Read-only.",
-        audit_trail_note=(
-            "Reuses this SAME roles/viewer role — no new role. The audit-log read "
-            "(logging.logEntries.list) sits inside the existing roles/viewer grant in standard setups."
-        ),
-    ),
-    "snowflake": _ConnectSource(
-        name="snowflake",
-        title="Snowflake",
-        terraform_module="deploy/terraform/connect-snowflake",
-        provision_path="scripts/provision/snowflake_readonly.sql",
-        cli_hint="snow sql -f scripts/provision/snowflake_readonly.sql",
-        cloudshell_hint="Snowsight SQL worksheet → paste snowflake_readonly.sql",
-        inventory_env="SNOWFLAKE_ACCOUNT",
-        inventory_value="<your-account-locator>",
-        cred_env_vars=("SNOWFLAKE_ACCOUNT", "SNOWFLAKE_USER", "SNOWFLAKE_PRIVATE_KEY_PATH"),
-        scan_command="agent-bom scan --snowflake",
-        role_summary="Read-only role (warehouse USAGE + governance views). No DML/DDL grants.",
-    ),
-}
 
 
 def _detected_cred_vars(source: _ConnectSource) -> list[str]:
@@ -149,8 +57,14 @@ def _render_connect_guidance(con: object, source: _ConnectSource) -> None:
         f"   [dim]Recipe + policy: {source.provision_path}[/dim]",
         "   [bold]CloudShell / console[/bold]",
         f"   [cyan]{source.cloudshell_hint}[/cyan]",
-        "   [bold]Terraform[/bold] [dim](when IaC owns apply rights)[/dim]",
-        f"   [cyan]terraform -chdir={source.terraform_module} init && terraform -chdir={source.terraform_module} apply[/cyan]",
+        *(
+            [
+                "   [bold]Terraform[/bold] [dim](when IaC owns apply rights)[/dim]",
+                f"   [cyan]terraform -chdir={source.terraform_module} init && terraform -chdir={source.terraform_module} apply[/cyan]",
+            ]
+            if source.terraform_module
+            else []
+        ),
         "   [dim]Read-only role only — agent-bom never writes to your account.[/dim]",
         "",
         "[bold]2. Opt in to inventory[/bold] [dim](default-off)[/dim]",
@@ -247,50 +161,6 @@ def connect_group(ctx: click.Context) -> None:
 # the single write-only secret and are never echoed.
 
 
-@dataclass(frozen=True)
-class _ConnectField:
-    """One provider flag and how it maps onto the canonical connection schema.
-
-    ``kind`` selects the canonical target: ``role_ref`` and ``secret`` set the
-    two required columns, ``secret_file`` reads the secret from a file path,
-    ``regions`` is a repeatable list, and ``auth_param`` writes into the
-    non-secret ``auth_params`` blob under ``auth_key``.
-    """
-
-    flag: str
-    param: str
-    kind: str
-    help: str
-    auth_key: str = ""
-
-
-_CONNECT_FIELDS: dict[str, tuple[_ConnectField, ...]] = {
-    "aws": (
-        _ConnectField("--role-arn", "role_arn", "role_ref", "IAM role ARN to assume, read-only (the connection role_ref)."),
-        _ConnectField("--external-id", "external_id", "secret", "STS ExternalId — write-only secret; never printed or logged."),
-        _ConnectField("--region", "regions", "regions", "Region to scan (repeatable)."),
-    ),
-    "azure": (
-        _ConnectField("--client-id", "client_id", "role_ref", "App/service-principal client id (the connection role_ref)."),
-        _ConnectField("--client-secret", "client_secret", "secret", "Client secret — write-only; never printed or logged."),
-        _ConnectField("--tenant-id", "tenant_id", "auth_param", "Azure AD tenant id.", auth_key="tenant_id"),
-        _ConnectField("--subscription-id", "subscription_id", "auth_param", "Azure subscription id.", auth_key="subscription_id"),
-    ),
-    "gcp": (
-        _ConnectField("--service-account", "service_account", "role_ref", "Service-account email (the connection role_ref)."),
-        _ConnectField("--key-file", "key_file", "secret_file", "Path to the service-account key JSON — write-only; never printed."),
-        _ConnectField("--project", "project", "auth_param", "GCP project id.", auth_key="project_id"),
-    ),
-    "snowflake": (
-        _ConnectField("--account", "account", "role_ref", "Snowflake account or account/user (the connection role_ref)."),
-        _ConnectField("--private-key-file", "private_key_file", "secret_file", "Path to the PEM private key — write-only; never printed."),
-        _ConnectField("--user", "user", "auth_param", "Snowflake user.", auth_key="user"),
-        _ConnectField("--role", "role", "auth_param", "Snowflake role.", auth_key="role"),
-        _ConnectField("--warehouse", "warehouse", "auth_param", "Snowflake warehouse.", auth_key="warehouse"),
-    ),
-}
-
-
 def _connect_options(source: _ConnectSource) -> list[click.Parameter]:
     """Build the Click options for one provider's establish + verify flags."""
     from agent_bom.cloud.onboarding import default_emit_format
@@ -304,28 +174,28 @@ def _connect_options(source: _ConnectSource) -> list[click.Parameter]:
             options.append(click.Option(decls, type=click.Path(exists=True, dir_okay=False), help=field.help))
         else:
             options.append(click.Option(decls, help=field.help))
-    # ── Emit a ready-to-run, read-only deploy artifact (provisioning-time) ──
-    default_fmt = default_emit_format(source.name)
-    options.append(
-        click.Option(
-            ["--emit"],
-            is_flag=False,
-            flag_value=default_fmt,
-            default=None,
-            help=(
-                f"Emit a ready-to-run, read-only deploy artifact ({default_fmt}) that "
-                f"provisions the role/app this connection uses, then exit. Bare --emit "
-                f"uses the default format."
-            ),
+    if source.terraform_module:
+        default_fmt = default_emit_format(source.name)
+        options.append(
+            click.Option(
+                ["--emit"],
+                is_flag=False,
+                flag_value=default_fmt,
+                default=None,
+                help=(
+                    f"Emit a ready-to-run, read-only deploy artifact ({default_fmt}) that "
+                    f"provisions the role/app this connection uses, then exit. Bare --emit "
+                    f"uses the default format."
+                ),
+            )
         )
-    )
-    options.append(
-        click.Option(
-            ["--out"],
-            type=click.Path(dir_okay=False, writable=True),
-            help="Write the emitted artifact to this file (default: stdout).",
+        options.append(
+            click.Option(
+                ["--out"],
+                type=click.Path(dir_okay=False, writable=True),
+                help="Write the emitted artifact to this file (default: stdout).",
+            )
         )
-    )
     # ── Snowflake: read-only role (default) vs Snowpark native-app (SPCS) ──
     if source.name == "snowflake":
         options.append(
@@ -786,8 +656,8 @@ def _make_connect_subcommand(source: _ConnectSource) -> click.Command:
         params=_connect_options(source),
         help=(
             f"Read-only onboarding for {source.title}.\n\n"
-            f"With no connection flags: prints CLI, CloudShell, and Terraform grant "
-            f"options ({source.terraform_module} / {source.provision_path}), the opt-in "
+            f"With no connection flags: prints the provider setup guidance "
+            f"({source.provision_path}), the inventory "
             f"inventory env var ({source.inventory_env}), and the scan command, then reports "
             f"whether local credentials are detectable.\n\n"
             f"With connection flags (e.g. {_CONNECT_FIELDS[source.name][0].flag} + the write-only "

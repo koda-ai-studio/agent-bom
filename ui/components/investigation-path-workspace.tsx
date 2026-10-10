@@ -39,6 +39,7 @@ export function InvestigationPathWorkspace({
   onSelect,
   title,
   subtitle,
+  coverageNotice,
   filters,
   detail,
   queueFooter,
@@ -49,12 +50,14 @@ export function InvestigationPathWorkspace({
   onSelect: (key: string) => void;
   title: string;
   subtitle: string;
+  coverageNotice?: React.ReactNode;
   filters: React.ReactNode;
   detail: React.ReactNode;
   queueFooter?: React.ReactNode | undefined;
   sideRail?: React.ReactNode | undefined;
 }) {
   const detailRef = useRef<HTMLDivElement>(null);
+  const [queueOpen, setQueueOpen] = useState(false);
   const [announcement, setAnnouncement] = useState("");
   const [mobilePanel, setMobilePanel] = useState<"path" | "queue">("path");
   const [scrollRequest, setScrollRequest] = useState(0);
@@ -92,21 +95,23 @@ export function InvestigationPathWorkspace({
   return (
     <section
       aria-label="Investigation workspace"
-      data-layout={rows.length === 1 ? "focused-path" : "responsive-split"}
+      data-layout={queueOpen ? "responsive-split" : "focused-path"}
       data-mobile-panel={mobilePanel}
       className="investigation-workspace"
     >
+      {coverageNotice ? <p role="note" className="col-span-full text-xs text-ink-secondary">{coverageNotice}</p> : null}
       <div role="group" aria-label="Investigation panels" className="investigation-panel-switch">
         <button type="button" aria-pressed={mobilePanel === "path"} aria-controls={DETAIL_REGION_ID} onClick={() => setMobilePanel("path")}>Selected path</button>
-        <button type="button" aria-pressed={mobilePanel === "queue"} aria-controls="investigation-queue" onClick={() => setMobilePanel("queue")}>Paths &amp; filters ({rows.length})</button>
+        <button type="button" aria-pressed={mobilePanel === "queue"} aria-controls="investigation-queue" onClick={() => { setMobilePanel("queue"); setQueueOpen(true); }}>Paths &amp; filters ({rows.length})</button>
       </div>
-      <details id="investigation-queue" open={rows.length !== 1 || mobilePanel === "queue"} className="investigation-queue rounded-xl border border-outline bg-surface p-3">
-        <summary className="cursor-pointer text-sm font-medium text-foreground">{rows.length === 1 ? "1 path selected · change focus or filters" : `${rows.length} paths · investigation queue`}</summary>
+      <details id="investigation-queue" open={queueOpen} onToggle={(event) => setQueueOpen(event.currentTarget.open)} className="investigation-queue rounded-xl border border-outline bg-surface p-3">
+        <summary className="cursor-pointer text-sm font-medium text-foreground">{`Browse ${rows.length} ${rows.length === 1 ? "path" : "paths"} & filters`}</summary>
         <div className="investigation-queue-body mt-3">
-          <div>
-            <h2 className="text-base font-semibold text-foreground">{title}</h2>
-            <p className="mt-1 text-xs text-ink-tertiary">{subtitle}</p>
-          </div>
+          <details className="text-xs text-ink-secondary">
+            <summary className="cursor-pointer py-1">Queue coverage</summary>
+            <p className="mt-2 font-medium">{title}</p>
+            <p className="mt-1">{subtitle}</p>
+          </details>
 
           <div className="mt-3">
             <InvestigationFilterDrawer>{filters}</InvestigationFilterDrawer>

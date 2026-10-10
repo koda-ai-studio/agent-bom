@@ -146,6 +146,9 @@ def probe_read_capability(
             return _probe_azure(brokered)
         if provider == "snowflake":
             return _probe_snowflake(brokered)
+        if provider == "databricks":
+            next(iter(brokered.clusters.list()), None)  # type: ignore[attr-defined]
+            return CapabilityProbeResult(("databricks:clusters-list",))
         raise CapabilityProbeError(PROBE_INVALID_CONFIGURATION)
     except CapabilityProbeError:
         raise

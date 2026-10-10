@@ -577,10 +577,10 @@ export function AddConnectionWizard({
                         </>
                       ) : (
                         <>
-                          <GrantMethodPicker method={grantMethod} onChange={setGrantMethod} provider={provider.value} />
+                          {providerMeta ? <GrantMethodPicker method={grantMethod} onChange={setGrantMethod} provider={provider.value} /> : null}
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-ink-tertiary">
-                              {cloudGrantMethodLabel(grantMethod)} grant script
+                              {providerMeta ? `${cloudGrantMethodLabel(grantMethod)} grant script` : "Verify your connection"}
                             </p>
                             {deployScript ? <CopyTextButton text={deployScript} label="Copy script" /> : null}
                           </div>
@@ -721,6 +721,7 @@ export function AddConnectionWizard({
                     </div>
                   ) : provider.secretField.multiline ? (
                     <textarea
+                      aria-label={provider.secretField.label}
                       autoComplete="off"
                       rows={5}
                       value={form.external_id}
@@ -731,6 +732,7 @@ export function AddConnectionWizard({
                   ) : (
                     <input
                       type="password"
+                      aria-label={provider.secretField.label}
                       autoComplete="off"
                       value={form.external_id}
                       onChange={(event) => update("external_id", event.target.value)}
@@ -771,8 +773,8 @@ export function AddConnectionWizard({
                 <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-outline bg-surface-elevated px-3 py-2.5">
                   <input
                     type="checkbox"
+                    disabled={managedTrial || !["aws", "azure", "gcp"].includes(provider.value)}
                     checked={form.scan_mode === "continuous"}
-                    disabled={managedTrial}
                     onChange={(event) =>
                       setForm((current) => ({
                         ...current,
@@ -787,7 +789,9 @@ export function AddConnectionWizard({
                     <span className="mt-0.5 block text-[11px] text-ink-secondary">
                       {managedTrial
                         ? "Continuous scans are unavailable in managed trials."
-                        : "Event-driven mid-interval refresh between full cadence scans."}
+                        : !["aws", "azure", "gcp"].includes(provider.value)
+                          ? "This provider supports full scans only. Set a cadence for recurring inventory."
+                          : "Event-driven mid-interval refresh between full cadence scans."}
                     </span>
                     {form.scan_mode === "continuous" ? (
                       <span

@@ -444,6 +444,16 @@ def broker_session(
         return _broker_gcp(record)
     if provider == "snowflake":
         return _broker_snowflake(record)
+    if provider == "databricks":
+        from agent_bom.cloud.databricks_connection import workspace_client, workspace_host
+
+        try:
+            host = workspace_host(record.role_ref)
+            return workspace_client(host, _decrypt_or_fail(record))
+        except ImportError as exc:
+            raise CloudDiscoveryError("Install agent-bom[databricks] for Databricks connections.") from exc
+        except (ValueError, ConnectionSecretError) as exc:
+            raise ConnectionBrokerError("Invalid Databricks workspace or stored credential.") from exc
     if provider in _DATABASE_PROVIDERS:
         return _broker_database(record)
     raise ValueError(f"Unknown connection provider '{record.provider}'.")

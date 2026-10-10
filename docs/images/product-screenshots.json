@@ -1,9 +1,9 @@
 {
   "release_version": "0.108.4",
-  "captured_at": "2026-10-10T20:53:01.869Z",
-  "source_commit": "fba26dced3e76ab2115ba8a5853b5101269ca74c",
+  "captured_at": "2026-10-10T22:12:18.466Z",
+  "source_commit": "bf17826fbc3fea1147360a07ddc508c9cf1f789b",
   "source_tree": "clean",
-  "capture_inputs_sha256": "sha256:f3290b334de7684372c2e7b6f80ebcf261181f03ff5e4db765f54b83ff931197",
+  "capture_inputs_sha256": "sha256:cfc92c536fe234f59eea3075e1c96c6704c1965407cf0eab9edda48437039e23",
   "capture_note": "Deterministically captured from real Next.js dashboard routes in capture mode. The correlation hero views consume the committed, hash-pinned Reference evidence lab — modeled local infrastructure artifact with CVE-2023-4863 and exact canonical joins. Remaining gallery fixtures are explicitly synthetic UI states. No external, customer, or private infrastructure data is used.",
   "screenshots": [
     {
@@ -132,7 +132,7 @@
       "page": "/connections?capture=1",
       "scope": "Connections hub — scalable connector gallery across cloud, code, AI, and data sources",
       "visible_version": "0.108.4",
-      "sha256": "sha256:190109251dd5de3e185b3409444305dbca6ed99f07d9ddf4cde97518555af1df"
+      "sha256": "sha256:0729128942962743e5f24b92a3dd08ffa2af1dfc2c9ec759c7dbde06a0df635b"
     },
     {
       "presentation": "dark desktop",
@@ -172,7 +172,7 @@
       "page": "/graph?lens=mesh&scan=scan-proof-ai-platform&agent=agent%3Adeveloper-copilot&capture=1",
       "scope": "Persisted agent neighborhood with recorded shared filesystem connections and both IDE + SRE agents in scope",
       "visible_version": "0.108.4",
-      "sha256": "sha256:e95e835b2989159b3104fcdbf3036aecbe4c096f7dc3270c21ef1d6a71839672"
+      "sha256": "sha256:eaa4a4193217b73bc3f4a97612ec6798dc9f8cc3eb5401266a242cc3a0b32053"
     },
     {
       "presentation": "dark desktop",
@@ -188,7 +188,7 @@
       "page": "/security-graph?lens=attack-path&scan=scan-proof-ai-platform&capture=1",
       "scope": "Prioritized attack path with graph evidence export and remediation handoff",
       "visible_version": "0.108.4",
-      "sha256": "sha256:27612d3ab170e1d16d6a26c9722e2a7a0e50187f32e0a028679f32922ac0211c"
+      "sha256": "sha256:227a16980b8f62b0c73c99abd8f40c82ca1851b7ce64a57893a32f5d3d897934"
     },
     {
       "presentation": "dark desktop",
@@ -210,7 +210,7 @@
       "evidence_sha256": "sha256:f4f8901f412997be7690b50ce8e7468ba8f781dc22b85e7b5f44408e28fe2c5f",
       "correlation_manifest_sha256": "sha256:fe781c82f958c2f9aa4cadfa2289aa767629dc7d6716e11add790e8f3336fc3a",
       "visible_version": "0.108.4",
-      "sha256": "sha256:3e71646d491f8d8388842e1353ef5a4eda006f786ef06970bfdeb2b456d8bf61"
+      "sha256": "sha256:1fefa4333532b3ceb6be0910d9e4018fade2785a1d7ec9046cc063b9542ebaf0"
     },
     {
       "presentation": "dark desktop",
@@ -232,7 +232,7 @@
       "evidence_sha256": "sha256:f4f8901f412997be7690b50ce8e7468ba8f781dc22b85e7b5f44408e28fe2c5f",
       "correlation_manifest_sha256": "sha256:fe781c82f958c2f9aa4cadfa2289aa767629dc7d6716e11add790e8f3336fc3a",
       "visible_version": "0.108.4",
-      "sha256": "sha256:9ed0268372e00309dd4b9f88f2ffc2a0def9ed86363b2b42d0ed621d375d87fd"
+      "sha256": "sha256:75af2991425cfb0874aff2f379e87410c2f3201298945daaf59b6e3a17e8b31f"
     },
     {
       "presentation": "light desktop",
@@ -254,7 +254,7 @@
       "evidence_sha256": "sha256:f4f8901f412997be7690b50ce8e7468ba8f781dc22b85e7b5f44408e28fe2c5f",
       "correlation_manifest_sha256": "sha256:fe781c82f958c2f9aa4cadfa2289aa767629dc7d6716e11add790e8f3336fc3a",
       "visible_version": "0.108.4",
-      "sha256": "sha256:e2b822633a143df320aedc855dc38b0849da13c814d285f1802aa0e39615d41e"
+      "sha256": "sha256:885573758fa4e7de7ca35fcea48640792184073ffe900d1fe236657f2ec4a2c7"
     },
     {
       "presentation": "dark mobile",
@@ -273,7 +273,7 @@
       "page": "/security-graph?lens=attack-path&scan=scan-proof-ai-platform&capture=1",
       "scope": "Prioritized attack path in the light theme",
       "visible_version": "0.108.4",
-      "sha256": "sha256:4c0cfba04fed34b45c0c670b5114d67d84aaa6c5a8396c6bc787e41480ca6972"
+      "sha256": "sha256:3a3ac0774ae4d334fd6307c125a74e2a71bfe0c32db673413db416ffed2b8131"
     },
     {
       "presentation": "dark mobile",
@@ -281,7 +281,7 @@
       "page": "/security-graph?lens=attack-path&scan=scan-proof-ai-platform&capture=1",
       "scope": "Prioritized attack path at a 390 by 844 viewport",
       "visible_version": "0.108.4",
-      "sha256": "sha256:a14762543b0df4a47a787ef89dd50bfe5008b3a7f7f4839c72771da2a39e32fd"
+      "sha256": "sha256:70044b6624bcd0d43be78c6397aa5600ea8bae899e75ee975382f26016c50bba"
     },
     {
       "presentation": "dark desktop 1512x811",

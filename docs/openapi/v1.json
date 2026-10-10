@@ -26017,7 +26017,7 @@
     },
     "/v1/cloud/{provider}/cis-benchmark": {
       "get": {
-        "description": "Run the CIS Foundations benchmark for a cloud provider over REST.\n\nCalls the same provider ``run_benchmark`` functions the CLI and MCP\n``cis_benchmark`` tool use and returns the report's canonical ``to_dict()``\nshape unchanged, so REST / CLI / MCP report the same checks and counts.",
+        "description": "Run provider posture checks; Databricks uses vendor guidance, not CIS.\n\nCalls the same provider ``run_benchmark`` functions the CLI and MCP\n``cis_benchmark`` tool use and returns the report's canonical ``to_dict()``\nshape unchanged, so REST / CLI / MCP report the same checks and counts.",
         "operationId": "cloud_cis_benchmark_v1_cloud__provider__cis_benchmark_get",
         "parameters": [
           {
@@ -26030,13 +26030,13 @@
             }
           },
           {
-            "description": "Optional comma-separated CIS check ids to scope the run.",
+            "description": "Optional comma-separated benchmark check ids to scope the run.",
             "in": "query",
             "name": "checks",
             "required": false,
             "schema": {
               "default": "",
-              "description": "Optional comma-separated CIS check ids to scope the run.",
+              "description": "Optional comma-separated benchmark check ids to scope the run.",
               "title": "Checks",
               "type": "string"
             }

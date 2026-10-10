@@ -118,7 +118,7 @@ _CIS_SECTIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
 )
 
 _INVENTORY_PROVIDERS = ("aws", "azure", "gcp", "snowflake")
-_CIS_PROVIDERS = ("aws", "azure", "gcp", "snowflake")
+_CIS_PROVIDERS = ("aws", "azure", "gcp", "snowflake", "databricks")
 _REGION_RE = re.compile(r"[a-z]{2}(-gov)?-[a-z]+-\d{1,2}")
 _PROFILE_RE = re.compile(r"[a-zA-Z0-9._-]{1,100}")
 # Audit-field allowlists. IAM action identifiers (AWS ``svc:Action``, GCP
@@ -459,14 +459,12 @@ def _run_cis_benchmark(
         elif requested == "snowflake":
             from agent_bom.cloud.snowflake_cis_benchmark import run_benchmark as run_snowflake_cis
 
-            # Snowflake has no region/profile/subscription/project scoping; its
-            # account/user/authenticator come from the standard read-only env
-            # credentials (SNOWFLAKE_ACCOUNT/USER + key-pair/SSO), mirroring how
-            # the CLI/MCP snowflake CIS path resolves them. When the connector or
-            # credentials are absent, run_benchmark raises CloudDiscoveryError and
-            # the handler below degrades to the same HTTP-200 "unavailable" shape
-            # as the other providers — never a 500.
+            # Snowflake uses the same account credentials as CLI/MCP.
             report = run_snowflake_cis(checks=check_list)
+        elif requested == "databricks":
+            from agent_bom.cloud.databricks_security import run_security_checks
+
+            report = run_security_checks(checks=check_list)
         else:  # gcp
             from agent_bom.cloud.gcp_cis_benchmark import run_benchmark as run_gcp_cis
 
@@ -486,6 +484,8 @@ def _run_cis_benchmark(
             provider_label = "gcp"
         elif requested == "snowflake":
             provider_label = "snowflake"
+        elif requested == "databricks":
+            provider_label = "databricks"
         else:
             provider_label = "unknown"
         _logger.warning("Cloud CIS benchmark unavailable for %s", provider_label)
@@ -505,7 +505,7 @@ def _run_cis_benchmark(
         "read_only": True,
         "writes_performed": False,
         "provider": requested,
-        "note": "CIS benchmark is read-only; checks evaluate posture without mutating any resource.",
+        "note": "Benchmark checks are read-only; evaluate provider posture without mutating resources.",
     }
     return result
 
@@ -514,14 +514,14 @@ def _run_cis_benchmark(
 async def cloud_cis_benchmark(
     request: Request,
     provider: str,
-    checks: str = Query("", description="Optional comma-separated CIS check ids to scope the run."),
+    checks: str = Query("", description="Optional comma-separated benchmark check ids to scope the run."),
     region: str = Query("", description="Optional AWS region (e.g. us-east-1)."),
     profile: str = Query("", description="Optional AWS profile name."),
     subscription_id: str = Query("", description="Optional Azure subscription id."),
     project_id: str = Query("", description="Optional GCP project id."),
     _role: Any = _CIS_DEP,
 ) -> dict[str, Any]:
-    """Run the CIS Foundations benchmark for a cloud provider over REST.
+    """Run provider posture checks; Databricks uses vendor guidance, not CIS.
 
     Calls the same provider ``run_benchmark`` functions the CLI and MCP
     ``cis_benchmark`` tool use and returns the report's canonical ``to_dict()``

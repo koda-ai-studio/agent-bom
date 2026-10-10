@@ -4457,7 +4457,7 @@ export interface NhiDiscoveryResponse {
 // write-only: it is accepted on create, encrypted at rest, and is NEVER returned
 // by the API. `has_external_id` is the only signal that a secret is configured.
 
-export type CloudConnectionProvider = "aws" | "azure" | "gcp" | "snowflake";
+export type CloudConnectionProvider = "aws" | "azure" | "gcp" | "snowflake" | "database" | "databricks";
 export type CloudConnectionStatus = "pending" | "active" | "error";
 
 /** Non-secret public shape of `CloudConnectionRecord.to_public_dict()`. */

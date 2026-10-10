@@ -81,7 +81,7 @@ from agent_bom.security import sanitize_error, sanitize_text
 logger = logging.getLogger(__name__)
 
 # Every supported provider is broker-enabled and therefore schedulable.
-_SCHEDULABLE_PROVIDERS: frozenset[str] = frozenset({"aws", "azure", "gcp", "snowflake"})
+_SCHEDULABLE_PROVIDERS: frozenset[str] = frozenset({"aws", "azure", "gcp", "snowflake", "databricks"})
 
 # How often an enabled-but-idle scheduler repeats its notice. The loop polls
 # every ``CONNECTIONS_SCHEDULER_POLL_SECONDS`` (60s by default), so a per-tick
