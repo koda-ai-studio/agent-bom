@@ -2488,7 +2488,18 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
       await document.fonts.ready;
       await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     });
-    const visibleText = await page.locator("body").innerText();
+    // innerText concatenates SVG tspan lines ("DeveloperCopilot"). Include
+    // the actual painted text lines, never hidden sequences or title tooltips.
+    const svgText = await page.locator("svg text").evaluateAll(elements => elements
+      .filter(element => {
+        const rect = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" && style.opacity !== "0";
+      })
+      .map(element => element.querySelector("tspan")
+        ? [...element.querySelectorAll("tspan")].map(span => span.textContent).join(" ")
+        : element.textContent).join("\n"));
+    const visibleText = `${await page.locator("body").innerText()}\n${svgText}`;
     const visibleErrorPatterns = [/500 Internal Server Error/i, /Application error/i, /Unhandled Runtime Error/i];
     const visibleError = visibleErrorPatterns.find((pattern) => pattern.test(visibleText));
     if (visibleError) throw new Error(`Visible error on ${urlPath}: ${visibleError}`);
