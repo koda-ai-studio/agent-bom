@@ -1864,7 +1864,7 @@ export interface paths {
         };
         /**
          * Cloud Cis Benchmark
-         * @description Run the CIS Foundations benchmark for a cloud provider over REST.
+         * @description Run provider posture checks; Databricks uses vendor guidance, not CIS.
          *
          *     Calls the same provider ``run_benchmark`` functions the CLI and MCP
          *     ``cis_benchmark`` tool use and returns the report's canonical ``to_dict()``
@@ -19605,7 +19605,7 @@ export interface operations {
     cloud_cis_benchmark_v1_cloud__provider__cis_benchmark_get: {
         parameters: {
             query?: {
-                /** @description Optional comma-separated CIS check ids to scope the run. */
+                /** @description Optional comma-separated benchmark check ids to scope the run. */
                 checks?: string;
                 /** @description Optional AWS region (e.g. us-east-1). */
                 region?: string;
