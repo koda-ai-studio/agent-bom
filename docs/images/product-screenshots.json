@@ -1,7 +1,7 @@
 {
   "release_version": "0.108.4",
-  "captured_at": "2026-10-10T22:07:42.048Z",
-  "source_commit": "5adaf1471431981c34611dd2a205f0b571bf3915",
+  "captured_at": "2026-10-10T22:12:18.466Z",
+  "source_commit": "bf17826fbc3fea1147360a07ddc508c9cf1f789b",
   "source_tree": "clean",
   "capture_inputs_sha256": "sha256:cfc92c536fe234f59eea3075e1c96c6704c1965407cf0eab9edda48437039e23",
   "capture_note": "Deterministically captured from real Next.js dashboard routes in capture mode. The correlation hero views consume the committed, hash-pinned Reference evidence lab — modeled local infrastructure artifact with CVE-2023-4863 and exact canonical joins. Remaining gallery fixtures are explicitly synthetic UI states. No external, customer, or private infrastructure data is used.",
@@ -172,7 +172,7 @@
       "page": "/graph?lens=mesh&scan=scan-proof-ai-platform&agent=agent%3Adeveloper-copilot&capture=1",
       "scope": "Persisted agent neighborhood with recorded shared filesystem connections and both IDE + SRE agents in scope",
       "visible_version": "0.108.4",
-      "sha256": "sha256:e95e835b2989159b3104fcdbf3036aecbe4c096f7dc3270c21ef1d6a71839672"
+      "sha256": "sha256:eaa4a4193217b73bc3f4a97612ec6798dc9f8cc3eb5401266a242cc3a0b32053"
     },
     {
       "presentation": "dark desktop",
@@ -199,7 +199,7 @@
       "evidence_sha256": "sha256:f4f8901f412997be7690b50ce8e7468ba8f781dc22b85e7b5f44408e28fe2c5f",
       "correlation_manifest_sha256": "sha256:fe781c82f958c2f9aa4cadfa2289aa767629dc7d6716e11add790e8f3336fc3a",
       "visible_version": "0.108.4",
-      "sha256": "sha256:0542863f849b477e4a9e7717185a4219509ebfc34d6ed3d313c7fc7a069273f0"
+      "sha256": "sha256:6cee5c99ff63b33d2ac9b6c4a6dae1de842cea036cd926cc206be34676907314"
     },
     {
       "presentation": "dark desktop",
@@ -265,7 +265,7 @@
       "evidence_sha256": "sha256:f4f8901f412997be7690b50ce8e7468ba8f781dc22b85e7b5f44408e28fe2c5f",
       "correlation_manifest_sha256": "sha256:fe781c82f958c2f9aa4cadfa2289aa767629dc7d6716e11add790e8f3336fc3a",
       "visible_version": "0.108.4",
-      "sha256": "sha256:c4ce7512cd33b2af67b61889130dd5f7bfe9624054ecd8342329d2af6499adf9"
+      "sha256": "sha256:6a73eaeff0537e398b44bc2449e427009d234a885e63dd9652ac41133c9e5d3b"
     },
     {
       "presentation": "light desktop",
