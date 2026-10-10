@@ -606,10 +606,14 @@ test("Attack Paths keeps scenario state observed-only", async ({ page }) => {
 });
 
 async function openPathQueue(page: Page) {
-  const mobile = page.getByRole("button", { name: /^Paths & filters/ });
-  if (await mobile.isVisible()) await mobile.click();
+  await expect(page.getByRole("region", { name: "Investigation workspace" })).toBeVisible();
   const queue = page.locator("#investigation-queue");
-  if (await queue.getAttribute("open") === null) await queue.locator(":scope > summary").click();
+  if ((page.viewportSize()?.width ?? 1440) < 1024) {
+    await page.getByRole("button", { name: /^Paths & filters/ }).click();
+  } else if (await queue.getAttribute("open") === null) {
+    await queue.locator(":scope > summary").click();
+  }
+  await expect(queue).toHaveAttribute("open");
 }
 
 async function expectCockpitVisible(page: Page) {
