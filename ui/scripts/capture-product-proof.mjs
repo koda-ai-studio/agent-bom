@@ -2499,7 +2499,8 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
       throw new Error(`Network errors on ${urlPath}: ${networkErrors.join(" | ")}`);
     }
     for (const expected of options.expectedText ?? []) {
-      const matched = expected instanceof RegExp ? expected.test(visibleText) : visibleText.includes(expected);
+      // A fitted SVG can wrap a visible label across lines without changing its words.
+      const matched = expected instanceof RegExp ? expected.test(visibleText) : visibleText.replace(/\s+/g, " ").includes(expected.replace(/\s+/g, " "));
       if (!matched) {
         const pathSequence = await page
           .locator('[data-testid="exposure-path-sequence"]')

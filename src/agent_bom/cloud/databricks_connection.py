@@ -30,10 +30,13 @@ def workspace_host(value: str) -> str:
 def workspace_client(host: str, token: str) -> Any:
     """Never fall back to the control-plane host's ambient SDK credentials."""
     from databricks.sdk import WorkspaceClient
+    from databricks.sdk.core import Config
 
     if not token.strip():
         raise CloudDiscoveryError("A stored Databricks workspace token is required.")
-    return WorkspaceClient(host=workspace_host(host), token=token, auth_type="pat", http_timeout_seconds=10)
+    return WorkspaceClient(
+        config=Config(host=workspace_host(host), token=token, auth_type="pat", http_timeout_seconds=10, retry_timeout_seconds=10)
+    )
 
 
 def validate_scan_options(host: str, inventory_scope: str | None, scan_mode: str, regions: list[str]) -> str:

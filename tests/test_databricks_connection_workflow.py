@@ -14,14 +14,18 @@ def test_broker_uses_explicit_host_and_encrypted_token(monkeypatch):
 
     sdk = ModuleType("databricks.sdk")
     sdk.WorkspaceClient = Mock(return_value=object())
+    core = ModuleType("databricks.sdk.core")
+    core.Config = Mock(return_value=object())
+    monkeypatch.setitem(sys.modules, "databricks.sdk.core", core)
     monkeypatch.setitem(sys.modules, "databricks.sdk", sdk)
     with ephemeral_connection_record(
         provider="databricks", display_name="workspace", role_ref="https://demo.cloud.databricks.com", external_id="private-token"
     ) as record:
         result = broker_session(record)
     assert result is sdk.WorkspaceClient.return_value
-    sdk.WorkspaceClient.assert_called_once_with(
-        host="https://demo.cloud.databricks.com", token="private-token", auth_type="pat", http_timeout_seconds=10
+    sdk.WorkspaceClient.assert_called_once_with(config=core.Config.return_value)
+    core.Config.assert_called_once_with(
+        host="https://demo.cloud.databricks.com", token="private-token", auth_type="pat", http_timeout_seconds=10, retry_timeout_seconds=10
     )
 
 
@@ -164,3 +168,27 @@ def test_cli_workspace_command_reaches_bounded_local_verification(monkeypatch, t
     assert verify.call_args.kwargs["external_id"] == "private-token"
     assert verify.call_args.kwargs["role_ref"] == "https://demo.cloud.databricks.com"
     assert "private-token" not in result.output
+
+
+def test_installed_sdk_constructs_scoped_client_with_mocked_transport(monkeypatch):
+    pytest.importorskip("databricks.sdk")
+    from agent_bom.cloud.databricks_connection import workspace_client
+
+    monkeypatch.setenv("DATABRICKS_HOST", "https://ambient.cloud.databricks.com")
+    monkeypatch.setenv("DATABRICKS_TOKEN", "ambient-token")
+    import requests
+
+    response = requests.Response()
+    response.status_code = 200
+    response._content = b"{}"
+    request = Mock(return_value=response)
+    monkeypatch.setattr("requests.sessions.Session.request", request)
+    client = workspace_client("https://scoped.cloud.databricks.com", "scoped-token")
+    assert client.config.host == "https://scoped.cloud.databricks.com"
+    assert client.config.auth_type == "pat"
+    assert client.config.http_timeout_seconds == 10
+    assert client.config.authenticate()["Authorization"] == "Bearer scoped-token"
+    assert client.config.retry_timeout_seconds == 10
+    request.assert_called_once()
+    assert request.call_args.args[:2] == ("GET", "https://scoped.cloud.databricks.com/.well-known/databricks-config")
+    assert request.call_args.kwargs["auth"] is None
