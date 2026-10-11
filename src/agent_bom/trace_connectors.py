@@ -23,6 +23,7 @@ Design:
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timedelta, timezone
 from typing import Any, Protocol, cast
 
 logger = logging.getLogger(__name__)
@@ -37,6 +38,12 @@ _HTTP_TIMEOUT = 20.0
 
 class TraceConnectorError(RuntimeError):
     """Raised when a trace connector cannot authenticate or reach its API."""
+
+
+class _TraceConnectorHTTPError(TraceConnectorError):
+    def __init__(self, status: int) -> None:
+        self.status = status
+        super().__init__(f"trace connector returned HTTP {status}")
 
 
 class TraceConnectorValidationError(TraceConnectorError):
@@ -117,7 +124,7 @@ def _call_json(client: _HttpClient, method: str, url: str, **kwargs: Any) -> Any
         raise TraceConnectorError(f"trace connector request failed: {type(exc).__name__}") from exc
     status = getattr(resp, "status_code", 0)
     if not 200 <= status < 300:
-        raise TraceConnectorError(f"trace connector returned HTTP {status}")
+        raise _TraceConnectorHTTPError(status)
     try:
         return resp.json()
     except (ValueError, TypeError) as exc:
@@ -188,16 +195,32 @@ def fetch_langfuse_traces(
         raise TraceConnectorError("langfuse connector requires host, public_key and secret_key")
     base = host.rstrip("/")
     _validate_pull_url(base)
-    url = f"{base}/api/public/observations"
+    url = f"{base}/api/public/v2/observations"
+    end = datetime.now(timezone.utc)
+    window = {"fromStartTime": (end - timedelta(days=1)).isoformat(), "toStartTime": end.isoformat()}
+    params = {
+        "limit": _bounded_limit(limit),
+        **window,
+        "type": "TOOL",
+        "fields": "core,basic,metadata" + (",io" if include_content else ""),
+        "expandMetadata": "server,mcp_server,package,dependency",
+    }
     resolved, owns = _client_or_default(client)
     try:
-        payload = _call_json(
-            resolved,
-            "GET",
-            url,
-            params={"limit": _bounded_limit(limit)},
-            auth=(public_key, secret_key),
-        )
+        try:
+            payload = _call_json(resolved, "GET", url, params=params, auth=(public_key, secret_key))
+        except _TraceConnectorHTTPError as exc:
+            # v3 self-hosted instances have no v2 route. Never downgrade on
+            # authorization, rate-limit, retired-route or upstream failures.
+            if exc.status != 404:
+                raise
+            payload = _call_json(
+                resolved,
+                "GET",
+                f"{base}/api/public/observations",
+                params={"limit": _bounded_limit(limit), **window},
+                auth=(public_key, secret_key),
+            )
     finally:
         if owns:
             getattr(resolved, "close", lambda: None)()

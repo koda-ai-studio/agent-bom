@@ -249,3 +249,40 @@ def test_invalid_json_is_a_safe_connector_error():
         fetch_langsmith_traces(api_key="key", client=InvalidJsonClient())
     assert "invalid JSON" in str(caught.value)
     assert "private-upstream-response" not in str(caught.value)
+
+
+@pytest.mark.parametrize("include_content", [False, True])
+def test_langfuse_v2_requests_bounded_tool_metadata_without_unconsented_io(include_content):
+    from datetime import datetime, timedelta
+
+    client = _FakeClient({"data": []})
+    fetch_langfuse_traces(host="https://cloud.example", public_key="pk", secret_key="sk", include_content=include_content, client=client)
+    call = client.calls[0]
+    assert call["url"].endswith("/api/public/v2/observations")
+    params = call["params"]
+    assert params["type"] == "TOOL"
+    assert set(params["fields"].split(",")) == {"core", "basic", "metadata"} | ({"io"} if include_content else set())
+    assert datetime.fromisoformat(params["toStartTime"]) - datetime.fromisoformat(params["fromStartTime"]) == timedelta(days=1)
+
+
+def test_langfuse_v3_fallback_only_when_v2_route_is_missing():
+    class LegacyClient(_FakeClient):
+        def request(self, method, url, **kwargs):
+            super().request(method, url, **kwargs)
+            if "/v2/" in url:
+                return _FakeResponse({}, 404)
+            return _FakeResponse({"data": [{"id": "legacy", "name": "read_file"}]})
+
+    client = LegacyClient({})
+    result = fetch_langfuse_traces(host="https://cloud.example", public_key="pk", secret_key="sk", client=client)
+    assert len(result["spans"]) == 1
+    assert len(client.calls) == 2
+    assert client.calls[1]["url"].endswith("/api/public/observations")
+
+
+@pytest.mark.parametrize("status", [401, 403, 410, 429, 500])
+def test_langfuse_v2_errors_do_not_downgrade_or_retry(status):
+    client = _FakeClient({}, status_code=status)
+    with pytest.raises(TraceConnectorError, match=f"HTTP {status}"):
+        fetch_langfuse_traces(host="https://cloud.example", public_key="pk", secret_key="sk", client=client)
+    assert len(client.calls) == 1

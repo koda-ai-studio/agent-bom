@@ -79,3 +79,15 @@ Pull results are transient and do not populate the trace explorer. See the
 Contract tests: [broker boundaries](../tests/test_trace_connection_broker.py),
 [content consent](../tests/test_trace_pull_screen_content.py), and
 [browser workflow](../ui/e2e/trace-platform-connectors.spec.ts).
+
+## Langfuse API compatibility
+
+Langfuse pulls request a bounded sample of tool observations from the last 24
+hours through Observations API v2. Metadata is requested explicitly; input/output
+fields are requested only with content screening enabled. This is a sample, not
+a complete or incremental export. Only a missing v2 route (HTTP 404) falls back
+to the v1 endpoint for older self-hosted instances. Authorization errors, rate
+limits, HTTP 410, and server failures remain visible errors. The legacy API can
+return content even when the adapter excludes it from evidence.
+
+See the [Langfuse public API contract](https://langfuse.com/docs/api-and-data-platform/features/public-api).
