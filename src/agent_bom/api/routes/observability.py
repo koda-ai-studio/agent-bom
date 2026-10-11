@@ -42,6 +42,7 @@ from agent_bom.api.models import JobStatus, PushPayload, ScanJob, ScanRequest
 from agent_bom.api.pipeline import _persist_graph_snapshot
 from agent_bom.api.push_evidence import audit_push_admission
 from agent_bom.api.push_evidence import normalize_pushed_report as _normalize_pushed_report
+from agent_bom.api.read_models import documented, observability
 from agent_bom.api.runtime_event_store import (
     RuntimeObservationRecord,
     get_runtime_event_store,
@@ -60,15 +61,14 @@ from agent_bom.canonical_ids import canonical_id
 from agent_bom.config import API_MAX_OCSF_INGEST_EVENTS
 from agent_bom.core.severity import ocsf_to_severity
 from agent_bom.rbac import require_authenticated_permission
-from agent_bom.security import (
-    sanitize_error,
-    sanitize_sensitive_payload,
-    sanitize_text,
-)
+from agent_bom.security import sanitize_error, sanitize_sensitive_payload, sanitize_text
 
 router = APIRouter(dependencies=[Depends(demo_daily_evidence_dependency)])
 infra_router = APIRouter()
 _logger = logging.getLogger(__name__)
+_RUNTIME_READ: dict[str, Any] = {"tags": ["runtime", "observability"], "dependencies": [require_authenticated_permission("read")]}
+_FINOPS_READ: dict[str, Any] = {"tags": ["observability", "finops"], "dependencies": [require_authenticated_permission("read")]}
+_CONNECTOR_READ: dict[str, Any] = {"tags": ["observability", "connectors"], "dependencies": [require_authenticated_permission("read")]}
 
 
 def _dep(permission: str) -> Any:
@@ -732,7 +732,7 @@ def correlate_trace_attack_paths(request: Request, body: dict, span_id: str | No
     }
 
 
-@router.get("/traces/connectors", tags=["observability", "connectors"], dependencies=[_dep("read")])
+@router.get("/traces/connectors", **documented(observability.TraceConnectorsResponse), **_CONNECTOR_READ)
 def list_trace_connectors_route() -> dict[str, object]:
     """List native trace-pull connectors (Langfuse, LangSmith)."""
     from agent_bom.trace_connectors import list_trace_connectors
@@ -1439,7 +1439,7 @@ def ingest_runtime_events(request: Request, body: dict | list[dict]) -> dict[str
     }
 
 
-@router.get("/runtime/sessions", tags=["runtime", "observability"], dependencies=[_dep("read")])
+@router.get("/runtime/sessions", **documented(observability.RuntimeSessionsResponse), **_RUNTIME_READ)
 def list_runtime_sessions(
     request: Request,
     limit: Annotated[int, Query(ge=1, le=500)] = 100,
@@ -1460,7 +1460,7 @@ def list_runtime_sessions(
     }
 
 
-@router.get("/runtime/observations", tags=["runtime", "observability"], dependencies=[_dep("read")])
+@router.get("/runtime/observations", **documented(observability.RuntimeObservationsResponse), **_RUNTIME_READ)
 def list_runtime_observations(
     request: Request,
     session_id: str | None = None,
@@ -1487,7 +1487,7 @@ def list_runtime_observations(
     }
 
 
-@router.get("/runtime/trace-explorer", tags=["runtime", "observability"], dependencies=[_dep("read")])
+@router.get("/runtime/trace-explorer", **documented(observability.RuntimeTraceExplorerResponse), **_RUNTIME_READ)
 async def trace_explorer(
     request: Request,
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
@@ -1554,7 +1554,7 @@ async def _trace_explorer_payload_for_tenant(tenant_id: str, *, limit: int = 100
     return await asyncio.to_thread(_build_trace_explorer_payload_sync, tenant_id, limit=bounded_limit)
 
 
-@router.get("/runtime/approval-queue", tags=["runtime", "observability"], dependencies=[_dep("read")])
+@router.get("/runtime/approval-queue", **documented(observability.RuntimeApprovalQueueResponse), **_RUNTIME_READ)
 async def runtime_approval_queue(
     request: Request,
     status: str | None = None,
@@ -1648,7 +1648,7 @@ async def runtime_approval_decision(request: Request, item_id: str, body: _HitlD
     }
 
 
-@router.get("/runtime/sessions/{session_id}/observations", tags=["runtime", "observability"], dependencies=[_dep("read")])
+@router.get("/runtime/sessions/{session_id}/observations", **documented(observability.RuntimeSessionObservationsResponse), **_RUNTIME_READ)
 def list_runtime_session_observations(
     request: Request,
     session_id: str,
@@ -1752,7 +1752,7 @@ async def prometheus_metrics(request: Request) -> Response:
     return await _render_prometheus_metrics(request)
 
 
-@router.get("/observability/costs", tags=["observability", "finops"], dependencies=[_dep("read")])
+@router.get("/observability/costs", **documented(observability.ObservabilityCostsResponse), **_FINOPS_READ)
 async def get_llm_costs(
     request: Request,
     agent: str | None = None,
@@ -1836,7 +1836,7 @@ def _build_llm_costs_report_sync(
     return report
 
 
-@router.get("/observability/costs/budget", tags=["observability", "finops"], dependencies=[_dep("read")])
+@router.get("/observability/costs/budget", **documented(observability.ObservabilityCostBudgetResponse), **_FINOPS_READ)
 def get_llm_cost_budget(request: Request, agent: str = "", cost_center: str = "", owner: str = "", workflow: str = "") -> dict[str, object]:
     """Return the configured spend budget and current utilization.
 
@@ -1929,7 +1929,7 @@ def set_llm_cost_budget(request: Request, body: dict) -> dict[str, object]:
     }
 
 
-@router.get("/observability/costs/forecast", tags=["observability", "finops"], dependencies=[_dep("read")])
+@router.get("/observability/costs/forecast", **documented(observability.ObservabilityCostForecastResponse), **_FINOPS_READ)
 async def get_llm_cost_forecast(
     request: Request, agent: str | None = None, limit: Annotated[int, Query(ge=1, le=10000)] = 10000
 ) -> dict[str, object]:
@@ -1948,7 +1948,7 @@ async def get_llm_cost_forecast(
     return await asyncio.to_thread(forecast_for_tenant, _tenant_id(request), agent=scoped_agent, limit=bounded_limit)
 
 
-@router.get("/observability/anomalies", tags=["observability", "finops"], dependencies=[_dep("read")])
+@router.get("/observability/anomalies", **documented(observability.ObservabilityAnomaliesResponse), **_FINOPS_READ)
 def get_anomalies(request: Request, z_threshold: float = 3.0) -> dict[str, object]:
     """Detect cost and behavior anomalies (per-agent spend + per-session call-rate
     z-scores) for the active tenant. Proactive surfacing of runaway agents."""
