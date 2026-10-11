@@ -51,7 +51,7 @@ def _run(coro):
 
 def _call_tool(server, name, args=None):
     """Call a tool and extract the text result."""
-    from mcp.types import CallToolResult
+    from mcp_types import CallToolResult
 
     result = _run(server.call_tool(name, args or {}))
     content_blocks = result.content if isinstance(result, CallToolResult) else result[0]
@@ -65,7 +65,7 @@ def _call_tool(server, name, args=None):
 
 def test_check_mcp_sdk_missing():
     """Should raise ImportError if mcp is not installed."""
-    with patch.dict(sys.modules, {"mcp": None, "mcp.server": None, "mcp.server.fastmcp": None}):
+    with patch.dict(sys.modules, {"mcp": None, "mcp.server": None, "mcp.server.mcpserver": None}):
         from agent_bom.mcp_server import _check_mcp_sdk
 
         with pytest.raises(ImportError, match="mcp SDK is required"):
@@ -88,7 +88,7 @@ def test_create_mcp_server_returns_object():
 
 def test_create_mcp_server_rebuilds_sdk_settings_before_initialization(monkeypatch) -> None:
     """Avoid pydantic-settings incomplete-forward-reference warnings at startup."""
-    from mcp.server.fastmcp.server import Settings
+    from mcp.server.mcpserver.server import Settings
 
     from agent_bom.mcp_server import create_mcp_server
 
@@ -830,7 +830,7 @@ def test_ingest_external_scan_parse_only_allowed_without_scope(mock_detect):
 
 
 def test_ingest_external_scan_annotation_is_write():
-    """The tool must advertise a mutating annotation, not readOnlyHint=true."""
+    """The tool must advertise a mutating annotation, not read_only_hint=true."""
     from agent_bom.mcp_server import create_mcp_server
 
     server = create_mcp_server(profile="full")
@@ -838,8 +838,8 @@ def test_ingest_external_scan_annotation_is_write():
     tool = tools["ingest_external_scan"]
     ann = tool.annotations
     assert ann is not None
-    assert ann.readOnlyHint is False, ann
-    assert ann.destructiveHint is True, ann
+    assert ann.read_only_hint is False, ann
+    assert ann.destructive_hint is True, ann
 
 
 # ---------------------------------------------------------------------------
@@ -1212,7 +1212,7 @@ def test_tool_parameters_have_descriptions():
     tools = _run(server.list_tools())
 
     for tool in tools:
-        schema = tool.inputSchema
+        schema = tool.input_schema
         props = schema.get("properties", {})
         for param_name, param_schema in props.items():
             assert "description" in param_schema, f"Tool '{tool.name}' param '{param_name}' is missing a description"
@@ -1650,7 +1650,7 @@ def test_graph_export_mermaid_limit_zero_renders_full_graph(mock_pipeline):
 
     with patch("agent_bom.output.graph_export.to_mermaid", return_value="graph LR") as mermaid_mock:
         server = create_mcp_server(profile="full")
-        content_blocks, _meta = _run(server.call_tool("graph_export", {"format": "mermaid", "mermaid_limit": 0}))
+        content_blocks = _run(server.call_tool("graph_export", {"format": "mermaid", "mermaid_limit": 0})).content
 
     assert content_blocks[0].text == "graph LR"
     mermaid_mock.assert_called_once()
@@ -1681,8 +1681,8 @@ def test_registry_cache_returns_same_instance():
 
 
 def test_scan_with_invalid_severity_gate():
-    """Invalid fail_severity should raise ToolError (isError=True in MCP protocol)."""
-    from mcp.server.fastmcp.exceptions import ToolError
+    """Invalid fail_severity should raise ToolError (is_error=True in MCP protocol)."""
+    from mcp.server.mcpserver.exceptions import ToolError
 
     from agent_bom.mcp_server import create_mcp_server
     from agent_bom.models import Agent, AgentType, MCPServer, TransportType
@@ -1872,10 +1872,8 @@ def test_safe_path_traversal():
 def test_sdk_check_names_an_incompatible_major_distinctly():
     """An installed-but-incompatible SDK must not read as "not installed".
 
-    ``check_mcp_sdk`` only did ``import mcp``, which succeeds on mcp 2.x — the
-    major that removed ``mcp.server.fastmcp``. Users got "install
-    agent-bom[mcp-server]", the exact command they had just run, for a problem
-    that installing more could never fix.
+    An SDK lacking the server entry point receives the supported version range
+    rather than a generic missing-package diagnosis.
     """
     import builtins
 
@@ -1884,8 +1882,8 @@ def test_sdk_check_names_an_incompatible_major_distinctly():
     real_import = builtins.__import__
 
     def _fastmcp_missing(name, *args, **kwargs):
-        if name == "mcp.server.fastmcp" or name.startswith("mcp.server.fastmcp."):
-            raise ModuleNotFoundError("No module named 'mcp.server.fastmcp'")
+        if name == "mcp.server.mcpserver" or name.startswith("mcp.server.mcpserver."):
+            raise ModuleNotFoundError("No module named 'mcp.server.mcpserver'")
         return real_import(name, *args, **kwargs)
 
     with patch.object(builtins, "__import__", _fastmcp_missing):
@@ -1894,7 +1892,7 @@ def test_sdk_check_names_an_incompatible_major_distinctly():
 
     message = str(excinfo.value)
     assert "incompatible" in message.lower(), message
-    assert "<2" in message or "2.x" in message, message
+    assert "mcp>=2.3,<3" in message, message
 
 
 def test_sdk_check_still_reports_a_genuinely_missing_sdk():

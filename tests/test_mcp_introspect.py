@@ -535,7 +535,7 @@ async def test_introspect_streamable_http_uses_streamable_client_and_queries_cap
     transport_context.__aenter__ = AsyncMock(return_value=("read", "write", lambda: "session-id"))
     transport_context.__aexit__ = AsyncMock(return_value=None)
     session = MagicMock()
-    session.initialize = AsyncMock(return_value=SimpleNamespace(protocolVersion="2025-06-18"))
+    session.protocol_version = "2026-07-28"
     session_context = MagicMock()
     session_context.__aenter__ = AsyncMock(return_value=session)
     session_context.__aexit__ = AsyncMock(return_value=None)
@@ -545,7 +545,7 @@ async def test_introspect_streamable_http_uses_streamable_client_and_queries_cap
             "mcp.client.streamable_http.streamable_http_client",
             return_value=transport_context,
         ) as streamable_http_client,
-        patch("mcp.ClientSession", return_value=session_context) as client_session,
+        patch("mcp.Client", return_value=session_context) as client_session,
         patch(
             "agent_bom.mcp_introspect._query_capabilities",
             new=AsyncMock(return_value=completed),
@@ -554,9 +554,10 @@ async def test_introspect_streamable_http_uses_streamable_client_and_queries_cap
         actual = await _introspect_streamable_http(server, result, timeout=1.0)
 
     assert actual is completed
-    assert result.protocol_version == "2025-06-18"
-    streamable_http_client.assert_called_once_with(server.url)
-    client_session.assert_called_once_with("read", "write")
+    assert result.protocol_version == "2026-07-28"
+    assert streamable_http_client.call_args.args == (server.url,)
+    assert "http_client" in streamable_http_client.call_args.kwargs
+    client_session.assert_called_once_with(transport_context, mode="auto")
     query_capabilities.assert_awaited_once_with(session, server, result)
 
 

@@ -2,17 +2,16 @@
 
 agent-bom starts with 8 focused MCP tools. Select a task profile for graph, cloud, runtime or audit work;
 `--profile full` explicitly exposes the complete compatibility catalog of 89 MCP tools. Clients that negotiate the
-locked MCP SDK's session-era `2025-11-25` handshake can connect over stdio or
-Streamable HTTP and use vulnerability scanning, blast radius analysis,
-compliance checks, runtime posture, and supply-chain verification. SSE remains
-available as a deprecated transport, but it has not been wire-verified by the
-compatibility contract.
+MCP SDK's legacy `2025-11-25` handshake can connect over stdio or
+Streamable HTTP. The `2026-07-28` protocol also supports stateless requests,
+`server/discover`, per-request capabilities, required HTTP headers, and private
+cache hints. SDK 2 retains legacy negotiation; legacy HTTP+SSE remains deprecated.
 
-The current official MCP revision is `2026-07-28`; agent-bom does not claim
-compatibility with it. Clients must retain a `2025-11-25` fallback until the
-2026 protocol lane, including stateless requests, `server/discover`, required
-headers, extensions, and updated authorization rules, has executable evidence.
-See `src/agent_bom/data/mcp_protocol_compatibility.json` for the bounded matrix.
+Executable wire tests cover modern discovery/inventory, legacy handshakes,
+header mismatch rejection, and authenticated remote introspection. This is not
+an official conformance certification. Optional tasks and DPoP are not advertised.
+See [MCP scanning and gateway compatibility](MCP_COMPATIBILITY.md) for configuration,
+limits, and the machine-readable evidence matrix.
 
 See also:
 

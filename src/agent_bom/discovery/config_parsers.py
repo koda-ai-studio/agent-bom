@@ -19,6 +19,7 @@ import yaml  # type: ignore[import-untyped]
 from rich.console import Console
 from rich.markup import escape
 
+from agent_bom.discovery.mcp_metadata import connection_metadata
 from agent_bom.models import CredentialIdentityBinding, MCPServer, MCPTool, TransportType
 from agent_bom.security import (
     SecurityError,
@@ -58,9 +59,8 @@ def _auto_approved_tool_names(value: object) -> list[str]:
 def _explicit_identity_bindings(value: object, *, credential_refs: set[str]) -> list[CredentialIdentityBinding]:
     """Parse bounded, explicit credential-to-identity evidence.
 
-    The credential slot must exist in the same server definition.  Provider and
-    identity are declarative non-secret metadata; provenance is derived from the
-    parser contract rather than trusting an arbitrary caller label.
+    Credential slots must exist in this definition; identity declarations are
+    non-secret metadata, with parser-derived provenance.
     """
     if not isinstance(value, list):
         return []
@@ -141,7 +141,6 @@ def parse_mcp_config(config_data: dict, config_path: str) -> list[MCPServer]:
         if not isinstance(server_def, dict):
             continue
 
-        # ✅ Security: Validate MCP server configuration
         try:
             validate_mcp_server_config(server_def)
         except SecurityError as e:
@@ -181,8 +180,7 @@ def parse_mcp_config(config_data: dict, config_path: str) -> list[MCPServer]:
         args = _args_field(server_def.get("args", []))
         raw_env = server_def.get("env", {})
 
-        # ✅ Security: redact credential values before storing in MCPServer
-        # Only env var NAMES appear in reports — values are replaced with ***REDACTED***
+        # Retain environment names while redacting credential values.
         env = sanitize_env_vars(raw_env) if isinstance(raw_env, dict) else {}
         identity_bindings = _explicit_identity_bindings(
             server_def.get("identityBindings", server_def.get("identity_bindings")),
@@ -219,6 +217,7 @@ def parse_mcp_config(config_data: dict, config_path: str) -> list[MCPServer]:
             config_path=config_path,
             security_warnings=security_warnings,
             identity_bindings=identity_bindings,
+            connection_metadata=connection_metadata(server_def, config_data),
         )
 
         # Detect privilege indicators from command/args
@@ -316,6 +315,7 @@ def parse_codex_config(config_path: str) -> list[MCPServer]:
             transport=transport,
             url=url,
             config_path=config_path,
+            connection_metadata=connection_metadata(server_def, data),
         )
         servers.append(server)
 

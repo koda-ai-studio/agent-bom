@@ -185,10 +185,10 @@ def test_live_graph_correlation_tool_annotations_are_truthful() -> None:
 
     create = tools["graph_correlate"]
     status = tools["graph_correlation_status"]
-    assert create.annotations.readOnlyHint is False
-    assert create.annotations.destructiveHint is False
-    assert create.annotations.idempotentHint is True
-    assert "reason" in create.inputSchema["required"]
-    assert status.annotations.readOnlyHint is True
-    assert create.inputSchema["additionalProperties"] is False
-    assert status.inputSchema["additionalProperties"] is False
+    assert create.annotations.read_only_hint is False
+    assert create.annotations.destructive_hint is False
+    assert create.annotations.idempotent_hint is True
+    assert "reason" in create.input_schema["required"]
+    assert status.annotations.read_only_hint is True
+    assert create.input_schema["additionalProperties"] is False
+    assert status.input_schema["additionalProperties"] is False

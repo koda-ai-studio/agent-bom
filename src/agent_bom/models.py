@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
@@ -22,6 +21,7 @@ from agent_bom.canonical_ids import (
     canonical_mcp_tool_id,
     canonical_package_id,
     legacy_agent_id_v1,
+    mcp_server_fingerprint,
 )
 from agent_bom.core.exploitability import parse_cvss_vector_signals
 from agent_bom.core.package_artifacts import normalize_artifact_version, package_lookup_names
@@ -474,7 +474,10 @@ class MCPTool:
     description: str
     discovery_source: Optional[str] = None
     discovery_confidence: Optional[str] = None
-    input_schema: Optional[dict[str, Any]] = None
+    input_schema: dict[str, Any] | bool | None = None
+    output_schema: dict[str, Any] | bool | None = None
+    annotations: dict[str, Any] = field(default_factory=dict)
+    ui_metadata: dict[str, Any] = field(default_factory=dict)
     declared_capabilities: list[str] = field(default_factory=list)
     schema_findings: list[str] = field(default_factory=list)
     schema_rule_findings: list[dict[str, Any]] = field(default_factory=list)
@@ -664,6 +667,7 @@ class MCPServer:
     prompts: list[MCPPrompt] = field(default_factory=list)
     packages: list[Package] = field(default_factory=list)
     config_path: Optional[str] = None  # Where this server was discovered
+    connection_metadata: dict[str, Any] = field(default_factory=dict)
     working_dir: Optional[str] = None  # Server's working directory
     mcp_version: Optional[str] = None  # MCP protocol version (e.g. "2024-11-05")
     registry_verified: bool = False  # True if found in agent-bom MCP registry
@@ -728,6 +732,8 @@ class MCPServer:
     @property
     def auth_mode(self) -> str:
         """Best-effort auth posture classification for the server."""
+        if self.connection_metadata.get("header_names") or self.connection_metadata.get("oauth_configured"):
+            return "configured-http-auth"
         credential_names = self.credential_names
         if credential_names:
             return "env-credentials"
@@ -740,31 +746,7 @@ class MCPServer:
     @property
     def fingerprint(self) -> str:
         """Deterministic runtime/config fingerprint for the server."""
-        import uuid as _uuid
-
-        _ns = _uuid.UUID("7f3e4b2a-9c1d-5f8e-a0b4-12c3d4e5f6a7")
-        tool_ids = sorted(t.stable_id for t in self.tools)
-        resource_ids = sorted(r.stable_id for r in self.resources)
-        prompt_ids = sorted(p.stable_id for p in self.prompts)
-        env_keys = sorted(self.credential_names)
-        raw = json.dumps(
-            {
-                "registry_id": self.registry_id,
-                "name": self.name,
-                "command": self.command,
-                "args": self.args,
-                "url": self.url,
-                "transport": self.transport.value,
-                "auth_mode": self.auth_mode,
-                "credential_refs": env_keys,
-                "tool_ids": tool_ids,
-                "resource_ids": resource_ids,
-                "prompt_ids": prompt_ids,
-            },
-            sort_keys=True,
-            separators=(",", ":"),
-        )
-        return str(_uuid.uuid5(_ns, f"mcp_server_fingerprint:{raw}"))
+        return mcp_server_fingerprint(self)
 
     @property
     def vulnerable_packages(self) -> list[Package]:

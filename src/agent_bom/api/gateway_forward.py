@@ -412,6 +412,17 @@ async def forward_authorized_request(context: GatewayForwardContext) -> JSONResp
     if isinstance(response, JSONResponse):
         return response
     upstream_response = response
+    result = upstream_response.get("result")
+    if isinstance(result, dict) and result.get("resultType") == "input_required":
+        await audit.emit(
+            {
+                "action": "gateway.input_required",
+                "upstream": context.upstream.name,
+                "tenant_id": context.tenant_id,
+                "tool": extract_tool_name(context.message),
+                "execution_status": "awaiting_input",
+            }
+        )
     if context.audit_sink is not None and not is_tools_call(context.message):
         forward_audit_event: dict[str, Any] = {
             "action": "gateway.message",
@@ -428,4 +439,5 @@ async def forward_authorized_request(context: GatewayForwardContext) -> JSONResp
     if context.trace_meta["baggage"]:
         response_headers["baggage"] = str(context.trace_meta["baggage"])
     audit.headers(response_headers)
-    return JSONResponse(upstream_response, headers=response_headers or None)
+    response_headers["Cache-Control"] = "no-store"
+    return JSONResponse(upstream_response, status_code=200 if "id" in context.message else 202, headers=response_headers or None)

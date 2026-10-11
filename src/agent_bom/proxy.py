@@ -86,8 +86,7 @@ _safe_regex_search = _proxy_policy._safe_regex_search
 check_policy = _proxy_policy.check_policy
 resolve_rate_limit_threshold = _proxy_policy.resolve_rate_limit_threshold
 
-# Maximum JSON-RPC message size accepted from client or server (2 MiB).
-# Guards against DoS via oversized payloads in the stdio relay loop.
+# Cap client and server JSON-RPC messages to 2 MiB.
 _MAX_MESSAGE_BYTES = 2 * 1024 * 1024
 _PROXY_TRACER = get_tracer("agent_bom.proxy")
 _PROXY_POLICY_CACHE_SIGNING_ENV_VAR = "AGENT_BOM_PROXY_POLICY_CACHE_ED25519_PRIVATE_KEY_PEM"
@@ -155,6 +154,7 @@ _POLICY_GATED_METHODS = {
     "prompts/get",
     "resources/read",
     "sampling/createMessage",
+    "subscriptions/listen",
 }
 
 

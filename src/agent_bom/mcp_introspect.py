@@ -9,7 +9,7 @@ Requires ``mcp`` SDK.  Install with::
     pip install mcp
 
 Security guarantees:
-- **Protocol read-only**: Only calls ``initialize``, ``tools/list``, ``resources/list``, and ``prompts/list``.
+- **Protocol read-only**: Discovery, capability listings, and bounded linked Apps resource reads.
   Never calls ``tools/call``.
 - **Execution-gated**: Security-blocked servers are never connected to or launched;
   callers can also disable stdio process execution entirely.
@@ -26,6 +26,8 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from agent_bom.discovery.identity import server_identity_key
+from agent_bom.discovery.mcp_metadata import apps_resource_evidence, capability_items
+from agent_bom.discovery.mcp_metadata import ui_metadata as _ui_metadata
 from agent_bom.mcp_tool_rules import evaluate_tool
 from agent_bom.models import MCPPrompt, MCPResource, MCPServer, MCPTool, TransportType
 from agent_bom.security import sanitize_sensitive_payload, sanitize_text
@@ -159,6 +161,9 @@ class ServerIntrospection:
                 {
                     "name": _safe_runtime_text(t.name, max_len=300),
                     "description": _safe_runtime_text(t.description, max_len=1000),
+                    "output_schema": _safe_runtime_value(t.output_schema),
+                    "annotations": _safe_runtime_value(t.annotations),
+                    "ui_metadata": _safe_runtime_value(t.ui_metadata),
                     "schema_findings": _safe_runtime_value(t.schema_findings),
                     "schema_rule_findings": _safe_runtime_value(t.schema_rule_findings),
                     "risk_score": t.risk_score,
@@ -251,6 +256,7 @@ def _runtime_server_fingerprint(
         resources=resources,
         prompts=prompts,
         registry_id=server.registry_id,
+        connection_metadata=server.connection_metadata,
     )
     return runtime_server.fingerprint
 
@@ -404,96 +410,76 @@ async def introspect_server(
         return result
 
 
-async def _introspect_stdio(
-    server: MCPServer,
-    result: ServerIntrospection,
-    timeout: float,
-) -> ServerIntrospection:
-    """Introspect via stdio transport (subprocess)."""
-    from mcp import ClientSession, StdioServerParameters
-    from mcp.client.stdio import stdio_client
-
-    params = StdioServerParameters(
-        command=server.command,
-        args=server.args,
-        env=server.env or None,
-    )
+async def _introspect_stdio(server: MCPServer, result: ServerIntrospection, timeout: float) -> ServerIntrospection:
+    from mcp import Client, StdioServerParameters
 
     try:
         async with asyncio.timeout(timeout):
-            async with stdio_client(params) as (read, write):
-                async with ClientSession(read, write) as session:
-                    init_result = await session.initialize()
-                    result.protocol_version = getattr(init_result, "protocolVersion", None)
-
-                    result = await _query_capabilities(session, server, result)
-
+            async with Client(StdioServerParameters(command=server.command, args=server.args, env=server.env or None)) as client:
+                result.protocol_version = client.protocol_version
+                return await _query_capabilities(client, server, result)
     except TimeoutError:
         result.error = f"Connection timed out after {timeout}s"
     except Exception as exc:
         result.error = _safe_runtime_text(exc)
-
     return result
 
 
-async def _introspect_sse(
-    server: MCPServer,
-    result: ServerIntrospection,
-    timeout: float,
+async def _introspect_sse(server: MCPServer, result: ServerIntrospection, timeout: float) -> ServerIntrospection:
+    return await _introspect_remote(server, result, timeout, legacy_sse=True)
+
+
+async def _introspect_streamable_http(server: MCPServer, result: ServerIntrospection, timeout: float) -> ServerIntrospection:
+    return await _introspect_remote(server, result, timeout)
+
+
+async def _introspect_remote(
+    server: MCPServer, result: ServerIntrospection, timeout: float, *, legacy_sse: bool = False
 ) -> ServerIntrospection:
-    """Introspect via SSE transport (HTTP connection to running server)."""
-    from mcp import ClientSession
+    import httpx2
+    from mcp import Client
     from mcp.client.sse import sse_client
-
-    if not server.url:
-        result.error = "Server URL is not set"
-        return result
-
-    try:
-        async with asyncio.timeout(timeout):
-            async with sse_client(server.url) as (read, write):  # type: ignore[arg-type]
-                async with ClientSession(read, write) as session:
-                    init_result = await session.initialize()
-                    result.protocol_version = getattr(init_result, "protocolVersion", None)
-
-                    result = await _query_capabilities(session, server, result)
-
-    except TimeoutError:
-        result.error = f"Connection timed out after {timeout}s"
-    except Exception as exc:
-        result.error = _safe_runtime_text(exc)
-
-    return result
-
-
-async def _introspect_streamable_http(
-    server: MCPServer,
-    result: ServerIntrospection,
-    timeout: float,
-) -> ServerIntrospection:
-    """Introspect via MCP Streamable HTTP transport."""
-    from mcp import ClientSession
     from mcp.client.streamable_http import streamable_http_client
 
+    from agent_bom.discovery.mcp_metadata import scan_auth_headers
+
     if not server.url:
         result.error = "Server URL is not set"
         return result
-
     try:
+        headers = scan_auth_headers(server)
+        if server.auth_mode == "configured-http-auth" and not headers:
+            result.error = "Authentication configured; operator scan credentials required (AGENT_BOM_MCP_SCAN_AUTH_FILE)"
+            return result
         async with asyncio.timeout(timeout):
-            async with streamable_http_client(server.url) as (read, write, _get_session_id):
-                async with ClientSession(read, write) as session:
-                    init_result = await session.initialize()
-                    result.protocol_version = getattr(init_result, "protocolVersion", None)
-
-                    result = await _query_capabilities(session, server, result)
-
+            async with httpx2.AsyncClient(headers=headers, timeout=timeout, follow_redirects=False) as http:
+                transport = (
+                    sse_client(server.url, headers=headers, timeout=timeout)
+                    if legacy_sse
+                    else streamable_http_client(server.url, http_client=http)
+                )
+                async with Client(transport, mode="legacy" if legacy_sse else "auto") as client:
+                    result.protocol_version = client.protocol_version
+                    return await _query_capabilities(client, server, result)
     except TimeoutError:
         result.error = f"Connection timed out after {timeout}s"
     except Exception as exc:
         result.error = _safe_runtime_text(exc)
-
     return result
+
+
+def _runtime_tool(tool) -> MCPTool:
+    runtime_tool = MCPTool(
+        name=tool.name,
+        description=getattr(tool, "description", "") or "",
+        input_schema=getattr(tool, "input_schema", None),
+        output_schema=getattr(tool, "output_schema", None),
+        annotations=tool.annotations.model_dump(by_alias=True, exclude_none=True) if getattr(tool, "annotations", None) is not None else {},
+        ui_metadata=_ui_metadata(getattr(tool, "meta", None)),
+    )
+    runtime_tool.schema_findings = _lint_tool_schema(runtime_tool)
+    runtime_tool.schema_rule_findings = [finding.to_dict() for finding in evaluate_tool(runtime_tool)]
+    return runtime_tool
 
 
 async def _query_capabilities(
@@ -505,17 +491,15 @@ async def _query_capabilities(
 
     # ── Tools ──────────────────────────────────────────────────────────
     tools_ok = False
+    app_reads = 0
     try:
-        tools_result = await session.list_tools()
-        for tool in tools_result.tools:
-            runtime_tool = MCPTool(
-                name=tool.name,
-                description=getattr(tool, "description", "") or "",
-                input_schema=getattr(tool, "inputSchema", None),
-            )
-            runtime_tool.schema_findings = _lint_tool_schema(runtime_tool)
-            runtime_tool.schema_rule_findings = [finding.to_dict() for finding in evaluate_tool(runtime_tool)]
+        for tool in await capability_items(session, "list_tools", "tools"):
+            runtime_tool = _runtime_tool(tool)
             result.runtime_tools.append(runtime_tool)
+            uri = runtime_tool.ui_metadata.get("resourceUri")
+            if isinstance(uri, str) and uri.startswith("ui://") and app_reads < 16:
+                app_reads += 1
+                runtime_tool.ui_metadata.update(await apps_resource_evidence(session, uri))
         tools_ok = True
     except Exception as exc:
         logger.warning("tools/list failed for %s: %s — drift detection skipped", _safe_runtime_text(server.name), _safe_runtime_text(exc))
@@ -523,13 +507,12 @@ async def _query_capabilities(
     # ── Resources ──────────────────────────────────────────────────────
     resources_ok = False
     try:
-        resources_result = await session.list_resources()
-        for resource in resources_result.resources:
+        for resource in await capability_items(session, "list_resources", "resources"):
             runtime_resource = MCPResource(
                 uri=str(getattr(resource, "uri", "")),
                 name=getattr(resource, "name", "") or "",
                 description=getattr(resource, "description", "") or "",
-                mime_type=getattr(resource, "mimeType", None),
+                mime_type=getattr(resource, "mime_type", None),
             )
             runtime_resource.content_findings = _lint_resource(runtime_resource)
             result.runtime_resources.append(runtime_resource)
@@ -544,8 +527,7 @@ async def _query_capabilities(
         logger.debug("prompts/list unsupported for %s", server.name)
     else:
         try:
-            prompts_result = await list_prompts()
-            for prompt in prompts_result.prompts:
+            for prompt in await capability_items(session, "list_prompts", "prompts"):
                 args: list[dict[str, object]] = []
                 for arg in getattr(prompt, "arguments", []) or []:
                     args.append(
@@ -566,7 +548,9 @@ async def _query_capabilities(
         except Exception as exc:
             logger.warning("prompts/list failed for %s: %s", _safe_runtime_text(server.name), _safe_runtime_text(exc))
 
-    result.success = True
+    result.success = tools_ok or resources_ok or prompts_ok
+    if not tools_ok:
+        result.error = "Tools unavailable; runtime inventory is incomplete"
 
     # ── Drift detection ────────────────────────────────────────────────
     # Only compare tools if tools/list succeeded — otherwise empty runtime_tools

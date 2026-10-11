@@ -14,9 +14,9 @@ from pathlib import Path
 import pytest
 from jsonschema import Draft202012Validator
 from mcp import ClientSession, StdioServerParameters
-from mcp.client.session import SUPPORTED_PROTOCOL_VERSIONS
 from mcp.client.stdio import stdio_client
-from mcp.types import LATEST_PROTOCOL_VERSION
+from mcp_types import LATEST_PROTOCOL_VERSION
+from mcp_types.version import KNOWN_PROTOCOL_VERSIONS as SUPPORTED_PROTOCOL_VERSIONS
 from starlette.testclient import TestClient
 
 from agent_bom.mcp_server import create_mcp_server
@@ -27,9 +27,10 @@ SCHEMA_PATH = REPO_ROOT / "src" / "agent_bom" / "data" / "mcp_protocol_compatibi
 OFFICIAL_REVISION = "2026-07-28"
 LOCKED_PROTOCOL = "2025-11-25"
 EXECUTABLE_EVIDENCE_IDS = {
+    "tests/test_mcp_modernization.py::test_authenticated_modern_introspection_wire",
     "tests/test_mcp_protocol_compatibility.py::test_locked_sdk_stdio_wire_contract",
     "tests/test_mcp_protocol_compatibility.py::test_locked_sdk_streamable_http_wire_contract",
-    "tests/test_mcp_protocol_compatibility.py::test_2026_server_discover_is_rejected_by_session_era_server",
+    "tests/test_mcp_protocol_compatibility.py::test_2026_stateless_inventory_wire_contract",
     "tests/test_mcp_protocol_compatibility.py::test_embedded_oauth_is_disabled_until_trusted_authorization_exists",
 }
 EVIDENCE_KIND_BASIS = {
@@ -138,7 +139,7 @@ def test_sdk_policy_separates_locked_capability_from_current_official_revision()
 
     assert sdk["dependency_constraint"] == dependency
     assert sdk["locked_version"] == locked == version("mcp")
-    assert sdk["latest_protocol_supported_by_locked_sdk"] == LATEST_PROTOCOL_VERSION == LOCKED_PROTOCOL
+    assert sdk["latest_protocol_supported_by_locked_sdk"] == LATEST_PROTOCOL_VERSION == OFFICIAL_REVISION
     assert set(sdk["protocol_versions_supported_by_locked_sdk"]) == set(SUPPORTED_PROTOCOL_VERSIONS)
     assert official == {
         "current_revision": OFFICIAL_REVISION,
@@ -146,11 +147,11 @@ def test_sdk_policy_separates_locked_capability_from_current_official_revision()
         "source_url": "https://modelcontextprotocol.io/specification/2026-07-28/changelog",
         "retrieved_at": "2026-09-04",
     }
-    assert official["current_revision"] != sdk["latest_protocol_supported_by_locked_sdk"]
+    assert official["current_revision"] == sdk["latest_protocol_supported_by_locked_sdk"]
 
 
 def test_2026_protocol_deltas_are_independent_and_not_claimed_conformant() -> None:
-    rows = [row for row in _manifest()["features"] if row["protocol_version"] == OFFICIAL_REVISION]
+    rows = [row for row in _manifest()["features"] if row["protocol_version"] == OFFICIAL_REVISION and ".2026." in row["feature_id"]]
     required = {
         "server.2026.stateless_requests",
         "server.2026.server_discover",
@@ -182,8 +183,7 @@ def test_2026_protocol_deltas_are_independent_and_not_claimed_conformant() -> No
         "server.2026.oauth_dcr_deprecated",
     }
     assert {row["feature_id"] for row in rows} == required
-    assert all(row["conformance_state"] != "conformant" for row in rows)
-    assert all(row["assessment_status"] in {"partial", "unavailable"} for row in rows)
+    assert all(row["evidence_outcome"] == "passed" for row in rows if row["conformance_state"] == "conformant")
     unassessed = [row for row in rows if "not_assessed" in row["evidence_basis"]]
     assert all(row["implementation_state"] == "unverified" for row in unassessed)
 
@@ -192,7 +192,7 @@ def test_surface_and_role_gaps_are_explicit() -> None:
     features = _features()
     assert features["server.sse.transport"]["lifecycle"] == "deprecated"
     assert features["server.sse.transport"]["conformance_state"] == "unverified"
-    assert features["introspection.remote.authenticated"]["implementation_state"] == "not_implemented"
+    assert features["introspection.remote.authenticated"]["implementation_state"] == "implemented"
     for feature_id in ("api.compatibility_contract", "ui.compatibility_contract"):
         assert features[feature_id]["implementation_state"] == "not_implemented"
         assert features[feature_id]["assessment_status"] == "unavailable"
@@ -241,14 +241,14 @@ def test_locked_sdk_streamable_http_wire_contract(monkeypatch, tmp_path, profile
             assert response.status_code == 200
             assert len(result[result_key]) == expected_count
 
-        for rejected_version in ("not-a-protocol-version", OFFICIAL_REVISION):
+        for rejected_version in ("not-a-protocol-version",):
             response = client.post(
                 "/mcp",
                 headers={**session_headers, "mcp-protocol-version": rejected_version},
                 json={"jsonrpc": "2.0", "id": 5, "method": "tools/list", "params": {}},
             )
             assert response.status_code == 400
-            assert response.json()["error"]["code"] == -32600
+            assert response.json()["error"]["code"] == -32602
 
         malformed = client.post("/mcp", headers=session_headers, content=b"{")
         assert malformed.status_code == 400
@@ -268,7 +268,7 @@ def test_locked_sdk_stdio_wire_contract(tmp_path) -> None:
         async with stdio_client(params) as (read, write):
             async with ClientSession(read, write) as session:
                 initialized = await session.initialize()
-                assert initialized.protocolVersion == LOCKED_PROTOCOL
+                assert initialized.protocol_version == LOCKED_PROTOCOL
                 assert len((await session.list_tools()).tools) == 89
                 assert len((await session.list_resources()).resources) == 7
                 assert len((await session.list_prompts()).prompts) == 8
@@ -276,25 +276,44 @@ def test_locked_sdk_stdio_wire_contract(tmp_path) -> None:
     asyncio.run(asyncio.wait_for(probe(), timeout=30))
 
 
-def test_2026_server_discover_is_rejected_by_session_era_server(monkeypatch, tmp_path) -> None:
+def test_2026_stateless_inventory_wire_contract(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("AGENT_BOM_STATE_DIR", str(tmp_path / "state"))
-    server = create_mcp_server(profile="full")
+    server = create_mcp_server(profile="scan")
+    meta = {"io.modelcontextprotocol/protocolVersion": OFFICIAL_REVISION, "io.modelcontextprotocol/clientCapabilities": {}}
     with TestClient(server.streamable_http_app(), base_url="http://localhost:8000") as client:
-        response = client.post(
+        for method, key, count in (
+            ("server/discover", None, 0),
+            ("tools/list", "tools", 8),
+            ("resources/list", "resources", 4),
+            ("prompts/list", "prompts", 3),
+        ):
+            response = client.post(
+                "/mcp",
+                headers={"Accept": "application/json, text/event-stream", "Mcp-Method": method, "Mcp-Protocol-Version": OFFICIAL_REVISION},
+                json={"jsonrpc": "2.0", "id": 1, "method": method, "params": {"_meta": meta}},
+            )
+            assert response.status_code == 200
+            assert "mcp-session-id" not in response.headers
+            payload = response.json() if response.headers["content-type"].startswith("application/json") else _sse_json(response)
+            result = payload["result"]
+            assert result["resultType"] == "complete"
+            if key:
+                assert len(result[key]) == count
+                assert result["cacheScope"] == "private"
+                assert result["ttlMs"] >= 0
+            else:
+                assert OFFICIAL_REVISION in result["supportedVersions"]
+        mismatch = client.post(
             "/mcp",
             headers={
                 "Accept": "application/json, text/event-stream",
-                "Content-Type": "application/json",
+                "Mcp-Method": "prompts/list",
                 "Mcp-Protocol-Version": OFFICIAL_REVISION,
             },
-            json={"jsonrpc": "2.0", "id": 1, "method": "server/discover", "params": {}},
+            json={"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {"_meta": meta}},
         )
-    payload = response.json()
-    assert response.status_code == 400
-    assert payload["error"]["code"] == -32600
-    assert "session" in payload["error"]["message"].lower()
-    assert "mcp-session-id" in response.headers
-    assert _features()["server.2026.server_discover"]["conformance_state"] == "nonconformant"
+        assert mismatch.status_code == 400
+        assert mismatch.json()["error"]["code"] == -32020
 
 
 def test_embedded_oauth_is_disabled_until_trusted_authorization_exists(monkeypatch) -> None:

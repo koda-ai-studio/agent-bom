@@ -190,7 +190,7 @@ def test_mcp_tools_registered_without_credential_params() -> None:
     mcp = create_mcp_server(profile="full")
     tools = {t.name: t for t in asyncio.run(mcp.list_tools())}
     assert "create_ticket" in tools and "sync_ticket_status" in tools
-    props = set(tools["create_ticket"].inputSchema.get("properties", {}))
+    props = set(tools["create_ticket"].input_schema.get("properties", {}))
     forbidden = {
         "token",
         "api_token",

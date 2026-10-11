@@ -8,7 +8,7 @@ import logging
 from unittest.mock import patch
 
 import pytest
-from mcp.server.fastmcp.exceptions import ToolError
+from mcp.server.mcpserver.exceptions import ToolError
 
 from agent_bom.mcp_server import (
     _caller_rate_windows,

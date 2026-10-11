@@ -39,7 +39,7 @@ async def test_check_accepts_separate_version_argument():
 
 @pytest.mark.asyncio
 async def test_check_rejects_conflicting_embedded_and_argument_version():
-    from mcp.server.fastmcp.exceptions import ToolError
+    from mcp.server.mcpserver.exceptions import ToolError
 
     from agent_bom.mcp_tools.scanning import check_impl
 

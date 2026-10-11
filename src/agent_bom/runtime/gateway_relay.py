@@ -185,11 +185,18 @@ async def _post_upstream_jsonrpc(
     auth_headers = await upstream.resolve_auth_headers()
     target = relay_upstream_from_config(upstream)
     transport = build_gateway_relay_transport(client, max_bytes=_MAX_GATEWAY_MESSAGE_BYTES)
+    from agent_bom.runtime.mcp_protocol import parameter_headers
+
+    headers = {**auth_headers, **extra_headers}
+    # A caller cannot inject routing headers; derive parameter headers only
+    # from the authenticated upstream catalog and policy-approved arguments.
+    headers = {k: v for k, v in headers.items() if not k.lower().startswith("mcp-param-")}
+    headers.update(await parameter_headers(transport, target, message, headers))
     result = await transport.forward(
         RelayForwardRequest(
             upstream=target,
             message=message,
-            headers={**auth_headers, **extra_headers},
+            headers=headers,
         )
     )
     return result.message

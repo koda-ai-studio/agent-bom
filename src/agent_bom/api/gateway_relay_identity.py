@@ -82,6 +82,12 @@ async def parse_relay_request(runtime: RelayRuntime, server_name: str, request: 
 
     _reject_declared_oversize(request)
     message = _parse_jsonrpc_body(await _read_bounded_gateway_body(request))
+    from agent_bom.runtime.mcp_protocol import validate_request_headers
+
+    try:
+        validate_request_headers(message, request.headers)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail="Invalid MCP request headers or capabilities") from exc
     request.state.gateway_message_id = message.get("id")
     await runtime.bind_audit_tenant(request, tenant_id, auth_method)
 

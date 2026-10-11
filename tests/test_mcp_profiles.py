@@ -70,7 +70,7 @@ def test_live_card_and_health_match_active_surface(profile, count):
     expected = build_server_card(profile=profile)
     assert len(tools) == count
     assert {t.name for t in tools} == {t["name"] for t in expected["tools"]}
-    assert all(t.inputSchema["additionalProperties"] is False for t in tools)
+    assert all(t.input_schema["additionalProperties"] is False for t in tools)
     with TestClient(server.streamable_http_app()) as client:
         card = client.get("/.well-known/mcp/server-card.json").json()
         assert card["profile"] == profile
@@ -87,7 +87,7 @@ def test_live_card_and_health_match_active_surface(profile, count):
 
 
 def test_schema_construction_skips_excluded_tools(monkeypatch):
-    from mcp.server.fastmcp import FastMCP
+    from mcp.server.mcpserver import MCPServer as FastMCP
 
     from agent_bom.mcp_server import create_mcp_server
 
@@ -156,10 +156,10 @@ def test_stdio_wire_profile_discovery_and_strict_calls(profile, tmp_path):
                 assert "inputSchema" not in json.dumps(catalog)
                 assert {p["name"] for p in catalog["profiles"]} >= {"scan", "graph", "full"}
                 rejected = await session.call_tool(tools[0].name, {"unexpected_profile_argument": True})
-                assert rejected.isError
+                assert rejected.is_error
                 if profile != "full":
                     hidden = await session.call_tool("identity_issue", {})
-                    assert hidden.isError
+                    assert hidden.is_error
 
     asyncio.run(asyncio.wait_for(probe(), timeout=30))
 
@@ -184,7 +184,7 @@ def test_docker_catalog_matches_real_default_argument_names():
     live = {tool.name: tool for tool in asyncio.run(create_mcp_server().list_tools())}
     assert {tool["name"] for tool in catalog} == set(live)
     for tool in catalog:
-        assert {arg["name"] for arg in tool["arguments"]} == set(live[tool["name"]].inputSchema["properties"])
+        assert {arg["name"] for arg in tool["arguments"]} == set(live[tool["name"]].input_schema["properties"])
 
 
 def test_docker_catalog_generator_imports_the_checkout(tmp_path):
@@ -222,7 +222,7 @@ def test_docker_catalog_normalizes_python_docstring_indentation(monkeypatch, des
     tool = SimpleNamespace(
         name="check",
         description=description,
-        inputSchema={"properties": {"package": {"type": "string", "description": "Package name.\n  Keep this spacing."}}},
+        input_schema={"properties": {"package": {"type": "string", "description": "Package name.\n  Keep this spacing."}}},
     )
     server = SimpleNamespace(list_tools=AsyncMock(return_value=[tool]))
     monkeypatch.setattr("agent_bom.mcp_server.create_mcp_server", lambda: server)

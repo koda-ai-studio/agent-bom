@@ -60,8 +60,10 @@ def create_fastmcp_server(
 ):
     """Create the FastMCP server with optional static bearer auth."""
     from mcp.server.auth.settings import AuthSettings
-    from mcp.server.fastmcp import FastMCP
-    from mcp.server.fastmcp.server import Settings
+    from mcp.server.mcpserver import MCPServer as FastMCP
+    from mcp.server.mcpserver.server import Settings
+
+    from agent_bom.mcp_tools.request_identity import request_identity_context
 
     # mcp 1.29 can leave the generic lifespan annotation unresolved under
     # pydantic-settings 2.15. Rebuild once before Settings is instantiated so
@@ -103,12 +105,12 @@ def create_fastmcp_server(
 
     mcp = FastMCP(
         name="agent-bom",
-        host=host,
-        port=port,
+        version=version,
+        middleware=[request_identity_context],
         auth=auth_settings,
         token_verifier=token_verifier,
         instructions=_server_instructions(version, profile),
     )
     # Set the actual agent-bom version (FastMCP defaults to SDK version)
-    mcp._mcp_server.version = version
+    mcp._lowlevel_server.version = version
     return mcp

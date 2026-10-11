@@ -68,7 +68,7 @@ class IncompleteScanPayload(ToolErrorPayload):
     """A JSON scan payload that reports a scan which could not complete.
 
     It is still a plain JSON string for direct callers; the MCP tool layer maps
-    it to a ``CallToolResult`` with ``isError=True``.
+    it to a ``CallToolResult`` with ``is_error=True``.
     """
 
 

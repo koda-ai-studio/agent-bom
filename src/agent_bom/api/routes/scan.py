@@ -1478,7 +1478,7 @@ async def _wait_for_idempotent_job(
 async def check_package(body: PackageCheckRequest) -> dict[str, Any]:
     """Check one package with the same vulnerability intelligence as MCP."""
 
-    from mcp.server.fastmcp.exceptions import ToolError
+    from mcp.server.mcpserver.exceptions import ToolError
 
     from agent_bom.ecosystems import SUPPORTED_PACKAGE_ECOSYSTEM_SET
     from agent_bom.mcp_server_runtime import validate_ecosystem

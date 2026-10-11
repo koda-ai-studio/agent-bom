@@ -182,8 +182,9 @@ async def scan_request_content(session: ProxySession, call: ToolCall) -> bool:
     if not scan_config.enabled:
         return False
     from agent_bom.runtime.detectors import Alert, AlertSeverity
+    from agent_bom.runtime.mcp_protocol import inspection_arguments
 
-    s_results = session.host.scan_tool_call(call.tool_name, call.arguments, scan_config)
+    s_results = session.host.scan_tool_call(call.tool_name, inspection_arguments(call.msg, call.arguments), scan_config)
     for sr in s_results:
         alert = Alert(
             detector=f"scanner:{sr.scanner}",

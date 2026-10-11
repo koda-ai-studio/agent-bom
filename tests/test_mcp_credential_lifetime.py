@@ -70,7 +70,7 @@ def test_expiry_is_independent_and_does_not_extend_on_restart(clock, monkeypatch
 @pytest.mark.parametrize("transport", ["sse", "streamable-http"])
 def test_remote_cli_rejects_missing_expiry_before_startup(monkeypatch, transport):
     monkeypatch.delenv("AGENT_BOM_MCP_BEARER_TOKEN_EXPIRES_AT", raising=False)
-    from mcp.server.fastmcp import FastMCP
+    from mcp.server.mcpserver import MCPServer as FastMCP
 
     run = Mock()
     monkeypatch.setattr(FastMCP, "run", run)

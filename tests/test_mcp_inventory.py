@@ -131,7 +131,7 @@ def test_live_mcp_server_exposes_inventory_tools_read_only() -> None:
     for name in ("inventory_summary", "inventory_list", "inventory_asset"):
         assert name in tools, f"{name} missing from live tools/list"
         annotations = getattr(tools[name], "annotations", None)
-        assert annotations is not None and annotations.readOnlyHint is True
+        assert annotations is not None and annotations.read_only_hint is True
 
 
 # ── Summary ──────────────────────────────────────────────────────────────────
