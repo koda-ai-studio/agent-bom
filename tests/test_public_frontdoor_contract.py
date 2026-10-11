@@ -19,7 +19,7 @@ def test_social_preview_is_portable_and_evidence_focused() -> None:
 
     png_header = preview.read_bytes()[:24]
     assert png_header[:8] == b"\x89PNG\r\n\x1a\n"
-    assert struct.unpack(">II", png_header[16:24]) == (1280, 420)
+    assert struct.unpack(">II", png_header[16:24]) == (1280, 520)
 
     svg = source.read_text(encoding="utf-8")
     template_svg = template.read_text(encoding="utf-8")

@@ -136,16 +136,16 @@ O(agents + servers + packages + edges)); the 50k jump is actually
 cheaper per-package than 10k because the synthetic fixture reuses
 package keys across servers, so dedup amortises cost.
 
-**Implication for pilot teams:**
-- **Build-on-every-scan is fine up to ~50k packages.** No caching layer
-  needed. The graph fits comfortably in the API pod memory (~200 MB at
-  50k nodes).
-- **Cardinality cliff to watch:** at >200k packages / 5k agents (hypothetical
-  multi-tenant mega-deploy), consider moving graph persistence to ClickHouse
-  for analytics cardinality or paginate the builder.
-- **Storage story:** graph materialisation (the Postgres `graph_state`
-  table, see [`api/postgres_graph.py`](../src/agent_bom/api/postgres_graph.py))
-  is ~2 KB per node — 50k nodes ≈ 100 MB per tenant.
+**Deployment implications:**
+
+- These are in-process graph-builder timings for the stated synthetic fixtures.
+  Package counts can collapse into fewer deduplicated graph nodes. They do not
+  establish API latency, database size, process RSS or a supported estate limit.
+- SQLite and PostgreSQL own graph persistence. ClickHouse is an optional event
+  analytics sink, not a graph-store replacement. See [storage backends](STORAGE_BACKENDS.md).
+- Size a deployment using its unique nodes and edges, retained snapshots,
+  concurrent scans and queries. Measure full-process memory, storage growth and
+  end-to-end p95 latency against the intended database before setting capacity.
 
 Run yourself:
 
