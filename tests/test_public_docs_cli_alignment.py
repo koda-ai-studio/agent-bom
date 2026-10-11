@@ -62,7 +62,7 @@ def test_readme_promotes_repository_scan_before_the_failing_demo() -> None:
     quick_start = readme.split("## Quick start", 1)[1].split("\n## ", 1)[0]
 
     repository_scan = quick_start.index("agent-bom scan .")
-    demo_warning = quick_start.index("exits `1` on purpose")
+    demo_warning = quick_start.index("Exit `1` is expected")
     demo_scan = quick_start.index("agent-bom scan --demo --offline")
 
     assert repository_scan < demo_scan < demo_warning
@@ -158,7 +158,7 @@ def test_release_prep_does_not_call_unpublished_version_current() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     docker_hub = (ROOT / "docs" / "registry" / "DOCKER_HUB_README.md").read_text(encoding="utf-8")
     assert "0.98.1` | Current stable" not in docker_hub
-    assert "[published release checkout](https://github.com/msaad00/agent-bom/releases)" in readme
+    assert "[published release checkout](https://github.com/koda-ai-studio/agent-bom/releases)" in readme
     assert "verify registry availability before pinning" in docker_hub
 
 
@@ -220,10 +220,12 @@ def test_readme_storefront_is_concise_ordered_and_actionable() -> None:
         assert noise not in hero
     quick_start = readme.split("## Quick start", 1)[1].split("\n## ", 1)[0]
     block = re.search(r"```bash\n(.*?)\n```", quick_start, re.S)
-    assert block and block.group(1).splitlines() == ["pip install agent-bom", "agent-bom scan .", "agent-bom scan --demo --offline"]
-    assert "agent-bom mcp server" in quick_start
+    assert block and block.group(1).splitlines() == ["pip install agent-bom", "agent-bom scan ."]
+    integrations = readme.split("<summary>Work with your existing tools</summary>", 1)[1].split("</details>", 1)[0]
+    assert "agent-bom mcp server" in integrations
     sample = quick_start.split("<summary>No project handy?", 1)[1].split("</details>", 1)[0]
-    assert "agent-bom scan --demo --offline" in sample and "docs/images/demo-latest.gif" in sample
+    assert "```bash\nagent-bom scan --demo --offline\n```" in sample
+    assert "docs/images/demo-latest.gif" in sample
     assert "```text" not in quick_start.split("<summary>No project handy?", 1)[0]
     assert len(readme.splitlines()) <= 210
     images = re.findall(r'<img src="docs/images/([^"]+-live.png)"', readme)

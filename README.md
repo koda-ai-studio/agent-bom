@@ -1,14 +1,14 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/msaad00/agent-bom/main/docs/images/social-preview.svg" alt="agent-bom — Discover. Scan. Correlate. Act. Security evidence across repositories, software supply chains, AI and MCP, cloud, identity, and data." width="960" />
+  <img src="docs/images/social-preview.svg" alt="agent-bom — Discover. Scan. Correlate. Act. Security evidence across repositories, software supply chains, AI and MCP, cloud, identity, and data." width="960" />
 </p>
 
 <p align="center">
-  <a href="https://github.com/msaad00/agent-bom/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/msaad00/agent-bom/ci.yml?branch=main&style=flat&label=Build" alt="Build"></a>
+  <a href="https://github.com/koda-ai-studio/agent-bom/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/koda-ai-studio/agent-bom/ci.yml?branch=main&style=flat&label=Build" alt="Build"></a>
   <a href="https://pypi.org/project/agent-bom/"><img src="https://img.shields.io/pypi/v/agent-bom?style=flat&label=PyPI&cacheSeconds=60" alt="PyPI"></a>
   <a href="https://pypi.org/project/agent-bom/"><img src="https://img.shields.io/badge/Python-3.11%E2%80%933.14-blue?style=flat" alt="Python 3.11 through 3.14"></a>
   <a href="https://hub.docker.com/r/agentbom/agent-bom"><img src="https://img.shields.io/docker/pulls/agentbom/agent-bom?style=flat&label=Docker%20pulls" alt="Docker pulls"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue?style=flat" alt="Apache-2.0 license"></a>
-  <a href="https://securityscorecards.dev/viewer/?uri=github.com/msaad00/agent-bom"><img src="https://img.shields.io/ossf-scorecard/github.com/msaad00/agent-bom?style=flat&label=OpenSSF%20scorecard" alt="OpenSSF Scorecard"></a>
+  <a href="https://securityscorecards.dev/viewer/?uri=github.com/koda-ai-studio/agent-bom"><img src="https://img.shields.io/ossf-scorecard/github.com/koda-ai-studio/agent-bom?style=flat&label=OpenSSF%20scorecard" alt="OpenSSF Scorecard"></a>
   <a href="https://glama.ai/mcp/servers/msaad00/agent-bom"><img src="https://img.shields.io/badge/MCP-Glama-7c3aed?style=flat" alt="Glama MCP server"></a>
   <a href="https://smithery.ai/servers/agentbom/agent-bom"><img src="https://img.shields.io/badge/MCP-Smithery-1f6feb?style=flat" alt="Smithery MCP server"></a>
 </p>
@@ -24,24 +24,31 @@
   <a href="https://koda-ai-studio.github.io/agent-bom/">Docs</a>
 </p>
 
-For security, AppSec and GRC teams, agent-bom inventories the AI agents, MCP servers, packages, credential references and infrastructure in a repository, container image, Kubernetes cluster or cloud account. It checks packages against vulnerability advisories and IaC and cloud configuration against security benchmarks, imports findings from the scanners you already run, and traces each finding to the agents, tools and credentials it can reach. The self-hosted control plane centralizes those findings, maps them to compliance frameworks and enforces policy on live MCP traffic.
+Discover AI agents, MCP servers, packages, credential references and infrastructure across repositories, container images, Kubernetes and cloud accounts. Check vulnerabilities and configuration, import existing scanner findings, and investigate the recorded relationships behind each finding.
+
+- **Scan** from the CLI or CI and export findings, SBOMs and reports.
+- **Centralize** inventory, graph evidence, remediation and compliance in your own control plane.
+- **Enforce** policy on live MCP tool calls through the proxy or gateway.
 
 ## Quick start
 
 ```bash
 pip install agent-bom
 agent-bom scan .
-agent-bom scan --demo --offline
 ```
 
-`agent-bom scan .` inventories the current project and checks its packages against advisories. `agent-bom scan --demo --offline` runs a bundled sample estate with no network access and exits `1` on purpose, because the sample trips the security gate.
-For CI, write SARIF with `agent-bom scan . -f sarif -o findings.sarif` and [upload it](docs/FIRST_RUN.md#5-gate-ci-on-the-result); check setup with `agent-bom doctor`. [First-run guide](docs/FIRST_RUN.md)
-To give an assistant the same evidence, run `agent-bom mcp server`. Start with eight focused tools, then select a graph, cloud, runtime or audit profile. The full catalog has 89 MCP tools, 7 resources, and 8 workflow prompts. [MCP workflows](docs/MCP_WORKFLOWS.md)
+The scan prints project inventory, package findings and remediation guidance. Run `agent-bom doctor` to check setup, or follow the [first-run guide](docs/FIRST_RUN.md).
+
+For CI, save a report with `agent-bom scan . -f sarif -o findings.sarif`, then [upload it and gate the build](docs/FIRST_RUN.md#5-gate-ci-on-the-result). A non-zero exit can mean a security gate or incomplete assessment; inspect the report and [exit codes](site-docs/reference/exit-codes.md).
 
 <details>
 <summary>No project handy? Scan the bundled sample estate offline</summary>
 
-`agent-bom scan --demo --offline` lists sample agents, CVEs with recorded agent, MCP server and credential associations, and policy findings (excerpt from current source; installed-release output may differ):
+```bash
+agent-bom scan --demo --offline
+```
+
+Runs a bundled sample estate without network access. Exit `1` is expected: the sample trips the security gate. It lists sample agents, CVEs and policy findings (excerpt from current source; installed-release output may differ):
 
 ```text
   Security posture:   CRIT  7   HIGH  10   MED   6 · all finding categories
@@ -63,7 +70,7 @@ ANALYZE | Graph & Policy Findings (8 occurrences)
 For sample inventory with an exact graph link, run `agent-bom quickstart --run --offline` (it skips package-CVE lookup). [First-run guide](docs/FIRST_RUN.md#2-inspect-the-bundled-sample-project)
 
 <p align="center">
-  <img src="docs/images/demo-latest.gif" alt="Recorded agent-bom CLI showing sample findings and remediation guidance" width="920" />
+  <img src="docs/images/demo-latest.gif" alt="Recorded agent-bom v0.108.4 CLI showing sample findings and remediation guidance" width="920" />
 </p>
 
 </details>
@@ -85,15 +92,15 @@ report and coverage. [Exit codes](site-docs/reference/exit-codes.md)
 
 <p align="center"><a href="docs/images/context-map-horizontal-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/context-map-horizontal-light-live.png"><img src="docs/images/context-map-horizontal-dark-live.png" alt="Recorded agent connections linking a role, agents, MCP servers, tool, credential reference, package and finding" width="960"></picture></a></p>
 
-Run it as a CLI, in CI, as an MCP server for your assistant, or as a self-hosted dashboard; Apache-2.0, and the control plane runs in your own environment.
-A recorded relationship is evidence to investigate; it does not prove execution or data access. The map above uses labeled sample data.
+**Context Map:** inspect agents, MCP servers, packages and credential references. The map above uses labeled sample data; recorded relationships do not prove execution or data access. Click any screenshot to view it at full size.
 To trace one vulnerable dependency to the affected agents and into remediation, [try the connected-BOM walkthrough](examples/connected-bom/README.md).
 
 ## Self-host in your environment
-**Your infrastructure, your identity, your database, your audit boundary.** From a [published release checkout](https://github.com/msaad00/agent-bom/releases):
+
+**Your infrastructure, your identity, your database, your audit boundary.** From a [published release checkout](https://github.com/koda-ai-studio/agent-bom/releases):
 
 ```bash
-git clone --depth 1 --branch v0.108.4 https://github.com/msaad00/agent-bom.git && cd agent-bom
+git clone --depth 1 --branch v0.108.4 https://github.com/koda-ai-studio/agent-bom.git && cd agent-bom
 AGENT_BOM_IMAGE_TAG=0.108.4 docker compose up -d
 ```
 
@@ -101,9 +108,15 @@ Open **http://localhost:3000**, then **Connections** or **New Scan**. For cloud 
 The pilot binds to loopback and retains state in a Docker volume. Use the authenticated deployment guide for a shared instance.
 
 ### Deployment models
-[Docker pilot](docs/DEPLOY_QUICKSTART.md) · [Authenticated deployment](site-docs/deployment/authenticated-hosted-instance.md) ·
-[Compose with PostgreSQL](deploy/docker-compose.platform.yml) · [Helm](site-docs/deployment/control-plane-helm.md) · [EKS Terraform](deploy/terraform/platform-eks) ·
-[Snowflake Native App preview](docs/snowflake-native-app/INSTALL.md) · [Air-gapped bundle](site-docs/deployment/airgapped-image-bundle.md) ·
+
+| Start with | Guide |
+|---|---|
+| Local evaluation | [Docker pilot](docs/DEPLOY_QUICKSTART.md) |
+| Shared control plane | [Authenticated deployment](site-docs/deployment/authenticated-hosted-instance.md) · [Compose with PostgreSQL](deploy/docker-compose.platform.yml) |
+| Kubernetes or AWS | [Helm](site-docs/deployment/control-plane-helm.md) · [EKS Terraform](deploy/terraform/platform-eks) |
+| Restricted networks | [Air-gapped bundle](site-docs/deployment/airgapped-image-bundle.md) |
+| Snowflake preview | [Native App installation](docs/snowflake-native-app/INSTALL.md) |
+
 [Choose a deployment](site-docs/deployment/overview.md) · [Enterprise configuration](docs/ENTERPRISE.md) · [Connect cloud accounts](docs/CLOUD_CONNECT.md)
 
 <details>
@@ -111,6 +124,8 @@ The pilot binds to loopback and retains state in a Docker volume. Use the authen
 
 Use **CLI or GitHub Action**, **REST API**, or **MCP**; export **SARIF, CycloneDX, SPDX, JSON and HTML**.
 Cloud connectors and fleet sync collect inventory; proxy and gateway deployments add runtime evidence.
+
+For coding assistants, run `agent-bom mcp server`. It starts with eight focused tools; choose a graph, cloud, runtime or audit profile for other workflows. Current source includes 89 MCP tools, 7 resources, and 8 workflow prompts. [MCP workflows](docs/MCP_WORKFLOWS.md)
 
 [Integration capability matrix](docs/INTEGRATIONS.md) · [MCP client setup](docs/MCP_CLIENT_GUIDES.md) ·
 [Proxy, gateway and fleet](site-docs/deployment/proxy-vs-gateway-vs-fleet.md) · [Smithery setup and manifest](site-docs/integrations/smithery.md)
@@ -122,7 +137,7 @@ Cloud connectors and fleet sync collect inventory; proxy and gateway deployments
 | Your team | What you can do |
 |---|---|
 | **Developers & AI engineers** | Inspect repositories, dependencies and MCP configuration; bring findings into CI and coding assistants. |
-| **AppSec & cloud security** | Connect cloud accounts, trace findings through workloads and identities, and prioritize fixes by reachable impact. |
+| **AppSec & cloud security** | Connect cloud accounts, trace findings through workloads and identities, and prioritize fixes using recorded exposure and evidence gaps. |
 | **Platform & DevOps** | Run a shared control plane, collect fleet evidence, and apply policy to MCP traffic through the proxy or gateway. |
 | **GRC & audit** | Open **Compliance** to review mappings and [export scan evidence](docs/GALLERY.md#scan-a-repository-before-shipping) with its source, freshness and assessment gaps. |
 | **Security & engineering leaders** | Open **Overview** to review posture, remediation priorities and tracked AI spend across connected sources. |
@@ -130,23 +145,22 @@ Cloud connectors and fleet sync collect inventory; proxy and gateway deployments
 
 ## Product tour
 
-### Security, engineering and GRC: prioritize risk and assessment gaps
+### Security, engineering and GRC: prioritize findings
 
 Start with **Posture**, inspect evidence in **Top risks**, and scope inventory in **Assets & coverage**.
-**Compliance** separates evaluated-control pass rate from assessment coverage.
-OWASP and MITRE ATLAS risk mappings describe applicability, not control pass/fail.
-The offline synthetic enterprise estate includes evaluated checks; results do not establish certification or an audit opinion.
+**Compliance** separates evaluated-control pass rate from assessment coverage. OWASP and MITRE ATLAS risk mappings describe applicability, not control pass/fail.
+The offline synthetic enterprise estate shown below includes evaluated checks; results do not establish certification or an audit opinion.
 
 <p align="center"><a href="docs/images/dashboard-live.png"><img src="docs/images/dashboard-live.png" alt="Posture and open findings with compliance and security-area disclosures collapsed in a labeled sample environment" width="1440"></a></p>
 
 Explore [expanded framework evidence](docs/images/dashboard-paths-live.png), [Top risks](docs/images/dashboard-risks-live.png), [scoped Inventory](docs/images/inventory-live.png), [recorded scan history](docs/GALLERY.md#compare-recorded-scan-history), [framework controls and evidence](site-docs/features/compliance.md), and the [per-agent BOM preview](docs/SCAN_EVIDENCE_JOURNEY.md).
 
-### AppSec and cloud teams: explain why a finding matters
+### AppSec and cloud teams: investigate a finding
 
-Follow **CVE-2023-4863 in pillow@9.0.0** through recorded relationships between the service, container, tool, workload identity and modeled data asset.
+Follow **CVE-2023-4863 in pillow@9.0.0** through recorded relationships between the service, workload, container, tool and modeled data asset.
 Inspect the source receipts and carry the selected finding into remediation. A recorded path does not by itself prove exploitation or successful data access.
 
-<a href="docs/images/correlation-graph-live.png"><img src="docs/images/correlation-graph-live.png" alt="Reference lab path linking a Pillow advisory, workload identity and modeled data asset" width="1440"></a>
+<a href="docs/images/correlation-graph-live.png"><img src="docs/images/correlation-graph-live.png" alt="Reference lab graph linking a Pillow advisory, workload, container, tool and modeled data asset" width="1440"></a>
 
 <details>
 <summary>Explore graph navigation, permissions and evidence</summary>
@@ -159,7 +173,7 @@ opens permission receipts, CVE prerequisites and related activity; missing explo
 Distinguish storage, access evidence and collection sources; derived classifications do not prove contents or successful reads. [Data and evidence model](site-docs/architecture/security-graph-model.md#data-locations-access-and-evidence-sources).
 </details>
 
-### Engineers and GRC: turn exposure into an accountable fix
+### Engineers and GRC: fix and verify
 
 Connect the upgrade decision, the responsible owner and the evidence needed to close the risk.
 
@@ -174,10 +188,7 @@ Connect the upgrade decision, the responsible owner and the evidence needed to c
 
 [Run the before-and-after dependency example](examples/connected-bom/README.md) · [Review component control evidence](docs/images/component-controls-dark-live.png) · [Compliance evidence workflow](site-docs/features/compliance.md)
 
-These are application captures, not mockups. Overview, Findings and remediation use
-labeled sample data. The graph uses the reproducible reference lab: real parsers,
-a pinned advisory scan and authenticated gateway calls, with modeled infrastructure.
-A blocked call does not establish that the underlying package was fixed.
+These are application captures, not mockups. Overview, Findings and remediation use labeled sample data. Re-scan your own scope for current versions and fixes. The investigation graph uses the reproducible reference lab: real parsers, a pinned advisory scan and authenticated gateway calls, with modeled infrastructure. A blocked call does not establish that the underlying package was fixed.
 
 [Discover and scan](docs/GALLERY.md) · [Runtime policy and agent workflows](site-docs/deployment/proxy-vs-gateway-vs-fleet.md) ·
 [Run the reference evidence lab](examples/reference-evidence-lab/README.md) ·
@@ -194,6 +205,6 @@ acts on selected tool calls. Missing evidence stays unavailable or partial. Cont
 
 ## Contributing and support
 
-[Contributing](CONTRIBUTING.md) · [Support](SUPPORT.md) · [Open issues](https://github.com/msaad00/agent-bom/issues) · [Apache-2.0 license](LICENSE)
+[Contributing](CONTRIBUTING.md) · [Support](SUPPORT.md) · [Open issues](https://github.com/koda-ai-studio/agent-bom/issues) · [Apache-2.0 license](LICENSE)
 
 Source version: **v0.108.4** · Latest release: **v0.108.4** · [Changelog](CHANGELOG.md)

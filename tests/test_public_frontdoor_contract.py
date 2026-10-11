@@ -108,7 +108,10 @@ def test_readme_shows_the_end_to_end_product_journey_and_links_the_gallery() -> 
     assert 'width="450"' not in journey
     front = readme.split("## Self-host", 1)[0]
     front_outside_details = re.sub(r"<details>.*?</details>", "", front, flags=re.S)
-    assert re.findall(r'<img src="docs/images/([^"]+)"', front_outside_details) == ["context-map-horizontal-dark-live.png"]
+    assert re.findall(r'<img src="docs/images/([^"]+)"', front_outside_details) == [
+        "social-preview.svg",
+        "context-map-horizontal-dark-live.png",
+    ]
     assert front.index("img.shields.io") < front.index("context-map-horizontal-dark-live.png")
     assert "labeled sample data" in front
     assert "<summary>Explore graph navigation, permissions and evidence</summary>" in journey
