@@ -5,7 +5,7 @@ from uuid import uuid4
 
 import pytest
 
-from agent_bom.api.storage.jobs_schema import POSTGRES_TENANT_KEYS
+from agent_bom.api.storage.jobs_schema import JOBS_SCHEMA_VERSION, POSTGRES_TENANT_KEYS
 
 pytestmark = pytest.mark.skipif(not os.environ.get("AGENT_BOM_TEST_ADMIN_URL"), reason="requires task-owned migration database")
 
@@ -120,7 +120,10 @@ def test_full_bootstrap_upgrade_preserves_populated_schema(database):
     assert database.execute("SELECT tenant_id,claimed_by,lease_expires_at FROM scan_dispatch_queue").fetchall() == [
         ("a", "worker:kept", "2099")
     ]
-    assert database.execute("SELECT version FROM control_plane_schema_versions WHERE component='scan_jobs'").fetchone()[0] == 3
+    assert (
+        database.execute("SELECT version FROM control_plane_schema_versions WHERE component='scan_jobs'").fetchone()[0]
+        == JOBS_SCHEMA_VERSION
+    )
     before_revision = database.execute("SELECT revision FROM job_overview_revisions WHERE tenant_id='a'").fetchone()[0]
     database.execute("UPDATE scan_jobs SET status='done' WHERE job_id='same' AND team_id='a'")
     assert database.execute("SELECT revision FROM job_overview_revisions WHERE tenant_id='a'").fetchone()[0] == before_revision + 1

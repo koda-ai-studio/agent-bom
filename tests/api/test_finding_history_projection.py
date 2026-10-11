@@ -213,6 +213,19 @@ def test_backfill_rereads_after_enumeration_and_emits_receipt(projected_store, m
     assert scan._current_scan_rows("history-tenant", None, None) == []
 
 
+@pytest.mark.parametrize("result", ["postgresql://user:private-password@db/internal", None])
+def test_backfill_cli_rejects_non_numeric_receipt_without_disclosing_store_data(monkeypatch, capsys, result):
+    from agent_bom.api import tenant_worker
+    from agent_bom.api.storage import finding_history_cli, job_backends
+
+    monkeypatch.setattr(job_backends, "configured_job_store", lambda: object())
+    monkeypatch.setattr(tenant_worker, "run_tenant_bound", lambda *args: result)
+    assert finding_history_cli.main(["--tenant", "history-tenant"]) == 1
+    output = capsys.readouterr()
+    assert output.out == ""
+    assert output.err == "Finding history backfill failed; check tenant, database configuration and migrations.\n"
+
+
 @pytest.mark.parametrize("qualify", [False, True])
 def test_qualification_compares_whole_history_and_uses_legacy_on_mismatch(projected_store, monkeypatch, caplog, qualify):
     from agent_bom.api.storage.finding_history import HistoryReader

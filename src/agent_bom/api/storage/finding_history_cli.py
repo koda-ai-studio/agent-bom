@@ -46,7 +46,7 @@ def main(argv: list[str] | None = None) -> int:
     from agent_bom.api.tenant_worker import run_tenant_bound
 
     try:
-        count = run_tenant_bound(args.tenant, backfill_tenant_history, configured_job_store(), args.tenant)
+        count = int(run_tenant_bound(args.tenant, backfill_tenant_history, configured_job_store(), args.tenant))
     except Exception:  # broad-except: CLI failure reports no source payload, path, or connection secret
         sys.stderr.write("Finding history backfill failed; check tenant, database configuration and migrations.\n")
         return 1
