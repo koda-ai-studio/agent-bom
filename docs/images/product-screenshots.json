@@ -1,9 +1,9 @@
 {
   "release_version": "0.108.4",
-  "captured_at": "2026-10-11T22:20:08.565Z",
-  "source_commit": "ebecd69eaa17c9c9e027714816ec53c6766513cc",
+  "captured_at": "2026-10-11T22:35:57.631Z",
+  "source_commit": "191d72b232f13c791448b1c71d7cd4a43a2db8f4",
   "source_tree": "clean",
-  "capture_inputs_sha256": "sha256:e7c7e6ebea8cb1670c0ae50dc1459a9246b977db9d6c967eb2d8d81f2e231a30",
+  "capture_inputs_sha256": "sha256:dc86e6193b50895ab775125d54f9df17db6ecea77a956df3a32a0897d34a999c",
   "capture_note": "Deterministically captured from real Next.js dashboard routes in capture mode. The correlation hero views consume the committed, hash-pinned Reference evidence lab — modeled local infrastructure artifact with CVE-2023-4863 and exact canonical joins. Remaining gallery fixtures are explicitly synthetic UI states. No external, customer, or private infrastructure data is used.",
   "screenshots": [
     {
@@ -132,7 +132,7 @@
       "page": "/connections?capture=1",
       "scope": "Connections hub — scalable connector gallery across cloud, code, AI, and data sources",
       "visible_version": "0.108.4",
-      "sha256": "sha256:0729128942962743e5f24b92a3dd08ffa2af1dfc2c9ec759c7dbde06a0df635b"
+      "sha256": "sha256:fde5f7ef35859369798af61513e6de21e866b29d588ae497be0807185013cd9f"
     },
     {
       "presentation": "dark desktop",
@@ -172,7 +172,7 @@
       "page": "/graph?lens=mesh&scan=scan-proof-ai-platform&agent=agent%3Adeveloper-copilot&capture=1",
       "scope": "Persisted agent neighborhood with recorded shared filesystem connections and both IDE + SRE agents in scope",
       "visible_version": "0.108.4",
-      "sha256": "sha256:3dc4e6937526a1ebb6cdbc176a9e50daf96ed34cb3351cdefc136a337cdc6c34"
+      "sha256": "sha256:eaa4a4193217b73bc3f4a97612ec6798dc9f8cc3eb5401266a242cc3a0b32053"
     },
     {
       "presentation": "dark desktop",
@@ -199,7 +199,7 @@
       "evidence_sha256": "sha256:f4f8901f412997be7690b50ce8e7468ba8f781dc22b85e7b5f44408e28fe2c5f",
       "correlation_manifest_sha256": "sha256:fe781c82f958c2f9aa4cadfa2289aa767629dc7d6716e11add790e8f3336fc3a",
       "visible_version": "0.108.4",
-      "sha256": "sha256:0542863f849b477e4a9e7717185a4219509ebfc34d6ed3d313c7fc7a069273f0"
+      "sha256": "sha256:6cee5c99ff63b33d2ac9b6c4a6dae1de842cea036cd926cc206be34676907314"
     },
     {
       "presentation": "dark desktop",
@@ -321,7 +321,7 @@
       "page": "/graph?lens=context&scan=scan-proof-ai-platform&capture=1",
       "scope": "Recorded neighborhood and selected evidence in the light theme, with bounded expansion and branch focus",
       "visible_version": "0.108.4",
-      "sha256": "sha256:a6c265d5051ec1c5b0935916ae977f9fb23867c23b6fa5b5d6ce3d16a8178fef"
+      "sha256": "sha256:0ee0b35270b3046318f132c3457ed24dd739df9cdcd9a042d24ebcd1fbd669b5"
     },
     {
       "presentation": "dark responsive 1000x900",
@@ -329,7 +329,7 @@
       "page": "/graph?lens=context&scan=scan-proof-ai-platform&capture=1",
       "scope": "Same nine recorded entities and eight relationships arranged left to right using the Horizontal layout control",
       "visible_version": "0.108.4",
-      "sha256": "sha256:d8f2d9890763693f1b83525a410e280e434c43289af5748bae31f7374ee63f4a"
+      "sha256": "sha256:68ae8e0191996143807792e07718008dba3b7271697683e90956379223218b79"
     },
     {
       "presentation": "light responsive 1000x900",
@@ -337,7 +337,7 @@
       "page": "/graph?lens=context&scan=scan-proof-ai-platform&capture=1",
       "scope": "Same nine recorded entities and eight relationships arranged left to right using the Horizontal layout control",
       "visible_version": "0.108.4",
-      "sha256": "sha256:cc8e106cad2e8f19e803126705bf8a7719392ec81417f415744196424d69a3d3"
+      "sha256": "sha256:2401cbaac64277d030ebb25a6fd49bdfe9324209c8789633f68a4dd37e8ed44a"
     },
     {
       "presentation": "dark desktop",
@@ -369,7 +369,7 @@
       "page": "/findings?capture=1",
       "scope": "Findings queue with seeded package and CVE evidence from the demo estate",
       "visible_version": "0.108.4",
-      "sha256": "sha256:1ce1ecc06f82dc992bf19b564876e4ff4d6b261ea0ba4ce67936b4964f13b810"
+      "sha256": "sha256:a189a3a137438f3470584a10ccf19364680600aa69675966c2194a2a92120000"
     },
     {
       "presentation": "dark desktop",
