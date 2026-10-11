@@ -1,9 +1,10 @@
 """SQLite graph startup repair and read initialization."""
 
 import sqlite3
-import threading
 from collections.abc import Callable
 from pathlib import Path
+
+from agent_bom.db.graph_write_admission import graph_writer_admission
 
 
 def backfill_edge_metadata(conn: sqlite3.Connection) -> None:
@@ -14,14 +15,13 @@ def backfill_edge_metadata(conn: sqlite3.Connection) -> None:
         conn.execute(f"UPDATE graph_edges SET {column} = {source} WHERE {predicate}")  # nosec B608 - column and source come from the fixed internal tuple
 
 
-_SCHEMA_INIT_LOCK = threading.Lock()
 _INITIALIZED_FILES: dict[str, tuple[int, int]] = {}
 
 
 def invalidate_read_schema(path: Path) -> None:
     """Retire failed storage qualification so a repaired file can initialize."""
     key = str(path.resolve())
-    with _SCHEMA_INIT_LOCK:
+    with graph_writer_admission(path):
         _INITIALIZED_FILES.pop(key, None)
 
 
@@ -32,7 +32,11 @@ def ensure_read_schema(path: Path, initialize: Callable[[], sqlite3.Connection],
     identity = (metadata.st_dev, metadata.st_ino)
     if _INITIALIZED_FILES.get(key) == identity:
         return
-    with _SCHEMA_INIT_LOCK:
+    # Reuse the per-file writer queue: cold reads may migrate schema, but one
+    # busy database must not hold up initialization or recovery of another.
+    with graph_writer_admission(path):
+        metadata = path.stat()
+        identity = (metadata.st_dev, metadata.st_ino)
         if _INITIALIZED_FILES.get(key) == identity:
             return
         # Retire the old identity before attempting replacement initialization:

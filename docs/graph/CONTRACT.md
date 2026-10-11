@@ -731,6 +731,19 @@ revision. Keep the additive column when rolling back application code; restart
 investigations after any rollback rather than continuing old cursors.
 
 
+### SQLite initialization and contention
+
+Cold schema initialization and failed-probe invalidation use the same bounded,
+per-file writer admission as graph mutations. A blocked database cannot hold an
+initialization lock for unrelated files. Concurrent first reads of the same file
+still initialize once; initialized WAL readers stay outside writer admission.
+File replacement is rechecked after admission, and failed initialization is not
+cached as healthy. Admission timeout fails the operation with SQLite busy
+semantics; it does not return an empty or partially initialized graph.
+
+This coordinates threads in one process. SQLite still arbitrates separate
+processes; it does not promise cross-process fairness or production latency.
+
 ### Bounded storage qualification
 
 Use a separate, disposable database with migrated schema and a restricted app
