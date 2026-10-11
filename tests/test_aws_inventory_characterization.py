@@ -922,7 +922,8 @@ def _scenarios_single(h: Any) -> dict[str, Any]:
     h.monkeypatch.setenv(aws_inventory.INVENTORY_ENV_FLAG, "On")
     session_calls: list[str] = []
     injected = FakeSession(_full_spec(), session_calls, region_name="eu-central-1")
-    result = aws_inventory.discover_inventory(session=injected, include_iam=False)
+    with _fake_boto3(_full_spec(), session_calls):
+        result = aws_inventory.discover_inventory(session=injected, include_iam=False)
     out["single_injected_session_flag_on"] = {"result": _normalize(_jsonable(result)), "calls": session_calls, "logs": _logs(h.caplog)}
     h.monkeypatch.delenv(aws_inventory.INVENTORY_ENV_FLAG)
     return out
@@ -985,7 +986,8 @@ def _scenarios_multi(h: Any) -> dict[str, Any]:
     h.monkeypatch.setenv(aws_inventory.INVENTORY_ENV_FLAG, "1")
     calls: list[str] = []
     injected = FakeSession(_full_spec(), calls, region_name=None)
-    result = aws_inventory.discover_inventory_all_regions(session=injected, regions=["us-west-2"])
+    with _fake_boto3(_full_spec(), calls):
+        result = aws_inventory.discover_inventory_all_regions(session=injected, regions=["us-west-2"])
     out["multi_injected_session_default_region_missing"] = {"result": _normalize(_jsonable(result)), "calls": sorted(calls)}
     h.monkeypatch.delenv(aws_inventory.INVENTORY_ENV_FLAG)
     return out
@@ -1050,7 +1052,9 @@ def _build_golden(h: Any) -> dict[str, Any]:
 
 
 def test_aws_inventory_golden(harness: Any) -> None:
-    actual = json.loads(json.dumps(_build_golden(harness), sort_keys=False, default=repr))
+    # Every discovery scenario must supply SDK stubs, including injected sessions.
+    with patch.dict(sys.modules, {"boto3": None}):
+        actual = json.loads(json.dumps(_build_golden(harness), sort_keys=False, default=repr))
     if os.environ.get("UPDATE_CLOUD_GOLDEN") == "1":
         GOLDEN.parent.mkdir(parents=True, exist_ok=True)
         GOLDEN.write_text(json.dumps(actual, indent=1, sort_keys=False) + "\n")
