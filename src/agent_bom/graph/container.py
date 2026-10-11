@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import math
 import time
 from collections import defaultdict, deque
@@ -78,8 +79,6 @@ def technique_mappings_from_json(raw: object) -> list["TechniqueMapping"]:
 
     Tolerant of legacy rows: ``None`` / empty / malformed values yield ``[]``.
     """
-    import json
-
     if not raw:
         return []
     if isinstance(raw, (str, bytes, bytearray)):
