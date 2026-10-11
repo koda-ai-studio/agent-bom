@@ -11,7 +11,6 @@ _EXTERNAL_SCRIPT_TAGS = (
     '  <script src="https://unpkg.com/cytoscape@3.30.2/dist/cytoscape.min.js"></script>\n',
     '  <script src="https://unpkg.com/dagre@0.8.5/dist/dagre.min.js"></script>\n',
     '  <script src="https://unpkg.com/cytoscape-dagre@2.5.0/cytoscape-dagre.js"></script>\n',
-    '  <script src="https://unpkg.com/cytoscape-popper@2.0.0/cytoscape-popper.js"></script>\n',
 )
 
 

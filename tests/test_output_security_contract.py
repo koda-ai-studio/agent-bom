@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import io
 import json
+import re
 from datetime import datetime
 
 from agent_bom.finding import Asset, Finding, FindingSource, FindingType
@@ -381,3 +382,18 @@ def test_linked_document_trusted_ids_skip_resanitizing_but_never_leak():
     assert sanitize_output_text(minted) == minted, "trust must not change output, only skip work"
     assert secret not in json.dumps(linked)
     assert linked == sanitize_linked_document(doc)
+
+
+def test_html_graph_extensions_load_after_their_browser_dependencies():
+    """Optional graph extensions must not throw during report startup."""
+    rendered = to_html(_report([_finding()]))
+    sources = re.findall(r'<script[^>]+src="([^"]+)"', rendered)
+    dependencies = {
+        "cytoscape-dagre": ("cytoscape", "dagre"),
+        "cytoscape-popper": ("cytoscape", "@popperjs/core"),
+    }
+    for index, source in enumerate(sources):
+        for extension, required in dependencies.items():
+            if f"/{extension}@" in source:
+                for dependency in required:
+                    assert any(f"/{dependency}@" in prior for prior in sources[:index]), f"{extension} needs {dependency} loaded first"

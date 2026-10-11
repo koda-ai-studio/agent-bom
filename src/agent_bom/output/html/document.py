@@ -146,7 +146,6 @@ def to_html(
   <script src="https://unpkg.com/cytoscape@3.30.2/dist/cytoscape.min.js"></script>
   <script src="https://unpkg.com/dagre@0.8.5/dist/dagre.min.js"></script>
   <script src="https://unpkg.com/cytoscape-dagre@2.5.0/cytoscape-dagre.js"></script>
-  <script src="https://unpkg.com/cytoscape-popper@2.0.0/cytoscape-popper.js"></script>
 {render_styles(status_color)}
 </head>
 <body>
