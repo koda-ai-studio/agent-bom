@@ -59,10 +59,14 @@ async def consequence_assessment_impl(
 def register_consequence_tool(mcp: Any, *, read_only: Any, execute_tool_async: Any) -> None:
     @mcp.tool(annotations=read_only, title="Consequence Assessment")
     async def consequence_assessment(
-        request: ConsequenceRequest,
-        scan_id: Annotated[str, Field(min_length=1, max_length=1024)],
-        snapshot_generation: Annotated[str | None, Field(min_length=1, max_length=256)] = None,
-        tenant_id: str = "default",
+        request: Annotated[
+            ConsequenceRequest, Field(description="Explicit starting assumption, affected occurrence and traversal bounds.")
+        ],
+        scan_id: Annotated[str, Field(min_length=1, max_length=1024, description="Persisted snapshot from graph inventory.")],
+        snapshot_generation: Annotated[
+            str | None, Field(min_length=1, max_length=256, description="Require this previously returned evidence revision.")
+        ] = None,
+        tenant_id: Annotated[str, Field(description="Compatibility hint; the server-bound tenant remains authoritative.")] = "default",
     ) -> str:
         """Trace experimental consequences, exact blockers and missing prerequisites.
 

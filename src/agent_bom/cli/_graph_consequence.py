@@ -3,10 +3,8 @@
 from __future__ import annotations
 
 import click
-from pydantic import ValidationError
 
 from agent_bom.cli._findings_group import _common_api_options, _emit_json, _make_client, _run_request
-from agent_bom.graph.consequence.contracts import ConsequenceRequest
 
 
 @click.command("consequences")
@@ -35,22 +33,21 @@ def consequences_cmd(
 ) -> None:
     """Export experimental action consequences and evidence gaps as JSON."""
 
-    try:
-        request = ConsequenceRequest(
-            root_node_id=root_node_id,
-            mode=mode,
-            assume_control=assume_control,
-            affected_node_id=affected_node_id,
-            max_depth=max_depth,
-            max_results=max_results,
-        )
-    except ValidationError as exc:
-        raise click.UsageError("Use --assume-control for an agent/principal, or --affected-node with vulnerability mode.") from exc
+    if (mode == "assumed_compromise" and (not assume_control or affected_node_id is not None)) or (
+        mode == "vulnerability" and (assume_control or not affected_node_id)
+    ):
+        raise click.UsageError("Use --assume-control for an agent/principal, or --affected-node with vulnerability mode.")
+    request = {
+        "root_node_id": root_node_id,
+        "mode": mode,
+        "assume_control": assume_control,
+        "affected_node_id": affected_node_id,
+        "max_depth": max_depth,
+        "max_results": max_results,
+    }
     client = _make_client(api_url, api_key, bearer_token, tenant_id)
     result = _run_request(
         client,
-        lambda api: api.consequence_assessment(
-            request=request.model_dump(mode="json"), scan_id=scan_id, snapshot_generation=snapshot_generation
-        ),
+        lambda api: api.consequence_assessment(request=request, scan_id=scan_id, snapshot_generation=snapshot_generation),
     )
     _emit_json(result)
