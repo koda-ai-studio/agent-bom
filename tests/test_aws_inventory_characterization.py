@@ -314,7 +314,12 @@ def _full_spec() -> dict[str, Any]:
             "page:describe_vpc_endpoints": [
                 {
                     "VpcEndpoints": [
-                        {"VpcEndpointId": "vpce-1", "ServiceName": "com.amazonaws.us-east-1.s3", "VpcId": "vpc-1", "VpcEndpointType": "Gateway"},
+                        {
+                            "VpcEndpointId": "vpce-1",
+                            "ServiceName": "com.amazonaws.us-east-1.s3",
+                            "VpcId": "vpc-1",
+                            "VpcEndpointType": "Gateway",
+                        },
                         {"VpcEndpointId": "vpce-2"},
                         {"VpcEndpointId": ""},
                     ]
@@ -368,7 +373,9 @@ def _full_spec() -> dict[str, Any]:
                             "Path": "/",
                             "CreateDate": DT,
                             "AssumeRolePolicyDocument": {
-                                "Statement": [{"Effect": "Allow", "Principal": {"Service": "ec2.amazonaws.com"}, "Action": "sts:AssumeRole"}]
+                                "Statement": [
+                                    {"Effect": "Allow", "Principal": {"Service": "ec2.amazonaws.com"}, "Action": "sts:AssumeRole"}
+                                ]
                             },
                         },
                         "bad",
@@ -392,7 +399,11 @@ def _full_spec() -> dict[str, Any]:
                 "RoleName",
                 {
                     "role-admin": [
-                        {"AttachedPolicies": [{"PolicyArn": "arn:aws:iam::aws:policy/AdministratorAccess", "PolicyName": "AdministratorAccess"}]}
+                        {
+                            "AttachedPolicies": [
+                                {"PolicyArn": "arn:aws:iam::aws:policy/AdministratorAccess", "PolicyName": "AdministratorAccess"}
+                            ]
+                        }
                     ],
                     "role-ro": [
                         {
@@ -598,7 +609,12 @@ def _full_spec() -> dict[str, Any]:
             "page:list_secrets": [
                 {
                     "SecretList": [
-                        {"Name": "db-password", "ARN": f"arn:aws:secretsmanager:us-east-1:{ACCOUNT}:secret:db", "RotationEnabled": True, "LastChangedDate": DT},
+                        {
+                            "Name": "db-password",
+                            "ARN": f"arn:aws:secretsmanager:us-east-1:{ACCOUNT}:secret:db",
+                            "RotationEnabled": True,
+                            "LastChangedDate": DT,
+                        },
                         {"Name": "api-token"},
                         {"Name": ""},
                     ]
@@ -692,8 +708,12 @@ def _full_spec() -> dict[str, Any]:
                     "WebACLs": [{"Name": "acl-a", "Id": "a", "ARN": "arn:aws:wafv2:us-east-1:1:regional/webacl/acl-a/a"}, {"Name": ""}],
                     "NextMarker": "n1",
                 },
-                ("REGIONAL", "n1"): {"WebACLs": [{"Name": "acl-b", "ARN": "arn:aws:wafv2:us-east-1:1:regional/webacl/acl-b/b"}, {"ARN": "arn:x/acl-c"}]},
-                ("CLOUDFRONT", None): {"WebACLs": [{"Name": "acl-cf", "Id": "cf", "ARN": "arn:aws:wafv2:us-east-1:1:global/webacl/acl-cf/cf"}]},
+                ("REGIONAL", "n1"): {
+                    "WebACLs": [{"Name": "acl-b", "ARN": "arn:aws:wafv2:us-east-1:1:regional/webacl/acl-b/b"}, {"ARN": "arn:x/acl-c"}]
+                },
+                ("CLOUDFRONT", None): {
+                    "WebACLs": [{"Name": "acl-cf", "Id": "cf", "ARN": "arn:aws:wafv2:us-east-1:1:global/webacl/acl-cf/cf"}]
+                },
             }[(kw["Scope"], kw.get("NextMarker"))],
             "list_resources_for_web_acl": lambda **kw: (
                 {"ResourceArns": ["arn:alb-1", ""], "NextMarker": "r1"}
@@ -860,7 +880,12 @@ def _scenarios_single(h: Any) -> dict[str, Any]:
         }
     h.caplog.clear()
     out["single_session_error"] = _single(
-        h, _full_spec(), session_error=FakeError("ProfileNotFound", "profile secret-profile not found"), region="eu-west-1", profile="dev", force=True
+        h,
+        _full_spec(),
+        session_error=FakeError("ProfileNotFound", "profile secret-profile not found"),
+        region="eu-west-1",
+        profile="dev",
+        force=True,
     )
     h.caplog.clear()
     no_creds = _full_spec()
@@ -1079,7 +1104,12 @@ _FAMILY_ONLY = {"include_s3": False, "include_ec2": False, "include_iam": False,
         ("_discover_ecr", lambda *_a, **_k: [{"name": "p"}], {}, lambda r: r["ecr_repositories"] == [{"name": "p"}]),
         ("_discover_elb", lambda *_a, **_k: [{"name": "p"}], _FAMILY_ONLY, lambda r: r["elb_load_balancers"] == [{"name": "p"}]),
         ("_discover_vpcs", lambda *_a, **_k: [{"name": "p"}], _FAMILY_ONLY, lambda r: r["vpcs"] == [{"name": "p"}]),
-        ("_discover_cloudfront", lambda *_a, **_k: [{"name": "p"}], _FAMILY_ONLY, lambda r: r["cloudfront_distributions"] == [{"name": "p"}]),
+        (
+            "_discover_cloudfront",
+            lambda *_a, **_k: [{"name": "p"}],
+            _FAMILY_ONLY,
+            lambda r: r["cloudfront_distributions"] == [{"name": "p"}],
+        ),
         ("_discover_messaging", lambda *_a, **_k: [{"name": "p"}], _FAMILY_ONLY, lambda r: r["messaging"] == [{"name": "p"}]),
         ("_discover_waf", lambda *_a, **_k: [{"name": "p"}], _FAMILY_ONLY, lambda r: r["web_acls"] == [{"name": "p"}]),
         ("_discover_api_gateways", lambda *_a, **_k: [{"name": "p"}], _FAMILY_ONLY, lambda r: r["api_gateways"] == [{"name": "p"}]),
@@ -1088,7 +1118,15 @@ _FAMILY_ONLY = {"include_s3": False, "include_ec2": False, "include_iam": False,
             "_discover_network_edge",
             lambda *_a, **_k: {
                 k: [{"id": k}]
-                for k in ("network_interfaces", "subnets", "nat_gateways", "internet_gateways", "vpc_endpoints", "route_tables", "network_acls")
+                for k in (
+                    "network_interfaces",
+                    "subnets",
+                    "nat_gateways",
+                    "internet_gateways",
+                    "vpc_endpoints",
+                    "route_tables",
+                    "network_acls",
+                )
             },
             _FAMILY_ONLY,
             lambda r: r["subnets"] == [{"id": "subnets"}] and r["network_acls"] == [{"id": "network_acls"}],

@@ -23,8 +23,8 @@ from typing import Any
 
 import pytest
 
-from agent_bom.cloud import azure_authorization_collector, azure_blob_data_classifier  # noqa: F401 — import before sys.modules faking
 from agent_bom import discovery_envelope
+from agent_bom.cloud import azure_authorization_collector, azure_blob_data_classifier  # noqa: F401 — import before sys.modules faking
 from agent_bom.cloud import azure_inventory as azinv
 from agent_bom.identity import entra_nhi
 
@@ -40,11 +40,11 @@ class _Obj:
             setattr(self, key, value)
 
 
-class _AccessDenied(Exception):
+class _AccessDenied(Exception):  # noqa: N818 - mirrors the Azure SDK access-denied shape
     status_code = 403
 
 
-class _Throttled(Exception):
+class _Throttled(Exception):  # noqa: N818 - mirrors the Azure SDK throttling shape
     status_code = 429
 
 
@@ -112,10 +112,17 @@ def _data() -> dict[str, list[Any]]:
                 id=f"{RG}/rg-web/providers/Microsoft.Compute/virtualMachines/web-1",
                 location="eastus",
                 hardware_profile=_Obj(vm_size="Standard_D2s_v3"),
-                identity=_Obj(principal_id="mi-principal-1", type="SystemAssigned,UserAssigned", user_assigned_identities={"/uai/a": {}, "": {}}),
+                identity=_Obj(
+                    principal_id="mi-principal-1", type="SystemAssigned,UserAssigned", user_assigned_identities={"/uai/a": {}, "": {}}
+                ),
                 tags={"app": "web"},
             ),
-            _Obj(name="typed-only", id="", hardware_profile=None, identity=_Obj(principal_id="", type="UserAssigned", user_assigned_identities=None)),
+            _Obj(
+                name="typed-only",
+                id="",
+                hardware_profile=None,
+                identity=_Obj(principal_id="", type="UserAssigned", user_assigned_identities=None),
+            ),
             _Obj(name="no-identity", id="vm-bare", identity=None),
             _Obj(name="", id="skip"),
         ],
@@ -155,7 +162,13 @@ def _data() -> dict[str, list[Any]]:
                     _Obj(direction="Inbound", access="Allow", protocol="Tcp", source_address_prefix="::/0", destination_port_range=None),
                     _Obj(direction="Outbound", access="Allow", protocol="Tcp", source_address_prefix="*", destination_port_range="443"),
                     _Obj(direction="Inbound", access="Deny", protocol="Tcp", source_address_prefix="*", destination_port_range="3389"),
-                    _Obj(direction="Inbound", access="Allow", protocol="Tcp", source_address_prefix="10.1.0.0/16", destination_port_range="80"),
+                    _Obj(
+                        direction="Inbound",
+                        access="Allow",
+                        protocol="Tcp",
+                        source_address_prefix="10.1.0.0/16",
+                        destination_port_range="80",
+                    ),
                 ],
             ),
             _Obj(name="empty-nsg", id="", security_rules=None),
@@ -197,7 +210,9 @@ def _data() -> dict[str, list[Any]]:
                 name="kv-prod",
                 id=f"{RG}/rg-sec/providers/Microsoft.KeyVault/vaults/kv-prod",
                 location="eastus",
-                properties=_Obj(vault_uri="https://kv-prod.vault.azure.net/", enable_rbac_authorization=True, public_network_access="Disabled"),
+                properties=_Obj(
+                    vault_uri="https://kv-prod.vault.azure.net/", enable_rbac_authorization=True, public_network_access="Disabled"
+                ),
             ),
             _Obj(name="kv-noprops", id="kv-2", properties=None),
             _Obj(name="", id="skip"),
@@ -226,21 +241,37 @@ def _data() -> dict[str, list[Any]]:
             _Obj(name="", id="skip"),
         ],
         "sql": [
-            _Obj(name="sql-1", id=f"{RG}/rg-data/providers/Microsoft.Sql/servers/sql-1", location="eastus", public_network_access="Enabled"),
+            _Obj(
+                name="sql-1", id=f"{RG}/rg-data/providers/Microsoft.Sql/servers/sql-1", location="eastus", public_network_access="Enabled"
+            ),
             _Obj(name="", id="skip"),
         ],
         "postgres": [
-            _Obj(name="pg-1", id=f"{RG}/rg-data/providers/Microsoft.DBforPostgreSQL/flexibleServers/pg-1", network=_Obj(public_network_access="Disabled")),
+            _Obj(
+                name="pg-1",
+                id=f"{RG}/rg-data/providers/Microsoft.DBforPostgreSQL/flexibleServers/pg-1",
+                network=_Obj(public_network_access="Disabled"),
+            ),
             _Obj(name="pg-2", id="pg-2", public_network_access="", network=None),
         ],
         "mysql": [_Obj(name="mysql-1", id="mysql-1", location="westus", tags={"t": 1})],
         "eventhubs": [
-            _Obj(name="eh-1", id=f"{RG}/rg-msg/providers/Microsoft.EventHub/namespaces/eh-1", sku=_Obj(name="Standard"), public_network_access="Enabled"),
+            _Obj(
+                name="eh-1",
+                id=f"{RG}/rg-msg/providers/Microsoft.EventHub/namespaces/eh-1",
+                sku=_Obj(name="Standard"),
+                public_network_access="Enabled",
+            ),
             _Obj(name="eh-2", id="eh-2", sku=None),
             _Obj(name="", id="skip"),
         ],
         "servicebus": [
-            _Obj(name="sb-1", id=f"{RG}/rg-msg/providers/Microsoft.ServiceBus/namespaces/sb-1", sku=_Obj(name="Premium"), public_network_access="Disabled"),
+            _Obj(
+                name="sb-1",
+                id=f"{RG}/rg-msg/providers/Microsoft.ServiceBus/namespaces/sb-1",
+                sku=_Obj(name="Premium"),
+                public_network_access="Disabled",
+            ),
             _Obj(name="sb-2", id="sb-2", sku=None),
             _Obj(name="", id="skip"),
         ],
@@ -280,7 +311,9 @@ def _data() -> dict[str, list[Any]]:
                 public_ip_allocation_method="Static",
                 ip_configuration=_Obj(id=f"{RG}/rg-web/providers/Microsoft.Network/networkInterfaces/nic-1/ipConfigurations/ipconfig1"),
             ),
-            _Obj(name="pip-free", id="pip-2", location="westus", ip_address="", public_ip_allocation_method="Dynamic", ip_configuration=None),
+            _Obj(
+                name="pip-free", id="pip-2", location="westus", ip_address="", public_ip_allocation_method="Dynamic", ip_configuration=None
+            ),
             _Obj(name="", id="pip-nameless", ip_address="203.0.113.99", ip_configuration=_Obj(id="")),
         ],
         "nics": [
@@ -293,7 +326,9 @@ def _data() -> dict[str, list[Any]]:
                 ip_configurations=[
                     _Obj(private_ip_address="", subnet=None, public_ip_address=None),
                     _Obj(private_ip_address="10.0.1.5", subnet=_Obj(id=web_subnet), public_ip_address=_Obj(ip_address="", id="pip-ref-id")),
-                    _Obj(private_ip_address="10.0.1.6", subnet=_Obj(id=db_subnet), public_ip_address=_Obj(ip_address="203.0.113.10", id="x")),
+                    _Obj(
+                        private_ip_address="10.0.1.6", subnet=_Obj(id=db_subnet), public_ip_address=_Obj(ip_address="203.0.113.10", id="x")
+                    ),
                 ],
             ),
             _Obj(name="nic-bare", id="nic-2", virtual_machine=None, network_security_group=None, ip_configurations=None),
@@ -324,7 +359,10 @@ def _data() -> dict[str, list[Any]]:
                 id="rt-1",
                 location="eastus",
                 subnets=[_Obj(id="not-a-subnet"), _Obj(id=web_subnet)],
-                routes=[_Obj(next_hop_type="VirtualAppliance", address_prefix="10.0.0.0/8"), _Obj(next_hop_type="Internet", address_prefix="0.0.0.0/0")],
+                routes=[
+                    _Obj(next_hop_type="VirtualAppliance", address_prefix="10.0.0.0/8"),
+                    _Obj(next_hop_type="Internet", address_prefix="0.0.0.0/0"),
+                ],
             ),
             _Obj(name="rt-private", id="rt-2", subnets=[], routes=[_Obj(next_hop_type="VirtualAppliance", address_prefix="0.0.0.0/0")]),
             _Obj(name="rt-empty", id="rt-3", subnets=None, routes=None),
@@ -372,7 +410,13 @@ def _data() -> dict[str, list[Any]]:
                 firewall_policy=_Obj(id="policy-1"),
                 frontend_ip_configurations=[],
             ),
-            _Obj(name="agw-tier", id="agw-3", sku=_Obj(name="WAF_v2", tier="WAF_v2"), web_application_firewall_configuration=None, firewall_policy=None),
+            _Obj(
+                name="agw-tier",
+                id="agw-3",
+                sku=_Obj(name="WAF_v2", tier="WAF_v2"),
+                web_application_firewall_configuration=None,
+                firewall_policy=None,
+            ),
             _Obj(name="agw-plain", id="agw-4", sku=None, web_application_firewall_configuration=None, firewall_policy=_Obj(id="")),
             _Obj(name="", id="skip"),
         ],
@@ -382,8 +426,21 @@ def _data() -> dict[str, list[Any]]:
             _Obj(name="", id="skip"),
         ],
         "apim": [
-            _Obj(name="apim-ext", id="apim-1", sku=_Obj(name="Developer"), gateway_url="https://apim-ext.azure-api.net", virtual_network_type="External"),
-            _Obj(name="apim-int", id="apim-2", sku=None, gateway_url="https://apim-int.azure-api.net", public_ip_addresses=["198.51.100.1"], virtual_network_type="Internal"),
+            _Obj(
+                name="apim-ext",
+                id="apim-1",
+                sku=_Obj(name="Developer"),
+                gateway_url="https://apim-ext.azure-api.net",
+                virtual_network_type="External",
+            ),
+            _Obj(
+                name="apim-int",
+                id="apim-2",
+                sku=None,
+                gateway_url="https://apim-int.azure-api.net",
+                public_ip_addresses=["198.51.100.1"],
+                virtual_network_type="Internal",
+            ),
             _Obj(name="apim-ips", id="apim-3", gateway_url="", public_ip_addresses=["", "198.51.100.2"], virtual_network_type="None"),
             _Obj(name="apim-dark", id="apim-4", gateway_url="", public_ip_addresses=None),
             _Obj(name="", id="skip"),
@@ -401,7 +458,14 @@ def _data() -> dict[str, list[Any]]:
             _Obj(name="", id="skip"),
         ],
         "sites": [
-            _Obj(name="webapp", id="site-1", kind="app,linux", default_host_name="webapp.azurewebsites.net", https_only=True, public_network_access="Enabled"),
+            _Obj(
+                name="webapp",
+                id="site-1",
+                kind="app,linux",
+                default_host_name="webapp.azurewebsites.net",
+                https_only=True,
+                public_network_access="Enabled",
+            ),
             _Obj(name="funcapp", id="site-2", kind="functionapp", default_host_name="funcapp.azurewebsites.net", enabled=False),
             _Obj(name="nohost", id="site-3", kind=None, default_host_name=""),
             _Obj(name="", id="skip"),
@@ -414,7 +478,12 @@ def _data() -> dict[str, list[Any]]:
         ],
         "management_group_children": {
             "root": [
-                _Obj(id="/providers/Microsoft.Management/managementGroups/leaf", name="leaf", type="Microsoft.Management/managementGroups", display_name="Leaf"),
+                _Obj(
+                    id="/providers/Microsoft.Management/managementGroups/leaf",
+                    name="leaf",
+                    type="Microsoft.Management/managementGroups",
+                    display_name="Leaf",
+                ),
                 _Obj(id=f"/subscriptions/{SUB}", name=SUB, type="/subscriptions", display_name="Prod"),
                 _Obj(id="/subscriptions/dup", name=SUB, type="/subscriptions", display_name="Prod again"),
             ],
@@ -1008,7 +1077,14 @@ def test_golden_has_no_stale_scenarios() -> None:
 
 def test_golden_covers_every_resource_family() -> None:
     full = _load_golden()["full"]["result"]
-    skip = {"authorization_observed_at", "authorization_evidence", "discovery_envelope", "missing_permissions", "warnings", "deny_assignments"}
+    skip = {
+        "authorization_observed_at",
+        "authorization_evidence",
+        "discovery_envelope",
+        "missing_permissions",
+        "warnings",
+        "deny_assignments",
+    }
     empty_lists = [k for k, v in full.items() if isinstance(v, list) and not v and k not in skip]
     assert empty_lists == []
     assert full["status"] == "ok"
