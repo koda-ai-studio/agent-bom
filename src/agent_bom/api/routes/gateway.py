@@ -30,6 +30,7 @@ from fastapi.responses import JSONResponse, Response
 from agent_bom.api.demo_refresh import demo_daily_evidence_dependency
 from agent_bom.api.models import EvaluateRequest, JobStatus, PolicyCreate, PolicyUpdate
 from agent_bom.api.read_models import GatewayPoliciesResponse, documented
+from agent_bom.api.read_models import runtime_estate_a as rt
 from agent_bom.api.stores import _get_firewall_decision_store, _get_policy_store, _get_store
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.gateway_upstreams import is_gateway_compatible_upstream_transport
@@ -231,7 +232,9 @@ def create_gateway_policy(body: PolicyCreate, request: Request) -> dict[str, Any
     return policy.model_dump()
 
 
-@router.get("/gateway/policies/{policy_id}", tags=["gateway"], dependencies=[_dep("policy_read")])
+@router.get(
+    "/gateway/policies/{policy_id}", **documented(rt.GatewayPolicyDetailResponse), tags=["gateway"], dependencies=[_dep("policy_read")]
+)
 def get_gateway_policy(policy_id: str, request: Request) -> dict[str, Any]:
     """Get a gateway policy by ID."""
     tenant_id = require_request_tenant_id(request)
@@ -410,7 +413,7 @@ def evaluate_gateway(body: EvaluateRequest, request: Request) -> dict[str, Any]:
     }
 
 
-@router.get("/gateway/audit", tags=["gateway"], dependencies=[_dep("audit_read")])
+@router.get("/gateway/audit", **documented(rt.GatewayAuditResponse), tags=["gateway"], dependencies=[_dep("audit_read")])
 def list_gateway_audit(
     request: Request,
     policy_id: str | None = None,
@@ -419,17 +422,13 @@ def list_gateway_audit(
 ) -> dict[str, Any]:
     """Query the gateway policy audit log."""
     tenant_id = require_request_tenant_id(request)
-    entries = _get_policy_store().list_audit_entries(
-        policy_id=policy_id,
-        agent_name=agent_name,
-        limit=limit,
-        tenant_id=tenant_id,
-    )
+    entries = _get_policy_store().list_audit_entries(policy_id=policy_id, agent_name=agent_name, limit=limit, tenant_id=tenant_id)
     return {"entries": [e.model_dump() for e in entries], "count": len(entries)}
 
 
 @router.get(
     "/gateway/upstreams/discovered",
+    **documented(rt.GatewayDiscoveredUpstreamsResponse),
     tags=["gateway"],
     dependencies=[cast(Any, require_authenticated_permission("read"))],
 )
@@ -548,7 +547,7 @@ def _build_discovered_upstreams(tenant_id: str) -> dict:
     }
 
 
-@router.get("/gateway/stats", tags=["gateway"], dependencies=[_dep("audit_read")])
+@router.get("/gateway/stats", **documented(rt.GatewayStatsResponse), tags=["gateway"], dependencies=[_dep("audit_read")])
 def gateway_stats(request: Request) -> dict[str, Any]:
     """Gateway-wide statistics."""
     from agent_bom.gateway import summarize_gateway_policies
@@ -650,7 +649,7 @@ async def firewall_check(request: Request) -> dict[str, Any]:
     }
 
 
-@router.get("/firewall/stats", tags=["gateway"], dependencies=[_dep("audit_read")])
+@router.get("/firewall/stats", **documented(rt.FirewallStatsResponse), tags=["gateway"], dependencies=[_dep("audit_read")])
 def firewall_stats(request: Request) -> dict[str, Any]:
     """Aggregated inter-agent firewall decisions for the runtime-tab overlay.
 

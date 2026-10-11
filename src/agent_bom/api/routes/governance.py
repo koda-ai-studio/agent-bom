@@ -26,6 +26,12 @@ import anyio.to_thread
 from fastapi import APIRouter, HTTPException, Query, Request
 
 from agent_bom.api.read_models import ActivityTimelineResponse, SiemFormatsResponse, documented
+from agent_bom.api.read_models.governance_a import (
+    CortexHealthResponse,
+    CortexTelemetryResponse,
+    GovernanceFindingsResponse,
+    GovernanceReportResponse,
+)
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.backpressure import BackpressureRejectedError, adaptive_backpressure
 from agent_bom.security import sanitize_error, sanitize_text
@@ -65,7 +71,7 @@ async def _offload(build: Callable[[], _T]) -> _T:
         ) from exc
 
 
-@router.get("/governance", tags=["governance"])
+@router.get("/governance", **documented(GovernanceReportResponse), tags=["governance"])
 async def governance_report(days: int = 30) -> dict[str, Any]:
     """Run Snowflake governance discovery and return findings.
 
@@ -98,7 +104,7 @@ async def governance_report(days: int = 30) -> dict[str, Any]:
         raise HTTPException(status_code=500, detail=sanitize_error(exc))
 
 
-@router.get("/governance/findings", tags=["governance"])
+@router.get("/governance/findings", **documented(GovernanceFindingsResponse), tags=["governance"])
 async def governance_findings(
     days: int = 30,
     severity: str | None = None,
@@ -305,7 +311,7 @@ async def activity_timeline(request: Request, days: int = 30) -> dict[str, Any]:
         raise HTTPException(status_code=500, detail=sanitize_error(exc))
 
 
-@router.get("/cortex/telemetry", tags=["governance"], deprecated=True)
+@router.get("/cortex/telemetry", **documented(CortexTelemetryResponse), tags=["governance"], deprecated=True)
 async def cortex_telemetry(hours: int = 24) -> dict[str, Any]:
     """Aggregated Cortex agent telemetry with health assessments.
 
@@ -344,7 +350,7 @@ async def cortex_telemetry(hours: int = 24) -> dict[str, Any]:
         raise HTTPException(status_code=500, detail=sanitize_error(exc))
 
 
-@router.get("/cortex/agents/{name}/telemetry", tags=["governance"])
+@router.get("/cortex/agents/{name}/telemetry", **documented(CortexTelemetryResponse), tags=["governance"])
 async def cortex_agent_telemetry(name: str, hours: int = 24) -> dict[str, Any]:
     """Telemetry for a specific Cortex agent."""
     import os
@@ -374,7 +380,7 @@ async def cortex_agent_telemetry(name: str, hours: int = 24) -> dict[str, Any]:
         raise HTTPException(status_code=500, detail=sanitize_error(exc))
 
 
-@router.get("/cortex/health", tags=["governance"])
+@router.get("/cortex/health", **documented(CortexHealthResponse), tags=["governance"])
 async def cortex_health() -> dict[str, Any]:
     """Health status for all Cortex agents."""
     import os

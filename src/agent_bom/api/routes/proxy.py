@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 from functools import partial
 from pathlib import Path as _Path
 from threading import Lock
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any, cast
 
 import anyio.to_thread
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, WebSocket
@@ -33,16 +33,13 @@ from agent_bom.api.gateway_activity_store import (
     get_gateway_activity_store,
 )
 from agent_bom.api.idempotency_store import IdempotencyConflictError, idempotency_request_fingerprint
+from agent_bom.api.models import ProxyAuditIngestRequest
 from agent_bom.api.proxy_provenance import GatewaySubmissionProvenance, canonicalize_proxy_submission
 from agent_bom.api.read_models import ProxyAlertsResponse, ProxyStatusResponse, documented
+from agent_bom.api.read_models import runtime_estate_b as rt
 from agent_bom.api.shield_registry import _MAX_SHIELD_SESSIONS, _get_engine, _shield_engines, _shield_engines_lock, _shield_key
-from agent_bom.api.tenancy import require_request_tenant_id
-
-if TYPE_CHECKING:
-    pass
-
-from agent_bom.api.models import ProxyAuditIngestRequest
 from agent_bom.api.stores import _get_idempotency_store
+from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.evidence import EvidenceTier, redact_for_persistence
 from agent_bom.runtime.gateway_events import GATEWAY_CANONICAL_EVENT_TYPES, GATEWAY_DENIED_EVENT_TYPES
 from agent_bom.security import sanitize_error, sanitize_sensitive_payload
@@ -956,7 +953,7 @@ def proxy_status(request: Request) -> dict:
     }
 
 
-@router.get("/runtime/production-index", tags=["runtime", "proxy"])
+@router.get("/runtime/production-index", **documented(rt.RuntimeProductionIndexResponse), tags=["runtime", "proxy"])
 def runtime_production_index(request: Request) -> dict:
     """Return tenant-scoped runtime security observability for proxy/gateway traffic.
 
@@ -1211,7 +1208,7 @@ def shield_start(request: Request, session_id: str = "default", correlation_wind
         return {"status": "started", "tenant_id": tenant_id, "session_id": session_id, **engine.status()}
 
 
-@router.get("/shield/status", tags=["shield"])
+@router.get("/shield/status", **documented(rt.ShieldStatusResponse), tags=["shield"])
 def shield_status(request: Request, session_id: str = "default") -> dict:
     """Get current shield threat assessment for a session."""
     tenant_id = _request_tenant_id(request)

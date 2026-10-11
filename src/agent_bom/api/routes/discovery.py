@@ -23,6 +23,7 @@ from agent_bom.api.agent_findings import current_agent_blast_rows, estate_reach_
 from agent_bom.api.mcp_observation_store import MCPObservation, agent_observation_id, merge_observations
 from agent_bom.api.models import JobStatus
 from agent_bom.api.read_models import AgentsResponse, DiscoveryProvidersResponse, documented
+from agent_bom.api.read_models import runtime_estate_b as rt
 from agent_bom.api.stores import _get_fleet_store, _get_mcp_observation_store, _get_store
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.asset_provenance import agent_discovery_provenance, package_discovery_provenance, package_version_provenance
@@ -555,11 +556,7 @@ async def list_agents(
         _agents_response_cache[tenant_id] = (now, deepcopy(response))
         return response
     except BackpressureRejectedError as exc:
-        raise HTTPException(
-            status_code=429,
-            detail=exc.to_dict(),
-            headers={"Retry-After": str(exc.retry_after_seconds)},
-        ) from exc
+        raise HTTPException(status_code=429, detail=exc.to_dict(), headers={"Retry-After": str(exc.retry_after_seconds)}) from exc
     except Exception as exc:  # noqa: BLE001
         _logger.warning("Agent discovery failed: %s", sanitize_text(sanitize_error(exc, generic=True)))
         raise HTTPException(status_code=500, detail=sanitize_error(exc, generic=True)) from exc
@@ -574,7 +571,7 @@ def list_discovery_providers() -> dict:
     return provider_contracts()
 
 
-@router.get("/agents/mesh", tags=["discovery"], deprecated=True)
+@router.get("/agents/mesh", **documented(rt.AgentMeshResponse), tags=["discovery"], deprecated=True)
 async def get_agent_mesh(request: Request) -> dict:
     """Get a ReactFlow-compatible mesh topology of all discovered agents.
 
@@ -635,7 +632,7 @@ def _get_agent_mesh_impl(request: Request) -> dict:
     return build_agent_mesh(agents_data, all_blast)
 
 
-@router.get("/agents/{agent_name}", tags=["discovery"])
+@router.get("/agents/{agent_name}", **documented(rt.AgentDetailResponse), tags=["discovery"])
 async def get_agent_detail(request: Request, agent_name: str) -> dict:
     """Get detailed view of a single agent with cross-referenced scan data.
 
@@ -772,7 +769,7 @@ def _estate_agent_detail(request: Request, agent_name: str) -> dict:
     }
 
 
-@router.get("/agents/{agent_name}/lifecycle", tags=["discovery"])
+@router.get("/agents/{agent_name}/lifecycle", **documented(rt.AgentLifecycleResponse), tags=["discovery"])
 async def get_agent_lifecycle(request: Request, agent_name: str) -> dict:
     """Get React Flow nodes/edges for an agent's full lifecycle graph.
 

@@ -25,6 +25,7 @@ from agent_bom.api.idempotency_store import IdempotencyConflictError, idempotenc
 from agent_bom.api.mcp_observation_store import MCPObservation, agent_observation_id, merge_observations
 from agent_bom.api.models import FleetAgentUpdate, PushPayload, StateUpdate
 from agent_bom.api.read_models import FleetResponse, FleetStatsResponse, documented
+from agent_bom.api.read_models import runtime_estate_b as rt
 from agent_bom.api.stores import _get_fleet_store, _get_idempotency_store, _get_mcp_observation_store, _get_policy_store
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.api.tenant_quota import enforce_fleet_agents_quota, tenant_quota_guard
@@ -48,11 +49,7 @@ async def _store_call(fn: Callable[..., _T], /, *args: Any, **kwargs: Any) -> _T
         async with adaptive_backpressure("graph"):
             return await asyncio.to_thread(fn, *args, **kwargs)
     except BackpressureRejectedError as exc:
-        raise HTTPException(
-            status_code=429,
-            detail=exc.to_dict(),
-            headers={"Retry-After": str(exc.retry_after_seconds)},
-        ) from exc
+        raise HTTPException(status_code=429, detail=exc.to_dict(), headers={"Retry-After": str(exc.retry_after_seconds)}) from exc
 
 
 def _quarantine_policy_name(agent_id: str) -> str:
@@ -200,7 +197,7 @@ async def fleet_stats(request: Request) -> dict[str, Any]:
     }
 
 
-@router.get("/fleet/endpoints", tags=["fleet"])
+@router.get("/fleet/endpoints", **documented(rt.FleetEndpointsResponse), tags=["fleet"])
 async def list_fleet_endpoints(
     request: Request,
     search: str | None = None,
@@ -237,7 +234,7 @@ async def list_fleet_endpoints(
     }
 
 
-@router.get("/fleet/endpoints/{endpoint_id}", tags=["fleet"])
+@router.get("/fleet/endpoints/{endpoint_id}", **documented(rt.FleetEndpointDetailResponse), tags=["fleet"])
 async def get_fleet_endpoint(request: Request, endpoint_id: str) -> dict[str, Any]:
     """Return one tenant-scoped endpoint inventory summary."""
 
@@ -249,7 +246,7 @@ async def get_fleet_endpoint(request: Request, endpoint_id: str) -> dict[str, An
     return cast(dict[str, Any], endpoint.model_dump())
 
 
-@router.get("/fleet/{agent_id}", tags=["fleet"])
+@router.get("/fleet/{agent_id}", **documented(rt.FleetAgentDetailResponse), tags=["fleet"])
 async def get_fleet_agent(request: Request, agent_id: str) -> dict[str, Any]:
     """Get a single fleet agent with trust score breakdown."""
     tenant_id = require_request_tenant_id(request)

@@ -36,6 +36,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from agent_bom.api.audit_log import log_action
 from agent_bom.api.connection_crypto import ConnectionSecretError, connections_key_configured, encrypt_secret
 from agent_bom.api.read_models import TicketingConnectionsResponse, documented
+from agent_bom.api.read_models.governance_b import TicketingConnectionDetailResponse, TicketingTicketsResponse
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.rbac import require_authenticated_permission
 from agent_bom.security import sanitize_error, validate_url
@@ -226,7 +227,7 @@ async def list_connections(request: Request, _role: Any = _READ_DEP) -> dict[str
     }
 
 
-@router.get("/ticketing/connections/{connection_id}")
+@router.get("/ticketing/connections/{connection_id}", **documented(TicketingConnectionDetailResponse))
 async def get_connection(request: Request, connection_id: str, _role: Any = _READ_DEP) -> dict[str, Any]:
     """Return one ticketing connection's non-secret metadata (tenant-scoped)."""
     tenant_id = _tenant(request)
@@ -275,7 +276,7 @@ async def create_ticket(request: Request, body: TicketCreate, _role: Any = _WRIT
         raise HTTPException(status_code=_ERROR_STATUS.get(exc.code, 400), detail=sanitize_error(exc)) from exc
 
 
-@router.get("/ticketing/tickets")
+@router.get("/ticketing/tickets", **documented(TicketingTicketsResponse))
 async def list_tickets(request: Request, _role: Any = _READ_DEP) -> dict[str, Any]:
     """List the tenant's filed tickets (finding→ticket links + last status)."""
     tenant_id = _tenant(request)

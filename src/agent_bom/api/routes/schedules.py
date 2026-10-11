@@ -16,6 +16,9 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Request
 
 from agent_bom.api.models import ScheduleCreate
+from agent_bom.api.read_models import admin as m
+from agent_bom.api.read_models import documented
+from agent_bom.api.read_models.admin import documented_list
 from agent_bom.api.stores import _get_schedule_store, _get_source_store
 from agent_bom.api.tenancy import require_body_tenant_match, require_request_tenant_id
 from agent_bom.api.tenant_quota import enforce_schedule_quota, tenant_quota_guard
@@ -126,14 +129,14 @@ def create_schedule(request: Request, body: ScheduleCreate) -> dict:
     return schedule.model_dump()
 
 
-@router.get("/schedules", tags=["schedules"])
+@router.get("/schedules", **documented_list(m.ScanSchedulesResponse), tags=["schedules"])
 def list_schedules(request: Request) -> list[dict]:
     """List all scan schedules."""
     tenant_id = require_request_tenant_id(request)
     return [s.model_dump() for s in _get_schedule_store().list_all(tenant_id=tenant_id)]
 
 
-@router.get("/schedules/{schedule_id}", tags=["schedules"])
+@router.get("/schedules/{schedule_id}", **documented(m.ScanScheduleResponse), tags=["schedules"])
 def get_schedule(request: Request, schedule_id: str) -> dict:
     """Get a specific schedule."""
     tenant_id = require_request_tenant_id(request)

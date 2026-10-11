@@ -16,6 +16,8 @@ from agent_bom.api.models import (
     CredentialRefStatus,
     CredentialRefUpdate,
 )
+from agent_bom.api.read_models import admin as m
+from agent_bom.api.read_models import documented
 from agent_bom.api.stores import _get_credential_ref_store, _get_source_store
 from agent_bom.api.tenancy import require_body_tenant_match, require_request_tenant_id
 from agent_bom.api.tenant_quota import tenant_quota_guard
@@ -140,7 +142,7 @@ def create_credential_ref(request: Request, body: CredentialRefCreate) -> dict:
     return _public_credential(credential)
 
 
-@router.get("/credentials", tags=["credentials"])
+@router.get("/credentials", **documented(m.CredentialRefsResponse), tags=["credentials"])
 def list_credential_refs(
     request: Request,
     limit: int = Query(1000, ge=1, le=1000),
@@ -160,7 +162,7 @@ def list_credential_refs(
     }
 
 
-@router.get("/credentials/posture", tags=["credentials"], deprecated=True)
+@router.get("/credentials/posture", **documented(m.CredentialRotationPostureResponse), tags=["credentials"], deprecated=True)
 def get_credential_rotation_posture(request: Request) -> dict:
     """Credential rotation posture rollup for the request tenant.
 
@@ -171,7 +173,7 @@ def get_credential_rotation_posture(request: Request) -> dict:
     return build_credential_rotation_governance(credentials, tenant_id=tenant_id)
 
 
-@router.get("/credentials/{credential_ref_id}", tags=["credentials"])
+@router.get("/credentials/{credential_ref_id}", **documented(m.CredentialRefResponse), tags=["credentials"])
 def get_credential_ref(request: Request, credential_ref_id: str) -> dict:
     return _public_credential(_credential_for_request(request, credential_ref_id))
 
