@@ -595,3 +595,6 @@ AGENT_BOM_HEAVY_READ_CONCURRENCY  # aggregate dashboard reads computed at once (
 
 # Operator-selected credentials re-read for each introspection; never selected by scanned config.
 AGENT_BOM_MCP_SCAN_AUTH_FILE
+
+# Operator-managed trace connection configuration (secret_source also supports _FILE).
+AGENT_BOM_TRACE_CONNECTIONS

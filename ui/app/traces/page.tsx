@@ -18,7 +18,7 @@ import { useSearchParams } from "next/navigation";
 import { useTraceIntake } from "@/hooks/use-trace-intake";
 import { useAuthState } from "@/components/auth-provider";
 import { useDeploymentContext } from "@/hooks/use-deployment-context";
-import { TraceConnectorsPanel } from "@/components/trace-connectors-panel";
+import Link from "next/link";
 import { TraceExplorerPanel } from "@/components/trace-explorer-panel";
 import { HitlApprovalQueuePanel } from "@/components/hitl-approval-queue-panel";
 
@@ -50,7 +50,7 @@ const SAMPLE_PAYLOAD = JSON.stringify(
 function TracesPageContent() {
   const searchParams = useSearchParams();
   const { counts } = useDeploymentContext();
-  const [mode, setMode] = useState<"explorer" | "queue" | "ingest" | "connectors">("explorer");
+  const [mode, setMode] = useState<"explorer" | "queue" | "ingest">(searchParams.get("view") === "ingest" ? "ingest" : "explorer");
   const { payload, source, result, loading, reading, error, replacePayload, handleFile, submit } = useTraceIntake(SAMPLE_PAYLOAD);
   const tracesUnavailable = counts ? !counts.has_traces : false;
 
@@ -97,7 +97,7 @@ function TracesPageContent() {
               <FileUp className="h-3.5 w-3.5" />
               OTLP ingest
             </button>
-            <button type="button" onClick={() => setMode("connectors")} className={`rounded-lg px-3 py-1.5 text-xs ${mode === "connectors" ? "bg-emerald-700 text-white" : "text-[var(--text-secondary)]"}`}>Connect platforms</button>
+            <Link href="/connections?tab=traces" className="rounded-lg px-3 py-1.5 text-xs text-[var(--text-secondary)]">Connect platforms</Link>
           </div>
         </div>
         <div className="grid gap-3 text-xs text-[var(--text-secondary)] sm:grid-cols-2 lg:w-[360px]">
@@ -114,7 +114,7 @@ function TracesPageContent() {
         </div>
       </div>
 
-      {mode === "connectors" ? <TraceConnectorsPanel /> : mode === "explorer" ? (
+      {mode === "explorer" ? (
         <TraceExplorerPanel agent={searchParams.get("agent") ?? undefined} scanId={searchParams.get("scan") ?? undefined} />
       ) : mode === "queue" ? (
         <HitlApprovalQueuePanel />

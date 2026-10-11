@@ -8,6 +8,7 @@ import { AddConnectionWizard } from "@/components/connections/connection-wizard"
 import { summarizeProviders } from "@/components/connections/display";
 import { SourceDrawer } from "@/components/connections/source-detail";
 import { SourcesSegment } from "@/components/connections/sources-workflow";
+import { ObservabilityConnections } from "@/components/connections/observability";
 import { EndpointConnectionsPanel } from "@/components/endpoint-connections";
 import { PageLaneHeader } from "@/components/page-lane";
 import { PermissionDeniedNotice } from "@/components/role-access";
@@ -680,7 +681,7 @@ export function ConnectionsHub() {
             {deploymentModeLabel(counts?.deployment_mode)} · brokered read-only
           </span>
         }
-        actions={tab === "endpoints" ? undefined :
+        actions={["endpoints", "traces"].includes(tab) ? undefined :
           <>
             <button
               onClick={refreshAll}
@@ -699,7 +700,7 @@ export function ConnectionsHub() {
             </button>
           </>
         }
-        banner={tab === "endpoints" ? undefined :
+        banner={["endpoints", "traces"].includes(tab) ? undefined :
           <dl aria-label="Source status" className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
             <div className="flex gap-2"><dt className="text-ink-secondary">Cloud accounts</dt><dd className="font-semibold tabular-nums">{loading ? "…" : error ? "Unavailable" : cloudAccountCount}</dd></div>
             <div className="flex gap-2"><dt className="text-ink-secondary">Registered sources</dt><dd className="font-semibold tabular-nums">{sourcesLoading ? "…" : sourcesUnavailable ? "Unavailable" : sources.length}</dd></div>
@@ -711,7 +712,7 @@ export function ConnectionsHub() {
       <HubTabs tab={tab} onChange={setTab} connectCount={CONNECTOR_CATALOG.length} sourceCount={unifiedRows.length} />
 
       {message ? <p className="text-sm text-emerald-400">{message}</p> : null}
-      {tab !== "endpoints" && <div className="grid gap-3 lg:grid-cols-2">
+      {!["endpoints", "traces"].includes(tab) && <div className="grid gap-3 lg:grid-cols-2">
       {!connectionsSchedulerEnabled &&
       connections.some(
         (connection) => connection.scan_interval_minutes || isContinuousMode(connection),
@@ -743,7 +744,7 @@ export function ConnectionsHub() {
 
       </div>}
 
-      {tab === "endpoints" ? (
+      {tab === "traces" ? <ObservabilityConnections key={session?.tenant_id ?? "unauthenticated"} /> : tab === "endpoints" ? (
         <EndpointConnectionsPanel key={session?.tenant_id ?? "unauthenticated"} canManage={session?.role === "admin" && !managedTrialSession} demo={isDemoMode} />
       ) : tab === "connect" ? (
         <ConnectSegment

@@ -8029,11 +8029,8 @@ export interface paths {
          * Pull Trace Connector
          * @description Pull traces from an LLM-observability platform and correlate them (#3899).
          *
-         *     Body: ``{"credentials": {...}, "limit": int, "screen_content": bool}``. The
-         *     provider's credentials (Langfuse public/secret key or LangSmith API key) are
-         *     used for auth only and never logged. Pulled traces feed the same parser +
-         *     per-span correlation pipeline as pushed OTLP. ``screen_content`` opts in to
-         *     Shield content screening (off by default; raw content is never stored).
+         *     Select a managed ``connection_id`` or provide one-shot ``credentials``.
+         *     Screening is opt-in; provider responses may still contain content.
          */
         post: operations["pull_trace_connector_v1_traces_connectors__provider__pull_post"];
         delete?: never;
@@ -17539,6 +17536,17 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** ManagedTraceConnection */
+        ManagedTraceConnection: {
+            /** Display Name */
+            display_name: string;
+            /** Id */
+            id: string;
+            /** Provider */
+            provider: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** ManagedTrialInvitationRequest */
         ManagedTrialInvitationRequest: {
             /** Email */
@@ -22483,6 +22491,11 @@ export interface components {
         };
         /** TraceConnectorsResponse */
         TraceConnectorsResponse: {
+            /**
+             * Connections
+             * @default []
+             */
+            connections: components["schemas"]["ManagedTraceConnection"][];
             /** Connectors */
             connectors: components["schemas"]["ObsTraceConnector"][];
             /** Schema Version */

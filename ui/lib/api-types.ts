@@ -4651,10 +4651,7 @@ export interface TraceConnectorDescriptor {
   supports_content: boolean;
 }
 
-export interface TraceConnectorsResponse {
-  schema_version: "observability.trace_connectors.v1" | string;
-  connectors: TraceConnectorDescriptor[];
-}
+export type TraceConnectorsResponse = ApiSchemas["TraceConnectorsResponse"];
 
 export interface TraceConnectorPullResponse {
   schema_version: "observability.trace_connectors.v1" | string;
