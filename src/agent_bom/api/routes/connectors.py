@@ -20,6 +20,7 @@ import anyio.to_thread
 from fastapi import APIRouter, HTTPException
 
 from agent_bom.api.read_models import ConnectorsResponse, RegistryResponse, documented
+from agent_bom.api.read_models import runtime_estate_b as rt
 from agent_bom.api.routes.endpoint_connectors import router as endpoint_router
 
 router = APIRouter()
@@ -104,7 +105,7 @@ def list_available_connectors() -> dict:
     return {"connectors": list_connectors()}
 
 
-@router.get("/connectors/{name}/health", tags=["connectors"])
+@router.get("/connectors/{name}/health", **documented(rt.ConnectorHealthResponse), tags=["connectors"])
 async def connector_health(name: str) -> dict:
     """Check connectivity for a SaaS connector."""
     try:
@@ -146,7 +147,7 @@ def list_registry() -> dict:
     return {"servers": servers, "count": len(servers), "meta": _load_registry_meta()}
 
 
-@router.get("/registry/{server_id:path}", tags=["registry"])
+@router.get("/registry/{server_id:path}", **documented(rt.RegistryServerDetailResponse), tags=["registry"])
 def get_registry_server(server_id: str) -> dict:
     """Get a single MCP server entry by ID (e.g. 'modelcontextprotocol/filesystem')."""
     servers = _load_registry()
@@ -159,7 +160,7 @@ def get_registry_server(server_id: str) -> dict:
 # ─── Security lookup endpoints ───────────────────────────────────────────────
 
 
-@router.get("/malicious/check", tags=["security"])
+@router.get("/malicious/check", **documented(rt.MaliciousCheckResponse), tags=["security"])
 def check_malicious(name: str, ecosystem: str = "npm") -> dict:
     """Check if a package name is a known malicious package or typosquat.
 
@@ -178,7 +179,7 @@ def check_malicious(name: str, ecosystem: str = "npm") -> dict:
     }
 
 
-@router.get("/scorecard/{ecosystem}/{package:path}", tags=["security"])
+@router.get("/scorecard/{ecosystem}/{package:path}", **documented(rt.ScorecardLookupResponse), tags=["security"])
 async def scorecard_lookup(ecosystem: str, package: str) -> dict:
     """Look up OpenSSF Scorecard for a package.
 

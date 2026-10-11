@@ -28,6 +28,8 @@ import anyio.to_thread
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 
+from agent_bom.api.read_models import documented
+from agent_bom.api.read_models import runtime_estate_a as rt
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.backpressure import BackpressureRejectedError, adaptive_backpressure
 from agent_bom.k8s import K8sPostureResult, scan_live_cluster_posture_with_evidence
@@ -169,7 +171,7 @@ async def run_cluster_posture(
     return payload
 
 
-@router.get("/kspm/clusters/posture")
+@router.get("/kspm/clusters/posture", **documented(rt.KspmClusterPostureResponse))
 async def latest_cluster_posture(
     request: Request,
     _role: Any = _READ_DEP,

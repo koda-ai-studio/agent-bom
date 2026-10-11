@@ -37,6 +37,8 @@ from agent_bom.api.mcp_config_store import (
     get_mcp_config_store,
     revoke_assignment,
 )
+from agent_bom.api.read_models import documented
+from agent_bom.api.read_models import runtime_estate_b as rt
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.api.versioning import API_V1_PREFIX
 from agent_bom.rbac import require_authenticated_permission
@@ -419,7 +421,7 @@ def update_mcp_config_assignment(
     }
 
 
-@router.get("/mcp-config/assignments", dependencies=[_dep("read")])
+@router.get("/mcp-config/assignments", **documented(rt.McpConfigAssignmentsResponse), dependencies=[_dep("read")])
 def list_mcp_config_assignments(
     request: Request, include_revoked: bool = False, limit: Annotated[int, Query(ge=1, le=1000)] = 200
 ) -> dict[str, object]:
@@ -442,7 +444,7 @@ def _assignment_for_tenant(request: Request, config_id: str) -> McpClientConfigA
     return assignment
 
 
-@router.get("/mcp-config/assignments/{config_id}", dependencies=[_dep("read")])
+@router.get("/mcp-config/assignments/{config_id}", **documented(rt.McpConfigAssignmentDetailResponse), dependencies=[_dep("read")])
 def get_mcp_config_assignment(request: Request, config_id: str) -> dict[str, object]:
     """Return one MCP-client-config assignment (metadata)."""
     assignment = _assignment_for_tenant(request, config_id)

@@ -64,6 +64,7 @@ from agent_bom.api.connection_store import (
     get_connection_store,
 )
 from agent_bom.api.read_models import CloudConnectionsResponse, documented
+from agent_bom.api.read_models import runtime_estate_a as rt
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.api.tenant_quota import enforce_cloud_connection_quota, tenant_quota_guard
 from agent_bom.backpressure import BackpressureRejectedError, adaptive_backpressure
@@ -568,7 +569,7 @@ def _require_connection(request: Request, connection_id: str) -> CloudConnection
     return record
 
 
-@router.get("/cloud/connections/{connection_id}")
+@router.get("/cloud/connections/{connection_id}", **documented(rt.CloudConnectionDetailResponse))
 def get_connection(request: Request, connection_id: str, _role: Any = _READ_DEP) -> dict[str, Any]:
     """Return one connection's non-secret metadata (tenant-scoped)."""
     return _require_connection(request, connection_id).to_public_dict()
