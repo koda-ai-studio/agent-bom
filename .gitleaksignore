@@ -80,3 +80,4 @@ cc3d86f9b6cca9ed3ee186f287ded454fd573207:tests/test_helm_replica_safety.py:gener
 # Characterization fixture: the AKS api_server_fqdn host name matches the generic
 # api-key pattern; it is a synthetic host name, not a credential.
 fd17bcff34d7ad78f9ca8d40deb398fb6727afdd:tests/fixtures/cloud_characterization/azure_inventory.json:generic-api-key:2091
+c7146a2f686473fc298b57d748b1e2329dd7102c:tests/fixtures/cloud_characterization/azure_inventory.json:generic-api-key:2091
