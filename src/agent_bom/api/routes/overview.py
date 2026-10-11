@@ -47,7 +47,7 @@ from agent_bom.api.demo_refresh import demo_daily_evidence_dependency
 from agent_bom.api.exec_posture import issue_counts_payload, issue_severity_counts, tenant_exec_posture
 from agent_bom.api.finding_read_context import finding_read_snapshot
 from agent_bom.api.models import ExecScoreConfigUpdateRequest, JobStatus
-from agent_bom.api.read_models import OverviewResponse, documented
+from agent_bom.api.read_models import OverviewResponse, documented, governance_b
 from agent_bom.api.stores import _get_fleet_store, _get_store
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.backpressure import BackpressureRejectedError, adaptive_backpressure
@@ -1804,7 +1804,7 @@ def _compose_overview(
     }
 
 
-@router.get("/overview/score-config", tags=["overview"])
+@router.get("/overview/score-config", **documented(governance_b.OverviewScoreConfigResponse), tags=["overview"])
 def get_overview_score_config(request: Request) -> dict[str, Any]:
     """Return the tenant's effective exec risk-score model + display config (#3940).
 

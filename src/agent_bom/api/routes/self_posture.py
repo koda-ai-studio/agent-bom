@@ -18,12 +18,14 @@ from typing import Any, cast
 import anyio.to_thread
 from fastapi import APIRouter, HTTPException, Request
 
+from agent_bom.api.read_models import documented
+from agent_bom.api.read_models.governance_b import SelfPostureResponse
 from agent_bom.rbac import require_authenticated_permission
 
 router = APIRouter(dependencies=[cast(Any, require_authenticated_permission("read"))])
 
 
-@router.get("/self-posture", tags=["self-posture"])
+@router.get("/self-posture", **documented(SelfPostureResponse), tags=["self-posture"])
 async def get_self_posture(request: Request) -> dict[str, Any]:
     """Return this agent-bom deployment's own security + governance posture.
 

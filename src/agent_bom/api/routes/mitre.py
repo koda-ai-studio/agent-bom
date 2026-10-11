@@ -18,6 +18,8 @@ from typing import Any, cast
 import anyio.to_thread
 from fastapi import APIRouter, Request
 
+from agent_bom.api.read_models import documented
+from agent_bom.api.read_models.governance_b import MitreCoverageResponse
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.rbac import require_authenticated_permission
 
@@ -94,7 +96,7 @@ def _build_coverage(tenant_id: str, jobs: list[Any]) -> dict[str, Any]:
     return coverage
 
 
-@router.get("/mitre/coverage", tags=["mitre"])
+@router.get("/mitre/coverage", **documented(MitreCoverageResponse), tags=["mitre"])
 async def mitre_coverage(request: Request) -> dict[str, Any]:
     """Per-framework MITRE technique coverage for the current tenant.
 

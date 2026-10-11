@@ -13,6 +13,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from agent_bom import config as agent_config
 from agent_bom.api import stores as api_stores
 from agent_bom.api.audit_log import log_action
+from agent_bom.api.read_models import documented
+from agent_bom.api.read_models.governance_a import GraphCorrelationRunResponse, GraphCorrelationRuntimeFactsResponse
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.graph.correlation import CorrelationRunStatus, GraphCorrelationRun
 from agent_bom.graph.correlation_service import (
@@ -158,7 +160,7 @@ def _get_run(tenant_id: str, correlation_id: str) -> GraphCorrelationRun:
     return run
 
 
-@router.get("/graph/correlations/{correlation_id}", tags=["graph-correlations"])
+@router.get("/graph/correlations/{correlation_id}", **documented(GraphCorrelationRunResponse), tags=["graph-correlations"])
 async def get_graph_correlation(request: Request, correlation_id: str) -> dict[str, Any]:
     tenant_id = require_request_tenant_id(request)
     await _correlation_service(tenant_id)
@@ -173,7 +175,9 @@ async def get_graph_correlation(request: Request, correlation_id: str) -> dict[s
     return run.to_dict()
 
 
-@router.get("/graph/correlations/{correlation_id}/runtime-facts", tags=["graph-correlations"])
+@router.get(
+    "/graph/correlations/{correlation_id}/runtime-facts", **documented(GraphCorrelationRuntimeFactsResponse), tags=["graph-correlations"]
+)
 async def get_graph_correlation_runtime_facts(request: Request, correlation_id: str) -> dict[str, Any]:
     tenant_id = require_request_tenant_id(request)
     run = await asyncio.to_thread(_get_run, tenant_id, correlation_id)
