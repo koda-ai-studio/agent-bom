@@ -98,3 +98,32 @@ def test_same_version_deployment_schema_drift_stays_failed(tmp_path, schema_drif
     outputs = dict(line.split("=", 1) for line in output.read_text().splitlines())
     assert outputs["probe_failed"] == ("true" if schema_drift else "false")
     assert ("schema drift" in outputs["railway_version"]) == schema_drift
+
+
+@pytest.mark.parametrize("schema_attribute", ["inputSchema", "input_schema"])
+def test_extract_handles_published_and_current_mcp_schema_models(monkeypatch, capsys, schema_attribute):
+    """Execute the extraction code against both SDK field spellings."""
+    import importlib.metadata
+    import sys
+    import types
+
+    from pydantic import Field, create_model
+
+    script = load_script()
+    tool_model = create_model("Tool", name=(str, ...), **{schema_attribute: (dict, Field(alias="inputSchema"))})
+    schema = {"type": "object", "properties": {"cursor": {"type": "string"}}}
+
+    class Server:
+        async def list_tools(self):
+            return [tool_model(name="scan", inputSchema=schema)]
+
+    package = types.ModuleType("agent_bom")
+    package.__version__ = "0.108.4"
+    server = types.ModuleType("agent_bom.mcp_server")
+    server.create_mcp_server = lambda **_kwargs: Server()
+    monkeypatch.setitem(sys.modules, "agent_bom", package)
+    monkeypatch.setitem(sys.modules, "agent_bom.mcp_server", server)
+    monkeypatch.setattr(importlib.metadata, "version", lambda _name: "0.108.4")
+    monkeypatch.setattr(sys, "argv", ["extract", "0.108.4"])
+    exec(script.EXTRACT, {})
+    assert json.loads(capsys.readouterr().out) == [{"name": "scan", "inputSchema": schema}]
