@@ -375,6 +375,7 @@ def test_graph_storage_edits_include_startup_and_writer_contracts(tmp_path: Path
         "src/agent_bom/api/inventory_service.py",
         "src/agent_bom/api/routes/inventory_assets.py",
         "src/agent_bom/api/routes/graph.py",
+        "src/agent_bom/api/routes/graph_routes/reads.py",
         "src/agent_bom/api/neptune_graph.py",
     ],
 )

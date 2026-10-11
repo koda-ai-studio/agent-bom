@@ -8631,6 +8631,35 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** AisvsComplianceResponse */
+        AisvsComplianceResponse: {
+            /** Benchmark */
+            benchmark: {
+                [key: string]: unknown;
+            };
+            /** Framework */
+            framework: string;
+            /** Framework Key */
+            framework_key: string;
+            /** Framework Label */
+            framework_label: string;
+            /** Measured At */
+            measured_at: string | null;
+            /** Representation */
+            representation: string;
+            /** Scan Id */
+            scan_id: string | null;
+            /** Score */
+            score: number;
+            /** Source */
+            source: string;
+            /** Summary */
+            summary: {
+                [key: string]: number;
+            };
+        } & {
+            [key: string]: unknown;
+        };
         /** AnalyticsHealth */
         AnalyticsHealth: {
             /**
@@ -8664,6 +8693,120 @@ export interface components {
             /** Queue Depth */
             queue_depth?: number | null;
         };
+        /** ApiKeysResponse */
+        ApiKeysResponse: {
+            /** Keys */
+            keys: {
+                [key: string]: unknown;
+            }[];
+            /** Schema Version */
+            schema_version: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** AuditChain */
+        AuditChain: {
+            /** Algorithm */
+            algorithm: string;
+            /** Algorithms */
+            algorithms?: string[] | null;
+            /** Checked */
+            checked: number;
+            /** Error */
+            error?: string | null;
+            /** Name */
+            name: string;
+            /** Source */
+            source?: string | null;
+            /** Tampered */
+            tampered: number;
+            /** Tenant Scoped */
+            tenant_scoped: boolean;
+            /** Verified */
+            verified: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** AuditEntriesResponse */
+        AuditEntriesResponse: {
+            /** Entries */
+            entries: components["schemas"]["AuditEntryRow"][];
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Schema Version */
+            schema_version: string;
+            /** Total */
+            total: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** AuditEntryRow */
+        AuditEntryRow: {
+            /** Action */
+            action: string;
+            /** Actor */
+            actor: string;
+            /** Details */
+            details: {
+                [key: string]: unknown;
+            };
+            /** Entry Id */
+            entry_id: string;
+            /** Hmac Signature */
+            hmac_signature: string;
+            /** Prev Signature */
+            prev_signature: string;
+            /** Resource */
+            resource: string;
+            /** Timestamp */
+            timestamp: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** AuditExportFilters */
+        AuditExportFilters: {
+            /** Action */
+            action: string | null;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Resource */
+            resource: string | null;
+            /** Since */
+            since: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** AuditExportIntegrity */
+        AuditExportIntegrity: {
+            /** Checked */
+            checked: number;
+            /** Tampered */
+            tampered: number;
+            /** Verified */
+            verified: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * AuditExportResponse
+         * @description The ``format=json`` packet; ``format=jsonl`` streams NDJSON instead.
+         */
+        AuditExportResponse: {
+            /** Entries */
+            entries: components["schemas"]["AuditEntryRow"][];
+            /** Exported At */
+            exported_at: string;
+            filters: components["schemas"]["AuditExportFilters"];
+            integrity: components["schemas"]["AuditExportIntegrity"];
+            /** Tenant Id */
+            tenant_id: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** AuditExportVerifyRequest */
         AuditExportVerifyRequest: {
             /**
@@ -8676,6 +8819,65 @@ export interface components {
              * @description X-Agent-Bom-Audit-Export-Signature value
              */
             signature: string;
+        };
+        /** AuditIntegrityResponse */
+        AuditIntegrityResponse: {
+            /** Algorithms */
+            algorithms: string[];
+            /** Chains */
+            chains: components["schemas"]["AuditChain"][];
+            /** Checked */
+            checked: number;
+            /** Tampered */
+            tampered: number;
+            /** Verified */
+            verified: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** AuditLogIntegrity */
+        AuditLogIntegrity: {
+            /** Checked */
+            checked: number;
+            /** Tampered */
+            tampered: number;
+            /** Truncated */
+            truncated: boolean;
+            /** Verified */
+            verified: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** AuthDebugResponse */
+        AuthDebugResponse: {
+            /** Api Key Id Prefix */
+            api_key_id_prefix: string | null;
+            /** Auth Method */
+            auth_method: string | null;
+            /** Auth Required */
+            auth_required: boolean;
+            /** Authenticated */
+            authenticated: boolean;
+            /** Configured Modes */
+            configured_modes: string[];
+            /** Oidc Issuer Suffix */
+            oidc_issuer_suffix: string | null;
+            /** Recommended Ui Mode */
+            recommended_ui_mode: string;
+            /** Request Id */
+            request_id: string | null;
+            /** Role */
+            role: string | null;
+            /** Span Id */
+            span_id: string | null;
+            /** Subject */
+            subject: string | null;
+            /** Tenant Id */
+            tenant_id: string | null;
+            /** Trace Id */
+            trace_id: string | null;
+        } & {
+            [key: string]: unknown;
         };
         /** AuthMeResponse */
         AuthMeResponse: {
@@ -8712,6 +8914,117 @@ export interface components {
             tenant_id: string;
             /** Trace Id */
             trace_id: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** AuthPolicyResponse */
+        AuthPolicyResponse: {
+            /** Api Key */
+            api_key: {
+                [key: string]: unknown;
+            };
+            /** Audit Hmac */
+            audit_hmac: {
+                [key: string]: unknown;
+            };
+            /** Auth Session Client Identity */
+            auth_session_client_identity: {
+                [key: string]: unknown;
+            };
+            /** Auth State Backend */
+            auth_state_backend: {
+                [key: string]: unknown;
+            };
+            /** Backpressure */
+            backpressure: {
+                [key: string]: unknown;
+            };
+            /** Data Access Boundaries */
+            data_access_boundaries: {
+                [key: string]: unknown;
+            };
+            /** Identity Provisioning */
+            identity_provisioning: {
+                [key: string]: unknown;
+            };
+            /** Proxy Control Plane Mtls */
+            proxy_control_plane_mtls: {
+                [key: string]: unknown;
+            };
+            /** Proxy Sandbox */
+            proxy_sandbox: {
+                [key: string]: unknown;
+            };
+            /** Rate Limit Key */
+            rate_limit_key: {
+                [key: string]: unknown;
+            };
+            /** Rate Limit Runtime */
+            rate_limit_runtime: {
+                [key: string]: unknown;
+            };
+            /** Secret Integrity */
+            secret_integrity: {
+                [key: string]: unknown;
+            };
+            /** Secret Lifecycle */
+            secret_lifecycle: {
+                [key: string]: unknown;
+            };
+            /** Security Headers */
+            security_headers: {
+                [key: string]: unknown;
+            };
+            /** Storage Schema */
+            storage_schema: {
+                [key: string]: unknown;
+            };
+            /** Tenant Quota Runtime */
+            tenant_quota_runtime: {
+                [key: string]: unknown;
+            };
+            /** Tenant Quotas */
+            tenant_quotas: {
+                [key: string]: unknown;
+            };
+            /** Trusted Proxy Auth */
+            trusted_proxy_auth: {
+                [key: string]: unknown;
+            };
+            /** Ui */
+            ui: {
+                [key: string]: unknown;
+            };
+        } & {
+            [key: string]: unknown;
+        };
+        /** AuthScopesResponse */
+        AuthScopesResponse: {
+            /** Count */
+            count: number;
+            /** Schema Version */
+            schema_version: string;
+            /** Scopes */
+            scopes: {
+                [key: string]: unknown;
+            }[];
+            /** Wildcard Examples */
+            wildcard_examples: string[];
+        } & {
+            [key: string]: unknown;
+        };
+        /** BackpressurePostureResponse */
+        BackpressurePostureResponse: {
+            /** Enabled */
+            enabled: boolean;
+            /** Notes */
+            notes: string;
+            /** Paths */
+            paths: {
+                [key: string]: unknown;
+            }[];
+            /** Status */
+            status: string;
         } & {
             [key: string]: unknown;
         };
@@ -9230,6 +9543,36 @@ export interface components {
             /** Scan Id */
             scan_id: string;
         };
+        /** CisChecksResponse */
+        CisChecksResponse: {
+            /** Checks */
+            checks: {
+                [key: string]: unknown;
+            }[];
+            /** Count */
+            count: number;
+            /** Source */
+            source: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** CisTrendsResponse */
+        CisTrendsResponse: {
+            /** Bucket */
+            bucket: string;
+            /** Buckets */
+            buckets: {
+                [key: string]: unknown;
+            }[];
+            /** Count */
+            count: number;
+            /** Days */
+            days: number;
+            /** Source */
+            source: string;
+        } & {
+            [key: string]: unknown;
+        };
         /**
          * CloudChangeEventIngestItem
          * @description One normalized posture-change event (event-collector → control plane).
@@ -9549,6 +9892,52 @@ export interface components {
             /** Vulnerability Id */
             vulnerability_id?: string | null;
         };
+        /**
+         * ComplianceEvidencePackResponse
+         * @description Signed multi-framework evidence pack (served as a JSON attachment).
+         */
+        ComplianceEvidencePackResponse: {
+            /** Audit Events */
+            audit_events: {
+                [key: string]: unknown;
+            }[];
+            audit_log_integrity: components["schemas"]["AuditLogIntegrity"];
+            /** Document Type */
+            document_type: string;
+            /** Expires At */
+            expires_at: string;
+            /** Frameworks */
+            frameworks: {
+                [key: string]: unknown;
+            }[];
+            /** Generated At */
+            generated_at: string;
+            /** Nonce */
+            nonce: string;
+            /** Schema Version */
+            schema_version: string;
+            scope: components["schemas"]["EvidencePackScope"];
+            /** Signature */
+            signature: string;
+            /** Signature Algorithm */
+            signature_algorithm: string;
+            /** Signature Disclosure */
+            signature_disclosure: {
+                [key: string]: unknown;
+            };
+            /** Signature Key Id */
+            signature_key_id?: string | null;
+            /** Signature Public Key Pem */
+            signature_public_key_pem?: string | null;
+            /** Summary */
+            summary: {
+                [key: string]: number | null;
+            };
+            /** Tenant Id */
+            tenant_id: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** ComplianceNarrativeResponse */
         ComplianceNarrativeResponse: {
             /** Claim Boundary */
@@ -9786,6 +10175,39 @@ export interface components {
             /** Verification Status */
             verification_status: string;
         };
+        /** ComplianceSummaryResponse */
+        ComplianceSummaryResponse: {
+            /** Evaluated Controls */
+            evaluated_controls: number;
+            /** Frameworks */
+            frameworks: {
+                [key: string]: {
+                    [key: string]: unknown;
+                };
+            };
+            /** Has Agent Context */
+            has_agent_context: boolean;
+            /** Has Mcp Context */
+            has_mcp_context: boolean;
+            /** Latest Scan */
+            latest_scan: string | null;
+            /** Overall Score */
+            overall_score: number;
+            /** Overall Status */
+            overall_status: string;
+            /** Scan Count */
+            scan_count: number;
+            /** Scan Sources */
+            scan_sources: string[];
+            /** Summary */
+            summary: {
+                [key: string]: number;
+            };
+            /** Total Controls */
+            total_controls: number;
+        } & {
+            [key: string]: unknown;
+        };
         /** ComplianceThreatModel */
         ComplianceThreatModel: {
             /** Confidentiality */
@@ -9796,6 +10218,27 @@ export interface components {
             non_repudiation: string;
             /** Replay */
             replay: string;
+        };
+        /** ComplianceVerificationKeyResponse */
+        ComplianceVerificationKeyResponse: {
+            /** Algorithm */
+            algorithm: string;
+            /** Key Distribution */
+            key_distribution: string;
+            /** Key Id */
+            key_id: string | null;
+            /** Persists Across Restart */
+            persists_across_restart: boolean;
+            /** Public Key Pem */
+            public_key_pem: string | null;
+            /** Remediation */
+            remediation: string | null;
+            /** Signature Verifiable */
+            signature_verifiable: boolean;
+            /** Verification Status */
+            verification_status: string;
+        } & {
+            [key: string]: unknown;
         };
         /** CompositionModel */
         CompositionModel: {
@@ -10091,6 +10534,43 @@ export interface components {
             /** Scopes */
             scopes?: string[];
         };
+        /** CredentialExpiryResponse */
+        CredentialExpiryResponse: {
+            /** Action Required */
+            action_required?: unknown[] | null;
+            /** Blockers */
+            blockers?: unknown[] | null;
+            /** Control Plane Included */
+            control_plane_included?: boolean | null;
+            /** Counts */
+            counts?: {
+                [key: string]: number;
+            } | null;
+            /** Credentials */
+            credentials?: {
+                [key: string]: unknown;
+            }[] | null;
+            /** Discovered Credential Count */
+            discovered_credential_count?: number | null;
+            /** Evaluated */
+            evaluated?: number | null;
+            /** Generated From */
+            generated_from?: string | null;
+            /** Message */
+            message?: string | null;
+            /** Secret Values Included */
+            secret_values_included?: boolean | null;
+            /** Status */
+            status?: string | null;
+            /** Thresholds */
+            thresholds?: {
+                [key: string]: unknown;
+            } | null;
+            /** Warnings */
+            warnings?: unknown[] | null;
+        } & {
+            [key: string]: unknown;
+        };
         /** CredentialRefCreate */
         CredentialRefCreate: {
             /**
@@ -10178,6 +10658,21 @@ export interface components {
             /** Scopes */
             scopes?: string[] | null;
             status?: components["schemas"]["CredentialRefStatus"] | null;
+        };
+        /** CredentialRiskRankingResponse */
+        CredentialRiskRankingResponse: {
+            /** Count */
+            count: number;
+            /** Credentials */
+            credentials: {
+                [key: string]: unknown;
+            }[];
+            /** Rotation Governance */
+            rotation_governance: {
+                [key: string]: unknown;
+            };
+        } & {
+            [key: string]: unknown;
         };
         /** CurrentRemediationResponse */
         CurrentRemediationResponse: {
@@ -10570,6 +11065,19 @@ export interface components {
             symbol_reachability: unknown;
             /** Tool Capability */
             tool_capability: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** EnrichmentPostureResponse */
+        EnrichmentPostureResponse: {
+            /** Operator Message */
+            operator_message: string;
+            /** Sources */
+            sources: {
+                [key: string]: unknown;
+            }[];
+            /** Status */
+            status: string;
         } & {
             [key: string]: unknown;
         };
@@ -11064,6 +11572,31 @@ export interface components {
             /** Trace Id */
             trace_id?: string | null;
         };
+        /** EvidencePackScope */
+        EvidencePackScope: {
+            /** Audit Event Count */
+            audit_event_count: number;
+            /** Audit Event Limit */
+            audit_event_limit: number;
+            /** Audit Events Truncated */
+            audit_events_truncated: boolean;
+            /** Completed Scan Count */
+            completed_scan_count: number;
+            /** Control Count */
+            control_count: number;
+            /** Distinct Finding Count */
+            distinct_finding_count: number;
+            /** Evidence Row Count */
+            evidence_row_count: number;
+            /** Framework Count */
+            framework_count: number;
+            /** Since */
+            since: string;
+            /** Until */
+            until: string;
+        } & {
+            [key: string]: unknown;
+        };
         /**
          * EvidenceSource
          * @enum {string}
@@ -11194,6 +11727,34 @@ export interface components {
             /** Vulnerability Id */
             vulnerability_id: string;
         };
+        /** FalsePositiveRow */
+        FalsePositiveRow: {
+            /** Created At */
+            created_at: string;
+            /** Id */
+            id: string;
+            /** Marked By */
+            marked_by: string;
+            /** Package */
+            package: string;
+            /** Reason */
+            reason: string;
+            /** Status */
+            status: string;
+            /** Vulnerability Id */
+            vulnerability_id: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** FalsePositivesResponse */
+        FalsePositivesResponse: {
+            /** False Positives */
+            false_positives: components["schemas"]["FalsePositiveRow"][];
+            /** Total */
+            total: number;
+        } & {
+            [key: string]: unknown;
+        };
         /** FindingAsset */
         FindingAsset: {
             /** Asset Type */
@@ -11240,6 +11801,42 @@ export interface components {
             state: "false_positive" | "accepted_risk" | "not_affected" | "not_applicable" | "fixed_verified" | "needs_review";
             /** Vulnerability Id */
             vulnerability_id: string;
+        };
+        /** FindingFeedbackResponse */
+        FindingFeedbackResponse: {
+            /** Feedback */
+            feedback: components["schemas"]["FindingFeedbackRow"][];
+            /** Total */
+            total: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** FindingFeedbackRow */
+        FindingFeedbackRow: {
+            /** Created At */
+            created_at: string;
+            /** Expires At */
+            expires_at: string;
+            /** Id */
+            id: string;
+            /** Marked By */
+            marked_by: string;
+            /** Package */
+            package: string;
+            /** Reason */
+            reason: string;
+            /** Server Name */
+            server_name: string;
+            /** State */
+            state: string;
+            /** Status */
+            status: string;
+            /** Tenant Id */
+            tenant_id: string;
+            /** Vulnerability Id */
+            vulnerability_id: string;
+        } & {
+            [key: string]: unknown;
         };
         /** FindingRow */
         FindingRow: {
@@ -11439,6 +12036,62 @@ export interface components {
             /** Vulnerability Id */
             vulnerability_id: string;
         };
+        /** FindingTriageResponse */
+        FindingTriageResponse: {
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Schema Version */
+            schema_version: string;
+            /** Total */
+            total: number;
+            /** Triage */
+            triage: components["schemas"]["FindingTriageRow"][];
+        } & {
+            [key: string]: unknown;
+        };
+        /** FindingTriageRow */
+        FindingTriageRow: {
+            /** Approval Required */
+            approval_required: boolean;
+            /** Approval Status */
+            approval_status: string;
+            /** Assignee */
+            assignee: string;
+            /** Created At */
+            created_at: string;
+            /** Created By */
+            created_by: string;
+            /** Decided By */
+            decided_by: string;
+            /** Decision */
+            decision: string;
+            /** Decision Reason */
+            decision_reason: string;
+            /** Expires At */
+            expires_at: string;
+            /** Id */
+            id: string;
+            /** Justification */
+            justification: string | null;
+            /** Package */
+            package: string;
+            /** Queue State */
+            queue_state: string;
+            /** Reviewed At */
+            reviewed_at: string;
+            /** Server Name */
+            server_name: string;
+            /** Tenant Id */
+            tenant_id: string;
+            /** Vex Eligible */
+            vex_eligible: boolean;
+            /** Vulnerability Id */
+            vulnerability_id: string;
+        } & {
+            [key: string]: unknown;
+        };
         /**
          * FindingTriageVexIngestRequest
          * @description Request body for POST /v1/findings/triage/vex/ingest.
@@ -11454,6 +12107,35 @@ export interface components {
             vex: {
                 [key: string]: unknown;
             };
+        };
+        /** FindingTriageVexResponse */
+        FindingTriageVexResponse: {
+            /** Count */
+            count: number;
+            /** Filters */
+            filters: {
+                [key: string]: unknown;
+            };
+            /** Finding Scope */
+            finding_scope?: {
+                [key: string]: unknown;
+            } | null;
+            /** Format */
+            format: string;
+            /** Schema Version */
+            schema_version: string;
+            /** Signature */
+            signature: {
+                [key: string]: unknown;
+            };
+            /** Tenant Id */
+            tenant_id: string;
+            /** Vex */
+            vex: {
+                [key: string]: unknown;
+            };
+        } & {
+            [key: string]: unknown;
         };
         /** FindingsResponse */
         FindingsResponse: {
@@ -11608,6 +12290,48 @@ export interface components {
                     [key: string]: unknown;
                 };
             };
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * FrameworkComplianceResponse
+         * @description Per-framework posture; the ``aisvs`` slug answers with the benchmark shape.
+         */
+        FrameworkComplianceResponse: {
+            /** Benchmark */
+            benchmark?: {
+                [key: string]: unknown;
+            } | null;
+            /** Controls */
+            controls?: {
+                [key: string]: unknown;
+            }[] | null;
+            /** Evaluated Controls */
+            evaluated_controls?: number | null;
+            /** Framework */
+            framework: string;
+            /** Framework Key */
+            framework_key?: string | null;
+            /** Framework Label */
+            framework_label?: string | null;
+            /** Measured At */
+            measured_at?: string | null;
+            /** Representation */
+            representation?: string | null;
+            /** Scan Id */
+            scan_id?: string | null;
+            /** Score */
+            score: number;
+            /** Source */
+            source?: string | null;
+            /** Status */
+            status?: string | null;
+            /** Summary */
+            summary: {
+                [key: string]: number;
+            };
+            /** Total Controls */
+            total_controls?: number | null;
         } & {
             [key: string]: unknown;
         };
@@ -12095,6 +12819,84 @@ export interface components {
              */
             submitter_principal_id: string;
         };
+        /**
+         * GraphActiveEdgesResponse
+         * @description ``GET /v1/graph/edges/active``: edge versions active at ``at``.
+         */
+        GraphActiveEdgesResponse: {
+            [key: string]: unknown;
+        }[];
+        /** GraphAgentsResponse */
+        GraphAgentsResponse: {
+            /** Agents */
+            agents: {
+                [key: string]: unknown;
+            }[];
+            completeness: components["schemas"]["GraphCompleteness"];
+            /** Created At */
+            created_at: string;
+            pagination: components["schemas"]["GraphPagination"];
+            /** Scan Id */
+            scan_id: string;
+            /** Snapshot Generation */
+            snapshot_generation?: string | null;
+            /** Tenant Id */
+            tenant_id: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphBoundedPage */
+        GraphBoundedPage: {
+            /** Has More */
+            has_more: boolean;
+            /** Limit */
+            limit: number;
+            /** Total */
+            total: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphClustersResponse */
+        GraphClustersResponse: {
+            /** Available Kinds */
+            available_kinds: string[];
+            /** Clusters */
+            clusters: {
+                [key: string]: unknown;
+            }[];
+            completeness: components["schemas"]["GraphCompleteness"];
+            /** Created At */
+            created_at: string;
+            /** Scan Id */
+            scan_id: string;
+            /** Stats */
+            stats: {
+                [key: string]: number;
+            };
+            /** Tenant Id */
+            tenant_id: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphCompleteness */
+        GraphCompleteness: {
+            /** Complete */
+            complete: boolean;
+            /** Reason */
+            reason?: string | null;
+            /** Returned */
+            returned: number;
+            /** Sampled */
+            sampled: boolean;
+            /** Status */
+            status: string;
+            /** Total */
+            total?: number | null;
+            /** Truncated */
+            truncated: boolean;
+        } & {
+            [key: string]: unknown;
+        };
         /** GraphCompletenessResponse */
         GraphCompletenessResponse: {
             /** Complete */
@@ -12114,6 +12916,24 @@ export interface components {
             total?: number | null;
             /** Truncated */
             truncated: boolean;
+        };
+        /** GraphComplianceResponse */
+        GraphComplianceResponse: {
+            completeness?: components["schemas"]["GraphCompleteness"] | null;
+            /** Framework Count */
+            framework_count?: number | null;
+            /** Frameworks */
+            frameworks?: {
+                [key: string]: {
+                    [key: string]: unknown;
+                };
+            } | null;
+            /** Scan Id */
+            scan_id: string;
+            /** Total Tagged Findings */
+            total_tagged_findings?: number | null;
+        } & {
+            [key: string]: unknown;
         };
         /** GraphCompromiseRequest */
         GraphCompromiseRequest: {
@@ -12283,6 +13103,519 @@ export interface components {
              */
             warnRisk: number;
         };
+        /** GraphDiffResponse */
+        GraphDiffResponse: {
+            /** Attribute Deltas */
+            attribute_deltas?: {
+                [key: string]: {
+                    [key: string]: unknown;
+                }[];
+            } | null;
+            /** Change Kind Index */
+            change_kind_index: {
+                [key: string]: {
+                    [key: string]: string;
+                };
+            };
+            completeness: components["schemas"]["GraphCompleteness"];
+            /** Edges Added */
+            edges_added?: unknown[] | null;
+            /** Edges Changed */
+            edges_changed?: unknown[] | null;
+            /** Edges Removed */
+            edges_removed?: unknown[] | null;
+            /** Nodes Added */
+            nodes_added?: unknown[] | null;
+            /** Nodes Changed */
+            nodes_changed?: unknown[] | null;
+            /** Nodes Removed */
+            nodes_removed?: unknown[] | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphEdgeChangeSummary */
+        GraphEdgeChangeSummary: {
+            /** Added */
+            added: number;
+            /** Changed */
+            changed: number;
+            /** Removed */
+            removed: number;
+            /** Unchanged */
+            unchanged: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphEdgeChangesResponse */
+        GraphEdgeChangesResponse: {
+            completeness?: components["schemas"]["GraphCompleteness"] | null;
+            /** Edges Added */
+            edges_added?: {
+                [key: string]: unknown;
+            }[] | null;
+            /** Edges Changed */
+            edges_changed?: {
+                [key: string]: unknown;
+            }[] | null;
+            /** Edges Removed */
+            edges_removed?: {
+                [key: string]: unknown;
+            }[] | null;
+            /** Edges Unchanged */
+            edges_unchanged?: {
+                [key: string]: unknown;
+            }[] | null;
+            /** Scan Id New */
+            scan_id_new?: string | null;
+            /** Scan Id Old */
+            scan_id_old?: string | null;
+            summary?: components["schemas"]["GraphEdgeChangeSummary"] | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphEvidenceManifestResponse */
+        GraphEvidenceManifestResponse: {
+            /** Collection Coverage */
+            collection_coverage?: {
+                [key: string]: unknown;
+            } | null;
+            /** Counts */
+            counts?: {
+                [key: string]: number;
+            } | null;
+            /** Diff Baseline Scan Id */
+            diff_baseline_scan_id?: string | null;
+            /** Diff Summary */
+            diff_summary?: {
+                [key: string]: unknown;
+            } | null;
+            /** Evidence Scope */
+            evidence_scope?: string | null;
+            /** Excluded Private Fields */
+            excluded_private_fields?: string[] | null;
+            /** Findings Digest */
+            findings_digest?: string | null;
+            /** Generated At */
+            generated_at?: string | null;
+            /** Graph Digest */
+            graph_digest?: string | null;
+            /** Included Tables */
+            included_tables?: string[] | null;
+            /** Retention Policy */
+            retention_policy?: {
+                [key: string]: unknown;
+            } | null;
+            /** Scan Created At */
+            scan_created_at?: string | null;
+            /** Scan Id */
+            scan_id: string;
+            /** Schema Version */
+            schema_version: string;
+            /** Snapshot Generation */
+            snapshot_generation?: string | null;
+            /** Tenant Id */
+            tenant_id: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphExposurePathsResponse */
+        GraphExposurePathsResponse: {
+            /** Collection Coverage */
+            collection_coverage?: {
+                [key: string]: unknown;
+            } | null;
+            completeness?: components["schemas"]["GraphCompleteness"] | null;
+            /** Count */
+            count: number;
+            /** Count Metadata */
+            count_metadata?: {
+                [key: string]: unknown;
+            } | null;
+            /** Created At */
+            created_at?: string | null;
+            /** Edges */
+            edges?: {
+                [key: string]: unknown;
+            }[] | null;
+            /** Evidence Scope */
+            evidence_scope?: string | null;
+            /** Filters */
+            filters?: {
+                [key: string]: unknown;
+            } | null;
+            /** Message */
+            message?: string | null;
+            /** Nodes */
+            nodes?: {
+                [key: string]: unknown;
+            }[] | null;
+            /** Pagination */
+            pagination?: {
+                [key: string]: unknown;
+            } | null;
+            /** Paths */
+            paths: {
+                [key: string]: unknown;
+            }[];
+            /** Scan Id */
+            scan_id?: string | null;
+            /** Schema Version */
+            schema_version: string;
+            /** Snapshot Generation */
+            snapshot_generation?: string | null;
+            /** Stats */
+            stats?: {
+                [key: string]: unknown;
+            } | null;
+            /** Tenant Id */
+            tenant_id: string;
+            /** Tool */
+            tool: string;
+            /** Total */
+            total?: number | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphGovernanceResponse */
+        GraphGovernanceResponse: {
+            attack_path_pagination: components["schemas"]["GraphBoundedPage"];
+            /** Attack Paths */
+            attack_paths: {
+                [key: string]: unknown;
+            }[];
+            completeness: components["schemas"]["GraphCompleteness"];
+            /** Created At */
+            created_at: string;
+            edge_pagination: components["schemas"]["GraphBoundedPage"];
+            /** Edges */
+            edges: {
+                [key: string]: unknown;
+            }[];
+            /** Governance Counts */
+            governance_counts: {
+                [key: string]: number;
+            };
+            /** Nodes */
+            nodes: {
+                [key: string]: unknown;
+            }[];
+            /** Overlay */
+            overlay: {
+                [key: string]: number;
+            };
+            /** Scan Id */
+            scan_id: string;
+            stats: components["schemas"]["GraphGovernanceStats"];
+            /** Tenant Id */
+            tenant_id: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphGovernanceStats */
+        GraphGovernanceStats: {
+            /** Analysis Status */
+            analysis_status: {
+                [key: string]: unknown;
+            };
+            /** Edge Count */
+            edge_count: number;
+            /** Node Count */
+            node_count: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphHistoryResponse */
+        GraphHistoryResponse: {
+            /** Retention Policy */
+            retention_policy?: {
+                [key: string]: unknown;
+            } | null;
+            /** Schema Version */
+            schema_version?: string | null;
+            /** Snapshots */
+            snapshots: {
+                [key: string]: unknown;
+            }[];
+            /** Tenant Id */
+            tenant_id?: string | null;
+            /** Window */
+            window?: {
+                [key: string]: unknown;
+            } | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphImpactInterpretation */
+        GraphImpactInterpretation: {
+            /** Basis */
+            basis: string;
+            /** Collection Coverage */
+            collection_coverage: string;
+            /** Execution */
+            execution: string;
+            /** Max Depth */
+            max_depth: number;
+            /** Traversable Only */
+            traversable_only: boolean;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphImpactResponse */
+        GraphImpactResponse: {
+            /** Affected By Type */
+            affected_by_type: {
+                [key: string]: number;
+            };
+            /** Affected Count */
+            affected_count: number;
+            /** Affected Nodes */
+            affected_nodes: string[];
+            /** Completeness */
+            completeness: {
+                [key: string]: unknown;
+            };
+            interpretation: components["schemas"]["GraphImpactInterpretation"];
+            /** Max Depth Reached */
+            max_depth_reached: number;
+            /** Node Id */
+            node_id: string;
+            /** Scan Id */
+            scan_id: string;
+            /** Snapshot Generation */
+            snapshot_generation: string | null;
+            /** Tenant Id */
+            tenant_id: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphLegendResponse */
+        GraphLegendResponse: {
+            /** Entities */
+            entities: {
+                [key: string]: unknown;
+            }[];
+            /** Relationships */
+            relationships: {
+                [key: string]: unknown;
+            }[];
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphNhiCounts */
+        GraphNhiCounts: {
+            /** By Risk Band */
+            by_risk_band: {
+                [key: string]: number;
+            };
+            /** Dormant */
+            dormant: number;
+            /** Orphaned */
+            orphaned: number;
+            /** Over Granted */
+            over_granted: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphNhiGovernanceResponse */
+        GraphNhiGovernanceResponse: {
+            counts: components["schemas"]["GraphNhiCounts"];
+            /** Dormant After Days */
+            dormant_after_days: number;
+            /** Evaluated */
+            evaluated: number;
+            /** Generated From */
+            generated_from: string;
+            /** Identities */
+            identities: {
+                [key: string]: unknown;
+            }[];
+            /** Message */
+            message: string;
+            /** Scan Id */
+            scan_id: string;
+            /** Secret Values Included */
+            secret_values_included: boolean;
+            /** Status */
+            status: string;
+            /** Tenant Id */
+            tenant_id: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphNodeContextResponse */
+        GraphNodeContextResponse: {
+            /** Completeness */
+            completeness: {
+                [key: string]: unknown;
+            };
+            /** Edges In */
+            edges_in: {
+                [key: string]: unknown;
+            }[];
+            /** Edges Out */
+            edges_out: {
+                [key: string]: unknown;
+            }[];
+            /** Impact */
+            impact: {
+                [key: string]: unknown;
+            };
+            /** Neighbors */
+            neighbors: unknown[];
+            /** Node */
+            node: {
+                [key: string]: unknown;
+            };
+            /** Scan Id */
+            scan_id: string;
+            /** Snapshot Generation */
+            snapshot_generation: string | null;
+            /** Sources */
+            sources: unknown[];
+            /** Tenant Id */
+            tenant_id: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphNodeNeighborsResponse */
+        GraphNodeNeighborsResponse: {
+            completeness: components["schemas"]["GraphCompleteness"];
+            /** Direction */
+            direction: string;
+            /** Edges */
+            edges: {
+                [key: string]: unknown;
+            }[];
+            /** Found */
+            found: boolean;
+            /** Limit */
+            limit: number;
+            /** Neighbors */
+            neighbors: {
+                [key: string]: unknown;
+            }[];
+            /** Node Id */
+            node_id: string;
+            /** Scan Id */
+            scan_id: string;
+            /** Total Neighbors */
+            total_neighbors: number | null;
+            /** Truncated */
+            truncated: boolean;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * GraphPageResponse
+         * @description ``GET /v1/graph``: one ranked node page plus incident edges and context.
+         */
+        GraphPageResponse: {
+            /** Attack Campaigns */
+            attack_campaigns?: {
+                [key: string]: unknown;
+            }[] | null;
+            attack_path_pagination?: components["schemas"]["GraphBoundedPage"] | null;
+            /** Attack Paths */
+            attack_paths: {
+                [key: string]: unknown;
+            }[];
+            /** Collection Coverage */
+            collection_coverage?: {
+                [key: string]: unknown;
+            } | null;
+            completeness: components["schemas"]["GraphCompleteness"];
+            /** Created At */
+            created_at: string;
+            /** Edges */
+            edges: {
+                [key: string]: unknown;
+            }[];
+            /** Evidence Scope */
+            evidence_scope?: string | null;
+            /** Interaction Risks */
+            interaction_risks: {
+                [key: string]: unknown;
+            }[];
+            /** Nodes */
+            nodes: {
+                [key: string]: unknown;
+            }[];
+            pagination: components["schemas"]["GraphPagination"];
+            /** Scan Id */
+            scan_id: string;
+            /** Snapshot Generation */
+            snapshot_generation?: string | null;
+            /** Stats */
+            stats: {
+                [key: string]: unknown;
+            };
+            /** Tenant Id */
+            tenant_id: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphPagination */
+        GraphPagination: {
+            /** Cursor */
+            cursor?: string | null;
+            /** Has More */
+            has_more: boolean;
+            /** Limit */
+            limit: number;
+            /** Next Cursor */
+            next_cursor?: string | null;
+            /** Offset */
+            offset: number;
+            /** Total */
+            total: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphPathHop */
+        GraphPathHop: {
+            /** Depth */
+            depth: number;
+            /** Hops */
+            hops: string[];
+            /** Target */
+            target: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphPathsResponse */
+        GraphPathsResponse: {
+            /** Attack Paths */
+            attack_paths: {
+                [key: string]: unknown;
+            }[];
+            completeness: components["schemas"]["GraphCompleteness"];
+            /** Depth Limited */
+            depth_limited: boolean;
+            /** Max Depth */
+            max_depth: number;
+            pagination: components["schemas"]["GraphPagination"];
+            /** Paths */
+            paths: components["schemas"]["GraphPathHop"][];
+            /** Reachable Count */
+            reachable_count: number;
+            /** Reachable Nodes */
+            reachable_nodes: string[];
+            /** Source */
+            source: string;
+            /** Source Id */
+            source_id: string;
+            /** Truncated */
+            truncated: boolean;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * GraphPresetsResponse
+         * @description ``GET /v1/graph/presets``: saved filter presets for the tenant.
+         */
+        GraphPresetsResponse: {
+            [key: string]: unknown;
+        }[];
         /** GraphQueryRequest */
         GraphQueryRequest: {
             /** Compliance Prefixes */
@@ -12365,6 +13698,81 @@ export interface components {
              */
             traversable_only: boolean;
         };
+        /**
+         * GraphRollupResponse
+         * @description Roll-up, attack-path-first, or drill-down view, selected by ``mode``.
+         */
+        GraphRollupResponse: {
+            /** Aggregate Count Metadata */
+            aggregate_count_metadata?: {
+                [key: string]: unknown;
+            } | null;
+            /** Attack Paths */
+            attack_paths?: {
+                [key: string]: unknown;
+            }[] | null;
+            /** Children */
+            children?: {
+                [key: string]: unknown;
+            }[] | null;
+            /** Collapsed */
+            collapsed?: {
+                [key: string]: unknown;
+            } | null;
+            completeness: components["schemas"]["GraphCompleteness"];
+            /** Created At */
+            created_at: string;
+            /** Edge Count Metadata */
+            edge_count_metadata?: {
+                [key: string]: unknown;
+            } | null;
+            /** Edges */
+            edges?: {
+                [key: string]: unknown;
+            }[] | null;
+            /** Filters */
+            filters: {
+                [key: string]: unknown;
+            };
+            /** Mode */
+            mode: string;
+            /** Node */
+            node?: {
+                [key: string]: unknown;
+            } | null;
+            /** Orphan Summary */
+            orphan_summary?: {
+                [key: string]: unknown;
+            } | null;
+            /** Pagination */
+            pagination?: {
+                [key: string]: unknown;
+            } | null;
+            /** Path Edges */
+            path_edges?: {
+                [key: string]: unknown;
+            }[] | null;
+            /** Path Nodes */
+            path_nodes?: {
+                [key: string]: unknown;
+            }[] | null;
+            /** Scan Id */
+            scan_id: string;
+            /** Snapshot Generation */
+            snapshot_generation?: string | null;
+            /** Summary */
+            summary: {
+                [key: string]: unknown;
+            };
+            /** Tenant Id */
+            tenant_id: string;
+            /** Top Level */
+            top_level?: {
+                [key: string]: unknown;
+            }[] | null;
+        } & {
+            [key: string]: unknown;
+        };
         /** GraphScenarioCreate */
         GraphScenarioCreate: {
             /** Assumptions */
@@ -12412,6 +13820,33 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** GraphSchemaResponse */
+        GraphSchemaResponse: {
+            /** Edge Kinds */
+            edge_kinds: {
+                [key: string]: unknown;
+            }[];
+            /** Edge Types */
+            edge_types: string[];
+            /** Interchange */
+            interchange: {
+                [key: string]: string;
+            };
+            /** Node Kinds */
+            node_kinds: {
+                [key: string]: unknown;
+            }[];
+            /** Node Types */
+            node_types: string[];
+            /** Semantic Layers */
+            semantic_layers: {
+                [key: string]: string;
+            }[];
+            /** Version */
+            version: number;
+        } & {
+            [key: string]: unknown;
+        };
         /** GraphScopeDescriptor */
         GraphScopeDescriptor: {
             /**
@@ -12429,6 +13864,44 @@ export interface components {
             /** Observed */
             observed: boolean;
         };
+        /** GraphSearchFilters */
+        GraphSearchFilters: {
+            /** Compliance Prefixes */
+            compliance_prefixes: string[];
+            /** Data Sources */
+            data_sources: string[];
+            /** Entity Types */
+            entity_types: string[];
+            /** Min Severity */
+            min_severity: string;
+            /** Scan Id */
+            scan_id: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphSearchResponse */
+        GraphSearchResponse: {
+            completeness: components["schemas"]["GraphCompleteness"];
+            filters: components["schemas"]["GraphSearchFilters"];
+            pagination: components["schemas"]["GraphPagination"];
+            /** Query */
+            query: string;
+            /** Results */
+            results: {
+                [key: string]: unknown;
+            }[];
+            /** Snapshot Generation */
+            snapshot_generation: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * GraphSnapshotsResponse
+         * @description ``GET /v1/graph/snapshots``: retained snapshots, newest first.
+         */
+        GraphSnapshotsResponse: {
+            [key: string]: unknown;
+        }[];
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -12469,6 +13942,42 @@ export interface components {
             unauthenticated_allowed: boolean;
             /** Version */
             version: string;
+        };
+        /** HubFindingsResponse */
+        HubFindingsResponse: {
+            /** Count */
+            count: number;
+            count_metadata: components["schemas"]["CountMetadata"];
+            /** Cursor */
+            cursor: string;
+            /** Filters */
+            filters: {
+                [key: string]: unknown;
+            };
+            /** Findings */
+            findings: {
+                [key: string]: unknown;
+            }[];
+            /** Has More */
+            has_more: boolean;
+            /** Limit */
+            limit: number;
+            /** Next Cursor */
+            next_cursor: string;
+            /** Offset */
+            offset: number;
+            /** Scan Id */
+            scan_id: string | null;
+            /** Schema Version */
+            schema_version: string;
+            /** Sort */
+            sort: string;
+            /** Total */
+            total: number | null;
+            /** Warnings */
+            warnings: unknown[];
+        } & {
+            [key: string]: unknown;
         };
         /** HubFrameworkCounts */
         HubFrameworkCounts: {
@@ -12519,6 +14028,15 @@ export interface components {
             schema_version: string;
             /** Tenant Id */
             tenant_id: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** IncidentCorrelationResponse */
+        IncidentCorrelationResponse: {
+            /** Count */
+            count: number;
+            /** Incidents */
+            incidents: unknown[];
         } & {
             [key: string]: unknown;
         };
@@ -12977,6 +14495,31 @@ export interface components {
              */
             token: string;
         };
+        /** ManagedTrialTenantResponse */
+        ManagedTrialTenantResponse: {
+            /** Cleanup After */
+            cleanup_after: string;
+            /** Cleanup Attempts */
+            cleanup_attempts: number;
+            /** Cleanup Completed At */
+            cleanup_completed_at: string | null;
+            /** Cleanup Error */
+            cleanup_error: string | null;
+            /** Cleanup Pending */
+            cleanup_pending: boolean;
+            /** Created At */
+            created_at: string;
+            /** State */
+            state: string;
+            /** Tenant Id */
+            tenant_id: string;
+            /** Trial Ends At */
+            trial_ends_at: string;
+            /** Updated At */
+            updated_at: string;
+        } & {
+            [key: string]: unknown;
+        };
         /**
          * McpConfigAssignmentCreate
          * @description Strict, secret-free client-profile assignment request.
@@ -13113,6 +14656,41 @@ export interface components {
             status: string;
             /** Title */
             title: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** Nist80053DrillResponse */
+        Nist80053DrillResponse: {
+            /** Controls */
+            controls: {
+                [key: string]: unknown;
+            }[];
+            /** Families */
+            families: {
+                [key: string]: unknown;
+            }[];
+            /** Framework */
+            framework: string;
+            /** Framework Key */
+            framework_key: string;
+            /** Framework Label */
+            framework_label: string;
+            /** Iso 27001 Derived */
+            iso_27001_derived: unknown;
+            /** Representation */
+            representation: string;
+            /** Score */
+            score: number;
+            /** Source */
+            source: string;
+            /** Status */
+            status: string;
+            /** Summary */
+            summary: {
+                [key: string]: number;
+            };
+            /** Vendor Asserted */
+            vendor_asserted: boolean;
         } & {
             [key: string]: unknown;
         };
@@ -14699,6 +16277,75 @@ export interface components {
              */
             tenant_id: string;
         };
+        /** ScimConfigResponse */
+        ScimConfigResponse: {
+            /** Auth Authority */
+            auth_authority?: string | null;
+            /** Base Path */
+            base_path?: string | null;
+            /** Configured */
+            configured?: boolean | null;
+            /** Configured Api Replicas */
+            configured_api_replicas?: number | null;
+            /** Default Role */
+            default_role?: string | null;
+            /** Deprovisioning Boundary */
+            deprovisioning_boundary?: string | null;
+            /** External Id Attribute */
+            external_id_attribute?: string | null;
+            /** Groups Required */
+            groups_required?: boolean | null;
+            /** Lifecycle Endpoints */
+            lifecycle_endpoints?: {
+                [key: string]: unknown;
+            } | null;
+            /** Message */
+            message?: string | null;
+            /** Multi Node Ready */
+            multi_node_ready?: boolean | null;
+            /** Provisioning Authority */
+            provisioning_authority?: string | null;
+            /** Role Attribute */
+            role_attribute?: string | null;
+            /** Role Values */
+            role_values?: string[] | null;
+            /** Runtime Auth Enforced */
+            runtime_auth_enforced?: boolean | null;
+            /** Shared Store Required */
+            shared_store_required?: boolean | null;
+            /** Status */
+            status?: string | null;
+            /** Storage Backend */
+            storage_backend?: string | null;
+            /** Supported */
+            supported?: boolean | null;
+            /** Tenant Assignment */
+            tenant_assignment?: {
+                [key: string]: unknown;
+            } | null;
+            /** Tenant Attribute */
+            tenant_attribute?: string | null;
+            /** Tenant Count */
+            tenant_count?: number | null;
+            /** Tenant Id */
+            tenant_id?: string | null;
+            /** Tenant Id Source */
+            tenant_id_source?: string | null;
+            /** Tenant Ids */
+            tenant_ids?: string[] | null;
+            /** Token Binding Count */
+            token_binding_count?: number | null;
+            /** Token Binding Mode */
+            token_binding_mode?: string | null;
+            /** Token Configured */
+            token_configured?: boolean | null;
+            /** Verified Idp Templates */
+            verified_idp_templates?: {
+                [key: string]: unknown;
+            }[] | null;
+        } & {
+            [key: string]: unknown;
+        };
         /** ScopedGraphCompleteness */
         ScopedGraphCompleteness: {
             edges: components["schemas"]["GraphCompletenessResponse"];
@@ -14727,6 +16374,66 @@ export interface components {
             };
             /** Tenant Id */
             tenant_id: string;
+        };
+        /** SecretLifecycleResponse */
+        SecretLifecycleResponse: {
+            /** Blockers */
+            blockers?: unknown[] | null;
+            /** External Secret Provider */
+            external_secret_provider?: {
+                [key: string]: unknown;
+            } | null;
+            /** Message */
+            message?: string | null;
+            /** Rotation Statuses */
+            rotation_statuses?: string[] | null;
+            /** Secrets */
+            secrets?: {
+                [key: string]: unknown;
+            } | null;
+            /** Status */
+            status?: string | null;
+            /** Warnings */
+            warnings?: unknown[] | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** SecretRotationPlanResponse */
+        SecretRotationPlanResponse: {
+            /** Action Count */
+            action_count?: number | null;
+            /** Actions */
+            actions?: {
+                [key: string]: unknown;
+            }[] | null;
+            /** All Secrets */
+            all_secrets?: {
+                [key: string]: unknown;
+            }[] | null;
+            /** External Secret Provider Configured */
+            external_secret_provider_configured?: boolean | null;
+            /** Generated From */
+            generated_from?: string | null;
+            /** Message */
+            message?: string | null;
+            /** Operator Sequence */
+            operator_sequence?: string[] | null;
+            /** Provider */
+            provider?: string | null;
+            /** Rotation Adapter */
+            rotation_adapter?: {
+                [key: string]: unknown;
+            } | null;
+            /** Secret Values Included */
+            secret_values_included?: boolean | null;
+            /** Status */
+            status?: string | null;
+            /** Supported Rotation Adapters */
+            supported_rotation_adapters?: {
+                [key: string]: unknown;
+            }[] | null;
+        } & {
+            [key: string]: unknown;
         };
         /** ServiceState */
         ServiceState: {
@@ -15197,6 +16904,29 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** TenantQuotaRuntimeResponse */
+        TenantQuotaRuntimeResponse: {
+            /** Active Override */
+            active_override?: boolean | null;
+            /** Message */
+            message?: string | null;
+            /** Override Endpoint */
+            override_endpoint?: string | null;
+            /** Overrides */
+            overrides?: {
+                [key: string]: unknown;
+            } | null;
+            /** Per Tenant Overrides */
+            per_tenant_overrides?: boolean | null;
+            /** Source */
+            source?: string | null;
+            /** Usage */
+            usage?: {
+                [key: string]: unknown;
+            } | null;
+        } & {
+            [key: string]: unknown;
+        };
         /** TenantQuotaUpdateRequest */
         TenantQuotaUpdateRequest: {
             /** Active Scan Jobs */
@@ -15521,6 +17251,99 @@ export interface components {
              * @default
              */
             reason: string;
+        };
+        /** VulnExceptionResponse */
+        VulnExceptionResponse: {
+            /** Approval Required */
+            approval_required: boolean;
+            /** Approval Version */
+            approval_version: number;
+            /** Approved At */
+            approved_at: string;
+            /** Approved By */
+            approved_by: string;
+            /** Created At */
+            created_at: string;
+            /** Decided By */
+            decided_by: string;
+            /** Exception Id */
+            exception_id: string;
+            /** Expires At */
+            expires_at: string;
+            /** Package Name */
+            package_name: string;
+            /** Reason */
+            reason: string;
+            /** Requested By */
+            requested_by: string;
+            /** Revoked At */
+            revoked_at: string;
+            /** Server Name */
+            server_name: string;
+            /** Status */
+            status: string;
+            /** Suppression Active */
+            suppression_active: boolean;
+            /** Tenant Id */
+            tenant_id: string;
+            /** Vuln Id */
+            vuln_id: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** VulnExceptionRow */
+        VulnExceptionRow: {
+            /** Approval Required */
+            approval_required: boolean;
+            /** Approval Version */
+            approval_version: number;
+            /** Approved At */
+            approved_at: string;
+            /** Approved By */
+            approved_by: string;
+            /** Created At */
+            created_at: string;
+            /** Decided By */
+            decided_by: string;
+            /** Exception Id */
+            exception_id: string;
+            /** Expires At */
+            expires_at: string;
+            /** Package Name */
+            package_name: string;
+            /** Reason */
+            reason: string;
+            /** Requested By */
+            requested_by: string;
+            /** Revoked At */
+            revoked_at: string;
+            /** Server Name */
+            server_name: string;
+            /** Status */
+            status: string;
+            /** Suppression Active */
+            suppression_active: boolean;
+            /** Tenant Id */
+            tenant_id: string;
+            /** Vuln Id */
+            vuln_id: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** VulnExceptionsResponse */
+        VulnExceptionsResponse: {
+            /** Exceptions */
+            exceptions: components["schemas"]["VulnExceptionRow"][];
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Schema Version */
+            schema_version: string;
+            /** Total */
+            total: number;
+        } & {
+            [key: string]: unknown;
         };
         /** _HitlDecisionBody */
         _HitlDecisionBody: {
@@ -17049,9 +18872,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AuditEntriesResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -17096,7 +18917,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["AuditExportResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -17181,9 +19002,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AuditIntegrityResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -17221,9 +19040,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AuthDebugResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -17341,9 +19158,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["ApiKeysResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -17630,9 +19445,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AuthPolicyResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -17670,9 +19483,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["TenantQuotaRuntimeResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -17912,9 +19723,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["ScimConfigResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -17952,9 +19761,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AuthScopesResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -17992,9 +19799,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["CredentialExpiryResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -18032,9 +19837,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["SecretLifecycleResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -18072,9 +19875,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["SecretRotationPlanResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -18315,9 +20116,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["ManagedTrialTenantResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -18917,9 +20716,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["CisChecksResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -18968,9 +20765,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["CisTrendsResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -19771,9 +21566,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AisvsComplianceResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -19819,9 +21612,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["HubFindingsResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -20037,9 +21828,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["ComplianceNarrativeResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -20084,9 +21873,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["Nist80053DrillResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -20131,7 +21918,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ComplianceEvidencePackResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -20173,9 +21960,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["ComplianceSummaryResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -20217,9 +22002,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["ComplianceVerificationKeyResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -20263,9 +22046,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["FrameworkComplianceResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -22080,9 +23861,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["VulnExceptionsResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -22166,9 +23945,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["VulnExceptionResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -22933,9 +24710,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["FalsePositivesResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -22975,9 +24750,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["FindingFeedbackResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -23140,9 +24913,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["FindingTriageResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -23247,9 +25018,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["FindingTriageVexResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -25123,9 +26892,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["GraphPageResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -25176,9 +26943,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["GraphAgentsResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -25638,9 +27403,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["GraphClustersResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -25683,9 +27446,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["GraphComplianceResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -25940,9 +27701,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["GraphDiffResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -25983,9 +27742,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    }[];
+                    "application/json": components["schemas"]["GraphActiveEdgesResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -26028,9 +27785,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["GraphEdgeChangesResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -26073,9 +27828,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["GraphEvidenceManifestResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -26122,9 +27875,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["GraphExposurePathsResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -26171,9 +27922,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["GraphGovernanceResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -26216,9 +27965,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["GraphHistoryResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -26264,9 +28011,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["GraphImpactResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -26355,9 +28100,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["GraphLegendResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -26398,9 +28141,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["GraphNhiGovernanceResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -26443,9 +28184,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["GraphNodeContextResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -26491,9 +28230,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["GraphNodeNeighborsResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -26537,9 +28274,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["GraphNodeContextResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -26586,9 +28321,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["GraphNodeNeighborsResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -26637,9 +28370,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["GraphPathsResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -26677,9 +28408,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    }[];
+                    "application/json": components["schemas"]["GraphPresetsResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -26866,9 +28595,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["GraphRollupResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -27161,9 +28888,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["GraphSchemaResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -27271,9 +28996,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["GraphSearchResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -27360,9 +29083,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    }[];
+                    "application/json": components["schemas"]["GraphSnapshotsResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -30921,9 +32642,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["BackpressurePostureResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -31007,9 +32726,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["CredentialRiskRankingResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -31051,9 +32768,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["EnrichmentPostureResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -31095,9 +32810,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["IncidentCorrelationResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */

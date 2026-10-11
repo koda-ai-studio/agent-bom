@@ -8,6 +8,7 @@ should reference that same contract instead of drifting into parallel models.
 
 from __future__ import annotations
 
+import re
 import sys
 from pathlib import Path
 
@@ -35,7 +36,8 @@ def _require_v1_routes(path: str, routes: list[tuple[str, str]], failures: list[
             continue
         route_path = full_path.removeprefix(prefix) or "/"
         needle = f'@router.{method.lower()}("{route_path}"'
-        if needle not in text:
+        # Split route modules register on named sub-routers (``@search_router.get``).
+        if not re.search(rf'@\w*router\.{method.lower()}\("{re.escape(route_path)}"', text):
             failures.append(f"{path}: missing {needle!r} for {method.upper()} {full_path}")
 
 
@@ -70,10 +72,10 @@ def main() -> int:
         ],
         failures,
     )
+    _require_v1_routes("src/agent_bom/api/routes/enterprise.py", [("GET", "/v1/auth/policy")], failures)
     _require_v1_routes(
-        "src/agent_bom/api/routes/enterprise.py",
+        "src/agent_bom/api/routes/enterprise_routes/trials.py",
         [
-            ("GET", "/v1/auth/policy"),
             ("GET", "/v1/auth/scim/config"),
             ("GET", "/v1/auth/secrets/lifecycle"),
             ("GET", "/v1/auth/secrets/rotation-plan"),
@@ -127,10 +129,10 @@ def main() -> int:
         ],
         failures,
     )
+    _require_v1_routes("src/agent_bom/api/routes/graph.py", [("GET", "/v1/graph")], failures)
     _require_v1_routes(
-        "src/agent_bom/api/routes/graph.py",
+        "src/agent_bom/api/routes/graph_routes/reads.py",
         [
-            ("GET", "/v1/graph"),
             ("GET", "/v1/graph/agents"),
             ("GET", "/v1/graph/search"),
             ("GET", "/v1/graph/node/{node_id}"),
