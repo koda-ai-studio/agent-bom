@@ -49,6 +49,8 @@ from agent_bom.api.idempotency_store import (
     idempotency_reservation_lease_seconds,
 )
 from agent_bom.api.models import RuntimeEvidenceIngestRequest, ScanJob, SideScanTriggerRequest
+from agent_bom.api.read_models import documented
+from agent_bom.api.read_models import runtime_estate_a as rt
 from agent_bom.api.stores import _get_graph_store, _get_idempotency_store, _get_store
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.backpressure import (
@@ -341,7 +343,7 @@ def _build_inventory_payload(tenant_id: str, selected: list[str], scoped_region:
     }
 
 
-@router.get("/cloud/{provider}/inventory")
+@router.get("/cloud/{provider}/inventory", **documented(rt.CloudInventorySummaryResponse))
 async def cloud_inventory(
     request: Request,
     provider: str,
@@ -510,7 +512,7 @@ def _run_cis_benchmark(
     return result
 
 
-@router.get("/cloud/{provider}/cis-benchmark")
+@router.get("/cloud/{provider}/cis-benchmark", **documented(rt.CloudCisBenchmarkResponse))
 async def cloud_cis_benchmark(
     request: Request,
     provider: str,
@@ -887,7 +889,7 @@ def _build_account_summary(tenant_id: str, raw_account_ref: str) -> dict[str, An
     }
 
 
-@router.get("/cloud/accounts/{account_ref}/summary")
+@router.get("/cloud/accounts/{account_ref}/summary", **documented(rt.CloudAccountSummaryResponse))
 async def cloud_account_summary(
     request: Request,
     account_ref: str,
@@ -1378,7 +1380,7 @@ async def cloud_side_scan_trigger(
     return payload
 
 
-@router.get("/cloud/side-scan", tags=["cloud"])
+@router.get("/cloud/side-scan", **documented(rt.CloudSideScanListResponse), tags=["cloud"])
 async def cloud_side_scan_list(
     request: Request,
     limit: int = Query(50, ge=1, le=200, description="Max executions to return (newest first)."),
@@ -1398,10 +1400,7 @@ async def cloud_side_scan_list(
     per-provider executor surface (``credentialed_smoke`` stays false until a live
     run is proven). Powers the CWPP side-scan UI.
     """
-    from agent_bom.cloud.side_scan_lifecycle import (
-        get_side_scan_state_store,
-        side_scan_provider_capabilities,
-    )
+    from agent_bom.cloud.side_scan_lifecycle import get_side_scan_state_store, side_scan_provider_capabilities
 
     tenant_id = _tenant(request)
 
@@ -1442,7 +1441,7 @@ async def cloud_side_scan_list(
         ) from exc
 
 
-@router.get("/cloud/side-scan/{execution_id}", tags=["cloud"])
+@router.get("/cloud/side-scan/{execution_id}", **documented(rt.CloudSideScanStatusResponse), tags=["cloud"])
 async def cloud_side_scan_status(
     request: Request,
     execution_id: str,
