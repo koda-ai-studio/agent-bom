@@ -10,7 +10,9 @@ import json
 import sys
 from typing import Any
 
+from agent_bom.api import tenant_worker
 from agent_bom.api.models import JobStatus
+from agent_bom.api.storage import job_backends
 from agent_bom.api.storage.finding_history import KEY_BATCH
 from agent_bom.core.tenancy import require_explicit_tenant_id
 
@@ -42,11 +44,8 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Backfill versioned retained finding history")
     parser.add_argument("--tenant", required=True)
     args = parser.parse_args(argv)
-    from agent_bom.api.storage.job_backends import configured_job_store
-    from agent_bom.api.tenant_worker import run_tenant_bound
-
     try:
-        count = int(run_tenant_bound(args.tenant, backfill_tenant_history, configured_job_store(), args.tenant))
+        count = int(tenant_worker.run_tenant_bound(args.tenant, backfill_tenant_history, job_backends.configured_job_store(), args.tenant))
     except Exception:  # broad-except: CLI failure reports no source payload, path, or connection secret
         sys.stderr.write("Finding history backfill failed; check tenant, database configuration and migrations.\n")
         return 1
