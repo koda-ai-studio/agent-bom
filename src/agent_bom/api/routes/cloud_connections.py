@@ -29,8 +29,7 @@ through the existing scan/graph stores — no parallel persistence path — and 
 connection's lifecycle status is updated (``active`` + ``last_scan_at`` on
 success, ``error`` + ``status_detail`` on failure, never carrying a secret).
 Databricks also uses a scoped workspace client for inventory and vendor
-security checks. A connection may
-also carry a ``scan_interval_minutes`` so the background scheduler
+security checks. A connection may also carry a ``scan_interval_minutes`` so the background scheduler
 (:mod:`agent_bom.api.connection_scheduler`) re-runs this same scan path when due.
 """
 
