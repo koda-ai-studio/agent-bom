@@ -462,21 +462,25 @@ def _reset_proxy_route_state() -> None:
 
 
 def _reset_durable_store_singletons() -> None:
+    from agent_bom.api.blueprint_store import set_blueprint_store
     from agent_bom.api.export_destination_store import set_export_destination_store
     from agent_bom.api.export_schedule_store import set_export_schedule_store
     from agent_bom.api.kspm_posture_store import set_kspm_posture_store
     from agent_bom.api.report_job_store import reset_report_job_store
     from agent_bom.api.skills_scan_store import set_skills_scan_store
+    from agent_bom.cloud.side_scan_lifecycle import reset_side_scan_state_store
     from agent_bom.ticketing.connection_store import set_ticketing_store
 
     # A successful test's tmp_path may already be deleted when the next test
     # selects a backend. Never retain those SQLite paths across test boundaries.
+    set_blueprint_store(None)
     set_export_destination_store(None)
     set_export_schedule_store(None)
     set_kspm_posture_store(None)
     set_skills_scan_store(None)
     set_ticketing_store(None)
     reset_report_job_store()
+    reset_side_scan_state_store()
     # The agent-identity, JIT-grant, and runtime session/event stores are now
     # durable by default (SQLite under AGENT_BOM_STATE_DIR — the isolated temp
     # dir set above — instead of in-memory). Their selectors memoize a
