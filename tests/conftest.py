@@ -462,6 +462,7 @@ def _reset_proxy_route_state() -> None:
 
 
 def _reset_durable_store_singletons() -> None:
+    from agent_bom.api.blueprint_store import set_blueprint_store
     from agent_bom.api.export_destination_store import set_export_destination_store
     from agent_bom.api.export_schedule_store import set_export_schedule_store
     from agent_bom.api.kspm_posture_store import set_kspm_posture_store
@@ -471,6 +472,7 @@ def _reset_durable_store_singletons() -> None:
 
     # A successful test's tmp_path may already be deleted when the next test
     # selects a backend. Never retain those SQLite paths across test boundaries.
+    set_blueprint_store(None)
     set_export_destination_store(None)
     set_export_schedule_store(None)
     set_kspm_posture_store(None)

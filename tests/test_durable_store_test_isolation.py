@@ -10,6 +10,7 @@ from tests.conftest import _reset_durable_store_singletons
 @pytest.mark.parametrize(
     ("module_name", "getter", "setter"),
     [
+        ("agent_bom.api.blueprint_store", "get_blueprint_store", "set_blueprint_store"),
         ("agent_bom.api.kspm_posture_store", "get_kspm_posture_store", "set_kspm_posture_store"),
         ("agent_bom.api.export_schedule_store", "get_export_schedule_store", "set_export_schedule_store"),
         ("agent_bom.api.export_destination_store", "get_export_destination_store", "set_export_destination_store"),
