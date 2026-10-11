@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 from typing import Protocol
 
 from agent_bom.api.postgres_common import ConnectionPool
@@ -14,6 +15,8 @@ from agent_bom.api.storage.sql import (
     require_tenant_scope,
     utc_timestamp,
 )
+from agent_bom.api.storage_schema import postgres_deployment_configured
+from agent_bom.core.settings import env_raw
 
 
 class TenantGraphRetentionStore(Protocol):
@@ -134,3 +137,28 @@ class SqlTenantGraphRetentionStore:
 
 SQLiteTenantGraphRetentionStore = SqlTenantGraphRetentionStore.sqlite
 PostgresTenantGraphRetentionStore = SqlTenantGraphRetentionStore.postgres
+
+_tenant_graph_retention_store: TenantGraphRetentionStore | None = None
+_tenant_graph_retention_store_lock = threading.Lock()
+
+
+def get_tenant_graph_retention_store() -> TenantGraphRetentionStore:
+    """Get the active tenant graph retention override store."""
+    global _tenant_graph_retention_store
+    if _tenant_graph_retention_store is None:
+        with _tenant_graph_retention_store_lock:
+            if _tenant_graph_retention_store is None:
+                db_path = env_raw("AGENT_BOM_DB")
+                if postgres_deployment_configured():
+                    _tenant_graph_retention_store = PostgresTenantGraphRetentionStore()
+                elif db_path:
+                    _tenant_graph_retention_store = SQLiteTenantGraphRetentionStore(db_path)
+                else:
+                    _tenant_graph_retention_store = InMemoryTenantGraphRetentionStore()
+    return _tenant_graph_retention_store
+
+
+def set_tenant_graph_retention_store(store: TenantGraphRetentionStore) -> None:
+    """Switch the tenant graph retention override store backend."""
+    global _tenant_graph_retention_store
+    _tenant_graph_retention_store = store

@@ -7,7 +7,8 @@ import os
 from collections.abc import Iterable
 from typing import Any
 
-from agent_bom.api.stores import _get_tenant_graph_retention_store, set_tenant_graph_retention_store
+from agent_bom.api.tenant_graph_retention_store import get_tenant_graph_retention_store as _get_tenant_graph_retention_store
+from agent_bom.api.tenant_graph_retention_store import set_tenant_graph_retention_store
 
 
 def _env_graph_retention_overrides() -> dict[str, int]:

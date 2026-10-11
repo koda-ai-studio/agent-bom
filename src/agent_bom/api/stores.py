@@ -23,6 +23,8 @@ from agent_bom.api.storage.job_cache import (
     _jobs_is_compacted as _jobs_is_compacted,
 )
 from agent_bom.api.storage_schema import postgres_deployment_configured
+from agent_bom.api.tenant_graph_retention_store import get_tenant_graph_retention_store as _get_tenant_graph_retention_store  # noqa: F401
+from agent_bom.api.tenant_graph_retention_store import set_tenant_graph_retention_store as set_tenant_graph_retention_store
 from agent_bom.config import API_MAX_IN_MEMORY_JOBS as _MAX_IN_MEMORY_JOBS
 
 if TYPE_CHECKING:
@@ -34,7 +36,6 @@ if TYPE_CHECKING:
     from agent_bom.api.schedule_store import ScheduleStore
     from agent_bom.api.scim_store import SCIMStore
     from agent_bom.api.source_store import SourceStore
-    from agent_bom.api.tenant_graph_retention_store import TenantGraphRetentionStore
     from agent_bom.api.tenant_quota_store import TenantQuotaStore
     from agent_bom.api.tenant_score_config_store import TenantScoreConfigStore
     from agent_bom.graph.ports import GraphStoreProtocol
@@ -265,37 +266,6 @@ def set_tenant_quota_store(store: TenantQuotaStore) -> None:
     """Switch the tenant quota override store backend."""
     global _tenant_quota_store
     _tenant_quota_store = store
-
-
-# ─── Tenant graph retention override store (pluggable) ─────────────────────
-_tenant_graph_retention_store: TenantGraphRetentionStore | None = None
-
-
-def _get_tenant_graph_retention_store() -> TenantGraphRetentionStore:
-    """Get the active tenant graph retention override store."""
-    global _tenant_graph_retention_store
-    if _tenant_graph_retention_store is None:
-        with _store_lock:
-            if _tenant_graph_retention_store is None:
-                if postgres_deployment_configured():
-                    from agent_bom.api.tenant_graph_retention_store import PostgresTenantGraphRetentionStore
-
-                    _tenant_graph_retention_store = PostgresTenantGraphRetentionStore()
-                elif os.environ.get("AGENT_BOM_DB"):
-                    from agent_bom.api.tenant_graph_retention_store import SQLiteTenantGraphRetentionStore
-
-                    _tenant_graph_retention_store = SQLiteTenantGraphRetentionStore(os.environ["AGENT_BOM_DB"])
-                else:
-                    from agent_bom.api.tenant_graph_retention_store import InMemoryTenantGraphRetentionStore
-
-                    _tenant_graph_retention_store = InMemoryTenantGraphRetentionStore()
-    return _tenant_graph_retention_store
-
-
-def set_tenant_graph_retention_store(store: TenantGraphRetentionStore) -> None:
-    """Switch the tenant graph retention override store backend."""
-    global _tenant_graph_retention_store
-    _tenant_graph_retention_store = store
 
 
 # ─── Tenant exec-score config override store (pluggable) ───────────────────

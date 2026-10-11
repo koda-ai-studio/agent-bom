@@ -366,3 +366,28 @@ class TestAnalyticsCap:
         observations = store.list_observations("tenant-a", limit=10)
         assert len(observations) == 2
         assert {row.observation_id for row in observations} == {"obs-2", "obs-3"}
+
+
+def test_retention_store_singleton_is_shared_and_independent_of_api_stores(monkeypatch):
+    """Retention resolution reads one store slot without importing the API store registry."""
+    import ast
+    import importlib
+    from pathlib import Path
+
+    from agent_bom.api import stores
+    from agent_bom.api import tenant_graph_retention_store as owner
+    from agent_bom.api.tenant_graph_retention import get_tenant_graph_retention_override
+    from agent_bom.api.tenant_graph_retention_store import InMemoryTenantGraphRetentionStore
+
+    retention = importlib.import_module("agent_bom.api.tenant_graph_retention")
+    tree = ast.parse(Path(retention.__file__).read_text())
+    imported = {node.module for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)}
+    assert "agent_bom.api.stores" not in imported
+
+    monkeypatch.setattr(owner, "_tenant_graph_retention_store", None)
+    replacement = InMemoryTenantGraphRetentionStore()
+    stores.set_tenant_graph_retention_store(replacement)
+    assert owner.get_tenant_graph_retention_store() is replacement
+    assert stores._get_tenant_graph_retention_store() is replacement
+    replacement.put("tenant-singleton", 45)
+    assert get_tenant_graph_retention_override("tenant-singleton") == 45
