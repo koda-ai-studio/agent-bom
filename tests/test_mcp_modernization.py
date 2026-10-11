@@ -376,3 +376,20 @@ def test_gateway_rejects_invalid_response_envelopes(response):
 
     with pytest.raises(ValueError):
         validate_response({"id": 1}, response)
+
+
+def test_registry_factory_does_not_import_legacy_smithery_sdk(monkeypatch):
+    import builtins
+
+    from agent_bom.mcp_server_entrypoint import create_smithery_server
+
+    original = builtins.__import__
+
+    def guarded(name, *args, **kwargs):
+        if name == "smithery" or name.startswith("smithery."):
+            raise AssertionError("legacy decorator cannot wrap SDK 2")
+        return original(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", guarded)
+    server = object()
+    assert create_smithery_server(lambda: server) is server

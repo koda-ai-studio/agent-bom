@@ -198,11 +198,8 @@ visual = [
     "Pillow>=10.0",
     "pytesseract>=0.3.10",
 ]
-mcp-server = [
-    # Retained for install-command compatibility; Smithery remains specific
-    # to hosted MCP registry adapters rather than the core stdio server.
-    "smithery>=0.4",
-]
+# MCP ships in the base install; retain the extra for install-command compatibility.
+mcp-server = []
 lake = [
     "pyarrow>=15.0",
     "pyiceberg>=0.11.1",
