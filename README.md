@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/images/social-preview.svg" alt="agent-bom — Discover. Scan. Correlate. Act. Security evidence across repositories, software supply chains, AI and MCP, cloud, identity, and data." width="960" />
+  <img src="docs/images/social-preview.svg" alt="agent-bom — Discover. Scan. Correlate. Act. Security evidence across repositories, software supply chains, AI and MCP, cloud, identity, and data." width="1280" />
 </p>
 
 <p align="center">
@@ -92,8 +92,7 @@ report and coverage. [Exit codes](site-docs/reference/exit-codes.md)
 
 <p align="center"><a href="docs/images/context-map-horizontal-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/context-map-horizontal-light-live.png"><img src="docs/images/context-map-horizontal-dark-live.png" alt="Recorded agent connections linking a role, agents, MCP servers, tool, credential reference, package and finding" width="960"></picture></a></p>
 
-**Context Map:** inspect agents, MCP servers, packages and credential references. The map above uses labeled sample data; recorded relationships do not prove execution or data access. Click any screenshot to view it at full size.
-To trace one vulnerable dependency to the affected agents and into remediation, [try the connected-BOM walkthrough](examples/connected-bom/README.md).
+**Context Map:** inspect agents, MCP servers, packages and credential references. The map above uses labeled sample data; recorded relationships do not prove execution or data access. Click any screenshot to view it at full size. To trace one vulnerable dependency to the affected agents and into remediation, [try the connected-BOM walkthrough](examples/connected-bom/README.md).
 
 ## Self-host in your environment
 
@@ -104,8 +103,10 @@ git clone --depth 1 --branch v0.108.4 https://github.com/koda-ai-studio/agent-bo
 AGENT_BOM_IMAGE_TAG=0.108.4 docker compose up -d
 ```
 
-Open **http://localhost:3000**, then **Connections** or **New Scan**. For cloud accounts, add a scoped read-only connection, verify access, then start a scan.
-The pilot binds to loopback and retains state in a Docker volume. Use the authenticated deployment guide for a shared instance.
+Open **http://localhost:3000**, then **Connections** or **New Scan**. For cloud accounts, add a scoped read-only connection, verify access, then start a scan. The pilot binds to loopback and retains state in a Docker volume. Use the authenticated deployment guide for a shared instance.
+
+**Shared deployment:** Agent-Bom + PostgreSQL + your chosen identity provider. Local CLI/CI scans need no database service or login stack.
+Grafana/Prometheus and ClickHouse are optional. [Choose the stack](site-docs/deployment/overview.md#start-with-a-small-stack).
 
 ### Deployment models
 
@@ -122,8 +123,7 @@ The pilot binds to loopback and retains state in a Docker volume. Use the authen
 <details>
 <summary>Work with your existing tools</summary>
 
-Use **CLI or GitHub Action**, **REST API**, or **MCP**; export **SARIF, CycloneDX, SPDX, JSON and HTML**.
-Cloud connectors and fleet sync collect inventory; proxy and gateway deployments add runtime evidence.
+Use **CLI or GitHub Action**, **REST API**, or **MCP**; export **SARIF, CycloneDX, SPDX, JSON and HTML**. Cloud connectors and fleet sync collect inventory; proxy and gateway deployments add runtime evidence.
 
 For coding assistants, run `agent-bom mcp server`. Start with eight focused tools, then choose a graph, cloud, runtime or audit profile. The full catalog has 89 MCP tools, 7 resources, and 8 workflow prompts in current source. [MCP workflows](docs/MCP_WORKFLOWS.md)
 

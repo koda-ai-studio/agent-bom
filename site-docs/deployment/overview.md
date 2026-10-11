@@ -1,6 +1,6 @@
 # Deployment Overview
 
-> **Unified quickstart:** [`docs/DEPLOY_QUICKSTART.md`](https://github.com/msaad00/agent-bom/blob/main/docs/DEPLOY_QUICKSTART.md)
+> **Unified quickstart:** [`docs/DEPLOY_QUICKSTART.md`](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/DEPLOY_QUICKSTART.md)
 > — `scripts/deploy/install.sh` for pilot, EKS, AKS, GKE, Snowflake, and
 > read-only cloud connect.
 
@@ -21,13 +21,33 @@ from them.
 | **Team demo** | `docker compose` pilot | shared API + UI control plane on one workstation |
 | **Production** | Helm / EKS Terraform | tenant-aware self-hosted control plane in your cluster |
 | **Private customer / CISO instance** | `docker compose` platform + product overlay | login-gated single host, no demo data, real cloud connected read-only |
-| **Snowflake shop** | SPCS / Native App | warehouse-native governance lane in your account |
+| **Snowflake evaluation** | SPCS / Native App preview | installation contract; Native App scan dispatch is unavailable |
 
-Same one-liner in prose: laptop scan → pip; team demo → docker compose pilot;
-production → Helm / EKS Terraform; Snowflake shop → SPCS / Native App. Every lane
-here runs in your own boundary. Cost posture: all in-repo lanes are free and no
-managed public SaaS ships in this repo yet; see
-[Product boundaries](product-boundaries.md) for the full lane matrix.
+The software is open source; hosting, database storage, identity, monitoring and
+operator time still have costs. Keep the first deployment small and measure the
+workload before adding services. See [Product boundaries](product-boundaries.md)
+for support tiers and preview limitations.
+
+## Start with a small stack
+
+| Component | When to run it | Boundary |
+|---|---|---|
+| CLI / CI scanner | First scan or build gate | No control-plane database, login service or paid model is required. |
+| API + UI + PostgreSQL | Shared inventory, retained findings, graph and governance | PostgreSQL is the default shared transactional and graph store; apply the documented migrations and role separation. |
+| Chosen identity provider | Shared authenticated access | Use the documented authentication flow for each surface. Keycloak is an available self-hosted choice; it is not required for local scans. |
+| Grafana + Prometheus | Metrics, dashboards and alerts | Optional. Reuse an existing monitoring stack where possible. |
+| ClickHouse | Measured event-analytics or retention pressure | Optional analytics sink; it does not replace PostgreSQL jobs, authorization or graph persistence. |
+| MCP proxy / gateway | Selected tool-call enforcement | Add where inline policy is needed; validate authentication and failure behavior before routing traffic. |
+
+Start with a [local scan](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/FIRST_RUN.md) or the pilot below,
+retain an exported report, then connect one scoped source to the shared control
+plane. Core checks do not require LLM enrichment. Standard vulnerability lookups
+may contact external services; use the documented offline path when required.
+
+For identity setup, use [authenticated deployment](authenticated-hosted-instance.md)
+and the [MCP OAuth guide](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/MCP_OAUTH.md). MCP clients have distinct
+registration and resource-audience requirements; verify the actual client flow
+before advertising compatibility.
 
 For the private, login-gated single-host instance where a real cloud account is
 connected read-only (the customer / CISO experience, distinct from the public
@@ -44,7 +64,7 @@ Pilot on one workstation:
 ```bash
 scripts/deploy/install.sh pilot
 # or without a checkout:
-curl -fsSL https://raw.githubusercontent.com/msaad00/agent-bom/main/deploy/docker-compose.pilot.yml -o docker-compose.pilot.yml
+curl -fsSL https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/deploy/docker-compose.pilot.yml -o docker-compose.pilot.yml
 docker compose -f docker-compose.pilot.yml up -d
 # Dashboard -> http://localhost:3000
 ```
@@ -398,15 +418,15 @@ YAML.
 
 **Risk overview**
 
-![agent-bom dashboard](https://raw.githubusercontent.com/msaad00/agent-bom/main/docs/images/dashboard-live.png)
+![agent-bom dashboard](https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/docs/images/dashboard-live.png)
 
 **Focused fleet and graph visibility**
 
-![agent-bom agent mesh](https://raw.githubusercontent.com/msaad00/agent-bom/main/docs/images/mesh-live.png)
+![agent-bom agent mesh](https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/docs/images/mesh-live.png)
 
 **Remediation workflow**
 
-![agent-bom remediation view](https://raw.githubusercontent.com/msaad00/agent-bom/main/docs/images/remediation-live.png)
+![agent-bom remediation view](https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/docs/images/remediation-live.png)
 
 ## Where to go next
 
