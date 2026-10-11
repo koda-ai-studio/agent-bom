@@ -44,8 +44,16 @@ CONTROL_PLANE_SCHEMA_COMPONENTS: tuple[StorageSchemaComponent, ...] = (
     StorageSchemaComponent(
         "scan_jobs",
         "sqlite/postgres",
-        ("jobs", "scan_jobs", "cis_benchmark_checks", "scan_dispatch_queue", "job_overview_revisions"),
-        version=3,
+        (
+            "jobs",
+            "scan_jobs",
+            "cis_benchmark_checks",
+            "scan_dispatch_queue",
+            "job_overview_revisions",
+            "finding_history_jobs",
+            "finding_history_rows",
+        ),
+        version=4,
     ),
     StorageSchemaComponent("report_jobs", "sqlite/postgres", ("report_jobs",)),
     StorageSchemaComponent("api_keys", "postgres", ("api_keys",)),

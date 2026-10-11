@@ -87,6 +87,12 @@ CURRENT_EVIDENCE_SOURCES = frozenset(
         "src/agent_bom/api/finding_collection.py",
         "src/agent_bom/api/finding_read_context.py",
         "src/agent_bom/api/finding_snapshot_metadata.py",
+        "src/agent_bom/api/finding_history_read.py",
+        "src/agent_bom/api/finding_job_metadata.py",
+        "src/agent_bom/api/storage/finding_history.py",
+        "src/agent_bom/api/storage/finding_history_adapters.py",
+        "src/agent_bom/api/storage/finding_history_cli.py",
+        "src/agent_bom/api/storage/finding_history_schema.py",
         "src/agent_bom/api/inventory_service.py",
         "src/agent_bom/api/remediation_view.py",
         "src/agent_bom/api/stores.py",
@@ -99,6 +105,9 @@ CURRENT_EVIDENCE_SOURCES = frozenset(
     }
 )
 CURRENT_EVIDENCE_CONTRACTS = (
+    "tests/api/test_finding_history_projection.py",
+    "tests/api/test_scan_job_sla_history.py",
+    "tests/test_postgres_finding_history.py",
     "tests/test_findings_read_path_3641.py",
     "tests/test_graph_api.py",
     "tests/test_inventory_assets.py",

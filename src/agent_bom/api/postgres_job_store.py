@@ -19,6 +19,8 @@ from agent_bom.api.postgres_common import (
     set_current_tenant,
 )
 from agent_bom.api.scan_snapshot_store import discard_job_snapshot
+from agent_bom.api.storage.finding_history_adapters import postgres_history_backfill, postgres_history_read
+from agent_bom.api.storage.finding_history_schema import POSTGRES_FINDING_HISTORY_V1
 from agent_bom.api.storage.job_payload_cache import JobPayloadCache, read_versioned_jobs
 from agent_bom.api.storage.job_read_projections import postgres_demo_exists, postgres_pending_dispatch_count
 from agent_bom.api.storage.job_revisions import POSTGRES_JOB_REVISIONS_V1, read_postgres_job_revision
@@ -39,8 +41,8 @@ if TYPE_CHECKING:
 
 
 class PostgresJobStore:
-    """PostgreSQL-backed scan job persistence."""
-
+    finding_history_read = postgres_history_read
+    backfill_finding_history = postgres_history_backfill
     has_usable_demo_job = postgres_demo_exists
     pending_dispatch_count = postgres_pending_dispatch_count
     retains_job_objects_in_memory = False
@@ -55,9 +57,7 @@ class PostgresJobStore:
     def _scope_connection(self, *, all_tenants: bool = False) -> Iterator[Connection]:
         """Use the app pool by default and maintenance only for explicit global work."""
         if all_tenants:
-            # Reconciliation and retention can run on every worker tick. Their
-            # job lifecycle events are audited separately, so avoid producing a
-            # signed bypass event (and stack walk) for each bounded sweep.
+            # Job lifecycle events already audit these frequent reconciliation/retention sweeps.
             with bypass_tenant_rls(audit=False, warn=False):
                 with _maintenance_connection(self._maintenance_pool) as conn:
                     yield conn
@@ -196,7 +196,7 @@ class PostgresJobStore:
             _ensure_tenant_rls(conn, "scan_jobs", "team_id")
             _ensure_tenant_rls(conn, "cis_benchmark_checks", "team_id")
             _ensure_tenant_rls(conn, "scan_dispatch_queue", "tenant_id")
-            conn.execute(POSTGRES_JOB_REVISIONS_V1)
+            conn.execute(POSTGRES_JOB_REVISIONS_V1 + POSTGRES_FINDING_HISTORY_V1)
             conn.commit()
 
     def overview_evidence_revision(self, tenant_id: str) -> str:

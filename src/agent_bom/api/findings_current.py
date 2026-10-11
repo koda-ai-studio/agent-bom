@@ -7,29 +7,42 @@ cannot drift independently.
 
 from __future__ import annotations
 
-import json
 from collections.abc import Callable, Iterable
 from datetime import datetime, timezone
-from typing import Any, Protocol
+from typing import Any
 
+from agent_bom.api.finding_job_metadata import (
+    HistoryKey as HistoryKey,
+)
+from agent_bom.api.finding_job_metadata import (
+    _job_matches_scan_id as _job_matches_scan_id,
+)
+from agent_bom.api.finding_job_metadata import (
+    _merge_retained_history_row as _merge_retained_history_row,
+)
+from agent_bom.api.finding_job_metadata import (
+    _normalized_evidence_timestamp as _normalized_evidence_timestamp,
+)
+from agent_bom.api.finding_job_metadata import (
+    _retained_finding_key as _retained_finding_key,
+)
+from agent_bom.api.finding_job_metadata import (
+    _ScanJobLike as _ScanJobLike,
+)
+from agent_bom.api.finding_job_metadata import (
+    job_has_authoritative_scan_evidence as job_has_authoritative_scan_evidence,
+)
+from agent_bom.api.finding_job_metadata import (
+    scan_collection_incomplete_reasons as scan_collection_incomplete_reasons,
+)
+from agent_bom.api.finding_job_metadata import (
+    scan_evidence_authority_key as scan_evidence_authority_key,
+)
+from agent_bom.api.finding_job_metadata import (
+    scan_scope_key as scan_scope_key,
+)
 from agent_bom.api.models import JobStatus
-from agent_bom.evidence.finding_observation import FindingObservationStatus, ReconfirmationReason
-
-
-class _ScanJobLike(Protocol):
-    """Structural contract for the scan-job rows this fold reads.
-
-    Kept as a Protocol (rather than importing ``ScanJob``) so the fold stays
-    decoupled from the concrete store row and accepts any object exposing the
-    same surface. ``ScanJob`` satisfies it structurally.
-    """
-
-    job_id: str
-    status: JobStatus
-    result: dict[str, Any] | None
-    created_at: str
-    completed_at: str | None
-    child_job_ids: list[str]
+from agent_bom.evidence.finding_observation import FindingObservationStatus
 
 
 def job_in_window(job: _ScanJobLike, since: str | None) -> bool:
@@ -89,162 +102,6 @@ def scan_only_findings(
     return [row for row, key in zip(retained, keys) if key not in owned]
 
 
-_SCAN_TARGET_FIELDS = (
-    "inventory",
-    "images",
-    "k8s",
-    "k8s_namespace",
-    "tf_dirs",
-    "gha_path",
-    "repo_url",
-    "agent_projects",
-    "jupyter_dirs",
-    "sbom",
-    "external_scan",
-    "vex",
-    "connectors",
-    "filesystem_paths",
-    "dynamic_discovery",
-    "dynamic_max_depth",
-    "discover_host",
-    "scope_agents",
-    "scope_servers",
-    "exclude_agents",
-    "exclude_servers",
-    "dry_run",
-    "no_scan",
-)
-
-
-def _normalized_evidence_timestamp(*values: Any) -> str:
-    """Return the first valid timestamp in a UTC-sortable representation."""
-    for value in values:
-        raw = str(value or "").strip()
-        if not raw:
-            continue
-        try:
-            parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
-        except ValueError:
-            continue
-        if parsed.tzinfo is None:
-            parsed = parsed.replace(tzinfo=timezone.utc)
-        return parsed.astimezone(timezone.utc).isoformat()
-    return ""
-
-
-def scan_evidence_authority_key(job: _ScanJobLike) -> tuple[str, str, str]:
-    """Deterministic newest-wins key for one completed scan snapshot.
-
-    The stores do not yet persist one shared commit sequence. If evidence and
-    completion timestamps are exactly equal, ``job_id`` is therefore a stable
-    backend-independent tie-break, not a claim about commit chronology.
-    """
-    raw_result = getattr(job, "result", None)
-    result: dict[str, Any] = raw_result if isinstance(raw_result, dict) else {}
-    raw_scan_run = result.get("scan_run")
-    scan_run: dict[str, Any] = raw_scan_run if isinstance(raw_scan_run, dict) else {}
-    completed_at = _normalized_evidence_timestamp(
-        getattr(job, "completed_at", None),
-        getattr(job, "created_at", None),
-    )
-    evidence_at = _normalized_evidence_timestamp(
-        result.get("generated_at"),
-        result.get("scan_timestamp"),
-        scan_run.get("generated_at"),
-        completed_at,
-    )
-    return evidence_at, completed_at, str(getattr(job, "job_id", ""))
-
-
-def scan_scope_key(job: _ScanJobLike) -> str:
-    """Canonical target scope whose newer successful scan replaces the older.
-
-    Result ordering cannot express replacement semantics: an empty successful
-    scan has no finding identity to overwrite.  The request's target-bearing
-    fields are therefore the durable scope.  Execution/enrichment/output flags
-    are intentionally excluded because they do not identify a different asset
-    estate.  Legacy/default jobs fall back to their reported scan-source set.
-    """
-    from agent_bom.evidence.push_scope import pushed_scope_key
-
-    raw_result = getattr(job, "result", None)
-    result = raw_result if isinstance(raw_result, dict) else {}
-    push_scope = pushed_scope_key(job, result)
-    if push_scope is not None:
-        return push_scope
-    request = getattr(job, "request", None)
-    if request is not None and hasattr(request, "model_dump"):
-        raw_request = request.model_dump(mode="json")
-    elif isinstance(request, dict):
-        raw_request = request
-    else:
-        raw_request = {}
-
-    target: dict[str, Any] = {}
-    for field in _SCAN_TARGET_FIELDS:
-        if field == "dynamic_max_depth" and not raw_request.get("dynamic_discovery"):
-            continue
-        value = raw_request.get(field)
-        if value in (None, "", False, [], {}):
-            continue
-        if isinstance(value, list):
-            value = sorted(str(item) for item in value)
-        target[field] = value
-    explicit_target = getattr(job, "target", None)
-    if isinstance(explicit_target, dict) and explicit_target:
-        target["job_target"] = explicit_target
-    source_id = str(getattr(job, "source_id", None) or "").strip()
-    if source_id:
-        target["source_id"] = source_id
-    if target:
-        return "request:" + json.dumps(target, sort_keys=True, separators=(",", ":"), default=str)
-
-    raw_result = getattr(job, "result", None)
-    result = raw_result if isinstance(raw_result, dict) else {}
-    explicit = str(result.get("scan_scope") or result.get("source_scope") or "").strip()
-    if explicit:
-        return f"explicit:{explicit}"
-    sources = sorted({str(item).strip() for item in result.get("scan_sources", []) or [] if str(item).strip()})
-    return "sources:" + json.dumps(sources or ["local-agents"], separators=(",", ":"))
-
-
-def _job_matches_scan_id(job: _ScanJobLike, scan_id: str) -> bool:
-    if str(getattr(job, "job_id", "")) == scan_id:
-        return True
-    raw_result = getattr(job, "result", None)
-    result: dict[str, Any] = raw_result if isinstance(raw_result, dict) else {}
-    raw_scan_run = result.get("scan_run")
-    scan_run: dict[str, Any] = raw_scan_run if isinstance(raw_scan_run, dict) else {}
-    return scan_id in {str(result.get("scan_id") or ""), str(scan_run.get("scan_id") or "")}
-
-
-def job_has_authoritative_scan_evidence(job: _ScanJobLike) -> bool:
-    """Return whether a completed job represents an executed scan.
-
-    Request validation and inventory-only jobs may finish successfully, but
-    ``scan_skipped``, ``dry_run``, and ``no_scan`` cannot prove that a
-    detective control operated. Check both request and result because older
-    persisted jobs did not consistently copy execution flags into the result.
-    """
-    raw_result = getattr(job, "result", None)
-    result: dict[str, Any] = raw_result if isinstance(raw_result, dict) else {}
-    if any(bool(result.get(field)) for field in ("scan_skipped", "dry_run", "no_scan")):
-        return False
-    raw_scan_run = result.get("scan_run")
-    scan_run: dict[str, Any] = raw_scan_run if isinstance(raw_scan_run, dict) else {}
-    if str(scan_run.get("outcome") or "").strip().casefold() == "failed":
-        return False
-
-    request = getattr(job, "request", None)
-    if request is not None and hasattr(request, "model_dump"):
-        raw_request = request.model_dump(mode="json")
-    elif isinstance(request, dict):
-        raw_request = request
-    else:
-        raw_request = {}
-    return not any(bool(raw_request.get(field)) for field in ("dry_run", "no_scan"))
-
-
 def current_scan_jobs(
     jobs: Iterable[_ScanJobLike],
     *,
@@ -288,6 +145,7 @@ def current_scan_findings(
     scan_id: str | None,
     iter_findings: Callable[[Any], list[dict[str, Any]]],
     require_authoritative_evidence: bool = False,
+    history_lookup: Callable[[set[HistoryKey], bool], dict[HistoryKey, dict[str, Any]]] | None = None,
 ) -> list[dict[str, Any]]:
     """Return the latest current row per identity across eligible scan jobs.
 
@@ -297,15 +155,9 @@ def current_scan_findings(
     require executed evidence, excluding skipped/dry-run/failed outcomes.
     """
     retained_jobs = list(jobs)
-    if scan_id:
-        selected_jobs = current_scan_jobs(
-            retained_jobs, since=since, scan_id=scan_id, require_authoritative_evidence=require_authoritative_evidence
-        )
-        attempts: dict[tuple[str, str], tuple[_ScanJobLike, list[str]]] = {}
-    else:
-        selected_jobs, attempts = _finding_snapshot_jobs(
-            retained_jobs, since=since, require_authoritative_evidence=require_authoritative_evidence
-        )
+    selected_jobs, attempts = _finding_snapshot_jobs(
+        retained_jobs, since=since, scan_id=scan_id, require_authoritative_evidence=require_authoritative_evidence
+    )
     deduped: dict[tuple[str, str], tuple[tuple[str, str, str], dict[str, Any], _ScanJobLike]] = {}
     for job in selected_jobs:
         authority = scan_evidence_authority_key(job)
@@ -323,7 +175,11 @@ def current_scan_findings(
     # One scope per job, not per row: deriving it re-serializes the request.
     scopes = {id(job): scan_scope_key(job) for _, _, job in selected}
     wanted = {key for _, row, job in selected if (key := _retained_finding_key(job, row, scope=scopes[id(job)])) is not None}
-    history = _retained_finding_history(retained_jobs, wanted, require_authoritative_evidence=require_authoritative_evidence)
+    history = (
+        history_lookup(wanted, require_authoritative_evidence)
+        if history_lookup is not None
+        else _retained_finding_history(retained_jobs, wanted, require_authoritative_evidence=require_authoritative_evidence)
+    )
     from agent_bom.graph.sla import merge_finding_sla
 
     rows = []
@@ -354,35 +210,8 @@ def _tenant_scope(job: _ScanJobLike) -> tuple[str, str]:
     return str(getattr(job, "tenant_id", "default")), scan_scope_key(job)
 
 
-def scan_collection_incomplete_reasons(job: _ScanJobLike) -> list[str]:
-    """Read explicit coverage receipts; absent legacy metadata proves nothing."""
-    result = job.result or {}
-    raw = result.get("scan_run")
-    run = raw if isinstance(raw, dict) else {}
-    reasons: set[str] = set()
-    outcome = run.get("outcome")
-    if outcome in ("partial", "failed"):
-        reasons.add(f"scan_{outcome}")
-    if any(result.get(key) is True for key in ("scan_skipped", "dry_run", "no_scan")):
-        reasons.add(ReconfirmationReason.SCAN_NOT_EXECUTED.value)
-    scopes = run.get("scopes")
-    for scope in scopes if isinstance(scopes, list) else []:
-        if not isinstance(scope, dict) or scope.get("requested") is not True:
-            continue
-        status = scope.get("status")
-        if isinstance(status, str) and status in {"partial", "permission_denied", "unavailable", "unsupported", "skipped"}:
-            reasons.add(f"scope_{status}")
-    issues = run.get("issues")
-    if isinstance(issues, list) and any(isinstance(issue, dict) and issue.get("affects_coverage") is True for issue in issues):
-        reasons.add(ReconfirmationReason.COVERAGE_ISSUE.value)
-    incomplete = run.get("incomplete_scope_count")
-    if isinstance(incomplete, int) and not isinstance(incomplete, bool) and incomplete > 0:
-        reasons.add(ReconfirmationReason.SCOPE_INCOMPLETE.value)
-    return sorted(reasons)
-
-
 def _finding_snapshot_jobs(
-    jobs: Iterable[_ScanJobLike], *, since: str | None, require_authoritative_evidence: bool
+    jobs: Iterable[_ScanJobLike], *, since: str | None, require_authoritative_evidence: bool = False, scan_id: str | None = None
 ) -> tuple[list[_ScanJobLike], dict[tuple[str, str], tuple[_ScanJobLike, list[str]]]]:
     """Retain the last replacement plus subsequent incomplete observations.
 
@@ -391,6 +220,8 @@ def _finding_snapshot_jobs(
     and cannot establish remediation verification. Selection uses resident
     tenant history within the requested window; it performs no extra reads.
     """
+    if scan_id:
+        return current_scan_jobs(jobs, since=since, scan_id=scan_id, require_authoritative_evidence=require_authoritative_evidence), {}
     selected: dict[tuple[str, str], list[_ScanJobLike]] = {}
     attempts: dict[tuple[str, str], tuple[_ScanJobLike, list[str]]] = {}
     for job in sorted(jobs, key=scan_evidence_authority_key):
@@ -414,16 +245,6 @@ def _finding_snapshot_jobs(
     return [job for group in selected.values() for job in group], attempts
 
 
-def _retained_finding_key(job: _ScanJobLike, row: dict[str, Any], *, scope: str | None = None) -> tuple[str, str, str, str] | None:
-    """Bind history to an explicit canonical occurrence, never a display fallback."""
-    identity = row.get("canonical_id")
-    if not isinstance(identity, str) or not identity.strip():
-        return None
-    asset = row.get("asset")
-    environment = row.get("environment") or (asset.get("environment") if isinstance(asset, dict) else None) or ""
-    return str(getattr(job, "tenant_id", "default")), scope if scope is not None else scan_scope_key(job), identity, str(environment)
-
-
 def _retained_finding_history(
     jobs: list[_ScanJobLike],
     wanted: set[tuple[str, str, str, str]],
@@ -436,8 +257,6 @@ def _retained_finding_history(
     display window does not restart it. Legacy projections without an explicit
     canonical finding identity cannot establish this association.
     """
-    from agent_bom.graph.sla import merge_finding_sla
-
     history: dict[tuple[str, str, str, str], dict[str, Any]] = {}
     if not wanted:
         return history
@@ -458,13 +277,7 @@ def _retained_finding_history(
             key = _retained_finding_key(job, row, scope=scope)
             if key is None or key not in wanted:
                 continue
-            previous = history.get(key, {})
-            dates = [value for value in (_normalized_evidence_timestamp(row.get("first_seen")), previous.get("first_seen")) if value]
-            first_seen = min(dates) if dates else None
-            # A recorded assignment is useful even when its observation date
-            # is unavailable; missing dates must not discard manual policy.
-            history[key] = merge_finding_sla(row, previous, first_seen=first_seen or "")
-            history[key]["first_seen"] = first_seen
+            _merge_retained_history_row(history, key, row)
     return history
 
 

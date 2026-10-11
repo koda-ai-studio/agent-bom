@@ -55,7 +55,7 @@ _FORK_GUARD_INDEX_CANON = "createuniqueindexifnotexistsaudit_log_team_prevsig_un
 
 # The newest migration. One place to update when a revision lands, so the
 # single-head property and the head's identity do not drift apart.
-ALEMBIC_HEAD = "20261010_01"
+ALEMBIC_HEAD = "20261010_02"
 
 
 def _canonical_sql(text: str) -> str:
@@ -1027,3 +1027,21 @@ def test_scan_snapshot_migration_is_chained_tenant_isolated_and_matches_runtime_
     assert ":" not in POSTGRES_SCAN_SNAPSHOTS_V1
     with pytest.raises(NotImplementedError):
         migration.downgrade()
+
+
+def test_finding_history_migration_matches_bootstrap_and_invalidates_every_job_mutation(monkeypatch) -> None:
+    from agent_bom.api.storage.finding_history_schema import POSTGRES_FINDING_HISTORY_V1
+
+    statements = []
+    monkeypatch.setitem(sys.modules, "alembic", SimpleNamespace(op=SimpleNamespace(execute=statements.append)))
+    migration = _load_module(VERSIONS_DIR / "20261010_02_finding_history.py", "finding_history_upgrade")
+    assert (migration.revision, migration.down_revision) == ("20261010_02", "20261010_01")
+    migration.upgrade()
+    assert statements == [POSTGRES_FINDING_HISTORY_V1]
+    assert POSTGRES_FINDING_HISTORY_V1 in RUNTIME_SCHEMA_SQL.read_text()
+    assert "AFTER INSERT OR UPDATE OR DELETE ON public.scan_jobs" in POSTGRES_FINDING_HISTORY_V1
+    for table in ("finding_history_jobs", "finding_history_rows"):
+        assert f"ALTER TABLE {table} FORCE ROW LEVEL SECURITY" in POSTGRES_FINDING_HISTORY_V1
+        assert f"CREATE POLICY {table}_tenant_isolation ON {table}" in POSTGRES_FINDING_HISTORY_V1
+    assert "VALUES ('scan_jobs',4,now())" in POSTGRES_FINDING_HISTORY_V1
+    assert ":" not in POSTGRES_FINDING_HISTORY_V1

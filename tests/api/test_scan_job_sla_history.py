@@ -13,10 +13,14 @@ from tests.api.test_findings_owner_sla import _completed_job, _critical_finding
 from tests.auth_helpers import disable_trusted_proxy_env, enable_trusted_proxy_env, proxy_headers
 
 
-@pytest.fixture(params=["memory", "sqlite"])
+@pytest.fixture(params=["memory", "sqlite", "sqlite-projected"])
 def scan_store(request, tmp_path, monkeypatch):
     # Count request work separately from the independently tested campaign worker.
     monkeypatch.setattr("agent_bom.api.campaign_reconciliation.poll_campaign_reconciliation", lambda: None)
+    if request.param == "sqlite-projected":
+        monkeypatch.setenv("AGENT_BOM_SCAN_SNAPSHOTS", "1")
+        monkeypatch.setenv("AGENT_BOM_SCAN_SNAPSHOT_FAST_READS", "1")
+        monkeypatch.delenv("AGENT_BOM_SCAN_SNAPSHOT_READS", raising=False)
     original = stores._store
     store = InMemoryJobStore() if request.param == "memory" else SQLiteJobStore(str(tmp_path / "jobs.db"))
     stores.set_job_store(store)
@@ -157,7 +161,11 @@ def test_history_uses_existing_tenant_read_and_does_not_mutate_snapshots(scan_st
         calls.clear()  # Application startup restores jobs independently of this read route.
         response = client.get("/v1/findings", params={"origin": "scan", "window_days": 0})
         assert response.status_code == 200 and len(response.json()["findings"]) == 1
-    assert calls == ["history-tenant"]
+    from agent_bom.core.settings import env_flag
+
+    assert calls == (
+        [] if isinstance(scan_store, SQLiteJobStore) and env_flag("AGENT_BOM_SCAN_SNAPSHOT_FAST_READS") else ["history-tenant"]
+    )
     assert [row.model_dump(mode="json") for row in original(tenant_id="history-tenant")] == before
 
 

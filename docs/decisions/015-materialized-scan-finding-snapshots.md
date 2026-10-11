@@ -1,6 +1,6 @@
 # ADR-015: Materialized Scan Finding Snapshots
 
-**Status:** Opt-in per-job fast reads and differential qualification implemented; metadata-only history and default-on remain proposed
+**Status:** Opt-in per-job snapshots and retained-history projections implemented; default-on remains proposed
 **Date:** 2026-10-10
 
 ## Context
@@ -147,20 +147,68 @@ Inspect `scan_snapshot_read` outcomes (`match`, `missing_or_stale`, `invalid`,
 `mismatch`, `unavailable`). Disable qualification before measuring fast reads.
 These signals describe parity and availability, not a clean security result.
 
-## Remaining metadata-only history blocker
+## Retained-history projection (version 1)
 
-This fast path avoids per-selected-job reconstruction. It still loads full
-retained job results and hashes the selected source. It does **not** make memory
-or read cost independent of retained history. The current fold reads original
-unified rows across retained history for first-seen dates and manual SLA policy,
-including observations outside the display window. The current snapshot metadata
-has neither that history projection nor a source revision tied atomically to the
-authoritative job commit. Selecting only snapshot rows would lose history and
-could accept stale inputs after same-ID updates or deletion.
+The SQLite and PostgreSQL findings-list fold can now select from compact job
+metadata and hydrate only selected reports. `finding_history_jobs` stores scope,
+authority, execution status, incomplete-attempt reasons and alternate scan IDs.
+`finding_history_rows` stores the original unified finding's first-seen, severity,
+KEV and SLA inputs, keyed by tenant, scope, canonical identity and environment.
+History outside the display window still anchors surviving current findings.
+Partial attempts retain the existing unreconfirmed behavior; parent aggregates
+cannot contribute leaf history.
 
-A metadata-only rollout therefore requires a versioned, deletion-aware history
-projection plus authoritative job revision/invalidation, and bounded queries for
-selected identities. Until those gates are implemented and differentially tested,
-the existing retained-history fold remains authoritative. Partial rescans, scope
-selection, aggregate-parent exclusion and alternate IDs retain their current
-behavior; no hidden snapshot-table history scan substitutes for it.
+Writes share the authoritative job transaction when `AGENT_BOM_SCAN_SNAPSHOTS=1`.
+Projection inputs are frozen from the exact JSON persisted for the job, so later
+mutation of the caller's in-memory model cannot alter its history.
+Database triggers invalidate the projection on every job insert, update or delete,
+including direct SQL, retention and older writers with the feature disabled.
+A savepoint isolates materialization failure: the source job commits with no
+projection, so the next read falls back. Backfill locks and re-reads source jobs
+inside each bounded write transaction; it cannot publish a stale pre-lock copy.
+
+Two read-only database snapshots are fenced by the durable tenant revision.
+The first selects metadata and source reports, then releases its connection before
+dynamic enrichment can query the same pool. The second verifies that no job
+mutation committed and reads historical metadata; a changed revision falls back
+to retained jobs. PostgreSQL uses repeatable-read with forced tenant RLS; SQLite
+uses read transactions and tenant predicates. Missing versions or malformed
+metadata also fall back. This is consistency within the
+customer-controlled database, not independent evidence against a database owner.
+
+Metadata is paged in batches of 256 jobs. History queries use an indexed hash of
+the requested identity tuple, verify the full tuple, and process at most 64 keys
+and 256 rows per query. Occurrences stream in evidence-time, completion-time,
+job-ID and ordinal order into the shared SLA fold. No report is loaded merely to
+supply an older first-seen date. Memory still includes all compact job metadata,
+selected reports, current findings and accumulated history for requested identities;
+partial attempts can legitimately select multiple reports.
+
+For an existing deployment, migrate PostgreSQL to Alembic head (SQLite upgrades
+at store initialization), enable writes, then backfill the two projections:
+
+```bash
+export AGENT_BOM_SCAN_SNAPSHOTS=1
+python -m agent_bom.api.scan_snapshot backfill --tenant TENANT
+python -m agent_bom.api.storage.finding_history_cli --tenant TENANT
+```
+
+The history command emits a JSON receipt with `projected_jobs`; it never rewrites
+source jobs. With concurrent writers, re-run it if coverage remains incomplete.
+Enable `AGENT_BOM_SCAN_SNAPSHOT_READS=1`, exercise authenticated findings reads,
+and inspect `finding_history_read` outcomes (`match`, `incomplete`, `mismatch`,
+`unavailable`). Qualification compares the entire current-state fold, including
+historical dates and reconfirmation. Then disable qualification and enable
+`AGENT_BOM_SCAN_SNAPSHOT_FAST_READS=1` to measure the optimized path. Writes,
+qualification and fast reads remain independently opt-in.
+
+Disabling both read flags immediately restores the legacy fold. Disabling writes
+leaves invalidation active. Keep source jobs and the additive schema when rolling
+back application code. Changes to selection or historical SLA inputs must bump
+the history projection version and require backfill.
+
+This change covers the findings-list scan half and consumers of that fold.
+Separate aggregate readers and narrative inventory metadata still load retained
+reports; this is not a claim that every dashboard or export read is bounded.
+Production capacity, default-on rollout and SQL filtering/sorting remain separate
+qualification work. Small estates may not benefit from the extra metadata queries.

@@ -19,6 +19,14 @@ def require_job_tenant(tenant_id: str) -> str:
 
 
 def put_job(session: SqlSession, dialect: Dialect, job: ScanJob, *, if_absent: bool = False) -> int:
+    from agent_bom.config import scan_snapshots_enabled
+
+    write_history = scan_snapshots_enabled()
+    payload = job.model_dump_json()
+    if write_history:
+        # Freeze the exact serialized source before SQL can release the GIL.
+        # A caller mutating its model cannot change the derived projection.
+        job = type(job).model_validate_json(payload)
     require_job_tenant(job.tenant_id)
     table, tenant = ("scan_jobs", "team_id") if dialect == "postgres" else ("jobs", "tenant_id")
     columns = (
@@ -45,7 +53,7 @@ def put_job(session: SqlSession, dialect: Dialect, job: ScanJob, *, if_absent: b
         f"INSERT INTO {table} ({', '.join(columns)}) "  # nosec B608 - static identifiers
         f"VALUES ({', '.join(placeholders)}) ON CONFLICT ({tenant}, job_id) {conflict}"
     )
-    return int(
+    changed = int(
         session.execute(
             sql,
             (
@@ -62,11 +70,17 @@ def put_job(session: SqlSession, dialect: Dialect, job: ScanJob, *, if_absent: b
                 job.target_count,
                 job.schedule_id,
                 job.triggered_by,
-                job.model_dump_json(),
+                payload,
             ),
         ).rowcount
         or 0
     )
+
+    if changed and write_history:
+        from agent_bom.api.storage.finding_history import record_history_write
+
+        record_history_write(session, job)
+    return changed
 
 
 def parse_job_payload(payload: Any) -> ScanJob:
