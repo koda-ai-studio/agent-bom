@@ -755,38 +755,40 @@
       "function_lines": 103
     },
     "api/routes/compliance.py": {
-      "broad_except": 5,
-      "deferred_imports": 58,
-      "file_lines": 2974,
+      "deferred_imports": 26,
+      "file_lines": 983,
       "raw_env_reads": 2
     },
     "api/routes/compliance.py::_build_compliance": {
-      "complexity": 22,
-      "function_lines": 321
-    },
-    "api/routes/compliance.py::_build_compliance._build_controls": {
-      "function_lines": 94
-    },
-    "api/routes/compliance.py::_cis_benchmark_trends_impl": {
-      "function_lines": 115
-    },
-    "api/routes/compliance.py::_list_cis_benchmark_checks_impl": {
-      "function_lines": 81
-    },
-    "api/routes/compliance.py::_list_hub_findings_impl": {
-      "function_lines": 99
+      "function_lines": 117
     },
     "api/routes/compliance.py::export_compliance_pack": {
-      "function_lines": 228
+      "function_lines": 161
     },
     "api/routes/compliance.py::export_compliance_report": {
-      "function_lines": 308
-    },
-    "api/routes/compliance.py::get_compliance_summary": {
-      "function_lines": 82
+      "function_lines": 234
     },
     "api/routes/compliance.py::ingest_compliance_findings": {
       "function_lines": 134
+    },
+    "api/routes/compliance_routes/bundle.py": {
+      "deferred_imports": 1
+    },
+    "api/routes/compliance_routes/cis.py": {
+      "broad_except": 3
+    },
+    "api/routes/compliance_routes/common.py": {
+      "broad_except": 1,
+      "deferred_imports": 17
+    },
+    "api/routes/compliance_routes/evidence.py": {
+      "deferred_imports": 4
+    },
+    "api/routes/compliance_routes/hub_paging.py": {
+      "broad_except": 1
+    },
+    "api/routes/compliance_routes/reads.py": {
+      "deferred_imports": 10
     },
     "api/routes/connectors.py": {
       "deferred_imports": 7
@@ -810,10 +812,9 @@
       "deferred_imports": 3
     },
     "api/routes/enterprise.py": {
-      "broad_except": 7,
-      "deferred_imports": 131,
-      "file_lines": 3216,
-      "raw_env_reads": 14
+      "broad_except": 1,
+      "deferred_imports": 26,
+      "file_lines": 729
     },
     "api/routes/enterprise.py::auth_policy": {
       "function_lines": 97
@@ -828,6 +829,29 @@
     "api/routes/enterprise.py::oidc_browser_callback": {
       "complexity": 20,
       "function_lines": 142
+    },
+    "api/routes/enterprise_routes/_session_helpers.py": {
+      "deferred_imports": 14
+    },
+    "api/routes/enterprise_routes/findings.py": {
+      "deferred_imports": 7
+    },
+    "api/routes/enterprise_routes/governance.py": {
+      "broad_except": 2,
+      "deferred_imports": 20
+    },
+    "api/routes/enterprise_routes/keys.py": {
+      "deferred_imports": 13
+    },
+    "api/routes/enterprise_routes/sessions.py": {
+      "deferred_imports": 12
+    },
+    "api/routes/enterprise_routes/sso.py": {
+      "deferred_imports": 14
+    },
+    "api/routes/enterprise_routes/trials.py": {
+      "broad_except": 4,
+      "deferred_imports": 25
     },
     "api/routes/entitlements.py": {
       "broad_except": 1
@@ -867,28 +891,42 @@
       "raw_env_reads": 6
     },
     "api/routes/graph.py": {
-      "broad_except": 4,
-      "deferred_imports": 25,
-      "file_lines": 3196,
+      "broad_except": 1,
+      "deferred_imports": 3,
+      "file_lines": 885,
       "raw_env_reads": 1
     },
     "api/routes/graph.py::get_graph": {
-      "function_lines": 164
+      "function_lines": 163
     },
     "api/routes/graph.py::get_graph_node_neighbors": {
       "function_lines": 134
-    },
-    "api/routes/graph.py::get_graph_paths": {
-      "function_lines": 85
     },
     "api/routes/graph.py::get_graph_rollup": {
       "function_lines": 137
     },
     "api/routes/graph.py::query_graph": {
-      "function_lines": 84
+      "function_lines": 81
     },
     "api/routes/graph_correlations.py": {
       "broad_except": 1
+    },
+    "api/routes/graph_routes/_runtime.py": {
+      "deferred_imports": 1
+    },
+    "api/routes/graph_routes/payloads.py": {
+      "broad_except": 2,
+      "deferred_imports": 6
+    },
+    "api/routes/graph_routes/reads.py": {
+      "deferred_imports": 3
+    },
+    "api/routes/graph_routes/schema_routes.py": {
+      "deferred_imports": 4
+    },
+    "api/routes/graph_routes/views.py": {
+      "broad_except": 1,
+      "deferred_imports": 8
     },
     "api/routes/graph_scenarios.py": {
       "broad_except": 4,
@@ -1102,8 +1140,8 @@
     "api/server.py": {
       "broad_except": 15,
       "deferred_imports": 78,
-      "file_lines": 1796,
-      "raw_env_reads": 27
+      "file_lines": 1764,
+      "raw_env_reads": 26
     },
     "api/server.py::_cleanup_tick": {
       "function_lines": 130

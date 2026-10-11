@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import pytest
 
 from agent_bom.api.models import JobStatus
-from agent_bom.api.routes import compliance
+from agent_bom.api.routes.compliance_routes import common as compliance
 
 
 @pytest.fixture

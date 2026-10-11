@@ -1160,7 +1160,7 @@ def test_browser_logout_returns_503_when_shared_revocation_is_unavailable(monkey
     backend = PostgresAuthState()
     monkeypatch.setattr(backend, "_ensure_schema", lambda: False)
     set_auth_state_for_tests(backend)
-    monkeypatch.setattr(enterprise, "_session_cookie_secure", lambda _request: False)
+    monkeypatch.setattr("agent_bom.api.routes.enterprise_routes._session_helpers._session_cookie_secure", lambda _request: False)
     request = SimpleNamespace(cookies={SESSION_COOKIE_NAME: token})
     try:
         with pytest.raises(HTTPException) as error:

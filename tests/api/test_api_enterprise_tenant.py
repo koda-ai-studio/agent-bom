@@ -26,6 +26,8 @@ from agent_bom.api.models import (
     ScanRequest,
 )
 from agent_bom.api.routes import enterprise
+from agent_bom.api.routes.enterprise_routes import findings as enterprise_findings
+from agent_bom.api.routes.enterprise_routes import governance as enterprise_governance
 from agent_bom.api.store import InMemoryJobStore
 from agent_bom.api.stores import _get_store, _get_trend_store, set_issue_mapping_store, set_job_store, set_trend_store
 from agent_bom.audit_integrity import compute_audit_record_mac
@@ -73,7 +75,8 @@ def isolated_key_store():
 @pytest.fixture
 def isolated_exception_store(monkeypatch):
     store = InMemoryExceptionStore()
-    monkeypatch.setattr(enterprise, "_get_exception_store", lambda: store)
+    for _owner in (enterprise, enterprise_findings, enterprise_governance):
+        monkeypatch.setattr(_owner, "_get_exception_store", lambda: store)
     return store
 
 
@@ -307,7 +310,8 @@ async def test_delete_exception_passes_tenant_to_store(monkeypatch):
             return None
 
     store = RecordingExceptionStore()
-    monkeypatch.setattr(enterprise, "_get_exception_store", lambda: store)
+    for _owner in (enterprise, enterprise_findings, enterprise_governance):
+        monkeypatch.setattr(_owner, "_get_exception_store", lambda: store)
 
     enterprise.delete_exception(_request("tenant-alpha", "alice-admin"), store.exc.exception_id)
 

@@ -254,7 +254,7 @@ def test_callback_defaults_to_least_privilege_viewer(monkeypatch: pytest.MonkeyP
             "agent_bom.api.snowflake_oauth.exchange_code_for_tokens",
             return_value={"access_token": "opaque", "username": "SOME_USER"},
         ),
-        patch.object(enterprise, "_set_browser_session_cookie", _capture),
+        patch("agent_bom.api.routes.enterprise_routes.sso._set_browser_session_cookie", _capture),
     ):
         enterprise.snowflake_oauth_callback(
             _request(path="/v1/auth/snowflake/callback", cookies={"agent_bom_oidc_pkce": sealed}),

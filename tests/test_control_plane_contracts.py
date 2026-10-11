@@ -102,9 +102,9 @@ def control_plane_contracts(tmp_path, monkeypatch):
 
     sqlite_graph = SQLiteGraphStore(tmp_path / "graph.db")
     set_graph_store(sqlite_graph)
-    monkeypatch.setattr("agent_bom.api.routes.graph._get_graph_store_or_503", lambda: sqlite_graph)
+    monkeypatch.setattr("agent_bom.api.routes.graph_routes._runtime._get_graph_store_or_503", lambda: sqlite_graph)
     monkeypatch.setattr(
-        "agent_bom.api.routes.graph._tenant",
+        "agent_bom.api.routes.graph_routes._runtime._tenant",
         lambda request: (
             getattr(getattr(request, "state", None), "tenant_id", None) or request.headers.get("X-Agent-Bom-Tenant-ID", "default")
         ),
@@ -113,7 +113,7 @@ def control_plane_contracts(tmp_path, monkeypatch):
     async def _direct_graph_store_call(fn, /, *args, **kwargs):
         return fn(*args, **kwargs)
 
-    monkeypatch.setattr("agent_bom.api.routes.graph._graph_store_call", _direct_graph_store_call)
+    monkeypatch.setattr("agent_bom.api.routes.graph_routes._runtime._graph_store_call", _direct_graph_store_call)
     reset_metrics()
 
     alpha_job = _seed_scan_job(

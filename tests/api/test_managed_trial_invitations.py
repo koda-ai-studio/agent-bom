@@ -214,9 +214,8 @@ def test_managed_trial_creation_rejects_non_operator_before_generating_or_persis
     body = enterprise.ManagedTrialInvitationRequest(email="analyst@example.com", organization="Example Trial")
 
     with (
-        patch.object(
-            enterprise,
-            "_new_invited_tenant_id",
+        patch(
+            "agent_bom.api.routes.enterprise_routes.trials._new_invited_tenant_id",
             side_effect=AssertionError("tenant id must not be generated"),
         ),
         patch(
@@ -373,7 +372,7 @@ def test_login_form_adapter_accepts_post_body_and_never_requires_query_token() -
         _receive,
     )
     adapter = AsyncMock(return_value=RedirectResponse("/synthetic", status_code=302))
-    with patch.object(enterprise, "managed_trial_oidc_start", adapter):
+    with patch("agent_bom.api.routes.enterprise_routes.sessions.managed_trial_oidc_start", adapter):
         response = asyncio.run(enterprise.managed_trial_oidc_start_form(request))
 
     assert response.status_code == 302
