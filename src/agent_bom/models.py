@@ -8,6 +8,14 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any, Optional, Union
 from uuid import UUID
 
+from agent_bom.domain.report_payloads import (
+    BenchmarkPayload,
+    LicenseReportPayload,
+    RuntimeCorrelationPayload,
+    VexReportPayload,
+    VulnerabilityFreshnessPayload,
+)
+
 if TYPE_CHECKING:
     from agent_bom.ai_schemas import AIFindingAssessment
     from agent_bom.finding import Finding
@@ -1170,14 +1178,14 @@ class AIBOMReport:
     model_supply_chain_data: Optional[dict[str, Any]] = None  # Consolidated model file/provenance/hash summary
     enforcement_data: Optional[dict[str, Any]] = None  # Serialized EnforcementReport (set by CLI)
     context_graph_data: Optional[dict[str, Any]] = None  # Serialized context graph (set by CLI)
-    license_report: Optional[dict[str, Any]] = None  # Serialized license compliance report
-    vex_data: Optional[dict[str, Any]] = None  # Serialized VEX document
+    license_report: Optional[LicenseReportPayload] = None  # Serialized license compliance report
+    vex_data: Optional[VexReportPayload] = None  # Serialized VEX document
     toxic_combinations: Optional[list[Any]] = None  # Serialized ToxicCombination list
     prioritized_findings: Optional[list[Any]] = None  # Priority-ordered findings
     sast_data: Optional[dict[str, Any]] = None  # Serialized SAST scan results (Semgrep)
     aws_organization_data: Optional[dict[str, Any]] = None  # AWS Organizations: org/OUs/accounts/SCPs hierarchy
-    cis_benchmark_data: Optional[dict[str, Any]] = None  # Serialized CIS AWS Benchmark results
-    snowflake_cis_benchmark_data: Optional[dict[str, Any]] = None  # Serialized CIS Snowflake Benchmark results
+    cis_benchmark_data: Optional[BenchmarkPayload] = None  # Serialized CIS AWS Benchmark results
+    snowflake_cis_benchmark_data: Optional[BenchmarkPayload] = None  # Serialized CIS Snowflake Benchmark results
     snowflake_object_graph_data: Optional[dict[str, Any]] = None  # Snowflake tables/views + OBJECT_DEPENDENCIES lineage
     snowflake_login_anomalies_data: Optional[dict[str, Any]] = None  # Snowflake impossible-travel / login-anomaly detection
     snowflake_exfil_graph_data: Optional[dict[str, Any]] = None  # Snowflake egress: outbound shares, external stages, sensitive objects
@@ -1196,10 +1204,10 @@ class AIBOMReport:
     snowflake_activity_data: Optional[dict[str, Any]] = (
         None  # Snowflake activity timeline: QUERY_HISTORY (365d) + AI observability events (summarized)
     )
-    azure_cis_benchmark_data: Optional[dict[str, Any]] = None  # Serialized CIS Azure Benchmark results
-    gcp_cis_benchmark_data: Optional[dict[str, Any]] = None  # Serialized CIS GCP Benchmark results
+    azure_cis_benchmark_data: Optional[BenchmarkPayload] = None  # Serialized CIS Azure Benchmark results
+    gcp_cis_benchmark_data: Optional[BenchmarkPayload] = None  # Serialized CIS GCP Benchmark results
     databricks_security_data: Optional[dict[str, Any]] = None  # Serialized Databricks Security Best Practices results (canonical)
-    aisvs_benchmark_data: Optional[dict[str, Any]] = None  # Serialized AISVS compliance results
+    aisvs_benchmark_data: Optional[BenchmarkPayload] = None  # Serialized AISVS compliance results
     vector_db_scan_data: Optional[list[Any]] = None  # Serialized vector DB security assessments
     gpu_infra_data: Optional[dict[str, Any]] = None  # Serialized GPU/AI compute infra scan results
     # Serialized IaC misconfiguration findings. Set by the CLI scan path and by the
@@ -1224,10 +1232,12 @@ class AIBOMReport:
     # Cloud audit-trail behavioral payload(s); per-provider list of aggregated
     # (principal, resource, action) edges + findings (opt-in AGENT_BOM_AUDIT_TRAIL, read-only)
     cloud_audit_trail_data: Optional[Union[dict[str, Any], list[Any]]] = None
-    runtime_correlation: Optional[dict[str, Any]] = None  # Runtime ↔ scan correlation (proxy audit vs CVE findings)
+    runtime_correlation: Optional[RuntimeCorrelationPayload] = None  # Runtime ↔ scan correlation (proxy audit vs CVE findings)
     delta_data: Optional[dict[str, Any]] = None  # Baseline/delta comparison metadata for CI gate outputs
     scan_performance_data: Optional[dict[str, Any]] = None  # Cache coverage / scan latency metadata
-    vuln_data_freshness: Optional[dict[str, Any]] = None  # Vuln-data source/age/staleness snapshot (set by CLI; surfaced to API/MCP)
+    vuln_data_freshness: Optional[VulnerabilityFreshnessPayload] = (
+        None  # Vuln-data source/age/staleness snapshot (set by CLI; surfaced to API/MCP)
+    )
     training_pipelines: Optional[dict[str, Any]] = None  # Serialized TrainingPipelineScanResult
     dataset_cards: Optional[dict[str, Any]] = None  # Serialized DatasetScanResult
     serving_configs: Optional[list[Any]] = None  # Serialized ServingConfig list
@@ -1249,9 +1259,9 @@ class AIBOMReport:
     health_check_data: Optional[dict[str, Any]] = None  # MCP server reachability/health results
     runtime_session_graph: Optional[dict[str, Any]] = None  # Structured runtime session graph/timeline evidence
 
-    # Unified Finding stream (issue #566 — Phase 1).
-    # Populated alongside blast_radii for backward compatibility.
-    # Future phases will migrate cloud_reports and proxy alerts here too.
+    # Explicit unified findings coexist with the legacy blast-radius projection.
+    # to_findings() reconciles CVE representations and appends scanner payload
+    # findings, including secrets, cloud controls and governance evidence.
     findings: list["Finding"] = field(default_factory=list)
 
     # Scan context metadata — what input sources were actually processed.
@@ -1397,13 +1407,7 @@ class AIBOMReport:
         return list(by_sink.values())
 
     def _toxic_combination_findings(self) -> "list[Finding]":
-        """Graph toxic-combination findings, rehydrated from the side block.
-
-        The graph evaluator (``graph.toxic_findings``) stores serialized Finding
-        dicts on ``toxic_combination_findings_data`` at the graph-build call site.
-        Surfacing them here routes them through ``--fail-on-severity`` and every
-        machine output (JSON/SARIF/CSV), mirroring the secret-finding side block.
-        """
+        """Rehydrate graph toxic findings for severity gates and JSON/SARIF/CSV."""
         if not self.toxic_combination_findings_data:
             return []
         from agent_bom.domain.finding_rehydrate import findings_from_dicts
@@ -1453,13 +1457,7 @@ class AIBOMReport:
         return findings
 
     def _ciem_over_privilege_findings(self) -> "list[Finding]":
-        """CIEM over-privilege findings, rehydrated from the side block.
-
-        Access-Advisor right-sizing findings are serialized on
-        ``ciem_over_privilege_findings_data`` at the graph-build call site;
-        surfacing them here routes them through ``--fail-on-severity`` and every
-        machine output (JSON/SARIF/CSV), mirroring the toxic-combination block.
-        """
+        """Rehydrate CIEM right-sizing findings for severity gates and JSON/SARIF/CSV."""
         if not self.ciem_over_privilege_findings_data:
             return []
         from agent_bom.domain.finding_rehydrate import findings_from_dicts
@@ -1475,12 +1473,12 @@ class AIBOMReport:
         return [enforcement_dict_to_finding(raw) for raw in self.enforcement_data.get("findings", []) or [] if isinstance(raw, dict)]
 
     def to_findings(self) -> "list[Finding]":
-        """Return the unified findings list, auto-populating from blast_radii if empty.
+        """Return unified findings reconciled with legacy and scanner evidence.
 
-        Phase 1 shim: if ``self.findings`` is already populated (dual-write path),
-        use it directly.  Otherwise convert ``blast_radii`` on the fly. Hardcoded-
-        secret findings are always appended so machine consumers (JSON/SARIF/CSV)
-        see them, not just the console.
+        Reconcile explicit findings with the legacy blast-radius projection,
+        retaining non-CVE findings when both representations are present.
+        Convert supported scanner payloads and append secret evidence so
+        machine consumers (JSON/SARIF/CSV) share the same finding stream.
         """
         from agent_bom.finding import FindingType, blast_radius_to_finding
 

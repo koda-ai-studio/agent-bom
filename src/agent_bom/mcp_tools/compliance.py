@@ -342,7 +342,7 @@ async def license_compliance_scan_impl(
             ]
 
         report = evaluate_license_policy(agents, policy=policy)
-        result = to_serializable(report)
+        result: dict[str, Any] = dict(to_serializable(report))
 
         # Optional: scan a local directory for LICENSE files and SPDX headers
         if scan_dir:

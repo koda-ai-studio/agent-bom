@@ -5,8 +5,7 @@ covering the highest-impact, programmatically verifiable controls across the AI
 system stack: model security, inference exposure, vector store auth, agent tool
 scope, and supply chain provenance.
 
-Each check runs against the local system or discovered endpoints and returns a
-CISCheckResult-compatible result with pass/fail/error status and evidence.
+Checks return CISCheckResult-compatible status and evidence from local or discovered endpoints.
 
 Check categories:
 - AI-4 Model Deployment Security   (KC1: AI Models)
@@ -26,6 +25,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from agent_bom.cloud.aws_cis_benchmark import CheckStatus, CISCheckResult
+from agent_bom.domain.report_payloads import BenchmarkPayload
 from agent_bom.security import sanitize_text
 
 logger = logging.getLogger(__name__)
@@ -63,7 +63,7 @@ class AIVSReport:
     def pass_rate(self) -> float:
         return round(100 * self.passed / self.total, 1) if self.total else 0.0
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> BenchmarkPayload:
         from agent_bom.maestro import tag_aisvs_check
 
         return {

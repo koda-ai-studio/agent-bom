@@ -16,6 +16,7 @@ from fnmatch import fnmatch
 from typing import TYPE_CHECKING
 
 from agent_bom.core.severity import severity_worst_first_rank
+from agent_bom.domain.report_payloads import LicenseCoveragePayload, LicenseReportPayload, LicenseSummaryPayload
 from agent_bom.models import Agent
 
 if TYPE_CHECKING:
@@ -192,7 +193,7 @@ class LicenseReport:
     """Aggregated license compliance report."""
 
     findings: list[LicenseFinding] = field(default_factory=list)
-    summary: dict = field(default_factory=dict)
+    summary: LicenseSummaryPayload = field(default_factory=LicenseSummaryPayload)
     compliant: bool = True
     unknown_count: int = 0
     total_packages: int = 0
@@ -204,7 +205,7 @@ class LicenseReport:
     status: str = "compliant"
 
     @property
-    def coverage(self) -> dict:
+    def coverage(self) -> LicenseCoveragePayload:
         not_evaluated = self.unknown_count + self.unrecognized_count
         evaluated = self.total_packages - not_evaluated
         percent = round(100.0 * evaluated / self.total_packages, 1) if self.total_packages else 100.0
@@ -485,7 +486,7 @@ def evaluate_license_policy(
     return report
 
 
-def to_serializable(report: LicenseReport) -> dict:
+def to_serializable(report: LicenseReport) -> LicenseReportPayload:
     """Convert LicenseReport to a JSON-serializable dict."""
     return {
         "compliant": report.compliant,

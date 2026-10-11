@@ -62,7 +62,7 @@ def build_scan_analytics_payload(
         "posture_grade": posture.get("grade", ""),
         "scan_duration_ms": int(data.get("scan_duration_ms", 0) or 0),
         "source": source,
-        "aisvs_score": float((report.aisvs_benchmark_data or {}).get("overall_score", 0.0) or 0.0),
+        "aisvs_score": float(report.aisvs_benchmark_data.get("overall_score", 0.0) or 0.0) if report.aisvs_benchmark_data else 0.0,
         "has_runtime_correlation": bool(report.runtime_correlation),
     }
     return ScanAnalyticsPayload(
@@ -219,7 +219,9 @@ def _build_compliance_controls(report: AIBOMReport, data: dict[str, Any]) -> lis
                 }
             )
 
-    aisvs = report.aisvs_benchmark_data or {}
+    aisvs = report.aisvs_benchmark_data
+    if not aisvs:
+        return rows
     for check in aisvs.get("checks", []) or []:
         status = str(check.get("status", "")).lower() or "unknown"
         rows.append(

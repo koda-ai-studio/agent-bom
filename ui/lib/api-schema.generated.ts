@@ -7269,10 +7269,7 @@ export interface paths {
         };
         /**
          * Get Licenses
-         * @description Get the license compliance report for a completed scan.
-         *
-         *     Returns license findings, summary, compliance status, and per-package
-         *     license categorization (permissive, copyleft, commercial risk, unknown).
+         * @description Return a completed scan's license findings, coverage, status and categories.
          */
         get: operations["get_licenses_v1_scan__job_id__licenses_get"];
         put?: never;
@@ -17401,6 +17398,75 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** LicenseCoveragePayload */
+        LicenseCoveragePayload: {
+            /** Evaluated */
+            evaluated: number;
+            /** Percent */
+            percent: number;
+            /** Total */
+            total: number;
+            /** Unknown */
+            unknown: number;
+        };
+        /** LicenseFindingPayload */
+        LicenseFindingPayload: {
+            /** Agents */
+            agents: string[];
+            /** Category */
+            category: string;
+            /** Ecosystem */
+            ecosystem: string;
+            /** License Expression */
+            license_expression: string;
+            /** License Id */
+            license_id: string;
+            /** Package Name */
+            package_name: string;
+            /** Package Version */
+            package_version: string;
+            /** Reason */
+            reason: string;
+            /** Risk Level */
+            risk_level: string;
+        };
+        /** LicenseReportPayload */
+        LicenseReportPayload: {
+            /** Compliant */
+            compliant: boolean;
+            coverage: components["schemas"]["LicenseCoveragePayload"];
+            /** Findings */
+            findings: components["schemas"]["LicenseFindingPayload"][];
+            /** Status */
+            status: string;
+            summary: components["schemas"]["LicenseSummaryPayload"];
+            /** Total Packages */
+            total_packages: number;
+            /** Unknown Count */
+            unknown_count: number;
+        };
+        /** LicenseSummaryPayload */
+        LicenseSummaryPayload: {
+            /** By Category */
+            by_category?: {
+                [key: string]: number;
+            };
+            /** By Risk */
+            by_risk?: {
+                [key: string]: number;
+            };
+            /** Compliant */
+            compliant?: boolean;
+            coverage?: components["schemas"]["LicenseCoveragePayload"];
+            /** Findings Count */
+            findings_count?: number;
+            /** Status */
+            status?: string;
+            /** Total Packages */
+            total_packages?: number;
+            /** Unknown Count */
+            unknown_count?: number;
+        };
         /** LifecyclePage */
         LifecyclePage: {
             /**
@@ -20504,6 +20570,16 @@ export interface components {
             /** Saml Response */
             saml_response: string;
         };
+        /** ScanDriversResponse */
+        ScanDriversResponse: {
+            /** Drivers */
+            drivers: components["schemas"]["ScannerDriver"][];
+            summary: components["schemas"]["ScannerSummary"];
+            /** Warnings */
+            warnings: string[];
+        } & {
+            [key: string]: unknown;
+        };
         /**
          * ScanIssuePayload
          * @description Bounded execution issue accepted from a trusted scan producer.
@@ -20594,6 +20670,11 @@ export interface components {
             /** Triggered By */
             triggered_by?: string | null;
         };
+        /**
+         * ScanLicensesResponse
+         * @description The same license payload emitted in the report envelope.
+         */
+        ScanLicensesResponse: components["schemas"]["LicenseReportPayload"];
         /**
          * ScanRequest
          * @description Options accepted by POST /v1/scan — mirrors agent-bom scan CLI flags.
@@ -20832,6 +20913,164 @@ export interface components {
             score: number;
             /** Summary */
             summary: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ScanStatusResponse */
+        ScanStatusResponse: {
+            /** Aggregation */
+            aggregation: {
+                [key: string]: unknown;
+            } | null;
+            /** Auto Correlation */
+            auto_correlation?: {
+                [key: string]: unknown;
+            } | null;
+            /** Batch Id */
+            batch_id: string | null;
+            /** Child Job Ids */
+            child_job_ids: string[];
+            /** Completed At */
+            completed_at: string | null;
+            /** Correlation Cohort Id */
+            correlation_cohort_id: string | null;
+            /** Correlation Cohort Manifest Hash */
+            correlation_cohort_manifest_hash: string | null;
+            /** Correlation Max Age Hours */
+            correlation_max_age_hours: number | null;
+            /** Created At */
+            created_at: string;
+            /** Error */
+            error: string | null;
+            /** Generated At */
+            generated_at: string | null;
+            /** Graph Scan Id */
+            graph_scan_id: string | null;
+            /** Job Id */
+            job_id: string;
+            /** Parent Job Id */
+            parent_job_id: string | null;
+            /** Pushed */
+            pushed: boolean;
+            /** Request */
+            request: {
+                [key: string]: unknown;
+            };
+            /** Scan Outcome */
+            scan_outcome: string | null;
+            /** Scan Run */
+            scan_run: {
+                [key: string]: unknown;
+            } | null;
+            /** Scan Timestamp */
+            scan_timestamp: string | null;
+            /** Schedule Id */
+            schedule_id: string | null;
+            /** Source Id */
+            source_id: string | null;
+            /** Status */
+            status: string;
+            /** Summary */
+            summary: {
+                [key: string]: unknown;
+            } | null;
+            /** Target */
+            target: {
+                [key: string]: unknown;
+            } | null;
+            /** Target Count */
+            target_count: number | null;
+            /** Target Index */
+            target_index: number | null;
+            /** Tenant Id */
+            tenant_id: string;
+            /** Warning Count */
+            warning_count: number;
+            /** Warnings Preview */
+            warnings_preview: unknown[];
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * ScanVexResponse
+         * @description The same VEX payload emitted in the report envelope.
+         */
+        ScanVexResponse: components["schemas"]["VexReportPayload"];
+        /** ScannerCapabilities */
+        ScannerCapabilities: {
+            /** Data Boundary */
+            data_boundary: string;
+            /** Guarantees */
+            guarantees: string[];
+            /** Network Access */
+            network_access: boolean;
+            /** Outbound Destinations */
+            outbound_destinations: string[];
+            /** Permissions Used */
+            permissions_used: string[];
+            /** Required Scopes */
+            required_scopes: string[];
+            /** Scan Modes */
+            scan_modes: string[];
+            /** Writes */
+            writes: boolean;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ScannerDriver */
+        ScannerDriver: {
+            capabilities: components["schemas"]["ScannerCapabilities"];
+            /** Enabled By Default */
+            enabled_by_default: boolean;
+            /** Execution State */
+            execution_state: string;
+            /** Failure Mode */
+            failure_mode: string;
+            /** Finding Types */
+            finding_types: string[];
+            /** Input Types */
+            input_types: string[];
+            /** Module */
+            module: string;
+            /** Name */
+            name: string;
+            /** Output Types */
+            output_types: string[];
+            /** Phase */
+            phase: string;
+            /** Run Attr */
+            run_attr: string;
+            /** Skip When */
+            skip_when: string[];
+            /** Source */
+            source: string;
+            /** Standards */
+            standards: string[];
+            /** Summary */
+            summary: string;
+            /** Telemetry Keys */
+            telemetry_keys: string[];
+        } & {
+            [key: string]: unknown;
+        };
+        /** ScannerSummary */
+        ScannerSummary: {
+            /** Active */
+            active: number;
+            /** By Phase */
+            by_phase: {
+                [key: string]: number;
+            };
+            /** By State */
+            by_state: {
+                [key: string]: number;
+            };
+            /** Passive */
+            passive: number;
+            /** Planned */
+            planned: number;
+            /** Total */
+            total: number;
         } & {
             [key: string]: unknown;
         };
@@ -22414,6 +22653,48 @@ export interface components {
             python_package: string;
             /** Version */
             version: string;
+        };
+        /** VexReportPayload */
+        VexReportPayload: {
+            /** Metadata */
+            metadata?: {
+                [key: string]: unknown;
+            };
+            /** Statements */
+            statements: components["schemas"]["VexStatementPayload"][];
+            stats: components["schemas"]["VexStatsPayload"];
+        };
+        /** VexStatementPayload */
+        VexStatementPayload: {
+            /** Action Statement */
+            action_statement: string | null;
+            /** Author */
+            author: string;
+            /** Impact Statement */
+            impact_statement: string | null;
+            /** Justification */
+            justification: string | null;
+            /** Products */
+            products: string[];
+            /** Status */
+            status: string;
+            /** Timestamp */
+            timestamp: string;
+            /** Vulnerability Id */
+            vulnerability_id: string;
+        };
+        /** VexStatsPayload */
+        VexStatsPayload: {
+            /** Affected */
+            affected: number;
+            /** Fixed */
+            fixed: number;
+            /** Not Affected */
+            not_affected: number;
+            /** Total Statements */
+            total_statements: number;
+            /** Under Investigation */
+            under_investigation: number;
         };
         /**
          * VirtualKeyAuthorize
@@ -39360,9 +39641,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["ScanDriversResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -39877,9 +40156,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["ScanLicensesResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -40003,9 +40280,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["ScanStatusResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
@@ -40085,9 +40360,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["ScanVexResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */

@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from agent_bom.cloud.aws_cis_benchmark import CheckStatus, CISCheckResult
+from agent_bom.domain.report_payloads import BenchmarkPayload
 
 logger = logging.getLogger("agent_bom.cloud.gcp_cis_benchmark")
 
@@ -209,7 +210,7 @@ class GCPCISReport:
     def pass_rate(self) -> float:
         return (self.passed / self.evaluated * 100) if self.evaluated else 0.0
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> BenchmarkPayload:
         from agent_bom.cloud.benchmark_manifests import benchmark_manifest
         from agent_bom.mitre_attack import tag_cis_check
 

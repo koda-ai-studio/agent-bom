@@ -764,7 +764,7 @@ def _build_mcp_runtime_diff(report: AIBOMReport) -> dict | None:
         item.get("server_name"): item for item in (report.introspection_data or {}).get("results", []) if item.get("server_name")
     }
     runtime_used: dict[str, set[str]] = {}
-    for finding in (report.runtime_correlation or {}).get("correlated_findings", []):
+    for finding in report.runtime_correlation.get("correlated_findings", []) if report.runtime_correlation else []:
         server_name = finding.get("server_name")
         tool_name = finding.get("tool_name")
         if server_name and tool_name:

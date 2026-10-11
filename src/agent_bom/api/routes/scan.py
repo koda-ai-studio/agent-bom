@@ -129,6 +129,7 @@ from agent_bom.api.models import (
 )
 from agent_bom.api.pipeline import _now, request_scan_cancellation, submit_scan_job
 from agent_bom.api.read_models import FindingsResponse, JobsResponse, documented
+from agent_bom.api.read_models.scan import ScanDriversResponse, ScanLicensesResponse, ScanStatusResponse, ScanVexResponse
 from agent_bom.api.remediation_view import CurrentRemediationResponse
 from agent_bom.api.scan_batches import child_request_for_target, refresh_batch_parent, scan_request_targets
 from agent_bom.api.scan_cohorts import (  # noqa: F401 - re-exported route-module API
@@ -1044,7 +1045,7 @@ async def check_package(body: PackageCheckRequest) -> dict[str, Any]:
     return payload
 
 
-@router.get("/scan/drivers", tags=["scan"])
+@router.get("/scan/drivers", **documented(ScanDriversResponse), tags=["scan"])
 def list_scan_drivers(include_planned: bool = True) -> dict:
     """List scanner driver contracts and orchestration semantics."""
 
@@ -1072,7 +1073,7 @@ async def get_scan(request: Request, job_id: str) -> ScanJob:
     return await _job_response_payload_off_loop(await _load_job_for_request(request, job_id))
 
 
-@router.get("/scan/{job_id}/status", tags=["scan"])
+@router.get("/scan/{job_id}/status", **documented(ScanStatusResponse), tags=["scan"])
 async def get_scan_status(request: Request, job_id: str) -> dict[str, Any]:
     """Poll lightweight scan status without serializing large result payloads."""
     return _job_summary_payload(await _load_job_for_request(request, job_id))
@@ -1250,13 +1251,9 @@ async def get_remediation_plan(request: Request, job_id: str) -> dict:
     return {"job_id": job_id, "remediation_plan": plan, "total": len(plan)}
 
 
-@router.get("/scan/{job_id}/licenses", tags=["scan"])
+@router.get("/scan/{job_id}/licenses", **documented(ScanLicensesResponse), tags=["scan"])
 async def get_licenses(request: Request, job_id: str) -> dict:
-    """Get the license compliance report for a completed scan.
-
-    Returns license findings, summary, compliance status, and per-package
-    license categorization (permissive, copyleft, commercial risk, unknown).
-    """
+    """Return a completed scan's license findings, coverage, status and categories."""
     job = await _load_job_for_request(request, job_id)
     if job.status != JobStatus.DONE or not job.result:
         raise HTTPException(status_code=409, detail="Scan not completed yet")
@@ -1294,10 +1291,10 @@ async def get_licenses(request: Request, job_id: str) -> dict:
         )
 
     lic_report = _eval_lic(model_agents)
-    return _lic_ser(lic_report)
+    return dict(_lic_ser(lic_report))
 
 
-@router.get("/scan/{job_id}/vex", tags=["scan"])
+@router.get("/scan/{job_id}/vex", **documented(ScanVexResponse), tags=["scan"])
 async def get_vex(request: Request, job_id: str) -> dict:
     """Get the VEX (Vulnerability Exploitability eXchange) document for a completed scan.
 

@@ -23,6 +23,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
+from agent_bom.domain.report_payloads import OSVResponseCachePayload, VulnerabilityFreshnessPayload
+
 # Default freshness target: refresh / mark stale once the cache crosses a day.
 DEFAULT_MAX_AGE_HOURS = 24
 # Clear-danger threshold: results past this almost certainly miss recent CVEs.
@@ -114,17 +116,16 @@ class VulnDataFreshness:
             return None
         return self.age_hours // 24
 
-    def to_dict(self, *, osv_performance: dict | None = None) -> dict:
+    def to_dict(self, *, osv_performance: dict | None = None) -> VulnerabilityFreshnessPayload:
         """Report observed OSV response-cache use separately from feed-sync age.
 
         Other providers may still use the network; a cache hit does not prove
         an offline scan or establish the response cache's advisory freshness.
         """
         cache_hits = (osv_performance or {}).get("cache_hits", 0)
-        cache = {"packages": cache_hits, "live_queries": (osv_performance or {}).get("queries_sent", 0)}
-        return {
+        cache: OSVResponseCachePayload = {"packages": cache_hits, "live_queries": (osv_performance or {}).get("queries_sent", 0)}
+        payload: VulnerabilityFreshnessPayload = {
             "mode": "live-with-cache" if self.mode == "live" and cache_hits else self.mode,
-            **({"osv_response_cache": cache} if cache_hits else {}),
             "sources": list(self.sources),
             "last_updated": self.last_updated,
             "age_hours": self.age_hours,
@@ -134,6 +135,9 @@ class VulnDataFreshness:
             "danger": self.danger,
             "max_age_hours": self.max_age_hours,
         }
+        if cache_hits:
+            payload["osv_response_cache"] = cache
+        return payload
 
     def summary_line(self) -> str:
         """One-line, plain-text (no Rich markup) freshness statement.
@@ -350,7 +354,7 @@ def should_refresh(
     return freshness.stale
 
 
-def freshness_note(freshness: VulnDataFreshness) -> dict:
+def freshness_note(freshness: VulnDataFreshness) -> VulnerabilityFreshnessPayload:
     """Compact freshness note for embedding in JSON report metadata."""
     return freshness.to_dict()
 

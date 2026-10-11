@@ -1031,7 +1031,7 @@
     "api/routes/scan.py": {
       "broad_except": 14,
       "deferred_imports": 32,
-      "file_lines": 2673
+      "file_lines": 2670
     },
     "api/routes/scan.py::create_scan": {
       "function_lines": 147
@@ -4049,7 +4049,7 @@
     },
     "models.py": {
       "deferred_imports": 25,
-      "file_lines": 1683
+      "file_lines": 1681
     },
     "models.py::BlastRadius.calculate_risk_score": {
       "function_lines": 113

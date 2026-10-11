@@ -38,7 +38,7 @@ from __future__ import annotations
 import logging
 import re
 import uuid
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -687,7 +687,7 @@ def _safe_connection_detail(exc: Exception) -> str:
     return operator_facing_detail(exc)
 
 
-def _cis_summary(cis_dict: dict[str, Any]) -> dict[str, Any]:
+def _cis_summary(cis_dict: Mapping[str, Any]) -> dict[str, Any]:
     """Reduce a CIS report dict to the non-secret counts surfaced in the summary."""
     return {
         "benchmark": cis_dict.get("benchmark"),

@@ -25,6 +25,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
+from agent_bom.domain.report_payloads import CorrelatedFindingPayload, RuntimeCorrelationPayload, UncalledVulnerableToolPayload
+
 if TYPE_CHECKING:
     from agent_bom.otel_ingest import ToolCallTrace
 
@@ -72,7 +74,7 @@ class CorrelatedFinding:
     affected_agents: list[str] = field(default_factory=list)
     exposed_credentials: list[str] = field(default_factory=list)
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> CorrelatedFindingPayload:
         return {
             "vulnerability_id": self.vulnerability_id,
             "severity": self.severity,
@@ -103,10 +105,10 @@ class CorrelationReport:
     unique_tools_called: int
     vulnerable_tools_called: int
     correlated_findings: list[CorrelatedFinding]
-    uncalled_vulnerable_tools: list[dict[str, Any]]  # Vulnerable but never called
+    uncalled_vulnerable_tools: list[UncalledVulnerableToolPayload]  # Vulnerable but never called
     timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_dict(self) -> RuntimeCorrelationPayload:
         return {
             "timestamp": self.timestamp,
             "total_tool_calls": self.total_tool_calls,
@@ -307,7 +309,7 @@ def correlate(
 
     # Build tool → vulnerability mapping from blast radii
     correlated: list[CorrelatedFinding] = []
-    uncalled: list[dict[str, Any]] = []
+    uncalled: list[UncalledVulnerableToolPayload] = []
     vulnerable_tools_seen: set[str] = set()
 
     for br in blast_radii:

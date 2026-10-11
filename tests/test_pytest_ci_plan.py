@@ -517,3 +517,11 @@ def test_spdx_import_edits_select_all_spdx_and_sbom_contracts(tmp_path, source):
         _write(path, 1)
     _write(tmp_path / "tests/test_unrelated.py", 1)
     assert select_targeted_tests(changed_files=[Path(source)], root=tmp_path) == expected
+
+
+@pytest.mark.parametrize("source", ["src/agent_bom/domain/report_payloads.py", "src/agent_bom/api/read_models/scan.py"])
+def test_report_contract_edits_select_producer_and_mounted_read_tests(tmp_path, source):
+    expected = sorted(tmp_path / path for path in ("tests/test_report_payload_contracts.py", "tests/api/test_scan_read_contracts.py"))
+    for path in expected:
+        _write(path, 1)
+    assert select_targeted_tests(changed_files=[Path(source)], root=tmp_path) == expected
