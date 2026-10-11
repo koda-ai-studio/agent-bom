@@ -1408,7 +1408,7 @@ class TestTenantQuotaAdvisoryLockFailClosed:
             "agent_bom.api.postgres_common._get_pool",
             lambda: (_ for _ in ()).throw(RuntimeError("pool down")),
         )
-        monkeypatch.setattr("agent_bom.api.middleware.clustered_control_plane_required", lambda: True)
+        monkeypatch.setattr("agent_bom.api.storage.deployment.clustered_control_plane_required", lambda: True)
 
         with pytest.raises(HTTPException) as exc_info:
             with tenant_quota_module._maybe_postgres_advisory_lock("tenant-x"):
@@ -1421,7 +1421,7 @@ class TestTenantQuotaAdvisoryLockFailClosed:
             "agent_bom.api.postgres_common._get_pool",
             lambda: (_ for _ in ()).throw(RuntimeError("pool down")),
         )
-        monkeypatch.setattr("agent_bom.api.middleware.clustered_control_plane_required", lambda: False)
+        monkeypatch.setattr("agent_bom.api.storage.deployment.clustered_control_plane_required", lambda: False)
 
         entered = False
         with tenant_quota_module._maybe_postgres_advisory_lock("tenant-x"):

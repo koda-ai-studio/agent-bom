@@ -7,6 +7,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+from agent_bom.domain.report_payloads import BenchmarkPayload
+
 logger = logging.getLogger("agent_bom.cloud.aws_cis_benchmark")
 
 _AWS_RETRY_CONFIG = {"max_attempts": 5, "mode": "adaptive"}
@@ -123,7 +125,7 @@ class CISBenchmarkReport:
     def pass_rate(self) -> float:
         return (self.passed / self.evaluated * 100) if self.evaluated else 0.0
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> BenchmarkPayload:
         from agent_bom.cloud.benchmark_manifests import benchmark_manifest
         from agent_bom.mitre_attack import tag_cis_check
 

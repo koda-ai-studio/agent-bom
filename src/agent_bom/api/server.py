@@ -265,7 +265,7 @@ def _log_control_plane_auth_posture() -> None:
     ``--api-key`` flag (which is not in the environment yet). Logging here — the
     lifespan startup, after the CLI has reconfigured — avoids that.
     """
-    from agent_bom.api.middleware import get_auth_posture
+    from agent_bom.api.auth_posture import get_auth_posture
 
     posture = get_auth_posture()
     # One structured line summarizing the single derived posture (effective
@@ -1057,7 +1057,7 @@ def configure_api(
     # Single derivation: the env-based credential-source facts are computed once
     # here (and identically by the CLI serve gate) instead of re-derived per
     # surface. The runtime status, /health, and the startup log all read this.
-    from agent_bom.api.middleware import apply_auth_posture, derive_auth_posture
+    from agent_bom.api.auth_posture import apply_auth_posture, derive_auth_posture
 
     posture = derive_auth_posture(
         api_key_configured=api_key_configured,
@@ -1588,7 +1588,7 @@ async def root(request: Request) -> Response:
 
 
 def _public_health() -> PublicHealthResponse:
-    from agent_bom.api.middleware import get_auth_runtime_status
+    from agent_bom.api.auth_posture import get_auth_runtime_status
 
     auth_runtime = get_auth_runtime_status()
     return PublicHealthResponse(
@@ -1627,8 +1627,8 @@ async def health() -> PublicHealthResponse:
 @app.get("/v1/system/health", response_model=HealthResponse, tags=["meta"], responses=ERROR_RESPONSES)
 async def system_health() -> HealthResponse:
     """Authenticated operator diagnostics for configured subsystems."""
+    from agent_bom.api.auth_posture import get_auth_runtime_status
     from agent_bom.api.connection_scheduler import connections_scheduler_enabled
-    from agent_bom.api.middleware import get_auth_runtime_status
     from agent_bom.entitlements import load_entitlement_state
 
     auth_runtime = get_auth_runtime_status()

@@ -45,7 +45,7 @@ async def call_with_request_tenant(
     if not os.environ.get("AGENT_BOM_POSTGRES_URL"):
         return await call_next(request)
 
-    from agent_bom.api.postgres_store import reset_current_tenant, set_current_tenant
+    from agent_bom.api.postgres_common import reset_current_tenant, set_current_tenant
 
     token = set_current_tenant(tenant_id)
     try:

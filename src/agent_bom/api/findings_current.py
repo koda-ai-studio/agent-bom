@@ -11,6 +11,7 @@ from collections.abc import Callable, Iterable
 from datetime import datetime, timezone
 from typing import Any
 
+from agent_bom.api.finding_identity import finding_identity as finding_identity
 from agent_bom.api.finding_job_metadata import (
     HistoryKey as HistoryKey,
 )
@@ -60,18 +61,6 @@ def job_in_window(job: _ScanJobLike, since: str | None) -> bool:
         return observed >= cutoff
     except (TypeError, ValueError):
         return False
-
-
-def finding_identity(finding: dict[str, Any]) -> str:
-    """Stable identity used to collapse a finding across scan jobs."""
-    raw_id = finding.get("id")
-    if raw_id:
-        return str(raw_id)
-    vuln_id = finding.get("vulnerability_id") or finding.get("cve_id") or finding.get("title") or ""
-    raw_asset = finding.get("asset")
-    asset = raw_asset if isinstance(raw_asset, dict) else {}
-    package = finding.get("package") or finding.get("package_name") or asset.get("name", "")
-    return f"{vuln_id}:{package}"
 
 
 def scan_only_findings(

@@ -171,7 +171,7 @@ def _ws_auth_required() -> bool:
     the configured no-auth role (viewer by default).
     """
     try:
-        from agent_bom.api.middleware import get_auth_posture
+        from agent_bom.api.auth_posture import get_auth_posture
 
         return get_auth_posture().auth_required
     except Exception:
@@ -190,7 +190,7 @@ def _ws_auth_from_trusted_proxy(websocket: WebSocket) -> _WebSocketAuthContext |
 
     secret = resolve_secret("AGENT_BOM_TRUST_PROXY_AUTH_SECRET")
     presented_secret = websocket.headers.get("x-agent-bom-proxy-secret", "").strip()
-    from agent_bom.api.middleware import _trusted_proxy_secret_is_strong
+    from agent_bom.api.auth_posture import _trusted_proxy_secret_is_strong
 
     if not _trusted_proxy_secret_is_strong(secret):
         return None

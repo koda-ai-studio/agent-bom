@@ -144,7 +144,7 @@ def api_client(monkeypatch):
     monkeypatch.setattr(routes, "_get_store", lambda: store)
     monkeypatch.setattr(routes, "_jobs_get", lambda job_id, **kwargs: None)
     monkeypatch.setattr(
-        "agent_bom.api.middleware.get_auth_runtime_status", lambda: {"auth_required": True, "unauthenticated_allowed": False}
+        "agent_bom.api.auth_runtime_state.get_auth_runtime_status", lambda: {"auth_required": True, "unauthenticated_allowed": False}
     )
     app.include_router(routes.router, prefix="/v1")
     return TestClient(app)

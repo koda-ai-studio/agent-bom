@@ -1508,14 +1508,11 @@ async def trace_explorer(
 
 
 def _build_trace_explorer_payload_sync(tenant_id: str, *, limit: int = 100) -> dict[str, object]:
-    """Heavy trace-explorer assembly; always run off the event loop.
-
-    Findings iteration is bounded by ``limit`` so a large estate can never fold
-    an unbounded number of scan findings into one request.
-    """
+    """Assemble trace evidence off the event loop, bounded by the request limit."""
     from agent_bom.api.cost_store import get_cost_store
     from agent_bom.api.routes.gateway_feed import _load_tenant_alerts, build_gateway_feed
-    from agent_bom.api.routes.scan import _completed_jobs_for_tenant, _iter_scan_findings
+    from agent_bom.api.scan_finding_projection import _iter_scan_findings
+    from agent_bom.api.scan_finding_read import _completed_jobs_for_tenant
     from agent_bom.api.trace_explorer import build_trace_explorer_payload
 
     bounded_limit = max(1, min(limit, 200))

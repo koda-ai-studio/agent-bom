@@ -24427,6 +24427,177 @@
         "title": "KspmScanRun",
         "type": "object"
       },
+      "LicenseCoveragePayload": {
+        "properties": {
+          "evaluated": {
+            "title": "Evaluated",
+            "type": "integer"
+          },
+          "percent": {
+            "title": "Percent",
+            "type": "number"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "unknown": {
+            "title": "Unknown",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "evaluated",
+          "unknown",
+          "total",
+          "percent"
+        ],
+        "title": "LicenseCoveragePayload",
+        "type": "object"
+      },
+      "LicenseFindingPayload": {
+        "properties": {
+          "agents": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Agents",
+            "type": "array"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "ecosystem": {
+            "title": "Ecosystem",
+            "type": "string"
+          },
+          "license_expression": {
+            "title": "License Expression",
+            "type": "string"
+          },
+          "license_id": {
+            "title": "License Id",
+            "type": "string"
+          },
+          "package_name": {
+            "title": "Package Name",
+            "type": "string"
+          },
+          "package_version": {
+            "title": "Package Version",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "risk_level": {
+            "title": "Risk Level",
+            "type": "string"
+          }
+        },
+        "required": [
+          "package_name",
+          "package_version",
+          "ecosystem",
+          "license_id",
+          "license_expression",
+          "category",
+          "risk_level",
+          "reason",
+          "agents"
+        ],
+        "title": "LicenseFindingPayload",
+        "type": "object"
+      },
+      "LicenseReportPayload": {
+        "properties": {
+          "compliant": {
+            "title": "Compliant",
+            "type": "boolean"
+          },
+          "coverage": {
+            "$ref": "#/components/schemas/LicenseCoveragePayload"
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/LicenseFindingPayload"
+            },
+            "title": "Findings",
+            "type": "array"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/LicenseSummaryPayload"
+          },
+          "total_packages": {
+            "title": "Total Packages",
+            "type": "integer"
+          },
+          "unknown_count": {
+            "title": "Unknown Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "compliant",
+          "status",
+          "coverage",
+          "total_packages",
+          "unknown_count",
+          "summary",
+          "findings"
+        ],
+        "title": "LicenseReportPayload",
+        "type": "object"
+      },
+      "LicenseSummaryPayload": {
+        "properties": {
+          "by_category": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "By Category",
+            "type": "object"
+          },
+          "by_risk": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "By Risk",
+            "type": "object"
+          },
+          "compliant": {
+            "title": "Compliant",
+            "type": "boolean"
+          },
+          "coverage": {
+            "$ref": "#/components/schemas/LicenseCoveragePayload"
+          },
+          "findings_count": {
+            "title": "Findings Count",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "total_packages": {
+            "title": "Total Packages",
+            "type": "integer"
+          },
+          "unknown_count": {
+            "title": "Unknown Count",
+            "type": "integer"
+          }
+        },
+        "title": "LicenseSummaryPayload",
+        "type": "object"
+      },
       "LifecyclePage": {
         "additionalProperties": false,
         "properties": {
@@ -33701,6 +33872,35 @@
         "title": "SAMLLoginRequest",
         "type": "object"
       },
+      "ScanDriversResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "drivers": {
+            "items": {
+              "$ref": "#/components/schemas/ScannerDriver"
+            },
+            "title": "Drivers",
+            "type": "array"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/ScannerSummary"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "drivers",
+          "summary",
+          "warnings"
+        ],
+        "title": "ScanDriversResponse",
+        "type": "object"
+      },
       "ScanIssuePayload": {
         "additionalProperties": false,
         "description": "Bounded execution issue accepted from a trusted scan producer.",
@@ -33987,6 +34187,11 @@
         ],
         "title": "ScanJob",
         "type": "object"
+      },
+      "ScanLicensesResponse": {
+        "$ref": "#/components/schemas/LicenseReportPayload",
+        "description": "The same license payload emitted in the report envelope.",
+        "title": "ScanLicensesResponse"
       },
       "ScanRequest": {
         "additionalProperties": false,
@@ -34590,6 +34795,529 @@
           "summary"
         ],
         "title": "ScanScorecard",
+        "type": "object"
+      },
+      "ScanStatusResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "aggregation": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aggregation"
+          },
+          "auto_correlation": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auto Correlation"
+          },
+          "batch_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Batch Id"
+          },
+          "child_job_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Child Job Ids",
+            "type": "array"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "correlation_cohort_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correlation Cohort Id"
+          },
+          "correlation_cohort_manifest_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correlation Cohort Manifest Hash"
+          },
+          "correlation_max_age_hours": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correlation Max Age Hours"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "generated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated At"
+          },
+          "graph_scan_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Graph Scan Id"
+          },
+          "job_id": {
+            "title": "Job Id",
+            "type": "string"
+          },
+          "parent_job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Job Id"
+          },
+          "pushed": {
+            "title": "Pushed",
+            "type": "boolean"
+          },
+          "request": {
+            "additionalProperties": true,
+            "title": "Request",
+            "type": "object"
+          },
+          "scan_outcome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Outcome"
+          },
+          "scan_run": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Run"
+          },
+          "scan_timestamp": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Timestamp"
+          },
+          "schedule_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schedule Id"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target"
+          },
+          "target_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Count"
+          },
+          "target_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Index"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          },
+          "warning_count": {
+            "title": "Warning Count",
+            "type": "integer"
+          },
+          "warnings_preview": {
+            "items": {},
+            "title": "Warnings Preview",
+            "type": "array"
+          }
+        },
+        "required": [
+          "job_id",
+          "graph_scan_id",
+          "tenant_id",
+          "batch_id",
+          "correlation_cohort_id",
+          "correlation_cohort_manifest_hash",
+          "correlation_max_age_hours",
+          "parent_job_id",
+          "child_job_ids",
+          "target",
+          "target_index",
+          "target_count",
+          "source_id",
+          "schedule_id",
+          "status",
+          "created_at",
+          "completed_at",
+          "request",
+          "summary",
+          "aggregation",
+          "scan_timestamp",
+          "generated_at",
+          "scan_run",
+          "scan_outcome",
+          "warning_count",
+          "warnings_preview",
+          "pushed",
+          "error"
+        ],
+        "title": "ScanStatusResponse",
+        "type": "object"
+      },
+      "ScanVexResponse": {
+        "$ref": "#/components/schemas/VexReportPayload",
+        "description": "The same VEX payload emitted in the report envelope.",
+        "title": "ScanVexResponse"
+      },
+      "ScannerCapabilities": {
+        "additionalProperties": true,
+        "properties": {
+          "data_boundary": {
+            "title": "Data Boundary",
+            "type": "string"
+          },
+          "guarantees": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Guarantees",
+            "type": "array"
+          },
+          "network_access": {
+            "title": "Network Access",
+            "type": "boolean"
+          },
+          "outbound_destinations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Outbound Destinations",
+            "type": "array"
+          },
+          "permissions_used": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Permissions Used",
+            "type": "array"
+          },
+          "required_scopes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Required Scopes",
+            "type": "array"
+          },
+          "scan_modes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Scan Modes",
+            "type": "array"
+          },
+          "writes": {
+            "title": "Writes",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "scan_modes",
+          "required_scopes",
+          "permissions_used",
+          "outbound_destinations",
+          "data_boundary",
+          "writes",
+          "network_access",
+          "guarantees"
+        ],
+        "title": "ScannerCapabilities",
+        "type": "object"
+      },
+      "ScannerDriver": {
+        "additionalProperties": true,
+        "properties": {
+          "capabilities": {
+            "$ref": "#/components/schemas/ScannerCapabilities"
+          },
+          "enabled_by_default": {
+            "title": "Enabled By Default",
+            "type": "boolean"
+          },
+          "execution_state": {
+            "title": "Execution State",
+            "type": "string"
+          },
+          "failure_mode": {
+            "title": "Failure Mode",
+            "type": "string"
+          },
+          "finding_types": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Finding Types",
+            "type": "array"
+          },
+          "input_types": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Input Types",
+            "type": "array"
+          },
+          "module": {
+            "title": "Module",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "output_types": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Output Types",
+            "type": "array"
+          },
+          "phase": {
+            "title": "Phase",
+            "type": "string"
+          },
+          "run_attr": {
+            "title": "Run Attr",
+            "type": "string"
+          },
+          "skip_when": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Skip When",
+            "type": "array"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "standards": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Standards",
+            "type": "array"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "telemetry_keys": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Telemetry Keys",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "module",
+          "source",
+          "phase",
+          "execution_state",
+          "failure_mode",
+          "enabled_by_default",
+          "run_attr",
+          "input_types",
+          "output_types",
+          "finding_types",
+          "skip_when",
+          "telemetry_keys",
+          "standards",
+          "summary",
+          "capabilities"
+        ],
+        "title": "ScannerDriver",
+        "type": "object"
+      },
+      "ScannerSummary": {
+        "additionalProperties": true,
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "integer"
+          },
+          "by_phase": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "By Phase",
+            "type": "object"
+          },
+          "by_state": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "By State",
+            "type": "object"
+          },
+          "passive": {
+            "title": "Passive",
+            "type": "integer"
+          },
+          "planned": {
+            "title": "Planned",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "active",
+          "passive",
+          "planned",
+          "by_phase",
+          "by_state"
+        ],
+        "title": "ScannerSummary",
         "type": "object"
       },
       "ScenarioNodeAttributes": {
@@ -38995,6 +39723,136 @@
           "version"
         ],
         "title": "VersionInfo",
+        "type": "object"
+      },
+      "VexReportPayload": {
+        "properties": {
+          "metadata": {
+            "additionalProperties": true,
+            "title": "Metadata",
+            "type": "object"
+          },
+          "statements": {
+            "items": {
+              "$ref": "#/components/schemas/VexStatementPayload"
+            },
+            "title": "Statements",
+            "type": "array"
+          },
+          "stats": {
+            "$ref": "#/components/schemas/VexStatsPayload"
+          }
+        },
+        "required": [
+          "statements",
+          "stats"
+        ],
+        "title": "VexReportPayload",
+        "type": "object"
+      },
+      "VexStatementPayload": {
+        "properties": {
+          "action_statement": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Statement"
+          },
+          "author": {
+            "title": "Author",
+            "type": "string"
+          },
+          "impact_statement": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Impact Statement"
+          },
+          "justification": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Justification"
+          },
+          "products": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Products",
+            "type": "array"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "timestamp": {
+            "title": "Timestamp",
+            "type": "string"
+          },
+          "vulnerability_id": {
+            "title": "Vulnerability Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "vulnerability_id",
+          "status",
+          "justification",
+          "impact_statement",
+          "action_statement",
+          "products",
+          "timestamp",
+          "author"
+        ],
+        "title": "VexStatementPayload",
+        "type": "object"
+      },
+      "VexStatsPayload": {
+        "properties": {
+          "affected": {
+            "title": "Affected",
+            "type": "integer"
+          },
+          "fixed": {
+            "title": "Fixed",
+            "type": "integer"
+          },
+          "not_affected": {
+            "title": "Not Affected",
+            "type": "integer"
+          },
+          "total_statements": {
+            "title": "Total Statements",
+            "type": "integer"
+          },
+          "under_investigation": {
+            "title": "Under Investigation",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total_statements",
+          "affected",
+          "not_affected",
+          "fixed",
+          "under_investigation"
+        ],
+        "title": "VexStatsPayload",
         "type": "object"
       },
       "VirtualKeyAuthorize": {
@@ -73848,9 +74706,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response List Scan Drivers V1 Scan Drivers Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ScanDriversResponse"
                 }
               }
             },
@@ -74628,7 +75484,7 @@
     },
     "/v1/scan/{job_id}/licenses": {
       "get": {
-        "description": "Get the license compliance report for a completed scan.\n\nReturns license findings, summary, compliance status, and per-package\nlicense categorization (permissive, copyleft, commercial risk, unknown).",
+        "description": "Return a completed scan's license findings, coverage, status and categories.",
         "operationId": "get_licenses_v1_scan__job_id__licenses_get",
         "parameters": [
           {
@@ -74646,9 +75502,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Licenses V1 Scan  Job Id  Licenses Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ScanLicensesResponse"
                 }
               }
             },
@@ -74811,9 +75665,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Scan Status V1 Scan  Job Id  Status Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ScanStatusResponse"
                 }
               }
             },
@@ -74917,9 +75769,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Vex V1 Scan  Job Id  Vex Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ScanVexResponse"
                 }
               }
             },

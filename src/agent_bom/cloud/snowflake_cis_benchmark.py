@@ -1,8 +1,7 @@
 """CIS Snowflake Benchmark v1.0 — live account checks.
 
 Runs read-only SQL queries against Snowflake ACCOUNT_USAGE and SHOW commands
-to evaluate security posture against the CIS Snowflake Foundations Benchmark.
-Each check returns pass/fail with evidence.
+to return control status and evidence for the CIS Snowflake Foundations Benchmark.
 
 Required privileges (all read-only):
     IMPORTED PRIVILEGES on SNOWFLAKE database (for ACCOUNT_USAGE schema)
@@ -26,6 +25,7 @@ import os
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
+from agent_bom.domain.report_payloads import BenchmarkPayload
 from agent_bom.security import sanitize_text
 
 from .aws_cis_benchmark import CheckStatus, CISCheckResult
@@ -72,7 +72,7 @@ class SnowflakeCISReport:
     def pass_rate(self) -> float:
         return (self.passed / self.evaluated * 100) if self.evaluated else 0.0
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> BenchmarkPayload:
         from agent_bom.cloud.benchmark_manifests import benchmark_manifest
         from agent_bom.mitre_attack import tag_cis_check
 

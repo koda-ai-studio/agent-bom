@@ -81,7 +81,7 @@ def materialize_job_snapshot(job: ScanJob) -> tuple[dict[str, Any], list[dict[st
                 "payload": payload,
             }
         )
-    from agent_bom.api.routes.scan import _effective_reach_lookup
+    from agent_bom.api.scan_graph_view import _effective_reach_lookup
 
     context = {"source_digest": snapshot_source_digest(job), "reach": _effective_reach_lookup(job)}
     context["content_digest"] = snapshot_content_digest(context["reach"], rows)

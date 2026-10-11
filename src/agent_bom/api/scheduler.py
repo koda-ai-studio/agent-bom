@@ -144,7 +144,7 @@ async def scheduler_loop(
         if not needs_leader_lock:
             return None
         try:
-            from agent_bom.api.postgres_store import _get_pool
+            from agent_bom.api.postgres_common import _get_pool
 
             pool = _get_pool()
             conn = pool.getconn()
@@ -215,7 +215,7 @@ async def scheduler_loop(
     finally:
         if leader_conn is not None:
             try:
-                from agent_bom.api.postgres_store import _get_pool
+                from agent_bom.api.postgres_common import _get_pool
 
                 leader_conn.execute("SELECT pg_advisory_unlock(%s)", (_SCHEDULER_LEADER_LOCK_ID,))
                 _get_pool().putconn(leader_conn)

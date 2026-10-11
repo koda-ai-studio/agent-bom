@@ -33,6 +33,7 @@ from agent_bom.api.finding_cursor import (
     finding_order_clause,
     row_is_after_cursor,
 )
+from agent_bom.api.finding_rank import compute_effective_reach_score as compute_effective_reach_score
 from agent_bom.api.hub_current_payload import (
     batch_ledger_payloads,
     current_state_overlay,
@@ -291,33 +292,6 @@ def _cvss_value(payload: dict[str, Any]) -> float:
         return float(payload.get("cvss_score") or 0.0)
     except (TypeError, ValueError):
         return 0.0
-
-
-def compute_effective_reach_score(payload: dict[str, Any]) -> float:
-    """Return the composite effective-reach signal for a finding payload.
-
-    Shared by the API sort path (``routes/scan.py``) and the persistence
-    layer so the ``effective_reach_score`` column materialised on ingest
-    matches the in-memory ranking exactly. Prefers an explicit
-    ``effective_reach_score`` field, then the ``effective_reach.composite``
-    breakdown, defaulting to ``0.0`` when neither is present.
-    """
-    from agent_bom.symbol_reach_triage import apply_composite_delta, symbol_reachability_from_payload
-
-    reach = payload.get("effective_reach_score")
-    if reach is None:
-        breakdown = payload.get("effective_reach") or {}
-        if isinstance(breakdown, dict):
-            reach = breakdown.get("composite")
-    try:
-        base = float(reach or 0.0)
-    except (TypeError, ValueError):
-        base = 0.0
-    sym = symbol_reachability_from_payload(payload)
-    breakdown = payload.get("effective_reach") or {}
-    if isinstance(breakdown, dict) and breakdown.get("symbol_reach_adjustment") is not None:
-        return base
-    return apply_composite_delta(base, sym)
 
 
 def _page_signal(row: dict[str, Any], sort: str) -> float:

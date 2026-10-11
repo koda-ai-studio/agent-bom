@@ -4,7 +4,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from agent_bom.api.routes import scan
+from agent_bom.api import scan_finding_projection as scan
 from tests.test_scan_snapshot import _job
 from tests.test_scan_snapshot_reads import put
 from tests.test_scan_snapshot_reads import snapshots as snapshots  # noqa: F401

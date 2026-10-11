@@ -9,7 +9,7 @@ import json
 import logging
 import time
 import uuid
-from collections.abc import AsyncIterator, Callable, Iterable, Mapping
+from collections.abc import AsyncIterator, Callable
 from datetime import datetime, timezone
 from functools import partial
 from typing import Annotated, Any, Literal, NamedTuple, cast
@@ -33,8 +33,28 @@ from agent_bom.api.bulk_findings_ingest import (  # noqa: F401 - re-exported rou
     _derive_bulk_finding_id,
     _normalized_bulk_finding,
 )
-from agent_bom.api.finding_collection import collect_scan_findings, merge_finding_representations
-from agent_bom.api.finding_history_read import current_findings_with_history
+from agent_bom.api.finding_facets import _FACET_DEADLINE_SECONDS as _FACET_DEADLINE_SECONDS
+from agent_bom.api.finding_facets import _FACET_SCAN_BUDGET as _FACET_SCAN_BUDGET
+from agent_bom.api.finding_facets import _FACET_SEVERITY_BANDS as _FACET_SEVERITY_BANDS
+from agent_bom.api.finding_facets import _TRIAGE_DISPOSITIONS as _TRIAGE_DISPOSITIONS
+from agent_bom.api.finding_facets import _count_facet_row as _count_facet_row
+from agent_bom.api.finding_facets import _facet_completeness as _facet_completeness
+from agent_bom.api.finding_facets import _facet_exploit_bucket as _facet_exploit_bucket
+from agent_bom.api.finding_facets import _facet_has_fix as _facet_has_fix
+from agent_bom.api.finding_facets import _facet_reachability_bucket as _facet_reachability_bucket
+from agent_bom.api.finding_facets import _facet_severity_histogram as _facet_severity_histogram
+from agent_bom.api.finding_facets import _FacetCounts as _FacetCounts
+from agent_bom.api.finding_facets import _FacetScopes as _FacetScopes
+from agent_bom.api.finding_facets import _finding_facets as _finding_facets
+from agent_bom.api.finding_facets import _finding_facets_bounded as _finding_facets_bounded
+from agent_bom.api.finding_facets import _walk_facet_rows as _walk_facet_rows
+from agent_bom.api.finding_grouping import _attach_grouping_metadata as _attach_grouping_metadata
+from agent_bom.api.finding_grouping import _collect_group_occurrences as _collect_group_occurrences
+from agent_bom.api.finding_grouping import _finding_group_identity as _finding_group_identity
+from agent_bom.api.finding_grouping import _finding_group_offset as _finding_group_offset
+from agent_bom.api.finding_grouping import _group_occurrence_rows as _group_occurrence_rows
+from agent_bom.api.finding_grouping import _grouped_severity_counts as _grouped_severity_counts
+from agent_bom.api.finding_grouping import _groups_envelope as _groups_envelope
 from agent_bom.api.finding_list_envelope import HUB_LIST_OFFSET_CEILING as _HUB_LIST_OFFSET_CEILING
 from agent_bom.api.finding_list_envelope import finding_list_envelope
 from agent_bom.api.finding_list_helpers import (  # noqa: F401 - re-exported route-module API
@@ -54,6 +74,12 @@ from agent_bom.api.finding_list_helpers import (  # noqa: F401 - re-exported rou
     _serialize_finding_group,
 )
 from agent_bom.api.finding_list_projection import FindingListInclude, finding_list_projection, list_include_or_422, project_list_row
+from agent_bom.api.finding_merge import _BULK_MERGE_CHUNK as _BULK_MERGE_CHUNK
+from agent_bom.api.finding_merge import MergedScanBulkPage as MergedScanBulkPage
+from agent_bom.api.finding_merge import _merge_bulk_kwargs as _merge_bulk_kwargs
+from agent_bom.api.finding_merge import _merged_scan_bulk_page as _merged_scan_bulk_page
+from agent_bom.api.finding_merge import _resolve_bulk_findings_total as _resolve_bulk_findings_total
+from agent_bom.api.finding_merge import _ScanBulkMerge as _ScanBulkMerge
 from agent_bom.api.finding_reachability import project_persisted_graph_reachability
 from agent_bom.api.finding_read_context import finding_read_snapshot, read_once
 from agent_bom.api.finding_row_shapes import (  # noqa: F401 - re-exported route-module API
@@ -68,8 +94,23 @@ from agent_bom.api.finding_row_shapes import (  # noqa: F401 - re-exported route
     _row_vuln_id,
     _scan_source_labels,
 )
+from agent_bom.api.finding_scope_filters import _canonical_group_key as _canonical_group_key
+from agent_bom.api.finding_scope_filters import _canonical_scope_filters as _canonical_scope_filters
+from agent_bom.api.finding_scope_filters import _finding_identity as _finding_identity
+from agent_bom.api.finding_scope_filters import _finding_sort_key as _finding_sort_key
+from agent_bom.api.finding_scope_filters import _row_asset_key as _row_asset_key
+from agent_bom.api.finding_scope_filters import _row_matches_scope as _row_matches_scope
 from agent_bom.api.finding_snapshot_metadata import snapshot_metadata
 from agent_bom.api.finding_suppression import project_current_suppressions
+from agent_bom.api.finding_view_filters import _FINDINGS_VIEW_FILTER_MAX_ROWS as _FINDINGS_VIEW_FILTER_MAX_ROWS
+from agent_bom.api.finding_view_filters import _copy_first_page_metadata as _copy_first_page_metadata
+from agent_bom.api.finding_view_filters import _finding_triage_state as _finding_triage_state
+from agent_bom.api.finding_view_filters import _matches_reachability as _matches_reachability
+from agent_bom.api.finding_view_filters import _view_envelope as _view_envelope
+from agent_bom.api.finding_view_filters import _view_filtered_row as _view_filtered_row
+from agent_bom.api.finding_view_filters import _view_filters as _view_filters
+from agent_bom.api.finding_view_filters import _ViewWalk as _ViewWalk
+from agent_bom.api.finding_view_filters import _walk_view_filtered_findings as _walk_view_filtered_findings
 from agent_bom.api.findings_current import _finding_snapshot_jobs, current_scan_jobs
 from agent_bom.api.hub_ingest import hub_ingest_store_writes, hub_store_call
 from agent_bom.api.idempotency_store import (
@@ -88,6 +129,7 @@ from agent_bom.api.models import (
 )
 from agent_bom.api.pipeline import _now, request_scan_cancellation, submit_scan_job
 from agent_bom.api.read_models import FindingsResponse, JobsResponse, documented
+from agent_bom.api.read_models.scan import ScanDriversResponse, ScanLicensesResponse, ScanStatusResponse, ScanVexResponse
 from agent_bom.api.remediation_view import CurrentRemediationResponse
 from agent_bom.api.scan_batches import child_request_for_target, refresh_batch_parent, scan_request_targets
 from agent_bom.api.scan_cohorts import (  # noqa: F401 - re-exported route-module API
@@ -95,6 +137,21 @@ from agent_bom.api.scan_cohorts import (  # noqa: F401 - re-exported route-modul
     correlation_cohort_id,
     correlation_cohort_parent_job_id,
 )
+from agent_bom.api.scan_finding_projection import _finding_from_blast_radius as _finding_from_blast_radius
+from agent_bom.api.scan_finding_projection import _iter_scan_findings as _iter_scan_findings
+from agent_bom.api.scan_finding_projection import _project_finding_owners_and_suppressions as _project_finding_owners_and_suppressions
+from agent_bom.api.scan_finding_read import _bulk_ingested_findings_for_tenant as _bulk_ingested_findings_for_tenant
+from agent_bom.api.scan_finding_read import _cached_scan_findings as _cached_scan_findings
+from agent_bom.api.scan_finding_read import _completed_jobs_for_tenant as _completed_jobs_for_tenant
+from agent_bom.api.scan_finding_read import _current_scan_rows as _current_scan_rows
+from agent_bom.api.scan_finding_read import current_open_scan_findings as current_open_scan_findings
+from agent_bom.api.scan_finding_read import iter_tenant_scan_spine_findings as iter_tenant_scan_spine_findings
+from agent_bom.api.scan_finding_read import persisted_finding_evidence as persisted_finding_evidence
+from agent_bom.api.scan_graph_view import _attach_unified_graph_view as _attach_unified_graph_view
+from agent_bom.api.scan_graph_view import _context_graph_payload as _context_graph_payload
+from agent_bom.api.scan_graph_view import _effective_reach_lookup as _effective_reach_lookup
+from agent_bom.api.scan_graph_view import _graph_export_response as _graph_export_response
+from agent_bom.api.scan_graph_view import _scan_graph_compute_call as _scan_graph_compute_call
 from agent_bom.api.scan_job_reconciliation import reconcile_scan_jobs_active
 from agent_bom.api.scan_job_views import (  # noqa: F401 - re-exported route-module API
     _inventory_packages_from_agents,
@@ -110,7 +167,6 @@ from agent_bom.api.scan_path_jail import (  # noqa: F401 - re-exported route-mod
     _enforce_api_scan_path_owner,
     _sanitize_api_path,
 )
-from agent_bom.api.scan_snapshot_read import verified_snapshot_findings
 from agent_bom.api.stores import (
     _get_graph_store,
     _get_idempotency_store,
@@ -124,22 +180,11 @@ from agent_bom.api.stores import (
 from agent_bom.api.tenancy import require_body_tenant_match, require_request_tenant_id
 from agent_bom.api.tenant_quota import enforce_active_scan_quota, enforce_retained_jobs_quota, tenant_quota_guard
 from agent_bom.backpressure import BackpressureRejectedError, adaptive_backpressure
-from agent_bom.canonical_ids import canonical_id
 from agent_bom.evidence.agent_bom import AgentBomDocument
 from agent_bom.evidence.scan_agent_bom import AgentSelectionError, build_scan_agent_bom
-from agent_bom.finding_runtime_evidence import (
-    attach_runtime_evidence_to_finding,
-    build_incident_runtime_evidence_index,
-    build_tenant_runtime_evidence_index,
-    compliance_tags_from_finding_row,
-)
 from agent_bom.finding_scope import (
-    FINDING_CLASSES,
-    SECURITY_DOMAINS,
     FindingClass,
     canonical_finding_severity_filter,
-    finding_class_for_row,
-    lenses_for_row,
 )
 from agent_bom.rbac import require_authenticated_permission
 from agent_bom.security import sanitize_error, sanitize_text
@@ -157,11 +202,6 @@ def _require_json_content_type(request: Request) -> None:
     media_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
     if media_type != "application/json" and not media_type.endswith("+json"):
         raise HTTPException(status_code=422, detail="Content-Type must be application/json")
-
-
-async def _scan_graph_compute_call(fn: Callable[..., Any], /, *args: Any, **kwargs: Any) -> Any:
-    """Run graph rendering/derivation for scan subresources off the event loop."""
-    return await asyncio.to_thread(fn, *args, **kwargs)
 
 
 # Shared off-loop hub ingest write path (also used by /v1/compliance/ingest).
@@ -231,517 +271,10 @@ def _visible_to_tenant(job: ScanJob, tenant_id: str) -> bool:
     return getattr(job, "tenant_id", "default") == tenant_id
 
 
-def _completed_jobs_for_tenant(tenant_id: str) -> list[ScanJob]:
-    return read_once(
-        ("jobs", tenant_id),
-        lambda: [job for job in _get_store().list_all(tenant_id=tenant_id) if job.status == JobStatus.DONE and job.result],
-    )
-
-
-def iter_tenant_scan_spine_findings(
-    tenant_id: str,
-    *,
-    since: str | None = None,
-    severity: str | None = None,
-    scan_id: str | None = None,
-    scope: Mapping[str, str] | None = None,
-    status: str = "all",
-    sanitize: bool = True,
-) -> list[dict[str, Any]]:
-    """Current scan-spine findings for a tenant — the same source ``/v1/findings`` shows.
-
-    The scan pipeline never writes the compliance hub, so these live only in the
-    in-memory job store. The scheduled findings export unions this with the hub
-    stream so a scan-based estate is not silently exported as empty. Bounded by
-    the scan-job results already resident in memory (no per-tenant DB scan).
-    """
-    from agent_bom.api.compliance_hub_store import status_matches
-    from agent_bom.api.findings_current import scan_only_findings
-
-    rows = _current_scan_rows(tenant_id, since, scan_id)
-    rows = scan_only_findings(rows, tenant_id, scan_id=scan_id)
-    if severity:
-        normalized = severity.lower()
-        rows = [item for item in rows if str(item.get("severity", "")).lower() == normalized]
-    rows = [item for item in rows if status_matches(item, status)]
-    if scope:
-        rows = [item for item in rows if _row_matches_scope(item, dict(scope))]
-    if not sanitize:
-        return rows
-    from agent_bom.finding_scope import safe_finding_response_payload
-
-    return [safe_finding_response_payload(row) for row in rows]
-
-
-def persisted_finding_evidence(
-    *,
-    tenant_id: str,
-    cve_id: str,
-    scan_id: str | None = None,
-) -> dict[str, Any]:
-    """Return one vulnerability from the same persisted finding sources as REST.
-
-    MCP tools call this in-process instead of running a second laptop scan. The
-    response distinguishes an empty persisted estate from a process that has no
-    persisted scan evidence at all, allowing standalone MCP mode to retain its
-    local-scan fallback without mixing the two scopes.
-    """
-    scan_jobs = _completed_jobs_for_tenant(tenant_id)
-    if scan_id:
-        scan_jobs = [job for job in scan_jobs if str((job.result or {}).get("scan_id") or job.job_id) == scan_id]
-    rows = iter_tenant_scan_spine_findings(tenant_id, scan_id=scan_id, status="all")
-    bulk_rows = _bulk_ingested_findings_for_tenant(tenant_id)
-    if scan_id:
-        bulk_rows = [row for row in bulk_rows if str(row.get("scan_id") or "") == scan_id]
-    from agent_bom.finding_scope import safe_finding_response_payload
-
-    rows.extend(safe_finding_response_payload(row) for row in bulk_rows)
-    deduped: dict[tuple[str, str, str], dict[str, Any]] = {}
-    for row in rows:
-        key = (
-            str(row.get("canonical_id") or row.get("id") or ""),
-            str(row.get("cve_id") or row.get("vulnerability_id") or ""),
-            str(row.get("package") or row.get("package_name") or ""),
-        )
-        deduped[key] = row
-    wanted = cve_id.strip().upper()
-    matched = [
-        row
-        for row in deduped.values()
-        if str(row.get("cve_id") or row.get("vulnerability_id") or row.get("id") or "").strip().upper() == wanted
-    ]
-    # An explicit scan scope must never fall through to an unrelated local MCP
-    # scan merely because the requested persisted scan is absent.
-    source_available = bool(scan_jobs or bulk_rows or scan_id)
-    from agent_bom.api.findings_current import current_scan_jobs, scan_collection_incomplete_reasons
-
-    incomplete_reasons = sorted(
-        {reason for job in current_scan_jobs(scan_jobs, since=None, scan_id=scan_id) for reason in scan_collection_incomplete_reasons(job)}
-    )
-    return {
-        "available": source_available,
-        "source": "persisted_scan_findings",
-        "scope": {"tenant_id": tenant_id, "scan_id": scan_id},
-        "completeness": {
-            "status": "partial" if incomplete_reasons else "complete",
-            "basis": "persisted_row_enumeration",
-            "reason": (
-                "Collection was incomplete; retained earlier findings may be unreconfirmed."
-                if incomplete_reasons
-                else "Persisted rows were enumerated; this does not establish collection coverage."
-            ),
-            "reason_codes": incomplete_reasons,
-        },
-        "findings": matched,
-    }
-
-
-def _bulk_ingested_findings_for_tenant(tenant_id: str) -> list[dict[str, Any]]:
-    from agent_bom.api.compliance_hub_store import get_compliance_hub_store
-
-    return [item for item in get_compliance_hub_store().list(tenant_id) if isinstance(item, dict) and item.get("origin") == "bulk_ingest"]
-
-
 def _redact_finding_page(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     from agent_bom.finding_scope import safe_finding_response_payload
 
     return [safe_finding_response_payload(project_list_row(row)) for row in rows]
-
-
-def _finding_identity(finding: dict[str, Any]) -> str:
-    """Stable identity used to collapse the default findings view.
-
-    Prefers the finding ``id`` (what Postgres' ``hub_findings_current`` keys on)
-    and falls back to the vuln:package content key when a scan row omits ``id``.
-    """
-    from agent_bom.api.findings_current import finding_identity
-
-    return finding_identity(finding)
-
-
-def _canonical_group_key(finding: dict[str, Any]) -> str:
-    """Collapse the three per-CVE representations onto one grouping key.
-
-    Findings that carry a CVE/advisory id group by
-    ``(vuln_id, package_name, version, ecosystem, asset)`` so the unified,
-    ``blast_radius`` and ``package_vulnerability`` rows for the *same
-    vulnerability on the same asset* merge into a single list row. Non-CVE
-    findings (posture, malicious-package, etc.) fall back to their stable
-    identity so distinct findings stay distinct.
-
-    ``asset`` is in the key, and its absence was a real under-count. The three
-    representations this function exists to merge all describe one vulnerability
-    on **one** asset, so the asset was never needed to merge them — but leaving
-    it out also merged the same package version across *different* assets. A
-    scan of one repository never noticed, because a package appears once. An
-    estate does: the demo ships fifteen advisories across 768 inventoried
-    package rows in 129 container images, and ``/v1/findings`` reported 1,833 of
-    2,616 rows — the entire vulnerability lane folded to fifteen — while every
-    surface described the result as the total. A dedup key that omits the scope
-    of the thing it dedupes is the same defect class that once dropped a second
-    tenant's rows here.
-    """
-    vuln = _row_vuln_id(finding)
-    if vuln:
-        name, version, ecosystem = _package_identity(finding)
-        return f"vuln:{vuln.lower()}:{name}:{version}:{ecosystem}:{_row_asset_key(finding)}"
-    return f"id:{_finding_identity(finding)}"
-
-
-def _row_asset_key(finding: dict[str, Any]) -> str:
-    """The asset a row is about, in whichever spelling its representation uses.
-
-    Empty when a representation names no asset — which keeps the merge working:
-    a blast-radius row that identifies no asset still folds onto the unified row
-    for the same vulnerability and package rather than splitting off on its own.
-    """
-    raw_asset = finding.get("asset")
-    asset = raw_asset if isinstance(raw_asset, dict) else {}
-    for value in (
-        asset.get("identifier"),
-        asset.get("canonical_id"),
-        asset.get("stable_id"),
-        finding.get("resource_id"),
-    ):
-        text = str(value or "").strip()
-        if text:
-            return text.lower()
-    return ""
-
-
-def _finding_from_blast_radius(item: dict[str, Any], job: ScanJob) -> dict[str, Any]:
-    vulnerability_id = item.get("vulnerability_id") or item.get("id") or ""
-    package = item.get("package") or item.get("package_name") or ""
-    vex_status = item.get("vex_status")
-    risk_score = item.get("risk_score", item.get("blast_score", 0))
-    vex_suppressed = False  # Historical or uploaded VEX assertions cannot authorize suppression.
-    canonical_id = item.get("canonical_id") or item.get("finding_id")
-    row = {
-        "id": canonical_id or f"{vulnerability_id}:{package}",
-        "canonical_id": canonical_id,
-        "asset": item.get("asset"),
-        "vulnerability_id": vulnerability_id,
-        "package": package,
-        "severity": (item.get("severity") or "unknown").lower(),
-        "source": "blast_radius",
-        "scan_id": str((job.result or {}).get("scan_id") or job.job_id),
-        "scan_sources": _scan_source_labels(job),
-        "affected_agents": item.get("affected_agents", []),
-        "affected_servers": item.get("affected_servers", []),
-        "exposed_credentials": item.get("exposed_credentials", []),
-        "exposed_tools": item.get("exposed_tools", []),
-        "phantom_tools": item.get("phantom_tools", []),
-        "risk_score": risk_score,
-        "cvss_score": item.get("cvss_score"),
-        "epss_score": item.get("epss_score"),
-        "upstream_ids": item.get("upstream_ids"),
-        "epss_cve_id": item.get("epss_cve_id"),
-        "kev_cve_id": item.get("kev_cve_id"),
-        "attack_vector_summary": item.get("attack_vector_summary"),
-        "impact_category": item.get("impact_category"),
-        "ai_risk_context": item.get("ai_risk_context"),
-        "fixed_version": item.get("fixed_version"),
-        "is_kev": bool(item.get("is_kev") or item.get("cisa_kev")),
-        "graph_reachable": item.get("graph_reachable"),
-        "graph_min_hop_distance": item.get("graph_min_hop_distance"),
-        "graph_reachable_from_agents": item.get("graph_reachable_from_agents", []),
-        "symbol_reachability": item.get("symbol_reachability"),
-        "reachable_affected_symbols": item.get("reachable_affected_symbols", []),
-        "symbol_reachability_reason": item.get("symbol_reachability_reason"),
-        "runtime_dependency_chain": item.get("runtime_dependency_chain", []),
-        "match_confidence_tier": item.get("match_confidence_tier"),
-        "vex_status": vex_status,
-        "vex_justification": item.get("vex_justification"),
-        "vex_suppressed": vex_suppressed,
-        "compliance_tags": item.get("compliance_tags"),
-    }
-    for tag_field in (
-        "owasp_tags",
-        "atlas_tags",
-        "attack_tags",
-        "nist_ai_rmf_tags",
-        "owasp_mcp_tags",
-        "owasp_agentic_tags",
-        "eu_ai_act_tags",
-        "nist_csf_tags",
-        "iso_27001_tags",
-        "soc2_tags",
-        "cis_tags",
-        "cmmc_tags",
-        "nist_800_53_tags",
-        "fedramp_tags",
-        "pci_dss_tags",
-    ):
-        if tag_field in item:
-            row[tag_field] = item.get(tag_field) or []
-    from agent_bom.finding_runtime_evidence import compliance_tags_from_finding_row
-
-    row["framework_tags"] = compliance_tags_from_finding_row(row)
-    return row
-
-
-def _effective_reach_lookup(job: ScanJob) -> dict[str, dict[str, Any]]:
-    """Build a per-vuln lookup of the effective-reach breakdown.
-
-    Builds a one-shot context graph from the job's ``agents`` +
-    ``blast_radius`` and runs :func:`agent_bom.effective_reach.annotate_graph`.
-    Returned dict is keyed by *vulnerability_id* (e.g. ``CVE-2024-1234``)
-    so the various finding shapes (top-level, blast-radius, package
-    inner-vuln) can all hydrate from the same map.
-    """
-    result = job.result or {}
-    try:
-        from agent_bom.context_graph import NodeKind, build_context_graph
-
-        graph = build_context_graph(
-            result.get("agents", []) or [],
-            result.get("blast_radius", []) or result.get("blast_radii", []) or [],
-        )
-    except Exception:  # pragma: no cover - never break the findings list
-        return {}
-    out: dict[str, dict[str, Any]] = {}
-    for node in graph.nodes.values():
-        if node.kind != NodeKind.VULNERABILITY:
-            continue
-        breakdown = node.metadata.get("effective_reach")
-        if isinstance(breakdown, dict):
-            out[node.label] = breakdown
-    return out
-
-
-def _attach_unified_graph_view(payload: dict[str, Any], result: dict[str, Any], *, scan_id: str, tenant_id: str) -> dict[str, Any]:
-    """Attach the canonical graph view without changing legacy context fields."""
-    try:
-        from agent_bom.graph.builder import build_unified_graph_from_report
-
-        unified = build_unified_graph_from_report(result, scan_id=scan_id, tenant_id=tenant_id)
-    except Exception:  # pragma: no cover - graph bridge must not break legacy response
-        payload.setdefault("warnings", []).append("Unified graph view unavailable for this scan result")
-        return payload
-
-    payload["unified_graph"] = {
-        "schema_version": "agent-bom.graph/v1",
-        **unified.to_dict(),
-    }
-    return payload
-
-
-def _context_graph_payload(result: dict[str, Any], *, agent: str | None, scan_id: str, tenant_id: str) -> dict[str, Any]:
-    from agent_bom.context_graph import (
-        NodeKind,
-        build_context_graph,
-        collect_lateral_paths,
-        compute_interaction_risks,
-        to_serializable,
-    )
-
-    graph = build_context_graph(
-        result.get("agents", []),
-        result.get("blast_radius", []),
-    )
-    paths: list = []
-    paths_truncated = False
-    if agent:
-        node_id = f"agent:{agent}"
-        if node_id in graph.nodes:
-            paths, paths_truncated = collect_lateral_paths(graph, [node_id])
-    else:
-        source_ids = (nid for nid, node in sorted(graph.nodes.items()) if node.kind == NodeKind.AGENT)
-        paths, paths_truncated = collect_lateral_paths(graph, source_ids)
-    risks = compute_interaction_risks(graph)
-
-    payload = to_serializable(graph, paths, risks)
-    payload["stats"]["lateral_paths_truncated"] = paths_truncated
-    attached = _attach_unified_graph_view(payload, result, scan_id=scan_id, tenant_id=tenant_id)
-    from agent_bom.output.interop_security import sanitize_linked_document
-
-    return sanitize_linked_document(attached)
-
-
-def _graph_export_response(
-    result: dict[str, Any], *, format: str, mermaid_limit: int, scan_id: str | None = None, tenant_id: str | None = None
-) -> dict | str | PlainTextResponse:
-    from agent_bom.output.graph_export import (
-        build_graph_from_scan_data,
-        to_cypher,
-        to_dot,
-        to_graphml,
-        to_mermaid,
-    )
-    from agent_bom.output.graph_export import (
-        to_json as graph_to_json,
-    )
-
-    graph = build_graph_from_scan_data(result)
-
-    def _render_mermaid(g: Any) -> PlainTextResponse:
-        if mermaid_limit == 0:
-            return PlainTextResponse(
-                to_mermaid(g, max_nodes=None, max_edges=None),
-                media_type="text/plain",
-            )
-        return PlainTextResponse(
-            to_mermaid(g, max_nodes=mermaid_limit),
-            media_type="text/plain",
-        )
-
-    formats = {
-        "dot": lambda g: PlainTextResponse(to_dot(g), media_type="text/vnd.graphviz"),
-        "mermaid": _render_mermaid,
-        "graphml": lambda g: PlainTextResponse(to_graphml(g), media_type="application/xml"),
-        "cypher": lambda g: PlainTextResponse(to_cypher(g), media_type="text/plain"),
-    }
-    if format in formats:
-        return formats[format](graph)
-    return graph_to_json(graph, scan_id=scan_id, tenant_id=tenant_id)
-
-
-def _current_scan_rows(tenant_id: str, window_since: str | None, scan_id: str | None) -> list[dict[str, Any]]:
-    return read_once(
-        ("current_rows", json.dumps([tenant_id, window_since, scan_id])),
-        lambda: current_findings_with_history(
-            _get_store(),
-            tenant_id,
-            window_since,
-            scan_id,
-            _iter_scan_findings,
-            lambda: findings_current.current_scan_findings(
-                _completed_jobs_for_tenant(tenant_id),
-                since=window_since,
-                scan_id=scan_id,
-                iter_findings=_cached_scan_findings,
-            ),
-            fold=findings_current.current_scan_findings,
-            select_jobs=findings_current._finding_snapshot_jobs,
-        ),
-    )
-
-
-def _cached_scan_findings(job: ScanJob) -> list[dict[str, Any]]:
-    key = json.dumps([job.tenant_id, job.job_id, str(job.status), job.completed_at])
-    return read_once(("rows", key), lambda: _iter_scan_findings(job))
-
-
-def current_open_scan_findings(jobs: list[Any]) -> list[dict[str, Any]]:
-    """Open, executed-evidence current rows, shared by every block of one aggregate read."""
-    from agent_bom.api import time_window
-    from agent_bom.api.compliance_hub_store import status_matches
-
-    since = time_window.window_since_iso(time_window.normalize_window_days(None))
-    tenant_id = str(getattr(jobs[0], "tenant_id", "default")) if jobs else "default"
-    job_keys = sorted((str(job.job_id), str(job.status), str(job.completed_at)) for job in jobs)
-
-    def load() -> list[dict[str, Any]]:
-        rows = findings_current.current_scan_findings(
-            jobs, since=since, scan_id=None, iter_findings=_cached_scan_findings, require_authoritative_evidence=True
-        )
-        return [row for row in findings_current.scan_only_findings(rows, tenant_id) if status_matches(row, "open")]
-
-    return read_once(("current_open_rows", json.dumps([tenant_id, since, job_keys])), load)
-
-
-def _iter_scan_findings(job: ScanJob) -> list[dict[str, Any]]:
-    result = job.result or {}
-    reach: dict[str, dict[str, Any]] | None = None
-
-    def use_reach(value: dict[str, dict[str, Any]] | None) -> None:
-        nonlocal reach
-        reach = value
-
-    tenant_id = str(getattr(job, "tenant_id", None) or "default")
-    runtime_index = read_once(("runtime_events", tenant_id), lambda: build_tenant_runtime_evidence_index(tenant_id))
-    incidents = result.get("runtime_incident_feedback")
-    incident_index = build_incident_runtime_evidence_index(incidents if isinstance(incidents, list) else [])
-
-    # CWPP runtime/EDR workload evidence (#4158 stage 3): additive, read-only.
-    # Only workload-scoped rows are annotated, and only when this tenant actually
-    # has runtime signals — an empty index leaves every row untouched, so absence
-    # of runtime data is never rendered as a clean workload. Reachability is never
-    # invented here.
-    from agent_bom.cloud.runtime_workload_evidence import (
-        RuntimeWorkloadEvidenceIndex,
-        attach_workload_runtime_evidence_to_finding,
-    )
-    from agent_bom.cloud.runtime_workload_evidence_store import get_runtime_workload_evidence_store
-
-    workload_runtime_index: RuntimeWorkloadEvidenceIndex | None = None
-    try:
-        _wl_index = read_once(
-            ("workload_runtime_events", tenant_id),
-            lambda: RuntimeWorkloadEvidenceIndex.from_store(get_runtime_workload_evidence_store(), tenant_id),
-        )
-        if not _wl_index.is_empty():
-            workload_runtime_index = _wl_index
-    except Exception:  # noqa: BLE001 - runtime evidence is additive; never break the read path
-        workload_runtime_index = None
-
-    def _attach_reach(row: dict[str, Any]) -> dict[str, Any]:
-        nonlocal reach
-        if reach is None:
-            reach = _effective_reach_lookup(job)
-        from agent_bom.symbol_reach_triage import adjust_effective_reach_breakdown, symbol_reachability_from_payload
-
-        vuln_id = row.get("vulnerability_id") or row.get("cve_id") or row.get("id") or ""
-        breakdown = reach.get(str(vuln_id))
-        sym = symbol_reachability_from_payload(row)
-        if breakdown:
-            adjusted = adjust_effective_reach_breakdown(breakdown, sym)
-            row["effective_reach"] = adjusted
-            row.setdefault("effective_reach_score", adjusted.get("composite"))
-            row.setdefault("effective_reach_band", adjusted.get("band"))
-        elif sym:
-            from agent_bom.symbol_reach_triage import apply_composite_delta, band_from_composite
-
-            composite = apply_composite_delta(0.0, sym)
-            row["effective_reach"] = {
-                "composite": composite,
-                "band": band_from_composite(composite),
-                "symbol_reachability": sym,
-            }
-            row.setdefault("effective_reach_score", composite)
-            row.setdefault("effective_reach_band", band_from_composite(composite))
-        row.setdefault("framework_tags", compliance_tags_from_finding_row(row))
-        # Scan completion is authoritative observation time for scan-spine rows.
-        # Do not infer first-seen history from the currently retained job set.
-        observed_at = getattr(job, "completed_at", None) or getattr(job, "created_at", None)
-        if observed_at is not None:
-            row.setdefault("last_observed", observed_at)
-        attach_runtime_evidence_to_finding(row, runtime_index, incident_index=incident_index)
-        if workload_runtime_index is not None:
-            attach_workload_runtime_evidence_to_finding(row, workload_runtime_index)
-        return row
-
-    findings = verified_snapshot_findings(
-        job, lambda: collect_scan_findings(job, _attach_reach), _attach_reach, merge=merge_finding_representations, use_reach=use_reach
-    )
-    return _project_finding_owners_and_suppressions(findings, tenant_id)
-
-
-def _project_finding_owners_and_suppressions(findings: list[dict[str, Any]], tenant_id: str) -> list[dict[str, Any]]:
-    # Surface the triage assignee as the finding owner (the simple ownership cut).
-    # Built once per tenant and matched per row; rows with no triage assignee keep
-    # whatever owner the scan spine already set (an explicit None when unassigned,
-    # rendered "Unassigned" only in the CLI/UI).
-    from agent_bom.api.routes.enterprise import build_tenant_triage_owner_index, triage_owner_for
-
-    owner_index = build_tenant_triage_owner_index(tenant_id)
-    for row in findings:
-        _normalize_finding_identifiers(row)
-        if owner_index:
-            raw_asset = row.get("asset")
-            asset = raw_asset if isinstance(raw_asset, dict) else {}
-            raw_evidence = row.get("evidence")
-            evidence = raw_evidence if isinstance(raw_evidence, dict) else {}
-            package = str(row.get("package") or row.get("package_name") or evidence.get("package_name") or asset.get("name") or "")
-            assignee = triage_owner_for(
-                owner_index,
-                vuln_id=str(row.get("vulnerability_id") or row.get("cve_id") or ""),
-                package=package,
-                server_name=str(row.get("server_name") or ""),
-            )
-            if assignee:
-                row["owner"] = assignee
-    return project_current_suppressions(findings, tenant_id)
 
 
 def _job_for_request(request: Request, job_id: str) -> ScanJob:
@@ -1512,7 +1045,7 @@ async def check_package(body: PackageCheckRequest) -> dict[str, Any]:
     return payload
 
 
-@router.get("/scan/drivers", tags=["scan"])
+@router.get("/scan/drivers", **documented(ScanDriversResponse), tags=["scan"])
 def list_scan_drivers(include_planned: bool = True) -> dict:
     """List scanner driver contracts and orchestration semantics."""
 
@@ -1540,7 +1073,7 @@ async def get_scan(request: Request, job_id: str) -> ScanJob:
     return await _job_response_payload_off_loop(await _load_job_for_request(request, job_id))
 
 
-@router.get("/scan/{job_id}/status", tags=["scan"])
+@router.get("/scan/{job_id}/status", **documented(ScanStatusResponse), tags=["scan"])
 async def get_scan_status(request: Request, job_id: str) -> dict[str, Any]:
     """Poll lightweight scan status without serializing large result payloads."""
     return _job_summary_payload(await _load_job_for_request(request, job_id))
@@ -1718,13 +1251,9 @@ async def get_remediation_plan(request: Request, job_id: str) -> dict:
     return {"job_id": job_id, "remediation_plan": plan, "total": len(plan)}
 
 
-@router.get("/scan/{job_id}/licenses", tags=["scan"])
+@router.get("/scan/{job_id}/licenses", **documented(ScanLicensesResponse), tags=["scan"])
 async def get_licenses(request: Request, job_id: str) -> dict:
-    """Get the license compliance report for a completed scan.
-
-    Returns license findings, summary, compliance status, and per-package
-    license categorization (permissive, copyleft, commercial risk, unknown).
-    """
+    """Return a completed scan's license findings, coverage, status and categories."""
     job = await _load_job_for_request(request, job_id)
     if job.status != JobStatus.DONE or not job.result:
         raise HTTPException(status_code=409, detail="Scan not completed yet")
@@ -1762,10 +1291,10 @@ async def get_licenses(request: Request, job_id: str) -> dict:
         )
 
     lic_report = _eval_lic(model_agents)
-    return _lic_ser(lic_report)
+    return dict(_lic_ser(lic_report))
 
 
-@router.get("/scan/{job_id}/vex", tags=["scan"])
+@router.get("/scan/{job_id}/vex", **documented(ScanVexResponse), tags=["scan"])
 async def get_vex(request: Request, job_id: str) -> dict:
     """Get the VEX (Vulnerability Exploitability eXchange) document for a completed scan.
 
@@ -2015,664 +1544,6 @@ def _list_jobs_impl(
         "offset": offset,
         "status_counts": status_counts,
     }
-
-
-_FACET_SCAN_BUDGET = 50_000
-_FACET_DEADLINE_SECONDS = 1.5
-
-
-def _facet_severity_histogram(
-    tenant_id: str,
-    *,
-    severity: str | None,
-    scan_id: str | None,
-    since: str | None,
-    scope: Mapping[str, str],
-    status: str,
-) -> dict[str, int] | None:
-    """Serve the self-excluding severity histogram from the store's aggregate.
-
-    Every other facet dimension is gated on ``severity_matches``, so a
-    ``?severity=`` request only needs severity-matching rows resident — except
-    this histogram, which by contract excludes its own filter and therefore
-    needs every band. Answering it with the store's indexed ``GROUP BY`` (the
-    same one the overview headline reconciles against) lets the caller push
-    ``severity`` into the store query and stop walking the non-matching
-    remainder in Python.
-
-    Returns ``None`` when the request is not expressible as that aggregate — no
-    active severity filter (the walk is already minimal), a payload-side scope
-    filter, a ``scan_id`` the aggregate does not carry, or a store without the
-    capability — in which case the caller keeps the unfiltered walk unchanged.
-    """
-    if severity is None or scan_id is not None:
-        return None
-    if severity.strip().lower() not in _FACET_LITERAL_SEVERITY_BANDS:
-        return None
-    if any(key in scope for key in _FACET_PAYLOAD_SCOPE_KEYS):
-        return None
-
-    from agent_bom.api.compliance_hub_store import get_compliance_hub_store, status_matches
-    from agent_bom.export.runner import iter_scan_spine_findings
-
-    breakdown = getattr(get_compliance_hub_store(), "current_severity_breakdown", None)
-    if not callable(breakdown):
-        return None
-    try:
-        raw = breakdown(tenant_id, since=since, status=status)
-    except TypeError:
-        # A store whose aggregate cannot honour the active predicates would
-        # silently answer a different question; keep the exact walk instead.
-        return None
-
-    counts = {key: 0 for key in ("critical", "high", "medium", "low", "info", "unknown")}
-    for band, value in dict(raw).items():
-        counts[_normalize_facet_severity(band)] += int(value)
-
-    # The aggregate covers the hub's current state only. The read path also
-    # unions the resident scan spine, so fold its (bounded, in-memory) rows in
-    # under the same predicates or the histogram would undercount a scan estate.
-    for row in iter_scan_spine_findings(
-        tenant_id,
-        severity=None,
-        since=since,
-        scan_id=scan_id,
-        scope=scope,
-        status="all",
-    ):
-        if status_matches(row, status):
-            counts[_normalize_facet_severity(row.get("severity"))] += 1
-    return counts
-
-
-def _finding_facets(
-    tenant_id: str,
-    *,
-    severity: str | None,
-    scan_id: str | None,
-    since: str | None,
-    scope: Mapping[str, str],
-    status: str,
-) -> tuple[dict[str, dict[str, int]], int]:
-    facets, total, _metadata = _finding_facets_bounded(
-        tenant_id,
-        severity=severity,
-        scan_id=scan_id,
-        since=since,
-        scope=scope,
-        status=status,
-    )
-    return facets, total
-
-
-_FACET_SEVERITY_BANDS = ("critical", "high", "medium", "low", "info", "unknown")
-_TRIAGE_DISPOSITIONS = frozenset({"affected", "not_affected", "under_investigation"})
-
-
-class _FacetScopes(NamedTuple):
-    """Self-excluding scope variants: each dimension ignores its own filter."""
-
-    full: dict[str, str]
-    finding_class: dict[str, str]
-    domain: dict[str, str]
-    base: dict[str, str]
-
-    @classmethod
-    def from_scope(cls, scope: Mapping[str, str]) -> _FacetScopes:
-        full = dict(scope)
-        class_scope = {key: value for key, value in full.items() if key != "finding_class"}
-        domain_scope = {key: value for key, value in full.items() if key != "domain"}
-        base = {key: value for key, value in full.items() if key not in ("finding_class", "domain")}
-        return cls(full=full, finding_class=class_scope, domain=domain_scope, base=base)
-
-
-def _facet_reachability_bucket(row: Mapping[str, Any]) -> str:
-    reachable = row.get("graph_reachable")
-    return "reachable" if reachable is True else "unreachable" if reachable is False else "unassessed"
-
-
-def _facet_exploit_bucket(row: Mapping[str, Any]) -> str:
-    is_kev = row.get("is_kev") is True
-    epss = row.get("epss_score")
-    has_epss = isinstance(epss, (int, float)) and not isinstance(epss, bool)
-    if is_kev:
-        return "kev_and_epss" if has_epss else "kev_only"
-    return "epss_only" if has_epss else "unavailable"
-
-
-def _facet_has_fix(row: Mapping[str, Any]) -> bool:
-    versions = row.get("remediation_versions")
-    has_remediation_version = isinstance(versions, (list, tuple)) and any(str(value).strip() for value in versions)
-    return bool(str(row.get("fixed_version") or "").strip()) or has_remediation_version
-
-
-class _FacetCounts:
-    """Mutable counters for one bounded facet walk."""
-
-    def __init__(self) -> None:
-        self.finding_class: dict[str, int] = {key: 0 for key in FINDING_CLASSES}
-        self.severity: dict[str, int] = {key: 0 for key in _FACET_SEVERITY_BANDS}
-        self.status: dict[str, int] = {key: 0 for key in ("open", "resolved")}
-        self.domain: dict[str, int] = {key: 0 for key in SECURITY_DOMAINS}
-        self.freshness: dict[str, int] = {key: 0 for key in _FRESHNESS_BUCKETS}
-        self.reachability = {key: 0 for key in ("reachable", "unreachable", "unassessed")}
-        self.exploit_intelligence = {key: 0 for key in ("kev_and_epss", "kev_only", "epss_only", "unavailable")}
-        self.fixability = {key: 0 for key in ("fix_available", "no_fix_available")}
-        self.ownership = {key: 0 for key in ("owned", "unowned")}
-        self.disposition = {key: 0 for key in ("affected", "not_affected", "under_investigation", "untriaged")}
-        self.total = 0
-
-    def add_in_scope_row(self, row: dict[str, Any], triage_index: Any) -> None:
-        """Count a row that matches every active filter."""
-        self.total += 1
-        self.freshness[_freshness_bucket(row)] += 1
-        self.reachability[_facet_reachability_bucket(row)] += 1
-        self.exploit_intelligence[_facet_exploit_bucket(row)] += 1
-        self.fixability["fix_available" if _facet_has_fix(row) else "no_fix_available"] += 1
-        triage_state = _finding_triage_state(row, triage_index)
-        owner = str(row.get("owner") or "").strip() or str((triage_state or {}).get("assignee") or "").strip()
-        self.ownership["owned" if owner else "unowned"] += 1
-        decision = str((triage_state or {}).get("decision") or "").strip()
-        self.disposition[decision if decision in _TRIAGE_DISPOSITIONS else "untriaged"] += 1
-
-    def as_dict(self, pushed_severity: dict[str, int] | None) -> dict[str, dict[str, int]]:
-        return {
-            "finding_class": self.finding_class,
-            "severity": pushed_severity if pushed_severity is not None else self.severity,
-            "status": self.status,
-            "domain": self.domain,
-            "freshness": self.freshness,
-            "reachability": self.reachability,
-            "exploit_intelligence": self.exploit_intelligence,
-            "fixability": self.fixability,
-            "ownership": self.ownership,
-            "disposition": self.disposition,
-        }
-
-
-def _count_facet_row(
-    row: dict[str, Any],
-    counts: _FacetCounts,
-    *,
-    severity: str | None,
-    status: str,
-    scopes: _FacetScopes,
-    count_severity: bool,
-    triage_index: Any,
-) -> None:
-    """Test one resident row against every dimension's self-excluding predicate."""
-    finding_class = finding_class_for_row(row)
-    row_severity = _normalize_facet_severity(row.get("severity"))
-    # Re-checked in Python even when the predicate was pushed down, so a store
-    # that ignores the kwarg degrades to slow, never to wrong.
-    severity_matches = severity is None or row_severity == severity.lower()
-    status_ok = compliance_hub_store.status_matches(row, status)
-    full_scope_ok = _row_matches_scope(row, scopes.full)
-    if severity_matches and status_ok and _row_matches_scope(row, scopes.finding_class):
-        counts.finding_class[finding_class] += 1
-    if count_severity and status_ok and full_scope_ok:
-        # Only on the unfiltered walk: once ``severity`` is a store-side
-        # predicate this stream no longer carries the other bands.
-        counts.severity[row_severity] += 1
-    if severity_matches and full_scope_ok:
-        counts.status["resolved" if str(row.get("status") or "").strip().lower() == "resolved" else "open"] += 1
-    if severity_matches and status_ok and _row_matches_scope(row, scopes.domain):
-        for value in lenses_for_row(row):
-            if value in counts.domain:
-                counts.domain[value] += 1
-    if severity_matches and status_ok and full_scope_ok:
-        counts.add_in_scope_row(row, triage_index)
-
-
-def _walk_facet_rows(
-    rows: Iterable[dict[str, Any]],
-    count_row: Callable[[dict[str, Any]], None],
-    *,
-    scan_budget: int,
-    deadline_seconds: float,
-) -> tuple[int, bool, str]:
-    """Count rows until the row budget or the processing deadline is reached."""
-    scanned_rows = 0
-    deadline: float | None = None
-    for row in rows:
-        if scanned_rows >= scan_budget:
-            return scanned_rows, True, "scan_budget"
-        if deadline is None:
-            # Bound facet processing, not the iterator's time-to-first-row: a
-            # slow cursor setup must not turn a non-empty tenant into zero counts.
-            deadline = time.monotonic() + max(0.001, deadline_seconds)
-        elif time.monotonic() >= deadline:
-            return scanned_rows, True, "deadline"
-        scanned_rows += 1
-        count_row(row)
-    return scanned_rows, False, ""
-
-
-def _facet_completeness(
-    *, truncated: bool, reason: str, scanned_rows: int, scan_budget: int, deadline_seconds: float, total_exact: bool, severity_exact: bool
-) -> dict[str, Any]:
-    # Walk-derived dimensions stay lower bounds after a truncated walk; say per
-    # dimension which is which so severity can be exact while others are not.
-    walk_state = "bounded" if truncated else "exact"
-    dimensions = {
-        name: walk_state
-        for name in ("finding_class", "severity", "status", "domain", "freshness", "reachability")
-        + ("exploit_intelligence", "fixability", "ownership", "disposition")
-    }
-    dimensions["severity"] = "exact" if severity_exact else "bounded"
-    return {
-        "status": "partial" if truncated else "complete",
-        "reason": reason,
-        "scanned_rows": scanned_rows,
-        "scan_budget": scan_budget,
-        "deadline_ms": int(deadline_seconds * 1000),
-        "total_exact": total_exact,
-        "dimensions": dimensions,
-    }
-
-
-def _finding_facets_bounded(
-    tenant_id: str,
-    *,
-    severity: str | None,
-    scan_id: str | None,
-    since: str | None,
-    scope: Mapping[str, str],
-    status: str,
-    scan_budget: int | None = None,
-    deadline_seconds: float | None = None,
-) -> tuple[dict[str, dict[str, int]], int, dict[str, Any]]:
-    """Compute self-excluding facets in one bounded canonical-stream pass.
-
-    A row is tested against every dimension's self-excluding predicate while it
-    is resident, avoiding four full tenant walks. When the row/deadline budget
-    is reached the counts remain useful lower-bound evidence and are explicitly
-    marked approximate by the caller.
-
-    The budgets resolve from the module constants at call time so a test can
-    reproduce truncation by lowering them instead of seeding 50k rows.
-    """
-    scan_budget = _FACET_SCAN_BUDGET if scan_budget is None else scan_budget
-    deadline_seconds = _FACET_DEADLINE_SECONDS if deadline_seconds is None else deadline_seconds
-
-    from agent_bom.api.routes.enterprise import build_tenant_triage_state_index
-    from agent_bom.export.runner import iter_current_findings
-
-    counts = _FacetCounts()
-    triage_index = build_tenant_triage_state_index(tenant_id)
-    scopes = _FacetScopes.from_scope(scope)
-    # Severity is the only dimension that excludes its own filter; when the
-    # store can answer it directly, ``severity`` becomes a store-side predicate
-    # and the walk stops paying for non-matching rows.
-    pushed = _facet_severity_histogram(tenant_id, severity=severity, scan_id=scan_id, since=since, scope=scopes.full, status=status)
-    rows = iter_current_findings(
-        tenant_id,
-        severity=severity if pushed is not None else None,
-        since=since,
-        scan_id=scan_id,
-        scope=scopes.base,
-        status="all",
-        sanitize=False,
-    )
-    count_row = partial(
-        _count_facet_row,
-        counts=counts,
-        severity=severity,
-        status=status,
-        scopes=scopes,
-        count_severity=pushed is None,
-        triage_index=triage_index,
-    )
-    scanned_rows, truncated, reason = _walk_facet_rows(rows, count_row, scan_budget=scan_budget, deadline_seconds=deadline_seconds)
-    # ``total`` and the severity histogram must answer the same question on the
-    # same basis. Under pushdown the histogram is the store's unbounded aggregate
-    # with identical predicates, so its count for the filtered band is the exact
-    # total even when the row-budgeted walk was truncated.
-    total, total_exact = counts.total, not truncated
-    if truncated and pushed is not None and severity is not None:
-        total = pushed.get(_normalize_facet_severity(severity), total)
-        total_exact = True
-    completeness = _facet_completeness(
-        truncated=truncated,
-        reason=reason,
-        scanned_rows=scanned_rows,
-        scan_budget=scan_budget,
-        deadline_seconds=deadline_seconds,
-        total_exact=total_exact,
-        severity_exact=pushed is not None or not truncated,
-    )
-    return counts.as_dict(pushed), total, completeness
-
-
-def _canonical_scope_filters(
-    provider: str | None,
-    account: str | None,
-    environment: str | None,
-    domain: str | None,
-    finding_class: str | None = None,
-    q: str | None = None,
-    kev: bool | None = None,
-    framework: str | None = None,
-    control: str | None = None,
-    owner: str | None = None,
-    sla: str | None = None,
-) -> dict[str, str]:
-    """Normalize the optional scope/domain filters into an active-filter map.
-
-    Server-side canonicalization (issue #3946): values are lowercased/trimmed
-    and empty inputs dropped. Unknown values are kept (not rejected) so the
-    endpoint never raises on ad-hoc input — an unmatched value simply returns no
-    findings. ``account`` maps to the finding's ``account_ref``.
-
-    ``framework`` / ``control`` power the compliance drill-through (epic #4790):
-    the framework identifier (a UI section id such as ``nist-csf`` / ``iso27001``)
-    is resolved once here to the finding's ``*_tags`` field and canonical slug so
-    the per-row predicate stays a cheap containment check. An unresolved
-    framework is stored raw so the predicate returns an honest empty match.
-    ``control`` is only meaningful alongside a framework and is dropped otherwise.
-    """
-    filters: dict[str, str] = {}
-    if framework and framework.strip():
-        from agent_bom.compliance_coverage import resolve_framework_filter
-
-        meta = resolve_framework_filter(framework)
-        if meta is not None:
-            filters["framework_tag_field"] = meta.tag_field
-            filters["framework_slug"] = meta.slug
-        else:
-            filters["framework"] = framework.strip().lower()
-        if control and control.strip():
-            filters["control"] = control.strip()
-    if provider and provider.strip():
-        filters["provider"] = provider.strip().lower()
-    if account and account.strip():
-        filters["account_ref"] = account.strip().lower()
-    if environment and environment.strip():
-        filters["environment"] = environment.strip().lower()
-    if domain and domain.strip():
-        # Map the pre-rename ``appsec_sca`` alias to ``aspm`` so historical
-        # deep-links keep resolving; unknown values pass through untouched.
-        from agent_bom.finding_scope import _LEGACY_DOMAIN_ALIASES
-
-        key = domain.strip().lower()
-        filters["domain"] = _LEGACY_DOMAIN_ALIASES.get(key, key)
-    if finding_class:
-        filters["finding_class"] = finding_class
-    if kev is not None:
-        filters["kev"] = "true" if kev else "false"
-    if q and q.strip():
-        filters["q"] = q.strip()
-    if owner and owner.strip():
-        filters["owner"] = owner.strip().lower()
-    if sla and sla.strip():
-        filters["sla"] = sla.strip().lower()
-    return filters
-
-
-def _row_matches_scope(row: dict[str, Any], filters: dict[str, str]) -> bool:
-    """Scope/domain predicate for a finding row.
-
-    Thin wrapper over :func:`agent_bom.finding_scope.row_matches_scope` — the one
-    source of truth shared with the hub store's scope-filtered keyset path so the
-    in-memory scan-finding filter and the bulk-ingest store filter can never
-    diverge on the overlapping-lens semantics. Retained under this name because
-    ``routes/cloud.py`` imports it.
-    """
-    from agent_bom.finding_scope import row_matches_scope
-
-    return row_matches_scope(row, filters)
-
-
-def _resolve_bulk_findings_total(
-    *,
-    tenant_id: str,
-    severity: str | None,
-    scan_id: str | None,
-    approximate_total: bool,
-    offset: int,
-    bulk_total: int | None,
-    page_len: int,
-    limit: int,
-    window_days: int = 0,
-    status: str | None = None,
-    request_cached_total: int | None = None,
-) -> tuple[int | None, bool]:
-    """Return ``(total, total_approximate)`` for the bulk-ingest slice."""
-    from agent_bom.api.findings_count_cache import cache_key, get_cached_total, set_cached_total
-
-    # Preserve the count that justified skipping COUNT at request start. It may
-    # expire while scan rows are assembled; using the snapshot does not renew TTL.
-    key = cache_key(tenant_id=tenant_id, severity=severity, scan_id=scan_id, origin="bulk_ingest", window_days=window_days, status=status)
-    if not approximate_total:
-        if bulk_total is not None:
-            set_cached_total(key, bulk_total)
-            return bulk_total, False
-        cached = get_cached_total(key)
-        if cached is None:
-            cached = request_cached_total
-        if cached is not None:
-            # Cache entries are populated only from an exact store COUNT.  A
-            # normal request reusing that value remains complete; labelling it
-            # approximate made the campaign workflow reject a second request
-            # as provisional even though the underlying membership was exact.
-            return cached, False
-        return bulk_total, False
-
-    if offset == 0 and bulk_total is not None:
-        set_cached_total(key, bulk_total)
-        return bulk_total, False
-
-    cached = get_cached_total(key)
-    if cached is None:
-        cached = request_cached_total
-    if cached is not None:
-        return cached, True
-
-    # Cold cache on a deep page: expose a conservative lower bound so paging
-    # controls stay usable until the client revisits offset=0.
-    if page_len < limit:
-        return offset + page_len, True
-    return offset + limit, True
-
-
-def _finding_sort_key(row: dict[str, Any], sort: str) -> tuple[float, float, float]:
-    """Stable sort key — descending order on the requested signal,
-    with CVSS + severity-rank tiebreakers so the order is fully
-    deterministic for a given input.
-    """
-    from agent_bom.api.compliance_hub_store import compute_effective_reach_score
-    from agent_bom.core.severity import severity_policy_rank
-
-    sev_rank = severity_policy_rank(str(row.get("severity", "")))
-    from agent_bom.api.finding_cursor import cvss_sort_value
-
-    cvss = cvss_sort_value(row.get("cvss_score"))
-    reach_val = compute_effective_reach_score(row)
-
-    if sort == "cvss":
-        primary = cvss
-    elif sort == "severity":
-        primary = float(sev_rank)
-    else:  # default — effective_reach
-        primary = reach_val
-    # Descending: negate, with cvss + severity as deterministic tiebreakers.
-    return (-primary, -cvss, -float(sev_rank))
-
-
-_BULK_MERGE_CHUNK = 256
-
-
-class MergedScanBulkPage(NamedTuple):
-    """A merged page plus the frontier needed to resume the keyset walk.
-
-    ``next_scan_index`` is how many pre-sorted scan findings have been consumed
-    (skipped + emitted); ``next_bulk_cursor`` is the hub keyset cursor of the
-    last consumed bulk row (``""`` when no bulk row was consumed). Together they
-    let ``/v1/findings`` emit ONE compound cursor so a keyset caller walks the
-    full merged set with 0 dups / 0 drops instead of losing the scan half after
-    page 1.
-    """
-
-    rows: list[dict[str, Any]]
-    next_scan_index: int
-    next_bulk_cursor: str
-    has_more: bool
-
-
-class _ScanBulkMerge:
-    """Two-pointer walk over pre-sorted scan findings and keyset-refilled hub pages.
-
-    Each source is consumed strictly in order, so a page consumes a contiguous
-    prefix of each source after its resume point.
-    """
-
-    def __init__(
-        self,
-        scan_findings: list[dict[str, Any]],
-        fetch_bulk: Callable[[str | None], Any],
-        *,
-        sort_key: str,
-        scan_start: int,
-        bulk_cursor: str | None,
-    ) -> None:
-        self.scan_findings = scan_findings
-        self.sort_key = sort_key
-        self.scan_i = scan_start
-        self.bulk_buf: list[dict[str, Any]] = []
-        self.bulk_i = 0
-        self.last_bulk_consumed: dict[str, Any] | None = None
-        self._fetch_bulk = fetch_bulk
-        self._fetch_cursor: str | None = bulk_cursor or None
-        self._bulk_exhausted = False
-
-    def _refill_bulk(self) -> bool:
-        if self._bulk_exhausted:
-            self.bulk_buf = []
-            self.bulk_i = 0
-            return False
-        result = self._fetch_bulk(self._fetch_cursor)
-        self.bulk_buf = result[0]
-        self._fetch_cursor = result[2] if len(result) > 2 else None
-        if not self._fetch_cursor:
-            self._bulk_exhausted = True
-        self.bulk_i = 0
-        return bool(self.bulk_buf)
-
-    def bulk_head(self) -> dict[str, Any] | None:
-        if self.bulk_i >= len(self.bulk_buf) and not self._refill_bulk():
-            return None
-        return self.bulk_buf[self.bulk_i]
-
-    def scan_head(self) -> dict[str, Any] | None:
-        return self.scan_findings[self.scan_i] if self.scan_i < len(self.scan_findings) else None
-
-    def _take_scan(self) -> dict[str, Any]:
-        row = self.scan_findings[self.scan_i]
-        self.scan_i += 1
-        return row
-
-    def _take_bulk(self) -> dict[str, Any]:
-        row = self.bulk_buf[self.bulk_i]
-        self.bulk_i += 1
-        self.last_bulk_consumed = row
-        return row
-
-    def pick_next(self) -> dict[str, Any] | None:
-        scan_row = self.scan_head()
-        bulk_row = self.bulk_head()
-        if scan_row is None and bulk_row is None:
-            return None
-        if bulk_row is None:
-            return self._take_scan()
-        if scan_row is None:
-            return self._take_bulk()
-        if _finding_sort_key(scan_row, self.sort_key) <= _finding_sort_key(bulk_row, self.sort_key):
-            return self._take_scan()
-        return self._take_bulk()
-
-    def has_more(self) -> bool:
-        return self.scan_head() is not None or self.bulk_head() is not None
-
-
-def _merge_bulk_kwargs(
-    since: str | None, status: str | None, scope: Mapping[str, str] | None, scope_metadata: dict[str, Any] | None
-) -> dict[str, Any]:
-    extra: dict[str, Any] = {}
-    if since:
-        extra["since"] = since
-    if status is not None:
-        extra["status"] = status
-    if scope:
-        extra["scope"] = dict(scope)
-        if scope_metadata is not None:
-            # One dict across every refill: the store accumulates, so the merged
-            # page reports the combined walk.
-            extra["scope_metadata"] = scope_metadata
-    return extra
-
-
-def _merged_scan_bulk_page(
-    scan_findings: list[dict[str, Any]],
-    *,
-    bulk_list: Any,
-    tenant_id: str,
-    sort_key: str,
-    severity: str | None,
-    scan_id: str | None,
-    offset: int,
-    limit: int,
-    scan_start: int = 0,
-    bulk_cursor: str | None = None,
-    since: str | None = None,
-    scope: Mapping[str, str] | None = None,
-    status: str | None = None,
-    scope_metadata: dict[str, Any] | None = None,
-) -> MergedScanBulkPage:
-    """Merge pre-sorted scan findings with bulk hub pages without O(table) work.
-
-    Streams two sorted sources with a two-pointer walk so deep ``offset`` does
-    not require loading ``offset + limit`` bulk rows up front or re-sorting the
-    full combined window in memory. The bulk source is refilled by keyset cursor
-    (``list_current_page``) so the merge stays sargable and — critically — the
-    frontier it stops at is expressible as one resumable cursor. ``scan_start``
-    (index into ``scan_findings``) and ``bulk_cursor`` (hub keyset position)
-    resume a prior page; ``status`` filters the bulk source's lifecycle status
-    to match the merged scan findings' basis (default open) so both halves
-    reconcile.
-
-    Each source is consumed strictly in order (scan by ascending index, bulk in
-    the store's keyset order), so a page consumes a contiguous prefix of each
-    source after its resume point — that is what makes the walk drop-free and
-    dup-free regardless of the merge comparator's tiebreakers.
-    """
-    extra_kwargs = _merge_bulk_kwargs(since, status, scope, scope_metadata)
-
-    def fetch_bulk(cursor: str | None) -> Any:
-        return bulk_list(
-            tenant_id,
-            limit=_BULK_MERGE_CHUNK,
-            sort=sort_key,
-            severity=severity,
-            scan_id=scan_id,
-            origin="bulk_ingest",
-            include_total=False,
-            cursor=cursor,
-            **extra_kwargs,
-        )
-
-    walk = _ScanBulkMerge(scan_findings, fetch_bulk, sort_key=sort_key, scan_start=scan_start, bulk_cursor=bulk_cursor)
-    skipped = 0
-    while skipped < offset and walk.pick_next() is not None:
-        skipped += 1
-    page: list[dict[str, Any]] = []
-    while len(page) < limit and (row := walk.pick_next()) is not None:
-        page.append(row)
-    has_more = walk.has_more()
-    if walk.last_bulk_consumed is not None:
-        next_bulk_cursor = finding_cursor.cursor_from_current_row(walk.last_bulk_consumed, sort=sort_key)
-    else:
-        next_bulk_cursor = bulk_cursor or ""
-    return MergedScanBulkPage(page, walk.scan_i, next_bulk_cursor, has_more)
 
 
 @router.get("/findings", **documented(FindingsResponse), tags=["scan"])
@@ -3322,155 +2193,6 @@ def _list_findings_impl(
     return envelope
 
 
-_FINDINGS_VIEW_FILTER_MAX_ROWS = 50_000
-
-
-def _finding_triage_state(
-    row: dict[str, Any],
-    triage_index: Any,
-) -> dict[str, Any] | None:
-    """Project the newest active triage state onto one occurrence row."""
-    from agent_bom.api.routes.enterprise import triage_state_for
-
-    raw_servers = row.get("affected_servers")
-    servers = [str(row.get("server_name") or "")]
-    if isinstance(raw_servers, list):
-        servers.extend(str(value) for value in raw_servers if str(value).strip())
-    for server_name in dict.fromkeys(servers):
-        state = triage_state_for(
-            triage_index,
-            vuln_id=_row_vuln_id(row),
-            package=_package_base_name(row),
-            server_name=server_name,
-        )
-        if state is not None:
-            return state
-    return None
-
-
-def _matches_reachability(reachable: Any, requested: str | None) -> bool:
-    return (
-        requested is None
-        or (requested == "reachable" and reachable is True)
-        or (requested == "unreachable" and reachable is False)
-        or (requested == "unassessed" and reachable is None)
-    )
-
-
-def _view_filtered_row(
-    source_row: dict[str, Any],
-    *,
-    triage_index: Any,
-    reachability: str | None,
-    triage: str | None,
-    suppressed_only: bool,
-) -> dict[str, Any] | None:
-    """Annotate one occurrence with triage state; return it only when it matches."""
-    row = dict(source_row)
-    triage_state = _finding_triage_state(row, triage_index) if triage_index is not None else None
-    if triage_index is not None:
-        row["triage_id"] = triage_state.get("id") if triage_state else None
-        row["triage_decision"] = triage_state.get("decision") if triage_state else None
-        row["triage_queue_state"] = triage_state.get("queue_state") if triage_state else None
-    decision = triage_state.get("decision") if triage_state else None
-    triage_matches = triage is None or decision == triage or (triage == "untriaged" and decision is None)
-    if not (_matches_reachability(row.get("graph_reachable"), reachability) and triage_matches):
-        return None
-    if suppressed_only and row.get("suppressed") is not True:
-        return None
-    return row
-
-
-class _ViewWalk(NamedTuple):
-    matches: list[dict[str, Any]]
-    first_page: dict[str, Any] | None
-    warnings: list[str]
-    next_cursor: str | None
-    exhausted: bool
-    truncated: bool
-
-
-def _walk_view_filtered_findings(
-    fetch_page: Callable[[int, str | None], dict[str, Any]],
-    row_filter: Callable[[dict[str, Any]], dict[str, Any] | None],
-    *,
-    target: int,
-    cursor: str | None,
-) -> _ViewWalk:
-    """Walk the canonical keyset stream until ``target`` rows match or the budget is spent."""
-    source_cursor = cursor
-    rows_seen = 0
-    matches: list[dict[str, Any]] = []
-    first_page: dict[str, Any] | None = None
-    warnings: list[str] = []
-    exhausted = False
-    while rows_seen < _FINDINGS_VIEW_FILTER_MAX_ROWS and len(matches) < target:
-        page_limit = min(1000, _FINDINGS_VIEW_FILTER_MAX_ROWS - rows_seen, max(1, target - len(matches)))
-        page = fetch_page(page_limit, source_cursor)
-        if first_page is None:
-            first_page = page
-        warnings.extend(str(item) for item in page.get("warnings", []) if str(item))
-        raw_rows = page.get("findings")
-        page_rows = [row for row in raw_rows if isinstance(row, dict)] if isinstance(raw_rows, list) else []
-        rows_seen += len(page_rows)
-        matches.extend(row for row in map(row_filter, page_rows) if row is not None)
-        source_cursor = str(page.get("next_cursor") or "") or None
-        if not source_cursor:
-            exhausted = True
-            break
-    truncated = not exhausted and rows_seen >= _FINDINGS_VIEW_FILTER_MAX_ROWS
-    if truncated:
-        warnings.append(f"Finding view filters inspected {_FINDINGS_VIEW_FILTER_MAX_ROWS} rows; additional occurrences remain.")
-    return _ViewWalk(matches, first_page, warnings, source_cursor, exhausted, truncated)
-
-
-def _copy_first_page_metadata(envelope: dict[str, Any], first_page: dict[str, Any] | None, keys: tuple[str, ...]) -> None:
-    if not first_page:
-        return
-    if "window" in first_page:
-        envelope["window"] = first_page["window"]
-        envelope["count_metadata"]["window"] = first_page["window"]
-    for key in keys:
-        if key in first_page:
-            envelope[key] = first_page[key]
-
-
-def _view_filters(
-    first_page: dict[str, Any] | None, *, suppressed_only: bool, reachability: str | None, triage: str | None
-) -> dict[str, Any]:
-    filters = dict(first_page.get("filters") or {}) if first_page else {}
-    if suppressed_only:
-        filters["status"] = "suppressed"
-    if reachability is not None:
-        filters["reachability"] = reachability
-    if triage is not None:
-        filters["triage"] = triage
-    return filters
-
-
-def _view_envelope(
-    walk: _ViewWalk, *, limit: int, offset: int, cursor: str | None, sort: str, scan_id: str | None, filters: dict[str, Any]
-) -> dict[str, Any]:
-    total = len(walk.matches) if walk.exhausted and cursor is None else None
-    envelope = finding_list_envelope(
-        findings=walk.matches[:limit] if cursor else walk.matches[offset : offset + limit],
-        total=total,
-        limit=limit,
-        offset=0 if cursor else offset,
-        sort=sort,
-        scan_id=scan_id,
-        cursor=cursor or "",
-        next_cursor=walk.next_cursor or "",
-        filters=filters,
-        warnings=list(dict.fromkeys(walk.warnings)),
-        total_approximate=total is None,
-        source="scan_and_current_ingest_findings",
-        scope="tenant current-state findings with graph and triage view filters",
-    )
-    _copy_first_page_metadata(envelope, walk.first_page, ("scope_completeness",))
-    return envelope
-
-
 @finding_read_snapshot
 def _list_findings_view_impl(
     request: Request,
@@ -3546,137 +2268,6 @@ def _list_findings_view_impl(
     walk = _walk_view_filtered_findings(fetch_page, row_filter, target=limit if cursor else offset + limit, cursor=cursor)
     filters = _view_filters(walk.first_page, suppressed_only=suppressed_only, reachability=reachability, triage=triage)
     return _view_envelope(walk, limit=limit, offset=offset, cursor=cursor, sort=sort, scan_id=scan_id, filters=filters)
-
-
-def _finding_group_offset(cursor: str | None, offset: int, sort_key: str) -> int:
-    if not cursor:
-        return offset
-    try:
-        group_offset = finding_cursor.decode_finding_group_cursor(cursor, expected_sort=sort_key)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail="Invalid grouped findings cursor") from exc
-    if group_offset is None:
-        raise HTTPException(status_code=400, detail="Cursor is not valid for grouped findings")
-    return group_offset
-
-
-def _collect_group_occurrences(
-    fetch_page: Callable[[int, str | None, bool], dict[str, Any]],
-) -> tuple[list[dict[str, Any]], dict[str, Any] | None, list[str], str | None]:
-    """Read the hard-bounded occurrence window in keyset-backed batches.
-
-    Grouping already materializes at most 50k occurrences; small internal
-    pages made the scan spine deserialize and enrich again for every page.
-    """
-    rows: list[dict[str, Any]] = []
-    source_cursor: str | None = None
-    first_page: dict[str, Any] | None = None
-    warnings: list[str] = []
-    while len(rows) < _FINDING_GROUP_MAX_OCCURRENCES:
-        page = fetch_page(_FINDING_GROUP_MAX_OCCURRENCES - len(rows), source_cursor, first_page is None)
-        if first_page is None:
-            first_page = page
-        page_rows = page.get("findings")
-        if isinstance(page_rows, list):
-            rows.extend(row for row in page_rows if isinstance(row, dict))
-        warnings.extend(str(item) for item in page.get("warnings", []) if str(item))
-        source_cursor = str(page.get("next_cursor") or "") or None
-        if not source_cursor:
-            break
-    return rows, first_page, warnings, source_cursor
-
-
-def _group_occurrence_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Fold occurrences onto their canonical issue identity with a bounded sample."""
-    grouped: dict[str, dict[str, Any]] = {}
-    for row in rows:
-        group_id, group_key = _finding_group_identity(row)
-        group = grouped.get(group_id)
-        if group is None:
-            group = dict(row)
-            group.update(
-                finding_group_id=group_id,
-                finding_group_key=group_key,
-                occurrence_count=0,
-                unreconfirmed_occurrence_count=0,
-                _occurrence_rows=[],
-                occurrences_truncated=False,
-            )
-            grouped[group_id] = group
-        group["occurrence_count"] = int(group["occurrence_count"]) + 1
-        if row.get("observation_status") == "unreconfirmed":
-            group["unreconfirmed_occurrence_count"] = int(group["unreconfirmed_occurrence_count"]) + 1
-        occurrences = group["_occurrence_rows"]
-        if isinstance(occurrences, list) and len(occurrences) < _FINDING_GROUP_OCCURRENCE_SAMPLE:
-            occurrences.append(row)
-        else:
-            group["occurrences_truncated"] = True
-    return list(grouped.values())
-
-
-def _grouped_severity_counts(groups: list[dict[str, Any]]) -> dict[str, int]:
-    counts = {key: 0 for key in ("critical", "high", "medium", "low", "info", "unknown")}
-    for group in groups:
-        counts[_normalize_facet_severity(group.get("severity"))] += 1
-    return counts
-
-
-def _attach_grouping_metadata(
-    envelope: dict[str, Any],
-    *,
-    first_page: dict[str, Any] | None,
-    groups: list[dict[str, Any]],
-    scanned: int,
-    truncated: bool,
-    severity_counts: dict[str, int] | None,
-) -> None:
-    envelope["grouping"] = {
-        "status": "partial" if truncated else "complete",
-        "scanned_occurrences": scanned,
-        "scan_budget": _FINDING_GROUP_MAX_OCCURRENCES,
-        "occurrence_total": sum(int(group.get("occurrence_count") or 0) for group in groups),
-        "occurrence_sample_limit": _FINDING_GROUP_OCCURRENCE_SAMPLE,
-    }
-    _copy_first_page_metadata(envelope, first_page, ("facets", "facets_approximate", "facet_metadata", "scope_completeness"))
-    if first_page and severity_counts is not None:
-        envelope.setdefault("facets", {})["severity"] = severity_counts
-        envelope["facet_metadata"]["severity_basis"] = "canonical issue groups"
-
-
-def _groups_envelope(
-    page_groups: list[dict[str, Any]],
-    *,
-    first_page: dict[str, Any] | None,
-    total: int,
-    limit: int,
-    offset: int,
-    sort: str,
-    scan_id: str | None,
-    cursor: str | None,
-    next_cursor: str,
-    warnings: list[str],
-    severity: str | None,
-    truncated: bool,
-) -> dict[str, Any]:
-    filters = dict(first_page.get("filters") or {}) if first_page else {}
-    filters["group_occurrences"] = True
-    if severity is not None:
-        filters["severity"] = severity
-    return finding_list_envelope(
-        findings=page_groups,
-        total=total,
-        limit=limit,
-        offset=offset,
-        sort=sort,
-        scan_id=scan_id,
-        cursor=cursor or "",
-        next_cursor=next_cursor,
-        filters=filters,
-        warnings=list(dict.fromkeys(warnings)),
-        total_approximate=truncated,
-        source="scan_and_current_ingest_finding_groups",
-        scope="tenant current-state issue groups over asset-scoped occurrences",
-    )
 
 
 @finding_read_snapshot
@@ -3757,23 +2348,6 @@ def _list_finding_groups_impl(
         envelope, first_page=first_page, groups=groups, scanned=len(rows), truncated=truncated, severity_counts=severity_counts
     )
     return envelope
-
-
-def _finding_group_identity(row: dict[str, Any]) -> tuple[str, str]:
-    """Return the canonical aggregate identity without changing occurrence IDs."""
-    supplied_id = str(row.get("finding_group_id") or "").strip()
-    supplied_key = str(row.get("finding_group_key") or "").strip()
-    vulnerability_id = _row_vuln_id(row).lower()
-    if vulnerability_id:
-        group_key = f"vulnerability:{vulnerability_id}:{_package_base_name(row).lower()}"
-    else:
-        group_key = f"occurrence:{_finding_identity(row)}"
-    # Persisted metadata is an optimization, not authority. A row can be
-    # reclassified/enriched after ingest; stale group metadata must not collapse
-    # two distinct advisories. Reuse it only when its semantic key still agrees.
-    if supplied_id and supplied_key == group_key:
-        return supplied_id, group_key
-    return canonical_id("finding-group", group_key), group_key
 
 
 def issue_severity_counts(request: Request) -> dict[str, Any]:

@@ -6,12 +6,10 @@ import asyncio
 import hashlib
 import hmac
 import io
-import ipaddress
 import logging
 import os
 import secrets
 import sys
-import threading
 import time
 import uuid
 import zlib
@@ -21,12 +19,31 @@ from dataclasses import dataclass
 from datetime import datetime as _dt
 from datetime import timezone as _tz
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, cast
 
 import anyio.to_thread
 
 from agent_bom import __version__
 from agent_bom.api.auth import get_key_store
+from agent_bom.api.auth_posture import _AUTH_POSTURE as _AUTH_POSTURE
+from agent_bom.api.auth_posture import _AUTH_RUNTIME_STATUS as _AUTH_RUNTIME_STATUS
+from agent_bom.api.auth_posture import _EMPTY_AUTH_POSTURE as _EMPTY_AUTH_POSTURE
+from agent_bom.api.auth_posture import _TRUSTED_PROXY_SECRET_MIN_BYTES as _TRUSTED_PROXY_SECRET_MIN_BYTES
+from agent_bom.api.auth_posture import AuthPosture as AuthPosture
+from agent_bom.api.auth_posture import AuthPostureError as AuthPostureError
+from agent_bom.api.auth_posture import _configured_listener_host as _configured_listener_host
+from agent_bom.api.auth_posture import _env_flag as _env_flag
+from agent_bom.api.auth_posture import _is_loopback_listener as _is_loopback_listener
+from agent_bom.api.auth_posture import _secret_min_bytes as _secret_min_bytes
+from agent_bom.api.auth_posture import _trusted_proxy_secret_is_strong as _trusted_proxy_secret_is_strong
+from agent_bom.api.auth_posture import apply_auth_posture as apply_auth_posture
+from agent_bom.api.auth_posture import configure_auth_runtime as configure_auth_runtime
+from agent_bom.api.auth_posture import derive_auth_posture as derive_auth_posture
+from agent_bom.api.auth_posture import get_auth_posture as get_auth_posture
+from agent_bom.api.auth_posture import get_auth_runtime_status as get_auth_runtime_status
+from agent_bom.api.auth_posture import get_trusted_proxy_auth_status as get_trusted_proxy_auth_status
+from agent_bom.api.auth_posture import trusted_proxy_auth_usable as trusted_proxy_auth_usable
+from agent_bom.api.auth_posture import validate_auth_posture as validate_auth_posture
 from agent_bom.api.browser_session import (
     CSRF_COOKIE_NAME,
     CSRF_HEADER_NAME,
@@ -46,6 +63,8 @@ from agent_bom.api.error_envelope import (
     install_error_envelope as install_error_envelope,
 )
 from agent_bom.api.host_guard import browser_origin_trusted
+from agent_bom.api.rate_limit_store import InMemoryRateLimitStore as InMemoryRateLimitStore
+from agent_bom.api.rate_limit_store import PostgresRateLimitStore as PostgresRateLimitStore
 from agent_bom.api.route_policy import (
     PUBLIC_OPERATIONS,
     ROLE_RULES,
@@ -92,13 +111,6 @@ _TENANT_SCOPED_AUTH_METHODS = {
 # Deliberately narrow: "static_api_key" is NOT here because the static key never
 # reaches the KeyStore, so its verify returns None and buckets differently.
 _API_KEY_VERIFIED_AUTH_METHODS = {"api_key", "saml"}
-_AUTH_RUNTIME_STATUS: dict[str, object] = {
-    "auth_required": True,
-    "auth_configured": False,
-    "configured_modes": [],
-    "recommended_ui_mode": "configure_auth",
-    "unauthenticated_allowed": False,
-}
 _API_CSP = "default-src 'self'"
 # /docs (Swagger UI) and /redoc serve HTML shells that load swagger-ui /
 # redoc bundles + a favicon from public CDNs (cdn.jsdelivr.net,
@@ -117,7 +129,6 @@ _DOCS_CSP = (
     "worker-src 'self' blob:; "
     "connect-src 'self'"
 )
-_TRUSTED_PROXY_SECRET_MIN_BYTES = 32
 
 
 def _content_security_policy(path: str, content_type: str) -> str:
@@ -127,10 +138,6 @@ def _content_security_policy(path: str, content_type: str) -> str:
     if "text/html" in content_type and not path.startswith(("/v1/", "/docs", "/redoc", "/openapi.json")):
         return dashboard_csp_header()
     return _API_CSP
-
-
-def _env_flag(name: str) -> bool:
-    return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def static_api_key_allowed() -> bool:
@@ -145,99 +152,7 @@ def static_api_key_rejection_message() -> str:
     )
 
 
-def _secret_min_bytes(secret: str) -> int:
-    return len(secret.encode("utf-8"))
-
-
-def _trusted_proxy_secret_is_strong(secret: str) -> bool:
-    return _secret_min_bytes(secret) >= _TRUSTED_PROXY_SECRET_MIN_BYTES
-
-
-def get_trusted_proxy_auth_status() -> dict[str, object]:
-    """Return trusted-proxy auth posture without exposing secret material."""
-    from agent_bom.api.secret_source import resolve_secret
-
-    enabled = _env_flag("AGENT_BOM_TRUST_PROXY_AUTH")
-    secret = resolve_secret("AGENT_BOM_TRUST_PROXY_AUTH_SECRET")
-    issuer = os.environ.get("AGENT_BOM_TRUST_PROXY_AUTH_ISSUER", "").strip()
-    if not enabled:
-        return {
-            "enabled": False,
-            "status": "disabled",
-            "secret_min_bytes": _TRUSTED_PROXY_SECRET_MIN_BYTES,
-            "issuer_pinned": False,
-            "message": "Trusted reverse-proxy header authentication is disabled.",
-        }
-    if not secret:
-        return {
-            "enabled": True,
-            "status": "misconfigured",
-            "secret_configured": False,
-            "secret_min_bytes": _TRUSTED_PROXY_SECRET_MIN_BYTES,
-            "issuer_pinned": bool(issuer),
-            "message": "AGENT_BOM_TRUST_PROXY_AUTH is enabled but AGENT_BOM_TRUST_PROXY_AUTH_SECRET is not set.",
-        }
-    if not _trusted_proxy_secret_is_strong(secret):
-        return {
-            "enabled": True,
-            "status": "weak_secret",
-            "secret_configured": True,
-            "secret_min_bytes": _TRUSTED_PROXY_SECRET_MIN_BYTES,
-            "issuer_pinned": bool(issuer),
-            "message": (
-                f"AGENT_BOM_TRUST_PROXY_AUTH_SECRET must contain at least {_TRUSTED_PROXY_SECRET_MIN_BYTES} bytes of secret material."
-            ),
-        }
-    return {
-        "enabled": True,
-        "status": "ok" if issuer else "issuer_unpinned",
-        "secret_configured": True,
-        "secret_min_bytes": _TRUSTED_PROXY_SECRET_MIN_BYTES,
-        "issuer_pinned": bool(issuer),
-        "issuer": issuer or None,
-        "message": (
-            "Trusted proxy auth uses strong shared-secret attestation."
-            if issuer
-            else (
-                "Trusted proxy auth uses strong shared-secret attestation; set "
-                "AGENT_BOM_TRUST_PROXY_AUTH_ISSUER to pin the upstream issuer."
-            )
-        ),
-    }
-
-
-def trusted_proxy_auth_usable() -> bool:
-    """Return whether trusted-proxy auth is enabled with a strong resolved secret.
-
-    The feature flag alone is not an authentication mechanism.  Treat unreadable
-    mounted secrets, missing values, and weak values as unusable so startup gates
-    and health posture describe the same boundary enforced by the middleware.
-    """
-    try:
-        status = get_trusted_proxy_auth_status()
-    except (OSError, ValueError):
-        return False
-    return status.get("status") in {"ok", "issuer_unpinned"}
-
-
 _PROXY_CONTROL_PLANE_MTLS_MODES = {"app_native", "delegated", "disabled"}
-
-
-def _is_loopback_listener(host: str | None) -> bool:
-    cleaned = (host or "").strip().lower()
-    if not cleaned:
-        return False
-    if cleaned in {"localhost", "127.0.0.1", "::1"}:
-        return True
-    try:
-        return ipaddress.ip_address(cleaned).is_loopback
-    except ValueError:
-        return False
-
-
-def _configured_listener_host(host: str | None = None) -> str:
-    # Direct ASGI imports do not reveal the ASGI server's actual bind address.
-    return (host or "").strip() or os.environ.get("AGENT_BOM_API_HOST", "").strip() or "unknown"
 
 
 def _production_or_clustered_control_plane() -> bool:
@@ -459,430 +374,6 @@ def describe_security_header_posture() -> dict[str, object]:
     }
 
 
-class AuthPostureError(RuntimeError):
-    """Raised when the derived auth posture is internally contradictory.
-
-    A contradictory posture is a fail-fast startup error (surfaced by the CLI
-    serve/api gate) rather than a silent coexistence that only breaks at request
-    time.
-    """
-
-
-@dataclass(frozen=True)
-class AuthPosture:
-    """The single derived view of control-plane authentication posture.
-
-    Every reader — the CLI serve gate, ``/health``/operator surfaces (via the
-    runtime status), and the middleware — consumes this one object instead of
-    re-deriving the same facts from the environment. The boolean fields are the
-    raw credential-source facts (derived once by ``derive_auth_posture``); the
-    properties express the precedence order and the two aggregate views the
-    readers need.
-    """
-
-    listener_host: str
-    listener_loopback: bool
-    api_key: bool
-    oidc_bearer: bool
-    oidc_browser: bool
-    snowflake_oauth: bool
-    scim_bearer: bool
-    saml: bool
-    trusted_proxy: bool
-    anonymous_allowed: bool
-    oidc_config_invalid: bool = False
-    oidc_config_error: str | None = None
-
-    @property
-    def sources(self) -> tuple[str, ...]:
-        """Effective credential sources in resolver precedence order."""
-        ordered: list[str] = []
-        if self.scim_bearer:
-            ordered.append("scim_bearer")
-        if self.trusted_proxy:
-            ordered.append("trusted_proxy")
-        if self.oidc_bearer:
-            ordered.append("oidc_bearer")
-        if self.api_key:
-            ordered.append("api_key")
-        if self.oidc_browser:
-            ordered.append("oidc_browser")
-        if self.snowflake_oauth:
-            ordered.append("snowflake_oauth")
-        if self.saml:
-            ordered.append("saml_sso")
-        return tuple(ordered)
-
-    @property
-    def auth_configured(self) -> bool:
-        """True when any credential source (including browser SSO) is configured."""
-        return bool(self.sources)
-
-    @property
-    def programmatic_auth_configured(self) -> bool:
-        """The serve-gate view: excludes browser-interactive SSO.
-
-        ``oidc_browser`` / ``snowflake_oauth`` are browser-login flows that do
-        not gate programmatic API access, so the non-loopback serve gate does
-        not treat them as satisfying the auth requirement (unchanged behavior).
-        """
-        return self.api_key or self.oidc_bearer or self.scim_bearer or self.saml or self.trusted_proxy
-
-    @property
-    def configured_modes(self) -> list[str]:
-        """Operator/UI mode list — ordering preserved for existing consumers."""
-        modes: list[str] = []
-        if self.trusted_proxy:
-            modes.append("trusted_proxy")
-        if self.oidc_browser:
-            modes.append("oidc_browser")
-        if self.snowflake_oauth:
-            modes.append("snowflake_oauth")
-        if self.oidc_bearer:
-            modes.append("oidc_bearer")
-        if self.api_key:
-            modes.append("api_key")
-        if self.scim_bearer:
-            modes.append("scim_provisioning")
-        if self.saml:
-            modes.append("saml_sso")
-        return modes
-
-    @property
-    def auth_required(self) -> bool:
-        # An explicit unauthenticated opt-in means anonymous callers are served
-        # as NO_AUTH_ROLE, so authentication is not *required* — even when
-        # credentials are also configured for callers who want to elevate.
-        return not self.anonymous_allowed
-
-    @property
-    def recommended_ui_mode(self) -> str:
-        if self.anonymous_allowed and not self.auth_configured:
-            return "no_auth"
-        if self.trusted_proxy:
-            return "reverse_proxy_oidc"
-        if self.oidc_browser:
-            return "oidc_browser"
-        if self.snowflake_oauth:
-            return "snowflake_oauth"
-        if self.oidc_bearer:
-            return "oidc_bearer"
-        if self.saml or self.api_key:
-            # SAML SSO completes at the IdP and mints a short-lived session API
-            # key, so the dashboard uses the same session-key login surface.
-            return "session_api_key"
-        return "configure_auth"
-
-    def runtime_status(self) -> dict[str, object]:
-        """Project to the operator/UI runtime-status dict (the /health source)."""
-        return {
-            "auth_required": self.auth_required,
-            "auth_configured": self.auth_configured,
-            "configured_modes": self.configured_modes,
-            "recommended_ui_mode": self.recommended_ui_mode,
-            "unauthenticated_allowed": self.anonymous_allowed,
-        }
-
-    def summary_line(self) -> str:
-        """One structured line summarizing the posture for the startup log."""
-        sources = ">".join(self.sources) if self.sources else "none"
-        scope = "unknown" if self.listener_host == "unknown" else ("loopback" if self.listener_loopback else "non-loopback")
-        return (
-            f"auth posture: sources=[{sources}] "
-            f"anonymous={'on' if self.anonymous_allowed else 'off'} "
-            f"listener={self.listener_host}({scope}) "
-            f"trusted_proxy={'usable' if self.trusted_proxy else 'off'} "
-            f"oidc={'invalid' if self.oidc_config_invalid else ('configured' if self.oidc_bearer else 'off')}"
-        )
-
-
-_EMPTY_AUTH_POSTURE = AuthPosture(
-    listener_host="unknown",
-    listener_loopback=False,
-    api_key=False,
-    oidc_bearer=False,
-    oidc_browser=False,
-    snowflake_oauth=False,
-    scim_bearer=False,
-    saml=False,
-    trusted_proxy=False,
-    anonymous_allowed=False,
-)
-_AUTH_POSTURE: AuthPosture = _EMPTY_AUTH_POSTURE
-
-
-def derive_auth_posture(
-    *,
-    api_key_configured: bool,
-    allow_unauthenticated: bool,
-    listener_host: str | None = None,
-) -> AuthPosture:
-    """Derive the auth posture from the environment plus caller-known facts.
-
-    This is the single derivation of the env-based credential-source facts
-    (OIDC bearer/browser, Snowflake OAuth, SCIM, SAML, trusted proxy). The
-    caller supplies the two facts it uniquely knows — whether an API key source
-    is configured (static key flag / env keys / runtime key store) and whether
-    the unauthenticated opt-in is on — and the listener host being bound.
-    """
-    from agent_bom.api.oidc import OIDCConfig, OIDCError, oidc_enabled_from_env
-    from agent_bom.api.oidc_browser import oidc_browser_enabled_from_env
-    from agent_bom.api.saml import saml_enabled_from_env
-    from agent_bom.api.scim import scim_enabled_from_env
-    from agent_bom.api.snowflake_oauth import snowflake_oauth_enabled_from_env
-
-    oidc_bearer = oidc_enabled_from_env()
-    oidc_config_invalid = False
-    oidc_config_error: str | None = None
-    if oidc_bearer:
-        try:
-            OIDCConfig.from_env()
-        except OIDCError as exc:
-            from agent_bom.security import sanitize_error
-
-            oidc_config_invalid = True
-            oidc_config_error = sanitize_error(exc)
-
-    host = _configured_listener_host(listener_host)
-    return AuthPosture(
-        listener_host=host,
-        listener_loopback=_is_loopback_listener(host),
-        api_key=bool(api_key_configured),
-        oidc_bearer=oidc_bearer,
-        oidc_browser=oidc_browser_enabled_from_env(),
-        snowflake_oauth=snowflake_oauth_enabled_from_env(),
-        scim_bearer=scim_enabled_from_env(),
-        saml=saml_enabled_from_env(),
-        trusted_proxy=trusted_proxy_auth_usable(),
-        anonymous_allowed=bool(allow_unauthenticated),
-        oidc_config_invalid=oidc_config_invalid,
-        oidc_config_error=oidc_config_error,
-    )
-
-
-def validate_auth_posture(posture: AuthPosture) -> None:
-    """Raise ``AuthPostureError`` for an internally contradictory posture.
-
-    Consolidation, not policy change: this only rejects combinations that are
-    already broken today (a malformed/contradictory OIDC configuration currently
-    500s on the first OIDC request). Every combination that boots and serves
-    today keeps working — including trusted-proxy alongside direct OIDC on one
-    listener, which stays allowed.
-    """
-    if posture.oidc_config_invalid:
-        detail = posture.oidc_config_error or "OIDC configuration is invalid"
-        raise AuthPostureError(f"Invalid OIDC configuration: {detail}")
-
-
-def apply_auth_posture(posture: AuthPosture) -> None:
-    """Store the derived posture and project it into the runtime-status dict."""
-    global _AUTH_POSTURE
-    _AUTH_POSTURE = posture
-    _AUTH_RUNTIME_STATUS.clear()
-    _AUTH_RUNTIME_STATUS.update(posture.runtime_status())
-
-
-def get_auth_posture() -> AuthPosture:
-    """Return the last-applied derived auth posture (the single source of truth)."""
-    return _AUTH_POSTURE
-
-
-def configure_auth_runtime(
-    *,
-    api_key_configured: bool,
-    oidc_enabled: bool,
-    trusted_proxy_enabled: bool,
-    scim_enabled: bool = False,
-    saml_enabled: bool = False,
-    oidc_browser_enabled: bool = False,
-    snowflake_oauth_enabled: bool = False,
-    unauthenticated_allowed: bool = False,
-) -> None:
-    """Build and apply an :class:`AuthPosture` from already-derived source facts.
-
-    Backward-compatible entry point: callers that have already resolved the
-    per-source booleans (notably ``configure_api``) hand them here, and the
-    posture object becomes the single stored source the runtime status,
-    ``/health``, and the startup log all read.
-    """
-    host = _configured_listener_host(None)
-    posture = AuthPosture(
-        listener_host=host,
-        listener_loopback=_is_loopback_listener(host),
-        api_key=bool(api_key_configured),
-        oidc_bearer=bool(oidc_enabled),
-        oidc_browser=bool(oidc_browser_enabled),
-        snowflake_oauth=bool(snowflake_oauth_enabled),
-        scim_bearer=bool(scim_enabled),
-        saml=bool(saml_enabled),
-        trusted_proxy=bool(trusted_proxy_enabled),
-        anonymous_allowed=bool(unauthenticated_allowed),
-    )
-    apply_auth_posture(posture)
-
-
-def get_auth_runtime_status() -> dict[str, object]:
-    """Return the configured auth modes for UI and operator surfaces."""
-    return dict(_AUTH_RUNTIME_STATUS)
-
-
-class InMemoryRateLimitStore:
-    """Process-local sliding-window limiter state."""
-
-    _MAX_ENTRIES = 10_000
-
-    def __init__(self, window_seconds: int = 60) -> None:
-        self._window = window_seconds
-        self._hits: dict[str, list[float]] = {}
-        self._last_cleanup = time.time()
-        self._lock = threading.RLock()
-
-    def _cleanup(self, now: float) -> None:
-        """Prune stale entries to prevent unbounded memory growth."""
-        with self._lock:
-            if now - self._last_cleanup < self._window:
-                return
-            self._last_cleanup = now
-            stale = [k for k, v in self._hits.items() if not v or v[-1] < now - self._window]
-            for k in stale:
-                del self._hits[k]
-            if len(self._hits) > self._MAX_ENTRIES:
-                overflow = len(self._hits) - self._MAX_ENTRIES
-                oldest_keys = sorted(self._hits, key=lambda key: self._hits[key][-1] if self._hits[key] else 0.0)[:overflow]
-                for key in oldest_keys:
-                    del self._hits[key]
-                _logger.warning(
-                    "In-memory rate limiter pruned %s oldest buckets to stay under %s entries",
-                    overflow,
-                    self._MAX_ENTRIES,
-                )
-
-    def hit(self, key: str, now: float) -> tuple[int, int]:
-        """Record a request and return (hit_count, reset_epoch)."""
-        with self._lock:
-            self._cleanup(now)
-            timestamps = [t for t in self._hits.get(key, []) if now - t < self._window]
-            timestamps.append(now)
-            self._hits[key] = timestamps
-            reset_at = int((timestamps[0] if timestamps else now) + self._window)
-            return len(timestamps), reset_at
-
-    def consume_if_below(self, key: str, now: float, limit: int) -> tuple[bool, int, int]:
-        """Atomically consume one sliding-window unit when below ``limit``."""
-
-        with self._lock:
-            self._cleanup(now)
-            timestamps = [timestamp for timestamp in self._hits.get(key, []) if now - timestamp < self._window]
-            accepted = len(timestamps) < limit
-            if accepted:
-                timestamps.append(now)
-                self._hits[key] = timestamps
-            reset_at = int((timestamps[0] if timestamps else now) + self._window)
-            return accepted, len(timestamps), reset_at
-
-    def count(self, key: str, now: float) -> int:
-        """Return current sliding-window usage without consuming a unit."""
-
-        with self._lock:
-            self._cleanup(now)
-            timestamps = [timestamp for timestamp in self._hits.get(key, []) if now - timestamp < self._window]
-            if timestamps:
-                self._hits[key] = timestamps
-            else:
-                self._hits.pop(key, None)
-            return len(timestamps)
-
-
-class PostgresRateLimitStore:
-    """Shared sliding-window limiter backed by Postgres for horizontal scaling."""
-
-    def __init__(self, window_seconds: int = 60, pool: Any = None) -> None:
-        self._window = window_seconds
-        if pool is None:
-            from agent_bom.api.postgres_store import _get_pool
-
-            pool = _get_pool()
-        self._pool = pool
-        self._init_tables()
-
-    def _init_tables(self) -> None:
-        from agent_bom.api.storage_schema import ensure_postgres_schema_version
-
-        with self._pool.connection() as conn:
-            if not ensure_postgres_schema_version(conn, "rate_limits"):
-                return
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS api_rate_limit_hits (
-                    bucket_key TEXT NOT NULL,
-                    hit_at DOUBLE PRECISION NOT NULL
-                )
-            """)
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_api_rate_limit_hits_bucket_hit_at ON api_rate_limit_hits (bucket_key, hit_at)")
-
-    def hit(self, key: str, now: float) -> tuple[int, int]:
-        """Record a request and return (hit_count, reset_epoch)."""
-        window_start = now - self._window
-        with self._pool.connection() as conn:
-            # Trim stale hits opportunistically to keep the table bounded.
-            conn.execute(
-                "DELETE FROM api_rate_limit_hits WHERE hit_at < %s",
-                (window_start,),
-            )
-            conn.execute(
-                "INSERT INTO api_rate_limit_hits (bucket_key, hit_at) VALUES (%s, %s)",
-                (key, now),
-            )
-            row = conn.execute(
-                """
-                SELECT COUNT(*), MIN(hit_at)
-                FROM api_rate_limit_hits
-                WHERE bucket_key = %s AND hit_at >= %s
-                """,
-                (key, window_start),
-            ).fetchone()
-        count = int(row[0]) if row and row[0] is not None else 1
-        oldest = float(row[1]) if row and row[1] is not None else now
-        reset_at = int(oldest + self._window)
-        return count, reset_at
-
-    @staticmethod
-    def _advisory_key(key: str) -> int:
-        digest = hashlib.sha256(f"rate-limit:{key}".encode()).digest()
-        return int.from_bytes(digest[:8], "big", signed=True)
-
-    def consume_if_below(self, key: str, now: float, limit: int) -> tuple[bool, int, int]:
-        """Atomically consume one unit using a transaction advisory lock."""
-
-        window_start = now - self._window
-        with self._pool.connection() as conn:
-            conn.execute("SELECT pg_advisory_xact_lock(%s)", (self._advisory_key(key),))
-            conn.execute("DELETE FROM api_rate_limit_hits WHERE bucket_key = %s AND hit_at < %s", (key, window_start))
-            row = conn.execute(
-                "SELECT COUNT(*), MIN(hit_at) FROM api_rate_limit_hits WHERE bucket_key = %s AND hit_at >= %s",
-                (key, window_start),
-            ).fetchone()
-            current = int(row[0]) if row and row[0] is not None else 0
-            oldest = float(row[1]) if row and row[1] is not None else now
-            accepted = current < limit
-            if accepted:
-                conn.execute("INSERT INTO api_rate_limit_hits (bucket_key, hit_at) VALUES (%s, %s)", (key, now))
-                current += 1
-                if current == 1:
-                    oldest = now
-        return accepted, current, int(oldest + self._window)
-
-    def count(self, key: str, now: float) -> int:
-        """Return current sliding-window usage without consuming a unit."""
-
-        window_start = now - self._window
-        with self._pool.connection() as conn:
-            row = conn.execute(
-                "SELECT COUNT(*) FROM api_rate_limit_hits WHERE bucket_key = %s AND hit_at >= %s",
-                (key, window_start),
-            ).fetchone()
-        return int(row[0]) if row and row[0] is not None else 0
-
-
 def _is_hashed_build_asset(method: str, path: str, status_code: int) -> bool:
     return method in {"GET", "HEAD"} and status_code in {200, 304} and path.startswith("/_next/static/") and ".." not in path
 
@@ -955,7 +446,7 @@ class TrustHeadersMiddleware(BaseHTTPMiddleware):
                 if trace_meta["baggage"]:
                     span.set_attribute("agent_bom.baggage_present", True)
             if postgres_deployment_configured():
-                from agent_bom.api.postgres_store import set_current_tenant
+                from agent_bom.api.postgres_common import set_current_tenant
 
                 tenant_token = set_current_tenant(getattr(request.state, "tenant_id", "default"))
             response = await call_next(request)
@@ -991,7 +482,7 @@ class TrustHeadersMiddleware(BaseHTTPMiddleware):
             raise
         finally:
             if tenant_token is not None:
-                from agent_bom.api.postgres_store import reset_current_tenant
+                from agent_bom.api.postgres_common import reset_current_tenant
 
                 reset_current_tenant(tenant_token)
             if otel_cm is not None:
@@ -1348,7 +839,7 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         if postgres_deployment_configured():
-            from agent_bom.api.postgres_store import is_tenant_rls_bypassed
+            from agent_bom.api.postgres_common import is_tenant_rls_bypassed
 
             if is_tenant_rls_bypassed():
                 _logger.critical("Rejecting request while Postgres tenant RLS bypass context is active")

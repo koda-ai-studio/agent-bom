@@ -957,7 +957,7 @@ def _materialize_showcase_attack_paths(graph: UnifiedGraph) -> bool:
     materialized = list(graph.attack_paths)
     graph.attack_paths = []
     try:
-        from agent_bom.api.routes.graph import _derived_attack_paths
+        from agent_bom.graph.path_derivation import _derived_attack_paths
 
         derived = _derived_attack_paths(graph)
     except Exception:  # noqa: BLE001 — never block the snapshot save on path shaping

@@ -87,8 +87,10 @@ def test_trace_explorer_handler_offloads_to_thread(monkeypatch) -> None:
 
 def test_build_trace_explorer_payload_sync_bounds_findings(monkeypatch) -> None:
     """Findings iteration is capped at the request limit, not the whole estate."""
+    from agent_bom.api import scan_finding_projection
+    from agent_bom.api import scan_finding_read as scan
     from agent_bom.api import trace_explorer as trace_explorer_mod
-    from agent_bom.api.routes import gateway_feed, observability, scan
+    from agent_bom.api.routes import gateway_feed, observability
     from agent_bom.api.routes.scan import _completed_jobs_for_tenant  # noqa: F401
 
     monkeypatch.setattr(gateway_feed, "_load_tenant_alerts", lambda tenant_id: [])
@@ -102,7 +104,9 @@ def test_build_trace_explorer_payload_sync_bounds_findings(monkeypatch) -> None:
 
     # 50 jobs, each yielding 100 findings → 5000 findings if unbounded.
     monkeypatch.setattr(scan, "_completed_jobs_for_tenant", lambda tenant_id: list(range(50)))
-    monkeypatch.setattr(scan, "_iter_scan_findings", lambda job: [{"vulnerability_id": f"CVE-{job}-{i}"} for i in range(100)])
+    monkeypatch.setattr(
+        scan_finding_projection, "_iter_scan_findings", lambda job: [{"vulnerability_id": f"CVE-{job}-{i}"} for i in range(100)]
+    )
 
     class _FakeRuntimeStore:
         def list_sessions(self, tenant_id, limit, offset):

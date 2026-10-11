@@ -2012,7 +2012,7 @@ def test_api_key_middleware_rejects_request_when_tenant_rls_bypass_is_active(mon
     # Postgres connection — the bypass flag itself is a process-local
     # contextvar, which makes it cheap and safe to monkeypatch.
     import agent_bom.api.middleware as middleware_module
-    import agent_bom.api.postgres_store as postgres_store_module
+    import agent_bom.api.postgres_common as postgres_store_module
 
     monkeypatch.setattr(postgres_store_module, "is_tenant_rls_bypassed", lambda: True)
 

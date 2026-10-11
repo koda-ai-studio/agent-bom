@@ -1,7 +1,6 @@
 """VEX (Vulnerability Exploitability eXchange) support.
 
-Provides VEX document generation, ingestion, and application to scan results.
-Supports OpenVEX JSON format (https://openvex.dev/).
+Generates, ingests and applies OpenVEX JSON documents (https://openvex.dev/).
 """
 
 from __future__ import annotations
@@ -14,6 +13,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import TYPE_CHECKING
 
+from agent_bom.domain.report_payloads import VexReportPayload
 from agent_bom.package_utils import package_purl
 from agent_bom.redaction.log_values import sanitize_log_value
 
@@ -653,7 +653,7 @@ def export_openvex(doc: VexDocument) -> dict:
     }
 
 
-def to_serializable(doc: VexDocument) -> dict:
+def to_serializable(doc: VexDocument) -> VexReportPayload:
     """Convert VEX document to a simplified JSON-serializable dict."""
     return {
         "metadata": doc.metadata,

@@ -176,7 +176,7 @@ def _consume_saml_response_once(saml_response: str, *, ttl_seconds: int) -> None
 
 def _auth_session_state(request: Request) -> dict:
     """Build the current request's auth/session state without leaking secrets."""
-    from agent_bom.api.middleware import get_auth_runtime_status
+    from agent_bom.api.auth_posture import get_auth_runtime_status
     from agent_bom.rbac import summarize_role
 
     method = getattr(request.state, "auth_method", None)

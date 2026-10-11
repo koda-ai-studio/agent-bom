@@ -633,7 +633,7 @@ def _dispatch_connection_scan(ctx: ScanContext) -> bool:
 
     if not is_queued_connection_scan(ctx.job):
         return False
-    from agent_bom.api.postgres_store import reset_current_tenant, set_current_tenant
+    from agent_bom.api.postgres_common import reset_current_tenant, set_current_tenant
 
     ctx.progress("Starting queued cloud connection scan")
     tenant_token = set_current_tenant(ctx.job.tenant_id or "default")

@@ -19,6 +19,9 @@ AUTHORIZATION_SOURCES = frozenset(
         "src/agent_bom/rbac.py",
         "src/agent_bom/api/auth.py",
         "src/agent_bom/api/middleware.py",
+        "src/agent_bom/api/auth_posture.py",
+        "src/agent_bom/api/auth_runtime_state.py",
+        "src/agent_bom/api/rate_limit_store.py",
         "src/agent_bom/api/route_policy.py",
         "src/agent_bom/api/session_authorization.py",
         "src/agent_bom/api/stream_authorization.py",
@@ -55,6 +58,8 @@ MCP_TOOL_CONTRACTS = (
 GRAPH_PROJECTION_SOURCES = frozenset(
     {
         "src/agent_bom/graph/builder.py",
+        "src/agent_bom/graph/ast_tool_projection.py",
+        "src/agent_bom/graph/framework_topology_projection.py",
         "src/agent_bom/graph/cloud_compute_projection.py",
         "src/agent_bom/graph/cloud_service_projection.py",
         "src/agent_bom/graph/cloud_storage_projection.py",
@@ -85,6 +90,16 @@ CURRENT_EVIDENCE_SOURCES = frozenset(
         "src/agent_bom/api/estate_agents.py",
         "src/agent_bom/api/findings_current.py",
         "src/agent_bom/api/finding_collection.py",
+        "src/agent_bom/api/finding_facets.py",
+        "src/agent_bom/api/finding_grouping.py",
+        "src/agent_bom/api/finding_identity.py",
+        "src/agent_bom/api/finding_merge.py",
+        "src/agent_bom/api/finding_rank.py",
+        "src/agent_bom/api/finding_scope_filters.py",
+        "src/agent_bom/api/finding_view_filters.py",
+        "src/agent_bom/api/scan_finding_projection.py",
+        "src/agent_bom/api/scan_finding_read.py",
+        "src/agent_bom/api/scan_graph_view.py",
         "src/agent_bom/api/finding_read_context.py",
         "src/agent_bom/api/finding_snapshot_metadata.py",
         "src/agent_bom/api/finding_history_read.py",
@@ -208,6 +223,12 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
 
     for changed in changed_files:
         normalized = Path(changed.as_posix().removeprefix("./"))
+        if normalized.as_posix() in {"src/agent_bom/domain/report_payloads.py", "src/agent_bom/api/read_models/scan.py"}:
+            selected.update(
+                root / path
+                for path in ("tests/test_report_payload_contracts.py", "tests/api/test_scan_read_contracts.py")
+                if root / path in available
+            )
         if normalized.as_posix() == "src/agent_bom/models.py" or normalized.as_posix().startswith(
             (
                 "src/agent_bom/enrichment",
@@ -236,6 +257,16 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
             "src/agent_bom/api/push_models.py",
             "src/agent_bom/api/correlation_cohort_ingest.py",
             "src/agent_bom/api/finding_collection.py",
+            "src/agent_bom/api/finding_facets.py",
+            "src/agent_bom/api/finding_grouping.py",
+            "src/agent_bom/api/finding_identity.py",
+            "src/agent_bom/api/finding_merge.py",
+            "src/agent_bom/api/finding_rank.py",
+            "src/agent_bom/api/finding_scope_filters.py",
+            "src/agent_bom/api/finding_view_filters.py",
+            "src/agent_bom/api/scan_finding_projection.py",
+            "src/agent_bom/api/scan_finding_read.py",
+            "src/agent_bom/api/scan_graph_view.py",
             "src/agent_bom/api/routes/observability.py",
         }:
             selected.update(
@@ -379,6 +410,9 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
             selected.update(root / path for path in MCP_TOOL_CONTRACTS if root / path in available)
         if normalized.as_posix() in {
             "src/agent_bom/api/middleware.py",
+            "src/agent_bom/api/auth_posture.py",
+            "src/agent_bom/api/auth_runtime_state.py",
+            "src/agent_bom/api/rate_limit_store.py",
             "src/agent_bom/api/tenant_lifecycle.py",
             "src/agent_bom/api/storage_schema.py",
         }:

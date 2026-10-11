@@ -334,7 +334,7 @@ def _native_hub_findings(request: Request) -> list[dict[str, Any]]:
     ingests together. This keeps the list endpoint aligned with that contract
     so operators can drill into both sides of the combined posture count.
     """
-    from agent_bom.api.routes.scan import _iter_scan_findings
+    from agent_bom.api.scan_finding_projection import _iter_scan_findings
     from agent_bom.compliance_coverage import TAG_MAPPED_FRAMEWORKS
     from agent_bom.compliance_hub import select_frameworks
     from agent_bom.finding import FindingSource, FindingType

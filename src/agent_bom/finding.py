@@ -363,8 +363,8 @@ def _occurrence_evidence_qualifier(evidence: object) -> dict[str, object]:
 class Finding:
     """Unified finding — one model for all issue types across all sources.
 
-    Phase 1 covers CVE findings (migrated from BlastRadius).
-    Phase 2 will add cloud CIS, proxy, SAST, skill findings.
+    Carries CVE, cloud, secret, source-analysis and runtime evidence with source
+    identity and scope. BlastRadius remains a supported compatibility input.
     """
 
     # Core identity

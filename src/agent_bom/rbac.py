@@ -465,7 +465,7 @@ def require_authenticated_permission(action: str) -> Callable:
         x_tenant_id: str | None = Header(None, alias="X-Agent-Bom-Tenant-ID"),
         x_proxy_secret: str | None = Header(None, alias="X-Agent-Bom-Proxy-Secret"),
     ) -> Role:
-        from agent_bom.api.middleware import get_auth_runtime_status
+        from agent_bom.api.auth_runtime_state import get_auth_runtime_status
 
         state_role = getattr(request.state, "api_key_role", None)
         if state_role:
