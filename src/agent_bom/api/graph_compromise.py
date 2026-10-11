@@ -9,6 +9,8 @@ from typing import Any
 from fastapi import HTTPException
 from pydantic import Field, field_validator
 
+from agent_bom.api.graph_consequence import GraphConsequenceRequest as GraphConsequenceRequest
+from agent_bom.api.graph_consequence import assess_snapshot_consequences as assess_snapshot_consequences
 from agent_bom.api.graph_generation import pin_generation, verify_generation
 from agent_bom.graph.compromise import CompromiseAssessment, CompromiseRequest, assess_direct_compromise
 

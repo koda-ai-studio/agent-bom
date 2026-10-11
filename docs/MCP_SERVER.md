@@ -1,7 +1,7 @@
 # MCP Server — Connect agent-bom to AI Assistants
 
 agent-bom starts with 8 focused MCP tools. Select a task profile for graph, cloud, runtime or audit work;
-`--profile full` explicitly exposes the complete compatibility catalog of 89 MCP tools. Clients that negotiate the
+`--profile full` explicitly exposes the complete compatibility catalog of 90 MCP tools. Clients that negotiate the
 MCP SDK's legacy `2025-11-25` handshake can connect over stdio or
 Streamable HTTP. The `2026-07-28` protocol also supports stateless requests,
 `server/discover`, per-request capabilities, required HTTP headers, and private
@@ -204,7 +204,7 @@ agent-bom proxy-bootstrap \
 
 For scoped historical permission receipts, use [`compromise_assessment`](MCP_WORKFLOWS.md#assess-an-assumed-compromise) in the graph profile.
 
-## Tool Categories (89 tools)
+## Tool Categories (90 tools)
 
 These categories describe `--profile full`, not the default startup catalog.
 The [profile guide](MCP_WORKFLOWS.md) lists the smaller task surfaces.
@@ -224,7 +224,7 @@ The [profile guide](MCP_WORKFLOWS.md) lists the smaller task surfaces.
 | **AI supply chain** | `dataset_card_scan`, `training_pipeline_scan`, `browser_extension_scan`, `model_provenance_scan`, `prompt_scan`, `model_file_scan`, `ingest_external_scan`, `runtime_evidence_ingest` | Scan AI artifacts, prompts, model files, and browser extensions; import tool-agnostic SARIF/SBOM/scanner evidence without executing its producer; merge CWPP runtime signals |
 
 <details>
-<summary>Complete current catalog (89 tools)</summary>
+<summary>Complete current catalog (90 tools)</summary>
 
 `scan`, `check`, `intel_lookup`, `intel_match`, `intel_sources`,
 `intel_daily_brief`, `youcom_search`, `blast_radius`, `exposure_paths`, `compromise_assessment`, `graph_correlate`,

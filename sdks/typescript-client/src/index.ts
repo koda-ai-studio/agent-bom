@@ -1,3 +1,7 @@
+import type { components as ConsequenceSchemas } from "./graph-consequence.generated.js";
+export type GraphConsequenceRequest = ConsequenceSchemas["schemas"]["GraphConsequenceRequest"];
+export type GraphConsequenceResponse = ConsequenceSchemas["schemas"]["GraphConsequenceResponse"];
+
 export type JsonValue =
   | string
   | number
@@ -368,6 +372,11 @@ export class AgentBomClient {
       "GET",
       `/v1/graph/exposure-paths${formatSearch(search)}`,
     );
+  }
+
+  /** Assess recorded consequences at one snapshot revision; never executes containment. */
+  consequenceAssessment(request: GraphConsequenceRequest): Promise<GraphConsequenceResponse> {
+    return this.request<GraphConsequenceResponse>("POST", "/v1/graph/consequences", request);
   }
 
   listFindings(query: FindingsQuery = {}): Promise<Record<string, JsonValue>> {

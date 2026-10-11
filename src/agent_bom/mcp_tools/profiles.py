@@ -68,6 +68,7 @@ PROFILES = {
                 "context_graph",
                 "exposure_paths",
                 "compromise_assessment",
+                "consequence_assessment",
                 "graph_correlate",
                 "graph_correlation_status",
                 "graph_export",

@@ -122,6 +122,10 @@ def _minimal_args(name: str, workdir: Path) -> dict[str, Any]:
     p = str(workdir)
     file_target = str(workdir / "skill.md")
     per_tool: dict[str, dict[str, Any]] = {
+        "consequence_assessment": {
+            "request": {"root_node_id": "node-missing", "mode": "assumed_compromise", "assume_control": True},
+            "scan_id": "snapshot-missing",
+        },
         "compromise_assessment": {"root_node_id": "node-missing", "scan_id": "snapshot-missing", "assume_control": True},
         # Point scan at the throwaway workdir so it inspects the fixture, not
         # the host's real MCP configs (which would error in offline mode).

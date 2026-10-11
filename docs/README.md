@@ -67,6 +67,7 @@ New here? Read [`START_HERE.md`](START_HERE.md) for role-based paths, then
 - [`decisions/`](decisions/README.md) — architecture decision records
 - [`PROJECT_STRUCTURE.md`](PROJECT_STRUCTURE.md) — repository map · [`CODE_MAP.md`](CODE_MAP.md) — where new code goes
 - [`DATA_MODEL.md`](DATA_MODEL.md) · [`IDENTITY_AND_NAMING_CONTRACT.md`](IDENTITY_AND_NAMING_CONTRACT.md) · [`DISCOVERY_ENVELOPE.md`](DISCOVERY_ENVELOPE.md) — data model and identifiers
+- [`GRAPH_CONSEQUENCES.md`](GRAPH_CONSEQUENCES.md) — consequence investigation, assumptions, blockers and collection gaps
 - [`graph/CONTRACT.md`](graph/CONTRACT.md) · [`GRAPH_MIGRATION.md`](GRAPH_MIGRATION.md) — graph guarantees and limits
 - [`CONCURRENCY_AND_FAILURE_MODEL.md`](CONCURRENCY_AND_FAILURE_MODEL.md) · [`SESSION_FLOWS.md`](SESSION_FLOWS.md) — concurrency, failure and enforcement flows
 - [`OCSF_BOUNDARY.md`](OCSF_BOUNDARY.md) · [`POSTURE_EVENT_STREAMING.md`](POSTURE_EVENT_STREAMING.md) · [`WAREHOUSE_EXPORTS.md`](WAREHOUSE_EXPORTS.md) — export contracts

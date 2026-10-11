@@ -35,11 +35,11 @@ async def compromise_assessment_impl(
     try:
         from fastapi import HTTPException
 
-        from agent_bom.api.graph_compromise import GraphCompromiseRequest, assess_snapshot
+        request_model, assess_snapshot = assessment_api("direct")
     except ImportError:
         return mcp_error_json(CODE_UNSUPPORTED_BACKEND, "Install agent-bom[api] to assess persisted graph snapshots.")
     try:
-        request = GraphCompromiseRequest.model_validate(
+        request = request_model.model_validate(
             {
                 "root_node_id": root_node_id,
                 "scan_id": scan_id,
@@ -119,3 +119,15 @@ def register_compromise_tool(mcp: Any, *, read_only: Any, execute_tool_async: An
             tenant_id=tenant_id,
             _truncate_response=truncate_response,
         )
+
+
+def assessment_api(kind: str) -> tuple[Any, Any]:
+    """Load optional API assessment adapters at one shared transport boundary."""
+    from agent_bom.api.graph_compromise import (
+        GraphCompromiseRequest,
+        GraphConsequenceRequest,
+        assess_snapshot,
+        assess_snapshot_consequences,
+    )
+
+    return (GraphConsequenceRequest, assess_snapshot_consequences) if kind == "consequence" else (GraphCompromiseRequest, assess_snapshot)

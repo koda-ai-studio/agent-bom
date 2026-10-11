@@ -4,10 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { GraphNodeDetailResponse } from "@/lib/api-types";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, Loader2, Network, Radar, ShieldAlert } from "lucide-react";
+import { ArrowRight, Loader2, Network, Radar } from "lucide-react";
 
 import { GraphRecordedRelationships, GraphRecordedRelationshipScope } from "@/components/graph-recorded-relationships";
-import { GraphCompromisePanel } from "@/components/graph-compromise-panel";
+import { GraphConsequencePanel } from "@/components/graph-consequence-panel";
 import { LineageDetailPanel } from "@/components/lineage-detail";
 import type { LineageNodeData } from "@/components/lineage-nodes";
 import { api } from "@/lib/api";
@@ -36,9 +36,6 @@ export function GraphEntityDrawer({
   onInspectNode,
   onExpandNeighbors,
   onShowImpact,
-  onQuarantine,
-  quarantineState = "idle",
-  quarantineMessage = "",
   remediationHref,
   enrich = true,
 }: {
@@ -52,10 +49,6 @@ export function GraphEntityDrawer({
   onInspectNode?: ((nodeId: string) => void) | undefined;
   onExpandNeighbors?: (() => void) | undefined;
   onShowImpact?: (() => void) | undefined;
-  /** Contain this agent at the gateway. Agent nodes only; drawer stays presentational. */
-  onQuarantine?: (() => void) | undefined;
-  quarantineState?: "idle" | "confirming" | "pending" | "done" | "error";
-  quarantineMessage?: string;
   remediationHref?: string | undefined;
   /** When true and scanId is set, refresh node detail from /v1/graph/node. */
   enrich?: boolean;
@@ -132,7 +125,12 @@ export function GraphEntityDrawer({
   const missingLocationFields = locationFields.filter(([, value]) => !value).map(([label]) => label.toLowerCase());
   const headerSlot = (
     <div className="space-y-2 rounded-lg border border-outline bg-surface-muted px-3 py-2">
-      {enrich && scanId && nodeId && <GraphCompromisePanel nodeId={nodeId} scanId={scanId} snapshotGeneration={detail?.snapshot_generation} findingRoot={["vulnerability", "misconfiguration", "driftIncident"].includes(enriched.nodeType)} />}
+      {enrich && scanId && nodeId && detail && ["agent", "vulnerability", "user", "role", "group", "service_account", "service_principal", "federated_identity", "managed_identity"].includes(String(detail.node.entity_type)) && <GraphConsequencePanel nodeId={nodeId} scanId={scanId} snapshotGeneration={detail?.snapshot_generation}
+        findingRoot={enriched.nodeType === "vulnerability"}
+        affectedNodeIds={detail ? [...new Set([
+          ...detail.edges_out.filter(edge => edge.source === nodeId && edge.relationship === "affects").map(edge => edge.target),
+          ...detail.edges_in.filter(edge => edge.target === nodeId && edge.relationship === "vulnerable_to").map(edge => edge.source),
+        ])] : []} />}
       <div className="flex flex-wrap items-center gap-2 text-[11px]">
         <span className="rounded border border-outline px-1.5 py-0.5 font-mono text-ink-secondary">
           {layer.label}
@@ -208,31 +206,13 @@ export function GraphEntityDrawer({
           ) : null}
         </div>
       )}
-      {onQuarantine && enriched.nodeType === "agent" && (
-        <div className="space-y-1.5 border-t border-outline pt-2">
-          <button
-            type="button"
-            onClick={onQuarantine}
-            disabled={quarantineState === "pending" || quarantineState === "done"}
-            data-testid="graph-quarantine-agent"
-            className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-red-500/40 bg-red-500/10 px-2 py-2 text-[11px] font-medium text-red-700 transition hover:border-red-500/60 disabled:opacity-60 dark:text-red-200"
-          >
-            <ShieldAlert className="h-3.5 w-3.5" />
-            {quarantineState === "confirming"
-              ? "Confirm — block every tool call"
-              : quarantineState === "pending"
-                ? "Quarantining…"
-                : quarantineState === "done"
-                  ? "Quarantined"
-                  : "Quarantine agent"}
-          </button>
-          {quarantineMessage && (
-            <p
-              className={`text-[10px] ${quarantineState === "error" ? "text-red-600 dark:text-red-300" : "text-ink-tertiary"}`}
-            >
-              {quarantineMessage}
-            </p>
-          )}
+      {enriched.nodeType === "agent" && (
+        <div className="space-y-2 border-t border-outline pt-3 text-xs text-ink-secondary">
+          <p>Read-only discovery cannot stop this agent. Gateway policies apply only to calls routed through the gateway with its authenticated fleet identity.</p>
+          <p>Direct cloud calls and other connections remain outside that control. Review the exact identity and business impact before changing a policy.</p>
+          <Link href="/fleet" className="inline-flex rounded-lg border border-outline px-3 py-2 font-medium text-foreground hover:bg-surface-muted">
+            Review gateway controls
+          </Link>
         </div>
       )}
     </div>

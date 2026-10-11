@@ -10,7 +10,7 @@
     },
     {
       "name": "MCP tools",
-      "value": 89,
+      "value": 90,
       "source": "src/agent_bom/mcp_server_metadata.py",
       "notes": "Counted from the advertised server-card tools."
     },
@@ -34,7 +34,7 @@
     },
     {
       "name": "API route modules",
-      "value": 79,
+      "value": 80,
       "source": "src/agent_bom/api/routes",
       "notes": "Counts Python files in the routes package, including __init__.py."
     },
@@ -46,7 +46,7 @@
     },
     {
       "name": "Python modules",
-      "value": 1435,
+      "value": 1453,
       "source": "src/agent_bom",
       "notes": "Counts all Python files recursively."
     },

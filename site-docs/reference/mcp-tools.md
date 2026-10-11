@@ -16,10 +16,10 @@ admin role, the tool-specific write scope, and an audit reason; stdio cannot
 invoke them.
 
 `agent-bom mcp server` and the programmatic server default to eight focused
-scan tools. Use `--profile full` for the complete 89-tool catalog.
+scan tools. Use `--profile full` for the complete 90-tool catalog.
 
 <details>
-<summary>Explicit full-profile catalog (89 tools)</summary>
+<summary>Explicit full-profile catalog (90 tools)</summary>
 
 `scan`, `check`, `intel_lookup`, `intel_match`, `intel_sources`,
 `intel_daily_brief`, `youcom_search`, `blast_radius`, `exposure_paths`, `compromise_assessment`, `graph_correlate`,

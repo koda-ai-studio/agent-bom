@@ -62,7 +62,7 @@ cannot be invoked. Profiles are not permissions: graph writes still require the
 existing authenticated role, tenant scope and audit reason.
 
 Existing clients that require the complete catalog can explicitly use
-`agent-bom mcp server --profile full`. It retains all 89 tools. The previous
+`agent-bom mcp server --profile full`. It retains all 90 tools. The previous
 25-tool `--profile guided` option remains available for compatibility with all
 eight workflow prompts. Neither is the recommended first-run configuration.
 Third-party tool plugins remain separately opt-in and are exposed only by `full`.
@@ -160,3 +160,7 @@ Generation-pinned reads require SQLite or Postgres; unsupported backends return
 Next: inspect missing or stale receipts in the source system, collect a new
 snapshot when appropriate, and rerun with that snapshot's identity. Retain the
 original export when comparing assessments.
+
+For recorded action/resource consequences with assumptions, blockers and gaps, use
+`consequence_assessment` in the graph profile. See [graph consequences](GRAPH_CONSEQUENCES.md)
+for the matching CLI command and evidence boundaries. Assessments are read-only.

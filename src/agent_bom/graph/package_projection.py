@@ -9,6 +9,7 @@ from agent_bom.canonical_ids import canonical_graph_node_id, source_ids
 from agent_bom.core.severity import SEVERITY_RISK_SCORE
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
+from agent_bom.graph.exploitability_projection import project_exploitability
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.types import EntityType, RelationshipType
 from agent_bom.package_utils import canonical_package_key
@@ -178,6 +179,7 @@ def _add_vuln_node(
                 "attack_complexity": vuln_dict.get("attack_complexity"),
                 "privileges_required": vuln_dict.get("privileges_required"),
                 "user_interaction": vuln_dict.get("user_interaction"),
+                "exploitability_assessment": project_exploitability(vuln_dict, vuln_node_id),
                 "network_exploitable": vuln_dict.get("network_exploitable", False),
                 "epss_score": vuln_dict.get("epss_score"),
                 "is_kev": vuln_dict.get("is_kev", False),
