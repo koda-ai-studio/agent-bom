@@ -13,6 +13,8 @@ from typing import Annotated, Any, cast
 from fastapi import APIRouter, HTTPException, Query, Request
 
 from agent_bom.api.audit_log import log_action
+from agent_bom.api.read_models import admin as m
+from agent_bom.api.read_models import documented
 from agent_bom.api.request_contract import reject_unknown_fields, require_scalar_str
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.api.webhook_store import (
@@ -98,7 +100,7 @@ def create_webhook_subscription(request: Request, body: dict) -> dict[str, objec
     }
 
 
-@router.get("/webhooks", dependencies=[_dep("read")])
+@router.get("/webhooks", **documented(m.WebhookSubscriptionsResponse), dependencies=[_dep("read")])
 def list_webhook_subscriptions(
     request: Request, include_disabled: bool = False, limit: Annotated[int, Query(ge=1, le=1000)] = 200
 ) -> dict[str, object]:
@@ -115,7 +117,7 @@ def list_webhook_subscriptions(
     }
 
 
-@router.get("/webhooks/{subscription_id}", dependencies=[_dep("read")])
+@router.get("/webhooks/{subscription_id}", **documented(m.WebhookSubscriptionResponse), dependencies=[_dep("read")])
 def get_webhook_subscription(request: Request, subscription_id: str) -> dict[str, object]:
     """Return one webhook subscription (without the signing secret)."""
     subscription = _subscription_for_tenant(request, subscription_id)

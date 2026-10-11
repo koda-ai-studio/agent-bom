@@ -14,6 +14,8 @@ from fastapi.responses import FileResponse
 
 from agent_bom.api.models import JobStatus, ReportJob, ReportJobRequest
 from agent_bom.api.pipeline import _now
+from agent_bom.api.read_models import admin as m
+from agent_bom.api.read_models import documented
 from agent_bom.api.report_job_store import get_report_job_store
 from agent_bom.api.report_worker import resolve_report_artifact, submit_report_job
 from agent_bom.api.tenancy import require_request_tenant_id
@@ -108,7 +110,7 @@ async def create_report_job(request: Request, body: ReportJobRequest) -> dict:
     return await _report_call(_job_payload, job, request=request)
 
 
-@router.get("/reports/{job_id}", tags=["reports"])
+@router.get("/reports/{job_id}", **documented(m.ReportJobStatusResponse), tags=["reports"])
 async def get_report_job(request: Request, job_id: str) -> dict:
     """Return async report job status and download URL when complete."""
     tenant_id = _tenant_id(request)

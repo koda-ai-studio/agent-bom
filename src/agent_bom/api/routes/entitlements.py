@@ -7,6 +7,8 @@ import logging
 from fastapi import APIRouter, Request
 
 from agent_bom.api.audit_log import AuditEntry, get_audit_log
+from agent_bom.api.read_models import admin as m
+from agent_bom.api.read_models import documented
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.entitlements import load_entitlement_state
 
@@ -30,7 +32,7 @@ def _audit_entitlement_read(request: Request, *, resource: str, details: dict[st
         _logger.error("Failed to append entitlement audit entry")
 
 
-@router.get("/entitlements", tags=["enterprise"])
+@router.get("/entitlements", **documented(m.EntitlementsResponse), tags=["enterprise"])
 def get_entitlements(request: Request) -> dict:
     """Return local entitlement metadata for self-hosted packaging.
 
@@ -52,7 +54,7 @@ def get_entitlements(request: Request) -> dict:
     return state.to_dict()
 
 
-@router.get("/entitlements/check/{feature}", tags=["enterprise"])
+@router.get("/entitlements/check/{feature}", **documented(m.EntitlementCheckResponse), tags=["enterprise"])
 def check_entitlement(feature: str, request: Request) -> dict:
     """Evaluate one feature against local entitlement metadata."""
     state = load_entitlement_state()

@@ -35,6 +35,9 @@ from agent_bom.api.export_destination_store import (
     is_supported_kind,
 )
 from agent_bom.api.export_schedule_store import ExportSchedule, get_export_schedule_store
+from agent_bom.api.read_models import admin as m
+from agent_bom.api.read_models import documented
+from agent_bom.api.read_models.admin import documented_list
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.api.tenant_worker import submit_tenant_bound
 from agent_bom.export.destinations import SUPPORTED_EXPORT_KINDS, ExportPublicationIndeterminateError
@@ -138,13 +141,13 @@ def create_export_destination(request: Request, body: ExportDestinationCreate, _
     return record.to_public_dict()
 
 
-@router.get("/exports/destinations", tags=["exports"])
+@router.get("/exports/destinations", **documented_list(m.ExportDestinationsResponse), tags=["exports"])
 def list_export_destinations(request: Request, _role: Any = _READ_DEP) -> list[dict[str, Any]]:
     tenant_id = require_request_tenant_id(request)
     return [r.to_public_dict() for r in get_export_destination_store().list_for_tenant(tenant_id)]
 
 
-@router.get("/exports/destinations/{destination_id}", tags=["exports"])
+@router.get("/exports/destinations/{destination_id}", **documented(m.ExportDestinationResponse), tags=["exports"])
 def get_export_destination(request: Request, destination_id: str, _role: Any = _READ_DEP) -> dict[str, Any]:
     tenant_id = require_request_tenant_id(request)
     record = get_export_destination_store().get(tenant_id, destination_id)
@@ -257,7 +260,7 @@ def create_export_schedule(request: Request, body: ExportScheduleCreate, _role: 
     return schedule.model_dump()
 
 
-@router.get("/exports/schedules", tags=["exports"])
+@router.get("/exports/schedules", **documented_list(m.ExportSchedulesResponse), tags=["exports"])
 def list_export_schedules(request: Request, _role: Any = _READ_DEP) -> list[dict[str, Any]]:
     tenant_id = require_request_tenant_id(request)
     return [s.model_dump() for s in get_export_schedule_store().list_all(tenant_id=tenant_id)]

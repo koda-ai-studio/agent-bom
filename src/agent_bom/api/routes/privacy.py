@@ -11,6 +11,8 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from agent_bom.api.audit_log import get_audit_log, log_action
 from agent_bom.api.auth import get_key_store
 from agent_bom.api.connection_store import get_connection_store
+from agent_bom.api.read_models import admin as m
+from agent_bom.api.read_models import documented
 from agent_bom.api.scan_snapshot_store import purge_tenant_snapshots
 from agent_bom.api.stores import (
     _get_credential_ref_store,
@@ -239,7 +241,7 @@ def _delete_records(tenant_id: str) -> dict[str, int]:
     return deleted
 
 
-@router.get("/tenant/{tenant_id}/data", dependencies=[_dep("config")])
+@router.get("/tenant/{tenant_id}/data", **documented(m.TenantDataExportResponse), dependencies=[_dep("config")])
 def export_tenant_data(
     tenant_id: str,
     request: Request,

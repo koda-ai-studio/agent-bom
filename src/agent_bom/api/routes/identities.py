@@ -38,6 +38,7 @@ from agent_bom.api.delegation_service import (
 )
 from agent_bom.api.delegation_token import DelegationTokenError
 from agent_bom.api.read_models import IdentitiesResponse, documented
+from agent_bom.api.read_models import admin as m
 from agent_bom.api.request_contract import PageLimit1000, reject_unknown_fields, require_scalar_str
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.api.webhook_store import emit_governance_event
@@ -378,7 +379,7 @@ def revoke_agent_identity_jit(request: Request, grant_id: str, body: dict | None
     return {"schema_version": "agent.identity.jit.v1", "grant": grant.to_public_dict()}
 
 
-@router.get("/identity-jit-grants", dependencies=[_dep("read")])
+@router.get("/identity-jit-grants", **documented(m.IdentityJitGrantsResponse), dependencies=[_dep("read")])
 def list_agent_identity_jit_grants(
     request: Request,
     identity_id: str | None = None,
@@ -401,7 +402,7 @@ def list_agent_identity_jit_grants(
     }
 
 
-@router.get("/identities/{identity_id}/jit-grants", dependencies=[_dep("read")])
+@router.get("/identities/{identity_id}/jit-grants", **documented(m.IdentityJitGrantsResponse), dependencies=[_dep("read")])
 def list_agent_identity_jit_for_identity(
     request: Request,
     identity_id: str,
@@ -576,7 +577,7 @@ def enable_conditional_access_policy(request: Request, policy_id: str) -> dict[s
     return {"schema_version": "agent.identity.conditional.v1", "policy": policy.to_public_dict()}
 
 
-@router.get("/conditional-access-policies", dependencies=[_dep("read")])
+@router.get("/conditional-access-policies", **documented(m.ConditionalAccessPoliciesResponse), dependencies=[_dep("read")])
 def list_conditional_access_policies(request: Request, include_disabled: bool = False, limit: PageLimit1000 = 200) -> dict[str, object]:
     """List conditional-access policies for the active tenant."""
     tenant_id = _tenant(request)
@@ -590,7 +591,7 @@ def list_conditional_access_policies(request: Request, include_disabled: bool = 
     }
 
 
-@router.get("/conditional-access-policies/{policy_id}", dependencies=[_dep("read")])
+@router.get("/conditional-access-policies/{policy_id}", **documented(m.ConditionalAccessPolicyResponse), dependencies=[_dep("read")])
 def get_conditional_access_policy(request: Request, policy_id: str) -> dict[str, object]:
     """Return one conditional-access policy."""
     policy = _conditional_policy_for_tenant(request, policy_id)
@@ -745,10 +746,7 @@ def discover_non_human_identities(request: Request, body: dict | None = None) ->
     a provider whose flag is off.
     """
     from agent_bom.graph.nhi_overlay import merge_discovery_results
-    from agent_bom.identity import (
-        discover_entra_non_human_identities,
-        discover_okta_non_human_identities,
-    )
+    from agent_bom.identity import discover_entra_non_human_identities, discover_okta_non_human_identities
 
     payload = body or {}
     requested = payload.get("providers")
@@ -811,10 +809,7 @@ def _discover_nhi_subjects() -> list[dict[str, object]]:
     never reads secret material; each provider is gated by its own env flag.
     """
     from agent_bom.graph.nhi_overlay import merge_discovery_results
-    from agent_bom.identity import (
-        discover_entra_non_human_identities,
-        discover_okta_non_human_identities,
-    )
+    from agent_bom.identity import discover_entra_non_human_identities, discover_okta_non_human_identities
 
     merged = merge_discovery_results([discover_okta_non_human_identities(), discover_entra_non_human_identities()])
     return list(merged.get("identities", []))
@@ -898,7 +893,7 @@ def create_access_review(request: Request, body: dict | None = None) -> dict[str
     }
 
 
-@router.get("/identities/access-reviews", dependencies=[_dep("read")])
+@router.get("/identities/access-reviews", **documented(m.AccessReviewsResponse), dependencies=[_dep("read")])
 def list_access_reviews(request: Request, limit: PageLimit1000 = 200) -> dict[str, object]:
     """List access-review campaigns for the active tenant (overdue refreshed)."""
     from agent_bom.api.access_review import get_access_review_store, refresh_campaign_status
@@ -916,7 +911,7 @@ def list_access_reviews(request: Request, limit: PageLimit1000 = 200) -> dict[st
     }
 
 
-@router.get("/identities/access-reviews/{campaign_id}", dependencies=[_dep("read")])
+@router.get("/identities/access-reviews/{campaign_id}", **documented(m.AccessReviewDetailResponse), dependencies=[_dep("read")])
 def get_access_review(request: Request, campaign_id: str) -> dict[str, object]:
     """Return one access-review campaign and its review items."""
     from agent_bom.api.access_review import get_access_review_store, refresh_campaign_status
@@ -990,7 +985,7 @@ def submit_access_review_decision(request: Request, campaign_id: str, item_id: s
     }
 
 
-@router.get("/identities/access-reviews/{campaign_id}/evidence", dependencies=[_dep("read")])
+@router.get("/identities/access-reviews/{campaign_id}/evidence", **documented(m.AccessReviewEvidenceResponse), dependencies=[_dep("read")])
 def export_access_review_evidence(request: Request, campaign_id: str) -> dict[str, object]:
     """Export a non-secret, signable evidence bundle for one campaign."""
     from agent_bom.api.access_review import export_evidence, get_access_review_store
@@ -1003,7 +998,7 @@ def export_access_review_evidence(request: Request, campaign_id: str) -> dict[st
 
 
 # Declared last so the ``access-reviews`` static routes above take precedence over this single-identity catch-all.
-@router.get("/identities/{identity_id}", dependencies=[_dep("read")])
+@router.get("/identities/{identity_id}", **documented(m.AgentIdentityResponse), dependencies=[_dep("read")])
 def get_agent_identity(request: Request, identity_id: str) -> dict[str, object]:
     """Return one agent identity's lifecycle status (metadata only)."""
     identity = get_agent_identity_store().get(identity_id, tenant_id=_tenant(request))
@@ -1055,7 +1050,7 @@ def ingest_device_posture(request: Request, body: dict) -> dict[str, object]:
     }
 
 
-@router.get("/device-posture/{device_id}", dependencies=[_dep("read")])
+@router.get("/device-posture/{device_id}", **documented(m.DevicePostureResponse), dependencies=[_dep("read")])
 def get_device_posture(request: Request, device_id: str) -> dict[str, object]:
     """Return the latest stored posture signal for one device (tenant-scoped)."""
     from agent_bom.device_posture import get_device_posture_store
