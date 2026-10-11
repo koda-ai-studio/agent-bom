@@ -115,36 +115,41 @@ async def forward_jsonrpc_http(
     Auth / Content-Type headers are caller-supplied (registry resolves bearer /
     OAuth before this call).
     """
-    merged = {"Content-Type": "application/json", **headers}
+    from agent_bom.runtime.mcp_protocol import request_headers, sse_messages, validate_response
+
+    merged = request_headers(message, headers)
     async with client.stream("POST", upstream_url, json=message, headers=merged) as response:
         response.raise_for_status()
+        if "id" not in message:
+            if response.status_code not in (200, 202, 204):
+                raise ValueError("Invalid MCP notification acknowledgement")
+            return RelayForwardResult(message={}, upstream_name=upstream_name, bytes_read=0)
+        if response.status_code == 202:
+            raise ValueError("MCP request acknowledged without a response")
         content_length = response.headers.get("content-length")
-        if content_length:
-            try:
-                declared_size = int(content_length)
-            except ValueError:
-                declared_size = 0
-            if declared_size > max_bytes:
-                raise ValueError(f"upstream response exceeded {max_bytes} bytes")
-
+        if content_length and int(content_length) > max_bytes:
+            raise ValueError("MCP upstream response exceeds size limit")
+        media = response.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+        if media == "text/event-stream":
+            # Parse incrementally and stop at the correlated final response,
+            # even when the upstream keeps its stream open. Never wrap an
+            # opaque event stream in a fabricated successful tool result.
+            async for event, size in sse_messages(response, max_bytes):
+                if isinstance(event, dict) and ("result" in event or "error" in event):
+                    parsed = validate_response(message, event)
+                    return RelayForwardResult(message=parsed, upstream_name=upstream_name, bytes_read=size)
+                if not isinstance(event, dict) or event.get("jsonrpc") != "2.0" or "id" in event:
+                    raise ValueError("Unsupported MCP upstream stream message")
+            raise ValueError("MCP upstream stream ended without a response")
+        if media != "application/json":
+            raise ValueError("Unsupported MCP upstream response content type")
         body = bytearray()
         async for chunk in response.aiter_bytes():
             if len(body) + len(chunk) > max_bytes:
-                raise ValueError(f"upstream response exceeded {max_bytes} bytes")
+                raise ValueError("MCP upstream response exceeds size limit")
             body.extend(chunk)
-
-        raw_body = bytes(body)
-        if response.headers.get("content-type", "").startswith("application/json"):
-            parsed: dict[str, Any] = json.loads(raw_body)
-        else:
-            # Non-JSON upstreams (e.g. text/event-stream) stay opaque so policy
-            # + audit in the Python plane can still observe a success envelope.
-            parsed = {
-                "jsonrpc": "2.0",
-                "id": message.get("id"),
-                "result": {"raw": raw_body.decode("utf-8", errors="replace")},
-            }
-        return RelayForwardResult(message=parsed, upstream_name=upstream_name, bytes_read=len(raw_body))
+        parsed = validate_response(message, json.loads(body))
+        return RelayForwardResult(message=parsed, upstream_name=upstream_name, bytes_read=len(body))
 
 
 class PythonHttpRelayTransport:

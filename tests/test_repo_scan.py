@@ -334,7 +334,7 @@ async def test_scan_impl_repo_url_clones_and_routes(monkeypatch: pytest.MonkeyPa
 
 @pytest.mark.asyncio
 async def test_scan_impl_rejects_repo_url_and_config_path(monkeypatch: pytest.MonkeyPatch) -> None:
-    from mcp.server.fastmcp.exceptions import ToolError
+    from mcp.server.mcpserver.exceptions import ToolError
 
     from agent_bom.mcp_tools import scanning
 

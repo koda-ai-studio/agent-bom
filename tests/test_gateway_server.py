@@ -1299,6 +1299,8 @@ def test_managed_upstream_relay_opens_circuit_after_repeated_failures() -> None:
 
 
 class _StreamingResponse:
+    status_code = 200
+
     def __init__(self, chunks: list[bytes], *, content_length: int | None = None) -> None:
         self.headers = {"content-type": "application/json"}
         if content_length is not None:
@@ -1344,7 +1346,7 @@ def test_upstream_relay_rejects_declared_oversize_before_reading_body() -> None:
     client = _StreamingClient(response)
     upstream = UpstreamConfig(name="remote", url="https://mcp.example.test/mcp")
 
-    with pytest.raises(ValueError, match="upstream response exceeded"):
+    with pytest.raises(ValueError, match="upstream response exceeds size limit"):
         asyncio.run(gateway_server._post_upstream_jsonrpc(upstream, _json_rpc("tools/list"), {}, client=client))
 
     assert client.stream_calls == 1
@@ -1357,7 +1359,7 @@ def test_upstream_relay_stops_streaming_undeclared_oversize_body() -> None:
     client = _StreamingClient(response)
     upstream = UpstreamConfig(name="remote", url="https://mcp.example.test/mcp")
 
-    with pytest.raises(ValueError, match="upstream response exceeded"):
+    with pytest.raises(ValueError, match="upstream response exceeds size limit"):
         asyncio.run(gateway_server._post_upstream_jsonrpc(upstream, _json_rpc("tools/list"), {}, client=client))
 
     assert client.stream_calls == 1

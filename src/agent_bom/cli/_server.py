@@ -1278,7 +1278,7 @@ def mcp_server_cmd(
             ),
         ]
         _emit_runtime_summary("agent-bom MCP server", rows, err=True)
-        server.run(transport=transport)
+        server.run(transport=transport, host=host, port=port)
     else:
         if bearer_token:
             click.echo("  Warning:   --bearer-token applies only to SSE / Streamable HTTP transports", err=True)

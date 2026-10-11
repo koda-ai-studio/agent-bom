@@ -109,9 +109,9 @@ def test_mcp_wire_reads_retained_evidence_and_rejects_extra_arguments(journey):
                 assert "inventory_asset" in {tool.name for tool in (await session.list_tools()).tools}
                 arguments = {"asset_id": "pkg:pypi:pillow@9.0.0", "scan_id": "connected-before", "limit": 1}
                 response = await session.call_tool("inventory_asset", arguments)
-                assert not response.isError
+                assert not response.is_error
                 assert json.loads(response.content[0].text) == json.loads((output / "before-component.json").read_text())[0]
                 rejected = await session.call_tool("inventory_asset", {**arguments, "unexpected_argument": True})
-                assert rejected.isError
+                assert rejected.is_error
 
     asyncio.run(asyncio.wait_for(probe(), timeout=30))

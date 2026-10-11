@@ -24,7 +24,7 @@ def test_runtime_ingest_mcp_does_not_accept_credentials():
     from agent_bom.mcp_server import create_mcp_server
 
     tool = next(t for t in asyncio.run(create_mcp_server(profile="full").list_tools()) if t.name == "runtime_evidence_ingest")
-    assert not {"secret", "token", "api_key", "password"} & tool.inputSchema["properties"].keys()
+    assert not {"secret", "token", "api_key", "password"} & tool.input_schema["properties"].keys()
 
 
 def test_runtime_ingest_cli_does_not_accept_source_secrets():

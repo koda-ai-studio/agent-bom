@@ -9,7 +9,7 @@ Locks four properties an agent calling ``scan`` over MCP depends on:
    a summary (counts, top findings, affected paths) plus a ``result_id`` whose
    sections are paged by follow-up calls — never a sliced JSON document.
 3. A scan that could not evaluate vulnerabilities is reported with
-   ``isError=True`` while keeping its structured JSON body.
+   ``is_error=True`` while keeping its structured JSON body.
 4. The path sandbox accepts explicitly configured workspace roots in addition
    to HOME, without weakening traversal or symlink protection.
 """
@@ -27,8 +27,8 @@ import pytest
 
 pytest.importorskip("mcp")
 
-from mcp.shared.memory import create_connected_server_and_client_session  # noqa: E402
-from mcp.types import CallToolResult  # noqa: E402
+from mcp import Client  # noqa: E402
+from mcp_types import CallToolResult  # noqa: E402
 
 
 def _call(args: dict[str, Any] | None = None) -> CallToolResult:
@@ -37,7 +37,7 @@ def _call(args: dict[str, Any] | None = None) -> CallToolResult:
     server = create_mcp_server(profile="full")
 
     async def _run() -> CallToolResult:
-        async with create_connected_server_and_client_session(server._mcp_server) as client:
+        async with Client(server) as client:
             return await client.call_tool("scan", args or {})
 
     return asyncio.run(_run())
@@ -154,7 +154,7 @@ def _clean_offline_env(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_scan_defaults_to_online_lookups_when_no_offline_config(mock_pipeline) -> None:
     mock_pipeline.return_value = ([], [], [], [])
     result = _call({"no_discover": True})
-    assert result.isError is False
+    assert result.is_error is False
     assert mock_pipeline.call_args.kwargs["offline"] is False
 
 
@@ -184,7 +184,7 @@ def test_scan_schema_advertises_the_real_offline_default() -> None:
 
     server = create_mcp_server(profile="full")
     tools = {tool.name: tool for tool in asyncio.run(server.list_tools())}
-    schema = tools["scan"].inputSchema["properties"]
+    schema = tools["scan"].input_schema["properties"]
     assert schema["offline"].get("default") is None
     description = schema["offline"]["description"].lower()
     assert "agent_bom_offline" in description
@@ -201,7 +201,7 @@ def test_incomplete_scan_sets_is_error_and_keeps_json_body(mock_pipeline) -> Non
 
     mock_pipeline.side_effect = IncompleteScanError("Offline mode requires a populated local vulnerability DB.")
     result = _call({"no_discover": True, "offline": True})
-    assert result.isError is True
+    assert result.is_error is True
     body = _body(result)
     assert body["status"] == "incomplete_scan"
     assert body["warnings"]
@@ -214,7 +214,7 @@ def test_unresolved_package_spec_sets_is_error(mock_pipeline) -> None:
     mock_pipeline.return_value = ([agent], [], [], ["mcp_package"])
     with patch("agent_bom.mcp_server_scan.package_spec_extracted_count", return_value=0):
         result = _call({"package": "totally::unparseable", "offline": True})
-    assert result.isError is True
+    assert result.is_error is True
     assert _body(result)["status"] == "incomplete_scan"
 
 
@@ -222,7 +222,7 @@ def test_unresolved_package_spec_sets_is_error(mock_pipeline) -> None:
 def test_empty_project_is_not_an_error(mock_pipeline) -> None:
     mock_pipeline.return_value = ([], [], [], [])
     result = _call({"no_discover": True, "offline": True})
-    assert result.isError is False
+    assert result.is_error is False
     body = _body(result)
     assert body["status"] == "no_agents_found"
 
@@ -248,7 +248,7 @@ def test_huge_default_scan_returns_bounded_valid_summary(huge_scan) -> None:
 
     result = _call({"no_discover": True, "offline": True})
     text = result.content[0].text  # type: ignore[union-attr]
-    assert result.isError is False
+    assert result.is_error is False
     assert len(text) <= _MAX_RESPONSE_CHARS
     body = json.loads(text)
     assert "_truncated" not in body
@@ -290,7 +290,7 @@ def test_follow_up_pages_through_a_section(huge_scan) -> None:
     server = create_mcp_server(profile="full")
 
     async def _run() -> tuple[CallToolResult, CallToolResult, CallToolResult]:
-        async with create_connected_server_and_client_session(server._mcp_server) as client:
+        async with Client(server) as client:
             first = await client.call_tool("scan", {"no_discover": True, "offline": True})
             rid = json.loads(first.content[0].text)["result_id"]  # type: ignore[union-attr]
             page = await client.call_tool("scan", {"result_id": rid, "section": "findings", "offset": 10, "limit": 5})
@@ -299,7 +299,7 @@ def test_follow_up_pages_through_a_section(huge_scan) -> None:
 
     _first, page, paths = asyncio.run(_run())
     text = page.content[0].text  # type: ignore[union-attr]
-    assert page.isError is False
+    assert page.is_error is False
     assert len(text) <= _MAX_RESPONSE_CHARS
     body = json.loads(text)
     assert body["section"] == "findings"
@@ -321,7 +321,7 @@ def test_last_page_has_no_next_offset(huge_scan) -> None:
     server = create_mcp_server(profile="full")
 
     async def _run() -> CallToolResult:
-        async with create_connected_server_and_client_session(server._mcp_server) as client:
+        async with Client(server) as client:
             first = await client.call_tool("scan", {"no_discover": True, "offline": True})
             rid = json.loads(first.content[0].text)["result_id"]  # type: ignore[union-attr]
             return await client.call_tool("scan", {"result_id": rid, "section": "packages", "offset": 35, "limit": 25})
@@ -333,7 +333,7 @@ def test_last_page_has_no_next_offset(huge_scan) -> None:
 
 def test_unknown_result_id_is_an_error() -> None:
     result = _call({"result_id": "does-not-exist", "section": "findings"})
-    assert result.isError is True
+    assert result.is_error is True
 
 
 def test_unknown_section_is_an_error(huge_scan) -> None:
@@ -342,13 +342,13 @@ def test_unknown_section_is_an_error(huge_scan) -> None:
     server = create_mcp_server(profile="full")
 
     async def _run() -> CallToolResult:
-        async with create_connected_server_and_client_session(server._mcp_server) as client:
+        async with Client(server) as client:
             first = await client.call_tool("scan", {"no_discover": True, "offline": True})
             rid = json.loads(first.content[0].text)["result_id"]  # type: ignore[union-attr]
             return await client.call_tool("scan", {"result_id": rid, "section": "no_such_section"})
 
     result = asyncio.run(_run())
-    assert result.isError is True
+    assert result.is_error is True
 
 
 def test_full_detail_is_bounded_valid_json_with_truncation_metadata(huge_scan) -> None:
@@ -520,11 +520,11 @@ def test_scan_tool_accepts_path_under_workspace_root(workspace: Path, monkeypatc
 
         pipeline.side_effect = _fake
         result = _call({"config_path": str(workspace / "proj"), "no_discover": True, "offline": True})
-    assert result.isError is False
+    assert result.is_error is False
     assert _body(result)["status"] == "no_agents_found"
 
     outside = _call({"config_path": str(workspace.parent), "no_discover": True, "offline": True})
-    assert outside.isError is True
+    assert outside.is_error is True
 
 
 def test_mcp_server_cli_workspace_root_flag_sets_env(workspace: Path, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -21,6 +21,7 @@ from agent_bom.security import (
     sanitize_command_args,
     sanitize_path_label,
     sanitize_security_warnings,
+    sanitize_sensitive_payload,
     sanitize_url,
 )
 
@@ -150,6 +151,15 @@ def _package_json(pkg: Any, agent: Any) -> dict[str, Any]:
     }
 
 
+def tool_metadata_json(tool: Any) -> dict[str, Any]:
+    """Optional extension evidence, preserving the legacy empty-tool shape."""
+    return {
+        key: sanitize_sensitive_payload(value)
+        for key in ("output_schema", "annotations", "ui_metadata")
+        if (value := getattr(tool, key)) is not None and value != {}
+    }
+
+
 def _tool_json(t: Any) -> dict[str, Any]:
     return {
         "name": t.name,
@@ -159,6 +169,7 @@ def _tool_json(t: Any) -> dict[str, Any]:
         "description": t.description,
         "discovery_source": t.discovery_source,
         "discovery_confidence": t.discovery_confidence,
+        **tool_metadata_json(t),
         "schema_findings": t.schema_findings,
         "schema_rule_findings": t.schema_rule_findings,
         "risk_score": t.risk_score,
@@ -204,6 +215,7 @@ def _server_json(server: Any, agent: Any) -> dict[str, Any]:
         "transport": server.transport.value,
         "url": sanitize_url(server.url),
         "auth_mode": server.auth_mode,
+        **({"connection_metadata": sanitize_sensitive_payload(server.connection_metadata)} if server.connection_metadata else {}),
         "mcp_version": server.mcp_version,
         "has_credentials": server.has_credentials,
         "credential_env_vars": server.credential_names,

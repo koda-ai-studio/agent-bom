@@ -208,7 +208,7 @@ def test_tool_output_contract(tool_name: str, mcp_server: Any, workdir: Path) ->
     args = _minimal_args(tool_name, workdir)
 
     async def call() -> Any:
-        return await mcp_server._tool_manager.call_tool(tool_name, args)
+        return await mcp_server._tool_manager.call_tool(tool_name, args, context=None)
 
     try:
         raw = asyncio.run(call())
@@ -233,7 +233,7 @@ def test_tool_output_contract(tool_name: str, mcp_server: Any, workdir: Path) ->
 
 
 def _extract_text(raw: Any) -> str:
-    from mcp.types import CallToolResult
+    from mcp_types import CallToolResult
 
     if isinstance(raw, str):
         return raw

@@ -24,12 +24,12 @@ class ToolErrorPayload(str):
     """A JSON tool payload that reports a failed or incomplete call.
 
     It is an ordinary JSON string for callers that only read text; tools that
-    return a ``CallToolResult`` map it to ``isError=True``.
+    return a ``CallToolResult`` map it to ``is_error=True``.
     """
 
 
 try:
-    from mcp.server.fastmcp.exceptions import ToolError as _FastMCPToolError
+    from mcp.server.mcpserver.exceptions import ToolError as _FastMCPToolError
 except ModuleNotFoundError:  # pragma: no cover - base CLI installs do not include MCP extras
     _TOOL_ERROR_TYPES: tuple[type[BaseException], ...] = ()
 else:
@@ -838,9 +838,8 @@ def get_registry_data_raw(registry_raw_cache: str | None, registry_path: Path) -
 def check_mcp_sdk() -> None:
     """Verify the MCP SDK is present AND exposes the entry point we build on.
 
-    Checking only ``import mcp`` was not enough: mcp 2.x removed
-    ``mcp.server.fastmcp``, so the import succeeded while the server could not
-    start, and the user was told to install a package they already had.
+    Check the SDK 2 server entry point so an older installed SDK receives
+    an actionable upgrade message before startup.
     """
     try:
         import mcp  # noqa: F401
@@ -848,7 +847,7 @@ def check_mcp_sdk() -> None:
         raise ImportError("mcp SDK is required for the MCP server. Install with: pip install 'agent-bom[mcp-server]'") from None
 
     try:
-        import mcp.server.fastmcp  # noqa: F401
+        import mcp.server.mcpserver  # noqa: F401
     except ImportError:
         installed = ""
         try:
@@ -859,7 +858,6 @@ def check_mcp_sdk() -> None:
             installed = ""
         raise ImportError(
             f"The installed mcp SDK is incompatible{installed}: it does not provide "
-            "'mcp.server.fastmcp', which agent-bom's MCP server is built on. mcp 2.x "
-            "removed that module. Install a supported release with: "
-            "pip install 'mcp<2'  (agent-bom pins mcp>=1.26,<2)"
+            "'mcp.server.mcpserver', which agent-bom's MCP server is built on. "
+            "Install a supported release with: pip install 'mcp>=2.3,<3'"
         ) from None

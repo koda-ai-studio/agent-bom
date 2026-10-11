@@ -95,4 +95,14 @@ async def run_relay(runtime: RelayRuntime, server_name: str, request: Request) -
         response = await stage(runtime, ctx)
         if response is not None:
             return response
+    if ctx.message.get("method") == "subscriptions/listen":
+        return JSONResponse(
+            status_code=400,
+            content={
+                "jsonrpc": "2.0",
+                "id": ctx.message_id,
+                "error": {"code": -32601, "message": "Gateway subscriptions are not supported"},
+            },
+            headers={"Cache-Control": "no-store"},
+        )
     return await forward_authorized_request(forward_context(runtime, ctx))

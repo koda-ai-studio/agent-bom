@@ -51,7 +51,6 @@ _EXTRA_BY_TOP = {
     "openai": "openai",
     "litellm": "ai-enrich",
     "mcp": "mcp-server",
-    "smithery": "mcp-server",
     "onelogin": "saml",
 }
 

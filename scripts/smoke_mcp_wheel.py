@@ -103,18 +103,18 @@ async def _smoke() -> dict[str, object]:
     )
 
     # The version a client sees on `initialize` is the release it is talking to.
-    if initialized.serverInfo.version != agent_bom.__version__:
-        problems.append(f"serverInfo.version {initialized.serverInfo.version!r} != package version {agent_bom.__version__!r}")
-    if initialized.serverInfo.name != "agent-bom":
-        problems.append(f"serverInfo.name {initialized.serverInfo.name!r} != 'agent-bom'")
+    if initialized.server_info.version != agent_bom.__version__:
+        problems.append(f"serverInfo.version {initialized.server_info.version!r} != package version {agent_bom.__version__!r}")
+    if initialized.server_info.name != "agent-bom":
+        problems.append(f"serverInfo.name {initialized.server_info.name!r} != 'agent-bom'")
 
     if problems:
         raise RuntimeError("live MCP surface disagrees with the shipped server card:\n  - " + "\n  - ".join(problems))
 
     return {
-        "protocol_version": initialized.protocolVersion,
-        "server_name": initialized.serverInfo.name,
-        "server_version": initialized.serverInfo.version,
+        "protocol_version": initialized.protocol_version,
+        "server_name": initialized.server_info.name,
+        "server_version": initialized.server_info.version,
         "tool_count": len(tools),
         "resource_count": len(resources),
         "prompt_count": len(prompts),

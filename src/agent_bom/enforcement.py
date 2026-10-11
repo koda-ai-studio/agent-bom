@@ -81,7 +81,7 @@ class EnforcementReport:
         }
 
 
-def _extract_schema_descriptions(input_schema: dict | None) -> list[str]:
+def _extract_schema_descriptions(input_schema: dict | bool | None) -> list[str]:
     """Extract all description strings from a JSON Schema (inputSchema).
 
     Walks properties, items, allOf/anyOf/oneOf recursively.

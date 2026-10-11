@@ -48,9 +48,9 @@ async def test_mcp_inventory_and_sync_registration_contract():
     tools = {tool.name: tool for tool in await server.list_tools()}
     assert {"endpoint_inventory", "endpoint_sync"} <= set(tools)
     for name in ("endpoint_inventory", "endpoint_sync"):
-        properties = tools[name].inputSchema["properties"]
+        properties = tools[name].input_schema["properties"]
         assert not {"client_secret", "client_id", "url", "jamf_url"}.intersection(properties)
-    assert tools["endpoint_sync"].annotations.destructiveHint is True
+    assert tools["endpoint_sync"].annotations.destructive_hint is True
     cloud = create_mcp_server(profile="cloud")
     assert "endpoint_inventory" in {tool.name for tool in await cloud.list_tools()}
 

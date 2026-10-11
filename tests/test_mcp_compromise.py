@@ -58,9 +58,9 @@ def test_mcp_compromise_advertises_strict_readonly_graph_profile_tool():
     server = create_mcp_server(profile="graph")
     tools = {tool.name: tool for tool in asyncio.run(server.list_tools())}
     tool = tools["compromise_assessment"]
-    assert tool.annotations.readOnlyHint is True
-    assert tool.inputSchema["additionalProperties"] is False
-    assert {"root_node_id", "scan_id", "assume_control"} <= set(tool.inputSchema["required"])
+    assert tool.annotations.read_only_hint is True
+    assert tool.input_schema["additionalProperties"] is False
+    assert {"root_node_id", "scan_id", "assume_control"} <= set(tool.input_schema["required"])
     with pytest.raises(Exception, match="Unknown argument"):
         asyncio.run(
             server.call_tool(

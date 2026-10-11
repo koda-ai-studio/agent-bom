@@ -7,14 +7,9 @@ from typing import Any
 
 
 def create_smithery_server(factory: Callable[[], Any]) -> Any:
-    """Return a Smithery-decorated MCP server when the SDK is installed."""
-    try:
-        from smithery.decorators import smithery
+    """Retain the registry factory without the SDK-1-only Smithery decorator.
 
-        @smithery.server()
-        def _factory():
-            return factory()
-
-        return _factory()
-    except ImportError:
-        return factory()
+    The stdio entrypoint needs the MCP server itself. Hosted registration uses
+    the authenticated HTTP endpoint documented in docs/PUBLISHING.md.
+    """
+    return factory()

@@ -318,7 +318,9 @@ async def apply_argument_dlp(runtime: RelayRuntime, ctx: RelayContext, decision:
     config = runtime.dlp_config
     if not (decision.allowed and config.enabled):
         return
-    findings = scan_tool_call(decision.tool_name, decision.arguments, config)
+    from agent_bom.runtime.mcp_protocol import inspection_arguments
+
+    findings = scan_tool_call(decision.tool_name, inspection_arguments(ctx.message, decision.arguments), config)
     blocked = config.mode == "enforce" and any(f.blocked for f in findings)
     redacted = config.mode == "enforce" and config.pii_action == "redact" and bool(findings) and not blocked
     if findings and runtime.settings.audit_sink is not None:
@@ -353,6 +355,8 @@ async def apply_argument_dlp(runtime: RelayRuntime, ctx: RelayContext, decision:
         params = ctx.message.get("params")
         if isinstance(params, dict):
             params["arguments"] = redacted_args
+            if "inputResponses" in params:
+                params["inputResponses"] = _redact_obj_pii(params["inputResponses"])
 
 
 TOOL_POLICY_LAYERS: tuple[ToolPolicyLayer, ...] = (

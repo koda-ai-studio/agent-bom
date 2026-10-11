@@ -39,7 +39,7 @@ def test_every_tool_advertises_additional_properties_false(mcp_server) -> None: 
 def test_unknown_argument_raises_clear_error(mcp_server) -> None:  # noqa: ANN001
     """Calling a tool with a typo arg name fails loudly instead of silently
     dropping the arg (the audit's flask@2.0.0 false-clean repro)."""
-    from mcp.server.fastmcp.exceptions import ToolError
+    from mcp.server.mcpserver.exceptions import ToolError
 
     async def call() -> None:
         await mcp_server._tool_manager.call_tool(
@@ -74,11 +74,12 @@ def test_known_arguments_pass_through(mcp_server) -> None:  # noqa: ANN001
         return await mcp_server._tool_manager.call_tool(
             "inventory",
             {"config_path": None},
+            context=None,
         )
 
     # The call may succeed or fail downstream (e.g. no MCP configs found),
     # but it should NOT raise a ToolError about unknown args.
-    from mcp.server.fastmcp.exceptions import ToolError
+    from mcp.server.mcpserver.exceptions import ToolError
 
     try:
         asyncio.run(call())

@@ -152,8 +152,8 @@ def canonical_mcp_server_id(
     return canonical_id("mcp_server", identifier)
 
 
-def canonical_mcp_tool_id(name: str, input_schema: Mapping[str, Any] | None = None, *, server_id: str | None = None) -> str:
-    schema = json.dumps(input_schema or {}, sort_keys=True, separators=(",", ":"))
+def canonical_mcp_tool_id(name: str, input_schema: Mapping[str, Any] | bool | None = None, *, server_id: str | None = None) -> str:
+    schema = json.dumps({} if input_schema is None else input_schema, sort_keys=True, separators=(",", ":"))
     return canonical_id("mcp_tool", server_id or "", name, schema)
 
 
@@ -181,3 +181,46 @@ def canonical_graph_node_id(entity_type: str, graph_id: str) -> str:
 
 def canonical_graph_edge_id(source: str, target: str, relationship: str) -> str:
     return canonical_id("graph_edge", relationship, source, target)
+
+
+def mcp_server_fingerprint(server: Any) -> str:
+    """Stable server evidence hash; absent extension fields retain legacy hashes."""
+    import uuid as _uuid
+
+    _ns = _uuid.UUID("7f3e4b2a-9c1d-5f8e-a0b4-12c3d4e5f6a7")
+    tool_ids = sorted(t.stable_id for t in server.tools)
+    resource_ids = sorted(r.stable_id for r in server.resources)
+    prompt_ids = sorted(p.stable_id for p in server.prompts)
+    env_keys = sorted(server.credential_names)
+    raw = json.dumps(
+        {
+            "registry_id": server.registry_id,
+            "name": server.name,
+            "command": server.command,
+            "args": server.args,
+            "url": server.url,
+            "transport": server.transport.value,
+            "auth_mode": server.auth_mode,
+            "credential_refs": env_keys,
+            "tool_ids": tool_ids,
+            **(
+                {
+                    "tool_metadata": sorted(
+                        (
+                            {"id": t.stable_id, "output_schema": t.output_schema, "annotations": t.annotations, "ui": t.ui_metadata}
+                            for t in server.tools
+                        ),
+                        key=lambda item: item["id"],
+                    )
+                }
+                if any(t.output_schema is not None or t.annotations or t.ui_metadata for t in server.tools)
+                else {}
+            ),
+            **({"connection_metadata": server.connection_metadata} if server.connection_metadata else {}),
+            "resource_ids": resource_ids,
+            "prompt_ids": prompt_ids,
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return str(_uuid.uuid5(_ns, f"mcp_server_fingerprint:{raw}"))

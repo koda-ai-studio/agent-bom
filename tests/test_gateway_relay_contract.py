@@ -152,10 +152,10 @@ def test_oversized_response_rejected(mock_upstream_url: str) -> None:
             def stream(self, *args, **kwargs):  # noqa: ANN002, ANN003
                 return _Resp()
 
-        with pytest.raises(ValueError, match="exceeded"):
+        with pytest.raises(ValueError, match="exceeds"):
             await forward_jsonrpc_http(
                 upstream_url=mock_upstream_url,
-                message={"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {}},
+                message={"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "echo", "arguments": {}}},
                 headers={},
                 client=_Client(),
                 max_bytes=MAX_GATEWAY_RELAY_MESSAGE_BYTES,

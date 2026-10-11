@@ -14,6 +14,7 @@ ConfigMap or Secret. Reload = redeploy.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import logging
 import os
 import threading
@@ -38,15 +39,15 @@ _STREAMABLE_HTTP_ALIASES: frozenset[str] = frozenset({"http", "https", "streamab
 
 
 # Process-wide cache for OAuth2 client-credentials access tokens. Keyed by
-# ``(token_url, client_id, scopes)`` so two upstreams pointing at the same
-# IdP with the same credentials share a token.
+# Keys bind tenant, issuer, resource, endpoint, client, secret fingerprint, and scopes.
+# Rotation or authority/resource changes cannot reuse another context's token.
 _oauth_cache_lock = threading.Lock()
-_oauth_cache: dict[tuple[str, str, tuple[str, ...]], tuple[str, float]] = {}
+_oauth_cache: dict[tuple[str, str, str, str, str, str, tuple[str, ...]], tuple[str, float]] = {}
 _oauth_singleflight_lock = threading.Lock()
-_oauth_singleflight_locks: dict[tuple[str, str, tuple[str, ...]], asyncio.Lock] = {}
+_oauth_singleflight_locks: dict[tuple[str, str, str, str, str, str, tuple[str, ...]], asyncio.Lock] = {}
 
 
-def _cached_oauth_token(key: tuple[str, str, tuple[str, ...]]) -> str | None:
+def _cached_oauth_token(key: tuple[str, str, str, str, str, str, tuple[str, ...]]) -> str | None:
     with _oauth_cache_lock:
         entry = _oauth_cache.get(key)
         if entry is None:
@@ -57,12 +58,12 @@ def _cached_oauth_token(key: tuple[str, str, tuple[str, ...]]) -> str | None:
         return token
 
 
-def _store_oauth_token(key: tuple[str, str, tuple[str, ...]], token: str, expires_in: int) -> None:
+def _store_oauth_token(key: tuple[str, str, str, str, str, str, tuple[str, ...]], token: str, expires_in: int) -> None:
     with _oauth_cache_lock:
         _oauth_cache[key] = (token, time.time() + max(30, expires_in))
 
 
-def _oauth_singleflight_for(key: tuple[str, str, tuple[str, ...]]) -> asyncio.Lock:
+def _oauth_singleflight_for(key: tuple[str, str, str, str, str, str, tuple[str, ...]]) -> asyncio.Lock:
     with _oauth_singleflight_lock:
         lock = _oauth_singleflight_locks.get(key)
         if lock is None:
@@ -121,6 +122,8 @@ class UpstreamConfig:
     auth: str = "none"
     token_env: str | None = None
     oauth_token_url: str | None = None
+    oauth_issuer: str | None = None
+    oauth_resource: str | None = None
     oauth_client_id_env: str | None = None
     oauth_client_secret_env: str | None = None
     oauth_scopes: tuple[str, ...] = ()
@@ -128,7 +131,12 @@ class UpstreamConfig:
     private_network_approved: bool = field(default=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
-        for label, candidate in (("url", self.url), ("oauth_token_url", self.oauth_token_url)):
+        for label, candidate in (
+            ("url", self.url),
+            ("oauth_token_url", self.oauth_token_url),
+            ("oauth_issuer", self.oauth_issuer),
+            ("oauth_resource", self.oauth_resource),
+        ):
             if not candidate:
                 continue
             parsed = urlsplit(candidate)
@@ -183,7 +191,15 @@ class UpstreamConfig:
                 f"({self.oauth_client_id_env}, {self.oauth_client_secret_env}) are not set"
             )
 
-        cache_key = (self.oauth_token_url, client_id, self.oauth_scopes)
+        cache_key = (
+            self.tenant_id or "",
+            self.oauth_issuer or "",
+            self.oauth_resource or self.url,
+            self.oauth_token_url,
+            client_id,
+            hashlib.sha256(client_secret.encode()).hexdigest(),
+            self.oauth_scopes,
+        )
         cached = _cached_oauth_token(cache_key)
         if cached is not None:
             return cached
@@ -196,7 +212,7 @@ class UpstreamConfig:
 
     async def _fetch_and_store_oauth2_token(
         self,
-        cache_key: tuple[str, str, tuple[str, ...]],
+        cache_key: tuple[str, str, str, str, str, str, tuple[str, ...]],
         token_url: str,
         client_id: str,
         client_secret: str,
@@ -210,6 +226,8 @@ class UpstreamConfig:
             "client_id": client_id,
             "client_secret": client_secret,
         }
+        if self.oauth_resource:
+            form["resource"] = self.oauth_resource
         if self.oauth_scopes:
             form["scope"] = " ".join(self.oauth_scopes)
 
@@ -217,6 +235,20 @@ class UpstreamConfig:
             allow_private_networks=self.private_network_approved,
             timeout=httpx.Timeout(10.0),
         ) as client:
+            if self.oauth_issuer:
+                issuer = urlsplit(self.oauth_issuer)
+                if issuer.query or issuer.fragment:
+                    raise UpstreamConfigError("OAuth issuer must not contain a query or fragment")
+                metadata_url = f"{issuer.scheme}://{issuer.netloc}/.well-known/oauth-authorization-server{issuer.path.rstrip('/')}"
+                metadata_response = await client.get(metadata_url, headers={"Accept": "application/json"})
+                metadata_response.raise_for_status()
+                metadata = metadata_response.json()
+                if (
+                    not isinstance(metadata, dict)
+                    or metadata.get("issuer") != self.oauth_issuer
+                    or metadata.get("token_endpoint") != token_url
+                ):
+                    raise UpstreamConfigError("OAuth issuer or token endpoint does not match configured authority")
             response = await client.post(
                 token_url,
                 data=form,
@@ -477,6 +509,8 @@ def _parse_upstream(
         auth=auth,
         token_env=raw.get("token_env"),
         oauth_token_url=raw.get("oauth_token_url"),
+        oauth_issuer=raw.get("oauth_issuer"),
+        oauth_resource=raw.get("oauth_resource"),
         oauth_client_id_env=raw.get("oauth_client_id_env"),
         oauth_client_secret_env=raw.get("oauth_client_secret_env"),
         oauth_scopes=tuple(str(s) for s in scopes_raw),
