@@ -10,6 +10,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 
 from agent_bom.api.read_models import IntelSourcesResponse, documented
+from agent_bom.api.read_models.governance_b import IntelAdvisoryResponse
 from agent_bom.backpressure import BackpressureRejectedError, adaptive_backpressure
 from agent_bom.intel_lookup import build_daily_brief, list_intel_sources, lookup_advisory, match_packages
 from agent_bom.security import sanitize_error
@@ -53,7 +54,7 @@ def _backpressure_429(exc: BackpressureRejectedError) -> HTTPException:
     return HTTPException(status_code=429, detail=exc.to_dict(), headers={"Retry-After": str(exc.retry_after_seconds)})
 
 
-@router.get("/intel/advisories/{advisory_id}", tags=["intel"])
+@router.get("/intel/advisories/{advisory_id}", **documented(IntelAdvisoryResponse), tags=["intel"])
 async def get_intel_advisory(advisory_id: str) -> dict[str, Any]:
     """Look up one CVE/GHSA/OSV advisory from local intel."""
 

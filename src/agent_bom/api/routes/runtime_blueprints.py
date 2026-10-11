@@ -10,6 +10,11 @@ from fastapi import APIRouter, HTTPException, Query, Request
 
 from agent_bom.api.drift_incident_store import get_drift_incident_store, record_drift_if_detected
 from agent_bom.api.read_models import DriftIncidentsResponse, documented
+from agent_bom.api.read_models.governance_a import (
+    RuntimeBlueprintDriftResponse,
+    RuntimeRoleBlueprintResponse,
+    RuntimeRoleBlueprintsResponse,
+)
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.rbac import require_authenticated_permission
 from agent_bom.runtime_blueprints import evaluate_runtime_blueprint_drift, runtime_role_blueprint, runtime_role_blueprints
@@ -30,7 +35,7 @@ def _actor(request: Request) -> str:
     return getattr(getattr(request, "state", None), "actor", None) or "api"
 
 
-@router.get("/runtime/blueprints", dependencies=[_dep("read")])
+@router.get("/runtime/blueprints", **documented(RuntimeRoleBlueprintsResponse), dependencies=[_dep("read")])
 def list_runtime_blueprints(request: Request) -> dict[str, object]:
     """Return canonical role/profile blueprints for runtime policy design."""
     return {
@@ -40,7 +45,7 @@ def list_runtime_blueprints(request: Request) -> dict[str, object]:
     }
 
 
-@router.get("/runtime/blueprints/{blueprint_id}", dependencies=[_dep("read")])
+@router.get("/runtime/blueprints/{blueprint_id}", **documented(RuntimeRoleBlueprintResponse), dependencies=[_dep("read")])
 def get_runtime_blueprint(request: Request, blueprint_id: str) -> dict[str, object]:
     """Return one canonical role/profile blueprint by ID."""
     blueprint = runtime_role_blueprint(blueprint_id)
@@ -53,7 +58,7 @@ def get_runtime_blueprint(request: Request, blueprint_id: str) -> dict[str, obje
     }
 
 
-@router.get("/runtime/blueprints/{blueprint_id}/drift", dependencies=[_dep("read")])
+@router.get("/runtime/blueprints/{blueprint_id}/drift", **documented(RuntimeBlueprintDriftResponse), dependencies=[_dep("read")])
 def get_runtime_blueprint_drift(request: Request, blueprint_id: str) -> dict[str, object]:
     """Evaluate current runtime posture against one role/profile blueprint."""
     from agent_bom.api.routes.proxy import _build_runtime_production_index, _load_proxy_alerts, _runtime_metrics_for_tenant

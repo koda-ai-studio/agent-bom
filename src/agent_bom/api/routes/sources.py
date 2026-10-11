@@ -34,7 +34,7 @@ from agent_bom.api.models import (
     SourceStatus,
     SourceUpdate,
 )
-from agent_bom.api.read_models import SourcesResponse, documented
+from agent_bom.api.read_models import SourcesResponse, documented, governance_b
 from agent_bom.api.routes.scan import (
     _sanitize_scan_request_paths,
     correlation_cohort_id,
@@ -314,7 +314,7 @@ def list_sources(
     }
 
 
-@router.get("/sources/{source_id}", tags=["sources"])
+@router.get("/sources/{source_id}", **documented(governance_b.SourceDetailResponse), tags=["sources"])
 def get_source(request: Request, source_id: str) -> dict:
     return _source_for_request(request, source_id).model_dump()
 
@@ -709,7 +709,7 @@ async def run_source_cohort(
             heartbeat.__exit__()
 
 
-@router.get("/sources/{source_id}/jobs", tags=["sources"])
+@router.get("/sources/{source_id}/jobs", **documented(governance_b.SourceJobsResponse), tags=["sources"])
 async def list_source_jobs(request: Request, source_id: str) -> dict:
     def _load() -> dict:
         source = _source_for_request(request, source_id)

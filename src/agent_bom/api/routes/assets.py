@@ -12,6 +12,8 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, Request
 
+from agent_bom.api.read_models import documented
+from agent_bom.api.read_models.governance_b import VulnerabilityAssetsResponse, VulnerabilityAssetStatsResponse
 from agent_bom.api.tenancy import require_request_tenant_id
 
 router = APIRouter()
@@ -22,7 +24,7 @@ _ASSET_COUNT_DEFINITION = "tracked vulnerability-package records after lifecycle
 _ASSET_STATS_COUNT_DEFINITION = "tracked vulnerability-package records across lifecycle states; not unified estate assets"
 
 
-@router.get("/assets", tags=["assets"])
+@router.get("/assets", **documented(VulnerabilityAssetsResponse), tags=["assets"])
 def list_assets(
     request: Request,
     status: str | None = None,
@@ -66,7 +68,7 @@ def list_assets(
         }
 
 
-@router.get("/assets/stats", tags=["assets"])
+@router.get("/assets/stats", **documented(VulnerabilityAssetStatsResponse), tags=["assets"])
 def get_asset_stats(request: Request) -> dict:
     """Return aggregate asset tracking statistics including MTTR."""
     try:

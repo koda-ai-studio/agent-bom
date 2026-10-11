@@ -13,6 +13,8 @@ from typing import Any, cast
 from fastapi import APIRouter, HTTPException, Query, Request
 
 from agent_bom.api.models import JobStatus
+from agent_bom.api.read_models import documented
+from agent_bom.api.read_models.governance_b import EstateCorrelationsResponse
 from agent_bom.api.stores import _get_store
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.cross_env_correlation import CorrelationConfidence, correlate_cross_environment
@@ -49,7 +51,7 @@ def _match_payload(match: Any) -> dict[str, Any]:
     return payload
 
 
-@router.get("/estate/correlations", tags=["estate"], deprecated=True)
+@router.get("/estate/correlations", **documented(EstateCorrelationsResponse), tags=["estate"], deprecated=True)
 def get_estate_correlations(
     request: Request,
     scan_id: str | None = Query(None, description="Scan job ID; latest completed scan if omitted"),

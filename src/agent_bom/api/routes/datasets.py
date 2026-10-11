@@ -12,6 +12,8 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from agent_bom.api.audit_log import log_action
 from agent_bom.api.dataset_version_store import DatasetVersionRecord, get_dataset_version_store
+from agent_bom.api.read_models import documented
+from agent_bom.api.read_models.governance_a import DatasetVersionResponse, DatasetVersionsResponse
 from agent_bom.api.tenancy import require_body_tenant_match, require_request_tenant_id
 
 router = APIRouter()
@@ -101,7 +103,7 @@ def register_dataset_version(
     return {"schema_version": "v1", "dataset": record.to_dict(), "warnings": warnings}
 
 
-@router.get("/datasets/{dataset_id}/versions", tags=["datasets"])
+@router.get("/datasets/{dataset_id}/versions", **documented(DatasetVersionsResponse), tags=["datasets"])
 def list_dataset_versions(
     request: Request,
     dataset_id: Annotated[str, Path(min_length=1, max_length=128)],
@@ -118,7 +120,7 @@ def list_dataset_versions(
     }
 
 
-@router.get("/datasets/{dataset_id}/versions/{version_id}", tags=["datasets"])
+@router.get("/datasets/{dataset_id}/versions/{version_id}", **documented(DatasetVersionResponse), tags=["datasets"])
 def get_dataset_version(
     request: Request,
     dataset_id: Annotated[str, Path(min_length=1, max_length=128)],

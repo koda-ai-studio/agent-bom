@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
+from agent_bom.api.read_models import documented
+from agent_bom.api.read_models.governance_b import PluginRegistryStatusResponse
 from agent_bom.plugin_entrypoints import plugin_registry_status
 
 router = APIRouter()
 
 
-@router.get("/plugins/status", tags=["plugins"])
+@router.get("/plugins/status", **documented(PluginRegistryStatusResponse), tags=["plugins"])
 def get_plugin_registry_status() -> dict[str, object]:
     """Return metadata-only plugin registry status for operator dashboards."""
 
