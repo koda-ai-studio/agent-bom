@@ -39,7 +39,7 @@ def create_loopback_dev_session(request: Request, response: Response) -> None:
     browser session as the packaged, same-origin dashboard.
     """
     from agent_bom.api.audit_log import log_action
-    from agent_bom.api.server import get_dev_api_key, get_dev_api_role
+    from agent_bom.api.dev_auth_state import get_dev_api_key, get_dev_api_role
 
     if get_dev_api_key() is None:
         raise HTTPException(status_code=404, detail="Loopback dev session is not active")

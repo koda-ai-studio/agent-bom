@@ -75,3 +75,10 @@ Composer/Packagist recognizes `patch` as a patch-level alias, consistent with
 [Composer's version parser](https://github.com/composer/semver/blob/main/src/VersionParser.php).
 Native PHP retains its own qualifier ordering. The architecture gate measures
 complexity even when a function carries a `noqa` annotation.
+
+Loopback bootstrap credentials live in `api/dev_auth_state.py`. Middleware and
+browser key exchange read that process-local state without importing the API
+server or its routers. The server preserves the CLI setter/getter exports.
+Invalid configured roles fail closed before replacing the active key; clearing
+the key disables automatic loopback browser sessions. Host restrictions, tenant
+binding and session authorization remain enforced by their existing adapters.
