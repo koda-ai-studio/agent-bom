@@ -136,3 +136,22 @@ def test_loading_domain_models_does_not_load_graph_api_or_cloud_layers():
     )
     run = subprocess.run([sys.executable, "-c", probe], capture_output=True, text=True, check=True, cwd=ROOT)
     assert run.stdout.strip() == "[]"
+
+
+def test_graph_retention_resolution_stays_below_the_api_store_registry():
+    """The SQLite graph store purges per-tenant windows without a runtime path back into ``api.stores``."""
+    import agent_bom.api.stores as stores
+    import agent_bom.api.tenant_graph_retention_store as retention_store
+
+    runtime = graph.adjacency(graph.build_graph(ROOT), graph.RUNTIME)
+    seen: set[str] = set()
+    frontier = ["agent_bom.api.tenant_graph_retention"]
+    while frontier:
+        module = frontier.pop()
+        if module not in seen:
+            seen.add(module)
+            frontier.extend(runtime.get(module, ()))
+    assert "agent_bom.api.stores" not in seen
+    assert "agent_bom.db.graph_store" not in seen
+    assert stores._get_tenant_graph_retention_store is retention_store._get_tenant_graph_retention_store
+    assert stores.set_tenant_graph_retention_store is retention_store.set_tenant_graph_retention_store

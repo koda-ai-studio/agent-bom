@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any, Iterable, Iterator, Sequence
 if TYPE_CHECKING:
     pass
 
+from agent_bom.core.settings import env_raw
 from agent_bom.graph import (
     EntityType,
 )
@@ -290,6 +291,14 @@ _GRAPH_PURGEABLE_TABLES = (
     "graph_nodes",
     "graph_snapshots",
 )
+
+
+def _graph_retention_days() -> int:
+    raw = env_raw("AGENT_BOM_GRAPH_RETENTION_DAYS", str(_DEFAULT_GRAPH_RETENTION_DAYS))
+    try:
+        return max(1, int(raw))
+    except ValueError:
+        return _DEFAULT_GRAPH_RETENTION_DAYS
 
 
 def normalize_graph_tenant_id(tenant_id: str | None) -> str:

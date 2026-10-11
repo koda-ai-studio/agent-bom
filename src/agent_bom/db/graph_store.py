@@ -50,6 +50,7 @@ from agent_bom.db.graph_store_schema import GRAPH_SNAPSHOT_KINDS as GRAPH_SNAPSH
 from agent_bom.db.graph_store_schema import _batched_rows as _batched_rows
 from agent_bom.db.graph_store_schema import _digest_payload as _digest_payload
 from agent_bom.db.graph_store_schema import _executemany_batched as _executemany_batched
+from agent_bom.db.graph_store_schema import _graph_retention_days as _graph_retention_days
 from agent_bom.db.graph_store_schema import _parse_iso_timestamp as _parse_iso_timestamp
 from agent_bom.db.graph_store_schema import _read_purge_state as _read_purge_state
 from agent_bom.db.graph_store_schema import _record_purge_state as _record_purge_state
@@ -252,14 +253,6 @@ def _graph_write_batch_size() -> int:
         return max(1, int(raw))
     except ValueError:
         return _DEFAULT_GRAPH_WRITE_BATCH_SIZE
-
-
-def _graph_retention_days() -> int:
-    raw = os.environ.get("AGENT_BOM_GRAPH_RETENTION_DAYS", str(_DEFAULT_GRAPH_RETENTION_DAYS))
-    try:
-        return max(1, int(raw))
-    except ValueError:
-        return _DEFAULT_GRAPH_RETENTION_DAYS
 
 
 def graph_retention_policy(
