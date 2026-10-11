@@ -7,7 +7,8 @@ import os
 from collections.abc import Iterable
 from typing import Any
 
-from agent_bom.api.stores import _get_tenant_graph_retention_store, set_tenant_graph_retention_store
+from agent_bom.api.tenant_graph_retention_store import _get_tenant_graph_retention_store, set_tenant_graph_retention_store
+from agent_bom.db.graph_store_schema import _graph_retention_days, normalize_graph_tenant_id
 
 
 def _env_graph_retention_overrides() -> dict[str, int]:
@@ -39,8 +40,6 @@ def resolve_graph_retention_days(tenant_id: str | None = None) -> int:
     Precedence: API config store override, then env JSON overrides, then the
     global ``AGENT_BOM_GRAPH_RETENTION_DAYS`` default.
     """
-    from agent_bom.db.graph_store import _graph_retention_days, normalize_graph_tenant_id
-
     tid = normalize_graph_tenant_id(tenant_id)
     stored = _get_tenant_graph_retention_store().get(tid)
     if stored is not None:
@@ -61,8 +60,6 @@ def resolve_graph_retention_days_by_tenant(tenant_ids: Iterable[str], *, all_ten
     tenant-bound read per tenant, which RLS would answer with "no override"
     for every tenant but the bound one. Precedence is the same either way.
     """
-    from agent_bom.db.graph_store import _graph_retention_days, normalize_graph_tenant_id
-
     wanted = set(tenant_ids)
     if not wanted or not all_tenants:
         return {tenant_id: resolve_graph_retention_days(tenant_id) for tenant_id in wanted}
@@ -78,15 +75,11 @@ def resolve_graph_retention_days_by_tenant(tenant_ids: Iterable[str], *, all_ten
 
 def get_tenant_graph_retention_override(tenant_id: str) -> int | None:
     """Return the persisted override for *tenant_id*, if any."""
-    from agent_bom.db.graph_store import normalize_graph_tenant_id
-
     return _get_tenant_graph_retention_store().get(normalize_graph_tenant_id(tenant_id))
 
 
 def set_tenant_graph_retention_override(tenant_id: str, retention_days: int) -> int:
     """Persist a tenant-specific graph retention override."""
-    from agent_bom.db.graph_store import normalize_graph_tenant_id
-
     normalized = normalize_graph_tenant_id(tenant_id)
     days = max(1, int(retention_days))
     _get_tenant_graph_retention_store().put(normalized, days)
@@ -95,8 +88,6 @@ def set_tenant_graph_retention_override(tenant_id: str, retention_days: int) -> 
 
 def clear_tenant_graph_retention_override(tenant_id: str) -> bool:
     """Remove a tenant-specific graph retention override."""
-    from agent_bom.db.graph_store import normalize_graph_tenant_id
-
     return _get_tenant_graph_retention_store().delete(normalize_graph_tenant_id(tenant_id))
 
 

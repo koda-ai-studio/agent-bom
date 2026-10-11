@@ -334,9 +334,8 @@
       "deferred_imports": 1
     },
     "api/graph_store.py": {
-      "broad_except": 1,
-      "deferred_imports": 7,
-      "file_lines": 2557
+      "deferred_imports": 1,
+      "file_lines": 976
     },
     "api/graph_store.py::SQLiteGraphStore._frontier_edge_query": {
       "function_lines": 81
@@ -360,6 +359,19 @@
     },
     "api/graph_store.py::containment_drilldown_graph": {
       "function_lines": 85
+    },
+    "api/graph_store_correlation.py": {
+      "deferred_imports": 1
+    },
+    "api/graph_store_snapshots.py": {
+      "deferred_imports": 1
+    },
+    "api/graph_store_support.py": {
+      "broad_except": 1,
+      "deferred_imports": 3
+    },
+    "api/graph_store_traversal.py": {
+      "deferred_imports": 1
     },
     "api/heavy_read_gate.py": {
       "deferred_imports": 2
@@ -1166,8 +1178,8 @@
       "file_lines": 676
     },
     "api/stores.py": {
-      "deferred_imports": 37,
-      "raw_env_reads": 19
+      "deferred_imports": 33,
+      "raw_env_reads": 17
     },
     "api/stream_authorization.py": {
       "broad_except": 1
@@ -1177,7 +1189,6 @@
       "raw_env_reads": 1
     },
     "api/tenant_graph_retention.py": {
-      "deferred_imports": 5,
       "raw_env_reads": 1
     },
     "api/tenant_lifecycle.py": {
@@ -2701,10 +2712,10 @@
     },
     "db/graph_store.py": {
       "api_imports": 2,
-      "broad_except": 2,
-      "deferred_imports": 4,
-      "file_lines": 2369,
-      "raw_env_reads": 4
+      "broad_except": 1,
+      "deferred_imports": 2,
+      "file_lines": 942,
+      "raw_env_reads": 3
     },
     "db/graph_store.py::_init_db": {
       "complexity": 20
@@ -2717,8 +2728,16 @@
       "function_lines": 196
     },
     "db/graph_store.py::save_graph_streaming": {
-      "complexity": 22,
-      "function_lines": 380
+      "function_lines": 107
+    },
+    "db/graph_store_correlation.py": {
+      "broad_except": 1
+    },
+    "db/graph_store_history.py": {
+      "deferred_imports": 1
+    },
+    "db/graph_store_snapshots.py": {
+      "deferred_imports": 1
     },
     "db/local_analytics.py": {
       "broad_except": 1,
@@ -3240,11 +3259,8 @@
     },
     "graph/builder.py": {
       "deferred_imports": 4,
-      "file_lines": 2926,
+      "file_lines": 2319,
       "graph_api_imports": 1
-    },
-    "graph/builder.py::_add_agent_cloud_lineage": {
-      "function_lines": 282
     },
     "graph/builder.py::_add_ai_stack_frameworks": {
       "complexity": 19,
@@ -3275,10 +3291,6 @@
     },
     "graph/builder.py::_add_inventory_principal": {
       "function_lines": 153
-    },
-    "graph/builder.py::_add_network_edge_inventory": {
-      "complexity": 46,
-      "function_lines": 343
     },
     "graph/builder.py::_add_normalized_cloud_resources": {
       "function_lines": 109
@@ -4181,9 +4193,8 @@
       "deferred_imports": 3
     },
     "output/graph.py": {
-      "broad_except": 1,
-      "deferred_imports": 12,
-      "file_lines": 2020
+      "deferred_imports": 6,
+      "file_lines": 993
     },
     "output/graph.py::_append_repo_structure_elements": {
       "complexity": 25,
@@ -4213,6 +4224,13 @@
     },
     "output/graph_export.py::to_mermaid": {
       "function_lines": 105
+    },
+    "output/graph_html.py": {
+      "broad_except": 1,
+      "deferred_imports": 5
+    },
+    "output/graph_policy.py": {
+      "deferred_imports": 1
     },
     "output/html/document.py": {
       "deferred_imports": 2
