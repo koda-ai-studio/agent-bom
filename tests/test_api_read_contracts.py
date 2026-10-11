@@ -75,8 +75,8 @@ def _undeclared_keys(value: Any, path: str = "$") -> list[str]:
     return found
 
 
-def _contract_violations(path: str, body: Any) -> list[str]:
-    model = TYPED_READS[path]
+def _contract_violations(path: str, body: Any, model: type[BaseModel] | None = None) -> list[str]:
+    model = model or TYPED_READS[path]
     try:
         instance = model.model_validate(body, context={read_models.STRICT_CONTRACT: True})
     except ValidationError as exc:
