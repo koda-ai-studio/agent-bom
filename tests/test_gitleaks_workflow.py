@@ -33,3 +33,25 @@ def test_gitleaks_binary_and_scan_contract_are_fail_closed() -> None:
     assert "--config .gitleaks.toml" in workflow
     assert "--gitleaks-ignore-path .gitleaksignore" in workflow
     assert "--redact=100" in workflow
+
+
+def test_characterization_hostname_exception_does_not_hide_other_values() -> None:
+    import json
+    import re
+    import tomllib
+
+    config = tomllib.loads((ROOT / ".gitleaks.toml").read_text())
+    patterns = [re.compile(value) for value in config["allowlist"]["regexes"] if "api_server_fqdn" in value]
+    assert len(patterns) == 1
+    pattern = patterns[0]
+    hostname = "private.azmk8s.io"
+    field = "api_server_fqdn"
+
+    def line(values: dict[str, str]) -> str:
+        return "  " + json.dumps(values)[1:-1] + ","
+
+    assert pattern.fullmatch(line({field: hostname}))
+    assert not pattern.fullmatch(line({field: hostname + ".attacker.example"}))
+    assert not pattern.fullmatch(line({field: "another-value"}))
+    assert not pattern.fullmatch(line({"api_key": hostname}))
+    assert not pattern.fullmatch(line({field: hostname, "api_key": "another-value"}))

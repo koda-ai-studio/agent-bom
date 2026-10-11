@@ -76,8 +76,3 @@ cc3d86f9b6cca9ed3ee186f287ded454fd573207:tests/test_helm_replica_safety.py:gener
 # Historical non-functional detector input in the discovery characterization
 # fixture. The current fixture assembles the same input at runtime.
 458278cf05e2d297dfef9be50a278f701070cea4:tests/test_discovery_characterization.py:generic-api-key:110
-
-# Characterization fixture: the AKS api_server_fqdn host name matches the generic
-# api-key pattern; it is a synthetic host name, not a credential.
-fd17bcff34d7ad78f9ca8d40deb398fb6727afdd:tests/fixtures/cloud_characterization/azure_inventory.json:generic-api-key:2091
-c7146a2f686473fc298b57d748b1e2329dd7102c:tests/fixtures/cloud_characterization/azure_inventory.json:generic-api-key:2091
