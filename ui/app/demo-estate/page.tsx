@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
-  ArrowRight,
   CheckCircle2,
   Clock3,
   Database,
@@ -23,6 +22,8 @@ import { PageErrorState, PageLoadingState, PageState } from "@/components/states
 import { api, type DemoEstateStatus, type EnterpriseDemoStory } from "@/lib/api";
 import { ApiError } from "@/lib/api-errors";
 import { securityGraphHref } from "@/lib/page-links";
+import { buildGraphInvestigationHref } from "@/lib/attack-paths";
+import { CorrelatedAssetPath, incidentAssetRoot } from "@/components/correlated-asset-path";
 
 const FIRST_COMMAND = "agent-bom serve --demo-estate --allow-insecure-no-auth";
 const DISPLAY_LABELS: Record<string, string> = {
@@ -171,6 +172,11 @@ export default function DemoEstatePage() {
   const graphScanId = demoStatus.showcase_available
     ? demoStatus.showcase_snapshot_id
     : null;
+  const incidentScanId = graphScanId === story.graph_snapshot_id ? graphScanId : null;
+  const incidentRoot = incidentAssetRoot(primary.asset_path, primary.correlation_id, story.findings);
+  const incidentHref = incidentScanId && incidentRoot
+    ? buildGraphInvestigationHref({ scanId: incidentScanId, rootId: incidentRoot })
+    : securityGraphHref({ scan: graphScanId ?? undefined });
 
   return (
     <div className="space-y-6" data-testid="demo-estate-page">
@@ -193,8 +199,8 @@ export default function DemoEstatePage() {
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
               {graphScanId ? (
-                <Link className="inline-flex items-center gap-2 rounded-lg bg-emerald-700 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-800" href={securityGraphHref({ scan: graphScanId })}>
-                  Open security graph <ExternalLink className="h-3.5 w-3.5" />
+                <Link className="inline-flex items-center gap-2 rounded-lg bg-emerald-700 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-800" href={incidentHref}>
+                  {incidentScanId && incidentRoot ? "Investigate incident" : "Open security graph"} <ExternalLink className="h-3.5 w-3.5" />
                 </Link>
               ) : null}
               <Link className="inline-flex items-center gap-2 rounded-lg border border-[color:var(--border-subtle)] bg-[color:var(--surface-elevated)] px-3 py-2 text-sm font-medium text-[color:var(--foreground)] hover:border-[color:var(--border-strong)]" href="/traces">
@@ -254,16 +260,7 @@ export default function DemoEstatePage() {
             <ShieldCheck className="h-4 w-4" /> {primary.outcome}
           </span>
         </div>
-        <div className="mt-5 flex flex-wrap items-center gap-2" aria-label="Correlated asset path">
-          {primary.asset_path.map((asset, index) => (
-            <div className="contents" key={asset}>
-              {index > 0 ? <ArrowRight className="h-4 w-4 shrink-0 text-[color:var(--text-tertiary)]" aria-hidden="true" /> : null}
-              <span className="min-w-0 max-w-full break-all rounded-lg border border-[color:var(--border-subtle)] bg-[color:var(--surface-muted)] px-3 py-2 font-mono text-xs text-[color:var(--foreground)]" title={asset}>
-                {asset}
-              </span>
-            </div>
-          ))}
-        </div>
+        <CorrelatedAssetPath assets={primary.asset_path} scanId={incidentScanId} />
         <div className="mt-4 flex flex-wrap gap-2 text-xs">
           {primary.sources.map((source) => <span key={source} className="rounded-full bg-[color:var(--surface-elevated)] px-2.5 py-1 text-[color:var(--text-secondary)]">{words(source)}</span>)}
           {primary.data_classifications.map((classification) => <span key={classification} className="rounded-full border border-rose-500/30 bg-rose-500/10 px-2.5 py-1 font-semibold uppercase text-rose-700 dark:text-rose-200">{classification}</span>)}
