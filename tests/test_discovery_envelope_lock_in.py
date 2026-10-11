@@ -197,6 +197,25 @@ def _extract_verb(perm: str) -> str | None:
     return None
 
 
+def _provider_source(mod: object) -> str:
+    """Return a provider facade's source plus every split-out subpackage it re-exports.
+
+    Large providers keep a thin facade module and move service families into a
+    sibling subpackage (``from .aws_inv.network import ...``). The read-only
+    and redaction contracts apply to the whole provider, so the subpackage
+    sources are scanned as well; reading only the facade would let a moved
+    permission catalog escape the guard.
+    """
+    path = Path(str(getattr(mod, "__file__", "")))
+    src = path.read_text()
+    packages = sorted(set(re.findall(r"^from \.(\w+)\.\w+ import", src, re.MULTILINE)))
+    for package in packages:
+        package_dir = path.parent / package
+        if (package_dir / "__init__.py").is_file():
+            src += "".join("\n" + sub.read_text() for sub in sorted(package_dir.glob("*.py")))
+    return src
+
+
 def _parse_permissions_block(src: str) -> list[str]:
     """Pull every string in a `permissions_used=(...)` tuple out of a source file.
 
@@ -238,7 +257,7 @@ def _parse_permissions_block(src: str) -> list[str]:
 def test_provider_permissions_match_expected_shape(module_path: str, scan_mode: ScanMode, redaction: RedactionStatus) -> None:
     """Every permission entry follows a known service:action / dotted shape."""
     mod = importlib.import_module(module_path)
-    src = open(mod.__file__).read()  # noqa: SIM115
+    src = _provider_source(mod)
     perms = _parse_permissions_block(src)
     assert perms, f"{module_path} declares no permissions_used"
     bad = [p for p in perms if not _PERMISSION_PATTERN.match(p)]
@@ -266,7 +285,7 @@ def test_provider_permissions_are_read_only(module_path: str, scan_mode: ScanMod
     why a write permission is being claimed.
     """
     mod = importlib.import_module(module_path)
-    src = open(mod.__file__).read()  # noqa: SIM115
+    src = _provider_source(mod)
     perms = _parse_permissions_block(src)
     write_verbs: list[tuple[str, str]] = []
     for perm in perms:
@@ -301,7 +320,7 @@ def test_provider_redaction_status_matches_expected(module_path: str, scan_mode:
     don't read sensitive values to begin with.
     """
     mod = importlib.import_module(module_path)
-    src = open(mod.__file__).read()  # noqa: SIM115
+    src = _provider_source(mod)
     needle = f"RedactionStatus.{redaction.name}"
     assert needle in src, f"{module_path} should declare {needle}"
 
