@@ -14,12 +14,15 @@ it("merges more than 200 events, resumes once, deduplicates and preserves an exp
     .mockImplementationOnce(async function* () { yield batch(250, 2, "251"); throw new ActivityStreamError("gap"); });
   const view = render(<GatewayFeedPanel onActivity={() => {}} />);
   await act(() => vi.advanceTimersByTimeAsync(0));
+  fireEvent.change(screen.getByLabelText("Rows per page"), { target: { value: "250" } });
   expect(screen.getAllByTestId("gateway-activity-row")).toHaveLength(250);
   view.rerender(<GatewayFeedPanel onActivity={() => {}} />);
   expect(mocks.stream).toHaveBeenCalledTimes(1);
   await act(() => vi.advanceTimersByTimeAsync(1000));
   expect(mocks.stream.mock.calls[1]?.[0]).toBe("250");
-  expect(screen.getAllByTestId("gateway-activity-row")).toHaveLength(251);
+  expect(screen.getByText("251 filtered events in the buffered window")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Next events" }));
+  expect(screen.getAllByTestId("gateway-activity-row")).toHaveLength(1);
   expect(screen.getByText(/Activity gap:/)).toBeInTheDocument();
   await act(() => vi.advanceTimersByTimeAsync(60000));
   expect(mocks.stream).toHaveBeenCalledTimes(2);
@@ -41,4 +44,42 @@ it("paginates canonical history without replacing the live cursor", async () => 
   fireEvent.click(screen.getByRole("button", { name: "Return to recent activity" }));
   await act(() => vi.advanceTimersByTimeAsync(1000));
   expect(mocks.stream.mock.calls[1]?.[0]).toBe("live-500");
+});
+it("keeps the runtime preview bounded and opens the complete activity page", async () => {
+  vi.useFakeTimers();
+  mocks.stream.mockImplementation(async function* () { yield batch(1, 20, "20"); });
+  render(<GatewayFeedPanel preview />);
+  await act(() => vi.advanceTimersByTimeAsync(0));
+  expect(screen.getAllByTestId("gateway-activity-row")).toHaveLength(5);
+  expect(screen.getByRole("link", { name: "Open live activity" })).toHaveAttribute("href", "/live-activity");
+});
+it("freezes the visible rows while continuing to receive and resume complete batches", async () => {
+  vi.useFakeTimers();
+  mocks.stream.mockImplementationOnce(async function* () { yield batch(1, 2, "2"); })
+    .mockImplementationOnce(async function* () { yield batch(3, 1, "3"); });
+  render(<GatewayFeedPanel />);
+  await act(() => vi.advanceTimersByTimeAsync(0));
+  fireEvent.click(screen.getByRole("button", { name: "Pause view" }));
+  await act(() => vi.advanceTimersByTimeAsync(1000));
+  expect(screen.getAllByTestId("gateway-activity-row")).toHaveLength(2);
+  fireEvent.click(screen.getByRole("button", { name: /Resume.*1 new/ }));
+  expect(screen.getAllByTestId("gateway-activity-row")).toHaveLength(3);
+  fireEvent.click(screen.getAllByRole("button", { name: /Inspect.*read_file/ })[0]!);
+  expect(screen.getByRole("dialog", { name: "Activity details" })).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Agent traces" })).toHaveAttribute("href", "/traces?agent=payroll-agent");
+});
+it("paginates a frozen window and aggregates exact agent identities", async () => {
+  vi.useFakeTimers();
+  mocks.stream.mockImplementation(async function* () { yield { ...batch(1, 65, "65"), events: Array.from({ length: 65 }, (_, i) => ({ ...activity(i + 1), agent_id: i < 60 ? "agent-a" : "agent-b", decision: i < 3 ? "deny" : "allow" })) }; });
+  render(<GatewayFeedPanel />);
+  await act(() => vi.advanceTimersByTimeAsync(0));
+  expect(screen.getAllByTestId("gateway-activity-row")).toHaveLength(50);
+  fireEvent.click(screen.getByRole("button", { name: "Next events" }));
+  expect(screen.getAllByTestId("gateway-activity-row")).toHaveLength(15);
+  expect(screen.getByRole("button", { name: /Resume/ })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "By agent" }));
+  expect(screen.getByRole("button", { name: /agent-a.*60 events.*3 blocked/ })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: /agent-b.*5 events/ }));
+  expect(screen.getAllByTestId("gateway-activity-row")).toHaveLength(5);
+  expect(screen.queryByRole("button", { name: /Inspect agent-a/ })).not.toBeInTheDocument();
 });

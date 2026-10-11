@@ -1,21 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Activity, Clock, RefreshCw } from "lucide-react";
-import { formatDate } from "@/lib/api";
+import Link from "next/link";
+import { Activity, RefreshCw } from "lucide-react";
 import { useAuthState } from "@/components/auth-provider";
-import { producerEvidenceLabel, PRODUCER_EVIDENCE_HINT } from "@/lib/gateway-feed";
+import { PRODUCER_EVIDENCE_HINT } from "@/lib/gateway-feed";
 import { ActivityStreamError, gatewayActivityPage, mergeActivity, streamGatewayActivity, type GatewayActivity, type ActivityPage } from "@/lib/gateway-activity";
 
-const activityLabels: Record<string, string> = {
-  "gateway.tool_call.allowed": "Tool call allowed", "gateway.tool_call.blocked": "Tool call blocked",
-  "gateway.dlp.arguments_redacted": "Arguments redacted", "gateway.dlp.result_redacted": "Result redacted",
-  "gateway.dlp.result_blocked": "Result blocked", "gateway.visual.redacted": "Visual data redacted",
-  "gateway.visual_leak_blocked": "Visual leak blocked", "gateway.runtime_profile.blocked": "Profile blocked",
-  "gateway.runtime_profile.warned": "Profile warning", "gateway.runtime_profile.dev_bypass": "Development bypass",
-  "gateway.enforcement.warned": "Enforcement warning", "gateway.enforcement.observed": "Enforcement observation",
-  "gateway.enforcement.blocked": "Enforcement blocked",
-};
+
+import { ActivityRows } from "./GatewayActivityRows";
+import { ActivityWindow } from "./GatewayActivityWindow";
 
 const messages = {
   connecting: "Connecting to durable activity…",
@@ -28,15 +22,19 @@ const messages = {
 };
 type StreamState = keyof typeof messages;
 
-export function GatewayFeedPanel({ onActivity }: { onActivity?: () => void }) {
+type FeedProps = { onActivity?: (() => void) | undefined; preview?: boolean; initialFilter?: string; initialSearch?: string };
+
+export function GatewayFeedPanel({ onActivity, preview = false, initialFilter = "", initialSearch = "" }: FeedProps) {
   const { session } = useAuthState();
-  return <ActivityFeed key={`${session?.tenant_id ?? ""}:${session?.subject ?? ""}`} onActivity={onActivity} tenantId={session?.tenant_id ?? undefined} />;
+  return <ActivityFeed key={`${session?.tenant_id ?? ""}:${session?.subject ?? ""}`} onActivity={onActivity} preview={preview} initialFilter={initialFilter} initialSearch={initialSearch} tenantId={session?.tenant_id ?? undefined} />;
 }
 
-function ActivityFeed({ onActivity, tenantId }: { onActivity: (() => void) | undefined; tenantId: string | undefined }) {
+function ActivityFeed({ onActivity, tenantId, preview, initialFilter, initialSearch }: FeedProps & { tenantId: string | undefined }) {
   const [events, setEvents] = useState<GatewayActivity[]>([]);
   const [state, setState] = useState<StreamState>("connecting");
-  const [filter, setFilter] = useState("");
+  const [filter, setFilter] = useState(initialFilter ?? "");
+  const [search, setSearch] = useState(initialSearch ?? "");
+  const [frozen, setFrozen] = useState<GatewayActivity[] | null>(null);
   const [epoch, setEpoch] = useState(0);
   const [history, setHistory] = useState(false);
   const [latest, setLatest] = useState<number | null>(null);
@@ -88,12 +86,28 @@ function ActivityFeed({ onActivity, tenantId }: { onActivity: (() => void) | und
   }, [epoch, tenantId]);
 
   const reconnect = (restart = false) => {
-    if (restart) { cursor.current = undefined; rows.current = []; tenant.current = undefined; setEvents([]); setLatest(null); }
+    if (restart) { cursor.current = undefined; rows.current = []; tenant.current = undefined; setEvents([]); setLatest(null); setFrozen(null); }
     setState("connecting"); setEpoch(value => value + 1);
   };
   const receiptTime = events[0]?.ingested_at;
   const staleReceipt = Boolean(receiptTime && Date.now() - Date.parse(receiptTime) > 120000);
-  const visible = events.filter(row => !filter || (filter === "deny" ? row.decision === "deny" : filter === "data" ? /dlp|visual/.test(row.event_type) : row.event_type.includes(filter)));
+  const displayed = frozen ?? events;
+  const visible = displayed.filter(row => (!filter || (filter === "deny" ? row.decision === "deny" : filter === "data" ? /dlp|visual/.test(row.event_type) : row.event_type.includes(filter))) &&
+    [row.agent_id, row.tool, row.upstream, row.reason_code].join(" ").toLowerCase().includes(search.toLowerCase()));
+  const params = new URLSearchParams();
+  if (filter) params.set("filter", filter);
+  if (search) params.set("q", search);
+  const activityHref = `/live-activity${params.size ? `?${params}` : ""}`;
+  const scope = (nextFilter: string, nextSearch: string) => {
+    setFilter(nextFilter); setSearch(nextSearch);
+    if (!preview && window.location.pathname === "/live-activity") {
+      const query = new URLSearchParams();
+      if (nextFilter) query.set("filter", nextFilter);
+      if (nextSearch) query.set("q", nextSearch);
+      window.history.replaceState(null, "", `/live-activity${query.size ? `?${query}` : ""}`);
+    }
+  };
+  const pending = frozen ? events.filter(row => row.ingest_ordinal > (frozen[0]?.ingest_ordinal ?? 0)).length : 0;
 
   return <section className="min-w-0 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4 sm:p-5" aria-label="Gateway activity">
     <div className="flex flex-wrap items-start justify-between gap-3">
@@ -103,21 +117,30 @@ function ActivityFeed({ onActivity, tenantId }: { onActivity: (() => void) | und
         <p className="mt-1 text-xs text-[var(--text-secondary)]" role="status">{messages[state]}</p>
       </div>
       <div className="flex flex-wrap gap-2">
-        <button className="graph-page-action" onClick={() => setHistory(value => !value)}>{history ? "Return to recent activity" : "Browse retained history"}</button>
+        {preview ? <Link className="graph-page-action" href={activityHref}>Open live activity</Link> : <button className="graph-page-action" onClick={() => setFrozen(value => value ? null : events)}>{frozen ? `Resume · ${pending} new in buffer` : "Pause view"}</button>}
+        {!preview && <button className="graph-page-action" onClick={() => setHistory(value => !value)}>{history ? "Return to recent activity" : "Browse retained history"}</button>}
         {state === "gap" ? <button className="graph-page-action" onClick={() => reconnect(true)}>Start a new retained window</button> :
           <button className="graph-page-action" onClick={() => reconnect()}><RefreshCw className="h-3 w-3" />Reconnect</button>}
       </div>
     </div>
-    <p className="my-3 text-xs text-[var(--text-tertiary)]">Newest {events.length} events in this view · ledger position {latest ?? "unavailable"}. History is paged separately; reconnects do not reset the cursor.</p>
+    <p className="my-3 text-xs text-[var(--text-tertiary)]">{preview ? `Showing ${Math.min(5, visible.length)} recent matches` : `Newest ${displayed.length} events in this view`} · bounded to 1,000 received events, not a complete history.</p>
+    {!preview && <div className="my-4 grid grid-cols-3 gap-3" aria-label="Activity window summary">
+      {[["Blocked", displayed.filter(row => row.decision === "deny").length], ["Warnings", displayed.filter(row => /warned|dev_bypass/.test(row.event_type)).length], ["Without trace ID", displayed.filter(row => !row.trace_id).length]].map(([label, count]) =>
+        <div key={label} className="rounded-lg bg-[var(--background)] p-3"><p className="text-xs text-[var(--text-secondary)]">{label}</p><p className="mt-1 text-xl font-semibold">{displayed.length ? count : "—"}</p></div>)}
+    </div>}
     {staleReceipt && <p className="mb-3 text-xs text-amber-800 dark:text-amber-200">Latest receipt is older than 2 minutes. A connected transport does not prove current producer activity.</p>}
     {history ? <RetainedHistory tenantId={tenant.current ?? tenantId} /> : <>
       <div className="mb-3 flex flex-wrap gap-2" aria-label="Activity filters">
         {[["", "All"], ["deny", "Blocked"], ["data", "Data filters"], ["runtime_profile", "Profile decisions"], ["enforcement", "Enforcement"]].map(([value, label]) =>
-          <button key={label} onClick={() => setFilter(value ?? "")} aria-pressed={filter === value} className={`rounded px-2 py-1 text-xs ${filter === value ? "bg-[var(--surface-muted)] text-[var(--foreground)]" : "text-[var(--text-secondary)]"}`}>{label}</button>)}
+          <button key={label} onClick={() => scope(value ?? "", search)} aria-pressed={filter === value} className={`rounded px-2 py-1 text-xs ${filter === value ? "bg-[var(--surface-muted)] text-[var(--foreground)]" : "text-[var(--text-secondary)]"}`}>{label}</button>)}
       </div>
+      <label className="mb-3 block text-xs text-[var(--text-secondary)]">Search agent, tool or reason
+        <input value={search} onChange={event => scope(filter, event.target.value)} className="mt-1 block w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--background)] px-3 py-2 text-sm text-[var(--foreground)]" placeholder="Filter activity…" />
+      </label>
       {!visible.length && <p className="py-6 text-sm text-[var(--text-secondary)]">{events.length ? "No activity matches this filter." : state === "live" ? "No retained gateway activity yet." : "No verified activity loaded."}</p>}
-      <ActivityRows events={visible} />
+      {preview ? <ActivityRows events={visible.slice(0, 5)} /> : <ActivityWindow key={`${filter}:${search}`} events={visible} onFreeze={() => setFrozen(value => value ?? events)} />}
     </>}
+    {!preview && <details className="mt-4 text-xs text-[var(--text-secondary)]"><summary className="cursor-pointer">Stream and evidence details</summary><p className="mt-2">Ledger position {latest ?? "unavailable"}. Pausing freezes the view, not collection. History is paged separately; reconnects resume the last complete batch. {PRODUCER_EVIDENCE_HINT}</p></details>}
   </section>;
 }
 
@@ -148,26 +171,5 @@ function RetainedHistory({ tenantId }: { tenantId: string | undefined }) {
     {loading ? <p role="status">Loading retained page…</p> : null}
     {error ? <p role="alert" className="text-sm text-amber-800 dark:text-amber-200">{error}</p> : null}
     {page && <ActivityRows events={[...page.events].reverse()} />}
-  </div>;
-}
-
-function ActivityRows({ events }: { events: GatewayActivity[] }) {
-  return <div className="max-h-[36rem] space-y-1 overflow-y-auto">
-    {events.map(event => <article key={event.event_id} className="min-w-0 border-b border-[var(--border-subtle)] py-3 text-xs" data-testid="gateway-activity-row">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <p className="min-w-0 break-all font-medium">{event.agent_id || "Unattributed agent"} → {event.upstream || "Gateway"}{event.tool ? ` / ${event.tool}` : ""}</p>
-        <span className={event.decision === "deny" ? "text-red-700 dark:text-red-300" : "text-[var(--text-secondary)]"}>{activityLabels[event.event_type] ?? "Gateway decision"}</span>
-      </div>
-      <p className="mt-1 break-all text-[var(--text-secondary)]">Profile {event.profile_id || "unavailable"} · revision {event.profile_revision || "unavailable"} · blueprint {event.blueprint_id || "unavailable"} / {event.blueprint_revision || "unavailable"}</p>
-      <p className="mt-1 break-all text-[var(--text-secondary)]">Policies: {event.policy_ids?.length ? event.policy_ids.join(", ") : event.policy_id || "unavailable"} · Evidence: {event.evidence_id || "unavailable"}</p>
-      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[var(--text-tertiary)]">
-        <span title={PRODUCER_EVIDENCE_HINT}>{producerEvidenceLabel(event.submission_provenance?.producer_assurance)}</span>
-        <span>{(event.reason_code || event.data_action || "No reason recorded").replaceAll("_", " ")}</span>
-        {event.development_mode ? <strong className="text-amber-800 dark:text-amber-200">Development bypass</strong> : null}
-        <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3" />Received {event.ingested_at ? formatDate(event.ingested_at) : "unavailable"}</span>
-        {event.trace_id ? <a className="text-sky-800 underline dark:text-sky-200" href={`/security-graph?${new URLSearchParams({ trace: event.trace_id, agent: event.agent_id })}`}>Pin trace</a> : null}
-      </div>
-      <details className="mt-2 text-[var(--text-secondary)]"><summary className="cursor-pointer">Receipt details</summary><p className="mt-1 break-all">{event.event_type} · event {event.event_id} · identity {event.identity_id || "unavailable"} · receipt trace {event.receipt_trace_id || "unavailable"} · reported time {event.event_timestamp || "unavailable"}</p></details>
-    </article>)}
   </div>;
 }

@@ -178,3 +178,74 @@ def test_valid_public_https_host_passes_validation(monkeypatch: pytest.MonkeyPat
     otlp = fetch_langfuse_traces(host="https://93.184.216.34", public_key="pk", secret_key="sk", client=client)
     assert client.calls, "valid public host must proceed to the HTTP fetch"
     assert parse_otel_traces(otlp)[0].tool_name == "run_shell"
+
+
+@pytest.mark.parametrize("provider,key", [("langfuse", "data"), ("langsmith", "runs")])
+@pytest.mark.parametrize("records", [None, {}, "not-a-list", [{"id": "broken"}]])
+def test_invalid_provider_records_are_not_a_successful_empty_pull(provider, key, records):
+    credentials = {"host": "https://cloud.example", "public_key": "pk", "secret_key": "sk", "api_key": "key"}
+    with pytest.raises(TraceConnectorError, match="invalid"):
+        fetch_traces(provider, credentials, client=_FakeClient({key: records}))
+
+
+def test_langfuse_does_not_turn_generations_into_tool_calls():
+    client = _FakeClient(
+        {
+            "data": [
+                {"id": "llm", "traceId": "t", "name": "read_file", "type": "GENERATION", "model": "gpt-test"},
+                {"id": "tool", "traceId": "t", "name": "read_file", "type": "TOOL"},
+            ]
+        }
+    )
+    traces = parse_otel_traces(fetch_langfuse_traces(host="https://cloud.example", public_key="pk", secret_key="sk", client=client))
+    assert [span.span_id for span in traces] == ["tool"]
+
+
+def test_langsmith_project_scope_resolves_name_before_query():
+    class ProjectClient(_FakeClient):
+        def request(self, method, url, **kwargs):
+            self.calls.append({"method": method, "url": url, **kwargs})
+            return _FakeResponse([{"id": "project-123", "name": "production"}] if method == "GET" else {"runs": []})
+
+    client = ProjectClient(None)
+    fetch_langsmith_traces(api_key="key", project="production", client=client)
+    assert client.calls[0]["url"].endswith("/sessions")
+    assert client.calls[0]["params"]["name"] == "production"
+    assert client.calls[1]["json"]["session"] == ["project-123"]
+    assert "project_name" not in client.calls[1]["json"]
+
+
+def test_langsmith_missing_project_never_falls_back_to_all_projects():
+    client = _FakeClient([])
+    with pytest.raises(TraceConnectorError):
+        fetch_langsmith_traces(api_key="key", project="missing", client=client)
+    assert len(client.calls) == 1
+    assert client.calls[0]["method"] == "GET"
+
+
+def test_langsmith_project_session_is_not_a_trace_id():
+    client = _FakeClient({"runs": [{"id": "r", "name": "read_file", "session_id": "project-id"}]})
+    assert parse_otel_traces(fetch_langsmith_traces(api_key="key", client=client))[0].trace_id == ""
+
+
+def test_provider_cannot_expand_requested_sample():
+    client = _FakeClient({"data": [{"id": str(i), "name": "read_file", "type": "TOOL"} for i in range(5)]})
+    payload = fetch_langfuse_traces(host="https://cloud.example", public_key="pk", secret_key="sk", limit=2, client=client)
+    assert len(payload["spans"]) == 2
+
+
+def test_invalid_json_is_a_safe_connector_error():
+    class InvalidJsonClient:
+        def request(self, *args, **kwargs):
+            class InvalidJsonResponse:
+                status_code = 200
+
+                def json(self):
+                    raise ValueError("private-upstream-response")
+
+            return InvalidJsonResponse()
+
+    with pytest.raises(TraceConnectorError) as caught:
+        fetch_langsmith_traces(api_key="key", client=InvalidJsonClient())
+    assert "invalid JSON" in str(caught.value)
+    assert "private-upstream-response" not in str(caught.value)

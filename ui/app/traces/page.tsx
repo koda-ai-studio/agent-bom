@@ -18,6 +18,7 @@ import { useSearchParams } from "next/navigation";
 import { useTraceIntake } from "@/hooks/use-trace-intake";
 import { useAuthState } from "@/components/auth-provider";
 import { useDeploymentContext } from "@/hooks/use-deployment-context";
+import { TraceConnectorsPanel } from "@/components/trace-connectors-panel";
 import { TraceExplorerPanel } from "@/components/trace-explorer-panel";
 import { HitlApprovalQueuePanel } from "@/components/hitl-approval-queue-panel";
 
@@ -49,7 +50,7 @@ const SAMPLE_PAYLOAD = JSON.stringify(
 function TracesPageContent() {
   const searchParams = useSearchParams();
   const { counts } = useDeploymentContext();
-  const [mode, setMode] = useState<"explorer" | "queue" | "ingest">("explorer");
+  const [mode, setMode] = useState<"explorer" | "queue" | "ingest" | "connectors">("explorer");
   const { payload, source, result, loading, reading, error, replacePayload, handleFile, submit } = useTraceIntake(SAMPLE_PAYLOAD);
   const tracesUnavailable = counts ? !counts.has_traces : false;
 
@@ -65,7 +66,7 @@ function TracesPageContent() {
               : "Explore blocked and observed tool calls joined to the same findings and compliance controls surfaced in triage."}{" "}
             Production collectors send OTLP JSON to <code className="rounded bg-[var(--surface)] px-1.5 py-0.5 font-mono text-[var(--foreground)]">POST /v1/traces</code>.
           </p>
-          <div className="mt-4 inline-flex rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)]/70 p-1">
+          <div className="mt-4 inline-flex flex-wrap rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)]/70 p-1">
             <button
               type="button"
               onClick={() => setMode("explorer")}
@@ -96,6 +97,7 @@ function TracesPageContent() {
               <FileUp className="h-3.5 w-3.5" />
               OTLP ingest
             </button>
+            <button type="button" onClick={() => setMode("connectors")} className={`rounded-lg px-3 py-1.5 text-xs ${mode === "connectors" ? "bg-emerald-700 text-white" : "text-[var(--text-secondary)]"}`}>Connect platforms</button>
           </div>
         </div>
         <div className="grid gap-3 text-xs text-[var(--text-secondary)] sm:grid-cols-2 lg:w-[360px]">
@@ -112,7 +114,7 @@ function TracesPageContent() {
         </div>
       </div>
 
-      {mode === "explorer" ? (
+      {mode === "connectors" ? <TraceConnectorsPanel /> : mode === "explorer" ? (
         <TraceExplorerPanel agent={searchParams.get("agent") ?? undefined} scanId={searchParams.get("scan") ?? undefined} />
       ) : mode === "queue" ? (
         <HitlApprovalQueuePanel />

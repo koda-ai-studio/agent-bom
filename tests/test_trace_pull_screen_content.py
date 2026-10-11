@@ -53,3 +53,19 @@ def test_pull_screen_content_true_screens_when_default_off(monkeypatch: Any) -> 
     result = _call_pull(monkeypatch, {"credentials": {"k": "v"}, "screen_content": True}, default_on=False)
     assert result["content_screened"] is True
     assert result["content_findings"]
+
+
+def test_pull_rejects_non_boolean_content_consent_before_fetch(monkeypatch: Any) -> None:
+    import pytest
+    from fastapi import HTTPException
+
+    monkeypatch.setattr(obs, "_tenant_id", lambda request: "default")
+
+    def forbidden_fetch(*args, **kwargs):
+        pytest.fail("invalid content consent must never contact the provider")
+
+    monkeypatch.setattr("agent_bom.trace_connectors.fetch_traces", forbidden_fetch)
+    for value in ("false", "true", 0, 1, [], {}):
+        with pytest.raises(HTTPException) as caught:
+            obs.pull_trace_connector(_request(), "langfuse", {"credentials": {"k": "v"}, "screen_content": value})
+        assert caught.value.status_code == 400

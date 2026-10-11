@@ -194,6 +194,7 @@ const NAV_GROUPS: NavGroup[] = [
     desc: "Live enforcement and identity",
     links: [
       { href: "/runtime", label: "Runtime", icon: Shield },
+      { href: "/live-activity", label: "Live Activity", icon: Radio, desc: "Review runtime decisions and investigate evidence" },
       { href: "/cwpp", label: "CWPP Side-Scan", icon: HardDrive, desc: "Agentless Azure/GCP disk side-scan — SBOM, CVEs, secrets" },
       { href: "/traces", label: "Traces", icon: Radio },
       { href: "/identity", label: "Identity", icon: Fingerprint, desc: "Non-human identities and creds" },

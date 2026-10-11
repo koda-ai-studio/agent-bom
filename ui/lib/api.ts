@@ -1,3 +1,4 @@
+import type { TraceConnectorPullResponse } from "./api-types";
 import type { EndpointConnection, EndpointConnectionCreate, EndpointConnections, EndpointInventory, EndpointSync } from "./endpoint-connectors";
 import type { McpClientConfigAssignment, McpConfigAssignmentResponse } from "./api-types";
 /**
@@ -1647,6 +1648,7 @@ export const api = {
 
   // Activity Timeline
   getActivity: (days = 30) => get<ActivityTimeline>(`/v1/activity?days=${days}`),
+  pullTraceConnector: (provider: "langfuse" | "langsmith", body: { credentials: Record<string, string>; limit: number; screen_content: boolean }, signal?: AbortSignal) => post<TraceConnectorPullResponse>(`/v1/traces/connectors/${provider}/pull`, body, {}, signal, 60000),
   ingestTraces: (body: unknown) => post<TraceIngestResponse>("/v1/traces", body),
   getTraceExplorer: (limit = 100) => get<TraceExplorerResponse>(`/v1/runtime/trace-explorer?limit=${limit}`),
   getHitlApprovalQueue: (status?: string, limit = 100) => {

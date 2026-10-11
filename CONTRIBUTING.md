@@ -5,6 +5,9 @@ agent-bom runs against real AI agent deployments, so every contribution directly
 Not contributing code, just need help? [SUPPORT.md](SUPPORT.md) has the routing
 and what response to expect.
 
+Start with the [current capabilities, coverage, and contributor roadmap](docs/ROADMAP.md)
+for implemented paths, known limits, and bounded tasks with acceptance criteria.
+
 The best ways to help:
 
 - Try the demo and open issues for confusing output, missing context, or weak remediation.

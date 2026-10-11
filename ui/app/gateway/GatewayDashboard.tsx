@@ -228,7 +228,7 @@ export default function GatewayPage() {
 
       {/* Activity stream owns its authenticated connection and resume cursor. */}
       {tab === "feed" && (
-        <GatewayFeedPanel onActivity={() => setKpiRefreshKey((current) => current + 1)} />
+        <GatewayFeedPanel preview onActivity={() => setKpiRefreshKey((current) => current + 1)} />
       )}
 
       {/* Loading */}

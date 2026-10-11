@@ -54,7 +54,7 @@ describe("runtime receipt assurance", () => {
     render(<GatewayFeedPanel />); await screen.findByText(/filesystem \/ read_file/);
     expect(screen.getByText("Connected to durable activity")).toBeInTheDocument();
     expect(screen.getAllByText("Reported producer").length).toBeGreaterThan(0);
-    expect(screen.queryByText(/^Live$|Verified/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^(Live|Verified)$/i)).not.toBeInTheDocument();
   });
   it("keeps legacy producer identity unknown despite durable storage and fresh transport", async () => {
     stream.rows = [( { ...stream.rows[0] as object, submission_provenance: undefined } )];

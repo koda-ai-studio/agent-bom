@@ -1,4 +1,6 @@
-# Roadmap
+# Archived roadmap
+
+Historical planning only. See the [current capabilities and contributor roadmap](../ROADMAP.md).
 
 This roadmap reflects the current post-`v0.76.0` direction for `agent-bom`.
 It is organized around product phases, not a loose feature wish list.
