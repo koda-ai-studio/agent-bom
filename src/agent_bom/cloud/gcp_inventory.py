@@ -47,6 +47,60 @@ from agent_bom.security import sanitize_text
 from .aws_inventory import dedupe_missing_permissions, record_discovery_failure
 from .gcp_authorization_collector import collect_gcp_authorization
 from .gcp_iam_evidence import normalize_gcp_iam_inventory
+from .gcp_inv._base import (  # noqa: F401 - facade re-export
+    _AUTHORIZATION_KEYS,
+    _GCP_COMPUTE_PERMISSIONS,
+    _GCP_IAM_PERMISSIONS,
+    _GCP_ROLE_PRIVILEGE,
+    _GCP_STORAGE_PERMISSIONS,
+    _INTERNET_RANGES,
+    _PRIVILEGE_RANK,
+    _PUBLIC_MEMBERS,
+    _STAGE_PERMISSIONS,
+    _classify_role_privilege,
+    _clean_labels,
+    _derive_default_project,
+    _highest_privilege,
+    _leaf,
+    _parse_port,
+    _safe_int,
+    _segment,
+)
+from .gcp_inv.compute_storage import (  # noqa: F401 - facade re-export
+    _bucket_public,
+    _discover_buckets,
+    _discover_cloud_functions,
+    _discover_cloud_run_services,
+    _discover_cloud_sql_instances,
+    _discover_disks,
+    _discover_firewalls,
+    _discover_gke_clusters,
+    _discover_instances,
+    _discover_pubsub_topics,
+    _firewall_internet_exposure,
+    _normalize_firewall,
+    _normalize_instance,
+)
+from .gcp_inv.iam import (  # noqa: F401 - facade re-export
+    _GCP_SA_USAGE_DEFERRED,
+    _build_iam_group_principals,
+    _discover_project_iam_bindings,
+    _discover_service_accounts,
+    _make_role_resolver,
+    _policy_bindings,
+    _role_policy_entry,
+    _service_account_usage_evidence,
+)
+from .gcp_inv.network import (  # noqa: F401 - facade re-export
+    _discover_api_gateways,
+    _discover_ip_addresses,
+    _discover_routers,
+    _discover_security_policies,
+    _discover_subnets,
+    _discover_subnets_by_network,
+    _discover_target_proxies,
+    _discover_vpc_networks,
+)
 from .normalization import sanitize_discovery_warning
 from .side_scan_targets import gcp_persistent_disk_targets
 
@@ -57,123 +111,6 @@ logger = logging.getLogger(__name__)
 INVENTORY_ENV_FLAG = "AGENT_BOM_GCP_INVENTORY"
 
 _TRUTHY = {"1", "true", "yes", "on"}
-
-# Read-only IAM permissions this scanner is allowed to exercise, by resource
-# class. Kept here so the per-run discovery envelope `permissions_used` stays
-# honest: the producer owns the catalog, not external docs.
-_GCP_STORAGE_PERMISSIONS: tuple[str, ...] = (
-    "storage.buckets.list",
-    "storage.buckets.getIamPolicy",
-)
-_GCP_COMPUTE_PERMISSIONS: tuple[str, ...] = (
-    "compute.instances.list",
-    "compute.firewalls.list",
-)
-_GCP_IAM_PERMISSIONS: tuple[str, ...] = (
-    "cloudasset.assets.listIamPolicy",
-    "iam.denypolicies.list",
-    "iam.policybindings.list",
-    "iam.principalaccessboundarypolicies.list",
-    "iam.roles.get",
-    "iam.serviceAccounts.list",
-    "resourcemanager.folders.get",
-    "resourcemanager.folders.getIamPolicy",
-    "resourcemanager.organizations.getIamPolicy",
-    "resourcemanager.projects.get",
-    "resourcemanager.projects.getIamPolicy",
-    "serviceusage.services.use",
-)
-# Read-only permissions exercised by each discovery stage (``include_<stage>``),
-# so the per-run discovery envelope's ``permissions_used`` lists only what ran.
-_STAGE_PERMISSIONS: dict[str, tuple[str, ...]] = {
-    "storage": _GCP_STORAGE_PERMISSIONS,
-    "compute": _GCP_COMPUTE_PERMISSIONS,
-    "iam": _GCP_IAM_PERMISSIONS,
-    "containers": ("container.clusters.list",),
-    "serverless": ("run.services.list", "cloudfunctions.functions.list"),
-    "databases": ("cloudsql.instances.list",),
-    "networks": (
-        "compute.networks.list",
-        "compute.subnetworks.list",
-        "compute.securityPolicies.list",
-        "compute.backendServices.list",
-        "compute.urlMaps.list",
-        "compute.forwardingRules.list",
-        "compute.targetHttpProxies.list",
-        "compute.targetHttpsProxies.list",
-        "compute.routers.list",
-        "compute.addresses.list",
-        "apigateway.gateways.list",
-    ),
-    "disks": ("compute.disks.list",),
-    "messaging": ("pubsub.topics.list",),
-}
-# Authorization-collector keys transported verbatim onto the inventory payload.
-_AUTHORIZATION_KEYS = (
-    "allow_policies",
-    "role_definitions",
-    "deny_policies",
-    "pab_policies",
-    "pab_bindings",
-    "iam_hierarchy",
-    "iam_sources",
-    "iam_observed_at",
-)
-
-# Open-to-the-world source ranges that mark a firewall rule as internet-facing.
-# The CNAPP overlay keys off this `network_exposure` shape.
-_INTERNET_RANGES = {"0.0.0.0/0", "::/0"}
-
-# Members that mark a bucket IAM policy as publicly accessible.
-_PUBLIC_MEMBERS = {"allusers", "allauthenticatedusers"}
-
-# Privilege ranking shared with the AWS path so cross-provider CIEM reasoning
-# (OVERPERMISSIONED_TO_SENSITIVE, effective-permissions) treats levels uniformly.
-_PRIVILEGE_RANK = {"admin": 3, "write": 2, "read": 1, "unknown": 0}
-
-# Canonical predefined GCP roles → privilege level (no extra API call needed).
-_GCP_ROLE_PRIVILEGE: dict[str, str] = {
-    "roles/owner": "admin",
-    "roles/editor": "write",
-    "roles/viewer": "read",
-    "roles/browser": "read",
-}
-
-
-def _classify_role_privilege(role: str) -> str:
-    """Classify a single GCP IAM role into admin / write / read / unknown.
-
-    Mirrors the AWS managed-policy classifier: the basic Owner/Editor/Viewer
-    roles map directly; any ``*Admin`` role is admin; any ``*Viewer`` / ``*Reader``
-    role is read. Everything else stays ``unknown`` — never an inflated guess.
-    """
-    name = str(role or "").strip()
-    if not name:
-        return "unknown"
-    lowered = name.lower()
-    if lowered in _GCP_ROLE_PRIVILEGE:
-        return _GCP_ROLE_PRIVILEGE[lowered]
-    # Strip the leaf after the last dot/slash for the "*Admin"/"*Viewer" suffix test.
-    leaf = lowered.rsplit("/", 1)[-1].rsplit(".", 1)[-1]
-    if leaf.endswith("admin") or "admin" in leaf:
-        return "admin"
-    if "owner" in leaf:
-        return "admin"
-    if "editor" in leaf or leaf.endswith("writer") or leaf.endswith("write"):
-        return "write"
-    if leaf.endswith("viewer") or leaf.endswith("reader") or leaf.endswith("read") or "viewer" in leaf or "reader" in leaf:
-        return "read"
-    return "unknown"
-
-
-def _highest_privilege(roles: list[str]) -> str:
-    """Return the most-privileged level across a principal's bound roles."""
-    best = "unknown"
-    for role in roles:
-        level = _classify_role_privilege(role)
-        if _PRIVILEGE_RANK.get(level, 0) > _PRIVILEGE_RANK.get(best, 0):
-            best = level
-    return best
 
 
 def inventory_enabled() -> bool:
@@ -255,27 +192,6 @@ def discover_all_project_inventories(credentials: Any = None, *, force: bool = F
                     sanitize_text(sanitize_discovery_warning(exc)),
                 )
     return payloads
-
-
-def _derive_default_project() -> tuple[str, str]:
-    """Best-effort ``(project_id, note)`` from Application Default Credentials.
-
-    ``google.auth.default()`` resolves the project the same way every google
-    client does — from a service-account key's ``project_id``, the gcloud config,
-    or the metadata server — so a key/ADC connection needs no explicit
-    ``GOOGLE_CLOUD_PROJECT``. Returns ``("", note)`` on any failure; never raises.
-    """
-    try:
-        from google import auth as google_auth
-    except ImportError:
-        return "", "google-auth not installed; cannot auto-derive the project. Set GOOGLE_CLOUD_PROJECT."
-    try:
-        _creds, project = google_auth.default()
-    except Exception as exc:  # noqa: BLE001 — ADC resolution must not crash a scan
-        return "", sanitize_discovery_warning(exc)
-    if not project:
-        return "", "No GCP project resolved from Application Default Credentials. Set GOOGLE_CLOUD_PROJECT."
-    return str(project), ""
 
 
 _IMPERSONATE_ENV = "AGENT_BOM_GCP_IMPERSONATE_SA"
@@ -549,258 +465,9 @@ def _inventory_payload(
 # ---------------------------------------------------------------------------
 
 
-def _discover_buckets(
-    project_id: str, *, credentials: Any, warnings: list[str], missing: list[dict[str, str]] | None = None
-) -> list[dict[str, Any]]:
-    """Enumerate every GCS bucket in the project (read-only).
-
-    Public-access posture is read from the bucket IAM policy (``allUsers`` /
-    ``allAuthenticatedUsers`` bindings) — never from object contents. Buckets
-    become ``DATA_STORE``-signalling nodes so DSPM and exposure overlays apply.
-    """
-    try:
-        from google.cloud import storage  # type: ignore[attr-defined]  # google.cloud namespace package
-    except ImportError:
-        warnings.append("google-cloud-storage not installed. Skipping GCS bucket inventory.")
-        return []
-
-    buckets: list[dict[str, Any]] = []
-    try:
-        client = storage.Client(project=project_id, credentials=credentials)
-        for bucket in client.list_buckets():
-            name = str(getattr(bucket, "name", "") or "").strip()
-            if not name:
-                continue
-            bucket_record = {
-                "name": name,
-                "id": f"//storage.googleapis.com/{name}",
-                "location": str(getattr(bucket, "location", "") or ""),
-                "publicly_accessible": _bucket_public(bucket, name, warnings),
-                "tags": _clean_labels(getattr(bucket, "labels", None)),
-                "project_id": project_id,
-            }
-            try:
-                from agent_bom.cloud.gcs_data_classifier import classify_gcs_bucket, gcs_sampling_enabled
-
-                if gcs_sampling_enabled():
-                    bucket_record["content_classification"] = classify_gcs_bucket(client, name).to_dict()
-            except Exception as exc:  # noqa: BLE001
-                warnings.append(f"Could not classify GCS bucket {name}: {sanitize_discovery_warning(exc)}")
-            buckets.append(bucket_record)
-    except Exception as exc:  # noqa: BLE001 — one failed GCS buckets list must not sink the scan
-        record_discovery_failure(
-            exc=exc,
-            resource_type="GCS buckets",
-            permission="storage.buckets.list",
-            cloud="gcp",
-            warnings=warnings,
-            missing=missing,
-        )
-    return buckets
-
-
-def _bucket_public(bucket: Any, name: str, warnings: list[str]) -> bool:
-    """Best-effort public determination from the bucket IAM policy only.
-
-    A bucket is treated as public when its IAM policy grants any role to
-    ``allUsers`` or ``allAuthenticatedUsers``. Errors degrade to ``False``
-    (unknown) with a warning — never a guess that inflates risk.
-    """
-    get_policy = getattr(bucket, "get_iam_policy", None)
-    if not callable(get_policy):
-        return False
-    try:
-        policy = get_policy()
-    except Exception as exc:  # noqa: BLE001
-        warnings.append(f"Could not read IAM policy for GCS bucket {name}: {sanitize_discovery_warning(exc)}")
-        return False
-    for binding in _policy_bindings(policy):
-        members = binding.get("members", []) or []
-        if any(str(member).split(":", 1)[0].lower() in _PUBLIC_MEMBERS for member in members):
-            return True
-    return False
-
-
-def _policy_bindings(policy: Any) -> list[dict[str, Any]]:
-    raw = getattr(policy, "bindings", None)
-    if raw is None and isinstance(policy, dict):
-        raw = policy.get("bindings")
-    bindings: list[dict[str, Any]] = []
-    for binding in raw or []:
-        if isinstance(binding, dict):
-            bindings.append(binding)
-        else:
-            bindings.append(
-                {
-                    "role": str(getattr(binding, "role", "") or ""),
-                    "members": list(getattr(binding, "members", []) or []),
-                }
-            )
-    return bindings
-
-
 # ---------------------------------------------------------------------------
 # Compute instances + firewall rules (project-wide aggregated list)
 # ---------------------------------------------------------------------------
-
-
-def _discover_instances(
-    project_id: str, *, credentials: Any, warnings: list[str], missing: list[dict[str, str]] | None = None
-) -> list[dict[str, Any]]:
-    """Enumerate all Compute Engine instances in the project (read-only)."""
-    try:
-        from google.cloud import compute_v1
-    except ImportError:
-        warnings.append("google-cloud-compute not installed. Skipping Compute instance inventory.")
-        return []
-
-    instances: list[dict[str, Any]] = []
-    try:
-        client = compute_v1.InstancesClient(credentials=credentials)
-        for _zone, scoped_list in client.aggregated_list(project=project_id):
-            for instance in getattr(scoped_list, "instances", None) or []:
-                name = str(getattr(instance, "name", "") or "").strip()
-                if not name:
-                    continue
-                instances.append(_normalize_instance(instance, name=name, project_id=project_id))
-    except Exception as exc:  # noqa: BLE001 — one failed Compute instances list must not sink the scan
-        record_discovery_failure(
-            exc=exc,
-            resource_type="Compute instances",
-            permission="compute.instances.list",
-            cloud="gcp",
-            warnings=warnings,
-            missing=missing,
-        )
-    return instances
-
-
-def _normalize_instance(instance: Any, *, name: str, project_id: str) -> dict[str, Any]:
-    public_ip = ""
-    private_ip = ""
-    networks: list[str] = []
-    for interface in getattr(instance, "network_interfaces", None) or []:
-        private_ip = private_ip or str(getattr(interface, "network_i_p", "") or getattr(interface, "network_ip", "") or "")
-        network_leaf = _leaf(getattr(interface, "network", ""))
-        if network_leaf and network_leaf not in networks:
-            networks.append(network_leaf)
-        for access in getattr(interface, "access_configs", None) or []:
-            nat_ip = str(getattr(access, "nat_i_p", "") or getattr(access, "nat_ip", "") or "")
-            if nat_ip:
-                public_ip = nat_ip
-                break
-    service_accounts = [
-        str(getattr(sa, "email", "") or "") for sa in (getattr(instance, "service_accounts", None) or []) if getattr(sa, "email", "")
-    ]
-    return {
-        "instance_id": str(getattr(instance, "id", "") or "") or name,
-        "name": name,
-        "instance_type": _leaf(getattr(instance, "machine_type", "")),
-        "zone": _leaf(getattr(instance, "zone", "")),
-        "status": str(getattr(instance, "status", "") or ""),
-        "public_ip": public_ip,
-        "private_ip": private_ip,
-        # The network each interface attaches to — the join key a firewall rule
-        # matches on (a rule applies to instances on its target network).
-        "network": networks[0] if networks else "",
-        "networks": networks,
-        "network_tags": list(getattr(getattr(instance, "tags", None), "items", None) or []),
-        "service_accounts": service_accounts,
-        "labels": _clean_labels(getattr(instance, "labels", None)),
-        "project_id": project_id,
-    }
-
-
-def _discover_firewalls(
-    project_id: str, *, credentials: Any, warnings: list[str], missing: list[dict[str, str]] | None = None
-) -> list[dict[str, Any]]:
-    """Enumerate all VPC firewall rules in the project (read-only)."""
-    try:
-        from google.cloud import compute_v1
-    except ImportError:
-        warnings.append("google-cloud-compute not installed. Skipping firewall inventory.")
-        return []
-
-    firewalls: list[dict[str, Any]] = []
-    try:
-        client = compute_v1.FirewallsClient(credentials=credentials)
-        for rule in client.list(project=project_id):
-            name = str(getattr(rule, "name", "") or "").strip()
-            if not name:
-                continue
-            firewalls.append(_normalize_firewall(rule, name=name, project_id=project_id))
-    except Exception as exc:  # noqa: BLE001 — one failed firewall rules list must not sink the scan
-        record_discovery_failure(
-            exc=exc,
-            resource_type="firewall rules",
-            permission="compute.firewalls.list",
-            cloud="gcp",
-            warnings=warnings,
-            missing=missing,
-        )
-    return firewalls
-
-
-def _normalize_firewall(rule: Any, *, name: str, project_id: str) -> dict[str, Any]:
-    exposure = _firewall_internet_exposure(rule)
-    source_ranges = [str(r) for r in (getattr(rule, "source_ranges", None) or []) if r]
-    # Target tags / target service accounts scope a rule to specific instances.
-    # An EMPTY target set means the rule applies to ALL instances on its network.
-    target_tags = [str(t) for t in (getattr(rule, "target_tags", None) or []) if t]
-    target_service_accounts = [str(sa) for sa in (getattr(rule, "target_service_accounts", None) or []) if sa]
-    return {
-        "group_id": name,
-        "name": name,
-        "network": _leaf(getattr(rule, "network", "")),
-        "direction": str(getattr(rule, "direction", "") or "").upper(),
-        "internet_exposed": bool(exposure),
-        "network_exposure": exposure,
-        "source_ranges": source_ranges,
-        "target_tags": target_tags,
-        "target_service_accounts": target_service_accounts,
-        "project_id": project_id,
-    }
-
-
-def _firewall_internet_exposure(rule: Any) -> list[dict[str, Any]]:
-    """Return internet-facing ingress allow rules in the CNAPP overlay's shape."""
-    direction = str(getattr(rule, "direction", "") or "INGRESS").upper()
-    if direction not in ("", "INGRESS"):
-        return []
-    if not (getattr(rule, "allowed", None) or []):
-        return []
-    source_ranges = [str(r) for r in (getattr(rule, "source_ranges", None) or []) if r]
-    if not any(src in _INTERNET_RANGES for src in source_ranges):
-        return []
-    exposure: list[dict[str, Any]] = []
-    for allowed in getattr(rule, "allowed", None) or []:
-        protocol = str(getattr(allowed, "I_p_protocol", "") or getattr(allowed, "ip_protocol", "") or "tcp").lower()
-        ports = list(getattr(allowed, "ports", None) or [])
-        if not ports:
-            exposure.append({"scope": "internet", "from_port": None, "to_port": None, "protocol": protocol})
-            continue
-        for port in ports:
-            from_port, to_port = _parse_port(str(port))
-            exposure.append({"scope": "internet", "from_port": from_port, "to_port": to_port, "protocol": protocol})
-    return exposure
-
-
-def _parse_port(text: str) -> tuple[int | None, int | None]:
-    value = text.strip()
-    if not value:
-        return None, None
-    if "-" in value:
-        low, _, high = value.partition("-")
-        return _safe_int(low), _safe_int(high)
-    port = _safe_int(value)
-    return port, port
-
-
-def _safe_int(value: str) -> int | None:
-    try:
-        return int(str(value).strip())
-    except (TypeError, ValueError):
-        return None
 
 
 # ---------------------------------------------------------------------------
@@ -808,322 +475,9 @@ def _safe_int(value: str) -> int | None:
 # ---------------------------------------------------------------------------
 
 
-def _discover_project_iam_bindings(
-    project_id: str, *, credentials: Any, warnings: list[str], missing: list[dict[str, str]] | None = None
-) -> tuple[dict[str, list[str]], dict[str, str]]:
-    """Read the project IAM policy (read-only) → ``({member: [roles…]}, {member: kind})``.
-
-    Calls ``cloudresourcemanager`` ``projects.getIamPolicy`` and inverts the
-    role→members bindings into a member→roles map so each principal carries the
-    roles bound to it. The member key is the bare identity (e.g.
-    ``svc@p.iam.gserviceaccount.com``) with the ``serviceAccount:`` / ``user:`` /
-    ``group:`` prefix stripped, matching the SA email used elsewhere. The second
-    map records each member's kind (``serviceaccount`` / ``user`` / ``group`` /
-    ``domain`` …) so ``group:`` bindings can be represented as group principals
-    rather than silently collapsed into the SA-only view. Degrades to empty maps
-    plus a warning on any error — never raises.
-    """
-    bindings_by_member: dict[str, list[str]] = {}
-    member_kinds: dict[str, str] = {}
-    try:
-        from google.cloud import resourcemanager_v3
-    except ImportError:
-        warnings.append("google-cloud-resource-manager not installed. Skipping project IAM-binding discovery.")
-        return bindings_by_member, member_kinds
-    try:
-        from google.iam.v1 import iam_policy_pb2
-
-        client = resourcemanager_v3.ProjectsClient(credentials=credentials)
-        request = iam_policy_pb2.GetIamPolicyRequest(resource=f"projects/{project_id}")
-        policy = client.get_iam_policy(request=request)
-        for binding in _policy_bindings(policy):
-            role = str(binding.get("role", "") or "")
-            if not role:
-                continue
-            for member in binding.get("members", []) or []:
-                raw = str(member)
-                if ":" in raw:
-                    prefix, _, ident = raw.partition(":")
-                    key = ident.strip().lower()
-                    kind = prefix.strip().lower()
-                else:
-                    key = raw.strip().lower()
-                    kind = ""
-                if not key:
-                    continue
-                member_kinds.setdefault(key, kind)
-                roles = bindings_by_member.setdefault(key, [])
-                if role not in roles:
-                    roles.append(role)
-    except Exception as exc:  # noqa: BLE001 — one failed project IAM policy list must not sink the scan
-        record_discovery_failure(
-            exc=exc,
-            resource_type="project IAM policy",
-            permission="resourcemanager.projects.getIamPolicy",
-            cloud="gcp",
-            warnings=warnings,
-            missing=missing,
-        )
-    return bindings_by_member, member_kinds
-
-
-def _make_role_resolver(*, credentials: Any, warnings: list[str]) -> Any:
-    """Return a cached ``role_id -> [permission…]`` resolver (read-only ``roles.get``).
-
-    Resolves both predefined (``roles/...``) and custom
-    (``projects|organizations/.../roles/...``) role definitions to their concrete
-    ``includedPermissions`` so a binding's *actual* capabilities are known rather
-    than only its name-classified privilege level — closing the gap with the
-    Azure path, which already resolves role definitions to actions. Each role is
-    resolved at most once (cached), and every returned permission is retained.
-    The call is covered by the connector's read-only IAM review roles. It
-    degrades to an empty list plus a warning on any error — never raises.
-    """
-    cache: dict[str, list[str]] = {}
-    client_holder: dict[str, Any] = {}
-
-    def resolve(role: str) -> list[str]:
-        name = str(role or "").strip()
-        if not name:
-            return []
-        if name in cache:
-            return cache[name]
-        permissions: list[str] = []
-        try:
-            from google.cloud import iam_admin_v1
-
-            client = client_holder.get("client")
-            if client is None:
-                client = iam_admin_v1.IAMClient(credentials=credentials)
-                client_holder["client"] = client
-            role_def = client.get_role(request=iam_admin_v1.GetRoleRequest(name=name))
-            permissions = [str(p) for p in (getattr(role_def, "included_permissions", None) or [])]
-        except Exception as exc:  # noqa: BLE001 — one failed role lookup must not sink the scan
-            warnings.append(f"GCP role-definition resolution skipped for {name}: {sanitize_discovery_warning(exc)}")
-        cache[name] = permissions
-        return permissions
-
-    return resolve
-
-
-def _role_policy_entry(role: str, *, role_resolver: Any) -> dict[str, Any]:
-    """Build one classified IAM-binding policy entry, resolved to its permissions."""
-    return {
-        "policy_id": role,
-        "policy_name": role,
-        "attachment_type": "iam-binding",
-        "privilege_level": _classify_role_privilege(role),
-        "permissions": role_resolver(role) if role_resolver is not None else [],
-        "source_field": "projects.getIamPolicy.bindings",
-    }
-
-
-def _build_iam_group_principals(
-    bindings_by_member: dict[str, list[str]],
-    member_kinds: dict[str, str],
-    *,
-    project_id: str,
-    role_resolver: Any,
-) -> list[dict[str, Any]]:
-    """Represent ``group:`` IAM-policy bindings as group principals (read-only).
-
-    A role granted to a Google group reaches every member of that group, so the
-    group must be a first-class principal carrying its bound roles (resolved to
-    permissions) — otherwise group-granted access is invisible to the
-    effective-permissions graph. Member expansion (who is in the group) needs the
-    Workspace Directory API (admin-scoped) and is left as an explicit, optional
-    seam: ``members`` stays empty here unless a gated directory connector fills it.
-    """
-    groups: list[dict[str, Any]] = []
-    for member, roles in bindings_by_member.items():
-        if member_kinds.get(member) != "group":
-            continue
-        policies = [_role_policy_entry(role, role_resolver=role_resolver) for role in roles]
-        groups.append(
-            {
-                "principal_type": "group",
-                "name": member,
-                "arn": member,
-                "principal_id": member,
-                "email": member,
-                "account_id": project_id,
-                "roles": roles,
-                "policies": policies,
-                # Seam: Workspace Directory API (admin-scoped) member expansion is
-                # optional + gated; leave empty rather than guess membership.
-                "members": [],
-                "members_expansion": "unresolved",
-                "privilege_level": _highest_privilege(roles),
-            }
-        )
-    return groups
-
-
-# Fail-closed default when no read-only GCP usage source is wired: usage is
-# UNEVALUABLE, never fabricated as "used" or "unused". Shaped like the AWS
-# Access-Advisor payload (``state`` + ``records``) the graph builder consumes, so
-# a "state != available" bundle makes the builder attach NO ``last_used_at`` and
-# NO access-advisor edges → ``nhi_governance`` stays fail-closed (no phantom
-# dormant / over-grant finding). A live GCP usage source (Policy Analyzer activity
-# / audit-log last-authentication) can be injected via ``usage_resolver`` to
-# populate real telemetry — DEFERRED: no such read-only API is wired in this repo
-# yet, so production inventory honestly reports "usage source not configured".
-_GCP_SA_USAGE_DEFERRED: dict[str, Any] = {
-    "state": "unavailable",
-    "diagnostic": "gcp_service_account_usage_source_not_configured",
-    "records": [],
-}
-
-
-def _service_account_usage_evidence(email: str, roles: list[str], resolver: Any) -> dict[str, Any]:
-    """Resolve read-only usage evidence for one service account (never fabricated).
-
-    ``resolver`` is an optional callable ``(email, roles) -> Mapping`` supplying
-    real last-authentication telemetry (mirrors the AWS Access-Advisor collector
-    injection point). When absent or failing, usage is reported as unevaluable so
-    downstream CIEM stays fail-closed.
-    """
-    if resolver is None:
-        return dict(_GCP_SA_USAGE_DEFERRED)
-    try:
-        evidence = resolver(email, list(roles))
-    except Exception:  # noqa: BLE001 — a usage lookup failure must never sink inventory
-        return {"state": "unavailable", "diagnostic": "gcp_usage_resolver_error", "records": []}
-    if not isinstance(evidence, Mapping):
-        return dict(_GCP_SA_USAGE_DEFERRED)
-    records = evidence.get("records")
-    return {
-        "state": str(evidence.get("state") or "unavailable"),
-        "diagnostic": str(evidence.get("diagnostic") or "gcp_usage_resolver"),
-        "records": list(records) if isinstance(records, list) else [],
-    }
-
-
-def _discover_service_accounts(
-    project_id: str,
-    *,
-    credentials: Any,
-    warnings: list[str],
-    iam_bindings: dict[str, list[str]] | None = None,
-    role_resolver: Any = None,
-    missing: list[dict[str, str]] | None = None,
-    usage_resolver: Any = None,
-) -> list[dict[str, Any]]:
-    """Enumerate all service accounts in the project (read-only).
-
-    Each service account becomes a ``service_account`` graph node carrying its
-    unique id and the project IAM roles bound to it, classified into a
-    ``privilege_level`` (admin / write / read / unknown) so the
-    effective-permissions overlay and ``OVERPERMISSIONED_TO_SENSITIVE`` /
-    CIEM reasoning fire on GCP — mirroring the AWS IAM path. Privilege defaults to
-    ``unknown`` when no binding is found — inventory never guesses an inflated level.
-
-    Each record also carries ``usage_evidence`` (AWS Access-Advisor shape) so the
-    graph builder can attach ``last_used_at`` + access-advisor grant edges and
-    ``nhi_governance`` can evaluate GCP identities for over-grant / dormancy. With
-    no wired read-only GCP usage source, usage is reported UNEVALUABLE (fail-closed,
-    never fabricated); a ``usage_resolver`` injects real last-auth telemetry.
-    """
-    try:
-        from google.cloud import iam_admin_v1
-    except ImportError:
-        warnings.append("google-cloud-iam not installed. Skipping service-account inventory.")
-        return []
-
-    bindings = iam_bindings or {}
-    accounts: list[dict[str, Any]] = []
-    try:
-        client = iam_admin_v1.IAMClient(credentials=credentials)
-        request = iam_admin_v1.ListServiceAccountsRequest(name=f"projects/{project_id}")
-        for account in client.list_service_accounts(request=request):
-            email = str(getattr(account, "email", "") or "").strip()
-            if not email:
-                continue
-            roles = list(bindings.get(email.lower(), []))
-            policies = [_role_policy_entry(role, role_resolver=role_resolver) for role in roles]
-            accounts.append(
-                {
-                    "principal_type": "service-account",
-                    "name": str(getattr(account, "display_name", "") or "") or email,
-                    "arn": email,
-                    "principal_id": str(getattr(account, "unique_id", "") or "") or email,
-                    "email": email,
-                    "disabled": bool(getattr(account, "disabled", False)),
-                    "account_id": project_id,
-                    "roles": roles,
-                    "policies": policies,
-                    "trust_principals": [],
-                    "privilege_level": _highest_privilege(roles),
-                    "usage_evidence": _service_account_usage_evidence(email, roles, usage_resolver),
-                }
-            )
-    except Exception as exc:  # noqa: BLE001 — one failed service accounts list must not sink the scan
-        record_discovery_failure(
-            exc=exc,
-            resource_type="service accounts",
-            permission="iam.serviceAccounts.list",
-            cloud="gcp",
-            warnings=warnings,
-            missing=missing,
-        )
-    return accounts
-
-
 # ---------------------------------------------------------------------------
 # GKE clusters (container_v1, project-wide via the "-" location wildcard)
 # ---------------------------------------------------------------------------
-
-
-def _discover_gke_clusters(
-    project_id: str, *, credentials: Any, warnings: list[str], missing: list[dict[str, str]] | None = None
-) -> list[dict[str, Any]]:
-    """Enumerate every GKE cluster in the project (read-only).
-
-    Uses the ``-`` location wildcard so a single call returns clusters across all
-    regions/zones. A cluster with a public control-plane endpoint (no
-    ``private_cluster_config.enable_private_endpoint``) is marked
-    ``internet_exposed`` so the CNAPP / attack-path overlays treat it as an entry.
-    """
-    try:
-        from google.cloud import container_v1
-    except ImportError:
-        warnings.append("google-cloud-container not installed. Skipping GKE cluster inventory.")
-        return []
-
-    clusters: list[dict[str, Any]] = []
-    try:
-        client = container_v1.ClusterManagerClient(credentials=credentials)
-        response = client.list_clusters(parent=f"projects/{project_id}/locations/-")
-        for cluster in getattr(response, "clusters", None) or []:
-            name = str(getattr(cluster, "name", "") or "").strip()
-            if not name:
-                continue
-            private_cfg = getattr(cluster, "private_cluster_config", None)
-            private_endpoint = bool(getattr(private_cfg, "enable_private_endpoint", False)) if private_cfg else False
-            clusters.append(
-                {
-                    "name": name,
-                    "id": str(getattr(cluster, "id", "") or "") or name,
-                    "location": str(getattr(cluster, "location", "") or ""),
-                    "endpoint": str(getattr(cluster, "endpoint", "") or ""),
-                    "private_cluster": bool(getattr(private_cfg, "enable_private_nodes", False)) if private_cfg else False,
-                    "internet_exposed": not private_endpoint,
-                    "node_count": _safe_int(str(getattr(cluster, "current_node_count", "") or "")) or 0,
-                    "version": str(getattr(cluster, "current_master_version", "") or ""),
-                    "labels": _clean_labels(getattr(cluster, "resource_labels", None)),
-                    "project_id": project_id,
-                }
-            )
-    except Exception as exc:  # noqa: BLE001 — one failed GKE clusters list must not sink the scan
-        record_discovery_failure(
-            exc=exc,
-            resource_type="GKE clusters",
-            permission="container.clusters.list",
-            cloud="gcp",
-            warnings=warnings,
-            missing=missing,
-        )
-    return clusters
 
 
 # ---------------------------------------------------------------------------
@@ -1131,105 +485,9 @@ def _discover_gke_clusters(
 # ---------------------------------------------------------------------------
 
 
-def _discover_cloud_run_services(
-    project_id: str, *, credentials: Any, warnings: list[str], missing: list[dict[str, str]] | None = None
-) -> list[dict[str, Any]]:
-    """Enumerate every Cloud Run service in the project (read-only).
-
-    Ingress ``INGRESS_TRAFFIC_ALL`` means the service is reachable from the
-    internet → ``internet_exposed``. ``INGRESS_TRAFFIC_INTERNAL_*`` is private.
-    """
-    try:
-        from google.cloud import run_v2
-    except ImportError:
-        warnings.append("google-cloud-run not installed. Skipping Cloud Run service inventory.")
-        return []
-
-    services: list[dict[str, Any]] = []
-    try:
-        client = run_v2.ServicesClient(credentials=credentials)
-        request = run_v2.ListServicesRequest(parent=f"projects/{project_id}/locations/-")
-        for service in client.list_services(request=request):
-            full_name = str(getattr(service, "name", "") or "").strip()
-            name = _leaf(full_name)
-            if not name:
-                continue
-            ingress = str(getattr(service, "ingress", "") or "")
-            region = _segment(full_name, "locations")
-            services.append(
-                {
-                    "name": name,
-                    "id": full_name or name,
-                    "location": region,
-                    "url": str(getattr(service, "uri", "") or ""),
-                    "ingress": ingress,
-                    "internet_exposed": "ALL" in ingress.upper(),
-                    "labels": _clean_labels(getattr(service, "labels", None)),
-                    "project_id": project_id,
-                }
-            )
-    except Exception as exc:  # noqa: BLE001 — one failed Cloud Run services list must not sink the scan
-        record_discovery_failure(
-            exc=exc,
-            resource_type="Cloud Run services",
-            permission="run.services.list",
-            cloud="gcp",
-            warnings=warnings,
-            missing=missing,
-        )
-    return services
-
-
 # ---------------------------------------------------------------------------
 # Cloud Functions (functions_v2, project-wide via the "-" location wildcard)
 # ---------------------------------------------------------------------------
-
-
-def _discover_cloud_functions(
-    project_id: str, *, credentials: Any, warnings: list[str], missing: list[dict[str, str]] | None = None
-) -> list[dict[str, Any]]:
-    """Enumerate every 2nd-gen Cloud Function in the project (read-only)."""
-    try:
-        from google.cloud import functions_v2
-    except ImportError:
-        warnings.append("google-cloud-functions not installed. Skipping Cloud Functions inventory.")
-        return []
-
-    functions: list[dict[str, Any]] = []
-    try:
-        client = functions_v2.FunctionServiceClient(credentials=credentials)
-        request = functions_v2.ListFunctionsRequest(parent=f"projects/{project_id}/locations/-")
-        for function in client.list_functions(request=request):
-            full_name = str(getattr(function, "name", "") or "").strip()
-            name = _leaf(full_name)
-            if not name:
-                continue
-            service_config = getattr(function, "service_config", None)
-            ingress = str(getattr(service_config, "ingress_settings", "") or "") if service_config else ""
-            event_trigger = getattr(function, "event_trigger", None)
-            trigger = "event" if event_trigger else "https"
-            functions.append(
-                {
-                    "name": name,
-                    "id": full_name or name,
-                    "location": _segment(full_name, "locations"),
-                    "trigger": trigger,
-                    "ingress": ingress,
-                    "internet_exposed": "ALL" in ingress.upper(),
-                    "labels": _clean_labels(getattr(function, "labels", None)),
-                    "project_id": project_id,
-                }
-            )
-    except Exception as exc:  # noqa: BLE001 — one failed Cloud Functions list must not sink the scan
-        record_discovery_failure(
-            exc=exc,
-            resource_type="Cloud Functions",
-            permission="cloudfunctions.functions.list",
-            cloud="gcp",
-            warnings=warnings,
-            missing=missing,
-        )
-    return functions
 
 
 # ---------------------------------------------------------------------------
@@ -1237,202 +495,14 @@ def _discover_cloud_functions(
 # ---------------------------------------------------------------------------
 
 
-def _discover_cloud_sql_instances(
-    project_id: str, *, credentials: Any, warnings: list[str], missing: list[dict[str, str]] | None = None
-) -> list[dict[str, Any]]:
-    """Enumerate every Cloud SQL instance in the project (read-only).
-
-    The Cloud SQL Admin API has no idiomatic google-cloud client, so this uses
-    the discovery-built ``sqladmin`` client. An instance with a public IPv4
-    address (``PRIMARY`` ip_address) or an open authorized-network
-    (``0.0.0.0/0``) is marked ``internet_exposed`` so a public managed database
-    feeds the CNAPP / attack-path overlays.
-    """
-    try:
-        from googleapiclient.discovery import build
-    except ImportError:
-        warnings.append("google-api-python-client not installed. Skipping Cloud SQL inventory.")
-        return []
-
-    instances: list[dict[str, Any]] = []
-    try:
-        service = build("sqladmin", "v1beta4", credentials=credentials, cache_discovery=False)
-        request = service.instances().list(project=project_id)
-        while request is not None:
-            response = request.execute()
-            for item in response.get("items", []) or []:
-                if not isinstance(item, dict):
-                    continue
-                name = str(item.get("name", "") or "").strip()
-                if not name:
-                    continue
-                ip_addresses = [str(ip.get("ipAddress", "")) for ip in (item.get("ipAddresses") or []) if isinstance(ip, dict)]
-                settings = item.get("settings") or {}
-                ip_config = settings.get("ipConfiguration") or {}
-                authorized = [str(net.get("value", "")) for net in (ip_config.get("authorizedNetworks") or []) if isinstance(net, dict)]
-                public_ip = bool(ip_config.get("ipv4Enabled")) and bool(ip_addresses)
-                open_network = any(net in _INTERNET_RANGES for net in authorized)
-                disk_encryption = item.get("diskEncryptionConfiguration") or {}
-                instances.append(
-                    {
-                        "name": name,
-                        "id": str(item.get("selfLink", "") or "") or name,
-                        "location": str(item.get("region", "") or ""),
-                        "database_version": str(item.get("databaseVersion", "") or ""),
-                        "ip_addresses": ip_addresses,
-                        "authorized_networks": authorized,
-                        "publicly_accessible": public_ip or open_network,
-                        "internet_exposed": public_ip or open_network,
-                        "encrypted": bool(disk_encryption.get("kmsKeyName")),
-                        "project_id": project_id,
-                    }
-                )
-            page_token = response.get("nextPageToken")
-            if not page_token:
-                break
-            request = service.instances().list(project=project_id, pageToken=page_token)
-    except Exception as exc:  # noqa: BLE001 — one failed Cloud SQL instances list must not sink the scan
-        record_discovery_failure(
-            exc=exc,
-            resource_type="Cloud SQL instances",
-            permission="cloudsql.instances.list",
-            cloud="gcp",
-            warnings=warnings,
-            missing=missing,
-        )
-    return instances
-
-
 # ---------------------------------------------------------------------------
 # VPC networks + subnets (compute_v1)
 # ---------------------------------------------------------------------------
 
 
-def _discover_vpc_networks(
-    project_id: str,
-    *,
-    credentials: Any,
-    warnings: list[str],
-    missing: list[dict[str, str]] | None = None,
-    subnets_by_network: dict[str, list[dict[str, Any]]] | None = None,
-) -> list[dict[str, Any]]:
-    """Enumerate every VPC network + its subnets in the project (read-only).
-
-    ``subnets_by_network`` may be supplied by the caller to reuse a single
-    aggregated subnet query (the flat ``subnets`` list shares the same data);
-    when ``None`` the subnets are queried here.
-    """
-    try:
-        from google.cloud import compute_v1
-    except ImportError:
-        warnings.append("google-cloud-compute not installed. Skipping VPC network inventory.")
-        return []
-
-    if subnets_by_network is None:
-        subnets_by_network = _discover_subnets_by_network(project_id, credentials=credentials, warnings=warnings, missing=missing)
-    networks: list[dict[str, Any]] = []
-    try:
-        client = compute_v1.NetworksClient(credentials=credentials)
-        for network in client.list(project=project_id):
-            name = str(getattr(network, "name", "") or "").strip()
-            if not name:
-                continue
-            self_link = str(getattr(network, "self_link", "") or "")
-            network_subnets = subnets_by_network.get(self_link, []) or subnets_by_network.get(name, [])
-            networks.append(
-                {
-                    "name": name,
-                    "id": str(getattr(network, "id", "") or "") or name,
-                    "location": "global",
-                    "auto_create_subnetworks": bool(getattr(network, "auto_create_subnetworks", False)),
-                    "subnets": network_subnets,
-                    "project_id": project_id,
-                }
-            )
-    except Exception as exc:  # noqa: BLE001 — one failed VPC networks list must not sink the scan
-        record_discovery_failure(
-            exc=exc,
-            resource_type="VPC networks",
-            permission="compute.networks.list",
-            cloud="gcp",
-            warnings=warnings,
-            missing=missing,
-        )
-    return networks
-
-
-def _discover_subnets_by_network(
-    project_id: str, *, credentials: Any, warnings: list[str], missing: list[dict[str, str]] | None = None
-) -> dict[str, list[dict[str, Any]]]:
-    """Aggregated subnet list, keyed by the parent network self-link AND name."""
-    try:
-        from google.cloud import compute_v1
-    except ImportError:
-        return {}
-
-    by_network: dict[str, list[dict[str, Any]]] = {}
-    try:
-        client = compute_v1.SubnetworksClient(credentials=credentials)
-        for _region, scoped_list in client.aggregated_list(project=project_id):
-            for subnet in getattr(scoped_list, "subnetworks", None) or []:
-                network_link = str(getattr(subnet, "network", "") or "")
-                flow_logs = getattr(subnet, "enable_flow_logs", None)
-                subnet_name = str(getattr(subnet, "name", "") or "")
-                entry = {
-                    "id": str(getattr(subnet, "self_link", "") or "") or str(getattr(subnet, "id", "") or "") or subnet_name,
-                    "name": subnet_name,
-                    "network": network_link,
-                    "region": _leaf(getattr(subnet, "region", "")),
-                    "cidr": str(getattr(subnet, "ip_cidr_range", "") or ""),
-                    "flow_logs": bool(flow_logs) if flow_logs is not None else False,
-                }
-                by_network.setdefault(network_link, []).append(entry)
-                by_network.setdefault(_leaf(network_link), []).append(entry)
-    except Exception as exc:  # noqa: BLE001 — one failed VPC subnets list must not sink the scan
-        record_discovery_failure(
-            exc=exc,
-            resource_type="VPC subnets",
-            permission="compute.subnetworks.list",
-            cloud="gcp",
-            warnings=warnings,
-            missing=missing,
-        )
-    return by_network
-
-
 # ---------------------------------------------------------------------------
 # Subnets (flat list, reusing the aggregated subnet query)
 # ---------------------------------------------------------------------------
-
-
-def _discover_subnets(subnets_by_network: dict[str, list[dict[str, Any]]], *, project_id: str) -> list[dict[str, Any]]:
-    """Flatten the aggregated subnet map into a top-level ``subnets`` list.
-
-    Reuses the data already produced by ``_discover_subnets_by_network`` (which
-    keys each subnet under both its network self-link and the network leaf name),
-    so each subnet object is deduplicated by identity rather than re-queried.
-    """
-    seen: set[int] = set()
-    subnets: list[dict[str, Any]] = []
-    for entries in subnets_by_network.values():
-        for entry in entries:
-            marker = id(entry)
-            if marker in seen:
-                continue
-            seen.add(marker)
-            name = str(entry.get("name", "") or "")
-            subnets.append(
-                {
-                    "id": str(entry.get("id", "") or "") or name,
-                    "name": name,
-                    "vpc_id": str(entry.get("network", "") or ""),
-                    "cidr": str(entry.get("cidr", "") or ""),
-                    "is_public": False,
-                    "location": str(entry.get("region", "") or ""),
-                    "account_id": project_id,
-                }
-            )
-    return subnets
 
 
 # ---------------------------------------------------------------------------
@@ -1554,126 +624,9 @@ def _discover_load_balancers(
     return load_balancers, backends_by_policy
 
 
-def _discover_target_proxies(
-    project_id: str, *, credentials: Any, warnings: list[str], missing: list[dict[str, str]] | None = None
-) -> list[dict[str, Any]]:
-    """Enumerate target HTTP + HTTPS proxies (read-only), normalized as LBs."""
-    try:
-        from google.cloud import compute_v1
-    except ImportError:
-        return []
-
-    proxies: list[dict[str, Any]] = []
-    try:
-        http_proxies_client = compute_v1.TargetHttpProxiesClient(credentials=credentials)
-        for proxy in http_proxies_client.list(project=project_id):
-            name = str(getattr(proxy, "name", "") or "").strip()
-            if not name:
-                continue
-            proxies.append(
-                {
-                    "name": name,
-                    "id": str(getattr(proxy, "id", "") or "") or name,
-                    "lb_type": "target-proxy",
-                    "scheme": "",
-                    "internet_exposed": False,
-                    "location": "global",
-                    "account_id": project_id,
-                }
-            )
-    except Exception as exc:  # noqa: BLE001 — one failed target-HTTP-proxies list must not sink the scan
-        record_discovery_failure(
-            exc=exc,
-            resource_type="target HTTP proxies",
-            permission="compute.targetHttpProxies.list",
-            cloud="gcp",
-            warnings=warnings,
-            missing=missing,
-        )
-
-    try:
-        https_proxies_client = compute_v1.TargetHttpsProxiesClient(credentials=credentials)
-        for proxy in https_proxies_client.list(project=project_id):
-            name = str(getattr(proxy, "name", "") or "").strip()
-            if not name:
-                continue
-            proxies.append(
-                {
-                    "name": name,
-                    "id": str(getattr(proxy, "id", "") or "") or name,
-                    "lb_type": "target-proxy",
-                    "scheme": "",
-                    "internet_exposed": False,
-                    "location": "global",
-                    "account_id": project_id,
-                }
-            )
-    except Exception as exc:  # noqa: BLE001 — one failed target-HTTPS-proxies list must not sink the scan
-        record_discovery_failure(
-            exc=exc,
-            resource_type="target HTTPS proxies",
-            permission="compute.targetHttpsProxies.list",
-            cloud="gcp",
-            warnings=warnings,
-            missing=missing,
-        )
-    return proxies
-
-
 # ---------------------------------------------------------------------------
 # Cloud Armor security policies (compute_v1) — GCP's WAF → web_acls
 # ---------------------------------------------------------------------------
-
-
-def _discover_security_policies(
-    project_id: str,
-    *,
-    credentials: Any,
-    warnings: list[str],
-    missing: list[dict[str, str]] | None = None,
-    backends_by_policy: dict[str, list[str]] | None = None,
-) -> list[dict[str, Any]]:
-    """Enumerate Cloud Armor security policies (read-only) → ``web_acls`` shape.
-
-    ``protected_targets`` is resolved from the backend services that reference
-    each policy (passed in via ``backends_by_policy``) so the graph can link a
-    policy to the resources it shields.
-    """
-    try:
-        from google.cloud import compute_v1
-    except ImportError:
-        warnings.append("google-cloud-compute not installed. Skipping Cloud Armor inventory.")
-        return []
-
-    by_policy = backends_by_policy or {}
-    policies: list[dict[str, Any]] = []
-    try:
-        client = compute_v1.SecurityPoliciesClient(credentials=credentials)
-        for policy in client.list(project=project_id):
-            name = str(getattr(policy, "name", "") or "").strip()
-            if not name:
-                continue
-            policies.append(
-                {
-                    "name": name,
-                    "id": str(getattr(policy, "id", "") or "") or name,
-                    "arn": "",
-                    "scope": "cloud-armor",
-                    "protected_targets": list(by_policy.get(name, [])),
-                    "location": "global",
-                    "account_id": project_id,
-                }
-            )
-    except Exception as exc:  # noqa: BLE001 — one failed Cloud Armor policies list must not sink the scan
-        record_discovery_failure(
-            exc=exc,
-            resource_type="Cloud Armor policies",
-            permission="compute.securityPolicies.list",
-            cloud="gcp",
-            warnings=warnings,
-            missing=missing,
-        )
-    return policies
 
 
 # ---------------------------------------------------------------------------
@@ -1681,124 +634,9 @@ def _discover_security_policies(
 # ---------------------------------------------------------------------------
 
 
-def _discover_api_gateways(
-    project_id: str, *, credentials: Any, warnings: list[str], missing: list[dict[str, str]] | None = None
-) -> list[dict[str, Any]]:
-    """Enumerate API Gateway gateways in the project (read-only).
-
-    Gateways front backend services with a public default hostname, so each is
-    marked ``internet_exposed``. Degrades to ``[]`` plus a warning when the
-    apigateway SDK is absent.
-    """
-    try:
-        from google.cloud import apigateway_v1
-    except ImportError:
-        warnings.append("google-cloud-api-gateway not installed. Skipping API Gateway inventory.")
-        return []
-
-    gateways: list[dict[str, Any]] = []
-    try:
-        client = apigateway_v1.ApiGatewayServiceClient(credentials=credentials)
-        request = apigateway_v1.ListGatewaysRequest(parent=f"projects/{project_id}/locations/-")
-        for gateway in client.list_gateways(request=request):
-            full_name = str(getattr(gateway, "name", "") or "").strip()
-            name = _leaf(full_name)
-            if not name:
-                continue
-            api_config = _leaf(getattr(gateway, "api_config", ""))
-            gateways.append(
-                {
-                    "name": name,
-                    "id": full_name or name,
-                    "arn": "",
-                    "protocol": "apigateway",
-                    "endpoint": str(getattr(gateway, "default_hostname", "") or ""),
-                    "internet_exposed": True,
-                    "stages": [],
-                    "protected_targets": [api_config] if api_config else [],
-                    "location": _segment(full_name, "locations"),
-                    "account_id": project_id,
-                }
-            )
-    except Exception as exc:  # noqa: BLE001 — one failed API Gateway list must not sink the scan
-        record_discovery_failure(
-            exc=exc,
-            resource_type="API gateways",
-            permission="apigateway.gateways.list",
-            cloud="gcp",
-            warnings=warnings,
-            missing=missing,
-        )
-    return gateways
-
-
 # ---------------------------------------------------------------------------
 # Cloud routers + Cloud NAT (compute_v1 RoutersClient.aggregated_list)
 # ---------------------------------------------------------------------------
-
-
-def _discover_routers(
-    project_id: str, *, credentials: Any, warnings: list[str], missing: list[dict[str, str]] | None = None
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Enumerate Cloud routers + their NAT configs (read-only).
-
-    Returns ``(nat_gateways, route_tables)``: each router becomes a route-table
-    entry (``has_internet_route`` True when it carries a NAT egress config), and
-    each NAT config on a router becomes a NAT-gateway entry.
-    """
-    try:
-        from google.cloud import compute_v1
-    except ImportError:
-        warnings.append("google-cloud-compute not installed. Skipping router/NAT inventory.")
-        return [], []
-
-    nat_gateways: list[dict[str, Any]] = []
-    route_tables: list[dict[str, Any]] = []
-    try:
-        client = compute_v1.RoutersClient(credentials=credentials)
-        for _scope, scoped_list in client.aggregated_list(project=project_id):
-            for router in getattr(scoped_list, "routers", None) or []:
-                name = str(getattr(router, "name", "") or "").strip()
-                if not name:
-                    continue
-                network = _leaf(getattr(router, "network", ""))
-                region = _leaf(getattr(router, "region", ""))
-                router_id = str(getattr(router, "id", "") or "") or name
-                nats = list(getattr(router, "nats", None) or [])
-                route_tables.append(
-                    {
-                        "id": router_id,
-                        "name": name,
-                        "vpc_id": network,
-                        "has_internet_route": bool(nats),
-                        "location": region,
-                        "account_id": project_id,
-                    }
-                )
-                for nat in nats:
-                    nat_name = str(getattr(nat, "name", "") or "").strip()
-                    if not nat_name:
-                        continue
-                    nat_gateways.append(
-                        {
-                            "id": f"{name}/{nat_name}",
-                            "name": nat_name,
-                            "vpc_id": network,
-                            "subnet_id": "",
-                            "location": region,
-                            "account_id": project_id,
-                        }
-                    )
-    except Exception as exc:  # noqa: BLE001 — one failed routers list must not sink the scan
-        record_discovery_failure(
-            exc=exc,
-            resource_type="routers",
-            permission="compute.routers.list",
-            cloud="gcp",
-            warnings=warnings,
-            missing=missing,
-        )
-    return nat_gateways, route_tables
 
 
 # ---------------------------------------------------------------------------
@@ -1806,120 +644,9 @@ def _discover_routers(
 # ---------------------------------------------------------------------------
 
 
-def _discover_ip_addresses(
-    project_id: str,
-    *,
-    credentials: Any,
-    warnings: list[str],
-    missing: list[dict[str, str]] | None = None,
-    instances: list[dict[str, Any]] | None = None,
-) -> list[dict[str, Any]]:
-    """Enumerate reserved external IPs + ephemeral external IPs (read-only).
-
-    Reserved addresses come from ``AddressesClient.aggregated_list``; ephemeral
-    external IPs are read from the already-discovered instances' access configs
-    (their ``public_ip``) and de-duplicated against the reserved set so a static
-    IP attached to a VM is not double-counted.
-    """
-    try:
-        from google.cloud import compute_v1
-    except ImportError:
-        warnings.append("google-cloud-compute not installed. Skipping IP-address inventory.")
-        return []
-
-    ip_addresses: list[dict[str, Any]] = []
-    reserved_values: set[str] = set()
-    try:
-        client = compute_v1.AddressesClient(credentials=credentials)
-        for _scope, scoped_list in client.aggregated_list(project=project_id):
-            for address in getattr(scoped_list, "addresses", None) or []:
-                value = str(getattr(address, "address", "") or "").strip()
-                if not value:
-                    continue
-                reserved_values.add(value)
-                users = [_leaf(u) for u in (getattr(address, "users", None) or []) if u]
-                ip_addresses.append(
-                    {
-                        "address": value,
-                        "kind": "reserved",
-                        "attached_to": users[0] if users else "",
-                        "location": _leaf(getattr(address, "region", "")) or "global",
-                        "account_id": project_id,
-                    }
-                )
-    except Exception as exc:  # noqa: BLE001 — one failed addresses list must not sink the scan
-        record_discovery_failure(
-            exc=exc,
-            resource_type="reserved IP addresses",
-            permission="compute.addresses.list",
-            cloud="gcp",
-            warnings=warnings,
-            missing=missing,
-        )
-
-    for instance in instances or []:
-        public_ip = str(instance.get("public_ip", "") or "").strip()
-        if not public_ip or public_ip in reserved_values:
-            continue
-        reserved_values.add(public_ip)
-        ip_addresses.append(
-            {
-                "address": public_ip,
-                "kind": "ephemeral",
-                "attached_to": str(instance.get("name", "") or instance.get("instance_id", "") or ""),
-                "location": str(instance.get("zone", "") or ""),
-                "account_id": project_id,
-            }
-        )
-    return ip_addresses
-
-
 # ---------------------------------------------------------------------------
 # Persistent disks (compute_v1, aggregated)
 # ---------------------------------------------------------------------------
-
-
-def _discover_disks(
-    project_id: str, *, credentials: Any, warnings: list[str], missing: list[dict[str, str]] | None = None
-) -> list[dict[str, Any]]:
-    """Enumerate every persistent disk in the project (read-only)."""
-    try:
-        from google.cloud import compute_v1
-    except ImportError:
-        warnings.append("google-cloud-compute not installed. Skipping persistent-disk inventory.")
-        return []
-
-    disks: list[dict[str, Any]] = []
-    try:
-        client = compute_v1.DisksClient(credentials=credentials)
-        for _zone, scoped_list in client.aggregated_list(project=project_id):
-            for disk in getattr(scoped_list, "disks", None) or []:
-                name = str(getattr(disk, "name", "") or "").strip()
-                if not name:
-                    continue
-                encryption = getattr(disk, "disk_encryption_key", None)
-                disks.append(
-                    {
-                        "name": name,
-                        "id": str(getattr(disk, "id", "") or "") or name,
-                        "location": _leaf(getattr(disk, "zone", "")),
-                        "size_gb": _safe_int(str(getattr(disk, "size_gb", "") or "")) or 0,
-                        "encrypted": bool(getattr(encryption, "kms_key_name", "") if encryption else False),
-                        "source_image": _leaf(getattr(disk, "source_image", "")),
-                        "labels": _clean_labels(getattr(disk, "labels", None)),
-                        "project_id": project_id,
-                    }
-                )
-    except Exception as exc:  # noqa: BLE001 — one failed persistent disks list must not sink the scan
-        record_discovery_failure(
-            exc=exc,
-            resource_type="persistent disks",
-            permission="compute.disks.list",
-            cloud="gcp",
-            warnings=warnings,
-            missing=missing,
-        )
-    return disks
 
 
 # ---------------------------------------------------------------------------
@@ -1927,75 +654,9 @@ def _discover_disks(
 # ---------------------------------------------------------------------------
 
 
-def _discover_pubsub_topics(
-    project_id: str, *, credentials: Any, warnings: list[str], missing: list[dict[str, str]] | None = None
-) -> list[dict[str, Any]]:
-    """Enumerate every Pub/Sub topic in the project (read-only)."""
-    try:
-        from google.cloud import pubsub_v1  # type: ignore[attr-defined]  # google.cloud namespace package
-    except ImportError:
-        warnings.append("google-cloud-pubsub not installed. Skipping Pub/Sub topic inventory.")
-        return []
-
-    topics: list[dict[str, Any]] = []
-    try:
-        client = pubsub_v1.PublisherClient(credentials=credentials)
-        for topic in client.list_topics(request={"project": f"projects/{project_id}"}):
-            full_name = str(getattr(topic, "name", "") or "").strip()
-            name = _leaf(full_name)
-            if not name:
-                continue
-            topics.append(
-                {
-                    "name": name,
-                    "id": full_name or name,
-                    "location": "global",
-                    "labels": _clean_labels(getattr(topic, "labels", None)),
-                    "project_id": project_id,
-                }
-            )
-    except Exception as exc:  # noqa: BLE001 — one failed Pub/Sub topics list must not sink the scan
-        record_discovery_failure(
-            exc=exc,
-            resource_type="Pub/Sub topics",
-            permission="pubsub.topics.list",
-            cloud="gcp",
-            warnings=warnings,
-            missing=missing,
-        )
-    return topics
-
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-
-def _segment(self_link: str, key: str) -> str:
-    """Return the path segment following ``key`` in a GCP resource name, else ''.
-
-    e.g. ``_segment("projects/p/locations/us-central1/services/svc", "locations")``
-    → ``"us-central1"``.
-    """
-    parts = str(self_link or "").split("/")
-    for i, part in enumerate(parts):
-        if part == key and i + 1 < len(parts):
-            return parts[i + 1]
-    return ""
-
-
-def _leaf(value: Any) -> str:
-    """Return the last path segment of a GCP self-link / type URL, else ''."""
-    text = str(value or "").strip()
-    if not text:
-        return ""
-    return text.rsplit("/", 1)[-1]
-
-
-def _clean_labels(labels: Any) -> dict[str, str]:
-    if not isinstance(labels, dict):
-        return {}
-    return {str(key): str(value) for key, value in labels.items() if key is not None}
 
 
 __all__ = [

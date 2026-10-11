@@ -1954,29 +1954,34 @@
     "cloud/aws_iam_collector.py::collect_iam_roles_usage_evidence": {
       "function_lines": 120
     },
+    "cloud/aws_inv/_base.py": {
+      "broad_except": 3
+    },
+    "cloud/aws_inv/edge.py": {
+      "broad_except": 9
+    },
+    "cloud/aws_inv/network.py": {
+      "broad_except": 3
+    },
+    "cloud/aws_inv/services.py": {
+      "broad_except": 14,
+      "deferred_imports": 3
+    },
+    "cloud/aws_inv/storage_compute.py": {
+      "broad_except": 16,
+      "deferred_imports": 1
+    },
     "cloud/aws_inventory.py": {
-      "broad_except": 59,
-      "deferred_imports": 5,
-      "file_lines": 2744,
+      "broad_except": 6,
+      "deferred_imports": 1,
+      "file_lines": 724,
       "raw_env_reads": 7
     },
     "cloud/aws_inventory.py::_discover_iam": {
       "function_lines": 90
     },
-    "cloud/aws_inventory.py::_discover_network_edge": {
-      "complexity": 39,
-      "function_lines": 276
-    },
     "cloud/aws_inventory.py::discover_all_account_inventories": {
       "function_lines": 106
-    },
-    "cloud/aws_inventory.py::discover_inventory": {
-      "complexity": 23,
-      "function_lines": 207
-    },
-    "cloud/aws_inventory.py::discover_inventory_all_regions": {
-      "complexity": 27,
-      "function_lines": 219
     },
     "cloud/aws_organizations.py": {
       "broad_except": 7,
@@ -2089,22 +2094,31 @@
       "broad_except": 3,
       "deferred_imports": 2
     },
+    "cloud/azure_inv/_base.py": {
+      "broad_except": 2,
+      "deferred_imports": 2
+    },
+    "cloud/azure_inv/compute_storage.py": {
+      "broad_except": 10,
+      "deferred_imports": 1
+    },
+    "cloud/azure_inv/data.py": {
+      "broad_except": 7
+    },
+    "cloud/azure_inv/edge.py": {
+      "broad_except": 5
+    },
+    "cloud/azure_inv/identity.py": {
+      "broad_except": 5
+    },
+    "cloud/azure_inv/network.py": {
+      "broad_except": 9
+    },
     "cloud/azure_inventory.py": {
-      "broad_except": 43,
-      "deferred_imports": 6,
-      "file_lines": 2433,
+      "broad_except": 5,
+      "deferred_imports": 3,
+      "file_lines": 654,
       "raw_env_reads": 8
-    },
-    "cloud/azure_inventory.py::_discover_databases": {
-      "function_lines": 104
-    },
-    "cloud/azure_inventory.py::_discover_entra_directory": {
-      "complexity": 18,
-      "function_lines": 128
-    },
-    "cloud/azure_inventory.py::discover_inventory": {
-      "complexity": 27,
-      "function_lines": 329
     },
     "cloud/azure_rbac_evidence.py::_authoritative_bundle": {
       "function_lines": 129
@@ -2284,18 +2298,27 @@
     "cloud/gcp_iam_evidence.py::normalize_gcp_iam_inventory": {
       "function_lines": 126
     },
+    "cloud/gcp_inv/_base.py": {
+      "broad_except": 1
+    },
+    "cloud/gcp_inv/compute_storage.py": {
+      "broad_except": 11,
+      "deferred_imports": 1
+    },
+    "cloud/gcp_inv/iam.py": {
+      "broad_except": 4
+    },
+    "cloud/gcp_inv/network.py": {
+      "broad_except": 8
+    },
     "cloud/gcp_inventory.py": {
-      "broad_except": 30,
-      "deferred_imports": 2,
-      "file_lines": 2032,
+      "broad_except": 6,
+      "deferred_imports": 1,
+      "file_lines": 669,
       "raw_env_reads": 6
     },
     "cloud/gcp_inventory.py::_discover_load_balancers": {
       "function_lines": 111
-    },
-    "cloud/gcp_inventory.py::discover_inventory": {
-      "complexity": 24,
-      "function_lines": 274
     },
     "cloud/gcp_organizations.py": {
       "broad_except": 6,
@@ -2476,47 +2499,9 @@
       "function_lines": 194
     },
     "cloud/snowflake.py": {
-      "broad_except": 32,
-      "file_lines": 2021,
+      "broad_except": 3,
+      "file_lines": 651,
       "raw_env_reads": 8
-    },
-    "cloud/snowflake.py::_discover_snowflake_notebooks": {
-      "function_lines": 164
-    },
-    "cloud/snowflake.py::_find_agent_usage_anomalies": {
-      "function_lines": 109
-    },
-    "cloud/snowflake.py::_live_role_grants": {
-      "complexity": 19,
-      "function_lines": 104
-    },
-    "cloud/snowflake.py::_mine_access_history": {
-      "function_lines": 103
-    },
-    "cloud/snowflake.py::discover": {
-      "complexity": 18,
-      "function_lines": 191
-    },
-    "cloud/snowflake.py::discover_auth_posture": {
-      "complexity": 18,
-      "function_lines": 167
-    },
-    "cloud/snowflake.py::discover_data_exfil": {
-      "complexity": 19,
-      "function_lines": 189
-    },
-    "cloud/snowflake.py::discover_governance": {
-      "function_lines": 99
-    },
-    "cloud/snowflake.py::discover_login_anomalies": {
-      "function_lines": 153
-    },
-    "cloud/snowflake.py::enrich_report_with_snowflake_estate": {
-      "complexity": 25,
-      "function_lines": 153
-    },
-    "cloud/snowflake.py::merge_live_identity_into_object_graph": {
-      "complexity": 17
     },
     "cloud/snowflake_ai_surfaces.py": {
       "broad_except": 9,
@@ -2534,6 +2519,15 @@
     "cloud/snowflake_common.py": {
       "broad_except": 1,
       "deferred_imports": 2
+    },
+    "cloud/snowflake_discovery/_base.py": {
+      "broad_except": 1
+    },
+    "cloud/snowflake_discovery/estate.py": {
+      "broad_except": 3
+    },
+    "cloud/snowflake_discovery/security.py": {
+      "broad_except": 3
     },
     "cloud/snowflake_estate_inventory.py": {
       "broad_except": 2
