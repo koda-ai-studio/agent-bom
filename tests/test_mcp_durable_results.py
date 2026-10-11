@@ -134,7 +134,7 @@ def test_invalid_retention_limits_fail_closed(tmp_path, ttl):
 def test_result_retrieval_storage_error_is_generic():
     import asyncio
 
-    from mcp.server.fastmcp.exceptions import ToolError
+    from mcp.server.mcpserver.exceptions import ToolError
 
     from agent_bom.mcp_tools.scanning import scan_impl
 

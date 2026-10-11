@@ -506,7 +506,7 @@ def test_mcp_server_cmd_sse():
     mock_server = MagicMock()
     with patch("agent_bom.mcp_server.create_mcp_server", return_value=mock_server):
         runner.invoke(mcp_server_cmd, ["--transport", "sse"], catch_exceptions=False)
-        mock_server.run.assert_called_once_with(transport="sse")
+        mock_server.run.assert_called_once_with(transport="sse", host="127.0.0.1", port=8423)
 
 
 def test_mcp_server_cmd_rejects_unauthenticated_non_loopback_remote_bind():
@@ -535,7 +535,7 @@ def test_mcp_server_cmd_allows_remote_bind_with_bearer_token():
 
     assert result.exit_code == 0
     mock_create.assert_called_once_with(host="0.0.0.0", port=8423, bearer_token="test-token", profile="scan", oauth_enabled=False)
-    mock_server.run.assert_called_once_with(transport="sse")
+    mock_server.run.assert_called_once_with(transport="sse", host="0.0.0.0", port=8423)
     assert "Bearer token required" in result.output
     assert "Transport" in result.output
 

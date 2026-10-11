@@ -7,8 +7,8 @@ from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Any
 
-from mcp.server.fastmcp import FastMCP
-from mcp.types import ToolAnnotations
+from mcp.server.mcpserver import MCPServer as FastMCP
+from mcp_types import ToolAnnotations
 
 
 def capture_operator_implementations() -> Mapping[str, Callable[..., Any]]:

@@ -106,22 +106,22 @@ def _default_caller(record: TicketingConnectionRecord, secret: str) -> _ToolCall
         if not endpoint:
             raise TicketingTransportError("The ITSM MCP connection has no server endpoint.")
         try:
-            from mcp import ClientSession
-            from mcp.client.streamable_http import streamablehttp_client
+            import httpx2
+            from mcp import Client
+            from mcp.client.streamable_http import streamable_http_client
         except ImportError as exc:  # pragma: no cover - mcp is a core extra
             raise TicketingTransportError("The MCP client SDK is not installed for the MCP ticketing transport.") from exc
 
         headers = {"Authorization": f"Bearer {secret}"} if secret else None
         try:
-            async with streamablehttp_client(endpoint, headers=headers) as (read, write, _get_session_id):
-                async with ClientSession(read, write) as session:
-                    await session.initialize()
+            async with httpx2.AsyncClient(headers=headers) as http:
+                async with Client(streamable_http_client(endpoint, http_client=http)) as session:
                     result = await session.call_tool(tool_name, arguments)
         except TicketingTransportError:
             raise
         except Exception as exc:  # noqa: BLE001 - any client/transport failure
             raise TicketingTransportError(f"ITSM MCP server call '{tool_name}' failed.") from exc
-        if getattr(result, "isError", False):
+        if getattr(result, "is_error", False):
             raise TicketingTransportError(f"ITSM MCP server reported an error for '{tool_name}'.")
         return _reduce_tool_result(result)
 
@@ -133,7 +133,7 @@ def _reduce_tool_result(result: Any) -> dict[str, Any]:
 
     Prefers ``structuredContent``; otherwise parses the first JSON text block.
     """
-    structured = getattr(result, "structuredContent", None)
+    structured = getattr(result, "structured_content", None)
     if isinstance(structured, dict):
         return structured
     for block in getattr(result, "content", None) or []:

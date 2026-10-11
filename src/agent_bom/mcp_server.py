@@ -117,8 +117,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Annotated, Any, Awaitable, Callable, Literal, Optional, TypeVar
 
-from mcp.server.lowlevel.server import request_ctx as _mcp_request_ctx
-from mcp.types import CallToolResult, TextContent, ToolAnnotations
+from mcp_types import CallToolResult, TextContent, ToolAnnotations
 from pydantic import Field
 
 from agent_bom import mcp_server_runtime as _mcp_runtime
@@ -159,6 +158,7 @@ from agent_bom.mcp_server_runtime_catalog import (
 )
 from agent_bom.mcp_tools.inventory_registration import register_inventory_asset_tool
 from agent_bom.mcp_tools.profiles import _GUIDED_TOOL_NAMES as _GUIDED_TOOL_NAMES
+from agent_bom.mcp_tools.request_identity import request_context as _mcp_request_ctx
 from agent_bom.mcp_tools.result_store import scan_result_owner as _scan_result_owner
 from agent_bom.security import sanitize_error
 
@@ -299,8 +299,8 @@ def _json_tool_result(text: str) -> CallToolResult:
     """
     return CallToolResult(
         content=[TextContent(type="text", text=str(text))],
-        structuredContent={"result": str(text)},
-        isError=isinstance(text, _mcp_runtime.ToolErrorPayload),
+        structured_content={"result": str(text)},
+        is_error=isinstance(text, _mcp_runtime.ToolErrorPayload),
     )
 
 
@@ -478,17 +478,17 @@ _MAX_CACHED_TOOL_LOOPS = 8
 # Most agent-bom MCP tools are read-only scanners. Shield write tools are
 # explicitly annotated as mutating and fail closed unless an admin role,
 # shield:write scope, and audit reason are supplied.
-_READ_ONLY = ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=True)
-_WRITE_ACTION = ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False)
+_READ_ONLY = ToolAnnotations(read_only_hint=True, destructive_hint=False, idempotent_hint=True, open_world_hint=True)
+_WRITE_ACTION = ToolAnnotations(read_only_hint=False, destructive_hint=True, idempotent_hint=False, open_world_hint=False)
 # A tool that persists state as a side effect of a read-shaped call but is not
 # destructive and yields the same result on repeat (e.g. access_review, which
 # recomputes and upserts campaign status). It is a WRITE — never readOnlyHint —
 # but non-destructive and idempotent.
-_WRITE_IDEMPOTENT = ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=True, openWorldHint=True)
+_WRITE_IDEMPOTENT = ToolAnnotations(read_only_hint=False, destructive_hint=False, idempotent_hint=True, open_world_hint=True)
 # Runtime capability inspection is protocol-read-only, but stdio discovery may
 # launch a configured process. Advertise the host-side execution truthfully so
 # MCP clients can require approval before the explicit opt-in is accepted.
-_RUNTIME_INTROSPECTION = ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=True)
+_RUNTIME_INTROSPECTION = ToolAnnotations(read_only_hint=False, destructive_hint=True, idempotent_hint=False, open_world_hint=True)
 
 
 def _check_mcp_sdk() -> None:

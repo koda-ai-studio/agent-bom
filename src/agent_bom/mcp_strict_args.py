@@ -62,7 +62,7 @@ def harden_tool_arguments(mcp: Any) -> int:
             accepted = _accepted_keys_for_tool(tool)
             unknown = sorted(set(arguments) - accepted)
             if unknown:
-                from mcp.server.fastmcp.exceptions import ToolError
+                from mcp.server.mcpserver.exceptions import ToolError
 
                 raise ToolError(
                     f"Unknown argument(s) for tool '{name}': {unknown}. "

@@ -7,7 +7,7 @@ import json
 import logging
 import re
 
-from mcp.server.fastmcp.exceptions import ToolError
+from mcp.server.mcpserver.exceptions import ToolError
 
 from agent_bom.core.severity import normalize_severity, severity_at_or_above
 from agent_bom.mcp_tools.result_store import ResultStore

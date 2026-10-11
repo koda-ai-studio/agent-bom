@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import time
+from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from mcp.server.auth.provider import AccessToken
+    from mcp.server.context import CallNext, HandlerResult, ServerRequestContext
 
 
 def verified_access_token(context: Any) -> AccessToken | None:
@@ -29,3 +31,15 @@ def verified_access_token(context: Any) -> AccessToken | None:
     if token is not None and token.expires_at is not None and token.expires_at <= time.time():
         return None
     return token
+
+
+request_context: ContextVar[Any] = ContextVar("agent_bom_mcp_request")
+
+
+async def request_identity_context(ctx: ServerRequestContext[Any, Any], call_next: CallNext) -> HandlerResult:
+    """Bind the SDK-verified identity to this request, including stateless calls."""
+    token = request_context.set(ctx)
+    try:
+        return await call_next(ctx)
+    finally:
+        request_context.reset(token)

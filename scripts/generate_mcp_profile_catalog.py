@@ -22,7 +22,7 @@ def render() -> str:
     rows = []
     for tool in tools:
         arguments = []
-        for name, schema in tool.inputSchema.get("properties", {}).items():
+        for name, schema in tool.input_schema.get("properties", {}).items():
             types = [s.get("type") for s in schema.get("anyOf", []) if s.get("type") != "null"]
             arguments.append(
                 {"name": name, "type": schema.get("type") or next((t for t in types if t), "object"), "desc": schema.get("description", "")}

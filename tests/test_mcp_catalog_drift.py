@@ -69,7 +69,7 @@ def test_live_mcp_server_lists_same_prompt_names_as_server_card() -> None:
 
 def test_no_write_tool_is_labeled_read_only() -> None:
     """A tool whose capability class set includes WRITE must never advertise
-    readOnlyHint=True — that mislabel tells a client the call is side-effect free
+    read_only_hint=True — that mislabel tells a client the call is side-effect free
     when it actually mutates state (see access_review / diff)."""
     offenders = []
     for tool in build_server_card()["tools"]:
@@ -77,7 +77,7 @@ def test_no_write_tool_is_labeled_read_only() -> None:
         annotations = tool.get("annotations", {}) or {}
         if "WRITE" in classes and annotations.get("readOnlyHint") is True:
             offenders.append(tool["name"])
-    assert not offenders, f"WRITE tools mislabeled readOnlyHint=True: {offenders}"
+    assert not offenders, f"WRITE tools mislabeled read_only_hint=True: {offenders}"
 
 
 def test_access_review_and_diff_are_labeled_write() -> None:
@@ -87,7 +87,7 @@ def test_access_review_and_diff_are_labeled_write() -> None:
         classes = set(tools[name].get("capability_classes", []))
         annotations = tools[name].get("annotations", {}) or {}
         assert "WRITE" in classes, f"{name} should be classified WRITE"
-        assert annotations.get("readOnlyHint") is not True, f"{name} must not be readOnlyHint=True"
+        assert annotations.get("readOnlyHint") is not True, f"{name} must not be read_only_hint=True"
     # diff prunes/deletes older reports → destructive.
     assert tools["diff"]["annotations"].get("destructiveHint") is True
 
@@ -112,8 +112,8 @@ def test_live_access_review_and_diff_annotations_are_not_read_only() -> None:
     for name in ("access_review", "diff"):
         annotations = getattr(tools[name], "annotations", None)
         assert annotations is not None, f"{name} should carry annotations"
-        assert annotations.readOnlyHint is not True, f"{name} live annotation must not be readOnlyHint=True"
-    assert tools["diff"].annotations.destructiveHint is True
+        assert annotations.read_only_hint is not True, f"{name} live annotation must not be read_only_hint=True"
+    assert tools["diff"].annotations.destructive_hint is True
 
 
 def test_tool_risk_assessment_is_labeled_as_process_execution() -> None:
@@ -133,10 +133,10 @@ def test_live_tool_risk_assessment_requires_opt_in_and_operator_approval() -> No
 
     server = create_mcp_server(profile="full")
     tool = {item.name: item for item in asyncio.run(server.list_tools())}["tool_risk_assessment"]
-    properties = tool.inputSchema["properties"]
+    properties = tool.input_schema["properties"]
 
-    assert tool.annotations.readOnlyHint is False
-    assert tool.annotations.destructiveHint is True
+    assert tool.annotations.read_only_hint is False
+    assert tool.annotations.destructive_hint is True
     assert properties["allow_command_execution"]["default"] is False
 
 
@@ -151,6 +151,6 @@ def test_ingestion_card_annotations_match_live_write_contract(name: str) -> None
     card_tools = {tool["name"]: tool for tool in build_server_card(profile="full")["tools"]}
     live = tools[name].annotations
     assert live is not None
-    assert live.readOnlyHint is False
+    assert live.read_only_hint is False
     for field in ("readOnlyHint", "destructiveHint", "idempotentHint"):
-        assert card_tools[name]["annotations"][field] == getattr(live, field)
+        assert card_tools[name]["annotations"][field] == live.model_dump(by_alias=True)[field]

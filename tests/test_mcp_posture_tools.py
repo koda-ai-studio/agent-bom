@@ -229,12 +229,12 @@ def test_new_tools_registered_read_only_strict(tool_name):
     params = tool.parameters or {}
     assert params.get("additionalProperties") is False, f"{tool_name} missing additionalProperties:false"
     # These five are genuinely read-only posture queries.
-    assert tool.annotations is not None and tool.annotations.readOnlyHint is True
+    assert tool.annotations is not None and tool.annotations.read_only_hint is True
 
 
 def test_access_review_registered_as_idempotent_write():
     """access_review recomputes and persists campaign status on read, so it must
-    be labeled a (non-destructive, idempotent) write, not readOnlyHint=True."""
+    be labeled a (non-destructive, idempotent) write, not read_only_hint=True."""
     from agent_bom.mcp_server import create_mcp_server
 
     server = create_mcp_server(profile="full")
@@ -243,6 +243,6 @@ def test_access_review_registered_as_idempotent_write():
     params = tool.parameters or {}
     assert params.get("additionalProperties") is False
     assert tool.annotations is not None
-    assert tool.annotations.readOnlyHint is False
-    assert tool.annotations.destructiveHint is False
-    assert tool.annotations.idempotentHint is True
+    assert tool.annotations.read_only_hint is False
+    assert tool.annotations.destructive_hint is False
+    assert tool.annotations.idempotent_hint is True
