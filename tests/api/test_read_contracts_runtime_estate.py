@@ -202,3 +202,13 @@ def test_unknown_ids_return_not_found(empty_estate_client: TestClient) -> None: 
         "/v1/connectors/does-not-exist/health",
     ):
         assert client.get(url, headers=_ADMIN).status_code == 404, url
+
+
+def test_fleet_agent_row_accepts_unset_owner_and_environment() -> None:
+    from agent_bom.api.fleet_models import FleetAgent
+    from agent_bom.api.read_models import FleetAgentRow
+
+    body = FleetAgent(agent_id="a-1", name="agent", agent_type="claude-desktop").model_dump(mode="json")
+    assert body["owner"] is None and body["environment"] is None
+    row = FleetAgentRow.model_validate(body)
+    assert row.owner is None and row.environment is None
