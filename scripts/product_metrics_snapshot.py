@@ -64,7 +64,7 @@ def _count_test_files() -> int:
 
 
 def _count_api_route_modules() -> int:
-    return len(_tracked_files("src/agent_bom/api/routes/*.py"))
+    return len(_tracked_files("src/agent_bom/api/routes/*.py", "src/agent_bom/api/routes/**/*.py"))
 
 
 def _count_ui_app_pages() -> int:

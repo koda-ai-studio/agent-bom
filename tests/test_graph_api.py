@@ -13,6 +13,8 @@ from starlette.testclient import TestClient
 from agent_bom.api import stores as api_stores
 from agent_bom.api.graph_store import SQLiteGraphStore
 from agent_bom.api.routes import graph as graph_routes
+from agent_bom.api.routes.graph_routes import _runtime as graph_runtime
+from agent_bom.api.routes.graph_routes import payloads as graph_payloads
 from agent_bom.api.server import app
 from agent_bom.api.stores import set_graph_store
 from agent_bom.db.graph_store import (
@@ -2536,7 +2538,7 @@ class TestGraphStoreBackendSelection:
             helper_calls.append(fn.__name__)
             return fn(*args, **kwargs)
 
-        monkeypatch.setattr(graph_routes, "_graph_store_call", _fake_graph_store_call)
+        monkeypatch.setattr(graph_runtime, "_graph_store_call", _fake_graph_store_call)
 
         graph_response = client.get("/v1/graph")
         search_response = client.get("/v1/graph/search", params={"q": "agent"})
@@ -2573,7 +2575,7 @@ class TestGraphStoreBackendSelection:
             compute_calls.append(fn.__name__)
             return fn(*args, **kwargs)
 
-        monkeypatch.setattr(graph_routes, "_graph_compute_call", _fake_graph_compute_call)
+        monkeypatch.setattr(graph_runtime, "_graph_compute_call", _fake_graph_compute_call)
 
         fix_first = client.get("/v1/graph/views/fix-first", params={"scan_id": "store-scan"})
         attack_paths = client.get("/v1/graph/attack-paths", params={"scan_id": "store-scan", "limit": 5})
@@ -3685,8 +3687,8 @@ def test_paged_graph_serialization_runs_off_request_event_loop(recording_graph_s
 
     request_threads: list[int] = []
     serialization_threads: list[int] = []
-    original_tenant = graph_routes._tenant
-    original_serialize = graph_routes._serialize_attack_path_batch
+    original_tenant = graph_runtime._tenant
+    original_serialize = graph_payloads._serialize_attack_path_batch
 
     def tenant(request):
         request_threads.append(threading.get_ident())
@@ -3696,8 +3698,8 @@ def test_paged_graph_serialization_runs_off_request_event_loop(recording_graph_s
         serialization_threads.append(threading.get_ident())
         return original_serialize(*args, **kwargs)
 
-    monkeypatch.setattr(graph_routes, "_tenant", tenant)
-    monkeypatch.setattr(graph_routes, "_serialize_attack_path_batch", serialize)
+    monkeypatch.setattr(graph_runtime, "_tenant", tenant)
+    monkeypatch.setattr(graph_payloads, "_serialize_attack_path_batch", serialize)
     response = TestClient(app).get("/v1/graph", params={"scan_id": "store-scan"})
     assert response.status_code == 200
     assert response.json()["nodes"]
@@ -3710,7 +3712,7 @@ def test_graph_runtime_evidence_enrichment_runs_off_request_event_loop(recording
 
     request_threads: list[int] = []
     enrichment_threads: list[int] = []
-    original_tenant = graph_routes._tenant
+    original_tenant = graph_runtime._tenant
 
     def tenant(request):
         request_threads.append(threading.get_ident())
@@ -3720,8 +3722,8 @@ def test_graph_runtime_evidence_enrichment_runs_off_request_event_loop(recording
         enrichment_threads.append(threading.get_ident())
         return graph
 
-    monkeypatch.setattr(graph_routes, "_tenant", tenant)
-    monkeypatch.setattr(graph_routes, "_enrich_loaded_graph_runtime_evidence", enrich)
+    monkeypatch.setattr(graph_runtime, "_tenant", tenant)
+    monkeypatch.setattr(graph_runtime, "_enrich_loaded_graph_runtime_evidence", enrich)
     response = TestClient(app).get("/v1/graph", params={"scan_id": "store-scan", "static_only": True})
     assert response.status_code == 200
     assert enrichment_threads

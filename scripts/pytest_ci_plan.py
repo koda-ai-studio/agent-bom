@@ -99,6 +99,9 @@ CURRENT_EVIDENCE_SOURCES = frozenset(
         "src/agent_bom/api/storage/job_backends.py",
         "src/agent_bom/api/routes/scan.py",
         "src/agent_bom/api/routes/graph.py",
+        "src/agent_bom/api/routes/graph_routes/_runtime.py",
+        "src/agent_bom/api/routes/graph_routes/reads.py",
+        "src/agent_bom/api/routes/graph_routes/views.py",
         "src/agent_bom/api/routes/overview.py",
         "src/agent_bom/api/routes/inventory_assets.py",
         "src/agent_bom/finding_scope.py",
@@ -456,6 +459,9 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
             "src/agent_bom/api/inventory_service.py",
             "src/agent_bom/api/routes/inventory_assets.py",
             "src/agent_bom/api/routes/graph.py",
+            "src/agent_bom/api/routes/graph_routes/_runtime.py",
+            "src/agent_bom/api/routes/graph_routes/reads.py",
+            "src/agent_bom/api/routes/graph_routes/views.py",
             "src/agent_bom/api/neptune_graph.py",
         }:
             selected.update(candidate for candidate in available if candidate.name == "test_neptune_unsupported_501.py")

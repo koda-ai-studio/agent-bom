@@ -7,6 +7,8 @@ import pytest
 
 import agent_bom.api.routes.enterprise as enterprise
 from agent_bom.api.exception_store import InMemoryExceptionStore
+from agent_bom.api.routes.enterprise_routes import findings as enterprise_findings
+from agent_bom.api.routes.enterprise_routes import governance as enterprise_governance
 from agent_bom.mcp_tools.triage import findings_triage_impl
 
 
@@ -17,7 +19,8 @@ def _truncate(text: str) -> str:
 @pytest.fixture
 def isolated_store(monkeypatch) -> InMemoryExceptionStore:
     store = InMemoryExceptionStore()
-    monkeypatch.setattr(enterprise, "_get_exception_store", lambda: store)
+    for _owner in (enterprise, enterprise_findings, enterprise_governance):
+        monkeypatch.setattr(_owner, "_get_exception_store", lambda: store)
     return store
 
 

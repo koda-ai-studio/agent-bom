@@ -10,6 +10,8 @@ from datetime import datetime, timezone
 
 from agent_bom.api.exception_store import ExceptionStatus, InMemoryExceptionStore, SQLiteExceptionStore, VulnException
 from agent_bom.api.routes import enterprise
+from agent_bom.api.routes.enterprise_routes import findings as enterprise_findings
+from agent_bom.api.routes.enterprise_routes import governance as enterprise_governance
 from agent_bom.finding import Finding, blast_radius_to_finding
 from agent_bom.models import Agent, AgentType, AIBOMReport, BlastRadius, MCPServer, Package, Severity, Vulnerability
 
@@ -138,7 +140,8 @@ def test_triage_owner_lookup_is_bounded_after_one_tenant_read(monkeypatch) -> No
             assert tenant_id == "tenant-a"
             return entries
 
-    monkeypatch.setattr(enterprise, "_get_exception_store", lambda: _Store())
+    for _owner in (enterprise, enterprise_findings, enterprise_governance):
+        monkeypatch.setattr(_owner, "_get_exception_store", lambda: _Store())
     monkeypatch.setattr(VulnException, "matches", _counted_matches)
 
     index = enterprise.build_tenant_triage_owner_index("tenant-a")
@@ -225,7 +228,8 @@ def test_tenant_assignment_is_joined_before_rescan_document_export(monkeypatch) 
         ),
         tenant_id="tenant-a",
     )
-    monkeypatch.setattr(enterprise, "_get_exception_store", lambda: store)
+    for _owner in (enterprise, enterprise_findings, enterprise_governance):
+        monkeypatch.setattr(_owner, "_get_exception_store", lambda: store)
     report = _owned_report()
     finding = report.findings[0]
     finding.owner = None

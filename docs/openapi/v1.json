@@ -1877,6 +1877,97 @@
         "title": "AgentsResponse",
         "type": "object"
       },
+      "AisvsComplianceResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "benchmark": {
+            "additionalProperties": true,
+            "title": "Benchmark",
+            "type": "object"
+          },
+          "framework": {
+            "title": "Framework",
+            "type": "string"
+          },
+          "framework_key": {
+            "title": "Framework Key",
+            "type": "string"
+          },
+          "framework_label": {
+            "title": "Framework Label",
+            "type": "string"
+          },
+          "measured_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Measured At"
+          },
+          "representation": {
+            "title": "Representation",
+            "type": "string"
+          },
+          "scan_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Id"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Score"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "summary": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "title": "Summary",
+            "type": "object"
+          }
+        },
+        "required": [
+          "benchmark",
+          "framework",
+          "framework_key",
+          "framework_label",
+          "measured_at",
+          "representation",
+          "scan_id",
+          "score",
+          "source",
+          "summary"
+        ],
+        "title": "AisvsComplianceResponse",
+        "type": "object"
+      },
       "AnalyticsHealth": {
         "properties": {
           "backend": {
@@ -1958,6 +2049,306 @@
         "title": "AnalyticsHealth",
         "type": "object"
       },
+      "ApiKeysResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "keys": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Keys",
+            "type": "array"
+          },
+          "schema_version": {
+            "title": "Schema Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_version",
+          "keys"
+        ],
+        "title": "ApiKeysResponse",
+        "type": "object"
+      },
+      "AuditChain": {
+        "additionalProperties": true,
+        "properties": {
+          "algorithm": {
+            "title": "Algorithm",
+            "type": "string"
+          },
+          "algorithms": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Algorithms"
+          },
+          "checked": {
+            "title": "Checked",
+            "type": "integer"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "tampered": {
+            "title": "Tampered",
+            "type": "integer"
+          },
+          "tenant_scoped": {
+            "title": "Tenant Scoped",
+            "type": "boolean"
+          },
+          "verified": {
+            "title": "Verified",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name",
+          "algorithm",
+          "verified",
+          "tampered",
+          "checked",
+          "tenant_scoped"
+        ],
+        "title": "AuditChain",
+        "type": "object"
+      },
+      "AuditEntriesResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/AuditEntryRow"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "schema_version": {
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "schema_version",
+          "entries",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "AuditEntriesResponse",
+        "type": "object"
+      },
+      "AuditEntryRow": {
+        "additionalProperties": true,
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "actor": {
+            "title": "Actor",
+            "type": "string"
+          },
+          "details": {
+            "additionalProperties": true,
+            "title": "Details",
+            "type": "object"
+          },
+          "entry_id": {
+            "title": "Entry Id",
+            "type": "string"
+          },
+          "hmac_signature": {
+            "title": "Hmac Signature",
+            "type": "string"
+          },
+          "prev_signature": {
+            "title": "Prev Signature",
+            "type": "string"
+          },
+          "resource": {
+            "title": "Resource",
+            "type": "string"
+          },
+          "timestamp": {
+            "title": "Timestamp",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entry_id",
+          "timestamp",
+          "action",
+          "actor",
+          "resource",
+          "details",
+          "prev_signature",
+          "hmac_signature"
+        ],
+        "title": "AuditEntryRow",
+        "type": "object"
+      },
+      "AuditExportFilters": {
+        "additionalProperties": true,
+        "properties": {
+          "action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "resource": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resource"
+          },
+          "since": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Since"
+          }
+        },
+        "required": [
+          "action",
+          "resource",
+          "since",
+          "limit",
+          "offset"
+        ],
+        "title": "AuditExportFilters",
+        "type": "object"
+      },
+      "AuditExportIntegrity": {
+        "additionalProperties": true,
+        "properties": {
+          "checked": {
+            "title": "Checked",
+            "type": "integer"
+          },
+          "tampered": {
+            "title": "Tampered",
+            "type": "integer"
+          },
+          "verified": {
+            "title": "Verified",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "verified",
+          "tampered",
+          "checked"
+        ],
+        "title": "AuditExportIntegrity",
+        "type": "object"
+      },
+      "AuditExportResponse": {
+        "additionalProperties": true,
+        "description": "The ``format=json`` packet; ``format=jsonl`` streams NDJSON instead.",
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/AuditEntryRow"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "exported_at": {
+            "title": "Exported At",
+            "type": "string"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/AuditExportFilters"
+          },
+          "integrity": {
+            "$ref": "#/components/schemas/AuditExportIntegrity"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "exported_at",
+          "tenant_id",
+          "filters",
+          "integrity",
+          "entries"
+        ],
+        "title": "AuditExportResponse",
+        "type": "object"
+      },
       "AuditExportVerifyRequest": {
         "additionalProperties": false,
         "properties": {
@@ -1978,6 +2369,215 @@
           "signature"
         ],
         "title": "AuditExportVerifyRequest",
+        "type": "object"
+      },
+      "AuditIntegrityResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "algorithms": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Algorithms",
+            "type": "array"
+          },
+          "chains": {
+            "items": {
+              "$ref": "#/components/schemas/AuditChain"
+            },
+            "title": "Chains",
+            "type": "array"
+          },
+          "checked": {
+            "title": "Checked",
+            "type": "integer"
+          },
+          "tampered": {
+            "title": "Tampered",
+            "type": "integer"
+          },
+          "verified": {
+            "title": "Verified",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "verified",
+          "tampered",
+          "checked",
+          "algorithms",
+          "chains"
+        ],
+        "title": "AuditIntegrityResponse",
+        "type": "object"
+      },
+      "AuditLogIntegrity": {
+        "additionalProperties": true,
+        "properties": {
+          "checked": {
+            "title": "Checked",
+            "type": "integer"
+          },
+          "tampered": {
+            "title": "Tampered",
+            "type": "integer"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          },
+          "verified": {
+            "title": "Verified",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "checked",
+          "tampered",
+          "truncated",
+          "verified"
+        ],
+        "title": "AuditLogIntegrity",
+        "type": "object"
+      },
+      "AuthDebugResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "api_key_id_prefix": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Key Id Prefix"
+          },
+          "auth_method": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auth Method"
+          },
+          "auth_required": {
+            "title": "Auth Required",
+            "type": "boolean"
+          },
+          "authenticated": {
+            "title": "Authenticated",
+            "type": "boolean"
+          },
+          "configured_modes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Configured Modes",
+            "type": "array"
+          },
+          "oidc_issuer_suffix": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oidc Issuer Suffix"
+          },
+          "recommended_ui_mode": {
+            "title": "Recommended Ui Mode",
+            "type": "string"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role"
+          },
+          "span_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Span Id"
+          },
+          "subject": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Subject"
+          },
+          "tenant_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant Id"
+          },
+          "trace_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace Id"
+          }
+        },
+        "required": [
+          "authenticated",
+          "auth_required",
+          "configured_modes",
+          "recommended_ui_mode",
+          "auth_method",
+          "subject",
+          "role",
+          "tenant_id",
+          "oidc_issuer_suffix",
+          "api_key_id_prefix",
+          "request_id",
+          "trace_id",
+          "span_id"
+        ],
+        "title": "AuthDebugResponse",
         "type": "object"
       },
       "AuthMeResponse": {
@@ -2108,6 +2708,198 @@
           "trace_id"
         ],
         "title": "AuthMeResponse",
+        "type": "object"
+      },
+      "AuthPolicyResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "api_key": {
+            "additionalProperties": true,
+            "title": "Api Key",
+            "type": "object"
+          },
+          "audit_hmac": {
+            "additionalProperties": true,
+            "title": "Audit Hmac",
+            "type": "object"
+          },
+          "auth_session_client_identity": {
+            "additionalProperties": true,
+            "title": "Auth Session Client Identity",
+            "type": "object"
+          },
+          "auth_state_backend": {
+            "additionalProperties": true,
+            "title": "Auth State Backend",
+            "type": "object"
+          },
+          "backpressure": {
+            "additionalProperties": true,
+            "title": "Backpressure",
+            "type": "object"
+          },
+          "data_access_boundaries": {
+            "additionalProperties": true,
+            "title": "Data Access Boundaries",
+            "type": "object"
+          },
+          "identity_provisioning": {
+            "additionalProperties": true,
+            "title": "Identity Provisioning",
+            "type": "object"
+          },
+          "proxy_control_plane_mtls": {
+            "additionalProperties": true,
+            "title": "Proxy Control Plane Mtls",
+            "type": "object"
+          },
+          "proxy_sandbox": {
+            "additionalProperties": true,
+            "title": "Proxy Sandbox",
+            "type": "object"
+          },
+          "rate_limit_key": {
+            "additionalProperties": true,
+            "title": "Rate Limit Key",
+            "type": "object"
+          },
+          "rate_limit_runtime": {
+            "additionalProperties": true,
+            "title": "Rate Limit Runtime",
+            "type": "object"
+          },
+          "secret_integrity": {
+            "additionalProperties": true,
+            "title": "Secret Integrity",
+            "type": "object"
+          },
+          "secret_lifecycle": {
+            "additionalProperties": true,
+            "title": "Secret Lifecycle",
+            "type": "object"
+          },
+          "security_headers": {
+            "additionalProperties": true,
+            "title": "Security Headers",
+            "type": "object"
+          },
+          "storage_schema": {
+            "additionalProperties": true,
+            "title": "Storage Schema",
+            "type": "object"
+          },
+          "tenant_quota_runtime": {
+            "additionalProperties": true,
+            "title": "Tenant Quota Runtime",
+            "type": "object"
+          },
+          "tenant_quotas": {
+            "additionalProperties": true,
+            "title": "Tenant Quotas",
+            "type": "object"
+          },
+          "trusted_proxy_auth": {
+            "additionalProperties": true,
+            "title": "Trusted Proxy Auth",
+            "type": "object"
+          },
+          "ui": {
+            "additionalProperties": true,
+            "title": "Ui",
+            "type": "object"
+          }
+        },
+        "required": [
+          "api_key",
+          "rate_limit_key",
+          "audit_hmac",
+          "ui",
+          "rate_limit_runtime",
+          "auth_session_client_identity",
+          "trusted_proxy_auth",
+          "proxy_control_plane_mtls",
+          "security_headers",
+          "backpressure",
+          "proxy_sandbox",
+          "data_access_boundaries",
+          "auth_state_backend",
+          "secret_integrity",
+          "secret_lifecycle",
+          "tenant_quotas",
+          "tenant_quota_runtime",
+          "storage_schema",
+          "identity_provisioning"
+        ],
+        "title": "AuthPolicyResponse",
+        "type": "object"
+      },
+      "AuthScopesResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "schema_version": {
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "scopes": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Scopes",
+            "type": "array"
+          },
+          "wildcard_examples": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Wildcard Examples",
+            "type": "array"
+          }
+        },
+        "required": [
+          "schema_version",
+          "count",
+          "wildcard_examples",
+          "scopes"
+        ],
+        "title": "AuthScopesResponse",
+        "type": "object"
+      },
+      "BackpressurePostureResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "notes": {
+            "title": "Notes",
+            "type": "string"
+          },
+          "paths": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Paths",
+            "type": "array"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "enabled",
+          "notes",
+          "paths",
+          "status"
+        ],
+        "title": "BackpressurePostureResponse",
         "type": "object"
       },
       "BrowserExtensionsRequest": {
@@ -3319,6 +4111,72 @@
           "agent_id"
         ],
         "title": "CaptureSnapshot",
+        "type": "object"
+      },
+      "CisChecksResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "checks": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Checks",
+            "type": "array"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "checks",
+          "count",
+          "source"
+        ],
+        "title": "CisChecksResponse",
+        "type": "object"
+      },
+      "CisTrendsResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "bucket": {
+            "title": "Bucket",
+            "type": "string"
+          },
+          "buckets": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Buckets",
+            "type": "array"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "days": {
+            "title": "Days",
+            "type": "integer"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "buckets",
+          "count",
+          "source",
+          "bucket",
+          "days"
+        ],
+        "title": "CisTrendsResponse",
         "type": "object"
       },
       "CloudAccountAssets": {
@@ -5192,6 +6050,128 @@
         "title": "ComplianceEvidenceItem",
         "type": "object"
       },
+      "ComplianceEvidencePackResponse": {
+        "additionalProperties": true,
+        "description": "Signed multi-framework evidence pack (served as a JSON attachment).",
+        "properties": {
+          "audit_events": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Audit Events",
+            "type": "array"
+          },
+          "audit_log_integrity": {
+            "$ref": "#/components/schemas/AuditLogIntegrity"
+          },
+          "document_type": {
+            "title": "Document Type",
+            "type": "string"
+          },
+          "expires_at": {
+            "title": "Expires At",
+            "type": "string"
+          },
+          "frameworks": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Frameworks",
+            "type": "array"
+          },
+          "generated_at": {
+            "title": "Generated At",
+            "type": "string"
+          },
+          "nonce": {
+            "title": "Nonce",
+            "type": "string"
+          },
+          "schema_version": {
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/EvidencePackScope"
+          },
+          "signature": {
+            "title": "Signature",
+            "type": "string"
+          },
+          "signature_algorithm": {
+            "title": "Signature Algorithm",
+            "type": "string"
+          },
+          "signature_disclosure": {
+            "additionalProperties": true,
+            "title": "Signature Disclosure",
+            "type": "object"
+          },
+          "signature_key_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature Key Id"
+          },
+          "signature_public_key_pem": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Signature Public Key Pem"
+          },
+          "summary": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Summary",
+            "type": "object"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "audit_events",
+          "audit_log_integrity",
+          "document_type",
+          "expires_at",
+          "frameworks",
+          "generated_at",
+          "nonce",
+          "schema_version",
+          "scope",
+          "signature",
+          "signature_algorithm",
+          "signature_disclosure",
+          "summary",
+          "tenant_id"
+        ],
+        "title": "ComplianceEvidencePackResponse",
+        "type": "object"
+      },
       "ComplianceNarrativeResponse": {
         "additionalProperties": true,
         "properties": {
@@ -5759,6 +6739,101 @@
         "title": "ComplianceSignatureDisclosure",
         "type": "object"
       },
+      "ComplianceSummaryResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "evaluated_controls": {
+            "title": "Evaluated Controls",
+            "type": "integer"
+          },
+          "frameworks": {
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Frameworks",
+            "type": "object"
+          },
+          "has_agent_context": {
+            "title": "Has Agent Context",
+            "type": "boolean"
+          },
+          "has_mcp_context": {
+            "title": "Has Mcp Context",
+            "type": "boolean"
+          },
+          "latest_scan": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Scan"
+          },
+          "overall_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Overall Score"
+          },
+          "overall_status": {
+            "title": "Overall Status",
+            "type": "string"
+          },
+          "scan_count": {
+            "title": "Scan Count",
+            "type": "integer"
+          },
+          "scan_sources": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Scan Sources",
+            "type": "array"
+          },
+          "summary": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "title": "Summary",
+            "type": "object"
+          },
+          "total_controls": {
+            "title": "Total Controls",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "evaluated_controls",
+          "frameworks",
+          "has_agent_context",
+          "has_mcp_context",
+          "latest_scan",
+          "overall_score",
+          "overall_status",
+          "scan_count",
+          "scan_sources",
+          "summary",
+          "total_controls"
+        ],
+        "title": "ComplianceSummaryResponse",
+        "type": "object"
+      },
       "ComplianceThreatModel": {
         "properties": {
           "confidentiality": {
@@ -5785,6 +6860,76 @@
           "non_repudiation"
         ],
         "title": "ComplianceThreatModel",
+        "type": "object"
+      },
+      "ComplianceVerificationKeyResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "algorithm": {
+            "title": "Algorithm",
+            "type": "string"
+          },
+          "key_distribution": {
+            "title": "Key Distribution",
+            "type": "string"
+          },
+          "key_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key Id"
+          },
+          "persists_across_restart": {
+            "title": "Persists Across Restart",
+            "type": "boolean"
+          },
+          "public_key_pem": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Public Key Pem"
+          },
+          "remediation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remediation"
+          },
+          "signature_verifiable": {
+            "title": "Signature Verifiable",
+            "type": "boolean"
+          },
+          "verification_status": {
+            "title": "Verification Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "algorithm",
+          "key_distribution",
+          "key_id",
+          "persists_across_restart",
+          "public_key_pem",
+          "remediation",
+          "signature_verifiable",
+          "verification_status"
+        ],
+        "title": "ComplianceVerificationKeyResponse",
         "type": "object"
       },
       "CompositionModel": {
@@ -7021,6 +8166,167 @@
         "title": "CreateKeyRequest",
         "type": "object"
       },
+      "CredentialExpiryResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "action_required": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Required"
+          },
+          "blockers": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blockers"
+          },
+          "control_plane_included": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Control Plane Included"
+          },
+          "counts": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "integer"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counts"
+          },
+          "credentials": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credentials"
+          },
+          "discovered_credential_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Discovered Credential Count"
+          },
+          "evaluated": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evaluated"
+          },
+          "generated_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated From"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "secret_values_included": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Secret Values Included"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "thresholds": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thresholds"
+          },
+          "warnings": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Warnings"
+          }
+        },
+        "title": "CredentialExpiryResponse",
+        "type": "object"
+      },
       "CredentialRefCreate": {
         "additionalProperties": false,
         "properties": {
@@ -7738,6 +9044,35 @@
           "offset"
         ],
         "title": "CredentialRefsResponse",
+        "type": "object"
+      },
+      "CredentialRiskRankingResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "credentials": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Credentials",
+            "type": "array"
+          },
+          "rotation_governance": {
+            "additionalProperties": true,
+            "title": "Rotation Governance",
+            "type": "object"
+          }
+        },
+        "required": [
+          "count",
+          "credentials",
+          "rotation_governance"
+        ],
+        "title": "CredentialRiskRankingResponse",
         "type": "object"
       },
       "CredentialRotationDefaults": {
@@ -9509,6 +10844,34 @@
         "title": "EffectiveReach",
         "type": "object"
       },
+      "EnrichmentPostureResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "operator_message": {
+            "title": "Operator Message",
+            "type": "string"
+          },
+          "sources": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "operator_message",
+          "sources",
+          "status"
+        ],
+        "title": "EnrichmentPostureResponse",
+        "type": "object"
+      },
       "EnterpriseCollectionHealth": {
         "additionalProperties": false,
         "properties": {
@@ -11092,6 +12455,65 @@
         "title": "EvaluationRunsResponse",
         "type": "object"
       },
+      "EvidencePackScope": {
+        "additionalProperties": true,
+        "properties": {
+          "audit_event_count": {
+            "title": "Audit Event Count",
+            "type": "integer"
+          },
+          "audit_event_limit": {
+            "title": "Audit Event Limit",
+            "type": "integer"
+          },
+          "audit_events_truncated": {
+            "title": "Audit Events Truncated",
+            "type": "boolean"
+          },
+          "completed_scan_count": {
+            "title": "Completed Scan Count",
+            "type": "integer"
+          },
+          "control_count": {
+            "title": "Control Count",
+            "type": "integer"
+          },
+          "distinct_finding_count": {
+            "title": "Distinct Finding Count",
+            "type": "integer"
+          },
+          "evidence_row_count": {
+            "title": "Evidence Row Count",
+            "type": "integer"
+          },
+          "framework_count": {
+            "title": "Framework Count",
+            "type": "integer"
+          },
+          "since": {
+            "title": "Since",
+            "type": "string"
+          },
+          "until": {
+            "title": "Until",
+            "type": "string"
+          }
+        },
+        "required": [
+          "audit_event_count",
+          "audit_event_limit",
+          "audit_events_truncated",
+          "completed_scan_count",
+          "control_count",
+          "distinct_finding_count",
+          "evidence_row_count",
+          "framework_count",
+          "since",
+          "until"
+        ],
+        "title": "EvidencePackScope",
+        "type": "object"
+      },
       "EvidenceSource": {
         "enum": [
           "aws_cloudtrail",
@@ -11633,6 +13055,72 @@
         "title": "FalsePositiveRequest",
         "type": "object"
       },
+      "FalsePositiveRow": {
+        "additionalProperties": true,
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "marked_by": {
+            "title": "Marked By",
+            "type": "string"
+          },
+          "package": {
+            "title": "Package",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "vulnerability_id": {
+            "title": "Vulnerability Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "vulnerability_id",
+          "package",
+          "reason",
+          "marked_by",
+          "status",
+          "created_at"
+        ],
+        "title": "FalsePositiveRow",
+        "type": "object"
+      },
+      "FalsePositivesResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "false_positives": {
+            "items": {
+              "$ref": "#/components/schemas/FalsePositiveRow"
+            },
+            "title": "False Positives",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "false_positives",
+          "total"
+        ],
+        "title": "FalsePositivesResponse",
+        "type": "object"
+      },
       "FindingAsset": {
         "additionalProperties": true,
         "properties": {
@@ -11715,6 +13203,92 @@
           "vulnerability_id"
         ],
         "title": "FindingFeedbackRequest",
+        "type": "object"
+      },
+      "FindingFeedbackResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "feedback": {
+            "items": {
+              "$ref": "#/components/schemas/FindingFeedbackRow"
+            },
+            "title": "Feedback",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "feedback",
+          "total"
+        ],
+        "title": "FindingFeedbackResponse",
+        "type": "object"
+      },
+      "FindingFeedbackRow": {
+        "additionalProperties": true,
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "expires_at": {
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "marked_by": {
+            "title": "Marked By",
+            "type": "string"
+          },
+          "package": {
+            "title": "Package",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "server_name": {
+            "title": "Server Name",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          },
+          "vulnerability_id": {
+            "title": "Vulnerability Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "vulnerability_id",
+          "package",
+          "server_name",
+          "state",
+          "reason",
+          "marked_by",
+          "status",
+          "created_at",
+          "expires_at",
+          "tenant_id"
+        ],
+        "title": "FindingFeedbackRow",
         "type": "object"
       },
       "FindingRow": {
@@ -12567,6 +14141,149 @@
         "title": "FindingTriageRequest",
         "type": "object"
       },
+      "FindingTriageResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "schema_version": {
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "triage": {
+            "items": {
+              "$ref": "#/components/schemas/FindingTriageRow"
+            },
+            "title": "Triage",
+            "type": "array"
+          }
+        },
+        "required": [
+          "schema_version",
+          "triage",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "FindingTriageResponse",
+        "type": "object"
+      },
+      "FindingTriageRow": {
+        "additionalProperties": true,
+        "properties": {
+          "approval_required": {
+            "title": "Approval Required",
+            "type": "boolean"
+          },
+          "approval_status": {
+            "title": "Approval Status",
+            "type": "string"
+          },
+          "assignee": {
+            "title": "Assignee",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by": {
+            "title": "Created By",
+            "type": "string"
+          },
+          "decided_by": {
+            "title": "Decided By",
+            "type": "string"
+          },
+          "decision": {
+            "title": "Decision",
+            "type": "string"
+          },
+          "decision_reason": {
+            "title": "Decision Reason",
+            "type": "string"
+          },
+          "expires_at": {
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "justification": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Justification"
+          },
+          "package": {
+            "title": "Package",
+            "type": "string"
+          },
+          "queue_state": {
+            "title": "Queue State",
+            "type": "string"
+          },
+          "reviewed_at": {
+            "title": "Reviewed At",
+            "type": "string"
+          },
+          "server_name": {
+            "title": "Server Name",
+            "type": "string"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          },
+          "vex_eligible": {
+            "title": "Vex Eligible",
+            "type": "boolean"
+          },
+          "vulnerability_id": {
+            "title": "Vulnerability Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "vulnerability_id",
+          "package",
+          "server_name",
+          "queue_state",
+          "decision",
+          "justification",
+          "decision_reason",
+          "assignee",
+          "created_by",
+          "created_at",
+          "reviewed_at",
+          "expires_at",
+          "tenant_id",
+          "vex_eligible",
+          "decided_by",
+          "approval_status",
+          "approval_required"
+        ],
+        "title": "FindingTriageRow",
+        "type": "object"
+      },
       "FindingTriageVexIngestRequest": {
         "additionalProperties": false,
         "description": "Request body for POST /v1/findings/triage/vex/ingest.\n\nAccepts an OpenVEX (or CycloneDX/CSAF) VEX document and applies its\n``not_affected`` / ``fixed`` statements as tenant-scoped triage suppressions.",
@@ -12582,6 +14299,65 @@
           "vex"
         ],
         "title": "FindingTriageVexIngestRequest",
+        "type": "object"
+      },
+      "FindingTriageVexResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "filters": {
+            "additionalProperties": true,
+            "title": "Filters",
+            "type": "object"
+          },
+          "finding_scope": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finding Scope"
+          },
+          "format": {
+            "title": "Format",
+            "type": "string"
+          },
+          "schema_version": {
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "signature": {
+            "additionalProperties": true,
+            "title": "Signature",
+            "type": "object"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          },
+          "vex": {
+            "additionalProperties": true,
+            "title": "Vex",
+            "type": "object"
+          }
+        },
+        "required": [
+          "schema_version",
+          "tenant_id",
+          "count",
+          "format",
+          "filters",
+          "vex",
+          "signature"
+        ],
+        "title": "FindingTriageVexResponse",
         "type": "object"
       },
       "FindingsResponse": {
@@ -13682,6 +15458,174 @@
           "frameworks"
         ],
         "title": "FrameworkCatalogsResponse",
+        "type": "object"
+      },
+      "FrameworkComplianceResponse": {
+        "additionalProperties": true,
+        "description": "Per-framework posture; the ``aisvs`` slug answers with the benchmark shape.",
+        "properties": {
+          "benchmark": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Benchmark"
+          },
+          "controls": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Controls"
+          },
+          "evaluated_controls": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evaluated Controls"
+          },
+          "framework": {
+            "title": "Framework",
+            "type": "string"
+          },
+          "framework_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Framework Key"
+          },
+          "framework_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Framework Label"
+          },
+          "measured_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Measured At"
+          },
+          "representation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Representation"
+          },
+          "scan_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Id"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Score"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "summary": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "title": "Summary",
+            "type": "object"
+          },
+          "total_controls": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Controls"
+          }
+        },
+        "required": [
+          "framework",
+          "score",
+          "summary"
+        ],
+        "title": "FrameworkComplianceResponse",
         "type": "object"
       },
       "FrameworkNarrative": {
@@ -16166,6 +18110,200 @@
         "title": "GovernanceReportSummary",
         "type": "object"
       },
+      "GraphActiveEdgesResponse": {
+        "description": "``GET /v1/graph/edges/active``: edge versions active at ``at``.",
+        "items": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "title": "GraphActiveEdgesResponse",
+        "type": "array"
+      },
+      "GraphAgentsResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "agents": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Agents",
+            "type": "array"
+          },
+          "completeness": {
+            "$ref": "#/components/schemas/GraphCompleteness"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/GraphPagination"
+          },
+          "scan_id": {
+            "title": "Scan Id",
+            "type": "string"
+          },
+          "snapshot_generation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Generation"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scan_id",
+          "tenant_id",
+          "created_at",
+          "agents",
+          "pagination",
+          "completeness"
+        ],
+        "title": "GraphAgentsResponse",
+        "type": "object"
+      },
+      "GraphBoundedPage": {
+        "additionalProperties": true,
+        "properties": {
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "limit",
+          "has_more"
+        ],
+        "title": "GraphBoundedPage",
+        "type": "object"
+      },
+      "GraphClustersResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "available_kinds": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Available Kinds",
+            "type": "array"
+          },
+          "clusters": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Clusters",
+            "type": "array"
+          },
+          "completeness": {
+            "$ref": "#/components/schemas/GraphCompleteness"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "scan_id": {
+            "title": "Scan Id",
+            "type": "string"
+          },
+          "stats": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Stats",
+            "type": "object"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scan_id",
+          "tenant_id",
+          "created_at",
+          "clusters",
+          "stats",
+          "available_kinds",
+          "completeness"
+        ],
+        "title": "GraphClustersResponse",
+        "type": "object"
+      },
+      "GraphCompleteness": {
+        "additionalProperties": true,
+        "properties": {
+          "complete": {
+            "title": "Complete",
+            "type": "boolean"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "returned": {
+            "title": "Returned",
+            "type": "integer"
+          },
+          "sampled": {
+            "title": "Sampled",
+            "type": "boolean"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "status",
+          "complete",
+          "sampled",
+          "truncated",
+          "returned"
+        ],
+        "title": "GraphCompleteness",
+        "type": "object"
+      },
       "GraphCompletenessResponse": {
         "properties": {
           "complete": {
@@ -16224,6 +18362,67 @@
           "returned"
         ],
         "title": "GraphCompletenessResponse",
+        "type": "object"
+      },
+      "GraphComplianceResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "completeness": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GraphCompleteness"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "framework_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Framework Count"
+          },
+          "frameworks": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Frameworks"
+          },
+          "scan_id": {
+            "title": "Scan Id",
+            "type": "string"
+          },
+          "total_tagged_findings": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Tagged Findings"
+          }
+        },
+        "required": [
+          "scan_id"
+        ],
+        "title": "GraphComplianceResponse",
         "type": "object"
       },
       "GraphCompromiseRequest": {
@@ -16756,6 +18955,1485 @@
         "title": "GraphDeployDecisionRequest",
         "type": "object"
       },
+      "GraphDiffResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "attribute_deltas": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attribute Deltas"
+          },
+          "change_kind_index": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "Change Kind Index",
+            "type": "object"
+          },
+          "completeness": {
+            "$ref": "#/components/schemas/GraphCompleteness"
+          },
+          "edges_added": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edges Added"
+          },
+          "edges_changed": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edges Changed"
+          },
+          "edges_removed": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edges Removed"
+          },
+          "nodes_added": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nodes Added"
+          },
+          "nodes_changed": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nodes Changed"
+          },
+          "nodes_removed": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nodes Removed"
+          }
+        },
+        "required": [
+          "change_kind_index",
+          "completeness"
+        ],
+        "title": "GraphDiffResponse",
+        "type": "object"
+      },
+      "GraphEdgeChangeSummary": {
+        "additionalProperties": true,
+        "properties": {
+          "added": {
+            "title": "Added",
+            "type": "integer"
+          },
+          "changed": {
+            "title": "Changed",
+            "type": "integer"
+          },
+          "removed": {
+            "title": "Removed",
+            "type": "integer"
+          },
+          "unchanged": {
+            "title": "Unchanged",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "added",
+          "removed",
+          "changed",
+          "unchanged"
+        ],
+        "title": "GraphEdgeChangeSummary",
+        "type": "object"
+      },
+      "GraphEdgeChangesResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "completeness": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GraphCompleteness"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "edges_added": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edges Added"
+          },
+          "edges_changed": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edges Changed"
+          },
+          "edges_removed": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edges Removed"
+          },
+          "edges_unchanged": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edges Unchanged"
+          },
+          "scan_id_new": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Id New"
+          },
+          "scan_id_old": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Id Old"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GraphEdgeChangeSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "GraphEdgeChangesResponse",
+        "type": "object"
+      },
+      "GraphEvidenceManifestResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "collection_coverage": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Collection Coverage"
+          },
+          "counts": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "integer"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counts"
+          },
+          "diff_baseline_scan_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diff Baseline Scan Id"
+          },
+          "diff_summary": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diff Summary"
+          },
+          "evidence_scope": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Scope"
+          },
+          "excluded_private_fields": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Excluded Private Fields"
+          },
+          "findings_digest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Findings Digest"
+          },
+          "generated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated At"
+          },
+          "graph_digest": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Graph Digest"
+          },
+          "included_tables": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Included Tables"
+          },
+          "retention_policy": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retention Policy"
+          },
+          "scan_created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Created At"
+          },
+          "scan_id": {
+            "title": "Scan Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "snapshot_generation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Generation"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_version",
+          "tenant_id",
+          "scan_id"
+        ],
+        "title": "GraphEvidenceManifestResponse",
+        "type": "object"
+      },
+      "GraphExposurePathsResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "collection_coverage": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Collection Coverage"
+          },
+          "completeness": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GraphCompleteness"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "count_metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Count Metadata"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "edges": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edges"
+          },
+          "evidence_scope": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Scope"
+          },
+          "filters": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filters"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "nodes": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nodes"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pagination"
+          },
+          "paths": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Paths",
+            "type": "array"
+          },
+          "scan_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Id"
+          },
+          "schema_version": {
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "snapshot_generation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Generation"
+          },
+          "stats": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stats"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          },
+          "tool": {
+            "title": "Tool",
+            "type": "string"
+          },
+          "total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total"
+          }
+        },
+        "required": [
+          "schema_version",
+          "tool",
+          "tenant_id",
+          "count",
+          "paths"
+        ],
+        "title": "GraphExposurePathsResponse",
+        "type": "object"
+      },
+      "GraphGovernanceResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "attack_path_pagination": {
+            "$ref": "#/components/schemas/GraphBoundedPage"
+          },
+          "attack_paths": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Attack Paths",
+            "type": "array"
+          },
+          "completeness": {
+            "$ref": "#/components/schemas/GraphCompleteness"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "edge_pagination": {
+            "$ref": "#/components/schemas/GraphBoundedPage"
+          },
+          "edges": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Edges",
+            "type": "array"
+          },
+          "governance_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Governance Counts",
+            "type": "object"
+          },
+          "nodes": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Nodes",
+            "type": "array"
+          },
+          "overlay": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Overlay",
+            "type": "object"
+          },
+          "scan_id": {
+            "title": "Scan Id",
+            "type": "string"
+          },
+          "stats": {
+            "$ref": "#/components/schemas/GraphGovernanceStats"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scan_id",
+          "tenant_id",
+          "created_at",
+          "nodes",
+          "edges",
+          "attack_paths",
+          "overlay",
+          "governance_counts",
+          "stats",
+          "edge_pagination",
+          "attack_path_pagination",
+          "completeness"
+        ],
+        "title": "GraphGovernanceResponse",
+        "type": "object"
+      },
+      "GraphGovernanceStats": {
+        "additionalProperties": true,
+        "properties": {
+          "analysis_status": {
+            "additionalProperties": true,
+            "title": "Analysis Status",
+            "type": "object"
+          },
+          "edge_count": {
+            "title": "Edge Count",
+            "type": "integer"
+          },
+          "node_count": {
+            "title": "Node Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "node_count",
+          "edge_count",
+          "analysis_status"
+        ],
+        "title": "GraphGovernanceStats",
+        "type": "object"
+      },
+      "GraphHistoryResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "retention_policy": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retention Policy"
+          },
+          "schema_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schema Version"
+          },
+          "snapshots": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Snapshots",
+            "type": "array"
+          },
+          "tenant_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant Id"
+          },
+          "window": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window"
+          }
+        },
+        "required": [
+          "snapshots"
+        ],
+        "title": "GraphHistoryResponse",
+        "type": "object"
+      },
+      "GraphImpactInterpretation": {
+        "additionalProperties": true,
+        "properties": {
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "collection_coverage": {
+            "title": "Collection Coverage",
+            "type": "string"
+          },
+          "execution": {
+            "title": "Execution",
+            "type": "string"
+          },
+          "max_depth": {
+            "title": "Max Depth",
+            "type": "integer"
+          },
+          "traversable_only": {
+            "title": "Traversable Only",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "basis",
+          "execution",
+          "collection_coverage",
+          "traversable_only",
+          "max_depth"
+        ],
+        "title": "GraphImpactInterpretation",
+        "type": "object"
+      },
+      "GraphImpactResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "affected_by_type": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Affected By Type",
+            "type": "object"
+          },
+          "affected_count": {
+            "title": "Affected Count",
+            "type": "integer"
+          },
+          "affected_nodes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Affected Nodes",
+            "type": "array"
+          },
+          "completeness": {
+            "additionalProperties": true,
+            "title": "Completeness",
+            "type": "object"
+          },
+          "interpretation": {
+            "$ref": "#/components/schemas/GraphImpactInterpretation"
+          },
+          "max_depth_reached": {
+            "title": "Max Depth Reached",
+            "type": "integer"
+          },
+          "node_id": {
+            "title": "Node Id",
+            "type": "string"
+          },
+          "scan_id": {
+            "title": "Scan Id",
+            "type": "string"
+          },
+          "snapshot_generation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Generation"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "node_id",
+          "affected_nodes",
+          "affected_by_type",
+          "affected_count",
+          "max_depth_reached",
+          "completeness",
+          "scan_id",
+          "tenant_id",
+          "snapshot_generation",
+          "interpretation"
+        ],
+        "title": "GraphImpactResponse",
+        "type": "object"
+      },
+      "GraphLegendResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "entities": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Entities",
+            "type": "array"
+          },
+          "relationships": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Relationships",
+            "type": "array"
+          }
+        },
+        "required": [
+          "entities",
+          "relationships"
+        ],
+        "title": "GraphLegendResponse",
+        "type": "object"
+      },
+      "GraphNhiCounts": {
+        "additionalProperties": true,
+        "properties": {
+          "by_risk_band": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "By Risk Band",
+            "type": "object"
+          },
+          "dormant": {
+            "title": "Dormant",
+            "type": "integer"
+          },
+          "orphaned": {
+            "title": "Orphaned",
+            "type": "integer"
+          },
+          "over_granted": {
+            "title": "Over Granted",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "over_granted",
+          "dormant",
+          "orphaned",
+          "by_risk_band"
+        ],
+        "title": "GraphNhiCounts",
+        "type": "object"
+      },
+      "GraphNhiGovernanceResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "counts": {
+            "$ref": "#/components/schemas/GraphNhiCounts"
+          },
+          "dormant_after_days": {
+            "title": "Dormant After Days",
+            "type": "integer"
+          },
+          "evaluated": {
+            "title": "Evaluated",
+            "type": "integer"
+          },
+          "generated_from": {
+            "title": "Generated From",
+            "type": "string"
+          },
+          "identities": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Identities",
+            "type": "array"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "scan_id": {
+            "title": "Scan Id",
+            "type": "string"
+          },
+          "secret_values_included": {
+            "title": "Secret Values Included",
+            "type": "boolean"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "secret_values_included",
+          "evaluated",
+          "dormant_after_days",
+          "counts",
+          "identities",
+          "message",
+          "generated_from",
+          "scan_id",
+          "tenant_id"
+        ],
+        "title": "GraphNhiGovernanceResponse",
+        "type": "object"
+      },
+      "GraphNodeContextResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "completeness": {
+            "additionalProperties": true,
+            "title": "Completeness",
+            "type": "object"
+          },
+          "edges_in": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Edges In",
+            "type": "array"
+          },
+          "edges_out": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Edges Out",
+            "type": "array"
+          },
+          "impact": {
+            "additionalProperties": true,
+            "title": "Impact",
+            "type": "object"
+          },
+          "neighbors": {
+            "items": {},
+            "title": "Neighbors",
+            "type": "array"
+          },
+          "node": {
+            "additionalProperties": true,
+            "title": "Node",
+            "type": "object"
+          },
+          "scan_id": {
+            "title": "Scan Id",
+            "type": "string"
+          },
+          "snapshot_generation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Generation"
+          },
+          "sources": {
+            "items": {},
+            "title": "Sources",
+            "type": "array"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scan_id",
+          "tenant_id",
+          "snapshot_generation",
+          "node",
+          "edges_out",
+          "edges_in",
+          "neighbors",
+          "sources",
+          "impact",
+          "completeness"
+        ],
+        "title": "GraphNodeContextResponse",
+        "type": "object"
+      },
+      "GraphNodeNeighborsResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "completeness": {
+            "$ref": "#/components/schemas/GraphCompleteness"
+          },
+          "direction": {
+            "title": "Direction",
+            "type": "string"
+          },
+          "edges": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Edges",
+            "type": "array"
+          },
+          "found": {
+            "title": "Found",
+            "type": "boolean"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "neighbors": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Neighbors",
+            "type": "array"
+          },
+          "node_id": {
+            "title": "Node Id",
+            "type": "string"
+          },
+          "scan_id": {
+            "title": "Scan Id",
+            "type": "string"
+          },
+          "total_neighbors": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Neighbors"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "node_id",
+          "scan_id",
+          "found",
+          "direction",
+          "limit",
+          "total_neighbors",
+          "truncated",
+          "neighbors",
+          "edges",
+          "completeness"
+        ],
+        "title": "GraphNodeNeighborsResponse",
+        "type": "object"
+      },
+      "GraphPageResponse": {
+        "additionalProperties": true,
+        "description": "``GET /v1/graph``: one ranked node page plus incident edges and context.",
+        "properties": {
+          "attack_campaigns": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attack Campaigns"
+          },
+          "attack_path_pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GraphBoundedPage"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "attack_paths": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Attack Paths",
+            "type": "array"
+          },
+          "collection_coverage": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Collection Coverage"
+          },
+          "completeness": {
+            "$ref": "#/components/schemas/GraphCompleteness"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "edges": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Edges",
+            "type": "array"
+          },
+          "evidence_scope": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Scope"
+          },
+          "interaction_risks": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Interaction Risks",
+            "type": "array"
+          },
+          "nodes": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Nodes",
+            "type": "array"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/GraphPagination"
+          },
+          "scan_id": {
+            "title": "Scan Id",
+            "type": "string"
+          },
+          "snapshot_generation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Generation"
+          },
+          "stats": {
+            "additionalProperties": true,
+            "title": "Stats",
+            "type": "object"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scan_id",
+          "tenant_id",
+          "created_at",
+          "nodes",
+          "edges",
+          "attack_paths",
+          "interaction_risks",
+          "stats",
+          "pagination",
+          "completeness"
+        ],
+        "title": "GraphPageResponse",
+        "type": "object"
+      },
+      "GraphPagination": {
+        "additionalProperties": true,
+        "properties": {
+          "cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cursor"
+          },
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "offset",
+          "limit",
+          "has_more"
+        ],
+        "title": "GraphPagination",
+        "type": "object"
+      },
+      "GraphPathHop": {
+        "additionalProperties": true,
+        "properties": {
+          "depth": {
+            "title": "Depth",
+            "type": "integer"
+          },
+          "hops": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Hops",
+            "type": "array"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "target",
+          "hops",
+          "depth"
+        ],
+        "title": "GraphPathHop",
+        "type": "object"
+      },
+      "GraphPathsResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "attack_paths": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Attack Paths",
+            "type": "array"
+          },
+          "completeness": {
+            "$ref": "#/components/schemas/GraphCompleteness"
+          },
+          "depth_limited": {
+            "title": "Depth Limited",
+            "type": "boolean"
+          },
+          "max_depth": {
+            "title": "Max Depth",
+            "type": "integer"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/GraphPagination"
+          },
+          "paths": {
+            "items": {
+              "$ref": "#/components/schemas/GraphPathHop"
+            },
+            "title": "Paths",
+            "type": "array"
+          },
+          "reachable_count": {
+            "title": "Reachable Count",
+            "type": "integer"
+          },
+          "reachable_nodes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reachable Nodes",
+            "type": "array"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "source_id": {
+            "title": "Source Id",
+            "type": "string"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "source",
+          "source_id",
+          "max_depth",
+          "reachable_count",
+          "reachable_nodes",
+          "paths",
+          "attack_paths",
+          "pagination",
+          "truncated",
+          "depth_limited",
+          "completeness"
+        ],
+        "title": "GraphPathsResponse",
+        "type": "object"
+      },
+      "GraphPresetsResponse": {
+        "description": "``GET /v1/graph/presets``: saved filter presets for the tenant.",
+        "items": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "title": "GraphPresetsResponse",
+        "type": "array"
+      },
       "GraphQueryRequest": {
         "additionalProperties": false,
         "properties": {
@@ -16887,6 +20565,225 @@
           "roots"
         ],
         "title": "GraphQueryRequest",
+        "type": "object"
+      },
+      "GraphRollupResponse": {
+        "additionalProperties": true,
+        "description": "Roll-up, attack-path-first, or drill-down view, selected by ``mode``.",
+        "properties": {
+          "aggregate_count_metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Aggregate Count Metadata"
+          },
+          "attack_paths": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Attack Paths"
+          },
+          "children": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Children"
+          },
+          "collapsed": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Collapsed"
+          },
+          "completeness": {
+            "$ref": "#/components/schemas/GraphCompleteness"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "edge_count_metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edge Count Metadata"
+          },
+          "edges": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edges"
+          },
+          "filters": {
+            "additionalProperties": true,
+            "title": "Filters",
+            "type": "object"
+          },
+          "mode": {
+            "title": "Mode",
+            "type": "string"
+          },
+          "node": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Node"
+          },
+          "orphan_summary": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Orphan Summary"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pagination"
+          },
+          "path_edges": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path Edges"
+          },
+          "path_nodes": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Path Nodes"
+          },
+          "scan_id": {
+            "title": "Scan Id",
+            "type": "string"
+          },
+          "snapshot_generation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Generation"
+          },
+          "summary": {
+            "additionalProperties": true,
+            "title": "Summary",
+            "type": "object"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          },
+          "top_level": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Top Level"
+          }
+        },
+        "required": [
+          "scan_id",
+          "tenant_id",
+          "created_at",
+          "mode",
+          "filters",
+          "summary",
+          "completeness"
+        ],
+        "title": "GraphRollupResponse",
         "type": "object"
       },
       "GraphScenarioComparisonCurrent": {
@@ -17411,6 +21308,73 @@
         "title": "GraphScenariosResponse",
         "type": "object"
       },
+      "GraphSchemaResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "edge_kinds": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Edge Kinds",
+            "type": "array"
+          },
+          "edge_types": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Edge Types",
+            "type": "array"
+          },
+          "interchange": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Interchange",
+            "type": "object"
+          },
+          "node_kinds": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Node Kinds",
+            "type": "array"
+          },
+          "node_types": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Node Types",
+            "type": "array"
+          },
+          "semantic_layers": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "Semantic Layers",
+            "type": "array"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "interchange",
+          "semantic_layers",
+          "node_kinds",
+          "edge_kinds",
+          "node_types",
+          "edge_types"
+        ],
+        "title": "GraphSchemaResponse",
+        "type": "object"
+      },
       "GraphScopeDescriptor": {
         "properties": {
           "basis": {
@@ -17457,6 +21421,105 @@
         ],
         "title": "GraphScopeDescriptor",
         "type": "object"
+      },
+      "GraphSearchFilters": {
+        "additionalProperties": true,
+        "properties": {
+          "compliance_prefixes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Compliance Prefixes",
+            "type": "array"
+          },
+          "data_sources": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Data Sources",
+            "type": "array"
+          },
+          "entity_types": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Entity Types",
+            "type": "array"
+          },
+          "min_severity": {
+            "title": "Min Severity",
+            "type": "string"
+          },
+          "scan_id": {
+            "title": "Scan Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scan_id",
+          "entity_types",
+          "min_severity",
+          "compliance_prefixes",
+          "data_sources"
+        ],
+        "title": "GraphSearchFilters",
+        "type": "object"
+      },
+      "GraphSearchResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "completeness": {
+            "$ref": "#/components/schemas/GraphCompleteness"
+          },
+          "filters": {
+            "$ref": "#/components/schemas/GraphSearchFilters"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/GraphPagination"
+          },
+          "query": {
+            "title": "Query",
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "snapshot_generation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Generation"
+          }
+        },
+        "required": [
+          "snapshot_generation",
+          "query",
+          "filters",
+          "results",
+          "pagination",
+          "completeness"
+        ],
+        "title": "GraphSearchResponse",
+        "type": "object"
+      },
+      "GraphSnapshotsResponse": {
+        "description": "``GET /v1/graph/snapshots``: retained snapshots, newest first.",
+        "items": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "title": "GraphSnapshotsResponse",
+        "type": "array"
       },
       "HTTPValidationError": {
         "properties": {
@@ -17529,6 +21592,104 @@
           "storage"
         ],
         "title": "HealthResponse",
+        "type": "object"
+      },
+      "HubFindingsResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "count_metadata": {
+            "$ref": "#/components/schemas/CountMetadata"
+          },
+          "cursor": {
+            "title": "Cursor",
+            "type": "string"
+          },
+          "filters": {
+            "additionalProperties": true,
+            "title": "Filters",
+            "type": "object"
+          },
+          "findings": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Findings",
+            "type": "array"
+          },
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "next_cursor": {
+            "title": "Next Cursor",
+            "type": "string"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "scan_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Id"
+          },
+          "schema_version": {
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "sort": {
+            "title": "Sort",
+            "type": "string"
+          },
+          "total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total"
+          },
+          "warnings": {
+            "items": {},
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "count_metadata",
+          "cursor",
+          "filters",
+          "findings",
+          "has_more",
+          "limit",
+          "next_cursor",
+          "offset",
+          "scan_id",
+          "schema_version",
+          "sort",
+          "total",
+          "warnings"
+        ],
+        "title": "HubFindingsResponse",
         "type": "object"
       },
       "HubFrameworkCounts": {
@@ -17785,6 +21946,26 @@
           "grants"
         ],
         "title": "IdentityJitGrantsResponse",
+        "type": "object"
+      },
+      "IncidentCorrelationResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "incidents": {
+            "items": {},
+            "title": "Incidents",
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "incidents"
+        ],
+        "title": "IncidentCorrelationResponse",
         "type": "object"
       },
       "IncidentEdgePageCompleteness": {
@@ -20543,6 +24724,79 @@
         "title": "ManagedTrialOIDCStartRequest",
         "type": "object"
       },
+      "ManagedTrialTenantResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "cleanup_after": {
+            "title": "Cleanup After",
+            "type": "string"
+          },
+          "cleanup_attempts": {
+            "title": "Cleanup Attempts",
+            "type": "integer"
+          },
+          "cleanup_completed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cleanup Completed At"
+          },
+          "cleanup_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cleanup Error"
+          },
+          "cleanup_pending": {
+            "title": "Cleanup Pending",
+            "type": "boolean"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          },
+          "trial_ends_at": {
+            "title": "Trial Ends At",
+            "type": "string"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tenant_id",
+          "state",
+          "created_at",
+          "trial_ends_at",
+          "cleanup_after",
+          "updated_at",
+          "cleanup_attempts",
+          "cleanup_pending",
+          "cleanup_error",
+          "cleanup_completed_at"
+        ],
+        "title": "ManagedTrialTenantResponse",
+        "type": "object"
+      },
       "McpConfigAssignment": {
         "additionalProperties": true,
         "properties": {
@@ -21647,6 +25901,99 @@
           "remediation_steps"
         ],
         "title": "NarrativeFailingControl",
+        "type": "object"
+      },
+      "Nist80053DrillResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "controls": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Controls",
+            "type": "array"
+          },
+          "families": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Families",
+            "type": "array"
+          },
+          "framework": {
+            "title": "Framework",
+            "type": "string"
+          },
+          "framework_key": {
+            "title": "Framework Key",
+            "type": "string"
+          },
+          "framework_label": {
+            "title": "Framework Label",
+            "type": "string"
+          },
+          "iso_27001_derived": {
+            "title": "Iso 27001 Derived"
+          },
+          "representation": {
+            "title": "Representation",
+            "type": "string"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Score"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "title": "Summary",
+            "type": "object"
+          },
+          "vendor_asserted": {
+            "title": "Vendor Asserted",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "controls",
+          "families",
+          "framework",
+          "framework_key",
+          "framework_label",
+          "iso_27001_derived",
+          "representation",
+          "score",
+          "source",
+          "status",
+          "summary",
+          "vendor_asserted"
+        ],
+        "title": "Nist80053DrillResponse",
         "type": "object"
       },
       "NormalizedEnterpriseEvent": {
@@ -30531,6 +34878,344 @@
         "title": "ScheduleCreate",
         "type": "object"
       },
+      "ScimConfigResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "auth_authority": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auth Authority"
+          },
+          "base_path": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Path"
+          },
+          "configured": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Configured"
+          },
+          "configured_api_replicas": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Configured Api Replicas"
+          },
+          "default_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Role"
+          },
+          "deprovisioning_boundary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deprovisioning Boundary"
+          },
+          "external_id_attribute": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External Id Attribute"
+          },
+          "groups_required": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Groups Required"
+          },
+          "lifecycle_endpoints": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lifecycle Endpoints"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "multi_node_ready": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Multi Node Ready"
+          },
+          "provisioning_authority": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provisioning Authority"
+          },
+          "role_attribute": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role Attribute"
+          },
+          "role_values": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role Values"
+          },
+          "runtime_auth_enforced": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Runtime Auth Enforced"
+          },
+          "shared_store_required": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shared Store Required"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "storage_backend": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Storage Backend"
+          },
+          "supported": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supported"
+          },
+          "tenant_assignment": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant Assignment"
+          },
+          "tenant_attribute": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant Attribute"
+          },
+          "tenant_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant Count"
+          },
+          "tenant_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant Id"
+          },
+          "tenant_id_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant Id Source"
+          },
+          "tenant_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant Ids"
+          },
+          "token_binding_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Binding Count"
+          },
+          "token_binding_mode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Binding Mode"
+          },
+          "token_configured": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Configured"
+          },
+          "verified_idp_templates": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified Idp Templates"
+          }
+        },
+        "title": "ScimConfigResponse",
+        "type": "object"
+      },
       "ScopedGraphCompleteness": {
         "properties": {
           "edges": {
@@ -30659,6 +35344,252 @@
           "scorecard"
         ],
         "title": "ScorecardLookupResponse",
+        "type": "object"
+      },
+      "SecretLifecycleResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "blockers": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blockers"
+          },
+          "external_secret_provider": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External Secret Provider"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "rotation_statuses": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rotation Statuses"
+          },
+          "secrets": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Secrets"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "warnings": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Warnings"
+          }
+        },
+        "title": "SecretLifecycleResponse",
+        "type": "object"
+      },
+      "SecretRotationPlanResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "action_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action Count"
+          },
+          "actions": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actions"
+          },
+          "all_secrets": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "All Secrets"
+          },
+          "external_secret_provider_configured": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External Secret Provider Configured"
+          },
+          "generated_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated From"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "operator_sequence": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Operator Sequence"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "rotation_adapter": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rotation Adapter"
+          },
+          "secret_values_included": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Secret Values Included"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "supported_rotation_adapters": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supported Rotation Adapters"
+          }
+        },
+        "title": "SecretRotationPlanResponse",
         "type": "object"
       },
       "SelfPostureCheck": {
@@ -33148,6 +38079,92 @@
         "title": "TenantMembership",
         "type": "object"
       },
+      "TenantQuotaRuntimeResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "active_override": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Override"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "override_endpoint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Override Endpoint"
+          },
+          "overrides": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overrides"
+          },
+          "per_tenant_overrides": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Per Tenant Overrides"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "usage": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Usage"
+          }
+        },
+        "title": "TenantQuotaRuntimeResponse",
+        "type": "object"
+      },
       "TenantQuotaUpdateRequest": {
         "additionalProperties": false,
         "properties": {
@@ -34075,6 +39092,231 @@
           }
         },
         "title": "VirtualKeyRevoke",
+        "type": "object"
+      },
+      "VulnExceptionResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "approval_required": {
+            "title": "Approval Required",
+            "type": "boolean"
+          },
+          "approval_version": {
+            "title": "Approval Version",
+            "type": "integer"
+          },
+          "approved_at": {
+            "title": "Approved At",
+            "type": "string"
+          },
+          "approved_by": {
+            "title": "Approved By",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "decided_by": {
+            "title": "Decided By",
+            "type": "string"
+          },
+          "exception_id": {
+            "title": "Exception Id",
+            "type": "string"
+          },
+          "expires_at": {
+            "title": "Expires At",
+            "type": "string"
+          },
+          "package_name": {
+            "title": "Package Name",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "requested_by": {
+            "title": "Requested By",
+            "type": "string"
+          },
+          "revoked_at": {
+            "title": "Revoked At",
+            "type": "string"
+          },
+          "server_name": {
+            "title": "Server Name",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "suppression_active": {
+            "title": "Suppression Active",
+            "type": "boolean"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          },
+          "vuln_id": {
+            "title": "Vuln Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "exception_id",
+          "vuln_id",
+          "package_name",
+          "server_name",
+          "reason",
+          "requested_by",
+          "approved_by",
+          "status",
+          "created_at",
+          "expires_at",
+          "approved_at",
+          "revoked_at",
+          "tenant_id",
+          "approval_version",
+          "decided_by",
+          "suppression_active",
+          "approval_required"
+        ],
+        "title": "VulnExceptionResponse",
+        "type": "object"
+      },
+      "VulnExceptionRow": {
+        "additionalProperties": true,
+        "properties": {
+          "approval_required": {
+            "title": "Approval Required",
+            "type": "boolean"
+          },
+          "approval_version": {
+            "title": "Approval Version",
+            "type": "integer"
+          },
+          "approved_at": {
+            "title": "Approved At",
+            "type": "string"
+          },
+          "approved_by": {
+            "title": "Approved By",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "decided_by": {
+            "title": "Decided By",
+            "type": "string"
+          },
+          "exception_id": {
+            "title": "Exception Id",
+            "type": "string"
+          },
+          "expires_at": {
+            "title": "Expires At",
+            "type": "string"
+          },
+          "package_name": {
+            "title": "Package Name",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "requested_by": {
+            "title": "Requested By",
+            "type": "string"
+          },
+          "revoked_at": {
+            "title": "Revoked At",
+            "type": "string"
+          },
+          "server_name": {
+            "title": "Server Name",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "suppression_active": {
+            "title": "Suppression Active",
+            "type": "boolean"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          },
+          "vuln_id": {
+            "title": "Vuln Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "exception_id",
+          "vuln_id",
+          "package_name",
+          "server_name",
+          "reason",
+          "requested_by",
+          "approved_by",
+          "status",
+          "created_at",
+          "expires_at",
+          "approved_at",
+          "revoked_at",
+          "tenant_id",
+          "approval_version",
+          "decided_by",
+          "suppression_active",
+          "approval_required"
+        ],
+        "title": "VulnExceptionRow",
+        "type": "object"
+      },
+      "VulnExceptionsResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "exceptions": {
+            "items": {
+              "$ref": "#/components/schemas/VulnExceptionRow"
+            },
+            "title": "Exceptions",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "schema_version": {
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "schema_version",
+          "exceptions",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "VulnExceptionsResponse",
         "type": "object"
       },
       "VulnerabilityAssetRow": {
@@ -37037,9 +42279,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response List Audit Entries V1 Audit Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AuditEntriesResponse"
                 }
               }
             },
@@ -37163,7 +42403,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/AuditExportResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -37282,9 +42524,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Audit Integrity V1 Audit Integrity Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AuditIntegrityResponse"
                 }
               }
             },
@@ -37326,9 +42566,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Auth Debug V1 Auth Debug Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AuthDebugResponse"
                 }
               }
             },
@@ -37459,9 +42697,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response List Keys V1 Auth Keys Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ApiKeysResponse"
                 }
               }
             },
@@ -37879,9 +43115,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Auth Policy V1 Auth Policy Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AuthPolicyResponse"
                 }
               }
             },
@@ -37956,9 +43190,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Auth Quota V1 Auth Quota Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/TenantQuotaRuntimeResponse"
                 }
               }
             },
@@ -38190,9 +43422,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Auth Scim Config V1 Auth Scim Config Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ScimConfigResponse"
                 }
               }
             },
@@ -38234,9 +43464,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Auth Scopes V1 Auth Scopes Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AuthScopesResponse"
                 }
               }
             },
@@ -38278,9 +43506,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Auth Secret Credential Expiry V1 Auth Secrets Credential Expiry Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/CredentialExpiryResponse"
                 }
               }
             },
@@ -38322,9 +43548,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Auth Secret Lifecycle V1 Auth Secrets Lifecycle Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/SecretLifecycleResponse"
                 }
               }
             },
@@ -38366,9 +43590,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Auth Secret Rotation Plan V1 Auth Secrets Rotation Plan Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/SecretRotationPlanResponse"
                 }
               }
             },
@@ -38699,9 +43921,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Managed Trial Tenant V1 Auth Trial Tenants  Tenant Id  Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ManagedTrialTenantResponse"
                 }
               }
             },
@@ -39912,9 +45132,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response List Cis Benchmark Checks V1 Cis Checks Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/CisChecksResponse"
                 }
               }
             },
@@ -40091,9 +45309,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Cis Benchmark Trends V1 Cis Trends Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/CisTrendsResponse"
                 }
               }
             },
@@ -41969,9 +47185,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Aisvs Compliance V1 Compliance Aisvs Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/AisvsComplianceResponse"
                 }
               }
             },
@@ -42193,9 +47407,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response List Hub Findings V1 Compliance Hub Findings Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/HubFindingsResponse"
                 }
               }
             },
@@ -42574,9 +47786,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Compliance Narrative By Framework V1 Compliance Narrative  Framework  Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ComplianceNarrativeResponse"
                 }
               }
             },
@@ -42694,9 +47904,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Compliance Nist 800 53 V1 Compliance Nist 800 53 Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/Nist80053DrillResponse"
                 }
               }
             },
@@ -42819,7 +48027,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ComplianceEvidencePackResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -42910,9 +48120,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Compliance Summary V1 Compliance Summary Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ComplianceSummaryResponse"
                 }
               }
             },
@@ -43004,9 +48212,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Compliance Verification Key V1 Compliance Verification Key Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ComplianceVerificationKeyResponse"
                 }
               }
             },
@@ -43107,9 +48313,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Compliance By Framework V1 Compliance  Framework  Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/FrameworkComplianceResponse"
                 }
               }
             },
@@ -46355,9 +51559,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response List Exceptions V1 Exceptions Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/VulnExceptionsResponse"
                 }
               }
             },
@@ -46506,9 +51708,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Exception V1 Exceptions  Exception Id  Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/VulnExceptionResponse"
                 }
               }
             },
@@ -48158,9 +53358,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response List False Positives V1 Findings False Positives Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/FalsePositivesResponse"
                 }
               }
             },
@@ -48220,9 +53418,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response List Finding Feedback V1 Findings Feedback Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/FindingFeedbackResponse"
                 }
               }
             },
@@ -48461,9 +53657,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response List Finding Triage V1 Findings Triage Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/FindingTriageResponse"
                 }
               }
             },
@@ -48949,9 +54143,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Export Finding Triage Vex V1 Findings Triage Vex Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/FindingTriageVexResponse"
                 }
               }
             },
@@ -52951,9 +58143,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Graph V1 Graph Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/GraphPageResponse"
                 }
               }
             },
@@ -53091,9 +58281,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response List Graph Agents V1 Graph Agents Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/GraphAgentsResponse"
                 }
               }
             },
@@ -54487,9 +59675,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Graph Clusters V1 Graph Clusters Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/GraphClustersResponse"
                 }
               }
             },
@@ -54569,9 +59755,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Graph Compliance V1 Graph Compliance Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/GraphComplianceResponse"
                 }
               }
             },
@@ -54912,9 +60096,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Graph Diff V1 Graph Diff Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/GraphDiffResponse"
                 }
               }
             },
@@ -54969,12 +60151,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "additionalProperties": true,
-                    "type": "object"
-                  },
-                  "title": "Response Get Active Graph Edges V1 Graph Edges Active Get",
-                  "type": "array"
+                  "$ref": "#/components/schemas/GraphActiveEdgesResponse"
                 }
               }
             },
@@ -55040,9 +60217,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Graph Edge Changes V1 Graph Edges Changes Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/GraphEdgeChangesResponse"
                 }
               }
             },
@@ -55122,9 +60297,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Graph Evidence Manifest V1 Graph Evidence Manifest Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/GraphEvidenceManifestResponse"
                 }
               }
             },
@@ -55233,9 +60406,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Graph Exposure Paths V1 Graph Exposure Paths Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/GraphExposurePathsResponse"
                 }
               }
             },
@@ -55339,9 +60510,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Graph Governance V1 Graph Governance Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/GraphGovernanceResponse"
                 }
               }
             },
@@ -55418,9 +60587,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Graph History V1 Graph History Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/GraphHistoryResponse"
                 }
               }
             },
@@ -55524,9 +60691,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Graph Impact V1 Graph Impact Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/GraphImpactResponse"
                 }
               }
             },
@@ -55717,9 +60882,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Graph Legend V1 Graph Legend Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/GraphLegendResponse"
                 }
               }
             },
@@ -55781,9 +60944,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Nhi Governance V1 Graph Nhi Governance Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/GraphNhiGovernanceResponse"
                 }
               }
             },
@@ -55873,9 +61034,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Graph Node V1 Graph Node Context Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/GraphNodeContextResponse"
                 }
               }
             },
@@ -55974,9 +61133,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Graph Node Neighbors V1 Graph Node Neighbors Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/GraphNodeNeighborsResponse"
                 }
               }
             },
@@ -56066,9 +61223,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Graph Node V1 Graph Node  Node Id  Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/GraphNodeContextResponse"
                 }
               }
             },
@@ -56167,9 +61322,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Graph Node Neighbors V1 Graph Node  Node Id  Neighbors Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/GraphNodeNeighborsResponse"
                 }
               }
             },
@@ -56290,9 +61443,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Graph Paths V1 Graph Paths Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/GraphPathsResponse"
                 }
               }
             },
@@ -56334,12 +61485,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "additionalProperties": true,
-                    "type": "object"
-                  },
-                  "title": "Response List Presets V1 Graph Presets Get",
-                  "type": "array"
+                  "$ref": "#/components/schemas/GraphPresetsResponse"
                 }
               }
             },
@@ -56685,9 +61831,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Graph Rollup V1 Graph Rollup Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/GraphRollupResponse"
                 }
               }
             },
@@ -57053,9 +62197,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Graph Schema V1 Graph Schema Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/GraphSchemaResponse"
                 }
               }
             },
@@ -57392,9 +62534,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Search Graph V1 Graph Search Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/GraphSearchResponse"
                 }
               }
             },
@@ -57525,12 +62665,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "additionalProperties": true,
-                    "type": "object"
-                  },
-                  "title": "Response Get Graph Snapshots V1 Graph Snapshots Get",
-                  "type": "array"
+                  "$ref": "#/components/schemas/GraphSnapshotsResponse"
                 }
               }
             },
@@ -65876,9 +71011,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Backpressure Posture V1 Posture Backpressure Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BackpressurePostureResponse"
                 }
               }
             },
@@ -66062,9 +71195,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Credential Risk Ranking V1 Posture Credentials Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/CredentialRiskRankingResponse"
                 }
               }
             },
@@ -66156,9 +71287,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Enrichment Posture V1 Posture Enrichment Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/EnrichmentPostureResponse"
                 }
               }
             },
@@ -66250,9 +71379,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Incident Correlation V1 Posture Incidents Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/IncidentCorrelationResponse"
                 }
               }
             },

@@ -157,8 +157,8 @@ async def test_api_selects_scope_and_preserves_legacy_history(monkeypatch):
     store = InMemoryTrendStore()
     for row in [point(), point("two", "2026-09-02T00:00:00Z"), point("other", scope="repo:b"), point("foreign", tenant="b")]:
         store.record(row)
-    monkeypatch.setattr(enterprise, "_get_trend_store", lambda: store)
-    monkeypatch.setattr(enterprise, "require_request_tenant_id", lambda request: "a")
+    monkeypatch.setattr("agent_bom.api.routes.enterprise_routes.governance._get_trend_store", lambda: store)
+    monkeypatch.setattr("agent_bom.api.routes.enterprise_routes.governance.require_request_tenant_id", lambda request: "a")
     request = Request({"type": "http", "headers": []})
     payload = enterprise.get_trends(request, scope_id="repo:a")
     assert payload["count"] == 2

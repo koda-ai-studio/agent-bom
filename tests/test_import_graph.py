@@ -155,3 +155,13 @@ def test_graph_retention_resolution_stays_below_the_api_store_registry():
     assert "agent_bom.db.graph_store" not in seen
     assert stores._get_tenant_graph_retention_store is retention_store._get_tenant_graph_retention_store
     assert stores.set_tenant_graph_retention_store is retention_store.set_tenant_graph_retention_store
+
+
+def test_loopback_auth_readers_do_not_import_application_composition_root():
+    """Auth middleware and key exchange must not load the server/router graph."""
+    edges = graph.build_graph(ROOT)
+    for module in (
+        "agent_bom.api.middleware",
+        "agent_bom.api.routes.enterprise_routes.keys",
+    ):
+        assert "agent_bom.api.server" not in edges[module]

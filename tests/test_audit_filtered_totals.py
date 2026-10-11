@@ -38,7 +38,7 @@ async def test_api_total_retains_filters_when_page_is_empty(audit_store, monkeyp
     from agent_bom.api.routes import enterprise
 
     monkeypatch.setattr(audit_log, "get_audit_log", lambda: audit_store)
-    monkeypatch.setattr(enterprise, "require_request_tenant_id", lambda request: "alpha")
+    monkeypatch.setattr("agent_bom.api.routes.enterprise_routes.governance.require_request_tenant_id", lambda request: "alpha")
     response = enterprise.list_audit_entries(
         Request({"type": "http"}), action="scan", resource="image/", since="2026-09-08", limit=1, offset=2
     )

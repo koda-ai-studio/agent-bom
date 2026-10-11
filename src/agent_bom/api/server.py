@@ -27,6 +27,9 @@ from agent_bom.api import host_guard as _host_guard
 from agent_bom.api import stores as _stores
 from agent_bom.api.audit_log import get_audit_log, warn_if_ephemeral_hmac_key
 from agent_bom.api.auth import Role, create_api_key_record, get_key_store
+from agent_bom.api.dev_auth_state import get_dev_api_key as get_dev_api_key
+from agent_bom.api.dev_auth_state import get_dev_api_role as get_dev_api_role
+from agent_bom.api.dev_auth_state import set_dev_api_key as set_dev_api_key
 from agent_bom.api.error_envelope import ERROR_RESPONSES, install_error_envelope
 from agent_bom.api.foreground_activity import ForegroundActivityMiddleware
 from agent_bom.api.middleware import (
@@ -887,43 +890,6 @@ DEFAULT_RATE_LIMIT_RPM = DEFAULT_SCAN_RATE_LIMIT_RPM
 _rate_limit_rpm: int = DEFAULT_RATE_LIMIT_RPM
 _env_api_keys_seeded = False
 _runtime_api_key_seeded = False
-# Ephemeral, per-process loopback dev API key. Only ever set by the CLI
-# (`agent-bom serve`) on a LOOPBACK bind when no other auth is configured, so
-# the same-origin dashboard can mint a matching browser session and load with
-# zero flags. Never persisted; non-loopback binds never set this (the CLI auth
-# gate refuses them first). See cli/_server._should_auto_generate_dev_key.
-_dev_api_key: str | None = None
-_dev_api_role: Role = Role.ADMIN
-
-
-def set_dev_api_key(raw_key: str | None) -> None:
-    """Register (or clear) the ephemeral loopback dev API key for the UI.
-
-    The key itself is seeded into the RBAC key store by ``configure_api``; this
-    holder only lets the dashboard HTML routes issue a matching browser-session
-    cookie so the first-party same-origin UI authenticates automatically on a
-    loopback bind. Process-local and never written to disk.
-    """
-    global _dev_api_key, _dev_api_role
-    value = (raw_key or "").strip() or None
-    role = Role.ADMIN
-    if value:
-        try:
-            role = Role((os.environ.get("AGENT_BOM_NO_AUTH_ROLE") or "admin").strip().lower())
-        except ValueError:
-            raise ValueError("Invalid explicit loopback role") from None
-    _dev_api_key = value
-    _dev_api_role = role
-
-
-def get_dev_api_key() -> str | None:
-    """Return the active ephemeral loopback dev API key, if any."""
-    return _dev_api_key
-
-
-def get_dev_api_role() -> Role:
-    """Role selected for the active authenticated loopback bootstrap."""
-    return _dev_api_role
 
 
 def _env_truthy(name: str) -> bool:
@@ -1559,7 +1525,9 @@ def _maybe_attach_dev_session_cookie(response: Any, request: Request) -> None:
     lifetime without depending on key-store lookups, and is re-used across page
     loads instead of churning a fresh nonce each request.
     """
-    if _dev_api_key is None or not _host_guard.is_loopback_hostname(_host_guard.hostname_from_authority(request.headers.get("host", ""))):
+    if get_dev_api_key() is None or not _host_guard.is_loopback_hostname(
+        _host_guard.hostname_from_authority(request.headers.get("host", ""))
+    ):
         return
     from agent_bom.api.browser_session import (
         CSRF_COOKIE_NAME,

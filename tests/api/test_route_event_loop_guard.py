@@ -184,7 +184,7 @@ async def test_slow_siem_health_check_keeps_event_loop_responsive(monkeypatch):
     from agent_bom.api import audit_log
     from agent_bom.api.routes import enterprise
 
-    monkeypatch.setattr(enterprise, "require_request_tenant_id", lambda request: "t-siem")
+    monkeypatch.setattr("agent_bom.api.routes.enterprise_routes.governance.require_request_tenant_id", lambda request: "t-siem")
     monkeypatch.setattr(audit_log, "log_action", lambda *args, **kwargs: None)
 
     block_seconds = 0.5

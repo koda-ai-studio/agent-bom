@@ -26,6 +26,11 @@ _SRC = Path(__file__).resolve().parents[1] / "src" / "agent_bom" / "api"
 _AUTH_MODULES = (
     _SRC / "middleware.py",
     _SRC / "routes" / "enterprise.py",
+    _SRC / "routes" / "enterprise_routes" / "governance.py",
+    _SRC / "routes" / "enterprise_routes" / "keys.py",
+    _SRC / "routes" / "enterprise_routes" / "sessions.py",
+    _SRC / "routes" / "enterprise_routes" / "sso.py",
+    _SRC / "routes" / "enterprise_routes" / "trials.py",
     _SRC / "routes" / "proxy.py",
 )
 

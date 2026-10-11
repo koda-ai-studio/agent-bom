@@ -1432,7 +1432,7 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
             return Absent()
         if self._api_key and secrets.compare_digest(raw_key, self._api_key):
             from agent_bom.api.auth import Role
-            from agent_bom.api.server import get_dev_api_key, get_dev_api_role
+            from agent_bom.api.dev_auth_state import get_dev_api_key, get_dev_api_role
 
             role = get_dev_api_role() if get_dev_api_key() == self._api_key else Role.ADMIN
             required = Role(self._required_role(request.method, request.url.path))
@@ -1686,7 +1686,7 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
                 return JSONResponse(status_code=401, content={"detail": "Unauthorized — managed trial is inactive"})
         effective_role = session_role
         if auth_method == "browser_session_dev_key":
-            from agent_bom.api.server import get_dev_api_key, get_dev_api_role
+            from agent_bom.api.dev_auth_state import get_dev_api_key, get_dev_api_role
 
             if get_dev_api_key() is None or session_role != get_dev_api_role():
                 return JSONResponse(status_code=401, content={"detail": "Unauthorized — loopback session is no longer active"})

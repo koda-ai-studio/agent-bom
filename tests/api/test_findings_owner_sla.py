@@ -18,6 +18,8 @@ from agent_bom.api.exception_store import ExceptionStatus, InMemoryExceptionStor
 from agent_bom.api.models import JobStatus, ScanJob, ScanRequest
 from agent_bom.api.routes import enterprise
 from agent_bom.api.routes.enterprise import _triage_reason
+from agent_bom.api.routes.enterprise_routes import findings as enterprise_findings
+from agent_bom.api.routes.enterprise_routes import governance as enterprise_governance
 from agent_bom.api.routes.scan import iter_tenant_scan_spine_findings
 from agent_bom.api.store import InMemoryJobStore
 from agent_bom.finding import Asset, Finding, FindingSource, FindingType
@@ -65,7 +67,8 @@ def isolated_job_store():
 @pytest.fixture
 def isolated_exception_store(monkeypatch):
     store = InMemoryExceptionStore()
-    monkeypatch.setattr(enterprise, "_get_exception_store", lambda: store)
+    for _owner in (enterprise, enterprise_findings, enterprise_governance):
+        monkeypatch.setattr(_owner, "_get_exception_store", lambda: store)
     return store
 
 

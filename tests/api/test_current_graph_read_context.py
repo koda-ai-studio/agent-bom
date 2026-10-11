@@ -41,6 +41,7 @@ def test_current_generation_resolves_once_in_existing_read_context(estate, monke
 
 def test_graph_http_request_establishes_read_context(estate, monkeypatch):
     from agent_bom.api.routes import graph as routes
+    from agent_bom.api.routes.graph_routes import _runtime as graph_runtime
 
     record(estate, 8, "repo-a", "package-a")
     summaries = estate[0].list_summary
@@ -51,7 +52,7 @@ def test_graph_http_request_establishes_read_context(estate, monkeypatch):
         return summaries(**kwargs)
 
     monkeypatch.setattr(estate[0], "list_summary", counted)
-    monkeypatch.setattr(routes, "_tenant", lambda request: "history-tenant")
+    monkeypatch.setattr(graph_runtime, "_tenant", lambda request: "history-tenant")
     app = FastAPI()
     app.include_router(routes.router, prefix="/v1")
     with TestClient(app) as client:

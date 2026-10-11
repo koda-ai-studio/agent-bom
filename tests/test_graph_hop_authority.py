@@ -222,7 +222,7 @@ def test_api_and_cli_preserve_same_authority_and_tenant_boundary(tmp_path, monke
     from click.testing import CliRunner
     from starlette.testclient import TestClient
 
-    from agent_bom.api.routes import graph as graph_routes
+    from agent_bom.api.routes.graph_routes import _runtime as graph_runtime
     from agent_bom.api.server import app
     from agent_bom.cli import main
     from tests.test_cli_graph_paths import FakeGraphClient
@@ -230,7 +230,7 @@ def test_api_and_cli_preserve_same_authority_and_tenant_boundary(tmp_path, monke
     graph = _ingested_native_graph() if native else _graph({"authorization_decisions": [_decision()]})
     db = tmp_path / "route.db"
     SQLiteGraphStore(db).save_graph(graph)
-    monkeypatch.setattr(graph_routes, "_get_graph_store", lambda: SQLiteGraphStore(db))
+    monkeypatch.setattr(graph_runtime, "_get_graph_store", lambda: SQLiteGraphStore(db))
     client = TestClient(app)
     response = client.get("/v1/graph/exposure-paths", params={"scan_id": graph.scan_id})
     assert response.status_code == 200
