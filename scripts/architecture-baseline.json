@@ -708,7 +708,7 @@
     "api/routes/cloud.py": {
       "broad_except": 6,
       "deferred_imports": 22,
-      "file_lines": 1488,
+      "file_lines": 1487,
       "raw_env_reads": 1
     },
     "api/routes/cloud.py::_build_account_summary": {
@@ -800,7 +800,7 @@
     "api/routes/discovery.py": {
       "broad_except": 3,
       "deferred_imports": 17,
-      "file_lines": 955
+      "file_lines": 952
     },
     "api/routes/discovery.py::_serialize_agent": {
       "function_lines": 127
@@ -862,7 +862,7 @@
     },
     "api/routes/fleet.py": {
       "deferred_imports": 11,
-      "file_lines": 801
+      "file_lines": 798
     },
     "api/routes/fleet.py::quarantine_fleet_agent": {
       "function_lines": 102
@@ -874,7 +874,7 @@
     "api/routes/gateway.py": {
       "broad_except": 1,
       "deferred_imports": 17,
-      "file_lines": 669,
+      "file_lines": 668,
       "raw_env_reads": 2
     },
     "api/routes/gateway.py::evaluate_gateway": {
@@ -941,7 +941,7 @@
     },
     "api/routes/identities.py": {
       "deferred_imports": 11,
-      "file_lines": 1066
+      "file_lines": 1061
     },
     "api/routes/kspm.py": {
       "broad_except": 1,
@@ -988,7 +988,7 @@
     "api/routes/proxy.py": {
       "broad_except": 6,
       "deferred_imports": 17,
-      "file_lines": 1322,
+      "file_lines": 1319,
       "raw_env_reads": 1
     },
     "api/routes/proxy.py::_gateway_activity_record_from_alert": {
