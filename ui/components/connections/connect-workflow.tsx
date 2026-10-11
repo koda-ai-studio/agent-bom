@@ -45,6 +45,7 @@ export function HubTabs({
     { key: "connect", label: "Add source", count: connectCount, icon: Plug },
     { key: "sources", label: "Sources", count: sourceCount, icon: Boxes },
     { key: "endpoints", label: "Endpoints", icon: Shield },
+    { key: "traces", label: "Observability & SIEM", icon: Plug },
   ];
   return (
     <div

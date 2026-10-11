@@ -57,6 +57,7 @@ from agent_bom.api.stores import (
 )
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.api.tenant_quota import enforce_retained_jobs_quota, tenant_quota_guard
+from agent_bom.api.trace_connection_broker import public_connections, pull_credentials
 from agent_bom.canonical_ids import canonical_id
 from agent_bom.config import API_MAX_OCSF_INGEST_EVENTS
 from agent_bom.core.severity import ocsf_to_severity
@@ -733,11 +734,15 @@ def correlate_trace_attack_paths(request: Request, body: dict, span_id: str | No
 
 
 @router.get("/traces/connectors", **documented(observability.TraceConnectorsResponse), **_CONNECTOR_READ)
-def list_trace_connectors_route() -> dict[str, object]:
+def list_trace_connectors_route(request: Request) -> dict[str, object]:
     """List native trace-pull connectors (Langfuse, LangSmith)."""
     from agent_bom.trace_connectors import list_trace_connectors
 
-    return {"schema_version": "observability.trace_connectors.v1", "connectors": list_trace_connectors()}
+    return {
+        "schema_version": "observability.trace_connectors.v1",
+        "connectors": list_trace_connectors(),
+        "connections": public_connections(_tenant_id(request)),
+    }
 
 
 @router.post(
@@ -748,11 +753,8 @@ def list_trace_connectors_route() -> dict[str, object]:
 def pull_trace_connector(request: Request, provider: str, body: dict) -> dict[str, object]:
     """Pull traces from an LLM-observability platform and correlate them (#3899).
 
-    Body: ``{"credentials": {...}, "limit": int, "screen_content": bool}``. The
-    provider's credentials (Langfuse public/secret key or LangSmith API key) are
-    used for auth only and never logged. Pulled traces feed the same parser +
-    per-span correlation pipeline as pushed OTLP. ``screen_content`` opts in to
-    Shield content screening (off by default; raw content is never stored).
+    Select a managed ``connection_id`` or provide one-shot ``credentials``.
+    Screening is opt-in; provider responses may still contain content.
     """
     from agent_bom.otel_ingest import parse_otel_traces
     from agent_bom.runtime_correlation import correlate_spans_to_attack_paths
@@ -763,23 +765,21 @@ def pull_trace_connector(request: Request, provider: str, body: dict) -> dict[st
     )
 
     tenant_id = _tenant_id(request)
-    credentials = body.get("credentials") if isinstance(body.get("credentials"), dict) else {}
-    if not credentials:
-        raise HTTPException(status_code=400, detail="connector credentials are required")
+    credentials = pull_credentials(tenant_id, provider, body, actor=_triggered_by(request))
     try:
         limit = max(1, min(int(body.get("limit", 50) or 50), 1000))
     except (TypeError, ValueError) as exc:
         raise HTTPException(status_code=400, detail="'limit' must be an integer") from exc
     raw_screen = body.get("screen_content")
-    screen_content = _screen_content_enabled(None if raw_screen is None else bool(raw_screen))
+    if raw_screen is not None and not isinstance(raw_screen, bool):
+        raise HTTPException(status_code=400, detail="'screen_content' must be a boolean")
+    screen_content = _screen_content_enabled(raw_screen)
 
     try:
         otlp = fetch_traces(provider, credentials, limit=limit, include_content=screen_content)
     except TraceConnectorValidationError as exc:
-        # Invalid/unsafe caller input (e.g. SSRF-blocked host) — a client error.
         raise HTTPException(status_code=400, detail=sanitize_error(exc)) from exc
     except TraceConnectorError as exc:
-        # sanitize_error keeps credentials out of the response/logs.
         raise HTTPException(status_code=502, detail=sanitize_error(exc)) from exc
 
     traces = parse_otel_traces(otlp)

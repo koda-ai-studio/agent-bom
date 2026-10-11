@@ -46,13 +46,15 @@ for (const theme of ["light", "dark"] as const) {
       return route.fulfill({ json: body });
     });
     await page.setViewportSize({ width: 1280, height: 1000 });
-    await page.goto("/runtime?tab=gateway");
+    await page.goto("/live-activity");
     const feed = page.getByRole("region", { name: "Gateway activity", exact: true });
     await expect(feed.getByTestId("gateway-activity-row")).toHaveCount(6);
     await expect(feed.getByText(/Activity gap:/)).toBeVisible();
     expect(cursors.slice(0, 3)).toEqual([undefined, "cursor-3", "cursor-6"]);
     expect(sockets.filter(url => url.includes("proxy/metrics"))).toEqual([]);
-    await expect(feed.getByText(/Evidence: evidence-7/).first()).toBeVisible();
+    await feed.getByRole("button", { name: /Inspect.*read_file/ }).first().click();
+    await expect(page.getByRole("dialog", { name: "Activity details" }).getByText("evidence-7", { exact: true })).toBeVisible();
+    await page.keyboard.press("Escape");
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({ fullPage: true, path: testInfo.outputPath(`activity-${theme}-desktop.png`) });
     await page.setViewportSize({ width: 390, height: 844 });
@@ -60,6 +62,7 @@ for (const theme of ["light", "dark"] as const) {
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({ fullPage: true, path: testInfo.outputPath(`activity-${theme}-mobile.png`) });
+    await page.getByRole("link", { name: "Runtime controls", exact: true }).click();
     await page.getByRole("button", { name: "Runtime profiles", exact: true }).click();
     const profiles = page.getByRole("region", { name: "Runtime profiles", exact: true });
     await profiles.getByRole("button", { name: "Validate profile" }).click();

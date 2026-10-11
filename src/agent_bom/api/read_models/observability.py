@@ -16,9 +16,16 @@ class ObsTraceConnector(ReadModel):
     supports_content: bool
 
 
+class ManagedTraceConnection(ReadModel):
+    id: str
+    provider: str
+    display_name: str
+
+
 class TraceConnectorsResponse(ReadResponse):
     schema_version: str
     connectors: list[ObsTraceConnector]
+    connections: list[ManagedTraceConnection] = []
 
 
 # ── runtime sessions + observations ──────────────────────────────────────────

@@ -3636,7 +3636,7 @@ async function main() {
       await gatewayPage.getByText("Gateway activity").first().waitFor({ state: "visible", timeout: 8000 });
       await scrollTo(gatewayPage, 0);
     }, {
-      expectedText: ["Calls today", "4,485", "Gateway activity", "developer-copilot", "Repo-write blocked"],
+      expectedText: ["Calls today", "4,485", "Gateway activity", "developer-copilot", "Open live activity"],
       expectedApiPaths: ["/v1/gateway/policies", "/v1/gateway/feed/stream", "/v1/gateway/feed/kpis"],
     });
     await page.setViewportSize({ width: 1440, height: 1120 });

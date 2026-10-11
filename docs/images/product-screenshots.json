@@ -1,9 +1,9 @@
 {
   "release_version": "0.108.4",
-  "captured_at": "2026-10-10T22:12:18.466Z",
-  "source_commit": "bf17826fbc3fea1147360a07ddc508c9cf1f789b",
+  "captured_at": "2026-10-11T22:35:57.631Z",
+  "source_commit": "191d72b232f13c791448b1c71d7cd4a43a2db8f4",
   "source_tree": "clean",
-  "capture_inputs_sha256": "sha256:f2f213ded07c7498a91d95662b55e58ba2fd5bce7f231d699324347031666649",
+  "capture_inputs_sha256": "sha256:dc86e6193b50895ab775125d54f9df17db6ecea77a956df3a32a0897d34a999c",
   "capture_note": "Deterministically captured from real Next.js dashboard routes in capture mode. The correlation hero views consume the committed, hash-pinned Reference evidence lab — modeled local infrastructure artifact with CVE-2023-4863 and exact canonical joins. Remaining gallery fixtures are explicitly synthetic UI states. No external, customer, or private infrastructure data is used.",
   "screenshots": [
     {
@@ -132,7 +132,7 @@
       "page": "/connections?capture=1",
       "scope": "Connections hub — scalable connector gallery across cloud, code, AI, and data sources",
       "visible_version": "0.108.4",
-      "sha256": "sha256:0729128942962743e5f24b92a3dd08ffa2af1dfc2c9ec759c7dbde06a0df635b"
+      "sha256": "sha256:fde5f7ef35859369798af61513e6de21e866b29d588ae497be0807185013cd9f"
     },
     {
       "presentation": "dark desktop",
@@ -265,7 +265,7 @@
       "evidence_sha256": "sha256:f4f8901f412997be7690b50ce8e7468ba8f781dc22b85e7b5f44408e28fe2c5f",
       "correlation_manifest_sha256": "sha256:fe781c82f958c2f9aa4cadfa2289aa767629dc7d6716e11add790e8f3336fc3a",
       "visible_version": "0.108.4",
-      "sha256": "sha256:6a73eaeff0537e398b44bc2449e427009d234a885e63dd9652ac41133c9e5d3b"
+      "sha256": "sha256:c4ce7512cd33b2af67b61889130dd5f7bfe9624054ecd8342329d2af6499adf9"
     },
     {
       "presentation": "light desktop",
@@ -297,7 +297,7 @@
       "page": "/security-graph?lens=estate&scan=scan-proof-ai-platform&rollup=1&scenario=scenario-private-service-endpoint&state=proposed&capture=1",
       "scope": "Modeled proposed-state comparison at 1568 by 780",
       "visible_version": "0.108.4",
-      "sha256": "sha256:cc1887bf709a72b6a87bbcb5c44bf83f0044b7294b635d04cf02199a13adc7d2"
+      "sha256": "sha256:942ab9b4b7187a0feb48f646846589dc28bec94d7f8d0fc13922c12b0dd5e027"
     },
     {
       "presentation": "dark desktop",
@@ -369,7 +369,7 @@
       "page": "/findings?capture=1",
       "scope": "Findings queue with seeded package and CVE evidence from the demo estate",
       "visible_version": "0.108.4",
-      "sha256": "sha256:1ce1ecc06f82dc992bf19b564876e4ff4d6b261ea0ba4ce67936b4964f13b810"
+      "sha256": "sha256:a189a3a137438f3470584a10ccf19364680600aa69675966c2194a2a92120000"
     },
     {
       "presentation": "dark desktop",

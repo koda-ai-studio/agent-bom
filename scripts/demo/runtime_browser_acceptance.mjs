@@ -68,10 +68,13 @@ try {
       await page.goto(origin + "/runtime?tab=gateway");
       const feed = page.getByRole("region", { name: "Gateway activity", exact: true });
       await expect(feed.getByText("Connected to durable activity", { exact: true })).toBeVisible({ timeout: 45000 });
-      await expect(feed.getByTestId("gateway-activity-row")).toHaveCount(212);
+      await expect(feed.getByTestId("gateway-activity-row")).toHaveCount(5);
       await page.getByRole("button", { name: "Runtime profiles", exact: true }).click();
       await expect(page.getByRole("region", { name: "Runtime profiles", exact: true }).getByText("Acceptance · active · revision 1")).toBeVisible();
       await page.getByRole("button", { name: "Live Feed", exact: true }).click();
+      await page.getByRole("link", { name: "Open live activity", exact: true }).click();
+      await expect(page).toHaveURL(/\/live-activity/);
+      await page.getByLabel("Rows per page").selectOption("250");
       await expect(feed.getByTestId("gateway-activity-row")).toHaveCount(212);
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), "Page must fit viewport");
       assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), theme);

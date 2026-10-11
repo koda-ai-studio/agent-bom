@@ -23,6 +23,7 @@ Design:
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timedelta, timezone
 from typing import Any, Protocol, cast
 
 logger = logging.getLogger(__name__)
@@ -37,6 +38,12 @@ _HTTP_TIMEOUT = 20.0
 
 class TraceConnectorError(RuntimeError):
     """Raised when a trace connector cannot authenticate or reach its API."""
+
+
+class _TraceConnectorHTTPError(TraceConnectorError):
+    def __init__(self, status: int) -> None:
+        self.status = status
+        super().__init__(f"trace connector returned HTTP {status}")
 
 
 class TraceConnectorValidationError(TraceConnectorError):
@@ -116,9 +123,26 @@ def _call_json(client: _HttpClient, method: str, url: str, **kwargs: Any) -> Any
     except Exception as exc:  # noqa: BLE001 — surface a clean, credential-free error
         raise TraceConnectorError(f"trace connector request failed: {type(exc).__name__}") from exc
     status = getattr(resp, "status_code", 0)
-    if status >= 400:
-        raise TraceConnectorError(f"trace connector returned HTTP {status}")
-    return resp.json()
+    if not 200 <= status < 300:
+        raise _TraceConnectorHTTPError(status)
+    try:
+        return resp.json()
+    except (ValueError, TypeError) as exc:
+        raise TraceConnectorError("trace connector returned invalid JSON") from exc
+
+
+def _records(payload: Any, key: str) -> list[dict[str, Any]]:
+    records = payload.get(key) if isinstance(payload, dict) else payload
+    if not isinstance(records, list) or any(
+        not isinstance(row, dict)
+        or not isinstance(row.get("id"), str)
+        or not row["id"].strip()
+        or not isinstance(row.get("name"), str)
+        or not row["name"].strip()
+        for row in records
+    ):
+        raise TraceConnectorError("trace connector returned invalid records")
+    return records
 
 
 # ─── Langfuse ──────────────────────────────────────────────────────────────
@@ -127,13 +151,17 @@ def _call_json(client: _HttpClient, method: str, url: str, **kwargs: Any) -> Any
 def _langfuse_observation_to_span(obs: dict[str, Any], *, include_content: bool) -> dict[str, Any] | None:
     if not isinstance(obs, dict):
         return None
+    # Explicit observation kinds must not become fabricated tool executions.
+    # Preserve legacy untyped observations for existing instrumentations.
+    if obs.get("type") and str(obs["type"]).upper() != "TOOL":
+        return None
     name = str(obs.get("name") or "").strip()
     if not name:
         return None
     attributes: list[dict[str, Any]] = [_attr("tool.name", name)]
     raw_meta = obs.get("metadata")
     metadata: dict[str, Any] = raw_meta if isinstance(raw_meta, dict) else {}
-    server = metadata.get("server") or metadata.get("mcp_server") or obs.get("model")
+    server = metadata.get("server") or metadata.get("mcp_server")
     if server:
         attributes.append(_attr("mcp.server", server))
     package = metadata.get("package") or metadata.get("dependency")
@@ -167,22 +195,38 @@ def fetch_langfuse_traces(
         raise TraceConnectorError("langfuse connector requires host, public_key and secret_key")
     base = host.rstrip("/")
     _validate_pull_url(base)
-    url = f"{base}/api/public/observations"
+    url = f"{base}/api/public/v2/observations"
+    end = datetime.now(timezone.utc)
+    window = {"fromStartTime": (end - timedelta(days=1)).isoformat(), "toStartTime": end.isoformat()}
+    params = {
+        "limit": _bounded_limit(limit),
+        **window,
+        "type": "TOOL",
+        "fields": "core,basic,metadata" + (",io" if include_content else ""),
+        "expandMetadata": "server,mcp_server,package,dependency",
+    }
     resolved, owns = _client_or_default(client)
     try:
-        payload = _call_json(
-            resolved,
-            "GET",
-            url,
-            params={"limit": _bounded_limit(limit)},
-            auth=(public_key, secret_key),
-        )
+        try:
+            payload = _call_json(resolved, "GET", url, params=params, auth=(public_key, secret_key))
+        except _TraceConnectorHTTPError as exc:
+            # v3 self-hosted instances have no v2 route. Never downgrade on
+            # authorization, rate-limit, retired-route or upstream failures.
+            if exc.status != 404:
+                raise
+            payload = _call_json(
+                resolved,
+                "GET",
+                f"{base}/api/public/observations",
+                params={"limit": _bounded_limit(limit), **window},
+                auth=(public_key, secret_key),
+            )
     finally:
         if owns:
             getattr(resolved, "close", lambda: None)()
-    records = payload.get("data", []) if isinstance(payload, dict) else payload
+    records = _records(payload, "data")
     spans: list[dict[str, Any]] = []
-    for obs in records or []:
+    for obs in records[: _bounded_limit(limit)]:
         span = _langfuse_observation_to_span(obs, include_content=include_content)
         if span is not None:
             spans.append(span)
@@ -213,7 +257,7 @@ def _langsmith_run_to_span(run: dict[str, Any], *, include_content: bool) -> dic
     if include_content and run.get("outputs") is not None:
         attributes.append(_attr("tool.output", run.get("outputs")))
     return {
-        "traceId": str(run.get("trace_id") or run.get("session_id") or ""),
+        "traceId": str(run.get("trace_id") or ""),
         "spanId": str(run.get("id") or ""),
         "name": f"adk.tool.{name}",
         "attributes": attributes,
@@ -239,10 +283,22 @@ def fetch_langsmith_traces(
     base = (api_url or "https://api.smith.langchain.com").rstrip("/")
     _validate_pull_url(base)
     body: dict[str, Any] = {"limit": _bounded_limit(limit), "run_type": "tool"}
-    if project:
-        body["project_name"] = project
     resolved, owns = _client_or_default(client)
     try:
+        if project:
+            projects = _call_json(
+                resolved,
+                "GET",
+                f"{base}/sessions",
+                headers={"x-api-key": api_key},
+                params={"name": project, "limit": 2, "include_stats": False},
+            )
+            if not isinstance(projects, list) or len(projects) != 1 or not isinstance(projects[0], dict):
+                raise TraceConnectorError("langsmith project could not be resolved uniquely")
+            project_id = projects[0].get("id")
+            if not isinstance(project_id, str) or not project_id or projects[0].get("name") != project:
+                raise TraceConnectorError("langsmith returned invalid project scope")
+            body["session"] = [project_id]
         payload = _call_json(
             resolved,
             "POST",
@@ -253,9 +309,9 @@ def fetch_langsmith_traces(
     finally:
         if owns:
             getattr(resolved, "close", lambda: None)()
-    records = payload.get("runs", []) if isinstance(payload, dict) else payload
+    records = _records(payload, "runs")
     spans: list[dict[str, Any]] = []
-    for run in records or []:
+    for run in records[: _bounded_limit(limit)]:
         span = _langsmith_run_to_span(run, include_content=include_content)
         if span is not None:
             spans.append(span)

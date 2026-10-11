@@ -552,3 +552,17 @@ def test_ml_span_agent_is_empty_when_absent():
     """No attribution must stay empty rather than inventing one."""
     calls = parse_ml_api_spans(_otlp_trace([_ml_span([])]))
     assert calls[0].agent == ""
+
+
+@pytest.mark.parametrize(
+    "name,attributes,parser",
+    [
+        ("adk.tool.read_file", [], parse_otel_traces),
+        ("chat", [{"key": "gen_ai.system", "value": {"stringValue": "openai"}}], parse_ml_api_spans),
+    ],
+)
+def test_otlp_json_string_nanoseconds(name, attributes, parser):
+    payload = _otlp_trace(
+        [{"name": name, "attributes": attributes, "startTimeUnixNano": "1720000000000000000", "endTimeUnixNano": "1720000000123456789"}]
+    )
+    assert parser(payload)[0].duration_ms == pytest.approx(123.456789)

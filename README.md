@@ -205,6 +205,6 @@ acts on selected tool calls. Missing evidence stays unavailable or partial. Cont
 
 ## Contributing and support
 
-[Contributing](CONTRIBUTING.md) · [Support](SUPPORT.md) · [Open issues](https://github.com/koda-ai-studio/agent-bom/issues) · [Apache-2.0 license](LICENSE)
+[Contributing](CONTRIBUTING.md) · [Capabilities and roadmap](docs/ROADMAP.md) · [Support](SUPPORT.md) · [Open issues](https://github.com/koda-ai-studio/agent-bom/issues) · [Apache-2.0 license](LICENSE)
 
 Source version: **v0.108.4** · Latest release: **v0.108.4** · [Changelog](CHANGELOG.md)

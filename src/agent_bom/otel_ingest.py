@@ -19,6 +19,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
+from agent_bom.runtime.trace_input import duration_ms as _duration_ms
+
 _ADK_TOOL_RE = re.compile(r"^adk\.tool\.(.+)$")
 
 # Maximum trace file size (50 MB) — prevents OOM on adversarially large files
@@ -292,9 +294,7 @@ def parse_otel_traces(trace_data: dict) -> list[ToolCallTrace]:
                 params[param_name] = val.get("stringValue", val.get("intValue", ""))
 
         # Duration
-        start = span.get("startTimeUnixNano", 0)
-        end = span.get("endTimeUnixNano", 0)
-        duration_ms = (end - start) / 1_000_000 if start and end else 0.0
+        duration_ms = _duration_ms(span)
 
         # Status
         status_obj = span.get("status", {})
@@ -391,9 +391,7 @@ def parse_ml_api_spans(trace_data: dict) -> list[LLMAPICall]:
                 )
 
                 # Duration
-                start = span.get("startTimeUnixNano", 0)
-                end = span.get("endTimeUnixNano", 0)
-                duration_ms = (end - start) / 1_000_000 if start and end else 0.0
+                duration_ms = _duration_ms(span)
 
                 # Status
                 status_obj = span.get("status", {})

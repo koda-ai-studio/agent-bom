@@ -12,6 +12,7 @@ New here? Read [`START_HERE.md`](START_HERE.md) for role-based paths, then
 
 - [`FIRST_RUN.md`](FIRST_RUN.md) — install, first scan, first artifact, CI gate
 - [`START_HERE.md`](START_HERE.md) — role-based entry paths
+- [`ROADMAP.md`](ROADMAP.md) — current capabilities, coverage boundaries and planned work
 - [`HOW_IT_WORKS.md`](HOW_IT_WORKS.md) — five-stage evidence flow
 - [`GALLERY.md`](GALLERY.md) — product scenarios with captures
 - [`SCAN_EVIDENCE_JOURNEY.md`](SCAN_EVIDENCE_JOURNEY.md) — inspect scan evidence and a per-agent BOM
@@ -39,6 +40,7 @@ New here? Read [`START_HERE.md`](START_HERE.md) for role-based paths, then
 - [`EDITIONS.md`](EDITIONS.md) · [`PRODUCT_MAP.md`](PRODUCT_MAP.md) — deployment lanes and surface chooser
 - [`CLOUD_CONNECT.md`](CLOUD_CONNECT.md) · [`DATA_SOURCES.md`](DATA_SOURCES.md) · [`INGEST_PATHS.md`](INGEST_PATHS.md) — cloud connections, intake mechanisms, ingest paths
 - [`ENDPOINT_CONNECTORS.md`](ENDPOINT_CONNECTORS.md) · [`DATABASE_EVIDENCE.md`](DATABASE_EVIDENCE.md) — endpoint and database connectors
+- [`TRACE_CONNECTIONS.md`](TRACE_CONNECTIONS.md) — managed trace collection, credential rotation and evidence limits
 - [`AUTH_SSO.md`](AUTH_SSO.md) — single sign-on setup
 - [`RUNTIME_REFERENCE.md`](RUNTIME_REFERENCE.md) · [`RUNTIME_MONITORING.md`](RUNTIME_MONITORING.md) · [`RUNTIME_FAIL_MODES.md`](RUNTIME_FAIL_MODES.md) · [`RUNTIME_PROXY_AUDIT_JSONL.md`](RUNTIME_PROXY_AUDIT_JSONL.md) — proxy and gateway
 - [`AGENT_FIREWALL.md`](AGENT_FIREWALL.md) · [`POLICY_PRECEDENCE.md`](POLICY_PRECEDENCE.md) — inter-agent firewall and policy order

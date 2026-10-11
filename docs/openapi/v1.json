@@ -24856,6 +24856,30 @@
         "title": "MaliciousCheckResponse",
         "type": "object"
       },
+      "ManagedTraceConnection": {
+        "additionalProperties": true,
+        "properties": {
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "provider",
+          "display_name"
+        ],
+        "title": "ManagedTraceConnection",
+        "type": "object"
+      },
       "ManagedTrialInvitationRequest": {
         "additionalProperties": false,
         "properties": {
@@ -39284,6 +39308,14 @@
       "TraceConnectorsResponse": {
         "additionalProperties": true,
         "properties": {
+          "connections": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ManagedTraceConnection"
+            },
+            "title": "Connections",
+            "type": "array"
+          },
           "connectors": {
             "items": {
               "$ref": "#/components/schemas/ObsTraceConnector"
@@ -78559,7 +78591,7 @@
     },
     "/v1/traces/connectors/{provider}/pull": {
       "post": {
-        "description": "Pull traces from an LLM-observability platform and correlate them (#3899).\n\nBody: ``{\"credentials\": {...}, \"limit\": int, \"screen_content\": bool}``. The\nprovider's credentials (Langfuse public/secret key or LangSmith API key) are\nused for auth only and never logged. Pulled traces feed the same parser +\nper-span correlation pipeline as pushed OTLP. ``screen_content`` opts in to\nShield content screening (off by default; raw content is never stored).",
+        "description": "Pull traces from an LLM-observability platform and correlate them (#3899).\n\nSelect a managed ``connection_id`` or provide one-shot ``credentials``.\nScreening is opt-in; provider responses may still contain content.",
         "operationId": "pull_trace_connector_v1_traces_connectors__provider__pull_post",
         "parameters": [
           {
