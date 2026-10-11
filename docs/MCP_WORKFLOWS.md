@@ -14,7 +14,7 @@ expose different profiles; connect only the entries needed for the task.
 | Profile | Tools | Use it for | Workflow prompts |
 |---|---:|---|---|
 | `scan` (default) | 8 | Package/project scan, exposure and fix planning | quick-audit, pre-install-check, remediation-plan |
-| `graph` | 9 | Inventory rollup, asset drill-down and scoped correlation | Use inventory_summary → inventory_list → inventory_asset, then inspect paths |
+| `graph` | 10 | Inventory rollup, asset drill-down and scoped correlation | Use inventory_summary → inventory_list → inventory_asset, then inspect paths |
 | `cloud` | 6 | Inventory, connection scope and CIS posture | cloud-connection-review |
 | `runtime` | 7 | Gateway policy, alerts and incident evidence | incident-triage, gateway-fleet-live-demo |
 | `audit` | 4 | Scan, framework mapping, policy and audit integrity | compliance-report |

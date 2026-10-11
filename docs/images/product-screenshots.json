@@ -1,9 +1,9 @@
 {
   "release_version": "0.108.4",
-  "captured_at": "2026-10-11T22:35:57.631Z",
-  "source_commit": "191d72b232f13c791448b1c71d7cd4a43a2db8f4",
+  "captured_at": "2026-10-11T23:05:24.284Z",
+  "source_commit": "0251f093070d892c81f49ccc8e1d580dc1b4de7b",
   "source_tree": "clean",
-  "capture_inputs_sha256": "sha256:dc86e6193b50895ab775125d54f9df17db6ecea77a956df3a32a0897d34a999c",
+  "capture_inputs_sha256": "sha256:39b0765c01a0f7b0121dd2ac0386dfc6dc4969dbbee7a111e598b3e40b4ba6ec",
   "capture_note": "Deterministically captured from real Next.js dashboard routes in capture mode. The correlation hero views consume the committed, hash-pinned Reference evidence lab — modeled local infrastructure artifact with CVE-2023-4863 and exact canonical joins. Remaining gallery fixtures are explicitly synthetic UI states. No external, customer, or private infrastructure data is used.",
   "screenshots": [
     {
@@ -132,7 +132,7 @@
       "page": "/connections?capture=1",
       "scope": "Connections hub — scalable connector gallery across cloud, code, AI, and data sources",
       "visible_version": "0.108.4",
-      "sha256": "sha256:fde5f7ef35859369798af61513e6de21e866b29d588ae497be0807185013cd9f"
+      "sha256": "sha256:0729128942962743e5f24b92a3dd08ffa2af1dfc2c9ec759c7dbde06a0df635b"
     },
     {
       "presentation": "dark desktop",
@@ -297,7 +297,7 @@
       "page": "/security-graph?lens=estate&scan=scan-proof-ai-platform&rollup=1&scenario=scenario-private-service-endpoint&state=proposed&capture=1",
       "scope": "Modeled proposed-state comparison at 1568 by 780",
       "visible_version": "0.108.4",
-      "sha256": "sha256:942ab9b4b7187a0feb48f646846589dc28bec94d7f8d0fc13922c12b0dd5e027"
+      "sha256": "sha256:cc1887bf709a72b6a87bbcb5c44bf83f0044b7294b635d04cf02199a13adc7d2"
     },
     {
       "presentation": "dark desktop",
@@ -321,7 +321,7 @@
       "page": "/graph?lens=context&scan=scan-proof-ai-platform&capture=1",
       "scope": "Recorded neighborhood and selected evidence in the light theme, with bounded expansion and branch focus",
       "visible_version": "0.108.4",
-      "sha256": "sha256:0ee0b35270b3046318f132c3457ed24dd739df9cdcd9a042d24ebcd1fbd669b5"
+      "sha256": "sha256:a6c265d5051ec1c5b0935916ae977f9fb23867c23b6fa5b5d6ce3d16a8178fef"
     },
     {
       "presentation": "dark responsive 1000x900",
@@ -329,7 +329,7 @@
       "page": "/graph?lens=context&scan=scan-proof-ai-platform&capture=1",
       "scope": "Same nine recorded entities and eight relationships arranged left to right using the Horizontal layout control",
       "visible_version": "0.108.4",
-      "sha256": "sha256:68ae8e0191996143807792e07718008dba3b7271697683e90956379223218b79"
+      "sha256": "sha256:d8f2d9890763693f1b83525a410e280e434c43289af5748bae31f7374ee63f4a"
     },
     {
       "presentation": "light responsive 1000x900",
