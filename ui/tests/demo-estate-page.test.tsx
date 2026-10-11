@@ -195,15 +195,15 @@ describe("DemoEstatePage", () => {
     expect(screen.getByText("GCP Audit Logs")).toBeInTheDocument();
     expect(screen.getByText("2 records · google-cloud-audit-log")).toBeInTheDocument();
     expect(screen.getByText("workflow_run")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Open security graph/ })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /Investigate incident/ })).toHaveAttribute(
       "href",
-      "/security-graph?scan=showcase",
+      "/security-graph?scan=showcase&investigate=1&root=github%3Aworkflow&lens=lineage",
     );
     expect(screen.getByText("Demo findings")).toBeInTheDocument();
     expect(screen.getByText("Evidence-linked correlations")).toBeInTheDocument();
     expect(screen.queryByText("Attack paths")).not.toBeInTheDocument();
     const incident = screen.getByRole("heading", { name: /Sensitive-data path stopped/i }).closest("section");
-    expect(within(incident!).getByTitle(story.primary_correlation.asset_path[0]!)).toHaveClass("break-all");
+    expect(within(incident!).getByText(story.primary_correlation.asset_path[0]!)).toHaveClass("break-all");
     const starts = screen.getByRole("region", { name: /Start by workflow/i });
     for (const label of [
       "CLI scan",
@@ -217,13 +217,22 @@ describe("DemoEstatePage", () => {
     }
   });
 
+  it("does not carry incident assets into a different showcase snapshot", async () => {
+    apiMock.getEnterpriseDemoStory.mockResolvedValue({ ...story, graph_snapshot_id: "older-showcase" });
+    render(<DemoEstatePage />);
+    expect(await screen.findByRole("heading", { name: "Northstar Health AI" })).toBeVisible();
+    expect(screen.queryByRole("link", { name: "Investigate incident" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Inspect .* in graph/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Open security graph/ })).toHaveAttribute("href", "/security-graph?scan=showcase");
+  });
+
   it("qualifies a legitimate baseline while the showcase is prepared", async () => {
     apiMock.getEnterpriseDemoStory.mockResolvedValue(story);
     apiMock.getDemoEstateStatus.mockResolvedValue({ ...alignedStatus, showcase_available: false, graph_owner_scan_id: null, graph_alignment: "unavailable", reason: "showcase_preparation_incomplete" });
     render(<DemoEstatePage />);
     expect(await screen.findByText(/Sample graph preparation is incomplete/)).toBeVisible();
     expect(screen.queryByText(/holds non-demo graph data/)).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /Open security graph/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Investigate incident/ })).not.toBeInTheDocument();
   });
 
   it("never links a non-demo graph from the demo page when the demo is blocked", async () => {
@@ -257,9 +266,9 @@ describe("DemoEstatePage", () => {
     render(<DemoEstatePage />);
 
     expect(await screen.findByTestId("demo-estate-graph-scope")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Open security graph/i })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /Investigate incident/i })).toHaveAttribute(
       "href",
-      `/security-graph?scan=${alignedStatus.showcase_snapshot_id}`,
+      `/security-graph?scan=${alignedStatus.showcase_snapshot_id}&investigate=1&root=github%3Aworkflow&lens=lineage`,
     );
   });
 
