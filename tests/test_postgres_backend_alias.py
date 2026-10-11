@@ -10,7 +10,7 @@ import pytest
     [
         ("stores", "_get_idempotency_store", "_idempotency_store", "idempotency_store", "PostgresIdempotencyStore"),
         (
-            "stores",
+            "tenant_graph_retention_store",
             "_get_tenant_graph_retention_store",
             "_tenant_graph_retention_store",
             "tenant_graph_retention_store",

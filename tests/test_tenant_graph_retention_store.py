@@ -287,3 +287,20 @@ def test_cross_tenant_purge_resolves_windows_with_one_maintenance_listing(make_s
     assert calls == [("list_overrides", True)]
     assert result["purged_snapshots"] == [{"scan_id": "c", "tenant_id": "tenant-c-default-window"}]
     assert result["per_tenant_retention_days"] == {tenant_a: 90, tenant_b: 60, "tenant-c-default-window": 30}
+
+
+def test_global_fixture_restores_retention_store_after_backend_swap(make_store):
+    from agent_bom.api.tenant_graph_retention_store import (
+        _get_tenant_graph_retention_store,
+        set_tenant_graph_retention_store,
+    )
+    from tests.conftest import _restore_store_singletons, _snapshot_store_singletons
+
+    previous = _get_tenant_graph_retention_store()
+    snapshot = _snapshot_store_singletons()
+    try:
+        set_tenant_graph_retention_store(make_store())
+        _restore_store_singletons(snapshot)
+        assert _get_tenant_graph_retention_store() is previous
+    finally:
+        set_tenant_graph_retention_store(previous)
