@@ -1161,7 +1161,7 @@ def _reconciled_exec_counts(estate: dict[str, Any], hub_severity: dict[str, int]
 
 def _current_open_scan_findings(jobs: list[Any]) -> list[dict[str, Any]]:
     """The same executed scan, time window and lifecycle basis as the drill."""
-    from agent_bom.api.routes.scan import current_open_scan_findings
+    from agent_bom.api.scan_finding_read import current_open_scan_findings
 
     return current_open_scan_findings(jobs)
 

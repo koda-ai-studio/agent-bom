@@ -7,7 +7,7 @@ import os
 
 from agent_bom.agent_identity import ANONYMOUS
 from agent_bom.api.gateway_request import _sanitize_for_log
-from agent_bom.api.middleware import InMemoryRateLimitStore, PostgresRateLimitStore
+from agent_bom.api.rate_limit_store import InMemoryRateLimitStore, PostgresRateLimitStore
 from agent_bom.api.storage_schema import postgres_deployment_configured
 from agent_bom.runtime.gateway_settings import GatewaySettings
 

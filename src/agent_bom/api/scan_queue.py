@@ -82,7 +82,7 @@ def distributed_scans_enabled() -> bool:
     if raw and _truthy(raw):
         return True
     try:
-        from agent_bom.api.middleware import clustered_control_plane_required
+        from agent_bom.api.storage.deployment import clustered_control_plane_required
 
         return clustered_control_plane_required()
     except Exception:  # noqa: BLE001

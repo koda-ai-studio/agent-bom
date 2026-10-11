@@ -529,7 +529,7 @@ async def _run_scan_pipeline(
 
 def _persisted_finding_evidence(*, tenant_id: str, cve_id: str, scan_id: str | None = None) -> dict[str, Any]:
     """Read the API's canonical persisted finding spine without an HTTP self-call."""
-    from agent_bom.api.routes.scan import persisted_finding_evidence
+    from agent_bom.api.scan_finding_read import persisted_finding_evidence
 
     return persisted_finding_evidence(tenant_id=tenant_id, cve_id=cve_id, scan_id=scan_id)
 

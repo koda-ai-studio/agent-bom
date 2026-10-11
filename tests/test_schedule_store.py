@@ -764,7 +764,7 @@ class TestSchedulerLoop:
             except asyncio.CancelledError:
                 pass
 
-        with patch("agent_bom.api.postgres_store._get_pool", return_value=_FakePool()):
+        with patch("agent_bom.api.postgres_common._get_pool", return_value=_FakePool()):
             asyncio.run(_run())
 
         assert observed_tenants
@@ -812,7 +812,7 @@ class TestSchedulerLoop:
             except asyncio.CancelledError:
                 pass
 
-        with patch("agent_bom.api.postgres_store._get_pool", return_value=_FakePool()):
+        with patch("agent_bom.api.postgres_common._get_pool", return_value=_FakePool()):
             asyncio.run(_run())
 
         assert triggered == []

@@ -4,7 +4,7 @@ from copy import deepcopy
 
 import pytest
 
-from agent_bom.api.routes import scan
+from agent_bom.api import scan_finding_read as scan
 from agent_bom.api.storage.finding_history import HistoryReader, HistoryUnavailableError, identity_hash
 from agent_bom.api.store import SQLiteJobStore
 from tests.api.test_scan_job_sla_history import job

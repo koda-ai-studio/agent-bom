@@ -189,15 +189,13 @@ def auth_policy(request: Request) -> dict:
     """
     from agent_bom.api.audit_log import describe_audit_hmac_status
     from agent_bom.api.auth import get_api_key_policy
+    from agent_bom.api.auth_posture import get_auth_posture, get_auth_runtime_status, get_trusted_proxy_auth_status
     from agent_bom.api.compliance_signing import describe_signing_posture
     from agent_bom.api.middleware import (
         describe_proxy_control_plane_mtls_posture,
         describe_security_header_posture,
-        get_auth_posture,
-        get_auth_runtime_status,
         get_rate_limit_key_status,
         get_rate_limit_runtime_status,
-        get_trusted_proxy_auth_status,
     )
     from agent_bom.api.oidc import describe_oidc_posture
     from agent_bom.api.saml import describe_saml_posture

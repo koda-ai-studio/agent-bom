@@ -230,7 +230,7 @@ def test_operational_facets_cover_the_whole_query_not_only_the_returned_page(
         lambda _tenant_id: object(),
     )
     monkeypatch.setattr(
-        "agent_bom.api.routes.scan._finding_triage_state",
+        "agent_bom.api.finding_facets._finding_triage_state",
         lambda row, _index: {"decision": "affected", "assignee": "appsec"} if row.get("id") == "finding-outside-first-page" else None,
     )
 
@@ -431,7 +431,6 @@ def test_findings_envelope_total_never_contradicts_the_severity_facet(
     still answers the histogram exactly, which is precisely the combination that
     used to emit an exact facet beside a truncated total.
     """
-    from agent_bom.api.routes import scan as scan_routes
 
     tenant = "tenant-facet-contradiction"
     store = InMemoryComplianceHubStore()
@@ -449,7 +448,7 @@ def test_findings_envelope_total_never_contradicts_the_severity_facet(
     store.add(tenant, rows)
     store.upsert_current_batch(tenant, rows, observed_at="2026-07-30T00:00:00Z", batch_id="contradiction", source="fixture")
     set_compliance_hub_store(store)
-    monkeypatch.setattr(scan_routes, "_FACET_SCAN_BUDGET", 3)
+    monkeypatch.setattr("agent_bom.api.finding_facets._FACET_SCAN_BUDGET", 3)
 
     response = TestClient(app).get(
         "/v1/findings?include_facets=true&window_days=0&severity=critical",

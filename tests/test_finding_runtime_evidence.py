@@ -145,9 +145,9 @@ def test_runtime_join_preserves_counts_and_bounded_source_order():
 
 
 def test_runtime_join_loads_once_per_tenant_per_read_context(monkeypatch):
+    from agent_bom.api import scan_finding_projection as scan
     from agent_bom.api.finding_read_context import finding_read_scope
     from agent_bom.api.models import ScanJob, ScanRequest
-    from agent_bom.api.routes import scan
     from agent_bom.cloud import runtime_workload_evidence
 
     loaded = []

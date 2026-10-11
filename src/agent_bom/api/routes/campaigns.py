@@ -293,7 +293,7 @@ def _actor(request: Request) -> str:
 
 def _campaign_source_revision(request: Request) -> tuple[str, int]:
     from agent_bom.api.compliance_hub_store import get_compliance_hub_store
-    from agent_bom.api.routes.scan import _completed_jobs_for_tenant
+    from agent_bom.api.scan_finding_read import _completed_jobs_for_tenant
     from agent_bom.api.stores import _get_store
 
     tenant_id = _tenant(request)

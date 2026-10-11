@@ -225,7 +225,7 @@ def client(monkeypatch, store):
     monkeypatch.setattr(agent_lifecycle, "get_lifecycle_store", lambda: store)
     monkeypatch.setattr(agent_lifecycle, "get_agent_identity_store", lambda: identities)
     monkeypatch.setattr(
-        "agent_bom.api.middleware.get_auth_runtime_status", lambda: {"auth_required": True, "unauthenticated_allowed": False}
+        "agent_bom.api.auth_runtime_state.get_auth_runtime_status", lambda: {"auth_required": True, "unauthenticated_allowed": False}
     )
     app.include_router(agent_lifecycle.router, prefix="/v1")
     return TestClient(app), identity, jobs

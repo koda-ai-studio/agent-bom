@@ -3,6 +3,7 @@
 import pytest
 from starlette.requests import Request
 
+from agent_bom.api import scan_finding_read
 from agent_bom.api.fleet_store import FleetAgent, InMemoryFleetStore, SQLiteFleetStore
 from agent_bom.api.mcp_observation_store import InMemoryMCPObservationStore, MCPObservation, SQLiteMCPObservationStore
 from agent_bom.api.models import JobStatus, ScanJob, ScanRequest
@@ -47,7 +48,7 @@ def test_inventory_pages_preserve_distinct_occurrences_and_unknown_identity(tmp_
             result={"agents": rows},
         )
     )
-    monkeypatch.setattr(scan, "_get_store", lambda: store)
+    monkeypatch.setattr(scan_finding_read, "_get_store", lambda: store)
     pages = [scan.list_inventory(_request(), limit=2, offset=offset) for offset in (0, 2, 4)]
     assert {page["package_total"] for page in pages} == {5}
     packages = [package for page in pages for package in page["packages"]]
@@ -133,7 +134,7 @@ def test_changed_contract_models_preserve_raw_response_and_publish_schemas(monke
     from agent_bom.api.models import AgentBomManifestResponse, InventoryResponse
     from agent_bom.api.server import app
 
-    monkeypatch.setattr(scan, "_get_store", InMemoryJobStore)
+    monkeypatch.setattr(scan_finding_read, "_get_store", InMemoryJobStore)
     raw = scan.list_inventory(_request(), limit=2, offset=0)
     assert InventoryResponse.model_validate(raw).model_dump() == raw
     monkeypatch.setattr(agent_manifest, "_get_fleet_store", InMemoryFleetStore)
@@ -196,7 +197,7 @@ def test_http_serialization_retains_nonempty_inventory_and_shared_manifest(monke
                 tenant_id="tenant-a", observation_id=name, server_stable_id="shared", server_name="shared-server", agent_name=name
             )
         )
-    monkeypatch.setattr(scan, "_get_store", lambda: jobs)
+    monkeypatch.setattr(scan_finding_read, "_get_store", lambda: jobs)
     monkeypatch.setattr(agent_manifest, "_get_fleet_store", lambda: fleet)
     monkeypatch.setattr(agent_manifest, "_get_mcp_observation_store", lambda: observations)
     app = FastAPI()

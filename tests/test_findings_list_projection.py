@@ -123,8 +123,8 @@ def test_grouped_list_honours_the_same_projection() -> None:
 
 
 def test_posture_materializes_each_scan_job_once_per_read(monkeypatch: pytest.MonkeyPatch) -> None:
+    from agent_bom.api import scan_finding_read as scan_route
     from agent_bom.api.routes import overview as overview_route
-    from agent_bom.api.routes import scan as scan_route
 
     _seed()
     monkeypatch.setattr(overview_route, "_overview_cache_get", lambda *_args, **_kwargs: None)

@@ -5,6 +5,7 @@ from unittest.mock import Mock
 
 import pytest
 
+from agent_bom.api import scan_finding_projection
 from agent_bom.api.findings_current import current_scan_findings
 from agent_bom.api.routes import scan
 from tests.api.test_partial_rescan_findings import attempted
@@ -71,7 +72,7 @@ def test_mixed_representations_preserve_enrichment_order_without_fallback(snapsh
     def attach(finding, *_args, **_kwargs):
         finding["runtime_evidence"] = {"servers_seen": list(finding.get("affected_servers", []))}
 
-    monkeypatch.setattr(scan, "attach_runtime_evidence_to_finding", attach)
+    monkeypatch.setattr(scan_finding_projection, "attach_runtime_evidence_to_finding", attach)
     monkeypatch.setenv("AGENT_BOM_SCAN_SNAPSHOT_READS", "0")
     expected = scan._iter_scan_findings(row)
     monkeypatch.setenv("AGENT_BOM_SCAN_SNAPSHOT_READS", "1")
@@ -102,7 +103,7 @@ def test_live_enrichment_is_not_frozen_at_snapshot_time(snapshots, monkeypatch):
     def attach(finding, *_args, **_kwargs):
         finding["runtime_evidence"] = dict(live)
 
-    monkeypatch.setattr(scan, "attach_runtime_evidence_to_finding", attach)
+    monkeypatch.setattr(scan_finding_projection, "attach_runtime_evidence_to_finding", attach)
     for signal in ("first", "changed"):
         live["signal"] = signal
         monkeypatch.setenv("AGENT_BOM_SCAN_SNAPSHOT_READS", "0")
@@ -149,7 +150,9 @@ def test_owner_and_suppression_are_projected_after_snapshot_verification(snapsho
     live = {"owner": "first", "suppressed": False}
     monkeypatch.setattr(enterprise, "build_tenant_triage_owner_index", lambda _: {"present": True})
     monkeypatch.setattr(enterprise, "triage_owner_for", lambda *_args, **_kwargs: live["owner"])
-    monkeypatch.setattr(scan, "project_current_suppressions", lambda rows, _: [{**r, "suppressed": live["suppressed"]} for r in rows])
+    monkeypatch.setattr(
+        scan_finding_projection, "project_current_suppressions", lambda rows, _: [{**r, "suppressed": live["suppressed"]} for r in rows]
+    )
     for owner, suppressed in [("first", False), ("changed", True)]:
         live.update(owner=owner, suppressed=suppressed)
         monkeypatch.setenv("AGENT_BOM_SCAN_SNAPSHOT_READS", "0")

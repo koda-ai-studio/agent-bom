@@ -82,3 +82,28 @@ server or its routers. The server preserves the CLI setter/getter exports.
 Invalid configured roles fail closed before replacing the active key; clearing
 the key disables automatic loopback browser sessions. Host restrictions, tenant
 binding and session authorization remain enforced by their existing adapters.
+
+## Finding reads and authentication state
+
+The scan router composes HTTP handlers; finding scope, facets, grouping, merged
+pagination, and view filtering live in `api/finding_*.py`. Persisted scan reads
+and enrichment live in `api/scan_finding_read.py` and
+`api/scan_finding_projection.py`. Export and MCP readers import those services
+directly. The router retains compatibility exports, but lower-level helpers
+must not import the router. Cursor order, tenant scope, suppression, incomplete
+counts, and redaction remain the existing read contracts.
+
+`api/auth_runtime_state.py` owns the applied authentication posture.
+`api/auth_posture.py` derives configuration facts; `api/middleware.py` enforces
+requests. Derivation preserves the existing anonymous opt-in and role clamp;
+missing credentials and tenant scope remain rejected at their existing gates.
+Rate-limit persistence lives in `api/rate_limit_store.py`, including the same
+Postgres advisory lock and schema-version guard. Clustered initialization
+failures must not fall back to an in-process limiter.
+
+Source-defined tools and application entrypoints are projected by
+`graph/ast_tool_projection.py`. Framework agents, model links, and observability
+edges are projected by `graph/framework_topology_projection.py`, with mutable
+projection state scoped to a single build. `graph/builder.py` retains stage
+ordering and compatibility exports. Demo graph seeding uses graph services
+directly rather than importing an HTTP router.

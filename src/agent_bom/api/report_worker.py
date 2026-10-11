@@ -113,7 +113,7 @@ def _audit_report(job: ReportJob, action: str) -> None:
 
 def _write_findings_artifact(job: ReportJob, attempt: str, lost: threading.Event) -> tuple[int, int, str, Path]:
     from agent_bom.api import time_window
-    from agent_bom.api.routes.scan import _canonical_scope_filters
+    from agent_bom.api.finding_scope_filters import _canonical_scope_filters
     from agent_bom.export.runner import iter_current_findings
 
     resolved_window = time_window.normalize_window_days(job.window_days)

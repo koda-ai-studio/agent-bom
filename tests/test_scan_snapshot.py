@@ -172,7 +172,7 @@ def test_materializer_never_reads_mutable_tenant_state(monkeypatch) -> None:
     def _forbidden(*_args, **_kwargs):
         raise AssertionError("snapshot materialization must not read mutable tenant state")
 
-    monkeypatch.setattr("agent_bom.api.routes.scan.attach_runtime_evidence_to_finding", _forbidden)
+    monkeypatch.setattr("agent_bom.api.scan_finding_projection.attach_runtime_evidence_to_finding", _forbidden)
     monkeypatch.setattr("agent_bom.api.routes.enterprise.build_tenant_triage_owner_index", _forbidden)
 
     _, rows = materialize_job_snapshot(_job())

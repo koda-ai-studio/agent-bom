@@ -753,6 +753,7 @@ def _build_account_summary(tenant_id: str, raw_account_ref: str) -> dict[str, An
     buckets, the #3946 scope filters, and the shared scan-store helpers so no
     counting logic is re-implemented here.
     """
+    from agent_bom.api.finding_scope_filters import _canonical_scope_filters, _finding_identity, _row_matches_scope
     from agent_bom.api.routes.overview import (
         _ALL_SEVERITY_KEYS,
         _COVERAGE_DOMAINS,
@@ -761,13 +762,7 @@ def _build_account_summary(tenant_id: str, raw_account_ref: str) -> dict[str, An
         _empty_severity,
         _row_domain,
     )
-    from agent_bom.api.routes.scan import (
-        _bulk_ingested_findings_for_tenant,
-        _canonical_scope_filters,
-        _completed_jobs_for_tenant,
-        _finding_identity,
-        _row_matches_scope,
-    )
+    from agent_bom.api.scan_finding_read import _bulk_ingested_findings_for_tenant, _completed_jobs_for_tenant
 
     canonical_ref, provider, account = _split_account_ref(raw_account_ref)
 

@@ -47,7 +47,7 @@ def iter_scan_spine_findings(
     rather than failing the run.
     """
     try:
-        from agent_bom.api.routes.scan import iter_tenant_scan_spine_findings
+        from agent_bom.api.scan_finding_read import iter_tenant_scan_spine_findings
     except Exception:  # noqa: BLE001 - scan spine is additive; hub export must still run
         logger.debug("scan-spine finding source unavailable; exporting hub only", exc_info=True)
         return

@@ -105,11 +105,7 @@ def _enforce_auth_defaults(command: str, host: str, api_key: str | None, allow_i
       their `--allow-insecure-no-auth` does NOT actually disable the SCIM /
       SAML / OIDC / API-key middleware path that's still in effect)
     """
-    from agent_bom.api.middleware import (
-        AuthPostureError,
-        derive_auth_posture,
-        validate_auth_posture,
-    )
+    from agent_bom.api.auth_posture import AuthPostureError, derive_auth_posture, validate_auth_posture
     from agent_bom.api.secret_source import secret_is_configured
 
     has_api_key = bool(api_key or secret_is_configured("AGENT_BOM_API_KEYS") or secret_is_configured("AGENT_BOM_API_KEY"))

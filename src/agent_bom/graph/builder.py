@@ -14,10 +14,12 @@ from collections.abc import Mapping
 from typing import Any
 
 from agent_bom.api.tracing import get_tracer
-from agent_bom.canonical_ids import canonical_graph_node_id
 from agent_bom.cloud.normalization import coerce_truthy
 from agent_bom.core.cloud_identity import cloud_resource_node_id
 from agent_bom.graph.agent_projection import project_agents
+from agent_bom.graph.ast_tool_projection import _apply_ast_tool_overlay as _apply_ast_tool_overlay
+from agent_bom.graph.ast_tool_projection import _project_ast_entrypoints as _project_ast_entrypoints
+from agent_bom.graph.ast_tool_projection import _project_ast_tools as _project_ast_tools
 from agent_bom.graph.authorization_evidence import apply_authorization_evidence, has_authoritative_authorization_evidence
 from agent_bom.graph.benchmark_projection import benchmark_inputs, project_benchmarks
 from agent_bom.graph.blast_projection import enrich_blast_radius, project_blast_radius, project_package_exploits, project_shared_servers
@@ -210,8 +212,12 @@ from agent_bom.graph.finding_projection import (
     project_skill_audit,
     project_toxic_combinations,
 )
+from agent_bom.graph.framework_topology_projection import _add_ai_stack_frameworks as _add_ai_stack_frameworks
+from agent_bom.graph.framework_topology_projection import _add_framework_topology as _add_framework_topology
+from agent_bom.graph.framework_topology_projection import _AIStackProjection as _AIStackProjection
+from agent_bom.graph.framework_topology_projection import _FrameworkTopology as _FrameworkTopology
 from agent_bom.graph.identity_nodes import identity_node_id as _identity_node_id
-from agent_bom.graph.node import NodeDimensions, UnifiedNode, stable_node_id
+from agent_bom.graph.node import NodeDimensions, UnifiedNode
 from agent_bom.graph.package_projection import (
     _add_exploitable_via_edges as _add_exploitable_via_edges,
 )
@@ -314,16 +320,16 @@ from agent_bom.graph.runtime_projection import (
 from agent_bom.graph.training_projection import (
     _flatten_compliance_tags as _flatten_compliance_tags,
 )
-from agent_bom.graph.training_projection import _model_node_id, project_dataset_cards, project_model_provenance, project_serving_configs
 from agent_bom.graph.training_projection import (
     _normalize_model_ref as _normalize_model_ref,
 )
 from agent_bom.graph.training_projection import (
     _resolve_model_id as _resolve_model_id,
 )
+from agent_bom.graph.training_projection import project_dataset_cards, project_model_provenance, project_serving_configs
 from agent_bom.graph.types import EntityType, RelationshipType
 from agent_bom.graph.util import clean_graph_part as _clean_graph_part
-from agent_bom.security import sanitize_sensitive_payload, sanitize_text
+from agent_bom.security import sanitize_text
 
 _GRAPH_TRACER = get_tracer("agent_bom.graph")
 _logger = logging.getLogger(__name__)
@@ -455,149 +461,6 @@ def _analysis_ports() -> GraphAnalysisPorts:
         aspm=_apply_aspm_overlay,
         cost=_apply_cost_overlay,
     )
-
-
-def _apply_ast_tool_overlay(graph: UnifiedGraph, report_json: Mapping[str, Any]) -> None:
-    """Materialise source-defined tool and application entrypoints."""
-    inventory = report_json.get("ai_inventory")
-    if not isinstance(inventory, Mapping):
-        return
-    analysis = inventory.get("ast_analysis")
-    if not isinstance(analysis, Mapping):
-        return
-    raw_tools = analysis.get("tools")
-    raw_entrypoints = analysis.get("application_entrypoints")
-    if not isinstance(raw_tools, list):
-        raw_tools = []
-    if not isinstance(raw_entrypoints, list):
-        raw_entrypoints = []
-
-    for raw in raw_tools:
-        if not isinstance(raw, Mapping):
-            continue
-        tool_name = sanitize_text(raw.get("name", ""), max_len=200).strip()
-        source_file = sanitize_text(raw.get("file", ""), max_len=500).strip().replace("\\", "/")
-        while source_file.startswith("./"):
-            source_file = source_file[2:]
-        if not tool_name or not source_file:
-            continue
-
-        file_id = f"{EntityType.SOURCE_FILE.value}:{source_file}"
-        if file_id not in graph.nodes:
-            graph.add_node(
-                UnifiedNode(
-                    id=file_id,
-                    entity_type=EntityType.SOURCE_FILE,
-                    label=source_file.rsplit("/", 1)[-1],
-                    attributes={
-                        "path": source_file,
-                        "evidence_tier": "static_scan",
-                        "canonical_id": canonical_graph_node_id(EntityType.SOURCE_FILE.value, file_id),
-                    },
-                    data_sources=["ast_analysis"],
-                    dimensions=NodeDimensions(surface="code"),
-                )
-            )
-
-        tool_id = f"tool:source:{stable_node_id(source_file, tool_name)}"
-        graph.add_node(
-            UnifiedNode(
-                id=tool_id,
-                entity_type=EntityType.TOOL,
-                label=tool_name,
-                attributes={
-                    "description": sanitize_text(raw.get("description", ""), max_len=1_000),
-                    "source_file": source_file,
-                    "line": raw.get("line") if isinstance(raw.get("line"), int) else None,
-                    "parameters": sanitize_sensitive_payload(raw.get("parameters", [])),
-                    "handler": sanitize_text(raw.get("handler", ""), max_len=200),
-                    "registration_kind": sanitize_text(raw.get("registration_kind", ""), max_len=100),
-                    "framework": sanitize_text(raw.get("framework", ""), max_len=100),
-                    "provenance": sanitize_text(raw.get("provenance", ""), max_len=500),
-                    "discovery_source": "ast_analysis",
-                    "canonical_id": canonical_graph_node_id(EntityType.TOOL.value, tool_id),
-                },
-                data_sources=["ast_analysis"],
-                dimensions=NodeDimensions(surface="code"),
-            )
-        )
-        graph.add_edge(
-            UnifiedEdge(
-                source=file_id,
-                target=tool_id,
-                relationship=RelationshipType.DEFINES,
-                evidence={
-                    "source": "ast_analysis",
-                    "line": raw.get("line"),
-                    "registration_kind": sanitize_text(raw.get("registration_kind", ""), max_len=100),
-                    "framework": sanitize_text(raw.get("framework", ""), max_len=100),
-                    "provenance": sanitize_text(raw.get("provenance", ""), max_len=500),
-                },
-            )
-        )
-
-    for raw in raw_entrypoints:
-        if not isinstance(raw, Mapping):
-            continue
-        entry_name = sanitize_text(raw.get("name", ""), max_len=200).strip()
-        handler = sanitize_text(raw.get("handler", ""), max_len=200).strip()
-        source_file = sanitize_text(raw.get("file", ""), max_len=500).strip().replace("\\", "/")
-        while source_file.startswith("./"):
-            source_file = source_file[2:]
-        if not entry_name or not handler or not source_file:
-            continue
-
-        file_id = f"{EntityType.SOURCE_FILE.value}:{source_file}"
-        if file_id not in graph.nodes:
-            graph.add_node(
-                UnifiedNode(
-                    id=file_id,
-                    entity_type=EntityType.SOURCE_FILE,
-                    label=source_file.rsplit("/", 1)[-1],
-                    attributes={
-                        "path": source_file,
-                        "evidence_tier": "static_scan",
-                        "canonical_id": canonical_graph_node_id(EntityType.SOURCE_FILE.value, file_id),
-                    },
-                    data_sources=["ast_analysis"],
-                    dimensions=NodeDimensions(surface="code"),
-                )
-            )
-
-        entry_id = f"application_entrypoint:source:{stable_node_id(source_file, entry_name, handler)}"
-        graph.add_node(
-            UnifiedNode(
-                id=entry_id,
-                entity_type=EntityType.CODE_MODULE,
-                label=entry_name,
-                attributes={
-                    "node_kind": "application_entrypoint",
-                    "handler": handler,
-                    "entrypoint_kind": sanitize_text(raw.get("kind", ""), max_len=100),
-                    "framework": sanitize_text(raw.get("framework", ""), max_len=100),
-                    "language": sanitize_text(raw.get("language", ""), max_len=100),
-                    "provenance": sanitize_text(raw.get("provenance", ""), max_len=500),
-                    "source_file": source_file,
-                    "line": raw.get("line") if isinstance(raw.get("line"), int) else None,
-                    "discovery_source": "ast_analysis",
-                    "canonical_id": canonical_graph_node_id(EntityType.CODE_MODULE.value, entry_id),
-                },
-                data_sources=["ast_analysis"],
-                dimensions=NodeDimensions(surface="code"),
-            )
-        )
-        graph.add_edge(
-            UnifiedEdge(
-                source=file_id,
-                target=entry_id,
-                relationship=RelationshipType.DEFINES,
-                evidence={
-                    "source": "ast_analysis",
-                    "line": raw.get("line"),
-                    "provenance": sanitize_text(raw.get("provenance", ""), max_len=500),
-                },
-            )
-        )
 
 
 def _add_agent_cloud_lineage(
@@ -1984,335 +1847,6 @@ def _add_inventory_group(
         _add_rel_edge(
             graph, member_node_id, group_node_id, RelationshipType.MEMBER_OF, {"source": "cloud-inventory", "membership": "group"}
         )
-
-
-def _add_framework_topology(
-    graph: UnifiedGraph,
-    framework_agents: Any,
-    data_source: str,
-    *,
-    host_agent_id: str | None = None,
-) -> None:
-    """Add framework nodes, model nodes, framework-native agents, and topology edges.
-
-    Frameworks (LangChain, LangGraph, CrewAI, …) are first-class BOM entities.
-    Agents link via ``uses_framework``; model string refs become ``model`` nodes
-    linked via ``serves_model``.
-
-    With a ``host_agent_id`` (the project agent), a construct that takes no part
-    in multi-agent delegation is folded into the host as ``code_agents``
-    evidence; delegation participants remain distinct agents.
-    """
-    if not isinstance(framework_agents, list):
-        return
-    known_agent_ids: set[str] = set()
-    topology_participants: set[str] = set()
-    for item in framework_agents:
-        if not isinstance(item, dict):
-            continue
-        for edge in item.get("topology_edges", []) or []:
-            if isinstance(edge, dict):
-                topology_participants.add(str(edge.get("source_id") or "").strip())
-                topology_participants.add(str(edge.get("target_id") or "").strip())
-    host = graph.nodes.get(host_agent_id) if host_agent_id else None
-    folded: list[dict[str, Any]] = []
-    framework_ids: dict[str, str] = {}
-
-    def _framework_node_id(name: str) -> str:
-        key = name.strip().lower() or "unknown"
-        if key not in framework_ids:
-            framework_ids[key] = stable_node_id(EntityType.FRAMEWORK.value, key)
-        return framework_ids[key]
-
-    def _ensure_framework(name: str, *, kind: str = "orchestration") -> str | None:
-        label = str(name or "").strip()
-        if not label:
-            return None
-        fid = _framework_node_id(label)
-        if not graph.has_node(fid):
-            graph.add_node(
-                UnifiedNode(
-                    id=fid,
-                    entity_type=EntityType.FRAMEWORK,
-                    label=label,
-                    attributes={
-                        "framework": label,
-                        "framework_kind": kind,
-                    },
-                    dimensions=NodeDimensions(surface=label, agent_type="framework"),
-                    data_sources=[data_source, "source-ast"],
-                )
-            )
-        return fid
-
-    def _ensure_model(ref: str) -> str | None:
-        label = str(ref or "").strip()
-        if not label:
-            return None
-        mid = _model_node_id(label)
-        # add_node is create-or-merge: unconditionally add so a model discovered
-        # by multiple sources (provenance + framework ref) unions its attributes
-        # onto one node rather than being skipped when already present.
-        graph.add_node(
-            UnifiedNode(
-                id=mid,
-                entity_type=EntityType.MODEL,
-                label=label,
-                attributes={"model_ref": label, "source": "framework-agent"},
-                dimensions=NodeDimensions(surface="model"),
-                data_sources=[data_source, "source-ast"],
-            )
-        )
-        return mid
-
-    for item in framework_agents:
-        if not isinstance(item, dict):
-            continue
-        agent_id = str(item.get("stable_id") or "").strip()
-        if not agent_id:
-            continue
-        framework_name = str(item.get("framework") or "").strip()
-        if host is not None and agent_id not in topology_participants:
-            folded.append(
-                {
-                    "name": str(item.get("name") or agent_id),
-                    "framework": framework_name,
-                    "file_path": item.get("file_path", ""),
-                    "line_number": item.get("line_number", 0),
-                    "confidence": item.get("confidence", ""),
-                    "capabilities": item.get("capabilities", []),
-                }
-            )
-            agent_id = host.id
-        else:
-            known_agent_ids.add(agent_id)
-            graph.add_node(
-                UnifiedNode(
-                    id=agent_id,
-                    entity_type=EntityType.AGENT,
-                    label=str(item.get("name") or agent_id),
-                    attributes={
-                        "agent_type": "framework-agent",
-                        "framework": framework_name,
-                        "file_path": item.get("file_path", ""),
-                        "line_number": item.get("line_number", 0),
-                        "confidence": item.get("confidence", ""),
-                        "model_refs": item.get("model_refs", []),
-                        "credential_refs": item.get("credential_refs", []),
-                        "capabilities": item.get("capabilities", []),
-                        "dynamic_edges": item.get("dynamic_edges", False),
-                    },
-                    dimensions=NodeDimensions(agent_type="framework-agent", surface=framework_name),
-                    data_sources=[data_source, "source-ast"],
-                )
-            )
-        fw_id = _ensure_framework(framework_name)
-        if fw_id:
-            graph.add_edge(
-                UnifiedEdge(
-                    source=agent_id,
-                    target=fw_id,
-                    relationship=RelationshipType.USES_FRAMEWORK,
-                    evidence={"source": "source-ast", "framework": framework_name},
-                )
-            )
-        for model_ref in item.get("model_refs", []) or []:
-            mid = _ensure_model(str(model_ref))
-            if mid:
-                graph.add_edge(
-                    UnifiedEdge(
-                        source=agent_id,
-                        target=mid,
-                        relationship=RelationshipType.SERVES_MODEL,
-                        evidence={"source": "source-ast", "model_ref": str(model_ref)},
-                    )
-                )
-
-    if host is not None and folded:
-        host.attributes["code_agents"] = folded
-        host.data_sources = list(dict.fromkeys([*host.data_sources, "source-ast"]))
-
-    for item in framework_agents:
-        if not isinstance(item, dict):
-            continue
-        for edge in item.get("topology_edges", []):
-            if not isinstance(edge, dict):
-                continue
-            source_id = str(edge.get("source_id") or "").strip()
-            target_id = str(edge.get("target_id") or "").strip()
-            if not source_id or not target_id:
-                continue
-            for node_id, node_name in ((source_id, edge.get("source_name")), (target_id, edge.get("target_name"))):
-                if node_id in known_agent_ids or graph.has_node(node_id):
-                    continue
-                edge_fw = str(edge.get("framework") or "").strip()
-                graph.add_node(
-                    UnifiedNode(
-                        id=node_id,
-                        entity_type=EntityType.AGENT,
-                        label=str(node_name or node_id),
-                        attributes={
-                            "agent_type": "framework-agent",
-                            "framework": edge_fw,
-                            "synthetic_from_topology_edge": True,
-                        },
-                        dimensions=NodeDimensions(agent_type="framework-agent", surface=edge_fw),
-                        data_sources=[data_source, "source-ast"],
-                    )
-                )
-                known_agent_ids.add(node_id)
-                fw_id = _ensure_framework(edge_fw)
-                if fw_id:
-                    graph.add_edge(
-                        UnifiedEdge(
-                            source=node_id,
-                            target=fw_id,
-                            relationship=RelationshipType.USES_FRAMEWORK,
-                            evidence={"source": "source-ast", "framework": edge_fw},
-                        )
-                    )
-            try:
-                relationship = RelationshipType(str(edge.get("relationship") or "delegated_to"))
-            except ValueError:
-                continue
-            graph.add_edge(
-                UnifiedEdge(
-                    source=source_id,
-                    target=target_id,
-                    relationship=relationship,
-                    evidence={
-                        "source": "source-ast",
-                        "framework": edge.get("framework", ""),
-                        "file_path": edge.get("file_path", ""),
-                        "line_number": edge.get("line_number", 0),
-                        "confidence": edge.get("confidence", ""),
-                        "evidence": edge.get("evidence", ""),
-                    },
-                )
-            )
-
-
-def _add_ai_stack_frameworks(graph: UnifiedGraph, ai_inventory: Any, data_source: str) -> None:
-    """Project SDK/observability imports as first-class framework nodes + package/model links."""
-    if not isinstance(ai_inventory, dict):
-        return
-    components = ai_inventory.get("components")
-    if not isinstance(components, list):
-        return
-
-    observability_fids: list[str] = []
-
-    def _ensure_model(ref: str, *, source: str = "ai-inventory") -> str | None:
-        label = str(ref or "").strip()
-        if not label or label.upper() == "[REDACTED]":
-            return None
-        mid = _model_node_id(label)
-        # add_node is create-or-merge: unconditionally add so a model discovered
-        # by multiple sources unions its attributes onto one node.
-        graph.add_node(
-            UnifiedNode(
-                id=mid,
-                entity_type=EntityType.MODEL,
-                label=label,
-                attributes={"model_ref": label, "source": source},
-                dimensions=NodeDimensions(surface="model"),
-                data_sources=[data_source, "ai-inventory"],
-            )
-        )
-        return mid
-
-    for comp in components:
-        if not isinstance(comp, dict):
-            continue
-        ctype = str(comp.get("type") or "").strip().lower()
-        name = str(comp.get("name") or comp.get("package") or "").strip()
-        if not name:
-            continue
-
-        if ctype in {"model_reference", "deprecated_model"}:
-            _ensure_model(name, source=ctype)
-            continue
-
-        if ctype not in {"agent_framework", "observability"}:
-            continue
-        kind = "observability" if ctype == "observability" else "orchestration"
-        fid = stable_node_id(EntityType.FRAMEWORK.value, name.lower())
-        if kind == "observability" and fid not in observability_fids:
-            observability_fids.append(fid)
-        if not graph.has_node(fid):
-            graph.add_node(
-                UnifiedNode(
-                    id=fid,
-                    entity_type=EntityType.FRAMEWORK,
-                    label=name,
-                    attributes={
-                        "framework": name,
-                        "framework_kind": kind,
-                        "package": comp.get("package", ""),
-                        "ecosystem": comp.get("ecosystem", ""),
-                        "language": comp.get("language", ""),
-                        "is_shadow": bool(comp.get("is_shadow")),
-                        "file": comp.get("file", ""),
-                        "line": comp.get("line", 0),
-                    },
-                    dimensions=NodeDimensions(surface=name, agent_type=kind),
-                    data_sources=[data_source, "ai-inventory"],
-                )
-            )
-        package_name = str(comp.get("package") or "").strip()
-        ecosystem = str(comp.get("ecosystem") or "pypi").strip() or "pypi"
-        if package_name:
-            pkg_id = stable_node_id(EntityType.PACKAGE.value, ecosystem, package_name, "latest")
-            # Prefer an existing versioned package node if present.
-            existing = [
-                n
-                for n in graph.nodes_by_type(EntityType.PACKAGE)
-                if str(n.attributes.get("name") or n.label).lower() == package_name.lower()
-            ]
-            if existing:
-                pkg_id = existing[0].id
-            elif not graph.has_node(pkg_id):
-                graph.add_node(
-                    UnifiedNode(
-                        id=pkg_id,
-                        entity_type=EntityType.PACKAGE,
-                        label=package_name,
-                        attributes={
-                            "name": package_name,
-                            "ecosystem": ecosystem,
-                            "version": "latest",
-                            "from_ai_inventory": True,
-                        },
-                        data_sources=[data_source, "ai-inventory"],
-                    )
-                )
-            graph.add_edge(
-                UnifiedEdge(
-                    source=fid,
-                    target=pkg_id,
-                    relationship=RelationshipType.DEPENDS_ON,
-                    evidence={"source": "ai-inventory", "framework": name},
-                )
-            )
-
-    for model_name in ai_inventory.get("unique_models") or []:
-        _ensure_model(str(model_name))
-
-    # Observability frameworks (Langfuse/LangSmith/OpenLLMetry-class) instrument
-    # the agents detected in the same scan surface. Emit framework→agent
-    # ``observes`` edges so the advertised relationship is actually produced.
-    if observability_fids:
-        agent_ids = [n.id for n in graph.nodes_by_type(EntityType.AGENT)]
-        for fid in observability_fids:
-            for agent_id in agent_ids:
-                graph.add_edge(
-                    UnifiedEdge(
-                        source=fid,
-                        target=agent_id,
-                        relationship=RelationshipType.OBSERVES,
-                        evidence={"source": "ai-inventory"},
-                    )
-                )
 
 
 # Provider prefixes stripped when fingerprinting a model reference so that

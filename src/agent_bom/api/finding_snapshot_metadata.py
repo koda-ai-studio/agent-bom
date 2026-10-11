@@ -1,8 +1,11 @@
 """Inventory and timestamps for the retained finding snapshot scope."""
 
-from typing import Any
+from __future__ import annotations
 
-from agent_bom.api.findings_current import _ScanJobLike
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from agent_bom.api.findings_current import _ScanJobLike
 
 
 def snapshot_metadata(jobs: list[_ScanJobLike], rows: list[dict[str, Any]]) -> dict[str, Any]:
