@@ -1,9 +1,9 @@
 {
   "release_version": "0.108.4",
-  "captured_at": "2026-10-11T23:13:37.945Z",
-  "source_commit": "488a923821f972757df126e7479a65d7a9f0b901",
+  "captured_at": "2026-10-11T23:31:54.262Z",
+  "source_commit": "d9a4acdd29b805c4fad70c206bcd9ab98eb3de73",
   "source_tree": "clean",
-  "capture_inputs_sha256": "sha256:704e705f70e36b85fe53d26555db70c11fe1f9395fb8f01eea3b12af58e57579",
+  "capture_inputs_sha256": "sha256:4cdb1a69bd2847da0db1def21c27bac32163a6eae3314ae6fe0f72555b42db8b",
   "capture_note": "Deterministically captured from real Next.js dashboard routes in capture mode. The correlation hero views consume the committed, hash-pinned Reference evidence lab — modeled local infrastructure artifact with CVE-2023-4863 and exact canonical joins. Remaining gallery fixtures are explicitly synthetic UI states. No external, customer, or private infrastructure data is used.",
   "screenshots": [
     {
@@ -132,7 +132,7 @@
       "page": "/connections?capture=1",
       "scope": "Connections hub — scalable connector gallery across cloud, code, AI, and data sources",
       "visible_version": "0.108.4",
-      "sha256": "sha256:0729128942962743e5f24b92a3dd08ffa2af1dfc2c9ec759c7dbde06a0df635b"
+      "sha256": "sha256:fde5f7ef35859369798af61513e6de21e866b29d588ae497be0807185013cd9f"
     },
     {
       "presentation": "dark desktop",
@@ -221,7 +221,7 @@
       "evidence_sha256": "sha256:f4f8901f412997be7690b50ce8e7468ba8f781dc22b85e7b5f44408e28fe2c5f",
       "correlation_manifest_sha256": "sha256:fe781c82f958c2f9aa4cadfa2289aa767629dc7d6716e11add790e8f3336fc3a",
       "visible_version": "0.108.4",
-      "sha256": "sha256:df8eaeb1d634789550d8162d4749c5dd85827884b5dd4467bcd5e6f3f735201a"
+      "sha256": "sha256:6ddbc5a895da78378eb9fca243cac651df13f39c40599cc998418190611c2fc6"
     },
     {
       "presentation": "light desktop",
@@ -337,7 +337,7 @@
       "page": "/graph?lens=context&scan=scan-proof-ai-platform&capture=1",
       "scope": "Same nine recorded entities and eight relationships arranged left to right using the Horizontal layout control",
       "visible_version": "0.108.4",
-      "sha256": "sha256:2401cbaac64277d030ebb25a6fd49bdfe9324209c8789633f68a4dd37e8ed44a"
+      "sha256": "sha256:cc8e106cad2e8f19e803126705bf8a7719392ec81417f415744196424d69a3d3"
     },
     {
       "presentation": "dark desktop",
