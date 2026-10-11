@@ -11,6 +11,8 @@ from typing import Any, Protocol, cast
 from agent_bom.api.posture_counts_cache import announce_scan_evidence
 from agent_bom.api.scan_snapshot_store import discard_job_snapshot
 from agent_bom.api.storage.campaign_revisions import initialize_sqlite_campaign_evidence
+from agent_bom.api.storage.finding_history_adapters import sqlite_history_backfill, sqlite_history_read
+from agent_bom.api.storage.finding_history_schema import initialize_sqlite_finding_history
 from agent_bom.api.storage.job_read_projections import sqlite_demo_exists, sqlite_job_revision
 from agent_bom.api.storage.jobs import get_job, parse_job_payload, put_job, require_job_tenant
 from agent_bom.api.storage.jobs_schema import JOBS_SCHEMA_VERSION, migrate_sqlite_job_key
@@ -332,16 +334,10 @@ class InMemoryJobStore:
 
 
 class SQLiteJobStore:
-    """SQLite-backed persistent job store.
+    """Durable tenant/job keyed rows with JSON results and indexed lifecycle columns."""
 
-    Schema:
-        jobs(job_id TEXT PK, status TEXT, created_at TEXT,
-             completed_at TEXT, tenant_id TEXT, data TEXT)
-
-    The ``data`` column stores the full ScanJob as JSON. Status and timestamps
-    are duplicated as columns for efficient queries.
-    """
-
+    finding_history_read = sqlite_history_read
+    backfill_finding_history = sqlite_history_backfill
     has_usable_demo_job = sqlite_demo_exists
     retains_job_objects_in_memory = False
 
@@ -411,6 +407,7 @@ class SQLiteJobStore:
                         f"UPDATE jobs SET {name}=json_extract(data, '$.{name}') WHERE json_valid(data)"  # nosec B608 - static column names
                     )
             migrate_sqlite_job_key(self._conn)
+            initialize_sqlite_finding_history(self._conn)
             self._conn.execute("DROP TRIGGER IF EXISTS jobs_overview_replace")
             self._conn.execute("CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status)")
             self._conn.execute("CREATE INDEX IF NOT EXISTS idx_jobs_completed ON jobs(completed_at)")

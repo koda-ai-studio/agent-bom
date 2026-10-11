@@ -29,7 +29,7 @@ def verified_snapshot_findings(
     Qualification takes precedence when both flags are set. Authoritative
     collection failures propagate. Invalid derived data falls back without
     exposing payloads or backend errors. Store calls are per job, never per row.
-    Full retained history still loads for first-seen and manual-SLA semantics.
+    The outer current-findings fold can use a separate retained-history projection.
     """
     qualify = env_flag("AGENT_BOM_SCAN_SNAPSHOT_READS")
     fast = env_flag("AGENT_BOM_SCAN_SNAPSHOT_FAST_READS")

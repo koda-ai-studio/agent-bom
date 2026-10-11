@@ -34,6 +34,7 @@ from agent_bom.api.bulk_findings_ingest import (  # noqa: F401 - re-exported rou
     _normalized_bulk_finding,
 )
 from agent_bom.api.finding_collection import collect_scan_findings, merge_finding_representations
+from agent_bom.api.finding_history_read import current_findings_with_history
 from agent_bom.api.finding_list_envelope import HUB_LIST_OFFSET_CEILING as _HUB_LIST_OFFSET_CEILING
 from agent_bom.api.finding_list_envelope import finding_list_envelope
 from agent_bom.api.finding_list_helpers import (  # noqa: F401 - re-exported route-module API
@@ -598,11 +599,20 @@ def _graph_export_response(
 def _current_scan_rows(tenant_id: str, window_since: str | None, scan_id: str | None) -> list[dict[str, Any]]:
     return read_once(
         ("current_rows", json.dumps([tenant_id, window_since, scan_id])),
-        lambda: findings_current.current_scan_findings(
-            _completed_jobs_for_tenant(tenant_id),
-            since=window_since,
-            scan_id=scan_id,
-            iter_findings=_cached_scan_findings,
+        lambda: current_findings_with_history(
+            _get_store(),
+            tenant_id,
+            window_since,
+            scan_id,
+            _iter_scan_findings,
+            lambda: findings_current.current_scan_findings(
+                _completed_jobs_for_tenant(tenant_id),
+                since=window_since,
+                scan_id=scan_id,
+                iter_findings=_cached_scan_findings,
+            ),
+            fold=findings_current.current_scan_findings,
+            select_jobs=findings_current._finding_snapshot_jobs,
         ),
     )
 
