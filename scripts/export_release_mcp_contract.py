@@ -26,7 +26,9 @@ expected = sys.argv[1]
 if version('agent-bom') != expected or __version__ != expected:
     raise SystemExit('Installed release version mismatch')
 tools = asyncio.run(create_mcp_server(profile='scan').list_tools())
-print(json.dumps(sorted([{'name': t.name, 'inputSchema': t.input_schema} for t in tools], key=lambda t: t['name'])))
+# The wire alias is stable across MCP SDK 1.x and 2.x Python field names.
+contract = [{'name': t.name, 'inputSchema': t.model_dump(by_alias=True)['inputSchema']} for t in tools]
+print(json.dumps(sorted(contract, key=lambda t: t['name'])))
 """
 
 
