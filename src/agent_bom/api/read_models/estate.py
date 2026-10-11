@@ -133,11 +133,11 @@ class FleetAgentRow(ReadModel):
     config_path: str
     device_fingerprint: str
     enrollment_name: str
-    environment: str
+    environment: str | None
     lifecycle_state: str
     mdm_provider: str
     notes: str
-    owner: str
+    owner: str | None
     source_id: str
     tags: list[str]
     trust_factors: dict[str, Any]

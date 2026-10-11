@@ -62,6 +62,8 @@ from agent_bom.api.model_key_broker import (
     resolve_virtual_key,
     revoke_virtual_key,
 )
+from agent_bom.api.read_models import admin as m
+from agent_bom.api.read_models import documented
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.rbac import require_authenticated_permission
 from agent_bom.security import sanitize_error
@@ -191,7 +193,7 @@ def create_provider_key(request: Request, body: ProviderKeyCreate, _role: Any = 
     return record.to_public_dict()
 
 
-@router.get("/model-keys/providers")
+@router.get("/model-keys/providers", **documented(m.ModelProviderKeysResponse))
 def list_provider_keys(request: Request, _role: Any = _READ_DEP) -> dict[str, Any]:
     """List the tenant's registered provider keys (non-secret metadata only)."""
     tenant_id = _tenant(request)
@@ -205,7 +207,7 @@ def list_provider_keys(request: Request, _role: Any = _READ_DEP) -> dict[str, An
     }
 
 
-@router.get("/model-keys/providers/{provider_key_id}")
+@router.get("/model-keys/providers/{provider_key_id}", **documented(m.ModelProviderKeyResponse))
 def get_provider_key(request: Request, provider_key_id: str, _role: Any = _READ_DEP) -> dict[str, Any]:
     """Return one provider key's non-secret metadata (tenant-scoped)."""
     tenant_id = _tenant(request)
@@ -280,7 +282,7 @@ def mint_virtual_key_route(
     }
 
 
-@router.get("/model-keys/virtual-keys")
+@router.get("/model-keys/virtual-keys", **documented(m.ModelVirtualKeysResponse))
 def list_virtual_keys(
     request: Request,
     provider_key_id: str | None = None,

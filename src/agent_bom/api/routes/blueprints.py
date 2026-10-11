@@ -29,6 +29,14 @@ from agent_bom.api.blueprint_store import (
     seed_blueprints_from_archetypes,
     submit_version_for_approval,
 )
+from agent_bom.api.read_models import documented
+from agent_bom.api.read_models.governance_a import (
+    GovernanceBlueprintDetailResponse,
+    GovernanceBlueprintDiffResponse,
+    GovernanceBlueprintsResponse,
+    GovernanceBlueprintVersionResponse,
+    GovernanceBlueprintVersionsResponse,
+)
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.rbac import require_authenticated_permission
 from agent_bom.security import sanitize_error
@@ -98,7 +106,7 @@ class DecisionBody(BaseModel):
     note: str = Field(default="", max_length=1000)
 
 
-@router.get("/governance/blueprints", dependencies=[_dep("read")])
+@router.get("/governance/blueprints", **documented(GovernanceBlueprintsResponse), dependencies=[_dep("read")])
 def list_blueprints(request: Request, limit: Annotated[int, Query(ge=1, le=200)] = 50, offset: int = 0) -> dict[str, object]:
     """List persisted AI-system blueprints for the active tenant (paginated)."""
     tenant_id = _tenant(request)
@@ -148,7 +156,7 @@ def seed_blueprints_route(request: Request) -> dict[str, object]:
     }
 
 
-@router.get("/governance/blueprints/{blueprint_id}", dependencies=[_dep("read")])
+@router.get("/governance/blueprints/{blueprint_id}", **documented(GovernanceBlueprintDetailResponse), dependencies=[_dep("read")])
 def get_blueprint_route(request: Request, blueprint_id: str) -> dict[str, object]:
     """Return one blueprint plus its full version history and approval state."""
     tenant_id = _tenant(request)
@@ -165,7 +173,9 @@ def get_blueprint_route(request: Request, blueprint_id: str) -> dict[str, object
     }
 
 
-@router.get("/governance/blueprints/{blueprint_id}/versions", dependencies=[_dep("read")])
+@router.get(
+    "/governance/blueprints/{blueprint_id}/versions", **documented(GovernanceBlueprintVersionsResponse), dependencies=[_dep("read")]
+)
 def list_versions_route(request: Request, blueprint_id: str, limit: Annotated[int, Query(ge=1, le=500)] = 200) -> dict[str, object]:
     """List a blueprint's immutable versions, newest first."""
     tenant_id = _tenant(request)
@@ -182,7 +192,11 @@ def list_versions_route(request: Request, blueprint_id: str, limit: Annotated[in
     }
 
 
-@router.get("/governance/blueprints/{blueprint_id}/versions/{version}", dependencies=[_dep("read")])
+@router.get(
+    "/governance/blueprints/{blueprint_id}/versions/{version}",
+    **documented(GovernanceBlueprintVersionResponse),
+    dependencies=[_dep("read")],
+)
 def get_version_route(request: Request, blueprint_id: str, version: int) -> dict[str, object]:
     """Return one blueprint version (its composition snapshot + approval state)."""
     tenant_id = _tenant(request)
@@ -192,7 +206,7 @@ def get_version_route(request: Request, blueprint_id: str, version: int) -> dict
     return {"schema_version": _SCHEMA, "tenant_id": tenant_id, "version": record.to_dict()}
 
 
-@router.get("/governance/blueprints/{blueprint_id}/diff", dependencies=[_dep("read")])
+@router.get("/governance/blueprints/{blueprint_id}/diff", **documented(GovernanceBlueprintDiffResponse), dependencies=[_dep("read")])
 def diff_versions_route(request: Request, blueprint_id: str, from_version: int, to_version: int) -> dict[str, object]:
     """Diff two versions' compositions (added / removed / persistent per axis)."""
     tenant_id = _tenant(request)

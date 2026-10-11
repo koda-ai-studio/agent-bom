@@ -14,7 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, model_validator
 
 from agent_bom.api.graph_scenario_store import GraphScenarioConflictError
 from agent_bom.api.neptune_graph import NeptuneGraphStore, NeptuneGraphStoreUnsupportedOperationError
-from agent_bom.api.read_models import GraphScenariosResponse, documented
+from agent_bom.api.read_models import GraphScenariosResponse, documented, governance_a
 from agent_bom.api.stores import _get_graph_scenario_store, _get_graph_store
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.graph import EntityType, RelationshipType
@@ -528,7 +528,7 @@ async def create_graph_scenario(request: Request, body: GraphScenarioCreate) -> 
     return {"schema": _SCENARIO_SCHEMA, "scenario": _public_scenario(scenario)}
 
 
-@router.get("/graph/scenarios/{scenario_id}", tags=["graph"])
+@router.get("/graph/scenarios/{scenario_id}", **documented(governance_a.GraphScenarioDetailResponse), tags=["graph"])
 async def get_graph_scenario(request: Request, scenario_id: str) -> dict[str, Any]:
     _ensure_supported_graph_backend()
     scenario = await _store_call(_get_graph_scenario_store().get, _tenant(request), scenario_id)
@@ -578,7 +578,7 @@ async def delete_graph_scenario(
     return Response(status_code=204)
 
 
-@router.get("/graph/scenarios/{scenario_id}/comparison", tags=["graph"])
+@router.get("/graph/scenarios/{scenario_id}/comparison", **documented(governance_a.GraphScenarioComparisonResponse), tags=["graph"])
 async def compare_graph_scenario(
     request: Request,
     scenario_id: str,

@@ -36,6 +36,8 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from agent_bom.api import inventory_service
 from agent_bom.api.inventory_service import MAX_PAGE_LIMIT, InventoryError
 from agent_bom.api.neptune_graph import NeptuneGraphStoreUnsupportedOperationError
+from agent_bom.api.read_models import documented
+from agent_bom.api.read_models.governance_b import InventoryAssetDetailResponse, InventoryAssetsResponse, InventorySummaryResponse
 from agent_bom.api.stores import _get_graph_store
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.backpressure import BackpressureRejectedError, adaptive_backpressure
@@ -72,7 +74,7 @@ def _tenant(request: Request) -> str:
 # ═══════════════════════════════════════════════════════════════════════════
 
 
-@router.get("/inventory/summary", tags=["inventory"])
+@router.get("/inventory/summary", **documented(InventorySummaryResponse), tags=["inventory"])
 async def inventory_summary(
     request: Request,
     type: Optional[str] = Query(None, description="Comma-separated asset entity types"),
@@ -121,7 +123,7 @@ async def inventory_summary(
 # ═══════════════════════════════════════════════════════════════════════════
 
 
-@router.get("/inventory/assets", tags=["inventory"])
+@router.get("/inventory/assets", **documented(InventoryAssetsResponse), tags=["inventory"])
 async def list_inventory_assets(
     request: Request,
     type: Optional[str] = Query(None, description="Comma-separated asset entity types (e.g. agent,cloud_resource)"),
@@ -169,7 +171,7 @@ async def list_inventory_assets(
 # ═══════════════════════════════════════════════════════════════════════════
 
 
-@router.get("/inventory/assets/{asset_id:path}", tags=["inventory"])
+@router.get("/inventory/assets/{asset_id:path}", **documented(InventoryAssetDetailResponse), tags=["inventory"])
 async def get_inventory_asset(
     request: Request,
     asset_id: str,

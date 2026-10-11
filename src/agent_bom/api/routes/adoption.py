@@ -7,6 +7,8 @@ from typing import Literal
 from fastapi import APIRouter
 from pydantic import BaseModel, ConfigDict, model_validator
 
+from agent_bom.api.read_models import documented
+from agent_bom.api.read_models.observability import ObservabilityAdoptionResponse
 from agent_bom.db.adoption_events import get_adoption_event_store
 from agent_bom.rbac import require_authenticated_permission
 
@@ -33,7 +35,7 @@ class AdoptionEventRequest(BaseModel):
         return self
 
 
-@router.get("")
+@router.get("", **documented(ObservabilityAdoptionResponse))
 def adoption_summary(_role: object = _READ) -> dict[str, object]:
     return get_adoption_event_store().summary()
 

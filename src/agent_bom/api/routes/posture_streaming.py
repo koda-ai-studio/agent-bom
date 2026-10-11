@@ -7,6 +7,8 @@ from typing import Annotated
 from fastapi import APIRouter, HTTPException, Query, Request
 
 from agent_bom.api.audit_log import log_action
+from agent_bom.api.read_models import documented
+from agent_bom.api.read_models.governance_b import PostureWebhookOutboxResponse, PostureWebhookOutboxStatsResponse
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.posture_streaming import WebhookOutbox, default_webhook_outbox_path
 
@@ -40,7 +42,7 @@ def set_posture_webhook_outbox(outbox: WebhookOutbox | None) -> None:
     _OUTBOX_OVERRIDE = outbox is not None
 
 
-@router.get("/posture/webhooks/outbox", tags=["posture"])
+@router.get("/posture/webhooks/outbox", **documented(PostureWebhookOutboxResponse), tags=["posture"])
 def list_posture_webhook_outbox(
     request: Request,
     status: str | None = Query(default=None, pattern="^(pending|delivered|dead_letter)$"),
@@ -64,7 +66,7 @@ def list_posture_webhook_outbox(
     }
 
 
-@router.get("/posture/webhooks/outbox/stats", tags=["posture"])
+@router.get("/posture/webhooks/outbox/stats", **documented(PostureWebhookOutboxStatsResponse), tags=["posture"])
 def get_posture_webhook_outbox_stats(request: Request) -> dict:
     """Return webhook outbox status counts for the current tenant."""
     return {"schema_version": "v1", "stats": get_posture_webhook_outbox().stats(tenant_id=_tenant_id(request))}

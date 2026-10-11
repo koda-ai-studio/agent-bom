@@ -13,6 +13,8 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from agent_bom.api.audit_log import log_action
 from agent_bom.api.dataset_version_store import get_dataset_version_store
 from agent_bom.api.evaluation_store import EvaluationRunRecord, get_evaluation_run_store
+from agent_bom.api.read_models import documented
+from agent_bom.api.read_models.governance_a import EvaluationRunResponse, EvaluationRunsResponse
 from agent_bom.api.tenancy import require_body_tenant_match, require_request_tenant_id
 from agent_bom.security import sanitize_error
 
@@ -159,7 +161,7 @@ def register_evaluation_run(request: Request, body: EvaluationRunCreate) -> dict
     return {"schema_version": "evals.runs.v1", "evaluation": record.to_dict(), "warnings": warnings}
 
 
-@router.get("/evaluations", tags=["evaluations"])
+@router.get("/evaluations", **documented(EvaluationRunsResponse), tags=["evaluations"])
 def list_evaluation_runs(
     request: Request,
     dataset_id: Annotated[str | None, Query(max_length=128)] = None,
@@ -187,7 +189,7 @@ def list_evaluation_runs(
     }
 
 
-@router.get("/evaluations/{evaluation_id}", tags=["evaluations"])
+@router.get("/evaluations/{evaluation_id}", **documented(EvaluationRunResponse), tags=["evaluations"])
 def get_evaluation_run(
     request: Request,
     evaluation_id: Annotated[str, Path(min_length=1, max_length=128)],
