@@ -1,9 +1,9 @@
 {
   "release_version": "0.108.4",
-  "captured_at": "2026-10-10T22:12:18.466Z",
-  "source_commit": "bf17826fbc3fea1147360a07ddc508c9cf1f789b",
+  "captured_at": "2026-10-11T22:20:08.565Z",
+  "source_commit": "ebecd69eaa17c9c9e027714816ec53c6766513cc",
   "source_tree": "clean",
-  "capture_inputs_sha256": "sha256:f2f213ded07c7498a91d95662b55e58ba2fd5bce7f231d699324347031666649",
+  "capture_inputs_sha256": "sha256:e7c7e6ebea8cb1670c0ae50dc1459a9246b977db9d6c967eb2d8d81f2e231a30",
   "capture_note": "Deterministically captured from real Next.js dashboard routes in capture mode. The correlation hero views consume the committed, hash-pinned Reference evidence lab — modeled local infrastructure artifact with CVE-2023-4863 and exact canonical joins. Remaining gallery fixtures are explicitly synthetic UI states. No external, customer, or private infrastructure data is used.",
   "screenshots": [
     {
@@ -172,7 +172,7 @@
       "page": "/graph?lens=mesh&scan=scan-proof-ai-platform&agent=agent%3Adeveloper-copilot&capture=1",
       "scope": "Persisted agent neighborhood with recorded shared filesystem connections and both IDE + SRE agents in scope",
       "visible_version": "0.108.4",
-      "sha256": "sha256:eaa4a4193217b73bc3f4a97612ec6798dc9f8cc3eb5401266a242cc3a0b32053"
+      "sha256": "sha256:3dc4e6937526a1ebb6cdbc176a9e50daf96ed34cb3351cdefc136a337cdc6c34"
     },
     {
       "presentation": "dark desktop",
@@ -199,7 +199,7 @@
       "evidence_sha256": "sha256:f4f8901f412997be7690b50ce8e7468ba8f781dc22b85e7b5f44408e28fe2c5f",
       "correlation_manifest_sha256": "sha256:fe781c82f958c2f9aa4cadfa2289aa767629dc7d6716e11add790e8f3336fc3a",
       "visible_version": "0.108.4",
-      "sha256": "sha256:6cee5c99ff63b33d2ac9b6c4a6dae1de842cea036cd926cc206be34676907314"
+      "sha256": "sha256:0542863f849b477e4a9e7717185a4219509ebfc34d6ed3d313c7fc7a069273f0"
     },
     {
       "presentation": "dark desktop",
@@ -265,7 +265,7 @@
       "evidence_sha256": "sha256:f4f8901f412997be7690b50ce8e7468ba8f781dc22b85e7b5f44408e28fe2c5f",
       "correlation_manifest_sha256": "sha256:fe781c82f958c2f9aa4cadfa2289aa767629dc7d6716e11add790e8f3336fc3a",
       "visible_version": "0.108.4",
-      "sha256": "sha256:6a73eaeff0537e398b44bc2449e427009d234a885e63dd9652ac41133c9e5d3b"
+      "sha256": "sha256:c4ce7512cd33b2af67b61889130dd5f7bfe9624054ecd8342329d2af6499adf9"
     },
     {
       "presentation": "light desktop",
@@ -297,7 +297,7 @@
       "page": "/security-graph?lens=estate&scan=scan-proof-ai-platform&rollup=1&scenario=scenario-private-service-endpoint&state=proposed&capture=1",
       "scope": "Modeled proposed-state comparison at 1568 by 780",
       "visible_version": "0.108.4",
-      "sha256": "sha256:cc1887bf709a72b6a87bbcb5c44bf83f0044b7294b635d04cf02199a13adc7d2"
+      "sha256": "sha256:942ab9b4b7187a0feb48f646846589dc28bec94d7f8d0fc13922c12b0dd5e027"
     },
     {
       "presentation": "dark desktop",
@@ -321,7 +321,7 @@
       "page": "/graph?lens=context&scan=scan-proof-ai-platform&capture=1",
       "scope": "Recorded neighborhood and selected evidence in the light theme, with bounded expansion and branch focus",
       "visible_version": "0.108.4",
-      "sha256": "sha256:0ee0b35270b3046318f132c3457ed24dd739df9cdcd9a042d24ebcd1fbd669b5"
+      "sha256": "sha256:a6c265d5051ec1c5b0935916ae977f9fb23867c23b6fa5b5d6ce3d16a8178fef"
     },
     {
       "presentation": "dark responsive 1000x900",
@@ -329,7 +329,7 @@
       "page": "/graph?lens=context&scan=scan-proof-ai-platform&capture=1",
       "scope": "Same nine recorded entities and eight relationships arranged left to right using the Horizontal layout control",
       "visible_version": "0.108.4",
-      "sha256": "sha256:68ae8e0191996143807792e07718008dba3b7271697683e90956379223218b79"
+      "sha256": "sha256:d8f2d9890763693f1b83525a410e280e434c43289af5748bae31f7374ee63f4a"
     },
     {
       "presentation": "light responsive 1000x900",
@@ -337,7 +337,7 @@
       "page": "/graph?lens=context&scan=scan-proof-ai-platform&capture=1",
       "scope": "Same nine recorded entities and eight relationships arranged left to right using the Horizontal layout control",
       "visible_version": "0.108.4",
-      "sha256": "sha256:2401cbaac64277d030ebb25a6fd49bdfe9324209c8789633f68a4dd37e8ed44a"
+      "sha256": "sha256:cc8e106cad2e8f19e803126705bf8a7719392ec81417f415744196424d69a3d3"
     },
     {
       "presentation": "dark desktop",

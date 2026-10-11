@@ -771,15 +771,15 @@ def pull_trace_connector(request: Request, provider: str, body: dict) -> dict[st
     except (TypeError, ValueError) as exc:
         raise HTTPException(status_code=400, detail="'limit' must be an integer") from exc
     raw_screen = body.get("screen_content")
-    screen_content = _screen_content_enabled(None if raw_screen is None else bool(raw_screen))
+    if raw_screen is not None and not isinstance(raw_screen, bool):
+        raise HTTPException(status_code=400, detail="'screen_content' must be a boolean")
+    screen_content = _screen_content_enabled(raw_screen)
 
     try:
         otlp = fetch_traces(provider, credentials, limit=limit, include_content=screen_content)
     except TraceConnectorValidationError as exc:
-        # Invalid/unsafe caller input (e.g. SSRF-blocked host) — a client error.
         raise HTTPException(status_code=400, detail=sanitize_error(exc)) from exc
     except TraceConnectorError as exc:
-        # sanitize_error keeps credentials out of the response/logs.
         raise HTTPException(status_code=502, detail=sanitize_error(exc)) from exc
 
     traces = parse_otel_traces(otlp)
