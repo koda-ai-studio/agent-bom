@@ -625,6 +625,7 @@ _SERVER_RUNTIME_ENV_VARS = (
 # modules are covered automatically.
 _STORE_SINGLETON_MODULES = (
     "agent_bom.api.stores",
+    "agent_bom.api.tenant_graph_retention_store",
     "agent_bom.api.auth",
     "agent_bom.api.audit_log",
     "agent_bom.api.proxy_replay_store",
