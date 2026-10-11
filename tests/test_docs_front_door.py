@@ -76,6 +76,7 @@ def test_readme_first_screen_states_audience_and_visible_quick_start() -> None:
     visible = quick_start.split("<details>", 1)[0]
     for command in ("pip install agent-bom", "agent-bom scan .", "agent-bom scan --demo --offline"):
         assert command in visible, f"uncollapsed quick start is missing {command!r}"
+    assert "Exit `1` is expected" in visible, "the visible demo command must explain its security-gate exit"
     intro = first[: first.index("## Quick start")]
     assert re.search(r"\bfor (security|AppSec)", intro, re.I), "intro must say who the tool is for"
     assert "Source version:" not in first, "release plumbing does not belong on the first screen"

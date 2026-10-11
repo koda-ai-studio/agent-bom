@@ -24,7 +24,7 @@
   <a href="https://koda-ai-studio.github.io/agent-bom/">Docs</a>
 </p>
 
-Discover AI agents, MCP servers, packages, credential references and infrastructure across repositories, container images, Kubernetes and cloud accounts. Check vulnerabilities and configuration, import existing scanner findings, and investigate the recorded relationships behind each finding.
+For security, AppSec and GRC teams: discover AI agents, MCP servers, packages, credential references and infrastructure across repositories, container images, Kubernetes and cloud accounts. Check vulnerabilities and configuration, import existing scanner findings, and investigate the recorded relationships behind each finding.
 
 - **Scan** from the CLI or CI and export findings, SBOMs and reports.
 - **Centralize** inventory, graph evidence, remediation and compliance in your own control plane.
@@ -37,7 +37,7 @@ pip install agent-bom
 agent-bom scan .
 ```
 
-The scan prints project inventory, package findings and remediation guidance. Run `agent-bom doctor` to check setup, or follow the [first-run guide](docs/FIRST_RUN.md).
+The scan prints project inventory, package findings and remediation guidance. Run `agent-bom doctor` to check setup, or follow the [first-run guide](docs/FIRST_RUN.md). No project handy? Run `agent-bom scan --demo --offline` for a bundled sample without network access. Exit `1` is expected: the sample trips the security gate.
 
 For CI, save a report with `agent-bom scan . -f sarif -o findings.sarif`, then [upload it and gate the build](docs/FIRST_RUN.md#5-gate-ci-on-the-result). A non-zero exit can mean a security gate or incomplete assessment; inspect the report and [exit codes](site-docs/reference/exit-codes.md).
 
@@ -48,7 +48,7 @@ For CI, save a report with `agent-bom scan . -f sarif -o findings.sarif`, then [
 agent-bom scan --demo --offline
 ```
 
-Runs a bundled sample estate without network access. Exit `1` is expected: the sample trips the security gate. It lists sample agents, CVEs and policy findings (excerpt from current source; installed-release output may differ):
+The sample lists agents, CVEs and policy findings (excerpt from current source; installed-release output may differ):
 
 ```text
   Security posture:   CRIT  7   HIGH  10   MED   6 · all finding categories
@@ -125,7 +125,7 @@ The pilot binds to loopback and retains state in a Docker volume. Use the authen
 Use **CLI or GitHub Action**, **REST API**, or **MCP**; export **SARIF, CycloneDX, SPDX, JSON and HTML**.
 Cloud connectors and fleet sync collect inventory; proxy and gateway deployments add runtime evidence.
 
-For coding assistants, run `agent-bom mcp server`. It starts with eight focused tools; choose a graph, cloud, runtime or audit profile for other workflows. Current source includes 89 MCP tools, 7 resources, and 8 workflow prompts. [MCP workflows](docs/MCP_WORKFLOWS.md)
+For coding assistants, run `agent-bom mcp server`. Start with eight focused tools, then choose a graph, cloud, runtime or audit profile. The full catalog has 89 MCP tools, 7 resources, and 8 workflow prompts in current source. [MCP workflows](docs/MCP_WORKFLOWS.md)
 
 [Integration capability matrix](docs/INTEGRATIONS.md) · [MCP client setup](docs/MCP_CLIENT_GUIDES.md) ·
 [Proxy, gateway and fleet](site-docs/deployment/proxy-vs-gateway-vs-fleet.md) · [Smithery setup and manifest](site-docs/integrations/smithery.md)
