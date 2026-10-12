@@ -549,8 +549,19 @@ for (const theme of ["light", "dark"] as const) {
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       const navigation = page.getByRole("button", {name: "Open navigation menu"});
       if (viewport.width === 390) {
-        const bounds = await navigation.boundingBox();
-        expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(viewport.width);
+        const controls = [navigation, page.getByRole("button", {name: /Switch to .* theme/}), page.locator("header summary[aria-label^='Account menu:']")];
+        for (const control of controls) {
+          const bounds = await control.boundingBox();
+          expect(bounds).not.toBeNull();
+          expect(bounds!.x).toBeGreaterThanOrEqual(0);
+          expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(viewport.width);
+        }
+        const account = controls[2]!;
+        await account.click();
+        await expect(page.getByRole("link", {name: "Profile & settings"})).toBeVisible();
+        await page.keyboard.press("Escape");
+        await expect(account).toBeFocused();
+        await page.getByRole("banner").screenshot({path: testInfo.outputPath(`header-zoom-${theme}-${viewport.width}.png`)});
       }
       const status = page.locator("header summary", {hasText: "Control plane"});
       await status.focus(); await page.keyboard.press("Enter");

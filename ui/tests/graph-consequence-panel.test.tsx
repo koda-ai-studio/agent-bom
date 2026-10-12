@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { GraphConsequencePanel } from "@/components/graph-consequence-panel";
 import { api } from "@/lib/api";
@@ -18,8 +18,9 @@ it("requires explicit control and keeps missing evidence visible", async () => {
   expect(screen.getByRole("button", { name: "Trace consequences" })).toBeDisabled();
   fireEvent.click(screen.getByLabelText("Assume control of this agent or principal"));
   fireEvent.click(screen.getByRole("button", { name: "Trace consequences" }));
-  await screen.findByText(/No qualified action consequences/);
-  expect(screen.getByText(/Estate coverage is unknown/)).toBeVisible();
+  const investigation = await screen.findByRole("dialog", { name: "Consequence investigation" });
+  expect(within(investigation).getByText(/No qualified action consequences/)).toBeVisible();
+  expect(within(investigation).getByText(/Estate coverage is unknown/)).toBeVisible();
   expect(call.mock.calls[0]![0]).toMatchObject({ mode: "assumed_compromise", assume_control: true, snapshot_generation: "revision-one" });
 });
 it("selects only linked occurrences and never assumes exploitation", async () => {
