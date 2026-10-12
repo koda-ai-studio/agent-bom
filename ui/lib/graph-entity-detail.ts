@@ -133,13 +133,16 @@ export function resolveInvestigationNextAction(
   if (data.nodeType === "vulnerability") {
     return {
       label: "Review finding",
-      href: `/vulnerabilities?${scanQs}q=${encodeURIComponent(data.label)}`,
+      href: `/findings?${scanQs}cve=${encodeURIComponent(data.label)}`,
     };
   }
   if (data.nodeType === "package") {
+    const packageName = data.version && data.label.endsWith(`@${data.version}`)
+      ? data.label.slice(0, -data.version.length - 1)
+      : data.label;
     return {
       label: "Review package findings",
-      href: `/vulnerabilities?${scanQs}package=${encodeURIComponent(data.label)}`,
+      href: `/findings?${scanQs}q=${encodeURIComponent(packageName)}`,
     };
   }
   const nodeId = nodeIdFromLineageData(data);
