@@ -111,9 +111,9 @@ def test_readme_shows_the_end_to_end_product_journey_and_links_the_gallery() -> 
     front_outside_details = re.sub(r"<details>.*?</details>", "", front, flags=re.S)
     assert re.findall(r'<img src="docs/images/([^"]+)"', front_outside_details) == [
         "social-preview.svg",
-        "context-map-horizontal-dark-live.png",
+        "graph-environment-dark-live.png",
     ]
-    assert front.index("img.shields.io") < front.index("context-map-horizontal-dark-live.png")
+    assert front.index("img.shields.io") < front.index("graph-environment-dark-live.png")
     assert "labeled sample data" in front
     assert "[Explore the graph gallery](docs/GALLERY.md#explore-connections-and-inspect-evidence)" in journey
     grc = journey.split("### Security, engineering and GRC:", 1)[1].split("### AppSec", 1)[0]
@@ -164,7 +164,7 @@ def test_scenarios_separate_reproducible_proof_from_synthetic_layout_fixtures() 
 
     scenario, layouts = gallery.split("## Explore connections and inspect evidence", 1)
     assert scenario.count("<img ") == 1
-    assert layouts.count("<img ") == 2
+    assert layouts.count("<img ") == 5
     assert "labeled synthetic UI fixtures" in layouts
     assert "graph-relationship-dark-live.png" in layouts
     assert "context-map-live.png" in layouts

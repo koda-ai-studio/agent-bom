@@ -108,6 +108,30 @@ release predates them. In **Investigation → Explore connections**, select a
 snapshot and search for a package or agent. Start with its bounded neighborhood,
 then use **Show more connections** or **Expand** to inspect related entities.
 
+**Repository — connect source, configuration and dependencies.** The repository
+view shows source imports, deployment configuration, a CI job, the workload
+container and a package advisory. The fixture models configured relationships;
+it does not establish that the CI job ran or that a workload was deployed.
+
+<picture><source media="(prefers-color-scheme: light)" srcset="images/graph-repository-light-live.png"><img src="images/graph-repository-dark-live.png" alt="Repository branches into source dependencies, deployment configuration and a CI job, with the package advisory visible" width="1440"></picture>
+
+**Environment — see the agent alongside its infrastructure.** Follow the
+production environment into the workload cluster, agent, model, MCP server,
+exposed tool and dependency. Entity types, relationship labels and arrows use
+the same language throughout the workspace.
+
+<picture><source media="(prefers-color-scheme: light)" srcset="images/graph-environment-light-live.png"><img src="images/graph-environment-dark-live.png" alt="Environment connects a workload cluster and AI agent with its model, MCP server, tool and dependency" width="1440"></picture>
+
+**Cloud estate — inspect accounts, workloads, identities and data.** Follow the
+account's cluster and private API endpoint, then inspect a role's configured
+storage permission and the related finding. Configuration does not prove
+reachability or effective access.
+
+<picture><source media="(prefers-color-scheme: light)" srcset="images/graph-cloud-light-live.png"><img src="images/graph-cloud-dark-live.png" alt="Cloud account branches into cluster workloads, a private endpoint, an identity and storage with a review finding" width="1440"></picture>
+
+These three views use explicitly labeled synthetic UI fixtures. Each is captured
+through its actual **View & layers** preset; none is live-cloud evidence.
+
 **Start with one component.** The selected package stays beside its MCP server
 and vulnerability. The inspector links to that package's findings in the same
 snapshot. This capture uses labeled synthetic UI fixtures.

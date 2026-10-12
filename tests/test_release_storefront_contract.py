@@ -131,6 +131,12 @@ def test_release_manifest_covers_dark_light_and_mobile_product_proof() -> None:
         "security-graph-live.png": "dark desktop",
         "security-graph-light-live.png": "light desktop",
         "security-graph-mobile-live.png": "dark mobile",
+        "graph-cloud-dark-live.png": "dark desktop",
+        "graph-cloud-light-live.png": "light desktop",
+        "graph-repository-dark-live.png": "dark desktop",
+        "graph-repository-light-live.png": "light desktop",
+        "graph-environment-dark-live.png": "dark desktop",
+        "graph-environment-light-live.png": "light desktop",
         "graph-relationship-dark-live.png": "dark desktop",
         "graph-relationship-light-live.png": "light desktop",
     }

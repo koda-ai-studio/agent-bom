@@ -90,11 +90,11 @@ report and coverage. [Exit codes](site-docs/reference/exit-codes.md)
 
 </details>
 
-<p align="center"><a href="docs/images/context-map-horizontal-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/context-map-horizontal-light-live.png"><img src="docs/images/context-map-horizontal-dark-live.png" alt="Recorded MCP server, package and vulnerability relationships in the shared graph workspace" width="960"></picture></a></p>
+<p align="center"><a href="docs/images/graph-environment-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/graph-environment-light-live.png"><img src="docs/images/graph-environment-dark-live.png" alt="Environment graph connecting AI agents, models, MCP tools, dependencies and deployed workloads" width="1440"></picture></a></p>
 
-**Explore the connections behind a finding.** Start with a package, see its MCP server and linked vulnerability, then open the selected component's findings. The graph above uses labeled sample data. Click any screenshot to view it at full size.
+**See your AI environment in context.** Follow workloads, agents, models, MCP servers, tools and dependencies in one graph. Switch to **Repository** or **Cloud estate** to inspect code, build configuration, accounts, identities and storage. The graph above uses labeled sample data. Click any screenshot to view it at full size.
 
-**One investigation workspace:** follow a finding with **Find a path**, or inspect a snapshot with **Explore connections**. Select nodes and relationship arrows for details, expand the connections you need, and carry the finding into remediation. [See the graph tour](#appsec-and-cloud-teams-investigate-a-finding) · [Try the connected-BOM walkthrough](examples/connected-bom/README.md).
+**One investigation workspace:** follow a finding with **Find a path**, or inspect a snapshot with **Explore connections**. Select nodes and relationship arrows for details, expand the connections you need, and carry the finding into remediation. [Repository, environment and cloud gallery](docs/GALLERY.md#explore-connections-and-inspect-evidence) · [Try the connected-BOM walkthrough](examples/connected-bom/README.md).
 
 These graph enhancements are merged in current source; the pinned `0.108.4` release below predates them. Recorded relationships do not by themselves prove execution or data access.
 
