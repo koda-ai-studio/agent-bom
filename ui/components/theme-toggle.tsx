@@ -53,7 +53,7 @@ export function ThemePreferenceControl() {
   return <div role="group" aria-label="Appearance" className="flex flex-wrap gap-2">
     {(["light", "dark", "system"] as const).map(value => <button key={value} type="button" aria-pressed={preference === value}
       onClick={() => applyTheme(value)}
-      className={`rounded-lg border px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-500 ${preference === value ? "border-emerald-500 bg-emerald-500/10 text-foreground" : "border-outline text-ink-secondary hover:bg-surface-muted"}`}>
+      className={`flex-1 rounded-lg border px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-500 ${preference === value ? "border-emerald-500 bg-emerald-500/10 text-foreground" : "border-outline text-ink-secondary hover:bg-surface-muted"}`}>
       {value[0]!.toUpperCase() + value.slice(1)}
     </button>)}
   </div>;

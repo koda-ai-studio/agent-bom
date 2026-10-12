@@ -107,9 +107,7 @@ describe("graph-entity-detail", () => {
   });
 
   it("resolves next actions for findings and packages", () => {
-    expect(resolveInvestigationNextAction(baseNode(), { scanId: "scan-1" }).href).toContain(
-      "/vulnerabilities",
-    );
+    expect(resolveInvestigationNextAction(baseNode(), { scanId: "scan-1" }).href).toBe("/findings?scan=scan-1&cve=CVE-2024-1234");
     expect(
       resolveInvestigationNextAction(baseNode({ nodeType: "package", label: "lodash" }), {
         scanId: "scan-1",
@@ -129,4 +127,16 @@ it("replaces stale assessment metadata when authoritative legacy detail has no a
   } as unknown as GraphNodeDetailResponse);
   expect(data.riskAssessment?.status).toBe("not_assessed");
   expect(data.riskScore).toBe(0);
+});
+
+it.each([
+  ["next@15.2.2", "15.2.2", "next"],
+  ["@scope/package@1.0.0", "1.0.0", "@scope/package"],
+  ["@scope/package", undefined, "@scope/package"],
+])("keeps the snapshot and searchable package name for %s", (label, version, name) => {
+  const action = resolveInvestigationNextAction(baseNode({ nodeType: "package", label, version }), { scanId: "scan /1" });
+  const url = new URL(action.href, "https://example.test");
+  expect(url.pathname).toBe("/findings");
+  expect(url.searchParams.get("scan")).toBe("scan /1");
+  expect(url.searchParams.get("q")).toBe(name);
 });

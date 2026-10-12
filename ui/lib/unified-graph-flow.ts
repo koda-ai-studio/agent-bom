@@ -20,6 +20,7 @@ import {
 import {
   NODE_COLOR_MAP,
   NODE_TYPE_LEGEND_ORDER,
+  relationshipEdgeLabelText,
   relationshipLegendItem,
   type LegendItem,
 } from "@/lib/graph-utils";
@@ -605,11 +606,11 @@ function toFlowEdge(edge: UnifiedEdge): Edge {
   const reachColor = reachStrokeColor(reachScore);
   const strokeColor = reachColor ?? color;
   const dashed = DASHED_RELATIONSHIPS.has(relationship);
+  const evidenceMode = graphEdgeEvidenceMode(edge);
   const animated =
-    ANIMATED_RELATIONSHIPS.has(relationship) ||
-    edge.weight >= 4 ||
-    (reachScore ?? 0) >= 90;
-  const runtime = RUNTIME_RELATIONSHIPS.has(relationship);
+    (!RUNTIME_RELATIONSHIPS.has(relationship) || evidenceMode === "runtime") &&
+    (ANIMATED_RELATIONSHIPS.has(relationship) || edge.weight >= 4 || (reachScore ?? 0) >= 90);
+  const marker = { type: MarkerType.ArrowClosed, color: strokeColor, width: 14, height: 10 };
 
   return {
     id: edge.id || `${edge.source}:${relationship}:${edge.target}`,
@@ -618,9 +619,11 @@ function toFlowEdge(edge: UnifiedEdge): Edge {
     type: "smoothstep",
     data: {
       relationship,
-      relationshipLabel: legend.label,
+      relationshipLabel: relationshipEdgeLabelText(relationship, { evidenceMode }),
       relationshipCategory: legend.layer,
-      evidenceMode: runtime ? "runtime" : dashed ? "inferred" : "static",
+      evidenceMode,
+      direction: edge.direction,
+      traversable: edge.traversable,
     },
     animated,
     style: {
@@ -632,13 +635,22 @@ function toFlowEdge(edge: UnifiedEdge): Edge {
       opacity: animated ? 0.95 : 0.82,
       strokeDasharray: dashed ? "6 3" : undefined,
     },
-    markerEnd: {
-      type: MarkerType.ArrowClosed,
-      color: strokeColor,
-      width: 14,
-      height: 10,
-    },
+    markerEnd: marker,
+    ...(edge.direction === "bidirectional" ? { markerStart: marker } : {}),
   };
+}
+
+/** A runtime-shaped verb can also come from source analysis or configuration. */
+export function graphEdgeEvidenceMode(edge: Pick<UnifiedEdge, "relationship" | "evidence">): "runtime" | "static" | "inferred" | "unknown" {
+  const evidence = edge.evidence ?? {};
+  if (evidence.source === "source-ast" ||
+    ["configured", "configured_delegation", "configured_target", "static", "static_scan"].includes(String(evidence.basis))) return "static";
+  if (RUNTIME_RELATIONSHIPS.has(String(edge.relationship))) {
+    const recordedRuntime = [evidence.source, evidence.data_source].some(source =>
+      source === "runtime-proxy" || source === "runtime-identity" || source === "runtime-feedback");
+    return recordedRuntime || evidence.evidence_tier === "runtime_observed" || evidence.evidence_tier === "runtime_blocked" ? "runtime" : "unknown";
+  }
+  return DASHED_RELATIONSHIPS.has(String(edge.relationship)) ? "inferred" : "static";
 }
 
 function buildSummary(
@@ -659,7 +671,7 @@ function buildSummary(
     (edge) =>
       visibleNodeIds.has(edge.source) &&
       visibleNodeIds.has(edge.target) &&
-      RUNTIME_RELATIONSHIPS.has(String(edge.relationship)),
+      graphEdgeEvidenceMode(edge) === "runtime",
   ).length;
 
   // Spend is summed over the visible nodes only, so the header reconciles with

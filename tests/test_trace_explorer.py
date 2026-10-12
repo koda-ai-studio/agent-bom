@@ -112,8 +112,8 @@ def test_build_trace_explorer_payload_sync_bounds_findings(monkeypatch) -> None:
         def list_sessions(self, tenant_id, limit, offset):
             return []
 
-        def list_observations(self, tenant_id, limit, offset):
-            return []
+        def query_observations(self, tenant_id, limit, offset, **filters):
+            return {"observations": [], "total": 0, "sources": {}}
 
     monkeypatch.setattr(observability, "get_runtime_event_store", lambda: _FakeRuntimeStore())
 
@@ -127,5 +127,71 @@ def test_build_trace_explorer_payload_sync_bounds_findings(monkeypatch) -> None:
 
     result = observability._build_trace_explorer_payload_sync("tenant-x", limit=25)
 
-    assert result == {"ok": True}
+    assert result["ok"] is True
     assert captured["findings_len"] == 25
+
+
+def test_native_tree_keeps_physical_parents_and_logical_roots_without_name_joins():
+    records = [
+        {
+            "tenant_id": "tenant",
+            "observation_id": identity,
+            "session_id": "scoped-trace",
+            "surface": "imported_trace",
+            "tool_name": "same-name",
+            "metadata": {
+                "parent_observation_id": parent,
+                "logical_root": logical,
+                "provider": "langfuse",
+                "project_id": "project",
+                "native_type": "TOOL",
+            },
+        }
+        for identity, parent, logical in [
+            ("child", "root", True),
+            ("root", "", False),
+            ("orphan", "missing", False),
+            ("cycle-a", "cycle-b", False),
+            ("cycle-b", "cycle-a", False),
+        ]
+    ]
+    payload = build_trace_explorer_payload(
+        tenant_id="tenant",
+        feed_events=[],
+        sessions=[],
+        observations=records,
+        findings=[{"id": "unrelated", "exposed_tools": ["same-name"]}],
+    )
+    spans = {s["span_id"]: s for s in payload["sessions"][0]["spans"]}
+    assert spans["child"]["parent_span_id"] == "root"
+    assert spans["child"]["depth"] == 1
+    assert spans["child"]["logical_root"] is True
+    assert spans["orphan"]["parent_state"] == "missing"
+    assert spans["cycle-a"]["parent_state"] == "cycle"
+    assert spans["cycle-b"]["parent_state"] == "cycle"
+    assert all(s["linked_findings"] == [] for s in spans.values())
+    assert spans["child"]["correlation_state"] == "unmapped"
+    assert spans["child"]["source_scope"]["project_id"] == "project"
+
+
+def test_native_tree_does_not_attach_across_sessions_or_tenants():
+    payload = build_trace_explorer_payload(
+        tenant_id="tenant",
+        feed_events=[],
+        sessions=[],
+        findings=[],
+        observations=[
+            {"tenant_id": "other", "observation_id": "wrong", "session_id": "s"},
+            {"tenant_id": "tenant", "observation_id": "parent", "session_id": "other-project", "surface": "imported_trace"},
+            {
+                "tenant_id": "tenant",
+                "observation_id": "child",
+                "session_id": "s",
+                "surface": "imported_trace",
+                "metadata": {"parent_observation_id": "parent"},
+            },
+        ],
+    )
+    spans = [s for session in payload["sessions"] for s in session["spans"]]
+    assert {s["span_id"] for s in spans} == {"parent", "child"}
+    assert next(s for s in spans if s["span_id"] == "child")["parent_state"] == "missing"

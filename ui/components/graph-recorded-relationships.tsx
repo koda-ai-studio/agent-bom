@@ -3,7 +3,8 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { useAuthState } from "@/components/auth-provider";
 import { useIncidentNeighborhood } from "@/hooks/use-incident-neighborhood";
-import { contextRelationshipLabel } from "@/lib/context-graph";
+import { relationshipEdgeLabelText } from "@/lib/graph-utils";
+import { graphEdgeEvidenceMode } from "@/lib/unified-graph-flow";
 import { buildGraphInvestigationBundle, downloadGraphInvestigation } from "@/lib/graph-investigation-bundle";
 
 type Props = { scanId: string; nodeId: string; onInspectNode?: ((id: string) => void) | undefined };
@@ -64,7 +65,7 @@ export function GraphRecordedRelationships({ scanId, nodeId, onInspectNode }: Pr
         const neighborId = edge.source === nodeId ? edge.target : edge.source;
         const label = nodes.get(neighborId)?.label || neighborId;
         const direction = edge.source === edge.target ? "Self relationship" : edge.direction === "bidirectional" ? "Bidirectional ↔" : edge.direction === "directed" ? (edge.source === nodeId ? "Outgoing →" : "← Incoming") : "Related";
-        const relationship = edge.relationship === "uses" ? "Recorded connection" : contextRelationshipLabel(edge.relationship);
+        const relationship = relationshipEdgeLabelText(edge.relationship, { evidenceMode: graphEdgeEvidenceMode(edge) });
         return <li key={JSON.stringify([edge.source, edge.target, edge.relationship])} className="rounded-lg border border-outline p-3 [overflow-wrap:anywhere]">
           <p className="mb-1 text-ink-secondary">{direction} · {relationship}</p>
           {onInspectNode ? <button type="button" onClick={() => onInspectNode(neighborId)} className="block w-full break-words text-left text-sm font-medium text-emerald-800 dark:text-emerald-300">{label}</button> : <p className="break-words text-sm font-medium">{label}</p>}

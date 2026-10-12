@@ -58,7 +58,7 @@ def test_postgres_ledger_serializes_same_tenant_sequence_before_dedupe() -> None
     legacy_source = (
         __import__("pathlib").Path(__file__).parents[1] / "src" / "agent_bom" / "api" / "postgres_runtime_event.py"
     ).read_text()
-    assert 'ensure_postgres_schema_version(conn, "runtime_events", version=GATEWAY_ACTIVITY_STORAGE_VERSION)' in legacy_source
+    assert 'ensure_postgres_schema_version(conn, "runtime_events", version=RUNTIME_TRACE_STORAGE_VERSION)' in legacy_source
     assert "bootstrap_postgres_gateway_activity_schema(conn)" in legacy_source
 
 

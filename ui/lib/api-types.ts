@@ -3987,6 +3987,21 @@ export interface TraceIngestResponse {
 }
 
 export interface TraceExplorerSpan {
+  cloud_trace?: { basis: "source_reported"; execution_proven: false; scope_state: "consistent" | "conflict" | "invalid"; attributes: Record<string, string> } | null;
+  surface?: string;
+  parent_span_id?: string;
+  parent_state?: "root" | "resolved" | "missing" | "cycle";
+  depth?: number;
+  logical_root?: boolean | null;
+  native_type?: string;
+  native_name?: string;
+  event_time_missing?: boolean;
+  collected_at?: string | null;
+  end_time_unix_nano?: string | null;
+  correlation_state?: string;
+  inventory_binding?: { state: string; basis?: string; node_id?: string; scan_id?: string; snapshot_generation?: string; execution_proven: false; inventory_paths?: Array<{ node_ids: string[]; edge_ids: string[]; node_labels: string[]; finding_node_id: string; basis: "recorded_inventory_relationships"; execution_proven: false }>; paths_truncated?: boolean } | null;
+  source_scope?: Record<string, string>;
+
   span_id: string;
   timestamp?: string | undefined;
   agent: string;
@@ -4015,6 +4030,13 @@ export interface TraceExplorerSession {
 }
 
 export interface TraceExplorerResponse {
+  retained_total?: number;
+  source_counts?: Record<string, number>;
+  offset?: number;
+  limit?: number;
+  has_more?: boolean;
+  feed_included?: boolean;
+  counts_scope?: string;
   schema_version: string;
   tenant_id: string;
   session_count: number;
@@ -4665,6 +4687,21 @@ export interface TraceConnectorPullResponse {
   content_screened: boolean;
   attack_paths: TraceSpanAttackPath[];
   content_findings: TraceContentFinding[];
+  import?: {
+    import_id: string;
+    revision: number;
+    complete: boolean;
+    status: string;
+    coverage: string;
+    window_start: string;
+    window_end: string;
+    counts_scope: string;
+    counts: { fetched: number; imported: number; updated?: number; unchanged: number; rejected: number; committed_pages: number; failed_pages: number };
+    rejected_reasons: Record<string, number>;
+    total_rejected: number;
+    error: { code: string; retryable: boolean } | null;
+    content_retained: false;
+  };
 }
 
 // ── Governance: persisted AI-system blueprints (versioning + approval) ────────

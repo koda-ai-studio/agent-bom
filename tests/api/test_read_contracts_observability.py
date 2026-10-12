@@ -146,3 +146,23 @@ def test_anomaly_rows_match_documented_models() -> None:
         "anomaly_count": len(cost) + len(behavior) + len(temporal),
     }
     assert _contract_violations("/v1/observability/anomalies", body, obs.ObservabilityAnomaliesResponse) == []
+
+
+def test_native_history_requires_auth_and_validates_pagination(
+    empty_estate_client: TestClient,  # noqa: F811
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from agent_bom.api.server import configure_api
+
+    # The shared harness explicitly enables local no-auth mode. Exercise the
+    # production trusted-proxy posture here, with anonymous access disabled.
+    monkeypatch.delenv("AGENT_BOM_ALLOW_UNAUTHENTICATED_API", raising=False)
+    configure_api(api_key=None, allow_unauthenticated=False)
+    path = "/v1/runtime/observation-revisions?observation_id=unavailable"
+    assert empty_estate_client.get(path).status_code in {401, 403}
+    response = empty_estate_client.get(path, headers=_ADMIN)
+    assert response.status_code == 200
+    assert response.json()["observations"] == []
+    assert _contract_violations(path, response.json(), obs.RuntimeObservationsResponse) == []
+    assert empty_estate_client.get(path + "&offset=-1", headers=_ADMIN).status_code == 422
+    assert empty_estate_client.get(path + "&limit=501", headers=_ADMIN).status_code == 422

@@ -27,23 +27,18 @@ for (const theme of ["light", "dark"] as const) {
       await page.goto(`/graph?scan=${scanId}&rollup=1`);
       const notice = page.getByText(/This level: 1 unique descendant · 2 scope memberships/);
       await expect(notice).toBeVisible();
-      const settings = page.getByTestId("graph-evidence-controls");
-      const settingsToggle = settings.locator(":scope > summary");
-      await settingsToggle.click();
-      const scopeSummary = settings.locator(":scope > div > p").first();
-      await expect(scopeSummary).toBeVisible();
-      await expect(scopeSummary).toContainText("2 nodes and scopes · 1,241 nodes in snapshot");
-      await expect(scopeSummary).not.toContainText("bounded canvas");
-      await settingsToggle.click();
+      const controls = page.getByTestId("graph-view-controls");
+      await controls.getByRole("button", { name: "View & layers" }).click();
+      await expect(controls.getByLabel("Active graph filters")).toContainText("Estate summary");
+      await controls.getByRole("button", { name: "View & layers" }).click();
       expect(await notice.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
       await notice.scrollIntoViewIfNeeded();
       await page.screenshot({ path: testInfo.outputPath(`shared-scopes-${theme}-${width}.png`) });
-      const controls = page.getByTestId("graph-view-controls");
       await controls.getByRole("button", { name: "View & layers" }).click();
       await controls.getByRole("button", { name: "Hide all layers" }).click();
       await expect(notice).not.toBeVisible();
       await expect(controls.getByLabel("Active graph filters")).toContainText("0/");
-      await controls.getByRole("button", { name: "Reset graph view" }).click();
+      await controls.getByRole("button", { name: "Reset view" }).click();
       await expect(notice).toBeVisible();
     });
   }
@@ -168,6 +163,7 @@ function buildLargeGraph() {
 }
 
 async function routeLargeGraphPage(page: Page, environmentFixture = false) {
+  await page.route("**/v1/**", route => route.fulfill({ status: 404, json: { detail: "Outside graph fixture" } }));
   const graph = buildLargeGraph();
   if (environmentFixture) graph.nodes.forEach((item, index) => {
     item.dimensions = { cloud_provider: "aws", environment: index % 3 ? "production" : "development" };
@@ -527,15 +523,15 @@ test("root investigations expose depth and direction controls with bounded reque
   const initial = page.waitForRequest((request) => request.url().endsWith("/v1/graph/query"));
   await page.goto(`/graph?scan=${scanId}&root=pkg%3A42`);
   expect((await initial).postDataJSON()).toMatchObject({ roots: ["pkg:42"], max_depth: 1, max_nodes: 4 });
-  await page.getByText("Traversal options", { exact: true }).click();
-  await expect(page.getByRole("combobox", { name: "Traversal depth" })).toHaveValue("1");
+  await page.getByRole("button", { name: "View & layers", exact: true }).click();
+  await page.getByRole("button", { name: /^Traversal/ }).click();
+  await expect(page.getByRole("combobox", { name: "Graph traversal depth" })).toHaveValue("1");
   await expect(page.getByTestId("graph-headline-metrics")).toHaveCount(0);
   await expect(page.getByText("Analysis status unavailable", { exact: true })).toHaveCount(0);
   const deeper = page.waitForRequest((request) => request.url().endsWith("/v1/graph/query") && request.postDataJSON().max_depth === 2);
-  await page.getByRole("combobox", { name: "Traversal depth" }).selectOption("2");
+  await page.getByRole("combobox", { name: "Graph traversal depth" }).selectOption("2");
   expect((await deeper).postDataJSON()).toMatchObject({ roots: ["pkg:42"], scan_id: scanId, max_nodes: 4, max_edges: 96 });
   const reverse = page.waitForRequest((request) => request.url().endsWith("/v1/graph/query") && request.postDataJSON().direction === "reverse");
-  await page.getByText("Traversal options", { exact: true }).click();
   await page.getByRole("combobox", { name: "Traversal direction" }).selectOption("reverse");
   const reverseRequest = await reverse;
   expect(reverseRequest.postDataJSON()).toMatchObject({ roots: ["pkg:42"], max_depth: 2 });
@@ -544,13 +540,17 @@ test("root investigations expose depth and direction controls with bounded reque
   await reverseResponse!.finished();
   await expect(page.getByText("Loading related assets · current view retained", { exact: true })).toBeHidden();
   const canvas = page.locator(".react-flow");
-  const top = (await canvas.boundingBox())!.y;
+  const documentTop = () => canvas.evaluate(element => element.getBoundingClientRect().top + window.scrollY);
+  const top = await documentTop();
   await page.locator(".graph-legend-dock-summary:visible").click();
   await expect(page.locator(".graph-legend-dock-content:visible").getByText(/Arrows show recorded direction/)).toBeVisible();
-  expect((await canvas.boundingBox())!.y).toBe(top);
+  // The separated legend grows above the canvas instead of covering its nodes.
+  const legendBottom = await page.locator(".graph-legend-dock-content:visible").evaluate(element => element.getBoundingClientRect().bottom + window.scrollY);
+  expect(await documentTop()).toBeGreaterThanOrEqual(legendBottom);
   await page.locator(".graph-legend-dock-summary:visible").click();
-  await page.getByTestId("reachability-evidence-details").locator("summary").first().click();
-  expect((await canvas.boundingBox())!.y).toBe(top);
+  expect(await documentTop()).toBe(top);
+  await expect(page).toHaveURL(/root=pkg%3A42/);
+  await expect(page.getByTestId("graph-entity-drawer").getByText("pkg:42", { exact: true })).toBeVisible();
 });
 
 for (const width of [1100, 1440]) {
@@ -573,7 +573,7 @@ for (const width of [1100, 1440]) {
     };
     await expect.poll(visibleBesideDetails).toBe(true);
     await drawer.getByRole("separator", { name: "Resize drawer" }).press("ArrowLeft");
-    await page.getByRole("button", { name: "Readable view", exact: true }).click();
+    await page.getByRole("button", { name: "Fit all", exact: true }).click();
     await expect.poll(visibleBesideDetails).toBe(true);
     await page.getByRole("button", { name: "Switch to light theme" }).click();
     await expect.poll(visibleBesideDetails).toBe(true);
@@ -594,11 +594,12 @@ test("scope summary does not inherit the unrelated node-page warning", async ({ 
   } }));
   await page.goto("/security-graph?lens=estate");
   await expect(page.getByRole("group", { name: "Complete estate scope, org", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Summary", exact: true }).click();
-  await expect(page.getByRole("region", { name: "Risk-prioritized estate scopes" })).toContainText("Complete estate scope");
+  await expect(page.getByRole("button", { name: "All scopes", exact: true })).toHaveCount(1);
+  await page.getByRole("button", { name: "All scopes", exact: true }).click();
+  await expect(page.getByRole("group", { name: "Complete estate scope, org", exact: true })).toBeVisible();
   await expect(page.getByText(/This node view includes only part/)).toHaveCount(0);
   await expect(page.getByText("node_page_limit", { exact: true })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Open scope", exact: true })).toBeVisible();
+  await expect(page.locator(".react-flow__node")).toHaveCount(1);
 });
 
 
@@ -688,7 +689,7 @@ test("partial investigations expand only after an explicit request", async ({ pa
   const next = page.waitForRequest(req => req.url().endsWith("/v1/graph/query") && req.postDataJSON().max_nodes === 8);
   await page.getByRole("button", { name: "Show more connections", exact: true }).click();
   await next;
-  await expect(page.getByTestId("graph-viewport-scope")).toContainText("8 displayed nodes");
+  await expect(page.getByTestId("graph-viewport-scope")).toContainText("8 nodes");
   // Fit every loaded connection, including newly measured off-screen nodes.
   await page.getByRole("button", { name: "Fit all", exact: true }).click();
   await expect(page.locator(".react-flow__node")).toHaveCount(8);
@@ -744,7 +745,7 @@ for (const theme of ["light", "dark"] as const) {
       neighbors: [finding], sources: ["scan"], impact: { affected_count: 0, affected_by_type: {}, max_depth_reached: 0 },
     } }));
     await page.goto(`/graph?scan=${scanId}`);
-    await page.getByRole("button", { name: "Summary", exact: true }).click();
+    await page.getByRole("button", { name: "All scopes", exact: true }).first().click();
     await page.getByRole("button", { name: "Inspect pyyaml@5.3 (pkg:42)", exact: true }).click();
     await expect(page.getByTestId("graph-drawer-panel-overview").getByText("Findings", { exact: true })).toBeVisible();
     await expect(page.getByText("No known findings on this package node")).toHaveCount(0);
@@ -766,7 +767,7 @@ for (const theme of ["light", "dark"] as const) {
       completeness: { status: "complete", complete: true, truncated: false, returned: 2, total: 2 },
     } }));
     await page.goto("/graph");
-    await page.getByRole("button", { name: "Summary", exact: true }).click();
+    await page.getByRole("button", { name: "All scopes", exact: true }).first().click();
     const summary = page.getByTestId("graph-rollup-decision-surface");
     await expect(summary.getByText(/image: billing:1.0/)).toBeVisible();
     await expect(summary.getByText(/image: claims:1.0/)).toBeVisible();
@@ -794,7 +795,7 @@ for (const theme of ["light", "dark"] as const) {
       completeness: { status: "complete", complete: true, truncated: false, returned: 13, total: 13 },
     } }));
     await page.goto(`/graph?scan=${scanId}`);
-    await page.getByRole("button", { name: "Summary", exact: true }).click();
+    await page.getByRole("button", { name: "All scopes", exact: true }).first().click();
     const summary = page.getByTestId("graph-rollup-decision-surface");
     await expect(summary.getByRole("article")).toHaveCount(12);
     const row = summary.getByRole("article").first();
@@ -1073,7 +1074,7 @@ for (const theme of ["light", "dark"] as const) {
       await page.goto(`/graph?scan=${scanId}`);
       const controls = page.getByTestId("graph-view-controls");
       await expect(controls.getByRole("button", { name: "View & layers" })).toBeVisible();
-      await expect(page.getByTestId("graph-evidence-controls")).not.toHaveAttribute("open");
+      await expect(page.getByTestId("graph-evidence-controls")).toHaveCount(0);
       await controls.getByRole("button", { name: "View & layers" }).click();
       const search = controls.getByRole("searchbox", { name: "Filter graph layers" });
       await search.fill("Packages");
@@ -1082,7 +1083,7 @@ for (const theme of ["light", "dark"] as const) {
       const previous = await packages.isChecked();
       await packages.click();
       await expect(packages).toBeChecked({ checked: !previous });
-      await controls.getByRole("button", { name: "Reset graph view" }).click();
+      await controls.getByRole("button", { name: "Reset view" }).click();
       await expect(page).toHaveURL(new RegExp(`scan=${scanId}`));
       await search.fill("");
       await controls.evaluate(element => window.scrollTo(0, element.getBoundingClientRect().top + window.scrollY - 80));

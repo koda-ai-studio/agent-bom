@@ -261,3 +261,23 @@ describe("readableGraphEdges label density", () => {
     expect(accessible?.labelBgStyle).toEqual({ fill: "#111827" });
   });
 });
+
+it("names every relationship in a small neighborhood without hover", () => {
+  const relationships = ["can_access", "uses", "depends_on", "vulnerable_to", "shares_server"];
+  const edges = readableGraphEdges(relationships.map((relationship, i) => ({
+    id: `e${i}`, source: `n${i}`, target: `n${i + 1}`, data: { relationship },
+  })), null, { maxLabeledEdges: 24 });
+  expect(edges.every(edge => typeof edge.label === "string" && edge.label.length > 0)).toBe(true);
+  expect(edges[4]?.label).not.toMatch(/delegat|invok|execut/i);
+});
+
+it("qualifies configured and unverified delegation in visible and accessible labels", () => {
+  for (const [evidenceMode, expected] of [["static", "Configured delegation"], ["unknown", "Delegation (unverified)"], ["runtime", "Delegated To"]]) {
+    const [edge] = readableGraphEdges([{
+      id: "delegation", source: "planner", target: "worker",
+      data: {relationship: "delegated_to", evidenceMode},
+    }]);
+    expect(edge?.label).toBe(expected);
+    expect(edge?.ariaLabel).toContain(expected);
+  }
+});

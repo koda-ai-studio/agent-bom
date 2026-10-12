@@ -13,15 +13,6 @@ import type {
 export const ROLLUP_DECISION_THRESHOLD = 24;
 const PAGE_SIZE = 12;
 
-export function InvestigationViewSwitch({ summary, onSummary, onGraph }: {
-  summary: boolean; onSummary: () => void; onGraph: () => void;
-}) {
-  return <div role="group" aria-label="Investigation view" className="flex flex-wrap items-center gap-2">
-    <button type="button" aria-pressed={summary} onClick={onSummary} className={summary ? "graph-chip-emerald" : "graph-chip-neutral"}>Summary</button>
-    <button type="button" aria-pressed={!summary} onClick={onGraph} className={!summary ? "graph-chip-emerald" : "graph-chip-neutral"}>Graph</button>
-  </div>;
-}
-
 type RiskFilter = "priority" | "exposed" | "all";
 
 const SEVERITY_RANK: Record<string, number> = { critical: 5, high: 4, medium: 3, low: 2, info: 1 };

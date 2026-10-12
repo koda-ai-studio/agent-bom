@@ -120,16 +120,18 @@ export function GraphLegend({
 export function GraphLegendDock({
   items,
   defaultOpen = false,
+  separated = false,
 }: {
   items: LegendItem[];
   defaultOpen?: boolean;
+  separated?: boolean;
 }) {
   if (items.length === 0) return null;
   const preview = pickLegendPreview(items, 6);
 
   return (
     <details
-      className="group graph-legend-dock relative !pt-2"
+      className={`group graph-legend-dock relative${separated ? " graph-legend-dock-separated" : ""}`}
       {...(defaultOpen ? { open: true } : {})}
     >
       <summary className="graph-legend-dock-summary">
@@ -158,7 +160,7 @@ export function GraphLegendDock({
           collapse
         </span>
       </summary>
-      <div className="graph-legend-dock-content absolute inset-x-0 top-full z-40 !bg-surface shadow-lg">
+      <div className="graph-legend-dock-content">
         <p className="mb-2 text-xs text-ink-secondary">Arrows show recorded direction. Colors and solid/dashed lines distinguish relationship types, not confidence or proof of execution.</p>
         <GraphLegendContent items={items} />
       </div>
@@ -170,12 +172,12 @@ function GraphLegendContent({ items }: { items: LegendItem[] }) {
   const nodeItems = items.filter((item) => item.kind !== "edge");
   const edgeItems = items.filter((item) => item.kind === "edge");
   return (
-    <>
+    <div className="graph-legend-sections" role="group" aria-label="Graph legend categories">
       {nodeItems.length > 0 && <LayeredLegendSections items={nodeItems} />}
       {edgeItems.length > 0 && (
         <LegendSection title="Relationships" items={edgeItems} />
       )}
-    </>
+    </div>
   );
 }
 
@@ -223,9 +225,9 @@ function LayeredLegendSections({ items }: { items: LegendItem[] }) {
 
 function LegendSection({ title, items }: { title: string; items: LegendItem[] }) {
   return (
-    <div className="first:mt-0 mt-3">
-      <div className="mb-2 text-[10px] uppercase tracking-[0.18em] text-ink-tertiary">{title}</div>
-      <div className="grid grid-cols-1 gap-x-3 gap-y-2 text-[11px] text-ink-secondary sm:grid-cols-2">
+    <div className="graph-legend-section">
+      <div className="mb-2 text-xs font-medium text-ink-tertiary">{title}</div>
+      <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-ink-secondary">
         {items.map((item) => (
           <span
             key={`${title}:${item.label}`}

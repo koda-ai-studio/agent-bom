@@ -1,11 +1,4 @@
-"""Observability and data ingestion API routes.
-
-POST /v1/traces                          ingest OpenTelemetry traces
-POST /v1/traces/attack-paths             per-span trace -> attack-path join
-GET  /v1/traces/connectors               list native trace-pull connectors
-POST /v1/traces/connectors/{provider}/pull  pull + correlate Langfuse/LangSmith traces
-POST /v1/results/push                    receive pushed scan results from CLI
-"""
+"""Tenant-scoped observability and evidence ingestion routes; see generated OpenAPI."""
 
 from __future__ import annotations
 
@@ -36,7 +29,9 @@ from agent_bom.api.idempotency_store import (
     idempotency_request_fingerprint,
     idempotency_reservation_lease_seconds,
 )
+from agent_bom.api.managed_trace_pull import managed_trace_pull
 from agent_bom.api.models import JobStatus, PushPayload, ScanJob, ScanRequest
+from agent_bom.api.ocsf_fields import _ocsf_finding_message, _resource_name
 from agent_bom.api.pipeline import _persist_graph_snapshot
 from agent_bom.api.push_evidence import audit_push_admission
 from agent_bom.api.push_evidence import normalize_pushed_report as _normalize_pushed_report
@@ -57,6 +52,7 @@ from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.api.tenant_quota import enforce_retained_jobs_quota, tenant_quota_guard
 from agent_bom.api.trace_collection.routes import router as trace_collection_router
 from agent_bom.api.trace_connection_broker import public_connections, pull_credentials
+from agent_bom.api.trace_explorer_read import assemble_trace_explorer
 from agent_bom.canonical_ids import canonical_id
 from agent_bom.config import API_MAX_OCSF_INGEST_EVENTS
 from agent_bom.core.severity import ocsf_to_severity
@@ -122,31 +118,6 @@ def _ocsf_timestamp(value: object) -> str:
     if isinstance(value, str) and value.strip():
         return value.strip()
     return _now()
-
-
-def _resource_name(event: dict) -> str:
-    resources = event.get("resources")
-    if isinstance(resources, list):
-        for resource in resources:
-            if isinstance(resource, dict) and str(resource.get("name", "")).strip():
-                return str(resource["name"]).strip()
-    for key in ("resource", "tool_name", "tool"):
-        candidate = str(event.get(key, "")).strip()
-        if candidate:
-            return candidate
-    return ""
-
-
-def _ocsf_finding_message(event: dict) -> str:
-    if message := str(event.get("message", "")).strip():
-        return message
-    finding_info = event.get("finding_info")
-    if isinstance(finding_info, dict):
-        for key in ("title", "desc", "uid"):
-            candidate = str(finding_info.get(key, "")).strip()
-            if candidate:
-                return candidate
-    return str(event.get("class_name", "OCSF event")).strip() or "OCSF event"
 
 
 def _ocsf_finding_detector(event: dict) -> str:
@@ -488,17 +459,9 @@ def _screen_trace_content_events(body: dict, *, tenant_id: str) -> list[dict[str
 
 @router.post("/traces", tags=["observability"])
 async def ingest_traces(request: Request, body: dict, screen_content: bool | None = None) -> dict:
-    """Ingest OpenTelemetry trace data and flag vulnerable tool calls.
+    """Ingest OTLP metadata and flag candidate vulnerable tool calls.
 
-    Accepts OTLP JSON format traces containing `adk.tool.*` spans.
-    Cross-references tool calls against completed scan results to flag
-    any calls that touch packages with known CVEs.
-
-    Span *metadata* is parsed by default; content is never read or stored.
-    Pass ``screen_content=true`` (opt-in; default follows
-    ``AGENT_BOM_TRACE_CONTENT_SCREENING``) to additionally run Shield over trace
-    content and surface injection / PII / credential-leak findings. Raw content
-    is screened in-memory and never persisted.
+    Opt-in Shield content screening stays in memory; raw content is never persisted.
     """
     tenant_id = _tenant_id(request)
     try:
@@ -700,11 +663,10 @@ def _nhi_by_credential_for_tenant(tenant_id: str) -> dict[str, list[dict[str, An
 
 @router.post("/traces/attack-paths", tags=["observability"], dependencies=[_dep("read")])
 def correlate_trace_attack_paths(request: Request, body: dict, span_id: str | None = None) -> dict[str, object]:
-    """Resolve each traced tool-call span to its exact attack path (#3898).
+    """Return name-based finding candidates for traced tool calls.
 
-    Accepts an OTLP JSON trace and correlates every vulnerable tool-call span
-    against the tenant's scan blast radii, returning per-span the exact reachable
-    CVE, exposed credentials, resolved non-human identities, and blast radius.
+    These legacy associations are not exact inventory joins or execution proof.
+    They relate reported tool/server names to the tenant's scan blast radii.
     Correlation is in-memory; raw span content is never stored. Pass ``span_id``
     to scope the answer to a single span.
     """
@@ -751,9 +713,7 @@ def list_trace_connectors_route(request: Request) -> dict[str, object]:
     dependencies=[_dep("runtime_ingest")],
 )
 def pull_trace_connector(request: Request, provider: str, body: dict) -> dict[str, object]:
-    """Pull traces from an LLM-observability platform and correlate them (#3899).
-
-    Select a managed ``connection_id`` or provide one-shot ``credentials``.
+    """Import via a managed connection or correlate one-shot provider credentials.
     Screening is opt-in; provider responses may still contain content.
     """
     from agent_bom.otel_ingest import parse_otel_traces
@@ -774,6 +734,21 @@ def pull_trace_connector(request: Request, provider: str, body: dict) -> dict[st
     if raw_screen is not None and not isinstance(raw_screen, bool):
         raise HTTPException(status_code=400, detail="'screen_content' must be a boolean")
     screen_content = _screen_content_enabled(raw_screen)
+
+    if "connection_id" in body:
+        return managed_trace_pull(
+            provider=provider,
+            body=body,
+            credentials=credentials,
+            tenant_id=tenant_id,
+            actor=_triggered_by(request),
+            store=get_runtime_event_store(),
+            limit=limit,
+            screen_content=screen_content,
+            screen=lambda payload: _screen_trace_content_events(payload, tenant_id=tenant_id),
+            findings=lambda: _blast_radius_views_for_tenant(tenant_id),
+            identities=lambda: _nhi_by_credential_for_tenant(tenant_id),
+        )
 
     try:
         otlp = fetch_traces(provider, credentials, limit=limit, include_content=screen_content)
@@ -1487,61 +1462,82 @@ def list_runtime_observations(
     }
 
 
+@router.get("/runtime/observation-revisions", **documented(observability.RuntimeObservationsResponse), **_RUNTIME_READ)
+def list_runtime_observation_revisions(
+    request: Request,
+    observation_id: Annotated[str, Query(min_length=1, max_length=512)],
+    limit: Annotated[int, Query(ge=1, le=500)] = 100,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> dict[str, object]:
+    """Read tenant-scoped metadata history; it is not independent provider proof."""
+    tenant_id = _tenant_id(request)
+    rows = get_runtime_event_store().list_observation_revisions(tenant_id, observation_id, limit=limit, offset=offset)
+    return {
+        "schema_version": "runtime.observability.v1",
+        "tenant_id": tenant_id,
+        "count": len(rows),
+        "limit": limit,
+        "offset": offset,
+        "observations": [row.to_dict() for row in rows],
+    }
+
+
 @router.get("/runtime/trace-explorer", **documented(observability.RuntimeTraceExplorerResponse), **_RUNTIME_READ)
 async def trace_explorer(
     request: Request,
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
+    scan_id: Annotated[str | None, Query(max_length=512)] = None,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    session_id: Annotated[str | None, Query(min_length=1, max_length=512)] = None,
+    source: Annotated[str | None, Query(min_length=1, max_length=512)] = None,
+    agent_name: Annotated[str | None, Query(min_length=1, max_length=512)] = None,
+    connection_id: Annotated[str | None, Query(min_length=1, max_length=512)] = None,
 ) -> dict[str, object]:
-    """Langfuse-style trace explorer joined to findings and policy decisions (#3608).
-
-    Fuses gateway/proxy feed events and persisted runtime observations into
-    session-grouped spans. Each span carries correlated findings (CVE, reach
-    band, compliance controls) and blocked/observed verdict metadata.
-
-    The whole assembly — unbounded findings iteration, synchronous psycopg
-    session/observation reads, and CPU-bound serialization — is offloaded via
-    ``asyncio.to_thread`` so it never blocks the event loop under scale.
-    """
+    """Read bounded runtime traces off-loop; name matches remain candidates."""
     tenant_id = _tenant_id(request)
     bounded_limit = max(1, min(limit, 200))
-    return await asyncio.to_thread(_build_trace_explorer_payload_sync, tenant_id, limit=bounded_limit)
-
-
-def _build_trace_explorer_payload_sync(tenant_id: str, *, limit: int = 100) -> dict[str, object]:
-    """Assemble trace evidence off the event loop, bounded by the request limit."""
-    from agent_bom.api.cost_store import get_cost_store
-    from agent_bom.api.routes.gateway_feed import _load_tenant_alerts, build_gateway_feed
-    from agent_bom.api.scan_finding_projection import _iter_scan_findings
-    from agent_bom.api.scan_finding_read import _completed_jobs_for_tenant
-    from agent_bom.api.trace_explorer import build_trace_explorer_payload
-
-    bounded_limit = max(1, min(limit, 200))
-    alerts = _load_tenant_alerts(tenant_id)
-    llm_records = list(get_cost_store().list_records(tenant_id, limit=bounded_limit))
-    feed = build_gateway_feed(
-        tenant_id=tenant_id,
-        alerts=alerts,
-        llm_records=llm_records,
+    return await asyncio.to_thread(
+        _build_trace_explorer_payload_sync,
+        tenant_id,
         limit=bounded_limit,
+        scan_id=scan_id,
+        offset=offset,
+        session_id=session_id,
+        source=source,
+        agent_name=agent_name,
+        connection_id=connection_id,
     )
-    findings: list[dict[str, Any]] = []
-    for job in _completed_jobs_for_tenant(tenant_id):
-        for finding in _iter_scan_findings(job):
-            findings.append(finding)
-            if len(findings) >= bounded_limit:
-                break
-        if len(findings) >= bounded_limit:
-            break
-    store = get_runtime_event_store()
-    sessions = [session.to_dict() for session in store.list_sessions(tenant_id, limit=bounded_limit, offset=0)]
-    observations = [observation.to_dict() for observation in store.list_observations(tenant_id, limit=bounded_limit, offset=0)]
-    return build_trace_explorer_payload(
+
+
+def _build_trace_explorer_payload_sync(
+    tenant_id: str, *, limit: int = 100, scan_id: str | None = None, offset: int = 0, **filters: Any
+) -> dict[str, object]:
+    """Assemble trace evidence off the event loop, bounded by the request limit."""
+    from agent_bom.api import cost_store, scan_finding_projection, scan_finding_read
+    from agent_bom.api.routes import gateway_feed
+    from agent_bom.api.stores import _get_graph_store
+
+    feed = gateway_feed.build_gateway_feed(
         tenant_id=tenant_id,
-        feed_events=cast(list[dict[str, Any]], feed.get("events", [])),
-        findings=findings,
-        sessions=sessions,
-        observations=observations,
-        limit=bounded_limit,
+        alerts=gateway_feed._load_tenant_alerts(tenant_id),
+        llm_records=list(cost_store.get_cost_store().list_records(tenant_id, limit=limit)),
+        limit=limit,
+    )
+    findings = (
+        finding
+        for job in scan_finding_read._completed_jobs_for_tenant(tenant_id)
+        for finding in scan_finding_projection._iter_scan_findings(job)
+    )
+    return assemble_trace_explorer(
+        get_runtime_event_store(),
+        tenant_id,
+        limit=limit,
+        scan_id=scan_id,
+        feed=feed,
+        finding_rows=findings,
+        graph_store=_get_graph_store() if scan_id else None,
+        offset=offset,
+        **filters,
     )
 
 

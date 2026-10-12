@@ -1,7 +1,7 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import SettingsPage from "@/app/settings/page";
-const state = vi.hoisted(() => ({ session: { authenticated: true, auth_required: true, auth_method: "browser_session", subject: "automation-key", tenant_id: "staging", role: "viewer", role_summary: { display_name: "Viewer" } }, hasCapability: vi.fn(() => false), signOut: vi.fn() }));
+const state = vi.hoisted(() => ({ session: { authenticated: true, auth_required: true, auth_method: "browser_session", subject: "automation-key", tenant_id: "staging", role: "viewer", role_summary: { display_name: "Viewer" }, memberships: [{ tenant_id: "staging", role: "viewer", ui_role: "Viewer", display_name: "Staging", active: true }, { tenant_id: "research", role: "analyst", ui_role: "Analyst", display_name: "Research", active: false }] }, hasCapability: vi.fn(() => false), signOut: vi.fn() }));
 vi.mock("@/components/auth-provider", () => ({ useAuthState: () => state }));
 vi.mock("next/link", () => ({ default: ({ href, children }: { href: string; children: React.ReactNode }) => <a href={href}>{children}</a> }));
 afterEach(() => vi.clearAllMocks());
@@ -10,6 +10,11 @@ it("gives a viewer truthful identity and appearance without admin links or unsup
   expect(screen.getByText("automation-key")).toBeInTheDocument();
   expect(screen.getByText("staging")).toBeInTheDocument();
   expect(screen.getByText(/identity belongs to an API key/)).toBeInTheDocument();
+  const memberships = screen.getByText(/Other workspace memberships/).closest("details");
+  expect(memberships).not.toHaveAttribute("open");
+  fireEvent.click(within(memberships!).getByText(/Other workspace memberships/));
+  expect(within(memberships!).getByText("research")).toBeInTheDocument();
+  expect(screen.getByText("Active tenant")).toBeInTheDocument();
   expect(screen.queryByRole("link", { name: /Access.*keys/ })).not.toBeInTheDocument();
   expect(screen.queryByRole("link", { name: /Control plane security/ })).not.toBeInTheDocument();
   expect(screen.queryByRole("combobox")).not.toBeInTheDocument();

@@ -316,7 +316,13 @@ export default function AgentBomManifestPage() {
         <Card className="border-red-500/30 bg-red-500/10 !p-3 text-sm text-red-700 dark:text-red-200">{error}</Card>
       ) : null}
 
-      {/* Top row: sources | inventory metrics — side by side, scroll inside */}
+      <Collapsible
+        title="Estate coverage"
+        subtitle={`${activeSources} evidence sources · ${metrics.length} inventory dimensions`}
+        defaultOpen={false}
+        data-testid="ai-bom-coverage"
+      >
+      {/* Coverage is available on demand so the inventory remains the first work area. */}
       <div className="grid gap-3 lg:grid-cols-12">
         <section className="min-w-0 rounded-xl border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-3 lg:col-span-4">
           <div className="mb-2 flex items-center justify-between gap-2">
@@ -381,6 +387,7 @@ export default function AgentBomManifestPage() {
           ) : null}
         </section>
       </div>
+      </Collapsible>
 
       {(manifest?.blueprint_drift.signal_count ?? 0) > 0 ? (
         <details className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-amber-900 dark:text-amber-100">
@@ -395,9 +402,9 @@ export default function AgentBomManifestPage() {
       ) : null}
 
       {manifest ? (
-        <div className="grid gap-3 lg:grid-cols-12">
-          {/* Inventory table — primary, scrollable */}
-          <div className="min-w-0 lg:col-span-8">
+        <div className="space-y-3">
+          {/* Inventory table — primary, full-width and horizontally scrollable when needed. */}
+          <div className="min-w-0">
             <Section
               label="MCP inventory"
               description="Client names come from MCP observations; they do not imply fleet enrollment. Credential references do not establish privilege or finding severity."
@@ -476,13 +483,13 @@ export default function AgentBomManifestPage() {
                   </div>
                 </div>
 
-                <div tabIndex={0} role="region" aria-label="AI BOM components" className="max-h-[28rem] overflow-auto">
-                  <table className="w-full min-w-[720px] text-left text-xs">
+                <div tabIndex={0} role="region" aria-label="AI BOM components" className="max-h-[34rem] overflow-auto">
+                  <table className="w-full min-w-[1180px] table-fixed text-left text-xs">
                     <thead className="sticky top-0 z-10 bg-[color:var(--surface-muted)] text-[10px] uppercase tracking-[0.12em] text-[color:var(--text-tertiary)]">
                       <tr>
                         {["Agent", "Owner", "Source", "Env", "MCP server", "Review", "Transport", "Runtime", "Tools", "Creds", "Last seen"].map(
-                          (heading) => (
-                            <th key={heading} className="whitespace-nowrap px-3 py-2 font-medium">
+                          (heading, index) => (
+                            <th key={heading} className={`whitespace-nowrap px-3 py-2 font-medium ${index === 0 || index === 4 ? "w-48" : index === 5 ? "w-44" : index === 10 ? "w-40" : "w-28"}`}>
                               {heading}
                             </th>
                           ),
@@ -492,22 +499,22 @@ export default function AgentBomManifestPage() {
                     <tbody className="divide-y divide-[color:var(--border-subtle)]">
                       {rows.map((row, index) => (
                         <tr key={`${row.id}:${index}`} className="hover:bg-[color:var(--surface-muted)]/60">
-                          <td className="px-3 py-2 text-[color:var(--foreground)]">{row.agentName}</td>
-                          <td className="px-3 py-2 text-[color:var(--text-secondary)]">{row.owner}</td>
-                          <td className="px-3 py-2 text-[color:var(--text-secondary)]">{row.source}</td>
-                          <td className="px-3 py-2 text-[color:var(--text-secondary)]">{row.environment}</td>
-                          <td className="px-3 py-2 font-medium text-[color:var(--foreground)]">{row.name}</td>
+                          <td className="truncate whitespace-nowrap px-3 py-2 text-[color:var(--foreground)]" title={row.agentName}>{row.agentName}</td>
+                          <td className="truncate whitespace-nowrap px-3 py-2 text-[color:var(--text-secondary)]" title={row.owner}>{row.owner}</td>
+                          <td className="truncate whitespace-nowrap px-3 py-2 text-[color:var(--text-secondary)]" title={row.source}>{row.source}</td>
+                          <td className="truncate whitespace-nowrap px-3 py-2 text-[color:var(--text-secondary)]" title={row.environment}>{row.environment}</td>
+                          <td className="truncate whitespace-nowrap px-3 py-2 font-medium text-[color:var(--foreground)]" title={row.name}>{row.name}</td>
                           <td className="px-3 py-2">
                             <span
                               className={`rounded-full px-1.5 py-0.5 text-[10px] ${row.reviewStatus === "review needed" ? "bg-amber-500/10 text-amber-700 dark:text-amber-200" : "text-ink-secondary"}`}
                             >
-                              {row.reviewStatus}
+                              <span className="whitespace-nowrap">{row.reviewStatus}</span>
                             </span>
                             {row.reviewIndicators.map((indicator) => <p key={indicator} className="mt-1 max-w-56 text-xs text-ink-secondary">{indicator}</p>)}
                           </td>
-                          <td className="px-3 py-2 text-[color:var(--text-secondary)]">{row.transport}</td>
-                          <td className="px-3 py-2 text-[color:var(--text-secondary)]">{row.runtimeState}</td>
-                          <td className="px-3 py-2 text-[color:var(--foreground)]">{row.toolCount ?? "Not collected"}</td>
+                          <td className="truncate whitespace-nowrap px-3 py-2 text-[color:var(--text-secondary)]" title={row.transport}>{row.transport}</td>
+                          <td className="truncate whitespace-nowrap px-3 py-2 text-[color:var(--text-secondary)]" title={row.runtimeState}>{row.runtimeState}</td>
+                          <td className="whitespace-nowrap px-3 py-2 text-[color:var(--foreground)]">{row.toolCount ?? "Not collected"}</td>
                           <td className="max-w-[8rem] truncate px-3 py-2 text-[color:var(--text-secondary)]">
                             {row.credentialRefs.join(", ") || "—"}
                           </td>
@@ -530,35 +537,32 @@ export default function AgentBomManifestPage() {
             </Section>
           </div>
 
-          {/* Side column: graph + extended metrics */}
-          <aside className="space-y-3 lg:col-span-4">
-            <Collapsible
-              title="Inventory relationships"
-              subtitle={`${manifest.graph.stats.nodes} nodes · ${manifest.graph.stats.edges} edges`}
-              defaultOpen
-              scrollMaxHeight="22rem"
-            >
-              <MiniGraph manifest={manifest} />
-            </Collapsible>
-
-            <Collapsible
-              title="Visibility"
-              subtitle="Operator metrics"
-              defaultOpen={false}
-              scrollMaxHeight="16rem"
-            >
-              <div className="grid grid-cols-2 gap-2">
-                <StatCard label="Tools" value={manifest.source === "control-plane" ? "Not collected" : manifest.summary.tools} accent="info" />
-                <StatCard label="Gateway" value={manifest.summary.gateway_registered_servers} />
-                <StatCard label="Owners" value={manifest.visibility.owners} />
-                <StatCard label="Unowned" value={manifest.visibility.unowned_agents} accent="medium" />
-                <StatCard label="Shadow" value={manifest.visibility.shadow_runtime_servers} accent="high" />
-                <StatCard label="Untracked" value={manifest.visibility.untracked_runtime_servers} accent="high" />
-                <StatCard label="Warnings" value={manifest.visibility.servers_with_warnings} accent="medium" />
-                <StatCard label="Credential name hints" value={manifest.visibility.risky_credential_refs} />
-              </div>
-            </Collapsible>
-          </aside>
+          <Collapsible
+            title="Explore relationships & visibility"
+            subtitle={`${manifest.graph.stats.nodes} nodes · ${manifest.graph.stats.edges} edges · operator metrics`}
+            defaultOpen={false}
+            data-testid="ai-bom-exploration"
+          >
+            <div className="grid gap-4 xl:grid-cols-2">
+              <section className="min-w-0 rounded-lg border border-[color:var(--border-subtle)] bg-[color:var(--surface-muted)]/35 p-3">
+                <h2 className="mb-3 text-sm font-semibold text-[color:var(--foreground)]">Inventory relationships</h2>
+                <MiniGraph manifest={manifest} />
+              </section>
+              <section className="min-w-0 rounded-lg border border-[color:var(--border-subtle)] bg-[color:var(--surface-muted)]/35 p-3">
+                <h2 className="mb-3 text-sm font-semibold text-[color:var(--foreground)]">Visibility</h2>
+                <div className="grid grid-cols-2 gap-2">
+                  <StatCard label="Tools" value={manifest.source === "control-plane" ? "Not collected" : manifest.summary.tools} accent="info" />
+                  <StatCard label="Gateway" value={manifest.summary.gateway_registered_servers} />
+                  <StatCard label="Owners" value={manifest.visibility.owners} />
+                  <StatCard label="Unowned" value={manifest.visibility.unowned_agents} accent="medium" />
+                  <StatCard label="Shadow" value={manifest.visibility.shadow_runtime_servers} accent="high" />
+                  <StatCard label="Untracked" value={manifest.visibility.untracked_runtime_servers} accent="high" />
+                  <StatCard label="Warnings" value={manifest.visibility.servers_with_warnings} accent="medium" />
+                  <StatCard label="Credential name hints" value={manifest.visibility.risky_credential_refs} />
+                </div>
+              </section>
+            </div>
+          </Collapsible>
         </div>
       ) : loading ? (
         <Card className="!p-6 text-sm text-[color:var(--text-secondary)]">

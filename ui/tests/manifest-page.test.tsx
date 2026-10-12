@@ -18,10 +18,16 @@ describe("AI BOM evidence scope",()=>{
  it("distinguishes registered agents and uncollected scan dimensions",async()=>{
  getManifest.mockResolvedValue(manifest); render(<ManifestPage/>);
  await screen.findByText("claude-desktop");
- expect(screen.getByText("Registered agents")).toBeInTheDocument();
+ const coverage = screen.getByRole("button", { name: /Estate coverage/ });
+ expect(coverage).toHaveAttribute("aria-expanded", "false");
+ fireEvent.click(coverage);
+ expect(screen.getByText("Registered agents")).toBeVisible();
  expect(screen.getAllByText("Not collected").length).toBeGreaterThan(0);
  expect(screen.queryByText("Live")).not.toBeInTheDocument();
- expect(screen.getByText("Inventory relationships")).toBeInTheDocument();
+ const exploration = screen.getByRole("button", { name: /Explore relationships & visibility/ });
+ expect(exploration).toHaveAttribute("aria-expanded", "false");
+ fireEvent.click(exploration);
+ expect(screen.getByText("Inventory relationships")).toBeVisible();
  });
  it("does not render zero inventory after manifest request failure",async()=>{
  getManifest.mockRejectedValue(new Error("Request unavailable")); render(<ManifestPage/>);
@@ -59,6 +65,17 @@ describe("AI BOM evidence scope",()=>{
   expect(region).toHaveAttribute("tabindex","0");
   expect(region).toHaveAttribute("aria-label");
  }
+ });
+
+ it("keeps the component inventory full-width with a bounded, scrollable table", async()=>{
+ getManifest.mockResolvedValue(manifest);
+ const {container}=render(<ManifestPage/>);
+ await screen.findByText("claude-desktop");
+ const components = screen.getByRole("region", { name: "AI BOM components" });
+ expect(components.className).toContain("max-h-[34rem]");
+ expect(components.className).toContain("overflow-auto");
+ expect(container.querySelector("table")?.className).toContain("min-w-[1180px]");
+ expect(container.querySelector("[data-testid='ai-bom-exploration'] button")).toHaveAttribute("aria-expanded", "false");
  });
 
 });

@@ -1,8 +1,44 @@
 """Qualification receipts must not turn failure or missing work into green evidence."""
 
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
 import pytest
 
 from scripts.run_trace_collection_qualification import assess
+
+
+def test_qualification_reconciles_native_scoped_records(tmp_path):
+    # The harness intentionally configures process-global stores and auth.
+    root = Path(__file__).resolve().parents[1]
+    output = tmp_path / "qualification"
+    subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            """
+from pathlib import Path
+import sys
+from unittest.mock import patch
+from scripts.run_trace_collection_qualification import run
+with patch('agent_bom.trace_connectors._validate_pull_url'):
+    run(Path(sys.argv[1]), backend='sqlite', workers=1, pages=2, rows=2, p95_limit_ms=5000, slowdown_limit=100)
+""",
+            str(output),
+        ],
+        cwd=root,
+        env={**os.environ, "PYTHONPATH": os.pathsep.join((str(root / "src"), str(root)))},
+        check=True,
+        capture_output=True,
+        timeout=60,
+    )
+    receipt = json.loads((output / "receipt.json").read_text())
+    assert receipt["failed_requests"] == 0
+    assert receipt["reconciled"] is True
+    assert receipt["expected_observations"] == 8
 
 
 def attempt(phase, ms, *, ok=True, operation="status"):

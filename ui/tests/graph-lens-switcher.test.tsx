@@ -1,249 +1,58 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { GraphLensSwitcher } from "@/components/graph-lens-switcher";
+import { GraphLensSwitcher, buildInvestigationLensHref } from "@/components/graph-lens-switcher";
 
 const push = vi.fn();
-let pathname = "/graph";
-let scope: string | null = null;
+let pathname = "/security-graph";
 let params = new URLSearchParams();
-
 vi.mock("next/navigation", () => ({
   usePathname: () => pathname,
   useRouter: () => ({ push }),
-  useSearchParams: () => ({
-    get: (key: string) => (key === "scope" ? scope : params.get(key)),
-  }),
+  useSearchParams: () => params,
 }));
 
-describe("GraphLensSwitcher", () => {
-  beforeEach(() => {
-    pathname = "/graph";
-    scope = null;
-    params = new URLSearchParams();
-    push.mockClear();
-  });
+describe("Investigation navigation", () => {
+  beforeEach(() => { pathname = "/security-graph"; params = new URLSearchParams(); push.mockClear(); });
 
-  it("keeps the specialized-view menu closed until requested", () => {
-    params = new URLSearchParams({ lens: "context" });
-    render(<GraphLensSwitcher variant="compact" />);
-    const menu = screen.getByText("More views").closest("details");
-    expect(menu).toHaveAttribute("data-active-view", "true");
-    expect(menu).not.toHaveAttribute("open");
-  });
-
-  it("renders the compact lens bar without overlay marketing copy", () => {
-    render(<GraphLensSwitcher variant="compact" />);
-
-    expect(screen.queryByTestId("graph-lens-floating-bar")).not.toBeInTheDocument();
-    expect(screen.queryByText("Security Graph Lens")).not.toBeInTheDocument();
-    expect(screen.getByText("Lens")).toBeInTheDocument();
-    expect(screen.getByText("Lineage")).toBeInTheDocument();
-  });
-
-  it("renders the floating lens bar for full-canvas graph pages", () => {
-    render(<GraphLensSwitcher variant="floating" />);
-
-    expect(screen.getByTestId("graph-lens-floating-bar")).toBeInTheDocument();
-    expect(screen.getByText("Security Graph Lens")).toBeInTheDocument();
-    expect(screen.getByText("Estate")).toBeInTheDocument();
-    expect(screen.getByText("Cloud")).toBeInTheDocument();
-    expect(screen.getByText("Repository")).toBeInTheDocument();
-    expect(screen.getByText("Identity")).toBeInTheDocument();
-    expect(screen.getByText("Attack Paths")).toBeInTheDocument();
-    expect(screen.getByText("Lineage")).toBeInTheDocument();
-    expect(screen.getByText("Asset Drift")).toBeInTheDocument();
-    expect(screen.getByText("More views")).toBeInTheDocument();
-    expect(screen.getByText("Agent Mesh")).not.toBeVisible();
-    expect(screen.getByText("Context")).not.toBeVisible();
-
-    fireEvent.click(screen.getByText("More views"));
-
-    expect(screen.getByText("Agent Mesh")).toBeVisible();
-    expect(screen.getByText("Context")).toBeVisible();
-    expect(screen.getByText("Inspect recorded relationships within a selected snapshot.")).toBeVisible();
-  });
-
-  it("treats the unfocused security graph as ranked paths", () => {
-    pathname = "/security-graph";
-    render(<GraphLensSwitcher variant="compact" />);
-
-    expect(screen.getByRole("button", { name: /estate/i })).toHaveAttribute(
-      "aria-pressed",
-      "false",
-    );
-    expect(screen.getByRole("button", { name: /attack paths/i })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-  });
-
-  it("opens attack paths as an explicit lens", () => {
-    pathname = "/security-graph";
-    params = new URLSearchParams({ lens: "estate" });
-    render(<GraphLensSwitcher variant="compact" />);
-
-    fireEvent.click(screen.getByRole("button", { name: /attack paths/i }));
-
-    expect(push).toHaveBeenCalledWith("/security-graph?lens=attack-path");
-  });
-
-  it("exposes the canonical domain lenses as explicit routes", () => {
-    pathname = "/security-graph";
-    render(<GraphLensSwitcher variant="compact" />);
-
-    for (const [name, lens] of [
-      ["Cloud", "cloud"],
-      ["Repository", "repository"],
-      ["Identity", "identity"],
-      ["Lineage", "lineage"],
-    ] as const) {
-      fireEvent.click(screen.getByRole("button", { name: new RegExp(name, "i") }));
-      expect(push).toHaveBeenLastCalledWith(`/security-graph?lens=${lens}`);
-    }
-  });
-
-  it("switches to the mesh lens without leaving the investigation surface", () => {
-    render(<GraphLensSwitcher variant="floating" />);
-
-    fireEvent.click(screen.getByText("More views"));
-    fireEvent.click(screen.getByRole("button", { name: /agent mesh/i }));
-
-    expect(push).toHaveBeenCalledWith("/security-graph?lens=mesh");
-  });
-
-  it("preserves the recorded snapshot when entering Context", () => {
-    pathname = "/security-graph";
-    params = new URLSearchParams({ lens: "estate", scan: "snapshot-original", rollup: "1" });
+  it("offers two tasks without duplicate graph destinations or a second legend", () => {
     render(<GraphLensSwitcher />);
-    fireEvent.click(screen.getByText("More views"));
-    fireEvent.click(screen.getByRole("button", { name: /context/i }));
-    expect(push).toHaveBeenCalledWith("/security-graph?scan=snapshot-original&lens=context");
+    expect(screen.getAllByRole("button").map(button => button.textContent)).toEqual(["Find a path", "Explore connections"]);
+    expect(screen.getByRole("button", { name: "Find a path" })).toHaveAttribute("aria-current", "page");
+    expect(screen.queryByText("Legend")).not.toBeInTheDocument();
+    expect(screen.queryByText("More views")).not.toBeInTheDocument();
   });
 
-  it("uses the explicitly selected snapshot when leaving Context", () => {
-    pathname = "/security-graph";
-    params = new URLSearchParams({ lens: "context", scan: "older-snapshot" });
-    render(<GraphLensSwitcher scanId="selected-snapshot" />);
-    fireEvent.click(screen.getByRole("button", { name: /cloud/i }));
-    expect(push).toHaveBeenCalledWith("/security-graph?scan=selected-snapshot&lens=cloud");
-  });
-
-  it("switches to the context lens without leaving the investigation surface", () => {
-    render(<GraphLensSwitcher variant="floating" />);
-
-    fireEvent.click(screen.getByText("More views"));
-    fireEvent.click(screen.getByRole("button", { name: /context/i }));
-
-    expect(push).toHaveBeenCalledWith("/security-graph?lens=context");
-  });
-
-  it("preserves investigation focus when switching canonical lenses", () => {
-    pathname = "/security-graph";
-    params = new URLSearchParams({
-      scan: "scan-123",
-      agent: "payments-agent",
-      cve: "CVE-2026-0042",
-      package: "werkzeug",
-      root: "agent:payments",
-      root_label: "Payments agent",
-      investigate: "1",
-      q: "Payments agent",
-      rollup: "1",
-      unrelated: "drop-me",
-    });
-    render(<GraphLensSwitcher variant="floating" />);
-
-    fireEvent.click(screen.getByRole("button", { name: /^.*cloud$/i }));
-
-    expect(push).toHaveBeenCalledWith(
-      "/security-graph?scan=scan-123&agent=payments-agent&cve=CVE-2026-0042&package=werkzeug&root=agent%3Apayments&root_label=Payments+agent&investigate=1&q=Payments+agent&lens=cloud",
-    );
-  });
-
-  it("preserves the snapshot-pinned scenario across canonical lenses", () => {
-    pathname = "/security-graph";
-    params = new URLSearchParams({
-      scan: "scan-123",
-      scenario: "scenario-private-endpoint",
-      state: "proposed",
-      lens: "estate",
-      rollup: "1",
-    });
-    render(<GraphLensSwitcher variant="compact" />);
-
-    fireEvent.click(screen.getByRole("button", { name: /cloud/i }));
-
-    expect(push).toHaveBeenCalledWith(
-      "/security-graph?scan=scan-123&scenario=scenario-private-endpoint&state=proposed&lens=cloud",
-    );
-  });
-
-  it("preserves the canonical snapshot and focus in the persisted mesh", () => {
-    pathname = "/security-graph";
-    params = new URLSearchParams({ scan: "scan-123", node: "asset-1" });
-    render(<GraphLensSwitcher variant="compact" />);
-
-    fireEvent.click(screen.getByText("More views"));
-    fireEvent.click(screen.getByRole("button", { name: /agent mesh/i }));
-
-    expect(push).toHaveBeenCalledWith("/security-graph?scan=scan-123&node=asset-1&lens=mesh");
-  });
-
-  it("keeps the target lens scope authoritative while preserving shared context", () => {
-    params = new URLSearchParams({ scan: "scan-123", scope: "something-else" });
-    render(<GraphLensSwitcher variant="floating" />);
-
-    fireEvent.click(screen.getByRole("button", { name: /asset drift/i }));
-
-    expect(push).toHaveBeenCalledWith("/security-graph?scan=scan-123&lens=asset-drift&scope=asset-drift");
-  });
-
-  it("routes to the asset drift lens on the lineage graph", () => {
-    render(<GraphLensSwitcher variant="floating" />);
-
-    fireEvent.click(screen.getByRole("button", { name: /asset drift/i }));
-
-    expect(push).toHaveBeenCalledWith("/security-graph?lens=asset-drift&scope=asset-drift");
-  });
-
-  it("does not reroute when the active param lens is selected", () => {
-    pathname = "/graph";
-    params = new URLSearchParams({ lens: "mesh" });
-    render(<GraphLensSwitcher variant="floating" />);
-
-    fireEvent.click(screen.getByRole("button", { name: /agent mesh/i }));
-
+  it.each(["lineage", "mesh", "context", "cloud", "repository", "identity", "estate", "asset-drift"])("keeps legacy %s links in Explore connections", lens => {
+    params = new URLSearchParams({ lens });
+    render(<GraphLensSwitcher />);
+    expect(screen.getByRole("button", { name: "Explore connections" })).toHaveAttribute("aria-current", "page");
+    fireEvent.click(screen.getByRole("button", { name: "Explore connections" }));
     expect(push).not.toHaveBeenCalled();
   });
 
-  it("marks the mesh lens active when the lens param is set on /graph", () => {
-    pathname = "/graph";
-    params = new URLSearchParams({ lens: "mesh" });
-    render(<GraphLensSwitcher variant="floating" />);
-
-    expect(
-      screen.getByRole("button", { name: /agent mesh/i }),
-    ).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: /lineage/i })).toHaveAttribute(
-      "aria-pressed",
-      "false",
-    );
+  it("preserves snapshot, finding, focus and scenario when opening connections", () => {
+    params = new URLSearchParams({ scan: "scan-123", finding: "finding-1", node: "asset-1", root: "agent:payments", root_label: "Payments", scenario: "scenario-1", state: "proposed", unrelated: "drop-me" });
+    render(<GraphLensSwitcher />);
+    fireEvent.click(screen.getByRole("button", { name: "Explore connections" }));
+    const href = new URL(push.mock.calls[0]![0], "http://fixture");
+    expect(Object.fromEntries(href.searchParams)).toEqual({ scan: "scan-123", finding: "finding-1", node: "asset-1", root: "agent:payments", root_label: "Payments", scenario: "scenario-1", state: "proposed", lens: "estate", rollup: "1", finding_scan: "scan-123" });
   });
 
-  it("renders a collapsible legend dock under the lens bar", () => {
-    render(
-      <GraphLensSwitcher
-        variant="compact"
-        legendItems={[
-          { label: "AI Agent", color: "#10b981", layer: "orchestration", kind: "node", shape: "dot" },
-          { label: "MCP Server", color: "#3b82f6", layer: "mcp_server", kind: "node", shape: "square" },
-          { label: "Uses", color: "#10b981", kind: "edge", lineStyle: "solid" },
-        ]}
-      />,
-    );
+  it("opens paths with the selected snapshot and removes graph composition state", () => {
+    params = new URLSearchParams({ scan: "old-snapshot", lens: "context", rollup: "1", rollup_node: "old-group", trace: "trace-1" });
+    render(<GraphLensSwitcher scanId="selected-snapshot" />);
+    fireEvent.click(screen.getByRole("button", { name: "Find a path" }));
+    expect(push).toHaveBeenCalledWith("/security-graph?scan=selected-snapshot&trace=trace-1&lens=attack-path");
+  });
 
-    expect(screen.getByText("Legend")).toBeInTheDocument();
-    expect(screen.getAllByText("AI Agent").length).toBeGreaterThan(0);
-    expect(screen.getByText("expand")).toBeInTheDocument();
+  it("recognizes the legacy graph route as connections", () => {
+    pathname = "/graph";
+    render(<GraphLensSwitcher />);
+    expect(screen.getByRole("button", { name: "Explore connections" })).toHaveAttribute("aria-current", "page");
+  });
+
+  it("retains exact contextual identifiers when building a scoped deep link", () => {
+    const context = new URLSearchParams({ scan: "s/1", agent: "a", cve: "CVE-1", package: "pkg", root: "a:1", q: "Agent 1", investigate: "1", rollup: "1", scope: "old" });
+    expect(Object.fromEntries(new URL(buildInvestigationLensHref("/security-graph?lens=identity&scope=identity", context), "http://fixture").searchParams)).toEqual({ scan: "s/1", agent: "a", cve: "CVE-1", package: "pkg", root: "a:1", q: "Agent 1", investigate: "1", lens: "identity", scope: "identity" });
   });
 });

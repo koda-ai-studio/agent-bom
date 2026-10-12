@@ -423,6 +423,14 @@ describe("attack path helpers", () => {
     expect(attackPathRoleChain(path, nodes)).toBe("agent → server → package → finding");
   });
 
+  it("preserves legacy mesh/context exact agent identifiers without applying them as display names", () => {
+    for (const lens of ["mesh", "context"]) {
+      expect(decodeGraphInvestigationParams(new URLSearchParams({ lens, agent: "agent:with spaces/+?" }))).toEqual({rootId: "agent:with spaces/+?", rootLabel: undefined});
+      expect(decodeGraphInvestigationParams(new URLSearchParams({lens, root: "server:exact", agent: "Old name"}))?.rootId).toBe("server:exact");
+    }
+    expect(decodeGraphInvestigationParams(new URLSearchParams({lens: "estate", agent: "Display name"}))).toBeNull();
+  });
+
   it("decodes graph investigation roots from URL params", () => {
     expect(decodeGraphInvestigationParams(new URLSearchParams("investigate=1&root=pkg-1&q=flask"))).toEqual({
       rootId: "pkg-1",

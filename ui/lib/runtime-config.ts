@@ -51,7 +51,11 @@ export function getConfiguredApiUrl(): string {
 }
 
 export function getDisplayApiUrl(): string {
-  return getConfiguredApiUrl() || DEFAULT_API_URL;
+  const configured = getConfiguredApiUrl();
+  if (typeof window !== "undefined") {
+    return new URL(configured || "/", window.location.origin).href.replace(/\/$/, "");
+  }
+  return configured || DEFAULT_API_URL;
 }
 
 /**

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { GraphRollupDecisionSurface, InvestigationViewSwitch } from "@/components/graph-rollup-decision-surface";
+import { GraphRollupDecisionSurface } from "@/components/graph-rollup-decision-surface";
 import type { GraphRollupContainer } from "@/lib/api-types";
 
 function item(
@@ -72,17 +72,6 @@ describe("GraphRollupDecisionSurface", () => {
     expect(screen.getByText(/Coverage may be incomplete/)).toBeInTheDocument();
   });
 
-  it("keeps an explicit return to summary available from the graph", () => {
-    const onSummary = vi.fn();
-    const onGraph = vi.fn();
-    render(<InvestigationViewSwitch summary={false} onSummary={onSummary} onGraph={onGraph} />);
-    expect(screen.getByRole("button", { name: "Graph" })).toHaveAttribute("aria-pressed", "true");
-    fireEvent.click(screen.getByRole("button", { name: "Summary" }));
-    expect(onSummary).toHaveBeenCalledOnce();
-    expect(screen.getAllByRole("button")).toHaveLength(2);
-    fireEvent.click(screen.getByRole("button", { name: "Graph" }));
-    expect(onGraph).toHaveBeenCalledOnce();
-  });
   it("prioritizes a rated leaf without fabricating contained assets or findings", () => {
     const leaf = item("vulnerable", {
       label: "Affected package", entity_type: "package", severity: "critical",

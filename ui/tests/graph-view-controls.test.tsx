@@ -28,7 +28,7 @@ describe("graph view controls", () => {
     fireEvent.change(screen.getByRole("searchbox", { name: "Filter graph layers" }), { target: { value: "Packages" } });
     fireEvent.click(screen.getByRole("checkbox", { name: "Packages" }));
     expect(onChange).toHaveBeenLastCalledWith({ ...filters, layers: { ...filters.layers, package: false } });
-    fireEvent.click(screen.getByRole("button", { name: "Reset graph view" }));
+    fireEvent.click(screen.getByRole("button", { name: "Reset view" }));
     expect(onReset).toHaveBeenCalledOnce();
   });
 });

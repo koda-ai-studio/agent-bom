@@ -50,6 +50,37 @@ function edge(source: string, target: string, relationship: RelationshipType): U
 }
 
 describe("buildUnifiedFlowGraph", () => {
+  it.each(["directed", "bidirectional"] as const)("preserves recorded %s arrow direction", (direction) => {
+    const graph = {
+      scan_id: "direction", tenant_id: "default", created_at: createdAt,
+      nodes: [node("a", EntityType.AGENT, "Planner"), node("b", EntityType.AGENT, "Worker")],
+      edges: [{ ...edge("a", "b", RelationshipType.SHARES_SERVER), direction }],
+      attack_paths: [], interaction_risks: [],
+    } as unknown as UnifiedGraphData;
+    const flow = buildUnifiedFlowGraph(graph, createFocusedGraphFilters());
+    expect(flow.edges[0]?.markerEnd).toBeDefined();
+    if (direction === "bidirectional") expect(flow.edges[0]?.markerStart).toEqual(flow.edges[0]?.markerEnd);
+    else expect(flow.edges[0]?.markerStart).toBeUndefined();
+  });
+
+  it.each([
+    { evidence: { source: "source-ast" }, mode: "static", count: 0 },
+    { evidence: { basis: "configured_delegation" }, mode: "static", count: 0 },
+    { evidence: {}, mode: "unknown", count: 0 },
+    { evidence: { data_source: "runtime-proxy" }, mode: "runtime", count: 1 },
+  ])("does not infer runtime delegation from the verb alone: $mode / $evidence", ({ evidence, mode, count }) => {
+    const graph = {
+      scan_id: "delegation", tenant_id: "default", created_at: createdAt,
+      nodes: [node("a", EntityType.AGENT, "Planner"), node("b", EntityType.AGENT, "Worker")],
+      edges: [{ ...edge("a", "b", RelationshipType.DELEGATED_TO), evidence }],
+      attack_paths: [], interaction_risks: [],
+    } as unknown as UnifiedGraphData;
+    const flow = buildUnifiedFlowGraph(graph, createFocusedGraphFilters());
+    expect(flow.edges[0]?.data?.evidenceMode).toBe(mode);
+    expect(flow.summary.runtimeEdges).toBe(count);
+    if (mode !== "runtime") expect(flow.edges[0]?.animated).toBe(false);
+  });
+
   it("counts distinct loaded entities of the requested type, not relationship rows", () => {
     const nodes = [node("agent", EntityType.AGENT, "Agent"), node("server", EntityType.SERVER, "Server"), node("tool", EntityType.TOOL, "Tool")];
     const graph = {

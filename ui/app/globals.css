@@ -25,8 +25,8 @@
   --surface: #22262f;
   --surface-elevated: #2c3140;
   --surface-metric: #353e50;
-  --surface-muted: rgba(72, 78, 94, 0.58);
-  --border-subtle: rgba(110, 118, 138, 0.72);
+  --surface-muted: rgba(72, 78, 94, 0.22);
+  --border-subtle: rgba(110, 118, 138, 0.30);
   --border-strong: rgba(140, 148, 168, 0.92);
   --text-secondary: #d0d4dc;
   --text-tertiary: #a8aebc;
@@ -128,14 +128,14 @@
   color-scheme: light;
   --graph-minimap-mask: rgba(226, 232, 240, 0.82);
   /* Cool gray canvas — white cards sit clearly above panels and the page. */
-  --background: #e6eaf1;
+  --background: #f5f6f9;
   --foreground: #12141a;
   --surface-panel: #eef2f8;
   --surface: #ffffff;
   --surface-elevated: #f4f7fb;
   --surface-metric: #eef3fa;
   --surface-muted: rgba(190, 198, 212, 0.5);
-  --border-subtle: rgba(130, 145, 168, 0.5);
+  --border-subtle: rgba(130, 145, 168, 0.26);
   --border-strong: rgba(90, 105, 128, 0.72);
   --text-secondary: #374151;
   --text-tertiary: #55627a;
@@ -399,7 +399,12 @@ body {
 .ep-root { @apply relative overflow-hidden rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--surface)]; }
 .ep-body { @apply space-y-2 p-4; }
 .ep-header { @apply flex flex-wrap items-start justify-between gap-2; }
-.ep-header-copy { @apply w-full min-w-0 space-y-1.5 sm:flex-1; }
+.ep-header-details { @apply min-w-0 basis-full sm:flex-1; }
+.ep-header-summary { @apply flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 py-2.5; }
+.ep-header-summary::-webkit-details-marker { display: none; }
+.ep-header-copy { @apply min-w-0 flex-1 space-y-1; }
+.ep-header-context { @apply block text-xs text-[color:var(--text-secondary)]; }
+.ep-header-details-body { @apply space-y-3 border-t border-[color:var(--border-subtle)] px-4 py-3; }
 .ep-header-action { @apply shrink-0 self-center; }
 .ep-badges { @apply flex flex-wrap items-center gap-2; }
 .ep-severity { @apply rounded-md bg-red-500/10 px-2.5 py-1 text-[15px] font-semibold text-red-700 dark:text-red-200; }
@@ -410,7 +415,7 @@ body {
 .ep-view-toggle { @apply inline-flex items-center overflow-hidden rounded-lg border border-[color:var(--border-subtle)] bg-[color:var(--surface-elevated)]; }
 .ep-path-frame { @apply rounded-lg bg-[color:var(--surface-panel)] p-3; }
 .ep-graph-hint { @apply rounded-2xl border border-dashed border-[color:var(--border-subtle)] bg-[color:var(--surface-elevated)]/60 px-4 py-6 text-center text-xs text-[color:var(--text-secondary)]; }
-.ep-primary-action { @apply inline-flex min-h-11 items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-[15px] font-semibold text-white transition hover:bg-emerald-700; }
+.ep-primary-action { @apply inline-flex min-h-10 max-w-full items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-emerald-700 sm:text-sm; }
 .ep-details { @apply rounded-xl border border-[color:var(--border-subtle)] bg-[color:var(--surface-elevated)]/70; }
 .ep-details-summary { @apply flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-[15px] font-medium text-[color:var(--foreground)]; }
 .ep-details-summary::-webkit-details-marker { display: none; }
@@ -588,13 +593,17 @@ body {
 .graph-legend-count { @apply rounded-full bg-[var(--surface)] px-1.5 py-0.5 text-[10px] text-[var(--text-tertiary)]; }
 .graph-legend-popover { @apply max-h-[60vh] w-[min(30rem,calc(100vw-2rem))] overflow-y-auto rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-3 text-[var(--foreground)] backdrop-blur-md; }
 .graph-legend-dock { @apply border-t border-[var(--border-subtle)] pt-2 open:pt-3; }
-.graph-legend-dock-summary { @apply flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-1.5 text-xs; }
+.graph-legend-dock-separated { @apply my-1 px-3 py-1.5; }
+.graph-legend-dock-separated[open] { @apply pb-3; }
+.graph-legend-dock-summary { @apply flex min-h-6 cursor-pointer list-none flex-wrap items-center gap-x-4 gap-y-2 text-xs; }
 .graph-legend-dock-summary::-webkit-details-marker { display: none; }
-.graph-legend-dock-label { @apply shrink-0 font-medium uppercase tracking-[0.16em] text-[var(--text-tertiary)]; }
+.graph-legend-dock-label { @apply shrink-0 font-medium text-[var(--text-tertiary)]; }
 .graph-legend-preview { @apply flex min-w-0 flex-1 flex-wrap items-center gap-x-2.5 gap-y-1 group-open:hidden; }
 .graph-legend-preview-item { @apply inline-flex max-w-[8rem] items-center gap-1 text-[10px] text-[var(--text-secondary)]; }
-.graph-legend-expand { @apply ml-auto shrink-0 text-[10px] uppercase tracking-[0.14em] text-[var(--text-tertiary)]; }
-.graph-legend-dock-content { @apply mt-2 max-h-[min(40vh,18rem)] overflow-y-auto rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-muted)] p-3; }
+.graph-legend-expand { @apply ml-auto shrink-0 text-[11px] text-[var(--text-tertiary)]; }
+.graph-legend-dock-content { @apply mt-3 max-h-[min(40vh,18rem)] overflow-y-auto border-t border-[var(--border-subtle)] pt-3; }
+.graph-legend-sections { display: flex; flex-wrap: wrap; gap: 1.25rem 2.5rem; }
+.graph-legend-section { flex: 0 1 auto; min-width: min(10rem, 100%); max-width: 100%; }
 .graph-icon-button { @apply flex items-center gap-1.5 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-muted)] px-2.5 py-1.5 text-xs text-[var(--text-secondary)] backdrop-blur-sm transition-colors hover:bg-[var(--surface-elevated)]; }
 .graph-layout-toolbar { @apply flex max-w-full items-center gap-0.5 overflow-x-auto rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)]/90 p-1; }
 .graph-layout-button { @apply inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-[var(--text-secondary)] transition hover:bg-[var(--surface-elevated)] hover:text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-40; }
@@ -639,16 +648,11 @@ body {
 .attack-flow-swatch { @apply h-2.5 w-2.5 rounded border-2; }
 .attack-flow-loading { @apply flex h-[80vh] items-center justify-center text-[var(--text-secondary)]; }
 .attack-flow-error { @apply flex h-[80vh] flex-col items-center justify-center gap-3 text-[var(--text-secondary)]; }
-.graph-page-header {
-  @apply border-b border-[var(--border-subtle)] px-4 py-3;
-  background-image:
-    radial-gradient(circle at top left, rgba(14, 165, 233, 0.10), transparent 24%),
-    linear-gradient(180deg, var(--surface-panel), var(--background));
-}
-.graph-page-select { @apply rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)]/90 px-3 py-2 text-sm text-[var(--text-secondary)] focus:border-sky-600 focus:outline-none; }
-.graph-page-search { @apply min-w-[260px] flex-1 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)]/90 px-3 py-2 text-sm text-[var(--text-secondary)] placeholder:text-[var(--text-tertiary)] focus:border-sky-600 focus:outline-none; }
-.graph-page-action { @apply rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)]/80 px-3 py-2 text-sm text-[var(--text-secondary)] transition hover:border-[var(--border-strong)] hover:text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-40; }
-.graph-page-result { @apply rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)]/80 px-3 py-2 text-left transition hover:border-[var(--border-strong)] hover:bg-[var(--surface)]; }
+.graph-page-header { @apply px-4 py-2; background: var(--background); }
+.graph-page-select { @apply rounded-md border border-[var(--border-subtle)] bg-[var(--surface)]/90 px-3 py-2 text-sm text-[var(--text-secondary)] focus:border-sky-600 focus:outline-none; }
+.graph-page-search { @apply min-w-[260px] flex-1 rounded-md border border-[var(--border-subtle)] bg-[var(--surface)]/90 px-3 py-2 text-sm text-[var(--text-secondary)] placeholder:text-[var(--text-tertiary)] focus:border-sky-600 focus:outline-none; }
+.graph-page-action { @apply cursor-pointer rounded-md border border-[var(--border-subtle)] bg-[var(--surface)]/80 px-3 py-2 text-sm text-[var(--text-secondary)] transition hover:border-[var(--border-strong)] hover:bg-[var(--surface-elevated)] hover:text-[var(--foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-40; }
+.graph-page-result { @apply rounded-md border border-[var(--border-subtle)] bg-[var(--surface)]/80 px-3 py-2 text-left transition hover:border-[var(--border-strong)] hover:bg-[var(--surface)]; }
 .graph-page-secondary-action { @apply rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)]/80 px-3 py-1.5 text-xs text-[var(--text-secondary)] transition hover:border-[var(--border-strong)] hover:text-[var(--foreground)]; }
 .graph-callout-orange { @apply flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-orange-500/30 bg-orange-500/10 px-3 py-2 text-xs text-orange-100; }
 .graph-callout-orange-compact { @apply mb-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-orange-500/30 bg-orange-500/10 px-3 py-2 text-xs text-orange-100; }
@@ -820,13 +824,28 @@ main > div {
   transition: box-shadow 0.2s ease, opacity 0.2s ease;
 }
 
-.ep-outcome-title { @apply max-w-4xl break-words text-xl font-semibold leading-tight tracking-tight text-[color:var(--foreground)] sm:text-2xl; }
+.ep-outcome-title { @apply max-w-4xl break-words text-lg font-semibold leading-tight tracking-tight text-[color:var(--foreground)] sm:text-xl; }
 
 
 
 .gc-impact-label { @apply mb-2 block text-[15px] text-[color:var(--text-secondary)]; }
 
 .gc-impact-finding { @apply mt-1 block text-[15px] text-orange-700 dark:text-orange-300; }
+
+.advisory-freshness { @apply rounded-xl border border-outline bg-surface; }
+.advisory-freshness-summary { @apply flex cursor-pointer list-none flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3 text-sm; }
+.advisory-freshness-summary::-webkit-details-marker { display: none; }
+.advisory-freshness-counts { @apply flex flex-wrap items-center gap-2 text-xs text-ink-secondary; }
+.advisory-freshness-body { @apply space-y-3 border-t border-outline p-4; }
+.advisory-source-list { @apply divide-y divide-outline overflow-hidden rounded-xl border border-outline; }
+.advisory-source-row { @apply grid gap-2 px-3 py-3 sm:grid-cols-[minmax(0,1fr)_minmax(10rem,auto)] sm:items-center sm:px-4; }
+.advisory-source-status { @apply rounded-full border border-outline bg-surface-muted px-2.5 py-1 text-xs font-medium text-ink-secondary; }
+.advisory-source-status[data-status="synced"] { @apply border-emerald-700/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200; }
+.advisory-source-status[data-status="failed"], .advisory-source-status[data-status="error"] { @apply border-red-700/30 bg-red-500/10 text-red-800 dark:text-red-200; }
+.advisory-source-status[data-status="unknown"] { @apply border-outline bg-surface-muted text-ink-secondary; }
+.advisory-source-note { @apply rounded-full border border-amber-700/30 bg-amber-500/10 px-2.5 py-1 text-xs font-medium text-amber-800 dark:text-amber-200; }
+.advisory-source-link { @apply inline-flex min-h-10 items-center rounded-lg px-1 text-sm font-medium text-emerald-700 underline underline-offset-4 hover:text-emerald-800 dark:text-emerald-300 dark:hover:text-emerald-200; }
+.advisory-source-empty { @apply rounded-lg border border-dashed border-outline px-3 py-4 text-sm text-ink-secondary; }
 
 /* Let the available path width, rather than the window width, set card density. */
 .ep-path-frame { container-type: inline-size; }
@@ -881,6 +900,10 @@ main > div {
   .ep-inspection-evidence { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; align-items: start; }
   .ep-inspection-evidence > * { margin-top: 0; }
 }
+@container (min-width: 1120px) {
+  .ep-inspection-grid { grid-template-columns: minmax(0, 1.55fr) minmax(20rem, 0.9fr); align-items: start; }
+  .ep-inspection-evidence { display: flex; flex-direction: column; max-height: min(72svh, 54rem); overflow-y: auto; overscroll-behavior: contain; position: sticky; top: 5.5rem; padding-right: 0.25rem; }
+}
 
 /* Compact evidence remains visible while the graph gets the narrow viewport. */
 .ep-assessment-grid { @apply flex flex-wrap gap-x-6 gap-y-2; }
@@ -894,60 +917,10 @@ main > div {
   .ep-inspection-main > .ep-view-row { justify-content: flex-end; }
 }
 
-/* Context investigation: brighter canvas, bounded board, persistent inspector. */
+/* Shared graph canvas theme. */
 :root { --graph-canvas: #242d3b; }
 [data-theme="light"] { --graph-canvas: #f1f5fa; }
-.react-flow, .context-canvas { background-color: var(--graph-canvas); }
-.context-inspector { @apply w-full shrink-0 overflow-y-auto border-t border-[var(--border-subtle)] bg-[var(--surface)] p-4 text-[15px] text-[var(--foreground)] md:w-80 md:border-l md:border-t-0; max-height: 44vh; }
-@media (min-width: 768px) { .context-inspector { max-height: none; } }
-.context-action { @apply min-h-10 rounded-lg border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--surface-elevated)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-50; }
-.context-connection { @apply block w-full rounded-md px-2 py-2 text-left text-sm break-words hover:bg-[var(--surface-elevated)] focus-visible:outline-2 focus-visible:outline-emerald-500; }
-.context-evidence-badge { @apply inline-block rounded-full border border-[var(--border-strong)] bg-[var(--surface-elevated)] px-3 py-1 text-xs text-[var(--text-secondary)]; }
-.context-facts { @apply space-y-2 rounded-lg border border-[var(--border-subtle)] p-3 text-sm; }
-.context-facts > div { @apply flex flex-wrap justify-between gap-2; }
-.context-facts dt { @apply text-[var(--text-tertiary)]; }
-
-/* Context investigation: one toolbar, a quiet canvas, and selected evidence. */
-.context-shell { --border-subtle: color-mix(in srgb, var(--foreground) 16%, transparent); --border-strong: color-mix(in srgb, var(--foreground) 28%, transparent); }
-.context-source-tabs { @apply flex flex-wrap gap-5 border-b border-[var(--border-subtle)] px-3; }
-.context-source-tab { @apply min-h-10 border-b-2 border-transparent py-2 text-sm text-ink-secondary transition-colors hover:text-[var(--foreground)] focus-visible:outline-2 focus-visible:outline-emerald-500; }
-.context-source-tab[aria-pressed="true"] { @apply border-emerald-500 font-semibold text-[var(--foreground)]; }
-.context-workspace { @apply min-w-0 px-3 pb-3; }
-.context-map-header { @apply flex flex-wrap items-center justify-between gap-4 py-5; }
-.context-field { @apply flex flex-col gap-1.5 text-xs font-medium text-ink-secondary; }
-.context-toolbar { @apply flex min-w-0 flex-wrap items-end gap-2 border-y border-[var(--border-subtle)] py-3; }
-.context-toolbar .context-field { @apply sm:mr-auto; }
-.context-icon-action { @apply inline-flex items-center justify-center px-2.5; }
-.context-popover { @apply relative; }
-.context-popover > summary { @apply list-none; }
-.context-popover > summary::-webkit-details-marker { display: none; }
-.context-popover-panel { @apply absolute right-0 top-full z-30 mt-2 w-80 max-w-[calc(100vw-3.5rem)] rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4 text-[var(--foreground)] shadow-xl; }
-.context-scope-status { @apply flex flex-wrap items-center justify-between gap-2 py-3 text-sm text-ink-secondary; }
-.context-map-panels { @apply grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1fr)_19rem]; }
-.context-map-canvas { @apply relative min-w-0 overflow-hidden rounded-xl border border-[var(--border-subtle)]; height: 34rem; }
-.context-map-canvas .react-flow { background: var(--surface-elevated); }
-.context-map-canvas .react-flow__attribution { background: var(--surface); color: var(--text-secondary); }
-.context-map-canvas .react-flow__attribution a { color: inherit; }
-.context-map-inspector { @apply min-w-0 space-y-4 overflow-y-auto rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-5; max-height: none; }
-.context-map-node { @apply h-20 w-52 rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] px-3 py-2 text-[var(--foreground)] shadow-sm; }
-.context-map-node[data-selected] { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft), 0 3px 12px var(--shadow-color); }
-.context-investigate { @apply inline-flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-sm font-medium focus-visible:outline-2 focus-visible:outline-emerald-500; color: var(--foreground); background: var(--accent-soft); }
-.context-investigate:hover { background: color-mix(in srgb, var(--accent) 24%, transparent); }
-@media (min-width: 1024px) {
-  .context-map-canvas { height: clamp(30rem, calc(100dvh - 24rem), 44rem); }
-  .context-map-inspector { max-height: clamp(30rem, calc(100dvh - 24rem), 44rem); }
-}
-@media (max-width: 639px) {
-  .context-map-header { @apply gap-3 py-4; }
-  .context-map-header h1 { @apply text-xl; }
-  .context-map-header > div { @apply w-full; }
-  .context-map-header .context-field { @apply min-w-0 flex-1; }
-  .context-toolbar > .context-field { flex-basis: 100%; }
-  .context-popover-panel { @apply fixed left-7 right-7 top-auto w-auto; }
-}
-
-.context-inspector-heading { @apply sticky -top-5 z-10 -mx-5 space-y-2 bg-[var(--surface)] px-5 py-3; }
-
+.react-flow { background-color: var(--graph-canvas); }
 /* Scenario cards share width with the decision panel; keep metadata legible. */
 .scenario-context-canvas .react-flow__node :is(span, p, .text-xs) { font-size: max(16px, 1em); }
 

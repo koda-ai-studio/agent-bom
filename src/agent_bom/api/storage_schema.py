@@ -116,11 +116,13 @@ CONTROL_PLANE_SCHEMA_COMPONENTS: tuple[StorageSchemaComponent, ...] = (
         (
             "runtime_observations",
             "runtime_sessions",
+            "runtime_trace_imports",
+            "runtime_observation_revisions",
             "gateway_activity_events",
             "gateway_activity_sequences",
             "gateway_activity_tombstones",
         ),
-        version=2,
+        version=4,
     ),
     StorageSchemaComponent(
         "runtime_workload_evidence",

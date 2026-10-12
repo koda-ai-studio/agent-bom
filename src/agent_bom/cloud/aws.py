@@ -23,9 +23,10 @@ from pathlib import Path
 from typing import Any
 
 from agent_bom.discovery_envelope import DiscoveryEnvelope, RedactionStatus, ScanMode
-from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, Package, TransportType
+from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, Package, ServerSurface, TransportType
 from agent_bom.security import sanitize_text
 
+from .aws_workloads import build_aws_workload_metadata
 from .base import CloudDiscoveryError
 from .normalization import (
     build_cloud_origin,
@@ -1223,7 +1224,8 @@ def _discover_lambda_functions(
                 name=f"lambda:{func_name}",
                 command="lambda",
                 args=[func_arn],
-                transport=TransportType.STREAMABLE_HTTP,
+                transport=TransportType.UNKNOWN,
+                surface=ServerSurface.AI_INVENTORY,
                 env={"AWS_REGION": region},
                 packages=packages,
             )
@@ -1235,39 +1237,25 @@ def _discover_lambda_functions(
                 source="aws-lambda",
                 version=runtime,
                 mcp_servers=[server],
-                metadata={
-                    "cloud_origin": build_cloud_origin(
-                        provider="aws",
-                        service="lambda",
-                        resource_type="function",
-                        resource_id=func_arn,
-                        resource_name=func_name,
-                        location=region,
-                        account_id=account_id,
-                        raw_identity={"function_name": func_name, "function_arn": func_arn, "runtime": runtime},
-                    )
-                },
+                metadata=build_aws_workload_metadata(
+                    service="lambda",
+                    resource_type="function",
+                    resource_id=func_arn,
+                    resource_name=func_name,
+                    region=region,
+                    account_id=account_id,
+                    role_arn=role_arn,
+                    role_field="Role",
+                    raw_identity={
+                        "function_name": func_name,
+                        "function_arn": func_arn,
+                        "runtime": runtime,
+                        "function_version": func.get("Version", ""),
+                    },
+                    updated_at=func.get("LastModified"),
+                    updated_source="LastModified",
+                ),
             )
-            cloud_timestamps = build_cloud_timestamps(
-                provider="aws",
-                service="lambda",
-                resource_type="function",
-                updated_at=func.get("LastModified"),
-                updated_source="LastModified",
-            )
-            if cloud_timestamps:
-                agent.metadata["cloud_timestamps"] = cloud_timestamps
-            cloud_principal = build_cloud_principal(
-                provider="aws",
-                service="lambda",
-                resource_type="function",
-                principal_type="iam-role",
-                principal_id=role_arn or None,
-                source_field="Role",
-                raw_identity={"role_arn": role_arn},
-            )
-            if cloud_principal:
-                agent.metadata["cloud_principal"] = cloud_principal
             agents.append(agent)
 
     return agents, warnings
@@ -1408,13 +1396,15 @@ def _discover_step_functions(
             for arn in resource_arns:
                 if ":lambda:" in arn:
                     packages = _extract_lambda_packages(session, arn, region, parent_warnings)
-                    func_name = arn.split(":")[-1] if ":" in arn else arn
+                    func_name = arn.split(":function:", 1)[-1]
                     servers.append(
                         MCPServer(
                             name=f"sfn-lambda:{func_name}",
                             command="lambda",
                             args=[arn],
-                            transport=TransportType.STREAMABLE_HTTP,
+                            transport=TransportType.UNKNOWN,
+                            surface=ServerSurface.AI_INVENTORY,
+                            connection_metadata={"relationship_basis": "configured_workflow_target", "execution_proven": False},
                             packages=packages,
                         )
                     )
@@ -1431,6 +1421,7 @@ def _discover_step_functions(
                 servers = [
                     MCPServer(
                         name=f"sfn-orchestration:{sm_name}",
+                        surface=ServerSurface.AI_INVENTORY,
                         transport=TransportType.UNKNOWN,
                         tools=tools,
                     )
@@ -1442,40 +1433,20 @@ def _discover_step_functions(
                 config_path=sm_arn,
                 source="aws-step-functions",
                 mcp_servers=servers,
-                metadata={
-                    "cloud_origin": build_cloud_origin(
-                        provider="aws",
-                        service="step-functions",
-                        resource_type="state-machine",
-                        resource_id=sm_arn,
-                        resource_name=sm_name,
-                        location=region,
-                        account_id=account_id,
-                        raw_identity={"state_machine_arn": sm_arn, "name": sm_name},
-                    )
-                },
+                metadata=build_aws_workload_metadata(
+                    service="step-functions",
+                    resource_type="state-machine",
+                    resource_id=sm_arn,
+                    resource_name=sm_name,
+                    region=region,
+                    account_id=account_id,
+                    role_arn=role_arn,
+                    role_field="roleArn",
+                    raw_identity={"state_machine_arn": sm_arn, "name": sm_name},
+                    created_at=sm.get("creationDate") or detail.get("creationDate"),
+                    created_source="creationDate",
+                ),
             )
-            cloud_timestamps = build_cloud_timestamps(
-                provider="aws",
-                service="step-functions",
-                resource_type="state-machine",
-                created_at=sm.get("creationDate") or detail.get("creationDate"),
-                updated_source=None,
-                created_source="creationDate",
-            )
-            if cloud_timestamps:
-                agent.metadata["cloud_timestamps"] = cloud_timestamps
-            cloud_principal = build_cloud_principal(
-                provider="aws",
-                service="step-functions",
-                resource_type="state-machine",
-                principal_type="iam-role",
-                principal_id=role_arn or None,
-                source_field="roleArn",
-                raw_identity={"role_arn": role_arn},
-            )
-            if cloud_principal:
-                agent.metadata["cloud_principal"] = cloud_principal
             agents.append(agent)
 
     return agents, warnings
@@ -1491,10 +1462,10 @@ def _extract_sfn_task_resources(definition: dict) -> list[str]:
 
             if state_type == "Task":
                 resource = state_def.get("Resource", "")
-                if resource and resource.startswith("arn:"):
+                if isinstance(resource, str) and resource.startswith("arn:") and ":states:::" not in resource:
                     resources.append(resource)
                 params = state_def.get("Parameters", {})
-                fn_name = params.get("FunctionName", params.get("FunctionName.$", ""))
+                fn_name = params.get("FunctionName", "")
                 if isinstance(fn_name, str) and fn_name.startswith("arn:"):
                     resources.append(fn_name)
 
@@ -1507,7 +1478,7 @@ def _extract_sfn_task_resources(definition: dict) -> list[str]:
                 _walk_states(iterator.get("States", {}))
 
     _walk_states(definition.get("States", {}))
-    return list(set(resources))
+    return sorted(set(resources))
 
 
 # ---------------------------------------------------------------------------

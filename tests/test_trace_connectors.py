@@ -252,7 +252,7 @@ def test_invalid_json_is_a_safe_connector_error():
 
 
 @pytest.mark.parametrize("include_content", [False, True])
-def test_langfuse_v2_requests_bounded_tool_metadata_without_unconsented_io(include_content):
+def test_langfuse_v2_requests_bounded_native_metadata_without_unconsented_io(include_content):
     from datetime import datetime, timedelta
 
     client = _FakeClient({"data": []})
@@ -260,7 +260,7 @@ def test_langfuse_v2_requests_bounded_tool_metadata_without_unconsented_io(inclu
     call = client.calls[0]
     assert call["url"].endswith("/api/public/v2/observations")
     params = call["params"]
-    assert params["type"] == "TOOL"
+    assert "type" not in params
     assert set(params["fields"].split(",")) == {"core", "basic", "metadata"} | ({"io"} if include_content else set())
     assert datetime.fromisoformat(params["toStartTime"]) - datetime.fromisoformat(params["fromStartTime"]) == timedelta(days=1)
 

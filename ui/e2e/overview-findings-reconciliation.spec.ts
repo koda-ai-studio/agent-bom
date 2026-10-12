@@ -252,6 +252,7 @@ test("overview and current-state findings remain readable without mobile overflo
   const overflow = await page.evaluate(() => {
     const viewportWidth = document.documentElement.clientWidth;
     return Array.from(document.querySelectorAll<HTMLElement>("body *"))
+      .filter(element => element.checkVisibility({ visibilityProperty: true, opacityProperty: true }))
       .map((element) => ({
         tag: element.tagName.toLowerCase(),
         className: element.className,

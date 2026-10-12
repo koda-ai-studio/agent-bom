@@ -390,7 +390,7 @@ def correlate(
 
 @dataclass
 class SpanAttackPath:
-    """One traced tool-call span resolved to the exact attack path it hit."""
+    """A name-based candidate association between a span and a scan path."""
 
     trace_id: str
     span_id: str
@@ -399,7 +399,7 @@ class SpanAttackPath:
     package_name: str
     match_basis: str  # "tool" | "server" | "package"
 
-    # Exact vulnerability this span reached
+    # Vulnerability in the candidate scan path; execution is not established
     vulnerability_id: str
     severity: str
     cvss_score: float
@@ -421,6 +421,8 @@ class SpanAttackPath:
             "server_name": self.server_name,
             "package_name": self.package_name,
             "match_basis": self.match_basis,
+            "correlation_state": "candidate_name",
+            "execution_proven": False,
             "vulnerability_id": self.vulnerability_id,
             "severity": self.severity,
             "cvss_score": self.cvss_score,
@@ -500,7 +502,7 @@ def correlate_spans_to_attack_paths(
     *,
     nhi_by_credential: Mapping[str, Sequence[Mapping[str, Any]]] | None = None,
 ) -> list[SpanAttackPath]:
-    """Resolve each traced tool-call span to the exact attack path it hit.
+    """Find name-based candidate scan paths for traced spans.
 
     Args:
         traces: Parsed OTel/Langfuse tool-call spans (``ToolCallTrace``), each
@@ -509,7 +511,7 @@ def correlate_spans_to_attack_paths(
             credentials + affected agents/servers + risk score).
         nhi_by_credential: Optional map of credential env-var name -> the NHIs
             that hold it, used to resolve a span's exposed credentials to the
-            exact non-human identities. Never carries secret material.
+            candidate non-human identities. Names do not prove credential possession.
 
     Returns:
         One ``SpanAttackPath`` per (span, matched blast radius). A span that hit

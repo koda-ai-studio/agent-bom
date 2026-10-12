@@ -6773,6 +6773,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/runtime/observation-revisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Runtime Observation Revisions
+         * @description Read tenant-scoped metadata history; it is not independent provider proof.
+         */
+        get: operations["list_runtime_observation_revisions_v1_runtime_observation_revisions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/runtime/observations": {
         parameters: {
             query?: never;
@@ -6890,15 +6910,7 @@ export interface paths {
         };
         /**
          * Trace Explorer
-         * @description Langfuse-style trace explorer joined to findings and policy decisions (#3608).
-         *
-         *     Fuses gateway/proxy feed events and persisted runtime observations into
-         *     session-grouped spans. Each span carries correlated findings (CVE, reach
-         *     band, compliance controls) and blocked/observed verdict metadata.
-         *
-         *     The whole assembly — unbounded findings iteration, synchronous psycopg
-         *     session/observation reads, and CPU-bound serialization — is offloaded via
-         *     ``asyncio.to_thread`` so it never blocks the event loop under scale.
+         * @description Read bounded runtime traces off-loop; name matches remain candidates.
          */
         get: operations["trace_explorer_v1_runtime_trace_explorer_get"];
         put?: never;
@@ -7971,17 +7983,9 @@ export interface paths {
         put?: never;
         /**
          * Ingest Traces
-         * @description Ingest OpenTelemetry trace data and flag vulnerable tool calls.
+         * @description Ingest OTLP metadata and flag candidate vulnerable tool calls.
          *
-         *     Accepts OTLP JSON format traces containing `adk.tool.*` spans.
-         *     Cross-references tool calls against completed scan results to flag
-         *     any calls that touch packages with known CVEs.
-         *
-         *     Span *metadata* is parsed by default; content is never read or stored.
-         *     Pass ``screen_content=true`` (opt-in; default follows
-         *     ``AGENT_BOM_TRACE_CONTENT_SCREENING``) to additionally run Shield over trace
-         *     content and surface injection / PII / credential-leak findings. Raw content
-         *     is screened in-memory and never persisted.
+         *     Opt-in Shield content screening stays in memory; raw content is never persisted.
          */
         post: operations["ingest_traces_v1_traces_post"];
         delete?: never;
@@ -8001,11 +8005,10 @@ export interface paths {
         put?: never;
         /**
          * Correlate Trace Attack Paths
-         * @description Resolve each traced tool-call span to its exact attack path (#3898).
+         * @description Return name-based finding candidates for traced tool calls.
          *
-         *     Accepts an OTLP JSON trace and correlates every vulnerable tool-call span
-         *     against the tenant's scan blast radii, returning per-span the exact reachable
-         *     CVE, exposed credentials, resolved non-human identities, and blast radius.
+         *     These legacy associations are not exact inventory joins or execution proof.
+         *     They relate reported tool/server names to the tenant's scan blast radii.
          *     Correlation is in-memory; raw span content is never stored. Pass ``span_id``
          *     to scope the answer to a single span.
          */
@@ -8081,9 +8084,7 @@ export interface paths {
         put?: never;
         /**
          * Pull Trace Connector
-         * @description Pull traces from an LLM-observability platform and correlate them (#3899).
-         *
-         *     Select a managed ``connection_id`` or provide one-shot ``credentials``.
+         * @description Import via a managed connection or correlate one-shot provider credentials.
          *     Screening is opt-in; provider responses may still contain content.
          */
         post: operations["pull_trace_connector_v1_traces_connectors__provider__pull_post"];
@@ -18604,6 +18605,30 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** ObsCloudTraceClaims */
+        ObsCloudTraceClaims: {
+            /** Attributes */
+            attributes: {
+                [key: string]: string;
+            };
+            /**
+             * Basis
+             * @constant
+             */
+            basis: "source_reported";
+            /**
+             * Execution Proven
+             * @constant
+             */
+            execution_proven: false;
+            /**
+             * Scope State
+             * @enum {string}
+             */
+            scope_state: "consistent" | "conflict" | "invalid";
+        } & {
+            [key: string]: unknown;
+        };
         /** ObsCostAnomaly */
         ObsCostAnomaly: {
             /** Agent */
@@ -18840,6 +18865,11 @@ export interface components {
         };
         /** ObsTraceLinkedFinding */
         ObsTraceLinkedFinding: {
+            /**
+             * Correlation Basis
+             * @default candidate_name
+             */
+            correlation_basis: string;
             /** Effective Reach Band */
             effective_reach_band: string | null;
             /** Finding Id */
@@ -18890,20 +18920,78 @@ export interface components {
             action_type: string;
             /** Agent */
             agent: string;
+            cloud_trace?: components["schemas"]["ObsCloudTraceClaims"] | null;
+            /** Collected At */
+            collected_at?: string | null;
             /** Compliance Controls */
             compliance_controls: string[];
+            /**
+             * Correlation State
+             * @default candidate_name
+             */
+            correlation_state: string;
+            /**
+             * Depth
+             * @default 0
+             */
+            depth: number;
             /** Detail */
             detail: string | null;
+            /** End Time Unix Nano */
+            end_time_unix_nano?: string | null;
+            /**
+             * Event Time Missing
+             * @default false
+             */
+            event_time_missing: boolean;
+            /** Inventory Binding */
+            inventory_binding?: {
+                [key: string]: unknown;
+            } | null;
             /** Linked Findings */
             linked_findings: components["schemas"]["ObsTraceLinkedFinding"][];
+            /** Logical Root */
+            logical_root?: boolean | null;
+            /**
+             * Native Name
+             * @default
+             */
+            native_name: string;
+            /**
+             * Native Type
+             * @default
+             */
+            native_type: string;
+            /**
+             * Parent Span Id
+             * @default
+             */
+            parent_span_id: string;
+            /**
+             * Parent State
+             * @default root
+             */
+            parent_state: string;
             /** Session Id */
             session_id?: string | null;
             /** Shadow */
             shadow: boolean;
             /** Source */
             source: string | null;
+            /**
+             * Source Scope
+             * @default {}
+             */
+            source_scope: {
+                [key: string]: string;
+            };
             /** Span Id */
             span_id: string;
+            /**
+             * Surface
+             * @default runtime
+             */
+            surface: string;
             /** Timestamp */
             timestamp: string | null;
             /** Tool */
@@ -20964,12 +21052,49 @@ export interface components {
         RuntimeTraceExplorerResponse: {
             /** Blocked Count */
             blocked_count: number;
+            /**
+             * Counts Scope
+             * @default matching_retained_observations
+             */
+            counts_scope: string;
+            /**
+             * Feed Included
+             * @default false
+             */
+            feed_included: boolean;
+            /**
+             * Has More
+             * @default false
+             */
+            has_more: boolean;
+            /**
+             * Limit
+             * @default 100
+             */
+            limit: number;
+            /**
+             * Offset
+             * @default 0
+             */
+            offset: number;
+            /**
+             * Retained Total
+             * @default 0
+             */
+            retained_total: number;
             /** Schema Version */
             schema_version: string;
             /** Session Count */
             session_count: number;
             /** Sessions */
             sessions: components["schemas"]["ObsTraceSession"][];
+            /**
+             * Source Counts
+             * @default {}
+             */
+            source_counts: {
+                [key: string]: number;
+            };
             /** Span Count */
             span_count: number;
             /** Tenant Id */
@@ -39645,6 +39770,52 @@ export interface operations {
             };
         };
     };
+    list_runtime_observation_revisions_v1_runtime_observation_revisions_get: {
+        parameters: {
+            query: {
+                observation_id: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: {
+                "X-Agent-Bom-Role"?: string | null;
+                "X-Agent-Bom-Tenant-ID"?: string | null;
+                "X-Agent-Bom-Proxy-Secret"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuntimeObservationsResponse"];
+                };
+            };
+            /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE) */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     list_runtime_observations_v1_runtime_observations_get: {
         parameters: {
             query?: {
@@ -39871,6 +40042,12 @@ export interface operations {
         parameters: {
             query?: {
                 limit?: number;
+                scan_id?: string | null;
+                offset?: number;
+                session_id?: string | null;
+                source?: string | null;
+                agent_name?: string | null;
+                connection_id?: string | null;
             };
             header?: {
                 "X-Agent-Bom-Role"?: string | null;

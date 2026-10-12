@@ -1,7 +1,7 @@
 # Managed trace connections
 
 Use **Connections → Observability & SIEM** to select an operator-configured Langfuse
-or LangSmith project and pull a bounded correlation sample. **Traces → Connect
+or LangSmith project and import a bounded window of native observations. **Traces → Connect
 platforms** opens the same hub. The browser sends a connection ID using the
 existing Agent-Bom session; it does not receive provider credentials.
 
@@ -45,7 +45,7 @@ Git, UI URLs, tickets, or shell history. No new database credential store is use
 3. Start the configured API with `agent-bom api`, sign into the dashboard, then
    open **Connections → Observability & SIEM** and select the connection. A configured
    entry is not proof of provider access. **Pull and correlate** checks access
-   and returns tool-call counts and finding links. It requires `runtime.ingest`.
+   and returns native observation, update, replay and rejected-row counts. It requires `runtime.ingest`.
 
 For Helm, use `controlPlane.api.env`, `envFrom`, `extraVolumes`, and
 `extraVolumeMounts` to supply these references and read-only secret mounts. For
@@ -73,8 +73,87 @@ per-connection user grants are not implemented.
 The advanced temporary-credentials form remains available for one-shot testing.
 Content screening is off by default. Provider responses may still contain input
 or output content; disabled screening excludes outputs from the adapted evidence.
-Pull results are transient and do not populate the trace explorer. See the
-[coverage and roadmap](ROADMAP.md) for incremental collection and persisted imports.
+Temporary-credential pulls are transient. Managed-connection pulls persist native
+observations and append content revisions to the runtime store. Replaying a span
+preserves its identity and does not increment session counts again. Collection
+time alone does not create a revision. Revisions are collector-controlled history,
+not independent or tamper-proof audit evidence; a newly collected revision is not
+proof of the provider's latest state. Projection retention does not erase replay
+identity or revision history. Revision history currently requires operator-managed
+storage capacity; no automatic history-pruning policy is provided.
+
+## Upgrading existing collection
+
+Existing collection checkpoints retain their resume cursor when connection scope
+is unchanged. Adding account, environment, cloud or project bindings requires a
+new connection ID; do not reset the old checkpoint to bypass the conflict.
+Older tool-only observations remain available as legacy evidence. They lack the
+canonical project/scope fields needed to merge safely into native span history,
+so the first native import can add a separate record for the same provider span.
+Replay deduplication applies within each identity format, not across that upgrade.
+
+## Import, resume, and inspect
+
+With the authenticated control-plane session, POST to
+`/v1/traces/connectors/langfuse/pull` (or `langsmith`) with:
+
+```json
+{"connection_id":"production-traces","limit":50,"max_pages":3,"screen_content":false}
+```
+
+The response contains an `import_id`, fixed window, completion flag, scope and
+request-scoped counts. Repeat with the same `import_id` to resume at the committed
+cursor. Optional `window_start` and `window_end` select a timezone-aware window of
+at most 31 days on the first request. Completed imports do not fetch again; start
+a new import to collect provider updates. Page failures retain prior evidence and
+the last committed cursor. Rejected rows keep coverage partial even when every
+page was traversed. Provider pagination does not guarantee an immutable source.
+
+Open **Traces** for native kinds, physical parents, missing-parent notices and
+collection revisions. `GET /v1/runtime/observation-revisions?observation_id=...`
+reads paged, tenant-scoped history. SQLite and PostgreSQL store observations,
+revisions, session counters and page checkpoints in the same transaction.
+
+The trace explorer accepts exact `source`, `session_id`, `agent_name` and
+`connection_id` filters, plus `limit` (1–200) and `offset`. Filtering happens
+before pagination. `retained_total` and `source_counts` describe matching retained
+observations at query time, not total provider history. Concurrent collection can
+change these live counts between pages. The gateway feed appears only on the
+first unfiltered page; it is separate from the retained-observation total.
+
+
+## Exact inventory identifiers
+
+A managed connection may specify `cloud_provider`, `account_id` and `environment`
+when those values are known and restricted by the operator. Instrumented native
+observations can report `metadata["agent_bom.inventory_node_id"]` (LangSmith uses
+`extra.metadata`) containing an exact canonical inventory node ID. Names are
+never substituted for IDs.
+
+`GET /v1/runtime/trace-explorer?scan_id=SNAPSHOT` checks these claims against a named
+snapshot. Every recorded cloud/account/environment field must agree. Missing or
+conflicting scope, absent nodes and snapshots changed during lookup produce no
+entity link. The response identifies the exact snapshot generation used. This is
+a source-reported identifier association: it does not authenticate the workload,
+prove invocation or downstream effects, establish current permission, or prove
+exploitation. Imported spans do not inherit findings through display-name matches.
+Legacy tool-name correlation results remain explicitly labeled candidates.
+
+If inventory records a normalized cloud resource ID or location, reported cloud
+identifiers must also agree with those values. Version or alias resolution is not
+inferred to make different identifiers match.
+
+Sources can additionally pin `agent_bom.inventory_scan_id` and
+`agent_bom.inventory_generation`; a mismatched pin yields no entity link. For an
+exact match, the explorer returns up to ten recorded inventory paths to
+vulnerabilities, following only directed uses, dependency, containment and
+vulnerability relationships. Traversal is bounded to four hops, 500 nodes,
+1,000 edges and a 500 ms store deadline. Returned paths carry node/edge IDs and
+the snapshot generation; truncation is disclosed. These paths do not prove that
+the span executed the package, exploited the finding or completed a downstream
+action. Inspect the pinned graph and its source receipts before making those
+claims.
+
 
 Contract tests: [broker boundaries](../tests/test_trace_connection_broker.py),
 [content consent](../tests/test_trace_pull_screen_content.py), and
@@ -82,10 +161,9 @@ Contract tests: [broker boundaries](../tests/test_trace_connection_broker.py),
 
 ## Langfuse API compatibility
 
-Langfuse pulls request a bounded sample of tool observations from the last 24
-hours through Observations API v2. Metadata is requested explicitly; input/output
-fields are requested only with content screening enabled. This is a sample, not
-a complete or incremental export. Only a missing v2 route (HTTP 404) falls back
+Langfuse pulls request native observation types through Observations API v2.
+Managed imports default to a fixed 24-hour window and follow provider cursors. Metadata is requested explicitly; input/output
+fields are requested only with content screening enabled. Traversal completion describes the requested window, not complete project history. Only a missing v2 route (HTTP 404) falls back
 to the v1 endpoint for older self-hosted instances. Authorization errors, rate
 limits, HTTP 410, and server failures remain visible errors. The legacy API can
 return content even when the adapter excludes it from evidence.
@@ -94,12 +172,15 @@ See the [Langfuse public API contract](https://langfuse.com/docs/api-and-data-pl
 
 ## Save and resume Langfuse evidence
 
-Select a managed Langfuse connection, then choose **Save trace evidence → Collect
+Select a managed Langfuse connection, then choose **Incremental collection and saved progress → Collect
 next page**. The receipt shows cumulative saved observations, committed pages,
 collection progress, and retry delays. Open **Trace explorer** to inspect retained
-observations. Each request imports at most 100 metadata-only tool observations;
-collection runs only when requested. **Pull and correlate** remains a transient
-sample, and LangSmith retains that existing behavior.
+observations. Each request imports at most 100 metadata-only native observations;
+collection runs only when requested. Both managed Langfuse and LangSmith window
+imports also persist native observations. Incremental collection and window imports
+share stable IDs and revision history, so overlapping reads do not inflate session
+counts. Temporary-credential previews remain transient. The collection receipt
+counts newly inserted observations from that collection, not all retained rows.
 
 For an authenticated API client, POST a body such as
 `{"connection_id":"production-traces"}` to
@@ -125,3 +206,20 @@ collector route for private deployments.
 
 For crash recovery, lost acknowledgments, concurrent lease claims, and bounded
 tenant-load checks, run the [collection qualification](perf/trace-collection-qualification.md).
+
+
+## Cloud request identifiers
+
+Native Langfuse metadata and LangSmith `extra.metadata` can retain the bounded
+OpenTelemetry keys `cloud.provider`, `cloud.account.id`, `cloud.region`,
+`cloud.resource_id`, `faas.invocation_id`, `faas.version`, `aws.request_id`,
+`rpc.service` and `rpc.method`. Inspect **Traces → Cloud identifiers** for these
+source-reported claims. Credentials and request/response bodies are excluded;
+invalid or conflicting cloud identifiers prevent an inventory link.
+
+SDK request IDs and Lambda invocation IDs remain distinct. Function ARNs retain
+version or alias qualifiers; aliases are not resolved to versions by name.
+A retained span or end timestamp does not prove successful function execution,
+a downstream effect, or caller identity. Independent provider execution and
+downstream event receipts are still required; managed traces do not collect
+Lambda data events or provide that independent correlation automatically.

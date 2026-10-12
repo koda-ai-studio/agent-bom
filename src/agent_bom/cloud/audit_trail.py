@@ -44,6 +44,8 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from agent_bom.cloud.audit_trail_aws import aws_event_fields
+
 logger = logging.getLogger(__name__)
 
 # ── Opt-in gate ───────────────────────────────────────────────────────────
@@ -172,7 +174,7 @@ class AuditEvent:
     action: str
     resource: str
     time: str = ""
-    outcome: str = "success"  # "success" | "failure"
+    outcome: str = "success"  # success, failure, accepted or unknown
 
     def as_tuple(self) -> tuple[str, str, str, str, str]:
         return (self.principal, self.action, self.resource, self.time, self.outcome)
@@ -309,26 +311,8 @@ def read_aws_cloudtrail(
 
 
 def _normalize_aws_event(raw: Any) -> AuditEvent | None:
-    if not isinstance(raw, dict):
-        return None
-    action = _clean(raw.get("EventName"))
-    principal = _clean(raw.get("Username"))
-    resources = raw.get("Resources") or []
-    resource = ""
-    if isinstance(resources, list) and resources:
-        first = resources[0]
-        if isinstance(first, dict):
-            resource = _clean(first.get("ResourceName")) or _clean(first.get("ResourceType"))
-    resource = resource or _clean(raw.get("EventSource"))
-    if not principal or not action or not resource:
-        return None
-    return AuditEvent(
-        principal=principal,
-        action=action,
-        resource=resource,
-        time=_iso(raw.get("EventTime")),
-        outcome="success",
-    )
+    fields = aws_event_fields(raw)
+    return AuditEvent(**fields, time=_iso(raw.get("EventTime"))) if fields else None
 
 
 # ── Azure Activity Log (read-only) ────────────────────────────────────────

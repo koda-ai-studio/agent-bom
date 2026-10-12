@@ -23,7 +23,7 @@ import {
   type Node,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { AlertTriangle, ChevronDown, Layers, Loader2, Route, ShieldAlert } from "lucide-react";
+import { AlertTriangle, Layers, Loader2, ShieldAlert } from "lucide-react";
 
 import { AttackPathCard } from "@/components/attack-path-card";
 import { AttackPathTechniqueChain } from "@/components/attack-path-technique-chain";
@@ -46,10 +46,10 @@ import {
   GraphScenarioSelector,
 } from "@/components/graph-scenario-comparison";
 import { withFindingContext } from "@/lib/finding-investigation-href";
+import { GraphRelationshipDetail } from "@/components/graph-relationship-detail";
 import { GraphEntityDrawer } from "@/components/graph-entity-drawer";
 import {
   GraphRollupDecisionSurface,
-  InvestigationViewSwitch,
   ROLLUP_DECISION_THRESHOLD,
 } from "@/components/graph-rollup-decision-surface";
 import {
@@ -130,9 +130,7 @@ import {
 import { BlastRadiusPanel } from "@/components/graph-blast-radius-panel";
 import { loadBlastInvestigation, type BlastRadiusState } from "@/lib/graph-blast-investigation";
 import {
-  prettifyReachabilityType,
   summarizeReachability,
-  describeTraversalSequence,
   type ReachabilitySummary,
 } from "@/lib/graph-reachability";
 import {
@@ -652,7 +650,11 @@ type RollupBreadcrumb = {
   label: string;
 };
 
-const GRAPH_EDGE_LABEL_BUDGET = 60;
+// Keep relationship captions useful on focused graphs without letting a
+// medium-sized topology turn into a wall of overlapping badges. Above this
+// count labels follow the selected neighborhood; the relationship inspector
+// and legend remain available for the full evidence.
+const GRAPH_EDGE_LABEL_BUDGET = 24;
 
 export default function GraphPageClient() {
   return (
@@ -675,6 +677,7 @@ function GraphPageInner() {
   }, []);
   const { session, loading: authLoading } = useAuthState();
   const [snapshotRetry, setSnapshotRetry] = useState(0);
+  const [snapshotListUnavailable, setSnapshotListUnavailable] = useState(false);
   const [graphRetry, setGraphRetry] = useState(0);
   const [canvasPage, setCanvasPage] = useState(0);
   const [expandedGraphScanId, setExpandedGraphScanId] = useState<string | null>(null);
@@ -737,6 +740,7 @@ function GraphPageInner() {
     null,
   );
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [selectedRelationship, setSelectedRelationship] = useState<{ scanId: string; id: string } | null>(null);
   const [selectedAttackPathKey, setSelectedAttackPathKey] = useState<
     string | null
   >(null);
@@ -840,7 +844,7 @@ function GraphPageInner() {
   );
   const explicitCanvasLens = searchParams.get("lens");
   const canvasLens =
-    explicitCanvasLens ??
+    (explicitCanvasLens === "mesh" || explicitCanvasLens === "context" || explicitCanvasLens === "lineage" ? "estate" : explicitCanvasLens) ??
     (pathname?.startsWith("/security-graph") ? "estate" : null);
   // Client-side lens navigation can mount this page before
   // `window.location.search` reflects the destination URL. Reconcile from
@@ -860,6 +864,7 @@ function GraphPageInner() {
     }
   }, [canvasLens, searchParams]);
   const canvasAgent = searchParams.get("agent");
+  const hasRequestedInvestigation = decodeGraphInvestigationParams(searchParams) !== null;
   const canvasLensRef = useRef(canvasLens);
   const canvasAgentRef = useRef(canvasAgent);
   canvasLensRef.current = canvasLens;
@@ -926,12 +931,12 @@ function GraphPageInner() {
 
   useEffect(() => {
     const next = createCanvasLensGraphFilters(canvasLens, canvasAgent);
-    if (!next || requestedInvestigationRef.current) return;
+    if (!next || requestedInvestigationRef.current || hasRequestedInvestigation) return;
     setInvestigationMode(null);
     setReachabilitySummary(null);
     setReachabilityError(null);
     setFilters(next);
-  }, [canvasAgent, canvasLens]);
+  }, [canvasAgent, canvasLens, hasRequestedInvestigation]);
   const firstScanSelectionRef = useRef(true);
   // Last URL the filter→URL sync effect wrote, used to break an infinite
   // router.replace loop (see the sync effect below for the full rationale).
@@ -940,28 +945,45 @@ function GraphPageInner() {
   const captureMode = captureModeFromLocation || searchParams.get("capture") === "1";
 
   useEffect(() => {
+    let cancelled = false;
+    const requested = requestedScanIdRef.current;
+    const namedSnapshot = requested && !requested.startsWith("current-estate:");
+    if (namedSnapshot) setSelectedScanId(requested);
     setLoadingSnapshots(true);
-    Promise.all([api.getGraphSnapshots(40, 0), !requestedScanIdRef.current || requestedScanIdRef.current.startsWith("current-estate:") ? api.getInventorySummary() : Promise.resolve(null)])
-      .then(([items, currentScope]) => {
-        setSnapshots(items);
+    setSnapshotListUnavailable(false);
+    void Promise.allSettled([api.getGraphSnapshots(40, 0), !namedSnapshot ? api.getInventorySummary() : Promise.resolve(null)])
+      .then(([saved, inventory]) => {
+        if (cancelled) return;
+        if (saved.status === "fulfilled") setSnapshots(saved.value);
+        else setSnapshotListUnavailable(true);
+        const currentScope = inventory.status === "fulfilled" ? inventory.value : null;
         setCurrentEstateId(currentScope?.scan_id ?? "");
-        if (items.length > 0 || currentScope?.scan_id || requestedScanIdRef.current) {
-          setSelectedScanId((current) => {
-            if (current) return current;
-            const requested = requestedScanIdRef.current;
-            if (requested && !requested.startsWith("current-estate:")) {
-              return requested;
-            }
-            return currentScope?.scan_id ?? "";
-          });
+        if (namedSnapshot || currentScope?.scan_id) {
+          setSelectedScanId(current => current || requested || currentScope?.scan_id || "");
+          return;
         }
+        const failure = inventory.status === "rejected" ? inventory.reason : saved.status === "rejected" ? saved.reason : null;
+        if (failure) { setRateLimited(failure instanceof ApiRateLimitError); setError("Graph scope could not be loaded."); }
       })
-      .catch((e) => {
-        setRateLimited(e instanceof ApiRateLimitError);
-        setError(e.message);
-      })
-      .finally(() => setLoadingSnapshots(false));
+      .finally(() => { if (!cancelled) setLoadingSnapshots(false); });
+    return () => { cancelled = true; };
   }, [snapshotRetry]);
+
+  // External root/scan navigation must invalidate the prior investigation. Native
+  // history writes made below are already reflected in state and need no reload.
+  useEffect(() => {
+    const destination = `${pathname}${searchParams.size ? `?${searchParams}` : ""}`;
+    if (destination === lastSyncedUrlRef.current) return;
+    const requested = decodeGraphInvestigationParams(searchParams);
+    const scan = searchParams.get("scan") || searchParams.get("scan_id") || "";
+    if (scan && scan !== selectedScanId) {
+      requestedScanIdRef.current = scan;
+      setSelectedScanId(scan);
+    }
+    if (requested && (requested.rootId !== investigationMode?.rootId || (scan && scan !== selectedScanId))) {
+      requestedInvestigationRef.current = requested;
+    }
+  }, [pathname, searchParams, selectedScanId, investigationMode?.rootId]);
 
   const serverEntityTypes = useMemo(
     () => entityTypesForLayers(filters.layers),
@@ -1560,7 +1582,7 @@ function GraphPageInner() {
       nextParams.set("capture", "1");
     }
     const shareableInvestigation =
-      investigationMode ?? requestedInvestigationRef.current;
+      requestedInvestigationRef.current ?? investigationMode;
     if (shareableInvestigation) {
       nextParams.set("investigate", "1");
       nextParams.set("root", shareableInvestigation.rootId);
@@ -2306,10 +2328,10 @@ function GraphPageInner() {
         : viewportOptions;
       // Scenario views share width with the decision panel and app navigation.
       // Allow the complete proposed context to fit shorter desktop canvases.
-      if (compactInvestigationTopology && !narrowViewport) return { ...options, minZoom: COMPACT_GRAPH_MIN_ZOOM, maxZoom: 1 };
+      if (compactInvestigationTopology && !narrowViewport) return { ...options, minZoom: displayNodes.length <= 3 ? 1 : COMPACT_GRAPH_MIN_ZOOM, maxZoom: displayNodes.length <= 3 ? 1.25 : 1 };
       return selectedScenarioId && !scenarioExpanded ? { ...options, minZoom: 0.75, maxZoom: 1 } : options;
     },
-    [initialAnchorId, viewportOptions, selectedScenarioId, scenarioExpanded, compactInvestigationTopology, narrowViewport],
+    [initialAnchorId, viewportOptions, selectedScenarioId, scenarioExpanded, compactInvestigationTopology, narrowViewport, displayNodes.length],
   );
   const showMiniMap = useMemo(
     () =>
@@ -2365,6 +2387,15 @@ function GraphPageInner() {
     }
   }, [displayNodes, investigationMode?.rootId, reactFlow, selectedNodeId, viewportOptions]);
 
+  useEffect(() => {
+    if (!selectedNodeId || narrowViewport) return;
+    // Re-frame the selected neighborhood after the docked inspector takes its
+    // share of the canvas. Otherwise React Flow preserves the pre-drawer zoom
+    // and leaves the reduced canvas looking empty beside the details.
+    const frame = window.requestAnimationFrame(() => { void fitSelection(); });
+    return () => window.cancelAnimationFrame(frame);
+  }, [fitSelection, narrowViewport, selectedNodeId]);
+
   const autoLayout = useCallback(() => {
     presentation.autoLayout();
     window.setTimeout(fitVisible, 0);
@@ -2380,7 +2411,6 @@ function GraphPageInner() {
       ).length ?? null,
     [graphData],
   );
-  const graphTotal = graphData ? knownGraphTotal(graphData) : null;
 
   const hasContextualGraph = useMemo(
     () =>
@@ -2435,8 +2465,16 @@ function GraphPageInner() {
     [displayNodes],
   );
 
+  const inspectRelationship = useCallback((edge: Edge) => {
+    if (edge.data?.isClusterEdge) return;
+    setSelectedNode(null); setSelectedNodeId(null);
+    setSelectedRelationship(current => current?.scanId === selectedScanId && current.id === edge.id
+      ? current : { scanId: selectedScanId, id: edge.id });
+  }, [selectedScanId]);
+
   const onNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
+      setSelectedRelationship(null);
       // Cluster-pill click → restore the absorbed siblings in place. We
       // never open the detail panel for a synthetic cluster node.
       if (isClusterPillNode(node as Node<LineageNodeData>)) {
@@ -2539,6 +2577,7 @@ function GraphPageInner() {
       request: GraphInvestigationRequest & { node?: UnifiedNode | undefined; nodeLimit?: number },
     ) => {
       if (!selectedScanId) return;
+      setSelectedRelationship(null);
       const requestId = ++investigationRequestId.current;
       investigationAbort.current?.abort();
       const controller = new AbortController();
@@ -2660,10 +2699,10 @@ function GraphPageInner() {
 
   useEffect(() => {
     const requested = requestedInvestigationRef.current;
-    if (!requested || !selectedScanId) return;
+    if (!requested || !selectedScanId || (requestedScanIdRef.current && requestedScanIdRef.current !== selectedScanId)) return;
     requestedInvestigationRef.current = null;
     void loadRootInvestigation(requested);
-  }, [loadRootInvestigation, selectedScanId]);
+  }, [loadRootInvestigation, selectedScanId, searchParams]);
 
   const focusSearchResult = useCallback(
     async (node: UnifiedNode) => {
@@ -2812,7 +2851,7 @@ function GraphPageInner() {
     );
   }
 
-  if (error && snapshots.length === 0) {
+  if (error && snapshots.length === 0 && !selectedScanId) {
     return (
       <div className="flex flex-col items-center justify-center h-[80vh] text-ink-secondary gap-3">
         <AlertTriangle className="w-8 h-8 text-amber-500" />
@@ -2837,7 +2876,7 @@ function GraphPageInner() {
     );
   }
 
-  if (snapshots.length === 0) {
+  if (snapshots.length === 0 && !selectedScanId) {
     return (
       <div className="flex flex-col items-center justify-center h-[80vh] text-ink-secondary gap-3">
         <ShieldAlert className="w-8 h-8 text-ink-tertiary" />
@@ -2946,8 +2985,9 @@ function GraphPageInner() {
         aria-label="Graph snapshot"
         value={selectedScanId}
         onChange={(event) => setSelectedScanId(event.target.value)}
-        className="graph-page-select max-w-full"
+        className="graph-page-select max-w-full sm:max-w-56"
       >
+        {selectedScanId && selectedScanId !== currentEstateId && !snapshots.some(item => item.scan_id === selectedScanId) && <option value={selectedScanId}>{selectedScanId}</option>}
         {currentEstateId && !snapshots.some(item => item.scan_id === currentEstateId) && <option value={currentEstateId}>Current tenant estate</option>}
         {snapshots.map((snapshot) => (
           <option key={snapshot.scan_id} value={snapshot.scan_id}>
@@ -3007,20 +3047,17 @@ function GraphPageInner() {
     // to scroll to the React Flow canvas or the findings panel.
     <div className="min-h-[calc(100vh-3.5rem)] flex flex-col">
       <PulseStyles />
+          {snapshotListUnavailable && <p role="status" className="text-sm text-ink-secondary">Snapshot list unavailable. The selected graph can still be explored.</p>}
+
 
       <div className="graph-page-header">
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
           <div className="flex min-w-0 items-start justify-between gap-2">
             <div className="min-w-0">
-              {!investigationMode && <p className="hidden text-[10px] uppercase tracking-[0.24em] text-sky-400 sm:block">Unified graph</p>}
               <h1 className="text-lg font-semibold text-foreground sm:mt-1">
-                {canvasLens === "estate" ? "Investigation Canvas" : "Lineage Graph"}
+                Investigation
               </h1>
-              {!investigationMode && <p className="hidden text-xs text-ink-tertiary sm:block">
-                {canvasLens === "estate"
-                  ? "Review priority findings, then follow their connections and evidence."
-                  : "Evidence-backed relationships across agents, servers, packages, credentials, tools, and findings."}
-              </p>}
+
             </div>
             {narrowViewport && <details className="relative shrink-0" data-testid="mobile-graph-view">
               <summary className="graph-page-action cursor-pointer">Snapshot &amp; view</summary>
@@ -3030,30 +3067,26 @@ function GraphPageInner() {
             </details>}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 xl:justify-end">
+          <GraphLensSwitcher variant="compact" scanId={selectedScanId || undefined} />
+          <div>
             {!investigationMode && <GraphAnalysisStatusBanner
               status={graphData?.stats.analysis_status?.attack_path_fusion}
               compact
             />}
-            {!narrowViewport && snapshotViewControls}
           </div>
         </div>
 
-        <div className="mt-3">
+        <div className="mt-1 sm:mt-3">
           <div className="flex flex-wrap items-center gap-2">
           {scenarioState === "current" && !rollupUnavailable && (rollupView || investigationMode || selectedAttackPath) && <div className="shrink-0">
-            <InvestigationViewSwitch summary={rollupDecisionActive} onSummary={returnToSummary} onGraph={() => setRollupMapExpanded(true)} />
+            {!rollupDecisionActive && rollupStack.length === 0 && <button type="button" onClick={returnToSummary} className="graph-page-action">All scopes</button>}
             {rollupStack.length > 0 && <nav aria-label="Investigation scope" className="mt-2 flex flex-wrap items-center gap-2 text-xs">
               <button type="button" onClick={resetRollupToRoot} className="graph-page-action">All scopes</button>
               {rollupStack.map((crumb, index) => <button key={crumb.id} type="button" onClick={() => navigateRollupBreadcrumb(index)} className="graph-chip-neutral">{crumb.label}</button>)}
             </nav>}
           </div>}
-          {narrowViewport ? <details className="relative ml-auto" data-testid="mobile-graph-search">
-            <summary className="graph-page-action cursor-pointer">Search graph</summary>
-            <div className="absolute right-0 top-full z-30 mt-2 w-72 max-w-[calc(100vw-4rem)] rounded-xl border border-outline bg-surface p-3 shadow-lg">
-              {graphSearchForm}
-            </div>
-          </details> : graphSearchForm}
+          {!narrowViewport && snapshotViewControls}
+          {!narrowViewport && graphSearchForm}
           </div>
 
           {searchResults.length > 0 && (
@@ -3092,7 +3125,7 @@ function GraphPageInner() {
 
 
           {investigationMode && !reachabilitySummary && !blastRadius && !loadingBlast && (
-            <div className="graph-callout-sky">
+            <div className="flex flex-wrap items-center gap-3 py-2 text-xs text-ink-secondary">
               <span>
                 Focused on:{" "}
                 <span className="font-mono">{investigationMode.rootLabel || investigationMode.rootId}</span>
@@ -3110,22 +3143,8 @@ function GraphPageInner() {
             </div>
           )}
 
-          {(reachabilitySummary ||
-            loadingReachability ||
-            reachabilityError) && (
-            <ReachabilityDrillInPanel
-              summary={reachabilitySummary}
-              loading={loadingReachability}
-              error={reachabilityError}
-              depth={filters.maxDepth}
-              onDepthChange={(maxDepth) => setFilters((current) => ({ ...current, maxDepth }))}
-              direction={investigationDirection}
-              onDirectionChange={(direction) => {
-                if (investigationMode) void loadRootInvestigation({ rootId: investigationMode.rootId, rootLabel: investigationMode.rootLabel, direction });
-              }}
-              onClear={returnToSummary}
-            />
-          )}
+          {reachabilityError && <p role="alert" className="py-2 text-sm text-amber-700 dark:text-amber-200">{reachabilityError}</p>}
+          {loadingReachability && <p role="status" className="py-2 text-sm text-ink-secondary">Loading connections…</p>}
 
           {(blastRadius || loadingBlast || blastError) && (
             <BlastRadiusPanel
@@ -3138,6 +3157,12 @@ function GraphPageInner() {
 
           <div className="relative mt-1">
           <GraphViewControls
+            actions={narrowViewport ? <details className="relative ml-auto" data-testid="mobile-graph-search">
+              <summary className="graph-page-action cursor-pointer">Search graph</summary>
+              <div className="absolute right-0 top-full z-30 mt-2 w-72 max-w-[calc(100vw-4rem)] rounded-xl border border-outline bg-surface p-3 shadow-lg">
+                {graphSearchForm}
+              </div>
+            </details> : undefined}
             filters={filters}
             onChange={(next) => {
               if (rollupCanvasOwnsPresentation) restoreSummaryOnFilterReset.current = true;
@@ -3158,28 +3183,15 @@ function GraphPageInner() {
                 restoreSummaryOnFilterReset.current = false;
               }
             }}
-          />
-
-          <details
-            data-testid="graph-evidence-controls"
-            className="group"
           >
-            <summary className="graph-drawer-summary absolute right-2 top-1 !flex-nowrap !gap-1 !px-1 !py-1.5">
-              <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-3 gap-y-1">
-                <span className="text-xs font-medium text-foreground">
-                  Graph settings
-                </span>
-
-              </div>
-              <ChevronDown className="h-3 w-3 transition-transform group-open:rotate-180" aria-hidden="true" />
-            </summary>
-            <div className="space-y-3 border-t border-outline/80 p-3">
-                <p className="text-xs text-ink-secondary">
-                  {rollupCanvasOwnsPresentation ? <>
-                    {rollupItems.length.toLocaleString()} nodes and scopes · {estateNodeCount.toLocaleString()} nodes in snapshot
-                    {rollupView?.completeness?.truncated ? " · incomplete scope" : ""}
-                  </> : <>
-                    {graphScopeLabelForFilters(filters)} ·{" "}
+            <div data-testid="graph-evidence-controls" className="space-y-3">
+              {investigationMode && <label className="flex items-center gap-2 text-xs text-ink-secondary">Direction
+                <select aria-label="Traversal direction" value={investigationDirection} onChange={event => void loadRootInvestigation({ rootId: investigationMode.rootId, rootLabel: investigationMode.rootLabel, direction: event.target.value as "forward" | "reverse" | "both" })} className="graph-page-action">
+                  <option value="forward">Outgoing connections</option><option value="reverse">Incoming connections</option><option value="both">Both directions</option>
+                </select>
+              </label>}
+                {!rollupCanvasOwnsPresentation && <p className="text-xs text-ink-secondary">
+                  {graphScopeLabelForFilters(filters)} ·{" "}
                   {activeSnapshot
                     ? `${activeSnapshot.node_count.toLocaleString()} nodes · ${activeSnapshot.edge_count.toLocaleString()} edges`
                     : "Snapshot metadata unavailable"}
@@ -3187,9 +3199,7 @@ function GraphPageInner() {
                   {compressedGroupCount > 0
                     ? ` · ${compressedGroupCount.toLocaleString()} grouped scopes`
                     : ""}
-                  </>}
-                </p>
-              <GraphLensSwitcher variant="compact" legendItems={legendItems} />
+                </p>}
               <div className="flex flex-wrap items-center gap-2">
                 <GraphScenarioSelector
                   scenarios={scenarios}
@@ -3269,30 +3279,9 @@ function GraphPageInner() {
 
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-4 text-[11px] text-ink-tertiary">
-          {activeSnapshot && (
-            <>
-              {!rollupCanvasOwnsPresentation && (
-                <>
-                  <span>{activeSnapshot.node_count} nodes in snapshot</span>
-                  <span>{activeSnapshot.edge_count} edges</span>
-                </>
-              )}
-            </>
-          )}
-          {graphData &&
-            !rollupCanvasOwnsPresentation &&
-            graphTotal !== null &&
-            graphTotal > 0 && (
-            <span>
-              {graphTotal.toLocaleString()} nodes in graph
-            </span>
-          )}
-        </div>
-
         <div className="mt-2">
-          <GraphSnapshotReceipt snapshot={activeSnapshot ?? null} scanId={selectedScanId} />
-          <GraphEvidenceSummary
+          {!rollupCanvasOwnsPresentation && <GraphSnapshotReceipt snapshot={activeSnapshot ?? null} scanId={selectedScanId} />}
+          {!rollupCanvasOwnsPresentation && <GraphEvidenceSummary
             capturedAt={activeSnapshot?.created_at ?? null}
             returnedNodes={graphData?.completeness?.returned ?? graphData?.nodes.length ?? null}
             totalNodes={
@@ -3314,7 +3303,7 @@ function GraphPageInner() {
             completenessReason={graphData?.completeness?.reason ?? null}
             showCompleteness={!rollupCanvasOwnsPresentation}
             showRelationships={!rollupCanvasOwnsPresentation}
-          />
+          />}
         </div>
 
         {/* One collapsed drawer keeps secondary controls off the default path.
@@ -3644,7 +3633,7 @@ function GraphPageInner() {
         )}
           </div>
         </details>
-          </details>
+          </GraphViewControls>
           </div>
         </div>
       </div>
@@ -3657,7 +3646,7 @@ function GraphPageInner() {
           ? "relative grid gap-4 px-4 py-3 lg:grid-cols-[minmax(0,1fr)_320px] lg:h-[max(28rem,calc(100dvh-18rem))]"
           : selectedAttackPath
             ? "flex relative min-h-[540px]"
-            : "flex relative h-[clamp(18rem,calc(100dvh-28rem),36rem)] md:h-[clamp(22rem,calc(100dvh-20rem),48rem)]"}
+            : (selectedAttackPath || (compactInvestigationTopology && displayNodes.length <= 4 && !investigationMode)) ? "flex relative min-h-0" : "flex relative min-h-[max(30rem,calc(100dvh-17rem))]"}
       >
         <div className={`flex-1 relative min-w-0 flex flex-col ${selectedScenario ? "min-h-[26rem] lg:min-h-0" : "min-h-0"}`} data-testid="investigation-graph-workspace">
           {selectedAttackPath && selectedPathDecision && (
@@ -3729,16 +3718,16 @@ function GraphPageInner() {
           )}
           {!rollupDecisionActive && (selectedScenarioId || investigationMode || initialViewportOptions.nodes || displayNodes.length > 6) && graphRenderer.kind === "react-flow" && (
             <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-xs text-muted-foreground" data-testid="graph-viewport-scope">
-              <span>{scenarioContextIds ? `Changes and neighbors · ${displayNodes.length} of ${aggregated.nodes.length} nodes` : graphViewport.zoom >= 1 ? "Focused view" : "Topology view"} · {displayNodes.length.toLocaleString()} displayed nodes · {displayEdges.length.toLocaleString()} displayed relationships</span>
+              <span>{scenarioContextIds ? `Changes and neighbors · ${displayNodes.length} of ${aggregated.nodes.length} nodes` : "Graph"} · {displayNodes.length.toLocaleString()} nodes · {displayEdges.length.toLocaleString()} relationships</span>
               {selectedScenarioId && !attackPathLens && !selectedAttackPath && !investigationMode && <button type="button" onClick={() => setExpandedScenarioId(scenarioExpanded ? null : selectedScenarioId)} className="text-foreground underline underline-offset-4">{scenarioExpanded ? "Focus changes" : "Show full graph"}</button>}
               {showMiniMap && <button type="button" aria-pressed={minimapExpanded} onClick={() => setMinimapExpanded((value) => !value)} className="text-foreground underline underline-offset-4">{minimapExpanded ? "Hide minimap" : "Show minimap"}</button>}
               <button type="button" onClick={fitVisible} className="text-foreground underline underline-offset-4">Fit all</button>
-              <button type="button" onClick={fitSelection} className="text-foreground underline underline-offset-4" title="Focus an asset at readable zoom; pan to follow its connections">Readable view</button>
+
           {investigationMode?.truncated && investigationMode.nodeCount < 24 && !loadingGraph && <button type="button" className="graph-page-action min-h-11 sm:min-h-7" onClick={() => void loadRootInvestigation({ rootId: investigationMode.rootId, rootLabel: investigationMode.rootLabel, direction: investigationDirection, nodeLimit: Math.min(24, Math.max(8, investigationMode.nodeCount * 2)) })}>Show more connections</button>}
             </div>
           )}
-          {graphRenderer.kind === "react-flow" && displayNodes.length > 0 && <GraphLegendDock items={legendItems} />}
-          <div className="relative flex min-h-0 flex-1 rounded-2xl border border-outline bg-surface">
+          {!rollupDecisionActive && graphRenderer.kind === "react-flow" && displayNodes.length > 0 && <GraphLegendDock items={legendItems} separated />}
+          <div className={`relative flex h-[max(24rem,calc(100dvh-25rem))] ${(selectedAttackPath || (compactInvestigationTopology && displayNodes.length <= 4 && !investigationMode)) ? "sm:h-[clamp(24rem,50dvh,36rem)]" : "sm:h-[max(28rem,calc(100dvh-21rem))]"} shrink-0 overflow-hidden rounded-lg border border-outline bg-surface`}>
           <div className="relative min-h-0 min-w-0 flex-1">
           {graphPanelError && graphData && !loadingGraph && (
             <div role="status" className="flex items-center justify-between gap-3 border-b border-outline px-4 py-2 text-sm">
@@ -3851,6 +3840,13 @@ function GraphPageInner() {
               })}
               defaultEdgeOptions={{ type: "smoothstep" }}
               proOptions={{ hideAttribution: true }}
+              onEdgeClick={(_event, edge) => inspectRelationship(edge)}
+              onKeyDownCapture={event => {
+                if (event.key !== "Enter" && event.key !== " ") return;
+                const id = event.target instanceof Element ? event.target.closest(".react-flow__edge")?.getAttribute("data-id") : null;
+                const edge = id ? displayEdges.find(item => item.id === id) : undefined;
+                if (edge) { event.preventDefault(); event.stopPropagation(); inspectRelationship(edge); }
+              }}
               onNodeClick={onNodeClick}
               onNodeMouseEnter={onNodeMouseEnter}
               onNodeMouseLeave={onNodeMouseLeave}
@@ -3858,6 +3854,7 @@ function GraphPageInner() {
               onNodeDragStop={presentation.onNodeDragStop}
               onMoveEnd={presentation.onMoveEnd}
               onPaneClick={() => {
+                setSelectedRelationship(null);
                 setSelectedNode(null);
                 setSelectedNodeId(null);
                 setHoveredNodeId(null);
@@ -3917,6 +3914,14 @@ function GraphPageInner() {
           )}
 
           </div>
+          {!selectedNode && selectedRelationship?.scanId === selectedScanId && (() => {
+            const edge = mergedGraphData?.edges.find(item => item.id === selectedRelationship.id);
+            if (!edge || !displayEdges.some(item => item.id === edge.id)) return null;
+            return <GraphRelationshipDetail edge={edge} scanId={selectedScanId} mobile={narrowViewport}
+              sourceLabel={mergedGraphData?.nodes.find(item => item.id === edge.source)?.label || edge.source}
+              targetLabel={mergedGraphData?.nodes.find(item => item.id === edge.target)?.label || edge.target}
+              onClose={() => setSelectedRelationship(null)} />;
+          })()}
           {selectedNode && (
             <GraphEntityDrawer
               variant={narrowViewport ? "overlay" : "docked"}
@@ -3952,144 +3957,6 @@ function GraphPageInner() {
           </aside>
         )}
       </div>
-    </div>
-  );
-}
-
-export function ReachabilityDrillInPanel({
-  summary,
-  loading,
-  error,
-  onClear,
-  direction,
-  onDirectionChange,
-  depth,
-  onDepthChange,
-}: {
-  summary: ReachabilitySummary | null;
-  loading: boolean;
-  error: string | null;
-  onClear: () => void;
-  depth: number;
-  onDepthChange: (depth: number) => void;
-  direction: "forward" | "reverse" | "both";
-  onDirectionChange: (direction: "forward" | "reverse" | "both") => void;
-}) {
-  const affectedCount = summary ? Math.max(0, summary.nodeIds.size - 1) : 0;
-  return (
-    <div className="mt-3 rounded-2xl border border-outline bg-surface p-3 text-xs text-foreground">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex items-start gap-2">
-          <Route className="mt-0.5 h-4 w-4 text-ink-secondary" />
-          <div>
-            <p className="text-sm font-medium text-foreground" aria-label="Related graph context">
-              {summary
-                ? `${summary.rootLabel} · ${affectedCount} related node${affectedCount === 1 ? "" : "s"} returned`
-                : loading ? "Loading related context" : "Related context unavailable"}
-            </p>
-            {summary?.truncated && (
-              <p className="mt-1 text-[11px] text-amber-800 dark:text-amber-200">
-                Partial context. Narrow the scope or return to Summary to drill into a smaller group.
-              </p>
-            )}
-            {error && (
-              <p className="mt-1 text-[11px] text-amber-800 dark:text-amber-200">{error}</p>
-            )}
-            {loading && (
-              <p className="mt-1 flex items-center gap-1 text-[11px] text-ink-secondary">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                Refreshing related context
-              </p>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-        <details className="relative">
-          <summary className="graph-chip-neutral cursor-pointer">Traversal options</summary>
-          <div className="absolute right-0 top-full z-30 mt-1 flex w-64 flex-wrap gap-2 rounded-xl border border-outline bg-surface p-3 shadow-lg">
-        <select aria-label="Traversal depth" value={depth} onChange={(event) => onDepthChange(Number(event.target.value))} className="graph-chip-neutral">
-          {[1, 2, 3, 4].map((hops) => <option key={hops} value={hops}>{hops} hop{hops === 1 ? "" : "s"}</option>)}
-        </select>
-        <select aria-label="Traversal direction" value={direction} onChange={(event) => onDirectionChange(event.target.value as "forward" | "reverse" | "both")} className="graph-chip-neutral">
-          <option value="forward">Outgoing connections</option>
-          <option value="reverse">Incoming connections</option>
-          <option value="both">Both directions</option>
-        </select>
-          </div>
-        </details>
-        <button
-          type="button"
-          onClick={onClear}
-          className="graph-chip-neutral"
-        >
-          Return to summary
-        </button>
-        </div>
-      </div>
-
-      {summary && (
-        <details className="relative mt-1" data-testid="reachability-evidence-details">
-          <summary className="cursor-pointer text-[11px]">Types and paths · {summary.pathPreviews.length} path previews</summary>
-          <div className="absolute left-0 top-full z-30 mt-2 max-h-72 w-80 max-w-full overflow-y-auto rounded-xl border border-outline bg-surface p-3 space-y-3 shadow-lg">
-            <div className="min-w-0">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-ink-secondary">
-                Related by type
-              </p>
-              {Object.keys(summary.countsByType).length === 0 ? (
-                <p className="mt-2 text-ink-secondary">
-                  No related nodes returned for this root.
-                </p>
-              ) : (
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {Object.entries(summary.countsByType)
-                    .sort((left, right) => right[1] - left[1])
-                    .map(([type, count]) => (
-                      <span
-                        key={type}
-                        className="text-xs text-ink-secondary"
-                      >
-                        {prettifyReachabilityType(type)}: {count}
-                      </span>
-                    ))}
-                </div>
-              )}
-            </div>
-
-            <div className="min-w-0">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-ink-secondary">
-                Bounded paths
-              </p>
-              {summary.pathPreviews.length === 0 ? (
-                <p className="mt-2 text-ink-secondary">
-                  No path preview is available for this root.
-                </p>
-              ) : (
-                <div className="mt-2 grid gap-1.5">
-                  {summary.pathPreviews.map((path) => (
-                    <details
-                      key={`${path.targetId}:${path.hops.join(">")}`}
-                      className="border-b border-outline py-1.5"
-                    >
-                      <summary className="cursor-pointer">
-                        <span className="font-medium text-foreground">
-                          {path.targetLabel}
-                        </span>
-                        <span className="ml-2 text-[10px] text-ink-tertiary">
-                          {prettifyReachabilityType(path.targetType)} ·{" "}
-                          {path.depth} hop{path.depth === 1 ? "" : "s"}
-                        </span>
-                      </summary>
-                      <p className="mt-1 break-words text-xs text-ink-secondary">
-                        {describeTraversalSequence(path.labels)}
-                      </p>
-                    </details>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </details>
-      )}
     </div>
   );
 }

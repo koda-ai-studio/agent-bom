@@ -20,7 +20,7 @@ rollups, enforcing retention, and advancing the provider cursor together.
 Lease decisions use the database clock after acquiring the row lock.
 A replacement collector has a new token. An expired collector cannot commit.
 SQLite serializes claim/commit with `BEGIN IMMEDIATE`; PostgreSQL locks one
-connection checkpoint and applies application-role RLS. Different connections
+tenant observation lock plus the connection checkpoint and applies application-role RLS. Different connections
 have distinct session identities, avoiding shared rollup updates. No application
 pool may bypass tenant RLS. Schema initialization is serialized once per runtime
 store instance and cached for the current instance only; status requests do not
@@ -28,7 +28,7 @@ repeat bootstrap writes. Replacing the runtime store replaces this cache entry.
 No tenant observations or authorization decisions are cached.
 
 Provider source IDs are preserved. Durable identity includes tenant, managed
-connection, trace, and span. Matching a tool name remains a correlation candidate,
+connection, endpoint, resolved project, cloud scope, trace, and span. Matching a tool name remains a correlation candidate,
 not proof of execution in an environment. Content, credentials, and provider
 cursors are absent from public collection receipts. Only metadata is persisted.
 
@@ -48,9 +48,13 @@ read can overshoot the checked deadline by its socket timeout. The lease remains
 are capped at 100,000 per connection. Hitting either limit fails closed and keeps
 the checkpoint. Existing runtime retention caps remain authoritative; totals in
 the collection receipt count committed insertions, not currently retained rows.
-Completed windows discard replay hashes older than the overlap floor. Replay
-protection applies to the active window and retained observations, not forever.
-Conflicting normalized metadata for a retained source ID rejects the whole page.
+Native observations share append-only revision history with window imports. A
+changed native span appends a revision and updates its current projection without
+increasing session counts; a previously seen digest cannot roll the projection
+back. Native history remains after current-observation retention. Legacy rows use
+bounded replay receipts, whose hashes expire beyond the completed overlap window;
+conflicting legacy metadata rejects the whole page. These collector-owned records
+are not independent or tamper-proof evidence.
 
 ## Failure and recovery
 
@@ -62,7 +66,7 @@ conflicting evidence never trigger a legacy fallback or automatic retry loop.
 Fix configuration or provider data before requesting another page.
 
 Bindings are checked before fetching and again before committing. Changing the
-endpoint or project public key requires a new connection ID; secret-key rotation
+endpoint, configured project/cloud scope, resolved project, or public key requires a new connection ID; secret-key rotation
 within that scope is supported. Revocation during a network request cannot undo
 that request; the post-fetch check prevents committing under a revoked binding
 that it observes. Provider-side revocation remains the upstream control.

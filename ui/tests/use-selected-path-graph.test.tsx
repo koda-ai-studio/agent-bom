@@ -34,8 +34,8 @@ describe("selected path graph hydration", () => {
     expect(result.current.graph!.nodes.map((node) => node.id).sort()).toEqual([...path.hops].sort());
     expect(result.current.graph!.edges).toContainEqual(edge);
     expect(result.current.graph!.edges.some((item) => item.id === "unrelated")).toBe(false);
-    expect(result.current.graph!.attack_paths[0]).toBe(path);
-    expect(result.current.graph!.attack_paths[0]!.hop_evidence).toBe(path.hop_evidence);
+    expect(result.current.graph!.attack_paths[0]).toEqual(path);
+    expect(result.current.graph!.attack_paths[0]!.hop_evidence).toEqual(path.hop_evidence);
   });
 
   for (const field of ["scan_id", "tenant_id"] as const) {
@@ -61,7 +61,7 @@ describe("selected path graph hydration", () => {
     expect(result.current.graph!.nodes).toHaveLength(1);
     expect(result.current.graph!.edges).toHaveLength(0);
     expect(result.current.message).toContain("incomplete");
-    expect(result.current.graph!.attack_paths[0]).toBe(path);
+    expect(result.current.graph!.attack_paths[0]).toEqual(path);
   });
 
   it("retains the recorded edge direction instead of treating a reversed edge as path evidence", async () => {
@@ -77,7 +77,7 @@ describe("selected path graph hydration", () => {
     const { result } = renderHook(() => useSelectedPathGraph(props));
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.message).toContain("Broader context was limited");
-    expect(result.current.graph!.attack_paths[0]).toBe(path);
+    expect(result.current.graph!.attack_paths[0]).toEqual(path);
   });
 
   it("cancels selection changes and ignores late responses without stale path receipts", async () => {
@@ -172,4 +172,23 @@ describe("selected path graph hydration", () => {
     await waitFor(() => expect(result.current.graph).not.toBeNull());
     expect(query).toHaveBeenCalledTimes(2);
   });
+});
+
+it("does not refetch identical evidence when its parent rerenders", async () => {
+  query.mockResolvedValue(response);
+  const { result, rerender } = renderHook(current => useSelectedPathGraph(current), { initialProps: props });
+  await waitFor(() => expect(result.current.loading).toBe(false));
+  rerender({ ...props, graph: { ...graph }, path: { ...path, hops: [...path.hops] } });
+  await waitFor(() => expect(result.current.loading).toBe(false));
+  expect(query).toHaveBeenCalledTimes(1);
+});
+
+it("retains the same hop graph when ranking metadata changes", async () => {
+  query.mockResolvedValue(response);
+  const { result, rerender } = renderHook(current => useSelectedPathGraph(current), { initialProps: props });
+  await waitFor(() => expect(result.current.loading).toBe(false));
+  rerender({ ...props, path: { ...path, summary: "Enriched source explanation", composite_risk: 42 } });
+  await waitFor(() => expect(result.current.loading).toBe(false));
+  expect(query).toHaveBeenCalledTimes(1);
+  expect(result.current.graph?.attack_paths[0]?.summary).toBe("Enriched source explanation");
 });

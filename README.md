@@ -90,9 +90,9 @@ report and coverage. [Exit codes](site-docs/reference/exit-codes.md)
 
 </details>
 
-<p align="center"><a href="docs/images/context-map-horizontal-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/context-map-horizontal-light-live.png"><img src="docs/images/context-map-horizontal-dark-live.png" alt="Recorded agent connections linking a role, agents, MCP servers, tool, credential reference, package and finding" width="960"></picture></a></p>
+<p align="center"><a href="docs/images/context-map-horizontal-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/context-map-horizontal-light-live.png"><img src="docs/images/context-map-horizontal-dark-live.png" alt="Recorded MCP server, package and vulnerability relationships in the shared graph workspace" width="960"></picture></a></p>
 
-**Context Map:** inspect agents, MCP servers, packages and credential references. The map above uses labeled sample data; recorded relationships do not prove execution or data access. Click any screenshot to view it at full size. To trace one vulnerable dependency to the affected agents and into remediation, [try the connected-BOM walkthrough](examples/connected-bom/README.md).
+**Graph workspace:** inspect agents, MCP servers, packages and credential references. The map above uses labeled sample data; recorded relationships do not prove execution or data access. Click any screenshot to view it at full size. To trace one vulnerable dependency to the affected agents and into remediation, [try the connected-BOM walkthrough](examples/connected-bom/README.md).
 
 ## Self-host in your environment
 
@@ -127,6 +127,8 @@ Use **CLI or GitHub Action**, **REST API**, or **MCP**; export **SARIF, CycloneD
 
 For coding assistants, run `agent-bom mcp server`. Start with eight focused tools, then choose a graph, cloud, runtime or audit profile. The full catalog has 90 MCP tools, 7 resources, and 8 workflow prompts in current source. [MCP workflows](docs/MCP_WORKFLOWS.md)
 
+**Current source (not yet in the pinned release):** MCP audit results include scoped graph drilldowns. Start `agent-bom api`, then use **Connections → Observability & SIEM** to import a bounded Langfuse or LangSmith window. Inspect retained native spans, parents, revisions and resume receipts in **Traces**. [Managed trace setup](docs/TRACE_CONNECTIONS.md) covers credential references and exact inventory matching; names alone do not establish a link.
+
 [Integration capability matrix](docs/INTEGRATIONS.md) · [MCP client setup](docs/MCP_CLIENT_GUIDES.md) ·
 [Proxy, gateway and fleet](site-docs/deployment/proxy-vs-gateway-vs-fleet.md) · [Smithery setup and manifest](site-docs/integrations/smithery.md)
 
@@ -147,9 +149,7 @@ For coding assistants, run `agent-bom mcp server`. Start with eight focused tool
 
 ### Security, engineering and GRC: prioritize findings
 
-Start with **Posture**, inspect evidence in **Top risks**, and scope inventory in **Assets & coverage**.
-**Compliance** separates evaluated-control pass rate from assessment coverage. OWASP and MITRE ATLAS risk mappings describe applicability, not control pass/fail.
-The offline synthetic enterprise estate shown below includes evaluated checks; results do not establish certification or an audit opinion.
+Start with **Posture**, inspect **Top risks**, and scope **Assets & coverage**. **Compliance** separates evaluated-control pass rate from assessment coverage; OWASP and MITRE ATLAS mappings show applicability. Results from this offline synthetic enterprise estate do not establish certification or an audit opinion.
 
 <p align="center"><a href="docs/images/dashboard-live.png"><img src="docs/images/dashboard-live.png" alt="Posture and open findings with compliance and security-area disclosures collapsed in a labeled sample environment" width="1440"></a></p>
 
@@ -165,9 +165,9 @@ Inspect the source receipts and carry the selected finding into remediation. A r
 <details>
 <summary>Explore graph navigation, permissions and evidence</summary>
 
-Choose a scope in **Summary**, then **Inspect** an entity. Filter by type or severity, set direction and hop limits, and expand bounded pages; incomplete views are labeled.
-In **Context**, use **Focus here**, **Back**, or an exact identifier. Select a node or arrow to inspect its evidence, freshness and unknowns. **Investigate reach & permissions**
-opens permission receipts, CVE prerequisites and related activity; missing exploitability stays **not assessed**. [Investigation workflow](site-docs/architecture/security-graph-model.md#investigate-an-agent-from-context).
+Use **Find a path** for findings or **Explore connections** for recorded entities. Select a snapshot and entity, filter by type or severity, and expand within a hop limit.
+Browse relationships in bounded pages; select a node or arrow for source evidence. Incomplete views remain labeled, and a replaced snapshot requires a fresh page.
+Permission, execution and exploitability require separate receipts. [Investigation workflow](site-docs/architecture/security-graph-model.md#investigate-an-agent-from-context).
 
 **Connect data locations to security evidence.** Explore recorded stores and datasets alongside identities and findings.
 Distinguish storage, access evidence and collection sources; derived classifications do not prove contents or successful reads. [Data and evidence model](site-docs/architecture/security-graph-model.md#data-locations-access-and-evidence-sources).

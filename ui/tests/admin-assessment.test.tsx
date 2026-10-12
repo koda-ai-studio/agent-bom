@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { expect, it } from "vitest";
-import { AdminAssessment } from "@/components/persisted-context-view";
+import { AdminAssessment } from "@/components/graph-admin-assessment";
 
 it.each([["admin", "Admin"], ["conditional_admin", "Conditional admin"], ["not_admin", "Not admin"], ["unknown", "Unknown"]])("displays %s without conflating authority states", (status, label) => {
   render(<AdminAssessment attributes={{ admin_equivalence_status: status }} />);

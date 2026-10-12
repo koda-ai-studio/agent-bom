@@ -2103,20 +2103,31 @@ async function installRoutes(page) {
     changed: [],
     count: 0,
   }));
-  await page.route("**/v1/graph/query", (route) => fulfill(route, {
-    ...graph,
-    roots: ["agent:developer-copilot"],
-    direction: "both",
-    max_depth: 4,
-    max_nodes: 800,
-    max_edges: 8000,
-    timeout_ms: 2500,
-    budget: { nodes: 800, edges: 8000 },
-    truncated: false,
-    missing_roots: [],
-    depth_by_node: Object.fromEntries(graph.nodes.map((item, index) => [item.id, Math.min(4, Math.floor(index / 6))])),
-    filters: {},
-  }));
+  await page.route("**/v1/graph/query", (route) => {
+    const request = route.request().postDataJSON();
+    const roots = request.roots ?? [];
+    const depth = new Map(roots.filter(id => graph.nodes.some(node => node.id === id)).map(id => [id, 0]));
+    const queue = [...depth.keys()];
+    for (let index = 0; index < queue.length; index++) {
+      const id = queue[index];
+      if (depth.get(id) >= (request.max_depth ?? 1)) continue;
+      for (const edge of graph.edges) {
+        const next = edge.source === id && request.direction !== "reverse" ? edge.target
+          : edge.target === id && request.direction !== "forward" ? edge.source : null;
+        if (next && !depth.has(next)) { depth.set(next, depth.get(id) + 1); queue.push(next); }
+      }
+    }
+    const ids = new Set(queue.slice(0, request.max_nodes ?? 4));
+    const nodes = graph.nodes.filter(node => ids.has(node.id));
+    const edges = graph.edges.filter(edge => ids.has(edge.source) && ids.has(edge.target)).slice(0, request.max_edges ?? 96);
+    return fulfill(route, { ...graph, nodes, edges, attack_paths: [], roots,
+      stats: { ...graph.stats, total_nodes: nodes.length, total_edges: edges.length },
+      direction: request.direction, max_depth: request.max_depth,
+      budget: { nodes: request.max_nodes, edges: request.max_edges },
+      truncated: queue.length > ids.size, missing_roots: roots.filter(id => !depth.has(id)),
+      depth_by_node: Object.fromEntries([...depth].filter(([id]) => ids.has(id))), filters: {},
+    });
+  });
   await page.route("**/v1/graph/search?**", (route) => fulfill(route, {
     query: "developer-copilot",
     results: graph.nodes.filter((item) => ["agent:developer-copilot", "server:github", "cve:next", "cred:github"].includes(item.id)),
@@ -2514,7 +2525,7 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
       const matched = expected instanceof RegExp ? expected.test(visibleText) : visibleText.replace(/\s+/g, " ").includes(expected.replace(/\s+/g, " "));
       if (!matched) {
         const pathSequence = await page
-          .locator('[data-testid="exposure-path-sequence"]')
+          .locator('[data-testid="security-graph-investigation"]')
           .allInnerTexts();
         const pathDetail = pathSequence.length > 0 ? `; rendered path: ${pathSequence.join(" | ")}` : "";
         const failurePath = path.join(os.tmpdir(), `agent-bom-capture-failure-${filename}`);
@@ -2948,19 +2959,19 @@ async function writeScreenshotManifest(outputDir = IMAGE_DIR) {
     },
     {
       path: "context-map-live.png",
-      page: `/graph?lens=context&scan=${SCAN_ID}&capture=1`,
-      scope: "Recorded agent neighborhood with identity, shared infrastructure, tool and package evidence after branch focus and return",
+      page: `/graph?lens=context&scan=${SCAN_ID}&root=pkg%3Anext&capture=1`,
+      scope: "Exact package neighborhood with recorded MCP dependency and vulnerability relationships",
     },
     {
       path: "context-map-light-live.png",
-      page: `/graph?lens=context&scan=${SCAN_ID}&capture=1`,
-      scope: "Recorded neighborhood and selected evidence in the light theme, with bounded expansion and branch focus",
+      page: `/graph?lens=context&scan=${SCAN_ID}&root=pkg%3Anext&capture=1`,
+      scope: "Exact package neighborhood and selected evidence in the light theme",
       presentation: "light desktop",
     },
     ...["dark", "light"].map(theme => ({
       path: `context-map-horizontal-${theme}-live.png`,
-      page: `/graph?lens=context&scan=${SCAN_ID}&capture=1`,
-      scope: "Same nine recorded entities and eight relationships arranged left to right using the Horizontal layout control",
+      page: `/graph?lens=context&scan=${SCAN_ID}&root=pkg%3Anext&capture=1`,
+      scope: "Same three recorded entities and two relationships in the shared graph workspace",
       presentation: `${theme} responsive 1000x900`,
     })),
     {
@@ -3141,7 +3152,8 @@ async function main() {
     const prepareCorrelationPath = async (proofPage) => {
       await proofPage.locator(".react-flow__node").first().waitFor({ state: "visible" });
       if (proofPage.viewportSize().width < 768) {
-        await proofPage.getByRole("button", { name: "Readable view", exact: true }).click();
+        // Preserve the readable initial anchor. Fitting the entire reference
+        // estate on a phone deliberately sacrifices text size for overview.
         await proofPage.waitForTimeout(500);
         await scrollTo(proofPage, 0);
       } else {
@@ -3339,6 +3351,8 @@ async function main() {
         .filter({ hasText: "filesystem MCP" })
         .first()
         .waitFor({ state: "visible", timeout: 30_000 });
+      const more = meshPage.getByRole("button", { name: "Show more connections", exact: true });
+      if (await more.isVisible()) await more.click();
       await meshPage
         .locator(".react-flow__node:visible")
         .filter({ hasText: /sre[ -]runbook[ -]agent/i })
@@ -3354,13 +3368,13 @@ async function main() {
       await scrollTo(meshPage, 0);
     }, {
       expectedText: [
-        "Agent Mesh",
+        "Investigation",
         "developer-copilot",
-        "sre-runbook-agent",
+        "Sre Runbook Agent",
         "filesystem MCP",
-        "Recorded connection",
+        "Uses",
       ],
-      expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/agents", "/v1/graph/incident-edges"],
+      expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/query"],
       minGraphNodes: 4,
       minGraphEdges: 3,
     });
@@ -3409,7 +3423,7 @@ async function main() {
       "investigation-canvas-current-1512x811.png",
       async (canvasPage) => {
         await canvasPage.waitForLoadState("networkidle");
-        await canvasPage.getByRole("heading", { name: "Investigation Canvas" }).waitFor({
+        await canvasPage.getByRole("heading", { name: "Investigation", exact: true }).waitFor({
           state: "visible",
           timeout: 30_000,
         });
@@ -3435,7 +3449,7 @@ async function main() {
         awaitResponses: [
           (response) => new URL(response.url()).pathname === "/v1/graph/rollup" && response.ok(),
         ],
-        expectedText: ["Investigation Canvas", "Prioritized findings and scopes", "aggregated relationship rows"],
+        expectedText: ["Investigation", "Prioritized findings and scopes", "aggregated relationship rows"],
         expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/rollup", "/v1/graph/scenarios"],
         readySelector: '[data-testid="graph-rollup-decision-surface"]',
         assertNoHorizontalOverflow: true,
@@ -3495,7 +3509,7 @@ async function main() {
             response.ok(),
         ],
         expectedText: [
-          "Investigation Canvas",
+          "Investigation",
         ],
         expectedApiPaths: [
           "/v1/graph/snapshots",
@@ -3515,7 +3529,7 @@ async function main() {
       `/graph?capture=1&scan=${SCAN_ID}&path=top&layers=user,serviceAccount,role,agent,server,package,vulnerability`,
       "lineage-graph-live.png",
       async (lineagePage) => {
-        await lineagePage.getByRole("heading", { name: "Lineage Graph" }).waitFor({
+        await lineagePage.getByRole("heading", { name: "Investigation", exact: true }).waitFor({
           state: "visible",
           timeout: 10_000,
         });
@@ -3531,8 +3545,9 @@ async function main() {
           const state = `${visible.slice(0, 500)} … ${visible.slice(-1_200)}`;
           throw new Error(`Focused path graph did not render: ${state}`);
         }
-        await lineagePage.getByTestId("focused-path-surface").scrollIntoViewIfNeeded();
-        await lineagePage.evaluate(() => window.scrollBy({ top: -76, behavior: "instant" }));
+        await lineagePage.getByTestId("focused-path-decision").evaluate((element) => {
+          window.scrollTo({ top: window.scrollY + element.getBoundingClientRect().top - 84, behavior: "instant" });
+        });
         await lineagePage.waitForTimeout(350);
       },
       {
@@ -3551,6 +3566,7 @@ async function main() {
           /Demo data — sample environment/i,
         ],
         expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph"],
+        viewportSelectors: ['[data-testid="focused-path-decision"]', ".react-flow__controls"],
         minGraphNodes: 7,
         maxGraphNodes: 8,
         minGraphEdges: 6,
@@ -3564,52 +3580,21 @@ async function main() {
       },
     );
     const prepareContextNeighborhood = async (contextPage) => {
-      await contextPage.getByRole("heading", { name: "Context Map" }).waitFor({
-        state: "visible",
-        timeout: 30_000,
-      });
-      const agentScope = contextPage.getByLabel("Agent scope", { exact: true });
-      await agentScope.selectOption("agent:developer-copilot");
-      await contextPage.getByRole("button", { name: "Expand canvas", exact: true }).click();
-      const inspector = contextPage.getByRole("complementary", { name: "Agent neighborhood inspector" });
-      await contextPage.locator('[data-id="server:github"]').click();
-      await inspector.getByRole("button", { name: "Expand connections", exact: true }).click();
-      await contextPage.locator('[data-id="pkg:next"]').click();
-      await inspector.getByRole("button", { name: "Expand connections", exact: true }).click();
+      await contextPage.getByRole("heading", { name: "Investigation", exact: true }).waitFor({ state: "visible", timeout: 30_000 });
       await contextPage.locator('[data-id="cve:next"]').waitFor({ state: "visible" });
-      await contextPage.locator('[data-id="pkg:next"]').click();
-      await inspector.getByRole("button", { name: "Focus here", exact: true }).click();
       await expect(contextPage.locator(".react-flow__node")).toHaveCount(3);
-      await contextPage.getByRole("button", { name: "Back to neighborhood", exact: true }).click();
-      await expect(contextPage.locator(".react-flow__node")).toHaveCount(9);
-      await contextPage.locator('[data-id="agent:developer-copilot"]').click();
-      await contextPage.getByRole("button", { name: "Vertical", exact: true }).click();
-      await contextPage.waitForTimeout(500);
-      for (const node of await contextPage.locator(".react-flow__node").all()) await expect(node).toBeInViewport({ ratio: 0.999 });
+      await fitReactFlow(contextPage);
       await scrollTo(contextPage, 0);
     };
-    const prepareHorizontalNeighborhood = async (contextPage) => {
-      await prepareContextNeighborhood(contextPage);
-      await contextPage.getByRole("button", { name: "Horizontal", exact: true }).click();
-      await contextPage.waitForTimeout(500);
-      await expect(contextPage.locator(".react-flow__node")).toHaveCount(9);
-      const role = await contextPage.locator('[data-id="role:prod-admin"]').boundingBox();
-      const agent = await contextPage.locator('[data-id="agent:developer-copilot"]').boundingBox();
-      if (!role || !agent || agent.x <= role.x) throw new Error("Horizontal layout must place the connected agent after its role");
-      for (const node of await contextPage.locator(".react-flow__node").all()) await expect(node).toBeInViewport({ ratio: 0.999 });
-    };
+    const prepareHorizontalNeighborhood = prepareContextNeighborhood;
     const contextNeighborhoodAssertions = {
-      awaitResponses: [(response) => response.url().includes("/graph/incident-edges") && response.ok()],
-      expectedText: ["Context Map", "developer-copilot", "CVE-2025-29927", "Persisted snapshot"],
-      expectedApiPaths: ["/v1/jobs", "/v1/graph/agents", "/v1/graph/incident-edges"],
-      minGraphNodes: 9,
-      maxGraphNodes: 9,
-      minGraphEdges: 8,
-      maxGraphEdges: 8,
-      minGraphNodeFontPx: 14,
-      assertEdgeLabelsClearOfNodes: true,
+      expectedText: ["Investigation", "next@", "CVE-2025-29927", "github-enterprise MCP"],
+      expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/query"],
+      minGraphNodes: 3, maxGraphNodes: 3, minGraphEdges: 2, maxGraphEdges: 2,
+      minGraphNodeFontPx: 12, assertEdgeLabelsClearOfNodes: true,
+      assertNoHorizontalOverflow: true,
     };
-    await capture(page, `/graph?lens=context&scan=${SCAN_ID}&capture=1`, "context-map-live.png", prepareContextNeighborhood, contextNeighborhoodAssertions);
+    await capture(page, `/graph?lens=context&scan=${SCAN_ID}&root=pkg%3Anext&capture=1`, "context-map-live.png", prepareContextNeighborhood, contextNeighborhoodAssertions);
     await page.setViewportSize({ width: 1440, height: 980 });
     await capture(page, "/inventory?capture=1", "inventory-live.png", async (inventoryPage) => {
       await inventoryPage.getByRole("heading", { name: "Asset inventory" }).waitFor({
@@ -3719,10 +3704,10 @@ async function main() {
       expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/views/fix-first"],
       readySelector: '[data-testid="selected-exposure-path"]',
     });
-    await capture(lightPage, `/graph?lens=context&scan=${SCAN_ID}&capture=1`, "context-map-light-live.png", prepareContextNeighborhood, contextNeighborhoodAssertions);
+    await capture(lightPage, `/graph?lens=context&scan=${SCAN_ID}&root=pkg%3Anext&capture=1`, "context-map-light-live.png", prepareContextNeighborhood, contextNeighborhoodAssertions);
     for (const theme of ["dark", "light"]) {
       const horizontalPage = await newCapturePage(theme, { width: 1760, height: 860 });
-      await capture(horizontalPage, `/graph?lens=context&scan=${SCAN_ID}&capture=1`, `context-map-horizontal-${theme}-live.png`, prepareHorizontalNeighborhood, contextNeighborhoodAssertions);
+      await capture(horizontalPage, `/graph?lens=context&scan=${SCAN_ID}&root=pkg%3Anext&capture=1`, `context-map-horizontal-${theme}-live.png`, prepareHorizontalNeighborhood, contextNeighborhoodAssertions);
       await horizontalPage.close();
     }
     await capture(lightPage, "/remediation?capture=1", "remediation-light-live.png", undefined, {
@@ -3748,7 +3733,7 @@ async function main() {
       prepareCorrelationPath,
       {
         ...correlationPathAssertions,
-        expectedText: ["Reference Evidence Workload", "Focused view", "Readable view"],
+        expectedText: ["Reference Evidence Workload", "Graph", "Fit all"],
         minGraphNodes: 1,
         maxGraphNodes: referenceGraph.nodes.length,
         minGraphEdges: 0,
@@ -3761,13 +3746,13 @@ async function main() {
     );
     await capture(mobilePage, `/security-graph?lens=attack-path&scan=${SCAN_ID}&capture=1`, "security-graph-mobile-live.png", async (securityGraphPage) => {
       await securityGraphPage
-        .getByTestId("exposure-path-sequence")
+        .getByTestId("security-graph-investigation")
         .waitFor({ state: "visible", timeout: 30_000 });
       await scrollTo(securityGraphPage, 0);
     }, {
       expectedText: ["Investigation", "contractor-reviewer", "Developer Copilot", "CVE-2025-29927"],
       expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/views/fix-first"],
-      readySelector: '[data-testid="exposure-path-sequence"]',
+      readySelector: '[data-testid="security-graph-investigation"]',
       rejectedText: [/Loading/i],
       assertNoHorizontalOverflow: true,
     });

@@ -10,7 +10,6 @@ import {
   ChevronDown,
   ChevronRight,
   Database,
-  GitBranch,
   KeyRound,
   List,
   Network,
@@ -55,9 +54,8 @@ export interface ExposurePathCommandAction {
 export type ExposurePathView = "path" | "graph" | "list";
 
 const PATH_VIEW_ITEMS: { key: ExposurePathView; label: string; icon: LucideIcon }[] = [
-  { key: "path", label: "Path", icon: GitBranch },
   { key: "graph", label: "Graph", icon: Network },
-  { key: "list", label: "List", icon: List },
+  { key: "list", label: "Connections", icon: List },
 ];
 
 function PathViewToggle({
@@ -145,12 +143,15 @@ export function ExposurePathCommandCenter({
   /** Technical analysis retained behind the Evidence & relationships disclosure. */
   detailsSlot?: React.ReactNode | undefined;
 }) {
-  const [internalView, setInternalView] = useState<ExposurePathView>("path");
+  const [internalView, setInternalView] = useState<ExposurePathView>("graph");
   const view = controlledView ?? internalView;
   const graphViewRef = useRef<HTMLElement>(null);
   const setView = (next: ExposurePathView) => {
     if (!controlledView) setInternalView(next);
     onViewChange?.(next);
+    if (next === "graph" && view === "graph") {
+      graphViewRef.current?.scrollIntoView({ block: "start", behavior: "instant" });
+    }
   };
   useLayoutEffect(() => {
     // Controlled view updates can commit after an event's animation frame.
@@ -182,19 +183,37 @@ export function ExposurePathCommandCenter({
       <div className={`ep-severity-rail ${severityTone}`} aria-hidden="true" />
       <div className="ep-body">
         <div className="ep-header">
-          <div className="ep-header-copy">
-            <div className="ep-badges">
-              <h2 className="ep-outcome-title">{headline}</h2>
-              <span className="ep-severity" data-severity={String(path.severity).toLowerCase()}>
-                {String(path.severity)} severity
-              </span>
-              {evidence?.isKev ? (
-                <span className="ep-kev">
-                  CISA KEV
+          <details className="ep-header-details">
+            <summary className="ep-header-summary">
+              <span className="ep-header-copy">
+                <span className="ep-badges">
+                  <h2 className="ep-outcome-title">{headline}</h2>
+                  <span className="ep-severity" data-severity={String(path.severity).toLowerCase()}>
+                    {String(path.severity)} severity
+                  </span>
+                  {evidence?.isKev ? <span className="ep-kev">CISA KEV</span> : null}
                 </span>
-              ) : null}
+                <span className="ep-header-context">Path context &amp; evidence · {pathSpanLabel(path.hops.length)} · {path.affectedAgents.length} agents</span>
+              </span>
+              <ChevronDown className="ep-chevron" aria-hidden="true" />
+            </summary>
+            <div className="ep-header-details-body">
+              <div className="ep-metrics">
+                {contextLabel && <span className="py-1 font-medium" data-testid="path-finding-context">{contextLabel}</span>}
+                <MetricPill label="Path priority" value={path.riskScore.toFixed(1)} tone="red" />
+                <MetricPill label="Path span" value={pathSpanLabel(path.hops.length)} />
+                <MetricPill label="Agents" value={String(path.affectedAgents.length)} />
+                {fixLabel ? <MetricPill label="Fix" value={fixLabel} tone="green" /> : null}
+              </div>
+              <section aria-label="Path evidence assessment" className="space-y-1 border-t border-[color:var(--border-subtle)] pt-3">
+                <dl className="ep-assessment-grid">
+                  <div className="flex flex-wrap items-baseline gap-x-2"><dt className="text-sm text-[color:var(--text-secondary)]">Reachability</dt><dd className="text-sm font-medium capitalize">{path.evidenceDimensions?.reachability.verdict ?? "Unknown"}</dd></div>
+                  <div className="flex flex-wrap items-baseline gap-x-2"><dt className="text-sm text-[color:var(--text-secondary)]">Exploitability</dt><dd className="text-sm font-medium capitalize">{path.evidenceDimensions?.exploitability.verdict?.replaceAll("_", " ") ?? "Not assessed"}</dd></div>
+                  <div className="flex flex-wrap items-baseline gap-x-2"><dt className="text-sm text-[color:var(--text-secondary)]">Assessment completeness</dt><dd className="text-sm font-medium capitalize">{path.evidenceDimensions?.completeness.status ?? "Unavailable"}</dd></div>
+                </dl>
+              </section>
             </div>
-          </div>
+          </details>
           {primaryAction && (
             <div className="ep-header-action">
               <Link
@@ -208,22 +227,7 @@ export function ExposurePathCommandCenter({
               </Link>
             </div>
           )}
-          <div className="ep-metrics">
-            {contextLabel && <span className="py-1 font-medium" data-testid="path-finding-context">{contextLabel}</span>}
-            <MetricPill label="Path priority" value={path.riskScore.toFixed(1)} tone="red" />
-            <MetricPill label="Path span" value={pathSpanLabel(path.hops.length)} />
-            <MetricPill label="Agents" value={String(path.affectedAgents.length)} />
-            {fixLabel ? <MetricPill label="Fix" value={fixLabel} tone="green" /> : null}
-          </div>
         </div>
-
-        <section aria-label="Path evidence assessment" className="space-y-1 border-b border-[color:var(--border-subtle)] pb-2">
-            <dl className="ep-assessment-grid">
-              <div className="flex flex-wrap items-baseline gap-x-2"><dt className="text-[15px] text-[color:var(--text-secondary)]">Reachability</dt><dd className="text-[15px] font-medium capitalize">{path.evidenceDimensions?.reachability.verdict ?? "Unknown"}</dd></div>
-              <div className="flex flex-wrap items-baseline gap-x-2"><dt className="text-[15px] text-[color:var(--text-secondary)]">Exploitability</dt><dd className="text-[15px] font-medium capitalize">{path.evidenceDimensions?.exploitability.verdict?.replaceAll("_", " ") ?? "Not assessed"}</dd></div>
-              <div className="flex flex-wrap items-baseline gap-x-2"><dt className="text-[15px] text-[color:var(--text-secondary)]">Assessment completeness</dt><dd className="text-[15px] font-medium capitalize">{path.evidenceDimensions?.completeness.status ?? "Unavailable"}</dd></div>
-            </dl>
-          </section>
 
         <div className="ep-inspection-grid">
         <div className="ep-inspection-main">
@@ -235,10 +239,10 @@ export function ExposurePathCommandCenter({
                 ? "Interactive graph"
                 : "Path neighbors"}
           </div>
-          <PathViewToggle view={view} onChange={setView} />
+          <PathViewToggle view={view === "path" ? "graph" : view} onChange={setView} />
         </div>
 
-        {view === "path" ? (
+        {(view === "path" || view === "graph") && !graphSlot ? (
           <section aria-label="Selected exposure path graph" className="ep-path-frame">
             {/* Keyed by path so selecting a new path re-enters the fit-first
                 frame instead of inheriting the previous path's expanded board. */}
@@ -537,7 +541,7 @@ function ExposurePathGraph({ path }: { path: ExposurePath }) {
             onClick={() => setExpanded((current) => !current)}
             className="ep-board-toggle"
           >
-            {expanded ? "Return to ordered path" : "Open full-width diagram"}
+            {expanded ? "Return to ordered path" : "Expand graph workspace"}
           </button>
           <span className="text-ink-tertiary">
             {expanded

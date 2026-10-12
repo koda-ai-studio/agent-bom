@@ -129,22 +129,24 @@ export function LoginPanel({
     );
 
     return (
-      <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-6">
-        <div className="w-full max-w-md rounded-2xl border border-[var(--border-subtle)] bg-[var(--background)]/80 p-5 sm:p-6 shadow-2xl shadow-black/20">
-          <div className="mb-4 text-center">
+      <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-8">
+        <div className="w-full max-w-md overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)] shadow-2xl shadow-black/20">
+          <div className="border-b border-[var(--border-subtle)] px-6 pb-5 pt-6 sm:px-8">
             <div className="mx-auto mb-4 flex justify-center">
               <BrandLogo />
             </div>
-            <h1 className="text-xl font-semibold tracking-tight text-[var(--foreground)]">{title}</h1>
-            <p className="mt-1 text-sm text-[var(--text-secondary)]">
+            <p className="mb-2 text-center text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-500">Workspace access</p>
+            <h1 className="text-center text-2xl font-semibold tracking-tight text-[var(--foreground)]">{title}</h1>
+            <p className="mt-2 text-center text-sm leading-5 text-[var(--text-secondary)]">
               {ssoConfigured
                 ? `${browserOidcConfigured ? ssoPreset.buttonLabel : "Sign in with Snowflake"}, or use an API key as a fallback.`
                 : "Enter your API key to access the dashboard."}
             </p>
           </div>
 
+          <div className="px-6 py-5 sm:px-8">
           {ssoConfigured ? (
-            <div className="mb-6 space-y-3">
+            <div className="mb-5 space-y-3">
               {browserOidcConfigured ? (
                 <a
                   href={OIDC_BROWSER_LOGIN_PATH}
@@ -212,7 +214,7 @@ export function LoginPanel({
           >
             <label
               htmlFor="agent-bom-browser-session-api-key"
-              className="mb-2 block text-xs uppercase tracking-[0.2em] text-[var(--text-tertiary)]"
+              className="mb-2 block text-xs font-medium text-[var(--text-secondary)]"
             >
               API key
             </label>
@@ -222,7 +224,7 @@ export function LoginPanel({
                 type="password"
                 value={apiKey}
                 onChange={(event) => setApiKey(event.target.value)}
-                className="w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--background)] px-3 py-2.5 font-mono text-sm text-[var(--foreground)] outline-none ring-0 placeholder:text-[var(--text-tertiary)] focus:border-emerald-500"
+                className="w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--background)] px-3 py-3 font-mono text-sm text-[var(--foreground)] outline-none placeholder:text-[var(--text-tertiary)] focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20"
                 placeholder="Paste your API key"
                 autoComplete="off"
                 autoFocus={!ssoConfigured}
@@ -280,13 +282,14 @@ export function LoginPanel({
             </div>
           </form>
 
-          {authUnconfigured ? null : <details className="mt-4 border-t border-[var(--border-subtle)] pt-3 text-sm text-[var(--text-secondary)]">
+          {authUnconfigured ? null : <details className="mt-5 border-t border-[var(--border-subtle)] pt-4 text-sm text-[var(--text-secondary)]">
             <summary className="cursor-pointer font-medium">Sign-in help</summary>
             <p className="mt-2">Use the key provided by your administrator. Access permissions are managed by your organization.</p>
             {!ssoConfigured && !proxyOrBearerHint ? (
               <p className="mt-2">For single sign-on, ask your administrator to configure your organization's identity provider.</p>
             ) : null}
           </details>}
+          </div>
         </div>
       </div>
     );

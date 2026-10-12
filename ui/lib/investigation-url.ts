@@ -11,5 +11,5 @@ export function investigationHref(pathname: string, query: string, patch: Record
 }
 
 export function investigationView(value: string | null): ExposurePathView {
-  return value === "graph" || value === "list" ? value : "path";
+  return value === "list" ? "list" : "graph";
 }

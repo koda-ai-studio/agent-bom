@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import type { GraphNodeDetailResponse } from "@/lib/api-types";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Loader2, Network, Radar } from "lucide-react";
 
 import { GraphRecordedRelationships, GraphRecordedRelationshipScope } from "@/components/graph-recorded-relationships";
+import { AdminAssessment } from "@/components/graph-admin-assessment";
 import { GraphConsequencePanel } from "@/components/graph-consequence-panel";
 import { LineageDetailPanel } from "@/components/lineage-detail";
 import type { LineageNodeData } from "@/components/lineage-nodes";
@@ -65,7 +65,6 @@ export function GraphEntityDrawer({
   const detail = enrich && loadedDetail && loadedDetail.scanId === scanId && loadedDetail.response.node.id === nodeId
     ? loadedDetail.response : null;
   const enriched = useMemo(() => detail ? mergeGraphNodeDetail(data, detail) : data, [data, detail]);
-  const pathname = usePathname();
 
   useEffect(() => {
     setLoadedDetail(null);
@@ -107,7 +106,7 @@ export function GraphEntityDrawer({
   const relationshipSlot = enrich && scanId && nodeId
     ? <GraphRecordedRelationships key={`${scanId}:${nodeId}`} scanId={scanId} nodeId={nodeId} onInspectNode={onInspectNode} />
     : undefined;
-  const showNextAction = !(pathname === "/graph" && nextAction.label === "Inspect in lineage");
+  const showNextAction = nextAction.label !== "Inspect in lineage";
 
   const locationValue = (...keys: string[]) => {
     for (const key of keys) {
@@ -124,7 +123,8 @@ export function GraphEntityDrawer({
   ];
   const missingLocationFields = locationFields.filter(([, value]) => !value).map(([label]) => label.toLowerCase());
   const headerSlot = (
-    <div className="space-y-2 rounded-lg border border-outline bg-surface-muted px-3 py-2">
+    <div className="space-y-3 text-xs text-ink-secondary">
+      <AdminAssessment attributes={enriched.attributes ?? {}} />
       {enrich && scanId && nodeId && detail && ["agent", "vulnerability", "user", "role", "group", "service_account", "service_principal", "federated_identity", "managed_identity"].includes(String(detail.node.entity_type)) && <GraphConsequencePanel nodeId={nodeId} scanId={scanId} snapshotGeneration={detail?.snapshot_generation}
         findingRoot={enriched.nodeType === "vulnerability"}
         affectedNodeIds={detail ? [...new Set([
@@ -162,11 +162,6 @@ export function GraphEntityDrawer({
         </p>}
         {(enriched.nodeType === "dataStore" || enriched.nodeType === "dataset") && <p className="mt-2">Storage metadata does not establish data contents or successful reads. Inspect permission and runtime receipts separately.</p>}
       </details>
-      {nodeId ? (
-        <p className="truncate font-mono text-[10px] text-ink-tertiary" title={nodeId}>
-          id · {nodeId}
-        </p>
-      ) : null}
     </div>
   );
 
@@ -207,13 +202,14 @@ export function GraphEntityDrawer({
         </div>
       )}
       {enriched.nodeType === "agent" && (
-        <div className="space-y-2 border-t border-outline pt-3 text-xs text-ink-secondary">
+        <details className="space-y-2 border-t border-outline pt-3 text-xs text-ink-secondary">
+          <summary className="cursor-pointer">Gateway controls and limits</summary>
           <p>Read-only discovery cannot stop this agent. Gateway policies apply only to calls routed through the gateway with its authenticated fleet identity.</p>
           <p>Direct cloud calls and other connections remain outside that control. Review the exact identity and business impact before changing a policy.</p>
           <Link href="/fleet" className="inline-flex rounded-lg border border-outline px-3 py-2 font-medium text-foreground hover:bg-surface-muted">
             Review gateway controls
           </Link>
-        </div>
+        </details>
       )}
     </div>
   );

@@ -288,6 +288,9 @@ describe("InventoryIndex whole-query truth", () => {
   it("opens with asset rows and keeps secondary filters in a disclosure", async () => {
     render(<InventoryProvider><InventoryIndex /></InventoryProvider>);
     const table = await screen.findByRole("table", {name:"Asset inventory"});
+    const nextButton = screen.getByRole("button", { name: "Next" });
+    expect(nextButton.className).toContain("graph-page-action");
+    expect(nextButton.className).toContain("min-h-10");
     expect(within(table).getByText("requests")).toBeVisible();
     expect(screen.getByLabelText("Filter by provider")).not.toBeVisible();
     expect(screen.getByLabelText("Filter by environment")).toBeVisible();

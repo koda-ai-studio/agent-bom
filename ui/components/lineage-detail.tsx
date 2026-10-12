@@ -10,6 +10,8 @@ import {
   Brain,
   Bug,
   Building2,
+  ChevronLeft,
+  ChevronRight,
   Cloud,
   Component,
   Database,
@@ -198,6 +200,7 @@ export function LineageDetailPanel({
   const { width, onHandlePointerDown, onHandleKeyDown } = useDrawerWidth();
   const isOverlay = variant === "overlay";
   const isDocked = variant === "docked";
+  const [dockedCollapsed, setDockedCollapsed] = useState(false);
   const [mobileViewport, setMobileViewport] = useState(false);
   useEffect(() => {
     if (typeof window.matchMedia !== "function") return;
@@ -676,7 +679,7 @@ export function LineageDetailPanel({
   // present (identity + lifecycle); the rest appear only when they carry data
   // so the drawer never shows an empty tab.
   const tabs: { id: TabId; label: string; content: ReactNode }[] = [
-    { id: "overview", label: "Overview", content: typeSection },
+    { id: "overview", label: "Overview", content: <>{typeSection}{headerSlot}</> },
     ...(hasRelationships
       ? [
           {
@@ -739,10 +742,9 @@ export function LineageDetailPanel({
   if (mobileDialog) {
     return createPortal(
       <div className="fixed inset-0 z-[80]" data-testid="graph-entity-drawer">
-        <Drawer open onClose={onClose} onBack={onClose} title={data.label}
+        <Drawer open onClose={onClose} title={data.label} backdropLabel="Dismiss graph details"
           eyebrow={typeLabel} size="none" resizable={false}
           bodyClassName="!p-0 flex flex-col" footer={footerSlot}>
-          {headerSlot ? <div className="shrink-0 px-4 pt-3 pb-3">{headerSlot}</div> : null}
           {tabBar}
           <div role="tabpanel" data-testid={`graph-drawer-panel-${activeId}`}
             className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
@@ -753,11 +755,23 @@ export function LineageDetailPanel({
     );
   }
 
+  if (isDocked && dockedCollapsed) {
+    return (
+      <aside className="flex h-full min-h-0 w-12 shrink-0 flex-col items-center gap-3 border-l border-outline bg-background/95 py-3" data-testid="graph-entity-drawer-collapsed">
+        <button type="button" aria-label="Show node details" title={`Show details for ${data.label}`} onClick={() => setDockedCollapsed(false)}
+          className="rounded-md p-2 text-ink-secondary hover:bg-surface-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-emerald-500">
+          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+        </button>
+        <span className="max-h-[65%] overflow-hidden text-ellipsis text-xs text-ink-secondary [writing-mode:vertical-rl]" title={data.label}>{data.label}</span>
+      </aside>
+    );
+  }
+
   const shellClass = isOverlay
     ? `absolute right-0 top-0 bottom-0 flex max-w-full flex-col bg-background border-l ${TYPE_BORDER[data.nodeType]} z-50`
     : isDocked
-      ? `relative flex min-h-0 max-w-[45%] shrink-0 flex-col border-l ${TYPE_BORDER[data.nodeType]} bg-background/95`
-    : `relative flex w-full max-w-none flex-col border ${TYPE_BORDER[data.nodeType]} bg-background/95 rounded-xl`;
+      ? `relative flex h-full min-h-0 min-w-[18rem] max-w-[36%] shrink-0 flex-col border-l ${TYPE_BORDER[data.nodeType]} bg-background/95`
+      : `relative flex w-full max-w-none flex-col border ${TYPE_BORDER[data.nodeType]} bg-background/95 rounded-xl`;
 
   return (
     <div
@@ -779,7 +793,7 @@ export function LineageDetailPanel({
       )}
 
       {/* Header — always visible */}
-      <div className="flex items-start justify-between gap-3 px-4 pt-4 pb-3">
+      <div className="flex shrink-0 items-start justify-between gap-3 px-4 pt-4 pb-3">
         <div className="min-w-0">
           <span className="text-[10px] uppercase tracking-wider text-ink-tertiary">
             {typeLabel}
@@ -791,6 +805,11 @@ export function LineageDetailPanel({
             </h3>
           </div>
         </div>
+        <div className="flex shrink-0 items-center gap-1">
+        {isDocked && <button type="button" aria-label="Collapse details" title="Collapse node details" onClick={() => setDockedCollapsed(true)}
+          className="rounded-md p-1 text-ink-tertiary transition-colors hover:bg-surface-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-emerald-500">
+          <ChevronRight className="h-4 w-4" aria-hidden="true" />
+        </button>}
         <button
           onClick={onClose}
           aria-label="Close"
@@ -798,10 +817,8 @@ export function LineageDetailPanel({
         >
           <X className="w-4 h-4" />
         </button>
+        </div>
       </div>
-
-      {/* Pinned summary (layer / evidence / id / counts) */}
-      {headerSlot ? <div className="px-4 pb-3">{headerSlot}</div> : null}
 
       {tabBar}
 
@@ -809,8 +826,8 @@ export function LineageDetailPanel({
       <div
         role="tabpanel"
         data-testid={`graph-drawer-panel-${activeId}`}
-        className={`space-y-4 p-4 ${
-          isOverlay ? "min-h-0 flex-1 overflow-y-auto" : ""
+        className={`min-w-0 space-y-4 p-4 ${
+          isOverlay || isDocked ? "min-h-0 flex-1 overflow-y-auto overscroll-contain" : ""
         }`}
       >
         {activeContent}

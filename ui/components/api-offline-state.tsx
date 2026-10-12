@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSyncExternalStore } from "react";
 import { AlertTriangle, FileText, PlayCircle, Server } from "lucide-react";
 
 import type { ScanResult } from "@/lib/api";
@@ -27,13 +28,16 @@ const KIND_TITLES: Record<ApiOfflineKind, string> = {
   forbidden: "This account doesn't have access to that view",
 };
 
+const subscribeToDeployment = () => () => {};
+const serverEndpointLabel = () => "the configured endpoint";
+
 export function ApiOfflineState({
   title,
   detail,
   kind = "network",
   onImport,
 }: ApiOfflineStateProps) {
-  const apiUrl = getDisplayApiUrl();
+  const apiUrl = useSyncExternalStore(subscribeToDeployment, getDisplayApiUrl, serverEndpointLabel);
   const resolvedTitle = title ?? KIND_TITLES[kind];
   const resolvedDetail = detail ? userFacingApiErrorMessage(detail, "The API request failed.") : null;
 
@@ -45,18 +49,16 @@ export function ApiOfflineState({
           <h2 className="text-2xl font-semibold tracking-tight text-[var(--foreground)]">{resolvedTitle}</h2>
           {kind === "network" ? (
             <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-              Run the local stack at{" "}
+              Check that the control plane and its reverse proxy are available at{" "}
               <code className="rounded bg-[var(--surface)] px-1.5 py-0.5 font-mono text-[var(--foreground)]">
                 {apiUrl}
               </code>{" "}
-              so the dashboard can load live scan data, graph views, and compliance surfaces.
+              so the dashboard can load scan data, graph views, and compliance evidence.
             </p>
           ) : kind === "auth" ? (
             <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
-              The API is reachable but rejected an unauthenticated request. Sign in via your IdP, set{" "}
-              <code className="rounded bg-[var(--surface)] px-1.5 py-0.5 font-mono text-[var(--foreground)]">AGENT_BOM_API_KEY</code>{" "}
-              when launching <code className="rounded bg-[var(--surface)] px-1.5 py-0.5 font-mono text-[var(--foreground)]">agent-bom serve</code>,
-              or request access from your administrator.
+              The API is reachable but rejected an unauthenticated request. Sign in using this deployment&apos;s
+              configured authentication, or request access from your administrator.
             </p>
           ) : (
             <p className="mt-3 text-sm leading-6 text-[var(--text-secondary)]">
@@ -73,46 +75,46 @@ export function ApiOfflineState({
         </div>
 
         {kind === "network" ? (
-          <>
-            <div className="mt-8 grid gap-4 md:grid-cols-2">
-              <div className="rounded-2xl border border-emerald-900/60 bg-emerald-950/20 p-5">
-                <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-emerald-800 dark:text-emerald-300">
-                  <PlayCircle className="h-4 w-4" />
-                  Recommended: start the full product surface
+          <div className="mt-6">
+            <p className="text-center text-sm text-[var(--text-secondary)]">
+              Ask your deployment administrator to check service health and API routing, then reload this page.
+            </p>
+            <details className="mt-4 rounded-2xl border border-[var(--border-subtle)] p-4">
+              <summary className="cursor-pointer text-sm font-medium text-[var(--foreground)]">Local setup instructions</summary>
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                <div className="rounded-2xl border border-emerald-900/60 bg-emerald-950/20 p-5">
+                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-emerald-800 dark:text-emerald-300">
+                    <PlayCircle className="h-4 w-4" />
+                    Recommended: start the full product surface
+                  </div>
+                  <p className="mb-4 text-sm text-[var(--text-secondary)]">
+                    This starts the API and serves the bundled dashboard from one command path.
+                  </p>
+                  <code className="block rounded-xl border border-[var(--border-subtle)] bg-[var(--background)] px-4 py-3 font-mono text-sm leading-7 text-emerald-800 dark:text-emerald-400">
+                    pip install &apos;agent-bom[ui]&apos;
+                    <br />
+                    agent-bom serve
+                  </code>
                 </div>
-                <p className="mb-4 text-sm text-[var(--text-secondary)]">
-                  This starts the API and serves the bundled dashboard from one command path.
-                </p>
-                <code className="block rounded-xl border border-[var(--border-subtle)] bg-[var(--background)] px-4 py-3 font-mono text-sm leading-7 text-emerald-800 dark:text-emerald-400">
-                  pip install &apos;agent-bom[ui]&apos;
-                  <br />
-                  agent-bom serve
-                </code>
+
+                <div className="rounded-2xl border border-blue-900/60 bg-blue-950/20 p-5">
+                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-blue-800 dark:text-blue-300">
+                    <Server className="h-4 w-4" />
+                    API only
+                  </div>
+                  <p className="mb-4 text-sm text-[var(--text-secondary)]">
+                    Use this if the dashboard is already running separately and only the backend is missing.
+                  </p>
+                  <code className="block rounded-xl border border-[var(--border-subtle)] bg-[var(--background)] px-4 py-3 font-mono text-sm leading-7 text-blue-800 dark:text-blue-300">
+                    pip install &apos;agent-bom[api]&apos;
+                    <br />
+                    agent-bom serve --no-ui
+                  </code>
+                </div>
               </div>
 
-              <div className="rounded-2xl border border-blue-900/60 bg-blue-950/20 p-5">
-                <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-blue-800 dark:text-blue-300">
-                  <Server className="h-4 w-4" />
-                  API only
-                </div>
-                <p className="mb-4 text-sm text-[var(--text-secondary)]">
-                  Use this if the dashboard is already running separately and only the backend is missing.
-                </p>
-                <code className="block rounded-xl border border-[var(--border-subtle)] bg-[var(--background)] px-4 py-3 font-mono text-sm leading-7 text-blue-800 dark:text-blue-300">
-                  pip install &apos;agent-bom[api]&apos;
-                  <br />
-                  agent-bom serve --no-ui
-                </code>
-              </div>
-            </div>
-
-            <div className="mt-4 rounded-2xl border border-[var(--border-subtle)] bg-[var(--surface)]/60 p-4 text-sm text-[var(--text-secondary)]">
-              If the API is already running and you still see this page, check the browser console for CORS errors and confirm{" "}
-              <code className="rounded bg-[var(--background)] px-1.5 py-0.5 font-mono text-[var(--foreground)]">NEXT_PUBLIC_API_URL</code>{" "}
-              points to{" "}
-              <code className="rounded bg-[var(--background)] px-1.5 py-0.5 font-mono text-[var(--foreground)]">{apiUrl}</code>.
-            </div>
-          </>
+            </details>
+          </div>
         ) : null}
 
         {onImport ? (

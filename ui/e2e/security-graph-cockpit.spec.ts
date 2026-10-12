@@ -1,9 +1,17 @@
-import { expect, test, type Page, type TestInfo } from "@playwright/test";
+import { expect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
 
 // Non-empty fixture with two observed paths so the security graph page can
 // prove that queue selection updates the in-place graph and evidence panel.
 const scanId = "scan-cockpit-fixture";
 const createdAt = "2026-05-27T16:00:00Z";
+
+async function inspectPathAssessment(detail: Locator, expected: string | RegExp) {
+  const disclosure = detail.locator(".ep-header-details");
+  await disclosure.locator(":scope > summary").click();
+  await expect(detail.getByRole("region", { name: "Path evidence assessment" })).toContainText(expected);
+  await disclosure.locator(":scope > summary").click();
+}
+
 
 type GraphNode = {
   id: string;
@@ -160,6 +168,7 @@ async function routeCockpit(
     longPathNodeCount?: number;
   } = {},
 ) {
+  await page.route("**/v1/**", route => route.fulfill({ status: 404, json: { detail: "Outside graph fixture" } }));
   const graph = buildCockpitGraph(snapshotNodeCount);
   if (options.longPathNodeCount) {
     const intermediates = Array.from({ length: options.longPathNodeCount - 3 }, (_, index) =>
@@ -623,6 +632,8 @@ async function expectCockpitVisible(page: Page) {
   ).toBeVisible();
   // Progressive disclosure summary — avoid /Evidence/ which also matches "Evidence drawer".
   await expect(page.getByText("Evidence & relationships")).toBeVisible();
+  await expect(page.getByText("Path priority", { exact: true }).first()).toBeHidden();
+  await page.locator(".ep-header-summary").click();
   await expect(page.getByText("Path priority", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("Path span", { exact: true }).first()).toBeVisible();
 }
@@ -763,7 +774,7 @@ test("ranked path selection opens the ordered path and can expand the interactiv
   expect(Math.abs(queueBox!.y - detailBox!.y)).toBeLessThan(200);
 
   await queue.getByRole("button", { name: /#2/ }).click();
-  await expect(detail.getByRole("button", { name: "Path", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(detail.getByRole("button", { name: "Graph", exact: true })).toHaveAttribute("aria-pressed", "true");
   await detail.getByRole("button", { name: "Graph", exact: true }).click();
   await expect(detail.getByTestId("security-graph-investigation")).toBeVisible();
   await expect(page.getByRole("status")).toContainText("Focused path 2");
@@ -800,7 +811,7 @@ test(`mobile ranked path selection moves the ordered path into view ${theme}`, a
   const queue = page.getByLabel("Attack path queue");
   await queue.getByRole("button", { name: /#2/ }).click();
   const detail = page.getByRole("region", { name: "Selected path detail" });
-  await expect(detail.getByRole("button", { name: "Path", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(detail.getByRole("button", { name: "Graph", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect.poll(async () => (await detail.boundingBox())?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(120);
   await expect(page).toHaveURL(/selected_path=/);
   await page.waitForLoadState("networkidle");
@@ -921,12 +932,10 @@ test(`a selected queue path missing from the canvas loads its exact graph in ${t
 }
 
 async function openEvidenceControls(page: Page) {
+  const toggle = page.getByRole("button", { name: "View & layers", exact: true });
+  if (await toggle.getAttribute("aria-expanded") !== "true") await toggle.click();
   const controls = page.getByTestId("graph-evidence-controls");
-  await expect(controls.locator(":scope > summary")).toBeVisible();
-  if ((await controls.getAttribute("open")) === null) {
-    await controls.locator(":scope > summary").click();
-  }
-  await expect(controls).toHaveAttribute("open", "");
+  await expect(controls).toBeVisible();
   return controls;
 }
 
@@ -1073,11 +1082,10 @@ for (const proof of [
     await page.goto("/security-graph?lens=estate");
     await page.waitForLoadState("networkidle");
 
-    await expect(page.getByRole("heading", { name: "Investigation Canvas" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Investigation", exact: true })).toBeVisible();
     const evidenceControls = page.getByTestId("graph-evidence-controls");
-    await expect(evidenceControls.locator(":scope > summary")).toBeVisible();
-    await expect(evidenceControls).not.toHaveAttribute("open", "");
-    await expect(evidenceControls.getByRole("button", { name: /Estate/ })).toBeHidden();
+    await expect(page.getByRole("button", { name: "View & layers" })).toBeVisible();
+    await expect(evidenceControls).toHaveCount(0);
     await expect(page.getByTestId("graph-rollup-decision-surface")).toBeVisible();
     await expect(page.getByTestId("graph-rollup-relationship-completeness")).toHaveText(
       "1 aggregated relationship rows · complete for this scope",
@@ -1225,48 +1233,40 @@ test("selected paths 13 and 25 retain hydrated anchors beyond fix-first enrichme
 test("URL-selected path returns to summary without reopening the path", async ({ page }) => {
   await routeCockpit(page, 200, { rollupItemCount: 30 });
   await page.goto(`/security-graph?lens=estate&scan=${scanId}&path=top`);
-  const views = page.getByRole("group", { name: "Investigation view" });
-  await views.getByRole("button", { name: "Summary", exact: true }).click();
+  await page.getByRole("button", { name: "All scopes", exact: true }).first().click();
   await expect(page.getByTestId("graph-rollup-decision-surface")).toBeVisible();
   await expect(page).not.toHaveURL(/[?&]path=/);
-  await views.getByRole("button", { name: "Graph", exact: true }).click();
-  await views.getByRole("button", { name: "Summary", exact: true }).click();
+  await page.getByRole("button", { name: "Open scope", exact: true }).first().click();
+  await page.getByRole("button", { name: "All scopes", exact: true }).first().click();
   await expect(page.getByTestId("graph-rollup-decision-surface")).toBeVisible();
   await expect(page).not.toHaveURL(/[?&]path=/);
 });
 
 for (const theme of ["light", "dark"] as const) {
-  test(`estate topology starts readable and fits all on request with compact controls in ${theme}`, async ({ page }, testInfo) => {
+  test(`large estate opens a bounded recorded neighborhood in ${theme}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await routeCockpit(page, 200, { rollupItemCount: 30 });
-    await page.addInitScript((value) => localStorage.setItem("agent-bom-theme", value), theme);
+    await page.addInitScript(value => localStorage.setItem("agent-bom-theme", value), theme);
+    const queries: Record<string, unknown>[] = [];
+    await page.route("**/v1/graph/query", route => {
+      const body = route.request().postDataJSON(); queries.push(body);
+      const selected = node(body.roots[0], "account", "Selected account");
+      const agent = node("agent:recorded", "agent", "Recorded agent");
+      return route.fulfill({ json: { ...buildCockpitGraph(), roots: body.roots, nodes: [selected, agent],
+        edges: [edge(selected.id, agent.id, "contains")], attack_paths: [], truncated: false, depth_by_node: { [selected.id]: 0, [agent.id]: 1 } } });
+    });
     await page.goto("/security-graph?lens=estate");
-    await expect(page.getByTestId("graph-rollup-decision-surface")).toBeVisible();
-    const views = page.getByRole("group", { name: "Investigation view" });
-    await views.getByRole("button", { name: "Graph", exact: true }).click();
-    const canvas = page.locator(".react-flow").first();
-    await expect(canvas.locator(".react-flow__node")).toHaveCount(30);
-    await expect(page.getByTestId("graph-viewport-scope")).toContainText("Focused view");
-    await expect.poll(() => canvas.locator(".react-flow__viewport").evaluate(element =>
-      new DOMMatrixReadOnly(getComputedStyle(element).transform).a,
-    )).toBeGreaterThanOrEqual(1);
-    await page.screenshot({ path: testInfo.outputPath(`estate-readable-${theme}.png`), fullPage: false });
+    const scopes = page.getByTestId("graph-rollup-decision-surface");
+    await expect(scopes).toBeVisible();
+    await expect(page.locator(".react-flow__node")).toHaveCount(0);
+    await scopes.getByRole("button", { name: "Connections", exact: true }).first().click();
+    await expect(page.locator(".react-flow__node")).toHaveCount(2);
+    expect(queries[0]).toMatchObject({ max_nodes: 4, max_depth: 1, scan_id: scanId });
     await page.getByRole("button", { name: "Fit all", exact: true }).click();
-    await expect.poll(() => canvas.evaluate((element) => {
-      const frame = element.getBoundingClientRect();
-      return [...element.querySelectorAll(".react-flow__node")].every((node) => {
-        const box = node.getBoundingClientRect();
-        return box.left >= frame.left && box.top >= frame.top && box.right <= frame.right && box.bottom <= frame.bottom;
-      });
-    })).toBe(true);
-    const frame = await canvas.boundingBox();
-    expect(frame!.y).toBeLessThan(330);
-    expect(frame!.height).toBeGreaterThan(500);
-    await expect(canvas.locator(".react-flow__minimap")).toBeHidden();
-    await expect(views.getByRole("button")).toHaveCount(2);
-    await page.screenshot({ path: testInfo.outputPath(`estate-topology-${theme}.png`), fullPage: false });
-    await views.getByRole("button", { name: "Summary", exact: true }).click();
-    await expect(page.getByTestId("graph-rollup-decision-surface")).toBeVisible();
+    await expect(page.getByRole("group", { name: "Investigation view" })).toHaveCount(0);
+    await page.screenshot({ path: testInfo.outputPath(`estate-neighborhood-${theme}.png`), fullPage: false });
+    await page.getByRole("button", { name: "All scopes", exact: true }).first().click();
+    await expect(scopes).toBeVisible();
     await expect(page.getByTestId("graph-viewport-scope")).toBeHidden();
   });
 }
@@ -1307,7 +1307,7 @@ for (const theme of ["light", "dark"] as const) {
     await expect(page.getByText(/3 from the path queue/)).toBeVisible();
     await openPathQueue(page);
     await page.getByLabel("Attack path queue").getByRole("button", { name: /#1 fix first/ }).click();
-    await page.getByRole("button", { name: "List", exact: true }).click();
+    await page.getByRole("button", { name: "Connections", exact: true }).click();
     const explorer = page.getByRole("region", { name: "Expand path neighbors" });
     await explorer.getByRole("button", { name: "Expand neighbors of Billing repository" }).click();
     await explorer.getByRole("button", { name: "Retry neighbor lookup" }).click();
@@ -1364,7 +1364,7 @@ for (const proof of [
     await page.getByText("Investigation tools · snapshots, correlation & checks", { exact: true }).click();
     await page.getByRole("button", { name: /Exposure paths/ }).click();
     const lens = page.getByTestId("exposure-path-lens");
-    await expect(lens.getByRole("region", { name: "Path evidence assessment" })).toContainText("Unknown");
+    await inspectPathAssessment(lens, "Unknown");
     await lens.getByText("Evidence & relationships", { exact: true }).click();
     await expect(lens.getByRole("region", { name: "Relationship proof" })).toContainText("Context only; not traversable");
     await lens.getByText("Inspect 1 hop receipts", { exact: true }).click();
@@ -1419,7 +1419,7 @@ for (const theme of ["light", "dark"] as const) {
     await page.goto(`/security-graph?lens=attack-path&scan=${scanId}&node=pkg%3Aform-data&cve=CVE-2025-7783&package=form-data`);
     const detail = page.getByTestId("selected-exposure-path");
     await expect(detail).toBeVisible();
-    const diagram = detail.getByRole("img", { name: /Selected exposure path graph/ });
+    const diagram = detail.getByRole("region", { name: "Interactive graph", exact: true });
     await expect(diagram).toBeVisible();
     // Resolving the parent scan scope can briefly remount this diagram. Read
     // one box per attempt and retry missing geometry without accepting it.
@@ -1427,9 +1427,9 @@ for (const theme of ["light", "dark"] as const) {
       const bounds = await diagram.boundingBox();
       return bounds ? bounds.y + bounds.height : Number.POSITIVE_INFINITY;
     }).toBeLessThanOrEqual(900);
-    await expect(detail.getByRole("region", { name: "Path evidence assessment" })).toContainText("Reachability");
-    await expect(detail.getByRole("region", { name: "Path evidence assessment" })).toContainText("Exploitability");
-    await expect(detail.getByRole("region", { name: "Path evidence assessment" })).toContainText("Assessment completeness");
+    await inspectPathAssessment(detail, "Reachability");
+    await inspectPathAssessment(detail, "Exploitability");
+    await inspectPathAssessment(detail, "Assessment completeness");
     await expect(detail.getByTestId("exposure-path-primary-action")).toBeVisible();
     await expect(detail.getByText("Evidence & relationships", { exact: true })).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath(`focused-path-${theme}.png`) });
@@ -1446,7 +1446,7 @@ for (const theme of ["light", "dark"] as const) {
       const workspace = page.getByRole("region", { name: "Investigation workspace" });
       const detail = workspace.getByRole("region", { name: "Selected path detail" });
       await expect(detail).toBeVisible();
-      await expect(detail.getByRole("region", { name: "Path evidence assessment" })).toContainText(/unknown/i);
+      await inspectPathAssessment(detail, /unknown/i);
       await expect(detail.getByRole("heading", { level: 2 })).not.toContainText(/reachable|exploitable/i);
       const queue = page.getByLabel("Attack path queue");
       await expect(queue).not.toContainText(/Critical package reachable/);
@@ -1459,19 +1459,19 @@ for (const theme of ["light", "dark"] as const) {
         await expect(queue).toBeHidden();
         await expect(detail).toBeVisible();
         await expect(detail.getByRole("heading", { level: 2 })).toContainText("GITHUB PERSONAL ACCESS TOKEN");
-        const steps = detail.getByTestId("exposure-path-sequence");
-        expect((await steps.boundingBox())!.height).toBeLessThan(280);
-        await detail.getByRole("button", { name: "Next path steps" }).click();
-        await expect.poll(() => steps.evaluate(element => element.scrollLeft)).toBeGreaterThan(0);
-        await expect(detail.getByRole("button", { name: "Previous path steps" })).toBeEnabled();
-        await detail.getByRole("button", { name: "Previous path steps" }).click();
-        await expect.poll(() => steps.evaluate(element => element.scrollLeft)).toBe(0);
+        const graph = detail.getByTestId("security-graph-investigation");
+        await expect(graph.getByText(/Focused view · 1 of/)).toBeVisible();
+        await graph.getByRole("button", { name: "Next graph node" }).click();
+        await expect(graph.getByText(/Focused view · 2 of/)).toBeVisible();
+        await expect(graph.getByRole("button", { name: "Previous graph node" })).toBeEnabled();
+        await graph.getByRole("button", { name: "Previous graph node" }).click();
+        await expect(graph.getByText(/Focused view · 1 of/)).toBeVisible();
       } else {
         await openPathQueue(page);
         const [queueBox, detailBox] = await Promise.all([queue.boundingBox(), detail.boundingBox()]);
         expect(queueBox!.x + queueBox!.width).toBeLessThan(detailBox!.x);
         expect(queueBox!.height).toBeLessThanOrEqual(650);
-        const graph = detail.getByRole("region", { name: "Selected exposure path graph", exact: true });
+        const graph = detail.getByRole("region", { name: "Interactive graph", exact: true });
         const proof = detail.getByRole("complementary", { name: "Selected path evidence" });
         const [graphBox, proofBox] = await Promise.all([graph.boundingBox(), proof.boundingBox()]);
         expect(proofBox!.y).toBeGreaterThanOrEqual(graphBox!.y + graphBox!.height);
@@ -1522,7 +1522,7 @@ for (const theme of ["light", "dark"] as const) {
         return box.top >= 0 && box.bottom <= innerHeight && box.left >= frame.left && box.right <= frame.right && !overlapsControls;
       }),
     )).toBe(true);
-    await expect(detail.getByRole("region", { name: "Path evidence assessment" })).toContainText(/unknown/i);
+    await inspectPathAssessment(detail, /unknown/i);
     await expect(detail.getByRole("complementary", { name: "Selected path evidence" })).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath(`selected-graph-${theme}-${height}.png`), fullPage: true });
   });
@@ -1570,13 +1570,7 @@ for (const theme of ["light", "dark"] as const) {
     await page.getByRole("button", { name: `Switch to ${theme} theme`, exact: true }).click();
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
     const detail = page.getByTestId("selected-exposure-path");
-    const sequence = detail.getByTestId("exposure-path-sequence");
-    await expect(sequence.locator("li")).toHaveCount(10);
-    await expect(sequence.locator("li").filter({ visible: true }).first()).toBeVisible();
-    await expect.poll(async () => {
-      const box = await sequence.locator("li").filter({ visible: true }).first().boundingBox();
-      return box?.width ?? 0;
-    }).toBeGreaterThanOrEqual(180);
+    // The unified interactive graph owns both path rendering and navigation.
     await detail.getByRole("button", { name: "Graph", exact: true }).click();
     const canvas = page.getByTestId("security-graph-investigation");
     await expect(canvas.locator(".react-flow__node")).toHaveCount(10);

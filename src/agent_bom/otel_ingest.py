@@ -298,7 +298,7 @@ def parse_otel_traces(trace_data: dict) -> list[ToolCallTrace]:
 
         # Status
         status_obj = span.get("status", {})
-        status = "error" if status_obj.get("code") == 2 else "ok"
+        status = "error" if status_obj.get("code") == 2 else "unknown" if status_obj.get("code") == 0 else "ok"
 
         traces.append(
             ToolCallTrace(

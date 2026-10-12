@@ -21,7 +21,7 @@ const DEFAULT_VISIBLE = 6;
 
 /**
  * Tones are spelled out as whole class strings on purpose. The previous
- * `bg-${color}-950` form in `attack-flow.tsx` cannot be seen by Tailwind's
+ * `bg-${color}-950` form in a graph renderer cannot be seen by Tailwind's
  * static extractor, so those classes were never generated and the chips
  * rendered with no background or border at all.
  */

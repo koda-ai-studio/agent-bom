@@ -628,7 +628,7 @@ export function SecurityGraphInvestigation({
       </div>}
       <div
         id="security-graph-investigation-canvas"
-        className={`relative bg-surface-muted ${embedded ? "h-[clamp(18rem,34vh,24rem)]" : "h-[clamp(32rem,56vh,42rem)]"}`}
+        className={`relative bg-surface-muted ${embedded ? "h-[clamp(24rem,42vh,34rem)]" : "h-[clamp(32rem,56vh,42rem)]"}`}
         data-testid="security-graph-investigation"
       >
         {loading ? (

@@ -27434,6 +27434,45 @@
         "title": "ObsBudgetStatus",
         "type": "object"
       },
+      "ObsCloudTraceClaims": {
+        "additionalProperties": true,
+        "properties": {
+          "attributes": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Attributes",
+            "type": "object"
+          },
+          "basis": {
+            "const": "source_reported",
+            "title": "Basis",
+            "type": "string"
+          },
+          "execution_proven": {
+            "const": false,
+            "title": "Execution Proven",
+            "type": "boolean"
+          },
+          "scope_state": {
+            "enum": [
+              "consistent",
+              "conflict",
+              "invalid"
+            ],
+            "title": "Scope State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "basis",
+          "execution_proven",
+          "scope_state",
+          "attributes"
+        ],
+        "title": "ObsCloudTraceClaims",
+        "type": "object"
+      },
       "ObsCostAnomaly": {
         "additionalProperties": true,
         "properties": {
@@ -28169,6 +28208,11 @@
       "ObsTraceLinkedFinding": {
         "additionalProperties": true,
         "properties": {
+          "correlation_basis": {
+            "default": "candidate_name",
+            "title": "Correlation Basis",
+            "type": "string"
+          },
           "effective_reach_band": {
             "anyOf": [
               {
@@ -28349,12 +28393,43 @@
             "title": "Agent",
             "type": "string"
           },
+          "cloud_trace": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ObsCloudTraceClaims"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "collected_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Collected At"
+          },
           "compliance_controls": {
             "items": {
               "type": "string"
             },
             "title": "Compliance Controls",
             "type": "array"
+          },
+          "correlation_state": {
+            "default": "candidate_name",
+            "title": "Correlation State",
+            "type": "string"
+          },
+          "depth": {
+            "default": 0,
+            "title": "Depth",
+            "type": "integer"
           },
           "detail": {
             "anyOf": [
@@ -28367,12 +28442,71 @@
             ],
             "title": "Detail"
           },
+          "end_time_unix_nano": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Time Unix Nano"
+          },
+          "event_time_missing": {
+            "default": false,
+            "title": "Event Time Missing",
+            "type": "boolean"
+          },
+          "inventory_binding": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inventory Binding"
+          },
           "linked_findings": {
             "items": {
               "$ref": "#/components/schemas/ObsTraceLinkedFinding"
             },
             "title": "Linked Findings",
             "type": "array"
+          },
+          "logical_root": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logical Root"
+          },
+          "native_name": {
+            "default": "",
+            "title": "Native Name",
+            "type": "string"
+          },
+          "native_type": {
+            "default": "",
+            "title": "Native Type",
+            "type": "string"
+          },
+          "parent_span_id": {
+            "default": "",
+            "title": "Parent Span Id",
+            "type": "string"
+          },
+          "parent_state": {
+            "default": "root",
+            "title": "Parent State",
+            "type": "string"
           },
           "session_id": {
             "anyOf": [
@@ -28400,8 +28534,21 @@
             ],
             "title": "Source"
           },
+          "source_scope": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "default": {},
+            "title": "Source Scope",
+            "type": "object"
+          },
           "span_id": {
             "title": "Span Id",
+            "type": "string"
+          },
+          "surface": {
+            "default": "runtime",
+            "title": "Surface",
             "type": "string"
           },
           "timestamp": {
@@ -34641,6 +34788,36 @@
             "title": "Blocked Count",
             "type": "integer"
           },
+          "counts_scope": {
+            "default": "matching_retained_observations",
+            "title": "Counts Scope",
+            "type": "string"
+          },
+          "feed_included": {
+            "default": false,
+            "title": "Feed Included",
+            "type": "boolean"
+          },
+          "has_more": {
+            "default": false,
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "limit": {
+            "default": 100,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "retained_total": {
+            "default": 0,
+            "title": "Retained Total",
+            "type": "integer"
+          },
           "schema_version": {
             "title": "Schema Version",
             "type": "string"
@@ -34655,6 +34832,14 @@
             },
             "title": "Sessions",
             "type": "array"
+          },
+          "source_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "default": {},
+            "title": "Source Counts",
+            "type": "object"
           },
           "span_count": {
             "title": "Span Count",
@@ -74740,6 +74925,133 @@
         ]
       }
     },
+    "/v1/runtime/observation-revisions": {
+      "get": {
+        "description": "Read tenant-scoped metadata history; it is not independent provider proof.",
+        "operationId": "list_runtime_observation_revisions_v1_runtime_observation_revisions_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "observation_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Observation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Agent-Bom-Role",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Bom-Role"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Agent-Bom-Tenant-ID",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Bom-Tenant-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Agent-Bom-Proxy-Secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Bom-Proxy-Secret"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuntimeObservationsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE)"
+          }
+        },
+        "summary": "List Runtime Observation Revisions",
+        "tags": [
+          "runtime",
+          "observability"
+        ]
+      }
+    },
     "/v1/runtime/observations": {
       "get": {
         "description": "List metadata-only runtime observations for the active tenant.",
@@ -75257,7 +75569,7 @@
     },
     "/v1/runtime/trace-explorer": {
       "get": {
-        "description": "Langfuse-style trace explorer joined to findings and policy decisions (#3608).\n\nFuses gateway/proxy feed events and persisted runtime observations into\nsession-grouped spans. Each span carries correlated findings (CVE, reach\nband, compliance controls) and blocked/observed verdict metadata.\n\nThe whole assembly \u2014 unbounded findings iteration, synchronous psycopg\nsession/observation reads, and CPU-bound serialization \u2014 is offloaded via\n``asyncio.to_thread`` so it never blocks the event loop under scale.",
+        "description": "Read bounded runtime traces off-loop; name matches remain candidates.",
         "operationId": "trace_explorer_v1_runtime_trace_explorer_get",
         "parameters": [
           {
@@ -75270,6 +75582,106 @@
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scan_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 512,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scan Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "session_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 512,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Session Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "source",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 512,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source"
+            }
+          },
+          {
+            "in": "query",
+            "name": "agent_name",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 512,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Agent Name"
+            }
+          },
+          {
+            "in": "query",
+            "name": "connection_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 512,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Connection Id"
             }
           },
           {
@@ -79159,7 +79571,7 @@
     },
     "/v1/traces": {
       "post": {
-        "description": "Ingest OpenTelemetry trace data and flag vulnerable tool calls.\n\nAccepts OTLP JSON format traces containing `adk.tool.*` spans.\nCross-references tool calls against completed scan results to flag\nany calls that touch packages with known CVEs.\n\nSpan *metadata* is parsed by default; content is never read or stored.\nPass ``screen_content=true`` (opt-in; default follows\n``AGENT_BOM_TRACE_CONTENT_SCREENING``) to additionally run Shield over trace\ncontent and surface injection / PII / credential-leak findings. Raw content\nis screened in-memory and never persisted.",
+        "description": "Ingest OTLP metadata and flag candidate vulnerable tool calls.\n\nOpt-in Shield content screening stays in memory; raw content is never persisted.",
         "operationId": "ingest_traces_v1_traces_post",
         "parameters": [
           {
@@ -79233,7 +79645,7 @@
     },
     "/v1/traces/attack-paths": {
       "post": {
-        "description": "Resolve each traced tool-call span to its exact attack path (#3898).\n\nAccepts an OTLP JSON trace and correlates every vulnerable tool-call span\nagainst the tenant's scan blast radii, returning per-span the exact reachable\nCVE, exposed credentials, resolved non-human identities, and blast radius.\nCorrelation is in-memory; raw span content is never stored. Pass ``span_id``\nto scope the answer to a single span.",
+        "description": "Return name-based finding candidates for traced tool calls.\n\nThese legacy associations are not exact inventory joins or execution proof.\nThey relate reported tool/server names to the tenant's scan blast radii.\nCorrelation is in-memory; raw span content is never stored. Pass ``span_id``\nto scope the answer to a single span.",
         "operationId": "correlate_trace_attack_paths_v1_traces_attack_paths_post",
         "parameters": [
           {
@@ -79650,7 +80062,7 @@
     },
     "/v1/traces/connectors/{provider}/pull": {
       "post": {
-        "description": "Pull traces from an LLM-observability platform and correlate them (#3899).\n\nSelect a managed ``connection_id`` or provide one-shot ``credentials``.\nScreening is opt-in; provider responses may still contain content.",
+        "description": "Import via a managed connection or correlate one-shot provider credentials.\nScreening is opt-in; provider responses may still contain content.",
         "operationId": "pull_trace_connector_v1_traces_connectors__provider__pull_post",
         "parameters": [
           {
