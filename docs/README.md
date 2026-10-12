@@ -82,6 +82,7 @@ New here? Read [`START_HERE.md`](START_HERE.md) for role-based paths, then
 - [`ENTERPRISE_PROCUREMENT_PACKET.md`](ENTERPRISE_PROCUREMENT_PACKET.md) · [`ENTERPRISE_OPERATIONS_EVIDENCE.md`](ENTERPRISE_OPERATIONS_EVIDENCE.md) · [`ENTERPRISE_SUPPORT_MODEL.md`](ENTERPRISE_SUPPORT_MODEL.md)
 - [`ENTERPRISE_DEMO.md`](ENTERPRISE_DEMO.md) — synthetic enterprise estate demo
 - [`CONTROL_PLANE_TESTING.md`](CONTROL_PLANE_TESTING.md) · [`PERFORMANCE_BENCHMARKS.md`](PERFORMANCE_BENCHMARKS.md) · [`perf/`](perf/) — test matrix, benchmarks, workload receipts
+- [`RUNTIME_FIXTURE_QUALIFICATION.md`](RUNTIME_FIXTURE_QUALIFICATION.md) — execution/effect fixtures, source coverage and live-evidence limits
 - [`OBSERVABILITY_METRICS.md`](OBSERVABILITY_METRICS.md) · [`operations/`](operations/) — metrics and runbooks
 - [`PRODUCT_BRIEF.md`](PRODUCT_BRIEF.md) · [`PRODUCT_METRICS.md`](PRODUCT_METRICS.md) · [`AGENT_CAPABILITY.md`](AGENT_CAPABILITY.md) — positioning, metrics snapshot, capability manifest
 - [`PUBLISHING.md`](PUBLISHING.md) · [`PUBLICATION_POLICY.md`](PUBLICATION_POLICY.md) · [`release/`](release/) · [`registry/`](registry/) — publishing and registry listings

@@ -59,7 +59,8 @@ def test_postgres_atomic_restart_replay_fencing_and_rls():
         reset_current_tenant(token)
 
 
-def test_postgres_window_import_and_collection_share_native_identity_under_concurrency():
+@pytest.mark.parametrize("count", [1, 201])
+def test_postgres_window_import_and_collection_share_native_identity_under_concurrency(count):
     from concurrent.futures import ThreadPoolExecutor
     from threading import Barrier
 
@@ -76,7 +77,7 @@ def test_postgres_window_import_and_collection_share_native_identity_under_concu
         initial = CollectionState(scope_digest="project", window_start="2026-10-10T00:00:00+00:00", window_end="2026-10-11T00:00:00+00:00")
         claimed = collection.claim(tenant, "production", initial, now=100)
         records = prepare_trace_page(
-            {"spans": [{"spanId": "native-span", "traceId": "native-trace", "attributes": []}]},
+            {"spans": [{"spanId": f"native-span-{index}", "traceId": "native-trace", "attributes": []} for index in range(count)]},
             scope=TraceImportScope(tenant, "langfuse", "production", "https://example.test", "project"),
             collected_at="2026-10-12T00:00:00+00:00",
         ).observations
@@ -97,10 +98,11 @@ def test_postgres_window_import_and_collection_share_native_identity_under_concu
 
         with ThreadPoolExecutor(max_workers=2) as workers:
             counts = list(workers.map(write, (True, False)))
-        assert sum(counts) == 1
-        assert len(runtime.list_observations(tenant)) == 1
+        assert sum(counts) == count
+        assert len(runtime.list_observations(tenant, limit=500)) == count
         assert len(runtime.list_observation_revisions(tenant, records[0].observation_id)) == 1
-        assert runtime.get_session(tenant, records[0].session_id).observation_count == 1
+        assert len(runtime.list_observation_revisions(tenant, records[-1].observation_id)) == 1
+        assert runtime.get_session(tenant, records[0].session_id).observation_count == count
     finally:
         pool.close()
         reset_current_tenant(token)

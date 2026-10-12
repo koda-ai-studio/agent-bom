@@ -237,27 +237,21 @@ class PostgresAuditLog:
         return _AuditChainCheckpoint(entry_count=int(row[0]), head_signature=str(row[1]))
 
     def _upsert_checkpoint(self, conn: Any, tenant_id: str, head_signature: str) -> None:
-        # First-seed entry_count is the tenant's TRUE audit_log row count, not a
-        # hardcoded 1: a legacy tenant whose rows predate its first checkpoint
-        # upsert (the migration-owned schema creates the table empty and never
-        # runs _hydrate_checkpoints) would otherwise seed entry_count=1 while N
-        # historical rows exist, so verify_integrity's truncation check
-        # (len(entries) == checkpoint.entry_count) under-counts until N further
-        # appends accrue (#4294). The COUNT runs in the SAME transaction as the
-        # audit_log INSERT that precedes it (so it includes the just-inserted
-        # row) and only on the INSERT branch; the steady-state ON CONFLICT path
-        # stays an O(1) increment, correct because each append adds exactly one
-        # row once the checkpoint is seeded true. A genuine genesis (0 prior
-        # rows) still seeds 1 — the just-inserted row.
+        # VALUES expressions run even when INSERT takes ON CONFLICT. Use the
+        # checkpoint's indexed count first so COALESCE skips the legacy history
+        # scan. Missing checkpoints still seed from the true count in this txn.
         conn.execute(
             """
             INSERT INTO audit_chain_checkpoint (tenant_id, entry_count, head_signature)
-            VALUES (%s, (SELECT COUNT(*) FROM audit_log WHERE team_id = %s), %s)
+            VALUES (%s, COALESCE(
+                (SELECT entry_count + 1 FROM audit_chain_checkpoint WHERE tenant_id = %s),
+                (SELECT COUNT(*) FROM audit_log WHERE team_id = %s)
+            ), %s)
             ON CONFLICT (tenant_id) DO UPDATE SET
                 entry_count = audit_chain_checkpoint.entry_count + 1,
                 head_signature = EXCLUDED.head_signature
             """,
-            (tenant_id, tenant_id, head_signature),
+            (tenant_id, tenant_id, tenant_id, head_signature),
         )
 
     def backfill_checkpoints(self) -> int:
@@ -400,7 +394,12 @@ class PostgresAuditLog:
                             "SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))",
                             (f"audit_chain:{tenant_id}",),
                         )
-                        entry.prev_signature = self._chain_tip_signature_from_log_on_connection(conn, tenant_id)
+                        checkpoint = conn.execute(
+                            "SELECT entry_count, head_signature FROM audit_chain_checkpoint WHERE tenant_id = %s", (tenant_id,)
+                        ).fetchone()
+                        entry.prev_signature = (
+                            str(checkpoint[-1]) if checkpoint else self._chain_tip_signature_from_log_on_connection(conn, tenant_id)
+                        )
                         entry.sign()
                         conn.execute(
                             """INSERT INTO audit_log

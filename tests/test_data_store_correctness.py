@@ -91,7 +91,7 @@ class _FakeAuditConn:
 
         if "SELECT COUNT(*) FROM audit_chain_checkpoint" in s:
             return _FakeResult([(len(self.pool.checkpoints),)])
-        if "FROM audit_chain_checkpoint WHERE tenant_id" in s:
+        if s.startswith("SELECT") and "FROM audit_chain_checkpoint WHERE tenant_id" in s:
             cp = self.pool.checkpoints.get(p[0])
             return _FakeResult([(cp[0], cp[1])] if cp else [])
         if "INSERT INTO audit_chain_checkpoint" in s:
@@ -249,6 +249,15 @@ def test_postgres_audit_append_locks_tenant_before_head_and_insert():
         ("head", "acme"),
         ("insert", "acme"),
     ]
+
+
+def test_postgres_audit_append_uses_seeded_checkpoint_under_tenant_lock():
+    log, pool = _make_audit_log()
+    _append_entry(log, "acme", "scan", "2026-07-09T00:00:01Z")
+    pool.audit_write_events.clear()
+    _append_entry(log, "acme", "scan", "2026-07-09T00:00:00Z")
+    assert pool.audit_write_events == [("lock", "audit_chain:acme"), ("insert", "acme")]
+    assert log.verify_integrity(tenant_id="acme") == (2, 0)
 
 
 def test_postgres_audit_chains_are_isolated_per_tenant():

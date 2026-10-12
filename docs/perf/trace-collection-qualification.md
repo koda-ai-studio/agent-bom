@@ -68,6 +68,62 @@ These are correctness checks, separate from machine-dependent load receipts.
 
 ## Next step: deployment and provider qualification
 
+### Mixed runtime writes over HTTP
+
+The runtime workload is separate from trace collection. It runs 40 authenticated
+write requests of 50 synthetic events and 480 collection-status reads at
+concurrency 10, after 30 baseline reads. The load generator and loopback HTTP
+API replicas run in separate processes, using real SQL and middleware. Each
+request uses a fresh client and connection but shares a preloaded certificate
+context, so repeated trust-store parsing does not dominate plaintext HTTP load.
+The attempts record client setup and HTTP response time separately; the gate
+still uses total request time. Collection
+status uses a synthetic configured connection; no provider request is made.
+Application lifespan provisioning, ingress and live provider access are outside
+this command.
+
+```bash
+AGENT_BOM_STATE_DIR=/tmp/runtime-capacity-state-001 \
+  uv run python -m scripts.run_runtime_capacity_qualification \
+  --output /tmp/runtime-capacity-001
+```
+
+Use `--backend postgres --replicas 2` with the disposable application and
+maintenance roles above for two PostgreSQL-backed API processes, or `--replicas 4`
+for a four-process profile. Each runtime store pool has a minimum of one and
+maximum of two connections. Set the shared pool and worker limits explicitly
+before comparing runs; the command applies the ordinary API worker cap and
+records all three limits in its receipt:
+
+```bash
+export AGENT_BOM_POSTGRES_POOL_MIN_SIZE=1
+export AGENT_BOM_POSTGRES_POOL_MAX_SIZE=2
+export AGENT_BOM_WORKER_THREAD_LIMIT=2
+AGENT_BOM_STATE_DIR=/tmp/runtime-capacity-state-004 \
+  uv run python -m scripts.run_runtime_capacity_qualification \
+  --backend postgres --replicas 4 --output /tmp/runtime-capacity-004
+```
+
+The API process count corresponds to `controlPlane.api.replicas` for a Helm
+configuration running one API process per pod. A local profile is an input to
+staging qualification, not a reason to change a production replica count without
+repeating the workload there. Increasing only the database pool is a different
+profile and requires its own receipt.
+
+The fixed local gate requires zero failed requests, exactly
+500 retained observations per writer tenant with matching session rollups, no
+reader-tenant observations, complete verified audit chains, read p95 at most 5 seconds and slowdown at most 4×.
+Inspect `attempts.jsonl` and `receipt.json`; retain failed runs. Run on an idle
+host without overlapping test/build jobs. A noisy baseline can make the ratio
+appear better, so record host contention and repeat from a clean pinned commit
+before using a pass as qualification. A local pass does not supersede a failed
+deployment measurement.
+
+### Execution and enterprise fixture coverage
+
+Run the [qualified fixture suite](../RUNTIME_FIXTURE_QUALIFICATION.md) to check
+execution/effect distinctions, tenant boundaries and recorded access changes.
+
 Inspect `passed`, reconciliation, errors, and all-attempt latency in the receipt.
 A process error or missing receipt is a failed run. Keep the JSONL attempts even
 when setup or reconciliation fails. Keep local receipts outside the public tree;

@@ -67,3 +67,33 @@ def test_warmup_is_retained_but_excluded_from_baseline():
     assert receipt["all_attempts_ms"]["samples"] == 3
     assert receipt["baseline_light_ms"]["p95"] == 10
     assert receipt["light_p95_slowdown"] == 3
+
+
+def test_runtime_qualification_applies_deployment_worker_budget(monkeypatch):
+    import asyncio
+
+    import anyio.to_thread
+    import uvicorn
+
+    from agent_bom import config
+    from scripts.run_runtime_capacity_qualification import _QualificationServer
+
+    monkeypatch.setattr(config, "WORKER_THREAD_LIMIT", 2)
+    observed = []
+
+    async def serve(self, sockets=None):
+        observed.append(anyio.to_thread.current_default_thread_limiter().total_tokens)
+
+    monkeypatch.setattr(uvicorn.Server, "serve", serve)
+
+    async def verify():
+        limiter = anyio.to_thread.current_default_thread_limiter()
+        before = limiter.total_tokens
+        try:
+            limiter.total_tokens = 31
+            await _QualificationServer(uvicorn.Config("unused:app")).serve()
+            assert observed == [2], "bypassing provisioning must not bypass deployment backpressure"
+        finally:
+            limiter.total_tokens = before
+
+    asyncio.run(verify())

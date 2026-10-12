@@ -136,3 +136,45 @@ def test_rate_limit_tenant_scope_offloads_verify(monkeypatch):
 
     assert scope == "tenant-beta"
     assert "verify" in offloaded, f"rate-limit bucketing must offload verify; saw {offloaded}"
+
+
+def test_proxy_audit_is_off_loop_and_completed_before_handler(monkeypatch):
+    """Durable audit writes must not stall concurrent requests on the ASGI loop."""
+    import threading
+
+    from starlette.applications import Starlette
+    from starlette.responses import JSONResponse
+    from starlette.routing import Route
+
+    from agent_bom.api import audit_log
+
+    secret = "proxy-audit-test-secret-at-least-32-characters"
+    monkeypatch.setenv("AGENT_BOM_TRUST_PROXY_AUTH", "1")
+    monkeypatch.setenv("AGENT_BOM_TRUST_PROXY_AUTH_SECRET", secret)
+    events = []
+
+    def record(action, **kwargs):
+        events.append((action, threading.get_ident(), kwargs))
+
+    async def handler(request):
+        assert len(events) == 1, "audit must finish before dispatch"
+        assert events[0][1] != threading.get_ident(), "audit storage must run off the event loop"
+        return JSONResponse({"tenant": request.state.tenant_id})
+
+    monkeypatch.setattr(audit_log, "log_action", record)
+    app = Starlette(routes=[Route("/v1/auth/policy", handler)])
+    app.add_middleware(middleware_mod.APIKeyMiddleware, api_key="")
+    headers = {
+        "X-Agent-Bom-Role": "admin",
+        "X-Agent-Bom-Tenant-ID": "tenant-alpha",
+        "X-Agent-Bom-Subject": "fixture-operator",
+        "X-Agent-Bom-Proxy-Secret": secret,
+    }
+    with TestClient(app) as client:
+        assert client.get("/v1/auth/policy", headers=headers).json() == {"tenant": "tenant-alpha"}
+        denied = client.get("/v1/auth/policy", headers={**headers, "X-Agent-Bom-Proxy-Secret": "wrong"})
+    assert denied.status_code == 401
+    assert len(events) == 1
+    assert events[0][0] == "auth.proxy_header_authenticated"
+    assert events[0][2]["tenant_id"] == "tenant-alpha"
+    assert events[0][2]["actor"] == "fixture-operator"
