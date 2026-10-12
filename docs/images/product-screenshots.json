@@ -1,9 +1,9 @@
 {
   "release_version": "0.108.4",
-  "captured_at": "2026-10-12T03:26:16.385Z",
-  "source_commit": "615f9d847851faac2f74f12e40f57922e2c2d93b",
+  "captured_at": "2026-10-12T04:53:02.263Z",
+  "source_commit": "beec096ea4659911f1e2d3134c9b06dad7535a45",
   "source_tree": "clean",
-  "capture_inputs_sha256": "sha256:aaca070ab451e885262ee7d4073f11aa93a07f335b2fd3b18d027e8d5b7387f3",
+  "capture_inputs_sha256": "sha256:6f53fb92123319aa27a3ed4284ea6445b850b1a101cecfacfbe276f632da396c",
   "capture_note": "Deterministically captured from real Next.js dashboard routes in capture mode. The correlation hero views consume the committed, hash-pinned Reference evidence lab — modeled local infrastructure artifact with CVE-2023-4863 and exact canonical joins. Remaining gallery fixtures are explicitly synthetic UI states. No external, customer, or private infrastructure data is used.",
   "screenshots": [
     {
@@ -108,7 +108,7 @@
       "page": "/?capture=1",
       "scope": "Executive impact summaries with technical details collapsed",
       "visible_version": "0.108.4",
-      "sha256": "sha256:fa96b7a20dbf9ff2a0288456c850ed0a6491867885b8025afda75923dc27a2e9"
+      "sha256": "sha256:4f985ffe11648ffe08e07395cf426a2c95fffca40554083bfe09c4081ba75876"
     },
     {
       "presentation": "dark mobile",
@@ -297,7 +297,7 @@
       "page": "/security-graph?lens=estate&scan=scan-proof-ai-platform&rollup=1&scenario=scenario-private-service-endpoint&state=proposed&capture=1",
       "scope": "Modeled proposed-state comparison at 1568 by 780",
       "visible_version": "0.108.4",
-      "sha256": "sha256:4f72bbb8ec318206dda597dae87499492d5358a55b3c583a391f3a6ffff2694f"
+      "sha256": "sha256:b7ffcca110312311d5f472141a11b7edb3bd327da4b42fff1751fd623a26b944"
     },
     {
       "presentation": "dark desktop",
@@ -329,7 +329,7 @@
       "page": "/graph?lens=context&scan=scan-proof-ai-platform&capture=1",
       "scope": "Same nine recorded entities and eight relationships arranged left to right using the Horizontal layout control",
       "visible_version": "0.108.4",
-      "sha256": "sha256:924484cb43f1cf743a65dc4926c6284ba4c37bd5789ef782be72192d0184bd12"
+      "sha256": "sha256:4b9e43e1780a0556569c14f4cc16f3159ea747ddb8909b8754e0900b5bd03a7a"
     },
     {
       "presentation": "light responsive 1000x900",
@@ -337,7 +337,7 @@
       "page": "/graph?lens=context&scan=scan-proof-ai-platform&capture=1",
       "scope": "Same nine recorded entities and eight relationships arranged left to right using the Horizontal layout control",
       "visible_version": "0.108.4",
-      "sha256": "sha256:6f02f2c292066eb448b980625af033c37ed2c9a1cdab641926300fb982fa01dd"
+      "sha256": "sha256:3e8f9255648fcb2167b928e6b5e9c4f2f6d0f3d0a92f9111f16e11b3641c5701"
     },
     {
       "presentation": "dark desktop",
@@ -385,7 +385,7 @@
       "page": "/remediation?capture=1",
       "scope": "Fix-first remediation workflow in the light theme",
       "visible_version": "0.108.4",
-      "sha256": "sha256:ca9d9113e47a96db3d2dda9f4af798760e9ed6cfd284f936eddb03134e33aae6"
+      "sha256": "sha256:24e1d12a78aa3f3e44b0006cdc5741127ba25e76b1eb68c2272d064b5d7af431"
     },
     {
       "presentation": "dark mobile",
