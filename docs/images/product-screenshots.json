@@ -1,9 +1,9 @@
 {
   "release_version": "0.108.4",
-  "captured_at": "2026-10-11T22:35:57.631Z",
-  "source_commit": "191d72b232f13c791448b1c71d7cd4a43a2db8f4",
+  "captured_at": "2026-10-11T23:31:54.262Z",
+  "source_commit": "d9a4acdd29b805c4fad70c206bcd9ab98eb3de73",
   "source_tree": "clean",
-  "capture_inputs_sha256": "sha256:dc86e6193b50895ab775125d54f9df17db6ecea77a956df3a32a0897d34a999c",
+  "capture_inputs_sha256": "sha256:4cdb1a69bd2847da0db1def21c27bac32163a6eae3314ae6fe0f72555b42db8b",
   "capture_note": "Deterministically captured from real Next.js dashboard routes in capture mode. The correlation hero views consume the committed, hash-pinned Reference evidence lab — modeled local infrastructure artifact with CVE-2023-4863 and exact canonical joins. Remaining gallery fixtures are explicitly synthetic UI states. No external, customer, or private infrastructure data is used.",
   "screenshots": [
     {
@@ -172,7 +172,7 @@
       "page": "/graph?lens=mesh&scan=scan-proof-ai-platform&agent=agent%3Adeveloper-copilot&capture=1",
       "scope": "Persisted agent neighborhood with recorded shared filesystem connections and both IDE + SRE agents in scope",
       "visible_version": "0.108.4",
-      "sha256": "sha256:eaa4a4193217b73bc3f4a97612ec6798dc9f8cc3eb5401266a242cc3a0b32053"
+      "sha256": "sha256:e95e835b2989159b3104fcdbf3036aecbe4c096f7dc3270c21ef1d6a71839672"
     },
     {
       "presentation": "dark desktop",
@@ -297,7 +297,7 @@
       "page": "/security-graph?lens=estate&scan=scan-proof-ai-platform&rollup=1&scenario=scenario-private-service-endpoint&state=proposed&capture=1",
       "scope": "Modeled proposed-state comparison at 1568 by 780",
       "visible_version": "0.108.4",
-      "sha256": "sha256:942ab9b4b7187a0feb48f646846589dc28bec94d7f8d0fc13922c12b0dd5e027"
+      "sha256": "sha256:cc1887bf709a72b6a87bbcb5c44bf83f0044b7294b635d04cf02199a13adc7d2"
     },
     {
       "presentation": "dark desktop",
@@ -337,7 +337,7 @@
       "page": "/graph?lens=context&scan=scan-proof-ai-platform&capture=1",
       "scope": "Same nine recorded entities and eight relationships arranged left to right using the Horizontal layout control",
       "visible_version": "0.108.4",
-      "sha256": "sha256:2401cbaac64277d030ebb25a6fd49bdfe9324209c8789633f68a4dd37e8ed44a"
+      "sha256": "sha256:cc8e106cad2e8f19e803126705bf8a7719392ec81417f415744196424d69a3d3"
     },
     {
       "presentation": "dark desktop",

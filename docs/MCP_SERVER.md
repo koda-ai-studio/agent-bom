@@ -1,7 +1,7 @@
 # MCP Server — Connect agent-bom to AI Assistants
 
 agent-bom starts with 8 focused MCP tools. Select a task profile for graph, cloud, runtime or audit work;
-`--profile full` explicitly exposes the complete compatibility catalog of 89 MCP tools. Clients that negotiate the
+`--profile full` explicitly exposes the complete compatibility catalog of 90 MCP tools. Clients that negotiate the
 MCP SDK's legacy `2025-11-25` handshake can connect over stdio or
 Streamable HTTP. The `2026-07-28` protocol also supports stateless requests,
 `server/discover`, per-request capabilities, required HTTP headers, and private
@@ -202,9 +202,11 @@ agent-bom proxy-bootstrap \
 
 `proxy-configure` is best for JSON MCP clients such as Claude Desktop, Cursor, Windsurf, and Cortex CoCo. TOML-based clients like Codex CLI need manual proxy wrapping.
 
+For prerequisite checks and bounded identity paths, use [`consequence_assessment`](GRAPH_CONSEQUENCES.md) in the graph profile. It is experimental and read-only; missing session or exploitability evidence stays explicit.
+
 For scoped historical permission receipts, use [`compromise_assessment`](MCP_WORKFLOWS.md#assess-an-assumed-compromise) in the graph profile.
 
-## Tool Categories (89 tools)
+## Tool Categories (90 tools)
 
 These categories describe `--profile full`, not the default startup catalog.
 The [profile guide](MCP_WORKFLOWS.md) lists the smaller task surfaces.
@@ -213,7 +215,7 @@ The [profile guide](MCP_WORKFLOWS.md) lists the smaller task surfaces.
 |----------|-------|-------------|
 | **Scan** | `scan`, `code_scan`, `vector_db_scan`, `gpu_infra_scan`, `ai_inventory_scan` | Discover agents; execute Semgrep SAST with typed findings/clean/skipped/failed status; scan packages, vector stores, GPU infra, and AI usage |
 | **Check** | `check`, `verify`, `marketplace_check`, `license_compliance_scan` | Pre-install CVE gate, integrity verification, marketplace trust, and license policy |
-| **Blast Radius** | `blast_radius`, `exposure_paths`, `compromise_assessment`, `graph_correlate`, `graph_correlation_status`, `should_i_deploy` | Map package → vulnerability finding → MCP server (tools + credential env names) → connected agents; correlate exact snapshot receipts; return ranked ExposurePath JSON and allow/warn/block deploy guidance for headless agents |
+| **Blast Radius** | `blast_radius`, `exposure_paths`, `compromise_assessment`, `consequence_assessment`, `graph_correlate`, `graph_correlation_status`, `should_i_deploy` | Map package → vulnerability finding → MCP server (tools + credential env names) → connected agents; correlate exact snapshot receipts; return ranked ExposurePath JSON and allow/warn/block deploy guidance for headless agents |
 | **Registry** | `registry_lookup`, `inventory`, `where`, `fleet_scan` | Query the MCP registry, inspect discovery paths, and summarize fleet inventories |
 | **Compliance** | `compliance`, `cis_benchmark`, `aisvs_benchmark` | Run OWASP, NIST, MITRE ATLAS, CIS, and AISVS-aligned posture checks |
 | **Policy** | `policy_check`, `remediate` | Evaluate policies and generate guided remediation plans |
@@ -224,10 +226,10 @@ The [profile guide](MCP_WORKFLOWS.md) lists the smaller task surfaces.
 | **AI supply chain** | `dataset_card_scan`, `training_pipeline_scan`, `browser_extension_scan`, `model_provenance_scan`, `prompt_scan`, `model_file_scan`, `ingest_external_scan`, `runtime_evidence_ingest` | Scan AI artifacts, prompts, model files, and browser extensions; import tool-agnostic SARIF/SBOM/scanner evidence without executing its producer; merge CWPP runtime signals |
 
 <details>
-<summary>Complete current catalog (89 tools)</summary>
+<summary>Complete current catalog (90 tools)</summary>
 
 `scan`, `check`, `intel_lookup`, `intel_match`, `intel_sources`,
-`intel_daily_brief`, `youcom_search`, `blast_radius`, `exposure_paths`, `compromise_assessment`, `graph_correlate`,
+`intel_daily_brief`, `youcom_search`, `blast_radius`, `exposure_paths`, `compromise_assessment`, `consequence_assessment`, `graph_correlate`,
 `graph_correlation_status`, `should_i_deploy`,
 `policy_check`, `registry_lookup`, `generate_sbom`, `compliance`, `remediate`,
 `skill_scan`, `skill_verify`, `skill_trust`, `verify`, `inventory_summary`,

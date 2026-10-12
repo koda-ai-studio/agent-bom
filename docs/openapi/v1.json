@@ -7617,6 +7617,265 @@
         "title": "ConnectorsResponse",
         "type": "object"
       },
+      "Consequence": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action"
+          },
+          "binding_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Binding Ids",
+            "type": "array"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "deny_binding_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Deny Binding Ids",
+            "type": "array"
+          },
+          "edge_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Edge Ids",
+            "type": "array"
+          },
+          "evidence_refs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Refs",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "node_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Node Ids",
+            "type": "array"
+          },
+          "node_labels": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Node Labels",
+            "type": "array"
+          },
+          "node_types": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Node Types",
+            "type": "array"
+          },
+          "observation": {
+            "default": "not_recorded",
+            "title": "Observation",
+            "type": "string"
+          },
+          "observed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed At"
+          },
+          "principal_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Principal Id"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "reason_codes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reason Codes",
+            "type": "array"
+          },
+          "resource": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resource"
+          },
+          "resource_context": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Resource Context",
+            "type": "object"
+          },
+          "runtime_references": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "title": "Runtime References",
+            "type": "array"
+          },
+          "session_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Session Ids",
+            "type": "array"
+          },
+          "source_node_id": {
+            "title": "Source Node Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "supported",
+              "conditional",
+              "blocked",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "target_node_id": {
+            "title": "Target Node Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "category",
+          "source_node_id",
+          "target_node_id",
+          "node_ids",
+          "edge_ids",
+          "session_ids",
+          "evidence_refs",
+          "binding_ids",
+          "reason_codes"
+        ],
+        "title": "Consequence",
+        "type": "object"
+      },
+      "ConsequenceRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "affected_node_id": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "minLength": 1,
+                "pattern": "^[^\\x00]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Affected Node Id"
+          },
+          "assume_control": {
+            "default": false,
+            "title": "Assume Control",
+            "type": "boolean"
+          },
+          "max_depth": {
+            "default": 6,
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Max Depth",
+            "type": "integer"
+          },
+          "max_evidence_age_seconds": {
+            "default": 3600,
+            "maximum": 86400.0,
+            "minimum": 1.0,
+            "title": "Max Evidence Age Seconds",
+            "type": "integer"
+          },
+          "max_results": {
+            "default": 128,
+            "maximum": 512.0,
+            "minimum": 1.0,
+            "title": "Max Results",
+            "type": "integer"
+          },
+          "max_states": {
+            "default": 256,
+            "maximum": 1024.0,
+            "minimum": 1.0,
+            "title": "Max States",
+            "type": "integer"
+          },
+          "mode": {
+            "enum": [
+              "vulnerability",
+              "assumed_compromise"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "root_node_id": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "pattern": "^[^\\x00]+$",
+            "title": "Root Node Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "root_node_id",
+          "mode"
+        ],
+        "title": "ConsequenceRequest",
+        "type": "object"
+      },
       "ControlSeverityBreakdown": {
         "additionalProperties": true,
         "properties": {
@@ -8056,6 +8315,38 @@
           "label"
         ],
         "title": "CountWindow",
+        "type": "object"
+      },
+      "Counts": {
+        "additionalProperties": false,
+        "properties": {
+          "blocked": {
+            "default": 0,
+            "title": "Blocked",
+            "type": "integer"
+          },
+          "conditional": {
+            "default": 0,
+            "title": "Conditional",
+            "type": "integer"
+          },
+          "lower_bound": {
+            "default": false,
+            "title": "Lower Bound",
+            "type": "boolean"
+          },
+          "supported": {
+            "default": 0,
+            "title": "Supported",
+            "type": "integer"
+          },
+          "unknown": {
+            "default": 0,
+            "title": "Unknown",
+            "type": "integer"
+          }
+        },
+        "title": "Counts",
         "type": "object"
       },
       "CreateBlueprintBody": {
@@ -15685,6 +15976,53 @@
         "title": "FrameworkNarrative",
         "type": "object"
       },
+      "Frontier": {
+        "additionalProperties": false,
+        "properties": {
+          "edge_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Edge Ids",
+            "type": "array"
+          },
+          "next_collection_step": {
+            "title": "Next Collection Step",
+            "type": "string"
+          },
+          "node_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Node Ids",
+            "type": "array"
+          },
+          "reason_codes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reason Codes",
+            "type": "array"
+          },
+          "status": {
+            "default": "unknown",
+            "enum": [
+              "blocked",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "node_ids",
+          "edge_ids",
+          "reason_codes",
+          "next_collection_step"
+        ],
+        "title": "Frontier",
+        "type": "object"
+      },
       "GatewayActivityRecord": {
         "properties": {
           "agent_id": {
@@ -18620,6 +18958,230 @@
           "snapshot_generation"
         ],
         "title": "GraphCompromiseResponse",
+        "type": "object"
+      },
+      "GraphConsequenceRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "affected_node_id": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "minLength": 1,
+                "pattern": "^[^\\x00]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Affected Node Id"
+          },
+          "assume_control": {
+            "default": false,
+            "title": "Assume Control",
+            "type": "boolean"
+          },
+          "max_depth": {
+            "default": 6,
+            "maximum": 10.0,
+            "minimum": 1.0,
+            "title": "Max Depth",
+            "type": "integer"
+          },
+          "max_evidence_age_seconds": {
+            "default": 3600,
+            "maximum": 86400.0,
+            "minimum": 1.0,
+            "title": "Max Evidence Age Seconds",
+            "type": "integer"
+          },
+          "max_results": {
+            "default": 128,
+            "maximum": 512.0,
+            "minimum": 1.0,
+            "title": "Max Results",
+            "type": "integer"
+          },
+          "max_states": {
+            "default": 256,
+            "maximum": 1024.0,
+            "minimum": 1.0,
+            "title": "Max States",
+            "type": "integer"
+          },
+          "mode": {
+            "enum": [
+              "vulnerability",
+              "assumed_compromise"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "root_node_id": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "pattern": "^[^\\x00]+$",
+            "title": "Root Node Id",
+            "type": "string"
+          },
+          "scan_id": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "pattern": "^[^\\x00]+$",
+            "title": "Scan Id",
+            "type": "string"
+          },
+          "snapshot_generation": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "minLength": 1,
+                "pattern": "^[^\\x00]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Generation"
+          }
+        },
+        "required": [
+          "root_node_id",
+          "mode",
+          "scan_id"
+        ],
+        "title": "GraphConsequenceRequest",
+        "type": "object"
+      },
+      "GraphConsequenceResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "affected_node_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Affected Node Id"
+          },
+          "assessed_at": {
+            "title": "Assessed At",
+            "type": "string"
+          },
+          "capability": {
+            "const": "experimental",
+            "default": "experimental",
+            "title": "Capability",
+            "type": "string"
+          },
+          "collection_coverage": {
+            "const": "unknown",
+            "default": "unknown",
+            "title": "Collection Coverage",
+            "type": "string"
+          },
+          "collector_independence": {
+            "const": "not_assessed",
+            "default": "not_assessed",
+            "title": "Collector Independence",
+            "type": "string"
+          },
+          "consequences": {
+            "items": {
+              "$ref": "#/components/schemas/Consequence"
+            },
+            "title": "Consequences",
+            "type": "array"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/Counts"
+          },
+          "current_access": {
+            "const": "not_evaluated",
+            "default": "not_evaluated",
+            "title": "Current Access",
+            "type": "string"
+          },
+          "evaluator_version": {
+            "const": "1",
+            "default": "1",
+            "title": "Evaluator Version",
+            "type": "string"
+          },
+          "frontier": {
+            "items": {
+              "$ref": "#/components/schemas/Frontier"
+            },
+            "title": "Frontier",
+            "type": "array"
+          },
+          "observed_effects": {
+            "const": "not_established",
+            "default": "not_established",
+            "title": "Observed Effects",
+            "type": "string"
+          },
+          "prerequisites": {
+            "$ref": "#/components/schemas/Prerequisites"
+          },
+          "reason_codes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reason Codes",
+            "type": "array"
+          },
+          "request": {
+            "$ref": "#/components/schemas/ConsequenceRequest"
+          },
+          "scan_id": {
+            "title": "Scan Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "graph.consequence.v1",
+            "default": "graph.consequence.v1",
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "snapshot_generation": {
+            "title": "Snapshot Generation",
+            "type": "string"
+          },
+          "states_examined": {
+            "title": "States Examined",
+            "type": "integer"
+          },
+          "tenant_id": {
+            "title": "Tenant Id",
+            "type": "string"
+          },
+          "truncated": {
+            "title": "Truncated",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "tenant_id",
+          "scan_id",
+          "assessed_at",
+          "request",
+          "affected_node_id",
+          "prerequisites",
+          "counts",
+          "states_examined",
+          "truncated",
+          "reason_codes",
+          "consequences",
+          "frontier",
+          "snapshot_generation"
+        ],
+        "title": "GraphConsequenceResponse",
         "type": "object"
       },
       "GraphCorrelationCreate": {
@@ -30123,6 +30685,98 @@
           "stats"
         ],
         "title": "PostureWebhookOutboxStatsResponse",
+        "type": "object"
+      },
+      "PrerequisiteCheck": {
+        "additionalProperties": false,
+        "properties": {
+          "basis": {
+            "enum": [
+              "inventory",
+              "advisory",
+              "local"
+            ],
+            "title": "Basis",
+            "type": "string"
+          },
+          "evidence_refs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Refs",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "recorded",
+              "missing"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "name",
+          "status",
+          "basis"
+        ],
+        "title": "PrerequisiteCheck",
+        "type": "object"
+      },
+      "Prerequisites": {
+        "additionalProperties": false,
+        "properties": {
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/PrerequisiteCheck"
+            },
+            "title": "Checks",
+            "type": "array"
+          },
+          "evidence_refs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Refs",
+            "type": "array"
+          },
+          "reason_codes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reason Codes",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "supported",
+              "blocked",
+              "unknown",
+              "not_evaluated"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "Prerequisites",
         "type": "object"
       },
       "PresetCreate": {
@@ -60725,6 +61379,58 @@
           }
         },
         "summary": "Post Graph Compromise",
+        "tags": [
+          "graph"
+        ]
+      }
+    },
+    "/v1/graph/consequences": {
+      "post": {
+        "description": "Trace recorded action consequences; missing authority evidence fails closed.",
+        "operationId": "post_graph_consequences_v1_graph_consequences_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GraphConsequenceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphConsequenceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE)"
+          }
+        },
+        "summary": "Post Graph Consequences",
         "tags": [
           "graph"
         ]

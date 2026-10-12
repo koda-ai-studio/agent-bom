@@ -12,19 +12,16 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from agent_bom.cloud.authorization_evaluator import evaluate_authorization
 from agent_bom.cloud.authorization_evidence import (
     AuthorizationBinding,
     AuthorizationDecision,
-    AuthorizationEvaluation,
     AuthorizationEvidenceBundle,
-    AuthorizationPlane,
     AuthorizationProvider,
-    AuthorizationRequest,
 )
 from agent_bom.cloud.azure_rbac_evidence import normalize_azure_rbac_inventory
 from agent_bom.cloud.gcp_iam_evidence import normalize_gcp_iam_inventory
 from agent_bom.graph.analysis import GraphAnalysisState, GraphAnalysisStatus
+from agent_bom.graph.authorization_boundaries import AuthorizationBoundaries, decision_receipt, evaluate_request
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge, merge_edge_evidence
 from agent_bom.graph.identity_nodes import find_native_principal, unresolved_principal_node_id
@@ -263,22 +260,6 @@ def _identity_attachment_actions(bundle: AuthorizationEvidenceBundle, binding: A
     return tuple(sorted(actions))
 
 
-def _decision_receipt(
-    bundle: AuthorizationEvidenceBundle, principal_id: str, action: str, resource: str, result: AuthorizationEvaluation
-) -> dict[str, Any]:
-    """Retain each evaluated request and its matched source bindings together."""
-    return {
-        "source": _SOURCE,
-        "provider": bundle.provider.value,
-        "principal_id": principal_id,
-        "decision": result.decision.value,
-        "action": action,
-        "resource": resource,
-        "binding_ids": sorted(result.matched_allow_bindings),
-        "observed_at": bundle.observed_at.isoformat() if bundle.observed_at else None,
-    }
-
-
 def apply_authorization_evidence(graph: UnifiedGraph, inventory: Any) -> dict[str, int]:
     """Emit evaluator-proven access edges and a secret-safe execution status."""
     if not has_authoritative_authorization_evidence(inventory):
@@ -289,6 +270,7 @@ def apply_authorization_evidence(graph: UnifiedGraph, inventory: Any) -> dict[st
     if bundle is None:
         return {}
 
+    boundaries = AuthorizationBoundaries()
     evaluated = 0
     allow_edges = 0
     denied = 0
@@ -322,23 +304,15 @@ def apply_authorization_evidence(graph: UnifiedGraph, inventory: Any) -> dict[st
                     break
                 seen_requests.add(key)
                 evaluated += 1
-                result = evaluate_authorization(
-                    bundle,
-                    AuthorizationRequest(
-                        provider=bundle.provider,
-                        principal_id=binding.principal_id,
-                        action=action,
-                        resource=resource,
-                        # ANY evaluates both control- and data-plane grants. The
-                        # provider normalizers already preserve those planes;
-                        # classifying a GCP permission name by string would lose
-                        # valid storage data access because GCP roles expose one
-                        # unified permission list.
-                        plane=AuthorizationPlane.ANY,
-                    ),
-                )
+                result = evaluate_request(bundle, binding.principal_id, action, resource, principal_node_id, resource_node.id, boundaries)
                 if result.decision is AuthorizationDecision.ALLOW:
-                    receipts.append(_decision_receipt(bundle, binding.principal_id, action, resource, result))
+                    receipts.append(
+                        {
+                            **decision_receipt(bundle, binding.principal_id, action, resource, result),
+                            "principal_node_id": principal_node_id,
+                            "target_node_id": resource_node.id,
+                        }
+                    )
                 elif result.decision in {AuthorizationDecision.EXPLICIT_DENY, AuthorizationDecision.IMPLICIT_DENY}:
                     denied += 1
                 else:
@@ -356,6 +330,7 @@ def apply_authorization_evidence(graph: UnifiedGraph, inventory: Any) -> dict[st
                         relationship=RelationshipType.CAN_ACCESS,
                         weight=4.0,
                         confidence=1.0,
+                        valid_from=bundle.observed_at.isoformat() if bundle.observed_at else "",
                         provenance={"source": _SOURCE},
                         evidence=evidence,
                     )
@@ -385,19 +360,10 @@ def apply_authorization_evidence(graph: UnifiedGraph, inventory: Any) -> dict[st
                     break
                 seen_requests.add(key)
                 evaluated += 1
-                result = evaluate_authorization(
-                    bundle,
-                    AuthorizationRequest(
-                        provider=bundle.provider,
-                        principal_id=binding.principal_id,
-                        action=action,
-                        resource=resource,
-                        plane=AuthorizationPlane.ANY,
-                    ),
-                )
+                result = evaluate_request(bundle, binding.principal_id, action, resource, principal_node_id, target_node.id, boundaries)
                 if result.decision is AuthorizationDecision.ALLOW:
                     before = len(graph.edges)
-                    receipt = _decision_receipt(bundle, binding.principal_id, action, resource, result)
+                    receipt = decision_receipt(bundle, binding.principal_id, action, resource, result)
                     graph.add_edge(
                         UnifiedEdge(
                             source=principal_node_id,
@@ -427,7 +393,7 @@ def apply_authorization_evidence(graph: UnifiedGraph, inventory: Any) -> dict[st
         if capped:
             break
 
-    reason_codes: list[str] = []
+    reason_codes = boundaries.persist(graph)
     if bundle.incomplete_required_sources():
         reason_codes.append("incomplete_required_sources")
     if indeterminate:

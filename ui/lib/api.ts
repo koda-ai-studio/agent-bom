@@ -27,6 +27,8 @@ import type {
   UnifiedGraphResponse,
   FixFirstGraphViewResponse,
   GraphQueryRequest,
+  GraphConsequenceRequest,
+  GraphConsequenceResponse,
   GraphCompromiseRequest,
   GraphCompromiseResponse,
   GraphQueryResponse,
@@ -213,6 +215,8 @@ export type {
   FixFirstPathCard,
   GraphAttackCampaign,
   GraphQueryRequest,
+  GraphConsequenceRequest,
+  GraphConsequenceResponse,
   GraphCompromiseRequest,
   GraphCompromiseResponse,
   GraphQueryResponse,
@@ -1257,6 +1261,9 @@ export const api = {
   },
 
   /** Assess explicit control assumptions against one pinned graph revision. */
+  assessConsequences: (body: GraphConsequenceRequest, options?: { signal?: AbortSignal }) =>
+    post<GraphConsequenceResponse>("/v1/graph/consequences", body, {}, options?.signal),
+
   assessCompromise: (body: GraphCompromiseRequest, options?: { signal?: AbortSignal }) =>
     post<GraphCompromiseResponse>("/v1/graph/compromise", body, {}, options?.signal),
 

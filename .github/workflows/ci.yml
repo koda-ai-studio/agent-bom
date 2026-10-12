@@ -673,6 +673,7 @@ jobs:
             echo "::error::ui/lib/api-schema.generated.ts is out of date relative to docs/openapi/v1.json. Run \`cd ui && npm run codegen:api-schema\` and commit the result."
             exit 1
           fi
+          node scripts/codegen-consequence-sdk.mjs --check
 
       - name: UI tests
         run: |

@@ -27,6 +27,7 @@ from agent_bom.api.read_models.graph import (
 )
 from agent_bom.api.routes.graph_routes import _runtime
 from agent_bom.api.routes.graph_routes._admission import _GraphAdmissionRoute
+from agent_bom.api.routes.graph_routes.consequences import router as consequence_router
 from agent_bom.api.routes.graph_routes.params import (
     _GOVERNANCE_ATTACK_PATH_LIMIT,
     _GOVERNANCE_EDGE_LIMIT,
@@ -46,6 +47,7 @@ from agent_bom.graph.completeness import graph_completeness
 from agent_bom.graph.scope import GraphScopeKind
 
 compromise_router = APIRouter(route_class=_GraphAdmissionRoute)
+compromise_router.include_router(consequence_router)
 investigation_router = APIRouter(route_class=_GraphAdmissionRoute)
 
 

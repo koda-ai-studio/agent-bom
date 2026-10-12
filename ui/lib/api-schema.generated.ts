@@ -4324,6 +4324,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/graph/consequences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Graph Consequences
+         * @description Trace recorded action consequences; missing authority evidence fails closed.
+         */
+        post: operations["post_graph_consequences_v1_graph_consequences_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/graph/correlations": {
         parameters: {
             query?: never;
@@ -11125,6 +11145,100 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** Consequence */
+        Consequence: {
+            /** Action */
+            action?: string | null;
+            /** Binding Ids */
+            binding_ids: string[];
+            /** Category */
+            category: string;
+            /** Deny Binding Ids */
+            deny_binding_ids?: string[];
+            /** Edge Ids */
+            edge_ids: string[];
+            /** Evidence Refs */
+            evidence_refs: string[];
+            /** Id */
+            id: string;
+            /** Node Ids */
+            node_ids: string[];
+            /** Node Labels */
+            node_labels?: string[];
+            /** Node Types */
+            node_types?: string[];
+            /**
+             * Observation
+             * @default not_recorded
+             */
+            observation: string;
+            /** Observed At */
+            observed_at?: string | null;
+            /** Principal Id */
+            principal_id?: string | null;
+            /** Provider */
+            provider?: string | null;
+            /** Reason Codes */
+            reason_codes: string[];
+            /** Resource */
+            resource?: string | null;
+            /** Resource Context */
+            resource_context?: {
+                [key: string]: string;
+            };
+            /** Runtime References */
+            runtime_references?: {
+                [key: string]: string;
+            }[];
+            /** Session Ids */
+            session_ids: string[];
+            /** Source Node Id */
+            source_node_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "supported" | "conditional" | "blocked" | "unknown";
+            /** Target Node Id */
+            target_node_id: string;
+        };
+        /** ConsequenceRequest */
+        ConsequenceRequest: {
+            /** Affected Node Id */
+            affected_node_id?: string | null;
+            /**
+             * Assume Control
+             * @default false
+             */
+            assume_control: boolean;
+            /**
+             * Max Depth
+             * @default 6
+             */
+            max_depth: number;
+            /**
+             * Max Evidence Age Seconds
+             * @default 3600
+             */
+            max_evidence_age_seconds: number;
+            /**
+             * Max Results
+             * @default 128
+             */
+            max_results: number;
+            /**
+             * Max States
+             * @default 256
+             */
+            max_states: number;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "vulnerability" | "assumed_compromise";
+            /** Root Node Id */
+            root_node_id: string;
+        };
         /** ControlSeverityBreakdown */
         ControlSeverityBreakdown: {
             /** Critical */
@@ -11280,6 +11394,34 @@ export interface components {
             since?: string | null;
         } & {
             [key: string]: unknown;
+        };
+        /** Counts */
+        Counts: {
+            /**
+             * Blocked
+             * @default 0
+             */
+            blocked: number;
+            /**
+             * Conditional
+             * @default 0
+             */
+            conditional: number;
+            /**
+             * Lower Bound
+             * @default false
+             */
+            lower_bound: boolean;
+            /**
+             * Supported
+             * @default 0
+             */
+            supported: number;
+            /**
+             * Unknown
+             * @default 0
+             */
+            unknown: number;
         };
         /** CreateBlueprintBody */
         CreateBlueprintBody: {
@@ -14012,6 +14154,23 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** Frontier */
+        Frontier: {
+            /** Edge Ids */
+            edge_ids: string[];
+            /** Next Collection Step */
+            next_collection_step: string;
+            /** Node Ids */
+            node_ids: string[];
+            /** Reason Codes */
+            reason_codes: string[];
+            /**
+             * Status
+             * @default unknown
+             * @enum {string}
+             */
+            status: "blocked" | "unknown";
+        };
         /** GatewayActivityRecord */
         GatewayActivityRecord: {
             /** Agent Id */
@@ -15257,6 +15416,115 @@ export interface components {
             scope: "direct_outgoing_relationships";
             /** Snapshot Generation */
             snapshot_generation: string;
+            /** Tenant Id */
+            tenant_id: string;
+            /** Truncated */
+            truncated: boolean;
+        };
+        /** GraphConsequenceRequest */
+        GraphConsequenceRequest: {
+            /** Affected Node Id */
+            affected_node_id?: string | null;
+            /**
+             * Assume Control
+             * @default false
+             */
+            assume_control: boolean;
+            /**
+             * Max Depth
+             * @default 6
+             */
+            max_depth: number;
+            /**
+             * Max Evidence Age Seconds
+             * @default 3600
+             */
+            max_evidence_age_seconds: number;
+            /**
+             * Max Results
+             * @default 128
+             */
+            max_results: number;
+            /**
+             * Max States
+             * @default 256
+             */
+            max_states: number;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "vulnerability" | "assumed_compromise";
+            /** Root Node Id */
+            root_node_id: string;
+            /** Scan Id */
+            scan_id: string;
+            /** Snapshot Generation */
+            snapshot_generation?: string | null;
+        };
+        /** GraphConsequenceResponse */
+        GraphConsequenceResponse: {
+            /** Affected Node Id */
+            affected_node_id: string | null;
+            /** Assessed At */
+            assessed_at: string;
+            /**
+             * Capability
+             * @default experimental
+             * @constant
+             */
+            capability: "experimental";
+            /**
+             * Collection Coverage
+             * @default unknown
+             * @constant
+             */
+            collection_coverage: "unknown";
+            /**
+             * Collector Independence
+             * @default not_assessed
+             * @constant
+             */
+            collector_independence: "not_assessed";
+            /** Consequences */
+            consequences: components["schemas"]["Consequence"][];
+            counts: components["schemas"]["Counts"];
+            /**
+             * Current Access
+             * @default not_evaluated
+             * @constant
+             */
+            current_access: "not_evaluated";
+            /**
+             * Evaluator Version
+             * @default 1
+             * @constant
+             */
+            evaluator_version: "1";
+            /** Frontier */
+            frontier: components["schemas"]["Frontier"][];
+            /**
+             * Observed Effects
+             * @default not_established
+             * @constant
+             */
+            observed_effects: "not_established";
+            prerequisites: components["schemas"]["Prerequisites"];
+            /** Reason Codes */
+            reason_codes: string[];
+            request: components["schemas"]["ConsequenceRequest"];
+            /** Scan Id */
+            scan_id: string;
+            /**
+             * Schema Version
+             * @default graph.consequence.v1
+             * @constant
+             */
+            schema_version: "graph.consequence.v1";
+            /** Snapshot Generation */
+            snapshot_generation: string;
+            /** States Examined */
+            states_examined: number;
             /** Tenant Id */
             tenant_id: string;
             /** Truncated */
@@ -19289,6 +19557,39 @@ export interface components {
             stats: components["schemas"]["PostureWebhookOutboxStats"];
         } & {
             [key: string]: unknown;
+        };
+        /** PrerequisiteCheck */
+        PrerequisiteCheck: {
+            /**
+             * Basis
+             * @enum {string}
+             */
+            basis: "inventory" | "advisory" | "local";
+            /** Evidence Refs */
+            evidence_refs?: string[];
+            /** Name */
+            name: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "recorded" | "missing";
+            /** Value */
+            value?: string | null;
+        };
+        /** Prerequisites */
+        Prerequisites: {
+            /** Checks */
+            checks?: components["schemas"]["PrerequisiteCheck"][];
+            /** Evidence Refs */
+            evidence_refs?: string[];
+            /** Reason Codes */
+            reason_codes?: string[];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "supported" | "blocked" | "unknown" | "not_evaluated";
         };
         /** PresetCreate */
         PresetCreate: {
@@ -33041,6 +33342,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GraphCompromiseResponse"];
+                };
+            };
+            /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE) */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    post_graph_consequences_v1_graph_consequences_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GraphConsequenceRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GraphConsequenceResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */

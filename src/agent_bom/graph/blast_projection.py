@@ -7,6 +7,7 @@ from agent_bom.core.severity import SEVERITY_RISK_SCORE
 from agent_bom.graph.build_indexes import BuildIndexes
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
+from agent_bom.graph.exploitability_projection import project_exploitability
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.package_projection import (
     _add_exploitable_via_edges,
@@ -58,6 +59,7 @@ def _add_blast_node(
                 "attack_complexity": br_dict.get("attack_complexity"),
                 "privileges_required": br_dict.get("privileges_required"),
                 "user_interaction": br_dict.get("user_interaction"),
+                "exploitability_assessment": project_exploitability(br_dict, vuln_node_id),
                 "network_exploitable": br_dict.get("network_exploitable", False),
                 "epss_score": br_dict.get("epss_score"),
                 "is_kev": br_dict.get("is_kev", False),

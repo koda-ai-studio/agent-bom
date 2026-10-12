@@ -22,6 +22,14 @@ class GraphClientMixin:
     ) -> JsonObject:
         raise NotImplementedError
 
+    def consequence_assessment(
+        self, *, request: Mapping[str, JsonValue], scan_id: str, snapshot_generation: str | None = None
+    ) -> JsonObject:
+        """Export one server-computed consequence revision without local inference."""
+        return self._request(
+            "POST", "/v1/graph/consequences", json={**request, "scan_id": scan_id, "snapshot_generation": snapshot_generation}
+        )
+
     def compromise_assessment(
         self,
         *,

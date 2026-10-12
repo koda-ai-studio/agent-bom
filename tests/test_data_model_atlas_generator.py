@@ -31,3 +31,24 @@ def test_data_model_atlas_check_needs_no_installed_runtime_dependencies() -> Non
     )
 
     assert result.returncode == 0, result.stderr
+
+
+def test_graph_schema_import_needs_no_installed_runtime_dependencies() -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-I",
+            "-S",
+            "-c",
+            "import sys; sys.path.insert(0, 'src'); "
+            "from agent_bom.graph import EntityType, RelationshipType, UnifiedGraph; "
+            "assert EntityType and RelationshipType and UnifiedGraph; "
+            "assert 'pydantic' not in sys.modules",
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr

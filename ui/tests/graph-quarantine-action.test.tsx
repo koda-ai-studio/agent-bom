@@ -1,86 +1,30 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
-
+import { readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
 import { GraphEntityDrawer } from "@/components/graph-entity-drawer";
 import type { LineageNodeData } from "@/components/lineage-nodes";
 
-function node(nodeType: string, label = "checkout-agent"): LineageNodeData {
-  return { label, nodeType, severity: "none" } as unknown as LineageNodeData;
+function node(nodeType: string): LineageNodeData {
+  return { label: "shared-display-name", nodeType, severity: "none" } as unknown as LineageNodeData;
 }
 
-const noop = () => {};
-
-describe("graph quarantine action", () => {
-  it("offers containment on an agent node", () => {
-    render(
-      <GraphEntityDrawer data={node("agent")} onClose={noop} enrich={false} onQuarantine={noop} />,
-    );
-    expect(screen.getByTestId("graph-quarantine-agent")).toHaveTextContent("Quarantine agent");
-  });
-
-  it("is not offered on non-agent nodes", () => {
-    render(
-      <GraphEntityDrawer data={node("package", "left-pad")} onClose={noop} enrich={false} onQuarantine={noop} />,
-    );
+describe("graph containment boundary", () => {
+  it("offers review with explicit gateway scope, never a mutation from a discovered agent", () => {
+    render(<GraphEntityDrawer data={node("agent")} onClose={() => {}} enrich={false} />);
+    expect(screen.getByRole("link", { name: "Review gateway controls" })).toHaveAttribute("href", "/fleet");
+    expect(screen.getByText(/Read-only discovery cannot stop this agent/)).toBeTruthy();
+    expect(screen.getByText(/Direct cloud calls and other connections remain outside/)).toBeTruthy();
     expect(screen.queryByTestId("graph-quarantine-agent")).toBeNull();
   });
 
-  it("is absent entirely when no handler is supplied", () => {
-    render(<GraphEntityDrawer data={node("agent")} onClose={noop} enrich={false} />);
-    expect(screen.queryByTestId("graph-quarantine-agent")).toBeNull();
+  it("does not show agent controls for a package", () => {
+    render(<GraphEntityDrawer data={node("package")} onClose={() => {}} enrich={false} />);
+    expect(screen.queryByRole("link", { name: "Review gateway controls" })).toBeNull();
   });
 
-  it("requires a second confirming click before it commits", () => {
-    const onQuarantine = vi.fn();
-    render(
-      <GraphEntityDrawer
-        data={node("agent")}
-        onClose={noop}
-        enrich={false}
-        onQuarantine={onQuarantine}
-        quarantineState="confirming"
-        quarantineMessage="Blocks every tool call"
-      />,
-    );
-    expect(screen.getByTestId("graph-quarantine-agent")).toHaveTextContent("Confirm");
-    expect(screen.getByText(/Blocks every tool call/)).toBeTruthy();
-  });
-
-  it("disables the control while pending and once done", () => {
-    const { rerender } = render(
-      <GraphEntityDrawer
-        data={node("agent")}
-        onClose={noop}
-        enrich={false}
-        onQuarantine={noop}
-        quarantineState="pending"
-      />,
-    );
-    expect(screen.getByTestId("graph-quarantine-agent")).toBeDisabled();
-
-    rerender(
-      <GraphEntityDrawer
-        data={node("agent")}
-        onClose={noop}
-        enrich={false}
-        onQuarantine={noop}
-        quarantineState="done"
-      />,
-    );
-    expect(screen.getByTestId("graph-quarantine-agent")).toBeDisabled();
-  });
-
-  it("surfaces a failure instead of silently doing nothing", () => {
-    render(
-      <GraphEntityDrawer
-        data={node("agent")}
-        onClose={noop}
-        enrich={false}
-        onQuarantine={noop}
-        quarantineState="error"
-        quarantineMessage='"checkout-agent" is not registered in the fleet roster, so it cannot be quarantined.'
-      />,
-    );
-    expect(screen.getByText(/not registered in the fleet roster/)).toBeTruthy();
+  it("cannot resolve a containment subject by a mutable display name", () => {
+    const source = readFileSync("app/graph/graph-page-client.tsx", "utf8");
+    expect(source.includes("quarantineAgentByLabel")).toBe(false);
+    expect(source.includes("api.quarantineFleetAgent")).toBe(false);
   });
 });

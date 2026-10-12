@@ -20,6 +20,7 @@ from agent_bom.cli._findings_group import (
     _run_request,
     _string,
 )
+from agent_bom.cli._graph_consequence import consequences_cmd
 
 
 def _node_label(value: object) -> str:
@@ -216,5 +217,7 @@ def compromise_cmd(
             continue
         click.echo("\t".join(_string(action.get(key)) for key in ("permission", "action", "resource", "observation")))
 
+
+graph_paths_cmd.add_command(consequences_cmd)
 
 __all__ = ["graph_paths_cmd"]

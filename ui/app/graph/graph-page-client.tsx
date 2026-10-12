@@ -762,44 +762,6 @@ function GraphPageInner() {
   );
   const [blastRadius, setBlastRadius] = useState<BlastRadiusState | null>(null);
   const [loadingBlast, setLoadingBlast] = useState(false);
-  // Containment is a two-step action: the first click arms it, the second
-  // commits. Blocking every tool call for an agent is not a one-click gesture.
-  const [quarantine, setQuarantine] = useState<{
-    state: "idle" | "confirming" | "pending" | "done" | "error";
-    message: string;
-  }>({ state: "idle", message: "" });
-
-  const quarantineSelectedAgent = useCallback(
-    async (node: LineageNodeData | null) => {
-      const label = node?.label?.trim();
-      if (!label) return;
-      if (quarantine.state === "idle" || quarantine.state === "error") {
-        setQuarantine({
-          state: "confirming",
-          message: `Blocks every tool call from ${label} at the gateway. Release it from the fleet roster.`,
-        });
-        return;
-      }
-      if (quarantine.state !== "confirming") return;
-      setQuarantine({ state: "pending", message: "" });
-      try {
-        await quarantineAgentByLabel(label);
-        setQuarantine({ state: "done", message: `${label} is quarantined; every tool call is now denied.` });
-      } catch (e) {
-        setQuarantine({
-          state: "error",
-          message: e instanceof Error ? e.message : "Quarantine failed.",
-        });
-      }
-    },
-    [quarantine.state],
-  );
-
-  // Containment state belongs to one agent. Without this reset, opening a
-  // different node would show it already "quarantined".
-  useEffect(() => {
-    setQuarantine({ state: "idle", message: "" });
-  }, [selectedNodeId]);
   const [blastError, setBlastError] = useState<string | null>(null);
   const [rollupView, setRollupView] = useState<GraphRollupResponse | null>(null);
   const [rollupStack, setRollupStack] = useState<RollupBreadcrumb[]>(() => {
@@ -3971,9 +3933,6 @@ function GraphPageInner() {
               }}
               blastRadiusActive={blastRadius?.rootId === selectedNodeId}
               blastRadiusLoading={loadingBlast}
-              quarantineState={quarantine.state}
-              quarantineMessage={quarantine.message}
-              onQuarantine={() => void quarantineSelectedAgent(selectedNode)}
               onShowBlastRadius={
                 selectedNodeId
                   ? () =>
@@ -3995,24 +3954,6 @@ function GraphPageInner() {
       </div>
     </div>
   );
-}
-
-/** Resolve a graph agent label to its fleet id, then contain it at the gateway.
- *
- * The graph knows an agent by label; quarantine is keyed by fleet id, so this
- * bridges the two through the existing fleet list. An agent that is not in the
- * roster cannot be contained — say so plainly rather than failing silently.
- */
-async function quarantineAgentByLabel(label: string): Promise<string> {
-  const roster = await api.listFleet({ search: label, include_quarantined: true });
-  const match = roster.agents.find(
-    (agent) => (agent.name || "").trim().toLowerCase() === label.trim().toLowerCase(),
-  );
-  if (!match) {
-    throw new Error(`"${label}" is not registered in the fleet roster, so it cannot be quarantined.`);
-  }
-  await api.quarantineFleetAgent(match.agent_id);
-  return match.agent_id;
 }
 
 export function ReachabilityDrillInPanel({
