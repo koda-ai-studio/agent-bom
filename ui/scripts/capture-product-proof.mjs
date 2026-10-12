@@ -329,6 +329,61 @@ function buildGraph() {
 
 const graph = buildGraph();
 
+// Three explicitly synthetic scope fixtures exercise the shipped presets.
+// Shared native IDs identify entities; names never manufacture a relationship.
+function buildScopeShowcase(kind) {
+  const definitions = {
+    cloud: {
+      nodes: [
+        ["account:demo", "account", "Production account", { provider: "AWS", account_id: "123456789012" }],
+        ["cluster:demo", "cluster", "AI workloads", { region: "us-east-1" }],
+        ["container:demo", "container", "Document worker"],
+        ["role:demo", "role", "Document reader"],
+        ["data:demo", "data_store", "Document archive", { service: "S3", region: "us-east-1" }],
+        ["resource:demo", "cloud_resource", "Private API endpoint", { service: "API Gateway" }],
+        ["finding:demo", "misconfiguration", "Review storage access", { description: "Synthetic policy review finding" }],
+      ],
+      edges: [["account:demo", "cluster:demo", "hosts"], ["cluster:demo", "container:demo", "hosts"],
+        ["account:demo", "role:demo", "contains"], ["role:demo", "data:demo", "has_permission"],
+        ["account:demo", "resource:demo", "contains"], ["finding:demo", "data:demo", "affects"]],
+    },
+    repository: {
+      nodes: [["repo:demo", "directory", "document-service/", { path: "document-service/" }],
+        ["source:demo", "source_file", "app.py", { language: "Python" }],
+        ["config:demo", "config_file", "deployment.yaml"], ["ci:demo", "ci_job", "Build and scan"],
+        ["package:demo", "package", "pillow@9.0.0", { ecosystem: "pypi", version: "9.0.0" }],
+        ["container:demo", "container", "Document worker"],
+        ["cve:demo", "vulnerability", "CVE-2023-4863", { ...advisory("CVE-2023-4863"), simulated: true }]],
+      edges: [["repo:demo", "source:demo", "contains"], ["repo:demo", "config:demo", "contains"],
+        ["repo:demo", "ci:demo", "contains"], ["source:demo", "package:demo", "imports"],
+        ["config:demo", "container:demo", "configures"], ["ci:demo", "container:demo", "configures"],
+        ["package:demo", "cve:demo", "vulnerable_to"]],
+    },
+    environment: {
+      nodes: [["env:demo", "environment", "Production AI", { environment: "production" }],
+        ["cluster:demo", "cluster", "AI workloads"], ["container:demo", "container", "Document worker"],
+        ["agent:demo", "agent", "Document processing agent"], ["server:demo", "server", "Image processing MCP"],
+        ["tool:demo", "tool", "render_image"], ["model:demo", "model", "Document reasoning model"],
+        ["package:demo", "package", "pillow@9.0.0", { ecosystem: "pypi", version: "9.0.0" }]],
+      edges: [["env:demo", "cluster:demo", "hosts"], ["cluster:demo", "container:demo", "hosts"],
+        ["env:demo", "agent:demo", "contains"], ["agent:demo", "server:demo", "uses"],
+        ["agent:demo", "model:demo", "uses"], ["server:demo", "tool:demo", "provides_tool"],
+        ["server:demo", "package:demo", "depends_on"]],
+    },
+  };
+  const fixture = definitions[kind];
+  const nodes = fixture.nodes.map(([id, type, label, attributes = {}]) => node(id, type, label,
+    ["vulnerability", "misconfiguration"].includes(type) ? "high" : "none", 0,
+    { ...attributes, simulated: true, environment: "production", data_sources: ["synthetic-scope-fixture"] }));
+  const edges = fixture.edges.map(([source, target, relation]) => edge(source, target, relation, 1,
+    { evidence_tier: "modeled_infrastructure", modeled: true, source_kind: "synthetic-scope-fixture" }));
+  return { ...graph, nodes, edges, attack_paths: [], interaction_risks: [],
+    stats: { total_nodes: nodes.length, total_edges: edges.length, attack_path_count: 0, interaction_risk_count: 0,
+      node_types: Object.fromEntries(nodes.map(n => [n.entity_type, nodes.filter(v => v.entity_type === n.entity_type).length])),
+      severity_counts: { high: nodes.filter(n => n.severity === "high").length, none: nodes.filter(n => n.severity === "none").length } },
+    pagination: { total: nodes.length, offset: 0, limit: nodes.length, has_more: false } };
+}
+
 function graphScenario() {
   return {
     scenario_id: SCENARIO_ID,
@@ -1578,7 +1633,8 @@ async function fulfill(route, body, status = 200) {
   });
 }
 
-async function installRoutes(page) {
+async function installRoutes(page, fixtureGraph = graph) {
+  const graph = fixtureGraph;
   // The offline fixture has no successful feed-run receipt; freshness stays unknown.
   await page.route("**/v1/intel/sources", (route) => fulfill(route, {
     schema_version: "intel.sources.v1", sources: [], count: 0,
@@ -2426,6 +2482,7 @@ const README_CAPTURE_FILES = new Set([
   "context-map-horizontal-dark-live.png", "context-map-horizontal-light-live.png",
   "context-map-light-live.png", "context-map-live.png", "correlation-graph-live.png",
   "graph-relationship-dark-live.png", "graph-relationship-light-live.png",
+  ...["cloud", "repository", "environment"].flatMap(scope => ["dark", "light"].map(theme => `graph-${scope}-${theme}-live.png`)),
   "dashboard-live.png", "dashboard-paths-live.png", "dashboard-risks-live.png", "inventory-live.png", "remediation-live.png",
 ]);
 
@@ -2779,6 +2836,12 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
 
 async function writeScreenshotManifest(outputDir = IMAGE_DIR) {
   const screenshotEntries = [
+    ...["cloud", "repository", "environment"].flatMap(scope => ["dark", "light"].map(theme => ({
+      path: `graph-${scope}-${theme}-live.png`,
+      page: `/graph?lens=estate&rollup=0&scan=${SCAN_ID}&capture=1`,
+      scope: `Explicitly synthetic ${scope} inventory projected through the shipped graph scope preset; configured relationships do not establish execution or effective access`,
+      presentation: `${theme} desktop`,
+    }))),
     ...["dark", "light"].flatMap((theme) => [
       { path: `component-detail-mobile-${theme}-live.png`, page: `/inventory/packages?scan=${SCAN_ID}&capture=1`,
         scope: "On-demand component drawer at a 390 by 844 viewport", presentation: `${theme} mobile` },
@@ -3075,10 +3138,10 @@ async function main() {
   try {
     await waitForOwnedServer(BASE_URL, server);
     browser = await chromium.launch();
-    const newCapturePage = async (theme, viewport) => {
+    const newCapturePage = async (theme, viewport, fixtureGraph = graph) => {
       const capturePage = await browser.newPage({ viewport, deviceScaleFactor: 1 });
       await capturePage.clock.setFixedTime(REFERENCE_CAPTURE_NOW);
-      await installRoutes(capturePage);
+      await installRoutes(capturePage, fixtureGraph);
       // The home-page proof comes from the real offline demo API, including
       // cross-domain findings and evaluated controls. Other workflow fixtures
       // retain their own snapshots and IDs.
@@ -3093,6 +3156,29 @@ async function main() {
       }, theme);
       return capturePage;
     };
+    for (const [scope, preset] of [["cloud", "Cloud estate"], ["repository", "Repository"], ["environment", "Environment"]]) {
+      const fixture = buildScopeShowcase(scope);
+      for (const theme of ["dark", "light"]) {
+        const p = await newCapturePage(theme, { width: 1440, height: 900 }, fixture);
+        await capture(p, `/graph?lens=estate&rollup=0&scan=${SCAN_ID}&capture=1`, `graph-${scope}-${theme}-live.png`, async p => {
+          await p.getByRole("heading", { name: "Investigation", exact: true }).waitFor();
+          await p.getByRole("button", { name: "View & layers", exact: true }).click();
+          const view = p.getByRole("button", { name: preset, exact: true });
+          await view.click();
+          await expect(view).toHaveAttribute("aria-pressed", "true");
+          await p.getByRole("button", { name: "View & layers", exact: true }).click();
+          await expect(p.locator(".react-flow__node")).toHaveCount(fixture.nodes.length);
+          await fitReactFlow(p);
+          await scrollTo(p, 0);
+        }, { expectedText: [/Demo data/i, ...fixture.nodes.map(n => new RegExp(n.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"))],
+          expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph"],
+          minGraphNodes: fixture.nodes.length, maxGraphNodes: fixture.nodes.length,
+          minGraphEdges: fixture.edges.length, maxGraphEdges: fixture.edges.length,
+          minGraphNodeFontPx: 12, minGraphEdgeLabelFontPx: 12,
+          assertEdgeLabelsClearOfNodes: true, assertNoHorizontalOverflow: true });
+        await p.close();
+      }
+    }
     // Capture the shipped component workflow; fixture mappings are not assessments.
     for (const theme of ["dark", "light"]) {
       const componentPage = await newCapturePage(theme, { width: 1440, height: 900 });
