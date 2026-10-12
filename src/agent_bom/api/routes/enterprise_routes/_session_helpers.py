@@ -12,6 +12,8 @@ from urllib.parse import urlsplit
 
 from fastapi import HTTPException, Request, Response
 
+from agent_bom.api import host_guard as _host_guard
+from agent_bom.api.dev_auth_state import get_dev_api_key, get_dev_api_role
 from agent_bom.api.forwarded_identity import resolve_forwarded_client_ip, trusted_proxy_hops, trusted_proxy_networks
 from agent_bom.core.settings import env_raw
 from agent_bom.security import sanitize_error
@@ -257,7 +259,13 @@ def _set_browser_session_cookie(
     key_id: str | None = None,
     scopes: list[str] | None = None,
 ) -> None:
-    from agent_bom.api.browser_session import CSRF_COOKIE_NAME, SESSION_COOKIE_NAME, BrowserSessionError, create_browser_session_token
+    from agent_bom.api.browser_session import (
+        CSRF_COOKIE_NAME,
+        SESSION_COOKIE_NAME,
+        SIGNED_OUT_COOKIE_NAME,
+        BrowserSessionError,
+        create_browser_session_token,
+    )
 
     max_age = _session_cookie_max_age()
     try:
@@ -273,6 +281,7 @@ def _set_browser_session_cookie(
     except BrowserSessionError as exc:
         raise HTTPException(status_code=503, detail=sanitize_error(exc, generic=True)) from exc
     secure = _session_cookie_secure(request)
+    response.delete_cookie(SIGNED_OUT_COOKIE_NAME, httponly=True, secure=secure, samesite="strict", path="/")
     response.set_cookie(
         SESSION_COOKIE_NAME,
         token,
@@ -294,9 +303,11 @@ def _set_browser_session_cookie(
 
 
 def _delete_browser_session_cookies(response: Response, request: Request) -> None:
-    from agent_bom.api.browser_session import CSRF_COOKIE_NAME, SESSION_COOKIE_NAME
+    from agent_bom.api.browser_session import CSRF_COOKIE_NAME, SESSION_COOKIE_NAME, SIGNED_OUT_COOKIE_NAME
 
     secure = _session_cookie_secure(request)
+    # Non-authorizing intent marker: survive navigation until explicit sign-in.
+    response.set_cookie(SIGNED_OUT_COOKIE_NAME, "1", max_age=365 * 24 * 60 * 60, httponly=True, secure=secure, samesite="strict", path="/")
     response.delete_cookie(
         SESSION_COOKIE_NAME,
         httponly=True,
@@ -339,3 +350,71 @@ def _loopback_browser_origin(request: Request) -> bool:
     except ValueError:
         return False
     return hostname in {"localhost", "127.0.0.1", "::1"}
+
+
+_DEV_SESSION_MAX_AGE_SECONDS = 8 * 60 * 60
+
+
+def _maybe_attach_dev_session_cookie(response: Any, request: Request) -> None:
+    """Seed a loopback browser session so the zero-config dev key authenticates
+    the same-origin dashboard without any flag or manual key entry.
+
+    No-op unless an ephemeral dev key is active. The dev key is only ever set on
+    a loopback bind (the CLI auth gate refuses non-loopback binds before the key
+    is generated), so a set key already means "loopback, no other auth". The
+    minted session carries no ``key_id``, so it stays valid for the process
+    lifetime without depending on key-store lookups, and is re-used across page
+    loads instead of churning a fresh nonce each request.
+    """
+    if get_dev_api_key() is None or not _host_guard.is_loopback_hostname(
+        _host_guard.hostname_from_authority(request.headers.get("host", ""))
+    ):
+        return
+    from agent_bom.api.browser_session import (
+        CSRF_COOKIE_NAME,
+        SESSION_COOKIE_NAME,
+        SIGNED_OUT_COOKIE_NAME,
+        BrowserSessionError,
+        create_browser_session_token,
+        verify_browser_session_token,
+    )
+
+    if request.cookies.get(SIGNED_OUT_COOKIE_NAME) == "1":
+        return
+    existing = request.cookies.get(SESSION_COOKIE_NAME, "")
+    if existing:
+        try:
+            verify_browser_session_token(existing)
+            return
+        except BrowserSessionError:
+            pass
+    try:
+        token, csrf = create_browser_session_token(
+            subject="loopback-dev-key",
+            role=get_dev_api_role().value,
+            tenant_id="default",
+            auth_method="browser_session_dev_key",
+            key_id=None,
+            scopes=[],
+            max_age_seconds=_DEV_SESSION_MAX_AGE_SECONDS,
+        )
+    except BrowserSessionError:
+        return
+    response.set_cookie(
+        SESSION_COOKIE_NAME,
+        token,
+        max_age=_DEV_SESSION_MAX_AGE_SECONDS,
+        httponly=True,
+        secure=False,
+        samesite="strict",
+        path="/",
+    )
+    response.set_cookie(
+        CSRF_COOKIE_NAME,
+        csrf,
+        max_age=_DEV_SESSION_MAX_AGE_SECONDS,
+        httponly=False,
+        secure=False,
+        samesite="strict",
+        path="/",
+    )

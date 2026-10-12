@@ -180,3 +180,28 @@ required unless the deployment explicitly enables the documented local/demo
 mode; missing or invalid credentials do not gain access through these rules.
 Route dependencies may impose additional resource or tenant checks.
 The catalog covers scoped rules, not a complete list of every API operation.
+
+## Browser account and sign-out
+
+Open **Account menu → Profile & settings** to inspect the current identity,
+authentication method, role and authorized scope. API-key sessions identify a
+key, not a person. Identity and role changes remain with the configured identity
+provider or administrator. Settings links expose the existing Connections,
+Access & keys, Audit history and Control plane security surfaces according to
+server-reported capabilities; they do not create additional tenant memberships.
+Appearance supports light, dark and system preferences saved in the browser.
+
+**Sign out** revokes the local browser session and clears in-memory response
+caches. The UI locks immediately, rejects late authentication responses and
+propagates sign-out to other same-origin tabs. A failed revocation remains an
+unconfirmed sign-out with a retry action; it is not reported as server success.
+Loopback dashboard navigation respects the sign-out cookie instead of silently
+issuing a new development session. **Continue to sign in** explicitly resumes
+authentication. Logout does not revoke the API key itself or end an upstream
+identity-provider/reverse-proxy session. An explicitly unauthenticated server
+cannot be secured by a browser sign-out action.
+
+After explicit logout, the loopback `/v1/auth/dev-session` exchange returns
+`409` until an explicit browser resume supplies `X-Agent-Bom-Session-Resume: true`.
+The existing loopback-origin restriction still applies; this header records intent
+and does not grant access to a remotely bound or explicitly authenticated server.

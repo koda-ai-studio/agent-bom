@@ -545,7 +545,8 @@ def test_browser_session_cookies_use_strict_samesite(monkeypatch):
     )
 
     set_cookie_values = [value.decode("latin-1") for key, value in response.raw_headers if key.lower() == b"set-cookie"]
-    assert len(set_cookie_values) == 2
+    assert len(set_cookie_values) == 3
+    assert any(value.startswith("agent_bom_signed_out=") and "Max-Age=0" in value for value in set_cookie_values)
     assert all("SameSite=strict" in value for value in set_cookie_values)
     assert any("HttpOnly" in value and SESSION_COOKIE_NAME in value for value in set_cookie_values)
     assert any(CSRF_COOKIE_NAME in value for value in set_cookie_values)
@@ -2466,3 +2467,34 @@ def test_dev_session_cannot_retain_previous_bootstrap_role(monkeypatch):
         assert client.get("/v1/auth/me").status_code == 401
     finally:
         server.set_dev_api_key(None)
+
+
+def test_explicit_logout_prevents_packaged_dashboard_auto_login(monkeypatch):
+    """Navigation cannot silently mint a replacement for a revoked dev session."""
+    from agent_bom.api.server import _maybe_attach_dev_session_cookie, set_dev_api_key
+
+    _clear_dev_key_auth_env(monkeypatch)
+    configure_api(api_key="abk_loopback_logout_test", allow_unauthenticated=False)
+    set_dev_api_key("abk_loopback_logout_test")
+    try:
+        client = TestClient(app)
+        origin = {"Origin": "http://127.0.0.1:3440"}
+        assert client.post("/v1/auth/dev-session", headers=origin).status_code == 204
+        original = client.cookies.get(SESSION_COOKIE_NAME)
+        csrf = client.cookies.get(CSRF_COOKIE_NAME)
+        assert client.delete("/v1/auth/session", headers={**origin, CSRF_HEADER_NAME: csrf}).status_code == 204
+        response = Response()
+        _maybe_attach_dev_session_cookie(response, SimpleNamespace(cookies=dict(client.cookies), headers={"host": "127.0.0.1:8422"}))
+        assert not any(value.startswith(f"{SESSION_COOKIE_NAME}=") for value in response.headers.getlist("set-cookie"))
+        assert client.get("/v1/overview").status_code == 401
+        replay = TestClient(app)
+        replay.cookies.set(SESSION_COOKIE_NAME, original)
+        assert replay.get("/v1/overview").status_code == 401
+        # The automatic exchange must also respect the server-side opt-out.
+        assert client.post("/v1/auth/dev-session", headers=origin).status_code == 409
+        # Resuming is an explicit browser action; successful login clears the opt-out.
+        assert client.post("/v1/auth/dev-session", headers={**origin, "X-Agent-Bom-Session-Resume": "true"}).status_code == 204
+        assert client.get("/v1/overview").status_code == 200
+        assert client.cookies.get("agent_bom_signed_out") is None
+    finally:
+        set_dev_api_key(None)

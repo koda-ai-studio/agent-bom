@@ -17,6 +17,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 SESSION_COOKIE_NAME = "agent_bom_session"
+SIGNED_OUT_COOKIE_NAME = "agent_bom_signed_out"
 CSRF_COOKIE_NAME = "agent_bom_csrf"
 CSRF_HEADER_NAME = "x-agent-bom-csrf"
 
