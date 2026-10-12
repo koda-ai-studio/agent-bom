@@ -177,3 +177,30 @@ def test_persisted_consistency_label_does_not_override_revalidated_cloud_scope(a
     )
     assert result["span-1"]["state"] == "scope_conflict"
     assert "node_id" not in result["span-1"]
+
+
+@pytest.mark.parametrize(
+    "attributes, expected",
+    [
+        ({"cloud_origin": {"resource_id": "arn:aws:lambda:us-east-1:111111111111:function:other:3"}}, "scope_conflict"),
+        ({"cloud_origin": {"location": "eu-west-1"}}, "scope_conflict"),
+        ({"location": "eu-west-1"}, "scope_conflict"),
+        ({"region": "eu-west-1"}, "scope_conflict"),
+        (
+            {"cloud_origin": {"resource_id": "arn:aws:lambda:us-east-1:111111111111:function:process:3", "location": "us-east-1"}},
+            "exact_identifier",
+        ),
+    ],
+)
+def test_inventory_binding_checks_recorded_cloud_resource_and_region(attributes, expected):
+    claims = {
+        "scope_state": "consistent",
+        "attributes": {
+            "cloud.resource_id": "arn:aws:lambda:us-east-1:111111111111:function:process:3",
+            "cloud.region": "us-east-1",
+        },
+    }
+    result = correlate_inventory_observations(
+        Store(**attributes), tenant_id="tenant-a", scan_id="snapshot", observations=[observation(cloud_trace=claims)]
+    )
+    assert result["span-1"]["state"] == expected

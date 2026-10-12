@@ -139,6 +139,10 @@ prove invocation or downstream effects, establish current permission, or prove
 exploitation. Imported spans do not inherit findings through display-name matches.
 Legacy tool-name correlation results remain explicitly labeled candidates.
 
+If inventory records a normalized cloud resource ID or location, reported cloud
+identifiers must also agree with those values. Version or alias resolution is not
+inferred to make different identifiers match.
+
 Sources can additionally pin `agent_bom.inventory_scan_id` and
 `agent_bom.inventory_generation`; a mismatched pin yields no entity link. For an
 exact match, the explorer returns up to ten recorded inventory paths to

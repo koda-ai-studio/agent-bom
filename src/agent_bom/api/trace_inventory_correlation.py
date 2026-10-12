@@ -12,6 +12,22 @@ from typing import Any, Mapping, Sequence
 from agent_bom.runtime.cloud_trace_claims import cloud_trace_projection
 
 
+def _resource_conflicts(claims: dict[str, Any] | None, node: Any) -> bool:
+    if claims is None or node is None:
+        return False
+    origin = node.attributes.get("cloud_origin")
+    origin = origin if isinstance(origin, dict) else {}
+    expected = {
+        "cloud.resource_id": [origin.get("resource_id")],
+        "cloud.region": [node.attributes.get("region"), node.attributes.get("location"), origin.get("location")],
+    }
+    return any(
+        claims["attributes"].get(key) and isinstance(value, str) and value and claims["attributes"][key] != value
+        for key, values in expected.items()
+        for value in values
+    )
+
+
 def correlate_inventory_observations(
     store: Any, *, tenant_id: str, scan_id: str, observations: Sequence[Mapping[str, Any]]
 ) -> dict[str, dict[str, Any]]:
@@ -39,7 +55,9 @@ def correlate_inventory_observations(
         binding: dict[str, Any] = {"state": "unmapped", "execution_proven": False}
         result[str(row["observation_id"])] = binding
         cloud_claims = cloud_trace_projection(metadata)
-        if metadata.get("cloud_trace") is not None and (cloud_claims is None or cloud_claims.get("scope_state") != "consistent"):
+        if metadata.get("cloud_trace") is not None and (
+            cloud_claims is None or cloud_claims.get("scope_state") != "consistent" or _resource_conflicts(cloud_claims, node)
+        ):
             binding["state"] = "scope_conflict"
             continue
         if node is None:
