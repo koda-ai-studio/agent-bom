@@ -149,7 +149,7 @@ For coding assistants, run `agent-bom mcp server`. Start with eight focused tool
 
 ### Security, engineering and GRC: prioritize findings
 
-Start with **Posture**, inspect **Top risks**, and scope **Assets & coverage**. **Compliance** separates evaluated-control pass rate from assessment coverage; OWASP and MITRE ATLAS mappings show applicability. This synthetic estate does not establish certification or an audit opinion.
+Start with **Posture**, inspect **Top risks**, and scope **Assets & coverage**. **Compliance** separates evaluated-control pass rate from assessment coverage; OWASP and MITRE ATLAS mappings show applicability. Results from this offline synthetic enterprise estate do not establish certification or an audit opinion.
 
 <p align="center"><a href="docs/images/dashboard-live.png"><img src="docs/images/dashboard-live.png" alt="Posture and open findings with compliance and security-area disclosures collapsed in a labeled sample environment" width="1440"></a></p>
 

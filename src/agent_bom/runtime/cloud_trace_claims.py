@@ -19,6 +19,17 @@ CLOUD_TRACE_ATTRIBUTES = (
 )
 
 
+def cloud_trace_projection(metadata: Mapping[str, Any]) -> dict[str, Any] | None:
+    """Re-project even persisted input; a producer cannot assert independent proof."""
+    claim = metadata.get("cloud_trace")
+    if not isinstance(claim, dict) or not isinstance(claim.get("attributes"), dict):
+        return None
+    result = cloud_trace_claims(claim["attributes"], account_id=metadata.get("account_id", ""), provider=metadata.get("cloud_provider", ""))
+    if result is not None and claim.get("scope_state") != "consistent":
+        result["scope_state"] = "invalid" if claim.get("scope_state") != "conflict" else "conflict"
+    return result
+
+
 def cloud_trace_claims(attributes: Mapping[str, Any], *, account_id: str, provider: str) -> dict[str, Any] | None:
     """Keep exact identifiers or reject them; never truncate an ID into a match."""
     present = {key: attributes[key] for key in CLOUD_TRACE_ATTRIBUTES if key in attributes}

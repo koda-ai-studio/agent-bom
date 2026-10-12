@@ -3,6 +3,7 @@
 import pytest
 
 from agent_bom.api.native_trace_import import TraceImportScope, prepare_trace_page
+from agent_bom.api.trace_explorer import build_trace_explorer_payload
 from agent_bom.runtime.native_trace_spans import native_span
 
 ARN = "arn:aws:lambda:us-east-1:111111111111:function:process-invoice:3"
@@ -130,3 +131,27 @@ def test_cloud_claims_survive_replay_and_explorer_without_execution_upgrade(tmp_
     spans = response["sessions"][0]["spans"]
     assert {s["cloud_trace"]["attributes"]["faas.invocation_id"] for s in spans} == {"attempt-1", "attempt-2"}
     assert all(s["cloud_trace"]["execution_proven"] is False and s["parent_state"] == "missing" for s in spans)
+
+
+def test_explorer_does_not_repeat_untrusted_execution_proof_or_extra_claim_fields():
+    row = {
+        "tenant_id": "tenant",
+        "session_id": "session",
+        "observation_id": "span",
+        "surface": "imported_trace",
+        "metadata": {
+            "account_id": "111111111111",
+            "cloud_provider": "aws",
+            "cloud_trace": {
+                "basis": "independent_provider",
+                "execution_proven": True,
+                "scope_state": "consistent",
+                "attributes": {"aws.request_id": "request", "payload": "private-input"},
+            },
+        },
+    }
+    result = build_trace_explorer_payload(tenant_id="tenant", observations=[row], sessions=[], feed_events=[], findings=[], limit=10)
+    claims = result["sessions"][0]["spans"][0]["cloud_trace"]
+    assert claims["execution_proven"] is False
+    assert claims["basis"] == "source_reported"
+    assert claims["attributes"] == {"aws.request_id": "request"}

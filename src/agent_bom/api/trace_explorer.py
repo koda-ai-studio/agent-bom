@@ -10,6 +10,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any, Mapping, Sequence
 
+from agent_bom.runtime.cloud_trace_claims import cloud_trace_projection
+
 
 def _norm(value: object) -> str:
     return str(value or "").strip().lower()
@@ -101,7 +103,7 @@ def _span_from_observation(obs: Mapping[str, Any], *, findings: Sequence[Mapping
         "logical_root": metadata.get("logical_root"),
         "native_type": str(metadata.get("native_type") or ""),
         "native_name": str(metadata.get("native_name") or ""),
-        "cloud_trace": metadata.get("cloud_trace") if imported else None,
+        "cloud_trace": cloud_trace_projection(metadata) if imported else None,
         "event_time_missing": bool(metadata.get("event_time_missing")),
         "collected_at": metadata.get("collected_at"),
         "end_time_unix_nano": metadata.get("end_time_unix_nano"),

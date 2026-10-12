@@ -14,6 +14,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from agent_bom.api.runtime_event_store import RuntimeObservationRecord, sanitize_runtime_metadata
+from agent_bom.api.storage.runtime_records import RuntimeMetadataCache
 from agent_bom.runtime.cloud_trace_claims import cloud_trace_claims
 from agent_bom.security import sanitize_text
 
@@ -80,6 +81,11 @@ def _event_time(span: dict[str, Any]) -> str:
         return ""
 
 
+def _status_code(span: dict[str, Any]) -> object:
+    status = span.get("status")
+    return status.get("code") if isinstance(status, dict) else None
+
+
 def prepare_trace_page(payload: dict[str, Any], *, scope: TraceImportScope, collected_at: str) -> PreparedTracePage:
     """Namespace native IDs; report rejected rows without silently losing them."""
     collected_at = _collection_time(scope, collected_at)
@@ -88,6 +94,7 @@ def prepare_trace_page(payload: dict[str, Any], *, scope: TraceImportScope, coll
         raise ValueError("Trace import requires a bounded span page")
     records: list[RuntimeObservationRecord] = []
     rejected: Counter[str] = Counter()
+    cache = RuntimeMetadataCache()
     for span in spans:
         if not isinstance(span, dict):
             rejected["invalid_span"] += 1
@@ -112,8 +119,7 @@ def prepare_trace_page(payload: dict[str, Any], *, scope: TraceImportScope, coll
         native_type = attrs.get("agent_bom.native_type", "unknown")
         native_name = sanitize_text(attrs.get("agent_bom.native_name", ""), max_len=300)
         observed_at = _event_time(span)
-        status = span.get("status")
-        code = status.get("code") if isinstance(status, dict) else None
+        code = _status_code(span)
         metadata: dict[str, Any] = {
             "schema_version": "native_trace.v1",
             "provider": scope.provider,
@@ -156,7 +162,7 @@ def prepare_trace_page(payload: dict[str, Any], *, scope: TraceImportScope, coll
                 trace_id=sanitize_text(trace_id, max_len=512),
                 span_id=sanitize_text(native_id, max_len=512),
                 summary={"message": native_name},
-                metadata=sanitize_runtime_metadata(metadata),
+                metadata=sanitize_runtime_metadata(metadata, _cache=cache),
             )
         )
     return PreparedTracePage(observations=records, rejected=dict(sorted(rejected.items())))

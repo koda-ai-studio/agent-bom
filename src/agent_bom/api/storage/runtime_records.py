@@ -74,7 +74,15 @@ class RuntimeSessionRecord:
         return asdict(self)
 
 
-def sanitize_runtime_metadata(value: object, *, max_items: int = 50) -> dict[str, Any]:
+class RuntimeMetadataCache:
+    """Bounded redaction memoization owned by one import page, never a store."""
+
+    def __init__(self) -> None:
+        self.strings: dict[tuple[str | None, str, int], object] = {}
+        self.keys: dict[str, str] = {}
+
+
+def sanitize_runtime_metadata(value: object, *, max_items: int = 50, _cache: RuntimeMetadataCache | None = None) -> dict[str, Any]:
     """Return metadata safe for durable runtime observability storage.
 
     Raw prompt, argument, and tool-output fields are intentionally omitted.
@@ -88,7 +96,13 @@ def sanitize_runtime_metadata(value: object, *, max_items: int = 50) -> dict[str
         key = sanitize_text(raw_key, max_len=120)
         if not key or key.lower() in RAW_RUNTIME_FIELDS:
             continue
-        safe[key] = sanitize_sensitive_payload(raw_value, key=key, max_str_len=500)
+        safe[key] = sanitize_sensitive_payload(
+            raw_value,
+            key=key,
+            max_str_len=500,
+            _string_cache=_cache.strings if _cache is not None else None,
+            _key_cache=_cache.keys if _cache is not None else None,
+        )
     return safe
 
 

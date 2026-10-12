@@ -6,6 +6,7 @@ import pytest
 
 from agent_bom.api.native_trace_import import TraceImportScope, prepare_trace_page
 from agent_bom.api.runtime_event_store import SQLiteRuntimeEventStore
+from agent_bom.runtime.native_trace_spans import native_span
 
 SCOPE = TraceImportScope(
     tenant_id="tenant",
@@ -111,3 +112,48 @@ def test_missing_event_time_is_explicit_and_keeps_collection_time_separate():
     assert record.metadata["event_time_missing"] is True
     assert record.metadata["start_time_unix_nano"] is None
     assert record.metadata["collected_at"] == TIME
+
+
+def test_repeated_native_metadata_is_redacted_once_per_page_and_cache_does_not_survive(monkeypatch):
+    from agent_bom import security
+
+    calls = []
+    original = security._sanitize_sensitive_string
+
+    def observed(value, **kwargs):
+        if value == "langfuse" and kwargs.get("key") == "provider":
+            calls.append(value)
+        return original(value, **kwargs)
+
+    monkeypatch.setattr(security, "_sanitize_sensitive_string", observed)
+    scope = TraceImportScope("tenant", "langfuse", "connection", "https://traces.example", "project")
+    payload = {
+        "spans": [
+            native_span(
+                {"id": str(i), "traceId": "trace", "name": "api_key=private-value", "type": "TOOL"},
+                provider="langfuse",
+                include_content=False,
+            )
+            for i in range(100)
+        ]
+    }
+    first = prepare_trace_page(payload, scope=scope, collected_at="2026-10-12T00:00:00Z")
+    assert len(calls) == 1
+    second = prepare_trace_page(payload, scope=scope, collected_at="2026-10-12T00:00:00Z")
+    assert len(calls) == 2
+    assert first == second
+    assert "private-value" not in repr(first)
+
+
+def test_page_redaction_cache_keeps_field_policy_and_raw_payload_exclusion():
+    from agent_bom.api.storage.runtime_records import RuntimeMetadataCache, sanitize_runtime_metadata
+
+    cache = RuntimeMetadataCache()
+    metadata = {"label": "same-value", "password": "same-value", "prompt": "private-input"}
+    expected = sanitize_runtime_metadata(metadata)
+    assert expected["label"] == "same-value"
+    assert expected["password"] == "***REDACTED***"
+    assert "prompt" not in expected
+    for _ in range(2):
+        assert sanitize_runtime_metadata(metadata, _cache=cache) == expected
+    assert len(cache.strings) == 2
