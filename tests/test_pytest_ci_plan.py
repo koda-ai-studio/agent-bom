@@ -532,3 +532,21 @@ def test_frontdoor_edits_select_product_explanation_contract(tmp_path, source):
     contract = tmp_path / "tests/test_product_explanations.py"
     _write(contract, 1)
     assert select_targeted_tests(changed_files=[Path(source)], root=tmp_path) == [contract]
+
+
+@pytest.mark.parametrize(
+    "source",
+    ["README.md", "docs/README.md", "docs/NEW_GUIDE.md", "docs/perf/new-guide.md", "site-docs/new-guide.md"],
+)
+def test_documentation_edits_select_index_and_link_contracts(tmp_path, source):
+    contract = tmp_path / "tests/test_docs_front_door.py"
+    _write(contract, 1)
+    _write(tmp_path / "tests/test_unrelated.py", 1)
+    # New and deleted documents need the contract even without a current file.
+    assert select_targeted_tests(changed_files=[Path(source)], root=tmp_path) == [contract]
+
+
+@pytest.mark.parametrize("source", ["docs/image.png", "src/agent_bom/example.py"])
+def test_non_documentation_edits_do_not_select_index_contract(tmp_path, source):
+    _write(tmp_path / "tests/test_docs_front_door.py", 1)
+    assert select_targeted_tests(changed_files=[Path(source)], root=tmp_path) == []

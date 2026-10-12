@@ -223,6 +223,10 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
 
     for changed in changed_files:
         normalized = Path(changed.as_posix().removeprefix("./"))
+        if normalized.suffix == ".md" and (
+            normalized.as_posix() == "README.md" or normalized.as_posix().startswith(("docs/", "site-docs/"))
+        ):
+            selected.update(candidate for candidate in available if candidate.name == "test_docs_front_door.py")
         if normalized.as_posix() in {"README.md", "docs/GALLERY.md"}:
             selected.update(candidate for candidate in available if candidate.name == "test_product_explanations.py")
         if normalized.as_posix() in {"src/agent_bom/domain/report_payloads.py", "src/agent_bom/api/read_models/scan.py"}:
