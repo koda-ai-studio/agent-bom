@@ -16,4 +16,3 @@ export function graphResponseWithPagination(data, collection = "nodes") {
     pagination: { total: data[collection].length, offset: 0, limit: data[collection].length, has_more: false },
   };
 }
-
