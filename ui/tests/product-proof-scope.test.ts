@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertCaptureSnapshotScope } from "../scripts/product-proof-scope.mjs";
+import { assertCaptureSnapshotScope, graphResponseWithPagination } from "../scripts/product-proof-scope.mjs";
 
 const gallery = "scan-proof-ai-platform";
 const reference = "reference-evidence-correlation-v1";
@@ -19,4 +19,12 @@ describe("capture fixture snapshot scope", () => {
   ])("rejects unsupported requests or mismatched response/base identity: %s", (url, responseIds) => {
     expect(() => assertCaptureSnapshotScope(url, gallery, responseIds)).toThrow("Capture fixture snapshot scope mismatch");
   });
+});
+
+
+it("counts attack paths independently from graph nodes in screenshot responses", () => {
+  const graph = { nodes: [{ id: "a" }, { id: "b" }], attack_paths: [] };
+  expect(graphResponseWithPagination(graph, "attack_paths").pagination.total).toBe(0);
+  expect(graphResponseWithPagination({ ...graph, attack_paths: [{ id: "path" }] }, "attack_paths").pagination.total).toBe(1);
+  expect(graphResponseWithPagination(graph).pagination.total).toBe(2);
 });

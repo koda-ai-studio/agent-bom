@@ -8,7 +8,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
-import { assertCaptureSnapshotScope } from "./product-proof-scope.mjs";
+import { assertCaptureSnapshotScope, graphResponseWithPagination } from "./product-proof-scope.mjs";
 import { waitForOwnedServer } from "./product-proof-server.mjs";
 import { captureSourceProvenance } from "./product-proof-provenance.mjs";
 
@@ -1480,13 +1480,6 @@ function auditEntries() {
   }));
 }
 
-function graphResponseWithPagination(data = graph) {
-  return {
-    ...data,
-    pagination: { total: data.nodes.length, offset: 0, limit: data.nodes.length, has_more: false },
-  };
-}
-
 const INVENTORY_FINDING_TYPES = new Set([
   "finding",
   "vulnerability",
@@ -2130,7 +2123,7 @@ async function installRoutes(page, fixtureGraph = graph) {
   await page.route("**/v1/graph/attack-paths?**", (route) => {
     const url = new URL(route.request().url());
     const selectedGraph = url.searchParams.get("scan_id") === REFERENCE_CORRELATION_ID ? referenceGraph : graph;
-    return fulfill(route, graphResponseWithPagination(selectedGraph));
+    return fulfill(route, graphResponseWithPagination(selectedGraph, "attack_paths"));
   });
   await page.route("**/v1/graph/exposure-paths?**", (route) => fulfill(route, {
     schema_version: "exposure-paths.v1",
@@ -3170,7 +3163,7 @@ async function main() {
           await expect(p.locator(".react-flow__node")).toHaveCount(fixture.nodes.length);
           await fitReactFlow(p);
           await scrollTo(p, 0);
-        }, { expectedText: [/Demo data/i, ...fixture.nodes.map(n => new RegExp(n.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"))],
+        }, { expectedText: [/Demo data/i, "0 snapshot paths", ...fixture.nodes.map(n => new RegExp(n.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"))],
           expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph"],
           minGraphNodes: fixture.nodes.length, maxGraphNodes: fixture.nodes.length,
           minGraphEdges: fixture.edges.length, maxGraphEdges: fixture.edges.length,
