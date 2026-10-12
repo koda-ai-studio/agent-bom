@@ -17,6 +17,11 @@ for (const theme of ["light", "dark"]) {
       else if (path === "/v1/connectors") body = { connectors: [] };
       else if (path === "/v1/discovery/providers") body = { providers: [] };
       else if (path === "/v1/traces/connectors") body = { connections: [{ id: "production", provider: "langfuse", display_name: "Production traces" }], connectors: [] };
+      else if (path === "/v1/traces/connectors/langfuse/collection") body = { status: "partial", persisted: 100, pages: 1, retry_after_seconds: 0 };
+      else if (path === "/v1/traces/connectors/langfuse/collect") {
+        expect(request.postDataJSON()).toEqual({ connection_id: "production" });
+        body = { status: "failed", persisted: 100, pages: 1, retry_after_seconds: 900, last_error: "rate_limited" };
+      }
       else if (path === "/v1/traces/connectors/langfuse/pull") {
         expect(request.postDataJSON()).toMatchObject({ connection_id: "production", screen_content: false, limit: 50 });
         expect(request.postDataJSON()).not.toHaveProperty("credentials");
@@ -31,9 +36,14 @@ for (const theme of ["light", "dark"]) {
     await expect(page).toHaveURL(/connections\?tab=traces/);
     await page.getByLabel("Managed connection").selectOption("production");
     await expect(page.getByLabel("Secret key", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("100 observations saved · 1 pages committed")).toBeVisible();
+    await page.getByRole("button", { name: "Collect next page" }).click();
+    await expect(page.getByText(/Provider rate limit/)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Collect next page" })).toBeDisabled();
     await page.getByRole("button", { name: "Pull and correlate" }).click();
     await expect(page.getByText("2 tool calls reviewed · 1 finding matches")).toBeVisible();
     await expect(page.getByLabel("Secret key", { exact: true })).toHaveCount(0);
+
     await expect(page.getByRole("link", { name: "CVE-2025-1234" })).toHaveAttribute("href", "/findings?cve=CVE-2025-1234");
     await expect(page.getByText(/not saved to the trace explorer/)).toBeVisible();
     for (const width of [1280, 390]) {

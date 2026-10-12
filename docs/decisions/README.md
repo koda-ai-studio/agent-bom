@@ -38,6 +38,8 @@ the two logs merged; the original OSV record was folded into 002.
 | 014 | [UI Authentication Model](014-ui-auth-model.md) | Accepted | 2026-04-20 |
 | 015 | [Materialized Scan Finding Snapshots](015-materialized-scan-finding-snapshots.md) | Partially implemented | 2026-10-10 |
 
+| 016 | [Resumable Trace Collection](016-resumable-trace-collection.md) | Implemented for managed Langfuse v2 | 2026-10-12 |
+
 ## Adding a New ADR
 
 1. Copy the template: `cp docs/decisions/_template.md docs/decisions/NNN-title.md`

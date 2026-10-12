@@ -1,12 +1,10 @@
 """Observability and data ingestion API routes.
 
-Endpoints:
-    POST /v1/traces                          ingest OpenTelemetry traces
-    POST /v1/traces/attack-paths             per-span trace -> attack-path join
-    GET  /v1/traces/connectors               list native trace-pull connectors
-    POST /v1/traces/connectors/{provider}/pull  pull + correlate Langfuse/LangSmith traces
-    POST /v1/results/push                    receive pushed scan results from CLI
-    POST /v1/ocsf/ingest                     receive OCSF interoperability events
+POST /v1/traces                          ingest OpenTelemetry traces
+POST /v1/traces/attack-paths             per-span trace -> attack-path join
+GET  /v1/traces/connectors               list native trace-pull connectors
+POST /v1/traces/connectors/{provider}/pull  pull + correlate Langfuse/LangSmith traces
+POST /v1/results/push                    receive pushed scan results from CLI
 """
 
 from __future__ import annotations
@@ -57,6 +55,7 @@ from agent_bom.api.stores import (
 )
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.api.tenant_quota import enforce_retained_jobs_quota, tenant_quota_guard
+from agent_bom.api.trace_collection.routes import router as trace_collection_router
 from agent_bom.api.trace_connection_broker import public_connections, pull_credentials
 from agent_bom.canonical_ids import canonical_id
 from agent_bom.config import API_MAX_OCSF_INGEST_EVENTS
@@ -65,6 +64,7 @@ from agent_bom.rbac import require_authenticated_permission
 from agent_bom.security import sanitize_error, sanitize_sensitive_payload, sanitize_text
 
 router = APIRouter(dependencies=[Depends(demo_daily_evidence_dependency)])
+router.include_router(trace_collection_router, dependencies=[cast(Any, require_authenticated_permission("runtime_ingest"))])
 infra_router = APIRouter()
 _logger = logging.getLogger(__name__)
 _RUNTIME_READ: dict[str, Any] = {"tags": ["runtime", "observability"], "dependencies": [require_authenticated_permission("read")]}

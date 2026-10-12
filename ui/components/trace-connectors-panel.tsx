@@ -1,5 +1,6 @@
 "use client";
 
+import { TraceCollectionPanel } from "@/components/trace-collection-panel";
 import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { api } from "@/lib/api";
@@ -10,7 +11,7 @@ type Provider = "langfuse" | "langsmith";
 const hosts = { langfuse: "https://cloud.langfuse.com", langsmith: "https://api.smith.langchain.com" };
 
 export function TraceConnectorsPanel() {
-  const { hasCapability } = useAuthState();
+  const { hasCapability, session } = useAuthState();
   const [provider, setProvider] = useState<Provider>("langfuse");
   const [host, setHost] = useState(hosts.langfuse);
   const [publicKey, setPublicKey] = useState("");
@@ -91,7 +92,8 @@ export function TraceConnectorsPanel() {
       <button disabled={pending || (!manual && !connectionId)} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">{pending ? "Correlating…" : "Pull and correlate"}</button>
     </form>
     <div className="space-y-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-5">
-      <h2 className="text-lg font-semibold">Correlation result</h2>
+      {!manual && provider === "langfuse" && connectionId && <TraceCollectionPanel key={JSON.stringify([session, connectionId])} connectionId={connectionId} />}
+      <h2 className="text-lg font-semibold">Sample correlation result</h2>
       <p className="text-sm text-[var(--text-secondary)]">This request reviews up to 50 provider records. Results are not saved to the trace explorer; this is not continuous collection or a complete trace history.</p>
       {!result && !error && <p role="status" className="text-sm text-[var(--text-secondary)]">{pending ? "Waiting for the provider…" : "Select a platform and pull a sample to review security matches."}</p>}
       {error && <p role="alert" className="text-sm text-red-700 dark:text-red-300">Trace pull failed. Check access, project name, endpoint and provider availability. No successful result is available.</p>}
