@@ -576,13 +576,13 @@ def annotate_graph_mcp_auth_from_report(graph: UnifiedGraph, report_json: dict[s
     nodes. No-op when no MCP-auth findings are present.
     """
     from agent_bom.graph.container import InteractionRisk
-    from agent_bom.graph.types import EntityType
+    from agent_bom.graph.mcp_audit_projection import auth_server_index
 
     raw_findings = report_json.get("findings")
     if not isinstance(raw_findings, list):
         return {"nodes_flagged": 0, "interaction_risks": 0}
 
-    server_nodes = {n.label: n for n in graph.nodes.values() if n.entity_type == EntityType.SERVER}
+    server_nodes = auth_server_index(graph)
 
     flagged = 0
     risks_added = 0
@@ -597,9 +597,10 @@ def annotate_graph_mcp_auth_from_report(graph: UnifiedGraph, report_json: dict[s
         raw_asset = raw.get("asset")
         asset: dict[str, Any] = raw_asset if isinstance(raw_asset, dict) else {}
         server_label = str(evidence.get("server", "")) or str(asset.get("name", ""))
-        node = server_nodes.get(server_label)
-        if node is not None and _flag_node(node, weakness):
-            flagged += 1
+        matches = server_nodes.get("id:" + str(asset.get("identifier") or ""), []) or server_nodes.get("label:" + server_label, [])
+        for node in matches:
+            if _flag_node(node, weakness):
+                flagged += 1
         try:
             risk_score = min(10.0, max(0.0, float(raw.get("risk_score", 0.0) or 0.0)))
         except (TypeError, ValueError):
@@ -619,34 +620,5 @@ def annotate_graph_mcp_auth_from_report(graph: UnifiedGraph, report_json: dict[s
 
 
 def annotate_graph_mcp_auth(graph: UnifiedGraph, findings: list[Finding]) -> dict[str, int]:
-    """Flag MCP-server nodes named by MCP-auth findings; record interaction risks.
-
-    Reuses existing ``EntityType.SERVER`` and ``InteractionRisk`` — invents
-    no new graph types. Matches findings to nodes by server label/name. Never
-    raises into the builder.
-    """
-    from agent_bom.graph.container import InteractionRisk
-    from agent_bom.graph.types import EntityType
-
-    flagged = 0
-    risks_added = 0
-    server_nodes = {n.label: n for n in graph.nodes.values() if n.entity_type == EntityType.SERVER}
-
-    for finding in findings:
-        weakness = str(finding.evidence.get("mcp_auth_weakness", ""))
-        server_label = str(finding.evidence.get("server", "")) or finding.asset.name
-        node = server_nodes.get(server_label)
-        if node is not None and _flag_node(node, weakness):
-            flagged += 1
-        graph.interaction_risks.append(
-            InteractionRisk(
-                pattern=f"mcp_auth.{weakness}" if weakness else "mcp_auth",
-                agents=[str(finding.evidence.get("agent", ""))] if finding.evidence.get("agent") else [],
-                risk_score=min(10.0, max(0.0, finding.risk_score)),
-                description=finding.title,
-                owasp_agentic_tag=_MCP_AUTH_OWASP_AGENTIC[0],
-            )
-        )
-        risks_added += 1
-
-    return {"nodes_flagged": flagged, "interaction_risks": risks_added}
+    """Use the same identity-safe projection for object and serialized findings."""
+    return annotate_graph_mcp_auth_from_report(graph, {"findings": [finding.to_dict() for finding in findings]})

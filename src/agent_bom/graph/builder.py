@@ -208,7 +208,7 @@ from agent_bom.graph.finding_projection import _resolve_skill_audit_target_ids a
 from agent_bom.graph.finding_projection import (
     project_iac,
     project_sast,
-    project_secret_findings,
+    project_scan_findings,
     project_skill_audit,
     project_toxic_combinations,
 )
@@ -400,7 +400,7 @@ def _project_inventory_findings(
     project_sast(graph, report.get("sast") or report.get("sast_data"))
     project_iac(graph, report.get("iac_findings") or report.get("iac_findings_data"))
     project_skill_audit(graph, report.get("skill_audit"), indexes)
-    project_secret_findings(graph, report.get("findings"))
+    project_scan_findings(graph, report.get("findings"))
     return inventories
 
 

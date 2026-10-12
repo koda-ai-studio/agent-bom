@@ -17,7 +17,7 @@ expose different profiles; connect only the entries needed for the task.
 | `graph` | 10 | Inventory rollup, asset drill-down and scoped correlation | Use inventory_summary → inventory_list → inventory_asset, then inspect paths |
 | `cloud` | 6 | Inventory, connection scope and CIS posture | cloud-connection-review |
 | `runtime` | 7 | Gateway policy, alerts and incident evidence | incident-triage, gateway-fleet-live-demo |
-| `audit` | 4 | Scan, framework mapping, policy and audit integrity | compliance-report |
+| `audit` | 6 | Scan, descriptor and permission checks, prompt inspection, framework mapping, policy and audit integrity | compliance-report |
 
 For component inspection, call `inventory_asset` with the asset's exact graph
 ID and the `scan_id` returned by inventory. The artifact contains attributes,

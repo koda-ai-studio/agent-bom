@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { api, type ScanJob, type ScanJobStatus, type ScanResult, type BlastRadius, type RemediationItem, type GraphExportFormat, formatDate, OWASP_LLM_TOP10, MITRE_ATLAS, severityColor } from "@/lib/api";
 import { useScanStream } from "@/lib/use-scan-stream";
+import { McpAuditPanel } from "@/components/mcp-audit-panel";
 import { ScanEvidencePanel } from "@/components/scan-evidence-panel";
 import { JobPipelinePanel } from "@/components/job-pipeline-panel";
 import { RepoScanOverviewPanel } from "@/components/repo-scan-overview-panel";
@@ -236,6 +237,7 @@ export function ScanResultView({ id }: { id: string }) {
       )}
 
       {job?.status === "done" && result ? <ScanEvidencePanel key={id} jobId={id} result={result} /> : null}
+      {job?.status === "done" && result ? <McpAuditPanel result={result} scanId={id} /> : null}
 
       {/* Summary stats */}
       {summary && (
