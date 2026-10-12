@@ -91,3 +91,34 @@ limits, HTTP 410, and server failures remain visible errors. The legacy API can
 return content even when the adapter excludes it from evidence.
 
 See the [Langfuse public API contract](https://langfuse.com/docs/api-and-data-platform/features/public-api).
+
+## Save and resume Langfuse evidence
+
+Select a managed Langfuse connection, then choose **Save trace evidence → Collect
+next page**. The receipt shows cumulative saved observations, committed pages,
+collection progress, and retry delays. Open **Trace explorer** to inspect retained
+observations. Each request imports at most 100 metadata-only tool observations;
+collection runs only when requested. **Pull and correlate** remains a transient
+sample, and LangSmith retains that existing behavior.
+
+For an authenticated API client, POST a body such as
+`{"connection_id":"production-traces"}` to
+`/v1/traces/connectors/langfuse/collect`. Inspect the returned `status`:
+`partial` means request another page; `caught_up` means that selected time window
+has been collected; `failed` requires inspecting `last_error` and waiting
+`retry_after_seconds` before retrying. GET
+`/v1/traces/connectors/langfuse/collection?connection_id=production-traces`
+recovers status after a client disconnect. Both endpoints require runtime ingest
+permission; provider credentials and cursors remain server-side. They do not
+accept endpoint, cursor, content, or tenant overrides.
+
+The first window covers the previous day with a 15-minute ingestion delay.
+Subsequent completed windows overlap 30 minutes, with bounded replay deduplication.
+Missing older observations, provider mutations, and late arrivals beyond this
+window remain coverage gaps. Imported tool names may produce correlation
+candidates; they do not prove cloud workload identity or exploitation.
+
+For operators, [ADR-016](decisions/016-resumable-trace-collection.md) specifies
+atomicity, leases, retention, HTTP and storage limits, failure behavior, migration,
+and rollback. Private hosts remain unsupported for pull; use the existing OTLP
+collector route for private deployments.

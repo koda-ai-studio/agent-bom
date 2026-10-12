@@ -38,7 +38,7 @@ resumes from the last complete batch and keeps a bounded event buffer. See the
 NVD synchronization also has checkpointed incremental updates and failure
 recovery [tests](../tests/test_db_sync_nvd_incremental.py).
 
-The missing incremental path below is specifically **Langfuse/LangSmith pull**.
+Managed Langfuse v2 connections also support [resumable, metadata-only collection](TRACE_CONNECTIONS.md#save-and-resume-langfuse-evidence). Each request commits one page and its checkpoint atomically. Continuous scheduling and LangSmith incremental collection remain open.
 Reuse the established cursor, tenant, replay, and retention contracts when adding
 provider collection state; do not introduce a second conflicting event ledger.
 A workload with thousands of daily events needs measured burst throughput,
@@ -106,8 +106,8 @@ Never attach production credentials, prompts, customer traces, or private keys.
 | P1 — Unified connection authorization | Connections hub, existing SSO and credential brokers | One connection lifecycle across supported integrations: prefer supported OAuth/workload identity, otherwise operator-managed keys; per-connection grants, validation status, revocation, and expiry; no unsupported SSO-to-API access claims |
 | P1 — Live platform qualification | `trace_connectors.py`, connector/API tests | Opt-in integration tests for supported Langfuse/LangSmith versions; success, 401/403, 429, malformed response, project isolation, empty versus incomplete results; sanitized fixtures without real content |
 | P1 — Current provider API adapters | Existing pull connectors | Langfuse observations v2 and LangSmith query-version compatibility behind explicit contracts; bounded pagination, timeout/retry policy, no silent broadening of project scope, migration docs |
-| P1 — Incremental provider collection | Existing pull connectors and gateway/runtime storage contracts | Durable per-tenant provider cursors, overlapping-window replay deduplication, bounded backfill, restart and rate-limit recovery; preserve checkpoints on partial failure; measure burst throughput, lag, storage, and query latency |
-| P1 — Persist imported trace evidence | `api/routes/observability.py`, runtime event store | Tenant-scoped stable trace/span/source IDs, replay deduplication, pagination receipts, retention limits, authorization tests, and visible persisted versus transient results |
+| P1 — Extend incremental collection beyond managed Langfuse v2 | Existing pull connectors and gateway/runtime storage contracts | Durable per-tenant provider cursors, overlapping-window replay deduplication, bounded backfill, restart and rate-limit recovery; preserve checkpoints on partial failure; measure burst throughput, lag, storage, and query latency |
+| P1 — Extend persisted import beyond managed Langfuse v2 | `api/routes/observability.py`, runtime event store | Tenant-scoped stable trace/span/source IDs, replay deduplication, pagination receipts, retention limits, authorization tests, and visible persisted versus transient results |
 | P1 — Exact trace navigation | `api/trace_explorer.py`, `trace-explorer-panel.tsx` | Server-side trace filtering; preserve actual parent IDs; distinguish sessions, traces, and spans; handle missing parents, replay, cycles, and multiple agents without inventing nesting |
 | P2 — Framework compatibility fixtures | `otel_ingest.py` and parser tests | Versioned LangChain/LangGraph exports covering tools, LLMs, retrieval, branches, retries, and interrupts; expected correlation and unsupported fields documented |
 | P1 — Environment-scoped runtime evidence | Trace adapters, inventory identities, graph projections | Preserve source/project, trace/span/parent IDs, stable workload/agent IDs, cloud account/environment and observation time; bind matches to the tenant and scan snapshot; distinguish exact IDs from name matches and reject ambiguous cross-environment attribution |

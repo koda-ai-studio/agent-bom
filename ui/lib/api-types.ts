@@ -5350,3 +5350,5 @@ export interface GraphIncidentPage {
   next_cursor: string | null;
   completeness: Omit<GraphCompleteness, "total"> & { total: null; scope: "incident_edge_page"; missing_endpoint_count: number };
 }
+
+export type TraceCollectionReceipt = ApiSchemas["CollectionReceipt"];
