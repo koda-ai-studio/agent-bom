@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { TraceConnectorsPanel } from "@/components/trace-connectors-panel";
 const mocks = vi.hoisted(() => ({ pull: vi.fn(), list: vi.fn().mockResolvedValue({ connections: [{id: "production", provider: "langfuse", display_name: "Production traces"}] }), allowed: true }));
-vi.mock("@/lib/api", () => ({ api: { pullTraceConnector: mocks.pull, listTraceConnectors: mocks.list } }));
+vi.mock("@/lib/api", () => ({ api: { traceCollectionStatus: vi.fn().mockResolvedValue({status: "not_started", persisted: 0}), collectTracePage: vi.fn(), pullTraceConnector: mocks.pull, listTraceConnectors: mocks.list } }));
 vi.mock("@/components/auth-provider", () => ({ useAuthState: () => ({ hasCapability: () => mocks.allowed }) }));
 afterEach(() => { vi.clearAllMocks(); mocks.allowed = true; });
 it("pulls metadata without content and labels ephemeral results honestly", async () => {

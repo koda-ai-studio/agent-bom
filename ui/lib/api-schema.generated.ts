@@ -8036,6 +8036,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/traces/connectors/langfuse/collect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Collect Trace Page */
+        post: operations["collect_trace_page_v1_traces_connectors_langfuse_collect_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/traces/connectors/langfuse/collection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Collection Status */
+        get: operations["collection_status_v1_traces_connectors_langfuse_collection_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/traces/connectors/{provider}/pull": {
         parameters: {
             query?: never;
@@ -10443,6 +10477,77 @@ export interface components {
              * @default default
              */
             namespace: string;
+        };
+        /** CollectionReceipt */
+        CollectionReceipt: {
+            /** Completed Until */
+            completed_until?: string | null;
+            /** Connection Id */
+            connection_id: string;
+            /**
+             * Consecutive Failures
+             * @default 0
+             */
+            consecutive_failures: number;
+            /**
+             * Coverage
+             * @default bounded_window
+             * @constant
+             */
+            coverage: "bounded_window";
+            /** Lag Seconds */
+            lag_seconds?: number | null;
+            /** Last Error */
+            last_error?: string | null;
+            /** Last Success */
+            last_success?: string | null;
+            /**
+             * Pages
+             * @default 0
+             */
+            pages: number;
+            /**
+             * Persisted
+             * @default 0
+             */
+            persisted: number;
+            /**
+             * Provider
+             * @default langfuse
+             * @constant
+             */
+            provider: "langfuse";
+            /**
+             * Raw Payload Stored
+             * @default false
+             * @constant
+             */
+            raw_payload_stored: false;
+            /**
+             * Retry After Seconds
+             * @default 0
+             */
+            retry_after_seconds: number;
+            /**
+             * Schema Version
+             * @default trace.collection.v1
+             * @constant
+             */
+            schema_version: "trace.collection.v1";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "not_started" | "collecting" | "partial" | "caught_up" | "failed";
+            /** Window End */
+            window_end?: string | null;
+            /** Window Start */
+            window_start?: string | null;
+        };
+        /** CollectionRequest */
+        CollectionRequest: {
+            /** Connection Id */
+            connection_id: string;
         };
         /**
          * CollectionStatus
@@ -42346,6 +42451,96 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TraceConnectorsResponse"];
+                };
+            };
+            /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE) */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    collect_trace_page_v1_traces_connectors_langfuse_collect_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "X-Agent-Bom-Role"?: string | null;
+                "X-Agent-Bom-Tenant-ID"?: string | null;
+                "X-Agent-Bom-Proxy-Secret"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CollectionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionReceipt"];
+                };
+            };
+            /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE) */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    collection_status_v1_traces_connectors_langfuse_collection_get: {
+        parameters: {
+            query: {
+                connection_id: string;
+            };
+            header?: {
+                "X-Agent-Bom-Role"?: string | null;
+                "X-Agent-Bom-Tenant-ID"?: string | null;
+                "X-Agent-Bom-Proxy-Secret"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CollectionReceipt"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
