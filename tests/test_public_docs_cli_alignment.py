@@ -233,6 +233,7 @@ def test_readme_storefront_is_concise_ordered_and_actionable() -> None:
         "context-map-horizontal-dark-live.png",
         "dashboard-live.png",
         "correlation-graph-live.png",
+        "graph-relationship-dark-live.png",
         "remediation-live.png",
     ]
     assert "correlation-path-live.png" not in readme

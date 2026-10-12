@@ -115,7 +115,7 @@ def test_readme_shows_the_end_to_end_product_journey_and_links_the_gallery() -> 
     ]
     assert front.index("img.shields.io") < front.index("context-map-horizontal-dark-live.png")
     assert "labeled sample data" in front
-    assert "<summary>Explore graph navigation, permissions and evidence</summary>" in journey
+    assert "[Explore the graph gallery](docs/GALLERY.md#explore-connections-and-inspect-evidence)" in journey
     grc = journey.split("### Security, engineering and GRC:", 1)[1].split("### AppSec", 1)[0]
     assert "dashboard-live.png" in grc
     assert "[expanded framework evidence](docs/images/dashboard-paths-live.png)" in grc

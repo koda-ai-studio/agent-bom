@@ -1,9 +1,9 @@
 {
   "release_version": "0.108.4",
-  "captured_at": "2026-10-12T09:02:53.540Z",
-  "source_commit": "1a9c6ef12b62389ae9ebd4b428fd9d13babb9bd1",
+  "captured_at": "2026-10-12T15:50:19.539Z",
+  "source_commit": "6bfaeb6dc88a4fd54eed07379dcc9fd3b69c02c9",
   "source_tree": "clean",
-  "capture_inputs_sha256": "sha256:9f53955775e45583e9ca86d963198b7efda4dfdb838e4e95612cd1eff4d499de",
+  "capture_inputs_sha256": "sha256:c809229b24174dc402b4bce2172d1d8a7d4b7955d0244735b4c6bae39be44557",
   "capture_note": "Deterministically captured from real Next.js dashboard routes in capture mode. The correlation hero views consume the committed, hash-pinned Reference evidence lab — modeled local infrastructure artifact with CVE-2023-4863 and exact canonical joins. Remaining gallery fixtures are explicitly synthetic UI states. No external, customer, or private infrastructure data is used.",
   "screenshots": [
     {
@@ -36,7 +36,7 @@
       "page": "/compliance?asset=pkg%3Anext&scan=scan-proof-ai-platform&capture=1",
       "scope": "Synthetic control applicability mapping explicitly marked not evaluated",
       "visible_version": "0.108.4",
-      "sha256": "sha256:8bfd6772c79440ac6ed5bc18722a9ae7bb5192debf7f5b69a158257948b632da"
+      "sha256": "sha256:87da8e59ca5063d3edb9dd01efee4b3adc035f5557be88f55cdac6bd0b0ebc75"
     },
     {
       "presentation": "light mobile",
@@ -172,7 +172,7 @@
       "page": "/graph?lens=mesh&scan=scan-proof-ai-platform&agent=agent%3Adeveloper-copilot&capture=1",
       "scope": "Persisted agent neighborhood with recorded shared filesystem connections and both IDE + SRE agents in scope",
       "visible_version": "0.108.4",
-      "sha256": "sha256:c7efbaa39680010dfd63ab63ee756eb1af4c4cd2de647c43d04d4fb4e3d32062"
+      "sha256": "sha256:db540a8b7357e3a489c6de4650bd199eaf66d1985e7f6dd3c1d16a65565e1a95"
     },
     {
       "presentation": "dark desktop",
@@ -203,6 +203,28 @@
     },
     {
       "presentation": "dark desktop",
+      "path": "graph-relationship-dark-live.png",
+      "page": "/graph?capture=1&scan=reference-evidence-correlation-v1&layers=server,agent,tool",
+      "scope": "Reference evidence lab local gateway invocation with relationship direction, snapshot, timestamps and recorded runtime evidence; modeled infrastructure remains separate",
+      "evidence_artifact": "examples/reference-evidence-lab/generated/correlation-proof.json",
+      "evidence_sha256": "sha256:f4f8901f412997be7690b50ce8e7468ba8f781dc22b85e7b5f44408e28fe2c5f",
+      "correlation_manifest_sha256": "sha256:fe781c82f958c2f9aa4cadfa2289aa767629dc7d6716e11add790e8f3336fc3a",
+      "visible_version": "0.108.4",
+      "sha256": "sha256:676c46e9d2f02732395363034d8de365850ea493a6acaa02fd0088d5a1e25d76"
+    },
+    {
+      "presentation": "light desktop",
+      "path": "graph-relationship-light-live.png",
+      "page": "/graph?capture=1&scan=reference-evidence-correlation-v1&layers=server,agent,tool",
+      "scope": "Reference evidence lab local gateway invocation with relationship direction, snapshot, timestamps and recorded runtime evidence; modeled infrastructure remains separate",
+      "evidence_artifact": "examples/reference-evidence-lab/generated/correlation-proof.json",
+      "evidence_sha256": "sha256:f4f8901f412997be7690b50ce8e7468ba8f781dc22b85e7b5f44408e28fe2c5f",
+      "correlation_manifest_sha256": "sha256:fe781c82f958c2f9aa4cadfa2289aa767629dc7d6716e11add790e8f3336fc3a",
+      "visible_version": "0.108.4",
+      "sha256": "sha256:33b6460430823dbe401cd17993182e8c852f60cde4dcfd65d8c685e2158e54bf"
+    },
+    {
+      "presentation": "dark desktop",
       "path": "correlation-receipts-live.png",
       "page": "/security-graph?lens=attack-path&scan=reference-evidence-correlation-v1&correlation=1&capture=1",
       "scope": "Reference evidence lab modeled permission route with inspectable source receipts; no vulnerability exploit edge",
@@ -221,7 +243,7 @@
       "evidence_sha256": "sha256:f4f8901f412997be7690b50ce8e7468ba8f781dc22b85e7b5f44408e28fe2c5f",
       "correlation_manifest_sha256": "sha256:fe781c82f958c2f9aa4cadfa2289aa767629dc7d6716e11add790e8f3336fc3a",
       "visible_version": "0.108.4",
-      "sha256": "sha256:a3854adb23ee9ccc13682eba8025f48ef740768bb8af33110fd18de61121fae6"
+      "sha256": "sha256:cc442e4cc36ba5b93e43fb799f2e79c474c3400c95399b62ae135887763840ba"
     },
     {
       "presentation": "light desktop",
@@ -369,7 +391,7 @@
       "page": "/findings?capture=1",
       "scope": "Findings queue with seeded package and CVE evidence from the demo estate",
       "visible_version": "0.108.4",
-      "sha256": "sha256:6ec886186c2fa459f467b5dcce783a0904a5cab52932323fd5b8ade48babb444"
+      "sha256": "sha256:e66d7778db12626aeb543fa4828f2f2939cd6df51850bd9a02fc1cb5eeaa584f"
     },
     {
       "presentation": "dark desktop",
