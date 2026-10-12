@@ -93,6 +93,9 @@ class PostgresRuntimeEventStore:
             return 0
         tenant_id = unique_records[0].tenant_id
         with _tenant_connection(self._pool) as conn:
+            # Serialize deduplication and session rollups across replicas,
+            # including a first observation whose session row does not exist.
+            conn.execute("SELECT pg_advisory_xact_lock(hashtextextended(%s, 0))", (f"runtime_observations:{tenant_id}",))
             existing_ids: set[str] = set()
             observation_ids = [record.observation_id for record in unique_records]
             for offset in range(0, len(observation_ids), _BATCH_LOOKUP_CHUNK):

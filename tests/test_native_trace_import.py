@@ -1,0 +1,113 @@
+"""Durable native span identity is scoped independently of source metadata."""
+
+from dataclasses import replace
+
+import pytest
+
+from agent_bom.api.native_trace_import import TraceImportScope, prepare_trace_page
+from agent_bom.api.runtime_event_store import SQLiteRuntimeEventStore
+
+SCOPE = TraceImportScope(
+    tenant_id="tenant",
+    provider="langfuse",
+    connection_id="connection",
+    endpoint="https://cloud.example",
+    project_id="project",
+    environment="prod",
+    account_id="account",
+)
+TIME = "2026-10-11T12:00:00+00:00"
+
+
+def span(span_id="child", parent="parent", **attributes):
+    values = {
+        "agent_bom.native_name": "Read file",
+        "agent_bom.native_type": "TOOL",
+        "agent_bom.native_project_id": "project",
+        "agent_bom.native_environment": "prod",
+        **attributes,
+    }
+    return {
+        "spanId": span_id,
+        "traceId": "trace",
+        "parentSpanId": parent,
+        "startTimeUnixNano": "1791720000000000000",
+        "status": {"code": 0},
+        "attributes": [{"key": key, "value": {"stringValue": value}} for key, value in values.items()],
+    }
+
+
+def test_import_replay_and_restart_preserve_parent_and_metadata_only(tmp_path):
+    path = str(tmp_path / "runtime.db")
+    store = SQLiteRuntimeEventStore(path)
+    page = prepare_trace_page(
+        {"spans": [span("parent", ""), span(**{"tool.output": "private-output", "tool.input.prompt": "private-prompt"})]},
+        scope=SCOPE,
+        collected_at=TIME,
+    )
+    assert len(page.observations) == 2
+    assert page.rejected == {}
+    assert store.put_observations_batch(page.observations) == 2
+    assert store.put_observations_batch(page.observations) == 0
+    reopened = SQLiteRuntimeEventStore(path)
+    rows = reopened.list_observations("tenant")
+    assert len(rows) == 2
+    child = next(row for row in rows if row.span_id == "child")
+    parent = next(row for row in rows if row.span_id == "parent")
+    assert child.metadata["parent_observation_id"] == parent.observation_id
+    assert child.metadata["native_type"] == "TOOL"
+    assert child.metadata["collected_at"] == TIME
+    assert child.verdict == "unknown"
+    assert "private-" not in repr(rows)
+    assert reopened.get_session("tenant", child.session_id).observation_count == 2
+    assert reopened.list_observations("another-tenant") == []
+
+
+@pytest.mark.parametrize("field", ["tenant_id", "connection_id", "project_id", "environment", "account_id", "endpoint"])
+def test_identical_native_ids_cannot_collide_across_scope(field):
+    first = prepare_trace_page({"spans": [span()]}, scope=SCOPE, collected_at=TIME).observations[0]
+    other_scope = replace(SCOPE, **{field: "other"})
+    other_span = span(**{"agent_bom.native_project_id": other_scope.project_id, "agent_bom.native_environment": other_scope.environment})
+    second = prepare_trace_page({"spans": [other_span]}, scope=other_scope, collected_at=TIME).observations[0]
+    assert first.observation_id != second.observation_id
+    assert first.session_id != second.session_id
+
+
+def test_conflicting_source_scope_is_rejected_without_losing_good_records():
+    page = prepare_trace_page(
+        {
+            "spans": [
+                span(),
+                span("wrong-project", **{"agent_bom.native_project_id": "another-project"}),
+                span("wrong-env", **{"agent_bom.native_environment": "staging"}),
+            ]
+        },
+        scope=SCOPE,
+        collected_at=TIME,
+    )
+    assert len(page.observations) == 1
+    assert page.rejected == {"scope_conflict": 2}
+
+
+def test_missing_parent_does_not_create_a_fabricated_root():
+    child = prepare_trace_page({"spans": [span()]}, scope=SCOPE, collected_at=TIME).observations[0]
+    assert child.metadata["native_parent_span_id"] == "parent"
+    assert child.metadata["parent_observation_id"] != ""
+    assert child.metadata["logical_root"] is None
+
+
+def test_import_retains_end_time_and_redacts_credential_shaped_metadata():
+    item = span(**{"agent_bom.native_name": "invoke api_key=super-secret", "agent_bom.native_session_id": "token=super-secret"})
+    item["endTimeUnixNano"] = "1791720001000000000"
+    record = prepare_trace_page({"spans": [item]}, scope=SCOPE, collected_at=TIME).observations[0]
+    assert record.metadata["end_time_unix_nano"] == "1791720001000000000"
+    assert "super-secret" not in repr(record)
+
+
+def test_missing_event_time_is_explicit_and_keeps_collection_time_separate():
+    item = span()
+    del item["startTimeUnixNano"]
+    record = prepare_trace_page({"spans": [item]}, scope=SCOPE, collected_at=TIME).observations[0]
+    assert record.metadata["event_time_missing"] is True
+    assert record.metadata["start_time_unix_nano"] is None
+    assert record.metadata["collected_at"] == TIME

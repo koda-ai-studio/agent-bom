@@ -83,6 +83,8 @@ _BATCH_LOOKUP_CHUNK = 500
 
 
 def _dedupe_observation_records(records: list[RuntimeObservationRecord]) -> list[RuntimeObservationRecord]:
+    if records and (not records[0].tenant_id or any(record.tenant_id != records[0].tenant_id for record in records)):
+        raise ValueError("Runtime observation batches must belong to one tenant")
     seen: set[tuple[str, str]] = set()
     unique: list[RuntimeObservationRecord] = []
     for record in records:
@@ -295,8 +297,16 @@ class SQLiteRuntimeEventStore:
         unique_records = _dedupe_observation_records(records)
         if not unique_records:
             return 0
-        tenant_id = unique_records[0].tenant_id
         conn = self._conn
+        # Serialize the identity check and rollup with all SQLite writers. A
+        # deferred transaction starts too late: competing readers can both
+        # classify the same observation as new before either inserts it.
+        with conn:
+            conn.execute("BEGIN IMMEDIATE")
+            return self._put_observations_locked(conn, unique_records)
+
+    def _put_observations_locked(self, conn: sqlite3.Connection, unique_records: list[RuntimeObservationRecord]) -> int:
+        tenant_id = unique_records[0].tenant_id
         existing_ids: set[str] = set()
         observation_ids = [record.observation_id for record in unique_records]
         for offset in range(0, len(observation_ids), _BATCH_LOOKUP_CHUNK):
@@ -356,7 +366,6 @@ class SQLiteRuntimeEventStore:
             ],
         )
         prune_runtime_observations_for_tenant(conn, tenant_id)
-        conn.commit()
         return len(new_records)
 
     def list_sessions(self, tenant_id: str, *, limit: int = 100, offset: int = 0) -> list[RuntimeSessionRecord]:

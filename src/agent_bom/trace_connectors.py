@@ -26,6 +26,8 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any, Protocol, cast
 
+from agent_bom.runtime.native_trace_spans import native_span
+
 logger = logging.getLogger(__name__)
 
 LANGFUSE = "langfuse"
@@ -105,10 +107,6 @@ def _bounded_limit(limit: int) -> int:
     return max(1, min(int(limit or _DEFAULT_LIMIT), _MAX_LIMIT))
 
 
-def _attr(key: str, value: Any) -> dict[str, Any]:
-    return {"key": key, "value": {"stringValue": "" if value is None else str(value)}}
-
-
 def _client_or_default(client: _HttpClient | None) -> tuple[_HttpClient, bool]:
     if client is not None:
         return client, False
@@ -149,32 +147,7 @@ def _records(payload: Any, key: str) -> list[dict[str, Any]]:
 
 
 def _langfuse_observation_to_span(obs: dict[str, Any], *, include_content: bool) -> dict[str, Any] | None:
-    if not isinstance(obs, dict):
-        return None
-    # Explicit observation kinds must not become fabricated tool executions.
-    # Preserve legacy untyped observations for existing instrumentations.
-    if obs.get("type") and str(obs["type"]).upper() != "TOOL":
-        return None
-    name = str(obs.get("name") or "").strip()
-    if not name:
-        return None
-    attributes: list[dict[str, Any]] = [_attr("tool.name", name)]
-    raw_meta = obs.get("metadata")
-    metadata: dict[str, Any] = raw_meta if isinstance(raw_meta, dict) else {}
-    server = metadata.get("server") or metadata.get("mcp_server")
-    if server:
-        attributes.append(_attr("mcp.server", server))
-    package = metadata.get("package") or metadata.get("dependency")
-    if package:
-        attributes.append(_attr("package.name", package))
-    if include_content and obs.get("output") is not None:
-        attributes.append(_attr("tool.output", obs.get("output")))
-    return {
-        "traceId": str(obs.get("traceId") or obs.get("trace_id") or ""),
-        "spanId": str(obs.get("id") or ""),
-        "name": f"adk.tool.{name}",
-        "attributes": attributes,
-    }
+    return native_span(obs, provider=LANGFUSE, include_content=include_content)
 
 
 def fetch_langfuse_traces(
@@ -201,7 +174,6 @@ def fetch_langfuse_traces(
     params = {
         "limit": _bounded_limit(limit),
         **window,
-        "type": "TOOL",
         "fields": "core,basic,metadata" + (",io" if include_content else ""),
         "expandMetadata": "server,mcp_server,package,dependency",
     }
@@ -238,30 +210,7 @@ def fetch_langfuse_traces(
 
 
 def _langsmith_run_to_span(run: dict[str, Any], *, include_content: bool) -> dict[str, Any] | None:
-    if not isinstance(run, dict):
-        return None
-    name = str(run.get("name") or "").strip()
-    if not name:
-        return None
-    attributes: list[dict[str, Any]] = [_attr("tool.name", name)]
-    raw_extra = run.get("extra")
-    extra: dict[str, Any] = raw_extra if isinstance(raw_extra, dict) else {}
-    raw_meta = extra.get("metadata")
-    metadata: dict[str, Any] = raw_meta if isinstance(raw_meta, dict) else {}
-    server = metadata.get("server") or metadata.get("mcp_server")
-    if server:
-        attributes.append(_attr("mcp.server", server))
-    package = metadata.get("package") or metadata.get("dependency")
-    if package:
-        attributes.append(_attr("package.name", package))
-    if include_content and run.get("outputs") is not None:
-        attributes.append(_attr("tool.output", run.get("outputs")))
-    return {
-        "traceId": str(run.get("trace_id") or ""),
-        "spanId": str(run.get("id") or ""),
-        "name": f"adk.tool.{name}",
-        "attributes": attributes,
-    }
+    return native_span(run, provider=LANGSMITH, include_content=include_content)
 
 
 def fetch_langsmith_traces(
@@ -273,7 +222,7 @@ def fetch_langsmith_traces(
     include_content: bool = False,
     client: _HttpClient | None = None,
 ) -> dict[str, Any]:
-    """Pull recent LangSmith tool runs and adapt them to flat OTLP spans.
+    """Pull recent LangSmith runs and adapt them to flat OTLP spans.
 
     ``api_key`` is sent as the ``x-api-key`` header only and is never logged.
     Returns ``{"spans": [...]}`` for ``otel_ingest`` to parse.
@@ -282,7 +231,7 @@ def fetch_langsmith_traces(
         raise TraceConnectorError("langsmith connector requires api_key")
     base = (api_url or "https://api.smith.langchain.com").rstrip("/")
     _validate_pull_url(base)
-    body: dict[str, Any] = {"limit": _bounded_limit(limit), "run_type": "tool"}
+    body: dict[str, Any] = {"limit": _bounded_limit(limit)}
     resolved, owns = _client_or_default(client)
     try:
         if project:
