@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import copy
 import datetime
+import importlib
 import json
 import logging
 import os
@@ -819,7 +820,14 @@ def _fake_classify(s3: Any, name: str) -> _FakeClassification:
 
 
 @pytest.fixture
-def harness(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> Iterator[Any]:
+def harness(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture, request: pytest.FixtureRequest) -> Iterator[Any]:
+    classifier = importlib.import_module("agent_bom.cloud.s3_data_classifier")
+    if getattr(request, "param", None) == "stale-parent":
+        # Restoring sys.modules after optional-SDK tests can leave a detached
+        # child attribute on the package. Python imports still use sys.modules.
+        detached = types.ModuleType(classifier.__name__)
+        detached.__dict__.update(vars(classifier))
+        monkeypatch.setattr(importlib.import_module("agent_bom.cloud"), "s3_data_classifier", detached)
     for var in (
         aws_inventory.INVENTORY_ENV_FLAG,
         aws_inventory.INVENTORY_ENV_FLAG_LEGACY,
@@ -831,10 +839,10 @@ def harness(monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -
         monkeypatch.delenv(var, raising=False)
     monkeypatch.setattr("agent_bom.cloud.aws._extract_lambda_packages", _fake_lambda_packages)
     monkeypatch.setattr("agent_bom.cloud.sbom_pull.pull_cloud_sbom", _fake_sbom)
-    monkeypatch.setattr("agent_bom.cloud.s3_data_classifier.s3_sampling_enabled", lambda: False)
-    monkeypatch.setattr("agent_bom.cloud.s3_data_classifier.classify_s3_bucket", _fake_classify)
+    monkeypatch.setattr(classifier, "s3_sampling_enabled", lambda: False)
+    monkeypatch.setattr(classifier, "classify_s3_bucket", _fake_classify)
     caplog.set_level(logging.DEBUG, logger="agent_bom.cloud")
-    yield SimpleNamespace(monkeypatch=monkeypatch, caplog=caplog)
+    yield SimpleNamespace(monkeypatch=monkeypatch, caplog=caplog, classifier=classifier)
 
 
 _WALL_CLOCK_KEYS = frozenset({"collected_at", "captured_at"})
@@ -894,9 +902,9 @@ def _scenarios_single(h: Any) -> dict[str, Any]:
     h.caplog.clear()
     out["single_full"] = _single(h, _full_spec(), force=True)
     h.caplog.clear()
-    h.monkeypatch.setattr("agent_bom.cloud.s3_data_classifier.s3_sampling_enabled", lambda: True)
+    h.monkeypatch.setattr(h.classifier, "s3_sampling_enabled", lambda: True)
     out["single_full_sampling_eu"] = _single(h, _full_spec(), region="eu-west-1", force=True)
-    h.monkeypatch.setattr("agent_bom.cloud.s3_data_classifier.s3_sampling_enabled", lambda: False)
+    h.monkeypatch.setattr(h.classifier, "s3_sampling_enabled", lambda: False)
     h.caplog.clear()
     empty_spec: dict[str, Any] = {"sts": {"get_caller_identity": {"Account": ""}}}
     out["single_empty_no_account"] = _single(h, empty_spec, force=True)
@@ -1051,6 +1059,7 @@ def _build_golden(h: Any) -> dict[str, Any]:
     return golden
 
 
+@pytest.mark.parametrize("harness", ["canonical", "stale-parent"], indirect=True)
 def test_aws_inventory_golden(harness: Any) -> None:
     # Every discovery scenario must supply SDK stubs, including injected sessions.
     with patch.dict(sys.modules, {"boto3": None}):
