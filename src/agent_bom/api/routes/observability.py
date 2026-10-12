@@ -41,6 +41,7 @@ from agent_bom.api.runtime_event_store import (
     get_runtime_event_store,
     sanitize_runtime_metadata,
 )
+from agent_bom.api.storage.runtime_records import RuntimeMetadataCache
 from agent_bom.api.stores import (
     _get_analytics_store,
     _get_fleet_store,
@@ -227,7 +228,9 @@ def _event_session_id(payload: dict[str, Any]) -> str:
     return f"runtime-{uuid.uuid4()}"
 
 
-def _runtime_observation_from_event(event: dict[str, Any], *, tenant_id: str, source: str = "api") -> RuntimeObservationRecord:
+def _runtime_observation_from_event(
+    event: dict[str, Any], *, tenant_id: str, source: str = "api", _cache: RuntimeMetadataCache | None = None
+) -> RuntimeObservationRecord:
     observed_at = str(event.get("event_timestamp") or event.get("observed_at") or event.get("timestamp") or _now())
     event_id = str(event.get("event_id") or event.get("observation_id") or "").strip()
     if not event_id:
@@ -263,8 +266,8 @@ def _runtime_observation_from_event(event: dict[str, Any], *, tenant_id: str, so
         trace_id=_bounded(event.get("trace_id") or "", max_len=200),
         span_id=_bounded(event.get("span_id") or "", max_len=200),
         request_id=_bounded(event.get("request_id") or "", max_len=200),
-        summary=sanitize_runtime_metadata(summary),
-        metadata=sanitize_runtime_metadata(metadata_source),
+        summary=sanitize_runtime_metadata(summary, _cache=_cache),
+        metadata=sanitize_runtime_metadata(metadata_source, _cache=_cache),
     )
 
 
@@ -272,7 +275,8 @@ def _persist_runtime_observations(events: list[dict[str, Any]], *, tenant_id: st
     if not events:
         return 0
     store = get_runtime_event_store()
-    records = [_runtime_observation_from_event(event, tenant_id=tenant_id, source=source) for event in events]
+    cache = RuntimeMetadataCache()
+    records = [_runtime_observation_from_event(event, tenant_id=tenant_id, source=source, _cache=cache) for event in events]
     persisted = store.put_observations_batch(records)
     # Opt-in runtime emitter plugins receive a redacted routing envelope per
     # persisted observation (off by default; see plugin_activation). Never lets

@@ -1307,9 +1307,9 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         request.state.proxy_auth_attested = True
         request.state.auth_issuer = presented_issuer or None
         try:
-            from agent_bom.api.audit_log import log_action
+            from agent_bom.api.audit_async import log_action_async
 
-            log_action(
+            await log_action_async(
                 "auth.proxy_header_authenticated",
                 actor=str(request.state.api_key_name),
                 resource=str(request.url.path),

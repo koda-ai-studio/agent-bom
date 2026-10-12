@@ -68,6 +68,36 @@ These are correctness checks, separate from machine-dependent load receipts.
 
 ## Next step: deployment and provider qualification
 
+### Mixed runtime writes over HTTP
+
+The runtime workload is separate from trace collection. It runs 40 authenticated
+write requests of 50 synthetic events and 480 collection-status reads at
+concurrency 10, after 30 baseline reads. It starts one loopback HTTP server and
+uses real SQL and middleware. Collection status uses a synthetic configured
+connection; no provider request is made. Application lifespan provisioning,
+multiple replicas, ingress and live provider access are outside this command.
+
+```bash
+AGENT_BOM_STATE_DIR=/tmp/runtime-capacity-state-001 \
+  uv run python -m scripts.run_runtime_capacity_qualification \
+  --output /tmp/runtime-capacity-001
+```
+
+Use `--backend postgres` with the disposable application and maintenance roles
+above for PostgreSQL. The fixed local gate requires zero failed requests, exactly
+500 retained observations per writer tenant with matching session rollups, no
+reader-tenant observations, read p95 at most 5 seconds and slowdown at most 4×.
+Inspect `attempts.jsonl` and `receipt.json`; retain failed runs. Run on an idle
+host without overlapping test/build jobs. A noisy baseline can make the ratio
+appear better, so record host contention and repeat from a clean pinned commit
+before using a pass as qualification. A local pass does not supersede a failed
+deployment measurement.
+
+### Execution and enterprise fixture coverage
+
+Run the [qualified fixture suite](../RUNTIME_FIXTURE_QUALIFICATION.md) to check
+execution/effect distinctions, tenant boundaries and recorded access changes.
+
 Inspect `passed`, reconciliation, errors, and all-attempt latency in the receipt.
 A process error or missing receipt is a failed run. Keep the JSONL attempts even
 when setup or reconciliation fails. Keep local receipts outside the public tree;

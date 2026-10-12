@@ -111,6 +111,21 @@ def revised_session(session: RuntimeSessionRecord, old: RuntimeObservationRecord
     )
 
 
+def _revise_session_sql(conn: Any, old: RuntimeObservationRecord, record: RuntimeObservationRecord, p: str) -> None:
+    from agent_bom.api.storage.runtime_records import _session_from_json
+
+    session_row = conn.execute(
+        f"SELECT data FROM runtime_sessions WHERE tenant_id={p} AND session_id={p}",  # nosec B608
+        (record.tenant_id, record.session_id),
+    ).fetchone()
+    if session_row:
+        session = revised_session(_session_from_json(session_row[0]), old, record)
+        conn.execute(
+            f"UPDATE runtime_sessions SET data={p} WHERE tenant_id={p} AND session_id={p}",  # nosec B608
+            (json.dumps(session.to_dict(), sort_keys=True), record.tenant_id, record.session_id),
+        )
+
+
 def reconcile_sql(
     conn: Any, records: list[RuntimeObservationRecord], *, placeholder: str = "?"
 ) -> tuple[int, list[RuntimeObservationRecord]]:
@@ -119,7 +134,7 @@ def reconcile_sql(
     Retention of the current projection does not erase replay identity or reset
     lifetime session counts. History lookups are bounded and indexed.
     """
-    from agent_bom.api.storage.runtime_records import _observation_from_json, _session_from_json
+    from agent_bom.api.storage.runtime_records import _observation_from_json
 
     if placeholder not in {"?", "%s"}:
         raise ValueError("Unsupported SQL placeholder")
@@ -183,16 +198,7 @@ def reconcile_sql(
             f"WHERE tenant_id={p} AND observation_id={p}",
             (encoded, record.observed_at, *identity),
         )
-        session_row = conn.execute(
-            f"SELECT data FROM runtime_sessions WHERE tenant_id={p} AND session_id={p}",  # nosec B608
-            (record.tenant_id, record.session_id),
-        ).fetchone()
-        if session_row:
-            session = revised_session(_session_from_json(session_row[0]), old, record)
-            conn.execute(
-                f"UPDATE runtime_sessions SET data={p} WHERE tenant_id={p} AND session_id={p}",  # nosec B608
-                (json.dumps(session.to_dict(), sort_keys=True), record.tenant_id, record.session_id),
-            )
+        _revise_session_sql(conn, old, record, p)
         updated += 1
     return updated, first_seen
 

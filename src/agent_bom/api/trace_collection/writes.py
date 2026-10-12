@@ -10,14 +10,9 @@ from agent_bom.api.storage.sql import SqlSession
 from agent_bom.api.trace_collection.contracts import MAX_RECEIPTS, CollectionConflictError
 
 
-def put_page(tx: SqlSession, tenant: str, connection: str, records: list[RuntimeObservationRecord]) -> int:
-    if any(record.tenant_id != tenant for record in records):
-        raise CollectionConflictError("Observation tenant does not match collection.")
-    # Window imports and resumable collection share native IDs and append-only
-    # revisions. A changed native span updates its projection, not its count.
-    native = {record.observation_id: record for record in records if record.surface == "imported_trace"}
-    _, first_seen = reconcile_sql(tx, list(native.values()))
-    records = [record for record in records if record.surface != "imported_trace"] + first_seen
+def _prior_page_rows(
+    tx: SqlSession, tenant: str, connection: str, records: list[RuntimeObservationRecord]
+) -> tuple[dict[str, str], dict[str, str]]:
     prior_receipts: dict[str, str] = {}
     retained: dict[str, str] = {}
     keys = list(dict.fromkeys(record.observation_id for record in records))
@@ -37,6 +32,18 @@ def put_page(tx: SqlSession, tenant: str, connection: str, records: list[Runtime
                 (tenant, *batch),
             ).fetchall()
         )
+    return prior_receipts, retained
+
+
+def put_page(tx: SqlSession, tenant: str, connection: str, records: list[RuntimeObservationRecord]) -> int:
+    if any(record.tenant_id != tenant for record in records):
+        raise CollectionConflictError("Observation tenant does not match collection.")
+    # Window imports and resumable collection share native IDs and append-only
+    # revisions. A changed native span updates its projection, not its count.
+    native = {record.observation_id: record for record in records if record.surface == "imported_trace"}
+    _, first_seen = reconcile_sql(tx, list(native.values()))
+    records = [record for record in records if record.surface != "imported_trace"] + first_seen
+    prior_receipts, retained = _prior_page_rows(tx, tenant, connection, records)
     added = 0
     sessions: dict[str, RuntimeSessionRecord] = {}
     receipts = []
