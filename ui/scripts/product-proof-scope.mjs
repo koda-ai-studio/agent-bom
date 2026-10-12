@@ -9,3 +9,10 @@ export function assertCaptureSnapshotScope(requestUrl, expectedScanId, responseS
     throw new Error("Capture fixture snapshot scope mismatch");
   }
 }
+
+export function graphResponseWithPagination(data, collection = "nodes") {
+  return {
+    ...data,
+    pagination: { total: data[collection].length, offset: 0, limit: data[collection].length, has_more: false },
+  };
+}

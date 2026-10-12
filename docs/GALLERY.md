@@ -27,11 +27,11 @@ with a route to a sensitive asset.
 
 The [reference lab](../examples/reference-evidence-lab/README.md) follows
 `CVE-2023-4863` through a pinned Pillow dependency, image SBOM, Kubernetes
-manifest, MCP configuration, and modeled identity. The ordered path shows the
-relationship and evidence behind every step. Open a hop to inspect its source;
-use Graph or List to investigate the same selected path.
+manifest, MCP configuration, and modeled identity. The shared graph shows the
+recorded relationships and their direction. Select a node or relationship to
+inspect its source, then open the scoped findings and remediation.
 
-<img src="https://raw.githubusercontent.com/msaad00/agent-bom/main/docs/images/correlation-path-live.png" alt="Pillow advisory investigation with eight ordered entities, remediation action, and per-hop evidence" width="900" />
+<img src="images/correlation-path-live.png" alt="Pillow advisory investigation with eight ordered entities, remediation action, and per-hop evidence" width="900" />
 
 This is a structural exposure supported by the lab inputs, not execution of an
 exploit. The lab observes an allowed local gateway call, then checks that graph
@@ -101,21 +101,55 @@ For a parser-backed scan and changed-input rescan, run the
 bounded advisory fixture and explicitly synthetic cloud topology. A finding no
 longer present after the input change is not proof that a deployment was repaired.
 
-## Explore the same graph in both directions
+## Explore connections and inspect evidence
 
-Open **Context**, choose an agent, expand its recorded connections, then switch
-**Vertical / Horizontal**. Both layouts retain the same selected entities and
-relationships; changing direction does not add evidence or change risk.
+These graph enhancements are available in current source; the pinned `0.108.4`
+release predates them. In **Investigation → Explore connections**, select a
+snapshot and search for a package or agent. Start with its bounded neighborhood,
+then use **Show more connections** or **Expand** to inspect related entities.
 
-**Vertical — follow dependencies from identity to finding.** The role sits above
-the agent; MCP servers branch into tools, credentials and packages below it.
+**Repository — connect source, configuration and dependencies.** The repository
+view shows source imports, deployment configuration, a CI job, the workload
+container and a package advisory. The fixture models configured relationships;
+it does not establish that the CI job ran or that a workload was deployed.
 
-<picture><source media="(prefers-color-scheme: light)" srcset="images/context-map-light-live.png"><img src="images/context-map-live.png" alt="Vertical recorded neighborhood, from role and agent down to MCP servers, packages and finding" width="960"></picture>
+<picture><source media="(prefers-color-scheme: light)" srcset="images/graph-repository-light-live.png"><img src="images/graph-repository-dark-live.png" alt="Repository branches into source dependencies, deployment configuration and a CI job, with the package advisory visible" width="1440"></picture>
 
-**Horizontal — trace the same chain from left to right.** Select a node or
-connection to inspect its source in the adjacent evidence panel.
+**Environment — see the agent alongside its infrastructure.** Follow the
+production environment into the workload cluster, agent, model, MCP server,
+exposed tool and dependency. Entity types, relationship labels and arrows use
+the same language throughout the workspace.
 
-<picture><source media="(prefers-color-scheme: light)" srcset="images/context-map-horizontal-light-live.png"><img src="images/context-map-horizontal-dark-live.png" alt="Horizontal recorded neighborhood showing the same nine entities and eight relationships" width="960"></picture>
+<picture><source media="(prefers-color-scheme: light)" srcset="images/graph-environment-light-live.png"><img src="images/graph-environment-dark-live.png" alt="Environment connects a workload cluster and AI agent with its model, MCP server, tool and dependency" width="1440"></picture>
 
-These are labeled synthetic UI fixtures. Recorded connections do not establish
-execution, successful access or complete collection coverage.
+**Cloud estate — inspect accounts, workloads, identities and data.** Follow the
+account's cluster and private API endpoint, then inspect a role's configured
+storage permission and the related finding. Configuration does not prove
+reachability or effective access.
+
+<picture><source media="(prefers-color-scheme: light)" srcset="images/graph-cloud-light-live.png"><img src="images/graph-cloud-dark-live.png" alt="Cloud account branches into cluster workloads, a private endpoint, an identity and storage with a review finding" width="1440"></picture>
+
+These three views use explicitly labeled synthetic UI fixtures. Each is captured
+through its actual **View & layers** preset; none is live-cloud evidence.
+
+**Start with one component.** The selected package stays beside its MCP server
+and vulnerability. The inspector links to that package's findings in the same
+snapshot. This capture uses labeled synthetic UI fixtures.
+
+<picture><source media="(prefers-color-scheme: light)" srcset="images/context-map-light-live.png"><img src="images/context-map-live.png" alt="Selected Next.js package with its MCP server, vulnerability and scoped findings action" width="1440"></picture>
+
+**Open the relationship evidence.** Select an arrow to inspect its direction,
+snapshot, first/last seen timestamps and source receipt. The view below comes
+from the reference lab's recorded local gateway call, with modeled infrastructure
+clearly labeled. It does not establish a cloud execution or downstream effect.
+
+<picture><source media="(prefers-color-scheme: light)" srcset="images/graph-relationship-light-live.png"><img src="images/graph-relationship-dark-live.png" alt="Local gateway invocation and its recorded runtime evidence in the relationship inspector" width="1440"></picture>
+
+**Follow the finding into action.** Switch to **Find a path** to investigate
+recorded finding paths, then use the scoped findings and remediation links.
+Re-scan the same scope before closing the finding. Missing receipts remain
+missing evidence; graph connectivity alone does not prove successful access.
+
+[See the full reference graph](images/correlation-graph-live.png) ·
+[Inspect the mobile view](images/correlation-path-mobile-live.png) ·
+[Run the reference lab](../examples/reference-evidence-lab/README.md)

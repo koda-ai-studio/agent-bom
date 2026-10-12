@@ -102,19 +102,20 @@ def test_readme_shows_the_end_to_end_product_journey_and_links_the_gallery() -> 
     assert images == [
         "dashboard-live.png",
         "correlation-graph-live.png",
+        "graph-relationship-dark-live.png",
         "remediation-live.png",
     ]
-    assert journey.count('width="1440"') == 3
+    assert journey.count('width="1440"') == 4
     assert 'width="450"' not in journey
     front = readme.split("## Self-host", 1)[0]
     front_outside_details = re.sub(r"<details>.*?</details>", "", front, flags=re.S)
     assert re.findall(r'<img src="docs/images/([^"]+)"', front_outside_details) == [
         "social-preview.svg",
-        "context-map-horizontal-dark-live.png",
+        "graph-environment-dark-live.png",
     ]
-    assert front.index("img.shields.io") < front.index("context-map-horizontal-dark-live.png")
+    assert front.index("img.shields.io") < front.index("graph-environment-dark-live.png")
     assert "labeled sample data" in front
-    assert "<summary>Explore graph navigation, permissions and evidence</summary>" in journey
+    assert "[Explore the graph gallery](docs/GALLERY.md#explore-connections-and-inspect-evidence)" in journey
     grc = journey.split("### Security, engineering and GRC:", 1)[1].split("### AppSec", 1)[0]
     assert "dashboard-live.png" in grc
     assert "[expanded framework evidence](docs/images/dashboard-paths-live.png)" in grc
@@ -161,13 +162,15 @@ def test_scenarios_separate_reproducible_proof_from_synthetic_layout_fixtures() 
     gallery = (ROOT / "docs" / "GALLERY.md").read_text(encoding="utf-8")
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
 
-    scenario, layouts = gallery.split("## Explore the same graph in both directions", 1)
+    scenario, layouts = gallery.split("## Explore connections and inspect evidence", 1)
     assert scenario.count("<img ") == 1
-    assert layouts.count("<img ") == 2
+    assert layouts.count("<img ") == 5
     assert "labeled synthetic UI fixtures" in layouts
-    assert "context-map-horizontal-dark-live.png" in layouts
+    assert "graph-relationship-dark-live.png" in layouts
     assert "context-map-live.png" in layouts
-    assert "Both layouts retain the same selected entities" in layouts
+    assert "Select an arrow" in layouts
+    assert "pinned `0.108.4`" in layouts
+    assert "does not establish a cloud execution or downstream effect" in layouts
     assert "correlation-path-live.png" in gallery
     assert "correlation-path-live.png" not in readme
     assert "correlation-receipts-live.png" not in gallery

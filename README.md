@@ -90,9 +90,13 @@ report and coverage. [Exit codes](site-docs/reference/exit-codes.md)
 
 </details>
 
-<p align="center"><a href="docs/images/context-map-horizontal-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/context-map-horizontal-light-live.png"><img src="docs/images/context-map-horizontal-dark-live.png" alt="Recorded MCP server, package and vulnerability relationships in the shared graph workspace" width="960"></picture></a></p>
+<p align="center"><a href="docs/images/graph-environment-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/graph-environment-light-live.png"><img src="docs/images/graph-environment-dark-live.png" alt="Environment graph connecting AI agents, models, MCP tools, dependencies and deployed workloads" width="1440"></picture></a></p>
 
-**Graph workspace:** inspect agents, MCP servers, packages and credential references. The map above uses labeled sample data; recorded relationships do not prove execution or data access. Click any screenshot to view it at full size. To trace one vulnerable dependency to the affected agents and into remediation, [try the connected-BOM walkthrough](examples/connected-bom/README.md).
+**See your AI environment in context.** Follow workloads, agents, models, MCP servers, tools and dependencies in one graph. Switch to **Repository** or **Cloud estate** to inspect code, build configuration, accounts, identities and storage. The graph above uses labeled sample data. Click any screenshot to view it at full size.
+
+**One investigation workspace:** follow a finding with **Find a path**, or inspect a snapshot with **Explore connections**. Select nodes and relationship arrows for details, expand the connections you need, and carry the finding into remediation. [Repository, environment and cloud gallery](docs/GALLERY.md#explore-connections-and-inspect-evidence) · [Try the connected-BOM walkthrough](examples/connected-bom/README.md).
+
+These graph enhancements are merged in current source; the pinned `0.108.4` release below predates them. Recorded relationships do not by themselves prove execution or data access.
 
 ## Self-host in your environment
 
@@ -157,21 +161,18 @@ Explore [expanded framework evidence](docs/images/dashboard-paths-live.png), [To
 
 ### AppSec and cloud teams: investigate a finding
 
-Follow **CVE-2023-4863 in pillow@9.0.0** through recorded relationships between the service, workload, container, tool and modeled data asset.
-Inspect the source receipts and carry the selected finding into remediation. A recorded path does not by itself prove exploitation or successful data access.
+Follow **CVE-2023-4863 in pillow@9.0.0** through recorded relationships between the service, workload, container, tool and modeled data asset. Inspect the source receipts and carry the selected finding into remediation. A recorded path does not by itself prove exploitation or successful data access.
 
 <a href="docs/images/correlation-graph-live.png"><img src="docs/images/correlation-graph-live.png" alt="Reference lab graph linking a Pillow advisory, workload, container, tool and modeled data asset" width="1440"></a>
 
-<details>
-<summary>Explore graph navigation, permissions and evidence</summary>
+**Inspect the evidence behind an arrow.** Select a relationship to see its direction, retained snapshot, timestamps and recorded source evidence. This focused view shows the reference lab's local gateway invocation; modeled cloud permissions and downstream effects remain separate claims.
 
-Use **Find a path** for findings or **Explore connections** for recorded entities. Select a snapshot and entity, filter by type or severity, and expand within a hop limit.
-Browse relationships in bounded pages; select a node or arrow for source evidence. Incomplete views remain labeled, and a replaced snapshot requires a fresh page.
-Permission, execution and exploitability require separate receipts. [Investigation workflow](site-docs/architecture/security-graph-model.md#investigate-an-agent-from-context).
+<p align="center"><a href="docs/images/graph-relationship-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/graph-relationship-light-live.png"><img src="docs/images/graph-relationship-dark-live.png" alt="Reference lab workload and tool relationship with the recorded gateway runtime evidence open beside the graph" width="1440"></picture></a></p>
 
-**Connect data locations to security evidence.** Explore recorded stores and datasets alongside identities and findings.
-Distinguish storage, access evidence and collection sources; derived classifications do not prove contents or successful reads. [Data and evidence model](site-docs/architecture/security-graph-model.md#data-locations-access-and-evidence-sources).
-</details>
+**Find a path → Explore connections → Inspect evidence → Remediate.** Keep the snapshot and selected finding in scope as you move through the workflow. Expand within a hop limit and browse relationships in bounded pages; incomplete views remain labeled. Configured permissions, observed activity and downstream effects have separate evidence requirements.
+
+[Explore the graph gallery](docs/GALLERY.md#explore-connections-and-inspect-evidence) · [View the mobile graph](docs/images/correlation-path-mobile-live.png) · [Run the reference lab](examples/reference-evidence-lab/README.md)
+
 
 ### Engineers and GRC: fix and verify
 
@@ -196,8 +197,7 @@ These are application captures, not mockups. Overview, Findings and remediation 
 
 ## Trust and evidence
 
-Discovery uses read-only access by default. Explicit disk side-scans create temporary cloud resources; runtime enforcement
-acts on selected tool calls. Missing evidence stays unavailable or partial. Control mappings are not audit certification.
+Discovery uses read-only access by default. Explicit disk side-scans create temporary cloud resources; runtime enforcement acts on selected tool calls. Missing evidence stays unavailable or partial. Control mappings are not audit certification.
 
 [Product boundaries](docs/PRODUCT_BOUNDARIES.md) · [Permissions](docs/PERMISSIONS.md) · [Threat model](docs/THREAT_MODEL.md) ·
 [Security policy](SECURITY.md) · [Release verification](docs/RELEASE_VERIFICATION.md) ·
