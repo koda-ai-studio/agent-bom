@@ -549,7 +549,8 @@ test("root investigations expose depth and direction controls with bounded reque
   expect(await documentTop()).toBeGreaterThanOrEqual(legendBottom);
   await page.locator(".graph-legend-dock-summary:visible").click();
   expect(await documentTop()).toBe(top);
-  await expect(page.getByText(/Focused on:/)).toBeVisible();
+  await expect(page).toHaveURL(/root=pkg%3A42/);
+  await expect(page.getByTestId("graph-entity-drawer").getByText("pkg:42", { exact: true })).toBeVisible();
 });
 
 for (const width of [1100, 1440]) {

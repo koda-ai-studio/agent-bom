@@ -148,7 +148,7 @@ describe("product proof capture contract", () => {
     expect(source).toContain('\'[data-testid="graph-correlation-decision"]\'');
     expect(source).not.toContain('hiddenSelectors: [\'[data-testid="correlation-primary-action"]\']');
     expect(source).toContain('getByTestId("selected-exposure-path")');
-    expect(source).toContain('readySelector: \'[data-testid="exposure-path-sequence"]\'');
+    expect(source).toContain('readySelector: \'[data-testid="security-graph-investigation"]\'');
     expect(source).toContain('rejectedText: ["Exploitable Via"]');
     expect(source).toContain("maxGraphNodes: referenceGraph.nodes.length");
     expect(source).toContain("minFontPx: 12");

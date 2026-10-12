@@ -2525,7 +2525,7 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
       const matched = expected instanceof RegExp ? expected.test(visibleText) : visibleText.replace(/\s+/g, " ").includes(expected.replace(/\s+/g, " "));
       if (!matched) {
         const pathSequence = await page
-          .locator('[data-testid="exposure-path-sequence"]')
+          .locator('[data-testid="security-graph-investigation"]')
           .allInnerTexts();
         const pathDetail = pathSequence.length > 0 ? `; rendered path: ${pathSequence.join(" | ")}` : "";
         const failurePath = path.join(os.tmpdir(), `agent-bom-capture-failure-${filename}`);
@@ -3152,7 +3152,7 @@ async function main() {
     const prepareCorrelationPath = async (proofPage) => {
       await proofPage.locator(".react-flow__node").first().waitFor({ state: "visible" });
       if (proofPage.viewportSize().width < 768) {
-        await proofPage.getByRole("button", { name: "Readable view", exact: true }).click();
+        await proofPage.getByRole("button", { name: "Fit all", exact: true }).click();
         await proofPage.waitForTimeout(500);
         await scrollTo(proofPage, 0);
       } else {
@@ -3369,9 +3369,9 @@ async function main() {
       expectedText: [
         "Investigation",
         "developer-copilot",
-        "sre-runbook-agent",
+        "Sre Runbook Agent",
         "filesystem MCP",
-        "Recorded connection",
+        "Uses",
       ],
       expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/query"],
       minGraphNodes: 4,
@@ -3730,7 +3730,7 @@ async function main() {
       prepareCorrelationPath,
       {
         ...correlationPathAssertions,
-        expectedText: ["Reference Evidence Workload", "Focused view", "Readable view"],
+        expectedText: ["Reference Evidence Workload", "Graph", "Fit all"],
         minGraphNodes: 1,
         maxGraphNodes: referenceGraph.nodes.length,
         minGraphEdges: 0,
@@ -3743,13 +3743,13 @@ async function main() {
     );
     await capture(mobilePage, `/security-graph?lens=attack-path&scan=${SCAN_ID}&capture=1`, "security-graph-mobile-live.png", async (securityGraphPage) => {
       await securityGraphPage
-        .getByTestId("exposure-path-sequence")
+        .getByTestId("security-graph-investigation")
         .waitFor({ state: "visible", timeout: 30_000 });
       await scrollTo(securityGraphPage, 0);
     }, {
       expectedText: ["Investigation", "contractor-reviewer", "Developer Copilot", "CVE-2025-29927"],
       expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/views/fix-first"],
-      readySelector: '[data-testid="exposure-path-sequence"]',
+      readySelector: '[data-testid="security-graph-investigation"]',
       rejectedText: [/Loading/i],
       assertNoHorizontalOverflow: true,
     });
