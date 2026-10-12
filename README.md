@@ -172,8 +172,9 @@ Inspect the source receipts and carry the selected finding into remediation. A r
 
 Use **Find a path** to investigate a finding, or **Explore connections** to browse
 recorded entities in the same workspace. Choose a snapshot and exact entity, then
-filter by type or severity and expand bounded connections. Select a node or arrow
-for its source evidence; incomplete views remain labeled. Relationship pages are
+filter by type or severity and expand connections within a hop limit. Browse
+relationships in bounded pages and select a node or arrow for its source evidence;
+incomplete views remain labeled. Relationship pages are
 pinned to the snapshot generation, so a replaced snapshot requires a fresh page.
 Permission, execution and exploitability require separate supporting receipts.
 [Investigation workflow](site-docs/architecture/security-graph-model.md#investigate-an-agent-from-context).
