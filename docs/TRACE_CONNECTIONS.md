@@ -122,3 +122,6 @@ For operators, [ADR-016](decisions/016-resumable-trace-collection.md) specifies
 atomicity, leases, retention, HTTP and storage limits, failure behavior, migration,
 and rollback. Private hosts remain unsupported for pull; use the existing OTLP
 collector route for private deployments.
+
+For crash recovery, lost acknowledgments, concurrent lease claims, and bounded
+tenant-load checks, run the [collection qualification](perf/trace-collection-qualification.md).

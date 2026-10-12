@@ -2,6 +2,8 @@
 
 import time
 from datetime import datetime, timedelta, timezone
+from functools import lru_cache
+from threading import Lock
 
 from fastapi import HTTPException
 
@@ -21,15 +23,24 @@ from agent_bom.api.trace_collection.langfuse import ProviderFailureError, fetch_
 from agent_bom.api.trace_collection.store import TraceCollectionStore
 from agent_bom.api.trace_connection_broker import pull_credentials
 
+_store_lock = Lock()
+
 
 def collection_store() -> TraceCollectionStore:
     runtime = get_runtime_event_store()
+    if not isinstance(runtime, (SQLiteRuntimeEventStore, PostgresRuntimeEventStore)):
+        raise HTTPException(status_code=503, detail="Trace collection requires durable runtime storage.")
+    # Serialize initialization only; page HTTP and SQL work never hold this lock.
+    with _store_lock:
+        return _initialized_store(runtime)
+
+
+@lru_cache(maxsize=1)
+def _initialized_store(runtime: SQLiteRuntimeEventStore | PostgresRuntimeEventStore) -> TraceCollectionStore:
     backend: SqlBackend
     if isinstance(runtime, SQLiteRuntimeEventStore):
         backend = SQLiteBackend(runtime._db_path, connection_factory=lambda: runtime._conn)
     else:
-        if not isinstance(runtime, PostgresRuntimeEventStore):
-            raise HTTPException(status_code=503, detail="Trace collection requires durable runtime storage.")
         backend = PostgresBackend(runtime._pool)
     store = TraceCollectionStore(backend)
     store.init_schema()
