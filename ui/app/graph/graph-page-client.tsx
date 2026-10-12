@@ -2327,10 +2327,10 @@ function GraphPageInner() {
         : viewportOptions;
       // Scenario views share width with the decision panel and app navigation.
       // Allow the complete proposed context to fit shorter desktop canvases.
-      if (compactInvestigationTopology && !narrowViewport) return { ...options, minZoom: COMPACT_GRAPH_MIN_ZOOM, maxZoom: 1 };
+      if (compactInvestigationTopology && !narrowViewport) return { ...options, minZoom: displayNodes.length <= 3 ? 1 : COMPACT_GRAPH_MIN_ZOOM, maxZoom: displayNodes.length <= 3 ? 1.25 : 1 };
       return selectedScenarioId && !scenarioExpanded ? { ...options, minZoom: 0.75, maxZoom: 1 } : options;
     },
-    [initialAnchorId, viewportOptions, selectedScenarioId, scenarioExpanded, compactInvestigationTopology, narrowViewport],
+    [initialAnchorId, viewportOptions, selectedScenarioId, scenarioExpanded, compactInvestigationTopology, narrowViewport, displayNodes.length],
   );
   const showMiniMap = useMemo(
     () =>
@@ -3076,7 +3076,7 @@ function GraphPageInner() {
           </div>
         </div>
 
-        <div className="mt-3">
+        <div className="mt-1 sm:mt-3">
           <div className="flex flex-wrap items-center gap-2">
           {scenarioState === "current" && !rollupUnavailable && (rollupView || investigationMode || selectedAttackPath) && <div className="shrink-0">
             {!rollupDecisionActive && rollupStack.length === 0 && <button type="button" onClick={returnToSummary} className="graph-page-action">All scopes</button>}
@@ -3086,12 +3086,7 @@ function GraphPageInner() {
             </nav>}
           </div>}
           {!narrowViewport && snapshotViewControls}
-          {narrowViewport ? <details className="relative ml-auto" data-testid="mobile-graph-search">
-            <summary className="graph-page-action cursor-pointer">Search graph</summary>
-            <div className="absolute right-0 top-full z-30 mt-2 w-72 max-w-[calc(100vw-4rem)] rounded-xl border border-outline bg-surface p-3 shadow-lg">
-              {graphSearchForm}
-            </div>
-          </details> : graphSearchForm}
+          {!narrowViewport && graphSearchForm}
           </div>
 
           {searchResults.length > 0 && (
@@ -3162,6 +3157,12 @@ function GraphPageInner() {
 
           <div className="relative mt-1">
           <GraphViewControls
+            actions={narrowViewport ? <details className="relative ml-auto" data-testid="mobile-graph-search">
+              <summary className="graph-page-action cursor-pointer">Search graph</summary>
+              <div className="absolute right-0 top-full z-30 mt-2 w-72 max-w-[calc(100vw-4rem)] rounded-xl border border-outline bg-surface p-3 shadow-lg">
+                {graphSearchForm}
+              </div>
+            </details> : undefined}
             filters={filters}
             onChange={(next) => {
               if (rollupCanvasOwnsPresentation) restoreSummaryOnFilterReset.current = true;
@@ -3645,7 +3646,7 @@ function GraphPageInner() {
           ? "relative grid gap-4 px-4 py-3 lg:grid-cols-[minmax(0,1fr)_320px] lg:h-[max(28rem,calc(100dvh-18rem))]"
           : selectedAttackPath
             ? "flex relative min-h-[540px]"
-            : "flex relative min-h-[max(30rem,calc(100dvh-17rem))]"}
+            : compactInvestigationTopology && displayNodes.length <= 4 && !investigationMode ? "flex relative min-h-0" : "flex relative min-h-[max(30rem,calc(100dvh-17rem))]"}
       >
         <div className={`flex-1 relative min-w-0 flex flex-col ${selectedScenario ? "min-h-[26rem] lg:min-h-0" : "min-h-0"}`} data-testid="investigation-graph-workspace">
           {selectedAttackPath && selectedPathDecision && (
@@ -3726,7 +3727,7 @@ function GraphPageInner() {
             </div>
           )}
           {!rollupDecisionActive && graphRenderer.kind === "react-flow" && displayNodes.length > 0 && <GraphLegendDock items={legendItems} separated />}
-          <div className="relative flex h-[max(28rem,calc(100dvh-21rem))] shrink-0 overflow-hidden rounded-lg border border-outline bg-surface">
+          <div className={`relative flex h-[max(24rem,calc(100dvh-25rem))] ${compactInvestigationTopology && displayNodes.length <= 4 && !investigationMode ? "sm:h-[clamp(24rem,50dvh,36rem)]" : "sm:h-[max(28rem,calc(100dvh-21rem))]"} shrink-0 overflow-hidden rounded-lg border border-outline bg-surface`}>
           <div className="relative min-h-0 min-w-0 flex-1">
           {graphPanelError && graphData && !loadingGraph && (
             <div role="status" className="flex items-center justify-between gap-3 border-b border-outline px-4 py-2 text-sm">

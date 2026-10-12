@@ -20,7 +20,7 @@ export function AccountMenu() {
     <summary ref={trigger} aria-label={`Account menu: ${displayName}`} className="flex cursor-pointer list-none items-center gap-2 rounded-lg border border-outline bg-surface-muted px-2 py-2 text-sm md:px-3 text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-500 [&::-webkit-details-marker]:hidden">
       <UserRound className="h-4 w-4" aria-hidden="true" /><span className="hidden max-w-40 truncate md:inline">{displayName}</span><ChevronDown className="hidden h-3 w-3 md:block" aria-hidden="true" />
     </summary>
-    <div className="absolute right-0 top-full z-50 mt-2 max-h-[calc(100vh-6rem)] w-[24rem] max-w-[calc(100vw-2rem)] overflow-y-auto rounded-xl border border-outline bg-surface p-4 shadow-xl" aria-label="Account details">
+    <div className="fixed left-4 right-4 top-14 z-50 mt-2 max-h-[calc(100dvh-6rem)] overflow-y-auto rounded-xl border border-outline bg-surface p-4 shadow-xl md:absolute md:left-auto md:right-0 md:top-full md:w-[24rem] md:max-w-[calc(100vw-2rem)]" aria-label="Account details">
       <section aria-labelledby="account-signed-in-label" className="border-b border-outline pb-4">
         <p id="account-signed-in-label" className="mb-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-secondary">{session?.authenticated ? "Signed in" : "Session"}</p>
         <div className="flex items-start gap-3">

@@ -28,7 +28,7 @@ from agent_bom.api.postgres_common import reset_current_tenant, set_current_tena
 from agent_bom.api.runtime_event_store import SQLiteRuntimeEventStore, set_runtime_event_store
 from agent_bom.api.server import app, configure_api
 from agent_bom.api.storage.sql import PostgresBackend, SQLiteBackend
-from agent_bom.api.trace_collection.langfuse import fetch_page, identity
+from agent_bom.api.trace_collection.langfuse import fetch_page
 from agent_bom.api.trace_collection.store import TraceCollectionStore
 from scripts.run_graph_mixed_scale_evidence import percentiles
 
@@ -104,6 +104,8 @@ def run(output: Path, *, backend: str, workers: int, pages: int, rows: int, p95_
 
     def provider(request):
         nonlocal calls
+        if request.url.path == "/api/public/projects":
+            return httpx.Response(200, json={"data": [{"id": "fixture-project", "name": "Qualification"}]})
         with guard:
             calls += 1
         index = int(request.url.params.get("cursor", "0"))
@@ -195,18 +197,24 @@ def run(output: Path, *, backend: str, workers: int, pages: int, rows: int, p95_
             token = set_current_tenant(tenant)
             try:
                 expected = {
-                    "trace:" + identity(tenant, connection, "shared-trace-id", f"{p}-{r}")
+                    (connection, "fixture-project", "shared-trace-id", f"{p}-{r}")
                     for connection, owner in bindings.items()
                     if owner == tenant
                     for p in range(pages)
                     for r in range(rows)
                 }
                 with store.backend.transaction(read_only=True) as tx:
-                    actual = {
-                        row[0]
-                        for row in tx.execute("SELECT observation_id FROM runtime_observations WHERE tenant_id=?", (tenant,)).fetchall()
-                    }
-                checks.append(actual == expected)
+                    records = [
+                        json.loads(row[0])
+                        for row in tx.execute("SELECT data FROM runtime_observations WHERE tenant_id=?", (tenant,)).fetchall()
+                    ]
+                actual = {
+                    tuple(row["metadata"].get(key) for key in ("connection_id", "project_id", "native_trace_id", "native_span_id"))
+                    for row in records
+                }
+                checks.append(actual == expected and len(records) == len(expected))
+                checks.append(all(row["tenant_id"] == tenant and row["surface"] == "imported_trace" for row in records))
+                checks.append(len({row["observation_id"] for row in records}) == len(expected))
                 for connection, owner in bindings.items():
                     if owner == tenant:
                         state = store.get(tenant, connection)

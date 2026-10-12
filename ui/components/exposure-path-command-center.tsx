@@ -150,6 +150,9 @@ export function ExposurePathCommandCenter({
   const setView = (next: ExposurePathView) => {
     if (!controlledView) setInternalView(next);
     onViewChange?.(next);
+    if (next === "graph" && view === "graph") {
+      graphViewRef.current?.scrollIntoView({ block: "start", behavior: "instant" });
+    }
   };
   useLayoutEffect(() => {
     // Controlled view updates can commit after an event's animation frame.

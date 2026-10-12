@@ -1,9 +1,17 @@
-import { expect, test, type Page, type TestInfo } from "@playwright/test";
+import { expect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
 
 // Non-empty fixture with two observed paths so the security graph page can
 // prove that queue selection updates the in-place graph and evidence panel.
 const scanId = "scan-cockpit-fixture";
 const createdAt = "2026-05-27T16:00:00Z";
+
+async function inspectPathAssessment(detail: Locator, expected: string | RegExp) {
+  const disclosure = detail.locator(".ep-header-details");
+  await disclosure.locator(":scope > summary").click();
+  await expect(detail.getByRole("region", { name: "Path evidence assessment" })).toContainText(expected);
+  await disclosure.locator(":scope > summary").click();
+}
+
 
 type GraphNode = {
   id: string;
@@ -1299,7 +1307,7 @@ for (const theme of ["light", "dark"] as const) {
     await expect(page.getByText(/3 from the path queue/)).toBeVisible();
     await openPathQueue(page);
     await page.getByLabel("Attack path queue").getByRole("button", { name: /#1 fix first/ }).click();
-    await page.getByRole("button", { name: "List", exact: true }).click();
+    await page.getByRole("button", { name: "Connections", exact: true }).click();
     const explorer = page.getByRole("region", { name: "Expand path neighbors" });
     await explorer.getByRole("button", { name: "Expand neighbors of Billing repository" }).click();
     await explorer.getByRole("button", { name: "Retry neighbor lookup" }).click();
@@ -1356,7 +1364,7 @@ for (const proof of [
     await page.getByText("Investigation tools · snapshots, correlation & checks", { exact: true }).click();
     await page.getByRole("button", { name: /Exposure paths/ }).click();
     const lens = page.getByTestId("exposure-path-lens");
-    await expect(lens.getByRole("region", { name: "Path evidence assessment" })).toContainText("Unknown");
+    await inspectPathAssessment(lens, "Unknown");
     await lens.getByText("Evidence & relationships", { exact: true }).click();
     await expect(lens.getByRole("region", { name: "Relationship proof" })).toContainText("Context only; not traversable");
     await lens.getByText("Inspect 1 hop receipts", { exact: true }).click();
@@ -1411,7 +1419,7 @@ for (const theme of ["light", "dark"] as const) {
     await page.goto(`/security-graph?lens=attack-path&scan=${scanId}&node=pkg%3Aform-data&cve=CVE-2025-7783&package=form-data`);
     const detail = page.getByTestId("selected-exposure-path");
     await expect(detail).toBeVisible();
-    const diagram = detail.getByRole("img", { name: /Selected exposure path graph/ });
+    const diagram = detail.getByRole("region", { name: "Interactive graph", exact: true });
     await expect(diagram).toBeVisible();
     // Resolving the parent scan scope can briefly remount this diagram. Read
     // one box per attempt and retry missing geometry without accepting it.
@@ -1419,9 +1427,9 @@ for (const theme of ["light", "dark"] as const) {
       const bounds = await diagram.boundingBox();
       return bounds ? bounds.y + bounds.height : Number.POSITIVE_INFINITY;
     }).toBeLessThanOrEqual(900);
-    await expect(detail.getByRole("region", { name: "Path evidence assessment" })).toContainText("Reachability");
-    await expect(detail.getByRole("region", { name: "Path evidence assessment" })).toContainText("Exploitability");
-    await expect(detail.getByRole("region", { name: "Path evidence assessment" })).toContainText("Assessment completeness");
+    await inspectPathAssessment(detail, "Reachability");
+    await inspectPathAssessment(detail, "Exploitability");
+    await inspectPathAssessment(detail, "Assessment completeness");
     await expect(detail.getByTestId("exposure-path-primary-action")).toBeVisible();
     await expect(detail.getByText("Evidence & relationships", { exact: true })).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath(`focused-path-${theme}.png`) });
@@ -1438,7 +1446,7 @@ for (const theme of ["light", "dark"] as const) {
       const workspace = page.getByRole("region", { name: "Investigation workspace" });
       const detail = workspace.getByRole("region", { name: "Selected path detail" });
       await expect(detail).toBeVisible();
-      await expect(detail.getByRole("region", { name: "Path evidence assessment" })).toContainText(/unknown/i);
+      await inspectPathAssessment(detail, /unknown/i);
       await expect(detail.getByRole("heading", { level: 2 })).not.toContainText(/reachable|exploitable/i);
       const queue = page.getByLabel("Attack path queue");
       await expect(queue).not.toContainText(/Critical package reachable/);
@@ -1451,19 +1459,19 @@ for (const theme of ["light", "dark"] as const) {
         await expect(queue).toBeHidden();
         await expect(detail).toBeVisible();
         await expect(detail.getByRole("heading", { level: 2 })).toContainText("GITHUB PERSONAL ACCESS TOKEN");
-        const steps = detail.getByTestId("exposure-path-sequence");
-        expect((await steps.boundingBox())!.height).toBeLessThan(280);
-        await detail.getByRole("button", { name: "Next path steps" }).click();
-        await expect.poll(() => steps.evaluate(element => element.scrollLeft)).toBeGreaterThan(0);
-        await expect(detail.getByRole("button", { name: "Previous path steps" })).toBeEnabled();
-        await detail.getByRole("button", { name: "Previous path steps" }).click();
-        await expect.poll(() => steps.evaluate(element => element.scrollLeft)).toBe(0);
+        const graph = detail.getByTestId("security-graph-investigation");
+        await expect(graph.getByText(/Focused view · 1 of/)).toBeVisible();
+        await graph.getByRole("button", { name: "Next graph node" }).click();
+        await expect(graph.getByText(/Focused view · 2 of/)).toBeVisible();
+        await expect(graph.getByRole("button", { name: "Previous graph node" })).toBeEnabled();
+        await graph.getByRole("button", { name: "Previous graph node" }).click();
+        await expect(graph.getByText(/Focused view · 1 of/)).toBeVisible();
       } else {
         await openPathQueue(page);
         const [queueBox, detailBox] = await Promise.all([queue.boundingBox(), detail.boundingBox()]);
         expect(queueBox!.x + queueBox!.width).toBeLessThan(detailBox!.x);
         expect(queueBox!.height).toBeLessThanOrEqual(650);
-        const graph = detail.getByRole("region", { name: "Selected exposure path graph", exact: true });
+        const graph = detail.getByRole("region", { name: "Interactive graph", exact: true });
         const proof = detail.getByRole("complementary", { name: "Selected path evidence" });
         const [graphBox, proofBox] = await Promise.all([graph.boundingBox(), proof.boundingBox()]);
         expect(proofBox!.y).toBeGreaterThanOrEqual(graphBox!.y + graphBox!.height);
@@ -1514,7 +1522,7 @@ for (const theme of ["light", "dark"] as const) {
         return box.top >= 0 && box.bottom <= innerHeight && box.left >= frame.left && box.right <= frame.right && !overlapsControls;
       }),
     )).toBe(true);
-    await expect(detail.getByRole("region", { name: "Path evidence assessment" })).toContainText(/unknown/i);
+    await inspectPathAssessment(detail, /unknown/i);
     await expect(detail.getByRole("complementary", { name: "Selected path evidence" })).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath(`selected-graph-${theme}-${height}.png`), fullPage: true });
   });
@@ -1562,13 +1570,7 @@ for (const theme of ["light", "dark"] as const) {
     await page.getByRole("button", { name: `Switch to ${theme} theme`, exact: true }).click();
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
     const detail = page.getByTestId("selected-exposure-path");
-    const sequence = detail.getByTestId("exposure-path-sequence");
-    await expect(sequence.locator("li")).toHaveCount(10);
-    await expect(sequence.locator("li").filter({ visible: true }).first()).toBeVisible();
-    await expect.poll(async () => {
-      const box = await sequence.locator("li").filter({ visible: true }).first().boundingBox();
-      return box?.width ?? 0;
-    }).toBeGreaterThanOrEqual(180);
+    // The unified interactive graph owns both path rendering and navigation.
     await detail.getByRole("button", { name: "Graph", exact: true }).click();
     const canvas = page.getByTestId("security-graph-investigation");
     await expect(canvas.locator(".react-flow__node")).toHaveCount(10);

@@ -18,10 +18,10 @@ import {
 type Props = Pick<
   ComponentProps<typeof FilterPanel>,
   "filters" | "onChange" | "agentNames" | "validValues" | "onReset"
-> & { estateSummary?: boolean; focusedPath?: boolean; children?: ReactNode };
+> & { estateSummary?: boolean; focusedPath?: boolean; children?: ReactNode; actions?: ReactNode };
 
 /** One canonical filter model drives both this control and shareable graph URLs. */
-export function GraphViewControls({ filters, onChange, agentNames, validValues, onReset, estateSummary = false, focusedPath = false, children }: Props) {
+export function GraphViewControls({ filters, onChange, agentNames, validValues, onReset, estateSummary = false, focusedPath = false, children, actions }: Props) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const selected = graphScopePresetForFilters(filters);
@@ -69,6 +69,7 @@ export function GraphViewControls({ filters, onChange, agentNames, validValues, 
           <RotateCcw className="h-3.5 w-3.5 sm:hidden" aria-hidden="true" />
           <span className="sr-only sm:not-sr-only">Reset view</span>
         </button>
+        {actions}
       </div>
       {open && (
         <div id={panelId} className="space-y-3 border-t border-outline p-3">

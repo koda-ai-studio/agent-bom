@@ -148,9 +148,7 @@ def test_managed_use_audit_contains_identity_not_secrets(configured, monkeypatch
     from agent_bom.trace_connectors import NativeTracePage
 
     monkeypatch.setattr("agent_bom.trace_connectors.resolve_trace_project", lambda *a, **kw: "project-id")
-    monkeypatch.setattr(
-        "agent_bom.trace_connectors.fetch_trace_page", lambda *a, **kw: NativeTracePage({"spans": []}, None, 0)
-    )
+    monkeypatch.setattr("agent_bom.trace_connectors.fetch_trace_page", lambda *a, **kw: NativeTracePage({"spans": []}, None, 0))
     monkeypatch.setattr("agent_bom.api.trace_connection_broker.log_action", lambda action, **kwargs: audit.append((action, kwargs)))
     monkeypatch.setattr("agent_bom.api.audit_log.log_action", lambda action, **kwargs: audit.append((action, kwargs)))
     routes.pull_trace_connector(request(), "langfuse", {"connection_id": "production", "screen_content": False})

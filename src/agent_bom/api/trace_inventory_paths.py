@@ -12,9 +12,9 @@ _RELATIONSHIPS = {RelationshipType.USES, RelationshipType.DEPENDS_ON, Relationsh
 
 
 def _finding_paths(graph: UnifiedGraph, root: str) -> tuple[list[dict[str, Any]], bool]:
-    pending = deque([([root], [])])
+    pending: deque[tuple[list[str], list[str]]] = deque([([root], [])])
     seen = {root}
-    paths = []
+    paths: list[dict[str, Any]] = []
     while pending and len(paths) < 10:
         nodes, edges = pending.popleft()
         node = graph.nodes.get(nodes[-1])

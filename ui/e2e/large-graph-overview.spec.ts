@@ -540,11 +540,15 @@ test("root investigations expose depth and direction controls with bounded reque
   await reverseResponse!.finished();
   await expect(page.getByText("Loading related assets · current view retained", { exact: true })).toBeHidden();
   const canvas = page.locator(".react-flow");
-  const top = (await canvas.boundingBox())!.y;
+  const documentTop = () => canvas.evaluate(element => element.getBoundingClientRect().top + window.scrollY);
+  const top = await documentTop();
   await page.locator(".graph-legend-dock-summary:visible").click();
   await expect(page.locator(".graph-legend-dock-content:visible").getByText(/Arrows show recorded direction/)).toBeVisible();
-  expect((await canvas.boundingBox())!.y).toBe(top);
+  // The separated legend grows above the canvas instead of covering its nodes.
+  const legendBottom = await page.locator(".graph-legend-dock-content:visible").evaluate(element => element.getBoundingClientRect().bottom + window.scrollY);
+  expect(await documentTop()).toBeGreaterThanOrEqual(legendBottom);
   await page.locator(".graph-legend-dock-summary:visible").click();
+  expect(await documentTop()).toBe(top);
   await expect(page.getByText(/Focused on:/)).toBeVisible();
 });
 
@@ -591,10 +595,10 @@ test("scope summary does not inherit the unrelated node-page warning", async ({ 
   await expect(page.getByRole("group", { name: "Complete estate scope, org", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "All scopes", exact: true })).toHaveCount(1);
   await page.getByRole("button", { name: "All scopes", exact: true }).click();
-  await expect(page.getByRole("region", { name: "Risk-prioritized estate scopes" })).toContainText("Complete estate scope");
+  await expect(page.getByRole("group", { name: "Complete estate scope, org", exact: true })).toBeVisible();
   await expect(page.getByText(/This node view includes only part/)).toHaveCount(0);
   await expect(page.getByText("node_page_limit", { exact: true })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Open scope", exact: true })).toBeVisible();
+  await expect(page.locator(".react-flow__node")).toHaveCount(1);
 });
 
 

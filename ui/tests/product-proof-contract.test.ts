@@ -163,7 +163,7 @@ describe("product proof capture contract", () => {
     expect(source).toContain(
       '/graph?capture=1&scan=${SCAN_ID}&path=top&layers=user,serviceAccount,role,agent,server,package,vulnerability',
     );
-    expect(source).toContain('getByRole("heading", { name: "Lineage Graph" })');
+    expect(source).toContain('getByRole("heading", { name: "Investigation", exact: true })');
     expect(graphPage).toContain("requestedAttackPathKeyRef.current = key");
     expect(graphPage).toContain('captureModeFromLocation || searchParams.get("capture") === "1"');
     expect(graphPage).toContain("A selected path is an explicit witness");

@@ -53,11 +53,13 @@ def sql_observation_page(conn: Any, tenant_id: str, *, limit: int, offset: int, 
     where = " AND ".join(clauses)
     # Live reads: totals describe the matching retained projection at query time,
     # not an immutable provider snapshot or an unbounded execution history.
+    # validate_query allowlists every field; values and paging are bound parameters.
     counts = conn.execute(
-        f"SELECT {field('source')}, COUNT(*) FROM runtime_observations WHERE {where} GROUP BY {field('source')}", params
+        f"SELECT {field('source')}, COUNT(*) FROM runtime_observations WHERE {where} GROUP BY {field('source')}",  # nosec B608
+        params,
     ).fetchall()
     rows = conn.execute(
-        f"SELECT data FROM runtime_observations WHERE {where} "
+        f"SELECT data FROM runtime_observations WHERE {where} "  # nosec B608
         f"ORDER BY observed_at DESC, observation_id DESC LIMIT {marker} OFFSET {marker}",
         (*params, limit, offset),
     ).fetchall()

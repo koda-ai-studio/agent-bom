@@ -64,7 +64,24 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     await expect(page.locator(".react-flow__node")).toHaveCount(2);
     expect(queries.at(-1)?.roots).toEqual([role.id]);
     await expect(page.getByRole("link", {name: "Inspect in lineage"})).toHaveCount(0);
+    if (width === 390) {
+      const dialog = page.getByRole("dialog", { name: "conditional", exact: true });
+      await expect(dialog).toHaveCSS("opacity", "1");
+      await page.screenshot({path: testInfo.outputPath(`shared-detail-${theme}-${width}.png`), animations: "disabled"});
+      await inspector.getByRole("button", {name: "Close", exact: true}).click();
+    }
+    await expect.poll(async () => {
+      const selected = await page.locator('[data-id="role:conditional"].react-flow__node').boundingBox();
+      const canvas = await page.locator(".react-flow").boundingBox();
+      return Boolean(selected && canvas && selected.width >= 140 && selected.x >= canvas.x &&
+        selected.x + selected.width <= canvas.x + canvas.width && selected.y >= canvas.y &&
+        selected.y + selected.height <= canvas.y + canvas.height);
+    }).toBe(true);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
-    await page.screenshot({path: testInfo.outputPath(`shared-evidence-${theme}-${width}.png`), fullPage: true});
+    await page.evaluate(() => window.scrollTo(0, 0));
+    const heading = await page.getByRole("heading", { name: "Investigation", exact: true }).boundingBox();
+    const header = await page.getByRole("banner").boundingBox();
+    expect(heading!.y).toBeGreaterThanOrEqual(header!.y + header!.height);
+    await page.screenshot({path: testInfo.outputPath(`shared-evidence-${theme}-${width}.png`), fullPage: true, animations: "disabled"});
   });
 }

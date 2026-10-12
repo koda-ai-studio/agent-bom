@@ -399,7 +399,7 @@ body {
 .ep-root { @apply relative overflow-hidden rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--surface)]; }
 .ep-body { @apply space-y-2 p-4; }
 .ep-header { @apply flex flex-wrap items-start justify-between gap-2; }
-.ep-header-details { @apply min-w-0 flex-1; }
+.ep-header-details { @apply min-w-0 basis-full sm:flex-1; }
 .ep-header-summary { @apply flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 py-2.5; }
 .ep-header-summary::-webkit-details-marker { display: none; }
 .ep-header-copy { @apply min-w-0 flex-1 space-y-1; }

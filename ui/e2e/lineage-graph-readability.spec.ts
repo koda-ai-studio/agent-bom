@@ -48,7 +48,7 @@ for (const theme of ["light", "dark"] as const) for (const width of [390, 1440])
     await page.route("**/v1/graph/snapshots?**", route => route.fulfill({ json: available ? [latest, current] : [current] }));
     await page.route("**/v1/graph?**", route => route.fulfill({ json: { ...buildDenseGraph(), scan_id: new URL(route.request().url()).searchParams.get("scan_id") || scanId } }));
     await page.clock.install();
-    await page.goto(`/graph?lens=lineage&scan=${scanId}`);
+    await page.goto(`/graph?lens=lineage&scan=${scanId}&rollup=0`);
     const canvas = page.locator(".react-flow").last();
     await expect(page.getByTestId("rf__node-agent:desktop")).toBeVisible();
     if (width === 1440) await page.getByTestId("rf__node-agent:desktop").click();
@@ -306,15 +306,15 @@ async function routeGraphPage(page: Page, graph = buildDenseGraph()) {
 }
 
 async function captureGraphScreenshot(page: Page, testInfo: TestInfo, theme: "dark" | "light") {
-  await expect(page.getByRole("heading", { name: "Lineage Graph" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Investigation", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Relevant paths", exact: true })).toBeHidden();
   // Evidence, lens selection, and advanced controls now share one
   // collapsed-by-default shelf so the canvas owns the fold. Nested controls
   // remain available on demand without becoming first-view chrome.
   await expect(page.getByText("Advanced controls", { exact: true })).toBeHidden();
   const evidenceControls = page.getByTestId("graph-evidence-controls");
-  await expect(evidenceControls).not.toHaveAttribute("open", "");
-  await expect(evidenceControls.getByText("Graph settings", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "View & layers", exact: true })).toHaveAttribute("aria-expanded", "false");
+  await expect(evidenceControls).toBeHidden();
 
   const largeOverview = page.getByTestId("large-graph-overview");
   const application = page.getByRole("application");
@@ -331,7 +331,7 @@ async function captureGraphScreenshot(page: Page, testInfo: TestInfo, theme: "da
     await expect(page.getByText("Pan, zoom, search, filter, and select nodes for evidence.")).toBeVisible();
   } else {
     await expect(desktopNode).toBeVisible();
-    await expect(page.getByTestId("graph-viewport-scope")).toContainText("Focused view");
+    await expect(page.getByTestId("graph-viewport-scope")).toContainText("Graph ·");
     // Initial context stays readable; the explicit whole-topology action makes
     // distant findings available without claiming all-fit labels are readable.
     await page.getByRole("button", { name: "Fit all", exact: true }).click();
@@ -345,7 +345,7 @@ async function captureGraphScreenshot(page: Page, testInfo: TestInfo, theme: "da
     if (await legendToggle.isVisible()) {
       await legendToggle.click();
     } else {
-      await evidenceControls.locator(":scope > summary").click();
+      await page.locator(".graph-legend-dock > summary").click();
     }
     // Graph chrome may render the legend in the evidence shelf instead of on
     // the canvas. Verify that either route keeps the legend readable.
@@ -440,7 +440,7 @@ for (const activation of ["pointer", "keyboard"] as const) {
       await pill.click();
     }
     await expect(pill).toHaveCount(0);
-    await expect(page.getByTestId("graph-viewport-scope")).toContainText("24 displayed nodes · 45 displayed relationships");
+    await expect(page.getByTestId("graph-viewport-scope")).toContainText("24 nodes · 45 relationships");
     // Expanding changes the canvas scope and starts its initial framing.
     // Fit the settled expanded canvas, not the preceding three-node frame.
     await settledViewportZoom(page);
@@ -448,7 +448,7 @@ for (const activation of ["pointer", "keyboard"] as const) {
     await settledViewportZoom(page);
     await expect(page.locator(".react-flow__edge")).toHaveCount(45);
     await expect(page.locator(".react-flow__node")).toHaveCount(24);
-    await expect(page.getByTestId("graph-viewport-scope")).toContainText("Topology view");
+    await expect(page.getByTestId("graph-viewport-scope")).toContainText("24 nodes · 45 relationships");
     const renderedEdges = await page.locator(".react-flow__edge").evaluateAll((elements) => elements.map((element) => element.getAttribute("data-id")));
     expect(new Set(renderedEdges).size).toBe(45);
     const packageNode = page.getByTestId(`rf__node-${pkg.id}`);
@@ -636,7 +636,7 @@ for (const width of [1440, 390]) {
       const detailPanel = page.getByTestId("graph-entity-drawer");
       if (width === 1440 && theme === "light") {
         await expect(page.locator("#demo-estate-watermark")).toBeVisible();
-        await detailPanel.getByRole("button", { name: "Back", exact: true }).click();
+        await detailPanel.getByRole("button", { name: "Close", exact: true }).last().click();
       } else {
         // The backdrop and header both expose Close during responsive transitions.
         // The header action is last in either drawer composition.
@@ -674,7 +674,7 @@ for (const theme of ["light", "dark"] as const) {
         if (!viewport || !title) return 0;
         return parseFloat(getComputedStyle(title).fontSize) * new DOMMatrixReadOnly(getComputedStyle(viewport).transform).a;
       })).toBeGreaterThanOrEqual(12);
-      await expect(page.getByTestId("graph-viewport-scope")).toContainText("Focused view");
+      await expect(page.getByTestId("graph-viewport-scope")).toContainText("Graph ·");
       await flow.scrollIntoViewIfNeeded();
       await expect(flow.locator(".react-flow__minimap")).toBeHidden();
       await page.getByRole("button", { name: "Show minimap", exact: true }).click();
@@ -687,7 +687,7 @@ for (const theme of ["light", "dark"] as const) {
       expect(overlapWidth * overlapHeight).toBe(0);
       await page.screenshot({ path: testInfo.outputPath(`initial-focus-${width}-${theme}.png`) });
       await page.getByRole("button", { name: "Fit all", exact: true }).click();
-      await expect(page.getByTestId("graph-viewport-scope")).toContainText(`${graph.nodes.length} displayed nodes · ${graph.edges.length} displayed relationships`);
+      await expect(page.getByTestId("graph-viewport-scope")).toContainText(`${graph.nodes.length} nodes · ${graph.edges.length} relationships`);
       const zoom = await settledViewportZoom(page);
       await page.reload();
       await expect.poll(async () => flow.locator(".react-flow__viewport").evaluate((element) => new DOMMatrixReadOnly(getComputedStyle(element).transform).a)).toBeCloseTo(zoom, 2);
@@ -707,9 +707,11 @@ for (const theme of ["light", "dark"] as const) {
       await page.getByRole("button", { name: "Fit all", exact: true }).click();
       await expect(page.locator(".react-flow__node")).toHaveCount(graph.nodes.length);
       await expect(page.locator(".react-flow__edge")).toHaveCount(graph.edges.length);
-      // Recover readable framing without requiring a selected node. This must
-      // preserve graph membership rather than discard offscreen relationships.
-      await page.getByRole("button", { name: "Readable view", exact: true }).click();
+      // Select an anchor and fit it through the shared layout controls without
+      // discarding the offscreen relationships from the loaded graph.
+      await anchor.click();
+      await page.getByText("Layout", { exact: true }).click();
+      await page.getByRole("button", { name: "Fit selection", exact: true }).click();
       await expect(anchor).toBeVisible();
       await expect.poll(async () => anchor.evaluate((element) => {
         const viewport = element.closest(".react-flow__viewport");
@@ -734,12 +736,13 @@ for (const theme of ["light", "dark"] as const) {
     await page.route("**/v1/graph/query", route => route.fulfill({ json: { ...scoped, roots: [ids[3]], direction: "reverse", max_depth: 3, truncated: false, budget: {}, depth_by_node: Object.fromEntries(ids.map((id, i) => [id, 3 - i])) } }));
     await page.addInitScript(value => localStorage.setItem("agent-bom-theme", value), theme);
     await page.goto(`/graph?scan=${scanId}&investigate=1&root=${encodeURIComponent(ids[3]!)}&depth=3&scope=expanded`);
-    await page.getByText("Traversal options", { exact: true }).click();
+    await page.getByRole("button", { name: "View & layers", exact: true }).click();
     await expect(page.getByRole("combobox", {name: "Traversal direction"})).toBeVisible();
-    await expect(page.getByTestId("graph-viewport-scope")).toContainText("4 displayed nodes · 3 displayed relationships");
+    await expect(page.getByTestId("graph-viewport-scope")).toContainText("4 nodes · 3 relationships");
     await page.getByRole("combobox", {name: "Traversal direction"}).selectOption("reverse");
-    await page.getByText("Traversal options", { exact: true }).click();
-    await page.getByRole("combobox", {name: "Traversal depth"}).selectOption("3");
+    await page.getByRole("button", { name: /^Traversal / }).click();
+    await page.getByRole("combobox", {name: "Graph traversal depth"}).selectOption("3");
+    await page.getByRole("button", { name: "View & layers", exact: true }).click();
     const close = page.getByRole("button", { name: "Close", exact: true });
     // Query completion opens the requested finding. Do not skip closing it
     // while an asynchronous depth/direction refresh is still loading.
@@ -829,10 +832,9 @@ for (const theme of ["light", "dark"] as const) {
     await expect(page.getByTestId("graph-search-result-agent:desktop")).toContainText("Desktop Agent");
     expect(searched).toEqual([{ query: "Desktop Agent", scanId }]);
     await header.getByText("Search graph", { exact: true }).click();
-    const settings = header.getByTestId("graph-evidence-controls");
-    await settings.locator(":scope > summary").click();
-    await expect(settings).toHaveAttribute("open", "");
-    await expect(settings.getByText("Advanced controls", { exact: true })).toBeVisible();
+    await header.getByRole("button", { name: "View & layers", exact: true }).click();
+    await expect(header.getByRole("button", { name: "View & layers", exact: true })).toHaveAttribute("aria-expanded", "true");
+    await expect(header.getByText("Advanced controls", { exact: true })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
 }
@@ -909,10 +911,11 @@ for (const theme of ["light", "dark"] as const) {
     await settledViewportZoom(page);
     const sizes=await page.locator(".react-flow__node").evaluateAll(elements=>elements.map(element=>{
       const zoom=new DOMMatrixReadOnly(getComputedStyle(element.closest(".react-flow__viewport")!).transform).a;
-      const heading=element.querySelector("h3")??element.querySelector("[data-testid=lineage-node-label]")??element;
+      const heading=element.querySelector("p")!;
       return {width:element.getBoundingClientRect().width,font:parseFloat(getComputedStyle(heading).fontSize)*zoom};
     }));
-    expect(sizes.every(size=>size.width>=200)).toBe(true);
+    // Card width varies with its label; enforce readable rendered text as well as a usable target.
+    expect(sizes.every(size=>size.width>=200 && size.font>=12)).toBe(true);
     await expect(page.locator(".relationship-badge").first()).toBeVisible();
     const overlaps = await page.locator(".react-flow").evaluate(canvas => {
       const cards = [...canvas.querySelectorAll(".react-flow__node")].map(n => n.getBoundingClientRect());

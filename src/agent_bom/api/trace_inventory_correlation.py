@@ -30,7 +30,8 @@ def correlate_inventory_observations(
     nodes = {node.id: node for node in store.nodes_by_ids(tenant_id=tenant_id, scan_id=scan_id, node_ids=identities)}
     result: dict[str, dict[str, Any]] = {}
     for row in rows:
-        metadata = row.get("metadata") if isinstance(row.get("metadata"), dict) else {}
+        raw_metadata = row.get("metadata")
+        metadata = raw_metadata if isinstance(raw_metadata, dict) else {}
         identity = metadata.get("inventory_node_id")
         node = nodes.get(identity) if isinstance(identity, str) else None
         binding: dict[str, Any] = {"state": "unmapped", "execution_proven": False}

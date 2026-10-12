@@ -36,16 +36,17 @@ for (const theme of ["light", "dark"]) {
     await expect(page).toHaveURL(/connections\?tab=traces/);
     await page.getByLabel("Managed connection").selectOption("production");
     await expect(page.getByLabel("Secret key", { exact: true })).toHaveCount(0);
-    await expect(page.getByText("100 observations saved · 1 pages committed")).toBeVisible();
+    await page.getByText("Incremental collection and saved progress", { exact: true }).click();
+    await expect(page.getByText("100 new observations saved · 1 pages committed")).toBeVisible();
     await page.getByRole("button", { name: "Collect next page" }).click();
     await expect(page.getByText(/Provider rate limit/)).toBeVisible();
     await expect(page.getByRole("button", { name: "Collect next page" })).toBeDisabled();
     await page.getByRole("button", { name: "Pull and correlate" }).click();
-    await expect(page.getByText("2 native observations collected · 1 finding matches")).toBeVisible();
+    await expect(page.getByText("2 native observations collected · 1 candidate finding matches")).toBeVisible();
     await expect(page.getByLabel("Secret key", { exact: true })).toHaveCount(0);
 
     await expect(page.getByRole("link", { name: "CVE-2025-1234" })).toHaveAttribute("href", "/findings?cve=CVE-2025-1234");
-    await expect(page.getByText(/2 new observations retained/)).toBeVisible();
+    await expect(page.getByText(/2 new · 0 updated · 0 unchanged observations/)).toBeVisible();
     for (const width of [1280, 390]) {
       await page.setViewportSize({ width, height: 900 });
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);

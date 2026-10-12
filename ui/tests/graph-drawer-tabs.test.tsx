@@ -210,7 +210,7 @@ describe("graph entity drawer tabs", () => {
     render(<GraphEntityDrawer data={richNode()} scanId="scan-proof" onClose={noop} onInspectNode={inspect} />);
     fireEvent.click(screen.getByTestId("graph-drawer-tab-relationships"));
     const relationship = await screen.findByRole("button", { name: "Recorded package" });
-    expect(screen.getByText("← Incoming · Package vulnerability")).toBeVisible();
+    expect(screen.getByText("← Incoming · Has CVE")).toBeVisible();
     const counts = screen.getByText("Relationship counts");
     expect(counts.closest("details")?.open).toBe(false);
     expect(relationship.compareDocumentPosition(counts) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
