@@ -28169,6 +28169,11 @@
       "ObsTraceLinkedFinding": {
         "additionalProperties": true,
         "properties": {
+          "correlation_basis": {
+            "default": "candidate_name",
+            "title": "Correlation Basis",
+            "type": "string"
+          },
           "effective_reach_band": {
             "anyOf": [
               {
@@ -28349,12 +28354,33 @@
             "title": "Agent",
             "type": "string"
           },
+          "collected_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Collected At"
+          },
           "compliance_controls": {
             "items": {
               "type": "string"
             },
             "title": "Compliance Controls",
             "type": "array"
+          },
+          "correlation_state": {
+            "default": "candidate_name",
+            "title": "Correlation State",
+            "type": "string"
+          },
+          "depth": {
+            "default": 0,
+            "title": "Depth",
+            "type": "integer"
           },
           "detail": {
             "anyOf": [
@@ -28367,12 +28393,71 @@
             ],
             "title": "Detail"
           },
+          "end_time_unix_nano": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Time Unix Nano"
+          },
+          "event_time_missing": {
+            "default": false,
+            "title": "Event Time Missing",
+            "type": "boolean"
+          },
+          "inventory_binding": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inventory Binding"
+          },
           "linked_findings": {
             "items": {
               "$ref": "#/components/schemas/ObsTraceLinkedFinding"
             },
             "title": "Linked Findings",
             "type": "array"
+          },
+          "logical_root": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logical Root"
+          },
+          "native_name": {
+            "default": "",
+            "title": "Native Name",
+            "type": "string"
+          },
+          "native_type": {
+            "default": "",
+            "title": "Native Type",
+            "type": "string"
+          },
+          "parent_span_id": {
+            "default": "",
+            "title": "Parent Span Id",
+            "type": "string"
+          },
+          "parent_state": {
+            "default": "root",
+            "title": "Parent State",
+            "type": "string"
           },
           "session_id": {
             "anyOf": [
@@ -28400,8 +28485,21 @@
             ],
             "title": "Source"
           },
+          "source_scope": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "default": {},
+            "title": "Source Scope",
+            "type": "object"
+          },
           "span_id": {
             "title": "Span Id",
+            "type": "string"
+          },
+          "surface": {
+            "default": "runtime",
+            "title": "Surface",
             "type": "string"
           },
           "timestamp": {
@@ -74740,6 +74838,133 @@
         ]
       }
     },
+    "/v1/runtime/observation-revisions": {
+      "get": {
+        "description": "Read retained native content history within the authenticated tenant.\n\nCollection history is not independent provider evidence. Pruning the current\nobservation projection does not remove this history; no delete API is exposed.",
+        "operationId": "list_runtime_observation_revisions_v1_runtime_observation_revisions_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "observation_id",
+            "required": true,
+            "schema": {
+              "maxLength": 512,
+              "minLength": 1,
+              "title": "Observation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Agent-Bom-Role",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Bom-Role"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Agent-Bom-Tenant-ID",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Bom-Tenant-Id"
+            }
+          },
+          {
+            "in": "header",
+            "name": "X-Agent-Bom-Proxy-Secret",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Agent-Bom-Proxy-Secret"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuntimeObservationsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED"
+          },
+          "5XX": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE)"
+          }
+        },
+        "summary": "List Runtime Observation Revisions",
+        "tags": [
+          "runtime",
+          "observability"
+        ]
+      }
+    },
     "/v1/runtime/observations": {
       "get": {
         "description": "List metadata-only runtime observations for the active tenant.",
@@ -75270,6 +75495,23 @@
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scan_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 512,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scan Id"
             }
           },
           {
@@ -79233,7 +79475,7 @@
     },
     "/v1/traces/attack-paths": {
       "post": {
-        "description": "Resolve each traced tool-call span to its exact attack path (#3898).\n\nAccepts an OTLP JSON trace and correlates every vulnerable tool-call span\nagainst the tenant's scan blast radii, returning per-span the exact reachable\nCVE, exposed credentials, resolved non-human identities, and blast radius.\nCorrelation is in-memory; raw span content is never stored. Pass ``span_id``\nto scope the answer to a single span.",
+        "description": "Return name-based finding candidates for traced tool calls.\n\nThese legacy associations are not exact inventory joins or execution proof.\nThey relate reported tool/server names to the tenant's scan blast radii.\nCorrelation is in-memory; raw span content is never stored. Pass ``span_id``\nto scope the answer to a single span.",
         "operationId": "correlate_trace_attack_paths_v1_traces_attack_paths_post",
         "parameters": [
           {

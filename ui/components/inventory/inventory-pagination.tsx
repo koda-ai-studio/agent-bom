@@ -13,10 +13,10 @@ export function InventoryPagination() {
   return <nav aria-label="Asset pages" className="flex flex-wrap items-center justify-between gap-3 text-xs text-ink-secondary">
     <span aria-live="polite">Showing {start.toLocaleString()}–{end.toLocaleString()} of {total.toLocaleString()} matching assets</span>
     <div className="flex items-center gap-3">
-      <label>Rows per page <select aria-label="Rows per page" value={pageSize} disabled={busy} onChange={event => setPageSize(Number(event.target.value))} className="rounded border border-outline bg-surface px-2 py-1">{[25, 50, 100].map(size => <option key={size} value={size}>{size}</option>)}</select></label>
-      <button type="button" disabled={busy || offset === 0} onClick={() => void previousPage()} className="graph-chip disabled:opacity-50">Previous</button>
+      <label className="flex items-center gap-2">Rows per page <select aria-label="Rows per page" value={pageSize} disabled={busy} onChange={event => setPageSize(Number(event.target.value))} className="cursor-pointer rounded border border-outline bg-surface px-2 py-1 focus-visible:outline-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed">{[25, 50, 100].map(size => <option key={size} value={size}>{size}</option>)}</select></label>
+      <button type="button" disabled={busy || offset === 0} onClick={() => void previousPage()} className="graph-page-action min-h-10 disabled:opacity-50">Previous</button>
       <span>Page {Math.floor(offset / pageSize) + 1} of {Math.max(1, Math.ceil(total / pageSize))}</span>
-      <button type="button" disabled={busy || !hasMore} onClick={() => void loadMore()} className="graph-chip disabled:opacity-50">Next</button>
+      <button type="button" disabled={busy || !hasMore} onClick={() => void loadMore()} className="graph-page-action min-h-10 disabled:opacity-50">Next</button>
       {busy ? <span role="status">Loading page…</span> : null}
     </div>
   </nav>;

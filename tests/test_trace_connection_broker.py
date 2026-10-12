@@ -47,14 +47,23 @@ def test_catalog_hides_secrets_and_other_tenants(configured):
 
 def test_managed_pull_resolves_rotated_secret_on_each_use(configured, monkeypatch):
     calls = []
+    from agent_bom.trace_connectors import NativeTracePage
+
+    monkeypatch.setattr("agent_bom.trace_connectors.resolve_trace_project", lambda *a, **kw: "project-id")
     monkeypatch.setattr(
-        "agent_bom.trace_connectors.fetch_traces", lambda provider, credentials, **kw: calls.append(credentials) or {"spans": []}
+        "agent_bom.trace_connectors.fetch_trace_page",
+        lambda provider, credentials, **kw: calls.append(credentials) or NativeTracePage({"spans": []}, None, 0),
     )
     body = {"connection_id": "production", "screen_content": False}
     routes.pull_trace_connector(request(), "langfuse", body)
     configured[2].write_text(json.dumps({"public_key": "fixture-public", "secret_key": "rotated-fixture"}))
     routes.pull_trace_connector(request(), "langfuse", body)
-    assert calls[0] == {"host": "https://cloud.langfuse.com", "public_key": "fixture-public", "secret_key": "fixture-secret"}
+    assert calls[0] == {
+        "host": "https://cloud.langfuse.com",
+        "project": "",
+        "public_key": "fixture-public",
+        "secret_key": "fixture-secret",
+    }
     assert calls[1]["secret_key"] == "rotated-fixture"
 
 
@@ -93,7 +102,13 @@ def test_managed_connection_http_auth_and_tenant_boundary(configured, monkeypatc
     from tests.auth_helpers import disable_trusted_proxy_env, enable_trusted_proxy_env, proxy_headers
 
     calls = []
-    monkeypatch.setattr("agent_bom.trace_connectors.fetch_traces", lambda *a, **kw: calls.append(a) or {"spans": []})
+    from agent_bom.trace_connectors import NativeTracePage
+
+    monkeypatch.setattr("agent_bom.trace_connectors.resolve_trace_project", lambda *a, **kw: "project-id")
+    monkeypatch.setattr(
+        "agent_bom.trace_connectors.fetch_trace_page",
+        lambda *a, **kw: calls.append(a) or NativeTracePage({"spans": []}, None, 0),
+    )
     enable_trusted_proxy_env()
     configure_api(api_key="fixture-api-auth-required")
     try:
@@ -117,8 +132,12 @@ def test_langsmith_project_scope_is_operator_bound(configured, monkeypatch):
     path.write_text(json.dumps(config))
     secret.write_text(json.dumps({"api_key": "fixture-secret"}))
     calls = []
+    from agent_bom.trace_connectors import NativeTracePage
+
+    monkeypatch.setattr("agent_bom.trace_connectors.resolve_trace_project", lambda *a, **kw: "project-id")
     monkeypatch.setattr(
-        "agent_bom.trace_connectors.fetch_traces", lambda provider, credentials, **kw: calls.append(credentials) or {"spans": []}
+        "agent_bom.trace_connectors.fetch_trace_page",
+        lambda provider, credentials, **kw: calls.append(credentials) or NativeTracePage({"spans": []}, None, 0),
     )
     routes.pull_trace_connector(request(), "langsmith", {"connection_id": "production", "screen_content": False})
     assert calls == [{"api_url": "https://api.smith.langchain.com", "project": "production", "api_key": "fixture-secret"}]
@@ -126,13 +145,15 @@ def test_langsmith_project_scope_is_operator_bound(configured, monkeypatch):
 
 def test_managed_use_audit_contains_identity_not_secrets(configured, monkeypatch):
     audit = []
+    from agent_bom.trace_connectors import NativeTracePage
+
+    monkeypatch.setattr("agent_bom.trace_connectors.resolve_trace_project", lambda *a, **kw: "project-id")
+    monkeypatch.setattr(
+        "agent_bom.trace_connectors.fetch_trace_page", lambda *a, **kw: NativeTracePage({"spans": []}, None, 0)
+    )
     monkeypatch.setattr("agent_bom.api.trace_connection_broker.log_action", lambda action, **kwargs: audit.append((action, kwargs)))
-    monkeypatch.setattr("agent_bom.trace_connectors.fetch_traces", lambda *a, **kw: {"spans": []})
+    monkeypatch.setattr("agent_bom.api.audit_log.log_action", lambda action, **kwargs: audit.append((action, kwargs)))
     routes.pull_trace_connector(request(), "langfuse", {"connection_id": "production", "screen_content": False})
-    assert audit == [
-        (
-            "trace_connection.use",
-            {"actor": "operator", "tenant_id": "tenant-a", "resource": "trace_connection/production", "provider": "langfuse"},
-        )
-    ]
+    assert [event for event, _ in audit] == ["trace_connection.use", "trace_import.pull"]
+    assert audit[-1][1]["outcome"] == "complete"
     assert "fixture-secret" not in json.dumps(audit)

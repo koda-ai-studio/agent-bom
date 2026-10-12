@@ -50,6 +50,9 @@ def native_span(row: dict[str, Any], *, provider: str, include_content: bool) ->
     if tool:
         attrs["tool.name"] = name
     for key, value in {
+        "agent_bom.inventory_node_id": metadata.get("agent_bom.inventory_node_id"),
+        "agent_bom.inventory_scan_id": metadata.get("agent_bom.inventory_scan_id"),
+        "agent_bom.inventory_generation": metadata.get("agent_bom.inventory_generation"),
         "mcp.server": metadata.get("server") or metadata.get("mcp_server"),
         "package.name": metadata.get("package") or metadata.get("dependency"),
         "agent_bom.native_project_id": row.get("projectId" if lf else "session_id"),

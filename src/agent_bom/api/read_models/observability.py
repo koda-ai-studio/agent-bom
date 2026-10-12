@@ -98,6 +98,7 @@ class RuntimeSessionObservationsResponse(ReadResponse):
 
 
 class ObsTraceLinkedFinding(ReadModel):
+    correlation_basis: str = "candidate_name"
     finding_id: str | None
     vulnerability_id: str | None
     severity: str | None
@@ -109,6 +110,20 @@ class ObsTraceLinkedFinding(ReadModel):
 
 
 class ObsTraceSpan(ReadModel):
+    surface: str = "runtime"
+    parent_span_id: str = ""
+    parent_state: str = "root"
+    depth: int = 0
+    logical_root: bool | None = None
+    native_type: str = ""
+    native_name: str = ""
+    event_time_missing: bool = False
+    collected_at: str | None = None
+    end_time_unix_nano: str | None = None
+    correlation_state: str = "candidate_name"
+    source_scope: dict[str, str] = {}
+    inventory_binding: dict[str, Any] | None = None
+
     span_id: str
     timestamp: str | None
     agent: str
@@ -137,6 +152,13 @@ class ObsTraceSession(ReadModel):
 
 
 class RuntimeTraceExplorerResponse(ReadResponse):
+    retained_total: int = 0
+    source_counts: dict[str, int] = {}
+    offset: int = 0
+    limit: int = 100
+    has_more: bool = False
+    feed_included: bool = False
+    counts_scope: str = "matching_retained_observations"
     schema_version: str
     tenant_id: str
     session_count: int

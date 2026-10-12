@@ -128,3 +128,36 @@ def test_pull_connector_rejects_ssrf_host_with_400() -> None:
     resp = client.post("/v1/traces/connectors/langfuse/pull", json=body, headers=proxy_headers(role="admin"))
     assert resp.status_code == 400, resp.text
     assert "169.254.169.254" not in resp.text
+
+
+def test_trace_explorer_filters_are_validated_and_tenant_scoped(monkeypatch, tmp_path):
+    from agent_bom.api.routes import observability
+    from agent_bom.api.runtime_event_store import RuntimeObservationRecord, SQLiteRuntimeEventStore
+
+    store = SQLiteRuntimeEventStore(str(tmp_path / "traces.db"))
+    headers = proxy_headers(role="viewer")
+    tenant = headers["X-Agent-Bom-Tenant-ID"]
+    store.put_observations_batch(
+        [
+            RuntimeObservationRecord(
+                tenant_id=tenant,
+                observation_id=str(i),
+                session_id="session",
+                observed_at=f"2026-10-12T00:00:0{i}Z",
+                source="langsmith" if i % 2 else "langfuse",
+            )
+            for i in range(4)
+        ]
+    )
+    monkeypatch.setattr(observability, "get_runtime_event_store", lambda: store)
+    client = TestClient(app)
+    response = client.get("/v1/runtime/trace-explorer?source=langsmith&limit=1&offset=1", headers=headers)
+    assert response.status_code == 200, response.text
+    result = response.json()
+    assert result["retained_total"] == 2
+    assert result["source_counts"] == {"langsmith": 2}
+    assert result["has_more"] is False
+    assert result["feed_included"] is False
+    assert result["sessions"][0]["spans"][0]["span_id"] == "1"
+    assert client.get("/v1/runtime/trace-explorer?offset=-1", headers=headers).status_code == 422
+    assert client.get("/v1/runtime/trace-explorer?source=", headers=headers).status_code == 422

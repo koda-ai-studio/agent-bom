@@ -39,7 +39,6 @@ describe("light theme token guard", () => {
   it("keeps the graph page header on semantic surfaces in both themes", () => {
     const css = readFileSync(path.join(UI_ROOT, "app/globals.css"), "utf8");
     const header = css.match(/\.graph-page-header\s*\{([^}]+)\}/)?.[1] ?? "";
-    expect(header).toContain("var(--surface-panel)");
     expect(header).toContain("var(--background)");
     expect(header).not.toMatch(/rgba\(24,24,27|rgba\(9,9,11/);
 

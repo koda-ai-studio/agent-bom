@@ -10,6 +10,6 @@ describe("investigation URL state", () => {
   });
   it("ignores unsupported views", () => {
     expect(investigationView("list")).toBe("list");
-    expect(investigationView("full-estate")).toBe("path");
+    expect(investigationView("full-estate")).toBe("graph");
   });
 });

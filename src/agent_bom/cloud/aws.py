@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from agent_bom.discovery_envelope import DiscoveryEnvelope, RedactionStatus, ScanMode
-from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, Package, TransportType
+from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, Package, ServerSurface, TransportType
 from agent_bom.security import sanitize_text
 
 from .base import CloudDiscoveryError
@@ -1223,7 +1223,8 @@ def _discover_lambda_functions(
                 name=f"lambda:{func_name}",
                 command="lambda",
                 args=[func_arn],
-                transport=TransportType.STREAMABLE_HTTP,
+                transport=TransportType.UNKNOWN,
+                surface=ServerSurface.AI_INVENTORY,
                 env={"AWS_REGION": region},
                 packages=packages,
             )
@@ -1244,7 +1245,12 @@ def _discover_lambda_functions(
                         resource_name=func_name,
                         location=region,
                         account_id=account_id,
-                        raw_identity={"function_name": func_name, "function_arn": func_arn, "runtime": runtime},
+                        raw_identity={
+                            "function_name": func_name,
+                            "function_arn": func_arn,
+                            "runtime": runtime,
+                            "function_version": func.get("Version", ""),
+                        },
                     )
                 },
             )
@@ -1408,13 +1414,15 @@ def _discover_step_functions(
             for arn in resource_arns:
                 if ":lambda:" in arn:
                     packages = _extract_lambda_packages(session, arn, region, parent_warnings)
-                    func_name = arn.split(":")[-1] if ":" in arn else arn
+                    func_name = arn.split(":function:", 1)[-1]
                     servers.append(
                         MCPServer(
                             name=f"sfn-lambda:{func_name}",
                             command="lambda",
                             args=[arn],
-                            transport=TransportType.STREAMABLE_HTTP,
+                            transport=TransportType.UNKNOWN,
+                            surface=ServerSurface.AI_INVENTORY,
+                            connection_metadata={"relationship_basis": "configured_workflow_target", "execution_proven": False},
                             packages=packages,
                         )
                     )
@@ -1431,6 +1439,7 @@ def _discover_step_functions(
                 servers = [
                     MCPServer(
                         name=f"sfn-orchestration:{sm_name}",
+                        surface=ServerSurface.AI_INVENTORY,
                         transport=TransportType.UNKNOWN,
                         tools=tools,
                     )
@@ -1491,10 +1500,10 @@ def _extract_sfn_task_resources(definition: dict) -> list[str]:
 
             if state_type == "Task":
                 resource = state_def.get("Resource", "")
-                if resource and resource.startswith("arn:"):
+                if isinstance(resource, str) and resource.startswith("arn:") and ":states:::" not in resource:
                     resources.append(resource)
                 params = state_def.get("Parameters", {})
-                fn_name = params.get("FunctionName", params.get("FunctionName.$", ""))
+                fn_name = params.get("FunctionName", "")
                 if isinstance(fn_name, str) and fn_name.startswith("arn:"):
                     resources.append(fn_name)
 
@@ -1507,7 +1516,7 @@ def _extract_sfn_task_resources(definition: dict) -> list[str]:
                 _walk_states(iterator.get("States", {}))
 
     _walk_states(definition.get("States", {}))
-    return list(set(resources))
+    return sorted(set(resources))
 
 
 # ---------------------------------------------------------------------------

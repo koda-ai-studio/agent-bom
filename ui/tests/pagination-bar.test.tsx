@@ -21,6 +21,8 @@ describe("PaginationBar continuation state", () => {
     expect(screen.getByText("Page 2 · total unavailable")).toBeInTheDocument();
     const next = screen.getByRole("button", { name: /Next/i });
     expect(next).toBeEnabled();
+    expect(next.className).toContain("cursor-pointer");
+    expect(next.className).toContain("focus-visible:outline-2");
     fireEvent.click(next);
     expect(onNext).toHaveBeenCalledOnce();
   });

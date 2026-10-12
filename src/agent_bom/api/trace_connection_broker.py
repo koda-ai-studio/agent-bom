@@ -27,6 +27,9 @@ class TraceConnection(BaseModel):
     endpoint: str = Field(min_length=1)
     credentials_env: str = Field(pattern=r"^[A-Z][A-Z0-9_]+$")
     project: str = ""
+    cloud_provider: str = Field(default="", max_length=80)
+    account_id: str = Field(default="", max_length=256)
+    environment: str = Field(default="", max_length=256)
     enabled: bool = True
     expires_at: str
 
@@ -72,7 +75,15 @@ def pull_credentials(tenant_id: str, provider: str, body: dict, *, actor: str) -
             raise HTTPException(status_code=400, detail="Select a managed connection or supply connector credentials.")
         return credentials
     ref = body["connection_id"]
-    if not isinstance(ref, str) or set(body) - {"connection_id", "limit", "screen_content"}:
+    if not isinstance(ref, str) or set(body) - {
+        "connection_id",
+        "limit",
+        "screen_content",
+        "import_id",
+        "window_start",
+        "window_end",
+        "max_pages",
+    }:
         raise HTTPException(status_code=400, detail="Managed connections do not accept credential or endpoint overrides.")
     binding = _connections().get(ref)
     try:
@@ -96,9 +107,10 @@ def pull_credentials(tenant_id: str, provider: str, body: dict, *, actor: str) -
         if provider == "langsmith" and not binding.project.strip():
             raise ValueError("missing project scope")
         log_action("trace_connection.use", actor=actor, tenant_id=tenant_id, resource=f"trace_connection/{ref}", provider=provider)
+        scope = {f"scope_{key}": getattr(binding, key) for key in ("cloud_provider", "account_id", "environment") if getattr(binding, key)}
         if provider == "langfuse":
-            return {"host": binding.endpoint, **credentials}
-        return {"api_url": binding.endpoint, "project": binding.project, **credentials}
+            return {"host": binding.endpoint, "project": binding.project, **scope, **credentials}
+        return {"api_url": binding.endpoint, "project": binding.project, **scope, **credentials}
     except (OSError, ValueError) as exc:
         raise HTTPException(
             status_code=503, detail="Managed trace credentials are unavailable. Contact the control-plane operator."

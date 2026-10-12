@@ -264,7 +264,7 @@ def test_dedupe_history_is_count_bounded_and_reports_window(store_kind: str, tmp
 
 
 @pytest.mark.parametrize("first_store", ["runtime", "gateway"])
-def test_sqlite_runtime_v2_schema_converges_in_both_initialization_orders(tmp_path, first_store: str) -> None:
+def test_sqlite_runtime_schema_converges_in_both_initialization_orders(tmp_path, first_store: str) -> None:
     path = str(tmp_path / f"{first_store}.db")
     constructors = {
         "runtime": lambda: SQLiteRuntimeEventStore(path),
@@ -281,7 +281,7 @@ def test_sqlite_runtime_v2_schema_converges_in_both_initialization_orders(tmp_pa
         tables = {
             row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'gateway_activity_%'")
         }
-    assert marker == (2,)
+    assert marker == (4,)
     assert tables == {
         "gateway_activity_events",
         "gateway_activity_sequences",

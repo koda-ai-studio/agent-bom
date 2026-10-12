@@ -2,113 +2,7 @@
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { withFindingContext } from "@/lib/finding-investigation-href";
-import { InsightLayerToggle } from "@/components/insight-layer-toggle";
-import { GraphLegendDock } from "@/components/graph-chrome";
-import { ASSET_DRIFT_GRAPH_SCOPE_PARAM } from "@/components/lineage-filter";
 import type { LegendItem } from "@/lib/graph-utils";
-
-// One security-graph route, several lenses. URL params switch the composed
-// surface without tearing down shared investigation context. `/graph` remains
-// a compatible direct entry point for existing links.
-interface GraphLens {
-  id: string;
-  label: string;
-  icon: string;
-  href: string;
-  preserveContext?: boolean;
-  match: (
-    path: string,
-    scope: string | null,
-    lens: string | null,
-    hasLegacyAttackFocus: boolean,
-  ) => boolean;
-}
-
-const isLegacyGraphPath = (p: string) => p === "/graph" || p.startsWith("/graph/");
-const isSecurityGraphPath = (p: string) => p.startsWith("/security-graph");
-
-const CANONICAL_GRAPH_LENSES: GraphLens[] = [
-  {
-    id: "estate",
-    label: "Estate",
-    icon: "◫",
-    href: "/security-graph?lens=estate&rollup=1",
-    match: (p, _scope, lens) => isSecurityGraphPath(p) && lens === "estate",
-  },
-  {
-    id: "cloud",
-    label: "Cloud",
-    icon: "☁",
-    href: "/security-graph?lens=cloud",
-    match: (p, _scope, lens) =>
-      (isSecurityGraphPath(p) || isLegacyGraphPath(p)) && lens === "cloud",
-  },
-  {
-    id: "repository",
-    label: "Repository",
-    icon: "⌘",
-    href: "/security-graph?lens=repository",
-    match: (p, _scope, lens) =>
-      (isSecurityGraphPath(p) || isLegacyGraphPath(p)) && lens === "repository",
-  },
-  {
-    id: "identity",
-    label: "Identity",
-    icon: "◎",
-    href: "/security-graph?lens=identity",
-    match: (p, _scope, lens) =>
-      (isSecurityGraphPath(p) || isLegacyGraphPath(p)) && lens === "identity",
-  },
-  {
-    id: "lineage",
-    label: "Lineage",
-    icon: "🌿",
-    href: "/security-graph?lens=lineage",
-    match: (p, scope, lens) =>
-      scope !== ASSET_DRIFT_GRAPH_SCOPE_PARAM &&
-      ((isSecurityGraphPath(p) && lens === "lineage") || (isLegacyGraphPath(p) && !lens)),
-  },
-  {
-    id: "attack-path",
-    label: "Attack Paths",
-    icon: "🎯",
-    href: "/security-graph?lens=attack-path",
-    match: (p, _scope, lens) => isSecurityGraphPath(p) && (lens === "attack-path" || !lens),
-  },
-  {
-    id: "asset-drift",
-    label: "Asset Drift",
-    icon: "📐",
-    href: `/security-graph?lens=asset-drift&scope=${ASSET_DRIFT_GRAPH_SCOPE_PARAM}`,
-    match: (p, scope, lens) =>
-      (isSecurityGraphPath(p) || isLegacyGraphPath(p)) &&
-      scope === ASSET_DRIFT_GRAPH_SCOPE_PARAM &&
-      (lens === "asset-drift" || !lens),
-  },
-];
-
-const SPECIALIZED_GRAPH_VIEWS: GraphLens[] = [
-  {
-    id: "mesh",
-    label: "Agent Mesh",
-    icon: "🕸️",
-    href: "/security-graph?lens=mesh",
-    match: (p, _scope, lens) =>
-      (isSecurityGraphPath(p) || isLegacyGraphPath(p)) && lens === "mesh",
-  },
-  {
-    id: "context",
-    label: "Context",
-    icon: "🗺️",
-    href: "/security-graph?lens=context",
-    match: (p, _scope, lens) =>
-      (isSecurityGraphPath(p) || isLegacyGraphPath(p)) && lens === "context",
-  },
-];
-
-const ALL_GRAPH_VIEWS = [...CANONICAL_GRAPH_LENSES, ...SPECIALIZED_GRAPH_VIEWS];
-
-const LEGACY_ATTACK_FOCUS_PARAMS = ["agent", "cve", "finding", "node", "package", "trace"] as const;
 
 const SHARED_INVESTIGATION_PARAMS = [
   "scan",
@@ -157,114 +51,30 @@ export function buildInvestigationLensHref(
 }
 
 interface GraphLensSwitcherProps {
-  /** Resolved persisted snapshot when selection is local to a view. */
   scanId?: string | undefined;
   variant?: "inline" | "floating" | "compact";
   legendItems?: LegendItem[];
   legendDefaultOpen?: boolean;
 }
 
-export function GraphLensSwitcher({
-  scanId,
-  variant = "inline",
-  legendItems,
-  legendDefaultOpen = false,
-}: GraphLensSwitcherProps) {
-  const path = usePathname() ?? "/security-graph";
+/** Task navigation only. Entity scopes and layers belong to the graph toolbar. */
+export function GraphLensSwitcher({ scanId, variant = "inline" }: GraphLensSwitcherProps) {
+  const pathname = usePathname();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const scope = searchParams?.get("scope") ?? null;
-  const activeLens = searchParams?.get("lens") ?? null;
-  const hasLegacyAttackFocus =
-    !activeLens && LEGACY_ATTACK_FOCUS_PARAMS.some((key) => Boolean(searchParams?.get(key)));
-
-  const canonicalLayers = CANONICAL_GRAPH_LENSES.map((lens) => ({
-    id: lens.id,
-    label: lens.label,
-    icon: lens.icon,
-    active: lens.match(path, scope, activeLens, hasLegacyAttackFocus),
-  }));
-  const specializedViews = SPECIALIZED_GRAPH_VIEWS.map((lens) => ({
-    id: lens.id,
-    label: lens.label,
-    icon: lens.icon,
-    active: lens.match(path, scope, activeLens, hasLegacyAttackFocus),
-  }));
-  const specializedViewActive = specializedViews.some((view) => view.active);
-
-  const onToggle = (id: string) => {
-    const lens = ALL_GRAPH_VIEWS.find((candidate) => candidate.id === id);
-    if (!lens || lens.match(path, scope, activeLens, hasLegacyAttackFocus)) return;
-    router.push(
-      lens.preserveContext === false
-        ? lens.href
-        : buildInvestigationLensHref(lens.href, {
-          get: (key) => key === "scan" && scanId ? scanId : searchParams.get(key),
-        }),
-    );
-  };
-
-  const content = (
-    <div
-      className={
-        variant === "floating"
-          ? "pointer-events-auto flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-2xl border border-outline/80 bg-background/85 px-3 py-2 shadow-2xl shadow-black/40 backdrop-blur"
-          : variant === "compact"
-            ? "flex flex-col gap-2 rounded-xl border border-outline bg-background/80 px-3 py-2"
-            : "flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-outline bg-surface-muted px-4 py-3"
-      }
-    >
-      {variant !== "compact" && (
-        <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-ink-tertiary">
-            {variant === "floating" ? "Security Graph Lens" : "Security Graph"}
-          </p>
-          <p
-            className={`mt-0.5 text-xs text-ink-secondary ${
-              variant === "floating" ? "hidden sm:block" : ""
-            }`}
-          >
-            Canonical lenses share one persisted estate snapshot and its exact counts.
-          </p>
-        </div>
-      )}
-      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
-        <InsightLayerToggle layers={canonicalLayers} onToggle={onToggle} />
-        <details
-          className="group relative"
-          data-active-view={specializedViewActive || undefined}
-        >
-          <summary className="graph-chip-neutral cursor-pointer select-none whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.12em] hover:border-outline-strong">
-            More views
-          </summary>
-          <div className="absolute left-0 top-[calc(100%+0.5rem)] sm:left-auto sm:right-0 z-40 flex min-w-72 flex-wrap items-center gap-2 rounded-xl border border-outline bg-background p-3 shadow-xl">
-            <InsightLayerToggle
-              layers={specializedViews}
-              label="Views"
-              onToggle={onToggle}
-            />
-            <span className="text-[10px] text-ink-tertiary">
-              Inspect recorded relationships within a selected snapshot.
-            </span>
-          </div>
-        </details>
-      </div>
-      {legendItems && legendItems.length > 0 ? (
-        <GraphLegendDock items={legendItems} defaultOpen={legendDefaultOpen} />
-      ) : null}
-    </div>
-  );
-
-  if (variant === "floating") {
-    return (
-      <div
-        data-testid="graph-lens-floating-bar"
-        className="pointer-events-none absolute left-1/2 top-3 z-30 w-[min(760px,calc(100%-2rem))] -translate-x-1/2"
-      >
-        {content}
-      </div>
-    );
-  }
-
-  return content;
+  const params = useSearchParams();
+  const lens = params.get("lens");
+  const exploring = pathname === "/graph" || Boolean(lens && lens !== "attack-path");
+  const options = [
+    { label: "Find a path", active: !exploring, href: "/security-graph?lens=attack-path" },
+    { label: "Explore connections", active: exploring, href: "/security-graph?lens=estate&rollup=1" },
+  ];
+  return <nav aria-label="Investigation workspace" className={variant === "floating" ? "absolute left-3 top-3 z-30 flex gap-4 bg-surface px-3 py-2" : "flex flex-wrap gap-5 border-b border-outline"}>
+    {options.map(option => <button key={option.label} type="button" aria-current={option.active ? "page" : undefined}
+      className={`min-h-11 border-b-2 px-1 text-sm font-medium ${option.active ? "border-[var(--accent)] text-foreground" : "border-transparent text-ink-secondary hover:text-foreground"}`}
+      onClick={() => { if (!option.active) router.push(buildInvestigationLensHref(option.href, {
+        get: key => key === "scan" && scanId ? scanId : params.get(key),
+      })); }}>
+      {option.label}
+    </button>)}
+  </nav>;
 }

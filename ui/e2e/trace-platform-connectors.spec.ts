@@ -23,10 +23,10 @@ for (const theme of ["light", "dark"]) {
         body = { status: "failed", persisted: 100, pages: 1, retry_after_seconds: 900, last_error: "rate_limited" };
       }
       else if (path === "/v1/traces/connectors/langfuse/pull") {
-        expect(request.postDataJSON()).toMatchObject({ connection_id: "production", screen_content: false, limit: 50 });
+        expect(request.postDataJSON()).toMatchObject({ connection_id: "production", screen_content: false, limit: 50, max_pages: 3 });
         expect(request.postDataJSON()).not.toHaveProperty("credentials");
         expect(request.headers()["x-agent-bom-csrf"]).toBe("trace-fixture");
-        body = { provider: "langfuse", pulled_spans: 2, content_screened: false, content_findings: [], attack_paths: [{ trace_id: "trace-7", span_id: "span-1", tool_name: "read_file", server_name: "filesystem", vulnerability_id: "CVE-2025-1234", match_basis: "tool", severity: "high" }] };
+        body = { provider: "langfuse", pulled_spans: 2, content_screened: false, content_findings: [], attack_paths: [{ trace_id: "trace-7", span_id: "span-1", tool_name: "read_file", server_name: "filesystem", vulnerability_id: "CVE-2025-1234", match_basis: "tool", severity: "high" }], import: { import_id: "trace-import-1", revision: 2, complete: true, status: "complete", coverage: "window_traversed", window_start: "2026-10-11T00:00:00Z", window_end: "2026-10-12T00:00:00Z", counts_scope: "this_request", counts: { fetched: 2, imported: 2, unchanged: 0, rejected: 0, committed_pages: 1, failed_pages: 0 }, rejected_reasons: {}, total_rejected: 0, error: null, content_retained: false } };
       }
       await route.fulfill({ json: body });
     });
@@ -41,11 +41,11 @@ for (const theme of ["light", "dark"]) {
     await expect(page.getByText(/Provider rate limit/)).toBeVisible();
     await expect(page.getByRole("button", { name: "Collect next page" })).toBeDisabled();
     await page.getByRole("button", { name: "Pull and correlate" }).click();
-    await expect(page.getByText("2 tool calls reviewed · 1 finding matches")).toBeVisible();
+    await expect(page.getByText("2 native observations collected · 1 finding matches")).toBeVisible();
     await expect(page.getByLabel("Secret key", { exact: true })).toHaveCount(0);
 
     await expect(page.getByRole("link", { name: "CVE-2025-1234" })).toHaveAttribute("href", "/findings?cve=CVE-2025-1234");
-    await expect(page.getByText(/not saved to the trace explorer/)).toBeVisible();
+    await expect(page.getByText(/2 new observations retained/)).toBeVisible();
     for (const width of [1280, 390]) {
       await page.setViewportSize({ width, height: 900 });
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);

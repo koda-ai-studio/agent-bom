@@ -1045,3 +1045,12 @@ def test_finding_history_migration_matches_bootstrap_and_invalidates_every_job_m
         assert f"CREATE POLICY {table}_tenant_isolation ON {table}" in POSTGRES_FINDING_HISTORY_V1
     assert "VALUES ('scan_jobs',4,now())" in POSTGRES_FINDING_HISTORY_V1
     assert ":" not in POSTGRES_FINDING_HISTORY_V1
+
+
+def test_runtime_trace_import_policy_guard_finds_policy_on_resolved_table() -> None:
+    migration = VERSIONS_DIR / "20261011_01_runtime_trace_imports.py"
+    source = migration.read_text(encoding="utf-8")
+
+    assert "FROM pg_policy" in source
+    assert "p.polrelid = to_regclass('runtime_trace_imports')" in source
+    assert "current_schema()" not in source

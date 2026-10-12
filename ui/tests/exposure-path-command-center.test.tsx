@@ -112,10 +112,14 @@ describe("ExposurePathCommandCenter", () => {
     }
   });
 
-  it("keeps assessments visible and discloses scope without duplicating the finding title", () => {
+  it("keeps the path outcome visible and tucks secondary metrics and assessments into a collapsible summary", () => {
     render(<ExposurePathCommandCenter path={{ ...basePath, provenance: { source: "fixture", scanId: "scan-scope" } }} />);
+    expect(screen.getByTestId("path-finding-context")).not.toBeVisible();
+    expect(screen.getByRole("region", { name: "Path evidence assessment" })).not.toBeVisible();
+    fireEvent.click(screen.getByText(/Path context & evidence/));
     expect(screen.getByTestId("path-finding-context")).toHaveTextContent("werkzeug@2.2.2");
     expect(screen.getByTestId("path-finding-context")).not.toHaveTextContent("CVE-2026-0002");
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("Analyst Agent → CVE-2026-0002");
     expect(screen.getByRole("region", { name: "Path evidence assessment" })).toHaveTextContent("Unknown");
     expect(screen.getByRole("region", { name: "Path evidence assessment" })).toHaveTextContent("Not assessed");
     expect(screen.getByText("Snapshot: scan-scope")).not.toBeVisible();
@@ -138,6 +142,7 @@ describe("ExposurePathCommandCenter", () => {
     expect(screen.getByRole("heading", { level: 2 })).toBeVisible();
     expect(screen.queryByTestId("exposure-path-hop-title")).not.toBeInTheDocument();
     expect(screen.queryByText("What is exposed")).not.toBeInTheDocument();
+    expect(screen.getByText(/Path context & evidence/)).toBeInTheDocument();
     expect(screen.getByText("Evidence & relationships")).toBeInTheDocument();
     expect(screen.queryByText("Evidence drawer")).not.toBeVisible();
     expect(screen.getByText("Validate the lead finding")).toBeInTheDocument();
@@ -197,6 +202,7 @@ describe("ExposurePathCommandCenter", () => {
       />,
     );
 
+    fireEvent.click(screen.getByText(/Path context & evidence/));
     expect(screen.getByText("Path span")).toBeInTheDocument();
     expect(screen.getByText("1 node")).toBeInTheDocument();
     expect(screen.queryByText("Hops")).not.toBeInTheDocument();
@@ -238,13 +244,13 @@ describe("ExposurePathCommandCenter", () => {
     expect(onViewChange).toHaveBeenCalledWith("graph");
   });
 
-  it("renders a hint instead of a reserved blank canvas when no graph slot is supplied", () => {
+  it("renders the recorded path when an interactive graph is unavailable", () => {
     render(<ExposurePathCommandCenter path={basePath} view="graph" onViewChange={vi.fn()} />);
 
-    expect(screen.getByText(/Interactive graph loads here/)).toBeInTheDocument();
+    expect(screen.queryByText(/Interactive graph loads here/)).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("img", { name: /Selected exposure path graph for/ }),
-    ).not.toBeInTheDocument();
+      screen.getByRole("img", { name: /Selected exposure path graph for/ }),
+    ).toBeInTheDocument();
   });
 
   it("keeps every long-path hop available in the ordered lane", () => {
@@ -298,7 +304,7 @@ describe("ExposurePathCommandCenter", () => {
   it("round-trips the long-chain board between collapsed and fully expanded", () => {
     render(<ExposurePathCommandCenter path={longPath} />);
 
-    const toggle = screen.getByRole("button", { name: "Open full-width diagram" });
+    const toggle = screen.getByRole("button", { name: "Expand graph workspace" });
     expect(toggle).toHaveAttribute("aria-expanded", "false");
 
     fireEvent.click(toggle);
@@ -320,20 +326,20 @@ describe("ExposurePathCommandCenter", () => {
 
   it("re-enters the fit-first frame when a different path is selected", () => {
     const { rerender } = render(<ExposurePathCommandCenter path={longPath} />);
-    fireEvent.click(screen.getByRole("button", { name: "Open full-width diagram" }));
+    fireEvent.click(screen.getByRole("button", { name: "Expand graph workspace" }));
     expect(screen.getByRole("button", { name: "Return to ordered path" })).toBeInTheDocument();
 
     // Selecting another long path must not inherit the expanded board — the
     // first frame of a new investigation has to fit again.
     rerender(<ExposurePathCommandCenter path={{ ...longPath, id: "path-long-2" }} />);
-    expect(screen.getByRole("button", { name: "Open full-width diagram" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Expand graph workspace" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Return to ordered path" })).not.toBeInTheDocument();
   });
 
   it("does not offer a collapse toggle for a path that already fits", () => {
     render(<ExposurePathCommandCenter path={{ ...basePath, hops: basePath.hops.slice(0, 4) }} />);
 
-    expect(screen.queryByRole("button", { name: /Open full-width diagram/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Expand graph workspace/ })).not.toBeInTheDocument();
     expect(screen.getByTestId("exposure-path-graph-scroll")).not.toHaveClass("overflow-x-auto");
   });
 
@@ -392,6 +398,7 @@ it("uses recorded endpoints even when a source title claims unassessed exploitat
 
 it("keeps unavailable assessments visible when a legacy snapshot has no dimensions", () => {
   render(<ExposurePathCommandCenter path={basePath} />);
+  fireEvent.click(screen.getByText(/Path context & evidence/));
   const assessment = screen.getByRole("region", { name: "Path evidence assessment" });
   expect(assessment).toHaveTextContent("ReachabilityUnknown");
   expect(assessment).toHaveTextContent("ExploitabilityNot assessed");

@@ -22,7 +22,9 @@ Design:
 
 from __future__ import annotations
 
+import json
 import logging
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Protocol, cast
 
@@ -314,3 +316,161 @@ __all__ = [
     "fetch_traces",
     "list_trace_connectors",
 ]
+
+
+@dataclass(frozen=True)
+class NativeTracePage:
+    """A single provider page; a null cursor means the fixed window is exhausted."""
+
+    payload: dict[str, Any]
+    cursor: str | None
+    fetched: int
+
+
+def resolve_trace_project(provider: str, credentials: dict[str, str], *, client: _HttpClient | None = None) -> str:
+    """Resolve canonical project identity from authenticated provider state."""
+    base = credentials.get("host" if provider == LANGFUSE else "api_url", "").rstrip("/")
+    _validate_pull_url(base)
+    resolved, owns = _client_or_default(client)
+    try:
+        if provider == LANGFUSE:
+            payload = _call_json(
+                resolved, "GET", f"{base}/api/public/projects", auth=(credentials["public_key"], credentials["secret_key"])
+            )
+            projects = payload.get("data") if isinstance(payload, dict) else None
+            project_hint = credentials.get("project", "").strip()
+            if isinstance(projects, list) and project_hint:
+                projects = [row for row in projects if isinstance(row, dict) and project_hint in {row.get("id"), row.get("name")}]
+        elif provider == LANGSMITH and credentials.get("project"):
+            projects = _call_json(
+                resolved,
+                "GET",
+                f"{base}/sessions",
+                headers={"x-api-key": credentials["api_key"]},
+                params={"name": credentials["project"], "limit": 2, "include_stats": False},
+            )
+        else:
+            raise TraceConnectorValidationError("A managed tracing project is required")
+        if not isinstance(projects, list) or len(projects) != 1 or not isinstance(projects[0], dict):
+            raise TraceConnectorError("Trace project could not be resolved uniquely")
+        project_id = projects[0].get("id")
+        if not isinstance(project_id, str) or not project_id.strip() or len(project_id) > 512:
+            raise TraceConnectorError("Trace provider returned an invalid project identity")
+        if provider == LANGSMITH and projects[0].get("name") != credentials["project"]:
+            raise TraceConnectorError("Trace provider returned a conflicting project")
+        return project_id
+    finally:
+        if owns:
+            getattr(resolved, "close", lambda: None)()
+
+
+def fetch_trace_page(
+    provider: str,
+    credentials: dict[str, str],
+    *,
+    project_id: str,
+    window_start: str,
+    window_end: str,
+    cursor: str | None,
+    limit: int = _DEFAULT_LIMIT,
+    include_content: bool = False,
+    client: _HttpClient | None = None,
+) -> NativeTracePage:
+    """Fetch one bounded native page without truncation or implicit API downgrade.
+
+    A malformed page is rejected as a unit so its checkpoint remains retryable.
+    Retry/rate-limit policy belongs to the durable importer. v2 Langfuse reads
+    and v1 LangSmith runs/query have different cursor and field contracts.
+    """
+    start, end = (datetime.fromisoformat(value.replace("Z", "+00:00")) for value in (window_start, window_end))
+    if start.tzinfo is None or end.tzinfo is None or start >= end:
+        raise TraceConnectorValidationError("Trace pull requires a fixed timezone-aware window")
+    if cursor is not None and (not isinstance(cursor, str) or not cursor or len(cursor) > 8192):
+        raise TraceConnectorValidationError("Trace cursor is invalid")
+    base = credentials.get("host" if provider == LANGFUSE else "api_url", "").rstrip("/")
+    _validate_pull_url(base)
+    page_limit = min(_bounded_limit(limit), 100 if provider == LANGSMITH else _MAX_LIMIT)
+    resolved, owns = _client_or_default(client)
+    try:
+        rows, pagination, cursor_key = _native_page_request(
+            resolved, provider, credentials, base, project_id, window_start, window_end, cursor, page_limit, include_content
+        )
+        if (pagination is not None and not isinstance(pagination, dict)) or len(rows) > page_limit:
+            raise TraceConnectorError("Trace provider returned an invalid bounded page")
+        # Both native APIs signal completion by omitting a cursor object or its
+        # next-cursor field. A present pagination object must still be valid.
+        next_cursor = pagination.get(cursor_key) if isinstance(pagination, dict) else None
+        if next_cursor is not None and (
+            not isinstance(next_cursor, str) or not next_cursor or len(next_cursor) > 8192 or next_cursor == cursor
+        ):
+            raise TraceConnectorError("Trace provider returned an invalid or nonadvancing cursor")
+        spans = [native_span(row, provider=provider, include_content=include_content) for row in rows]
+        return NativeTracePage(payload={"spans": spans}, cursor=next_cursor, fetched=len(rows))
+    finally:
+        if owns:
+            getattr(resolved, "close", lambda: None)()
+
+
+def _native_page_request(
+    resolved: _HttpClient,
+    provider: str,
+    credentials: dict[str, str],
+    base: str,
+    project_id: str,
+    window_start: str,
+    window_end: str,
+    cursor: str | None,
+    page_limit: int,
+    include_content: bool,
+) -> tuple[list[dict[str, Any]], Any, str]:
+    if provider == LANGFUSE:
+        params: dict[str, Any] = {
+            "limit": page_limit,
+            "fromStartTime": window_start,
+            "toStartTime": window_end,
+            "fields": "core,basic,time,metadata" + (",io" if include_content else ""),
+        }
+        if cursor:
+            params["cursor"] = cursor
+        payload = _call_json(
+            resolved,
+            "GET",
+            f"{base}/api/public/v2/observations",
+            params=params,
+            auth=(credentials["public_key"], credentials["secret_key"]),
+        )
+        rows = _records(payload, "data")
+        pagination = payload.get("meta") if isinstance(payload, dict) else None
+        cursor_key = "cursor"
+    elif provider == LANGSMITH:
+        # Bound start_time on both sides; end_time filters completion time
+        # and would incorrectly omit unfinished runs from this window.
+        body: dict[str, Any] = {
+            "session": [project_id],
+            "limit": page_limit,
+            "filter": f"and(gte(start_time, {json.dumps(window_start)}), lt(start_time, {json.dumps(window_end)}))",
+            "select": [
+                "id",
+                "name",
+                "run_type",
+                "start_time",
+                "end_time",
+                "status",
+                "error",
+                "extra",
+                "parent_run_id",
+                "session_id",
+                "trace_id",
+            ],
+        }
+        if include_content:
+            body["select"].append("outputs")
+        if cursor:
+            body["cursor"] = cursor
+        payload = _call_json(resolved, "POST", f"{base}/runs/query", headers={"x-api-key": credentials["api_key"]}, json=body)
+        rows = _records(payload, "runs")
+        pagination = payload.get("cursors") if isinstance(payload, dict) else None
+        cursor_key = "next"
+    else:
+        raise TraceConnectorValidationError("Unsupported trace provider")
+    return rows, pagination, cursor_key

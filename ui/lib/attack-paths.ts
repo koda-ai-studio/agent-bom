@@ -571,7 +571,8 @@ export function buildGraphInvestigationHref(
 export function decodeGraphInvestigationParams(
   params: URLSearchParams | { get(name: string): string | null },
 ): GraphInvestigationRequest | null {
-  const rootId = params.get("root") || params.get("root_id") || params.get("node");
+  const legacyRoot = ["mesh", "context"].includes(params.get("lens") ?? "") ? params.get("agent") : null;
+  const rootId = params.get("root") || params.get("root_id") || params.get("node") || legacyRoot;
   if (!rootId) return null;
 
   const investigate = params.get("investigate");

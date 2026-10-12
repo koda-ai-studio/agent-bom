@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { api } from "@/lib/api";
@@ -34,6 +34,10 @@ function richNode(): LineageNodeData {
 }
 
 describe("graph entity drawer tabs", () => {
+  it("does not send an already inspected entity to a duplicate lineage canvas", () => {
+    render(<GraphEntityDrawer data={{ label: "Cursor IDE Agent", nodeType: "agent", attributes: { node_id: "agent:cursor" } } as LineageNodeData} scanId="scan-one" onClose={noop} enrich={false} />);
+    expect(screen.queryByRole("link", { name: "Inspect in lineage" })).not.toBeInTheDocument();
+  });
   it("retains loaded finding evidence when a later canvas response refreshes the same node", async () => {
     const data = { label: "pyyaml@5.3", nodeType: "package", attributes: { node_id: "pkg:42" } } as LineageNodeData;
     const getNode = vi.spyOn(api, "getGraphNode").mockResolvedValue({
@@ -73,7 +77,7 @@ describe("graph entity drawer tabs", () => {
     fireEvent.click(screen.getByTestId("graph-drawer-tab-relationships"));
     expect(screen.getByText("Incoming edges")).toBeTruthy();
     expect(screen.getByTestId("graph-drawer-panel-relationships").className).toContain("overflow-y-auto");
-    fireEvent.click(screen.getByRole("button", { name: "Back" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
     expect(close).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
     fireEvent.keyDown(document, { key: "Escape" });
@@ -220,6 +224,17 @@ describe("graph entity drawer tabs", () => {
   it("exposes a keyboard/pointer resize handle in overlay mode", () => {
     render(<GraphEntityDrawer data={richNode()} onClose={noop} enrich={false} />);
     expect(screen.getByLabelText("Resize drawer")).toBeTruthy();
+  });
+
+  it("keeps docked details independently scrollable and collapsible beside the canvas", () => {
+    render(<GraphEntityDrawer data={richNode()} onClose={noop} enrich={false} variant="docked" />);
+
+    const panel = screen.getByTestId("graph-drawer-panel-overview");
+    expect(panel.className).toContain("min-h-0");
+    expect(panel.className).toContain("overflow-y-auto");
+    fireEvent.click(screen.getByRole("button", { name: "Collapse details" }));
+    fireEvent.click(screen.getByRole("button", { name: "Show node details" }));
+    expect(screen.getByTestId("graph-drawer-panel-overview")).toBeTruthy();
   });
 
   it("collapses to no tab bar when only Overview has content", () => {

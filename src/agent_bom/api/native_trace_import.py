@@ -26,6 +26,14 @@ class TraceImportScope:
     project_id: str
     environment: str = ""
     account_id: str = ""
+    cloud_provider: str = ""
+
+    def identity_scope(self) -> dict[str, str]:
+        scope = asdict(self)
+        # Preserve IDs issued before cloud scope was supported.
+        if not self.cloud_provider:
+            scope.pop("cloud_provider")
+        return scope
 
 
 @dataclass(frozen=True)
@@ -35,7 +43,7 @@ class PreparedTracePage:
 
 
 def _identity(scope: TraceImportScope, category: str, *parts: str) -> str:
-    raw = json.dumps([asdict(scope), category, *parts], sort_keys=True, separators=(",", ":"))
+    raw = json.dumps([scope.identity_scope(), category, *parts], sort_keys=True, separators=(",", ":"))
     return f"trace:{category}:{hashlib.sha256(raw.encode()).hexdigest()}"
 
 
@@ -73,15 +81,7 @@ def _event_time(span: dict[str, Any]) -> str:
 
 def prepare_trace_page(payload: dict[str, Any], *, scope: TraceImportScope, collected_at: str) -> PreparedTracePage:
     """Namespace native IDs; report rejected rows without silently losing them."""
-    if scope.provider not in {"langfuse", "langsmith"} or any(
-        not isinstance(value, str) or not value or len(value) > 2048
-        for value in (scope.tenant_id, scope.connection_id, scope.endpoint, scope.project_id)
-    ):
-        raise ValueError("Resolved trace connection scope is required")
-    moment = datetime.fromisoformat(collected_at.replace("Z", "+00:00"))
-    if moment.tzinfo is None:
-        raise ValueError("Trace collection time must include a timezone")
-    collected_at = moment.astimezone(timezone.utc).isoformat()
+    collected_at = _collection_time(scope, collected_at)
     spans = payload.get("spans")
     if not isinstance(spans, list) or len(spans) > 1000:
         raise ValueError("Trace import requires a bounded span page")
@@ -121,6 +121,10 @@ def prepare_trace_page(payload: dict[str, Any], *, scope: TraceImportScope, coll
             "project_id": scope.project_id,
             "environment": scoped.environment,
             "account_id": scope.account_id,
+            "cloud_provider": scope.cloud_provider,
+            "inventory_node_id": sanitize_text(attrs.get("agent_bom.inventory_node_id", ""), max_len=512),
+            "inventory_scan_id": sanitize_text(attrs.get("agent_bom.inventory_scan_id", ""), max_len=512),
+            "inventory_generation": sanitize_text(attrs.get("agent_bom.inventory_generation", ""), max_len=512),
             "native_type": sanitize_text(native_type, max_len=80),
             "native_name": native_name,
             "native_trace_id": trace_id,
@@ -153,3 +157,15 @@ def prepare_trace_page(payload: dict[str, Any], *, scope: TraceImportScope, coll
             )
         )
     return PreparedTracePage(observations=records, rejected=dict(sorted(rejected.items())))
+
+
+def _collection_time(scope: TraceImportScope, collected_at: str) -> str:
+    if scope.provider not in {"langfuse", "langsmith"} or any(
+        not isinstance(value, str) or not value or len(value) > 2048
+        for value in (scope.tenant_id, scope.connection_id, scope.endpoint, scope.project_id)
+    ):
+        raise ValueError("Resolved trace connection scope is required")
+    moment = datetime.fromisoformat(collected_at.replace("Z", "+00:00"))
+    if moment.tzinfo is None:
+        raise ValueError("Trace collection time must include a timezone")
+    return moment.astimezone(timezone.utc).isoformat()

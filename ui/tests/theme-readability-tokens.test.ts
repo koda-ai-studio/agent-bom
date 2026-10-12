@@ -57,7 +57,7 @@ describe("theme readability tokens", () => {
   });
 
   it("defines light-theme severity and surface counterparts", () => {
-    expect(css).toMatch(/:root\[data-theme="light"\][\s\S]*--background:\s*#e6eaf1;/);
+    expect(css).toMatch(/:root\[data-theme="light"\][\s\S]*--background:\s*#f5f6f9;/);
     expect(css).toMatch(/:root\[data-theme="light"\][\s\S]*--severity-critical:\s*#991b1b;/);
     expect(css).toMatch(/:root\[data-theme="light"\][\s\S]*--text-secondary:\s*#374151;/);
   });

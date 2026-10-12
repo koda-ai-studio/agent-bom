@@ -476,7 +476,7 @@ describe('Nav', () => {
     expect(within(palette).getByRole('link', { name: /mcp catalog/i })).toHaveAttribute('href', '/registry')
   })
 
-  it('keeps graph lenses in the command palette instead of the sidebar', () => {
+  it('offers one Investigation destination in both navigation and search', () => {
     renderExpandedNav()
     const hrefs = screen.getAllByRole('link').map((l) => l.getAttribute('href'))
     expect(hrefs).toContain('/security-graph')
@@ -488,16 +488,7 @@ describe('Nav', () => {
     fireEvent.keyDown(window, { key: 'k', metaKey: true })
     const palette = screen.getByRole('dialog', { name: /command palette/i })
     const paletteHrefs = within(palette).getAllByRole('link').map((l) => l.getAttribute('href'))
-    expect(paletteHrefs).toEqual(expect.arrayContaining([
-      '/security-graph?lens=attack-path',
-      '/security-graph?lens=cloud',
-      '/security-graph?lens=repository',
-      '/security-graph?lens=identity',
-      '/security-graph?lens=lineage',
-      '/security-graph?lens=asset-drift&scope=asset-drift',
-      '/security-graph?lens=mesh',
-      '/security-graph?lens=context',
-    ]))
+    expect(paletteHrefs.filter(href => href?.startsWith('/security-graph'))).toEqual(['/security-graph'])
   })
 
   it('keeps Investigation selected while a deep graph lens route is open', () => {
@@ -580,9 +571,7 @@ describe('Nav', () => {
     expect(palette).toBeInTheDocument()
     expect(within(palette).getByRole('button', { name: /refresh current view/i })).toBeInTheDocument()
     expect(within(palette).getByRole('link', { name: /overview/i })).toHaveAttribute('href', '/')
-    expect(within(palette).getByRole('link', { name: /lineage/i })).toHaveAttribute('href', '/security-graph?lens=lineage')
-    expect(within(palette).getByRole('link', { name: /agent mesh.*specialized/i })).toHaveAttribute('href', '/security-graph?lens=mesh')
-    expect(within(palette).getByRole('link', { name: /context.*specialized/i })).toHaveAttribute('href', '/security-graph?lens=context')
+    expect(within(palette).getByRole('link', { name: /^investigation/i })).toHaveAttribute('href', '/security-graph')
   })
 
   it('renders the canonical agent-bom mark in the top bar', () => {
@@ -608,13 +597,11 @@ describe('Nav', () => {
     expect(screen.queryByText('One security graph with attack-path, lineage, mesh, and context lenses')).not.toBeInTheDocument()
   })
 
-  it('shows page counts for expanded nav groups', async () => {
+  it('keeps navigation groups free of decorative page counts', () => {
     renderExpandedNav()
-    expect(screen.getAllByText('4').length).toBeGreaterThan(0)
-    fireEvent.click(screen.getByRole('button', { name: /governance/i }))
-    await waitFor(() => {
-      expect(screen.getAllByText('4').length).toBeGreaterThan(0)
-    })
+    for (const name of ['Posture', 'Inventory', 'Governance', 'Connect', 'Runtime', 'Operations']) {
+      expect(screen.getByRole('button', { name: new RegExp(name, 'i') }).textContent).not.toMatch(/\d/)
+    }
   })
 
   it('contains links for all primary pages across all groups', async () => {
@@ -751,7 +738,10 @@ describe('Nav', () => {
     fireEvent.click(screen.getByLabelText(/^Account menu:/))
     const details = screen.getByLabelText('Account details')
     expect(within(details).getByText('security@acme.example')).toBeInTheDocument()
-    expect(within(details).getByText(/Security analyst · tenant-acme/)).toBeInTheDocument()
+    expect(within(details).getByText(/Security analyst/)).toBeInTheDocument()
+    expect(within(details).getByText('tenant-acme')).toBeInTheDocument()
+    expect(within(details).getByText('Organization')).toBeInTheDocument()
+    expect(within(details).getByText('Active')).toBeInTheDocument()
     expect(within(details).getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
     expect(within(details).queryByRole('link', { name: 'Access & keys' })).not.toBeInTheDocument()
   })

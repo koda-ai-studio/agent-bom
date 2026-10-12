@@ -43,7 +43,7 @@ export function PaginationBar({
           type="button"
           onClick={onPrevious}
           disabled={previousDisabled}
-          className="flex items-center gap-1 rounded-md border border-[var(--border-subtle)] px-2.5 py-1 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-subtle)] hover:text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex cursor-pointer items-center gap-1 rounded-md border border-[var(--border-subtle)] px-2.5 py-1 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <ChevronLeft className="h-3 w-3" />
           Prev
@@ -52,7 +52,7 @@ export function PaginationBar({
           type="button"
           onClick={onNext}
           disabled={nextDisabled}
-          className="flex items-center gap-1 rounded-md border border-[var(--border-subtle)] px-2.5 py-1 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-subtle)] hover:text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex cursor-pointer items-center gap-1 rounded-md border border-[var(--border-subtle)] px-2.5 py-1 text-xs font-medium text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-muted)] hover:text-[var(--foreground)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500 disabled:cursor-not-allowed disabled:opacity-40"
         >
           Next
           <ChevronRight className="h-3 w-3" />

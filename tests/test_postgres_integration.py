@@ -1917,3 +1917,231 @@ def test_maintenance_bootstrap_is_repeatable_under_a_non_superuser_role(preprovi
         finally:
             # Roles and grants are transactional: no cluster-global test roles remain.
             conn.rollback()
+
+
+def test_postgres_runtime_parallel_replay_preserves_tenant_counts():
+    """Competing imports serialize identity checks and session rollups under RLS."""
+    from concurrent.futures import ThreadPoolExecutor
+    from datetime import datetime, timezone
+    from threading import Barrier
+
+    from agent_bom.api.postgres_common import _get_pool, reset_current_tenant, set_current_tenant
+    from agent_bom.api.postgres_runtime_event import PostgresRuntimeEventStore
+    from agent_bom.api.runtime_event_store import RuntimeObservationRecord
+    from agent_bom.api.storage.runtime_trace_imports import TraceImportCheckpoint, TraceImportConflictError
+
+    pool = _get_pool()
+    store = PostgresRuntimeEventStore(pool=pool)
+    tenant = f"trace-replay-{uuid4().hex}"
+    records = [
+        RuntimeObservationRecord(
+            tenant_id=tenant, observation_id=f"span-{i}", session_id="trace", observed_at=datetime.now(timezone.utc).isoformat()
+        )
+        for i in range(20)
+    ]
+    ready = Barrier(4)
+
+    def write(_index):
+        token = set_current_tenant(tenant)
+        try:
+            ready.wait(timeout=5)
+            return store.put_observations_batch(records)
+        finally:
+            reset_current_tenant(token)
+
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        inserted = list(executor.map(write, range(4)))
+    assert sum(inserted) == 20
+    token = set_current_tenant(tenant)
+    try:
+        assert len(store.list_observations(tenant)) == 20
+        assert store.get_session(tenant, "trace").observation_count == 20
+        assert store.put_observations_batch(records) == 0
+        checkpoint = TraceImportCheckpoint(
+            tenant_id=tenant,
+            import_id="source",
+            revision=1,
+            window_start="2026-10-11T00:00:00Z",
+            window_end="2026-10-12T00:00:00Z",
+            updated_at=datetime.now(timezone.utc).isoformat(),
+            cursor="next",
+        )
+        assert store.commit_trace_page(checkpoint, records, expected_revision=0).inserted == 0
+        assert store.get_trace_import(tenant, "source") == checkpoint
+        with pytest.raises(TraceImportConflictError):
+            store.commit_trace_page(checkpoint, [replace(records[0], observation_id="stale-page")], expected_revision=0)
+        assert len(store.list_observations(tenant)) == 20
+    finally:
+        reset_current_tenant(token)
+    wrong = set_current_tenant(f"other-{tenant}")
+    try:
+        assert store.list_observations(tenant) == []
+        assert store.get_trace_import(tenant, "source") is None
+    finally:
+        reset_current_tenant(wrong)
+
+
+def test_postgres_trace_checkpoint_failure_rolls_back_and_parallel_resume_has_one_winner(monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    from datetime import datetime, timezone
+    from threading import Barrier
+
+    from agent_bom.api import postgres_runtime_event
+    from agent_bom.api.postgres_common import _get_pool, reset_current_tenant, set_current_tenant
+    from agent_bom.api.runtime_event_store import RuntimeObservationRecord
+    from agent_bom.api.storage.runtime_trace_imports import TraceImportCheckpoint, TraceImportConflictError
+
+    store = postgres_runtime_event.PostgresRuntimeEventStore(pool=_get_pool())
+    tenant = f"checkpoint-{uuid4().hex}"
+    now = datetime.now(timezone.utc).isoformat()
+    row = RuntimeObservationRecord(tenant_id=tenant, observation_id="one", session_id="trace", observed_at=now)
+    page = TraceImportCheckpoint(
+        tenant_id=tenant,
+        import_id="source",
+        revision=1,
+        window_start="2026-10-11T00:00:00Z",
+        window_end="2026-10-12T00:00:00Z",
+        updated_at=now,
+        cursor="next",
+    )
+
+    def fail(*args, **kwargs):
+        raise RuntimeError("injected checkpoint failure")
+
+    token = set_current_tenant(tenant)
+    try:
+        with monkeypatch.context() as patch:
+            patch.setattr(postgres_runtime_event, "write_checkpoint", fail)
+            with pytest.raises(RuntimeError, match="injected"):
+                store.commit_trace_page(page, [row], expected_revision=0)
+        assert store.get_trace_import(tenant, "source") is None
+        assert store.list_observations(tenant) == []
+        assert store.list_sessions(tenant) == []
+    finally:
+        reset_current_tenant(token)
+    ready = Barrier(4)
+
+    def resume(index):
+        token = set_current_tenant(tenant)
+        try:
+            ready.wait(timeout=5)
+            try:
+                return store.commit_trace_page(page, [replace(row, observation_id=f"winner-{index}")], expected_revision=0).inserted
+            except TraceImportConflictError:
+                return 0
+        finally:
+            reset_current_tenant(token)
+
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        assert sum(executor.map(resume, range(4))) == 1
+    token = set_current_tenant(tenant)
+    try:
+        assert len(store.list_observations(tenant)) == 1
+        assert store.get_session(tenant, "trace").observation_count == 1
+        assert store.get_trace_import(tenant, "source") == page
+        with pytest.raises(ValueError, match="window"):
+            store.commit_trace_page(replace(page, revision=2, window_start="2026-10-09T00:00:00Z"), [row], expected_revision=1)
+    finally:
+        reset_current_tenant(token)
+    token = set_current_tenant(f"other-{tenant}")
+    try:
+        with pytest.raises(Exception, match="row-level security"):
+            store.commit_trace_page(page, [row], expected_revision=0)
+        assert store.get_trace_import(tenant, "source") is None
+    finally:
+        reset_current_tenant(token)
+
+
+def test_postgres_native_revisions_preserve_history_and_rollbacks():
+    from dataclasses import replace
+
+    import pytest
+
+    from agent_bom.api.postgres_common import _get_pool, reset_current_tenant, set_current_tenant
+    from agent_bom.api.postgres_runtime_event import PostgresRuntimeEventStore
+    from agent_bom.api.runtime_event_store import RuntimeObservationRecord
+    from agent_bom.api.storage.runtime_trace_imports import TraceImportCheckpoint
+
+    store = PostgresRuntimeEventStore(pool=_get_pool())
+    tenant = f"native-revisions-{uuid4().hex}"
+    token = set_current_tenant(tenant)
+    row = RuntimeObservationRecord(
+        tenant_id=tenant,
+        observation_id="one",
+        session_id="trace",
+        observed_at="2026-10-11T00:00:00Z",
+        surface="imported_trace",
+        verdict="unknown",
+    )
+    checkpoint = TraceImportCheckpoint(
+        tenant_id=tenant,
+        import_id="import",
+        revision=1,
+        window_start="2026-10-10T00:00:00Z",
+        window_end="2026-10-12T00:00:00Z",
+        updated_at=row.observed_at,
+    )
+    try:
+        assert store.commit_trace_page(checkpoint, [row], expected_revision=0).inserted == 1
+        updated = replace(row, verdict="error")
+        from agent_bom.api import postgres_runtime_event
+
+        def fail(*args, **kwargs):
+            raise RuntimeError("injected revision checkpoint failure")
+
+        with pytest.MonkeyPatch.context() as patch:
+            patch.setattr(postgres_runtime_event, "write_checkpoint", fail)
+            with pytest.raises(RuntimeError, match="injected"):
+                store.commit_trace_page(replace(checkpoint, revision=2), [updated], expected_revision=1)
+        assert [r.verdict for r in store.list_observation_revisions(tenant, "one")] == ["unknown"]
+        assert store.list_observations(tenant)[0].verdict == "unknown"
+        assert store.commit_trace_page(replace(checkpoint, revision=2), [updated], expected_revision=1).updated == 1
+        assert store.commit_trace_page(replace(checkpoint, revision=3), [row], expected_revision=2).unchanged == 1
+        assert [r.verdict for r in store.list_observation_revisions(tenant, "one")] == ["unknown", "error"]
+        assert store.get_session(tenant, "trace").observation_count == 1
+        assert store.get_session(tenant, "trace").verdicts == {"error": 1}
+    finally:
+        reset_current_tenant(token)
+    token = set_current_tenant(f"other-{tenant}")
+    try:
+        assert store.list_observation_revisions(tenant, "one") == []
+    finally:
+        reset_current_tenant(token)
+
+
+def test_postgres_observation_filters_count_before_paging_and_respect_rls():
+    from agent_bom.api.postgres_common import _get_pool, reset_current_tenant, set_current_tenant
+    from agent_bom.api.postgres_runtime_event import PostgresRuntimeEventStore
+    from agent_bom.api.runtime_event_store import RuntimeObservationRecord
+
+    store = PostgresRuntimeEventStore(pool=_get_pool())
+    tenant = f"observation-query-{uuid4().hex}"
+    token = set_current_tenant(tenant)
+    try:
+        store.put_observations_batch(
+            [
+                RuntimeObservationRecord(
+                    tenant_id=tenant,
+                    observation_id=str(i),
+                    session_id="session",
+                    observed_at=f"2026-10-12T00:00:0{i}Z",
+                    source="langsmith" if i % 2 else "langfuse",
+                    agent_name="exact",
+                    metadata={"connection_id": "source"},
+                )
+                for i in range(6)
+            ]
+        )
+        page = store.query_observations(tenant, source="langsmith", connection_id="source", limit=1, offset=1)
+        assert page["total"] == 3
+        assert page["sources"] == {"langsmith": 3}
+        assert [row.observation_id for row in page["observations"]] == ["3"]
+        assert store.query_observations(tenant, agent_name="exac")["total"] == 0
+        assert store.query_observations(tenant, source="x' OR 1=1 --")["total"] == 0
+    finally:
+        reset_current_tenant(token)
+    token = set_current_tenant(f"other-{tenant}")
+    try:
+        assert store.query_observations(tenant)["total"] == 0
+    finally:
+        reset_current_tenant(token)

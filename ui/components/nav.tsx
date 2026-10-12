@@ -133,16 +133,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/findings", label: "Findings", icon: Bug, desc: "Queue of evidence; open a row to investigate the estate node" },
       { href: "/remediation", label: "Remediation", icon: Wrench },
     ],
-    secondary: [
-      { href: "/security-graph?lens=attack-path", label: "Attack Paths", icon: Focus },
-      { href: "/security-graph?lens=cloud", label: "Cloud lens", icon: HardDrive },
-      { href: "/security-graph?lens=repository", label: "Repository lens", icon: GitBranch },
-      { href: "/security-graph?lens=identity", label: "Identity lens", icon: Fingerprint },
-      { href: "/security-graph?lens=lineage", label: "Lineage", icon: GitBranch },
-      { href: "/security-graph?lens=asset-drift&scope=asset-drift", label: "Asset Drift lens", icon: Radar },
-      { href: "/security-graph?lens=mesh", label: "Agent Mesh (specialized)", icon: Waypoints },
-      { href: "/security-graph?lens=context", label: "Context (specialized)", icon: Layers },
-    ],
+
   },
   {
     label: "Inventory",
@@ -629,7 +620,7 @@ export function Nav() {
             isCollapsed ? "justify-center px-0 py-2" : ""
           } ${
             hasActiveChild
-              ? "border-outline-strong text-foreground bg-surface-elevated"
+              ? "border-transparent text-foreground"
               : "border-transparent text-ink-secondary hover:border-outline hover:text-foreground hover:bg-surface-muted"
           }`;
           const groupHeaderContent = (
@@ -644,9 +635,6 @@ export function Nav() {
                       {group.label}
                     </span>
                   </div>
-                  <span className="rounded-full border border-outline bg-surface-elevated px-1.5 py-0.5 text-[9px] font-mono text-ink-tertiary">
-                    {group.visibleLinks.length}
-                  </span>
                   {isExpanded ? (
                     <ChevronDown className="w-3 h-3 text-ink-tertiary" />
                   ) : (
@@ -660,7 +648,7 @@ export function Nav() {
           return (
             <div
               key={group.label}
-              className={`rounded-xl border border-outline bg-surface-muted ${
+              className={`py-1 ${
                 isCollapsed ? "group/navlane relative" : ""
               }`}
             >
@@ -694,7 +682,7 @@ export function Nav() {
 
               {/* Group Links */}
               {isExpanded && !isCollapsed && (
-                <div className="mx-2 mb-2 mt-1 space-y-0.5 border-l border-outline pl-2">
+                <div className="mb-2 mt-1 space-y-0.5">
                   {group.visibleLinks.map(({ href, label, icon: Icon, desc }) => {
                     const hrefPath = href.split("?")[0] ?? href;
                     const active = isNavLinkActive(href, path);
