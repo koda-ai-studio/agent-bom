@@ -169,7 +169,7 @@ Follow **CVE-2023-4863 in pillow@9.0.0** through recorded relationships between 
 
 <p align="center"><a href="docs/images/graph-relationship-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/graph-relationship-light-live.png"><img src="docs/images/graph-relationship-dark-live.png" alt="Reference lab workload and tool relationship with the recorded gateway runtime evidence open beside the graph" width="1440"></picture></a></p>
 
-**Find a path → Explore connections → Inspect evidence → Remediate.** Keep the snapshot and selected finding in scope as you move through the workflow. Configured permissions, observed activity and downstream effects have separate evidence requirements.
+**Find a path → Explore connections → Inspect evidence → Remediate.** Keep the snapshot and selected finding in scope as you move through the workflow. Expand within a hop limit and browse relationships in bounded pages; incomplete views remain labeled. Configured permissions, observed activity and downstream effects have separate evidence requirements.
 
 [Explore the graph gallery](docs/GALLERY.md#explore-connections-and-inspect-evidence) · [View the mobile graph](docs/images/correlation-path-mobile-live.png) · [Run the reference lab](examples/reference-evidence-lab/README.md)
 

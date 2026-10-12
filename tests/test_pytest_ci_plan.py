@@ -525,3 +525,10 @@ def test_report_contract_edits_select_producer_and_mounted_read_tests(tmp_path, 
     for path in expected:
         _write(path, 1)
     assert select_targeted_tests(changed_files=[Path(source)], root=tmp_path) == expected
+
+
+@pytest.mark.parametrize("source", ["README.md", "docs/GALLERY.md"])
+def test_frontdoor_edits_select_product_explanation_contract(tmp_path, source):
+    contract = tmp_path / "tests/test_product_explanations.py"
+    _write(contract, 1)
+    assert select_targeted_tests(changed_files=[Path(source)], root=tmp_path) == [contract]
