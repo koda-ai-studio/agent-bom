@@ -80,6 +80,16 @@ class RuntimeMetadataCache:
     def __init__(self) -> None:
         self.strings: dict[tuple[str | None, str, int], object] = {}
         self.keys: dict[str, str] = {}
+        self.fields: dict[str, str] = {}
+
+
+def _metadata_key(raw_key: object, cache: RuntimeMetadataCache | None) -> str:
+    if cache is not None and isinstance(raw_key, str) and raw_key in cache.fields:
+        return cache.fields[raw_key]
+    key = sanitize_text(raw_key, max_len=120)
+    if cache is not None and isinstance(raw_key, str) and len(cache.fields) < 50:
+        cache.fields[raw_key] = key
+    return key
 
 
 def sanitize_runtime_metadata(value: object, *, max_items: int = 50, _cache: RuntimeMetadataCache | None = None) -> dict[str, Any]:
@@ -93,7 +103,7 @@ def sanitize_runtime_metadata(value: object, *, max_items: int = 50, _cache: Run
         return {}
     safe: dict[str, Any] = {}
     for raw_key, raw_value in list(value.items())[:max_items]:
-        key = sanitize_text(raw_key, max_len=120)
+        key = _metadata_key(raw_key, _cache)
         if not key or key.lower() in RAW_RUNTIME_FIELDS:
             continue
         safe[key] = sanitize_sensitive_payload(

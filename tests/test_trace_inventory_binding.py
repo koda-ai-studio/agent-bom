@@ -167,3 +167,13 @@ def test_malformed_cloud_claims_fail_closed_without_breaking_the_explorer(claims
         Store(), tenant_id="tenant-a", scan_id="snapshot", observations=[observation(cloud_trace=claims)]
     )
     assert result["span-1"]["state"] == "scope_conflict"
+
+
+@pytest.mark.parametrize("attributes", [{"cloud.account.id": "222222222222"}, {}, {"aws.request_id": []}])
+def test_persisted_consistency_label_does_not_override_revalidated_cloud_scope(attributes):
+    claims = {"scope_state": "consistent", "attributes": attributes}
+    result = correlate_inventory_observations(
+        Store(), tenant_id="tenant-a", scan_id="snapshot", observations=[observation(cloud_trace=claims)]
+    )
+    assert result["span-1"]["state"] == "scope_conflict"
+    assert "node_id" not in result["span-1"]

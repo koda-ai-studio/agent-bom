@@ -9,6 +9,8 @@ from __future__ import annotations
 
 from typing import Any, Mapping, Sequence
 
+from agent_bom.runtime.cloud_trace_claims import cloud_trace_projection
+
 
 def correlate_inventory_observations(
     store: Any, *, tenant_id: str, scan_id: str, observations: Sequence[Mapping[str, Any]]
@@ -36,8 +38,8 @@ def correlate_inventory_observations(
         node = nodes.get(identity) if isinstance(identity, str) else None
         binding: dict[str, Any] = {"state": "unmapped", "execution_proven": False}
         result[str(row["observation_id"])] = binding
-        cloud_claims = metadata.get("cloud_trace")
-        if cloud_claims is not None and (not isinstance(cloud_claims, dict) or cloud_claims.get("scope_state") != "consistent"):
+        cloud_claims = cloud_trace_projection(metadata)
+        if metadata.get("cloud_trace") is not None and (cloud_claims is None or cloud_claims.get("scope_state") != "consistent"):
             binding["state"] = "scope_conflict"
             continue
         if node is None:

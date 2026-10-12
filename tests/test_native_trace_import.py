@@ -157,3 +157,25 @@ def test_page_redaction_cache_keeps_field_policy_and_raw_payload_exclusion():
     for _ in range(2):
         assert sanitize_runtime_metadata(metadata, _cache=cache) == expected
     assert len(cache.strings) == 2
+
+
+def test_page_metadata_field_cache_is_bounded_and_preserves_key_sanitization(monkeypatch):
+    from agent_bom.api.storage import runtime_records
+
+    calls = []
+    original = runtime_records.sanitize_text
+
+    def observed(value, **kwargs):
+        calls.append(value)
+        return original(value, **kwargs)
+
+    monkeypatch.setattr(runtime_records, "sanitize_text", observed)
+    cache = runtime_records.RuntimeMetadataCache()
+    for _ in range(2):
+        assert runtime_records.sanitize_runtime_metadata({"provider": "langfuse"}, _cache=cache) == {"provider": "langfuse"}
+    assert calls == ["provider"]
+    for index in range(100):
+        runtime_records.sanitize_runtime_metadata({f"field-{index}": index}, _cache=cache)
+    assert len(cache.fields) <= 50
+    key = "x" * 200
+    assert runtime_records.sanitize_runtime_metadata({key: 1}, _cache=cache) == runtime_records.sanitize_runtime_metadata({key: 1})
