@@ -131,6 +131,8 @@ def test_release_manifest_covers_dark_light_and_mobile_product_proof() -> None:
         "security-graph-live.png": "dark desktop",
         "security-graph-light-live.png": "light desktop",
         "security-graph-mobile-live.png": "dark mobile",
+        "graph-relationship-dark-live.png": "dark desktop",
+        "graph-relationship-light-live.png": "light desktop",
     }
     for path, presentation in required.items():
         assert path in entries
@@ -163,7 +165,7 @@ def test_release_manifest_carries_reproducible_sanitized_provenance() -> None:
     assert {"remediation-live.png", "remediation-light-live.png", "remediation-mobile-live.png"} <= paths
 
     lab_digest = (ROOT / "examples/reference-evidence-lab/generated/correlation-proof.sha256").read_text(encoding="utf-8").strip()
-    for path in ("correlation-receipts-live.png", "correlation-path-live.png"):
+    for path in ("correlation-receipts-live.png", "correlation-path-live.png", "graph-relationship-dark-live.png", "graph-relationship-light-live.png"):
         assert entries[path]["evidence_sha256"] == lab_digest
         assert entries[path]["correlation_manifest_sha256"].startswith("sha256:")
 

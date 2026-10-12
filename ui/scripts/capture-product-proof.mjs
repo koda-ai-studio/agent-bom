@@ -2425,12 +2425,13 @@ const README_CAPTURE_FILES = new Set([
   "component-controls-dark-live.png", "component-controls-light-live.png",
   "context-map-horizontal-dark-live.png", "context-map-horizontal-light-live.png",
   "context-map-light-live.png", "context-map-live.png", "correlation-graph-live.png",
+  "graph-relationship-dark-live.png", "graph-relationship-light-live.png",
   "dashboard-live.png", "dashboard-paths-live.png", "dashboard-risks-live.png", "inventory-live.png", "remediation-live.png",
 ]);
 
 async function capture(page, urlPath, filename, beforeShot, options = {}) {
   if (README_CAPTURE_FILES.has(filename)) {
-    // Stack the inspector below the README hero so the graph gets the full image width.
+    // Keep the compact README hero and the full-width tour captures deterministic.
     const width = filename.startsWith("context-map-horizontal-") ? 1000 : 1440;
     await page.setViewportSize({ width, height: 900 });
   }
@@ -2874,6 +2875,15 @@ async function writeScreenshotManifest(outputDir = IMAGE_DIR) {
       evidence_sha256: referenceLabActualDigest,
       correlation_manifest_sha256: REFERENCE_LAB.correlation.manifest_sha256,
     },
+    ...["dark", "light"].map((theme) => ({
+      path: `graph-relationship-${theme}-live.png`,
+      page: `/graph?capture=1&scan=${REFERENCE_CORRELATION_ID}&layers=server,agent,tool`,
+      scope: "Reference evidence lab local gateway invocation with relationship direction, snapshot, timestamps and recorded runtime evidence; modeled infrastructure remains separate",
+      presentation: `${theme} desktop`,
+      evidence_artifact: path.relative(REPO_ROOT, REFERENCE_LAB_PROOF_PATH),
+      evidence_sha256: referenceLabActualDigest,
+      correlation_manifest_sha256: REFERENCE_LAB.correlation.manifest_sha256,
+    })),
     {
       path: "correlation-receipts-live.png",
       page: `/security-graph?lens=attack-path&scan=${REFERENCE_CORRELATION_ID}&correlation=1&capture=1`,
@@ -3416,6 +3426,31 @@ async function main() {
       correlationPathAssertions,
     );
     await referenceGraphPage.close();
+    for (const theme of ["dark", "light"]) {
+      const relationshipPage = await newCapturePage(theme, { width: 1440, height: 900 });
+      await capture(relationshipPage,
+        `/graph?capture=1&scan=${REFERENCE_CORRELATION_ID}&layers=server,agent,tool`,
+        `graph-relationship-${theme}-live.png`, async (p) => {
+          await expect(p.locator(".react-flow__node")).toHaveCount(3);
+          const invocation = p.locator('.react-flow__edge[data-id="invoked:agent:model:reference-workload:tool:runtime:render-untrusted-image"]');
+          await invocation.focus();
+          await invocation.press("Space");
+          const receipt = p.getByLabel("Relationship details", { exact: true });
+          await expect(receipt).toBeVisible();
+          await receipt.getByText("Recorded evidence", { exact: true }).click();
+          await expect(receipt).toContainText("gateway_runtime");
+          await fitReactFlow(p);
+          await scrollTo(p, 0);
+        }, {
+          expectedText: ["Invoked (runtime)", "Recorded evidence", "runtime_observed", "gateway_runtime", /Reference evidence lab/i],
+          expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph"],
+          minGraphNodes: 3, maxGraphNodes: 3, minGraphEdges: 2, maxGraphEdges: 2,
+          minGraphNodeFontPx: 12, minGraphEdgeLabelFontPx: 12,
+          viewportSelectors: ['[aria-label="Relationship details"]'],
+          assertEdgeLabelsClearOfNodes: true, assertNoHorizontalOverflow: true,
+        });
+      await relationshipPage.close();
+    }
     const currentCanvasPage = await newCapturePage("dark", { width: 1512, height: 811 });
     await capture(
       currentCanvasPage,

@@ -43,7 +43,7 @@ before replacing any published product image.
    Kubernetes, MCP, and identity source receipt before opening a browser. A
    stale, hand-edited, or source-divergent artifact stops capture.
 
-3. Inspect all 46 PNGs and the manifest at the final README display size. The
+3. Inspect all 48 PNGs and the manifest at the final README display size. The
    harness stages files and publishes them only after every page passes.
    README desktop captures use 1440×900; mobile captures use 390×844.
    Capture the application viewport directly. Do not crop, edit, or enlarge
@@ -94,6 +94,7 @@ deterministic public screenshot set.
 | `gateway-policies-live.png` | `/runtime?tab=gateway&capture=1` | KPI rollup, enforcement posture, and recent tool-call evidence | Proves runtime gateway observability without a live proxy session during capture |
 | `security-graph-live.png` | `/security-graph?lens=attack-path&scan=scan-proof-ai-platform&capture=1` | Capture a prioritized synthetic attack path with graph evidence export and remediation handoff | Keeps the gallery fixture pinned to its own scan instead of inheriting a newer correlation snapshot |
 | `correlation-receipts-live.png` | `/security-graph?lens=attack-path&scan=reference-evidence-correlation-v1&correlation=1&capture=1` | Latest completed correlation selected automatically, leading with affected assets, path priority, real advisory, runtime state, and remediation action; receipt details and custom creation stay collapsed | Outcome proof generated from the reference lab rather than the synthetic graph fixture |
+| `graph-relationship-{dark,light}-live.png` | `/graph?scan=reference-evidence-correlation-v1&layers=server,agent,tool&capture=1` | Three recorded entities, two relationships, and an open invocation receipt from the reference lab | Readable relationship evidence in both themes; local gateway observation does not establish cloud execution |
 | `correlation-graph-live.png` | `/graph?scan=reference-evidence-correlation-v1&path=top&capture=1`, with all eight path entity layers | Interactive reference-lab graph with the real advisory, modeled service and data asset, and remediation context | README graph proof; captured from the application, not an illustrated diagram |
 | `correlation-path-live.png` | `/security-graph?lens=attack-path&scan=reference-evidence-correlation-v1&cve=CVE-2023-4863&capture=1` | Confirmed real-advisory path with all eight hops visible, compact exact anchors, freshness, runtime proof, and inspectable per-hop receipts | Primary README path proof; modeled local infrastructure, never customer evidence |
 | `correlation-receipts-light-live.png` | `/security-graph?lens=attack-path&scan=reference-evidence-correlation-v1&correlation=1&capture=1` | Same reference-lab outcome-first decision surface in the light theme | Theme readability contract; not a separate evidence run |
