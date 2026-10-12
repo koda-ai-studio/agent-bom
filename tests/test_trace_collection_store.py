@@ -177,3 +177,19 @@ def test_collection_scope_includes_configured_cloud_binding():
     credentials = {"host": "https://example.test", "public_key": "pk"}
     for field in ("project", "scope_account_id", "scope_environment", "scope_cloud_provider"):
         assert scope(credentials) != scope({**credentials, field: "changed"})
+
+
+def test_existing_main_checkpoint_keeps_its_scope_when_no_optional_binding_changes(stores):
+    from agent_bom.api.trace_collection.langfuse import identity
+    from agent_bom.api.trace_collection.service import scope
+
+    _, store = stores
+    credentials = {"host": "https://cloud.langfuse.com/", "public_key": "project-key"}
+    old = initial().model_copy(update={"scope_digest": identity("https://cloud.langfuse.com", "project-key")})
+    claim = store.claim("a", "connection", old, now=100)
+    store.commit("a", "connection", claim, [], next_cursor="old-cursor", now=101)
+    resumed = store.claim("a", "connection", old.model_copy(update={"scope_digest": scope(credentials)}), now=102)
+    assert resumed.cursor == "old-cursor"
+    assert resumed.pages == 1
+    for field in ("project", "scope_account_id", "scope_environment", "scope_cloud_provider"):
+        assert scope({**credentials, field: "changed"}) != old.scope_digest

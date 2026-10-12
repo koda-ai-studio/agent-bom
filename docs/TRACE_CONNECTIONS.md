@@ -82,6 +82,16 @@ proof of the provider's latest state. Projection retention does not erase replay
 identity or revision history. Revision history currently requires operator-managed
 storage capacity; no automatic history-pruning policy is provided.
 
+## Upgrading existing collection
+
+Existing collection checkpoints retain their resume cursor when connection scope
+is unchanged. Adding account, environment, cloud or project bindings requires a
+new connection ID; do not reset the old checkpoint to bypass the conflict.
+Older tool-only observations remain available as legacy evidence. They lack the
+canonical project/scope fields needed to merge safely into native span history,
+so the first native import can add a separate record for the same provider span.
+Replay deduplication applies within each identity format, not across that upgrade.
+
 ## Import, resume, and inspect
 
 With the authenticated control-plane session, POST to

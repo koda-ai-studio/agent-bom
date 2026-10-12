@@ -18605,6 +18605,30 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** ObsCloudTraceClaims */
+        ObsCloudTraceClaims: {
+            /** Attributes */
+            attributes: {
+                [key: string]: string;
+            };
+            /**
+             * Basis
+             * @constant
+             */
+            basis: "source_reported";
+            /**
+             * Execution Proven
+             * @constant
+             */
+            execution_proven: false;
+            /**
+             * Scope State
+             * @enum {string}
+             */
+            scope_state: "consistent" | "conflict" | "invalid";
+        } & {
+            [key: string]: unknown;
+        };
         /** ObsCostAnomaly */
         ObsCostAnomaly: {
             /** Agent */
@@ -18896,6 +18920,7 @@ export interface components {
             action_type: string;
             /** Agent */
             agent: string;
+            cloud_trace?: components["schemas"]["ObsCloudTraceClaims"] | null;
             /** Collected At */
             collected_at?: string | null;
             /** Compliance Controls */

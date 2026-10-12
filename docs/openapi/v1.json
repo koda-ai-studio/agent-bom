@@ -27434,6 +27434,45 @@
         "title": "ObsBudgetStatus",
         "type": "object"
       },
+      "ObsCloudTraceClaims": {
+        "additionalProperties": true,
+        "properties": {
+          "attributes": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Attributes",
+            "type": "object"
+          },
+          "basis": {
+            "const": "source_reported",
+            "title": "Basis",
+            "type": "string"
+          },
+          "execution_proven": {
+            "const": false,
+            "title": "Execution Proven",
+            "type": "boolean"
+          },
+          "scope_state": {
+            "enum": [
+              "consistent",
+              "conflict",
+              "invalid"
+            ],
+            "title": "Scope State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "basis",
+          "execution_proven",
+          "scope_state",
+          "attributes"
+        ],
+        "title": "ObsCloudTraceClaims",
+        "type": "object"
+      },
       "ObsCostAnomaly": {
         "additionalProperties": true,
         "properties": {
@@ -28353,6 +28392,16 @@
           "agent": {
             "title": "Agent",
             "type": "string"
+          },
+          "cloud_trace": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ObsCloudTraceClaims"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "collected_at": {
             "anyOf": [

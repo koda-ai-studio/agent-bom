@@ -48,11 +48,10 @@ def _initialized_store(runtime: SQLiteRuntimeEventStore | PostgresRuntimeEventSt
 
 
 def scope(credentials: dict[str, str]) -> str:
-    return identity(
-        credentials["host"].rstrip("/"),
-        credentials["public_key"],
-        *(credentials.get(key, "") for key in ("project", "scope_account_id", "scope_environment", "scope_cloud_provider")),
-    )
+    optional = tuple(credentials.get(key, "") for key in ("project", "scope_account_id", "scope_environment", "scope_cloud_provider"))
+    # Preserve published checkpoints when no new scope binding is configured.
+    # Adding any binding changes identity and must still fail closed.
+    return identity(credentials["host"].rstrip("/"), credentials["public_key"], *(optional if any(optional) else ()))
 
 
 def initial_state(credentials: dict[str, str], now: float) -> CollectionState:

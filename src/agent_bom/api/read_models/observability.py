@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from agent_bom.api.read_models._base import Num, ReadModel, ReadResponse
 
@@ -109,6 +109,13 @@ class ObsTraceLinkedFinding(ReadModel):
     policy_state: Any
 
 
+class ObsCloudTraceClaims(ReadModel):
+    basis: Literal["source_reported"]
+    execution_proven: Literal[False]
+    scope_state: Literal["consistent", "conflict", "invalid"]
+    attributes: dict[str, str]
+
+
 class ObsTraceSpan(ReadModel):
     surface: str = "runtime"
     parent_span_id: str = ""
@@ -117,6 +124,7 @@ class ObsTraceSpan(ReadModel):
     logical_root: bool | None = None
     native_type: str = ""
     native_name: str = ""
+    cloud_trace: ObsCloudTraceClaims | None = None
     event_time_missing: bool = False
     collected_at: str | None = None
     end_time_unix_nano: str | None = None
