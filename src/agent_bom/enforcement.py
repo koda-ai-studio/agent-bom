@@ -17,7 +17,7 @@ import hashlib
 import logging
 import re
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional, cast
 
 from agent_bom.core.severity import severity_at_or_above
 from agent_bom.models import MCPServer, Severity
@@ -39,6 +39,10 @@ class EnforcementFinding:
     tool_name: Optional[str] = None
     reason: str = ""
     recommendation: str = ""
+    surface_type: str = "mcp_tool"
+    surface_name: str = ""
+    server_identity: str = ""
+    evidence: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -49,6 +53,7 @@ class EnforcementReport:
     servers_checked: int = 0
     tools_checked: int = 0
     passed: bool = True
+    coverage: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def critical_count(self) -> int:
@@ -60,25 +65,37 @@ class EnforcementReport:
 
     def to_dict(self) -> dict:
         """Serialize for JSON output and AIBOMReport storage."""
-        return {
-            "passed": self.passed,
-            "servers_checked": self.servers_checked,
-            "tools_checked": self.tools_checked,
-            "findings_count": len(self.findings),
-            "critical_count": self.critical_count,
-            "high_count": self.high_count,
-            "findings": [
+        from agent_bom.security import sanitize_sensitive_payload
+
+        return cast(
+            dict[str, Any],
+            sanitize_sensitive_payload(
                 {
-                    "severity": f.severity,
-                    "category": f.category,
-                    "server_name": f.server_name,
-                    "tool_name": f.tool_name,
-                    "reason": f.reason,
-                    "recommendation": f.recommendation,
+                    "passed": self.passed,
+                    "coverage": self.coverage,
+                    "servers_checked": self.servers_checked,
+                    "tools_checked": self.tools_checked,
+                    "findings_count": len(self.findings),
+                    "critical_count": self.critical_count,
+                    "high_count": self.high_count,
+                    "findings": [
+                        {
+                            "severity": f.severity,
+                            "category": f.category,
+                            "server_name": f.server_name,
+                            "tool_name": f.tool_name,
+                            "reason": f.reason,
+                            "recommendation": f.recommendation,
+                            "surface_type": f.surface_type,
+                            "surface_name": f.surface_name,
+                            "server_identity": f.server_identity,
+                            "evidence": f.evidence,
+                        }
+                        for f in self.findings
+                    ],
                 }
-                for f in self.findings
-            ],
-        }
+            ),
+        )
 
 
 def _extract_schema_descriptions(input_schema: dict | bool | None) -> list[str]:
@@ -118,124 +135,85 @@ def _extract_schema_descriptions(input_schema: dict | bool | None) -> list[str]:
     return descriptions
 
 
+def _scan_surface(
+    server: MCPServer, name: str, text: str, category: str, kind: str, label: str, asset_identifier: str = ""
+) -> list[EnforcementFinding]:
+    """Use the same normalized injection rules for every MCP text descriptor."""
+    from agent_bom.parsers.prompt_scanner import _INJECTION_PATTERNS, _UNSAFE_INSTRUCTION_PATTERNS
+
+    normalized = _normalize_text(text)
+    findings = []
+    for patterns, risk in ((_INJECTION_PATTERNS, "injection pattern"), (_UNSAFE_INSTRUCTION_PATTERNS, "unsafe instruction")):
+        for pattern, title in patterns:
+            if pattern.search(normalized):
+                findings.append(
+                    EnforcementFinding(
+                        severity="high",
+                        category=category,
+                        server_name=server.name,
+                        tool_name=name,
+                        surface_type=kind,
+                        surface_name=name,
+                        reason=f"{label} contains {risk}: {title}",
+                        recommendation="Review the flagged descriptor for hidden instructions. Verify the MCP server source.",
+                        evidence={
+                            "basis": "descriptor_pattern",
+                            "surface": label,
+                            "asset_identifier": asset_identifier,
+                            "rule_id": f"{label}: {risk}: {title}",
+                        },
+                    )
+                )
+    return findings
+
+
 def scan_tool_descriptions(server: MCPServer) -> list[EnforcementFinding]:
-    """Scan MCP tool descriptions AND inputSchema for injection patterns.
-
-    Reuses the regex library from prompt_scanner.py to detect
-    jailbreak patterns, unsafe instructions, and data exfiltration
-    vectors hidden in tool description fields and parameter schemas.
-    Applies Unicode normalization before matching to resist homoglyph evasion.
-    """
-    from agent_bom.parsers.prompt_scanner import (
-        _INJECTION_PATTERNS,
-        _UNSAFE_INSTRUCTION_PATTERNS,
-    )
-
-    findings: list[EnforcementFinding] = []
+    """Scan tool and recursive input-schema descriptions with shared rules."""
+    findings = []
     for tool in server.tools:
-        # Collect all scannable text surfaces for this tool
-        surfaces: list[tuple[str, str]] = []  # (text, source_label)
-
-        desc = (tool.description or "").strip()
-        if desc:
-            surfaces.append((desc, "description"))
-
-        # inputSchema property descriptions (the #1 real-world attack vector)
-        schema_descs = _extract_schema_descriptions(tool.input_schema)
-        for sd in schema_descs:
-            sd = sd.strip()
-            if sd:
-                surfaces.append((sd, "inputSchema"))
-
-        for raw_text, source in surfaces:
-            text = _normalize_text(raw_text)
-
-            category = "injection" if source == "description" else "schema_injection"
-
-            # Check injection patterns (high severity)
-            for pattern, title in _INJECTION_PATTERNS:
-                if pattern.search(text):
-                    findings.append(
-                        EnforcementFinding(
-                            severity="high",
-                            category=category,
-                            server_name=server.name,
-                            tool_name=tool.name,
-                            reason=f"Tool {source} contains injection pattern: {title}",
-                            recommendation=(
-                                "Review tool parameter schemas for hidden instructions. Consider removing or replacing this MCP server."
-                                if source == "inputSchema"
-                                else "Review tool description for hidden instructions. Consider removing or replacing this MCP server."
-                            ),
-                        )
-                    )
-
-            # Check unsafe instruction patterns (high severity)
-            for pattern, title in _UNSAFE_INSTRUCTION_PATTERNS:
-                if pattern.search(text):
-                    findings.append(
-                        EnforcementFinding(
-                            severity="high",
-                            category=category,
-                            server_name=server.name,
-                            tool_name=tool.name,
-                            reason=f"Tool {source} contains unsafe instruction: {title}",
-                            recommendation=(
-                                "Remove unsafe instructions from parameter schemas. Verify the MCP server source."
-                                if source == "inputSchema"
-                                else "Remove unsafe instructions from tool descriptions. Verify the MCP server source."
-                            ),
-                        )
-                    )
-
+        findings.extend(
+            _scan_surface(server, tool.name, tool.description or "", "injection", "mcp_tool", "Tool description", tool.canonical_id)
+        )
+        for text in _extract_schema_descriptions(tool.input_schema):
+            findings.extend(_scan_surface(server, tool.name, text, "schema_injection", "mcp_tool", "Tool inputSchema", tool.canonical_id))
     return findings
 
 
 def scan_resource_descriptions(server: MCPServer) -> list[EnforcementFinding]:
-    """Scan MCP resource descriptions for injection patterns.
-
-    Resources are another text surface that can carry hidden instructions.
-    Applies the same injection/unsafe-instruction patterns as tool scanning.
-    """
-    from agent_bom.parsers.prompt_scanner import (
-        _INJECTION_PATTERNS,
-        _UNSAFE_INSTRUCTION_PATTERNS,
-    )
-
-    findings: list[EnforcementFinding] = []
+    """Inspect descriptors only; resource bodies are not fetched by this check."""
+    findings = []
     for resource in server.resources:
-        desc = (resource.description or "").strip()
-        if not desc:
-            continue
+        findings.extend(
+            _scan_surface(
+                server,
+                resource.name,
+                resource.description or "",
+                "resource_injection",
+                "mcp_resource",
+                "Resource description",
+                resource.canonical_id,
+            )
+        )
+    return findings
 
-        text = _normalize_text(desc)
 
-        for pattern, title in _INJECTION_PATTERNS:
-            if pattern.search(text):
-                findings.append(
-                    EnforcementFinding(
-                        severity="high",
-                        category="resource_injection",
-                        server_name=server.name,
-                        tool_name=resource.name,
-                        reason=f"Resource description contains injection pattern: {title}",
-                        recommendation="Review resource description for hidden instructions. Verify the MCP server source.",
+def scan_prompt_descriptions(server: MCPServer) -> list[EnforcementFinding]:
+    """Inspect prompt and argument descriptors without rendering a prompt."""
+    findings = []
+    for prompt in server.prompts:
+        findings.extend(
+            _scan_surface(
+                server, prompt.name, prompt.description or "", "prompt_injection", "mcp_prompt", "Prompt description", prompt.canonical_id
+            )
+        )
+        for arg in prompt.arguments:
+            text = arg.get("description")
+            if isinstance(text, str):
+                findings.extend(
+                    _scan_surface(
+                        server, prompt.name, text, "prompt_injection", "mcp_prompt", "Prompt argument description", prompt.canonical_id
                     )
                 )
-
-        for pattern, title in _UNSAFE_INSTRUCTION_PATTERNS:
-            if pattern.search(text):
-                findings.append(
-                    EnforcementFinding(
-                        severity="high",
-                        category="resource_injection",
-                        server_name=server.name,
-                        tool_name=resource.name,
-                        reason=f"Resource description contains unsafe instruction: {title}",
-                        recommendation="Remove unsafe instructions from resource descriptions. Verify the MCP server source.",
-                    )
-                )
-
     return findings
 
 
@@ -609,19 +587,9 @@ def check_agentic_search_risk(server: MCPServer) -> list[EnforcementFinding]:
 # ─── Over-permission analyzer ─────────────────────────────────────────────────
 
 
-def check_over_permission(server: MCPServer, agent_type: str | None = None) -> list[EnforcementFinding]:
-    """Flag servers whose tool capabilities exceed expected mission profile.
-
-    Mission profiles define expected capabilities per agent type:
-    - code agents (claude-code, cursor, copilot): READ + WRITE + EXECUTE
-    - chat agents (claude-desktop): READ only
-    - automation agents (goose, crewai): READ + WRITE + NETWORK
-    """
-    from agent_bom.risk_analyzer import ToolCapability, classify_mcp_tool
-
-    findings: list[EnforcementFinding] = []
-    if not server.tools:
-        return findings
+def expected_mcp_capabilities(agent_type: str | None, expected_capabilities: list[str] | None = None):
+    """Resolve the explicit operator profile or a documented agent-type heuristic."""
+    from agent_bom.risk_analyzer import ToolCapability
 
     # Define expected capabilities per agent category
     code_agents = {
@@ -636,23 +604,46 @@ def check_over_permission(server: MCPServer, agent_type: str | None = None) -> l
         "roo-code",
         "amazon-q",
     }
-    chat_agents = {"claude-desktop", "custom"}
+    chat_agents = {"claude-desktop"}
     automation_agents = {"goose", "openclaw", "docker-mcp"}
 
-    if agent_type in code_agents:
+    if expected_capabilities is not None:
+        expected = {ToolCapability(value) for value in expected_capabilities}
+    elif agent_type in code_agents:
         expected = {ToolCapability.READ, ToolCapability.WRITE, ToolCapability.EXECUTE}
     elif agent_type in chat_agents:
         expected = {ToolCapability.READ}
     elif agent_type in automation_agents:
         expected = {ToolCapability.READ, ToolCapability.WRITE, ToolCapability.NETWORK}
     else:
-        # Unknown agent type — skip analysis
+        return None
+
+    return expected
+
+
+def check_over_permission(
+    server: MCPServer, agent_type: str | None = None, *, expected_capabilities: list[str] | None = None
+) -> list[EnforcementFinding]:
+    """Flag servers whose tool capabilities exceed expected mission profile.
+
+    Mission profiles define expected capabilities per agent type:
+    - code agents (claude-code, cursor, copilot): READ + WRITE + EXECUTE
+    - chat agents (claude-desktop): READ only
+    - automation agents (goose, crewai): READ + WRITE + NETWORK
+    """
+    from agent_bom.risk_analyzer import ToolCapability, classify_mcp_tool
+
+    findings: list[EnforcementFinding] = []
+    if not server.tools:
+        return findings
+
+    expected = expected_mcp_capabilities(agent_type, expected_capabilities)
+    if expected is None:
         return findings
 
     # Classify actual capabilities
-    actual: set[ToolCapability] = set()
-    for tool in server.tools:
-        actual.update(classify_mcp_tool(tool))
+    tool_capabilities = [(tool.name, set(classify_mcp_tool(tool))) for tool in server.tools]
+    actual: set[ToolCapability] = set().union(*(capabilities for _, capabilities in tool_capabilities))
 
     excess = actual - expected
     if excess:
@@ -662,6 +653,16 @@ def check_over_permission(server: MCPServer, agent_type: str | None = None) -> l
                 severity="medium",
                 category="over_permission",
                 server_name=server.name,
+                surface_type="mcp_server",
+                evidence={
+                    "basis": "capability_heuristic",
+                    "asset_identifier": server.canonical_id,
+                    "affected_tools": sorted({name for name, capabilities in tool_capabilities if capabilities & excess}),
+                    "expected_capabilities": sorted(c.value for c in expected),
+                    "observed_capabilities": sorted(c.value for c in actual),
+                    "excess_capabilities": excess_names,
+                    "profile_source": "operator" if expected_capabilities is not None else "agent_type",
+                },
                 reason=f"Server has excess capabilities for {agent_type}: {', '.join(excess_names)}",
                 recommendation=f"Review tool permissions. Expected: {sorted(c.value for c in expected)}",
             )
@@ -704,11 +705,10 @@ def run_enforcement(
     servers: list[MCPServer],
     introspection_report: IntrospectionReport | None = None,
     fail_on_severity: str = "high",
+    *,
+    include_descriptors: bool = True,
 ) -> EnforcementReport:
-    """Run full enforcement scan across all servers.
-
-    Orchestrates all checks and produces a unified report.
-    """
+    """Run enforcement, optionally reusing descriptors already audited by the caller."""
     report = EnforcementReport()
     report.servers_checked = len(servers)
 
@@ -721,11 +721,8 @@ def run_enforcement(
     for server in servers:
         report.tools_checked += len(server.tools)
 
-        # 1. Scan tool descriptions + inputSchema for injection
-        report.findings.extend(scan_tool_descriptions(server))
-
-        # 1b. Scan resource descriptions for injection
-        report.findings.extend(scan_resource_descriptions(server))
+        if include_descriptors:
+            report.findings.extend(scan_description_surfaces([server]).findings)
 
         # 2. Check dangerous capability combos (word-boundary matching)
         report.findings.extend(score_capability_risk(server))
@@ -768,6 +765,7 @@ def scan_description_surfaces(
         report.tools_checked += len(server.tools)
         report.findings.extend(scan_tool_descriptions(server))
         report.findings.extend(scan_resource_descriptions(server))
+        report.findings.extend(scan_prompt_descriptions(server))
 
     report.passed = not any(severity_at_or_above(finding.severity, fail_on_severity) for finding in report.findings)
     return report

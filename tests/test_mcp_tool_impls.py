@@ -998,13 +998,10 @@ def test_inventory_impl_exception():
 def test_tool_risk_assessment_impl_success():
     from agent_bom.mcp_introspect import IntrospectionReport, ServerIntrospection
     from agent_bom.mcp_tools.runtime import tool_risk_assessment_impl
+    from agent_bom.models import Agent, AgentType, MCPServer
 
-    server = MagicMock()
-    server.name = "filesystem"
-    server.command = "npx"
-    server.transport.value = "stdio"
-    agent = MagicMock()
-    agent.mcp_servers = [server]
+    server = MCPServer(name="filesystem", command="npx")
+    agent = Agent(name="desktop", agent_type=AgentType.CLAUDE_DESKTOP, config_path="fixture.json", mcp_servers=[server])
 
     intro = ServerIntrospection(
         server_name="filesystem",
@@ -1034,13 +1031,10 @@ def test_tool_risk_assessment_impl_success():
 def test_tool_risk_assessment_requires_opt_in_before_stdio_execution():
     from agent_bom.mcp_introspect import IntrospectionReport
     from agent_bom.mcp_tools.runtime import tool_risk_assessment_impl
+    from agent_bom.models import Agent, AgentType, MCPServer
 
-    server = MagicMock()
-    server.name = "local-stdio"
-    server.command = "must-not-run"
-    server.transport.value = "stdio"
-    agent = MagicMock()
-    agent.mcp_servers = [server]
+    server = MCPServer(name="local-stdio", command="must-not-run")
+    agent = Agent(name="desktop", agent_type=AgentType.CLAUDE_DESKTOP, config_path="fixture.json", mcp_servers=[server])
 
     with (
         patch("agent_bom.discovery.discover_all", return_value=[agent]),

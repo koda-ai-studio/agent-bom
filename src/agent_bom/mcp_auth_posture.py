@@ -254,7 +254,7 @@ def _finding(
 ) -> Finding:
     from agent_bom.compliance_hub import apply_hub_classification
 
-    evidence = {"mcp_auth_weakness": weakness, **evidence}
+    evidence = {"mcp_auth_weakness": weakness, "assessment_basis": "configuration", "anonymous_access_verified": False, **evidence}
     finding = Finding(
         finding_type=FindingType.PROMPT_SECURITY,
         source=FindingSource.MCP_SCAN,
@@ -315,12 +315,12 @@ def _detect_unauthenticated_server(pairs: list[tuple[Agent | None, MCPServer]]) 
         emitted.add(key)
         findings.append(
             _finding(
-                title="Unauthenticated network-reachable MCP server",
+                title="No authentication observed in MCP server configuration",
                 description=(
-                    f"MCP server {server.name!r} is reachable over a network transport "
-                    f"({server.transport.value}) but requires no authentication (no bearer token, OAuth, "
-                    "or proxy binding observed). Per the MCP authorization spec, remote MCP servers must "
-                    "require OAuth 2.1; an open network endpoint lets any caller invoke its tools."
+                    f"MCP server {server.name!r} is configured for a network transport "
+                    f"({server.transport.value}) without observed authentication declarations. "
+                    "The server may enforce authentication outside this configuration. "
+                    "Anonymous access and authorization bypass have not been tested."
                 ),
                 severity="high",
                 asset=_server_asset(server),
@@ -494,11 +494,11 @@ def _detect_agent_mcp_auth_gap(
             reason = "no governing proxy policy binds this agent (bound_agents is empty or wildcard)"
         findings.append(
             _finding(
-                title="Agent calls MCP server without verified identity",
+                title="No verified agent identity observed in MCP configuration",
                 description=(
-                    f"Agent {agent.name!r} calls network MCP server {server.name!r}, but {reason}. The MCP server "
-                    "cannot confirm which agent is invoking it, so any caller reaching the endpoint is "
-                    "indistinguishable from this agent."
+                    f"Agent {agent.name!r} is configured for network MCP server {server.name!r}, but {reason}. "
+                    "Caller identity enforcement was not observed in the supplied configuration. "
+                    "The server may enforce identity elsewhere; live authorization was not tested."
                 ),
                 severity="high",
                 asset=_server_asset(server),

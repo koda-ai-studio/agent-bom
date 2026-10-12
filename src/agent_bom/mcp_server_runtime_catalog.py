@@ -6,6 +6,8 @@ from typing import Annotated, Awaitable, Callable
 
 from pydantic import Field
 
+from agent_bom.mcp_tools.audit_registration import register_audit_tool
+
 
 def register_runtime_catalog_tools(
     mcp,
@@ -22,7 +24,6 @@ def register_runtime_catalog_tools(
         skill_scan_impl,
         skill_trust_impl,
         skill_verify_impl,
-        tool_risk_assessment_impl,
         where_impl,
     )
 
@@ -82,44 +83,10 @@ def register_runtime_catalog_tools(
             _truncate_response=truncate_response,
         )
 
-    @mcp.tool(annotations=runtime_introspection, title="Tool Capability Risk")
-    async def tool_risk_assessment(
-        config_path: Annotated[str | None, Field(description="Path to MCP client config directory. Auto-discovers all if omitted.")] = None,
-        timeout: Annotated[float, Field(ge=0.1, le=60.0, description="Per-server introspection timeout in seconds.")] = 10.0,
-        allow_command_execution: Annotated[
-            bool,
-            Field(description="Explicitly allow launching unblocked stdio server commands. False only connects to HTTP/SSE servers."),
-        ] = False,
-    ) -> str:
-        """Live-introspect MCP servers and score each tool's capability risk.
-
-        Discovers configured MCP clients, connects to their servers, calls
-        ``tools/list``, and classifies every exposed tool by capability
-        (filesystem, network, code execution, credential access) to produce a
-        per-tool and per-server risk score from what the servers actually
-        advertise at runtime.
-
-        Args:
-            config_path: MCP client config directory to read; auto-discovers all
-                supported clients when omitted.
-            timeout: Per-server introspection timeout in seconds.
-            allow_command_execution: Explicit opt-in required before launching
-                discovered stdio server commands.
-
-        Returns:
-            JSON with per-server tool inventories, per-tool capability classes
-            and risk levels, and an aggregate server risk rating.
-
-        Use this to assess the blast radius of MCP servers an agent can reach
-        before granting or trusting their tools.
-        """
-        return await execute_tool_sync_async(
-            "tool_risk_assessment",
-            tool_risk_assessment_impl,
-            config_path=config_path,
-            timeout=timeout,
-            allow_command_execution=allow_command_execution,
-            _safe_path=safe_path,
-            _truncate_response=truncate_response,
-            destructive=allow_command_execution,
-        )
+    register_audit_tool(
+        mcp,
+        runtime_introspection=runtime_introspection,
+        execute_tool_sync_async=execute_tool_sync_async,
+        safe_path=safe_path,
+        truncate_response=truncate_response,
+    )

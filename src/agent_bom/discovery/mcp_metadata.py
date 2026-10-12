@@ -140,3 +140,12 @@ async def capability_items(session: Any, method: str, field: str) -> list[Any]:
             raise ValueError("Invalid MCP capability pagination")
         seen.add(cursor)
     raise ValueError("MCP capability pagination exceeds limit")
+
+
+def listing_status(tools_ok: bool, resources_ok: bool, prompts_ok: bool, prompts_supported: bool) -> dict[str, str]:
+    """Preserve each listing outcome instead of treating partial discovery as complete."""
+    return {
+        "tools": "inspected" if tools_ok else "failed",
+        "resources": "inspected" if resources_ok else "failed",
+        "prompts": "inspected" if prompts_ok else "unsupported" if not prompts_supported else "failed",
+    }

@@ -4,9 +4,7 @@ Protocol-read-only introspection: connects to running MCP servers via the MCP pr
 calls ``tools/list``, ``resources/list``, and ``prompts/list`` to discover actual runtime capabilities,
 and compares them against config-declared data to detect drift.
 
-Requires ``mcp`` SDK.  Install with::
-
-    pip install mcp
+Requires the optional MCP SDK.
 
 Security guarantees:
 - **Protocol read-only**: Discovery, capability listings, and bounded linked Apps resource reads.
@@ -26,7 +24,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from agent_bom.discovery.identity import server_identity_key
-from agent_bom.discovery.mcp_metadata import apps_resource_evidence, capability_items
+from agent_bom.discovery.mcp_metadata import apps_resource_evidence, capability_items, listing_status
 from agent_bom.discovery.mcp_metadata import ui_metadata as _ui_metadata
 from agent_bom.mcp_tool_rules import evaluate_tool
 from agent_bom.models import MCPPrompt, MCPResource, MCPServer, MCPTool, TransportType
@@ -78,6 +76,7 @@ class ServerIntrospection:
     runtime_resources: list[MCPResource] = field(default_factory=list)
     runtime_prompts: list[MCPPrompt] = field(default_factory=list)
     error: Optional[str] = None
+    surface_status: dict[str, str] = field(default_factory=dict)
     tool_schema_findings: list[str] = field(default_factory=list)
     tool_schema_rule_findings: list[dict] = field(default_factory=list)
     resource_findings: list[str] = field(default_factory=list)
@@ -126,6 +125,7 @@ class ServerIntrospection:
             "server_name": _safe_runtime_text(self.server_name, max_len=300),
             "server_identity": _safe_runtime_value(self.server_identity, max_len=300),
             "success": self.success,
+            "surface_status": dict(self.surface_status),
             "protocol_version": _safe_runtime_value(self.protocol_version, max_len=100),
             "auth_mode": _safe_runtime_value(self.auth_mode, max_len=100),
             "configured_fingerprint": self.configured_fingerprint,
@@ -487,8 +487,7 @@ async def _query_capabilities(
     server: MCPServer,
     result: ServerIntrospection,
 ) -> ServerIntrospection:
-    """Query tools/list, resources/list, and prompts/list from an active MCP session."""
-
+    """Query capability lists and record partial coverage per surface."""
     # ── Tools ──────────────────────────────────────────────────────────
     tools_ok = False
     app_reads = 0
@@ -548,6 +547,7 @@ async def _query_capabilities(
         except Exception as exc:
             logger.warning("prompts/list failed for %s: %s", _safe_runtime_text(server.name), _safe_runtime_text(exc))
 
+    result.surface_status = listing_status(tools_ok, resources_ok, prompts_ok, list_prompts is not None)
     result.success = tools_ok or resources_ok or prompts_ok
     if not tools_ok:
         result.error = "Tools unavailable; runtime inventory is incomplete"

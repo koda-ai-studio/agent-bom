@@ -21,6 +21,7 @@ from agent_bom.mcp_tools.scan_response import (
     section_page,
 )
 from agent_bom.parsers.sbom_context import imported_cloud_inventory
+from agent_bom.scanners.mcp_audit import attach_passive_mcp_audit
 from agent_bom.scanners.package_check_result import has_lookup_coverage_gap
 from agent_bom.security import sanitize_error
 
@@ -306,8 +307,8 @@ async def _scan_impl_inner(
         if scorecard:
             await _enrich_scanned_packages_with_scorecard(agents)
         report = AIBOMReport(agents, blast_radii, cloud_inventory_data=imported_cloud_inventory(agents), scan_sources=scan_sources)
-        if agents:
-            await _surface_graph_findings(report)
+        attach_passive_mcp_audit(report)
+        await _surface_graph_findings(report)
         if package_spec_unresolved:
             # Fail closed for every format: an empty SARIF/CycloneDX/SPDX document reads as an audited clean result.
             envelope = _empty_envelope("incomplete_scan", requested_package=package, requested_ecosystem=ecosystem, warnings=scan_warnings)
@@ -427,8 +428,7 @@ async def _enrich_scanned_packages_with_scorecard(agents) -> None:
 
 
 async def _surface_graph_findings(report) -> None:
-    """Share CLI/API graph-derived findings; offload the best-effort build
-    so graph analysis does not block the event loop."""
+    """Offload shared graph findings so analysis does not block the event loop."""
     from agent_bom.graph.scan_findings import surface_graph_derived_findings
 
     await asyncio.to_thread(surface_graph_derived_findings, report, scan_id=report.scan_id or "mcp-scan", tenant_id="default")

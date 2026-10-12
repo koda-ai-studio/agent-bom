@@ -11,6 +11,7 @@ from typing import Any, cast
 from agent_bom.api.route_offload import call_route as _call_route
 from agent_bom.config import MCP_MAX_FILE_SIZE as _MAX_FILE_SIZE
 from agent_bom.mcp_tenant import resolve_mcp_tool_tenant_id
+from agent_bom.mcp_tools.audit import tool_risk_assessment_impl as tool_risk_assessment_impl
 from agent_bom.security import sanitize_error
 
 logger = logging.getLogger(__name__)
@@ -794,42 +795,6 @@ def inventory_impl(
                 }
             )
         return _truncate_response(json.dumps(_inventory_payload(agents, result), indent=2, default=str))
-    except Exception as exc:
-        logger.exception("MCP tool error")
-        return json.dumps({"error": sanitize_error(exc)})
-
-
-def tool_risk_assessment_impl(
-    *,
-    config_path: str | None = None,
-    timeout: float = 10.0,
-    allow_command_execution: bool = False,
-    _authenticated_actor: str = "",
-    _safe_path,
-    _truncate_response,
-) -> str:
-    """Implementation of the tool_risk_assessment tool."""
-    try:
-        from agent_bom.discovery import discover_all
-        from agent_bom.mcp_introspect import introspect_servers_sync
-
-        resolved_config_path = str(_safe_path(config_path)) if config_path else None
-        agents = discover_all(project_dir=resolved_config_path)
-        servers = [s for a in agents for s in a.mcp_servers]
-        if not servers:
-            return json.dumps({"status": "no_servers_found", "servers": []})
-
-        report = introspect_servers_sync(servers, timeout=timeout, allow_stdio=allow_command_execution)
-        results = [r.to_dict(include_runtime_objects=True) for r in report.results]
-        summary = {
-            "total_servers": report.total_servers,
-            "successful": report.successful,
-            "failed": report.failed,
-            "critical_or_high": sum(1 for r in report.results if r.capability_risk_level in ("critical", "high")),
-            "max_capability_risk_score": max((r.capability_risk_score for r in report.results), default=0.0),
-            "command_execution_allowed": allow_command_execution,
-        }
-        return _truncate_response(json.dumps({"summary": summary, "servers": results, "warnings": report.warnings}, indent=2))
     except Exception as exc:
         logger.exception("MCP tool error")
         return json.dumps({"error": sanitize_error(exc)})

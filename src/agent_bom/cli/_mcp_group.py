@@ -26,6 +26,7 @@ def mcp_group(ctx: click.Context) -> None:
 
     \b
     Subcommands:
+      audit        Audit MCP descriptors, permissions and auth configuration
       scan         Check a single MCP server package before adding it
       inventory    Discover agents and servers (no CVE scan)
       introspect   Connect to live servers, list their tools
@@ -73,3 +74,8 @@ def mcp_scan_cmd(server_spec: str, ecosystem: str | None, quiet: bool, no_color:
         fail_on_severity=None,
         nvd_api_key=None,
     )
+
+
+from agent_bom.cli._mcp_audit import mcp_audit_cmd  # noqa: E402
+
+mcp_group.add_command(mcp_audit_cmd, "audit")
