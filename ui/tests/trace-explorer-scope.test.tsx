@@ -55,6 +55,7 @@ it("keeps native hierarchy, uncertainty and collection history visible without c
   data.sessions = [{ session_id: "native", blocked_count: 0, observed_count: 1, spans: [{
     span_id: "scoped-native-child", agent: "", tool: "lookup", action_type: "native_span", verdict: "success",
     linked_findings: [], compliance_controls: [], surface: "imported_trace", native_type: "TOOL", native_name: "Retrieve invoices",
+    cloud_trace: { basis: "source_reported", execution_proven: false, scope_state: "conflict", attributes: { "aws.request_id": "sdk-request", "faas.invocation_id": "execution-attempt" } },
     depth: 1, parent_span_id: "scoped-parent", parent_state: "missing", logical_root: true, event_time_missing: true,
     source_scope: { provider: "langfuse", project_id: "project-a", environment: "test" }, correlation_state: "unmapped",
   }] }];
@@ -66,6 +67,11 @@ it("keeps native hierarchy, uncertainty and collection history visible without c
   fireEvent.click(screen.getByText("Source and parent evidence"));
   expect(screen.getByText("project-a")).toBeVisible();
   expect(screen.getByText("scoped-parent")).toBeVisible();
+  fireEvent.click(screen.getByText("Cloud identifiers"));
+  expect(screen.getByText("sdk-request")).toBeVisible();
+  expect(screen.getByText("execution-attempt")).toBeVisible();
+  expect(screen.getByText(/Cloud scope conflicts/)).toBeVisible();
+  expect(screen.getByText(/do not prove function execution/)).toBeVisible();
   fireEvent.click(screen.getByText("Collection history"));
   expect(screen.getByRole("button", { name: "Load revisions" })).toBeVisible();
 });

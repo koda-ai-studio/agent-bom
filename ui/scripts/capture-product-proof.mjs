@@ -3545,8 +3545,9 @@ async function main() {
           const state = `${visible.slice(0, 500)} … ${visible.slice(-1_200)}`;
           throw new Error(`Focused path graph did not render: ${state}`);
         }
-        await lineagePage.getByTestId("focused-path-surface").scrollIntoViewIfNeeded();
-        await lineagePage.evaluate(() => window.scrollBy({ top: -76, behavior: "instant" }));
+        await lineagePage.getByTestId("focused-path-decision").evaluate((element) => {
+          window.scrollTo({ top: window.scrollY + element.getBoundingClientRect().top - 84, behavior: "instant" });
+        });
         await lineagePage.waitForTimeout(350);
       },
       {
@@ -3565,6 +3566,7 @@ async function main() {
           /Demo data — sample environment/i,
         ],
         expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph"],
+        viewportSelectors: ['[data-testid="focused-path-decision"]', ".react-flow__controls"],
         minGraphNodes: 7,
         maxGraphNodes: 8,
         minGraphEdges: 6,

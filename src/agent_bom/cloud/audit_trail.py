@@ -37,13 +37,14 @@ mirroring the Snowflake ACCESS_HISTORY → ACCESSED layer.
 
 from __future__ import annotations
 
-import json
 import logging
 import os
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any
+
+from agent_bom.cloud.audit_trail_aws import aws_event_fields
 
 logger = logging.getLogger(__name__)
 
@@ -309,51 +310,9 @@ def read_aws_cloudtrail(
     return events, warnings
 
 
-def _aws_event_outcome(raw: dict[str, Any], action: str) -> str:
-    # LookupEvents wraps the provider outcome in a JSON string. Keep only its
-    # classification; error messages and request/response content are not retained.
-    document = raw.get("CloudTrailEvent")
-    if not isinstance(document, str) or len(document) > 1_000_000:
-        return "unknown"
-    try:
-        detail = json.loads(document)
-    except (ValueError, TypeError):
-        return "unknown"
-    if not isinstance(detail, dict):
-        return "unknown"
-    if detail.get("errorCode") or detail.get("errorMessage"):
-        return "failure"
-    if action.lower().startswith("invoke"):
-        response = detail.get("responseElements")
-        if isinstance(response, dict) and response.get("statusCode") == 202:
-            return "accepted"
-        # HTTP 200 does not report Lambda function errors; a separate execution
-        # receipt is needed. DryRun and missing response metadata prove no call.
-        return "unknown"
-    return "success"
-
-
 def _normalize_aws_event(raw: Any) -> AuditEvent | None:
-    if not isinstance(raw, dict):
-        return None
-    action = _clean(raw.get("EventName"))
-    principal = _clean(raw.get("Username"))
-    resources = raw.get("Resources") or []
-    resource = ""
-    if isinstance(resources, list) and resources:
-        first = resources[0]
-        if isinstance(first, dict):
-            resource = _clean(first.get("ResourceName")) or _clean(first.get("ResourceType"))
-    resource = resource or _clean(raw.get("EventSource"))
-    if not principal or not action or not resource:
-        return None
-    return AuditEvent(
-        principal=principal,
-        action=action,
-        resource=resource,
-        time=_iso(raw.get("EventTime")),
-        outcome=_aws_event_outcome(raw, action),
-    )
+    fields = aws_event_fields(raw)
+    return AuditEvent(**fields, time=_iso(raw.get("EventTime"))) if fields else None
 
 
 # ── Azure Activity Log (read-only) ────────────────────────────────────────

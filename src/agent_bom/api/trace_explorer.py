@@ -101,6 +101,7 @@ def _span_from_observation(obs: Mapping[str, Any], *, findings: Sequence[Mapping
         "logical_root": metadata.get("logical_root"),
         "native_type": str(metadata.get("native_type") or ""),
         "native_name": str(metadata.get("native_name") or ""),
+        "cloud_trace": metadata.get("cloud_trace") if imported else None,
         "event_time_missing": bool(metadata.get("event_time_missing")),
         "collected_at": metadata.get("collected_at"),
         "end_time_unix_nano": metadata.get("end_time_unix_nano"),

@@ -58,18 +58,9 @@ def import_native_pages(
             page = fetch(window_start=current.window_start, window_end=current.window_end, cursor=current.cursor)
         except TraceConnectorError as exc:
             counts["failed_pages"] += 1
-            status = exc.status if isinstance(exc, _TraceConnectorHTTPError) else None
-            error = {
-                "code": "rate_limited" if status == 429 else "provider_unavailable",
-                "retryable": status not in {400, 401, 403, 404, 410},
-            }
+            error = _provider_error(exc)
             break
-        cursor_history = current.cursor_history
-        if page.cursor is not None:
-            digest = hashlib.sha256(page.cursor.encode()).hexdigest()
-            if page.cursor == current.cursor or digest in cursor_history or len(cursor_history) >= 1000:
-                raise TraceImportConflictError("Provider cursor cycle or page limit reached; checkpoint retained")
-            cursor_history = (*cursor_history, digest)
+        cursor_history = _next_cursor_history(current, page.cursor)
         if on_page is not None:
             on_page(page.payload)
         prepared = prepare_trace_page(page.payload, scope=scope, collected_at=collected_at)
@@ -148,3 +139,17 @@ def _resolve_checkpoint(
         # failures can resume without drifting their coverage boundary.
         store.commit_trace_page(current, [], expected_revision=0)
     return current
+
+
+def _next_cursor_history(current: TraceImportCheckpoint, cursor: str | None) -> tuple[str, ...]:
+    if cursor is None:
+        return current.cursor_history
+    digest = hashlib.sha256(cursor.encode()).hexdigest()
+    if cursor == current.cursor or digest in current.cursor_history or len(current.cursor_history) >= 1000:
+        raise TraceImportConflictError("Provider cursor cycle or page limit reached; checkpoint retained")
+    return (*current.cursor_history, digest)
+
+
+def _provider_error(exc: TraceConnectorError) -> dict[str, Any]:
+    status = exc.status if isinstance(exc, _TraceConnectorHTTPError) else None
+    return {"code": "rate_limited" if status == 429 else "provider_unavailable", "retryable": status not in {400, 401, 403, 404, 410}}

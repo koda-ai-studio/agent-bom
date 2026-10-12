@@ -9,6 +9,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
+from agent_bom.runtime.cloud_trace_claims import CLOUD_TRACE_ATTRIBUTES
+
 
 def _text(value: object) -> str:
     return value if isinstance(value, str) else ""
@@ -47,6 +49,7 @@ def native_span(row: dict[str, Any], *, provider: str, include_content: bool) ->
         "agent_bom.native_type": native_type or "unknown",
         "agent_bom.type_basis": "native" if native_type else "legacy_tool_adapter",
     }
+    attrs.update({key: metadata[key] if isinstance(metadata[key], str) else "" for key in CLOUD_TRACE_ATTRIBUTES if key in metadata})
     if tool:
         attrs["tool.name"] = name
     for key, value in {

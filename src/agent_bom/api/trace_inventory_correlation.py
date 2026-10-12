@@ -36,6 +36,10 @@ def correlate_inventory_observations(
         node = nodes.get(identity) if isinstance(identity, str) else None
         binding: dict[str, Any] = {"state": "unmapped", "execution_proven": False}
         result[str(row["observation_id"])] = binding
+        cloud_claims = metadata.get("cloud_trace")
+        if isinstance(cloud_claims, dict) and cloud_claims.get("scope_state") in {"conflict", "invalid"}:
+            binding["state"] = "scope_conflict"
+            continue
         if node is None:
             continue
         if any(

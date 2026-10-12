@@ -127,10 +127,7 @@ Use **CLI or GitHub Action**, **REST API**, or **MCP**; export **SARIF, CycloneD
 
 For coding assistants, run `agent-bom mcp server`. Start with eight focused tools, then choose a graph, cloud, runtime or audit profile. The full catalog has 90 MCP tools, 7 resources, and 8 workflow prompts in current source. [MCP workflows](docs/MCP_WORKFLOWS.md)
 
-**Current-source workflows (not yet in the pinned release above):**
-
-- Audit MCP descriptors with `agent-bom mcp audit . --format json --output mcp-audit.json`. Review the scoped findings in `mcp-audit.json`, then inspect their recorded graph relationships. See [MCP audit](docs/MCP_AUDIT.md) for descriptor availability and rule coverage.
-- Start a configured control plane with `agent-bom api`, then use **Connections → Observability & SIEM** to import a bounded Langfuse or LangSmith window. Retained native spans, parents, revisions and resume receipts appear in **Traces**. See [managed trace connections](docs/TRACE_CONNECTIONS.md) for mounted credential references and API examples. Exact inventory links require matching canonical identifiers and scope; names alone do not establish a link.
+**Current source (not yet in the pinned release):** MCP audit results include scoped graph drilldowns. Start `agent-bom api`, then use **Connections → Observability & SIEM** to import a bounded Langfuse or LangSmith window. Inspect retained native spans, parents, revisions and resume receipts in **Traces**. [Managed trace setup](docs/TRACE_CONNECTIONS.md) covers credential references and exact inventory matching; names alone do not establish a link.
 
 [Integration capability matrix](docs/INTEGRATIONS.md) · [MCP client setup](docs/MCP_CLIENT_GUIDES.md) ·
 [Proxy, gateway and fleet](site-docs/deployment/proxy-vs-gateway-vs-fleet.md) · [Smithery setup and manifest](site-docs/integrations/smithery.md)
@@ -152,9 +149,7 @@ For coding assistants, run `agent-bom mcp server`. Start with eight focused tool
 
 ### Security, engineering and GRC: prioritize findings
 
-Start with **Posture**, inspect evidence in **Top risks**, and scope inventory in **Assets & coverage**.
-**Compliance** separates evaluated-control pass rate from assessment coverage. OWASP and MITRE ATLAS risk mappings describe applicability, not control pass/fail.
-The offline synthetic enterprise estate shown below includes evaluated checks; results do not establish certification or an audit opinion.
+Start with **Posture**, inspect **Top risks**, and scope **Assets & coverage**. **Compliance** separates evaluated-control pass rate from assessment coverage; OWASP and MITRE ATLAS mappings show applicability. This synthetic estate does not establish certification or an audit opinion.
 
 <p align="center"><a href="docs/images/dashboard-live.png"><img src="docs/images/dashboard-live.png" alt="Posture and open findings with compliance and security-area disclosures collapsed in a labeled sample environment" width="1440"></a></p>
 
@@ -170,14 +165,9 @@ Inspect the source receipts and carry the selected finding into remediation. A r
 <details>
 <summary>Explore graph navigation, permissions and evidence</summary>
 
-Use **Find a path** to investigate a finding, or **Explore connections** to browse
-recorded entities in the same workspace. Choose a snapshot and exact entity, then
-filter by type or severity and expand connections within a hop limit. Browse
-relationships in bounded pages and select a node or arrow for its source evidence;
-incomplete views remain labeled. Relationship pages are
-pinned to the snapshot generation, so a replaced snapshot requires a fresh page.
-Permission, execution and exploitability require separate supporting receipts.
-[Investigation workflow](site-docs/architecture/security-graph-model.md#investigate-an-agent-from-context).
+Use **Find a path** for findings or **Explore connections** for recorded entities. Select a snapshot and entity, filter by type or severity, and expand within a hop limit.
+Browse relationships in bounded pages; select a node or arrow for source evidence. Incomplete views remain labeled, and a replaced snapshot requires a fresh page.
+Permission, execution and exploitability require separate receipts. [Investigation workflow](site-docs/architecture/security-graph-model.md#investigate-an-agent-from-context).
 
 **Connect data locations to security evidence.** Explore recorded stores and datasets alongside identities and findings.
 Distinguish storage, access evidence and collection sources; derived classifications do not prove contents or successful reads. [Data and evidence model](site-docs/architecture/security-graph-model.md#data-locations-access-and-evidence-sources).

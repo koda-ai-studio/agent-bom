@@ -150,3 +150,12 @@ def test_cloud_origin_scope_is_resolved_without_losing_conflicting_aliases():
     store.attributes["scope"] = {"account_id": "222222222222"}
     result = correlate_inventory_observations(store, tenant_id="tenant-a", scan_id="snapshot", observations=[observation()])
     assert result["span-1"]["state"] == "scope_conflict"
+
+
+@pytest.mark.parametrize("state", ["conflict", "invalid"])
+def test_cloud_trace_scope_conflict_blocks_otherwise_exact_inventory_identifier(state):
+    result = correlate_inventory_observations(
+        Store(), tenant_id="tenant-a", scan_id="snapshot", observations=[observation(cloud_trace={"scope_state": state})]
+    )
+    assert result["span-1"]["state"] == "scope_conflict"
+    assert "node_id" not in result["span-1"]

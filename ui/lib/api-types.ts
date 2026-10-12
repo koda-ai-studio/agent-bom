@@ -3987,6 +3987,7 @@ export interface TraceIngestResponse {
 }
 
 export interface TraceExplorerSpan {
+  cloud_trace?: { basis: "source_reported"; execution_proven: false; scope_state: "consistent" | "conflict" | "invalid"; attributes: Record<string, string> } | null;
   surface?: string;
   parent_span_id?: string;
   parent_state?: "root" | "resolved" | "missing" | "cycle";

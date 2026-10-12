@@ -9,11 +9,12 @@ from __future__ import annotations
 import hashlib
 import json
 from collections import Counter
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from agent_bom.api.runtime_event_store import RuntimeObservationRecord, sanitize_runtime_metadata
+from agent_bom.runtime.cloud_trace_claims import cloud_trace_claims
 from agent_bom.security import sanitize_text
 
 
@@ -106,9 +107,8 @@ def prepare_trace_page(payload: dict[str, Any], *, scope: TraceImportScope, coll
         ):
             rejected["scope_conflict"] += 1
             continue
-        native_environment = attrs.get("agent_bom.native_environment", "")
         # A connection spanning environments still keeps identical IDs apart.
-        scoped = TraceImportScope(**{**asdict(scope), "environment": scope.environment or native_environment})
+        scoped = replace(scope, environment=scope.environment or attrs.get("agent_bom.native_environment", ""))
         native_type = attrs.get("agent_bom.native_type", "unknown")
         native_name = sanitize_text(attrs.get("agent_bom.native_name", ""), max_len=300)
         observed_at = _event_time(span)
@@ -139,6 +139,9 @@ def prepare_trace_page(payload: dict[str, Any], *, scope: TraceImportScope, coll
             "event_time_missing": not bool(observed_at),
             "type_basis": attrs.get("agent_bom.type_basis", "unknown"),
         }
+        cloud_claims = cloud_trace_claims(attrs, account_id=scope.account_id, provider=scope.cloud_provider)
+        if cloud_claims is not None:
+            metadata["cloud_trace"] = cloud_claims
         records.append(
             RuntimeObservationRecord(
                 tenant_id=scope.tenant_id,

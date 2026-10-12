@@ -186,6 +186,14 @@ export function TraceExplorerPanel({ agent, scanId }: { agent?: string | undefin
                   <div>Collected: {selectedSpan.collected_at || "Unknown"}</div>
                 </dl>
               </details>
+              {selectedSpan.cloud_trace && <details className="border-t border-outline pt-2">
+                <summary className="cursor-pointer text-xs">Cloud identifiers</summary>
+                <p className="mt-2 text-xs text-ink-secondary">Source-reported identifiers do not prove function execution or downstream effects. SDK request and invocation IDs remain separate.</p>
+                {selectedSpan.cloud_trace.scope_state !== "consistent" && <p className="mt-2 text-xs text-ink-secondary">Cloud scope conflicts or invalid identifiers prevent inventory linking.</p>}
+                <dl className="mt-2 space-y-1 break-all text-xs text-ink-secondary">
+                  {Object.entries(selectedSpan.cloud_trace.attributes).map(([key, value]) => <div key={key}><dt className="font-medium">{key}</dt><dd>{value}</dd></div>)}
+                </dl>
+              </details>}
               {selectedSpan.inventory_binding && <div className="border-t border-outline pt-2 text-xs text-ink-secondary">
                 {selectedSpan.inventory_binding.state === "exact_identifier" && selectedSpan.inventory_binding.node_id && selectedSpan.inventory_binding.scan_id ? <>
                   <a className="underline" href={`/security-graph?lens=estate&scan=${encodeURIComponent(selectedSpan.inventory_binding.scan_id)}&root=${encodeURIComponent(selectedSpan.inventory_binding.node_id)}&investigate=1`}>Inspect reported inventory entity</a>

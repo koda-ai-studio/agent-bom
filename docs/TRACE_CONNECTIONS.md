@@ -192,3 +192,20 @@ collector route for private deployments.
 
 For crash recovery, lost acknowledgments, concurrent lease claims, and bounded
 tenant-load checks, run the [collection qualification](perf/trace-collection-qualification.md).
+
+
+## Cloud request identifiers
+
+Native Langfuse metadata and LangSmith `extra.metadata` can retain the bounded
+OpenTelemetry keys `cloud.provider`, `cloud.account.id`, `cloud.region`,
+`cloud.resource_id`, `faas.invocation_id`, `faas.version`, `aws.request_id`,
+`rpc.service` and `rpc.method`. Inspect **Traces → Cloud identifiers** for these
+source-reported claims. Credentials and request/response bodies are excluded;
+invalid or conflicting cloud identifiers prevent an inventory link.
+
+SDK request IDs and Lambda invocation IDs remain distinct. Function ARNs retain
+version or alias qualifiers; aliases are not resolved to versions by name.
+A retained span or end timestamp does not prove successful function execution,
+a downstream effect, or caller identity. Independent provider execution and
+downstream event receipts are still required; managed traces do not collect
+Lambda data events or provide that independent correlation automatically.
