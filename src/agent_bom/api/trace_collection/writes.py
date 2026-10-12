@@ -5,11 +5,19 @@ import json
 
 from agent_bom.analytics_retention import prune_runtime_observations_for_tenant
 from agent_bom.api.runtime_event_store import RuntimeObservationRecord, _merge_session, _session_from_json
+from agent_bom.api.storage.runtime_trace_revisions import reconcile_sql
 from agent_bom.api.storage.sql import SqlSession
 from agent_bom.api.trace_collection.contracts import MAX_RECEIPTS, CollectionConflictError
 
 
 def put_page(tx: SqlSession, tenant: str, connection: str, records: list[RuntimeObservationRecord]) -> int:
+    if any(record.tenant_id != tenant for record in records):
+        raise CollectionConflictError("Observation tenant does not match collection.")
+    # Window imports and resumable collection share native IDs and append-only
+    # revisions. A changed native span updates its projection, not its count.
+    native = {record.observation_id: record for record in records if record.surface == "imported_trace"}
+    _, first_seen = reconcile_sql(tx, list(native.values()))
+    records = [record for record in records if record.surface != "imported_trace"] + first_seen
     added = 0
     for record in records:
         if record.tenant_id != tenant:
@@ -54,9 +62,10 @@ def put_page(tx: SqlSession, tenant: str, connection: str, records: list[Runtime
         raise CollectionConflictError("Collection replay capacity reached; checkpoint retained.")
     prune_runtime_observations_for_tenant(tx, tenant)
     tx.execute(
-        "DELETE FROM runtime_sessions WHERE tenant_id=? AND session_id LIKE ? "
+        "DELETE FROM runtime_sessions WHERE tenant_id=? AND session_id LIKE ? AND session_id NOT LIKE ? "
         "AND NOT EXISTS (SELECT 1 FROM runtime_observations o WHERE o.tenant_id=runtime_sessions.tenant_id "
         "AND o.session_id=runtime_sessions.session_id)",
-        (tenant, "trace:%"),
+        # Native history retains lifetime rollups after projection retention.
+        (tenant, "trace:%", "trace:session:%"),
     )
     return added

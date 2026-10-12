@@ -29,26 +29,30 @@ function containsPath(graph: UnifiedGraphData, path: AttackPath): boolean {
 type Result = { key: string; graph: UnifiedGraphData | null; message: string; failed: boolean };
 
 /** Load recorded nodes/edges for a selected path outside the paginated queue. */
-export function useSelectedPathGraph({ graph, path, scanId, enabled }: {
+export function useSelectedPathGraph({ graph, path: inputPath, scanId, enabled }: {
   graph: UnifiedGraphData | null;
   path: AttackPath | null;
   scanId: string;
   enabled: boolean;
 }) {
+  // Parent enrichment can recreate an equivalent path/page. Bind requests to
+  // recorded content and snapshot identity instead of object allocation.
+  const pathJson = JSON.stringify(inputPath);
+  const path = useMemo(() => JSON.parse(pathJson) as AttackPath | null, [pathJson]);
+  const tenantId = graph?.tenant_id;
+  const generation = graph?.snapshot_generation;
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState<Result | null>(null);
   const roots = useMemo(() => [...new Set(path?.hops ?? [])], [path]);
-  const key = useMemo(() => JSON.stringify([graph?.tenant_id, scanId, path, attempt]), [graph?.tenant_id, scanId, path, attempt]);
+  const key = useMemo(() => JSON.stringify([tenantId, scanId, generation, path?.hops, path?.edges, attempt]), [tenantId, scanId, generation, path, attempt]);
   const inScope = Boolean(graph && scanId && graph.scan_id === scanId);
   const available = useMemo(() => Boolean(inScope && graph && path && containsPath(graph, path)), [graph, inScope, path]);
   const overBudget = roots.length > MAX_PATH_NODES;
   const needsLoad = enabled && inScope && path !== null && roots.length > 0 && !available && !overBudget;
 
   useEffect(() => {
-    if (!needsLoad || !graph || !path) return;
+    if (!needsLoad || !tenantId || !path || result?.key === key) return;
     const controller = new AbortController();
-    const tenantId = graph.tenant_id;
-    setResult(null);
     void api.queryGraph({
       roots,
       scan_id: scanId,
@@ -103,11 +107,15 @@ export function useSelectedPathGraph({ graph, path, scanId, enabled }: {
       }
     });
     return () => controller.abort();
-  }, [graph, key, needsLoad, path, roots, scanId]);
+  }, [tenantId, key, needsLoad, path, roots, scanId, result?.key]);
 
   const current = result?.key === key ? result : null;
+  const projected = useMemo(() => current?.graph && path ? {
+    ...current.graph, attack_paths: [path],
+    stats: { ...current.graph.stats, max_attack_path_risk: path.composite_risk },
+  } : null, [current?.graph, path]);
   return {
-    graph: available ? graph : inScope ? current?.graph ?? null : null,
+    graph: available ? graph : inScope ? projected : null,
     loading: needsLoad && current === null,
     message: path && roots.length === 0
       ? "This path has no recorded hops to display. Inspect the ordered Path evidence or open the full graph."

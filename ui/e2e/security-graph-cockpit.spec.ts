@@ -160,6 +160,7 @@ async function routeCockpit(
     longPathNodeCount?: number;
   } = {},
 ) {
+  await page.route("**/v1/**", route => route.fulfill({ status: 404, json: { detail: "Outside graph fixture" } }));
   const graph = buildCockpitGraph(snapshotNodeCount);
   if (options.longPathNodeCount) {
     const intermediates = Array.from({ length: options.longPathNodeCount - 3 }, (_, index) =>
@@ -623,6 +624,8 @@ async function expectCockpitVisible(page: Page) {
   ).toBeVisible();
   // Progressive disclosure summary — avoid /Evidence/ which also matches "Evidence drawer".
   await expect(page.getByText("Evidence & relationships")).toBeVisible();
+  await expect(page.getByText("Path priority", { exact: true }).first()).toBeHidden();
+  await page.locator(".ep-header-summary").click();
   await expect(page.getByText("Path priority", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("Path span", { exact: true }).first()).toBeVisible();
 }
@@ -763,7 +766,7 @@ test("ranked path selection opens the ordered path and can expand the interactiv
   expect(Math.abs(queueBox!.y - detailBox!.y)).toBeLessThan(200);
 
   await queue.getByRole("button", { name: /#2/ }).click();
-  await expect(detail.getByRole("button", { name: "Path", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(detail.getByRole("button", { name: "Graph", exact: true })).toHaveAttribute("aria-pressed", "true");
   await detail.getByRole("button", { name: "Graph", exact: true }).click();
   await expect(detail.getByTestId("security-graph-investigation")).toBeVisible();
   await expect(page.getByRole("status")).toContainText("Focused path 2");
@@ -800,7 +803,7 @@ test(`mobile ranked path selection moves the ordered path into view ${theme}`, a
   const queue = page.getByLabel("Attack path queue");
   await queue.getByRole("button", { name: /#2/ }).click();
   const detail = page.getByRole("region", { name: "Selected path detail" });
-  await expect(detail.getByRole("button", { name: "Path", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await expect(detail.getByRole("button", { name: "Graph", exact: true })).toHaveAttribute("aria-pressed", "true");
   await expect.poll(async () => (await detail.boundingBox())?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(120);
   await expect(page).toHaveURL(/selected_path=/);
   await page.waitForLoadState("networkidle");
@@ -921,12 +924,10 @@ test(`a selected queue path missing from the canvas loads its exact graph in ${t
 }
 
 async function openEvidenceControls(page: Page) {
+  const toggle = page.getByRole("button", { name: "View & layers", exact: true });
+  if (await toggle.getAttribute("aria-expanded") !== "true") await toggle.click();
   const controls = page.getByTestId("graph-evidence-controls");
-  await expect(controls.locator(":scope > summary")).toBeVisible();
-  if ((await controls.getAttribute("open")) === null) {
-    await controls.locator(":scope > summary").click();
-  }
-  await expect(controls).toHaveAttribute("open", "");
+  await expect(controls).toBeVisible();
   return controls;
 }
 
@@ -1073,11 +1074,10 @@ for (const proof of [
     await page.goto("/security-graph?lens=estate");
     await page.waitForLoadState("networkidle");
 
-    await expect(page.getByRole("heading", { name: "Investigation Canvas" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Investigation", exact: true })).toBeVisible();
     const evidenceControls = page.getByTestId("graph-evidence-controls");
-    await expect(evidenceControls.locator(":scope > summary")).toBeVisible();
-    await expect(evidenceControls).not.toHaveAttribute("open", "");
-    await expect(evidenceControls.getByRole("button", { name: /Estate/ })).toBeHidden();
+    await expect(page.getByRole("button", { name: "View & layers" })).toBeVisible();
+    await expect(evidenceControls).toHaveCount(0);
     await expect(page.getByTestId("graph-rollup-decision-surface")).toBeVisible();
     await expect(page.getByTestId("graph-rollup-relationship-completeness")).toHaveText(
       "1 aggregated relationship rows · complete for this scope",
@@ -1225,48 +1225,40 @@ test("selected paths 13 and 25 retain hydrated anchors beyond fix-first enrichme
 test("URL-selected path returns to summary without reopening the path", async ({ page }) => {
   await routeCockpit(page, 200, { rollupItemCount: 30 });
   await page.goto(`/security-graph?lens=estate&scan=${scanId}&path=top`);
-  const views = page.getByRole("group", { name: "Investigation view" });
-  await views.getByRole("button", { name: "Summary", exact: true }).click();
+  await page.getByRole("button", { name: "All scopes", exact: true }).first().click();
   await expect(page.getByTestId("graph-rollup-decision-surface")).toBeVisible();
   await expect(page).not.toHaveURL(/[?&]path=/);
-  await views.getByRole("button", { name: "Graph", exact: true }).click();
-  await views.getByRole("button", { name: "Summary", exact: true }).click();
+  await page.getByRole("button", { name: "Open scope", exact: true }).first().click();
+  await page.getByRole("button", { name: "All scopes", exact: true }).first().click();
   await expect(page.getByTestId("graph-rollup-decision-surface")).toBeVisible();
   await expect(page).not.toHaveURL(/[?&]path=/);
 });
 
 for (const theme of ["light", "dark"] as const) {
-  test(`estate topology starts readable and fits all on request with compact controls in ${theme}`, async ({ page }, testInfo) => {
+  test(`large estate opens a bounded recorded neighborhood in ${theme}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await routeCockpit(page, 200, { rollupItemCount: 30 });
-    await page.addInitScript((value) => localStorage.setItem("agent-bom-theme", value), theme);
+    await page.addInitScript(value => localStorage.setItem("agent-bom-theme", value), theme);
+    const queries: Record<string, unknown>[] = [];
+    await page.route("**/v1/graph/query", route => {
+      const body = route.request().postDataJSON(); queries.push(body);
+      const selected = node(body.roots[0], "account", "Selected account");
+      const agent = node("agent:recorded", "agent", "Recorded agent");
+      return route.fulfill({ json: { ...buildCockpitGraph(), roots: body.roots, nodes: [selected, agent],
+        edges: [edge(selected.id, agent.id, "contains")], attack_paths: [], truncated: false, depth_by_node: { [selected.id]: 0, [agent.id]: 1 } } });
+    });
     await page.goto("/security-graph?lens=estate");
-    await expect(page.getByTestId("graph-rollup-decision-surface")).toBeVisible();
-    const views = page.getByRole("group", { name: "Investigation view" });
-    await views.getByRole("button", { name: "Graph", exact: true }).click();
-    const canvas = page.locator(".react-flow").first();
-    await expect(canvas.locator(".react-flow__node")).toHaveCount(30);
-    await expect(page.getByTestId("graph-viewport-scope")).toContainText("Focused view");
-    await expect.poll(() => canvas.locator(".react-flow__viewport").evaluate(element =>
-      new DOMMatrixReadOnly(getComputedStyle(element).transform).a,
-    )).toBeGreaterThanOrEqual(1);
-    await page.screenshot({ path: testInfo.outputPath(`estate-readable-${theme}.png`), fullPage: false });
+    const scopes = page.getByTestId("graph-rollup-decision-surface");
+    await expect(scopes).toBeVisible();
+    await expect(page.locator(".react-flow__node")).toHaveCount(0);
+    await scopes.getByRole("button", { name: "Connections", exact: true }).first().click();
+    await expect(page.locator(".react-flow__node")).toHaveCount(2);
+    expect(queries[0]).toMatchObject({ max_nodes: 4, max_depth: 1, scan_id: scanId });
     await page.getByRole("button", { name: "Fit all", exact: true }).click();
-    await expect.poll(() => canvas.evaluate((element) => {
-      const frame = element.getBoundingClientRect();
-      return [...element.querySelectorAll(".react-flow__node")].every((node) => {
-        const box = node.getBoundingClientRect();
-        return box.left >= frame.left && box.top >= frame.top && box.right <= frame.right && box.bottom <= frame.bottom;
-      });
-    })).toBe(true);
-    const frame = await canvas.boundingBox();
-    expect(frame!.y).toBeLessThan(330);
-    expect(frame!.height).toBeGreaterThan(500);
-    await expect(canvas.locator(".react-flow__minimap")).toBeHidden();
-    await expect(views.getByRole("button")).toHaveCount(2);
-    await page.screenshot({ path: testInfo.outputPath(`estate-topology-${theme}.png`), fullPage: false });
-    await views.getByRole("button", { name: "Summary", exact: true }).click();
-    await expect(page.getByTestId("graph-rollup-decision-surface")).toBeVisible();
+    await expect(page.getByRole("group", { name: "Investigation view" })).toHaveCount(0);
+    await page.screenshot({ path: testInfo.outputPath(`estate-neighborhood-${theme}.png`), fullPage: false });
+    await page.getByRole("button", { name: "All scopes", exact: true }).first().click();
+    await expect(scopes).toBeVisible();
     await expect(page.getByTestId("graph-viewport-scope")).toBeHidden();
   });
 }

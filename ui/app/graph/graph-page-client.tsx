@@ -3079,7 +3079,7 @@ function GraphPageInner() {
         <div className="mt-3">
           <div className="flex flex-wrap items-center gap-2">
           {scenarioState === "current" && !rollupUnavailable && (rollupView || investigationMode || selectedAttackPath) && <div className="shrink-0">
-            {!rollupDecisionActive && <button type="button" onClick={returnToSummary} className="graph-page-action">All scopes</button>}
+            {!rollupDecisionActive && rollupStack.length === 0 && <button type="button" onClick={returnToSummary} className="graph-page-action">All scopes</button>}
             {rollupStack.length > 0 && <nav aria-label="Investigation scope" className="mt-2 flex flex-wrap items-center gap-2 text-xs">
               <button type="button" onClick={resetRollupToRoot} className="graph-page-action">All scopes</button>
               {rollupStack.map((crumb, index) => <button key={crumb.id} type="button" onClick={() => navigateRollupBreadcrumb(index)} className="graph-chip-neutral">{crumb.label}</button>)}

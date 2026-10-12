@@ -85,11 +85,11 @@ Credential and tool exposure increase impact, not reachability. MITRE ATT&CK
 and ATLAS enrich evidence-backed hops; their technique mappings never create a
 hop or promote a structural candidate into an executable path.
 
-## Reading Context Map evidence
+## Reading graph evidence
 
-Open **Context** for a completed scan, then select a relationship label to inspect
-its source, target, and affected package. Repository and SBOM imports remain
-static inventory in Repository/Lineage; they are not MCP agent configurations.
+Open **Explore connections** for a completed scan, then select a relationship to
+inspect its source, target, and recorded evidence. Repository and SBOM imports
+remain static inventory; they are not MCP agent configurations.
 These links describe scan evidence:
 
 - **Configured server** records an agent configuration, not an invocation.
@@ -252,7 +252,7 @@ generation check prevents mixing graph data across a replaced snapshot.
 execution. Completeness covers the current recorded page, and totals stay unknown.
 On a stale-cursor or generation-mismatch 400, discard the accumulated view and
 restart from the first page; unsupported backends return 501.
-Context uses these pages for progressive persisted-neighborhood exploration.
+The shared graph inspector uses these pages for recorded-relationship exploration.
 
 ## Scale and readability
 
@@ -322,48 +322,27 @@ runtime evidence, and remediation.
 
 ## Investigate an agent from Context
 
-Context defaults to **Persisted snapshot**. Choose a completed scan, then search
-or page the agent selector. The scan status response supplies the graph snapshot ID without downloading the
-full report. Selection uses the server's canonical node ID, so
-identically named agents from different sources remain distinct.
+The graph workspace offers **Find a path** and **Explore connections**. Choose a
+persisted snapshot or current estate, then select an exact entity. Canonical IDs
+keep same-named agents from different sources distinct. Old Context, Mesh and
+Lineage URLs resolve into this workspace.
 
-The initial view requests one page of up to 24 recorded relationships. Select a
-node and choose **Expand connections** for its first page, or **Load more
-relationships** for its continuation. **Collapse connections** removes the selected
-node's loaded pages and expansions that depend solely on them. Independent branches,
-shared descendants and later root pages stay loaded. **Focus here** shows the selected
-node and its immediate recorded neighbors.
-**Back to neighborhood** restores the loaded overview without fetching again or
-discarding earlier expansions. Browsing scan pages preserves the current selection;
-choosing a different scan replaces it. Switching graph lenses retains the selected snapshot.
-**Restart neighborhood** clears the workspace and reloads the selected agent.
-Direction filters recorded incoming/outgoing endpoints, not effective permissions.
+Select a node for its evidence, attributes and impact. The **Relationships** tab
+loads bounded pages of recorded incoming and outgoing relationships. Each page
+retains the scan and snapshot generation; a replaced snapshot clears stale rows
+and requires a retry. Choosing a different snapshot replaces the investigation
+scope. No full scan report is required merely to select a graph entity.
 
-The canvas initially shows at most eight nodes and 12 relationships.
-**Expand canvas** raises that limit to 24 nodes and 36 relationships;
-**Compact canvas** restores the smaller view. The loaded workspace has a budget of 240 relationships or 10 pages. The **Loaded entities** section makes
-cached nodes searchable by name or exact ID and grouped by entity type, without
-fitting the whole graph on screen. Select a node or edge to inspect recorded
-relationships; the overview keeps relationship labels in the inspector to avoid
-covering nearby cards. **Fit all** frames the nodes currently on the canvas;
-large layouts may use smaller labels. **Readable view** centers the selected entity
-at readable zoom. Neither control fetches additional evidence or raises the canvas
-limits. Counts cover
-loaded evidence only; unqueried relationships and collection coverage remain
-unknown. A new snapshot generation clears the workspace and requires a restart.
-There is no automatic multi-hop collection or full-graph download in this mode.
-These bounds do not establish an end-to-end enterprise performance guarantee.
+Select an arrow for its recorded source, target, direction and evidence. The same
+inspector docks beside the graph on desktop and opens as a keyboard-accessible
+drawer on mobile. **Fit all** frames displayed nodes; **Readable view** restores
+readable zoom. Neither action fetches evidence. Filters, traversal budgets and
+partial-view labels describe the loaded subset, not complete collection coverage.
 
-**Scan-derived (unpersisted)** explicitly opens the older scan projection when
-needed. It loads a bounded scan snapshot before filtering locally and does not
-fetch additional evidence when expanding. Authentication or network failures do
-not silently switch to this mode.
+Shared infrastructure is not evidence that agents communicated. Permissions,
+exploitation and execution require their own supporting evidence.
 
-Shared infrastructure is not evidence that agents communicated. Inspect a
-relationship for its recorded direction and evidence; permissions, exploitation,
-and execution must have their own supporting evidence.
-
-Select an agent and scan in Context, then choose **Investigate reach & permissions**.
+Choose **Find a path** to investigate recorded reach and permission evidence.
 The investigation retains that scope and presents recorded paths. Select a path,
 then use its investigation questions:
 

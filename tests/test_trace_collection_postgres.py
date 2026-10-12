@@ -57,3 +57,50 @@ def test_postgres_atomic_restart_replay_fencing_and_rls():
     finally:
         pool.close()
         reset_current_tenant(token)
+
+
+def test_postgres_window_import_and_collection_share_native_identity_under_concurrency():
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+
+    from agent_bom.api.native_trace_import import TraceImportScope, prepare_trace_page
+    from agent_bom.api.storage.runtime_trace_imports import TraceImportCheckpoint
+
+    tenant = "trace-native-" + uuid4().hex
+    token = set_current_tenant(tenant)
+    pool = _new_application_pool(min_size=1, max_size=4)
+    try:
+        runtime = PostgresRuntimeEventStore(pool)
+        collection = TraceCollectionStore(PostgresBackend(pool))
+        collection.init_schema()
+        initial = CollectionState(scope_digest="project", window_start="2026-10-10T00:00:00+00:00", window_end="2026-10-11T00:00:00+00:00")
+        claimed = collection.claim(tenant, "production", initial, now=100)
+        records = prepare_trace_page(
+            {"spans": [{"spanId": "native-span", "traceId": "native-trace", "attributes": []}]},
+            scope=TraceImportScope(tenant, "langfuse", "production", "https://example.test", "project"),
+            collected_at="2026-10-12T00:00:00+00:00",
+        ).observations
+        checkpoint = TraceImportCheckpoint(
+            tenant, "window", 1, initial.window_start, initial.window_end, "2026-10-12T00:00:00+00:00", complete=True
+        )
+        barrier = Barrier(2)
+
+        def write(manual):
+            active = set_current_tenant(tenant)
+            try:
+                barrier.wait(timeout=10)
+                if manual:
+                    return runtime.commit_trace_page(checkpoint, records, expected_revision=0).inserted
+                return collection.commit(tenant, "production", claimed, records, next_cursor=None, now=101).persisted
+            finally:
+                reset_current_tenant(active)
+
+        with ThreadPoolExecutor(max_workers=2) as workers:
+            counts = list(workers.map(write, (True, False)))
+        assert sum(counts) == 1
+        assert len(runtime.list_observations(tenant)) == 1
+        assert len(runtime.list_observation_revisions(tenant, records[0].observation_id)) == 1
+        assert runtime.get_session(tenant, records[0].session_id).observation_count == 1
+    finally:
+        pool.close()
+        reset_current_tenant(token)

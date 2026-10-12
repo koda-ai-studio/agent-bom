@@ -6,6 +6,23 @@ import type { UnifiedEdge } from "@/lib/graph-schema";
 const edge: UnifiedEdge = { id: "edge-a", source: "agent-a", target: "function-a", relationship: "uses", direction: "directed", weight: 1, traversable: false,
   first_seen: "2026-10-12T00:00:00Z", last_seen: "2026-10-12T00:01:00Z", evidence: { basis: "configured_target", source: "workflow" }, activity_id: 0 };
 describe("relationship inspector", () => {
+  it.each([
+    { evidence: { source: "source-ast" }, title: "Configured delegation" },
+    { evidence: {}, title: "Delegation (unverified)" },
+    { evidence: { data_source: "runtime-proxy" }, title: "Delegated To" },
+  ])("qualifies delegation as $title", ({ evidence, title }) => {
+    render(<GraphRelationshipDetail edge={{ ...edge, relationship: "delegated_to", evidence }} scanId="snapshot-a" sourceLabel="Planner" targetLabel="Worker" onClose={vi.fn()} />);
+    expect(screen.getByRole("heading", { name: title })).toBeVisible();
+  });
+  it.each([
+    { relationship: "uses", sourceLabel: "Planner", targetLabel: "Invoice function", title: "Uses" },
+    { relationship: "vulnerable_to", sourceLabel: "MCP server", targetLabel: "CVE-2025-29927", title: "Has CVE" },
+  ])("preserves $relationship without inventing an entity type", ({ relationship, sourceLabel, targetLabel, title }) => {
+    render(<GraphRelationshipDetail edge={{ ...edge, relationship }} scanId="snapshot-a" sourceLabel={sourceLabel} targetLabel={targetLabel} onClose={vi.fn()} />);
+    expect(screen.getByRole("heading", { name: title })).toBeVisible();
+    expect(screen.getByText(`${sourceLabel} → ${targetLabel}`)).toBeVisible();
+    expect(screen.getByText(/does not establish execution/)).toBeVisible();
+  });
   it("shows recorded direction, scope and evidence without promoting execution", () => {
     const close = vi.fn();
     render(<GraphRelationshipDetail edge={edge} scanId="snapshot-a" sourceLabel="Planner" targetLabel="Invoice function" onClose={close} />);

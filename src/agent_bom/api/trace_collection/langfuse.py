@@ -9,12 +9,13 @@ from urllib.parse import urlsplit
 
 import httpx
 
+from agent_bom.api.native_trace_import import TraceImportScope, prepare_trace_page
 from agent_bom.api.runtime_event_store import RuntimeObservationRecord
 from agent_bom.api.trace_collection.contracts import PAGE_LIMIT, CollectionState
 from agent_bom.api.trace_collection.retry import provider_retry_after
 from agent_bom.runtime.egress_transport import build_pinned_sync_client
-from agent_bom.security import sanitize_text
-from agent_bom.trace_connectors import TraceConnectorError
+from agent_bom.runtime.native_trace_spans import native_span
+from agent_bom.trace_connectors import TraceConnectorError, resolve_trace_project
 
 MAX_RESPONSE_BYTES = 2_000_000
 
@@ -39,41 +40,22 @@ def _text(row: dict[str, Any], key: str, *, optional: bool = False) -> str:
     return value
 
 
-def _record(tenant: str, connection: str, row: dict[str, Any], state: CollectionState) -> RuntimeObservationRecord:
-    span, trace, name = (_text(row, key) for key in ("id", "traceId", "name"))
+def _validate_record(row: dict[str, Any], state: CollectionState) -> None:
+    for key in ("id", "traceId", "name", "type"):
+        _text(row, key)
+    _text(row, "parentObservationId", optional=True)
     try:
         observed = datetime.fromisoformat(_text(row, "startTime").replace("Z", "+00:00"))
         if observed.tzinfo is None or not datetime.fromisoformat(state.window_start) <= observed < datetime.fromisoformat(state.window_end):
             raise ValueError("timestamp outside requested window")
     except ValueError as exc:
         raise ProviderFailureError("invalid_timestamp") from exc
-    parent = _text(row, "parentObservationId", optional=True)
-    # Stable source identity is not independently verified workload identity.
-    return RuntimeObservationRecord(
-        tenant_id=tenant,
-        observation_id="trace:" + identity(tenant, connection, trace, span),
-        session_id="trace:" + identity(tenant, connection, trace),
-        observed_at=observed.astimezone(timezone.utc).isoformat(),
-        source="langfuse",
-        event_type="tool_call",
-        tool_name=sanitize_text(name, max_len=256),
-        trace_id=trace,
-        span_id=span,
-        metadata={
-            "connection_id": connection,
-            "parent_span_id": parent,
-            "identity_basis": "provider_record",
-            "correlation_basis": "name_match_only",
-            "schema_version": "trace.observation.v1",
-        },
-    )
 
 
 def _payload(client: httpx.Client, credentials: dict[str, str], state: CollectionState) -> Any:
     params = {
         "limit": str(PAGE_LIMIT),
-        "fields": "core,basic",
-        "type": "TOOL",
+        "fields": "core,basic,time,metadata",
         "fromStartTime": state.window_start,
         "toStartTime": state.window_end,
     }
@@ -109,13 +91,36 @@ def fetch_page(
     resolved = client or build_pinned_sync_client(allow_private_networks=False, timeout=10)
     try:
         payload = _payload(resolved, credentials, state)
+        rows, cursor = _validate_page(payload, state)
+        project = resolve_trace_project("langfuse", credentials, client=resolved)
+        scope = TraceImportScope(
+            tenant_id=tenant,
+            provider="langfuse",
+            connection_id=connection,
+            endpoint=credentials["host"],
+            project_id=project,
+            account_id=credentials.get("scope_account_id", ""),
+            environment=credentials.get("scope_environment", ""),
+            cloud_provider=credentials.get("scope_cloud_provider", ""),
+        )
+        prepared = prepare_trace_page(
+            {"spans": [native_span(row, provider="langfuse", include_content=False) for row in rows]},
+            scope=scope,
+            collected_at=datetime.now(timezone.utc).isoformat(),
+        )
+        if prepared.rejected:
+            raise ProviderFailureError("invalid_record")
+        return prepared.observations, cursor
     except ProviderFailureError:
         raise
-    except (httpx.HTTPError, ValueError, OSError) as exc:
+    except (httpx.HTTPError, ValueError, OSError, TraceConnectorError) as exc:
         raise ProviderFailureError("provider_unavailable") from exc
     finally:
         if owns:
             resolved.close()
+
+
+def _validate_page(payload: Any, state: CollectionState) -> tuple[list[dict[str, Any]], str | None]:
     if not isinstance(payload, dict) or not isinstance(payload.get("meta"), dict) or not isinstance(payload.get("data"), list):
         raise ProviderFailureError("invalid_page")
     cursor = payload["meta"].get("cursor")
@@ -123,9 +128,8 @@ def fetch_page(
         raise ProviderFailureError("invalid_cursor")
     if len(payload["data"]) > PAGE_LIMIT:
         raise ProviderFailureError("invalid_page")
-    records = []
     for row in payload["data"]:
-        if not isinstance(row, dict) or row.get("type") != "TOOL":
+        if not isinstance(row, dict):
             raise ProviderFailureError("invalid_record")
-        records.append(_record(tenant, connection, row, state))
-    return records, cursor
+        _validate_record(row, state)
+    return payload["data"], cursor

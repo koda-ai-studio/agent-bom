@@ -10,16 +10,14 @@ import { useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import { ScanForm } from "@/components/scan-form";
 import { ScanResultView } from "@/components/scan-result";
-import { AttackFlowView } from "@/components/attack-flow";
-import { ScanMeshView } from "@/components/scan-mesh";
+import { ScanInvestigationEntry } from "@/components/scan-investigation-entry";
 
 function ScanRouter() {
   const searchParams = useSearchParams();
   const id = searchParams.get("id") || "";
   const view = searchParams.get("view") || "";
 
-  if (id && view === "attack-flow") return <AttackFlowView id={id} />;
-  if (id && view === "mesh") return <ScanMeshView id={id} />;
+  if (id && (view === "attack-flow" || view === "mesh")) return <ScanInvestigationEntry id={id} path={view === "attack-flow"} />;
   if (id) return <ScanResultView id={id} />;
   return (
     <ScanForm

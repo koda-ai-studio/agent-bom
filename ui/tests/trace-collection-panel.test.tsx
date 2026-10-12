@@ -7,10 +7,10 @@ it("loads saved progress and resumes one bounded page", async () => {
   mocks.status.mockResolvedValue({status: "partial", persisted: 100, pages: 1, retry_after_seconds: 0});
   mocks.collect.mockResolvedValue({status: "caught_up", persisted: 130, pages: 2, retry_after_seconds: 0});
   render(<TraceCollectionPanel connectionId="production" />);
-  expect(await screen.findByText(/100 observations saved/)).toBeInTheDocument();
+  expect(await screen.findByText(/100 new observations saved/)).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", {name: "Collect next page"}));
   await waitFor(() => expect(mocks.collect).toHaveBeenCalledWith("production", expect.any(AbortSignal)));
-  expect(await screen.findByText(/130 observations saved/)).toBeInTheDocument();
+  expect(await screen.findByText(/130 new observations saved/)).toBeInTheDocument();
   expect(screen.getByText(/does not establish workload identity/)).toBeInTheDocument();
 });
 it("disables collection while provider backoff is active", async () => {

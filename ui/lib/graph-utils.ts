@@ -410,7 +410,10 @@ export function relationshipEdgeLabelText(
   relationship: string,
   metadata?: Record<string, unknown>,
 ): string {
-  void metadata;
+  if (relationship === "delegated_to") {
+    if (metadata?.evidenceMode === "static") return "Configured delegation";
+    if (metadata?.evidenceMode === "unknown") return "Delegation (unverified)";
+  }
   return relationshipLegendItem(relationship).label;
 }
 
@@ -628,7 +631,7 @@ export function readableGraphEdges(
       ? edge.label
       : mayLabel
         ? ((safeSharedLabel ? undefined : edge.label) ??
-          (relationship && (active || highSignal)
+          (relationship && (active || highSignal || edges.length <= 24)
             ? relationshipEdgeLabelText(relationship, edge.data as Record<string, unknown>)
             : undefined))
         : undefined;
@@ -650,7 +653,7 @@ export function readableGraphEdges(
       ...edge,
       label,
       ariaLabel: relationship
-        ? `${relationshipEdgeLabelText(relationship)} relationship from ${nodeLabels?.get(edge.source) ?? "source node"} to ${nodeLabels?.get(edge.target) ?? "target node"}`
+        ? `${relationshipEdgeLabelText(relationship, edge.data as Record<string, unknown>)} relationship from ${nodeLabels?.get(edge.source) ?? "source node"} to ${nodeLabels?.get(edge.target) ?? "target node"}`
         : `Relationship from ${nodeLabels?.get(edge.source) ?? "source node"} to ${nodeLabels?.get(edge.target) ?? "target node"}`,
       ...labelPresentation,
       animated: preserveVisualStyle && !captureMode

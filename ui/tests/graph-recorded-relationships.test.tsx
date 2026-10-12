@@ -20,12 +20,36 @@ function page(next: string | null = null, missing = false): GraphIncidentPage {
   } as GraphIncidentPage;
 }
 beforeEach(() => { fetchPage.mockReset(); });
+it.each([
+  { evidence: { source: "source-ast" }, title: "Configured delegation" },
+  { evidence: {}, title: "Delegation (unverified)" },
+  { evidence: { data_source: "runtime-proxy" }, title: "Delegated To" },
+])("qualifies delegation consistently in recorded rows: $title", async ({ evidence, title }) => {
+  const response = page();
+  response.edges[0] = { ...response.edges[0]!, relationship: "delegated_to", evidence };
+  fetchPage.mockResolvedValue(response);
+  render(<GraphRecordedRelationshipScope scanId="s-1" nodeId="agent:one"><GraphRecordedRelationships scanId="s-1" nodeId="agent:one" /></GraphRecordedRelationshipScope>);
+  expect(await screen.findByText(`Outgoing → · ${title}`)).toBeVisible();
+});
+it.each([
+  { relationship: "can_access", direction: "directed", incoming: true, text: "← Incoming · Can Access" },
+  { relationship: "shares_server", direction: "bidirectional", incoming: false, text: "Bidirectional ↔ · Shares Server" },
+  { relationship: "vulnerable_to", direction: "directed", incoming: false, text: "Outgoing → · Has CVE" },
+])("retains $relationship meaning and recorded direction", async ({ relationship, direction, incoming, text }) => {
+  const response = page();
+  response.edges[0] = { ...response.edges[0]!, relationship, direction: direction as "directed" | "bidirectional",
+    ...(incoming ? { source: "server:opaque-id", target: "agent:one" } : {}) };
+  fetchPage.mockResolvedValue(response);
+  render(<GraphRecordedRelationshipScope scanId="s-1" nodeId="agent:one"><GraphRecordedRelationships scanId="s-1" nodeId="agent:one" /></GraphRecordedRelationshipScope>);
+  expect(await screen.findByText(text)).toBeVisible();
+  expect(screen.getByText(/do not establish execution/)).toBeVisible();
+});
 it("uses recorded labels, retains identifiers and inspects the canonical endpoint", async () => {
   fetchPage.mockResolvedValue(page());
   const inspect = vi.fn();
   render(<GraphRecordedRelationshipScope scanId="s-1" nodeId="agent:one"><GraphRecordedRelationships scanId="s-1" nodeId="agent:one" onInspectNode={inspect} /></GraphRecordedRelationshipScope>);
   const link = await screen.findByRole("button", { name: "Recorded server name" });
-  expect(screen.getByText("Outgoing → · Recorded connection")).toBeVisible();
+  expect(screen.getByText("Outgoing → · Uses")).toBeVisible();
   fireEvent.click(link);
   expect(inspect).toHaveBeenCalledWith("server:opaque-id");
   fireEvent.click(screen.getByText("Canonical identifiers"));

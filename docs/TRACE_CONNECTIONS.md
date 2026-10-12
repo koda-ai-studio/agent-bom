@@ -158,12 +158,15 @@ See the [Langfuse public API contract](https://langfuse.com/docs/api-and-data-pl
 
 ## Save and resume Langfuse evidence
 
-Select a managed Langfuse connection, then choose **Save trace evidence → Collect
+Select a managed Langfuse connection, then choose **Incremental collection and saved progress → Collect
 next page**. The receipt shows cumulative saved observations, committed pages,
 collection progress, and retry delays. Open **Trace explorer** to inspect retained
-observations. Each request imports at most 100 metadata-only tool observations;
-collection runs only when requested. **Pull and correlate** remains a transient
-sample, and LangSmith retains that existing behavior.
+observations. Each request imports at most 100 metadata-only native observations;
+collection runs only when requested. Both managed Langfuse and LangSmith window
+imports also persist native observations. Incremental collection and window imports
+share stable IDs and revision history, so overlapping reads do not inflate session
+counts. Temporary-credential previews remain transient. The collection receipt
+counts newly inserted observations from that collection, not all retained rows.
 
 For an authenticated API client, POST a body such as
 `{"connection_id":"production-traces"}` to

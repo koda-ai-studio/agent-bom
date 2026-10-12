@@ -112,3 +112,68 @@ def test_retention_keeps_overlap_receipts_and_bounds_import_sessions(stores, mon
     result = store.commit("a", "connection", claim, [first, second], next_cursor=None, now=103)
     assert result.persisted == 2
     assert len(runtime.list_observations("a")) == 1
+
+
+def test_native_collection_and_manual_import_share_identity_revision_and_rollup(stores):
+    from agent_bom.api.native_trace_import import TraceImportScope, prepare_trace_page
+    from agent_bom.api.trace_import_service import import_native_pages
+    from agent_bom.trace_connectors import NativeTracePage
+
+    runtime, collection = stores
+    source = TraceImportScope("a", "langfuse", "connection", "https://example.test", "project")
+    payload = {
+        "spans": [
+            {
+                "spanId": "span",
+                "traceId": "trace",
+                "attributes": [
+                    {"key": "agent_bom.native_type", "value": {"stringValue": "TOOL"}},
+                    {"key": "agent_bom.native_name", "value": {"stringValue": "read"}},
+                ],
+            }
+        ]
+    }
+    imported = import_native_pages(runtime, scope=source, fetch=lambda **kw: NativeTracePage(payload, None, 1))
+    assert imported["counts"]["imported"] == 1
+    original = runtime.list_observations("a")[0]
+    payload["spans"][0]["status"] = {"code": 2}
+    updated = prepare_trace_page(payload, scope=source, collected_at="2026-10-12T12:00:00+00:00").observations
+    claim = collection.claim("a", "connection", initial(), now=100)
+    result = collection.commit("a", "connection", claim, updated, next_cursor="next", now=101)
+    assert result.persisted == 0
+    assert len(runtime.list_observations("a")) == 1
+    assert len(runtime.list_observation_revisions("a", original.observation_id)) == 2
+    assert runtime.get_session("a", original.session_id).observation_count == 1
+    claim = collection.claim("a", "connection", initial(), now=102)
+    collection.commit("a", "connection", claim, updated, next_cursor=None, now=103)
+    assert len(runtime.list_observation_revisions("a", original.observation_id)) == 2
+
+
+def test_collection_rejects_changed_native_project(stores):
+    from agent_bom.api.native_trace_import import TraceImportScope, prepare_trace_page
+
+    runtime, store = stores
+    payload = {"spans": [{"spanId": "span", "traceId": "trace", "attributes": []}]}
+
+    def records(project):
+        return prepare_trace_page(
+            payload,
+            scope=TraceImportScope("a", "langfuse", "connection", "https://example.test", project),
+            collected_at="2026-10-12T00:00:00+00:00",
+        ).observations
+
+    claim = store.claim("a", "connection", initial(), now=100)
+    store.commit("a", "connection", claim, records("project-a"), next_cursor="next", now=101)
+    claim = store.claim("a", "connection", initial(), now=102)
+    with pytest.raises(CollectionConflictError, match="project"):
+        store.commit("a", "connection", claim, records("project-b"), next_cursor=None, now=103)
+    assert store.get("a", "connection").pages == 1
+    assert len(runtime.list_observations("a")) == 1
+
+
+def test_collection_scope_includes_configured_cloud_binding():
+    from agent_bom.api.trace_collection.service import scope
+
+    credentials = {"host": "https://example.test", "public_key": "pk"}
+    for field in ("project", "scope_account_id", "scope_environment", "scope_cloud_provider"):
+        assert scope(credentials) != scope({**credentials, field: "changed"})

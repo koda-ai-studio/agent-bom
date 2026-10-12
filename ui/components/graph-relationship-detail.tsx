@@ -4,7 +4,8 @@ import { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { Drawer } from "@/components/drawer";
 import type { UnifiedEdge } from "@/lib/graph-schema";
-import { contextRelationshipLabel } from "@/lib/context-graph";
+import { relationshipEdgeLabelText } from "@/lib/graph-utils";
+import { graphEdgeEvidenceMode } from "@/lib/unified-graph-flow";
 
 export function GraphRelationshipDetail({ edge, scanId, sourceLabel, targetLabel, onClose, mobile = false }: {
   edge: UnifiedEdge;
@@ -31,7 +32,7 @@ export function GraphRelationshipDetail({ edge, scanId, sourceLabel, targetLabel
       if ((previous instanceof HTMLElement || previous instanceof SVGElement) && previous.isConnected) previous.focus();
     };
   }, [mobile, edge.id]);
-  const title = contextRelationshipLabel(edge.relationship);
+  const title = relationshipEdgeLabelText(edge.relationship, { evidenceMode: graphEdgeEvidenceMode(edge) });
   const content = <div className="space-y-4 text-sm [overflow-wrap:anywhere]">
     <p className="font-medium">{sourceLabel} {edge.direction === "bidirectional" ? "↔" : "→"} {targetLabel}</p>
     <p className="text-xs text-ink-secondary">This recorded relationship does not establish execution or successful data access.</p>

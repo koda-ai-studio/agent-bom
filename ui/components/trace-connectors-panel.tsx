@@ -98,10 +98,10 @@ export function TraceConnectorsPanel() {
       <button disabled={pending || (!manual && !connectionId)} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">{pending ? "Pulling…" : result?.import && !result.import.complete ? "Continue import" : "Pull and correlate"}</button>
     </form>
     <div className="space-y-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-5">
-      {!manual && provider === "langfuse" && connectionId && <TraceCollectionPanel key={JSON.stringify([session, connectionId])} connectionId={connectionId} />}
+      {!manual && provider === "langfuse" && connectionId && <details className="border-b border-[var(--border-subtle)] pb-3"><summary className="cursor-pointer text-sm font-medium">Incremental collection and saved progress</summary><div className="mt-3"><TraceCollectionPanel key={JSON.stringify([session, connectionId])} connectionId={connectionId} /></div></details>}
       <h2 className="text-lg font-semibold">Correlation result</h2>
       <p className="text-sm text-[var(--text-secondary)]">Managed connections import up to three pages at a time into this tenant’s trace history. Each pull uses a fixed time window; continue to resume when more pages remain.</p>
-      {!result && !error && <p role="status" className="text-sm text-[var(--text-secondary)]">{pending ? "Waiting for the provider…" : "Select a platform and pull a sample to review security matches."}</p>}
+      {!result && !error && <p role="status" className="text-sm text-[var(--text-secondary)]">{pending ? "Waiting for the provider…" : "Select a connection to import trace evidence and review candidate matches."}</p>}
       {error && <p role="alert" className="text-sm text-red-700 dark:text-red-300">Trace pull failed. Check access, project name, endpoint and provider availability. No successful result is available.</p>}
       {result && <>
         <p className="font-medium">{result.pulled_spans} native observations collected · {result.attack_paths.length} candidate finding matches</p>

@@ -20,6 +20,7 @@ class CollectionConflictError(RuntimeError):
 class CollectionState(BaseModel):
     model_config = ConfigDict(extra="forbid")
     scope_digest: str
+    project_id: str | None = None
     window_start: str
     window_end: str
     cursor: str | None = None
@@ -64,7 +65,7 @@ class CollectionReceipt(BaseModel):
 def receipt(connection_id: str, state: CollectionState | None, now: float) -> CollectionReceipt:
     if state is None:
         return CollectionReceipt(connection_id=connection_id, status="not_started")
-    values = state.model_dump(exclude={"scope_digest", "cursor", "owner", "lease_until", "retry_after", "cursor_history"})
+    values = state.model_dump(exclude={"scope_digest", "project_id", "cursor", "owner", "lease_until", "retry_after", "cursor_history"})
     lag = max(0, now - datetime.fromisoformat(state.completed_until).timestamp()) if state.completed_until else None
     return CollectionReceipt(
         connection_id=connection_id,

@@ -28,9 +28,11 @@ def row():
 
 def collect(payload):
     def handle(request):
+        if request.url.path == "/api/public/projects":
+            return httpx.Response(200, json={"data": [{"id": "project"}]})
         assert request.url.params["cursor"] == "previous"
         assert request.url.params["limit"] == "100"
-        assert request.url.params["fields"] == "core,basic"
+        assert request.url.params["fields"] == "core,basic,time,metadata"
         return httpx.Response(200, json=payload)
 
     with httpx.Client(transport=httpx.MockTransport(handle)) as client:
@@ -44,7 +46,8 @@ def test_page_preserves_identity_and_excludes_content():
     assert cursor == "next" and len(records) == 1
     assert records[0].trace_id == "trace-a" and records[0].span_id == "span-a"
     assert "secret" not in str(records[0].to_dict())
-    assert records[0].metadata["identity_basis"] == "provider_record"
+    assert records[0].metadata["native_type"] == "TOOL"
+    assert records[0].metadata["project_id"] == "project"
 
 
 @pytest.mark.parametrize(
@@ -103,3 +106,31 @@ def test_oversized_provider_response_is_rejected():
                 client=client,
             )
     assert caught.value.code == "response_too_large"
+
+
+def test_collection_uses_native_import_identity_for_non_tool_spans():
+    from agent_bom.api.native_trace_import import TraceImportScope, prepare_trace_page
+    from agent_bom.runtime.native_trace_spans import native_span
+
+    source_row = {**row(), "type": "GENERATION", "projectId": "project", "parentObservationId": "root"}
+    credentials = {"host": "https://cloud.langfuse.com", "public_key": "pk", "secret_key": "secret"}
+
+    def handle(request):
+        if request.url.path == "/api/public/projects":
+            return httpx.Response(200, json={"data": [{"id": "project"}]})
+        assert "type" not in request.url.params
+        return httpx.Response(200, json={"data": [source_row], "meta": {}})
+
+    with httpx.Client(transport=httpx.MockTransport(handle)) as client:
+        records, _ = fetch_page("a", "production", credentials, state(), client=client)
+    expected = prepare_trace_page(
+        {"spans": [native_span(source_row, provider="langfuse", include_content=False)]},
+        scope=TraceImportScope("a", "langfuse", "production", credentials["host"], "project"),
+        collected_at="2026-10-12T00:00:00+00:00",
+    ).observations[0]
+    assert records[0].observation_id == expected.observation_id
+    assert records[0].session_id == expected.session_id
+    assert records[0].surface == "imported_trace"
+    assert records[0].event_type != "tool_call"
+    assert records[0].metadata["native_type"] == "GENERATION"
+    assert "secret" not in str(records[0].to_dict())

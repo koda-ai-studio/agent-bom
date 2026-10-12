@@ -421,12 +421,14 @@ def test_migration_schema_uses_the_runtime_rls_contract_and_exact_dml_columns() 
         assert required_fragment in sql
 
 
-def test_runtime_events_manifest_is_v2_and_includes_gateway_activity_tables() -> None:
+def test_runtime_events_manifest_is_v4_and_includes_native_history_and_gateway_activity() -> None:
     component = next(item for item in CONTROL_PLANE_SCHEMA_COMPONENTS if item.component == "runtime_events")
-    assert component.version == 2
+    assert component.version == 4
     assert set(component.tables) == {
         "runtime_observations",
         "runtime_sessions",
+        "runtime_trace_imports",
+        "runtime_observation_revisions",
         "gateway_activity_events",
         "gateway_activity_sequences",
         "gateway_activity_tombstones",

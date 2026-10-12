@@ -113,8 +113,23 @@ class TraceCollectionStore:
         require_tenant_id(tenant)
         with self.backend.transaction() as tx:
             self._begin(tx)
+            if self.backend.dialect == "postgres":
+                # Serialize with the runtime store's native-window importer as
+                # well as other collection workers before reconciling history.
+                tx.execute("SELECT pg_advisory_xact_lock(hashtextextended(?, 0))", (f"runtime_observations:{tenant}",))
             state = self._owned(tx, tenant, connection, claimed, now)
             now = self._clock(tx, now)
+            native = [record for record in records if record.surface == "imported_trace"]
+            projects = {record.metadata.get("project_id") for record in native}
+            if native:
+                if len(projects) != 1 or not all(isinstance(project, str) and project for project in projects):
+                    raise CollectionConflictError("Collection requires one resolved native project.")
+                project = str(next(iter(projects)))
+                if state.project_id is not None and state.project_id != project:
+                    raise CollectionConflictError("Native project changed; checkpoint retained.")
+                if any(record.metadata.get("connection_id") != connection for record in native):
+                    raise CollectionConflictError("Native connection changed; checkpoint retained.")
+                state.project_id = project
             if next_cursor:
                 cursor_digest = hashlib.sha256(next_cursor.encode()).hexdigest()
                 if cursor_digest in state.cursor_history or len(state.cursor_history) >= 1000:

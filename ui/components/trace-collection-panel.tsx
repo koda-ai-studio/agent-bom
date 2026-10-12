@@ -53,10 +53,10 @@ export function TraceCollectionPanel({ connectionId }: { connectionId: string })
     } finally { if (!controller.signal.aborted) setPending(false); }
   }
   return <section aria-label="Saved trace collection" className="space-y-3 rounded-lg border border-[var(--border-subtle)] p-4">
-    <h3 className="font-semibold">Save trace evidence</h3>
-    <p className="text-sm text-[var(--text-secondary)]">Collect up to 100 tool observations per request into your trace explorer. Each request resumes saved progress. Collection runs when requested.</p>
+    <h3 className="font-semibold">Incremental collection</h3>
+    <p className="text-sm text-[var(--text-secondary)]">Collect up to 100 native observations per request into your trace explorer. Each request resumes saved progress. Collection runs when requested.</p>
     {state && <>
-      <p role="status" className="text-sm">{state.persisted ?? 0} observations saved · {state.pages ?? 0} pages committed</p>
+      <p role="status" className="text-sm">{state.persisted ?? 0} new observations saved · {state.pages ?? 0} pages committed</p>
       <p className="text-xs text-[var(--text-secondary)]">{state.status === "caught_up" ? "Selected window collected." : state.status === "not_started" ? "Ready to collect the previous day, with a 15-minute ingestion delay." : "Collection is incomplete."} This does not establish workload identity or complete provider coverage.</p>
       {state.completed_until && <p className="break-all text-xs">Collected through {state.completed_until}{state.lag_seconds != null ? ` · ${Math.ceil(state.lag_seconds / 60)} minutes behind at last check` : ""}</p>}
       {state.last_error && <p role="alert" className="text-sm text-amber-800 dark:text-amber-200">{failures[state.last_error] ?? "Provider evidence could not be accepted. Saved progress is retained; ask your operator to inspect the connection."}</p>}

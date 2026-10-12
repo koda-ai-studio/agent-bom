@@ -7,8 +7,6 @@ const source = (path: string) => readFileSync(join(process.cwd(), path), "utf8")
 describe("interactive React Flow surface contract", () => {
   it.each([
     "app/graph/graph-page-client.tsx",
-    "components/scan-mesh.tsx",
-    "components/attack-flow.tsx",
     "components/security-graph-investigation.tsx",
     "app/agents/page.tsx",
   ])("keeps evidence topology immutable in %s", (path) => {
@@ -16,8 +14,6 @@ describe("interactive React Flow surface contract", () => {
   });
 
   it.each([
-    "components/scan-mesh.tsx",
-    "components/attack-flow.tsx",
     "app/agents/page.tsx",
   ])("persists personal node positions and viewport in %s", (path) => {
     const content = source(path);
@@ -61,8 +57,6 @@ describe("interactive React Flow surface contract", () => {
 
   it.each([
     "app/graph/graph-page-client.tsx",
-    "components/scan-mesh.tsx",
-    "components/attack-flow.tsx",
     "app/agents/page.tsx",
   ])("does not treat transient auth loading as logout in %s", (path) => {
     const content = source(path);

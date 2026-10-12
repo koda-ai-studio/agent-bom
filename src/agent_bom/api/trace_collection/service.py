@@ -48,7 +48,11 @@ def _initialized_store(runtime: SQLiteRuntimeEventStore | PostgresRuntimeEventSt
 
 
 def scope(credentials: dict[str, str]) -> str:
-    return identity(credentials["host"].rstrip("/"), credentials["public_key"])
+    return identity(
+        credentials["host"].rstrip("/"),
+        credentials["public_key"],
+        *(credentials.get(key, "") for key in ("project", "scope_account_id", "scope_environment", "scope_cloud_provider")),
+    )
 
 
 def initial_state(credentials: dict[str, str], now: float) -> CollectionState:

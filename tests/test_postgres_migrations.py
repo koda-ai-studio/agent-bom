@@ -55,7 +55,7 @@ _FORK_GUARD_INDEX_CANON = "createuniqueindexifnotexistsaudit_log_team_prevsig_un
 
 # The newest migration. One place to update when a revision lands, so the
 # single-head property and the head's identity do not drift apart.
-ALEMBIC_HEAD = "20261012_01"
+ALEMBIC_HEAD = "20261012_03"
 
 
 def _canonical_sql(text: str) -> str:
@@ -1048,7 +1048,7 @@ def test_finding_history_migration_matches_bootstrap_and_invalidates_every_job_m
 
 
 def test_runtime_trace_import_policy_guard_finds_policy_on_resolved_table() -> None:
-    migration = VERSIONS_DIR / "20261011_01_runtime_trace_imports.py"
+    migration = VERSIONS_DIR / "20261012_02_runtime_trace_imports.py"
     source = migration.read_text(encoding="utf-8")
 
     assert "FROM pg_policy" in source
