@@ -65,7 +65,9 @@ spec:
                   ts="$(date -u +%Y%m%dT%H%M%SZ)"
                   out="/backup/agent-bom-${ts}.dump"
                   pg_dump "$AGENT_BOM_POSTGRES_MAINTENANCE_URL" \
-                    --enable-row-security --format=custom --file "$out"
+                    --enable-row-security --format=custom \
+                    --exclude-table=public.agent_bom_tenant_binding_keys --file "$out"
+                  echo "Tenant-binding authority excluded; retain its secrets through the separate operator recovery channel."
                   echo "$out" > /backup/latest-path
               env:
                 - name: PGCONNECT_TIMEOUT
