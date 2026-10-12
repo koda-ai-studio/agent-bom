@@ -3422,7 +3422,7 @@ async function main() {
       "investigation-canvas-current-1512x811.png",
       async (canvasPage) => {
         await canvasPage.waitForLoadState("networkidle");
-        await canvasPage.getByRole("heading", { name: "Investigation Canvas" }).waitFor({
+        await canvasPage.getByRole("heading", { name: "Investigation", exact: true }).waitFor({
           state: "visible",
           timeout: 30_000,
         });
@@ -3448,7 +3448,7 @@ async function main() {
         awaitResponses: [
           (response) => new URL(response.url()).pathname === "/v1/graph/rollup" && response.ok(),
         ],
-        expectedText: ["Investigation Canvas", "Prioritized findings and scopes", "aggregated relationship rows"],
+        expectedText: ["Investigation", "Prioritized findings and scopes", "aggregated relationship rows"],
         expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/rollup", "/v1/graph/scenarios"],
         readySelector: '[data-testid="graph-rollup-decision-surface"]',
         assertNoHorizontalOverflow: true,
@@ -3508,7 +3508,7 @@ async function main() {
             response.ok(),
         ],
         expectedText: [
-          "Investigation Canvas",
+          "Investigation",
         ],
         expectedApiPaths: [
           "/v1/graph/snapshots",
