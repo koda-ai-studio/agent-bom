@@ -4,8 +4,8 @@ The public-route allowlist used to be a hand-maintained set that drifted from
 ``ui/app/``: ``/overview`` (the header CTA and left-nav target), ``/inventory``,
 ``/reports``, ``/runtime``, ``/threat-intel``, ``/self-posture``,
 ``/blueprints``, ``/integrations`` and ``/accounts/*`` returned a raw JSON 401
-on a cold request, while ``/settings`` and ``/dashboard`` — which do not exist —
-returned 200. It only worked because landing on ``/`` first set the session
+on a cold request, while then-absent pages were allowlisted. It only worked
+because landing on ``/`` first set the session
 cookie. The allowlist is now derived from the same shipped dashboard files the
 SPA catch-all resolves against.
 """
@@ -33,6 +33,7 @@ REGRESSION_ROUTES = (
     "/blueprints",
     "/integrations",
     "/accounts/aws-prod",
+    "/settings",
 )
 
 
@@ -83,8 +84,10 @@ def test_root_and_index_stay_public(_registered_spa_routes) -> None:
 
 
 def test_routes_that_do_not_exist_are_not_public(_registered_spa_routes) -> None:
-    """``/settings`` and ``/dashboard`` have no page; they must not be allowlisted."""
-    assert APIKeyMiddleware._is_dashboard_public_request("/settings", "GET") is False
+    """Absent pages must not be allowlisted, even beside a shipped route."""
+    assert not (UI_APP / "dashboard").exists()
+    assert not (UI_APP / "settings-missing").exists()
+    assert APIKeyMiddleware._is_dashboard_public_request("/settings-missing", "GET") is False
     assert APIKeyMiddleware._is_dashboard_public_request("/dashboard", "GET") is False
 
 
@@ -92,6 +95,7 @@ def test_api_paths_are_never_treated_as_dashboard_routes(_registered_spa_routes)
     assert APIKeyMiddleware._is_dashboard_public_request("/v1/findings", "GET") is False
     assert APIKeyMiddleware._is_dashboard_public_request("/metrics", "GET") is False
     assert APIKeyMiddleware._is_dashboard_public_request("/overview", "POST") is False
+    assert APIKeyMiddleware._is_dashboard_public_request("/settings", "POST") is False
 
 
 def test_mounting_the_dashboard_registers_the_allowlist(tmp_path: Path, monkeypatch) -> None:
@@ -111,6 +115,7 @@ def test_mounting_the_dashboard_registers_the_allowlist(tmp_path: Path, monkeypa
     (ui_dist / "index.html").write_text("<html></html>")
     (ui_dist / "overview.html").write_text("<html></html>")
     (ui_dist / "findings.html").write_text("<html></html>")
+    (ui_dist / "settings.html").write_text("<html></html>")
     (ui_dist / "accounts" / "_.html").write_text("<html></html>")
     (ui_dist / "_next" / "static" / "app.js").write_text("//")
 
@@ -122,7 +127,8 @@ def test_mounting_the_dashboard_registers_the_allowlist(tmp_path: Path, monkeypa
     assert APIKeyMiddleware._is_dashboard_public_request("/overview", "GET") is True
     assert APIKeyMiddleware._is_dashboard_public_request("/accounts/aws-prod", "GET") is True
     assert APIKeyMiddleware._is_dashboard_public_request("/", "GET") is True
-    assert APIKeyMiddleware._is_dashboard_public_request("/settings", "GET") is False
+    assert APIKeyMiddleware._is_dashboard_public_request("/settings", "GET") is True
+    assert APIKeyMiddleware._is_dashboard_public_request("/settings-missing", "GET") is False
     assert APIKeyMiddleware._is_dashboard_public_request("/_next/static/app.js", "GET") is True
 
 
@@ -130,6 +136,7 @@ def test_no_spa_mounted_means_no_public_spa_routes(monkeypatch) -> None:
     """A REST-only deployment has no SPA to serve, so nothing is allowlisted."""
     monkeypatch.setattr(middleware_module, "_DASHBOARD_SPA_ROUTES", frozenset())
     assert APIKeyMiddleware._is_dashboard_public_request("/overview", "GET") is False
+    assert APIKeyMiddleware._is_dashboard_public_request("/settings", "GET") is False
     # Static asset routes that do not depend on the SPA stay public.
     assert APIKeyMiddleware._is_dashboard_public_request("/favicon.ico", "GET") is True
     assert APIKeyMiddleware._is_dashboard_public_request("/_next/static/x.js", "GET") is True
