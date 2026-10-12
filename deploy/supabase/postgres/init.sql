@@ -1465,8 +1465,8 @@ $$;
 -- which reads /run/secrets/postgres_app_password. An empty GUC means a
 -- misconfigured secret, so we RAISE EXCEPTION and abort loudly at the real
 -- root cause — never limp on to create a broken passwordless app role. An
--- unset GUC (NULL) is the out-of-band path used by Alembic migrations, the
--- integration-test bootstrap, and wrapper-less local dev, where the app role
+-- unset GUC (NULL) is the out-of-band path used by migrations without runtime
+-- credentials, integration-test bootstrap, and wrapper-less local dev, where the app role
 -- is provisioned separately — skip creation here instead of aborting.
 DO $$
 DECLARE
@@ -1484,7 +1484,13 @@ BEGIN
         IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'agent_bom_app') THEN
             EXECUTE format('CREATE ROLE agent_bom_app LOGIN NOSUPERUSER NOBYPASSRLS PASSWORD %L', app_pass);
         ELSE
-            EXECUTE format('ALTER ROLE agent_bom_app NOSUPERUSER NOBYPASSRLS PASSWORD %L', app_pass);
+            IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'agent_bom_app'
+                       AND (NOT rolcanlogin OR rolsuper OR rolbypassrls)) THEN
+                RAISE EXCEPTION 'agent_bom_app must be LOGIN NOSUPERUSER NOBYPASSRLS';
+            END IF;
+            -- Managed Postgres admins cannot ALTER SUPERUSER/BYPASSRLS, even
+            -- to repeat an already-false value. Validate, then rotate only.
+            EXECUTE format('ALTER ROLE agent_bom_app PASSWORD %L', app_pass);
         END IF;
 
         -- Connection limit: prevent app from exhausting all connections
@@ -1533,7 +1539,7 @@ DECLARE
 BEGIN
     maintenance_pass := current_setting('init.maintenance_password', true);
     IF maintenance_pass IS NOT NULL AND maintenance_pass != '' THEN
-        EXECUTE format('ALTER ROLE agent_bom_maintenance LOGIN NOSUPERUSER NOBYPASSRLS PASSWORD %L', maintenance_pass);
+        EXECUTE format('ALTER ROLE agent_bom_maintenance PASSWORD %L', maintenance_pass);
     ELSIF maintenance_pass = '' THEN
         RAISE EXCEPTION 'init.maintenance_password is empty — /run/secrets/postgres_maintenance_password had no value';
     ELSE

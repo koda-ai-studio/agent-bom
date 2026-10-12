@@ -128,7 +128,7 @@ def _needs_baseline_stamp(url: str) -> bool:
 
 def _run_alembic(root: Path, config_path: str, *args: str) -> None:
     cmd = ["alembic", "-c", config_path, *args]
-    print("+", " ".join(cmd), flush=True)
+    print("+", " ".join(cmd), flush=True)  # noqa: T201 -- migration CLI progress
     subprocess.check_call(cmd, cwd=str(root))
 
 
@@ -151,6 +151,31 @@ def _runtime_credential(url_name: str, password_file_name: str, expected_role: s
     if not password:
         raise SystemExit(f"error: {url_name} must supply a non-empty runtime-role password")
     return raw_url, password
+
+
+def configure_bootstrap_credentials(connection: Any) -> None:
+    """Supply baseline role passwords only inside the migration transaction.
+
+    Fresh managed databases do not run the Compose init wrapper. Reuse its
+    transaction-local settings so init.sql creates and hardens the fixed roles
+    before runtime-schema.sql grants privileges. Validate all supplied
+    identities before sending any credentials to Postgres; absent credentials
+    retain the existing out-of-band provisioning path.
+    """
+    credentials = (
+        ("init.app_password", _runtime_credential("AGENT_BOM_POSTGRES_URL", "AGENT_BOM_POSTGRES_PASSWORD_FILE", "agent_bom_app")),
+        (
+            "init.maintenance_password",
+            _runtime_credential(
+                "AGENT_BOM_POSTGRES_MAINTENANCE_URL",
+                "AGENT_BOM_POSTGRES_MAINTENANCE_PASSWORD_FILE",
+                "agent_bom_maintenance",
+            ),
+        ),
+    )
+    for setting, resolved in credentials:
+        if resolved is not None:
+            connection.exec_driver_sql("SELECT set_config(%s, %s, true)", (setting, resolved[1]))
 
 
 def _reconcile_runtime_role_passwords(admin_url: str) -> None:
@@ -241,14 +266,14 @@ def main(argv: list[str] | None = None) -> int:
     # Keep PASSWORD_FILE for operator diagnostics; ALEMBIC_DATABASE_URL now
     # carries the admin secret only in this child process.
     if _needs_baseline_stamp(url):
-        print(
+        print(  # noqa: T201 -- migration CLI progress
             f"compose-migrate: init.sql baseline detected without alembic_version; stamping {BASELINE_REVISION}",
             flush=True,
         )
         _run_alembic(root, args.config, "stamp", BASELINE_REVISION)
     _run_alembic(root, args.config, "upgrade", "head")
     _reconcile_runtime_role_passwords(url)
-    print("compose-migrate: upgrade head OK", flush=True)
+    print("compose-migrate: upgrade head OK", flush=True)  # noqa: T201 -- migration CLI progress
     return 0
 
 

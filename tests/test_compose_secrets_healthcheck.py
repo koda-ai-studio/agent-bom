@@ -551,3 +551,13 @@ def test_compose_file_declares_profile_header(path: Path) -> None:
         "lines. Operators rely on this to tell pilot/dev/production-shaped "
         "files apart at a glance."
     )
+
+
+def test_runtime_password_rotation_does_not_require_superuser_attributes() -> None:
+    """Managed Postgres admins can rotate passwords but cannot ALTER SUPERUSER."""
+    import re
+
+    source = (COMPOSE_DIR / "supabase" / "postgres" / "init.sql").read_text()
+    assert not re.search(r"ALTER ROLE agent_bom_(?:app|maintenance)[^;]*\b(?:NOSUPERUSER|NOBYPASSRLS)\b", source)
+    assert "agent_bom_app must be LOGIN NOSUPERUSER NOBYPASSRLS" in source
+    assert "agent_bom_maintenance must be LOGIN NOSUPERUSER NOBYPASSRLS" in source

@@ -224,3 +224,10 @@ set deletion protection false, and choose a unique
 `db_final_snapshot_identifier` that is not already present from an earlier
 destroy/recreate cycle. Terraform then removes both Helm releases in dependency
 order; do not manually uninstall only one of them while workloads are active.
+
+Fresh RDS installs use the complete RDS-managed secret ARN in ExternalSecret
+references; the final ARN segment includes an AWS-generated suffix and is not
+the secret name. The migration job passes the supplied fixed app and maintenance
+credentials into transaction-local bootstrap settings, then creates the roles
+before granting runtime schema privileges. Supplied credentials with empty passwords or unexpected role names fail
+closed; the API never receives the admin credential.
