@@ -1223,13 +1223,18 @@ def test_published_control_plane_helm_example_renders() -> None:
     assert result.returncode == 0, result.stderr
 
 
-def test_backup_restore_object_store_uses_pinned_upstream_image():
+def test_backup_restore_object_store_builds_pinned_upstream_source():
     workflow = yaml.safe_load((REPO_ROOT / ".github" / "workflows" / "backup-restore.yml").read_text())
-    start = next(step for step in workflow["jobs"]["roundtrip"]["steps"] if step.get("name", "").startswith("Start MinIO"))
-    # The Docker Hub latest alias stopped being publicly pullable. Keep the
-    # real S3 round-trip on the upstream registry and an immutable release.
-    assert re.search(r"quay\.io/minio/minio:RELEASE\.[\w-]+@sha256:[a-f0-9]{64}\s", start["run"])
-    assert "minio/minio:latest" not in start["run"]
+    steps = workflow["jobs"]["roundtrip"]["steps"]
+    start = next(step for step in steps if step.get("name", "").startswith("Start MinIO"))
+    build = next(step for step in steps if step.get("name", "").startswith("Build MinIO"))
+    assert re.search(r"go install github\.com/minio/minio@[a-f0-9]{40}", build["run"])
+    assert "127.0.0.1:9000" in start["run"]
+    assert "docker run" not in start["run"]
+    assert "minio.pid" in start["run"]
+    cleanup = next(step for step in steps if step.get("name") == "Stop MinIO fixture")
+    assert cleanup["if"] == "always()"
+    assert "minio.pid" in cleanup["run"]
 
 
 def test_backup_restore_workflow_proves_rls_maintenance_dump_contract():

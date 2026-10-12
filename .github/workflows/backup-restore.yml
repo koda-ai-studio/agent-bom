@@ -57,9 +57,7 @@ jobs:
       PG_MAJOR: '16'
 
     services:
-      # MinIO is launched as a step below rather than a service because its
-      # default entrypoint needs a subcommand that GitHub Actions' `services:`
-      # block cannot express cleanly. Postgres fits services: naturally.
+      # MinIO is built and launched on loopback in later steps.
       postgres:
         image: postgres:16-alpine
         env:
@@ -76,17 +74,28 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: '1.27.2'
+          cache: false
+
+      - name: Build MinIO from pinned upstream source
+        # Community images are no longer publicly pullable. Build the upstream
+        # RELEASE.2025-10-15T17-29-55Z commit for this loopback-only S3 fixture.
+        env:
+          GOBIN: ${{ runner.temp }}/minio-bin
+        run: go install github.com/minio/minio@9e49d5e7a648f00e26f2246f4dc28e6b07f8c84a
+
       - name: Start MinIO (S3-compatible object store)
-        # Docker Hub's minio/minio alias is no longer publicly pullable.
-        # Pin the upstream release and digest so the restore fixture is stable.
+        env:
+          MINIO_ROOT_USER: testuser
+          MINIO_ROOT_PASSWORD: testpassword
         run: |
           set -euo pipefail
-          docker run -d --name minio \
-            -p 9000:9000 -p 9001:9001 \
-            -e MINIO_ROOT_USER=testuser \
-            -e MINIO_ROOT_PASSWORD=testpassword \
-            quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e \
-            server /data --address :9000 --console-address :9001
+          "$RUNNER_TEMP/minio-bin/minio" server "$RUNNER_TEMP/minio-data" \
+            --address 127.0.0.1:9000 --console-address 127.0.0.1:9001 \
+            > "$RUNNER_TEMP/minio.log" 2>&1 &
+          echo "$!" > "$RUNNER_TEMP/minio.pid"
           for _ in $(seq 1 30); do
             if curl -fsS "$AWS_ENDPOINT_URL/minio/health/live" >/dev/null; then
               echo "MinIO is live"; exit 0
@@ -94,7 +103,7 @@ jobs:
             sleep 1
           done
           echo "::error::MinIO never became live"
-          docker logs minio || true
+          cat "$RUNNER_TEMP/minio.log"
           exit 1
 
       - name: Install postgresql-client-${{ env.PG_MAJOR }} + aws-cli
@@ -107,6 +116,7 @@ jobs:
             | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends "postgresql-client-${PG_MAJOR}"
+          echo "/usr/lib/postgresql/${PG_MAJOR}/bin" >> "$GITHUB_PATH"
           aws --version
 
       - uses: ./.github/actions/setup-python
@@ -307,3 +317,10 @@ jobs:
           echo "${tenant_breakdown}"
           tenant_count="$(echo "${tenant_breakdown}" | grep -c '^tenant-')"
           [ "${tenant_count}" = "3" ]
+
+      - name: Stop MinIO fixture
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/minio.pid" ]; then
+            kill "$(cat "$RUNNER_TEMP/minio.pid")" || true
+          fi
