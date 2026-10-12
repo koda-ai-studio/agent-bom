@@ -23,7 +23,7 @@ import {
   type Node,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { AlertTriangle, ChevronDown, Layers, Loader2, ShieldAlert } from "lucide-react";
+import { AlertTriangle, Layers, Loader2, ShieldAlert } from "lucide-react";
 
 import { AttackPathCard } from "@/components/attack-path-card";
 import { AttackPathTechniqueChain } from "@/components/attack-path-technique-chain";
@@ -864,6 +864,7 @@ function GraphPageInner() {
     }
   }, [canvasLens, searchParams]);
   const canvasAgent = searchParams.get("agent");
+  const hasRequestedInvestigation = decodeGraphInvestigationParams(searchParams) !== null;
   const canvasLensRef = useRef(canvasLens);
   const canvasAgentRef = useRef(canvasAgent);
   canvasLensRef.current = canvasLens;
@@ -930,12 +931,12 @@ function GraphPageInner() {
 
   useEffect(() => {
     const next = createCanvasLensGraphFilters(canvasLens, canvasAgent);
-    if (!next || requestedInvestigationRef.current || decodeGraphInvestigationParams(searchParams)) return;
+    if (!next || requestedInvestigationRef.current || hasRequestedInvestigation) return;
     setInvestigationMode(null);
     setReachabilitySummary(null);
     setReachabilityError(null);
     setFilters(next);
-  }, [canvasAgent, canvasLens]);
+  }, [canvasAgent, canvasLens, hasRequestedInvestigation]);
   const firstScanSelectionRef = useRef(true);
   // Last URL the filter→URL sync effect wrote, used to break an infinite
   // router.replace loop (see the sync effect below for the full rationale).
@@ -950,7 +951,7 @@ function GraphPageInner() {
     if (namedSnapshot) setSelectedScanId(requested);
     setLoadingSnapshots(true);
     setSnapshotListUnavailable(false);
-    Promise.allSettled([api.getGraphSnapshots(40, 0), !namedSnapshot ? api.getInventorySummary() : Promise.resolve(null)])
+    void Promise.allSettled([api.getGraphSnapshots(40, 0), !namedSnapshot ? api.getInventorySummary() : Promise.resolve(null)])
       .then(([saved, inventory]) => {
         if (cancelled) return;
         if (saved.status === "fulfilled") setSnapshots(saved.value);
@@ -2410,7 +2411,6 @@ function GraphPageInner() {
       ).length ?? null,
     [graphData],
   );
-  const graphTotal = graphData ? knownGraphTotal(graphData) : null;
 
   const hasContextualGraph = useMemo(
     () =>

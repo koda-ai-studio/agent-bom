@@ -84,7 +84,17 @@ class _HttpResponse(Protocol):
 
 
 class _HttpClient(Protocol):
-    def request(self, method: str, url: str, **kwargs: Any) -> _HttpResponse: ...
+    def request(
+        self,
+        method: str,
+        url: str,
+        *,
+        timeout: float,
+        auth: tuple[str, str] | None = None,
+        headers: dict[str, str] | None = None,
+        params: dict[str, Any] | None = None,
+        json: Any = None,
+    ) -> _HttpResponse: ...
 
 
 def list_trace_connectors() -> list[dict[str, Any]]:

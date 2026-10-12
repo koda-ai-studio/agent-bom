@@ -10,7 +10,6 @@ import {
   ChevronDown,
   ChevronRight,
   Database,
-  GitBranch,
   KeyRound,
   List,
   Network,
