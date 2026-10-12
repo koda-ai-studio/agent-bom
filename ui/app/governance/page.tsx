@@ -20,8 +20,8 @@ import {
 } from "@/lib/api";
 import type { GovernanceReport, GovernanceFinding } from "@/lib/api";
 import { useChartTheme } from "@/lib/theme-colors";
-import { IntegrationRequiredState } from "@/components/integration-required-state";
-import { PageEmptyState } from "@/components/states/page-state";
+
+import { PageEmptyState, PageErrorState } from "@/components/states/page-state";
 import { useDemoMode } from "@/hooks/use-demo-mode";
 import {
   ResponsiveContainer,
@@ -54,7 +54,7 @@ export default function GovernancePage() {
     api
       .getGovernance(days)
       .then(setReport)
-      .catch((e) => setError(e.message))
+      .catch(() => setError("Governance evidence unavailable"))
       .finally(() => setLoading(false));
   };
 
@@ -87,18 +87,10 @@ export default function GovernancePage() {
 
   if (error) {
     return (
-      <IntegrationRequiredState
-        title="Governance integration is not configured"
-        summary="This page mines access history, grants, data classifications, and agent usage from a cloud telemetry source. Core agent-bom scans do not depend on it. The current backend integration for this page uses Snowflake."
-        requirement="Cloud governance integration on the API host"
-        command={"pip install 'agent-bom[cloud]'\nexport SNOWFLAKE_ACCOUNT=...\nagent-bom serve"}
-        capabilities={[
-          "Access-history review across users, roles, and objects",
-          "Privilege and classification findings with severity filters",
-          "Cortex agent usage and governance-focused summaries",
-        ]}
-        detail={error}
-        onRetry={load}
+      <PageErrorState
+        title="Governance evidence unavailable"
+        detail="The current request did not return governance evidence. Check access and source health, then retry. An unavailable response does not establish that the integration is missing."
+        actions={[{ label: "Retry", onClick: load }, { label: "Review connections", href: "/connections" }]}
       />
     );
   }
@@ -125,6 +117,7 @@ export default function GovernancePage() {
           </p>
         </div>
         <select
+          aria-label="Governance time window"
           value={days}
           onChange={(e) => setDays(Number(e.target.value))}
           className="bg-[var(--surface)] border border-[var(--border-subtle)] rounded-md px-3 py-1.5 text-sm text-[var(--text-secondary)]"

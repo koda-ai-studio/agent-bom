@@ -51,6 +51,13 @@ export default function AuditLogPage() {
   const canManageKeys = hasCapability("keys.manage");
   const showAdmin = view === "admin" && canManageKeys;
 
+  useEffect(() => {
+    const restore = () => setView(window.location.hash === "#access" ? "admin" : "events");
+    restore();
+    window.addEventListener("hashchange", restore);
+    return () => window.removeEventListener("hashchange", restore);
+  }, []);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -242,7 +249,7 @@ export default function AuditLogPage() {
 
       </div>
       </>}
-      {showAdmin && <section aria-label="Access administration">
+      {showAdmin && <section id="access" aria-label="Access administration">
         <KeyLifecyclePanel loading={adminLoading} error={adminError} policy={authPolicy} keys={keys} onRefresh={loadAdmin} roleLabel={roleLabel} />
       </section>}
     </div>

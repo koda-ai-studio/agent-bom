@@ -4,25 +4,14 @@ import { Moon, Sun } from "lucide-react";
 import { useSyncExternalStore } from "react";
 
 import {
+  applyTheme,
+  readThemePreference,
+  type ThemePreference,
   getThemeModeServerSnapshot,
   readThemeMode,
   subscribeThemeMode,
   type ThemeMode,
 } from "@/lib/theme-mode";
-
-const THEME_STORAGE_KEY = "agent-bom-theme";
-
-function applyTheme(theme: ThemeMode) {
-  const root = document.documentElement;
-  root.dataset.theme = theme;
-  root.style.colorScheme = theme;
-  try {
-    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
-  } catch {
-    // Ignore storage failures; the theme still applies for this session.
-  }
-  window.dispatchEvent(new Event("agent-bom-theme-change"));
-}
 
 function subscribe(onChange: () => void) {
   return subscribeThemeMode(onChange);
@@ -56,4 +45,16 @@ export function ThemeToggle({ compact = false, className = "" }: { compact?: boo
       )}
     </button>
   );
+}
+
+
+export function ThemePreferenceControl() {
+  const preference = useSyncExternalStore(subscribeThemeMode, readThemePreference, (): ThemePreference => "dark");
+  return <div role="group" aria-label="Appearance" className="flex flex-wrap gap-2">
+    {(["light", "dark", "system"] as const).map(value => <button key={value} type="button" aria-pressed={preference === value}
+      onClick={() => applyTheme(value)}
+      className={`rounded-lg border px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-500 ${preference === value ? "border-emerald-500 bg-emerald-500/10 text-foreground" : "border-outline text-ink-secondary hover:bg-surface-muted"}`}>
+      {value[0]!.toUpperCase() + value.slice(1)}
+    </button>)}
+  </div>;
 }
