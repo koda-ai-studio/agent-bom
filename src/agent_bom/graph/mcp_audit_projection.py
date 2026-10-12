@@ -16,6 +16,9 @@ def project_mcp_audit_findings(graph: UnifiedGraph, findings: Any) -> None:
     """Use canonical IDs only; an unlinked observation stays unlinked."""
     if not isinstance(findings, list):
         return
+    rows = [row for row in findings if _is_audit_finding(row)]
+    if not rows:
+        return
     identities: dict[str, set[str]] = defaultdict(set)
     for node in graph.nodes.values():
         if node.entity_type in {EntityType.TOOL, EntityType.SERVER}:
@@ -23,14 +26,10 @@ def project_mcp_audit_findings(graph: UnifiedGraph, findings: Any) -> None:
                 value = node.attributes.get(key)
                 if isinstance(value, str) and value:
                     identities[value].add(node.id)
-    for row in findings:
-        if not isinstance(row, dict) or row.get("source") != "MCP_SCAN":
-            continue
+    for row in rows:
         evidence = row.get("evidence") or {}
         asset = row.get("asset") or {}
         if not isinstance(evidence, dict) or not isinstance(asset, dict):
-            continue
-        if evidence.get("detector") != "mcp_enforcement" and not evidence.get("mcp_auth_weakness") and not evidence.get("mcp_tool_rule"):
             continue
         finding_id = row.get("id")
         if not isinstance(finding_id, str) or not finding_id:
@@ -63,6 +62,15 @@ def project_mcp_audit_findings(graph: UnifiedGraph, findings: Any) -> None:
                     evidence={"source": "mcp-audit", "basis": "configuration", "runtime_reachability_verified": False},
                 )
             )
+
+
+def _is_audit_finding(row: Any) -> bool:
+    if not isinstance(row, dict) or row.get("source") != "MCP_SCAN":
+        return False
+    evidence = row.get("evidence")
+    return isinstance(evidence, dict) and bool(
+        evidence.get("detector") == "mcp_enforcement" or evidence.get("mcp_auth_weakness") or evidence.get("mcp_tool_rule")
+    )
 
 
 def _asset_targets(identities: dict[str, set[str]], asset: dict, evidence: dict) -> set[str]:

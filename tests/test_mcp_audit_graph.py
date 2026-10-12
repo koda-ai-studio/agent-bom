@@ -155,3 +155,15 @@ def test_persisted_api_audit_findings_and_hops_keep_scan_and_tenant_scope(tmp_pa
     finally:
         stores.set_graph_store(original_graph)
         set_job_store(original_jobs)
+
+
+def test_unrelated_findings_do_not_materialize_graph_inventory():
+    from agent_bom.graph.mcp_audit_projection import project_mcp_audit_findings
+
+    class UnreadableGraph:
+        @property
+        def nodes(self):
+            raise AssertionError("Unrelated findings must not load graph inventory")
+
+    for findings in ([], [{"id": "secret", "source": "SECRET_SCAN"}], [{"id": "package", "source": "MCP_SCAN", "evidence": {}}]):
+        project_mcp_audit_findings(UnreadableGraph(), findings)
