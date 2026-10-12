@@ -6,7 +6,11 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from deploy.supabase.postgres.compose_migrate import _normalize_sqlalchemy_url, top_up_observation_partition_runway
+from deploy.supabase.postgres.compose_migrate import (
+    _normalize_sqlalchemy_url,
+    configure_bootstrap_credentials,
+    top_up_observation_partition_runway,
+)
 
 config = context.config
 
@@ -72,12 +76,14 @@ def run_migrations_online() -> None:
         section,
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
+        hide_parameters=True,
     )
 
     with connectable.connect() as connection:
         context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
+            configure_bootstrap_credentials(connection)
             context.run_migrations()
             # Partition provisioning is migration-owned (the runtime roles are
             # DML-only), so the runway has to be topped up by every deploy —

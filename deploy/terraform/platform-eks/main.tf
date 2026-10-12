@@ -359,14 +359,14 @@ locals {
           {
             secretKey = "username"
             remoteRef = {
-              key      = module.baseline.db_secret_name
+              key      = module.baseline.db_secret_arn
               property = "username"
             }
           },
           {
             secretKey = "password"
             remoteRef = {
-              key      = module.baseline.db_secret_name
+              key      = module.baseline.db_secret_arn
               property = "password"
             }
           },
@@ -485,7 +485,7 @@ resource "helm_release" "control_plane_secrets" {
         var.app_db_secret_name,
         var.maintenance_db_secret_name,
         var.auth_secret_name,
-        module.baseline.db_secret_name,
+        module.baseline.db_secret_arn,
       ])) == 4
       error_message = "app, maintenance, auth, and RDS master Secrets Manager names must be distinct."
     }

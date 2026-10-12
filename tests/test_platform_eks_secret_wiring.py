@@ -175,20 +175,20 @@ def test_platform_eks_composes_three_distinct_database_identities(
     assert block.count('secretKey = "username"') == 1
     assert block.count('secretKey = "password"') == 1
     if remote_secret is None:
-        assert block.count("key      = module.baseline.db_secret_name") == 2
+        assert block.count("key      = module.baseline.db_secret_arn") == 2
     else:
         assert block.count(f"key      = var.{remote_secret}") == 2
-        assert "module.baseline.db_secret_name" not in block
+        assert "module.baseline.db_secret_arn" not in block
 
 
 def test_rds_master_secret_is_admin_only() -> None:
     """The RDS-managed master credential may feed migration, never runtime."""
     admin = _secret_block("control-plane-admin")
 
-    assert admin.count("module.baseline.db_secret_name") == 2
-    assert MAIN.count("module.baseline.db_secret_name") == 3
-    assert "module.baseline.db_secret_name" not in _secret_block("control-plane-db")
-    assert "module.baseline.db_secret_name" not in _secret_block("control-plane-maintenance")
+    assert admin.count("module.baseline.db_secret_arn") == 2
+    assert MAIN.count("module.baseline.db_secret_arn") == 3
+    assert "module.baseline.db_secret_arn" not in _secret_block("control-plane-db")
+    assert "module.baseline.db_secret_arn" not in _secret_block("control-plane-maintenance")
 
 
 def test_workloads_receive_only_the_database_identities_they_need() -> None:

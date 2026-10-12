@@ -70,7 +70,8 @@ def test_normalize_sqlalchemy_url_selects_shipped_driver(raw: str, expected: str
 
 def test_alembic_env_normalizes_driverless_postgres_urls() -> None:
     env_source = (Path(__file__).parents[1] / "deploy/supabase/postgres/alembic/env.py").read_text(encoding="utf-8")
-    assert "from deploy.supabase.postgres.compose_migrate import _normalize_sqlalchemy_url" in env_source
+    assert "from deploy.supabase.postgres.compose_migrate import" in env_source
+    assert "_normalize_sqlalchemy_url," in env_source
     assert "url = _normalize_sqlalchemy_url(url)" in env_source
 
 
@@ -151,3 +152,45 @@ def test_main_preserves_custom_alembic_config(monkeypatch: pytest.MonkeyPatch, t
 
     assert cm.main(["--config", "deploy/custom-alembic.ini"]) == 0
     assert calls == [("deploy/custom-alembic.ini", "upgrade", "head")]
+
+
+def test_bootstrap_passwords_are_bound_before_fresh_schema(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Fresh RDS has no app login; baseline role creation needs both secrets."""
+    monkeypatch.setenv("AGENT_BOM_POSTGRES_URL", "postgresql://agent_bom_app:app%27secret@db/app")
+    monkeypatch.setenv("AGENT_BOM_POSTGRES_MAINTENANCE_URL", "postgresql://agent_bom_maintenance:maintenance-secret@db/app")
+    monkeypatch.delenv("AGENT_BOM_POSTGRES_PASSWORD_FILE", raising=False)
+    monkeypatch.delenv("AGENT_BOM_POSTGRES_MAINTENANCE_PASSWORD_FILE", raising=False)
+    calls: list[tuple[str, tuple[str, str]]] = []
+    connection = SimpleNamespace(exec_driver_sql=lambda sql, parameters: calls.append((sql, parameters)))
+    cm.configure_bootstrap_credentials(connection)
+    assert [parameters for _, parameters in calls] == [
+        ("init.app_password", "app'secret"),
+        ("init.maintenance_password", "maintenance-secret"),
+    ]
+    assert all(sql == "SELECT set_config(%s, %s, true)" for sql, _ in calls)
+    env_source = (Path(__file__).parents[1] / "deploy/supabase/postgres/alembic/env.py").read_text()
+    online = env_source.split("def run_migrations_online()", 1)[1]
+    assert (
+        online.index("with context.begin_transaction():")
+        < online.index("configure_bootstrap_credentials(connection)")
+        < online.index("context.run_migrations()")
+    )
+    assert "hide_parameters=True" in online
+
+
+@pytest.mark.parametrize("url", ["postgresql://unexpected:secret@db/app", "postgresql://agent_bom_app@db/app"])
+def test_bootstrap_credentials_reject_rebinding_and_empty_password(monkeypatch: pytest.MonkeyPatch, url: str) -> None:
+    monkeypatch.setenv("AGENT_BOM_POSTGRES_URL", url)
+    monkeypatch.delenv("AGENT_BOM_POSTGRES_PASSWORD_FILE", raising=False)
+    calls: list[object] = []
+    with pytest.raises(SystemExit):
+        cm.configure_bootstrap_credentials(SimpleNamespace(exec_driver_sql=lambda *args: calls.append(args)))
+    assert calls == []
+
+
+def test_bootstrap_credentials_preserve_out_of_band_role_path(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("AGENT_BOM_POSTGRES_URL", raising=False)
+    monkeypatch.delenv("AGENT_BOM_POSTGRES_MAINTENANCE_URL", raising=False)
+    calls: list[object] = []
+    cm.configure_bootstrap_credentials(SimpleNamespace(exec_driver_sql=lambda *args: calls.append(args)))
+    assert calls == []
