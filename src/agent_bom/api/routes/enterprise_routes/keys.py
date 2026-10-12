@@ -9,6 +9,7 @@ import anyio.to_thread
 from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 
+from agent_bom.api.browser_session import SIGNED_OUT_COOKIE_NAME
 from agent_bom.api.models import CreateKeyRequest, RotateKeyRequest
 from agent_bom.api.read_models._base import documented
 from agent_bom.api.read_models.enterprise import ApiKeysResponse
@@ -45,6 +46,9 @@ def create_loopback_dev_session(request: Request, response: Response) -> None:
         raise HTTPException(status_code=404, detail="Loopback dev session is not active")
     if not _loopback_browser_origin(request):
         raise HTTPException(status_code=403, detail="Loopback browser origin required")
+
+    if request.cookies.get(SIGNED_OUT_COOKIE_NAME) == "1" and request.headers.get("X-Agent-Bom-Session-Resume") != "true":
+        raise HTTPException(status_code=409, detail="Explicit sign-in required after sign-out")
 
     _set_browser_session_cookie(
         response,

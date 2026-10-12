@@ -59,6 +59,7 @@ from agent_bom.api.models import (
     TracingHealth,
     VersionInfo,
 )
+from agent_bom.api.routes.enterprise_routes._session_helpers import _maybe_attach_dev_session_cookie as _maybe_attach_dev_session_cookie
 from agent_bom.api.scan_snapshot_store import expire_jobs_and_snapshots
 from agent_bom.api.storage.analytics import peek_analytics_store
 from agent_bom.api.storage_schema import postgres_deployment_configured
@@ -957,7 +958,7 @@ def _apply_cors_middleware(origins: list[str]) -> None:
         allow_origins=origins,
         allow_credentials="*" not in origins,
         allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        allow_headers=["Content-Type", "Authorization", "X-API-Key", "X-Agent-Bom-CSRF"],
+        allow_headers=["Content-Type", "Authorization", "X-API-Key", "X-Agent-Bom-CSRF", "X-Agent-Bom-Session-Resume"],
     )
     if app.middleware_stack is not None:
         app.middleware_stack = app.build_middleware_stack()
@@ -1509,71 +1510,6 @@ def _dashboard_html_response(dashboard_file: _DashboardFile) -> HTMLResponse:
     except UnicodeDecodeError:
         html = dashboard_file.path.read_text(encoding="utf-8", errors="replace")
     return HTMLResponse(_DASHBOARD_CSP_META_RE.sub("", html))
-
-
-_DEV_SESSION_MAX_AGE_SECONDS = 8 * 60 * 60
-
-
-def _maybe_attach_dev_session_cookie(response: Any, request: Request) -> None:
-    """Seed a loopback browser session so the zero-config dev key authenticates
-    the same-origin dashboard without any flag or manual key entry.
-
-    No-op unless an ephemeral dev key is active. The dev key is only ever set on
-    a loopback bind (the CLI auth gate refuses non-loopback binds before the key
-    is generated), so a set key already means "loopback, no other auth". The
-    minted session carries no ``key_id``, so it stays valid for the process
-    lifetime without depending on key-store lookups, and is re-used across page
-    loads instead of churning a fresh nonce each request.
-    """
-    if get_dev_api_key() is None or not _host_guard.is_loopback_hostname(
-        _host_guard.hostname_from_authority(request.headers.get("host", ""))
-    ):
-        return
-    from agent_bom.api.browser_session import (
-        CSRF_COOKIE_NAME,
-        SESSION_COOKIE_NAME,
-        BrowserSessionError,
-        create_browser_session_token,
-        verify_browser_session_token,
-    )
-
-    existing = request.cookies.get(SESSION_COOKIE_NAME, "")
-    if existing:
-        try:
-            verify_browser_session_token(existing)
-            return
-        except BrowserSessionError:
-            pass
-    try:
-        token, csrf = create_browser_session_token(
-            subject="loopback-dev-key",
-            role=get_dev_api_role().value,
-            tenant_id="default",
-            auth_method="browser_session_dev_key",
-            key_id=None,
-            scopes=[],
-            max_age_seconds=_DEV_SESSION_MAX_AGE_SECONDS,
-        )
-    except BrowserSessionError:
-        return
-    response.set_cookie(
-        SESSION_COOKIE_NAME,
-        token,
-        max_age=_DEV_SESSION_MAX_AGE_SECONDS,
-        httponly=True,
-        secure=False,
-        samesite="strict",
-        path="/",
-    )
-    response.set_cookie(
-        CSRF_COOKIE_NAME,
-        csrf,
-        max_age=_DEV_SESSION_MAX_AGE_SECONDS,
-        httponly=False,
-        secure=False,
-        samesite="strict",
-        path="/",
-    )
 
 
 @app.api_route("/", methods=["GET", "HEAD"], include_in_schema=False)

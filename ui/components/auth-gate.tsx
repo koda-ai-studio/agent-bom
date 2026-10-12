@@ -54,7 +54,7 @@ function ContinueOfflineButton() {
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
-  const { session, loading, error, reconnecting } = useAuthState();
+  const { session, loading, error, reconnecting, signedOut } = useAuthState();
   const offlineReportMode = useOfflineReportMode();
 
   const needsAuth =
@@ -63,10 +63,10 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     (!error || isAuthFailure(error));
 
   useEffect(() => {
-    if (!needsAuth || offlineReportMode || pathname === "/login") return;
+    if (!needsAuth || (offlineReportMode && !signedOut) || pathname === "/login") return;
     const returnTo = encodeURIComponent(`${pathname || "/"}${window.location.search}${window.location.hash}`);
     router.replace(`/login?returnTo=${returnTo}`);
-  }, [needsAuth, offlineReportMode, pathname, router]);
+  }, [needsAuth, offlineReportMode, pathname, router, signedOut]);
 
   if (loading) {
     return (
@@ -86,7 +86,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   // The user asked to work from a local report. Say so plainly — nothing on
   // screen below this banner came from the control plane — and keep the way
   // back to signing in one click away.
-  if (offlineReportMode) {
+  if (offlineReportMode && !signedOut) {
     return (
       <>
         <div

@@ -231,7 +231,7 @@ export function ConnectionsHub() {
       // The connection now exists; the wizard stays open on its Verify step so the
       // operator sees the live connectivity/permission check before closing. We
       // refresh the background list so the new row appears immediately.
-      setMessage(`Connected ${created.display_name}.`);
+      setMessage(`Saved ${created.display_name}. Verify access before collecting evidence.`);
       void refresh();
     },
     [refresh],

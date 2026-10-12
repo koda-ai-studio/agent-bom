@@ -54,6 +54,8 @@ import { CommandPalette, type CommandPaletteAction } from "@/components/command-
 import { DemoNavSignIn } from "@/components/demo-mode-cta";
 import { useSidebarLayout } from "@/components/sidebar-layout";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { AccountMenu } from "@/components/account-menu";
+import { applyTheme, readThemeMode } from "@/lib/theme-mode";
 import {
   deploymentModeLabel,
   isDemoEstate,
@@ -219,7 +221,7 @@ const NAV_GROUPS: NavGroup[] = [
         desc: "Operator checks for this deployment's authentication, isolation, audit, and secret controls",
       },
     ],
-    secondary: [{ href: "/registry", label: "MCP Catalog", icon: Boxes }],
+    secondary: [{ href: "/registry", label: "MCP Catalog", icon: Boxes }, { href: "/settings", label: "Settings", icon: Cog }],
   },
 ];
 
@@ -305,7 +307,7 @@ export function Nav() {
   const previousPathRef = useRef(path);
   const { counts } = useDeploymentContext();
   const openIssues = useMemo(() => openIssueSeverity(counts), [counts]);
-  const { session, loading: authLoading, hasCapability } = useAuthState();
+  const { session, hasCapability } = useAuthState();
 
   // Close mobile on route change
   useEffect(() => {
@@ -557,12 +559,7 @@ export function Nav() {
         icon: SunMoon,
         keywords: ["dark", "light"],
         run: () => {
-          const current = document.documentElement.dataset.theme === "light" ? "light" : "dark";
-          const next = current === "dark" ? "light" : "dark";
-          document.documentElement.dataset.theme = next;
-          document.documentElement.style.colorScheme = next;
-          window.localStorage.setItem("agent-bom-theme", next);
-          window.dispatchEvent(new Event("agent-bom-theme-change"));
+          applyTheme(readThemeMode() === "dark" ? "light" : "dark");
         },
       },
     ],
@@ -844,8 +841,6 @@ export function Nav() {
       {/* Bottom section — collapsed by default so nav lanes keep vertical space */}
       <SidebarFooter
         collapsed={isCollapsed}
-        authLoading={authLoading}
-        session={session}
         path={path}
       />
     </>
@@ -886,6 +881,7 @@ export function Nav() {
           </button>
           <ThemeToggle compact className="shrink-0" />
           <ApiStatus collapsed={false} />
+          <AccountMenu />
           <button
             ref={mobileMenuButtonRef}
             onClick={() => setMobileOpen(!mobileOpen)}
@@ -948,117 +944,14 @@ export function Nav() {
   );
 }
 
-function SidebarFooter({
-  collapsed,
-  authLoading,
-  session,
-  path,
-}: {
-  collapsed: boolean;
-  authLoading: boolean;
-  session: ReturnType<typeof useAuthState>["session"];
-  path: string | null;
-}) {
-  const feedbackLink = (
-    <Link
-      href={`/help?from=${encodeURIComponent(path ?? "/")}`}
-      className={`flex items-center gap-2 rounded-lg border border-outline bg-surface-muted px-3 py-2 text-[12px] text-ink-secondary transition-colors hover:border-outline-strong hover:text-foreground ${collapsed ? "justify-center px-2" : ""}`}
-      title="Share feedback or report a bug"
-    >
-      <MessageSquareQuote className="h-4 w-4 shrink-0" />
-      {!collapsed && <span>Feedback &amp; Bug Report</span>}
+function SidebarFooter({ collapsed, path }: { collapsed: boolean; path: string | null }) {
+  return <div className="space-y-2 border-t border-outline px-3 py-3">
+    <DemoNavSignIn collapsed={collapsed} />
+    <Link href={`/help?from=${encodeURIComponent(path ?? "/")}`} aria-label="Feedback & Bug Report"
+      className={`flex items-center gap-2 rounded-lg px-2 py-2 text-xs text-ink-secondary hover:bg-surface-muted ${collapsed ? "justify-center" : ""}`}>
+      <MessageSquareQuote className="h-4 w-4 shrink-0" />{!collapsed && <span>Feedback &amp; Bug Report</span>}
     </Link>
-  );
-
-  if (collapsed) {
-    return (
-      <div className="border-t border-outline px-2 py-3">
-        <div className="space-y-2">
-          <SessionStatus collapsed loading={authLoading} session={session} />
-          <DemoNavSignIn collapsed />
-          {feedbackLink}
-        </div>
-      </div>
-    );
-  }
-
-  const footerHint = authLoading
-    ? "Checking session…"
-    : session?.authenticated
-      ? `Signed in · ${session.subject ?? session.role_summary?.display_name ?? session.role ?? "user"}`
-      : "Sign-in required";
-
-  return (
-    <div className="border-t border-outline px-3 py-3">
-      <details className="group/footer">
-        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-lg border border-outline bg-surface-muted px-3 py-2 text-[11px] text-ink-secondary [&::-webkit-details-marker]:hidden">
-          <span className="truncate">{footerHint}</span>
-          <ChevronRight className="h-3.5 w-3.5 shrink-0 text-ink-tertiary transition-transform group-open/footer:rotate-90" />
-        </summary>
-        <div className="mt-2 space-y-2">
-          <SessionStatus collapsed={false} loading={authLoading} session={session} embedded />
-          <DemoNavSignIn />
-          {feedbackLink}
-        </div>
-      </details>
-    </div>
-  );
-}
-
-function SessionStatus({
-  collapsed,
-  loading,
-  session,
-  embedded = false,
-}: {
-  collapsed: boolean;
-  loading: boolean;
-  session: ReturnType<typeof useAuthState>["session"];
-  embedded?: boolean;
-}) {
-  if (collapsed) {
-    if (loading) {
-      return <div className="mx-auto h-2 w-2 rounded-full bg-ink-tertiary animate-pulse" title="Checking session" />;
-    }
-    if (session?.authenticated) {
-      return (
-        <div
-          className="mx-auto h-2 w-2 rounded-full bg-emerald-500"
-          title={`${session.role_summary?.display_name ?? session.role ?? "Authenticated"} · tenant ${session.tenant_id}`}
-        />
-      );
-    }
-    return <div className="mx-auto h-2 w-2 rounded-full bg-amber-500" title="Authentication required" />;
-  }
-
-  if (loading) {
-    return (
-      <div className="rounded-lg border border-outline bg-surface-muted px-3 py-2 text-[12px] text-ink-secondary">
-        Checking session…
-      </div>
-    );
-  }
-
-  if (!session?.authenticated) {
-    if (embedded) {
-      return null;
-    }
-    return (
-      <div className="rounded-lg border border-outline bg-surface-muted px-3 py-2 text-[12px] text-ink-secondary">
-        Sign-in required for protected control-plane actions
-      </div>
-    );
-  }
-
-  return (
-    <div className="rounded-lg border border-outline bg-surface-muted px-3 py-2">
-      <p className="text-[10px] uppercase tracking-[0.18em] text-ink-tertiary">Signed in</p>
-      <p className="mt-1 truncate text-[12px] font-medium text-foreground">{session.subject ?? "Authenticated user"}</p>
-      <p className="mt-1 text-[11px] text-ink-secondary">
-        {session.role_summary?.display_name ?? session.role ?? "Unknown"} · tenant {session.tenant_id}
-      </p>
-    </div>
-  );
+  </div>;
 }
 
 // ─── API Status ─────────────────────────────────────────────────────────────

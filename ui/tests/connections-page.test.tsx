@@ -477,7 +477,7 @@ describe("ConnectionsPage — Connect segment", () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByText("Connected Production account.")).toBeInTheDocument(),
+      expect(screen.getByText("Saved Production account. Verify access before collecting evidence.")).toBeInTheDocument(),
     );
 
     // Create advances to Verify (does not close), which auto-runs the real test.

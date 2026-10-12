@@ -42,3 +42,13 @@ describe("GovernancePage public demo", () => {
     expect(apiMock.getGovernance).not.toHaveBeenCalled();
   });
 });
+
+it("does not misdiagnose an unavailable service as a missing integration or display raw errors", async () => {
+  demoMode.isDemoMode = false;
+  apiMock.getGovernance.mockRejectedValue(new Error("private-connection-details"));
+  render(<GovernancePage />);
+  await screen.findByText("Governance evidence unavailable");
+  expect(screen.queryByText("Governance integration is not configured")).not.toBeInTheDocument();
+  expect(screen.queryByText("private-connection-details")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+});

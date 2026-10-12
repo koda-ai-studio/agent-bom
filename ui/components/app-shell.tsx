@@ -38,8 +38,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       >
         Skip to content
       </a>
-      <Nav />
       <AuthGate>
+        <Nav />
         <ShellMain>{children}</ShellMain>
       </AuthGate>
     </SidebarLayoutProvider>

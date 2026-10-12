@@ -579,6 +579,7 @@ function _runInvalidations(path: string): void {
 
 /** A session change, even a failed one, may change the principal; no prior response is reusable. */
 function _sessionChange(request: () => Promise<void>): Promise<void> {
+  _clearCache();
   return request().finally(_clearCache);
 }
 
@@ -876,7 +877,7 @@ export const api = {
   updateTenantQuota: (body: TenantQuotaUpdateRequest) =>
     put<AuthPolicyResponse["tenant_quota_runtime"]>("/v1/auth/quota", body),
   resetTenantQuota: () => del("/v1/auth/quota"),
-  createDevAuthSession: () => _sessionChange(() => postVoid("/v1/auth/dev-session", {})),
+  createDevAuthSession: (resume = false) => _sessionChange(() => postVoid("/v1/auth/dev-session", {}, resume ? { "X-Agent-Bom-Session-Resume": "true" } : {})),
   createAuthSession: (apiKey: string) => _sessionChange(() => postVoid("/v1/auth/session", { api_key: apiKey })),
   deleteAuthSession: () => _sessionChange(() => del("/v1/auth/session")),
   reportClientError: (body: { message: string; digest?: string | undefined; path?: string | undefined; component?: string | undefined }) =>

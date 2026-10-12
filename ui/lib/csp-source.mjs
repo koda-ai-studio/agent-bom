@@ -14,8 +14,10 @@ export const THEME_BOOTSTRAP_SCRIPT = `
 (function () {
   try {
     var stored = localStorage.getItem("agent-bom-theme");
-    var theme = stored === "light" || stored === "dark" ? stored : "dark";
+    var preference = stored === "light" || stored === "system" ? stored : "dark";
+    var theme = preference === "system" ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : preference;
     var root = document.documentElement;
+    root.dataset.themePreference = preference;
     root.dataset.theme = theme;
     root.style.colorScheme = theme;
   } catch (error) {

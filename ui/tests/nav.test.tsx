@@ -733,48 +733,27 @@ describe('Nav', () => {
     expect(screen.getAllByRole('link', { name: /^traces$/i }).some((link) => link.getAttribute('href') === '/traces')).toBe(true)
   })
 
-  it('shows a single sign-in hint in the expanded session footer without duplicate copy', () => {
+  it('shows offline context without claiming a signed-in identity', () => {
     authStateMock.loading = false
-    authStateMock.session = {
-      authenticated: false,
-      auth_required: true,
-      tenant_id: 'default',
-      subject: null,
-      role: null,
-      role_summary: null,
-    }
-
     renderExpandedNav()
-
-    expect(screen.getByText('Sign-in required')).toBeInTheDocument()
-    expect(
-      screen.queryByText('Sign-in required for protected control-plane actions'),
-    ).not.toBeInTheDocument()
-
-    fireEvent.click(screen.getByText('Sign-in required'))
-    expect(
-      screen.queryByText('Sign-in required for protected control-plane actions'),
-    ).not.toBeInTheDocument()
+    fireEvent.click(screen.getByLabelText(/^Account menu:/))
+    expect(screen.getByText('No control-plane session')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Sign out' })).not.toBeInTheDocument()
   })
 
-  it('surfaces signed-in identity when the session footer is expanded', () => {
+  it('shows the verified identity and scope in the account menu', () => {
     authStateMock.loading = false
     authStateMock.session = {
-      authenticated: true,
-      auth_required: true,
-      tenant_id: 'tenant-acme',
-      subject: 'security@acme.example',
-      role: 'analyst',
+      authenticated: true, auth_required: true, tenant_id: 'tenant-acme', subject: 'security@acme.example', role: 'analyst',
       role_summary: { display_name: 'Security analyst', capabilities: ['inventory.read'] },
     }
-
     renderExpandedNav()
-
-    expect(screen.getByText(/Signed in · security@acme\.example/)).toBeInTheDocument()
-    fireEvent.click(screen.getByText(/Signed in · security@acme\.example/))
-    expect(screen.getByText('Signed in')).toBeInTheDocument()
-    expect(screen.getByText('security@acme.example')).toBeInTheDocument()
-    expect(screen.getByText(/Security analyst · tenant tenant-acme/)).toBeInTheDocument()
+    fireEvent.click(screen.getByLabelText(/^Account menu:/))
+    const details = screen.getByLabelText('Account details')
+    expect(within(details).getByText('security@acme.example')).toBeInTheDocument()
+    expect(within(details).getByText(/Security analyst · tenant-acme/)).toBeInTheDocument()
+    expect(within(details).getByRole('button', { name: 'Sign out' })).toBeInTheDocument()
+    expect(within(details).queryByRole('link', { name: 'Access & keys' })).not.toBeInTheDocument()
   })
 
   it('keeps CI-only scans from masquerading as workstation deployment context', async () => {

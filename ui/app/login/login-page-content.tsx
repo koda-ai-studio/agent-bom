@@ -13,7 +13,7 @@ import { safeReturnPath } from "@/lib/safe-return-path";
 export function LoginPageContent({ trialInvitation }: { trialInvitation: ReactNode }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { session, loading } = useAuthState();
+  const { session, loading, signedOut } = useAuthState();
   const returnTo = defaultOperatorLanding(safeReturnPath(searchParams.get("returnTo")));
 
   useEffect(() => {
@@ -31,7 +31,7 @@ export function LoginPageContent({ trialInvitation }: { trialInvitation: ReactNo
         in-browser report importer. Without this, a user holding a report file
         and no working sign-in has nowhere left to go.
       */}
-      <div className="pb-10 text-center">
+      {!signedOut && <div className="pb-10 text-center">
         <button
           type="button"
           onClick={() => {
@@ -43,7 +43,7 @@ export function LoginPageContent({ trialInvitation }: { trialInvitation: ReactNo
           <FileText className="h-4 w-4" />
           Continue offline with a report file
         </button>
-      </div>
+      </div>}
     </>
   );
 }

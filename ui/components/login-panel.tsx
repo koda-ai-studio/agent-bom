@@ -41,7 +41,7 @@ export function LoginPanel({
   title?: string;
   trialInvitation?: ReactNode;
 }) {
-  const { session, loading, error, refresh } = useAuthState();
+  const { session, loading, error, refresh, signedOut, signOutConfirmed, signOutError, signOut, resumeSession } = useAuthState();
   const [apiKey, setApiKey] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [authUnconfigured, setAuthUnconfigured] = useState(false);
@@ -65,6 +65,15 @@ export function LoginPanel({
         />
       </div>
     );
+  }
+
+  if (signedOut) {
+    return <div className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center gap-4 px-5">
+      <BrandLogo /><h1 className="text-2xl font-semibold">{signOutConfirmed ? "Signed out" : "Browser locked"}</h1>
+      <p className="text-sm leading-6 text-ink-secondary">Your identity provider or reverse proxy may still have an active session. Continue when you are ready to sign in again.</p>
+      {!signOutConfirmed && <><p role="alert" className="text-sm text-ink-secondary">{signOutError || "Server sign-out has not been confirmed. Retry to revoke the local session."}</p><button type="button" onClick={() => void signOut()} className="rounded-lg border border-outline px-4 py-2">Retry sign-out</button></>}
+      <button type="button" onClick={() => void resumeSession()} className="rounded-lg bg-emerald-500 px-4 py-2 font-medium text-[var(--on-accent)]">Continue to sign in</button>
+    </div>;
   }
 
   if (signedIn) {
