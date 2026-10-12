@@ -353,7 +353,7 @@ function buildScopeShowcase(kind) {
         ["config:demo", "config_file", "deployment.yaml"], ["ci:demo", "ci_job", "Build and scan"],
         ["package:demo", "package", "pillow@9.0.0", { ecosystem: "pypi", version: "9.0.0" }],
         ["container:demo", "container", "Document worker"],
-        ["cve:demo", "vulnerability", "CVE-2023-4863", { ...advisory("CVE-2023-4863"), simulated: true }]],
+        ["cve:demo", "vulnerability", "CVE-2023-4863", { ...referenceGraph.nodes.find(n => n.label === "CVE-2023-4863").attributes, simulated: true }]],
       edges: [["repo:demo", "source:demo", "contains"], ["repo:demo", "config:demo", "contains"],
         ["repo:demo", "ci:demo", "contains"], ["source:demo", "package:demo", "imports"],
         ["config:demo", "container:demo", "configures"], ["ci:demo", "container:demo", "configures"],
