@@ -104,6 +104,14 @@ collection revisions. `GET /v1/runtime/observation-revisions?observation_id=...`
 reads paged, tenant-scoped history. SQLite and PostgreSQL store observations,
 revisions, session counters and page checkpoints in the same transaction.
 
+The trace explorer accepts exact `source`, `session_id`, `agent_name` and
+`connection_id` filters, plus `limit` (1–200) and `offset`. Filtering happens
+before pagination. `retained_total` and `source_counts` describe matching retained
+observations at query time, not total provider history. Concurrent collection can
+change these live counts between pages. The gateway feed appears only on the
+first unfiltered page; it is separate from the retained-observation total.
+
+
 ## Exact inventory identifiers
 
 A managed connection may specify `cloud_provider`, `account_id` and `environment`
@@ -120,6 +128,18 @@ a source-reported identifier association: it does not authenticate the workload,
 prove invocation or downstream effects, establish current permission, or prove
 exploitation. Imported spans do not inherit findings through display-name matches.
 Legacy tool-name correlation results remain explicitly labeled candidates.
+
+Sources can additionally pin `agent_bom.inventory_scan_id` and
+`agent_bom.inventory_generation`; a mismatched pin yields no entity link. For an
+exact match, the explorer returns up to ten recorded inventory paths to
+vulnerabilities, following only directed uses, dependency, containment and
+vulnerability relationships. Traversal is bounded to four hops, 500 nodes,
+1,000 edges and a 500 ms store deadline. Returned paths carry node/edge IDs and
+the snapshot generation; truncation is disclosed. These paths do not prove that
+the span executed the package, exploited the finding or completed a downstream
+action. Inspect the pinned graph and its source receipts before making those
+claims.
+
 
 Contract tests: [broker boundaries](../tests/test_trace_connection_broker.py),
 [content consent](../tests/test_trace_pull_screen_content.py), and

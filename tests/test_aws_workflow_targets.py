@@ -90,3 +90,36 @@ def test_workflow_qualified_lambda_has_readable_name_and_configuration_basis(mon
     assert not server.is_mcp_surface
     assert server.connection_metadata["relationship_basis"] == "configured_workflow_target"
     assert server.connection_metadata["execution_proven"] is False
+
+
+def test_cloudtrail_denied_lambda_attempt_is_not_success():
+    import json
+
+    from agent_bom.cloud.audit_trail import _normalize_aws_event, aggregate_events
+
+    event = _normalize_aws_event(
+        {
+            "EventName": "Invoke",
+            "Username": "runtime",
+            "Resources": [{"ResourceName": "arn:aws:lambda:us-east-1:111111111111:function:invoice:3"}],
+            "CloudTrailEvent": json.dumps({"errorCode": "AccessDenied", "errorMessage": "must not retain this secret"}),
+        }
+    )
+    assert event is not None and event.outcome == "failure"
+    rows = aggregate_events([event])
+    assert rows[0]["failure_count"] == 1
+    assert "secret" not in str(rows)
+
+
+def test_cloudtrail_async_acceptance_does_not_claim_function_completion():
+    import json
+
+    from agent_bom.cloud.audit_trail import _normalize_aws_event
+
+    row = {"EventName": "Invoke", "Username": "runtime", "Resources": [{"ResourceName": "function"}]}
+    event = _normalize_aws_event(
+        {**row, "CloudTrailEvent": json.dumps({"requestParameters": {"invocationType": "Event"}, "responseElements": {"statusCode": 202}})}
+    )
+    assert event is not None and event.outcome == "accepted"
+    assert _normalize_aws_event({**row, "CloudTrailEvent": "malformed"}).outcome == "unknown"
+    assert _normalize_aws_event(row).outcome == "unknown"

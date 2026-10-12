@@ -10,4 +10,3 @@ export function AdminAssessment({ attributes }: { attributes: Record<string, unk
     {Array.isArray(attributes.admin_equivalence_resource_scopes) && attributes.admin_equivalence_resource_scopes.length > 0 && <p className="break-all text-xs">Scope: {attributes.admin_equivalence_resource_scopes.filter((scope): scope is string => typeof scope === "string").join(", ")}</p>}
   </div>;
 }
-

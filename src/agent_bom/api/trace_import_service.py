@@ -18,7 +18,7 @@ from typing import Any
 
 from agent_bom.api.native_trace_import import TraceImportScope, prepare_trace_page
 from agent_bom.api.runtime_event_store import RuntimeEventStore
-from agent_bom.api.storage.runtime_trace_imports import TraceImportCheckpoint
+from agent_bom.api.storage.runtime_trace_imports import TraceImportCheckpoint, TraceImportConflictError
 from agent_bom.trace_connectors import NativeTracePage, TraceConnectorError, _TraceConnectorHTTPError
 
 
@@ -64,6 +64,12 @@ def import_native_pages(
                 "retryable": status not in {400, 401, 403, 404, 410},
             }
             break
+        cursor_history = current.cursor_history
+        if page.cursor is not None:
+            digest = hashlib.sha256(page.cursor.encode()).hexdigest()
+            if page.cursor == current.cursor or digest in cursor_history or len(cursor_history) >= 1000:
+                raise TraceImportConflictError("Provider cursor cycle or page limit reached; checkpoint retained")
+            cursor_history = (*cursor_history, digest)
         if on_page is not None:
             on_page(page.payload)
         prepared = prepare_trace_page(page.payload, scope=scope, collected_at=collected_at)
@@ -75,6 +81,7 @@ def import_native_pages(
             complete=page.cursor is None,
             updated_at=collected_at,
             rejected_count=current.rejected_count + rejected_count,
+            cursor_history=cursor_history,
         )
         committed = store.commit_trace_page(next_checkpoint, prepared.observations, expected_revision=current.revision)
         counts["fetched"] += page.fetched

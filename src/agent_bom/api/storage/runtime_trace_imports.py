@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
@@ -38,8 +39,16 @@ class TraceImportCheckpoint:
     complete: bool = False
     scope_key: str = ""
     rejected_count: int = 0
+    cursor_history: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
+        # JSON storage decodes tuples as lists. Retain only bounded cursor hashes,
+        # never opaque provider cursor values in the traversal history.
+        if not isinstance(self.cursor_history, (tuple, list)) or len(self.cursor_history) > 1000:
+            raise ValueError("Trace import cursor history is invalid")
+        if any(not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value) for value in self.cursor_history):
+            raise ValueError("Trace import cursor history is invalid")
+        object.__setattr__(self, "cursor_history", tuple(self.cursor_history))
         if any(not isinstance(value, str) or not value or len(value) > 512 for value in (self.tenant_id, self.import_id)):
             raise ValueError("Trace import scope is invalid")
         if isinstance(self.revision, bool) or not isinstance(self.revision, int) or not 1 <= self.revision < 2**31:
@@ -68,6 +77,8 @@ def check_revision(current: TraceImportCheckpoint | None, expected_revision: int
     if (current.revision if current else 0) != expected_revision:
         raise TraceImportConflictError("Trace import checkpoint changed; resume from the committed page")
     if current is not None:
+        if next_checkpoint.cursor_history[: len(current.cursor_history)] != current.cursor_history:
+            raise ValueError("Trace import cursor history cannot be discarded while resuming")
         if current.scope_key != next_checkpoint.scope_key or next_checkpoint.rejected_count < current.rejected_count:
             raise ValueError("Trace import scope and rejected evidence cannot change while resuming")
         if current.complete:

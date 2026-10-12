@@ -200,3 +200,21 @@ def test_revision_read_route_is_tenant_scoped_and_bounded(tmp_path, monkeypatch)
     assert routes.list_runtime_observation_revisions(request, record.observation_id, limit=1, offset=1)["count"] == 0
     request.state.tenant_id = "other"
     assert routes.list_runtime_observation_revisions(request, record.observation_id, limit=1, offset=0)["count"] == 0
+
+
+def test_provider_cursor_cycle_is_rejected_after_restart_without_committing_page(tmp_path):
+    from agent_bom.api.storage.runtime_trace_imports import TraceImportConflictError
+    from agent_bom.api.trace_import_service import import_native_pages
+
+    path = str(tmp_path / "cursor-cycle.db")
+    first = import_native_pages(SQLiteRuntimeEventStore(path), scope=scope(), fetch=lambda **kw: page("first", "a"))
+    second = import_native_pages(
+        SQLiteRuntimeEventStore(path), scope=scope(), import_id=first["import_id"], fetch=lambda **kw: page("second", "b")
+    )
+    store = SQLiteRuntimeEventStore(path)
+    before = store.get_trace_import("tenant", first["import_id"])
+    with pytest.raises(TraceImportConflictError, match="cursor"):
+        import_native_pages(store, scope=scope(), import_id=first["import_id"], fetch=lambda **kw: page("uncommitted", "a"))
+    assert store.get_trace_import("tenant", first["import_id"]) == before
+    assert len(store.list_observations("tenant")) == 2
+    assert second["complete"] is False

@@ -43,7 +43,7 @@ for (const theme of ["light", "dark"] as const) {
       await controls.getByRole("button", { name: "Hide all layers" }).click();
       await expect(notice).not.toBeVisible();
       await expect(controls.getByLabel("Active graph filters")).toContainText("0/");
-      await controls.getByRole("button", { name: "Reset graph view" }).click();
+      await controls.getByRole("button", { name: "Reset view" }).click();
       await expect(notice).toBeVisible();
     });
   }
@@ -1082,7 +1082,7 @@ for (const theme of ["light", "dark"] as const) {
       const previous = await packages.isChecked();
       await packages.click();
       await expect(packages).toBeChecked({ checked: !previous });
-      await controls.getByRole("button", { name: "Reset graph view" }).click();
+      await controls.getByRole("button", { name: "Reset view" }).click();
       await expect(page).toHaveURL(new RegExp(`scan=${scanId}`));
       await search.fill("");
       await controls.evaluate(element => window.scrollTo(0, element.getBoundingClientRect().top + window.scrollY - 80));

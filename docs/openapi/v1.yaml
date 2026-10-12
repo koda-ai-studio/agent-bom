@@ -23717,6 +23717,30 @@ components:
         blocked_count:
           title: Blocked Count
           type: integer
+        counts_scope:
+          default: matching_retained_observations
+          title: Counts Scope
+          type: string
+        feed_included:
+          default: false
+          title: Feed Included
+          type: boolean
+        has_more:
+          default: false
+          title: Has More
+          type: boolean
+        limit:
+          default: 100
+          title: Limit
+          type: integer
+        offset:
+          default: 0
+          title: Offset
+          type: integer
+        retained_total:
+          default: 0
+          title: Retained Total
+          type: integer
         schema_version:
           title: Schema Version
           type: string
@@ -23728,6 +23752,12 @@ components:
             $ref: '#/components/schemas/ObsTraceSession'
           title: Sessions
           type: array
+        source_counts:
+          additionalProperties:
+            type: integer
+          default: {}
+          title: Source Counts
+          type: object
         span_count:
           title: Span Count
           type: integer
@@ -50358,13 +50388,8 @@ paths:
       - observability
   /v1/runtime/observation-revisions:
     get:
-      description: 'Read retained native content history within the authenticated
-        tenant.
-
-
-        Collection history is not independent provider evidence. Pruning the current
-
-        observation projection does not remove this history; no delete API is exposed.'
+      description: Read tenant-scoped metadata history; it is not independent provider
+        proof.
       operationId: list_runtime_observation_revisions_v1_runtime_observation_revisions_get
       parameters:
       - in: query
@@ -50777,13 +50802,7 @@ paths:
       - observability
   /v1/runtime/trace-explorer:
     get:
-      description: "Langfuse-style trace explorer joined to findings and policy decisions\
-        \ (#3608).\n\nFuses gateway/proxy feed events and persisted runtime observations\
-        \ into\nsession-grouped spans. Each span carries correlated findings (CVE,\
-        \ reach\nband, compliance controls) and blocked/observed verdict metadata.\n\
-        \nThe whole assembly \u2014 unbounded findings iteration, synchronous psycopg\n\
-        session/observation reads, and CPU-bound serialization \u2014 is offloaded\
-        \ via\n``asyncio.to_thread`` so it never blocks the event loop under scale."
+      description: Read bounded runtime traces off-loop; name matches remain candidates.
       operationId: trace_explorer_v1_runtime_trace_explorer_get
       parameters:
       - in: query
@@ -50804,6 +50823,54 @@ paths:
             type: string
           - type: 'null'
           title: Scan Id
+      - in: query
+        name: offset
+        required: false
+        schema:
+          default: 0
+          minimum: 0
+          title: Offset
+          type: integer
+      - in: query
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - maxLength: 512
+            minLength: 1
+            type: string
+          - type: 'null'
+          title: Session Id
+      - in: query
+        name: source
+        required: false
+        schema:
+          anyOf:
+          - maxLength: 512
+            minLength: 1
+            type: string
+          - type: 'null'
+          title: Source
+      - in: query
+        name: agent_name
+        required: false
+        schema:
+          anyOf:
+          - maxLength: 512
+            minLength: 1
+            type: string
+          - type: 'null'
+          title: Agent Name
+      - in: query
+        name: connection_id
+        required: false
+        schema:
+          anyOf:
+          - maxLength: 512
+            minLength: 1
+            type: string
+          - type: 'null'
+          title: Connection Id
       - in: header
         name: X-Agent-Bom-Role
         required: false
@@ -53482,25 +53549,10 @@ paths:
       - ticketing
   /v1/traces:
     post:
-      description: 'Ingest OpenTelemetry trace data and flag vulnerable tool calls.
+      description: 'Ingest OTLP metadata and flag candidate vulnerable tool calls.
 
 
-        Accepts OTLP JSON format traces containing `adk.tool.*` spans.
-
-        Cross-references tool calls against completed scan results to flag
-
-        any calls that touch packages with known CVEs.
-
-
-        Span *metadata* is parsed by default; content is never read or stored.
-
-        Pass ``screen_content=true`` (opt-in; default follows
-
-        ``AGENT_BOM_TRACE_CONTENT_SCREENING``) to additionally run Shield over trace
-
-        content and surface injection / PII / credential-leak findings. Raw content
-
-        is screened in-memory and never persisted.'
+        Opt-in Shield content screening stays in memory; raw content is never persisted.'
       operationId: ingest_traces_v1_traces_post
       parameters:
       - in: query
@@ -53804,11 +53856,8 @@ paths:
       - observability
   /v1/traces/connectors/{provider}/pull:
     post:
-      description: 'Pull traces from an LLM-observability platform and correlate them
-        (#3899).
-
-
-        Select a managed ``connection_id`` or provide one-shot ``credentials``.
+      description: 'Import via a managed connection or correlate one-shot provider
+        credentials.
 
         Screening is opt-in; provider responses may still contain content.'
       operationId: pull_trace_connector_v1_traces_connectors__provider__pull_post

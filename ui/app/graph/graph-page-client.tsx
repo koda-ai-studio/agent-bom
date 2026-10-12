@@ -46,6 +46,7 @@ import {
   GraphScenarioSelector,
 } from "@/components/graph-scenario-comparison";
 import { withFindingContext } from "@/lib/finding-investigation-href";
+import { GraphRelationshipDetail } from "@/components/graph-relationship-detail";
 import { GraphEntityDrawer } from "@/components/graph-entity-drawer";
 import {
   GraphRollupDecisionSurface,
@@ -739,6 +740,7 @@ function GraphPageInner() {
     null,
   );
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [selectedRelationship, setSelectedRelationship] = useState<{ scanId: string; id: string } | null>(null);
   const [selectedAttackPathKey, setSelectedAttackPathKey] = useState<
     string | null
   >(null);
@@ -2463,8 +2465,16 @@ function GraphPageInner() {
     [displayNodes],
   );
 
+  const inspectRelationship = useCallback((edge: Edge) => {
+    if (edge.data?.isClusterEdge) return;
+    setSelectedNode(null); setSelectedNodeId(null);
+    setSelectedRelationship(current => current?.scanId === selectedScanId && current.id === edge.id
+      ? current : { scanId: selectedScanId, id: edge.id });
+  }, [selectedScanId]);
+
   const onNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
+      setSelectedRelationship(null);
       // Cluster-pill click → restore the absorbed siblings in place. We
       // never open the detail panel for a synthetic cluster node.
       if (isClusterPillNode(node as Node<LineageNodeData>)) {
@@ -2567,6 +2577,7 @@ function GraphPageInner() {
       request: GraphInvestigationRequest & { node?: UnifiedNode | undefined; nodeLimit?: number },
     ) => {
       if (!selectedScanId) return;
+      setSelectedRelationship(null);
       const requestId = ++investigationRequestId.current;
       investigationAbort.current?.abort();
       const controller = new AbortController();
@@ -3828,6 +3839,13 @@ function GraphPageInner() {
               })}
               defaultEdgeOptions={{ type: "smoothstep" }}
               proOptions={{ hideAttribution: true }}
+              onEdgeClick={(_event, edge) => inspectRelationship(edge)}
+              onKeyDownCapture={event => {
+                if (event.key !== "Enter" && event.key !== " ") return;
+                const id = event.target instanceof Element ? event.target.closest(".react-flow__edge")?.getAttribute("data-id") : null;
+                const edge = id ? displayEdges.find(item => item.id === id) : undefined;
+                if (edge) { event.preventDefault(); event.stopPropagation(); inspectRelationship(edge); }
+              }}
               onNodeClick={onNodeClick}
               onNodeMouseEnter={onNodeMouseEnter}
               onNodeMouseLeave={onNodeMouseLeave}
@@ -3835,6 +3853,7 @@ function GraphPageInner() {
               onNodeDragStop={presentation.onNodeDragStop}
               onMoveEnd={presentation.onMoveEnd}
               onPaneClick={() => {
+                setSelectedRelationship(null);
                 setSelectedNode(null);
                 setSelectedNodeId(null);
                 setHoveredNodeId(null);
@@ -3894,6 +3913,14 @@ function GraphPageInner() {
           )}
 
           </div>
+          {!selectedNode && selectedRelationship?.scanId === selectedScanId && (() => {
+            const edge = mergedGraphData?.edges.find(item => item.id === selectedRelationship.id);
+            if (!edge || !displayEdges.some(item => item.id === edge.id)) return null;
+            return <GraphRelationshipDetail edge={edge} scanId={selectedScanId} mobile={narrowViewport}
+              sourceLabel={mergedGraphData?.nodes.find(item => item.id === edge.source)?.label || edge.source}
+              targetLabel={mergedGraphData?.nodes.find(item => item.id === edge.target)?.label || edge.target}
+              onClose={() => setSelectedRelationship(null)} />;
+          })()}
           {selectedNode && (
             <GraphEntityDrawer
               variant={narrowViewport ? "overlay" : "docked"}
