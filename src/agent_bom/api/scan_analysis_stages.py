@@ -16,6 +16,7 @@ from agent_bom.api.scan_report_support import (
     _surface_graph_derived_findings,
 )
 from agent_bom.parsers.sbom_context import imported_cloud_inventory
+from agent_bom.scanners.mcp_audit import attach_passive_mcp_audit
 from agent_bom.scanners.supplied_findings import build_supplied_findings
 from agent_bom.security import sanitize_error, sanitize_sensitive_payload, sanitize_text
 
@@ -179,7 +180,6 @@ def analyse_reachability_stage(ctx: ScanContext) -> bool:
 def _report_findings(ctx: ScanContext) -> list[Any]:
     from agent_bom.a2a_auth_posture import evaluate_a2a_auth_posture
     from agent_bom.finding import blast_radius_to_finding
-    from agent_bom.mcp_auth_posture import evaluate_mcp_auth_posture
     from agent_bom.mcp_blocklist import blocklist_findings_for_agents
 
     report_findings = [blast_radius_to_finding(br) for br in ctx.blast_radii]
@@ -189,10 +189,6 @@ def _report_findings(ctx: ScanContext) -> list[Any]:
         report_findings.extend(evaluate_a2a_auth_posture(ctx.agents))
     except Exception as a2a_exc:  # noqa: BLE001
         _logger.warning("A2A auth posture evaluation skipped: %s", sanitize_text(sanitize_error(a2a_exc)))
-    try:
-        report_findings.extend(evaluate_mcp_auth_posture(ctx.agents))
-    except Exception as mcp_auth_exc:  # noqa: BLE001
-        _logger.warning("MCP auth posture evaluation skipped: %s", sanitize_text(sanitize_error(mcp_auth_exc)))
     return report_findings
 
 
@@ -254,6 +250,7 @@ def _build_report(ctx: ScanContext) -> Any:
         scan_id=ctx.job.job_id,
         scan_run=ctx.build_scan_run(has_usable_evidence=True),
     )
+    attach_passive_mcp_audit(report)
     if ctx.ast_for_reach is not None:
         report.ai_inventory_data = report.ai_inventory_data or {}
         report.ai_inventory_data["ast_analysis"] = ctx.ast_for_reach.to_dict()

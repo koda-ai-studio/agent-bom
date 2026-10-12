@@ -59,6 +59,7 @@ def _run_demo(home: Path, hash_seed: str) -> str:
     env = {
         **os.environ,
         "PYTHONHASHSEED": hash_seed,
+        "PYTHONPATH": str(ROOT / "src") + os.pathsep + os.environ.get("PYTHONPATH", ""),
         "COLUMNS": "120",
         "HOME": str(home),
         "AGENT_BOM_SKIP_UPDATE_CHECK": "1",

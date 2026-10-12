@@ -19,6 +19,7 @@ New here? Read [`START_HERE.md`](START_HERE.md) for role-based paths, then
 - [`CLI_MAP.md`](CLI_MAP.md) — all 50 top-level commands grouped by domain + intentional aliases
 - [`cli.md`](cli.md) · [`CLI_DEBUG_GUIDE.md`](CLI_DEBUG_GUIDE.md) — CLI reference and debugging
 - [`MCP_SERVER.md`](MCP_SERVER.md) — run the MCP server with 8 default tools and optional task profiles
+- [`MCP_AUDIT.md`](MCP_AUDIT.md) — passive descriptor and permission audit, coverage and JSON/SARIF evidence
 - [`MCP_COMPATIBILITY.md`](MCP_COMPATIBILITY.md) — current protocol support, authenticated scans, gateway limits
 - [`MCP_WORKFLOWS.md`](MCP_WORKFLOWS.md) · [`MCP_CLIENT_GUIDES.md`](MCP_CLIENT_GUIDES.md) · [`MCP_ERROR_CODES.md`](MCP_ERROR_CODES.md) · [`MCP_OAUTH.md`](MCP_OAUTH.md) — MCP workflows, clients, errors, remote OAuth
 - [`CLAUDE_INTEGRATION.md`](CLAUDE_INTEGRATION.md) · [`CODEX_CLI.md`](CODEX_CLI.md) · [`CORTEX_CODE.md`](CORTEX_CODE.md) — assistant integrations

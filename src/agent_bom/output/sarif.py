@@ -1183,10 +1183,7 @@ def to_sarif(
 ) -> dict:
     """Convert report to SARIF 2.1.0 dict for GitHub Security tab.
 
-    Args:
-        exclude_unfixable: If True, skip findings where no fix is available
-            (fixed_version is None/empty). Reduces noise in GitHub Security tab
-            from CVEs that can't be acted on.
+    ``exclude_unfixable`` omits CVEs without a known fixed version.
     """
     scan_run = effective_scan_run(report)
     catalog = _SarifCatalog()
@@ -1195,11 +1192,13 @@ def to_sarif(
     _add_iac_results(catalog, report)
     _add_ai_inventory_results(catalog, report)
     _add_cis_benchmark_results(catalog, report)
-    document = {
+    document: dict[str, Any] = {
         "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json",
         "version": "2.1.0",
         "runs": [_build_sarif_run(report, catalog, scan_run)],
     }
+    if report.enforcement_data and report.enforcement_data.get("coverage"):
+        document["runs"][0].setdefault("properties", {})["mcp_audit_coverage"] = report.enforcement_data["coverage"]
     from agent_bom.output.interop_security import sanitize_linked_document
 
     return sanitize_linked_document(document)

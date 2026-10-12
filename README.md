@@ -51,7 +51,7 @@ agent-bom scan --demo --offline
 The sample lists agents, CVEs and policy findings (excerpt from current source; installed-release output may differ):
 
 ```text
-  Security posture:   CRIT  7   HIGH  10   MED   6 · all finding categories
+  Security posture:   CRIT  7   HIGH  10   MED   8   LOW   26 · all finding categories
   5 agents · 10 servers · 23 packages
 DISCOVER | Agents
   Agent                Type              Servers    Pkgs    Creds    Vulns
@@ -61,9 +61,9 @@ ANALYZE | Critical Details
   CVE-2023-36258 · langchain@0.0.150 · CRITICAL
   Fix: upgrade to ≥ 0.0.247
   Blast: langchain-service → llm-orchestrator-server → ANTHROPIC_API_KEY, OPENAI_API_KEY
-ANALYZE | Graph & Policy Findings (8 occurrences)
+ANALYZE | Graph & Policy Findings (36 occurrences)
    CRIT  COMBINATION AI agent can reach a credential or privileged tool: langchain-service
-   HIGH  PROMPT_SECURITY Agent calls MCP server without verified identity
+   HIGH  PROMPT_SECURITY No verified agent identity observed in MCP configuration
    MED   PROMPT_SECURITY Long-lived static credential on MCP server
 ```
 

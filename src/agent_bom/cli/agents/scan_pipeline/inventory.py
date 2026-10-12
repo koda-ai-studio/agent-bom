@@ -233,10 +233,10 @@ def _scan_descriptions_and_enforce(opts: ScanOptions, st: ScanState) -> None:
     # These surfaces are already in the discovered config and require no
     # active connection or policy action, so their findings must not depend
     # on the broader --enforce mode.
-    from agent_bom.enforcement import scan_description_surfaces
+    from agent_bom.scanners.mcp_audit import audit_mcp_agents
 
-    _description_report = scan_description_surfaces([s for a in st.agents for s in a.mcp_servers])
-    if _description_report.findings:
+    _description_report = audit_mcp_agents(st.agents, introspection_report=st.intro_report)
+    if _description_report.coverage:
         _enforcement_data = _description_report.to_dict()
         st.ctx.enforcement_data = _enforcement_data
 
@@ -249,7 +249,13 @@ def _scan_descriptions_and_enforce(opts: ScanOptions, st: ScanState) -> None:
         enforce_result = run_enforcement(
             servers=all_enforce_servers,
             introspection_report=st.intro_report,
+            include_descriptors=False,
         )
+        # Full enforcement adds drift/CVE checks; preserve passive audit coverage
+        # and findings without duplicating descriptor findings.
+        enforce_result.findings.extend(_description_report.findings)
+        enforce_result.coverage = _description_report.coverage
+        enforce_result.passed = enforce_result.passed and _description_report.passed
         _enforcement_data = enforce_result.to_dict()
         if enforce_result.findings:
             from rich.table import Table

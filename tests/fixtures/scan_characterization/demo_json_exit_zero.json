@@ -1,17 +1,17 @@
 {
  "document": {
-  "sha256": "c873347169c2a6ea64acab5b7931cd0151603aa9f97fd123c83c25041e5a92b2",
+  "sha256": "e3b2059b7e8fc684f49b53b3d4608f91855522fd5314c97be4353bcba1f72636",
   "summary": {
    "coverage_warnings": [],
    "critical_findings": 2,
    "critical_unified_findings": 7,
    "high_unified_findings": 10,
    "total_agents": 5,
-   "total_findings": 23,
+   "total_findings": 51,
    "total_mcp_servers": 10,
    "total_packages": 23,
    "total_vulnerabilities": 22,
-   "unique_assets": 16,
+   "unique_assets": 44,
    "unique_packages": 16
   }
  },

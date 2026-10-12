@@ -2260,6 +2260,59 @@
    "coverage_warnings": [],
    "credential_risk_ranking": [],
    "document_type": "AI-BOM",
+   "enforcement": {
+    "coverage": [
+     {
+      "agent_name": "api-agent",
+      "authorization_bypass": {
+       "reason": "Authentication checks inspect configuration only.",
+       "status": "not_assessed"
+      },
+      "permission_scope": {
+       "basis": "agent_type_heuristic",
+       "expected_capabilities": null,
+       "reason": "Missing tool descriptors or expected capability profile.",
+       "status": "not_assessed"
+      },
+      "prompts": {
+       "discovered": 0,
+       "inspected": 0,
+       "reason": "Only discovered configuration descriptors were inspected. Live listing was not collected.",
+       "status": "configuration_only"
+      },
+      "rendered_prompts": {
+       "reason": "Audit does not render prompts.",
+       "status": "not_inspected"
+      },
+      "resource_content": {
+       "reason": "General resource-body injection inspection was not performed.",
+       "status": "not_inspected"
+      },
+      "resources": {
+       "discovered": 0,
+       "inspected": 0,
+       "reason": "Only discovered configuration descriptors were inspected. Live listing was not collected.",
+       "status": "configuration_only"
+      },
+      "server_canonical_id": "<UUID>",
+      "server_identity": "cmd:npx::api-agent-server",
+      "server_name": "api-agent-server",
+      "tools": {
+       "discovered": 0,
+       "inspected": 0,
+       "reason": "Only discovered configuration descriptors were inspected. Live listing was not collected.",
+       "status": "configuration_only"
+      }
+     }
+    ],
+    "critical_count": 0,
+    "findings": [],
+    "findings_count": 0,
+    "high_count": 0,
+    "passed": true,
+    "servers_checked": 1,
+    "tools_checked": 0
+   },
    "exposure_paths": {
     "path_count": 1,
     "paths": [
@@ -4799,6 +4852,59 @@
    "coverage_warnings": [],
    "credential_risk_ranking": [],
    "document_type": "AI-BOM",
+   "enforcement": {
+    "coverage": [
+     {
+      "agent_name": "api-agent",
+      "authorization_bypass": {
+       "reason": "Authentication checks inspect configuration only.",
+       "status": "not_assessed"
+      },
+      "permission_scope": {
+       "basis": "agent_type_heuristic",
+       "expected_capabilities": null,
+       "reason": "Missing tool descriptors or expected capability profile.",
+       "status": "not_assessed"
+      },
+      "prompts": {
+       "discovered": 0,
+       "inspected": 0,
+       "reason": "Only discovered configuration descriptors were inspected. Live listing was not collected.",
+       "status": "configuration_only"
+      },
+      "rendered_prompts": {
+       "reason": "Audit does not render prompts.",
+       "status": "not_inspected"
+      },
+      "resource_content": {
+       "reason": "General resource-body injection inspection was not performed.",
+       "status": "not_inspected"
+      },
+      "resources": {
+       "discovered": 0,
+       "inspected": 0,
+       "reason": "Only discovered configuration descriptors were inspected. Live listing was not collected.",
+       "status": "configuration_only"
+      },
+      "server_canonical_id": "<UUID>",
+      "server_identity": "cmd:npx::api-agent-server",
+      "server_name": "api-agent-server",
+      "tools": {
+       "discovered": 0,
+       "inspected": 0,
+       "reason": "Only discovered configuration descriptors were inspected. Live listing was not collected.",
+       "status": "configuration_only"
+      }
+     }
+    ],
+    "critical_count": 0,
+    "findings": [],
+    "findings_count": 0,
+    "high_count": 0,
+    "passed": true,
+    "servers_checked": 1,
+    "tools_checked": 0
+   },
    "exposure_paths": {
     "path_count": 1,
     "paths": [
@@ -7031,6 +7137,59 @@
    "coverage_warnings": [],
    "credential_risk_ranking": [],
    "document_type": "AI-BOM",
+   "enforcement": {
+    "coverage": [
+     {
+      "agent_name": "api-agent",
+      "authorization_bypass": {
+       "reason": "Authentication checks inspect configuration only.",
+       "status": "not_assessed"
+      },
+      "permission_scope": {
+       "basis": "agent_type_heuristic",
+       "expected_capabilities": null,
+       "reason": "Missing tool descriptors or expected capability profile.",
+       "status": "not_assessed"
+      },
+      "prompts": {
+       "discovered": 0,
+       "inspected": 0,
+       "reason": "Only discovered configuration descriptors were inspected. Live listing was not collected.",
+       "status": "configuration_only"
+      },
+      "rendered_prompts": {
+       "reason": "Audit does not render prompts.",
+       "status": "not_inspected"
+      },
+      "resource_content": {
+       "reason": "General resource-body injection inspection was not performed.",
+       "status": "not_inspected"
+      },
+      "resources": {
+       "discovered": 0,
+       "inspected": 0,
+       "reason": "Only discovered configuration descriptors were inspected. Live listing was not collected.",
+       "status": "configuration_only"
+      },
+      "server_canonical_id": "<UUID>",
+      "server_identity": "cmd:npx::api-agent-server",
+      "server_name": "api-agent-server",
+      "tools": {
+       "discovered": 0,
+       "inspected": 0,
+       "reason": "Only discovered configuration descriptors were inspected. Live listing was not collected.",
+       "status": "configuration_only"
+      }
+     }
+    ],
+    "critical_count": 0,
+    "findings": [],
+    "findings_count": 0,
+    "high_count": 0,
+    "passed": true,
+    "servers_checked": 1,
+    "tools_checked": 0
+   },
    "exposure_paths": {
     "path_count": 0,
     "paths": [],
@@ -8774,6 +8933,59 @@
    "coverage_warnings": [],
    "credential_risk_ranking": [],
    "document_type": "AI-BOM",
+   "enforcement": {
+    "coverage": [
+     {
+      "agent_name": "api-agent",
+      "authorization_bypass": {
+       "reason": "Authentication checks inspect configuration only.",
+       "status": "not_assessed"
+      },
+      "permission_scope": {
+       "basis": "agent_type_heuristic",
+       "expected_capabilities": null,
+       "reason": "Missing tool descriptors or expected capability profile.",
+       "status": "not_assessed"
+      },
+      "prompts": {
+       "discovered": 0,
+       "inspected": 0,
+       "reason": "Only discovered configuration descriptors were inspected. Live listing was not collected.",
+       "status": "configuration_only"
+      },
+      "rendered_prompts": {
+       "reason": "Audit does not render prompts.",
+       "status": "not_inspected"
+      },
+      "resource_content": {
+       "reason": "General resource-body injection inspection was not performed.",
+       "status": "not_inspected"
+      },
+      "resources": {
+       "discovered": 0,
+       "inspected": 0,
+       "reason": "Only discovered configuration descriptors were inspected. Live listing was not collected.",
+       "status": "configuration_only"
+      },
+      "server_canonical_id": "<UUID>",
+      "server_identity": "cmd:npx::api-agent-server",
+      "server_name": "api-agent-server",
+      "tools": {
+       "discovered": 0,
+       "inspected": 0,
+       "reason": "Only discovered configuration descriptors were inspected. Live listing was not collected.",
+       "status": "configuration_only"
+      }
+     }
+    ],
+    "critical_count": 0,
+    "findings": [],
+    "findings_count": 0,
+    "high_count": 0,
+    "passed": true,
+    "servers_checked": 1,
+    "tools_checked": 0
+   },
    "exposure_paths": {
     "path_count": 0,
     "paths": [],
@@ -10947,6 +11159,59 @@
    "coverage_warnings": [],
    "credential_risk_ranking": [],
    "document_type": "AI-BOM",
+   "enforcement": {
+    "coverage": [
+     {
+      "agent_name": "api-agent",
+      "authorization_bypass": {
+       "reason": "Authentication checks inspect configuration only.",
+       "status": "not_assessed"
+      },
+      "permission_scope": {
+       "basis": "agent_type_heuristic",
+       "expected_capabilities": null,
+       "reason": "Missing tool descriptors or expected capability profile.",
+       "status": "not_assessed"
+      },
+      "prompts": {
+       "discovered": 0,
+       "inspected": 0,
+       "reason": "Only discovered configuration descriptors were inspected. Live listing was not collected.",
+       "status": "configuration_only"
+      },
+      "rendered_prompts": {
+       "reason": "Audit does not render prompts.",
+       "status": "not_inspected"
+      },
+      "resource_content": {
+       "reason": "General resource-body injection inspection was not performed.",
+       "status": "not_inspected"
+      },
+      "resources": {
+       "discovered": 0,
+       "inspected": 0,
+       "reason": "Only discovered configuration descriptors were inspected. Live listing was not collected.",
+       "status": "configuration_only"
+      },
+      "server_canonical_id": "<UUID>",
+      "server_identity": "cmd:npx::api-agent-server",
+      "server_name": "api-agent-server",
+      "tools": {
+       "discovered": 0,
+       "inspected": 0,
+       "reason": "Only discovered configuration descriptors were inspected. Live listing was not collected.",
+       "status": "configuration_only"
+      }
+     }
+    ],
+    "critical_count": 0,
+    "findings": [],
+    "findings_count": 0,
+    "high_count": 0,
+    "passed": true,
+    "servers_checked": 1,
+    "tools_checked": 0
+   },
    "exposure_paths": {
     "path_count": 1,
     "paths": [
@@ -13352,6 +13617,59 @@
    "coverage_warnings": [],
    "credential_risk_ranking": [],
    "document_type": "AI-BOM",
+   "enforcement": {
+    "coverage": [
+     {
+      "agent_name": "api-agent",
+      "authorization_bypass": {
+       "reason": "Authentication checks inspect configuration only.",
+       "status": "not_assessed"
+      },
+      "permission_scope": {
+       "basis": "agent_type_heuristic",
+       "expected_capabilities": null,
+       "reason": "Missing tool descriptors or expected capability profile.",
+       "status": "not_assessed"
+      },
+      "prompts": {
+       "discovered": 0,
+       "inspected": 0,
+       "reason": "Only discovered configuration descriptors were inspected. Live listing was not collected.",
+       "status": "configuration_only"
+      },
+      "rendered_prompts": {
+       "reason": "Audit does not render prompts.",
+       "status": "not_inspected"
+      },
+      "resource_content": {
+       "reason": "General resource-body injection inspection was not performed.",
+       "status": "not_inspected"
+      },
+      "resources": {
+       "discovered": 0,
+       "inspected": 0,
+       "reason": "Only discovered configuration descriptors were inspected. Live listing was not collected.",
+       "status": "configuration_only"
+      },
+      "server_canonical_id": "<UUID>",
+      "server_identity": "cmd:npx::api-agent-server",
+      "server_name": "api-agent-server",
+      "tools": {
+       "discovered": 0,
+       "inspected": 0,
+       "reason": "Only discovered configuration descriptors were inspected. Live listing was not collected.",
+       "status": "configuration_only"
+      }
+     }
+    ],
+    "critical_count": 0,
+    "findings": [],
+    "findings_count": 0,
+    "high_count": 0,
+    "passed": true,
+    "servers_checked": 1,
+    "tools_checked": 0
+   },
    "exposure_paths": {
     "path_count": 1,
     "paths": [
@@ -15493,6 +15811,59 @@
    "coverage_warnings": [],
    "credential_risk_ranking": [],
    "document_type": "AI-BOM",
+   "enforcement": {
+    "coverage": [
+     {
+      "agent_name": "keep-me",
+      "authorization_bypass": {
+       "reason": "Authentication checks inspect configuration only.",
+       "status": "not_assessed"
+      },
+      "permission_scope": {
+       "basis": "agent_type_heuristic",
+       "expected_capabilities": null,
+       "reason": "Missing tool descriptors or expected capability profile.",
+       "status": "not_assessed"
+      },
+      "prompts": {
+       "discovered": 0,
+       "inspected": 0,
+       "reason": "Only discovered configuration descriptors were inspected. Live listing was not collected.",
+       "status": "configuration_only"
+      },
+      "rendered_prompts": {
+       "reason": "Audit does not render prompts.",
+       "status": "not_inspected"
+      },
+      "resource_content": {
+       "reason": "General resource-body injection inspection was not performed.",
+       "status": "not_inspected"
+      },
+      "resources": {
+       "discovered": 0,
+       "inspected": 0,
+       "reason": "Only discovered configuration descriptors were inspected. Live listing was not collected.",
+       "status": "configuration_only"
+      },
+      "server_canonical_id": "<UUID>",
+      "server_identity": "cmd:npx::keep-me-server",
+      "server_name": "keep-me-server",
+      "tools": {
+       "discovered": 0,
+       "inspected": 0,
+       "reason": "Only discovered configuration descriptors were inspected. Live listing was not collected.",
+       "status": "configuration_only"
+      }
+     }
+    ],
+    "critical_count": 0,
+    "findings": [],
+    "findings_count": 0,
+    "high_count": 0,
+    "passed": true,
+    "servers_checked": 1,
+    "tools_checked": 0
+   },
    "exposure_paths": {
     "path_count": 0,
     "paths": [],
@@ -17509,6 +17880,59 @@
    "coverage_warnings": [],
    "credential_risk_ranking": [],
    "document_type": "AI-BOM",
+   "enforcement": {
+    "coverage": [
+     {
+      "agent_name": "api-agent",
+      "authorization_bypass": {
+       "reason": "Authentication checks inspect configuration only.",
+       "status": "not_assessed"
+      },
+      "permission_scope": {
+       "basis": "agent_type_heuristic",
+       "expected_capabilities": null,
+       "reason": "Missing tool descriptors or expected capability profile.",
+       "status": "not_assessed"
+      },
+      "prompts": {
+       "discovered": 0,
+       "inspected": 0,
+       "reason": "Only discovered configuration descriptors were inspected. Live listing was not collected.",
+       "status": "configuration_only"
+      },
+      "rendered_prompts": {
+       "reason": "Audit does not render prompts.",
+       "status": "not_inspected"
+      },
+      "resource_content": {
+       "reason": "General resource-body injection inspection was not performed.",
+       "status": "not_inspected"
+      },
+      "resources": {
+       "discovered": 0,
+       "inspected": 0,
+       "reason": "Only discovered configuration descriptors were inspected. Live listing was not collected.",
+       "status": "configuration_only"
+      },
+      "server_canonical_id": "<UUID>",
+      "server_identity": "cmd:npx::api-agent-server",
+      "server_name": "api-agent-server",
+      "tools": {
+       "discovered": 0,
+       "inspected": 0,
+       "reason": "Only discovered configuration descriptors were inspected. Live listing was not collected.",
+       "status": "configuration_only"
+      }
+     }
+    ],
+    "critical_count": 0,
+    "findings": [],
+    "findings_count": 0,
+    "high_count": 0,
+    "passed": true,
+    "servers_checked": 1,
+    "tools_checked": 0
+   },
    "exposure_paths": {
     "path_count": 1,
     "paths": [
