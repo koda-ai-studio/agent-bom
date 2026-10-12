@@ -1033,6 +1033,19 @@ def test_control_plane_backup_uses_scoped_maintenance_identity():
     assert "generic envFrom cannot prove a maintenance identity" in template
 
 
+def test_backup_excludes_binding_authority_and_restore_preserves_its_boundary():
+    template = (HELM_DIR / "templates" / "controlplane-backup-cronjob.yaml").read_text()
+    workflow = (REPO_ROOT / ".github/workflows/backup-restore.yml").read_text()
+    restore = (OPS_DIR / "restore-postgres-backup.sh").read_text()
+    for source in (template, workflow):
+        assert "--exclude-table=public.agent_bom_tenant_binding_keys" in source
+    assert "agent_bom_tenant_binding_keys" in restore
+    assert "--single-transaction" in restore
+    assert "--exit-on-error" in restore
+    assert "--no-privileges" not in restore
+    assert "REVOKE ALL ON TABLE public.agent_bom_tenant_binding_keys" in workflow
+
+
 @pytest.mark.skipif(shutil.which("helm") is None, reason="helm not installed")
 def test_helm_postgres_jobs_fail_render_without_distinct_credentials() -> None:
     common = [
@@ -1231,7 +1244,9 @@ def test_backup_restore_workflow_proves_rls_maintenance_dump_contract():
     assert '[ "$role_flags" = "false:false" ]' in workflow
     assert "PGOPTIONS: -c app.bypass_rls=1" in workflow
     assert "PGPASSWORD: maintenancepass" in workflow
-    assert ('pg_dump "$AGENT_BOM_POSTGRES_MAINTENANCE_URL" \\\n            --enable-row-security --format=custom --file "$out"') in workflow
+    assert 'pg_dump "$AGENT_BOM_POSTGRES_MAINTENANCE_URL"' in workflow
+    assert "--enable-row-security --format=custom" in workflow
+    assert "--exclude-table=public.agent_bom_tenant_binding_keys" in workflow
 
 
 def test_scanner_only_cronjob_warning_annotation():

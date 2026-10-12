@@ -13,11 +13,15 @@ on:
       - 'deploy/helm/agent-bom/templates/controlplane-backup-cronjob.yaml'
       - 'deploy/ops/restore-postgres-backup.sh'
       - '.github/workflows/backup-restore.yml'
+      - 'tests/test_postgres_backup_restore.py'
+      - 'deploy/supabase/postgres/**'
   pull_request:
     paths:
       - 'deploy/helm/agent-bom/templates/controlplane-backup-cronjob.yaml'
       - 'deploy/ops/restore-postgres-backup.sh'
       - '.github/workflows/backup-restore.yml'
+      - 'tests/test_postgres_backup_restore.py'
+      - 'deploy/supabase/postgres/**'
   schedule:
     # Weekly — Mondays 08:00 UTC. Cheap and catches image/CLI drift early.
     - cron: '0 8 * * 1'
@@ -105,6 +109,20 @@ jobs:
           sudo apt-get install -y --no-install-recommends "postgresql-client-${PG_MAJOR}"
           aws --version
 
+      - uses: ./.github/actions/setup-python
+        with:
+          python-version: '3.13'
+
+      - name: Qualify full migrated schema, authority boundary and atomic rollback
+        env:
+          AGENT_BOM_BACKUP_TEST_ADMIN_URL: postgresql://postgres:testpass@127.0.0.1:5432/postgres
+        run: |
+          uv sync --frozen --extra dev --extra api --extra postgres
+          uv run pytest tests/test_postgres_backup_restore.py -q --tb=short
+          # Qualification migrations provision cluster roles; the independent
+          # object-store fixture below creates its own scoped roles.
+          psql -v ON_ERROR_STOP=1 -c 'DROP ROLE IF EXISTS agent_bom_app, agent_bom_readonly, agent_bom_maintenance, agent_bom_rls_maintenance;'
+
       - name: Create MinIO bucket
         run: |
           set -euo pipefail
@@ -191,6 +209,12 @@ jobs:
             GRANT USAGE ON SCHEMA public TO agent_bom_rls_maintenance;
             GRANT SELECT ON ALL TABLES IN SCHEMA public TO agent_bom_rls_maintenance;
             GRANT SELECT, USAGE ON ALL SEQUENCES IN SCHEMA public TO agent_bom_rls_maintenance;
+            CREATE TABLE public.agent_bom_tenant_binding_keys (
+              key_id TEXT PRIMARY KEY, key_material BYTEA NOT NULL
+            );
+            INSERT INTO public.agent_bom_tenant_binding_keys VALUES
+              ('operator-recovery-key', decode(repeat('ab', 32), 'hex'));
+            REVOKE ALL ON TABLE public.agent_bom_tenant_binding_keys FROM PUBLIC, agent_bom_rls_maintenance, agent_bom_maintenance;
           SQL
 
       - name: Record expected row counts
@@ -218,6 +242,7 @@ jobs:
           role_flags="$(psql "$AGENT_BOM_POSTGRES_MAINTENANCE_URL" -Atc \
             "SELECT rolsuper::text || ':' || rolbypassrls::text FROM pg_roles WHERE rolname = current_user")"
           [ "$role_flags" = "false:false" ]
+          [ "$(psql "$AGENT_BOM_POSTGRES_MAINTENANCE_URL" -Atc "SELECT has_table_privilege(current_user, 'public.agent_bom_tenant_binding_keys', 'SELECT')")" = "f" ]
           [ "$(psql "$AGENT_BOM_POSTGRES_MAINTENANCE_URL" -Atc 'SELECT count(*) FROM scan_jobs')" = "0" ]
           [ "$(PGOPTIONS='-c app.bypass_rls=1' psql "$AGENT_BOM_POSTGRES_MAINTENANCE_URL" \
             -Atc 'SELECT count(*) FROM scan_jobs')" = "${{ steps.counts.outputs.jobs }}" ]
@@ -231,7 +256,8 @@ jobs:
           ts="$(date -u +%Y%m%dT%H%M%SZ)"
           out="/tmp/agent-bom-${ts}.dump"
           pg_dump "$AGENT_BOM_POSTGRES_MAINTENANCE_URL" \
-            --enable-row-security --format=custom --file "$out"
+            --enable-row-security --format=custom \
+            --exclude-table=public.agent_bom_tenant_binding_keys --file "$out"
           ls -la "$out"
           aws s3 cp "$out" "s3://${BUCKET}/${BACKUP_KEY}"
 
@@ -245,7 +271,8 @@ jobs:
           SQL
           # Prove the wipe succeeded before restoring.
           remaining="$(psql -At -c "SELECT count(*) FROM pg_tables WHERE schemaname='public'")"
-          [ "$remaining" = "0" ]
+          # Binding authority is recovered independently, never by the backup role.
+          [ "$remaining" = "1" ]
 
       - name: Restore via deploy/ops/restore-postgres-backup.sh
         run: |
@@ -266,6 +293,9 @@ jobs:
           [ "$jobs_n" = "${{ steps.counts.outputs.jobs }}" ]
           [ "$findings_n" = "${{ steps.counts.outputs.findings }}" ]
           [ "$audit_n" = "${{ steps.counts.outputs.audit }}" ]
+          [ "$(psql -Atc "SELECT count(*) FROM public.agent_bom_tenant_binding_keys WHERE key_id='operator-recovery-key' AND key_material=decode(repeat('ab', 32), 'hex')")" = "1" ]
+          [ "$(PGPASSWORD=maintenancepass psql "$AGENT_BOM_POSTGRES_MAINTENANCE_URL" -Atc "SELECT has_table_privilege(current_user, 'public.agent_bom_tenant_binding_keys', 'SELECT')")" = "f" ]
+          [ "$(PGPASSWORD=maintenancepass psql "$AGENT_BOM_POSTGRES_MAINTENANCE_URL" -Atc 'SELECT count(*) FROM scan_jobs')" = "0" ]
 
       - name: Verify tenant-aware data integrity post-restore
         # The failure mode we care about is not "rows restored" but "rows

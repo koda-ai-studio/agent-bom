@@ -14,7 +14,11 @@ instead.
 
 The backup CronJob runs `pg_dump --enable-row-security --format=custom` against
 `AGENT_BOM_POSTGRES_MAINTENANCE_URL` with scoped `app.bypass_rls=1` and uploads the resulting dump to S3-compatible
-storage.
+storage. It excludes `public.agent_bom_tenant_binding_keys`: the maintenance
+role must not read the schema-owner-only tenant-binding authority. Preserve
+those keys in the operator's separate encrypted secret-recovery channel;
+this dump alone is not a complete recovery package. Preserve cluster roles,
+application credentials and audit/encryption secrets separately as well.
 
 Packaged implementation:
 
@@ -83,13 +87,27 @@ kubectl -n agent-bom get jobs -l app.kubernetes.io/component=control-plane-backu
 
 ## Restore Drill
 
+Use the migration/admin principal and the same PostgreSQL major version as
+the dump. Create a staging database with the matching application release's
+migrations, provision the required cluster roles, and recover the tenant-binding
+keys from the independent operator channel before running the command. Keep
+API traffic and collectors stopped throughout the drill.
+
+The script fails closed before restoration if the authority table is missing or empty,
+if a runtime role or PUBLIC can access it, or if the archive includes it. It
+preserves that table and its contents, restores application ACLs, and handles
+partition detachment and restoration in one transaction. A SQL/ACL failure rolls
+back the entire restore, including the partition changes. An older administrator
+dump containing authority keys requires a separate operator-reviewed recovery
+procedure; do not grant the maintenance role access to make it readable.
+
 Restore into a staging database first. Do not restore directly over production
 until incident command has approved the data-loss window.
 
 ```bash
 export AWS_REGION="<your-backup-bucket-region>"
 export BACKUP_URI="s3://agent-bom-prod-backups/agent-bom/postgres/agent-bom-YYYYMMDDTHHMMSSZ.dump"
-export RESTORE_POSTGRES_URL="postgresql://agent_bom:REDACTED@staging-postgres:5432/agent_bom"
+export RESTORE_POSTGRES_URL="postgresql://migration_admin:REDACTED@staging-postgres:5432/agent_bom"
 
 deploy/ops/restore-postgres-backup.sh \
   "$BACKUP_URI" \
@@ -101,7 +119,7 @@ Verify tenant-aware tables after restore:
 
 ```bash
 psql "$RESTORE_POSTGRES_URL" -c "select count(*) from audit_log;"
-psql "$RESTORE_POSTGRES_URL" -c "select team_id, count(*) from audit_log group by team_id order by team_id;"
+psql "$RESTORE_POSTGRES_URL" -c "select tenant_id, count(*) from audit_log group by tenant_id order by tenant_id;"
 ```
 
 Then run the control-plane smoke checks against the restored environment:
@@ -127,7 +145,16 @@ scripts/deploy/verify-eks-reference.sh \
 
 ## CI Guardrail
 
-The backup workflow seeds synthetic tenant data, dumps it, wipes the database,
-restores through the production restore script, and verifies row counts plus
-tenant distribution. It runs on backup-script/template changes and weekly to
-catch upstream image drift.
+The backup workflow runs two complementary checks:
+
+- A full migration-schema qualification uses a restricted maintenance dump,
+  restores through the production script, and verifies all table counts, tenant
+  isolation, preserved binding keys, and rollback after a missing ACL role.
+- An object-store round trip uses synthetic tenant tables, uploads to MinIO,
+  removes only the application tables, restores through the production script,
+  and verifies row counts, tenant distribution and the protected authority.
+
+It runs on pull requests and main changes to the backup path, migrations or
+qualification test, and weekly to catch upstream image drift. These checks use
+disposable PostgreSQL and synthetic data; they do not establish a production
+RPO/RTO or replace an operator's restore rehearsal.
