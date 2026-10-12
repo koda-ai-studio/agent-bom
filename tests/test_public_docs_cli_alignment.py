@@ -81,7 +81,7 @@ def test_readme_first_scan_output_leads_with_agent_and_mcp_findings() -> None:
     # runs the command and checks each excerpt line in order).
     agents = text.index("DISCOVER | Agents")
     cve = text.index("CVE-")
-    mcp = text.index("Agent calls MCP server without verified identity")
+    mcp = text.index("No verified agent identity observed in MCP configuration")
     assert agents < cve < mcp
     assert "Blast:" in text
 
