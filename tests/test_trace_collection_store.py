@@ -80,6 +80,41 @@ def test_conflicting_replay_rolls_back_entire_page_and_checkpoint(stores):
     assert store.get("a", "connection").cursor == "page-2"
 
 
+@pytest.mark.parametrize("count", [100, 201])
+def test_native_page_bounds_identity_reads_without_losing_replay_or_history(stores, count):
+    runtime, store = stores
+    records = [
+        replace(
+            observation(key=f"span-{i}"),
+            surface="imported_trace",
+            metadata={"connection_id": "connection", "project_id": "project"},
+        )
+        for i in range(count)
+    ]
+    statements = []
+    claim = store.claim("a", "connection", initial(), now=100)
+    store.backend._conn().set_trace_callback(statements.append)
+    done = store.commit("a", "connection", claim, records, next_cursor="second", now=101)
+    store.backend._conn().set_trace_callback(None)
+    reads = [
+        sql
+        for sql in statements
+        if sql.startswith("SELECT")
+        and any(table in sql for table in ("runtime_observations", "runtime_observation_revisions", "trace_collection_receipts"))
+    ]
+    assert len(reads) <= 10, "page identity reads must be bounded rather than repeated per span"
+    inserts = [sql for sql in statements if sql.startswith(("INSERT INTO runtime_observation", "INSERT INTO trace_collection_receipts"))]
+    assert len(inserts) <= 3 * ((count + 99) // 100), "page inserts must use bounded batches rather than one round trip per span"
+    assert done.persisted == count
+    assert runtime.get_session("a", "session-1").observation_count == count
+    claim = store.claim("a", "connection", initial(), now=102)
+    assert store.commit("a", "connection", claim, records, next_cursor=None, now=103).persisted == count
+    assert len(runtime.list_observations("a", limit=1000)) == count
+    assert not runtime.list_observations("b")
+    with store.backend.transaction(read_only=True) as tx:
+        assert tx.execute("SELECT COUNT(*) FROM runtime_observation_revisions WHERE tenant_id=?", ("a",)).fetchone()[0] == count
+
+
 def test_expired_worker_cannot_commit_after_replacement(stores):
     runtime, store = stores
     old = store.claim("a", "connection", initial(), now=100)

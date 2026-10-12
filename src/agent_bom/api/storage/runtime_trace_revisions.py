@@ -38,11 +38,57 @@ class TracePageCommit:
 
 
 def content_hash(record: RuntimeObservationRecord) -> str:
-    data = record.to_dict()
+    return _content_hash(record.to_dict())
+
+
+def _content_hash(data: dict[str, Any]) -> str:
+    # Own a detached payload; callers serialize the full revision before this
+    # removes collection-only fields from the stable content identity.
     data["metadata"].pop("collected_at", None)
     if data["metadata"].get("event_time_missing"):
         data.pop("observed_at", None)
     return hashlib.sha256(json.dumps(data, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+def _fresh_identities(conn: Any, records: list[RuntimeObservationRecord], p: str) -> set[tuple[str, str]]:
+    identities = list(dict.fromkeys((record.tenant_id, record.observation_id) for record in records if record.surface == "imported_trace"))
+    existing: set[tuple[str, str]] = set()
+    for start in range(0, len(identities), 200):
+        batch = identities[start : start + 200]
+        pairs = ",".join(f"({p},{p})" for _ in batch)
+        params = tuple(value for identity in batch for value in identity)
+        for table in ("runtime_observations", "runtime_observation_revisions"):
+            rows = conn.execute(
+                f"SELECT tenant_id,observation_id FROM {table} "  # nosec B608 — fixed table names, bound identities
+                f"WHERE (tenant_id,observation_id) IN ({pairs}) GROUP BY tenant_id,observation_id",
+                params,
+            ).fetchall()
+            existing.update((row[0], row[1]) for row in rows)
+    return set(identities) - existing
+
+
+def _encode_revision(record: RuntimeObservationRecord) -> tuple[str, str]:
+    payload = record.to_dict()
+    encoded = json.dumps(payload, sort_keys=True)
+    return _content_hash(payload), encoded
+
+
+def _insert_fresh_revisions(conn: Any, records: list[RuntimeObservationRecord], fresh: set[tuple[str, str]], p: str) -> None:
+    pending: dict[tuple[str, str], RuntimeObservationRecord] = {}
+    for record in records:
+        identity = (record.tenant_id, record.observation_id)
+        if record.surface == "imported_trace" and identity in fresh:
+            pending.setdefault(identity, record)
+    entries = list(pending.items())
+    for start in range(0, len(entries), 100):
+        batch = entries[start : start + 100]
+        values = ",".join(f"({','.join([p] * 5)})" for _ in batch)
+        params = tuple(value for identity, record in batch for value in (*identity, 1, *_encode_revision(record)))
+        conn.execute(
+            "INSERT INTO runtime_observation_revisions "  # nosec B608 — bound values, fixed identifiers
+            f"(tenant_id,observation_id,revision,content_hash,data) VALUES {values}",
+            params,
+        )
 
 
 def revised_session(session: RuntimeSessionRecord, old: RuntimeObservationRecord, new: RuntimeObservationRecord) -> RuntimeSessionRecord:
@@ -80,11 +126,20 @@ def reconcile_sql(
     p = placeholder
     updated = 0
     first_seen = []
+    fresh = _fresh_identities(conn, records, p)
+    _insert_fresh_revisions(conn, records, fresh, p)
     for record in records:
         if record.surface != "imported_trace":
             first_seen.append(record)
             continue
         identity = (record.tenant_id, record.observation_id)
+        if identity in fresh:
+            # A repeated identity later in this page must reconcile against the
+            # revision just written, including conflicting session identities.
+            fresh.remove(identity)
+            first_seen.append(record)
+            continue
+        digest, encoded = _encode_revision(record)
         row = conn.execute(
             f"SELECT data FROM runtime_observations WHERE tenant_id={p} AND observation_id={p}",  # nosec B608
             identity,
@@ -99,13 +154,13 @@ def reconcile_sql(
         if old and (old.surface != "imported_trace" or old.session_id != record.session_id):
             raise ValueError("Native span identity conflicts with retained evidence")
 
-        def append(value: RuntimeObservationRecord) -> None:
+        def append(value: RuntimeObservationRecord, *, prepared: tuple[str, str] | None = None) -> None:
             nonlocal revision
             revision += 1
             conn.execute(
                 "INSERT INTO runtime_observation_revisions "  # nosec B608
                 f"(tenant_id,observation_id,revision,content_hash,data) VALUES ({','.join([p] * 5)})",
-                (*identity, revision, content_hash(value), json.dumps(value.to_dict(), sort_keys=True)),
+                (*identity, revision, *(prepared or (content_hash(value), json.dumps(value.to_dict(), sort_keys=True)))),
             )
 
         if old and not latest:
@@ -113,11 +168,11 @@ def reconcile_sql(
         known = conn.execute(
             f"SELECT 1 FROM runtime_observation_revisions "  # nosec B608
             f"WHERE tenant_id={p} AND observation_id={p} AND content_hash={p}",
-            (*identity, content_hash(record)),
+            (*identity, digest),
         ).fetchone()
         if known:
             continue
-        append(record)
+        append(record, prepared=(digest, encoded))
         if old is None:
             first_seen.append(record)
             continue
@@ -126,7 +181,7 @@ def reconcile_sql(
         conn.execute(
             f"UPDATE runtime_observations SET data={p}, observed_at={p} "  # nosec B608
             f"WHERE tenant_id={p} AND observation_id={p}",
-            (json.dumps(record.to_dict(), sort_keys=True), record.observed_at, *identity),
+            (encoded, record.observed_at, *identity),
         )
         session_row = conn.execute(
             f"SELECT data FROM runtime_sessions WHERE tenant_id={p} AND session_id={p}",  # nosec B608

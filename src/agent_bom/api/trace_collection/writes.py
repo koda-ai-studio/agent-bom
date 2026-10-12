@@ -18,36 +18,49 @@ def put_page(tx: SqlSession, tenant: str, connection: str, records: list[Runtime
     native = {record.observation_id: record for record in records if record.surface == "imported_trace"}
     _, first_seen = reconcile_sql(tx, list(native.values()))
     records = [record for record in records if record.surface != "imported_trace"] + first_seen
+    prior_receipts: dict[str, str] = {}
+    retained: dict[str, str] = {}
+    keys = list(dict.fromkeys(record.observation_id for record in records))
+    for start in range(0, len(keys), 200):
+        batch = keys[start : start + 200]
+        placeholders = ",".join("?" for _ in batch)
+        prior_receipts.update(
+            tx.execute(
+                "SELECT observation_id,digest FROM trace_collection_receipts "
+                f"WHERE tenant_id=? AND connection_id=? AND observation_id IN ({placeholders})",  # nosec B608
+                (tenant, connection, *batch),
+            ).fetchall()
+        )
+        retained.update(
+            tx.execute(
+                f"SELECT observation_id,data FROM runtime_observations WHERE tenant_id=? AND observation_id IN ({placeholders})",  # nosec B608
+                (tenant, *batch),
+            ).fetchall()
+        )
     added = 0
     sessions: dict[str, RuntimeSessionRecord] = {}
+    receipts = []
+    observations = []
     for record in records:
         if record.tenant_id != tenant:
             raise CollectionConflictError("Observation tenant does not match collection.")
-        data = json.dumps(record.to_dict(), sort_keys=True, separators=(",", ":"))
+        payload = record.to_dict()
+        data = json.dumps(payload, sort_keys=True, separators=(",", ":"))
         digest = hashlib.sha256(data.encode()).hexdigest()
-        prior = tx.execute(
-            "SELECT digest FROM trace_collection_receipts WHERE tenant_id=? AND connection_id=? AND observation_id=?",
-            (tenant, connection, record.observation_id),
-        ).fetchone()
+        prior = prior_receipts.get(record.observation_id)
         if prior:
-            if prior[0] != digest:
+            if prior != digest:
                 raise CollectionConflictError("Conflicting observation replay; checkpoint retained.")
             continue
-        existing = tx.execute(
-            "SELECT data FROM runtime_observations WHERE tenant_id=? AND observation_id=?", (tenant, record.observation_id)
-        ).fetchone()
-        if existing and json.loads(existing[0]) != record.to_dict():
+        existing = retained.get(record.observation_id)
+        if existing and json.loads(existing) != payload:
             raise CollectionConflictError("Conflicting retained observation; checkpoint retained.")
-        tx.execute(
-            "INSERT INTO trace_collection_receipts VALUES (?, ?, ?, ?, ?)",
-            (tenant, connection, record.observation_id, record.observed_at, digest),
-        )
+        receipts.append((tenant, connection, record.observation_id, record.observed_at, digest))
+        prior_receipts[record.observation_id] = digest
         if existing:
             continue
-        tx.execute(
-            "INSERT INTO runtime_observations (tenant_id,observation_id,session_id,observed_at,data) VALUES (?,?,?,?,?)",
-            (tenant, record.observation_id, record.session_id, record.observed_at, data),
-        )
+        observations.append((tenant, record.observation_id, record.session_id, record.observed_at, data))
+        retained[record.observation_id] = data
         if record.session_id not in sessions:
             row = tx.execute("SELECT data FROM runtime_sessions WHERE tenant_id=? AND session_id=?", (tenant, record.session_id)).fetchone()
             previous = _session_from_json(row[0]) if row else None
@@ -55,6 +68,13 @@ def put_page(tx: SqlSession, tenant: str, connection: str, records: list[Runtime
             previous = sessions[record.session_id]
         sessions[record.session_id] = _merge_session(previous, record)
         added += 1
+    for rows, insert in (
+        (receipts, "INSERT INTO trace_collection_receipts(tenant_id,connection_id,observation_id,observed_at,digest) VALUES "),
+        (observations, "INSERT INTO runtime_observations(tenant_id,observation_id,session_id,observed_at,data) VALUES "),
+    ):
+        for start in range(0, len(rows), 100):
+            insert_batch = rows[start : start + 100]
+            tx.execute(insert + ",".join("(?,?,?,?,?)" for _ in insert_batch), tuple(value for row in insert_batch for value in row))
     # Rollups and page/checkpoint writes still share the same transaction. Work
     # scales with distinct sessions instead of repeatedly reading each span's
     # growing session from SQL and rewriting the same row.
