@@ -4,7 +4,7 @@ import hashlib
 import json
 
 from agent_bom.analytics_retention import prune_runtime_observations_for_tenant
-from agent_bom.api.runtime_event_store import RuntimeObservationRecord, _merge_session, _session_from_json
+from agent_bom.api.runtime_event_store import RuntimeObservationRecord, RuntimeSessionRecord, _merge_session, _session_from_json
 from agent_bom.api.storage.runtime_trace_revisions import reconcile_sql
 from agent_bom.api.storage.sql import SqlSession
 from agent_bom.api.trace_collection.contracts import MAX_RECEIPTS, CollectionConflictError
@@ -19,6 +19,7 @@ def put_page(tx: SqlSession, tenant: str, connection: str, records: list[Runtime
     _, first_seen = reconcile_sql(tx, list(native.values()))
     records = [record for record in records if record.surface != "imported_trace"] + first_seen
     added = 0
+    sessions: dict[str, RuntimeSessionRecord] = {}
     for record in records:
         if record.tenant_id != tenant:
             raise CollectionConflictError("Observation tenant does not match collection.")
@@ -47,14 +48,22 @@ def put_page(tx: SqlSession, tenant: str, connection: str, records: list[Runtime
             "INSERT INTO runtime_observations (tenant_id,observation_id,session_id,observed_at,data) VALUES (?,?,?,?,?)",
             (tenant, record.observation_id, record.session_id, record.observed_at, data),
         )
-        row = tx.execute("SELECT data FROM runtime_sessions WHERE tenant_id=? AND session_id=?", (tenant, record.session_id)).fetchone()
-        session = _merge_session(_session_from_json(row[0]) if row else None, record)
+        if record.session_id not in sessions:
+            row = tx.execute("SELECT data FROM runtime_sessions WHERE tenant_id=? AND session_id=?", (tenant, record.session_id)).fetchone()
+            previous = _session_from_json(row[0]) if row else None
+        else:
+            previous = sessions[record.session_id]
+        sessions[record.session_id] = _merge_session(previous, record)
+        added += 1
+    # Rollups and page/checkpoint writes still share the same transaction. Work
+    # scales with distinct sessions instead of repeatedly reading each span's
+    # growing session from SQL and rewriting the same row.
+    for session in sessions.values():
         tx.execute(
             "INSERT INTO runtime_sessions(tenant_id,session_id,last_seen,data) VALUES(?,?,?,?) "
             "ON CONFLICT(tenant_id,session_id) DO UPDATE SET last_seen=excluded.last_seen,data=excluded.data",
             (tenant, session.session_id, session.last_seen, json.dumps(session.to_dict(), sort_keys=True)),
         )
-        added += 1
     count = tx.execute(
         "SELECT COUNT(*) FROM trace_collection_receipts WHERE tenant_id=? AND connection_id=?", (tenant, connection)
     ).fetchone()[0]

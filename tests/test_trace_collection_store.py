@@ -38,6 +38,35 @@ def test_page_and_checkpoint_survive_restart_without_replay(stores):
     assert runtime.get_session("a", "session-1").observation_count == 1
 
 
+def test_page_rollups_do_bounded_sql_work_per_session_and_preserve_replay(stores):
+    runtime, store = stores
+    first = store.claim("a", "connection", initial(), now=100)
+    store.commit("a", "connection", first, [observation()], next_cursor="page-2", now=101)
+    records = [
+        replace(observation(key=f"page-2-{i}"), session_id=f"session-{1 + i % 2}", verdict="denied" if i % 2 else "allowed")
+        for i in range(100)
+    ]
+    # A noisy page must not repeatedly deserialize and rewrite the same rollup.
+    statements = []
+    store.backend._conn().set_trace_callback(statements.append)
+    claim = store.claim("a", "connection", initial(), now=102)
+    done = store.commit("a", "connection", claim, records, next_cursor="page-3", now=103)
+    store.backend._conn().set_trace_callback(None)
+    reads = [sql for sql in statements if sql.startswith("SELECT data FROM runtime_sessions")]
+    writes = [sql for sql in statements if sql.startswith("INSERT INTO runtime_sessions")]
+    assert len(reads) <= 2
+    assert len(writes) <= 2
+    assert done.persisted == 101
+    assert runtime.get_session("a", "session-1").observation_count == 51
+    assert runtime.get_session("a", "session-1").verdicts == {"allowed": 50, "observed": 1}
+    assert runtime.get_session("a", "session-2").verdicts == {"denied": 50}
+    assert runtime.get_session("b", "session-1") is None
+    claim = store.claim("a", "connection", initial(), now=104)
+    replay = store.commit("a", "connection", claim, records, next_cursor=None, now=105)
+    assert replay.persisted == 101
+    assert runtime.get_session("a", "session-1").observation_count == 51
+
+
 def test_conflicting_replay_rolls_back_entire_page_and_checkpoint(stores):
     runtime, store = stores
     first = store.claim("a", "connection", initial(), now=100)
