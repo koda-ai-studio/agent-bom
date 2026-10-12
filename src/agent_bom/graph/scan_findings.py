@@ -116,7 +116,9 @@ def attach_graph_derived_findings(report: "AIBOMReport", graph: "UnifiedGraph") 
 
 
 def _rewrite_side_block_findings(report: "AIBOMReport", findings: list[Any]) -> None:
-    """Write stamped FKs back into toxic/CIEM side-block dicts."""
+    """Retain linked audit findings and write toxic/CIEM side-block FKs."""
+    existing = {f.id for f in report.findings}
+    report.findings.extend(f for f in findings if f.id not in existing and f.finding_node_id and f.source.value == "MCP_SCAN")
     by_id = {str(getattr(f, "id", "")): f for f in findings if getattr(f, "id", None)}
 
     def _merge(rows: list[Any] | None) -> list[Any] | None:

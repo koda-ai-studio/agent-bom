@@ -83,6 +83,8 @@ export interface ScanJob {
 }
 
 export interface ScanResult {
+  findings?: UnifiedFinding[];
+  enforcement?: { coverage?: import("./mcp-audit").McpAuditCoverage[] };
   scan_id?: string | undefined;
   finding_summary?: { total: number; by_severity: Record<string, number> } | undefined;
   agents: Agent[];

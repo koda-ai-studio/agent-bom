@@ -66,10 +66,10 @@ changed, including when discovery fails.
 
 The existing `tool_risk_assessment` tool returns an `audit` block and
 `authentication_findings` alongside its live inventory and risk scores.
-Use the full catalog to access it:
+Use the audit catalog to access it alongside `prompt_scan`:
 
 ```bash
-agent-bom mcp server --profile full
+agent-bom mcp server --profile audit
 ```
 
 Call with `{"config_path":"/path/to/project","live":false}` for a passive audit.
@@ -85,3 +85,17 @@ API/MCP evaluation errors fail the scan rather than silently returning a clean
 audit. Existing authentication and tenant boundaries remain in force. `--enforce` adds its existing
 CVE, drift and capability-combination checks; it is not required for passive
 injection and permission findings.
+
+## Inspect and remediate in the dashboard
+
+Open a completed scan to view MCP descriptor coverage and findings. Counts are
+unique finding occurrences; server coverage is shown per agent configuration.
+Use **Inspect asset** to open the recorded node in that scan, then traverse
+its connections. Hop counts describe graph edges, not successful exploitation.
+Unlinked observations remain visible as findings without an invented asset link.
+
+The permission finding can show a **Proposed tool restriction** using its
+recorded affected tools. This is a draft for a dedicated proxy bound to the
+identified server. Review required application behavior before adopting it;
+the dashboard never activates the policy. After changing a descriptor, server
+configuration or reviewed policy, repeat the audit and compare the evidence.

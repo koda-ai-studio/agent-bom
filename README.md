@@ -125,6 +125,8 @@ Grafana/Prometheus and ClickHouse are optional. [Choose the stack](site-docs/dep
 
 Use **CLI or GitHub Action**, **REST API**, or **MCP**; export **SARIF, CycloneDX, SPDX, JSON and HTML**. Cloud connectors and fleet sync collect inventory; proxy and gateway deployments add runtime evidence.
 
+Audit MCP security before granting tool access: `agent-bom mcp audit . --format json --output mcp-audit.json`. Inspect descriptor injection, risky tool inputs, authentication configuration and excess capability findings alongside coverage. Review the recorded evidence and remediation, then repeat the scoped audit. [MCP security audit](docs/MCP_AUDIT.md)
+
 For coding assistants, run `agent-bom mcp server`. Start with eight focused tools, then choose a graph, cloud, runtime or audit profile. The full catalog has 90 MCP tools, 7 resources, and 8 workflow prompts in current source. [MCP workflows](docs/MCP_WORKFLOWS.md)
 
 [Integration capability matrix](docs/INTEGRATIONS.md) · [MCP client setup](docs/MCP_CLIENT_GUIDES.md) ·

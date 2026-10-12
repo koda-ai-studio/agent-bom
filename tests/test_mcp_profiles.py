@@ -57,7 +57,7 @@ def test_cli_uses_focused_default():
 
 
 @pytest.mark.parametrize(
-    "profile, count", [("scan", 8), ("graph", 10), ("cloud", 6), ("runtime", 7), ("audit", 4), ("guided", 25), ("full", 90)]
+    "profile, count", [("scan", 8), ("graph", 10), ("cloud", 6), ("runtime", 7), ("audit", 6), ("guided", 25), ("full", 90)]
 )
 def test_live_card_and_health_match_active_surface(profile, count):
     from starlette.testclient import TestClient
@@ -234,3 +234,9 @@ def test_docker_catalog_normalizes_python_docstring_indentation(monkeypatch, des
             "arguments": [{"name": "package", "type": "string", "desc": "Package name.\n  Keep this spacing."}],
         }
     ]
+
+
+def test_audit_profile_exposes_descriptor_and_prompt_checks():
+    from agent_bom.mcp_tools.profiles import get_profile
+
+    assert {"tool_risk_assessment", "prompt_scan"} <= get_profile("audit").tools

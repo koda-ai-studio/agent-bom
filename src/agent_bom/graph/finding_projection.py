@@ -8,6 +8,7 @@ from typing import Any
 from agent_bom.graph.build_indexes import BuildIndexes
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
+from agent_bom.graph.mcp_audit_projection import project_mcp_audit_findings
 from agent_bom.graph.node import UnifiedNode, stable_node_id
 from agent_bom.graph.types import EntityType, RelationshipType
 from agent_bom.security import sanitize_text
@@ -280,3 +281,9 @@ def _resolve_skill_audit_target_ids(
             target_ids.update(candidates)
 
     return sorted(target_ids)
+
+
+def project_scan_findings(graph: UnifiedGraph, findings: Any) -> None:
+    """Project secret and MCP audit evidence without repeating scanner work."""
+    project_secret_findings(graph, findings)
+    project_mcp_audit_findings(graph, findings)
