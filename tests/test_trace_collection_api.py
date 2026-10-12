@@ -103,3 +103,27 @@ def test_revocation_during_fetch_prevents_commit(client, monkeypatch):
     assert response.status_code == 200
     assert response.json()["status"] == "failed"
     assert response.json()["pages"] == 0
+
+
+def test_collection_storage_bootstrap_runs_once_per_runtime_store(client, monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+
+    from agent_bom.api.trace_collection import service
+
+    original = service.TraceCollectionStore.init_schema
+    calls = []
+
+    def initialize(store):
+        calls.append(store)
+        original(store)
+
+    monkeypatch.setattr(service.TraceCollectionStore, "init_schema", initialize)
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        stores = list(executor.map(lambda _: service.collection_store(), range(8)))
+    assert len(calls) == 1
+    assert all(store is stores[0] for store in stores)
+    # Reconfiguring storage must not reuse a store bound to the old database.
+    runtime = service.get_runtime_event_store()
+    monkeypatch.setattr(service, "get_runtime_event_store", lambda: SQLiteRuntimeEventStore(runtime._db_path + ".replacement"))
+    assert service.collection_store() is not stores[0]
+    assert len(calls) == 2

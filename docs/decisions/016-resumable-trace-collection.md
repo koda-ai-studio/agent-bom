@@ -22,7 +22,10 @@ A replacement collector has a new token. An expired collector cannot commit.
 SQLite serializes claim/commit with `BEGIN IMMEDIATE`; PostgreSQL locks one
 connection checkpoint and applies application-role RLS. Different connections
 have distinct session identities, avoiding shared rollup updates. No application
-pool may bypass tenant RLS.
+pool may bypass tenant RLS. Schema initialization is serialized once per runtime
+store instance and cached for the current instance only; status requests do not
+repeat bootstrap writes. Replacing the runtime store replaces this cache entry.
+No tenant observations or authorization decisions are cached.
 
 Provider source IDs are preserved. Durable identity includes tenant, managed
 connection, trace, and span. Matching a tool name remains a correlation candidate,
