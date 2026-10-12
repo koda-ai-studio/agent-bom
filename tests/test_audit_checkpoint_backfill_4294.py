@@ -82,6 +82,34 @@ def _sqlite_corrupt_checkpoint_count(log: SQLiteAuditLog, tenant: str, value: in
     log._conn.commit()
 
 
+def test_sqlite_append_work_is_bounded_after_checkpoint_seed(tmp_path):
+    log = SQLiteAuditLog(str(tmp_path / "bounded-audit.db"))
+    tenant = "tenant-growth"
+
+    def measured_append():
+        instructions = 0
+
+        def progress():
+            nonlocal instructions
+            instructions += 1
+            return 0
+
+        log._conn.set_progress_handler(progress, 1)
+        try:
+            log.append(AuditEntry(action="scan", details={"tenant_id": tenant}))
+        finally:
+            log._conn.set_progress_handler(None, 0)
+        return instructions
+
+    _sqlite_build_chain(log, tenant, 100)
+    small = measured_append()
+    _sqlite_build_chain(log, tenant, 1000)
+    large = measured_append()
+    assert large <= small * 3, (small, large)
+    assert log._get_checkpoint(tenant).entry_count == 1102
+    assert log.verify_integrity(limit=2000, tenant_id=tenant) == (1102, 0)
+
+
 def test_sqlite_backfill_heals_underseeded_checkpoint(tmp_path) -> None:
     log = SQLiteAuditLog(str(tmp_path / "audit.db"))
     tenant = "tenant-legacy"

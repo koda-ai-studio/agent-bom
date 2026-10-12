@@ -72,10 +72,15 @@ These are correctness checks, separate from machine-dependent load receipts.
 
 The runtime workload is separate from trace collection. It runs 40 authenticated
 write requests of 50 synthetic events and 480 collection-status reads at
-concurrency 10, after 30 baseline reads. It starts one loopback HTTP server and
-uses real SQL and middleware. Collection status uses a synthetic configured
-connection; no provider request is made. Application lifespan provisioning,
-multiple replicas, ingress and live provider access are outside this command.
+concurrency 10, after 30 baseline reads. The load generator and loopback HTTP
+API replicas run in separate processes, using real SQL and middleware. Each
+request uses a fresh client and connection but shares a preloaded certificate
+context, so repeated trust-store parsing does not dominate plaintext HTTP load.
+The attempts record client setup and HTTP response time separately; the gate
+still uses total request time. Collection
+status uses a synthetic configured connection; no provider request is made.
+Application lifespan provisioning, ingress and live provider access are outside
+this command.
 
 ```bash
 AGENT_BOM_STATE_DIR=/tmp/runtime-capacity-state-001 \
@@ -83,10 +88,11 @@ AGENT_BOM_STATE_DIR=/tmp/runtime-capacity-state-001 \
   --output /tmp/runtime-capacity-001
 ```
 
-Use `--backend postgres` with the disposable application and maintenance roles
-above for PostgreSQL. The fixed local gate requires zero failed requests, exactly
+Use `--backend postgres --replicas 2` with the disposable application and
+maintenance roles above for two PostgreSQL-backed API processes. Each runtime
+store pool has a minimum of one and maximum of two connections. The fixed local gate requires zero failed requests, exactly
 500 retained observations per writer tenant with matching session rollups, no
-reader-tenant observations, read p95 at most 5 seconds and slowdown at most 4×.
+reader-tenant observations, complete verified audit chains, read p95 at most 5 seconds and slowdown at most 4×.
 Inspect `attempts.jsonl` and `receipt.json`; retain failed runs. Run on an idle
 host without overlapping test/build jobs. A noisy baseline can make the ratio
 appear better, so record host contention and repeat from a clean pinned commit
