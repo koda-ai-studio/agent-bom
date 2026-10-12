@@ -58,7 +58,7 @@ from agent_bom.canonical_ids import canonical_id
 from agent_bom.config import API_MAX_OCSF_INGEST_EVENTS
 from agent_bom.core.severity import ocsf_to_severity
 from agent_bom.rbac import require_authenticated_permission
-from agent_bom.security import sanitize_error, sanitize_sensitive_payload, sanitize_text
+from agent_bom.security import sanitize_error, sanitize_text
 
 router = APIRouter(dependencies=[Depends(demo_daily_evidence_dependency)])
 router.include_router(trace_collection_router, dependencies=[cast(Any, require_authenticated_permission("runtime_ingest"))])
@@ -216,15 +216,15 @@ def _normalize_ocsf_event(event: dict, *, tenant_id: str) -> dict:
     return normalized
 
 
-def _bounded(value: object, *, max_len: int = 200) -> str:
-    return sanitize_text(value, max_len=max_len)
+def _bounded(value: object, *, max_len: int = 200, _cache: RuntimeMetadataCache | None = None) -> str:
+    return _cache.bounded(value, max_len=max_len) if _cache is not None else sanitize_text(value, max_len=max_len)
 
 
-def _event_session_id(payload: dict[str, Any]) -> str:
+def _event_session_id(payload: dict[str, Any], *, _cache: RuntimeMetadataCache | None = None) -> str:
     for key in ("session_id", "trace_id", "request_id"):
         value = str(payload.get(key) or "").strip()
         if value:
-            return _bounded(value)
+            return _bounded(value, _cache=_cache)
     return f"runtime-{uuid.uuid4()}"
 
 
@@ -246,26 +246,25 @@ def _runtime_observation_from_event(
             event.get("tool_name") or event.get("tool") or "",
             event.get("message") or event.get("reason") or event.get("decision") or "",
         )
-    summary: dict[str, Any] = {}
-    for key in ("message", "reason", "decision", "risk", "policy", "blocked"):
-        if key in event:
-            summary[key] = sanitize_sensitive_payload(event[key], key=key, max_str_len=500)
+    summary = {key: event[key] for key in ("message", "reason", "decision", "risk", "policy", "blocked") if key in event}
     metadata_source = event.get("metadata") if isinstance(event.get("metadata"), dict) else event
     return RuntimeObservationRecord(
         tenant_id=tenant_id,
-        observation_id=_bounded(event_id),
-        session_id=_event_session_id(event),
-        observed_at=_bounded(observed_at, max_len=80),
-        source=_bounded(event.get("source_id") or event.get("source") or source, max_len=120),
-        surface=_bounded(event.get("surface") or "runtime", max_len=80),
-        event_type=_bounded(event.get("event_type") or event.get("type") or "runtime_event", max_len=120),
-        severity=_bounded(str(event.get("severity") or "unknown").lower(), max_len=40),
-        verdict=_bounded(event.get("verdict") or event.get("action_taken") or event.get("decision") or "observed", max_len=80),
-        tool_name=_bounded(event.get("tool_name") or event.get("tool") or "", max_len=200),
-        agent_name=_bounded(event.get("agent_name") or event.get("agent_id") or "", max_len=200),
-        trace_id=_bounded(event.get("trace_id") or "", max_len=200),
-        span_id=_bounded(event.get("span_id") or "", max_len=200),
-        request_id=_bounded(event.get("request_id") or "", max_len=200),
+        observation_id=_bounded(event_id, _cache=_cache),
+        session_id=_event_session_id(event, _cache=_cache),
+        observed_at=_bounded(observed_at, max_len=80, _cache=_cache),
+        source=_bounded(event.get("source_id") or event.get("source") or source, max_len=120, _cache=_cache),
+        surface=_bounded(event.get("surface") or "runtime", max_len=80, _cache=_cache),
+        event_type=_bounded(event.get("event_type") or event.get("type") or "runtime_event", max_len=120, _cache=_cache),
+        severity=_bounded(str(event.get("severity") or "unknown").lower(), max_len=40, _cache=_cache),
+        verdict=_bounded(
+            event.get("verdict") or event.get("action_taken") or event.get("decision") or "observed", max_len=80, _cache=_cache
+        ),
+        tool_name=_bounded(event.get("tool_name") or event.get("tool") or "", max_len=200, _cache=_cache),
+        agent_name=_bounded(event.get("agent_name") or event.get("agent_id") or "", max_len=200, _cache=_cache),
+        trace_id=_bounded(event.get("trace_id") or "", max_len=200, _cache=_cache),
+        span_id=_bounded(event.get("span_id") or "", max_len=200, _cache=_cache),
+        request_id=_bounded(event.get("request_id") or "", max_len=200, _cache=_cache),
         summary=sanitize_runtime_metadata(summary, _cache=_cache),
         metadata=sanitize_runtime_metadata(metadata_source, _cache=_cache),
     )

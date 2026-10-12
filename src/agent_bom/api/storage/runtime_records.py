@@ -81,6 +81,16 @@ class RuntimeMetadataCache:
         self.strings: dict[tuple[str | None, str, int], object] = {}
         self.keys: dict[str, str] = {}
         self.fields: dict[str, str] = {}
+        self.bounded_text: dict[tuple[str, int], str] = {}
+
+    def bounded(self, value: object, *, max_len: int) -> str:
+        key = (value, max_len) if isinstance(value, str) else None
+        if key is not None and key in self.bounded_text:
+            return self.bounded_text[key]
+        result = sanitize_text(value, max_len=max_len)
+        if key is not None and len(key[0]) <= 1000 and len(self.bounded_text) < 256:
+            self.bounded_text[key] = result
+        return result
 
 
 def _metadata_key(raw_key: object, cache: RuntimeMetadataCache | None) -> str:

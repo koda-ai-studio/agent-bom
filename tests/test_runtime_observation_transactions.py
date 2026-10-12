@@ -45,12 +45,22 @@ def test_sqlite_parallel_replays_keep_exact_session_count(tmp_path):
 
 def test_runtime_batch_redaction_reuses_field_values_without_cross_batch_state(monkeypatch):
     from agent_bom.api.routes import observability
+    from agent_bom.api.storage import runtime_records
     from agent_bom.redaction import payload
 
     store = InMemoryRuntimeEventStore()
     monkeypatch.setattr(observability, "get_runtime_event_store", lambda: store)
     real = payload.sanitize_string
+    real_text = observability.sanitize_text
+    text_calls = []
     calls = []
+
+    def text(value, max_len=1000):
+        text_calls.append((value, max_len))
+        return real_text(value, max_len=max_len)
+
+    monkeypatch.setattr(observability, "sanitize_text", text)
+    monkeypatch.setattr(runtime_records, "sanitize_text", text)
 
     def sanitize(value, key, max_str_len):
         calls.append((value, key))
@@ -58,16 +68,26 @@ def test_runtime_batch_redaction_reuses_field_values_without_cross_batch_state(m
 
     monkeypatch.setattr(payload, "sanitize_string", sanitize)
     events = [
-        {"event_id": f"batch-{i}", "session_id": "session", "metadata": {"label": "shared-label", "authorization": "shared-label"}}
+        {
+            "event_id": f"batch-{i}",
+            "session_id": "session",
+            "agent_name": "shared-agent",
+            "message": "shared-message",
+            "metadata": {"label": "shared-label", "authorization": "shared-label"},
+        }
         for i in range(50)
     ]
     assert observability._persist_runtime_observations(events, tenant_id="tenant-a") == 50
     assert calls.count(("shared-label", "label")) == 1
+    assert calls.count(("shared-message", "message")) == 1
+    assert text_calls.count(("shared-agent", 200)) == 1
     assert calls.count(("shared-label", "authorization")) == 1
     rows = store.list_observations("tenant-a")
     assert all(row.metadata["label"] == "shared-label" and row.metadata["authorization"] != "shared-label" for row in rows)
     rows[0].metadata["label"] = "mutated"
     assert rows[1].metadata["label"] == "shared-label"
     calls.clear()
+    text_calls.clear()
     assert observability._persist_runtime_observations(events[:1], tenant_id="tenant-b") == 1
     assert calls.count(("shared-label", "label")) == 1, "cache must not retain data across batches or tenants"
+    assert text_calls.count(("shared-agent", 200)) == 1
