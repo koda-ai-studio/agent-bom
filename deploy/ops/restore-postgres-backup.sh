@@ -10,7 +10,9 @@ fi
 s3_uri="$1"
 postgres_url="$2"
 aws_region="$3"
-local_file="${4:-/tmp/agent-bom-restore.dump}"
+restore_dir="$(mktemp -d "${TMPDIR:-/tmp}/agent-bom-restore.XXXXXX")"
+trap 'rm -rf -- "$restore_dir"' EXIT
+local_file="${4:-$restore_dir/archive.dump}"
 
 # Restore application evidence without replacing the schema-owner-only binding
 # authority. Provision the target with the matching release's migrations and
@@ -44,8 +46,6 @@ fi
 # pg_restore --clean cannot drop an inherited partition constraint while its
 # table remains attached. Detach inside the SAME transaction as restoration;
 # a failed restore rolls the detachments and all restored objects back.
-restore_dir="$(mktemp -d "${TMPDIR:-/tmp}/agent-bom-restore.XXXXXX")"
-trap 'rm -rf -- "$restore_dir"' EXIT
 pg_restore \
   --exit-on-error \
   --clean \

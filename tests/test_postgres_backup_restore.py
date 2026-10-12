@@ -137,7 +137,12 @@ def test_maintenance_dump_restores_migrated_schema_without_binding_authority(tmp
         aws = bin_dir / "aws"
         aws.write_text('#!/bin/sh\ncp "$BACKUP_TEST_ARCHIVE" "$4"\n')
         aws.chmod(0o700)
-        restore_env = {**os.environ, "PATH": str(bin_dir) + os.pathsep + os.environ["PATH"], "BACKUP_TEST_ARCHIVE": str(archive)}
+        restore_env = {
+            **os.environ,
+            "PATH": str(bin_dir) + os.pathsep + os.environ["PATH"],
+            "BACKUP_TEST_ARCHIVE": str(archive),
+            "TMPDIR": str(tmp_path),
+        }
         restore_env.pop("PGOPTIONS", None)
         restore_command = [
             "bash",
@@ -145,7 +150,6 @@ def test_maintenance_dump_restores_migrated_schema_without_binding_authority(tmp
             "s3://test/application.dump",
             make_conninfo(**{**admin_options, "dbname": target}),
             "us-east-1",
-            str(tmp_path / "download.dump"),
         ]
         with connect(target) as conn:
             conn.execute("GRANT SELECT ON public.agent_bom_tenant_binding_keys TO agent_bom_maintenance")
@@ -177,6 +181,7 @@ def test_maintenance_dump_restores_migrated_schema_without_binding_authority(tmp
         with psycopg.connect(ADMIN_URL, autocommit=True) as admin:
             admin.execute(sql.SQL("CREATE ROLE {} NOLOGIN").format(sql.Identifier(archive_role)))
         run(restore_command, env=restore_env)
+        assert not list(tmp_path.glob("agent-bom-restore.*"))
         assert counts(target) == expected
         with connect(target) as conn:
             assert (

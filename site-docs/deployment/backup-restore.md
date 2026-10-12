@@ -97,7 +97,9 @@ The script fails closed before restoration if the authority table is missing or 
 if a runtime role or PUBLIC can access it, or if the archive includes it. It
 preserves that table and its contents, restores application ACLs, and handles
 partition detachment and restoration in one transaction. A SQL/ACL failure rolls
-back the entire restore, including the partition changes. An older administrator
+back the entire restore, including the partition changes. Downloaded archives and
+SQL use a private temporary directory removed at exit; supply a fourth argument
+to retain a downloaded archive at an explicit path. An older administrator
 dump containing authority keys requires a separate operator-reviewed recovery
 procedure; do not grant the maintenance role access to make it readable.
 
