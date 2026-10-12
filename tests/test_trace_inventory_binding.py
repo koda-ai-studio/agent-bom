@@ -159,3 +159,11 @@ def test_cloud_trace_scope_conflict_blocks_otherwise_exact_inventory_identifier(
     )
     assert result["span-1"]["state"] == "scope_conflict"
     assert "node_id" not in result["span-1"]
+
+
+@pytest.mark.parametrize("claims", [{}, {"scope_state": []}, {"scope_state": {}}, {"scope_state": "unknown"}, ["invalid"]])
+def test_malformed_cloud_claims_fail_closed_without_breaking_the_explorer(claims):
+    result = correlate_inventory_observations(
+        Store(), tenant_id="tenant-a", scan_id="snapshot", observations=[observation(cloud_trace=claims)]
+    )
+    assert result["span-1"]["state"] == "scope_conflict"
