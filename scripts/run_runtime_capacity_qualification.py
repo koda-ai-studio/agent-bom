@@ -51,6 +51,16 @@ def _runtime(output: Path, backend: str):
     return runtime, pool
 
 
+class _QualificationServer(uvicorn.Server):
+    async def serve(self, sockets=None):
+        from agent_bom.api.server import _apply_worker_thread_limit
+
+        # Provisioning is deliberately bypassed, but deployment backpressure
+        # must be applied inside the same event loop that serves requests.
+        _apply_worker_thread_limit()
+        await super().serve(sockets=sockets)
+
+
 def _serve_replica(output: Path, backend: str, secret: str, ready):
     runtime, pool = _runtime(output, backend)
     set_runtime_event_store(runtime)
@@ -61,7 +71,7 @@ def _serve_replica(output: Path, backend: str, secret: str, ready):
     ready.send(listener.getsockname()[1])
     ready.close()
     try:
-        uvicorn.Server(uvicorn.Config(app, log_level="error", lifespan="off")).run(sockets=[listener])
+        _QualificationServer(uvicorn.Config(app, log_level="error", lifespan="off")).run(sockets=[listener])
     finally:
         listener.close()
         set_runtime_event_store(None)
@@ -222,6 +232,8 @@ def run(output: Path, *, backend: str, replicas: int = 1) -> dict:
                 counts.append(len(entries) == expected_audit and verified == expected_audit and tampered == 0)
             finally:
                 reset_current_tenant(token)
+        from agent_bom import config
+
         receipt = {
             "schema": "runtime.capacity.v1",
             "evidence": "synthetic-events/loopback-HTTP/real-SQL",
@@ -231,6 +243,11 @@ def run(output: Path, *, backend: str, replicas: int = 1) -> dict:
             "python": platform.python_version(),
             "platform": platform.platform(),
             "replicas": replicas,
+            "worker_threads_per_replica": config.WORKER_THREAD_LIMIT,
+            "shared_pool_per_replica": (
+                {"min": config.POSTGRES_POOL_MIN_SIZE, "max": config.POSTGRES_POOL_MAX_SIZE} if backend == "postgres" else None
+            ),
+            "runtime_pool_per_replica": {"min": 1, "max": 2} if backend == "postgres" else None,
             "load_generator_process": "separate-from-API",
             "client_transport": "fresh-client-and-connection/shared-TLS-context",
             "concurrency": 10,

@@ -89,8 +89,28 @@ AGENT_BOM_STATE_DIR=/tmp/runtime-capacity-state-001 \
 ```
 
 Use `--backend postgres --replicas 2` with the disposable application and
-maintenance roles above for two PostgreSQL-backed API processes. Each runtime
-store pool has a minimum of one and maximum of two connections. The fixed local gate requires zero failed requests, exactly
+maintenance roles above for two PostgreSQL-backed API processes, or `--replicas 4`
+for a four-process profile. Each runtime store pool has a minimum of one and
+maximum of two connections. Set the shared pool and worker limits explicitly
+before comparing runs; the command applies the ordinary API worker cap and
+records all three limits in its receipt:
+
+```bash
+export AGENT_BOM_POSTGRES_POOL_MIN_SIZE=1
+export AGENT_BOM_POSTGRES_POOL_MAX_SIZE=2
+export AGENT_BOM_WORKER_THREAD_LIMIT=2
+AGENT_BOM_STATE_DIR=/tmp/runtime-capacity-state-004 \
+  uv run python -m scripts.run_runtime_capacity_qualification \
+  --backend postgres --replicas 4 --output /tmp/runtime-capacity-004
+```
+
+The API process count corresponds to `controlPlane.api.replicas` for a Helm
+configuration running one API process per pod. A local profile is an input to
+staging qualification, not a reason to change a production replica count without
+repeating the workload there. Increasing only the database pool is a different
+profile and requires its own receipt.
+
+The fixed local gate requires zero failed requests, exactly
 500 retained observations per writer tenant with matching session rollups, no
 reader-tenant observations, complete verified audit chains, read p95 at most 5 seconds and slowdown at most 4×.
 Inspect `attempts.jsonl` and `receipt.json`; retain failed runs. Run on an idle
