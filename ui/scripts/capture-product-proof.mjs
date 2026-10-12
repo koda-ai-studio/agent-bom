@@ -3152,7 +3152,8 @@ async function main() {
     const prepareCorrelationPath = async (proofPage) => {
       await proofPage.locator(".react-flow__node").first().waitFor({ state: "visible" });
       if (proofPage.viewportSize().width < 768) {
-        await proofPage.getByRole("button", { name: "Fit all", exact: true }).click();
+        // Preserve the readable initial anchor. Fitting the entire reference
+        // estate on a phone deliberately sacrifices text size for overview.
         await proofPage.waitForTimeout(500);
         await scrollTo(proofPage, 0);
       } else {
