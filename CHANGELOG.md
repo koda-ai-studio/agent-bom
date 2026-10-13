@@ -11,6 +11,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Published-package first-run verification checks the offline report, persisted sample snapshot and rendered graph on Linux/macOS, with desktop/mobile light/dark captures, separate timings and retained failure receipts.
+
 - Add opt-in snapshot finding reads with per-read differential verification and fallback to current findings on mismatch or unavailable snapshots. Qualification preserves live enrichment and retention semantics; optimized metadata-only reads remain deferred.
 
 - Opt-in scan finding snapshots persist completed job evidence in tenant-scoped memory, SQLite or PostgreSQL stores. Backfill and purge commands manage retained jobs; deletion and expiry remove snapshots even after writes are disabled. Reads require the independent, default-off qualification flag.

@@ -1,0 +1,95 @@
+name: Published first-run journey
+
+on:
+  pull_request:
+    paths:
+      - scripts/verify_first_run.py
+      - tests/test_verify_first_run.py
+      - .github/workflows/first-run.yml
+      - README.md
+      - docs/FIRST_RUN.md
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Published PyPI version (blank selects the latest GitHub release)
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  journey:
+    name: Released package (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    env:
+      PLAYWRIGHT_SKIP_BROWSER_GC: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-python
+        with:
+          python-version: '3.13'
+      - name: Select published release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_VERSION: ${{ inputs.version }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          uv run --no-project --python 3.13 python - <<'PY'
+          import json, os, re, urllib.request
+          version = os.environ.get("REQUESTED_VERSION") or os.environ.get("RELEASE_TAG", "").removeprefix("v")
+          if not version:
+              request = urllib.request.Request(
+                  "https://api.github.com/repos/koda-ai-studio/agent-bom/releases/latest",
+                  headers={"Authorization": "Bearer " + os.environ["GH_TOKEN"], "Accept": "application/vnd.github+json"},
+              )
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  version = json.load(response)["tag_name"].removeprefix("v")
+          if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version):
+              raise SystemExit("Expected a published stable version")
+          with open(os.environ["GITHUB_ENV"], "a") as env:
+              env.write(f"FIRST_RUN_VERSION={version}\n")
+          PY
+      - name: Install published package into a clean environment
+        run: |
+          uv run --no-project --python 3.13 python - <<'PY'
+          import os, pathlib, subprocess, sys, time
+          version = os.environ["FIRST_RUN_VERSION"]
+          root = pathlib.Path(os.environ["RUNNER_TEMP"])
+          venv = root / "first-run-venv"
+          subprocess.run([sys.executable, "-m", "venv", str(venv)], check=True)
+          python = str(venv / "bin/python")
+          started = time.monotonic()
+          subprocess.run([python, "-m", "pip", "install", "--no-cache-dir", "--index-url", "https://pypi.org/simple", f"agent-bom[ui]=={version}"], check=True)
+          seconds = time.monotonic() - started
+          subprocess.run([python, "-m", "pip", "install", "playwright==1.63.0"], check=True)
+          with open(os.environ["GITHUB_ENV"], "a") as env:
+              env.write(f"FIRST_RUN_INSTALL_SECONDS={seconds}\n")
+          PY
+      - name: Install browser test driver
+        run: '"$RUNNER_TEMP/first-run-venv/bin/python" -m playwright install --with-deps chromium'
+      - name: Verify report, persisted graph and browser handoff
+        run: |
+          "$RUNNER_TEMP/first-run-venv/bin/python" scripts/verify_first_run.py \
+            --expected-version "$FIRST_RUN_VERSION" \
+            --install-seconds "$FIRST_RUN_INSTALL_SECONDS" \
+            --output "$RUNNER_TEMP/first-run-evidence"
+      - name: Preserve successful and failed qualification evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: first-run-${{ matrix.os }}
+          path: |
+            ${{ runner.temp }}/first-run-evidence/receipt.json
+            ${{ runner.temp }}/first-run-evidence/*.png
+            ${{ runner.temp }}/first-run-evidence/demo.json
+            ${{ runner.temp }}/first-run-evidence/demo.log
+            ${{ runner.temp }}/first-run-evidence/quickstart.log
+          retention-days: 14

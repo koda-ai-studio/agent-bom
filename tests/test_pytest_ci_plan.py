@@ -550,3 +550,18 @@ def test_documentation_edits_select_index_and_link_contracts(tmp_path, source):
 def test_non_documentation_edits_do_not_select_index_contract(tmp_path, source):
     _write(tmp_path / "tests/test_docs_front_door.py", 1)
     assert select_targeted_tests(changed_files=[Path(source)], root=tmp_path) == []
+
+
+@pytest.mark.parametrize("source", [".github/workflows/new.yml", ".github/workflows/removed.yaml"])
+def test_workflow_changes_select_product_metrics_snapshot(tmp_path, source):
+    contract = tmp_path / "tests/test_product_metrics_snapshot.py"
+    _write(contract, 1)
+    _write(tmp_path / "tests/test_unrelated.py", 1)
+    # Select even when a newly added or deleted workflow is absent locally.
+    assert select_targeted_tests(changed_files=[Path(source)], root=tmp_path) == [contract]
+
+
+@pytest.mark.parametrize("source", [".github/workflows/README.md", ".github/ISSUE_TEMPLATE/bug.yml"])
+def test_non_workflow_changes_do_not_select_product_metrics(tmp_path, source):
+    _write(tmp_path / "tests/test_product_metrics_snapshot.py", 1)
+    assert select_targeted_tests(changed_files=[Path(source)], root=tmp_path) == []

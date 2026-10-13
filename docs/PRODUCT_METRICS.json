@@ -28,7 +28,7 @@
     },
     {
       "name": "GitHub workflow files",
-      "value": 40,
+      "value": 41,
       "source": ".github/workflows",
       "notes": "Counts .yml and .yaml workflow definitions."
     },
