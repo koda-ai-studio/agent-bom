@@ -12,6 +12,7 @@ from typing import Any
 from agent_bom.api.models import JobStatus, ScanJob, ScanRequest
 from agent_bom.api.pipeline import _now
 from agent_bom.api.store import DEMO_ESTATE_TRIGGERED_BY
+from agent_bom.demo_estate import demo_estate_enabled as demo_estate_enabled
 from agent_bom.demo_estate.boot_seed import serialized_seed
 from agent_bom.demo_estate.showcase_graph import (
     SHOWCASE_BASELINE_CREATED_AT,
@@ -42,10 +43,6 @@ _daily_evidence_day: str | None = None
 # default instead of discarding the only code path that knows that decision.
 _bootstrap_status_lock = threading.Lock()
 _bootstrap_status_by_tenant: dict[str, dict[str, Any]] = {}
-
-
-def demo_estate_enabled() -> bool:
-    return os.environ.get("AGENT_BOM_DEMO_ESTATE", "").strip().lower() in _TRUTHY
 
 
 def _demo_seed_block_reason(graph_store: Any | None, tenant_id: str) -> str | None:

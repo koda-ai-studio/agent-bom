@@ -374,6 +374,7 @@ async def test_session_backing_key_revalidation_runs_off_event_loop(scoped_store
 
 @pytest.mark.asyncio
 async def test_session_nonce_and_scim_rechecks_run_off_event_loop(scoped_store, monkeypatch):
+    monkeypatch.setenv("AGENT_BOM_SCIM_BEARER_TOKEN", "synthetic-scim-token")
     from agent_bom.api import middleware
     from agent_bom.api.browser_session import SESSION_COOKIE_NAME, create_browser_session_token
 

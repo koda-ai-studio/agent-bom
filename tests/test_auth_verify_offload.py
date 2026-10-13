@@ -155,3 +155,74 @@ async def test_managed_trial_lifecycle_read_keeps_the_loop_responsive(monkeypatc
     assert observed >= _MIN_TICKS_WHILE_OFFLOADED, (
         f"event loop advanced only {observed} tick(s) during a {_BLOCKING_SECONDS}s lifecycle read — it ran inline"
     )
+
+
+@pytest.mark.asyncio
+async def test_disabled_scim_role_resolution_does_not_wait_for_worker(monkeypatch):
+    import anyio.to_thread
+    from fastapi import FastAPI
+    from starlette.requests import Request
+
+    from agent_bom.api.middleware import APIKeyMiddleware
+    from agent_bom.rbac import Role
+
+    for name in ("AGENT_BOM_SCIM_BEARER_TOKEN", "AGENT_BOM_SCIM_BEARER_TOKEN_FILE", "AGENT_BOM_SCIM_BEARER_TOKENS_JSON"):
+        monkeypatch.delenv(name, raising=False)
+    middleware = APIKeyMiddleware(FastAPI(), api_key="")
+    limiter = anyio.to_thread.current_default_thread_limiter()
+    before = limiter.total_tokens
+    limiter.total_tokens = 1
+    borrower = object()
+    await limiter.acquire_on_behalf_of(borrower)
+    try:
+        result = await asyncio.wait_for(
+            middleware._resolve_runtime_role(
+                Request({"type": "http"}), tenant_id="tenant", upstream_role=Role.ANALYST, subjects=("subject",)
+            ),
+            0.5,
+        )
+        assert result == (Role.ANALYST, None)
+    finally:
+        limiter.release_on_behalf_of(borrower)
+        limiter.total_tokens = before
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("source", ["AGENT_BOM_SCIM_BEARER_TOKEN", "AGENT_BOM_SCIM_BEARER_TOKEN_FILE", "AGENT_BOM_SCIM_BEARER_TOKENS_JSON"])
+async def test_configured_scim_sources_recheck_revocation_off_loop(monkeypatch, source):
+    from fastapi import FastAPI
+    from starlette.requests import Request
+
+    from agent_bom.api import auth
+    from agent_bom.api.middleware import APIKeyMiddleware
+    from agent_bom.api.postgres_common import _current_tenant, reset_current_tenant, set_current_tenant
+    from agent_bom.rbac import Role
+
+    for name in ("AGENT_BOM_SCIM_BEARER_TOKEN", "AGENT_BOM_SCIM_BEARER_TOKEN_FILE", "AGENT_BOM_SCIM_BEARER_TOKENS_JSON"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv(source, "synthetic-source")
+    loop_thread = threading.get_ident()
+    calls = []
+
+    def resolve(tenant, *subjects):
+        assert threading.get_ident() != loop_thread
+        assert tenant == _current_tenant.get() == "tenant"
+        assert subjects == ("subject",)
+        calls.append(tenant)
+        return auth.SCIMRoleResolution(matched=True, active=len(calls) == 1, role=Role.VIEWER, user_id="subject")
+
+    monkeypatch.setattr(auth, "resolve_scim_user_role", resolve)
+    middleware = APIKeyMiddleware(FastAPI(), api_key="")
+    token = set_current_tenant("tenant")
+    try:
+        role, error = await middleware._resolve_runtime_role(
+            Request({"type": "http"}), tenant_id="tenant", upstream_role=Role.ADMIN, subjects=("subject",)
+        )
+        assert role == Role.VIEWER and error is None
+        role, error = await middleware._resolve_runtime_role(
+            Request({"type": "http"}), tenant_id="tenant", upstream_role=Role.ADMIN, subjects=("subject",)
+        )
+        assert role is None and error.status_code == 401
+        assert len(calls) == 2
+    finally:
+        reset_current_tenant(token)

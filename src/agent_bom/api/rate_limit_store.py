@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import logging
 import threading
@@ -15,6 +16,7 @@ class InMemoryRateLimitStore:
     """Process-local sliding-window limiter state."""
 
     _MAX_ENTRIES = 10_000
+    _INLINE_MAX_HITS = 256
 
     def __init__(self, window_seconds: int = 60) -> None:
         self._window = window_seconds
@@ -46,11 +48,28 @@ class InMemoryRateLimitStore:
         """Record a request and return (hit_count, reset_epoch)."""
         with self._lock:
             self._cleanup(now)
-            timestamps = [t for t in self._hits.get(key, []) if now - t < self._window]
-            timestamps.append(now)
-            self._hits[key] = timestamps
-            reset_at = int((timestamps[0] if timestamps else now) + self._window)
-            return len(timestamps), reset_at
+            return self._hit_locked(key, now)
+
+    def _hit_locked(self, key: str, now: float) -> tuple[int, int]:
+        timestamps = [t for t in self._hits.get(key, []) if now - t < self._window]
+        timestamps.append(now)
+        self._hits[key] = timestamps
+        return len(timestamps), int(timestamps[0] + self._window)
+
+    def _try_hit_bounded(self, key: str, now: float) -> tuple[int, int] | None:
+        """Try a small memory-only hit without waiting or scanning other buckets."""
+        if not self._lock.acquire(blocking=False):
+            return None
+        try:
+            if (
+                now - self._last_cleanup >= self._window
+                or len(self._hits.get(key, [])) >= self._INLINE_MAX_HITS
+                or (key not in self._hits and len(self._hits) >= self._MAX_ENTRIES)
+            ):
+                return None
+            return self._hit_locked(key, now)
+        finally:
+            self._lock.release()
 
     def consume_if_below(self, key: str, now: float, limit: int) -> tuple[bool, int, int]:
         """Atomically consume one sliding-window unit when below ``limit``."""
@@ -166,3 +185,12 @@ class PostgresRateLimitStore:
                 (key, window_start),
             ).fetchone()
         return int(row[0]) if row and row[0] is not None else 0
+
+
+async def record_rate_limit_hit(store: InMemoryRateLimitStore | PostgresRateLimitStore, key: str, now: float) -> tuple[int, int]:
+    """Keep SQL, cleanup, large buckets and contended locks off the event loop."""
+    if type(store) is InMemoryRateLimitStore:
+        result = store._try_hit_bounded(key, now)
+        if result is not None:
+            return result
+    return await asyncio.to_thread(store.hit, key, now)

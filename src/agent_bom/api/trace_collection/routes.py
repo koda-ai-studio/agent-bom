@@ -4,6 +4,7 @@ import sqlite3
 from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Query, Request
+from starlette.concurrency import run_in_threadpool
 
 from agent_bom.api.request_tenant import require_request_tenant_id
 from agent_bom.api.trace_collection import service
@@ -48,5 +49,7 @@ async def collect_trace_page(request: Request, body: CollectionRequest) -> Colle
     response_model=CollectionReceipt,
     tags=["observability"],
 )
-def collection_status(request: Request, connection_id: Annotated[str, Query(pattern=r"^[a-zA-Z0-9_-]{1,80}$")]) -> CollectionReceipt:
-    return _invoke(request, CollectionRequest(connection_id=connection_id), advance=False)
+async def collection_status(request: Request, connection_id: Annotated[str, Query(pattern=r"^[a-zA-Z0-9_-]{1,80}$")]) -> CollectionReceipt:
+    # Keep credential/audit/SQL work off-loop while validating this bounded
+    # receipt without an additional trip through the shared worker queue.
+    return await run_in_threadpool(_invoke, request, CollectionRequest(connection_id=connection_id), advance=False)

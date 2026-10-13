@@ -16,6 +16,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Protocol
 
 from agent_bom.api.storage_schema import postgres_deployment_configured
+from agent_bom.core.settings import env_str
 from agent_bom.rbac import Role, role_rank
 
 
@@ -246,6 +247,18 @@ def resolve_scim_user_role(tenant_id: str, *subjects: object) -> SCIMRoleResolut
             best_user = user
 
     return SCIMRoleResolution(matched=True, active=True, role=best_role, user_id=best_user.user_id, user_name=best_user.user_name)
+
+
+async def resolve_scim_user_role_async(tenant_id: str, *subjects: object) -> SCIMRoleResolution:
+    """Recheck SCIM source presence per request; keep configured file/store reads off-loop."""
+    from starlette.concurrency import run_in_threadpool
+
+    from agent_bom.api.scim import _SCIM_SINGLE_TOKEN_ENV, _SCIM_TOKEN_MAPPING_ENV
+
+    sources = (_SCIM_SINGLE_TOKEN_ENV, f"{_SCIM_SINGLE_TOKEN_ENV}_FILE", _SCIM_TOKEN_MAPPING_ENV)
+    if not any(env_str(name, "") for name in sources):
+        return SCIMRoleResolution(matched=False, active=False)
+    return await run_in_threadpool(resolve_scim_user_role, tenant_id, *subjects)
 
 
 def resolve_scim_subject_binding(request: object, explicit: str | None = None) -> str | None:
