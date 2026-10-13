@@ -57,8 +57,10 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     await edge.press("Enter");
     const details = page.getByLabel("Relationship details", { exact: true });
     await expect(details.getByText("Cloud planner → Ingested worker")).toBeVisible();
+    await expect(details.getByText("configured_delegation", { exact: true })).toBeVisible();
     await details.getByText("Recorded evidence", { exact: true }).click();
-    await expect(details.getByText(/configured_delegation/)).toBeVisible();
+    await expect(details.locator("pre")).toBeVisible();
+    await expect(details.locator("pre")).toContainText('"basis": "configured_delegation"');
     expect(legacy).toEqual([]);
     expect(errors).toEqual([]);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
