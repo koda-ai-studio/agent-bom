@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from agent_bom.graph.container import UnifiedGraph
+from agent_bom.graph.credential_findings import project_credential_findings
 
 _logger = logging.getLogger("agent_bom.graph.builder")
 ReportOverlay = Callable[[UnifiedGraph, Mapping[str, Any]], None]
@@ -34,6 +35,8 @@ def apply_build_analysis(graph: UnifiedGraph, report_json: dict[str, Any], ports
     _identity_analysis(graph, report_json)
     _topology_analysis(graph, report_json, ports)
     _risk_analysis(graph, report_json, ports)
+    # Assessments must not feed back into the topology analysis that produced them.
+    project_credential_findings(graph, report_json.get("findings"))
 
 
 def _identity_analysis(graph: UnifiedGraph, report_json: dict[str, Any]) -> None:

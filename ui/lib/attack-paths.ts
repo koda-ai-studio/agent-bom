@@ -116,7 +116,7 @@ export function attackPathPresentationKey(
     finding: findings.length ? findings : path.finding_ids?.length ? [...path.finding_ids].sort() : [path.target],
     agent: agents.length ? agents : [path.source],
     package: packages,
-    asset: assets,
+    asset: assets, credential: pathNodeIdsForTypes(path, nodeById, new Set([EntityType.CREDENTIAL, EntityType.CREDENTIAL_REF])),
   });
 }
 

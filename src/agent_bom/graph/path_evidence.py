@@ -15,6 +15,8 @@ from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.hop_evidence import authority_evidence, runtime_evidence_references
 from agent_bom.graph.types import RelationshipType
 
+HopEdges = dict[tuple[str, str], list[UnifiedEdge]]
+
 STRUCTURAL_EXPOSURE_SUMMARY = (
     "Graph topology links an agent/server to a vulnerable component. Listed tools and "
     "credential references are context; effective permission, successful use, and exploitation "
@@ -139,8 +141,11 @@ def _evidence_tier(edge: UnifiedEdge) -> str:
     return "static_evidence"
 
 
-def _analysis(graph: UnifiedGraph, *, hop_count: int) -> dict[str, Any]:
-    status = graph.analysis_status.get("attack_path_fusion")
+def _analysis(graph: UnifiedGraph, *, hop_count: int, path: AttackPath | None = None) -> dict[str, Any]:
+    target = graph.nodes.get(path.target) if path is not None else None
+    credential_assessment = target is not None and target.attributes.get("rule_id") == "AGENT_REACHES_PRIVILEGED"
+    analyzer = "credential_finding_paths" if credential_assessment else "attack_path_fusion"
+    status = graph.analysis_status.get(analyzer)
     if status is None:
         return {
             "status": "not_recorded",
@@ -155,10 +160,12 @@ def _analysis(graph: UnifiedGraph, *, hop_count: int) -> dict[str, Any]:
     return result
 
 
-def _edge_for_hop(graph: UnifiedGraph, source: str, target: str, relationship: str) -> UnifiedEdge | None:
+def _edge_for_hop(
+    graph: UnifiedGraph, source: str, target: str, relationship: str, hop_edges: HopEdges | None = None
+) -> UnifiedEdge | None:
     candidates = [
         edge
-        for edge in graph.adjacency.get(source, [])
+        for edge in (hop_edges.get((source, target), []) if hop_edges is not None else graph.adjacency.get(source, []))
         if edge.target == target and (not relationship or _relationship(edge) == relationship)
     ]
     if not candidates:
@@ -174,14 +181,14 @@ def _edge_for_hop(graph: UnifiedGraph, source: str, target: str, relationship: s
     )
 
 
-def annotate_attack_path_evidence(path: AttackPath, graph: UnifiedGraph) -> AttackPath:
+def annotate_attack_path_evidence(path: AttackPath, graph: UnifiedGraph, *, hop_edges: HopEdges | None = None) -> AttackPath:
     """Attach deterministic hop receipts and conservatively classify truth."""
 
     path.summary = _qualify_structural_summary(path.summary)
     receipts: list[dict[str, Any]] = []
     for index, (source, target) in enumerate(zip(path.hops, path.hops[1:])):
         relationship = path.edges[index] if index < len(path.edges) else ""
-        edge = _edge_for_hop(graph, source, target, relationship)
+        edge = _edge_for_hop(graph, source, target, relationship, hop_edges)
         if edge is None:
             receipts.append(
                 {
@@ -236,7 +243,7 @@ def annotate_attack_path_evidence(path: AttackPath, graph: UnifiedGraph) -> Atta
             }
         )
 
-    analysis = _analysis(graph, hop_count=max(len(path.hops) - 1, 0))
+    analysis = _analysis(graph, hop_count=max(len(path.hops) - 1, 0), path=path)
     truncated = analysis.get("status") in {"limited", "skipped", "failed", "not_recorded"}
     if truncated:
         for receipt in receipts:
@@ -498,3 +505,21 @@ def qualify_exposure_reachability(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 __all__ = ["annotate_attack_path_evidence", "exposure_evidence_dimensions"]
+
+
+def with_technique_mappings(paths: list[AttackPath], graph: UnifiedGraph) -> list[AttackPath]:
+    """Annotate a batch without rescanning a shared credential's finding fan-out."""
+    hop_edges: HopEdges = {}
+    for source, edges in graph.adjacency.items():
+        for edge in edges:
+            hop_edges.setdefault((source, edge.target), []).append(edge)
+    for path in paths:
+        annotate_attack_path_evidence(path, graph, hop_edges=hop_edges)
+    try:
+        from agent_bom.graph.attack_path_mitre import derive_attack_path_techniques
+
+        for path in paths:
+            path.technique_mappings = derive_attack_path_techniques(path, graph)
+    except Exception:  # noqa: BLE001
+        pass
+    return paths

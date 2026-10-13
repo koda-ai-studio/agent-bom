@@ -72,7 +72,7 @@ export function GraphEntityDrawer({
   useEffect(() => {
     setLoadedDetail(null);
     setLoading(false);
-    if (data.rollup || !enrich || !scanId || !nodeId) return;
+    if (data.rollup?.is_container || data.rollup?.has_children || !enrich || !scanId || !nodeId) return;
     let cancelled = false;
     setLoading(true);
     void api
@@ -105,7 +105,7 @@ export function GraphEntityDrawer({
     [enriched, remediationHref, scanId],
   );
   const evidenceLabel = evidenceTierLabel(enriched);
-  if (data.rollup) return <GraphScopeDetail item={data.rollup} onClose={onClose} onOpenScope={onOpenScope} onInspectRelationships={onExpandNeighbors} scanId={scanId} docked={variant === "docked"} />;
+  if (data.rollup && (data.rollup.is_container || data.rollup.has_children)) return <GraphScopeDetail item={data.rollup} onClose={onClose} onOpenScope={onOpenScope} onInspectRelationships={onExpandNeighbors} scanId={scanId} docked={variant === "docked"} />;
 
   const relationshipSlot = enrich && scanId && nodeId
     ? <GraphRecordedRelationships key={`${scanId}:${nodeId}`} scanId={scanId} nodeId={nodeId} onInspectNode={onInspectNode} />

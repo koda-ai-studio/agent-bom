@@ -1385,10 +1385,14 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
     "source_types": [
       "package",
       "server",
-      "container"
+      "container",
+      "agent",
+      "credential",
+      "credential_ref"
     ],
     "target_types": [
-      "vulnerability"
+      "vulnerability",
+      "misconfiguration"
     ],
     "traversable": true
   },

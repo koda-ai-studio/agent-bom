@@ -2,6 +2,7 @@ import { MarkerType, type Edge, type Node } from "@xyflow/react";
 
 import type { LineageNodeData, LineageNodeType } from "@/components/lineage-nodes";
 import type { GraphRollupContainer, GraphRollupEdge } from "@/lib/api-types";
+import { severityRank } from "@/lib/severity";
 import { FLOW_NODE_TYPES, lineageNodeTypeForEntity } from "@/lib/graph-entity-mapping";
 
 
@@ -60,6 +61,12 @@ export function rollupContainerSubtitle(container: GraphRollupContainer): string
   return parts.join(" · ");
 }
 
+export function rollupDisplaySeverity(container: GraphRollupContainer): string {
+  const own = container.severity?.toLowerCase() ?? "";
+  const descendants = container.aggregate?.worst_severity?.toLowerCase() ?? "";
+  return severityRank(own) >= severityRank(descendants) ? own : descendants;
+}
+
 function rollupContainerToNodeData(
   container: GraphRollupContainer,
 ): LineageNodeData {
@@ -70,7 +77,7 @@ function rollupContainerToNodeData(
     rollup: container,
     nodeType,
     entityType: container.entity_type,
-    severity: container.severity || aggregate?.worst_severity || undefined,
+    severity: rollupDisplaySeverity(container) || undefined,
     description: rollupContainerSubtitle(container),
     attributes: {
       node_id: container.id,
@@ -130,8 +137,8 @@ export function buildRollupFlowGraph(
       // The aggregate count spans every listed kind; it is not a per-kind count.
       type: "smoothstep",
       label: `${edge.count.toLocaleString()} relationship${edge.count === 1 ? "" : "s"}`,
-      data: { aggregate: edge, hoverDescription: `${edge.count} recorded relationships between scopes · ${edge.directions?.join(", ") || "Direction not recorded"}. Select to inspect the aggregate.` },
-      ariaLabel: `${edge.count} recorded relationships between scopes; ${edge.directions?.length === 1 ? edge.directions[0] : edge.directions?.length ? "mixed directions" : "direction unavailable"}`,
+      data: { aggregate: edge, hoverDescription: `${edge.count} recorded relationship${edge.count === 1 ? "" : "s"} between entities · ${edge.directions?.join(", ") || "Direction not recorded"}. Select to inspect the aggregate.` },
+      ariaLabel: `${edge.count} recorded relationship${edge.count === 1 ? "" : "s"} between entities; ${edge.directions?.length === 1 ? edge.directions[0] : edge.directions?.length ? "mixed directions" : "direction unavailable"}`,
       ...(edge.directions?.length === 1 && ["directed", "bidirectional"].includes(edge.directions[0]!)
         ? { markerEnd: { type: MarkerType.ArrowClosed, color: "var(--text-secondary)" } } : {}),
       ...(edge.directions?.length === 1 && edge.directions[0] === "bidirectional"

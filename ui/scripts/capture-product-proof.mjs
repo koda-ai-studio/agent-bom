@@ -3611,11 +3611,10 @@ async function main() {
           state: "visible",
           timeout: 30_000,
         });
-        await canvasPage.waitForFunction((scenarioId) => {
-          const frame = document.querySelector(".react-flow")?.getBoundingClientRect();
-          const proposal = document.querySelector(`[data-id="proposal:${scenarioId}:private-endpoint"]`)?.getBoundingClientRect();
-          return frame && proposal && proposal.left >= frame.left && proposal.right <= frame.right && proposal.top >= frame.top && proposal.bottom <= frame.bottom;
-        }, SCENARIO_ID, { timeout: 10_000 });
+        const unconnected = canvasPage.getByRole("region", { name: "Unconnected proposal items" });
+        await expect(unconnected).toBeVisible();
+        await expect(unconnected.getByRole("button", { name: /Private service endpoint/ })).toBeVisible();
+        await expect(canvasPage.locator(`.react-flow [data-id="proposal:${SCENARIO_ID}:private-endpoint"]`)).toHaveCount(0);
         await expect.poll(() => canvasPage.locator(".react-flow__node").evaluateAll(nodes => nodes.flatMap(node => {
           const box = node.getBoundingClientRect();
           const frame = node.closest(".react-flow").getBoundingClientRect();
@@ -3649,6 +3648,7 @@ async function main() {
         ],
         readySelector:
           'section[aria-label="Scenario comparison"]:has-text("Proposed scenario — not observed or deployed"):has-text("Current · observed"):has-text("Proposed · modeled")',
+        assertEdgeLabelsClearOfNodes: true,
         minGraphNodes: 3,
         minGraphEdges: 1,
         assertNoHorizontalOverflow: true,

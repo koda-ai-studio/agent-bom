@@ -399,6 +399,22 @@ describe("attack path helpers", () => {
     ]);
   });
 
+  it("retains different credential paths to the same agent finding", () => {
+    const nodes = new Map([
+      ["agent", graphNode("agent", EntityType.AGENT, "Agent")],
+      ["server", graphNode("server", EntityType.SERVER, "Server")],
+      ["credential-a", graphNode("credential-a", EntityType.CREDENTIAL, "TOKEN_A")],
+      ["credential-b", graphNode("credential-b", EntityType.CREDENTIAL_REF, "TOKEN_B")],
+      ["finding", graphNode("finding", EntityType.MISCONFIGURATION, "Credential reach")],
+    ]);
+    const paths: AttackPath[] = ["credential-a", "credential-b"].map(credential => ({
+      source: "agent", target: "finding", hops: ["agent", "server", credential, "finding"],
+      edges: ["uses", "exposes_cred", "vulnerable_to"], composite_risk: 28,
+      summary: "Modeled credential exposure", credential_exposure: [credential], tool_exposure: [], vuln_ids: ["Credential reach"],
+    }));
+    expect(dedupeAttackPathsForPresentation([...paths, paths[0]!], nodes)).toHaveLength(2);
+  });
+
   it("builds a focused security-graph href from canonical context", () => {
     expect(
       buildSecurityGraphHref({

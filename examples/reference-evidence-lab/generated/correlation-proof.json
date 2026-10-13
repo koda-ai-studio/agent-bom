@@ -10,7 +10,7 @@
       ]
     }
   ],
-  "artifact_sha256": "sha256:8a3b1be9b72bfc9364fc8b84afd6309582dfe4da6e408e51d1a59b6b5a0f197c",
+  "artifact_sha256": "sha256:973e3f0e1a1d685b14434d9d8bc4dcbc4b709a84b624739687e90ac8c9ff9b27",
   "capture_fixture": {
     "fix_first": {
       "attack_campaigns": [
@@ -994,6 +994,21 @@
             "evaluated_entry_count": 1,
             "node_count": 10,
             "result_count": 1
+          },
+          "reason_codes": [],
+          "status": "complete"
+        },
+        "credential_finding_paths": {
+          "limits": {
+            "agent_edges": 5000,
+            "depth": 6,
+            "edges": 100000,
+            "results": 10000
+          },
+          "observed": {
+            "agents": 0,
+            "edges": 0,
+            "results": 0
           },
           "reason_codes": [],
           "status": "complete"
@@ -2504,6 +2519,21 @@
               "evaluated_entry_count": 1,
               "node_count": 10,
               "result_count": 1
+            },
+            "reason_codes": [],
+            "status": "complete"
+          },
+          "credential_finding_paths": {
+            "limits": {
+              "agent_edges": 5000,
+              "depth": 6,
+              "edges": 100000,
+              "results": 10000
+            },
+            "observed": {
+              "agents": 0,
+              "edges": 0,
+              "results": 0
             },
             "reason_codes": [],
             "status": "complete"

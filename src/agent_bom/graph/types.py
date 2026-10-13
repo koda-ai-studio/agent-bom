@@ -47,7 +47,7 @@ class RelationshipType(str, Enum):
 
     # ── Vulnerability ──
     AFFECTS = "affects"  # vulnerability → package (reverse)
-    VULNERABLE_TO = "vulnerable_to"  # package/server → vulnerability
+    VULNERABLE_TO = "vulnerable_to"  # asset → vulnerability/configuration finding
     EXPLOITABLE_VIA = "exploitable_via"  # vulnerability → tool/credential
     REMEDIATES = "remediates"  # package/fixed package → vulnerability
     TRIGGERS = "triggers"  # vulnerability → misconfiguration/risk condition

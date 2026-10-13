@@ -23,6 +23,8 @@ import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from agent_bom.graph.credential_findings import project_credential_findings
+
 if TYPE_CHECKING:
     from agent_bom.graph.container import AttackPath, UnifiedGraph
     from agent_bom.graph.dependency_reach import ReachabilityReport
@@ -67,6 +69,7 @@ def attach_graph_derived_findings(report: "AIBOMReport", graph: "UnifiedGraph") 
         toxic = build_toxic_combination_findings_data(graph)
         if toxic:
             report.toxic_combination_findings_data = toxic
+            project_credential_findings(graph, toxic)
     except Exception as exc:  # noqa: BLE001
         _logger.debug("Toxic-combination findings surfacing skipped: %s", exc)
 

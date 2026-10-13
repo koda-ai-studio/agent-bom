@@ -359,32 +359,13 @@ def _match_overpermissioned_to_sensitive(graph: UnifiedGraph) -> list[ToxicMatch
 def _match_agent_reaches_privileged(graph: UnifiedGraph) -> list[ToxicMatch]:
     """An AGENT that reaches a credential / privileged tool — the agentic-AI moat."""
     matches: list[ToxicMatch] = []
-    privileged_rels = frozenset(
-        {
-            RelationshipType.EXPOSES_CRED,
-            RelationshipType.REACHES_TOOL,
-            RelationshipType.USES,
-            RelationshipType.USED_CREDENTIAL,
-        }
-    )
-    # Precompute the set of nodes that are the source of any privileged edge in
-    # a single O(E) pass, instead of re-scanning every edge per agent (which is
-    # O(agents x edges)). Membership-testing this set per agent is O(1) amortized.
-    priv_sources = {e.source for e in graph.edges if e.relationship in privileged_rels}
-    for agent in graph.nodes_by_type(EntityType.AGENT):
-        reached = graph.reachable_from(agent.id, max_depth=6, include_source=False)
-        cred_hits: list[str] = []
-        for nid in reached:
-            target = graph.nodes.get(nid)
-            if target is None:
-                continue
-            if target.entity_type in (EntityType.CREDENTIAL, EntityType.CREDENTIAL_REF):
-                cred_hits.append(nid)
+    from agent_bom.graph.credential_reach import credential_routes
+
+    routes = credential_routes(graph, (a.id for a in graph.nodes_by_type(EntityType.AGENT)), analyzer="credential_reach")
+    for owner, credentials in routes.items():
+        agent = graph.nodes[owner]
+        cred_hits = list(credentials)
         if not cred_hits:
-            continue
-        # Require the reach to actually traverse a credential/tool relationship
-        # (not merely co-membership), so the path is a real harvest chain.
-        if agent.id not in priv_sources and priv_sources.isdisjoint(reached):
             continue
         ranked = sorted(set(cred_hits))
         node_ids = (agent.id, *ranked)

@@ -841,6 +841,7 @@ _REPORT_COORDINATE_KEYS = {
     "purl",
     "identifier",
     "finding_group_key",
+    "finding_node_id",
 }
 _REPORT_AUTH_MODES = {
     "env-credentials",
@@ -858,8 +859,7 @@ _WHITESPACE_OR_C0_RE = re.compile(r"[\s\x00-\x1f]")
 def _safe_report_coordinate(value: str) -> bool:
     """Check coordinate components, not the entropy of combined namespaces.
 
-    Namespace separators make valid purls and graph coordinates look random.
-    Retain credential-pattern, encoded-secret and per-component entropy checks;
+    Preserve coordinates while checking credential patterns and component entropy;
     a field named node_id is not permission to export an embedded token.
     """
     if ":" not in value or "://" in value or _looks_like_path_value(value) or _WHITESPACE_OR_C0_RE.search(value):
