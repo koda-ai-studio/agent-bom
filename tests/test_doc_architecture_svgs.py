@@ -25,9 +25,9 @@ ROOT = Path(__file__).resolve().parents[1]
 IMAGES = ROOT / "docs" / "images"
 
 
-def _readme_persona_rows() -> list[list[str]]:
+def _tour_persona_rows() -> list[list[str]]:
     """Return the team/value table without its header or separator."""
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    readme = (ROOT / "docs/PRODUCT_TOUR.md").read_text(encoding="utf-8")
     section = readme.split("## Built for the teams", 1)[1].split("## Product tour", 1)[0]
     lines = [line for line in section.splitlines() if line.startswith("|")]
     return [[cell.strip().strip("*") for cell in line.strip("|").split("|")] for line in lines[2:]]
@@ -181,7 +181,7 @@ def test_persona_value_renders_buyer_lanes() -> None:
 
 
 def test_readme_persona_table_covers_each_operating_lane() -> None:
-    titles = [row[0] for row in _readme_persona_rows()]
+    titles = [row[0] for row in _tour_persona_rows()]
     assert titles == [
         "Developers & AI engineers",
         "AppSec & cloud security",
@@ -190,19 +190,16 @@ def test_readme_persona_table_covers_each_operating_lane() -> None:
         "Security & engineering leaders",
         "AI assistants & automation",
     ]
-    assert all(len(row) == 2 and row[1] for row in _readme_persona_rows())
+    assert all(len(row) == 2 and row[1] for row in _tour_persona_rows())
 
 
 def test_readme_links_end_to_end_workflow_from_product_tour() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    hosting = readme.index("## Self-host")
-    personas = readme.index("## Built for the teams")
-    tour = readme.index("## Product tour")
-    trust = readme.index("## Trust and evidence")
-    assert hosting < personas < tour < trust
-    workflow = readme[tour:trust]
-    assert "[Evidence workflow](docs/HOW_IT_WORKS.md)" in workflow
-    assert "[Control-plane architecture](docs/ARCHITECTURE.md)" in workflow
+    assert "docs/PRODUCT_TOUR.md" in readme
+    workflow = (ROOT / "docs/PRODUCT_TOUR.md").read_text()
+    assert workflow.index("## Built for the teams") < workflow.index("## Product tour")
+    assert "[Evidence workflow](HOW_IT_WORKS.md)" in workflow
+    assert "[Control-plane architecture](ARCHITECTURE.md)" in workflow
     assert "correlation-graph-live.png" in workflow
     assert "modeled infrastructure" in workflow
     assert "CVE-2023-4863" in workflow
@@ -211,22 +208,23 @@ def test_readme_links_end_to_end_workflow_from_product_tour() -> None:
 def test_readme_embeds_cli_and_investigation_and_links_workflow_detail() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     assert readme.count("docs/images/demo-latest.gif") == 1
-    assert readme.count('<img src="docs/images/correlation-graph-live.png"') == 1
+    assert readme.count('<img src="docs/images/graph-relationship-dark-live.png"') == 1
     for diagram in ("workflow-dark.svg", "architecture-dark.svg", "persona-value-dark.svg"):
         assert diagram not in readme
-    assert "[Evidence workflow](docs/HOW_IT_WORKS.md)" in readme
-    assert "[Control-plane architecture](docs/ARCHITECTURE.md)" in readme
+    assert "docs/PRODUCT_TOUR.md" in readme
+    assert "Current-source preview" in readme
+    assert "published `0.108.4` UI predates" in readme
 
 
 def test_persona_table_rows_all_carry_a_concrete_first_action() -> None:
-    rows = dict(_readme_persona_rows())
+    rows = dict(_tour_persona_rows())
     for role, action in (
         ("Developers & AI engineers", "Inspect repositories"),
         ("AppSec & cloud security", "Connect cloud accounts"),
         ("Platform & DevOps", "Run a shared control plane"),
         ("GRC & audit", "Open **Compliance**"),
         ("Security & engineering leaders", "Open **Overview**"),
-        ("AI assistants & automation", "docs/MCP_WORKFLOWS.md"),
+        ("AI assistants & automation", "MCP_WORKFLOWS.md"),
     ):
         assert action in rows[role]
 

@@ -681,9 +681,9 @@ def main() -> int:
         _fail(f"integrations/docker-mcp-registry/tools.json is out of sync with MCP server-card tools: missing={missing}, extra={extra}")
     for path in MCP_COUNT_DOCS:
         text = path.read_text()
-        readme_count_phrase = f"{tools} MCP tools, {resources} resources, and {prompts} workflow prompts"
-        if path.name == "README.md" and readme_count_phrase not in text:
-            _fail("README.md must advertise current MCP tool/resource/prompt counts")
+        readme_catalog_link = "[Choose an MCP profile](docs/MCP_SERVER.md)"
+        if path.name == "README.md" and readme_catalog_link not in text:
+            _fail("README.md must link the owning MCP profile and catalog reference")
         if path.name == "MCP_SERVER.md" and f"Tool Categories ({tools} tools)" not in text:
             _fail("docs/MCP_SERVER.md must advertise current MCP tool count")
         if path.name == "mcp-server.md" and f"{resources} resources and {prompts} workflow prompts" not in text:

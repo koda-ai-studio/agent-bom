@@ -72,8 +72,8 @@ def test_readme_promotes_repository_scan_before_the_failing_demo() -> None:
 def test_readme_first_scan_output_leads_with_agent_and_mcp_findings() -> None:
     import re
 
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    quick_start = readme.split("## Quick start", 1)[1].split("## Self-host", 1)[0]
+    readme = (ROOT / "docs/FIRST_RUN.md").read_text(encoding="utf-8")
+    quick_start = readme.split("### Annotated demo output", 1)[1].split("## 2.", 1)[0]
     output = re.search(r"```text\n(.*?)\n```", quick_start, re.S)
     assert output, "quick start must show real first-scan output"
     text = output.group(1)
@@ -87,8 +87,7 @@ def test_readme_first_scan_output_leads_with_agent_and_mcp_findings() -> None:
 
 
 def test_readme_first_run_explains_blast_radius_and_mcp_evidence() -> None:
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    tour = readme.split("## Product tour", 1)[1].split("## Self-host", 1)[0]
+    tour = (ROOT / "docs/PRODUCT_TOUR.md").read_text()
     normalized = " ".join(tour.lower().split())
     for marker in ("finding", "source receipts", "graph", "modeled data asset", "owners", "fix", "re-scan", "verify"):
         assert marker in normalized
@@ -164,7 +163,8 @@ def test_release_prep_does_not_call_unpublished_version_current() -> None:
 
 def test_readme_distinguishes_graph_relationship_provenance() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    normalized = " ".join(readme.lower().split())
+    tour = (ROOT / "docs/PRODUCT_TOUR.md").read_text()
+    normalized = " ".join(tour.lower().split())
     assert "Graph views use observed nodes and relationships" not in readme
     for claim in (
         "source receipts",
@@ -173,7 +173,7 @@ def test_readme_distinguishes_graph_relationship_provenance() -> None:
         "a blocked call does not establish that the underlying package was fixed",
     ):
         assert claim in normalized
-    assert "[Evidence workflow](docs/HOW_IT_WORKS.md)" in readme
+    assert "[Evidence workflow](HOW_IT_WORKS.md)" in tour
     workflow = " ".join((ROOT / "docs/HOW_IT_WORKS.md").read_text().lower().split())
     for boundary in (
         "they do not merge permission-bearing runtime occurrences",
@@ -196,58 +196,34 @@ def test_release_verification_blocks_on_stale_registry_surfaces() -> None:
 
 
 def test_readme_storefront_is_concise_ordered_and_actionable() -> None:
-    import re
-
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    markers = [
-        "## Quick start",
-        "## Self-host in your environment",
-        "### Deployment models",
-        "## Built for the teams",
-        "## Product tour",
-        "## Trust and evidence",
-    ]
+    markers = ["## Quick start", "## Open the sample graph", "## Self-host in your environment", "## Trust and evidence"]
     positions = [readme.index(marker) for marker in markers]
     assert positions == sorted(positions)
     hero = readme[: positions[0]]
-    assert "MCP server" in hero and "agents" in hero
-    assert hero.count("img.shields.io/") == 8
-    assert hero.count("Open security scanner and self-hosted control plane") == 1
-    for anchor in ("#product-tour", "#self-host-in-your-environment", "#deployment-models", "#quick-start"):
-        assert f'href="{anchor}"' in hero
-    assert "Scan your software and AI infrastructure" not in hero
-    for noise in ("package ecosystems", "compliance surfaces", "MCP tools · no account required", "demo.agent-bom.com"):
-        assert noise not in hero
+    assert "For AppSec and platform engineers" in hero
+    assert "trace the exposure evidence" in hero
+    assert "docs/PRODUCT_TOUR.md" in hero
     quick_start = readme.split("## Quick start", 1)[1].split("\n## ", 1)[0]
-    block = re.search(r"```bash\n(.*?)\n```", quick_start, re.S)
-    assert block and block.group(1).splitlines() == ["pip install agent-bom", "agent-bom scan ."]
-    integrations = readme.split("<summary>Work with your existing tools</summary>", 1)[1].split("</details>", 1)[0]
-    assert "agent-bom mcp server" in integrations
-    sample = quick_start.split("<summary>No project handy?", 1)[1].split("</details>", 1)[0]
-    assert "```bash\nagent-bom scan --demo --offline\n```" in sample
-    assert "docs/images/demo-latest.gif" in sample
-    assert "```text" not in quick_start.split("<summary>No project handy?", 1)[0]
-    assert len(readme.splitlines()) <= 210
-    images = re.findall(r'<img src="docs/images/([^"]+-live.png)"', readme)
-    assert images == [
-        "graph-environment-dark-live.png",
-        "dashboard-live.png",
-        "correlation-graph-live.png",
-        "graph-relationship-dark-live.png",
-        "remediation-live.png",
-    ]
-    assert "correlation-path-live.png" not in readme
-    assert "docs/GALLERY.md" in readme
-    for diagram in ("workflow-dark.svg", "architecture-dark.svg", "persona-value-dark.svg", "blast-radius-dark.svg"):
-        assert diagram not in readme
-    assert "AppSec / GRC" not in readme
+    assert "pip install agent-bom\nagent-bom scan ." in quick_start
+    assert "agent-bom scan --demo --offline" in quick_start
+    assert "Exit `1` is expected" in quick_start
+    assert "does not prove" in readme or "do not prove" in readme
+    sample = readme.split("## Open the sample graph", 1)[1].split("\n## ", 1)[0]
+    assert "agent-bom[ui]==0.108.4" in sample
+    assert "server command it prints" in sample and "graph URL" in sample
+    assert "skips package-CVE lookup" in sample
+    assert "zero CVEs is not a clean verdict" in sample
+    assert "Current source (not yet" not in readme
+    assert "## Built for the teams" not in readme
+    assert "docs/IMPORTERS.md" in readme
 
 
 def test_readme_grc_persona_row_links_a_runnable_compliance_workflow() -> None:
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    row = next(line for line in readme.splitlines() if line.startswith("| **GRC & audit**"))
+    tour = (ROOT / "docs/PRODUCT_TOUR.md").read_text(encoding="utf-8")
+    row = next(line for line in tour.splitlines() if line.startswith("| **GRC & audit**"))
     assert "Open **Compliance**" in row
-    assert "docs/GALLERY.md#scan-a-repository-before-shipping" in row
+    assert "GALLERY.md#scan-a-repository-before-shipping" in row
     scenario = (ROOT / "docs/GALLERY.md").read_text().split("## Scan a repository before shipping", 1)[1].split("\n## ", 1)[0]
     assert "agent-bom scan . -f json -o scan.json" in scenario
     assert "agent-bom report compliance-narrative scan.json" in scenario
