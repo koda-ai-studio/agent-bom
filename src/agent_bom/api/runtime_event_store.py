@@ -10,7 +10,13 @@ from typing import Any, Protocol
 
 from agent_bom.analytics_retention import prune_runtime_observations_for_tenant
 from agent_bom.api.gateway_activity_store import ensure_sqlite_gateway_activity_schema
-from agent_bom.api.storage.runtime_observation_query import memory_observation_page, session_keys, sql_observation_page, sql_sessions
+from agent_bom.api.storage.runtime_observation_query import (
+    memory_observation_page,
+    order_sessions,
+    session_keys,
+    sql_observation_page,
+    sql_sessions,
+)
 from agent_bom.api.storage.runtime_records import (
     RuntimeObservationRecord as RuntimeObservationRecord,
 )
@@ -247,7 +253,7 @@ class InMemoryRuntimeEventStore:
     def get_sessions(self, tenant_id: str, session_ids: list[str]) -> list[RuntimeSessionRecord]:
         keys = session_keys(session_ids)
         with self._lock:
-            return [row for key in keys if (row := self._sessions.get((tenant_id, key))) is not None]
+            return order_sessions([row for key in keys if (row := self._sessions.get((tenant_id, key))) is not None])
 
     def list_observations(
         self,

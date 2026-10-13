@@ -23,10 +23,16 @@ def sql_sessions(conn: Any, tenant_id: str, session_ids: list[str], *, postgres:
     marker = "%s" if postgres else "?"
     placeholders = ",".join(marker for _ in keys)
     rows = conn.execute(
-        f"SELECT data FROM runtime_sessions WHERE tenant_id={marker} AND session_id IN ({placeholders})",  # nosec B608
+        f"SELECT data FROM runtime_sessions WHERE tenant_id={marker} AND session_id IN ({placeholders}) "  # nosec B608
+        "ORDER BY last_seen DESC, session_id DESC",
         (tenant_id, *keys),
     ).fetchall()
     return [_session_from_json(row[0]) for row in rows]
+
+
+def order_sessions(rows: list[RuntimeSessionRecord]) -> list[RuntimeSessionRecord]:
+    """Newest activity first, then session id; matches the SQL session reads."""
+    return sorted(rows, key=lambda row: (row.last_seen, row.session_id), reverse=True)
 
 
 def validate_query(limit: int, offset: int, filters: dict[str, Any]) -> dict[str, str]:
