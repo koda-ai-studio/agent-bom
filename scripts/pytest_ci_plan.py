@@ -288,7 +288,11 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
                     "test_findings_push.py",
                 }
             )
-        if normalized.as_posix().startswith("src/agent_bom/") or normalized.as_posix().startswith("docs/PRODUCT_METRICS."):
+        if (
+            normalized.as_posix().startswith("src/agent_bom/")
+            or normalized.as_posix().startswith("docs/PRODUCT_METRICS.")
+            or (normalized.parent == Path(".github/workflows") and normalized.suffix in {".yml", ".yaml"})
+        ):
             selected.update(candidate for candidate in available if candidate.name == "test_product_metrics_snapshot.py")
         if normalized.as_posix() == "src/agent_bom/security.py" or normalized.as_posix().startswith("src/agent_bom/redaction/"):
             selected.update(
