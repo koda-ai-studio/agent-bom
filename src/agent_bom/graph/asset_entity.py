@@ -125,6 +125,7 @@ def link_findings_to_graph_nodes(findings: list[Any], graph: Any) -> int:
                 if edge.target == node_id
                 and getattr(edge.relationship, "value", edge.relationship) == RelationshipType.VULNERABLE_TO.value
                 and edge.source in nodes
+                and not (getattr(edge, "evidence", None) or {}).get("derived_via")
             }
             if len(predecessors) == 1:
                 asset_node_id = next(iter(predecessors))
