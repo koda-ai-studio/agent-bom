@@ -50,7 +50,10 @@ export function relationshipPath(edge: Endpoints, obstacles: Obstacle[]): [strin
   const lanes = candidates.filter(y => between.every(node => y < node.y - 16 || y > node.y + node.height + 16));
   lanes.sort((a, b) => (Math.abs(edge.sourceY - a) + Math.abs(edge.targetY - a))
     - (Math.abs(edge.sourceY - b) + Math.abs(edge.targetY - b)) || a - b);
-  const lane = lanes[0] ?? Math.min(edge.sourceY, edge.targetY, ...between.map(node => node.y)) - 40;
+  const baseLane = lanes[0] ?? Math.min(edge.sourceY, edge.targetY, ...between.map(node => node.y)) - 40;
+  const branchLane = baseLane + Math.sign(edge.targetY - edge.sourceY) * 16;
+  const lane = between.every(node => branchLane < node.y - 16 || branchLane > node.y + node.height + 16)
+    ? branchLane : baseLane;
   const sourceNode = obstacles.find(node => node.id === edge.source);
   const targetNode = obstacles.find(node => node.id === edge.target);
   const start = Math.max(edge.sourceX + 32, sourceNode ? sourceNode.x + sourceNode.width + 24 : edge.sourceX + 32);
