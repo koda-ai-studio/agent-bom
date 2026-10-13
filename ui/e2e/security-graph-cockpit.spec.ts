@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { expect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
 
 // Non-empty fixture with two observed paths so the security graph page can
@@ -166,10 +167,17 @@ async function routeCockpit(
     rollupItemCount?: number;
     qualifiedEvidence?: boolean;
     longPathNodeCount?: number;
+    longNodeLabel?: boolean;
+    referenceGraph?: boolean;
   } = {},
 ) {
   await page.route("**/v1/**", route => route.fulfill({ status: 404, json: { detail: "Outside graph fixture" } }));
   const graph = buildCockpitGraph(snapshotNodeCount);
+  if (options.referenceGraph) {
+    const reference = JSON.parse(readFileSync("../examples/reference-evidence-lab/generated/correlation-proof.json", "utf8"));
+    Object.assign(graph, reference.capture_fixture.graph, { scan_id: scanId, tenant_id: "default" });
+  }
+  if (options.longNodeLabel) graph.nodes[1]!.label = `reference-evidence-api@sha256:${"a".repeat(64)}`;
   if (options.longPathNodeCount) {
     const intermediates = Array.from({ length: options.longPathNodeCount - 3 }, (_, index) =>
       node(`server:hop-${index}`, "server", `Recorded service ${index + 1}`));
@@ -1950,4 +1958,33 @@ test("aggregate edge opens recorded counts without inventing direct evidence", a
   await expect(detail).toContainText("Not recorded");
   await expect(detail).toContainText("Count unavailable");
   await page.screenshot({ path: testInfo.outputPath("aggregate-relationship-detail.png"), fullPage: true });
+});
+
+test("long digest labels stay inside their graph nodes", async ({ page }) => {
+  await routeCockpit(page, undefined, { longNodeLabel: true });
+  await page.goto(`/graph?scan=${scanId}&rollup=0`);
+  const node = page.locator('.react-flow__node[data-id="server:github"]');
+  await expect(node).toBeVisible();
+  const label = node.locator('[data-graph-entity="true"] > p').first();
+  await expect(label).toBeVisible();
+  await expect.poll(() => node.evaluate(element => {
+    const bounds = element.getBoundingClientRect();
+    const caption = element.querySelector('[data-graph-entity="true"] > p')!.getBoundingClientRect();
+    return caption.left >= bounds.left - 1 && caption.right <= bounds.right + 1;
+  })).toBe(true);
+});
+
+test("reference correlation captions stay separate", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await routeCockpit(page, undefined, { referenceGraph: true });
+  await page.goto(`/graph?scan=${scanId}&rollup=0&capture=1&layers=server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile`);
+  await expect(page.locator(".react-flow__node")).toHaveCount(10);
+  await page.locator(".react-flow__controls-fitview").click();
+  await page.waitForLoadState("networkidle");
+  await page.screenshot({ path: testInfo.outputPath("reference-captions.png"), fullPage: true });
+  const collisions = await page.locator(".graph-relationship-label").evaluateAll(labels => {
+    const boxes = labels.map(element => ({ text: element.textContent, rect: element.getBoundingClientRect() }));
+    return boxes.flatMap((left, index) => boxes.slice(index + 1).filter(right => left.rect.left < right.rect.right && left.rect.right > right.rect.left && left.rect.top < right.rect.bottom && left.rect.bottom > right.rect.top).map(right => `${left.text} overlaps ${right.text}`));
+  });
+  expect(collisions).toEqual([]);
 });

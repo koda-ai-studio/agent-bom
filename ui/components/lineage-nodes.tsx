@@ -167,7 +167,7 @@ function NodeCard({
           className={`!h-1 !w-1 !border-0 !bg-transparent ${source ? "" : "!opacity-0"}`} />
         <Icon aria-hidden="true" className={`h-8 w-8 ${iconClass}`} />
       </div>
-      <p className="mb-1 break-words line-clamp-3 text-lg font-semibold leading-[1.2] text-foreground [overflow-wrap:anywhere]" style={{ fontSize: "var(--graph-node-label-size, 18px)" }}>
+      <p className="mb-1 w-full min-w-0 break-words line-clamp-3 text-lg font-semibold leading-[1.2] text-foreground [overflow-wrap:anywhere]" style={{ fontSize: "var(--graph-node-label-size, 18px)" }}>
         {data.label.split(/(?<=[_/-])/).map((part, index) => <span key={index}>{part}<wbr /></span>)}
       </p>
       <span className="text-xs text-ink-secondary">
