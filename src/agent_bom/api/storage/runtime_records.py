@@ -8,6 +8,9 @@ from typing import Any
 
 from agent_bom.security import sanitize_sensitive_payload, sanitize_text
 
+_SCALAR_METADATA_TYPES = frozenset({type(None), bool, int, float})
+_CACHE_MISS = object()
+
 RAW_RUNTIME_FIELDS = {
     "args",
     "arguments",
@@ -116,6 +119,16 @@ def sanitize_runtime_metadata(value: object, *, max_items: int = 50, _cache: Run
         key = _metadata_key(raw_key, _cache)
         if not key or key.lower() in RAW_RUNTIME_FIELDS:
             continue
+        # Match the redactor's scalar fast path. Repeated string leaves have
+        # already passed its complete field-sensitive policy on this page.
+        if type(raw_value) in _SCALAR_METADATA_TYPES:
+            safe[key] = raw_value
+            continue
+        if _cache is not None and type(raw_value) is str:
+            cached = _cache.strings.get((key, raw_value, 500), _CACHE_MISS)
+            if cached is not _CACHE_MISS:
+                safe[key] = cached
+                continue
         safe[key] = sanitize_sensitive_payload(
             raw_value,
             key=key,
