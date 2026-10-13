@@ -218,3 +218,35 @@ def test_equal_risk_paths_have_deterministic_order():
 
     forward, backward = build(["a", "b", "c"]), build(["c", "b", "a"])
     assert forward == backward == ["agent:a", "agent:b", "agent:c"]
+
+
+def _rollup_graph(derived_via: list[str] | None, *, package_edge: bool = True) -> UnifiedGraph:
+    g = UnifiedGraph()
+    for node_id, kind in (("agent:a", E.AGENT), ("server:s", E.SERVER), ("pkg:p", E.PACKAGE), ("vuln:CVE-1", E.VULNERABILITY)):
+        _node(g, node_id, kind)
+    g.nodes["vuln:CVE-1"].severity = "high"
+    _edge(g, "agent:a", "server:s", R.USES)
+    if package_edge:
+        _edge(g, "server:s", "pkg:p", R.DEPENDS_ON)
+        _edge(g, "pkg:p", "vuln:CVE-1", R.VULNERABLE_TO)
+    evidence = {"derived_via": derived_via} if derived_via is not None else {}
+    _edge(g, "server:s", "vuln:CVE-1", R.VULNERABLE_TO, evidence=evidence)
+    return g
+
+
+def _vuln_hops(g: UnifiedGraph) -> list[list[str]]:
+    from agent_bom.graph.path_derivation import _derived_attack_paths
+
+    return sorted(p.hops for p in _derived_attack_paths(g) if p.target == "vuln:CVE-1")
+
+
+def test_derived_server_rollup_does_not_duplicate_package_path():
+    assert _vuln_hops(_rollup_graph(["pkg:p"])) == [["agent:a", "server:s", "pkg:p", "vuln:CVE-1"]]
+
+
+def test_name_only_server_link_stays_a_primary_path():
+    assert _vuln_hops(_rollup_graph(None, package_edge=False)) == [["agent:a", "server:s", "vuln:CVE-1"]]
+
+
+def test_rollup_without_its_package_path_is_kept():
+    assert _vuln_hops(_rollup_graph(["pkg:p"], package_edge=False)) == [["agent:a", "server:s", "vuln:CVE-1"]]
