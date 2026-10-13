@@ -179,6 +179,8 @@ async function routeCockpit(
     Object.assign(graph, reference.capture_fixture.graph, { scan_id: scanId, tenant_id: "default" });
   }
   if (options.scenarioTool) {
+    graph.nodes[0]!.label = "Developer Copilot";
+    graph.nodes[1]!.label = "github-enterprise MCP";
     graph.nodes.push(node("tool:repo-write", "tool", "create_pull_request"));
     graph.edges.push(edge("server:github", "tool:repo-write", "provides_tool"));
     graph.stats.total_nodes = graph.nodes.length;
