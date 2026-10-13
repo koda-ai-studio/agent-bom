@@ -3,17 +3,17 @@
 from __future__ import annotations
 
 import shutil
+import sqlite3
 import sys
-from contextlib import redirect_stderr, redirect_stdout
+from contextlib import closing, redirect_stderr, redirect_stdout
 from io import StringIO
 
 import click
 from rich.console import Console
 from rich.markup import escape
 
-from agent_bom.core.settings import env_raw, env_str
+from agent_bom.core.settings import env_raw
 from agent_bom.scan_cache import CACHE_KEY_PREFIX
-from agent_bom.storage import state_home
 from agent_bom.storage.tiers import StorageTier, classify_storage, storage_selection_from_env
 
 
@@ -51,32 +51,7 @@ def doctor_cmd(offline: bool = False) -> None:
 
     core_checks.append(_vuln_db_check())
 
-    # OSV lookup cache — check the same path ScanCache() uses
-    try:
-        from pathlib import Path
-
-        _db_env = env_str("AGENT_BOM_SCAN_CACHE")
-        db_path = Path(_db_env) if _db_env else state_home.state_path("scan_cache.db")
-        if db_path.exists():
-            size_kb = db_path.stat().st_size // 1024
-            # Count cached entries to distinguish "empty" from "populated"
-            try:
-                import sqlite3 as _sqlite3
-
-                _conn = _sqlite3.connect(str(db_path), check_same_thread=False)
-                _row = _conn.execute("SELECT COUNT(*) FROM osv_cache WHERE cache_key LIKE ?", (f"{CACHE_KEY_PREFIX}%",)).fetchone()
-                _conn.close()
-                entry_count = _row[0] if _row else 0
-                if entry_count == 0:
-                    core_checks.append(("Scan cache", f"exists but empty ({size_kb} KB) — run a scan to populate", "info"))
-                else:
-                    core_checks.append(("Scan cache", f"exists ({size_kb} KB, {entry_count} cached entries)", "ok"))
-            except Exception:
-                core_checks.append(("Scan cache", f"exists ({size_kb} KB)", "ok"))
-        else:
-            core_checks.append(("Scan cache", "not yet created (run a scan first)", "info"))
-    except Exception:
-        core_checks.append(("Scan cache", "not available", "info"))
+    core_checks.append(_scan_cache_check())
 
     core_checks.append(_network_check(offline))
 
@@ -333,6 +308,32 @@ def _vuln_db_check() -> tuple[str, str, str]:
     if stale:
         return ("Vuln DB", f"stale ({records}{age_days}d old; threshold {threshold}d) — run `agent-bom db update`", "warn")
     return ("Vuln DB", f"fresh ({records}{age_days}d old; threshold {threshold}d)", "ok")
+
+
+def _scan_cache_check() -> tuple[str, str, str]:
+    """Inspect the scanner's selected cache without creating or repairing it."""
+    from agent_bom.scan_cache import default_cache_path
+
+    try:
+        db_path = default_cache_path()
+        if not db_path.exists():
+            return ("Scan cache", "not yet created (run a scan first)", "info")
+        size_kb = db_path.stat().st_size // 1024
+        # URI encoding protects paths containing spaces, # or ?. Read-only mode
+        # also prevents recreating a file removed between stat and connect.
+        with closing(sqlite3.connect(f"{db_path.resolve().as_uri()}?mode=ro", uri=True, timeout=0.2)) as conn:
+            row = conn.execute("SELECT COUNT(*) FROM osv_cache WHERE cache_key LIKE ?", (f"{CACHE_KEY_PREFIX}%",)).fetchone()
+        entry_count = row[0] if row else 0
+    except (OSError, sqlite3.Error, ValueError):
+        return (
+            "Scan cache",
+            "unreadable or incompatible — check AGENT_BOM_SCAN_CACHE and file permissions; "
+            "preserve the file before repair, then rerun `agent-bom doctor --offline`",
+            "warn",
+        )
+    if entry_count == 0:
+        return ("Scan cache", f"exists but empty ({size_kb} KB) — run a scan to populate", "info")
+    return ("Scan cache", f"readable ({size_kb} KB, {entry_count} cached entries); write access not assessed", "ok")
 
 
 def _network_check(offline: bool) -> tuple[str, str, str]:

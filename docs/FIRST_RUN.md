@@ -46,6 +46,13 @@ network and database probes do not establish full readiness. Visible SDK and
 provider API warnings count toward the summary. Configured credentials are
 presence checks, not authenticated-provider evidence. When connections are
 available, run `agent-bom doctor` to check OSV and any configured Postgres database.
+The scan-cache check opens the selected `AGENT_BOM_SCAN_CACHE` file (or the
+state-directory default) read-only. An unreadable, locked or incompatible cache
+produces a warning; it is never repaired or deleted by diagnostics. Check the
+configured path and file permissions, preserve the file before repair, then run
+`agent-bom doctor --offline` again. A readable cache does not establish write
+access or the freshness of its individual entries.
+
 For a reproducible scan artifact while offline, continue with the demo below.
 
 The sample deliberately contains blocking findings, so status `1` is expected.
