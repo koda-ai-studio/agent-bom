@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { GraphImpactResponse } from "@/lib/api-types";
 import { buildGraphInvestigationHref } from "@/lib/attack-paths";
+import { countLabel } from "@/lib/count-label";
 import { prettifyReachabilityType } from "@/lib/graph-reachability";
 
 export function GraphPathImpact({ nodeId, label, scanId, tenantId, snapshotGeneration }: {
@@ -32,9 +33,9 @@ export function GraphPathImpact({ nodeId, label, scanId, tenantId, snapshotGener
     {!current && <p role="status" className="mt-2 text-ink-secondary">Reading upstream relationships…</p>}
     {current?.error && <div role="alert" className="mt-2 text-ink-secondary">Impact evidence is unavailable or the snapshot changed. Refresh the snapshot or <button type="button" className="underline" onClick={() => setAttempt(value => value + 1)}>retry impact</button>.</div>}
     {impact && <div className="mt-2 space-y-2">
-      <p className="font-medium">{impact.completeness?.complete === true ? "" : "At least "}{impact.affected_count} upstream related node{impact.affected_count === 1 ? "" : "s"} · {impact.max_depth_reached} recorded hops</p>
+      <p className="font-medium">{impact.completeness?.complete === true ? "" : "At least "}{countLabel(impact.affected_count, "upstream related node")} · up to {countLabel(impact.max_depth_reached, "reverse step")} from this node</p>
       <div className="flex flex-wrap gap-2 text-xs">{Object.entries(impact.affected_by_type).map(([type, count]) => <span key={type} className="rounded border border-outline bg-surface px-2 py-1">{prettifyReachabilityType(type)} · {count}</span>)}</div>
-      <p className="text-xs text-ink-secondary">Reverse graph connections within four hops, including links not enabled for traversal. They do not establish execution or compromise. Source collection coverage is unknown.{impact.completeness?.complete !== true && " This is a lower bound because the graph query is incomplete."}</p>
+      <p className="text-xs text-ink-secondary">Traversal depth is counted from this node, not along the selected path. Reverse graph connections within four steps, including links not enabled for traversal. They do not establish execution or compromise. Source collection coverage is unknown.{impact.completeness?.complete !== true && " This is a lower bound because the graph query is incomplete."}</p>
       <Link className="inline-flex rounded-lg border border-outline bg-surface px-3 py-2 text-xs font-medium hover:bg-surface-muted" href={buildGraphInvestigationHref({ rootId: nodeId, scanId: impact.scan_id, direction: "reverse" })}>Explore upstream relationships</Link>
     </div>}
   </section>;
