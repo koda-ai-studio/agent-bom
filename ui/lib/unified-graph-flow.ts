@@ -1,4 +1,4 @@
-import { graphEdgeEvidence } from "@/lib/graph-edge-evidence";
+import { graphEdgeEvidence, graphEdgeEvidenceLabel } from "@/lib/graph-edge-evidence";
 import { NODE_LABELS } from "@/lib/entity-labels";
 import { nodeRiskAssessment } from "@/lib/node-risk-assessment";
 import { MarkerType, type Edge, type Node } from "@xyflow/react";
@@ -611,7 +611,7 @@ function toFlowEdge(edge: UnifiedEdge): Edge {
       relationshipLabel: relationshipEdgeLabelText(relationship, { evidenceMode }),
       relationshipCategory: legend.layer,
       evidenceMode,
-      hoverDescription: `${relationshipEdgeLabelText(relationship, { evidenceMode })} · ${graphEdgeEvidence(edge.evidence ?? {}).label} · ${edge.direction === "bidirectional" ? "Bidirectional" : "Directed"} · Traversal ${edge.traversable ? "eligible" : "not enabled"}. Select to inspect evidence.`,
+      hoverDescription: `${relationshipEdgeLabelText(relationship, { evidenceMode })} · ${graphEdgeEvidenceLabel(edge)} · ${edge.direction === "bidirectional" ? "Bidirectional" : "Directed"} · Traversal ${edge.traversable ? "eligible" : "not enabled"}. Select to inspect evidence.`,
       direction: edge.direction,
       traversable: edge.traversable,
     },

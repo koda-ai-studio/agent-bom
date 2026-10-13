@@ -95,6 +95,8 @@ it.each([
   [{ source: "cloud-audit-trail", observed: true }, "Cloud audit observation"],
   [{ source: "cloud-audit-trail" }, "Not recorded"],
   [{ source: "cloud-inventory" }, "Static / configured"],
+  [{ source: "agent_discovery", credential_env_var: "TOKEN" }, "Static / configured"],
+  [{ source: "repo-structure-overlay" }, "Static / configured"],
   [{ source: "gateway", runtime_observed_state: "blocked" }, "Runtime blocked"],
   [{ source: "gateway", blocked: true }, "Runtime blocked"],
   [{ source: ["runtime-proxy"] }, "Not recorded"],
@@ -122,4 +124,9 @@ it("keeps source observation, receipt timestamp and graph freshness distinct", (
   expect(screen.getByText("Receipt timestamp").nextElementSibling).toHaveTextContent(event);
   expect(screen.getByText("Graph last seen").nextElementSibling).toHaveTextContent(edge.last_seen);
   expect(screen.getByText("Evidence type").nextElementSibling).toHaveTextContent("Runtime blocked");
+});
+
+it("labels a scan-recorded link without a per-edge receipt by its snapshot origin", () => {
+  render(<GraphRelationshipDetail edge={{ ...edge, evidence: {}, source_scan_id: "scan-1" }} scanId="s" sourceLabel="Agent" targetLabel="Server" onClose={vi.fn()} />);
+  expect(screen.getByText("Evidence type").nextElementSibling).toHaveTextContent("Scan inventory · no per-edge receipt");
 });
