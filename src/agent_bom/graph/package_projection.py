@@ -354,12 +354,27 @@ def _package_version_provenance_from_dict(pkg_dict: dict[str, Any]) -> dict[str,
     )
 
 
+def _blast_radius_package_identity(br_dict: dict[str, Any]) -> tuple[str, str]:
+    """Normalize legacy name@version labels once, preserving scoped npm names.
+
+    Explicit fields win. Never borrow a version from a conflicting package label.
+    """
+    label = str(br_dict.get("package") or "")
+    legacy_name, separator, legacy_version = label.rpartition("@")
+    if not separator or not legacy_name:
+        legacy_name, legacy_version = label, ""
+    name = str(br_dict.get("package_name") or legacy_name)
+    version = str(br_dict.get("package_version") or (legacy_version if name == legacy_name else ""))
+    return name, version
+
+
 def _blast_radius_package_evidence(br_dict: dict[str, Any], data_source_tag: str) -> dict[str, Any]:
+    name, version = _blast_radius_package_identity(br_dict)
     evidence = {
         "source": data_source_tag,
         "package": br_dict.get("package", ""),
-        "package_name": br_dict.get("package_name", ""),
-        "package_version": br_dict.get("package_version", ""),
+        "package_name": name,
+        "package_version": version,
         "package_stable_id": br_dict.get("package_stable_id", ""),
         "purl": br_dict.get("package_purl") or br_dict.get("purl", ""),
         "reachability": br_dict.get("reachability", ""),

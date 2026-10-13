@@ -1,5 +1,6 @@
 "use client";
 
+import { GraphPathImpact } from "@/components/graph-path-impact";
 import { AdvisoryFreshness } from "@/components/advisory-freshness";
 
 import { investigationHref, investigationView } from "@/lib/investigation-url";
@@ -68,6 +69,7 @@ import {
 } from "@/lib/api";
 import {
   attackPathKey,
+  attackPathFindingHref,
   attackPathRoleChain,
   buildFindingsHref,
   buildGraphInvestigationHref,
@@ -654,6 +656,12 @@ function AttackPathInvestigationContent() {
       ? { ...action, href: buildCorrelationRemediationHref(action.href, selectedScanId, finding, packageNode?.label) }
       : action);
   }, [graphNodeById, selectedAttackPath, selectedFixFirstCard, selectedScanId]);
+  const selectedFindingHref = selectedAttackPath
+    ? attackPathFindingHref(selectedAttackPath, graphNodeById, selectedScanId || undefined)
+    : buildFindingsHref({ scanId: selectedScanId || undefined });
+  const impactRoot = selectedAttackPath?.hops.map(id => graphNodeById.get(id))
+    .find(node => node?.entity_type === "vulnerability" || node?.entity_type === "misconfiguration")
+    ?? (selectedAttackPath ? graphNodeById.get(selectedAttackPath.target) : undefined);
   const correlationOutcome = useMemo<GraphCorrelationOutcome | null>(() => {
     if (
       !selectedAttackPath ||
@@ -873,9 +881,9 @@ function AttackPathInvestigationContent() {
             onStepChange={setInvestigationStep}
             completed={completedSteps}
             stepHrefs={{
-              owner: "/remediation#campaigns",
-              fix: "/remediation#campaigns",
-              verify: "/remediation#verification",
+              owner: selectedFindingHref,
+              fix: selectedFindingHref,
+              verify: `/remediation${selectedScanId && !selectedScanId.startsWith("current-estate:") ? `?scan=${encodeURIComponent(selectedScanId)}` : ""}#verification`,
             }}
           />
           {pinnedNodeId ? (
@@ -886,6 +894,10 @@ function AttackPathInvestigationContent() {
         </div>
       ) : null}
 
+      {investigationStep === "impact" && impactRoot && selectedScanId && graphData && <GraphPathImpact
+        key={JSON.stringify([selectedScanId, impactRoot.id, graphData.snapshot_generation])}
+        nodeId={impactRoot.id} label={impactRoot.label} scanId={selectedScanId}
+        tenantId={graphData.tenant_id} snapshotGeneration={graphData.snapshot_generation} />}
       {showCorrelationOverview ? (
         <GraphCorrelationWorkflow snapshots={snapshots} initialRun={latestCorrelationRun} outcome={correlationOutcome} onOpenSnapshot={openCorrelationPath} />
       ) : null}

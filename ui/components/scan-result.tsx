@@ -310,11 +310,11 @@ export function ScanResultView({ id }: { id: string }) {
             </button>
             <div className="flex flex-wrap items-center gap-2">
               <Link
-                href={`/security-graph?scan=${encodeURIComponent(id)}&lens=mesh`}
+                href={`/security-graph?scan=${encodeURIComponent(id)}&lens=lineage`}
                 className="flex items-center gap-1.5 rounded-lg border border-cyan-500/30 bg-cyan-500/10 px-3 py-1.5 text-xs text-cyan-700 transition-colors hover:text-cyan-900 dark:border-cyan-900/50 dark:bg-cyan-950/30 dark:text-cyan-300 dark:hover:text-cyan-200"
               >
                 <Server className="w-3 h-3" />
-                Open agent mesh
+                Explore relationships
               </Link>
               <Link
                 href={`/security-graph?scan=${encodeURIComponent(id)}&investigate=1&lens=attack-path`}

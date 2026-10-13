@@ -5,9 +5,28 @@ from __future__ import annotations
 from collections import Counter
 from typing import Any
 
-from agent_bom.api.storage.runtime_records import RuntimeObservationRecord, _observation_from_json
+from agent_bom.api.storage.runtime_records import RuntimeObservationRecord, RuntimeSessionRecord, _observation_from_json, _session_from_json
 
 FILTER_FIELDS = {"session_id", "source", "agent_name", "connection_id"}
+
+
+def session_keys(session_ids: list[str]) -> list[str]:
+    if len(session_ids) > 500 or any(not isinstance(key, str) or not key or len(key) > 512 for key in session_ids):
+        raise ValueError("Session lookup requires at most 500 valid identities")
+    return list(dict.fromkeys(session_ids))
+
+
+def sql_sessions(conn: Any, tenant_id: str, session_ids: list[str], *, postgres: bool = False) -> list[RuntimeSessionRecord]:
+    keys = session_keys(session_ids)
+    if not keys:
+        return []
+    marker = "%s" if postgres else "?"
+    placeholders = ",".join(marker for _ in keys)
+    rows = conn.execute(
+        f"SELECT data FROM runtime_sessions WHERE tenant_id={marker} AND session_id IN ({placeholders})",  # nosec B608
+        (tenant_id, *keys),
+    ).fetchall()
+    return [_session_from_json(row[0]) for row in rows]
 
 
 def validate_query(limit: int, offset: int, filters: dict[str, Any]) -> dict[str, str]:

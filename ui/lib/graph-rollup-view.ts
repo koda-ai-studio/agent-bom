@@ -1,4 +1,4 @@
-import type { Edge, Node } from "@xyflow/react";
+import { MarkerType, type Edge, type Node } from "@xyflow/react";
 
 import type { LineageNodeData, LineageNodeType } from "@/components/lineage-nodes";
 import type { GraphRollupContainer, GraphRollupEdge } from "@/lib/api-types";
@@ -6,12 +6,11 @@ import { FLOW_NODE_TYPES, lineageNodeTypeForEntity } from "@/lib/graph-entity-ma
 
 
 const MIN_COLUMNS = 3;
-// NodeCard renders up to 300px wide. Position columns by the rendered maximum
-// plus a deliberate gutter so long roll-up labels never overlap their neighbor.
-const NODE_CARD_MAX_WIDTH = 300;
-const NODE_COLUMN_GAP = 32;
+// Scope cards keep summary facts visible. Reserve a separate lane for link labels.
+const NODE_CARD_MAX_WIDTH = 280;
+const NODE_COLUMN_GAP = 200;
 const NODE_WIDTH = NODE_CARD_MAX_WIDTH + NODE_COLUMN_GAP;
-const NODE_HEIGHT = 112;
+const NODE_HEIGHT = 280;
 // A graph canvas is landscape — roughly 2.2:1 at a laptop viewport. A grid
 // whose own aspect ratio is far from that wastes the short axis and pays for it
 // in zoom, because `fitView` scales to whichever axis runs out first.
@@ -23,9 +22,9 @@ const CANVAS_ASPECT = 2.2;
  *  tower, which `fitView` correctly resolved to scale 0.14 — labels at ~2.6px
  *  and half the nodes below the fold. Solving `(c*w)/((n/c)*h) = aspect` for
  *  `c` keeps the grid landscape at every estate size. */
-function fittingColumns(count: number): number {
+function fittingColumns(count: number, width: number, height: number): number {
   if (count <= MIN_COLUMNS) return Math.max(1, count);
-  const ideal = Math.sqrt((count * CANVAS_ASPECT * NODE_HEIGHT) / NODE_WIDTH);
+  const ideal = Math.sqrt((count * CANVAS_ASPECT * height) / width);
   return Math.min(count, Math.max(MIN_COLUMNS, Math.round(ideal)));
 }
 
@@ -56,7 +55,7 @@ export function rollupContainerSubtitle(container: GraphRollupContainer): string
     parts.push("toxic combo");
   }
   if (container.has_children) {
-    parts.push("click to drill down");
+    parts.push("select to inspect scope");
   }
   return parts.join(" · ");
 }
@@ -68,6 +67,7 @@ function rollupContainerToNodeData(
   const aggregate = container.aggregate;
   return {
     label: container.label,
+    rollup: container,
     nodeType,
     entityType: container.entity_type,
     severity: container.severity || aggregate?.worst_severity || undefined,
@@ -96,7 +96,10 @@ export function buildRollupFlowGraph(
   containers: GraphRollupContainer[],
   options?: { columns?: number; edges?: GraphRollupEdge[] | undefined },
 ): { nodes: Node<LineageNodeData>[]; edges: Edge[] } {
-  const columns = Math.max(1, options?.columns ?? fittingColumns(containers.length));
+  const compact = containers.length > 24;
+  const width = compact ? 332 : NODE_WIDTH;
+  const height = compact ? 112 : NODE_HEIGHT;
+  const columns = Math.max(1, options?.columns ?? fittingColumns(containers.length, width, height));
   const nodes: Node<LineageNodeData>[] = containers.map((container, index) => {
     const nodeType = rollupEntityToNodeType(container.entity_type);
     const col = index % columns;
@@ -104,8 +107,8 @@ export function buildRollupFlowGraph(
     return {
       id: container.id,
       type: FLOW_NODE_TYPES[nodeType],
-      position: { x: col * NODE_WIDTH, y: row * NODE_HEIGHT },
-      data: rollupContainerToNodeData(container),
+      position: { x: col * width, y: row * height },
+      data: { ...rollupContainerToNodeData(container), rollupCompact: compact },
       ...(container.has_children ? { className: "cursor-pointer" } : {}),
     };
   });
@@ -114,17 +117,25 @@ export function buildRollupFlowGraph(
   // cards are not rendered relationship evidence" — a security graph admitting
   // it was not showing a graph. The API now aggregates the non-containment
   // edges between containers; drawing them is what makes this a topology.
-  const present = new Set(nodes.map((node) => node.id));
+  const positions = new Map(nodes.map(node => [node.id, node.position]));
+  const present = new Set(positions.keys());
   const edges: Edge[] = (options?.edges ?? [])
     .filter((edge) => present.has(edge.source) && present.has(edge.target))
     .map((edge) => ({
       id: `rollup:${edge.source}->${edge.target}`,
       source: edge.source,
       target: edge.target,
+      sourceHandle: `scope-source-${positions.get(edge.source)!.x === positions.get(edge.target)!.x ? (positions.get(edge.source)!.y < positions.get(edge.target)!.y ? "bottom" : "top") : positions.get(edge.source)!.x < positions.get(edge.target)!.x ? "right" : "left"}`,
+      targetHandle: `scope-target-${positions.get(edge.source)!.x === positions.get(edge.target)!.x ? (positions.get(edge.source)!.y < positions.get(edge.target)!.y ? "top" : "bottom") : positions.get(edge.source)!.x < positions.get(edge.target)!.x ? "left" : "right"}`,
       // The aggregate count spans every listed kind; it is not a per-kind count.
-      label: edge.relationships.length > 1
-        ? `${edge.count} relationships · ${edge.relationships.join(", ")}`
-        : edge.count > 1 ? `${edge.relationships[0] ?? "related"} ×${edge.count}` : (edge.relationships[0] ?? "related"),
+      type: "smoothstep",
+      label: `${edge.count.toLocaleString()} relationship${edge.count === 1 ? "" : "s"}`,
+      data: { aggregate: edge, hoverDescription: `${edge.count} recorded relationships between scopes · ${edge.directions?.join(", ") || "Direction not recorded"}. Select to inspect the aggregate.` },
+      ariaLabel: `${edge.count} recorded relationships between scopes; ${edge.directions?.length === 1 ? edge.directions[0] : edge.directions?.length ? "mixed directions" : "direction unavailable"}`,
+      ...(edge.directions?.length === 1 && ["directed", "bidirectional"].includes(edge.directions[0]!)
+        ? { markerEnd: { type: MarkerType.ArrowClosed, color: "var(--text-secondary)" } } : {}),
+      ...(edge.directions?.length === 1 && edge.directions[0] === "bidirectional"
+        ? { markerStart: { type: MarkerType.ArrowClosed, color: "var(--text-secondary)" } } : {}),
       animated: false,
       style: { strokeWidth: rollupEdgeWidth(edge.count) },
     }));

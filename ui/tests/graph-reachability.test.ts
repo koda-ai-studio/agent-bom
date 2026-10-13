@@ -24,6 +24,12 @@ function edge(id: string, source: string, target: string, traversable = true): U
 }
 
 describe("graph reachability", () => {
+  it("builds incoming-only paths without crossing an outgoing shortcut", () => {
+    const summary = summarizeReachability({ rootId: "root", direction: "incoming", nodes: [node("root", EntityType.AGENT, "Root"), node("parent", EntityType.AGENT, "Parent"), node("child", EntityType.AGENT, "Child")],
+      edges: [edge("in", "parent", "root"), edge("out", "root", "child")] });
+    expect([...summary.nodeIds].sort()).toEqual(["parent", "root"]);
+    expect(summary.pathPreviews[0]).toMatchObject({ hops: ["root", "parent"], depth: 1 });
+  });
   it("summarizes reachable nodes, edge keys, type counts, and bounded path previews", () => {
     const summary = summarizeReachability({
       rootId: "agent-1",

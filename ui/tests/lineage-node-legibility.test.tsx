@@ -76,7 +76,9 @@ describe("lineage node labels", () => {
     // line rather than a wider node.
     // Neither the detailed node nor the rolled-up summary node may clip.
     expect(source).not.toMatch(/flex-1 truncate/);
-    expect(source).toContain('<p className="mb-1 break-words line-clamp-3 text-lg');
+    const Renderer = lineageNodeTypes.containerNode;
+    const { container } = render(<ReactFlowProvider><Renderer data={{ label: "image@sha256:abcdef", nodeType: "container" }} /></ReactFlowProvider>);
+    expect(container.querySelector('[data-graph-entity="true"] > p')).toHaveClass("w-full", "min-w-0", "break-words", "line-clamp-3");
     expect(source).toContain("line-clamp-2 text-[11px]");
   });
 });

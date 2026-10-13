@@ -29,7 +29,7 @@ from agent_bom.api.runtime_event_store import (
     _observation_from_json,
     _session_from_json,
 )
-from agent_bom.api.storage.runtime_observation_query import sql_observation_page
+from agent_bom.api.storage.runtime_observation_query import sql_observation_page, sql_sessions
 from agent_bom.api.storage.runtime_trace_imports import (
     RUNTIME_TRACE_STORAGE_VERSION,
     TRACE_IMPORT_TABLE_SQL,
@@ -224,6 +224,10 @@ class PostgresRuntimeEventStore:
                 (tenant_id, session_id),
             ).fetchone()
         return _session_from_json(row[0]) if row else None
+
+    def get_sessions(self, tenant_id: str, session_ids: list[str]) -> list[RuntimeSessionRecord]:
+        with _tenant_connection(self._pool) as conn:
+            return sql_sessions(conn, tenant_id, session_ids, postgres=True)
 
     def list_observations(
         self,

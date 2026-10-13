@@ -2781,6 +2781,16 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
           throw new Error(`Graph framing on ${urlPath} uses ${(fillRatio * 100).toFixed(1)}% of the canvas height`);
         }
       }
+      if (options.assertNodeLabelsWithinBounds) {
+        const overflow = await page.locator('.react-flow__node').evaluateAll(nodes => nodes.flatMap(node => {
+          const bounds = node.getBoundingClientRect();
+          const label = node.querySelector('[data-graph-entity="true"] > p');
+          if (!label) return [];
+          const rect = label.getBoundingClientRect();
+          return rect.left < bounds.left - 1 || rect.right > bounds.right + 1 ? [label.textContent] : [];
+        }));
+        if (overflow.length) throw new Error(`Graph node labels overflow on ${urlPath}: ${overflow.join(" | ")}`);
+      }
       if (options.assertEdgeLabelsClearOfNodes) {
         const collisions = await page.evaluate(() => {
           const nodes = [...document.querySelectorAll(".react-flow__node")]
@@ -3251,6 +3261,7 @@ async function main() {
         await scrollTo(proofPage, 0);
       } else {
         await fitReactFlow(proofPage);
+        await scrollTo(proofPage, 0);
       }
     };
     const correlationPathAssertions = {
@@ -3262,6 +3273,8 @@ async function main() {
       maxGraphNodes: referenceGraph.nodes.length,
       minGraphEdges: referenceGraph.edges.length,
       maxGraphEdges: referenceGraph.edges.length,
+      assertEdgeLabelsClearOfNodes: true,
+      assertNodeLabelsWithinBounds: true,
       assertNoHorizontalOverflow: true,
     };
     const page = await newCapturePage(CAPTURE_THEME, { width: 1440, height: 980 });

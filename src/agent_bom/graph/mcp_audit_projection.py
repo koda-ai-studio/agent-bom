@@ -43,7 +43,7 @@ def project_mcp_audit_findings(graph: UnifiedGraph, findings: Any) -> None:
                 id=node_id,
                 entity_type=EntityType.MISCONFIGURATION,
                 label=sanitize_text(str(row.get("title") or "MCP audit finding"), max_len=500),
-                severity=str(row.get("severity") or "medium").lower(),
+                severity=str(row.get("severity") or "unknown").lower(),
                 attributes={
                     "finding_id": finding_id,
                     "finding_source": "MCP_SCAN",

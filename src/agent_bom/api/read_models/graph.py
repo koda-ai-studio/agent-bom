@@ -295,6 +295,17 @@ class GraphPresetsResponse(RootModel[list[Row]]):
     """``GET /v1/graph/presets``: saved filter presets for the tenant."""
 
 
+class GraphRollupEdge(ReadModel):
+    """Aggregate counts and recorded directions, not a single evidence edge."""
+
+    source: str
+    target: str
+    count: int
+    relationships: list[str]
+    directions: list[str] | None = None
+    relationship_counts: dict[str, int] | None = None
+
+
 class GraphRollupResponse(ReadResponse):
     """Roll-up, attack-path-first, or drill-down view, selected by ``mode``."""
 
@@ -307,7 +318,7 @@ class GraphRollupResponse(ReadResponse):
     completeness: GraphCompleteness
     snapshot_generation: str | None = None
     top_level: list[Row] | None = None
-    edges: list[Row] | None = None
+    edges: list[GraphRollupEdge] | None = None
     edge_count_metadata: Row | None = None
     aggregate_count_metadata: Row | None = None
     orphan_summary: Row | None = None

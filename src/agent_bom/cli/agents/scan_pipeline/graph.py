@@ -101,7 +101,7 @@ def _build_context_graph(opts: ScanOptions, st: ScanState) -> None:
             else ""
         )
         st.con.print(
-            f"  [green]✓[/green] Context graph: {len(_cg.nodes)} nodes, {_n_paths} lateral path(s), "
+            f"  [green]✓[/green] MCP context subset: {len(_cg.nodes)} nodes, {_n_paths} lateral path(s), "
             f"{_n_risks} risk pattern(s), {_n_bottlenecks} bottleneck(s){_bottleneck_qualifier}"
         )
 
@@ -121,7 +121,7 @@ def _build_context_graph(opts: ScanOptions, st: ScanState) -> None:
             _graph_db_path.parent.mkdir(parents=True, exist_ok=True)
             with open_graph_db(_graph_db_path) as _gconn:
                 save_graph(_gconn, _ug)
-            st.con.print(f"  [green]✓[/green] Graph persisted ({len(_ug.nodes)} nodes, scan {st.scan_id[:8]}…)")
+            st.con.print(f"  [green]✓[/green] Full security graph persisted ({len(_ug.nodes)} nodes, scan {st.scan_id[:8]}…)")
         except Exception as _graph_err:  # noqa: BLE001
             import logging as _glog
 

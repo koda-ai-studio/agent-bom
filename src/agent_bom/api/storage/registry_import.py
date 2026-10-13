@@ -28,7 +28,12 @@ from agent_bom.api.storage.registry_stores import (
     PostgresEvaluationRunStore,
     PostgresWebhookSubscriptionStore,
 )
-from agent_bom.api.storage.runtime_import import RUNTIME_TABLES, import_runtime_groups, validate_runtime_groups
+from agent_bom.api.storage.runtime_import import (
+    RUNTIME_TABLES,
+    import_runtime_groups,
+    require_legacy_runtime_source,
+    validate_runtime_groups,
+)
 from agent_bom.core.tenancy import require_explicit_tenant_id
 from agent_bom.security import sanitize_error
 
@@ -57,6 +62,7 @@ def read_source(path: Path, tenant_map: dict[str, str], tables: list[str]) -> li
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA query_only=ON")
         conn.execute("BEGIN")
+        require_legacy_runtime_source(conn, tables)
         for table in sorted(set(tables), key=lambda t: (t == "access_review_items", t)):
             if table == "compliance_hub":
                 records.extend(read_compliance_snapshots(conn, tenant_map))

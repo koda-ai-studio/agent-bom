@@ -24,11 +24,10 @@ def assemble_trace_explorer(
 ) -> dict[str, object]:
     bounded_limit = max(1, min(limit, 200))
     findings = list(islice(finding_rows, bounded_limit))
-    sessions = [session.to_dict() for session in store.list_sessions(tenant_id, limit=bounded_limit, offset=0)]
     page = store.query_observations(tenant_id, limit=bounded_limit, offset=offset, **filters)
     observations = [observation.to_dict() for observation in page["observations"]]
-    session_ids = {row["session_id"] for row in observations}
-    sessions = [row for row in sessions if row["session_id"] in session_ids]
+    session_ids = list(dict.fromkeys(row["session_id"] for row in observations))
+    sessions = [session.to_dict() for session in store.get_sessions(tenant_id, session_ids)] if session_ids else []
     feed_included = offset == 0 and not any(value is not None for value in filters.values())
     bindings = {}
     if scan_id:

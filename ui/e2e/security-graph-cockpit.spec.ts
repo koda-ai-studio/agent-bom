@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { expect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
 
 // Non-empty fixture with two observed paths so the security graph page can
@@ -166,10 +167,17 @@ async function routeCockpit(
     rollupItemCount?: number;
     qualifiedEvidence?: boolean;
     longPathNodeCount?: number;
+    longNodeLabel?: boolean;
+    referenceGraph?: boolean;
   } = {},
 ) {
   await page.route("**/v1/**", route => route.fulfill({ status: 404, json: { detail: "Outside graph fixture" } }));
   const graph = buildCockpitGraph(snapshotNodeCount);
+  if (options.referenceGraph) {
+    const reference = JSON.parse(readFileSync("../examples/reference-evidence-lab/generated/correlation-proof.json", "utf8"));
+    Object.assign(graph, reference.capture_fixture.graph, { scan_id: scanId, tenant_id: "default" });
+  }
+  if (options.longNodeLabel) graph.nodes[1]!.label = `reference-evidence-api@sha256:${"a".repeat(64)}`;
   if (options.longPathNodeCount) {
     const intermediates = Array.from({ length: options.longPathNodeCount - 3 }, (_, index) =>
       node(`server:hop-${index}`, "server", `Recorded service ${index + 1}`));
@@ -1865,4 +1873,126 @@ for (const theme of ["dark", "light"] as const) {
       await page.screenshot({ path: testInfo.outputPath(`unavailable-${theme}-${status}.png`), fullPage: true });
     });
   }
+}
+
+for (const theme of ["light", "dark"] as const) {
+  test(`impact step reads scoped reverse reachability in ${theme}`, async ({ page }, testInfo) => {
+    await routeCockpit(page);
+    await page.addInitScript(value => localStorage.setItem("agent-bom-theme", value), theme);
+    await page.route("**/v1/graph/impact?**", route => route.fulfill({ json: {
+      scan_id: scanId, tenant_id: "default", snapshot_generation: "a".repeat(32), node_id: "cve:form-data",
+      affected_nodes: ["agent:desktop", "server:github", "pkg:form-data"], affected_count: 3,
+      affected_by_type: { agent: 1, server: 1, package: 1 }, max_depth_reached: 3,
+      completeness: { complete: true },
+    } }));
+    await page.goto(`/security-graph?scan=${scanId}&lens=attack-path`);
+    await page.getByTestId("investigation-step-strip").getByRole("button", { name: /Impact/ }).click();
+    await expect(page.getByRole("region", { name: "Path impact" })).toContainText("3 upstream related nodes");
+    await expect(page.getByRole("link", { name: "Explore upstream relationships" })).toHaveAttribute("href", /direction=reverse/);
+    await page.screenshot({ path: testInfo.outputPath(`path-impact-${theme}.png`), fullPage: true });
+  });
+
+  test(`scope selection preserves the parent until explicit drill-down in ${theme}`, async ({ page }, testInfo) => {
+    await routeCockpit(page);
+    await page.addInitScript(value => localStorage.setItem("agent-bom-theme", value), theme);
+    const drilled: string[] = [];
+    page.on("request", request => { const url = new URL(request.url()); if (url.pathname === "/v1/graph/rollup" && url.searchParams.has("node")) drilled.push(url.searchParams.get("node")!); });
+    await page.goto(`/graph?scan=${scanId}&rollup=1`);
+    const productionScope = page.locator('.react-flow__node[data-id="account:production"]');
+    await expect(productionScope).toContainText("900");
+    await expect(productionScope).toContainText("Critical · highest severity");
+    await expect(page.locator(".graph-aggregate-label")).toHaveText("35 relationships");
+    await page.waitForLoadState("networkidle");
+    await page.screenshot({ path: testInfo.outputPath(`scope-overview-${theme}.png`), fullPage: true });
+    await productionScope.click();
+    await expect(page.getByTestId("graph-entity-drawer")).toBeVisible();
+    await expect(page.getByRole("complementary", { name: "Scope details" })).toContainText("Severity of contained entities");
+    await expect(page.getByRole("button", { name: "Show blast radius" })).toHaveCount(0);
+    expect(drilled).toEqual([]);
+    await expect(page.locator('.react-flow__node[data-id="account:production"]')).toBeVisible();
+    await expect.poll(async () => {
+      const canvas = await page.locator(".react-flow").boundingBox();
+      const neighbor = await page.locator('.react-flow__node[data-id="account:development"]').boundingBox();
+      return !!canvas && !!neighbor && neighbor.x >= canvas.x && neighbor.x + neighbor.width <= canvas.x + canvas.width + 1;
+    }).toBe(true);
+    await page.screenshot({ path: testInfo.outputPath(`scope-selected-${theme}.png`), fullPage: true });
+    await page.getByRole("button", { name: "Explore scope", exact: true }).click();
+    await expect.poll(() => drilled).toContain("account:production");
+  });
+}
+
+test("incoming traversal survives URL synchronization and reload", async ({ page }) => {
+  await routeCockpit(page);
+  const directions: string[] = [];
+  await page.route("**/v1/graph/query", route => {
+    const body = route.request().postDataJSON(); directions.push(body.direction);
+    const graph = buildCockpitGraph();
+    return route.fulfill({ json: { ...graph, roots: body.roots, direction: body.direction, truncated: false, missing_roots: [], depth_by_node: { "server:github": 0, "agent:desktop": 1 } } });
+  });
+  await page.goto(`/security-graph?scan=${scanId}&investigate=1&root=server%3Agithub&direction=reverse&lens=lineage`);
+  await openEvidenceControls(page);
+  await expect(page.getByRole("combobox", { name: "Traversal direction" })).toHaveValue("reverse");
+  await expect(page).toHaveURL(/direction=reverse/);
+  expect(directions[0]).toBe("reverse");
+  await page.reload();
+  await openEvidenceControls(page);
+  await expect(page.getByRole("combobox", { name: "Traversal direction" })).toHaveValue("reverse");
+  expect(directions.every(value => value === "reverse")).toBe(true);
+});
+
+test("aggregate edge opens recorded counts without inventing direct evidence", async ({ page }, testInfo) => {
+  await routeCockpit(page);
+  await page.goto(`/graph?scan=${scanId}&rollup=1`);
+  await page.waitForLoadState("networkidle");
+  const edge = page.locator(".react-flow__edge").first();
+  await expect(edge).toBeAttached();
+  const point = await edge.locator(".react-flow__edge-interaction").evaluate(element => {
+    const path = element as SVGPathElement;
+    const local = path.getPointAtLength(path.getTotalLength() / 2);
+    const screen = new DOMPoint(local.x, local.y).matrixTransform(path.getScreenCTM()!);
+    return { x: screen.x, y: screen.y };
+  });
+  await page.mouse.click(point.x, point.y);
+  const detail = page.getByRole("dialog", { name: "Scope relationship details" });
+  await expect(detail).toContainText("35 recorded relationships");
+  await expect(detail).toContainText("Not recorded");
+  await expect(detail).toContainText("Count unavailable");
+  await page.screenshot({ path: testInfo.outputPath("aggregate-relationship-detail.png"), fullPage: true });
+});
+
+test("long digest labels stay inside their graph nodes", async ({ page }) => {
+  await routeCockpit(page, undefined, { longNodeLabel: true });
+  await page.goto(`/graph?scan=${scanId}&rollup=0`);
+  const node = page.locator('.react-flow__node[data-id="server:github"]');
+  await expect(node).toBeVisible();
+  const label = node.locator('[data-graph-entity="true"] > p').first();
+  await expect(label).toBeVisible();
+  await expect.poll(() => node.evaluate(element => {
+    const bounds = element.getBoundingClientRect();
+    const caption = element.querySelector('[data-graph-entity="true"] > p')!.getBoundingClientRect();
+    return caption.left >= bounds.left - 1 && caption.right <= bounds.right + 1;
+  })).toBe(true);
+});
+
+for (const width of [1440, 1920]) for (const theme of ["light", "dark"]) {
+  test(`reference correlation captions stay separate ${theme} ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: width === 1440 ? 900 : 1080 });
+    await page.addInitScript(value => localStorage.setItem("agent-bom-theme", value), theme);
+    await routeCockpit(page, undefined, { referenceGraph: true });
+    await page.goto(`/graph?scan=${scanId}&rollup=0&capture=1&layers=server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile`);
+    await expect(page.locator(".react-flow__node")).toHaveCount(10);
+    await page.locator(".react-flow__controls-fitview").click();
+    await page.waitForLoadState("networkidle");
+    await page.screenshot({ path: testInfo.outputPath("reference-captions.png"), fullPage: true });
+    const collisions = await page.locator(".graph-relationship-label").evaluateAll(labels => {
+      const boxes = labels.map(element => ({ text: element.textContent, rect: element.getBoundingClientRect() }));
+      const nodes = [...document.querySelectorAll(".react-flow__node")].map(element => ({ text: element.textContent, rect: element.getBoundingClientRect() }));
+      const overlaps = (left: DOMRect, right: DOMRect) => left.left < right.right && left.right > right.left && left.top < right.bottom && left.bottom > right.top;
+      return boxes.flatMap((left, index) => [
+        ...boxes.slice(index + 1).filter(right => overlaps(left.rect, right.rect)).map(right => `${left.text} overlaps ${right.text}`),
+        ...nodes.filter(node => overlaps(left.rect, node.rect)).map(node => `${left.text} intersects ${node.text}`),
+      ]);
+    });
+    expect(collisions).toEqual([]);
+  });
 }

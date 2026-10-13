@@ -82,6 +82,13 @@ proof of the provider's latest state. Projection retention does not erase replay
 identity or revision history. Revision history currently requires operator-managed
 storage capacity; no automatic history-pruning policy is provided.
 
+The SQLite-to-PostgreSQL registry importer supports legacy runtime observation
+and session groups. It rejects sources containing native revisions, trace import
+state, collection checkpoints, or replay receipts before opening the target.
+These records require a full source database backup; importing only current
+observations would lose history and replay protection. Native trace history
+migration across backends is not supported by this importer.
+
 ## Upgrading existing collection
 
 Existing collection checkpoints retain their resume cursor when connection scope

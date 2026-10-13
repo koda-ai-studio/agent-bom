@@ -8,7 +8,7 @@ const explanations: Record<string, string> = {
   uses: "A recorded use relationship. It does not establish that a tool was called.",
   provides_tool: "The source lists the target as an available tool. Availability does not prove invocation.",
   depends_on: "The source is linked to a dependency in the collected inventory. This does not establish that vulnerable code runs.",
-  vulnerable_to: "The source component is linked to a vulnerability finding. Review the recorded package and version before choosing a fix.",
+  vulnerable_to: "The source is linked to a security finding. Review its affected asset, evidence, and remediation before choosing a fix.",
   affects: "The finding identifies the target as affected in this snapshot. Review the finding and its source evidence for the detection reason.",
   contains: "The source contains the target in the collected inventory. Containment alone does not establish execution or access.",
   exposes_cred: "The graph links the source to credential material or a secret reference. This alone does not establish that a secret value was read.",

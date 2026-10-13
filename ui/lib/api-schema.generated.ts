@@ -16386,6 +16386,28 @@ export interface components {
             traversable_only: boolean;
         };
         /**
+         * GraphRollupEdge
+         * @description Aggregate counts and recorded directions, not a single evidence edge.
+         */
+        GraphRollupEdge: {
+            /** Count */
+            count: number;
+            /** Directions */
+            directions?: string[] | null;
+            /** Relationship Counts */
+            relationship_counts?: {
+                [key: string]: number;
+            } | null;
+            /** Relationships */
+            relationships: string[];
+            /** Source */
+            source: string;
+            /** Target */
+            target: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
          * GraphRollupResponse
          * @description Roll-up, attack-path-first, or drill-down view, selected by ``mode``.
          */
@@ -16414,9 +16436,7 @@ export interface components {
                 [key: string]: unknown;
             } | null;
             /** Edges */
-            edges?: {
-                [key: string]: unknown;
-            }[] | null;
+            edges?: components["schemas"]["GraphRollupEdge"][] | null;
             /** Filters */
             filters: {
                 [key: string]: unknown;

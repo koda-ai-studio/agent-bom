@@ -21280,6 +21280,67 @@
         "title": "GraphQueryRequest",
         "type": "object"
       },
+      "GraphRollupEdge": {
+        "additionalProperties": true,
+        "description": "Aggregate counts and recorded directions, not a single evidence edge.",
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "directions": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Directions"
+          },
+          "relationship_counts": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "integer"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relationship Counts"
+          },
+          "relationships": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Relationships",
+            "type": "array"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "target",
+          "count",
+          "relationships"
+        ],
+        "title": "GraphRollupEdge",
+        "type": "object"
+      },
       "GraphRollupResponse": {
         "additionalProperties": true,
         "description": "Roll-up, attack-path-first, or drill-down view, selected by ``mode``.",
@@ -21361,8 +21422,7 @@
             "anyOf": [
               {
                 "items": {
-                  "additionalProperties": true,
-                  "type": "object"
+                  "$ref": "#/components/schemas/GraphRollupEdge"
                 },
                 "type": "array"
               },
