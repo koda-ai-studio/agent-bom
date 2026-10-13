@@ -1,0 +1,61 @@
+name: First-run and investigation feedback
+description: Ask a usage question or share a confusing step, missing context, or useful investigation outcome.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This issue is public. Share only sanitized or synthetic examples; keep raw scans,
+        source code, secrets, customer identifiers, private URLs and prompts out of the report.
+        Report vulnerabilities in agent-bom through [SECURITY.md](https://github.com/koda-ai-studio/agent-bom/blob/main/SECURITY.md).
+        For an incorrect finding or relationship, use [Inaccurate Finding](https://github.com/koda-ai-studio/agent-bom/issues/new?template=inaccurate_finding.yml).
+        You can give useful feedback without uploading any scan artifacts.
+
+  - type: input
+    id: version
+    attributes:
+      label: Version and platform
+      description: Run `agent-bom --version`. Include OS and install method, or the commit SHA for a source checkout.
+    validations:
+      required: true
+
+  - type: textarea
+    id: task
+    attributes:
+      label: What were you trying to do?
+      description: Include the guide or command you used and your investigation question. Use placeholders for private paths.
+    validations:
+      required: true
+
+  - type: textarea
+    id: result
+    attributes:
+      label: What happened, and what would have helped?
+      description: >-
+        Describe the result or failure stage. Did context, correlation, blast radius
+        or reachability evidence help you choose a next action? What remained unclear?
+        A setup failure is useful feedback too; no successful result is required.
+    validations:
+      required: true
+
+  - type: input
+    id: timing
+    attributes:
+      label: Time spent (optional)
+      description: If measured, separate install, first report, first visible graph and first useful decision. Mark estimates; leave unknown timings blank.
+
+  - type: dropdown
+    id: assistance
+    attributes:
+      label: Help used (optional)
+      options:
+        - README or linked docs only
+        - Help from a person or assistant
+        - Mixed or unsure
+
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Public report check
+      options:
+        - label: I reviewed this report and removed secrets, private source, customer identifiers and other confidential data.
+          required: true
