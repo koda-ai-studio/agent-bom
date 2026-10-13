@@ -26,6 +26,10 @@ def upgrade() -> None:
             target_node TEXT NOT NULL,
             hop_count INTEGER NOT NULL DEFAULT 0,
             composite_risk DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+            queue_rank INTEGER NOT NULL DEFAULT 0,
+            severity_rank INTEGER NOT NULL DEFAULT 0,
+            has_credential INTEGER NOT NULL DEFAULT 0,
+            source_type TEXT NOT NULL DEFAULT '',
             path_json TEXT NOT NULL,
             computed_at TEXT NOT NULL,
             PRIMARY KEY (tenant_id, scan_id, path_key)
@@ -35,6 +39,7 @@ def upgrade() -> None:
     op.execute(
         "CREATE INDEX IF NOT EXISTS idx_pg_graph_attack_paths_source ON graph_attack_paths(tenant_id, scan_id, source_node, rank_index)"
     )
+    op.execute("CREATE INDEX IF NOT EXISTS idx_pg_graph_attack_paths_queue ON graph_attack_paths(tenant_id, scan_id, queue_rank)")
     op.execute("ALTER TABLE graph_attack_paths ENABLE ROW LEVEL SECURITY")
     op.execute("ALTER TABLE graph_attack_paths FORCE ROW LEVEL SECURITY")
     op.execute("""

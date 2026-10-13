@@ -11,7 +11,7 @@ from agent_bom.graph import technique_mappings_from_json
 from agent_bom.graph.completeness import (
     graph_completeness,
 )
-from agent_bom.graph.snapshot_paths import StoredPathSet, path_from_json, stored_paths_current
+from agent_bom.graph.snapshot_paths import StoredPathSet, StoredQueuePage, path_from_json, queue_filter_sql, stored_paths_current
 
 from .postgres_common import (
     _tenant_connection,
@@ -57,6 +57,42 @@ class PostgresGraphPathsMixin(PostgresGraphTraversalMixin):
                 params.append(sorted(source_ids))
             rows = conn.execute(sql + " ORDER BY rank_index", params).fetchall()
         return StoredPathSet(effective_scan_id, created_at, [path_from_json(item[0]) for item in rows])
+
+    def snapshot_queue_page(
+        self,
+        *,
+        tenant_id: str = "",
+        scan_id: str = "",
+        offset: int = 0,
+        limit: int = 100,
+        min_severity: str | None = None,
+        has_credential: bool | None = None,
+        source_type: str | None = None,
+    ) -> StoredQueuePage | None:
+        """One queue page in stored queue order, or ``None`` without a current index."""
+        tenant_id = normalize_graph_tenant_id(tenant_id)
+        effective_scan_id = scan_id or self.latest_snapshot_id(tenant_id=tenant_id)
+        if not effective_scan_id:
+            return None
+        where, params = queue_filter_sql(
+            placeholder="%s", min_severity=min_severity, has_credential=has_credential, source_type=source_type
+        )
+        scope = "FROM graph_attack_paths WHERE tenant_id = %s AND scan_id = %s"
+        with _tenant_connection(self._pool) as conn:
+            row = conn.execute(
+                "SELECT created_at, analysis_status FROM graph_snapshots WHERE tenant_id = %s AND scan_id = %s",
+                (tenant_id, effective_scan_id),
+            ).fetchone()
+            if row is None or not stored_paths_current(_decode_json_object(row[1], field="graph snapshot analysis status")):
+                return None
+            snapshot_total = (conn.execute(f"SELECT COUNT(*) {scope}", (tenant_id, effective_scan_id)).fetchone() or (0,))[0]  # nosec B608
+            total = (conn.execute(f"SELECT COUNT(*) {scope}{where}", (tenant_id, effective_scan_id, *params)).fetchone() or (0,))[0]  # nosec B608
+            rows = conn.execute(
+                f"SELECT path_json {scope}{where} ORDER BY queue_rank LIMIT %s OFFSET %s",  # nosec B608 - static predicates
+                (tenant_id, effective_scan_id, *params, limit, offset),
+            ).fetchall()
+        paths = [path_from_json(item[0]) for item in rows]
+        return StoredQueuePage(effective_scan_id, str(row[0] or ""), paths, int(total), int(snapshot_total))
 
     def attack_paths_for_sources(
         self,

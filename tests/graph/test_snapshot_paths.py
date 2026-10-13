@@ -375,3 +375,21 @@ def test_per_hop_signal_cache_scores_paths_exactly_like_whole_path_scoring() -> 
     assert any(_fusion_signals_for_path(graph, hops) for hops in chains)
     for hops in chains:
         assert _cached_path_boost(graph, hops, cache) == sum(boost for _k, _l, _d, boost in _fusion_signals_for_path(graph, hops))
+
+
+@pytest.mark.parametrize(
+    "filters",
+    [{}, {"min_severity": "critical"}, {"has_credential": True}, {"has_credential": False}, {"source_type": "agent"}],
+)
+def test_stored_queue_page_matches_ranking_the_full_set(store: SQLiteGraphStore, filters: dict[str, Any]) -> None:
+    from agent_bom.graph.attack_path_queue_rank import rank_attack_paths
+
+    graph = build_unified_graph_from_report(shared_server_estate(agents=30, group_size=10), scan_id="q", tenant_id="t")
+    store.save_graph(graph)
+    loaded = store.load_graph(tenant_id="t", scan_id="q")
+    expected = rank_attack_paths(_derived_attack_paths(loaded), loaded.nodes, **filters)
+    page = store.snapshot_queue_page(tenant_id="t", scan_id="q", offset=3, limit=7, **filters)
+    assert page is not None
+    assert page.total == len(expected)
+    assert page.snapshot_total == len(_derived_attack_paths(loaded))
+    assert _dicts(page.paths) == _dicts(expected[3:10])

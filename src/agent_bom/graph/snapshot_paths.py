@@ -17,18 +17,20 @@ from collections.abc import Iterable, Iterator, Mapping
 from dataclasses import dataclass
 from typing import Any
 
+from agent_bom.core.severity import severity_rank
 from agent_bom.graph.analysis import (
     GraphAnalysisState,
     GraphAnalysisStatus,
     analysis_status_map_from_dict,
     analysis_status_map_to_dict,
 )
+from agent_bom.graph.attack_path_queue_rank import attack_path_rank_key, path_has_credential, path_severity, source_entity_type
 from agent_bom.graph.container import AttackPath, UnifiedGraph
 from agent_bom.graph.path_derivation import _derived_attack_paths
 
 logger = logging.getLogger(__name__)
 
-# Bump whenever derived_attack_paths_with_kinds can emit different paths, order or fields for the same snapshot.
+# Bump whenever derived paths, their order/fields, or the stored queue rank/facets can change for the same snapshot.
 DERIVATION_VERSION = 1
 PATHS_ANALYSIS_KEY = "paths"
 
@@ -44,6 +46,10 @@ SNAPSHOT_PATH_COLUMNS = (
     "target_node",
     "hop_count",
     "composite_risk",
+    "queue_rank",
+    "severity_rank",
+    "has_credential",
+    "source_type",
     "path_json",
     "computed_at",
 )
@@ -55,6 +61,12 @@ class SnapshotPath:
     path_kind: str
     rank_index: int
     path: AttackPath
+    # Attack-path queue order and filter facets, fixed at persist so a queue
+    # page is an indexed read instead of re-ranking every stored path.
+    queue_rank: int = 0
+    severity_rank: int = 0
+    has_credential: bool = False
+    source_type: str = ""
 
 
 def path_identity(path: AttackPath) -> str:
@@ -96,13 +108,27 @@ def materialize_snapshot_paths(graph: UnifiedGraph) -> list[SnapshotPath]:
                 original_status[name] = status
     finally:
         graph.attack_paths, graph.analysis_status = original_paths, original_status
+    nodes = graph.nodes
+    queue_order = sorted(range(len(tagged)), key=lambda index: attack_path_rank_key(tagged[index][0], nodes))
+    queue_rank = {index: position for position, index in enumerate(queue_order)}
     occurrences: dict[str, int] = {}
     rows: list[SnapshotPath] = []
     for rank_index, (path, kind) in enumerate(tagged):
         identity = path_identity(path)
         ordinal = occurrences.get(identity, 0)
         occurrences[identity] = ordinal + 1
-        rows.append(SnapshotPath(identity if ordinal == 0 else f"{identity}:{ordinal}", kind, rank_index, path))
+        rows.append(
+            SnapshotPath(
+                identity if ordinal == 0 else f"{identity}:{ordinal}",
+                kind,
+                rank_index,
+                path,
+                queue_rank=queue_rank[rank_index],
+                severity_rank=severity_rank(path_severity(path, nodes)),
+                has_credential=path_has_credential(path, nodes),
+                source_type=source_entity_type(path, nodes),
+            )
+        )
     return rows
 
 
@@ -157,6 +183,10 @@ def snapshot_path_rows(rows: Iterable[SnapshotPath], *, tenant: str, scan: str, 
             row.path.target,
             len(row.path.hops),
             row.path.composite_risk,
+            row.queue_rank,
+            row.severity_rank,
+            int(row.has_credential),
+            row.source_type,
             json.dumps(payload, sort_keys=True, separators=(",", ":")),
             now,
         )
@@ -174,6 +204,35 @@ class StoredPathSet:
     scan_id: str
     created_at: str
     paths: list[AttackPath]
+
+
+@dataclass(frozen=True, slots=True)
+class StoredQueuePage:
+    """One attack-path queue page read in stored queue order."""
+
+    scan_id: str
+    created_at: str
+    paths: list[AttackPath]
+    total: int
+    snapshot_total: int
+
+
+def queue_filter_sql(
+    *, placeholder: str, min_severity: str | None, has_credential: bool | None, source_type: str | None
+) -> tuple[str, list[Any]]:
+    """SQL predicate over the stored queue facets, mirroring ``path_matches_filters``."""
+    clauses: list[str] = []
+    params: list[Any] = []
+    if min_severity:
+        clauses.append(f"severity_rank >= {placeholder}")
+        params.append(severity_rank(min_severity))
+    if has_credential is not None:
+        clauses.append(f"has_credential = {placeholder}")
+        params.append(int(has_credential))
+    if source_type:
+        clauses.append(f"source_type = {placeholder}")
+        params.append(source_type)
+    return "".join(f" AND {clause}" for clause in clauses), params
 
 
 def _derive_on_read(graph: UnifiedGraph) -> list[AttackPath]:
@@ -218,6 +277,8 @@ __all__ = [
     "SNAPSHOT_PATH_COLUMNS",
     "SnapshotPath",
     "StoredPathSet",
+    "StoredQueuePage",
+    "queue_filter_sql",
     "materialize_snapshot_paths",
     "path_from_json",
     "path_identity",

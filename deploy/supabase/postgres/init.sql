@@ -609,6 +609,10 @@ CREATE TABLE IF NOT EXISTS graph_attack_paths (
     target_node         TEXT NOT NULL,
     hop_count           INTEGER NOT NULL DEFAULT 0,
     composite_risk      DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+    queue_rank          INTEGER NOT NULL DEFAULT 0,
+    severity_rank       INTEGER NOT NULL DEFAULT 0,
+    has_credential      INTEGER NOT NULL DEFAULT 0,
+    source_type         TEXT NOT NULL DEFAULT '',
     path_json           TEXT NOT NULL,
     computed_at         TEXT NOT NULL,
     PRIMARY KEY (tenant_id, scan_id, path_key)
@@ -617,6 +621,7 @@ CREATE TABLE IF NOT EXISTS graph_attack_paths (
 CREATE INDEX IF NOT EXISTS idx_pg_graph_attack_paths_rank ON graph_attack_paths(tenant_id, scan_id, rank_index);
 CREATE INDEX IF NOT EXISTS idx_pg_graph_attack_paths_source
     ON graph_attack_paths(tenant_id, scan_id, source_node, rank_index);
+CREATE INDEX IF NOT EXISTS idx_pg_graph_attack_paths_queue ON graph_attack_paths(tenant_id, scan_id, queue_rank);
 
 CREATE TABLE IF NOT EXISTS graph_filter_presets (
     name        TEXT NOT NULL,

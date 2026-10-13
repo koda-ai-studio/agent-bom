@@ -113,3 +113,17 @@ def test_stored_set_matches_read_time_derivation(store) -> None:
     assert stored is not None and subset is not None
     assert [path.to_dict() for path in stored.paths] == [path.to_dict() for path in derived]
     assert [path.to_dict() for path in subset.paths] == [path.to_dict() for path in derived if path.source == derived[0].source]
+
+
+def test_queue_page_reads_stored_order_and_facets(store) -> None:
+    from agent_bom.graph.attack_path_queue_rank import rank_attack_paths
+
+    scan, tenant = f"queue-{uuid4().hex[:10]}", f"tq-{uuid4().hex[:8]}"
+    with tenant_scope(tenant):
+        store.save_graph(build_unified_graph_from_report(shared_server_estate(agents=20, group_size=10), scan_id=scan, tenant_id=tenant))
+        loaded = store.load_graph(tenant_id=tenant, scan_id=scan)
+        page = store.snapshot_queue_page(tenant_id=tenant, scan_id=scan, offset=2, limit=5, min_severity="critical", has_credential=True)
+        store.delete_snapshot(tenant_id=tenant, scan_id=scan)
+    expected = rank_attack_paths(_derived_attack_paths(loaded), loaded.nodes, min_severity="critical", has_credential=True)
+    assert page is not None and page.total == len(expected)
+    assert [path.to_dict() for path in page.paths] == [path.to_dict() for path in expected[2:7]]
