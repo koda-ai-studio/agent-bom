@@ -27,14 +27,11 @@ describe("entities in scope navigation", () => {
     expect(screen.queryByLabelText("Scope details")).not.toBeInTheDocument();
     expect(screen.getByTestId("graph-drawer-tab-overview")).toBeVisible();
   });
-  it("keeps the drilled parent visible without inventing relationship edges", () => {
-    const parent = { id: "agent:cursor", label: "Cursor workspace", entity_type: "agent", severity: "" };
-    const { nodes, edges } = buildRollupFlowGraph([leaf], { parent });
-    const context = nodes.find(node => node.id === parent.id);
-    expect(context?.data.label).toBe(parent.label);
-    expect(context?.data.description).toBe("Current scope");
-    expect(context?.data.rollup).toBeUndefined();
-    expect(context!.position.y).toBeLessThan(nodes.find(node => node.id === leaf.id)!.position.y);
-    expect(edges).toHaveLength(0);
+  it("uses a finding's own severity when it has no descendants", () => {
+    const finding = { ...leaf, id: "finding:high", entity_type: "misconfiguration", label: "Credential exposure", severity: "high" };
+    render(<ReactFlowProvider><GraphScopeNode item={finding} /></ReactFlowProvider>);
+    expect(screen.getByText("High severity")).toBeVisible();
+    expect(screen.getByText("Inspect finding")).toBeVisible();
+    expect(screen.queryByText("No severity recorded")).not.toBeInTheDocument();
   });
 });

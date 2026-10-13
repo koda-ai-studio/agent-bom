@@ -548,34 +548,36 @@ for (const proof of [
     await expect(page.getByText("Current · observed")).toBeVisible();
     await expect(page.getByText("Proposed · modeled")).toBeVisible();
     const canvas = page.locator(".react-flow");
-    await expect(canvas.locator('[data-id="proposal:scenario-private-endpoint:private-endpoint"]')).toBeAttached();
+    const unconnected = page.getByRole("region", { name: "Unconnected proposal items" });
+    await expect(unconnected).toBeVisible();
+    await expect(unconnected.getByRole("button", { name: /Private service endpoint/ })).toBeVisible();
+    await expect(canvas.locator('[data-id="proposal:scenario-private-endpoint:private-endpoint"]')).toHaveCount(0);
+    await expect(canvas.locator('[data-id="cred:gh-token"]')).toHaveCount(0);
     await expect(canvas.locator('.react-flow__edge[data-id="server:github->cred:gh-token:exposes_cred"]')).toHaveCount(0);
     await expect.poll(() => canvas.locator(".react-flow__viewport").evaluate(
       (element) => new DOMMatrixReadOnly(getComputedStyle(element).transform).a,
     )).toBeGreaterThanOrEqual(0.75);
     const canvasBox = await canvas.boundingBox();
     expect(canvasBox).not.toBeNull();
-    expect(canvasBox!.height).toBeGreaterThanOrEqual(400);
+    expect(canvasBox!.height).toBeGreaterThanOrEqual(240);
     expect(canvasBox!.y + canvasBox!.height).toBeLessThanOrEqual(proof.height + 16);
-    const proposedBox = await canvas.locator('[data-id="proposal:scenario-private-endpoint:private-endpoint"]').boundingBox();
-    expect(proposedBox).not.toBeNull();
-    expect(proposedBox!.x).toBeGreaterThanOrEqual(canvasBox!.x);
-    expect(proposedBox!.y).toBeGreaterThanOrEqual(canvasBox!.y);
-    expect(proposedBox!.x + proposedBox!.width).toBeLessThanOrEqual(canvasBox!.x + canvasBox!.width);
-    expect(proposedBox!.y + proposedBox!.height).toBeLessThanOrEqual(canvasBox!.y + canvasBox!.height);
     await expect.poll(() => canvas.evaluate(flow => {
       const frame = flow.getBoundingClientRect();
       const controls = flow.querySelector(".react-flow__controls")!.getBoundingClientRect();
       const zoom = new DOMMatrixReadOnly(getComputedStyle(flow.querySelector(".react-flow__viewport")!).transform).a;
       const nodes = [...flow.querySelectorAll(".react-flow__node")];
-      return nodes.length === 5 && nodes.every(node => {
+      return nodes.flatMap(node => {
         const box = node.getBoundingClientRect();
         const overlap = box.left < controls.right && box.right > controls.left && box.top < controls.bottom && box.bottom > controls.top;
         const text = [...node.querySelectorAll("p, span")].filter(el => el.textContent?.trim() && !el.querySelector("p, span"));
-        return box.left >= frame.left && box.right <= frame.right && box.top >= frame.top && box.bottom <= frame.bottom && !overlap
-          && text.every(el => parseFloat(getComputedStyle(el).fontSize) * zoom >= 12);
+        const issues = [];
+        if (box.left < frame.left || box.right > frame.right || box.top < frame.top || box.bottom > frame.bottom) issues.push(`Clipped: ${node.textContent}`);
+        if (overlap) issues.push(`Controls overlap: ${node.textContent}`);
+        for (const el of text) if (parseFloat(getComputedStyle(el).fontSize) * zoom < 12) issues.push(`Small text: ${el.textContent} (${parseFloat(getComputedStyle(el).fontSize) * zoom}px)`);
+        return issues;
       });
-    })).toBe(true);
+    })).toEqual([]);
+    await expect(canvas.locator(".react-flow__node")).toHaveCount(3);
     await page.screenshot({ path: testInfo.outputPath(`scenario-first-view-${proof.theme}-${capture}.png`) });
     await expect.poll(() => canvas.locator(".react-flow__node").evaluateAll((nodes) => {
       const frame = nodes[0]?.closest(".react-flow")?.getBoundingClientRect();
@@ -585,16 +587,21 @@ for (const proof of [
         return box.left >= frame.left && box.right <= frame.right && box.top >= frame.top && box.bottom <= frame.bottom;
       }).length;
     })).toBeGreaterThanOrEqual(3);
-    await expect(canvas.locator('[data-id="cred:gh-token"]').getByTestId("scenario-connection-note")).toHaveText("Connection removed in proposal");
-    await expect(canvas.locator('[data-id="proposal:scenario-private-endpoint:private-endpoint"]').getByTestId("scenario-connection-note")).toHaveText("No connection in supplied proposal");
+    await expect(unconnected).toContainText("Connection removed in proposal");
+    await expect(unconnected).toContainText("No connection in supplied proposal");
     await expect(page.getByTestId("scenario-impact-summary")).toContainText("Observed paths touched");
     await expect(page.getByTestId("graph-viewport-scope")).toContainText("Fit all");
     await expect(page.getByTestId("graph-viewport-scope")).toContainText("Changes and neighbors");
     await page.getByRole("button", { name: "Show full graph" }).click();
     await expect(page.getByRole("button", { name: "Focus changes" })).toBeVisible();
+    await expect(canvas.locator('[data-id="cred:gh-token"]')).toHaveCount(0);
+    await expect(unconnected).toBeVisible();
     await expect(page.getByTestId("graph-viewport-scope")).not.toContainText("Changes and neighbors");
     await page.getByRole("button", { name: "Focus changes" }).click();
     await expect(page.getByTestId("graph-viewport-scope")).toContainText("Changes and neighbors");
+    await unconnected.getByRole("button", { name: /Private service endpoint/ }).click();
+    await expect(page.getByTestId("graph-drawer-tab-overview")).toBeVisible();
+    await page.getByRole("button", { name: "Close", exact: true }).click();
     await page.getByRole("button", { name: "Review modeled changes" }).click();
     await expect(page).toHaveURL(/state=difference/);
     await expect(page.getByTestId("graph-scenario-difference")).toContainText(
@@ -1998,7 +2005,7 @@ for (const width of [1440, 1920]) for (const theme of ["light", "dark"]) {
 }
 
 for (const theme of ["light", "dark"] as const) {
-  test(`scope navigation fits the first load and retains its parent and leaf evidence in ${theme}`, async ({ page }, testInfo) => {
+  test(`scope navigation fits the first load with scope context and leaf evidence in ${theme}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await routeCockpit(page, undefined, { rollupItemCount: 8 });
     await page.addInitScript(value => localStorage.setItem("agent-bom-theme", value), theme);
@@ -2012,7 +2019,7 @@ for (const theme of ["light", "dark"] as const) {
       return route.fulfill({ json: {
         scan_id: scanId, tenant_id: "default", created_at: createdAt, mode: "drilldown", filters: {},
         node: { id: "account:production", label: "Production account", entity_type: "cloud_account", severity: "critical" },
-        children: [child, { ...child, id: "pkg:requests", label: "requests@2.28.0", entity_type: "package" }], edges: [],
+        children: [child, { ...child, id: "finding:high", label: "Credential exposure", entity_type: "misconfiguration", severity: "high" }], edges: [],
         summary: { direct_child_count: 2, matching_child_count: 2, returned_child_count: 2 },
         completeness: { returned: 2, total: 2, truncated: false, reason: "" },
       } });
@@ -2032,10 +2039,29 @@ for (const theme of ["light", "dark"] as const) {
     const credential = page.locator('.react-flow__node[data-id="cred:slot"]');
     await expect(credential).toContainText("Inspect entity");
     await expect(credential).not.toContainText("contained entities");
-    await expect(page.locator('.react-flow__node[data-id="account:production"]')).toBeVisible();
+    await expect(page.locator('.react-flow__node[data-id="account:production"]')).toHaveCount(0);
+    await expect(page.getByTestId("graph-viewport-scope")).toContainText("Within Production account");
+    await expect(page.locator('.react-flow__node[data-id="finding:high"]')).toContainText("High severity");
+    await expect(page.locator('.react-flow__node[data-id="finding:high"]')).toContainText("Inspect finding");
     await page.screenshot({ path: testInfo.outputPath(`scope-parent-${theme}.png`), fullPage: true });
     await credential.click();
     await expect(page.getByTestId("graph-drawer-tab-overview")).toBeVisible();
     await expect(page.getByLabel("Scope details")).toHaveCount(0);
   });
 }
+
+test("unconnected proposal items remain usable on a narrow screen", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await routeCockpit(page, 36);
+  await page.goto("/security-graph?lens=estate&rollup=0&scenario=scenario-private-endpoint&state=proposed");
+  const panel = page.getByRole("region", { name: "Unconnected proposal items" });
+  await expect(panel).toBeVisible();
+  await expect(page.locator('.react-flow [data-id="proposal:scenario-private-endpoint:private-endpoint"]')).toHaveCount(0);
+  const item = panel.getByRole("button", { name: /Private service endpoint/ });
+  await item.scrollIntoViewIfNeeded();
+  await expect(item).toBeInViewport();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+  await page.screenshot({ path: testInfo.outputPath("scenario-unconnected-mobile.png"), fullPage: true });
+  await item.click();
+  await expect(page.getByTestId("graph-drawer-tab-overview")).toBeVisible();
+});

@@ -95,7 +95,6 @@ export type LineageNodeData = {
   evidenceCaptureReplay?: boolean | undefined;
   evidenceNotAfter?: string | undefined;
   renderBand?: "detail" | "summary" | "cluster" | undefined;
-  scenarioConnectionNote?: string | undefined;
 };
 
 type CardProps = {
@@ -176,7 +175,6 @@ function NodeCard({
       {data.runtimeEvidenceTier && data.runtimeEvidenceTier !== "static_scan" && <div className="mt-1">
         <RuntimeEvidenceChip tier={data.runtimeEvidenceTier} />
       </div>}
-      {data.scenarioConnectionNote && <p className="mt-2 text-sm leading-5 text-ink-secondary" data-testid="scenario-connection-note">{data.scenarioConnectionNote}</p>}
       {subtitle && <div className="graph-node-context mt-1 max-w-full truncate text-xs leading-4 text-ink-secondary">{subtitle}</div>}
       {footer && <div className={`${data.nodeType === "vulnerability" || data.nodeType === "misconfiguration" ? "" : "graph-node-context "}mt-1 flex max-w-full flex-wrap items-baseline justify-center gap-x-2`} title={data.countScope === "loaded_graph" ? graphCountDescription(data) : undefined}>
         {footer}

@@ -182,6 +182,7 @@ import {
   type DriftLensFilter,
   type EvidenceLensFilter,
 } from "@/lib/filter-algebra";
+import { GraphScenarioUnconnected } from "@/components/graph-scenario-unconnected";
 import { useCaptureMode } from "@/lib/use-capture-mode";
 import { useAuthState } from "@/components/auth-provider";
 import { useGraphPresentation } from "@/hooks/use-graph-presentation";
@@ -1419,7 +1420,7 @@ function GraphPageInner() {
         rollupView.mode === "drilldown"
           ? (rollupView.children ?? [])
           : (rollupView.top_level ?? []);
-      const rollupFlow = buildRollupFlowGraph(items, { edges: rollupView.edges, parent: rollupView.mode === "drilldown" ? rollupView.node : undefined });
+      const rollupFlow = buildRollupFlowGraph(items, { edges: rollupView.edges });
       return {
         nodes: rollupFlow.nodes,
         edges: rollupFlow.edges,
@@ -1722,8 +1723,21 @@ function GraphPageInner() {
     if (!selectedScenarioId || !scenarioComparison?.available || scenarioExpanded || attackPathLens || selectedAttackPath || investigationMode) return undefined;
     return graphScenarioContextIds(aggregated.nodes, aggregated.edges, scenarioComparison.difference, mergedGraphData?.edges);
   }, [selectedScenarioId, scenarioComparison, scenarioExpanded, attackPathLens, selectedAttackPath, investigationMode, aggregated.nodes, aggregated.edges, mergedGraphData?.edges]);
-  const layoutInput = useMemo(() => {
+  const scenarioConnectionNotes = useMemo(() => scenarioState === "proposed" && scenarioComparison?.available
+    ? graphScenarioConnectionNotes(scenarioComparison.proposed.nodes.map(node => node.id), scenarioComparison.proposed.edges,
+      mergedGraphData?.edges ?? [], scenarioComparison.difference.edges_removed)
+    : new Map<string, string>(), [scenarioState, scenarioComparison, mergedGraphData]);
+  const scenarioElements = useMemo(() => {
     const selected = selectGraphSubgraph(aggregated.nodes, aggregated.edges, attackPathNodeIds ?? scenarioContextIds);
+    // Use the full proposal to distinguish missing connections from neighbors
+    // merely hidden by the active scope. Never remove an endpoint of a visible edge.
+    const connected = new Set(selected.edges.flatMap(edge => [edge.source, edge.target]));
+    const unconnected = selected.nodes.filter(node => scenarioConnectionNotes.has(node.id) && !connected.has(node.id));
+    const ids = new Set(unconnected.map(node => node.id));
+    return { ...selected, nodes: selected.nodes.filter(node => !ids.has(node.id)), unconnected };
+  }, [aggregated.nodes, aggregated.edges, attackPathNodeIds, scenarioContextIds, scenarioConnectionNotes]);
+  const layoutInput = useMemo(() => {
+    const selected = scenarioElements;
     // Decide broad-map rendering before paging the focused React Flow canvas.
     // Otherwise the 100-node page can never reach the WebGL threshold.
     const broadMap = !investigationMode && !scenarioContextIds && decideGraphRenderer({
@@ -1733,7 +1747,7 @@ function GraphPageInner() {
     }).kind === "webgl";
     if (broadMap) return { ...selected, omittedNodes: 0, pageCount: 1, page: 0 };
     return boundedGraphElements(selected.nodes, selected.edges, [...(attackPathNodeIds ?? scenarioContextIds ?? [])], canvasPage);
-  }, [aggregated.edges, aggregated.nodes, attackPathNodeIds, scenarioContextIds, canvasPage, investigationMode, captureMode, selectedAttackPath, rollupNavigationActive]);
+  }, [scenarioElements, attackPathNodeIds, scenarioContextIds, canvasPage, investigationMode, captureMode, selectedAttackPath, rollupNavigationActive]);
   const { nodes: layoutNodes, edges: layoutEdges, pending: layoutPending } = useGraphLayout(
     graphLayoutKind,
     layoutInput.nodes,
@@ -1974,12 +1988,8 @@ function GraphPageInner() {
     }
   }, [graphDiff]);
 
-  const scenarioConnectionNotes = useMemo(() => scenarioState !== "current" && scenarioComparison?.available
-    ? graphScenarioConnectionNotes(scenarioComparison.proposed.nodes.map(node => node.id), scenarioComparison.proposed.edges,
-      mergedGraphData?.edges ?? [], scenarioComparison.difference.edges_removed)
-    : new Map<string, string>(), [scenarioState, scenarioComparison, mergedGraphData]);
   const displayNodes = useMemo<Node<LineageNodeData>[]>(() => {
-    let nodes = baseDisplayNodes.map(node => ({ ...node, data: { ...node.data, scenarioConnectionNote: scenarioConnectionNotes.get(node.id) } }));
+    let nodes = baseDisplayNodes;
     if (driftLensEngaged) {
       nodes = nodes.map((node) => {
         const kind = changeKindForNode(node.id, driftIndex);
@@ -2022,7 +2032,6 @@ function GraphPageInner() {
     } : node);
   }, [
     baseDisplayNodes,
-    scenarioConnectionNotes,
     driftIndex,
     driftLensEngaged,
     driftFilter,
@@ -2301,6 +2310,7 @@ function GraphPageInner() {
         : viewportOptions;
       // Scenario views share width with the decision panel and app navigation.
       // Allow the complete proposed context to fit shorter desktop canvases.
+      if (selectedScenarioId) return { ...options, minZoom: 0.05, maxZoom: 1 };
       if (compactInvestigationTopology && !narrowViewport) return { ...options, minZoom: displayNodes.length <= 3 ? 1 : COMPACT_GRAPH_MIN_ZOOM, maxZoom: displayNodes.length <= 3 ? 1.25 : 1 };
       return rollupNavigationActive ? { ...viewportOptions, minZoom: 0.05, maxZoom: 1 } : selectedScenarioId && !scenarioExpanded ? { ...options, minZoom: 0.75, maxZoom: 1 } : options;
     },
@@ -2921,11 +2931,11 @@ function GraphPageInner() {
           <span className="font-mono text-orange-700 dark:text-orange-200">
             {flow.summary.findings.toLocaleString()}
           </span>{" "}
-          findings ·{" "}
+          {flow.summary.findings === 1 ? "finding" : "findings"} ·{" "}
           <span className="font-mono text-sky-700 dark:text-sky-200">
             {snapshotAttackPathCount.toLocaleString()}
           </span>{" "}
-          snapshot paths
+          {snapshotAttackPathCount === 1 ? "snapshot path" : "snapshot paths"}
           {flow.summary.costUsd30d > 0 && (
             <>
               {" · "}
@@ -3689,7 +3699,7 @@ function GraphPageInner() {
           )}
           {!rollupDecisionActive && (rollupNavigationActive || selectedScenarioId || investigationMode || initialViewportOptions.nodes || displayNodes.length > 6) && graphRenderer.kind === "react-flow" && (
             <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-xs text-muted-foreground" data-testid="graph-viewport-scope">
-              <span>{scenarioContextIds ? `Changes and neighbors · ${displayNodes.length} of ${aggregated.nodes.length} nodes` : rollupNavigationActive ? "Scope overview" : "Graph"} · {displayNodes.length.toLocaleString()} {rollupNavigationActive ? "entities" : "nodes"} · {displayEdges.length.toLocaleString()} {rollupNavigationActive ? `aggregate link${displayEdges.length === 1 ? "" : "s"}` : `relationship${displayEdges.length === 1 ? "" : "s"}`}</span>
+              <span>{scenarioContextIds ? "Changes and neighbors" : rollupNavigationActive ? (rollupView?.mode === "drilldown" ? `Within ${rollupView.node?.label ?? "selected scope"}` : "Scope overview") : "Graph"} · {displayNodes.length.toLocaleString()} {rollupNavigationActive ? "entities" : "nodes"} · {displayEdges.length.toLocaleString()} {rollupNavigationActive ? `aggregate link${displayEdges.length === 1 ? "" : "s"}` : `relationship${displayEdges.length === 1 ? "" : "s"}`}{scenarioElements.unconnected.length > 0 && ` · ${scenarioElements.unconnected.length} unconnected items`}</span>
               {selectedScenarioId && !attackPathLens && !selectedAttackPath && !investigationMode && <button type="button" onClick={() => setExpandedScenarioId(scenarioExpanded ? null : selectedScenarioId)} className="text-foreground underline underline-offset-4">{scenarioExpanded ? "Focus changes" : "Show full graph"}</button>}
               {showMiniMap && <button type="button" aria-pressed={minimapExpanded} onClick={() => setMinimapExpanded((value) => !value)} className="text-foreground underline underline-offset-4">{minimapExpanded ? "Hide minimap" : "Show minimap"}</button>}
               <button type="button" onClick={fitVisible} className="text-foreground underline underline-offset-4">Fit all</button>
@@ -3698,7 +3708,14 @@ function GraphPageInner() {
             </div>
           )}
           {!rollupNavigationActive && !rollupDecisionActive && graphRenderer.kind === "react-flow" && displayNodes.length > 0 && <GraphLegendDock items={legendItems} separated />}
-          <div className={`relative flex h-[max(24rem,calc(100dvh-25rem))] ${(selectedAttackPath || (compactInvestigationTopology && displayNodes.length <= 4 && !investigationMode)) ? "sm:h-[clamp(24rem,50dvh,36rem)]" : "sm:h-[max(28rem,calc(100dvh-21rem))]"} shrink-0 overflow-hidden rounded-lg border border-outline bg-surface`}>
+          <div className={`relative flex h-[max(24rem,calc(100dvh-25rem))] ${(selectedAttackPath || (compactInvestigationTopology && displayNodes.length <= 4 && !investigationMode && !selectedScenarioId)) ? "sm:h-[clamp(24rem,50dvh,36rem)]" : "sm:h-[max(28rem,calc(100dvh-21rem))]"} shrink-0 overflow-hidden rounded-lg border border-outline bg-surface`}>
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <GraphScenarioUnconnected
+            nodes={scenarioElements.unconnected}
+            notes={scenarioConnectionNotes}
+            selectedId={selectedNodeId}
+            onSelect={node => onNodeClick({} as React.MouseEvent, node)}
+          />
           <div className="relative min-h-0 min-w-0 flex-1">
           {graphPanelError && graphData && !loadingGraph && (
             <div role="status" className="flex items-center justify-between gap-3 border-b border-outline px-4 py-2 text-sm">
@@ -3739,6 +3756,8 @@ function GraphPageInner() {
               onDrill={drillIntoRollup}
               onInvestigate={investigateRollup}
             />
+          ) : displayNodes.length === 0 && scenarioElements.unconnected.length > 0 ? (
+            <div className="flex h-full items-center justify-center p-6 text-sm text-ink-secondary">No connected nodes in this proposal view. Select an unconnected item to inspect its details.</div>
           ) : displayNodes.length === 0 ? (
             <GraphEmptyState
               title="No nodes match the current graph scope"
@@ -3841,7 +3860,7 @@ function GraphPageInner() {
               }}
             >
               <Background color={BACKGROUND_COLOR} gap={BACKGROUND_GAP} />
-              <Controls position={selectedScenarioId ? "bottom-right" : "bottom-left"} className={CONTROLS_CLASS} />
+              <Controls orientation={selectedScenarioId ? "horizontal" : "vertical"} position={selectedScenarioId ? "bottom-right" : "bottom-left"} className={CONTROLS_CLASS} />
               {minimapExpanded && showMiniMap && (canvasLens !== "estate" || graphViewport.zoom >= 1) && (
                 <MiniMap
                   style={narrowViewport ? { width: 96, height: 64 } : undefined}
@@ -3885,6 +3904,7 @@ function GraphPageInner() {
             </details>
           )}
 
+          </div>
           </div>
           {!selectedNode && selectedRelationship?.scanId === selectedScanId && (() => {
             const aggregate = rollupNavigationActive ? rollupView?.edges?.find(item => `rollup:${item.source}->${item.target}` === selectedRelationship.id) : undefined;
