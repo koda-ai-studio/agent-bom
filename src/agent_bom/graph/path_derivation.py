@@ -18,6 +18,7 @@ from agent_bom.graph.edge_lookup import _edge_relationships_for_hops as _edge_re
 from agent_bom.graph.edge_lookup import _EdgeLookup as _EdgeLookup
 from agent_bom.graph.edge_lookup import _rel_value as _rel_value
 from agent_bom.graph.node import UnifiedNode
+from agent_bom.graph.path_evidence import with_technique_mappings as _with_technique_mappings
 from agent_bom.graph.reachability_truth import node_reachability
 from agent_bom.graph.types import EntityType, RelationshipType
 
@@ -455,26 +456,12 @@ def _derived_toxic_combination_paths(graph: UnifiedGraph) -> list[AttackPath]:
     return paths
 
 
-def _with_technique_mappings(paths: list[AttackPath], graph: UnifiedGraph) -> list[AttackPath]:
-    """Ensure every path carries typed MITRE mappings derived from its evidence.
-
-    Persisted paths already carry mappings from build time; route-derived paths
-    (governance / toxic-combination / fallback vuln chains) are enriched here so
-    the API surfaces the same typed kill-chain sequence for a pure-render UI.
-    Never raises into the route.
-    """
-    from agent_bom.graph.path_evidence import annotate_attack_path_evidence
-
-    for path in paths:
-        annotate_attack_path_evidence(path, graph)
-    try:
-        from agent_bom.graph.attack_path_mitre import derive_attack_path_techniques
-
-        for path in paths:
-            path.technique_mappings = derive_attack_path_techniques(path, graph)
-    except Exception:  # noqa: BLE001
-        pass
-    return paths
+def _component_finding(node: UnifiedNode) -> bool:
+    # Credential assessments use their own bounded, owner-scoped derivation.
+    return (
+        _node_type_value(node) in {EntityType.VULNERABILITY.value, EntityType.MISCONFIGURATION.value}
+        and node.attributes.get("rule_id") != "AGENT_REACHES_PRIVILEGED"
+    )
 
 
 def _derived_attack_paths(graph: UnifiedGraph) -> list[AttackPath]:
@@ -527,10 +514,9 @@ def _derived_attack_paths(graph: UnifiedGraph) -> list[AttackPath]:
 
     paths: list[AttackPath] = []
     seen: set[tuple[str, str, str, str]] = set()
-    finding_types = {EntityType.VULNERABILITY.value, EntityType.MISCONFIGURATION.value}
 
     for finding in graph.nodes.values():
-        if _node_type_value(finding) not in finding_types:
+        if not _component_finding(finding):
             continue
         reach = node_reachability(getattr(finding, "attributes", None))
         if reach.verdict == "unlikely":

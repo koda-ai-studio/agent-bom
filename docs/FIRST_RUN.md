@@ -161,7 +161,11 @@ Find a path shows the recorded agent/server/credential chain and its final
 modeled assessment link. These paths do not establish successful credential use
 or effective permission. Run a new scan to populate these nodes in a new
 snapshot; historical snapshots are preserved. Path derivation follows at most
-six topology hops and visits at most 5,000 nodes per agent.
+six topology hops in the owning agent's tool chain. Sharing a server or
+credential does not confer access to a peer's credentials. Each derivation
+examines at most 5,000 eligible edges per agent and 100,000 across the snapshot,
+and returns at most 10,000 credential paths. Budget exhaustion is recorded in
+graph analysis status; partial results are not a clean verdict.
 
 This is sample evidence, not an assessment of your environment. Offline
 quickstart inventories the sample and skips package-CVE lookup; zero CVEs is

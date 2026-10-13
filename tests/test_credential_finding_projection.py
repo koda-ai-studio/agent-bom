@@ -53,7 +53,7 @@ def test_rebuilt_snapshot_preserves_findings_and_paths_without_cross_agent_links
         assert path.source == finding.node_id
         assert path.target == finding.finding_node_id
         assert len(path.hops) == 4  # agent, server, credential, assessment
-        assert path.edges == ["uses", "exposes_cred", "triggers"]
+        assert path.edges == ["uses", "exposes_cred", "vulnerable_to"]
         assert path.reachability == "unknown"
         assert "successful use" in path.summary
     assert graph.stats()["severity_counts"] == {"high": 2}
@@ -137,3 +137,117 @@ def test_shared_topology_never_assigns_another_agents_finding_to_a_path():
     paths = credential_finding_paths(restored)
     assert len(paths) == 2
     assert all(owners[fid] == path.source for path in paths for fid in path.finding_ids)
+
+
+def test_shared_server_link_before_evaluation_does_not_transfer_credentials():
+    from agent_bom.graph.edge import UnifiedEdge
+    from agent_bom.graph.types import EntityType, RelationshipType
+
+    inventory, _, _ = _scan()
+    graph = build_unified_graph_from_report(inventory)
+    agents = list(graph.nodes_by_type(EntityType.AGENT))
+    graph.add_edge(
+        UnifiedEdge(source=agents[0].id, target=agents[1].id, relationship=RelationshipType.SHARES_SERVER, direction="bidirectional")
+    )
+    report = AIBOMReport(agents=[])
+    attach_graph_derived_findings(report, graph)
+    findings = [f for f in report.to_findings() if f.evidence.get("rule_id") == "AGENT_REACHES_PRIVILEGED"]
+    assert len(findings) == 2
+    for finding in findings:
+        assert len(finding.evidence["node_ids"]) == 2  # owner plus its own credential
+    paths = [p for p in _derived_attack_paths(graph) if p.finding_ids]
+    assert len(paths) == 2
+    assert all("shares_server" not in p.edges for p in paths)
+
+
+def test_projection_rejects_foreign_credentials_in_stale_findings():
+    from agent_bom.graph.credential_findings import project_credential_findings
+
+    inventory, _, findings = _scan()
+    graph = build_unified_graph_from_report(inventory)
+    own_credentials = list(findings[0].evidence["node_ids"][1:])
+    row = findings[0].to_dict()
+    row["evidence"]["node_ids"] += findings[1].evidence["node_ids"]
+    project_credential_findings(graph, [row])
+    node = graph.nodes[findings[0].finding_node_id]
+    assert node.attributes["credential_node_ids"] == own_credentials
+
+
+def test_credential_traversal_budgets_are_global_and_reported(monkeypatch):
+    from agent_bom.graph import credential_reach
+    from agent_bom.graph.types import EntityType
+
+    _, graph, _ = _scan()
+    monkeypatch.setattr(credential_reach, "MAX_EDGES", 2)
+    routes = credential_reach.credential_routes(graph, (a.id for a in graph.nodes_by_type(EntityType.AGENT)), analyzer="test_budget")
+    status = graph.analysis_status["test_budget"]
+    assert status.status.value == "limited"
+    assert "global_budget" in status.reason_codes
+    assert status.observed["edges"] == 2
+    assert sum(len(credentials) for credentials in routes.values()) == 1
+
+
+def test_shared_credential_is_terminal_and_associations_are_indexed(monkeypatch):
+    from agent_bom.graph.container import UnifiedGraph
+    from agent_bom.graph.credential_findings import credential_finding_paths
+    from agent_bom.graph.edge import UnifiedEdge
+    from agent_bom.graph.node import UnifiedNode
+    from agent_bom.graph.types import EntityType, RelationshipType
+
+    graph = UnifiedGraph()
+    graph.add_node(UnifiedNode(id="cred:shared", label="TOKEN", entity_type=EntityType.CREDENTIAL))
+    for i in range(100):
+        owner, fid = f"agent:{i}", f"finding:{i}"
+        graph.add_node(UnifiedNode(id=owner, label=owner, entity_type=EntityType.AGENT))
+        graph.add_node(
+            UnifiedNode(
+                id=fid,
+                label=fid,
+                entity_type=EntityType.MISCONFIGURATION,
+                attributes={
+                    "finding_source": "GRAPH_ANALYSIS",
+                    "rule_id": "AGENT_REACHES_PRIVILEGED",
+                    "owner_node_id": owner,
+                    "credential_node_ids": ["cred:shared"],
+                    "finding_id": fid,
+                },
+            )
+        )
+        graph.add_edge(UnifiedEdge(source=owner, target="cred:shared", relationship=RelationshipType.EXPOSES_CRED))
+        graph.add_edge(UnifiedEdge(source="cred:shared", target=fid, relationship=RelationshipType.VULNERABLE_TO))
+
+    class NoAdjacency(dict):
+        def get(self, *args):
+            raise AssertionError("must use one edge index, not rescan shared credential fan-out")
+
+    original_adjacency = graph.adjacency
+    graph.adjacency = NoAdjacency()
+    paths = credential_finding_paths(graph)
+    assert len(paths) == 100
+    assert graph.analysis_status["credential_finding_paths"].observed["edges"] == 100
+    assert all(p.edges[-1] == "vulnerable_to" for p in paths)
+    graph.adjacency = original_adjacency
+    from agent_bom.graph import path_derivation
+
+    calls = 0
+    original = path_derivation._rel_value
+
+    def count(edge):
+        nonlocal calls
+        calls += 1
+        return original(edge)
+
+    monkeypatch.setattr(path_derivation, "_rel_value", count)
+    assert len(_derived_attack_paths(graph)) == 100
+    assert calls <= len(graph.edges) * 3
+
+
+def test_credential_budget_survives_path_evidence_annotation(monkeypatch):
+    from agent_bom.graph import credential_reach
+
+    _, graph, _ = _scan()
+    monkeypatch.setattr(credential_reach, "MAX_EDGES", 2)
+    paths = [p for p in _derived_attack_paths(graph) if p.finding_ids]
+    assert len(paths) == 1
+    assert paths[0].analysis["status"] == "limited"
+    assert "global_budget" in paths[0].analysis["reason_codes"]

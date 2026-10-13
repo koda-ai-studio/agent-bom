@@ -69,7 +69,7 @@ export function GraphRollupRelationshipDetail({ edge, scanId, sourceLabel, targe
   onClose: () => void; onInspectNode: (id: string) => void;
 }) {
   const directions = edge.directions ?? [];
-  return <Drawer open onClose={onClose} title={`${edge.count} recorded relationships`} eyebrow="Between scopes" ariaLabel="Scope relationship details" closeLabel="Close relationship details" backdropLabel="Dismiss relationship details" size="md">
+  return <Drawer open onClose={onClose} title={`${edge.count} recorded relationship${edge.count === 1 ? "" : "s"}`} eyebrow="Between scopes" ariaLabel="Scope relationship details" closeLabel="Close relationship details" backdropLabel="Dismiss relationship details" size="md">
     <div className="space-y-4 text-sm [overflow-wrap:anywhere]">
       <p className="font-medium">{sourceLabel} · {targetLabel}</p>
       <p className="text-ink-secondary">These relationships connect entities inside the two scopes. Explore a scope to inspect the actual endpoints and their evidence.</p>

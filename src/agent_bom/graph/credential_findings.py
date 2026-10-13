@@ -6,24 +6,27 @@ Only exact node IDs join a finding to its agent and credential references.
 
 from __future__ import annotations
 
-from collections import deque
+from dataclasses import replace
 from typing import Any
 
 from agent_bom.core.severity import SEVERITY_RANK
+from agent_bom.graph.analysis import GraphAnalysisState
 from agent_bom.graph.container import AttackPath, UnifiedGraph
+from agent_bom.graph.credential_reach import MAX_RESULTS, credential_routes
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.types import EntityType, RelationshipType
 from agent_bom.security import sanitize_text
 
 _RULE = "AGENT_REACHES_PRIVILEGED"
-_CREDENTIAL_TYPES = {EntityType.CREDENTIAL, EntityType.CREDENTIAL_REF}
 
 
 def project_credential_findings(graph: UnifiedGraph, findings: Any) -> None:
     """Materialize report occurrences after topology evaluation, idempotently."""
     if not isinstance(findings, list):
         return
+    owners = dict.fromkeys(owner for row in findings if isinstance(row, dict) and isinstance(owner := row.get("node_id"), str))
+    routes = credential_routes(graph, owners, analyzer="credential_finding_projection")
     for row in findings:
         if not isinstance(row, dict) or row.get("source") != "GRAPH_ANALYSIS" or row.get("finding_type") != "COMBINATION":
             continue
@@ -39,9 +42,7 @@ def project_credential_findings(graph: UnifiedGraph, findings: Any) -> None:
         raw_ids = evidence.get("node_ids")
         if not isinstance(raw_ids, list):
             continue
-        credentials = sorted(
-            {nid for nid in raw_ids if isinstance(nid, str) and nid in graph.nodes and graph.nodes[nid].entity_type in _CREDENTIAL_TYPES}
-        )
+        credentials = sorted({nid for nid in raw_ids if isinstance(nid, str) and nid in routes.get(owner, {})})
         node_id = f"misconfig:graph_analysis:{fid}"
         severity = str(row.get("severity") or "unknown").lower()
         graph.add_node(
@@ -76,7 +77,9 @@ def project_credential_findings(graph: UnifiedGraph, findings: Any) -> None:
         }
         graph.add_edge(UnifiedEdge(source=owner, target=node_id, relationship=RelationshipType.VULNERABLE_TO, evidence=dict(receipt)))
         for credential in credentials:
-            graph.add_edge(UnifiedEdge(source=credential, target=node_id, relationship=RelationshipType.TRIGGERS, evidence=dict(receipt)))
+            graph.add_edge(
+                UnifiedEdge(source=credential, target=node_id, relationship=RelationshipType.VULNERABLE_TO, evidence=dict(receipt))
+            )
 
 
 def credential_finding_paths(graph: UnifiedGraph) -> list[AttackPath]:
@@ -86,38 +89,35 @@ def credential_finding_paths(graph: UnifiedGraph) -> list[AttackPath]:
     traversable edges, up to the evaluator's six-hop depth, then append the
     explicitly modeled assessment association.
     """
-    paths = []
-    by_owner: dict[str, dict[str, tuple[list[str], list[str]]]] = {}
-    for node in graph.nodes.values():
+    paths: list[AttackPath] = []
+    findings = [
+        node
+        for node in graph.nodes.values()
+        if node.attributes.get("finding_source") == "GRAPH_ANALYSIS" and node.attributes.get("rule_id") == _RULE
+    ]
+    owners = dict.fromkeys(owner for node in findings if isinstance(owner := node.attributes.get("owner_node_id"), str))
+    by_owner = credential_routes(graph, owners, analyzer="credential_finding_paths")
+    # A shared credential may anchor thousands of findings: index associations
+    # once rather than rescanning that credential's fan-out for every owner.
+    associations = {(e.source, e.target) for e in graph.edges if e.relationship == RelationshipType.VULNERABLE_TO}
+    for node in findings:
         attrs = node.attributes
-        if attrs.get("finding_source") != "GRAPH_ANALYSIS" or attrs.get("rule_id") != _RULE:
-            continue
         owner = attrs.get("owner_node_id")
-        if not isinstance(owner, str) or owner not in graph.nodes:
+        if not isinstance(owner, str):
             continue
-        if owner not in by_owner:
-            reached: dict[str, tuple[list[str], list[str]]] = {owner: ([owner], [])}
-            queue = deque([owner])
-            while queue and len(reached) < 5000:
-                current = queue.popleft()
-                hops, rels = reached[current]
-                if len(rels) >= 6:
-                    continue
-                for edge in graph.adjacency.get(current, []):
-                    if not edge.traversable or edge.target in reached or edge.target not in graph.nodes:
-                        continue
-                    if graph.nodes[edge.target].entity_type == EntityType.MISCONFIGURATION:
-                        continue
-                    reached[edge.target] = (hops + [edge.target], rels + [edge.relationship.value])
-                    queue.append(edge.target)
-                    if len(reached) >= 5000:
-                        break
-            by_owner[owner] = reached
         for credential in attrs.get("credential_node_ids", []):
-            route = by_owner[owner].get(credential)
-            if route is None or not any(
-                e.target == node.id and e.relationship == RelationshipType.TRIGGERS for e in graph.adjacency.get(credential, [])
-            ):
+            if not isinstance(credential, str):
+                continue
+            if len(paths) >= MAX_RESULTS:
+                status = replace(
+                    graph.analysis_status["credential_finding_paths"], status=GraphAnalysisState.LIMITED, reason_codes=("path_budget",)
+                )
+                graph.analysis_status["credential_finding_paths"] = status
+                for path in paths:
+                    path.analysis = status.to_dict()
+                return paths
+            route = by_owner.get(owner, {}).get(credential)
+            if route is None or (credential, node.id) not in associations:
                 continue
             hops, rels = route
             paths.append(
@@ -125,7 +125,7 @@ def credential_finding_paths(graph: UnifiedGraph) -> list[AttackPath]:
                     source=owner,
                     target=node.id,
                     hops=hops + [node.id],
-                    edges=rels + [RelationshipType.TRIGGERS.value],
+                    edges=rels + [RelationshipType.VULNERABLE_TO.value],
                     composite_risk=min(39.0, SEVERITY_RANK.get(node.severity, 0) * 20.0 * 0.35),
                     summary="Modeled credential-reach finding from recorded topology; successful use, effective permission, "
                     "and exploitation require separate evidence. The final hop links the credential to its assessment.",
@@ -134,6 +134,7 @@ def credential_finding_paths(graph: UnifiedGraph) -> list[AttackPath]:
                     finding_ids=[attrs["finding_id"]],
                     reachability="unknown",
                     reachability_basis=["structural_topology_only"],
+                    analysis=graph.analysis_status["credential_finding_paths"].to_dict(),
                 )
             )
     return paths

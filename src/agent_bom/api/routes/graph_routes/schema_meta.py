@@ -149,8 +149,15 @@ _RELATIONSHIP_SCHEMA_META: dict[str, dict[str, object]] = {
     RelationshipType.VULNERABLE_TO.value: {
         "category": "vulnerability",
         "direction": "directed",
-        "source_types": [EntityType.PACKAGE.value, EntityType.SERVER.value, EntityType.CONTAINER.value],
-        "target_types": [EntityType.VULNERABILITY.value],
+        "source_types": [
+            EntityType.PACKAGE.value,
+            EntityType.SERVER.value,
+            EntityType.CONTAINER.value,
+            EntityType.AGENT.value,
+            EntityType.CREDENTIAL.value,
+            EntityType.CREDENTIAL_REF.value,
+        ],
+        "target_types": [EntityType.VULNERABILITY.value, EntityType.MISCONFIGURATION.value],
         "traversable": True,
     },
     RelationshipType.EXPLOITABLE_VIA.value: {
