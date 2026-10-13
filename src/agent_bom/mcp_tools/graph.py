@@ -374,7 +374,16 @@ async def exposure_paths_for_tenant(
         path_source = "persisted_graph_paths"
         derivation_truncated = False
         derived_revision = ""
-        if total == 0:
+        reader = getattr(store, "snapshot_attack_paths", None)
+        stored = await asyncio.to_thread(reader, tenant_id=tenant_id, scan_id=effective_scan_id) if reader is not None else None
+        if stored is not None:
+            # The snapshot's path index is the derivation below, computed at persist.
+            paths, total, path_source = stored.paths, len(stored.paths), "derived_graph_paths"
+            derived_revision = hashlib.sha256(
+                json.dumps([(p.hops, p.edges, p.composite_risk, p.reachability) for p in paths], sort_keys=True).encode()
+            ).hexdigest()
+            paths = paths[offset : offset + limit + 1]
+        elif total == 0:
             # Keep the same topology semantics as the dashboard without importing
             # its optional FastAPI routes into the MCP-only installation.
             graph = await asyncio.to_thread(

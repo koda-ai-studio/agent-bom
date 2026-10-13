@@ -870,6 +870,7 @@ async def get_graph_rollup(
             mode=mode,
             offset=offset,
             limit=limit,
+            graph_store=graph_store,
         )
         if identity is not None:
             await _runtime._graph_store_call(verify_generation, graph_store, tenant=tenant, identity=identity, has_rows=bool(graph.nodes))

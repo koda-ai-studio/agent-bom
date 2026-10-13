@@ -146,7 +146,9 @@ async def get_fix_first_graph_view(
         scan_id=requested_scan_id,
         tenant_id=tenant,
     )
-    return await _runtime._graph_compute_call(_fix_first_graph_view_payload, graph, cve=cve, package=package, agent=agent, limit=limit)
+    return await _runtime._graph_compute_call(
+        _fix_first_graph_view_payload, graph, cve=cve, package=package, agent=agent, limit=limit, graph_store=graph_store
+    )
 
 
 @investigation_router.get("/graph/diff", **documented(GraphDiffResponse), tags=["graph"])
@@ -214,7 +216,7 @@ async def get_graph_attack_paths(
     (see ``graph.attack_path_queue_rank``), and hydrates only the hop nodes
     needed to render the selected queue page.
     """
-    from agent_bom.api.attack_path_queue import AttackPathFilters, ranked_persisted_path_page
+    from agent_bom.api.attack_path_queue import AttackPathFilters, ranked_persisted_path_page, ranked_snapshot_path_page
 
     tenant = _runtime._tenant(request)
     graph_store = _runtime._get_graph_store_or_503()
@@ -223,9 +225,17 @@ async def get_graph_attack_paths(
     )
     filters = AttackPathFilters(min_severity=min_severity, has_credential=has_credential, source_type=source_type)
     page_args = {"offset": offset, "limit": limit, "filters": filters}
-    ranked = await _runtime._graph_store_call(ranked_persisted_path_page, graph_store, scan_id=identity[0], tenant_id=tenant, **page_args)
-    materialized_paths, derived_paths, path_source = ranked.snapshot_total, 0, "persisted_graph_paths"
-    if ranked.snapshot_total == 0:
+    # A current snapshot path index is the complete derived set, ranked the same
+    # way a read-time derivation would be, without loading the whole graph.
+    indexed = await _runtime._graph_store_call(ranked_snapshot_path_page, graph_store, scan_id=identity[0], tenant_id=tenant, **page_args)
+    if indexed is not None:
+        ranked, materialized_paths, derived_paths, path_source = indexed, 0, indexed.snapshot_total, "derived_graph_paths"
+    else:
+        ranked = await _runtime._graph_store_call(
+            ranked_persisted_path_page, graph_store, scan_id=identity[0], tenant_id=tenant, **page_args
+        )
+        materialized_paths, derived_paths, path_source = ranked.snapshot_total, 0, "persisted_graph_paths"
+    if indexed is None and ranked.snapshot_total == 0:
         graph = await _runtime._load_graph_for_investigation(graph_store, scan_id=ranked.scan_id, tenant_id=tenant)
         ranked = await _runtime._graph_compute_call(_derived_attack_path_page, graph, **page_args)
         derived_paths, path_source = ranked.snapshot_total, "derived_graph_paths"
@@ -308,6 +318,7 @@ async def get_graph_governance(
         node_limit=limit,
         edge_limit=edge_limit,
         attack_path_limit=attack_path_limit,
+        graph_store=graph_store,
     )
 
 

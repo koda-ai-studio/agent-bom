@@ -316,3 +316,51 @@ def test_api_persist_materializes_paths_for_every_build_mode(
     assert stored is not None and stored.paths
     derived = _derived_attack_paths(store.load_graph(tenant_id="tenant-a", scan_id="api-scan"))
     assert _dicts(stored.paths) == _dicts(derived)
+
+
+def _showcase_graph() -> UnifiedGraph:
+    from agent_bom.demo_estate import showcase_graph as sg
+
+    identities = sg.build_demo_identity_store("default")
+    graph, identity, drift = sg.build_showcase_graph(tenant_id="default", scan_id="showcase", profile="current", identity_store=identities)
+    sg.apply_showcase_overlays(graph, tenant_id="default", identity_store=identity, drift_store=drift)
+    sg.finalize_showcase_snapshot(graph, profile="current")
+    sg._annotate_demo_identity_risk(graph)
+    sg.project_estate_onto_showcase(graph, tenant_id="default", profile="current")
+    sg._materialize_showcase_attack_paths(graph)
+    return graph
+
+
+def _identity(path: AttackPath) -> tuple[str, str, tuple[str, ...], tuple[str, ...]]:
+    return path.source, path.target, tuple(path.hops), tuple(path.edges)
+
+
+def test_demo_scan_paths_survive_save_and_reload(store: SQLiteGraphStore, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    report = _demo_report(tmp_path, monkeypatch)
+    graph = build_unified_graph_from_report(report, scan_id=report["scan_id"], tenant_id="tenant-a")
+    built = [_identity(path) for path in _derived_attack_paths(graph)]
+    store.save_graph(build_unified_graph_from_report(report, scan_id=report["scan_id"], tenant_id="tenant-a"))
+    stored = store.snapshot_attack_paths(tenant_id="tenant-a", scan_id=report["scan_id"])
+    assert stored is not None
+    assert [_identity(path) for path in stored.paths] == built
+    per_source_targets: dict[str, set[str]] = {}
+    for source, target, _hops, _edges in built:
+        per_source_targets.setdefault(source, set()).add(target)
+    assert max(len(targets) for targets in per_source_targets.values()) > 1
+
+
+@pytest.mark.parametrize("estate", ["showcase", "demo"])
+def test_served_paths_are_unique_and_never_degenerate(estate: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    if estate == "showcase":
+        graph = _showcase_graph()
+    else:
+        report = _demo_report(tmp_path, monkeypatch)
+        graph = build_unified_graph_from_report(report, scan_id=report["scan_id"], tenant_id="t")
+    paths = _derived_attack_paths(graph)
+    assert paths
+    identities = [_identity(path) for path in paths]
+    assert len(identities) == len(set(identities)), "served paths repeat a hop/edge chain"
+    hop_sets = [tuple(path.hops) for path in paths]
+    assert len(hop_sets) == len(set(hop_sets)) or estate == "demo"
+    degenerate = [path.hops for path in paths if len(path.hops) < 2 or path.source == path.target]
+    assert degenerate == []

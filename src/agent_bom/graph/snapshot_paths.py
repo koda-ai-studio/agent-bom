@@ -80,9 +80,15 @@ def materialize_snapshot_paths(graph: UnifiedGraph) -> list[SnapshotPath]:
     original_paths, original_status = graph.attack_paths, graph.analysis_status
     graph.attack_paths = [_detached_copy(path) for path in original_paths]
     # Derive against the analysis status exactly as a reader will load it.
-    graph.analysis_status = analysis_status_map_from_dict(analysis_status_map_to_dict(original_status))
+    loaded_status = analysis_status_map_from_dict(analysis_status_map_to_dict(original_status))
+    graph.analysis_status = dict(loaded_status)
     try:
         tagged = derived_attack_paths_with_kinds(graph)
+        # Keep analyzer receipts the derivation stamps (e.g. credential reach) so
+        # a stored-index read reports the same status a read-time derive would.
+        for name, status in graph.analysis_status.items():
+            if loaded_status.get(name) != status:
+                original_status[name] = status
     finally:
         graph.attack_paths, graph.analysis_status = original_paths, original_status
     occurrences: dict[str, int] = {}

@@ -619,9 +619,8 @@ def derived_attack_paths_with_kinds(graph: UnifiedGraph) -> list[tuple[AttackPat
                         )
                     )
 
-    # Persisted paths are occurrences, so retain them all for accurate matched-
-    # path counts. Only suppress an ordinary derived path when an equivalent
-    # persisted/governance occurrence already exists.
+    # Ordinary derived paths never displace an equivalent persisted/governance
+    # path; identical chains collapse to one served path below.
     combined = [*materialized, *governance_paths]
     kinds = {id(path): "fusion" for path in materialized}
     kinds.update({id(path): "governance" for path in governance_paths})
@@ -637,5 +636,15 @@ def derived_attack_paths_with_kinds(graph: UnifiedGraph) -> list[tuple[AttackPat
         if derived_path_key not in existing_keys:
             combined.append(derived_path)
             existing_keys.add(derived_path_key)
-    ranked = _with_technique_mappings(sorted(combined, key=rank_attack_path), graph)
+    # One served path per hop/edge chain: the highest-ranked occurrence wins. A
+    # single-node "path" (source == target) is a node finding, not a path.
+    unique: list[AttackPath] = []
+    served_keys: set[tuple[str, str, tuple[str, ...], tuple[str, ...]]] = set()
+    for path in sorted(combined, key=rank_attack_path):
+        identity = path_key(path)
+        if identity in served_keys or len(path.hops) < 2 or path.source == path.target:
+            continue
+        served_keys.add(identity)
+        unique.append(path)
+    ranked = _with_technique_mappings(unique, graph)
     return [(path, kinds.get(id(path), "component")) for path in ranked]

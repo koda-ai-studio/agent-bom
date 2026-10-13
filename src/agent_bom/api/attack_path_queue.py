@@ -111,6 +111,33 @@ def ranked_persisted_path_page(
     )
 
 
+def ranked_snapshot_path_page(
+    graph_store: Any,
+    *,
+    scan_id: str,
+    tenant_id: str,
+    offset: int,
+    limit: int,
+    filters: AttackPathFilters,
+) -> RankedPathPage | None:
+    """Rank the snapshot's stored path index; ``None`` when it has no current index."""
+    reader = getattr(graph_store, "snapshot_attack_paths", None)
+    stored = reader(tenant_id=tenant_id, scan_id=scan_id) if reader is not None else None
+    if stored is None:
+        return None
+    nodes = graph_store.nodes_by_ids(scan_id=stored.scan_id, tenant_id=tenant_id, node_ids=ranking_node_ids(stored.paths))
+    page, total = _rank_and_slice(stored.paths, {node.id: node for node in nodes}, offset=offset, limit=limit, filters=filters)
+    snapshot_total = len(stored.paths)
+    return RankedPathPage(
+        stored.scan_id,
+        stored.created_at,
+        page,
+        total,
+        snapshot_total,
+        _ranking_meta(snapshot_total=snapshot_total, window=snapshot_total or 1),
+    )
+
+
 def ranked_derived_path_page(
     graph: Any,
     derived_paths: list[AttackPath],
@@ -136,4 +163,5 @@ __all__ = [
     "attack_path_rank_window",
     "ranked_derived_path_page",
     "ranked_persisted_path_page",
+    "ranked_snapshot_path_page",
 ]
