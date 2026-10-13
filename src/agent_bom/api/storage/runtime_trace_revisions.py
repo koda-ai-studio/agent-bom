@@ -14,6 +14,8 @@ import json
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Any
 
+from agent_bom.analytics_retention import analytics_max_trace_revisions
+
 if TYPE_CHECKING:
     from agent_bom.api.storage.runtime_records import RuntimeObservationRecord, RuntimeSessionRecord
 
@@ -246,8 +248,6 @@ def prune_revisions_for_tenant(
     any span is never dropped. A dropped history no longer suppresses a later
     replay of that span, matching projection retention.
     """
-    from agent_bom.analytics_retention import analytics_max_trace_revisions
-
     if placeholder not in {"?", "%s"} or dialect not in {"sqlite", "postgres"}:
         raise ValueError("Unsupported SQL dialect")
     cap = analytics_max_trace_revisions() if max_rows is None else max_rows
@@ -295,8 +295,6 @@ def prune_revisions_in_memory(
     max_rows: int | None = None,
 ) -> int:
     """In-memory twin of :func:`prune_revisions_for_tenant`."""
-    from agent_bom.analytics_retention import analytics_max_trace_revisions
-
     cap = analytics_max_trace_revisions() if max_rows is None else max_rows
     if cap <= 0:
         return 0

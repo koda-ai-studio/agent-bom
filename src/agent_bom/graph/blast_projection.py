@@ -80,6 +80,27 @@ def _add_blast_node(
     )
 
 
+def _server_vulnerability_evidence(
+    graph: UnifiedGraph, br_dict: dict[str, Any], data_source_tag: str, vuln_node_id: str, pkg_ids: Any
+) -> dict[str, Any]:
+    """Evidence for a server's rollup edge to a vulnerability.
+
+    The package edge is the primary exposure. One-hop consumers rely on the
+    server edge, so it names the packages it derives from; owners and counts
+    never treat it as a second holder. A name-only server match has no package
+    edge and stays primary evidence.
+    """
+    evidence = _blast_radius_package_evidence(br_dict, data_source_tag)
+    derived_via = sorted(
+        pkg
+        for pkg in pkg_ids
+        if any(edge.target == vuln_node_id and edge.relationship == RelationshipType.VULNERABLE_TO for edge in graph.adjacency.get(pkg, []))
+    )
+    if derived_via:
+        evidence["derived_via"] = derived_via
+    return evidence
+
+
 def project_blast_radius(graph: UnifiedGraph, blast_data: list[dict[str, Any]], indexes: BuildIndexes, data_source_tag: str) -> None:
     for br_dict in blast_data:
         vuln_id_str = br_dict.get("vulnerability_id", "")
@@ -127,28 +148,13 @@ def project_blast_radius(graph: UnifiedGraph, blast_data: list[dict[str, Any]], 
                 ecosystem=ecosystem,
                 package_id_to_servers=indexes.package_id_to_servers,
             )
-            server_evidence = _blast_radius_package_evidence(br_dict, data_source_tag)
-            # The package edge is the primary exposure. The server edge is a
-            # rollup that one-hop consumers rely on; name its source package so
-            # owners and counts never treat it as a second holder. A name-only
-            # server match has no package edge and stays primary evidence.
-            derived_via = sorted(
-                pkg
-                for pkg in pkg_ids
-                if any(
-                    edge.target == vuln_node_id and edge.relationship == RelationshipType.VULNERABLE_TO
-                    for edge in graph.adjacency.get(pkg, [])
-                )
-            )
-            if derived_via:
-                server_evidence["derived_via"] = derived_via
             graph.add_edge(
                 UnifiedEdge(
                     source=srv_id,
                     target=vuln_node_id,
                     relationship=RelationshipType.VULNERABLE_TO,
                     weight=SEVERITY_RISK_SCORE.get(severity, 1.0),
-                    evidence=server_evidence,
+                    evidence=_server_vulnerability_evidence(graph, br_dict, data_source_tag, vuln_node_id, pkg_ids),
                 )
             )
             for pkg_id in pkg_ids:
