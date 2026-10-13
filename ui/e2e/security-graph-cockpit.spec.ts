@@ -1974,17 +1974,25 @@ test("long digest labels stay inside their graph nodes", async ({ page }) => {
   })).toBe(true);
 });
 
-test("reference correlation captions stay separate", async ({ page }, testInfo) => {
-  await page.setViewportSize({ width: 1920, height: 1080 });
-  await routeCockpit(page, undefined, { referenceGraph: true });
-  await page.goto(`/graph?scan=${scanId}&rollup=0&capture=1&layers=server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile`);
-  await expect(page.locator(".react-flow__node")).toHaveCount(10);
-  await page.locator(".react-flow__controls-fitview").click();
-  await page.waitForLoadState("networkidle");
-  await page.screenshot({ path: testInfo.outputPath("reference-captions.png"), fullPage: true });
-  const collisions = await page.locator(".graph-relationship-label").evaluateAll(labels => {
-    const boxes = labels.map(element => ({ text: element.textContent, rect: element.getBoundingClientRect() }));
-    return boxes.flatMap((left, index) => boxes.slice(index + 1).filter(right => left.rect.left < right.rect.right && left.rect.right > right.rect.left && left.rect.top < right.rect.bottom && left.rect.bottom > right.rect.top).map(right => `${left.text} overlaps ${right.text}`));
+for (const width of [1440, 1920]) for (const theme of ["light", "dark"]) {
+  test(`reference correlation captions stay separate ${theme} ${width}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: width === 1440 ? 900 : 1080 });
+    await page.addInitScript(value => localStorage.setItem("agent-bom-theme", value), theme);
+    await routeCockpit(page, undefined, { referenceGraph: true });
+    await page.goto(`/graph?scan=${scanId}&rollup=0&capture=1&layers=server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile`);
+    await expect(page.locator(".react-flow__node")).toHaveCount(10);
+    await page.locator(".react-flow__controls-fitview").click();
+    await page.waitForLoadState("networkidle");
+    await page.screenshot({ path: testInfo.outputPath("reference-captions.png"), fullPage: true });
+    const collisions = await page.locator(".graph-relationship-label").evaluateAll(labels => {
+      const boxes = labels.map(element => ({ text: element.textContent, rect: element.getBoundingClientRect() }));
+      const nodes = [...document.querySelectorAll(".react-flow__node")].map(element => ({ text: element.textContent, rect: element.getBoundingClientRect() }));
+      const overlaps = (left: DOMRect, right: DOMRect) => left.left < right.right && left.right > right.left && left.top < right.bottom && left.bottom > right.top;
+      return boxes.flatMap((left, index) => [
+        ...boxes.slice(index + 1).filter(right => overlaps(left.rect, right.rect)).map(right => `${left.text} overlaps ${right.text}`),
+        ...nodes.filter(node => overlaps(left.rect, node.rect)).map(node => `${left.text} intersects ${node.text}`),
+      ]);
+    });
+    expect(collisions).toEqual([]);
   });
-  expect(collisions).toEqual([]);
-});
+}
