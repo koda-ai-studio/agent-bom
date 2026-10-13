@@ -740,9 +740,9 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         upstream_role: Role | None,
         subjects: tuple[object, ...],
     ) -> tuple[Role | None, JSONResponse | None]:
-        from agent_bom.api.auth import resolve_scim_user_role
+        from agent_bom.api.auth import resolve_scim_user_role_async
 
-        resolution = await anyio.to_thread.run_sync(resolve_scim_user_role, tenant_id, *subjects)
+        resolution = await resolve_scim_user_role_async(tenant_id, *subjects)
         if not resolution.matched:
             return upstream_role, None
         if not resolution.active:
