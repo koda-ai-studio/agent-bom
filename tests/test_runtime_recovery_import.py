@@ -126,3 +126,29 @@ def test_runtime_recovery_refuses_to_drop_native_revision_history(tmp_path, monk
     with pytest.raises(ValueError, match="native trace history"):
         import_registries(path, {"source": "target"}, TABLES, apply=True)
     assert path.read_bytes() == before
+
+
+def _add_history(path, tenant):
+    import sqlite3
+
+    with sqlite3.connect(path) as conn:
+        conn.execute("INSERT INTO runtime_observation_revisions VALUES (?, ?, ?, ?, ?)", (tenant, "observation", 1, "digest", "{}"))
+
+
+def test_native_history_of_unselected_tenant_does_not_block_runtime_recovery(tmp_path):
+    path = tmp_path / "runtime.db"
+    seed(path)
+    _add_history(path, "unrelated-tenant")
+    assert len(read_source(path, {"source": "target"}, TABLES)) == 2
+
+
+def test_native_history_refusal_names_tables_and_tenants(tmp_path):
+    path = tmp_path / "runtime.db"
+    seed(path)
+    _add_history(path, "source")
+    with pytest.raises(ValueError) as refused:
+        read_source(path, {"source": "target"}, TABLES)
+    message = str(refused.value)
+    assert "runtime_observation_revisions" in message
+    assert "source" in message
+    assert "runtime_observations, runtime_sessions" in message

@@ -12,22 +12,38 @@ from agent_bom.api.storage_schema import postgres_deployment_configured
 from agent_bom.api.tenant_worker import tenant_bound_context
 
 RUNTIME_TABLES = {"runtime_observations", "runtime_sessions"}
+HISTORY_TABLES = {
+    "runtime_observation_revisions",
+    "runtime_trace_imports",
+    "trace_collection_checkpoints",
+    "trace_collection_receipts",
+}
 
 
-def require_legacy_runtime_source(conn: Any, tables: list[str]) -> None:
-    """Refuse a lossy current-row import when native replay/history is present."""
-    if not RUNTIME_TABLES.intersection(tables):
+def require_legacy_runtime_source(conn: Any, tables: list[str], source_tenants: list[str]) -> None:
+    """Refuse a lossy current-row import when selected tenants carry native history.
+
+    Only the requested runtime tables and the explicitly mapped source tenants
+    are checked; history of any other tenant is not part of this import.
+    """
+    selected = sorted(RUNTIME_TABLES.intersection(tables))
+    tenants = sorted(set(source_tenants))
+    if not selected or not tenants:
         return
-    history_tables = {
-        "runtime_observation_revisions",
-        "runtime_trace_imports",
-        "trace_collection_checkpoints",
-        "trace_collection_receipts",
-    }
     existing = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-    for table in sorted(history_tables & existing):
-        if conn.execute(f"SELECT 1 FROM {table} LIMIT 1").fetchone():  # nosec B608 - fixed history-table allowlist
-            raise ValueError("Runtime migration cannot preserve native trace history; retain a full source database backup")
+    marks = ",".join("?" for _ in tenants)
+    blocked: dict[str, list[str]] = {}
+    for table in sorted(HISTORY_TABLES & existing):
+        rows = conn.execute(f"SELECT DISTINCT tenant_id FROM {table} WHERE tenant_id IN ({marks})", tenants).fetchall()  # nosec B608 - fixed history-table allowlist
+        if rows:
+            blocked[table] = sorted(str(row[0]) for row in rows)
+    if blocked:
+        detail = "; ".join(f"{table}: {', '.join(names)}" for table, names in blocked.items())
+        raise ValueError(
+            "Runtime migration cannot preserve native trace history for the mapped source tenants "
+            f"({detail}). Import {', '.join(selected)} only for tenants without native history, "
+            "or omit those tables and retain the full source database backup for that evidence."
+        )
 
 
 def runtime_groups(records: list[tuple[str, Any, dict[str, Any]]]) -> dict[tuple[str, str], tuple[Any, list[Any]]]:
