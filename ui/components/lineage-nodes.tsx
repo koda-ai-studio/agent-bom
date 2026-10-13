@@ -100,7 +100,6 @@ type CardProps = {
   borderClass: string;
   bgClass: string;
   ringClass: string;
-  shapeClass?: string;
   iconClass: string;
   source?: boolean;
   target?: boolean;
@@ -145,67 +144,46 @@ function NodeCard({
   borderClass,
   bgClass,
   ringClass,
-  shapeClass = "rounded-xl",
   iconClass,
   source = true,
   target = true,
   subtitle,
   footer,
 }: CardProps) {
-  // The glyph is keyed by entity type from the shared ENTITY_ICONS map, so the
-  // node and its legend row are always the same icon — even for the renderers
-  // shared across several types (e.g. CredentialNode serves role/policy/grants).
   const Icon = entityIcon(data.nodeType);
   const isRollupContainer = data.attributes?.rollup_is_container === true;
   return (
-    <div
-      title={data.label}
-      data-rollup-container={isRollupContainer ? "true" : undefined}
-      className={`${shapeClass} border-2 px-4 py-3 min-w-[208px] max-w-[260px] shadow-sm transition-opacity ${
-        isRollupContainer
-          ? "border-outline-strong bg-surface-elevated"
-          : `${borderClass} bg-surface-elevated`
-      } ${
-        data.dimmed ? "opacity-25" : ""
-      } ${data.highlighted ? `ring-2 ${ringClass}` : ""}`}
-    >
-      <Handle
-        type="target"
-        position={data.reverseFlow ? Position.Right : Position.Left}
-        className={`!w-2 !h-2 !bg-current ${target ? "" : "!opacity-0"}`}
-      />
-      <Handle
-        type="source"
-        position={data.reverseFlow ? Position.Left : Position.Right}
-        className={`!w-2 !h-2 !bg-current ${source ? "" : "!opacity-0"}`}
-      />
-      <div className="mb-1 flex min-w-0 items-start gap-2">
-        <Icon className={`w-[18px] h-[18px] shrink-0 rounded ${iconClass} ${bgClass}`} />
-        <span className="ml-auto shrink-0 rounded border border-outline bg-surface px-1.5 py-0.5 text-[10px] uppercase tracking-[0.1em] text-ink-secondary">
-          {/* Applications share the container layout, not its runtime identity. */}
-          {data.entityType === "application" ? "Application" : NODE_TYPE_BADGES[data.nodeType]}
-        </span>
-        {data.runtimeEvidenceTier && data.runtimeEvidenceTier !== "static_scan" ? (
-          <RuntimeEvidenceChip tier={data.runtimeEvidenceTier} />
-        ) : null}
+    <div title={data.label} data-graph-entity="true" data-rollup-container={isRollupContainer ? "true" : undefined}
+      className={`flex w-[220px] flex-col items-center text-center transition-opacity ${data.dimmed ? "opacity-25" : ""}`}>
+      <div className={`graph-entity-glyph relative mb-3 flex h-[72px] w-[72px] items-center justify-center rounded-full border-2 shadow-sm ${
+        isRollupContainer ? "border-outline-strong bg-surface-elevated" : `${borderClass} ${bgClass}`
+      } ${data.highlighted ? `ring-2 ring-offset-4 ring-offset-[var(--surface)] ${ringClass}` : ""}`}>
+        <Handle type="target" position={data.reverseFlow ? Position.Right : Position.Left}
+          className={`!h-1 !w-1 !border-0 !bg-transparent ${target ? "" : "!opacity-0"}`} />
+        <Handle type="source" position={data.reverseFlow ? Position.Left : Position.Right}
+          className={`!h-1 !w-1 !border-0 !bg-transparent ${source ? "" : "!opacity-0"}`} />
+        <Icon aria-hidden="true" className={`h-8 w-8 ${iconClass}`} />
       </div>
-      <p className="mb-1 break-words line-clamp-3 text-lg font-semibold leading-6 text-foreground">
+      <p className="mb-1 break-words line-clamp-3 text-lg font-semibold leading-[1.2] text-foreground [overflow-wrap:anywhere]" style={{ fontSize: "var(--graph-node-label-size, 18px)" }}>
         {data.label.split(/(?<=[_/-])/).map((part, index) => <span key={index}>{part}<wbr /></span>)}
       </p>
+      <span className="text-xs text-ink-secondary">
+        {data.entityType === "application" ? "Application" : NODE_TYPE_BADGES[data.nodeType]}
+      </span>
+      {data.runtimeEvidenceTier && data.runtimeEvidenceTier !== "static_scan" && <div className="mt-1">
+        <RuntimeEvidenceChip tier={data.runtimeEvidenceTier} />
+      </div>}
       {data.scenarioConnectionNote && <p className="mt-2 text-sm leading-5 text-ink-secondary" data-testid="scenario-connection-note">{data.scenarioConnectionNote}</p>}
-      {subtitle && (
-        <div className="text-xs leading-4 text-ink-secondary truncate">
-          {subtitle}
-        </div>
-      )}
-      {footer && data.countScope === "loaded_graph" ? (
-        <div className="flex flex-wrap items-baseline gap-x-2" title={graphCountDescription(data)}>
-          <span className="text-[10px] text-ink-secondary">Loaded graph</span>
-          {footer}
-        </div>
-      ) : footer}
+      {subtitle && <div className="graph-node-context mt-1 max-w-full truncate text-xs leading-4 text-ink-secondary">{subtitle}</div>}
+      {footer && <div className={`${data.nodeType === "vulnerability" || data.nodeType === "misconfiguration" ? "" : "graph-node-context "}mt-1 flex max-w-full flex-wrap items-baseline justify-center gap-x-2`} title={data.countScope === "loaded_graph" ? graphCountDescription(data) : undefined}>
+        {footer}
+      </div>}
     </div>
   );
+}
+
+function linkedCount(count: number, singular: string): string {
+  return `${count} linked ${singular}${count === 1 ? "" : "s"}`;
 }
 
 function graphCountDescription(data: LineageNodeData): string {
@@ -276,15 +254,15 @@ function AgentNode({ data }: { data: LineageNodeData }) {
       target={false}
       subtitle={data.agentType}
       footer={
-        <div className="flex gap-2 mt-1 text-[10px] text-ink-tertiary">
+        <div className="mt-1 flex flex-wrap justify-center gap-x-2 gap-y-1 text-[10px] text-ink-secondary">
           {data.serverCount !== undefined && (
-            <span>{data.serverCount} srv</span>
+            <span>{linkedCount(data.serverCount, "server")}</span>
           )}
           {data.packageCount !== undefined && (
-            <span>{data.packageCount} pkg</span>
+            <span>{linkedCount(data.packageCount, "package")}</span>
           )}
           {(data.vulnCount ?? 0) > 0 && (
-            <span className="text-red-700 dark:text-red-300">{data.vulnCount} finding</span>
+            <span className="text-red-700 dark:text-red-300">{linkedCount(data.vulnCount ?? 0, "finding")}</span>
           )}
         </div>
       }
@@ -304,7 +282,7 @@ function ProviderNode({ data }: { data: LineageNodeData }) {
       footer={
         data.agentCount !== undefined ? (
           <div className="mt-1 text-[10px] text-ink-tertiary">
-            {data.agentCount} agents
+            {linkedCount(data.agentCount, "agent")}
           </div>
         ) : undefined
       }
@@ -400,12 +378,12 @@ function StructureNode({
       iconClass={iconClass}
       subtitle={data.description}
       footer={
-        <div className="flex gap-2 mt-1 text-[10px] text-ink-tertiary">
+        <div className="mt-1 flex flex-wrap justify-center gap-x-2 gap-y-1 text-[10px] text-ink-secondary">
           {data.agentCount !== undefined && (
-            <span>{data.agentCount} agents</span>
+            <span>{linkedCount(data.agentCount, "agent")}</span>
           )}
           {data.serverCount !== undefined && (
-            <span>{data.serverCount} servers</span>
+            <span>{linkedCount(data.serverCount, "server")}</span>
           )}
         </div>
       }
@@ -458,8 +436,8 @@ function ServerNode({ data }: { data: LineageNodeData }) {
       ringClass="ring-blue-400"
       iconClass="text-blue-600 dark:text-blue-400"
       subtitle={data.command}
-      footer={
-        <div className="flex gap-2 mt-1">
+      footer={(data.toolCount ?? 0) + (data.credentialCount ?? 0) + (data.packageCount ?? 0) > 0 ? (
+        <div className="mt-1 flex flex-wrap justify-center gap-2">
           {data.toolCount !== undefined && data.toolCount > 0 && (
             <span className="flex items-center gap-0.5 text-[10px] text-purple-700 dark:text-purple-300">
               <Wrench className="w-2.5 h-2.5" /> {data.toolCount}
@@ -476,7 +454,7 @@ function ServerNode({ data }: { data: LineageNodeData }) {
             </span>
           )}
         </div>
-      }
+      ) : undefined}
     />
   );
 }
@@ -535,9 +513,6 @@ function FindingNode({
       borderClass={borderClass}
       bgClass={bgClass}
       ringClass="ring-white/50"
-      shapeClass={
-        data.nodeType === "misconfiguration" ? "rounded-md" : "rounded-lg"
-      }
       iconClass={accentClass}
       source={false}
       subtitle={data.description}
@@ -613,7 +588,6 @@ function CredentialNode({ data }: { data: LineageNodeData }) {
       borderClass="border-amber-500 border-dashed"
       bgClass="bg-amber-50 dark:bg-amber-950/60"
       ringClass="ring-amber-400"
-      shapeClass="rounded-2xl"
       iconClass="text-amber-600 dark:text-amber-400"
       source={false}
       subtitle={data.serverName}
@@ -628,7 +602,6 @@ function ToolNode({ data }: { data: LineageNodeData }) {
       borderClass="border-purple-500 dark:border-purple-600"
       bgClass="bg-purple-50 dark:bg-purple-950/60"
       ringClass="ring-purple-400"
-      shapeClass="rounded-2xl"
       iconClass="text-purple-600 dark:text-purple-400"
       source={false}
       subtitle={data.description}
@@ -743,7 +716,6 @@ function SharedServerNode({ data }: { data: LineageNodeData }) {
       borderClass="border-cyan-400"
       bgClass="bg-cyan-50 dark:bg-cyan-950/80"
       ringClass="ring-cyan-300"
-      shapeClass="rounded-[18px]"
       iconClass="text-cyan-600 dark:text-cyan-300"
       subtitle={data.command}
       footer={
@@ -931,10 +903,7 @@ export const lineageNodeTypesAdaptive = {
   clusterPillNode: ClusterPillNode,
 };
 
-/**
- * Detail-band renderer registry — the full chip-laden cards. This is the
- * "default" map and matches what /graph rendered before LOD existed.
- */
+/** Detail renderers used by bounded investigations, with evidence metadata. */
 export const lineageNodeTypes = {
   providerNode: ProviderNode,
   agentNode: AgentNode,
@@ -961,73 +930,5 @@ export const lineageNodeTypes = {
   accessPolicyNode: CredentialNode,
   driftIncidentNode: MisconfigNode,
   dataStoreNode: CloudResourceNode,
-  clusterPillNode: ClusterPillNode,
-};
-
-/**
- * Summary-band registry — every node-type collapses to `SummaryNode`
- * except cluster pills, which keep their dedicated renderer because they
- * already encode "+N children" copy and wouldn't survive the squeeze.
- */
-export const lineageNodeTypesSummary = {
-  providerNode: SummaryNode,
-  agentNode: SummaryNode,
-  userNode: SummaryNode,
-  groupNode: SummaryNode,
-  serviceAccountNode: SummaryNode,
-  environmentNode: SummaryNode,
-  fleetNode: SummaryNode,
-  clusterNode: SummaryNode,
-  serverNode: SummaryNode,
-  packageNode: SummaryNode,
-  vulnNode: SummaryNode,
-  misconfigNode: SummaryNode,
-  credentialNode: SummaryNode,
-  toolNode: SummaryNode,
-  modelNode: SummaryNode,
-  frameworkNode: SummaryNode,
-  datasetNode: SummaryNode,
-  containerNode: SummaryNode,
-  cloudResourceNode: SummaryNode,
-  sharedServerNode: SummaryNode,
-  managedIdentityNode: SummaryNode,
-  accessGrantNode: SummaryNode,
-  accessPolicyNode: SummaryNode,
-  driftIncidentNode: SummaryNode,
-  dataStoreNode: SummaryNode,
-  clusterPillNode: ClusterPillNode,
-};
-
-/**
- * Cluster-band registry — regular node-types collapse to `ClusterBubbleNode`.
- * Aggregation pills keep their summary representation so a materially
- * compressed graph still shows meaningful "+N" cluster affordances.
- */
-export const lineageNodeTypesCluster = {
-  providerNode: ClusterBubbleNode,
-  agentNode: ClusterBubbleNode,
-  userNode: ClusterBubbleNode,
-  groupNode: ClusterBubbleNode,
-  serviceAccountNode: ClusterBubbleNode,
-  environmentNode: ClusterBubbleNode,
-  fleetNode: ClusterBubbleNode,
-  clusterNode: ClusterBubbleNode,
-  serverNode: ClusterBubbleNode,
-  packageNode: ClusterBubbleNode,
-  vulnNode: ClusterBubbleNode,
-  misconfigNode: ClusterBubbleNode,
-  credentialNode: ClusterBubbleNode,
-  toolNode: ClusterBubbleNode,
-  modelNode: ClusterBubbleNode,
-  frameworkNode: ClusterBubbleNode,
-  datasetNode: ClusterBubbleNode,
-  containerNode: ClusterBubbleNode,
-  cloudResourceNode: ClusterBubbleNode,
-  sharedServerNode: ClusterBubbleNode,
-  managedIdentityNode: ClusterBubbleNode,
-  accessGrantNode: ClusterBubbleNode,
-  accessPolicyNode: ClusterBubbleNode,
-  driftIncidentNode: ClusterBubbleNode,
-  dataStoreNode: ClusterBubbleNode,
   clusterPillNode: ClusterPillNode,
 };

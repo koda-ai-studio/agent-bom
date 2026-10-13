@@ -316,6 +316,11 @@ body {
 }
 
 .graph-relationship-label .relationship-badge {
+  border-color: transparent;
+  background: var(--surface);
+  box-shadow: none;
+  font-weight: 500;
+  padding: 0.2em 0.4em;
   width: max-content;
   max-width: 8em;
   white-space: normal;
@@ -325,6 +330,18 @@ body {
 
 .graph-relationship-label .relationship-badge svg {
   display: none;
+}
+
+/* Keep secondary node metadata available without crowding the default canvas. */
+.graph-node-context {
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+.react-flow__node:hover .graph-node-context,
+.react-flow__node:focus-within .graph-node-context {
+  visibility: visible;
+  opacity: 1;
 }
 
 /* Fullscreen mode styles */

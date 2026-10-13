@@ -37,6 +37,7 @@ import {
   minimapNodeColor,
   readableGraphEdges,
 } from "@/lib/graph-utils";
+import { readableLineageDagreLr } from "@/lib/graph-node-dimensions";
 import { graphFitViewOptions, shouldShowGraphMiniMap } from "@/lib/graph-viewport";
 import { decideGraphRenderer } from "@/lib/graph-renderer-switch";
 import { mergeGraphNodeDetail } from "@/lib/graph-entity-detail";
@@ -375,7 +376,7 @@ export function SecurityGraphInvestigation({
   }, [activeGraph, attackPath, bounded, focusMode]);
 
   const layout = useGraphLayout("dagre-lr", flow.nodes, flow.edges, {
-    dagreLr: { rankSep: 128, nodeSep: 48 },
+    dagreLr: readableLineageDagreLr({ rankSep: 96, nodeSep: 40 }),
   });
   const displayEdges = useMemo(
     () => readableGraphEdges(layout.edges, undefined, { nodeLabels: graphNodeDisplayLabels(layout.nodes) }),

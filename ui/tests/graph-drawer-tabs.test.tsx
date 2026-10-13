@@ -223,7 +223,13 @@ describe("graph entity drawer tabs", () => {
 
   it("exposes a keyboard/pointer resize handle in overlay mode", () => {
     render(<GraphEntityDrawer data={richNode()} onClose={noop} enrich={false} />);
-    expect(screen.getByLabelText("Resize drawer")).toBeTruthy();
+    const handle = screen.getByRole("separator", { name: "Resize drawer" });
+    const before = Number(handle.getAttribute("aria-valuenow"));
+    expect(before).toBeGreaterThanOrEqual(Number(handle.getAttribute("aria-valuemin")));
+    expect(before).toBeLessThanOrEqual(Number(handle.getAttribute("aria-valuemax")));
+    fireEvent.keyDown(handle, { key: "ArrowLeft" });
+    expect(Number(handle.getAttribute("aria-valuenow"))).toBe(before + 48);
+    expect(handle).toHaveAttribute("aria-valuetext", `${before + 48} pixels`);
   });
 
   it("keeps docked details independently scrollable and collapsible beside the canvas", () => {

@@ -183,9 +183,9 @@ describe("the raw lineage layout is shaped like the canvas it lands on", () => {
   });
 
   it("leaves a graph that already fits exactly as dagre laid it out", () => {
-    // A 4-node chain and a 3-sibling fan already fit; reflowing them would
-    // churn the layout for no gain and break the one-node-per-rank reading.
-    for (const levels of [[1, 1, 1], [3]]) {
+    // A short chain already fits. Circular glyphs have labels below them,
+    // so sibling fans can benefit from reflow even with only three children.
+    for (const levels of [[1, 1, 1]]) {
       const withFit = layout(levels).nodes.map((n) => n.position);
       const { nodes, edges } = fanout(levels);
       const plain = applyDagreLayout(nodes, edges, {

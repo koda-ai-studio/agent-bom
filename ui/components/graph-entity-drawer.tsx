@@ -147,6 +147,7 @@ export function GraphEntityDrawer({
       </div>
       <details className="text-xs text-ink-secondary">
         <summary className="cursor-pointer">Location and evidence source</summary>
+        {enriched.countScope === "loaded_graph" && <p className="mt-2">Counts cover linked entities in the graph data loaded for this investigation. They may be incomplete and are not inventory totals.</p>}
         <dl className="mt-2 space-y-1 break-words [overflow-wrap:anywhere]">
           {locationFields.filter(([, value]) => value).map(([label, value]) => (
             <div key={label}><dt className="inline font-semibold">{label}: </dt><dd className="inline">{value}</dd></div>

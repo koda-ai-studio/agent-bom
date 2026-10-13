@@ -441,7 +441,7 @@ export function relationshipEdgeLabelPresentation(options?: {
     },
     labelStyle: {
       fill: "var(--foreground)",
-      fontSize: Math.max(10, Math.min(24, 12 / zoom)),
+      fontSize: Math.max(10, Math.min(32, 12 / zoom)),
       fontWeight: 650,
     },
   };

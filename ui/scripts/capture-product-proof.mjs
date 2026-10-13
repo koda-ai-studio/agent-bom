@@ -2786,20 +2786,24 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
           const nodes = [...document.querySelectorAll(".react-flow__node")]
             .map((node) => ({ label: (node.textContent ?? "").trim(), rect: node.getBoundingClientRect() }))
             .filter(({ rect }) => rect.width > 0 && rect.height > 0);
-          return [...document.querySelectorAll(".react-flow__edge-text, .relationship-badge")]
+          const labels = [...document.querySelectorAll(".react-flow__edge-text, .relationship-badge")]
             .map((label) => ({ label: (label.textContent ?? "").trim(), rect: label.getBoundingClientRect() }))
-            .filter(({ label, rect }) => label && rect.width > 0 && rect.height > 0)
-            .flatMap((edgeLabel) => nodes
+            .filter(({ label, rect }) => label && rect.width > 0 && rect.height > 0);
+          return [...labels.flatMap((edgeLabel) => nodes
               .filter(({ rect }) =>
                 edgeLabel.rect.left < rect.right
                 && edgeLabel.rect.right > rect.left
                 && edgeLabel.rect.top < rect.bottom
                 && edgeLabel.rect.bottom > rect.top,
               )
-              .map((node) => `${edgeLabel.label} intersects ${node.label}`));
+              .map((node) => `${edgeLabel.label} intersects ${node.label}`)),
+            ...labels.flatMap((left, index) => labels.slice(index + 1)
+              .filter(right => left.rect.left < right.rect.right && left.rect.right > right.rect.left
+                && left.rect.top < right.rect.bottom && left.rect.bottom > right.rect.top)
+              .map(right => `${left.label} overlaps relationship ${right.label}`))];
         });
         if (collisions.length > 0) {
-          throw new Error(`Graph relationship labels overlap nodes on ${urlPath}: ${collisions.join(" | ")}`);
+          throw new Error(`Graph relationship labels overlap on ${urlPath}: ${collisions.join(" | ")}`);
         }
       }
     }

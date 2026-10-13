@@ -1,11 +1,13 @@
 "use client";
 
-import { BaseEdge, EdgeLabelRenderer, SmoothStepEdge, getSmoothStepPath, type EdgeProps } from "@xyflow/react";
+import { BaseEdge, EdgeLabelRenderer, SmoothStepEdge, useStore, type EdgeProps } from "@xyflow/react";
 import {
   ArrowRightLeft, Box, Bug, CirclePlay, Database, Eye, Fingerprint,
   GitBranch, KeyRound, Link2, LogIn, Plug, ShieldCheck, UserRoundCheck, Wrench,
   type LucideIcon,
 } from "lucide-react";
+
+import { relationshipPath } from "@/lib/relationship-routing";
 
 // Icons supplement the recorded verb; they never replace its meaning or imply
 // that a recorded permission has actually been exercised.
@@ -59,8 +61,13 @@ export function RelationshipBadge({ relationship, children }: {
 }
 
 export function RelationshipEdge(props: EdgeProps) {
+  const nodes = useStore(state => state.nodes);
+  const zoom = useStore(state => state.transform[2]);
   if (props.data?.isClusterEdge) return <SmoothStepEdge {...props} />;
-  const [path, x, y] = getSmoothStepPath(props);
+  const [path, x, y] = relationshipPath(props, nodes.length <= 80 ? nodes.map(node => ({
+    id: node.id, x: node.position.x, y: node.position.y,
+    width: node.measured?.width ?? 220, height: node.measured?.height ?? 224,
+  })) : []);
   const relationship = typeof props.data?.relationship === "string" ? props.data.relationship : "";
   return <>
     <BaseEdge id={props.id} path={path} style={props.style}
@@ -71,7 +78,7 @@ export function RelationshipEdge(props: EdgeProps) {
       <div className="nodrag nopan graph-relationship-label" style={{
         position: "absolute",
         transform: `translate(-50%, -50%) translate(${x}px, ${y}px)`,
-        fontSize: props.labelStyle?.fontSize ?? 12,
+        fontSize: Math.max(Number(props.labelStyle?.fontSize) || 12, 12.5 / Math.max(zoom, 0.16)),
         pointerEvents: "none",
       }}>
         <RelationshipBadge relationship={relationship}>{props.label}</RelationshipBadge>

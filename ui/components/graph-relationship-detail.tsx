@@ -55,8 +55,8 @@ export function GraphRelationshipDetail({ edge, scanId, sourceLabel, targetLabel
     </details>
   </div>;
   if (mobile) return <Drawer open onClose={onClose} title={title} eyebrow="Relationship" ariaLabel="Relationship details" closeLabel="Close relationship details" backdropLabel="Dismiss relationship details">{content}</Drawer>;
-  return <aside aria-label="Relationship details" className="w-[min(28rem,40vw)] shrink-0 self-stretch overflow-y-auto border-l border-outline bg-surface text-foreground">
-    <header className="flex items-center justify-between gap-3 border-b border-outline p-4"><h3 className="font-semibold">{title}</h3><button ref={closeButtonRef} type="button" aria-label="Close relationship details" onClick={onClose} className="rounded p-2 hover:bg-surface-muted"><X className="h-4 w-4" aria-hidden="true" /></button></header>
+  return <aside aria-label="Relationship details" className="w-[min(24rem,36vw)] shrink-0 self-stretch overflow-y-auto border-l border-outline bg-surface text-foreground">
+    <header className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-outline bg-surface p-4"><div><p className="mb-1 text-[10px] uppercase tracking-wider text-ink-secondary">Recorded relationship</p><h3 className="text-base font-semibold">{title}</h3></div><button ref={closeButtonRef} type="button" aria-label="Close relationship details" onClick={onClose} className="rounded p-2 hover:bg-surface-muted"><X className="h-4 w-4" aria-hidden="true" /></button></header>
     <div className="p-4">{content}</div>
   </aside>;
 }
