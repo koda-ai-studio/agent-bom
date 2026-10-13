@@ -36,19 +36,32 @@ jobs:
       - uses: ./.github/actions/setup-python
         with:
           python-version: '3.13'
-      - name: Select published release and install into a clean environment
+      - name: Select published release
         env:
+          GH_TOKEN: ${{ github.token }}
           REQUESTED_VERSION: ${{ inputs.version }}
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
-          python - <<'PY'
-          import json, os, pathlib, re, subprocess, sys, time, urllib.request
+          uv run --no-project --python 3.13 python - <<'PY'
+          import json, os, re, urllib.request
           version = os.environ.get("REQUESTED_VERSION") or os.environ.get("RELEASE_TAG", "").removeprefix("v")
           if not version:
-              with urllib.request.urlopen("https://api.github.com/repos/koda-ai-studio/agent-bom/releases/latest", timeout=30) as response:
+              request = urllib.request.Request(
+                  "https://api.github.com/repos/koda-ai-studio/agent-bom/releases/latest",
+                  headers={"Authorization": "Bearer " + os.environ["GH_TOKEN"], "Accept": "application/vnd.github+json"},
+              )
+              with urllib.request.urlopen(request, timeout=30) as response:
                   version = json.load(response)["tag_name"].removeprefix("v")
           if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", version):
               raise SystemExit("Expected a published stable version")
+          with open(os.environ["GITHUB_ENV"], "a") as env:
+              env.write(f"FIRST_RUN_VERSION={version}\n")
+          PY
+      - name: Install published package into a clean environment
+        run: |
+          uv run --no-project --python 3.13 python - <<'PY'
+          import os, pathlib, subprocess, sys, time
+          version = os.environ["FIRST_RUN_VERSION"]
           root = pathlib.Path(os.environ["RUNNER_TEMP"])
           venv = root / "first-run-venv"
           subprocess.run([sys.executable, "-m", "venv", str(venv)], check=True)
@@ -58,7 +71,7 @@ jobs:
           seconds = time.monotonic() - started
           subprocess.run([python, "-m", "pip", "install", "playwright==1.63.0"], check=True)
           with open(os.environ["GITHUB_ENV"], "a") as env:
-              env.write(f"FIRST_RUN_VERSION={version}\nFIRST_RUN_INSTALL_SECONDS={seconds}\n")
+              env.write(f"FIRST_RUN_INSTALL_SECONDS={seconds}\n")
           PY
       - name: Install browser test driver
         run: '"$RUNNER_TEMP/first-run-venv/bin/python" -m playwright install --with-deps chromium'
