@@ -147,7 +147,7 @@ def test_delete_snapshot_removes_only_requested_tenant_scan(monkeypatch) -> None
 
     removed = store.delete_snapshot(tenant_id="acme", scan_id="same-scan")
 
-    assert removed == 6
+    assert removed == len(postgres_delete_snapshot_tables())
     assert ("acme", "same-scan") not in conn.snapshots
     assert ("other", "same-scan") in conn.snapshots
     assert all(params == ("acme", "same-scan") for _table, params in conn.deletes)
@@ -222,6 +222,7 @@ def postgres_purge_tables():
 def postgres_delete_snapshot_tables() -> tuple[str, ...]:
     return (
         "graph_node_search",
+        "graph_attack_paths",
         "attack_paths",
         "interaction_risks",
         "graph_edges",

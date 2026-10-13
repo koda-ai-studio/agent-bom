@@ -147,6 +147,15 @@ def _graph_store_backed_build_enabled(report_json: Mapping[str, Any] | dict[str,
     return _estimate_graph_entities(report_json) >= threshold
 
 
+def _snapshot_path_kwargs(graph_store: Any, graph: UnifiedGraph) -> dict[str, Any]:
+    """Materialize the snapshot's path index when the destination store keeps one."""
+    if getattr(graph_store, "stores_snapshot_paths", False) is not True:
+        return {}
+    from agent_bom.graph.snapshot_paths import prepare_snapshot_paths
+
+    return {"snapshot_paths": prepare_snapshot_paths(graph)}
+
+
 def _persist_via_build_workspace(graph_store: GraphStoreProtocol, graph: UnifiedGraph, *, write_generation: str = "") -> dict[str, int]:
     """Stream a built graph through the bounded workspace into the store.
 
@@ -159,6 +168,7 @@ def _persist_via_build_workspace(graph_store: GraphStoreProtocol, graph: Unified
     with open_graph_build_workspace(tenant_id=graph.tenant_id, workspace_id=graph.scan_id) as workspace:
         workspace.add_nodes(graph.nodes.values())
         workspace.add_edges(graph.edges)
+        path_kwargs = _snapshot_path_kwargs(graph_store, graph)
         counts: dict[str, int] = graph_store.save_graph_streaming(
             scan_id=graph.scan_id,
             tenant_id=graph.tenant_id,
@@ -169,6 +179,7 @@ def _persist_via_build_workspace(graph_store: GraphStoreProtocol, graph: Unified
             analysis_status=graph.analysis_status,
             created_at=graph.created_at,
             **({"write_generation": write_generation} if write_generation else {}),
+            **path_kwargs,
         )
         return counts
 
@@ -239,6 +250,7 @@ def _write_snapshot(
         if (not store_backed) and _graph_build_workspace_enabled():
             counts = _persist_via_build_workspace(graph_store, graph, write_generation=write_generation)
         else:
+            path_kwargs = _snapshot_path_kwargs(graph_store, graph)
             counts = graph_store.save_graph_streaming(
                 scan_id=graph.scan_id,
                 tenant_id=graph.tenant_id,
@@ -249,6 +261,7 @@ def _write_snapshot(
                 analysis_status=graph.analysis_status,
                 created_at=graph.created_at,
                 **({"write_generation": write_generation} if write_generation else {}),
+                **path_kwargs,
             )
         return counts, prior_digest
 

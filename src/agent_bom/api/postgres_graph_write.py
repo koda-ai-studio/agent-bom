@@ -10,12 +10,13 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
-from typing import Any, Iterable, Iterator, Mapping
+from typing import Any, Iterable, Iterator, Mapping, Sequence
 
 from agent_bom.api.graph_store import _node_search_text
 from agent_bom.graph import RelationshipType
 from agent_bom.graph.correlation import CorrelationRunStatus, validate_correlation_update
 from agent_bom.graph.severity_floor import counts_as_finding
+from agent_bom.graph.snapshot_paths import SNAPSHOT_PATH_COLUMNS, SnapshotPath, snapshot_path_rows
 
 from .postgres_graph_support import _CORRELATION_RUN_COLUMNS, _correlation_run_from_row, _execute_many_batched
 
@@ -131,6 +132,20 @@ _SNAPSHOT_REPLACE_TABLES = (
     "graph_nodes",
     "graph_snapshots",
 )
+
+
+def _write_snapshot_paths(conn: Any, rows: Sequence[SnapshotPath], *, scan: str, tenant: str, now: str, batch_size: int) -> None:
+    generation = conn.execute(
+        "SELECT snapshot_generation FROM graph_snapshots WHERE tenant_id = %s AND scan_id = %s",
+        (tenant, scan),
+    ).fetchone()[0]
+    sql = (
+        f"INSERT INTO graph_attack_paths ({', '.join(SNAPSHOT_PATH_COLUMNS)}) "  # nosec B608 - static columns
+        f"VALUES ({', '.join('%s' for _ in SNAPSHOT_PATH_COLUMNS)})"
+    )
+    _execute_many_batched(
+        conn, sql, snapshot_path_rows(rows, tenant=tenant, scan=scan, generation=generation, now=now), batch_size=batch_size
+    )
 
 
 def _edge_upsert_sql(scope_predicate: str) -> str:

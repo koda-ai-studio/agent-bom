@@ -12,7 +12,7 @@ import logging
 import os
 import time
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, Iterable, Mapping
+from typing import TYPE_CHECKING, Any, Iterable, Mapping, Sequence
 
 if TYPE_CHECKING:
     from agent_bom.graph import RelationshipType, UnifiedGraph, UnifiedNode
@@ -37,6 +37,7 @@ from agent_bom.graph.completeness import (
 )
 from agent_bom.graph.observation_scope import comparable_observation_sql
 from agent_bom.graph.severity_floor import severity_floor_sql
+from agent_bom.graph.snapshot_paths import SnapshotPath, prepare_snapshot_paths
 
 from .postgres_common import (
     _apply_tenant_session,
@@ -51,6 +52,7 @@ from .postgres_graph_history import PostgresGraphHistoryMixin
 from .postgres_graph_inventory import PostgresGraphInventoryMixin
 from .postgres_graph_paths import PostgresGraphPathsMixin
 from .postgres_graph_schema import _GRAPH_TABLES_DDL, _GRAPH_TABLES_MIGRATION_DDL
+from .postgres_graph_snapshot_paths import PostgresSnapshotPathsMixin
 from .postgres_graph_support import (
     _ALLOWED_ENTITY_TYPES,
     _DB_LEASE_ISO,
@@ -83,6 +85,7 @@ from .postgres_graph_write import (
     _interaction_risk_rows,
     _reserve_snapshot,
     _write_nodes,
+    _write_snapshot_paths,
 )
 from .postgres_scan_cache import PostgresScanCache
 
@@ -134,6 +137,7 @@ __all__ = [
 
 
 class PostgresGraphStore(
+    PostgresSnapshotPathsMixin,
     PostgresGraphPathsMixin,
     PostgresGraphInventoryMixin,
     PostgresGraphHistoryMixin,
@@ -192,6 +196,7 @@ class PostgresGraphStore(
             _ensure_tenant_rls(conn, "graph_snapshots", "tenant_id")
             _ensure_tenant_rls(conn, "graph_correlation_runs", "tenant_id")
             _ensure_tenant_rls(conn, "attack_paths", "tenant_id")
+            _ensure_tenant_rls(conn, "graph_attack_paths", "tenant_id")
             _ensure_tenant_rls(conn, "interaction_risks", "tenant_id")
             _ensure_tenant_rls(conn, "graph_filter_presets", "tenant_id")
             _ensure_tenant_rls(conn, "graph_node_search", "tenant_id")
@@ -225,6 +230,7 @@ class PostgresGraphStore(
 
     def save_graph(self, graph: UnifiedGraph) -> None:
         """Persist a fully built ``UnifiedGraph`` via the streamed write path."""
+        snapshot_paths = prepare_snapshot_paths(graph)
         self.save_graph_streaming(
             scan_id=graph.scan_id or "",
             tenant_id=graph.tenant_id,
@@ -234,6 +240,7 @@ class PostgresGraphStore(
             interaction_risks=graph.interaction_risks,
             analysis_status=graph.analysis_status,
             created_at=graph.created_at,
+            snapshot_paths=snapshot_paths,
         )
 
     def save_graph_streaming(
@@ -254,6 +261,7 @@ class PostgresGraphStore(
         correlation_result_manifest: Mapping[str, Any] | None = None,
         correlation_completed_at: str = "",
         correlation_execution_owner: str = "",
+        snapshot_paths: Sequence[SnapshotPath] | None = None,
     ) -> dict[str, int]:
         """Persist a snapshot from node/edge iterables without materialising a graph.
 
@@ -306,6 +314,8 @@ class PostgresGraphStore(
                     *revision_tokens(write_generation),
                 ),
             )
+            if snapshot_paths is not None:
+                _write_snapshot_paths(conn, snapshot_paths, scan=scan, tenant=tenant, now=now, batch_size=batch_size)
             if correlation_result_manifest is not None:
                 _complete_correlation_in_write(
                     conn,

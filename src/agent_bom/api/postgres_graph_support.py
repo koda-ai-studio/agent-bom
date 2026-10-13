@@ -18,7 +18,7 @@ from agent_bom.graph.correlation import GraphCorrelationRun
 
 # Keep the historical logger name so log routing and filters are unchanged.
 logger = logging.getLogger("agent_bom.api.postgres_graph")
-_GRAPH_STORAGE_SCHEMA_VERSION = 6
+_GRAPH_STORAGE_SCHEMA_VERSION = 7
 _DB_NOW_ISO = "to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"')"
 _DB_LEASE_ISO = "to_char(now() AT TIME ZONE 'UTC' + (%s * INTERVAL '1 second'), 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"')"
 
@@ -263,6 +263,7 @@ class PostgresGraphStoreBase:
             correlation_result_manifest: Mapping[str, Any] | None = None,
             correlation_completed_at: str = "",
             correlation_execution_owner: str = "",
+            snapshot_paths: Sequence[Any] | None = None,
         ) -> dict[str, int]: ...
 
         def _walk_graph(

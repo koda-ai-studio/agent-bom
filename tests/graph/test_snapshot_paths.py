@@ -295,3 +295,24 @@ def test_stored_paths_equal_derivation_when_fusion_rows_need_read_adjustment(sto
     capped = next(path for path in stored.paths if path.target == "vuln:CVE-1" and path.summary.endswith("fused"))
     assert capped.composite_risk == 39.0
     assert store.load_graph(tenant_id="tenant-a", scan_id="fusion").attack_paths[1].composite_risk == 90.0
+
+
+@pytest.mark.parametrize("store_backed", ["on", "off"])
+@pytest.mark.parametrize("workspace", ["on", "off"])
+def test_api_persist_materializes_paths_for_every_build_mode(
+    store: SQLiteGraphStore, monkeypatch: pytest.MonkeyPatch, store_backed: str, workspace: str
+) -> None:
+    from types import SimpleNamespace
+
+    from agent_bom.api.graph_persistence import persist_graph_snapshot
+
+    monkeypatch.setenv("AGENT_BOM_GRAPH_STORE_BACKED_BUILD", store_backed)
+    monkeypatch.setenv("AGENT_BOM_GRAPH_BUILD_WORKSPACE", workspace)
+    report = shared_server_estate(agents=20, group_size=10, scan_id="api-scan")
+    job = SimpleNamespace(job_id="job", tenant_id="tenant-a", result={}, progress=[])
+    persist_graph_snapshot(job, report, store_factory=lambda: store)
+
+    stored = store.snapshot_attack_paths(tenant_id="tenant-a", scan_id="api-scan")
+    assert stored is not None and stored.paths
+    derived = _derived_attack_paths(store.load_graph(tenant_id="tenant-a", scan_id="api-scan"))
+    assert _dicts(stored.paths) == _dicts(derived)
