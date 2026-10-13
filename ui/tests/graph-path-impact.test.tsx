@@ -36,3 +36,12 @@ it("retries failed evidence without treating failure as zero impact", async () =
   expect(await screen.findByText(/At least 3 upstream related nodes/)).toBeVisible();
   expect(screen.getByRole("link", { name: "Explore upstream relationships" })).toHaveAttribute("href", "/security-graph?scan=scan-a&investigate=1&root=finding%3Aa&direction=reverse&lens=lineage");
 });
+
+it("labels reverse traversal depth so it is not read as the selected path's hop count", async () => {
+  vi.spyOn(api, "getGraphImpact").mockResolvedValue({ ...result, completeness: { complete: true }, max_depth_reached: 1 } as typeof result);
+  render(<GraphPathImpact {...props} />);
+  const summary = await screen.findByText(/upstream related nodes/);
+  expect(summary).toHaveTextContent("3 upstream related nodes · up to 1 reverse step from this node");
+  expect(summary).not.toHaveTextContent(/recorded hops/);
+  expect(screen.getByText(/Traversal depth is counted from this node, not along the selected path/)).toBeInTheDocument();
+});

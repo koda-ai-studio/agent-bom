@@ -1,4 +1,5 @@
-import { completeDirectedHopCount } from "@/lib/security-graph-focus";
+import { hopReceiptCoverage } from "@/lib/hop-receipt-coverage";
+import { countLabel } from "@/lib/count-label";
 import type { FixFirstRiskReason, GraphAttackPath } from "@/lib/api-types";
 import type { UnifiedNode } from "@/lib/graph-schema";
 import { GraphHopEvidenceInspector } from "@/components/graph-hop-evidence-inspector";
@@ -31,8 +32,8 @@ export function AttackPathCorrelationProof({
       return kind === "container" || kind === "package" || kind === "vulnerability" || kind === "finding";
     });
   const expectedHopCount = Math.max(path.hops.length - 1, 0);
-  const completeHopCount = completeDirectedHopCount(path);
-  const pathEvidenceComplete = path.reachability === "confirmed" && completeHopCount !== null;
+  const coverage = hopReceiptCoverage(path);
+  const pathEvidenceComplete = path.reachability === "confirmed" && coverage.complete !== null;
   const proofLabel = pathEvidenceComplete ? "Hop receipts complete" : "Hop receipts incomplete";
   const missingNodes = path.hops.filter((id) => !nodeById.has(id));
   const sourceCount = new Set(receipts.flatMap((receipt) =>
@@ -64,8 +65,9 @@ export function AttackPathCorrelationProof({
         <div>
           <p className="text-[15px] font-semibold text-[color:var(--foreground)]">{proofLabel}</p>
           <p className="mt-0.5 text-[15px] text-[color:var(--text-tertiary)]">
-            {completeHopCount === null ? "Directed-hop receipt count unavailable" : `${completeHopCount}/${expectedHopCount} directed traversable hops evidenced`}
+            {coverage.summary}
           </p>
+          {coverage.complete === null && coverage.gaps.length > 0 && <p className="mt-0.5 text-[15px] text-[color:var(--text-tertiary)]">Gaps: {coverage.gaps.join(", ")}</p>}
         </div>
         <div className="flex flex-wrap gap-1.5">
           {[...kinds].map(([kind, label]) => (
@@ -92,7 +94,7 @@ export function AttackPathCorrelationProof({
         </div>
       </details>
       <details className="mt-2">
-        <summary className="cursor-pointer py-1 text-[15px] font-medium text-[color:var(--text-secondary)]">Inspect {expectedHopCount} hop receipts</summary>
+        <summary className="cursor-pointer py-1 text-[15px] font-medium text-[color:var(--text-secondary)]">Inspect {countLabel(expectedHopCount, "hop receipt")}</summary>
         <div className="mt-2">
           <GraphHopEvidenceInspector key={path.hops.join("->")} receipts={path.hop_evidence}
             hops={path.hops.map(id => ({ id, label: nodeById.get(id)?.label || id }))} />

@@ -46,6 +46,14 @@ _logger = logging.getLogger(__name__)
 SCOPE_EXCLUSION_REASONS = frozenset({"directory_policy", "nested_worktree", "repository_ignore"})
 
 
+GRAPH_GAP_REASON = "graph_analysis_limited"
+
+
+def is_graph_analysis_gap(warning: object) -> bool:
+    """A graph finding evaluator stopped at a safety bound (not a vuln-data gap)."""
+    return isinstance(warning, dict) and warning.get("reason") == GRAPH_GAP_REASON
+
+
 def is_scope_exclusion(warning: dict) -> bool:
     """Only known filesystem scope receipts are informational exclusions."""
     return (

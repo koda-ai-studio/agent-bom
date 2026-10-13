@@ -12,7 +12,7 @@ from agent_bom.core.asset_types import _ASSET_TYPE_ALIASES as _ASSET_TYPE_ALIASE
 from agent_bom.core.asset_types import canonical_asset_type as canonical_asset_type
 from agent_bom.core.asset_types import entity_type_for_asset_type as entity_type_for_asset_type
 from agent_bom.core.asset_types import normalize_asset_type as normalize_asset_type
-from agent_bom.graph.types import EntityType
+from agent_bom.graph.types import EntityType, RelationshipType
 
 
 def finding_id_from_node_attributes(attrs: dict | None) -> str | None:
@@ -39,6 +39,12 @@ def finding_ids_for_asset_path(attrs: dict | None, path_hops: list[str]) -> list
     return [legacy] if legacy else []
 
 
+def _primary_exposure(edge: Any) -> bool:
+    """A VULNERABLE_TO edge that is not a rollup derived from another holder."""
+    relationship = getattr(edge.relationship, "value", edge.relationship)
+    return relationship == RelationshipType.VULNERABLE_TO.value and not (getattr(edge, "evidence", None) or {}).get("derived_via")
+
+
 def link_findings_to_graph_nodes(findings: list[Any], graph: Any) -> int:
     """Stamp Finding ↔ UnifiedNode FKs both ways. Returns number of findings linked.
 
@@ -49,8 +55,6 @@ def link_findings_to_graph_nodes(findings: list[Any], graph: Any) -> int:
 
     Best-effort and idempotent; never raises into callers.
     """
-    from agent_bom.graph.types import RelationshipType
-
     nodes = getattr(graph, "nodes", None)
     if not isinstance(nodes, dict) or not findings:
         return 0
@@ -122,9 +126,7 @@ def link_findings_to_graph_nodes(findings: list[Any], graph: Any) -> int:
             predecessors = {
                 edge.source
                 for edge in getattr(graph, "edges", []) or []
-                if edge.target == node_id
-                and getattr(edge.relationship, "value", edge.relationship) == RelationshipType.VULNERABLE_TO.value
-                and edge.source in nodes
+                if edge.target == node_id and _primary_exposure(edge) and edge.source in nodes
             }
             if len(predecessors) == 1:
                 asset_node_id = next(iter(predecessors))

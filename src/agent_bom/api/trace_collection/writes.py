@@ -5,8 +5,8 @@ import json
 
 from agent_bom.analytics_retention import prune_runtime_observations_for_tenant
 from agent_bom.api.runtime_event_store import RuntimeObservationRecord, RuntimeSessionRecord, _merge_session, _session_from_json
-from agent_bom.api.storage.runtime_trace_revisions import reconcile_sql
-from agent_bom.api.storage.sql import SqlSession
+from agent_bom.api.storage.runtime_trace_revisions import prune_revisions_for_tenant, reconcile_sql
+from agent_bom.api.storage.sql import Dialect, SqlSession
 from agent_bom.api.trace_collection.contracts import MAX_RECEIPTS, CollectionConflictError
 
 
@@ -35,7 +35,7 @@ def _prior_page_rows(
     return prior_receipts, retained
 
 
-def put_page(tx: SqlSession, tenant: str, connection: str, records: list[RuntimeObservationRecord]) -> int:
+def put_page(tx: SqlSession, tenant: str, connection: str, records: list[RuntimeObservationRecord], *, dialect: Dialect = "sqlite") -> int:
     if any(record.tenant_id != tenant for record in records):
         raise CollectionConflictError("Observation tenant does not match collection.")
     # Window imports and resumable collection share native IDs and append-only
@@ -97,6 +97,7 @@ def put_page(tx: SqlSession, tenant: str, connection: str, records: list[Runtime
     if count > MAX_RECEIPTS:
         raise CollectionConflictError("Collection replay capacity reached; checkpoint retained.")
     prune_runtime_observations_for_tenant(tx, tenant)
+    prune_revisions_for_tenant(tx, tenant, dialect=dialect)
     tx.execute(
         "DELETE FROM runtime_sessions WHERE tenant_id=? AND session_id LIKE ? AND session_id NOT LIKE ? "
         "AND NOT EXISTS (SELECT 1 FROM runtime_observations o WHERE o.tenant_id=runtime_sessions.tenant_id "

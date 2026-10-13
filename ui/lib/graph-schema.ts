@@ -370,6 +370,7 @@ export interface UnifiedEdge {
 
   // Evidence
   evidence: Record<string, unknown>;
+  source_scan_id?: string | null | undefined;
 
   // OCSF
   activity_id: number;

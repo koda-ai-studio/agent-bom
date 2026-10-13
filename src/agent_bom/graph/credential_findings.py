@@ -12,13 +12,15 @@ from typing import Any
 from agent_bom.core.severity import SEVERITY_RANK
 from agent_bom.graph.analysis import GraphAnalysisState
 from agent_bom.graph.container import AttackPath, UnifiedGraph
-from agent_bom.graph.credential_reach import MAX_RESULTS, credential_routes
+from agent_bom.graph.credential_reach import credential_routes
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.types import EntityType, RelationshipType
 from agent_bom.security import sanitize_text
 
 _RULE = "AGENT_REACHES_PRIVILEGED"
+# Rendering bound for path payloads only; finding evaluation is never capped.
+MAX_PATHS = 10_000
 
 
 def project_credential_findings(graph: UnifiedGraph, findings: Any) -> None:
@@ -96,6 +98,9 @@ def credential_finding_paths(graph: UnifiedGraph) -> list[AttackPath]:
         if node.attributes.get("finding_source") == "GRAPH_ANALYSIS" and node.attributes.get("rule_id") == _RULE
     ]
     owners = dict.fromkeys(owner for node in findings if isinstance(owner := node.attributes.get("owner_node_id"), str))
+    if not owners:
+        credential_routes(graph, (), analyzer="credential_finding_paths")
+        return paths
     by_owner = credential_routes(graph, owners, analyzer="credential_finding_paths")
     # A shared credential may anchor thousands of findings: index associations
     # once rather than rescanning that credential's fan-out for every owner.
@@ -108,7 +113,7 @@ def credential_finding_paths(graph: UnifiedGraph) -> list[AttackPath]:
         for credential in attrs.get("credential_node_ids", []):
             if not isinstance(credential, str):
                 continue
-            if len(paths) >= MAX_RESULTS:
+            if len(paths) >= MAX_PATHS:
                 status = replace(
                     graph.analysis_status["credential_finding_paths"], status=GraphAnalysisState.LIMITED, reason_codes=("path_budget",)
                 )

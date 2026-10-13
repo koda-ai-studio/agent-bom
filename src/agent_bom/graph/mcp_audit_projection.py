@@ -81,7 +81,13 @@ def _asset_targets(identities: dict[str, set[str]], asset: dict, evidence: dict)
 
 
 def auth_server_index(graph: UnifiedGraph) -> dict[str, list[UnifiedNode]]:
-    """Canonical server joins, with unique legacy labels only when IDs are absent."""
+    """Canonical server joins, with unique legacy labels only when source IDs are absent.
+
+    The builder always derives a ``canonical_id`` for a server, so a legacy
+    report (no recorded ``stable_id``) never matches a finding's identifier.
+    Such servers stay joinable by label, but only when the label is unique
+    across every server in the graph; an ambiguous label is never guessed.
+    """
     identities: dict[str, list[UnifiedNode]] = defaultdict(list)
     labels: dict[str, list[UnifiedNode]] = defaultdict(list)
     for node in graph.nodes.values():
@@ -92,6 +98,6 @@ def auth_server_index(graph: UnifiedGraph) -> dict[str, list[UnifiedNode]]:
             identities["id:" + str(identity)].append(node)
         labels[node.label].append(node)
     for label, nodes in labels.items():
-        if len(nodes) == 1 and not (nodes[0].attributes.get("canonical_id") or nodes[0].attributes.get("stable_id")):
+        if len(nodes) == 1 and not nodes[0].attributes.get("stable_id"):
             identities["label:" + label] = nodes
     return identities

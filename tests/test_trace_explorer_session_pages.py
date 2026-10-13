@@ -80,3 +80,20 @@ def test_postgres_bulk_sessions_and_later_pages_respect_rls():
             )
             assert [row["session_id"] for row in payload["sessions"]] == ["s-2", "s-1"]
             assert all(row["observation_count"] == 1 for row in payload["sessions"])
+
+
+def test_bulk_sessions_order_is_deterministic_across_stores(store):
+    seed(store)
+    store.put_observation(
+        RuntimeObservationRecord(
+            tenant_id="tenant-a",
+            observation_id="tie",
+            session_id="session-z",
+            observed_at="2026-10-13T00:00:04+00:00",
+            agent_name="tenant-a",
+        )
+    )
+    requested = ["session-1", "session-z", "session-3", "session-4", "session-0"]
+    rows = store.get_sessions("tenant-a", requested)
+    assert [row.session_id for row in rows] == ["session-z", "session-4", "session-3", "session-1", "session-0"]
+    assert [row.session_id for row in store.get_sessions("tenant-a", list(reversed(requested)))] == [row.session_id for row in rows]

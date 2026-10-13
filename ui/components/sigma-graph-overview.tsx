@@ -1,5 +1,6 @@
 "use client";
 
+import { countLabel } from "@/lib/count-label";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type Sigma from "sigma";
 import type { Edge, Node } from "@xyflow/react";
@@ -466,7 +467,7 @@ export function SigmaGraphOverview({
           data-testid="sigma-graph-overview-canvas"
         />
         {!focused && <svg ref={groupEdgesRef} className="pointer-events-none absolute inset-0 h-full w-full text-ink-tertiary" aria-hidden="true">
-          {overviewConnections.map(edge => <line key={`${edge.source}:${edge.target}`} stroke="currentColor" strokeOpacity="0.25" strokeWidth="1" strokeDasharray="3 5"><title>{edge.count} recorded relationships between groups</title></line>)}
+          {overviewConnections.map(edge => <line key={`${edge.source}:${edge.target}`} stroke="currentColor" strokeOpacity="0.25" strokeWidth="1" strokeDasharray="3 5"><title>{countLabel(edge.count, "recorded relationship")} between groups</title></line>)}
         </svg>}
         <div ref={groupLabelsRef} hidden={Boolean(focused)} className="pointer-events-none absolute inset-0 overflow-hidden">
           {model.groups.map((group) => <button type="button" key={group.key} onClick={() => enterScope(group.key)} className="pointer-events-auto absolute left-0 top-0 hidden max-w-36 rounded border border-outline bg-surface/95 px-2 py-1 text-center text-xs text-foreground">{group.label}<span className="block text-ink-secondary">{group.count} displayed / {group.loadedCount} loaded</span></button>)}

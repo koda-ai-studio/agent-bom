@@ -10,7 +10,13 @@ from typing import Any, Protocol
 
 from agent_bom.analytics_retention import prune_runtime_observations_for_tenant
 from agent_bom.api.gateway_activity_store import ensure_sqlite_gateway_activity_schema
-from agent_bom.api.storage.runtime_observation_query import memory_observation_page, session_keys, sql_observation_page, sql_sessions
+from agent_bom.api.storage.runtime_observation_query import (
+    memory_observation_page,
+    order_sessions,
+    session_keys,
+    sql_observation_page,
+    sql_sessions,
+)
 from agent_bom.api.storage.runtime_records import (
     RuntimeObservationRecord as RuntimeObservationRecord,
 )
@@ -39,6 +45,8 @@ from agent_bom.api.storage.runtime_trace_revisions import (
     REVISION_TABLE_SQL,
     TracePageCommit,
     content_hash,
+    prune_revisions_for_tenant,
+    prune_revisions_in_memory,
     read_revisions,
     reconcile_sql,
     revised_session,
@@ -218,6 +226,7 @@ class InMemoryRuntimeEventStore:
                 else:
                     first_seen.append(record)
             inserted = self._put_observations_locked(first_seen)
+            prune_revisions_in_memory(self._revisions, self._observations, checkpoint.tenant_id)
             self._trace_imports[key] = checkpoint
             return TracePageCommit(inserted, updated, len(unique) - inserted - updated)
 
@@ -244,7 +253,7 @@ class InMemoryRuntimeEventStore:
     def get_sessions(self, tenant_id: str, session_ids: list[str]) -> list[RuntimeSessionRecord]:
         keys = session_keys(session_ids)
         with self._lock:
-            return [row for key in keys if (row := self._sessions.get((tenant_id, key))) is not None]
+            return order_sessions([row for key in keys if (row := self._sessions.get((tenant_id, key))) is not None])
 
     def list_observations(
         self,
@@ -413,6 +422,7 @@ class SQLiteRuntimeEventStore:
             check_revision(read_checkpoint(conn, checkpoint.tenant_id, checkpoint.import_id), expected_revision, checkpoint)
             updated, first_seen = reconcile_sql(conn, unique)
             inserted = self._put_observations_locked(conn, first_seen)
+            prune_revisions_for_tenant(conn, checkpoint.tenant_id)
             write_checkpoint(conn, checkpoint)
             return TracePageCommit(inserted, updated, len(unique) - inserted - updated)
 

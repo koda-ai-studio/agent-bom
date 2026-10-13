@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Literal
 
-from agent_bom.coverage import is_scope_exclusion
+from agent_bom.coverage import is_graph_analysis_gap, is_scope_exclusion
 from agent_bom.security import sanitize_text
 
 if TYPE_CHECKING:
@@ -236,13 +236,17 @@ def effective_scan_run(report: Any) -> ScanRun:
         release = str(warning.get("release") or "unknown release")
         detail = str(warning.get("detail") or warning.get("reason") or "Vulnerability coverage is incomplete")
         excluded = is_scope_exclusion(warning)
-        issue_code = (
-            "scope_exclusion" if excluded else ("scanner_coverage_gap" if source.startswith("ast-") else "vulnerability_coverage_gap")
-        )
+        graph_gap = is_graph_analysis_gap(warning)
+        if excluded:
+            issue_code = "scope_exclusion"
+        elif graph_gap:
+            issue_code = "graph_analysis_coverage_gap"
+        else:
+            issue_code = "scanner_coverage_gap" if source.startswith("ast-") else "vulnerability_coverage_gap"
         run.add_issue(
             ScanIssue(
                 code=issue_code,
-                stage="scanning",
+                stage="correlation" if graph_gap else "scanning",
                 source=source,
                 message=f"{release}: {detail}",
                 affects_coverage=not excluded,

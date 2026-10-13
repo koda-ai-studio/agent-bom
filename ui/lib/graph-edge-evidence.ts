@@ -7,6 +7,9 @@ const categories: Record<string, string> = {
   runtime_observed: "Runtime observed", runtime_blocked: "Runtime blocked",
 };
 
+// Collectors that read configuration or manifests rather than observing activity.
+const STATIC_SOURCES = new Set(["source-ast", "cloud-inventory", "agent_discovery", "repo-structure-overlay"]);
+
 function text(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
@@ -19,7 +22,7 @@ export function graphEdgeEvidence(evidence: Record<string, unknown>) {
     if (key && Object.hasOwn(categories, key)) labels.add(categories[key]!);
   }
   const sources = [evidence.source, evidence.data_source];
-  if (sources.some(source => source === "source-ast" || source === "cloud-inventory")) labels.add("Static / configured");
+  if (sources.some(source => typeof source === "string" && STATIC_SOURCES.has(source))) labels.add("Static / configured");
   if (sources.includes("cloud-audit-trail") && evidence.observed === true) labels.add("Cloud audit observation");
   if (evidence.runtime_observed_state === "blocked" || evidence.blocked === true) labels.add("Runtime blocked");
   const runtimeSource = sources.some(source => typeof source === "string" && ["runtime-proxy", "runtime-identity", "runtime-feedback"].includes(source));
@@ -34,4 +37,10 @@ export function graphEdgeEvidence(evidence: Record<string, unknown>) {
     : ["Runtime observed", "Runtime blocked", "Runtime receipt", "Cloud audit observation"].includes(label) ? "runtime" : "unknown";
   return { label, mode, blocked };
 
+}
+
+/** A scan-recorded link with no receipt keeps its snapshot origin instead of reading as unrecorded. */
+export function graphEdgeEvidenceLabel(edge: { evidence?: Record<string, unknown> | undefined; source_scan_id?: string | null | undefined }): string {
+  const { label } = graphEdgeEvidence(edge.evidence ?? {});
+  return label === "Not recorded" && text(edge.source_scan_id) ? "Scan inventory · no per-edge receipt" : label;
 }

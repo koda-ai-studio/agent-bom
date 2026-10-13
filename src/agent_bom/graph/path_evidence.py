@@ -504,22 +504,65 @@ def qualify_exposure_reachability(payload: dict[str, Any]) -> dict[str, Any]:
     return payload
 
 
-__all__ = ["annotate_attack_path_evidence", "exposure_evidence_dimensions"]
+__all__ = [
+    "annotate_attack_path_evidence",
+    "exposure_evidence_dimensions",
+    "package_path_covers_rollup",
+    "rank_attack_path",
+]
 
 
 def with_technique_mappings(paths: list[AttackPath], graph: UnifiedGraph) -> list[AttackPath]:
-    """Annotate a batch without rescanning a shared credential's finding fan-out."""
+    """Annotate a batch without rescanning a shared credential's finding fan-out.
+
+    The hop index covers only the sources the batch's paths traverse, so the
+    cost tracks the paths, not the whole graph, and an empty batch is free.
+    """
+    if not paths:
+        return paths
     hop_edges: HopEdges = {}
-    for source, edges in graph.adjacency.items():
-        for edge in edges:
+    for source in {hop for path in paths for hop in path.hops[:-1]}:
+        for edge in graph.adjacency.get(source, []):
             hop_edges.setdefault((source, edge.target), []).append(edge)
     for path in paths:
         annotate_attack_path_evidence(path, graph, hop_edges=hop_edges)
     try:
-        from agent_bom.graph.attack_path_mitre import derive_attack_path_techniques
+        from agent_bom.graph.attack_path_mitre import TechniqueCatalogs, derive_attack_path_techniques
 
+        catalogs = TechniqueCatalogs()
         for path in paths:
-            path.technique_mappings = derive_attack_path_techniques(path, graph)
+            path.technique_mappings = derive_attack_path_techniques(path, graph, catalogs)
     except Exception:  # noqa: BLE001
         pass
     return paths
+
+
+def package_path_covers_rollup(finding_edge: Any, incoming: dict[str, list]) -> bool:
+    """A server->finding edge rolled up from packages repeats an exposure whose
+    server->package->finding path is already derived; count it once."""
+    derived_via = (getattr(finding_edge, "evidence", None) or {}).get("derived_via")
+    if not isinstance(derived_via, list):
+        return False
+    server, finding = finding_edge.source, finding_edge.target
+    finding_sources = {e.source for e in incoming.get(finding, []) if _relationship(e) == RelationshipType.VULNERABLE_TO.value}
+    return any(
+        pkg in finding_sources
+        and any(e.source == server and _relationship(e) == RelationshipType.DEPENDS_ON.value for e in incoming.get(pkg, []))
+        for pkg in derived_via
+        if isinstance(pkg, str)
+    )
+
+
+def rank_attack_path(path: AttackPath) -> tuple:
+    """Highest risk first; equal-risk paths fall back to a stable identity order
+    so tied credential-reach paths never depend on graph insertion order."""
+    return (
+        -path.composite_risk,
+        -len(path.hops),
+        -len(path.credential_exposure),
+        -len(path.tool_exposure),
+        path.source,
+        path.target,
+        tuple(path.hops),
+        tuple(path.edges),
+    )

@@ -6,6 +6,7 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import { useAuthState } from "@/components/auth-provider";
 import { useIncidentNeighborhood } from "@/hooks/use-incident-neighborhood";
 import { relationshipEdgeLabelText } from "@/lib/graph-utils";
+import { countLabel } from "@/lib/count-label";
 import { graphEdgeEvidenceMode } from "@/lib/unified-graph-flow";
 import { buildGraphInvestigationBundle, downloadGraphInvestigation } from "@/lib/graph-investigation-bundle";
 
@@ -43,7 +44,7 @@ export function GraphRecordedRelationships({ scanId, nodeId, onInspectNode }: Pr
   const missingLabels = edges.some(edge => !nodes.has(edge.source) || !nodes.has(edge.target));
   return <div className="space-y-3 text-xs">
     <p role="status" className="text-ink-secondary">
-      {graph.busy && !lastPage ? "Loading recorded relationships…" : `${edges.length} loaded relationships · total unknown`}
+      {graph.busy && !lastPage ? "Loading recorded relationships…" : lastPage && !lastPage.next_cursor && !graph.error ? `${countLabel(edges.length, "recorded relationship")} · all pages loaded` : `${countLabel(edges.length, "loaded relationship")} · total unknown`}
     </p>
     <details className="rounded-lg border border-outline p-3">
       <summary className="cursor-pointer font-medium">Export investigation</summary>

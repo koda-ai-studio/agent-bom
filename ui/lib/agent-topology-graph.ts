@@ -42,7 +42,9 @@ export function topologyAgentDisplayName(agent: Agent): string {
   return formatInventoryAgentLabel(agent.name);
 }
 
+/** Humanize slug identifiers only; a name with spaces is already a display name. */
 export function formatInventoryAgentLabel(name: string): string {
+  if (/\s/.test(name.trim())) return name.trim();
   return name
     .replace(/[-_]/g, " ")
     .replace(/\b\w/g, (char) => char.toUpperCase());

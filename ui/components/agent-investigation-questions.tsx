@@ -1,5 +1,6 @@
 "use client";
 
+import { countLabel } from "@/lib/count-label";
 import Link from "next/link";
 import { useState } from "react";
 import type { ExposurePath } from "@/lib/exposure-path";
@@ -43,7 +44,7 @@ export function AgentInvestigationQuestions({ path, scanId, onConnections }: {
     </div>
     <section aria-label={question ?? "Choose an investigation question"} className="space-y-3">
       {question === "Reach & connections" && <>
-        <p>{Math.max(0, path.hops.length - 1)} path hops · {receipts.length} matching receipts · {blocked.length} hops with recorded denial or blocking.</p>
+        <p>{countLabel(Math.max(0, path.hops.length - 1), "path hop")} · {countLabel(receipts.length, "matching receipt")} · {countLabel(blocked.length, "hop")} with recorded denial or blocking.</p>
         <p>Inspect each hop for identity, action, resource, direction, freshness and permission evidence. Graph connectivity alone does not establish effective access.</p>
         <button type="button" onClick={onConnections} className="min-h-11 rounded-lg border border-outline px-3 py-2">Explore incoming and outgoing connections</button>
         {evidence}
@@ -52,7 +53,7 @@ export function AgentInvestigationQuestions({ path, scanId, onConnections }: {
         {scenarioStart < 0 ? <p>No canonical agent is recorded on this path. Collect agent identity before assigning a compromise scenario.</p> : <label className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={assumed} onChange={event => setAssumed(event.target.checked)} />Assume an attacker controls {path.hops[scenarioStart]?.label}</label>}
         {assumed && scenarioStart >= 0 ? <>
           <p><strong>Scenario assumption only.</strong> Inspect the recorded path for candidate actions and stopping conditions. This does not establish a successful compromise.</p>
-          <p>{scenarioBlocked.length ? `${scenarioBlocked.length} hops contain denial or blocking evidence. Do not assume downstream access through those hops.` : "No denial or blocking receipt is attached to this path; this is not proof that controls are absent."}</p>
+          <p>{scenarioBlocked.length ? `${countLabel(scenarioBlocked.length, "hop")} ${scenarioBlocked.length === 1 ? "contains" : "contain"} denial or blocking evidence. Do not assume downstream access through those hops.` : "No denial or blocking receipt is attached to this path; this is not proof that controls are absent."}</p>
           <p>Every subsequent action still needs applicable permission and vulnerability prerequisites. Missing receipts remain unknown.</p>
           <GraphHopEvidenceInspector hops={scenarioHops} receipts={path.hopEvidence?.slice(scenarioStart)} />
         </> : <p>Select the assumption to examine this path as a conditional misuse scenario. No calls are executed or controls changed.</p>}
@@ -70,7 +71,7 @@ export function AgentInvestigationQuestions({ path, scanId, onConnections }: {
         <p>Next evidence: inspect the permitted action on each target and collect audit outcomes to distinguish attempted access, denial, failure and actual effects.</p>
       </>}
       {question === "Recorded activity" && <>
-        <p>{observed.length} matching hop receipts record runtime activity; {blocked.length} hops record blocking or denial. An observed call does not establish vulnerable-code execution or successful access.</p>
+        <p>{countLabel(observed.length, "matching hop receipt")} {observed.length === 1 ? "records" : "record"} runtime activity; {countLabel(blocked.length, "hop")} {blocked.length === 1 ? "records" : "record"} blocking or denial. An observed call does not establish vulnerable-code execution or successful access.</p>
         {!observed.length && <p>No runtime observation is attached to this path. Collect gateway or service audit events with stable agent, tool, target and event identities.</p>}
         {!agents.length && <p>A recorded agent name is unavailable; an activity filter cannot be established from display labels.</p>}
         {!!agents.length && <p>Activity is filtered by the recorded agent name. Shared names may include other agents; use exact event references to correlate a hop.</p>}

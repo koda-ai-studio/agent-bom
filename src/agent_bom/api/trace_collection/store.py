@@ -136,7 +136,7 @@ class TraceCollectionStore:
                     raise CollectionConflictError("Provider cursor cycle or page limit reached; checkpoint retained.")
                 state.cursor_history.append(cursor_digest)
             state.consecutive_failures = 0
-            state.persisted += put_page(tx, tenant, connection, records)
+            state.persisted += put_page(tx, tenant, connection, records, dialect=self.backend.dialect)
             state.cursor, state.pages = next_cursor, state.pages + 1
             state.last_success = datetime.fromtimestamp(now, timezone.utc).isoformat()
             state.owner, state.lease_until, state.retry_after = "", 0, 0

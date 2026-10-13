@@ -41,7 +41,8 @@ import { readableLineageDagreLr } from "@/lib/graph-node-dimensions";
 import { graphFitViewOptions, shouldShowGraphMiniMap } from "@/lib/graph-viewport";
 import { decideGraphRenderer } from "@/lib/graph-renderer-switch";
 import { mergeGraphNodeDetail } from "@/lib/graph-entity-detail";
-import { buildFocusedGraphData, completeDirectedHopCount, layersForFocusedPath } from "@/lib/security-graph-focus";
+import { buildFocusedGraphData, layersForFocusedPath } from "@/lib/security-graph-focus";
+import { hopReceiptCoverage } from "@/lib/hop-receipt-coverage";
 import { buildUnifiedFlowGraph } from "@/lib/unified-graph-flow";
 import { useGraphLayout } from "@/lib/use-graph-layout";
 import { useGraphPresentation } from "@/hooks/use-graph-presentation";
@@ -604,7 +605,7 @@ export function SecurityGraphInvestigation({
             </span>
           ))}
           <span className="text-[10px] text-ink-tertiary">
-            {completeDirectedHopCount(attackPath) === null ? "Directed-hop receipt count unavailable" : `${completeDirectedHopCount(attackPath)} directed hops evidenced`}
+            {hopReceiptCoverage(attackPath).summary}
           </span>
         </div>
       ) : null}

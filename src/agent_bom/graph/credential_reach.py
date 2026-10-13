@@ -5,11 +5,10 @@ from collections.abc import Iterable
 
 from agent_bom.graph.analysis import GraphAnalysisState, GraphAnalysisStatus
 from agent_bom.graph.container import UnifiedGraph
+from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.types import EntityType, RelationshipType
 
-MAX_EDGES = 100_000
 MAX_AGENT_EDGES = 5_000
-MAX_RESULTS = 10_000
 MAX_DEPTH = 6
 CREDENTIAL_TYPES = {EntityType.CREDENTIAL, EntityType.CREDENTIAL_REF}
 _CHAIN = {
@@ -33,21 +32,18 @@ def credential_routes(
     """Index edges once, stop at credentials, and never cross into another agent.
 
     Sharing, correlation and delegation describe context, not possession of a
-    peer's credentials. Limits apply across the whole call as well as per agent;
-    exhaustion remains visible in the graph's serialized analysis status.
+    peer's credentials. Only edges that can still lead to a credential are
+    indexed, so tool fan-out and other dead ends cost nothing and cannot
+    truncate discovery. There is no cross-agent result cap: every owner is
+    evaluated. The per-agent budget and depth bound remain visible in the
+    graph's serialized analysis status.
     """
-    outgoing: dict[str, list] = {}
-    for edge in graph.edges:
-        target = graph.nodes.get(edge.target)
-        if edge.traversable and edge.relationship in _CHAIN and target is not None and target.entity_type != EntityType.AGENT:
-            outgoing.setdefault(edge.source, []).append(edge)
+    owner_ids = list(dict.fromkeys(owners))
+    outgoing = _credential_leading_edges(graph) if owner_ids else {}
     routes: dict[str, dict[str, Route]] = {}
     examined = results = 0
     reasons: set[str] = set()
-    for owner in owners:
-        if examined >= MAX_EDGES or results >= MAX_RESULTS:
-            reasons.add("global_budget")
-            break
+    for owner in owner_ids:
         agent = graph.nodes.get(owner)
         if agent is None or agent.entity_type != EntityType.AGENT:
             continue
@@ -63,8 +59,8 @@ def credential_routes(
                     reasons.add("depth_budget")
                 continue
             for edge in outgoing.get(current, []):
-                if examined >= MAX_EDGES or local_edges >= MAX_AGENT_EDGES or results >= MAX_RESULTS:
-                    reasons.add("global_budget" if examined >= MAX_EDGES or results >= MAX_RESULTS else "agent_budget")
+                if local_edges >= MAX_AGENT_EDGES:
+                    reasons.add("agent_budget")
                     queue.clear()
                     break
                 examined += 1
@@ -82,7 +78,35 @@ def credential_routes(
     graph.analysis_status[analyzer] = GraphAnalysisStatus(
         status=GraphAnalysisState.LIMITED if reasons else GraphAnalysisState.COMPLETE,
         reason_codes=tuple(sorted(reasons)),
-        limits={"edges": MAX_EDGES, "agent_edges": MAX_AGENT_EDGES, "results": MAX_RESULTS, "depth": MAX_DEPTH},
+        limits={"agent_edges": MAX_AGENT_EDGES, "depth": MAX_DEPTH},
         observed={"edges": examined, "results": results, "agents": len(routes)},
     )
     return routes
+
+
+def _credential_leading_edges(graph: UnifiedGraph) -> dict[str, list[UnifiedEdge]]:
+    """Chain edges whose target is a credential or can still reach one.
+
+    Pruning is exact: a node with no chain path to a credential can never lie
+    on a credential route, so skipping it changes cost, never results.
+    """
+    chain: list[UnifiedEdge] = []
+    incoming: dict[str, list[str]] = {}
+    for edge in graph.edges:
+        target = graph.nodes.get(edge.target)
+        if edge.traversable and edge.relationship in _CHAIN and target is not None and target.entity_type != EntityType.AGENT:
+            chain.append(edge)
+            incoming.setdefault(edge.target, []).append(edge.source)
+    useful = {node_id for node_id in incoming if graph.nodes[node_id].entity_type in CREDENTIAL_TYPES}
+    frontier = list(useful)
+    while frontier:
+        node_id = frontier.pop()
+        for source in incoming.get(node_id, ()):
+            if source not in useful:
+                useful.add(source)
+                frontier.append(source)
+    outgoing: dict[str, list[UnifiedEdge]] = {}
+    for edge in chain:
+        if edge.target in useful:
+            outgoing.setdefault(edge.source, []).append(edge)
+    return outgoing

@@ -62,7 +62,7 @@ def read_source(path: Path, tenant_map: dict[str, str], tables: list[str]) -> li
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA query_only=ON")
         conn.execute("BEGIN")
-        require_legacy_runtime_source(conn, tables)
+        require_legacy_runtime_source(conn, tables, list(tenant_map))
         for table in sorted(set(tables), key=lambda t: (t == "access_review_items", t)):
             if table == "compliance_hub":
                 records.extend(read_compliance_snapshots(conn, tenant_map))

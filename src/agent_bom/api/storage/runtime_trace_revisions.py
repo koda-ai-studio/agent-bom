@@ -14,6 +14,8 @@ import json
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Any
 
+from agent_bom.analytics_retention import analytics_max_trace_revisions
+
 if TYPE_CHECKING:
     from agent_bom.api.storage.runtime_records import RuntimeObservationRecord, RuntimeSessionRecord
 
@@ -216,3 +218,109 @@ def read_revisions(
         (tenant_id, observation_id, max(1, min(limit, 1000)), max(0, offset)),
     ).fetchall()
     return [_observation_from_json(row[0]) for row in rows]
+
+
+def _orphan_histories_sql(p: str, when: str) -> str:
+    return (
+        "SELECT r.observation_id, COUNT(*) FROM runtime_observation_revisions r "  # nosec B608 — fixed identifiers
+        f"WHERE r.tenant_id={p} AND NOT EXISTS (SELECT 1 FROM runtime_observations o "
+        "WHERE o.tenant_id=r.tenant_id AND o.observation_id=r.observation_id) "
+        f"GROUP BY r.observation_id ORDER BY MIN({when}), r.observation_id LIMIT {p}"
+    )
+
+
+def _superseded_revisions_sql(p: str, when: str) -> str:
+    return (
+        "SELECT r.observation_id, r.revision FROM runtime_observation_revisions r "  # nosec B608 — fixed identifiers
+        f"WHERE r.tenant_id={p} AND r.revision < (SELECT MAX(x.revision) FROM runtime_observation_revisions x "
+        "WHERE x.tenant_id=r.tenant_id AND x.observation_id=r.observation_id) "
+        f"ORDER BY {when}, r.observation_id, r.revision LIMIT {p}"
+    )
+
+
+def prune_revisions_for_tenant(
+    conn: Any, tenant_id: str, *, placeholder: str = "?", dialect: str = "sqlite", max_rows: int | None = None
+) -> int:
+    """Bound one tenant's revision history after the projection write.
+
+    Histories whose projection row was already pruned are dropped whole, oldest
+    first; then superseded revisions of retained spans. The latest revision of
+    any span is never dropped. A dropped history no longer suppresses a later
+    replay of that span, matching projection retention.
+    """
+    if placeholder not in {"?", "%s"} or dialect not in {"sqlite", "postgres"}:
+        raise ValueError("Unsupported SQL dialect")
+    cap = analytics_max_trace_revisions() if max_rows is None else max_rows
+    if cap <= 0:
+        return 0
+    p = placeholder
+    total = conn.execute(f"SELECT COUNT(*) FROM runtime_observation_revisions WHERE tenant_id={p}", (tenant_id,)).fetchone()[0]  # nosec B608
+    excess = int(total) - cap
+    if excess <= 0:
+        return 0
+    when = "json_extract(r.data,'$.observed_at')" if dialect == "sqlite" else "(r.data::jsonb->>'observed_at')"
+    removed = 0
+    while excess > 0:
+        histories = conn.execute(_orphan_histories_sql(p, when), (tenant_id, min(excess, 500))).fetchall()
+        if not histories:
+            break
+        for observation_id, rows in histories:
+            conn.execute(
+                f"DELETE FROM runtime_observation_revisions WHERE tenant_id={p} AND observation_id={p}",  # nosec B608
+                (tenant_id, observation_id),
+            )
+            excess -= int(rows)
+            removed += int(rows)
+            if excess <= 0:
+                break
+    while excess > 0:
+        superseded = conn.execute(_superseded_revisions_sql(p, when), (tenant_id, min(excess, 500))).fetchall()
+        if not superseded:
+            break
+        for observation_id, revision in superseded:
+            conn.execute(
+                f"DELETE FROM runtime_observation_revisions WHERE tenant_id={p} AND observation_id={p} AND revision={p}",  # nosec B608
+                (tenant_id, observation_id, revision),
+            )
+        excess -= len(superseded)
+        removed += len(superseded)
+    return removed
+
+
+def prune_revisions_in_memory(
+    revisions: dict[tuple[str, str], list[RuntimeObservationRecord]],
+    projection: dict[tuple[str, str], RuntimeObservationRecord],
+    tenant_id: str,
+    *,
+    max_rows: int | None = None,
+) -> int:
+    """In-memory twin of :func:`prune_revisions_for_tenant`."""
+    cap = analytics_max_trace_revisions() if max_rows is None else max_rows
+    if cap <= 0:
+        return 0
+    keys = [key for key in revisions if key[0] == tenant_id]
+    excess = sum(len(revisions[key]) for key in keys) - cap
+    removed = 0
+
+    def oldest(key: tuple[str, str]) -> tuple[str, str]:
+        return min((record.observed_at for record in revisions[key]), default=""), key[1]
+
+    orphans = sorted((key for key in keys if key not in projection), key=oldest)
+    for key in orphans:
+        if excess <= 0:
+            break
+        rows = len(revisions.pop(key))
+        excess -= rows
+        removed += rows
+    if excess > 0:
+        live = [key for key in keys if key in revisions]
+        superseded = sorted((record.observed_at, key[1], index, key) for key in live for index, record in enumerate(revisions[key][:-1]))[
+            :excess
+        ]
+        drop: dict[tuple[str, str], set[int]] = {}
+        for _, _, index, key in superseded:
+            drop.setdefault(key, set()).add(index)
+        for key, indexes in drop.items():
+            revisions[key] = [record for index, record in enumerate(revisions[key]) if index not in indexes]
+            removed += len(indexes)
+    return removed

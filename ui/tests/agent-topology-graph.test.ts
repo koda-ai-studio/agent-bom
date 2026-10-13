@@ -7,9 +7,11 @@ import {
   filterTopologyAgents,
   limitTopologyAgents,
   serverHasCredentials,
+  formatInventoryAgentLabel,
   topologyAgentDisplayName,
   topologySummary,
 } from "@/lib/agent-topology-graph";
+import { formatExposureEntityDisplay } from "@/lib/entity-display";
 
 function agent(name: string, servers: Agent["mcp_servers"] = []): Agent {
   return {
@@ -28,6 +30,12 @@ describe("agent-topology-graph", () => {
         enrollment_name: "Prod Cursor",
       }),
     ).toBe("Prod Cursor");
+  });
+
+  it("keeps an already human-readable agent name canonical", () => {
+    expect(formatInventoryAgentLabel("Cursor First-Run Workspace")).toBe("Cursor First-Run Workspace");
+    expect(formatInventoryAgentLabel("claude_desktop")).toBe("Claude Desktop");
+    expect(formatExposureEntityDisplay("Cursor First-Run Workspace", "agent").title).toBe("Cursor First-Run Workspace");
   });
 
   it("scores credential and vulnerability edges higher", () => {

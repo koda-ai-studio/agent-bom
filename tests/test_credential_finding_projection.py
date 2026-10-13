@@ -173,18 +173,19 @@ def test_projection_rejects_foreign_credentials_in_stale_findings():
     assert node.attributes["credential_node_ids"] == own_credentials
 
 
-def test_credential_traversal_budgets_are_global_and_reported(monkeypatch):
+def test_credential_traversal_agent_budget_is_reported(monkeypatch):
     from agent_bom.graph import credential_reach
     from agent_bom.graph.types import EntityType
 
     _, graph, _ = _scan()
-    monkeypatch.setattr(credential_reach, "MAX_EDGES", 2)
+    monkeypatch.setattr(credential_reach, "MAX_AGENT_EDGES", 1)
     routes = credential_reach.credential_routes(graph, (a.id for a in graph.nodes_by_type(EntityType.AGENT)), analyzer="test_budget")
     status = graph.analysis_status["test_budget"]
     assert status.status.value == "limited"
-    assert "global_budget" in status.reason_codes
-    assert status.observed["edges"] == 2
-    assert sum(len(credentials) for credentials in routes.values()) == 1
+    assert status.reason_codes == ("agent_budget",)
+    assert "edges" not in status.limits and "results" not in status.limits
+    assert status.observed["agents"] == 2
+    assert sum(len(credentials) for credentials in routes.values()) == 0
 
 
 def test_shared_credential_is_terminal_and_associations_are_indexed(monkeypatch):
@@ -244,10 +245,23 @@ def test_shared_credential_is_terminal_and_associations_are_indexed(monkeypatch)
 
 def test_credential_budget_survives_path_evidence_annotation(monkeypatch):
     from agent_bom.graph import credential_reach
+    from agent_bom.graph.container import UnifiedGraph
+    from agent_bom.graph.credential_findings import project_credential_findings
+    from agent_bom.graph.edge import UnifiedEdge
+    from agent_bom.graph.node import UnifiedNode
+    from agent_bom.graph.toxic_findings import build_toxic_combination_findings_data
+    from agent_bom.graph.types import EntityType, RelationshipType
 
-    _, graph, _ = _scan()
-    monkeypatch.setattr(credential_reach, "MAX_EDGES", 2)
+    graph = UnifiedGraph()
+    graph.add_node(UnifiedNode(id="agent:a", label="a", entity_type=EntityType.AGENT))
+    for i in (1, 2):
+        graph.add_node(UnifiedNode(id=f"server:{i}", label=f"s{i}", entity_type=EntityType.SERVER))
+        graph.add_node(UnifiedNode(id=f"cred:{i}", label=f"c{i}", entity_type=EntityType.CREDENTIAL))
+        graph.add_edge(UnifiedEdge(source="agent:a", target=f"server:{i}", relationship=RelationshipType.USES))
+        graph.add_edge(UnifiedEdge(source=f"server:{i}", target=f"cred:{i}", relationship=RelationshipType.EXPOSES_CRED))
+    project_credential_findings(graph, build_toxic_combination_findings_data(graph))
+    monkeypatch.setattr(credential_reach, "MAX_AGENT_EDGES", 3)
     paths = [p for p in _derived_attack_paths(graph) if p.finding_ids]
-    assert len(paths) == 1
+    assert [p.hops[-2] for p in paths] == ["cred:1"]
     assert paths[0].analysis["status"] == "limited"
-    assert "global_budget" in paths[0].analysis["reason_codes"]
+    assert paths[0].analysis["reason_codes"] == ["agent_budget"]

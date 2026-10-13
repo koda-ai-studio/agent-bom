@@ -54,16 +54,17 @@ it("uses recorded labels, retains identifiers and inspects the canonical endpoin
   expect(inspect).toHaveBeenCalledWith("server:opaque-id");
   fireEvent.click(screen.getByText("Canonical identifiers"));
   expect(screen.getByText("server:opaque-id")).toBeVisible();
-  expect(screen.getByRole("status")).toHaveTextContent("1 loaded relationships · total unknown");
+  expect(screen.getByRole("status")).toHaveTextContent("1 recorded relationship · all pages loaded");
 });
 it("loads the next bounded page with the same snapshot generation", async () => {
   fetchPage.mockResolvedValueOnce(page("cursor-next")).mockResolvedValueOnce(page());
   render(<GraphRecordedRelationshipScope scanId="s-1" nodeId="agent:one"><GraphRecordedRelationships scanId="s-1" nodeId="agent:one" /></GraphRecordedRelationshipScope>);
+  expect(await screen.findByRole("status")).toHaveTextContent("1 loaded relationship · total unknown");
   fireEvent.click(await screen.findByRole("button", { name: "Load more recorded relationships" }));
   await waitFor(() => expect(fetchPage).toHaveBeenCalledTimes(2));
   expect(fetchPage.mock.calls[1]![1]).toMatchObject({ scanId: "s-1", snapshotGeneration: generation, cursor: "cursor-next", direction: "both" });
   await screen.findByText(/End of recorded pages/);
-  expect(screen.getByRole("status")).toHaveTextContent("1 loaded relationships");
+  expect(screen.getByRole("status")).toHaveTextContent("1 recorded relationship · all pages loaded");
 });
 it("retains missing endpoints as canonical IDs without invented labels", async () => {
   fetchPage.mockResolvedValue(page(null, true));

@@ -18,6 +18,7 @@ from agent_bom.graph.edge_lookup import _edge_relationships_for_hops as _edge_re
 from agent_bom.graph.edge_lookup import _EdgeLookup as _EdgeLookup
 from agent_bom.graph.edge_lookup import _rel_value as _rel_value
 from agent_bom.graph.node import UnifiedNode
+from agent_bom.graph.path_evidence import package_path_covers_rollup, rank_attack_path
 from agent_bom.graph.path_evidence import with_technique_mappings as _with_technique_mappings
 from agent_bom.graph.reachability_truth import node_reachability
 from agent_bom.graph.types import EntityType, RelationshipType
@@ -525,7 +526,7 @@ def _derived_attack_paths(graph: UnifiedGraph) -> list[AttackPath]:
             if _rel_value(finding_edge) != RelationshipType.VULNERABLE_TO.value:
                 continue
             vulnerable_source = graph.nodes.get(finding_edge.source)
-            if vulnerable_source is None:
+            if vulnerable_source is None or package_path_covers_rollup(finding_edge, incoming):
                 continue
 
             server_ids: list[str] = []
@@ -629,10 +630,6 @@ def _derived_attack_paths(graph: UnifiedGraph) -> list[AttackPath]:
             combined.append(derived_path)
             existing_keys.add(derived_path_key)
     return _with_technique_mappings(
-        sorted(
-            combined,
-            key=lambda path: (path.composite_risk, len(path.hops), len(path.credential_exposure), len(path.tool_exposure)),
-            reverse=True,
-        ),
+        sorted(combined, key=rank_attack_path),
         graph,
     )

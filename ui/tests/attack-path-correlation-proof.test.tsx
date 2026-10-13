@@ -122,7 +122,9 @@ describe("AttackPathCorrelationProof", () => {
     render(<AttackPathCorrelationProof path={path} />);
 
     expect(screen.getByText("Hop receipts incomplete")).toBeInTheDocument();
-    expect(screen.getByText("Directed-hop receipt count unavailable")).toBeInTheDocument();
+    expect(screen.queryByText("Directed-hop receipt count unavailable")).not.toBeInTheDocument();
+    expect(screen.getByText("0/2 hops fully evidenced · 1 of 2 hop receipts recorded")).toBeInTheDocument();
+    expect(screen.getByText("Gaps: not traversable, freshness not established, path analysis not complete")).toBeInTheDocument();
     expect(screen.getByText("Stale allowed")).toHaveClass("text-amber-700");
     expect(screen.queryByText("Path verified")).not.toBeInTheDocument();
   });
@@ -198,4 +200,24 @@ it("shows the server ranking reasons without deriving a browser score", () => {
   expect(screen.getByText("Why this path ranks here")).toBeInTheDocument();
   fireEvent.click(screen.getByText("Why this path ranks here"));
   expect(screen.getByText(/Recorded credential edge raises review priority/)).toBeVisible();
+});
+
+it("keeps the receipt summary consistent with the receipts listed for inspection", () => {
+  const receipt = (source: string, target: string, relationship: string) => ({
+    source_node_id: source, target_node_id: target, relationship, source_snapshot_ids: ["scan-1"],
+    relationship_provenance: "unavailable", correlation_identity_status: "current", evidence_tier: "static_evidence",
+    confidence: 1, freshness: "unknown", runtime_observed_state: "not_observed", direction: "directed",
+    traversable: true, complete: false, truncated: false,
+  });
+  const path = {
+    source: "agent:a", target: "finding:f", reachability: "unknown", analysis: { status: "complete" },
+    hops: ["agent:a", "server:s", "cred:c", "finding:f"], edges: ["uses", "exposes_cred", "vulnerable_to"],
+    hop_evidence: [receipt("agent:a", "server:s", "uses"), receipt("server:s", "cred:c", "exposes_cred"), receipt("cred:c", "finding:f", "vulnerable_to")],
+  } as unknown as GraphAttackPath;
+  render(<AttackPathCorrelationProof path={path} />);
+  expect(screen.getByText("Hop receipts incomplete")).toBeInTheDocument();
+  expect(screen.queryByText("Directed-hop receipt count unavailable")).not.toBeInTheDocument();
+  expect(screen.getByText("0/3 hops fully evidenced · 3 of 3 hop receipts recorded")).toBeInTheDocument();
+  expect(screen.getByText("Gaps: receipt marked incomplete, freshness not established, relationship provenance unavailable")).toBeInTheDocument();
+  expect(screen.getByText("Inspect 3 hop receipts")).toBeInTheDocument();
 });

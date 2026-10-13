@@ -10,7 +10,7 @@
       ]
     }
   ],
-  "artifact_sha256": "sha256:973e3f0e1a1d685b14434d9d8bc4dcbc4b709a84b624739687e90ac8c9ff9b27",
+  "artifact_sha256": "sha256:f6472c8be51e544421c3540345d9be2f81e010c08fae01dbe6226e85a1af32a2",
   "capture_fixture": {
     "fix_first": {
       "attack_campaigns": [
@@ -1001,9 +1001,7 @@
         "credential_finding_paths": {
           "limits": {
             "agent_edges": 5000,
-            "depth": 6,
-            "edges": 100000,
-            "results": 10000
+            "depth": 6
           },
           "observed": {
             "agents": 0,
@@ -2526,9 +2524,7 @@
           "credential_finding_paths": {
             "limits": {
               "agent_edges": 5000,
-              "depth": 6,
-              "edges": 100000,
-              "results": 10000
+              "depth": 6
             },
             "observed": {
               "agents": 0,
