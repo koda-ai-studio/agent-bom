@@ -169,6 +169,7 @@ async function routeCockpit(
     longPathNodeCount?: number;
     longNodeLabel?: boolean;
     referenceGraph?: boolean;
+    scenarioTool?: boolean;
   } = {},
 ) {
   await page.route("**/v1/**", route => route.fulfill({ status: 404, json: { detail: "Outside graph fixture" } }));
@@ -176,6 +177,13 @@ async function routeCockpit(
   if (options.referenceGraph) {
     const reference = JSON.parse(readFileSync("../examples/reference-evidence-lab/generated/correlation-proof.json", "utf8"));
     Object.assign(graph, reference.capture_fixture.graph, { scan_id: scanId, tenant_id: "default" });
+  }
+  if (options.scenarioTool) {
+    graph.nodes.push(node("tool:repo-write", "tool", "create_pull_request"));
+    graph.edges.push(edge("server:github", "tool:repo-write", "provides_tool"));
+    graph.stats.total_nodes = graph.nodes.length;
+    graph.stats.total_edges = graph.edges.length;
+    graph.pagination.total = graph.nodes.length;
   }
   if (options.longNodeLabel) graph.nodes[1]!.label = `reference-evidence-api@sha256:${"a".repeat(64)}`;
   if (options.longPathNodeCount) {
@@ -534,7 +542,7 @@ for (const proof of [
   for (const capture of [false, true]) {
   test(`scenario comparison stays truthful at ${proof.width}x${proof.height} ${proof.theme} capture=${capture}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width: proof.width, height: proof.height });
-    await routeCockpit(page, 36);
+    await routeCockpit(page, 36, { scenarioTool: true });
     await page.addInitScript((selectedTheme) => {
       window.localStorage.setItem("agent-bom-theme", selectedTheme);
     }, proof.theme);
@@ -577,7 +585,7 @@ for (const proof of [
         return issues;
       });
     })).toEqual([]);
-    await expect(canvas.locator(".react-flow__node")).toHaveCount(3);
+    await expect(canvas.locator(".react-flow__node")).toHaveCount(4);
     await page.screenshot({ path: testInfo.outputPath(`scenario-first-view-${proof.theme}-${capture}.png`) });
     await expect.poll(() => canvas.locator(".react-flow__node").evaluateAll((nodes) => {
       const frame = nodes[0]?.closest(".react-flow")?.getBoundingClientRect();

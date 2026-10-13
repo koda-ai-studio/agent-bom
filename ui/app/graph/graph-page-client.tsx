@@ -3860,7 +3860,7 @@ function GraphPageInner() {
               }}
             >
               <Background color={BACKGROUND_COLOR} gap={BACKGROUND_GAP} />
-              <Controls orientation={selectedScenarioId ? "horizontal" : "vertical"} position={selectedScenarioId ? "bottom-right" : "bottom-left"} className={CONTROLS_CLASS} />
+              <Controls orientation={selectedScenarioId ? "horizontal" : "vertical"} position="bottom-left" className={CONTROLS_CLASS} />
               {minimapExpanded && showMiniMap && (canvasLens !== "estate" || graphViewport.zoom >= 1) && (
                 <MiniMap
                   style={narrowViewport ? { width: 96, height: 64 } : undefined}

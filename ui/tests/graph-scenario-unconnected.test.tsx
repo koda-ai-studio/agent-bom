@@ -7,7 +7,7 @@ it("keeps disconnected proposal evidence selectable outside the graph", () => {
   const onSelect = vi.fn();
   render(<GraphScenarioUnconnected nodes={[node]} notes={new Map([[node.id, "Connection removed in proposal"]])} selectedId={node.id} onSelect={onSelect} />);
   const panel = screen.getByRole("region", { name: "Unconnected proposal items" });
-  expect(panel).toHaveTextContent("1 item has no connection in the supplied proposal");
+  expect(panel).toHaveTextContent("Unconnected proposal items · 1");
   const button = screen.getByRole("button", { name: /DEMO_CRED_REF/ });
   expect(button).toHaveAttribute("aria-pressed", "true");
   fireEvent.click(button);
