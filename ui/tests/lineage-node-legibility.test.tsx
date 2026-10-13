@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { render, screen } from "@testing-library/react";
 import { ReactFlowProvider } from "@xyflow/react";
+import { LineageDetailPanel } from "@/components/lineage-detail";
 import { lineageNodeTypes } from "@/components/lineage-nodes";
 
 const source = readFileSync(
@@ -11,12 +12,29 @@ const source = readFileSync(
 );
 
 describe("lineage node labels", () => {
+  it("uses the same entity glyph in the canvas and inspector", () => {
+    const Renderer = lineageNodeTypes.agentNode;
+    const { container } = render(<ReactFlowProvider>
+      <section data-testid="node"><Renderer data={{ label: "Review agent", nodeType: "agent" }} /></section>
+      <LineageDetailPanel data={{ label: "Review agent", nodeType: "agent" }} onClose={() => {}} variant="inline" />
+    </ReactFlowProvider>);
+    const nodeIcon = screen.getByTestId("node").querySelector("svg");
+    const inspectorIcon = container.querySelector('[data-testid="graph-entity-drawer"] svg');
+    expect(inspectorIcon?.innerHTML).toBe(nodeIcon?.innerHTML);
+  });
   it("qualifies partial graph counts visibly without claiming empty inventory", () => {
     const Renderer = lineageNodeTypes.agentNode;
     render(<ReactFlowProvider><Renderer data={{ label: "Scoped agent", nodeType: "agent", serverCount: 0, packageCount: 0, countScope: "loaded_graph", countHopLimits: { serverCount: 1, packageCount: 3 } }} /></ReactFlowProvider>);
-    expect(screen.getByText("Loaded graph")).toBeVisible();
-    expect(screen.getByTitle(/Servers: 1 hop; packages: 3 hops/)).toHaveTextContent("0 srv");
+    expect(screen.queryByText("Loaded graph")).not.toBeInTheDocument();
+    expect(screen.getByTitle(/Servers: 1 hop; packages: 3 hops/)).toHaveTextContent("0 linked servers");
   });
+  it("does not show a count-scope label on a server without counts", () => {
+    const Renderer = lineageNodeTypes.serverNode;
+    render(<ReactFlowProvider><Renderer data={{ label: "Image processing MCP server", nodeType: "server", countScope: "loaded_graph" }} /></ReactFlowProvider>);
+    expect(screen.queryByText("Loaded graph")).not.toBeInTheDocument();
+    expect(screen.queryByTitle(/Distinct entities linked/)).not.toBeInTheDocument();
+  });
+
   it.each([
     { entityType: "application", nodeType: "container" as const, badge: "Application" },
     { entityType: "container", nodeType: "container" as const, badge: "Container" },

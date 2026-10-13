@@ -774,7 +774,10 @@ for (const theme of ["light", "dark"] as const) {
       };
       return labels.map(label => {
         const foreground = luminance(getComputedStyle(label).color);
-        const background = luminance(getComputedStyle(label.parentElement!).backgroundColor);
+        // Glyph labels sit on the canvas without an opaque node card.
+        let surface: Element | null = label;
+        while (surface && ["rgba(0, 0, 0, 0)", "transparent"].includes(getComputedStyle(surface).backgroundColor)) surface = surface.parentElement;
+        const background = luminance(getComputedStyle(surface ?? document.body).backgroundColor);
         return (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05);
       });
     });
@@ -926,6 +929,16 @@ for (const theme of ["light", "dark"] as const) {
     });
     expect(overlaps).toEqual([]);
     await page.screenshot({path:testInfo.outputPath(`small-snapshot-${theme}.png`),fullPage:true});
+    const agent = page.locator('[data-id="agent:small"].react-flow__node');
+    const counts = agent.locator(".graph-node-context").last();
+    await expect(page.getByText("Loaded graph", { exact: true })).toHaveCount(0);
+    await expect(counts).toHaveCSS("visibility", "hidden");
+    await agent.hover();
+    await expect(counts).toBeVisible();
+    await expect(counts).toContainText("linked server");
+    await page.mouse.move(0, 0);
+    await agent.focus();
+    await expect(counts).toBeVisible();
   });
 }
 

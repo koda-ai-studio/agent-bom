@@ -1,41 +1,23 @@
 "use client";
 
+import { entityIcon } from "@/lib/entity-icons";
 import { NODE_LABELS } from "@/lib/entity-labels";
 import { nodeRiskLabel } from "@/lib/node-risk-assessment";
-import { useEffect, useState, type ComponentType, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import { Drawer } from "@/components/drawer";
 import {
-  Brain,
-  Bug,
-  Building2,
   ChevronLeft,
   ChevronRight,
-  Cloud,
-  Component,
-  Database,
-  DraftingCompass,
   ExternalLink,
-  FileCode,
-  FileCog,
-  Folder,
   Hourglass,
-  KeyRound,
   Lock,
   Loader2,
-  Package,
   Radar,
-  Server,
   Shield,
-  ShieldAlert,
   ShieldOff,
-  TriangleAlert,
-  Waypoints,
-  Workflow,
-  Wrench,
   X,
-  Zap,
 } from "lucide-react";
 
 import { severityColor } from "@/lib/api";
@@ -47,51 +29,6 @@ import {
 } from "@/lib/effective-reach";
 import { getOsvVulnerabilityUrl } from "@/lib/vulnerabilities";
 import type { LineageNodeData, RuntimeEvidenceTier } from "./lineage-nodes";
-
-const TYPE_ICON: Record<
-  LineageNodeData["nodeType"],
-  ComponentType<{ className?: string }>
-> = {
-  provider: Building2,
-  agent: ShieldAlert,
-  org: Building2,
-  account: Building2,
-  user: ShieldAlert,
-  group: Building2,
-  role: KeyRound,
-  policy: Lock,
-  serviceAccount: KeyRound,
-  servicePrincipal: KeyRound,
-  federatedIdentity: KeyRound,
-  environment: Cloud,
-  fleet: Building2,
-  cluster: Server,
-  server: Server,
-  sharedServer: Server,
-  package: Package,
-  vulnerability: Bug,
-  misconfiguration: TriangleAlert,
-  credential: KeyRound,
-  tool: Wrench,
-  model: Brain,
-  framework: Brain,
-  dataset: Database,
-  container: Package,
-  cloudResource: Cloud,
-  managedIdentity: KeyRound,
-  accessGrant: KeyRound,
-  accessPolicy: KeyRound,
-  driftIncident: TriangleAlert,
-  dataStore: Database,
-  directory: Folder,
-  sourceFile: FileCode,
-  configFile: FileCog,
-  codeModule: Component,
-  ciJob: Workflow,
-  apiGateway: Waypoints,
-  toolCall: Zap,
-  blueprint: DraftingCompass,
-};
 
 const TYPE_BORDER: Record<LineageNodeData["nodeType"], string> = {
   provider: "border-outline",
@@ -157,7 +94,7 @@ export function LineageDetailPanel({
   headerSlot?: ReactNode;
   footerSlot?: ReactNode;
 }) {
-  const Icon = TYPE_ICON[data.nodeType];
+  const Icon = entityIcon(data.nodeType);
   const typeLabel = data.nodeType === "server" ? "MCP Server" : data.nodeType === "sharedServer" ? "Shared MCP Server" : NODE_LABELS[data.nodeType];
   const osvUrl =
     data.nodeType === "vulnerability"
@@ -197,7 +134,7 @@ export function LineageDetailPanel({
     },
   );
 
-  const { width, onHandlePointerDown, onHandleKeyDown } = useDrawerWidth();
+  const { width, minWidth, maxWidth, onHandlePointerDown, onHandleKeyDown } = useDrawerWidth();
   const isOverlay = variant === "overlay";
   const isDocked = variant === "docked";
   const [dockedCollapsed, setDockedCollapsed] = useState(false);
@@ -784,6 +721,10 @@ export function LineageDetailPanel({
           role="separator"
           aria-label="Resize drawer"
           aria-orientation="vertical"
+          aria-valuenow={width}
+          aria-valuemin={minWidth}
+          aria-valuemax={maxWidth}
+          aria-valuetext={`${width} pixels`}
           tabIndex={0}
           onKeyDown={onHandleKeyDown}
           onPointerDown={onHandlePointerDown}
@@ -798,9 +739,9 @@ export function LineageDetailPanel({
           <span className="text-[10px] uppercase tracking-wider text-ink-tertiary">
             {typeLabel}
           </span>
-          <div className="flex items-center gap-2 mt-0.5">
-            <Icon className="w-4 h-4 shrink-0 text-ink-secondary" />
-            <h3 className="truncate text-sm font-semibold text-foreground">
+          <div className="mt-2 flex items-start gap-3">
+            <span className="rounded-full border border-outline bg-surface-muted p-2"><Icon aria-hidden="true" className="h-5 w-5 shrink-0 text-ink-secondary" /></span>
+            <h3 className="min-w-0 self-center break-words text-base font-semibold leading-5 text-foreground [overflow-wrap:anywhere]">
               {data.label}
             </h3>
           </div>

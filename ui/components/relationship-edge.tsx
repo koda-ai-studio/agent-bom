@@ -1,6 +1,6 @@
 "use client";
 
-import { BaseEdge, EdgeLabelRenderer, SmoothStepEdge, getSmoothStepPath, type EdgeProps } from "@xyflow/react";
+import { BaseEdge, EdgeLabelRenderer, SmoothStepEdge, getBezierPath, type EdgeProps } from "@xyflow/react";
 import {
   ArrowRightLeft, Box, Bug, CirclePlay, Database, Eye, Fingerprint,
   GitBranch, KeyRound, Link2, LogIn, Plug, ShieldCheck, UserRoundCheck, Wrench,
@@ -60,7 +60,7 @@ export function RelationshipBadge({ relationship, children }: {
 
 export function RelationshipEdge(props: EdgeProps) {
   if (props.data?.isClusterEdge) return <SmoothStepEdge {...props} />;
-  const [path, x, y] = getSmoothStepPath(props);
+  const [path, x, y] = getBezierPath(props);
   const relationship = typeof props.data?.relationship === "string" ? props.data.relationship : "";
   return <>
     <BaseEdge id={props.id} path={path} style={props.style}

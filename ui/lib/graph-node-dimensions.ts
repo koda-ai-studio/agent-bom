@@ -1,23 +1,12 @@
-/**
- * Shared footprint for the lineage node cards rendered across every React Flow
- * graph surface (unified graph, Agent Mesh, context lineage).
- *
- * The cards are `min-w-[208px] max-w-[300px]` with `border-2 px-4 py-3` and a
- * variable-height body (header + optional subtitle + optional footer rows). To
- * guarantee the auto-layout never lets two cards touch — the top dogfooding
- * complaint, visible even on a 4-node chain — dagre must be told a box that is
- * at least as large as the *widest / tallest* card it will ever draw. Declaring
- * the worst-case footprint means every real card, being equal or smaller, keeps
- * at least the configured rank/node separation of clear space around it.
- */
+/** Shared layout footprint for circular entity glyphs and readable labels. */
 
 import type { DagreLrOptions } from "@/lib/use-dagre-lr";
 import type { MinSeparationOptions } from "@/lib/dagre-layout";
 
-/** Worst-case rendered width of a lineage card (max-w-[300px] + border). */
-export const LINEAGE_NODE_WIDTH = 300;
-/** Worst-case rendered height of a lineage card (tall CVE card + border). */
-export const LINEAGE_NODE_HEIGHT = 140;
+/** Reserve label width as well as the circular glyph. */
+export const LINEAGE_NODE_WIDTH = 240;
+/** Reserve three label lines and evidence/finding metadata below the glyph. */
+export const LINEAGE_NODE_HEIGHT = 224;
 /** Minimum clear gap enforced between any two lineage cards, at any scale. */
 export const GRAPH_NODE_MIN_GAP = 48;
 
@@ -47,7 +36,7 @@ export const LINEAGE_MIN_SEPARATION: MinSeparationOptions = {
 export const READABLE_LINEAGE_DAGRE_LR: DagreLrOptions = {
   nodeWidth: LINEAGE_NODE_WIDTH,
   nodeHeight: LINEAGE_NODE_HEIGHT,
-  rankSep: 176,
+  rankSep: 112,
   nodeSep: 56,
   minSeparation: LINEAGE_MIN_SEPARATION,
   fitAspect: LINEAGE_CANVAS_ASPECT,
@@ -74,14 +63,11 @@ export const COMPACT_GRAPH_MIN_ZOOM = 0.75;
 /** A bounded selected context keeps full labels and card-sized layout boxes. */
 export function compactInvestigationLayout(explicitContext: boolean, nodeCount: number): DagreLrOptions | undefined {
   if (!explicitContext || nodeCount < 1 || nodeCount > 16) return undefined;
-  // Preserve the established short-chain framing. Larger contexts reserve the
-  // three-line label and metadata height. Reserve a lane for relationship badges.
-  const height = nodeCount <= 4 ? 140 : 188;
   return readableLineageDagreLr({
-    nodeWidth: 260,
-    nodeHeight: height,
-    rankSep: nodeCount <= 4 ? 144 : 216,
-    nodeSep: 24,
-    minSeparation: { width: 260, height, gap: 24 },
+    nodeWidth: LINEAGE_NODE_WIDTH,
+    nodeHeight: LINEAGE_NODE_HEIGHT,
+    rankSep: 96,
+    nodeSep: 32,
+    minSeparation: { width: LINEAGE_NODE_WIDTH, height: LINEAGE_NODE_HEIGHT, gap: 24 },
   });
 }

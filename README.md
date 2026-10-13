@@ -72,6 +72,28 @@ or successful data access. Missing or stale evidence remains explicit.
 
 [Explore context, correlation and reachability](docs/PRODUCT_TOUR.md#context-correlation-and-reachability) · [Run the reference lab](examples/reference-evidence-lab/README.md)
 
+**Explore an environment, repository or cloud estate.** Start with a scoped view,
+select an entity, and inspect its recorded relationships and source evidence.
+These current-source previews use labeled synthetic examples.
+
+<p align="center"><a href="docs/images/graph-environment-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/graph-environment-light-live.png"><img src="docs/images/graph-environment-dark-live.png" alt="Sample environment connecting an AI agent, model, MCP server, tool, package and container workload" width="1100"></picture></a></p>
+
+<details>
+<summary>Repository and cloud investigations</summary>
+
+Follow source files, dependencies and CI context in a repository:
+
+<p align="center"><a href="docs/images/graph-repository-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/graph-repository-light-live.png"><img src="docs/images/graph-repository-dark-live.png" alt="Synthetic repository graph with source, dependency and CI relationships" width="1100"></picture></a></p>
+
+Inspect cloud assets and the identities connected to them:
+
+<p align="center"><a href="docs/images/graph-cloud-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/graph-cloud-light-live.png"><img src="docs/images/graph-cloud-dark-live.png" alt="Synthetic cloud estate graph with assets and recorded identity relationships" width="1100"></picture></a></p>
+
+Recorded relationships describe the available evidence; they do not establish
+successful execution or data access.
+
+</details>
+
 ## Open the sample graph
 
 ```bash

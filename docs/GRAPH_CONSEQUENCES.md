@@ -127,6 +127,8 @@ quarantine or zero-disruption guarantee is provided by this investigation.
 
 ## Explain a recorded relationship
 
+Hover or keyboard-focus an entity to reveal secondary counts and metadata; select it to open the evidence inspector. Counts cover linked entities in the loaded graph data and may be incomplete.
+
 Select an edge in the graph to open **Relationship details → Why linked**. The
 explanation distinguishes inventory use, available tools, dependencies and
 vulnerability findings from runtime execution. Recorded source, basis, mapping

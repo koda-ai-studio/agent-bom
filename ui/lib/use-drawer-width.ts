@@ -26,6 +26,16 @@ function clamp(value: number): number {
 
 export function useDrawerWidth() {
   const [width, setWidth] = useState<number>(DEFAULT_WIDTH);
+  const [widthLimit, setWidthLimit] = useState(960);
+  useEffect(() => {
+    const update = () => {
+      setWidthLimit(maxWidth());
+      setWidth(value => clamp(value));
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
 
   // Read after mount so server and client render the same markup.
   //
@@ -84,5 +94,5 @@ export function useDrawerWidth() {
     [persist, width],
   );
 
-  return { width, onHandlePointerDown, onHandleKeyDown };
+  return { width, minWidth: MIN_WIDTH, maxWidth: widthLimit, onHandlePointerDown, onHandleKeyDown };
 }

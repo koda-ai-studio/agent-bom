@@ -1,4 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
+import { createRequire } from "node:module";
+const resolveModule = createRequire(`${__dirname}/../package.json`);
+test.use({ bypassCSP: true });
 
 // Contracts formerly exercised through separate Context/Mesh canvases now use
 // the same bounded query, selection, and relationship inspector as other links.
@@ -96,5 +99,13 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     const header = await page.getByRole("banner").boundingBox();
     expect(heading!.y).toBeGreaterThanOrEqual(header!.y + header!.height);
     await page.screenshot({path: testInfo.outputPath(`shared-evidence-${theme}-${width}.png`), fullPage: true, animations: "disabled"});
+    await page.addScriptTag({ path: resolveModule.resolve("axe-core/axe.min.js") });
+    const violations = await page.evaluate(async () => {
+      const axe = (window as unknown as { axe: typeof import("axe-core") }).axe;
+      const result = await axe.run(document);
+      return result.violations.filter(item => item.impact === "serious" || item.impact === "critical");
+    });
+    await testInfo.attach("graph-accessibility", { body: JSON.stringify(violations), contentType: "application/json" });
+    expect(violations).toEqual([]);
   });
 }

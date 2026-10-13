@@ -52,11 +52,9 @@ function everyPairClear(nodes: Node[], opts: MinSeparationOptions): boolean {
 
 describe("readable lineage layout options", () => {
   it("declares a box at least as large as the real lineage card footprint", () => {
-    // The card is min-w-[208px] max-w-[300px] with a variable-height body; the
-    // declared box must cover the worst case so dagre's own spacing already
-    // guarantees a gap for every card it draws.
-    expect(READABLE_LINEAGE_DAGRE_LR.nodeWidth).toBeGreaterThanOrEqual(300);
-    expect(READABLE_LINEAGE_DAGRE_LR.nodeHeight).toBeGreaterThanOrEqual(140);
+    // A 72px glyph sits above a 220px-wide, three-line label and metadata.
+    expect(READABLE_LINEAGE_DAGRE_LR.nodeWidth).toBeGreaterThanOrEqual(220);
+    expect(READABLE_LINEAGE_DAGRE_LR.nodeHeight).toBeGreaterThanOrEqual(224);
     expect(READABLE_LINEAGE_DAGRE_LR.minSeparation).toEqual(LINEAGE_MIN_SEPARATION);
   });
 

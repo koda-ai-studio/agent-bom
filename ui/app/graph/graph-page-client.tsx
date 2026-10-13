@@ -1742,7 +1742,7 @@ function GraphPageInner() {
   const compactInvestigationTopology = investigationLayout !== undefined;
   const compactMobileTopology = narrowViewport && !selectedAttackPath &&
     !rollupNavigationActive && compactGroupedTopology;
-  const graphLayoutKind = compactMobileTopology || investigationMode ? "dagre" : "dagre-lr";
+  const graphLayoutKind = compactMobileTopology || (narrowViewport && investigationMode) ? "dagre" : "dagre-lr";
   const scenarioContextIds = useMemo(() => {
     if (!selectedScenarioId || !scenarioComparison?.available || scenarioExpanded || attackPathLens || selectedAttackPath || investigationMode) return undefined;
     return graphScenarioContextIds(aggregated.nodes, aggregated.edges, scenarioComparison.difference, mergedGraphData?.edges);
@@ -1764,22 +1764,18 @@ function GraphPageInner() {
     layoutInput.nodes,
     layoutInput.edges,
     {
-      dagre: { direction: "TB", nodeWidth: 260, nodeHeight: 132, rankSep: 32, nodeSep: 24 },
+      dagre: { direction: "TB", nodeWidth: 240, nodeHeight: 216, rankSep: 32, nodeSep: 24 },
       force: {
         idealEdgeLength: filters.agentName ? 168 : 196,
         nodeRepulsion: filters.agentName ? 3600 : 4400,
         preservePinnedPositions: true,
       },
-      // The declared node box matches the real lineage-card footprint
-      // (max-w-[300px], tall CVE cards) so dagre — plus the wired-in
-      // min-separation guarantee — never lets two cards touch, even on a
-      // 4-node chain. A focused single-agent view tightens the ranks a little
-      // while keeping the same non-overlap guarantee.
+      // Reserve the circular glyph, wrapped label and evidence metadata.
       dagreLr: readableLineageDagreLr(
         selectedAttackPath
-          ? { rankSep: 72, nodeSep: 40, nodeWidth: 224, nodeHeight: 128, fitAspect: 2.65 }
+          ? { rankSep: 72, nodeSep: 40, nodeWidth: 240, nodeHeight: 224, fitAspect: 2.65 }
           : selectedScenarioId
-            ? { rankSep: 48, nodeSep: 12, nodeWidth: 260, minSeparation: { width: 260, height: 154, gap: 16 } }
+            ? { rankSep: 48, nodeSep: 12, nodeWidth: 240, nodeHeight: 224, minSeparation: { width: 240, height: 224, gap: 24 } }
           : compactInvestigationTopology
             ? investigationLayout
             : filters.agentName
