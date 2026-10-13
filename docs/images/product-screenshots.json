@@ -1,9 +1,9 @@
 {
   "release_version": "0.108.4",
-  "captured_at": "2026-10-13T05:13:22.169Z",
-  "source_commit": "06da055fa69dae08de38b0bd8113023ac1ed4d2d",
+  "captured_at": "2026-10-13T06:05:24.872Z",
+  "source_commit": "e3cf41c6d53411c458d58e2dfdb9796277d941ba",
   "source_tree": "clean",
-  "capture_inputs_sha256": "sha256:ebc000bd628e732f01be30c48775619ea6fe0db91128d4e33ef3e0a6c3fd52c0",
+  "capture_inputs_sha256": "sha256:c367726b63f2773c5b5ca397a0643ab202b9ed398a764d6f04dffa06c687c8ae",
   "capture_note": "Deterministically captured from real Next.js dashboard routes in capture mode. The correlation hero views consume the committed, hash-pinned Reference evidence lab — modeled local infrastructure artifact with CVE-2023-4863 and exact canonical joins. Remaining gallery fixtures are explicitly synthetic UI states. No external, customer, or private infrastructure data is used.",
   "screenshots": [
     {
@@ -116,7 +116,7 @@
       "page": "/compliance?asset=pkg%3Anext&scan=scan-proof-ai-platform&capture=1",
       "scope": "Synthetic control applicability mapping explicitly marked not evaluated",
       "visible_version": "0.108.4",
-      "sha256": "sha256:f6e2285438f2779e99b5831c828ded28f202c64b6280f905d89f1bade7561995"
+      "sha256": "sha256:bb0a60d997e4ecf4c320126dd610cfa74390beef7925d27d11769cddde48b525"
     },
     {
       "presentation": "dark desktop",
@@ -132,7 +132,7 @@
       "page": "/?capture=1",
       "scope": "Risk overview in the light theme",
       "visible_version": "0.108.4",
-      "sha256": "sha256:b025d641b28486ad10a02f4ec9ff817d08fc204dcf6a3be095617856c558b21b"
+      "sha256": "sha256:46fb19f6761294838a623dbd94e18b11871d20a19effdff8ff99c1a596b6c39b"
     },
     {
       "presentation": "dark mobile",
@@ -156,7 +156,7 @@
       "page": "/?capture=1",
       "scope": "Executive impact summaries with technical details collapsed",
       "visible_version": "0.108.4",
-      "sha256": "sha256:fb97b189b95c4525311db0fd46af550ecc9b84e4ce3c3f224fc7bd7d5b2d0a15"
+      "sha256": "sha256:68d6ce5c8c5d1c64be4c69ce625056c21800d4ee21348da811cb2f83c8aaf69a"
     },
     {
       "presentation": "dark mobile",
@@ -258,7 +258,7 @@
       "evidence_sha256": "sha256:f4f8901f412997be7690b50ce8e7468ba8f781dc22b85e7b5f44408e28fe2c5f",
       "correlation_manifest_sha256": "sha256:fe781c82f958c2f9aa4cadfa2289aa767629dc7d6716e11add790e8f3336fc3a",
       "visible_version": "0.108.4",
-      "sha256": "sha256:173ea90f1279555d8772dd4efb9265fdff9c3f329692e3f69c28653a8988e9d8"
+      "sha256": "sha256:5b3533ea4f6b46cac43fbafb5a70f370a52e0831db397afb22dbc187e734d7db"
     },
     {
       "presentation": "light desktop",
@@ -269,7 +269,7 @@
       "evidence_sha256": "sha256:f4f8901f412997be7690b50ce8e7468ba8f781dc22b85e7b5f44408e28fe2c5f",
       "correlation_manifest_sha256": "sha256:fe781c82f958c2f9aa4cadfa2289aa767629dc7d6716e11add790e8f3336fc3a",
       "visible_version": "0.108.4",
-      "sha256": "sha256:870b0d55f5d305c019797c160cf2369a331ce65f3b1c30711cc92ea3da07f2bc"
+      "sha256": "sha256:102572c46280be5b40e12713603b0ba23f5dd53c433d307b3d8ac111e085c5ed"
     },
     {
       "presentation": "dark desktop",
@@ -291,7 +291,7 @@
       "evidence_sha256": "sha256:f4f8901f412997be7690b50ce8e7468ba8f781dc22b85e7b5f44408e28fe2c5f",
       "correlation_manifest_sha256": "sha256:fe781c82f958c2f9aa4cadfa2289aa767629dc7d6716e11add790e8f3336fc3a",
       "visible_version": "0.108.4",
-      "sha256": "sha256:7c1d8394e46fc631edfbaf19de7bada242bb94bf58cfa6e77124cbf1e5590599"
+      "sha256": "sha256:8ccc576f4ada79843a133bab09a744ea77ad56e4f90c3bb87f441220a651ab78"
     },
     {
       "presentation": "light desktop",
@@ -439,7 +439,7 @@
       "page": "/findings?capture=1",
       "scope": "Findings queue with seeded package and CVE evidence from the demo estate",
       "visible_version": "0.108.4",
-      "sha256": "sha256:e66d7778db12626aeb543fa4828f2f2939cd6df51850bd9a02fc1cb5eeaa584f"
+      "sha256": "sha256:6ec886186c2fa459f467b5dcce783a0904a5cab52932323fd5b8ade48babb444"
     },
     {
       "presentation": "dark desktop",
