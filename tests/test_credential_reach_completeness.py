@@ -198,3 +198,23 @@ def test_technique_catalog_loads_once_per_batch(monkeypatch):
     assert any(p.technique_mappings for p in paths)
     assert calls["attack"] <= 1
     assert calls["atlas"] <= 1
+
+
+def test_equal_risk_paths_have_deterministic_order():
+    from agent_bom.graph.credential_findings import project_credential_findings
+    from agent_bom.graph.path_derivation import _derived_attack_paths
+
+    def build(order):
+        g = UnifiedGraph()
+        for i in order:
+            a, s, c = f"agent:{i}", f"server:{i}", f"cred:{i}"
+            _node(g, a, E.AGENT)
+            _node(g, s, E.SERVER)
+            _node(g, c, E.CREDENTIAL)
+            _edge(g, a, s, R.USES)
+            _edge(g, s, c, R.EXPOSES_CRED)
+        project_credential_findings(g, _reach_rows(g))
+        return [p.source for p in _derived_attack_paths(g) if p.finding_ids]
+
+    forward, backward = build(["a", "b", "c"]), build(["c", "b", "a"])
+    assert forward == backward == ["agent:a", "agent:b", "agent:c"]

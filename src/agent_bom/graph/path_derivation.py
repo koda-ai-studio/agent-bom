@@ -464,6 +464,21 @@ def _component_finding(node: UnifiedNode) -> bool:
     )
 
 
+def _path_rank(path: AttackPath) -> tuple:
+    """Highest risk first; equal-risk paths fall back to a stable identity order
+    so tied credential-reach paths never depend on graph insertion order."""
+    return (
+        -path.composite_risk,
+        -len(path.hops),
+        -len(path.credential_exposure),
+        -len(path.tool_exposure),
+        path.source,
+        path.target,
+        tuple(path.hops),
+        tuple(path.edges),
+    )
+
+
 def _derived_attack_paths(graph: UnifiedGraph) -> list[AttackPath]:
     """Derive fix-first paths when a snapshot lacks materialised path rows.
 
@@ -629,10 +644,6 @@ def _derived_attack_paths(graph: UnifiedGraph) -> list[AttackPath]:
             combined.append(derived_path)
             existing_keys.add(derived_path_key)
     return _with_technique_mappings(
-        sorted(
-            combined,
-            key=lambda path: (path.composite_risk, len(path.hops), len(path.credential_exposure), len(path.tool_exposure)),
-            reverse=True,
-        ),
+        sorted(combined, key=_path_rank),
         graph,
     )
