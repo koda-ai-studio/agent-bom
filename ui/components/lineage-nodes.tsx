@@ -153,9 +153,9 @@ function NodeCard({
   const Icon = entityIcon(data.nodeType);
   const isRollupContainer = data.attributes?.rollup_is_container === true;
   return (
-    <div title={data.label} data-rollup-container={isRollupContainer ? "true" : undefined}
+    <div title={data.label} data-graph-entity="true" data-rollup-container={isRollupContainer ? "true" : undefined}
       className={`flex w-[220px] flex-col items-center text-center transition-opacity ${data.dimmed ? "opacity-25" : ""}`}>
-      <div className={`relative mb-3 flex h-[72px] w-[72px] items-center justify-center rounded-full border-2 shadow-sm ${
+      <div className={`graph-entity-glyph relative mb-3 flex h-[72px] w-[72px] items-center justify-center rounded-full border-2 shadow-sm ${
         isRollupContainer ? "border-outline-strong bg-surface-elevated" : `${borderClass} ${bgClass}`
       } ${data.highlighted ? `ring-2 ring-offset-4 ring-offset-[var(--surface)] ${ringClass}` : ""}`}>
         <Handle type="target" position={data.reverseFlow ? Position.Right : Position.Left}

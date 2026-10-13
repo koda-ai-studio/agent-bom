@@ -19,12 +19,23 @@ describe("relationship routing", () => {
     const route = relationshipPath({ ...edge, sourceY: 170 }, [{ id: "intermediate", x: 260, y: 0, width: 220, height: 180 }]);
     expect(route[2]).toBeLessThan(-16);
   });
+  it("does not detour a diagonal whose bounding box contains a distant card", () => {
+    const diagonal = { ...edge, sourceY: 300, targetY: 0 };
+    const obstacles = [{ id: "other", x: 400, y: 240, width: 100, height: 80 }];
+    expect(relationshipPath(diagonal, obstacles)).toEqual(relationshipPath(diagonal, []));
+  });
   it("preserves vertical and reverse-direction curves", () => {
     const obstacles = [{ id: "endpoint", x: 260, y: 0, width: 220, height: 180 }];
     const vertical = { ...edge, sourcePosition: Position.Bottom, targetPosition: Position.Top };
     expect(relationshipPath(vertical, obstacles)).toEqual(relationshipPath(vertical, []));
     const reverse = { ...edge, sourceX: 672, targetX: 72, sourcePosition: Position.Left, targetPosition: Position.Right };
     expect(relationshipPath(reverse, obstacles)).toEqual(relationshipPath(reverse, []));
+  });
+  it("places a serpentine row turn outside the wider node label column", () => {
+    const turn = { ...edge, targetX: 72, targetY: 256, targetPosition: Position.Right };
+    const route = relationshipPath(turn, [{ id: "finding", x: 0, y: 0, width: 220, height: 180 }]);
+    expect(route[1]).toBeGreaterThan(240);
+    expect(route[2]).toBe(146);
   });
   it("excludes the relationship endpoints from obstacles", () => {
     expect(relationshipPath(edge, [{ id: "finding", x: 0, y: 0, width: 220, height: 180 }])[2]).toBe(36);

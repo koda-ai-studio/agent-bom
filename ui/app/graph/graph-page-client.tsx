@@ -290,7 +290,8 @@ function PulseStyles() {
       .lineage-node-focus {
         z-index: 5;
       }
-      .lineage-node-focus > div {
+      .lineage-node-focus .graph-entity-glyph,
+      .lineage-node-focus > div:not([data-graph-entity]) {
         outline: 2px solid var(--accent);
         outline-offset: 3px;
       }
