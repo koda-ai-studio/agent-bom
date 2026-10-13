@@ -193,6 +193,16 @@ recovers status after a client disconnect. Both endpoints require runtime ingest
 permission; provider credentials and cursors remain server-side. They do not
 accept endpoint, cursor, content, or tenant overrides.
 
+Each API worker admits at most two collection requests at once, reduced to one
+when `AGENT_BOM_WORKER_THREAD_LIMIT` is two or less. Waiting collection requests
+do not occupy shared worker threads; deployments with at least two threads leave
+capacity for status and other requests. At most eight additional collections
+wait per worker. Further requests receive HTTP 429 with `Retry-After: 1` before
+claiming a lease or contacting the provider. Retry after that delay and inspect
+saved status. A disconnected admitted request retains its slot until its worker
+finishes; its page and checkpoint still commit or roll back together. This is
+request admission, not background scheduling or a latency guarantee.
+
 The first window covers the previous day with a 15-minute ingestion delay.
 Subsequent completed windows overlap 30 minutes, with bounded replay deduplication.
 Missing older observations, provider mutations, and late arrivals beyond this

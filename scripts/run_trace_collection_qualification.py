@@ -16,6 +16,7 @@ import resource
 import subprocess
 import threading
 import time
+from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
@@ -33,6 +34,16 @@ from agent_bom.api.trace_collection.store import TraceCollectionStore
 from scripts.run_graph_mixed_scale_evidence import percentiles
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+@asynccontextmanager
+async def _qualification_lifespan(_app):
+    from agent_bom.api.server import _apply_worker_thread_limit
+
+    # Fixture stores are already provisioned. Apply the production worker
+    # budget on the single serving loop without provisioning external stores.
+    _apply_worker_thread_limit()
+    yield
 
 
 def assess(attempts: list[dict], reconciled: bool, *, p95_limit_ms: float, slowdown_limit: float) -> dict:
@@ -125,16 +136,12 @@ def run(output: Path, *, backend: str, workers: int, pages: int, rows: int, p95_
         started = time.perf_counter()
         row = {"connection": connection, "operation": operation, "phase": phase, "ok": False, "status": None}
         try:
-            client = TestClient(app)
-            try:
-                headers = {"X-Agent-Bom-Role": "admin", "X-Agent-Bom-Tenant-ID": bindings[connection], "X-Agent-Bom-Proxy-Secret": secret}
-                response = (
-                    client.post("/v1/traces/connectors/langfuse/collect", headers=headers, json={"connection_id": connection})
-                    if operation == "collect"
-                    else client.get("/v1/traces/connectors/langfuse/collection", headers=headers, params={"connection_id": connection})
-                )
-            finally:
-                client.close()
+            headers = {"X-Agent-Bom-Role": "admin", "X-Agent-Bom-Tenant-ID": bindings[connection], "X-Agent-Bom-Proxy-Secret": secret}
+            response = (
+                client.post("/v1/traces/connectors/langfuse/collect", headers=headers, json={"connection_id": connection})
+                if operation == "collect"
+                else client.get("/v1/traces/connectors/langfuse/collection", headers=headers, params={"connection_id": connection})
+            )
             row["status"] = response.status_code
             body = response.json()
             row["ok"] = (
@@ -156,6 +163,8 @@ def run(output: Path, *, backend: str, workers: int, pages: int, rows: int, p95_
     start = time.perf_counter()
     try:
         with (
+            patch.object(app.router, "lifespan_context", _qualification_lifespan),
+            TestClient(app) as client,
             httpx.Client(transport=httpx.MockTransport(provider)) as provider_client,
             patch(
                 "agent_bom.api.trace_collection.service.fetch_page",
@@ -224,6 +233,8 @@ def run(output: Path, *, backend: str, workers: int, pages: int, rows: int, p95_
             finally:
                 reset_current_tenant(token)
         elapsed = time.perf_counter() - start
+        from agent_bom import config
+
         receipt = {
             "schema": "trace.qualification.v1",
             "evidence": "synthetic-provider/in-process-ASGI/real-SQL",
@@ -233,6 +244,8 @@ def run(output: Path, *, backend: str, workers: int, pages: int, rows: int, p95_
             "platform": platform.platform(),
             "backend": backend,
             "workers": workers,
+            "worker_thread_limit": config.WORKER_THREAD_LIMIT,
+            "serving_event_loops": 1,
             "pages_per_connection": pages,
             "rows_per_page": rows,
             "elapsed_seconds": elapsed,

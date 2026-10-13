@@ -205,3 +205,28 @@ def test_page_metadata_field_cache_is_bounded_and_preserves_key_sanitization(mon
     assert len(cache.fields) <= 50
     key = "x" * 200
     assert runtime_records.sanitize_runtime_metadata({key: 1}, _cache=cache) == runtime_records.sanitize_runtime_metadata({key: 1})
+
+
+def test_page_metadata_reuses_sanitized_scalar_leaves_without_rewalking(monkeypatch):
+    from agent_bom.api.storage import runtime_records
+
+    original = runtime_records.sanitize_sensitive_payload
+    calls = []
+
+    def observed(value, **kwargs):
+        calls.append((kwargs.get("key"), value))
+        return original(value, **kwargs)
+
+    metadata = {"provider": "langfuse", "password": "langfuse", "count": 5, "missing": None, "nested": {"token": "secret"}}
+    expected = runtime_records.sanitize_runtime_metadata(metadata)
+    monkeypatch.setattr(runtime_records, "sanitize_sensitive_payload", observed)
+    cache = runtime_records.RuntimeMetadataCache()
+    outputs = [runtime_records.sanitize_runtime_metadata(metadata, _cache=cache) for _ in range(100)]
+    assert outputs == [expected] * 100
+    assert len([key for key, value in calls if key == "provider"]) == 1
+    assert len([key for key, value in calls if key == "password"]) == 1
+    assert not [key for key, value in calls if key in {"count", "missing"}]
+    outputs[0]["nested"]["token"] = "changed"
+    assert outputs[1]["nested"] == expected["nested"]
+    runtime_records.sanitize_runtime_metadata(metadata, _cache=runtime_records.RuntimeMetadataCache())
+    assert len([key for key, value in calls if key == "provider"]) == 2
