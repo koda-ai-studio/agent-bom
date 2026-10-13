@@ -1,5 +1,6 @@
 "use client";
 
+import { GraphRelationshipExplanation } from "@/components/graph-relationship-explanation";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { useAuthState } from "@/components/auth-provider";
 import { useIncidentNeighborhood } from "@/hooks/use-incident-neighborhood";
@@ -69,6 +70,10 @@ export function GraphRecordedRelationships({ scanId, nodeId, onInspectNode }: Pr
         return <li key={JSON.stringify([edge.source, edge.target, edge.relationship])} className="rounded-lg border border-outline p-3 [overflow-wrap:anywhere]">
           <p className="mb-1 text-ink-secondary">{direction} · {relationship}</p>
           {onInspectNode ? <button type="button" onClick={() => onInspectNode(neighborId)} className="block w-full break-words text-left text-sm font-medium text-emerald-800 dark:text-emerald-300">{label}</button> : <p className="break-words text-sm font-medium">{label}</p>}
+          <details className="mt-2 text-ink-secondary"><summary className="cursor-pointer">Why linked</summary>
+            <div className="mt-2"><GraphRelationshipExplanation edge={edge} /></div>
+            {Object.keys(edge.evidence ?? {}).length > 0 && <details className="mt-2"><summary className="cursor-pointer">Recorded evidence</summary><pre className="mt-2 whitespace-pre-wrap break-words">{JSON.stringify(edge.evidence, null, 2)}</pre></details>}
+          </details>
           <details className="mt-2 text-ink-secondary"><summary className="cursor-pointer">Canonical identifiers</summary>
             <dl className="mt-2 space-y-1 break-all"><dt>Source</dt><dd>{edge.source}</dd><dt>Relationship</dt><dd>{edge.relationship}</dd><dt>Target</dt><dd>{edge.target}</dd></dl>
           </details>

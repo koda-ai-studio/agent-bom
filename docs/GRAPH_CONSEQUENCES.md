@@ -123,3 +123,18 @@ Before an operator executes a proposed restriction, review:
 A vulnerable package or a name-based trace association alone is insufficient to
 justify quarantine. Unknown business impact remains unknown. No automatic
 quarantine or zero-disruption guarantee is provided by this investigation.
+
+
+## Explain a recorded relationship
+
+Select an edge in the graph to open **Relationship details → Why linked**. The
+explanation distinguishes inventory use, available tools, dependencies and
+vulnerability findings from runtime execution. Recorded source, basis, mapping
+method and package/version fields appear when supplied by the selected edge;
+the relationship name does not fill missing source evidence.
+
+In an entity's recorded relationship list, expand **Why linked** for the same
+explanation and its **Recorded evidence** disclosure. A conservative
+server-scoped tool-impact mapping does not establish an exact package-to-tool
+call path. Inspect the finding and package/version receipt before choosing a
+fix; a graph connection alone does not prove exploitation or successful access.
