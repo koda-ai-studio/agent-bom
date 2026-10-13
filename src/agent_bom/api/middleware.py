@@ -59,12 +59,11 @@ from agent_bom.api.error_envelope import (
 from agent_bom.api.error_envelope import (
     _with_middleware_error_envelope as _with_middleware_error_envelope,
 )
-from agent_bom.api.error_envelope import (
-    install_error_envelope as install_error_envelope,
-)
+from agent_bom.api.error_envelope import install_error_envelope as install_error_envelope
 from agent_bom.api.host_guard import browser_origin_trusted
 from agent_bom.api.rate_limit_store import InMemoryRateLimitStore as InMemoryRateLimitStore
 from agent_bom.api.rate_limit_store import PostgresRateLimitStore as PostgresRateLimitStore
+from agent_bom.api.rate_limit_store import record_rate_limit_hit
 from agent_bom.api.route_policy import (
     PUBLIC_OPERATIONS,
     ROLE_RULES,
@@ -1515,7 +1514,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         else:
             limit = self._authenticated_read_rpm
 
-        hit_count, reset_at = await asyncio.to_thread(self._store.hit, key, now)
+        hit_count, reset_at = await record_rate_limit_hit(self._store, key, now)
         remaining = max(0, limit - hit_count)
 
         if hit_count > limit:
@@ -1566,7 +1565,7 @@ class GlobalRateLimitMiddleware(BaseHTTPMiddleware):
 
         now = time.time()
         key = self._bucket_key(request)
-        hit_count, reset_at = await asyncio.to_thread(self._store.hit, key, now)
+        hit_count, reset_at = await record_rate_limit_hit(self._store, key, now)
         if hit_count > self._rpm:
             retry_after = max(int(reset_at - now), 1)
             return JSONResponse(
