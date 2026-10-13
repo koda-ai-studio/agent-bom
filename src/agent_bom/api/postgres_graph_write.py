@@ -15,6 +15,7 @@ from typing import Any, Iterable, Iterator, Mapping
 from agent_bom.api.graph_store import _node_search_text
 from agent_bom.graph import RelationshipType
 from agent_bom.graph.correlation import CorrelationRunStatus, validate_correlation_update
+from agent_bom.graph.severity_floor import counts_as_finding
 
 from .postgres_graph_support import _CORRELATION_RUN_COLUMNS, _correlation_run_from_row, _execute_many_batched
 
@@ -331,7 +332,7 @@ def _write_nodes(conn: Any, nodes: Iterable[Any], *, scan: str, tenant: str, bat
         node_count += 1
         et = node.entity_type.value if hasattr(node.entity_type, "value") else node.entity_type
         type_counts[str(et)] += 1
-        if node.severity:
+        if node.severity and counts_as_finding(entity_type=et, node_id=node.id):
             severity_counts[node.severity] += 1
         node_batch.append(_node_row(node, scan=scan, tenant=tenant))
         search_batch.append(_node_search_row(node, scan=scan, tenant=tenant))

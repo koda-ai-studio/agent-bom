@@ -13,7 +13,7 @@ from agent_bom.api.graph_store import (
 )
 from agent_bom.db.graph_store import normalize_graph_tenant_id
 from agent_bom.graph.analysis import analysis_status_map_from_dict, analysis_status_map_to_dict
-from agent_bom.graph.severity_floor import severity_floor_sql
+from agent_bom.graph.severity_floor import finding_severity_count_sql, severity_floor_sql
 
 from .postgres_common import _tenant_connection
 from .postgres_graph_query import PostgresGraphQueryMixin
@@ -248,9 +248,10 @@ def _node_breakdowns(
     if cached_severity_counts is not None:
         severity_counts = cached_severity_counts
     else:
+        finding_sql, finding_params = finding_severity_count_sql(placeholder="%s")
         severity_rows = conn.execute(
-            f"SELECT severity, COUNT(*) FROM graph_nodes WHERE {where_sql} AND severity <> '' GROUP BY severity",  # nosec B608 - where_sql is built from static clause fragments
-            params,
+            f"SELECT severity, COUNT(*) FROM graph_nodes WHERE {where_sql} AND {finding_sql} GROUP BY severity",  # nosec B608 - where_sql is built from static clause fragments
+            [*params, *finding_params],
         ).fetchall()
         severity_counts = {str(row[0]): int(row[1]) for row in severity_rows}
     return total_nodes, node_types, severity_counts

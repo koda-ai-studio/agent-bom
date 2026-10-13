@@ -16,7 +16,7 @@ from agent_bom.graph.bottleneck import BottleneckAnalysis, compute_bottlenecks
 from agent_bom.graph.edge import UnifiedEdge, merge_edge_evidence
 from agent_bom.graph.integration_contract import GRAPH_ENVELOPE_VERSION, validate_graph_version
 from agent_bom.graph.node import UnifiedNode
-from agent_bom.graph.ocsf import FINDING_ENTITY_TYPES
+from agent_bom.graph.severity_floor import FINDING_ENTITY_TYPES, counts_as_finding
 from agent_bom.graph.types import EntityType, GraphSemanticLayer, NodeStatus, RelationshipType
 from agent_bom.graph.util import _now_iso
 from agent_bom.graph.view_filters import GraphFilterOptions as GraphFilterOptions
@@ -909,7 +909,7 @@ class UnifiedGraph:
         for node in self.nodes.values():
             et = node.entity_type.value if isinstance(node.entity_type, EntityType) else node.entity_type
             type_counts[et] += 1
-            if node.severity:
+            if node.severity and counts_as_finding(entity_type=et, node_id=node.id):
                 severity_counts[node.severity] += 1
         rel_counts: dict[str, int] = defaultdict(int)
         for edge in self.edges:

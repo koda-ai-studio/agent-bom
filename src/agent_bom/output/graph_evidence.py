@@ -64,6 +64,13 @@ _CIS_SECTIONS: tuple[tuple[str, str, str], ...] = (
 )
 
 
+def has_graph_evidence(report: AIBOMReport) -> bool:
+    """Whether ``report`` carries any non-agent section the graph builder projects."""
+    return any(getattr(report, attr) for _key, attr in _PASSTHROUGH_SECTIONS) or any(
+        getattr(report, attr) for _key, attr, _cloud in _CIS_SECTIONS
+    )
+
+
 def graph_evidence_sections(report: AIBOMReport) -> dict[str, Any]:
     """Return the graph-consumed subset of ``to_json(report)``, key for key."""
     cve_pairs, exposure_paths = _cve_pairs_and_exposure_paths(report)
