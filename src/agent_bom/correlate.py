@@ -75,6 +75,28 @@ def _dedupe_server_packages(server: MCPServer) -> int:
     return removed
 
 
+def _cross_reference(packages: list[Package]) -> None:
+    """Add evidence across occurrences of one (name, ecosystem) without removing any."""
+    specific = {p.version.strip() for p in packages if not _unknown(p.version)}
+    if len(specific) == 1:
+        only = next(iter(specific))
+        for pkg in packages:
+            if _unknown(pkg.version):
+                pkg.version = only
+    by_version: dict[str, list[Package]] = {}
+    for pkg in packages:
+        by_version.setdefault((pkg.version or "").strip(), []).append(pkg)
+    for same in by_version.values():
+        union = Package(name=same[0].name, version="", ecosystem=same[0].ecosystem)
+        for pkg in same:
+            _merge_vulns(union, pkg)
+        purl = next((p.purl for p in same if p.purl), None)
+        for pkg in same:
+            _merge_vulns(pkg, union)
+            if purl and not pkg.purl:
+                pkg.purl = purl
+
+
 def correlate_agents(agents: list[Agent]) -> tuple[list[Agent], CorrelationResult]:
     """Cross-reference packages across agents from multiple sources.
 
@@ -108,32 +130,9 @@ def correlate_agents(agents: list[Agent]) -> tuple[list[Agent], CorrelationResul
                 pkg_index.setdefault(key, []).append((agent, server, pkg))
 
     for occurrences in pkg_index.values():
-        if len(occurrences) <= 1:
-            continue
-        if len({(a.source or "local") for a, _s, _p in occurrences}) <= 1:
-            continue
-        result.cross_source_matches += 1
-
-        specific = {p.version.strip() for _a, _s, p in occurrences if not _unknown(p.version)}
-        if len(specific) == 1:
-            only = next(iter(specific))
-            for _a, _s, p in occurrences:
-                if _unknown(p.version):
-                    p.version = only
-
-        by_version: dict[str, list[Package]] = {}
-        for _a, _s, p in occurrences:
-            by_version.setdefault((p.version or "").strip(), []).append(p)
-        for same in by_version.values():
-            if len(same) <= 1:
-                continue
-            purl = next((p.purl for p in same if p.purl), None)
-            for pkg in same:
-                for other in same:
-                    if other is not pkg:
-                        _merge_vulns(pkg, other)
-                if purl and not pkg.purl:
-                    pkg.purl = purl
+        if len(occurrences) > 1 and len({(a.source or "local") for a, _s, _p in occurrences}) > 1:
+            result.cross_source_matches += 1
+            _cross_reference([p for _a, _s, p in occurrences])
 
     return agents, result
 
