@@ -89,3 +89,5 @@ New here? Read [`START_HERE.md`](START_HERE.md) for role-based paths, then
 - [`CAPTURE.md`](CAPTURE.md) · [`VISUAL_LANGUAGE.md`](VISUAL_LANGUAGE.md) · [`CONTRIBUTING_SKILLS.md`](CONTRIBUTING_SKILLS.md) — screenshots, visual rules, skill contributions
 
 Historical writeups live in [`archive/`](archive/README.md).
+
+- [Product tour](PRODUCT_TOUR.md) — current-source team workflows, evidence views and deployment choices.

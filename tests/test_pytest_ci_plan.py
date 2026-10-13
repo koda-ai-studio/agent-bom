@@ -565,3 +565,21 @@ def test_workflow_changes_select_product_metrics_snapshot(tmp_path, source):
 def test_non_workflow_changes_do_not_select_product_metrics(tmp_path, source):
     _write(tmp_path / "tests/test_product_metrics_snapshot.py", 1)
     assert select_targeted_tests(changed_files=[Path(source)], root=tmp_path) == []
+
+
+@pytest.mark.parametrize("source", ["README.md", "docs/FIRST_RUN.md", "docs/PRODUCT_TOUR.md"])
+def test_frontdoor_edits_select_distribution_and_operator_contracts(tmp_path: Path, source: str) -> None:
+    expected = sorted(
+        tmp_path / "tests" / name
+        for name in (
+            "test_surface_freshness.py",
+            "test_deploy_topology_docs.py",
+            "test_consumer_precommit_hooks.py",
+            "test_cli_exit_contract_docs.py",
+            "test_readme_demo_excerpt.py",
+            "test_published_counts_gate.py",
+        )
+    )
+    for path in [*expected, tmp_path / "tests/test_unrelated.py"]:
+        _write(path, 1)
+    assert select_targeted_tests(changed_files=[Path(source)], root=tmp_path) == expected

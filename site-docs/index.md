@@ -9,8 +9,11 @@
 
 **Open security scanner and self-hosted control plane for AI, MCP, and cloud infrastructure.**
 
-Run scans in your environment, centralize findings, govern in your VPC — your team and your agents
-work from the same evidence model.
+**Find vulnerable software behind your AI agents—and trace the exposure evidence.**
+
+For AppSec and platform engineers: scan a repository, inspect connected findings,
+and verify a changed dependency with a rescan. Centralize the same evidence in
+your own infrastructure when your team needs a shared control plane.
 
 `agent-bom` is also an open security data plane. It generates a
 reachability-backed AI BOM across agents, MCP servers, tools, packages,

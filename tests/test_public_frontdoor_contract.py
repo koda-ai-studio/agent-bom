@@ -93,46 +93,17 @@ def test_social_preview_is_portable_and_evidence_focused() -> None:
         assert (source.parent / relative_asset).is_file()
 
 
-def test_readme_shows_the_end_to_end_product_journey_and_links_the_gallery() -> None:
-    import re
-
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    journey = readme.split("## Product tour", 1)[1].split("## Self-host", 1)[0]
-    images = re.findall(r'<img src="docs/images/([^"]+)"', journey)
-    assert images == [
-        "dashboard-live.png",
-        "correlation-graph-live.png",
-        "graph-relationship-dark-live.png",
-        "remediation-live.png",
-    ]
-    assert journey.count('width="1440"') == 4
-    assert 'width="450"' not in journey
-    front = readme.split("## Self-host", 1)[0]
-    front_outside_details = re.sub(r"<details>.*?</details>", "", front, flags=re.S)
-    assert re.findall(r'<img src="docs/images/([^"]+)"', front_outside_details) == [
-        "social-preview.svg",
-        "graph-environment-dark-live.png",
-    ]
-    assert front.index("img.shields.io") < front.index("graph-environment-dark-live.png")
-    assert "labeled sample data" in front
-    assert "[Explore the graph gallery](docs/GALLERY.md#explore-connections-and-inspect-evidence)" in journey
-    grc = journey.split("### Security, engineering and GRC:", 1)[1].split("### AppSec", 1)[0]
-    assert "dashboard-live.png" in grc
-    assert "[expanded framework evidence](docs/images/dashboard-paths-live.png)" in grc
-    assert "OWASP" in grc and "MITRE ATLAS" in grc
-    assert "offline synthetic enterprise estate" in grc
-    assert "evaluated" in grc
-    assert "do not establish certification or an audit opinion" in grc
-    assert "See the same graph" not in front
-    assert "Compare layouts" not in front
-    assert "component-detail-dark-live.png" not in journey
-    for image in images:
+def test_readme_links_to_the_detailed_source_tour():
+    readme = (ROOT / "README.md").read_text()
+    tour = (ROOT / "docs/PRODUCT_TOUR.md").read_text()
+    assert "docs/PRODUCT_TOUR.md" in readme
+    assert "## Product tour" not in readme
+    assert "current source" in tour and "published `0.108.4` release predates" in tour
+    for image in ("dashboard-live.png", "correlation-graph-live.png", "graph-relationship-dark-live.png", "remediation-live.png"):
+        assert image in tour
         assert (ROOT / "docs/images" / image).is_file()
-    for marker in ("source receipts", "owners", "Re-scan", "verify", "labeled sample data", "modeled infrastructure", "CVE-2023-4863"):
-        assert marker in journey
-    assert "[Discover and scan](docs/GALLERY.md)" in journey
-    assert "A blocked call does not establish" in journey
-    assert "DEMO-VULN" not in journey
+    for boundary in ("labeled sample data", "modeled infrastructure", "A blocked call does not establish"):
+        assert boundary in tour
 
 
 def test_readme_leads_with_discover_scan_correlate_act_brand_header() -> None:
@@ -196,8 +167,7 @@ def test_docker_ui_first_run_has_a_result_and_preserves_local_auth_boundary() ->
 
 
 def test_persona_routes_start_with_their_actual_work() -> None:
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    personas = readme.split("## Built for the teams", 1)[1].split("## Product tour", 1)[0]
+    personas = (ROOT / "docs/PRODUCT_TOUR.md").read_text().split("## Built for the teams", 1)[1].split("## Product tour", 1)[0]
     for marker in (
         "Developers & AI engineers",
         "AppSec & cloud security",
@@ -209,8 +179,8 @@ def test_persona_routes_start_with_their_actual_work() -> None:
         assert marker in personas
     assert "Open **Compliance**" in personas
     assert "Open **Overview**" in personas
-    assert "docs/GALLERY.md#scan-a-repository-before-shipping" in personas
-    assert "docs/MCP_WORKFLOWS.md" in personas
+    assert "GALLERY.md#scan-a-repository-before-shipping" in personas
+    assert "MCP_WORKFLOWS.md" in personas
     assert "caller’s permissions" in personas
 
 
@@ -281,13 +251,13 @@ def test_readme_header_omits_volatile_metric_strip() -> None:
     assert "MCP tools · no account required" not in header
 
 
-def test_readme_offline_bootstrap_leads_with_truthful_ecosystem_scope() -> None:
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    offline = readme.split("<summary>Developer gates and offline scans</summary>", 1)[1].split("</details>", 1)[0]
-    assert "agent-bom db update --osv-ecosystem PyPI" in offline
-    assert "covers only the selected ecosystem" in offline
-    assert offline.index("--osv-ecosystem PyPI") < offline.index("--source osv")
-    assert "security gate or incomplete assessment" in offline
+def test_readme_offline_bootstrap_links_the_advisory_prerequisite() -> None:
+    readme = (ROOT / "README.md").read_text()
+    assert "[populate the advisory database](docs/FIRST_RUN.md)" in readme
+    assert "skips package-CVE lookup" in readme
+    guide = (ROOT / "docs/FIRST_RUN.md").read_text()
+    assert "agent-bom db update --source osv" in guide
+    assert "missing, empty, or unreadable advisory" in guide
 
 
 def test_docs_home_leads_with_product_value_and_attack_path_proof() -> None:

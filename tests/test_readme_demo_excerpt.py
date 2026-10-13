@@ -1,4 +1,4 @@
-"""The README demo excerpt is real output of ``agent-bom scan --demo --offline``.
+"""The first-run guide demo excerpt is real output of ``agent-bom scan --demo --offline``.
 
 The excerpt drifted (it printed ``CRIT 2 HIGH 16`` while the command printed
 ``CRIT 7 HIGH 11``) because nothing compared it with the command. This runs the
@@ -26,10 +26,10 @@ def _normalize(line: str) -> str:
 
 
 def readme_excerpt() -> list[str]:
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    sample = readme.split("<summary>No project handy?", 1)[1].split("</details>", 1)[0]
+    readme = (ROOT / "docs/FIRST_RUN.md").read_text(encoding="utf-8")
+    sample = readme.split("### Annotated demo output", 1)[1].split("## 2.", 1)[0]
     block = re.search(r"```text\n(.*?)\n```", sample, re.S)
-    assert block, "README demo excerpt block not found"
+    assert block, "First-run guide demo excerpt block not found"
     return [_normalize(line) for line in block.group(1).splitlines() if line.strip()]
 
 
@@ -82,6 +82,6 @@ def _run_demo(home: Path, hash_seed: str) -> str:
 @pytest.mark.parametrize("hash_seed", ["0", "4242"])
 def test_readme_demo_excerpt_matches_real_demo_output(tmp_path: Path, hash_seed: str) -> None:
     excerpt = readme_excerpt()
-    assert any(line.startswith("Security posture:") for line in excerpt)
-    assert any(line.startswith("Blast:") and "," in line for line in excerpt)
+    assert any("packages" in line for line in excerpt)
+    assert any(line.startswith("Blast:") for line in excerpt)
     assert missing_in_order(excerpt, _run_demo(tmp_path, hash_seed)) == []

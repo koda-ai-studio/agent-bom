@@ -4,31 +4,19 @@
 
 **Open security scanner and self-hosted control plane for AI, MCP, and cloud infrastructure.**
 
-Start with the repository in front of you, then choose the entrypoint that
-matches your next job: image scan, cloud posture, fix plan, dashboard, MCP
-tools, or runtime review.
+**Find vulnerable software behind your AI agents—and trace the exposure evidence.**
 
-```text
-better-sqlite3@9.0.0  (npm package)
-  |── OSV/GHSA finding  (critical · advisory-backed)
-  |── sqlite-mcp  (MCP Server · unverified · root)
-       |── Cursor IDE  (Agent · 4 servers · 12 tools)
-       |── ANTHROPIC_KEY, DB_URL, AWS_SECRET  (Credential env names visible)
-       |── query_db, read_file, write_file, run_shell  (Reachable tools)
-
- Fix: upgrade better-sqlite3 → 11.7.0
-```
-
-Blast radius is the core idea: `package -> vulnerability finding -> MCP server (tools + credential env names) -> connected agents`. This schematic explains the model; emitted findings are backed by the configured advisory sources.
-
-Scan local agent configs, MCP servers, instruction files, lockfiles, containers, cloud estate, AI models/datasets, non-human identities, LLM cost, GPU surfaces, and runtime evidence.
+For AppSec and platform engineers: scan repositories and MCP configurations,
+inspect connected findings, and verify a changed dependency with a rescan.
+Credential references are names, not secret values. Recorded relationships do
+not prove exploitation or successful data access.
 
 ```bash
 pip install agent-bom
 agent-bom scan .
 ```
 
-The scan prints inventory, findings, reachable impact, evidence coverage, and
+The scan prints inventory, findings, recorded exposure, evidence coverage, and
 the next remediation step. Run `agent-bom doctor` if the first scan cannot
 start.
 

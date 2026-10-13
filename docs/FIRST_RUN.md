@@ -70,30 +70,26 @@ The demo is intentionally noisy enough to prove value without scanning a
 private repo. Current source output includes these excerpts (installed-release output may differ):
 
 ```text
-Demo mode - curated agent + MCP sample with known-vulnerable packages.
-Offline mode - bundled demo advisory DB only
-
-Discovery
-  [ok] 5 agent(s) from curated sample environment
-
-Package Extraction
-  23 packages (14 pypi, 9 npm)
-
-Vulnerability Scan
-  [ok] Demo advisory DB: 15 vulnerabilities found (offline)
-  [warn] Found 15 vulnerabilities across 15 findings
-  [warn] Scan complete — package CVEs: 2 critical · 8 high · 5 medium
-[warn] Toxic combinations: 5 finding(s)
-[warn] Findings — 7 critical · 10 high · 6 medium (all finding categories)
-
-5 agents · 10 servers · 23 packages
+  Security posture:   CRIT  7   HIGH  10   MED   8   LOW   26 · all finding categories
+  5 agents · 10 servers · 23 packages
+DISCOVER | Agents
+  Agent                Type              Servers    Pkgs    Creds    Vulns
+  langchain-service    custom                  2       4        4        4
+  claude-desktop       claude-desktop          2       6        3        5
+ANALYZE | Critical Details
+  CVE-2023-36258 · langchain@0.0.150 · CRITICAL
+  Fix: upgrade to ≥ 0.0.247
+  Blast: langchain-service → llm-orchestrator-server → ANTHROPIC_API_KEY, OPENAI_API_KEY
+ANALYZE | Graph & Policy Findings (36 occurrences)
+   CRIT  COMBINATION AI agent can reach a credential or privileged tool: langchain-service
+   HIGH  PROMPT_SECURITY No verified agent identity observed in MCP configuration
+   MED   PROMPT_SECURITY Long-lived static credential on MCP server
 ```
 
-The package-CVE count and unified finding count have different scopes. This
-sample has 15 package-CVE findings; its JSON `finding_summary` also includes
-3 prompt-security and 5 combination findings, for 23 unified findings. Use
-`finding_summary.by_type` when comparing categories rather than treating every
-finding as another CVE. Counts can change with the installed release.
+Package-CVE findings and graph/policy findings have different scopes. Use
+`finding_summary.by_type` in the JSON report when comparing categories; counts
+can change with the installed release. The excerpt above is checked against
+current source output.
 
 What to look for:
 

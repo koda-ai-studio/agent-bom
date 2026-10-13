@@ -5,7 +5,6 @@ from __future__ import annotations
 import importlib.util
 import io
 import json
-import re
 import subprocess
 import urllib.error
 from contextlib import redirect_stdout
@@ -1478,12 +1477,11 @@ def test_glama_full_catalog_copy_requires_exact_count(count):
     assert script._check(f"v0.103.2 The full catalog has {count} MCP tools.", "0.103.2", 86)
 
 
-def test_glama_accepts_current_readme_catalog_sentence():
+def test_glama_accepts_current_readme_default_profile_sentence():
     script = _load_script("check_glama_listing.py")
     readme = (ROOT / "README.md").read_text()
-    sentence = next(line.strip() for line in readme.splitlines() if "The full catalog has" in line)
-    catalog_count = int(re.search(r"The full catalog has (\d+) MCP tools", sentence).group(1))
-    assert script._check("<main>v0.103.2 " + sentence + "</main>", "0.103.2", catalog_count) == []
+    sentence = next(line.strip() for line in readme.splitlines() if "Start with eight focused tools" in line)
+    assert script._check("<main>v0.103.2 " + sentence + "</main>", "0.103.2", 8) == []
 
 
 @pytest.mark.parametrize("invalid", [None, "schema", "version", "count", "identity", "no_contract", "stale_copy"])
