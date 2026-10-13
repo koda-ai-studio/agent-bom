@@ -119,3 +119,82 @@ def test_complete_evaluation_adds_no_coverage_warning():
     report = AIBOMReport(agents=[])
     attach_graph_derived_findings(report, _fanout_agent(5))
     assert report.coverage_warnings == []
+
+
+class _Untouchable(dict):
+    def items(self):
+        raise AssertionError("idle requests must not index the whole adjacency")
+
+    def get(self, *args):
+        raise AssertionError("idle requests must not index the whole adjacency")
+
+
+class _UntouchableEdges(list):
+    def __iter__(self):
+        raise AssertionError("idle requests must not scan every edge")
+
+
+def test_no_credential_findings_skips_edge_and_hop_indexes():
+    from agent_bom.graph.credential_findings import credential_finding_paths
+    from agent_bom.graph.path_evidence import with_technique_mappings
+
+    g = _per_agent(50, creds=0, group=10)
+    g.adjacency = _Untouchable(g.adjacency)
+    g.edges = _UntouchableEdges(g.edges)
+    assert credential_finding_paths(g) == []
+    assert with_technique_mappings([], g) == []
+
+
+def test_hop_index_only_covers_path_sources(monkeypatch):
+    from agent_bom.graph.path_evidence import with_technique_mappings
+
+    g = _per_agent(200, creds=1)
+    path = AttackPath(source="agent:0", target="cred:0:0", hops=["agent:0", "server:0", "cred:0:0"], edges=["uses", "exposes_cred"])
+    touched: list[str] = []
+    original_get = g.adjacency.get
+
+    class Recording(dict):
+        def items(self):
+            raise AssertionError("must not index every adjacency list")
+
+        def get(self, key, default=None):
+            touched.append(key)
+            return original_get(key, default)
+
+    g.adjacency = Recording(g.adjacency)
+    with_technique_mappings([path], g)
+    assert set(touched) <= {"agent:0", "server:0", "cred:0:0"}
+
+
+def test_technique_catalog_loads_once_per_batch(monkeypatch):
+    from agent_bom import atlas_fetch, mitre_fetch
+    from agent_bom.graph.path_evidence import with_technique_mappings
+
+    calls = {"attack": 0, "atlas": 0}
+    attack_build, atlas_build = mitre_fetch.build_catalog, atlas_fetch.build_catalog
+
+    def count_attack(*a, **kw):
+        calls["attack"] += 1
+        return attack_build(*a, **kw)
+
+    def count_atlas(*a, **kw):
+        calls["atlas"] += 1
+        return atlas_build(*a, **kw)
+
+    monkeypatch.setattr(mitre_fetch, "build_catalog", count_attack)
+    monkeypatch.setattr(atlas_fetch, "build_catalog", count_atlas)
+    g = _per_agent(30, creds=1)
+    paths = [
+        AttackPath(
+            source=f"agent:{i}",
+            target=f"cred:{i}:0",
+            hops=[f"agent:{i}", f"server:{i}", f"cred:{i}:0"],
+            edges=["uses", "exposes_cred"],
+            reachability="confirmed",
+        )
+        for i in range(30)
+    ]
+    with_technique_mappings(paths, g)
+    assert any(p.technique_mappings for p in paths)
+    assert calls["attack"] <= 1
+    assert calls["atlas"] <= 1

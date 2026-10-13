@@ -133,35 +133,57 @@ def _candidate(
     return None
 
 
-def _attack_tactics(technique_id: str) -> list[str] | None:
-    """Tactic phase names for an ATT&CK id, or ``None`` if not in the catalog."""
-    from agent_bom.mitre_fetch import get_techniques
+class TechniqueCatalogs:
+    """Load each bundled/synced catalog at most once per annotation batch."""
 
-    meta = get_techniques().get(technique_id)
+    def __init__(self) -> None:
+        self._attack: dict[str, dict] | None = None
+        self._atlas: dict[str, dict] | None = None
+
+    def attack(self) -> dict[str, dict]:
+        if self._attack is None:
+            from agent_bom.mitre_fetch import get_techniques
+
+            self._attack = get_techniques()
+        return self._attack
+
+    def atlas(self) -> dict[str, dict]:
+        if self._atlas is None:
+            from agent_bom.atlas_fetch import get_techniques as atlas_techniques
+
+            self._atlas = atlas_techniques()
+        return self._atlas
+
+
+def _attack_tactics(technique_id: str, catalogs: TechniqueCatalogs) -> list[str] | None:
+    """Tactic phase names for an ATT&CK id, or ``None`` if not in the catalog."""
+    meta = catalogs.attack().get(technique_id)
     if meta is None:
         return None
     return list(meta.get("tactics", []))
 
 
-def _atlas_meta(technique_id: str) -> tuple[str, list[str]] | None:
+def _atlas_meta(technique_id: str, catalogs: TechniqueCatalogs) -> tuple[str, list[str]] | None:
     """``(name, tactic_ids)`` for a curated ATLAS id, or ``None`` if unknown."""
     from agent_bom.atlas import ATLAS_TECHNIQUES
-    from agent_bom.atlas_fetch import get_techniques as atlas_techniques
 
     if technique_id not in ATLAS_TECHNIQUES:
         return None
-    meta = atlas_techniques().get(technique_id, {})
+    meta = catalogs.atlas().get(technique_id, {})
     name = meta.get("name") or ATLAS_TECHNIQUES.get(technique_id, "")
     return name, list(meta.get("tactics", []))
 
 
-def derive_attack_path_techniques(path: AttackPath, graph: UnifiedGraph) -> list[TechniqueMapping]:
+def derive_attack_path_techniques(
+    path: AttackPath, graph: UnifiedGraph, catalogs: TechniqueCatalogs | None = None
+) -> list[TechniqueMapping]:
     """Derive ordered, catalog-resolved technique mappings for ``path``.
 
     One mapping per hop that carries mappable evidence, in kill-chain order.
     Hops with no mappable evidence — or whose candidate technique does not
     resolve in the bundled catalog — are skipped (fail-closed). Never raises.
     """
+    catalogs = catalogs or TechniqueCatalogs()
     mappings: list[TechniqueMapping] = []
     edges = path.edges or []
     hops = path.hops or []
@@ -188,17 +210,15 @@ def derive_attack_path_techniques(path: AttackPath, graph: UnifiedGraph) -> list
         basis = relationship_evidence_basis(edge)
         provenance = provenance.replace("observed ", f"{basis or 'unclassified'} ", 1)
         if catalog == _ATLAS:
-            resolved = _atlas_meta(technique_id)
+            resolved = _atlas_meta(technique_id, catalogs)
             if resolved is None:
                 continue  # dangling id — fail closed
             name, tactics = resolved
         else:
-            tactics_or_none = _attack_tactics(technique_id)
+            tactics_or_none = _attack_tactics(technique_id, catalogs)
             if tactics_or_none is None:
                 continue  # dangling id — fail closed
-            from agent_bom.mitre_attack import ATTACK_TECHNIQUES
-
-            name = ATTACK_TECHNIQUES.get(technique_id, "")
+            name = str(catalogs.attack().get(technique_id, {}).get("name", ""))
             tactics = tactics_or_none
         mappings.append(
             TechniqueMapping(
@@ -222,7 +242,8 @@ def apply_attack_path_technique_mappings(graph: UnifiedGraph) -> int:
     number of mappings materialised. Never raises into the builder.
     """
     total = 0
+    catalogs = TechniqueCatalogs()
     for path in graph.attack_paths:
-        path.technique_mappings = derive_attack_path_techniques(path, graph)
+        path.technique_mappings = derive_attack_path_techniques(path, graph, catalogs)
         total += len(path.technique_mappings)
     return total

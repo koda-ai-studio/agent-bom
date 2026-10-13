@@ -508,18 +508,25 @@ __all__ = ["annotate_attack_path_evidence", "exposure_evidence_dimensions"]
 
 
 def with_technique_mappings(paths: list[AttackPath], graph: UnifiedGraph) -> list[AttackPath]:
-    """Annotate a batch without rescanning a shared credential's finding fan-out."""
+    """Annotate a batch without rescanning a shared credential's finding fan-out.
+
+    The hop index covers only the sources the batch's paths traverse, so the
+    cost tracks the paths, not the whole graph, and an empty batch is free.
+    """
+    if not paths:
+        return paths
     hop_edges: HopEdges = {}
-    for source, edges in graph.adjacency.items():
-        for edge in edges:
+    for source in {hop for path in paths for hop in path.hops[:-1]}:
+        for edge in graph.adjacency.get(source, []):
             hop_edges.setdefault((source, edge.target), []).append(edge)
     for path in paths:
         annotate_attack_path_evidence(path, graph, hop_edges=hop_edges)
     try:
-        from agent_bom.graph.attack_path_mitre import derive_attack_path_techniques
+        from agent_bom.graph.attack_path_mitre import TechniqueCatalogs, derive_attack_path_techniques
 
+        catalogs = TechniqueCatalogs()
         for path in paths:
-            path.technique_mappings = derive_attack_path_techniques(path, graph)
+            path.technique_mappings = derive_attack_path_techniques(path, graph, catalogs)
     except Exception:  # noqa: BLE001
         pass
     return paths
