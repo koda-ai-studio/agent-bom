@@ -24,7 +24,7 @@ from agent_bom.graph.analysis import (
     analysis_status_map_to_dict,
 )
 from agent_bom.graph.container import AttackPath, UnifiedGraph
-from agent_bom.graph.path_derivation import _derived_attack_paths, derived_attack_paths_with_kinds
+from agent_bom.graph.path_derivation import _derived_attack_paths
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +65,12 @@ def path_identity(path: AttackPath) -> str:
 
 def _detached_copy(path: AttackPath) -> AttackPath:
     return AttackPath.from_dict(path.to_dict())
+
+
+def derived_attack_paths_with_kinds(graph: UnifiedGraph) -> list[tuple[AttackPath, str]]:
+    """Ranked served paths tagged fusion/governance/credential/component."""
+    kinds: dict[int, str] = {}
+    return [(path, kinds.get(id(path), "component")) for path in _derived_attack_paths(graph, kinds=kinds)]
 
 
 def materialize_snapshot_paths(graph: UnifiedGraph) -> list[SnapshotPath]:

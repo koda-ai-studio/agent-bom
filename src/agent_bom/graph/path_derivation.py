@@ -18,7 +18,7 @@ from agent_bom.graph.edge_lookup import _edge_relationships_for_hops as _edge_re
 from agent_bom.graph.edge_lookup import _EdgeLookup as _EdgeLookup
 from agent_bom.graph.edge_lookup import _rel_value as _rel_value
 from agent_bom.graph.node import UnifiedNode
-from agent_bom.graph.path_evidence import package_path_covers_rollup, rank_attack_path
+from agent_bom.graph.path_evidence import package_path_covers_rollup, rank_unique_paths, tag_path_kinds
 from agent_bom.graph.path_evidence import with_technique_mappings as _with_technique_mappings
 from agent_bom.graph.reachability_truth import node_reachability
 from agent_bom.graph.types import EntityType, RelationshipType
@@ -457,38 +457,23 @@ def _derived_toxic_combination_paths(graph: UnifiedGraph) -> list[AttackPath]:
     return paths
 
 
+def _cached_path_boost(graph: UnifiedGraph, hops: list[str], cache: dict[str, list[tuple[str, str, str, float]]]) -> float:
+    """Path risk boost from per-hop signals; first occurrence of a kind wins, as in whole-path scoring."""
+    boosts: dict[str, float] = {}
+    for hop_id in hops:
+        if hop_id not in cache:
+            cache[hop_id] = _fusion_signals_for_path(graph, [hop_id])
+        for kind, _label, _detail, boost in cache[hop_id]:
+            boosts.setdefault(kind, boost)
+    return sum(boosts.values())
+
+
 def _component_finding(node: UnifiedNode) -> bool:
     # Credential assessments use their own bounded, owner-scoped derivation.
     return (
         _node_type_value(node) in {EntityType.VULNERABILITY.value, EntityType.MISCONFIGURATION.value}
         and node.attributes.get("rule_id") != "AGENT_REACHES_PRIVILEGED"
     )
-
-
-def derived_attack_paths_with_kinds(graph: UnifiedGraph) -> list[tuple[AttackPath, str]]:
-    """Ranked served paths tagged fusion/governance/credential/component."""
-    kinds: dict[int, str] = {}
-    return [(path, kinds.get(id(path), "component")) for path in _derived_attack_paths(graph, kinds=kinds)]
-
-
-def _tag_path_kinds(kinds: dict[int, str] | None, **families: list[AttackPath]) -> None:
-    if kinds is None:
-        return
-    for family, members in families.items():
-        kinds.update({id(path): family for path in members})
-
-
-def _rank_unique_paths(paths: list[AttackPath], graph: UnifiedGraph) -> list[AttackPath]:
-    """One served path per hop/edge chain (highest-ranked wins); never a single-node "path"."""
-    unique: list[AttackPath] = []
-    served: set[tuple[str, str, tuple[str, ...], tuple[str, ...]]] = set()
-    for path in sorted(paths, key=rank_attack_path):
-        identity = (path.source, path.target, tuple(path.hops), tuple(path.edges))
-        if identity in served or len(path.hops) < 2 or path.source == path.target:
-            continue
-        served.add(identity)
-        unique.append(path)
-    return _with_technique_mappings(unique, graph)
 
 
 def _derived_attack_paths(graph: UnifiedGraph, *, kinds: dict[int, str] | None = None) -> list[AttackPath]:
@@ -535,6 +520,7 @@ def _derived_attack_paths(graph: UnifiedGraph, *, kinds: dict[int, str] | None =
 
     paths: list[AttackPath] = []
     seen: set[tuple[str, str, str, str]] = set()
+    signal_cache: dict[str, list[tuple[str, str, str, float]]] = {}
 
     for finding in graph.nodes.values():
         if not _component_finding(finding):
@@ -602,7 +588,7 @@ def _derived_attack_paths(graph: UnifiedGraph, *, kinds: dict[int, str] | None =
                     risk += min(10.0, len(tools) * 0.75)
                     # Fuse governance / CNAPP / runtime evidence into the score so
                     # exposed, drifting, or unscoped-identity paths rank higher.
-                    risk += sum(boost for _k, _l, _d, boost in _fusion_signals_for_path(graph, hop_ids))
+                    risk += _cached_path_boost(graph, hop_ids, signal_cache)
                     from agent_bom.graph.asset_entity import finding_ids_for_asset_path
 
                     stamped_finding_ids = finding_ids_for_asset_path(getattr(finding, "attributes", None), hop_ids)
@@ -648,5 +634,5 @@ def _derived_attack_paths(graph: UnifiedGraph, *, kinds: dict[int, str] | None =
         if derived_path_key not in existing_keys:
             combined.append(derived_path)
             existing_keys.add(derived_path_key)
-    _tag_path_kinds(kinds, fusion=materialized, governance=governance_paths, credential=credential_paths)
-    return _rank_unique_paths(combined, graph)
+    tag_path_kinds(kinds, fusion=materialized, governance=governance_paths, credential=credential_paths)
+    return _with_technique_mappings(rank_unique_paths(combined), graph)

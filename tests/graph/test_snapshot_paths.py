@@ -364,3 +364,14 @@ def test_served_paths_are_unique_and_never_degenerate(estate: str, tmp_path: Pat
     assert len(hop_sets) == len(set(hop_sets)) or estate == "demo"
     degenerate = [path.hops for path in paths if len(path.hops) < 2 or path.source == path.target]
     assert degenerate == []
+
+
+def test_per_hop_signal_cache_scores_paths_exactly_like_whole_path_scoring() -> None:
+    from agent_bom.graph.path_derivation import _cached_path_boost, _fusion_signals_for_path
+
+    graph = _showcase_graph()
+    cache: dict[str, Any] = {}
+    chains = [path.hops for path in _derived_attack_paths(graph)] + [list(reversed(path.hops)) for path in graph.attack_paths]
+    assert any(_fusion_signals_for_path(graph, hops) for hops in chains)
+    for hops in chains:
+        assert _cached_path_boost(graph, hops, cache) == sum(boost for _k, _l, _d, boost in _fusion_signals_for_path(graph, hops))

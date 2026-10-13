@@ -775,7 +775,8 @@ async def get_graph_rollup(
     ``completeness``; ``?mode=attack_path`` returns the nodes/edges on materialised
     attack paths first with the rest collapsed.
 
-    Backend for the UI graph-navigation surface. Read-only: never mutates the source graph.
+    Backend for the UI graph-navigation surface. Read-only: never mutates the
+    source graph.
     """
     tenant = _runtime._tenant(request)
     graph_store = _runtime._get_graph_store_or_503()
@@ -791,8 +792,7 @@ async def get_graph_rollup(
     if min_severity and min_severity.lower() not in SEVERITY_RANK:
         raise HTTPException(status_code=422, detail=f"Unsupported severity: {min_severity}")
 
-    # Cache the small summary, never the hydrated estate. Durable generation
-    # prevents same-ID replacement from replaying counts from an older snapshot.
+    # Cache the small summary, never the hydrated estate; the durable generation stops same-ID replays of older counts.
     from agent_bom.api import graph_rollup_cache
 
     identity = await _runtime._graph_store_call(
