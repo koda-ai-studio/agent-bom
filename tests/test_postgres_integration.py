@@ -1937,7 +1937,7 @@ def test_postgres_runtime_parallel_replay_preserves_tenant_counts():
         RuntimeObservationRecord(
             tenant_id=tenant, observation_id=f"span-{i}", session_id="trace", observed_at=datetime.now(timezone.utc).isoformat()
         )
-        for i in range(20)
+        for i in range(201)
     ]
     ready = Barrier(4)
 
@@ -1951,11 +1951,11 @@ def test_postgres_runtime_parallel_replay_preserves_tenant_counts():
 
     with ThreadPoolExecutor(max_workers=4) as executor:
         inserted = list(executor.map(write, range(4)))
-    assert sum(inserted) == 20
+    assert sum(inserted) == 201
     token = set_current_tenant(tenant)
     try:
-        assert len(store.list_observations(tenant)) == 20
-        assert store.get_session(tenant, "trace").observation_count == 20
+        assert len(store.list_observations(tenant, limit=300)) == 201
+        assert store.get_session(tenant, "trace").observation_count == 201
         assert store.put_observations_batch(records) == 0
         checkpoint = TraceImportCheckpoint(
             tenant_id=tenant,
@@ -1970,15 +1970,65 @@ def test_postgres_runtime_parallel_replay_preserves_tenant_counts():
         assert store.get_trace_import(tenant, "source") == checkpoint
         with pytest.raises(TraceImportConflictError):
             store.commit_trace_page(checkpoint, [replace(records[0], observation_id="stale-page")], expected_revision=0)
-        assert len(store.list_observations(tenant)) == 20
+        assert len(store.list_observations(tenant, limit=300)) == 201
     finally:
         reset_current_tenant(token)
     wrong = set_current_tenant(f"other-{tenant}")
     try:
-        assert store.list_observations(tenant) == []
+        assert store.list_observations(tenant, limit=300) == []
         assert store.get_trace_import(tenant, "source") is None
     finally:
         reset_current_tenant(wrong)
+
+
+def test_postgres_runtime_batch_late_failure_rolls_back(monkeypatch):
+    from contextlib import contextmanager
+    from datetime import datetime, timezone
+
+    from agent_bom.api import postgres_runtime_event
+    from agent_bom.api.postgres_common import _get_pool, reset_current_tenant, set_current_tenant
+    from agent_bom.api.runtime_event_store import RuntimeObservationRecord
+
+    tenant = f"runtime-rollback-{uuid4().hex}"
+    store = postgres_runtime_event.PostgresRuntimeEventStore(pool=_get_pool())
+    records = [
+        RuntimeObservationRecord(
+            tenant_id=tenant, observation_id=f"event-{i}", session_id=f"session-{i}", observed_at=datetime.now(timezone.utc).isoformat()
+        )
+        for i in range(201)
+    ]
+    original = postgres_runtime_event._tenant_connection
+    session_writes = []
+
+    @contextmanager
+    def failing_connection(pool):
+        with original(pool) as connection:
+
+            class Connection:
+                def execute(self, sql, params):
+                    if sql.lstrip().startswith("INSERT INTO runtime_sessions"):
+                        session_writes.append(sql)
+                        if len(session_writes) == 2:
+                            raise RuntimeError("injected later session write failure")
+                    return connection.execute(sql, params)
+
+            yield Connection()
+
+    token = set_current_tenant(tenant)
+    try:
+        with monkeypatch.context() as patch:
+            patch.setattr(postgres_runtime_event, "_tenant_connection", failing_connection)
+            with pytest.raises(RuntimeError, match="injected later session"):
+                store.put_observations_batch(records)
+        assert len(session_writes) == 2
+        assert store.list_observations(tenant) == []
+        assert store.list_sessions(tenant) == []
+        assert store.put_observations_batch(records) == 201
+        assert len(store.list_observations(tenant, limit=300)) == 201
+        assert len(store.list_sessions(tenant, limit=300)) == 201
+        assert store.put_observations_batch(records) == 0
+    finally:
+        reset_current_tenant(token)
 
 
 def test_postgres_trace_checkpoint_failure_rolls_back_and_parallel_resume_has_one_winner(monkeypatch):

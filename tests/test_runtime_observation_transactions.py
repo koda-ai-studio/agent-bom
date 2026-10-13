@@ -43,6 +43,32 @@ def test_sqlite_parallel_replays_keep_exact_session_count(tmp_path):
     assert store.get_session("tenant-a", "session").observation_count == 20
 
 
+def test_postgres_runtime_insert_round_trips_are_bounded(tmp_path):
+    from agent_bom.api.postgres_runtime_event import PostgresRuntimeEventStore
+
+    sqlite = SQLiteRuntimeEventStore(str(tmp_path / "batch.db"))
+    writes = []
+
+    class Connection:
+        def execute(self, sql, params):
+            if sql.lstrip().startswith("INSERT"):
+                writes.append(sql)
+            return sqlite._conn.execute(sql.replace("%s", "?"), params)
+
+    # Exercise actual INSERT/upsert semantics on SQL; live PostgreSQL separately
+    # qualifies tenant RLS, competing replicas and transaction rollback.
+    store = object.__new__(PostgresRuntimeEventStore)
+    records = [replace(record(i), session_id=f"session-{i}") for i in range(201)]
+    conn = Connection()
+    assert store._put_observations_locked(conn, records, prune=False) == 201
+    assert len(writes) <= 6, "observation/session writes must not make one round trip per row"
+    assert len(sqlite.list_observations("tenant-a", limit=300)) == 201
+    assert len(sqlite.list_sessions("tenant-a", limit=300)) == 201
+    writes.clear()
+    assert store._put_observations_locked(conn, records, prune=False) == 0
+    assert writes == []
+
+
 def test_runtime_batch_redaction_reuses_field_values_without_cross_batch_state(monkeypatch):
     from agent_bom.api.routes import observability
     from agent_bom.api.storage import runtime_records

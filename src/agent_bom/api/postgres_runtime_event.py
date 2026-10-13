@@ -144,37 +144,36 @@ class PostgresRuntimeEventStore:
             for session_id, data in rows:
                 existing_sessions[session_id] = _session_from_json(data)
         merged_sessions = _merge_sessions_for_batch(existing_sessions, new_records)
-        observation_sql = """
-            INSERT INTO runtime_observations (tenant_id, observation_id, session_id, observed_at, data)
-            VALUES (%s, %s, %s, %s, %s)
-            ON CONFLICT (tenant_id, observation_id) DO NOTHING
-        """
-        for record in new_records:
+        for offset in range(0, len(new_records), 100):
+            batch = new_records[offset : offset + 100]
+            values = ",".join("(%s,%s,%s,%s,%s)" for _ in batch)
             conn.execute(
-                observation_sql,
-                (
-                    record.tenant_id,
-                    record.observation_id,
-                    record.session_id,
-                    record.observed_at,
-                    json.dumps(record.to_dict(), sort_keys=True),
+                "INSERT INTO runtime_observations (tenant_id, observation_id, session_id, observed_at, data) "
+                f"VALUES {values} ON CONFLICT (tenant_id, observation_id) DO NOTHING",  # nosec B608 — bound values only
+                tuple(
+                    value
+                    for record in batch
+                    for value in (
+                        record.tenant_id,
+                        record.observation_id,
+                        record.session_id,
+                        record.observed_at,
+                        json.dumps(record.to_dict(), sort_keys=True),
+                    )
                 ),
             )
-        session_sql = """
-            INSERT INTO runtime_sessions (tenant_id, session_id, last_seen, data)
-            VALUES (%s, %s, %s, %s)
-            ON CONFLICT (tenant_id, session_id) DO UPDATE SET
-                last_seen = EXCLUDED.last_seen,
-                data = EXCLUDED.data
-        """
-        for session in merged_sessions.values():
+        sessions = list(merged_sessions.values())
+        for offset in range(0, len(sessions), 100):
+            batch_sessions = sessions[offset : offset + 100]
+            values = ",".join("(%s,%s,%s,%s)" for _ in batch_sessions)
             conn.execute(
-                session_sql,
-                (
-                    session.tenant_id,
-                    session.session_id,
-                    session.last_seen,
-                    json.dumps(session.to_dict(), sort_keys=True),
+                "INSERT INTO runtime_sessions (tenant_id, session_id, last_seen, data) "
+                f"VALUES {values} ON CONFLICT (tenant_id, session_id) DO UPDATE SET "  # nosec B608 — bound values only
+                "last_seen = EXCLUDED.last_seen, data = EXCLUDED.data",
+                tuple(
+                    value
+                    for session in batch_sessions
+                    for value in (session.tenant_id, session.session_id, session.last_seen, json.dumps(session.to_dict(), sort_keys=True))
                 ),
             )
         if prune:
