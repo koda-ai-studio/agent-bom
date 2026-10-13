@@ -12,6 +12,7 @@ from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.package_projection import (
     _add_exploitable_via_edges,
     _blast_radius_package_evidence,
+    _blast_radius_package_identity,
     _collect_compliance_tags,
     _package_node_id_from_parts,
     _resolve_affected_package_ids,
@@ -85,8 +86,7 @@ def project_blast_radius(graph: UnifiedGraph, blast_data: list[dict[str, Any]], 
         if not vuln_id_str:
             continue
         severity = br_dict.get("severity", "").lower()
-        pkg_name = br_dict.get("package_name", br_dict.get("package", "").split("@")[0])
-        pkg_version = br_dict.get("package_version", "")
+        pkg_name, pkg_version = _blast_radius_package_identity(br_dict)
         ecosystem = br_dict.get("ecosystem", "")
 
         # Add/merge vuln node (add_node unions compliance_tags if node exists)

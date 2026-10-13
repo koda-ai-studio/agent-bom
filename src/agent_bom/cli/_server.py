@@ -14,6 +14,7 @@ from typing import Any, Optional
 
 import click
 
+from agent_bom.api.secret_source import secret_is_configured
 from agent_bom.cli._common import LISTEN_PORT_RANGE
 from agent_bom.cli._demo_storage import demo_estate_default_persist as _demo_estate_default_persist
 from agent_bom.core.settings import env_flag, env_list, env_raw, env_str
@@ -106,7 +107,6 @@ def _enforce_auth_defaults(command: str, host: str, api_key: str | None, allow_i
       SAML / OIDC / API-key middleware path that's still in effect)
     """
     from agent_bom.api.auth_posture import AuthPostureError, derive_auth_posture, validate_auth_posture
-    from agent_bom.api.secret_source import secret_is_configured
 
     has_api_key = bool(api_key or secret_is_configured("AGENT_BOM_API_KEYS") or secret_is_configured("AGENT_BOM_API_KEY"))
     # One derivation, shared with configure_api: the CLI serve gate reads the
@@ -358,7 +358,6 @@ def _auth_summary(
     mcp_remote: bool = False,
 ) -> str:
     """Return a user-facing summary for the active auth mode."""
-    from agent_bom.api.secret_source import secret_is_configured
 
     if api_key or secret_is_configured("AGENT_BOM_API_KEYS") or secret_is_configured("AGENT_BOM_API_KEY"):
         return "API key required (Bearer / X-API-Key)"
@@ -412,7 +411,6 @@ def _should_auto_generate_dev_key(*, host: str, api_key: str | None, allow_insec
         return False
     if api_key or allow_insecure_no_auth:
         return False
-    from agent_bom.api.secret_source import secret_is_configured
 
     if secret_is_configured("AGENT_BOM_API_KEYS") or secret_is_configured("AGENT_BOM_API_KEY"):
         return False
@@ -489,7 +487,6 @@ def _api_auth_summary(
     versa). ``allow_unauthenticated`` is the resolved flag-OR-env value.
     ``dev_api_key`` is the auto-generated loopback key, if one was minted.
     """
-    from agent_bom.api.secret_source import secret_is_configured
 
     if api_key or secret_is_configured("AGENT_BOM_API_KEYS") or secret_is_configured("AGENT_BOM_API_KEY"):
         return "API key required (Bearer / X-API-Key)"

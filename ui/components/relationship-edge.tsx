@@ -70,12 +70,13 @@ export function RelationshipEdge(props: EdgeProps) {
   })) : []);
   const relationship = typeof props.data?.relationship === "string" ? props.data.relationship : "";
   return <>
+    {typeof props.data?.hoverDescription === "string" && <title>{props.data.hoverDescription}</title>}
     <BaseEdge id={props.id} path={path} style={props.style}
       {...(props.markerStart ? { markerStart: props.markerStart } : {})}
       {...(props.markerEnd ? { markerEnd: props.markerEnd } : {})}
       {...(props.interactionWidth !== undefined ? { interactionWidth: props.interactionWidth } : {})} />
     {props.label != null && <EdgeLabelRenderer>
-      <div className="nodrag nopan graph-relationship-label" style={{
+      <div className={`nodrag nopan graph-relationship-label ${props.data?.aggregate ? "graph-aggregate-label" : ""}`} style={{
         position: "absolute",
         transform: `translate(-50%, -50%) translate(${x}px, ${y}px)`,
         fontSize: Math.max(Number(props.labelStyle?.fontSize) || 12, 12.5 / Math.max(zoom, 0.16)),

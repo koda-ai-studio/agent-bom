@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { GraphScopeDetail } from "@/components/graph-scope-detail";
 import type { GraphNodeDetailResponse } from "@/lib/api-types";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Loader2, Network, Radar } from "lucide-react";
@@ -35,6 +36,7 @@ export function GraphEntityDrawer({
   blastRadiusLoading = false,
   onInspectNode,
   onExpandNeighbors,
+  onOpenScope,
   onShowImpact,
   remediationHref,
   enrich = true,
@@ -47,6 +49,7 @@ export function GraphEntityDrawer({
   blastRadiusActive?: boolean;
   blastRadiusLoading?: boolean;
   onInspectNode?: ((nodeId: string) => void) | undefined;
+  onOpenScope?: (() => void) | undefined;
   onExpandNeighbors?: (() => void) | undefined;
   onShowImpact?: (() => void) | undefined;
   remediationHref?: string | undefined;
@@ -69,7 +72,7 @@ export function GraphEntityDrawer({
   useEffect(() => {
     setLoadedDetail(null);
     setLoading(false);
-    if (!enrich || !scanId || !nodeId) return;
+    if (data.rollup || !enrich || !scanId || !nodeId) return;
     let cancelled = false;
     setLoading(true);
     void api
@@ -87,7 +90,7 @@ export function GraphEntityDrawer({
     return () => {
       cancelled = true;
     };
-  }, [enrich, nodeId, scanId]);
+  }, [data.rollup, enrich, nodeId, scanId]);
 
   const layer = useMemo(
     () => semanticLayerForNodeType(enriched.nodeType),
@@ -102,6 +105,7 @@ export function GraphEntityDrawer({
     [enriched, remediationHref, scanId],
   );
   const evidenceLabel = evidenceTierLabel(enriched);
+  if (data.rollup) return <GraphScopeDetail item={data.rollup} onClose={onClose} onOpenScope={onOpenScope} onInspectRelationships={onExpandNeighbors} scanId={scanId} docked={variant === "docked"} />;
 
   const relationshipSlot = enrich && scanId && nodeId
     ? <GraphRecordedRelationships key={`${scanId}:${nodeId}`} scanId={scanId} nodeId={nodeId} onInspectNode={onInspectNode} />
@@ -176,6 +180,10 @@ export function GraphEntityDrawer({
         {nextAction.label}
         <ArrowRight className="h-3.5 w-3.5" />
       </Link>}
+      {onOpenScope && <button type="button" onClick={onOpenScope}
+        className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-outline bg-surface-muted px-3 py-2 text-xs font-medium text-foreground hover:border-outline-strong">
+        <Network className="h-3.5 w-3.5" />Explore scope
+      </button>}
       {(onExpandNeighbors || onShowImpact) && (
         <div className="grid grid-cols-2 gap-2">
           {onExpandNeighbors ? (

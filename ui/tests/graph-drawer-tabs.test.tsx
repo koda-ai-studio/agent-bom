@@ -34,6 +34,13 @@ function richNode(): LineageNodeData {
 }
 
 describe("graph entity drawer tabs", () => {
+  it("opens a parent scope only through the explicit scope action", () => {
+    const openScope = vi.fn();
+    render(<GraphEntityDrawer data={{ label: "Production", nodeType: "agent", attributes: { node_id: "agent:parent", rollup_has_children: true } } as LineageNodeData} onClose={noop} enrich={false} onOpenScope={openScope} />);
+    expect(openScope).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Explore scope" }));
+    expect(openScope).toHaveBeenCalledTimes(1);
+  });
   it("does not send an already inspected entity to a duplicate lineage canvas", () => {
     render(<GraphEntityDrawer data={{ label: "Cursor IDE Agent", nodeType: "agent", attributes: { node_id: "agent:cursor" } } as LineageNodeData} scanId="scan-one" onClose={noop} enrich={false} />);
     expect(screen.queryByRole("link", { name: "Inspect in lineage" })).not.toBeInTheDocument();
@@ -210,7 +217,7 @@ describe("graph entity drawer tabs", () => {
     render(<GraphEntityDrawer data={richNode()} scanId="scan-proof" onClose={noop} onInspectNode={inspect} />);
     fireEvent.click(screen.getByTestId("graph-drawer-tab-relationships"));
     const relationship = await screen.findByRole("button", { name: "Recorded package" });
-    expect(screen.getByText("← Incoming · Has CVE")).toBeVisible();
+    expect(screen.getByText("← Incoming · Has finding")).toBeVisible();
     const counts = screen.getByText("Relationship counts");
     expect(counts.closest("details")?.open).toBe(false);
     expect(relationship.compareDocumentPosition(counts) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();

@@ -961,6 +961,9 @@ export interface GraphRollupEdge {
   /** How many underlying edges collapsed into this one. */
   count: number;
   relationships: string[];
+  /** Absent on older servers; never infer direction from a relationship name. */
+  directions?: string[] | null;
+  relationship_counts?: Record<string, number> | null;
 }
 
 export interface GraphSearchResponse {

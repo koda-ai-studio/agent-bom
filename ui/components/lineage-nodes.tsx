@@ -4,7 +4,8 @@ import type { ComponentType, ReactNode } from "react";
 import { Handle, Position } from "@xyflow/react";
 import { Bug, KeyRound, Package, Wrench } from "lucide-react";
 
-import type { GraphCompleteness } from "@/lib/api-types";
+import { GraphScopeNode } from "@/components/graph-scope-node";
+import type { GraphRollupContainer, GraphCompleteness } from "@/lib/api-types";
 import { severityColor } from "@/lib/api";
 import type { ReachBreakdown } from "@/lib/effective-reach";
 import { NODE_COLOR_MAP } from "@/lib/graph-utils";
@@ -25,6 +26,8 @@ export type RuntimeEvidenceTier = "static_scan" | "runtime_observed" | "runtime_
 
 export type LineageNodeData = {
   label: string;
+  rollup?: GraphRollupContainer | undefined;
+  rollupCompact?: boolean | undefined;
   reverseFlow?: boolean;
   nodeType: LineageNodeType;
   entityType?: string | undefined;
@@ -868,6 +871,7 @@ const DETAIL_RENDERERS: Record<
 };
 
 function AdaptiveLineageNode({ data }: { data: LineageNodeData }) {
+  if (data.rollup) return <GraphScopeNode item={data.rollup} compact={data.rollupCompact} dimmed={data.dimmed} highlighted={data.highlighted} />;
   if (data.renderBand === "cluster") return <ClusterBubbleNode data={data} />;
   if (data.renderBand === "summary") return <SummaryNode data={data} />;
   const Renderer = DETAIL_RENDERERS[data.nodeType] ?? SummaryNode;

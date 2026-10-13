@@ -1866,3 +1866,88 @@ for (const theme of ["dark", "light"] as const) {
     });
   }
 }
+
+for (const theme of ["light", "dark"] as const) {
+  test(`impact step reads scoped reverse reachability in ${theme}`, async ({ page }, testInfo) => {
+    await routeCockpit(page);
+    await page.addInitScript(value => localStorage.setItem("agent-bom-theme", value), theme);
+    await page.route("**/v1/graph/impact?**", route => route.fulfill({ json: {
+      scan_id: scanId, tenant_id: "default", snapshot_generation: "a".repeat(32), node_id: "cve:form-data",
+      affected_nodes: ["agent:desktop", "server:github", "pkg:form-data"], affected_count: 3,
+      affected_by_type: { agent: 1, server: 1, package: 1 }, max_depth_reached: 3,
+      completeness: { complete: true },
+    } }));
+    await page.goto(`/security-graph?scan=${scanId}&lens=attack-path`);
+    await page.getByTestId("investigation-step-strip").getByRole("button", { name: /Impact/ }).click();
+    await expect(page.getByRole("region", { name: "Path impact" })).toContainText("3 upstream related nodes");
+    await expect(page.getByRole("link", { name: "Explore upstream relationships" })).toHaveAttribute("href", /direction=reverse/);
+    await page.screenshot({ path: testInfo.outputPath(`path-impact-${theme}.png`), fullPage: true });
+  });
+
+  test(`scope selection preserves the parent until explicit drill-down in ${theme}`, async ({ page }, testInfo) => {
+    await routeCockpit(page);
+    await page.addInitScript(value => localStorage.setItem("agent-bom-theme", value), theme);
+    const drilled: string[] = [];
+    page.on("request", request => { const url = new URL(request.url()); if (url.pathname === "/v1/graph/rollup" && url.searchParams.has("node")) drilled.push(url.searchParams.get("node")!); });
+    await page.goto(`/graph?scan=${scanId}&rollup=1`);
+    const productionScope = page.locator('.react-flow__node[data-id="account:production"]');
+    await expect(productionScope).toContainText("900");
+    await expect(productionScope).toContainText("Critical · highest severity");
+    await expect(page.locator(".graph-aggregate-label")).toHaveText("35 relationships");
+    await page.waitForLoadState("networkidle");
+    await page.screenshot({ path: testInfo.outputPath(`scope-overview-${theme}.png`), fullPage: true });
+    await productionScope.click();
+    await expect(page.getByTestId("graph-entity-drawer")).toBeVisible();
+    await expect(page.getByRole("complementary", { name: "Scope details" })).toContainText("Severity of contained entities");
+    await expect(page.getByRole("button", { name: "Show blast radius" })).toHaveCount(0);
+    expect(drilled).toEqual([]);
+    await expect(page.locator('.react-flow__node[data-id="account:production"]')).toBeVisible();
+    await expect.poll(async () => {
+      const canvas = await page.locator(".react-flow").boundingBox();
+      const neighbor = await page.locator('.react-flow__node[data-id="account:development"]').boundingBox();
+      return !!canvas && !!neighbor && neighbor.x >= canvas.x && neighbor.x + neighbor.width <= canvas.x + canvas.width + 1;
+    }).toBe(true);
+    await page.screenshot({ path: testInfo.outputPath(`scope-selected-${theme}.png`), fullPage: true });
+    await page.getByRole("button", { name: "Explore scope", exact: true }).click();
+    await expect.poll(() => drilled).toContain("account:production");
+  });
+}
+
+test("incoming traversal survives URL synchronization and reload", async ({ page }) => {
+  await routeCockpit(page);
+  const directions: string[] = [];
+  await page.route("**/v1/graph/query", route => {
+    const body = route.request().postDataJSON(); directions.push(body.direction);
+    const graph = buildCockpitGraph();
+    return route.fulfill({ json: { ...graph, roots: body.roots, direction: body.direction, truncated: false, missing_roots: [], depth_by_node: { "server:github": 0, "agent:desktop": 1 } } });
+  });
+  await page.goto(`/security-graph?scan=${scanId}&investigate=1&root=server%3Agithub&direction=reverse&lens=lineage`);
+  await openEvidenceControls(page);
+  await expect(page.getByRole("combobox", { name: "Traversal direction" })).toHaveValue("reverse");
+  await expect(page).toHaveURL(/direction=reverse/);
+  expect(directions[0]).toBe("reverse");
+  await page.reload();
+  await openEvidenceControls(page);
+  await expect(page.getByRole("combobox", { name: "Traversal direction" })).toHaveValue("reverse");
+  expect(directions.every(value => value === "reverse")).toBe(true);
+});
+
+test("aggregate edge opens recorded counts without inventing direct evidence", async ({ page }, testInfo) => {
+  await routeCockpit(page);
+  await page.goto(`/graph?scan=${scanId}&rollup=1`);
+  await page.waitForLoadState("networkidle");
+  const edge = page.locator(".react-flow__edge").first();
+  await expect(edge).toBeAttached();
+  const point = await edge.locator(".react-flow__edge-interaction").evaluate(element => {
+    const path = element as SVGPathElement;
+    const local = path.getPointAtLength(path.getTotalLength() / 2);
+    const screen = new DOMPoint(local.x, local.y).matrixTransform(path.getScreenCTM()!);
+    return { x: screen.x, y: screen.y };
+  });
+  await page.mouse.click(point.x, point.y);
+  const detail = page.getByRole("dialog", { name: "Scope relationship details" });
+  await expect(detail).toContainText("35 recorded relationships");
+  await expect(detail).toContainText("Not recorded");
+  await expect(detail).toContainText("Count unavailable");
+  await page.screenshot({ path: testInfo.outputPath("aggregate-relationship-detail.png"), fullPage: true });
+});

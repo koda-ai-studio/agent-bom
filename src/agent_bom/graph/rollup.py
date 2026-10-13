@@ -450,18 +450,9 @@ def cross_container_edges(
 ) -> list[dict[str, Any]]:
     """Aggregate NON-containment edges into container-to-container relationships.
 
-    The roll-up collapses thousands of nodes into a handful of containers, but
-    it collapsed the edges to nothing: the canvas received containers with an
-    empty edge list and drew a grid of disconnected cards. The view then had to
-    tell the reader that "aggregate cards are not rendered relationship
-    evidence" -- a security graph admitting it is not showing a graph.
-
-    Containment is not the interesting relationship here; it is the tree the
-    roll-up already expresses through nesting. What a reviewer needs at estate
-    scale is the OTHER edges -- an account whose workload reaches another
-    account's data store, an identity that assumes a role across a boundary.
-    Those exist in the graph; nothing was projecting them onto the collapsed
-    view.
+    Containment defines the nesting. Other recorded relationships are counted
+    between the visible scopes while retaining direction and per-kind counts.
+    The aggregate is not proof of a direct or executable path between scopes.
 
     Self-edges (both endpoints inside one container) are dropped: they are
     internal detail the container already stands for, and drawing them would
@@ -505,10 +496,15 @@ def _cross_container_edge_rows(
                 "target": target_container,
                 "count": 1,
                 "relationships": {relationship},
+                "directions": {edge.direction},
+                "relationship_counts": {relationship: 1},
             }
             continue
         entry["count"] = int(entry["count"]) + 1
         cast(set, entry["relationships"]).add(relationship)
+        cast(set, entry["directions"]).add(edge.direction)
+        counts = cast(dict[str, int], entry["relationship_counts"])
+        counts[relationship] = counts.get(relationship, 0) + 1
 
     rows = [
         {
@@ -516,6 +512,8 @@ def _cross_container_edge_rows(
             "target": entry["target"],
             "count": entry["count"],
             "relationships": sorted(cast(set, entry["relationships"])),
+            "directions": sorted(cast(set, entry["directions"])),
+            "relationship_counts": dict(sorted(entry["relationship_counts"].items())),
         }
         for entry in aggregated.values()
     ]

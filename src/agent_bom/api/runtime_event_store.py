@@ -10,7 +10,7 @@ from typing import Any, Protocol
 
 from agent_bom.analytics_retention import prune_runtime_observations_for_tenant
 from agent_bom.api.gateway_activity_store import ensure_sqlite_gateway_activity_schema
-from agent_bom.api.storage.runtime_observation_query import memory_observation_page, sql_observation_page
+from agent_bom.api.storage.runtime_observation_query import memory_observation_page, session_keys, sql_observation_page, sql_sessions
 from agent_bom.api.storage.runtime_records import (
     RuntimeObservationRecord as RuntimeObservationRecord,
 )
@@ -92,6 +92,8 @@ class RuntimeEventStore(Protocol):
     def list_sessions(self, tenant_id: str, *, limit: int = 100, offset: int = 0) -> list[RuntimeSessionRecord]: ...
 
     def get_session(self, tenant_id: str, session_id: str) -> RuntimeSessionRecord | None: ...
+
+    def get_sessions(self, tenant_id: str, session_ids: list[str]) -> list[RuntimeSessionRecord]: ...
 
     def list_observations(
         self,
@@ -238,6 +240,11 @@ class InMemoryRuntimeEventStore:
     def get_session(self, tenant_id: str, session_id: str) -> RuntimeSessionRecord | None:
         with self._lock:
             return self._sessions.get((tenant_id, session_id))
+
+    def get_sessions(self, tenant_id: str, session_ids: list[str]) -> list[RuntimeSessionRecord]:
+        keys = session_keys(session_ids)
+        with self._lock:
+            return [row for key in keys if (row := self._sessions.get((tenant_id, key))) is not None]
 
     def list_observations(
         self,
@@ -435,6 +442,9 @@ class SQLiteRuntimeEventStore:
             (tenant_id, session_id),
         ).fetchone()
         return _session_from_json(row[0]) if row else None
+
+    def get_sessions(self, tenant_id: str, session_ids: list[str]) -> list[RuntimeSessionRecord]:
+        return sql_sessions(self._conn, tenant_id, session_ids)
 
     def list_observations(
         self,

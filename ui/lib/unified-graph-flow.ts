@@ -1,3 +1,4 @@
+import { graphEdgeEvidence } from "@/lib/graph-edge-evidence";
 import { NODE_LABELS } from "@/lib/entity-labels";
 import { nodeRiskAssessment } from "@/lib/node-risk-assessment";
 import { MarkerType, type Edge, type Node } from "@xyflow/react";
@@ -147,17 +148,6 @@ const RUNTIME_RELATIONSHIPS = new Set<string>([
   RelationshipType.ACCESSED,
   RelationshipType.USED_CREDENTIAL,
   RelationshipType.DELEGATED_TO,
-]);
-const ANIMATED_RELATIONSHIPS = new Set<string>([
-  RelationshipType.VULNERABLE_TO,
-  RelationshipType.EXPLOITABLE_VIA,
-  RelationshipType.LATERAL_PATH,
-  RelationshipType.SHARES_SERVER,
-  RelationshipType.SHARES_CRED,
-  RelationshipType.EXPOSED_TO,
-  RelationshipType.HAS_PERMISSION,
-  RelationshipType.EXHIBITS_DRIFT,
-  ...RUNTIME_RELATIONSHIPS,
 ]);
 const DASHED_RELATIONSHIPS = new Set<string>([
   RelationshipType.EXPOSES_CRED,
@@ -607,9 +597,8 @@ function toFlowEdge(edge: UnifiedEdge): Edge {
   const strokeColor = reachColor ?? color;
   const dashed = DASHED_RELATIONSHIPS.has(relationship);
   const evidenceMode = graphEdgeEvidenceMode(edge);
-  const animated =
-    (!RUNTIME_RELATIONSHIPS.has(relationship) || evidenceMode === "runtime") &&
-    (ANIMATED_RELATIONSHIPS.has(relationship) || edge.weight >= 4 || (reachScore ?? 0) >= 90);
+  // Motion denotes a recorded runtime receipt; severity alone is not activity.
+  const animated = evidenceMode === "runtime" && !graphEdgeEvidence(edge.evidence ?? {}).blocked;
   const marker = { type: MarkerType.ArrowClosed, color: strokeColor, width: 14, height: 10 };
 
   return {
@@ -622,6 +611,7 @@ function toFlowEdge(edge: UnifiedEdge): Edge {
       relationshipLabel: relationshipEdgeLabelText(relationship, { evidenceMode }),
       relationshipCategory: legend.layer,
       evidenceMode,
+      hoverDescription: `${relationshipEdgeLabelText(relationship, { evidenceMode })} · ${graphEdgeEvidence(edge.evidence ?? {}).label} · ${edge.direction === "bidirectional" ? "Bidirectional" : "Directed"} · Traversal ${edge.traversable ? "eligible" : "not enabled"}. Select to inspect evidence.`,
       direction: edge.direction,
       traversable: edge.traversable,
     },
@@ -642,15 +632,7 @@ function toFlowEdge(edge: UnifiedEdge): Edge {
 
 /** A runtime-shaped verb can also come from source analysis or configuration. */
 export function graphEdgeEvidenceMode(edge: Pick<UnifiedEdge, "relationship" | "evidence">): "runtime" | "static" | "inferred" | "unknown" {
-  const evidence = edge.evidence ?? {};
-  if (evidence.source === "source-ast" ||
-    ["configured", "configured_delegation", "configured_target", "static", "static_scan"].includes(String(evidence.basis))) return "static";
-  if (RUNTIME_RELATIONSHIPS.has(String(edge.relationship))) {
-    const recordedRuntime = [evidence.source, evidence.data_source].some(source =>
-      source === "runtime-proxy" || source === "runtime-identity" || source === "runtime-feedback");
-    return recordedRuntime || evidence.evidence_tier === "runtime_observed" || evidence.evidence_tier === "runtime_blocked" ? "runtime" : "unknown";
-  }
-  return DASHED_RELATIONSHIPS.has(String(edge.relationship)) ? "inferred" : "static";
+  return graphEdgeEvidence(edge.evidence ?? {}).mode;
 }
 
 function buildSummary(

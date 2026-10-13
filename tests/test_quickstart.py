@@ -8,6 +8,7 @@ import tomllib
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import click
 import pytest
 from click import ClickException
 from click.testing import CliRunner
@@ -43,6 +44,7 @@ def _fake_scan(monkeypatch):
         "agent_bom.cli._quickstart._verify_persisted_graph",
         lambda **kwargs: {"scan_id": "fake-scan-id", "nodes": 3, "edges": 2},
     )
+    monkeypatch.setattr("agent_bom.cli._quickstart._persist_completed_scan", lambda *args: None)
     return calls
 
 
@@ -230,6 +232,14 @@ def test_quickstart_run_offline_succeeds_with_empty_vulnerability_db(tmp_path, m
     with sqlite3.connect(graph_db) as connection:
         assert connection.execute("SELECT COUNT(*) FROM graph_nodes").fetchone()[0] > 0
         assert connection.execute("SELECT COUNT(*) FROM graph_edges").fetchone()[0] > 0
+    from agent_bom.api.finding_collection import collect_scan_findings
+    from agent_bom.api.store import SQLiteJobStore
+    from agent_bom.cli._tenant import resolve_cli_tenant_id
+
+    job = SQLiteJobStore(str(tmp_path / "control.db")).get(report["scan_id"], tenant_id=resolve_cli_tenant_id())
+    assert job is not None, "Quickstart must persist the completed scan behind Overview and Findings"
+    assert job.status.value == "done"
+    assert {row["id"] for row in collect_scan_findings(job)} == {row["id"] for row in report["findings"]}
 
 
 @pytest.mark.parametrize("case", ["same_second", "earlier_second", "wrong_scan", "wrong_tenant", "no_nodes", "no_edges", "incomplete"])
@@ -297,6 +307,8 @@ def test_quickstart_run_treats_a_critical_verdict_as_completed_evidence(tmp_path
         lambda **kwargs: {"scan_id": "fake-scan-id", "nodes": 3, "edges": 2},
     )
 
+    monkeypatch.setattr("agent_bom.cli._quickstart._persist_completed_scan", lambda *args: None)
+
     result = CliRunner().invoke(main, ["quickstart", "--run", "--offline", "--sample-dir", str(sample_dir)])
 
     assert result.exit_code == 0, result.output
@@ -350,3 +362,26 @@ def test_all_extra_composes_first_run_extras_without_mlflow():
     assert "agent-bom[docs]" not in all_extra
     assert not any("mlflow" in dep.lower() for dep in all_extra)
     assert not any("mlflow" in dep.lower() for dep in extras["cloud"])
+
+
+def test_completed_quickstart_readback_is_idempotent_and_preserves_conflicts(tmp_path, monkeypatch):
+    from agent_bom.api.store import SQLiteJobStore
+    from agent_bom.cli._quickstart import _persist_completed_scan
+
+    monkeypatch.setenv("AGENT_BOM_TENANT_ID", "quickstart-a")
+    report_path = tmp_path / "report.json"
+    database = tmp_path / "control.db"
+    payload = {"scan_id": "scan-a", "scan_run": {"outcome": "complete"}, "findings": []}
+    report_path.write_text(json.dumps(payload))
+    started = datetime.now(timezone.utc)
+    _persist_completed_scan(report_path, database, "scan-a", started)
+    _persist_completed_scan(report_path, database, "scan-a", started)
+    store = SQLiteJobStore(str(database))
+    assert store.get("scan-a", tenant_id="quickstart-a").result == payload
+    assert store.get("scan-a", tenant_id="quickstart-b") is None
+    report_path.write_text(json.dumps({**payload, "different": True}))
+    retained_report = report_path.read_bytes()
+    with pytest.raises(click.ClickException, match="JSON report and graph are retained"):
+        _persist_completed_scan(report_path, database, "scan-a", started)
+    assert report_path.read_bytes() == retained_report
+    assert store.get("scan-a", tenant_id="quickstart-a").result == payload

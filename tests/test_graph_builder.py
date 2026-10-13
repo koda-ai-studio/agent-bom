@@ -1728,3 +1728,19 @@ def test_affected_server_constraints_do_not_resurrect_empty_intersection():
         )
         == []
     )
+
+
+def test_legacy_scoped_package_finding_preserves_the_dependency_hop():
+    report = _minimal_report()
+    package = report["agents"][0]["mcp_servers"][0]["packages"][0]
+    package.update(name="@scope/transport", vulnerabilities=[])
+    finding = report["blast_radius"][0]
+    finding.pop("package_name")
+    finding.pop("package_version")
+    finding["package"] = "@scope/transport@4.18.0"
+    graph = build_unified_graph_from_report(report)
+    package_node = next(node for node in graph.nodes.values() if node.label == "@scope/transport@4.18.0")
+    finding_edges = [edge for edge in graph.edges if edge.target == "vuln:CVE-2024-1234" and edge.source == package_node.id]
+    assert len(finding_edges) == 1, "The finding must remain attached to the exact package and version"
+    assert finding_edges[0].evidence["package_name"] == "@scope/transport"
+    assert finding_edges[0].evidence["package_version"] == "4.18.0"

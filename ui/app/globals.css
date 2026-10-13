@@ -943,3 +943,12 @@ main > div {
 
 .investigation-navigation summary:focus-visible,
 .investigation-queue summary:focus-visible { outline: 2px solid var(--foreground); outline-offset: 4px; border-radius: 0.25rem; }
+
+.graph-aggregate-label .relationship-badge {
+  max-width: none;
+  white-space: nowrap;
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  padding: 0.5em 0.8em;
+  background: var(--surface-elevated);
+}

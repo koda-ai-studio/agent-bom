@@ -545,10 +545,11 @@ export function buildSecurityGraphHref(focus: AttackPathFocus): string {
   return `/security-graph?${params.toString()}`;
 }
 
-export function buildFindingsHref(focus: Pick<AttackPathFocus, "cve" | "scanId">): string {
+export function buildFindingsHref(focus: Pick<AttackPathFocus, "cve" | "scanId" | "findingId">): string {
   const params = new URLSearchParams();
   if (focus.scanId && !focus.scanId.startsWith("current-estate:")) params.set("scan", focus.scanId);
-  if (focus.cve) params.set("cve", focus.cve);
+  if (focus.findingId) params.set("finding", focus.findingId);
+  else if (focus.cve) params.set("cve", focus.cve);
   const query = params.toString();
   return query ? `/findings?${query}` : "/findings";
 }
@@ -561,6 +562,7 @@ export function buildGraphInvestigationHref(
   if (request.agentName) params.set("agent", request.agentName);
   params.set("investigate", "1");
   params.set("root", request.rootId);
+  if (request.direction) params.set("direction", request.direction);
   if (request.rootLabel && request.rootLabel !== request.rootId) {
     params.set("q", request.rootLabel);
   }
@@ -578,8 +580,10 @@ export function decodeGraphInvestigationParams(
   const investigate = params.get("investigate");
   if (investigate && investigate !== "1" && investigate !== "true") return null;
 
+  const direction = params.get("direction");
   return {
     rootId,
+    ...(direction === "forward" || direction === "reverse" || direction === "both" ? { direction } : {}),
     rootLabel: params.get("q") || params.get("label") || undefined,
   };
 }
@@ -672,6 +676,16 @@ export function investigationRootForAttackPath(
   return nodeById.get(path.source) ?? typedHops[0]?.node ?? null;
 }
 
+/** Prefer a canonical finding identifier over an advisory label. */
+export function attackPathFindingHref(path: AttackPath, nodeById: Map<string, UnifiedNode>, scanId?: string): string {
+  const findingNode = path.hops.map(id => nodeById.get(id)).find(node =>
+    node?.entity_type === EntityType.VULNERABILITY || node?.entity_type === EntityType.MISCONFIGURATION);
+  const recordedId = findingNode?.attributes?.finding_id;
+  const findingId = path.finding_ids?.[0] || (typeof recordedId === "string" ? recordedId : undefined);
+  const label = path.vuln_ids[0];
+  return buildFindingsHref({ scanId, findingId: findingId || (findingNode?.entity_type === EntityType.MISCONFIGURATION ? label : undefined), cve: label });
+}
+
 export function recommendedAttackPathActions(
   path: AttackPath,
   nodeById: Map<string, UnifiedNode>,
@@ -680,12 +694,13 @@ export function recommendedAttackPathActions(
   const actions: AttackPathAction[] = [];
   const leadingFinding = path.vuln_ids[0];
   const leadAgent = labelsForAttackPathType(path, nodeById, "agent")[0];
+  const contextHref = buildGraphInvestigationHref({ rootId: path.source, scanId: focus.scanId });
 
   if (leadingFinding) {
     actions.push({
       title: "Validate the lead finding",
-      detail: "Open the primary CVE evidence first so the exploit chain has a confirmed root cause.",
-      href: buildFindingsHref({ scanId: focus.scanId, cve: leadingFinding }),
+      detail: "Review the finding, affected asset, and source evidence before choosing a fix.",
+      href: attackPathFindingHref(path, nodeById, focus.scanId),
     });
   }
 
@@ -699,15 +714,15 @@ export function recommendedAttackPathActions(
 
   if (path.credential_exposure.length > 0) {
     actions.push({
-      title: "Contain credential exposure",
-      detail: "Rotate or scope exposed secrets before you widen blast radius by exploring deeper topology.",
-      href: "/security-graph?lens=mesh",
+      title: "Review credential exposure",
+      detail: "Inspect the credential relationship and its scope before deciding whether to rotate or restrict it.",
+      href: contextHref,
     });
   } else if (path.tool_exposure.length > 0) {
     actions.push({
       title: "Review reachable tools",
       detail: "Check whether the reachable tools increase impact before choosing a fix sequence.",
-      href: "/security-graph?lens=mesh",
+      href: contextHref,
     });
   }
 
@@ -715,7 +730,7 @@ export function recommendedAttackPathActions(
     actions.push({
       title: "Open full graph for neighbor context",
       detail: "Use the full graph when you need broader topology, additional paths, or related assets outside this shortlist.",
-      href: "/security-graph?lens=lineage",
+      href: contextHref,
     });
   }
 

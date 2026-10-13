@@ -47,7 +47,7 @@ describe("rollupContainerSubtitle", () => {
     expect(subtitle).toContain("42 descendants");
     expect(subtitle).toContain("worst critical");
     expect(subtitle).toContain("internet exposed");
-    expect(subtitle).toContain("click to drill down");
+    expect(subtitle).toContain("select to inspect scope");
   });
 
   it("tolerates missing aggregate without throwing", () => {
@@ -58,20 +58,43 @@ describe("rollupContainerSubtitle", () => {
       }),
     );
     expect(subtitle).toContain("2 direct children");
-    expect(subtitle).toContain("click to drill down");
+    expect(subtitle).toContain("select to inspect scope");
   });
 });
 
 describe("buildRollupFlowGraph", () => {
+  it.each(["directed", "bidirectional"] as const)("preserves %s direction on a homogeneous roll-up", direction => {
+    const containers = [sampleContainer(), sampleContainer({ id: "account:dev" })];
+    const { edges } = buildRollupFlowGraph(containers, { edges: [{ source: "account:prod", target: "account:dev", count: 2, relationships: ["uses"], directions: [direction], relationship_counts: { uses: 2 } }] });
+    expect(edges[0]?.markerEnd).toBeDefined();
+    if (direction === "bidirectional") expect(edges[0]?.markerStart).toEqual(edges[0]?.markerEnd);
+    else expect(edges[0]?.markerStart).toBeUndefined();
+    expect(edges[0]?.data?.aggregate).toMatchObject({ count: 2, directions: [direction] });
+  });
+  it("does not draw a single arrow for mixed or unavailable directions", () => {
+    const containers = [sampleContainer(), sampleContainer({ id: "account:dev" })];
+    for (const directions of [["directed", "bidirectional"], null, undefined]) {
+      const { edges } = buildRollupFlowGraph(containers, { edges: [{ source: "account:prod", target: "account:dev", count: 3, relationships: ["uses"], ...(directions !== undefined ? { directions } : {}) }] });
+      expect(edges[0]?.markerEnd).toBeUndefined();
+      expect(edges[0]?.markerStart).toBeUndefined();
+      expect(edges[0]?.animated).toBe(false);
+    }
+  });
   it("does not attribute a mixed aggregate count to the first relationship kind", () => {
     const containers = [sampleContainer(), sampleContainer({ id: "account:dev" })];
     const edges = [
       { source: "account:prod", target: "account:dev", count: 7, relationships: ["accessed", "assumes"] },
     ];
     const mixed = buildRollupFlowGraph(containers, { edges });
-    expect(mixed.edges[0]?.label).toBe("7 relationships · accessed, assumes");
+    expect(mixed.edges[0]?.label).toBe("7 relationships");
     const single = buildRollupFlowGraph(containers, { edges: [{ ...edges[0]!, relationships: ["accessed"] }] });
-    expect(single.edges[0]?.label).toBe("accessed ×7");
+    expect(single.edges[0]?.label).toBe("7 relationships");
+  });
+
+  it("routes reverse-order links from facing card edges without crossing scope cards", () => {
+    const { edges } = buildRollupFlowGraph([sampleContainer(), sampleContainer({ id: "account:dev" })], { edges: [{ source: "account:dev", target: "account:prod", count: 35, relationships: ["can_access", "uses"] }] });
+    expect(edges[0]?.sourceHandle).toBe("scope-source-left");
+    expect(edges[0]?.targetHandle).toBe("scope-target-right");
   });
 
   it("lays out containers on a grid with rollup metadata", () => {
@@ -95,9 +118,10 @@ describe("buildRollupFlowGraph", () => {
     expect(nodes).toHaveLength(2);
     expect(nodes[0]?.id).toBe("account:prod");
     expect(nodes[0]?.position).toEqual({ x: 0, y: 0 });
-    expect(nodes[1]?.position).toEqual({ x: 332, y: 0 });
+    expect(nodes[1]?.position).toEqual({ x: 480, y: 0 });
     expect(nodes[1]!.position.x - nodes[0]!.position.x).toBeGreaterThanOrEqual(300 + 32);
     expect(nodes[0]?.data.attributes?.rollup_has_children).toBe(true);
-    expect(nodes[0]?.data.description).toContain("click to drill down");
+    expect(nodes[0]?.data.rollup).toEqual(sampleContainer());
+    expect(nodes[0]?.data.description).toContain("select to inspect scope");
   });
 });

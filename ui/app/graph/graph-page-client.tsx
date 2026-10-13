@@ -46,7 +46,7 @@ import {
   GraphScenarioSelector,
 } from "@/components/graph-scenario-comparison";
 import { withFindingContext } from "@/lib/finding-investigation-href";
-import { GraphRelationshipDetail } from "@/components/graph-relationship-detail";
+import { GraphRelationshipDetail, GraphRollupRelationshipDetail } from "@/components/graph-relationship-detail";
 import { GraphEntityDrawer } from "@/components/graph-entity-drawer";
 import {
   GraphRollupDecisionSurface,
@@ -1559,6 +1559,7 @@ function GraphPageInner() {
     if (shareableInvestigation) {
       nextParams.set("investigate", "1");
       nextParams.set("root", shareableInvestigation.rootId);
+      nextParams.set("direction", requestedInvestigationRef.current?.direction ?? investigationDirection);
       if (
         shareableInvestigation.rootLabel &&
         shareableInvestigation.rootLabel !== shareableInvestigation.rootId
@@ -1601,6 +1602,7 @@ function GraphPageInner() {
     captureMode,
     filters,
     investigationMode,
+    investigationDirection,
     loadingSnapshots,
     pathname,
     rollupDismissed,
@@ -2260,15 +2262,17 @@ function GraphPageInner() {
     [displayEdges, displayNodes],
   );
   const viewportOptions = useMemo(
-    () =>
-      graphFitViewOptions({
+    () => {
+      const options = graphFitViewOptions({
         nodeCount: displayNodes.length,
         edgeCount: displayEdges.length,
         selectedNode: false,
         mode: "lineage",
         captureMode,
-      }),
-    [captureMode, displayEdges.length, displayNodes.length],
+      });
+      return rollupNavigationActive ? { ...options, maxZoom: 1 } : options;
+    },
+    [captureMode, displayEdges.length, displayNodes.length, rollupNavigationActive],
   );
   const initialViewportRequest = useMemo<ReturnType<typeof graphInitialFitViewOptions>>(() => {
     if (!narrowViewport && compactInvestigationTopology) return { ...viewportOptions, minZoom: COMPACT_GRAPH_MIN_ZOOM, maxZoom: 1 };
@@ -2344,6 +2348,10 @@ function GraphPageInner() {
     void reactFlow.fitView({ ...viewportOptions, duration: 240 });
   }, [reactFlow, viewportOptions]);
   const fitSelection = useCallback(async () => {
+    if (rollupNavigationActive) {
+      await reactFlow.fitView({ ...viewportOptions, minZoom: 0.16, maxZoom: 1, padding: 0.04 });
+      return;
+    }
     const framing = graphReadableFitViewOptions(displayNodes, viewportOptions, selectedNodeId ?? investigationMode?.rootId);
     if (!framing.nodes?.length) return;
     await reactFlow.fitView(framing);
@@ -2354,15 +2362,16 @@ function GraphPageInner() {
       const viewport = reactFlow.getViewport();
       void reactFlow.setViewport({ ...viewport, x: viewport.x - drawerWidth / 2 });
     }
-  }, [displayNodes, investigationMode?.rootId, reactFlow, selectedNodeId, viewportOptions]);
+  }, [displayNodes, investigationMode?.rootId, reactFlow, rollupNavigationActive, selectedNodeId, viewportOptions]);
 
   useEffect(() => {
     if (!selectedNodeId || narrowViewport) return;
     // Re-frame the selected neighborhood after the docked inspector takes its
     // share of the canvas. Otherwise React Flow preserves the pre-drawer zoom
     // and leaves the reduced canvas looking empty beside the details.
-    const frame = window.requestAnimationFrame(() => { void fitSelection(); });
-    return () => window.cancelAnimationFrame(frame);
+    let settledFrame = 0;
+    const frame = window.requestAnimationFrame(() => { settledFrame = window.requestAnimationFrame(() => { void fitSelection(); }); });
+    return () => { window.cancelAnimationFrame(frame); window.cancelAnimationFrame(settledFrame); };
   }, [fitSelection, narrowViewport, selectedNodeId]);
 
   const autoLayout = useCallback(() => {
@@ -2460,13 +2469,6 @@ function GraphPageInner() {
       }
 
       const data = node.data as LineageNodeData;
-      if (rollupNavigationActive && data.attributes?.rollup_has_children === true) {
-        rollupAutoDescendRef.current = false;
-        setRollupStack((current) => {
-          if (current.at(-1)?.id === node.id) return current;
-          return [...current, { id: node.id, label: data.label }];
-        });
-      }
 
       setSelectedNode({
         ...data,
@@ -2483,7 +2485,7 @@ function GraphPageInner() {
       setPinnedFocusId((current) => (current === node.id ? null : node.id));
       setHoveredNodeId(null);
     },
-    [rollupNavigationActive],
+    [],
   );
 
   const onLargeGraphNodeSelect = useCallback(
@@ -2634,7 +2636,7 @@ function GraphPageInner() {
             nodes: response.nodes,
             edges: response.edges,
             depthByNode: response.depth_by_node,
-            direction: "both",
+            direction: direction === "forward" ? "outgoing" : direction === "reverse" ? "incoming" : "both",
             includeNonTraversable: true,
             truncated: response.truncated,
           }),
@@ -3685,9 +3687,9 @@ function GraphPageInner() {
               onPage={(offset) => setRollupChildPage({ key: rollupChildPageKey, offset, generation: rollupView?.snapshot_generation })}
             />
           )}
-          {!rollupDecisionActive && (selectedScenarioId || investigationMode || initialViewportOptions.nodes || displayNodes.length > 6) && graphRenderer.kind === "react-flow" && (
+          {!rollupDecisionActive && (rollupNavigationActive || selectedScenarioId || investigationMode || initialViewportOptions.nodes || displayNodes.length > 6) && graphRenderer.kind === "react-flow" && (
             <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-xs text-muted-foreground" data-testid="graph-viewport-scope">
-              <span>{scenarioContextIds ? `Changes and neighbors · ${displayNodes.length} of ${aggregated.nodes.length} nodes` : "Graph"} · {displayNodes.length.toLocaleString()} nodes · {displayEdges.length.toLocaleString()} relationships</span>
+              <span>{scenarioContextIds ? `Changes and neighbors · ${displayNodes.length} of ${aggregated.nodes.length} nodes` : rollupNavigationActive ? "Scope overview" : "Graph"} · {displayNodes.length.toLocaleString()} {rollupNavigationActive ? "scopes" : "nodes"} · {displayEdges.length.toLocaleString()} {rollupNavigationActive ? `aggregate link${displayEdges.length === 1 ? "" : "s"}` : `relationship${displayEdges.length === 1 ? "" : "s"}`}</span>
               {selectedScenarioId && !attackPathLens && !selectedAttackPath && !investigationMode && <button type="button" onClick={() => setExpandedScenarioId(scenarioExpanded ? null : selectedScenarioId)} className="text-foreground underline underline-offset-4">{scenarioExpanded ? "Focus changes" : "Show full graph"}</button>}
               {showMiniMap && <button type="button" aria-pressed={minimapExpanded} onClick={() => setMinimapExpanded((value) => !value)} className="text-foreground underline underline-offset-4">{minimapExpanded ? "Hide minimap" : "Show minimap"}</button>}
               <button type="button" onClick={fitVisible} className="text-foreground underline underline-offset-4">Fit all</button>
@@ -3695,7 +3697,7 @@ function GraphPageInner() {
           {investigationMode?.truncated && investigationMode.nodeCount < 24 && !loadingGraph && <button type="button" className="graph-page-action min-h-11 sm:min-h-7" onClick={() => void loadRootInvestigation({ rootId: investigationMode.rootId, rootLabel: investigationMode.rootLabel, direction: investigationDirection, nodeLimit: Math.min(24, Math.max(8, investigationMode.nodeCount * 2)) })}>Show more connections</button>}
             </div>
           )}
-          {!rollupDecisionActive && graphRenderer.kind === "react-flow" && displayNodes.length > 0 && <GraphLegendDock items={legendItems} separated />}
+          {!rollupNavigationActive && !rollupDecisionActive && graphRenderer.kind === "react-flow" && displayNodes.length > 0 && <GraphLegendDock items={legendItems} separated />}
           <div className={`relative flex h-[max(24rem,calc(100dvh-25rem))] ${(selectedAttackPath || (compactInvestigationTopology && displayNodes.length <= 4 && !investigationMode)) ? "sm:h-[clamp(24rem,50dvh,36rem)]" : "sm:h-[max(28rem,calc(100dvh-21rem))]"} shrink-0 overflow-hidden rounded-lg border border-outline bg-surface`}>
           <div className="relative min-h-0 min-w-0 flex-1">
           {graphPanelError && graphData && !loadingGraph && (
@@ -3885,6 +3887,12 @@ function GraphPageInner() {
 
           </div>
           {!selectedNode && selectedRelationship?.scanId === selectedScanId && (() => {
+            const aggregate = rollupNavigationActive ? rollupView?.edges?.find(item => `rollup:${item.source}->${item.target}` === selectedRelationship.id) : undefined;
+            if (aggregate && displayEdges.some(item => item.id === selectedRelationship.id)) return <GraphRollupRelationshipDetail
+              edge={aggregate} scanId={selectedScanId}
+              sourceLabel={rollupItems.find(item => item.id === aggregate.source)?.label || aggregate.source}
+              targetLabel={rollupItems.find(item => item.id === aggregate.target)?.label || aggregate.target}
+              onClose={() => setSelectedRelationship(null)} onInspectNode={rootId => void loadRootInvestigation({ rootId })} />;
             const edge = mergedGraphData?.edges.find(item => item.id === selectedRelationship.id);
             if (!edge || !displayEdges.some(item => item.id === edge.id)) return null;
             return <GraphRelationshipDetail edge={edge} scanId={selectedScanId} mobile={narrowViewport}
@@ -3899,6 +3907,14 @@ function GraphPageInner() {
               onInspectNode={(rootId) => void loadRootInvestigation({ rootId })}
               scanId={selectedScanId || undefined}
               enrich={Boolean(selectedScanId)}
+              onOpenScope={rollupNavigationActive && selectedNodeId && selectedNode.attributes?.rollup_has_children === true ? () => {
+                rollupAutoDescendRef.current = false;
+                setRollupStack(current => current.at(-1)?.id === selectedNodeId ? current : [...current, { id: selectedNodeId, label: selectedNode.label }]);
+                setSelectedNode(null);
+                setSelectedNodeId(null);
+                setPinnedFocusId(null);
+                setHoveredNodeId(null);
+              } : undefined}
               onExpandNeighbors={selectedNodeId ? () => void loadRootInvestigation({ rootId: selectedNodeId }) : undefined}
               onClose={() => {
                 setSelectedNode(null);

@@ -16,7 +16,7 @@ describe("relationship inspector", () => {
   });
   it.each([
     { relationship: "uses", sourceLabel: "Planner", targetLabel: "Invoice function", title: "Uses" },
-    { relationship: "vulnerable_to", sourceLabel: "MCP server", targetLabel: "CVE-2025-29927", title: "Has CVE" },
+    { relationship: "vulnerable_to", sourceLabel: "MCP server", targetLabel: "CVE-2025-29927", title: "Has finding" },
   ])("preserves $relationship without inventing an entity type", ({ relationship, sourceLabel, targetLabel, title }) => {
     render(<GraphRelationshipDetail edge={{ ...edge, relationship }} scanId="snapshot-a" sourceLabel={sourceLabel} targetLabel={targetLabel} onClose={vi.fn()} />);
     expect(screen.getByRole("heading", { name: title })).toBeVisible();
@@ -57,7 +57,7 @@ it.each([
   ["uses", "A recorded use relationship. It does not establish that a tool was called."],
   ["provides_tool", "The source lists the target as an available tool. Availability does not prove invocation."],
   ["depends_on", "The source is linked to a dependency in the collected inventory. This does not establish that vulnerable code runs."],
-  ["vulnerable_to", "The source component is linked to a vulnerability finding. Review the recorded package and version before choosing a fix."],
+  ["vulnerable_to", "The source is linked to a security finding. Review its affected asset, evidence, and remediation before choosing a fix."],
 ])("explains %s without opening raw evidence", (relationship, explanation) => {
   render(<GraphRelationshipDetail edge={{ ...edge, relationship }} scanId="s" sourceLabel="Source" targetLabel="Target" onClose={vi.fn()} />);
   expect(screen.getByText(explanation)).toBeVisible();
@@ -92,6 +92,11 @@ it.each([
   [{ evidence_tier: "runtime_observed" }, "Runtime observed"],
   [{ evidence_tier: "runtime_blocked" }, "Runtime blocked"],
   [{ source: "runtime-proxy" }, "Runtime receipt"],
+  [{ source: "cloud-audit-trail", observed: true }, "Cloud audit observation"],
+  [{ source: "cloud-audit-trail" }, "Not recorded"],
+  [{ source: "cloud-inventory" }, "Static / configured"],
+  [{ source: "gateway", runtime_observed_state: "blocked" }, "Runtime blocked"],
+  [{ source: "gateway", blocked: true }, "Runtime blocked"],
   [{ source: ["runtime-proxy"] }, "Not recorded"],
   [{ evidence_tier: "future_evidence" }, "Unclassified"],
   [{ source: "source-ast", evidence_tier: "runtime_observed" }, "Mixed recorded evidence"],
@@ -103,6 +108,11 @@ it.each([
   expect(screen.getByText("Source observed at").nextElementSibling).toHaveTextContent("Not recorded");
   expect(screen.getByText("Graph last seen").nextElementSibling).toHaveTextContent(edge.last_seen);
   expect(screen.getByText(/Traversal eligibility does not establish runtime reachability/)).toBeVisible();
+});
+
+it("does not label a misconfiguration as a CVE", () => {
+  render(<GraphRelationshipDetail edge={{ ...edge, relationship: "vulnerable_to" }} scanId="s" sourceLabel="Server" targetLabel="Missing authentication" onClose={vi.fn()} />);
+  expect(screen.getByRole("heading", { name: "Has finding" })).toBeVisible();
 });
 
 it("keeps source observation, receipt timestamp and graph freshness distinct", () => {

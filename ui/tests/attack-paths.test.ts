@@ -35,6 +35,27 @@ describe("attack path helpers", () => {
     expect(buildFindingsHref({scanId: "current-estate:abc", cve: "CVE-2026-1234"})).toBe("/findings?cve=CVE-2026-1234");
     expect(buildFindingsHref({scanId: "historical-1"})).toBe("/findings?scan=historical-1");
   });
+  it("preserves the exact configuration finding and scan in follow-up actions", () => {
+    const finding = graphNode("misconfig:one", EntityType.MISCONFIGURATION, "Excess tool permissions");
+    finding.attributes = { finding_id: "finding-uuid" };
+    const path: AttackPath = { source: "agent:one", target: finding.id, hops: ["agent:one", finding.id], edges: [],
+      composite_risk: 5, summary: "", credential_exposure: ["TOKEN"], tool_exposure: [], vuln_ids: ["finding-uuid"] };
+    const actions = recommendedAttackPathActions(path, new Map([[finding.id, finding]]), { scanId: "scan-one" });
+    expect(actions[0]?.href).toBe("/findings?scan=scan-one&finding=finding-uuid");
+    for (const action of actions.filter(item => item.href.startsWith("/security-graph"))) {
+      const params = new URL(action.href, "http://local").searchParams;
+      expect(params.get("scan")).toBe("scan-one");
+      expect(params.get("root")).toBe("agent:one");
+      expect(params.get("lens")).toBe("lineage");
+    }
+    expect(actions[0]?.detail).not.toMatch(/confirmed root cause|exploit chain/);
+  });
+
+  it("round-trips explicit reverse traversal instead of changing the investigation", () => {
+    const href = buildGraphInvestigationHref({ rootId: "server:one", scanId: "scan-one", direction: "reverse" });
+    expect(decodeGraphInvestigationParams(new URL(href, "http://local").searchParams)).toMatchObject({ rootId: "server:one", direction: "reverse" });
+    expect(decodeGraphInvestigationParams(new URLSearchParams("root=server:one&direction=invalid"))?.direction).toBeUndefined();
+  });
   it("matches a package name without dropping version or finding constraints", () => {
     const path: AttackPath = { source: "package", target: "finding", hops: ["package", "finding"], edges: ["vulnerable_to"],
       composite_risk: 0, summary: "", credential_exposure: [], tool_exposure: [], vuln_ids: ["CVE-2020-14343"] };
@@ -995,7 +1016,7 @@ describe("attack path helpers", () => {
     expect(recommendedAttackPathActions(path, nodes)).toEqual([
       {
         title: "Validate the lead finding",
-        detail: "Open the primary CVE evidence first so the exploit chain has a confirmed root cause.",
+        detail: "Review the finding, affected asset, and source evidence before choosing a fix.",
         href: "/findings?cve=CVE-2026-3434",
       },
       {
@@ -1004,9 +1025,9 @@ describe("attack path helpers", () => {
         href: "/agents?name=Claude%20Desktop",
       },
       {
-        title: "Contain credential exposure",
-        detail: "Rotate or scope exposed secrets before you widen blast radius by exploring deeper topology.",
-        href: "/security-graph?lens=mesh",
+        title: "Review credential exposure",
+        detail: "Inspect the credential relationship and its scope before deciding whether to rotate or restrict it.",
+        href: buildGraphInvestigationHref({ rootId: path.source }),
       },
     ]);
   });
@@ -1050,7 +1071,7 @@ describe("attack path helpers", () => {
     expect(recommendedAttackPathActions(path, new Map())).toContainEqual({
       title: "Open full graph for neighbor context",
       detail: "Use the full graph when you need broader topology, additional paths, or related assets outside this shortlist.",
-      href: "/security-graph?lens=lineage",
+      href: buildGraphInvestigationHref({ rootId: path.source }),
     });
   });
 

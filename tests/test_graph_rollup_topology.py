@@ -150,3 +150,14 @@ def test_edges_referencing_absent_containers_are_dropped(missing: str) -> None:
     visible = ["acct-b"] if missing == "source" else ["acct-a"]
 
     assert cross_container_edges(graph, visible, children) == []
+
+
+def test_rollup_retains_mixed_directions_without_inventing_a_single_direction():
+    graph = _graph()
+    graph.add_edge(UnifiedEdge(source="wl-a", target="db-b", relationship=RelationshipType.SHARES_CRED, direction="bidirectional"))
+    children = {"acct-a": ["wl-a", "wl-a2"], "acct-b": ["db-b"]}
+    row = cross_container_edges(graph, ["acct-a", "acct-b"], children)[0]
+    assert row["count"] == 3
+    assert row["directions"] == ["bidirectional", "directed"]
+    assert row["relationship_counts"] == {"can_access": 2, "shares_cred": 1}
+    assert sum(row["relationship_counts"].values()) == row["count"]

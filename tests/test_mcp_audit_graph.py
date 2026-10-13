@@ -21,6 +21,19 @@ def audit_report():
     return report
 
 
+def test_missing_audit_severity_stays_unknown():
+    from agent_bom.graph.mcp_audit_projection import project_mcp_audit_findings
+    from agent_bom.output import to_json
+
+    report = audit_report()
+    graph = build_unified_graph_from_report(graph_evidence_sections(report))
+    row = next(row for row in to_json(report)["findings"] if row.get("evidence", {}).get("detector") == "mcp_enforcement")
+    row.pop("severity", None)
+    row["id"] += "-missing-severity"
+    project_mcp_audit_findings(graph, [row])
+    assert graph.nodes[f"misconfig:mcp_audit:{row['id']}"].severity == "unknown"
+
+
 def test_audit_finding_drilldown_stays_on_exact_asset_and_scan():
     report = audit_report()
     graph = build_unified_graph_from_report(graph_evidence_sections(report), scan_id="audit-scan", tenant_id="tenant-a")

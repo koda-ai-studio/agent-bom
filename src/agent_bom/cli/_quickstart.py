@@ -156,7 +156,6 @@ def _run_quickstart(
             raise click.ClickException(str(exc)) from exc
         click.echo(f"[1/3] Wrote {len(written)} sample files to {sample_dir}")
 
-    # 2. Graph-persisting scan ---------------------------------------------
     executable = _resolve_agent_bom()
     if executable is None:
         raise click.ClickException(
@@ -211,6 +210,7 @@ def _run_quickstart(
         graph_db=graph_db,
         scan_started_at=scan_started_at,
     )
+    _persist_completed_scan(report_path, control_plane_db, graph_receipt["scan_id"], scan_started_at)
     click.echo(
         f"      Verified persisted graph: {graph_receipt['nodes']} nodes, "
         f"{graph_receipt['edges']} edges (scan {graph_receipt['scan_id'][:8]}…)"
@@ -251,7 +251,7 @@ def _print_quickstart_handoff(
     """Show evidence and next actions only after exact snapshot verification."""
     # Handoff ---------------------------------------------------------------
     click.echo("")
-    click.echo("Onboarding complete. The security graph was read back from the configured local database.")
+    click.echo("Onboarding complete. The completed scan and security graph were read back from the configured local databases.")
     click.echo("")
     click.echo("Sample evidence; this does not assess your environment.")
     click.echo(f"  JSON report: {report_path.resolve()}")
@@ -289,6 +289,44 @@ def _resolve_quickstart_databases(environment: dict[str, str]) -> tuple[Path, Pa
     control_plane_db = _durable_sqlite_path(environment.get("AGENT_BOM_DB") or str(_durable_local_control_plane_db()))
     graph_db = _durable_sqlite_path(environment.get("AGENT_BOM_GRAPH_DB") or str(control_plane_db))
     return control_plane_db, graph_db
+
+
+def _persist_completed_scan(report_path: Path, database: Path, scan_id: str, started: datetime) -> None:
+    """Populate the same completed-job evidence read by Overview and Findings.
+
+    The graph was verified first. A failed job write leaves that evidence intact
+    and aborts onboarding; completion is only reported after both readbacks.
+    """
+    from agent_bom.api.models import JobStatus, ScanJob, ScanRequest
+    from agent_bom.api.store import SQLiteJobStore
+    from agent_bom.cli._tenant import resolve_cli_tenant_id
+
+    try:
+        payload = json.loads(report_path.read_text())
+        if payload.get("scan_id") != scan_id or payload.get("scan_run", {}).get("outcome") != "complete":
+            raise ValueError("Completed report identity does not match graph")
+        tenant = resolve_cli_tenant_id()
+        database.parent.mkdir(parents=True, exist_ok=True)
+        store = SQLiteJobStore(str(database))
+        job = ScanJob(
+            job_id=scan_id,
+            tenant_id=tenant,
+            request=ScanRequest(),
+            triggered_by="quickstart",
+            status=JobStatus.DONE,
+            created_at=started.isoformat(),
+            started_at=started.isoformat(),
+            completed_at=datetime.now(timezone.utc).isoformat(),
+            result=payload,
+        )
+        store.put_many_if_absent_atomic([job])
+        retained = store.get(scan_id, tenant_id=tenant)
+        if retained is None or retained.status != JobStatus.DONE or retained.result != payload:
+            raise ValueError("Completed scan could not be read back")
+    except Exception as exc:  # noqa: BLE001 - retain graph/report and fail onboarding on any persistence error
+        raise click.ClickException(
+            "Completed scan could not be verified in the control-plane database. The JSON report and graph are retained."
+        ) from exc
 
 
 def _durable_sqlite_path(value: str) -> Path:

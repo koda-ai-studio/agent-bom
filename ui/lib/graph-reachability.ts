@@ -27,7 +27,7 @@ type SummarizeReachabilityInput = {
   depthByNode?: Record<string, number> | undefined;
   truncated?: boolean | undefined;
   maxPaths?: number | undefined;
-  direction?: "outgoing" | "both";
+  direction?: "outgoing" | "incoming" | "both";
   includeNonTraversable?: boolean;
 };
 
@@ -93,12 +93,12 @@ export function summarizeReachability({
   };
 }
 
-function buildReachabilityAdjacency(edges: UnifiedEdge[], direction: "outgoing" | "both", includeNonTraversable: boolean): Map<string, string[]> {
+function buildReachabilityAdjacency(edges: UnifiedEdge[], direction: "outgoing" | "incoming" | "both", includeNonTraversable: boolean): Map<string, string[]> {
   const adjacency = new Map<string, string[]>();
   for (const edge of edges) {
     if (!includeNonTraversable && edge.traversable === false) continue;
-    addDirectedNeighbor(adjacency, edge.source, edge.target);
-    if (direction === "both" || edge.direction === "bidirectional") {
+    if (direction !== "incoming" || edge.direction === "bidirectional") addDirectedNeighbor(adjacency, edge.source, edge.target);
+    if (direction !== "outgoing" || edge.direction === "bidirectional") {
       addDirectedNeighbor(adjacency, edge.target, edge.source);
     }
   }

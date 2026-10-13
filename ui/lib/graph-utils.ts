@@ -322,7 +322,7 @@ const DASHED_LEGEND_RELATIONSHIPS = new Set<string>([
 const RELATIONSHIP_LABEL_OVERRIDES: Record<string, string> = {
   exposes_cred: "Exposes Credential",
   reaches_tool: "Credential Reaches Tool",
-  vulnerable_to: "Has CVE",
+  vulnerable_to: "Has finding",
   exploitable_via: "Exploitable Via",
   shares_cred: "Shares Credential",
   lateral_path: "Lateral Movement",
@@ -342,7 +342,7 @@ const RELATIONSHIP_DESCRIPTION_OVERRIDES: Record<string, string> = {
     "Static evidence that a server can surface a credential or secret reference.",
   reaches_tool:
     "Credential or identity can reach a tool-capable execution boundary.",
-  vulnerable_to: "Package or component is linked to a vulnerability finding.",
+  vulnerable_to: "The source is linked to a vulnerability or configuration finding.",
   exploitable_via:
     "Finding has a reachable exploit path through agent, MCP, tool, or identity context.",
   shares_server:

@@ -34,7 +34,7 @@ it.each([
 it.each([
   { relationship: "can_access", direction: "directed", incoming: true, text: "← Incoming · Can Access" },
   { relationship: "shares_server", direction: "bidirectional", incoming: false, text: "Bidirectional ↔ · Shares Server" },
-  { relationship: "vulnerable_to", direction: "directed", incoming: false, text: "Outgoing → · Has CVE" },
+  { relationship: "vulnerable_to", direction: "directed", incoming: false, text: "Outgoing → · Has finding" },
 ])("retains $relationship meaning and recorded direction", async ({ relationship, direction, incoming, text }) => {
   const response = page();
   response.edges[0] = { ...response.edges[0]!, relationship, direction: direction as "directed" | "bidirectional",

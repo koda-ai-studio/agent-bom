@@ -81,6 +81,20 @@ describe("buildUnifiedFlowGraph", () => {
     if (mode !== "runtime") expect(flow.edges[0]?.animated).toBe(false);
   });
 
+  it.each([
+    { relationship: RelationshipType.CALLED, evidence: { source: "cloud-audit-trail", observed: true }, mode: "runtime", animated: true },
+    { relationship: RelationshipType.CALLED, evidence: { source: "cloud-audit-trail" }, mode: "unknown", animated: false },
+    { relationship: RelationshipType.CALLED, evidence: { source: "runtime-proxy", blocked: true }, mode: "runtime", animated: false },
+    { relationship: RelationshipType.DELEGATED_TO, evidence: { evidence_tier: "configured" }, mode: "static", animated: false },
+    { relationship: RelationshipType.VULNERABLE_TO, evidence: {}, mode: "unknown", animated: false },
+  ])("aligns evidence and motion for $relationship / $evidence", ({ relationship, evidence, mode, animated }) => {
+    const graph = { scan_id: "evidence", tenant_id: "default", created_at: createdAt,
+      nodes: [node("a", EntityType.AGENT, "Planner"), node("b", EntityType.AGENT, "Worker")],
+      edges: [{ ...edge("a", "b", relationship), evidence, weight: 9 }], attack_paths: [], interaction_risks: [] } as unknown as UnifiedGraphData;
+    const flow = buildUnifiedFlowGraph(graph, createFocusedGraphFilters());
+    expect(flow.edges[0]?.data?.evidenceMode).toBe(mode);
+    expect(flow.edges[0]?.animated).toBe(animated);
+  });
   it("counts distinct loaded entities of the requested type, not relationship rows", () => {
     const nodes = [node("agent", EntityType.AGENT, "Agent"), node("server", EntityType.SERVER, "Server"), node("tool", EntityType.TOOL, "Tool")];
     const graph = {
@@ -173,8 +187,8 @@ describe("buildUnifiedFlowGraph", () => {
     expect(flow.summary).toMatchObject({ agents: 1, findings: 1, critical: 1 });
     expect(flow.edges.find((entry) => entry.id.includes("vulnerable_to"))?.data).toMatchObject({
       relationship: "vulnerable_to",
-      relationshipLabel: "Has CVE",
-      evidenceMode: "static",
+      relationshipLabel: "Has finding",
+      evidenceMode: "unknown",
     });
   });
 
