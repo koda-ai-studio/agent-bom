@@ -142,7 +142,7 @@ describe("ExposurePathCommandCenter", () => {
     expect(screen.getByRole("heading", { level: 2 })).toBeVisible();
     expect(screen.queryByTestId("exposure-path-hop-title")).not.toBeInTheDocument();
     expect(screen.queryByText("What is exposed")).not.toBeInTheDocument();
-    expect(screen.getByText(/Path context & evidence/)).toBeInTheDocument();
+    expect(screen.getByText(/Path context & evidence/)).toHaveTextContent(/· 1 agent$/);
     expect(screen.getByText("Evidence & relationships")).toBeInTheDocument();
     expect(screen.queryByText("Evidence drawer")).not.toBeVisible();
     expect(screen.getByText("Validate the lead finding")).toBeInTheDocument();

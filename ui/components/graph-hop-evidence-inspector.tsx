@@ -1,5 +1,6 @@
 "use client";
 
+import { countLabel } from "@/lib/count-label";
 import { useId, useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, Search } from "lucide-react";
 import type { GraphHopEvidence } from "@/lib/graph-schema";
@@ -49,7 +50,7 @@ export function GraphHopEvidenceInspector({
     <div className="flex flex-wrap items-center justify-between gap-3 p-3">
       <div className="min-w-0">
         <h3 className="text-sm font-semibold">Evidence at each hop</h3>
-        <p className="text-xs text-ink-secondary">{filtered.length} of {rows.length} relationships · inspect one hop at a time</p>
+        <p className="text-xs text-ink-secondary">{filtered.length} of {countLabel(rows.length, "relationship")} · inspect one hop at a time</p>
       </div>
       <label className="flex min-w-0 items-center gap-2 rounded-lg border border-outline px-2 py-1.5">
         <Search className="h-4 w-4 shrink-0" aria-hidden="true" />

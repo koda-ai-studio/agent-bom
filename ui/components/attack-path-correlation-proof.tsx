@@ -1,4 +1,5 @@
 import { completeDirectedHopCount } from "@/lib/security-graph-focus";
+import { countLabel } from "@/lib/count-label";
 import type { FixFirstRiskReason, GraphAttackPath } from "@/lib/api-types";
 import type { UnifiedNode } from "@/lib/graph-schema";
 import { GraphHopEvidenceInspector } from "@/components/graph-hop-evidence-inspector";
@@ -92,7 +93,7 @@ export function AttackPathCorrelationProof({
         </div>
       </details>
       <details className="mt-2">
-        <summary className="cursor-pointer py-1 text-[15px] font-medium text-[color:var(--text-secondary)]">Inspect {expectedHopCount} hop receipts</summary>
+        <summary className="cursor-pointer py-1 text-[15px] font-medium text-[color:var(--text-secondary)]">Inspect {countLabel(expectedHopCount, "hop receipt")}</summary>
         <div className="mt-2">
           <GraphHopEvidenceInspector key={path.hops.join("->")} receipts={path.hop_evidence}
             hops={path.hops.map(id => ({ id, label: nodeById.get(id)?.label || id }))} />

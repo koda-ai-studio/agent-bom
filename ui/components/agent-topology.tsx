@@ -1,5 +1,6 @@
 "use client";
 
+import { countLabel } from "@/lib/count-label";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ReactFlow,
@@ -312,7 +313,7 @@ export function AgentTopology({
 
       <div className="border-b border-outline px-4 py-2 text-xs text-ink-secondary" aria-live="polite">
         Showing {displayAgents.length} of {matched.agents} matching agents · {visible.uniqueServices} of {matched.uniqueServices} matching service groups.
-        {" "}Full inventory: {summary.agents} agents · {summary.uniqueServices} service groups · {summary.servers} configured relationships.
+        {" "}Full inventory: {countLabel(summary.agents, "agent")} · {countLabel(summary.uniqueServices, "service group")} · {countLabel(summary.servers, "configured relationship")}.
         {capped ? " View limit reached. Narrow the filter or inspect the Agents inventory for the remaining records." : null}
         {connectedAgents.length > 0 ? <span className="hidden md:inline"> Pan or zoom to inspect connections beyond the viewport.</span> : null}
         <p className="mt-1">
