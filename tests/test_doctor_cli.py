@@ -14,6 +14,7 @@ from agent_bom.models import Agent, AgentType, MCPServer
 @pytest.fixture(autouse=True)
 def deterministic_doctor_environment(monkeypatch, tmp_path):
     monkeypatch.setattr("agent_bom.db.schema.DB_PATH", tmp_path / "no-vulns.db")
+    monkeypatch.setenv("AGENT_BOM_SCAN_CACHE", str(tmp_path / "scan_cache.db"))
     monkeypatch.delenv("AGENT_BOM_DB_STALE_DAYS", raising=False)
     monkeypatch.delenv("AGENT_BOM_POSTGRES_URL", raising=False)
     monkeypatch.delenv("AGENT_BOM_DB", raising=False)
@@ -241,3 +242,112 @@ def test_doctor_reports_mcp_discovery_error_without_raw_parser_line(monkeypatch)
     assert "raw parser warning" not in result.output
     assert "MCP discovery" in result.output
     assert "discovery error" in result.output
+
+
+@pytest.mark.parametrize("agent_mode", [False, True])
+@pytest.mark.parametrize("cache_kind", ["corrupt", "wrong_schema", "directory"])
+def test_doctor_warns_on_unreadable_cache_without_changing_it(monkeypatch, tmp_path, agent_mode, cache_kind):
+    cache_path = tmp_path / "private-cache.db"
+    if cache_kind == "corrupt":
+        cache_path.write_bytes(b"not a SQLite database")
+    elif cache_kind == "wrong_schema":
+        with sqlite3.connect(cache_path) as conn:
+            conn.execute("CREATE TABLE unrelated (value TEXT)")
+    else:
+        cache_path.mkdir()
+    before = cache_path.read_bytes() if cache_path.is_file() else None
+    monkeypatch.setenv("AGENT_BOM_SCAN_CACHE", str(cache_path))
+
+    result = CliRunner().invoke(main, (["--agent-mode"] if agent_mode else []) + ["doctor", "--offline"])
+
+    assert result.exit_code == 0, result.output
+    if agent_mode:
+        data = json.loads(result.stdout)["data"]
+        row = next(row for row in data["core"] if row["label"] == "Scan cache")
+        assert row["status"] == "warn"
+        assert data["checks_passed"] is False
+        assert data["warnings"] == 1
+        message = row["value"]
+    else:
+        message = result.output
+        assert "1 local warning(s)" in message
+    assert "AGENT_BOM_SCAN_CACHE" in message
+    assert "agent-bom doctor --offline" in message
+    assert "private-cache" not in message
+    if before is not None:
+        assert cache_path.read_bytes() == before
+
+
+def test_doctor_uses_scan_cache_path_resolver(monkeypatch, tmp_path):
+    from agent_bom.scan_cache import CACHE_KEY_PREFIX
+
+    cache_path = tmp_path / "scan cache #1?.db"
+    with sqlite3.connect(cache_path) as conn:
+        conn.execute("CREATE TABLE osv_cache (cache_key TEXT PRIMARY KEY, vulns_json TEXT, cached_at REAL)")
+        conn.executemany("INSERT INTO osv_cache VALUES (?, '[]', 0)", [("obsolete-key",), (CACHE_KEY_PREFIX + "PyPI:sample@1",)])
+    monkeypatch.setattr("agent_bom.scan_cache.default_cache_path", lambda: cache_path)
+    before = cache_path.read_bytes()
+
+    result = CliRunner().invoke(main, ["--agent-mode", "doctor", "--offline"])
+
+    assert result.exit_code == 0, result.output
+    row = next(row for row in json.loads(result.stdout)["data"]["core"] if row["label"] == "Scan cache")
+    assert row["status"] == "ok"
+    assert "1 cached entries" in row["value"]
+    assert cache_path.read_bytes() == before
+
+
+def test_doctor_does_not_create_missing_cache(monkeypatch, tmp_path):
+    cache_path = tmp_path / "missing" / "cache.db"
+    monkeypatch.setenv("AGENT_BOM_SCAN_CACHE", str(cache_path))
+
+    result = CliRunner().invoke(main, ["--agent-mode", "doctor", "--offline"])
+
+    assert result.exit_code == 0, result.output
+    row = next(row for row in json.loads(result.stdout)["data"]["core"] if row["label"] == "Scan cache")
+    assert row["status"] == "info"
+    assert "not yet created" in row["value"]
+    assert not cache_path.parent.exists()
+
+
+def test_doctor_bounds_locked_cache_probe_and_preserves_lock(monkeypatch, tmp_path):
+    from agent_bom.cli._doctor import _scan_cache_check
+
+    cache_path = tmp_path / "locked.db"
+    monkeypatch.setenv("AGENT_BOM_SCAN_CACHE", str(cache_path))
+    conn = sqlite3.connect(cache_path)
+    try:
+        conn.execute("CREATE TABLE osv_cache (cache_key TEXT PRIMARY KEY)")
+        conn.commit()
+        conn.execute("BEGIN EXCLUSIVE")
+        assert _scan_cache_check()[2] == "warn"
+        assert conn.in_transaction
+    finally:
+        conn.close()
+
+
+def test_doctor_cache_probe_is_read_only_and_closes_connection(monkeypatch, tmp_path):
+    from agent_bom.cli._doctor import _scan_cache_check
+
+    cache_path = tmp_path / "cache.db"
+    cache_path.touch()
+    monkeypatch.setenv("AGENT_BOM_SCAN_CACHE", str(cache_path))
+    calls = []
+
+    class BrokenConnection:
+        def execute(self, *args):
+            raise sqlite3.OperationalError("secret-token and private path")
+
+        def close(self):
+            calls.append("closed")
+
+    def connect(database, **kwargs):
+        calls.append((database, kwargs))
+        return BrokenConnection()
+
+    monkeypatch.setattr("agent_bom.cli._doctor.sqlite3.connect", connect)
+    row = _scan_cache_check()
+    assert row[2] == "warn"
+    assert "secret-token" not in row[1]
+    assert "private path" not in row[1]
+    assert calls == [(cache_path.resolve().as_uri() + "?mode=ro", {"uri": True, "timeout": 0.2}), "closed"]

@@ -52,6 +52,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `doctor` warns when its selected OSV scan cache is unreadable, locked or incompatible instead of reporting it as healthy. Diagnostics reuse the scanner path resolver, open the cache read-only with a bounded lock wait, and give a repair/recheck hint without exposing paths or exceptions.
+
 - Align documentation-site links, package metadata and Action examples with the transferred repository; accept release signatures from its current and historical owners while rejecting unrelated workflows.
 
 - Managed PostgreSQL initialization validates existing maintenance-role attributes without reapplying superuser-only flags. Unsafe existing roles fail initialization; pre-provisioned safe roles remain usable on RDS.
