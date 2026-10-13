@@ -117,6 +117,7 @@ function OverviewTab({ vuln }: { vuln: EnrichedVuln }) {
   const fixValue = vuln.current_version && vuln.fixed_version
     ? `${vuln.current_version} → ${vuln.fixed_version}`
     : vuln.fixed_version ? `Upgrade to ${vuln.fixed_version}` : null;
+  const guidance = vuln.remediation_items.map((item) => item.risk_narrative?.trim()).find(Boolean) ?? null;
   const impact = [
     scope.agents.length ? `${scope.agents.length} agent${scope.agents.length === 1 ? "" : "s"}` : null,
     scope.servers.length ? `${scope.servers.length} MCP server${scope.servers.length === 1 ? "" : "s"}` : null,
@@ -134,11 +135,11 @@ function OverviewTab({ vuln }: { vuln: EnrichedVuln }) {
 
       <Section title="Next action" accent>
         <p className="text-sm font-medium text-foreground">
-          {fixValue ?? "Review the evidence and determine the appropriate fix."}
+          {fixValue ?? guidance ?? "Review the evidence and determine the appropriate fix."}
         </p>
-        {fixValue ? <p className="mt-1 text-xs text-ink-secondary">Apply the fix, then rescan the affected asset to verify the result.</p> : null}
+        {fixValue || guidance ? <p className="mt-1 text-xs text-ink-secondary">Apply the fix, then rescan the affected asset to verify the result.</p> : null}
         <div className="mt-3 flex flex-wrap gap-3">
-          {fixValue || fixCandidates.length ? (
+          {fixValue || guidance || fixCandidates.length ? (
             <Link href={remediationHref({ q: vuln.id })} className="rounded-lg bg-accent-mint px-3 py-2 text-sm font-medium text-black">
               Review remediation
             </Link>

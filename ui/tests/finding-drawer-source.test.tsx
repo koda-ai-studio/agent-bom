@@ -92,3 +92,15 @@ it.each(["infra/main.tf", undefined, "/private/host/infra/main.tf", "../outside/
   expect(screen.getByText(repository_relative_path === "infra/main.tf" ? "infra/main.tf" : "Unknown — no verified repository-relative location supplied")).toBeVisible();
   if (repository_relative_path?.startsWith("/") || repository_relative_path?.startsWith("..")) expect(screen.queryByText(repository_relative_path)).not.toBeInTheDocument();
 });
+
+it("shows the finding's own remediation guidance as the next action", () => {
+  const guidance = "Broker credentials through a short-lived token issuer instead of exposing them to the agent.";
+  render(<FindingDrawer vuln={{ ...base, remediation_items: [{ package: "agent", ecosystem: "agent", current_version: "", fixed_version: null, action: "review", command: null, verify_command: null, references: [], risk_narrative: guidance }] }} triage={undefined} triageBusy={false} onTriageDecision={vi.fn()} onClose={vi.fn()} />);
+  expect(screen.getByText(guidance)).toBeVisible();
+  expect(screen.queryByText("Review the evidence and determine the appropriate fix.")).not.toBeInTheDocument();
+});
+
+it("keeps the generic next action only when no remediation is recorded", () => {
+  render(<FindingDrawer vuln={base} triage={undefined} triageBusy={false} onTriageDecision={vi.fn()} onClose={vi.fn()} />);
+  expect(screen.getByText("Review the evidence and determine the appropriate fix.")).toBeVisible();
+});
