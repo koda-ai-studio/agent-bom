@@ -230,3 +230,52 @@ def test_page_metadata_reuses_sanitized_scalar_leaves_without_rewalking(monkeypa
     assert outputs[1]["nested"] == expected["nested"]
     runtime_records.sanitize_runtime_metadata(metadata, _cache=runtime_records.RuntimeMetadataCache())
     assert len([key for key, value in calls if key == "provider"]) == 2
+
+
+def test_native_identity_scope_serialization_is_bounded_per_page(monkeypatch):
+    calls = []
+    original = TraceImportScope.identity_scope
+
+    def observed(self):
+        calls.append(self.environment)
+        return original(self)
+
+    monkeypatch.setattr(TraceImportScope, "identity_scope", observed)
+    scope = replace(SCOPE, environment="")
+    payload = {"spans": [span(str(i), **{"agent_bom.native_environment": "prod" if i % 2 else "stage"}) for i in range(100)]}
+    first = prepare_trace_page(payload, scope=scope, collected_at=TIME)
+    assert len(first.observations) == 100
+    assert sorted(calls) == ["prod", "stage"]
+    second = prepare_trace_page(payload, scope=scope, collected_at=TIME)
+    assert first == second
+    assert sorted(calls) == ["prod", "prod", "stage", "stage"]
+
+
+@pytest.mark.parametrize(
+    ("environment", "observation", "parent", "session"),
+    [
+        (
+            "prod",
+            "e00f8ecbbd8a9617cee55791f1d49bf3379ad5d843769cb02a0892be63f7db27",
+            "7ebe866b7176a24f3c0841f7c307bd0e6b2d192ec74f910e63183f2d862b508c",
+            "21933c3459afa8f0c554fef46c5f822da836b43709c6c14568355755b747d82e",
+        ),
+        (
+            "stage",
+            "482397559eaaa8fb1d57dbc975c00615a8bc5753141c68ee1fa277f6f2879629",
+            "80ed427ecac82dc1fd824732ff7b9747774389f95bb339a85adcda5bc62b576b",
+            "59543be2fafbbcc4d6fd291707d665a5496e97768c446ae84082126a3b8e31c0",
+        ),
+    ],
+)
+def test_page_identity_cache_preserves_issued_ids_with_escaped_scope(environment, observation, parent, session):
+    scope = TraceImportScope("tenant-é", "langfuse", 'con"nection', "https://trace.example/path", "project\\id", account_id="account")
+    item = span("span\\1", "parent", **{"agent_bom.native_project_id": scope.project_id, "agent_bom.native_environment": environment})
+    item["traceId"] = 'tráce"'
+    record = prepare_trace_page({"spans": [item]}, scope=scope, collected_at=TIME).observations[0]
+    assert record.observation_id == "trace:span:" + observation
+    assert record.metadata["parent_observation_id"] == "trace:span:" + parent
+    assert record.session_id == "trace:trace:" + session
+    if environment == "prod":
+        cloud = prepare_trace_page({"spans": [item]}, scope=replace(scope, cloud_provider="aws"), collected_at=TIME).observations[0]
+        assert cloud.observation_id == "trace:span:8eae7fdfbccb1297ae919df71ac0a68b8d93a316b6ee725140e20b45a8e9745f"
