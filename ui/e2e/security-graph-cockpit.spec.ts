@@ -587,6 +587,18 @@ for (const proof of [
         return issues;
       });
     })).toEqual([]);
+    const labelCollisions = await canvas.evaluate(flow => {
+      const labels = [...flow.querySelectorAll(".react-flow__edge-text, .relationship-badge")];
+      const nodes = [...flow.querySelectorAll('[data-graph-entity="true"]')];
+      return labels.flatMap(label => {
+        const box = label.getBoundingClientRect();
+        return nodes.filter(node => {
+          const peer = node.getBoundingClientRect();
+          return box.left < peer.right && box.right > peer.left && box.top < peer.bottom && box.bottom > peer.top;
+        }).map(node => `${label.textContent} overlaps ${node.textContent}`);
+      });
+    });
+    expect(labelCollisions).toEqual([]);
     await expect(canvas.locator(".react-flow__node")).toHaveCount(4);
     await page.screenshot({ path: testInfo.outputPath(`scenario-first-view-${proof.theme}-${capture}.png`) });
     await expect.poll(() => canvas.locator(".react-flow__node").evaluateAll((nodes) => {

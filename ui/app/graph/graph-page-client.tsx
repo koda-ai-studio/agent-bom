@@ -1764,7 +1764,7 @@ function GraphPageInner() {
         selectedAttackPath
           ? { rankSep: 72, nodeSep: 40, nodeWidth: 240, nodeHeight: 224, fitAspect: 2.65 }
           : selectedScenarioId
-            ? { rankSep: 48, nodeSep: 12, nodeWidth: 240, nodeHeight: 208, minSeparation: { width: 240, height: 208, gap: 24 } }
+            ? { rankSep: 112, nodeSep: 12, nodeWidth: 240, nodeHeight: 208, minSeparation: { width: 240, height: 208, gap: 24 } }
           : compactInvestigationTopology
             ? investigationLayout
             : filters.agentName

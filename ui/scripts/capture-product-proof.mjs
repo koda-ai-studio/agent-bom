@@ -3648,6 +3648,7 @@ async function main() {
         ],
         readySelector:
           'section[aria-label="Scenario comparison"]:has-text("Proposed scenario — not observed or deployed"):has-text("Current · observed"):has-text("Proposed · modeled")',
+        assertEdgeLabelsClearOfNodes: true,
         minGraphNodes: 3,
         minGraphEdges: 1,
         assertNoHorizontalOverflow: true,
