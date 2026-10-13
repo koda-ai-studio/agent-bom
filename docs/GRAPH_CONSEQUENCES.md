@@ -138,3 +138,17 @@ explanation and its **Recorded evidence** disclosure. A conservative
 server-scoped tool-impact mapping does not establish an exact package-to-tool
 call path. Inspect the finding and package/version receipt before choosing a
 fix; a graph connection alone does not prove exploitation or successful access.
+
+The inspector and recorded relationship rows also show **Evidence type**,
+**Source observed at**, **Graph last seen**, and **Graph traversal** without
+opening raw evidence. Evidence types come from explicit receipt markers;
+unrecognized markers remain unclassified and absent markers stay unrecorded.
+Mixed markers remain visible as mixed evidence rather than being promoted to
+runtime observation. Original tier and basis fields stay in **Why linked**.
+
+**Source observed at** uses the receipt's `observed_at` field. A supplied
+`timestamp` is shown separately as **Receipt timestamp**. Neither is filled from
+the graph's `first_seen` or `last_seen`: those fields can reflect graph-record
+creation. A timestamp is not a freshness guarantee, and traversal eligibility
+is not verification of runtime reachability. Use the recorded source and snapshot
+to collect fresh evidence before making an access or remediation decision.
