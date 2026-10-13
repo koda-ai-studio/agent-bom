@@ -18,6 +18,7 @@ from agent_bom.graph.edge_lookup import _build_edge_lookup, _EdgeLookup
 from agent_bom.graph.exposure import _exposure_path_for_attack_path, _exposure_ref_for_node, _exposure_relationships_for_path
 from agent_bom.graph.exposure_cursor import decode_exposure_cursor
 from agent_bom.graph.path_derivation import _derived_attack_paths
+from agent_bom.graph.snapshot_paths import derived_paths_revision, exposure_path_page
 from agent_bom.mcp_errors import (
     CODE_INTERNAL_UNEXPECTED,
     CODE_NOT_FOUND_RESOURCE,
@@ -364,26 +365,11 @@ async def exposure_paths_for_tenant(
                 CODE_UNSUPPORTED_BACKEND,
                 "Exposure paths require generation-pinned graph reads, which this graph backend does not support.",
             )
-        effective_scan_id, created_at, paths, total = await asyncio.to_thread(
-            store.attack_paths,
-            tenant_id=tenant_id,
-            scan_id=pinned_scan_id,
-            offset=offset,
-            limit=limit + 1,
+        effective_scan_id, created_at, paths, total, path_source, derived_revision = await asyncio.to_thread(
+            exposure_path_page, store, tenant_id=tenant_id, scan_id=pinned_scan_id, offset=offset, limit=limit + 1
         )
-        path_source = "persisted_graph_paths"
         derivation_truncated = False
-        derived_revision = ""
-        reader = getattr(store, "snapshot_attack_paths", None)
-        stored = await asyncio.to_thread(reader, tenant_id=tenant_id, scan_id=effective_scan_id) if reader is not None else None
-        if stored is not None:
-            # The snapshot's path index is the derivation below, computed at persist.
-            paths, total, path_source = stored.paths, len(stored.paths), "derived_graph_paths"
-            derived_revision = hashlib.sha256(
-                json.dumps([(p.hops, p.edges, p.composite_risk, p.reachability) for p in paths], sort_keys=True).encode()
-            ).hexdigest()
-            paths = paths[offset : offset + limit + 1]
-        elif total == 0:
+        if total == 0:
             # Keep the same topology semantics as the dashboard without importing
             # its optional FastAPI routes into the MCP-only installation.
             graph = await asyncio.to_thread(
@@ -396,9 +382,7 @@ async def exposure_paths_for_tenant(
             paths = await asyncio.to_thread(_derived_attack_paths, graph)
             effective_scan_id, created_at = graph.scan_id, graph.created_at
             total = len(paths)
-            derived_revision = hashlib.sha256(
-                json.dumps([(p.hops, p.edges, p.composite_risk, p.reachability) for p in paths], sort_keys=True).encode()
-            ).hexdigest()
+            derived_revision = derived_paths_revision(paths)
             paths = paths[offset : offset + limit + 1]
             path_source = "derived_graph_paths"
             derivation_truncated = graph.completeness.truncated

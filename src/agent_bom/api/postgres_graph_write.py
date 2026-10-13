@@ -134,7 +134,9 @@ _SNAPSHOT_REPLACE_TABLES = (
 )
 
 
-def _write_snapshot_paths(conn: Any, rows: Sequence[SnapshotPath], *, scan: str, tenant: str, now: str, batch_size: int) -> None:
+def _write_snapshot_paths(conn: Any, rows: Sequence[SnapshotPath] | None, *, scan: str, tenant: str, now: str, batch_size: int) -> None:
+    if rows is None:
+        return
     generation = conn.execute(
         "SELECT snapshot_generation FROM graph_snapshots WHERE tenant_id = %s AND scan_id = %s",
         (tenant, scan),

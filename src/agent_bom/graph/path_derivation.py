@@ -465,20 +465,36 @@ def _component_finding(node: UnifiedNode) -> bool:
     )
 
 
-def _derived_attack_paths(graph: UnifiedGraph) -> list[AttackPath]:
-    return [path for path, _kind in derived_attack_paths_with_kinds(graph)]
-
-
 def derived_attack_paths_with_kinds(graph: UnifiedGraph) -> list[tuple[AttackPath, str]]:
-    """Derive fix-first paths when a snapshot lacks materialised path rows.
+    """Ranked served paths tagged fusion/governance/credential/component."""
+    kinds: dict[int, str] = {}
+    return [(path, kinds.get(id(path), "component")) for path in _derived_attack_paths(graph, kinds=kinds)]
 
-    Derive recorded agent/server/component/finding chains for snapshots without
-    path rows. Credential assessments also retain their exact owner and real
-    topology hops. Equivalent persisted paths take precedence.
 
-    Governance / CNAPP / effective-permission chains (privilege escalation,
-    over-scoped tool access, drift, data exposure) are derived and merged in
-    both branches so they surface even when materialised vuln paths exist.
+def _tag_path_kinds(kinds: dict[int, str] | None, **families: list[AttackPath]) -> None:
+    if kinds is None:
+        return
+    for family, members in families.items():
+        kinds.update({id(path): family for path in members})
+
+
+def _rank_unique_paths(paths: list[AttackPath], graph: UnifiedGraph) -> list[AttackPath]:
+    """One served path per hop/edge chain (highest-ranked wins); never a single-node "path"."""
+    unique: list[AttackPath] = []
+    served: set[tuple[str, str, tuple[str, ...], tuple[str, ...]]] = set()
+    for path in sorted(paths, key=rank_attack_path):
+        identity = (path.source, path.target, tuple(path.hops), tuple(path.edges))
+        if identity in served or len(path.hops) < 2 or path.source == path.target:
+            continue
+        served.add(identity)
+        unique.append(path)
+    return _with_technique_mappings(unique, graph)
+
+
+def _derived_attack_paths(graph: UnifiedGraph, *, kinds: dict[int, str] | None = None) -> list[AttackPath]:
+    """The snapshot's served path set: persisted fusion rows, governance / CNAPP /
+    effective-permission chains, credential-owner paths and agent/server/component/
+    finding chains, ranked and unique per chain (equivalent persisted rows win).
     """
     governance_paths = _derived_governance_attack_paths(graph) + _derived_toxic_combination_paths(graph)
     for path in governance_paths:
@@ -619,32 +635,18 @@ def derived_attack_paths_with_kinds(graph: UnifiedGraph) -> list[tuple[AttackPat
                         )
                     )
 
-    # Ordinary derived paths never displace an equivalent persisted/governance
-    # path; identical chains collapse to one served path below.
+    # Derived paths never displace an equivalent persisted/governance path.
     combined = [*materialized, *governance_paths]
-    kinds = {id(path): "fusion" for path in materialized}
-    kinds.update({id(path): "governance" for path in governance_paths})
 
     def path_key(path: AttackPath) -> tuple[str, str, tuple[str, ...], tuple[str, ...]]:
         return path.source, path.target, tuple(path.hops), tuple(path.edges)
 
     existing_keys = {path_key(path) for path in combined}
     credential_paths = credential_finding_paths(graph)
-    kinds.update({id(path): "credential" for path in credential_paths})
     for derived_path in [*credential_paths, *paths]:
         derived_path_key = path_key(derived_path)
         if derived_path_key not in existing_keys:
             combined.append(derived_path)
             existing_keys.add(derived_path_key)
-    # One served path per hop/edge chain: the highest-ranked occurrence wins. A
-    # single-node "path" (source == target) is a node finding, not a path.
-    unique: list[AttackPath] = []
-    served_keys: set[tuple[str, str, tuple[str, ...], tuple[str, ...]]] = set()
-    for path in sorted(combined, key=rank_attack_path):
-        identity = path_key(path)
-        if identity in served_keys or len(path.hops) < 2 or path.source == path.target:
-            continue
-        served_keys.add(identity)
-        unique.append(path)
-    ranked = _with_technique_mappings(unique, graph)
-    return [(path, kinds.get(id(path), "component")) for path in ranked]
+    _tag_path_kinds(kinds, fusion=materialized, governance=governance_paths, credential=credential_paths)
+    return _rank_unique_paths(combined, graph)

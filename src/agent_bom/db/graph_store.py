@@ -437,7 +437,6 @@ def save_graph(conn: sqlite3.Connection, graph: UnifiedGraph) -> None:
     that can produce nodes/edges lazily should call ``save_graph_streaming``
     directly with generators to avoid materialising the whole graph.
     """
-    snapshot_paths = prepare_snapshot_paths(graph)
     save_graph_streaming(
         conn,
         scan_id=graph.scan_id,
@@ -448,7 +447,7 @@ def save_graph(conn: sqlite3.Connection, graph: UnifiedGraph) -> None:
         attack_paths=graph.attack_paths,
         interaction_risks=graph.interaction_risks,
         analysis_status=graph.analysis_status,
-        snapshot_paths=snapshot_paths,
+        snapshot_paths=prepare_snapshot_paths(graph),
     )
 
 
@@ -474,12 +473,10 @@ def save_graph_streaming(
 ) -> dict[str, int]:
     """Persist a graph snapshot from streamed node/edge iterables.
 
-    Unlike :func:`save_graph`, this never requires a fully materialised
-    ``UnifiedGraph``. ``nodes`` and ``edges`` are consumed lazily and flushed to
-    SQLite in bounded batches, and the snapshot's node/edge/severity/type
-    breakdowns are accumulated incrementally as rows stream through — so a
-    producer that yields nodes/edges on the fly keeps peak RSS flat regardless
-    of graph size (#4055). Writes are byte-identical to ``save_graph``.
+    ``nodes``/``edges`` are consumed lazily in bounded batches with stats
+    accumulated incrementally, so peak RSS stays flat (#4055); writes are
+    byte-identical to ``save_graph``. ``snapshot_paths`` become the snapshot's
+    stored path index in the same transaction.
 
     Precondition — the caller must yield **deduplicated** items: unique node
     ``id`` and unique ``(source, target, relationship)`` edge keys, exactly the
@@ -527,8 +524,7 @@ def save_graph_streaming(
         evidence_manifest_sha256=evidence_manifest_sha256,
         write_generation=write_generation,
     )
-    if snapshot_paths is not None:
-        _write_snapshot_paths(conn, snapshot_paths, scan=scan, tenant=tenant, now=now)
+    _write_snapshot_paths(conn, snapshot_paths, scan=scan, tenant=tenant, now=now)
     if correlation_result_manifest is not None:
         _complete_correlation_run_atomically(
             conn,

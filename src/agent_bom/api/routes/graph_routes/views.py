@@ -193,6 +193,23 @@ async def get_graph_edge_changes(
     return changes
 
 
+async def _ranked_queue_page(graph_store: Any, tenant: str, scan_id: str, page_args: dict[str, Any]) -> tuple[Any, int, int, str]:
+    """Rank one queue page: snapshot path index, else persisted rows, else derive on read."""
+    from agent_bom.api.attack_path_queue import ranked_persisted_path_page, ranked_snapshot_path_page
+
+    # A current index is the complete derived set, ranked as a read-time
+    # derivation would rank it, without loading the whole graph.
+    indexed = await _runtime._graph_store_call(ranked_snapshot_path_page, graph_store, scan_id=scan_id, tenant_id=tenant, **page_args)
+    if indexed is not None:
+        return indexed, 0, indexed.snapshot_total, "derived_graph_paths"
+    ranked = await _runtime._graph_store_call(ranked_persisted_path_page, graph_store, scan_id=scan_id, tenant_id=tenant, **page_args)
+    if ranked.snapshot_total:
+        return ranked, ranked.snapshot_total, 0, "persisted_graph_paths"
+    graph = await _runtime._load_graph_for_investigation(graph_store, scan_id=ranked.scan_id, tenant_id=tenant)
+    ranked = await _runtime._graph_compute_call(_derived_attack_path_page, graph, **page_args)
+    return ranked, 0, ranked.snapshot_total, "derived_graph_paths"
+
+
 @investigation_router.get("/graph/attack-paths", tags=["graph"], responses={200: _ATTACK_PATHS_OPENAPI_RESPONSE})
 async def get_graph_attack_paths(
     request: Request,
@@ -216,7 +233,7 @@ async def get_graph_attack_paths(
     (see ``graph.attack_path_queue_rank``), and hydrates only the hop nodes
     needed to render the selected queue page.
     """
-    from agent_bom.api.attack_path_queue import AttackPathFilters, ranked_persisted_path_page, ranked_snapshot_path_page
+    from agent_bom.api.attack_path_queue import AttackPathFilters
 
     tenant = _runtime._tenant(request)
     graph_store = _runtime._get_graph_store_or_503()
@@ -225,20 +242,7 @@ async def get_graph_attack_paths(
     )
     filters = AttackPathFilters(min_severity=min_severity, has_credential=has_credential, source_type=source_type)
     page_args = {"offset": offset, "limit": limit, "filters": filters}
-    # A current snapshot path index is the complete derived set, ranked the same
-    # way a read-time derivation would be, without loading the whole graph.
-    indexed = await _runtime._graph_store_call(ranked_snapshot_path_page, graph_store, scan_id=identity[0], tenant_id=tenant, **page_args)
-    if indexed is not None:
-        ranked, materialized_paths, derived_paths, path_source = indexed, 0, indexed.snapshot_total, "derived_graph_paths"
-    else:
-        ranked = await _runtime._graph_store_call(
-            ranked_persisted_path_page, graph_store, scan_id=identity[0], tenant_id=tenant, **page_args
-        )
-        materialized_paths, derived_paths, path_source = ranked.snapshot_total, 0, "persisted_graph_paths"
-    if indexed is None and ranked.snapshot_total == 0:
-        graph = await _runtime._load_graph_for_investigation(graph_store, scan_id=ranked.scan_id, tenant_id=tenant)
-        ranked = await _runtime._graph_compute_call(_derived_attack_path_page, graph, **page_args)
-        derived_paths, path_source = ranked.snapshot_total, "derived_graph_paths"
+    ranked, materialized_paths, derived_paths, path_source = await _ranked_queue_page(graph_store, tenant, identity[0], page_args)
     effective_scan_id = ranked.scan_id
     hop_ids = {hop for path in ranked.paths for hop in path.hops}
     nodes = await _runtime._graph_store_call(

@@ -275,7 +275,9 @@ def _write_attack_paths(conn: sqlite3.Connection, attack_paths: Iterable[AttackP
     return attack_path_count
 
 
-def _write_snapshot_paths(conn: sqlite3.Connection, rows: Sequence[SnapshotPath], *, scan: str, tenant: str, now: str) -> None:
+def _write_snapshot_paths(conn: sqlite3.Connection, rows: Sequence[SnapshotPath] | None, *, scan: str, tenant: str, now: str) -> None:
+    if rows is None:
+        return
     generation = conn.execute(
         "SELECT snapshot_generation FROM graph_snapshots WHERE tenant_id = ? AND scan_id = ?",
         (tenant, scan),

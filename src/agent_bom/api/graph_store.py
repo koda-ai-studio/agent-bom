@@ -18,7 +18,6 @@ if TYPE_CHECKING:
     pass
 
 from agent_bom.api.graph_store_pages import SQLiteGraphPagesMixin
-from agent_bom.api.graph_store_snapshot_paths import SQLiteSnapshotPathsMixin
 from agent_bom.api.graph_store_support import _API_GRAPH_TENANT_TABLE_KEYS as _API_GRAPH_TENANT_TABLE_KEYS
 from agent_bom.api.graph_store_support import _CREATE_PRESET_TABLE_SQLITE as _CREATE_PRESET_TABLE_SQLITE
 from agent_bom.api.graph_store_support import _DYNAMIC_RELATIONSHIP_VALUES as _DYNAMIC_RELATIONSHIP_VALUES
@@ -138,7 +137,7 @@ def containment_drilldown_graph(
     return graph
 
 
-class SQLiteGraphStore(SQLiteSnapshotPathsMixin, SQLiteGraphPagesMixin):
+class SQLiteGraphStore(SQLiteGraphPagesMixin):
     """SQLite-backed graph store wrapper around the low-level graph DB helpers."""
 
     def _frontier_edge_query(

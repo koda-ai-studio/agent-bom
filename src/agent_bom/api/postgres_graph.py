@@ -52,7 +52,6 @@ from .postgres_graph_history import PostgresGraphHistoryMixin
 from .postgres_graph_inventory import PostgresGraphInventoryMixin
 from .postgres_graph_paths import PostgresGraphPathsMixin
 from .postgres_graph_schema import _GRAPH_TABLES_DDL, _GRAPH_TABLES_MIGRATION_DDL
-from .postgres_graph_snapshot_paths import PostgresSnapshotPathsMixin
 from .postgres_graph_support import (
     _ALLOWED_ENTITY_TYPES,
     _DB_LEASE_ISO,
@@ -137,7 +136,6 @@ __all__ = [
 
 
 class PostgresGraphStore(
-    PostgresSnapshotPathsMixin,
     PostgresGraphPathsMixin,
     PostgresGraphInventoryMixin,
     PostgresGraphHistoryMixin,
@@ -230,7 +228,6 @@ class PostgresGraphStore(
 
     def save_graph(self, graph: UnifiedGraph) -> None:
         """Persist a fully built ``UnifiedGraph`` via the streamed write path."""
-        snapshot_paths = prepare_snapshot_paths(graph)
         self.save_graph_streaming(
             scan_id=graph.scan_id or "",
             tenant_id=graph.tenant_id,
@@ -240,7 +237,7 @@ class PostgresGraphStore(
             interaction_risks=graph.interaction_risks,
             analysis_status=graph.analysis_status,
             created_at=graph.created_at,
-            snapshot_paths=snapshot_paths,
+            snapshot_paths=prepare_snapshot_paths(graph),
         )
 
     def save_graph_streaming(
@@ -265,13 +262,7 @@ class PostgresGraphStore(
     ) -> dict[str, int]:
         """Persist a snapshot from node/edge iterables without materialising a graph.
 
-        Bounded-memory equivalent of :meth:`save_graph` (#4055/#4075). The single
-        producer over ``nodes`` is consumed exactly once and fans out to BOTH the
-        ``graph_nodes`` row and its ``graph_node_search`` mirror in interleaved,
-        bounded batches — so a lazy producer never needs a second pass and peak
-        RSS is decoupled from graph size. Node/edge/severity tallies accumulate
-        incrementally in place of ``graph.stats()`` over a materialised graph, so
-        the persisted snapshot row is byte-identical to :meth:`save_graph`.
+        Bounded-memory, single-pass equivalent of :meth:`save_graph` (#4055); ``snapshot_paths`` are stored in the same transaction.
         """
         scan = scan_id or ""
         tenant = normalize_graph_tenant_id(tenant_id)
@@ -314,8 +305,7 @@ class PostgresGraphStore(
                     *revision_tokens(write_generation),
                 ),
             )
-            if snapshot_paths is not None:
-                _write_snapshot_paths(conn, snapshot_paths, scan=scan, tenant=tenant, now=now, batch_size=batch_size)
+            _write_snapshot_paths(conn, snapshot_paths, scan=scan, tenant=tenant, now=now, batch_size=batch_size)
             if correlation_result_manifest is not None:
                 _complete_correlation_in_write(
                     conn,

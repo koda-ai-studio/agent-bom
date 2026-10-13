@@ -15,6 +15,7 @@ from collections.abc import Callable, Mapping
 from typing import TYPE_CHECKING, Any
 
 from agent_bom import __version__
+from agent_bom.graph.snapshot_paths import prepare_snapshot_paths
 from agent_bom.security import sanitize_error, sanitize_text
 
 if TYPE_CHECKING:
@@ -151,8 +152,6 @@ def _snapshot_path_kwargs(graph_store: Any, graph: UnifiedGraph) -> dict[str, An
     """Materialize the snapshot's path index when the destination store keeps one."""
     if getattr(graph_store, "stores_snapshot_paths", False) is not True:
         return {}
-    from agent_bom.graph.snapshot_paths import prepare_snapshot_paths
-
     return {"snapshot_paths": prepare_snapshot_paths(graph)}
 
 

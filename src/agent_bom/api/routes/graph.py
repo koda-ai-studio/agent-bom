@@ -775,8 +775,7 @@ async def get_graph_rollup(
     ``completeness``; ``?mode=attack_path`` returns the nodes/edges on materialised
     attack paths first with the rest collapsed.
 
-    Backend for the UI graph-navigation surface. Read-only: never mutates the
-    source graph.
+    Backend for the UI graph-navigation surface. Read-only: never mutates the source graph.
     """
     tenant = _runtime._tenant(request)
     graph_store = _runtime._get_graph_store_or_503()
