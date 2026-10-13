@@ -26,7 +26,7 @@ from typing import TYPE_CHECKING, Any, Literal, Optional
 
 from agent_bom.evidence.asset_display import iac_source_label
 from agent_bom.evidence.finding_status import public_finding_status
-from agent_bom.finding_catalog_remediation import catalog_remediation
+from agent_bom.finding_response_fields import restored_public_fields
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from agent_bom.finding import FindingSource, FindingType
@@ -514,21 +514,6 @@ _FINDING_RESPONSE_TIMESTAMPS = (
     "reopened_at",
     "sla_due_at",
 )
-_FINDING_RESPONSE_PROVENANCE_KEYS = frozenset(
-    {
-        "source",
-        "source_type",
-        "collector",
-        "provider",
-        "service",
-        "observed_via",
-        "observed_at",
-        "confidence",
-        "scan_id",
-        "job_id",
-        "schema_version",
-    }
-)
 _FINDING_SEARCH_FIELDS = (
     "id",
     "canonical_id",
@@ -570,18 +555,6 @@ def _safe_optional_text(value: Any, *, max_len: int) -> str | None:
     from agent_bom.security import sanitize_text
 
     return sanitize_text(value.strip(), max_len=max_len)
-
-
-def _safe_finding_provenance(value: Any) -> dict[str, Any] | None:
-    if not isinstance(value, Mapping):
-        return None
-    from agent_bom.security import sanitize_sensitive_payload
-
-    bounded = {str(key): raw for key, raw in value.items() if str(key) in _FINDING_RESPONSE_PROVENANCE_KEYS}
-    sanitized = sanitize_sensitive_payload(bounded, max_str_len=128)
-    if not isinstance(sanitized, dict):
-        return None
-    return sanitized or None
 
 
 def _safe_structural_text(value: Any, *, max_len: int) -> str | None:
@@ -697,8 +670,6 @@ def safe_finding_response_payload(row: Mapping[str, Any]) -> dict[str, Any]:
         payload["bulk_ordinal"] = ordinal
 
     payload.update(public_finding_status(row))
-    if (guidance := catalog_remediation(row)) is not None:
-        payload["remediation_guidance"] = guidance
 
     for key, max_len in (
         ("source", 64),
@@ -783,9 +754,7 @@ def safe_finding_response_payload(row: Mapping[str, Any]) -> dict[str, Any]:
         if token is not None:
             payload[key] = token
 
-    provenance = _safe_finding_provenance(row.get("provenance"))
-    if provenance is not None:
-        payload["provenance"] = provenance
+    payload.update(restored_public_fields(row))
 
     from agent_bom.evidence.finding_observation import FindingObservationStatus, ReconfirmationReason
 
