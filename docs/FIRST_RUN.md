@@ -155,6 +155,14 @@ control-plane command, and a graph URL pinned to the snapshot just read back.
 Start that command before opening the URL. A missing or incomplete persisted
 graph fails the quickstart instead of printing a successful handoff.
 
+Credential-reach findings from the scan appear as graph finding nodes linked to
+their owning agents. Agent scope summaries include their recorded severity;
+Find a path shows the recorded agent/server/credential chain and its final
+modeled assessment link. These paths do not establish successful credential use
+or effective permission. Run a new scan to populate these nodes in a new
+snapshot; historical snapshots are preserved. Path derivation follows at most
+six topology hops and visits at most 5,000 nodes per agent.
+
 This is sample evidence, not an assessment of your environment. Offline
 quickstart inventories the sample and skips package-CVE lookup; zero CVEs is
 not a clean verdict. Use `agent-bom scan --demo --offline` for bundled advisory

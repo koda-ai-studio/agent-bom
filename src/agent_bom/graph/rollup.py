@@ -60,6 +60,8 @@ _ACCOUNT_RESOURCE_CONTAINMENT_TARGETS: frozenset[str] = frozenset({EntityType.CL
 _AGENT_STACK_CONTAINMENT: frozenset[tuple[str, str, str]] = frozenset(
     {
         (RelationshipType.USES.value, EntityType.AGENT.value, EntityType.SERVER.value),
+        (RelationshipType.VULNERABLE_TO.value, EntityType.AGENT.value, EntityType.MISCONFIGURATION.value),
+        (RelationshipType.VULNERABLE_TO.value, EntityType.SERVER.value, EntityType.MISCONFIGURATION.value),
         (RelationshipType.DEPENDS_ON.value, EntityType.SERVER.value, EntityType.PACKAGE.value),
         (RelationshipType.DEPENDS_ON.value, EntityType.PACKAGE.value, EntityType.PACKAGE.value),
         (RelationshipType.PROVIDES_TOOL.value, EntityType.SERVER.value, EntityType.TOOL.value),

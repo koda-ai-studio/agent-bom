@@ -12,6 +12,7 @@ from agent_bom.cloud.normalization import coerce_truthy
 from agent_bom.core.severity import SEVERITY_RANK
 from agent_bom.graph.attack_path_fusion import has_sensitive_data_label
 from agent_bom.graph.container import AttackPath, UnifiedGraph
+from agent_bom.graph.credential_findings import credential_finding_paths
 from agent_bom.graph.edge_lookup import _build_edge_lookup as _build_edge_lookup
 from agent_bom.graph.edge_lookup import _edge_relationships_for_hops as _edge_relationships_for_hops
 from agent_bom.graph.edge_lookup import _EdgeLookup as _EdgeLookup
@@ -479,11 +480,9 @@ def _with_technique_mappings(paths: list[AttackPath], graph: UnifiedGraph) -> li
 def _derived_attack_paths(graph: UnifiedGraph) -> list[AttackPath]:
     """Derive fix-first paths when a snapshot lacks materialised path rows.
 
-    Older snapshots and some stores have rich topology but no `attack_paths`
-    records. Security operators still need the obvious chain:
-    agent -> MCP server -> package/server -> vulnerability, enriched with the
-    server's credential and tool exposure. Keep this deterministic and bounded;
-    stores with first-class path rows remain the source of truth.
+    Derive recorded agent/server/component/finding chains for snapshots without
+    path rows. Credential assessments also retain their exact owner and real
+    topology hops. Equivalent persisted paths take precedence.
 
     Governance / CNAPP / effective-permission chains (privilege escalation,
     over-scoped tool access, drift, data exposure) are derived and merged in
@@ -638,7 +637,7 @@ def _derived_attack_paths(graph: UnifiedGraph) -> list[AttackPath]:
         return path.source, path.target, tuple(path.hops), tuple(path.edges)
 
     existing_keys = {path_key(path) for path in combined}
-    for derived_path in paths:
+    for derived_path in [*credential_finding_paths(graph), *paths]:
         derived_path_key = path_key(derived_path)
         if derived_path_key not in existing_keys:
             combined.append(derived_path)
