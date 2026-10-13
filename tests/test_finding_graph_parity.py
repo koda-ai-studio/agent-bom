@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import copy
 import json
+import os
 from collections import Counter
 from pathlib import Path
 
@@ -140,3 +141,42 @@ def test_cloud_fixture_stats_count_only_finding_nodes(name):
     report = json.loads((ROOT / "fixtures" / "graph_cloud_context" / "reports.json").read_text())[name]
     graph = build_unified_graph_from_report(copy.deepcopy(report), scan_id=SCAN_ID)
     assert Counter(graph.stats()["severity_counts"]) == _graph_finding_severities(graph)
+
+
+def _rated_estate():
+    from agent_bom.graph import EntityType, UnifiedGraph, UnifiedNode
+
+    graph = UnifiedGraph(scan_id=SCAN_ID, tenant_id="default")
+    graph.add_node(UnifiedNode(id="agent:a", entity_type=EntityType.AGENT, label="a", severity="high"))
+    graph.add_node(UnifiedNode(id="toxic:combo", entity_type=EntityType.MISCONFIGURATION, label="combo", severity="critical"))
+    graph.add_node(UnifiedNode(id="vuln:CVE-1", entity_type=EntityType.VULNERABILITY, label="CVE-1", severity="critical"))
+    graph.add_node(UnifiedNode(id="misconfig:iac:R:f:1", entity_type=EntityType.MISCONFIGURATION, label="R", severity="low"))
+    return graph
+
+
+@pytest.mark.parametrize("backend", ["sqlite", "postgres"])
+def test_snapshot_severity_counts_cached_and_live_count_only_findings(tmp_path, backend):
+    graph = _rated_estate()
+    if backend == "sqlite":
+        from agent_bom.api.graph_store import SQLiteGraphStore
+
+        store = SQLiteGraphStore(str(tmp_path / "graph.db"))
+    else:
+        if not os.environ.get("AGENT_BOM_POSTGRES_URL"):
+            pytest.skip("AGENT_BOM_POSTGRES_URL not set")
+        from agent_bom.api.postgres_common import reset_current_tenant, set_current_tenant
+        from agent_bom.api.postgres_graph import PostgresGraphStore
+
+        store = PostgresGraphStore()
+        token = set_current_tenant("default")
+    try:
+        store.save_graph(graph)
+        cached = store.snapshot_stats(tenant_id="default", scan_id=SCAN_ID)
+        live = store.snapshot_stats(tenant_id="default", scan_id=SCAN_ID, entity_types={"agent", "misconfiguration", "vulnerability"})
+    finally:
+        if backend == "postgres":
+            reset_current_tenant(token)
+    expected = {"critical": 1, "low": 1}
+    assert graph.stats()["severity_counts"] == expected
+    assert cached["severity_counts"] == expected
+    assert live["severity_counts"] == expected

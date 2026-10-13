@@ -1410,9 +1410,7 @@
         "owns": 7,
         "stores": 4
       },
-      "severity_counts": {
-        "info": 4
-      },
+      "severity_counts": {},
       "total_edges": 19,
       "total_nodes": 14,
       "total_nodes_source": 14
@@ -2307,9 +2305,7 @@
         "owns": 4,
         "stores": 2
       },
-      "severity_counts": {
-        "info": 2
-      },
+      "severity_counts": {},
       "total_edges": 10,
       "total_nodes": 9,
       "total_nodes_source": 9
@@ -4254,9 +4250,7 @@
         "owns": 4,
         "stores": 1
       },
-      "severity_counts": {
-        "info": 1
-      },
+      "severity_counts": {},
       "total_edges": 9,
       "total_nodes": 8,
       "total_nodes_source": 8
@@ -4924,9 +4918,7 @@
         "owns": 4,
         "stores": 1
       },
-      "severity_counts": {
-        "info": 1
-      },
+      "severity_counts": {},
       "total_edges": 9,
       "total_nodes": 6,
       "total_nodes_source": 6
