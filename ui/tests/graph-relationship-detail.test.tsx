@@ -30,7 +30,7 @@ describe("relationship inspector", () => {
     expect(screen.getByText("snapshot-a")).toBeVisible();
     expect(screen.getByText(/does not establish execution/)).toBeVisible();
     fireEvent.click(screen.getByText("Recorded evidence"));
-    expect(screen.getByText(/configured_target/)).toBeVisible();
+    expect(screen.getByText(/"basis": "configured_target"/)).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Close relationship details" }));
     expect(close).toHaveBeenCalledOnce();
   });
@@ -50,4 +50,35 @@ it("moves focus into details and restores the invoking control on close", () => 
   expect(screen.getByRole("button", { name: "Close relationship details" })).toHaveFocus();
   view.unmount();
   expect(trigger).toHaveFocus(); trigger.remove();
+});
+
+it.each([
+  ["uses", "A recorded use relationship. It does not establish that a tool was called."],
+  ["provides_tool", "The source lists the target as an available tool. Availability does not prove invocation."],
+  ["depends_on", "The source is linked to a dependency in the collected inventory. This does not establish that vulnerable code runs."],
+  ["vulnerable_to", "The source component is linked to a vulnerability finding. Review the recorded package and version before choosing a fix."],
+])("explains %s without opening raw evidence", (relationship, explanation) => {
+  render(<GraphRelationshipDetail edge={{ ...edge, relationship }} scanId="s" sourceLabel="Source" targetLabel="Target" onClose={vi.fn()} />);
+  expect(screen.getByText(explanation)).toBeVisible();
+  expect(screen.getByText("workflow")).toBeVisible();
+  expect(screen.getByText("configured_target")).toBeVisible();
+});
+
+it("explains conservative tool impact without claiming a traced exploit", () => {
+  render(<GraphRelationshipDetail edge={{ ...edge, relationship: "exploitable_via", evidence: { mapping_method: "server_scope_conservative", package: "example", version: "1.2", source: "scan" } }} scanId="s" sourceLabel="Finding" targetLabel="Tool" onClose={vi.fn()} />);
+  expect(screen.getByText(/shares a server with the affected package/)).toBeVisible();
+  expect(screen.getByText(/exact package-to-tool call path is not established/)).toBeVisible();
+  expect(screen.getByText("example")).toBeVisible();
+  expect(screen.getByText("1.2")).toBeVisible();
+});
+
+it("does not infer a source receipt from the relationship verb", () => {
+  render(<GraphRelationshipDetail edge={{ ...edge, evidence: {} }} scanId="s" sourceLabel="Agent" targetLabel="Server" onClose={vi.fn()} />);
+  expect(screen.getByText("Source evidence not recorded for this link.")).toBeVisible();
+});
+
+it.each(["future_relationship", "constructor"])("keeps unknown %s relationships neutral", relationship => {
+  render(<GraphRelationshipDetail edge={{ ...edge, relationship, evidence: { source: { unexpected: true }, mapping_method: ["not-a-method"] } }} scanId="s" sourceLabel="A" targetLabel="B" onClose={vi.fn()} />);
+  expect(screen.getByText(/Review its source evidence before drawing a security conclusion/)).toBeVisible();
+  expect(screen.queryByLabelText("Recorded link evidence")).not.toBeInTheDocument();
 });

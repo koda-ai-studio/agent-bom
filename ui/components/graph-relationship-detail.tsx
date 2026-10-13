@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { X } from "lucide-react";
+import { GraphRelationshipExplanation } from "@/components/graph-relationship-explanation";
 import { Drawer } from "@/components/drawer";
 import type { UnifiedEdge } from "@/lib/graph-schema";
 import { relationshipEdgeLabelText } from "@/lib/graph-utils";
@@ -35,6 +36,10 @@ export function GraphRelationshipDetail({ edge, scanId, sourceLabel, targetLabel
   const title = relationshipEdgeLabelText(edge.relationship, { evidenceMode: graphEdgeEvidenceMode(edge) });
   const content = <div className="space-y-4 text-sm [overflow-wrap:anywhere]">
     <p className="font-medium">{sourceLabel} {edge.direction === "bidirectional" ? "↔" : "→"} {targetLabel}</p>
+    <section aria-label="Why linked" className="space-y-2 rounded-lg border border-outline bg-surface-muted p-3">
+      <h4 className="text-xs font-semibold">Why linked</h4>
+      <GraphRelationshipExplanation edge={edge} />
+    </section>
     <p className="text-xs text-ink-secondary">This recorded relationship does not establish execution or successful data access.</p>
     <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-xs">
       <dt className="text-ink-secondary">Snapshot</dt><dd>{scanId}</dd>

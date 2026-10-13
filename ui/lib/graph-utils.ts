@@ -394,12 +394,12 @@ export function relationshipLegendItem(relationship: string): LegendItem {
   const dashed = DASHED_LEGEND_RELATIONSHIPS.has(relationship);
   return {
     label:
-      RELATIONSHIP_LABEL_OVERRIDES[relationship] ??
+      (Object.hasOwn(RELATIONSHIP_LABEL_OVERRIDES, relationship) ? RELATIONSHIP_LABEL_OVERRIDES[relationship] : undefined) ??
       meta?.label ??
       fallbackRelationshipLabel(relationship),
     color: meta?.color ?? "#52525b",
     layer: meta?.category,
-    description: RELATIONSHIP_DESCRIPTION_OVERRIDES[relationship],
+    description: Object.hasOwn(RELATIONSHIP_DESCRIPTION_OVERRIDES, relationship) ? RELATIONSHIP_DESCRIPTION_OVERRIDES[relationship] : undefined,
     kind: "edge",
     dashed,
     lineStyle: dashed ? "dashed" : "solid",

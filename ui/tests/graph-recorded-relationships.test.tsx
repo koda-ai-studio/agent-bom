@@ -103,3 +103,11 @@ it("exports only the loaded pinned investigation after a deliberate click", asyn
   expect(fetchPage).toHaveBeenCalledTimes(1);
   download.mockRestore();
 });
+
+it("offers the same explanation in recorded relationship rows", async () => {
+  fetchPage.mockResolvedValue(page());
+  render(<GraphRecordedRelationshipScope scanId="s-1" nodeId="agent:one"><GraphRecordedRelationships scanId="s-1" nodeId="agent:one" /></GraphRecordedRelationshipScope>);
+  fireEvent.click(await screen.findByText("Why linked"));
+  expect(screen.getByText("A recorded use relationship. It does not establish that a tool was called.")).toBeVisible();
+  expect(screen.getByText("Source evidence not recorded for this link.")).toBeVisible();
+});

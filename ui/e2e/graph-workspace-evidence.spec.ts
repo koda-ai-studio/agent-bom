@@ -58,6 +58,13 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     await receipt.getByText("Recorded evidence", {exact: true}).click();
     await expect(receipt.getByText(/fixture-package@1.0/)).toBeVisible();
     await page.keyboard.press("Escape"); await expect(edge).toBeFocused();
+    const usageEdge = page.locator('.react-flow__edge[data-id="edge:server:0"]');
+    await usageEdge.focus(); await usageEdge.press("Space");
+    await expect(receipt.getByRole("region", { name: "Why linked" })).toContainText("It does not establish that a tool was called.");
+    await expect(receipt.getByLabel("Recorded link evidence")).toContainText("configured");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+    await page.screenshot({path: testInfo.outputPath(`relationship-explanation-${theme}-${width}.png`), animations: "disabled"});
+    await page.keyboard.press("Escape"); await expect(usageEdge).toBeFocused();
     // A new canonical root replaces the bounded window, without old branches.
     await page.evaluate(() => history.pushState(null, "", "/graph?lens=mesh&scan=snapshot&root=role%3Aconditional"));
     await expect(inspector.getByRole("heading", {name: "conditional", exact: true})).toBeVisible();
