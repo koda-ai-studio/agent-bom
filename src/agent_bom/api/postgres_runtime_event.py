@@ -39,7 +39,13 @@ from agent_bom.api.storage.runtime_trace_imports import (
     validate_page,
     write_checkpoint,
 )
-from agent_bom.api.storage.runtime_trace_revisions import REVISION_TABLE_SQL, TracePageCommit, read_revisions, reconcile_sql
+from agent_bom.api.storage.runtime_trace_revisions import (
+    REVISION_TABLE_SQL,
+    TracePageCommit,
+    prune_revisions_for_tenant,
+    read_revisions,
+    reconcile_sql,
+)
 from agent_bom.api.storage_schema import ensure_postgres_schema_version
 
 
@@ -195,6 +201,7 @@ class PostgresRuntimeEventStore:
             check_revision(current, expected_revision, checkpoint)
             updated, first_seen = reconcile_sql(conn, unique, placeholder="%s")
             inserted = self._put_observations_locked(conn, first_seen)
+            prune_revisions_for_tenant(conn, checkpoint.tenant_id, placeholder="%s", dialect="postgres")
             write_checkpoint(conn, checkpoint, placeholder="%s")
             conn.commit()
             return TracePageCommit(inserted, updated, len(unique) - inserted - updated)

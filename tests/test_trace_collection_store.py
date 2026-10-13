@@ -102,7 +102,8 @@ def test_native_page_bounds_identity_reads_without_losing_replay_or_history(stor
         if sql.startswith("SELECT")
         and any(table in sql for table in ("runtime_observations", "runtime_observation_revisions", "trace_collection_receipts"))
     ]
-    assert len(reads) <= 10, "page identity reads must be bounded rather than repeated per span"
+    # Ten identity reads plus one constant revision-retention count per page.
+    assert len(reads) <= 11, "page identity reads must be bounded rather than repeated per span"
     inserts = [sql for sql in statements if sql.startswith(("INSERT INTO runtime_observation", "INSERT INTO trace_collection_receipts"))]
     assert len(inserts) <= 3 * ((count + 99) // 100), "page inserts must use bounded batches rather than one round trip per span"
     assert done.persisted == count
@@ -257,3 +258,18 @@ def test_existing_main_checkpoint_keeps_its_scope_when_no_optional_binding_chang
     assert resumed.pages == 1
     for field in ("project", "scope_account_id", "scope_environment", "scope_cloud_provider"):
         assert scope({**credentials, field: "changed"}) != old.scope_digest
+
+
+def test_collected_native_revision_history_is_bounded(stores, monkeypatch):
+    runtime, store = stores
+    monkeypatch.setenv("AGENT_BOM_ANALYTICS_MAX_EVENTS", "2")
+    monkeypatch.setenv("AGENT_BOM_ANALYTICS_MAX_TRACE_REVISIONS", "3")
+    native = {"project_id": "project", "connection_id": "connection"}
+    for i in range(6):
+        span = replace(observation(key=f"span-{i}"), surface="imported_trace", observed_at=f"2026-10-10T12:0{i}:00+00:00", metadata=native)
+        claim = store.claim("a", "connection", initial(), now=100 + 2 * i)
+        store.commit("a", "connection", claim, [span], next_cursor=f"page-{i + 2}", now=101 + 2 * i)
+    retained = {i: len(runtime.list_observation_revisions("a", f"span-{i}")) for i in range(6)}
+    assert sum(retained.values()) <= 3
+    assert retained[4] == retained[5] == 1
+    assert retained[0] == 0

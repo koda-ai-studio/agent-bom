@@ -39,6 +39,8 @@ from agent_bom.api.storage.runtime_trace_revisions import (
     REVISION_TABLE_SQL,
     TracePageCommit,
     content_hash,
+    prune_revisions_for_tenant,
+    prune_revisions_in_memory,
     read_revisions,
     reconcile_sql,
     revised_session,
@@ -218,6 +220,7 @@ class InMemoryRuntimeEventStore:
                 else:
                     first_seen.append(record)
             inserted = self._put_observations_locked(first_seen)
+            prune_revisions_in_memory(self._revisions, self._observations, checkpoint.tenant_id)
             self._trace_imports[key] = checkpoint
             return TracePageCommit(inserted, updated, len(unique) - inserted - updated)
 
@@ -413,6 +416,7 @@ class SQLiteRuntimeEventStore:
             check_revision(read_checkpoint(conn, checkpoint.tenant_id, checkpoint.import_id), expected_revision, checkpoint)
             updated, first_seen = reconcile_sql(conn, unique)
             inserted = self._put_observations_locked(conn, first_seen)
+            prune_revisions_for_tenant(conn, checkpoint.tenant_id)
             write_checkpoint(conn, checkpoint)
             return TracePageCommit(inserted, updated, len(unique) - inserted - updated)
 

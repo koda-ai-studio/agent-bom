@@ -367,6 +367,10 @@ ANALYTICS_MAX_FINDINGS = _int("AGENT_BOM_ANALYTICS_MAX_FINDINGS", 250_000)
 # Caps package rows in the local scan mirror. Old scan runs are removed atomically;
 # the newest run is always retained. ``<= 0`` disables this cap.
 ANALYTICS_MAX_PACKAGES = _int("AGENT_BOM_ANALYTICS_MAX_PACKAGES", 500_000)
+# Caps imported-trace revision rows per tenant. Histories whose projection row was
+# already pruned go first (oldest first), then superseded revisions; the latest
+# revision of a retained span is always kept. ``<= 0`` disables this cap.
+ANALYTICS_MAX_TRACE_REVISIONS = _int("AGENT_BOM_ANALYTICS_MAX_TRACE_REVISIONS", 250_000)
 
 
 # ── Graph Backend Selection ───────────────────────────────────────────────

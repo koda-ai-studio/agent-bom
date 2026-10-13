@@ -9,6 +9,7 @@ from typing import Any, Protocol
 _DEFAULT_ANALYTICS_MAX_EVENTS = 50_000
 _DEFAULT_ANALYTICS_MAX_PACKAGES = 500_000
 _DEFAULT_ANALYTICS_MAX_FINDINGS = 250_000
+_DEFAULT_ANALYTICS_MAX_TRACE_REVISIONS = 250_000
 
 
 class _ObservationCapConnection(Protocol):
@@ -87,6 +88,17 @@ def analytics_max_findings() -> int:
     except (ImportError, TypeError, ValueError):
         default = _DEFAULT_ANALYTICS_MAX_FINDINGS
     return _env_cap("AGENT_BOM_ANALYTICS_MAX_FINDINGS", default)
+
+
+def analytics_max_trace_revisions() -> int:
+    """Return the per-tenant imported-trace revision cap. ``<= 0`` disables it."""
+    try:
+        from agent_bom.config import ANALYTICS_MAX_TRACE_REVISIONS
+
+        default = int(ANALYTICS_MAX_TRACE_REVISIONS)
+    except (ImportError, TypeError, ValueError):
+        default = _DEFAULT_ANALYTICS_MAX_TRACE_REVISIONS
+    return _env_cap("AGENT_BOM_ANALYTICS_MAX_TRACE_REVISIONS", default)
 
 
 def plan_local_scan_prune(
