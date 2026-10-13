@@ -66,7 +66,7 @@ export function compactInvestigationLayout(explicitContext: boolean, nodeCount: 
   return readableLineageDagreLr({
     nodeWidth: LINEAGE_NODE_WIDTH,
     nodeHeight: LINEAGE_NODE_HEIGHT,
-    rankSep: 96,
+    rankSep: 128,
     nodeSep: 32,
     minSeparation: { width: LINEAGE_NODE_WIDTH, height: LINEAGE_NODE_HEIGHT, gap: 24 },
   });
