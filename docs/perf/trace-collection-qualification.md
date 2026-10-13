@@ -4,7 +4,10 @@ Use a disposable database and a fresh output directory for every run. This
 qualification sends authenticated requests through the in-process ASGI test
 transport and serves synthetic Langfuse pages through `httpx.MockTransport`.
 It exercises the real adapter, authorization, audit, SQL transactions, and
-checkpoint implementation. It does not measure a deployed HTTP server, a live
+checkpoint implementation. One shared TestClient lifespan serves all requests
+on one event loop and applies `AGENT_BOM_WORKER_THREAD_LIMIT`, matching the API's
+worker admission boundary. Fixture stores are provisioned before that lifespan;
+external startup provisioning is excluded. It does not measure a deployed HTTP server, a live
 provider account, network latency, or production capacity.
 
 ## First run: SQLite
@@ -13,13 +16,14 @@ provider account, network latency, or production capacity.
 uv sync --frozen --extra dev --extra api
 # Use a test-only persistent key so fixture audit signatures survive restart.
 export AGENT_BOM_AUDIT_HMAC_KEY="$(openssl rand -hex 32)"
+export AGENT_BOM_WORKER_THREAD_LIMIT=2
 uv run python -m scripts.run_trace_collection_qualification \
   --output /tmp/trace-qualification-sqlite-001
 ```
 
 The output contains `attempts.jsonl`, `receipt.json`, and SQLite runtime/audit
 databases. The receipt records the source commit, whether the checkout was
-dirty, configuration, Python/platform, all-attempt latency percentiles, process
+dirty, configuration, serving-loop and worker-thread limits, Python/platform, all-attempt latency percentiles, process
 peak RSS, provider calls, and exact reconciliation outcome. Failed requests
 remain in latency/error totals. Warmup is recorded separately and excluded from
 the baseline. An existing output directory is rejected, not overwritten.
@@ -29,7 +33,13 @@ light tenant: ten pages of 100 observations per connection, with concurrent
 light-tenant status reads. Provider source IDs deliberately repeat across
 connections and tenants. Reconciliation requires the exact expected observation
 IDs, page counts, insertion counts, and completed checkpoints for both tenants.
-No failed request or missing work can yield a passing receipt.
+No failed request or missing work can yield a passing receipt. Queue-overload
+responses also fail the run; this harness does not retry or hide them.
+
+Earlier versions created a new TestClient event loop for each request, bypassing
+the configured shared worker budget. Preserve those receipts, but compare code
+changes using the same harness and limits on both revisions. Do not attribute a
+change in transport or baseline to a production speedup.
 
 The predeclared local thresholds are light-tenant p95 below 5 seconds and at
 most 4 times its warm baseline (using a 1 ms denominator floor). Set

@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 
 from agent_bom.api.request_tenant import require_request_tenant_id
 from agent_bom.api.trace_collection import service
+from agent_bom.api.trace_collection.admission import run_collection
 from agent_bom.api.trace_collection.contracts import CollectionConflictError, CollectionReceipt, CollectionRequest
 
 try:
@@ -38,8 +39,8 @@ def _invoke(request: Request, body: CollectionRequest, *, advance: bool) -> Coll
     response_model=CollectionReceipt,
     tags=["observability"],
 )
-def collect_trace_page(request: Request, body: CollectionRequest) -> CollectionReceipt:
-    return _invoke(request, body, advance=True)
+async def collect_trace_page(request: Request, body: CollectionRequest) -> CollectionReceipt:
+    return await run_collection(lambda: _invoke(request, body, advance=True))
 
 
 @router.get(

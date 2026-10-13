@@ -21,11 +21,27 @@ def test_qualification_reconciles_native_scoped_records(tmp_path):
             "-c",
             """
 from pathlib import Path
+import asyncio
 import sys
+import anyio.to_thread
+import anyio.from_thread
 from unittest.mock import patch
 from scripts.run_trace_collection_qualification import run
-with patch('agent_bom.trace_connectors._validate_pull_url'):
+from agent_bom import config
+from agent_bom.api.trace_collection import service
+config.WORKER_THREAD_LIMIT = 2
+loops, limits = set(), set()
+original_status = service.status
+async def observe_loop():
+    loops.add(id(asyncio.get_running_loop()))
+    limits.add(anyio.to_thread.current_default_thread_limiter().total_tokens)
+def status(*args, **kwargs):
+    anyio.from_thread.run(observe_loop)
+    return original_status(*args, **kwargs)
+with patch.object(service, 'status', status), patch('agent_bom.trace_connectors._validate_pull_url'):
     run(Path(sys.argv[1]), backend='sqlite', workers=1, pages=2, rows=2, p95_limit_ms=5000, slowdown_limit=100)
+assert len(loops) == 1, loops
+assert limits == {2}, limits
 """,
             str(output),
         ],
