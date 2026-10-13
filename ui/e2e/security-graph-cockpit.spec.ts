@@ -1996,3 +1996,46 @@ for (const width of [1440, 1920]) for (const theme of ["light", "dark"]) {
     expect(collisions).toEqual([]);
   });
 }
+
+for (const theme of ["light", "dark"] as const) {
+  test(`scope navigation fits the first load and retains its parent and leaf evidence in ${theme}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await routeCockpit(page, undefined, { rollupItemCount: 8 });
+    await page.addInitScript(value => localStorage.setItem("agent-bom-theme", value), theme);
+    await page.route("**/v1/graph/rollup?**", async route => {
+      if (!new URL(route.request().url()).searchParams.has("node")) return route.fallback();
+      const child = {
+        id: "cred:slot", label: "API_TOKEN", entity_type: "credential", severity: "",
+        is_container: false, has_children: false, direct_child_count: 0,
+        aggregate: { descendant_count: 0, by_type: {}, severity_counts: { none: 1 }, worst_severity: "", worst_severity_rank: 0, internet_exposed: false, toxic_combo: false, exposed_count: 0, toxic_count: 0 },
+      };
+      return route.fulfill({ json: {
+        scan_id: scanId, tenant_id: "default", created_at: createdAt, mode: "drilldown", filters: {},
+        node: { id: "account:production", label: "Production account", entity_type: "cloud_account", severity: "critical" },
+        children: [child, { ...child, id: "pkg:requests", label: "requests@2.28.0", entity_type: "package" }], edges: [],
+        summary: { direct_child_count: 2, matching_child_count: 2, returned_child_count: 2 },
+        completeness: { returned: 2, total: 2, truncated: false, reason: "" },
+      } });
+    });
+    await page.goto(`/graph?scan=${scanId}&rollup=1`);
+    await expect(page.locator(".react-flow__node")).toHaveCount(8);
+    await expect.poll(async () => {
+      const canvas = await page.locator(".react-flow").boundingBox();
+      const boxes = await page.locator(".react-flow__node").evaluateAll(nodes => nodes.map(n => {
+        const r = n.getBoundingClientRect(); return { x: r.x, y: r.y, right: r.right, bottom: r.bottom };
+      }));
+      return !!canvas && boxes.every(r => r.x >= canvas.x && r.y >= canvas.y && r.right <= canvas.x + canvas.width + 1 && r.bottom <= canvas.y + canvas.height + 1);
+    }).toBe(true);
+    await page.screenshot({ path: testInfo.outputPath(`scope-fit-${theme}.png`), fullPage: true });
+    await page.locator('.react-flow__node[data-id="account:production"]').click();
+    await page.getByRole("button", { name: "Explore scope", exact: true }).click();
+    const credential = page.locator('.react-flow__node[data-id="cred:slot"]');
+    await expect(credential).toContainText("Inspect entity");
+    await expect(credential).not.toContainText("contained entities");
+    await expect(page.locator('.react-flow__node[data-id="account:production"]')).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath(`scope-parent-${theme}.png`), fullPage: true });
+    await credential.click();
+    await expect(page.getByTestId("graph-drawer-tab-overview")).toBeVisible();
+    await expect(page.getByLabel("Scope details")).toHaveCount(0);
+  });
+}

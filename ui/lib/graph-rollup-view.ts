@@ -1,7 +1,7 @@
 import { MarkerType, type Edge, type Node } from "@xyflow/react";
 
 import type { LineageNodeData, LineageNodeType } from "@/components/lineage-nodes";
-import type { GraphRollupContainer, GraphRollupEdge } from "@/lib/api-types";
+import type { GraphRollupContainer, GraphRollupEdge, GraphRollupResponse } from "@/lib/api-types";
 import { FLOW_NODE_TYPES, lineageNodeTypeForEntity } from "@/lib/graph-entity-mapping";
 
 
@@ -94,7 +94,7 @@ function rollupEdgeWidth(count: number): number {
 
 export function buildRollupFlowGraph(
   containers: GraphRollupContainer[],
-  options?: { columns?: number; edges?: GraphRollupEdge[] | undefined },
+  options?: { columns?: number; edges?: GraphRollupEdge[] | undefined; parent?: GraphRollupResponse["node"] | undefined },
 ): { nodes: Node<LineageNodeData>[]; edges: Edge[] } {
   const compact = containers.length > 24;
   const width = compact ? 332 : NODE_WIDTH;
@@ -112,6 +112,17 @@ export function buildRollupFlowGraph(
       ...(container.has_children ? { className: "cursor-pointer" } : {}),
     };
   });
+  const parent = options?.parent;
+  if (parent && !nodes.some(node => node.id === parent.id)) {
+    const nodeType = rollupEntityToNodeType(parent.entity_type);
+    // Navigation context is a recorded entity, not a fabricated containment edge.
+    nodes.unshift({
+      id: parent.id, type: FLOW_NODE_TYPES[nodeType], position: { x: 0, y: -180 },
+      data: { label: parent.label, nodeType, entityType: parent.entity_type,
+        severity: parent.severity || undefined, description: "Current scope",
+        attributes: { node_id: parent.id, navigation_context: "current_scope" } },
+    });
+  }
   // The roll-up used to return no edges at all, so the canvas drew a grid of
   // disconnected cards and the view had to tell the reader that "aggregate
   // cards are not rendered relationship evidence" — a security graph admitting
@@ -130,8 +141,8 @@ export function buildRollupFlowGraph(
       // The aggregate count spans every listed kind; it is not a per-kind count.
       type: "smoothstep",
       label: `${edge.count.toLocaleString()} relationship${edge.count === 1 ? "" : "s"}`,
-      data: { aggregate: edge, hoverDescription: `${edge.count} recorded relationships between scopes · ${edge.directions?.join(", ") || "Direction not recorded"}. Select to inspect the aggregate.` },
-      ariaLabel: `${edge.count} recorded relationships between scopes; ${edge.directions?.length === 1 ? edge.directions[0] : edge.directions?.length ? "mixed directions" : "direction unavailable"}`,
+      data: { aggregate: edge, hoverDescription: `${edge.count} recorded relationship${edge.count === 1 ? "" : "s"} between entities · ${edge.directions?.join(", ") || "Direction not recorded"}. Select to inspect the aggregate.` },
+      ariaLabel: `${edge.count} recorded relationship${edge.count === 1 ? "" : "s"} between entities; ${edge.directions?.length === 1 ? edge.directions[0] : edge.directions?.length ? "mixed directions" : "direction unavailable"}`,
       ...(edge.directions?.length === 1 && ["directed", "bidirectional"].includes(edge.directions[0]!)
         ? { markerEnd: { type: MarkerType.ArrowClosed, color: "var(--text-secondary)" } } : {}),
       ...(edge.directions?.length === 1 && edge.directions[0] === "bidirectional"

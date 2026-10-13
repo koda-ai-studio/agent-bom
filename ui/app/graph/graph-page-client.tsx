@@ -1419,7 +1419,7 @@ function GraphPageInner() {
         rollupView.mode === "drilldown"
           ? (rollupView.children ?? [])
           : (rollupView.top_level ?? []);
-      const rollupFlow = buildRollupFlowGraph(items, { edges: rollupView.edges });
+      const rollupFlow = buildRollupFlowGraph(items, { edges: rollupView.edges, parent: rollupView.mode === "drilldown" ? rollupView.node : undefined });
       return {
         nodes: rollupFlow.nodes,
         edges: rollupFlow.edges,
@@ -2302,9 +2302,9 @@ function GraphPageInner() {
       // Scenario views share width with the decision panel and app navigation.
       // Allow the complete proposed context to fit shorter desktop canvases.
       if (compactInvestigationTopology && !narrowViewport) return { ...options, minZoom: displayNodes.length <= 3 ? 1 : COMPACT_GRAPH_MIN_ZOOM, maxZoom: displayNodes.length <= 3 ? 1.25 : 1 };
-      return selectedScenarioId && !scenarioExpanded ? { ...options, minZoom: 0.75, maxZoom: 1 } : options;
+      return rollupNavigationActive ? { ...viewportOptions, minZoom: 0.05, maxZoom: 1 } : selectedScenarioId && !scenarioExpanded ? { ...options, minZoom: 0.75, maxZoom: 1 } : options;
     },
-    [initialAnchorId, viewportOptions, selectedScenarioId, scenarioExpanded, compactInvestigationTopology, narrowViewport, displayNodes.length],
+    [initialAnchorId, viewportOptions, selectedScenarioId, scenarioExpanded, compactInvestigationTopology, narrowViewport, displayNodes.length, rollupNavigationActive],
   );
   const showMiniMap = useMemo(
     () =>
@@ -3689,7 +3689,7 @@ function GraphPageInner() {
           )}
           {!rollupDecisionActive && (rollupNavigationActive || selectedScenarioId || investigationMode || initialViewportOptions.nodes || displayNodes.length > 6) && graphRenderer.kind === "react-flow" && (
             <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-xs text-muted-foreground" data-testid="graph-viewport-scope">
-              <span>{scenarioContextIds ? `Changes and neighbors · ${displayNodes.length} of ${aggregated.nodes.length} nodes` : rollupNavigationActive ? "Scope overview" : "Graph"} · {displayNodes.length.toLocaleString()} {rollupNavigationActive ? "scopes" : "nodes"} · {displayEdges.length.toLocaleString()} {rollupNavigationActive ? `aggregate link${displayEdges.length === 1 ? "" : "s"}` : `relationship${displayEdges.length === 1 ? "" : "s"}`}</span>
+              <span>{scenarioContextIds ? `Changes and neighbors · ${displayNodes.length} of ${aggregated.nodes.length} nodes` : rollupNavigationActive ? "Scope overview" : "Graph"} · {displayNodes.length.toLocaleString()} {rollupNavigationActive ? "entities" : "nodes"} · {displayEdges.length.toLocaleString()} {rollupNavigationActive ? `aggregate link${displayEdges.length === 1 ? "" : "s"}` : `relationship${displayEdges.length === 1 ? "" : "s"}`}</span>
               {selectedScenarioId && !attackPathLens && !selectedAttackPath && !investigationMode && <button type="button" onClick={() => setExpandedScenarioId(scenarioExpanded ? null : selectedScenarioId)} className="text-foreground underline underline-offset-4">{scenarioExpanded ? "Focus changes" : "Show full graph"}</button>}
               {showMiniMap && <button type="button" aria-pressed={minimapExpanded} onClick={() => setMinimapExpanded((value) => !value)} className="text-foreground underline underline-offset-4">{minimapExpanded ? "Hide minimap" : "Show minimap"}</button>}
               <button type="button" onClick={fitVisible} className="text-foreground underline underline-offset-4">Fit all</button>
