@@ -193,3 +193,73 @@ def test_annotate_graph_from_report_no_op_without_findings() -> None:
     graph = UnifiedGraph()
     result = annotate_graph_mcp_auth_from_report(graph, {"findings": []})
     assert result == {"nodes_flagged": 0, "interaction_risks": 0}
+
+
+def _legacy_report(server_names: list[str]) -> dict:
+    servers = [_net_server(name, url="https://mcp.example.com/sse") for name in server_names]
+    findings = evaluate_mcp_auth_posture([_agent("a", servers=servers[:1])])
+    return {
+        "agents": [
+            {
+                "name": "a",
+                "agent_type": "claude-desktop",
+                "config_path": "/tmp/a.json",
+                "mcp_servers": [{"name": name, "transport": "sse", "url": "https://mcp.example.com/sse"} for name in server_names],
+            }
+        ],
+        "findings": [finding.to_dict() for finding in findings],
+    }
+
+
+def _server_nodes(graph) -> list:
+    from agent_bom.graph.types import EntityType
+
+    return [node for node in graph.nodes.values() if node.entity_type == EntityType.SERVER]
+
+
+def test_legacy_report_without_server_ids_flags_server_by_unique_label() -> None:
+    from agent_bom.graph.builder import build_unified_graph_from_report
+
+    report = _legacy_report(["payments"])
+    graph = build_unified_graph_from_report(report, scan_id="legacy", tenant_id="tenant-a")
+
+    servers = _server_nodes(graph)
+    assert len(servers) == 1
+    assert servers[0].attributes.get("canonical_id"), "builder derives a canonical id for legacy servers"
+    assert servers[0].attributes.get("mcp_auth_weak") is True
+
+
+def test_legacy_report_ambiguous_label_is_not_guessed() -> None:
+    from agent_bom.graph.builder import build_unified_graph_from_report
+
+    report = _legacy_report(["payments", "payments"])
+    report["agents"].append({**report["agents"][0], "name": "b", "config_path": "/tmp/b.json"})
+    graph = build_unified_graph_from_report(report, scan_id="legacy", tenant_id="tenant-a")
+
+    servers = _server_nodes(graph)
+    assert len(servers) >= 2
+    assert not any(node.attributes.get("mcp_auth_weak") for node in servers)
+
+
+def test_exact_server_id_preferred_over_label() -> None:
+    from agent_bom.graph.container import UnifiedGraph
+    from agent_bom.graph.node import UnifiedNode
+    from agent_bom.graph.types import EntityType
+
+    server = _net_server("payments", url="https://mcp.example.com/sse")
+    finding = evaluate_mcp_auth_posture([_agent("a", servers=[server])])[0].to_dict()
+    graph = UnifiedGraph()
+    exact = UnifiedNode(
+        id="exact",
+        entity_type=EntityType.SERVER,
+        label="renamed",
+        attributes={"canonical_id": finding["asset"]["identifier"], "stable_id": finding["asset"]["identifier"]},
+    )
+    legacy = UnifiedNode(id="legacy", entity_type=EntityType.SERVER, label="payments", attributes={"canonical_id": "server:derived"})
+    graph.add_node(exact)
+    graph.add_node(legacy)
+
+    annotate_graph_mcp_auth_from_report(graph, {"findings": [finding]})
+
+    assert exact.attributes.get("mcp_auth_weak") is True
+    assert not legacy.attributes.get("mcp_auth_weak")
