@@ -327,3 +327,42 @@ def test_overview_gallery_fixture_contains_api_scoped_enterprise_evidence() -> N
         assert job["status"] == "done" and job["request"]["offline"] is True
         assert f"/v1/scan/{job['job_id']}" in responses
     assert (ROOT / "docs/images/dashboard-risks-live.png").is_file()
+
+
+def test_feedback_route_resolves_to_a_complete_public_issue_form() -> None:
+    import yaml
+
+    templates = ROOT / ".github/ISSUE_TEMPLATE"
+    config = yaml.safe_load((templates / "config.yml").read_text())
+    feedback = next((link for link in config["contact_links"] if "template=feedback.yml" in link["url"]), None)
+    assert feedback is not None, "the issue chooser must offer feedback without requiring Discussions"
+    assert feedback["url"].startswith("https://github.com/koda-ai-studio/agent-bom/issues/new?")
+    form = yaml.safe_load((templates / "feedback.yml").read_text())
+    fields = {row["id"]: row for row in form["body"] if "id" in row}
+    assert {"version", "task", "result", "privacy"} <= fields.keys()
+    for key in ("version", "task", "result"):
+        assert fields[key]["validations"]["required"] is True
+    assert fields["privacy"]["attributes"]["options"][0]["required"] is True
+    assert fields["timing"].get("validations", {}).get("required", False) is False
+    assert fields["assistance"].get("validations", {}).get("required", False) is False
+
+
+def test_accuracy_reports_can_capture_directed_graph_evidence() -> None:
+    import yaml
+
+    form = yaml.safe_load((ROOT / ".github/ISSUE_TEMPLATE/inaccurate_finding.yml").read_text())
+    fields = {row["id"]: row for row in form["body"] if "id" in row}
+    options = fields["finding-type"]["attributes"]["options"]
+    assert "Incorrect identity correlation or graph relationship" in options
+    assert "Unsupported reachability or blast-radius claim" in options
+    description = fields["graph-evidence"]["attributes"]["description"].lower()
+    for marker in ("source", "target", "direction", "snapshot", "scope", "freshness", "incomplete"):
+        assert marker in description
+    assert fields["graph-evidence"].get("validations", {}).get("required", False) is False
+
+
+def test_support_and_contributor_feedback_links_use_the_active_repository() -> None:
+    for filename in ("SUPPORT.md", "CONTRIBUTING.md"):
+        content = (ROOT / filename).read_text()
+        assert "https://github.com/koda-ai-studio/agent-bom/issues/new?template=feedback.yml" in content
+        assert "https://github.com/msaad00/agent-bom" not in content

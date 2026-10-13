@@ -11,6 +11,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Public first-run and investigation feedback forms capture setup friction and decision context. Inaccurate-finding reports now capture directed graph identity, scope, provenance, freshness and incomplete evidence, with contribution and support routing through the active repository.
+
 - Published-package first-run verification checks the offline report, persisted sample snapshot and rendered graph on Linux/macOS, with desktop/mobile light/dark captures, separate timings and retained failure receipts.
 
 - A shorter release-focused README leads from a repository scan to the persisted sample graph, explains the server handoff, and links the full source-version product tour.

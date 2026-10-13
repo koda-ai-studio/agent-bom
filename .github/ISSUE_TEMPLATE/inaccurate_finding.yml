@@ -1,18 +1,18 @@
 name: Inaccurate Finding
-description: Report a false positive, false negative, or misleading remediation.
+description: Report a false positive, false negative, misleading remediation, or an unsupported graph relationship.
 labels: ["bug", "area/scanning"]
 body:
   - type: markdown
     attributes:
       value: |
-        Use this for public accuracy reports only. Do not include secrets, private source code, private package names, or customer data.
+        Use this for public accuracy reports only. Do not include secrets, private source code, private package names, or customer data. Report vulnerabilities in agent-bom privately through SECURITY.md. Synthetic reproductions are welcome; identify them as synthetic.
 
   - type: input
     id: version
     attributes:
       label: agent-bom version
       description: Run `agent-bom --version`.
-      placeholder: "e.g. 0.86.3"
+      placeholder: "Installed version; source commit SHA if running from a checkout"
     validations:
       required: true
 
@@ -25,6 +25,8 @@ body:
         - False negative
         - Wrong severity or advisory mapping
         - Misleading remediation
+        - Incorrect identity correlation or graph relationship
+        - Unsupported reachability or blast-radius claim
         - Missing blast-radius or context
         - Other accuracy issue
     validations:
@@ -37,9 +39,9 @@ body:
       description: Include the exact command and the smallest redacted output that shows the issue.
       render: shell
       placeholder: |
-        agent-bom agents -p . -f json -o report.json
+        agent-bom scan . -f json -o report.json
         # paste the relevant sanitized finding here
-        # example: https://github.com/msaad00/agent-bom/blob/main/docs/INACCURATE_FINDING_REPORT.md
+        # example: https://github.com/koda-ai-studio/agent-bom/blob/main/docs/INACCURATE_FINDING_REPORT.md
     validations:
       required: true
 
@@ -62,3 +64,20 @@ body:
     attributes:
       label: Environment
       description: OS, Python version, install method, and whether the scan used `--offline`, `--enrich`, an SBOM, or a registry.
+
+  - type: textarea
+    id: graph-evidence
+    attributes:
+      label: Graph relationship evidence (if applicable)
+      description: >-
+        Include sanitized source and target identities, relationship direction,
+        tenant/account/environment scope, snapshot IDs, provenance/source reference,
+        evidence type, freshness, and any incomplete collection or paging.
+        Explain which independent source supports or contradicts the relationship.
+        Keep placeholders consistent across before/after snippets; do not paste a full graph.
+      placeholder: |
+        source: agent:example-a -> target: tool:example-b
+        relationship: uses; scope: synthetic-account-a; snapshot: example-before
+        evidence: configured, from a synthetic MCP config; observation time: unknown
+        expected: no join to the same-named tool in synthetic-account-b
+        collection: partial; absence is not evidence of removal
