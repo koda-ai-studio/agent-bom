@@ -5,23 +5,7 @@ type Endpoints = Pick<EdgeProps, "source" | "target" | "sourceX" | "sourceY" | "
 
 /** Detour long left-to-right links around intervening entities in bounded views. */
 export function relationshipPath(edge: Endpoints, obstacles: Obstacle[]): [string, number, number] {
-  const [path, midpointX, midpointY] = getBezierPath(edge);
-  let [labelX, labelY] = [midpointX, midpointY];
-  const coordinates = path.match(/-?\d+(?:\.\d+)?(?:e[+-]?\d+)?/gi)?.map(Number) ?? [];
-  // Opposite slopes can cross at their midpoints. Keep their captions on the
-  // actual curve, on different sides of that crossing.
-  if (coordinates.length === 8 && Math.abs(edge.targetY - edge.sourceY) > 80) {
-    const t = edge.targetY > edge.sourceY ? 0.65 : 0.35;
-    const u = 1 - t;
-    const candidateX = u ** 3 * coordinates[0]! + 3 * u ** 2 * t * coordinates[2]! + 3 * u * t ** 2 * coordinates[4]! + t ** 3 * coordinates[6]!;
-    const candidateY = u ** 3 * coordinates[1]! + 3 * u ** 2 * t * coordinates[3]! + 3 * u * t ** 2 * coordinates[5]! + t ** 3 * coordinates[7]!;
-    // Moving away from a crossing must not move the caption into an endpoint.
-    if (!obstacles.some(node => candidateX + 48 > node.x && candidateX - 48 < node.x + node.width
-      && candidateY + 16 > node.y && candidateY - 16 < node.y + node.height)) {
-      labelX = candidateX;
-      labelY = candidateY;
-    }
-  }
+  const [path, labelX, labelY] = getBezierPath(edge);
   // A serpentine path changes rows on the same side of both circular glyphs.
   // Keep its turn and caption outside the wider name/metadata column.
   if (obstacles.length <= 80 && Math.abs(edge.targetX - edge.sourceX) < 8
@@ -47,6 +31,7 @@ export function relationshipPath(edge: Endpoints, obstacles: Obstacle[]): [strin
     && node.x > edge.sourceX + 24 && node.x + node.width < edge.targetX - 24);
   // React Flow supplies a single cubic curve. Sample it rather than treating
   // its entire bounding box as an obstruction (which reroutes clear diagonals).
+  const coordinates = path.match(/-?\d+(?:\.\d+)?(?:e[+-]?\d+)?/gi)?.map(Number) ?? [];
   const intersects = (x: number, y: number, padX: number, padY: number) => between.some(node =>
     x + padX > node.x && x - padX < node.x + node.width
     && y + padY > node.y && y - padY < node.y + node.height);
@@ -75,6 +60,6 @@ export function relationshipPath(edge: Endpoints, obstacles: Obstacle[]): [strin
   const end = Math.min(edge.targetX - 32, targetNode ? targetNode.x - 24 : edge.targetX - 32);
   return [
     `M${edge.sourceX},${edge.sourceY} C${start},${edge.sourceY} ${start},${lane} ${start + 32},${lane} L${end - 32},${lane} C${end},${lane} ${end},${edge.targetY} ${edge.targetX},${edge.targetY}`,
-    edge.targetY < edge.sourceY ? end - 32 : edge.targetY > edge.sourceY ? start + 32 : (start + end) / 2, lane,
+    start + (end - start) * (edge.targetY < edge.sourceY ? 0.3 : edge.targetY > edge.sourceY ? 0.7 : 0.5), lane,
   ];
 }
