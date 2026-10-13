@@ -41,11 +41,12 @@ agent-bom scan .
 Read the inventory, findings, coverage gaps, and remediation guidance in the terminal.
 Save a report with `agent-bom scan . -f sarif -o findings.sarif`, then
 [upload it and gate CI](docs/FIRST_RUN.md#5-gate-ci-on-the-result).
-Run `agent-bom doctor` if setup fails.
+Run `agent-bom doctor` if setup fails. See the [first-run guide](docs/FIRST_RUN.md).
 
 No project handy? Run `agent-bom scan --demo --offline` for a bundled sample.
-Exit `1` is expected: the sample trips the security gate. A non-zero exit can
-also mean incomplete assessment; inspect the report and [exit codes](site-docs/reference/exit-codes.md).
+Exit `1` is expected: the sample trips the security gate. A non-zero exit
+can mean a security gate or incomplete assessment; inspect the report and coverage.
+See the [exit codes](site-docs/reference/exit-codes.md).
 
 <p align="center"><img src="docs/images/demo-latest.gif" alt="Recorded agent-bom v0.108.4 CLI showing sample findings and remediation guidance; no fix executed" width="920" /></p>
 
@@ -109,7 +110,7 @@ scoped read-only connection, verify access, then start a scan. Use the
 - **Centralize** inventory, graph evidence, remediation and compliance in your own control plane.
 - **Enforce** policy on selected live MCP tool calls through the proxy or gateway.
 
-[Docker pilot guide](docs/DEPLOY_QUICKSTART.md) · [Choose a deployment](site-docs/deployment/overview.md) · [Enterprise controls](docs/ENTERPRISE.md) · [Connect cloud accounts](docs/CLOUD_CONNECT.md)
+[Docker pilot guide](docs/DEPLOY_QUICKSTART.md) · [Compose with PostgreSQL](deploy/docker-compose.platform.yml) · [Choose a deployment](site-docs/deployment/overview.md) · [Enterprise controls](docs/ENTERPRISE.md) · [Connect cloud accounts](docs/CLOUD_CONNECT.md)
 
 <details>
 <summary>Work with your existing tools</summary>
@@ -118,11 +119,16 @@ Use **CLI or GitHub Action**, **REST API**, or **MCP**; export **SARIF, CycloneD
 SPDX, JSON and HTML**. Cloud connectors and fleet sync collect inventory;
 proxy and gateway deployments add runtime evidence.
 
-For coding assistants, `agent-bom mcp server` starts with eight focused tools.
+For coding assistants, run `agent-bom mcp server`.
+MCP server mode exposes 8 MCP tools by default.
 [Choose an MCP profile](docs/MCP_SERVER.md) for graph, cloud, runtime or audit work.
 [Import existing scanner reports](docs/IMPORTERS.md) without replacing their source evidence.
 
-[Integration capability matrix](docs/INTEGRATIONS.md) · [MCP client setup](docs/MCP_CLIENT_GUIDES.md) · [Smithery setup and manifest](site-docs/integrations/smithery.md)
+Prefer an isolated invocation? Use `uvx agent-bom scan .` or check a dependency
+with `uvx agent-bom check requests@2.33.0 --ecosystem pypi`. Add
+[pre-commit and CI setup](docs/DEPLOYMENT.md#pre-commit-hook) for repeated checks.
+
+[Proxy, gateway and fleet](site-docs/deployment/proxy-vs-gateway-vs-fleet.md) · [Integration capability matrix](docs/INTEGRATIONS.md) · [MCP client setup](docs/MCP_CLIENT_GUIDES.md) · [Smithery setup and manifest](site-docs/integrations/smithery.md)
 
 </details>
 
@@ -132,7 +138,7 @@ Discovery uses read-only access by default. Explicit disk side-scans create
 temporary cloud resources. Missing evidence stays unavailable or partial;
 control mappings are not audit certification.
 
-[Product boundaries](docs/PRODUCT_BOUNDARIES.md) · [Permissions](docs/PERMISSIONS.md) · [Threat model](docs/THREAT_MODEL.md) · [Release verification](docs/RELEASE_VERIFICATION.md)
+[Measured matcher proof](site-docs/features/scanning.md#reproducible-matching-evidence) · [Product boundaries](docs/PRODUCT_BOUNDARIES.md) · [Permissions](docs/PERMISSIONS.md) · [Threat model](docs/THREAT_MODEL.md) · [Release verification](docs/RELEASE_VERIFICATION.md)
 
 ## Contributing and support
 

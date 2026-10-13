@@ -84,6 +84,29 @@ GRAPH_PROJECTION_SOURCES = frozenset(
     }
 )
 
+PUBLIC_FRONTDOOR_CONTRACTS = frozenset(
+    {
+        "test_cli_exit_contract_docs.py",
+        "test_consumer_precommit_hooks.py",
+        "test_cve_matching_accuracy_gate.py",
+        "test_deploy_reference.py",
+        "test_deploy_topology_docs.py",
+        "test_doc_architecture_svgs.py",
+        "test_docs_front_door.py",
+        "test_mcp_protocol_compatibility.py",
+        "test_product_explanations.py",
+        "test_public_compose_paths.py",
+        "test_public_docs_cli_alignment.py",
+        "test_public_docs_runnable_commands.py",
+        "test_public_frontdoor_contract.py",
+        "test_public_release_contracts.py",
+        "test_readme_demo_excerpt.py",
+        "test_release_storefront_contract.py",
+        "test_stats_alignment.py",
+        "test_surface_freshness.py",
+    }
+)
+
 CURRENT_EVIDENCE_SOURCES = frozenset(
     {
         "src/agent_bom/api/current_graph.py",
@@ -227,6 +250,8 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
             normalized.as_posix() == "README.md" or normalized.as_posix().startswith(("docs/", "site-docs/"))
         ):
             selected.update(candidate for candidate in available if candidate.name == "test_docs_front_door.py")
+        if normalized.as_posix() in {"README.md", "docs/FIRST_RUN.md", "docs/PRODUCT_TOUR.md", "docs/registry/PYPI_README.md"}:
+            selected.update(candidate for candidate in available if candidate.name in PUBLIC_FRONTDOOR_CONTRACTS)
         if normalized.as_posix() in {"README.md", "docs/GALLERY.md"}:
             selected.update(candidate for candidate in available if candidate.name == "test_product_explanations.py")
         if normalized.as_posix() in {"src/agent_bom/domain/report_payloads.py", "src/agent_bom/api/read_models/scan.py"}:

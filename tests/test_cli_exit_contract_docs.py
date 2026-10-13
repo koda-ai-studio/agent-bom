@@ -112,7 +112,7 @@ def test_first_run_offline_bootstrap_discloses_command_cost_and_progress() -> No
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     guide = (ROOT / "docs" / "FIRST_RUN.md").read_text(encoding="utf-8")
 
-    for text in (readme, guide):
-        assert "agent-bom db update --source osv" in text
-        assert "can exceed 1 GB" in text
-        assert "live progress" in text
+    assert "[populate the advisory database](docs/FIRST_RUN.md)" in readme
+    assert "agent-bom db update --source osv" in guide
+    assert "can exceed 1 GB" in guide
+    assert "live progress" in guide
