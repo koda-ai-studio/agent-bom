@@ -1,14 +1,14 @@
 blank_issues_enabled: false
 contact_links:
   - name: Security vulnerability
-    url: https://github.com/msaad00/agent-bom/blob/main/SECURITY.md
+    url: https://github.com/koda-ai-studio/agent-bom/blob/main/SECURITY.md
     about: Report security vulnerabilities via our security policy (not here).
-  - name: Discussions
-    url: https://github.com/msaad00/agent-bom/discussions
-    about: Ask questions or start a discussion.
+  - name: First-run and investigation feedback
+    url: https://github.com/koda-ai-studio/agent-bom/issues/new?template=feedback.yml
+    about: Share a question, confusing step, missing context, or useful investigation outcome.
   - name: Contributing guide
-    url: https://github.com/msaad00/agent-bom/blob/main/CONTRIBUTING.md
+    url: https://github.com/koda-ai-studio/agent-bom/blob/main/CONTRIBUTING.md
     about: Your first PR in 30 minutes, good first areas, and where new code goes.
   - name: Where to ask, and what to expect
-    url: https://github.com/msaad00/agent-bom/blob/main/SUPPORT.md
+    url: https://github.com/koda-ai-studio/agent-bom/blob/main/SUPPORT.md
     about: Support routing, response expectations, and how to file a report we can act on.

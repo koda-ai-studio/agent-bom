@@ -1,9 +1,12 @@
 # Sanitized Inaccurate Finding Report
 
 Use this example when opening a public
-[Inaccurate Finding](https://github.com/msaad00/agent-bom/issues/new?template=inaccurate_finding.yml)
+[Inaccurate Finding](https://github.com/koda-ai-studio/agent-bom/issues/new?template=inaccurate_finding.yml)
 issue for a false positive, false negative, wrong advisory mapping, misleading
-remediation, or missing blast-radius context.
+remediation, missing blast-radius context, incorrect correlation, or unsupported
+reachability. For setup questions and general experience, use the
+[feedback form](https://github.com/koda-ai-studio/agent-bom/issues/new?template=feedback.yml).
+Report vulnerabilities in agent-bom through [the private security process](../SECURITY.md).
 
 ## What to include
 
@@ -28,7 +31,28 @@ Keep package names public when they are already public packages such as
 `requests`, `express`, or `@modelcontextprotocol/server-filesystem`. Replace
 private names with stable placeholders like `private-pypi-package`.
 
+## Graph relationship reports
+
+Include the directed source and target identities, relationship type, sanitized
+tenant/account/environment scope, and selected snapshot IDs. Add the source
+reference, evidence type, observation time or freshness, and whether collection
+was complete, paged, sampled or depth-limited. Explain which source supports or
+contradicts the join; the displayed graph alone is not ground truth.
+
+Preserve distinctions when sanitizing: two same-named resources in different
+accounts need different stable placeholders. Keep configured, observed and
+inferred evidence distinct. Missing evidence stays unknown; an absent edge does
+not prove that effective access was revoked. For before/after package changes,
+record both versions instead of pretending their component IDs are identical.
+
+Maintainers should reproduce confirmed accuracy defects as failing regression
+tests before merging a fix. A small synthetic fixture is useful when the real
+evidence cannot be shared publicly; label its origin explicitly.
+
 ## Copy-paste example
+
+The identifiers below are illustrative placeholders, not a real advisory or
+a reported package defect. Replace them with verified public evidence.
 
 ````markdown
 ### agent-bom version

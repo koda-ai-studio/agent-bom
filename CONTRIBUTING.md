@@ -10,7 +10,8 @@ for implemented paths, known limits, and bounded tasks with acceptance criteria.
 
 The best ways to help:
 
-- Try the demo and open issues for confusing output, missing context, or weak remediation.
+- Try the [first-run guide](docs/FIRST_RUN.md) and [share feedback](https://github.com/koda-ai-studio/agent-bom/issues/new?template=feedback.yml) on confusing output, missing context, or the decision the evidence helped you make.
+- Report incorrect correlations, unsupported reachability, or inaccurate findings with a [small sanitized reproduction](docs/INACCURATE_FINDING_REPORT.md).
 - Request integrations for MCP clients, coding agents, CI systems, cloud providers, and security workflows you actually use.
 - Pick a `good first issue` or `help wanted` task and comment before starting.
 - Improve docs, screenshots, diagrams, and first-run examples when something is unclear.
@@ -40,7 +41,7 @@ path keeps the loop small.
 [uv](https://docs.astral.sh/uv/).
 
 ```bash
-git clone https://github.com/msaad00/agent-bom.git
+git clone https://github.com/koda-ai-studio/agent-bom.git
 cd agent-bom
 uv sync --extra dev                  # core workflow; use --extra dev-all for the full suite
 uv run pre-commit install            # ruff + ruff-format on every commit
@@ -83,7 +84,7 @@ instead of debugging.
 
 **Where to ask.** Ask placement or design questions in your issue or draft PR,
 open-ended ones in
-[GitHub Discussions](https://github.com/msaad00/agent-bom/discussions), and
+[the feedback form](https://github.com/koda-ai-studio/agent-bom/issues/new?template=feedback.yml), and
 quick PR questions in `#contributors` on
 [Discord](https://discord.gg/3YmYPqKZh5).
 
@@ -93,13 +94,33 @@ quick PR questions in `#contributors` on
 
 ### Easiest — good first issues
 
-Browse [`good first issue`](https://github.com/msaad00/agent-bom/issues?q=is%3Aopen+label%3A%22good+first+issue%22) on GitHub. No architecture knowledge required.
+Browse [`good first issue`](https://github.com/koda-ai-studio/agent-bom/issues?q=is%3Aopen+label%3A%22good+first+issue%22) on GitHub. No architecture knowledge required.
 
 **That queue is often empty.** Labelled starter issues get opened in batches and
 picked up quickly, so an empty result is normal and does not mean the project is
 closed to contributions. When it is empty, take one of the standing tasks below,
 or open an issue proposing what you want to do — describing it first is welcome
 and saves you writing the wrong thing.
+
+### Contribute investigation evidence
+
+Start with one report you can reproduce, using public or synthetic inputs. A
+useful contribution can be a first-run correction, a supported importer fixture,
+or an incorrect graph join that is reproducible in a small test. Check current
+main and existing issues before starting; a missing feature is not automatically
+a bug.
+
+For graph reports, retain directed source/target identities, their scope and
+source references, and the selected snapshot. Record evidence type, freshness
+and missing collection. Keep configured access, observed execution and inferred
+relationships distinct. Same display names do not establish identity; an absent
+edge in partial evidence does not establish safety or a completed fix.
+
+A confirmed accuracy bug should first become a failing regression test. Include
+both the supported relationship and a nearby negative case (for example, the
+same name in another account). See the [accuracy-report example](docs/INACCURATE_FINDING_REPORT.md)
+and [code map](docs/CODE_MAP.md) for the owning package. Raw customer exports,
+secrets and private source code are not required for a public contribution.
 
 ### Good first contribution areas
 
@@ -120,7 +141,7 @@ Typical good-first tasks:
 
 ### Medium — help wanted
 
-Browse [`help wanted`](https://github.com/msaad00/agent-bom/issues?q=is%3Aopen+label%3A%22help+wanted%22).
+Browse [`help wanted`](https://github.com/koda-ai-studio/agent-bom/issues?q=is%3Aopen+label%3A%22help+wanted%22).
 
 Typical help-wanted tasks:
 - **A package ecosystem we do not parse yet** — check [`src/agent_bom/parsers/`](src/agent_bom/parsers/) first. Python, npm, Ruby, .NET, Swift, Go, Rust, PHP and others already ship; propose the gap you actually hit.
@@ -133,11 +154,11 @@ tree. This list is periodically overtaken by shipped work.
 
 ### Critical — P0 issues
 
-See [open issues labeled P0](https://github.com/msaad00/agent-bom/issues?q=is%3Aopen+label%3AP0) for the most impactful work. These close core coverage gaps (OS-level scanning, container image analysis, CWE enrichment, IaC misconfiguration, compliance frameworks). Comment on the issue before starting — these require coordination.
+See [open issues labeled P0](https://github.com/koda-ai-studio/agent-bom/issues?q=is%3Aopen+label%3AP0) for the most impactful work. These close core coverage gaps (OS-level scanning, container image analysis, CWE enrichment, IaC misconfiguration, compliance frameworks). Comment on the issue before starting — these require coordination.
 
 ### Priority — P1 features
 
-See [open issues labeled P1](https://github.com/msaad00/agent-bom/issues?q=is%3Aopen+label%3AP1) for high-impact work that's well-scoped and ready to pick up.
+See [open issues labeled P1](https://github.com/koda-ai-studio/agent-bom/issues?q=is%3Aopen+label%3AP1) for high-impact work that's well-scoped and ready to pick up.
 
 ---
 
@@ -215,7 +236,7 @@ uv run pytest tests/test_core.py -v
 - Every bug fix needs a **regression test** that fails without the fix and passes with it. This is enforced during code review — PRs that fix bugs without a regression test will be asked to add one. Over 90% of historical `fix:` commits include regression tests.
 - Network tests (hitting real APIs) are marked `@pytest.mark.network` and skipped in CI. Use mocks for unit tests.
 - The test suite must stay green. Pre-existing failures are bugs, not technical debt.
-- **Coverage floor:** CI enforces a minimum statement coverage threshold (currently 73%, target 80% per [#529](https://github.com/msaad00/agent-bom/issues/529)). PRs that drop coverage below the floor will fail CI.
+- **Coverage floor:** CI enforces a minimum statement coverage threshold (currently 73%, target 80% per [#529](https://github.com/koda-ai-studio/agent-bom/issues/529)). PRs that drop coverage below the floor will fail CI.
 
 **Test layout:**
 
@@ -347,4 +368,4 @@ All contributions must include a `Signed-off-by` line (`git commit -s`). By sign
 
 ## Security reports
 
-Please **do not open a public issue** for security vulnerabilities. Use [GitHub Security Advisories](https://github.com/msaad00/agent-bom/security/advisories) or email andwgdysaad@gmail.com. We aim to respond within 48 hours.
+Please **do not open a public issue** for security vulnerabilities. Use [GitHub Security Advisories](https://github.com/koda-ai-studio/agent-bom/security/advisories) or email andwgdysaad@gmail.com. We aim to respond within 48 hours.

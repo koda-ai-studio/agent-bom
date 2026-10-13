@@ -23,12 +23,13 @@ question to several does not make it get answered sooner.
 
 | What you have | Where it goes |
 |---|---|
-| **A security vulnerability in agent-bom** | **Not** a public issue — [private advisory](https://github.com/msaad00/agent-bom/security/advisories/new). See [SECURITY.md](SECURITY.md), which is the one channel with a committed response time. |
-| A reproducible bug | [Open an issue](https://github.com/msaad00/agent-bom/issues/new/choose) — `Bug Report`, or `Runtime / Proxy Bug` for gateway and proxy behavior |
-| A finding you believe is wrong | [Open an issue](https://github.com/msaad00/agent-bom/issues/new/choose) — `Inaccurate Finding`. These are the most useful reports we get. |
-| Docs that confused you | [Open an issue](https://github.com/msaad00/agent-bom/issues/new/choose) — `Docs Confusion` |
-| A feature or integration request | [Open an issue](https://github.com/msaad00/agent-bom/issues/new/choose) — `Feature Request` / `Integration Request` |
-| An open-ended question, or "am I holding it wrong?" | [GitHub Discussions](https://github.com/msaad00/agent-bom/discussions) |
+| **A security vulnerability in agent-bom** | **Not** a public issue — [private advisory](https://github.com/koda-ai-studio/agent-bom/security/advisories/new). See [SECURITY.md](SECURITY.md), which is the one channel with a committed response time. |
+| A reproducible bug | [Open an issue](https://github.com/koda-ai-studio/agent-bom/issues/new/choose) — `Bug Report`, or `Runtime / Proxy Bug` for gateway and proxy behavior |
+| A finding you believe is wrong | [Open an issue](https://github.com/koda-ai-studio/agent-bom/issues/new/choose) — `Inaccurate Finding`. These are the most useful reports we get. |
+| First-run or investigation feedback | [Share feedback](https://github.com/koda-ai-studio/agent-bom/issues/new?template=feedback.yml) — what you tried, the result, and what decision the evidence helped or failed to support |
+| Docs that confused you | [Open an issue](https://github.com/koda-ai-studio/agent-bom/issues/new/choose) — `Docs Confusion` |
+| A feature or integration request | [Open an issue](https://github.com/koda-ai-studio/agent-bom/issues/new/choose) — `Feature Request` / `Integration Request` |
+| An open-ended question, or "am I holding it wrong?" | [First-run and investigation feedback](https://github.com/koda-ai-studio/agent-bom/issues/new?template=feedback.yml) |
 | Wanting to talk to other users | [Discord](https://discord.gg/3YmYPqKZh5) — `#support` for usage, `#contributors` for PR questions |
 | Wanting to contribute code | [CONTRIBUTING.md](CONTRIBUTING.md) |
 
@@ -36,7 +37,7 @@ question to several does not make it get answered sooner.
 
 Being straight about this, because a vague promise is worse than a modest one:
 
-- **There is no support SLA for issues, Discussions, or Discord.** The one
+- **There is no support SLA for issues or Discord.** The one
   exception is a reported security vulnerability, which has a stated
   acknowledgement and triage commitment in [SECURITY.md](SECURITY.md).
 - Maintenance happens in bursts around releases. A quiet week is normal and does
