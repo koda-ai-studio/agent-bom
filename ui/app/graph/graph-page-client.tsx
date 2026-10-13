@@ -8,7 +8,7 @@ import { relationshipEdgeTypes } from "@/components/relationship-edge";
 import { GraphRollupChildPager } from "@/components/graph-rollup-child-pager";
 import { GraphRollupCountNotice } from "@/components/graph-rollup-count-notice";
 import { completeDirectedHopCount, visibleGraphFocus } from "@/lib/security-graph-focus";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
@@ -245,37 +245,9 @@ const SigmaGraphOverview = dynamic(
 function PulseStyles() {
   return (
     <style jsx global>{`
-      @keyframes pulse-critical {
-        0%,
-        100% {
-          box-shadow: 0 0 6px rgba(239, 68, 68, 0.35);
-        }
-        50% {
-          box-shadow: 0 0 12px rgba(239, 68, 68, 0.55);
-        }
-      }
-      .node-critical-pulse {
-        animation: none;
+      .node-critical-pulse .graph-entity-glyph,
+      .node-critical-pulse > div:not([data-graph-entity]) {
         box-shadow: 0 0 6px rgba(239, 68, 68, 0.28);
-      }
-      /* Stagger so a graph with many critical nodes does NOT strobe in
-         sync — when ten or twenty nodes pulse together at the same
-         phase the page reads as a flickering page-wide flash. The
-         animation-delay buckets desync neighbours visually. */
-      .node-critical-pulse:nth-child(3n) {
-        animation-delay: -0.4s;
-      }
-      .node-critical-pulse:nth-child(3n + 1) {
-        animation-delay: -1.2s;
-      }
-      .node-critical-pulse:nth-child(3n + 2) {
-        animation-delay: -2s;
-      }
-      @media (prefers-reduced-motion: reduce) {
-        .node-critical-pulse {
-          animation: none;
-          box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
-        }
       }
 
       /* Focus-mode (#2257). Hovering or pinning a node fires CSS classes
@@ -3809,6 +3781,7 @@ function GraphPageInner() {
             />
           ) : (
             <ReactFlow
+              style={{ "--graph-node-label-size": `${Math.min(24, Math.max(18, 13 / Math.max(graphViewport.zoom, 0.16)))}px` } as CSSProperties}
               className={selectedScenarioId ? "scenario-context-canvas" : undefined}
               key={captureMode ? `lineage-capture:${scenarioExpanded ? "full" : "context"}` : `${presentation.storageKey}:${presentation.restoredSavedState ? "restored" : "initial"}:${scenarioExpanded ? "full" : "context"}`}
               nodes={presentation.nodes}

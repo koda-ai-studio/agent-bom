@@ -17,7 +17,7 @@ describe("relationship routing", () => {
   });
   it("keeps a diagonal relationship label clear of an intermediate entity", () => {
     const route = relationshipPath({ ...edge, sourceY: 170 }, [{ id: "intermediate", x: 260, y: 0, width: 220, height: 180 }]);
-    expect(route[2]).toBeLessThan(-16);
+    expect(route[2]).toBeGreaterThan(196);
   });
   it("does not detour a diagonal whose bounding box contains a distant card", () => {
     const diagonal = { ...edge, sourceY: 300, targetY: 0 };

@@ -46,9 +46,15 @@ export function relationshipPath(edge: Endpoints, obstacles: Obstacle[]): [strin
     }
   }
   if (!blocked) return [path, labelX, labelY];
-  const lane = Math.min(edge.sourceY, edge.targetY, ...between.map(node => node.y)) - 40;
-  const start = edge.sourceX + 32;
-  const end = edge.targetX - 32;
+  const candidates = between.flatMap(node => [node.y - 40, node.y + node.height + 40]);
+  const lanes = candidates.filter(y => between.every(node => y < node.y - 16 || y > node.y + node.height + 16));
+  lanes.sort((a, b) => (Math.abs(edge.sourceY - a) + Math.abs(edge.targetY - a))
+    - (Math.abs(edge.sourceY - b) + Math.abs(edge.targetY - b)) || a - b);
+  const lane = lanes[0] ?? Math.min(edge.sourceY, edge.targetY, ...between.map(node => node.y)) - 40;
+  const sourceNode = obstacles.find(node => node.id === edge.source);
+  const targetNode = obstacles.find(node => node.id === edge.target);
+  const start = Math.max(edge.sourceX + 32, sourceNode ? sourceNode.x + sourceNode.width + 24 : edge.sourceX + 32);
+  const end = Math.min(edge.targetX - 32, targetNode ? targetNode.x - 24 : edge.targetX - 32);
   return [
     `M${edge.sourceX},${edge.sourceY} C${start},${edge.sourceY} ${start},${lane} ${start + 32},${lane} L${end - 32},${lane} C${end},${lane} ${end},${edge.targetY} ${edge.targetX},${edge.targetY}`,
     (edge.sourceX + edge.targetX) / 2, lane,
