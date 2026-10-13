@@ -13,6 +13,7 @@ from rich.tree import Tree
 
 from agent_bom.core.severity import SEVERITY_THRESHOLD_LABELS, severity_rank, severity_worst_first_rank
 from agent_bom.core.terminal import safe_emoji as safe_emoji
+from agent_bom.coverage import print_graph_coverage_gaps
 from agent_bom.models import AgentStatus, AIBOMReport, Severity
 from agent_bom.output.cis_posture import (
     ERROR,
@@ -220,7 +221,7 @@ def print_summary(report: AIBOMReport) -> None:
 
     _console().print(table)
 
-    coverage_warnings = getattr(report, "coverage_warnings", None) or []
+    coverage_warnings = print_graph_coverage_gaps(_console(), getattr(report, "coverage_warnings", None) or [])
     if coverage_warnings:
 
         def _coverage_line(w: dict) -> str:
@@ -235,8 +236,7 @@ def print_summary(report: AIBOMReport) -> None:
                 f"{w.get('advisory_rows', 0)} advisory row(s) in the data source"
             )
 
-        lines = [_coverage_line(w) for w in coverage_warnings]
-        body = "\n".join(lines) + (
+        body = "\n".join(_coverage_line(w) for w in coverage_warnings) + (
             "\n\n[dim]Vulnerability coverage for the release(s) above is incomplete — likely "
             "end-of-life and no longer carried by the data source. Results may UNDER-report; a "
             "low or zero count is NOT a clean bill of health.[/dim]"

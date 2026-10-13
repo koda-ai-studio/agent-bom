@@ -23,6 +23,8 @@ import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from agent_bom.coverage import GRAPH_GAP_REASON
+from agent_bom.graph.analysis import GraphAnalysisState
 from agent_bom.graph.credential_findings import project_credential_findings
 
 if TYPE_CHECKING:
@@ -70,6 +72,7 @@ def attach_graph_derived_findings(report: "AIBOMReport", graph: "UnifiedGraph") 
         if toxic:
             report.toxic_combination_findings_data = toxic
             project_credential_findings(graph, toxic)
+        _record_limited_graph_analysis(report, graph, ("credential_reach",))
     except Exception as exc:  # noqa: BLE001
         _logger.debug("Toxic-combination findings surfacing skipped: %s", exc)
 
@@ -116,6 +119,34 @@ def attach_graph_derived_findings(report: "AIBOMReport", graph: "UnifiedGraph") 
             _rewrite_side_block_findings(report, findings)
     except Exception as exc:  # noqa: BLE001
         _logger.debug("finding↔node linking skipped: %s", exc)
+
+
+def _record_limited_graph_analysis(report: "AIBOMReport", graph: "UnifiedGraph", analyzers: tuple[str, ...]) -> None:
+    """A finding evaluator that stopped at a safety bound is a coverage gap.
+
+    Recorded through ``coverage_warnings`` so the scan run turns partial and
+    the severity gate cannot read a truncated evaluation as clean.
+    """
+    warnings = report.coverage_warnings
+    for analyzer in analyzers:
+        status = graph.analysis_status.get(analyzer)
+        if status is None or status.status is not GraphAnalysisState.LIMITED:
+            continue
+        source = f"graph-{analyzer}"
+        if any(isinstance(w, dict) and w.get("ecosystem") == source and w.get("reason") == GRAPH_GAP_REASON for w in warnings):
+            continue
+        limits = ", ".join(f"{key}={value}" for key, value in sorted(status.limits.items()))
+        warnings.append(
+            {
+                "kind": GRAPH_GAP_REASON,
+                "ecosystem": source,
+                "release": "graph analysis",
+                "reason": GRAPH_GAP_REASON,
+                "reason_codes": list(status.reason_codes),
+                "detail": f"{analyzer} stopped at a safety bound ({', '.join(status.reason_codes)}; {limits}); "
+                "findings from this evaluator may be incomplete",
+            }
+        )
 
 
 def _rewrite_side_block_findings(report: "AIBOMReport", findings: list[Any]) -> None:
