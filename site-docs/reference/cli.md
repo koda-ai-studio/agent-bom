@@ -308,6 +308,16 @@ agent-bom agents --generate-vex --vex-output vex.json
 # Config directory
 agent-bom agents --config-dir /path/to/configs
 
+# Repeatable inputs: every value is scanned into one report
+agent-bom agents -p ./service-a -p ./service-b
+agent-bom agents --sbom a.cdx.json --sbom-name svc-a --sbom b.cdx.json --sbom-name svc-b
+agent-bom agents --inventory fleet-a.json --inventory fleet-b.json
+# --config-dir and --external-scan repeat the same way. --repo, --policy, --vex,
+# --baseline, --ignore-file and --correlate take one value and reject a repeat.
+# With several -p projects, secret scanning, source/reachability analysis, model
+# and dataset detection, and the manifest-tree summary cover the first project;
+# the scan records this as a `multi_project_primary_scope` notice.
+
 # Self-scan (scan agent-bom's own installed dependencies)
 agent-bom agents --self-scan
 

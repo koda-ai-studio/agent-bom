@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import time as _time
+from dataclasses import replace
+from typing import Any
 
 import click
 
@@ -94,7 +96,40 @@ def _guard_no_discover(opts: ScanOptions, st: ScanState) -> None:
             )
 
 
+def _merge_project_targets(targets: list[Any]) -> Any:
+    """Union per-project auto-detected surfaces (explicit values pass through unchanged)."""
+    first = targets[0]
+    if len(targets) == 1:
+        return first
+
+    def _union(name: str) -> tuple[str, ...]:
+        return tuple(dict.fromkeys(item for target in targets for item in getattr(target, name)))
+
+    return replace(
+        first,
+        jupyter_dirs=_union("jupyter_dirs"),
+        code_paths=_union("code_paths"),
+        scan_prompts=any(target.scan_prompts for target in targets),
+        tf_dirs=_union("tf_dirs"),
+        gha_path=next((target.gha_path for target in targets if target.gha_path), None),
+        agent_projects=_union("agent_projects"),
+        ai_inventory_paths=_union("ai_inventory_paths"),
+        iac_paths=_union("iac_paths"),
+        auto_enabled=list(_union("auto_enabled")),
+    )
+
+
 def _expand_project_targets(opts: ScanOptions, st: ScanState) -> None:
+    if opts.extra_projects and not opts.skill_only:
+        _primary_only = (
+            f"Scanning {len(opts.all_projects)} projects: packages, agents and auto-detected surfaces (IaC, code, "
+            f"notebooks, prompts, AI inventory) cover every project; secret scanning, source/reachability analysis, "
+            f"model/dataset/training-file detection, skill discovery and the manifest-tree summary cover the first "
+            f"project ({opts.project}) only."
+        )
+        st.ctx.scan_notices.append({"code": "multi_project_primary_scope", "source": "project", "message": _primary_only})
+        if not opts.quiet:
+            st.con.print(f"[yellow]![/yellow] {_primary_only}")
     # An imported external report adds evidence to the project scan; it never
     # replaces the project's own auto-detected surfaces.
     _explicit_target_flags = {
@@ -137,16 +172,21 @@ def _expand_project_targets(opts: ScanOptions, st: ScanState) -> None:
     if opts.project and not opts.skill_only and not _explicit_targets:
         from agent_bom.repo_auto_detect import expand_project_scan_targets
 
-        auto_targets = expand_project_scan_targets(
-            opts.project,
-            jupyter_dirs=opts.jupyter_dirs,
-            code_paths=opts.code_paths,
-            scan_prompts=opts.scan_prompts,
-            tf_dirs=opts.tf_dirs,
-            gha_path=opts.gha_path,
-            agent_projects=opts.agent_projects,
-            ai_inventory_paths=opts.ai_inventory_paths,
-            iac_paths=opts.iac_paths,
+        auto_targets = _merge_project_targets(
+            [
+                expand_project_scan_targets(
+                    project,
+                    jupyter_dirs=opts.jupyter_dirs,
+                    code_paths=opts.code_paths,
+                    scan_prompts=opts.scan_prompts,
+                    tf_dirs=opts.tf_dirs,
+                    gha_path=opts.gha_path,
+                    agent_projects=opts.agent_projects,
+                    ai_inventory_paths=opts.ai_inventory_paths,
+                    iac_paths=opts.iac_paths,
+                )
+                for project in opts.all_projects
+            ]
         )
         if auto_targets.auto_enabled:
             opts.jupyter_dirs = auto_targets.jupyter_dirs
@@ -223,6 +263,12 @@ def _discover_local(opts: ScanOptions, st: ScanState) -> None:
         os_packages=opts.os_packages,
         workstation_sweep=opts.preset == "workstation",
         iac_paths=opts.iac_paths,
+        extra_projects=opts.extra_projects,
+        extra_config_dirs=opts.extra_config_dirs,
+        extra_inventories=opts.extra_inventories,
+        extra_sbom_files=opts.extra_sbom_files,
+        extra_sbom_names=opts.extra_sbom_names,
+        extra_external_scan_paths=opts.extra_external_scan_paths,
         _image_only=opts._image_only,
         _any_cloud=st.any_cloud,
         _discover_all=_agents_patchable("discover_all"),  # tests patch agent_bom.cli.agents.discover_all

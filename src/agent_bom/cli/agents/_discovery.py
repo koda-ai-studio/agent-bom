@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import platform
 import sys
 from pathlib import Path
@@ -295,6 +296,19 @@ def _iac_deployment_mode() -> str:
     return "standalone"
 
 
+def _iac_walk_root(iac_path: str) -> Path:
+    root = Path(iac_path).expanduser().resolve()
+    return root.parent if root.is_file() else root
+
+
+def _anchor_iac_paths(findings: list, walk_root: Path, common_root: Path) -> None:
+    """Re-anchor root-relative IaC paths so equal paths under two roots stay distinct."""
+    for finding in findings:
+        anchored = (walk_root / finding.file_path).relative_to(common_root).as_posix()
+        finding.file_path = anchored
+        finding.repository_relative_path = anchored
+
+
 def scan_iac(run: DiscoveryRun) -> None:
     """Step 1g5: IaC misconfiguration scan (--iac)."""
     if run.skill_only or not run.iac_paths:
@@ -308,9 +322,12 @@ def scan_iac(run: DiscoveryRun) -> None:
     all_iac_findings: list = []
     all_iac_verdicts: list = []
     printed_iac_heading = False
+    common_root = Path(os.path.commonpath([_iac_walk_root(path) for path in iac_paths])) if len(iac_paths) > 1 else None
     for iac_path in iac_paths:
         is_synthetic_demo_iac = Path(iac_path).name.startswith("agent-bom-demo-dir-")
         result = scan_iac_with_context(iac_path, iac_scan_ctx)
+        if common_root is not None:
+            _anchor_iac_paths(result.findings, _iac_walk_root(iac_path), common_root)
         all_iac_findings.extend(result.findings)
         all_iac_verdicts.extend(result.verdicts)
         if not result.findings and is_synthetic_demo_iac:
@@ -427,6 +444,12 @@ def run_local_discovery(
     mcp_registry_flag: bool = False,
     os_packages: bool = False,
     workstation_sweep: bool = False,
+    extra_projects: tuple = (),
+    extra_config_dirs: tuple = (),
+    extra_inventories: tuple = (),
+    extra_sbom_files: tuple = (),
+    extra_sbom_names: tuple = (),
+    extra_external_scan_paths: tuple = (),
     _discover_all: Any = None,
     **kwargs: Any,
 ) -> None:

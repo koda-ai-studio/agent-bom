@@ -8,8 +8,29 @@ later stages read the effective value rather than the raw flag.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Optional
+from dataclasses import dataclass, field
+from typing import Any, Optional
+
+import click
+
+# Repeatable input flags: the first value stays on the primary field (every
+# stage that checks or rewrites it keeps working) and the rest land on the
+# paired ``extra_*`` tuple that the discovery stages iterate.
+REPEATABLE_INPUTS = {
+    "project": "extra_projects",
+    "config_dir": "extra_config_dirs",
+    "inventory": "extra_inventories",
+    "sbom_file": "extra_sbom_files",
+    "sbom_name": "extra_sbom_names",
+    "external_scan_path": "extra_external_scan_paths",
+}
+
+
+def _split_repeatable(value: Any) -> tuple[Optional[str], tuple[str, ...]]:
+    if value is None or isinstance(value, str):
+        return value or None, ()
+    values = tuple(dict.fromkeys(str(item) for item in value if item))
+    return (values[0], values[1:]) if values else (None, ())
 
 
 @dataclass
@@ -223,3 +244,35 @@ class ScanOptions:
     k8s_live_namespace: str = "default"
     k8s_live_all_namespaces: bool = False
     k8s_live_context: Optional[str] = None
+    extra_projects: tuple = field(default=(), init=False)
+    extra_config_dirs: tuple = field(default=(), init=False)
+    extra_inventories: tuple = field(default=(), init=False)
+    extra_sbom_files: tuple = field(default=(), init=False)
+    extra_sbom_names: tuple = field(default=(), init=False)
+    extra_external_scan_paths: tuple = field(default=(), init=False)
+
+    def __post_init__(self) -> None:
+        for primary, extra in REPEATABLE_INPUTS.items():
+            first, rest = _split_repeatable(getattr(self, primary))
+            setattr(self, primary, first)
+            setattr(self, extra, rest)
+        sbom_count = len(self.all_sbom_files)
+        name_count = len(self.all_sbom_names)
+        if name_count > max(sbom_count, 1) or (sbom_count > 1 and name_count not in (0, sbom_count)):
+            raise click.UsageError(
+                f"--sbom-name was given {name_count} times for {sbom_count} --sbom file(s); give one --sbom-name per --sbom."
+            )
+        if "-" in self.extra_inventories:
+            raise click.UsageError("--inventory - (stdin) must be the first --inventory value.")
+
+    @property
+    def all_projects(self) -> tuple[str, ...]:
+        return ((self.project,) if self.project else ()) + self.extra_projects
+
+    @property
+    def all_sbom_files(self) -> tuple[str, ...]:
+        return ((self.sbom_file,) if self.sbom_file else ()) + self.extra_sbom_files
+
+    @property
+    def all_sbom_names(self) -> tuple[str, ...]:
+        return ((self.sbom_name,) if self.sbom_name else ()) + self.extra_sbom_names

@@ -30,6 +30,11 @@ _PATH_TARGETS = (
     "iac_paths",
     "external_scan_path",
     "ignore_file",
+    "extra_projects",
+    "extra_config_dirs",
+    "extra_inventories",
+    "extra_sbom_files",
+    "extra_external_scan_paths",
 )
 _REMOTE_TARGETS = ("images", "image_platform", "hf_models")
 _COLLECTION_OPTIONS = (
