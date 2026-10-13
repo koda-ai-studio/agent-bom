@@ -24,6 +24,7 @@ it("keeps relationship labels screen-readable across zoom levels", () => {
   const distant = relationshipEdgeLabelPresentation({ zoom: 0.4 });
   const close = relationshipEdgeLabelPresentation({ zoom: 1.6 });
   expect(Number(distant.labelStyle?.fontSize)).toBeGreaterThan(Number(close.labelStyle?.fontSize));
+  expect(Number(distant.labelStyle?.fontSize) * 0.4).toBeGreaterThanOrEqual(12);
 });
 
 it("uses opaque theme-aware relationship labels in the app and captures", () => {
