@@ -26,6 +26,7 @@ from typing import TYPE_CHECKING, Any, Literal, Optional
 
 from agent_bom.evidence.asset_display import iac_source_label
 from agent_bom.evidence.finding_status import public_finding_status
+from agent_bom.finding_catalog_remediation import catalog_remediation
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from agent_bom.finding import FindingSource, FindingType
@@ -696,6 +697,8 @@ def safe_finding_response_payload(row: Mapping[str, Any]) -> dict[str, Any]:
         payload["bulk_ordinal"] = ordinal
 
     payload.update(public_finding_status(row))
+    if (guidance := catalog_remediation(row)) is not None:
+        payload["remediation_guidance"] = guidance
 
     for key, max_len in (
         ("source", 64),
