@@ -111,3 +111,14 @@ it("offers the same explanation in recorded relationship rows", async () => {
   expect(screen.getByText("A recorded use relationship. It does not establish that a tool was called.")).toBeVisible();
   expect(screen.getByText("Source evidence not recorded for this link.")).toBeVisible();
 });
+
+it("shows evidence type and source time in each row without opening raw evidence", async () => {
+  const response = page();
+  response.edges[0] = { ...response.edges[0]!, last_seen: "2026-10-12T00:00:00Z", evidence: { evidence_tier: "static_scan", observed_at: "2026-09-01T00:00:00Z" } };
+  fetchPage.mockResolvedValue(response);
+  render(<GraphRecordedRelationshipScope scanId="s-1" nodeId="agent:one"><GraphRecordedRelationships scanId="s-1" nodeId="agent:one" /></GraphRecordedRelationshipScope>);
+  await screen.findByText("Recorded server name");
+  expect(screen.getByText("Static / configured")).toBeVisible();
+  expect(screen.getByText("Source observed at").nextElementSibling).toHaveTextContent("2026-09-01T00:00:00Z");
+  expect(screen.getByText("Graph last seen").nextElementSibling).toHaveTextContent("2026-10-12T00:00:00Z");
+});

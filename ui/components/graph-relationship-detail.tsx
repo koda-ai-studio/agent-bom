@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { GraphRelationshipExplanation } from "@/components/graph-relationship-explanation";
+import { GraphRelationshipEvidence } from "@/components/graph-relationship-evidence";
 import { Drawer } from "@/components/drawer";
 import type { UnifiedEdge } from "@/lib/graph-schema";
 import { relationshipEdgeLabelText } from "@/lib/graph-utils";
@@ -40,12 +41,11 @@ export function GraphRelationshipDetail({ edge, scanId, sourceLabel, targetLabel
       <h4 className="text-xs font-semibold">Why linked</h4>
       <GraphRelationshipExplanation edge={edge} />
     </section>
+    <GraphRelationshipEvidence edge={edge} />
     <p className="text-xs text-ink-secondary">This recorded relationship does not establish execution or successful data access.</p>
     <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-xs">
       <dt className="text-ink-secondary">Snapshot</dt><dd>{scanId}</dd>
-      <dt className="text-ink-secondary">First seen</dt><dd>{edge.first_seen || "Not recorded"}</dd>
-      <dt className="text-ink-secondary">Last seen</dt><dd>{edge.last_seen || "Not recorded"}</dd>
-      <dt className="text-ink-secondary">Traversal</dt><dd>{edge.traversable ? "Recorded as traversable" : "Not established"}</dd>
+      <dt className="text-ink-secondary">Graph first seen</dt><dd>{edge.first_seen || "Not recorded"}</dd>
     </dl>
     <details><summary className="cursor-pointer font-medium">Recorded evidence</summary>
       {Object.keys(edge.evidence ?? {}).length ? <pre className="mt-2 whitespace-pre-wrap break-words text-xs text-ink-secondary">{JSON.stringify(edge.evidence, null, 2)}</pre> : <p className="mt-2 text-xs text-ink-secondary">No source receipt recorded for this relationship.</p>}

@@ -38,7 +38,8 @@ describe("relationship inspector", () => {
     const close = vi.fn();
     render(<GraphRelationshipDetail edge={{ ...edge, first_seen: "", last_seen: "", direction: "bidirectional" }} scanId="s" sourceLabel="Planner" targetLabel="Worker" onClose={close} />);
     expect(screen.getByText("Planner ↔ Worker")).toBeVisible();
-    expect(screen.getAllByText("Not recorded")).toHaveLength(2);
+    expect(screen.getByText("Graph first seen").nextElementSibling).toHaveTextContent("Not recorded");
+    expect(screen.getByText("Graph last seen").nextElementSibling).toHaveTextContent("Not recorded");
     fireEvent.keyDown(document, { key: "Escape" });
     expect(close).toHaveBeenCalledOnce();
   });
@@ -81,4 +82,34 @@ it.each(["future_relationship", "constructor"])("keeps unknown %s relationships 
   render(<GraphRelationshipDetail edge={{ ...edge, relationship, evidence: { source: { unexpected: true }, mapping_method: ["not-a-method"] } }} scanId="s" sourceLabel="A" targetLabel="B" onClose={vi.fn()} />);
   expect(screen.getByText(/Review its source evidence before drawing a security conclusion/)).toBeVisible();
   expect(screen.queryByLabelText("Recorded link evidence")).not.toBeInTheDocument();
+});
+
+it.each([
+  [{ basis: "configured_target" }, "Static / configured"],
+  [{ evidence_tier: "static_scan" }, "Static / configured"],
+  [{ evidence_basis: "inferred" }, "Inferred"],
+  [{ evidence_tier: "modeled_infrastructure" }, "Modeled"],
+  [{ evidence_tier: "runtime_observed" }, "Runtime observed"],
+  [{ evidence_tier: "runtime_blocked" }, "Runtime blocked"],
+  [{ source: "runtime-proxy" }, "Runtime receipt"],
+  [{ source: ["runtime-proxy"] }, "Not recorded"],
+  [{ evidence_tier: "future_evidence" }, "Unclassified"],
+  [{ source: "source-ast", evidence_tier: "runtime_observed" }, "Mixed recorded evidence"],
+  [{ evidence_tier: ["runtime_observed"], observed_at: { time: "invalid" } }, "Not recorded"],
+  [{}, "Not recorded"],
+])("shows the recorded evidence kind without deriving it from traversal: %j", (evidence, expected) => {
+  render(<GraphRelationshipDetail edge={{ ...edge, relationship: "invoked", traversable: true, evidence }} scanId="s" sourceLabel="A" targetLabel="B" onClose={vi.fn()} />);
+  expect(screen.getByText("Evidence type").nextElementSibling).toHaveTextContent(expected);
+  expect(screen.getByText("Source observed at").nextElementSibling).toHaveTextContent("Not recorded");
+  expect(screen.getByText("Graph last seen").nextElementSibling).toHaveTextContent(edge.last_seen);
+  expect(screen.getByText(/Traversal eligibility does not establish runtime reachability/)).toBeVisible();
+});
+
+it("keeps source observation, receipt timestamp and graph freshness distinct", () => {
+  const observed = "2026-09-01T01:00:00Z", event = "2026-09-02T02:00:00Z";
+  render(<GraphRelationshipDetail edge={{ ...edge, evidence: { observed_at: observed, timestamp: event, evidence_tier: "runtime_blocked" } }} scanId="s" sourceLabel="A" targetLabel="B" onClose={vi.fn()} />);
+  expect(screen.getByText("Source observed at").nextElementSibling).toHaveTextContent(observed);
+  expect(screen.getByText("Receipt timestamp").nextElementSibling).toHaveTextContent(event);
+  expect(screen.getByText("Graph last seen").nextElementSibling).toHaveTextContent(edge.last_seen);
+  expect(screen.getByText("Evidence type").nextElementSibling).toHaveTextContent("Runtime blocked");
 });
