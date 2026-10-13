@@ -16,7 +16,6 @@ from typing import Any
 from agent_bom.api.runtime_event_store import RuntimeObservationRecord, sanitize_runtime_metadata
 from agent_bom.api.storage.runtime_records import RuntimeMetadataCache
 from agent_bom.runtime.cloud_trace_claims import cloud_trace_claims
-from agent_bom.security import sanitize_text
 
 
 @dataclass(frozen=True)
@@ -117,7 +116,7 @@ def prepare_trace_page(payload: dict[str, Any], *, scope: TraceImportScope, coll
         # A connection spanning environments still keeps identical IDs apart.
         scoped = replace(scope, environment=scope.environment or attrs.get("agent_bom.native_environment", ""))
         native_type = attrs.get("agent_bom.native_type", "unknown")
-        native_name = sanitize_text(attrs.get("agent_bom.native_name", ""), max_len=300)
+        native_name = cache.bounded(attrs.get("agent_bom.native_name", ""), max_len=300)
         observed_at = _event_time(span)
         code = _status_code(span)
         metadata: dict[str, Any] = {
@@ -128,10 +127,10 @@ def prepare_trace_page(payload: dict[str, Any], *, scope: TraceImportScope, coll
             "environment": scoped.environment,
             "account_id": scope.account_id,
             "cloud_provider": scope.cloud_provider,
-            "inventory_node_id": sanitize_text(attrs.get("agent_bom.inventory_node_id", ""), max_len=512),
-            "inventory_scan_id": sanitize_text(attrs.get("agent_bom.inventory_scan_id", ""), max_len=512),
-            "inventory_generation": sanitize_text(attrs.get("agent_bom.inventory_generation", ""), max_len=512),
-            "native_type": sanitize_text(native_type, max_len=80),
+            "inventory_node_id": cache.bounded(attrs.get("agent_bom.inventory_node_id", ""), max_len=512),
+            "inventory_scan_id": cache.bounded(attrs.get("agent_bom.inventory_scan_id", ""), max_len=512),
+            "inventory_generation": cache.bounded(attrs.get("agent_bom.inventory_generation", ""), max_len=512),
+            "native_type": cache.bounded(native_type, max_len=80),
             "native_name": native_name,
             "native_trace_id": trace_id,
             "native_span_id": native_id,
@@ -159,8 +158,8 @@ def prepare_trace_page(payload: dict[str, Any], *, scope: TraceImportScope, coll
                 event_type="native_span",
                 verdict="error" if code == 2 else "success" if code == 1 else "unknown",
                 tool_name=native_name if native_type.lower() == "tool" else "",
-                trace_id=sanitize_text(trace_id, max_len=512),
-                span_id=sanitize_text(native_id, max_len=512),
+                trace_id=cache.bounded(trace_id, max_len=512),
+                span_id=cache.bounded(native_id, max_len=512),
                 summary={"message": native_name},
                 metadata=sanitize_runtime_metadata(metadata, _cache=cache),
             )

@@ -159,6 +159,32 @@ def test_page_redaction_cache_keeps_field_policy_and_raw_payload_exclusion():
     assert len(cache.strings) == 2
 
 
+def test_repeated_native_display_fields_are_sanitized_once_per_page(monkeypatch):
+    from agent_bom import security
+
+    original = security.sanitize_log_label
+    calls = []
+    name = "api_key=private-native-name"
+
+    def observed(value, max_len=1000):
+        if value == name and max_len == 300:
+            calls.append(value)
+        return original(value, max_len=max_len)
+
+    monkeypatch.setattr(security, "sanitize_log_label", observed)
+    payload = {"spans": [span(str(i), **{"agent_bom.native_name": name}) for i in range(100)]}
+    first = prepare_trace_page(payload, scope=SCOPE, collected_at=TIME)
+    assert len(first.observations) == 100
+    assert len(calls) == 1, "repeated display fields must not rerun redaction for every span"
+    assert "private-native-name" not in repr(first)
+    second = prepare_trace_page(payload, scope=SCOPE, collected_at=TIME)
+    assert first == second
+    assert len(calls) == 2, "the cache must not survive its page"
+    other = prepare_trace_page(payload, scope=replace(SCOPE, tenant_id="other"), collected_at=TIME)
+    assert len(calls) == 3
+    assert {row.observation_id for row in first.observations}.isdisjoint(row.observation_id for row in other.observations)
+
+
 def test_page_metadata_field_cache_is_bounded_and_preserves_key_sanitization(monkeypatch):
     from agent_bom.api.storage import runtime_records
 
