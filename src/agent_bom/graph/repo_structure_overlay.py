@@ -121,7 +121,7 @@ def _file_node_id(file_path: str, entity_type: EntityType) -> str:
 
 
 def _dir_label(dir_path: str) -> str:
-    return "." if dir_path == "" else dir_path.rsplit("/", 1)[-1]
+    return "Project root" if dir_path == "" else dir_path.rsplit("/", 1)[-1]
 
 
 def _parent_dir(dir_path: str) -> str:

@@ -121,6 +121,11 @@ def test_repo_scan_emits_directory_tree_and_file_dependency_vuln_paths(source) -
     dir_ids = {n.id for n in graph.nodes.values() if n.entity_type == EntityType.DIRECTORY}
     assert "directory:." in dir_ids
     assert "directory:ui" in dir_ids
+    root = graph.nodes["directory:."]
+    assert root.label == "Project root"
+    assert root.attributes["path"] == "."
+    assert root.attributes["is_repo_root"] is True
+    assert graph.nodes["directory:ui"].label == "ui"
     for nid in dir_ids:
         assert graph.nodes[nid].dimensions.surface == "code"
 
