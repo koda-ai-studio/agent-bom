@@ -9,8 +9,10 @@ from __future__ import annotations
 import hashlib
 import json
 from collections import Counter
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timedelta, timezone
+from functools import lru_cache
 from typing import Any
 
 from agent_bom.api.runtime_event_store import RuntimeObservationRecord, sanitize_runtime_metadata
@@ -43,9 +45,21 @@ class PreparedTracePage:
     rejected: dict[str, int]
 
 
-def _identity(scope: TraceImportScope, category: str, *parts: str) -> str:
-    raw = json.dumps([scope.identity_scope(), category, *parts], sort_keys=True, separators=(",", ":"))
-    return f"trace:{category}:{hashlib.sha256(raw.encode()).hexdigest()}"
+def _page_identity(scope: TraceImportScope) -> Callable[..., str]:
+    @lru_cache(maxsize=256)
+    def identity_scope(environment: str) -> str:
+        scoped = replace(scope, environment=environment)
+        return json.dumps(scoped.identity_scope(), sort_keys=True, separators=(",", ":"))
+
+    @lru_cache(maxsize=256)
+    def identity(environment: str, category: str, *parts: str) -> str:
+        # Preserve the exact issued JSON identity while encoding a repeated
+        # scope only once. Both bounded caches expire with this import page.
+        tail = json.dumps([category, *parts], sort_keys=True, separators=(",", ":"))
+        raw = "[" + identity_scope(environment) + "," + tail[1:]
+        return f"trace:{category}:{hashlib.sha256(raw.encode()).hexdigest()}"
+
+    return identity
 
 
 def _attributes(span: dict[str, Any]) -> dict[str, str]:
@@ -85,6 +99,17 @@ def _status_code(span: dict[str, Any]) -> object:
     return status.get("code") if isinstance(status, dict) else None
 
 
+def _scope_conflict(attrs: dict[str, str], scope: TraceImportScope) -> bool:
+    return any(
+        attrs.get(key) and expected and attrs[key] != expected
+        for key, expected in (
+            ("agent_bom.trace_provider", scope.provider),
+            ("agent_bom.native_project_id", scope.project_id),
+            ("agent_bom.native_environment", scope.environment),
+        )
+    )
+
+
 def prepare_trace_page(payload: dict[str, Any], *, scope: TraceImportScope, collected_at: str) -> PreparedTracePage:
     """Namespace native IDs; report rejected rows without silently losing them."""
     collected_at = _collection_time(scope, collected_at)
@@ -94,6 +119,7 @@ def prepare_trace_page(payload: dict[str, Any], *, scope: TraceImportScope, coll
     records: list[RuntimeObservationRecord] = []
     rejected: Counter[str] = Counter()
     cache = RuntimeMetadataCache()
+    identity = _page_identity(scope)
     for span in spans:
         if not isinstance(span, dict):
             rejected["invalid_span"] += 1
@@ -103,18 +129,11 @@ def prepare_trace_page(payload: dict[str, Any], *, scope: TraceImportScope, coll
             rejected["invalid_identity"] += 1
             continue
         attrs = _attributes(span)
-        if any(
-            attrs.get(key) and expected and attrs[key] != expected
-            for key, expected in (
-                ("agent_bom.trace_provider", scope.provider),
-                ("agent_bom.native_project_id", scope.project_id),
-                ("agent_bom.native_environment", scope.environment),
-            )
-        ):
+        if _scope_conflict(attrs, scope):
             rejected["scope_conflict"] += 1
             continue
         # A connection spanning environments still keeps identical IDs apart.
-        scoped = replace(scope, environment=scope.environment or attrs.get("agent_bom.native_environment", ""))
+        environment = scope.environment or attrs.get("agent_bom.native_environment", "")
         native_type = attrs.get("agent_bom.native_type", "unknown")
         native_name = cache.bounded(attrs.get("agent_bom.native_name", ""), max_len=300)
         observed_at = _event_time(span)
@@ -124,7 +143,7 @@ def prepare_trace_page(payload: dict[str, Any], *, scope: TraceImportScope, coll
             "provider": scope.provider,
             "connection_id": scope.connection_id,
             "project_id": scope.project_id,
-            "environment": scoped.environment,
+            "environment": environment,
             "account_id": scope.account_id,
             "cloud_provider": scope.cloud_provider,
             "inventory_node_id": cache.bounded(attrs.get("agent_bom.inventory_node_id", ""), max_len=512),
@@ -136,7 +155,7 @@ def prepare_trace_page(payload: dict[str, Any], *, scope: TraceImportScope, coll
             "native_span_id": native_id,
             "native_parent_span_id": parent,
             "native_session_id": attrs.get("agent_bom.native_session_id", ""),
-            "parent_observation_id": _identity(scoped, "span", trace_id, parent) if parent else "",
+            "parent_observation_id": identity(environment, "span", trace_id, parent) if parent else "",
             "logical_root": {"true": True, "false": False}.get(attrs.get("agent_bom.logical_root", "")),
             "collected_at": collected_at,
             "start_time_unix_nano": _valid_nanos(span.get("startTimeUnixNano")),
@@ -150,8 +169,8 @@ def prepare_trace_page(payload: dict[str, Any], *, scope: TraceImportScope, coll
         records.append(
             RuntimeObservationRecord(
                 tenant_id=scope.tenant_id,
-                observation_id=_identity(scoped, "span", trace_id, native_id),
-                session_id=_identity(scoped, "trace", trace_id) if trace_id else _identity(scoped, "untraced", native_id),
+                observation_id=identity(environment, "span", trace_id, native_id),
+                session_id=identity(environment, "trace", trace_id) if trace_id else identity(environment, "untraced", native_id),
                 observed_at=observed_at or collected_at,
                 source=scope.provider,
                 surface="imported_trace",
