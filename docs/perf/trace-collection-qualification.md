@@ -47,7 +47,26 @@ most 4 times its warm baseline (using a 1 ms denominator floor). Set
 environment. Preserve failed receipts when changing a budget; do not turn a
 failed result into a passing one by dropping slow requests. These thresholds
 are qualification inputs, not a published product SLO. Shared-runner latency is
-not a correctness gate in CI.
+not a correctness gate in PR CI.
+
+### Repeat on a fresh CI runner
+
+The opt-in performance workflow runs the same SQLite workload three times in
+separate cgroups limited to 2 CPUs and 2 GiB, with two API worker threads. It
+retains the 5-second and 4× thresholds above and requires every run to pass.
+
+```bash
+gh workflow run perf-scale-evidence.yml --ref YOUR_COMMIT_BRANCH \
+  -f trace_collection=true -f open_pr=false
+```
+
+Download the `trace-collection-evidence-RUN_ID` artifact from that workflow run.
+Inspect all three receipts, request logs and `resources.txt`; a failed run does
+not stop the remaining measurements or discard its evidence. The trace-only
+invocation skips graph baseline regeneration. Compare the exact source SHA and
+resource limits before using these measurements for a release decision. Hosted
+runner hardware can vary; these synthetic in-process results do not replace
+deployment or live-provider qualification.
 
 ## PostgreSQL
 
