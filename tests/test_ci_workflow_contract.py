@@ -672,6 +672,33 @@ def test_measured_graph_heap_assertion_has_dedicated_conditional_job() -> None:
     assert "-m graph_performance" in nightly
 
 
+def test_trace_capacity_is_opt_in_bounded_and_preserves_every_attempt() -> None:
+    workflow = yaml.safe_load((ROOT / ".github/workflows/perf-scale-evidence.yml").read_text())
+    triggers = workflow.get(True, workflow.get("on", {}))
+    assert triggers["workflow_dispatch"]["inputs"]["trace_collection"]["default"] is False
+    job = workflow["jobs"]["trace-collection"]
+    assert job["if"] == "github.event_name == 'workflow_dispatch' && inputs.trace_collection == true"
+    assert job["permissions"] == {"contents": "read"}
+    assert job["timeout-minutes"] <= 20
+    run = next(step["run"] for step in job["steps"] if step.get("name") == "Measure all three bounded runs")
+    for required in (
+        "for attempt in 1 2 3",
+        "CPUQuota=200%",
+        "MemoryMax=2G",
+        "AGENT_BOM_WORKER_THREAD_LIMIT=2",
+        "--workers 3 --pages 10 --rows 100",
+        "--p95-limit-ms 5000 --slowdown-limit 4",
+        "status=1",
+        'exit "$status"',
+    ):
+        assert required in run
+    assert "continue-on-error" not in job
+    artifact = next(step for step in job["steps"] if step.get("uses", "").startswith("actions/upload-artifact@"))
+    assert artifact["if"] == "always()"
+    for receipt in ("*/receipt.json", "*/attempts.jsonl", "*.log", "resources.txt"):
+        assert receipt in artifact["with"]["path"]
+
+
 def test_output_scale_budgets_run_in_a_dedicated_uninstrumented_lane() -> None:
     """Wall-clock budgets must not share coverage/xdist CPU with the full suite."""
 
