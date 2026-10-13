@@ -13,8 +13,14 @@ export function relationshipPath(edge: Endpoints, obstacles: Obstacle[]): [strin
   if (coordinates.length === 8 && Math.abs(edge.targetY - edge.sourceY) > 80) {
     const t = edge.targetY > edge.sourceY ? 0.65 : 0.35;
     const u = 1 - t;
-    labelX = u ** 3 * coordinates[0]! + 3 * u ** 2 * t * coordinates[2]! + 3 * u * t ** 2 * coordinates[4]! + t ** 3 * coordinates[6]!;
-    labelY = u ** 3 * coordinates[1]! + 3 * u ** 2 * t * coordinates[3]! + 3 * u * t ** 2 * coordinates[5]! + t ** 3 * coordinates[7]!;
+    const candidateX = u ** 3 * coordinates[0]! + 3 * u ** 2 * t * coordinates[2]! + 3 * u * t ** 2 * coordinates[4]! + t ** 3 * coordinates[6]!;
+    const candidateY = u ** 3 * coordinates[1]! + 3 * u ** 2 * t * coordinates[3]! + 3 * u * t ** 2 * coordinates[5]! + t ** 3 * coordinates[7]!;
+    // Moving away from a crossing must not move the caption into an endpoint.
+    if (!obstacles.some(node => candidateX + 48 > node.x && candidateX - 48 < node.x + node.width
+      && candidateY + 16 > node.y && candidateY - 16 < node.y + node.height)) {
+      labelX = candidateX;
+      labelY = candidateY;
+    }
   }
   // A serpentine path changes rows on the same side of both circular glyphs.
   // Keep its turn and caption outside the wider name/metadata column.

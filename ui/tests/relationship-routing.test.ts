@@ -43,6 +43,14 @@ describe("relationship routing", () => {
     const below = relationshipPath({ ...edge, sourceY: 100, targetY: 164 }, obstacles);
     expect(Math.abs(above[1] - below[1])).toBeGreaterThan(100);
   });
+  it("keeps a shifted caption out of its endpoint bounds", () => {
+    const diagonal = { ...edge, sourceY: 300, targetY: 0 };
+    const shifted = relationshipPath(diagonal, []);
+    const sourceBounds = { id: "finding", x: shifted[1] - 40, y: shifted[2] - 20, width: 80, height: 40 };
+    const safe = relationshipPath(diagonal, [sourceBounds]);
+    expect(safe[0]).toBe(shifted[0]);
+    expect(Math.abs(safe[1] - shifted[1])).toBeGreaterThan(48);
+  });
   it("excludes the relationship endpoints from obstacles", () => {
     expect(relationshipPath(edge, [{ id: "finding", x: 0, y: 0, width: 220, height: 180 }])[2]).toBe(36);
   });
