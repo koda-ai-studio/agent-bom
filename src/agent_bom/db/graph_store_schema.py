@@ -254,6 +254,26 @@ CREATE INDEX IF NOT EXISTS idx_ap_risk ON attack_paths(composite_risk DESC);
 CREATE INDEX IF NOT EXISTS idx_ap_scan ON attack_paths(scan_id);
 CREATE INDEX IF NOT EXISTS idx_ap_tenant_scan ON attack_paths(tenant_id, scan_id);
 
+-- ── Snapshot-materialized attack paths (complete ranked set, one row per occurrence) ──
+CREATE TABLE IF NOT EXISTS graph_attack_paths (
+    tenant_id           TEXT NOT NULL DEFAULT 'default',
+    scan_id             TEXT NOT NULL,
+    snapshot_generation TEXT NOT NULL DEFAULT '',
+    path_key            TEXT NOT NULL,
+    path_kind           TEXT NOT NULL,
+    derivation_version  INTEGER NOT NULL,
+    rank_index          INTEGER NOT NULL,
+    source_node         TEXT NOT NULL,
+    target_node         TEXT NOT NULL,
+    hop_count           INTEGER NOT NULL DEFAULT 0,
+    composite_risk      REAL NOT NULL DEFAULT 0.0,
+    path_json           TEXT NOT NULL,
+    computed_at         TEXT NOT NULL,
+    PRIMARY KEY (tenant_id, scan_id, path_key)
+);
+CREATE INDEX IF NOT EXISTS idx_gap_rank ON graph_attack_paths(tenant_id, scan_id, rank_index);
+CREATE INDEX IF NOT EXISTS idx_gap_source ON graph_attack_paths(tenant_id, scan_id, source_node, rank_index);
+
 -- ── Interaction risks (per scan) ──
 CREATE TABLE IF NOT EXISTS interaction_risks (
     pattern         TEXT NOT NULL,
@@ -285,6 +305,7 @@ CREATE TABLE IF NOT EXISTS graph_retention_state (
 # retention window. Ordered children-before-parents so a partial failure never
 # leaves orphaned nodes/edges pointing at a deleted snapshot.
 _GRAPH_PURGEABLE_TABLES = (
+    "graph_attack_paths",
     "attack_paths",
     "interaction_risks",
     "graph_edges",

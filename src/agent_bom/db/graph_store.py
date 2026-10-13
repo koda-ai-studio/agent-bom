@@ -15,7 +15,7 @@ import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Generator, Iterable, Mapping
+from typing import Any, Generator, Iterable, Mapping, Sequence
 
 from agent_bom.db.graph_bootstrap import backfill_edge_metadata
 from agent_bom.db.graph_revision import ensure_sqlite_revisions
@@ -76,14 +76,10 @@ from agent_bom.db.graph_store_write import (
     _write_edges,
     _write_interaction_risks,
     _write_nodes,
+    _write_snapshot_paths,
     _write_snapshot_row,
 )
 from agent_bom.db.graph_write_admission import graph_writer_admission
-from agent_bom.storage import sqlite_wal, state_home
-
-if TYPE_CHECKING:
-    pass
-
 from agent_bom.graph import (
     AttackPath,
     EntityType,
@@ -104,7 +100,9 @@ from agent_bom.graph.analysis import (
 )
 from agent_bom.graph.container import GraphCompleteness, resolve_node_budget
 from agent_bom.graph.severity_floor import severity_floor_sql
+from agent_bom.graph.snapshot_paths import SnapshotPath, prepare_snapshot_paths
 from agent_bom.security import sanitize_text
+from agent_bom.storage import sqlite_wal, state_home
 
 logger = logging.getLogger(__name__)
 
@@ -439,6 +437,7 @@ def save_graph(conn: sqlite3.Connection, graph: UnifiedGraph) -> None:
     that can produce nodes/edges lazily should call ``save_graph_streaming``
     directly with generators to avoid materialising the whole graph.
     """
+    snapshot_paths = prepare_snapshot_paths(graph)
     save_graph_streaming(
         conn,
         scan_id=graph.scan_id,
@@ -449,6 +448,7 @@ def save_graph(conn: sqlite3.Connection, graph: UnifiedGraph) -> None:
         attack_paths=graph.attack_paths,
         interaction_risks=graph.interaction_risks,
         analysis_status=graph.analysis_status,
+        snapshot_paths=snapshot_paths,
     )
 
 
@@ -470,6 +470,7 @@ def save_graph_streaming(
     correlation_result_manifest: Mapping[str, Any] | None = None,
     correlation_completed_at: str = "",
     correlation_execution_owner: str = "",
+    snapshot_paths: Sequence[SnapshotPath] | None = None,
 ) -> dict[str, int]:
     """Persist a graph snapshot from streamed node/edge iterables.
 
@@ -526,6 +527,8 @@ def save_graph_streaming(
         evidence_manifest_sha256=evidence_manifest_sha256,
         write_generation=write_generation,
     )
+    if snapshot_paths is not None:
+        _write_snapshot_paths(conn, snapshot_paths, scan=scan, tenant=tenant, now=now)
     if correlation_result_manifest is not None:
         _complete_correlation_run_atomically(
             conn,

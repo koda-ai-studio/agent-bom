@@ -79,6 +79,7 @@ _DEFAULT_GRAPH_WRITE_BATCH_SIZE = 1000
 # snapshot. Mirrors ``graph_store._GRAPH_PURGEABLE_TABLES`` plus the search index.
 _GRAPH_RETENTION_PURGE_TABLES = (
     "graph_node_search",
+    "graph_attack_paths",
     "attack_paths",
     "interaction_risks",
     "graph_edges",

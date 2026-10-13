@@ -190,6 +190,7 @@ class SQLiteGraphStoreBase:
             total = 0
             for table in (
                 "graph_node_search",
+                "graph_attack_paths",
                 "attack_paths",
                 "interaction_risks",
                 "graph_edges",
@@ -220,6 +221,7 @@ class SQLiteGraphStoreBase:
             total = 0
             for table in (
                 "graph_node_search",
+                "graph_attack_paths",
                 "attack_paths",
                 "interaction_risks",
                 "graph_edges",

@@ -466,6 +466,10 @@ def _component_finding(node: UnifiedNode) -> bool:
 
 
 def _derived_attack_paths(graph: UnifiedGraph) -> list[AttackPath]:
+    return [path for path, _kind in derived_attack_paths_with_kinds(graph)]
+
+
+def derived_attack_paths_with_kinds(graph: UnifiedGraph) -> list[tuple[AttackPath, str]]:
     """Derive fix-first paths when a snapshot lacks materialised path rows.
 
     Derive recorded agent/server/component/finding chains for snapshots without
@@ -619,17 +623,19 @@ def _derived_attack_paths(graph: UnifiedGraph) -> list[AttackPath]:
     # path counts. Only suppress an ordinary derived path when an equivalent
     # persisted/governance occurrence already exists.
     combined = [*materialized, *governance_paths]
+    kinds = {id(path): "fusion" for path in materialized}
+    kinds.update({id(path): "governance" for path in governance_paths})
 
     def path_key(path: AttackPath) -> tuple[str, str, tuple[str, ...], tuple[str, ...]]:
         return path.source, path.target, tuple(path.hops), tuple(path.edges)
 
     existing_keys = {path_key(path) for path in combined}
-    for derived_path in [*credential_finding_paths(graph), *paths]:
+    credential_paths = credential_finding_paths(graph)
+    kinds.update({id(path): "credential" for path in credential_paths})
+    for derived_path in [*credential_paths, *paths]:
         derived_path_key = path_key(derived_path)
         if derived_path_key not in existing_keys:
             combined.append(derived_path)
             existing_keys.add(derived_path_key)
-    return _with_technique_mappings(
-        sorted(combined, key=rank_attack_path),
-        graph,
-    )
+    ranked = _with_technique_mappings(sorted(combined, key=rank_attack_path), graph)
+    return [(path, kinds.get(id(path), "component")) for path in ranked]

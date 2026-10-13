@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator, Mapping
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -24,6 +24,7 @@ from agent_bom.graph import (
 )
 from agent_bom.graph.analysis import GraphAnalysisStatus
 from agent_bom.graph.ports import GraphStoreProtocol as GraphStoreProtocol
+from agent_bom.graph.snapshot_paths import SnapshotPath
 
 
 class SQLiteGraphSnapshotMixin(SQLiteGraphTraversalMixin):
@@ -94,6 +95,7 @@ class SQLiteGraphSnapshotMixin(SQLiteGraphTraversalMixin):
         correlation_id: str = "",
         evidence_manifest_sha256: str = "",
         write_generation: str = "",
+        snapshot_paths: Sequence[SnapshotPath] | None = None,
     ) -> dict[str, int]:
         """Persist a snapshot from node/edge iterables without materialising a graph.
 
@@ -118,6 +120,7 @@ class SQLiteGraphSnapshotMixin(SQLiteGraphTraversalMixin):
                 correlation_id=correlation_id,
                 evidence_manifest_sha256=evidence_manifest_sha256,
                 write_generation=write_generation,
+                snapshot_paths=snapshot_paths,
             )
             self._refresh_snapshot_search_index(conn, tenant_id=tenant_id, scan_id=scan_id)
             sqlite_graph_store._backfill_empty_tenant_ids(conn, _API_GRAPH_TENANT_TABLE_KEYS)

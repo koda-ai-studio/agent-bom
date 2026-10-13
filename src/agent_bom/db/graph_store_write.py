@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from collections import defaultdict
-from collections.abc import Iterable, Iterator, Mapping
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -25,6 +25,7 @@ from agent_bom.graph.analysis import GraphAnalysisStatus, analysis_status_map_to
 from agent_bom.graph.correlation import CorrelationRunStatus, validate_correlation_update
 from agent_bom.graph.observation_scope import comparable_observation_sql
 from agent_bom.graph.severity_floor import counts_as_finding
+from agent_bom.graph.snapshot_paths import SNAPSHOT_PATH_COLUMNS, SnapshotPath, snapshot_path_rows
 
 
 @dataclass
@@ -69,7 +70,7 @@ def _clear_snapshot_rows(conn: sqlite3.Connection, *, tenant: str, scan: str) ->
     # retried producer and make graph_snapshots counts contradict graph rows.
     # The first DELETE also takes SQLite's write lock, serializing concurrent
     # writers before any streamed batch is consumed.
-    for table in ("attack_paths", "interaction_risks", "graph_edges", "graph_nodes", "graph_snapshots"):
+    for table in ("graph_attack_paths", "attack_paths", "interaction_risks", "graph_edges", "graph_nodes", "graph_snapshots"):
         conn.execute(
             f"DELETE FROM {table} WHERE tenant_id = ? AND scan_id = ?",  # nosec B608 - static table list
             (tenant, scan),
@@ -272,6 +273,18 @@ def _write_attack_paths(conn: sqlite3.Connection, attack_paths: Iterable[AttackP
             ),
         )
     return attack_path_count
+
+
+def _write_snapshot_paths(conn: sqlite3.Connection, rows: Sequence[SnapshotPath], *, scan: str, tenant: str, now: str) -> None:
+    generation = conn.execute(
+        "SELECT snapshot_generation FROM graph_snapshots WHERE tenant_id = ? AND scan_id = ?",
+        (tenant, scan),
+    ).fetchone()[0]
+    placeholders = ", ".join("?" for _ in SNAPSHOT_PATH_COLUMNS)
+    conn.executemany(
+        f"INSERT INTO graph_attack_paths ({', '.join(SNAPSHOT_PATH_COLUMNS)}) VALUES ({placeholders})",  # nosec B608 - static columns
+        snapshot_path_rows(rows, tenant=tenant, scan=scan, generation=generation, now=now),
+    )
 
 
 def _write_interaction_risks(conn: sqlite3.Connection, interaction_risks: Iterable[InteractionRisk], *, scan: str, tenant: str) -> None:

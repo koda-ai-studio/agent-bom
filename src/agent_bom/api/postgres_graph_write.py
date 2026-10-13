@@ -124,6 +124,7 @@ _COMPLETE_CORRELATION_SQL = """
 # transaction before the new one-shot producers are consumed.
 _SNAPSHOT_REPLACE_TABLES = (
     "graph_node_search",
+    "graph_attack_paths",
     "attack_paths",
     "interaction_risks",
     "graph_edges",
