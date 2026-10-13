@@ -57,6 +57,6 @@ export function relationshipPath(edge: Endpoints, obstacles: Obstacle[]): [strin
   const end = Math.min(edge.targetX - 32, targetNode ? targetNode.x - 24 : edge.targetX - 32);
   return [
     `M${edge.sourceX},${edge.sourceY} C${start},${edge.sourceY} ${start},${lane} ${start + 32},${lane} L${end - 32},${lane} C${end},${lane} ${end},${edge.targetY} ${edge.targetX},${edge.targetY}`,
-    (edge.sourceX + edge.targetX) / 2, lane,
+    start + (end - start) * (edge.targetY < edge.sourceY ? 0.3 : edge.targetY > edge.sourceY ? 0.7 : 0.5), lane,
   ];
 }

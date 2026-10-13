@@ -37,6 +37,12 @@ describe("relationship routing", () => {
     expect(route[1]).toBeGreaterThan(240);
     expect(route[2]).toBe(146);
   });
+  it("separates captions for shared-source routes branching above and below", () => {
+    const obstacles = [{ id: "middle", x: 260, y: 0, width: 220, height: 180 }];
+    const above = relationshipPath({ ...edge, sourceY: 100, targetY: 36 }, obstacles);
+    const below = relationshipPath({ ...edge, sourceY: 100, targetY: 164 }, obstacles);
+    expect(Math.abs(above[1] - below[1])).toBeGreaterThan(100);
+  });
   it("excludes the relationship endpoints from obstacles", () => {
     expect(relationshipPath(edge, [{ id: "finding", x: 0, y: 0, width: 220, height: 180 }])[2]).toBe(36);
   });
