@@ -11,6 +11,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Graph relationship inspectors and recorded rows surface receipt evidence types and source observation times separately from graph-record timestamps and traversal eligibility. Missing and mixed evidence stay explicit.
+
 - Graph relationship details and recorded-link rows explain agent/server use, available tools, dependencies and findings in plain language. Recorded source, basis and package fields remain separate from relationship meaning; conservative tool-impact mappings and missing source receipts stay explicit.
 
 - Public first-run and investigation feedback forms capture setup friction and decision context. Inaccurate-finding reports now capture directed graph identity, scope, provenance, freshness and incomplete evidence, with contribution and support routing through the active repository.

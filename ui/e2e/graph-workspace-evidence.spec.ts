@@ -4,10 +4,11 @@ import { expect, test, type Page } from "@playwright/test";
 // the same bounded query, selection, and relationship inspector as other links.
 const root = "agent:root";
 const stamp = "2026-10-12T00:00:00Z";
+const observed = "2026-09-01T00:00:00Z";
 const node = (id: string, entity_type = "server", attributes = {}) => ({ id, label: id.split(":").at(-1), entity_type, attributes, severity: "none", risk_score: 0, status: "active", data_sources: ["fixture"], dimensions: {}, compliance_tags: [] });
 const role = node("role:conditional", "role", { admin_equivalence_status: "conditional_admin", admin_equivalence_resource_scopes: ["arn:aws:iam::123456789012:*"] });
 const nodes = [node(root, "agent"), role, ...Array.from({ length: 30 }, (_, i) => node(`server:${i}`))];
-const edges = nodes.slice(1).map(n => ({ id: `edge:${n.id}`, source: root, target: n.id, relationship: n.id === role.id ? "assumes" : "uses", direction: "bidirectional", weight: 1, traversable: false, evidence: { basis: "configured", packages: ["fixture-package@1.0"] } }));
+const edges = nodes.slice(1).map(n => ({ id: `edge:${n.id}`, source: root, target: n.id, relationship: n.id === role.id ? "assumes" : "uses", direction: "bidirectional", weight: 1, traversable: false, first_seen: stamp, last_seen: stamp, evidence: { basis: "configured", observed_at: observed, packages: ["fixture-package@1.0"] } }));
 async function fixture(page: Page) {
   const queries: Array<{roots: string[]; max_nodes: number; direction: string; scan_id: string}> = [];
   await page.route("**/health", route => route.fulfill({json: {status: "ok", demo_mode: false}}));
@@ -62,6 +63,11 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     await usageEdge.focus(); await usageEdge.press("Space");
     await expect(receipt.getByRole("region", { name: "Why linked" })).toContainText("It does not establish that a tool was called.");
     await expect(receipt.getByLabel("Recorded link evidence")).toContainText("configured");
+    const freshness = receipt.getByLabel("Relationship evidence and freshness");
+    await expect(freshness).toContainText("Static / configured");
+    await expect(freshness).toContainText(observed);
+    await expect(freshness).toContainText(stamp);
+    await expect(receipt.getByText(/Traversal eligibility does not establish runtime reachability/)).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
     await page.screenshot({path: testInfo.outputPath(`relationship-explanation-${theme}-${width}.png`), animations: "disabled"});
     await page.keyboard.press("Escape"); await expect(usageEdge).toBeFocused();
