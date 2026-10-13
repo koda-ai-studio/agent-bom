@@ -1,9 +1,9 @@
 {
   "release_version": "0.108.4",
-  "captured_at": "2026-10-12T16:24:52.410Z",
-  "source_commit": "4494d56314a5fc5a27d009dee107786207be6e1e",
+  "captured_at": "2026-10-13T05:13:22.169Z",
+  "source_commit": "06da055fa69dae08de38b0bd8113023ac1ed4d2d",
   "source_tree": "clean",
-  "capture_inputs_sha256": "sha256:6c44c63b255a47a8bd7fa151e2b8e0b269f596d147e9b972ac74705996f651b0",
+  "capture_inputs_sha256": "sha256:ebc000bd628e732f01be30c48775619ea6fe0db91128d4e33ef3e0a6c3fd52c0",
   "capture_note": "Deterministically captured from real Next.js dashboard routes in capture mode. The correlation hero views consume the committed, hash-pinned Reference evidence lab — modeled local infrastructure artifact with CVE-2023-4863 and exact canonical joins. Remaining gallery fixtures are explicitly synthetic UI states. No external, customer, or private infrastructure data is used.",
   "screenshots": [
     {
@@ -116,7 +116,7 @@
       "page": "/compliance?asset=pkg%3Anext&scan=scan-proof-ai-platform&capture=1",
       "scope": "Synthetic control applicability mapping explicitly marked not evaluated",
       "visible_version": "0.108.4",
-      "sha256": "sha256:bb0a60d997e4ecf4c320126dd610cfa74390beef7925d27d11769cddde48b525"
+      "sha256": "sha256:f6e2285438f2779e99b5831c828ded28f202c64b6280f905d89f1bade7561995"
     },
     {
       "presentation": "dark desktop",
@@ -132,7 +132,7 @@
       "page": "/?capture=1",
       "scope": "Risk overview in the light theme",
       "visible_version": "0.108.4",
-      "sha256": "sha256:46fb19f6761294838a623dbd94e18b11871d20a19effdff8ff99c1a596b6c39b"
+      "sha256": "sha256:b025d641b28486ad10a02f4ec9ff817d08fc204dcf6a3be095617856c558b21b"
     },
     {
       "presentation": "dark mobile",
@@ -220,7 +220,7 @@
       "page": "/graph?lens=mesh&scan=scan-proof-ai-platform&agent=agent%3Adeveloper-copilot&capture=1",
       "scope": "Persisted agent neighborhood with recorded shared filesystem connections and both IDE + SRE agents in scope",
       "visible_version": "0.108.4",
-      "sha256": "sha256:c7efbaa39680010dfd63ab63ee756eb1af4c4cd2de647c43d04d4fb4e3d32062"
+      "sha256": "sha256:db540a8b7357e3a489c6de4650bd199eaf66d1985e7f6dd3c1d16a65565e1a95"
     },
     {
       "presentation": "dark desktop",
@@ -258,7 +258,7 @@
       "evidence_sha256": "sha256:f4f8901f412997be7690b50ce8e7468ba8f781dc22b85e7b5f44408e28fe2c5f",
       "correlation_manifest_sha256": "sha256:fe781c82f958c2f9aa4cadfa2289aa767629dc7d6716e11add790e8f3336fc3a",
       "visible_version": "0.108.4",
-      "sha256": "sha256:3d7c79fc21c29100b67361c45d5c4b9e9bbbda0ccb0b12943584f319fa3e1347"
+      "sha256": "sha256:173ea90f1279555d8772dd4efb9265fdff9c3f329692e3f69c28653a8988e9d8"
     },
     {
       "presentation": "light desktop",
@@ -269,7 +269,7 @@
       "evidence_sha256": "sha256:f4f8901f412997be7690b50ce8e7468ba8f781dc22b85e7b5f44408e28fe2c5f",
       "correlation_manifest_sha256": "sha256:fe781c82f958c2f9aa4cadfa2289aa767629dc7d6716e11add790e8f3336fc3a",
       "visible_version": "0.108.4",
-      "sha256": "sha256:3efdacca2a674f5f6b062bdc81c66d9df6d81eb4e4f0e5ada678e88657644554"
+      "sha256": "sha256:870b0d55f5d305c019797c160cf2369a331ce65f3b1c30711cc92ea3da07f2bc"
     },
     {
       "presentation": "dark desktop",
@@ -291,7 +291,7 @@
       "evidence_sha256": "sha256:f4f8901f412997be7690b50ce8e7468ba8f781dc22b85e7b5f44408e28fe2c5f",
       "correlation_manifest_sha256": "sha256:fe781c82f958c2f9aa4cadfa2289aa767629dc7d6716e11add790e8f3336fc3a",
       "visible_version": "0.108.4",
-      "sha256": "sha256:8ccc576f4ada79843a133bab09a744ea77ad56e4f90c3bb87f441220a651ab78"
+      "sha256": "sha256:7c1d8394e46fc631edfbaf19de7bada242bb94bf58cfa6e77124cbf1e5590599"
     },
     {
       "presentation": "light desktop",
@@ -313,7 +313,7 @@
       "evidence_sha256": "sha256:f4f8901f412997be7690b50ce8e7468ba8f781dc22b85e7b5f44408e28fe2c5f",
       "correlation_manifest_sha256": "sha256:fe781c82f958c2f9aa4cadfa2289aa767629dc7d6716e11add790e8f3336fc3a",
       "visible_version": "0.108.4",
-      "sha256": "sha256:91a240606367c952a71fa68aa8f1e0338356dfd182702d59d4faca17abecfd36"
+      "sha256": "sha256:af5b958749f5ec3db8e1326f53c6e1aad4a3e617a2b27d87000ae42415591f37"
     },
     {
       "presentation": "dark mobile",
@@ -367,7 +367,7 @@
       "page": "/security-graph?lens=estate&scan=scan-proof-ai-platform&rollup=1&scenario=scenario-private-service-endpoint&state=proposed&capture=1",
       "scope": "Modeled proposed-state comparison at 1568 by 780",
       "visible_version": "0.108.4",
-      "sha256": "sha256:f0eda273eb61e1ac856da493085d77a4e57a079e23b5bf3667b551bb416437b7"
+      "sha256": "sha256:7066d45bfc795d27543a956ab57fe4678749b539339cc128e21aab472f2c6d0f"
     },
     {
       "presentation": "dark desktop",
@@ -391,7 +391,7 @@
       "page": "/graph?lens=context&scan=scan-proof-ai-platform&root=pkg%3Anext&capture=1",
       "scope": "Exact package neighborhood and selected evidence in the light theme",
       "visible_version": "0.108.4",
-      "sha256": "sha256:604c0a40de4a1643dea3d648dac3b5ae6090b286d5899ff1b02cfd7783ca65d4"
+      "sha256": "sha256:ea2efd6d4c3799090500c49ee360601658b050c8c562a869a4bec7378788547a"
     },
     {
       "presentation": "dark responsive 1000x900",
@@ -439,7 +439,7 @@
       "page": "/findings?capture=1",
       "scope": "Findings queue with seeded package and CVE evidence from the demo estate",
       "visible_version": "0.108.4",
-      "sha256": "sha256:6ec886186c2fa459f467b5dcce783a0904a5cab52932323fd5b8ade48babb444"
+      "sha256": "sha256:e66d7778db12626aeb543fa4828f2f2939cd6df51850bd9a02fc1cb5eeaa584f"
     },
     {
       "presentation": "dark desktop",
@@ -447,7 +447,7 @@
       "page": "/remediation?capture=1",
       "scope": "Fix-first remediation table with prioritized packages and framework context",
       "visible_version": "0.108.4",
-      "sha256": "sha256:419a456f164259856972337ad8192b06b9c54829410cde2c343a5bedb90fcdab"
+      "sha256": "sha256:871f43f0ab456097ae5dfd2562fd339bed6105fc6109f95c99a87b1c0685789c"
     },
     {
       "presentation": "light desktop",
