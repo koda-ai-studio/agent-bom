@@ -25,8 +25,8 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Literal, Optional
 
 from agent_bom.evidence.asset_display import iac_source_label
+from agent_bom.evidence.finding_response_fields import restored_public_fields
 from agent_bom.evidence.finding_status import public_finding_status
-from agent_bom.finding_response_fields import restored_public_fields
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from agent_bom.finding import FindingSource, FindingType
