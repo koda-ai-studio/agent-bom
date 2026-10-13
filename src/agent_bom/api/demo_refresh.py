@@ -16,18 +16,28 @@ from __future__ import annotations
 
 import logging
 
+from starlette.concurrency import run_in_threadpool
+
+from agent_bom.demo_estate import demo_estate_enabled
+
 _logger = logging.getLogger(__name__)
 
 
-def demo_daily_evidence_dependency() -> None:
+async def demo_daily_evidence_dependency() -> None:
     """Route dependency: refresh day-scoped demo evidence before serving.
 
     A no-op outside demo mode, and one string compare once the day is current.
     Never raises: a demo refresh must not be able to fail a real request.
     """
+    if not demo_estate_enabled():
+        return
     try:
-        from agent_bom.demo_estate.bootstrap import refresh_demo_daily_evidence
-
-        refresh_demo_daily_evidence()
+        await run_in_threadpool(_refresh_daily_evidence)
     except Exception:  # noqa: BLE001 - a demo refresh must never fail a request
         _logger.warning("demo estate daily evidence refresh skipped", exc_info=False)
+
+
+def _refresh_daily_evidence() -> None:
+    from agent_bom.demo_estate.bootstrap import refresh_demo_daily_evidence
+
+    refresh_demo_daily_evidence()

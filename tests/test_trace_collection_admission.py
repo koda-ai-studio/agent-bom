@@ -148,3 +148,61 @@ async def test_queued_collection_preserves_each_request_tenant_context(monkeypat
     tenants = [f"tenant-{i}" for i in range(8)]
     assert await asyncio.gather(*(request(tenant) for tenant in tenants)) == tenants
     assert _current_tenant.get() == parent_tenant
+
+
+@pytest.mark.asyncio
+async def test_status_uses_one_worker_call_and_keeps_storage_off_loop(monkeypatch):
+    from functools import partial
+
+    loop_thread = threading.get_ident()
+    calls = []
+    original = anyio.to_thread.run_sync
+
+    async def measured(func, *args, **kwargs):
+        target = func.func if isinstance(func, partial) else func
+        calls.append(target.__name__)
+        return await original(func, *args, **kwargs)
+
+    def status(tenant, connection, **kwargs):
+        assert threading.get_ident() != loop_thread
+        return CollectionReceipt(connection_id=connection, status="not_started")
+
+    monkeypatch.setattr(anyio.to_thread, "run_sync", measured)
+    monkeypatch.setattr(routes, "require_request_tenant_id", lambda request: "tenant")
+    monkeypatch.setattr(routes.service, "status", status)
+    app = FastAPI()
+    app.include_router(routes.router)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app), base_url="http://test") as client:
+        response = await client.get("/traces/connectors/langfuse/collection?connection_id=light")
+    assert response.status_code == 200
+    assert response.json()["connection_id"] == "light"
+    assert len(calls) == 1, calls
+
+
+@pytest.mark.asyncio
+async def test_concurrent_status_calls_preserve_each_tenant_context(monkeypatch):
+    from agent_bom.api.postgres_common import _current_tenant, reset_current_tenant, set_current_tenant
+
+    def status(tenant, connection, **kwargs):
+        assert _current_tenant.get() == connection
+        return CollectionReceipt(connection_id=connection, status="not_started")
+
+    monkeypatch.setattr(routes, "require_request_tenant_id", lambda request: _current_tenant.get())
+    monkeypatch.setattr(routes.service, "status", status)
+    app = FastAPI()
+    app.include_router(routes.router)
+    parent = _current_tenant.get()
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app), base_url="http://test") as client:
+
+        async def request(tenant):
+            token = set_current_tenant(tenant)
+            try:
+                response = await client.get("/traces/connectors/langfuse/collection", params={"connection_id": tenant})
+                assert response.status_code == 200
+                return response.json()["connection_id"]
+            finally:
+                reset_current_tenant(token)
+
+        tenants = [f"tenant-{i}" for i in range(8)]
+        assert await asyncio.gather(*(request(tenant) for tenant in tenants)) == tenants
+    assert _current_tenant.get() == parent
