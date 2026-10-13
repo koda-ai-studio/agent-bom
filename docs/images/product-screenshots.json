@@ -1,9 +1,9 @@
 {
   "release_version": "0.108.4",
-  "captured_at": "2026-10-13T19:10:07.800Z",
-  "source_commit": "3c6c7b750d58da50de2ed733a5ba6c5930014c4a",
+  "captured_at": "2026-10-13T19:14:22.589Z",
+  "source_commit": "ccabc67ec22671a5713aca8f7947668f4d262cbf",
   "source_tree": "clean",
-  "capture_inputs_sha256": "sha256:2286c3217cd935e456e00cf8f8a371a26d9136de4d34b12787765f4da8aaa1ba",
+  "capture_inputs_sha256": "sha256:fbb86828f2d658087dfaf72ef6900c5a6f2682cde2e9359f07272e8be5dac491",
   "capture_note": "Deterministically captured from real Next.js dashboard routes in capture mode. The correlation hero views consume the committed, hash-pinned Reference evidence lab — modeled local infrastructure artifact with CVE-2023-4863 and exact canonical joins. Remaining gallery fixtures are explicitly synthetic UI states. No external, customer, or private infrastructure data is used.",
   "screenshots": [
     {
@@ -244,7 +244,7 @@
       "page": "/graph?capture=1&scan=reference-evidence-correlation-v1&layers=server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile",
       "scope": "Reference evidence lab graph with scanned dependency evidence, local tool invocation, and separate modeled identity permissions",
       "evidence_artifact": "examples/reference-evidence-lab/generated/correlation-proof.json",
-      "evidence_sha256": "sha256:f4f8901f412997be7690b50ce8e7468ba8f781dc22b85e7b5f44408e28fe2c5f",
+      "evidence_sha256": "sha256:9ea0502652d651f34221d8736369a70a651986854e0544d196beaa8f1446e912",
       "correlation_manifest_sha256": "sha256:fe781c82f958c2f9aa4cadfa2289aa767629dc7d6716e11add790e8f3336fc3a",
       "visible_version": "0.108.4",
       "sha256": "sha256:2480f2f4d2ef7e810f66d44098d40a637638b035f04cb3fc3e6fc7c983c82253"
@@ -255,7 +255,7 @@
       "page": "/graph?capture=1&scan=reference-evidence-correlation-v1&layers=server,agent,tool",
       "scope": "Reference evidence lab local gateway invocation with relationship direction, snapshot, timestamps and recorded runtime evidence; modeled infrastructure remains separate",
       "evidence_artifact": "examples/reference-evidence-lab/generated/correlation-proof.json",
-      "evidence_sha256": "sha256:f4f8901f412997be7690b50ce8e7468ba8f781dc22b85e7b5f44408e28fe2c5f",
+      "evidence_sha256": "sha256:9ea0502652d651f34221d8736369a70a651986854e0544d196beaa8f1446e912",
       "correlation_manifest_sha256": "sha256:fe781c82f958c2f9aa4cadfa2289aa767629dc7d6716e11add790e8f3336fc3a",
       "visible_version": "0.108.4",
       "sha256": "sha256:291bd27fd16295faa8e1a9921c97529f75c351de847ce471511dae59c5e71041"
@@ -266,7 +266,7 @@
       "page": "/graph?capture=1&scan=reference-evidence-correlation-v1&layers=server,agent,tool",
       "scope": "Reference evidence lab local gateway invocation with relationship direction, snapshot, timestamps and recorded runtime evidence; modeled infrastructure remains separate",
       "evidence_artifact": "examples/reference-evidence-lab/generated/correlation-proof.json",
-      "evidence_sha256": "sha256:f4f8901f412997be7690b50ce8e7468ba8f781dc22b85e7b5f44408e28fe2c5f",
+      "evidence_sha256": "sha256:9ea0502652d651f34221d8736369a70a651986854e0544d196beaa8f1446e912",
       "correlation_manifest_sha256": "sha256:fe781c82f958c2f9aa4cadfa2289aa767629dc7d6716e11add790e8f3336fc3a",
       "visible_version": "0.108.4",
       "sha256": "sha256:db23def277002563c7c343317f279af4c02060d0d7eae7fce6961be58b08bb01"
@@ -277,7 +277,7 @@
       "page": "/security-graph?lens=attack-path&scan=reference-evidence-correlation-v1&correlation=1&capture=1",
       "scope": "Reference evidence lab modeled permission route with inspectable source receipts; no vulnerability exploit edge",
       "evidence_artifact": "examples/reference-evidence-lab/generated/correlation-proof.json",
-      "evidence_sha256": "sha256:f4f8901f412997be7690b50ce8e7468ba8f781dc22b85e7b5f44408e28fe2c5f",
+      "evidence_sha256": "sha256:9ea0502652d651f34221d8736369a70a651986854e0544d196beaa8f1446e912",
       "correlation_manifest_sha256": "sha256:fe781c82f958c2f9aa4cadfa2289aa767629dc7d6716e11add790e8f3336fc3a",
       "visible_version": "0.108.4",
       "sha256": "sha256:0b40dcb0b29dca43e94bf92d1ed35f1aab04f345aaf74b91b7ab0492b2623f67"
@@ -288,10 +288,10 @@
       "page": "/graph?capture=1&scan=reference-evidence-correlation-v1&layers=server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile",
       "scope": "Reference evidence lab recorded relationships; exploitability and cloud resource activity remain unestablished",
       "evidence_artifact": "examples/reference-evidence-lab/generated/correlation-proof.json",
-      "evidence_sha256": "sha256:f4f8901f412997be7690b50ce8e7468ba8f781dc22b85e7b5f44408e28fe2c5f",
+      "evidence_sha256": "sha256:9ea0502652d651f34221d8736369a70a651986854e0544d196beaa8f1446e912",
       "correlation_manifest_sha256": "sha256:fe781c82f958c2f9aa4cadfa2289aa767629dc7d6716e11add790e8f3336fc3a",
       "visible_version": "0.108.4",
-      "sha256": "sha256:e6b8bc56e4b76cb0e5d87b964a162409c5198a2d0f0eb6cbbbd2eeb52a5a501d"
+      "sha256": "sha256:25d1be9467fca410b70b351d3ee4013379b259d7da7c989f66aaa674b7f4b8c7"
     },
     {
       "presentation": "light desktop",
@@ -299,7 +299,7 @@
       "page": "/security-graph?lens=attack-path&scan=reference-evidence-correlation-v1&correlation=1&capture=1",
       "scope": "Reference evidence lab outcome-first correlation decision in the light theme",
       "evidence_artifact": "examples/reference-evidence-lab/generated/correlation-proof.json",
-      "evidence_sha256": "sha256:f4f8901f412997be7690b50ce8e7468ba8f781dc22b85e7b5f44408e28fe2c5f",
+      "evidence_sha256": "sha256:9ea0502652d651f34221d8736369a70a651986854e0544d196beaa8f1446e912",
       "correlation_manifest_sha256": "sha256:fe781c82f958c2f9aa4cadfa2289aa767629dc7d6716e11add790e8f3336fc3a",
       "visible_version": "0.108.4",
       "sha256": "sha256:6b644d0dbe2f88b0236099f3e14995934fd596a608aa1cfbc1bc9f1f8c8b5b6f"
@@ -310,7 +310,7 @@
       "page": "/graph?capture=1&scan=reference-evidence-correlation-v1&layers=server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile",
       "scope": "Reference evidence lab recorded relationships and evidence boundaries in the light theme",
       "evidence_artifact": "examples/reference-evidence-lab/generated/correlation-proof.json",
-      "evidence_sha256": "sha256:f4f8901f412997be7690b50ce8e7468ba8f781dc22b85e7b5f44408e28fe2c5f",
+      "evidence_sha256": "sha256:9ea0502652d651f34221d8736369a70a651986854e0544d196beaa8f1446e912",
       "correlation_manifest_sha256": "sha256:fe781c82f958c2f9aa4cadfa2289aa767629dc7d6716e11add790e8f3336fc3a",
       "visible_version": "0.108.4",
       "sha256": "sha256:213305bf343502b5a3f7722739ef214cdbf76b235b95b39faadf566b5134d9e2"
@@ -321,7 +321,7 @@
       "page": "/security-graph?lens=attack-path&scan=reference-evidence-correlation-v1&correlation=1&capture=1",
       "scope": "Reference evidence lab outcome-first correlation decision at a 390 by 844 viewport",
       "evidence_artifact": "examples/reference-evidence-lab/generated/correlation-proof.json",
-      "evidence_sha256": "sha256:f4f8901f412997be7690b50ce8e7468ba8f781dc22b85e7b5f44408e28fe2c5f",
+      "evidence_sha256": "sha256:9ea0502652d651f34221d8736369a70a651986854e0544d196beaa8f1446e912",
       "correlation_manifest_sha256": "sha256:fe781c82f958c2f9aa4cadfa2289aa767629dc7d6716e11add790e8f3336fc3a",
       "visible_version": "0.108.4",
       "sha256": "sha256:d3cc3013502d2925b3832b8b943a308cd03c469084d96afe771f761592c90006"
@@ -332,7 +332,7 @@
       "page": "/graph?capture=1&scan=reference-evidence-correlation-v1&layers=server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile",
       "scope": "Reference evidence lab readable focused graph context at a 390 by 844 viewport; pan to inspect adjacent recorded relationships",
       "evidence_artifact": "examples/reference-evidence-lab/generated/correlation-proof.json",
-      "evidence_sha256": "sha256:f4f8901f412997be7690b50ce8e7468ba8f781dc22b85e7b5f44408e28fe2c5f",
+      "evidence_sha256": "sha256:9ea0502652d651f34221d8736369a70a651986854e0544d196beaa8f1446e912",
       "correlation_manifest_sha256": "sha256:fe781c82f958c2f9aa4cadfa2289aa767629dc7d6716e11add790e8f3336fc3a",
       "visible_version": "0.108.4",
       "sha256": "sha256:ab4e939d0d682cbb6df972c50f19a4651b2033c903dffdcb4459653f49c6399e"
@@ -367,7 +367,7 @@
       "page": "/security-graph?lens=estate&scan=scan-proof-ai-platform&rollup=1&scenario=scenario-private-service-endpoint&state=proposed&capture=1",
       "scope": "Modeled proposed-state comparison at 1568 by 780",
       "visible_version": "0.108.4",
-      "sha256": "sha256:4b82cab921549c9f2508f9ee9ed50ff54471e864bc4983a7ad6b058f48a56089"
+      "sha256": "sha256:1b937076d9a8bb453423ff1b2b537d8eb414e3b5ec4652a1df8ba17e8325c66a"
     },
     {
       "presentation": "dark desktop",
@@ -375,7 +375,7 @@
       "page": "/graph?capture=1&scan=scan-proof-ai-platform&path=top&layers=user,serviceAccount,role,agent,server,package,vulnerability",
       "scope": "Focused highest-risk directed path from identity source through agent, MCP, package, and finding",
       "visible_version": "0.108.4",
-      "sha256": "sha256:985fe9f3b239d2cad5a181e4062447402f9794a278a27ed660e4a5e0b1c4c039"
+      "sha256": "sha256:b47edc005886d914d112ab2ee052c7ee3631255f30b10a603824da578988e613"
     },
     {
       "presentation": "dark desktop",
@@ -455,7 +455,7 @@
       "page": "/remediation?capture=1",
       "scope": "Fix-first remediation workflow in the light theme",
       "visible_version": "0.108.4",
-      "sha256": "sha256:bc228351a082e59872a163b64f400c76a720650567198f06c73a47e84a31b059"
+      "sha256": "sha256:212151289c4a7f6c8fed71f8ebe234a4eb740090e923cbc9670c3fc25a599707"
     },
     {
       "presentation": "dark mobile",
