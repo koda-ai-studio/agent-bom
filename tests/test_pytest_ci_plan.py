@@ -577,6 +577,7 @@ def test_frontdoor_edits_select_distribution_and_operator_contracts(tmp_path: Pa
             "test_consumer_precommit_hooks.py",
             "test_cli_exit_contract_docs.py",
             "test_readme_demo_excerpt.py",
+            "test_published_counts_gate.py",
         )
     )
     for path in [*expected, tmp_path / "tests/test_unrelated.py"]:

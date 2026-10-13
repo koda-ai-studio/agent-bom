@@ -120,7 +120,7 @@ SPDX, JSON and HTML**. Cloud connectors and fleet sync collect inventory;
 proxy and gateway deployments add runtime evidence.
 
 For coding assistants, run `agent-bom mcp server`.
-MCP server mode exposes 8 MCP tools by default.
+Start with eight focused tools in the default profile.
 [Choose an MCP profile](docs/MCP_SERVER.md) for graph, cloud, runtime or audit work.
 [Import existing scanner reports](docs/IMPORTERS.md) without replacing their source evidence.
 

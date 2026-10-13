@@ -100,6 +100,7 @@ PUBLIC_FRONTDOOR_CONTRACTS = frozenset(
         "test_public_docs_runnable_commands.py",
         "test_public_frontdoor_contract.py",
         "test_public_release_contracts.py",
+        "test_published_counts_gate.py",
         "test_readme_demo_excerpt.py",
         "test_release_storefront_contract.py",
         "test_stats_alignment.py",
