@@ -13,7 +13,6 @@ from rich.tree import Tree
 
 from agent_bom.core.severity import SEVERITY_THRESHOLD_LABELS, severity_rank, severity_worst_first_rank
 from agent_bom.core.terminal import safe_emoji as safe_emoji
-from agent_bom.coverage import print_graph_coverage_gaps
 from agent_bom.models import AgentStatus, AIBOMReport, Severity
 from agent_bom.output.cis_posture import (
     ERROR,
@@ -38,6 +37,7 @@ from agent_bom.output.finding_views import (
     package_version,
     sanitize_output_text,
 )
+from agent_bom.output.graph_coverage_panel import print_graph_coverage_gaps
 from agent_bom.security import sanitize_launch_command, sanitize_path_label
 
 console = Console()

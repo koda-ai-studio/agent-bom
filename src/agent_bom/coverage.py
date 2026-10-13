@@ -29,9 +29,6 @@ import sqlite3
 from dataclasses import asdict, dataclass
 from typing import Optional, Protocol, Sequence
 
-from rich.markup import escape
-from rich.panel import Panel
-
 
 class Package(Protocol):
     """Package coordinates this module reads; ``models.Package`` satisfies it."""
@@ -55,22 +52,6 @@ GRAPH_GAP_REASON = "graph_analysis_limited"
 def is_graph_analysis_gap(warning: object) -> bool:
     """A graph finding evaluator stopped at a safety bound (not a vuln-data gap)."""
     return isinstance(warning, dict) and warning.get("reason") == GRAPH_GAP_REASON
-
-
-def print_graph_coverage_gaps(console, warnings: list) -> list:  # noqa: ANN001
-    """Print graph-evaluator gaps in their own panel; return the other warnings.
-
-    Graph gaps are not vulnerability-data gaps, so they must not render with the
-    package/advisory wording of the vulnerability coverage panel.
-    """
-    gaps = [w for w in warnings if is_graph_analysis_gap(w)]
-    if gaps:
-        body = "\n".join(
-            f"[bold yellow]⚠ {escape(str(w.get('ecosystem', 'graph')))}[/bold yellow] — {escape(str(w.get('detail', '')))}" for w in gaps
-        )
-        body += "\n\n[dim]A graph evaluator stopped at a safety bound; graph-derived findings may UNDER-report.[/dim]"
-        console.print(Panel.fit(body, title="[bold red]Incomplete graph analysis[/bold red]", border_style="red"))
-    return [w for w in warnings if not is_graph_analysis_gap(w)]
 
 
 def is_scope_exclusion(warning: dict) -> bool:
