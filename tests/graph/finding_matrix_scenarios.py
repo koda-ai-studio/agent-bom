@@ -140,7 +140,8 @@ def scenario_sbom(work: Path, monkeypatch: Any) -> dict[str, Any]:
 
 
 def scenario_browser(work: Path, monkeypatch: Any) -> dict[str, Any]:
-    ext = work / "home-browser" / "Library" / "Application Support" / "Google" / "Chrome" / "Default" / "Extensions"
+    home = work / "home-browser"
+    monkeypatch.delenv("XDG_CONFIG_HOME", raising=False)
     manifest = {
         "name": "Evil Helper",
         "version": "1.0.0",
@@ -148,7 +149,8 @@ def scenario_browser(work: Path, monkeypatch: Any) -> dict[str, Any]:
         "permissions": ["nativeMessaging", "debugger", "cookies", "webRequest"],
         "host_permissions": ["<all_urls>"],
     }
-    _write(ext / ("abcdefghijklmnop" * 2) / "1.0.0" / "manifest.json", json.dumps(manifest))
+    for chrome in (home / "Library" / "Application Support" / "Google" / "Chrome", home / ".config" / "google-chrome"):
+        _write(chrome / "Default" / "Extensions" / ("abcdefghijklmnop" * 2) / "1.0.0" / "manifest.json", json.dumps(manifest))
     return _cli(work, monkeypatch, "browser", "--no-scan", "--no-discover", "--browser-extensions")
 
 

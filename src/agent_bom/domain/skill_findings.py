@@ -42,6 +42,7 @@ def skill_audit_data_to_findings(skill_audit: dict) -> list:
     """
     from agent_bom.compliance_hub import apply_hub_classification
     from agent_bom.finding import Asset, Finding, FindingSource
+    from agent_bom.security import sanitize_path_label
 
     if not isinstance(skill_audit, dict):
         return []
@@ -68,7 +69,7 @@ def skill_audit_data_to_findings(skill_audit: dict) -> list:
                         name=asset_name,
                         asset_type=asset_type,
                         identifier=str(identifier) if identifier else None,
-                        location=source_file or None,
+                        location=sanitize_path_label(source_file) if source_file else None,
                     ),
                     severity=severity,
                     title=title,
