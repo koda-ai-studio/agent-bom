@@ -551,6 +551,9 @@ jobs:
       - name: Verify Glama listing freshness
         env:
           GLAMA_API_KEY: ${{ secrets.GLAMA_API_KEY }}
+          GLAMA_LISTING_URL: ${{ vars.GLAMA_LISTING_URL }}
+          GLAMA_API_URL: ${{ vars.GLAMA_API_URL }}
+          GLAMA_SCHEMA_URL: ${{ vars.GLAMA_SCHEMA_URL }}
           GLAMA_DIAGNOSTICS_DIR: ${{ runner.temp }}/glama-response
           EXPECTED_VERSION: ${{ needs.release.outputs.version }}
           EXPECTED_TOOL_COUNT: ${{ needs.release.outputs.tool_count }}
