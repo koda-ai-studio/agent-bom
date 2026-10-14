@@ -4115,9 +4115,9 @@
     "SHOW GRANTS ON AGENT \"DB1\".\"S1\".\"agent_b\"",
     "DESCRIBE AGENT \"DB1\".\"S1\".\"agent_c\"",
     "SHOW GRANTS ON AGENT \"DB1\".\"S1\".\"agent_c\"",
-    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_a', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -7, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
-    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_b', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -7, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
-    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_c', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -7, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001"
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_a', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -7, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_b', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -7, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_c', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -7, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001"
    ]
   ],
   "closes": [
@@ -4939,9 +4939,9 @@
    [
     "SELECT query_id, query_text, user_name, role_name, start_time, end_time, execution_status, warehouse_name, database_name, schema_name, query_type, rows_produced, bytes_scanned, total_elapsed_time FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY WHERE start_time >= DATEADD(day, -365, CURRENT_TIMESTAMP()) AND (query_text ILIKE '%AGENT%' OR query_text ILIKE '%MCP%SERVER%' OR query_text ILIKE '%CORTEX%' OR query_text ILIKE '%SNOWFLAKE.ML%' OR query_text ILIKE '%EXECUTE_SQL%') ORDER BY start_time DESC LIMIT 2000",
     "SHOW AGENTS IN ACCOUNT",
-    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_a', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -365, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
-    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_b', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -365, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
-    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_c', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -365, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001"
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_a', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -365, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_b', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -365, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_c', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -365, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001"
    ]
   ],
   "closes": [
@@ -11268,16 +11268,16 @@
     "SHOW GRANTS ON AGENT \"DB1\".\"S1\".\"agent_b\"",
     "DESCRIBE AGENT \"DB1\".\"S1\".\"agent_c\"",
     "SHOW GRANTS ON AGENT \"DB1\".\"S1\".\"agent_c\"",
-    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_a', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
-    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_b', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
-    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_c', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001"
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_a', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_b', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_c', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001"
    ],
    [
     "SELECT query_id, query_text, user_name, role_name, start_time, end_time, execution_status, warehouse_name, database_name, schema_name, query_type, rows_produced, bytes_scanned, total_elapsed_time FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY WHERE start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP()) AND (query_text ILIKE '%AGENT%' OR query_text ILIKE '%MCP%SERVER%' OR query_text ILIKE '%CORTEX%' OR query_text ILIKE '%SNOWFLAKE.ML%' OR query_text ILIKE '%EXECUTE_SQL%') ORDER BY start_time DESC LIMIT 2000",
     "SHOW AGENTS IN ACCOUNT",
-    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_a', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
-    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_b', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
-    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_c', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001"
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_a', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_b', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_c', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001"
    ]
   ],
   "closes": [
@@ -14201,16 +14201,16 @@
     "SHOW GRANTS ON AGENT \"DB1\".\"S1\".\"agent_b\"",
     "DESCRIBE AGENT \"DB1\".\"S1\".\"agent_c\"",
     "SHOW GRANTS ON AGENT \"DB1\".\"S1\".\"agent_c\"",
-    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_a', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
-    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_b', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
-    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_c', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001"
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_a', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_b', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_c', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001"
    ],
    [
     "SELECT query_id, query_text, user_name, role_name, start_time, end_time, execution_status, warehouse_name, database_name, schema_name, query_type, rows_produced, bytes_scanned, total_elapsed_time FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY WHERE start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP()) AND (query_text ILIKE '%AGENT%' OR query_text ILIKE '%MCP%SERVER%' OR query_text ILIKE '%CORTEX%' OR query_text ILIKE '%SNOWFLAKE.ML%' OR query_text ILIKE '%EXECUTE_SQL%') ORDER BY start_time DESC LIMIT 2000",
     "SHOW AGENTS IN ACCOUNT",
-    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_a', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
-    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_b', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
-    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_c', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001"
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_a', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_b', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_c', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001"
    ]
   ],
   "closes": [
@@ -15945,14 +15945,14 @@
     "SHOW GRANTS ON AGENT \"DB1\".\"S1\".\"agent_b\"",
     "DESCRIBE AGENT \"DB1\".\"S1\".\"agent_c\"",
     "SHOW GRANTS ON AGENT \"DB1\".\"S1\".\"agent_c\"",
-    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_a', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
-    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_b', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
-    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_c', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_a', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_b', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_c', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
     "SELECT query_id, query_text, user_name, role_name, start_time, end_time, execution_status, warehouse_name, database_name, schema_name, query_type, rows_produced, bytes_scanned, total_elapsed_time FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY WHERE start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP()) AND (query_text ILIKE '%AGENT%' OR query_text ILIKE '%MCP%SERVER%' OR query_text ILIKE '%CORTEX%' OR query_text ILIKE '%SNOWFLAKE.ML%' OR query_text ILIKE '%EXECUTE_SQL%') ORDER BY start_time DESC LIMIT 2000",
     "SHOW AGENTS IN ACCOUNT",
-    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_a', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
-    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_b', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
-    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_c', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001"
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_a', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_b', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_c', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001"
    ],
    "closes": [
     49,

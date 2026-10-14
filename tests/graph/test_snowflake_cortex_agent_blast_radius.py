@@ -8,6 +8,7 @@ the dicts those discoverers emit. All identifiers are fictitious.
 
 from __future__ import annotations
 
+import hashlib
 import json
 from typing import Any
 
@@ -70,7 +71,6 @@ def _span(
             {"name": name, "kind": "SPAN_KIND_INTERNAL", "parent_span_id": parent, "status": {"code": "STATUS_CODE_UNSET"}}
         ),
         "record_attributes": json.dumps(attrs or {}),
-        "value": None,
     }
 
 
@@ -96,7 +96,7 @@ def _result(columns: list[str], rows: list[dict[str, Any]]) -> tuple[list[str], 
     return columns, [tuple(row.get(col) for col in columns) for row in rows]
 
 
-_SPAN_COLS = ["timestamp", "start_timestamp", "trace", "resource_attributes", "record", "record_attributes", "value"]
+_SPAN_COLS = ["timestamp", "start_timestamp", "trace", "resource_attributes", "record", "record_attributes"]
 _GRANT_COLS = ["privilege", "granted_on", "name", "granted_to", "grantee_name"]
 RESPONSES: list[tuple[str, tuple[list[str], list[tuple[Any, ...]]]]] = [
     (
@@ -308,7 +308,9 @@ def test_no_raw_tool_content_or_principal_is_stored(scanned: dict[str, Any]) -> 
     assert SPAN_USER not in stored
     events = scanned["out"]["snowflake_governance"]["cortex_events"]
     assert all(e["content_sha256"] for e in events if e["source_span_id"] in {"s2", "s5"})
-    assert all(len(e["principal_hash"]) == 64 for e in events)
+    # Pending the shared tenant-keyed digest: no raw or plain-hashed user value anywhere.
+    assert all(e["principal_hash"] is None for e in events)
+    assert hashlib.sha256(SPAN_USER.encode()).hexdigest() not in stored
 
 
 def test_reads_are_read_only(scanned: dict[str, Any]) -> None:

@@ -3,9 +3,9 @@
 Spans are read per agent through ``SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS``
 (database, schema, agent name, ``'CORTEX AGENT'``), which returns event-table
 rows (``TIMESTAMP``, ``START_TIMESTAMP``, ``TRACE``, ``RESOURCE_ATTRIBUTES``,
-``RECORD``, ``RECORD_ATTRIBUTES``, ``VALUE``). Raw prompts, tool inputs and tool
+``RECORD``, ``RECORD_ATTRIBUTES``). Raw prompts, tool inputs and tool
 outputs are never kept: content is reduced to a SHA-256 digest and the user name
-to a SHA-256 principal hash.
+to the tenant-keyed principal digest.
 """
 
 from __future__ import annotations
@@ -72,17 +72,24 @@ FIELD_MAP: tuple[tuple[str, str, str], ...] = (
     ("RECORD_ATTRIBUTES:*.tool.name | *tool_name", "tool_name", "observed_key"),
     ("RECORD_ATTRIBUTES:*prompt_tokens | *input_tokens", "input_tokens", "observed_key"),
     ("RECORD_ATTRIBUTES:*completion_tokens | *output_tokens", "output_tokens", "observed_key"),
-    ("RECORD_ATTRIBUTES:*input | *output | *query_text | *retrieved_contexts, VALUE", "content_sha256", "observed_key"),
+    (
+        "RECORD_ATTRIBUTES:*input | *query_text | *prompt | *arguments ; *output | *retrieved_contexts | *response | *result",
+        "content_sha256",
+        "observed_key",
+    ),
 )
 # The event table carries no cost, MCP server, provider or credential fields;
 # credits live in ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY.TOKEN_CREDITS.
 UNSUPPLIED_FIELDS = ("model_provider", "mcp_server_ref", "credential_ref", "cost_usd")
+# Sourced from the span but left empty until the shared tenant-keyed digest is wired in.
+PENDING_FIELDS = ("principal_hash",)
 
 _PLANNING_MODEL = "snow.ai.observability.agent.planning.model"
 _TOOL_NAME_RE = re.compile(r"(^|[._])tool[._]name$", re.IGNORECASE)
 _INPUT_TOKENS_RE = re.compile(r"(^|[._])(prompt|input)_tokens$", re.IGNORECASE)
 _OUTPUT_TOKENS_RE = re.compile(r"(^|[._])(completion|output)_tokens$", re.IGNORECASE)
-_CONTENT_RE = re.compile(r"(^|[._])(input|output|query_text|retrieved_contexts|prompt|response|arguments|result)s?$", re.IGNORECASE)
+_INPUT_RE = re.compile(r"(^|[._])(input|query_text|prompt|arguments)s?$", re.IGNORECASE)
+_OUTPUT_RE = re.compile(r"(^|[._])(output|retrieved_contexts|response|result)s?$", re.IGNORECASE)
 
 
 def _sql_string(value: str) -> str:
@@ -136,13 +143,22 @@ def _kind(span_name: str, attrs: dict[str, Any], tool_name: str, parent: str) ->
     return "other"
 
 
-def _content_digest(attrs: dict[str, Any], value: Any) -> str | None:
-    content = {key: attrs[key] for key in sorted(attrs) if _CONTENT_RE.search(key) and attrs[key] not in (None, "")}
-    if value not in (None, "", {}, []):
-        content["VALUE"] = value
-    if not content:
+def _content_digest(attrs: dict[str, Any]) -> str | None:
+    """``sha256(json.dumps([input, output]))`` — the shared normalized-event content digest."""
+    content_input, content_output = _first(attrs, _INPUT_RE), _first(attrs, _OUTPUT_RE)
+    if content_input is None and content_output is None:
         return None
-    return _sha256(json.dumps(content, sort_keys=True, separators=(",", ":"), default=str))
+    return _sha256(json.dumps([content_input, content_output], sort_keys=True, default=str))
+
+
+def _principal_digest(tenant_id: str | None, user_id: str) -> str | None:
+    """Tenant-keyed principal digest; empty until the shared keyed digest is wired in.
+
+    A plain hash of a user name is dictionary-reversible and joins across
+    tenants, so no local fallback is computed.
+    """
+    del tenant_id, user_id
+    return None
 
 
 def normalize_cortex_span(
@@ -176,7 +192,7 @@ def normalize_cortex_span(
     status = "error" if status_code == "STATUS_CODE_ERROR" else "ok"
     if status == "error":
         signals.add("error")
-    content_sha256 = _content_digest(attrs, row.get("value"))
+    content_sha256 = _content_digest(attrs)
     if content_sha256:
         signals.add("content_hashed")
 
@@ -204,7 +220,7 @@ def normalize_cortex_span(
         "tool_name": tool_name or None,
         "mcp_server_ref": None,
         "resource_refs": sorted({f"warehouse:{warehouse}"} if warehouse else set()),
-        "principal_hash": _sha256(user) if user else None,
+        "principal_hash": _principal_digest(tenant_id, user) if user else None,
         "role_name": _text(resource.get("snow.session.role.primary.name")) or None,
         "credential_ref": None,
         "input_tokens": _int_or_none(_first(attrs, _INPUT_TOKENS_RE)),
@@ -239,7 +255,7 @@ def fetch_cortex_agent_spans(
     events: list[dict[str, Any]] = []
     _for_each_row(
         conn,
-        "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value "
+        "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes "
         f"FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS({args}, 'CORTEX AGENT')) "  # nosec B608 — literals escaped
         "WHERE record_type = 'SPAN' "
         f"AND timestamp >= DATEADD(day, -{int(days)}, CURRENT_TIMESTAMP()) "  # nosec B608 — days is int

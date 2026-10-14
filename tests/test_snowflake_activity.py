@@ -283,7 +283,7 @@ class TestQueryHistory365:
 
 
 class TestObservabilityEvents:
-    _SPAN_COLUMNS = ["timestamp", "start_timestamp", "trace", "resource_attributes", "record", "record_attributes", "value"]
+    _SPAN_COLUMNS = ["timestamp", "start_timestamp", "trace", "resource_attributes", "record", "record_attributes"]
 
     def test_mine_observability_events(self):
         from agent_bom.cloud.snowflake import _mine_observability_events
@@ -296,7 +296,6 @@ class TestObservabilityEvents:
             "{}",
             '{"name": "ToolCall", "parent_span_id": "root", "status": {"code": "STATUS_CODE_UNSET"}}',
             '{"snow.ai.observability.agent.tool.name": "search_docs", "ai.observability.tool.input": "{\\"query\\": \\"test\\"}"}',
-            None,
         )
         llm_span = (
             "2026-02-20T00:00:01.500Z",
@@ -305,7 +304,6 @@ class TestObservabilityEvents:
             "{}",
             '{"name": "planning", "parent_span_id": "e1"}',
             '{"snow.ai.observability.agent.planning.model": "fake-model"}',
-            None,
         )
         conn.cursor.return_value = _make_cursor(rows=[tool_span, llm_span], columns=self._SPAN_COLUMNS)
 

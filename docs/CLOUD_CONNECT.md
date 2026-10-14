@@ -608,8 +608,9 @@ primary role inherits one of those roles can reach more than the graph shows.
 `DESCRIBE AGENT` returns no specification for a secure agent unless the owner
 role is active, so such agents show `spec_status: hidden` and no tools. Do not
 grant `READ UNREDACTED AI OBSERVABILITY EVENTS TABLE`: the collector keeps only
-tool names, timings, token counts, a SHA-256 digest of span content and a
-SHA-256 hash of the user name, never prompts or tool inputs/outputs.
+tool names, timings, token counts and a SHA-256 digest of span content. It
+stores no user name or plain hash of one, and never prompts or tool
+inputs/outputs.
 See [DESCRIBE AGENT](https://docs.snowflake.com/en/sql-reference/sql/desc-agent),
 [Cortex Agents access control](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents)
 and [GET_AI_OBSERVABILITY_EVENTS](https://docs.snowflake.com/en/sql-reference/functions/get_ai_observability_events-snowflake-local).

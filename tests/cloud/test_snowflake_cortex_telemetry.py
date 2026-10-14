@@ -2,8 +2,8 @@
 
 The fixture row follows the event-table layout GET_AI_OBSERVABILITY_EVENTS
 returns: TIMESTAMP / START_TIMESTAMP, TRACE{trace_id, span_id},
-RECORD{name, parent_span_id, status}, RESOURCE_ATTRIBUTES (snow.* keys),
-RECORD_ATTRIBUTES and VALUE. Identifiers are fictitious.
+RECORD{name, parent_span_id, status}, RESOURCE_ATTRIBUTES (snow.* keys) and
+RECORD_ATTRIBUTES. Identifiers are fictitious.
 """
 
 from __future__ import annotations
@@ -18,6 +18,7 @@ from agent_bom.cloud.snowflake_discovery.cortex_agents import parse_agent_spec
 from agent_bom.cloud.snowflake_discovery.cortex_telemetry import (
     FIELD_MAP,
     NORMALIZED_FIELDS,
+    PENDING_FIELDS,
     UNSUPPLIED_FIELDS,
     fetch_cortex_agent_spans,
     normalize_cortex_span,
@@ -49,7 +50,6 @@ ROW = {
         "gen_ai.usage.completion_tokens": 7,
         "ai.observability.tool.input": "order 1234 for jane@example.invalid",
     },
-    "value": None,
 }
 
 # documented event-table field -> expected normalized value
@@ -61,7 +61,7 @@ MAPPING = {
     "ended_at": "2026-10-02T08:00:03Z",
     "kind": "tool",
     "status": "error",
-    "principal_hash": hashlib.sha256(b"FAKE_USER").hexdigest(),
+    "principal_hash": None,
     "role_name": "HELPDESK_ROLE",
     "resource_refs": ["warehouse:HELPDESK_WH"],
     "model_name": "fake-model",
@@ -101,7 +101,7 @@ def test_documented_field_maps_to_canonical_field(field: str, expected: object) 
 def test_field_coverage_matches_the_documented_mapping() -> None:
     event = _normalize()
     supplied = {field for field, value in event.items() if value not in (None, [], "")}
-    assert supplied == set(NORMALIZED_FIELDS) - set(UNSUPPLIED_FIELDS)
+    assert supplied == set(NORMALIZED_FIELDS) - set(UNSUPPLIED_FIELDS) - set(PENDING_FIELDS)
     mapped = {target for _source, targets, _status in FIELD_MAP for target in targets.replace(" ", "").split("/")}
     assert supplied - mapped == {"tenant_id", "source", "signals", "match_method", "match_node_id"}
 
@@ -110,7 +110,9 @@ def test_raw_content_becomes_a_digest_only() -> None:
     event = _normalize()
     assert "jane@example.invalid" not in json.dumps(event)
     assert "FAKE_USER" not in json.dumps(event)
-    assert len(event["content_sha256"]) == 64
+    expected = hashlib.sha256(json.dumps(["order 1234 for jane@example.invalid", None], sort_keys=True, default=str).encode()).hexdigest()
+    assert event["content_sha256"] == expected
+    assert event["principal_hash"] is None
     assert event["signals"] == ["content_hashed", "error"]
 
 
