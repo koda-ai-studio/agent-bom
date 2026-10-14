@@ -14,8 +14,29 @@ function text(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
+// The edge evidence envelope: `tier` is the producer's own classification.
+const tierLabels: Record<string, string> = {
+  static_scan: "Static / configured", static_evidence: "Static / configured",
+  modeled_infrastructure: "Modeled", recorded: "Recorded observation",
+  runtime_observed: "Runtime observed", derived: "Derived", legacy_unrecorded: "Not recorded",
+};
+
+function enveloped(evidence: Record<string, unknown>) {
+  const tier = text(evidence.tier);
+  if (!tier || !Object.hasOwn(tierLabels, tier)) return null;
+  const blocked = evidence.runtime_observed_state === "blocked" || evidence.blocked === true;
+  const label = blocked ? "Runtime blocked" : tierLabels[tier]!;
+  const mode: "runtime" | "static" | "inferred" | "unknown" = blocked || tier === "runtime_observed" || tier === "recorded" ? "runtime"
+    : tier === "static_scan" || tier === "static_evidence" ? "static"
+    : tier === "modeled_infrastructure" || tier === "derived" ? "inferred" : "unknown";
+  return { label, mode, blocked, source: text(evidence.source) };
+}
+
 /** Present explicit receipt markers; a verb or traversal flag is not evidence. */
 export function graphEdgeEvidence(evidence: Record<string, unknown>) {
+  // Prefer the recorded envelope; the heuristics below serve pre-envelope snapshots.
+  const envelope = enveloped(evidence);
+  if (envelope) return envelope;
   const labels = new Set<string>();
   for (const value of [evidence.evidence_tier, evidence.evidence_basis, evidence.basis]) {
     const key = text(value);
@@ -35,7 +56,7 @@ export function graphEdgeEvidence(evidence: Record<string, unknown>) {
     : label === "Static / configured" ? "static"
     : label === "Inferred" || label === "Modeled" ? "inferred"
     : ["Runtime observed", "Runtime blocked", "Runtime receipt", "Cloud audit observation"].includes(label) ? "runtime" : "unknown";
-  return { label, mode, blocked };
+  return { label, mode, blocked, source: text(evidence.source) };
 
 }
 

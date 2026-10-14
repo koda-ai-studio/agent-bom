@@ -300,7 +300,7 @@ class SQLiteGraphTraversalMixin(SQLiteSnapshotPathsMixin):
                 graph.add_node(node)
             for edge in traversed_edges.values():
                 if edge.source in graph.nodes and edge.target in graph.nodes:
-                    graph.add_edge(edge)
+                    graph.add_stored_edge(edge)
             # A bounded walk must say so. #4595 gave the in-memory container and
             # the Postgres store this shape; the default backend was left
             # returning a fresh GraphCompleteness that reads "complete,

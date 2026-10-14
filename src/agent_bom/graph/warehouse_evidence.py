@@ -11,6 +11,7 @@ from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, TypeAdapter
 from agent_bom.graph import EntityType, NodeDimensions, RelationshipType, UnifiedEdge, UnifiedGraph, UnifiedNode
 from agent_bom.graph.analysis import GraphAnalysisState, GraphAnalysisStatus
 from agent_bom.graph.container import GraphCompleteness
+from agent_bom.graph.relationship_contract import audit_graph_contract
 
 Text = Annotated[str, Field(strict=True, min_length=1, max_length=1024, pattern=r"^[^\x00-\x1f\x7f]+$")]
 _TIMESTAMP = TypeAdapter(AwareDatetime)
@@ -164,4 +165,5 @@ def build_warehouse_graph(rows: dict[str, Any], mapping: dict[str, Any], *, tena
         seen.add(key)
         graph.add_edge(edge)
     graph.completeness = GraphCompleteness(total_nodes=len(nodes), returned_nodes=len(nodes))
+    audit_graph_contract(graph)
     return graph

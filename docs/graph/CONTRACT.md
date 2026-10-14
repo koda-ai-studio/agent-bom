@@ -111,6 +111,8 @@ restores the previous derivation behavior.
 
 Edges carry `weight` and `evidence` (a metadata dict). Bidirectional edges (`shares_server`, `shares_cred`, `correlates_with`) are stored once but traversed both ways.
 
+Every relationship has one `RelationshipSpec` in `agent_bom.graph.relationship_specs`: its traversal class, the exact `(source, target)` entity pairs it may connect, direction, default traversability and required evidence keys. `GET /v1/graph/schema` publishes the registry (`traversal_class`, `allowed_pairs`, `required_evidence`). Every edge's `evidence` names its collector in `source` and the kind of claim in `tier` (`modeled_infrastructure`, `static_scan`, `static_evidence`, `recorded`, `runtime_observed`, `derived`; edges rehydrated from snapshots written before the envelope carry `legacy_unrecorded`). `AGENT_BOM_GRAPH_CONTRACT` sets what a violation does: `warn` (default) keeps the edge and counts it in `analysis_status.relationship_contract`, `enforce` drops an edge whose pair is not allowed, and `strict` raises.
+
 ### Provider authorization receipts
 
 Azure/GCP authorization evaluation emits `can_access` edges only for an explicit

@@ -150,7 +150,7 @@ def load_rollup_graph(
     ).fetchone()
     for source, target, relationship in json.loads(edge_batch[0]):
         if source in graph.nodes and target in graph.nodes:
-            graph.add_edge(
+            graph.add_stored_edge(
                 UnifiedEdge(
                     source=source,
                     target=target,

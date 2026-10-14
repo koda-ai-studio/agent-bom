@@ -16,6 +16,7 @@ from agent_bom.graph.bottleneck import BottleneckAnalysis, compute_bottlenecks
 from agent_bom.graph.edge import UnifiedEdge, merge_edge_evidence
 from agent_bom.graph.integration_contract import GRAPH_ENVELOPE_VERSION, validate_graph_version
 from agent_bom.graph.node import UnifiedNode
+from agent_bom.graph.relationship_contract import admit_edge, merge_edge_provenance
 from agent_bom.graph.severity_floor import FINDING_ENTITY_TYPES, counts_as_finding
 from agent_bom.graph.types import EntityType, GraphSemanticLayer, NodeStatus, RelationshipType
 from agent_bom.graph.util import _now_iso
@@ -452,26 +453,30 @@ class UnifiedGraph:
         self.nodes[node.id] = node
 
     def add_edge(self, edge: UnifiedEdge) -> None:
-        """Add an edge with O(1) deduplication.
+        self._add_edge(edge, admit=True)
 
-        Reverse adjacency is ONLY added for bidirectional edges.
-        Directed edges are one-way in the adjacency map.
+    def add_stored_edge(self, edge: UnifiedEdge) -> None:
+        """Add a persisted edge as stored: the relationship contract is a write-time check."""
+        self._add_edge(edge, admit=False)
 
-        When the (source, target, relationship) triple already exists,
-        the new edge's ``evidence`` dict is **merged into** the kept
-        edge instead of being silently dropped. The graph builder adds
-        the same logical edge from multiple paths (package-path edge
-        first, blast-radius edge second); without the merge, the second
-        caller's evidence (cvss, epss, kev, attack tags) was lost.
+    def _add_edge(self, edge: UnifiedEdge, *, admit: bool) -> None:
+        """Add an edge with O(1) deduplication; reverse adjacency only for bidirectional edges.
+
+        When the (source, target, relationship) triple already exists, the new
+        edge's evidence and provenance are **merged into** the kept edge (the
+        builder adds one logical edge from several paths, e.g. package-path then
+        blast-radius). New edges pass the relationship contract first.
         """
         rel = edge.relationship.value if isinstance(edge.relationship, RelationshipType) else str(edge.relationship)
         key = (edge.source, edge.target, rel)
         if key in self._edge_keys:
-            if edge.evidence:
-                for stored in self.adjacency.get(edge.source, []):
-                    if stored.target == edge.target and stored.relationship == edge.relationship:
-                        merge_edge_evidence(stored.evidence, edge.evidence)
-                        break
+            for stored in self.adjacency.get(edge.source, []):
+                if stored.target == edge.target and stored.relationship == edge.relationship:
+                    merge_edge_evidence(stored.evidence, edge.evidence)
+                    merge_edge_provenance(stored, edge)
+                    break
+            return
+        if admit and not admit_edge(self.nodes, edge):
             return
         self._edge_keys.add(key)
         self.edges.append(edge)
@@ -976,7 +981,7 @@ class UnifiedGraph:
         for nd in data.get("nodes", []):
             graph.add_node(UnifiedNode.from_dict(nd))
         for ed in data.get("edges", []):
-            graph.add_edge(UnifiedEdge.from_dict(ed))
+            graph.add_stored_edge(UnifiedEdge.from_dict(ed))
         for pd in data.get("attack_paths", []):
             graph.attack_paths.append(AttackPath.from_dict(pd))
         for cd in data.get("attack_campaigns", []):
@@ -1070,12 +1075,7 @@ class UnifiedGraph:
         return self._inherit_completeness(self._subgraph(node_filter=node_filter))
 
     def runtime_view(self) -> UnifiedGraph:
-        runtime_rels = {
-            RelationshipType.INVOKED,
-            RelationshipType.ACCESSED,
-            RelationshipType.DELEGATED_TO,
-        }
-        return self._inherit_completeness(self._subgraph(edge_filter=lambda e: e.relationship in runtime_rels))
+        return self._inherit_completeness(self._subgraph(edge_filter=lambda e: e.relationship in _DYNAMIC_RELS))
 
     def filtered_view(self, filters: GraphFilterOptions) -> UnifiedGraph:
         """Build a subgraph from user-controlled filter options."""

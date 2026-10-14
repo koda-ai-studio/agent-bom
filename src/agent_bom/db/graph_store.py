@@ -704,7 +704,7 @@ def load_graph(
     for row in conn.execute(eq, eparams):
         if row["source_id"] not in node_ids or row["target_id"] not in node_ids:
             continue
-        graph.add_edge(
+        graph.add_stored_edge(
             UnifiedEdge(
                 source=row["source_id"],
                 target=row["target_id"],

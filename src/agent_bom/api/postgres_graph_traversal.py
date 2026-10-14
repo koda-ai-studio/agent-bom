@@ -341,7 +341,7 @@ class PostgresGraphTraversalMixin(PostgresGraphSnapshotsMixin):
             graph.add_node(node)
         for edge in edges.values():
             if edge.source in graph.nodes and edge.target in graph.nodes:
-                graph.add_edge(edge)
+                graph.add_stored_edge(edge)
         # A bounded walk must say so, and `returned` must be what we returned.
         # Reporting `returned: 0` beside a non-empty node set was the shipped
         # self-contradiction; matching the in-memory container's shape keeps a
