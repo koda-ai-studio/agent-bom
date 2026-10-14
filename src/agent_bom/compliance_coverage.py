@@ -349,6 +349,15 @@ def scoring_catalog(metadata: ComplianceFrameworkMetadata) -> dict[str, str]:
     return dict(metadata.catalog)
 
 
+def scored_control_codes(tag_field: str, codes: Iterable[str]) -> set[str]:
+    """The ``codes`` that resolve in ``tag_field``'s scoring catalog, i.e. the ones ``/v1/compliance`` can count."""
+    metadata = next((m for m in TAG_MAPPED_FRAMEWORKS if m.tag_field == tag_field), None)
+    if metadata is None:
+        return set()
+    catalog = scoring_catalog(metadata)
+    return {code for code in codes if control_key_for_tag(str(code), catalog)}
+
+
 def control_key_for_tag(tag: str, catalog: Mapping[str, str]) -> str | None:
     """Resolve an emitted compliance tag to its catalog key, or None if unmapped."""
     value = tag.strip()
