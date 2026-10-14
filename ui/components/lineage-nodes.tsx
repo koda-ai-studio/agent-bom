@@ -4,11 +4,13 @@ import type { ComponentType, ReactNode } from "react";
 import { Handle, Position } from "@xyflow/react";
 import { Bug, KeyRound, Package, Wrench } from "lucide-react";
 
+import { NodeBadgeRow, SeverityRingMark } from "@/components/graph-node-badges";
 import { GraphScopeNode } from "@/components/graph-scope-node";
 import type { GraphRollupContainer, GraphCompleteness } from "@/lib/api-types";
 import { severityColor } from "@/lib/api";
 import type { ReachBreakdown } from "@/lib/effective-reach";
 import { NODE_COLOR_MAP } from "@/lib/graph-utils";
+import { nodeBadges } from "@/lib/graph-node-badges";
 import {
   ENTITY_ICONS,
   entityIcon,
@@ -154,12 +156,17 @@ function NodeCard({
 }: CardProps) {
   const Icon = entityIcon(data.nodeType);
   const isRollupContainer = data.attributes?.rollup_is_container === true;
+  const { badges, ring } = nodeBadges(data);
+  const environmentRaw = badges.find((badge) => badge.kind === "environment")?.raw;
+  const shownSubtitle = typeof subtitle === "string" && environmentRaw && subtitle.trim().toLowerCase() === environmentRaw.toLowerCase()
+    ? undefined : subtitle;
   return (
     <div title={data.label} data-graph-entity="true" data-rollup-container={isRollupContainer ? "true" : undefined}
       className={`flex w-[220px] flex-col items-center text-center transition-opacity ${data.dimmed ? "opacity-25" : ""}`}>
       <div className={`graph-entity-glyph relative mb-3 flex h-[72px] w-[72px] items-center justify-center rounded-full border-2 shadow-sm ${
         isRollupContainer ? "border-outline-strong bg-surface-elevated" : `${borderClass} ${bgClass}`
-      } ${data.highlighted ? `ring-2 ring-offset-4 ring-offset-[var(--surface)] ${ringClass}` : ""}`}>
+      } ${data.highlighted ? `ring-2 ${ring ? "ring-offset-[10px]" : "ring-offset-4"} ring-offset-[var(--surface)] ${ringClass}` : ""}`}>
+        {ring && !isRollupContainer && <SeverityRingMark ring={ring} />}
         <Handle type="target" position={data.reverseFlow ? Position.Right : Position.Left}
           className={`!h-1 !w-1 !border-0 !bg-transparent ${target ? "" : "!opacity-0"}`} />
         <Handle type="source" position={data.reverseFlow ? Position.Left : Position.Right}
@@ -172,10 +179,11 @@ function NodeCard({
       <span className="text-xs text-ink-secondary">
         {data.entityType === "application" ? "Application" : NODE_TYPE_BADGES[data.nodeType]}
       </span>
+      <NodeBadgeRow badges={badges} />
       {data.runtimeEvidenceTier && data.runtimeEvidenceTier !== "static_scan" && <div className="mt-1">
         <RuntimeEvidenceChip tier={data.runtimeEvidenceTier} />
       </div>}
-      {subtitle && <div className="graph-node-context mt-1 max-w-full truncate text-xs leading-4 text-ink-secondary">{subtitle}</div>}
+      {shownSubtitle && <div className="graph-node-context mt-1 max-w-full truncate text-xs leading-4 text-ink-secondary">{shownSubtitle}</div>}
       {footer && <div className={`${data.nodeType === "vulnerability" || data.nodeType === "misconfiguration" ? "" : "graph-node-context "}mt-1 flex max-w-full flex-wrap items-baseline justify-center gap-x-2`} title={data.countScope === "loaded_graph" ? graphCountDescription(data) : undefined}>
         {footer}
       </div>}
@@ -465,6 +473,7 @@ function PackageNode({ data }: { data: LineageNodeData }) {
   const provenance = data.versionSource
     ? `${data.versionSource}${data.versionConfidence ? ` · ${data.versionConfidence}` : ""}`
     : "";
+  const ecosystem = nodeBadges(data).badges.some((badge) => badge.kind === "ecosystem") ? "" : data.ecosystem;
   return (
     <NodeCard
       data={data}
@@ -482,8 +491,8 @@ function PackageNode({ data }: { data: LineageNodeData }) {
       iconClass="text-ink-tertiary"
       subtitle={
         data.version
-          ? `${data.version}${data.ecosystem ? ` · ${data.ecosystem}` : ""}${provenance ? ` · ${provenance}` : ""}`
-          : data.ecosystem
+          ? `${data.version}${ecosystem ? ` · ${ecosystem}` : ""}${provenance ? ` · ${provenance}` : ""}`
+          : ecosystem
       }
       footer={
         hasVulns ? (
