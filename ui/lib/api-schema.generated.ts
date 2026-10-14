@@ -14958,10 +14958,20 @@ export interface components {
             agent_name: string;
             /** Credits Used */
             credits_used: number;
+            /**
+             * Database Name
+             * @default
+             */
+            database_name: string;
             /** Model Name */
             model_name: string;
             /** Role Name */
             role_name: string;
+            /**
+             * Schema Name
+             * @default
+             */
+            schema_name: string;
             /** Start Time */
             start_time: string;
             /** Status */
@@ -15151,6 +15161,129 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /**
+         * GovernanceCortexAgentRow
+         * @description One Cortex Agent from DESCRIBE AGENT; ``tools`` are only those its specification declares.
+         */
+        GovernanceCortexAgentRow: {
+            /** Account */
+            account: string;
+            /** Database */
+            database: string;
+            /** Display Name */
+            display_name: string;
+            /** Execution Roles */
+            execution_roles: components["schemas"]["GovernanceCortexExecutionRole"][];
+            /** Fqn */
+            fqn: string;
+            /** Is Secure */
+            is_secure: boolean;
+            /** Name */
+            name: string;
+            /** Node Id */
+            node_id: string;
+            /** Owner */
+            owner: string;
+            /** Schema */
+            schema: string;
+            /** Spec Status */
+            spec_status: string;
+            /** Tools */
+            tools: components["schemas"]["GovernanceCortexTool"][];
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * GovernanceCortexEventRow
+         * @description Normalized Cortex observability span: metadata, digests and derived signals only.
+         */
+        GovernanceCortexEventRow: {
+            /** Agent Name */
+            agent_name: string;
+            /** Agent Ref */
+            agent_ref: string;
+            /** Content Sha256 */
+            content_sha256: string | null;
+            /** Cost Usd */
+            cost_usd: number | null;
+            /** Credential Ref */
+            credential_ref: string | null;
+            /** Ended At */
+            ended_at: string | null;
+            /** Input Tokens */
+            input_tokens: number | null;
+            /** Kind */
+            kind: string;
+            /** Match Method */
+            match_method: string;
+            /** Match Node Id */
+            match_node_id: string | null;
+            /** Mcp Server Ref */
+            mcp_server_ref: string | null;
+            /** Model Name */
+            model_name: string | null;
+            /** Model Provider */
+            model_provider: string | null;
+            /** Output Tokens */
+            output_tokens: number | null;
+            /** Parent Span Id */
+            parent_span_id: string | null;
+            /** Principal Hash */
+            principal_hash: string | null;
+            /** Resource Refs */
+            resource_refs: string[];
+            /** Role Name */
+            role_name: string | null;
+            /** Signals */
+            signals: string[];
+            /** Source */
+            source: string;
+            /** Source Span Id */
+            source_span_id: string | null;
+            /** Source Trace Id */
+            source_trace_id: string | null;
+            /** Started At */
+            started_at: string | null;
+            /** Status */
+            status: string;
+            /** Tenant Id */
+            tenant_id: string | null;
+            /** Tool Name */
+            tool_name: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GovernanceCortexExecutionRole */
+        GovernanceCortexExecutionRole: {
+            /** Granted To */
+            granted_to: string;
+            /** Privilege */
+            privilege: string;
+            /** Role */
+            role: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GovernanceCortexTool */
+        GovernanceCortexTool: {
+            /** Name */
+            name: string;
+            /** Resources */
+            resources: components["schemas"]["GovernanceCortexToolResource"][];
+            /** Type */
+            type: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GovernanceCortexToolResource */
+        GovernanceCortexToolResource: {
+            /** Fqn */
+            fqn: string;
+            /** Kind */
+            kind: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** GovernanceDataClassificationRow */
         GovernanceDataClassificationRow: {
             /** Column Name */
@@ -15278,6 +15411,10 @@ export interface components {
             account: string;
             /** Agent Usage */
             agent_usage: components["schemas"]["GovernanceAgentUsageRow"][];
+            /** Cortex Agents */
+            cortex_agents?: components["schemas"]["GovernanceCortexAgentRow"][];
+            /** Cortex Events */
+            cortex_events?: components["schemas"]["GovernanceCortexEventRow"][];
             /** Data Classifications */
             data_classifications: components["schemas"]["GovernanceDataClassificationRow"][];
             /** Discovered At */
@@ -15298,6 +15435,16 @@ export interface components {
             access_records: number;
             /** Agent Usage Records */
             agent_usage_records: number;
+            /**
+             * Cortex Agents
+             * @default 0
+             */
+            cortex_agents: number;
+            /**
+             * Cortex Events
+             * @default 0
+             */
+            cortex_events: number;
             /** Critical Findings */
             critical_findings: number;
             /** Data Classifications */
@@ -20351,7 +20498,7 @@ export interface components {
          * @description Edge relationship types across all graph surfaces.
          * @enum {string}
          */
-        RelationshipType: "hosts" | "uses" | "uses_framework" | "depends_on" | "provides_tool" | "exposes_cred" | "reaches_tool" | "serves_model" | "contains" | "imports" | "defines" | "runs" | "configures" | "observes" | "affects" | "vulnerable_to" | "exploitable_via" | "remediates" | "triggers" | "shares_server" | "shares_cred" | "lateral_path" | "manages" | "owns" | "part_of" | "member_of" | "assumes" | "trusts" | "attached" | "inherits" | "can_access" | "cross_account_trust" | "authenticates_as" | "scoped_to" | "governs" | "exhibits_drift" | "exposed_to" | "stores" | "has_permission" | "protects" | "acted_as" | "invoked" | "called" | "used_credential" | "accessed" | "delegated_to" | "correlates_with" | "possibly_correlates_with" | "belongs_to";
+        RelationshipType: "hosts" | "uses" | "uses_framework" | "depends_on" | "provides_tool" | "exposes_cred" | "reaches_tool" | "serves_model" | "contains" | "imports" | "defines" | "runs" | "configures" | "observes" | "affects" | "vulnerable_to" | "exploitable_via" | "remediates" | "triggers" | "shares_server" | "shares_cred" | "lateral_path" | "manages" | "owns" | "part_of" | "member_of" | "assumes" | "trusts" | "attached" | "inherits" | "can_access" | "cross_account_trust" | "authenticates_as" | "scoped_to" | "governs" | "exhibits_drift" | "exposed_to" | "stores" | "has_permission" | "protects" | "acted_as" | "invoked" | "called" | "used_credential" | "accessed" | "delegated_to" | "trace_step" | "correlates_with" | "possibly_correlates_with" | "belongs_to";
         /** RemediationImpact */
         RemediationImpact: {
             /** Controls Fixed */
