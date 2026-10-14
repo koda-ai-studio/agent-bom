@@ -14,17 +14,35 @@ export type IssueSeverityMatrix = Record<IssueType, SeverityBucket> & {
   openTotal: number;
 };
 
-const VULNERABILITY_TYPES = new Set(["CVE", "MALICIOUS_PACKAGE"]);
+// Mirrors src/agent_bom/finding_scope.py (pinned by tests/test_finding_class_parity.py).
+const VULNERABILITY_TYPES = new Set([
+  "CVE",
+  "MALICIOUS_PACKAGE",
+  "MALICIOUS_MODEL",
+  "SAST",
+  "INJECTION",
+  "MCP_BLOCKLIST",
+  "EXFILTRATION",
+  "CLOAKING",
+]);
 const MISCONFIGURATION_TYPES = new Set([
   "CIS_FAIL",
   "CIS_ERROR",
   "CLOUD_BEST_PRACTICE_FAIL",
   "CLOUD_BEST_PRACTICE_ERROR",
+  "PROMPT_SECURITY",
+  "TOOL_DRIFT",
+  "SKILL_RISK",
+  "RATE_LIMIT",
+  "COMBINATION",
+  "MODEL_INTEGRITY",
+  "LICENSE",
+  "BROWSER_EXT",
 ]);
 const SECRET_TYPES = new Set(["CREDENTIAL_EXPOSURE"]);
-// Personal data shares the secret scanner as a source, so it must be decided
-// by finding type before the source check below.
-const PII_TYPES = new Set(["PII_EXPOSURE"]);
+// Personal / sensitive data shares the secret scanner as a source, so it must
+// be decided by finding type before the source check below.
+const PII_TYPES = new Set(["PII_EXPOSURE", "SENSITIVE_DATA"]);
 const IDENTITY_TYPES = new Set(["CIEM_OVER_PRIVILEGE"]);
 
 export type IssueTypeSignals = {
@@ -62,7 +80,7 @@ export function classifyIssueTypeFromSignals(signals: IssueTypeSignals): IssueTy
   ) {
     return "misconfiguration";
   }
-  if (VULNERABILITY_TYPES.has(findingType) || /^(cve-|ghsa-)/i.test(signals.id.trim())) {
+  if (VULNERABILITY_TYPES.has(findingType) || sources.includes("SAST") || /^(cve-|ghsa-)/i.test(signals.id.trim())) {
     return "vulnerability";
   }
   return "unclassified";

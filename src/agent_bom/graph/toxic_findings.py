@@ -33,10 +33,10 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from agent_bom.cloud.normalization import coerce_truthy
+from agent_bom.compliance_hub import apply_hub_classification
 from agent_bom.core.severity import severity_rank
 from agent_bom.domain.finding_rehydrate import findings_from_dicts as toxic_combination_findings_from_data
 from agent_bom.finding import Asset, Finding, FindingSource, FindingType
-from agent_bom.framework_mapping import controls_for_finding_shape
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.types import EntityType, RelationshipType
@@ -645,10 +645,8 @@ def _finding_from_match(graph: UnifiedGraph, rule: ToxicRule, match: ToxicMatch)
         impact_category="toxic_combination",
         id=_combination_finding_id(rule.id, match.dedupe_key),
     )
-    control_tags = controls_for_finding_shape(FindingType.COMBINATION, source=FindingSource.GRAPH_ANALYSIS, rule_id=rule.id)
-    for tag_field, controls in control_tags.items():
-        setattr(finding, tag_field, controls)
-    return finding
+    # Shape controls come from evidence["rule_id"]; applicability then covers every tagged framework.
+    return apply_hub_classification(finding)
 
 
 def _entity_type_of(graph: UnifiedGraph, node_id: str) -> str:

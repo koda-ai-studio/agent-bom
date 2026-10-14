@@ -13,7 +13,7 @@ from agent_bom.cmmc import CMMC_PRACTICES
 from agent_bom.eu_ai_act import EU_AI_ACT
 from agent_bom.fedramp import FEDRAMP_MODERATE
 from agent_bom.iso_27001 import ISO_27001
-from agent_bom.mitre_attack import get_bundled_attack_techniques
+from agent_bom.mitre_attack import get_attack_techniques, get_bundled_attack_techniques
 from agent_bom.nist_800_53 import NIST_800_53
 from agent_bom.nist_ai_rmf import NIST_AI_RMF
 from agent_bom.nist_csf import NIST_CSF
@@ -248,7 +248,10 @@ TAG_MAPPED_FRAMEWORKS: tuple[ComplianceFrameworkMetadata, ...] = (
         report_label="ISO 27001",
         bundled_unit="Annex A controls",
         source_standard_size="93",
-        coverage="Supplier, vulnerability, cryptography, secure-dev, evidence collection",
+        coverage=(
+            "Supplier, vulnerability, cryptography, secure-dev, evidence collection; identity, access, "
+            "malware and logging controls reached through NIST's SP 800-53 crosswalk"
+        ),
     ),
     ComplianceFrameworkMetadata(
         family="Regulatory",
@@ -329,6 +332,30 @@ def blast_radius_tag_kwargs(payload: Mapping[str, object]) -> dict[str, list[str
 # normalized, FedRAMP evidence rows carried findings while the status summary in
 # the same document reported zero evaluated controls.
 _TAG_NAMESPACE_PREFIXES: tuple[str, ...] = ("FedRAMP-", "CMMC-", "NIST-", "ISO-", "SOC2-", "CIS-", "PCI-")
+
+
+def scoring_catalog(metadata: ComplianceFrameworkMetadata) -> dict[str, str]:
+    """Return the catalog a framework's emitted tags are resolved and scored against.
+
+    The one resolver for every surface (API, evidence export, CLI narrative).
+    ``metadata.catalog`` stays the deterministic *bundled* catalog used for the
+    disclosed counts in docs; MITRE ATT&CK is scored against the ACTIVE catalog
+    (synced when one exists) because that is the catalog its tagger reads. A
+    technique only present in a synced catalog would otherwise be tagged and
+    then dropped by the API while the CLI showed it.
+    """
+    if metadata.slug == "attack":
+        return get_attack_techniques()
+    return dict(metadata.catalog)
+
+
+def scored_control_codes(tag_field: str, codes: Iterable[str]) -> set[str]:
+    """The ``codes`` that resolve in ``tag_field``'s scoring catalog, i.e. the ones ``/v1/compliance`` can count."""
+    metadata = next((m for m in TAG_MAPPED_FRAMEWORKS if m.tag_field == tag_field), None)
+    if metadata is None:
+        return set()
+    catalog = scoring_catalog(metadata)
+    return {code for code in codes if control_key_for_tag(str(code), catalog)}
 
 
 def control_key_for_tag(tag: str, catalog: Mapping[str, str]) -> str | None:

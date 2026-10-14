@@ -63,7 +63,7 @@ class _FailingGraphStore:
 
 @pytest.mark.asyncio
 async def test_exposure_paths_impl_returns_agent_native_contract():
-    response = await exposure_paths_impl(_get_graph_store=lambda: _GraphStore(), _truncate_response=lambda value: value)
+    response = await exposure_paths_impl(view="full", _get_graph_store=lambda: _GraphStore(), _truncate_response=lambda value: value)
     payload = json.loads(response)
 
     assert payload["schema_version"] == "v1"
@@ -97,7 +97,9 @@ async def test_exposure_paths_impl_explains_empty_queue():
     payload = json.loads(response)
 
     assert payload["count"] == 0
-    assert payload["total"] == 1
+    # ``total`` counts paths matching the filters, as /v1/graph/attack-paths does.
+    assert payload["total"] == 0
+    assert payload["snapshot_total"] == 1
     assert payload["message"] == "0 paths matched min_risk=95; lower min_risk to inspect lower-risk ExposurePaths."
 
 
@@ -170,7 +172,7 @@ def topology_store(tmp_path):
 
 @pytest.mark.asyncio
 async def test_exposure_paths_derives_persisted_topology_with_limits(topology_store):
-    payload = json.loads(await exposure_paths_impl(scan_id="topology", limit=2, _get_graph_store=lambda: topology_store))
+    payload = json.loads(await exposure_paths_impl(scan_id="topology", limit=2, view="full", _get_graph_store=lambda: topology_store))
     assert payload["count"] == 2
     assert payload["total"] == 3
     assert payload["completeness"]["complete"] is False
@@ -179,14 +181,17 @@ async def test_exposure_paths_derives_persisted_topology_with_limits(topology_st
     assert payload["paths"][0]["nodeIds"][:3] == ["agent:a", "server:s", "pkg:p"]
     filtered = json.loads(await exposure_paths_impl(scan_id="topology", min_risk=40, _get_graph_store=lambda: topology_store))
     assert filtered["count"] == 0
-    assert filtered["total"] == 3
+    assert filtered["total"] == 0
+    assert filtered["snapshot_total"] == 3
     assert "min_risk=40" in filtered["message"]
 
 
 @pytest.mark.asyncio
 async def test_exposure_paths_fallback_preserves_tenant_scope(topology_store, monkeypatch):
     monkeypatch.setenv("AGENT_BOM_MCP_TENANT_ID", "other")
-    payload = json.loads(await exposure_paths_impl(tenant_id="default", scan_id="topology", _get_graph_store=lambda: topology_store))
+    payload = json.loads(
+        await exposure_paths_impl(tenant_id="default", scan_id="topology", view="full", _get_graph_store=lambda: topology_store)
+    )
     assert payload["count"] == 0
     assert payload["nodes"] == []
     assert payload["edges"] == []
@@ -202,9 +207,9 @@ async def test_deploy_decision_does_not_approve_structural_candidates(topology_s
 
 @pytest.mark.asyncio
 async def test_exposure_paths_discloses_bounded_derivation(topology_store, monkeypatch):
-    monkeypatch.setattr("agent_bom.mcp_tools.graph.GRAPH_INVESTIGATION_NODE_BUDGET", 2, raising=False)
+    monkeypatch.setattr("agent_bom.mcp_tools.exposure_queue.GRAPH_INVESTIGATION_NODE_BUDGET", 2, raising=False)
     # Only read-time derivation is bounded; a current stored path index covers the whole snapshot.
-    monkeypatch.setattr(topology_store, "snapshot_attack_paths", lambda **_kwargs: None)
+    monkeypatch.setattr(topology_store, "snapshot_queue_page", lambda **_kwargs: None)
     payload = json.loads(await exposure_paths_impl(scan_id="topology", _get_graph_store=lambda: topology_store))
     assert payload["completeness"]["complete"] is False
     assert payload["completeness"]["reason"] == "node_budget"
@@ -250,7 +255,7 @@ async def test_exposure_cursor_rejects_different_filter_and_tenant(topology_stor
 async def test_exposure_pages_keep_structured_paths_under_response_budget(topology_store, monkeypatch):
     first = json.loads(await exposure_paths_impl(limit=1, _get_graph_store=lambda: topology_store))
     budget = len(json.dumps(first)) + 300
-    monkeypatch.setattr("agent_bom.mcp_tools.graph.MCP_MAX_RESPONSE_CHARS", budget)
+    monkeypatch.setattr("agent_bom.mcp_tools.exposure_queue.MCP_MAX_RESPONSE_CHARS", budget)
     from agent_bom.mcp_server_runtime import truncate_response
 
     cursor = None

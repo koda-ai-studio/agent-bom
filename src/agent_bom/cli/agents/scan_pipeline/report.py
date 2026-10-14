@@ -130,7 +130,7 @@ def _seed_findings_and_scan_id(opts: ScanOptions, st: ScanState) -> None:
 
 
 def _collect_scan_issues(opts: ScanOptions, st: ScanState) -> None:
-    from agent_bom.evidence.scan_run import ScanIssue, ScanOutcome
+    from agent_bom.evidence.scan_run import ScanIssue, ScanOutcome, vulnerability_scan_skipped_issue
 
     st.scan_issues = [
         ScanIssue(
@@ -174,6 +174,8 @@ def _collect_scan_issues(opts: ScanOptions, st: ScanState) -> None:
         for _notice in st.ctx.scan_notices
     )
     st.scan_issues.extend(_benchmark_scan_issues(st.ctx))
+    if opts.no_scan:
+        st.scan_issues.append(vulnerability_scan_skipped_issue())
     st.scan_outcome = (
         ScanOutcome.FAILED
         if st.ctx.cloud_provider_failures and not st.ctx.cloud_provider_successes and not st.agents

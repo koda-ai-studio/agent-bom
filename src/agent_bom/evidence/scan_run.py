@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from enum import Enum
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, Literal
 
 from agent_bom.coverage import is_graph_analysis_gap, is_scope_exclusion
@@ -296,6 +297,28 @@ def _ledger_stage(value: str) -> EvidenceStage:
 # evaluated. A failure in another lane (a cloud collector, a k8s collector) makes
 # the run partial without invalidating the vulnerability verdict, so it must not
 # blank the posture grade.
+# Receipt that the vulnerability lane was skipped on request (``--no-scan``).
+# Not a coverage gap: the run is complete for what was asked, but it is not
+# evidence that vulnerabilities were scanned.
+VULNERABILITY_SCAN_SKIPPED_CODE = "vulnerability_scan_skipped"
+VULNERABILITY_SCAN_SKIPPED_MESSAGE = "Vulnerability scanning skipped by request"
+
+
+def vulnerability_scan_skipped_issue() -> ScanIssue:
+    return ScanIssue(
+        code=VULNERABILITY_SCAN_SKIPPED_CODE,
+        stage="scanning",
+        source="agent-bom",
+        message=VULNERABILITY_SCAN_SKIPPED_MESSAGE,
+        affects_coverage=False,
+    )
+
+
+def vulnerability_scan_skipped(run: ScanRun) -> bool:
+    """True when the run carries the skip receipt (or the message older API reports recorded)."""
+    return any(issue.code == VULNERABILITY_SCAN_SKIPPED_CODE or issue.message == VULNERABILITY_SCAN_SKIPPED_MESSAGE for issue in run.issues)
+
+
 _VULN_COVERAGE_CODES = frozenset({"required_scanner_unavailable", "scanner_warning", "vulnerability_coverage_gap"})
 _UNRESOLVED_PACKAGE_WARNING = re.compile(r"^(?P<count>\d+) package\(s\) skipped due to unresolved versions$")
 _MAX_GRADEABLE_UNRESOLVED_RATIO = 0.05
@@ -369,13 +392,62 @@ def vulnerability_coverage_incomplete(report: Any) -> bool:
     return False
 
 
+def result_vulnerability_coverage_incomplete(result: Any) -> bool:
+    """:func:`vulnerability_coverage_incomplete` over a serialized scan result.
+
+    The API stores the JSON report, not the ``AIBOMReport``; rebuild just the
+    fields the shared derivation reads so the control plane and the CLI can
+    never disagree about whether a scan's vulnerability lane was complete.
+    """
+    if not isinstance(result, dict):
+        return False
+    return vulnerability_coverage_incomplete(serialized_coverage_view(result))
+
+
+def serialized_coverage_view(result: dict[str, Any]) -> SimpleNamespace:
+    """The report attributes :func:`vulnerability_coverage_incomplete` reads,
+    rebuilt from a serialized (JSON) scan report."""
+    raw_run = result.get("scan_run")
+    run_payload: dict[str, Any] = raw_run if isinstance(raw_run, dict) else {}
+    try:
+        outcome = ScanOutcome(str(run_payload.get("outcome") or ScanOutcome.COMPLETE.value))
+    except ValueError:
+        outcome = ScanOutcome.PARTIAL
+    issues = [
+        ScanIssue(
+            code=str(raw.get("code") or ""),
+            stage=str(raw.get("stage") or ""),
+            source=str(raw.get("source") or ""),
+            message=str(raw.get("message") or ""),
+            affects_coverage=raw.get("affects_coverage") is not False,
+        )
+        for raw in run_payload.get("issues") or []
+        if isinstance(raw, dict)
+    ]
+    raw_summary = result.get("summary")
+    summary: dict[str, Any] = raw_summary if isinstance(raw_summary, dict) else {}
+    return SimpleNamespace(
+        scan_performance_data=result.get("scan_performance") or result.get("scan_performance_data"),
+        scan_run=SimpleNamespace(outcome=outcome, issues=issues, scopes=[]),
+        coverage_warnings=result.get("coverage_warnings") or [],
+        agents=[],
+        total_packages=summary.get("total_packages", 0),
+    )
+
+
 __all__ = [
     "ScanIssue",
     "ScanOutcome",
     "ScanRun",
     "ScanScope",
     "ScanScopeStatus",
+    "VULNERABILITY_SCAN_SKIPPED_CODE",
+    "VULNERABILITY_SCAN_SKIPPED_MESSAGE",
     "effective_scan_run",
+    "result_vulnerability_coverage_incomplete",
+    "serialized_coverage_view",
     "vulnerability_coverage_caveat",
     "vulnerability_coverage_incomplete",
+    "vulnerability_scan_skipped",
+    "vulnerability_scan_skipped_issue",
 ]

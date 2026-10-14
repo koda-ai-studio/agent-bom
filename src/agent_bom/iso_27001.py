@@ -28,7 +28,9 @@ _HIGH_RISK = high_risk_severities()
 # copyrighted, so its control text is NOT reproduced or redistributed here; only
 # the Annex A control **identifier** (the fact) is used. Consult the standard for
 # the official titles: https://www.iso.org/standard/27001
-ISO_27001: dict[str, str] = {
+#
+# Identifiers the rules below assert directly, with agent-bom's own descriptor.
+ISO_27001_DIRECT: dict[str, str] = {
     # A.5 — Organizational controls
     "A.5.19": "Supplier-relationship information security",
     "A.5.20": "Security terms in supplier agreements",
@@ -40,6 +42,39 @@ ISO_27001: dict[str, str] = {
     "A.8.9": "System configuration management",
     "A.8.24": "Use of cryptographic protection",
     "A.8.28": "Secure development / coding practices",
+}
+
+# Identifiers reached only through NIST's SP 800-53 Rev 5 -> ISO crosswalk
+# (``framework_catalog.nist_to_iso_crosswalk``) from a NIST control the CWE or
+# finding-shape tables emit. They carry no descriptor of ours: the crosswalk,
+# not a rule here, is the reason they apply. Without them in the scoring
+# catalog the finding would silently drop off the ISO line;
+# ``tests/test_compliance_catalog_alignment.py`` enumerates every tagger.
+ISO_27001_CROSSWALK_IDS: tuple[str, ...] = (
+    "A.5.10",
+    "A.5.14",
+    "A.5.15",
+    "A.5.16",
+    "A.5.17",
+    "A.5.33",
+    "A.8.2",
+    "A.8.3",
+    "A.8.4",
+    "A.8.7",
+    "A.8.15",
+    "A.8.16",
+    "A.8.18",
+    "A.8.19",
+    "A.8.20",
+    "A.8.26",
+)
+
+_CROSSWALK_LABEL = "Reached through the NIST SP 800-53 Rev 5 crosswalk"
+
+# Scoring catalog: every Annex A identifier a tagger can emit.
+ISO_27001: dict[str, str] = {
+    **ISO_27001_DIRECT,
+    **{control_id: _CROSSWALK_LABEL for control_id in ISO_27001_CROSSWALK_IDS if control_id not in ISO_27001_DIRECT},
 }
 
 

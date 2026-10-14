@@ -163,6 +163,8 @@ def _minimal_args(name: str, workdir: Path) -> dict[str, Any]:
         # error without touching the network — which is the contract.
         "youcom_search": {"query": "agent-bom"},
         "inventory_asset": {"asset_id": "asset-does-not-exist"},
+        "graph_reach": {"node_id": "node-does-not-exist"},
+        "finding_detail": {"finding_id": "finding-does-not-exist"},
         "license_compliance_scan": {"scan_json": "{}"},
         "marketplace_check": {"package": "requests"},
         "model_file_scan": {"directory": p},

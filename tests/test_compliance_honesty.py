@@ -122,6 +122,7 @@ def _add_done_job(
     job_id: str = "job-honesty",
     completed_at: str | None = None,
     tenant_id: str = "default",
+    scanned_packages: int = 0,
 ) -> None:
     from agent_bom.api.server import ScanJob, ScanRequest
 
@@ -134,6 +135,9 @@ def _add_done_job(
     job.status = JobStatus.DONE
     job.completed_at = completed_at or _iso(0)
     job.result = {"agents": [], "blast_radius": blast_radius, "threat_framework_summary": {}}
+    if scanned_packages:
+        job.result["summary"] = {"total_packages": scanned_packages}
+        job.result["scan_performance"] = {"osv": {"packages_seen": scanned_packages}}
     _get_store().put(job)
 
 
@@ -326,7 +330,7 @@ def test_scanning_alone_is_not_compliance() -> None:
     used to appear over an unmeasured estate.
     """
     _clear_jobs()
-    _add_done_job([])
+    _add_done_job([], scanned_packages=3)
     with TestClient(app) as client:
         payload = client.get("/v1/compliance", headers=_AUTH_HEADERS).json()
 
