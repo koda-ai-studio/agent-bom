@@ -62,35 +62,35 @@ blast radius across packages, workloads, tools, identities and resources.
 Inspect each relationship's source and reachability basis, then rescan the same
 scope to check what changed.
 
-<p align="center"><a href="docs/images/graph-relationship-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/graph-relationship-light-live.png"><img src="docs/images/graph-relationship-dark-live.png" alt="Focused investigation linking a service, workload and tool, with the selected relationship's runtime evidence open" width="1100"></picture></a></p>
+<p align="center"><a href="docs/images/graph-relationship-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/graph-relationship-light-live.png"><img src="docs/images/graph-relationship-dark-live.png" alt="Repository pin, image SBOM and Kubernetes workload resolving to one pillow package linked to KEV-listed CVE-2023-4863, with the advisory receipt open" width="1100"></picture></a></p>
 
-*Current-source preview; the published `0.108.4` UI predates this investigation
-workspace.* The reference lab combines real parsers and local gateway calls
-with modeled infrastructure. A confirmed graph path means directed,
-provenance-backed hops within recorded bounds; it does not prove exploitation
-or successful data access. Missing or stale evidence remains explicit.
+*Current-source preview; the published `0.108.4` UI predates this workspace.*
+Three independent sources resolve to one `pillow@9.0.0` linked to KEV-listed
+CVE-2023-4863. Real parsers, modeled infrastructure; a graph path does not
+prove exploitation.
 
 [Explore context, correlation and reachability](docs/PRODUCT_TOUR.md#context-correlation-and-reachability) · [Run the reference lab](examples/reference-evidence-lab/README.md)
 
 **Explore an environment, repository or cloud estate.** Start with a scoped view,
-select an entity, and inspect its recorded relationships and source evidence.
-These current-source previews use labeled synthetic examples.
+follow the ranked paths, and open any node or arrow for its source evidence.
+Badges show provider, environment tier and package ecosystem; rings mark the
+worst linked finding.
 
-<p align="center"><a href="docs/images/graph-environment-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/graph-environment-light-live.png"><img src="docs/images/graph-environment-dark-live.png" alt="Sample environment connecting an AI agent, model, MCP server, tool, package and container workload" width="1100"></picture></a></p>
+<p align="center"><a href="docs/images/graph-environment-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/graph-environment-light-live.png"><img src="docs/images/graph-environment-dark-live.png" alt="Sample production AI environment where two agents and a model-serving workload reach vulnerable packages, a KEV-listed advisory, an exposed API key and a customer data store" width="1100"></picture></a></p>
+
+*Sample estates: fictional names and IDs, published advisories.*
 
 <details>
 <summary>Repository and cloud investigations</summary>
 
-Follow source files, dependencies and CI context in a repository:
+Trace source imports, deployment configuration and CI to a published container
+and its vulnerable packages:
 
-<p align="center"><a href="docs/images/graph-repository-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/graph-repository-light-live.png"><img src="docs/images/graph-repository-dark-live.png" alt="Synthetic repository graph with source, dependency and CI relationships" width="1100"></picture></a></p>
+<p align="center"><a href="docs/images/graph-repository-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/graph-repository-light-live.png"><img src="docs/images/graph-repository-dark-live.png" alt="Sample repository linking source, deployment configuration and a CI job to a container, vulnerable npm and PyPI packages, their advisories and a CI misconfiguration" width="1100"></picture></a></p>
 
-Inspect cloud assets and the identities connected to them:
+Follow a public API gateway into a vulnerable workload, its role and a PII bucket:
 
-<p align="center"><a href="docs/images/graph-cloud-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/graph-cloud-light-live.png"><img src="docs/images/graph-cloud-dark-live.png" alt="Synthetic cloud estate graph with assets and recorded identity relationships" width="1100"></picture></a></p>
-
-Recorded relationships describe the available evidence; they do not establish
-successful execution or data access.
+<p align="center"><a href="docs/images/graph-cloud-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/graph-cloud-light-live.png"><img src="docs/images/graph-cloud-dark-live.png" alt="Sample cloud account where a public API gateway exposes a workload with a critical advisory that authenticates as a role permitted to read a PII bucket" width="1100"></picture></a></p>
 
 </details>
 

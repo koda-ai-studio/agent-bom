@@ -29,6 +29,7 @@ export const PRODUCT_SCREENSHOT_INPUTS = [
   "ui/postcss.config.mjs",
   "ui/scripts/capture-product-proof.mjs",
   "ui/scripts/product-proof-scope.mjs",
+  "ui/scripts/product-proof-scope-showcase.mjs",
   "ui/scripts/product-proof-server.mjs",
   "ui/scripts/product-proof-provenance.mjs",
   "examples/reference-evidence-lab",

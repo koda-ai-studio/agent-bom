@@ -1404,7 +1404,7 @@ for (const proof of [
     await inspectPathAssessment(lens, "Unknown");
     await lens.getByText("Evidence & relationships", { exact: true }).click();
     await expect(lens.getByRole("region", { name: "Relationship proof" })).toContainText("Context only; not traversable");
-    await lens.getByText("Inspect 1 hop receipts", { exact: true }).click();
+    await lens.getByText("Inspect 1 hop receipt", { exact: true }).click();
     const inspector = lens.getByRole("region", { name: "Hop evidence inspector" });
     const hopButton = inspector.getByRole("button", { name: /1\. A long assistant/ });
     await hopButton.focus();

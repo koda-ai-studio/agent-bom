@@ -497,7 +497,7 @@ export function SigmaGraphOverview({
               Legend
             </summary>
             <div className="mt-2">
-              <GraphLegend items={legendItems} embedded />
+              <GraphLegend items={legendItems.filter((item) => item.kind !== "badge")} embedded />
             </div>
           </details>
         </div>

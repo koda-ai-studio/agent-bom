@@ -174,7 +174,7 @@ describe("product proof capture contract", () => {
     expect(source).toContain('minGraphEdgeLabelFontPx: 12');
     expect(source).toContain("node.offsetWidth");
     expect(graphPage).toContain('renderBand: "detail"');
-    expect(graphPage).toContain("serpentineColumn * 460");
+    expect(graphPage).toContain("serpentinePositions(ordered, 4, { column: 460, row: 220 })");
     expect(graphPage).toContain("Math.max(12, Math.min(20, 13 / Math.max(graphViewport.zoom, 0.2)))");
     expect(source).toContain('minGraphWidthFillRatio: 0.65');
     expect(source).toContain('assertEdgeLabelsClearOfNodes: true');
