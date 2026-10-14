@@ -126,8 +126,6 @@ class ObservabilityEvent:
     input_tokens: int = 0
     output_tokens: int = 0
     tool_name: str = ""
-    tool_input: str = ""
-    tool_output_summary: str = ""
     user_feedback: str = ""
     trace_id: str = ""  # correlates events in a single execution
     parent_event_id: str = ""
@@ -228,6 +226,9 @@ class GovernanceReport:
     privilege_grants: list[PrivilegeGrant] = field(default_factory=list)
     data_classifications: list[DataClassification] = field(default_factory=list)
     agent_usage: list[AgentUsageRecord] = field(default_factory=list)
+    # DESCRIBE AGENT specifications and normalized observability spans (no raw content).
+    cortex_agents: list[dict] = field(default_factory=list)
+    cortex_events: list[dict] = field(default_factory=list)
     findings: list[GovernanceFinding] = field(default_factory=list)
     discovered_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     warnings: list[str] = field(default_factory=list)
@@ -241,6 +242,8 @@ class GovernanceReport:
                 "privilege_grants": len(self.privilege_grants),
                 "data_classifications": len(self.data_classifications),
                 "agent_usage_records": len(self.agent_usage),
+                "cortex_agents": len(self.cortex_agents),
+                "cortex_events": len(self.cortex_events),
                 "findings": len(self.findings),
                 "critical_findings": sum(1 for f in self.findings if f.severity == GovernanceSeverity.CRITICAL),
                 "high_findings": sum(1 for f in self.findings if f.severity == GovernanceSeverity.HIGH),
@@ -292,6 +295,8 @@ class GovernanceReport:
             "agent_usage": [
                 {
                     "agent_name": u.agent_name,
+                    "database_name": u.database_name,
+                    "schema_name": u.schema_name,
                     "user_name": u.user_name,
                     "role_name": u.role_name,
                     "start_time": u.start_time,
@@ -303,5 +308,7 @@ class GovernanceReport:
                 }
                 for u in self.agent_usage
             ],
+            "cortex_agents": self.cortex_agents,
+            "cortex_events": self.cortex_events,
             "warnings": self.warnings,
         }

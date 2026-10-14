@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import re
+from datetime import datetime
 from typing import Any
 
 from agent_bom.governance import (
@@ -25,6 +26,8 @@ from .snowflake_common import (
     _record_snowflake_inventory_failure,
     _sf,
 )
+from .snowflake_discovery.cortex_agents import list_cortex_agents
+from .snowflake_discovery.cortex_telemetry import fetch_cortex_agent_spans
 
 # Log under the façade's logger so existing log routing and filters keep applying.
 logger = logging.getLogger("agent_bom.cloud.snowflake")
@@ -311,7 +314,7 @@ def discover_activity(
         timeline.query_history = queries
         timeline.warnings.extend(qh_warns)
 
-        # 2. AI_OBSERVABILITY_EVENTS
+        # 2. Cortex Agent observability spans
         events, ev_warns = _mine_observability_events(conn, days)
         timeline.observability_events = events
         timeline.warnings.extend(ev_warns)
@@ -399,67 +402,59 @@ def _mine_query_history_365(
     return records, warnings
 
 
+_EVENT_TYPES = {"agent": "AGENT_RUN", "tool": "TOOL_CALL", "llm": "LLM_INFERENCE", "retrieval": "RETRIEVAL", "mcp": "MCP_CALL"}
+
+
+def _duration_ms(started: str | None, ended: str | None) -> int:
+    try:
+        start = datetime.fromisoformat(str(started).replace("Z", "+00:00"))
+        end = datetime.fromisoformat(str(ended).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return 0
+    return max(0, int((end - start).total_seconds() * 1000))
+
+
+def _observability_event(event: dict[str, Any]) -> ObservabilityEvent:
+    return ObservabilityEvent(
+        event_id=event.get("source_span_id") or "",
+        event_type=_EVENT_TYPES.get(event.get("kind") or "", "OTHER"),
+        agent_name=event.get("agent_name") or "",
+        timestamp=event.get("started_at") or event.get("ended_at") or "",
+        duration_ms=_duration_ms(event.get("started_at"), event.get("ended_at")),
+        status="ERROR" if event.get("status") == "error" else "OK",
+        model_name=event.get("model_name") or "",
+        input_tokens=event.get("input_tokens") or 0,
+        output_tokens=event.get("output_tokens") or 0,
+        tool_name=event.get("tool_name") or "",
+        trace_id=event.get("source_trace_id") or "",
+        parent_event_id=event.get("parent_span_id") or "",
+        details={"content_sha256": event.get("content_sha256"), "signals": event.get("signals") or []},
+    )
+
+
 def _mine_observability_events(
     conn: Any,
     days: int,
+    agents: list[dict[str, Any]] | None = None,
 ) -> tuple[list[ObservabilityEvent], list[str]]:
-    """Mine SNOWFLAKE.LOCAL.AI_OBSERVABILITY_EVENTS for agent execution traces.
+    """Mine Cortex Agent spans via SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS.
 
-    Provides full execution traces including tool calls, LLM inferences,
-    and user feedback. Available when AI observability is enabled.
+    The function is scoped to one agent (database, schema, name,
+    ``'CORTEX AGENT'``), so agents are listed first unless supplied. Tool
+    inputs/outputs are reduced to a content digest; no raw content is kept.
     """
-    events: list[ObservabilityEvent] = []
     warnings: list[str] = []
-    cursor = conn.cursor()
     days = _coerce_snowflake_days(days, max_days=365)
-
-    try:
-        cursor.execute(
-            "SELECT event_id, event_type, agent_name, timestamp, "
-            "       duration_ms, status, model_name, "
-            "       input_tokens, output_tokens, "
-            "       tool_name, tool_input, tool_output_summary, "
-            "       user_feedback, trace_id, parent_event_id "
-            "FROM TABLE(SNOWFLAKE.LOCAL.AI_OBSERVABILITY_EVENTS("
-            f"  INTERVAL => '{min(days, 365)} days'"  # nosec B608 — days is int
-            ")) "
-            "ORDER BY timestamp DESC "
-            "LIMIT 5000"
-        )
-        columns = [desc[0].lower() for desc in cursor.description] if cursor.description else []
-
-        for row in cursor.fetchall():
-            row_dict = dict(zip(columns, row))
-            events.append(
-                ObservabilityEvent(
-                    event_id=str(row_dict.get("event_id", "")),
-                    event_type=str(row_dict.get("event_type", "")),
-                    agent_name=str(row_dict.get("agent_name", "")),
-                    timestamp=str(row_dict.get("timestamp", "")),
-                    duration_ms=int(row_dict.get("duration_ms", 0) or 0),
-                    status=str(row_dict.get("status", "")),
-                    model_name=str(row_dict.get("model_name", "")),
-                    input_tokens=int(row_dict.get("input_tokens", 0) or 0),
-                    output_tokens=int(row_dict.get("output_tokens", 0) or 0),
-                    tool_name=str(row_dict.get("tool_name", "")),
-                    tool_input=str(row_dict.get("tool_input", ""))[:500],
-                    tool_output_summary=str(row_dict.get("tool_output_summary", ""))[:500],
-                    user_feedback=str(row_dict.get("user_feedback", "")),
-                    trace_id=str(row_dict.get("trace_id", "")),
-                    parent_event_id=str(row_dict.get("parent_event_id", "")),
-                )
-            )
-
-    except Exception as exc:
-        msg = str(exc)
-        if "ai_observability" in msg.lower() or "does not exist" in msg.lower():
-            warnings.append("AI_OBSERVABILITY_EVENTS not available. Enable AI observability in Snowflake to capture agent traces.")
-        else:
-            warnings.append(f"Could not query AI_OBSERVABILITY_EVENTS: {sanitize_error(exc)}")
-
-    finally:
-        cursor.close()
-
+    if agents is None:
+        agents = [
+            {"database": row.get("database_name"), "schema": row.get("schema_name"), "name": row.get("name")}
+            for row in list_cortex_agents(conn, warnings)
+        ]
+    span_warnings: list[str] = []
+    events = [_observability_event(event) for agent in agents for event in fetch_cortex_agent_spans(conn, agent, days, span_warnings)]
+    if span_warnings and not events:
+        warnings.append("AI observability events not available. Requires MONITOR on each agent and SNOWFLAKE.CORTEX_USER.")
+    warnings.extend(span_warnings)
     return events, warnings
 
 

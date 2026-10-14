@@ -283,73 +283,45 @@ class TestQueryHistory365:
 
 
 class TestObservabilityEvents:
+    _SPAN_COLUMNS = ["timestamp", "start_timestamp", "trace", "resource_attributes", "record", "record_attributes", "value"]
+
     def test_mine_observability_events(self):
         from agent_bom.cloud.snowflake import _mine_observability_events
 
         conn = _make_mock_conn()
-        cursor = _make_cursor(
-            rows=[
-                (
-                    "e1",
-                    "TOOL_CALL",
-                    "my_agent",
-                    "2026-02-20T00:00:00Z",
-                    150,
-                    "SUCCESS",
-                    "claude-3.5-sonnet",
-                    100,
-                    50,
-                    "search_docs",
-                    '{"query": "test"}',
-                    "Found 3 results",
-                    "",
-                    "trace-123",
-                    "",
-                ),
-                (
-                    "e2",
-                    "LLM_INFERENCE",
-                    "my_agent",
-                    "2026-02-20T00:00:01Z",
-                    500,
-                    "SUCCESS",
-                    "claude-3.5-sonnet",
-                    500,
-                    200,
-                    "",
-                    "",
-                    "",
-                    "",
-                    "trace-123",
-                    "e1",
-                ),
-            ],
-            columns=[
-                "event_id",
-                "event_type",
-                "agent_name",
-                "timestamp",
-                "duration_ms",
-                "status",
-                "model_name",
-                "input_tokens",
-                "output_tokens",
-                "tool_name",
-                "tool_input",
-                "tool_output_summary",
-                "user_feedback",
-                "trace_id",
-                "parent_event_id",
-            ],
+        tool_span = (
+            "2026-02-20T00:00:00.150Z",
+            "2026-02-20T00:00:00Z",
+            '{"trace_id": "trace-123", "span_id": "e1"}',
+            "{}",
+            '{"name": "ToolCall", "parent_span_id": "root", "status": {"code": "STATUS_CODE_UNSET"}}',
+            '{"snow.ai.observability.agent.tool.name": "search_docs", "ai.observability.tool.input": "{\\"query\\": \\"test\\"}"}',
+            None,
         )
-        conn.cursor.return_value = cursor
+        llm_span = (
+            "2026-02-20T00:00:01.500Z",
+            "2026-02-20T00:00:01Z",
+            '{"trace_id": "trace-123", "span_id": "e2"}',
+            "{}",
+            '{"name": "planning", "parent_span_id": "e1"}',
+            '{"snow.ai.observability.agent.planning.model": "fake-model"}',
+            None,
+        )
+        conn.cursor.return_value = _make_cursor(rows=[tool_span, llm_span], columns=self._SPAN_COLUMNS)
 
-        events, warnings = _mine_observability_events(conn, 30)
+        agents = [{"database": "DB", "schema": "S", "name": "MY_AGENT", "tools": [{"name": "search_docs"}]}]
+        events, warnings = _mine_observability_events(conn, 30, agents)
+        sql = conn.cursor.return_value.execute.call_args[0][0]
+        assert "SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB', 'S', 'MY_AGENT', 'CORTEX AGENT')" in sql
         assert len(events) == 2
         assert events[0].event_type == "TOOL_CALL"
         assert events[0].tool_name == "search_docs"
         assert events[0].trace_id == "trace-123"
+        assert events[0].duration_ms == 150
+        assert len(events[0].details["content_sha256"]) == 64
+        assert "test" not in str(events[0])
         assert events[1].event_type == "LLM_INFERENCE"
+        assert events[1].model_name == "fake-model"
         assert events[1].parent_event_id == "e1"
         assert warnings == []
 
@@ -358,12 +330,12 @@ class TestObservabilityEvents:
 
         conn = _make_mock_conn()
         cursor = MagicMock()
-        cursor.execute.side_effect = Exception("ai_observability_events does not exist")
+        cursor.execute.side_effect = Exception("Unknown function GET_AI_OBSERVABILITY_EVENTS")
         conn.cursor.return_value = cursor
 
-        events, warnings = _mine_observability_events(conn, 30)
+        events, warnings = _mine_observability_events(conn, 30, [{"database": "DB", "schema": "S", "name": "A"}])
         assert len(events) == 0
-        assert any("AI_OBSERVABILITY_EVENTS" in w for w in warnings)
+        assert any("AI observability events not available" in w for w in warnings)
 
 
 # ─── Full discover_activity integration tests ─────────────────────────────────

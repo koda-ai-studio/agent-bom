@@ -236,78 +236,7 @@
        "env": {},
        "transport": "streamable-http",
        "url": "https://test-acct.snowflakecomputing.com/api/v2/cortex/agent/agent_a",
-       "tools": [
-        {
-         "name": "PY_UDF",
-         "description": "UDF((X NUMBER)) -> NUMBER [PYTHON] [external runtime: PYTHON]",
-         "discovery_source": null,
-         "discovery_confidence": null,
-         "input_schema": null,
-         "output_schema": null,
-         "annotations": {},
-         "ui_metadata": {},
-         "declared_capabilities": [],
-         "schema_findings": [],
-         "schema_rule_findings": [],
-         "server_canonical_id": null
-        },
-        {
-         "name": "SQL_UDF",
-         "description": "UDF(()) -> VARCHAR [SQL]",
-         "discovery_source": null,
-         "discovery_confidence": null,
-         "input_schema": null,
-         "output_schema": null,
-         "annotations": {},
-         "ui_metadata": {},
-         "declared_capabilities": [],
-         "schema_findings": [],
-         "schema_rule_findings": [],
-         "server_canonical_id": null
-        },
-        {
-         "name": "SHORT_UDF",
-         "description": "UDF() ->  [SQL]",
-         "discovery_source": null,
-         "discovery_confidence": null,
-         "input_schema": null,
-         "output_schema": null,
-         "annotations": {},
-         "ui_metadata": {},
-         "declared_capabilities": [],
-         "schema_findings": [],
-         "schema_rule_findings": [],
-         "server_canonical_id": null
-        },
-        {
-         "name": "JS_PROC",
-         "description": "PROCEDURE(()) -> VARCHAR [JAVASCRIPT] [external runtime: JAVASCRIPT]",
-         "discovery_source": null,
-         "discovery_confidence": null,
-         "input_schema": null,
-         "output_schema": null,
-         "annotations": {},
-         "ui_metadata": {},
-         "declared_capabilities": [],
-         "schema_findings": [],
-         "schema_rule_findings": [],
-         "server_canonical_id": null
-        },
-        {
-         "name": "SHORT_PROC",
-         "description": "PROCEDURE((A)) ->  [SQL]",
-         "discovery_source": null,
-         "discovery_confidence": null,
-         "input_schema": null,
-         "output_schema": null,
-         "annotations": {},
-         "ui_metadata": {},
-         "declared_capabilities": [],
-         "schema_findings": [],
-         "schema_rule_findings": [],
-         "server_canonical_id": null
-        }
-       ],
+       "tools": [],
        "resources": [],
        "prompts": [],
        "packages": [],
@@ -351,6 +280,17 @@
         "schema": "S1",
         "name": "agent_a"
        }
+      },
+      "snowflake_cortex_agent": {
+       "account": "test-acct",
+       "database": "DB1",
+       "schema": "S1",
+       "name": "agent_a",
+       "fqn": "DB1.S1.agent_a",
+       "owner": "",
+       "is_secure": false,
+       "spec_status": "unavailable",
+       "execution_roles": []
       }
      },
      "automation_settings": [],
@@ -389,78 +329,7 @@
        "env": {},
        "transport": "streamable-http",
        "url": "https://test-acct.snowflakecomputing.com/api/v2/cortex/agent/agent_b",
-       "tools": [
-        {
-         "name": "PY_UDF",
-         "description": "UDF((X NUMBER)) -> NUMBER [PYTHON] [external runtime: PYTHON]",
-         "discovery_source": null,
-         "discovery_confidence": null,
-         "input_schema": null,
-         "output_schema": null,
-         "annotations": {},
-         "ui_metadata": {},
-         "declared_capabilities": [],
-         "schema_findings": [],
-         "schema_rule_findings": [],
-         "server_canonical_id": null
-        },
-        {
-         "name": "SQL_UDF",
-         "description": "UDF(()) -> VARCHAR [SQL]",
-         "discovery_source": null,
-         "discovery_confidence": null,
-         "input_schema": null,
-         "output_schema": null,
-         "annotations": {},
-         "ui_metadata": {},
-         "declared_capabilities": [],
-         "schema_findings": [],
-         "schema_rule_findings": [],
-         "server_canonical_id": null
-        },
-        {
-         "name": "SHORT_UDF",
-         "description": "UDF() ->  [SQL]",
-         "discovery_source": null,
-         "discovery_confidence": null,
-         "input_schema": null,
-         "output_schema": null,
-         "annotations": {},
-         "ui_metadata": {},
-         "declared_capabilities": [],
-         "schema_findings": [],
-         "schema_rule_findings": [],
-         "server_canonical_id": null
-        },
-        {
-         "name": "JS_PROC",
-         "description": "PROCEDURE(()) -> VARCHAR [JAVASCRIPT] [external runtime: JAVASCRIPT]",
-         "discovery_source": null,
-         "discovery_confidence": null,
-         "input_schema": null,
-         "output_schema": null,
-         "annotations": {},
-         "ui_metadata": {},
-         "declared_capabilities": [],
-         "schema_findings": [],
-         "schema_rule_findings": [],
-         "server_canonical_id": null
-        },
-        {
-         "name": "SHORT_PROC",
-         "description": "PROCEDURE((A)) ->  [SQL]",
-         "discovery_source": null,
-         "discovery_confidence": null,
-         "input_schema": null,
-         "output_schema": null,
-         "annotations": {},
-         "ui_metadata": {},
-         "declared_capabilities": [],
-         "schema_findings": [],
-         "schema_rule_findings": [],
-         "server_canonical_id": null
-        }
-       ],
+       "tools": [],
        "resources": [],
        "prompts": [],
        "packages": [],
@@ -504,6 +373,17 @@
         "schema": "S1",
         "name": "agent_b"
        }
+      },
+      "snowflake_cortex_agent": {
+       "account": "test-acct",
+       "database": "DB1",
+       "schema": "S1",
+       "name": "agent_b",
+       "fqn": "DB1.S1.agent_b",
+       "owner": "",
+       "is_secure": false,
+       "spec_status": "unavailable",
+       "execution_roles": []
       }
      },
      "automation_settings": [],
@@ -542,78 +422,7 @@
        "env": {},
        "transport": "streamable-http",
        "url": "https://test-acct.snowflakecomputing.com/api/v2/cortex/agent/agent_c",
-       "tools": [
-        {
-         "name": "PY_UDF",
-         "description": "UDF((X NUMBER)) -> NUMBER [PYTHON] [external runtime: PYTHON]",
-         "discovery_source": null,
-         "discovery_confidence": null,
-         "input_schema": null,
-         "output_schema": null,
-         "annotations": {},
-         "ui_metadata": {},
-         "declared_capabilities": [],
-         "schema_findings": [],
-         "schema_rule_findings": [],
-         "server_canonical_id": null
-        },
-        {
-         "name": "SQL_UDF",
-         "description": "UDF(()) -> VARCHAR [SQL]",
-         "discovery_source": null,
-         "discovery_confidence": null,
-         "input_schema": null,
-         "output_schema": null,
-         "annotations": {},
-         "ui_metadata": {},
-         "declared_capabilities": [],
-         "schema_findings": [],
-         "schema_rule_findings": [],
-         "server_canonical_id": null
-        },
-        {
-         "name": "SHORT_UDF",
-         "description": "UDF() ->  [SQL]",
-         "discovery_source": null,
-         "discovery_confidence": null,
-         "input_schema": null,
-         "output_schema": null,
-         "annotations": {},
-         "ui_metadata": {},
-         "declared_capabilities": [],
-         "schema_findings": [],
-         "schema_rule_findings": [],
-         "server_canonical_id": null
-        },
-        {
-         "name": "JS_PROC",
-         "description": "PROCEDURE(()) -> VARCHAR [JAVASCRIPT] [external runtime: JAVASCRIPT]",
-         "discovery_source": null,
-         "discovery_confidence": null,
-         "input_schema": null,
-         "output_schema": null,
-         "annotations": {},
-         "ui_metadata": {},
-         "declared_capabilities": [],
-         "schema_findings": [],
-         "schema_rule_findings": [],
-         "server_canonical_id": null
-        },
-        {
-         "name": "SHORT_PROC",
-         "description": "PROCEDURE((A)) ->  [SQL]",
-         "discovery_source": null,
-         "discovery_confidence": null,
-         "input_schema": null,
-         "output_schema": null,
-         "annotations": {},
-         "ui_metadata": {},
-         "declared_capabilities": [],
-         "schema_findings": [],
-         "schema_rule_findings": [],
-         "server_canonical_id": null
-        }
-       ],
+       "tools": [],
        "resources": [],
        "prompts": [],
        "packages": [],
@@ -657,6 +466,17 @@
         "schema": "S1",
         "name": "agent_c"
        }
+      },
+      "snowflake_cortex_agent": {
+       "account": "test-acct",
+       "database": "DB1",
+       "schema": "S1",
+       "name": "agent_c",
+       "fqn": "DB1.S1.agent_c",
+       "owner": "",
+       "is_secure": false,
+       "spec_status": "unavailable",
+       "execution_roles": []
       }
      },
      "automation_settings": [],
@@ -1103,6 +923,157 @@
        "raw_identity": {
         "account": "test-acct",
         "name": "\"shadow_mcp"
+       }
+      }
+     },
+     "automation_settings": [],
+     "discovery_provenance": null,
+     "discovery_envelope": {
+      "envelope_version": 1,
+      "scan_mode": "saas_read_only",
+      "discovery_scope": [
+       "snowflake:account/test-acct",
+       "snowflake:database/DB1",
+       "snowflake:schema/S1"
+      ],
+      "permissions_used": [
+       "INFORMATION_SCHEMA.AGENTS:SELECT",
+       "INFORMATION_SCHEMA.CORTEX_SEARCH_SERVICES:SELECT",
+       "INFORMATION_SCHEMA.PACKAGES:SELECT",
+       "INFORMATION_SCHEMA.STAGES:SELECT",
+       "INFORMATION_SCHEMA.STREAMLITS:SELECT",
+       "INFORMATION_SCHEMA.NOTEBOOKS:SELECT"
+      ],
+      "redaction_status": "central_sanitizer_applied",
+      "captured_at": "<now>"
+     },
+     "source_id": null,
+     "device_fingerprint": null
+    },
+    {
+     "name": "snowflake-tools:test-acct",
+     "agent_type": "custom",
+     "config_path": "snowflake://test-acct/custom-tools",
+     "mcp_servers": [
+      {
+       "name": "snowflake-custom-tools",
+       "command": "",
+       "args": [],
+       "env": {},
+       "transport": "unknown",
+       "url": null,
+       "tools": [
+        {
+         "name": "PY_UDF",
+         "description": "UDF((X NUMBER)) -> NUMBER [PYTHON] [external runtime: PYTHON]",
+         "discovery_source": null,
+         "discovery_confidence": null,
+         "input_schema": null,
+         "output_schema": null,
+         "annotations": {},
+         "ui_metadata": {},
+         "declared_capabilities": [],
+         "schema_findings": [],
+         "schema_rule_findings": [],
+         "server_canonical_id": "bb898470-96ab-5674-8224-33d6675dbbc6"
+        },
+        {
+         "name": "SQL_UDF",
+         "description": "UDF(()) -> VARCHAR [SQL]",
+         "discovery_source": null,
+         "discovery_confidence": null,
+         "input_schema": null,
+         "output_schema": null,
+         "annotations": {},
+         "ui_metadata": {},
+         "declared_capabilities": [],
+         "schema_findings": [],
+         "schema_rule_findings": [],
+         "server_canonical_id": "bb898470-96ab-5674-8224-33d6675dbbc6"
+        },
+        {
+         "name": "SHORT_UDF",
+         "description": "UDF() ->  [SQL]",
+         "discovery_source": null,
+         "discovery_confidence": null,
+         "input_schema": null,
+         "output_schema": null,
+         "annotations": {},
+         "ui_metadata": {},
+         "declared_capabilities": [],
+         "schema_findings": [],
+         "schema_rule_findings": [],
+         "server_canonical_id": "bb898470-96ab-5674-8224-33d6675dbbc6"
+        },
+        {
+         "name": "JS_PROC",
+         "description": "PROCEDURE(()) -> VARCHAR [JAVASCRIPT] [external runtime: JAVASCRIPT]",
+         "discovery_source": null,
+         "discovery_confidence": null,
+         "input_schema": null,
+         "output_schema": null,
+         "annotations": {},
+         "ui_metadata": {},
+         "declared_capabilities": [],
+         "schema_findings": [],
+         "schema_rule_findings": [],
+         "server_canonical_id": "bb898470-96ab-5674-8224-33d6675dbbc6"
+        },
+        {
+         "name": "SHORT_PROC",
+         "description": "PROCEDURE((A)) ->  [SQL]",
+         "discovery_source": null,
+         "discovery_confidence": null,
+         "input_schema": null,
+         "output_schema": null,
+         "annotations": {},
+         "ui_metadata": {},
+         "declared_capabilities": [],
+         "schema_findings": [],
+         "schema_rule_findings": [],
+         "server_canonical_id": "bb898470-96ab-5674-8224-33d6675dbbc6"
+        }
+       ],
+       "resources": [],
+       "prompts": [],
+       "packages": [],
+       "config_path": null,
+       "connection_metadata": {},
+       "working_dir": null,
+       "mcp_version": null,
+       "registry_verified": false,
+       "registry_id": null,
+       "permission_profile": null,
+       "security_blocked": false,
+       "security_warnings": [],
+       "security_intelligence": [],
+       "surface": "mcp-server",
+       "discovery_sources": [],
+       "discovery_provenance": null,
+       "identity_bindings": [],
+       "imported_canonical_id": null
+      }
+     ],
+     "version": null,
+     "source": "snowflake-tools",
+     "status": "configured",
+     "discovered_at": "<now>",
+     "last_seen": "<now>",
+     "parent_agent": null,
+     "metadata": {
+      "cloud_origin": {
+       "normalization_version": "1",
+       "provider": "snowflake",
+       "service": "custom-tools",
+       "resource_type": "tool-collection",
+       "resource_id": "test-acct/custom-tools",
+       "resource_name": "custom-tools",
+       "scope": {
+        "account_id": "test-acct"
+       },
+       "raw_identity": {
+        "account": "test-acct",
+        "name": "custom-tools"
        }
       }
      },
@@ -1761,6 +1732,12 @@
    [
     "SHOW CORTEX SEARCH SERVICES",
     "SHOW AGENTS IN ACCOUNT",
+    "DESCRIBE AGENT \"DB1\".\"S1\".\"agent_a\"",
+    "SHOW GRANTS ON AGENT \"DB1\".\"S1\".\"agent_a\"",
+    "DESCRIBE AGENT \"DB1\".\"S1\".\"agent_b\"",
+    "SHOW GRANTS ON AGENT \"DB1\".\"S1\".\"agent_b\"",
+    "DESCRIBE AGENT \"DB1\".\"S1\".\"agent_c\"",
+    "SHOW GRANTS ON AGENT \"DB1\".\"S1\".\"agent_c\"",
     "SHOW MCP SERVERS IN ACCOUNT",
     "DESCRIBE MCP SERVER DB1.S1.mcp_ok",
     "DESCRIBE MCP SERVER MCP_LIST",
@@ -1776,7 +1753,7 @@
   ],
   "closes": [
    [
-    12,
+    18,
     1
    ]
   ],
@@ -2019,459 +1996,6 @@
         "database": "DB1",
         "schema": "S1",
         "name": "svc_b"
-       }
-      }
-     },
-     "automation_settings": [],
-     "discovery_provenance": null,
-     "discovery_envelope": {
-      "envelope_version": 1,
-      "scan_mode": "saas_read_only",
-      "discovery_scope": [
-       "snowflake:account/test-acct",
-       "snowflake:database/DB1",
-       "snowflake:schema/S1"
-      ],
-      "permissions_used": [
-       "INFORMATION_SCHEMA.AGENTS:SELECT",
-       "INFORMATION_SCHEMA.CORTEX_SEARCH_SERVICES:SELECT",
-       "INFORMATION_SCHEMA.PACKAGES:SELECT",
-       "INFORMATION_SCHEMA.STAGES:SELECT",
-       "INFORMATION_SCHEMA.STREAMLITS:SELECT",
-       "INFORMATION_SCHEMA.NOTEBOOKS:SELECT"
-      ],
-      "redaction_status": "central_sanitizer_applied",
-      "captured_at": "<now>"
-     },
-     "source_id": null,
-     "device_fingerprint": null
-    },
-    {
-     "name": "cortex-agent:agent_a",
-     "agent_type": "custom",
-     "config_path": "snowflake://test-acct///agent_a",
-     "mcp_servers": [
-      {
-       "name": "cortex-agent:agent_a",
-       "command": "",
-       "args": [],
-       "env": {},
-       "transport": "streamable-http",
-       "url": "https://test-acct.snowflakecomputing.com/api/v2/cortex/agent/agent_a",
-       "tools": [
-        {
-         "name": "PY_UDF",
-         "description": "UDF((X NUMBER)) -> NUMBER [PYTHON] [external runtime: PYTHON]",
-         "discovery_source": null,
-         "discovery_confidence": null,
-         "input_schema": null,
-         "output_schema": null,
-         "annotations": {},
-         "ui_metadata": {},
-         "declared_capabilities": [],
-         "schema_findings": [],
-         "schema_rule_findings": [],
-         "server_canonical_id": null
-        },
-        {
-         "name": "SQL_UDF",
-         "description": "UDF(()) -> VARCHAR [SQL]",
-         "discovery_source": null,
-         "discovery_confidence": null,
-         "input_schema": null,
-         "output_schema": null,
-         "annotations": {},
-         "ui_metadata": {},
-         "declared_capabilities": [],
-         "schema_findings": [],
-         "schema_rule_findings": [],
-         "server_canonical_id": null
-        },
-        {
-         "name": "SHORT_UDF",
-         "description": "UDF() ->  [SQL]",
-         "discovery_source": null,
-         "discovery_confidence": null,
-         "input_schema": null,
-         "output_schema": null,
-         "annotations": {},
-         "ui_metadata": {},
-         "declared_capabilities": [],
-         "schema_findings": [],
-         "schema_rule_findings": [],
-         "server_canonical_id": null
-        },
-        {
-         "name": "JS_PROC",
-         "description": "PROCEDURE(()) -> VARCHAR [JAVASCRIPT] [external runtime: JAVASCRIPT]",
-         "discovery_source": null,
-         "discovery_confidence": null,
-         "input_schema": null,
-         "output_schema": null,
-         "annotations": {},
-         "ui_metadata": {},
-         "declared_capabilities": [],
-         "schema_findings": [],
-         "schema_rule_findings": [],
-         "server_canonical_id": null
-        },
-        {
-         "name": "SHORT_PROC",
-         "description": "PROCEDURE((A)) ->  [SQL]",
-         "discovery_source": null,
-         "discovery_confidence": null,
-         "input_schema": null,
-         "output_schema": null,
-         "annotations": {},
-         "ui_metadata": {},
-         "declared_capabilities": [],
-         "schema_findings": [],
-         "schema_rule_findings": [],
-         "server_canonical_id": null
-        }
-       ],
-       "resources": [],
-       "prompts": [],
-       "packages": [],
-       "config_path": null,
-       "connection_metadata": {},
-       "working_dir": null,
-       "mcp_version": null,
-       "registry_verified": false,
-       "registry_id": null,
-       "permission_profile": null,
-       "security_blocked": false,
-       "security_warnings": [],
-       "security_intelligence": [],
-       "surface": "mcp-server",
-       "discovery_sources": [],
-       "discovery_provenance": null,
-       "identity_bindings": [],
-       "imported_canonical_id": null
-      }
-     ],
-     "version": null,
-     "source": "snowflake-cortex-agent",
-     "status": "configured",
-     "discovered_at": "<now>",
-     "last_seen": "<now>",
-     "parent_agent": null,
-     "metadata": {
-      "cloud_origin": {
-       "normalization_version": "1",
-       "provider": "snowflake",
-       "service": "cortex-agents",
-       "resource_type": "agent",
-       "resource_id": "snowflake://test-acct///agent_a",
-       "resource_name": "agent_a",
-       "scope": {
-        "account_id": "test-acct"
-       },
-       "raw_identity": {
-        "account": "test-acct",
-        "name": "agent_a"
-       }
-      }
-     },
-     "automation_settings": [],
-     "discovery_provenance": null,
-     "discovery_envelope": {
-      "envelope_version": 1,
-      "scan_mode": "saas_read_only",
-      "discovery_scope": [
-       "snowflake:account/test-acct",
-       "snowflake:database/DB1",
-       "snowflake:schema/S1"
-      ],
-      "permissions_used": [
-       "INFORMATION_SCHEMA.AGENTS:SELECT",
-       "INFORMATION_SCHEMA.CORTEX_SEARCH_SERVICES:SELECT",
-       "INFORMATION_SCHEMA.PACKAGES:SELECT",
-       "INFORMATION_SCHEMA.STAGES:SELECT",
-       "INFORMATION_SCHEMA.STREAMLITS:SELECT",
-       "INFORMATION_SCHEMA.NOTEBOOKS:SELECT"
-      ],
-      "redaction_status": "central_sanitizer_applied",
-      "captured_at": "<now>"
-     },
-     "source_id": null,
-     "device_fingerprint": null
-    },
-    {
-     "name": "cortex-agent:agent_b",
-     "agent_type": "custom",
-     "config_path": "snowflake://test-acct///agent_b",
-     "mcp_servers": [
-      {
-       "name": "cortex-agent:agent_b",
-       "command": "",
-       "args": [],
-       "env": {},
-       "transport": "streamable-http",
-       "url": "https://test-acct.snowflakecomputing.com/api/v2/cortex/agent/agent_b",
-       "tools": [
-        {
-         "name": "PY_UDF",
-         "description": "UDF((X NUMBER)) -> NUMBER [PYTHON] [external runtime: PYTHON]",
-         "discovery_source": null,
-         "discovery_confidence": null,
-         "input_schema": null,
-         "output_schema": null,
-         "annotations": {},
-         "ui_metadata": {},
-         "declared_capabilities": [],
-         "schema_findings": [],
-         "schema_rule_findings": [],
-         "server_canonical_id": null
-        },
-        {
-         "name": "SQL_UDF",
-         "description": "UDF(()) -> VARCHAR [SQL]",
-         "discovery_source": null,
-         "discovery_confidence": null,
-         "input_schema": null,
-         "output_schema": null,
-         "annotations": {},
-         "ui_metadata": {},
-         "declared_capabilities": [],
-         "schema_findings": [],
-         "schema_rule_findings": [],
-         "server_canonical_id": null
-        },
-        {
-         "name": "SHORT_UDF",
-         "description": "UDF() ->  [SQL]",
-         "discovery_source": null,
-         "discovery_confidence": null,
-         "input_schema": null,
-         "output_schema": null,
-         "annotations": {},
-         "ui_metadata": {},
-         "declared_capabilities": [],
-         "schema_findings": [],
-         "schema_rule_findings": [],
-         "server_canonical_id": null
-        },
-        {
-         "name": "JS_PROC",
-         "description": "PROCEDURE(()) -> VARCHAR [JAVASCRIPT] [external runtime: JAVASCRIPT]",
-         "discovery_source": null,
-         "discovery_confidence": null,
-         "input_schema": null,
-         "output_schema": null,
-         "annotations": {},
-         "ui_metadata": {},
-         "declared_capabilities": [],
-         "schema_findings": [],
-         "schema_rule_findings": [],
-         "server_canonical_id": null
-        },
-        {
-         "name": "SHORT_PROC",
-         "description": "PROCEDURE((A)) ->  [SQL]",
-         "discovery_source": null,
-         "discovery_confidence": null,
-         "input_schema": null,
-         "output_schema": null,
-         "annotations": {},
-         "ui_metadata": {},
-         "declared_capabilities": [],
-         "schema_findings": [],
-         "schema_rule_findings": [],
-         "server_canonical_id": null
-        }
-       ],
-       "resources": [],
-       "prompts": [],
-       "packages": [],
-       "config_path": null,
-       "connection_metadata": {},
-       "working_dir": null,
-       "mcp_version": null,
-       "registry_verified": false,
-       "registry_id": null,
-       "permission_profile": null,
-       "security_blocked": false,
-       "security_warnings": [],
-       "security_intelligence": [],
-       "surface": "mcp-server",
-       "discovery_sources": [],
-       "discovery_provenance": null,
-       "identity_bindings": [],
-       "imported_canonical_id": null
-      }
-     ],
-     "version": null,
-     "source": "snowflake-cortex-agent",
-     "status": "configured",
-     "discovered_at": "<now>",
-     "last_seen": "<now>",
-     "parent_agent": null,
-     "metadata": {
-      "cloud_origin": {
-       "normalization_version": "1",
-       "provider": "snowflake",
-       "service": "cortex-agents",
-       "resource_type": "agent",
-       "resource_id": "snowflake://test-acct///agent_b",
-       "resource_name": "agent_b",
-       "scope": {
-        "account_id": "test-acct"
-       },
-       "raw_identity": {
-        "account": "test-acct",
-        "name": "agent_b"
-       }
-      }
-     },
-     "automation_settings": [],
-     "discovery_provenance": null,
-     "discovery_envelope": {
-      "envelope_version": 1,
-      "scan_mode": "saas_read_only",
-      "discovery_scope": [
-       "snowflake:account/test-acct",
-       "snowflake:database/DB1",
-       "snowflake:schema/S1"
-      ],
-      "permissions_used": [
-       "INFORMATION_SCHEMA.AGENTS:SELECT",
-       "INFORMATION_SCHEMA.CORTEX_SEARCH_SERVICES:SELECT",
-       "INFORMATION_SCHEMA.PACKAGES:SELECT",
-       "INFORMATION_SCHEMA.STAGES:SELECT",
-       "INFORMATION_SCHEMA.STREAMLITS:SELECT",
-       "INFORMATION_SCHEMA.NOTEBOOKS:SELECT"
-      ],
-      "redaction_status": "central_sanitizer_applied",
-      "captured_at": "<now>"
-     },
-     "source_id": null,
-     "device_fingerprint": null
-    },
-    {
-     "name": "cortex-agent:agent_c",
-     "agent_type": "custom",
-     "config_path": "snowflake://test-acct///agent_c",
-     "mcp_servers": [
-      {
-       "name": "cortex-agent:agent_c",
-       "command": "",
-       "args": [],
-       "env": {},
-       "transport": "streamable-http",
-       "url": "https://test-acct.snowflakecomputing.com/api/v2/cortex/agent/agent_c",
-       "tools": [
-        {
-         "name": "PY_UDF",
-         "description": "UDF((X NUMBER)) -> NUMBER [PYTHON] [external runtime: PYTHON]",
-         "discovery_source": null,
-         "discovery_confidence": null,
-         "input_schema": null,
-         "output_schema": null,
-         "annotations": {},
-         "ui_metadata": {},
-         "declared_capabilities": [],
-         "schema_findings": [],
-         "schema_rule_findings": [],
-         "server_canonical_id": null
-        },
-        {
-         "name": "SQL_UDF",
-         "description": "UDF(()) -> VARCHAR [SQL]",
-         "discovery_source": null,
-         "discovery_confidence": null,
-         "input_schema": null,
-         "output_schema": null,
-         "annotations": {},
-         "ui_metadata": {},
-         "declared_capabilities": [],
-         "schema_findings": [],
-         "schema_rule_findings": [],
-         "server_canonical_id": null
-        },
-        {
-         "name": "SHORT_UDF",
-         "description": "UDF() ->  [SQL]",
-         "discovery_source": null,
-         "discovery_confidence": null,
-         "input_schema": null,
-         "output_schema": null,
-         "annotations": {},
-         "ui_metadata": {},
-         "declared_capabilities": [],
-         "schema_findings": [],
-         "schema_rule_findings": [],
-         "server_canonical_id": null
-        },
-        {
-         "name": "JS_PROC",
-         "description": "PROCEDURE(()) -> VARCHAR [JAVASCRIPT] [external runtime: JAVASCRIPT]",
-         "discovery_source": null,
-         "discovery_confidence": null,
-         "input_schema": null,
-         "output_schema": null,
-         "annotations": {},
-         "ui_metadata": {},
-         "declared_capabilities": [],
-         "schema_findings": [],
-         "schema_rule_findings": [],
-         "server_canonical_id": null
-        },
-        {
-         "name": "SHORT_PROC",
-         "description": "PROCEDURE((A)) ->  [SQL]",
-         "discovery_source": null,
-         "discovery_confidence": null,
-         "input_schema": null,
-         "output_schema": null,
-         "annotations": {},
-         "ui_metadata": {},
-         "declared_capabilities": [],
-         "schema_findings": [],
-         "schema_rule_findings": [],
-         "server_canonical_id": null
-        }
-       ],
-       "resources": [],
-       "prompts": [],
-       "packages": [],
-       "config_path": null,
-       "connection_metadata": {},
-       "working_dir": null,
-       "mcp_version": null,
-       "registry_verified": false,
-       "registry_id": null,
-       "permission_profile": null,
-       "security_blocked": false,
-       "security_warnings": [],
-       "security_intelligence": [],
-       "surface": "mcp-server",
-       "discovery_sources": [],
-       "discovery_provenance": null,
-       "identity_bindings": [],
-       "imported_canonical_id": null
-      }
-     ],
-     "version": null,
-     "source": "snowflake-cortex-agent",
-     "status": "configured",
-     "discovered_at": "<now>",
-     "last_seen": "<now>",
-     "parent_agent": null,
-     "metadata": {
-      "cloud_origin": {
-       "normalization_version": "1",
-       "provider": "snowflake",
-       "service": "cortex-agents",
-       "resource_type": "agent",
-       "resource_id": "snowflake://test-acct///agent_c",
-       "resource_name": "agent_c",
-       "scope": {
-        "account_id": "test-acct"
-       },
-       "raw_identity": {
-        "account": "test-acct",
-        "name": "agent_c"
        }
       }
      },
@@ -2872,6 +2396,157 @@
        "raw_identity": {
         "account": "test-acct",
         "name": "\"shadow_mcp"
+       }
+      }
+     },
+     "automation_settings": [],
+     "discovery_provenance": null,
+     "discovery_envelope": {
+      "envelope_version": 1,
+      "scan_mode": "saas_read_only",
+      "discovery_scope": [
+       "snowflake:account/test-acct",
+       "snowflake:database/DB1",
+       "snowflake:schema/S1"
+      ],
+      "permissions_used": [
+       "INFORMATION_SCHEMA.AGENTS:SELECT",
+       "INFORMATION_SCHEMA.CORTEX_SEARCH_SERVICES:SELECT",
+       "INFORMATION_SCHEMA.PACKAGES:SELECT",
+       "INFORMATION_SCHEMA.STAGES:SELECT",
+       "INFORMATION_SCHEMA.STREAMLITS:SELECT",
+       "INFORMATION_SCHEMA.NOTEBOOKS:SELECT"
+      ],
+      "redaction_status": "central_sanitizer_applied",
+      "captured_at": "<now>"
+     },
+     "source_id": null,
+     "device_fingerprint": null
+    },
+    {
+     "name": "snowflake-tools:test-acct",
+     "agent_type": "custom",
+     "config_path": "snowflake://test-acct/custom-tools",
+     "mcp_servers": [
+      {
+       "name": "snowflake-custom-tools",
+       "command": "",
+       "args": [],
+       "env": {},
+       "transport": "unknown",
+       "url": null,
+       "tools": [
+        {
+         "name": "PY_UDF",
+         "description": "UDF((X NUMBER)) -> NUMBER [PYTHON] [external runtime: PYTHON]",
+         "discovery_source": null,
+         "discovery_confidence": null,
+         "input_schema": null,
+         "output_schema": null,
+         "annotations": {},
+         "ui_metadata": {},
+         "declared_capabilities": [],
+         "schema_findings": [],
+         "schema_rule_findings": [],
+         "server_canonical_id": "bb898470-96ab-5674-8224-33d6675dbbc6"
+        },
+        {
+         "name": "SQL_UDF",
+         "description": "UDF(()) -> VARCHAR [SQL]",
+         "discovery_source": null,
+         "discovery_confidence": null,
+         "input_schema": null,
+         "output_schema": null,
+         "annotations": {},
+         "ui_metadata": {},
+         "declared_capabilities": [],
+         "schema_findings": [],
+         "schema_rule_findings": [],
+         "server_canonical_id": "bb898470-96ab-5674-8224-33d6675dbbc6"
+        },
+        {
+         "name": "SHORT_UDF",
+         "description": "UDF() ->  [SQL]",
+         "discovery_source": null,
+         "discovery_confidence": null,
+         "input_schema": null,
+         "output_schema": null,
+         "annotations": {},
+         "ui_metadata": {},
+         "declared_capabilities": [],
+         "schema_findings": [],
+         "schema_rule_findings": [],
+         "server_canonical_id": "bb898470-96ab-5674-8224-33d6675dbbc6"
+        },
+        {
+         "name": "JS_PROC",
+         "description": "PROCEDURE(()) -> VARCHAR [JAVASCRIPT] [external runtime: JAVASCRIPT]",
+         "discovery_source": null,
+         "discovery_confidence": null,
+         "input_schema": null,
+         "output_schema": null,
+         "annotations": {},
+         "ui_metadata": {},
+         "declared_capabilities": [],
+         "schema_findings": [],
+         "schema_rule_findings": [],
+         "server_canonical_id": "bb898470-96ab-5674-8224-33d6675dbbc6"
+        },
+        {
+         "name": "SHORT_PROC",
+         "description": "PROCEDURE((A)) ->  [SQL]",
+         "discovery_source": null,
+         "discovery_confidence": null,
+         "input_schema": null,
+         "output_schema": null,
+         "annotations": {},
+         "ui_metadata": {},
+         "declared_capabilities": [],
+         "schema_findings": [],
+         "schema_rule_findings": [],
+         "server_canonical_id": "bb898470-96ab-5674-8224-33d6675dbbc6"
+        }
+       ],
+       "resources": [],
+       "prompts": [],
+       "packages": [],
+       "config_path": null,
+       "connection_metadata": {},
+       "working_dir": null,
+       "mcp_version": null,
+       "registry_verified": false,
+       "registry_id": null,
+       "permission_profile": null,
+       "security_blocked": false,
+       "security_warnings": [],
+       "security_intelligence": [],
+       "surface": "mcp-server",
+       "discovery_sources": [],
+       "discovery_provenance": null,
+       "identity_bindings": [],
+       "imported_canonical_id": null
+      }
+     ],
+     "version": null,
+     "source": "snowflake-tools",
+     "status": "configured",
+     "discovered_at": "<now>",
+     "last_seen": "<now>",
+     "parent_agent": null,
+     "metadata": {
+      "cloud_origin": {
+       "normalization_version": "1",
+       "provider": "snowflake",
+       "service": "custom-tools",
+       "resource_type": "tool-collection",
+       "resource_id": "test-acct/custom-tools",
+       "resource_name": "custom-tools",
+       "scope": {
+        "account_id": "test-acct"
+       },
+       "raw_identity": {
+        "account": "test-acct",
+        "name": "custom-tools"
        }
       }
      },
@@ -3976,6 +3651,220 @@
      "status": ""
     }
    ],
+   "cortex_agents": [
+    {
+     "account": "test-acct",
+     "database": "DB1",
+     "schema": "S1",
+     "name": "agent_a",
+     "fqn": "DB1.S1.agent_a",
+     "node_id": "agent:snowflake:test-acct:DB1.S1.agent_a",
+     "display_name": "Agent A",
+     "owner": "",
+     "is_secure": false,
+     "spec_status": "unavailable",
+     "tools": [],
+     "execution_roles": []
+    },
+    {
+     "account": "test-acct",
+     "database": "DB1",
+     "schema": "S1",
+     "name": "agent_b",
+     "fqn": "DB1.S1.agent_b",
+     "node_id": "agent:snowflake:test-acct:DB1.S1.agent_b",
+     "display_name": "agent_b",
+     "owner": "",
+     "is_secure": false,
+     "spec_status": "unavailable",
+     "tools": [],
+     "execution_roles": []
+    },
+    {
+     "account": "test-acct",
+     "database": "DB1",
+     "schema": "S1",
+     "name": "agent_c",
+     "fqn": "DB1.S1.agent_c",
+     "node_id": "agent:snowflake:test-acct:DB1.S1.agent_c",
+     "display_name": "agent_c",
+     "owner": "",
+     "is_secure": false,
+     "spec_status": "unavailable",
+     "tools": [],
+     "execution_roles": []
+    }
+   ],
+   "cortex_events": [
+    {
+     "tenant_id": null,
+     "source": "snowflake_cortex",
+     "source_trace_id": null,
+     "source_span_id": null,
+     "parent_span_id": null,
+     "started_at": null,
+     "ended_at": "ts1",
+     "kind": "agent",
+     "agent_name": "DB1.S1.agent_a",
+     "agent_ref": "agent:snowflake:test-acct:DB1.S1.agent_a",
+     "model_provider": null,
+     "model_name": null,
+     "tool_name": null,
+     "mcp_server_ref": null,
+     "resource_refs": [],
+     "principal_hash": null,
+     "role_name": null,
+     "credential_ref": null,
+     "input_tokens": null,
+     "output_tokens": null,
+     "cost_usd": null,
+     "status": "ok",
+     "signals": [],
+     "content_sha256": null,
+     "match_method": "exact",
+     "match_node_id": "agent:snowflake:test-acct:DB1.S1.agent_a"
+    },
+    {
+     "tenant_id": null,
+     "source": "snowflake_cortex",
+     "source_trace_id": null,
+     "source_span_id": null,
+     "parent_span_id": null,
+     "started_at": null,
+     "ended_at": "ts2",
+     "kind": "agent",
+     "agent_name": "DB1.S1.agent_a",
+     "agent_ref": "agent:snowflake:test-acct:DB1.S1.agent_a",
+     "model_provider": null,
+     "model_name": null,
+     "tool_name": null,
+     "mcp_server_ref": null,
+     "resource_refs": [],
+     "principal_hash": null,
+     "role_name": null,
+     "credential_ref": null,
+     "input_tokens": null,
+     "output_tokens": null,
+     "cost_usd": null,
+     "status": "ok",
+     "signals": [],
+     "content_sha256": null,
+     "match_method": "exact",
+     "match_node_id": "agent:snowflake:test-acct:DB1.S1.agent_a"
+    },
+    {
+     "tenant_id": null,
+     "source": "snowflake_cortex",
+     "source_trace_id": null,
+     "source_span_id": null,
+     "parent_span_id": null,
+     "started_at": null,
+     "ended_at": "ts1",
+     "kind": "agent",
+     "agent_name": "DB1.S1.agent_b",
+     "agent_ref": "agent:snowflake:test-acct:DB1.S1.agent_b",
+     "model_provider": null,
+     "model_name": null,
+     "tool_name": null,
+     "mcp_server_ref": null,
+     "resource_refs": [],
+     "principal_hash": null,
+     "role_name": null,
+     "credential_ref": null,
+     "input_tokens": null,
+     "output_tokens": null,
+     "cost_usd": null,
+     "status": "ok",
+     "signals": [],
+     "content_sha256": null,
+     "match_method": "exact",
+     "match_node_id": "agent:snowflake:test-acct:DB1.S1.agent_b"
+    },
+    {
+     "tenant_id": null,
+     "source": "snowflake_cortex",
+     "source_trace_id": null,
+     "source_span_id": null,
+     "parent_span_id": null,
+     "started_at": null,
+     "ended_at": "ts2",
+     "kind": "agent",
+     "agent_name": "DB1.S1.agent_b",
+     "agent_ref": "agent:snowflake:test-acct:DB1.S1.agent_b",
+     "model_provider": null,
+     "model_name": null,
+     "tool_name": null,
+     "mcp_server_ref": null,
+     "resource_refs": [],
+     "principal_hash": null,
+     "role_name": null,
+     "credential_ref": null,
+     "input_tokens": null,
+     "output_tokens": null,
+     "cost_usd": null,
+     "status": "ok",
+     "signals": [],
+     "content_sha256": null,
+     "match_method": "exact",
+     "match_node_id": "agent:snowflake:test-acct:DB1.S1.agent_b"
+    },
+    {
+     "tenant_id": null,
+     "source": "snowflake_cortex",
+     "source_trace_id": null,
+     "source_span_id": null,
+     "parent_span_id": null,
+     "started_at": null,
+     "ended_at": "ts1",
+     "kind": "agent",
+     "agent_name": "DB1.S1.agent_c",
+     "agent_ref": "agent:snowflake:test-acct:DB1.S1.agent_c",
+     "model_provider": null,
+     "model_name": null,
+     "tool_name": null,
+     "mcp_server_ref": null,
+     "resource_refs": [],
+     "principal_hash": null,
+     "role_name": null,
+     "credential_ref": null,
+     "input_tokens": null,
+     "output_tokens": null,
+     "cost_usd": null,
+     "status": "ok",
+     "signals": [],
+     "content_sha256": null,
+     "match_method": "exact",
+     "match_node_id": "agent:snowflake:test-acct:DB1.S1.agent_c"
+    },
+    {
+     "tenant_id": null,
+     "source": "snowflake_cortex",
+     "source_trace_id": null,
+     "source_span_id": null,
+     "parent_span_id": null,
+     "started_at": null,
+     "ended_at": "ts2",
+     "kind": "agent",
+     "agent_name": "DB1.S1.agent_c",
+     "agent_ref": "agent:snowflake:test-acct:DB1.S1.agent_c",
+     "model_provider": null,
+     "model_name": null,
+     "tool_name": null,
+     "mcp_server_ref": null,
+     "resource_refs": [],
+     "principal_hash": null,
+     "role_name": null,
+     "credential_ref": null,
+     "input_tokens": null,
+     "output_tokens": null,
+     "cost_usd": null,
+     "status": "ok",
+     "signals": [],
+     "content_sha256": null,
+     "match_method": "exact",
+     "match_node_id": "agent:snowflake:test-acct:DB1.S1.agent_c"
+    }
+   ],
    "findings": [
     {
      "category": "privilege",
@@ -4218,12 +4107,22 @@
     "SELECT ah.query_id, ah.user_name, qh.role_name, ah.query_start_time, ah.direct_objects_accessed, ah.base_objects_accessed, ah.objects_modified FROM SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY ah LEFT JOIN SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY qh ON ah.query_id = qh.query_id WHERE ah.query_start_time >= DATEADD(day, -7, CURRENT_TIMESTAMP()) ORDER BY ah.query_start_time DESC LIMIT 1000",
     "SELECT grantee_name, privilege, granted_on, name, granted_by, grant_option FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES WHERE deleted_on IS NULL ORDER BY grantee_name, granted_on LIMIT 5000",
     "SELECT tag_name, tag_value, object_database, object_schema, object_name, column_name, domain FROM SNOWFLAKE.ACCOUNT_USAGE.TAG_REFERENCES WHERE tag_name ILIKE ANY ('%PII%', '%PHI%', '%SENSITIVE%', '%CONFIDENTIAL%', '%FINANCIAL%', '%CLASSIFICATION%', '%PRIVACY%', '%SECURITY%', '%SEMANTIC_CATEGORY%') ORDER BY object_name LIMIT 2000",
-    "SELECT agent_name, agent_database_name, agent_schema_name, user_name, start_time, end_time, request_id, tokens, token_credits, metadata FROM SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY WHERE start_time >= DATEADD(day, -7, CURRENT_TIMESTAMP()) ORDER BY start_time DESC LIMIT 2000"
+    "SELECT agent_name, agent_database_name, agent_schema_name, user_name, start_time, end_time, request_id, tokens, token_credits, metadata FROM SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY WHERE start_time >= DATEADD(day, -7, CURRENT_TIMESTAMP()) ORDER BY start_time DESC LIMIT 2000",
+    "SHOW AGENTS IN ACCOUNT",
+    "DESCRIBE AGENT \"DB1\".\"S1\".\"agent_a\"",
+    "SHOW GRANTS ON AGENT \"DB1\".\"S1\".\"agent_a\"",
+    "DESCRIBE AGENT \"DB1\".\"S1\".\"agent_b\"",
+    "SHOW GRANTS ON AGENT \"DB1\".\"S1\".\"agent_b\"",
+    "DESCRIBE AGENT \"DB1\".\"S1\".\"agent_c\"",
+    "SHOW GRANTS ON AGENT \"DB1\".\"S1\".\"agent_c\"",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_a', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -7, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_b', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -7, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_c', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -7, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001"
    ]
   ],
   "closes": [
    [
-    4,
+    14,
     1
    ]
   ],
@@ -4238,6 +4137,8 @@
    "privilege_grants": [],
    "data_classifications": [],
    "agent_usage": [],
+   "cortex_agents": [],
+   "cortex_events": [],
    "findings": [],
    "discovered_at": "<now>",
    "warnings": []
@@ -4254,12 +4155,13 @@
     "SELECT ah.query_id, ah.user_name, qh.role_name, ah.query_start_time, ah.direct_objects_accessed, ah.base_objects_accessed, ah.objects_modified FROM SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY ah LEFT JOIN SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY qh ON ah.query_id = qh.query_id WHERE ah.query_start_time >= DATEADD(day, -7, CURRENT_TIMESTAMP()) ORDER BY ah.query_start_time DESC LIMIT 1000",
     "SELECT grantee_name, privilege, granted_on, name, granted_by, grant_option FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES WHERE deleted_on IS NULL ORDER BY grantee_name, granted_on LIMIT 5000",
     "SELECT tag_name, tag_value, object_database, object_schema, object_name, column_name, domain FROM SNOWFLAKE.ACCOUNT_USAGE.TAG_REFERENCES WHERE tag_name ILIKE ANY ('%PII%', '%PHI%', '%SENSITIVE%', '%CONFIDENTIAL%', '%FINANCIAL%', '%CLASSIFICATION%', '%PRIVACY%', '%SECURITY%', '%SEMANTIC_CATEGORY%') ORDER BY object_name LIMIT 2000",
-    "SELECT agent_name, agent_database_name, agent_schema_name, user_name, start_time, end_time, request_id, tokens, token_credits, metadata FROM SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY WHERE start_time >= DATEADD(day, -7, CURRENT_TIMESTAMP()) ORDER BY start_time DESC LIMIT 2000"
+    "SELECT agent_name, agent_database_name, agent_schema_name, user_name, start_time, end_time, request_id, tokens, token_credits, metadata FROM SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY WHERE start_time >= DATEADD(day, -7, CURRENT_TIMESTAMP()) ORDER BY start_time DESC LIMIT 2000",
+    "SHOW AGENTS IN ACCOUNT"
    ]
   ],
   "closes": [
    [
-    4,
+    5,
     1
    ]
   ],
@@ -4507,6 +4409,8 @@
      "status": ""
     }
    ],
+   "cortex_agents": [],
+   "cortex_events": [],
    "findings": [],
    "discovered_at": "<now>",
    "warnings": []
@@ -4523,12 +4427,13 @@
     "SELECT ah.query_id, ah.user_name, qh.role_name, ah.query_start_time, ah.direct_objects_accessed, ah.base_objects_accessed, ah.objects_modified FROM SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY ah LEFT JOIN SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY qh ON ah.query_id = qh.query_id WHERE ah.query_start_time >= DATEADD(day, -7, CURRENT_TIMESTAMP()) ORDER BY ah.query_start_time DESC LIMIT 1000",
     "SELECT grantee_name, privilege, granted_on, name, granted_by, grant_option FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES WHERE deleted_on IS NULL ORDER BY grantee_name, granted_on LIMIT 5000",
     "SELECT tag_name, tag_value, object_database, object_schema, object_name, column_name, domain FROM SNOWFLAKE.ACCOUNT_USAGE.TAG_REFERENCES WHERE tag_name ILIKE ANY ('%PII%', '%PHI%', '%SENSITIVE%', '%CONFIDENTIAL%', '%FINANCIAL%', '%CLASSIFICATION%', '%PRIVACY%', '%SECURITY%', '%SEMANTIC_CATEGORY%') ORDER BY object_name LIMIT 2000",
-    "SELECT agent_name, agent_database_name, agent_schema_name, user_name, start_time, end_time, request_id, tokens, token_credits, metadata FROM SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY WHERE start_time >= DATEADD(day, -7, CURRENT_TIMESTAMP()) ORDER BY start_time DESC LIMIT 2000"
+    "SELECT agent_name, agent_database_name, agent_schema_name, user_name, start_time, end_time, request_id, tokens, token_credits, metadata FROM SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY WHERE start_time >= DATEADD(day, -7, CURRENT_TIMESTAMP()) ORDER BY start_time DESC LIMIT 2000",
+    "SHOW AGENTS IN ACCOUNT"
    ]
   ],
   "closes": [
    [
-    4,
+    5,
     1
    ]
   ],
@@ -4543,13 +4448,16 @@
    "privilege_grants": [],
    "data_classifications": [],
    "agent_usage": [],
+   "cortex_agents": [],
+   "cortex_events": [],
    "findings": [],
    "discovered_at": "<now>",
    "warnings": [
     "Could not query ACCESS_HISTORY: SQL access control error: Insufficient privileges; permission denied for test-object",
     "Skipped GRANTS_TO_ROLES: role lacks SELECT on SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES \u2014 add it to the read-only policy to cover this resource type. (SQL access control error: Insufficient privileges; permission denied for test-object)",
     "Could not query TAG_REFERENCES: SQL access control error: Insufficient privileges; permission denied for test-object",
-    "Could not query CORTEX_AGENT_USAGE_HISTORY: SQL access control error: Insufficient privileges; permission denied for test-object"
+    "Could not query CORTEX_AGENT_USAGE_HISTORY: SQL access control error: Insufficient privileges; permission denied for test-object",
+    "Could not list Cortex Agents: SQL access control error: Insufficient privileges; permission denied for test-object"
    ]
   },
   "connects": [
@@ -4564,12 +4472,13 @@
     "SELECT ah.query_id, ah.user_name, qh.role_name, ah.query_start_time, ah.direct_objects_accessed, ah.base_objects_accessed, ah.objects_modified FROM SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY ah LEFT JOIN SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY qh ON ah.query_id = qh.query_id WHERE ah.query_start_time >= DATEADD(day, -7, CURRENT_TIMESTAMP()) ORDER BY ah.query_start_time DESC LIMIT 1000",
     "SELECT grantee_name, privilege, granted_on, name, granted_by, grant_option FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES WHERE deleted_on IS NULL ORDER BY grantee_name, granted_on LIMIT 5000",
     "SELECT tag_name, tag_value, object_database, object_schema, object_name, column_name, domain FROM SNOWFLAKE.ACCOUNT_USAGE.TAG_REFERENCES WHERE tag_name ILIKE ANY ('%PII%', '%PHI%', '%SENSITIVE%', '%CONFIDENTIAL%', '%FINANCIAL%', '%CLASSIFICATION%', '%PRIVACY%', '%SECURITY%', '%SEMANTIC_CATEGORY%') ORDER BY object_name LIMIT 2000",
-    "SELECT agent_name, agent_database_name, agent_schema_name, user_name, start_time, end_time, request_id, tokens, token_credits, metadata FROM SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY WHERE start_time >= DATEADD(day, -7, CURRENT_TIMESTAMP()) ORDER BY start_time DESC LIMIT 2000"
+    "SELECT agent_name, agent_database_name, agent_schema_name, user_name, start_time, end_time, request_id, tokens, token_credits, metadata FROM SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY WHERE start_time >= DATEADD(day, -7, CURRENT_TIMESTAMP()) ORDER BY start_time DESC LIMIT 2000",
+    "SHOW AGENTS IN ACCOUNT"
    ]
   ],
   "closes": [
    [
-    4,
+    5,
     1
    ]
   ],
@@ -4593,13 +4502,16 @@
    "privilege_grants": [],
    "data_classifications": [],
    "agent_usage": [],
+   "cortex_agents": [],
+   "cortex_events": [],
    "findings": [],
    "discovered_at": "<now>",
    "warnings": [
     "Could not query ACCESS_HISTORY: SQL compilation error: [SELECT ah.query_id, ah.user_name, qh.role_name, ah.query_start_time, ah.direct_objects_accessed, ah.base_objects_accessed, ah.objects_modified FROM SNOWFLAKE.AC] does not exist",
     "Could not list GRANTS_TO_ROLES: SQL compilation error: [SELECT grantee_name, privilege, granted_on, name, granted_by, grant_option FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES WHERE deleted_on IS NULL ORDER BY grante] does not exist",
     "TAG_REFERENCES not accessible. Data classification analysis skipped.",
-    "CORTEX_AGENT_USAGE_HISTORY not available. Requires Cortex Agents (GA Feb 2026). Skipping agent telemetry."
+    "CORTEX_AGENT_USAGE_HISTORY not available. Requires Cortex Agents (GA Feb 2026). Skipping agent telemetry.",
+    "Could not list Cortex Agents: SQL compilation error: [SHOW AGENTS IN ACCOUNT] does not exist or syntax error"
    ]
   },
   "connects": [
@@ -4614,12 +4526,13 @@
     "SELECT ah.query_id, ah.user_name, qh.role_name, ah.query_start_time, ah.direct_objects_accessed, ah.base_objects_accessed, ah.objects_modified FROM SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY ah LEFT JOIN SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY qh ON ah.query_id = qh.query_id WHERE ah.query_start_time >= DATEADD(day, -7, CURRENT_TIMESTAMP()) ORDER BY ah.query_start_time DESC LIMIT 1000",
     "SELECT grantee_name, privilege, granted_on, name, granted_by, grant_option FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES WHERE deleted_on IS NULL ORDER BY grantee_name, granted_on LIMIT 5000",
     "SELECT tag_name, tag_value, object_database, object_schema, object_name, column_name, domain FROM SNOWFLAKE.ACCOUNT_USAGE.TAG_REFERENCES WHERE tag_name ILIKE ANY ('%PII%', '%PHI%', '%SENSITIVE%', '%CONFIDENTIAL%', '%FINANCIAL%', '%CLASSIFICATION%', '%PRIVACY%', '%SECURITY%', '%SEMANTIC_CATEGORY%') ORDER BY object_name LIMIT 2000",
-    "SELECT agent_name, agent_database_name, agent_schema_name, user_name, start_time, end_time, request_id, tokens, token_credits, metadata FROM SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY WHERE start_time >= DATEADD(day, -7, CURRENT_TIMESTAMP()) ORDER BY start_time DESC LIMIT 2000"
+    "SELECT agent_name, agent_database_name, agent_schema_name, user_name, start_time, end_time, request_id, tokens, token_credits, metadata FROM SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY WHERE start_time >= DATEADD(day, -7, CURRENT_TIMESTAMP()) ORDER BY start_time DESC LIMIT 2000",
+    "SHOW AGENTS IN ACCOUNT"
    ]
   ],
   "closes": [
    [
-    4,
+    5,
     1
    ]
   ],
@@ -4643,13 +4556,16 @@
    "privilege_grants": [],
    "data_classifications": [],
    "agent_usage": [],
+   "cortex_agents": [],
+   "cortex_events": [],
    "findings": [],
    "discovered_at": "<now>",
    "warnings": [
     "Could not query ACCESS_HISTORY: network timeout contacting test endpoint",
     "Could not list GRANTS_TO_ROLES: network timeout contacting test endpoint",
     "Could not query TAG_REFERENCES: network timeout contacting test endpoint",
-    "Could not query CORTEX_AGENT_USAGE_HISTORY: network timeout contacting test endpoint"
+    "Could not query CORTEX_AGENT_USAGE_HISTORY: network timeout contacting test endpoint",
+    "Could not list Cortex Agents: network timeout contacting test endpoint"
    ]
   },
   "connects": [
@@ -4664,12 +4580,13 @@
     "SELECT ah.query_id, ah.user_name, qh.role_name, ah.query_start_time, ah.direct_objects_accessed, ah.base_objects_accessed, ah.objects_modified FROM SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY ah LEFT JOIN SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY qh ON ah.query_id = qh.query_id WHERE ah.query_start_time >= DATEADD(day, -7, CURRENT_TIMESTAMP()) ORDER BY ah.query_start_time DESC LIMIT 1000",
     "SELECT grantee_name, privilege, granted_on, name, granted_by, grant_option FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES WHERE deleted_on IS NULL ORDER BY grantee_name, granted_on LIMIT 5000",
     "SELECT tag_name, tag_value, object_database, object_schema, object_name, column_name, domain FROM SNOWFLAKE.ACCOUNT_USAGE.TAG_REFERENCES WHERE tag_name ILIKE ANY ('%PII%', '%PHI%', '%SENSITIVE%', '%CONFIDENTIAL%', '%FINANCIAL%', '%CLASSIFICATION%', '%PRIVACY%', '%SECURITY%', '%SEMANTIC_CATEGORY%') ORDER BY object_name LIMIT 2000",
-    "SELECT agent_name, agent_database_name, agent_schema_name, user_name, start_time, end_time, request_id, tokens, token_credits, metadata FROM SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY WHERE start_time >= DATEADD(day, -7, CURRENT_TIMESTAMP()) ORDER BY start_time DESC LIMIT 2000"
+    "SELECT agent_name, agent_database_name, agent_schema_name, user_name, start_time, end_time, request_id, tokens, token_credits, metadata FROM SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY WHERE start_time >= DATEADD(day, -7, CURRENT_TIMESTAMP()) ORDER BY start_time DESC LIMIT 2000",
+    "SHOW AGENTS IN ACCOUNT"
    ]
   ],
   "closes": [
    [
-    4,
+    5,
     1
    ]
   ],
@@ -4693,6 +4610,8 @@
    "privilege_grants": [],
    "data_classifications": [],
    "agent_usage": [],
+   "cortex_agents": [],
+   "cortex_events": [],
    "findings": [],
    "discovered_at": "<now>",
    "warnings": [
@@ -4713,6 +4632,8 @@
    "privilege_grants": [],
    "data_classifications": [],
    "agent_usage": [],
+   "cortex_agents": [],
+   "cortex_events": [],
    "findings": [],
    "discovered_at": "<now>",
    "warnings": [
@@ -4739,6 +4660,8 @@
    "privilege_grants": [],
    "data_classifications": [],
    "agent_usage": [],
+   "cortex_agents": [],
+   "cortex_events": [],
    "findings": [],
    "discovered_at": "<now>",
    "warnings": [
@@ -4777,6 +4700,8 @@
    "privilege_grants": [],
    "data_classifications": [],
    "agent_usage": [],
+   "cortex_agents": [],
+   "cortex_events": [],
    "findings": [],
    "discovered_at": "<now>",
    "warnings": []
@@ -4793,12 +4718,13 @@
     "SELECT ah.query_id, ah.user_name, qh.role_name, ah.query_start_time, ah.direct_objects_accessed, ah.base_objects_accessed, ah.objects_modified FROM SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY ah LEFT JOIN SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY qh ON ah.query_id = qh.query_id WHERE ah.query_start_time >= DATEADD(day, -7, CURRENT_TIMESTAMP()) ORDER BY ah.query_start_time DESC LIMIT 1000",
     "SELECT grantee_name, privilege, granted_on, name, granted_by, grant_option FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES WHERE deleted_on IS NULL ORDER BY grantee_name, granted_on LIMIT 5000",
     "SELECT tag_name, tag_value, object_database, object_schema, object_name, column_name, domain FROM SNOWFLAKE.ACCOUNT_USAGE.TAG_REFERENCES WHERE tag_name ILIKE ANY ('%PII%', '%PHI%', '%SENSITIVE%', '%CONFIDENTIAL%', '%FINANCIAL%', '%CLASSIFICATION%', '%PRIVACY%', '%SECURITY%', '%SEMANTIC_CATEGORY%') ORDER BY object_name LIMIT 2000",
-    "SELECT agent_name, agent_database_name, agent_schema_name, user_name, start_time, end_time, request_id, tokens, token_credits, metadata FROM SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY WHERE start_time >= DATEADD(day, -7, CURRENT_TIMESTAMP()) ORDER BY start_time DESC LIMIT 2000"
+    "SELECT agent_name, agent_database_name, agent_schema_name, user_name, start_time, end_time, request_id, tokens, token_credits, metadata FROM SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY WHERE start_time >= DATEADD(day, -7, CURRENT_TIMESTAMP()) ORDER BY start_time DESC LIMIT 2000",
+    "SHOW AGENTS IN ACCOUNT"
    ]
   ],
   "closes": [
    [
-    4,
+    5,
     1
    ]
   ],
@@ -4885,40 +4811,118 @@
    ],
    "observability_events": [
     {
-     "event_id": "ev1",
-     "event_type": "TOOL_CALL",
-     "agent_name": "AGENT_HOT",
+     "event_id": "",
+     "event_type": "AGENT_RUN",
+     "agent_name": "DB1.S1.agent_a",
      "timestamp": "ts1",
-     "duration_ms": 12,
-     "status": "OK",
-     "model_name": "m1",
-     "input_tokens": 1,
-     "output_tokens": 2,
-     "tool_name": "search",
-     "tool_input": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
-     "tool_output_summary": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
-     "user_feedback": "",
-     "trace_id": "tr1",
-     "parent_event_id": "",
-     "details": {}
-    },
-    {
-     "event_id": "ev2",
-     "event_type": "LLM",
-     "agent_name": "AGENT_HOT",
-     "timestamp": "ts2",
      "duration_ms": 0,
-     "status": "ERR",
-     "model_name": "m1",
+     "status": "OK",
+     "model_name": "",
      "input_tokens": 0,
      "output_tokens": 0,
      "tool_name": "",
-     "tool_input": "",
-     "tool_output_summary": "",
-     "user_feedback": "thumbs_down",
-     "trace_id": "tr1",
-     "parent_event_id": "ev1",
-     "details": {}
+     "user_feedback": "",
+     "trace_id": "",
+     "parent_event_id": "",
+     "details": {
+      "content_sha256": null,
+      "signals": []
+     }
+    },
+    {
+     "event_id": "",
+     "event_type": "AGENT_RUN",
+     "agent_name": "DB1.S1.agent_a",
+     "timestamp": "ts2",
+     "duration_ms": 0,
+     "status": "OK",
+     "model_name": "",
+     "input_tokens": 0,
+     "output_tokens": 0,
+     "tool_name": "",
+     "user_feedback": "",
+     "trace_id": "",
+     "parent_event_id": "",
+     "details": {
+      "content_sha256": null,
+      "signals": []
+     }
+    },
+    {
+     "event_id": "",
+     "event_type": "AGENT_RUN",
+     "agent_name": "DB1.S1.agent_b",
+     "timestamp": "ts1",
+     "duration_ms": 0,
+     "status": "OK",
+     "model_name": "",
+     "input_tokens": 0,
+     "output_tokens": 0,
+     "tool_name": "",
+     "user_feedback": "",
+     "trace_id": "",
+     "parent_event_id": "",
+     "details": {
+      "content_sha256": null,
+      "signals": []
+     }
+    },
+    {
+     "event_id": "",
+     "event_type": "AGENT_RUN",
+     "agent_name": "DB1.S1.agent_b",
+     "timestamp": "ts2",
+     "duration_ms": 0,
+     "status": "OK",
+     "model_name": "",
+     "input_tokens": 0,
+     "output_tokens": 0,
+     "tool_name": "",
+     "user_feedback": "",
+     "trace_id": "",
+     "parent_event_id": "",
+     "details": {
+      "content_sha256": null,
+      "signals": []
+     }
+    },
+    {
+     "event_id": "",
+     "event_type": "AGENT_RUN",
+     "agent_name": "DB1.S1.agent_c",
+     "timestamp": "ts1",
+     "duration_ms": 0,
+     "status": "OK",
+     "model_name": "",
+     "input_tokens": 0,
+     "output_tokens": 0,
+     "tool_name": "",
+     "user_feedback": "",
+     "trace_id": "",
+     "parent_event_id": "",
+     "details": {
+      "content_sha256": null,
+      "signals": []
+     }
+    },
+    {
+     "event_id": "",
+     "event_type": "AGENT_RUN",
+     "agent_name": "DB1.S1.agent_c",
+     "timestamp": "ts2",
+     "duration_ms": 0,
+     "status": "OK",
+     "model_name": "",
+     "input_tokens": 0,
+     "output_tokens": 0,
+     "tool_name": "",
+     "user_feedback": "",
+     "trace_id": "",
+     "parent_event_id": "",
+     "details": {
+      "content_sha256": null,
+      "signals": []
+     }
     }
    ],
    "discovered_at": "<now>",
@@ -4934,12 +4938,15 @@
   "sql": [
    [
     "SELECT query_id, query_text, user_name, role_name, start_time, end_time, execution_status, warehouse_name, database_name, schema_name, query_type, rows_produced, bytes_scanned, total_elapsed_time FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY WHERE start_time >= DATEADD(day, -365, CURRENT_TIMESTAMP()) AND (query_text ILIKE '%AGENT%' OR query_text ILIKE '%MCP%SERVER%' OR query_text ILIKE '%CORTEX%' OR query_text ILIKE '%SNOWFLAKE.ML%' OR query_text ILIKE '%EXECUTE_SQL%') ORDER BY start_time DESC LIMIT 2000",
-    "SELECT event_id, event_type, agent_name, timestamp, duration_ms, status, model_name, input_tokens, output_tokens, tool_name, tool_input, tool_output_summary, user_feedback, trace_id, parent_event_id FROM TABLE(SNOWFLAKE.LOCAL.AI_OBSERVABILITY_EVENTS( INTERVAL => '365 days')) ORDER BY timestamp DESC LIMIT 5000"
+    "SHOW AGENTS IN ACCOUNT",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_a', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -365, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_b', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -365, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_c', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -365, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001"
    ]
   ],
   "closes": [
    [
-    2,
+    5,
     1
    ]
   ],
@@ -4965,7 +4972,7 @@
   "sql": [
    [
     "SELECT query_id, query_text, user_name, role_name, start_time, end_time, execution_status, warehouse_name, database_name, schema_name, query_type, rows_produced, bytes_scanned, total_elapsed_time FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY WHERE start_time >= DATEADD(day, -365, CURRENT_TIMESTAMP()) AND (query_text ILIKE '%AGENT%' OR query_text ILIKE '%MCP%SERVER%' OR query_text ILIKE '%CORTEX%' OR query_text ILIKE '%SNOWFLAKE.ML%' OR query_text ILIKE '%EXECUTE_SQL%') ORDER BY start_time DESC LIMIT 2000",
-    "SELECT event_id, event_type, agent_name, timestamp, duration_ms, status, model_name, input_tokens, output_tokens, tool_name, tool_input, tool_output_summary, user_feedback, trace_id, parent_event_id FROM TABLE(SNOWFLAKE.LOCAL.AI_OBSERVABILITY_EVENTS( INTERVAL => '365 days')) ORDER BY timestamp DESC LIMIT 5000"
+    "SHOW AGENTS IN ACCOUNT"
    ]
   ],
   "closes": [
@@ -5055,44 +5062,7 @@
      "agent_pattern": ""
     }
    ],
-   "observability_events": [
-    {
-     "event_id": "",
-     "event_type": "",
-     "agent_name": "",
-     "timestamp": "",
-     "duration_ms": 0,
-     "status": "",
-     "model_name": "",
-     "input_tokens": 0,
-     "output_tokens": 0,
-     "tool_name": "",
-     "tool_input": "",
-     "tool_output_summary": "",
-     "user_feedback": "",
-     "trace_id": "",
-     "parent_event_id": "",
-     "details": {}
-    },
-    {
-     "event_id": "",
-     "event_type": "",
-     "agent_name": "",
-     "timestamp": "",
-     "duration_ms": 0,
-     "status": "",
-     "model_name": "",
-     "input_tokens": 0,
-     "output_tokens": 0,
-     "tool_name": "",
-     "tool_input": "",
-     "tool_output_summary": "",
-     "user_feedback": "",
-     "trace_id": "",
-     "parent_event_id": "",
-     "details": {}
-    }
-   ],
+   "observability_events": [],
    "discovered_at": "<now>",
    "warnings": []
   },
@@ -5106,7 +5076,7 @@
   "sql": [
    [
     "SELECT query_id, query_text, user_name, role_name, start_time, end_time, execution_status, warehouse_name, database_name, schema_name, query_type, rows_produced, bytes_scanned, total_elapsed_time FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY WHERE start_time >= DATEADD(day, -365, CURRENT_TIMESTAMP()) AND (query_text ILIKE '%AGENT%' OR query_text ILIKE '%MCP%SERVER%' OR query_text ILIKE '%CORTEX%' OR query_text ILIKE '%SNOWFLAKE.ML%' OR query_text ILIKE '%EXECUTE_SQL%') ORDER BY start_time DESC LIMIT 2000",
-    "SELECT event_id, event_type, agent_name, timestamp, duration_ms, status, model_name, input_tokens, output_tokens, tool_name, tool_input, tool_output_summary, user_feedback, trace_id, parent_event_id FROM TABLE(SNOWFLAKE.LOCAL.AI_OBSERVABILITY_EVENTS( INTERVAL => '365 days')) ORDER BY timestamp DESC LIMIT 5000"
+    "SHOW AGENTS IN ACCOUNT"
    ]
   ],
   "closes": [
@@ -5127,7 +5097,7 @@
    "discovered_at": "<now>",
    "warnings": [
     "Could not query QUERY_HISTORY: SQL access control error: Insufficient privileges; permission denied for test-object",
-    "Could not query AI_OBSERVABILITY_EVENTS: SQL access control error: Insufficient privileges; permission denied for test-object"
+    "Could not list Cortex Agents: SQL access control error: Insufficient privileges; permission denied for test-object"
    ]
   },
   "connects": [
@@ -5140,7 +5110,7 @@
   "sql": [
    [
     "SELECT query_id, query_text, user_name, role_name, start_time, end_time, execution_status, warehouse_name, database_name, schema_name, query_type, rows_produced, bytes_scanned, total_elapsed_time FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY WHERE start_time >= DATEADD(day, -365, CURRENT_TIMESTAMP()) AND (query_text ILIKE '%AGENT%' OR query_text ILIKE '%MCP%SERVER%' OR query_text ILIKE '%CORTEX%' OR query_text ILIKE '%SNOWFLAKE.ML%' OR query_text ILIKE '%EXECUTE_SQL%') ORDER BY start_time DESC LIMIT 2000",
-    "SELECT event_id, event_type, agent_name, timestamp, duration_ms, status, model_name, input_tokens, output_tokens, tool_name, tool_input, tool_output_summary, user_feedback, trace_id, parent_event_id FROM TABLE(SNOWFLAKE.LOCAL.AI_OBSERVABILITY_EVENTS( INTERVAL => '365 days')) ORDER BY timestamp DESC LIMIT 5000"
+    "SHOW AGENTS IN ACCOUNT"
    ]
   ],
   "closes": [
@@ -5161,7 +5131,7 @@
    "discovered_at": "<now>",
    "warnings": [
     "Could not query QUERY_HISTORY: SQL compilation error: [SELECT query_id, query_text, user_name, role_name, start_time, end_time, execution_status, warehouse_name, database_name, schema_name, query_type, rows_produced] does not exist",
-    "AI_OBSERVABILITY_EVENTS not available. Enable AI observability in Snowflake to capture agent traces."
+    "Could not list Cortex Agents: SQL compilation error: [SHOW AGENTS IN ACCOUNT] does not exist or syntax error"
    ]
   },
   "connects": [
@@ -5174,7 +5144,7 @@
   "sql": [
    [
     "SELECT query_id, query_text, user_name, role_name, start_time, end_time, execution_status, warehouse_name, database_name, schema_name, query_type, rows_produced, bytes_scanned, total_elapsed_time FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY WHERE start_time >= DATEADD(day, -365, CURRENT_TIMESTAMP()) AND (query_text ILIKE '%AGENT%' OR query_text ILIKE '%MCP%SERVER%' OR query_text ILIKE '%CORTEX%' OR query_text ILIKE '%SNOWFLAKE.ML%' OR query_text ILIKE '%EXECUTE_SQL%') ORDER BY start_time DESC LIMIT 2000",
-    "SELECT event_id, event_type, agent_name, timestamp, duration_ms, status, model_name, input_tokens, output_tokens, tool_name, tool_input, tool_output_summary, user_feedback, trace_id, parent_event_id FROM TABLE(SNOWFLAKE.LOCAL.AI_OBSERVABILITY_EVENTS( INTERVAL => '365 days')) ORDER BY timestamp DESC LIMIT 5000"
+    "SHOW AGENTS IN ACCOUNT"
    ]
   ],
   "closes": [
@@ -5195,7 +5165,7 @@
    "discovered_at": "<now>",
    "warnings": [
     "Could not query QUERY_HISTORY: network timeout contacting test endpoint",
-    "Could not query AI_OBSERVABILITY_EVENTS: network timeout contacting test endpoint"
+    "Could not list Cortex Agents: network timeout contacting test endpoint"
    ]
   },
   "connects": [
@@ -5208,7 +5178,7 @@
   "sql": [
    [
     "SELECT query_id, query_text, user_name, role_name, start_time, end_time, execution_status, warehouse_name, database_name, schema_name, query_type, rows_produced, bytes_scanned, total_elapsed_time FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY WHERE start_time >= DATEADD(day, -365, CURRENT_TIMESTAMP()) AND (query_text ILIKE '%AGENT%' OR query_text ILIKE '%MCP%SERVER%' OR query_text ILIKE '%CORTEX%' OR query_text ILIKE '%SNOWFLAKE.ML%' OR query_text ILIKE '%EXECUTE_SQL%') ORDER BY start_time DESC LIMIT 2000",
-    "SELECT event_id, event_type, agent_name, timestamp, duration_ms, status, model_name, input_tokens, output_tokens, tool_name, tool_input, tool_output_summary, user_feedback, trace_id, parent_event_id FROM TABLE(SNOWFLAKE.LOCAL.AI_OBSERVABILITY_EVENTS( INTERVAL => '365 days')) ORDER BY timestamp DESC LIMIT 5000"
+    "SHOW AGENTS IN ACCOUNT"
    ]
   ],
   "closes": [
@@ -5314,7 +5284,7 @@
   "sql": [
    [
     "SELECT query_id, query_text, user_name, role_name, start_time, end_time, execution_status, warehouse_name, database_name, schema_name, query_type, rows_produced, bytes_scanned, total_elapsed_time FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY WHERE start_time >= DATEADD(day, -365, CURRENT_TIMESTAMP()) AND (query_text ILIKE '%AGENT%' OR query_text ILIKE '%MCP%SERVER%' OR query_text ILIKE '%CORTEX%' OR query_text ILIKE '%SNOWFLAKE.ML%' OR query_text ILIKE '%EXECUTE_SQL%') ORDER BY start_time DESC LIMIT 2000",
-    "SELECT event_id, event_type, agent_name, timestamp, duration_ms, status, model_name, input_tokens, output_tokens, tool_name, tool_input, tool_output_summary, user_feedback, trace_id, parent_event_id FROM TABLE(SNOWFLAKE.LOCAL.AI_OBSERVABILITY_EVENTS( INTERVAL => '365 days')) ORDER BY timestamp DESC LIMIT 5000"
+    "SHOW AGENTS IN ACCOUNT"
    ]
   ],
   "closes": [
@@ -9620,9 +9590,9 @@
     "summary": {
      "total_queries": 4,
      "agent_queries": 3,
-     "observability_events": 2,
-     "unique_agents": 1,
-     "tool_calls": 1
+     "observability_events": 6,
+     "unique_agents": 3,
+     "tool_calls": 0
     },
     "query_history": [
      {
@@ -9676,28 +9646,80 @@
     ],
     "observability_events": [
      {
-      "event_id": "ev1",
-      "event_type": "TOOL_CALL",
-      "agent_name": "AGENT_HOT",
+      "event_id": "",
+      "event_type": "AGENT_RUN",
+      "agent_name": "DB1.S1.agent_a",
       "timestamp": "ts1",
-      "duration_ms": 12,
+      "duration_ms": 0,
       "status": "OK",
-      "model_name": "m1",
-      "tool_name": "search",
-      "trace_id": "tr1",
-      "input_tokens": 1,
-      "output_tokens": 2
+      "model_name": "",
+      "tool_name": "",
+      "trace_id": "",
+      "input_tokens": 0,
+      "output_tokens": 0
      },
      {
-      "event_id": "ev2",
-      "event_type": "LLM",
-      "agent_name": "AGENT_HOT",
+      "event_id": "",
+      "event_type": "AGENT_RUN",
+      "agent_name": "DB1.S1.agent_a",
       "timestamp": "ts2",
       "duration_ms": 0,
-      "status": "ERR",
-      "model_name": "m1",
+      "status": "OK",
+      "model_name": "",
       "tool_name": "",
-      "trace_id": "tr1",
+      "trace_id": "",
+      "input_tokens": 0,
+      "output_tokens": 0
+     },
+     {
+      "event_id": "",
+      "event_type": "AGENT_RUN",
+      "agent_name": "DB1.S1.agent_b",
+      "timestamp": "ts1",
+      "duration_ms": 0,
+      "status": "OK",
+      "model_name": "",
+      "tool_name": "",
+      "trace_id": "",
+      "input_tokens": 0,
+      "output_tokens": 0
+     },
+     {
+      "event_id": "",
+      "event_type": "AGENT_RUN",
+      "agent_name": "DB1.S1.agent_b",
+      "timestamp": "ts2",
+      "duration_ms": 0,
+      "status": "OK",
+      "model_name": "",
+      "tool_name": "",
+      "trace_id": "",
+      "input_tokens": 0,
+      "output_tokens": 0
+     },
+     {
+      "event_id": "",
+      "event_type": "AGENT_RUN",
+      "agent_name": "DB1.S1.agent_c",
+      "timestamp": "ts1",
+      "duration_ms": 0,
+      "status": "OK",
+      "model_name": "",
+      "tool_name": "",
+      "trace_id": "",
+      "input_tokens": 0,
+      "output_tokens": 0
+     },
+     {
+      "event_id": "",
+      "event_type": "AGENT_RUN",
+      "agent_name": "DB1.S1.agent_c",
+      "timestamp": "ts2",
+      "duration_ms": 0,
+      "status": "OK",
+      "model_name": "",
+      "tool_name": "",
+      "trace_id": "",
       "input_tokens": 0,
       "output_tokens": 0
      }
@@ -9932,6 +9954,8 @@
      "privilege_grants": 5,
      "data_classifications": 4,
      "agent_usage_records": 9,
+     "cortex_agents": 3,
+     "cortex_events": 6,
      "findings": 14,
      "critical_findings": 4,
      "high_findings": 4
@@ -10120,6 +10144,8 @@
     "agent_usage": [
      {
       "agent_name": "AGENT_HOT",
+      "database_name": "DB",
+      "schema_name": "S",
       "user_name": "ALICE",
       "role_name": "",
       "start_time": "t0",
@@ -10131,6 +10157,8 @@
      },
      {
       "agent_name": "AGENT_HOT",
+      "database_name": "DB",
+      "schema_name": "S",
       "user_name": "ALICE",
       "role_name": "",
       "start_time": "t1",
@@ -10142,6 +10170,8 @@
      },
      {
       "agent_name": "AGENT_HOT",
+      "database_name": "DB",
+      "schema_name": "S",
       "user_name": "ALICE",
       "role_name": "",
       "start_time": "t2",
@@ -10153,6 +10183,8 @@
      },
      {
       "agent_name": "AGENT_HOT",
+      "database_name": "DB",
+      "schema_name": "S",
       "user_name": "ALICE",
       "role_name": "",
       "start_time": "t3",
@@ -10164,6 +10196,8 @@
      },
      {
       "agent_name": "AGENT_HOT",
+      "database_name": "DB",
+      "schema_name": "S",
       "user_name": "ALICE",
       "role_name": "",
       "start_time": "t4",
@@ -10175,6 +10209,8 @@
      },
      {
       "agent_name": "AGENT_HOT",
+      "database_name": "DB",
+      "schema_name": "S",
       "user_name": "ALICE",
       "role_name": "",
       "start_time": "t5",
@@ -10186,6 +10222,8 @@
      },
      {
       "agent_name": "AGENT_HOT",
+      "database_name": "DB",
+      "schema_name": "S",
       "user_name": "ALICE",
       "role_name": "",
       "start_time": "t6",
@@ -10197,6 +10235,8 @@
      },
      {
       "agent_name": "AGENT_COLD",
+      "database_name": "DB",
+      "schema_name": "S",
       "user_name": "BOB",
       "role_name": "",
       "start_time": "t9",
@@ -10208,6 +10248,8 @@
      },
      {
       "agent_name": "AGENT_COLD",
+      "database_name": "DB",
+      "schema_name": "S",
       "user_name": "BOB",
       "role_name": "",
       "start_time": "t10",
@@ -10216,6 +10258,220 @@
       "model_name": "",
       "tool_calls": 0,
       "status": ""
+     }
+    ],
+    "cortex_agents": [
+     {
+      "account": "test-acct",
+      "database": "DB1",
+      "schema": "S1",
+      "name": "agent_a",
+      "fqn": "DB1.S1.agent_a",
+      "node_id": "agent:snowflake:test-acct:DB1.S1.agent_a",
+      "display_name": "Agent A",
+      "owner": "",
+      "is_secure": false,
+      "spec_status": "unavailable",
+      "tools": [],
+      "execution_roles": []
+     },
+     {
+      "account": "test-acct",
+      "database": "DB1",
+      "schema": "S1",
+      "name": "agent_b",
+      "fqn": "DB1.S1.agent_b",
+      "node_id": "agent:snowflake:test-acct:DB1.S1.agent_b",
+      "display_name": "agent_b",
+      "owner": "",
+      "is_secure": false,
+      "spec_status": "unavailable",
+      "tools": [],
+      "execution_roles": []
+     },
+     {
+      "account": "test-acct",
+      "database": "DB1",
+      "schema": "S1",
+      "name": "agent_c",
+      "fqn": "DB1.S1.agent_c",
+      "node_id": "agent:snowflake:test-acct:DB1.S1.agent_c",
+      "display_name": "agent_c",
+      "owner": "",
+      "is_secure": false,
+      "spec_status": "unavailable",
+      "tools": [],
+      "execution_roles": []
+     }
+    ],
+    "cortex_events": [
+     {
+      "tenant_id": null,
+      "source": "snowflake_cortex",
+      "source_trace_id": null,
+      "source_span_id": null,
+      "parent_span_id": null,
+      "started_at": null,
+      "ended_at": "ts1",
+      "kind": "agent",
+      "agent_name": "DB1.S1.agent_a",
+      "agent_ref": "agent:snowflake:test-acct:DB1.S1.agent_a",
+      "model_provider": null,
+      "model_name": null,
+      "tool_name": null,
+      "mcp_server_ref": null,
+      "resource_refs": [],
+      "principal_hash": null,
+      "role_name": null,
+      "credential_ref": null,
+      "input_tokens": null,
+      "output_tokens": null,
+      "cost_usd": null,
+      "status": "ok",
+      "signals": [],
+      "content_sha256": null,
+      "match_method": "exact",
+      "match_node_id": "agent:snowflake:test-acct:DB1.S1.agent_a"
+     },
+     {
+      "tenant_id": null,
+      "source": "snowflake_cortex",
+      "source_trace_id": null,
+      "source_span_id": null,
+      "parent_span_id": null,
+      "started_at": null,
+      "ended_at": "ts2",
+      "kind": "agent",
+      "agent_name": "DB1.S1.agent_a",
+      "agent_ref": "agent:snowflake:test-acct:DB1.S1.agent_a",
+      "model_provider": null,
+      "model_name": null,
+      "tool_name": null,
+      "mcp_server_ref": null,
+      "resource_refs": [],
+      "principal_hash": null,
+      "role_name": null,
+      "credential_ref": null,
+      "input_tokens": null,
+      "output_tokens": null,
+      "cost_usd": null,
+      "status": "ok",
+      "signals": [],
+      "content_sha256": null,
+      "match_method": "exact",
+      "match_node_id": "agent:snowflake:test-acct:DB1.S1.agent_a"
+     },
+     {
+      "tenant_id": null,
+      "source": "snowflake_cortex",
+      "source_trace_id": null,
+      "source_span_id": null,
+      "parent_span_id": null,
+      "started_at": null,
+      "ended_at": "ts1",
+      "kind": "agent",
+      "agent_name": "DB1.S1.agent_b",
+      "agent_ref": "agent:snowflake:test-acct:DB1.S1.agent_b",
+      "model_provider": null,
+      "model_name": null,
+      "tool_name": null,
+      "mcp_server_ref": null,
+      "resource_refs": [],
+      "principal_hash": null,
+      "role_name": null,
+      "credential_ref": null,
+      "input_tokens": null,
+      "output_tokens": null,
+      "cost_usd": null,
+      "status": "ok",
+      "signals": [],
+      "content_sha256": null,
+      "match_method": "exact",
+      "match_node_id": "agent:snowflake:test-acct:DB1.S1.agent_b"
+     },
+     {
+      "tenant_id": null,
+      "source": "snowflake_cortex",
+      "source_trace_id": null,
+      "source_span_id": null,
+      "parent_span_id": null,
+      "started_at": null,
+      "ended_at": "ts2",
+      "kind": "agent",
+      "agent_name": "DB1.S1.agent_b",
+      "agent_ref": "agent:snowflake:test-acct:DB1.S1.agent_b",
+      "model_provider": null,
+      "model_name": null,
+      "tool_name": null,
+      "mcp_server_ref": null,
+      "resource_refs": [],
+      "principal_hash": null,
+      "role_name": null,
+      "credential_ref": null,
+      "input_tokens": null,
+      "output_tokens": null,
+      "cost_usd": null,
+      "status": "ok",
+      "signals": [],
+      "content_sha256": null,
+      "match_method": "exact",
+      "match_node_id": "agent:snowflake:test-acct:DB1.S1.agent_b"
+     },
+     {
+      "tenant_id": null,
+      "source": "snowflake_cortex",
+      "source_trace_id": null,
+      "source_span_id": null,
+      "parent_span_id": null,
+      "started_at": null,
+      "ended_at": "ts1",
+      "kind": "agent",
+      "agent_name": "DB1.S1.agent_c",
+      "agent_ref": "agent:snowflake:test-acct:DB1.S1.agent_c",
+      "model_provider": null,
+      "model_name": null,
+      "tool_name": null,
+      "mcp_server_ref": null,
+      "resource_refs": [],
+      "principal_hash": null,
+      "role_name": null,
+      "credential_ref": null,
+      "input_tokens": null,
+      "output_tokens": null,
+      "cost_usd": null,
+      "status": "ok",
+      "signals": [],
+      "content_sha256": null,
+      "match_method": "exact",
+      "match_node_id": "agent:snowflake:test-acct:DB1.S1.agent_c"
+     },
+     {
+      "tenant_id": null,
+      "source": "snowflake_cortex",
+      "source_trace_id": null,
+      "source_span_id": null,
+      "parent_span_id": null,
+      "started_at": null,
+      "ended_at": "ts2",
+      "kind": "agent",
+      "agent_name": "DB1.S1.agent_c",
+      "agent_ref": "agent:snowflake:test-acct:DB1.S1.agent_c",
+      "model_provider": null,
+      "model_name": null,
+      "tool_name": null,
+      "mcp_server_ref": null,
+      "resource_refs": [],
+      "principal_hash": null,
+      "role_name": null,
+      "credential_ref": null,
+      "input_tokens": null,
+      "output_tokens": null,
+      "cost_usd": null,
+      "status": "ok",
+      "signals": [],
+      "content_sha256": null,
+      "match_method": "exact",
+      "match_node_id": "agent:snowflake:test-acct:DB1.S1.agent_c"
      }
     ],
     "findings": [
@@ -11004,11 +11260,24 @@
     "SELECT ah.query_id, ah.user_name, qh.role_name, ah.query_start_time, ah.direct_objects_accessed, ah.base_objects_accessed, ah.objects_modified FROM SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY ah LEFT JOIN SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY qh ON ah.query_id = qh.query_id WHERE ah.query_start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY ah.query_start_time DESC LIMIT 1000",
     "SELECT grantee_name, privilege, granted_on, name, granted_by, grant_option FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES WHERE deleted_on IS NULL ORDER BY grantee_name, granted_on LIMIT 5000",
     "SELECT tag_name, tag_value, object_database, object_schema, object_name, column_name, domain FROM SNOWFLAKE.ACCOUNT_USAGE.TAG_REFERENCES WHERE tag_name ILIKE ANY ('%PII%', '%PHI%', '%SENSITIVE%', '%CONFIDENTIAL%', '%FINANCIAL%', '%CLASSIFICATION%', '%PRIVACY%', '%SECURITY%', '%SEMANTIC_CATEGORY%') ORDER BY object_name LIMIT 2000",
-    "SELECT agent_name, agent_database_name, agent_schema_name, user_name, start_time, end_time, request_id, tokens, token_credits, metadata FROM SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY WHERE start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY start_time DESC LIMIT 2000"
+    "SELECT agent_name, agent_database_name, agent_schema_name, user_name, start_time, end_time, request_id, tokens, token_credits, metadata FROM SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY WHERE start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY start_time DESC LIMIT 2000",
+    "SHOW AGENTS IN ACCOUNT",
+    "DESCRIBE AGENT \"DB1\".\"S1\".\"agent_a\"",
+    "SHOW GRANTS ON AGENT \"DB1\".\"S1\".\"agent_a\"",
+    "DESCRIBE AGENT \"DB1\".\"S1\".\"agent_b\"",
+    "SHOW GRANTS ON AGENT \"DB1\".\"S1\".\"agent_b\"",
+    "DESCRIBE AGENT \"DB1\".\"S1\".\"agent_c\"",
+    "SHOW GRANTS ON AGENT \"DB1\".\"S1\".\"agent_c\"",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_a', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_b', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_c', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001"
    ],
    [
     "SELECT query_id, query_text, user_name, role_name, start_time, end_time, execution_status, warehouse_name, database_name, schema_name, query_type, rows_produced, bytes_scanned, total_elapsed_time FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY WHERE start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP()) AND (query_text ILIKE '%AGENT%' OR query_text ILIKE '%MCP%SERVER%' OR query_text ILIKE '%CORTEX%' OR query_text ILIKE '%SNOWFLAKE.ML%' OR query_text ILIKE '%EXECUTE_SQL%') ORDER BY start_time DESC LIMIT 2000",
-    "SELECT event_id, event_type, agent_name, timestamp, duration_ms, status, model_name, input_tokens, output_tokens, tool_name, tool_input, tool_output_summary, user_feedback, trace_id, parent_event_id FROM TABLE(SNOWFLAKE.LOCAL.AI_OBSERVABILITY_EVENTS( INTERVAL => '30 days')) ORDER BY timestamp DESC LIMIT 5000"
+    "SHOW AGENTS IN ACCOUNT",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_a', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_b', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_c', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001"
    ]
   ],
   "closes": [
@@ -11053,11 +11322,11 @@
     1
    ],
    [
-    4,
+    14,
     1
    ],
    [
-    2,
+    5,
     1
    ]
   ],
@@ -11189,11 +11458,12 @@
     "SELECT ah.query_id, ah.user_name, qh.role_name, ah.query_start_time, ah.direct_objects_accessed, ah.base_objects_accessed, ah.objects_modified FROM SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY ah LEFT JOIN SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY qh ON ah.query_id = qh.query_id WHERE ah.query_start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY ah.query_start_time DESC LIMIT 1000",
     "SELECT grantee_name, privilege, granted_on, name, granted_by, grant_option FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES WHERE deleted_on IS NULL ORDER BY grantee_name, granted_on LIMIT 5000",
     "SELECT tag_name, tag_value, object_database, object_schema, object_name, column_name, domain FROM SNOWFLAKE.ACCOUNT_USAGE.TAG_REFERENCES WHERE tag_name ILIKE ANY ('%PII%', '%PHI%', '%SENSITIVE%', '%CONFIDENTIAL%', '%FINANCIAL%', '%CLASSIFICATION%', '%PRIVACY%', '%SECURITY%', '%SEMANTIC_CATEGORY%') ORDER BY object_name LIMIT 2000",
-    "SELECT agent_name, agent_database_name, agent_schema_name, user_name, start_time, end_time, request_id, tokens, token_credits, metadata FROM SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY WHERE start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY start_time DESC LIMIT 2000"
+    "SELECT agent_name, agent_database_name, agent_schema_name, user_name, start_time, end_time, request_id, tokens, token_credits, metadata FROM SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY WHERE start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY start_time DESC LIMIT 2000",
+    "SHOW AGENTS IN ACCOUNT"
    ],
    [
     "SELECT query_id, query_text, user_name, role_name, start_time, end_time, execution_status, warehouse_name, database_name, schema_name, query_type, rows_produced, bytes_scanned, total_elapsed_time FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY WHERE start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP()) AND (query_text ILIKE '%AGENT%' OR query_text ILIKE '%MCP%SERVER%' OR query_text ILIKE '%CORTEX%' OR query_text ILIKE '%SNOWFLAKE.ML%' OR query_text ILIKE '%EXECUTE_SQL%') ORDER BY start_time DESC LIMIT 2000",
-    "SELECT event_id, event_type, agent_name, timestamp, duration_ms, status, model_name, input_tokens, output_tokens, tool_name, tool_input, tool_output_summary, user_feedback, trace_id, parent_event_id FROM TABLE(SNOWFLAKE.LOCAL.AI_OBSERVABILITY_EVENTS( INTERVAL => '30 days')) ORDER BY timestamp DESC LIMIT 5000"
+    "SHOW AGENTS IN ACCOUNT"
    ]
   ],
   "closes": [
@@ -11238,7 +11508,7 @@
     1
    ],
    [
-    4,
+    5,
     1
    ],
    [
@@ -11258,7 +11528,7 @@
     "summary": {
      "total_queries": 4,
      "agent_queries": 0,
-     "observability_events": 2,
+     "observability_events": 0,
      "unique_agents": 0,
      "tool_calls": 0
     },
@@ -11312,34 +11582,7 @@
       "execution_time_ms": 0
      }
     ],
-    "observability_events": [
-     {
-      "event_id": "",
-      "event_type": "",
-      "agent_name": "",
-      "timestamp": "",
-      "duration_ms": 0,
-      "status": "",
-      "model_name": "",
-      "tool_name": "",
-      "trace_id": "",
-      "input_tokens": 0,
-      "output_tokens": 0
-     },
-     {
-      "event_id": "",
-      "event_type": "",
-      "agent_name": "",
-      "timestamp": "",
-      "duration_ms": 0,
-      "status": "",
-      "model_name": "",
-      "tool_name": "",
-      "trace_id": "",
-      "input_tokens": 0,
-      "output_tokens": 0
-     }
-    ],
+    "observability_events": [],
     "warnings": [],
     "status": "ok"
    },
@@ -11391,6 +11634,8 @@
      "privilege_grants": 5,
      "data_classifications": 4,
      "agent_usage_records": 9,
+     "cortex_agents": 0,
+     "cortex_events": 0,
      "findings": 0,
      "critical_findings": 0,
      "high_findings": 0
@@ -11399,6 +11644,8 @@
     "agent_usage": [
      {
       "agent_name": "",
+      "database_name": "",
+      "schema_name": "",
       "user_name": "",
       "role_name": "",
       "start_time": "",
@@ -11410,6 +11657,8 @@
      },
      {
       "agent_name": "",
+      "database_name": "",
+      "schema_name": "",
       "user_name": "",
       "role_name": "",
       "start_time": "",
@@ -11421,6 +11670,8 @@
      },
      {
       "agent_name": "",
+      "database_name": "",
+      "schema_name": "",
       "user_name": "",
       "role_name": "",
       "start_time": "",
@@ -11432,6 +11683,8 @@
      },
      {
       "agent_name": "",
+      "database_name": "",
+      "schema_name": "",
       "user_name": "",
       "role_name": "",
       "start_time": "",
@@ -11443,6 +11696,8 @@
      },
      {
       "agent_name": "",
+      "database_name": "",
+      "schema_name": "",
       "user_name": "",
       "role_name": "",
       "start_time": "",
@@ -11454,6 +11709,8 @@
      },
      {
       "agent_name": "",
+      "database_name": "",
+      "schema_name": "",
       "user_name": "",
       "role_name": "",
       "start_time": "",
@@ -11465,6 +11722,8 @@
      },
      {
       "agent_name": "",
+      "database_name": "",
+      "schema_name": "",
       "user_name": "",
       "role_name": "",
       "start_time": "",
@@ -11476,6 +11735,8 @@
      },
      {
       "agent_name": "",
+      "database_name": "",
+      "schema_name": "",
       "user_name": "",
       "role_name": "",
       "start_time": "",
@@ -11487,6 +11748,8 @@
      },
      {
       "agent_name": "",
+      "database_name": "",
+      "schema_name": "",
       "user_name": "",
       "role_name": "",
       "start_time": "",
@@ -11497,6 +11760,8 @@
       "status": ""
      }
     ],
+    "cortex_agents": [],
+    "cortex_events": [],
     "findings": [],
     "warnings": []
    },
@@ -11663,11 +11928,12 @@
     "SELECT ah.query_id, ah.user_name, qh.role_name, ah.query_start_time, ah.direct_objects_accessed, ah.base_objects_accessed, ah.objects_modified FROM SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY ah LEFT JOIN SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY qh ON ah.query_id = qh.query_id WHERE ah.query_start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY ah.query_start_time DESC LIMIT 1000",
     "SELECT grantee_name, privilege, granted_on, name, granted_by, grant_option FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES WHERE deleted_on IS NULL ORDER BY grantee_name, granted_on LIMIT 5000",
     "SELECT tag_name, tag_value, object_database, object_schema, object_name, column_name, domain FROM SNOWFLAKE.ACCOUNT_USAGE.TAG_REFERENCES WHERE tag_name ILIKE ANY ('%PII%', '%PHI%', '%SENSITIVE%', '%CONFIDENTIAL%', '%FINANCIAL%', '%CLASSIFICATION%', '%PRIVACY%', '%SECURITY%', '%SEMANTIC_CATEGORY%') ORDER BY object_name LIMIT 2000",
-    "SELECT agent_name, agent_database_name, agent_schema_name, user_name, start_time, end_time, request_id, tokens, token_credits, metadata FROM SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY WHERE start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY start_time DESC LIMIT 2000"
+    "SELECT agent_name, agent_database_name, agent_schema_name, user_name, start_time, end_time, request_id, tokens, token_credits, metadata FROM SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY WHERE start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY start_time DESC LIMIT 2000",
+    "SHOW AGENTS IN ACCOUNT"
    ],
    [
     "SELECT query_id, query_text, user_name, role_name, start_time, end_time, execution_status, warehouse_name, database_name, schema_name, query_type, rows_produced, bytes_scanned, total_elapsed_time FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY WHERE start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP()) AND (query_text ILIKE '%AGENT%' OR query_text ILIKE '%MCP%SERVER%' OR query_text ILIKE '%CORTEX%' OR query_text ILIKE '%SNOWFLAKE.ML%' OR query_text ILIKE '%EXECUTE_SQL%') ORDER BY start_time DESC LIMIT 2000",
-    "SELECT event_id, event_type, agent_name, timestamp, duration_ms, status, model_name, input_tokens, output_tokens, tool_name, tool_input, tool_output_summary, user_feedback, trace_id, parent_event_id FROM TABLE(SNOWFLAKE.LOCAL.AI_OBSERVABILITY_EVENTS( INTERVAL => '30 days')) ORDER BY timestamp DESC LIMIT 5000"
+    "SHOW AGENTS IN ACCOUNT"
    ]
   ],
   "closes": [
@@ -11712,7 +11978,7 @@
     1
    ],
    [
-    4,
+    5,
     1
    ],
    [
@@ -11839,11 +12105,12 @@
     "SELECT ah.query_id, ah.user_name, qh.role_name, ah.query_start_time, ah.direct_objects_accessed, ah.base_objects_accessed, ah.objects_modified FROM SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY ah LEFT JOIN SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY qh ON ah.query_id = qh.query_id WHERE ah.query_start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY ah.query_start_time DESC LIMIT 1000",
     "SELECT grantee_name, privilege, granted_on, name, granted_by, grant_option FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES WHERE deleted_on IS NULL ORDER BY grantee_name, granted_on LIMIT 5000",
     "SELECT tag_name, tag_value, object_database, object_schema, object_name, column_name, domain FROM SNOWFLAKE.ACCOUNT_USAGE.TAG_REFERENCES WHERE tag_name ILIKE ANY ('%PII%', '%PHI%', '%SENSITIVE%', '%CONFIDENTIAL%', '%FINANCIAL%', '%CLASSIFICATION%', '%PRIVACY%', '%SECURITY%', '%SEMANTIC_CATEGORY%') ORDER BY object_name LIMIT 2000",
-    "SELECT agent_name, agent_database_name, agent_schema_name, user_name, start_time, end_time, request_id, tokens, token_credits, metadata FROM SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY WHERE start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY start_time DESC LIMIT 2000"
+    "SELECT agent_name, agent_database_name, agent_schema_name, user_name, start_time, end_time, request_id, tokens, token_credits, metadata FROM SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY WHERE start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY start_time DESC LIMIT 2000",
+    "SHOW AGENTS IN ACCOUNT"
    ],
    [
     "SELECT query_id, query_text, user_name, role_name, start_time, end_time, execution_status, warehouse_name, database_name, schema_name, query_type, rows_produced, bytes_scanned, total_elapsed_time FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY WHERE start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP()) AND (query_text ILIKE '%AGENT%' OR query_text ILIKE '%MCP%SERVER%' OR query_text ILIKE '%CORTEX%' OR query_text ILIKE '%SNOWFLAKE.ML%' OR query_text ILIKE '%EXECUTE_SQL%') ORDER BY start_time DESC LIMIT 2000",
-    "SELECT event_id, event_type, agent_name, timestamp, duration_ms, status, model_name, input_tokens, output_tokens, tool_name, tool_input, tool_output_summary, user_feedback, trace_id, parent_event_id FROM TABLE(SNOWFLAKE.LOCAL.AI_OBSERVABILITY_EVENTS( INTERVAL => '30 days')) ORDER BY timestamp DESC LIMIT 5000"
+    "SHOW AGENTS IN ACCOUNT"
    ]
   ],
   "closes": [
@@ -11888,7 +12155,7 @@
     1
    ],
    [
-    4,
+    5,
     1
    ],
    [
@@ -12032,11 +12299,12 @@
     "SELECT ah.query_id, ah.user_name, qh.role_name, ah.query_start_time, ah.direct_objects_accessed, ah.base_objects_accessed, ah.objects_modified FROM SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY ah LEFT JOIN SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY qh ON ah.query_id = qh.query_id WHERE ah.query_start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY ah.query_start_time DESC LIMIT 1000",
     "SELECT grantee_name, privilege, granted_on, name, granted_by, grant_option FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES WHERE deleted_on IS NULL ORDER BY grantee_name, granted_on LIMIT 5000",
     "SELECT tag_name, tag_value, object_database, object_schema, object_name, column_name, domain FROM SNOWFLAKE.ACCOUNT_USAGE.TAG_REFERENCES WHERE tag_name ILIKE ANY ('%PII%', '%PHI%', '%SENSITIVE%', '%CONFIDENTIAL%', '%FINANCIAL%', '%CLASSIFICATION%', '%PRIVACY%', '%SECURITY%', '%SEMANTIC_CATEGORY%') ORDER BY object_name LIMIT 2000",
-    "SELECT agent_name, agent_database_name, agent_schema_name, user_name, start_time, end_time, request_id, tokens, token_credits, metadata FROM SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY WHERE start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY start_time DESC LIMIT 2000"
+    "SELECT agent_name, agent_database_name, agent_schema_name, user_name, start_time, end_time, request_id, tokens, token_credits, metadata FROM SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY WHERE start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY start_time DESC LIMIT 2000",
+    "SHOW AGENTS IN ACCOUNT"
    ],
    [
     "SELECT query_id, query_text, user_name, role_name, start_time, end_time, execution_status, warehouse_name, database_name, schema_name, query_type, rows_produced, bytes_scanned, total_elapsed_time FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY WHERE start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP()) AND (query_text ILIKE '%AGENT%' OR query_text ILIKE '%MCP%SERVER%' OR query_text ILIKE '%CORTEX%' OR query_text ILIKE '%SNOWFLAKE.ML%' OR query_text ILIKE '%EXECUTE_SQL%') ORDER BY start_time DESC LIMIT 2000",
-    "SELECT event_id, event_type, agent_name, timestamp, duration_ms, status, model_name, input_tokens, output_tokens, tool_name, tool_input, tool_output_summary, user_feedback, trace_id, parent_event_id FROM TABLE(SNOWFLAKE.LOCAL.AI_OBSERVABILITY_EVENTS( INTERVAL => '30 days')) ORDER BY timestamp DESC LIMIT 5000"
+    "SHOW AGENTS IN ACCOUNT"
    ]
   ],
   "closes": [
@@ -12081,7 +12349,7 @@
     1
    ],
    [
-    4,
+    5,
     1
    ],
    [
@@ -12225,11 +12493,12 @@
     "SELECT ah.query_id, ah.user_name, qh.role_name, ah.query_start_time, ah.direct_objects_accessed, ah.base_objects_accessed, ah.objects_modified FROM SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY ah LEFT JOIN SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY qh ON ah.query_id = qh.query_id WHERE ah.query_start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY ah.query_start_time DESC LIMIT 1000",
     "SELECT grantee_name, privilege, granted_on, name, granted_by, grant_option FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES WHERE deleted_on IS NULL ORDER BY grantee_name, granted_on LIMIT 5000",
     "SELECT tag_name, tag_value, object_database, object_schema, object_name, column_name, domain FROM SNOWFLAKE.ACCOUNT_USAGE.TAG_REFERENCES WHERE tag_name ILIKE ANY ('%PII%', '%PHI%', '%SENSITIVE%', '%CONFIDENTIAL%', '%FINANCIAL%', '%CLASSIFICATION%', '%PRIVACY%', '%SECURITY%', '%SEMANTIC_CATEGORY%') ORDER BY object_name LIMIT 2000",
-    "SELECT agent_name, agent_database_name, agent_schema_name, user_name, start_time, end_time, request_id, tokens, token_credits, metadata FROM SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY WHERE start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY start_time DESC LIMIT 2000"
+    "SELECT agent_name, agent_database_name, agent_schema_name, user_name, start_time, end_time, request_id, tokens, token_credits, metadata FROM SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY WHERE start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY start_time DESC LIMIT 2000",
+    "SHOW AGENTS IN ACCOUNT"
    ],
    [
     "SELECT query_id, query_text, user_name, role_name, start_time, end_time, execution_status, warehouse_name, database_name, schema_name, query_type, rows_produced, bytes_scanned, total_elapsed_time FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY WHERE start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP()) AND (query_text ILIKE '%AGENT%' OR query_text ILIKE '%MCP%SERVER%' OR query_text ILIKE '%CORTEX%' OR query_text ILIKE '%SNOWFLAKE.ML%' OR query_text ILIKE '%EXECUTE_SQL%') ORDER BY start_time DESC LIMIT 2000",
-    "SELECT event_id, event_type, agent_name, timestamp, duration_ms, status, model_name, input_tokens, output_tokens, tool_name, tool_input, tool_output_summary, user_feedback, trace_id, parent_event_id FROM TABLE(SNOWFLAKE.LOCAL.AI_OBSERVABILITY_EVENTS( INTERVAL => '30 days')) ORDER BY timestamp DESC LIMIT 5000"
+    "SHOW AGENTS IN ACCOUNT"
    ]
   ],
   "closes": [
@@ -12274,7 +12543,7 @@
     1
    ],
    [
-    4,
+    5,
     1
    ],
    [
@@ -12311,9 +12580,9 @@
     "summary": {
      "total_queries": 4,
      "agent_queries": 3,
-     "observability_events": 2,
-     "unique_agents": 1,
-     "tool_calls": 1
+     "observability_events": 6,
+     "unique_agents": 3,
+     "tool_calls": 0
     },
     "query_history": [
      {
@@ -12367,28 +12636,80 @@
     ],
     "observability_events": [
      {
-      "event_id": "ev1",
-      "event_type": "TOOL_CALL",
-      "agent_name": "AGENT_HOT",
+      "event_id": "",
+      "event_type": "AGENT_RUN",
+      "agent_name": "DB1.S1.agent_a",
       "timestamp": "ts1",
-      "duration_ms": 12,
+      "duration_ms": 0,
       "status": "OK",
-      "model_name": "m1",
-      "tool_name": "search",
-      "trace_id": "tr1",
-      "input_tokens": 1,
-      "output_tokens": 2
+      "model_name": "",
+      "tool_name": "",
+      "trace_id": "",
+      "input_tokens": 0,
+      "output_tokens": 0
      },
      {
-      "event_id": "ev2",
-      "event_type": "LLM",
-      "agent_name": "AGENT_HOT",
+      "event_id": "",
+      "event_type": "AGENT_RUN",
+      "agent_name": "DB1.S1.agent_a",
       "timestamp": "ts2",
       "duration_ms": 0,
-      "status": "ERR",
-      "model_name": "m1",
+      "status": "OK",
+      "model_name": "",
       "tool_name": "",
-      "trace_id": "tr1",
+      "trace_id": "",
+      "input_tokens": 0,
+      "output_tokens": 0
+     },
+     {
+      "event_id": "",
+      "event_type": "AGENT_RUN",
+      "agent_name": "DB1.S1.agent_b",
+      "timestamp": "ts1",
+      "duration_ms": 0,
+      "status": "OK",
+      "model_name": "",
+      "tool_name": "",
+      "trace_id": "",
+      "input_tokens": 0,
+      "output_tokens": 0
+     },
+     {
+      "event_id": "",
+      "event_type": "AGENT_RUN",
+      "agent_name": "DB1.S1.agent_b",
+      "timestamp": "ts2",
+      "duration_ms": 0,
+      "status": "OK",
+      "model_name": "",
+      "tool_name": "",
+      "trace_id": "",
+      "input_tokens": 0,
+      "output_tokens": 0
+     },
+     {
+      "event_id": "",
+      "event_type": "AGENT_RUN",
+      "agent_name": "DB1.S1.agent_c",
+      "timestamp": "ts1",
+      "duration_ms": 0,
+      "status": "OK",
+      "model_name": "",
+      "tool_name": "",
+      "trace_id": "",
+      "input_tokens": 0,
+      "output_tokens": 0
+     },
+     {
+      "event_id": "",
+      "event_type": "AGENT_RUN",
+      "agent_name": "DB1.S1.agent_c",
+      "timestamp": "ts2",
+      "duration_ms": 0,
+      "status": "OK",
+      "model_name": "",
+      "tool_name": "",
+      "trace_id": "",
       "input_tokens": 0,
       "output_tokens": 0
      }
@@ -12623,6 +12944,8 @@
      "privilege_grants": 5,
      "data_classifications": 4,
      "agent_usage_records": 9,
+     "cortex_agents": 3,
+     "cortex_events": 6,
      "findings": 14,
      "critical_findings": 4,
      "high_findings": 4
@@ -12811,6 +13134,8 @@
     "agent_usage": [
      {
       "agent_name": "AGENT_HOT",
+      "database_name": "DB",
+      "schema_name": "S",
       "user_name": "ALICE",
       "role_name": "",
       "start_time": "t0",
@@ -12822,6 +13147,8 @@
      },
      {
       "agent_name": "AGENT_HOT",
+      "database_name": "DB",
+      "schema_name": "S",
       "user_name": "ALICE",
       "role_name": "",
       "start_time": "t1",
@@ -12833,6 +13160,8 @@
      },
      {
       "agent_name": "AGENT_HOT",
+      "database_name": "DB",
+      "schema_name": "S",
       "user_name": "ALICE",
       "role_name": "",
       "start_time": "t2",
@@ -12844,6 +13173,8 @@
      },
      {
       "agent_name": "AGENT_HOT",
+      "database_name": "DB",
+      "schema_name": "S",
       "user_name": "ALICE",
       "role_name": "",
       "start_time": "t3",
@@ -12855,6 +13186,8 @@
      },
      {
       "agent_name": "AGENT_HOT",
+      "database_name": "DB",
+      "schema_name": "S",
       "user_name": "ALICE",
       "role_name": "",
       "start_time": "t4",
@@ -12866,6 +13199,8 @@
      },
      {
       "agent_name": "AGENT_HOT",
+      "database_name": "DB",
+      "schema_name": "S",
       "user_name": "ALICE",
       "role_name": "",
       "start_time": "t5",
@@ -12877,6 +13212,8 @@
      },
      {
       "agent_name": "AGENT_HOT",
+      "database_name": "DB",
+      "schema_name": "S",
       "user_name": "ALICE",
       "role_name": "",
       "start_time": "t6",
@@ -12888,6 +13225,8 @@
      },
      {
       "agent_name": "AGENT_COLD",
+      "database_name": "DB",
+      "schema_name": "S",
       "user_name": "BOB",
       "role_name": "",
       "start_time": "t9",
@@ -12899,6 +13238,8 @@
      },
      {
       "agent_name": "AGENT_COLD",
+      "database_name": "DB",
+      "schema_name": "S",
       "user_name": "BOB",
       "role_name": "",
       "start_time": "t10",
@@ -12907,6 +13248,220 @@
       "model_name": "",
       "tool_calls": 0,
       "status": ""
+     }
+    ],
+    "cortex_agents": [
+     {
+      "account": "test-acct",
+      "database": "DB1",
+      "schema": "S1",
+      "name": "agent_a",
+      "fqn": "DB1.S1.agent_a",
+      "node_id": "agent:snowflake:test-acct:DB1.S1.agent_a",
+      "display_name": "Agent A",
+      "owner": "",
+      "is_secure": false,
+      "spec_status": "unavailable",
+      "tools": [],
+      "execution_roles": []
+     },
+     {
+      "account": "test-acct",
+      "database": "DB1",
+      "schema": "S1",
+      "name": "agent_b",
+      "fqn": "DB1.S1.agent_b",
+      "node_id": "agent:snowflake:test-acct:DB1.S1.agent_b",
+      "display_name": "agent_b",
+      "owner": "",
+      "is_secure": false,
+      "spec_status": "unavailable",
+      "tools": [],
+      "execution_roles": []
+     },
+     {
+      "account": "test-acct",
+      "database": "DB1",
+      "schema": "S1",
+      "name": "agent_c",
+      "fqn": "DB1.S1.agent_c",
+      "node_id": "agent:snowflake:test-acct:DB1.S1.agent_c",
+      "display_name": "agent_c",
+      "owner": "",
+      "is_secure": false,
+      "spec_status": "unavailable",
+      "tools": [],
+      "execution_roles": []
+     }
+    ],
+    "cortex_events": [
+     {
+      "tenant_id": null,
+      "source": "snowflake_cortex",
+      "source_trace_id": null,
+      "source_span_id": null,
+      "parent_span_id": null,
+      "started_at": null,
+      "ended_at": "ts1",
+      "kind": "agent",
+      "agent_name": "DB1.S1.agent_a",
+      "agent_ref": "agent:snowflake:test-acct:DB1.S1.agent_a",
+      "model_provider": null,
+      "model_name": null,
+      "tool_name": null,
+      "mcp_server_ref": null,
+      "resource_refs": [],
+      "principal_hash": null,
+      "role_name": null,
+      "credential_ref": null,
+      "input_tokens": null,
+      "output_tokens": null,
+      "cost_usd": null,
+      "status": "ok",
+      "signals": [],
+      "content_sha256": null,
+      "match_method": "exact",
+      "match_node_id": "agent:snowflake:test-acct:DB1.S1.agent_a"
+     },
+     {
+      "tenant_id": null,
+      "source": "snowflake_cortex",
+      "source_trace_id": null,
+      "source_span_id": null,
+      "parent_span_id": null,
+      "started_at": null,
+      "ended_at": "ts2",
+      "kind": "agent",
+      "agent_name": "DB1.S1.agent_a",
+      "agent_ref": "agent:snowflake:test-acct:DB1.S1.agent_a",
+      "model_provider": null,
+      "model_name": null,
+      "tool_name": null,
+      "mcp_server_ref": null,
+      "resource_refs": [],
+      "principal_hash": null,
+      "role_name": null,
+      "credential_ref": null,
+      "input_tokens": null,
+      "output_tokens": null,
+      "cost_usd": null,
+      "status": "ok",
+      "signals": [],
+      "content_sha256": null,
+      "match_method": "exact",
+      "match_node_id": "agent:snowflake:test-acct:DB1.S1.agent_a"
+     },
+     {
+      "tenant_id": null,
+      "source": "snowflake_cortex",
+      "source_trace_id": null,
+      "source_span_id": null,
+      "parent_span_id": null,
+      "started_at": null,
+      "ended_at": "ts1",
+      "kind": "agent",
+      "agent_name": "DB1.S1.agent_b",
+      "agent_ref": "agent:snowflake:test-acct:DB1.S1.agent_b",
+      "model_provider": null,
+      "model_name": null,
+      "tool_name": null,
+      "mcp_server_ref": null,
+      "resource_refs": [],
+      "principal_hash": null,
+      "role_name": null,
+      "credential_ref": null,
+      "input_tokens": null,
+      "output_tokens": null,
+      "cost_usd": null,
+      "status": "ok",
+      "signals": [],
+      "content_sha256": null,
+      "match_method": "exact",
+      "match_node_id": "agent:snowflake:test-acct:DB1.S1.agent_b"
+     },
+     {
+      "tenant_id": null,
+      "source": "snowflake_cortex",
+      "source_trace_id": null,
+      "source_span_id": null,
+      "parent_span_id": null,
+      "started_at": null,
+      "ended_at": "ts2",
+      "kind": "agent",
+      "agent_name": "DB1.S1.agent_b",
+      "agent_ref": "agent:snowflake:test-acct:DB1.S1.agent_b",
+      "model_provider": null,
+      "model_name": null,
+      "tool_name": null,
+      "mcp_server_ref": null,
+      "resource_refs": [],
+      "principal_hash": null,
+      "role_name": null,
+      "credential_ref": null,
+      "input_tokens": null,
+      "output_tokens": null,
+      "cost_usd": null,
+      "status": "ok",
+      "signals": [],
+      "content_sha256": null,
+      "match_method": "exact",
+      "match_node_id": "agent:snowflake:test-acct:DB1.S1.agent_b"
+     },
+     {
+      "tenant_id": null,
+      "source": "snowflake_cortex",
+      "source_trace_id": null,
+      "source_span_id": null,
+      "parent_span_id": null,
+      "started_at": null,
+      "ended_at": "ts1",
+      "kind": "agent",
+      "agent_name": "DB1.S1.agent_c",
+      "agent_ref": "agent:snowflake:test-acct:DB1.S1.agent_c",
+      "model_provider": null,
+      "model_name": null,
+      "tool_name": null,
+      "mcp_server_ref": null,
+      "resource_refs": [],
+      "principal_hash": null,
+      "role_name": null,
+      "credential_ref": null,
+      "input_tokens": null,
+      "output_tokens": null,
+      "cost_usd": null,
+      "status": "ok",
+      "signals": [],
+      "content_sha256": null,
+      "match_method": "exact",
+      "match_node_id": "agent:snowflake:test-acct:DB1.S1.agent_c"
+     },
+     {
+      "tenant_id": null,
+      "source": "snowflake_cortex",
+      "source_trace_id": null,
+      "source_span_id": null,
+      "parent_span_id": null,
+      "started_at": null,
+      "ended_at": "ts2",
+      "kind": "agent",
+      "agent_name": "DB1.S1.agent_c",
+      "agent_ref": "agent:snowflake:test-acct:DB1.S1.agent_c",
+      "model_provider": null,
+      "model_name": null,
+      "tool_name": null,
+      "mcp_server_ref": null,
+      "resource_refs": [],
+      "principal_hash": null,
+      "role_name": null,
+      "credential_ref": null,
+      "input_tokens": null,
+      "output_tokens": null,
+      "cost_usd": null,
+      "status": "ok",
+      "signals": [],
+      "content_sha256": null,
+      "match_method": "exact",
+      "match_node_id": "agent:snowflake:test-acct:DB1.S1.agent_c"
      }
     ],
     "findings": [
@@ -13638,11 +14193,24 @@
     "SELECT ah.query_id, ah.user_name, qh.role_name, ah.query_start_time, ah.direct_objects_accessed, ah.base_objects_accessed, ah.objects_modified FROM SNOWFLAKE.ACCOUNT_USAGE.ACCESS_HISTORY ah LEFT JOIN SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY qh ON ah.query_id = qh.query_id WHERE ah.query_start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY ah.query_start_time DESC LIMIT 1000",
     "SELECT grantee_name, privilege, granted_on, name, granted_by, grant_option FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES WHERE deleted_on IS NULL ORDER BY grantee_name, granted_on LIMIT 5000",
     "SELECT tag_name, tag_value, object_database, object_schema, object_name, column_name, domain FROM SNOWFLAKE.ACCOUNT_USAGE.TAG_REFERENCES WHERE tag_name ILIKE ANY ('%PII%', '%PHI%', '%SENSITIVE%', '%CONFIDENTIAL%', '%FINANCIAL%', '%CLASSIFICATION%', '%PRIVACY%', '%SECURITY%', '%SEMANTIC_CATEGORY%') ORDER BY object_name LIMIT 2000",
-    "SELECT agent_name, agent_database_name, agent_schema_name, user_name, start_time, end_time, request_id, tokens, token_credits, metadata FROM SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY WHERE start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY start_time DESC LIMIT 2000"
+    "SELECT agent_name, agent_database_name, agent_schema_name, user_name, start_time, end_time, request_id, tokens, token_credits, metadata FROM SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY WHERE start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY start_time DESC LIMIT 2000",
+    "SHOW AGENTS IN ACCOUNT",
+    "DESCRIBE AGENT \"DB1\".\"S1\".\"agent_a\"",
+    "SHOW GRANTS ON AGENT \"DB1\".\"S1\".\"agent_a\"",
+    "DESCRIBE AGENT \"DB1\".\"S1\".\"agent_b\"",
+    "SHOW GRANTS ON AGENT \"DB1\".\"S1\".\"agent_b\"",
+    "DESCRIBE AGENT \"DB1\".\"S1\".\"agent_c\"",
+    "SHOW GRANTS ON AGENT \"DB1\".\"S1\".\"agent_c\"",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_a', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_b', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_c', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001"
    ],
    [
     "SELECT query_id, query_text, user_name, role_name, start_time, end_time, execution_status, warehouse_name, database_name, schema_name, query_type, rows_produced, bytes_scanned, total_elapsed_time FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY WHERE start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP()) AND (query_text ILIKE '%AGENT%' OR query_text ILIKE '%MCP%SERVER%' OR query_text ILIKE '%CORTEX%' OR query_text ILIKE '%SNOWFLAKE.ML%' OR query_text ILIKE '%EXECUTE_SQL%') ORDER BY start_time DESC LIMIT 2000",
-    "SELECT event_id, event_type, agent_name, timestamp, duration_ms, status, model_name, input_tokens, output_tokens, tool_name, tool_input, tool_output_summary, user_feedback, trace_id, parent_event_id FROM TABLE(SNOWFLAKE.LOCAL.AI_OBSERVABILITY_EVENTS( INTERVAL => '30 days')) ORDER BY timestamp DESC LIMIT 5000"
+    "SHOW AGENTS IN ACCOUNT",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_a', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_b', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_c', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001"
    ]
   ],
   "closes": [
@@ -13683,11 +14251,11 @@
     1
    ],
    [
-    4,
+    14,
     1
    ],
    [
-    2,
+    5,
     1
    ]
   ],
@@ -13782,9 +14350,9 @@
      "summary": {
       "total_queries": 4,
       "agent_queries": 3,
-      "observability_events": 2,
-      "unique_agents": 1,
-      "tool_calls": 1
+      "observability_events": 6,
+      "unique_agents": 3,
+      "tool_calls": 0
      },
      "query_history": [
       {
@@ -13838,28 +14406,80 @@
      ],
      "observability_events": [
       {
-       "event_id": "ev1",
-       "event_type": "TOOL_CALL",
-       "agent_name": "AGENT_HOT",
+       "event_id": "",
+       "event_type": "AGENT_RUN",
+       "agent_name": "DB1.S1.agent_a",
        "timestamp": "ts1",
-       "duration_ms": 12,
+       "duration_ms": 0,
        "status": "OK",
-       "model_name": "m1",
-       "tool_name": "search",
-       "trace_id": "tr1",
-       "input_tokens": 1,
-       "output_tokens": 2
+       "model_name": "",
+       "tool_name": "",
+       "trace_id": "",
+       "input_tokens": 0,
+       "output_tokens": 0
       },
       {
-       "event_id": "ev2",
-       "event_type": "LLM",
-       "agent_name": "AGENT_HOT",
+       "event_id": "",
+       "event_type": "AGENT_RUN",
+       "agent_name": "DB1.S1.agent_a",
        "timestamp": "ts2",
        "duration_ms": 0,
-       "status": "ERR",
-       "model_name": "m1",
+       "status": "OK",
+       "model_name": "",
        "tool_name": "",
-       "trace_id": "tr1",
+       "trace_id": "",
+       "input_tokens": 0,
+       "output_tokens": 0
+      },
+      {
+       "event_id": "",
+       "event_type": "AGENT_RUN",
+       "agent_name": "DB1.S1.agent_b",
+       "timestamp": "ts1",
+       "duration_ms": 0,
+       "status": "OK",
+       "model_name": "",
+       "tool_name": "",
+       "trace_id": "",
+       "input_tokens": 0,
+       "output_tokens": 0
+      },
+      {
+       "event_id": "",
+       "event_type": "AGENT_RUN",
+       "agent_name": "DB1.S1.agent_b",
+       "timestamp": "ts2",
+       "duration_ms": 0,
+       "status": "OK",
+       "model_name": "",
+       "tool_name": "",
+       "trace_id": "",
+       "input_tokens": 0,
+       "output_tokens": 0
+      },
+      {
+       "event_id": "",
+       "event_type": "AGENT_RUN",
+       "agent_name": "DB1.S1.agent_c",
+       "timestamp": "ts1",
+       "duration_ms": 0,
+       "status": "OK",
+       "model_name": "",
+       "tool_name": "",
+       "trace_id": "",
+       "input_tokens": 0,
+       "output_tokens": 0
+      },
+      {
+       "event_id": "",
+       "event_type": "AGENT_RUN",
+       "agent_name": "DB1.S1.agent_c",
+       "timestamp": "ts2",
+       "duration_ms": 0,
+       "status": "OK",
+       "model_name": "",
+       "tool_name": "",
+       "trace_id": "",
        "input_tokens": 0,
        "output_tokens": 0
       }
@@ -14094,6 +14714,8 @@
       "privilege_grants": 5,
       "data_classifications": 4,
       "agent_usage_records": 9,
+      "cortex_agents": 3,
+      "cortex_events": 6,
       "findings": 14,
       "critical_findings": 4,
       "high_findings": 4
@@ -14282,6 +14904,8 @@
      "agent_usage": [
       {
        "agent_name": "AGENT_HOT",
+       "database_name": "DB",
+       "schema_name": "S",
        "user_name": "ALICE",
        "role_name": "",
        "start_time": "t0",
@@ -14293,6 +14917,8 @@
       },
       {
        "agent_name": "AGENT_HOT",
+       "database_name": "DB",
+       "schema_name": "S",
        "user_name": "ALICE",
        "role_name": "",
        "start_time": "t1",
@@ -14304,6 +14930,8 @@
       },
       {
        "agent_name": "AGENT_HOT",
+       "database_name": "DB",
+       "schema_name": "S",
        "user_name": "ALICE",
        "role_name": "",
        "start_time": "t2",
@@ -14315,6 +14943,8 @@
       },
       {
        "agent_name": "AGENT_HOT",
+       "database_name": "DB",
+       "schema_name": "S",
        "user_name": "ALICE",
        "role_name": "",
        "start_time": "t3",
@@ -14326,6 +14956,8 @@
       },
       {
        "agent_name": "AGENT_HOT",
+       "database_name": "DB",
+       "schema_name": "S",
        "user_name": "ALICE",
        "role_name": "",
        "start_time": "t4",
@@ -14337,6 +14969,8 @@
       },
       {
        "agent_name": "AGENT_HOT",
+       "database_name": "DB",
+       "schema_name": "S",
        "user_name": "ALICE",
        "role_name": "",
        "start_time": "t5",
@@ -14348,6 +14982,8 @@
       },
       {
        "agent_name": "AGENT_HOT",
+       "database_name": "DB",
+       "schema_name": "S",
        "user_name": "ALICE",
        "role_name": "",
        "start_time": "t6",
@@ -14359,6 +14995,8 @@
       },
       {
        "agent_name": "AGENT_COLD",
+       "database_name": "DB",
+       "schema_name": "S",
        "user_name": "BOB",
        "role_name": "",
        "start_time": "t9",
@@ -14370,6 +15008,8 @@
       },
       {
        "agent_name": "AGENT_COLD",
+       "database_name": "DB",
+       "schema_name": "S",
        "user_name": "BOB",
        "role_name": "",
        "start_time": "t10",
@@ -14378,6 +15018,220 @@
        "model_name": "",
        "tool_calls": 0,
        "status": ""
+      }
+     ],
+     "cortex_agents": [
+      {
+       "account": "lent-acct",
+       "database": "DB1",
+       "schema": "S1",
+       "name": "agent_a",
+       "fqn": "DB1.S1.agent_a",
+       "node_id": "agent:snowflake:lent-acct:DB1.S1.agent_a",
+       "display_name": "Agent A",
+       "owner": "",
+       "is_secure": false,
+       "spec_status": "unavailable",
+       "tools": [],
+       "execution_roles": []
+      },
+      {
+       "account": "lent-acct",
+       "database": "DB1",
+       "schema": "S1",
+       "name": "agent_b",
+       "fqn": "DB1.S1.agent_b",
+       "node_id": "agent:snowflake:lent-acct:DB1.S1.agent_b",
+       "display_name": "agent_b",
+       "owner": "",
+       "is_secure": false,
+       "spec_status": "unavailable",
+       "tools": [],
+       "execution_roles": []
+      },
+      {
+       "account": "lent-acct",
+       "database": "DB1",
+       "schema": "S1",
+       "name": "agent_c",
+       "fqn": "DB1.S1.agent_c",
+       "node_id": "agent:snowflake:lent-acct:DB1.S1.agent_c",
+       "display_name": "agent_c",
+       "owner": "",
+       "is_secure": false,
+       "spec_status": "unavailable",
+       "tools": [],
+       "execution_roles": []
+      }
+     ],
+     "cortex_events": [
+      {
+       "tenant_id": null,
+       "source": "snowflake_cortex",
+       "source_trace_id": null,
+       "source_span_id": null,
+       "parent_span_id": null,
+       "started_at": null,
+       "ended_at": "ts1",
+       "kind": "agent",
+       "agent_name": "DB1.S1.agent_a",
+       "agent_ref": "agent:snowflake:lent-acct:DB1.S1.agent_a",
+       "model_provider": null,
+       "model_name": null,
+       "tool_name": null,
+       "mcp_server_ref": null,
+       "resource_refs": [],
+       "principal_hash": null,
+       "role_name": null,
+       "credential_ref": null,
+       "input_tokens": null,
+       "output_tokens": null,
+       "cost_usd": null,
+       "status": "ok",
+       "signals": [],
+       "content_sha256": null,
+       "match_method": "exact",
+       "match_node_id": "agent:snowflake:lent-acct:DB1.S1.agent_a"
+      },
+      {
+       "tenant_id": null,
+       "source": "snowflake_cortex",
+       "source_trace_id": null,
+       "source_span_id": null,
+       "parent_span_id": null,
+       "started_at": null,
+       "ended_at": "ts2",
+       "kind": "agent",
+       "agent_name": "DB1.S1.agent_a",
+       "agent_ref": "agent:snowflake:lent-acct:DB1.S1.agent_a",
+       "model_provider": null,
+       "model_name": null,
+       "tool_name": null,
+       "mcp_server_ref": null,
+       "resource_refs": [],
+       "principal_hash": null,
+       "role_name": null,
+       "credential_ref": null,
+       "input_tokens": null,
+       "output_tokens": null,
+       "cost_usd": null,
+       "status": "ok",
+       "signals": [],
+       "content_sha256": null,
+       "match_method": "exact",
+       "match_node_id": "agent:snowflake:lent-acct:DB1.S1.agent_a"
+      },
+      {
+       "tenant_id": null,
+       "source": "snowflake_cortex",
+       "source_trace_id": null,
+       "source_span_id": null,
+       "parent_span_id": null,
+       "started_at": null,
+       "ended_at": "ts1",
+       "kind": "agent",
+       "agent_name": "DB1.S1.agent_b",
+       "agent_ref": "agent:snowflake:lent-acct:DB1.S1.agent_b",
+       "model_provider": null,
+       "model_name": null,
+       "tool_name": null,
+       "mcp_server_ref": null,
+       "resource_refs": [],
+       "principal_hash": null,
+       "role_name": null,
+       "credential_ref": null,
+       "input_tokens": null,
+       "output_tokens": null,
+       "cost_usd": null,
+       "status": "ok",
+       "signals": [],
+       "content_sha256": null,
+       "match_method": "exact",
+       "match_node_id": "agent:snowflake:lent-acct:DB1.S1.agent_b"
+      },
+      {
+       "tenant_id": null,
+       "source": "snowflake_cortex",
+       "source_trace_id": null,
+       "source_span_id": null,
+       "parent_span_id": null,
+       "started_at": null,
+       "ended_at": "ts2",
+       "kind": "agent",
+       "agent_name": "DB1.S1.agent_b",
+       "agent_ref": "agent:snowflake:lent-acct:DB1.S1.agent_b",
+       "model_provider": null,
+       "model_name": null,
+       "tool_name": null,
+       "mcp_server_ref": null,
+       "resource_refs": [],
+       "principal_hash": null,
+       "role_name": null,
+       "credential_ref": null,
+       "input_tokens": null,
+       "output_tokens": null,
+       "cost_usd": null,
+       "status": "ok",
+       "signals": [],
+       "content_sha256": null,
+       "match_method": "exact",
+       "match_node_id": "agent:snowflake:lent-acct:DB1.S1.agent_b"
+      },
+      {
+       "tenant_id": null,
+       "source": "snowflake_cortex",
+       "source_trace_id": null,
+       "source_span_id": null,
+       "parent_span_id": null,
+       "started_at": null,
+       "ended_at": "ts1",
+       "kind": "agent",
+       "agent_name": "DB1.S1.agent_c",
+       "agent_ref": "agent:snowflake:lent-acct:DB1.S1.agent_c",
+       "model_provider": null,
+       "model_name": null,
+       "tool_name": null,
+       "mcp_server_ref": null,
+       "resource_refs": [],
+       "principal_hash": null,
+       "role_name": null,
+       "credential_ref": null,
+       "input_tokens": null,
+       "output_tokens": null,
+       "cost_usd": null,
+       "status": "ok",
+       "signals": [],
+       "content_sha256": null,
+       "match_method": "exact",
+       "match_node_id": "agent:snowflake:lent-acct:DB1.S1.agent_c"
+      },
+      {
+       "tenant_id": null,
+       "source": "snowflake_cortex",
+       "source_trace_id": null,
+       "source_span_id": null,
+       "parent_span_id": null,
+       "started_at": null,
+       "ended_at": "ts2",
+       "kind": "agent",
+       "agent_name": "DB1.S1.agent_c",
+       "agent_ref": "agent:snowflake:lent-acct:DB1.S1.agent_c",
+       "model_provider": null,
+       "model_name": null,
+       "tool_name": null,
+       "mcp_server_ref": null,
+       "resource_refs": [],
+       "principal_hash": null,
+       "role_name": null,
+       "credential_ref": null,
+       "input_tokens": null,
+       "output_tokens": null,
+       "cost_usd": null,
+       "status": "ok",
+       "signals": [],
+       "content_sha256": null,
+       "match_method": "exact",
+       "match_node_id": "agent:snowflake:lent-acct:DB1.S1.agent_c"
       }
      ],
      "findings": [
@@ -15084,11 +15938,24 @@
     "SELECT grantee_name, privilege, granted_on, name, granted_by, grant_option FROM SNOWFLAKE.ACCOUNT_USAGE.GRANTS_TO_ROLES WHERE deleted_on IS NULL ORDER BY grantee_name, granted_on LIMIT 5000",
     "SELECT tag_name, tag_value, object_database, object_schema, object_name, column_name, domain FROM SNOWFLAKE.ACCOUNT_USAGE.TAG_REFERENCES WHERE tag_name ILIKE ANY ('%PII%', '%PHI%', '%SENSITIVE%', '%CONFIDENTIAL%', '%FINANCIAL%', '%CLASSIFICATION%', '%PRIVACY%', '%SECURITY%', '%SEMANTIC_CATEGORY%') ORDER BY object_name LIMIT 2000",
     "SELECT agent_name, agent_database_name, agent_schema_name, user_name, start_time, end_time, request_id, tokens, token_credits, metadata FROM SNOWFLAKE.ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY WHERE start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY start_time DESC LIMIT 2000",
+    "SHOW AGENTS IN ACCOUNT",
+    "DESCRIBE AGENT \"DB1\".\"S1\".\"agent_a\"",
+    "SHOW GRANTS ON AGENT \"DB1\".\"S1\".\"agent_a\"",
+    "DESCRIBE AGENT \"DB1\".\"S1\".\"agent_b\"",
+    "SHOW GRANTS ON AGENT \"DB1\".\"S1\".\"agent_b\"",
+    "DESCRIBE AGENT \"DB1\".\"S1\".\"agent_c\"",
+    "SHOW GRANTS ON AGENT \"DB1\".\"S1\".\"agent_c\"",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_a', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_b', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_c', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
     "SELECT query_id, query_text, user_name, role_name, start_time, end_time, execution_status, warehouse_name, database_name, schema_name, query_type, rows_produced, bytes_scanned, total_elapsed_time FROM SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY WHERE start_time >= DATEADD(day, -30, CURRENT_TIMESTAMP()) AND (query_text ILIKE '%AGENT%' OR query_text ILIKE '%MCP%SERVER%' OR query_text ILIKE '%CORTEX%' OR query_text ILIKE '%SNOWFLAKE.ML%' OR query_text ILIKE '%EXECUTE_SQL%') ORDER BY start_time DESC LIMIT 2000",
-    "SELECT event_id, event_type, agent_name, timestamp, duration_ms, status, model_name, input_tokens, output_tokens, tool_name, tool_input, tool_output_summary, user_feedback, trace_id, parent_event_id FROM TABLE(SNOWFLAKE.LOCAL.AI_OBSERVABILITY_EVENTS( INTERVAL => '30 days')) ORDER BY timestamp DESC LIMIT 5000"
+    "SHOW AGENTS IN ACCOUNT",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_a', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_b', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001",
+    "SELECT timestamp, start_timestamp, trace, resource_attributes, record, record_attributes, value FROM TABLE(SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS('DB1', 'S1', 'agent_c', 'CORTEX AGENT')) WHERE record_type = 'SPAN' AND timestamp >= DATEADD(day, -30, CURRENT_TIMESTAMP()) ORDER BY timestamp DESC LIMIT 2001"
    ],
    "closes": [
-    36,
+    49,
     0
    ]
   },
