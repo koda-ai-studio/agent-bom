@@ -23,11 +23,13 @@ import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from agent_bom.core.severity import SEVERITY_RANK
 from agent_bom.coverage import GRAPH_GAP_REASON
 from agent_bom.graph.analysis import GraphAnalysisState
 from agent_bom.graph.credential_findings import project_credential_findings
 
 if TYPE_CHECKING:
+    from agent_bom.finding import Finding
     from agent_bom.graph.container import AttackPath, UnifiedGraph
     from agent_bom.graph.dependency_reach import ReachabilityReport
     from agent_bom.models import AIBOMReport
@@ -80,11 +82,14 @@ def attach_graph_derived_findings(report: "AIBOMReport", graph: "UnifiedGraph") 
     # Usage-evidence right-sizing findings; serialized like toxic combinations
     # and rehydrated by to_findings().
     try:
-        from agent_bom.graph.nhi_governance import build_ciem_over_privilege_findings_data
+        from agent_bom.graph.nhi_governance import build_ciem_over_privilege_findings
 
-        ciem = build_ciem_over_privilege_findings_data(graph)
+        nhi_kept, ciem = merge_over_privilege_findings(
+            list(report.nhi_governance_findings or []), build_ciem_over_privilege_findings(graph)
+        )
+        report.nhi_governance_findings = nhi_kept
         if ciem:
-            report.ciem_over_privilege_findings_data = ciem
+            report.ciem_over_privilege_findings_data = [finding.to_dict() for finding in ciem]
     except Exception as exc:  # noqa: BLE001
         _logger.debug("CIEM over-privilege findings surfacing skipped: %s", exc)
 
@@ -119,6 +124,36 @@ def attach_graph_derived_findings(report: "AIBOMReport", graph: "UnifiedGraph") 
             _rewrite_side_block_findings(report, findings)
     except Exception as exc:  # noqa: BLE001
         _logger.debug("finding↔node linking skipped: %s", exc)
+
+
+def merge_over_privilege_findings(nhi: list[Finding], ciem: list[Finding]) -> tuple[list[Finding], list[Finding]]:
+    """One over-privilege finding per identity: fold NHI right-sizing into the CIEM finding.
+
+    The NHI path right-sizes grants Access Advisor does not cover; when the same
+    identity also has an Access-Advisor CIEM finding, two rows with different
+    unused counts would contradict each other. The CIEM finding keeps its id and
+    absorbs the NHI targets; the NHI over-grant row is dropped.
+    """
+    by_node: dict[str | None, Finding] = {finding.node_id: finding for finding in ciem if finding.node_id}
+    kept: list[Finding] = []
+    for finding in nhi:
+        target = by_node.get(finding.node_id) if finding.evidence.get("nhi_governance") == "over_grant" else None
+        if target is None:
+            kept.append(finding)
+            continue
+        extra = [label for label in finding.evidence.get("unused_targets") or [] if label not in target.evidence["unused_permissions"]]
+        unused = [*target.evidence["unused_permissions"], *extra]
+        count = int(target.evidence.get("unused_permission_count") or 0) + len(extra)
+        target.evidence.update(
+            unused_permissions=unused[:20],
+            unused_permission_count=count,
+            sources=["access_advisor", "nhi_governance"],
+        )
+        target.title = f"Over-privileged identity: {target.asset.name} has {count} unused permission(s)"
+        target.description += f" Entitlement analysis also finds unused grants: {', '.join(extra)}." if extra else ""
+        if SEVERITY_RANK.get(finding.severity, 0) > SEVERITY_RANK.get(target.severity, 0):
+            target.severity = finding.severity
+    return kept, ciem
 
 
 def _record_limited_graph_analysis(report: "AIBOMReport", graph: "UnifiedGraph", analyzers: tuple[str, ...]) -> None:
