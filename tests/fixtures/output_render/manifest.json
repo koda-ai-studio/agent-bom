@@ -1,10 +1,10 @@
 {
  "demo": {
-  "html": "f3a54f79d7b0a14146043061c5672bb4120d1f5048e15248afe1e3a6305a577e",
+  "html": "20cb634e978e557fbb7b411fb2d736f27533dd92b9ec7b08f22d9c71274b0ddf",
   "html_offline": "2da7ff6e10e3406d056325d28d982b8898bf8184d9f34888315079f83e380281",
-  "sarif_exclude_unfixable": "14f1ba71f4f83e376052263b24dcbb687bf67acee2fc2ae64369ceef3ebf99a5",
-  "sarif_file": "bf0d6810c355303929988a48fbbfebcc87d43044c24002bb2d238222e6a89ed9",
-  "sarif_stdout": "14f1ba71f4f83e376052263b24dcbb687bf67acee2fc2ae64369ceef3ebf99a5"
+  "sarif_exclude_unfixable": "a50d76108ccc5db86fd5160473fac767a97f3a8bade2bde913bbec7aee4fd689",
+  "sarif_file": "47fea4732f27c8eca8ca59dc3502304db1ed36172ce77ab1480625bcb15ad3a8",
+  "sarif_stdout": "a50d76108ccc5db86fd5160473fac767a97f3a8bade2bde913bbec7aee4fd689"
  },
  "empty": {
   "html": "5ebe2ead369836345dc0e8884ccbb407fb901520d2f03c853aef17e31732a01a",
