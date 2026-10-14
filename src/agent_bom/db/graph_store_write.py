@@ -26,7 +26,6 @@ from agent_bom.graph.correlation import CorrelationRunStatus, validate_correlati
 from agent_bom.graph.observation_scope import comparable_observation_sql
 from agent_bom.graph.severity_floor import counts_as_finding
 from agent_bom.graph.snapshot_paths import SNAPSHOT_PATH_COLUMNS, SnapshotPath, occurrence_path_keys, snapshot_path_rows
-from agent_bom.graph.snapshot_paths import SNAPSHOT_PATH_COLUMNS, SnapshotPath, snapshot_path_rows
 
 
 @dataclass
