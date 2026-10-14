@@ -295,11 +295,11 @@ The effective-permissions overlay inherits a principal's access through the
 access is recorded on `HAS_PERMISSION` as `access="group"` and is not, by itself,
 a privilege escalation (only assume/trust chains are).
 
-### Relationship types (50)
+### Relationship types (51)
 
 | Group | Relationships | Direction |
 |---|---|---|
-| Composition | `HOSTS`, `USES`, `USES_FRAMEWORK`, `DEPENDS_ON`, `PROVIDES_TOOL`, `EXPOSES_CRED`, `REACHES_TOOL`, `SERVES_MODEL`, `CONTAINS`, `OBSERVES` | source → target |
+| Composition | `HOSTS`, `HOSTED_ON`, `USES`, `USES_FRAMEWORK`, `DEPENDS_ON`, `PROVIDES_TOOL`, `EXPOSES_CRED`, `REACHES_TOOL`, `SERVES_MODEL`, `CONTAINS`, `OBSERVES` | source → target |
 | Code topology | `IMPORTS`, `DEFINES`, `RUNS`, `CONFIGURES` | source → target |
 | Risk | `AFFECTS`, `VULNERABLE_TO`, `EXPLOITABLE_VIA`, `REMEDIATES`, `TRIGGERS` | mostly bidirectional |
 | Lateral movement | `SHARES_SERVER`, `SHARES_CRED`, `LATERAL_PATH` | symmetric |

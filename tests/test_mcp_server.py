@@ -1062,14 +1062,30 @@ def test_cli_mcp_server_transport_options():
 # ---------------------------------------------------------------------------
 
 
+@pytest.fixture
+def persisted_compliance_available():
+    """Local-scan contracts must not depend on prior tests leaving tenant evidence."""
+    with (
+        patch("agent_bom.mcp_tools.compliance_persisted._has_persisted_evidence", return_value=True),
+        patch(
+            "agent_bom.mcp_tools.compliance_persisted._persisted",
+            new=AsyncMock(return_value=({"source": "persisted_tenant_compliance", "summary": {}}, None)),
+        ) as persisted,
+    ):
+        yield persisted
+
+
 @patch("agent_bom.mcp_server._run_scan_pipeline")
-def test_compliance_no_agents(mock_pipeline):
+def test_compliance_no_agents(mock_pipeline, persisted_compliance_available):
     """Compliance with no evidence must be unevaluated, never a clean pass."""
     mock_pipeline.return_value = ([], [], [], [])
     from agent_bom.mcp_server import create_mcp_server
 
     server = create_mcp_server(profile="full")
     result = _call_tool(server, "compliance", {"source": "local_scan"})
+    persisted_compliance_available.assert_not_awaited()
+    mock_pipeline.assert_awaited_once()
+    assert result["source"] == "local_scan"
     assert result["overall_score"] == 0.0
     assert result["overall_status"] == "no_data"
     assert result["evaluated_controls"] == 0
@@ -1083,7 +1099,7 @@ def test_compliance_no_agents(mock_pipeline):
 
 
 @patch("agent_bom.mcp_server._run_scan_pipeline")
-def test_compliance_with_findings(mock_pipeline):
+def test_compliance_with_findings(mock_pipeline, persisted_compliance_available):
     """Compliance with high-severity findings should fail."""
     from agent_bom.models import (
         Agent,
@@ -1123,6 +1139,9 @@ def test_compliance_with_findings(mock_pipeline):
 
     server = create_mcp_server(profile="full")
     result = _call_tool(server, "compliance", {"source": "local_scan"})
+    persisted_compliance_available.assert_not_awaited()
+    mock_pipeline.assert_awaited_once()
+    assert result["source"] == "local_scan"
     assert result["overall_status"] == "fail"
     assert result["overall_score"] < 100.0
 

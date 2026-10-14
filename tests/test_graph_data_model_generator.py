@@ -116,3 +116,124 @@ def test_trace_event_section_follows_the_runtime_type(monkeypatch: pytest.Monkey
     monkeypatch.setattr(gen, "_find_trace_event_type", lambda: None)
     text = "\n".join(gen.render().values())
     assert "Normalized trace event" not in text
+
+
+def _write_store(root: Path, ddl: str) -> None:
+    module = root / "src" / "agent_bom" / "fake_store.py"
+    module.parent.mkdir(parents=True, exist_ok=True)
+    module.write_text(f"import sqlite3\n\n_DDL = '''\n{ddl}\n'''\n", encoding="utf-8")
+
+
+def test_storage_index_lists_every_table_from_the_ddl() -> None:
+    gen = _load_generator()
+    storage = gen.graph_data_model_storage
+    tables = storage.extract_tables(gen.SOURCE_ROOT)
+    assert len(tables) > 100
+    assert {"graph_nodes", "graph_edges", "scan_jobs", "teams", "hub_findings_current"} <= set(tables)
+    index = gen.render()[storage.INDEX_DOC]
+    rows = {line.split("|")[1].strip().strip("`") for line in index.split("## Table index", 1)[1].splitlines() if line.startswith("| `")}
+    assert set(tables) <= rows
+
+
+def test_storage_domain_pages_each_carry_an_er_diagram() -> None:
+    gen = _load_generator()
+    storage = gen.graph_data_model_storage
+    rendered = gen.render()
+    tables = storage.assign_domains(storage.extract_tables(gen.SOURCE_ROOT))
+    for key, _title, _exact, _prefixes in storage.DOMAINS:
+        page = rendered[f"{storage.DOMAIN_DOC_DIR}/{key}.md"]
+        block = page.split("```mermaid\nerDiagram\n", 1)[1].split("```", 1)[0]
+        for table in (t for t in tables.values() if t.domain == key):
+            assert f"  {table.name} {{" in block, (key, table.name)
+
+
+def test_storage_relations_split_declared_and_logical(tmp_path: Path) -> None:
+    gen = _load_generator()
+    storage = gen.graph_data_model_storage
+    _write_store(
+        tmp_path,
+        "CREATE TABLE IF NOT EXISTS scan_widgets (tenant_id TEXT NOT NULL, widget_id TEXT NOT NULL, PRIMARY KEY (tenant_id, widget_id));\n"
+        "CREATE TABLE IF NOT EXISTS scan_widget_parts (tenant_id TEXT NOT NULL, part_id TEXT PRIMARY KEY, widget_id TEXT);\n"
+        "CREATE TABLE IF NOT EXISTS scan_widget_notes (note_id TEXT PRIMARY KEY, part_id TEXT REFERENCES scan_widget_parts(part_id));\n"
+        "CREATE TABLE IF NOT EXISTS graph_widget_copies (tenant_id TEXT NOT NULL, copy_id TEXT PRIMARY KEY, widget_id TEXT);",
+    )
+    tables = storage.assign_domains(storage.extract_tables(tmp_path))
+    assert tables["scan_widget_notes"].foreign_keys == [("part_id", "scan_widget_parts", "part_id")]
+    rels = {(r.parent, r.child, r.column, r.kind) for r in storage.relations(tables)}
+    assert ("scan_widget_parts", "scan_widget_notes", "part_id", "fk") in rels
+    assert ("scan_widgets", "scan_widget_parts", "widget_id", "logical") in rels
+    # Logical joins stay inside one domain; tenant columns never become a join.
+    assert not any(child == "graph_widget_copies" for _p, child, _c, _k in rels)
+    assert not any(column in storage.TENANT_COLUMNS for _p, _c, column, _k in rels)
+
+
+def test_unmapped_table_fails_generation(tmp_path: Path) -> None:
+    gen = _load_generator()
+    storage = gen.graph_data_model_storage
+    _write_store(tmp_path, "CREATE TABLE IF NOT EXISTS brand_new_ledger (entry TEXT PRIMARY KEY)")
+    with pytest.raises(SystemExit, match="brand_new_ledger"):
+        storage.render(tmp_path, gen.GENERATOR)
+
+
+def test_unresolvable_table_placeholder_fails_generation(tmp_path: Path) -> None:
+    gen = _load_generator()
+    storage = gen.graph_data_model_storage
+    module = tmp_path / "src" / "agent_bom" / "dyn_store.py"
+    module.parent.mkdir(parents=True)
+    module.write_text('def ddl(name):\n    return f"CREATE TABLE IF NOT EXISTS {name} (id TEXT)"\n', encoding="utf-8")
+    with pytest.raises(SystemExit, match="cannot resolve table name"):
+        storage.extract_tables(tmp_path)
+
+
+def test_check_mode_covers_the_storage_and_correlation_pages(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    gen = _load_generator()
+    rendered = gen.render()
+    new_pages = [gen.graph_data_model_storage.INDEX_DOC, gen.graph_data_model_correlation.DOC]
+    new_pages.append(f"{gen.graph_data_model_storage.DOMAIN_DOC_DIR}/graph.md")
+    for rel_path, text in rendered.items():
+        target = tmp_path / rel_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(text, encoding="utf-8")
+    monkeypatch.setattr(gen, "ROOT", tmp_path)
+    for page in new_pages:
+        assert page in rendered
+        (tmp_path / page).write_text(rendered[page] + "\nhand edit\n", encoding="utf-8")
+        assert gen.main(["--check"]) == 1
+        (tmp_path / page).write_text(rendered[page], encoding="utf-8")
+        assert gen.main(["--check"]) == 0
+    main_doc = rendered[gen.MAIN_DOC]
+    assert "(data-model/storage-erd.md)" in main_doc and "(data-model/correlation.md)" in main_doc
+
+
+def test_correlation_page_follows_correlation_identity() -> None:
+    gen = _load_generator()
+    corr = gen.graph_data_model_correlation
+    page = gen.render()[corr.DOC]
+    assert "```mermaid\nflowchart LR" in page
+    branches = corr.identity_branches()
+    covered = [e for b in branches for e in b.entity_types]
+    assert sorted(covered) == sorted(e.value for e in EntityType), "every entity type has exactly one merge branch"
+    by_entity = corr.entity_branch(branches)
+    assert "purl" in by_entity["package"].keys
+    assert "arn" in by_entity["cloud_resource"].keys
+    missing = page.split("## Not correlated across sources yet", 1)[1]
+    listed = {line[3:-1] for line in missing.splitlines() if line.startswith("- `")}
+    assert listed == set(corr.not_correlated(branches, gen.scan_source().node_id_formats))
+    assert listed and all(by_entity[e].label == corr.FALLBACK_LABEL for e in listed)
+    assert "package" not in listed and "cloud_resource" not in listed
+
+
+def test_generator_path_does_not_import_the_api_framework() -> None:
+    import subprocess
+
+    code = (
+        "import runpy, sys\n"
+        f"sys.argv = ['g', '--check']\n"
+        "try:\n"
+        f"    runpy.run_path({str(SCRIPT_PATH)!r}, run_name='__main__')\n"
+        "except SystemExit:\n"
+        "    pass\n"
+        "print('fastapi' in sys.modules)\n"
+    )
+    result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True, cwd=ROOT)
+    assert result.stdout.strip().splitlines()[-1] == "False"
