@@ -77,17 +77,28 @@ FINDING_SEVERITY_FILTERS: tuple[FindingSeverityFilter, ...] = (
     "unknown",
 )
 
-_VULNERABILITY_TYPES = {"CVE", "MALICIOUS_PACKAGE", "MALICIOUS_MODEL", "SAST"}
+# Exploitable code, content or component: weaknesses, malicious artifacts, observed attacks.
+_VULNERABILITY_TYPES = {"CVE", "MALICIOUS_PACKAGE", "MALICIOUS_MODEL", "SAST", "INJECTION", "MCP_BLOCKLIST", "EXFILTRATION", "CLOAKING"}
+# Posture of how assets are set up or governed. Mirrored in ui/lib/finding-issue-type.ts
+# (pinned by tests/test_finding_class_parity.py).
 _MISCONFIGURATION_TYPES = {
     "CIS_FAIL",
     "CIS_ERROR",
     "CLOUD_BEST_PRACTICE_FAIL",
     "CLOUD_BEST_PRACTICE_ERROR",
+    "PROMPT_SECURITY",
+    "TOOL_DRIFT",
+    "SKILL_RISK",
+    "RATE_LIMIT",
+    "COMBINATION",
+    "MODEL_INTEGRITY",
+    "LICENSE",
+    "BROWSER_EXT",
 }
 _SECRET_TYPES = {"CREDENTIAL_EXPOSURE"}
-# Personal data committed in source is a privacy concern, not a credential. It
-# shares the secret scanner as a *source*, so it must be decided by type first.
-_PII_TYPES = {"PII_EXPOSURE"}
+# Personal / sensitive data is a privacy concern, not a credential. It shares
+# the secret scanner as a *source*, so it must be decided by type first.
+_PII_TYPES = {"PII_EXPOSURE", "SENSITIVE_DATA"}
 _IDENTITY_TYPES = {"CIEM_OVER_PRIVILEGE"}
 
 # Back-compat: rows persisted under the pre-rename ``appsec_sca`` key still
@@ -873,9 +884,9 @@ def _row_matches_framework(row: Mapping[str, Any], filters: Mapping[str, str]) -
     With a ``control`` code the match is exact containment in the framework's
     control codes, mirroring the compliance per-control count (``code in tags``)
     so the drilled queue reconciles with the badge the user clicked. Without a
-    control it is a framework-level match: any control tagged for the framework,
-    or — for bulk-ingested rows whose per-framework tags are redacted at rest —
-    the framework slug present in ``applicable_frameworks``.
+    control it is a framework-level match: any tagged code in the framework's
+    scoring catalog (what ``/v1/compliance`` counts), or — bulk-ingested rows
+    only — the slug in ``applicable_frameworks``.
     """
     tag_field = filters.get("framework_tag_field")
     if tag_field is None:
@@ -889,12 +900,12 @@ def _row_matches_framework(row: Mapping[str, Any], filters: Mapping[str, str]) -
 
     if control:
         return control in codes
-    if codes:
+    from agent_bom.compliance_coverage import normalize_framework_slug, scored_control_codes
+
+    if scored_control_codes(tag_field, codes):
         return True
     slug = filters.get("framework_slug")
-    if slug:
-        from agent_bom.compliance_coverage import normalize_framework_slug
-
+    if slug and row.get("origin") == "bulk_ingest":
         wanted = normalize_framework_slug(slug)
         applicable = row.get("applicable_frameworks")
         if isinstance(applicable, (list, tuple, set)):

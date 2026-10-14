@@ -19,7 +19,7 @@ from agent_bom.framework_mapping import FRAMEWORK_CONTROL_CATALOG, FRAMEWORK_NIS
 def _scenario() -> tuple[list[dict], dict[tuple[str, str], str]]:
     """CVE-driven SI-10 fail + a CIS estate exercising pass/fail/error/N-A."""
     all_blast = [
-        {"vulnerability_id": "CVE-1", "severity": "high", "nist_800_53_tags": ["SI-10"]},
+        {"vulnerability_id": "CVE-1", "severity": "high", "nist_800_53_tags": ["SI-10"], "cwe_ids": ["CWE-20"]},
         {"vulnerability_id": "CVE-2", "severity": "critical", "nist_800_53_tags": ["RA-5"]},
     ]
     cis_statuses = {

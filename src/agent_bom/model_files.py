@@ -470,7 +470,7 @@ def model_file_findings(
     """
     from agent_bom.compliance_hub import apply_hub_classification
     from agent_bom.finding import Asset, Finding, FindingSource, FindingType
-    from agent_bom.security import sanitize_text
+    from agent_bom.security import sanitize_path_label, sanitize_text
 
     findings: list[Finding] = []
     seen_ids: set[str] = set()
@@ -506,7 +506,7 @@ def model_file_findings(
                         name=filename,
                         asset_type="model_file",
                         identifier=path or filename,
-                        location=path or None,
+                        location=sanitize_path_label(path) if path else None,
                     ),
                     severity=str(raw_flag.get("severity") or spec["default_severity"]),
                     title=f"{spec['title']}: {filename}",

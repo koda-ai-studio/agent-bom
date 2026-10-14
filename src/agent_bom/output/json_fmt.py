@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import uuid
 from pathlib import Path
 from typing import Any
 
@@ -16,13 +15,14 @@ from agent_bom.asset_provenance import (
 from agent_bom.canonical_ids import CANONICAL_ID_SCHEMA_VERSION
 from agent_bom.compliance_utils import effective_blast_radius_tags, framework_qualified_blast_radius_tags
 from agent_bom.exploitability import fused_triage_priority
-from agent_bom.finding import FINDING_SCHEMA_VERSION, Finding, _forward_fixed_version
+from agent_bom.finding import Finding, _forward_fixed_version
 from agent_bom.mcp_blocklist import sanitize_security_intelligence_entry
 from agent_bom.models import AIBOMReport, BlastRadius
 from agent_bom.output.exposure_path import exposure_path_for_report_finding
 from agent_bom.output.finding_views import cve_findings
 from agent_bom.output.json_sections import _package_occurrence_to_dict, _severity_label, _severity_state, agents_json
 from agent_bom.output.json_writer import write_json_document
+from agent_bom.output.side_findings import _append_side_findings, stamp_finding_node_ids
 from agent_bom.security import (
     sanitize_command_args,
     sanitize_path_label,
@@ -55,11 +55,6 @@ def _risk_narrative(item: dict) -> str:
     return " ".join(parts) + "."
 
 
-def _stable_report_finding_id(*parts: object) -> str:
-    raw = ":".join(str(part or "") for part in parts)
-    return str(uuid.uuid5(uuid.NAMESPACE_URL, f"agent-bom:finding:{raw}"))
-
-
 def _build_finding_summary(findings: list[dict[str, object]]) -> dict[str, Any]:
     """Summarize the unified finding stream, independent of package CVE counts."""
     by_severity = dict.fromkeys(_FINDING_SEVERITIES, 0)
@@ -80,86 +75,6 @@ def _build_finding_summary(findings: list[dict[str, object]]) -> dict[str, Any]:
         "by_type": dict(sorted(by_type.items())),
         "by_source": dict(sorted(by_source.items())),
     }
-
-
-def _prompt_scan_findings(prompt_scan: dict) -> list[dict[str, object]]:
-    findings: list[dict[str, object]] = []
-    for item in prompt_scan.get("findings") or []:
-        if not isinstance(item, dict):
-            continue
-        source_file = str(item.get("source_file") or "")
-        line_number = item.get("line_number")
-        title = str(item.get("title") or "Prompt security finding")
-        category = str(item.get("category") or "prompt_security")
-        severity = str(item.get("severity") or "unknown").lower()
-        findings.append(
-            {
-                "schema_version": FINDING_SCHEMA_VERSION,
-                "id": _stable_report_finding_id("prompt_scan", source_file, line_number, title, item.get("matched_text")),
-                "canonical_id": _stable_report_finding_id("prompt_scan", source_file, line_number, title, item.get("matched_text")),
-                "finding_type": "PROMPT_SECURITY",
-                "source": "PROMPT_SCAN",
-                "asset": {
-                    "name": Path(source_file).name if source_file else "prompt",
-                    "asset_type": "prompt_template",
-                    "identifier": source_file or None,
-                    "location": source_file or None,
-                    "stable_id": _stable_report_finding_id("prompt_asset", source_file),
-                    "canonical_id": _stable_report_finding_id("prompt_asset", source_file),
-                },
-                "severity": severity,
-                "effective_severity": severity,
-                "title": title,
-                "description": item.get("detail") or title,
-                "category": category,
-                "line_number": line_number,
-                "matched_text": item.get("matched_text"),
-                "remediation_guidance": item.get("recommendation"),
-                "scan_sources": ["prompt_scan"],
-            }
-        )
-    return findings
-
-
-def _browser_extension_findings(browser_extensions: dict) -> list[dict[str, object]]:
-    findings: list[dict[str, object]] = []
-    for item in browser_extensions.get("extensions") or []:
-        if not isinstance(item, dict):
-            continue
-        risk_reasons = [str(reason) for reason in item.get("risk_reasons") or []]
-        extension_id = str(item.get("id") or item.get("name") or "unknown")
-        browser = str(item.get("browser") or "browser")
-        name = str(item.get("name") or extension_id)
-        severity = str(item.get("risk_level") or "unknown").lower()
-        findings.append(
-            {
-                "schema_version": FINDING_SCHEMA_VERSION,
-                "id": _stable_report_finding_id("browser_extension", browser, extension_id, item.get("version")),
-                "canonical_id": _stable_report_finding_id("browser_extension", browser, extension_id, item.get("version")),
-                "finding_type": "BROWSER_EXTENSION_RISK",
-                "source": "BROWSER_EXTENSION_SCAN",
-                "asset": {
-                    "name": name,
-                    "asset_type": "browser_extension",
-                    "identifier": extension_id,
-                    "location": item.get("path"),
-                    "stable_id": _stable_report_finding_id("browser_extension_asset", browser, extension_id),
-                    "canonical_id": _stable_report_finding_id("browser_extension_asset", browser, extension_id),
-                },
-                "severity": severity,
-                "effective_severity": severity,
-                "title": f"{name} browser extension risk",
-                "description": "; ".join(risk_reasons) if risk_reasons else f"{name} has {severity} browser-extension risk",
-                "browser": browser,
-                "version": item.get("version"),
-                "permissions": item.get("permissions") or [],
-                "host_permissions": item.get("host_permissions") or [],
-                "risk_reasons": risk_reasons,
-                "remediation_guidance": "Review extension permissions and remove or restrict the extension if it is not required.",
-                "scan_sources": ["browser_extensions"],
-            }
-        )
-    return findings
 
 
 def _build_remediation_json(report: AIBOMReport) -> list[dict]:
@@ -1012,15 +927,7 @@ def _export_findings_json(report: AIBOMReport) -> list[dict[str, Any]]:
     for finding in export_findings:
         if not finding.first_seen:
             finding.first_seen = scan_observed_at
-    return [finding.to_dict() for finding in export_findings]
-
-
-def _append_side_findings(findings: list[dict[str, Any]], report: AIBOMReport) -> None:
-    """Append prompt-scan and browser-extension rows the unified stream does not already carry."""
-    if report.prompt_scan_data and not any(finding.get("source") == "PROMPT_SCAN" for finding in findings if isinstance(finding, dict)):
-        findings.extend(_prompt_scan_findings(report.prompt_scan_data))
-    if report.browser_extensions:
-        findings.extend(_browser_extension_findings(report.browser_extensions))
+    return stamp_finding_node_ids([finding.to_dict() for finding in export_findings])
 
 
 def to_json(report: AIBOMReport) -> dict:

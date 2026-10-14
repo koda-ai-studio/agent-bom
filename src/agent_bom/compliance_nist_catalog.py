@@ -24,6 +24,7 @@ from __future__ import annotations
 from typing import Any
 
 from agent_bom.core.severity import evaluated_control_status as evaluated_control_status
+from agent_bom.evidence.evidencing_checks import finding_evaluated_controls
 
 # Order used to collapse multiple evidence signals on one NIST control into a
 # single status. Higher wins: a real weakness (fail/warning) beats an
@@ -42,9 +43,11 @@ def build_nist_800_53_catalog_line(
     """Score the full vendored NIST SP 800-53 Rev 5 catalog over EVALUATED
     controls only, using the curated (vendor-asserted) check → control map.
 
-    A control is *evaluated* when at least one mapped check ran: a CVE/CWE
-    finding whose ``nist_800_53_tags`` include a curated (evidencing_checks)
-    control, or a CIS Foundations check the vendor-asserted table maps to it.
+    A control is *evaluated* when at least one of ITS OWN evidencing checks ran:
+    a finding whose CWE check (``cwe:<CWE-ID>``) is curated for that control, or
+    a CIS Foundations check the vendor-asserted table maps to it. The filter is
+    per evidencing check, not per control: a vulnerability-intrinsic tag (SR-3,
+    SI-4) never evaluates a control just because some other check could.
     Findings can only fail/warn (absence of a CVE is never a pass); a CIS check
     contributes pass/fail/error. ERROR is an explicit bucket — counted toward the
     evaluated denominator but never the numerator. Controls with no run check are
@@ -61,9 +64,7 @@ def build_nist_800_53_catalog_line(
     finding_sev: dict[str, dict[str, int]] = {}
     finding_count: dict[str, int] = {}
     for br in all_blast:
-        for control_id in br.get("nist_800_53_tags", []) or []:
-            if control_id not in evidenced:
-                continue  # vuln-intrinsic tag with no curated check → reconcile out
+        for control_id in finding_evaluated_controls(br, catalog, evidenced):
             sev = str(br.get("severity") or "").lower()
             bucket = finding_sev.setdefault(control_id, {"critical": 0, "high": 0, "medium": 0, "low": 0})
             if sev in bucket:

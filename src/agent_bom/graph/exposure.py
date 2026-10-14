@@ -10,7 +10,7 @@ from typing import Any
 
 from agent_bom.graph.container import AttackPath
 from agent_bom.graph.edge import UnifiedEdge
-from agent_bom.graph.edge_lookup import _build_edge_lookup, _EdgeLookup, _rel_value
+from agent_bom.graph.edge_lookup import _build_edge_lookup, _EdgeLookup, _hop_edge, _rel_value
 from agent_bom.graph.integration_contract import EVIDENCE_VERSION, node_evidence_provenance
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.path_derivation import _node_type_value
@@ -103,7 +103,7 @@ def _exposure_relationships_for_path(
     relationships: list[dict[str, Any]] = []
     for index, (source, target) in enumerate(zip(path.hops, path.hops[1:], strict=False)):
         relationship_key = path.edges[index] if index < len(path.edges) else None
-        edge: UnifiedEdge | None = by_pair.get((source, target, relationship_key)) if relationship_key else by_pair.get((source, target))
+        edge = _hop_edge(by_pair, source, target, relationship_key)
         if edge is None:
             continue
         relationship = _rel_value(edge)
@@ -149,7 +149,9 @@ def _exposure_path_for_attack_path(
     servers = [hop for hop in hops if hop["role"] == "server"]
     agents = [hop for hop in hops if hop["role"] == "agent"]
     findings = _finding_ids_for_nodes(nodes_by_id, path.hops, path.vuln_ids)
-    label_parts = [findings[0] if findings else target["label"], agents[0]["label"] if agents else source["label"]]
+    finding_hops = [hop for hop in hops if hop["role"] == "finding"]
+    headline = finding_hops[0]["label"] if finding_hops else (target["label"] or (findings[0] if findings else ""))
+    label_parts = [headline, agents[0]["label"] if agents else source["label"]]
     from agent_bom.graph.hop_evidence import exposure_hop_evidence
     from agent_bom.graph.path_evidence import exposure_advisory_evidence, exposure_evidence_dimensions, qualify_exposure_reachability
 

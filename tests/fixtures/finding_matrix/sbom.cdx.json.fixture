@@ -1,0 +1,5 @@
+{"bomFormat":"CycloneDX","specVersion":"1.5","version":1,"metadata":{"component":{"type":"application","name":"legacy-app","version":"1.0"}},
+"components":[
+{"type":"library","name":"jinja2","version":"2.10","purl":"pkg:pypi/jinja2@2.10","licenses":[{"license":{"id":"BSD-3-Clause"}}]},
+{"type":"library","name":"requests","version":"2.19.0","purl":"pkg:pypi/requests@2.19.0","licenses":[{"license":{"id":"Apache-2.0"}}]},
+{"type":"library","name":"ghostscript-py","version":"1.0","purl":"pkg:pypi/ghostscript-py@1.0","licenses":[{"license":{"id":"AGPL-3.0-only"}}]}]}
