@@ -154,17 +154,8 @@ def tag_blast_radius(br: BlastRadius) -> list[str]:
     if has_creds and multi_agent:
         tags.add("IA.L2-3.5.3")
 
-    # CWE-based tagging for SAST findings
-    if br.package.ecosystem == "sast" and br.vulnerability.cwe_ids:
-        try:
-            from agent_bom.constants import SAST_CWE_MAP  # type: ignore[attr-defined]
-
-            for cwe in br.vulnerability.cwe_ids:
-                for tag in SAST_CWE_MAP.get(cwe.upper(), {}).get("cmmc", []):
-                    tags.add(tag)
-        except ImportError:
-            pass  # SAST_CWE_MAP not yet available
-
+    # No CWE-level CMMC crosswalk is vendored (CWE_COMPLIANCE_MAP carries none),
+    # so SAST findings get the same exposure-derived practices as any other.
     return sorted(tags)
 
 

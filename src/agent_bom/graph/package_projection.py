@@ -6,6 +6,7 @@ from typing import Any
 
 from agent_bom.asset_provenance import package_version_provenance, sanitize_discovery_provenance
 from agent_bom.canonical_ids import canonical_graph_node_id, source_ids
+from agent_bom.compliance_coverage import COMPLIANCE_TAG_FIELDS
 from agent_bom.core.severity import SEVERITY_RISK_SCORE
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
@@ -383,20 +384,8 @@ def _blast_radius_package_evidence(br_dict: dict[str, Any], data_source_tag: str
 
 
 def _collect_compliance_tags(br_dict: dict[str, Any]) -> list[str]:
-    """Collect all compliance tags from a blast radius dict."""
+    """Collect every framework's tags from a blast radius dict."""
     tags: list[str] = []
-    for key in (
-        "owasp_tags",
-        "atlas_tags",
-        "attack_tags",
-        "nist_ai_rmf_tags",
-        "owasp_mcp_tags",
-        "owasp_agentic_tags",
-        "eu_ai_act_tags",
-        "nist_csf_tags",
-        "iso_27001_tags",
-        "soc2_tags",
-        "cis_tags",
-    ):
-        tags.extend(br_dict.get(key, []))
+    for key in COMPLIANCE_TAG_FIELDS:
+        tags.extend(br_dict.get(key) or [])
     return sorted(set(tags))

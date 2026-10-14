@@ -7,7 +7,7 @@ importing the graph layer that produced them.
 
 from __future__ import annotations
 
-from agent_bom.finding import Asset, Finding, FindingSource, FindingType
+from agent_bom.finding import LEGACY_CONTROL_FIELDS, Asset, Finding, FindingSource, FindingType
 
 
 def findings_from_dicts(data: list[dict]) -> list[Finding]:
@@ -46,7 +46,7 @@ def finding_from_dict(item: dict) -> Finding | None:
         source = FindingSource(item.get("source", FindingSource.GRAPH_ANALYSIS.value))
     except ValueError:
         source = FindingSource.GRAPH_ANALYSIS
-    return Finding(
+    finding = Finding(
         finding_type=finding_type,
         source=source,
         asset=asset,
@@ -54,8 +54,6 @@ def finding_from_dict(item: dict) -> Finding | None:
         title=str(item.get("title", "")),
         description=str(item.get("description", "")),
         remediation_guidance=item.get("remediation_guidance"),
-        attack_tags=list(item.get("attack_tags", []) or []),
-        owasp_tags=list(item.get("owasp_tags", []) or []),
         evidence=item.get("evidence", {}) or {},
         risk_score=float(item.get("risk_score", 0.0) or 0.0),
         is_actionable=item.get("is_actionable"),
@@ -66,3 +64,12 @@ def finding_from_dict(item: dict) -> Finding | None:
         finding_node_id=_optional_str(item.get("finding_node_id")),
         entity_type=_optional_str(item.get("entity_type")),
     )
+    # ``compliance_tags`` serializes as the union of every framework's tags, so
+    # only the per-framework arrays are restored.
+    for tag_field, _framework in LEGACY_CONTROL_FIELDS:
+        if tag_field == "compliance_tags":
+            continue
+        values = item.get(tag_field)
+        if isinstance(values, (list, tuple)):
+            setattr(finding, tag_field, [str(value) for value in values if value])
+    return finding

@@ -107,12 +107,14 @@ def apply_hub_classification(finding: "Finding", *, include_gov: bool = False) -
         slug for slug in finding.applicable_frameworks if slug not in ALL_FRAMEWORKS
     ]
     location = finding.asset.location or (finding.evidence.get("file") if isinstance(finding.evidence, dict) else None)
+    rule_id = finding.evidence.get("rule_id") if isinstance(finding.evidence, dict) else None
     shape_tags = controls_for_finding_shape(
         finding.finding_type,
         source=finding.source,
         cwe_ids=finding.cwe_ids,
         asset_type=finding.asset.asset_type,
         location=str(location) if location else None,
+        rule_id=str(rule_id) if rule_id else None,
     )
     for tag_field, controls in shape_tags.items():
         existing = list(getattr(finding, tag_field))

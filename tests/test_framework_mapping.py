@@ -74,8 +74,8 @@ def _br(
 
 # A single representative finding exercised across every tagger: a CRITICAL,
 # KEV, fixable vuln on an AI package with exposed credentials and two CWEs —
-# one lowercase (`cwe-798`) to lock the case-normalization behavior of the
-# blast-radius taggers.
+# one lowercase (`cwe-798`) to lock case-insensitive CWE lookup in every
+# tagger.
 def _representative_br() -> BlastRadius:
     return _br(
         ["CWE-89", "cwe-798"],
@@ -223,7 +223,7 @@ def test_pci_dss_descriptors_are_own_wording_not_copyrighted_text():
 def test_vuln_compliance_tags_unchanged():
     br = _representative_br()
     assert vuln_compliance.tag_vulnerability(br.vulnerability, br.package) == {
-        "owasp_llm": ["LLM03", "LLM05"],
+        "owasp_llm": ["LLM02", "LLM03", "LLM05"],
         "atlas": ["AML.T0010", "AML.T0043"],
         "nist_ai_rmf": ["GOVERN-6.1", "MANAGE-1.3", "MAP-4.1", "MEASURE-2.7"],
         # The CVE-intrinsic tagger agrees with the blast-radius taggers by
@@ -235,14 +235,17 @@ def test_vuln_compliance_tags_unchanged():
             "GV.SC-07",
             "ID.AM-05",
             "ID.RA-05",
+            "PR.AA-01",
             "PR.DS-01",
             "RS.AN-03",
             "RS.MI-01",
         ],
-        "nist_800_53": ["CM-6", "IR-6", "SI-10", "SI-2", "SI-3", "SI-4", "SI-5", "SR-11", "SR-3", "SR-4"],
+        "nist_800_53": ["CM-6", "IA-5", "IR-6", "SC-28", "SI-10", "SI-2", "SI-3", "SI-4", "SI-5", "SR-11", "SR-3", "SR-4"],
         "fedramp": [
             "FedRAMP-CM-6",
+            "FedRAMP-IA-5",
             "FedRAMP-IR-6",
+            "FedRAMP-SC-28",
             "FedRAMP-SI-10",
             "FedRAMP-SI-2",
             "FedRAMP-SI-3",
@@ -265,7 +268,7 @@ def test_vuln_compliance_tags_unchanged():
             "A.8.7",
             "A.8.8",
         ],
-        "soc2": ["CC7.4", "CC8.1", "CC9.1", "CC9.2"],
+        "soc2": ["CC6.1", "CC7.4", "CC8.1", "CC9.1", "CC9.2"],
         "eu_ai_act": ["ART-15", "ART-17", "ART-9"],
         "owasp_mcp": ["MCP04"],
         "owasp_agentic": ["ASI04"],
@@ -338,10 +341,8 @@ def test_controls_for_cwe_resolves_per_framework():
 def test_controls_for_cwe_normalizes_case_by_default():
     from agent_bom import framework_mapping as fm
 
-    # Blast-radius taggers historically upper-cased the CWE id.
     assert fm.controls_for_cwe("cwe-798", "cis") == ["CIS-16.1"]
-    # vuln_compliance historically looked up the raw id (no normalization).
-    assert fm.controls_for_cwe("cwe-798", "cis", normalize=False) == []
+    assert fm.controls_for_cwe(" CWE-798 ", "cis") == ["CIS-16.1"]
 
 
 def test_controls_for_cwes_dedupes_and_preserves_order():

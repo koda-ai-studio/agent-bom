@@ -83,6 +83,7 @@ __all__ = [
     "iso_controls_for_cwes_via_nist",
     "select_frameworks",
     "controls_for_finding_shape",
+    "TOXIC_COMBINATION_CONTROLS",
     "is_framework_relevant",
     "ALL_FRAMEWORKS",
     "CIS_FOUNDATIONS_TO_NIST_800_53",
@@ -94,28 +95,26 @@ __all__ = [
 # ─── CWE -> per-framework control resolution (paths 1 + 2) ───────────────────
 
 
-def controls_for_cwe(cwe: str, framework_key: str, *, normalize: bool = True) -> list[str]:
+def controls_for_cwe(cwe: str, framework_key: str) -> list[str]:
     """Return the control IDs a single CWE evidences under one framework.
 
     Args:
-        cwe: A CWE identifier, e.g. ``"CWE-89"``.
+        cwe: A CWE identifier, e.g. ``"CWE-89"``. Matched case- and
+            whitespace-insensitively so every tagger resolves ``cwe-89`` and
+            ``CWE-89`` to the same controls.
         framework_key: The framework key used inside ``CWE_COMPLIANCE_MAP``
             (``"cis"``, ``"nist_800_53"``, ``"iso_27001"``, ``"owasp_llm"``,
             ``"soc2"``, ``"nist_csf"``, ``"pci_dss"``).
-        normalize: Upper-case the CWE id before lookup. The blast-radius taggers
-            normalize (``cwe.upper()``); ``vuln_compliance`` looks up the raw id,
-            so it passes ``normalize=False``. Preserved verbatim so the
-            consolidation is behavior-identical.
 
     Returns:
         The control-ID list (empty for an unknown CWE or framework key). The
         returned list is the mapping's own list; callers must not mutate it.
     """
-    key = cwe.upper() if normalize else cwe
+    key = cwe.strip().upper()
     return CWE_COMPLIANCE_MAP.get(key, {}).get(framework_key, [])
 
 
-def controls_for_cwes(cwe_ids: Iterable[str], framework_key: str, *, normalize: bool = True) -> list[str]:
+def controls_for_cwes(cwe_ids: Iterable[str], framework_key: str) -> list[str]:
     """Resolve a collection of CWEs to one framework's controls, deduped.
 
     First-seen order is preserved (matching ``vuln_compliance``'s
@@ -124,7 +123,7 @@ def controls_for_cwes(cwe_ids: Iterable[str], framework_key: str, *, normalize: 
     """
     out: list[str] = []
     for cwe in cwe_ids:
-        for control in controls_for_cwe(cwe, framework_key, normalize=normalize):
+        for control in controls_for_cwe(cwe, framework_key):
             if control not in out:
                 out.append(control)
     return out
@@ -176,7 +175,7 @@ def nist_to_iso(control_id: str) -> list[str]:
     return framework_catalog.iso_controls_for_nist(control_id)
 
 
-def iso_control_provenance_for_cwes(cwe_ids: Iterable[str], *, normalize: bool = True) -> dict[str, tuple[str, ...]]:
+def iso_control_provenance_for_cwes(cwe_ids: Iterable[str]) -> dict[str, tuple[str, ...]]:
     """Compose CWE -> NIST assertions with NIST's official ISO crosswalk.
 
     The first edge is an agent-bom, vendor-asserted signal mapping.  The second
@@ -185,7 +184,7 @@ def iso_control_provenance_for_cwes(cwe_ids: Iterable[str], *, normalize: bool =
     the result into an unqualified CWE -> ISO assertion.
     """
     provenance: dict[str, list[str]] = {}
-    for nist_control in controls_for_cwes(cwe_ids, "nist_800_53", normalize=normalize):
+    for nist_control in controls_for_cwes(cwe_ids, "nist_800_53"):
         for iso_control in nist_to_iso(nist_control):
             contributors = provenance.setdefault(iso_control, [])
             if nist_control not in contributors:
@@ -193,9 +192,9 @@ def iso_control_provenance_for_cwes(cwe_ids: Iterable[str], *, normalize: bool =
     return {control: tuple(contributors) for control, contributors in provenance.items()}
 
 
-def iso_controls_for_cwes_via_nist(cwe_ids: Iterable[str], *, normalize: bool = True) -> list[str]:
+def iso_controls_for_cwes_via_nist(cwe_ids: Iterable[str]) -> list[str]:
     """Return CWE-derived ISO IDs through the single NIST/OLIR spine."""
-    return list(iso_control_provenance_for_cwes(cwe_ids, normalize=normalize))
+    return list(iso_control_provenance_for_cwes(cwe_ids))
 
 
 # ─── Framework slug vocabulary ───────────────────────────────────────────────
@@ -470,6 +469,30 @@ _CWE_TABLE_TAG_FIELDS: dict[str, str] = {
     "cis": "cis_tags",
     "pci_dss": "pci_dss_tags",
 }
+# Graph toxic combinations, keyed by rule id. A public foothold on a known
+# vulnerability is evidence against flaw remediation and boundary protection;
+# reach into sensitive data or lateral roles is evidence against access
+# enforcement / least privilege. OWASP LLM Top 10 applies only where an AI
+# agent is part of the combination (excessive agency); web OWASP Top 10 IDs
+# have no catalog here and are deliberately not emitted.
+_PUBLIC_VULNERABLE_TAGS: dict[str, tuple[str, ...]] = {
+    "nist_800_53_tags": ("SI-2",),
+    "soc2_tags": ("CC6.6",),
+}
+TOXIC_COMBINATION_CONTROLS: dict[str, dict[str, tuple[str, ...]]] = {
+    "PUBLIC_EXPOSED_KEV": _PUBLIC_VULNERABLE_TAGS,
+    "PUBLIC_EXPOSED_RCE": _PUBLIC_VULNERABLE_TAGS,
+    "PUBLIC_EXPOSED_NETWORK_EXPLOITABLE": _PUBLIC_VULNERABLE_TAGS,
+    "PUBLIC_EXPOSED_VULNERABLE": _PUBLIC_VULNERABLE_TAGS,
+    "PUBLIC_TO_SENSITIVE_DATA": {"nist_800_53_tags": ("AC-3",), "soc2_tags": ("CC6.6",)},
+    "OVERPERMISSIONED_TO_SENSITIVE": {"nist_800_53_tags": ("AC-6",), "soc2_tags": ("CC6.1",)},
+    "AGENT_REACHES_PRIVILEGED": {
+        "owasp_tags": ("LLM06",),
+        "owasp_agentic_tags": ("ASI03",),
+        "nist_800_53_tags": ("AC-6", "IA-5"),
+    },
+    "PUBLIC_PERMISSION_LATERAL": {"nist_800_53_tags": ("AC-6",), "soc2_tags": ("CC6.6",)},
+}
 
 
 def _is_mcp_location(source: FindingSource, asset_type: str | None, location: str | None) -> bool:
@@ -486,11 +509,13 @@ def controls_for_finding_shape(
     cwe_ids: Iterable[str] = (),
     asset_type: str | None = None,
     location: str | None = None,
+    rule_id: str | None = None,
 ) -> dict[str, list[str]]:
     """Return ``{tag_field: [control, ...]}`` for a non-advisory finding.
 
     Empty for every finding type this table does not own (CVE findings are
-    tagged from their advisory by the CVE taggers).
+    tagged from their advisory by the CVE taggers). ``rule_id`` selects the
+    graph toxic-combination rule for ``COMBINATION`` findings.
     """
     from agent_bom.evidence.control_modes import finding_taggable_controls
     from agent_bom.fedramp import FEDRAMP_MODERATE
@@ -519,6 +544,9 @@ def controls_for_finding_shape(
         for field_name, controls in _SECURE_DEVELOPMENT_TAGS.items():
             add(field_name, controls)
         add_cwe_rows(cwe_ids)
+    elif finding_type is FindingType.COMBINATION and rule_id in TOXIC_COMBINATION_CONTROLS:
+        for field_name, controls in TOXIC_COMBINATION_CONTROLS[rule_id].items():
+            add(field_name, controls)
     else:
         return {}
 

@@ -48,6 +48,10 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 - The largest scanner engines are decomposed into named stages with no change to results: package vulnerability scanning (`scan_packages`), the cloned repository tree scan, the MCP `scan` tool body and the live Kubernetes posture scan. Each now reads as a short orchestrator over input preparation, version resolution, advisory lookups, enrichment and result assembly.
 
+### Fixed
+
+- Compliance control tags stay consistent across findings, the graph and exports. Toxic-combination findings no longer put OWASP Web Top 10 IDs (`A06:2021`, `A01:2021`) or `LLM06:2025` into the OWASP LLM field; they now carry catalog-backed NIST SP 800-53, SOC 2 and (for agents reaching privileged tools) OWASP LLM `LLM06` / Agentic `ASI03` controls, which survive report rehydration. Graph vulnerability nodes keep NIST 800-53, FedRAMP, CMMC and PCI DSS tags. CWE lookups are case-insensitive in every tagger. Framework-qualified export tags no longer treat a colon inside a control ID as a framework prefix. A dead SAST CWE-to-CMMC lookup that could never resolve was removed.
+
 ### Security
 
 - API local-path scans: a set-but-blank `AGENT_BOM_API_LOCAL_PATH_SCANS` no longer enables local filesystem scans. A blank value is treated as unset and falls through to `AGENT_BOM_ENABLE_LOCAL_PATH_SCANS`, then to the disabled default.
