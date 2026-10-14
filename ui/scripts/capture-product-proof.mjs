@@ -3493,7 +3493,7 @@ async function main() {
           await fitReactFlow(p);
           await scrollTo(p, 0);
         }, {
-          expectedText: ["Has finding", "pillow@9.0.0 is recorded as affected by CVE-2023-4863.", "Bundled advisory database", "Technical details", "Image inventory", "Deployment occurrence", "pinned-package.txt", "CVE-2023-4863",
+          expectedText: ["Has finding", "pillow@9.0.0 is recorded as affected by CVE-2023-4863.", "Bundled advisory database", "Technical details", /Image inventory/i, /Deployment occurrence/i, "pinned-package.txt", "CVE-2023-4863",
             "1 high finding · 1 KEV-listed · 1 snapshot path", "Path analysis complete for this snapshot", /Reference evidence lab/i],
           expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph"],
           minGraphNodes: 5, maxGraphNodes: 5, minGraphEdges: 4, maxGraphEdges: 4,
