@@ -84,7 +84,7 @@ from agent_bom.api.routes.compliance_routes.scoring import (
 from agent_bom.backpressure import BackpressureRejectedError, adaptive_backpressure
 from agent_bom.compliance_nist_catalog import build_nist_800_53_catalog_line, build_nist_800_53_drill
 from agent_bom.compliance_nist_catalog import evaluated_control_status as _evaluated_control_status  # noqa: F401
-from agent_bom.evidence.scan_run import result_vulnerability_coverage_incomplete
+from agent_bom.evidence.detective_evidence import DetectiveScanEvidence
 from agent_bom.evidence.scoring import score_compliance
 from agent_bom.rbac import require_authenticated_permission
 from agent_bom.security import sanitize_error
@@ -148,10 +148,6 @@ def _build_compliance(tenant_jobs: list[Any], *, scan_id: str | None = None) -> 
 
     completed_jobs = [job for job in tenant_jobs if job.status == JobStatus.DONE and job.result]
     scan_count = len(completed_jobs)
-    # A counted scan whose vulnerability lane was partial means the estate
-    # was not fully scanned, so no vulnerability-scanning control may claim
-    # a pass off this evidence set.
-    vulnerability_coverage_incomplete = any(result_vulnerability_coverage_incomplete(job.result) for job in completed_jobs)
     for job in completed_jobs:
         for row in _result_compliance_evidence(job.result):
             occurrence_id = str(row.get("id") or row.get("canonical_id") or "")
@@ -172,13 +168,16 @@ def _build_compliance(tenant_jobs: list[Any], *, scan_id: str | None = None) -> 
 
     all_blast.extend(row for _authority, row in authoritative_occurrences.values())
     latest_scan = getattr(latest_scan_job, "completed_at", None) if latest_scan_job is not None else None
+    # Detective controls rest only on scans whose lane ran, and a partial vulnerability lane withholds their pass.
+    scan_evidence = DetectiveScanEvidence.for_results(((job.result, job.completed_at) for job in completed_jobs), latest_scan=latest_scan)
 
     framework_controls = _build_framework_controls(
         all_blast,
         TAG_MAPPED_FRAMEWORKS,
         scan_count=scan_count,
         latest_scan=latest_scan,
-        vulnerability_coverage_incomplete=vulnerability_coverage_incomplete,
+        vulnerability_coverage_incomplete=scan_evidence.vulnerability_coverage_incomplete,
+        scan_evidence=scan_evidence,
     )
 
     # Wire the CIS Foundations Benchmark posture (report.cis_benchmark_data + the

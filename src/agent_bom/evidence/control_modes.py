@@ -50,6 +50,9 @@ __all__ = [
     "finding_taggable_controls",
     "requires_vulnerability_coverage",
     "INVENTORY_DETECTIVE_CONTROLS",
+    "LANE_INVENTORY",
+    "LANE_VULNERABILITY",
+    "detective_lane",
 ]
 
 MODE_DETECTIVE = "detective"
@@ -136,6 +139,17 @@ def finding_taggable_controls(tag_field: str, control_ids: Iterable[str]) -> set
     """
     excluded = DETECTIVE_CONTROLS.get(tag_field, frozenset()) | UNEVALUABLE_CONTROLS.get(tag_field, frozenset())
     return {control_id for control_id in control_ids if control_id.removeprefix("FedRAMP-") not in excluded}
+
+
+LANE_VULNERABILITY = "vulnerability"
+LANE_INVENTORY = "inventory"
+
+
+def detective_lane(tag_field: str, control_id: str) -> str:
+    """The scan lane whose output evidences a detective control: the component inventory or the vulnerability lane."""
+    if control_id in INVENTORY_DETECTIVE_CONTROLS.get(tag_field, frozenset()):
+        return LANE_INVENTORY
+    return LANE_VULNERABILITY
 
 
 def requires_vulnerability_coverage(tag_field: str, control_id: str) -> bool:

@@ -297,6 +297,28 @@ def _ledger_stage(value: str) -> EvidenceStage:
 # evaluated. A failure in another lane (a cloud collector, a k8s collector) makes
 # the run partial without invalidating the vulnerability verdict, so it must not
 # blank the posture grade.
+# Receipt that the vulnerability lane was skipped on request (``--no-scan``).
+# Not a coverage gap: the run is complete for what was asked, but it is not
+# evidence that vulnerabilities were scanned.
+VULNERABILITY_SCAN_SKIPPED_CODE = "vulnerability_scan_skipped"
+VULNERABILITY_SCAN_SKIPPED_MESSAGE = "Vulnerability scanning skipped by request"
+
+
+def vulnerability_scan_skipped_issue() -> ScanIssue:
+    return ScanIssue(
+        code=VULNERABILITY_SCAN_SKIPPED_CODE,
+        stage="scanning",
+        source="agent-bom",
+        message=VULNERABILITY_SCAN_SKIPPED_MESSAGE,
+        affects_coverage=False,
+    )
+
+
+def vulnerability_scan_skipped(run: ScanRun) -> bool:
+    """True when the run carries the skip receipt (or the message older API reports recorded)."""
+    return any(issue.code == VULNERABILITY_SCAN_SKIPPED_CODE or issue.message == VULNERABILITY_SCAN_SKIPPED_MESSAGE for issue in run.issues)
+
+
 _VULN_COVERAGE_CODES = frozenset({"required_scanner_unavailable", "scanner_warning", "vulnerability_coverage_gap"})
 _UNRESOLVED_PACKAGE_WARNING = re.compile(r"^(?P<count>\d+) package\(s\) skipped due to unresolved versions$")
 _MAX_GRADEABLE_UNRESOLVED_RATIO = 0.05
@@ -419,9 +441,13 @@ __all__ = [
     "ScanRun",
     "ScanScope",
     "ScanScopeStatus",
+    "VULNERABILITY_SCAN_SKIPPED_CODE",
+    "VULNERABILITY_SCAN_SKIPPED_MESSAGE",
     "effective_scan_run",
     "result_vulnerability_coverage_incomplete",
     "serialized_coverage_view",
     "vulnerability_coverage_caveat",
     "vulnerability_coverage_incomplete",
+    "vulnerability_scan_skipped",
+    "vulnerability_scan_skipped_issue",
 ]
