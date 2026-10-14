@@ -276,7 +276,47 @@ def scenario_cloud(work: Path, monkeypatch: Any) -> dict[str, Any]:
     return json.loads(json.dumps(to_json(report), default=str))
 
 
+def scenario_shadow(work: Path, mp: Any) -> dict[str, Any]:
+    """Run the trace projector and finding sink for unlisted runtime entities."""
+    from agent_bom.api.trace_collection.trace_evidence import emit_shadow_findings
+    from agent_bom.evidence.finding_node_ids import stamp_finding_node_ids
+    from agent_bom.graph.builder import build_unified_graph_from_report
+    from agent_bom.runtime.normalized_trace import NormalizedTraceEvent
+
+    report: dict[str, Any] = {
+        "scan_id": "matrix-shadow",
+        "agents": [],
+        "findings": [],
+        "runtime_trace_events": {
+            "window_start": "2026-10-05T00:00:00Z",
+            "window_end": "2026-10-06T00:00:00Z",
+            "events": [
+                NormalizedTraceEvent(
+                    tenant_id="default",
+                    source="otel",
+                    source_trace_id="shadow-trace",
+                    source_span_id="shadow-span",
+                    kind="tool",
+                    tool_name="unlisted-tool",
+                    started_at="2026-10-05T10:00:00Z",
+                ).to_dict()
+            ],
+        },
+    }
+    graph = build_unified_graph_from_report(report, scan_id="matrix-shadow", tenant_id="default")
+
+    def sink(tenant_id: str, rows: list[dict[str, Any]]) -> int:
+        assert tenant_id == "default"
+        report["findings"].extend(rows)
+        return len(rows)
+
+    assert emit_shadow_findings(graph, "default", sink) == 1
+    stamp_finding_node_ids(report["findings"])
+    return report
+
+
 SCENARIOS = {
+    "shadow": scenario_shadow,
     "demo": scenario_demo,
     "secrets": scenario_secrets,
     "skill": scenario_skill,

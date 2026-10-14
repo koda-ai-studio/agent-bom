@@ -172,28 +172,28 @@ Same column name in several tables here, but no table owns it, so no join is dra
 
 ## Tables
 
-| Table | Backends | Columns | Partitioned |
-|---|---|---|---|
-| `campaign_evidence_state` | Postgres, SQLite | 3 |  |
-| `compliance_hub_findings` | Postgres, SQLite, Snowflake | 13 |  |
-| `drift_incidents` | Postgres, SQLite | 5 |  |
-| `exceptions` | Postgres, SQLite, Snowflake | 17 |  |
-| `finding_history_jobs` | Postgres | 4 |  |
-| `finding_history_rows` | Postgres | 7 |  |
-| `findings` | Postgres | 26 |  |
-| `findings_by_framework` | Snowflake | 9 |  |
-| `findings_feed` | ClickHouse | 18 | yes |
-| `findings_feed_runs` | ClickHouse | 6 |  |
-| `findings_feed_staged` | ClickHouse | 18 | yes |
-| `hitl_approvals` | SQLite | 14 |  |
-| `hub_cve_intel` | Postgres, SQLite | 4 |  |
-| `hub_findings_current` | Postgres | 18 |  |
-| `hub_findings_current_observations` | Postgres, SQLite | 4 | yes |
-| `hub_ledger_ingest_state` | SQLite | 3 |  |
-| `hub_overview_revisions` | Postgres, SQLite | 2 |  |
-| `issue_mappings` | Postgres, SQLite | 11 |  |
-| `risk_campaign_workflows` | Postgres, SQLite | 13 |  |
-| `scan_findings` | SQLite | 20 |  |
-| `ticket_links` | Postgres, SQLite | 11 |  |
-| `trend_history` | Postgres, SQLite | 13 |  |
-| `vulnerability_scans` | ClickHouse | 16 | yes |
+| Table | Backends | Columns | Partitioned | Lifetime |
+|---|---|---|---|---|
+| `campaign_evidence_state` | Postgres, SQLite | 3 |  | persistent |
+| `compliance_hub_findings` | Postgres, SQLite, Snowflake | 13 |  | persistent |
+| `drift_incidents` | Postgres, SQLite | 5 |  | persistent |
+| `exceptions` | Postgres, SQLite, Snowflake | 17 |  | persistent |
+| `finding_history_jobs` | Postgres | 4 |  | persistent |
+| `finding_history_rows` | Postgres | 7 |  | persistent |
+| `findings` | Postgres | 26 |  | persistent |
+| `findings_by_framework` | Snowflake | 9 |  | persistent |
+| `findings_feed` | ClickHouse | 18 | yes | persistent |
+| `findings_feed_runs` | ClickHouse | 6 |  | persistent |
+| `findings_feed_staged` | ClickHouse | 18 | yes | persistent |
+| `hitl_approvals` | SQLite | 14 |  | persistent |
+| `hub_cve_intel` | Postgres, SQLite | 4 |  | persistent |
+| `hub_findings_current` | Postgres | 18 |  | persistent |
+| `hub_findings_current_observations` | Postgres, SQLite | 4 | yes | persistent |
+| `hub_ledger_ingest_state` | SQLite | 3 |  | persistent |
+| `hub_overview_revisions` | Postgres, SQLite | 2 |  | persistent |
+| `issue_mappings` | Postgres, SQLite | 11 |  | persistent |
+| `risk_campaign_workflows` | Postgres, SQLite | 13 |  | persistent |
+| `scan_findings` | SQLite | 20 |  | persistent |
+| `ticket_links` | Postgres, SQLite | 11 |  | persistent |
+| `trend_history` | Postgres, SQLite | 13 |  | persistent |
+| `vulnerability_scans` | ClickHouse | 16 | yes | persistent |

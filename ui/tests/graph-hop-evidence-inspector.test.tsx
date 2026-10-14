@@ -8,7 +8,7 @@ function receipt(index: number, overrides: Partial<GraphHopEvidence> = {}): Grap
   return {
     source_node_id: `node:${index}`, target_node_id: `node:${index + 1}`, relationship: "uses",
     source_snapshot_ids: ["scan:synthetic"], relationship_provenance: "recorded", correlation_identity_status: "current",
-    evidence_tier: "static_evidence", confidence: 1, freshness: "fresh", runtime_observed_state: "not_observed",
+    evidence_tier: "static_scan", confidence: 1, freshness: "fresh", runtime_observed_state: "not_observed",
     direction: "directed", traversable: true, complete: true, truncated: false, ...overrides,
   };
 }

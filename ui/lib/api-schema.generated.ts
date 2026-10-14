@@ -33438,7 +33438,7 @@ export interface operations {
                                      * @default unknown
                                      * @enum {string}
                                      */
-                                    evidence_tier: "static_evidence" | "modeled_infrastructure" | "runtime_observed" | "unknown";
+                                    evidence_tier: "static_scan" | "modeled_infrastructure" | "runtime_observed" | "recorded" | "derived" | "legacy_unrecorded" | "unknown";
                                     /**
                                      * Freshness
                                      * @default unknown
@@ -35646,7 +35646,7 @@ export interface operations {
                                          * @default unknown
                                          * @enum {string}
                                          */
-                                        evidence_tier: "static_evidence" | "modeled_infrastructure" | "runtime_observed" | "unknown";
+                                        evidence_tier: "static_scan" | "modeled_infrastructure" | "runtime_observed" | "recorded" | "derived" | "legacy_unrecorded" | "unknown";
                                         /**
                                          * Freshness
                                          * @default unknown
@@ -35970,7 +35970,7 @@ export interface operations {
                                      * @default unknown
                                      * @enum {string}
                                      */
-                                    evidence_tier: "static_evidence" | "modeled_infrastructure" | "runtime_observed" | "unknown";
+                                    evidence_tier: "static_scan" | "modeled_infrastructure" | "runtime_observed" | "recorded" | "derived" | "legacy_unrecorded" | "unknown";
                                     /**
                                      * Freshness
                                      * @default unknown

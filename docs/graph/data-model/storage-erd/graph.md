@@ -7,6 +7,8 @@ Storage tables in this domain. Back to the [storage ERD](../storage-erd.md).
 
 19 tables.
 
+Scratch tables are temporary SQLite build/correlation workspaces, not durable evidence stores.
+
 ```mermaid
 erDiagram
   attack_paths {
@@ -145,24 +147,24 @@ Same column name in several tables here, but no table owns it, so no join is dra
 
 ## Tables
 
-| Table | Backends | Columns | Partitioned |
-|---|---|---|---|
-| `attack_paths` | Postgres, SQLite | 20 |  |
-| `edge_groups` | SQLite | 5 |  |
-| `edge_observations` | SQLite | 9 |  |
-| `graph_attack_paths` | Postgres, SQLite | 17 |  |
-| `graph_build_workspace_edges` | Postgres | 7 |  |
-| `graph_build_workspace_nodes` | Postgres | 6 |  |
-| `graph_correlation_runs` | Postgres, SQLite | 17 |  |
-| `graph_edges` | Postgres, SQLite | 18 |  |
-| `graph_filter_presets` | Postgres | 5 |  |
-| `graph_node_search` | Postgres | 8 |  |
-| `graph_nodes` | Postgres, SQLite | 18 |  |
-| `graph_scenarios` | Postgres, SQLite | 12 |  |
-| `graph_snapshots` | Postgres, SQLite | 13 |  |
-| `interaction_risks` | Postgres, SQLite | 7 |  |
-| `merged_nodes` | SQLite | 4 |  |
-| `node_groups` | SQLite | 2 |  |
-| `node_observations` | SQLite | 7 |  |
-| `ws_edges` | SQLite | 6 |  |
-| `ws_nodes` | SQLite | 5 |  |
+| Table | Backends | Columns | Partitioned | Lifetime |
+|---|---|---|---|---|
+| `attack_paths` | Postgres, SQLite | 20 |  | persistent |
+| `edge_groups` | SQLite | 5 |  | scratch |
+| `edge_observations` | SQLite | 9 |  | scratch |
+| `graph_attack_paths` | Postgres, SQLite | 17 |  | persistent |
+| `graph_build_workspace_edges` | Postgres | 7 |  | persistent |
+| `graph_build_workspace_nodes` | Postgres | 6 |  | persistent |
+| `graph_correlation_runs` | Postgres, SQLite | 17 |  | persistent |
+| `graph_edges` | Postgres, SQLite | 18 |  | persistent |
+| `graph_filter_presets` | Postgres | 5 |  | persistent |
+| `graph_node_search` | Postgres | 8 |  | persistent |
+| `graph_nodes` | Postgres, SQLite | 18 |  | persistent |
+| `graph_scenarios` | Postgres, SQLite | 12 |  | persistent |
+| `graph_snapshots` | Postgres, SQLite | 13 |  | persistent |
+| `interaction_risks` | Postgres, SQLite | 7 |  | persistent |
+| `merged_nodes` | SQLite | 4 |  | scratch |
+| `node_groups` | SQLite | 2 |  | scratch |
+| `node_observations` | SQLite | 7 |  | scratch |
+| `ws_edges` | SQLite | 6 |  | scratch |
+| `ws_nodes` | SQLite | 5 |  | scratch |

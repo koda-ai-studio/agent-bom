@@ -210,7 +210,7 @@ def test_main_ui_smoke_covers_every_ui_classifier_surface() -> None:
         '"src/agent_bom/api/**"',
         '"src/agent_bom/graph/**"',
         '"src/agent_bom/context_graph.py"',
-        '"src/agent_bom/graph_schema.py"',
+        '"src/agent_bom/graph/types.py"',
         '"src/agent_bom/models.py"',
     ):
         assert path in workflow

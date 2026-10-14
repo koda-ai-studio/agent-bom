@@ -1,8 +1,7 @@
 """Unified findings derived from canonical trace events.
 
-Screened signals (prompt injection, personal data, secrets), vulnerable tool
-calls and shadow agents/tools become Finding rows in the tenant's compliance
-hub, linked to the exact inventory node when the span reported one. Each
+Screened signals (prompt injection, personal data, secrets) and shadow agents/tools
+become Finding rows in the tenant's compliance hub, linked to the exact inventory node when the span reported one. Each
 finding is deduplicated per tenant, signal, entity and UTC day. Evidence holds
 counts, timestamps and trace identifiers only, never content.
 """
@@ -68,16 +67,6 @@ _SPECS: dict[str, _Spec] = {
         ("ASI03",),
         ("MEASURE-2.7", "MANAGE-4.1"),
         "Rotate the exposed credential and stop the agent or tool from echoing secrets into model or trace content.",
-    ),
-    "vulnerable_tool_call": _Spec(
-        FindingType.COMBINATION,
-        "high",
-        "Vulnerable tool exercised at runtime",
-        ("LLM03",),
-        ("MCP04",),
-        ("ASI04",),
-        ("MAP-4.1", "MANAGE-4.1"),
-        "Upgrade the vulnerable package behind this tool; runtime traces show it is being called.",
     ),
 }
 _SHADOW = _Spec(
@@ -185,29 +174,6 @@ def signal_findings(tenant_id: str, events: Iterable[NormalizedTraceEvent], *, s
         asset = _asset(asset_type, name, node_id, group.events[0].source)
         extra = {"signal": signal, "severity": (severities or {}).get(signal)}
         findings.append(_finding(tenant_id, _SPECS[signal], signal, asset, node_id, _Observed.of(group.events), extra))
-    return findings
-
-
-def vulnerable_call_findings(tenant_id: str, flagged: Iterable[Any], events: Iterable[NormalizedTraceEvent]) -> list[Finding]:
-    """One finding per tool, matched advisory and day for tool calls backed by a known-vulnerable package."""
-    by_span = {(event.source_trace_id, event.source_span_id): event for event in events}
-    groups: dict[tuple[str, str, str | None, str], _Group] = {}
-    for flag in flagged:
-        event = by_span.get((flag.trace.trace_id, flag.trace.span_id))
-        if event is None or event.tenant_id != tenant_id:
-            continue
-        _, name, node_id = _entity(event)
-        for cve in sorted({str(cve) for cve in flag.matched_cves if cve}) or [""]:
-            groups.setdefault((cve, flag.trace.tool_name or name, node_id, _day(event.started_at or "")), _Group()).events.append(event)
-    findings: list[Finding] = []
-    for (cve, name, node_id, _), group in sorted(groups.items(), key=lambda item: str(item[0])):
-        asset = _asset("tool", name, node_id, group.events[0].source)
-        seen = _Observed.of(group.events)
-        key = f"vulnerable_tool_call:{cve}"
-        spec = _SPECS["vulnerable_tool_call"]
-        findings.append(
-            _finding(tenant_id, spec, key, asset, node_id, seen, {"signal": "vulnerable_tool_call"}, f" ({cve})" if cve else "")
-        )
     return findings
 
 

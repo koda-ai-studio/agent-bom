@@ -184,7 +184,7 @@ def test_probe_estate_covers_every_producer_family(probe_graphs: dict[str, Unifi
 def test_regenerated_reference_lab_edges_carry_recorded_evidence(probe_graphs: dict[str, UnifiedGraph]) -> None:
     tiers = {edge.evidence["tier"] for edge in probe_graphs["reference_lab"].edges}
     assert LEGACY_TIER not in tiers
-    assert {"modeled_infrastructure", "static_evidence", "runtime_observed"} <= tiers
+    assert {"modeled_infrastructure", "static_scan", "runtime_observed"} <= tiers
 
 
 def test_demo_estate_incident_hops_are_trace_steps(probe_graphs: dict[str, UnifiedGraph]) -> None:

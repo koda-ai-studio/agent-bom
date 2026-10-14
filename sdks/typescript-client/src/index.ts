@@ -108,7 +108,7 @@ export type ExposureHopEvidence = {
   source_snapshot_ids: string[];
   relationship_provenance: "recorded" | "unavailable";
   correlation_identity_status: "current" | "recomputation_required" | "unavailable";
-  evidence_tier: "static_evidence" | "modeled_infrastructure" | "runtime_observed" | "unknown";
+  evidence_tier: "static_scan" | "modeled_infrastructure" | "runtime_observed" | "recorded" | "derived" | "legacy_unrecorded" | "unknown";
   confidence: number | null;
   freshness: "fresh" | "stale" | "stale_allowed" | "unknown";
   runtime_observed_state: "observed" | "blocked" | "not_observed" | "unknown";

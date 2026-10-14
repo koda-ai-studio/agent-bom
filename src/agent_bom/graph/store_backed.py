@@ -458,7 +458,7 @@ class StoreBackedUnifiedGraph(UnifiedGraph):
     def __enter__(self) -> "StoreBackedUnifiedGraph":
         return self
 
-    def __exit__(self, exc_type: Any, exc: Any, tb: Any) -> None:
+    def __exit__(self, exc_type: Any, exc: Any, _tb: Any) -> None:
         self.close()
 
     def __repr__(self) -> str:

@@ -167,20 +167,20 @@ Same column name in several tables here, but no table owns it, so no join is dra
 
 ## Tables
 
-| Table | Backends | Columns | Partitioned |
-|---|---|---|---|
-| `job_overview_identity` | SQLite | 2 |  |
-| `job_overview_revisions` | Postgres, SQLite | 3 |  |
-| `job_queue` | Postgres | 13 |  |
-| `jobs` | SQLite | 14 |  |
-| `mcp_scan_results` | Postgres | 6 |  |
-| `report_jobs` | Postgres | 11 |  |
-| `scan_dispatch_queue` | Postgres | 6 |  |
-| `scan_jobs` | Postgres, Snowflake | 15 |  |
-| `scan_metadata` | ClickHouse | 14 | yes |
-| `scan_runs` | SQLite | 14 |  |
-| `scan_schedules` | Postgres, SQLite, Snowflake | 5 |  |
-| `scan_snapshot_jobs` | Postgres, SQLite | 12 |  |
-| `scan_snapshot_rows` | Postgres, SQLite | 7 |  |
-| `side_scan_execution_state` | Postgres, SQLite | 10 |  |
-| `skills_scan_run` | Postgres, SQLite | 5 |  |
+| Table | Backends | Columns | Partitioned | Lifetime |
+|---|---|---|---|---|
+| `job_overview_identity` | SQLite | 2 |  | persistent |
+| `job_overview_revisions` | Postgres, SQLite | 3 |  | persistent |
+| `job_queue` | Postgres | 13 |  | persistent |
+| `jobs` | SQLite | 14 |  | persistent |
+| `mcp_scan_results` | Postgres | 6 |  | persistent |
+| `report_jobs` | Postgres | 11 |  | persistent |
+| `scan_dispatch_queue` | Postgres | 6 |  | persistent |
+| `scan_jobs` | Postgres, Snowflake | 15 |  | persistent |
+| `scan_metadata` | ClickHouse | 14 | yes | persistent |
+| `scan_runs` | SQLite | 14 |  | persistent |
+| `scan_schedules` | Postgres, SQLite, Snowflake | 5 |  | persistent |
+| `scan_snapshot_jobs` | Postgres, SQLite | 12 |  | persistent |
+| `scan_snapshot_rows` | Postgres, SQLite | 7 |  | persistent |
+| `side_scan_execution_state` | Postgres, SQLite | 10 |  | persistent |
+| `skills_scan_run` | Postgres, SQLite | 5 |  | persistent |

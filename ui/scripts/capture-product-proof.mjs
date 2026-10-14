@@ -248,7 +248,7 @@ function buildGraph() {
         target_node_id: target,
         relationship: graphEdge?.relationship ?? "related",
         source_snapshot_ids: [SCAN_ID],
-        evidence_tier: "static_evidence",
+        evidence_tier: "static_scan",
         confidence: 1,
         freshness: "fresh",
         runtime_observed_state: "not_observed",

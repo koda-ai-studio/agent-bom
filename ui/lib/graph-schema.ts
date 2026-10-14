@@ -445,7 +445,7 @@ export interface GraphHopEvidence {
   source_snapshot_ids: string[];
   relationship_provenance?: "recorded" | "unavailable";
   correlation_identity_status?: "current" | "recomputation_required" | "unavailable";
-  evidence_tier: "static_evidence" | "modeled_infrastructure" | "runtime_observed" | "unknown" | string;
+  evidence_tier: "static_scan" | "modeled_infrastructure" | "runtime_observed" | "recorded" | "derived" | "legacy_unrecorded" | "unknown" | string;
   confidence: number | null;
   freshness: "fresh" | "stale_allowed" | "unknown" | string;
   runtime_observed_state: "observed" | "blocked" | "not_observed" | string;
