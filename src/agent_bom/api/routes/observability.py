@@ -21,6 +21,7 @@ from agent_bom.api.correlation_cohort_ingest import (
     validate_correlation_cohort_child,
 )
 from agent_bom.api.demo_refresh import demo_daily_evidence_dependency
+from agent_bom.api.hub_ingest import ingest_runtime_findings
 from agent_bom.api.idempotency_store import (
     IdempotencyConflictError,
     IdempotencyReservationHeartbeat,
@@ -52,6 +53,7 @@ from agent_bom.api.stores import (
 from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.api.tenant_quota import enforce_retained_jobs_quota, tenant_quota_guard
 from agent_bom.api.trace_collection.routes import router as trace_collection_router
+from agent_bom.api.trace_collection.trace_evidence import record_otlp_evidence, vulnerable_inventory
 from agent_bom.api.trace_connection_broker import public_connections, pull_credentials
 from agent_bom.api.trace_explorer_read import assemble_trace_explorer
 from agent_bom.canonical_ids import canonical_id
@@ -492,6 +494,10 @@ def _ingest_traces_sync(body: dict, tenant_id: str, screen: bool) -> dict:
         content_findings = _screen_trace_content_events(body, tenant_id=tenant_id)
 
     traces = parse_otel_traces(body)
+    flagged = flag_vulnerable_tool_calls(traces, *vulnerable_inventory(_get_store().list_all(tenant_id=tenant_id))) if traces else []
+    evidence = record_otlp_evidence(
+        body, tenant_id=tenant_id, flagged=flagged, content_findings=content_findings, sink=ingest_runtime_findings
+    )
     if not traces:
         return {
             "traces": 0,
@@ -500,35 +506,9 @@ def _ingest_traces_sync(body: dict, tenant_id: str, screen: bool) -> dict:
             "llm_cost_usd": llm_cost["cost_usd"],
             "content_findings": content_findings,
             "content_screened": screen,
+            "normalized": evidence,
             "message": "No tool call traces found",
         }
-
-    # Gather vulnerable packages and servers from scan history
-    vuln_packages: dict[str, set[str]] = defaultdict(set)
-    vuln_servers: dict[str, set[str]] = defaultdict(set)
-    for job in _get_store().list_all(tenant_id=tenant_id):
-        if job.status == JobStatus.DONE and job.result:
-            for br in job.result.get("blast_radius", []):
-                cve_id = br.get("vulnerability_id", "")
-                pkg = br.get("package", "")
-                if pkg:
-                    if cve_id:
-                        vuln_packages[pkg].add(cve_id)
-                    else:
-                        vuln_packages[pkg]
-                for srv in br.get("affected_servers", []):
-                    name = srv if isinstance(srv, str) else srv.get("name", "")
-                    if name:
-                        if cve_id:
-                            vuln_servers[name].add(cve_id)
-                        else:
-                            vuln_servers[name]
-
-    flagged = flag_vulnerable_tool_calls(
-        traces,
-        {pkg: sorted(cves) for pkg, cves in vuln_packages.items()},
-        {server: sorted(cves) for server, cves in vuln_servers.items()},
-    )
 
     if flagged:
         analytics_events = [
@@ -561,6 +541,7 @@ def _ingest_traces_sync(body: dict, tenant_id: str, screen: bool) -> dict:
         "llm_cost_usd": llm_cost["cost_usd"],
         "content_findings": content_findings,
         "content_screened": screen,
+        "normalized": evidence,
         "flagged": [
             {
                 "tool_name": f.trace.tool_name,
@@ -751,6 +732,7 @@ def pull_trace_connector(request: Request, provider: str, body: dict) -> dict[st
             screen=lambda payload: _screen_trace_content_events(payload, tenant_id=tenant_id),
             findings=lambda: _blast_radius_views_for_tenant(tenant_id),
             identities=lambda: _nhi_by_credential_for_tenant(tenant_id),
+            finding_sink=ingest_runtime_findings,
         )
 
     try:

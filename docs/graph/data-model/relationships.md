@@ -18,7 +18,7 @@ Class `runtime` · directed · traversable · required evidence `source`, `tier`
 - `tool_call` → `cloud_resource`, `credential`, `credential_ref`, `dataset`, `resource`
 - `user` → `cloud_resource`, `data_store`, `dataset`, `resource`
 
-Emitted by: `graph/builder.py`, `graph/builder_snowflake_governance.py`, `graph/runtime_projection.py`
+Emitted by: `graph/builder.py`, `graph/builder_snowflake_governance.py`, `graph/runtime_projection.py`, `graph/trace_projection.py`
 
 ## `acted_as`
 
@@ -101,7 +101,7 @@ Class `runtime` · directed · traversable · required evidence `source`, `tier`
 - `agent` → `server`, `tool`
 - `tool_call` → `server`, `tool`
 
-Emitted by: `graph/runtime_projection.py`; demo fixtures: `demo_estate/showcase_graph.py`
+Emitted by: `graph/runtime_projection.py`, `graph/trace_projection.py`; demo fixtures: `demo_estate/showcase_graph.py`
 
 ## `can_access`
 
@@ -323,7 +323,7 @@ Class `runtime` · directed · traversable · required evidence `source`, `tier`
 - `service_principal` → `cloud_resource`
 - `user` → `cloud_resource`, `tool`, `tool_call`
 
-Emitted by: `graph/builder.py`, `graph/runtime_projection.py`; demo fixtures: `demo_estate/showcase_graph.py`
+Emitted by: `graph/builder.py`, `graph/runtime_projection.py`, `graph/trace_projection.py`; demo fixtures: `demo_estate/showcase_graph.py`
 
 ## `lateral_path`
 
@@ -549,7 +549,7 @@ Class `runtime` · directed · traversable · required evidence `source`, `tier`
 - `tool` → `credential`, `credential_ref`
 - `tool_call` → `credential`, `credential_ref`
 
-Emitted by: `graph/runtime_projection.py`
+Emitted by: `graph/runtime_projection.py`, `graph/trace_projection.py`
 
 ## `uses`
 

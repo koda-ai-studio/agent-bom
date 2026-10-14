@@ -11,6 +11,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Imported Langfuse, LangSmith and OTLP JSON traces normalize into one canonical metadata-only event and become `runtime_observed` graph edges aggregated per source, relationship and target, bound only by exact inventory or canonical IDs. Attack-path ranking and credential reach read them; unmatched and name-only spans are counted in the `runtime_trace_projection` analysis status. Screened trace signals, vulnerable tool calls and unlisted agents or tools become unified findings, including the new `SHADOW_AI` finding type. Langfuse pulls now request model and usage fields and LangSmith pulls token and cost columns.
+
 - Graph relationship inspectors and recorded rows surface receipt evidence types and source observation times separately from graph-record timestamps and traversal eligibility. Missing and mixed evidence stay explicit.
 
 - Graph relationship details and recorded-link rows explain agent/server use, available tools, dependencies and findings in plain language. Recorded source, basis and package fields remain separate from relationship meaning; conservative tool-impact mappings and missing source receipts stay explicit.
