@@ -17,7 +17,7 @@
     {
       "source": "A",
       "target": "a",
-      "relationship": "uses",
+      "relationship": "accessed",
       "observed_at": "2026-09-29T14:00:00Z"
     }
   ]

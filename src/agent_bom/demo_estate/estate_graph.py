@@ -1,12 +1,7 @@
 """Project the enterprise demo estate into the unified graph.
 
-:mod:`agent_bom.demo_estate.enterprise_composition` inventories the estate and
-:mod:`agent_bom.demo_estate.enterprise_findings` raises its findings, but that
-evidence reached only the demo story endpoint. The graph a prospect actually
-clicks was seeded independently from a 112-node hand-built showcase, so "one
-correlated graph at enterprise scale" rested on the 112.
-
-This module closes the gap. Three decisions carry the weight:
+The estate's inventory and findings become graph nodes and edges, so the graph
+a prospect clicks is the estate itself. Three decisions carry the weight:
 
 **One id scheme.** A projected asset's graph node id *is* its estate
 ``asset_id`` — the same string ``Finding.asset.identifier`` carries, the same
@@ -29,9 +24,8 @@ org → account → environment via ``CONTAINS``, which is the only structure
 :mod:`agent_bom.graph.rollup` can collapse. Without it a 2,000-node estate
 renders as a hairball at any framerate.
 
-Nothing here invents severity or exposure: a node's severity is the worst
-severity of the findings actually raised against it, and an asset with no
-finding stays unrated rather than being quietly coloured.
+Nothing here invents severity or exposure: a node's severity is the worst of the
+findings raised against it; an asset with no finding stays unrated.
 """
 
 from __future__ import annotations
@@ -41,6 +35,7 @@ from typing import TYPE_CHECKING
 
 from agent_bom.core.severity import SEVERITY_RISK_SCORE, normalize_severity
 from agent_bom.demo_estate.enterprise import EnterpriseEstate, EstateAsset
+from agent_bom.demo_estate.estate_edges import ESTATE_DATA_SOURCE, add_estate_edge, oriented_topology_edge
 from agent_bom.graph.container import AttackPath, UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
@@ -51,10 +46,6 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
     from agent_bom.finding import Finding
 
 ESTATE_GRAPH_VERSION = "estate_graph.v3"
-
-# Data source stamped on every projected node/edge so a demo estate can always
-# be told apart from a real scan in the same graph.
-ESTATE_DATA_SOURCE = "demo-estate"
 
 # The estate resource type that *is* the organization, lifted out of the
 # account/environment hierarchy because it is the hierarchy's root.
@@ -356,7 +347,7 @@ def project_estate_into_graph(
     )
 
     def _edge(source: str, target: str, relationship: RelationshipType, **kwargs: object) -> None:
-        graph.add_edge(UnifiedEdge(source=source, target=target, relationship=relationship, **kwargs))  # type: ignore[arg-type]
+        add_estate_edge(graph, source, target, relationship, **kwargs)
 
     accounts: set[str] = set()
     environments: set[str] = set()
@@ -434,10 +425,7 @@ def project_estate_into_graph(
                 or assets_by_id[target].tenant_id != estate.tenant_id
             ):
                 continue
-            # Images consume their package contents; workloads consume images.
-            source = asset.asset_id
-            if tag == "container_image" and graph.nodes[source].entity_type == EntityType.PACKAGE:
-                source, target = target, source
+            source, target, relationship = oriented_topology_edge(graph, tag, asset.asset_id, target, relationship)
             _edge(
                 source,
                 target,
@@ -621,6 +609,8 @@ def _project_incident_chains(
                     target=target,
                     relationship=RelationshipType.ACCESSED,
                     evidence={
+                        "source": ESTATE_DATA_SOURCE,
+                        "tier": "recorded",
                         "correlation_id": correlation.correlation_id,
                         "correlation_kind": correlation.kind,
                         "evidence_quality": correlation.evidence_quality,

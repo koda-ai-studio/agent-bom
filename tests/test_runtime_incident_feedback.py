@@ -166,10 +166,11 @@ def test_inline_records_mark_agent_and_edge(tmp_path):
 
     feedback_edges = [e for e in graph.edges if e.evidence.get("source") == "runtime-feedback"]
     assert feedback_edges, "expected runtime-feedback edges"
-    rels = {e.relationship for e in feedback_edges}
-    assert RelationshipType.USED_CREDENTIAL in rels  # reached_credential
-    assert RelationshipType.ACCESSED in rels  # lateral_movement
-    # Synthetic observed-tool node created for label-only reach.
+    # A label-only reach names the tool the agent was observed invoking; the
+    # incident kind rides in the evidence instead of mistyping the edge.
+    assert {e.relationship for e in feedback_edges} == {RelationshipType.INVOKED}
+    assert {e.evidence["incident_kind"] for e in feedback_edges} == {"reached_credential", "lateral_movement"}
+    assert all(e.evidence["tier"] == "runtime_observed" for e in feedback_edges)
     assert graph.get_node("tool:observed:read_secret") is not None
 
 
@@ -198,19 +199,42 @@ def test_no_feedback_data_is_byte_identical(tmp_path):
 
 
 def test_observed_node_id_edge_when_node_present(tmp_path):
-    """A record naming an existing graph node id draws the edge to it directly."""
+    """A record naming an existing credential node draws a used-credential edge to it."""
     report = _report_with_agent()
-    # The agent's own provider node exists this scan; point the observed reach at it.
+    report["agents"][0]["mcp_servers"] = [{"name": "vault", "env": {"GITHUB_TOKEN": "***"}}]
+    graph = build_unified_graph_from_report(report)
+    cred_id = next(node.id for node in graph.nodes.values() if node.entity_type.value == "credential")
     report["runtime_incident_feedback"] = [
-        _record(
-            kind=IncidentKind.LATERAL_MOVEMENT.value,
-            observed_tool_labels=[],
-            observed_node_ids=["provider:local"],
-        ).to_dict()
+        _record(kind=IncidentKind.REACHED_CREDENTIAL.value, observed_tool_labels=[], observed_node_ids=[cred_id]).to_dict()
     ]
     graph = build_unified_graph_from_report(report)
-    edges = [e for e in graph.edges if e.evidence.get("source") == "runtime-feedback" and e.target == "provider:local"]
-    assert edges, "expected an observed-reach edge to the existing provider node"
+    edges = [e for e in graph.edges if e.evidence.get("source") == "runtime-feedback" and e.target == cred_id]
+    assert [e.relationship for e in edges] == [RelationshipType.USED_CREDENTIAL]
+
+
+def test_observed_reach_to_a_server_is_a_runtime_call(tmp_path):
+    """Lateral movement onto an MCP server keeps its edge, typed as the runtime call it is."""
+    report = _report_with_agent()
+    report["agents"][0]["mcp_servers"] = [{"name": "vault"}]
+    graph = build_unified_graph_from_report(report)
+    server_id = next(node.id for node in graph.nodes.values() if node.entity_type.value == "server")
+    report["runtime_incident_feedback"] = [
+        _record(kind=IncidentKind.LATERAL_MOVEMENT.value, observed_tool_labels=[], observed_node_ids=[server_id]).to_dict()
+    ]
+    graph = build_unified_graph_from_report(report)
+    edges = [e for e in graph.edges if e.evidence.get("source") == "runtime-feedback" and e.target == server_id]
+    assert [(e.relationship, e.evidence["incident_kind"]) for e in edges] == [(RelationshipType.CALLED, "lateral_movement")]
+
+
+def test_observed_reach_to_an_untypeable_node_is_counted_not_drawn(tmp_path):
+    """A provider is not a runtime reach target: no mistyped edge, an explicit count."""
+    report = _report_with_agent()
+    report["runtime_incident_feedback"] = [
+        _record(kind=IncidentKind.LATERAL_MOVEMENT.value, observed_tool_labels=[], observed_node_ids=["provider:local"]).to_dict()
+    ]
+    graph = build_unified_graph_from_report(report)
+    assert [e for e in graph.edges if e.target == "provider:local" and e.evidence.get("source") == "runtime-feedback"] == []
+    assert graph.get_node("agent:billing-agent").attributes["runtime_feedback"]["unprojected_targets"] == 1
 
 
 def test_dangling_node_id_is_skipped(tmp_path):

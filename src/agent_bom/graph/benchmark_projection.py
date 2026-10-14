@@ -8,6 +8,7 @@ from typing import Any
 
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
+from agent_bom.graph.edge_evidence import edge_evidence
 from agent_bom.graph.identity_nodes import identity_node_id as _identity_node_id
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
 from agent_bom.graph.resource_aliases import _build_cloud_resource_alias_index, _CloudResourceAliasIndex, _resolve_cloud_resource_node_id
@@ -155,6 +156,7 @@ def _project_resources(
                 source=misconfig_id,
                 target=resource_node_id,
                 relationship=RelationshipType.AFFECTS,
+                evidence=edge_evidence(section_key, "static_scan"),
             )
         )
 
@@ -179,5 +181,6 @@ def _project_account(
                 source=misconfig_id,
                 target=account_node_id,
                 relationship=RelationshipType.AFFECTS,
+                evidence=edge_evidence(section_key, "static_scan"),
             )
         )

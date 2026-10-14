@@ -8,6 +8,7 @@ from typing import Any
 from agent_bom.graph.build_indexes import BuildIndexes
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
+from agent_bom.graph.edge_evidence import edge_evidence
 from agent_bom.graph.mcp_audit_projection import project_mcp_audit_findings
 from agent_bom.graph.node import UnifiedNode, stable_node_id
 from agent_bom.graph.types import EntityType, RelationshipType
@@ -135,6 +136,7 @@ def project_iac(graph: UnifiedGraph, iac_data: dict[str, Any] | None) -> None:
                     source=iac_id,
                     target=target_id,
                     relationship=RelationshipType.AFFECTS,
+                    evidence=edge_evidence("iac", "static_scan"),
                 )
             )
 
@@ -180,6 +182,7 @@ def project_skill_audit(graph: UnifiedGraph, skill_audit: dict[str, Any] | None,
                         source=finding_id,
                         target=target_id,
                         relationship=RelationshipType.AFFECTS,
+                        evidence=edge_evidence("skill-audit", "static_scan"),
                     )
                 )
 
@@ -231,6 +234,9 @@ def project_toxic_combinations(graph: UnifiedGraph, toxic_data: list[dict[str, A
                             target=toxic_node_id,
                             relationship=RelationshipType.TRIGGERS,
                             evidence={
+                                "source": "toxic-combination",
+                                "tier": "derived",
+                                "derived_via": "toxic_combination",
                                 "combo": combo_key,
                                 "pattern": combo.get("pattern", ""),
                                 "title": combo.get("title", combo_label),

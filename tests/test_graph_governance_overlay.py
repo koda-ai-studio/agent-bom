@@ -21,6 +21,10 @@ from agent_bom.graph.governance_overlay import apply_governance_overlay
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.types import EntityType, RelationshipType
 
+# Hand-built graphs here use placeholder relationship pairs to exercise graph
+# mechanics; producers are held to the contract in test_graph_relationship_contract.
+pytestmark = pytest.mark.graph_contract("warn")
+
 
 class _FakeDriftStore:
     def __init__(self, incidents):
@@ -325,7 +329,12 @@ def test_exact_agent_id_binding_does_not_use_another_workloads_matching_label():
     assert len(edges) == 1
     assert edges[0].source == "agent:agent-a"
     assert edges[0].target == f"managed_identity:{identity.identity_id}"
-    assert edges[0].evidence == {"identity_match_basis": "exact_node_id", "runtime_observed_state": "not_observed"}
+    assert edges[0].evidence == {
+        "identity_match_basis": "exact_node_id",
+        "runtime_observed_state": "not_observed",
+        "source": "governance-overlay",
+        "tier": "recorded",
+    }
 
 
 @pytest.mark.parametrize("failure", ["unavailable", "limit"])

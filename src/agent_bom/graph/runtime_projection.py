@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from agent_bom.graph.analysis import GraphAnalysisState, GraphAnalysisStatus
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
@@ -20,11 +21,19 @@ from agent_bom.runtime.incident_feedback import (
 )
 from agent_bom.security import sanitize_sensitive_payload, sanitize_text
 
-_FEEDBACK_RELATIONSHIP: dict[str, RelationshipType] = {
-    "reached_credential": RelationshipType.USED_CREDENTIAL,
-    "lateral_movement": RelationshipType.ACCESSED,
-    "kill_switch": RelationshipType.ACCESSED,
+# An observed reach is typed by what was reached: the incident kind rides in the
+# evidence. A label-only reach materializes an observed tool the agent invoked.
+_OBSERVED_REACH: dict[EntityType, RelationshipType] = {
+    EntityType.TOOL: RelationshipType.INVOKED,
+    EntityType.SERVER: RelationshipType.CALLED,
+    EntityType.CREDENTIAL: RelationshipType.USED_CREDENTIAL,
+    EntityType.CREDENTIAL_REF: RelationshipType.USED_CREDENTIAL,
+    EntityType.CLOUD_RESOURCE: RelationshipType.ACCESSED,
+    EntityType.DATA_STORE: RelationshipType.ACCESSED,
+    EntityType.DATASET: RelationshipType.ACCESSED,
+    EntityType.RESOURCE: RelationshipType.ACCESSED,
 }
+_RUNTIME_SESSION_STATUS = "runtime_session_projection"
 
 
 def _iter_agentic_identity_graph_projections(report_json: Mapping[str, Any]) -> list[Mapping[str, Any]]:
@@ -240,8 +249,8 @@ def _project_agent_feedback(
         )
     )
 
+    unprojected = 0
     for record in records:
-        relationship = _FEEDBACK_RELATIONSHIP.get(record.kind, RelationshipType.ACCESSED)
         for target, is_node_id in iter_observed_targets(record):
             target_id = target if is_node_id else f"tool:observed:{_clean_graph_part(target) or 'unknown'}"
             if not is_node_id:
@@ -254,8 +263,11 @@ def _project_agent_feedback(
                         data_sources=[data_source_tag, "runtime-feedback"],
                     )
                 )
-            elif target_id not in graph.nodes:
-                # Reference to a node not present this scan — skip the dangling edge.
+            target_node = graph.get_node(target_id)
+            # Skip a node absent this scan (dangling) or one no runtime reach can type.
+            relationship = _OBSERVED_REACH.get(target_node.entity_type) if target_node is not None else None
+            if relationship is None:
+                unprojected += 1
                 continue
             _add_rel_edge(
                 graph,
@@ -264,12 +276,16 @@ def _project_agent_feedback(
                 relationship,
                 {
                     "source": "runtime-feedback",
+                    "tier": "runtime_observed",
                     "incident_kind": record.kind,
                     "severity": record.severity,
                     "observed_at": record.observed_at,
                     "count": max(1, record.count),
                 },
             )
+    agent_node = graph.get_node(agent_node_id)
+    if unprojected and agent_node is not None:
+        agent_node.attributes["runtime_feedback"]["unprojected_targets"] = unprojected
 
 
 def _runtime_identity_entity_type(value: Any) -> EntityType | None:
@@ -318,6 +334,7 @@ def _runtime_identity_evidence(
     sanitized = sanitize_sensitive_payload(dict(evidence)) if isinstance(evidence, Mapping) else {}
     safe_evidence = sanitized if isinstance(sanitized, dict) else {}
     safe_evidence.setdefault("source", projection_source)
+    safe_evidence.setdefault("tier", "recorded")
     safe_evidence["schema_version"] = schema_version
     safe_evidence["data_source"] = "runtime-identity"
     if tenant_id:
@@ -326,6 +343,7 @@ def _runtime_identity_evidence(
 
 
 def project_runtime_session(graph: UnifiedGraph, runtime_graph: dict[str, Any] | None) -> None:
+    dangling = 0
     if runtime_graph:
         for edge_dict in runtime_graph.get("edges", []):
             rel_str = edge_dict.get("interaction_type", edge_dict.get("relation", ""))
@@ -342,7 +360,9 @@ def project_runtime_session(graph: UnifiedGraph, runtime_graph: dict[str, Any] |
                 continue
             src = edge_dict.get("source_node_id", edge_dict.get("source", ""))
             tgt = edge_dict.get("target_node_id", edge_dict.get("target", ""))
-            if src and tgt:
+            if src and tgt and not (graph.has_node(src) and graph.has_node(tgt)):
+                dangling += 1
+            elif src and tgt:
                 graph.add_edge(
                     UnifiedEdge(
                         source=src,
@@ -352,7 +372,13 @@ def project_runtime_session(graph: UnifiedGraph, runtime_graph: dict[str, Any] |
                             "timestamp": edge_dict.get("timestamp", ""),
                             "tool_capability": edge_dict.get("tool_capability", ""),
                             "risk_score": edge_dict.get("risk_score", 0),
+                            "source": "runtime-proxy",
+                            "tier": "runtime_observed",
                             "data_source": "runtime-proxy",
                         },
                     )
                 )
+    if dangling:
+        graph.analysis_status[_RUNTIME_SESSION_STATUS] = GraphAnalysisStatus(
+            status=GraphAnalysisState.LIMITED, reason_codes=("dangling_endpoint",), observed={"skipped_edges": dangling}
+        )

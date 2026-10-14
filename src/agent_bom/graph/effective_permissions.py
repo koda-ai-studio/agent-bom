@@ -529,7 +529,7 @@ def apply_effective_permissions(graph: UnifiedGraph, *, at: datetime | None = No
                     valid_to=valid_to,
                     weight=5.0 if via == "assume_chain" else 2.0,
                     provenance={"source": _OVERLAY_SOURCE},
-                    evidence={"access": via, "permission_derivation": proofs[resource_id]},
+                    evidence={"tier": "derived", "derived_via": via, "access": via, "permission_derivation": proofs[resource_id]},
                 )
             )
             edges_added += 1

@@ -7,6 +7,7 @@ from agent_bom.core.severity import SEVERITY_RISK_SCORE
 from agent_bom.graph.build_indexes import BuildIndexes
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
+from agent_bom.graph.edge_evidence import edge_evidence
 from agent_bom.graph.exploitability_projection import project_exploitability
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.package_projection import (
@@ -98,6 +99,7 @@ def _server_vulnerability_evidence(
     )
     if derived_via:
         evidence["derived_via"] = derived_via
+        evidence["tier"] = "derived"
     return evidence
 
 
@@ -183,7 +185,7 @@ def project_shared_servers(graph: UnifiedGraph, indexes: BuildIndexes) -> None:
                             relationship=RelationshipType.SHARES_SERVER,
                             direction="bidirectional",
                             weight=3.0,
-                            evidence={"server": srv_name},
+                            evidence=edge_evidence("blast-radius", "derived", derived_via="shared_server", server=srv_name),
                         )
                     )
 
