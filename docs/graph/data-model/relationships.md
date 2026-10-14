@@ -105,24 +105,24 @@ Emitted by: `graph/runtime_projection.py`; demo fixtures: `demo_estate/showcase_
 
 ## `can_access`
 
-Class `authority` · directed · traversable · required evidence `source`, `tier` · 169 pairs
+Class `authority` · directed · traversable · required evidence `source`, `tier` · 183 pairs
 
 - `account` → `cloud_resource`, `credential`, `dataset`, `resource`
-- `agent` → `agent`, `cloud_resource`, `cluster`, `config_file`, `container`, `data_store`, `dataset`, `model`, `resource`, `server`
-- `application` → `agent`, `cloud_resource`, `cluster`, `config_file`, `container`, `data_store`, `dataset`, `model`, `resource`, `server`
-- `cloud_resource` → `agent`, `cloud_resource`, `cluster`, `config_file`, `container`, `data_store`, `dataset`, `model`, `resource`, `server`
-- `cluster` → `agent`, `cloud_resource`, `cluster`, `config_file`, `container`, `data_store`, `dataset`, `model`, `resource`, `server`
-- `container` → `agent`, `cloud_resource`, `cluster`, `config_file`, `container`, `data_store`, `dataset`, `model`, `resource`, `server`
+- `agent` → `agent`, `api_gateway`, `cloud_resource`, `cluster`, `config_file`, `container`, `data_store`, `dataset`, `model`, `resource`, `server`
+- `application` → `agent`, `api_gateway`, `cloud_resource`, `cluster`, `config_file`, `container`, `data_store`, `dataset`, `model`, `resource`, `server`
+- `cloud_resource` → `agent`, `api_gateway`, `cloud_resource`, `cluster`, `config_file`, `container`, `data_store`, `dataset`, `model`, `resource`, `server`
+- `cluster` → `agent`, `api_gateway`, `cloud_resource`, `cluster`, `config_file`, `container`, `data_store`, `dataset`, `model`, `resource`, `server`
+- `container` → `agent`, `api_gateway`, `cloud_resource`, `cluster`, `config_file`, `container`, `data_store`, `dataset`, `model`, `resource`, `server`
 - `federated_identity` → `cloud_resource`, `credential`, `dataset`, `resource`
-- `group` → `agent`, `cloud_resource`, `cluster`, `config_file`, `container`, `credential`, `data_store`, `dataset`, `model`, `resource`, `server`
-- `managed_identity` → `agent`, `cloud_resource`, `cluster`, `config_file`, `container`, `data_store`, `dataset`, `managed_identity`, `model`, `resource`, `role`, `server`, `service_account`, `service_principal`
-- `model` → `agent`, `cloud_resource`, `cluster`, `config_file`, `container`, `data_store`, `dataset`, `model`, `resource`, `server`
-- `role` → `agent`, `cloud_resource`, `cluster`, `config_file`, `container`, `credential`, `data_store`, `dataset`, `managed_identity`, `model`, `resource`, `role`, `server`, `service_account`, `service_principal`
-- `server` → `agent`, `cloud_resource`, `cluster`, `config_file`, `container`, `data_store`, `dataset`, `model`, `resource`, `server`
-- `service_account` → `agent`, `cloud_resource`, `cluster`, `config_file`, `container`, `credential`, `data_store`, `dataset`, `managed_identity`, `model`, `resource`, `role`, `server`, `service_account`, `service_principal`
-- `service_principal` → `agent`, `cloud_resource`, `cluster`, `config_file`, `container`, `credential`, `data_store`, `dataset`, `managed_identity`, `model`, `resource`, `role`, `server`, `service_account`, `service_principal`
-- `tool` → `agent`, `cloud_resource`, `cluster`, `config_file`, `container`, `data_store`, `dataset`, `model`, `resource`, `server`
-- `user` → `agent`, `cloud_resource`, `cluster`, `config_file`, `container`, `credential`, `data_store`, `dataset`, `model`, `resource`, `server`
+- `group` → `agent`, `api_gateway`, `cloud_resource`, `cluster`, `config_file`, `container`, `credential`, `data_store`, `dataset`, `model`, `resource`, `server`
+- `managed_identity` → `agent`, `api_gateway`, `cloud_resource`, `cluster`, `config_file`, `container`, `data_store`, `dataset`, `managed_identity`, `model`, `resource`, `role`, `server`, `service_account`, `service_principal`
+- `model` → `agent`, `api_gateway`, `cloud_resource`, `cluster`, `config_file`, `container`, `data_store`, `dataset`, `model`, `resource`, `server`
+- `role` → `agent`, `api_gateway`, `cloud_resource`, `cluster`, `config_file`, `container`, `credential`, `data_store`, `dataset`, `managed_identity`, `model`, `resource`, `role`, `server`, `service_account`, `service_principal`
+- `server` → `agent`, `api_gateway`, `cloud_resource`, `cluster`, `config_file`, `container`, `data_store`, `dataset`, `model`, `resource`, `server`
+- `service_account` → `agent`, `api_gateway`, `cloud_resource`, `cluster`, `config_file`, `container`, `credential`, `data_store`, `dataset`, `managed_identity`, `model`, `resource`, `role`, `server`, `service_account`, `service_principal`
+- `service_principal` → `agent`, `api_gateway`, `cloud_resource`, `cluster`, `config_file`, `container`, `credential`, `data_store`, `dataset`, `managed_identity`, `model`, `resource`, `role`, `server`, `service_account`, `service_principal`
+- `tool` → `agent`, `api_gateway`, `cloud_resource`, `cluster`, `config_file`, `container`, `data_store`, `dataset`, `model`, `resource`, `server`
+- `user` → `agent`, `api_gateway`, `cloud_resource`, `cluster`, `config_file`, `container`, `credential`, `data_store`, `dataset`, `model`, `resource`, `server`
 
 Emitted by: `graph/authorization_evidence.py`, `graph/builder.py`, `graph/builder_cloud_lineage.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
 
@@ -254,7 +254,7 @@ Class `authority` · directed · traversable · required evidence `source`, `tie
 - `agent` → `credential`
 - `server` → `credential`
 
-Emitted by: `graph/compat.py`, `graph/credential_projection.py`; demo fixtures: `demo_estate/showcase_graph.py`
+Emitted by: `graph/compat.py`, `graph/component_paths.py`, `graph/credential_projection.py`; demo fixtures: `demo_estate/showcase_graph.py`
 
 ## `governs`
 
@@ -422,7 +422,7 @@ Class `structural` · directed · traversable · required evidence `source`, `ti
 
 - `server` → `tool`
 
-Emitted by: `graph/agent_projection.py`, `graph/compat.py`; demo fixtures: `demo_estate/showcase_graph.py`
+Emitted by: `graph/agent_projection.py`, `graph/compat.py`, `graph/component_paths.py`; demo fixtures: `demo_estate/showcase_graph.py`
 
 ## `reaches_tool`
 
@@ -488,10 +488,11 @@ Emitted by: `graph/blast_projection.py`, `graph/compat.py`
 
 ## `stores`
 
-Class `structural` · directed · traversable · required evidence `source`, `tier` · 6 pairs
+Class `structural` · directed · traversable · required evidence `source`, `tier` · 8 pairs
 
 - `cloud_resource` → `data_store`, `dataset`
 - `data_store` → `data_store`, `dataset`
+- `resource` → `data_store`, `dataset`
 - `server` → `data_store`, `dataset`
 
 Emitted by: `graph/cnapp_overlay.py`
@@ -581,4 +582,4 @@ Class `finding` · directed · traversable · required evidence `source`, `tier`
 - `server` → `misconfiguration`, `vulnerability`
 - `tool` → `misconfiguration`, `vulnerability`
 
-Emitted by: `graph/blast_projection.py`, `graph/compat.py`, `graph/credential_findings.py`, `graph/mcp_audit_projection.py`, `graph/package_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
+Emitted by: `graph/blast_projection.py`, `graph/compat.py`, `graph/component_paths.py`, `graph/credential_findings.py`, `graph/mcp_audit_projection.py`, `graph/package_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`

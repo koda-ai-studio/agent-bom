@@ -85,11 +85,11 @@ Id formats:
 
 ## `config_file`
 
-Emitted by: `graph/repo_structure_overlay.py`; demo fixtures: `demo_estate/estate_graph.py`
+Emitted by: `graph/finding_row_projection.py`, `graph/repo_structure_overlay.py`; demo fixtures: `demo_estate/estate_graph.py`
 
 ## `container`
 
-Emitted by: `graph/training_projection.py`; demo fixtures: `demo_estate/estate_graph.py`
+Emitted by: `graph/finding_row_projection.py`, `graph/training_projection.py`; demo fixtures: `demo_estate/estate_graph.py`
 
 Id formats:
 
@@ -183,7 +183,7 @@ Id formats:
 
 ## `misconfiguration`
 
-Emitted by: `graph/benchmark_projection.py`, `graph/builder.py`, `graph/credential_findings.py`, `graph/finding_projection.py`, `graph/mcp_audit_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
+Emitted by: `graph/benchmark_projection.py`, `graph/builder.py`, `graph/credential_findings.py`, `graph/finding_projection.py`, `graph/finding_row_projection.py`, `graph/mcp_audit_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
 
 Id formats:
 
@@ -193,13 +193,12 @@ Id formats:
 - `misconfig:mcp_audit:{finding_id}`
 - `misconfig:sast:{rule_id}:{finding_path}:{finding_line}`
 - `misconfig:secret_scan:{finding_id}`
-- `misconfig:skill_audit:{category}:{index}`
 - `misconfig:{section_key}:{check_id}`
 - `toxic:{combo_key}`
 
 ## `model`
 
-Emitted by: `graph/framework_topology_projection.py`, `graph/training_projection.py`; demo fixtures: `demo_estate/estate_graph.py`
+Emitted by: `graph/finding_row_projection.py`, `graph/framework_topology_projection.py`, `graph/training_projection.py`; demo fixtures: `demo_estate/estate_graph.py`
 
 ## `org`
 
@@ -244,7 +243,7 @@ Id formats:
 
 ## `role`
 
-Emitted by: `graph/builder_cloud_inventory.py`, `graph/builder_snowflake_objects.py`, `graph/builder_snowflake_platform.py`, `graph/cloud_context.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
+Emitted by: `graph/builder_cloud_inventory.py`, `graph/builder_snowflake_objects.py`, `graph/builder_snowflake_platform.py`, `graph/cloud_context.py`, `graph/finding_row_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
 
 ## `server`
 
@@ -293,7 +292,7 @@ Id formats:
 
 ## `vulnerability`
 
-Emitted by: `graph/blast_projection.py`, `graph/builder_overlays.py`, `graph/compat.py`, `graph/dependency_reach.py`, `graph/package_projection.py`, `hardware_evidence.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
+Emitted by: `graph/blast_projection.py`, `graph/builder_overlays.py`, `graph/compat.py`, `graph/dependency_reach.py`, `graph/finding_row_projection.py`, `graph/package_projection.py`, `hardware_evidence.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
 
 Id formats:
 
