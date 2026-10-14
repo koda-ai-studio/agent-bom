@@ -10,7 +10,7 @@
       ]
     }
   ],
-  "artifact_sha256": "sha256:5f5e24b4bf2e8c4c462d51355fad1c33d46c4588371faa354a939820f7bc67c3",
+  "artifact_sha256": "sha256:44999482d7a79c447e98d4bc7ceb746fdb80ddfb2492d5921d5242b65932b399",
   "capture_fixture": {
     "fix_first": {
       "attack_campaigns": [
@@ -1751,82 +1751,6 @@
               "observation_count": 1,
               "observations": [
                 {
-                  "attribute_digest": "sha256:d62dfbc511d29d6e636df6af8d6094fba8311e766c87028f1b7c1e131b3693ca",
-                  "data_sources": [
-                    "cyclonedx_sbom"
-                  ],
-                  "risk_assessment": {
-                    "basis": null,
-                    "scope": null,
-                    "status": "not_assessed"
-                  },
-                  "risk_score": 0.0,
-                  "scan_id": "reference-image-sbom-scan",
-                  "severity": "",
-                  "snapshot_created_at": "2026-08-30T04:01:00+00:00",
-                  "source_node_id": "container:sbom:reference-api"
-                }
-              ],
-              "source_scan_ids": [
-                "reference-image-sbom-scan"
-              ]
-            },
-            "image_digest": "sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a",
-            "risk_assessment": {
-              "basis": null,
-              "scope": null,
-              "scored_value": 0.0,
-              "status": "not_assessed"
-            },
-            "sbom": "examples/reference-evidence-lab/sbom.cdx.json"
-          },
-          "canonical_id": "4043f8e6-7924-5159-a4ad-92d7f9f44979",
-          "category_uid": 5,
-          "class_uid": 4001,
-          "compliance_tags": [],
-          "data_sources": [
-            "cyclonedx_sbom"
-          ],
-          "dimensions": {},
-          "entity_type": "container",
-          "evidence_provenance": {
-            "execution": "not_established",
-            "first_seen": "2026-08-30T04:01:00+00:00",
-            "last_seen": "2026-08-30T04:01:00+00:00",
-            "schema_version": "agent-bom.graph-evidence/v1",
-            "source_snapshot_ids": [
-              "reference-image-sbom-scan"
-            ],
-            "sources": [
-              "cyclonedx_sbom"
-            ],
-            "tier": "unspecified",
-            "time_basis": "recorded_observation"
-          },
-          "first_seen": "2026-08-30T04:01:00+00:00",
-          "id": "container:sbom:reference-api",
-          "label": "reference-evidence-api@sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a",
-          "last_seen": "2026-08-30T04:01:00+00:00",
-          "risk_assessment": {
-            "basis": null,
-            "scope": null,
-            "status": "not_assessed"
-          },
-          "risk_score": 0.0,
-          "severity": "",
-          "severity_id": 0,
-          "status": "active",
-          "type_uid": 400101
-        },
-        {
-          "attributes": {
-            "correlation": {
-              "conflict_fields": [],
-              "identity_basis": "snapshot_scoped_runtime_occurrence",
-              "identity_version": "scoped-identity.v4",
-              "observation_count": 1,
-              "observations": [
-                {
                   "attribute_digest": "sha256:a1671ad05b8c7c6f3a402550f180335253b3e7faff993b950e7596ef074f9e43",
                   "data_sources": [
                     "kubernetes_iac"
@@ -1883,6 +1807,82 @@
           "id": "container:iac:reference-api",
           "label": "reference-evidence-api@sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a",
           "last_seen": "2026-08-30T04:02:00+00:00",
+          "risk_assessment": {
+            "basis": null,
+            "scope": null,
+            "status": "not_assessed"
+          },
+          "risk_score": 0.0,
+          "severity": "",
+          "severity_id": 0,
+          "status": "active",
+          "type_uid": 400101
+        },
+        {
+          "attributes": {
+            "correlation": {
+              "conflict_fields": [],
+              "identity_basis": "snapshot_scoped_runtime_occurrence",
+              "identity_version": "scoped-identity.v4",
+              "observation_count": 1,
+              "observations": [
+                {
+                  "attribute_digest": "sha256:d62dfbc511d29d6e636df6af8d6094fba8311e766c87028f1b7c1e131b3693ca",
+                  "data_sources": [
+                    "cyclonedx_sbom"
+                  ],
+                  "risk_assessment": {
+                    "basis": null,
+                    "scope": null,
+                    "status": "not_assessed"
+                  },
+                  "risk_score": 0.0,
+                  "scan_id": "reference-image-sbom-scan",
+                  "severity": "",
+                  "snapshot_created_at": "2026-08-30T04:01:00+00:00",
+                  "source_node_id": "container:sbom:reference-api"
+                }
+              ],
+              "source_scan_ids": [
+                "reference-image-sbom-scan"
+              ]
+            },
+            "image_digest": "sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a",
+            "risk_assessment": {
+              "basis": null,
+              "scope": null,
+              "scored_value": 0.0,
+              "status": "not_assessed"
+            },
+            "sbom": "examples/reference-evidence-lab/sbom.cdx.json"
+          },
+          "canonical_id": "4043f8e6-7924-5159-a4ad-92d7f9f44979",
+          "category_uid": 5,
+          "class_uid": 4001,
+          "compliance_tags": [],
+          "data_sources": [
+            "cyclonedx_sbom"
+          ],
+          "dimensions": {},
+          "entity_type": "container",
+          "evidence_provenance": {
+            "execution": "not_established",
+            "first_seen": "2026-08-30T04:01:00+00:00",
+            "last_seen": "2026-08-30T04:01:00+00:00",
+            "schema_version": "agent-bom.graph-evidence/v1",
+            "source_snapshot_ids": [
+              "reference-image-sbom-scan"
+            ],
+            "sources": [
+              "cyclonedx_sbom"
+            ],
+            "tier": "unspecified",
+            "time_basis": "recorded_observation"
+          },
+          "first_seen": "2026-08-30T04:01:00+00:00",
+          "id": "container:sbom:reference-api",
+          "label": "reference-evidence-api@sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a",
+          "last_seen": "2026-08-30T04:01:00+00:00",
           "risk_assessment": {
             "basis": null,
             "scope": null,
@@ -1972,6 +1972,83 @@
           "severity_id": 0,
           "status": "active",
           "type_uid": 400101
+        },
+        {
+          "attributes": {
+            "canonical_id": "provider-identity:local:reference-evidence-workload",
+            "correlation": {
+              "conflict_fields": [],
+              "identity_basis": "provider_identity_id",
+              "identity_version": "scoped-identity.v4",
+              "observation_count": 1,
+              "observations": [
+                {
+                  "attribute_digest": "sha256:37b5cfd78533361c4e2a15e2d91e81bc260a272726900c4469c4544f6a49aeda",
+                  "data_sources": [
+                    "identity_model"
+                  ],
+                  "risk_assessment": {
+                    "basis": null,
+                    "scope": null,
+                    "status": "not_assessed"
+                  },
+                  "risk_score": 0.0,
+                  "scan_id": "reference-identity-permission-scan",
+                  "severity": "",
+                  "snapshot_created_at": "2026-08-30T04:05:00+00:00",
+                  "source_node_id": "identity:model:reference-workload"
+                }
+              ],
+              "source_scan_ids": [
+                "reference-identity-permission-scan"
+              ]
+            },
+            "modeled": true,
+            "provider_identity_id": "local:reference-evidence-workload",
+            "risk_assessment": {
+              "basis": null,
+              "scope": null,
+              "scored_value": 0.0,
+              "status": "not_assessed"
+            }
+          },
+          "canonical_id": "provider-identity:local:reference-evidence-workload",
+          "category_uid": 3,
+          "class_uid": 3001,
+          "compliance_tags": [],
+          "data_sources": [
+            "identity_model"
+          ],
+          "dimensions": {},
+          "entity_type": "service_account",
+          "evidence_provenance": {
+            "execution": "not_established",
+            "first_seen": "2026-08-30T04:05:00+00:00",
+            "last_seen": "2026-08-30T04:05:00+00:00",
+            "schema_version": "agent-bom.graph-evidence/v1",
+            "source_snapshot_ids": [
+              "reference-identity-permission-scan"
+            ],
+            "sources": [
+              "identity_model"
+            ],
+            "tier": "unspecified",
+            "time_basis": "recorded_observation"
+          },
+          "first_seen": "2026-08-30T04:05:00+00:00",
+          "id": "identity:model:reference-workload",
+          "label": "reference-evidence-workload",
+          "last_seen": "2026-08-30T04:05:00+00:00",
+          "risk_assessment": {
+            "basis": null,
+            "scope": null,
+            "status": "not_assessed"
+          },
+          "risk_score": 0.0,
+          "severity": "",
+          "severity_id": 0,
+          "status": "active",
+          "type_uid": 300101
         },
         {
           "attributes": {
@@ -2166,83 +2243,6 @@
           "severity_id": 4,
           "status": "active",
           "type_uid": 400101
-        },
-        {
-          "attributes": {
-            "canonical_id": "provider-identity:local:reference-evidence-workload",
-            "correlation": {
-              "conflict_fields": [],
-              "identity_basis": "provider_identity_id",
-              "identity_version": "scoped-identity.v4",
-              "observation_count": 1,
-              "observations": [
-                {
-                  "attribute_digest": "sha256:37b5cfd78533361c4e2a15e2d91e81bc260a272726900c4469c4544f6a49aeda",
-                  "data_sources": [
-                    "identity_model"
-                  ],
-                  "risk_assessment": {
-                    "basis": null,
-                    "scope": null,
-                    "status": "not_assessed"
-                  },
-                  "risk_score": 0.0,
-                  "scan_id": "reference-identity-permission-scan",
-                  "severity": "",
-                  "snapshot_created_at": "2026-08-30T04:05:00+00:00",
-                  "source_node_id": "identity:model:reference-workload"
-                }
-              ],
-              "source_scan_ids": [
-                "reference-identity-permission-scan"
-              ]
-            },
-            "modeled": true,
-            "provider_identity_id": "local:reference-evidence-workload",
-            "risk_assessment": {
-              "basis": null,
-              "scope": null,
-              "scored_value": 0.0,
-              "status": "not_assessed"
-            }
-          },
-          "canonical_id": "provider-identity:local:reference-evidence-workload",
-          "category_uid": 3,
-          "class_uid": 3001,
-          "compliance_tags": [],
-          "data_sources": [
-            "identity_model"
-          ],
-          "dimensions": {},
-          "entity_type": "service_account",
-          "evidence_provenance": {
-            "execution": "not_established",
-            "first_seen": "2026-08-30T04:05:00+00:00",
-            "last_seen": "2026-08-30T04:05:00+00:00",
-            "schema_version": "agent-bom.graph-evidence/v1",
-            "source_snapshot_ids": [
-              "reference-identity-permission-scan"
-            ],
-            "sources": [
-              "identity_model"
-            ],
-            "tier": "unspecified",
-            "time_basis": "recorded_observation"
-          },
-          "first_seen": "2026-08-30T04:05:00+00:00",
-          "id": "identity:model:reference-workload",
-          "label": "reference-evidence-workload",
-          "last_seen": "2026-08-30T04:05:00+00:00",
-          "risk_assessment": {
-            "basis": null,
-            "scope": null,
-            "status": "not_assessed"
-          },
-          "risk_score": 0.0,
-          "severity": "",
-          "severity_id": 0,
-          "status": "active",
-          "type_uid": 300101
         },
         {
           "attributes": {
@@ -2561,7 +2561,7 @@
           "vulnerable_to": 1
         },
         "severity_counts": {
-          "high": 1
+          "high": 3
         },
         "total_edges": 9,
         "total_nodes": 10,
@@ -2583,7 +2583,7 @@
         "edge_count": 2,
         "node_count": 3,
         "risk_summary": {
-          "high": 1
+          "high": 2
         },
         "scan_id": "reference-image-sbom-scan",
         "snapshot_kind": "scan"
@@ -2592,7 +2592,9 @@
         "created_at": "2026-08-30T04:02:00+00:00",
         "edge_count": 3,
         "node_count": 4,
-        "risk_summary": {},
+        "risk_summary": {
+          "high": 1
+        },
         "scan_id": "reference-kubernetes-iac-scan",
         "snapshot_kind": "scan"
       },
@@ -2634,7 +2636,7 @@
       {
         "age_hours": 0.016667,
         "created_at": "2026-08-30T04:05:00+00:00",
-        "digest": "sha256:a50845f4307b01a5cce3d516fe46719bbfd4269420d23f9dd741757b7f3255bd",
+        "digest": "sha256:c961e2a439ca838fbedc2ffb9bcd50b5e48b93c1668e03287c87168c1097c24e",
         "edge_count": 2,
         "freshness": "fresh",
         "node_count": 3,
@@ -2643,7 +2645,7 @@
           "algorithm": "hmac-sha256",
           "key_id": "reference-lab-v1",
           "schema_version": "agent-bom.correlation-receipt-signature/v1",
-          "value": "sha256:adf752d250b62e5169df3dca15cd593d99be2dd9beee496e60f8decefd062dbb"
+          "value": "sha256:aec66e1b9d09e5814d623ae33b229d3aaf6f736f705a33487271f3df1bbb9242"
         },
         "source_kinds": [
           "identity_model"
@@ -2652,7 +2654,7 @@
       {
         "age_hours": 0.083333,
         "created_at": "2026-08-30T04:01:00+00:00",
-        "digest": "sha256:c8f3d5153cd44be44773f6d67cf6d17a88cf1b1e476f0b3c6814cc2916beff4e",
+        "digest": "sha256:0e2e7ce6f603f453cd5f3f959adbffa58c3f58d13c34335097d3427cfdcd845a",
         "edge_count": 2,
         "freshness": "fresh",
         "node_count": 3,
@@ -2661,7 +2663,7 @@
           "algorithm": "hmac-sha256",
           "key_id": "reference-lab-v1",
           "schema_version": "agent-bom.correlation-receipt-signature/v1",
-          "value": "sha256:315cab83e565788cd06bc0b7d4cf9dc0fa6b9430db26862c1a6674c7aae85fc9"
+          "value": "sha256:98487dfe158b26d4be12ba124db2c9aeb5cf578a05a2ab85bd57adabdecd19aa"
         },
         "source_kinds": [
           "bundled_advisory_scanner",
@@ -2671,7 +2673,7 @@
       {
         "age_hours": 0.066667,
         "created_at": "2026-08-30T04:02:00+00:00",
-        "digest": "sha256:ffff4f3f551cae9febef5c2f77f44f9fb4589d2d4d4eb8aa2809ae6567fef78e",
+        "digest": "sha256:7f228390eb332efcd424428aeeb413e2a28a4c87ebf8a14f1a1585669c964162",
         "edge_count": 3,
         "freshness": "fresh",
         "node_count": 4,
@@ -2680,7 +2682,7 @@
           "algorithm": "hmac-sha256",
           "key_id": "reference-lab-v1",
           "schema_version": "agent-bom.correlation-receipt-signature/v1",
-          "value": "sha256:8b57478b6793288d3cd97b3539144cda35e228edbfdb8f7d171931356f2bfb9f"
+          "value": "sha256:10b21f85bccf0ce897a661b3c17f6feafb90faaaa57ae037781e119e2937f280"
         },
         "source_kinds": [
           "kubernetes_iac",
@@ -2690,7 +2692,7 @@
       {
         "age_hours": 0.05,
         "created_at": "2026-08-30T04:03:00+00:00",
-        "digest": "sha256:3670b0ffcbe26839e8ec776d39bad9515fc629b63a177d497eec7e5012cfd14b",
+        "digest": "sha256:0e6870c6dab5d4333873a39f31ff2e4cbb5c409ec86d7521247ee527cda21df8",
         "edge_count": 0,
         "freshness": "fresh",
         "node_count": 1,
@@ -2699,7 +2701,7 @@
           "algorithm": "hmac-sha256",
           "key_id": "reference-lab-v1",
           "schema_version": "agent-bom.correlation-receipt-signature/v1",
-          "value": "sha256:d6813e1c784db7d061f12a9b288e116155bafdd6c4a4e3578057f62ad6b3274c"
+          "value": "sha256:1cfae40323605704c1ef0d39f5312c2b71c5e1286dc7a995b6e35803c6d0bb1b"
         },
         "source_kinds": [
           "mcp_config"
@@ -2708,7 +2710,7 @@
       {
         "age_hours": 0.1,
         "created_at": "2026-08-30T04:00:00+00:00",
-        "digest": "sha256:c72202021c78a63a2c2e86ad45e8f5be32f9257d7f74cdfb2aac16f2b273e111",
+        "digest": "sha256:140763e376d7295b08a986c729542dd5c8178e9d99d95b603c75ed5bc0d32db4",
         "edge_count": 1,
         "freshness": "fresh",
         "node_count": 2,
@@ -2717,7 +2719,7 @@
           "algorithm": "hmac-sha256",
           "key_id": "reference-lab-v1",
           "schema_version": "agent-bom.correlation-receipt-signature/v1",
-          "value": "sha256:e9d80ce72c348095ecdc2d0dd79d674ec1428ff7367f9346ebbf18d77067f008"
+          "value": "sha256:7684f9e111536499f7dd0519b8cc4a51dcd289086a417d60da0c6a7cd1c0d337"
         },
         "source_kinds": [
           "repository_parser"
@@ -2726,7 +2728,7 @@
       {
         "age_hours": 0.033333,
         "created_at": "2026-08-30T04:04:00+00:00",
-        "digest": "sha256:289e0566e3bf6d9fe1f4fd5a0c458771530439965d1bc58419034c6affd0b993",
+        "digest": "sha256:056f86108ec2acf3885fa074be3a21323b3d8310a690861e615e3611ae78aa31",
         "edge_count": 1,
         "freshness": "fresh",
         "node_count": 2,
@@ -2735,14 +2737,14 @@
           "algorithm": "hmac-sha256",
           "key_id": "reference-lab-v1",
           "schema_version": "agent-bom.correlation-receipt-signature/v1",
-          "value": "sha256:16701518b105a461df0c7b52f5969c3a4ea081e76adcc140d759980932e8e676"
+          "value": "sha256:bd1ef1725c3dd59de345ccee5fdcc0a19a496c61d55201d8e17cd273aa03d622"
         },
         "source_kinds": [
           "gateway_runtime"
         ]
       }
     ],
-    "manifest_sha256": "sha256:66051c24b8d7f82edb6696e20e72ecb3ecc63a885235654cdbd0aba3f4ba7927",
+    "manifest_sha256": "sha256:1970eaf9451335c1a2917ab1f1a4a7bd3c27cece13dde9273f721b02df90cf8f",
     "max_age_hours": 168,
     "name": "Reference evidence lab",
     "output_scan_id": "reference-evidence-correlation-v1",
@@ -2794,7 +2796,7 @@
         {
           "age_hours": 0.016667,
           "created_at": "2026-08-30T04:05:00+00:00",
-          "digest": "sha256:a50845f4307b01a5cce3d516fe46719bbfd4269420d23f9dd741757b7f3255bd",
+          "digest": "sha256:c961e2a439ca838fbedc2ffb9bcd50b5e48b93c1668e03287c87168c1097c24e",
           "edge_count": 2,
           "freshness": "fresh",
           "node_count": 3,
@@ -2803,7 +2805,7 @@
             "algorithm": "hmac-sha256",
             "key_id": "reference-lab-v1",
             "schema_version": "agent-bom.correlation-receipt-signature/v1",
-            "value": "sha256:adf752d250b62e5169df3dca15cd593d99be2dd9beee496e60f8decefd062dbb"
+            "value": "sha256:aec66e1b9d09e5814d623ae33b229d3aaf6f736f705a33487271f3df1bbb9242"
           },
           "source_kinds": [
             "identity_model"
@@ -2812,7 +2814,7 @@
         {
           "age_hours": 0.083333,
           "created_at": "2026-08-30T04:01:00+00:00",
-          "digest": "sha256:c8f3d5153cd44be44773f6d67cf6d17a88cf1b1e476f0b3c6814cc2916beff4e",
+          "digest": "sha256:0e2e7ce6f603f453cd5f3f959adbffa58c3f58d13c34335097d3427cfdcd845a",
           "edge_count": 2,
           "freshness": "fresh",
           "node_count": 3,
@@ -2821,7 +2823,7 @@
             "algorithm": "hmac-sha256",
             "key_id": "reference-lab-v1",
             "schema_version": "agent-bom.correlation-receipt-signature/v1",
-            "value": "sha256:315cab83e565788cd06bc0b7d4cf9dc0fa6b9430db26862c1a6674c7aae85fc9"
+            "value": "sha256:98487dfe158b26d4be12ba124db2c9aeb5cf578a05a2ab85bd57adabdecd19aa"
           },
           "source_kinds": [
             "bundled_advisory_scanner",
@@ -2831,7 +2833,7 @@
         {
           "age_hours": 0.066667,
           "created_at": "2026-08-30T04:02:00+00:00",
-          "digest": "sha256:ffff4f3f551cae9febef5c2f77f44f9fb4589d2d4d4eb8aa2809ae6567fef78e",
+          "digest": "sha256:7f228390eb332efcd424428aeeb413e2a28a4c87ebf8a14f1a1585669c964162",
           "edge_count": 3,
           "freshness": "fresh",
           "node_count": 4,
@@ -2840,7 +2842,7 @@
             "algorithm": "hmac-sha256",
             "key_id": "reference-lab-v1",
             "schema_version": "agent-bom.correlation-receipt-signature/v1",
-            "value": "sha256:8b57478b6793288d3cd97b3539144cda35e228edbfdb8f7d171931356f2bfb9f"
+            "value": "sha256:10b21f85bccf0ce897a661b3c17f6feafb90faaaa57ae037781e119e2937f280"
           },
           "source_kinds": [
             "kubernetes_iac",
@@ -2850,7 +2852,7 @@
         {
           "age_hours": 0.05,
           "created_at": "2026-08-30T04:03:00+00:00",
-          "digest": "sha256:3670b0ffcbe26839e8ec776d39bad9515fc629b63a177d497eec7e5012cfd14b",
+          "digest": "sha256:0e6870c6dab5d4333873a39f31ff2e4cbb5c409ec86d7521247ee527cda21df8",
           "edge_count": 0,
           "freshness": "fresh",
           "node_count": 1,
@@ -2859,7 +2861,7 @@
             "algorithm": "hmac-sha256",
             "key_id": "reference-lab-v1",
             "schema_version": "agent-bom.correlation-receipt-signature/v1",
-            "value": "sha256:d6813e1c784db7d061f12a9b288e116155bafdd6c4a4e3578057f62ad6b3274c"
+            "value": "sha256:1cfae40323605704c1ef0d39f5312c2b71c5e1286dc7a995b6e35803c6d0bb1b"
           },
           "source_kinds": [
             "mcp_config"
@@ -2868,7 +2870,7 @@
         {
           "age_hours": 0.1,
           "created_at": "2026-08-30T04:00:00+00:00",
-          "digest": "sha256:c72202021c78a63a2c2e86ad45e8f5be32f9257d7f74cdfb2aac16f2b273e111",
+          "digest": "sha256:140763e376d7295b08a986c729542dd5c8178e9d99d95b603c75ed5bc0d32db4",
           "edge_count": 1,
           "freshness": "fresh",
           "node_count": 2,
@@ -2877,7 +2879,7 @@
             "algorithm": "hmac-sha256",
             "key_id": "reference-lab-v1",
             "schema_version": "agent-bom.correlation-receipt-signature/v1",
-            "value": "sha256:e9d80ce72c348095ecdc2d0dd79d674ec1428ff7367f9346ebbf18d77067f008"
+            "value": "sha256:7684f9e111536499f7dd0519b8cc4a51dcd289086a417d60da0c6a7cd1c0d337"
           },
           "source_kinds": [
             "repository_parser"
@@ -2886,7 +2888,7 @@
         {
           "age_hours": 0.033333,
           "created_at": "2026-08-30T04:04:00+00:00",
-          "digest": "sha256:289e0566e3bf6d9fe1f4fd5a0c458771530439965d1bc58419034c6affd0b993",
+          "digest": "sha256:056f86108ec2acf3885fa074be3a21323b3d8310a690861e615e3611ae78aa31",
           "edge_count": 1,
           "freshness": "fresh",
           "node_count": 2,
@@ -2895,7 +2897,7 @@
             "algorithm": "hmac-sha256",
             "key_id": "reference-lab-v1",
             "schema_version": "agent-bom.correlation-receipt-signature/v1",
-            "value": "sha256:16701518b105a461df0c7b52f5969c3a4ea081e76adcc140d759980932e8e676"
+            "value": "sha256:bd1ef1725c3dd59de345ccee5fdcc0a19a496c61d55201d8e17cd273aa03d622"
           },
           "source_kinds": [
             "gateway_runtime"
