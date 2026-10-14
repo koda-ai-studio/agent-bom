@@ -105,11 +105,26 @@ def test_framework_only_matches_any_control_or_the_slug() -> None:
     resolved = {"framework_tag_field": "cis_tags", "framework_slug": "cis"}
     # A row carrying a CIS control tag matches.
     assert row_matches_scope(_row(cis_tags=["4.1"]), resolved) is True
-    # A bulk-ingested row whose per-framework tags were redacted at rest still
-    # matches on the retained applicable_frameworks slug.
-    assert row_matches_scope(_row(applicable_frameworks=["cis"]), resolved) is True
+    # A bulk-ingested row that carries no per-framework tags still matches on
+    # the applicable_frameworks slug its producer supplied.
+    assert row_matches_scope(_row(applicable_frameworks=["cis"], origin="bulk_ingest"), resolved) is True
     # A row for a different framework does not.
     assert row_matches_scope(_row(soc2_tags=["CC6.1"], applicable_frameworks=["soc2"]), resolved) is False
+
+
+def test_scan_row_without_a_framework_tag_never_matches_on_applicability() -> None:
+    """/v1/compliance counts a scan finding only by its control tags.
+
+    The selection table puts PCI DSS in a CVE's applicable_frameworks with no
+    PCI control behind it, so falling back to applicability for scan rows
+    listed findings under ?framework=pci-dss that /v1/compliance/pci-dss
+    counted as zero.
+    """
+    resolved = {"framework_tag_field": "pci_dss_tags", "framework_slug": "pci-dss"}
+    cve = _row(applicable_frameworks=["pci-dss", "nist-800-53"], nist_800_53_tags=["SI-2"])
+    assert row_matches_scope(cve, resolved) is False
+    assert row_matches_scope({**cve, "origin": "native_scan"}, resolved) is False
+    assert row_matches_scope({**cve, "pci_dss_tags": ["6.3.3"]}, resolved) is True
 
 
 def test_unresolved_framework_filter_matches_nothing() -> None:
@@ -161,14 +176,23 @@ def _seed() -> None:
                 "applicable_frameworks": ["nist-csf"],
             },
             {
-                "id": "f-cis-slug-only",
+                "id": "f-scan-cis-slug-only",
                 "severity": "low",
-                "title": "cis by slug, tags redacted",
+                "title": "scan row with cis applicability but no cis control",
                 "applicable_frameworks": ["cis"],
             },
         ],
     }
     _get_store().put(job)
+    bulk = {
+        "id": "f-cis-slug-only",
+        "severity": "low",
+        "title": "bulk-ingested cis row without per-framework tags",
+        "applicable_frameworks": ["cis"],
+    }
+    analyst = proxy_headers(role="analyst", tenant="default")
+    response = TestClient(app).post("/v1/findings/bulk", headers=analyst, json={"findings": [bulk], "source": "partner"})
+    assert response.status_code == 201, response.text
 
 
 def _ids(resp) -> set[str]:
@@ -228,4 +252,5 @@ def test_route_no_framework_filter_is_backward_compatible() -> None:
     _seed()
     resp = TestClient(app).get("/v1/findings", headers=_AUTH)
     assert resp.status_code == 200
-    assert len(resp.json()["findings"]) == 4
+    # Four scan findings plus the one bulk-ingested row.
+    assert len(resp.json()["findings"]) == 5
