@@ -60,7 +60,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 - `/v1/compliance` and the evidence export scored MITRE ATT&CK against the bundled catalog, while the taggers and CLI narrative used the active (synced) catalog. All surfaces now use one resolver, so a technique that exists only in a synced catalog appears everywhere. The documented technique count still comes from the bundled catalog.
 
-- A finding's `applicable_frameworks` now lists exactly the frameworks it has control tags for. Hub posture counts by `applicable_frameworks` and `/v1/compliance` counts by tags, so the two counts now match. Findings with no control tags still use the source/asset/finding-type selection table.
+- A finding's `applicable_frameworks` now always includes every framework it carries a control tag for, in addition to the frameworks the source/asset/finding-type selection table assigns. Hub posture counts by `applicable_frameworks` and `/v1/compliance` counts by tags, so the hub no longer omits a finding that `/v1/compliance` counts.
 
 ### Security
 
