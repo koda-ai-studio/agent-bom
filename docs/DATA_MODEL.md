@@ -210,7 +210,10 @@ of the five overlapping lanes.
 ## 3. Graph taxonomy (`src/agent_bom/graph/types.py`)
 
 The unified graph projects the canonical model into a node/edge form
-used for blast-radius traversal, dashboards, and OCSF export.
+used for blast-radius traversal, dashboards, and OCSF export. The
+[security graph data model](graph/DATA_MODEL.md) is generated from the code
+and lists every allowed relationship pair, the analyses that walk each edge,
+evidence tiers and emitting modules.
 
 ### Entity types (42)
 

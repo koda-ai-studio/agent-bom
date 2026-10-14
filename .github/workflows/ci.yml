@@ -508,6 +508,14 @@ jobs:
         # declared in config.py nor explicitly allowlisted.
         run: uv run python scripts/generate_env_var_reference.py --check
 
+      - name: Graph data-model reference is current
+        if: needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true'
+        # Generator: scripts/generate_graph_data_model.py
+        # Docs: docs/graph/DATA_MODEL.md, docs/graph/data-model/
+        # Fails when an entity, relationship, evidence tier, finding enum or
+        # normalization table changed without regenerating the reference.
+        run: uv run python scripts/generate_graph_data_model.py --check
+
       - name: CLI reference alignment (fast preflight)
         if: needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true'
         # Mirrors tests/test_public_docs_cli_alignment.py but runs in Lint so a

@@ -4,6 +4,8 @@ This is the single page that tells operators, auditors, and regulators what agen
 
 The graph subsystem has one source of truth in code: enums in `src/agent_bom/graph/types.py`, the legacy builder in `src/agent_bom/context_graph.py`, and the unified bridge in `src/agent_bom/graph/`. Every name on this page maps 1:1 to those files.
 
+The generated [data model reference](DATA_MODEL.md) lists every entity, relationship, evidence tier and normalization table from that code.
+
 ---
 
 ## Current estate and historical scans
