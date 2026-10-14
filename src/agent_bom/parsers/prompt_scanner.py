@@ -571,9 +571,9 @@ def prompt_scan_data_to_findings(prompt_scan: dict[str, Any]):
     for item in prompt_scan.get("findings") or []:
         if not isinstance(item, dict):
             continue
-        source_file = str(item.get("source_file") or "")
-        category = str(item.get("category") or "prompt_security")
-        severity = str(item.get("severity") or "unknown").lower()
+        source_file = str(item.get("source_file") or "")  # resolved: ``-p rel`` and ``-p /abs`` yield one id
+        source_file = str(Path(source_file).resolve()) if source_file and not source_file.startswith("<") else source_file
+        category, severity = str(item.get("category") or "prompt_security"), str(item.get("severity") or "unknown").lower()
         title = str(item.get("title") or "Prompt security finding")
         asset_name = Path(source_file).name if source_file else "prompt"
         unified.append(

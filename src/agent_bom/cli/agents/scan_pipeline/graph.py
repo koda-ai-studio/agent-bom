@@ -165,6 +165,9 @@ def _check_licenses(opts: ScanOptions, st: ScanState) -> None:
                 logger.debug("Could not load license policy file, using defaults: %s", exc)
         _lic_report = evaluate_license_policy(st.agents, policy=_lic_policy if _lic_policy else None)
         st.report.license_report = _lic_to_ser(_lic_report)
+        from agent_bom.domain.license_findings import replace_license_findings
+
+        replace_license_findings(st.report)
         if not opts.quiet and opts.output_format == "console":
             print_license_report(_lic_report, st.con)
         elif not opts.quiet:
