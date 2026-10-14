@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 
 from agent_bom.asset_provenance import sanitize_discovery_provenance
-from agent_bom.canonical_ids import canonical_agent_id, canonical_graph_node_id, snowflake_cortex_agent_node_id, source_ids
+from agent_bom.canonical_ids import agent_graph_id_for, canonical_agent_id, canonical_graph_node_id, mcp_server_graph_id_for, source_ids
 from agent_bom.graph.build_indexes import BuildIndexes
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.credential_projection import project_credentials
@@ -24,7 +24,6 @@ from agent_bom.graph.package_projection import (
 )
 from agent_bom.graph.projection_support import (
     _agent_identity_scope,
-    _agent_node_id,
     _is_repository_inventory,
     _is_sbom_import,
     _normalized_environment,
@@ -67,17 +66,6 @@ def _discovery_evidence(data_source: str) -> dict[str, Any]:
     return edge_evidence(data_source or "agent_discovery", "static_scan")
 
 
-def _snowflake_cortex_node_id(agent_dict: dict[str, Any]) -> str:
-    """Canonical id for a discovered Cortex Agent, rebuilt from its identity parts."""
-    metadata = agent_dict.get("metadata")
-    cortex = metadata.get("snowflake_cortex_agent") if isinstance(metadata, dict) else None
-    if agent_dict.get("source") != "snowflake-cortex-agent" or not isinstance(cortex, dict):
-        return ""
-    if not all(str(cortex.get(key) or "").strip() for key in ("database", "schema", "name")):
-        return ""
-    return snowflake_cortex_agent_node_id(cortex.get("account"), cortex["database"], cortex["schema"], cortex["name"])
-
-
 def _scope(agent_dict: dict[str, Any], report_data_source: str) -> AgentScope:
     agent = AgentScope(agent_dict=agent_dict, agent_metadata={}, agent_discovery_provenance={})
     agent.agent_name = agent.agent_dict.get("name", "unknown")
@@ -87,7 +75,7 @@ def _scope(agent_dict: dict[str, Any], report_data_source: str) -> AgentScope:
     agent.static_inventory = agent.sbom_import or agent.repository_inventory
     agent.data_source_tag = str(agent.agent_dict["source"]) if agent.repository_inventory else report_data_source
     agent.inventory_type = EntityType.DIRECTORY if agent.repository_inventory else EntityType.SOURCE_FILE
-    agent.agent_id = _snowflake_cortex_node_id(agent.agent_dict) or _agent_node_id(agent.agent_name, agent.agent_scope)
+    agent.agent_id = agent_graph_id_for(agent.agent_dict)
     if agent.sbom_import:
         agent.agent_id = f"source_file:sbom:{agent.agent_id.removeprefix('agent:')}"
     if agent.repository_inventory:
@@ -246,6 +234,7 @@ def _add_server_node(graph: UnifiedGraph, agent: AgentScope, srv_dict: Mapping[s
                     ],
                     "security_intelligence_count": len(srv_dict.get("security_intelligence", []) or []),
                     "agent": agent.agent_name,
+                    "agents": _server_agents(graph, srv_id, agent.agent_id),
                     "environment": agent.agent_env,
                     "canonical_id": srv_dict.get("canonical_id")
                     or srv_dict.get("stable_id")
@@ -261,9 +250,16 @@ def _add_server_node(graph: UnifiedGraph, agent: AgentScope, srv_dict: Mapping[s
     return srv_id
 
 
+def _server_agents(graph: UnifiedGraph, srv_id: str, agent_id: str) -> list[str]:
+    """Every agent that declared this server; a shared node keeps all of them."""
+    existing = graph.nodes.get(srv_id)
+    recorded = existing.attributes.get("agents") if existing is not None else None
+    return sorted({*(recorded if isinstance(recorded, list) else []), agent_id})
+
+
 def _project_server(graph: UnifiedGraph, agent: AgentScope, srv_dict: Mapping[str, Any], indexes: BuildIndexes) -> None:
     srv_name = srv_dict.get("name", "unknown")
-    srv_id = agent.agent_id if agent.sbom_import else f"server:{agent.agent_node_key}:{srv_name}"
+    srv_id = agent.agent_id if agent.sbom_import else mcp_server_graph_id_for(srv_dict, agent.agent_dict)
     surface = srv_dict.get("surface", "mcp-server")
     srv_id = _add_server_node(graph, agent, srv_dict, srv_id, srv_name, surface)
     indexes.server_name_to_ids[srv_name].append(srv_id)
@@ -277,6 +273,9 @@ def _project_server(graph: UnifiedGraph, agent: AgentScope, srv_dict: Mapping[st
             )
         )
         indexes.server_to_agents[srv_name].append(agent.agent_id)
+        if not srv_id.startswith(f"server:{agent.agent_node_key}:"):
+            # A canonical node shared under different names is still one server.
+            indexes.server_to_agents[srv_id].append(agent.agent_id)
     indexes.server_name_to_agent_servers[srv_name][agent.agent_id] = srv_id
     indexes.agent_to_server_ids[agent.agent_name].add(srv_id)
     if agent.agent_scope:
@@ -286,7 +285,7 @@ def _project_server(graph: UnifiedGraph, agent: AgentScope, srv_dict: Mapping[st
     if agent.static_inventory:
         return
     tool_ids = _project_tools(graph, agent, srv_dict, srv_id, indexes)
-    project_credentials(graph, srv_dict, srv_id, tool_ids, agent.data_source_tag)
+    project_credentials(graph, srv_dict, srv_id, tool_ids, agent.data_source_tag, configured_by=agent.agent_id)
 
 
 def _project_packages(graph: UnifiedGraph, agent: AgentScope, srv_dict: Mapping[str, Any], srv_id: str, indexes: BuildIndexes) -> None:

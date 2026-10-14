@@ -6,10 +6,10 @@ from collections.abc import Mapping
 from pathlib import PurePath
 from typing import Any
 
+from agent_bom.canonical_ids import agent_graph_id, agent_identity_scope
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.types import RelationshipType
-from agent_bom.graph.util import clean_graph_part as _clean_graph_part
 
 
 def _mapping_list(value: Any) -> list[Mapping[str, Any]]:
@@ -22,26 +22,12 @@ def _mapping_list(value: Any) -> list[Mapping[str, Any]]:
 
 def _agent_identity_scope(agent_dict: dict[str, Any]) -> str:
     """Return the endpoint/source scope that disambiguates fleet agents."""
-    for key in ("source_id", "endpoint_id", "device_id"):
-        value = str(agent_dict.get(key) or "").strip()
-        if value:
-            return value
-    metadata = agent_dict.get("metadata")
-    if isinstance(metadata, dict):
-        for key in ("source_id", "endpoint_id", "device_id"):
-            value = str(metadata.get(key) or "").strip()
-            if value:
-                return value
-    return ""
+    return agent_identity_scope(agent_dict)
 
 
 def _agent_node_id(agent_name: Any, source_id: str = "") -> str:
     """Build an agent graph ID without collapsing same-name fleet endpoints."""
-    name = str(agent_name or "unknown").strip() or "unknown"
-    source = _clean_graph_part(source_id).replace(":", "%3A")
-    if source:
-        return f"agent:{source}:{name}"
-    return f"agent:{name}"
+    return agent_graph_id(agent_name, source_id)
 
 
 def _add_rel_edge(

@@ -27,40 +27,10 @@ _registry_raw_cache: str | None = None
 
 
 def build_dep_graph_from_agents(agents_data: list[dict[str, Any]]):
-    """Build a dependency graph from serialized agent scan data.
+    """Build the export graph from serialized agents; the one DepGraph builder serves both callers."""
+    from agent_bom.output.graph_export import build_graph_from_scan_data
 
-    Pure — consumes the JSON shape returned by a scan pipeline, returns a
-    ``DepGraph`` suitable for graph/graph-HTML export or tree rendering.
-    """
-    from agent_bom.output.graph_export import DepGraph
-
-    graph = DepGraph()
-    for agent in agents_data:
-        aname = agent.get("name", "unknown")
-        source = agent.get("source") or "local"
-        sid = f"provider:{source}"
-        graph.add_node(sid, source, "provider")
-        aid = f"agent:{aname}"
-        graph.add_node(aid, aname, "agent")
-        graph.add_edge(sid, aid, "hosts")
-        for srv in agent.get("mcp_servers", []):
-            sname = srv.get("name", "unknown")
-            svid = f"server:{aname}/{sname}"
-            graph.add_node(svid, sname, "server_cred" if srv.get("has_credentials") else "server")
-            graph.add_edge(aid, svid, "uses")
-            for pkg in srv.get("packages", []):
-                pn = pkg.get("name", "?")
-                pv = pkg.get("version", "")
-                pe = pkg.get("ecosystem", "")
-                vulns = pkg.get("vulnerabilities", [])
-                pid = f"pkg:{pe}/{pn}@{pv}"
-                graph.add_node(pid, f"{pn}@{pv}" if pv else pn, "pkg_vuln" if vulns else "pkg")
-                graph.add_edge(svid, pid, "depends_on")
-                for vuln in vulns:
-                    vid = f"cve:{vuln.get('id', '?')}"
-                    graph.add_node(vid, vuln.get("id", "?"), "cve", vuln.get("severity", "").lower())
-                    graph.add_edge(pid, vid, "affects")
-    return graph
+    return build_graph_from_scan_data({"agents": agents_data})
 
 
 def get_registry_data() -> dict:

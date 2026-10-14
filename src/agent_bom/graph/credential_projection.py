@@ -15,7 +15,9 @@ from agent_bom.graph.types import EntityType, RelationshipType
 from agent_bom.security import sanitize_text
 
 
-def project_credentials(graph: UnifiedGraph, srv_dict: Mapping[str, Any], srv_id: str, tool_ids: list[str], data_source_tag: str) -> None:
+def project_credentials(
+    graph: UnifiedGraph, srv_dict: Mapping[str, Any], srv_id: str, tool_ids: list[str], data_source_tag: str, *, configured_by: str = ""
+) -> None:
     env_keys = srv_dict.get("credential_env_vars", [])
     if not env_keys:
         env_dict = srv_dict.get("env", {})
@@ -23,11 +25,13 @@ def project_credentials(graph: UnifiedGraph, srv_dict: Mapping[str, Any], srv_id
             env_keys = [k for k in env_dict if _is_credential_key(k)]
     for env_key in env_keys:
         cred_id = f"cred:{srv_id}:{env_key}"
-        _add_credential(graph, cred_id, srv_id, env_key, tool_ids, data_source_tag)
+        _add_credential(graph, cred_id, srv_id, env_key, tool_ids, data_source_tag, configured_by)
         _add_identity_bindings(graph, srv_dict, cred_id, env_key, data_source_tag)
 
 
-def _add_credential(graph: UnifiedGraph, cred_id: str, srv_id: str, env_key: str, tool_ids: list[str], data_source_tag: str) -> None:
+def _add_credential(
+    graph: UnifiedGraph, cred_id: str, srv_id: str, env_key: str, tool_ids: list[str], data_source_tag: str, configured_by: str
+) -> None:
     server = graph.nodes.get(srv_id)
     occurrence = slot_receipt(env_key, runtime_stable_identity(server, scan_id=graph.scan_id)) if server is not None else None
     graph.add_node(
@@ -51,7 +55,10 @@ def _add_credential(graph: UnifiedGraph, cred_id: str, srv_id: str, env_key: str
             target=cred_id,
             relationship=RelationshipType.EXPOSES_CRED,
             weight=2.0,
-            evidence=edge_evidence(data_source_tag or "agent_discovery", "static_scan"),
+            evidence={
+                **edge_evidence(data_source_tag or "agent_discovery", "static_scan"),
+                **({"configured_by": [configured_by]} if configured_by else {}),
+            },
         )
     )
     for tool_id in tool_ids:

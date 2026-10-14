@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from agent_bom.canonical_ids import agent_graph_id_for
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.projection_support import _agent_identity_scope, _agent_node_id
@@ -34,9 +35,17 @@ def _add_cross_env_correlation(
     if not result.matches:
         return
 
+    ids_by_name: dict[str, set[str]] = {}
+    for agent in agents_data:
+        if isinstance(agent, dict):
+            ids_by_name.setdefault(str(agent.get("name") or ""), set()).add(agent_graph_id_for(agent))
     for match in result.matches:
-        local_id = f"agent:{match.local_agent_name}"
-        cloud_id = f"agent:{match.cloud_agent_name}"
+        # A name shared by several scoped agents names none of them; the
+        # matcher reports names, so only an unambiguous name binds a node.
+        local_ids, cloud_ids = ids_by_name.get(match.local_agent_name, set()), ids_by_name.get(match.cloud_agent_name, set())
+        if len(local_ids) != 1 or len(cloud_ids) != 1:
+            continue
+        local_id, cloud_id = next(iter(local_ids)), next(iter(cloud_ids))
         # Only wire edges between agents we already added as nodes — the
         # matcher operates over the report payload but the graph may have
         # filtered some agents out earlier.

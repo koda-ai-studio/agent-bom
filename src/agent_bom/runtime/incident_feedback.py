@@ -88,9 +88,12 @@ class RuntimeIncidentRecord:
     observed_tool_labels: list[str] = field(default_factory=list)
     count: int = 1
     detail: dict[str, object] = field(default_factory=dict)
+    agent_source_id: str = ""
 
     def to_dict(self) -> dict[str, object]:
+        scope = {"agent_source_id": sanitize_text(self.agent_source_id, max_len=300)} if self.agent_source_id.strip() else {}
         return {
+            **scope,
             "schema_version": SCHEMA_VERSION,
             "agent_id": sanitize_text(self.agent_id, max_len=300),
             "kind": sanitize_text(self.kind, max_len=64),
@@ -136,6 +139,7 @@ class RuntimeIncidentRecord:
             observed_tool_labels=[sanitize_text(lbl, max_len=200) for lbl in labels if isinstance(lbl, str) and lbl.strip()],
             count=count,
             detail={str(k): sanitize_text(v, max_len=400) for k, v in detail.items()} if isinstance(detail, Mapping) else {},
+            agent_source_id=sanitize_text(payload.get("agent_source_id", ""), max_len=300).strip(),
         )
 
 
@@ -248,9 +252,9 @@ def iter_observed_targets(record: RuntimeIncidentRecord) -> Iterator[tuple[str, 
             yield label, False
 
 
-def merge_records(records: Iterable[RuntimeIncidentRecord]) -> dict[str, list[RuntimeIncidentRecord]]:
-    """Group incident records by ``agent_id`` for graph projection."""
-    grouped: dict[str, list[RuntimeIncidentRecord]] = {}
+def merge_records(records: Iterable[RuntimeIncidentRecord]) -> dict[tuple[str, str], list[RuntimeIncidentRecord]]:
+    """Group incident records by ``(agent_source_id, agent_id)`` for graph projection."""
+    grouped: dict[tuple[str, str], list[RuntimeIncidentRecord]] = {}
     for record in records:
-        grouped.setdefault(record.agent_id, []).append(record)
+        grouped.setdefault((record.agent_source_id, record.agent_id), []).append(record)
     return grouped

@@ -414,8 +414,9 @@ def test_sarif_exposure_chain_in_message_and_related_locations() -> None:
     related = result["relatedLocations"]
     fq_names = [loc["logicalLocations"][0]["fullyQualifiedName"] for loc in related]
     assert "agent:cursor" in fq_names
-    assert "server:database-server" in fq_names
-    assert "tool:run_query" in fq_names
+    # Hops are graph node ids: a name-only server stays under its agent.
+    assert "server:cursor:database-server" in fq_names
+    assert "tool:server:cursor:database-server:run_query" in fq_names
 
 
 def test_sarif_exposure_chain_document_is_schema_valid(sarif_validator: Draft7Validator) -> None:

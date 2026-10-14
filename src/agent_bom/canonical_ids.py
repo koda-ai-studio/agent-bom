@@ -152,6 +152,114 @@ def canonical_mcp_server_id(
     return canonical_id("mcp_server", identifier)
 
 
+_AGENT_SCOPE_KEYS = ("source_id", "endpoint_id", "device_id")
+CORTEX_AGENT_SOURCE = "snowflake-cortex-agent"
+
+
+def _field(record: Any, key: str) -> Any:
+    return record.get(key) if isinstance(record, Mapping) else getattr(record, key, None)
+
+
+def agent_identity_scope(record: Any) -> str:
+    """Endpoint/source scope that keeps same-named fleet agents apart.
+
+    Accepts a serialized agent mapping or an ``Agent`` model, so report,
+    graph and export producers derive one scope from either shape.
+    """
+    for container in (record, _field(record, "metadata")):
+        if container is None:
+            continue
+        for key in _AGENT_SCOPE_KEYS:
+            value = str(_field(container, key) or "").strip()
+            if value:
+                return value
+    return ""
+
+
+def agent_graph_id(name: Any, scope: str = "") -> str:
+    """Graph node id of a discovered agent: ``agent:[<scope>:]<name>``."""
+    label = str(name or "unknown").strip() or "unknown"
+    scope_part = str(scope or "").strip().replace(":", "%3A")
+    return f"agent:{scope_part}:{label}" if scope_part else f"agent:{label}"
+
+
+def agent_graph_id_for(record: Any) -> str:
+    """Graph id for an agent record; Cortex Agents keep their account-qualified id."""
+    metadata = _field(record, "metadata")
+    cortex = metadata.get("snowflake_cortex_agent") if isinstance(metadata, Mapping) else None
+    if _field(record, "source") == CORTEX_AGENT_SOURCE and isinstance(cortex, Mapping):
+        if all(str(cortex.get(key) or "").strip() for key in ("database", "schema", "name")):
+            return snowflake_cortex_agent_node_id(cortex.get("account"), cortex["database"], cortex["schema"], cortex["name"])
+    return agent_graph_id(_field(record, "name"), agent_identity_scope(record))
+
+
+def mcp_server_identity_kind(*, url: Any = None, command: Any = "", args: Sequence[Any] | None = None, registry_id: Any = None) -> str:
+    """How far one server identity reaches: ``remote``, ``host`` or ``agent``.
+
+    A url or registry entry names one service for the whole tenant. A launch
+    command with arguments names a process that is only the same server on the
+    same host. A bare command or a name alone proves nothing beyond the agent
+    that declared it: two configs both running ``npx`` are not one server.
+    """
+    if str(url or "").strip() or (str(registry_id or "").strip() and not str(command or "").strip()):
+        return "remote"
+    if any(normalize_command_arg(str(arg or "")) for arg in (args or [])):
+        return "host"
+    return "agent"
+
+
+def mcp_server_graph_id(
+    name: Any,
+    *,
+    command: Any = "",
+    args: Sequence[Any] | None = None,
+    url: Any = None,
+    registry_id: Any = None,
+    canonical_id: Any = "",
+    host_scope: str = "",
+    agent_key: str = "",
+) -> str:
+    """Graph node id of an MCP server, shared by every producer.
+
+    Remote servers are one node per tenant (``server:<canonical id>``), stdio
+    servers one node per host (``server:<host scope>:<canonical id>``, with an
+    unscoped local scan being one host), and name-only servers stay under the
+    agent that declared them (``server:<agent key>:<name>``).
+    """
+    label = str(name or "unknown").strip() or "unknown"
+    kind = mcp_server_identity_kind(url=url, command=command, args=args, registry_id=registry_id)
+    if kind == "agent":
+        return f"server:{agent_key}:{label}" if agent_key else f"server:{label}"
+    identity = str(canonical_id or "").strip() or canonical_mcp_server_id(
+        label, str(command or ""), registry_id=str(registry_id or "") or None, url=str(url or "") or None, args=list(args or [])
+    )
+    scope = str(host_scope or "").strip().replace(":", "%3A")
+    if kind == "host" and scope:
+        return f"server:{scope}:{identity}"
+    return f"server:{identity}"
+
+
+def mcp_server_graph_id_for(server: Any, agent: Any) -> str:
+    """Graph id for a server record (mapping or model) under its declaring agent.
+
+    A Cortex Agent's endpoint is the agent itself, so its pseudo-server and
+    tools stay agent-scoped and same-named agents in other schemas never merge.
+    """
+    agent_key = agent_graph_id_for(agent).removeprefix("agent:")
+    if _field(agent, "source") == CORTEX_AGENT_SOURCE:
+        return f"server:{agent_key}:{str(_field(server, 'name') or 'unknown').strip() or 'unknown'}"
+    return mcp_server_graph_id(
+        _field(server, "name"),
+        command=_field(server, "command") or "",
+        args=list(_field(server, "args") or []),
+        url=_field(server, "url"),
+        registry_id=_field(server, "registry_id"),
+        canonical_id=_field(server, "canonical_id") or _field(server, "stable_id") or "",
+        host_scope=agent_identity_scope(agent),
+        agent_key=agent_key,
+    )
+
+
 def canonical_mcp_tool_id(name: str, input_schema: Mapping[str, Any] | bool | None = None, *, server_id: str | None = None) -> str:
     schema = json.dumps({} if input_schema is None else input_schema, sort_keys=True, separators=(",", ":"))
     return canonical_id("mcp_tool", server_id or "", name, schema)

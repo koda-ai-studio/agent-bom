@@ -29,10 +29,10 @@ import hashlib
 from collections.abc import Sequence
 from dataclasses import dataclass
 
+from agent_bom.canonical_ids import mcp_server_graph_id
 from agent_bom.demo_estate.enterprise import EstateAsset
 
-# Tag key that says which AI lane an asset belongs to. Read by the graph
-# projection, the surfaces gate and the tests, so it lives in one place.
+# Tag key naming an asset's AI lane; graph projection, surfaces gate and tests read it.
 AI_LANE_TAG = "ai_lane"
 
 _TENANT_DOMAIN = "northstar.example"
@@ -313,7 +313,7 @@ def build_third_party_ai_assets(
         account = hosts[stable_index("mcp-server", server_name) % len(hosts)]
         seed = stable_index(account.scope, server_name)
         region, environment = account.placements[seed % len(account.placements)]
-        server_id = f"mcp:server:{server_name}"
+        server_id = mcp_server_graph_id(server_name, url=f"mcp://{server_name}")
         # A gateway-fronted server is not internet facing; a directly published
         # one is. Both exist in a real estate and the difference is the finding.
         published = seed % 4 == 0

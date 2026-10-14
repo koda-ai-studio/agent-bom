@@ -138,9 +138,9 @@ class TestScanPipelineWiring:
         assert total == 5
         assert [len(call) for call in conn.calls] == [2, 2, 1]
 
-    def test_context_graph_to_unified_round_trip(self, graph_db):
-        """Build context graph → bridge → persist → load → verify."""
-        from agent_bom.context_graph import build_context_graph, find_lateral_paths, to_unified_graph
+    def test_report_graph_round_trip(self, graph_db):
+        """Build the unified graph from a report → persist → load → verify."""
+        from agent_bom.graph.builder import build_unified_graph_from_report
 
         agents = [
             {
@@ -169,9 +169,7 @@ class TestScanPipelineWiring:
             }
         ]
 
-        cg = build_context_graph(agents, blast)
-        paths = find_lateral_paths(cg, "agent:claude-desktop")
-        ug = to_unified_graph(cg, paths, scan_id="pipeline-test")
+        ug = build_unified_graph_from_report({"agents": agents, "blast_radius": blast}, scan_id="pipeline-test")
 
         # Persist
         save_graph(graph_db, ug)

@@ -263,6 +263,7 @@ def _agent_json(agent: Any) -> dict[str, Any]:
         "type": agent.agent_type.value,
         "config_path": sanitize_path_label(agent.config_path) if agent.config_path else "",
         "source": agent.source,
+        **({"source_id": agent.source_id} if getattr(agent, "source_id", None) else {}),
         "status": agent.status.value,
         "discovered_at": agent.discovered_at,
         "last_seen": agent.last_seen,

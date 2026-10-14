@@ -24,6 +24,7 @@ from collections import deque
 from pathlib import Path
 from typing import Any, Union
 
+from agent_bom.canonical_ids import agent_graph_id_for, mcp_server_graph_id_for
 from agent_bom.core.severity import SEVERITY_THRESHOLD_LABELS, severity_band_rank
 from agent_bom.graph.compat import NODE_KIND_TO_ENTITY
 from agent_bom.output.finding_views import sanitize_output_text, with_output_sanitizer_cache
@@ -67,7 +68,7 @@ class DepGraph:
     def __init__(self) -> None:
         self._nodes: dict[str, _Node] = {}
         self._edges: list[_Edge] = []
-        self._edge_set: set[tuple[str, str, str]] = set()
+        self._edge_set: dict[tuple[str, str, str], _Edge] = {}
 
     def add_node(self, node_id: str, label: str, kind: str, severity: str = "", attributes: dict[str, Any] | None = None) -> None:
         if node_id not in self._nodes:
@@ -77,9 +78,13 @@ class DepGraph:
 
     def add_edge(self, source: str, target: str, kind: str, evidence: dict[str, Any] | None = None) -> None:
         key = (source, target, kind)
-        if key not in self._edge_set:
-            self._edge_set.add(key)
-            self._edges.append(_Edge(source, target, kind, evidence))
+        stored = self._edge_set.get(key)
+        configured_by = (evidence or {}).get("configured_by")
+        if stored is None:
+            self._edge_set[key] = _Edge(source, target, kind, evidence)
+            self._edges.append(self._edge_set[key])
+        elif isinstance(configured_by, list):
+            stored.evidence["configured_by"] = sorted({*stored.evidence.get("configured_by", []), *configured_by})
 
     @property
     def nodes(self) -> list[_Node]:
@@ -196,7 +201,7 @@ def build_graph_from_scan_data(data: dict[str, Any]) -> DepGraph:
         source_id = f"provider:{source}"
         graph.add_node(source_id, source, "provider", attributes={"provider": source})
 
-        agent_id = f"agent:{agent_name}"
+        agent_id = agent_graph_id_for(agent)
         graph.add_node(agent_id, agent_name, "agent", attributes=_agent_node_attributes(agent))
         graph.add_edge(source_id, agent_id, "hosts")
 
@@ -210,24 +215,22 @@ def build_graph_from_scan_data(data: dict[str, Any]) -> DepGraph:
             else:
                 srv_kind = "server_cred" if has_creds else "server"
 
-            srv_id = f"server:{agent_name}/{srv_name}"
+            srv_id = mcp_server_graph_id_for(server, agent)
             graph.add_node(srv_id, srv_name, srv_kind)
             graph.add_edge(agent_id, srv_id, "uses")
 
             tool_ids: list[tuple[str, str]] = []
             for tool_name in _tool_names_from_server(server):
-                tool_id = f"tool:{agent_name}/{srv_name}/{tool_name}"
+                tool_id = f"tool:{srv_id}:{tool_name}"
                 graph.add_node(tool_id, tool_name, "tool", attributes={"server": srv_id})
                 graph.add_edge(srv_id, tool_id, "provides_tool")
                 tool_ids.append((tool_name, tool_id))
 
             for cred_name in _credential_names_from_server(server):
-                # Env-var names are credential slots, not globally identifying
-                # secret material.  Scope them to the server to prevent the
-                # export from inventing cross-server reachability.
+                # Server-scoped slots; configured_by names the agents that set them.
                 cred_id = f"cred:{srv_id}:{cred_name}"
                 graph.add_node(cred_id, cred_name, "credential", attributes={"server": srv_id})
-                graph.add_edge(srv_id, cred_id, "exposes_cred")
+                graph.add_edge(srv_id, cred_id, "exposes_cred", evidence={"configured_by": [agent_id]})
                 for tool_name, tool_id in tool_ids:
                     graph.add_edge(
                         cred_id,
@@ -276,10 +279,8 @@ def build_graph_from_scan_data(data: dict[str, Any]) -> DepGraph:
     return graph
 
 
-# Cloud / identity / posture entity types the thin local walker doesn't produce
-# but the cloud-aware unified builder does (cloud inventory, CIEM, CIS, Snowflake
-# objects, exfil, RBAC, …). Pulled in so `agent-bom graph` shows the cloud estate
-# instead of a local-only graph.
+# Entity types only the unified builder produces (cloud inventory, CIEM, CIS,
+# Snowflake, RBAC), grafted so `agent-bom graph` shows the cloud estate.
 _CLOUD_ENTITY_TYPES = frozenset(
     {
         "cloud_resource",
@@ -347,8 +348,7 @@ def _merge_unified_graph_evidence(graph: DepGraph, data: dict[str, Any]) -> None
 
     edges = unified.edges.values() if isinstance(unified.edges, dict) else unified.edges
     for edge in edges:
-        # Only graft edges that touch at least one freshly-added cloud node and
-        # whose endpoints both exist, so we don't create dangling references.
+        # Graft only edges touching a freshly-added node with both endpoints present.
         if (edge.source in added or edge.target in added) and edge.source in graph._nodes and edge.target in graph._nodes:
             rel = edge.relationship.value if hasattr(edge.relationship, "value") else str(edge.relationship)
             graph.add_edge(edge.source, edge.target, rel, evidence=dict(getattr(edge, "evidence", {}) or {}))

@@ -21,7 +21,7 @@ from dataclasses import dataclass, field
 from agent_bom.graph.analysis import GraphAnalysisState, GraphAnalysisStatus
 from agent_bom.graph.applicability import Applicability, applicability_from_payload, edge_applicability
 from agent_bom.graph.container import AttackPath, UnifiedGraph
-from agent_bom.graph.edge import UnifiedEdge
+from agent_bom.graph.edge import UnifiedEdge, credential_edge_admits
 from agent_bom.graph.edge_lookup import _rel_value
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.path_evidence import STRUCTURAL_EXPOSURE_SUMMARY, package_path_covers_rollup
@@ -217,6 +217,7 @@ def _component_path(
     path_boost: Callable[[list[str]], float],
 ) -> AttackPath:
     servers = [hop for hop in hops if hop in graph.nodes and _kind(graph.nodes[hop]) == EntityType.SERVER.value]
+    entry_kind = _kind(graph.nodes[hops[0]]) if hops and hops[0] in graph.nodes else ""
 
     def labels(rel: str) -> list[str]:
         return sorted(
@@ -224,7 +225,9 @@ def _component_path(
                 graph.nodes[e.target].label
                 for server in servers
                 for e in outgoing.get(server, [])
-                if _rel_value(e) == rel and e.target in graph.nodes
+                if _rel_value(e) == rel
+                and e.target in graph.nodes
+                and (entry_kind != EntityType.AGENT.value or credential_edge_admits(e, hops[0]))
             }
         )
 

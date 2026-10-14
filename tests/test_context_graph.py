@@ -11,9 +11,13 @@ from agent_bom.context_graph import (
     build_context_graph,
     collect_lateral_paths,
     compute_interaction_risks,
-    find_lateral_paths,
     to_serializable,
 )
+
+
+def _lateral_paths(graph, source_id, max_depth=4):
+    return collect_lateral_paths(graph, [source_id], max_depth=max_depth)[0]
+
 
 # ---------------------------------------------------------------------------
 # Helpers — mirror JSON shapes from to_json() output
@@ -268,7 +272,7 @@ class TestLateralPaths:
             _agent(name="agent-b", servers=[_server(name="shared-srv", url="https://mcp.example/shared")]),
         ]
         graph = build_context_graph(agents, [])
-        paths = find_lateral_paths(graph, "agent:agent-a")
+        paths = _lateral_paths(graph, "agent:agent-a")
         assert len(paths) >= 1
         targets = {p.target for p in paths}
         assert "agent:agent-b" in targets
@@ -280,7 +284,7 @@ class TestLateralPaths:
         ]
         graph = build_context_graph(agents, [])
         # depth=0 means no expansion beyond start node
-        paths = find_lateral_paths(graph, "agent:agent-a", max_depth=0)
+        paths = _lateral_paths(graph, "agent:agent-a", max_depth=0)
         assert len(paths) == 0
 
     def test_no_cycles(self):
@@ -290,7 +294,7 @@ class TestLateralPaths:
             _agent(name="agent-b", servers=[_server(name="shared-srv", env={"API_KEY": "y"})]),
         ]
         graph = build_context_graph(agents, [])
-        paths = find_lateral_paths(graph, "agent:agent-a", max_depth=4)
+        paths = _lateral_paths(graph, "agent:agent-a", max_depth=4)
         # Should terminate, not infinite loop
         assert isinstance(paths, list)
 
@@ -301,7 +305,7 @@ class TestLateralPaths:
         ]
         blast = [_blast(severity="critical", agents=["agent-a", "agent-b"], servers=["srv"])]
         graph = build_context_graph(agents, blast)
-        paths = find_lateral_paths(graph, "agent:agent-a")
+        paths = _lateral_paths(graph, "agent:agent-a")
         # Should have non-zero risk from credentials + vulns
         if paths:
             assert paths[0].composite_risk > 0
@@ -312,7 +316,7 @@ class TestLateralPaths:
             _agent(name="agent-b", servers=[_server(name="srv", url="https://mcp.example/srv")]),
         ]
         graph = build_context_graph(agents, [])
-        paths = find_lateral_paths(graph, "agent:agent-a")
+        paths = _lateral_paths(graph, "agent:agent-a")
         cred_paths = [p for p in paths if p.credential_exposure]
         assert len(cred_paths) >= 1
 
@@ -325,7 +329,7 @@ class TestLateralPaths:
             _agent(name="agent-b", servers=[_server(name="srv", url="https://mcp.example/srv")]),
         ]
         graph = build_context_graph(agents, [])
-        paths = find_lateral_paths(graph, "agent:agent-a")
+        paths = _lateral_paths(graph, "agent:agent-a")
         tool_paths = [p for p in paths if p.tool_exposure]
         assert len(tool_paths) >= 1
 
@@ -335,7 +339,7 @@ class TestLateralPaths:
             _agent(name="agent-b", servers=[_server(name="shared", url="https://mcp.example/shared")]),
         ]
         graph = build_context_graph(agents, [])
-        paths = find_lateral_paths(graph, "agent:agent-a")
+        paths = _lateral_paths(graph, "agent:agent-a")
         for p in paths:
             assert " → " in p.summary
             assert p.summary.startswith("agent-a")
@@ -344,12 +348,12 @@ class TestLateralPaths:
         # Many agents sharing the same server
         agents = [_agent(name=f"agent-{i}", servers=[_server(name="shared", url="https://mcp.example/shared")]) for i in range(20)]
         graph = build_context_graph(agents, [])
-        paths = find_lateral_paths(graph, "agent:agent-0", max_depth=4)
+        paths = _lateral_paths(graph, "agent:agent-0", max_depth=4)
         assert len(paths) <= 100
 
     def test_nonexistent_source(self):
         graph = build_context_graph([], [])
-        paths = find_lateral_paths(graph, "agent:nonexistent")
+        paths = _lateral_paths(graph, "agent:nonexistent")
         assert paths == []
 
     def test_bfs_queue_bound_on_dense_graph(self):
@@ -368,7 +372,7 @@ class TestLateralPaths:
         ]
         graph = build_context_graph(agents, [])
         # Must complete quickly without hanging or OOM
-        paths = find_lateral_paths(graph, "agent:agent-0", max_depth=4)
+        paths = _lateral_paths(graph, "agent:agent-0", max_depth=4)
         assert isinstance(paths, list)
         assert len(paths) <= 100
         # Verify the constant is defined (regression guard)
@@ -478,7 +482,7 @@ class TestSerialization:
             _agent(name="agent-b", servers=[_server(name="shared", url="https://mcp.example/shared")]),
         ]
         graph = build_context_graph(agents, [])
-        paths = find_lateral_paths(graph, "agent:agent-a")
+        paths = _lateral_paths(graph, "agent:agent-a")
         risks = compute_interaction_risks(graph)
         data = to_serializable(graph, paths, risks)
         assert data["stats"]["agent_count"] == 2
@@ -499,7 +503,7 @@ class TestSerialization:
             _agent(name="agent-b", servers=[_server(name="shared", url="https://mcp.example/shared")]),
         ]
         graph = build_context_graph(agents, [])
-        paths = find_lateral_paths(graph, "agent:agent-a")
+        paths = _lateral_paths(graph, "agent:agent-a")
         data = to_serializable(graph, paths)
         assert len(data["lateral_paths"]) > 0
         assert "summary" in data["lateral_paths"][0]
@@ -552,7 +556,7 @@ class TestOutputIntegration:
             _agent(name="a2", servers=[_server(name="shared", url="https://mcp.example/shared")]),
         ]
         graph = build_context_graph(agents_data, [])
-        paths = find_lateral_paths(graph, "agent:a1")
+        paths = _lateral_paths(graph, "agent:a1")
         risks = compute_interaction_risks(graph)
         cg_data = to_serializable(graph, paths, risks)
 
@@ -769,7 +773,7 @@ class TestLateralPathDeterminism:
         paths: list = []
         for nid in sorted(graph.nodes.keys()):
             if graph.nodes[nid].kind == NodeKind.AGENT:
-                paths.extend(find_lateral_paths(graph, nid, max_depth=depth))
+                paths.extend(_lateral_paths(graph, nid, max_depth=depth))
         return paths
 
     def test_multi_source_path_order_is_stable_across_node_order(self):

@@ -246,21 +246,18 @@ def _cis_remediation_text(remediation: Any) -> str:
 
 
 def _exposure_related_locations(exposure_path: dict[str, Any]) -> list[dict]:
-    """Project an ExposurePath spine into SARIF relatedLocations.
-
-    Each hop becomes a logicalLocation so SARIF viewers can render the
-    agent → server → package → CVE → tool trust chain alongside the result.
-    """
+    """Project an ExposurePath spine plus its tool/credential side nodes into SARIF relatedLocations."""
 
     hops = [hop for hop in (exposure_path.get("hops") or []) if isinstance(hop, str) and hop]
-    # Side nodes (tools and credential references) remain outside the primary
-    # topology spine, but SARIF logical locations must retain the full bounded
-    # exposure context for viewers and downstream automation.
     nodes = [node for node in (exposure_path.get("nodeIds") or []) if isinstance(node, str) and node]
     locations = list(dict.fromkeys([*hops, *nodes]))
+    raw_labels = exposure_path.get("nodeLabels")
+    labels: dict[str, Any] = raw_labels if isinstance(raw_labels, dict) else {}
     related: list[dict] = []
     for index, hop in enumerate(locations):
         kind, _, name = hop.partition(":")
+        kind = {"vuln": "finding", "cred": "credential"}.get(kind, kind)  # kinds SARIF consumers already read
+        name = str(labels.get(hop) or name.rsplit(":", 1)[-1])
         related.append(
             {
                 "id": index,

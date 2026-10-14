@@ -2,14 +2,15 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import Any
 
+from agent_bom.canonical_ids import agent_graph_id
 from agent_bom.graph.analysis import GraphAnalysisState, GraphAnalysisStatus
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
-from agent_bom.graph.projection_support import _add_rel_edge, _agent_node_id, _mapping_list
+from agent_bom.graph.projection_support import _add_rel_edge, _mapping_list
 from agent_bom.graph.types import EntityType, RelationshipType
 from agent_bom.graph.util import clean_graph_part as _clean_graph_part
 from agent_bom.runtime.incident_feedback import (
@@ -165,17 +166,29 @@ def _iter_runtime_incident_records(report_json: Mapping[str, Any]) -> list[Runti
 def _resolve_feedback_agent_ids(
     agent_id: str,
     agent_name_to_ids: Mapping[str, list[str]],
+    *,
+    source_id: str = "",
+    known_ids: Callable[[str], bool] = lambda _node_id: False,
 ) -> list[str]:
-    """Map a runtime incident's ``agent_id`` onto existing graph agent node ids.
+    """Bind a runtime incident to exactly one graph agent, never a name fan-out.
 
-    Matches by agent name first (the common case). When the runtime id does not
-    name a discovered agent, falls back to the deterministic ``agent:<name>`` id
-    so the observed-reach is still recorded against a stable node.
+    An incident naming a graph id, or a source scope plus a name, binds to that
+    agent. A bare name binds only when one discovered agent carries it; with
+    several same-named agents it binds to none, because guessing would mark
+    every endpoint with one endpoint's incident. A name no discovered agent
+    carries keeps the deterministic ``agent:<name>`` node.
     """
     name = str(agent_id or "").strip()
-    if name and name in agent_name_to_ids and agent_name_to_ids[name]:
-        return list(agent_name_to_ids[name])
-    return [_agent_node_id(name or "unknown")]
+    if name.startswith("agent:") and known_ids(name):
+        return [name]
+    if source_id:
+        return [agent_graph_id(name or "unknown", source_id)]
+    candidates = list(dict.fromkeys(agent_name_to_ids.get(name, []))) if name else []
+    if len(candidates) == 1:
+        return candidates
+    if candidates:
+        return []
+    return [agent_graph_id(name or "unknown")]
 
 
 def _add_runtime_incident_feedback(
@@ -200,10 +213,16 @@ def _add_runtime_incident_feedback(
     if not records:
         return
 
-    for agent_id, agent_records in merge_records(records).items():
-        node_ids = _resolve_feedback_agent_ids(agent_id, agent_name_to_ids)
+    ambiguous = 0
+    for (source_id, agent_id), agent_records in merge_records(records).items():
+        node_ids = _resolve_feedback_agent_ids(agent_id, agent_name_to_ids, source_id=source_id, known_ids=graph.has_node)
+        ambiguous += not node_ids
         for node_id in node_ids:
             _project_agent_feedback(graph, node_id, agent_records, data_source_tag)
+    if ambiguous:
+        graph.analysis_status["runtime_incident_feedback"] = GraphAnalysisStatus(
+            status=GraphAnalysisState.LIMITED, reason_codes=("ambiguous_agent_name",), observed={"unbound_agents": ambiguous}
+        )
 
 
 def _project_agent_feedback(

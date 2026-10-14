@@ -1,4 +1,4 @@
-"""Backward-compatible mapping dicts for context_graph.py migration."""
+"""Map the lateral-movement context graph's node and edge kinds onto the unified schema."""
 
 from __future__ import annotations
 
@@ -16,9 +16,7 @@ NODE_KIND_TO_ENTITY: dict[str, EntityType] = {
     "credential": EntityType.CREDENTIAL,
     "tool": EntityType.TOOL,
     "vulnerability": EntityType.VULNERABILITY,
-    # Legacy context_graph exposes cloud IAM / workload identities as
-    # iam_role nodes. The canonical schema models those as service
-    # accounts so identity context survives conversion to UnifiedGraph.
+    # The context graph exposes cloud workload identities as iam_role nodes.
     "iam_role": EntityType.SERVICE_ACCOUNT,
 }
 
@@ -30,8 +28,6 @@ EDGE_KIND_TO_RELATIONSHIP: dict[str, RelationshipType] = {
     "vulnerable_to": RelationshipType.VULNERABLE_TO,
     "shares_server": RelationshipType.SHARES_SERVER,
     "shares_credential": RelationshipType.SHARES_CRED,
-    # Legacy iam_role -> agent attachment bridges to canonical identity
-    # membership. Keeping this mapping avoids silently dropping identity
-    # edges during to_unified_graph().
+    # The context graph's iam_role -> agent attachment serializes as identity membership.
     "attached_to": RelationshipType.MEMBER_OF,
 }
