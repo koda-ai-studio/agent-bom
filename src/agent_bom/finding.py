@@ -1356,15 +1356,14 @@ def cloud_cis_check_to_finding(check: dict, provider: str) -> "Finding":
 def iac_finding_to_finding(iac: dict) -> "Finding":
     """Convert one IaC misconfiguration into a unified Finding.
 
-    IaC scanning (Terraform / CloudFormation / K8s / Dockerfile) previously
-    reached only the JSON side block and SARIF's dedicated IaC loop, never the
-    unified stream — so exec ``total_findings``, ``--fail-on-severity``, and the
-    severity rollups under-counted it. Modeled as a ``CIS_FAIL`` carrying the
+    IaC (Terraform / CloudFormation / K8s / Dockerfile) joins the unified stream so
+    totals, ``--fail-on-severity`` and rollups count it. Modeled as a ``CIS_FAIL`` carrying the
     ``iac`` evidence marker so :func:`agent_bom.finding_scope.security_domain_for`
     keeps its primary CSPM lane while :func:`_is_iac_misconfig` also adds the ASPM
-    lens (IaC is a code-layer config concern). SARIF keeps rendering it via the
-    richer dedicated loop; the unified SARIF loop skips it to avoid duplicates.
+    lens. The rule's declared 800-53 controls become scored tags; SARIF renders it
+    via its dedicated IaC loop, which the unified SARIF loop skips.
     """
+    from agent_bom.evidence.iac_controls import iac_declared_controls
     from agent_bom.security import sanitize_text
 
     rule_id = sanitize_text(str(iac.get("rule_id", "") or "unknown"), max_len=80)
@@ -1397,6 +1396,7 @@ def iac_finding_to_finding(iac: dict) -> "Finding":
         remediation_guidance=remediation or None,
         compliance_tags=sorted(set(compliance)),
         attack_tags=sorted(set(attack)),
+        **iac_declared_controls(compliance),
         evidence={
             "iac": True,
             "rule_id": rule_id,
