@@ -58,27 +58,47 @@ exploitation or successful data access.
 
 **Which agent uses the vulnerable component? What could it reach? What evidence supports that path?**
 Correlate retained scans by exact, tenant-scoped identities; trace the recorded
-blast radius across packages, workloads, tools, identities and resources.
-Inspect each relationship's source and reachability basis, then rescan the same
-scope to check what changed.
+blast radius from each agent through its MCP servers to packages, findings,
+credentials and data stores. Inspect each relationship's source and evidence
+kind, then rescan the same scope to check what changed.
 
-<p align="center"><a href="docs/images/graph-relationship-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/graph-relationship-light-live.png"><img src="docs/images/graph-relationship-dark-live.png" alt="Repository pin, image SBOM and Kubernetes workload resolving to one pillow package linked to KEV-listed CVE-2023-4863, with the advisory receipt open" width="1100"></picture></a></p>
+<p align="center"><a href="docs/images/graph-environment-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/graph-environment-light-live.png"><img src="docs/images/graph-environment-dark-live.png" alt="Sample production AI environment: Document Intake Agent uses a document-tools MCP server that depends on pillow 9.0.0, linked to KEV-listed CVE-2023-4863; Support Triage Agent uses a ticketing MCP server that references TICKETING_API_KEY, which can access a customer ticket archive" width="1100"></picture></a></p>
 
-*Current-source preview; the published `0.108.4` UI predates this workspace.*
-Three independent sources resolve to one `pillow@9.0.0` linked to KEV-listed
-CVE-2023-4863. Real parsers, modeled infrastructure; a graph path does not
-prove exploitation.
+*Current-source preview with a fictional sample estate; the published `0.108.4`
+UI predates this workspace. Dashed use, credential and access links are
+configured or modeled, not observed at runtime. Path analysis covers the
+collected snapshot only.*
+
+**Follow one finding from agent to verified fix:**
+
+1. **Select an agent.** Document Intake Agent → document-tools MCP → `pillow@9.0.0`.
+2. **Inspect the finding.** CVE-2023-4863 is high severity and KEV-listed; the
+   headline counts severity and KEV status separately.
+3. **Inspect the evidence.** Select the arrow: why it is linked, which source
+   recorded it, whether it is static, modeled or observed, when, and what
+   remains unknown.
+4. **Choose a remediation.** The [remediation plan](docs/PRODUCT_TOUR.md#engineers-and-grc-fix-and-verify)
+   proposes the fixed version. A graph scenario can preview a change; both are
+   proposals, not verification.
+5. **Rescan the changed input.** The [before/after example](examples/connected-bom/README.md)
+   changes the pin to `pillow@10.0.1`, rescans, and retains both snapshots.
+6. **Compare.** The finding disappears from the second snapshot; an unrelated
+   modeled cloud check remains open. That verifies the changed input, not an
+   installed package or a running deployment.
+
+Steps 1–4 are in the dashboard. Step 5 runs from a source checkout; step 6 is
+the retained snapshot diff (graph drift lens or `rescan-diff.json`).
+
+**Supporting evidence: one package, three parsed inputs.** A repository pin, an
+image SBOM and a modeled Kubernetes workload resolve to one `pillow@9.0.0`. The
+image inventory and the deployment occurrence stay separate nodes; the advisory
+receipt is open.
+
+<p align="center"><a href="docs/images/graph-relationship-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/graph-relationship-light-live.png"><img src="docs/images/graph-relationship-dark-live.png" alt="Repository pin, image inventory and Kubernetes deployment occurrence resolving to one pillow package linked to KEV-listed CVE-2023-4863, with the plain-language relationship evidence open" width="1100"></picture></a></p>
+
+*Real parsers, modeled infrastructure; a graph path does not prove exploitation.*
 
 [Explore context, correlation and reachability](docs/PRODUCT_TOUR.md#context-correlation-and-reachability) · [Run the reference lab](examples/reference-evidence-lab/README.md)
-
-**Explore an environment, repository or cloud estate.** Start with a scoped view,
-follow the ranked paths, and open any node or arrow for its source evidence.
-Badges show provider, environment tier and package ecosystem; rings mark the
-worst linked finding.
-
-<p align="center"><a href="docs/images/graph-environment-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/graph-environment-light-live.png"><img src="docs/images/graph-environment-dark-live.png" alt="Sample production AI environment where two agents and a model-serving workload reach vulnerable packages, a KEV-listed advisory, an exposed API key and a customer data store" width="1100"></picture></a></p>
-
-*Sample estates: fictional names and IDs, published advisories.*
 
 <details>
 <summary>Repository and cloud investigations</summary>
@@ -91,6 +111,31 @@ and its vulnerable packages:
 Follow a public API gateway into a vulnerable workload, its role and a PII bucket:
 
 <p align="center"><a href="docs/images/graph-cloud-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/graph-cloud-light-live.png"><img src="docs/images/graph-cloud-dark-live.png" alt="Sample cloud account where a public API gateway exposes a workload with a critical advisory that authenticates as a role permitted to read a PII bucket" width="1100"></picture></a></p>
+
+</details>
+
+<details>
+<summary>Reproduce these screenshots from a source checkout</summary>
+
+The pictured graphs are the committed UI build serving fictional fixtures
+(`ui/scripts/product-proof-scope-showcase.mjs` and the hash-pinned
+reference-lab output). From the repository root:
+
+```bash
+cd ui && npm ci && npm run build
+npm run capture:product-proof   # writes docs/images/*-live.png
+```
+
+To explore a labeled demo estate in the current-source dashboard instead
+(different sample data from the screenshots):
+
+```bash
+make build-ui
+uv run --extra ui agent-bom serve --demo-estate --allow-insecure-no-auth --port 8422
+```
+
+Open **http://127.0.0.1:8422/graph**. Loopback only; the flag disables
+authentication for local evaluation.
 
 </details>
 
