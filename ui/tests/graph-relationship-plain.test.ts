@@ -8,7 +8,7 @@ const base: UnifiedEdge = { id: "e", source: "a", target: "b", relationship: "vu
 
 describe("plain relationship summary", () => {
   it("leads with a specific reason, a human source and the evidence kind for an advisory match", () => {
-    const summary = plainRelationshipSummary({ ...base, evidence: { tier: "static_evidence", source: "bundled_advisory_scanner", source_kind: "bundled_advisory_scanner" } }, "pillow@9.0.0", "CVE-2023-4863");
+    const summary = plainRelationshipSummary({ ...base, evidence: { tier: "static_scan", source: "bundled_advisory_scanner", source_kind: "bundled_advisory_scanner" } }, "pillow@9.0.0", "CVE-2023-4863");
     expect(summary).toEqual({
       why: "pillow@9.0.0 is recorded as affected by CVE-2023-4863.",
       source: "Bundled advisory database",
