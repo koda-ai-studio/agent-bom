@@ -1363,7 +1363,6 @@ def iac_finding_to_finding(iac: dict) -> "Finding":
     lens. The rule's declared 800-53 controls become scored tags; SARIF renders it
     via its dedicated IaC loop, which the unified SARIF loop skips.
     """
-    from agent_bom.evidence.iac_controls import iac_declared_controls
     from agent_bom.security import sanitize_text
 
     rule_id = sanitize_text(str(iac.get("rule_id", "") or "unknown"), max_len=80)
@@ -1410,10 +1409,9 @@ def iac_finding_to_finding(iac: dict) -> "Finding":
         impact_category="iac_misconfiguration",
         id=stable_id("iac", rule_id, file_path, str(line_number)),
     )
-    finding.nist_800_53_tags, finding.fedramp_tags = iac_declared_controls(compliance)
-    from agent_bom.compliance_hub import apply_hub_classification
+    from agent_bom.evidence.iac_controls import classify_iac_finding
 
-    return apply_hub_classification(finding)
+    return classify_iac_finding(finding, compliance)
 
 
 def snowflake_governance_finding_to_finding(finding: dict, account: str) -> "Finding":
