@@ -480,6 +480,7 @@ def _render_main(scan: ScanResult) -> list[str]:
         "Security graph data model",
         "Every node kind, edge kind, evidence tier and normalization table behind the security graph. "
         "The [graph contract](CONTRACT.md) states what the graph guarantees; this page lists what it is made of. "
+        "How report fields reach the database, exports and this graph is in the [data model atlas](../DATA_MODEL.md). "
         "Detail pages: [relationship pairs](data-model/relationships.md) · [entity emitters and id formats](data-model/entities.md).",
     )
     out += [
