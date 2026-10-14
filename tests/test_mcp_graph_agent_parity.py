@@ -264,8 +264,11 @@ def test_summary_view_returns_the_requested_page(showcase: _Estate) -> None:
     from agent_bom.mcp_tools.graph import exposure_paths_impl
 
     raw = showcase.mcp_raw(exposure_paths_impl, limit=100)
-    assert json.loads(raw)["count"] == 100
-    assert len(raw) <= 100_000
+    payload = json.loads(raw)
+    assert payload["count"] == 100
+    # Container-to-CVE paths name the image digest in three hop ids.
+    assert max(len(json.dumps(path, separators=(",", ":"))) for path in payload["paths"]) <= 1_400
+    assert len(raw) <= 140_000
 
 
 # ── P1-6: every hop resolves to a recorded edge ──────────────────────────────

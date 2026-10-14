@@ -149,7 +149,9 @@ def _exposure_path_for_attack_path(
     servers = [hop for hop in hops if hop["role"] == "server"]
     agents = [hop for hop in hops if hop["role"] == "agent"]
     findings = _finding_ids_for_nodes(nodes_by_id, path.hops, path.vuln_ids)
-    label_parts = [findings[0] if findings else target["label"], agents[0]["label"] if agents else source["label"]]
+    finding_hops = [hop for hop in hops if hop["role"] == "finding"]
+    headline = finding_hops[0]["label"] if finding_hops else (target["label"] or (findings[0] if findings else ""))
+    label_parts = [headline, agents[0]["label"] if agents else source["label"]]
     from agent_bom.graph.hop_evidence import exposure_hop_evidence
     from agent_bom.graph.path_evidence import exposure_advisory_evidence, exposure_evidence_dimensions, qualify_exposure_reachability
 
