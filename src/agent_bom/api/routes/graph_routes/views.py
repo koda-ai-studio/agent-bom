@@ -36,12 +36,12 @@ from agent_bom.api.routes.graph_routes.params import (
     _tag_diff_change_kinds,
 )
 from agent_bom.api.routes.graph_routes.payloads import (
-    _derived_attack_path_page,
     _fix_first_graph_view_payload,
     _governance_graph_payload,
     _scoped_graph_response,
     _serialize_attack_path_queue,
 )
+from agent_bom.cloud.runtime_graph_evidence import _enrich_loaded_graph_runtime_evidence
 from agent_bom.config import GRAPH_INVESTIGATION_NODE_BUDGET
 from agent_bom.graph.completeness import graph_completeness
 from agent_bom.graph.scope import GraphScopeKind
@@ -194,20 +194,19 @@ async def get_graph_edge_changes(
 
 
 async def _ranked_queue_page(graph_store: Any, tenant: str, scan_id: str, page_args: dict[str, Any]) -> tuple[Any, int, int, str]:
-    """Rank one queue page: snapshot path index, else persisted rows, else derive on read."""
-    from agent_bom.api.attack_path_queue import ranked_persisted_path_page, ranked_snapshot_path_page
+    """Rank one queue page through the service MCP shares, under REST admission control."""
+    from agent_bom.api.attack_path_queue import ranked_queue_page
 
-    # A current index is the complete derived set, ranked as a read-time
-    # derivation would rank it, without loading the whole graph.
-    indexed = await _runtime._graph_store_call(ranked_snapshot_path_page, graph_store, scan_id=scan_id, tenant_id=tenant, **page_args)
-    if indexed is not None:
-        return indexed, 0, indexed.snapshot_total, "derived_graph_paths"
-    ranked = await _runtime._graph_store_call(ranked_persisted_path_page, graph_store, scan_id=scan_id, tenant_id=tenant, **page_args)
-    if ranked.snapshot_total:
-        return ranked, ranked.snapshot_total, 0, "persisted_graph_paths"
-    graph = await _runtime._load_graph_for_investigation(graph_store, scan_id=ranked.scan_id, tenant_id=tenant)
-    ranked = await _runtime._graph_compute_call(_derived_attack_path_page, graph, **page_args)
-    return ranked, 0, ranked.snapshot_total, "derived_graph_paths"
+    page = await ranked_queue_page(
+        graph_store,
+        tenant_id=tenant,
+        scan_id=scan_id,
+        enrich=_enrich_loaded_graph_runtime_evidence,
+        store_call=_runtime._graph_store_call,
+        compute_call=_runtime._graph_compute_call,
+        **page_args,
+    )
+    return page.ranked, page.materialized_paths, page.derived_paths, page.source
 
 
 @investigation_router.get("/graph/attack-paths", tags=["graph"], responses={200: _ATTACK_PATHS_OPENAPI_RESPONSE})
@@ -419,6 +418,7 @@ async def post_graph_should_i_deploy(request: Request, body: GraphDeployDecision
         limit=body.limit,
         warn_risk=body.warn_risk,
         block_risk=body.block_risk,
+        view="full",
         _get_graph_store=lambda: graph_store,
         _truncate_response=lambda value: value,
     )

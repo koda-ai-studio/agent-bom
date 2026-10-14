@@ -13923,6 +13923,18 @@ components:
             type: object
           title: Paths
           type: array
+        ranking:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Ranking
+        risk_scale:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Risk Scale
         scan_id:
           anyOf:
           - type: string
@@ -13936,6 +13948,11 @@ components:
           - type: string
           - type: 'null'
           title: Snapshot Generation
+        snapshot_total:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Snapshot Total
         stats:
           anyOf:
           - additionalProperties: true
@@ -13953,6 +13970,11 @@ components:
           - type: integer
           - type: 'null'
           title: Total
+        view:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: View
       required:
       - schema_version
       - tool

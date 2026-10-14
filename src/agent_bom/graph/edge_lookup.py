@@ -11,10 +11,36 @@ def _rel_value(edge: UnifiedEdge) -> str:
     return edge.relationship.value if hasattr(edge.relationship, "value") else str(edge.relationship)
 
 
+def _edge_id_key(edge_id: str) -> tuple[str, ...]:
+    # Empty endpoints never name a real hop, so id keys cannot collide with pair keys.
+    return ("", "", edge_id)
+
+
+def _hop_edge(by_pair: _EdgeLookup, source: str, target: str, key: str | None) -> UnifiedEdge | None:
+    """Resolve one path hop: relationship key, then recorded edge id, then the hop pair.
+
+    Producers record ``AttackPath.edges`` either as relationship names or as the
+    edge ids themselves (trace steps), so a relationship-only lookup left those
+    hops unresolved.
+    """
+    if key:
+        edge = by_pair.get((source, target, key))
+        if edge is not None:
+            return edge
+        by_id = by_pair.get(_edge_id_key(key))
+        if by_id is not None and (
+            (by_id.source, by_id.target) == (source, target)
+            or (by_id.is_bidirectional and (by_id.target, by_id.source) == (source, target))
+        ):
+            return by_id
+    return by_pair.get((source, target))
+
+
 def _build_edge_lookup(edges: list[UnifiedEdge] | None) -> _EdgeLookup:
     """Index directed hop pairs once for a response serialization batch."""
     by_pair: _EdgeLookup = {}
     for edge in edges or []:
+        by_pair.setdefault(_edge_id_key(edge.id), edge)
         by_pair.setdefault((edge.source, edge.target), edge)
         by_pair.setdefault((edge.source, edge.target, _rel_value(edge)), edge)
         if edge.is_bidirectional:

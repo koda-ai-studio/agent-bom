@@ -110,7 +110,7 @@ def test_mcp_tool_wrapper_still_binds_to_process_tenant(api, monkeypatch):
 
     _, store, _ = api
     monkeypatch.setenv("AGENT_BOM_MCP_TENANT_ID", "tenant-b")
-    payload = json.loads(asyncio.run(exposure_paths_impl(tenant_id="tenant-a", _get_graph_store=lambda: store)))
+    payload = json.loads(asyncio.run(exposure_paths_impl(tenant_id="tenant-a", view="full", _get_graph_store=lambda: store)))
     assert payload["tenant_id"] == "tenant-b"
     assert _labels(payload) == {"tenant-b-reader", "tenant-b-store"}
 
