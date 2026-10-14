@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from .postgres_graph_aliases import NODE_ALIASES_DDL
 from .postgres_graph_path_identity import ADD_IDENTITY_COLUMNS
 
 _GRAPH_TABLES_DDL: tuple[str, ...] = (
@@ -245,4 +246,5 @@ _GRAPH_TABLES_MIGRATION_DDL: tuple[str, ...] = (
                 CREATE INDEX IF NOT EXISTS idx_pg_graph_node_search_severity
                 ON graph_node_search(tenant_id, scan_id, severity)
                 """,
+    *NODE_ALIASES_DDL,
 )

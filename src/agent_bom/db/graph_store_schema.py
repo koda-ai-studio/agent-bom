@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     pass
 
 from agent_bom.core.settings import env_raw
+from agent_bom.db.graph_node_aliases import NODE_ALIASES_DDL
 from agent_bom.graph import (
     AttackPath,
     EntityType,
@@ -29,7 +30,7 @@ DEFAULT_GRAPH_TENANT_ID = "default"
 GRAPH_SNAPSHOT_KINDS = frozenset({"scan", "correlation"})
 
 
-_GRAPH_SCHEMA_VERSION = 8
+_GRAPH_SCHEMA_VERSION = 9
 
 
 _DEFAULT_GRAPH_WRITE_BATCH_SIZE = 1000
@@ -69,6 +70,7 @@ _GRAPH_TENANT_TABLE_KEYS: dict[str, tuple[str, ...]] = {
     "graph_correlation_runs": ("correlation_id",),
     "attack_paths": ("path_key", "scan_id"),
     "interaction_risks": ("pattern", "agents", "scan_id"),
+    "graph_node_aliases": ("alias_id",),
 }
 
 
@@ -270,6 +272,7 @@ CREATE INDEX IF NOT EXISTS idx_gcr_recent ON graph_correlation_runs(tenant_id, c
 """
     + _ATTACK_PATHS_DDL
     + _ATTACK_PATH_INDEXES
+    + NODE_ALIASES_DDL
     + """
 -- ── Snapshot-materialized attack paths (complete ranked set, one row per occurrence) ──
 CREATE TABLE IF NOT EXISTS graph_attack_paths (

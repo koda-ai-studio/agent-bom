@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import re
 import sqlite3
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from contextlib import ExitStack, closing, contextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -23,6 +23,7 @@ from agent_bom.api.graph_store_support import (
 from agent_bom.api.storage.sqlite_graph_search import ensure_search_index
 from agent_bom.db import graph_store as sqlite_graph_store
 from agent_bom.db.graph_bootstrap import ensure_read_schema, invalidate_read_schema
+from agent_bom.db.graph_node_aliases import resolve_node_aliases
 from agent_bom.db.graph_write_admission import graph_writer_admission
 from agent_bom.graph import (
     EntityType,
@@ -183,6 +184,17 @@ class SQLiteGraphStoreBase:
         finally:
             select_cur.close()
 
+    def resolve_node_aliases(self, *, tenant_id: str = "", node_ids: Iterable[str]) -> dict[str, str]:
+        """Map node ids that canonicalization replaced to their canonical id, within one tenant."""
+        tenant_id = sqlite_graph_store.normalize_graph_tenant_id(tenant_id)
+        conn = self._open_ro_conn()
+        if conn is None:
+            return {}
+        try:
+            return resolve_node_aliases(conn, tenant_id=tenant_id, node_ids=node_ids)
+        finally:
+            conn.close()
+
     def delete_tenant(self, *, tenant_id: str = "") -> int:
         """Delete graph rows for one tenant and return the number of rows removed."""
         tenant_id = sqlite_graph_store.normalize_graph_tenant_id(tenant_id)
@@ -197,6 +209,7 @@ class SQLiteGraphStoreBase:
                 "graph_nodes",
                 "graph_snapshots",
                 "graph_filter_presets",
+                "graph_node_aliases",
             ):
                 cursor = conn.execute(f"DELETE FROM {table} WHERE tenant_id = ?", (tenant_id,))  # nosec B608 - table list is static
                 total += max(cursor.rowcount, 0)

@@ -1,34 +1,13 @@
-"""Storage-backed graph build workspace (#4075, PR-1 of the producer-streaming series).
+"""Storage-backed staging area for building and persisting the correlated graph.
 
-Foundation for streaming the correlated-graph *producer*
-(:func:`agent_bom.graph.builder.build_unified_graph_from_report`) to a
-storage-backed staging area instead of materialising the entire
-:class:`~agent_bom.graph.container.UnifiedGraph` in memory.
-
-A :class:`GraphBuildWorkspace` accepts nodes and edges in **bounded batches** —
+A :class:`GraphBuildWorkspace` accepts nodes and edges in bounded batches,
 spilling each batch to a backing store (a private SQLite temp DB, or the shared
-Postgres) and never retaining the full set — and yields them back in bounded
-batches for a downstream consumer (the persist write path). Its in-memory
-working set is bounded by ``batch_size``, not by the total graph size.
-
-Scope of this PR (PR-1 of the four-PR series):
-
-* the workspace primitive + both backends (SQLite + Postgres), tenant-scoped,
-  idempotent, cross-process safe on Postgres;
-* the first bounded consumer — the persist path can stream a graph through the
-  workspace into the store and produce a byte-identical snapshot (opt-in via
-  ``AGENT_BOM_GRAPH_BUILD_WORKSPACE`` so the shipped default path is unchanged).
-
-The follow-on foundation adds **random-access reads** to both backends —
-``get_node_payload`` / ``iter_node_payloads_by_type`` /
-``iter_edge_payloads_by_source`` / ``iter_edge_payloads_by_target`` — backed by
-indexed ``entity_type`` / ``source_id`` / ``target_id`` columns. These are the
-read side a store-backed producer needs so the builder's Phase-B overlays can
-query the staged graph without materialising the whole node set. They are
-**default-off and unwired**: no builder, container, or persist consumer calls
-them yet. The store-backed live graph container that consumes them (removing the
-builder's own materialisation to realise the #4055 peak-RSS bound end to end) is
-a later PR held for owner sign-off, and is intentionally out of scope here.
+Postgres) and yields them back in bounded batches, so its working set is
+bounded by ``batch_size`` rather than the graph size. The backends also serve
+the indexed random-access, keyset-paged and delete operations the store-backed
+live graph container (:mod:`agent_bom.graph.store_backed`) is built on.
+Both backends are tenant-scoped; Postgres rows are additionally namespaced by
+``workspace_id`` and bound to FORCE row-level security.
 """
 
 from __future__ import annotations
@@ -114,9 +93,7 @@ class WorkspaceBackend(Protocol):
 
     def iter_edge_payloads(self, tenant_id: str, batch_size: int) -> Iterator[str]: ...
 
-    # Random-access reads (#4075 PR-2 foundation) — the read side a store-backed
-    # producer needs so Phase-B overlays can query without materialising the
-    # whole node set. No consumer is wired to these yet.
+    # Random-access reads behind the store-backed live graph.
     def get_node_payload(self, tenant_id: str, node_id: str) -> str | None: ...
 
     def get_edge_payload(self, tenant_id: str, edge_key: str) -> str | None: ...
@@ -127,12 +104,8 @@ class WorkspaceBackend(Protocol):
 
     def iter_edge_payloads_by_target(self, tenant_id: str, node_id: str, batch_size: int) -> Iterator[str]: ...
 
-    # Keyset-paged reads (#4075 PR-3) — each call runs one bounded, self-contained
-    # query (no server-side cursor left open), so the store-backed live graph
-    # container can interleave write-back between pages without a cursor conflict.
-    # ``fetch_node_page`` rows are ``(seq, node_id, payload)``; ``fetch_edge_page``
-    # rows are ``(seq, payload)``. Both order by ``seq`` (insertion order) and
-    # return rows with ``seq > after_seq`` — keyset the last seq to page forward.
+    # Keyset pages: one bounded query per call, ordered by insertion ``seq``,
+    # rows ``(seq, node_id, payload)`` / ``(seq, payload)`` with ``seq > after_seq``.
     def fetch_node_page(self, tenant_id: str, after_seq: int, limit: int, entity_type: str | None = None) -> list[tuple[int, str, str]]: ...
 
     def fetch_edge_page(
@@ -142,6 +115,11 @@ class WorkspaceBackend(Protocol):
     def count_nodes(self, tenant_id: str) -> int: ...
 
     def count_edges(self, tenant_id: str) -> int: ...
+
+    # Deletes by key, used when node ids are re-keyed onto a canonical id.
+    def delete_node_payloads(self, tenant_id: str, node_ids: Iterable[str]) -> None: ...
+
+    def delete_edge_payloads(self, tenant_id: str, edge_keys: Iterable[str]) -> None: ...
 
     def close(self) -> None: ...
 
@@ -159,19 +137,12 @@ class _SQLiteWorkspaceBackend:
             self._path = Path(db_path)
             self._owns_file = False
         self._conn = sqlite3.connect(str(self._path))
-        # This database is a private, process-local staging workspace that is
-        # discarded after the graph is persisted.  WAL + full fsync semantics
-        # turn the producer's many bounded upserts into runner-disk latency and
-        # provide no recovery value: a crashed build is never selectable.  Keep
-        # the journal in memory and disable synchronous flushes while retaining
-        # SQLite's transactional statement semantics for the live build.
+        # A private scratch database discarded after persist: a crashed build is
+        # never selectable, so durable journaling would only add disk latency.
         self._conn.execute("PRAGMA journal_mode=MEMORY")
         self._conn.execute("PRAGMA synchronous=OFF")
-        # ``entity_type`` (nodes) and ``source_id``/``target_id`` (edges) back the
-        # random-access read indexes; kept in lock-step with the Postgres backend
-        # (graph_build_workspace_nodes/_edges). SQLite workspace DBs are private
-        # temp files created fresh per build, so the columns live directly in the
-        # CREATE TABLE (no ALTER-migration path is reachable, unlike shared PG).
+        # Indexed lookup columns mirror the Postgres workspace tables; a fresh
+        # temp file per build needs no ALTER migration path.
         self._conn.execute(
             "CREATE TABLE IF NOT EXISTS ws_nodes ("
             "tenant_id TEXT NOT NULL, node_id TEXT NOT NULL, "
@@ -318,6 +289,19 @@ class _SQLiteWorkspaceBackend:
 
     def count_edges(self, tenant_id: str) -> int:
         return self._count("ws_edges", tenant_id)
+
+    def _delete(self, table: str, key_col: str, tenant_id: str, keys: Iterable[str]) -> None:
+        self._conn.executemany(
+            f"DELETE FROM {table} WHERE tenant_id = ? AND {key_col} = ?",  # nosec B608 - static table/col
+            ((tenant_id, key) for key in keys),
+        )
+        self._conn.commit()
+
+    def delete_node_payloads(self, tenant_id: str, node_ids: Iterable[str]) -> None:
+        self._delete("ws_nodes", "node_id", tenant_id, node_ids)
+
+    def delete_edge_payloads(self, tenant_id: str, edge_keys: Iterable[str]) -> None:
+        self._delete("ws_edges", "edge_key", tenant_id, edge_keys)
 
     def close(self) -> None:
         try:
@@ -532,6 +516,22 @@ class _PostgresWorkspaceBackend:
 
     def count_edges(self, tenant_id: str) -> int:
         return self._count("graph_build_workspace_edges", tenant_id)
+
+    def _delete(self, table: str, key_col: str, tenant_id: str, keys: Iterable[str]) -> None:
+        batch = tuple((self._workspace_id, tenant_id, key) for key in keys)
+        with self._conn.transaction():
+            self._bind_tenant(tenant_id)
+            with self._conn.cursor() as cur:
+                cur.executemany(
+                    f"DELETE FROM {table} WHERE workspace_id = %s AND tenant_id = %s AND {key_col} = %s",  # nosec B608 - static
+                    batch,
+                )
+
+    def delete_node_payloads(self, tenant_id: str, node_ids: Iterable[str]) -> None:
+        self._delete("graph_build_workspace_nodes", "node_id", tenant_id, node_ids)
+
+    def delete_edge_payloads(self, tenant_id: str, edge_keys: Iterable[str]) -> None:
+        self._delete("graph_build_workspace_edges", "edge_key", tenant_id, edge_keys)
 
     def close(self) -> None:
         # Drop only rows this backend touched. The shared tables persist for

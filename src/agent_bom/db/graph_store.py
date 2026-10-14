@@ -76,9 +76,9 @@ from agent_bom.db.graph_store_write import (
     _write_attack_paths,
     _write_edges,
     _write_interaction_risks,
-    _write_nodes,
     _write_snapshot_paths,
     _write_snapshot_row,
+    write_nodes_and_aliases,
 )
 from agent_bom.db.graph_write_admission import graph_writer_admission
 from agent_bom.graph import (
@@ -505,7 +505,7 @@ def save_graph_streaming(
     _clear_snapshot_rows(conn, tenant=tenant, scan=scan)
 
     stats = _SnapshotStats()
-    _write_nodes(conn, nodes, stats, scan=scan, tenant=tenant, batch_size=batch_size)
+    write_nodes_and_aliases(conn, nodes, stats, scan=scan, tenant=tenant, batch_size=batch_size, now=now)
     _write_edges(conn, edges, stats, scan=scan, tenant=tenant, now=now, batch_size=batch_size)
     if previous_scan:
         _carry_forward_edge_continuity(conn, previous_scan=previous_scan, scan=scan, tenant=tenant)

@@ -43,7 +43,7 @@ def project_side_scan_targets(
                 attributes={
                     "resource_id": target_id_raw,
                     "resource_name": _clean_graph_part(target.get("name")) or target_id,
-                    "resource_type": "workload_disk",
+                    "resource_type": "instance" if target_type == "instance" else "workload_disk",
                     "resource_kind": target_type,
                     "cloud_provider": target_provider,
                     "cloud_service": "cwpp-side-scan",
@@ -55,7 +55,7 @@ def project_side_scan_targets(
                     "size_gb": target.get("size_gb"),
                     "encryption": _clean_graph_part(target.get("encryption")) or "unknown",
                 },
-                data_sources=data_sources,
+                data_sources=sorted({*data_sources, "cwpp-side-scan"}),
                 dimensions=NodeDimensions(cloud_provider=target_provider, surface="cwpp"),
             )
         )

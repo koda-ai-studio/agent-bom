@@ -28,6 +28,15 @@ def _resource_conflicts(claims: dict[str, Any] | None, node: Any) -> bool:
     )
 
 
+def _nodes_through_aliases(store: Any, *, tenant_id: str, scan_id: str, identities: set[str]) -> dict[str, Any]:
+    """An id a source minted before canonicalization merged it resolves to the canonical node."""
+    resolver = getattr(store, "resolve_node_aliases", None)
+    aliases: dict[str, str] = resolver(tenant_id=tenant_id, node_ids=identities) if callable(resolver) else {}
+    wanted = identities | set(aliases.values())
+    canonical = {node.id: node for node in store.nodes_by_ids(tenant_id=tenant_id, scan_id=scan_id, node_ids=wanted)}
+    return {identity: canonical[aliases.get(identity, identity)] for identity in identities if aliases.get(identity, identity) in canonical}
+
+
 def correlate_inventory_observations(
     store: Any, *, tenant_id: str, scan_id: str, observations: Sequence[Mapping[str, Any]]
 ) -> dict[str, dict[str, Any]]:
@@ -45,7 +54,7 @@ def correlate_inventory_observations(
     before = store.snapshot_identity(tenant_id=tenant_id, scan_id=scan_id)
     if before[0] != scan_id or not before[1]:
         return {str(row["observation_id"]): {"state": "snapshot_unavailable", "execution_proven": False} for row in rows}
-    nodes = {node.id: node for node in store.nodes_by_ids(tenant_id=tenant_id, scan_id=scan_id, node_ids=identities)}
+    nodes = _nodes_through_aliases(store, tenant_id=tenant_id, scan_id=scan_id, identities=identities)
     result: dict[str, dict[str, Any]] = {}
     for row in rows:
         raw_metadata = row.get("metadata")
@@ -96,6 +105,7 @@ def correlate_inventory_observations(
             binding.update(
                 state="exact_identifier",
                 basis="source_reported_canonical_id",
+                **({"alias_of": identity} if identity != node.id else {}),
                 node_id=node.id,
                 scan_id=scan_id,
                 snapshot_generation=before[1],

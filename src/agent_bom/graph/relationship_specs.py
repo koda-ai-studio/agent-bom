@@ -327,12 +327,20 @@ _SPECS: tuple[RelationshipSpec, ...] = (
         direction="bidirectional",
         traversable=False,
     ),
+    # A candidate is never a merge: weak identity signals (host name, address,
+    # name within an account) propose that two workloads, identities or data
+    # stores may be one asset. Pairs stay within one asset family.
     _spec(
         R.POSSIBLY_CORRELATES_WITH,
         T.CORRELATION,
         "correlation",
         (E.AGENT, E.SERVER),
         (E.AGENT, E.SERVER),
+        extra=(
+            *product((E.CLOUD_RESOURCE, E.CLUSTER, E.CONTAINER), (E.CLOUD_RESOURCE, E.CLUSTER, E.CONTAINER)),
+            *product(_WORKLOAD_IDENTITIES + (E.USER, E.MANAGED_IDENTITY), _WORKLOAD_IDENTITIES + (E.USER, E.MANAGED_IDENTITY)),
+            (E.DATA_STORE, E.DATA_STORE),
+        ),
         direction="bidirectional",
         traversable=False,
     ),

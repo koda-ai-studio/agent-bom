@@ -1,6 +1,19 @@
 {
   "aws": {
     "analysis_status": {
+      "asset_canonicalization": {
+        "limits": {},
+        "observed": {
+          "aliases": 0,
+          "candidate_edges": 0,
+          "conflicts": 0,
+          "merged_groups": 0,
+          "observations": 7,
+          "self_edges_dropped": 0
+        },
+        "reason_codes": [],
+        "status": "complete"
+      },
       "attack_path_fusion": {
         "limits": {
           "max_depth": 8,
@@ -909,6 +922,7 @@
           "cloud_service": "ec2",
           "environment": "prod",
           "evidence_tier": "static_scan",
+          "hostname": "",
           "iam_instance_profile": "",
           "image_id": "",
           "instance_type": "",
@@ -1392,6 +1406,19 @@
     "schema_version": "agent-bom.graph/v1",
     "stats": {
       "analysis_status": {
+        "asset_canonicalization": {
+          "limits": {},
+          "observed": {
+            "aliases": 0,
+            "candidate_edges": 0,
+            "conflicts": 0,
+            "merged_groups": 0,
+            "observations": 7,
+            "self_edges_dropped": 0
+          },
+          "reason_codes": [],
+          "status": "complete"
+        },
         "attack_path_fusion": {
           "limits": {
             "max_depth": 8,
@@ -1463,6 +1490,19 @@
   },
   "azure": {
     "analysis_status": {
+      "asset_canonicalization": {
+        "limits": {},
+        "observed": {
+          "aliases": 0,
+          "candidate_edges": 0,
+          "conflicts": 0,
+          "merged_groups": 0,
+          "observations": 5,
+          "self_edges_dropped": 0
+        },
+        "reason_codes": [],
+        "status": "complete"
+      },
       "attack_path_fusion": {
         "limits": {
           "max_depth": 8,
@@ -1947,6 +1987,7 @@
           "cloud_service": "compute",
           "environment": "prod",
           "evidence_tier": "static_scan",
+          "hostname": "",
           "iam_instance_profile": "",
           "image_id": "",
           "instance_type": "",
@@ -2318,6 +2359,19 @@
     "schema_version": "agent-bom.graph/v1",
     "stats": {
       "analysis_status": {
+        "asset_canonicalization": {
+          "limits": {},
+          "observed": {
+            "aliases": 0,
+            "candidate_edges": 0,
+            "conflicts": 0,
+            "merged_groups": 0,
+            "observations": 5,
+            "self_edges_dropped": 0
+          },
+          "reason_codes": [],
+          "status": "complete"
+        },
         "attack_path_fusion": {
           "limits": {
             "max_depth": 8,
@@ -3556,6 +3610,19 @@
   },
   "gcp": {
     "analysis_status": {
+      "asset_canonicalization": {
+        "limits": {},
+        "observed": {
+          "aliases": 0,
+          "candidate_edges": 0,
+          "conflicts": 0,
+          "merged_groups": 0,
+          "observations": 4,
+          "self_edges_dropped": 0
+        },
+        "reason_codes": [],
+        "status": "complete"
+      },
       "attack_path_fusion": {
         "limits": {
           "max_depth": 8,
@@ -4013,6 +4080,7 @@
           "cloud_service": "compute",
           "environment": "prod",
           "evidence_tier": "static_scan",
+          "hostname": "",
           "iam_instance_profile": "",
           "image_id": "",
           "instance_type": "",
@@ -4325,6 +4393,19 @@
     "schema_version": "agent-bom.graph/v1",
     "stats": {
       "analysis_status": {
+        "asset_canonicalization": {
+          "limits": {},
+          "observed": {
+            "aliases": 0,
+            "candidate_edges": 0,
+            "conflicts": 0,
+            "merged_groups": 0,
+            "observations": 4,
+            "self_edges_dropped": 0
+          },
+          "reason_codes": [],
+          "status": "complete"
+        },
         "attack_path_fusion": {
           "limits": {
             "max_depth": 8,
@@ -4395,6 +4476,19 @@
   },
   "snowflake": {
     "analysis_status": {
+      "asset_canonicalization": {
+        "limits": {},
+        "observed": {
+          "aliases": 0,
+          "candidate_edges": 0,
+          "conflicts": 0,
+          "merged_groups": 0,
+          "observations": 4,
+          "self_edges_dropped": 0
+        },
+        "reason_codes": [],
+        "status": "complete"
+      },
       "attack_path_fusion": {
         "limits": {
           "max_depth": 8,
@@ -5021,6 +5115,19 @@
     "schema_version": "agent-bom.graph/v1",
     "stats": {
       "analysis_status": {
+        "asset_canonicalization": {
+          "limits": {},
+          "observed": {
+            "aliases": 0,
+            "candidate_edges": 0,
+            "conflicts": 0,
+            "merged_groups": 0,
+            "observations": 4,
+            "self_edges_dropped": 0
+          },
+          "reason_codes": [],
+          "status": "complete"
+        },
         "attack_path_fusion": {
           "limits": {
             "max_depth": 8,

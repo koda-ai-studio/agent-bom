@@ -9,6 +9,7 @@ from collections.abc import Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
+from agent_bom.db.graph_node_aliases import write_node_aliases
 from agent_bom.db.graph_revision import revision_tokens
 from agent_bom.db.graph_store_correlation import get_correlation_run
 from agent_bom.db.graph_store_schema import _executemany_batched
@@ -23,6 +24,7 @@ from agent_bom.graph import (
 )
 from agent_bom.graph.analysis import GraphAnalysisStatus, analysis_status_map_to_dict
 from agent_bom.graph.correlation import CorrelationRunStatus, validate_correlation_update
+from agent_bom.graph.node_aliases import NodeAliasCollector
 from agent_bom.graph.observation_scope import comparable_observation_sql
 from agent_bom.graph.severity_floor import counts_as_finding
 from agent_bom.graph.snapshot_paths import SNAPSHOT_PATH_COLUMNS, SnapshotPath, occurrence_path_keys, snapshot_path_rows
@@ -104,6 +106,15 @@ def _node_rows(nodes: Iterable[UnifiedNode], stats: _SnapshotStats, *, scan: str
             scan,
             tenant,
         )
+
+
+def write_nodes_and_aliases(
+    conn: sqlite3.Connection, nodes: Iterable[UnifiedNode], stats: _SnapshotStats, *, scan: str, tenant: str, batch_size: int, now: str
+) -> None:
+    """Stream node rows, then record the source ids canonicalization replaced."""
+    aliases = NodeAliasCollector()
+    _write_nodes(conn, aliases.wrap(nodes), stats, scan=scan, tenant=tenant, batch_size=batch_size)
+    write_node_aliases(conn, aliases.records(tenant=tenant, scan=scan, now=now))
 
 
 def _write_nodes(

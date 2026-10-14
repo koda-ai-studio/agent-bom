@@ -119,6 +119,7 @@ def project_instances(
                     "vpc_id": _clean_graph_part(instance.get("vpc_id")),
                     "public_ip": public_ip,
                     "private_ip": _clean_graph_part(instance.get("private_ip")),
+                    "hostname": _clean_graph_part(instance.get("private_dns_name") or instance.get("hostname")),
                     "iam_instance_profile": _clean_graph_part(instance.get("iam_instance_profile")),
                     "security_group_ids": list(instance.get("security_group_ids", []) or []),
                     # GCP instance scoping (empty on AWS); the GCP firewall-matching

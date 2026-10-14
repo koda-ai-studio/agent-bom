@@ -15,9 +15,11 @@ from typing import Any, Iterable, Iterator, Mapping, Sequence
 from agent_bom.api.graph_store import _node_search_text
 from agent_bom.graph import RelationshipType
 from agent_bom.graph.correlation import CorrelationRunStatus, validate_correlation_update
+from agent_bom.graph.node_aliases import NodeAliasCollector
 from agent_bom.graph.severity_floor import counts_as_finding
 from agent_bom.graph.snapshot_paths import SNAPSHOT_PATH_COLUMNS, SnapshotPath, occurrence_path_keys, snapshot_path_rows
 
+from .postgres_graph_aliases import write_node_aliases
 from .postgres_graph_support import _CORRELATION_RUN_COLUMNS, _correlation_run_from_row, _execute_many_batched
 
 _NODE_UPSERT_SQL = """
@@ -323,6 +325,14 @@ def _node_search_row(node: Any, *, scan: str, tenant: str) -> tuple[Any, ...]:
         " ".join(node.data_sources).lower(),
         _node_search_text(node),
     )
+
+
+def write_nodes_and_aliases(conn: Any, nodes: Iterable[Any], *, scan: str, tenant: str, batch_size: int, now: str) -> tuple[Any, Any, Any]:
+    """Stream node rows, then record the source ids canonicalization replaced, in one transaction."""
+    aliases = NodeAliasCollector()
+    written = _write_nodes(conn, aliases.wrap(nodes), scan=scan, tenant=tenant, batch_size=batch_size)
+    write_node_aliases(conn, aliases.records(tenant=tenant, scan=scan, now=now))
+    return written
 
 
 def _write_nodes(conn: Any, nodes: Iterable[Any], *, scan: str, tenant: str, batch_size: int) -> tuple[int, dict[str, int], dict[str, int]]:

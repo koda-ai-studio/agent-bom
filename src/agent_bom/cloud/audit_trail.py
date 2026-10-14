@@ -12,27 +12,21 @@ Design contract
 * **Read-only** — only the providers' read/lookup APIs are ever called
   (``cloudtrail:LookupEvents``, ``Microsoft.Insights/eventtypes/values/read``,
   ``logging.logEntries.list``). No write/mutate API is referenced anywhere.
-* **No new IAM role** — reuses the SAME existing read-only connect role
-  (AWS ``SecurityAudit``, Azure ``Reader``/``Security Reader``, GCP
-  ``roles/viewer``). On AWS, ``cloudtrail:LookupEvents`` is already granted by
-  the AWS-managed ``SecurityAudit`` policy, so enabling this adds *zero* new
-  permission; on Azure/GCP the reads above sit inside the existing
-  ``Reader``/``viewer`` grants in standard setups. Turning on audit-trail
-  behavioral edges costs no new role and (in standard setups) no new permission.
+* **No new IAM role** — reuses the existing read-only connect role (AWS
+  ``SecurityAudit``, which already grants ``cloudtrail:LookupEvents``; Azure
+  ``Reader``/``Security Reader``; GCP ``roles/viewer``).
 * **Opt-in** — disabled unless ``AGENT_BOM_AUDIT_TRAIL`` is truthy. A scan that
   does not set it is a clean no-op; nothing is read.
 * **Nothing-silent** — a missing read permission yields a clear, actionable
   warning naming the exact grant required, never a silent skip or a crash.
 * **Bounded** — lookback window and event count are capped (env-configurable);
   hitting a cap appends a ``truncated`` warning, never silent truncation.
-* **No raw-log retention** — the reader returns normalized
-  ``(principal, action, resource, time, outcome)`` tuples only. The builder
-  aggregates them into ``(principal, resource, action) → count + last_seen``
-  edges; the raw event list is never persisted into the report contract.
+* **No raw-log retention** — the reader keeps normalized principal, caller
+  identity, action, resource, time and outcome only, aggregated into
+  ``(principal, resource, action) → count + last_seen`` edges.
 
-The output of :func:`collect_audit_trail` is the ``status: ok`` payload contract
-that :func:`agent_bom.graph.builder._add_cloud_audit_behavioral` consumes,
-mirroring the Snowflake ACCESS_HISTORY → ACCESSED layer.
+:func:`collect_audit_trail` returns the ``status: ok`` payload that
+:mod:`agent_bom.graph.cloud_audit_projection` projects.
 """
 
 from __future__ import annotations
@@ -175,6 +169,9 @@ class AuditEvent:
     resource: str
     time: str = ""
     outcome: str = "success"  # success, failure, accepted or unknown
+    principal_arn: str = ""  # recorded caller identity, typed by the graph
+    principal_type: str = ""
+    region: str = ""
 
     def as_tuple(self) -> tuple[str, str, str, str, str]:
         return (self.principal, self.action, self.resource, self.time, self.outcome)
@@ -185,9 +182,7 @@ def _now() -> datetime:
 
 
 def _clean(value: Any) -> str:
-    if value is None:
-        return ""
-    return str(value).strip()
+    return "" if value is None else str(value).strip()
 
 
 def _iso(value: Any) -> str:
@@ -501,16 +496,11 @@ class _Aggregate:
     last_seen: str = ""
     failures: int = 0
     sensitive: bool = False
+    identity: dict[str, str] | None = None
 
 
 def aggregate_events(events: Iterable[AuditEvent]) -> list[dict[str, Any]]:
-    """Collapse raw events into ``(principal, resource, action)`` edge records.
-
-    Deterministic: records are keyed by ``(principal, resource, action)``,
-    counted, and stamped with the latest ``time`` seen. The raw events are
-    *not* retained — only the aggregate edge descriptor is returned. Output is
-    sorted for byte-stable downstream graph construction.
-    """
+    """Collapse events into sorted ``(principal, resource, action)`` records with count and latest time."""
     buckets: dict[tuple[str, str, str], _Aggregate] = {}
     for evt in events:
         principal = _clean(evt.principal)
@@ -528,6 +518,11 @@ def aggregate_events(events: Iterable[AuditEvent]) -> list[dict[str, Any]]:
                 resource=resource,
                 relationship=rel,
                 sensitive=_is_sensitive_resource(resource),
+                identity={
+                    k: v
+                    for k, v in (("principal_arn", evt.principal_arn), ("principal_type", evt.principal_type), ("region", evt.region))
+                    if v
+                },
             )
             buckets[key] = agg
         agg.count += 1
@@ -547,6 +542,7 @@ def aggregate_events(events: Iterable[AuditEvent]) -> list[dict[str, Any]]:
             "last_seen": agg.last_seen,
             "failure_count": agg.failures,
             "is_sensitive_resource": agg.sensitive,
+            **(agg.identity or {}),
         }
         for agg in buckets.values()
     ]

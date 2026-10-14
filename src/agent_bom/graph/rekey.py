@@ -1,0 +1,70 @@
+"""Batch node re-keying for an in-memory :class:`UnifiedGraph`.
+
+Several node ids collapse onto one canonical id: their nodes merge with the
+same union semantics as :meth:`UnifiedGraph.add_node`, every edge is re-pointed
+at the canonical endpoint, edges that become duplicates merge their evidence,
+and an edge that would connect a node to itself is dropped (two observations of
+one asset do not relate the asset to itself).
+"""
+
+from __future__ import annotations
+
+from collections.abc import Callable, Mapping
+from dataclasses import replace
+from typing import Any
+
+
+def normalized_rekey_mapping(mapping: Mapping[str, str], exists: Callable[[str], bool]) -> dict[str, str]:
+    """Drop identity and unknown entries; reject chains, which have no single meaning."""
+    result = {old: new for old, new in mapping.items() if old and new and old != new and exists(old)}
+    chained = sorted(set(result) & set(result.values()))
+    if chained:
+        raise ValueError(f"rekey mapping chains through re-keyed ids: {chained[:3]}")
+    return result
+
+
+def _key(edge: Any) -> tuple[str, str, str]:
+    rel = edge.relationship.value if hasattr(edge.relationship, "value") else str(edge.relationship)
+    return (edge.source, edge.target, rel)
+
+
+def rekey_in_memory(graph: Any, mapping: Mapping[str, str]) -> int:
+    """Re-key nodes in place, touching only edges incident to a moved node.
+
+    Returns the number of edges dropped because both ends became one node.
+    """
+    moves = normalized_rekey_mapping(mapping, graph.nodes.__contains__)
+    if not moves:
+        return 0
+    touched: set[tuple[str, str, str]] = set()
+    for old in moves:
+        for edge in (*graph.adjacency.get(old, []), *graph.reverse_adjacency.get(old, [])):
+            key = _key(edge)
+            touched.add(key if key in graph._edge_keys else (key[1], key[0], key[2]))
+    originals = [edge for edge in graph.edges if _key(edge) in touched]
+    graph.edges = [edge for edge in graph.edges if _key(edge) not in touched]
+    endpoints = {endpoint for key in touched for endpoint in key[:2]}
+    for index in (graph.adjacency, graph.reverse_adjacency):
+        for node_id in endpoints:
+            kept = [
+                edge
+                for edge in index.get(node_id, [])
+                if _key(edge) not in touched and (_key(edge)[1], _key(edge)[0], _key(edge)[2]) not in touched
+            ]
+            if kept:
+                index[node_id] = kept
+            else:
+                index.pop(node_id, None)
+    graph._edge_keys.difference_update(touched)
+    for old, new in sorted(moves.items()):
+        node = graph.nodes.pop(old)
+        node.id = new
+        graph.add_node(node)
+    dropped = 0
+    for edge in originals:
+        source, target = moves.get(edge.source, edge.source), moves.get(edge.target, edge.target)
+        if source == target:
+            dropped += 1
+            continue
+        graph.add_stored_edge(replace(edge, source=source, target=target))
+    return dropped

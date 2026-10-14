@@ -30,6 +30,7 @@ from agent_bom.security import sanitize_text
 
 _FINDING_ENTITIES = frozenset({EntityType.VULNERABILITY, EntityType.MISCONFIGURATION})
 _NO_INVENTED_ASSET = frozenset({"SECRET_SCAN"})
+_OBSERVED_ASSETS = frozenset({EntityType.CLOUD_RESOURCE, EntityType.DATA_STORE, EntityType.CLUSTER})
 # Asset kinds a scanner names that have no inventory alias of their own.
 _ASSET_FALLBACK = {
     "model_file": EntityType.MODEL,
@@ -130,11 +131,28 @@ def _ensure_asset_node(graph: UnifiedGraph, row: dict[str, Any], entity: EntityT
                 id=node_id,
                 entity_type=entity,
                 label=sanitize_text(_text(asset.get("name")) or identifier, max_len=500),
-                attributes={"asset_type": _text(asset.get("asset_type")), "identifier": sanitize_text(identifier, max_len=500)},
+                attributes={
+                    "asset_type": _text(asset.get("asset_type")),
+                    "identifier": sanitize_text(identifier, max_len=500),
+                    **(_native_keys(row, asset, identifier) if entity == EntityType.CLOUD_RESOURCE else {}),
+                },
                 data_sources=[collector],
             )
         )
     return node_id
+
+
+def _native_keys(row: dict[str, Any], asset: dict[str, Any], identifier: str) -> dict[str, str]:
+    """Record the asset's native key so canonicalization can join it with other sources."""
+    keys = {
+        "cloud_provider": _text(asset.get("provider")).casefold(),
+        "account_id": _text(row.get("account_ref") or asset.get("account_ref")),
+    }
+    if identifier.startswith(("arn:", "/subscriptions/", "projects/")):
+        keys["resource_id"] = identifier
+    elif "." in identifier and " " not in identifier and "/" not in identifier:
+        keys["hostname"] = identifier
+    return {key: value for key, value in keys.items() if value}
 
 
 def _edge_for(finding: UnifiedNode, asset: UnifiedNode) -> tuple[str, str, RelationshipType] | None:
@@ -228,6 +246,9 @@ def project_finding_rows(graph: UnifiedGraph, findings: Any) -> None:
             continue
         source, target, relationship = edge
         graph.add_edge(UnifiedEdge(source=source, target=target, relationship=relationship, evidence=_evidence(row, collector, tier)))
+        if asset is not None and asset.entity_type in _OBSERVED_ASSETS and collector not in asset.data_sources:
+            # A posture source that names a cloud asset is one more observation of it.
+            asset.data_sources.append(collector)
 
 
 __all__ = ["finding_row_node_id", "project_finding_rows", "row_compliance_tags", "stamp_finding_node_ids"]

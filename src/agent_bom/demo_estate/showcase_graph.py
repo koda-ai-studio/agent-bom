@@ -11,6 +11,7 @@ from agent_bom.api.agent_identity_store import (
     AgentJITGrant,
     InMemoryAgentIdentityStore,
 )
+from agent_bom.demo_estate.compute_identity_lane import project_compute_lane
 from agent_bom.graph.cnapp_overlay import apply_cnapp_overlay
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
@@ -923,12 +924,8 @@ def project_estate_onto_showcase(
         findings=() if is_baseline else build_estate_findings(estate),
         correlations=() if is_baseline else build_estate_correlations(estate),
     )
-    _ensure_showcase_edge(
-        graph,
-        estate_org_node_id(estate),
-        SHOWCASE_ORG_ID,
-        RelationshipType.CONTAINS,
-    )
+    _ensure_showcase_edge(graph, estate_org_node_id(estate), SHOWCASE_ORG_ID, RelationshipType.CONTAINS)
+    project_compute_lane(graph, tenant_id=tenant_id, evidence=not is_baseline, org_node_id=estate_org_node_id(estate))
     return summary
 
 
