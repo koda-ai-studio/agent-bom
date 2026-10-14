@@ -171,7 +171,7 @@ def _kubernetes_keys(node: UnifiedNode) -> list[IdentityKey]:
 
 def _snowflake_keys(node: UnifiedNode) -> list[IdentityKey]:
     account, fqn = _attr(node, "account_id"), _attr(node, "snowflake_local_id", "fqn", "object_fqn")
-    return [IdentityKey(100, "snowflake_fqn", f"{account.casefold()}/{fqn}", "snowflake")] if account and fqn else []
+    return [IdentityKey(100, "snowflake_fqn", f"{account}/{fqn}", "snowflake")] if account and fqn else []
 
 
 def strong_keys(node: UnifiedNode) -> list[IdentityKey]:

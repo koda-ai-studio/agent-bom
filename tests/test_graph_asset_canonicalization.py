@@ -180,6 +180,24 @@ def test_same_name_in_two_accounts_never_merges() -> None:
     assert set(graph.nodes) == {"a", "b", "c", "d"}
 
 
+def test_snowflake_accounts_differing_only_in_case_never_merge() -> None:
+    graph = UnifiedGraph()
+    for node_id, account in (("upper", "ACCT1"), ("lower", "acct1")):
+        graph.add_node(
+            UnifiedNode(
+                id=node_id,
+                entity_type=EntityType.ROLE,
+                label="ANALYST",
+                attributes={"cloud_provider": "snowflake", "account_id": account, "snowflake_local_id": "role:snowflake:ANALYST"},
+                data_sources=["snowflake"],
+                dimensions=NodeDimensions(cloud_provider="snowflake"),
+            )
+        )
+
+    assert canonicalize_assets(graph) == {}
+    assert {graph.nodes[node_id].attributes["account_id"] for node_id in graph.nodes} == {"ACCT1", "acct1"}
+
+
 def test_conflicting_strong_keys_do_not_merge() -> None:
     graph = UnifiedGraph()
     graph.add_node(_resource("a", data_source="x", resource_arn=ARN, resource_id=INSTANCE, account_id=ACCOUNT, location=REGION))
