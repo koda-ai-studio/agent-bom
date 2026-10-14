@@ -185,3 +185,60 @@ def test_provenance_single_source():
 
     provenance = build_source_provenance([agent])
     assert provenance["express@4.17.1"] == ["local"]
+
+
+def _pkgs(agent):
+    return [(p.name, p.version) for s in agent.mcp_servers for p in s.packages]
+
+
+def test_cross_source_never_drops_occurrences_or_collapses_versions():
+    agents = [
+        _make_agent("a-local", "local", [_make_server("srv-a", [_make_pkg("requests", "2.31.0", "pypi")])]),
+        _make_agent("b-cloud", "aws", [_make_server("srv-b", [_make_pkg("requests", "2.20.0", "pypi")])]),
+        _make_agent("c-cloud", "aws", [_make_server("srv-c", [_make_pkg("requests", "2.20.0", "pypi")])]),
+    ]
+    out, result = correlate_agents(agents)
+    assert [_pkgs(a) for a in out] == [
+        [("requests", "2.31.0")],
+        [("requests", "2.20.0")],
+        [("requests", "2.20.0")],
+    ]
+    assert result.cross_source_matches == 1
+
+
+def test_unknown_version_not_filled_when_sources_disagree():
+    agents = [
+        _make_agent("a1", "local", [_make_server("s1", [_make_pkg("requests", "unknown", "pypi")])]),
+        _make_agent("a2", "aws", [_make_server("s2", [_make_pkg("requests", "2.31.0", "pypi")])]),
+        _make_agent("a3", "gcp", [_make_server("s3", [_make_pkg("requests", "2.20.0", "pypi")])]),
+    ]
+    out, _ = correlate_agents(agents)
+    assert _pkgs(out[0]) == [("requests", "unknown")]
+
+
+def test_same_server_duplicate_entries_are_deduplicated():
+    vuln_a = Vulnerability(id="CVE-2025-0001", summary="a", severity=Severity.HIGH)
+    vuln_b = Vulnerability(id="CVE-2025-0002", summary="b", severity=Severity.LOW)
+    srv = _make_server(
+        "srv",
+        [_make_pkg("express", "4.17.1", vulns=[vuln_a]), _make_pkg("Express", "4.17.1", vulns=[vuln_b])],
+    )
+    other = _make_agent("cloud", "aws", [_make_server("x", [_make_pkg("lodash")])])
+    out, result = correlate_agents([_make_agent("local", "local", [srv]), other])
+    pkgs = out[0].mcp_servers[0].packages
+    assert len(pkgs) == 1
+    assert sorted(v.id for v in pkgs[0].vulnerabilities) == ["CVE-2025-0001", "CVE-2025-0002"]
+    assert result.deduplicated_packages == 1
+
+
+def test_identical_version_occurrences_share_vulns_but_stay_on_each_server():
+    vuln = Vulnerability(id="CVE-2025-0009", summary="x", severity=Severity.HIGH)
+    agents = [
+        _make_agent("a1", "local", [_make_server("s1", [_make_pkg("express", "4.17.1")])]),
+        _make_agent("a2", "aws", [_make_server("s2", [_make_pkg("express", "4.17.1", vulns=[vuln])])]),
+    ]
+    out, _ = correlate_agents(agents)
+    for agent in out:
+        pkgs = agent.mcp_servers[0].packages
+        assert len(pkgs) == 1
+        assert [v.id for v in pkgs[0].vulnerabilities] == ["CVE-2025-0009"]

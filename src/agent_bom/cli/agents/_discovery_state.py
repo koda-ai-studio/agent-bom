@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, field, fields
 from typing import Any
 
 from agent_bom.cli.agents._context import ScanContext
@@ -63,10 +63,40 @@ class DiscoveryRun:
     verbose: bool
     os_packages: bool
     workstation_sweep: bool
+    extra_projects: tuple = ()
+    extra_config_dirs: tuple = ()
+    extra_inventories: tuple = ()
+    extra_sbom_files: tuple = ()
+    extra_sbom_names: tuple = ()
+    extra_external_scan_paths: tuple = ()
     preloaded_inventory: dict[str, Any] | None = None
+    preloaded_extra_inventories: list[dict[str, Any]] = field(default_factory=list)
     inventory_label: str | None = None
     skill_result: Any = None
     skill_audit: Any = None
+
+    @staticmethod
+    def _all(primary: Any, extra: tuple) -> tuple:
+        return ((primary,) if primary else ()) + tuple(extra)
+
+    @property
+    def all_projects(self) -> tuple:
+        return self._all(self.project, self.extra_projects)
+
+    @property
+    def all_config_dirs(self) -> tuple:
+        return self._all(self.config_dir, self.extra_config_dirs)
+
+    @property
+    def all_external_scan_paths(self) -> tuple:
+        return self._all(self.external_scan_path, self.extra_external_scan_paths)
+
+    @property
+    def sbom_inputs(self) -> list[tuple[Any, Any]]:
+        """``(sbom_file, sbom_name)`` pairs; names pair positionally when given."""
+        files = self._all(self.sbom_file, self.extra_sbom_files)
+        names = self._all(self.sbom_name, self.extra_sbom_names)
+        return [(path, names[index] if index < len(names) else None) for index, path in enumerate(files)]
 
     @classmethod
     def from_params(cls, params: dict[str, Any], discover: Callable[..., Any]) -> DiscoveryRun:

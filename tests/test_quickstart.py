@@ -229,6 +229,18 @@ def test_quickstart_run_offline_succeeds_with_empty_vulnerability_db(tmp_path, m
     assert report["summary"]["total_vulnerabilities"] == 0
     assert (sample_dir / "gateway-baseline-policy.json").is_file()
 
+    def _server_packages(agents: list[dict]) -> dict[tuple[str, str], set[tuple[str, str]]]:
+        return {
+            (agent["name"], server["name"]): {(pkg["name"], pkg["version"]) for pkg in server.get("packages", [])}
+            for agent in agents
+            for server in agent.get("mcp_servers", [])
+        }
+
+    declared = _server_packages(json.loads((sample_dir / "inventory.json").read_text())["agents"])
+    reported = _server_packages(report["agents"])
+    missing = {key: pkgs - reported.get(key, set()) for key, pkgs in declared.items() if pkgs - reported.get(key, set())}
+    assert missing == {}, "Every inventory-declared package must stay on its server after correlation"
+
     with sqlite3.connect(graph_db) as connection:
         assert connection.execute("SELECT COUNT(*) FROM graph_nodes").fetchone()[0] > 0
         assert connection.execute("SELECT COUNT(*) FROM graph_edges").fetchone()[0] > 0

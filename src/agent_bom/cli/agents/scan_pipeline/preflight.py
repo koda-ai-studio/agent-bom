@@ -59,8 +59,9 @@ def _refresh_vuln_data(opts: ScanOptions, st: ScanState) -> None:
     # cost minutes before the CLI admits the file was never there. Only
     # existence is decided here; format and parse errors still surface from the
     # loader during discovery, which owns that reporting.
-    if opts.inventory and opts.inventory != "-" and not Path(opts.inventory).exists():
-        raise click.BadParameter(f"Inventory file not found: {opts.inventory}", param_hint="--inventory")
+    for _inventory in ((opts.inventory,) if opts.inventory else ()) + opts.extra_inventories:
+        if _inventory != "-" and not Path(_inventory).exists():
+            raise click.BadParameter(f"Inventory file not found: {_inventory}", param_hint="--inventory")
 
     # ── Vuln-data freshness snapshot + auto-refresh ──────────────────────────
     # Single source of truth for "where did the vuln data come from, how old is

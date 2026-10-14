@@ -5,15 +5,18 @@ providers, Docker images, SBOMs, Snyk, etc.), the same package can appear
 from different sources with different version strings or ecosystem labels.
 
 This module:
-1. Deduplicates packages by (name, ecosystem) across all agents/servers
-2. Merges version info (prefers specific over "unknown"/"latest")
-3. Unions vulnerability lists (deduplicated by vuln ID)
+1. Collapses exact duplicate package entries within a single server, and never
+   removes a package occurrence from a server or collapses distinct versions
+2. Fills an "unknown"/"latest" version only when all sources agree on one
+3. Shares vulnerability lists between identical (name, ecosystem, version)
+   occurrences (deduplicated by vuln ID)
 4. Reverse-looks up SBOM packages to find which agents use them
 5. Tracks source provenance for the "full picture" view
 """
 
 from __future__ import annotations
 
+import copy
 import logging
 from dataclasses import dataclass, field
 
@@ -32,19 +35,7 @@ class CorrelationResult:
     source_summary: dict[str, int] = field(default_factory=dict)
 
 
-def _best_version(v1: str, v2: str) -> str:
-    """Pick the more specific version string."""
-    unknowns = {"unknown", "latest", ""}
-    if v1 in unknowns and v2 not in unknowns:
-        return v2
-    if v2 in unknowns and v1 not in unknowns:
-        return v1
-    # If both are specific, prefer the one that looks like a semver
-    if "." in v1 and "." not in v2:
-        return v1
-    if "." in v2 and "." not in v1:
-        return v2
-    return v1  # default to first
+_UNKNOWN_VERSIONS = frozenset({"unknown", "latest", ""})
 
 
 def _merge_vulns(pkg: Package, other: Package) -> int:
@@ -53,76 +44,95 @@ def _merge_vulns(pkg: Package, other: Package) -> int:
     added = 0
     for v in other.vulnerabilities:
         if v.id.upper() not in existing_ids:
-            pkg.vulnerabilities.append(v)
+            pkg.vulnerabilities.append(copy.copy(v))
             existing_ids.add(v.id.upper())
             added += 1
     return added
 
 
-def correlate_agents(agents: list[Agent]) -> tuple[list[Agent], CorrelationResult]:
-    """Deduplicate and cross-reference packages across agents from multiple sources.
+def _unknown(version: str) -> bool:
+    return (version or "").strip().lower() in _UNKNOWN_VERSIONS
 
-    For each (name, ecosystem) tuple found in multiple agents/servers:
-    - Merge version info (prefer specific over "unknown")
-    - Union vulnerability lists
-    - Track which sources reported each package
+
+def _dedupe_server_packages(server: MCPServer) -> int:
+    """Collapse duplicate (name, ecosystem, version) entries within one server."""
+    kept: dict[tuple[str, str, str], Package] = {}
+    unique: list[Package] = []
+    removed = 0
+    for pkg in server.packages:
+        key = (pkg.name.lower(), pkg.ecosystem.lower(), (pkg.version or "").strip())
+        primary = kept.get(key)
+        if primary is None:
+            kept[key] = pkg
+            unique.append(pkg)
+            continue
+        _merge_vulns(primary, pkg)
+        if not primary.purl and pkg.purl:
+            primary.purl = pkg.purl
+        removed += 1
+    if removed:
+        server.packages = unique
+    return removed
+
+
+def _cross_reference(packages: list[Package]) -> None:
+    """Add evidence across occurrences of one (name, ecosystem) without removing any."""
+    specific = {p.version.strip() for p in packages if not _unknown(p.version)}
+    if len(specific) == 1:
+        only = next(iter(specific))
+        for pkg in packages:
+            if _unknown(pkg.version):
+                pkg.version = only
+    by_version: dict[str, list[Package]] = {}
+    for pkg in packages:
+        by_version.setdefault((pkg.version or "").strip(), []).append(pkg)
+    for same in by_version.values():
+        union = Package(name=same[0].name, version="", ecosystem=same[0].ecosystem)
+        for pkg in same:
+            _merge_vulns(union, pkg)
+        purl = next((p.purl for p in same if p.purl), None)
+        for pkg in same:
+            _merge_vulns(pkg, union)
+            if purl and not pkg.purl:
+                pkg.purl = purl
+
+
+def correlate_agents(agents: list[Agent]) -> tuple[list[Agent], CorrelationResult]:
+    """Cross-reference packages across agents from multiple sources.
+
+    Correlation is additive: every server keeps its own package occurrences
+    and versions. Only exact duplicates *within one server* are collapsed.
+    Across servers, occurrences of the same (name, ecosystem, version) share
+    vulnerability evidence and purls, and an ``unknown`` version is filled only
+    when every cross-source occurrence agrees on a single specific version.
 
     Args:
         agents: List of Agent objects from all discovery sources.
 
     Returns:
-        (agents, result) — agents with merged package data + statistics.
+        (agents, result) — agents with cross-referenced package data + statistics.
     """
     result = CorrelationResult()
 
-    # Build source summary
     for agent in agents:
         source = agent.source or "local"
         result.source_summary[source] = result.source_summary.get(source, 0) + 1
 
-    # If only one source, skip correlation
     if len(result.source_summary) <= 1:
         return agents, result
 
-    # Build global package index: (name, ecosystem) → list of (agent, server, package)
     pkg_index: dict[tuple[str, str], list[tuple[Agent, MCPServer, Package]]] = {}
     for agent in agents:
         for server in agent.mcp_servers:
+            result.deduplicated_packages += _dedupe_server_packages(server)
             for pkg in server.packages:
                 key = (pkg.name.lower(), pkg.ecosystem.lower())
-                if key not in pkg_index:
-                    pkg_index[key] = []
-                pkg_index[key].append((agent, server, pkg))
+                pkg_index.setdefault(key, []).append((agent, server, pkg))
 
-    # Find cross-source packages and merge
-    for key, occurrences in pkg_index.items():
-        if len(occurrences) <= 1:
-            continue
-
-        sources = {(a.source or "local") for a, _s, _p in occurrences}
-        if len(sources) <= 1:
-            continue
-
-        result.cross_source_matches += 1
-
-        # Pick the "primary" occurrence (first one with a real version)
-        primary_agent, primary_server, primary_pkg = occurrences[0]
-        for a, s, p in occurrences[1:]:
-            # Merge version
-            primary_pkg.version = _best_version(primary_pkg.version, p.version)
-            # Merge vulnerabilities
-            merged = _merge_vulns(primary_pkg, p)
-            if merged:
-                result.deduplicated_packages += 1
-            # Merge purl if better
-            if not primary_pkg.purl and p.purl:
-                primary_pkg.purl = p.purl
-
-        # Remove duplicates from other agents/servers
-        for a, s, p in occurrences[1:]:
-            if p is not primary_pkg and p in s.packages:
-                s.packages.remove(p)
-                result.deduplicated_packages += 1
+    for occurrences in pkg_index.values():
+        if len(occurrences) > 1 and len({(a.source or "local") for a, _s, _p in occurrences}) > 1:
+            result.cross_source_matches += 1
+            _cross_reference([p for _a, _s, p in occurrences])
 
     return agents, result
 

@@ -7,7 +7,17 @@ import os
 import click
 
 from agent_bom.cli._scan_help import AliasedChoice
-from agent_bom.cli.options_helpers import _apply
+from agent_bom.cli.options_helpers import _apply, _single_value
+from agent_bom.cli.options_inputs import (
+    CONFIG_DIR_OPTION,
+    CORRELATE_OPTION,
+    EXTERNAL_SCAN_OPTION,
+    INVENTORY_OPTION,
+    PROJECT_OPTION,
+    REPO_OPTION,
+    SBOM_NAME_OPTION,
+    SBOM_OPTION,
+)
 
 # Canonical `--format` choices accepted by the top-level `scan` command. The
 # focused commands (fs/iac/sbom/image) forward straight to `scan`, so they
@@ -59,22 +69,10 @@ def input_options(fn):
     """Project directory, config, inventory, SBOM, images, filesystem."""
     return _apply(
         [
-            click.option("--project", "-p", type=click.Path(exists=True), help="Project directory to scan"),
-            click.option(
-                "--repo",
-                "repo_url",
-                type=str,
-                default=None,
-                metavar="URL",
-                help=(
-                    "Public git repository URL to clone and scan (e.g. "
-                    "https://github.com/org/repo). Shallow, static, read-only: the repo is "
-                    "cloned to a temp dir, scanned without executing its code, then deleted. "
-                    "Mutually exclusive with --project/-p."
-                ),
-            ),
-            click.option("--config-dir", type=click.Path(exists=True), help="Custom agent config directory to scan"),
-            click.option("--inventory", type=str, default=None, help="Inventory file (JSON or CSV). Use '-' for stdin."),
+            PROJECT_OPTION,
+            REPO_OPTION,
+            CONFIG_DIR_OPTION,
+            INVENTORY_OPTION,
             click.option(
                 "--no-discover",
                 "no_discover",
@@ -104,19 +102,8 @@ def input_options(fn):
                     "project root. Cross-root symlinks are always skipped with a warning."
                 ),
             ),
-            click.option(
-                "--sbom",
-                "sbom_file",
-                type=click.Path(exists=True),
-                help="Existing SBOM file to ingest (CycloneDX or SPDX JSON from Syft/Grype/Trivy)",
-            ),
-            click.option(
-                "--sbom-name",
-                "sbom_name",
-                default=None,
-                metavar="NAME",
-                help="Label for the SBOM resource (e.g. 'prod-api-01', 'nginx:1.25'). Auto-detected from SBOM metadata if omitted.",
-            ),
+            SBOM_OPTION,
+            SBOM_NAME_OPTION,
             click.option(
                 "--image",
                 "images",
@@ -139,14 +126,7 @@ def input_options(fn):
                 metavar="PATH",
                 help="Filesystem directory or tar archive to scan for packages via Syft (e.g. mounted VM disk snapshot). Repeatable.",
             ),
-            click.option(
-                "--correlate",
-                "correlate_log",
-                type=click.Path(exists=True),
-                default=None,
-                metavar="AUDIT_LOG",
-                help="Cross-reference scan results with proxy audit log (JSONL) to identify which vulnerable tools were actually called.",
-            ),
+            CORRELATE_OPTION,
             click.option(
                 "--self-scan",
                 "self_scan",
@@ -163,18 +143,7 @@ def input_options(fn):
                     "The complete demo report intentionally exits 1 as a security verdict."
                 ),
             ),
-            click.option(
-                "--external-scan",
-                "external_scan_path",
-                type=click.Path(exists=True),
-                default=None,
-                help=(
-                    "Path to an existing tool-agnostic report: SARIF 2.x, CycloneDX or SPDX JSON, Trivy/Grype/Syft JSON, "
-                    "Prowler JSON-OCSF, or AWS Security Hub ASFF. Adds its evidence without executing the producing tool. "
-                    "SARIF dependency results (CVE/GHSA rule ids) attach to the real package@version, other SARIF results "
-                    "stay SAST findings with file:line; a CycloneDX/SPDX SBOM without vulnerabilities is ingested like --sbom."
-                ),
-            ),
+            EXTERNAL_SCAN_OPTION,
             click.option(
                 "--os-packages",
                 "os_packages",
@@ -477,7 +446,8 @@ def vex_options(fn):
                 "--vex",
                 "vex_path",
                 type=click.Path(exists=True),
-                default=None,
+                multiple=True,
+                callback=_single_value("--vex"),
                 metavar="PATH",
                 help="Apply a VEX document (OpenVEX JSON) to suppress resolved vulnerabilities",
             ),
@@ -499,7 +469,8 @@ def vex_options(fn):
                 "--ignore-file",
                 "ignore_file",
                 type=click.Path(),
-                default=None,
+                multiple=True,
+                callback=_single_value("--ignore-file"),
                 metavar="PATH",
                 help=(
                     "Path to ignore/allowlist file (default: .agent-bom-ignore.yaml). "
@@ -548,7 +519,13 @@ def policy_options(fn):
             click.option("--fail-on-malicious", is_flag=True, help="Exit 1 if any package is flagged as known malicious"),
             click.option("--fail-if-ai-risk", is_flag=True, help="Exit 1 if an AI framework package with credentials has vulnerabilities"),
             click.option("--save", "save_report", is_flag=True, help="Save this scan to ~/.agent-bom/history/ for future diffing"),
-            click.option("--baseline", type=click.Path(exists=True), help="Path to a baseline report JSON to diff against current scan"),
+            click.option(
+                "--baseline",
+                type=click.Path(exists=True),
+                multiple=True,
+                callback=_single_value("--baseline"),
+                help="Path to a baseline report JSON to diff against current scan",
+            ),
             click.option(
                 "--delta",
                 "delta_mode",
@@ -560,6 +537,12 @@ def policy_options(fn):
                     "Use in CI to surface only what the current PR introduced."
                 ),
             ),
-            click.option("--policy", type=click.Path(exists=True), help="Policy file (JSON/YAML) with declarative security rules"),
+            click.option(
+                "--policy",
+                type=click.Path(exists=True),
+                multiple=True,
+                callback=_single_value("--policy"),
+                help="Policy file (JSON/YAML) with declarative security rules",
+            ),
         ]
     )(fn)

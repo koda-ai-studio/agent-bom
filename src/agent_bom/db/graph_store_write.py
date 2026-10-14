@@ -24,13 +24,14 @@ from agent_bom.graph import (
 from agent_bom.graph.analysis import GraphAnalysisStatus, analysis_status_map_to_dict
 from agent_bom.graph.correlation import CorrelationRunStatus, validate_correlation_update
 from agent_bom.graph.observation_scope import comparable_observation_sql
+from agent_bom.graph.severity_floor import counts_as_finding
 
 
 @dataclass
 class _SnapshotStats:
     """Incrementally accumulated snapshot stats — mirrors UnifiedGraph.stats().
 
-    ``severity_counts`` only counts truthy severities; ``type_counts`` counts
+    ``severity_counts`` only counts truthy finding severities; ``type_counts`` counts
     every node, without a second pass over a fully materialised graph.
     """
 
@@ -80,7 +81,7 @@ def _node_rows(nodes: Iterable[UnifiedNode], stats: _SnapshotStats, *, scan: str
         stats.node_count += 1
         et = node.entity_type.value if isinstance(node.entity_type, EntityType) else node.entity_type
         stats.type_counts[et] += 1
-        if node.severity:
+        if node.severity and counts_as_finding(entity_type=et, node_id=node.id):
             stats.severity_counts[node.severity] += 1
         yield (
             node.id,

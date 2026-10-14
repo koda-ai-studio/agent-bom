@@ -52,10 +52,15 @@ def scan_project(run: DiscoveryRun) -> None:
     """
     if run.skill_only or not run.project or run.images or run.code_paths or run.sbom_file:
         return
+    for index, project in enumerate(run.all_projects):
+        _scan_one_project(run, project, primary=index == 0)
+
+
+def _scan_one_project(run: DiscoveryRun, project: Any, *, primary: bool) -> None:
     from agent_bom.parsers import scan_project_directory, summarize_project_inventory
 
     con = run.con
-    proj_root = Path(run.project)
+    proj_root = Path(project)
     proj_root_resolved = proj_root.resolve()
     # Label from the *resolved* path: `Path(".").name` is the empty string, so
     # the README's headline `agent-bom scan .` otherwise produced a nameless
@@ -70,7 +75,10 @@ def scan_project(run: DiscoveryRun) -> None:
         con.print(f"  [yellow]⚠[/yellow] {warning}")
     if dir_map:
         project_inventory = summarize_project_inventory(proj_root, dir_map)
-        run.ctx.project_inventory_data = project_inventory
+        # The manifest-tree summary is rooted at one directory; it describes the
+        # primary project, while every project's packages land on its own agent.
+        if primary:
+            run.ctx.project_inventory_data = project_inventory
         total_proj_pkgs = sum(len(v) for v in dir_map.values())
         _print_project_summary(run, proj_label, project_inventory, total_proj_pkgs)
         proj_agent = Agent(

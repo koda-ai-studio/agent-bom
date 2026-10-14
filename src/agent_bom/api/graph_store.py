@@ -47,7 +47,7 @@ from agent_bom.graph.completeness import (
     graph_completeness,
 )
 from agent_bom.graph.ports import GraphStoreProtocol as GraphStoreProtocol
-from agent_bom.graph.severity_floor import severity_floor_sql
+from agent_bom.graph.severity_floor import FINDING_SEVERITY_SQLITE, severity_floor_sql
 
 
 def containment_drilldown_graph(
@@ -571,8 +571,8 @@ class SQLiteGraphStore(SQLiteGraphPagesMixin):
                 severity_counts = cached_severity_counts
             else:
                 severity_rows = conn.execute(
-                    f"SELECT severity, COUNT(*) FROM graph_nodes WHERE {where_sql} AND severity <> '' GROUP BY severity",  # nosec B608 - where_sql is built from static clause fragments
-                    params,
+                    f"SELECT severity, COUNT(*) FROM graph_nodes WHERE {where_sql} AND {FINDING_SEVERITY_SQLITE[0]} GROUP BY severity",  # nosec B608 - where_sql is built from static clause fragments
+                    [*params, *FINDING_SEVERITY_SQLITE[1]],
                 ).fetchall()
                 severity_counts = {str(row[0]): int(row[1]) for row in severity_rows}
             if stored_edge_count is not None:

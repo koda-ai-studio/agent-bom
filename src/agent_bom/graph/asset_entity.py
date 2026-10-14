@@ -45,6 +45,31 @@ def _primary_exposure(edge: Any) -> bool:
     return relationship == RelationshipType.VULNERABLE_TO.value and not (getattr(edge, "evidence", None) or {}).get("derived_via")
 
 
+def _finding_node_candidates(finding: Any, fid: str) -> tuple[list[str], str | None]:
+    """Keys that may name ``finding``'s node, plus the IaC file target when it is one."""
+    cve = str(getattr(finding, "cve_id", None) or getattr(finding, "vulnerability_id", None) or "").strip()
+    title = str(getattr(finding, "title", "") or "")
+    iac_node_id, iac_target_id = _iac_node_ids(finding)
+    candidates = [iac_node_id or "", fid, cve]
+    if cve:
+        candidates.append(f"vuln:{cve}")
+    if ":" in title:
+        candidates.append(title.split(":", 1)[0].strip())
+    return candidates, iac_target_id
+
+
+def _iac_node_ids(finding: Any) -> tuple[str | None, str | None]:
+    """The misconfiguration node and file target ``project_iac`` derives for an IaC finding."""
+    evidence = getattr(finding, "evidence", None)
+    if not isinstance(evidence, dict) or not evidence.get("iac"):
+        return None, None
+    rule_id = evidence.get("rule_id") or "unknown"
+    path = evidence.get("file_path") or "unknown"
+    line = evidence.get("line_number") or 0
+    category = str(evidence.get("category") or "iac").lower()
+    return f"misconfig:iac:{rule_id}:{path}:{line}", f"iac_target:{category}:{path}"
+
+
 def link_findings_to_graph_nodes(findings: list[Any], graph: Any) -> int:
     """Stamp Finding ↔ UnifiedNode FKs both ways. Returns number of findings linked.
 
@@ -80,13 +105,7 @@ def link_findings_to_graph_nodes(findings: list[Any], graph: Any) -> int:
         fid = str(getattr(finding, "id", "") or "").strip()
         if not fid:
             continue
-        cve = str(getattr(finding, "cve_id", None) or getattr(finding, "vulnerability_id", None) or "").strip()
-        title = str(getattr(finding, "title", "") or "")
-        candidates = [fid, cve]
-        if cve:
-            candidates.append(f"vuln:{cve}")
-        if ":" in title:
-            candidates.append(title.split(":", 1)[0].strip())
+        candidates, iac_target_id = _finding_node_candidates(finding, fid)
 
         match: Any | None = None
         for cand in candidates:
@@ -122,6 +141,8 @@ def link_findings_to_graph_nodes(findings: list[Any], graph: Any) -> int:
             getattr(finding, "node_id", None),
         ]
         asset_node_id = next((value for value in explicit if isinstance(value, str) and value in nodes), None)
+        if asset_node_id is None and iac_target_id in nodes:
+            asset_node_id = iac_target_id
         if asset_node_id is None:
             predecessors = {
                 edge.source

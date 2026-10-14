@@ -65,3 +65,36 @@ def severity_floor_sql(
     placeholders = ",".join(placeholder for _ in FINDING_ENTITY_VALUES)
     sql = f"({column} >= {placeholder} OR {entity_column} NOT IN ({placeholders}))"
     return sql, [min_severity_rank, *FINDING_ENTITY_VALUES]
+
+
+#: Node-id prefixes of finding-typed overlays that restate findings counted
+#: elsewhere. Legacy toxic-combination nodes (``toxic:*``) annotate CVE findings
+#: already in the unified stream; the COMBINATION findings come from the graph
+#: evaluator. Counting both would report one risk twice.
+FINDING_COUNT_EXCLUDED_ID_PREFIXES: tuple[str, ...] = ("toxic:",)
+
+
+def counts_as_finding(*, entity_type: Any, node_id: str) -> bool:
+    """Whether a node contributes to finding severity counts.
+
+    Agents and assets carry a rolled-up risk severity; counting it would
+    double-count the findings beneath them.
+    """
+    value = entity_type.value if hasattr(entity_type, "value") else str(entity_type)
+    return value in FINDING_ENTITY_VALUES and not str(node_id).startswith(FINDING_COUNT_EXCLUDED_ID_PREFIXES)
+
+
+def counts_as_finding_node(node: Any) -> bool:
+    return counts_as_finding(entity_type=getattr(node, "entity_type", ""), node_id=str(getattr(node, "id", "")))
+
+
+def finding_severity_count_sql(*, placeholder: str = "?") -> tuple[str, list[Any]]:
+    """WHERE fragment: a rated node that :func:`counts_as_finding`, for either driver."""
+    types = ",".join(placeholder for _ in FINDING_ENTITY_VALUES)
+    excluded = " AND ".join(f"id NOT LIKE {placeholder}" for _ in FINDING_COUNT_EXCLUDED_ID_PREFIXES)
+    excluded_params = [f"{prefix}%" for prefix in FINDING_COUNT_EXCLUDED_ID_PREFIXES]
+    return f"(severity <> '' AND entity_type IN ({types}) AND {excluded})", [*FINDING_ENTITY_VALUES, *excluded_params]
+
+
+#: :func:`finding_severity_count_sql` for SQLite's ``?`` placeholder.
+FINDING_SEVERITY_SQLITE: tuple[str, list[Any]] = finding_severity_count_sql()
