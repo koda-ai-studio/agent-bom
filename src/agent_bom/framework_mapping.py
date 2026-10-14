@@ -489,8 +489,8 @@ def controls_for_finding_shape(
     tagged from their advisory by the CVE taggers, COMBINATION by ``rule_id``).
     """
     from agent_bom.evidence.control_modes import finding_taggable_controls
-    from agent_bom.fedramp import FEDRAMP_MODERATE
     from agent_bom.evidence.toxic_combination_controls import TOXIC_COMBINATION_CONTROLS
+    from agent_bom.fedramp import FEDRAMP_MODERATE
 
     tags: dict[str, list[str]] = {}
 
