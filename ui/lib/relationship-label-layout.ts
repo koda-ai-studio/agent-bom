@@ -41,6 +41,10 @@ export function scheduleRelationshipLabelLayout(label: HTMLElement | null) {
       }
       return false;
     };
+    // A caption pushed past the canvas edge is clipped; never place one there.
+    const frame = canvas.getBoundingClientRect();
+    const insideCanvas = (box: Box) => frame.width <= 0 || frame.height <= 0
+      || (box.left >= frame.left && box.right <= frame.right && box.top >= frame.top && box.bottom <= frame.bottom);
     const labels = [...canvas.querySelectorAll<HTMLElement>(".graph-relationship-label[data-edge-id]")].flatMap(element => {
       const edge = canvas.querySelector(`.react-flow__edge[data-id="${CSS.escape(element.dataset.edgeId!)}"]`);
       const path = edge?.querySelector<SVGPathElement>(".react-flow__edge-path");
@@ -57,11 +61,21 @@ export function scheduleRelationshipLabelLayout(label: HTMLElement | null) {
           top: centerY - bounds.height / 2, bottom: centerY + bounds.height / 2 };
       };
       const fallback = { point: preferred, box: boxAt(preferred) };
-      const nodeClear = [preferred, ...Array.from({ length: 199 }, (_, index) => path.getPointAtLength(length * (index + 1) / 200))]
-        .sort((a, b) => ((a.x - preferred.x) ** 2 + (a.y - preferred.y) ** 2)
-          - ((b.x - preferred.x) ** 2 + (b.y - preferred.y) ** 2))
-        .map(point => ({ point, box: boxAt(point) }))
-        .filter(({ box }) => !nodes.some(node => intersects(box, node)));
+      const byDistance = (a: Point, b: Point) => ((a.x - preferred.x) ** 2 + (a.y - preferred.y) ** 2)
+        - ((b.x - preferred.x) ** 2 + (b.y - preferred.y) ** 2);
+      const clearOfNodes = ({ box }: { box: Box }) => insideCanvas(box) && !nodes.some(node => intersects(box, node));
+      const onPath = [preferred, ...Array.from({ length: 199 }, (_, index) => path.getPointAtLength(length * (index + 1) / 200))]
+        .sort(byDistance);
+      let nodeClear = onPath.map(point => ({ point, box: boxAt(point) })).filter(clearOfNodes);
+      if (!nodeClear.length) {
+        // A short link can lie wholly inside its endpoint cards: nudge the
+        // caption off the line, nearest the midpoint first, in growing steps.
+        const scaleX = Math.abs(matrix.a) || 1, scaleY = Math.abs(matrix.d) || 1;
+        nodeClear = onPath.slice(0, 24).flatMap(({ x, y }) => [4, 16, 32, 56].flatMap(gap => {
+          const dx = (bounds.width / 2 + gap) / scaleX, dy = (bounds.height / 2 + gap) / scaleY;
+          return [{ x, y: y - dy }, { x, y: y + dy }, { x: x - dx, y }, { x: x + dx, y }];
+        })).sort(byDistance).map(point => ({ point, box: boxAt(point) })).filter(clearOfNodes);
+      }
       const clearOfEdges = nodeClear.filter(({ box }) => !onForeignEdge(box, element.dataset.edgeId!));
       const candidates = clearOfEdges.length ? clearOfEdges : nodeClear;
       return [{ element, length, candidates, fallback }];

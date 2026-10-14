@@ -68,3 +68,30 @@ it("moves a caption off a crossing relationship line, not only off nodes and cap
   expect(bx).toBe(500);
   expect(Math.abs(by! - 100)).toBeGreaterThan(10);
 });
+
+it("moves a caption just off its line when every point on a short link lies inside the endpoint cards", () => {
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => { callback(0); return 1; });
+  vi.stubGlobal("CSS", { escape: (value: string) => value });
+  const labels = fixture();
+  document.querySelector<HTMLElement>(".react-flow__node")!.getBoundingClientRect = () => new DOMRect(-1000, 60, 4000, 80);
+  labels[1]!.remove();
+  labels[0]!.getBoundingClientRect = () => new DOMRect(450, 78, 100, 44);
+  scheduleRelationshipLabelLayout(labels[0]!);
+  const [x, y] = labels[0]!.style.transform.match(/translate\((-?[\d.]+)px, (-?[\d.]+)px\)$/)!.slice(1).map(Number);
+  expect(y! + 22 <= 58 || y! - 22 >= 142).toBe(true);
+  expect(Math.abs(x! - 500)).toBeLessThan(150);
+});
+
+it("never nudges a caption outside the visible canvas", () => {
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => { callback(0); return 1; });
+  vi.stubGlobal("CSS", { escape: (value: string) => value });
+  const labels = fixture();
+  document.querySelector<HTMLElement>(".react-flow")!.getBoundingClientRect = () => new DOMRect(0, 40, 1000, 400);
+  document.querySelector<HTMLElement>(".react-flow__node")!.getBoundingClientRect = () => new DOMRect(-1000, 60, 4000, 80);
+  labels[1]!.remove();
+  labels[0]!.getBoundingClientRect = () => new DOMRect(450, 78, 100, 44);
+  scheduleRelationshipLabelLayout(labels[0]!);
+  const y = Number(labels[0]!.style.transform.match(/translate\((-?[\d.]+)px, (-?[\d.]+)px\)$/)![2]);
+  expect(y - 22).toBeGreaterThanOrEqual(40);
+  expect(y - 22).toBeGreaterThanOrEqual(142);
+});
