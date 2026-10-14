@@ -1396,7 +1396,6 @@ def iac_finding_to_finding(iac: dict) -> "Finding":
         remediation_guidance=remediation or None,
         compliance_tags=sorted(set(compliance)),
         attack_tags=sorted(set(attack)),
-        **iac_declared_controls(compliance),
         evidence={
             "iac": True,
             "rule_id": rule_id,
@@ -1411,6 +1410,7 @@ def iac_finding_to_finding(iac: dict) -> "Finding":
         impact_category="iac_misconfiguration",
         id=stable_id("iac", rule_id, file_path, str(line_number)),
     )
+    finding.nist_800_53_tags, finding.fedramp_tags = iac_declared_controls(compliance)
     from agent_bom.compliance_hub import apply_hub_classification
 
     return apply_hub_classification(finding)

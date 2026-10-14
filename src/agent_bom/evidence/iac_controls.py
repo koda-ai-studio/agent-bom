@@ -18,11 +18,9 @@ from agent_bom.nist_800_53 import NIST_800_53
 __all__ = ["iac_declared_controls"]
 
 
-def iac_declared_controls(compliance: Iterable[str]) -> dict[str, list[str]]:
-    """Return ``nist_800_53_tags`` / ``fedramp_tags`` for the catalog controls an IaC rule declares."""
+def iac_declared_controls(compliance: Iterable[str]) -> tuple[list[str], list[str]]:
+    """Return ``(nist_800_53_tags, fedramp_tags)`` for the catalog controls an IaC rule declares."""
     declared = {control for raw in compliance if (control := str(raw).strip().upper().removeprefix("NIST-")) in NIST_800_53}
     nist = sorted(finding_taggable_controls("nist_800_53_tags", declared))
-    if not nist:
-        return {}
     fedramp = finding_taggable_controls("fedramp_tags", {f"FedRAMP-{control}" for control in nist if control in FEDRAMP_MODERATE})
-    return {"nist_800_53_tags": nist, "fedramp_tags": sorted(fedramp)}
+    return nist, sorted(fedramp)

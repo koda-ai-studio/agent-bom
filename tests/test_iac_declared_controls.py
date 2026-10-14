@@ -35,9 +35,9 @@ def test_declared_nist_controls_reach_nist_and_fedramp_fields() -> None:
 
 def test_only_catalog_controls_are_emitted() -> None:
     # CP-9 is not in the bundled 800-53 catalog; emitting it would tag a control no line can score.
-    assert iac_declared_controls(["NIST-CP-9", "CP-9"]) == {}
-    assert iac_declared_controls(["nist-au-2"]) == {"nist_800_53_tags": ["AU-2"], "fedramp_tags": ["FedRAMP-AU-2"]}
-    assert iac_declared_controls([]) == {}
+    assert iac_declared_controls(["NIST-CP-9", "CP-9"]) == ([], [])
+    assert iac_declared_controls(["nist-au-2"]) == (["AU-2"], ["FedRAMP-AU-2"])
+    assert iac_declared_controls([]) == ([], [])
 
 
 def test_every_emitted_tag_resolves_in_its_scoring_catalog() -> None:
@@ -49,5 +49,5 @@ def test_every_emitted_tag_resolves_in_its_scoring_catalog() -> None:
 
 def test_detective_and_unevaluable_controls_are_never_tagged() -> None:
     """IaC rules list RA-5 / CM-8; tagging a finding onto them would fail the scan-is-the-evidence controls."""
-    assert iac_declared_controls(["NIST-RA-5", "NIST-CM-8", "NIST-RA-7"]) == {}
-    assert iac_declared_controls(["NIST-RA-5", "NIST-AC-6"]) == {"nist_800_53_tags": ["AC-6"], "fedramp_tags": ["FedRAMP-AC-6"]}
+    assert iac_declared_controls(["NIST-RA-5", "NIST-CM-8", "NIST-RA-7"]) == ([], [])
+    assert iac_declared_controls(["NIST-RA-5", "NIST-AC-6"]) == (["AC-6"], ["FedRAMP-AC-6"])

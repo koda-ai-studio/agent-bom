@@ -34,7 +34,9 @@ _DATABRICKS = {
 
 def _job(result: dict) -> ScanJob:
     now = datetime.now(timezone.utc).isoformat()
-    return ScanJob(job_id="cloud", tenant_id="default", request=ScanRequest(), status=JobStatus.DONE, created_at=now, completed_at=now, result=result)
+    return ScanJob(
+        job_id="cloud", tenant_id="default", request=ScanRequest(), status=JobStatus.DONE, created_at=now, completed_at=now, result=result
+    )
 
 
 def test_databricks_best_practice_checks_stay_out_of_the_cis_foundations_line() -> None:
