@@ -10,15 +10,16 @@ request scope; no vendor field can set it.
 from __future__ import annotations
 
 import hashlib
+import hmac
 import json
 import re
-from collections.abc import Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass, field, fields, replace
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from urllib.parse import urlsplit
 
-from agent_bom.security import sanitize_text
+from agent_bom.security import sanitize_path_label, sanitize_text
 
 SOURCES = ("langfuse", "langsmith", "otel", "snowflake_cortex")
 KINDS = ("agent", "llm", "tool", "retrieval", "mcp", "other")
@@ -34,6 +35,7 @@ _MAX_SPANS = 5000
 _CREDENTIAL_NAME = re.compile(r"^[A-Z_][A-Z0-9_]{0,127}$")
 _PLAIN_REF = re.compile(r'^[A-Za-z0-9_$."/:-]{1,512}$')
 _EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+_LOCAL_PATH = re.compile(r"^(?:/|~|\.{1,2}[\\/]|\\|[A-Za-z]:[\\/])")
 
 
 @dataclass(frozen=True)
@@ -102,14 +104,20 @@ OPTIONAL_FIELDS = tuple(
 )
 
 
+def is_local_path(value: str) -> bool:
+    return bool(_LOCAL_PATH.match(value)) or value.lower().startswith("file:")
+
+
 def _text(value: object, max_len: int = 300) -> str | None:
+    """Bounded, redacted label; a local filesystem path keeps only a ``<path:basename>`` label."""
     if not isinstance(value, str) or not value.strip():
         return None
-    return sanitize_text(value.strip(), max_len=max_len) or None
+    text = value.strip()
+    return sanitize_path_label(text) if is_local_path(text) else sanitize_text(text, max_len=max_len) or None
 
 
 def _identifier(value: object) -> str | None:
-    return value if isinstance(value, str) and 0 < len(value) <= 512 else None
+    return value if isinstance(value, str) and 0 < len(value) <= 512 and not is_local_path(value) else None
 
 
 def _count(value: object) -> int | None:
@@ -130,10 +138,13 @@ def _cost(value: object) -> float | None:
     return round(number, 8) if 0 <= number < 1e9 else None
 
 
-def _timestamp(value: object) -> str | None:
+def _timestamp(value: object, *, naive_utc: bool = False) -> str | None:
+    """ISO-8601 UTC; a naive string is rejected unless the source documents it as UTC."""
     try:
         if isinstance(value, str) and not value.isdigit():
             moment = datetime.fromisoformat(value.replace("Z", "+00:00"))
+            if moment.tzinfo is None and naive_utc:
+                moment = moment.replace(tzinfo=timezone.utc)
             return moment.astimezone(timezone.utc).isoformat() if moment.tzinfo else None
         nanos = int(value) if isinstance(value, (int, str)) and not isinstance(value, bool) else 0
         return (_EPOCH + timedelta(microseconds=nanos // 1000)).isoformat() if 0 < nanos < 2**64 else None
@@ -141,10 +152,38 @@ def _timestamp(value: object) -> str | None:
         return None
 
 
-def principal_hash(user_id: object) -> str | None:
-    if not isinstance(user_id, (str, int)) or isinstance(user_id, bool) or str(user_id) == "":
+PRINCIPAL_KEYED_PREFIX = "h1:"
+PRINCIPAL_WEAK_PREFIX = "h1w:"
+_PRINCIPAL_CONTEXT = b"agent-bom/trace-principal/v1\x00"
+PrincipalDigest = Callable[[str], str]
+
+
+def principal_digest(tenant_id: str, user_id: str, *, deployment_key: bytes | None) -> str:
+    """Keyed, tenant-scoped digest of a user identifier; the raw identifier is never stored.
+
+    ``tenant_key = HMAC-SHA256(deployment_key, context || tenant_id)`` and the
+    digest is ``"h1:" + HMAC-SHA256(tenant_key, user_id)``. Without a deployment
+    key the tenant key derives from the tenant id alone: still tenant-scoped,
+    but dictionary-reversible by anyone who knows the tenant id, so it carries
+    the ``"h1w:"`` prefix and coverage reports it as weak.
+    """
+    if not tenant_id or not user_id:
+        raise ValueError("principal digest requires a tenant and a user identifier")
+    context = _PRINCIPAL_CONTEXT + tenant_id.encode()
+    tenant_key = hmac.new(deployment_key, context, hashlib.sha256).digest() if deployment_key else hashlib.sha256(context).digest()
+    prefix = PRINCIPAL_KEYED_PREFIX if deployment_key else PRINCIPAL_WEAK_PREFIX
+    return prefix + hmac.new(tenant_key, user_id.encode(), hashlib.sha256).hexdigest()
+
+
+def is_weak_principal(value: str | None) -> bool:
+    """True for a digest made without a deployment key (tenant-scoped but guessable)."""
+    return bool(value and value.startswith(PRINCIPAL_WEAK_PREFIX))
+
+
+def _principal(user_id: object, digest: PrincipalDigest | None) -> str | None:
+    if digest is None or not isinstance(user_id, (str, int)) or isinstance(user_id, bool) or str(user_id) == "":
         return None
-    return hashlib.sha256(str(user_id).encode()).hexdigest()
+    return digest(str(user_id))
 
 
 def content_sha256(*parts: object) -> str | None:
@@ -162,6 +201,8 @@ def resource_ref(value: object) -> str | None:
     if not isinstance(value, str) or not value.strip():
         return None
     text = value.strip()
+    if is_local_path(text):
+        return None
     if "://" in text:
         parts = urlsplit(text)
         return f"{parts.scheme.lower()}://{parts.hostname}" if parts.scheme and parts.hostname else None
@@ -201,7 +242,9 @@ def _match(kind: str, inventory_id: str | None, agent_ref: str | None) -> tuple[
     return ("exact", node) if node else ("none", None)
 
 
-def _build(tenant_id: str, source: str, view: dict[str, Any], signals: frozenset[str]) -> NormalizedTraceEvent:
+def _build(
+    tenant_id: str, source: str, view: dict[str, Any], signals: frozenset[str], principal: PrincipalDigest | None
+) -> NormalizedTraceEvent:
     kind = view["kind"]
     inventory_id = _identifier(view.get("inventory_id"))
     agent_ref = _identifier(view.get("agent_ref")) or (inventory_id if kind == "agent" else None)
@@ -212,8 +255,8 @@ def _build(tenant_id: str, source: str, view: dict[str, Any], signals: frozenset
         source_trace_id=_identifier(view.get("trace_id")) or "",
         source_span_id=_identifier(view.get("span_id")) or "",
         parent_span_id=_identifier(view.get("parent_id")),
-        started_at=_timestamp(view.get("started")),
-        ended_at=_timestamp(view.get("ended")),
+        started_at=_timestamp(view.get("started"), naive_utc=source == "langsmith"),
+        ended_at=_timestamp(view.get("ended"), naive_utc=source == "langsmith"),
         kind=kind,
         agent_name=_text(view.get("agent_name")),
         agent_ref=agent_ref,
@@ -222,7 +265,7 @@ def _build(tenant_id: str, source: str, view: dict[str, Any], signals: frozenset
         tool_name=_text(view.get("tool")),
         mcp_server_ref=_identifier(view.get("server")),
         resource_refs=_refs(*view.get("resources", ())),
-        principal_hash=principal_hash(view.get("user")),
+        principal_hash=_principal(view.get("user"), principal),
         role_name=_text(view.get("role"), 200),
         credential_ref=credential_name(view.get("credential")),
         input_tokens=_count(view.get("input_tokens")),
@@ -248,7 +291,9 @@ _LANGFUSE_KINDS = {"AGENT": "agent", "GENERATION": "llm", "EMBEDDING": "llm", "T
 _LANGSMITH_KINDS = {"llm": "llm", "embedding": "llm", "tool": "tool", "retriever": "retrieval"}
 
 
-def from_langfuse_observation(row: Mapping[str, Any], *, tenant_id: str, signals: frozenset[str] = frozenset()) -> NormalizedTraceEvent:
+def from_langfuse_observation(
+    row: Mapping[str, Any], *, tenant_id: str, signals: frozenset[str] = frozenset(), principal: PrincipalDigest | None = None
+) -> NormalizedTraceEvent:
     metadata = _dict(row.get("metadata"))
     kind = _LANGFUSE_KINDS.get(str(row.get("type") or "").upper(), "mcp" if metadata.get("mcp.method.name") else "other")
     usage = _dict(row.get("usageDetails")) or _dict(row.get("usage"))
@@ -277,10 +322,12 @@ def from_langfuse_observation(row: Mapping[str, Any], *, tenant_id: str, signals
         "failed": str(row.get("level") or "").upper() == "ERROR",
         "content": (row.get("input"), row.get("output")),
     }
-    return _build(tenant_id, "langfuse", view, signals)
+    return _build(tenant_id, "langfuse", view, signals, principal)
 
 
-def from_langsmith_run(row: Mapping[str, Any], *, tenant_id: str, signals: frozenset[str] = frozenset()) -> NormalizedTraceEvent:
+def from_langsmith_run(
+    row: Mapping[str, Any], *, tenant_id: str, signals: frozenset[str] = frozenset(), principal: PrincipalDigest | None = None
+) -> NormalizedTraceEvent:
     extra = _dict(row.get("extra"))
     metadata = _dict(extra.get("metadata"))
     run_type = str(row.get("run_type") or "").lower()
@@ -311,7 +358,7 @@ def from_langsmith_run(row: Mapping[str, Any], *, tenant_id: str, signals: froze
         "failed": bool(row.get("error")) or row.get("status") == "error",
         "content": (row.get("inputs"), row.get("outputs")),
     }
-    return _build(tenant_id, "langsmith", view, signals)
+    return _build(tenant_id, "langsmith", view, signals, principal)
 
 
 _OTEL_OPERATIONS = {
@@ -354,6 +401,7 @@ def from_otlp_span(
     tenant_id: str,
     resource_attributes: Mapping[str, Any] | None = None,
     signals: frozenset[str] = frozenset(),
+    principal: PrincipalDigest | None = None,
 ) -> NormalizedTraceEvent:
     attrs = {**(resource_attributes or {}), **otlp_attributes(span.get("attributes"))}
     name = str(span.get("name") or "")
@@ -372,7 +420,7 @@ def from_otlp_span(
         "model": attrs.get("gen_ai.response.model") or attrs.get("gen_ai.request.model"),
         "tool": attrs.get("gen_ai.tool.name") or attrs.get("tool.name") or (name.removeprefix("adk.tool.") if kind == "tool" else None),
         "server": attrs.get("mcp.server"),
-        "resources": (attrs.get("gen_ai.data_source.id"),),
+        "resources": (attrs.get("gen_ai.data_source.id"), attrs.get("mcp.resource.uri")),
         "user": attrs.get("user.id") or attrs.get("enduser.id"),
         "role": attrs.get("agent_bom.role_name"),
         "credential": attrs.get(CREDENTIAL_REF_KEY),
@@ -382,7 +430,7 @@ def from_otlp_span(
         "failed": _dict(span.get("status")).get("code") == 2,
         "content": tuple(attrs.get(key) for key in ("gen_ai.input.messages", "gen_ai.output.messages", "gen_ai.completion", "tool.output")),
     }
-    return _build(tenant_id, "otel", view, signals)
+    return _build(tenant_id, "otel", view, signals, principal)
 
 
 def iter_otlp_spans(body: Mapping[str, Any]) -> Iterator[tuple[dict[str, Any], dict[str, Any]]]:
@@ -405,8 +453,9 @@ def coverage_by_source(events: list[NormalizedTraceEvent]) -> dict[str, dict[str
     """How many events of each source supplied each optional canonical field."""
     coverage: dict[str, dict[str, Any]] = {}
     for event in events:
-        entry = coverage.setdefault(event.source, {"events": 0, "supplied": dict.fromkeys(OPTIONAL_FIELDS, 0)})
+        entry = coverage.setdefault(event.source, {"events": 0, "supplied": dict.fromkeys(OPTIONAL_FIELDS, 0), "weak_principal_hashes": 0})
         entry["events"] += 1
+        entry["weak_principal_hashes"] += is_weak_principal(event.principal_hash)
         for name in OPTIONAL_FIELDS:
             if getattr(event, name) not in (None, "", ()):
                 entry["supplied"][name] += 1

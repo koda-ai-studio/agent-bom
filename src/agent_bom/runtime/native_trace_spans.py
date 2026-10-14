@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from agent_bom.runtime.cloud_trace_claims import CLOUD_TRACE_ATTRIBUTES
-from agent_bom.runtime.normalized_trace import NORMALIZED_ATTRIBUTE, from_langfuse_observation, from_langsmith_run
+from agent_bom.runtime.normalized_trace import NORMALIZED_ATTRIBUTE, PrincipalDigest, from_langfuse_observation, from_langsmith_run
 
 
 def _text(value: object) -> str:
@@ -32,7 +32,9 @@ def _nanos(value: object) -> str:
         return ""
 
 
-def native_span(row: dict[str, Any], *, provider: str, include_content: bool) -> dict[str, Any] | None:
+def native_span(
+    row: dict[str, Any], *, provider: str, include_content: bool, principal: PrincipalDigest | None = None
+) -> dict[str, Any] | None:
     """Keep physical parentage and native kind without inventing tool calls."""
     name = _text(row.get("name")).strip()
     if not name:
@@ -70,7 +72,7 @@ def native_span(row: dict[str, Any], *, provider: str, include_content: bool) ->
         attrs["agent_bom.logical_root"] = "true" if row["isRootObservation"] else "false"
     normalize = from_langfuse_observation if lf else from_langsmith_run
     try:
-        attrs[NORMALIZED_ATTRIBUTE] = json.dumps(normalize(row, tenant_id="").to_dict(), sort_keys=True)
+        attrs[NORMALIZED_ATTRIBUTE] = json.dumps(normalize(row, tenant_id="", principal=principal).to_dict(), sort_keys=True)
     except ValueError:
         attrs["agent_bom.normalization"] = "rejected"
     if include_content:

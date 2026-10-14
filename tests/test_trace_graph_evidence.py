@@ -11,6 +11,7 @@ from agent_bom.api.compliance_hub_store import InMemoryComplianceHubStore, reset
 from agent_bom.api.hub_ingest import ingest_runtime_findings
 from agent_bom.api.native_trace_import import TraceImportScope, prepare_trace_page
 from agent_bom.api.runtime_event_store import InMemoryRuntimeEventStore
+from agent_bom.api.trace_collection.normalized_events import tenant_principal
 from agent_bom.api.trace_collection.trace_evidence import emit_shadow_findings, record_otlp_evidence, with_trace_events
 from agent_bom.graph.builder import build_unified_graph_from_report
 from agent_bom.graph.credential_reach import credential_routes
@@ -125,7 +126,8 @@ def _otlp(trace: str, tenant_claim: str) -> dict:
 
 def _import_langfuse(store: InMemoryRuntimeEventStore, tenant: str, trace: str) -> int:
     scope = TraceImportScope(tenant_id=tenant, provider="langfuse", connection_id="c1", endpoint="https://lf.example", project_id="p1")
-    spans = [native_span(row, provider="langfuse", include_content=True) for row in _langfuse_rows(trace)]
+    principal = tenant_principal(tenant)
+    spans = [native_span(row, provider="langfuse", include_content=True, principal=principal) for row in _langfuse_rows(trace)]
     prepared = prepare_trace_page({"spans": spans}, scope=scope, collected_at="2026-10-05T11:00:00+00:00")
     return store.put_observations_batch(prepared.observations)
 
@@ -190,6 +192,8 @@ def test_imported_traces_project_exact_runtime_edges_and_feed_analysis(runtime, 
     assert observed["unmatched_named_spans"] == 1
     assert observed["unbound_context_spans"] == 1
     assert observed["edges"] == 2
+    assert observed["weak_principal_hashes"] == 1  # no deployment key configured in this test
+    assert "weak_principal_hashes" in graph.analysis_status[STATUS_KEY].reason_codes
 
     assert graph.get_node(CREDENTIAL).attributes["runtime_used"] is True
     assert graph.get_node(TOOL).attributes["runtime_trace_use"]["count"] == 2
@@ -320,3 +324,26 @@ def test_pipeline_persist_stores_runtime_edges_status_and_shadow_findings(runtim
     assert persisted == {(AGENT, "invoked", TOOL), (TOOL, "used_credential", CREDENTIAL)}
     assert loaded.analysis_status[STATUS_KEY].observed["unmatched_named_spans"] == 1
     assert [row["finding_type"] for row in hub.list("tenant-a")] == ["SHADOW_AI"]
+
+
+def test_configured_deployment_key_yields_keyed_principal_digests(monkeypatch):
+    monkeypatch.setenv("AGENT_BOM_AUDIT_HMAC_KEY", "primary-key,previous-key")
+    store = InMemoryRuntimeEventStore()
+    _import_langfuse(store, "tenant-a", "lf-keyed")
+    hashes = {
+        record.metadata["normalized"]["principal_hash"]
+        for record in store.query_observations("tenant-a", limit=50)["observations"]
+        if record.metadata["normalized"]["principal_hash"]
+    }
+    from agent_bom.runtime.normalized_trace import principal_digest
+
+    assert hashes == {principal_digest("tenant-a", "jane.doe@example.com", deployment_key=b"primary-key")}
+
+
+def test_imported_span_names_never_store_local_paths():
+    rows = [{**_langfuse_rows("lf-path")[4], "name": "/tmp/abomprobe/shadow_tool"}]
+    scope = TraceImportScope(tenant_id="tenant-a", provider="langfuse", connection_id="c1", endpoint="https://lf.example", project_id="p1")
+    spans = [native_span(row, provider="langfuse", include_content=False) for row in rows]
+    record = prepare_trace_page({"spans": spans}, scope=scope, collected_at="2026-10-05T11:00:00+00:00").observations[0]
+    assert "/tmp/abomprobe" not in json.dumps(record.to_dict())
+    assert record.tool_name == "<path:shadow_tool>"

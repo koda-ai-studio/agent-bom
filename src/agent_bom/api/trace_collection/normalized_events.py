@@ -12,17 +12,21 @@ from __future__ import annotations
 import json
 from collections.abc import Iterable, Mapping
 from datetime import datetime, timedelta, timezone
+from functools import partial
 from typing import Any
 
 from agent_bom.api.runtime_event_store import RuntimeEventStore
+from agent_bom.api.secret_source import resolve_secret
 from agent_bom.api.storage.runtime_records import RuntimeObservationRecord
 from agent_bom.canonical_ids import canonical_id
 from agent_bom.runtime.normalized_trace import (
     NORMALIZED_ATTRIBUTE,
     NormalizedTraceEvent,
+    PrincipalDigest,
     coverage_by_source,
     from_otlp_span,
     iter_otlp_spans,
+    principal_digest,
 )
 
 NORMALIZED_SURFACE = "normalized_trace"
@@ -61,12 +65,12 @@ def normalize_otlp_body(
     """Normalize every OTLP span; return events and the count rejected as invalid."""
     events: list[NormalizedTraceEvent] = []
     rejected = 0
+    digest = tenant_principal(tenant_id)
     for span, resource in iter_otlp_spans(body):
         key = (str(span.get("traceId") or ""), str(span.get("spanId") or ""))
         try:
-            events.append(
-                from_otlp_span(span, tenant_id=tenant_id, resource_attributes=resource, signals=(signals or {}).get(key, frozenset()))
-            )
+            span_signals = (signals or {}).get(key, frozenset())
+            events.append(from_otlp_span(span, tenant_id=tenant_id, resource_attributes=resource, signals=span_signals, principal=digest))
         except ValueError:
             rejected += 1
     return events, rejected
@@ -170,4 +174,21 @@ def _before(observed_at: str, start: datetime) -> bool:
 
 
 def coverage_summary(events: list[NormalizedTraceEvent]) -> dict[str, dict[str, Any]]:
-    return {source: {"events": entry["events"], "missing": entry["missing"]} for source, entry in coverage_by_source(events).items()}
+    return {
+        source: {key: entry[key] for key in ("events", "missing", "weak_principal_hashes")}
+        for source, entry in coverage_by_source(events).items()
+    }
+
+
+def trace_principal_key() -> bytes | None:
+    """Primary deployment audit HMAC key (domain-separated in ``principal_digest``); never an ephemeral key.
+
+    Rotating the primary key changes digests for later events; earlier events keep theirs.
+    """
+    configured = resolve_secret("AGENT_BOM_AUDIT_HMAC_KEY")
+    keys = [chunk.strip().encode() for chunk in configured.split(",") if chunk.strip()] if configured else []
+    return keys[0] if keys else None
+
+
+def tenant_principal(tenant_id: str) -> PrincipalDigest:
+    return partial(principal_digest, tenant_id, deployment_key=trace_principal_key())

@@ -12,7 +12,7 @@ from agent_bom.api import audit_log
 from agent_bom.api.native_trace_import import TraceImportScope
 from agent_bom.api.runtime_event_store import RuntimeEventStore
 from agent_bom.api.storage.runtime_trace_imports import TraceImportConflictError
-from agent_bom.api.trace_collection.normalized_events import signals_by_span, stamp_page_signals
+from agent_bom.api.trace_collection.normalized_events import signals_by_span, stamp_page_signals, tenant_principal
 from agent_bom.api.trace_collection.trace_evidence import record_native_evidence
 from agent_bom.api.trace_collection.trace_findings import FindingSink
 from agent_bom.api.trace_import_service import import_native_pages
@@ -93,6 +93,7 @@ def _import(
         cloud_provider=credentials.get("scope_cloud_provider", ""),
     )
     native_spans: list[dict[str, Any]] = []
+    principal = tenant_principal(tenant_id)
     content_findings: list[dict[str, Any]] = []
 
     def observe_page(payload: dict[str, Any]) -> None:
@@ -112,7 +113,7 @@ def _import(
         window_end=body.get("window_end"),
         max_pages=max_pages,
         fetch=lambda **args: connectors.fetch_trace_page(
-            provider, credentials, project_id=project_id, limit=limit, include_content=screen_content, **args
+            provider, credentials, project_id=project_id, limit=limit, include_content=screen_content, principal=principal, **args
         ),
         on_page=observe_page,
     )

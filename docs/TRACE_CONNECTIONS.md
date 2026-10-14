@@ -174,9 +174,16 @@ Langfuse observations, LangSmith runs and OTLP JSON spans (OpenTelemetry GenAI
 attributes such as `gen_ai.operation.name`, `gen_ai.agent.name`,
 `gen_ai.tool.name`, `gen_ai.request.model` and `gen_ai.usage.input_tokens`).
 The tenant comes from the connection or request, never from span attributes.
-User IDs are stored only as SHA-256 hashes, prompt and output text only as a
-SHA-256 digest, URLs only as scheme and host, and `agent_bom.credential_ref`
-only when it is a credential name. Fields a source cannot supply stay empty and
+User IDs are stored only as a tenant-scoped HMAC-SHA256 (`h1:`) keyed from the
+primary `AGENT_BOM_AUDIT_HMAC_KEY`; without that key the digest is derived from
+the tenant ID alone, carries the `h1w:` prefix and is counted as
+`weak_principal_hashes` in coverage and in the graph analysis status. Rotating
+the primary key changes digests for later events. Prompt and output text are
+kept only as a SHA-256 digest, URLs only as scheme and host, local filesystem
+paths only as a `<path:basename>` label (never as resource references), and
+`agent_bom.credential_ref` only when it is a credential name. LangSmith
+timestamps without an offset are read as UTC, as the LangSmith SDK does; other
+sources must send timezone-aware timestamps. Fields a source cannot supply stay empty and
 are counted per source in the `normalized.coverage` block of
 `POST /v1/traces` and managed pull responses.
 

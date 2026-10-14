@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from functools import partial
 
 import pytest
 
@@ -13,8 +14,13 @@ from agent_bom.runtime.normalized_trace import (
     from_langfuse_observation,
     from_langsmith_run,
     from_otlp_span,
+    is_weak_principal,
     iter_otlp_spans,
+    principal_digest,
 )
+
+KEY = b"deployment-key"
+DIGEST = partial(principal_digest, "tenant-a", deployment_key=KEY)
 
 PROMPT = "Summarize the account notes for jane.doe@example.com"
 
@@ -132,8 +138,8 @@ OTLP_BODY = {
 }
 
 
-def _sha(value: str) -> str:
-    return hashlib.sha256(value.encode()).hexdigest()
+def _digest(value: str) -> str:
+    return principal_digest("tenant-a", value, deployment_key=KEY)
 
 
 @pytest.mark.parametrize(
@@ -152,13 +158,13 @@ def _sha(value: str) -> str:
         ("input_tokens", 812),  # usageDetails.input
         ("output_tokens", 96),  # usageDetails.output
         ("cost_usd", 0.00299),  # totalCost
-        ("principal_hash", _sha("jane.doe@example.com")),  # userId, hashed
+        ("principal_hash", _digest("jane.doe@example.com")),  # userId, hashed
         ("status", "ok"),  # level != ERROR
         ("match_method", "none"),
     ],
 )
 def test_langfuse_observation_mapping(field: str, expected: object) -> None:
-    event = from_langfuse_observation(LANGFUSE_GENERATION, tenant_id="tenant-a")
+    event = from_langfuse_observation(LANGFUSE_GENERATION, tenant_id="tenant-a", principal=DIGEST)
     assert getattr(event, field) == expected
 
 
@@ -175,13 +181,13 @@ def test_langfuse_observation_mapping(field: str, expected: object) -> None:
         ("input_tokens", 400),  # prompt_tokens
         ("output_tokens", 50),  # completion_tokens
         ("cost_usd", 0.0021),  # total_cost (decimal string)
-        ("principal_hash", _sha("u-42")),  # extra.metadata.user_id, hashed
+        ("principal_hash", _digest("u-42")),  # extra.metadata.user_id, hashed
         ("ended_at", "2026-10-01T12:00:01+00:00"),
-        ("started_at", None),  # naive timestamps are rejected, never guessed
+        ("started_at", "2026-10-01T12:00:00+00:00"),  # LangSmith naive timestamps are UTC
     ],
 )
 def test_langsmith_run_mapping(field: str, expected: object) -> None:
-    event = from_langsmith_run(LANGSMITH_LLM, tenant_id="tenant-a")
+    event = from_langsmith_run(LANGSMITH_LLM, tenant_id="tenant-a", principal=DIGEST)
     assert getattr(event, field) == expected
 
 
@@ -200,7 +206,7 @@ def test_langsmith_run_mapping(field: str, expected: object) -> None:
         ("input_tokens", 120),  # gen_ai.usage.input_tokens (string intValue)
         ("output_tokens", 7),  # gen_ai.usage.output_tokens
         ("resource_refs", ("crm-index",)),  # gen_ai.data_source.id
-        ("principal_hash", _sha("u-42")),  # user.id, hashed
+        ("principal_hash", _digest("u-42")),  # user.id, hashed
         ("mcp_server_ref", "server:crm"),
         ("status", "error"),  # status.code 2
         ("started_at", "2026-09-21T14:13:20+00:00"),
@@ -209,7 +215,7 @@ def test_langsmith_run_mapping(field: str, expected: object) -> None:
 )
 def test_otlp_span_mapping(field: str, expected: object) -> None:
     span, resource = next(iter_otlp_spans(OTLP_BODY))
-    event = from_otlp_span(span, tenant_id="tenant-a", resource_attributes=resource)
+    event = from_otlp_span(span, tenant_id="tenant-a", resource_attributes=resource, principal=DIGEST)
     assert getattr(event, field) == expected
 
 
@@ -275,3 +281,60 @@ def test_coverage_counts_missing_fields_per_source() -> None:
     assert coverage["otel"]["missing"]["cost_usd"] == 1
     assert coverage["langsmith"]["missing"]["agent_name"] == 1
     assert coverage["langsmith"]["events"] == 1
+
+
+def test_principal_digest_is_keyed_tenant_scoped_and_flags_weak_fallback() -> None:
+    keyed = principal_digest("tenant-a", "jane.doe@example.com", deployment_key=KEY)
+    assert keyed.startswith("h1:") and len(keyed) == 3 + 64
+    assert keyed.removeprefix("h1:") != hashlib.sha256(b"jane.doe@example.com").hexdigest()
+    assert keyed == principal_digest("tenant-a", "jane.doe@example.com", deployment_key=KEY)
+    assert keyed != principal_digest("tenant-b", "jane.doe@example.com", deployment_key=KEY)
+    assert keyed != principal_digest("tenant-a", "jane.doe@example.com", deployment_key=b"other-key")
+    weak = principal_digest("tenant-a", "jane.doe@example.com", deployment_key=None)
+    assert weak.startswith("h1w:") and is_weak_principal(weak) and not is_weak_principal(keyed)
+    assert weak != principal_digest("tenant-b", "jane.doe@example.com", deployment_key=None)
+    with pytest.raises(ValueError):
+        principal_digest("", "u", deployment_key=KEY)
+    unbound = from_langfuse_observation(LANGFUSE_GENERATION, tenant_id="tenant-a")
+    assert unbound.principal_hash is None  # no digest function means no identifier at all, never a plain hash
+    weak_event = from_langfuse_observation(
+        LANGFUSE_GENERATION, tenant_id="t", principal=partial(principal_digest, "t", deployment_key=None)
+    )
+    assert coverage_by_source([weak_event])["langfuse"]["weak_principal_hashes"] == 1
+
+
+def test_naive_timestamps_are_utc_only_for_langsmith() -> None:
+    naive = {**LANGFUSE_GENERATION, "startTime": "2026-10-01T12:00:00"}
+    assert from_langfuse_observation(naive, tenant_id="t").started_at is None
+    assert from_langsmith_run(LANGSMITH_LLM, tenant_id="t").started_at == "2026-10-01T12:00:00+00:00"
+
+
+def test_mcp_semconv_spans_map_method_and_resource_host_only() -> None:
+    def span(uri: str) -> dict:
+        attrs = {"mcp.method.name": "resources/read", "mcp.resource.uri": uri, "mcp.session.id": "s-1"}
+        return {
+            "traceId": "t",
+            "spanId": uri[-4:],
+            "name": "resources/read",
+            "attributes": [{"key": key, "value": {"stringValue": value}} for key, value in attrs.items()],
+        }
+
+    remote = from_otlp_span(span("https://docs.example.com/private/jane"), tenant_id="t")
+    assert (remote.kind, remote.resource_refs) == ("mcp", ("https://docs.example.com",))
+    assert from_otlp_span(span("file:///Users/jane/notes.txt"), tenant_id="t").resource_refs == ()
+
+
+def test_local_paths_never_survive_normalization() -> None:
+    root = "/tmp/abomprobe"
+    row = {
+        **LANGFUSE_RETRIEVER,
+        "name": f"{root}/indexer",
+        "metadata": {"data_source": f"{root}/vector.db", "role_name": f"{root}/role", "mcp_server": f"{root}/server.json"},
+        "output": json.dumps([{"metadata": {"source": f"file://{root}/doc.txt"}}, {"metadata": {"source": f"{root}/doc2.txt"}}]),
+    }
+    event = from_langfuse_observation({**row, "type": "TOOL"}, tenant_id="t")
+    assert event.tool_name == "<path:indexer>"
+    assert event.role_name == "<path:role>"
+    assert event.mcp_server_ref is None
+    assert from_langfuse_observation(row, tenant_id="t").resource_refs == ()
+    assert root not in json.dumps(event.to_dict())

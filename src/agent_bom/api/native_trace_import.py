@@ -18,7 +18,8 @@ from typing import Any
 from agent_bom.api.runtime_event_store import RuntimeObservationRecord, sanitize_runtime_metadata
 from agent_bom.api.storage.runtime_records import RuntimeMetadataCache
 from agent_bom.runtime.cloud_trace_claims import cloud_trace_claims
-from agent_bom.runtime.normalized_trace import NORMALIZED_ATTRIBUTE, NormalizedTraceEvent
+from agent_bom.runtime.normalized_trace import NORMALIZED_ATTRIBUTE, NormalizedTraceEvent, is_local_path
+from agent_bom.security import sanitize_path_label
 
 
 @dataclass(frozen=True)
@@ -137,6 +138,7 @@ def prepare_trace_page(payload: dict[str, Any], *, scope: TraceImportScope, coll
         environment = scope.environment or attrs.get("agent_bom.native_environment", "")
         native_type = attrs.get("agent_bom.native_type", "unknown")
         native_name = cache.bounded(attrs.get("agent_bom.native_name", ""), max_len=300)
+        native_name = sanitize_path_label(native_name) if is_local_path(native_name) else native_name
         observed_at = _event_time(span)
         code = _status_code(span)
         metadata: dict[str, Any] = {

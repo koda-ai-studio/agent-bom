@@ -22,7 +22,7 @@ from agent_bom.graph.edge_evidence import edge_evidence
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.relationship_specs import relationship_spec
 from agent_bom.graph.types import EntityType, RelationshipType
-from agent_bom.runtime.normalized_trace import NormalizedTraceEvent
+from agent_bom.runtime.normalized_trace import NormalizedTraceEvent, is_weak_principal
 from agent_bom.security import sanitize_sensitive_payload, sanitize_text
 
 TRACE_SOURCE = "runtime-trace"
@@ -43,6 +43,24 @@ _REL_BY_TARGET: dict[EntityType, RelationshipType] = {
     E.DATASET: R.ACCESSED,
     E.RESOURCE: R.ACCESSED,
 }
+_OBSERVED_KEYS = (
+    "events",
+    "invalid_events",
+    "tenant_rejected",
+    "untimed_events",
+    "out_of_window",
+    "truncated_events",
+    "exact_bound",
+    "stale_exact_refs",
+    "name_candidates",
+    "unmatched_named_spans",
+    "unbound_context_spans",
+    "unbound_credential_refs",
+    "disallowed_pairs",
+    "weak_principal_hashes",
+    "edges",
+    "shadow_entities",
+)
 _NAMED_KINDS = {"agent": E.AGENT, "tool": E.TOOL, "mcp": E.SERVER}
 
 
@@ -304,31 +322,13 @@ def project_trace_events(
     window_end: str,
 ) -> TraceProjectionResult:
     """Draw aggregated runtime edges for exactly bound spans and report the rest."""
-    observed = dict.fromkeys(
-        (
-            "events",
-            "invalid_events",
-            "tenant_rejected",
-            "untimed_events",
-            "out_of_window",
-            "truncated_events",
-            "exact_bound",
-            "stale_exact_refs",
-            "name_candidates",
-            "unmatched_named_spans",
-            "unbound_context_spans",
-            "unbound_credential_refs",
-            "disallowed_pairs",
-            "edges",
-            "shadow_entities",
-        ),
-        0,
-    )
+    observed = dict.fromkeys(_OBSERVED_KEYS, 0)
     start, end = _parse_moment(window_start), _parse_moment(window_end)
     if start is None or end is None or start > end or not tenant_id:
         raise ValueError("Trace projection requires a tenant and a valid fixed window")
     admitted = _admit(events, tenant_id, start, end, observed)
     observed["events"] = len(admitted)
+    observed["weak_principal_hashes"] = sum(is_weak_principal(event.principal_hash) for event in admitted)
     projector = _Projector(graph, admitted, observed)
     for event in admitted:
         projector.project(event)
@@ -361,7 +361,11 @@ def project_trace_events(
     limited = observed["truncated_events"] > 0
     reasons = tuple(
         code
-        for code, count in (("event_cap", observed["truncated_events"]), ("unmatched_named_spans", observed["unmatched_named_spans"]))
+        for code, count in (
+            ("event_cap", observed["truncated_events"]),
+            ("unmatched_named_spans", observed["unmatched_named_spans"]),
+            ("weak_principal_hashes", observed["weak_principal_hashes"]),
+        )
         if count
     )
     graph.analysis_status[STATUS_KEY] = GraphAnalysisStatus(

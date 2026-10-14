@@ -29,6 +29,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Protocol, cast
 
 from agent_bom.runtime.native_trace_spans import native_span
+from agent_bom.runtime.normalized_trace import PrincipalDigest
 
 logger = logging.getLogger(__name__)
 
@@ -385,6 +386,7 @@ def fetch_trace_page(
     limit: int = _DEFAULT_LIMIT,
     include_content: bool = False,
     client: _HttpClient | None = None,
+    principal: PrincipalDigest | None = None,
 ) -> NativeTracePage:
     """Fetch one bounded native page without truncation or implicit API downgrade.
 
@@ -414,7 +416,7 @@ def fetch_trace_page(
             not isinstance(next_cursor, str) or not next_cursor or len(next_cursor) > 8192 or next_cursor == cursor
         ):
             raise TraceConnectorError("Trace provider returned an invalid or nonadvancing cursor")
-        spans = [native_span(row, provider=provider, include_content=include_content) for row in rows]
+        spans = [native_span(row, provider=provider, include_content=include_content, principal=principal) for row in rows]
         return NativeTracePage(payload={"spans": spans}, cursor=next_cursor, fetched=len(rows))
     finally:
         if owns:

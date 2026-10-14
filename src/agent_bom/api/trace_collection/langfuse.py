@@ -12,6 +12,7 @@ import httpx
 from agent_bom.api.native_trace_import import TraceImportScope, prepare_trace_page
 from agent_bom.api.runtime_event_store import RuntimeObservationRecord
 from agent_bom.api.trace_collection.contracts import PAGE_LIMIT, CollectionState
+from agent_bom.api.trace_collection.normalized_events import tenant_principal
 from agent_bom.api.trace_collection.retry import provider_retry_after
 from agent_bom.runtime.egress_transport import build_pinned_sync_client
 from agent_bom.runtime.native_trace_spans import native_span
@@ -103,8 +104,9 @@ def fetch_page(
             environment=credentials.get("scope_environment", ""),
             cloud_provider=credentials.get("scope_cloud_provider", ""),
         )
+        principal = tenant_principal(tenant)
         prepared = prepare_trace_page(
-            {"spans": [native_span(row, provider="langfuse", include_content=False) for row in rows]},
+            {"spans": [native_span(row, provider="langfuse", include_content=False, principal=principal) for row in rows]},
             scope=scope,
             collected_at=datetime.now(timezone.utc).isoformat(),
         )
