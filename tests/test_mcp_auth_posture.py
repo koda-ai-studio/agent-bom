@@ -232,12 +232,13 @@ def test_legacy_report_without_server_ids_flags_server_by_unique_label() -> None
 def test_legacy_report_ambiguous_label_is_not_guessed() -> None:
     from agent_bom.graph.builder import build_unified_graph_from_report
 
-    report = _legacy_report(["payments", "payments"])
-    report["agents"].append({**report["agents"][0], "name": "b", "config_path": "/tmp/b.json"})
+    report = _legacy_report(["payments"])
+    other_server = {**report["agents"][0]["mcp_servers"][0], "url": "https://mcp-b.example.com/sse"}
+    report["agents"].append({**report["agents"][0], "name": "b", "config_path": "/tmp/b.json", "mcp_servers": [other_server]})
     graph = build_unified_graph_from_report(report, scan_id="legacy", tenant_id="tenant-a")
 
     servers = _server_nodes(graph)
-    assert len(servers) >= 2
+    assert sum(node.label == "payments" for node in servers) >= 2
     assert not any(node.attributes.get("mcp_auth_weak") for node in servers)
 
 
