@@ -72,4 +72,7 @@ def finding_from_dict(item: dict) -> Finding | None:
         values = item.get(tag_field)
         if isinstance(values, (list, tuple)):
             setattr(finding, tag_field, [str(value) for value in values if value])
+    applicable = item.get("applicable_frameworks")
+    if isinstance(applicable, (list, tuple)):
+        finding.applicable_frameworks = [str(slug) for slug in applicable if slug]
     return finding
