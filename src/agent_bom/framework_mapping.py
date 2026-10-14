@@ -83,7 +83,6 @@ __all__ = [
     "iso_controls_for_cwes_via_nist",
     "select_frameworks",
     "controls_for_finding_shape",
-    "TOXIC_COMBINATION_CONTROLS",
     "is_framework_relevant",
     "ALL_FRAMEWORKS",
     "CIS_FOUNDATIONS_TO_NIST_800_53",
@@ -99,9 +98,7 @@ def controls_for_cwe(cwe: str, framework_key: str) -> list[str]:
     """Return the control IDs a single CWE evidences under one framework.
 
     Args:
-        cwe: A CWE identifier, e.g. ``"CWE-89"``. Matched case- and
-            whitespace-insensitively so every tagger resolves ``cwe-89`` and
-            ``CWE-89`` to the same controls.
+        cwe: A CWE identifier, e.g. ``"CWE-89"`` (case/whitespace-insensitive).
         framework_key: The framework key used inside ``CWE_COMPLIANCE_MAP``
             (``"cis"``, ``"nist_800_53"``, ``"iso_27001"``, ``"owasp_llm"``,
             ``"soc2"``, ``"nist_csf"``, ``"pci_dss"``).
@@ -117,9 +114,8 @@ def controls_for_cwe(cwe: str, framework_key: str) -> list[str]:
 def controls_for_cwes(cwe_ids: Iterable[str], framework_key: str) -> list[str]:
     """Resolve a collection of CWEs to one framework's controls, deduped.
 
-    First-seen order is preserved (matching ``vuln_compliance``'s
-    order-preserving append); the blast-radius taggers fold the result into a
-    set and sort, so order is immaterial to them.
+    First-seen order is preserved for ``vuln_compliance``; the blast-radius
+    taggers sort the result, so order is immaterial to them.
     """
     out: list[str] = []
     for cwe in cwe_ids:
@@ -469,30 +465,6 @@ _CWE_TABLE_TAG_FIELDS: dict[str, str] = {
     "cis": "cis_tags",
     "pci_dss": "pci_dss_tags",
 }
-# Graph toxic combinations, keyed by rule id. A public foothold on a known
-# vulnerability is evidence against flaw remediation and boundary protection;
-# reach into sensitive data or lateral roles is evidence against access
-# enforcement / least privilege. OWASP LLM Top 10 applies only where an AI
-# agent is part of the combination (excessive agency); web OWASP Top 10 IDs
-# have no catalog here and are deliberately not emitted.
-_PUBLIC_VULNERABLE_TAGS: dict[str, tuple[str, ...]] = {
-    "nist_800_53_tags": ("SI-2",),
-    "soc2_tags": ("CC6.6",),
-}
-TOXIC_COMBINATION_CONTROLS: dict[str, dict[str, tuple[str, ...]]] = {
-    "PUBLIC_EXPOSED_KEV": _PUBLIC_VULNERABLE_TAGS,
-    "PUBLIC_EXPOSED_RCE": _PUBLIC_VULNERABLE_TAGS,
-    "PUBLIC_EXPOSED_NETWORK_EXPLOITABLE": _PUBLIC_VULNERABLE_TAGS,
-    "PUBLIC_EXPOSED_VULNERABLE": _PUBLIC_VULNERABLE_TAGS,
-    "PUBLIC_TO_SENSITIVE_DATA": {"nist_800_53_tags": ("AC-3",), "soc2_tags": ("CC6.6",)},
-    "OVERPERMISSIONED_TO_SENSITIVE": {"nist_800_53_tags": ("AC-6",), "soc2_tags": ("CC6.1",)},
-    "AGENT_REACHES_PRIVILEGED": {
-        "owasp_tags": ("LLM06",),
-        "owasp_agentic_tags": ("ASI03",),
-        "nist_800_53_tags": ("AC-6", "IA-5"),
-    },
-    "PUBLIC_PERMISSION_LATERAL": {"nist_800_53_tags": ("AC-6",), "soc2_tags": ("CC6.6",)},
-}
 
 
 def _is_mcp_location(source: FindingSource, asset_type: str | None, location: str | None) -> bool:
@@ -514,11 +486,11 @@ def controls_for_finding_shape(
     """Return ``{tag_field: [control, ...]}`` for a non-advisory finding.
 
     Empty for every finding type this table does not own (CVE findings are
-    tagged from their advisory by the CVE taggers). ``rule_id`` selects the
-    graph toxic-combination rule for ``COMBINATION`` findings.
+    tagged from their advisory by the CVE taggers, COMBINATION by ``rule_id``).
     """
     from agent_bom.evidence.control_modes import finding_taggable_controls
     from agent_bom.fedramp import FEDRAMP_MODERATE
+    from agent_bom.toxic_combination_controls import TOXIC_COMBINATION_CONTROLS
 
     tags: dict[str, list[str]] = {}
 

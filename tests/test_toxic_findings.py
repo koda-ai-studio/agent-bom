@@ -502,7 +502,7 @@ def test_every_toxic_finding_carries_scored_catalog_controls():
 
 def test_toxic_combination_control_table_uses_only_catalog_ids():
     from agent_bom.compliance_coverage import TAG_MAPPED_FRAMEWORKS
-    from agent_bom.framework_mapping import TOXIC_COMBINATION_CONTROLS
+    from agent_bom.toxic_combination_controls import TOXIC_COMBINATION_CONTROLS
 
     catalogs = {m.tag_field: m.catalog for m in TAG_MAPPED_FRAMEWORKS}
     assert set(TOXIC_COMBINATION_CONTROLS) == {rule.id for rule in TOXIC_RULES}
