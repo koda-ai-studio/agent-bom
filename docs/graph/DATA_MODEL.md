@@ -3,7 +3,7 @@
 > Generated from the code by `scripts/generate_graph_data_model.py`. Do not edit by hand: re-run the
 > generator and commit the result. CI runs it with `--check` and fails on drift.
 
-Every node kind, edge kind, evidence tier and normalization table behind the security graph. The [graph contract](CONTRACT.md) states what the graph guarantees; this page lists what it is made of. How report fields reach the database, exports and this graph is in the [data model atlas](../DATA_MODEL.md). Detail pages: [relationship pairs](data-model/relationships.md) · [entity emitters and id formats](data-model/entities.md).
+Every node kind, edge kind, evidence tier and normalization table behind the security graph. The [graph contract](CONTRACT.md) states what the graph guarantees; this page lists what it is made of. How report fields reach the database, exports and this graph is in the [data model atlas](../DATA_MODEL.md). Detail pages: [relationship pairs](data-model/relationships.md) · [entity emitters and id formats](data-model/entities.md) · [storage ERD](data-model/storage-erd.md) · [cross-source correlation](data-model/correlation.md).
 
 ## Overview
 
