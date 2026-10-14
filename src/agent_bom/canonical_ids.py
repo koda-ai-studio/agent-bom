@@ -224,3 +224,71 @@ def mcp_server_fingerprint(server: Any) -> str:
         separators=(",", ":"),
     )
     return str(_uuid.uuid5(_ns, f"mcp_server_fingerprint:{raw}"))
+
+
+def snowflake_identifier_parts(value: Any) -> list[str]:
+    """Split a Snowflake object name into resolved identifier parts.
+
+    Unquoted identifiers resolve to upper case; double-quoted ones keep their
+    exact text. ``analytics.public."Mixed"`` -> ``["ANALYTICS", "PUBLIC", "Mixed"]``.
+    """
+    text = str(value or "").strip()
+    parts: list[str] = []
+    current: list[str] = []
+    quoted = False
+    was_quoted = False
+    i = 0
+    while i < len(text):
+        char = text[i]
+        if char == '"':
+            if quoted and i + 1 < len(text) and text[i + 1] == '"':
+                current.append('"')
+                i += 2
+                continue
+            quoted = not quoted
+            was_quoted = True
+        elif char == "." and not quoted:
+            part = "".join(current).strip()
+            parts.append(part if was_quoted else part.upper())
+            current, was_quoted = [], False
+        else:
+            current.append(char)
+        i += 1
+    part = "".join(current).strip()
+    parts.append(part if was_quoted else part.upper())
+    return [p for p in parts if p]
+
+
+def snowflake_fqn(*parts: Any) -> str:
+    """Resolved, dot-joined Snowflake FQN from a name or its separate parts."""
+    resolved: list[str] = []
+    for part in parts:
+        resolved.extend(snowflake_identifier_parts(part))
+    return ".".join(resolved)
+
+
+def snowflake_stored_fqn(*parts: Any) -> str:
+    """Dot-joined FQN from stored identifier names (SHOW / ACCOUNT_USAGE output)."""
+    return ".".join(text for text in (str(part or "").strip() for part in parts) if text)
+
+
+def snowflake_cortex_agent_node_id(account: Any, database: Any, schema: Any, name: Any) -> str:
+    """Graph id of one Cortex Agent, shared by discovery, governance and telemetry.
+
+    Parts are stored names as Snowflake reports them. The account is part of
+    the id, so the node needs no per-account rescoping and two accounts holding
+    ``DB.SCHEMA.AGENT`` never merge.
+    """
+    fqn = snowflake_stored_fqn(database, schema, name)
+    account_part = str(account or "").strip().replace(":", "%3A")
+    return f"agent:snowflake:{account_part}:{fqn}" if account_part else f"agent:snowflake:{fqn}"
+
+
+def snowflake_cortex_agent_server_name(name: Any) -> str:
+    return f"cortex-agent:{str(name or '').strip()}"
+
+
+def snowflake_cortex_tool_node_id(agent_node_id: str, agent_name: Any, tool_name: str) -> str:
+    """Tool id matching the agent projection's ``tool:server:<agent>:<server>:<tool>`` form."""
+    agent_key = agent_node_id.removeprefix("agent:")
+    return f"tool:server:{agent_key}:{snowflake_cortex_agent_server_name(agent_name)}:{tool_name}"

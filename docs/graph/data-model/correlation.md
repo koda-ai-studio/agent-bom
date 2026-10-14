@@ -11,7 +11,7 @@ flowchart LR
     cloud["Cloud and platform providers<br/>16 built in"]
     traces["Trace connectors<br/>langfuse, langsmith"]
     findings["Finding sources<br/>16 FindingSource values"]
-    collectors["Edge collectors<br/>46 in SOURCE_TIERS"]
+    collectors["Edge collectors<br/>48 in SOURCE_TIERS"]
   end
   subgraph normalize["Normalization"]
     assettype["asset_type → EntityType<br/>49 spellings"]
@@ -43,7 +43,7 @@ flowchart LR
 - Cloud and platform providers (`cloud/__init__.py` `_PROVIDERS`): `aws`, `azure`, `coreweave`, `crusoe`, `databricks`, `gcp`, `huggingface`, `lambda`, `mlflow`, `nebius`, `ollama`, `openai`, `runpod`, `snowflake`, `vastai`, `wandb`
 - Trace connectors (`trace_connectors.py`): `langfuse`, `langsmith`
 - Finding sources (`agent_bom.finding.FindingSource`): `MCP_SCAN`, `CONTAINER`, `SBOM`, `CLOUD_CIS`, `CLOUD_SECURITY`, `PROXY`, `SAST`, `SKILL`, `BROWSER_EXT`, `EXTERNAL`, `FILESYSTEM`, `PROMPT_SCAN`, `SECRET_SCAN`, `GRAPH_ANALYSIS`, `DSPM`, `MODEL_SCAN`
-- Edge collectors (`graph/edge_evidence.py` `SOURCE_TIERS`): `access-advisor`, `agent_discovery`, `ai-inventory`, `aspm-overlay`, `ast_analysis`, `authorization-evidence`, `aws-organizations`, `ci_graph_overlay`, `cloud-audit-trail`, `cloud-inventory`, `cloud-rbac`, `cloud_origin`, `cloud_principal`, `cloud_principal_trust`, `cnapp-overlay`, `code_graph_overlay`, `cortex-agent-usage`, `framework-agent`, `gcp-organizations`, `github-actions`, `governance-overlay`, `hardware-attestation-ingest`, `iac`, `mcp-audit`, `mcp-scan`, `nhi-discovery`, `operator_reported_timestamps`, `repo-structure-overlay`, `repo-trust-overlay`, `runtime-feedback`, `runtime-identity`, `runtime-proxy`, `runtime-trace`, `skill-audit`, `snowflake-exfil`, `snowflake-external-data`, `snowflake-governance`, `snowflake-integrations`, `snowflake-objects`, `snowflake-organizations`, `snowflake-pipeline`, `snowflake-services`, `source-ast`, `tpm-quote`, `vendor-inventory-export`, `warehouse-export`
+- Edge collectors (`graph/edge_evidence.py` `SOURCE_TIERS`): `access-advisor`, `agent_discovery`, `ai-inventory`, `aspm-overlay`, `ast_analysis`, `authorization-evidence`, `aws-organizations`, `ci_graph_overlay`, `cloud-audit-trail`, `cloud-inventory`, `cloud-rbac`, `cloud_origin`, `cloud_principal`, `cloud_principal_trust`, `cnapp-overlay`, `code_graph_overlay`, `cortex-agent-usage`, `framework-agent`, `gcp-organizations`, `github-actions`, `governance-overlay`, `hardware-attestation-ingest`, `iac`, `mcp-audit`, `mcp-scan`, `nhi-discovery`, `operator_reported_timestamps`, `repo-structure-overlay`, `repo-trust-overlay`, `runtime-feedback`, `runtime-identity`, `runtime-proxy`, `runtime-trace`, `skill-audit`, `snowflake-cortex-agents`, `snowflake-cortex-observability`, `snowflake-exfil`, `snowflake-external-data`, `snowflake-governance`, `snowflake-integrations`, `snowflake-objects`, `snowflake-organizations`, `snowflake-pipeline`, `snowflake-services`, `source-ast`, `tpm-quote`, `vendor-inventory-export`, `warehouse-export`
 
 ## Normalization
 
@@ -98,7 +98,7 @@ Top-level branches of `correlation_identity`, in evaluation order. The first bra
 | `access_grant` | 9 | — | — |
 | `access_policy` | 9 | — | — |
 | `account` | 7 | — | `account:{provider}:{account_scope}` |
-| `agent` | 2 | `canonical_agent_id` | `agent:snowflake:{agent_name}` |
+| `agent` | 2 | `canonical_agent_id` | — |
 | `api_gateway` | 7 | — | `api_gateway:{provider}:{api_id}` |
 | `application` | 9 | — | — |
 | `blueprint` | 9 | — | — |

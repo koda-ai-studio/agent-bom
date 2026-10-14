@@ -22,7 +22,7 @@ the caller wants to explore or to invoke — not by whether it is human.
 
 | Area | Shipped today |
 |---|---|
-| MCP security tools | 8 default scan tools; explicit full catalog: 93 tools, 7 resources, 8 workflow prompts |
+| MCP security tools | 8 default scan tools; explicit full catalog: 94 tools, 7 resources, 8 workflow prompts |
 | REST API | 432 operations across 52 route modules (+ 2 WebSocket routes) — see `docs/openapi/v1.json` |
 | Package / SCA | 15 ecosystems, SARIF, CycloneDX, SPDX, HTML |
 | Graph / blast radius | UnifiedGraph, attack paths, hop counts, remediation handoff |

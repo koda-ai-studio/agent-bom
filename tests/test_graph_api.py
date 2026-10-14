@@ -423,7 +423,7 @@ def test_graph_diff_route_tags_change_kind(tmp_path) -> None:
     try:
         set_graph_store(store)
         client = TestClient(app)
-        resp = client.get("/v1/graph/diff?old=drift-s1&new=drift-s2")
+        resp = client.get("/v1/graph/diff?old=drift-s1&new=drift-s2&view=full")
         assert resp.status_code == 200
         body = resp.json()
 

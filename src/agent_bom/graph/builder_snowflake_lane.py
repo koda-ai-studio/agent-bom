@@ -69,3 +69,14 @@ def _snowflake_thin_node(lane: _SnowflakeLane, node_id: str, entity_type: Entity
                 dimensions=NodeDimensions(cloud_provider="snowflake", surface=surface),
             )
         )
+
+
+def _needs_account_scope(node: UnifiedNode, account: str) -> bool:
+    """Whether a staged node's id is only unique within its account.
+
+    Accounts and organizations are global; a node whose id already embeds this
+    lane's account (``snowflake_account_qualified``) is too.
+    """
+    if node.entity_type in {EntityType.ACCOUNT, EntityType.ORG}:
+        return False
+    return not (account and node.attributes.get("snowflake_account_qualified") and node.attributes.get("account_id") == account)

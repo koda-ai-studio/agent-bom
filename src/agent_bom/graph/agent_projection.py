@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 
 from agent_bom.asset_provenance import sanitize_discovery_provenance
-from agent_bom.canonical_ids import canonical_agent_id, canonical_graph_node_id, source_ids
+from agent_bom.canonical_ids import canonical_agent_id, canonical_graph_node_id, snowflake_cortex_agent_node_id, source_ids
 from agent_bom.graph.build_indexes import BuildIndexes
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.credential_projection import project_credentials
@@ -67,6 +67,17 @@ def _discovery_evidence(data_source: str) -> dict[str, Any]:
     return edge_evidence(data_source or "agent_discovery", "static_scan")
 
 
+def _snowflake_cortex_node_id(agent_dict: dict[str, Any]) -> str:
+    """Canonical id for a discovered Cortex Agent, rebuilt from its identity parts."""
+    metadata = agent_dict.get("metadata")
+    cortex = metadata.get("snowflake_cortex_agent") if isinstance(metadata, dict) else None
+    if agent_dict.get("source") != "snowflake-cortex-agent" or not isinstance(cortex, dict):
+        return ""
+    if not all(str(cortex.get(key) or "").strip() for key in ("database", "schema", "name")):
+        return ""
+    return snowflake_cortex_agent_node_id(cortex.get("account"), cortex["database"], cortex["schema"], cortex["name"])
+
+
 def _scope(agent_dict: dict[str, Any], report_data_source: str) -> AgentScope:
     agent = AgentScope(agent_dict=agent_dict, agent_metadata={}, agent_discovery_provenance={})
     agent.agent_name = agent.agent_dict.get("name", "unknown")
@@ -76,7 +87,7 @@ def _scope(agent_dict: dict[str, Any], report_data_source: str) -> AgentScope:
     agent.static_inventory = agent.sbom_import or agent.repository_inventory
     agent.data_source_tag = str(agent.agent_dict["source"]) if agent.repository_inventory else report_data_source
     agent.inventory_type = EntityType.DIRECTORY if agent.repository_inventory else EntityType.SOURCE_FILE
-    agent.agent_id = _agent_node_id(agent.agent_name, agent.agent_scope)
+    agent.agent_id = _snowflake_cortex_node_id(agent.agent_dict) or _agent_node_id(agent.agent_name, agent.agent_scope)
     if agent.sbom_import:
         agent.agent_id = f"source_file:sbom:{agent.agent_id.removeprefix('agent:')}"
     if agent.repository_inventory:

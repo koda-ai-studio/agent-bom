@@ -103,7 +103,7 @@ def _estate_governance(report: Any, account: str | None) -> None:
     # Governance: ACCESS_HISTORY reads + Cortex agent telemetry + derived risk
     # findings. De-duplicated against object-dependency and exfil discoveries.
     _sf_governance = _seams().discover_governance(account=account).to_dict()
-    if _sf_governance.get("access_records") or _sf_governance.get("agent_usage") or _sf_governance.get("findings"):
+    if any(_sf_governance.get(key) for key in ("access_records", "agent_usage", "findings", "cortex_agents", "cortex_events")):
         report.snowflake_governance_data = {
             "status": "ok",
             "account": _sf_governance.get("account", ""),
@@ -111,6 +111,8 @@ def _estate_governance(report: Any, account: str | None) -> None:
             "summary": _sf_governance.get("summary", {}),
             "access_records": _sf_governance.get("access_records", []),
             "agent_usage": _sf_governance.get("agent_usage", []),
+            "cortex_agents": _sf_governance.get("cortex_agents", []),
+            "cortex_events": _sf_governance.get("cortex_events", []),
             "findings": _sf_governance.get("findings", []),
             "warnings": _sf_governance.get("warnings", []),
         }

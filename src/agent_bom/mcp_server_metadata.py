@@ -94,6 +94,11 @@ _SERVER_CARD_TOOLS = [
         "annotations": {"readOnlyHint": True},
     },
     {
+        "name": "graph_diff",
+        "description": "What changed between two graph snapshots: summary counts and highlights, or filtered cursor-paged change rows",
+        "annotations": {"readOnlyHint": True},
+    },
+    {
         "name": "findings_query",
         "description": "Query tenant findings with the /v1/findings filters, sort and cursor in a compact projection",
         "annotations": {"readOnlyHint": True},

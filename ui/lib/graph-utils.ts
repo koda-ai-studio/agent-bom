@@ -757,6 +757,31 @@ export function edgeChangeKey(
   return `${source}|${target}|${relationship}`;
 }
 
+export interface DiffChangeCounts {
+  nodesAdded: number;
+  nodesRemoved: number;
+  nodesChanged: number;
+  edgesAdded: number;
+  edgesRemoved: number;
+  /** The node/edge lists (and drift lens) cover only part of the diff. */
+  truncated: boolean;
+}
+
+/** Exact diff counts from the server summary, falling back to list lengths. */
+export function diffChangeCounts(
+  diff: GraphDiffResponse | null | undefined,
+): DiffChangeCounts {
+  const totals = diff?.summary?.totals;
+  return {
+    nodesAdded: totals?.nodes.added ?? diff?.nodes_added.length ?? 0,
+    nodesRemoved: totals?.nodes.removed ?? diff?.nodes_removed.length ?? 0,
+    nodesChanged: totals?.nodes.changed ?? diff?.nodes_changed.length ?? 0,
+    edgesAdded: totals?.edges.added ?? diff?.edges_added.length ?? 0,
+    edgesRemoved: totals?.edges.removed ?? diff?.edges_removed.length ?? 0,
+    truncated: Boolean(diff?.truncated),
+  };
+}
+
 export interface DriftIndex {
   nodeKind: Map<string, ChangeKind>;
   edgeKind: Map<string, ChangeKind>;

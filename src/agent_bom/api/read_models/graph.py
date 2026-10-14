@@ -95,7 +95,26 @@ class GraphComplianceResponse(ReadResponse):
     completeness: GraphCompleteness | None = None
 
 
+class GraphDiffPagination(ReadModel):
+    offset: int
+    limit: int
+    returned: int
+    has_more: bool
+    next_cursor: str | None = None
+
+
 class GraphDiffResponse(ReadResponse):
+    """``GET /v1/graph/diff``: ``summary`` (default), ``detail`` rows, or capped ``full`` lists."""
+
+    schema_version: str
+    old: str
+    new: str
+    view: str
+    summary: Row | None = None
+    filters: dict[str, str] | None = None
+    total: int | None = None
+    items: list[Row] | None = None
+    pagination: GraphDiffPagination | None = None
     nodes_added: list[Any] | None = None
     nodes_removed: list[Any] | None = None
     nodes_changed: list[Any] | None = None
@@ -103,7 +122,13 @@ class GraphDiffResponse(ReadResponse):
     edges_added: list[Any] | None = None
     edges_removed: list[Any] | None = None
     edges_changed: list[Any] | None = None
-    change_kind_index: dict[str, dict[str, str]]
+    change_kind_index: dict[str, dict[str, str]] | None = None
+    truncated: bool | None = None
+    complete: bool | None = None
+    returned_changes: int | None = None
+    total_changes: int | None = None
+    limits: dict[str, int] | None = None
+    omitted_fields: list[str] | None = None
     completeness: GraphCompleteness
 
 

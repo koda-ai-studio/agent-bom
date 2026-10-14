@@ -17,6 +17,7 @@ _TOOL_CAPABILITY_CLASSES = {
     "graph_correlation_status": ["READ", "GRAPH", "PROVENANCE"],
     "should_i_deploy": ["READ", "GRAPH", "POLICY"],
     "graph_reach": ["READ", "GRAPH", "ANALYZE"],
+    "graph_diff": ["READ", "GRAPH", "HISTORY"],
     "findings_query": ["READ", "INVENTORY"],
     "finding_detail": ["READ", "GRAPH", "ANALYZE"],
     "policy_check": ["READ", "POLICY"],

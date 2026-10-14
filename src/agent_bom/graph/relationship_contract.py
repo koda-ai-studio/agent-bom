@@ -6,7 +6,9 @@ what happens on a violation:
 
 * ``warn`` (default): keep the edge, log once per (relationship, source kind,
   target kind) and count it in ``analysis_status["relationship_contract"]``.
-* ``enforce``: drop an edge whose entity pair is not allowed, log and count it.
+* ``enforce``: drop an edge whose entity pair is not allowed, log and count it;
+  the audit reports ``rejected`` edges (per pair, with a bounded id sample) so an
+  enforced graph is never reported clean.
 * ``strict``: raise :class:`RelationshipContractError` (the test-suite mode).
 
 The pair check runs in ``add_edge`` when both endpoints already exist;
@@ -18,6 +20,7 @@ from __future__ import annotations
 
 import logging
 from collections import Counter
+from dataclasses import dataclass, field
 from typing import Any
 
 from agent_bom.core.settings import env_enum
@@ -32,12 +35,34 @@ _logger = logging.getLogger(__name__)
 CONTRACT_ENV = "AGENT_BOM_GRAPH_CONTRACT"
 CONTRACT_MODES = ("warn", "enforce", "strict")
 ANALYSIS_KEY = "relationship_contract"
-__all__ = ["admit_edge", "audit_graph_contract", "contract_mode", "merge_edge_provenance", "validate_edge"]
+REJECTED_SAMPLE_LIMIT = 20
+__all__ = ["ContractRejections", "admit_edge", "audit_graph_contract", "contract_mode", "merge_edge_provenance", "validate_edge"]
 _warned: set[tuple[str, str, str, str]] = set()
 
 
 class RelationshipContractError(ValueError):
     """An edge violates the relationship contract under ``strict`` mode."""
+
+
+@dataclass(slots=True)
+class ContractRejections:
+    """Edges ``enforce`` mode kept out of one graph, each logical edge counted once."""
+
+    pairs: Counter[str] = field(default_factory=Counter)
+    edge_ids: set[str] = field(default_factory=set)
+    sample: list[str] = field(default_factory=list)
+
+    def record(self, label: str, edge_id: str) -> None:
+        if edge_id in self.edge_ids:
+            return
+        self.edge_ids.add(edge_id)
+        self.pairs[label] += 1
+        if len(self.sample) < REJECTED_SAMPLE_LIMIT:
+            self.sample.append(edge_id)
+
+    @property
+    def total(self) -> int:
+        return len(self.edge_ids)
 
 
 def contract_mode() -> str:
@@ -73,7 +98,7 @@ def _report(edge: UnifiedEdge, src: Any, tgt: Any, problem: str, mode: str) -> N
         _logger.warning("graph relationship contract: %s for %s %s -> %s", problem, key[0], key[1], key[2])
 
 
-def admit_edge(nodes: Any, edge: UnifiedEdge) -> bool:
+def admit_edge(nodes: Any, edge: UnifiedEdge, rejections: ContractRejections | None = None) -> bool:
     """Normalize evidence and check the entity pair of a new in-memory edge.
 
     Returns ``False`` only when ``enforce`` mode rejects the edge. Edges whose
@@ -88,8 +113,14 @@ def admit_edge(nodes: Any, edge: UnifiedEdge) -> bool:
     if spec is not None and spec.allows(src.entity_type, tgt.entity_type):
         return True
     mode = contract_mode()
-    _report(edge, src.entity_type, tgt.entity_type, "pair_not_allowed" if spec else "unregistered_relationship", mode)
-    return mode != "enforce"
+    problem = "pair_not_allowed" if spec else "unregistered_relationship"
+    _report(edge, src.entity_type, tgt.entity_type, problem, mode)
+    if mode != "enforce":
+        return True
+    if rejections is not None:
+        label = f"{problem}: {_value(edge.relationship)} {_value(src.entity_type)}->{_value(tgt.entity_type)}"
+        rejections.record(label, edge.id)
+    return False
 
 
 def audit_graph_contract(graph: Any, *, record: bool = True) -> dict[str, Any]:
@@ -113,12 +144,26 @@ def audit_graph_contract(graph: Any, *, record: bool = True) -> dict[str, Any]:
             src_kind = _value(src.entity_type) if src else "<missing>"
             tgt_kind = _value(tgt.entity_type) if tgt else "<missing>"
             pairs[f"{problem}: {_value(edge.relationship)} {src_kind}->{tgt_kind}"] += 1
-    summary = {"edges_checked": checked, "violations": dict(problems), "pairs": dict(pairs)}
+    rejected: ContractRejections = getattr(graph, "contract_rejections", None) or ContractRejections()
+    summary = {
+        "edges_checked": checked,
+        "violations": dict(problems),
+        "pairs": dict(pairs),
+        "rejected": rejected.total,
+        "rejected_pairs": dict(rejected.pairs),
+        "rejected_sample": list(rejected.sample),
+    }
     if record:
+        reasons = sorted(problems) + (["rejected_edges"] if rejected.total else [])
+        observed: dict[str, int] = {"edges_checked": checked, **problems}
+        if rejected.total:
+            observed["rejected"] = rejected.total
+            observed.update({f"rejected: {label}": count for label, count in rejected.pairs.items()})
         graph.analysis_status[ANALYSIS_KEY] = GraphAnalysisStatus(
-            status=GraphAnalysisState.LIMITED if problems else GraphAnalysisState.COMPLETE,
-            reason_codes=tuple(sorted(problems)),
-            observed={"edges_checked": checked, **problems},
+            status=GraphAnalysisState.LIMITED if reasons else GraphAnalysisState.COMPLETE,
+            reason_codes=tuple(reasons),
+            observed=observed,
+            samples=tuple(rejected.sample),
         )
     if problems:
         mode = contract_mode()

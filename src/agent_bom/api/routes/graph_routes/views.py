@@ -33,7 +33,6 @@ from agent_bom.api.routes.graph_routes.params import (
     _GOVERNANCE_EDGE_LIMIT,
     _candidate_to_string,
     _raise_mcp_error_as_http,
-    _tag_diff_change_kinds,
 )
 from agent_bom.api.routes.graph_routes.payloads import (
     _fix_first_graph_view_payload,
@@ -154,16 +153,40 @@ async def get_fix_first_graph_view(
 @investigation_router.get("/graph/diff", **documented(GraphDiffResponse), tags=["graph"])
 async def get_graph_diff(
     request: Request,
-    old: str = Query(..., description="Old scan ID"),
-    new: str = Query(..., description="New scan ID"),
+    old: Optional[str] = Query(None, max_length=512, description="Old scan ID; omit both old and new to compare the latest two"),
+    new: Optional[str] = Query(None, max_length=512, description="New scan ID; omit both old and new to compare the latest two"),
+    view: Literal["summary", "detail", "full"] = Query(
+        "summary",
+        description=(
+            "summary (default): counts per change kind by entity type and relationship plus the most significant changes. "
+            "detail: a filtered, cursor-paged list of change rows. "
+            "full: the legacy node/edge lists, capped (see truncated/complete/limits)."
+        ),
+    ),
+    change: Optional[Literal["added", "removed", "changed"]] = Query(None, description="detail: only this change kind"),
+    kind: Optional[Literal["node", "edge"]] = Query(None, description="detail: only node or edge rows"),
+    entity_type: Optional[str] = Query(None, max_length=64, description="detail: only node rows of this entity type"),
+    relationship: Optional[str] = Query(None, max_length=64, description="detail: only edge rows of this relationship"),
+    node_id: Optional[str] = Query(None, max_length=512, description="detail: the node itself or edges touching it"),
+    limit: int = Query(50, ge=1, le=200, description="detail: rows per page"),
+    cursor: Optional[str] = Query(None, max_length=4096, description="detail: pagination.next_cursor; keep filters unchanged"),
 ) -> dict:
-    """Diff two scan snapshots — nodes/edges added, removed, changed."""
-    diff = await _runtime._graph_store_call(
-        _runtime._get_graph_store_or_503().diff_snapshots, old, new, tenant_id=_runtime._tenant(request)
+    """Diff two scan snapshots: summary by default, filtered detail pages, or capped legacy lists."""
+    from agent_bom.api.graph_diff_read import graph_diff_read
+
+    return await graph_diff_read(
+        request,
+        old=old,
+        new=new,
+        view=view,
+        change=change,
+        kind=kind,
+        entity_type=entity_type,
+        relationship=relationship,
+        node_id=node_id,
+        limit=limit,
+        cursor=cursor,
     )
-    diff = _tag_diff_change_kinds(diff)
-    diff["completeness"] = graph_completeness(returned=1, total=1)
-    return diff
 
 
 @investigation_router.get("/graph/edges/active", **documented_list(GraphActiveEdgesResponse), tags=["graph"])

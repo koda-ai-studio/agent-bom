@@ -106,7 +106,7 @@ import {
 import {
   BACKGROUND_COLOR,
   BACKGROUND_GAP,
-  buildDriftIndex,
+  buildDriftIndex, diffChangeCounts,
   driftAttributeSummaries,
   changeKindForEdge,
   changeKindForNode,
@@ -1968,7 +1968,7 @@ function GraphPageInner() {
   // Drift lens (#3192) — classify the currently-rendered snapshot against the
   // previous one using the diff index the server tags. The lens is inert unless
   // a diff exists AND the operator armed it, so the default view never changes.
-  const driftIndex = useMemo(() => buildDriftIndex(graphDiff), [graphDiff]);
+  const [driftIndex, diffCounts] = useMemo(() => [buildDriftIndex(graphDiff), diffChangeCounts(graphDiff)] as const, [graphDiff]);
   const driftAttributeSummaryList = useMemo(
     () => driftAttributeSummaries(driftIndex),
     [driftIndex],
@@ -3328,7 +3328,7 @@ function GraphPageInner() {
                 </span>
                 <span className="text-xs text-ink-tertiary">
                   {graphDiff
-                    ? `+${graphDiff.nodes_added.length} −${graphDiff.nodes_removed.length} nodes · +${graphDiff.edges_added.length} −${graphDiff.edges_removed.length} edges`
+                    ? `+${diffCounts.nodesAdded} −${diffCounts.nodesRemoved} nodes · +${diffCounts.edgesAdded} −${diffCounts.edgesRemoved} edges${diffCounts.truncated ? " · lists show the first changes only" : ""}`
                     : previousSnapshot
                       ? `Compared with ${previousSnapshot.scan_id.slice(0, 12)}`
                       : "No older snapshot available."}
@@ -3359,27 +3359,27 @@ function GraphPageInner() {
               <div className="mt-3 grid gap-2 md:grid-cols-3 xl:grid-cols-5">
                 <DiffMetric
                   label="nodes added"
-                  value={graphDiff?.nodes_added.length ?? 0}
+                  value={diffCounts.nodesAdded}
                   tone="green"
                 />
                 <DiffMetric
                   label="nodes removed"
-                  value={graphDiff?.nodes_removed.length ?? 0}
+                  value={diffCounts.nodesRemoved}
                   tone="amber"
                 />
                 <DiffMetric
                   label="nodes changed"
-                  value={graphDiff?.nodes_changed.length ?? 0}
+                  value={diffCounts.nodesChanged}
                   tone="blue"
                 />
                 <DiffMetric
                   label="edges added"
-                  value={graphDiff?.edges_added.length ?? 0}
+                  value={diffCounts.edgesAdded}
                   tone="green"
                 />
                 <DiffMetric
                   label="edges removed"
-                  value={graphDiff?.edges_removed.length ?? 0}
+                  value={diffCounts.edgesRemoved}
                   tone="amber"
                 />
               </div>

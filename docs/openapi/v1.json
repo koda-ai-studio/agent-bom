@@ -17665,12 +17665,22 @@
             ],
             "title": "Credits Used"
           },
+          "database_name": {
+            "default": "",
+            "title": "Database Name",
+            "type": "string"
+          },
           "model_name": {
             "title": "Model Name",
             "type": "string"
           },
           "role_name": {
             "title": "Role Name",
+            "type": "string"
+          },
+          "schema_name": {
+            "default": "",
+            "title": "Schema Name",
             "type": "string"
           },
           "start_time": {
@@ -18163,6 +18173,427 @@
         "title": "GovernanceBlueprintsResponse",
         "type": "object"
       },
+      "GovernanceCortexAgentRow": {
+        "additionalProperties": true,
+        "description": "One Cortex Agent from DESCRIBE AGENT; ``tools`` are only those its specification declares.",
+        "properties": {
+          "account": {
+            "title": "Account",
+            "type": "string"
+          },
+          "database": {
+            "title": "Database",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "execution_roles": {
+            "items": {
+              "$ref": "#/components/schemas/GovernanceCortexExecutionRole"
+            },
+            "title": "Execution Roles",
+            "type": "array"
+          },
+          "fqn": {
+            "title": "Fqn",
+            "type": "string"
+          },
+          "is_secure": {
+            "title": "Is Secure",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "node_id": {
+            "title": "Node Id",
+            "type": "string"
+          },
+          "owner": {
+            "title": "Owner",
+            "type": "string"
+          },
+          "schema": {
+            "title": "Schema",
+            "type": "string"
+          },
+          "spec_status": {
+            "title": "Spec Status",
+            "type": "string"
+          },
+          "tools": {
+            "items": {
+              "$ref": "#/components/schemas/GovernanceCortexTool"
+            },
+            "title": "Tools",
+            "type": "array"
+          }
+        },
+        "required": [
+          "account",
+          "database",
+          "schema",
+          "name",
+          "fqn",
+          "node_id",
+          "display_name",
+          "owner",
+          "is_secure",
+          "spec_status",
+          "tools",
+          "execution_roles"
+        ],
+        "title": "GovernanceCortexAgentRow",
+        "type": "object"
+      },
+      "GovernanceCortexEventRow": {
+        "additionalProperties": true,
+        "description": "Normalized Cortex observability span: metadata, digests and derived signals only.",
+        "properties": {
+          "agent_name": {
+            "title": "Agent Name",
+            "type": "string"
+          },
+          "agent_ref": {
+            "title": "Agent Ref",
+            "type": "string"
+          },
+          "content_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Sha256"
+          },
+          "cost_usd": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost Usd"
+          },
+          "credential_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credential Ref"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "input_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Tokens"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "match_method": {
+            "title": "Match Method",
+            "type": "string"
+          },
+          "match_node_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Match Node Id"
+          },
+          "mcp_server_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mcp Server Ref"
+          },
+          "model_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Name"
+          },
+          "model_provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Provider"
+          },
+          "output_tokens": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output Tokens"
+          },
+          "parent_span_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Span Id"
+          },
+          "principal_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Principal Hash"
+          },
+          "resource_refs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Resource Refs",
+            "type": "array"
+          },
+          "role_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Role Name"
+          },
+          "signals": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Signals",
+            "type": "array"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "source_span_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Span Id"
+          },
+          "source_trace_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Trace Id"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "tenant_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant Id"
+          },
+          "tool_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tool Name"
+          }
+        },
+        "required": [
+          "tenant_id",
+          "source",
+          "source_trace_id",
+          "source_span_id",
+          "parent_span_id",
+          "started_at",
+          "ended_at",
+          "kind",
+          "agent_name",
+          "agent_ref",
+          "model_provider",
+          "model_name",
+          "tool_name",
+          "mcp_server_ref",
+          "resource_refs",
+          "principal_hash",
+          "role_name",
+          "credential_ref",
+          "input_tokens",
+          "output_tokens",
+          "cost_usd",
+          "status",
+          "signals",
+          "content_sha256",
+          "match_method",
+          "match_node_id"
+        ],
+        "title": "GovernanceCortexEventRow",
+        "type": "object"
+      },
+      "GovernanceCortexExecutionRole": {
+        "additionalProperties": true,
+        "properties": {
+          "granted_to": {
+            "title": "Granted To",
+            "type": "string"
+          },
+          "privilege": {
+            "title": "Privilege",
+            "type": "string"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "privilege",
+          "granted_to"
+        ],
+        "title": "GovernanceCortexExecutionRole",
+        "type": "object"
+      },
+      "GovernanceCortexTool": {
+        "additionalProperties": true,
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "resources": {
+            "items": {
+              "$ref": "#/components/schemas/GovernanceCortexToolResource"
+            },
+            "title": "Resources",
+            "type": "array"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "type",
+          "resources"
+        ],
+        "title": "GovernanceCortexTool",
+        "type": "object"
+      },
+      "GovernanceCortexToolResource": {
+        "additionalProperties": true,
+        "properties": {
+          "fqn": {
+            "title": "Fqn",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "fqn"
+        ],
+        "title": "GovernanceCortexToolResource",
+        "type": "object"
+      },
       "GovernanceDataClassificationRow": {
         "additionalProperties": true,
         "properties": {
@@ -18505,6 +18936,20 @@
             "title": "Agent Usage",
             "type": "array"
           },
+          "cortex_agents": {
+            "items": {
+              "$ref": "#/components/schemas/GovernanceCortexAgentRow"
+            },
+            "title": "Cortex Agents",
+            "type": "array"
+          },
+          "cortex_events": {
+            "items": {
+              "$ref": "#/components/schemas/GovernanceCortexEventRow"
+            },
+            "title": "Cortex Events",
+            "type": "array"
+          },
           "data_classifications": {
             "items": {
               "$ref": "#/components/schemas/GovernanceDataClassificationRow"
@@ -18564,6 +19009,16 @@
           },
           "agent_usage_records": {
             "title": "Agent Usage Records",
+            "type": "integer"
+          },
+          "cortex_agents": {
+            "default": 0,
+            "title": "Cortex Agents",
+            "type": "integer"
+          },
+          "cortex_events": {
+            "default": 0,
+            "title": "Cortex Events",
             "type": "integer"
           },
           "critical_findings": {
@@ -19668,8 +20123,49 @@
         "title": "GraphDeployDecisionRequest",
         "type": "object"
       },
+      "GraphDiffPagination": {
+        "additionalProperties": true,
+        "properties": {
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "returned": {
+            "title": "Returned",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "offset",
+          "limit",
+          "returned",
+          "has_more"
+        ],
+        "title": "GraphDiffPagination",
+        "type": "object"
+      },
       "GraphDiffResponse": {
         "additionalProperties": true,
+        "description": "``GET /v1/graph/diff``: ``summary`` (default), ``detail`` rows, or capped ``full`` lists.",
         "properties": {
           "attribute_deltas": {
             "anyOf": [
@@ -19690,14 +20186,32 @@
             "title": "Attribute Deltas"
           },
           "change_kind_index": {
-            "additionalProperties": {
-              "additionalProperties": {
-                "type": "string"
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "type": "object"
+                },
+                "type": "object"
               },
-              "type": "object"
-            },
-            "title": "Change Kind Index",
-            "type": "object"
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Kind Index"
+          },
+          "complete": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Complete"
           },
           "completeness": {
             "$ref": "#/components/schemas/GraphCompleteness"
@@ -19738,6 +20252,53 @@
             ],
             "title": "Edges Removed"
           },
+          "filters": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Filters"
+          },
+          "items": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Items"
+          },
+          "limits": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "integer"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limits"
+          },
+          "new": {
+            "title": "New",
+            "type": "string"
+          },
           "nodes_added": {
             "anyOf": [
               {
@@ -19773,10 +20334,105 @@
               }
             ],
             "title": "Nodes Removed"
+          },
+          "old": {
+            "title": "Old",
+            "type": "string"
+          },
+          "omitted_fields": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Omitted Fields"
+          },
+          "pagination": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GraphDiffPagination"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "returned_changes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Returned Changes"
+          },
+          "schema_version": {
+            "title": "Schema Version",
+            "type": "string"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total"
+          },
+          "total_changes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Changes"
+          },
+          "truncated": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Truncated"
+          },
+          "view": {
+            "title": "View",
+            "type": "string"
           }
         },
         "required": [
-          "change_kind_index",
+          "schema_version",
+          "old",
+          "new",
+          "view",
           "completeness"
         ],
         "title": "GraphDiffResponse",
@@ -62104,29 +62760,197 @@
     },
     "/v1/graph/diff": {
       "get": {
-        "description": "Diff two scan snapshots \u2014 nodes/edges added, removed, changed.",
+        "description": "Diff two scan snapshots: summary by default, filtered detail pages, or capped legacy lists.",
         "operationId": "get_graph_diff_v1_graph_diff_get",
         "parameters": [
           {
-            "description": "Old scan ID",
+            "description": "Old scan ID; omit both old and new to compare the latest two",
             "in": "query",
             "name": "old",
-            "required": true,
+            "required": false,
             "schema": {
-              "description": "Old scan ID",
-              "title": "Old",
+              "anyOf": [
+                {
+                  "maxLength": 512,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Old scan ID; omit both old and new to compare the latest two",
+              "title": "Old"
+            }
+          },
+          {
+            "description": "New scan ID; omit both old and new to compare the latest two",
+            "in": "query",
+            "name": "new",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 512,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "New scan ID; omit both old and new to compare the latest two",
+              "title": "New"
+            }
+          },
+          {
+            "description": "summary (default): counts per change kind by entity type and relationship plus the most significant changes. detail: a filtered, cursor-paged list of change rows. full: the legacy node/edge lists, capped (see truncated/complete/limits).",
+            "in": "query",
+            "name": "view",
+            "required": false,
+            "schema": {
+              "default": "summary",
+              "description": "summary (default): counts per change kind by entity type and relationship plus the most significant changes. detail: a filtered, cursor-paged list of change rows. full: the legacy node/edge lists, capped (see truncated/complete/limits).",
+              "enum": [
+                "summary",
+                "detail",
+                "full"
+              ],
+              "title": "View",
               "type": "string"
             }
           },
           {
-            "description": "New scan ID",
+            "description": "detail: only this change kind",
             "in": "query",
-            "name": "new",
-            "required": true,
+            "name": "change",
+            "required": false,
             "schema": {
-              "description": "New scan ID",
-              "title": "New",
-              "type": "string"
+              "anyOf": [
+                {
+                  "enum": [
+                    "added",
+                    "removed",
+                    "changed"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "detail: only this change kind",
+              "title": "Change"
+            }
+          },
+          {
+            "description": "detail: only node or edge rows",
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "node",
+                    "edge"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "detail: only node or edge rows",
+              "title": "Kind"
+            }
+          },
+          {
+            "description": "detail: only node rows of this entity type",
+            "in": "query",
+            "name": "entity_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "detail: only node rows of this entity type",
+              "title": "Entity Type"
+            }
+          },
+          {
+            "description": "detail: only edge rows of this relationship",
+            "in": "query",
+            "name": "relationship",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "detail: only edge rows of this relationship",
+              "title": "Relationship"
+            }
+          },
+          {
+            "description": "detail: the node itself or edges touching it",
+            "in": "query",
+            "name": "node_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 512,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "detail: the node itself or edges touching it",
+              "title": "Node Id"
+            }
+          },
+          {
+            "description": "detail: rows per page",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "detail: rows per page",
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "detail: pagination.next_cursor; keep filters unchanged",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 4096,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "detail: pagination.next_cursor; keep filters unchanged",
+              "title": "Cursor"
             }
           }
         ],

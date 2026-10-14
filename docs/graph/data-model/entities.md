@@ -23,11 +23,7 @@ Id formats:
 
 ## `agent`
 
-Emitted by: `graph/agent_projection.py`, `graph/builder_overlays.py`, `graph/builder_snowflake_governance.py`, `graph/compat.py`, `graph/delta_digest.py`, `graph/dependency_reach.py`, `graph/framework_topology_projection.py`, `graph/governance_overlay.py`, `graph/runtime_projection.py`, `graph/toxic_findings.py`, `graph/trace_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
-
-Id formats:
-
-- `agent:snowflake:{agent_name}`
+Emitted by: `graph/agent_projection.py`, `graph/builder_overlays.py`, `graph/builder_snowflake_cortex.py`, `graph/builder_snowflake_governance.py`, `graph/compat.py`, `graph/delta_digest.py`, `graph/dependency_reach.py`, `graph/framework_topology_projection.py`, `graph/governance_overlay.py`, `graph/runtime_projection.py`, `graph/toxic_findings.py`, `graph/trace_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
 
 ## `api_gateway`
 
@@ -243,7 +239,7 @@ Id formats:
 
 ## `role`
 
-Emitted by: `graph/builder_cloud_inventory.py`, `graph/builder_snowflake_objects.py`, `graph/builder_snowflake_platform.py`, `graph/cloud_context.py`, `graph/finding_row_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
+Emitted by: `graph/builder_cloud_inventory.py`, `graph/builder_snowflake_cortex.py`, `graph/builder_snowflake_objects.py`, `graph/builder_snowflake_platform.py`, `graph/cloud_context.py`, `graph/finding_row_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
 
 ## `server`
 
@@ -271,7 +267,7 @@ Id formats:
 
 ## `tool`
 
-Emitted by: `graph/agent_projection.py`, `graph/ast_tool_projection.py`, `graph/compat.py`, `graph/governance_overlay.py`, `graph/runtime_projection.py`, `graph/trace_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
+Emitted by: `graph/agent_projection.py`, `graph/ast_tool_projection.py`, `graph/builder_snowflake_cortex.py`, `graph/compat.py`, `graph/governance_overlay.py`, `graph/runtime_projection.py`, `graph/trace_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
 
 Id formats:
 

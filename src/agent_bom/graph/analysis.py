@@ -10,6 +10,9 @@ if TYPE_CHECKING:
     from agent_bom.evidence.semantics import CompletenessEntry
 
 
+ANALYSIS_SAMPLE_LIMIT = 20
+
+
 class GraphAnalysisState(str, Enum):
     COMPLETE = "complete"
     LIMITED = "limited"
@@ -26,14 +29,19 @@ class GraphAnalysisStatus:
     reason_codes: tuple[str, ...] = ()
     limits: Mapping[str, int] = field(default_factory=dict)
     observed: Mapping[str, int] = field(default_factory=dict)
+    # Bounded example identifiers behind the counts (e.g. rejected edge ids); never secret values.
+    samples: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        payload: dict[str, Any] = {
             "status": self.status.value,
             "reason_codes": list(self.reason_codes),
             "limits": {str(key): int(value) for key, value in self.limits.items()},
             "observed": {str(key): int(value) for key, value in self.observed.items()},
         }
+        if self.samples:
+            payload["samples"] = list(self.samples)
+        return payload
 
     def to_completeness_entry(self, *, component: str) -> CompletenessEntry:
         """Project this analyzer status without changing snapshot serialization."""
@@ -69,6 +77,7 @@ class GraphAnalysisStatus:
             reason_codes=tuple(str(code) for code in data.get("reason_codes", ()) if isinstance(code, str) and code),
             limits=_integer_mapping(data.get("limits")),
             observed=_integer_mapping(data.get("observed")),
+            samples=tuple(str(item) for item in (data.get("samples") or ())[:ANALYSIS_SAMPLE_LIMIT] if isinstance(item, str) and item),
         )
 
 

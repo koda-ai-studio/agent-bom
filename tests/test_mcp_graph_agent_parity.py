@@ -477,12 +477,93 @@ def test_finding_detail_joins_graph_paths(demo: _Estate) -> None:
     assert "triage" in payload
 
 
+# ── graph_diff: bounded snapshot diff for agents and the dashboard ──────────
+
+_LEGACY_DIFF_BYTES_FLOOR = 5_000_000
+
+
+def test_showcase_graph_diff_payloads_are_bounded(showcase: _Estate) -> None:
+    from agent_bom.graph.diff_view import FULL_BYTE_CAP
+    from agent_bom.mcp_tools.graph_diff import graph_diff_impl
+
+    legacy = showcase.store.diff_snapshots("showcase-baseline", "showcase", tenant_id="default")
+    legacy_bytes = len(json.dumps(legacy, separators=(",", ":"), default=str))
+    assert legacy_bytes >= _LEGACY_DIFF_BYTES_FLOOR, "the unbounded diff this view replaces"
+
+    summary_response = showcase.client.get("/v1/graph/diff")
+    assert summary_response.status_code == 200
+    summary = summary_response.json()
+    assert (summary["old"], summary["new"]) == ("showcase-baseline", "showcase")
+    assert len(summary_response.content) <= 16_000
+    totals = summary["summary"]["totals"]
+    assert totals["nodes"]["added"] == len(legacy["nodes_added"])
+    assert totals["edges"]["added"] == len(legacy["edges_added"])
+    assert summary["summary"]["total_changes"] == sum(len(legacy[key]) for key in _DIFF_LIST_KEYS)
+
+    raw = showcase.mcp_raw(graph_diff_impl)
+    assert len(raw) <= 16_000
+
+    detail = showcase.client.get("/v1/graph/diff", params={"view": "detail", "limit": 200})
+    assert len(detail.content) <= 80_000 and len(detail.json()["items"]) == 200
+
+    full = showcase.client.get("/v1/graph/diff", params={"view": "full"})
+    body = full.json()
+    assert len(full.content) <= FULL_BYTE_CAP + 50_000
+    assert body["truncated"] is True and body["complete"] is False
+    assert body["total_changes"] == summary["summary"]["total_changes"] > body["returned_changes"]
+    assert len(body["change_kind_index"]["nodes"]) == len(body["nodes_added"]) + len(body["nodes_removed"]) + len(body["nodes_changed"])
+
+
+_DIFF_LIST_KEYS = ("nodes_added", "nodes_removed", "nodes_changed", "edges_added", "edges_removed", "edges_changed")
+
+
+def test_graph_diff_mcp_matches_rest(showcase: _Estate) -> None:
+    from agent_bom.mcp_tools.graph_diff import graph_diff_impl
+
+    rest = showcase.rest("/v1/graph/diff")
+    mcp = showcase.mcp(graph_diff_impl)
+    assert mcp["summary"] == rest["summary"] and (mcp["old"], mcp["new"]) == (rest["old"], rest["new"])
+
+    filters = {"change": "added", "entity_type": "vulnerability"}
+    seen_mcp: list[str] = []
+    seen_rest: list[str] = []
+    mcp_cursor = rest_cursor = None
+    for _ in range(4):
+        page = showcase.mcp(graph_diff_impl, view="detail", limit=50, cursor=mcp_cursor, **filters)
+        rest_params: dict[str, Any] = {"view": "detail", "limit": 50, **filters}
+        if rest_cursor:
+            rest_params["cursor"] = rest_cursor
+        rest_page = showcase.rest("/v1/graph/diff", **rest_params)
+        assert page["total"] == rest_page["total"] == rest["summary"]["nodes_by_entity_type"]["vulnerability"]["added"]
+        assert page["items"] == rest_page["items"]
+        seen_mcp.extend(row["id"] for row in page["items"])
+        seen_rest.extend(row["id"] for row in rest_page["items"])
+        mcp_cursor, rest_cursor = page["pagination"]["next_cursor"], rest_page["pagination"]["next_cursor"]
+        assert mcp_cursor == rest_cursor
+    assert seen_mcp == seen_rest and len(seen_mcp) == len(set(seen_mcp)) == 200
+    assert all(
+        row["change"] == "added" and row["entity_type"] == "vulnerability"
+        for row in showcase.mcp(graph_diff_impl, view="detail", limit=200, **filters)["items"]
+    )
+
+
+def test_graph_diff_tool_errors_match_rest(demo: _Estate) -> None:
+    from agent_bom.mcp_tools.graph_diff import graph_diff_impl
+
+    assert demo.client.get("/v1/graph/diff").status_code == 404
+    assert demo.mcp(graph_diff_impl)["error"]["code"] == "AGENTBOM_MCP_NOT_FOUND_RESOURCE"
+    assert demo.mcp(graph_diff_impl, view="full")["error"]["details"] == {"argument": "view"}
+    assert demo.mcp(graph_diff_impl, limit=201)["error"]["details"] == {"argument": "limit"}
+    assert demo.mcp(graph_diff_impl, from_scan_id="missing-a", to_scan_id="missing-b")["error"]["code"] == "AGENTBOM_MCP_NOT_FOUND_RESOURCE"
+
+
 def test_new_graph_modules_import_without_fastapi() -> None:
     code = (
         "import sys; sys.modules['fastapi'] = None; "
         "import agent_bom.mcp_tools.graph, agent_bom.mcp_tools.graph_reach, agent_bom.mcp_tools.finding_graph, "
         "agent_bom.api.attack_path_queue, agent_bom.graph.attack_path_queue, agent_bom.mcp_tools.deploy_gate, "
-        "agent_bom.mcp_tools.findings, agent_bom.mcp_tools.compliance_persisted, agent_bom.mcp_tools.graph_registration"
+        "agent_bom.mcp_tools.findings, agent_bom.mcp_tools.compliance_persisted, agent_bom.mcp_tools.graph_registration, "
+        "agent_bom.mcp_tools.graph_diff, agent_bom.graph.diff_view"
     )
     result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=60, cwd=_ROOT)
     assert result.returncode == 0, result.stderr
@@ -491,6 +572,6 @@ def test_new_graph_modules_import_without_fastapi() -> None:
 def test_new_tools_are_registered_in_graph_profile() -> None:
     from agent_bom.mcp_tools.profiles import PROFILES
 
-    for name in ("graph_reach", "findings_query", "finding_detail", "should_i_deploy"):
+    for name in ("graph_reach", "graph_diff", "findings_query", "finding_detail", "should_i_deploy"):
         assert name in PROFILES["graph"].tools
         assert name in PROFILES["guided"].tools

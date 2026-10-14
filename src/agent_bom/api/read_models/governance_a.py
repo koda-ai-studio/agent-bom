@@ -26,6 +26,8 @@ class GovernanceReportSummary(ReadModel):
     privilege_grants: int
     data_classifications: int
     agent_usage_records: int
+    cortex_agents: int = 0
+    cortex_events: int = 0
     findings: int
     critical_findings: int
     high_findings: int
@@ -66,6 +68,8 @@ class GovernanceDataClassificationRow(ReadModel):
 
 class GovernanceAgentUsageRow(ReadModel):
     agent_name: str
+    database_name: str = ""
+    schema_name: str = ""
     user_name: str
     role_name: str
     start_time: str
@@ -74,6 +78,71 @@ class GovernanceAgentUsageRow(ReadModel):
     model_name: str
     tool_calls: int
     status: str
+
+
+class GovernanceCortexToolResource(ReadModel):
+    kind: str
+    fqn: str
+
+
+class GovernanceCortexTool(ReadModel):
+    name: str
+    type: str
+    resources: list[GovernanceCortexToolResource]
+
+
+class GovernanceCortexExecutionRole(ReadModel):
+    role: str
+    privilege: str
+    granted_to: str
+
+
+class GovernanceCortexAgentRow(ReadModel):
+    """One Cortex Agent from DESCRIBE AGENT; ``tools`` are only those its specification declares."""
+
+    account: str
+    database: str
+    schema_name: str = Field(alias="schema")
+    name: str
+    fqn: str
+    node_id: str
+    display_name: str
+    owner: str
+    is_secure: bool
+    spec_status: str
+    tools: list[GovernanceCortexTool]
+    execution_roles: list[GovernanceCortexExecutionRole]
+
+
+class GovernanceCortexEventRow(ReadModel):
+    """Normalized Cortex observability span: metadata, digests and derived signals only."""
+
+    tenant_id: str | None
+    source: str
+    source_trace_id: str | None
+    source_span_id: str | None
+    parent_span_id: str | None
+    started_at: str | None
+    ended_at: str | None
+    kind: str
+    agent_name: str
+    agent_ref: str
+    model_provider: str | None
+    model_name: str | None
+    tool_name: str | None
+    mcp_server_ref: str | None
+    resource_refs: list[str]
+    principal_hash: str | None
+    role_name: str | None
+    credential_ref: str | None
+    input_tokens: int | None
+    output_tokens: int | None
+    cost_usd: Num | None
+    status: str
+    signals: list[str]
+    content_sha256: str | None
+    match_method: str
+    match_node_id: str | None
 
 
 class GovernanceReportResponse(ReadResponse):
@@ -85,6 +154,8 @@ class GovernanceReportResponse(ReadResponse):
     privilege_grants: list[GovernancePrivilegeGrantRow]
     data_classifications: list[GovernanceDataClassificationRow]
     agent_usage: list[GovernanceAgentUsageRow]
+    cortex_agents: list[GovernanceCortexAgentRow] = Field(default_factory=list)
+    cortex_events: list[GovernanceCortexEventRow] = Field(default_factory=list)
     warnings: list[str]
 
 

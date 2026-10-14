@@ -4405,7 +4405,7 @@ export interface paths {
         };
         /**
          * Get Graph Diff
-         * @description Diff two scan snapshots — nodes/edges added, removed, changed.
+         * @description Diff two scan snapshots: summary by default, filtered detail pages, or capped legacy lists.
          */
         get: operations["get_graph_diff_v1_graph_diff_get"];
         put?: never;
@@ -14958,10 +14958,20 @@ export interface components {
             agent_name: string;
             /** Credits Used */
             credits_used: number;
+            /**
+             * Database Name
+             * @default
+             */
+            database_name: string;
             /** Model Name */
             model_name: string;
             /** Role Name */
             role_name: string;
+            /**
+             * Schema Name
+             * @default
+             */
+            schema_name: string;
             /** Start Time */
             start_time: string;
             /** Status */
@@ -15151,6 +15161,129 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /**
+         * GovernanceCortexAgentRow
+         * @description One Cortex Agent from DESCRIBE AGENT; ``tools`` are only those its specification declares.
+         */
+        GovernanceCortexAgentRow: {
+            /** Account */
+            account: string;
+            /** Database */
+            database: string;
+            /** Display Name */
+            display_name: string;
+            /** Execution Roles */
+            execution_roles: components["schemas"]["GovernanceCortexExecutionRole"][];
+            /** Fqn */
+            fqn: string;
+            /** Is Secure */
+            is_secure: boolean;
+            /** Name */
+            name: string;
+            /** Node Id */
+            node_id: string;
+            /** Owner */
+            owner: string;
+            /** Schema */
+            schema: string;
+            /** Spec Status */
+            spec_status: string;
+            /** Tools */
+            tools: components["schemas"]["GovernanceCortexTool"][];
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * GovernanceCortexEventRow
+         * @description Normalized Cortex observability span: metadata, digests and derived signals only.
+         */
+        GovernanceCortexEventRow: {
+            /** Agent Name */
+            agent_name: string;
+            /** Agent Ref */
+            agent_ref: string;
+            /** Content Sha256 */
+            content_sha256: string | null;
+            /** Cost Usd */
+            cost_usd: number | null;
+            /** Credential Ref */
+            credential_ref: string | null;
+            /** Ended At */
+            ended_at: string | null;
+            /** Input Tokens */
+            input_tokens: number | null;
+            /** Kind */
+            kind: string;
+            /** Match Method */
+            match_method: string;
+            /** Match Node Id */
+            match_node_id: string | null;
+            /** Mcp Server Ref */
+            mcp_server_ref: string | null;
+            /** Model Name */
+            model_name: string | null;
+            /** Model Provider */
+            model_provider: string | null;
+            /** Output Tokens */
+            output_tokens: number | null;
+            /** Parent Span Id */
+            parent_span_id: string | null;
+            /** Principal Hash */
+            principal_hash: string | null;
+            /** Resource Refs */
+            resource_refs: string[];
+            /** Role Name */
+            role_name: string | null;
+            /** Signals */
+            signals: string[];
+            /** Source */
+            source: string;
+            /** Source Span Id */
+            source_span_id: string | null;
+            /** Source Trace Id */
+            source_trace_id: string | null;
+            /** Started At */
+            started_at: string | null;
+            /** Status */
+            status: string;
+            /** Tenant Id */
+            tenant_id: string | null;
+            /** Tool Name */
+            tool_name: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GovernanceCortexExecutionRole */
+        GovernanceCortexExecutionRole: {
+            /** Granted To */
+            granted_to: string;
+            /** Privilege */
+            privilege: string;
+            /** Role */
+            role: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GovernanceCortexTool */
+        GovernanceCortexTool: {
+            /** Name */
+            name: string;
+            /** Resources */
+            resources: components["schemas"]["GovernanceCortexToolResource"][];
+            /** Type */
+            type: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GovernanceCortexToolResource */
+        GovernanceCortexToolResource: {
+            /** Fqn */
+            fqn: string;
+            /** Kind */
+            kind: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** GovernanceDataClassificationRow */
         GovernanceDataClassificationRow: {
             /** Column Name */
@@ -15278,6 +15411,10 @@ export interface components {
             account: string;
             /** Agent Usage */
             agent_usage: components["schemas"]["GovernanceAgentUsageRow"][];
+            /** Cortex Agents */
+            cortex_agents?: components["schemas"]["GovernanceCortexAgentRow"][];
+            /** Cortex Events */
+            cortex_events?: components["schemas"]["GovernanceCortexEventRow"][];
             /** Data Classifications */
             data_classifications: components["schemas"]["GovernanceDataClassificationRow"][];
             /** Discovered At */
@@ -15298,6 +15435,16 @@ export interface components {
             access_records: number;
             /** Agent Usage Records */
             agent_usage_records: number;
+            /**
+             * Cortex Agents
+             * @default 0
+             */
+            cortex_agents: number;
+            /**
+             * Cortex Events
+             * @default 0
+             */
+            cortex_events: number;
             /** Critical Findings */
             critical_findings: number;
             /** Data Classifications */
@@ -15790,7 +15937,25 @@ export interface components {
              */
             warnRisk: number;
         };
-        /** GraphDiffResponse */
+        /** GraphDiffPagination */
+        GraphDiffPagination: {
+            /** Has More */
+            has_more: boolean;
+            /** Limit */
+            limit: number;
+            /** Next Cursor */
+            next_cursor?: string | null;
+            /** Offset */
+            offset: number;
+            /** Returned */
+            returned: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * GraphDiffResponse
+         * @description ``GET /v1/graph/diff``: ``summary`` (default), ``detail`` rows, or capped ``full`` lists.
+         */
         GraphDiffResponse: {
             /** Attribute Deltas */
             attribute_deltas?: {
@@ -15799,11 +15964,13 @@ export interface components {
                 }[];
             } | null;
             /** Change Kind Index */
-            change_kind_index: {
+            change_kind_index?: {
                 [key: string]: {
                     [key: string]: string;
                 };
-            };
+            } | null;
+            /** Complete */
+            complete?: boolean | null;
             completeness: components["schemas"]["GraphCompleteness"];
             /** Edges Added */
             edges_added?: unknown[] | null;
@@ -15811,12 +15978,47 @@ export interface components {
             edges_changed?: unknown[] | null;
             /** Edges Removed */
             edges_removed?: unknown[] | null;
+            /** Filters */
+            filters?: {
+                [key: string]: string;
+            } | null;
+            /** Items */
+            items?: {
+                [key: string]: unknown;
+            }[] | null;
+            /** Limits */
+            limits?: {
+                [key: string]: number;
+            } | null;
+            /** New */
+            new: string;
             /** Nodes Added */
             nodes_added?: unknown[] | null;
             /** Nodes Changed */
             nodes_changed?: unknown[] | null;
             /** Nodes Removed */
             nodes_removed?: unknown[] | null;
+            /** Old */
+            old: string;
+            /** Omitted Fields */
+            omitted_fields?: string[] | null;
+            pagination?: components["schemas"]["GraphDiffPagination"] | null;
+            /** Returned Changes */
+            returned_changes?: number | null;
+            /** Schema Version */
+            schema_version: string;
+            /** Summary */
+            summary?: {
+                [key: string]: unknown;
+            } | null;
+            /** Total */
+            total?: number | null;
+            /** Total Changes */
+            total_changes?: number | null;
+            /** Truncated */
+            truncated?: boolean | null;
+            /** View */
+            view: string;
         } & {
             [key: string]: unknown;
         };
@@ -33836,11 +34038,27 @@ export interface operations {
     };
     get_graph_diff_v1_graph_diff_get: {
         parameters: {
-            query: {
-                /** @description Old scan ID */
-                old: string;
-                /** @description New scan ID */
-                new: string;
+            query?: {
+                /** @description Old scan ID; omit both old and new to compare the latest two */
+                old?: string | null;
+                /** @description New scan ID; omit both old and new to compare the latest two */
+                new?: string | null;
+                /** @description summary (default): counts per change kind by entity type and relationship plus the most significant changes. detail: a filtered, cursor-paged list of change rows. full: the legacy node/edge lists, capped (see truncated/complete/limits). */
+                view?: "summary" | "detail" | "full";
+                /** @description detail: only this change kind */
+                change?: ("added" | "removed" | "changed") | null;
+                /** @description detail: only node or edge rows */
+                kind?: ("node" | "edge") | null;
+                /** @description detail: only node rows of this entity type */
+                entity_type?: string | null;
+                /** @description detail: only edge rows of this relationship */
+                relationship?: string | null;
+                /** @description detail: the node itself or edges touching it */
+                node_id?: string | null;
+                /** @description detail: rows per page */
+                limit?: number;
+                /** @description detail: pagination.next_cursor; keep filters unchanged */
+                cursor?: string | null;
             };
             header?: never;
             path?: never;
