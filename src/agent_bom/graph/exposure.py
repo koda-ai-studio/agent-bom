@@ -10,7 +10,7 @@ from typing import Any
 
 from agent_bom.graph.container import AttackPath
 from agent_bom.graph.edge import UnifiedEdge
-from agent_bom.graph.edge_lookup import _build_edge_lookup, _EdgeLookup, _rel_value
+from agent_bom.graph.edge_lookup import _build_edge_lookup, _EdgeLookup, _hop_edge, _rel_value
 from agent_bom.graph.integration_contract import EVIDENCE_VERSION, node_evidence_provenance
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.path_derivation import _node_type_value
@@ -103,7 +103,7 @@ def _exposure_relationships_for_path(
     relationships: list[dict[str, Any]] = []
     for index, (source, target) in enumerate(zip(path.hops, path.hops[1:], strict=False)):
         relationship_key = path.edges[index] if index < len(path.edges) else None
-        edge: UnifiedEdge | None = by_pair.get((source, target, relationship_key)) if relationship_key else by_pair.get((source, target))
+        edge = _hop_edge(by_pair, source, target, relationship_key)
         if edge is None:
             continue
         relationship = _rel_value(edge)
