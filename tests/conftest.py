@@ -128,41 +128,49 @@ os.environ.setdefault("AGENT_BOM_POSTURE_PRECOMPUTE", "0")
 os.environ.setdefault("AGENT_BOM_GRAPH_CONTRACT", "strict")
 
 
+# Captured when this conftest is imported, before any fixture of any scope runs.
+_AGENT_BOM_LOGGING_BASELINE = (
+    logging.getLogger("agent_bom").level,
+    tuple(logging.getLogger("agent_bom").handlers),
+    logging.getLogger("agent_bom").propagate,
+    logging.getLogger().level,
+)
+
+
+def _apply_agent_bom_logging_baseline() -> None:
+    level, handlers, propagate, root_level = _AGENT_BOM_LOGGING_BASELINE
+    logger = logging.getLogger("agent_bom")
+    logger.setLevel(level)
+    logger.handlers = list(handlers)
+    logger.propagate = propagate
+    logging.getLogger().setLevel(root_level)
+
+
 @pytest.fixture(autouse=True)
 def _restore_agent_bom_logging():
-    """Undo any global logging reconfiguration a test leaves behind.
+    """Run every test against the session's original ``agent_bom`` logging.
 
     ``setup_logging`` mutates the process-global ``agent_bom`` logger: it sets
-    the level and replaces the handler list. ``monkeypatch.setenv`` restores
-    ``AGENT_BOM_LOG_LEVEL`` but cannot restore the logger, so one test calling
-    ``setup_logging(level="ERROR")`` silently raises the level for every test
-    that runs after it in the same process.
+    the level and replaces the handler list. ``agent-bom scan --quiet`` calls
+    ``setup_logging(level="ERROR")``, so any CLI scan raises the level for
+    every later test in the same process, and ``caplog`` then sees no
+    ``agent_bom.*`` warnings (the record is dropped at the logger's own level).
 
-    Anything later asserting on a warning through ``caplog`` then fails: the
-    record is dropped at the logger's own level before any handler sees it, and
-    the assertion reads as "the warning was never emitted". With
-    ``pytest-randomly`` shuffling order on every run, whether a given test lands
-    after the polluter changes run to run — which is what made this look like
-    flaky CI rather than order dependence. Reproduced deterministically by
-    running a ``setup_logging(level="ERROR")`` test immediately before
-    ``test_unreadable_database_does_not_masquerade_as_a_clean_scan``.
-
-    Restoring here fixes the whole class at once rather than hardening each
-    assertion against a polluter it cannot see.
+    The baseline is the state at conftest import, not a snapshot taken when
+    each test starts: module- and session-scoped fixtures run before this
+    function-scoped fixture, so a module fixture that runs a quiet CLI scan
+    (``tests/graph/test_occurrence_applicability.py``,
+    ``tests/test_output_render_characterization.py``) would otherwise become
+    the "saved" state and be re-applied after every later test on the worker.
+    Reproduced with ``pytest -p no:randomly -n 0
+    tests/graph/test_occurrence_applicability.py
+    tests/test_gcp_inventory_characterization.py``.
     """
-    logger = logging.getLogger("agent_bom")
-    saved_level = logger.level
-    saved_handlers = list(logger.handlers)
-    saved_propagate = logger.propagate
-    root = logging.getLogger()
-    saved_root_level = root.level
+    _apply_agent_bom_logging_baseline()
     try:
         yield
     finally:
-        logger.setLevel(saved_level)
-        logger.handlers = saved_handlers
-        logger.propagate = saved_propagate
-        root.setLevel(saved_root_level)
+        _apply_agent_bom_logging_baseline()
 
 
 @pytest.fixture(autouse=True)

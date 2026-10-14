@@ -9,6 +9,8 @@ the modules that emit each node and edge kind. Writes:
 - docs/graph/DATA_MODEL.md — overview diagram and catalogs
 - docs/graph/data-model/relationships.md — allowed pairs and emitting modules
 - docs/graph/data-model/entities.md — emitting modules and node id formats
+- docs/graph/data-model/storage-erd.md (+ storage-erd/<domain>.md) — persistence ERD from the DDL
+- docs/graph/data-model/correlation.md — how sources normalize and correlate into graph nodes
 
 Usage:
     python scripts/generate_graph_data_model.py            # regenerate
@@ -33,8 +35,14 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 SRC_ROOT = Path(__file__).resolve().parents[1] / "src"
 PKG_DIR = SRC_ROOT / "agent_bom"
+SOURCE_ROOT = ROOT
 if str(SRC_ROOT) not in sys.path:
     sys.path.insert(0, str(SRC_ROOT))
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import graph_data_model_correlation  # noqa: E402
+import graph_data_model_storage  # noqa: E402
 
 from agent_bom import canonical_ids  # noqa: E402
 from agent_bom.core.asset_types import _ASSET_TYPE_ALIASES  # noqa: E402
@@ -481,7 +489,8 @@ def _render_main(scan: ScanResult) -> list[str]:
         "Every node kind, edge kind, evidence tier and normalization table behind the security graph. "
         "The [graph contract](CONTRACT.md) states what the graph guarantees; this page lists what it is made of. "
         "How report fields reach the database, exports and this graph is in the [data model atlas](../DATA_MODEL.md). "
-        "Detail pages: [relationship pairs](data-model/relationships.md) · [entity emitters and id formats](data-model/entities.md).",
+        "Detail pages: [relationship pairs](data-model/relationships.md) · [entity emitters and id formats](data-model/entities.md) · "
+        "[storage ERD](data-model/storage-erd.md) · [cross-source correlation](data-model/correlation.md).",
     )
     out += [
         "## Overview",
@@ -698,6 +707,8 @@ def render() -> dict[str, str]:
         MAIN_DOC: _render_main(scan),
         REL_DOC: _render_relationships(scan),
         ENTITY_DOC: _render_entities(scan),
+        **graph_data_model_storage.render(SOURCE_ROOT, GENERATOR),
+        graph_data_model_correlation.DOC: graph_data_model_correlation.render(scan.node_id_formats, GENERATOR),
     }
     rendered: dict[str, str] = {}
     for path, lines in docs.items():
