@@ -17,6 +17,10 @@ from agent_bom.graph.correlation import (
     validate_correlation_output_manifest,
 )
 
+# Hand-built graphs here use placeholder relationship pairs to exercise graph
+# mechanics; producers are held to the contract in test_graph_relationship_contract.
+pytestmark = pytest.mark.graph_contract("warn")
+
 
 def _graph(scan_id: str, tenant_id: str = "acme") -> UnifiedGraph:
     return UnifiedGraph(scan_id=scan_id, tenant_id=tenant_id, created_at=f"2026-08-{10 + int(scan_id[-1])}T12:00:00+00:00")

@@ -29,6 +29,10 @@ from agent_bom.runtime.correlation_facts import (
 )
 from agent_bom.runtime.graph_reachability import AgentReachability, ReachabilityMap
 
+# Hand-built graphs here use placeholder relationship pairs to exercise graph
+# mechanics; producers are held to the contract in test_graph_relationship_contract.
+pytestmark = pytest.mark.graph_contract("warn")
+
 NOW = datetime(2026, 8, 30, 12, 0, tzinfo=timezone.utc)
 KEY = b"runtime-facts-test-key-material-32-bytes"
 

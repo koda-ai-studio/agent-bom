@@ -1,8 +1,14 @@
 """Shared containment must not turn repeated memberships into unique assets."""
 
+import pytest
+
 from agent_bom.graph import UnifiedEdge, UnifiedGraph, UnifiedNode
 from agent_bom.graph.rollup import RollupFilters, drill_down, rollup_view
 from agent_bom.graph.types import EntityType, RelationshipType
+
+# Hand-built graphs here use placeholder relationship pairs to exercise graph
+# mechanics; producers are held to the contract in test_graph_relationship_contract.
+pytestmark = pytest.mark.graph_contract("warn")
 
 
 def _shared_estate(*, root: bool = False) -> UnifiedGraph:

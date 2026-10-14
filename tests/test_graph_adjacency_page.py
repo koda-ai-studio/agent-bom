@@ -12,6 +12,10 @@ import pytest
 from agent_bom.api.graph_store import SQLiteGraphStore
 from agent_bom.graph import EntityType, RelationshipType, UnifiedEdge, UnifiedGraph, UnifiedNode
 
+# Hand-built graphs here use placeholder relationship pairs to exercise graph
+# mechanics; producers are held to the contract in test_graph_relationship_contract.
+pytestmark = pytest.mark.graph_contract("warn")
+
 
 @pytest.fixture(params=["sqlite", "postgres"])
 def store(request, tmp_path):

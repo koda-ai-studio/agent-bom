@@ -10,6 +10,10 @@ from agent_bom.graph.consequence.contracts import ConsequenceRequest
 from agent_bom.graph.consequence.service import assess_consequences
 from tests.graph.test_compromise import AT, STAMP, graph, receipt
 
+# Hand-built graphs here use placeholder relationship pairs to exercise graph
+# mechanics; producers are held to the contract in test_graph_relationship_contract.
+pytestmark = pytest.mark.graph_contract("warn")
+
 
 def assess(g, **changes):
     request = ConsequenceRequest.model_validate(

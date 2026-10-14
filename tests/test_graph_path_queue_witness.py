@@ -9,6 +9,10 @@ import pytest
 from agent_bom.graph import AttackPath, EntityType, RelationshipType, UnifiedEdge, UnifiedGraph, UnifiedNode
 from tests.test_graph_tenant_scope_and_bounds import api  # noqa: F401
 
+# Hand-built graphs here use placeholder relationship pairs to exercise graph
+# mechanics; producers are held to the contract in test_graph_relationship_contract.
+pytestmark = pytest.mark.graph_contract("warn")
+
 
 @pytest.mark.parametrize("direction", ["bidirectional", "directed"])
 def test_shared_mcp_path_preserves_reverse_relationship_without_inventing_directed_access(api, direction):  # noqa: F811

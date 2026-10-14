@@ -29,6 +29,10 @@ from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.types import EntityType, NodeStatus
 from agent_bom.graph.webhooks import compute_delta_alerts
 
+# Hand-built graphs here use placeholder relationship pairs to exercise graph
+# mechanics; producers are held to the contract in test_graph_relationship_contract.
+pytestmark = pytest.mark.graph_contract("warn")
+
 _FIXTURES = Path(__file__).parent / "fixtures"
 
 

@@ -22,6 +22,10 @@ from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.types import EntityType, RelationshipType
 
+# Hand-built graphs here use placeholder relationship pairs to exercise graph
+# mechanics; producers are held to the contract in test_graph_relationship_contract.
+pytestmark = pytest.mark.graph_contract("warn")
+
 # Extra call arguments per view. A view discovered on the class but missing here
 # fails ``test_every_view_method_is_covered`` — the regression guard.
 VIEW_ARGS: dict[str, tuple[tuple, dict]] = {

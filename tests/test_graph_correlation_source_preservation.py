@@ -17,6 +17,10 @@ from agent_bom.graph.correlation import (
     correlation_manifest_digest,
 )
 
+# Hand-built graphs here use placeholder relationship pairs to exercise graph
+# mechanics; producers are held to the contract in test_graph_relationship_contract.
+pytestmark = pytest.mark.graph_contract("warn")
+
 T1 = "2026-09-20T01:00:00+00:00"
 T2 = "2026-09-20T02:00:00+00:00"
 T3 = "2026-09-20T03:00:00+00:00"

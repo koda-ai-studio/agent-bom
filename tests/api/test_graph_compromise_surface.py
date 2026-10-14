@@ -4,6 +4,10 @@ import pytest
 
 from tests.test_graph_tenant_scope_and_bounds import _path_graph, api  # noqa: F401
 
+# Hand-built graphs here use placeholder relationship pairs to exercise graph
+# mechanics; producers are held to the contract in test_graph_relationship_contract.
+pytestmark = pytest.mark.graph_contract("warn")
+
 
 def _body(**changes):
     return {"root_node_id": "principal:reader", "assume_control": True, "scan_id": "shared-scan", **changes}

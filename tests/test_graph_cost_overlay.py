@@ -4,12 +4,18 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
+import pytest
+
 from agent_bom.api.cost_store import LLMCostRecord
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.cost_overlay import apply_cost_overlay
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.types import EntityType, RelationshipType
+
+# Hand-built graphs here use placeholder relationship pairs to exercise graph
+# mechanics; producers are held to the contract in test_graph_relationship_contract.
+pytestmark = pytest.mark.graph_contract("warn")
 
 _NOW = datetime(2026, 6, 25, 12, 0, 0, tzinfo=timezone.utc)
 

@@ -7,6 +7,10 @@ from agent_bom.graph.correlation import CorrelationSnapshot, correlation_identit
 from agent_bom.graph.correlation_workspace import CorrelationMergeWorkspace
 from agent_bom.graph.node import NodeDimensions
 
+# Hand-built graphs here use placeholder relationship pairs to exercise graph
+# mechanics; producers are held to the contract in test_graph_relationship_contract.
+pytestmark = pytest.mark.graph_contract("warn")
+
 
 def _node(kind, attributes, dimensions=None):
     return UnifiedNode(

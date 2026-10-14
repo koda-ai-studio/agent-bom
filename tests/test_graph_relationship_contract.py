@@ -9,12 +9,16 @@ without ``evidence.source`` / ``evidence.tier``.
 from __future__ import annotations
 
 import ast
+import json
 import logging
 from pathlib import Path
 
 import pytest
+from click.testing import CliRunner
 
 from agent_bom.api.routes.graph_routes.schema_meta import _RELATIONSHIP_SCHEMA_META
+from agent_bom.cli import main
+from agent_bom.graph.builder import build_unified_graph_from_report
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.edge_evidence import LEGACY_TIER, edge_evidence, recorded_tier
@@ -27,8 +31,83 @@ from agent_bom.graph.relationship_contract import (
 )
 from agent_bom.graph.relationship_specs import RELATIONSHIP_SPECS, TraversalClass
 from agent_bom.graph.types import EntityType, RelationshipType
+from tests.test_graph_schema_emission_honesty import REPORT
 
 ROOT = Path(__file__).resolve().parents[1]
+FIXTURES = ROOT / "tests" / "fixtures"
+
+
+def _cli_report(args: list[str], output: Path) -> dict:
+    result = CliRunner().invoke(main, [*args, "-o", str(output)])
+    assert result.exit_code == 0, result.output
+    return json.loads(output.read_text())
+
+
+def _probe_graphs(tmp: Path) -> dict[str, UnifiedGraph]:
+    from agent_bom.demo_estate.enterprise_composition import build_demo_estate
+    from agent_bom.demo_estate.enterprise_correlation import build_estate_correlations
+    from agent_bom.demo_estate.enterprise_findings import build_estate_findings
+    from agent_bom.demo_estate.estate_graph import project_estate_into_graph
+    from agent_bom.demo_estate.showcase_graph import (
+        apply_showcase_overlays,
+        build_showcase_graph,
+        finalize_showcase_snapshot,
+        project_estate_onto_showcase,
+    )
+
+    showcase, store, drift = build_showcase_graph()
+    apply_showcase_overlays(showcase, identity_store=store, drift_store=drift)
+    finalize_showcase_snapshot(showcase, profile="current")
+    project_estate_onto_showcase(showcase, tenant_id="default", profile="current")
+    estate = build_demo_estate(tenant_id="default")
+    estate_graph = UnifiedGraph(scan_id="estate", tenant_id="default")
+    project_estate_into_graph(estate_graph, estate, findings=build_estate_findings(estate), correlations=build_estate_correlations(estate))
+    project = json.loads((FIXTURES / "scan_characterization" / "project_json.json").read_text())["document"]
+    demo = _cli_report(["scan", "--demo", "--offline", "-f", "json", "--exit-zero"], tmp / "demo.json")
+    sample = tmp / "quickstart"
+    assert CliRunner().invoke(main, ["quickstart", "--write-sample", "--sample-dir", str(sample), "--offline"]).exit_code == 0
+    quickstart = _cli_report(
+        [
+            "agents",
+            "--inventory",
+            str(sample / "inventory.json"),
+            "-p",
+            str(sample),
+            "--context-graph",
+            "--exit-zero",
+            "--scan-prompts",
+            "--agent-project",
+            str(sample),
+            "--ai-inventory",
+            str(sample),
+            "--offline",
+            "--no-scan",
+        ],
+        tmp / "quickstart.json",
+    )
+    lab = json.loads((ROOT / "examples" / "reference-evidence-lab" / "generated" / "correlation-proof.json").read_text())
+    graphs = {
+        "multi_cloud_report": build_unified_graph_from_report(REPORT),
+        "self_scan": build_unified_graph_from_report(json.loads((FIXTURES / "agent_bom_self_scan_inventory.json").read_text())),
+        "project_scan": build_unified_graph_from_report(project),
+        "demo_scan": build_unified_graph_from_report(demo),
+        "quickstart": build_unified_graph_from_report(quickstart),
+        "showcase": showcase,
+        "demo_estate": estate_graph,
+        "reference_lab": UnifiedGraph.from_dict(lab["capture_fixture"]["graph"]),
+    }
+    for name, report in json.loads((FIXTURES / "graph_cloud_context" / "reports.json").read_text()).items():
+        graphs[f"cloud:{name}"] = build_unified_graph_from_report(report)
+    return graphs
+
+
+@pytest.fixture(scope="module")
+def probe_graphs(tmp_path_factory: pytest.TempPathFactory) -> dict[str, UnifiedGraph]:
+    with pytest.MonkeyPatch.context() as mp:
+        # Warn mode so every violation reaches the audit instead of aborting a
+        # producer whose failures an overlay would swallow.
+        mp.setenv("AGENT_BOM_GRAPH_CONTRACT", "warn")
+        return _probe_graphs(tmp_path_factory.mktemp("contract-probe"))
 
 
 def test_every_relationship_type_has_a_spec() -> None:
@@ -84,6 +163,59 @@ def test_schema_meta_is_derived_from_the_registry() -> None:
         assert pairs == {(s.value, t.value) for s, t in spec.allowed_pairs}
         assert {s for s, _ in pairs} == set(meta["source_types"])
         assert {t for _, t in pairs} == set(meta["target_types"])
+
+
+def test_probe_estate_has_no_contract_violations(probe_graphs: dict[str, UnifiedGraph], monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGENT_BOM_GRAPH_CONTRACT", "warn")
+    edges = 0
+    for name, graph in probe_graphs.items():
+        summary = audit_graph_contract(graph, record=False)
+        edges += summary["edges_checked"]
+        assert summary["violations"] == {}, f"{name}: {summary['pairs']}"
+    assert edges > 20_000, "the probe estate shrank and stopped proving anything"
+
+
+def test_probe_estate_covers_every_producer_family(probe_graphs: dict[str, UnifiedGraph]) -> None:
+    for name, graph in probe_graphs.items():
+        assert graph.edges, f"{name} produced no edges"
+    assert {"cloud:aws", "cloud:azure", "cloud:gcp", "cloud:snowflake"} <= set(probe_graphs)
+
+
+def test_regenerated_reference_lab_edges_carry_recorded_evidence(probe_graphs: dict[str, UnifiedGraph]) -> None:
+    tiers = {edge.evidence["tier"] for edge in probe_graphs["reference_lab"].edges}
+    assert LEGACY_TIER not in tiers
+    assert {"modeled_infrastructure", "static_evidence", "runtime_observed"} <= tiers
+
+
+def test_demo_estate_incident_hops_are_trace_steps(probe_graphs: dict[str, UnifiedGraph]) -> None:
+    graph = probe_graphs["demo_estate"]
+    hops = [edge for edge in graph.edges if edge.evidence.get("correlation_id")]
+    assert hops and all(edge.relationship is RelationshipType.TRACE_STEP for edge in hops)
+    assert all(edge.evidence["tier"] == "recorded" for edge in hops)
+    hop_ids = {edge.id for edge in hops}
+    chains = [path for path in graph.attack_paths if path.edges and path.edges[0].startswith("trace_step:")]
+    assert chains and all(set(path.edges) <= hop_ids for path in chains)
+
+
+def test_no_probe_edge_lacks_evidence_source_or_tier(probe_graphs: dict[str, UnifiedGraph]) -> None:
+    missing = [
+        (name, edge.id)
+        for name, graph in probe_graphs.items()
+        for edge in graph.edges
+        if not edge.evidence.get("source") or not edge.evidence.get("tier")
+    ]
+    assert missing == []
+
+
+def test_probe_estate_covers_most_relationship_kinds(probe_graphs: dict[str, UnifiedGraph]) -> None:
+    kinds = {edge.relationship for graph in probe_graphs.values() for edge in graph.edges}
+    assert len(kinds) >= 28
+
+
+def test_builder_records_contract_status(probe_graphs: dict[str, UnifiedGraph]) -> None:
+    status = probe_graphs["multi_cloud_report"].analysis_status[ANALYSIS_KEY].to_dict()
+    assert status["status"] == "complete"
+    assert status["observed"]["edges_checked"] == len(probe_graphs["multi_cloud_report"].edges)
 
 
 def _two_node_graph(src: EntityType, tgt: EntityType) -> UnifiedGraph:
@@ -179,7 +311,6 @@ def test_graph_json_rehydration_loads_stored_edges_unchanged(monkeypatch: pytest
     graph = UnifiedGraph.from_dict(payload)
     assert {edge.relationship for edge in graph.edges} == {RelationshipType.USES, RelationshipType.TRUSTS}
     assert all(edge.evidence == {} for edge in graph.edges)
-    assert graph.contract_admission is True
     graph.add_node(UnifiedNode(id="c", entity_type=EntityType.USER, label="c"))
     graph.add_edge(UnifiedEdge("c", "b", RelationshipType.TRUSTS, evidence=edge_evidence("t", "recorded")))
     assert len(graph.edges) == 2, "admission is back on for producer edges after the load"
@@ -203,3 +334,9 @@ def test_sqlite_round_trip_keeps_stored_evidence_and_out_of_contract_rows(tmp_pa
     loaded = store.load_graph(scan_id="legacy")
     assert [(edge.relationship, edge.evidence) for edge in loaded.edges] == [(RelationshipType.TRUSTS, {})]
     assert recorded_tier(loaded.edges[0].evidence) == LEGACY_TIER
+
+
+def test_suite_runs_the_contract_in_strict_mode() -> None:
+    from agent_bom.graph.relationship_contract import contract_mode
+
+    assert contract_mode() == "strict"

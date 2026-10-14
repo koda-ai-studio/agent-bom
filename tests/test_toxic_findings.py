@@ -8,6 +8,8 @@ tag, and evidence node ids — then that findings flow through
 
 from __future__ import annotations
 
+import pytest
+
 from agent_bom.finding import FindingSource, FindingType
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
@@ -20,6 +22,10 @@ from agent_bom.graph.toxic_findings import (
 )
 from agent_bom.graph.types import EntityType, RelationshipType
 from agent_bom.models import AIBOMReport
+
+# Hand-built graphs here use placeholder relationship pairs to exercise graph
+# mechanics; producers are held to the contract in test_graph_relationship_contract.
+pytestmark = pytest.mark.graph_contract("warn")
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 

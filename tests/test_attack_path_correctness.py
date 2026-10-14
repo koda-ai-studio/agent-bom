@@ -37,6 +37,10 @@ from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.types import EntityType, RelationshipType
 
+# Hand-built graphs here use placeholder relationship pairs to exercise graph
+# mechanics; producers are held to the contract in test_graph_relationship_contract.
+pytestmark = pytest.mark.graph_contract("warn")
+
 CHAIN = 9
 """``n0 -> n1 -> ... -> n8``: 8 nodes reachable from n0, 8 ancestors of n8.
 
