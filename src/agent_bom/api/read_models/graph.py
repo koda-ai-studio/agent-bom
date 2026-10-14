@@ -160,6 +160,10 @@ class GraphExposurePathsResponse(ReadResponse):
     count: int
     total: int | None = None
     count_metadata: Row | None = None
+    snapshot_total: int | None = None
+    view: str | None = None
+    ranking: Row | None = None
+    risk_scale: Row | None = None
     filters: Row | None = None
     paths: list[Row]
     nodes: list[Row] | None = None

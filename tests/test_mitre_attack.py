@@ -101,9 +101,8 @@ _MOCK_CWE_TO_ATTACK: dict[str, list[str]] = {
 
 @contextmanager
 def _mock_catalog():
-    """Scope the mock catalog and its lazy cache to this context."""
+    """Scope the mock catalog to this context."""
     with (
-        patch.object(ATTACK_TECHNIQUES, "_data", None),
         patch.multiple(
             "agent_bom.mitre_fetch",
             get_techniques=lambda: _MOCK_TECHNIQUES,
@@ -119,19 +118,14 @@ def _mock_catalog():
         yield
 
 
-@pytest.mark.parametrize("raises", [False, True])
-def test_mock_catalog_restores_prior_cache(monkeypatch, raises):
-    prior = {"T0000": {"name": "Prior catalog", "tactics": []}}
-    monkeypatch.setattr(ATTACK_TECHNIQUES, "_data", prior)
-    try:
-        with _mock_catalog():
-            assert "Command and Scripting Interpreter" in attack_label("T1059")
-            assert ATTACK_TECHNIQUES._data is not prior
-            if raises:
-                raise RuntimeError("test context exit")
-    except RuntimeError:
-        assert raises
-    assert ATTACK_TECHNIQUES._data is prior
+def test_attack_techniques_proxy_tracks_the_active_catalog():
+    # The legacy proxy must never pin a process-lifetime copy: after a catalog
+    # change it has to agree with the taggers and the compliance scorer.
+    bundled_size = len(ATTACK_TECHNIQUES)
+    with _mock_catalog():
+        assert len(ATTACK_TECHNIQUES) == len(_MOCK_TECHNIQUES)
+        assert "Command and Scripting Interpreter" in attack_label("T1059")
+    assert len(ATTACK_TECHNIQUES) == bundled_size > len(_MOCK_TECHNIQUES)
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────

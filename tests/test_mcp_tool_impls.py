@@ -525,7 +525,7 @@ def _nist_blast_radius():
         Vulnerability,
     )
 
-    vuln = Vulnerability(id="CVE-2025-9000", summary="x", severity=Severity.HIGH, fixed_version=None)
+    vuln = Vulnerability(id="CVE-2025-9000", summary="x", severity=Severity.HIGH, fixed_version=None, cwe_ids=["CWE-20"])
     pkg = Package(name="flask", version="1.0.0", ecosystem="pypi", vulnerabilities=[vuln])
     agent = Agent(name="claude", agent_type=AgentType.CUSTOM, config_path="/tmp")
     br = BlastRadius(

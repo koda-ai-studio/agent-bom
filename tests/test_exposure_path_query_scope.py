@@ -37,7 +37,7 @@ async def test_small_exposure_page_hydrates_only_its_relationships(tmp_path, mon
         return original(row)
 
     monkeypatch.setattr(store, "_edge_from_row", count_decode)
-    result = json.loads(await exposure_paths_impl(scan_id="snapshot", limit=2, _get_graph_store=lambda: store))
+    result = json.loads(await exposure_paths_impl(scan_id="snapshot", limit=2, view="full", _get_graph_store=lambda: store))
     assert result["count"] == 2 and result["total"] == 1_000
     assert decoded == 2
     assert len(result["edges"]) == 2
@@ -68,7 +68,7 @@ async def test_scoped_and_incident_queries_produce_identical_exposure_answers(tm
     graph = star("snapshot", size=100)
     graph.add_edge(UnifiedEdge(source="resource:0", target="resource:1", relationship=RelationshipType.ACCESSED))
     store.save_graph(graph)
-    narrowed = await exposure_paths_impl(scan_id="snapshot", limit=3, _get_graph_store=lambda: store)
+    narrowed = await exposure_paths_impl(scan_id="snapshot", limit=3, view="full", _get_graph_store=lambda: store)
     original = store.edges_for_node_ids
 
     def incident_query(**kwargs):
@@ -76,7 +76,7 @@ async def test_scoped_and_incident_queries_produce_identical_exposure_answers(tm
         return original(**kwargs)
 
     monkeypatch.setattr(store, "edges_for_node_ids", incident_query)
-    legacy = await exposure_paths_impl(scan_id="snapshot", limit=3, _get_graph_store=lambda: store)
+    legacy = await exposure_paths_impl(scan_id="snapshot", limit=3, view="full", _get_graph_store=lambda: store)
     assert json.loads(narrowed) == json.loads(legacy)
 
 
@@ -120,7 +120,7 @@ def test_postgres_receipt_restart_and_induced_query():
 @pytest.mark.asyncio
 async def test_large_page_indexes_relationships_once_and_retains_complete_records(tmp_path, monkeypatch):
     """Bound edge visits by input size, not paths times hydrated edges."""
-    from agent_bom.mcp_tools import graph as mcp_graph
+    from agent_bom.mcp_tools import exposure_queue as mcp_graph
 
     store = SQLiteGraphStore(tmp_path / "large-page.db")
     graph = star("large-page", size=1000)
@@ -147,7 +147,7 @@ async def test_large_page_indexes_relationships_once_and_retains_complete_record
 
     monkeypatch.setattr(store, "edges_for_node_ids", read_edges)
     monkeypatch.setattr(mcp_graph, "MCP_MAX_RESPONSE_CHARS", 2_000_000)
-    response = json.loads(await exposure_paths_impl(scan_id="large-page", limit=100, _get_graph_store=lambda: store))
+    response = json.loads(await exposure_paths_impl(scan_id="large-page", limit=100, view="full", _get_graph_store=lambda: store))
     assert response["count"] == 100
     assert response["total"] == 1000
     assert response["pagination"]["next_cursor"]

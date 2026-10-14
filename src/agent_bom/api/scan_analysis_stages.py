@@ -15,6 +15,7 @@ from agent_bom.api.scan_report_support import (
     _rendered_result_document,
     _surface_graph_derived_findings,
 )
+from agent_bom.evidence.scan_run import VULNERABILITY_SCAN_SKIPPED_MESSAGE
 from agent_bom.parsers.sbom_context import imported_cloud_inventory
 from agent_bom.scanners.mcp_audit import attach_passive_mcp_audit
 from agent_bom.scanners.supplied_findings import build_supplied_findings
@@ -137,8 +138,8 @@ def scan_vulnerabilities_stage(ctx: ScanContext) -> bool:
     req = ctx.req
     ctx.blast_radii = build_supplied_findings(ctx.agents) if req.no_scan else []
     if req.no_scan:
-        ctx.pipeline.skip_step("scanning", "Vulnerability scanning skipped by request")
-        ctx.warnings_all.append("Vulnerability scanning skipped by request")
+        ctx.pipeline.skip_step("scanning", VULNERABILITY_SCAN_SKIPPED_MESSAGE)
+        ctx.warnings_all.append(VULNERABILITY_SCAN_SKIPPED_MESSAGE)
     else:
         total_pkgs = sum(len(server.packages) for agent in ctx.agents for server in agent.mcp_servers if not server.security_blocked)
         ctx.pipeline.start_step("scanning", _scan_message(ctx, total_pkgs))

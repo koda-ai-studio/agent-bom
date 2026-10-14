@@ -20235,6 +20235,30 @@
             "title": "Paths",
             "type": "array"
           },
+          "ranking": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ranking"
+          },
+          "risk_scale": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Scale"
+          },
           "scan_id": {
             "anyOf": [
               {
@@ -20260,6 +20284,17 @@
               }
             ],
             "title": "Snapshot Generation"
+          },
+          "snapshot_total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Total"
           },
           "stats": {
             "anyOf": [
@@ -20291,6 +20326,17 @@
               }
             ],
             "title": "Total"
+          },
+          "view": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "View"
           }
         },
         "required": [

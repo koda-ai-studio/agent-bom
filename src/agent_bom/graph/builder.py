@@ -400,7 +400,7 @@ def _project_inventory_findings(
     project_benchmarks(graph, benchmark_inputs(report))
     project_sast(graph, report.get("sast") or report.get("sast_data"))
     project_iac(graph, report.get("iac_findings") or report.get("iac_findings_data"))
-    project_skill_audit(graph, report.get("skill_audit"), indexes)
+    project_skill_audit(graph, report.get("skill_audit"), indexes, report.get("findings"))
     project_scan_findings(graph, report.get("findings"))
     return inventories
 

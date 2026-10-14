@@ -4,6 +4,7 @@ from typing import Any
 
 from agent_bom.canonical_ids import canonical_graph_node_id, source_ids
 from agent_bom.core.severity import SEVERITY_RISK_SCORE
+from agent_bom.graph.applicability import aggregate_rows, applicability_from_row, row_finding_ids, stronger_applicability
 from agent_bom.graph.build_indexes import BuildIndexes
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
@@ -19,7 +20,10 @@ from agent_bom.graph.package_projection import (
     _resolve_affected_package_ids,
     _resolve_affected_server_ids,
 )
+from agent_bom.graph.relationship_specs import relationship_spec
 from agent_bom.graph.types import EntityType, RelationshipType
+
+_VULNERABLE_TO = relationship_spec(RelationshipType.VULNERABLE_TO)
 
 
 def project_package_exploits(graph: UnifiedGraph, indexes: BuildIndexes, data_source_tag: str) -> None:
@@ -91,7 +95,7 @@ def _server_vulnerability_evidence(
     never treat it as a second holder. A name-only server match has no package
     edge and stays primary evidence.
     """
-    evidence = _blast_radius_package_evidence(br_dict, data_source_tag)
+    evidence = _occurrence_evidence(br_dict, data_source_tag)
     derived_via = sorted(
         pkg
         for pkg in pkg_ids
@@ -100,7 +104,37 @@ def _server_vulnerability_evidence(
     if derived_via:
         evidence["derived_via"] = derived_via
         evidence["tier"] = "derived"
+        # The rollup stands for one occurrence per package it derives from.
+        evidence["applicability_by_holder"] = {pkg: evidence["applicability"] for pkg in derived_via}
     return evidence
+
+
+def _occurrence_evidence(br_dict: dict[str, Any], data_source_tag: str) -> dict[str, Any]:
+    """Package evidence plus this occurrence's applicability and Finding.id."""
+    evidence = _blast_radius_package_evidence(br_dict, data_source_tag)
+    evidence["applicability"] = applicability_from_row(br_dict)
+    finding_ids = row_finding_ids(br_dict)
+    if finding_ids:
+        evidence["finding_ids"] = finding_ids
+    return evidence
+
+
+def _add_occurrence_edge(graph: UnifiedGraph, source: str, target: str, weight: float, evidence: dict[str, Any]) -> None:
+    """Add an occurrence edge; a second row on the same edge keeps the stronger verdict."""
+    stored = next(
+        (edge for edge in graph.adjacency.get(source, []) if edge.target == target and edge.relationship == RelationshipType.VULNERABLE_TO),
+        None,
+    )
+    if stored is not None:
+        stored.evidence["applicability"] = stronger_applicability(stored.evidence.get("applicability"), evidence["applicability"])
+        by_holder = stored.evidence.get("applicability_by_holder")
+        if isinstance(by_holder, dict):
+            for holder, payload in (evidence.get("applicability_by_holder") or {}).items():
+                by_holder[holder] = stronger_applicability(by_holder.get(holder), payload)
+        merged = sorted({*(stored.evidence.get("finding_ids") or []), *(evidence.get("finding_ids") or [])})
+        if merged:
+            stored.evidence["finding_ids"] = merged
+    graph.add_edge(UnifiedEdge(source=source, target=target, relationship=RelationshipType.VULNERABLE_TO, weight=weight, evidence=evidence))
 
 
 def project_blast_radius(graph: UnifiedGraph, blast_data: list[dict[str, Any]], indexes: BuildIndexes, data_source_tag: str) -> None:
@@ -120,14 +154,8 @@ def project_blast_radius(graph: UnifiedGraph, blast_data: list[dict[str, Any]], 
         if pkg_name:
             pkg_id = _package_node_id_from_parts(pkg_name, pkg_version, ecosystem, br_dict.get("package_purl") or br_dict.get("purl"))
             if graph.has_node(pkg_id):
-                graph.add_edge(
-                    UnifiedEdge(
-                        source=pkg_id,
-                        target=vuln_node_id,
-                        relationship=RelationshipType.VULNERABLE_TO,
-                        weight=SEVERITY_RISK_SCORE.get(severity, 1.0),
-                        evidence=_blast_radius_package_evidence(br_dict, data_source_tag),
-                    )
+                _add_occurrence_edge(
+                    graph, pkg_id, vuln_node_id, SEVERITY_RISK_SCORE.get(severity, 1.0), _occurrence_evidence(br_dict, data_source_tag)
                 )
 
         # Link affected servers → vulnerability using indexed lookups instead
@@ -150,15 +178,21 @@ def project_blast_radius(graph: UnifiedGraph, blast_data: list[dict[str, Any]], 
                 ecosystem=ecosystem,
                 package_id_to_servers=indexes.package_id_to_servers,
             )
-            graph.add_edge(
-                UnifiedEdge(
-                    source=srv_id,
-                    target=vuln_node_id,
-                    relationship=RelationshipType.VULNERABLE_TO,
-                    weight=SEVERITY_RISK_SCORE.get(severity, 1.0),
-                    evidence=_server_vulnerability_evidence(graph, br_dict, data_source_tag, vuln_node_id, pkg_ids),
+            # Static imports fold the server into its SBOM / manifest node, which
+            # holds the package but is not itself a vulnerable asset kind.
+            server_node = graph.get_node(srv_id)
+            if (
+                server_node is not None
+                and _VULNERABLE_TO is not None
+                and _VULNERABLE_TO.allows(server_node.entity_type, EntityType.VULNERABILITY)
+            ):
+                _add_occurrence_edge(
+                    graph,
+                    srv_id,
+                    vuln_node_id,
+                    SEVERITY_RISK_SCORE.get(severity, 1.0),
+                    _server_vulnerability_evidence(graph, br_dict, data_source_tag, vuln_node_id, pkg_ids),
                 )
-            )
             for pkg_id in pkg_ids:
                 _add_exploitable_via_edges(
                     graph,
@@ -191,19 +225,13 @@ def project_shared_servers(graph: UnifiedGraph, indexes: BuildIndexes) -> None:
 
 
 def enrich_blast_radius(graph: UnifiedGraph, blast_data: list[dict[str, Any]]) -> None:
+    """Summarise every occurrence on its CVE node; no row overwrites another."""
+    rows_by_vuln: dict[str, list[dict[str, Any]]] = {}
     for br_dict in blast_data:
         vuln_id_str = br_dict.get("vulnerability_id", "")
-        vuln_node = graph.get_node(f"vuln:{vuln_id_str}") if vuln_id_str else None
+        if vuln_id_str:
+            rows_by_vuln.setdefault(f"vuln:{vuln_id_str}", []).append(br_dict)
+    for vuln_node_id, rows in rows_by_vuln.items():
+        vuln_node = graph.get_node(vuln_node_id)
         if vuln_node:
-            vuln_node.attributes["affected_agent_count"] = len(br_dict.get("affected_agents", []))
-            vuln_node.attributes["affected_server_count"] = len(br_dict.get("affected_servers", []))
-            vuln_node.attributes["exposed_credential_count"] = len(br_dict.get("exposed_credentials", []))
-            vuln_node.attributes["exposed_tool_count"] = len(br_dict.get("exposed_tools", []))
-            vuln_node.attributes["reachability"] = br_dict.get("reachability", "")
-            vuln_node.attributes["reachability_basis"] = list(br_dict.get("reachability_basis") or [])
-            vuln_node.attributes["graph_reachable"] = br_dict.get("graph_reachable")
-            vuln_node.attributes["symbol_reachability"] = br_dict.get("symbol_reachability")
-            vuln_node.attributes["symbol_reachability_reason"] = br_dict.get("symbol_reachability_reason")
-            vuln_node.attributes["runtime_dependency_chain"] = list(br_dict.get("runtime_dependency_chain") or [])
-            vuln_node.attributes["dependency_reachable"] = br_dict.get("dependency_reachable")
-            vuln_node.attributes["actionable"] = br_dict.get("actionable", False)
+            vuln_node.attributes.update(aggregate_rows(rows))

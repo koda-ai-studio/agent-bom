@@ -7,8 +7,11 @@ NIST SP 800-171 Rev 2, which derives from NIST SP 800-53 moderate baseline.
 CMMC 2.0 is required for Department of Defense (DoD) contractors handling
 Controlled Unclassified Information (CUI) — affecting 300,000+ organizations.
 
-Every finding triggers at minimum RA.L2-3.11.2 (vulnerability scanning) and
-SI.L2-3.14.1 (flaw remediation) since any CVE in a dependency requires both.
+Every finding triggers at minimum SI.L2-3.14.1 (flaw remediation). RA.L2-3.11.2
+(vulnerability scanning) is DETECTIVE — the scan itself evidences it — and
+CM.L2-3.4.3 (change control) cannot be observed from a dependency CVE, so
+neither is ever tagged onto a finding (see
+:mod:`agent_bom.evidence.control_modes`).
 
 References:
     - CMMC to NIST crosswalk: https://dodcio.defense.gov/Portals/0/Documents/CMMC/CMMC-AlignmentNIST-Standards.pdf
@@ -21,6 +24,7 @@ from typing import TYPE_CHECKING
 
 from agent_bom.constants import AI_PACKAGES as _AI_PACKAGES
 from agent_bom.constants import high_risk_severities
+from agent_bom.evidence.control_modes import finding_taggable_controls
 from agent_bom.risk_analyzer import ToolCapability, classify_mcp_tool
 
 if TYPE_CHECKING:
@@ -63,9 +67,7 @@ def tag_blast_radius(br: BlastRadius) -> list[str]:
     """Return sorted CMMC 2.0 Level 2 practice IDs applicable to this blast radius.
 
     Rules:
-    - RA.L2-3.11.2: Always — vulnerability scanning performed.
     - SI.L2-3.14.1: Always — flaw remediation required for any CVE.
-    - CM.L2-3.4.3: Always — track/control changes (software inventory).
     - RA.L2-3.11.3: Fixable vulnerability (remediation available).
     - SI.L2-3.14.2: HIGH+ severity (malicious code protection).
     - SI.L2-3.14.3: KEV vulnerability (security advisory/directive).
@@ -82,9 +84,7 @@ def tag_blast_radius(br: BlastRadius) -> list[str]:
     - IA.L2-3.5.3: Credentials + multi-agent (authentication concern).
     """
     tags: set[str] = {
-        "RA.L2-3.11.2",  # always — vulnerability scanning
         "SI.L2-3.14.1",  # always — flaw remediation
-        "CM.L2-3.4.3",  # always — track/control changes
     }
 
     is_high = br.vulnerability.severity in _HIGH_RISK
@@ -156,7 +156,7 @@ def tag_blast_radius(br: BlastRadius) -> list[str]:
 
     # No CWE-level CMMC crosswalk is vendored (CWE_COMPLIANCE_MAP carries none),
     # so SAST findings get the same exposure-derived practices as any other.
-    return sorted(tags)
+    return sorted(finding_taggable_controls("cmmc_tags", tags))
 
 
 def cmmc_label(code: str) -> str:

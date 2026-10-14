@@ -15944,12 +15944,22 @@ export interface components {
             paths: {
                 [key: string]: unknown;
             }[];
+            /** Ranking */
+            ranking?: {
+                [key: string]: unknown;
+            } | null;
+            /** Risk Scale */
+            risk_scale?: {
+                [key: string]: unknown;
+            } | null;
             /** Scan Id */
             scan_id?: string | null;
             /** Schema Version */
             schema_version: string;
             /** Snapshot Generation */
             snapshot_generation?: string | null;
+            /** Snapshot Total */
+            snapshot_total?: number | null;
             /** Stats */
             stats?: {
                 [key: string]: unknown;
@@ -15960,6 +15970,8 @@ export interface components {
             tool: string;
             /** Total */
             total?: number | null;
+            /** View */
+            view?: string | null;
         } & {
             [key: string]: unknown;
         };
@@ -20351,7 +20363,7 @@ export interface components {
          * @description Edge relationship types across all graph surfaces.
          * @enum {string}
          */
-        RelationshipType: "hosts" | "uses" | "uses_framework" | "depends_on" | "provides_tool" | "exposes_cred" | "reaches_tool" | "serves_model" | "contains" | "imports" | "defines" | "runs" | "configures" | "observes" | "affects" | "vulnerable_to" | "exploitable_via" | "remediates" | "triggers" | "shares_server" | "shares_cred" | "lateral_path" | "manages" | "owns" | "part_of" | "member_of" | "assumes" | "trusts" | "attached" | "inherits" | "can_access" | "cross_account_trust" | "authenticates_as" | "scoped_to" | "governs" | "exhibits_drift" | "exposed_to" | "stores" | "has_permission" | "protects" | "acted_as" | "invoked" | "called" | "used_credential" | "accessed" | "delegated_to" | "correlates_with" | "possibly_correlates_with" | "belongs_to";
+        RelationshipType: "hosts" | "uses" | "uses_framework" | "depends_on" | "provides_tool" | "exposes_cred" | "reaches_tool" | "serves_model" | "contains" | "imports" | "defines" | "runs" | "configures" | "observes" | "affects" | "vulnerable_to" | "exploitable_via" | "remediates" | "triggers" | "shares_server" | "shares_cred" | "lateral_path" | "manages" | "owns" | "part_of" | "member_of" | "assumes" | "trusts" | "attached" | "inherits" | "can_access" | "cross_account_trust" | "authenticates_as" | "scoped_to" | "governs" | "exhibits_drift" | "exposed_to" | "stores" | "has_permission" | "protects" | "acted_as" | "invoked" | "called" | "used_credential" | "accessed" | "delegated_to" | "trace_step" | "correlates_with" | "possibly_correlates_with" | "belongs_to";
         /** RemediationImpact */
         RemediationImpact: {
             /** Controls Fixed */

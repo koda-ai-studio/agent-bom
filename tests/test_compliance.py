@@ -857,19 +857,18 @@ def test_compliance_includes_latest_aisvs_benchmark():
     assert data["summary"]["aisvs_pass"] == 1
     assert data["summary"]["aisvs_fail"] == 1
     assert data["summary"]["aisvs_not_applicable"] == 1
-    # This scan produced only AISVS-benchmark results and no CVE findings, so
-    # every CORRECTIVE control stays not_evaluated. Two things are still real
-    # evidence and are scored:
-    #   * the 9 DETECTIVE controls — a completed, in-window scan IS the evidence
-    #     "we monitor / inventory" operates (pass);
-    #   * the AISVS benchmark's directly-evaluated checks (1 pass / 1 fail).
-    # 10 pass over 11 evaluated = 90.9, and the failing AISVS check drives the
-    # top line to "fail" — a directly-evaluated failure can never read compliant.
-    assert data["overall_score"] == 90.9
+    # This scan produced only AISVS-benchmark results: no CVE findings, no
+    # inventoried packages and no vulnerability lane. Every CORRECTIVE control
+    # stays not_evaluated, and the 12 DETECTIVE controls read not_assessed — the
+    # scan never inventoried components or scanned for vulnerabilities, so it is
+    # not evidence that either operates. Only the AISVS benchmark's
+    # directly-evaluated checks are scored: 1 pass over 2 evaluated = 50.0, and
+    # the failing check drives the top line to "fail".
+    assert data["overall_score"] == 50.0
     assert data["overall_status"] == "fail"
-    # The percentage always ships its denominator: 11 evaluated of a much larger
-    # catalog, so 90% cannot be misread as "90% of the estate is compliant".
-    assert data["evaluated_controls"] == 11
+    # The percentage always ships its denominator: 2 evaluated of a much larger
+    # catalog, so 50.0% cannot be misread as "half the estate is compliant".
+    assert data["evaluated_controls"] == 2
     assert data["total_controls"] > data["evaluated_controls"]
 
     _clear_jobs()
@@ -1486,6 +1485,7 @@ def _nist_catalog_scenario() -> None:
                 "severity": "high",
                 "package": "flask",
                 "nist_800_53_tags": ["SI-10"],
+                "cwe_ids": ["CWE-20"],  # the curated check that evidences SI-10
             },
             {
                 "vulnerability_id": "CVE-2025-2000",
@@ -1611,12 +1611,12 @@ def test_nist_catalog_line_is_independent_and_does_not_move_overall():
         "score": 25.0,
     }
     assert data["overall_status"] == "fail"
-    # CIS Foundations contributes pass=1 / fail=2 / error=1; the 9 DETECTIVE
-    # controls also pass because a completed in-window scan evidences them.
-    # 10 pass over 13 evaluated = 76.9. The NIST catalog line's own failures are
-    # still NOT folded in — if they were, aggregate_fail would exceed 2 and the
-    # score would drop below 76.9.
-    assert data["overall_score"] == 76.9
+    # CIS Foundations contributes pass=1 / fail=2 / error=1. The 12 DETECTIVE
+    # controls are not_assessed: a CIS-only cloud scan inventoried no components
+    # and ran no vulnerability lane. 1 pass over 4 evaluated = 25.0. The NIST
+    # catalog line's own failures are still NOT folded in — if they were,
+    # aggregate_fail would exceed 2 and the score would drop below 25.0.
+    assert data["overall_score"] == 25.0
 
     # The NIST catalog line still reports its own (independent) failing controls.
     nist_line = data["nist_800_53_catalog"]

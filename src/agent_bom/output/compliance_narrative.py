@@ -43,7 +43,8 @@ from agent_bom.compliance_coverage import (
     control_key_for_tag,
     normalize_framework_slug,
 )
-from agent_bom.evidence.control_modes import DETECTIVE_CONTROLS, detective_control_status
+from agent_bom.evidence.control_modes import DETECTIVE_CONTROLS
+from agent_bom.evidence.detective_evidence import DetectiveScanEvidence
 
 COMPLIANCE_CLAIM_BOUNDARY = (
     "Vulnerability-to-control mappings are review evidence, not a determination of compliance, "
@@ -72,20 +73,13 @@ _DISPLAY_NAME_OVERRIDES: dict[str, str] = {
 
 def _get_catalog(slug: str) -> tuple[dict[str, str], str, str]:
     """Return (catalog_dict, tag_field_on_blast_radius, display_name) for a framework slug."""
-    from agent_bom.compliance_coverage import TAG_MAPPED_FRAMEWORKS
+    from agent_bom.compliance_coverage import TAG_MAPPED_FRAMEWORKS, scoring_catalog
 
-    framework_map: dict[str, tuple[dict[str, str], str, str]] = {}
     for metadata in TAG_MAPPED_FRAMEWORKS:
-        catalog = dict(metadata.catalog)
-        if metadata.slug == "attack":
-            from agent_bom.mitre_attack import get_attack_techniques
-
-            catalog = get_attack_techniques()
-        framework_map[metadata.slug] = (catalog, metadata.tag_field, _DISPLAY_NAME_OVERRIDES.get(metadata.slug, metadata.report_label))
-    entry = framework_map.get(slug)
-    if entry is None:
-        raise ValueError(f"Unknown framework '{slug}'. Supported: {', '.join(framework_map.keys())}")
-    return entry
+        if metadata.slug == slug:
+            display_name = _DISPLAY_NAME_OVERRIDES.get(metadata.slug, metadata.report_label)
+            return scoring_catalog(metadata), metadata.tag_field, display_name
+    raise ValueError(f"Unknown framework '{slug}'. Supported: {', '.join(m.slug for m in TAG_MAPPED_FRAMEWORKS)}")
 
 
 def _all_framework_slugs() -> list[str]:
@@ -377,14 +371,13 @@ def _build_framework_narrative(
     slug: str,
     blast_radii_dicts: list[dict],
     *,
-    scan_count: int = 0,
-    latest_scan: str | None = None,
+    scan_evidence: DetectiveScanEvidence = DetectiveScanEvidence(),
 ) -> FrameworkNarrative:
     """Build a FrameworkNarrative for a single framework from pre-serialised blast radius data.
 
-    ``scan_count``/``latest_scan`` carry the scan-evidence freshness that
-    detective controls are scored from — see :func:`_build_framework_narrative`'s
-    detective branch and :mod:`agent_bom.evidence.control_modes`.
+    ``scan_evidence`` carries the scan evidence detective controls are scored
+    from — see :func:`_build_framework_narrative`'s detective branch and
+    :mod:`agent_bom.evidence.control_modes`.
     """
     catalog, tag_field, display_name = _get_catalog(slug)
     detective_ids = DETECTIVE_CONTROLS.get(tag_field, frozenset())
@@ -436,10 +429,10 @@ def _build_framework_narrative(
             # never tagged onto it, so the zero-mapped-findings skip below
             # dropped it from the narrative entirely instead of reporting the
             # pass it earned. Score it from evidence freshness, like the API.
-            status, _reason = detective_control_status(scan_count=scan_count, latest_scan=latest_scan)
+            status, _reason = scan_evidence.control_status(tag_field, code)
             if status == "not_assessed":
-                # No completed scan: nothing was measured, so the control is not
-                # asserted in either direction.
+                # No completed scan, or a partial vulnerability lane: the
+                # control is not asserted in either direction.
                 continue
             evaluated_count += 1
             if status == "pass":
@@ -840,6 +833,7 @@ def generate_compliance_narrative(
                 "affected_servers": [s.name for s in br.affected_servers],
                 "exposed_credentials": br.exposed_credentials,
                 "finding_type": getattr(br, "finding_type", None) or "CVE",
+                "cwe_ids": list(getattr(br.vulnerability, "cwe_ids", None) or []),
                 "title": getattr(br, "title", None),
                 "owner": getattr(br, "owner", None),
                 "sla_due_at": getattr(br, "sla_due_at", None),
@@ -849,20 +843,12 @@ def generate_compliance_narrative(
 
     slugs = [framework] if framework is not None else ALL_FRAMEWORK_SLUGS
 
-    # Scan-evidence freshness for detective controls. ``scan_count`` uses the
-    # same conservative derivation as the nist_800_53_catalog line below — a
-    # report carrying no findings is treated as no evidence, so an unmapped or
-    # unscanned estate reads not_evaluated rather than a fabricated pass, and
-    # the two representations in one narrative cannot contradict each other.
-    # ``generated_at`` may be absent on the lightweight shim the CLI rebuilds
-    # from a saved artifact; an unknown age is reported as unknown, never
-    # silently assumed fresh (see ``detective_control_status``).
-    _scan_count = 1 if blast_dicts else 0
-    _report_generated_at = getattr(report, "generated_at", None)
-    _latest_scan = _report_generated_at.isoformat() if isinstance(_report_generated_at, datetime) else None
+    # Scan evidence for detective controls, derived the same conservative way as
+    # the nist_800_53_catalog line below (see ``DetectiveScanEvidence.for_report``).
+    scan_evidence = DetectiveScanEvidence.for_report(report, has_findings=bool(blast_dicts))
 
     framework_narratives: list[FrameworkNarrative] = [
-        _build_framework_narrative(slug, blast_dicts, scan_count=_scan_count, latest_scan=_latest_scan) for slug in slugs
+        _build_framework_narrative(slug, blast_dicts, scan_evidence=scan_evidence) for slug in slugs
     ]
 
     remediation_impact = _build_remediation_impact(blast_dicts, framework)
@@ -886,7 +872,7 @@ def generate_compliance_narrative(
         total_packages=report.total_packages,
         total_vulns=total_vulns,
         critical_count=critical_count,
-        generated_at=_latest_scan or generated_at,
+        generated_at=scan_evidence.latest_scan or generated_at,
         finding_label=finding_label,
     )
 
@@ -926,6 +912,11 @@ def generate_compliance_narrative(
         nist_800_53_catalog=nist_800_53_catalog,
         executive_headline=asdict(headline),
     )
+
+
+def _row_cwe_ids(row: Mapping[str, object]) -> list[str]:
+    raw = row.get("cwe_ids")
+    return [str(cwe) for cwe in raw if str(cwe).strip()] if isinstance(raw, (list, tuple)) else []
 
 
 def blast_radii_from_finding_rows(findings: Iterable[Mapping[str, object]]) -> list[SimpleNamespace]:
@@ -975,8 +966,7 @@ def blast_radii_from_finding_rows(findings: Iterable[Mapping[str, object]]) -> l
                 if separator and tag_field and control_id.strip():
                     tag_values[tag_field].append(control_id.strip())
 
-        for tag_field, values in tag_values.items():
-            tag_values[tag_field] = list(dict.fromkeys(values))
+        tag_values = {tag_field: list(dict.fromkeys(values)) for tag_field, values in tag_values.items()}
 
         raw_asset = row.get("asset")
         asset: Mapping[str, object] = raw_asset if isinstance(raw_asset, Mapping) else {}
@@ -1009,6 +999,7 @@ def blast_radii_from_finding_rows(findings: Iterable[Mapping[str, object]]) -> l
                     severity=SimpleNamespace(value=severity),
                     fixed_version=row.get("fixed_version"),
                     is_kev=bool(row.get("is_kev")),
+                    cwe_ids=_row_cwe_ids(row),
                 ),
                 package=SimpleNamespace(name=package_name, version=package_version),
                 risk_score=risk_score,

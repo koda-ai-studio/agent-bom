@@ -10,7 +10,9 @@ import logging
 
 from agent_bom.cloud.normalization import coerce_truthy
 from agent_bom.core.severity import SEVERITY_RANK
+from agent_bom.graph.applicability import Applicability, edge_applicability
 from agent_bom.graph.attack_path_fusion import has_sensitive_data_label
+from agent_bom.graph.component_paths import derive_component_paths, occurrence_applicability
 from agent_bom.graph.container import AttackPath, UnifiedGraph
 from agent_bom.graph.credential_findings import credential_finding_paths
 from agent_bom.graph.edge_lookup import _build_edge_lookup as _build_edge_lookup
@@ -18,9 +20,8 @@ from agent_bom.graph.edge_lookup import _edge_relationships_for_hops as _edge_re
 from agent_bom.graph.edge_lookup import _EdgeLookup as _EdgeLookup
 from agent_bom.graph.edge_lookup import _rel_value as _rel_value
 from agent_bom.graph.node import UnifiedNode
-from agent_bom.graph.path_evidence import package_path_covers_rollup, rank_unique_paths, tag_path_kinds
+from agent_bom.graph.path_evidence import rank_unique_paths, tag_path_kinds
 from agent_bom.graph.path_evidence import with_technique_mappings as _with_technique_mappings
-from agent_bom.graph.reachability_truth import node_reachability
 from agent_bom.graph.types import EntityType, RelationshipType
 
 logger = logging.getLogger(__name__)
@@ -386,7 +387,7 @@ def _derived_toxic_combination_paths(graph: UnifiedGraph) -> list[AttackPath]:
         rel = _rel_value(edge)
         if rel == RelationshipType.VULNERABLE_TO.value:
             vulnerability_node = graph.nodes.get(edge.target)
-            if vulnerability_node is not None and node_reachability(getattr(vulnerability_node, "attributes", None)).permits_exploit_chain:
+            if vulnerability_node is not None and edge_applicability(edge, vulnerability_node.attributes).permits_exploit_chain:
                 vulnerable.add(edge.source)
         elif rel == RelationshipType.HAS_PERMISSION.value:
             principal = graph.nodes.get(edge.source)
@@ -468,12 +469,12 @@ def _cached_path_boost(graph: UnifiedGraph, hops: list[str], cache: dict[str, li
     return sum(boosts.values())
 
 
-def _component_finding(node: UnifiedNode) -> bool:
-    # Credential assessments use their own bounded, owner-scoped derivation.
-    return (
-        _node_type_value(node) in {EntityType.VULNERABILITY.value, EntityType.MISCONFIGURATION.value}
-        and node.attributes.get("rule_id") != "AGENT_REACHES_PRIVILEGED"
-    )
+def _hop_applicability(graph: UnifiedGraph, hops: list[str], node: UnifiedNode, occurrence_edges: dict) -> Applicability:
+    """A stored path's verdict at one vulnerability hop: the occurrence edge leading into it."""
+    index = hops.index(node.id)
+    if index > 0 and (hops[index - 1], node.id) in occurrence_edges:
+        return occurrence_applicability(graph, hops[: index + 1], node, occurrence_edges)[0]
+    return edge_applicability(None, node.attributes)
 
 
 def _derived_attack_paths(graph: UnifiedGraph, *, kinds: dict[int, str] | None = None) -> list[AttackPath]:
@@ -488,14 +489,17 @@ def _derived_attack_paths(graph: UnifiedGraph, *, kinds: dict[int, str] | None =
             path.reachability_basis = ["observed_graph_edges"]
     materialized: list[AttackPath] = []
     if graph.attack_paths:
+        occurrence_edges = {
+            (edge.source, edge.target): edge for edge in graph.edges if _rel_value(edge) == RelationshipType.VULNERABLE_TO.value
+        }
         for path in graph.attack_paths:
             vulnerability_nodes = [
                 graph.nodes[hop]
                 for hop in path.hops
                 if hop in graph.nodes and _node_type_value(graph.nodes[hop]) == EntityType.VULNERABILITY.value
             ]
-            assessments = [node_reachability(getattr(node, "attributes", None)) for node in vulnerability_nodes]
-            if any(item.verdict == "unlikely" for item in assessments):
+            assessments = [_hop_applicability(graph, path.hops, node, occurrence_edges) for node in vulnerability_nodes]
+            if any(item.unlikely or item.vex_excluded for item in assessments):
                 continue
             if path.reachability == "unknown":
                 strongest = next((item for item in assessments if item.verdict == "confirmed"), None)
@@ -513,113 +517,18 @@ def _derived_attack_paths(graph: UnifiedGraph, *, kinds: dict[int, str] | None =
 
     incoming: dict[str, list] = {}
     outgoing: dict[str, list] = {}
-    edge_lookup = _build_edge_lookup(graph.edges)
     for edge in graph.edges:
         incoming.setdefault(edge.target, []).append(edge)
         outgoing.setdefault(edge.source, []).append(edge)
 
-    paths: list[AttackPath] = []
-    seen: set[tuple[str, str, str, str]] = set()
     signal_cache: dict[str, list[tuple[str, str, str, float]]] = {}
-
-    for finding in graph.nodes.values():
-        if not _component_finding(finding):
-            continue
-        reach = node_reachability(getattr(finding, "attributes", None))
-        if reach.verdict == "unlikely":
-            continue
-        for finding_edge in incoming.get(finding.id, []):
-            if _rel_value(finding_edge) != RelationshipType.VULNERABLE_TO.value:
-                continue
-            vulnerable_source = graph.nodes.get(finding_edge.source)
-            if vulnerable_source is None or package_path_covers_rollup(finding_edge, incoming):
-                continue
-
-            server_ids: list[str] = []
-            if _node_type_value(vulnerable_source) == EntityType.SERVER.value:
-                server_ids.append(vulnerable_source.id)
-            else:
-                for source_edge in incoming.get(vulnerable_source.id, []):
-                    if _rel_value(source_edge) == RelationshipType.DEPENDS_ON.value:
-                        source_parent = graph.nodes.get(source_edge.source)
-                        if source_parent is not None and _node_type_value(source_parent) == EntityType.SERVER.value:
-                            server_ids.append(source_parent.id)
-
-            for server_id in server_ids:
-                agent_ids = [
-                    edge.source
-                    for edge in incoming.get(server_id, [])
-                    if _rel_value(edge) == RelationshipType.USES.value
-                    and graph.nodes.get(edge.source) is not None
-                    and _node_type_value(graph.nodes[edge.source])
-                    in {EntityType.AGENT.value, EntityType.USER.value, EntityType.SERVICE_ACCOUNT.value}
-                ]
-                if not agent_ids:
-                    agent_ids = [server_id]
-
-                credentials = [
-                    graph.nodes[edge.target].label
-                    for edge in outgoing.get(server_id, [])
-                    if _rel_value(edge) == RelationshipType.EXPOSES_CRED.value and edge.target in graph.nodes
-                ]
-                tools = [
-                    graph.nodes[edge.target].label
-                    for edge in outgoing.get(server_id, [])
-                    if _rel_value(edge) == RelationshipType.PROVIDES_TOOL.value and edge.target in graph.nodes
-                ]
-
-                for agent_id in sorted(set(agent_ids)):
-                    hop_ids = [agent_id] if agent_id == server_id else [agent_id, server_id]
-                    if vulnerable_source.id != server_id:
-                        hop_ids.append(vulnerable_source.id)
-                    hop_ids.append(finding.id)
-                    path_edges = _edge_relationships_for_hops(
-                        hop_ids,
-                        graph.edges,
-                        edge_lookup=edge_lookup,
-                    )
-                    key = (agent_id, server_id, vulnerable_source.id, finding.id)
-                    if key in seen:
-                        continue
-                    seen.add(key)
-
-                    risk = _node_risk_100(finding)
-                    risk += min(10.0, len(credentials) * 3.0)
-                    risk += min(10.0, len(tools) * 0.75)
-                    # Fuse governance / CNAPP / runtime evidence into the score so
-                    # exposed, drifting, or unscoped-identity paths rank higher.
-                    risk += _cached_path_boost(graph, hop_ids, signal_cache)
-                    from agent_bom.graph.asset_entity import finding_ids_for_asset_path
-
-                    stamped_finding_ids = finding_ids_for_asset_path(getattr(finding, "attributes", None), hop_ids)
-                    if reach.verdict == "unknown":
-                        # Preserve relative investigation priority while keeping
-                        # unverified topology below evidence-backed paths.
-                        risk = min(39.0, risk * 0.35)
-                        summary = (
-                            "Unverified structural candidate: graph topology connects the agent and vulnerable "
-                            "package/server, but no executable graph or symbol path has been proven."
-                        )
-                    else:
-                        from agent_bom.graph.path_evidence import STRUCTURAL_EXPOSURE_SUMMARY
-
-                        summary = STRUCTURAL_EXPOSURE_SUMMARY
-                    paths.append(
-                        AttackPath(
-                            source=agent_id,
-                            target=finding.id,
-                            hops=hop_ids,
-                            edges=path_edges,
-                            composite_risk=round(min(100.0, risk), 2),
-                            summary=summary,
-                            credential_exposure=sorted(set(credentials)),
-                            tool_exposure=sorted(set(tools)),
-                            vuln_ids=[finding.label or finding.id],
-                            finding_ids=stamped_finding_ids,
-                            reachability=reach.verdict,
-                            reachability_basis=list(reach.basis),
-                        )
-                    )
+    paths = derive_component_paths(
+        graph,
+        incoming=incoming,
+        outgoing=outgoing,
+        node_risk=_node_risk_100,
+        path_boost=lambda hops: _cached_path_boost(graph, hops, signal_cache),
+    )
 
     # Derived paths never displace an equivalent persisted/governance path.
     combined = [*materialized, *governance_paths]

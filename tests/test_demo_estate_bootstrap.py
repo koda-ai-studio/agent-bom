@@ -909,9 +909,11 @@ def test_demo_estate_exposure_paths_materialized(demo_estate_client: TestClient)
     assert payload.get("count") == len(paths) == 10, payload
     assert payload.get("total", 0) > len(paths), payload
     assert payload.get("completeness", {}).get("truncated") is True, payload
-    assert payload.get("completeness", {}).get("reason") == "path_limit_or_filter", payload
-    risks = [float(path.get("riskScore", 0.0)) for path in paths]
-    assert risks == sorted(risks, reverse=True)
+    assert payload.get("completeness", {}).get("reason") == "path_page_limit", payload
+    # Same queue order as the dashboard: exploitability evidence first, stored risk within a tier.
+    queue = demo_estate_client.get("/v1/graph/attack-paths", headers=VIEWER, params={"limit": 10}).json()
+    assert [path["id"] for path in paths] == [row["exposure_path"]["id"] for row in queue["attack_paths"]]
+    assert [path["rank"] for path in paths] == list(range(1, 11))
 
 
 def test_demo_estate_nhi_governance_tells_a_story(demo_estate_client: TestClient) -> None:

@@ -53,9 +53,11 @@ def test_catalog_has_seventeen_practices():
 
 def test_always_applied_tags():
     tags = tag_blast_radius(_br())
-    assert "RA.L2-3.11.2" in tags
     assert "SI.L2-3.14.1" in tags
-    assert "CM.L2-3.4.3" in tags
+    # RA.L2-3.11.2 is detective (the scan evidences it) and CM.L2-3.4.3 is not
+    # observable from a dependency CVE — neither is ever tagged onto a finding.
+    assert "RA.L2-3.11.2" not in tags
+    assert "CM.L2-3.4.3" not in tags
 
 
 def test_fixable_triggers_remediate_vulnerabilities():
@@ -155,7 +157,7 @@ def test_label_functions():
 
 def test_minimal_finding_gets_base_tags_only():
     tags = tag_blast_radius(_br(severity=Severity.LOW, pkg_name="requests"))
-    assert tags == ["CM.L2-3.4.3", "RA.L2-3.11.2", "SI.L2-3.14.1"]
+    assert tags == ["SI.L2-3.14.1"]
 
 
 def test_results_are_sorted():

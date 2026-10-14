@@ -547,3 +547,20 @@ def test_toxic_controls_survive_report_to_findings():
     assert combos
     assert "LLM06" in combos[0].owasp_tags
     assert "AC-6" in combos[0].nist_800_53_tags
+
+
+def test_toxic_findings_list_every_tagged_framework_as_applicable():
+    """Hub posture counts by applicable_frameworks and /v1/compliance by tags; a
+    toxic combination tagged for a framework must be applicable to it too."""
+    from agent_bom.compliance_coverage import TAG_MAPPED_FRAMEWORKS
+
+    for rule_id in _RULE_GRAPHS:
+        finding = _emitted(rule_id)
+        tagged = {m.slug for m in TAG_MAPPED_FRAMEWORKS if getattr(finding, m.tag_field)}
+        assert tagged <= set(finding.applicable_frameworks), (rule_id, tagged - set(finding.applicable_frameworks))
+
+
+def test_rehydrated_toxic_findings_keep_their_applicability():
+    report = _report_with_toxic_data(_graph_overpermissioned_to_sensitive())
+    combos = [f for f in report.to_findings() if f.finding_type == FindingType.COMBINATION]
+    assert combos and {"nist-800-53", "soc2"} <= set(combos[0].applicable_frameworks)

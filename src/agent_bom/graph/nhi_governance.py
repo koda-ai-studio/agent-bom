@@ -398,7 +398,7 @@ def build_nhi_governance_findings(
             findings.append(
                 Finding(
                     finding_type=FindingType.CIEM_OVER_PRIVILEGE,
-                    source=FindingSource.MCP_SCAN,
+                    source=FindingSource.GRAPH_ANALYSIS,
                     asset=asset,
                     node_id=v.node_id,
                     severity="medium" if v.is_privileged else "low",
@@ -432,7 +432,7 @@ def build_nhi_governance_findings(
             findings.append(
                 Finding(
                     finding_type=FindingType.CREDENTIAL_EXPOSURE,
-                    source=FindingSource.MCP_SCAN,
+                    source=FindingSource.GRAPH_ANALYSIS,
                     asset=asset,
                     node_id=v.node_id,
                     severity="high" if (v.is_privileged or v.internet_exposed) else "medium",

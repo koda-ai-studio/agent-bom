@@ -7,7 +7,7 @@ Start with:
 
 Default: 8 focused tools; select a task profile with --profile.
 
-Full profile Tools (90):
+Full profile Tools (93):
     scan                — Full discovery → scan → output pipeline
     check               — Check a specific package for CVEs before installing
     intel_lookup        — Look up a CVE, GHSA, or OSV advisory from local threat intel
@@ -19,11 +19,14 @@ Full profile Tools (90):
     exposure_paths      — Return ranked ExposurePath JSON for headless agents and MCP clients
     graph_correlate     — Create an immutable correlation from exact snapshot receipts
     graph_correlation_status — Read correlation state, receipts, and analysis bounds
-    should_i_deploy     — Return allow/warn/block from ExposurePath risk
+    should_i_deploy     — Return allow/warn/block from every matching ExposurePath
+    graph_reach         — Page what can reach a node (or what it reaches) over recorded edges
+    findings_query      — Query tenant findings exactly as /v1/findings, compact rows
+    finding_detail      — One finding with its graph paths, reachers and triage state
     policy_check        — Evaluate a policy against scan results
     registry_lookup     — Query the MCP server security metadata registry
     generate_sbom       — Generate CycloneDX or SPDX SBOM
-    compliance          — OWASP/ATLAS/NIST AI RMF compliance posture
+    compliance          — Persisted tenant compliance posture (labelled local scan fallback)
     remediate           — Generate actionable remediation plan
     skill_scan          — Scan instruction files for packages, servers, trust, and findings
     skill_verify        — Verify instruction file Sigstore provenance
@@ -156,6 +159,7 @@ from agent_bom.mcp_server_metadata import (
 from agent_bom.mcp_server_runtime_catalog import (
     register_runtime_catalog_tools as _register_runtime_catalog_tools,
 )
+from agent_bom.mcp_tools.graph_registration import register_graph_agent_tools
 from agent_bom.mcp_tools.inventory_registration import register_inventory_asset_tool
 from agent_bom.mcp_tools.profiles import _GUIDED_TOOL_NAMES as _GUIDED_TOOL_NAMES
 from agent_bom.mcp_tools.request_identity import request_context as _mcp_request_ctx
@@ -580,11 +584,8 @@ def create_mcp_server(
 
     # Import tool implementations
     from agent_bom.mcp_tools.analysis import blast_radius_impl
-    from agent_bom.mcp_tools.compliance import (
-        compliance_impl,
-        policy_check_impl,
-    )
-    from agent_bom.mcp_tools.graph import deploy_decision_impl, exposure_paths_impl
+    from agent_bom.mcp_tools.compliance import policy_check_impl
+    from agent_bom.mcp_tools.compliance_persisted import compliance_tool_impl
     from agent_bom.mcp_tools.intel import (
         intel_daily_brief_impl,
         intel_lookup_impl,
@@ -1036,79 +1037,7 @@ def create_mcp_server(
             _truncate_response=_truncate_response,
         )
 
-    # ── Tool 4: exposure_paths ───────────────────────────────────────
-
-    @mcp.tool(annotations=_READ_ONLY, title="Exposure Paths")
-    async def exposure_paths(
-        tenant_id: Annotated[str, Field(description="Tenant ID for the graph snapshot. Defaults to 'default'.")] = "default",
-        scan_id: Annotated[str | None, Field(description="Optional historical scan ID. Omit for the current tenant estate.")] = None,
-        limit: Annotated[int, Field(ge=1, le=100, description="Maximum number of ranked exposure paths to return.")] = 5,
-        min_risk: Annotated[float, Field(ge=0, le=100, description="Minimum path risk score to include.")] = 0.0,
-        cursor: Annotated[
-            str | None, Field(max_length=4096, description="Continue with pagination.next_cursor; keep the risk filter unchanged.")
-        ] = None,
-    ) -> str:
-        """Return ranked ExposurePath JSON for headless security agents.
-
-        This is the agent-native graph surface: Claude, Cursor, Codex,
-        Windsurf, Cortex, and other MCP clients can request the same
-        investigation objects used by the dashboard without scraping UI state.
-        """
-        return await _execute_tool_async(
-            "exposure_paths",
-            exposure_paths_impl,
-            tenant_id=tenant_id,
-            scan_id=scan_id,
-            limit=limit,
-            min_risk=min_risk,
-            cursor=cursor,
-            _truncate_response=_truncate_response,
-        )
-
-    # ── Tool 5: should_i_deploy ───────────────────────────────────────
-
-    @mcp.tool(annotations=_READ_ONLY, title="Should I Deploy")
-    async def should_i_deploy(
-        candidate: Annotated[str, Field(description="Candidate package, resource, CVE, node ID, or deployment label to evaluate.")],
-        tenant_id: Annotated[str, Field(description="Tenant ID for the graph snapshot. Defaults to 'default'.")] = "default",
-        scan_id: Annotated[str | None, Field(description="Optional historical scan ID. Omit for the current tenant estate.")] = None,
-        limit: Annotated[int, Field(ge=1, le=25, description="Maximum matched exposure paths to return.")] = 5,
-        warn_risk: Annotated[float, Field(ge=0, le=100, description="Risk score at or above which the decision becomes warn.")] = 40.0,
-        block_risk: Annotated[float, Field(ge=0, le=100, description="Risk score at or above which the decision becomes block.")] = 80.0,
-    ) -> str:
-        """Return an allow / warn / block deploy decision from graph exposure risk.
-
-        Resolves a deployment candidate against the latest security-graph
-        snapshot, ranks its reachable ExposurePaths by risk score, and maps the
-        top score to a gate decision using the warn/block thresholds.
-
-        Args:
-            candidate: Package, resource, CVE, graph node ID, or deployment
-                label to evaluate.
-            tenant_id: Tenant whose graph snapshot to read (default ``default``).
-            scan_id: Specific historical scan ID; omit for the current tenant estate.
-            limit: Maximum matched exposure paths to return (1-25).
-            warn_risk: Risk score at or above which the decision becomes warn.
-            block_risk: Risk score at or above which the decision becomes block.
-
-        Returns:
-            JSON with the ``decision`` (allow/warn/block), the driving risk
-            score, and the ranked exposure paths behind it.
-
-        Call this as a pre-deployment gate to get a single machine-readable
-        verdict instead of interpreting raw findings.
-        """
-        return await _execute_tool_async(
-            "should_i_deploy",
-            deploy_decision_impl,
-            candidate=candidate,
-            tenant_id=tenant_id,
-            scan_id=scan_id,
-            limit=limit,
-            warn_risk=warn_risk,
-            block_risk=block_risk,
-            _truncate_response=_truncate_response,
-        )
+    # Tools 4-5 (exposure_paths, should_i_deploy) live in mcp_tools.graph_registration.
 
     # ── Tool 6: policy_check ──────────────────────────────────────────
 
@@ -1219,34 +1148,45 @@ def create_mcp_server(
 
     @mcp.tool(annotations=_READ_ONLY, title="Compliance Posture")
     async def compliance(
-        config_path: Annotated[str | None, Field(description="Path to MCP client config directory. Auto-discovers all if omitted.")] = None,
-        image: Annotated[str | None, Field(description="Docker image to scan, e.g. 'nginx:1.25'.")] = None,
+        config_path: Annotated[
+            str | None, Field(description="Local scan only: MCP client config directory. Auto-discovers if omitted.")
+        ] = None,
+        image: Annotated[str | None, Field(description="Local scan only: Docker image to scan, e.g. 'nginx:1.25'.")] = None,
+        tenant_id: Annotated[str, Field(description="Tenant scope for persisted compliance. Defaults to 'default'.")] = "default",
+        source: Annotated[
+            Literal["auto", "persisted", "local_scan"],
+            Field(
+                description="auto: persisted tenant evidence when it exists, else a labelled local scan. persisted / local_scan force one."
+            ),
+        ] = "auto",
+        framework: Annotated[
+            str | None, Field(max_length=64, description="Persisted only: add one framework's controls, e.g. 'soc2'.")
+        ] = None,
+        control: Annotated[
+            str | None, Field(max_length=64, description="Persisted only: page the finding ids driving this control.")
+        ] = None,
+        limit: Annotated[int, Field(ge=1, le=500, description="Driving finding ids per page.")] = 50,
+        cursor: Annotated[str | None, Field(max_length=512, description="driving_findings.next_cursor from the previous page.")] = None,
     ) -> str:
-        """Get OWASP LLM Top 10 / OWASP MCP Top 10 / MITRE ATLAS / NIST AI RMF compliance posture.
+        """Return compliance posture with its source: the tenant's persisted evidence, or a labelled local scan.
 
-        Scans local MCP configurations, maps findings to 47 security controls
-        across four AI security frameworks, and returns per-control
-        pass/warning/fail status with an overall compliance score.
-
-        Args:
-            config_path: Path to a specific MCP config directory.
-                         If not provided, auto-discovers all local agent configs.
-            image: Docker image reference to scan (e.g. "nginx:1.25").
-
-        Returns:
-            JSON with overall_score (0-100), overall_status (pass/warning/fail/no_data),
-            and per-control details for OWASP LLM Top 10 (10 controls),
-            OWASP MCP Top 10 (10 controls), MITRE ATLAS (13 techniques),
-            and NIST AI RMF (14 subcategories). Plus a nist_800_53_catalog line:
-            the vendor-asserted, catalog-backed NIST SP 800-53 Rev 5 score over
-            evaluated controls only (with ISO-27001-by-id attribution), scored
-            independently and NOT folded into overall_score.
+        With completed scans in the control plane, ``summary`` is exactly
+        ``/v1/compliance/summary``; ``framework`` adds ``/v1/compliance/{framework}``
+        and ``control`` pages the driving finding ids from
+        ``/v1/findings?framework=&control=``. Otherwise (or with
+        source='local_scan') it scans local MCP configurations and labels that scope.
         """
         return await _execute_tool_async(
             "compliance",
-            compliance_impl,
+            compliance_tool_impl,
             config_path=config_path,
             image=image,
+            tenant_id=tenant_id,
+            source=source,
+            framework=framework,
+            control=control,
+            limit=limit,
+            cursor=cursor,
             _run_scan_pipeline=_run_scan_pipeline,
             _truncate_response=_truncate_response,
         )
@@ -1395,6 +1335,7 @@ def create_mcp_server(
         )
 
     register_inventory_asset_tool(mcp, read_only=_READ_ONLY, execute_tool_async=_execute_tool_async, truncate_response=_truncate_response)
+    register_graph_agent_tools(mcp, read_only=_READ_ONLY, execute_tool_async=_execute_tool_async, truncate_response=_truncate_response)
 
     _register_runtime_catalog_tools(
         mcp,

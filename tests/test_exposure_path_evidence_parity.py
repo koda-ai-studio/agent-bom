@@ -549,7 +549,9 @@ async def test_reopened_snapshot_keeps_asset_occurrences_scoped_across_surfaces(
     assert payload["count"] == 1
     mcp = payload["paths"][0]
     assert mcp["findings"] == ["tenant-a-occurrence-a"]
-    assert {k: v for k, v in mcp.items() if k != "provenance"} == {k: v for k, v in api.items() if k != "provenance"}
+    # Queue rank evidence rides on the MCP path; REST carries it on the attack-path row.
+    queue_fields = {"provenance", "isKev", "evidenceTier", "graphReachable", "graphReachability"}
+    assert {k: v for k, v in mcp.items() if k not in queue_fields} == {k: v for k, v in api.items() if k != "provenance"}
     assert "tenant-b" not in json.dumps(payload)
     assert "tenant-a-occurrence-b" not in json.dumps(mcp)
 

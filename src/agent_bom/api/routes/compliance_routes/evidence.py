@@ -133,9 +133,11 @@ def _aggregate_cis_foundations_checks(jobs: list[Any]) -> dict[str, Any]:
     This is the CIS *Foundations Benchmark* taxonomy (``CIS-2.1.1`` …), a
     different standard from the CVE-driven CIS Controls v8 line (safeguard
     ``CIS-02.1`` …) built elsewhere in :func:`get_compliance`. The two never
-    share identifiers, so no control is counted in both lines.
+    share identifiers, so no control is counted in both lines. Vendor
+    best-practice providers (Databricks) are listed by ``/v1/cis/checks`` but
+    are not CIS benchmarks, so they are left out here.
     """
-    from agent_bom.analytics_contract import build_cis_benchmark_check_rows
+    from agent_bom.analytics_contract import VENDOR_BEST_PRACTICE_CLOUDS, build_cis_benchmark_check_rows
 
     all_rows: list[dict[str, Any]] = []
     for job in jobs:
@@ -160,7 +162,7 @@ def _aggregate_cis_foundations_checks(jobs: list[Any]) -> dict[str, Any]:
     statuses: dict[tuple[str, str], str] = {}
     for row in all_rows:
         key = (str(row.get("cloud") or ""), str(row.get("check_id") or ""))
-        if key in seen:
+        if key in seen or key[0] in VENDOR_BEST_PRACTICE_CLOUDS:
             continue
         seen.add(key)
         status = str(row.get("status") or "").lower()
