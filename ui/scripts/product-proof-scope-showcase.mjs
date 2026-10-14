@@ -48,35 +48,38 @@ function definitions({ cve, kevCve }) {
     repository: {
       nodes: [
         ["repo:payments", "directory", "payments-service/", { path: "payments-service/" }],
-        ["finding:ci-token", "misconfiguration", "Workflow uses a long-lived registry token", { severity_source: "synthetic-policy" }],
+        ["finding:ci-token", "misconfiguration", "Workflow publishes with a long-lived registry token", {}, "high", 7.5],
         ["source:server", "source_file", "src/server.ts", { language: "TypeScript" }],
         ["config:values", "config_file", "deploy/values.yaml"],
         ["ci:publish", "ci_job", "build-and-publish"],
         ["pkg:next", "package", "next@15.2.2", { ecosystem: "npm", version: "15.2.2", purl: "pkg:npm/next@15.2.2" }],
+        ["pkg:axios", "package", "axios@1.4.0", { ecosystem: "npm", version: "1.4.0", purl: "pkg:npm/axios@1.4.0" }],
         ["container:api", "container", "payments-api", { internet_exposed: true, environment: "production" }],
-        ["cred:db", "credential_ref", "PAYMENTS_DB_PASSWORD", { safe_to_store: false }],
         cve("cve:next", "CVE-2025-29927"),
+        cve("cve:axios", "CVE-2023-45857"),
         ["pkg:cryptography", "package", "cryptography@41.0.7", { ecosystem: "pypi", version: "41.0.7", purl: "pkg:pypi/cryptography@41.0.7" }],
         cve("cve:cryptography", "CVE-2023-50782"),
       ],
       edges: [
         ["repo:payments", "source:server", "contains"], ["repo:payments", "config:values", "contains"],
         ["repo:payments", "ci:publish", "contains"], ["finding:ci-token", "ci:publish", "affects"],
-        ["source:server", "pkg:next", "imports"], ["ci:publish", "container:api", "configures"],
-        ["config:values", "cred:db", "exposes_cred"], ["pkg:next", "cve:next", "vulnerable_to"],
+        ["source:server", "pkg:next", "imports"], ["source:server", "pkg:axios", "imports"],
+        ["ci:publish", "container:api", "configures"], ["config:values", "container:api", "configures"],
+        ["pkg:next", "cve:next", "vulnerable_to"], ["pkg:axios", "cve:axios", "vulnerable_to"],
         ["container:api", "pkg:cryptography", "contains"], ["pkg:cryptography", "cve:cryptography", "vulnerable_to"],
       ],
     },
+    // The cloud preset omits package nodes, so workload findings use the
+    // package-derived workload link the graph builder also emits.
     cloud: {
       nodes: [
         ["account:prod", "account", "prod-workloads", { cloud_provider: "aws", account_id: "123456789012" }],
-        ["finding:waf", "misconfiguration", "Public API stage has no WAF association", { severity_source: "synthetic-policy" }],
+        ["finding:waf", "misconfiguration", "Public API stage has no WAF association", {}, "medium", 5.3],
         ["gateway:public", "api_gateway", "public-api-gateway", { cloud_provider: "aws", environment: "production", internet_exposed: true }],
         ["cluster:payments", "cluster", "payments-eks", { cloud_provider: "aws", environment: "production" }],
         ["container:checkout", "container", "checkout-api", { environment: "production" }],
         ["container:ledger", "container", "ledger-worker", { environment: "staging" }],
-        ["pkg:next", "package", "next@15.2.2", { ecosystem: "npm", version: "15.2.2", purl: "pkg:npm/next@15.2.2" }],
-        ["pkg:urllib3", "package", "urllib3@2.0.5", { ecosystem: "pypi", version: "2.0.5", purl: "pkg:pypi/urllib3@2.0.5" }],
+        ["finding:wildcard", "misconfiguration", "Role grants s3:* on every bucket", {}, "high", 8.1],
         ["role:checkout", "role", "checkout-runtime-role", { cloud_provider: "aws" }],
         cve("cve:next", "CVE-2025-29927"),
         cve("cve:urllib3", "CVE-2023-43804"),
@@ -86,9 +89,10 @@ function definitions({ cve, kevCve }) {
         ["account:prod", "gateway:public", "contains"], ["account:prod", "cluster:payments", "contains"],
         ["finding:waf", "gateway:public", "affects"], ["gateway:public", "container:checkout", "exposed_to"],
         ["cluster:payments", "container:checkout", "hosts"], ["cluster:payments", "container:ledger", "hosts"],
-        ["container:checkout", "pkg:next", "contains"], ["container:ledger", "pkg:urllib3", "contains"],
-        ["container:checkout", "role:checkout", "authenticates_as"], ["role:checkout", "data:pii", "has_permission"],
-        ["pkg:next", "cve:next", "vulnerable_to"], ["pkg:urllib3", "cve:urllib3", "vulnerable_to"],
+        ["container:checkout", "cve:next", "vulnerable_to", { derived_via: "package", package: "next@15.2.2" }],
+        ["container:ledger", "cve:urllib3", "vulnerable_to", { derived_via: "package", package: "urllib3@2.0.5" }],
+        ["container:checkout", "role:checkout", "authenticates_as"], ["finding:wildcard", "role:checkout", "affects"],
+        ["role:checkout", "data:pii", "has_permission"],
       ],
     },
   };
@@ -200,8 +204,7 @@ export function buildScopeShowcase(kind, { node, edge, base, advisory, reference
   const fixture = definitions({ cve, kevCve })[kind];
   if (!fixture) throw new Error(`Unknown scope showcase: ${kind}`);
   const nodes = fixture.nodes.map(([id, type, label, attributes = {}, severity, riskScore]) => {
-    const findingSeverity = severity ?? (type === "misconfiguration" ? "medium" : "none");
-    const created = node(id, type, label, findingSeverity, riskScore ?? (type === "misconfiguration" ? 5.3 : 0),
+    const created = node(id, type, label, severity ?? "none", riskScore ?? 0,
       { ...attributes, simulated: true, data_sources: ["synthetic-scope-fixture"] });
     const dimensions = {};
     if (attributes.environment) dimensions.environment = String(attributes.environment);
@@ -209,8 +212,8 @@ export function buildScopeShowcase(kind, { node, edge, base, advisory, reference
     if (attributes.ecosystem) dimensions.ecosystem = String(attributes.ecosystem);
     return { ...created, dimensions };
   });
-  const edges = fixture.edges.map(([source, target, relation]) => edge(source, target, relation, 1,
-    { evidence_tier: "modeled_infrastructure", modeled: true, source_kind: "synthetic-scope-fixture" }));
+  const edges = fixture.edges.map(([source, target, relation, extra = {}]) => edge(source, target, relation, 1,
+    { evidence_tier: "modeled_infrastructure", modeled: true, source_kind: "synthetic-scope-fixture", ...extra }));
   propagateSeverity(nodes, edges);
   const attackPaths = deriveAttackPaths(nodes, edges, base.scan_id);
   const count = (key) => nodes.reduce((acc, item) => ({ ...acc, [item[key]]: (acc[item[key]] ?? 0) + 1 }), {});
@@ -243,10 +246,12 @@ export function checkScopeShowcase(fixture, advisory, referenceCve) {
   for (const item of fixture.nodes.filter((entry) => entry.entity_type === "vulnerability")) {
     if (item.label === referenceCve.label) continue;
     const facts = advisory(item.label);
-    const pkg = fixture.edges.find((entry) => entry.target === item.id && entry.relationship === "vulnerable_to");
-    const pkgNode = pkg && byId.get(pkg.source);
+    const link = fixture.edges.find((entry) => entry.target === item.id && entry.relationship === "vulnerable_to");
+    const affected = link && byId.get(link.source);
+    const pkgLabel = affected?.entity_type === "package" ? affected.label : link?.evidence.package;
+    const ecosystemOk = affected?.entity_type !== "package" || affected.attributes.ecosystem === facts.ecosystem;
     if (item.severity !== facts.severity || item.risk_score !== facts.cvss_score
-      || pkgNode?.label !== `${facts.package}@${facts.version}` || pkgNode.attributes.ecosystem !== facts.ecosystem) {
+      || pkgLabel !== `${facts.package}@${facts.version}` || !ecosystemOk) {
       throw new Error(`Scope showcase advisory disagrees with verified fixture: ${item.label}`);
     }
   }

@@ -39,6 +39,7 @@ describe("nodeBadges", () => {
     expect(nodeBadges(input({ nodeType: "package", attributes: { purl: "pkg:maven/org.x/y@1" } })).badges[0]).toMatchObject({ label: "Maven" });
     expect(nodeBadges(input({ nodeType: "package", attributes: { purl: "not-a-purl" } })).badges).toEqual([]);
     expect(nodeBadges(input({ nodeType: "package", ecosystem: "made-up" })).badges).toEqual([]);
+    expect(nodeBadges(input({ nodeType: "vulnerability", attributes: { ecosystem: "pypi" } })).badges).toEqual([]);
   });
 
   it("derives a cloud provider only from recognised provider values", () => {

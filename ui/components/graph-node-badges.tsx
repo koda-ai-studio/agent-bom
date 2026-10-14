@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import {
   SEVERITY_RING_CLASSES,
   nodeBadgeClass,
@@ -22,10 +24,12 @@ export function NodeBadgeChip({ badge }: { badge: ChipBadge }) {
   );
 }
 
-export function NodeBadgeRow({ badges }: { badges: NodeBadge[] }) {
-  if (badges.length === 0) return null;
+/** The entity type label followed by its chips, on one wrapping line. */
+export function NodeBadgeRow({ badges, children }: { badges: NodeBadge[]; children: ReactNode }) {
+  if (badges.length === 0) return <>{children}</>;
   return (
-    <div className="mt-1 flex max-w-full flex-wrap justify-center gap-1" data-testid="graph-node-badges">
+    <div className="flex max-w-full flex-wrap items-center justify-center gap-1" data-testid="graph-node-badges">
+      {children}
       {badges.map((badge) => <NodeBadgeChip key={`${badge.kind}:${badge.value}`} badge={badge} />)}
     </div>
   );

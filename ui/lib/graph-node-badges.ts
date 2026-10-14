@@ -90,6 +90,7 @@ const PROVIDER_EXCLUDED_TYPES = new Set<string>([
   "vulnerability", "misconfiguration", "driftIncident", "package", "tool", "toolCall",
   "credential", "sourceFile", "configFile", "codeModule", "directory",
 ]);
+const ECOSYSTEM_TYPES = new Set<string>(["package", "framework", "codeModule"]);
 const FINDING_TYPES = new Set<string>(["vulnerability", "misconfiguration", "driftIncident"]);
 const RING_SEVERITIES = new Set<string>(["critical", "high", "medium", "low"]);
 
@@ -111,6 +112,7 @@ function environmentBadge(data: NodeBadgeInput): NodeBadge | null {
 }
 
 function ecosystemBadge(data: NodeBadgeInput): NodeBadge | null {
+  if (!ECOSYSTEM_TYPES.has(data.nodeType)) return null;
   const candidates = [
     text(data.ecosystem), text(data.dimensions?.ecosystem), text(data.attributes?.ecosystem),
     purlType(data.attributes?.purl), purlType(data.attributes?.package_url),

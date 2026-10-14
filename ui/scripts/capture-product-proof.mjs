@@ -3133,7 +3133,7 @@ async function main() {
           await expect(p.locator(".react-flow__node")).toHaveCount(fixture.nodes.length);
           await fitReactFlow(p);
           await scrollTo(p, 0);
-        }, { expectedText: [/Demo data/i, "Attack-path analysis complete", scopeShowcaseHeadline(fixture), ...fixture.nodes.map(n => new RegExp(n.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"))],
+        }, { expectedText: [/Demo data/i, "Attack-path analysis complete", scopeShowcaseHeadline(fixture), ...fixture.nodes.map(n => new RegExp(n.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/-/g, "[- ]"), "i"))],
           expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph"],
           minGraphNodes: fixture.nodes.length, maxGraphNodes: fixture.nodes.length,
           minGraphEdges: fixture.edges.length, maxGraphEdges: fixture.edges.length,

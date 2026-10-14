@@ -176,10 +176,11 @@ function NodeCard({
       <p className="mb-1 w-full min-w-0 break-words line-clamp-3 text-lg font-semibold leading-[1.2] text-foreground [overflow-wrap:anywhere]" style={{ fontSize: "var(--graph-node-label-size, 18px)" }}>
         {data.label.split(/(?<=[_/-])/).map((part, index) => <span key={index}>{part}<wbr /></span>)}
       </p>
-      <span className="text-xs text-ink-secondary">
-        {data.entityType === "application" ? "Application" : NODE_TYPE_BADGES[data.nodeType]}
-      </span>
-      <NodeBadgeRow badges={badges} />
+      <NodeBadgeRow badges={badges}>
+        <span className="text-xs text-ink-secondary">
+          {data.entityType === "application" ? "Application" : NODE_TYPE_BADGES[data.nodeType]}
+        </span>
+      </NodeBadgeRow>
       {data.runtimeEvidenceTier && data.runtimeEvidenceTier !== "static_scan" && <div className="mt-1">
         <RuntimeEvidenceChip tier={data.runtimeEvidenceTier} />
       </div>}
