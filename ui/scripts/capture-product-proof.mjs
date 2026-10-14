@@ -3861,10 +3861,9 @@ async function main() {
 }
 
 function scopeShowcaseHeadline(fixture) {
-  const findings = fixture.nodes.filter((item) => ["vulnerability", "misconfiguration"].includes(item.entity_type));
-  const counts = ["critical", "high", "medium", "low"].map((sev) => [sev, findings.filter((item) => item.severity === sev).length]).filter(([, n]) => n > 0);
-  const kev = findings.filter((item) => item.entity_type === "vulnerability" && item.attributes.is_kev === true).length, paths = fixture.attack_paths.length;
-  const noun = findings.length === 1 ? "finding" : "findings", sevText = counts.length === 1 && counts[0][1] === findings.length ? `${findings.length} ${counts[0][0]} ${noun}` : `${findings.length} ${noun}: ${counts.map(([sev, n]) => `${n} ${sev}`).join(", ")}`;
+  const findings = fixture.nodes.filter((item) => ["vulnerability", "misconfiguration"].includes(item.entity_type)), counts = ["critical", "high", "medium", "low"].map((sev) => [sev, findings.filter((item) => item.severity === sev).length]).filter(([, n]) => n > 0);
+  const kev = findings.filter((item) => item.entity_type === "vulnerability" && item.attributes.is_kev === true).length, paths = fixture.attack_paths.length, noun = findings.length === 1 ? "finding" : "findings";
+  const sevText = counts.length === 1 && counts[0][1] === findings.length ? `${findings.length} ${counts[0][0]} ${noun}` : `${findings.length} ${noun}: ${counts.map(([sev, n]) => `${n} ${sev}`).join(", ")}`;
   return `${sevText}${kev ? ` · ${kev} KEV-listed` : ""} · ${paths} ${paths === 1 ? "snapshot path" : "snapshot paths"}`;
 }
 
