@@ -293,7 +293,7 @@ def test_malicious_pickle_becomes_canonical_finding(tmp_path: Path):
     assert finding.source is FindingSource.MODEL_SCAN
     assert finding.severity == "critical"
     assert finding.asset.asset_type == "model_file"
-    assert finding.asset.location == str(model)
+    assert finding.asset.location == "<path:model.pkl>"
     assert finding.is_malicious is True
     assert finding.is_actionable is True
     assert finding.cwe_ids == ["CWE-502"]
