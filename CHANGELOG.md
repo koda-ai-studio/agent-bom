@@ -48,6 +48,10 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 - The largest scanner engines are decomposed into named stages with no change to results: package vulnerability scanning (`scan_packages`), the cloned repository tree scan, the MCP `scan` tool body and the live Kubernetes posture scan. Each now reads as a short orchestrator over input preparation, version resolution, advisory lookups, enrichment and result assembly.
 
+### Fixed
+
+- Graph analysis limits are reported only when they hide something. Credential reach no longer marks a scan `limited` (and therefore `partial`) when a depth-bounded route only leads to a credential already reached by a shorter route. A path budget keeps any earlier agent-budget reason instead of replacing it. The current-estate view now carries the worst analysis status of its source scans, so a limited source is no longer shown as clean.
+
 ### Security
 
 - API local-path scans: a set-but-blank `AGENT_BOM_API_LOCAL_PATH_SCANS` no longer enables local filesystem scans. A blank value is treated as unset and falls through to `AGENT_BOM_ENABLE_LOCAL_PATH_SCANS`, then to the disabled default.
