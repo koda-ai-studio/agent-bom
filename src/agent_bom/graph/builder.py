@@ -318,6 +318,7 @@ from agent_bom.graph.runtime_projection import (
 from agent_bom.graph.runtime_projection import (
     _runtime_identity_relationship as _runtime_identity_relationship,
 )
+from agent_bom.graph.trace_projection import project_report_trace_events
 from agent_bom.graph.training_projection import (
     _flatten_compliance_tags as _flatten_compliance_tags,
 )
@@ -422,6 +423,7 @@ def _project_runtime_topology(
     project_runtime_session(graph, report.get("runtime_session_graph"))
     _add_agentic_identity_graph_projections(graph, report, inputs.data_source, tenant_id)
     _add_runtime_incident_feedback(graph, report, indexes.agent_name_to_ids, inputs.data_source)
+    project_report_trace_events(graph, report.get("runtime_trace_events"), tenant_id)
 
 
 def _project_cloud_authority(

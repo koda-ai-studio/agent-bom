@@ -63,6 +63,7 @@ class FindingType(str, Enum):
     CIEM_OVER_PRIVILEGE = "CIEM_OVER_PRIVILEGE"  # Cloud identity granted permissions it never uses (right-sizing)
     SENSITIVE_DATA = "SENSITIVE_DATA"  # Content-confirmed sensitive data at rest (DSPM object/database sampling)
     PII_EXPOSURE = "PII_EXPOSURE"  # Personal data literal committed in source/config (not a credential)
+    SHADOW_AI = "SHADOW_AI"  # Agent or tool observed at runtime with no exact inventory match
 
 
 class FindingSource(str, Enum):

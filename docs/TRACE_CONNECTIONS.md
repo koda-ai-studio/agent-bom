@@ -166,6 +166,38 @@ Contract tests: [broker boundaries](../tests/test_trace_connection_broker.py),
 [content consent](../tests/test_trace_pull_screen_content.py), and
 [browser workflow](../ui/e2e/trace-platform-connectors.spec.ts).
 
+## Normalized events, graph evidence and findings
+
+Every trace source maps into one canonical, metadata-only event
+(`agent_bom.runtime.normalized_trace.NormalizedTraceEvent`) before storage:
+Langfuse observations, LangSmith runs and OTLP JSON spans (OpenTelemetry GenAI
+attributes such as `gen_ai.operation.name`, `gen_ai.agent.name`,
+`gen_ai.tool.name`, `gen_ai.request.model` and `gen_ai.usage.input_tokens`).
+The tenant comes from the connection or request, never from span attributes.
+User IDs are stored only as SHA-256 hashes, prompt and output text only as a
+SHA-256 digest, URLs only as scheme and host, and `agent_bom.credential_ref`
+only when it is a credential name. Fields a source cannot supply stay empty and
+are counted per source in the `normalized.coverage` block of
+`POST /v1/traces` and managed pull responses.
+
+When a scan snapshot is persisted, events from the 30 days before the snapshot
+timestamp become `runtime_observed` graph edges (`invoked`, `called`,
+`accessed`, `used_credential`) aggregated per source node, relationship and
+target with a count, first and last observation, trace sources and up to five
+sample trace IDs. Only spans carrying an exact inventory node ID or canonical
+ID bind; a credential binds only through the exact `cred:<server>:<NAME>` slot
+of a bound server. Name-only matches are counted as candidates and never become
+edges. The `runtime_trace_projection` analysis status reports bound, candidate,
+unmatched, out-of-window, untimed and rejected counts; a store outage is
+recorded as `failed`, not as zero activity. Attack-path ranking and credential
+reach read these edges; they show recorded activity, not exploitation.
+
+Screened prompt-injection, personal-data and credential signals, tool calls
+backed by a known-vulnerable package, and agents or tools named in spans with no
+exact or candidate inventory match (`SHADOW_AI`) become findings in the tenant's
+compliance hub, linked to the exact node when one was reported and deduplicated
+per tenant, signal, entity and UTC day.
+
 ## Langfuse API compatibility
 
 Langfuse pulls request native observation types through Observations API v2.

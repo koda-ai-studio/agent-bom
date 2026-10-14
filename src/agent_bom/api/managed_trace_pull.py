@@ -12,6 +12,9 @@ from agent_bom.api import audit_log
 from agent_bom.api.native_trace_import import TraceImportScope
 from agent_bom.api.runtime_event_store import RuntimeEventStore
 from agent_bom.api.storage.runtime_trace_imports import TraceImportConflictError
+from agent_bom.api.trace_collection.normalized_events import signals_by_span, stamp_page_signals
+from agent_bom.api.trace_collection.trace_evidence import record_native_evidence
+from agent_bom.api.trace_collection.trace_findings import FindingSink
 from agent_bom.api.trace_import_service import import_native_pages
 from agent_bom.otel_ingest import parse_otel_traces
 from agent_bom.runtime_correlation import correlate_spans_to_attack_paths
@@ -42,11 +45,13 @@ def managed_trace_pull(
     screen: Callable[[dict[str, Any]], list[dict[str, Any]]],
     findings: Callable[[], Any],
     identities: Callable[[], Any],
+    finding_sink: FindingSink | None = None,
 ) -> dict[str, Any]:
     max_pages = _validate(body)
     audit = dict(actor=actor, tenant_id=tenant_id, resource=f"trace_connection/{body['connection_id']}", provider=provider.strip().lower())
     try:
         result = _import(provider, body, credentials, tenant_id, store, limit, screen_content, max_pages, screen, findings, identities)
+        result["normalized"] = record_native_evidence(result.pop("native_spans"), tenant_id=tenant_id, sink=finding_sink)
     except (ValueError, connectors.TraceConnectorError, TraceImportConflictError) as exc:
         conflict = isinstance(exc, TraceImportConflictError)
         invalid = isinstance(exc, (ValueError, connectors.TraceConnectorValidationError))
@@ -95,7 +100,9 @@ def _import(
         if isinstance(spans, list):
             native_spans.extend(span for span in spans if isinstance(span, dict))
             if screen_content:
-                content_findings.extend(screen({"spans": spans}))
+                screened = screen({"spans": spans})
+                stamp_page_signals(spans, signals_by_span(screened))
+                content_findings.extend(screened)
 
     imported = import_native_pages(
         store,
@@ -119,4 +126,5 @@ def _import(
         "attack_paths": [path.to_dict() for path in candidates],
         "content_findings": content_findings,
         "import": imported,
+        "native_spans": native_spans,
     }
