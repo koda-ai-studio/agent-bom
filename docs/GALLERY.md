@@ -145,8 +145,8 @@ snapshot. This capture uses labeled synthetic UI fixtures.
 **Open the relationship evidence.** Select an arrow to inspect its direction,
 snapshot, first/last seen timestamps and source receipt. In the reference lab
 below, a repository pin, an image SBOM and a modeled Kubernetes workload resolve
-to one `pillow@9.0.0`; its advisory link came from the bundled scanner. It does
-not establish a cloud execution or downstream effect.
+to one `pillow@9.0.0`; its advisory link came from the bundled scanner.
+It does not establish a cloud execution or downstream effect.
 
 <picture><source media="(prefers-color-scheme: light)" srcset="images/graph-relationship-light-live.png"><img src="images/graph-relationship-dark-live.png" alt="Repository pin, image SBOM and Kubernetes workload resolving to one pillow package linked to KEV-listed CVE-2023-4863, with the advisory receipt open" width="1440"></picture>
 
