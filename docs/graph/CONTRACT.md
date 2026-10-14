@@ -2,7 +2,7 @@
 
 This is the single page that tells operators, auditors, and regulators what agent-bom's graph promises and what it does not. Guarantees that previously lived scattered across the README, [ARCHITECTURE.md](../ARCHITECTURE.md), and [SECURITY_ARCHITECTURE.md](../SECURITY_ARCHITECTURE.md) consolidate here.
 
-The graph subsystem has one source of truth in code: enums in `src/agent_bom/graph/types.py`, the legacy builder in `src/agent_bom/context_graph.py`, and the unified bridge in `src/agent_bom/graph/`. Every name on this page maps 1:1 to those files.
+The graph subsystem has one source of truth in code: enums in `src/agent_bom/graph/types.py`, the report builder in `src/agent_bom/graph/builder.py`, and the projections in `src/agent_bom/graph/`. Every name on this page maps 1:1 to those files.
 
 The generated [data model reference](DATA_MODEL.md) lists every entity, relationship, evidence tier and normalization table from that code.
 
@@ -36,26 +36,10 @@ recorded connections do not by themselves establish assessed risk or execution.
 
 ### Entity types
 
-`EntityType` (`src/agent_bom/graph/types.py:8`) is a closed enum. Every node in the graph carries one of these values. The legacy `NodeKind` enum (`src/agent_bom/context_graph.py:57`) is a strict subset that the bridge in `to_unified_graph()` maps onto `EntityType`.
-
-| Entity type | Producing scanner / module | Asset shape |
-|---|---|---|
-| `agent` | `discovery/__init__.py` (29 first-class MCP client surfaces) | One MCP host configuration: agent name, type, server list |
-| `server` | `discovery/__init__.py`, `parsers/__init__.py` | One declared MCP server: command, transport, env, packages, tools |
-| `package` | `parsers/__init__.py` (15 ecosystems) | One pinned dependency: ecosystem, name, version, source manifest |
-| `tool` | `mcp_introspect.py`, `risk_analyzer.classify_mcp_tool` | One tool advertised by a server with classified capabilities (read / write / execute / network) |
-| `model` | `cloud/`, model-card scanners | One model artifact: HuggingFace ID, local path, or cloud-served endpoint |
-| `dataset` | `cloud/`, dataset discovery | One referenced dataset (cloud or local) |
-| `container` | `image.py`, `cloud/container_sbom.py`, `filesystem.py` | One OCI image or unpacked filesystem |
-| `cloud_resource` | `cloud/aws.py`, `cloud/azure.py`, `cloud/gcp.py` | One discovered cloud asset (workload identity target, bucket, key, etc.) |
-| `vulnerability` | `scanners/__init__.py`, `enrichment.py` | One CVE / GHSA after OSV + NVD + EPSS + KEV enrichment |
-| `misconfiguration` | `iac/`, `cis/` | One IaC / CIS rule violation |
-| `credential` | `context_graph._is_credential_key` against MCP server `env` | One credential-shaped env key (no secret value stored) |
-| `user` | SCIM ingest (`api/routes/scim.py`) | One identity from the customer IdP |
-| `group` | SCIM ingest | One identity group |
-| `service_account` | Cloud workload-identity discovery | One non-human principal |
-| `provider`, `environment`, `fleet`, `cluster` | Fleet sync, cloud discovery | Organisational hierarchy nodes (no security state of their own) |
-| `iam_role` (legacy `NodeKind` only) | Cloud agent metadata `cloud_principal` | Workload identity attached to an agent — bridged onto `EntityType.SERVICE_ACCOUNT` |
+`EntityType` in `src/agent_bom/graph/types.py` is a closed enum. Every node
+carries one of its values. The generated [entity reference](data-model/entities.md)
+lists each type, its emitter modules and observed ID formats. Production emitters
+are listed separately from demo fixtures; vocabulary alone does not prove emission.
 
 ### Cloud identity correlation and governance
 
@@ -80,41 +64,15 @@ restores the previous derivation behavior.
 
 ### Edge kinds
 
-`RelationshipType` (`src/agent_bom/graph/types.py:40`) is a closed enum. The legacy `EdgeKind` (`src/agent_bom/context_graph.py:66`) maps onto it through `EDGE_KIND_TO_RELATIONSHIP`.
+`RelationshipType` in `src/agent_bom/graph/types.py` is a closed enum. The
+generated [relationship reference](data-model/relationships.md) lists allowed
+source/target pairs, evidence requirements, traversal semantics and emitter
+modules. `/v1/graph/schema` identifies verified production emitters and reserved
+vocabulary. Reserved kinds remain readable in historical and demo snapshots.
 
-| Edge kind | Direction | Semantics | Emission rule |
-|---|---|---|---|
-| `hosts` | provider → agent | A provider account / subscription / project hosts an agent. | Emitted when cloud discovery records a parent provider. |
-| `uses` | agent → server | The agent is configured to use this server. | Emitted for every server in `agent.mcp_servers`. |
-| `depends_on` | server → package | The server has this package as a dependency. | Emitted for every package returned by the package parser. |
-| `provides_tool` | server → tool | The server advertises this tool over MCP. | Emitted from `tools/list` introspection or static config. |
-| `exposes_cred` | server → credential | The server's launch env carries a credential-shaped key. | Emitted only when `_is_credential_key(env_key)` returns true; the value is never stored. |
-| `reaches_tool` | credential → tool | A credential is reachable by an executable tool on the same server. | Emitted only when both nodes share a server *and* the tool has the `execute` capability. |
-| `serves_model` | server → model | The server fronts a model endpoint. | Emitted by cloud / HuggingFace / Ollama scanners. |
-| `contains` | container → package | A container image contains this package. | Emitted by `image.py`, `cloud/container_sbom.py`, and `filesystem.py`. |
-| `affects` | vulnerability → package | The CVE affects this package version. | Emitted from OSV / GHSA advisory data. |
-| `vulnerable_to` | server / package → vulnerability | The server (via its packages) is exposed to this CVE. | Emitted when a CVE in `blast_radius` lists the server in `affected_servers`. |
-| `exploitable_via` | vulnerability → tool / credential | An exploitation path leads through this tool or credential. | Emitted by blast-radius propagation when a path exists. |
-| `remediates` | fix_version → vulnerability | This fix version closes the CVE. | Emitted when the advisory carries a `fixed` version. |
-| `triggers` | vulnerability → toxic_combination | The CVE participates in a toxic combination finding. | Emitted by toxic-combination detection. |
-| `shares_server` | agent ↔ agent (bidirectional) | Two agents reference the same MCP server. | Emitted only when `len(unique_agents_for_server) >= 2`. |
-| `shares_cred` (`shares_credential` legacy) | agent ↔ agent (bidirectional) | Two agents share a credential-shaped env key. | Emitted only when `len(unique_agents_for_credential) >= 2`. |
-| `lateral_path` | agent → agent | Pre-computed lateral movement path. | Emitted by `find_lateral_paths()` BFS, bounded to depth 4 and 100 paths. |
-| `manages` | user / team → agent / fleet | Identity ownership over a managed entity. | Emitted from SCIM + fleet metadata. |
-| `owns` | org / team → environment / resource | Organisational ownership. | Emitted from fleet / cloud metadata. |
-| `part_of` | agent → fleet, server → cluster | Hierarchy membership. | Emitted from fleet / cluster discovery. |
-| `member_of` | user → group, package → dependency_group | Group membership. | Emitted from SCIM and dependency-group analysis. |
-| `invoked` | agent → tool | Runtime tool invocation. | Emitted **only** by proxy / gateway runtime. Never emitted by static scans. |
-| `accessed` | tool → resource | Runtime resource access. | Emitted **only** by proxy / gateway runtime. |
-| `delegated_to` | agent → agent | Runtime delegation between agents. | Emitted **only** by proxy / gateway runtime. |
-| `trace_step` | asset → asset | Consecutive assets one correlated multi-source trace touched. | Emitted from correlated audit evidence (tier `recorded`); a sequence, not an access claim. |
-| `correlates_with` | local agent ↔ cloud agent | High-confidence cross-environment match. | Emitted only when cloud account/subscription/project + region + model ID all match (#1892). |
-| `possibly_correlates_with` | local agent ↔ cloud agent | Partial cross-environment match. | Emitted on partial-key matches; never conflated with the strict path. |
-| `attached_to` (legacy `EdgeKind`) | iam_role → agent | Workload identity correlation. | Bridged onto `member_of` in the unified graph. |
+Edges carry `weight` and `evidence` (a metadata dict). Bidirectional edges (`shares_server`, `correlates_with`) are stored once but traversed both ways.
 
-Edges carry `weight` and `evidence` (a metadata dict). Bidirectional edges (`shares_server`, `shares_cred`, `correlates_with`) are stored once but traversed both ways.
-
-Every relationship has one `RelationshipSpec` in `agent_bom.graph.relationship_specs`: its traversal class, the exact `(source, target)` entity pairs it may connect, direction, default traversability and required evidence keys. `GET /v1/graph/schema` publishes the registry (`traversal_class`, `allowed_pairs`, `required_evidence`). Every edge's `evidence` names its collector in `source` and the kind of claim in `tier` (`modeled_infrastructure`, `static_scan`, `static_evidence`, `recorded`, `runtime_observed`, `derived`; edges rehydrated from snapshots written before the envelope carry `legacy_unrecorded`). `AGENT_BOM_GRAPH_CONTRACT` sets what a violation does: `warn` (default) keeps the edge and counts it in `analysis_status.relationship_contract`, `enforce` drops an edge whose pair is not allowed, and `strict` raises.
+Every relationship has one `RelationshipSpec` in `agent_bom.graph.relationship_specs`: its traversal class, the exact `(source, target)` entity pairs it may connect, direction, default traversability and required evidence keys. `GET /v1/graph/schema` publishes the registry (`traversal_class`, `allowed_pairs`, `required_evidence`). Every edge's `evidence` names its collector in `source` and the kind of claim in `tier` (`modeled_infrastructure`, `static_scan`, `recorded`, `runtime_observed`, `derived`; edges rehydrated from snapshots written before the envelope carry `legacy_unrecorded`). `AGENT_BOM_GRAPH_CONTRACT` sets what a violation does: `warn` (default) keeps the edge and counts it in `analysis_status.relationship_contract`, `enforce` drops an edge whose pair is not allowed, and `strict` raises.
 
 ### Provider authorization receipts
 
@@ -276,13 +234,13 @@ requiring legacy numeric consumers to migrate immediately.
 
 ## 2. Accuracy guarantees
 
-agent-bom's graph is a static analytical artifact derived from inventory plus canonical advisory feeds. The guarantees below are the ones we will defend in an audit.
+agent-bom's graph is an analytical artifact derived from inventory, findings and recorded runtime evidence. The guarantees below are the ones we will defend in an audit.
 
-- **Deterministic given the same inventory.** No machine-learning inference is on the graph build path. Given the same `agents_data` + `blast_data` input, `build_context_graph()` produces the same nodes and edges. Edge insertion is deduplicated by `(source, target, kind)` (`context_graph.py:108`), and serialisation is sorted where order would otherwise be implementation-defined.
-- **Round-trip clean.** The graph is a projection of the inventory, not a parallel data store. `to_unified_graph()` accepts a `ContextGraph` and emits a `UnifiedGraph` whose node IDs and edge keys are stable. Projecting back to inventory matches the original — there are no graph-only entities invented by the builder.
+- **Stable topology for the same report and scope.** `build_unified_graph_from_report()` in `src/agent_bom/graph/builder.py` projects report evidence into `UnifiedGraph`. Rebuilding the same scoped report preserves node IDs and relationship keys; see `tests/graph/test_finding_type_matrix.py`.
+- **Stored evidence remains readable.** Graph snapshots retain nodes, edges and their recorded evidence. Readers classify missing evidence tiers as `legacy_unrecorded`; they do not infer a canonical tier from arbitrary text or rewrite the stored receipt. The generated [entity](data-model/entities.md) and [relationship](data-model/relationships.md) references document the current vocabulary.
 - **Framework tags from canonical sources only.** Every framework tag attached to a vulnerability node comes from CISA KEV, OSV, NVD, EPSS, MITRE ATLAS, or MITRE ATT&CK. The bundled canonical metadata lives in `src/agent_bom/compliance_coverage.py`. agent-bom never invents a framework label, never derives one from heuristics, and never re-tags advisories from secondary aggregators.
-- **No cross-tenant leakage.** Every `UnifiedGraph` carries a `tenant_id` (`context_graph.py:808`). Persistence enforces row-level security in Postgres, scoped by tenant, on every read and write path. A query for tenant A's graph cannot return tenant B's nodes or edges, regardless of API surface.
-- **Untrusted external metadata is fenced.** Tool descriptions ingested from MCP `tools/list` are passed through `_untrusted_metadata_text()` (`context_graph.py:47`), control characters are stripped, length is bounded, and the field is marked `description_trust = "untrusted_external_mcp_metadata"`. Downstream consumers must treat that field as data, never as a label or instruction.
+- **No cross-tenant leakage.** Every `UnifiedGraph` carries a `tenant_id` (`src/agent_bom/graph/container.py`). Persistence enforces row-level security in Postgres, scoped by tenant, on every read and write path. A query for tenant A's graph cannot return tenant B's nodes or edges, regardless of API surface.
+- **Untrusted external metadata is fenced.** Tool descriptions ingested from MCP `tools/list` are passed through `_untrusted_metadata_text()` (`context_graph.py`), control characters are stripped, length is bounded, and the field is marked `description_trust = "untrusted_external_mcp_metadata"`. Downstream consumers must treat that field as data, never as a label or instruction.
 - **Alternative graph backends must preserve this contract first.** SQLite and Postgres are the shipped graph persistence backends today. Any future backend, including the proposed Neptune lane, must preserve stable IDs, tenant predicates, snapshot semantics, bounded traversal, audit behavior, and explicit unsupported-operation errors before it can be documented as supported.
 
 ---

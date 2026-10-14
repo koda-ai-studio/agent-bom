@@ -11,10 +11,8 @@ from collections.abc import Callable
 from typing import Any, Mapping, Sequence
 
 from agent_bom.runtime.cloud_trace_claims import cloud_trace_projection
-
-
-def _norm(value: object) -> str:
-    return str(value or "").strip().lower()
+from agent_bom.runtime.name_candidates import candidate_name_basis
+from agent_bom.runtime.name_candidates import normalized_name as _norm
 
 
 def correlate_findings(
@@ -27,7 +25,7 @@ def correlate_findings(
     """Return name-based candidates; these do not establish an inventory join."""
     agent_key = _norm(agent)
     tool_key = _norm(tool)
-    if not agent_key and not tool_key:
+    if limit <= 0 or (not agent_key and not tool_key):
         return []
 
     matched: list[dict[str, Any]] = []
@@ -38,11 +36,7 @@ def correlate_findings(
         tools: set[str] = set()
         for key in ("exposed_tools", "reachable_tools", "phantom_tools"):
             tools.update(_norm(t) for t in (row.get(key) or []) if _norm(t))
-        if agent_key and agents and agent_key not in agents:
-            continue
-        if tool_key and tools and tool_key not in tools:
-            continue
-        if not agents and not tools:
+        if candidate_name_basis(agent=agent_key, tool=tool_key, agents=agents, tools=tools) is None:
             continue
         matched.append(
             {

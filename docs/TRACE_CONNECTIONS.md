@@ -199,9 +199,9 @@ unmatched, out-of-window, untimed and rejected counts; a store outage is
 recorded as `failed`, not as zero activity. Attack-path ranking and credential
 reach read these edges; they show recorded activity, not exploitation.
 
-Screened prompt-injection, personal-data and credential signals, tool calls
-backed by a known-vulnerable package, and agents or tools named in spans with no
-exact or candidate inventory match (`SHADOW_AI`) become findings in the tenant's
+Screened prompt-injection, personal-data and credential signals, and agents or
+tools named in spans with no exact or candidate inventory match (`SHADOW_AI`),
+become findings in the tenant's
 compliance hub, linked to the exact node when one was reported and deduplicated
 per tenant, signal, entity and UTC day.
 
@@ -279,3 +279,19 @@ A retained span or end timestamp does not prove successful function execution,
 a downstream effect, or caller identity. Independent provider execution and
 downstream event receipts are still required; managed traces do not collect
 Lambda data events or provide that independent correlation automatically.
+
+
+## Name-based vulnerability candidates
+
+POST OTLP spans to `/v1/traces` and inspect `flagged[].correlation_basis`.
+A `candidate_name` result compares tool, server or package names with scan
+inventory; it does not establish a package version, inventory relationship or
+successful exploitation. These candidates are response-only: they do not create
+runtime findings, analytics observations or vulnerability signals on graph edges.
+Even an exact tool inventory ID does not prove which package that tool exercised.
+Verify the tool-to-package inventory relationship and advisory before treating a
+candidate as runtime vulnerability evidence. Trace explorer and span correlation
+use the same candidate matcher; an agent-only finding cannot match an arbitrary
+tool call. Screened content signals and exact inventory trace edges retain their
+separate evidence contracts. Existing stored snapshots and audit records are
+preserved; this behavior applies to newly ingested traces.

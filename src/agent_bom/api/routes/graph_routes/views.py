@@ -212,13 +212,19 @@ async def get_graph_edge_changes(
         _runtime._get_graph_store_or_503().changed_edges_between_scans, old, new, tenant_id=_runtime._tenant(request)
     )
     if isinstance(changes, dict):
-        changes["completeness"] = graph_completeness(returned=1, total=1)
+        kinds = ("added", "removed", "changed", "unchanged")
+        returned = sum(len(changes.get(f"edges_{kind}") or []) for kind in kinds)
+        summary = changes.get("summary") or {}
+        total = sum(summary.get(kind, len(changes.get(f"edges_{kind}") or [])) for kind in kinds)
+        changes["completeness"] = graph_completeness(
+            returned=returned, total=total, truncated=returned < total, reason="edge_rows_omitted" if returned < total else ""
+        )
     return changes
 
 
 async def _ranked_queue_page(graph_store: Any, tenant: str, scan_id: str, page_args: dict[str, Any]) -> tuple[Any, int, int, str]:
     """Rank one queue page through the service MCP shares, under REST admission control."""
-    from agent_bom.api.attack_path_queue import ranked_queue_page
+    from agent_bom.graph.attack_path_queue import ranked_queue_page
 
     page = await ranked_queue_page(
         graph_store,
@@ -255,7 +261,7 @@ async def get_graph_attack_paths(
     (see ``graph.attack_path_queue_rank``), and hydrates only the hop nodes
     needed to render the selected queue page.
     """
-    from agent_bom.api.attack_path_queue import AttackPathFilters
+    from agent_bom.graph.attack_path_queue import AttackPathFilters
 
     tenant = _runtime._tenant(request)
     graph_store = _runtime._get_graph_store_or_503()

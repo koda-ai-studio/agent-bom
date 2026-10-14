@@ -22,7 +22,6 @@ from agent_bom.api.trace_collection.trace_findings import (
     FindingSink,
     shadow_findings,
     signal_findings,
-    vulnerable_call_findings,
     write_findings,
 )
 from agent_bom.graph.container import UnifiedGraph
@@ -72,11 +71,11 @@ def record_otlp_evidence(
 ) -> dict[str, Any]:
     """Normalize every OTLP span, persist the canonical events and emit their findings."""
     signals = {key: set(value) for key, value in signals_by_span(content_findings).items()}
-    for flag in flagged:
-        signals.setdefault((flag.trace.trace_id, flag.trace.span_id), set()).add("vulnerable_tool_call")
+    # Name candidates cannot establish a vulnerable package behind an exact
+    # tool reference. Keep them in the ingest response, never in graph signals.
     events, rejected = normalize_otlp_body(body, tenant_id=tenant_id, signals={key: frozenset(value) for key, value in signals.items()})
     persisted = persist_normalized_events(store or get_runtime_event_store(), events)
-    findings = signal_findings(tenant_id, events) + vulnerable_call_findings(tenant_id, flagged, events)
+    findings = signal_findings(tenant_id, events)
     return _summary(events, len(findings), write_findings(tenant_id, findings, sink), persisted=persisted, rejected=rejected)
 
 

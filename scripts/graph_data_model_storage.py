@@ -740,6 +740,14 @@ def _header(title: str, intro: str, generator: str) -> list[str]:
     ]
 
 
+def _storage_lifetime(table: Table) -> str:
+    scratch = {
+        "src/agent_bom/graph/build_workspace.py",
+        "src/agent_bom/graph/correlation_workspace.py",
+    }
+    return "scratch" if set(table.modules) <= scratch else "persistent"
+
+
 def _sources_lines() -> list[str]:
     lines = ["| Source | Dialect |", "|---|---|"]
     lines += [f"| {_code(path)} | {DIALECT_LABEL[dialect]} |" for path, dialect in _FIXED_DIALECT.items()]
@@ -813,8 +821,8 @@ def render_index(tables: dict[str, Table], rels: list[Relation], generator: str)
         "",
         "## Table index",
         "",
-        "| Table | Domain | Backends | Primary key | Key columns | Tenant column | Defined in |",
-        "|---|---|---|---|---|---|---|",
+        "| Table | Domain | Backends | Primary key | Key columns | Tenant column | Lifetime | Defined in |",
+        "|---|---|---|---|---|---|---|---|",
     ]
     for table in tables.values():
         modules = [m.replace("src/agent_bom/", "").replace("deploy/supabase/", "deploy/") for m in table.modules]
@@ -822,7 +830,8 @@ def render_index(tables: dict[str, Table], rels: list[Relation], generator: str)
         out.append(
             f"| {_code(table.name)} | [{titles[table.domain]}](storage-erd/{table.domain}.md) | "
             f"{', '.join(DIALECT_LABEL[d] for d in table.dialects)} | {_codes(table.primary_key)} | "
-            f"{_codes(key_columns(table, rels))} | {_code(_tenant_column(table)) if _tenant_column(table) else '**none**'} | {shown} |"
+            f"{_codes(key_columns(table, rels))} | {_code(_tenant_column(table)) if _tenant_column(table) else '**none**'} | "
+            f"{_storage_lifetime(table)} | {shown} |"
         )
     out += _render_oddities(tables)
     return out
@@ -881,7 +890,16 @@ def render_domain(domain: str, tables: dict[str, Table], rels: list[Relation], g
     members = _members(tables, domain)
     diagram, external = _er_diagram(domain, tables, rels)
     out = _header(title, "Storage tables in this domain. Back to the [storage ERD](../storage-erd.md).", generator)
-    out += [f"{len(members)} tables.", ""]
+    out += (
+        [
+            f"{len(members)} tables.",
+            "",
+            "Scratch tables are temporary SQLite build/correlation workspaces, not durable evidence stores.",
+            "",
+        ]
+        if any(_storage_lifetime(t) == "scratch" for t in members)
+        else [f"{len(members)} tables.", ""]
+    )
     if external:
         out += [f"Tables from other domains drawn for their relations: {_codes(external)}.", ""]
     out += [*diagram, "", "## Relations", "", "| Parent | Child | Column | Kind |", "|---|---|---|---|"]
@@ -902,11 +920,11 @@ def render_domain(domain: str, tables: dict[str, Table], rels: list[Relation], g
             "|---|---|",
         ]
         out += [f"| {_code(c)} | {_codes(n)} |" for c, n in shared.items()]
-    out += ["", "## Tables", "", "| Table | Backends | Columns | Partitioned |", "|---|---|---|---|"]
+    out += ["", "## Tables", "", "| Table | Backends | Columns | Partitioned | Lifetime |", "|---|---|---|---|---|"]
     for t in members:
         out.append(
             f"| {_code(t.name)} | {', '.join(DIALECT_LABEL[d] for d in t.dialects)} | {len(t.columns())} | "
-            f"{'yes' if any(d.partitioned for d in t.defs) else ''} |"
+            f"{'yes' if any(d.partitioned for d in t.defs) else ''} | {_storage_lifetime(t)} |"
         )
     return out
 

@@ -106,6 +106,6 @@ if needed) and deletes its name from `ALLOWED_TOP_LEVEL_MODULES` is welcome.
 | Source analysis | `ast_*.py`, `sast.py`, `js_ts_ast.py` | `ast/` |
 | Compliance frameworks | `owasp*.py`, `nist_*.py`, `mitre_*.py`, `soc2.py`, `iso_27001.py`, `compliance_*.py` | a future `compliance/` package |
 | Enrichment and intel | `enrichment*.py`, `intel_*.py`, `atlas*.py`, `exploitability.py` | `scanners/` or a future `intel/` package |
-| Graph bridge | `context_graph.py`, `graph_schema.py`, `graph_backend.py` | `graph/` |
+| Graph bridge | `context_graph.py`, `graph_backend.py` | `graph/` |
 
 The allowlist in `scripts/check_package_layout.py` is the authoritative list.

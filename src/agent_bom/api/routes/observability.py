@@ -510,33 +510,9 @@ def _ingest_traces_sync(body: dict, tenant_id: str, screen: bool) -> dict:
             "message": "No tool call traces found",
         }
 
-    if flagged:
-        analytics_events = [
-            {
-                "event_id": f"{flag.trace.trace_id}:{flag.trace.span_id}",
-                "event_timestamp": _now(),
-                "event_type": "vulnerable_tool_call",
-                "detector": "otel_vulnerable_tool_call",
-                "severity": flag.severity,
-                "tool_name": flag.trace.tool_name,
-                "message": flag.reason,
-                "agent_name": "",
-                "session_id": flag.trace.trace_id,
-                "trace_id": flag.trace.trace_id,
-                "span_id": flag.trace.span_id,
-                "source_id": "otel",
-            }
-            for flag in flagged
-        ]
-        try:
-            _get_analytics_store().record_events(analytics_events, tenant_id=tenant_id)
-        except Exception:  # noqa: BLE001
-            _logger.warning("Trace analytics sync skipped", exc_info=False)
-        _persist_runtime_observations(analytics_events, tenant_id=tenant_id, source="otel")
-
     return {
         "traces": len(traces),
-        "persisted_events": len(flagged),
+        "persisted_events": 0,
         "llm_calls": llm_cost["calls"],
         "llm_cost_usd": llm_cost["cost_usd"],
         "content_findings": content_findings,
@@ -548,6 +524,7 @@ def _ingest_traces_sync(body: dict, tenant_id: str, screen: bool) -> dict:
                 "server": f.server or f.trace.server_name,
                 "package_name": f.package_name or f.trace.package_name,
                 "cve_ids": f.matched_cves,
+                "correlation_basis": f.correlation_basis,
                 "reason": f.reason,
                 "severity": f.severity,
                 "span_id": f.trace.span_id,
@@ -559,10 +536,9 @@ def _ingest_traces_sync(body: dict, tenant_id: str, screen: bool) -> dict:
 
 # ─── Per-span attack-path correlation (#3898) ─────────────────────────────
 #
-# Resolve each traced tool-call span to the exact BlastRadius it hit (the precise
-# reachable CVE + exposed credential + NHI + blast radius), rather than an
-# aggregate "run_shell called 12x". The submitted trace is correlated in-memory
-# against the tenant's scan blast radii; no raw span content is stored.
+# Return name-based scan-path candidates for each span, retaining trace/span
+# identity. The candidates do not prove an inventory join or execution and are
+# never persisted as graph edges or findings.
 
 
 def _blast_radius_views_for_tenant(tenant_id: str) -> list[Any]:

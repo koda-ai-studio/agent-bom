@@ -561,7 +561,7 @@ def test_new_graph_modules_import_without_fastapi() -> None:
     code = (
         "import sys; sys.modules['fastapi'] = None; "
         "import agent_bom.mcp_tools.graph, agent_bom.mcp_tools.graph_reach, agent_bom.mcp_tools.finding_graph, "
-        "agent_bom.api.attack_path_queue, agent_bom.graph.attack_path_queue, agent_bom.mcp_tools.deploy_gate, "
+        "agent_bom.graph.attack_path_queue, agent_bom.mcp_tools.deploy_gate, "
         "agent_bom.mcp_tools.findings, agent_bom.mcp_tools.compliance_persisted, agent_bom.mcp_tools.graph_registration, "
         "agent_bom.mcp_tools.graph_diff, agent_bom.graph.diff_view"
     )

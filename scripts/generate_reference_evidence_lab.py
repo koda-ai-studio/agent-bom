@@ -376,7 +376,7 @@ def _snapshots(
             RelationshipType.DEPENDS_ON,
             scan_id=repo.scan_id,
             source_kind="repository_parser",
-            evidence_tier="static_evidence",
+            evidence_tier="static_scan",
             index=0,
         )
     )
@@ -427,7 +427,7 @@ def _snapshots(
             RelationshipType.CONTAINS,
             scan_id=sbom.scan_id,
             source_kind="cyclonedx_sbom",
-            evidence_tier="static_evidence",
+            evidence_tier="static_scan",
             index=1,
         )
     )
@@ -438,7 +438,7 @@ def _snapshots(
             RelationshipType.VULNERABLE_TO,
             scan_id=sbom.scan_id,
             source_kind="bundled_advisory_scanner",
-            evidence_tier="static_evidence",
+            evidence_tier="static_scan",
             index=1,
         )
     )

@@ -1,9 +1,4 @@
-"""Per-span trace -> attack-path correlation (#3898).
-
-A traced tool-call span must resolve to the *exact* reachable CVE + exposed
-credential + non-human identity + blast radius — i.e. "span abc123 = the exact
-call that hit the CVE", not just an aggregate "run_shell called N times".
-"""
+"""Response-only per-span name candidates, without inventory or execution proof."""
 
 from __future__ import annotations
 
@@ -55,7 +50,7 @@ NHI_MAP = {
 }
 
 
-def test_span_resolves_to_exact_cve_cred_nhi_and_blast() -> None:
+def test_span_returns_candidate_cve_cred_nhi_and_blast() -> None:
     vulnerable = _blast_radius()
     unrelated = _blast_radius(cve="CVE-0000-0000", tool="read_file", server="fs-mcp", pkg="left-pad", creds=[])
 
@@ -63,7 +58,7 @@ def test_span_resolves_to_exact_cve_cred_nhi_and_blast() -> None:
 
     paths = correlate_spans_to_attack_paths([trace], [vulnerable, unrelated], nhi_by_credential=NHI_MAP)
 
-    assert len(paths) == 1, "span should resolve to exactly the CVE it hit, not every finding"
+    assert len(paths) == 1, "only the matching name candidate should be returned"
     path = paths[0]
     assert path.span_id == "abc123"  # the exact traced call, not an aggregate
     assert path.match_basis == "tool"
@@ -74,6 +69,8 @@ def test_span_resolves_to_exact_cve_cred_nhi_and_blast() -> None:
     assert path.affected_servers == ["shell-mcp"]
     assert path.affected_agents == ["ci-agent"]
     assert path.blast_radius_score > 0
+    assert path.to_dict()["correlation_basis"] == "candidate_name"
+    assert path.to_dict()["execution_proven"] is False
 
 
 def test_per_span_identity_not_aggregate() -> None:
