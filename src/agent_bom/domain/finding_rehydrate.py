@@ -29,6 +29,14 @@ def _optional_str(value: object) -> str | None:
     return text or None
 
 
+# Report-only values written before browser-extension rows used the enums.
+_LEGACY_VALUES = {"BROWSER_EXTENSION_RISK": "BROWSER_EXT", "BROWSER_EXTENSION_SCAN": "BROWSER_EXT"}
+
+
+def _legacy(value: object) -> object:
+    return _LEGACY_VALUES.get(value, value) if isinstance(value, str) else value
+
+
 def finding_from_dict(item: dict) -> Finding | None:
     """Rehydrate a Finding dict, preserving graph investigation FKs when present."""
     asset_data = item.get("asset") or {}
@@ -39,11 +47,11 @@ def finding_from_dict(item: dict) -> Finding | None:
         location=asset_data.get("location"),
     )
     try:
-        finding_type = FindingType(item.get("finding_type", FindingType.COMBINATION.value))
+        finding_type = FindingType(_legacy(item.get("finding_type", "COMBINATION")))
     except ValueError:
         finding_type = FindingType.COMBINATION
     try:
-        source = FindingSource(item.get("source", FindingSource.GRAPH_ANALYSIS.value))
+        source = FindingSource(_legacy(item.get("source", "GRAPH_ANALYSIS")))
     except ValueError:
         source = FindingSource.GRAPH_ANALYSIS
     finding = Finding(

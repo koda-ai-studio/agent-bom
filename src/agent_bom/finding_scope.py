@@ -77,17 +77,28 @@ FINDING_SEVERITY_FILTERS: tuple[FindingSeverityFilter, ...] = (
     "unknown",
 )
 
-_VULNERABILITY_TYPES = {"CVE", "MALICIOUS_PACKAGE", "MALICIOUS_MODEL", "SAST"}
+# Exploitable code, content or component: weaknesses, malicious artifacts, observed attacks.
+_VULNERABILITY_TYPES = {"CVE", "MALICIOUS_PACKAGE", "MALICIOUS_MODEL", "SAST", "INJECTION", "MCP_BLOCKLIST", "EXFILTRATION", "CLOAKING"}
+# Posture of how assets are set up or governed. Mirrored in ui/lib/finding-issue-type.ts
+# (pinned by tests/test_finding_class_parity.py).
 _MISCONFIGURATION_TYPES = {
     "CIS_FAIL",
     "CIS_ERROR",
     "CLOUD_BEST_PRACTICE_FAIL",
     "CLOUD_BEST_PRACTICE_ERROR",
+    "PROMPT_SECURITY",
+    "TOOL_DRIFT",
+    "SKILL_RISK",
+    "RATE_LIMIT",
+    "COMBINATION",
+    "MODEL_INTEGRITY",
+    "LICENSE",
+    "BROWSER_EXT",
 }
 _SECRET_TYPES = {"CREDENTIAL_EXPOSURE"}
-# Personal data committed in source is a privacy concern, not a credential. It
-# shares the secret scanner as a *source*, so it must be decided by type first.
-_PII_TYPES = {"PII_EXPOSURE"}
+# Personal / sensitive data is a privacy concern, not a credential. It shares
+# the secret scanner as a *source*, so it must be decided by type first.
+_PII_TYPES = {"PII_EXPOSURE", "SENSITIVE_DATA"}
 _IDENTITY_TYPES = {"CIEM_OVER_PRIVILEGE"}
 
 # Back-compat: rows persisted under the pre-rename ``appsec_sca`` key still
