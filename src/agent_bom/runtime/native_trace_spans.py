@@ -6,10 +6,12 @@ bind it to the authenticated connection before persisting or correlating it.
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 from typing import Any
 
 from agent_bom.runtime.cloud_trace_claims import CLOUD_TRACE_ATTRIBUTES
+from agent_bom.runtime.normalized_trace import NORMALIZED_ATTRIBUTE, PrincipalDigest, from_langfuse_observation, from_langsmith_run
 
 
 def _text(value: object) -> str:
@@ -30,7 +32,9 @@ def _nanos(value: object) -> str:
         return ""
 
 
-def native_span(row: dict[str, Any], *, provider: str, include_content: bool) -> dict[str, Any] | None:
+def native_span(
+    row: dict[str, Any], *, provider: str, include_content: bool, principal: PrincipalDigest | None = None
+) -> dict[str, Any] | None:
     """Keep physical parentage and native kind without inventing tool calls."""
     name = _text(row.get("name")).strip()
     if not name:
@@ -66,6 +70,11 @@ def native_span(row: dict[str, Any], *, provider: str, include_content: bool) ->
             attrs[key] = value
     if lf and isinstance(row.get("isRootObservation"), bool):
         attrs["agent_bom.logical_root"] = "true" if row["isRootObservation"] else "false"
+    normalize = from_langfuse_observation if lf else from_langsmith_run
+    try:
+        attrs[NORMALIZED_ATTRIBUTE] = json.dumps(normalize(row, tenant_id="", principal=principal).to_dict(), sort_keys=True)
+    except ValueError:
+        attrs["agent_bom.normalization"] = "rejected"
     if include_content:
         output = row.get("output" if lf else "outputs")
         if output is not None:

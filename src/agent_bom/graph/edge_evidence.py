@@ -70,6 +70,7 @@ SOURCE_TIERS: dict[str, str] = {
     "runtime-proxy": _RUNTIME,
     "runtime-identity": _RUNTIME,
     "snowflake-cortex-observability": _RUNTIME,
+    "runtime-trace": _RUNTIME,
     "source-ast": _STATIC,
     "ast_analysis": _STATIC,
     "framework-agent": _STATIC,

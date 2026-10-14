@@ -94,6 +94,7 @@ _MISCONFIGURATION_TYPES = {
     "MODEL_INTEGRITY",
     "LICENSE",
     "BROWSER_EXT",
+    "SHADOW_AI",
 }
 _SECRET_TYPES = {"CREDENTIAL_EXPOSURE"}
 # Personal / sensitive data is a privacy concern, not a credential. It shares

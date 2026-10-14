@@ -245,6 +245,7 @@ class StoreBackedUnifiedGraph(UnifiedGraph):
         self.interaction_risks = []
         self.analysis_status = dict(analysis_status or {})
         self.nhi_governance_findings = []
+        self.runtime_trace_projection = None
         self.scan_id = scan_id
         self.tenant_id = tenant_id
         self.created_at = created_at or _now_iso()

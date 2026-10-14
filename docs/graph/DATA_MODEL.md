@@ -99,8 +99,8 @@ flowchart LR
 | `policy` | Policy | Identity and access | `identity` | 3 / 3001 |  | 3 (+1 demo) |
 | `provider` | Provider | Cloud, infrastructure and data | `infra` | 0 / 0 |  | 3 |
 | `resource` | Resource | Cloud, infrastructure and data | `asset` | 5 / 4001 |  | 3 |
-| `role` | Role | Identity and access | `identity` | 3 / 3001 |  | 6 (+2 demo) |
-| `server` | MCP Server | AI and agents | `mcp_server` | 5 / 4001 |  | 3 (+2 demo) |
+| `role` | Role | Identity and access | `identity` | 3 / 3001 |  | 5 (+2 demo) |
+| `server` | MCP Server | AI and agents | `mcp_server` | 5 / 4001 |  | 4 (+2 demo) |
 | `service_account` | Service Account | Identity and access | `identity` | 3 / 3001 |  | 4 (+1 demo) |
 | `service_principal` | Service Principal | Identity and access | `identity` | 3 / 3001 |  | 3 (+1 demo) |
 | `source_file` | Source File | Code and supply chain | `code` | 5 / 4001 |  | 3 |
@@ -117,15 +117,15 @@ Consumed by: **FU** Attack-path fusion · **CR** Credential reach · **BR** Depe
 
 | Relationship | Class | Category | Direction | Traversable | Source kinds | Target kinds | Pairs | Consumed by | Emitting modules |
 |---|---|---|---|---|---|---|---|---|---|
-| `accessed` | `runtime` | runtime | directed | yes | `agent`, `federated_identity`, `role`, `service_account`, `service_principal`, `tool` (+2 more) | `cloud_resource`, `credential`, `credential_ref`, `data_store`, `dataset`, `resource` | 34 | FU, MT, RT | 3 |
+| `accessed` | `runtime` | runtime | directed | yes | `agent`, `federated_identity`, `role`, `service_account`, `service_principal`, `tool` (+2 more) | `cloud_resource`, `credential`, `credential_ref`, `data_store`, `dataset`, `resource` | 34 | FU, MT, RT | 4 |
 | `acted_as` | `runtime` | runtime | directed | yes | `federated_identity`, `service_account`, `service_principal`, `user` | `agent` | 4 | RT | 0 |
 | `affects` | `finding` | vulnerability | directed | yes | `misconfiguration`, `vulnerability` | `access_policy`, `account`, `agent`, `api_gateway`, `application`, `ci_job` (+17 more) | 28 | BR | 5 (+2 demo) |
-| `assumes` | `authority` | identity | directed | yes | `agent`, `cloud_resource`, `cluster`, `container`, `federated_identity`, `model` (+5 more) | `managed_identity`, `role`, `service_account`, `service_principal` | 29 | FU, LT, MT | 5 (+1 demo) |
+| `assumes` | `authority` | identity | directed | yes | `agent`, `cloud_resource`, `cluster`, `container`, `federated_identity`, `model` (+5 more) | `managed_identity`, `role`, `service_account`, `service_principal` | 29 | FU, LT, MT | 4 (+1 demo) |
 | `attached` | `authority` | identity | directed | yes | `group`, `managed_identity`, `role`, `service_account`, `service_principal`, `user` | `access_grant`, `policy` | 12 | — | 3 (+1 demo) |
 | `authenticates_as` | `authority` | governance | directed | yes | `agent`, `credential` | `managed_identity`, `service_account`, `service_principal` | 6 | FU | 2 |
 | `belongs_to` | `structural` | aspm | directed | yes | `cloud_resource`, `container`, `credential`, `misconfiguration`, `package`, `server` (+1 more) | `application` | 7 | — | 1 |
-| `called` | `runtime` | runtime | directed | yes | `agent`, `tool_call` | `server`, `tool` | 4 | CR, RT | 1 (+1 demo) |
-| `can_access` | `authority` | identity | directed | yes | `account`, `agent`, `application`, `cloud_resource`, `cluster`, `container` (+10 more) | `agent`, `api_gateway`, `cloud_resource`, `cluster`, `config_file`, `container` (+10 more) | 183 | FU, LT, MT | 4 (+2 demo) |
+| `called` | `runtime` | runtime | directed | yes | `agent`, `tool_call` | `server`, `tool` | 4 | CR, RT | 2 (+1 demo) |
+| `can_access` | `authority` | identity | directed | yes | `account`, `agent`, `application`, `cloud_resource`, `cluster`, `container` (+10 more) | `agent`, `api_gateway`, `cloud_resource`, `cluster`, `config_file`, `container` (+10 more) | 183 | FU, LT, MT | 3 (+2 demo) |
 | `configures` | `structural` | code_topology | directed | yes | `config_file` | `agent`, `ci_job`, `server`, `tool` | 4 | — | 1 |
 | `contains` | `structural` | inventory | directed | yes | `access_policy`, `account`, `agent`, `api_gateway`, `application`, `ci_job` (+19 more) | `access_policy`, `account`, `agent`, `api_gateway`, `application`, `ci_job` (+21 more) | 93 | FU, BR | 8 (+2 demo) |
 | `correlates_with` | `correlation` | correlation | bidirectional | no | `agent`, `server` | `agent`, `server` | 4 | — | 1 |
@@ -142,17 +142,17 @@ Consumed by: **FU** Attack-path fusion · **CR** Credential reach · **BR** Depe
 | `hosts` | `structural` | inventory | directed | yes | `account`, `cloud_resource`, `environment`, `fleet`, `provider` | `account`, `agent`, `cloud_resource`, `org`, `server` | 25 | — | 2 |
 | `imports` | `dependency` | code_topology | directed | yes | `code_module`, `source_file` | `code_module`, `external_import`, `package` | 6 | — | 0 |
 | `inherits` | `authority` | identity | directed | yes | `group`, `role`, `service_account`, `service_principal`, `user` | `policy`, `role` | 10 | FU, MT | 0 |
-| `invoked` | `runtime` | runtime | directed | yes | `agent`, `federated_identity`, `role`, `service_account`, `service_principal`, `user` | `cloud_resource`, `tool`, `tool_call` | 9 | CR, RT | 2 (+1 demo) |
+| `invoked` | `runtime` | runtime | directed | yes | `agent`, `federated_identity`, `role`, `service_account`, `service_principal`, `user` | `cloud_resource`, `tool`, `tool_call` | 9 | CR, RT | 3 (+1 demo) |
 | `lateral_path` | `derived` | lateral_movement | directed | yes | `agent` | `agent` | 1 | — | 0 |
 | `manages` | `governance` | governance | directed | yes | `federated_identity`, `group`, `role`, `service_account`, `service_principal`, `user` | `agent`, `cloud_resource`, `environment`, `fleet` | 24 | — | 1 |
 | `member_of` | `authority` | governance | directed | yes | `agent`, `federated_identity`, `group`, `managed_identity`, `role`, `service_account` (+2 more) | `account`, `agent`, `fleet`, `group`, `role` | 31 | — | 4 |
 | `observes` | `structural` | inventory | directed | yes | `framework` | `agent`, `server` | 2 | — | 1 |
-| `owns` | `governance` | governance | directed | yes | `account`, `group`, `org`, `role`, `service_account`, `service_principal` (+1 more) | `agent`, `api_gateway`, `cloud_resource`, `data_store`, `environment`, `group` (+5 more) | 30 | — | 4 |
+| `owns` | `governance` | governance | directed | yes | `account`, `group`, `org`, `role`, `service_account`, `service_principal` (+1 more) | `agent`, `api_gateway`, `cloud_resource`, `data_store`, `environment`, `group` (+5 more) | 30 | — | 3 |
 | `part_of` | `structural` | governance | directed | yes | `account`, `agent`, `ci_job`, `cloud_resource`, `container`, `resource` (+2 more) | `application`, `cloud_resource`, `cluster`, `environment`, `fleet`, `org` (+2 more) | 20 | — | 4 |
 | `possibly_correlates_with` | `correlation` | correlation | bidirectional | no | `agent`, `server` | `agent`, `server` | 4 | — | 1 |
 | `protects` | `exposure` | exposure | directed | yes | `api_gateway`, `cloud_resource` | `cloud_resource`, `data_store`, `resource` | 6 | — | 1 |
 | `provides_tool` | `structural` | inventory | directed | yes | `server` | `tool` | 1 | FU, CR, BR, MT | 3 (+1 demo) |
-| `reaches_tool` | `authority` | inventory | directed | yes | `agent`, `credential` | `tool` | 2 | FU, CR, MT | 2 (+1 demo) |
+| `reaches_tool` | `authority` | inventory | directed | yes | `agent`, `credential` | `tool` | 2 | FU, CR, MT | 1 (+1 demo) |
 | `remediates` | `finding` | vulnerability | directed | no | `package` | `misconfiguration`, `vulnerability` | 2 | — | 0 |
 | `runs` | `structural` | code_topology | directed | yes | `ci_job` | `agent`, `server`, `tool` | 3 | — | 1 |
 | `scoped_to` | `governance` | governance | directed | yes | `access_grant`, `drift_incident`, `managed_identity` | `tool` | 3 | FU | 2 |
@@ -163,7 +163,7 @@ Consumed by: **FU** Attack-path fusion · **CR** Credential reach · **BR** Depe
 | `trace_step` | `runtime` | runtime | directed | yes | `access_policy`, `agent`, `api_gateway`, `application`, `ci_job`, `cloud_resource` (+14 more) | `access_policy`, `agent`, `api_gateway`, `application`, `ci_job`, `cloud_resource` (+14 more) | 400 | FU, MT | 0 (+1 demo) |
 | `triggers` | `finding` | vulnerability | directed | yes | `vulnerability` | `misconfiguration` | 1 | — | 1 |
 | `trusts` | `authority` | identity | directed | yes | `account`, `role` | `account`, `federated_identity`, `group`, `role`, `service_account`, `service_principal` (+1 more) | 14 | — | 2 |
-| `used_credential` | `runtime` | runtime | directed | yes | `agent`, `tool`, `tool_call` | `credential`, `credential_ref` | 6 | CR, RT | 1 |
+| `used_credential` | `runtime` | runtime | directed | yes | `agent`, `tool`, `tool_call` | `credential`, `credential_ref` | 6 | CR, RT | 2 |
 | `uses` | `dependency` | inventory | directed | yes | `agent` | `server` | 1 | FU, CR, BR | 2 (+1 demo) |
 | `uses_framework` | `dependency` | inventory | directed | yes | `agent` | `framework` | 1 | — | 1 |
 | `vulnerable_to` | `finding` | vulnerability | directed | yes | `agent`, `cloud_resource`, `container`, `credential`, `credential_ref`, `directory` (+4 more) | `misconfiguration`, `vulnerability` | 20 | FU, BR, MT | 6 (+2 demo) |
@@ -201,9 +201,9 @@ Every edge carries `evidence.source` (the collector) and `evidence.tier` (`agent
 |---|---|---|
 | `derived` | Computed from other edges; must name `derived_via`. | — |
 | `legacy_unrecorded` | Read-side label for edges stored before the evidence envelope existed; never written. | — |
-| `modeled_infrastructure` | Configuration read from a provider or inventory API. | `ai-inventory`, `aws-organizations`, `cloud-inventory`, `cloud-rbac`, `cloud_origin`, `cloud_principal`, `cloud_principal_trust`, `cnapp-overlay`, `gcp-organizations`, `nhi-discovery`, `snowflake-cortex-agents`, `snowflake-exfil`, `snowflake-external-data`, `snowflake-integrations`, `snowflake-objects`, `snowflake-organizations`, `snowflake-pipeline`, `snowflake-services`, `vendor-inventory-export` |
+| `modeled_infrastructure` | Configuration read from a provider or inventory API. | `ai-inventory`, `aws-organizations`, `cloud-inventory`, `cloud-rbac`, `cloud_origin`, `cloud_principal`, `cloud_principal_trust`, `cnapp-overlay`, `gcp-organizations`, `nhi-discovery`, `snowflake-exfil`, `snowflake-external-data`, `snowflake-integrations`, `snowflake-objects`, `snowflake-organizations`, `snowflake-pipeline`, `snowflake-services`, `vendor-inventory-export` |
 | `recorded` | Logs, audit trails, usage history or attestations recorded the activity. | `access-advisor`, `authorization-evidence`, `cloud-audit-trail`, `cortex-agent-usage`, `governance-overlay`, `hardware-attestation-ingest`, `mcp-audit`, `operator_reported_timestamps`, `snowflake-governance`, `tpm-quote`, `warehouse-export` |
-| `runtime_observed` | The runtime proxy, gateway or feedback loop observed it live. | `runtime-feedback`, `runtime-identity`, `runtime-proxy`, `snowflake-cortex-observability` |
+| `runtime_observed` | The runtime proxy, gateway or feedback loop observed it live. | `runtime-feedback`, `runtime-identity`, `runtime-proxy`, `runtime-trace` |
 | `static_evidence` | Static evidence supplied with the input (contract tier; no registered collector uses it). | — |
 | `static_scan` | A scanner read files, manifests or source. | `agent_discovery`, `aspm-overlay`, `ast_analysis`, `ci_graph_overlay`, `code_graph_overlay`, `framework-agent`, `github-actions`, `iac`, `mcp-scan`, `repo-structure-overlay`, `repo-trust-overlay`, `skill-audit`, `source-ast` |
 
@@ -242,6 +242,7 @@ Findings (`agent_bom.finding.Finding`) are linked to graph nodes by `graph/asset
 | `RATE_LIMIT` | — |
 | `SAST` | `graph/finding_row_projection.py` |
 | `SENSITIVE_DATA` | — |
+| `SHADOW_AI` | — |
 | `SKILL_RISK` | — |
 | `TOOL_DRIFT` | — |
 
@@ -310,6 +311,44 @@ Stable ids come from `agent_bom.canonical_ids` (UUIDv5 over normalized parts).
 | `canonical_mcp_server_id` | `(name: 'str', command: 'str' = '', *, registry_id: 'str | None' = None, url: 'str | None' = None, args: 'Sequence[str] | None' = None) -> 'str'` |
 | `canonical_mcp_tool_id` | `(name: 'str', input_schema: 'Mapping[str, Any] | bool | None' = None, *, server_id: 'str | None' = None) -> 'str'` |
 | `canonical_package_id` | `(name: 'str', version: 'str', ecosystem: 'str', purl: 'str | None' = None) -> 'str'` |
+<!-- trace-event-schema:start -->
+## Normalized trace event
+
+``resource_refs`` is an ordered list and ``signals`` a set, held immutably.
+
+Source: `agent_bom.runtime.normalized_trace.NormalizedTraceEvent`.
+
+| Field | Type | Description |
+|---|---|---|
+| `tenant_id` | `str` |  |
+| `source` | `str` |  |
+| `source_trace_id` | `str` |  |
+| `source_span_id` | `str` |  |
+| `parent_span_id` | `str | None` |  |
+| `started_at` | `str | None` |  |
+| `ended_at` | `str | None` |  |
+| `kind` | `str` |  |
+| `agent_name` | `str | None` |  |
+| `agent_ref` | `str | None` |  |
+| `model_provider` | `str | None` |  |
+| `model_name` | `str | None` |  |
+| `tool_name` | `str | None` |  |
+| `mcp_server_ref` | `str | None` |  |
+| `resource_refs` | `tuple[str, ...]` |  |
+| `principal_hash` | `str | None` |  |
+| `role_name` | `str | None` |  |
+| `credential_ref` | `str | None` |  |
+| `input_tokens` | `int | None` |  |
+| `output_tokens` | `int | None` |  |
+| `cost_usd` | `float | None` |  |
+| `status` | `str` |  |
+| `signals` | `frozenset[str]` |  |
+| `content_sha256` | `str | None` |  |
+| `match_method` | `str` |  |
+| `match_node_id` | `str | None` |  |
+
+<!-- trace-event-schema:end -->
+
 
 ## Coverage notes
 
