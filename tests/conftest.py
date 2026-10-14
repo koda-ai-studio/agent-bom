@@ -668,6 +668,9 @@ _STORE_SINGLETON_MODULES = (
     "agent_bom.api.hitl_approval_store",
     "agent_bom.api.runtime_event_store",
     "agent_bom.api.compliance_hub_store",
+    # Lazily memoized on first use; without a restore one test's snapshot rows
+    # (often under shared ids such as tenant-a/job-1) outlive it on the worker.
+    "agent_bom.api.scan_snapshot_store",
 )
 
 # Swappable process-globals in the modules above whose identifier does not end
