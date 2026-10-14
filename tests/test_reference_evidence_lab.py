@@ -56,7 +56,7 @@ def test_reference_lab_preserves_source_receipts_and_evidence_boundaries() -> No
     )
 
     path = payload["proof_path"]
-    assert path["edges"] == ["uses", "authenticates_as", "has_permission"]
+    assert path["edges"] == ["exposed_to", "authenticates_as", "has_permission"]
     assert path["vuln_ids"] == []
     assert path["tool_exposure"] == []
     assert all(hop["runtime_observed_state"] == "not_observed" for hop in path["hop_evidence"])
