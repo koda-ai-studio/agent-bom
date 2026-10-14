@@ -261,7 +261,7 @@ def test_langfuse_v2_requests_bounded_native_metadata_without_unconsented_io(inc
     assert call["url"].endswith("/api/public/v2/observations")
     params = call["params"]
     assert "type" not in params
-    assert set(params["fields"].split(",")) == {"core", "basic", "metadata"} | ({"io"} if include_content else set())
+    assert set(params["fields"].split(",")) == {"core", "basic", "metadata", "model", "usage"} | ({"io"} if include_content else set())
     assert datetime.fromisoformat(params["toStartTime"]) - datetime.fromisoformat(params["fromStartTime"]) == timedelta(days=1)
 
 

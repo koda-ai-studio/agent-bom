@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
+from datetime import datetime, timezone
 from functools import partial
 from typing import Any, TypeVar
 
@@ -23,6 +24,9 @@ import anyio.to_thread
 from pydantic import BaseModel, ConfigDict, StrictBool, StrictStr, ValidationError
 from starlette.exceptions import HTTPException
 from starlette.requests import Request
+
+from agent_bom.api.compliance_hub_store import get_compliance_hub_store
+from agent_bom.canonical_ids import canonical_id
 
 _T = TypeVar("_T")
 
@@ -157,3 +161,17 @@ def hub_ingest_store_writes(
         "distinct_findings": len(distinct_ids),
         "duplicate_payloads": len(payloads) - len(distinct_ids),
     }
+
+
+def ingest_runtime_findings(tenant_id: str, payloads: list[dict[str, Any]]) -> int:
+    """Upsert derived runtime findings (no absent reconciliation); returns distinct findings written."""
+    result = hub_ingest_store_writes(
+        get_compliance_hub_store(),
+        tenant_id,
+        payloads,
+        observed_at=datetime.now(timezone.utc).isoformat(),
+        batch_id=canonical_id("runtime_trace_batch", tenant_id, *sorted(str(item.get("id")) for item in payloads)),
+        source="runtime_trace",
+        reconcile_absent=False,
+    )
+    return int(result.get("distinct_findings") or 0)

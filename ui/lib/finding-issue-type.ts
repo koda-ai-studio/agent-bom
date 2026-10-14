@@ -38,6 +38,7 @@ const MISCONFIGURATION_TYPES = new Set([
   "MODEL_INTEGRITY",
   "LICENSE",
   "BROWSER_EXT",
+  "SHADOW_AI",
 ]);
 const SECRET_TYPES = new Set(["CREDENTIAL_EXPOSURE"]);
 // Personal / sensitive data shares the secret scanner as a source, so it must
