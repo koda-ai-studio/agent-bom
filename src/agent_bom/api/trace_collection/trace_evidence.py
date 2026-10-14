@@ -106,5 +106,5 @@ def with_trace_events(report_json: dict[str, Any], tenant_id: str, *, store: Run
 
 
 def emit_shadow_findings(graph: UnifiedGraph, tenant_id: str, sink: FindingSink | None) -> int:
-    shadow = getattr(graph.runtime_trace_projection, "shadow", None)
+    shadow = getattr(getattr(graph, "runtime_trace_projection", None), "shadow", None)
     return write_findings(tenant_id, shadow_findings(tenant_id, shadow), sink) if shadow else 0
