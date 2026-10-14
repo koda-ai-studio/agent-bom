@@ -64,6 +64,7 @@ from agent_bom.graph.container import GraphCompleteness, UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge, merge_edge_evidence
 from agent_bom.graph.edge_evidence import merge_edge_provenance, normalize_edge_evidence
 from agent_bom.graph.node import UnifiedNode
+from agent_bom.graph.relationship_contract import ContractRejections
 from agent_bom.graph.types import EntityType
 from agent_bom.graph.util import _now_iso
 
@@ -252,6 +253,7 @@ class StoreBackedUnifiedGraph(UnifiedGraph):
         # dataclass __init__, so a default the base class declares only exists
         # here if it is repeated. `stats()` and the view derivations read it.
         self.completeness = GraphCompleteness()
+        self.contract_rejections = ContractRejections()
 
     # ── Store-backed views (shadow the dataclass fields) ─────────────────────
 
