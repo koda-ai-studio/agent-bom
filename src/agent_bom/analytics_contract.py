@@ -239,6 +239,11 @@ def _build_compliance_controls(report: AIBOMReport, data: dict[str, Any]) -> lis
     return rows
 
 
+# Providers whose "benchmark" block is vendor best practice, not a CIS benchmark
+# (Databricks publishes none). Listed by the check browser; never scored as CIS.
+VENDOR_BEST_PRACTICE_CLOUDS = frozenset({"databricks"})
+
+
 def build_cis_benchmark_check_rows(data: dict[str, Any], scan_id: str, *, measured_at: str | None = None) -> list[dict[str, Any]]:
     """Normalize serialized CIS benchmark blobs into indexable analytics rows."""
     rows: list[dict[str, Any]] = []
