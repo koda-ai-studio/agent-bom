@@ -23,8 +23,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from agent_bom.evidence.evidencing_checks import finding_evaluated_controls
 from agent_bom.core.severity import evaluated_control_status as evaluated_control_status
+from agent_bom.evidence.evidencing_checks import finding_evaluated_controls
 
 # Order used to collapse multiple evidence signals on one NIST control into a
 # single status. Higher wins: a real weakness (fail/warning) beats an
