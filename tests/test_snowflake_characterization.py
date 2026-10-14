@@ -16,6 +16,7 @@ Regenerate with ``UPDATE_CLOUD_GOLDEN=1 pytest tests/test_snowflake_characteriza
 from __future__ import annotations
 
 import dataclasses
+import gc
 import json
 import logging
 import os
@@ -658,12 +659,18 @@ def _run(
     consume_coverage_warnings()
     caplog.clear()
     out: dict[str, Any] = {}
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-        try:
-            out["result"] = _ser(call())
-        except Exception as exc:  # noqa: BLE001 — the raised contract is pinned too
-            out["raised"] = [type(exc).__name__, str(exc)]
+    # Earlier tests' unclosed objects must not finalize inside the recorded window.
+    gc.collect()
+    gc.disable()
+    try:
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            try:
+                out["result"] = _ser(call())
+            except Exception as exc:  # noqa: BLE001 — the raised contract is pinned too
+                out["raised"] = [type(exc).__name__, str(exc)]
+    finally:
+        gc.enable()
     out["connects"] = state["connects"]
     out["sql"] = [c.sql for c in state["conns"]]
     out["closes"] = [[c.cursor_closes, c.closed] for c in state["conns"]]

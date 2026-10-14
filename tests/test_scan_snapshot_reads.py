@@ -1,5 +1,6 @@
 """Guarded snapshot reads must preserve the existing enriched finding contract."""
 
+import logging
 from copy import deepcopy
 from unittest.mock import Mock
 
@@ -55,6 +56,8 @@ def test_reads_default_off_and_disabled_never_access_snapshot_storage(snapshots,
 
 @pytest.mark.parametrize("reason", ["missing", "version", "count", "stale", "tenant", "order"])
 def test_unusable_or_different_snapshot_returns_current_rows(snapshots, reason, caplog):
+    reader_logger = "agent_bom.api.scan_snapshot_read"
+    caplog.set_level(logging.DEBUG, logger=reader_logger)
     job = _job()
     meta, rows = materialize_job_snapshot(job)
     legacy = deepcopy([row["payload"] for row in rows[1:]])
@@ -69,8 +72,14 @@ def test_unusable_or_different_snapshot_returns_current_rows(snapshots, reason, 
     if reason != "missing":
         snapshots.put_snapshot("other-tenant" if reason == "tenant" else job.tenant_id, job.job_id, meta, rows)
     assert read(job, legacy) is legacy
-    if reason in {"stale", "order"}:
-        assert "outcome=invalid" in caplog.text
+    # Name the branch taken: a missing or unreadable snapshot returns the same rows.
+    outcomes = [record.getMessage().split(";")[0] for record in caplog.records if record.name == reader_logger]
+    expected = {
+        "missing": "scan_snapshot_read outcome=missing_or_stale",
+        "version": "scan_snapshot_read outcome=missing_or_stale",
+        "tenant": "scan_snapshot_read outcome=missing_or_stale",
+    }.get(reason, "scan_snapshot_read outcome=invalid")
+    assert outcomes == [expected], outcomes
 
 
 def test_snapshot_error_falls_back_without_logging_exception_or_payload(snapshots, monkeypatch, caplog):

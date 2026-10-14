@@ -16,7 +16,7 @@ from agent_bom.graph.bottleneck import BottleneckAnalysis, compute_bottlenecks
 from agent_bom.graph.edge import UnifiedEdge, merge_edge_evidence
 from agent_bom.graph.integration_contract import GRAPH_ENVELOPE_VERSION, validate_graph_version
 from agent_bom.graph.node import UnifiedNode
-from agent_bom.graph.relationship_contract import admit_edge, merge_edge_provenance
+from agent_bom.graph.relationship_contract import ContractRejections, admit_edge, merge_edge_provenance
 from agent_bom.graph.severity_floor import FINDING_ENTITY_TYPES, counts_as_finding
 from agent_bom.graph.types import EntityType, GraphSemanticLayer, NodeStatus, RelationshipType
 from agent_bom.graph.util import _now_iso
@@ -402,6 +402,7 @@ class UnifiedGraph:
     adjacency: dict[str, list[UnifiedEdge]] = field(default_factory=lambda: defaultdict(list))
     reverse_adjacency: dict[str, list[UnifiedEdge]] = field(default_factory=lambda: defaultdict(list))
     _edge_keys: set[tuple[str, str, str]] = field(default_factory=set, repr=False)
+    contract_rejections: ContractRejections = field(default_factory=ContractRejections, repr=False)
 
     attack_paths: list[AttackPath] = field(default_factory=list)
     attack_campaigns: list[Campaign] = field(default_factory=list)
@@ -476,13 +477,12 @@ class UnifiedGraph:
                     merge_edge_provenance(stored, edge)
                     break
             return
-        if admit and not admit_edge(self.nodes, edge):
+        if admit and not admit_edge(self.nodes, edge, self.contract_rejections):
             return
         self._edge_keys.add(key)
         self.edges.append(edge)
         self.adjacency[edge.source].append(edge)
-        # Reverse index: "what points at this node?" — always populated
-        self.reverse_adjacency[edge.target].append(edge)
+        self.reverse_adjacency[edge.target].append(edge)  # "what points at this node?" — always populated
         # Forward adjacency for bidirectional edges (traversal both ways)
         if edge.is_bidirectional:
             reverse = UnifiedEdge(

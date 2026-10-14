@@ -123,6 +123,7 @@ from agent_bom.graph.builder_snowflake_governance import (
 from agent_bom.graph.builder_snowflake_governance import (
     _snowflake_access_receipt as _snowflake_access_receipt,
 )
+from agent_bom.graph.builder_snowflake_lane import _needs_account_scope
 from agent_bom.graph.builder_snowflake_lane import (
     _snowflake_data_store as _snowflake_data_store,
 )
@@ -551,7 +552,7 @@ def _add_snowflake_source_lanes(graph: UnifiedGraph, report_json: dict[str, Any]
                 node = deepcopy(staged_node) if store_backed else staged_node
                 original_id = node.id
                 provider = _clean_graph_part(node.attributes.get("cloud_provider") or node.dimensions.cloud_provider)
-                account_local = provider == "snowflake" and node.entity_type not in {EntityType.ACCOUNT, EntityType.ORG}
+                account_local = provider == "snowflake" and _needs_account_scope(node, account)
                 if account_local:
                     node.attributes["snowflake_local_id"] = original_id
                     node.attributes["snowflake_scope_version"] = "account-lanes.v1"

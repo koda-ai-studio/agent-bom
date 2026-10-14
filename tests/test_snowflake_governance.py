@@ -901,6 +901,10 @@ class TestDiscoverGovernance:
             usage_cursor = _make_cursor(rows=[], columns=[])
             cursors.append(usage_cursor)
 
+            # SHOW AGENTS cursor: no agents, so no per-agent DESCRIBE / grants / spans reads
+            agents_cursor = _make_cursor(rows=[], columns=["name", "database_name", "schema_name"])
+            cursors.append(agents_cursor)
+
             conn.cursor.side_effect = cursors
 
             with patch.dict("os.environ", {"SNOWFLAKE_ACCOUNT": "test"}):
@@ -908,6 +912,32 @@ class TestDiscoverGovernance:
                 assert report.account == "test"
                 assert len(report.access_records) == 1
                 assert len(report.privilege_grants) == 1
+                assert report.cortex_agents == [] and report.cortex_events == []
+                agents_cursor.execute.assert_called_once_with("SHOW AGENTS IN ACCOUNT")
+        finally:
+            self._cleanup_mock_sf()
+
+    def test_discover_governance_records_cortex_agent_privilege_gap(self):
+        mock_connector = self._install_mock_sf()
+        try:
+            from agent_bom.cloud.snowflake import discover_governance
+
+            conn = _make_mock_conn()
+            mock_connector.connect.return_value = conn
+            access_cursor = _make_cursor(
+                rows=[("q1", "alice", "ANALYST", "2026-02-20T00:00:00Z", json.dumps([{"objectName": "DB.S.T"}]), "[]")],
+                columns=["query_id", "user_name", "role_name", "query_start_time", "direct_objects_accessed", "base_objects_accessed"],
+            )
+            denied = _make_cursor(rows=[], columns=[])
+            denied.execute.side_effect = Exception("Insufficient privileges to operate on account")
+            empty = [_make_cursor(rows=[], columns=[]) for _ in range(3)]
+            conn.cursor.side_effect = [access_cursor, *empty, denied]
+
+            with patch.dict("os.environ", {"SNOWFLAKE_ACCOUNT": "test"}):
+                report = discover_governance(account="test")
+            assert len(report.access_records) == 1
+            assert report.cortex_agents == []
+            assert any(w.startswith("Could not list Cortex Agents") for w in report.warnings)
         finally:
             self._cleanup_mock_sf()
 

@@ -256,6 +256,37 @@ def test_enforce_mode_drops_the_edge(monkeypatch: pytest.MonkeyPatch) -> None:
     assert graph.edges == []
 
 
+def test_enforce_mode_reports_rejected_edges_instead_of_clean(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agent_bom.api.graph_store import SQLiteGraphStore
+
+    monkeypatch.setenv("AGENT_BOM_GRAPH_CONTRACT", "enforce")
+    graph = _two_node_graph(EntityType.USER, EntityType.ROLE)
+    graph.scan_id, graph.tenant_id = "enforced", "default"
+    for index in range(30):
+        graph.add_edge(UnifiedEdge("a", "b", RelationshipType.TRUSTS, evidence=edge_evidence("t", "recorded"), weight=float(index)))
+        graph.add_node(UnifiedNode(id=f"u{index}", entity_type=EntityType.USER, label=f"u{index}"))
+        graph.add_edge(UnifiedEdge(f"u{index}", "b", RelationshipType.TRUSTS, evidence=edge_evidence("t", "recorded")))
+    assert graph.edges == []
+
+    summary = audit_graph_contract(graph)
+    # Re-adding the same logical edge is one rejection, not thirty.
+    assert summary["rejected"] == 31
+    assert summary["rejected_pairs"] == {"pair_not_allowed: trusts user->role": 31}
+    assert 1 <= len(summary["rejected_sample"]) <= 20 and summary["rejected_sample"][0] == "trusts:a:b"
+
+    status = graph.analysis_status[ANALYSIS_KEY].to_dict()
+    assert status["status"] == "limited", "an enforced graph with rejected edges is not clean"
+    assert "rejected_edges" in status["reason_codes"]
+    assert status["observed"]["rejected"] == 31
+    assert status["observed"]["rejected: pair_not_allowed: trusts user->role"] == 31
+    assert status["samples"] == summary["rejected_sample"]
+
+    store = SQLiteGraphStore(tmp_path / "graph.db")
+    store.save_graph(graph)
+    persisted = store.load_graph(scan_id="enforced", tenant_id="default").analysis_status[ANALYSIS_KEY].to_dict()
+    assert persisted["observed"]["rejected"] == 31 and persisted["samples"] == status["samples"]
+
+
 def test_validate_edge_reports_evidence_and_dangling_problems() -> None:
     bare = UnifiedEdge("a", "b", RelationshipType.USES)
     assert validate_edge(bare, EntityType.AGENT, EntityType.SERVER) == ["missing_evidence_source", "missing_evidence_tier"]

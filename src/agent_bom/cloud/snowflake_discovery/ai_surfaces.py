@@ -21,6 +21,8 @@ from ..snowflake_governance_mining import _mine_cortex_agent_usage as _mine_cort
 from ..snowflake_governance_mining import _mine_grants_to_roles as _mine_grants_to_roles
 from ..snowflake_governance_mining import _mine_tag_references as _mine_tag_references
 from ..snowflake_notebooks import _discover_snowflake_notebooks as _discover_snowflake_notebooks
+from .cortex_agents import collect_cortex_agents
+from .cortex_telemetry import fetch_cortex_agent_spans
 
 
 def _snowflake_cloud_origin(
@@ -82,7 +84,7 @@ def _discover_ai_surfaces(
     # ── Custom Tools (functions & procedures) ─────────────────────────
     custom_tools, ct_warns = _discover_custom_tools(conn, account)
     warnings.extend(ct_warns)
-    _attach_custom_tools(agents, cortex_agent_list, custom_tools, account)
+    _attach_custom_tools(agents, custom_tools, account)
 
     # ── Snowpark packages ─────────────────────────────────────────────
     snowpark_pkgs, sp_warns = _discover_snowpark_packages(conn, account)
@@ -104,13 +106,13 @@ def _discover_ai_surfaces(
     warnings.extend(nb_warns)
 
 
-def _attach_custom_tools(agents: list[Agent], cortex_agent_list: list[Agent], custom_tools: list[MCPTool], account: str) -> None:
-    """Attach custom tools to cortex agents if any, otherwise create a standalone agent."""
-    if custom_tools and cortex_agent_list:
-        for a in cortex_agent_list:
-            for srv in a.mcp_servers:
-                srv.tools.extend(custom_tools)
-    elif custom_tools:
+def _attach_custom_tools(agents: list[Agent], custom_tools: list[MCPTool], account: str) -> None:
+    """Inventory account UDFs/procedures as one standalone tool collection.
+
+    They are never attached to Cortex Agents: an agent reaches only the
+    functions and procedures its own specification declares.
+    """
+    if custom_tools:
         tool_server = MCPServer(
             name="snowflake-custom-tools",
             transport=TransportType.UNKNOWN,
@@ -183,5 +185,10 @@ def _mine_governance_report(conn: Any, days: int, report: GovernanceReport) -> N
     report.agent_usage = usage
     report.warnings.extend(usage_warns)
 
-    # 5. Derive governance findings from raw data
+    # 5. Cortex Agents — DESCRIBE AGENT specs, agent grants, observability spans
+    report.cortex_agents = collect_cortex_agents(conn, report.account, report.warnings)
+    for agent in report.cortex_agents:
+        report.cortex_events.extend(fetch_cortex_agent_spans(conn, agent, days, report.warnings))
+
+    # 6. Derive governance findings from raw data
     report.findings = _derive_findings(report)

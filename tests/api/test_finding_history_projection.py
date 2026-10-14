@@ -1,5 +1,6 @@
 """Projected retained history must avoid deserializing superseded reports."""
 
+import logging
 from copy import deepcopy
 
 import pytest
@@ -235,9 +236,14 @@ def test_qualification_compares_whole_history_and_uses_legacy_on_mismatch(projec
     if qualify:
         monkeypatch.setenv("AGENT_BOM_SCAN_SNAPSHOT_READS", "1")
     monkeypatch.setattr(HistoryReader, "history", lambda *args: {})
+    reader_logger = "agent_bom.api.finding_history_read"
+    caplog.set_level(logging.DEBUG, logger=reader_logger)
     rows = scan._current_scan_rows("history-tenant", None, None)
     assert rows[0]["first_seen"] == ("2026-08-01T00:00:00+00:00" if qualify else "2026-09-01T00:00:00+00:00")
-    assert ("finding_history_read outcome=mismatch" in caplog.text) is qualify
+    # Every branch logs its outcome; naming the one taken separates a real
+    # mismatch from a fallback (incomplete/unavailable) that returns the same rows.
+    outcomes = [record.getMessage() for record in caplog.records if record.name == reader_logger]
+    assert outcomes == (["finding_history_read outcome=mismatch; using retained jobs"] if qualify else []), outcomes
 
 
 def test_streamed_history_keeps_kev_and_identity_batches(projected_store, monkeypatch):

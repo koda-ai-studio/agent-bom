@@ -584,6 +584,37 @@ in `agents_info` or evaluate all session and data-policy conditions. Confirm
 exact agent attribution with the corresponding runtime records before claiming
 agent-specific read/write access. See [ACCESS_HISTORY fields](https://docs.snowflake.com/en/sql-reference/account-usage/access_history#columns).
 
+**Cortex Agents (optional, per agent).** To model an agent's declared tools,
+execution roles and runtime spans, the scanner role needs, for each agent it
+should cover:
+
+```sql
+GRANT USAGE ON DATABASE <db> TO ROLE ABOM_READONLY;
+GRANT USAGE ON SCHEMA <db>.<schema> TO ROLE ABOM_READONLY;
+GRANT MONITOR ON AGENT <db>.<schema>.<agent> TO ROLE ABOM_READONLY;  -- SHOW/DESCRIBE AGENT, observability events
+GRANT DATABASE ROLE SNOWFLAKE.CORTEX_USER TO ROLE ABOM_READONLY;     -- GET_AI_OBSERVABILITY_EVENTS
+```
+
+| Read | Used for |
+|------|----------|
+| `SHOW AGENTS IN ACCOUNT`, `DESCRIBE AGENT` | the agent specification: only the tools it declares (`tools` / `tool_resources`) and the objects they name are attached to the agent |
+| `SHOW GRANTS ON AGENT` | roles holding `USAGE` or `OWNERSHIP` on the agent |
+| `SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS(<db>, <schema>, <agent>, 'CORTEX AGENT')` | span metadata aggregated into runtime-observed agent → tool / warehouse / role edges |
+
+Cortex Agents take permissions from the request's Snowflake context, so the
+graph models the roles granted `USAGE` or `OWNERSHIP` on an agent as the roles
+it can execute as; their grants form the agent's blast radius. Callers whose
+primary role inherits one of those roles can reach more than the graph shows.
+`DESCRIBE AGENT` returns no specification for a secure agent unless the owner
+role is active, so such agents show `spec_status: hidden` and no tools. Do not
+grant `READ UNREDACTED AI OBSERVABILITY EVENTS TABLE`: the collector keeps only
+tool names, timings, token counts and a SHA-256 digest of span content. It
+stores no user name or plain hash of one, and never prompts or tool
+inputs/outputs.
+See [DESCRIBE AGENT](https://docs.snowflake.com/en/sql-reference/sql/desc-agent),
+[Cortex Agents access control](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents)
+and [GET_AI_OBSERVABILITY_EVENTS](https://docs.snowflake.com/en/sql-reference/functions/get_ai_observability_events-snowflake-local).
+
 **Authenticate** with the matching private key — no password ever:
 
 ```bash

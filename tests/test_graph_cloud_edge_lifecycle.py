@@ -131,7 +131,7 @@ def test_cloud_inventory_snapshots_diff_exposed_edges(tmp_path) -> None:
         client = TestClient(app)
         diff_resp = client.get(
             "/v1/graph/diff",
-            params={"old": "cloud-scan-baseline", "new": "cloud-scan-current"},
+            params={"old": "cloud-scan-baseline", "new": "cloud-scan-current", "view": "full"},
         )
         assert diff_resp.status_code == 200
         diff_body = diff_resp.json()

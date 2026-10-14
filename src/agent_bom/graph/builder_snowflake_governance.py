@@ -5,6 +5,8 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any
 
+from agent_bom.canonical_ids import snowflake_cortex_agent_node_id
+from agent_bom.graph.builder_snowflake_cortex import add_cortex_agents, add_cortex_telemetry
 from agent_bom.graph.builder_snowflake_lane import _SnowflakeLane
 from agent_bom.graph.cloud_context import _add_identity_node, _prepare_cloud_payload
 from agent_bom.graph.container import UnifiedGraph
@@ -152,7 +154,20 @@ def _add_snowflake_access_edges(lane: _SnowflakeLane, access_records_by_pair: di
         _add_rel_edge(lane.graph, user_node_id, f"data_store:snowflake:{object_name}", RelationshipType.ACCESSED, evidence)
 
 
-def _aggregate_cortex_agent_usage(records: Any) -> dict[str, dict[str, Any]]:
+def _usage_agent_id(rec: dict[str, Any], account: str, cortex_agents: dict[tuple[str, str, str], str]) -> str:
+    """Canonical agent id for one usage row; unqualified legacy id only when the row cannot be resolved."""
+    agent_name = _clean_graph_part(rec.get("agent_name"))
+    database = _clean_graph_part(rec.get("database_name"))
+    schema = _clean_graph_part(rec.get("schema_name"))
+    if database and schema:
+        return cortex_agents.get((database, schema, agent_name)) or snowflake_cortex_agent_node_id(account, database, schema, agent_name)
+    same_name = [node_id for (_db, _schema, name), node_id in cortex_agents.items() if name == agent_name]
+    return same_name[0] if len(same_name) == 1 else f"agent:snowflake:{agent_name}"
+
+
+def _aggregate_cortex_agent_usage(
+    records: Any, account: str = "", cortex_agents: dict[tuple[str, str, str], str] | None = None
+) -> dict[str, dict[str, Any]]:
     agent_aggregate: dict[str, dict[str, Any]] = {}
     for rec in records or []:
         if not isinstance(rec, dict):
@@ -161,8 +176,16 @@ def _aggregate_cortex_agent_usage(records: Any) -> dict[str, dict[str, Any]]:
         if not agent_name:
             continue
         agg = agent_aggregate.setdefault(
-            agent_name,
-            {"calls": 0, "total_tokens": 0, "credits_used": 0.0, "tool_calls": 0, "models": set(), "users": set()},
+            _usage_agent_id(rec, account, cortex_agents or {}),
+            {
+                "agent_name": agent_name,
+                "calls": 0,
+                "total_tokens": 0,
+                "credits_used": 0.0,
+                "tool_calls": 0,
+                "models": set(),
+                "users": set(),
+            },
         )
         agg["calls"] += 1
         agg["total_tokens"] += int(rec.get("total_tokens") or 0)
@@ -177,25 +200,26 @@ def _aggregate_cortex_agent_usage(records: Any) -> dict[str, dict[str, Any]]:
     return agent_aggregate
 
 
-def _add_cortex_agent_nodes(lane: _SnowflakeLane, agent_aggregate: dict[str, dict[str, Any]]) -> None:
-    """CORTEX_AGENT_USAGE_HISTORY: one AGENT node per name, aggregated."""
-    for agent_name, agg in agent_aggregate.items():
-        agent_node_id = f"agent:snowflake:{agent_name}"
+def _add_cortex_agent_nodes(lane: _SnowflakeLane, agent_aggregate: dict[str, dict[str, Any]], account: str = "") -> None:
+    """CORTEX_AGENT_USAGE_HISTORY: usage totals merged onto each agent's canonical node."""
+    for agent_node_id, agg in agent_aggregate.items():
+        qualified = bool(account) and agent_node_id.startswith(f"agent:snowflake:{account}:")
         lane.graph.add_node(
             UnifiedNode(
                 id=agent_node_id,
                 entity_type=EntityType.AGENT,
-                label=f"cortex agent: {agent_name}",
+                label=f"cortex agent: {agg['agent_name']}",
                 attributes={
-                    "agent_name": agent_name,
+                    "agent_name": agg["agent_name"],
                     "cloud_provider": "snowflake",
-                    "source": "cortex-agent-usage",
+                    "usage_source": "cortex-agent-usage",
                     "call_count": agg["calls"],
                     "total_tokens": agg["total_tokens"],
                     "credits_used": round(agg["credits_used"], 4),
                     "tool_calls": agg["tool_calls"],
                     "models": sorted(agg["models"]),
                     "distinct_users": len(agg["users"]),
+                    **({"snowflake_account_qualified": True, "account_id": account} if qualified else {}),
                 },
                 data_sources=lane.data_sources,
                 dimensions=NodeDimensions(cloud_provider="snowflake", surface="identity"),
@@ -218,9 +242,13 @@ def _add_snowflake_governance(graph: UnifiedGraph, payload: Any, data_source: st
       edge lands on the existing object node rather than a duplicate. Records are
       collapsed per ``(user, object)`` with distinct query/action/role receipts.
       Historical observations do not establish current permission or row impact.
-    - **CORTEX_AGENT_USAGE_HISTORY** → one ``AGENT`` node per distinct agent name,
-      ``OWNS``-attached to the account, carrying aggregate telemetry (calls, tokens,
-      credits) as attributes — not one node per call.
+    - **Cortex Agents** (DESCRIBE AGENT) → one ``AGENT`` node per agent at its
+      canonical id, its declared tools and their objects, and ``ASSUMES`` edges to
+      the roles that can run it (see :mod:`builder_snowflake_cortex`).
+    - **CORTEX_AGENT_USAGE_HISTORY** → aggregate usage (calls, tokens, credits)
+      merged onto the same canonical agent node — not one node per call.
+    - **Observability spans** (normalized events) → one runtime-observed edge per
+      ``(agent, target, relationship)`` with counts and first/last seen.
     - **Derived findings** are converged into the unified findings stream by
       ``GraphIndices.to_findings`` (``_snowflake_governance_findings``), not into
       nodes, so ``--fail-on-severity`` sees them.
@@ -234,4 +262,8 @@ def _add_snowflake_governance(graph: UnifiedGraph, payload: Any, data_source: st
     lane = _SnowflakeLane(graph, account, data_sources, "snowflake-governance")
     access = _collect_snowflake_access(lane, payload.get("access_records", []), account)
     _add_snowflake_access_edges(lane, access)
-    _add_cortex_agent_nodes(lane, _aggregate_cortex_agent_usage(payload.get("agent_usage", [])))
+    cortex_agents = add_cortex_agents(lane, account, payload.get("cortex_agents"))
+    _add_cortex_agent_nodes(lane, _aggregate_cortex_agent_usage(payload.get("agent_usage", []), account, cortex_agents), account)
+    telemetry = add_cortex_telemetry(lane, payload.get("cortex_events"), set(cortex_agents.values()))
+    if telemetry and lane.account_node_id:
+        lane.graph.nodes[lane.account_node_id].attributes["cortex_telemetry_summary"] = telemetry

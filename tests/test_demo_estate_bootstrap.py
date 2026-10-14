@@ -607,7 +607,7 @@ def test_demo_estate_graph_snapshots_support_drift_lens(demo_estate_client: Test
     diff = demo_estate_client.get(
         "/v1/graph/diff",
         headers=VIEWER,
-        params={"old": SHOWCASE_BASELINE_SCAN_ID, "new": "showcase"},
+        params={"old": SHOWCASE_BASELINE_SCAN_ID, "new": "showcase", "view": "full"},
     )
     assert diff.status_code == 200, diff.text
     body = diff.json()

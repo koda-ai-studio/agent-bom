@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import logging
 import re
 from typing import Any
@@ -14,6 +13,7 @@ from .normalization import (
     build_package_purl,
 )
 from .snowflake_common import _record_snowflake_inventory_failure, _sf, _validate_sf_identifier
+from .snowflake_discovery.cortex_agents import describe_cortex_agent, list_cortex_agents
 
 # Log under the façade's logger so existing log routing and filters keep applying.
 logger = logging.getLogger("agent_bom.cloud.snowflake")
@@ -166,51 +166,40 @@ def _discover_streamlit_apps(
 # ---------------------------------------------------------------------------
 
 
+def _cortex_tool(tool: dict[str, Any]) -> MCPTool:
+    resources = ", ".join(f"{r['kind']}={r['fqn']}" for r in tool.get("resources") or [])
+    description = f"Cortex Agent tool [{tool.get('type') or 'unknown'}]" + (f" -> {resources}" if resources else "")
+    return MCPTool(name=str(tool["name"]), description=description)
+
+
 def _discover_cortex_agents(
     conn: Any,
     account: str,
 ) -> tuple[list[Agent], list[str]]:
-    """Discover Cortex Agents via SHOW AGENTS IN ACCOUNT.
+    """Discover Cortex Agents via SHOW AGENTS IN ACCOUNT plus DESCRIBE AGENT.
 
-    The Cortex Agent framework (v2025) is distinct from Cortex Search Services.
-    These are agentic orchestration systems combining semantic models, search
-    services, and custom tools.
+    Each agent carries only the tools its specification declares; a secure or
+    undescribable agent carries none (``spec_status`` says why).
     """
     agents: list[Agent] = []
     warnings: list[str] = []
-    cursor = conn.cursor()
 
-    try:
-        cursor.execute("SHOW AGENTS IN ACCOUNT")
-        rows = cursor.fetchall()
-        columns = [desc[0].lower() for desc in cursor.description] if cursor.description else []
+    def on_error(exc: Exception) -> None:
+        _record_snowflake_inventory_failure(exc=exc, resource_type="Cortex Agents", inventory_key="cortex_agents", warnings=warnings)
 
-        for row in rows:
-            row_dict = dict(zip(columns, row)) if columns else {}
-            agent_name = row_dict.get("name", str(row[0]) if row else "unknown")
-            db_name = row_dict.get("database_name", "")
-            schema_name = row_dict.get("schema_name", "")
-
-            # Parse profile JSON if available (contains display_name)
-            profile_str = row_dict.get("profile", "")
-            display_name = agent_name
-            if profile_str:
-                try:
-                    profile = json.loads(profile_str)
-                    display_name = profile.get("display_name", agent_name)
-                except (json.JSONDecodeError, TypeError):
-                    pass
-
-            config_path = f"snowflake://{account}/{db_name}/{schema_name}/{agent_name}"
-
-            server = MCPServer(
-                name=f"cortex-agent:{agent_name}",
-                transport=TransportType.STREAMABLE_HTTP,
-                url=f"https://{account}.snowflakecomputing.com/api/v2/cortex/agent/{agent_name}",
-            )
-
-            agent = Agent(
-                name=f"cortex-agent:{display_name}",
+    for row in list_cortex_agents(conn, warnings, on_error):
+        spec = describe_cortex_agent(conn, account, row, warnings)
+        agent_name, db_name, schema_name = spec["name"], spec["database"], spec["schema"]
+        config_path = f"snowflake://{account}/{db_name}/{schema_name}/{agent_name}"
+        server = MCPServer(
+            name=f"cortex-agent:{agent_name}",
+            transport=TransportType.STREAMABLE_HTTP,
+            url=f"https://{account}.snowflakecomputing.com/api/v2/cortex/agent/{agent_name}",
+            tools=[_cortex_tool(tool) for tool in spec["tools"]],
+        )
+        agents.append(
+            Agent(
+                name=f"cortex-agent:{spec['display_name']}",
                 agent_type=AgentType.CUSTOM,
                 config_path=config_path,
                 source="snowflake-cortex-agent",
@@ -224,22 +213,14 @@ def _discover_cortex_agents(
                         resource_name=agent_name,
                         database=db_name,
                         schema=schema_name,
-                    )
+                    ),
+                    "snowflake_cortex_agent": {
+                        key: spec[key]
+                        for key in ("account", "database", "schema", "name", "fqn", "owner", "is_secure", "spec_status", "execution_roles")
+                    },
                 },
             )
-            agents.append(agent)
-
-    except Exception as exc:
-        _record_snowflake_inventory_failure(
-            exc=exc,
-            resource_type="Cortex Agents",
-            inventory_key="cortex_agents",
-            warnings=warnings,
         )
-
-    finally:
-        cursor.close()
-
     return agents, warnings
 
 
