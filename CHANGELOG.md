@@ -11,6 +11,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `GET /v1/graph/diff` is bounded: the default `view=summary` returns counts per change kind by entity type and relationship plus the most significant changes (new critical findings, new credential reach, removed controls, new attack paths) and compares the latest two snapshots when no IDs are given; `view=detail` pages change rows with filters and a cursor; `view=full` keeps the legacy lists under a row and byte cap with `truncated`/`complete` flags and omits node attribute blobs. On the showcase estate the default answer drops from about 8 MB to under 16 KB. The new read-only MCP tool `graph_diff` answers from the same function (94 tools).
 - Imported Langfuse, LangSmith and OTLP JSON traces normalize into one canonical metadata-only event and become `runtime_observed` graph edges aggregated per source, relationship and target, bound only by exact inventory or canonical IDs. Attack-path ranking and credential reach read them; unmatched and name-only spans are counted in the `runtime_trace_projection` analysis status. Screened trace signals, vulnerable tool calls and unlisted agents or tools become unified findings, including the new `SHADOW_AI` finding type. Langfuse pulls now request model and usage fields and LangSmith pulls token and cost columns.
 
 - Graph relationship inspectors and recorded rows surface receipt evidence types and source observation times separately from graph-record timestamps and traversal eligibility. Missing and mixed evidence stay explicit.
@@ -52,6 +53,10 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - The largest scanner engines are decomposed into named stages with no change to results: package vulnerability scanning (`scan_packages`), the cloned repository tree scan, the MCP `scan` tool body and the live Kubernetes posture scan. Each now reads as a short orchestrator over input preparation, version resolution, advisory lookups, enrichment and result assembly.
 
 ### Fixed
+
+- Whole-queue path searches (the `should_i_deploy` gate and filtered `exposure_paths`, including `/v1/graph/exposure-paths`) read every stored path instead of the first rank window while reporting a complete search; beyond the search cap the answer is a labelled lower bound and the gate never allows. `/v1/graph/attack-paths` marks totals beyond the rank window as lower bounds. The deploy gate rechecks the pinned snapshot generation and returns a retryable error when it changed mid-read.
+
+- `AGENT_BOM_GRAPH_CONTRACT=enforce` no longer reports a clean contract after dropping edges: the snapshot's `relationship_contract` analysis records `rejected` counts per relationship and entity pair with a bounded sample of edge ids.
 
 - Graph analysis limits are reported only when they hide something. Credential reach no longer marks a scan `limited` (and therefore `partial`) when a depth-bounded route only leads to a credential already reached by a shorter route. A path budget keeps any earlier agent-budget reason instead of replacing it. The current-estate view now carries the worst analysis status of its source scans, so a limited source is no longer shown as clean.
 

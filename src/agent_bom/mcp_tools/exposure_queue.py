@@ -49,6 +49,8 @@ _ENDPOINT_KEYS = ("id", "label", "entityType")
 # Summary lists keep their first entries and always carry the full count;
 # view="full" returns every value.
 SUMMARY_LIST_LIMIT = 5
+# Whole-queue searches (filters, deploy gate) read at most this many ranked paths.
+SEARCH_PATH_CAP = 200_000
 _SUMMARY_LISTS = (("findings", "findingCount"), ("exposedCredentials", "credentialCount"), ("reachableTools", "toolCount"))
 
 
@@ -226,8 +228,30 @@ async def queue_page(store: Any, tenant_id: str, scan_id: str, *, offset: int, l
 
 
 async def whole_queue(store: Any, tenant_id: str, scan_id: str, filters: AttackPathFilters) -> QueuePage:
-    """Every ranked path of the snapshot (up to the ranking window)."""
-    return await queue_page(store, tenant_id, scan_id, offset=0, limit=attack_path_rank_window(), filters=filters)
+    """Every ranked path matching ``filters``, read in rank-window pages up to ``SEARCH_PATH_CAP``.
+
+    ``QueuePage.covers_all_matches`` says whether the result is the whole
+    matching set; callers must not treat a partial set as a complete search.
+    """
+    window = attack_path_rank_window()
+    page = await queue_page(store, tenant_id, scan_id, offset=0, limit=window, filters=filters)
+    paths = list(page.ranked.paths)
+    while page.ranked.paths and len(paths) < min(page.ranked.total, SEARCH_PATH_CAP):
+        following = await queue_page(store, tenant_id, page.ranked.scan_id, offset=len(paths), limit=window, filters=filters)
+        if not following.ranked.paths:
+            break
+        paths.extend(following.ranked.paths)
+    return replace(page, ranked=replace(page.ranked, paths=paths[:SEARCH_PATH_CAP]))
+
+
+SNAPSHOT_CHANGED_MESSAGE = "Graph snapshot changed during the read; retry the request."
+
+
+async def snapshot_changed(store: Any, tenant_id: str, identity: tuple[str, str], *, has_rows: bool) -> bool:
+    """Whether the pinned ``(scan_id, generation)`` moved while a multi-read answer was assembled."""
+    pinned_scan_id, generation = identity
+    final_identity = await asyncio.to_thread(store.snapshot_identity, tenant_id=tenant_id, scan_id=pinned_scan_id, for_paging=True)
+    return tuple(final_identity) != (pinned_scan_id, generation) or (has_rows and not generation)
 
 
 async def nodes_for(store: Any, tenant_id: str, scan_id: str, node_ids: set[str]) -> list[Any]:
@@ -266,6 +290,7 @@ class _Read:
     edges: list[Any]
     stats: dict[str, Any]
     projected: list[dict[str, Any]]
+    covered: bool = True
 
 
 async def _filtered_window(
@@ -282,6 +307,11 @@ async def _filtered_window(
     return page, len(matched), matched[offset : offset + limit]
 
 
+def _search_covers_snapshot(page: QueuePage, query: PathQuery) -> bool:
+    """Paged reads count matches in the store; whole-queue filters only see what was read."""
+    return page.covers_all_matches if query.needs_full_set() else True
+
+
 async def _read_exposure(
     store: Any, tenant_id: str, scan_id: str | None, query: PathQuery, offset: int, limit: int, continuation: dict[str, Any]
 ) -> _Read | str:
@@ -296,17 +326,17 @@ async def _read_exposure(
         return mcp_error_json(CODE_VALIDATION_INVALID_ARGUMENT, "Exposure snapshot changed; restart the query.")
     nodes, edges = await hydrate(store, tenant_id, effective_scan_id, paths)
     stats = await asyncio.to_thread(store.snapshot_stats, tenant_id=tenant_id, scan_id=effective_scan_id)
-    final_identity = await asyncio.to_thread(store.snapshot_identity, tenant_id=tenant_id, scan_id=pinned_scan_id, for_paging=True)
-    if final_identity != (pinned_scan_id, generation) or (paths and not generation):
+    if await snapshot_changed(store, tenant_id, identity, has_rows=bool(paths)):
         return mcp_error_json(CODE_VALIDATION_INVALID_ARGUMENT, "Exposure snapshot changed; restart the query.")
     projected = project_paths(paths, nodes=nodes, edges=edges, first_rank=offset + 1, scan_id=effective_scan_id)
-    return _Read(page, total, paths, generation, revision, nodes, edges, stats, projected)
+    covered = _search_covers_snapshot(page, query)
+    return _Read(page, total, paths, generation, revision, nodes, edges, stats, projected, covered)
 
 
 def _envelope(tenant_id: str, read: _Read, query: PathQuery, view: str, limit: int) -> dict[str, Any]:
     ranked = read.page.ranked
     ranking = dict(ranked.ranking or {})
-    lower_bound = read.page.derivation_truncated or not bool(ranking.get("complete", True))
+    lower_bound = read.page.derivation_truncated or not bool(ranking.get("complete", True)) or not read.covered
     payload: dict[str, Any] = {
         "schema_version": "v1",
         "tool": "exposure_paths",
@@ -338,6 +368,7 @@ def _fit(payload: dict[str, Any], read: _Read, *, view: str, offset: int, limit:
     """Fit whole path objects into the transport budget; omitted paths stay on the cursor."""
     ranking_complete = bool(payload["ranking"].get("complete", True))
     derivation_truncated = read.page.derivation_truncated
+    search_cut = ranking_complete and not derivation_truncated and not read.covered
     selected = read.projected
     while True:
         returned = len(selected)
@@ -352,10 +383,20 @@ def _fit(payload: dict[str, Any], read: _Read, *, view: str, offset: int, limit:
         payload["count"] = returned
         next_cursor = _encode_cursor(scope, read.page.ranked.scan_id, offset + returned, read.revision) if has_more and returned else None
         payload["pagination"] = {"offset": offset, "limit": limit, "returned": returned, "has_more": has_more, "next_cursor": next_cursor}
-        reason = "node_budget" if derivation_truncated else "rank_window" if not ranking_complete else "path_page_limit" if has_more else ""
+        reason = (
+            "node_budget"
+            if derivation_truncated
+            else "rank_window"
+            if not ranking_complete
+            else "search_cap"
+            if search_cut
+            else "path_page_limit"
+            if has_more
+            else ""
+        )
         payload["completeness"] = graph_completeness(
             returned=returned,
-            total=None if derivation_truncated or not ranking_complete else read.total,
+            total=None if derivation_truncated or not ranking_complete or search_cut else read.total,
             truncated=bool(reason),
             reason=reason,
         )
@@ -434,6 +475,9 @@ __all__ = [
     "hydrate",
     "nodes_for",
     "pinned_identity",
+    "snapshot_changed",
+    "SEARCH_PATH_CAP",
+    "SNAPSHOT_CHANGED_MESSAGE",
     "project_paths",
     "summary_path",
     "whole_queue",

@@ -266,11 +266,15 @@ def _serialize_attack_path_queue(
         if (edge.source, edge.target) in path_pairs or (edge.is_bidirectional and (edge.target, edge.source) in path_pairs)
     ]
     stats = _sync_attack_path_stats(stats, total=snapshot_total, paths=paths)
+    # Beyond the rank window only the top stored paths were ranked and filtered,
+    # so ``total`` counts matches among them: a lower bound, never "complete".
+    ranked_all = ranked is None or bool((ranked.ranking or {}).get("complete", True))
+    has_more = offset + len(paths) < total
     completeness = graph_completeness(
         returned=len(paths),
-        total=total,
-        truncated=offset + len(paths) < total,
-        reason="path_page_limit" if offset + len(paths) < total else "",
+        total=total if ranked_all else None,
+        truncated=has_more or not ranked_all,
+        reason="rank_window" if not ranked_all else "path_page_limit" if has_more else "",
     )
     return {
         "scan_id": scan_id,
@@ -295,6 +299,7 @@ def _serialize_attack_path_queue(
             "filters": {"scan_id": scan_id, "offset": offset, "limit": limit, **(filters or {})},
             "returned": len(paths),
             "total": total,
+            "total_is_lower_bound": not ranked_all,
             # Additive, explicitly named counts let clients distinguish the
             # snapshot's source rows from the page transferred over HTTP and
             # from the smaller subset they may choose to render.

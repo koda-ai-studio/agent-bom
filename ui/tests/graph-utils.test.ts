@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
+import type { GraphDiffResponse } from "@/lib/api-types";
 
 import { GraphNodeKind, GRAPH_NODE_KIND_META } from "@/lib/graph-schema";
 import {
+  diffChangeCounts,
   countVisiblePathHops,
   legendItemForNodeType,
   legendItemsForVisibleNodes,
@@ -281,4 +283,38 @@ it("qualifies configured and unverified delegation in visible and accessible lab
     expect(edge?.label).toBe(expected);
     expect(edge?.ariaLabel).toContain(expected);
   }
+});
+
+describe("diffChangeCounts", () => {
+  const capped: GraphDiffResponse = {
+    nodes_added: [{ id: "vuln:a", entity_type: "vulnerability", label: "a", status: "", severity: "", severity_id: 0, risk_score: 0 }],
+    nodes_removed: [],
+    nodes_changed: [],
+    edges_added: [],
+    edges_removed: [],
+    truncated: true,
+    summary: {
+      totals: {
+        nodes: { added: 2683, removed: 3, changed: 2 },
+        edges: { added: 15066, removed: 4, changed: 10 },
+      },
+    },
+  };
+
+  it("reports the server's exact totals when the lists are capped", () => {
+    expect(diffChangeCounts(capped)).toEqual({
+      nodesAdded: 2683,
+      nodesRemoved: 3,
+      nodesChanged: 2,
+      edgesAdded: 15066,
+      edgesRemoved: 4,
+      truncated: true,
+    });
+  });
+
+  it("falls back to list lengths for responses without a summary", () => {
+    const legacy: GraphDiffResponse = { ...capped, summary: undefined, truncated: undefined };
+    expect(diffChangeCounts(legacy)).toMatchObject({ nodesAdded: 1, edgesAdded: 0, truncated: false });
+    expect(diffChangeCounts(null).nodesAdded).toBe(0);
+  });
 });

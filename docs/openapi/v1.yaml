@@ -13911,8 +13911,37 @@ components:
       - candidate
       title: GraphDeployDecisionRequest
       type: object
+    GraphDiffPagination:
+      additionalProperties: true
+      properties:
+        has_more:
+          title: Has More
+          type: boolean
+        limit:
+          title: Limit
+          type: integer
+        next_cursor:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Next Cursor
+        offset:
+          title: Offset
+          type: integer
+        returned:
+          title: Returned
+          type: integer
+      required:
+      - offset
+      - limit
+      - returned
+      - has_more
+      title: GraphDiffPagination
+      type: object
     GraphDiffResponse:
       additionalProperties: true
+      description: '``GET /v1/graph/diff``: ``summary`` (default), ``detail`` rows,
+        or capped ``full`` lists.'
       properties:
         attribute_deltas:
           anyOf:
@@ -13925,12 +13954,19 @@ components:
           - type: 'null'
           title: Attribute Deltas
         change_kind_index:
-          additionalProperties:
-            additionalProperties:
-              type: string
+          anyOf:
+          - additionalProperties:
+              additionalProperties:
+                type: string
+              type: object
             type: object
+          - type: 'null'
           title: Change Kind Index
-          type: object
+        complete:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Complete
         completeness:
           $ref: '#/components/schemas/GraphCompleteness'
         edges_added:
@@ -13951,6 +13987,31 @@ components:
             type: array
           - type: 'null'
           title: Edges Removed
+        filters:
+          anyOf:
+          - additionalProperties:
+              type: string
+            type: object
+          - type: 'null'
+          title: Filters
+        items:
+          anyOf:
+          - items:
+              additionalProperties: true
+              type: object
+            type: array
+          - type: 'null'
+          title: Items
+        limits:
+          anyOf:
+          - additionalProperties:
+              type: integer
+            type: object
+          - type: 'null'
+          title: Limits
+        new:
+          title: New
+          type: string
         nodes_added:
           anyOf:
           - items: {}
@@ -13969,8 +14030,57 @@ components:
             type: array
           - type: 'null'
           title: Nodes Removed
+        old:
+          title: Old
+          type: string
+        omitted_fields:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Omitted Fields
+        pagination:
+          anyOf:
+          - $ref: '#/components/schemas/GraphDiffPagination'
+          - type: 'null'
+        returned_changes:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Returned Changes
+        schema_version:
+          title: Schema Version
+          type: string
+        summary:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Summary
+        total:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Total
+        total_changes:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Total Changes
+        truncated:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Truncated
+        view:
+          title: View
+          type: string
       required:
-      - change_kind_index
+      - schema_version
+      - old
+      - new
+      - view
       - completeness
       title: GraphDiffResponse
       type: object
@@ -42141,25 +42251,131 @@ paths:
       - graph-correlations
   /v1/graph/diff:
     get:
-      description: "Diff two scan snapshots \u2014 nodes/edges added, removed, changed."
+      description: 'Diff two scan snapshots: summary by default, filtered detail pages,
+        or capped legacy lists.'
       operationId: get_graph_diff_v1_graph_diff_get
       parameters:
-      - description: Old scan ID
+      - description: Old scan ID; omit both old and new to compare the latest two
         in: query
         name: old
-        required: true
+        required: false
         schema:
-          description: Old scan ID
+          anyOf:
+          - maxLength: 512
+            type: string
+          - type: 'null'
+          description: Old scan ID; omit both old and new to compare the latest two
           title: Old
-          type: string
-      - description: New scan ID
+      - description: New scan ID; omit both old and new to compare the latest two
         in: query
         name: new
-        required: true
+        required: false
         schema:
-          description: New scan ID
+          anyOf:
+          - maxLength: 512
+            type: string
+          - type: 'null'
+          description: New scan ID; omit both old and new to compare the latest two
           title: New
+      - description: 'summary (default): counts per change kind by entity type and
+          relationship plus the most significant changes. detail: a filtered, cursor-paged
+          list of change rows. full: the legacy node/edge lists, capped (see truncated/complete/limits).'
+        in: query
+        name: view
+        required: false
+        schema:
+          default: summary
+          description: 'summary (default): counts per change kind by entity type and
+            relationship plus the most significant changes. detail: a filtered, cursor-paged
+            list of change rows. full: the legacy node/edge lists, capped (see truncated/complete/limits).'
+          enum:
+          - summary
+          - detail
+          - full
+          title: View
           type: string
+      - description: 'detail: only this change kind'
+        in: query
+        name: change
+        required: false
+        schema:
+          anyOf:
+          - enum:
+            - added
+            - removed
+            - changed
+            type: string
+          - type: 'null'
+          description: 'detail: only this change kind'
+          title: Change
+      - description: 'detail: only node or edge rows'
+        in: query
+        name: kind
+        required: false
+        schema:
+          anyOf:
+          - enum:
+            - node
+            - edge
+            type: string
+          - type: 'null'
+          description: 'detail: only node or edge rows'
+          title: Kind
+      - description: 'detail: only node rows of this entity type'
+        in: query
+        name: entity_type
+        required: false
+        schema:
+          anyOf:
+          - maxLength: 64
+            type: string
+          - type: 'null'
+          description: 'detail: only node rows of this entity type'
+          title: Entity Type
+      - description: 'detail: only edge rows of this relationship'
+        in: query
+        name: relationship
+        required: false
+        schema:
+          anyOf:
+          - maxLength: 64
+            type: string
+          - type: 'null'
+          description: 'detail: only edge rows of this relationship'
+          title: Relationship
+      - description: 'detail: the node itself or edges touching it'
+        in: query
+        name: node_id
+        required: false
+        schema:
+          anyOf:
+          - maxLength: 512
+            type: string
+          - type: 'null'
+          description: 'detail: the node itself or edges touching it'
+          title: Node Id
+      - description: 'detail: rows per page'
+        in: query
+        name: limit
+        required: false
+        schema:
+          default: 50
+          description: 'detail: rows per page'
+          maximum: 200
+          minimum: 1
+          title: Limit
+          type: integer
+      - description: 'detail: pagination.next_cursor; keep filters unchanged'
+        in: query
+        name: cursor
+        required: false
+        schema:
+          anyOf:
+          - maxLength: 4096
+            type: string
+          - type: 'null'
+          description: 'detail: pagination.next_cursor; keep filters unchanged'
+          title: Cursor
       responses:
         '200':
           content:

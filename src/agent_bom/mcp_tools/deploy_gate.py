@@ -10,15 +10,17 @@ from typing import Any
 
 from agent_bom.graph.attack_path_queue import AttackPathFilters, QueuePage
 from agent_bom.graph.container import AttackPath
-from agent_bom.mcp_errors import CODE_VALIDATION_INVALID_ARGUMENT, mcp_error_json
+from agent_bom.mcp_errors import CODE_UPSTREAM_UNAVAILABLE, CODE_VALIDATION_INVALID_ARGUMENT, mcp_error_json
 from agent_bom.mcp_tools.exposure_queue import (
     RISK_SCALE,
+    SNAPSHOT_CHANGED_MESSAGE,
     PathQuery,
     graph_evidence_scope,
     hydrate,
     nodes_for,
     pinned_identity,
     project_paths,
+    snapshot_changed,
     summary_path,
     validate_request,
     whole_queue,
@@ -38,7 +40,7 @@ class _Search:
 
     @property
     def complete(self) -> bool:
-        return bool((self.page.ranked.ranking or {}).get("complete", True)) and not self.page.derivation_truncated
+        return self.page.covers_all_matches
 
 
 def _candidate_haystack(path: AttackPath, nodes_by_id: dict[str, Any]) -> list[str]:
@@ -108,6 +110,12 @@ async def _search(store: Any, tenant_id: str, scan_id: str | None, candidate: st
         ranks=[rank for rank, _path in evaluated],
     )
     stats = await asyncio.to_thread(store.snapshot_stats, tenant_id=tenant_id, scan_id=ranked.scan_id)
+    if await snapshot_changed(store, tenant_id, identity, has_rows=bool(ranked.paths)):
+        return mcp_error_json(
+            CODE_UPSTREAM_UNAVAILABLE,
+            SNAPSHOT_CHANGED_MESSAGE,
+            details={"retryable": True, "reason": "snapshot_changed", "evidenceStatus": "not_evaluated"},
+        )
     return _Search(page, identity[1], matched, projected, stats)
 
 
@@ -180,6 +188,7 @@ async def deploy_decision_for_tenant(
         "thresholds": {"warnRisk": warn_risk, "blockRisk": block_risk},
         "reasons": reasons,
         "searchedPaths": len(ranked.paths),
+        "matchingTotal": ranked.total,
         "total": ranked.snapshot_total,
         "searchComplete": search.complete,
         "ranking": ranked.ranking,
