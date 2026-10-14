@@ -23,7 +23,7 @@ for (const theme of ["light", "dark"] as const) for (const width of [390, 1440])
     await expect(page.getByText("Sources describe recorded observations.", { exact: false })).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath(`entity-provenance-${theme}-${width}.png`) });
     await page.getByTestId("graph-drawer-tab-relationships").click();
-    await expect(page.getByText("1 loaded relationships · total unknown")).toBeVisible();
+    await expect(page.getByText("1 loaded relationship · total unknown")).toBeVisible();
     await page.getByText("Export investigation", { exact: true }).click();
     const button = page.getByRole("button", { name: "Download investigation JSON" });
     await button.scrollIntoViewIfNeeded();
@@ -874,10 +874,10 @@ for (const theme of ["light", "dark"] as const) {
       expect(requests).toHaveLength(0);
       await drawer.getByRole("tab", { name: "Relationships", exact: true }).click();
       await expect(drawer.getByRole("button", { name: "Recorded production MCP", exact: true })).toBeVisible();
-      await expect(drawer.getByRole("status")).toContainText("1 loaded relationships · total unknown");
+      await expect(drawer.getByRole("status")).toContainText("1 loaded relationship · total unknown");
       await drawer.getByRole("button", { name: "Load more recorded relationships" }).click();
       await expect(drawer.getByRole("button", { name: "Second recorded MCP" })).toBeVisible();
-      await expect(drawer.getByRole("status")).toContainText("2 loaded relationships · total unknown");
+      await expect(drawer.getByRole("status")).toContainText("2 recorded relationships · all pages loaded");
       expect(requests[1]!.searchParams.get("snapshot_generation")).toBe("a".repeat(32));
       await drawer.getByText("Canonical identifiers", { exact: true }).first().click();
       await expect(drawer.getByText("server:opaque", { exact: true })).toBeVisible();
@@ -891,10 +891,10 @@ for (const theme of ["light", "dark"] as const) {
         } else {
           await expect(drawer.getByRole("dialog")).toHaveCount(0);
         }
-        await expect(drawer.getByRole("status")).toContainText("2 loaded relationships · total unknown");
+        await expect(drawer.getByRole("status")).toContainText("2 recorded relationships · all pages loaded");
       }
       await page.screenshot({ path: testInfo.outputPath(`relationships-${theme}-${width}.png`), fullPage: true });
-      await expect(drawer.getByRole("status")).toContainText("2 loaded relationships · total unknown");
+      await expect(drawer.getByRole("status")).toContainText("2 recorded relationships · all pages loaded");
       expect(requests).toHaveLength(2);
     });
   }

@@ -4,6 +4,7 @@
  */
 
 import { GRAPH_LAYER_ENTITY_TYPES } from "@/lib/graph-entity-mapping";
+import { badgeLegendItems, type NodeBadgeKind, type RingSeverity } from "@/lib/graph-node-badges";
 import type {
   LineageNodeData,
   LineageNodeType,
@@ -137,7 +138,10 @@ export interface LegendItem {
   layer?: string | undefined;
   description?: string | undefined;
   dashed?: boolean | undefined;
-  kind?: "node" | "edge" | undefined;
+  kind?: "node" | "edge" | "badge" | undefined;
+  /** Badge rows render the same chip or ring the node renderer shows. */
+  badge?: { kind: NodeBadgeKind; value: string; label: string } | undefined;
+  ring?: RingSeverity | undefined;
   lineStyle?: "solid" | "dashed" | undefined;
   shape?: "dot" | "square" | "diamond" | "pill" | undefined;
   // Entity type drives the legend glyph from the same ENTITY_ICONS map the
@@ -518,6 +522,7 @@ export function legendItemsForVisibleGraph(
 ): LegendItem[] {
   return legendItemsForVisibleNodes(nodes, [
     ...relationshipLegendItemsForVisibleEdges(edges),
+    ...badgeLegendItems(nodes),
     ...extras,
   ]);
 }

@@ -26,6 +26,7 @@ import { useReactFlow } from "@xyflow/react";
 import { api, type GraphExportFormat } from "@/lib/api";
 import type { LegendItem } from "@/lib/graph-utils";
 import { entityIcon } from "@/lib/entity-icons";
+import { NodeBadgeChip, SeverityRingSwatch } from "@/components/graph-node-badges";
 
 // ─── Legend Bar ──────────────────────────────────────────────────────────────
 
@@ -169,11 +170,13 @@ export function GraphLegendDock({
 }
 
 function GraphLegendContent({ items }: { items: LegendItem[] }) {
-  const nodeItems = items.filter((item) => item.kind !== "edge");
+  const nodeItems = items.filter((item) => item.kind !== "edge" && item.kind !== "badge");
   const edgeItems = items.filter((item) => item.kind === "edge");
+  const badgeItems = items.filter((item) => item.kind === "badge");
   return (
     <div className="graph-legend-sections" role="group" aria-label="Graph legend categories">
       {nodeItems.length > 0 && <LayeredLegendSections items={nodeItems} />}
+      {badgeItems.length > 0 && <LegendSection title="Node badges" items={badgeItems} />}
       {edgeItems.length > 0 && (
         <LegendSection title="Relationships" items={edgeItems} />
       )}
@@ -182,7 +185,7 @@ function GraphLegendContent({ items }: { items: LegendItem[] }) {
 }
 
 function pickLegendPreview(items: LegendItem[], limit: number): LegendItem[] {
-  const nodes = items.filter((item) => item.kind !== "edge");
+  const nodes = items.filter((item) => item.kind !== "edge" && item.kind !== "badge");
   const edges = items.filter((item) => item.kind === "edge");
   const picked: LegendItem[] = [];
   const seenLayers = new Set<string>();
@@ -249,6 +252,10 @@ function LegendSection({ title, items }: { title: string; items: LegendItem[] })
  * only when no icon resolves, e.g. legacy static legends).
  */
 function LegendGlyph({ item }: { item: LegendItem }) {
+  if (item.kind === "badge") {
+    if (item.ring) return <span className="flex w-5 shrink-0 justify-center"><SeverityRingSwatch severity={item.ring} /></span>;
+    if (item.badge) return <NodeBadgeChip badge={item.badge} />;
+  }
   if (item.kind === "edge") {
     return (
       <span className="flex w-5 shrink-0 justify-center">

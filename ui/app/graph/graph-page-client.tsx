@@ -77,6 +77,7 @@ import {
   type LineageNodeType,
 } from "@/components/lineage-nodes";
 import { useGraphLayout } from "@/lib/use-graph-layout";
+import { serpentinePositions } from "@/lib/path-serpentine-layout";
 import { COMPACT_GRAPH_MIN_ZOOM, compactInvestigationLayout, readableLineageDagreLr } from "@/lib/graph-node-dimensions";
 import { effectiveLodBandForGraph, useLodBand } from "@/lib/lod-renderer";
 import {
@@ -1892,25 +1893,21 @@ function GraphPageInner() {
       });
     }
     if (attackPathNodeIds) {
+      const ordered = [...(attackPathNodeOrder?.keys() ?? [])];
+      const attackPathSlots = serpentinePositions(ordered, 4, { column: 460, row: 220 });
       return canvasLayoutNodes
         .filter((node) => attackPathNodeIds.has(node.id))
         .map((node) => {
           const inPath = attackPathNodeIds.has(node.id);
-          const order = attackPathNodeOrder?.get(node.id) ?? 0;
-          const row = Math.floor(order / 4);
-          const column = order % 4;
-          const serpentineColumn = row % 2 === 0 ? column : 3 - column;
+          const slot = attackPathSlots.get(node.id) ?? { x: 0, y: 0, reverse: false };
           return {
             ...node,
-            position: {
-              x: serpentineColumn * 460,
-              y: row * 220,
-            },
+            position: { x: slot.x, y: slot.y },
             className: composeFocusClass(node.className, inPath, !inPath),
             data: {
               ...node.data,
               renderBand: "detail",
-              reverseFlow: row % 2 === 1,
+              reverseFlow: slot.reverse,
               dimmed: !inPath,
               highlighted: inPath,
             },

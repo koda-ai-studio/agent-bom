@@ -22,7 +22,7 @@ const explanations: Record<string, string> = {
 
 const fields = [
   ["evidence_tier", "Recorded evidence tier"], ["evidence_basis", "Recorded evidence basis"],
-  ["source", "Source"], ["data_source", "Data source"], ["basis", "Recorded basis"],
+  ["source", "Source"], ["source_kind", "Recorded source"], ["data_source", "Data source"], ["basis", "Recorded basis"],
   ["mapping_method", "Mapping method"], ["package", "Package"], ["version", "Version"],
   ["ecosystem", "Ecosystem"], ["purl", "Package URL"],
 ] as const;

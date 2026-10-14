@@ -4,7 +4,7 @@ This tour follows current source. The published `0.108.4` release predates
 the newer investigation workspace and managed trace enhancements. For commands
 that start with the published package, use the [README](../README.md).
 
-<p align="center"><a href="images/graph-environment-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="images/graph-environment-light-live.png"><img src="images/graph-environment-dark-live.png" alt="Environment graph connecting AI agents, models, MCP tools, dependencies and deployed workloads" width="1440"></picture></a></p>
+<p align="center"><a href="images/graph-environment-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="images/graph-environment-light-live.png"><img src="images/graph-environment-dark-live.png" alt="Sample production AI environment where two agents and a model-serving workload reach vulnerable packages, a KEV-listed advisory, an exposed API key and a customer data store" width="1440"></picture></a></p>
 
 **See your AI environment in context.** Follow workloads, agents, models, MCP servers, tools and dependencies in one graph. Switch to **Repository** or **Cloud estate** to inspect code, build configuration, accounts, identities and storage. The graph above uses labeled sample data. Click any screenshot to view it at full size.
 
@@ -58,9 +58,9 @@ Follow **CVE-2023-4863 in pillow@9.0.0** through recorded relationships between 
 
 <a href="images/correlation-graph-live.png"><img src="images/correlation-graph-live.png" alt="Reference lab graph linking a Pillow advisory, workload, container, tool and modeled data asset" width="1440"></a>
 
-**Inspect the evidence behind an arrow.** Select a relationship to see its direction, retained snapshot, timestamps and recorded source evidence. This focused view shows the reference lab's local gateway invocation; modeled cloud permissions and downstream effects remain separate claims.
+**Inspect the evidence behind an arrow.** Select a relationship to see its direction, retained snapshot, timestamps and recorded source evidence. This focused view shows three independent sources (a repository pin, an image SBOM and a modeled Kubernetes workload) resolving to one package, with the advisory receipt open; modeled cloud permissions and downstream effects remain separate claims.
 
-<p align="center"><a href="images/graph-relationship-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="images/graph-relationship-light-live.png"><img src="images/graph-relationship-dark-live.png" alt="Reference lab workload and tool relationship with the recorded gateway runtime evidence open beside the graph" width="1440"></picture></a></p>
+<p align="center"><a href="images/graph-relationship-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="images/graph-relationship-light-live.png"><img src="images/graph-relationship-dark-live.png" alt="Repository pin, image SBOM and Kubernetes workload resolving to one pillow package linked to KEV-listed CVE-2023-4863, with the advisory receipt open" width="1440"></picture></a></p>
 
 **Find a path → Explore connections → Inspect evidence → Remediate.** Keep the snapshot and selected finding in scope as you move through the workflow. Expand within a hop limit and browse relationships in bounded pages; incomplete views remain labeled. Configured permissions, observed activity and downstream effects have separate evidence requirements.
 

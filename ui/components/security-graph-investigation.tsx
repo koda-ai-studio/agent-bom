@@ -48,6 +48,8 @@ import { useGraphLayout } from "@/lib/use-graph-layout";
 import { useGraphPresentation } from "@/hooks/use-graph-presentation";
 import { graphTopologyKey, type GraphPresentationScope } from "@/lib/graph-presentation";
 import { useCaptureMode } from "@/lib/use-capture-mode";
+import { useElementWidth } from "@/hooks/use-element-width";
+import { applySerpentinePath, planSerpentinePath } from "@/lib/path-serpentine-layout";
 import { mergeGraphNeighborExpansions, boundedInvestigationGraph } from "@/lib/graph-neighbor-expansion";
 
 const INVESTIGATION_LAYERS = {
@@ -299,6 +301,8 @@ function InvestigationFlow({
   );
 }
 
+const SERPENTINE_MIN_HOP_NODES = 6;
+
 export function SecurityGraphInvestigation({
   graph,
   attackPath,
@@ -379,6 +383,23 @@ export function SecurityGraphInvestigation({
   const layout = useGraphLayout("dagre-lr", flow.nodes, flow.edges, {
     dagreLr: readableLineageDagreLr({ rankSep: 96, nodeSep: 40 }),
   });
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const canvasWidth = useElementWidth(canvasRef);
+  // Long focused paths wrap into alternating rows sized to the canvas, so
+  // labels stay readable instead of shrinking a single row to fit.
+  const pathLayout = useMemo(() => {
+    const hops = attackPath?.hops ?? [];
+    if (!focusMode || hops.length < SERPENTINE_MIN_HOP_NODES || canvasWidth <= 0) return null;
+    const plan = planSerpentinePath(layout.nodes.length, {
+      containerWidth: canvasWidth,
+      maxCanvasHeight: embedded ? 600 : 680,
+    });
+    // Narrow canvases keep the step-through focused view on the default layout.
+    if (plan.columns < 2) return null;
+    const nodes = applySerpentinePath(layout.nodes, hops, plan.columns);
+    return nodes === layout.nodes ? null : { plan, nodes };
+  }, [attackPath, canvasWidth, embedded, focusMode, layout.nodes]);
+  const canvasNodes = pathLayout?.nodes ?? layout.nodes;
   const displayEdges = useMemo(
     () => readableGraphEdges(layout.edges, undefined, { nodeLabels: graphNodeDisplayLabels(layout.nodes) }),
     [layout.edges, layout.nodes],
@@ -629,9 +650,12 @@ export function SecurityGraphInvestigation({
         </div>
       </div>}
       <div
+        ref={canvasRef}
         id="security-graph-investigation-canvas"
         className={`relative bg-surface-muted ${embedded ? "h-[clamp(24rem,42vh,34rem)]" : "h-[clamp(32rem,56vh,42rem)]"}`}
+        style={pathLayout ? { height: pathLayout.plan.canvasHeight } : undefined}
         data-testid="security-graph-investigation"
+        data-path-layout={pathLayout ? `serpentine-${pathLayout.plan.columns}x${pathLayout.plan.rows}` : undefined}
       >
         {loading ? (
           <div className="flex h-full items-center justify-center gap-2 text-sm text-ink-secondary">
@@ -655,7 +679,7 @@ export function SecurityGraphInvestigation({
         ) : (
           <ReactFlowProvider>
             <InvestigationFlow
-              nodes={layout.nodes as Node<LineageNodeData>[]}
+              nodes={canvasNodes as Node<LineageNodeData>[]}
               edges={displayEdges}
               viewportInput={viewportInput}
               onNodeSelect={setSelectedNodeId}
