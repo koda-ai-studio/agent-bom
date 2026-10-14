@@ -165,6 +165,17 @@ class QueuePage:
     source: str
     derivation_truncated: bool = False
 
+    @property
+    def covers_all_matches(self) -> bool:
+        """Every path matching the filters is ranked and present in ``ranked.paths``.
+
+        A paged read never covers all matches; a whole-queue read covers them
+        only when nothing was cut by the rank window, the node budget or a
+        search cap.
+        """
+        ranking_complete = bool((self.ranked.ranking or {}).get("complete", True))
+        return ranking_complete and not self.derivation_truncated and len(self.ranked.paths) >= self.ranked.total
+
 
 _Call = Callable[..., Awaitable[Any]]
 
