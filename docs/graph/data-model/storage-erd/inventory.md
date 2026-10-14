@@ -136,21 +136,21 @@ Same column name in several tables here, but no table owns it, so no join is dra
 
 ## Tables
 
-| Table | Backends | Columns | Partitioned |
-|---|---|---|---|
-| `agent_bom_snapshots` | Postgres, SQLite | 3 |  |
-| `agent_lifecycle_records` | Postgres, SQLite | 6 |  |
-| `agents` | Postgres | 14 |  |
-| `ai_system_blueprint_versions` | Postgres, SQLite | 7 |  |
-| `ai_system_blueprints` | Postgres, SQLite | 5 |  |
-| `assets` | SQLite | 11 |  |
-| `dataset_versions` | Postgres, SQLite | 5 |  |
-| `device_posture` | SQLite | 5 |  |
-| `endpoint_agent_bindings` | Postgres, SQLite | 4 |  |
-| `endpoint_devices` | Postgres, SQLite | 5 |  |
-| `fleet_agents` | Postgres, SQLite, Snowflake, ClickHouse | 16 | yes |
-| `fleet_endpoints` | Postgres, SQLite, Snowflake | 5 |  |
-| `kspm_cluster_posture` | Postgres, SQLite | 6 |  |
-| `mcp_client_configs` | Postgres, SQLite | 13 |  |
-| `mcp_observations` | Postgres, SQLite | 6 |  |
-| `scan_packages` | SQLite | 9 |  |
+| Table | Backends | Columns | Partitioned | Lifetime |
+|---|---|---|---|---|
+| `agent_bom_snapshots` | Postgres, SQLite | 3 |  | persistent |
+| `agent_lifecycle_records` | Postgres, SQLite | 6 |  | persistent |
+| `agents` | Postgres | 14 |  | persistent |
+| `ai_system_blueprint_versions` | Postgres, SQLite | 7 |  | persistent |
+| `ai_system_blueprints` | Postgres, SQLite | 5 |  | persistent |
+| `assets` | SQLite | 11 |  | persistent |
+| `dataset_versions` | Postgres, SQLite | 5 |  | persistent |
+| `device_posture` | SQLite | 5 |  | persistent |
+| `endpoint_agent_bindings` | Postgres, SQLite | 4 |  | persistent |
+| `endpoint_devices` | Postgres, SQLite | 5 |  | persistent |
+| `fleet_agents` | Postgres, SQLite, Snowflake, ClickHouse | 16 | yes | persistent |
+| `fleet_endpoints` | Postgres, SQLite, Snowflake | 5 |  | persistent |
+| `kspm_cluster_posture` | Postgres, SQLite | 6 |  | persistent |
+| `mcp_client_configs` | Postgres, SQLite | 13 |  | persistent |
+| `mcp_observations` | Postgres, SQLite | 6 |  | persistent |
+| `scan_packages` | SQLite | 9 |  | persistent |

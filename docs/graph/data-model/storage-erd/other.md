@@ -49,14 +49,14 @@ erDiagram
 
 ## Tables
 
-| Table | Backends | Columns | Partitioned |
-|---|---|---|---|
-| `adoption_events` | SQLite | 7 |  |
-| `agent_bom_hub_backfills` | Postgres | 2 |  |
-| `compliance_hub_findings_v2` | SQLite | 13 |  |
-| `control_plane_schema_versions` | Postgres, SQLite, ClickHouse | 3 |  |
-| `fleet_agents_tenant_key_migration` | SQLite | 9 |  |
-| `graph_retention_state` | SQLite | 3 |  |
-| `graph_schema_version` | SQLite | 1 |  |
-| `local_schema_meta` | SQLite | 3 |  |
-| `schema_version` | SQLite | 1 |  |
+| Table | Backends | Columns | Partitioned | Lifetime |
+|---|---|---|---|---|
+| `adoption_events` | SQLite | 7 |  | persistent |
+| `agent_bom_hub_backfills` | Postgres | 2 |  | persistent |
+| `compliance_hub_findings_v2` | SQLite | 13 |  | persistent |
+| `control_plane_schema_versions` | Postgres, SQLite, ClickHouse | 3 |  | persistent |
+| `fleet_agents_tenant_key_migration` | SQLite | 9 |  | persistent |
+| `graph_retention_state` | SQLite | 3 |  | persistent |
+| `graph_schema_version` | SQLite | 1 |  | persistent |
+| `local_schema_meta` | SQLite | 3 |  | persistent |
+| `schema_version` | SQLite | 1 |  | persistent |

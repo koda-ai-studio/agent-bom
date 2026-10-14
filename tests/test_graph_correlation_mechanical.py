@@ -117,7 +117,7 @@ def test_fused_path_rejects_non_traversable_hop() -> None:
             relationship=RelationshipType.CAN_ACCESS,
             traversable=False,
             source_scan_id="scan-a",
-            evidence={"source": "modeled_policy"},
+            evidence={"source": "modeled_policy", "tier": "modeled_infrastructure"},
         )
     )
 
@@ -148,7 +148,7 @@ def test_materialized_fused_path_carries_hop_evidence() -> None:
             target="data_store:crown",
             relationship=RelationshipType.CAN_ACCESS,
             source_scan_id="scan-a",
-            evidence={"source": "modeled_policy"},
+            evidence={"source": "modeled_policy", "tier": "modeled_infrastructure"},
         )
     )
 
@@ -337,7 +337,7 @@ def test_confirmed_path_carries_complete_per_hop_evidence() -> None:
         "source_snapshot_ids": ["scan-a"],
         "relationship_provenance": "recorded",
         "correlation_identity_status": "current",
-        "evidence_tier": "static_evidence",
+        "evidence_tier": "legacy_unrecorded",
         "confidence": 1.0,
         "freshness": "fresh",
         "runtime_observed_state": "not_observed",

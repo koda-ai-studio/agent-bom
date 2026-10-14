@@ -57,12 +57,12 @@ Same column name in several tables here, but no table owns it, so no join is dra
 
 ## Tables
 
-| Table | Backends | Columns | Partitioned |
-|---|---|---|---|
-| `affected` | SQLite | 6 |  |
-| `cpe_matches` | SQLite | 9 |  |
-| `epss_scores` | SQLite | 4 |  |
-| `kev_entries` | SQLite | 5 |  |
-| `osv_cache` | Postgres, SQLite | 3 |  |
-| `sync_meta` | SQLite | 4 |  |
-| `vulns` | SQLite | 12 |  |
+| Table | Backends | Columns | Partitioned | Lifetime |
+|---|---|---|---|---|
+| `affected` | SQLite | 6 |  | persistent |
+| `cpe_matches` | SQLite | 9 |  | persistent |
+| `epss_scores` | SQLite | 4 |  | persistent |
+| `kev_entries` | SQLite | 5 |  | persistent |
+| `osv_cache` | Postgres, SQLite | 3 |  | persistent |
+| `sync_meta` | SQLite | 4 |  | persistent |
+| `vulns` | SQLite | 12 |  | persistent |

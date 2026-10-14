@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 from agent_bom.domain.report_payloads import CorrelatedFindingPayload, RuntimeCorrelationPayload, UncalledVulnerableToolPayload
+from agent_bom.runtime.name_candidates import candidate_name_basis
 
 if TYPE_CHECKING:
     from agent_bom.otel_ingest import ToolCallTrace
@@ -378,14 +379,10 @@ def correlate(
 # and how often". It joins on tool *name* and collapses every call of a tool
 # into one row — it cannot say *which traced call* hit a CVE.
 #
-# ``correlate_spans_to_attack_paths`` is the span-aware companion: it consumes
-# OTel/Langfuse tool-call spans (each carrying a trace_id + span_id from
-# ``agent_bom.otel_ingest``) and resolves *each span* to the exact BlastRadius it
-# touched — the precise reachable CVE, the credentials that row exposes, the
-# non-human identities holding those credentials, and the blast radius (agents,
-# servers, score). This unifies the span-name flagging in
-# ``otel_ingest.flag_vulnerable_tool_calls`` with the scan-side blast radius so
-# one correlation carries span identity end-to-end.
+# ``correlate_spans_to_attack_paths`` retains each span's identity while returning
+# scan-path candidates through the shared name matcher. Credential and NHI names
+# are scan context, not proof of possession, execution or exploitation. These
+# candidates are response-only and never establish graph edges.
 
 
 @dataclass
@@ -422,6 +419,7 @@ class SpanAttackPath:
             "package_name": self.package_name,
             "match_basis": self.match_basis,
             "correlation_state": "candidate_name",
+            "correlation_basis": "candidate_name",
             "execution_proven": False,
             "vulnerability_id": self.vulnerability_id,
             "severity": self.severity,
@@ -449,34 +447,6 @@ def _br_tool_names(br: Any) -> set[str]:
 
 def _br_server_names(br: Any) -> set[str]:
     return {_entity_name(s).lower() for s in getattr(br, "affected_servers", []) if _entity_name(s)}
-
-
-def _match_basis(
-    *,
-    tool_l: str,
-    server_l: str,
-    pkg_l: str,
-    tool_names: set[str],
-    server_names: set[str],
-    br_pkg_l: str,
-) -> str | None:
-    """Decide how (if at all) a span joins to a blast radius, strongest first.
-
-    ``tool`` (the exact call is a confirmed tool on the impacted path) is the
-    most precise signal, then ``server``, then ``package``.
-    """
-    if tool_l and tool_l in tool_names:
-        return "tool"
-    if server_l and server_l in server_names:
-        return "server"
-    if br_pkg_l:
-        if pkg_l and pkg_l == br_pkg_l:
-            return "package"
-        # Fuzzy tool<->package parity with otel flag_vulnerable_tool_calls, but
-        # only when the span carried no explicit package that already missed.
-        if not pkg_l and tool_l and (br_pkg_l in tool_l or tool_l in br_pkg_l):
-            return "package"
-    return None
 
 
 def _resolve_span_nhi(
@@ -535,13 +505,13 @@ def correlate_spans_to_attack_paths(
         server_l = (getattr(trace, "server_name", "") or "").lower()
         pkg_l = (getattr(trace, "package_name", "") or "").lower()
         for br, tool_names, server_names, br_pkg_l in indexed:
-            basis = _match_basis(
-                tool_l=tool_l,
-                server_l=server_l,
-                pkg_l=pkg_l,
-                tool_names=tool_names,
-                server_names=server_names,
-                br_pkg_l=br_pkg_l,
+            basis = candidate_name_basis(
+                tool=tool_l,
+                server=server_l,
+                package=pkg_l,
+                tools=tool_names,
+                servers=server_names,
+                package_name=br_pkg_l,
             )
             if basis is None:
                 continue

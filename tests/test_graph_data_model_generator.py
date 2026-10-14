@@ -237,3 +237,15 @@ def test_generator_path_does_not_import_the_api_framework() -> None:
     )
     result = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True, cwd=ROOT)
     assert result.stdout.strip().splitlines()[-1] == "False"
+
+
+def test_workspace_tables_are_labeled_scratch():
+    gen = _load_generator()
+    storage = gen.graph_data_model_storage
+    tables = storage.extract_tables(gen.SOURCE_ROOT)
+    scratch = [t for t in tables.values() if storage._storage_lifetime(t) == "scratch"]
+    assert scratch
+    assert all(t.dialects == ["sqlite"] or set(t.dialects) == {"sqlite"} for t in scratch)
+    page = gen.render()[f"{storage.DOMAIN_DOC_DIR}/graph.md"]
+    for table in scratch:
+        assert any(line.startswith(f"| `{table.name}` |") and "scratch" in line for line in page.splitlines())

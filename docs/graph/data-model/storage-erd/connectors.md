@@ -93,21 +93,21 @@ Same column name in several tables here, but no table owns it, so no join is dra
 
 ## Tables
 
-| Table | Backends | Columns | Partitioned |
-|---|---|---|---|
-| `bound_references` | Snowflake | 4 |  |
-| `cloud_connections` | Postgres, SQLite | 21 |  |
-| `control_plane_sources` | Postgres | 5 |  |
-| `delivery_breaker` | SQLite | 5 |  |
-| `delivery_ledger` | SQLite | 7 |  |
-| `delivery_log` | SQLite | 10 |  |
-| `delta_stream_watermarks` | SQLite | 5 |  |
-| `endpoint_connections` | Postgres | 6 |  |
-| `endpoint_sync_events` | Postgres, SQLite | 5 |  |
-| `endpoint_syncs` | Postgres, SQLite | 5 |  |
-| `export_destinations` | Postgres, SQLite | 12 |  |
-| `export_schedules` | Postgres, SQLite | 5 |  |
-| `posture_webhook_outbox` | SQLite | 13 |  |
-| `sources` | SQLite | 5 |  |
-| `ticketing_connections` | Postgres, SQLite | 13 |  |
-| `webhook_subscriptions` | Postgres, SQLite | 5 |  |
+| Table | Backends | Columns | Partitioned | Lifetime |
+|---|---|---|---|---|
+| `bound_references` | Snowflake | 4 |  | persistent |
+| `cloud_connections` | Postgres, SQLite | 21 |  | persistent |
+| `control_plane_sources` | Postgres | 5 |  | persistent |
+| `delivery_breaker` | SQLite | 5 |  | persistent |
+| `delivery_ledger` | SQLite | 7 |  | persistent |
+| `delivery_log` | SQLite | 10 |  | persistent |
+| `delta_stream_watermarks` | SQLite | 5 |  | persistent |
+| `endpoint_connections` | Postgres | 6 |  | persistent |
+| `endpoint_sync_events` | Postgres, SQLite | 5 |  | persistent |
+| `endpoint_syncs` | Postgres, SQLite | 5 |  | persistent |
+| `export_destinations` | Postgres, SQLite | 12 |  | persistent |
+| `export_schedules` | Postgres, SQLite | 5 |  | persistent |
+| `posture_webhook_outbox` | SQLite | 13 |  | persistent |
+| `sources` | SQLite | 5 |  | persistent |
+| `ticketing_connections` | Postgres, SQLite | 13 |  | persistent |
+| `webhook_subscriptions` | Postgres, SQLite | 5 |  | persistent |

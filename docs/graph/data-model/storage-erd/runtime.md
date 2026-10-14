@@ -127,22 +127,22 @@ Same column name in several tables here, but no table owns it, so no join is dra
 
 ## Tables
 
-| Table | Backends | Columns | Partitioned |
-|---|---|---|---|
-| `gateway_activity_events` | Postgres, SQLite | 7 |  |
-| `gateway_activity_sequences` | Postgres, SQLite | 2 |  |
-| `gateway_activity_tombstones` | Postgres, SQLite | 4 |  |
-| `gateway_policies` | Postgres, SQLite, Snowflake | 8 |  |
-| `llm_cost_budgets` | Postgres, SQLite | 8 |  |
-| `llm_costs` | Postgres, SQLite | 13 |  |
-| `policy_audit_log` | Postgres, SQLite, Snowflake | 14 |  |
-| `posture_scores` | ClickHouse | 10 | yes |
-| `proxy_replay_log` | Postgres, SQLite | 5 |  |
-| `runtime_events` | ClickHouse | 16 | yes |
-| `runtime_observation_revisions` | Postgres | 5 |  |
-| `runtime_observations` | Postgres, SQLite | 5 |  |
-| `runtime_sessions` | Postgres, SQLite | 4 |  |
-| `runtime_trace_imports` | Postgres | 4 |  |
-| `runtime_workload_evidence` | Postgres, SQLite | 12 |  |
-| `trace_collection_checkpoints` | Postgres | 3 |  |
-| `trace_collection_receipts` | Postgres | 5 |  |
+| Table | Backends | Columns | Partitioned | Lifetime |
+|---|---|---|---|---|
+| `gateway_activity_events` | Postgres, SQLite | 7 |  | persistent |
+| `gateway_activity_sequences` | Postgres, SQLite | 2 |  | persistent |
+| `gateway_activity_tombstones` | Postgres, SQLite | 4 |  | persistent |
+| `gateway_policies` | Postgres, SQLite, Snowflake | 8 |  | persistent |
+| `llm_cost_budgets` | Postgres, SQLite | 8 |  | persistent |
+| `llm_costs` | Postgres, SQLite | 13 |  | persistent |
+| `policy_audit_log` | Postgres, SQLite, Snowflake | 14 |  | persistent |
+| `posture_scores` | ClickHouse | 10 | yes | persistent |
+| `proxy_replay_log` | Postgres, SQLite | 5 |  | persistent |
+| `runtime_events` | ClickHouse | 16 | yes | persistent |
+| `runtime_observation_revisions` | Postgres | 5 |  | persistent |
+| `runtime_observations` | Postgres, SQLite | 5 |  | persistent |
+| `runtime_sessions` | Postgres, SQLite | 4 |  | persistent |
+| `runtime_trace_imports` | Postgres | 4 |  | persistent |
+| `runtime_workload_evidence` | Postgres, SQLite | 12 |  | persistent |
+| `trace_collection_checkpoints` | Postgres | 3 |  | persistent |
+| `trace_collection_receipts` | Postgres | 5 |  | persistent |

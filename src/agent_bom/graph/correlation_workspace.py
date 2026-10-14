@@ -394,7 +394,7 @@ class CorrelationMergeWorkspace:
     def __enter__(self) -> CorrelationMergeWorkspace:
         return self
 
-    def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+    def __exit__(self, exc_type: object, exc: object, _tb: object) -> None:
         self.close()
 
 
