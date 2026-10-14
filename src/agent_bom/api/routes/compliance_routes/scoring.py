@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from typing import Any
 
+from agent_bom.compliance_coverage import rows_by_control_key
 from agent_bom.compliance_nist_catalog import evaluated_control_status as _evaluated_control_status
 from agent_bom.evidence.control_modes import (
     DETECTIVE_CONTROLS,
@@ -142,6 +143,30 @@ def _build_controls(
             }
         )
     return controls
+
+
+def _build_framework_controls(
+    all_blast: list[dict],
+    frameworks: Iterable[Any],
+    *,
+    scan_count: int,
+    latest_scan: str | None,
+    vulnerability_coverage_incomplete: bool,
+) -> dict[str, list[dict]]:
+    """Build every tag-mapped framework's control entries, keyed by output key."""
+    return {
+        metadata.output_key: _build_controls(
+            rows_by_control_key(all_blast, dict(metadata.catalog), metadata.tag_field),
+            dict(metadata.catalog),
+            metadata.tag_field,
+            "code",
+            scored=metadata.scored,
+            scan_count=scan_count,
+            latest_scan=latest_scan,
+            vulnerability_coverage_incomplete=vulnerability_coverage_incomplete,
+        )
+        for metadata in frameworks
+    }
 
 
 def _count_statuses(controls: list[dict]) -> tuple[int, int, int]:

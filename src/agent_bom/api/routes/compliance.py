@@ -74,7 +74,7 @@ from agent_bom.api.routes.compliance_routes.reads import get_credential_risk_ran
 from agent_bom.api.routes.compliance_routes.reads import get_incident_correlation as get_incident_correlation
 from agent_bom.api.routes.compliance_routes.reads import get_posture_scorecard as get_posture_scorecard
 from agent_bom.api.routes.compliance_routes.scoring import (
-    _build_controls,
+    _build_framework_controls,
     _compliance_verdict,
     _framework_posture,
     _framework_status_summary,
@@ -126,7 +126,7 @@ def _compliance_for_request(request: Request, scan_id: str | None) -> dict[str, 
 def _build_compliance(tenant_jobs: list[Any], *, scan_id: str | None = None) -> dict[str, Any]:
     """Build compliance truth from one caller-owned job-store snapshot."""
     from agent_bom.api.findings_current import current_scan_jobs, scan_evidence_authority_key
-    from agent_bom.compliance_coverage import TAG_MAPPED_FRAMEWORKS, rows_by_control_key
+    from agent_bom.compliance_coverage import TAG_MAPPED_FRAMEWORKS
 
     tenant_jobs = list(
         current_scan_jobs(
@@ -142,20 +142,17 @@ def _build_compliance(tenant_jobs: list[Any], *, scan_id: str | None = None) -> 
     all_blast: list[dict] = []
     authoritative_occurrences: dict[str, tuple[tuple[str, str, str], dict[str, Any]]] = {}
     latest_scan_job: Any | None = None
-    scan_count = 0
-    vulnerability_coverage_incomplete = False
     has_mcp_context = False
     has_agent_context = False
     all_scan_sources: set[str] = set()
 
-    for job in tenant_jobs:
-        if job.status != JobStatus.DONE or not job.result:
-            continue
-        scan_count += 1
-        # A counted scan whose vulnerability lane was partial means the estate
-        # was not fully scanned, so no vulnerability-scanning control may claim
-        # a pass off this evidence set.
-        vulnerability_coverage_incomplete = vulnerability_coverage_incomplete or result_vulnerability_coverage_incomplete(job.result)
+    completed_jobs = [job for job in tenant_jobs if job.status == JobStatus.DONE and job.result]
+    scan_count = len(completed_jobs)
+    # A counted scan whose vulnerability lane was partial means the estate
+    # was not fully scanned, so no vulnerability-scanning control may claim
+    # a pass off this evidence set.
+    vulnerability_coverage_incomplete = any(result_vulnerability_coverage_incomplete(job.result) for job in completed_jobs)
+    for job in completed_jobs:
         for row in _result_compliance_evidence(job.result):
             occurrence_id = str(row.get("id") or row.get("canonical_id") or "")
             if not occurrence_id:
@@ -176,19 +173,13 @@ def _build_compliance(tenant_jobs: list[Any], *, scan_id: str | None = None) -> 
     all_blast.extend(row for _authority, row in authoritative_occurrences.values())
     latest_scan = getattr(latest_scan_job, "completed_at", None) if latest_scan_job is not None else None
 
-    framework_controls = {
-        metadata.output_key: _build_controls(
-            rows_by_control_key(all_blast, dict(metadata.catalog), metadata.tag_field),
-            dict(metadata.catalog),
-            metadata.tag_field,
-            "code",
-            scored=metadata.scored,
-            scan_count=scan_count,
-            latest_scan=latest_scan,
-            vulnerability_coverage_incomplete=vulnerability_coverage_incomplete,
-        )
-        for metadata in TAG_MAPPED_FRAMEWORKS
-    }
+    framework_controls = _build_framework_controls(
+        all_blast,
+        TAG_MAPPED_FRAMEWORKS,
+        scan_count=scan_count,
+        latest_scan=latest_scan,
+        vulnerability_coverage_incomplete=vulnerability_coverage_incomplete,
+    )
 
     # Wire the CIS Foundations Benchmark posture (report.cis_benchmark_data + the
     # azure/gcp/snowflake/databricks siblings) into the aggregate. Previously the

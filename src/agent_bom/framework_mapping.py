@@ -57,9 +57,8 @@ referenced by ID only).
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 # CWE_COMPLIANCE_MAP physically lives in ``constants`` (a dependency-free leaf
 # module). This layer owns the *resolution API* over it and re-exports it so
@@ -89,7 +88,6 @@ __all__ = [
     "CIS_FOUNDATIONS_TO_NIST_800_53",
     "nist_controls_for_cis_check",
     "NIST_800_53_EVIDENCED_CONTROLS",
-    "finding_evidencing_checks",
 ]
 
 
@@ -628,21 +626,6 @@ def _nist_evidencing_checks() -> dict[str, list[str]]:
         for control_id in controls:
             checks.setdefault(control_id, set()).add(f"cis:{cloud}:{check_id}")
     return {control_id: sorted(values) for control_id, values in checks.items()}
-
-
-def finding_evidencing_checks(row: Mapping[str, Any]) -> set[str]:
-    """Return the curated checks one serialized finding row actually ran.
-
-    Namespaced like ``ControlSpec.evidencing_checks`` (``cwe:<CWE-ID>``). A
-    finding evidences a NIST control only through one of these; the
-    vulnerability-intrinsic tagger rules (SR-3 on every CVE, SI-4 on high
-    severity, ...) are not checks and never evaluate a catalog control.
-    """
-    cwes = {str(cwe).strip().upper() for cwe in row.get("cwe_ids") or () if str(cwe).strip()}
-    finding_type = row.get("finding_type")
-    if str(getattr(finding_type, "value", finding_type) or "").upper() == FindingType.CREDENTIAL_EXPOSURE.value:
-        cwes.update(_CREDENTIAL_CWES)
-    return {f"cwe:{cwe}" for cwe in cwes}
 
 
 # ─── Populate the provenanced control catalog (import-time, once) ─────────────

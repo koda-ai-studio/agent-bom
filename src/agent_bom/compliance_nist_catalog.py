@@ -23,6 +23,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from agent_bom.evidence.evidencing_checks import finding_evaluated_controls
 from agent_bom.core.severity import evaluated_control_status as evaluated_control_status
 
 # Order used to collapse multiple evidence signals on one NIST control into a
@@ -63,17 +64,7 @@ def build_nist_800_53_catalog_line(
     finding_sev: dict[str, dict[str, int]] = {}
     finding_count: dict[str, int] = {}
     for br in all_blast:
-        ran = fm.finding_evidencing_checks(br)
-        if not ran:
-            continue
-        for control_id in br.get("nist_800_53_tags", []) or []:
-            spec = catalog.get(control_id)
-            if control_id not in evidenced or spec is None or ran.isdisjoint(spec.evidencing_checks):
-                # The tag came from a vulnerability-intrinsic rule (SR-3 on every
-                # CVE, SI-4 on high severity), not from a curated check this
-                # finding ran. A control evidenced only by OTHER checks (CIS
-                # alarms for SI-4) must not be evaluated by it.
-                continue
+        for control_id in finding_evaluated_controls(br, catalog, evidenced):
             sev = str(br.get("severity") or "").lower()
             bucket = finding_sev.setdefault(control_id, {"critical": 0, "high": 0, "medium": 0, "low": 0})
             if sev in bucket:

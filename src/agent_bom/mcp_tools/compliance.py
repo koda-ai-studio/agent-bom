@@ -37,6 +37,22 @@ async def policy_check_impl(
         return json.dumps({"error": sanitize_error(exc)})
 
 
+def _blast_radius_row(br: Any) -> dict[str, Any]:
+    """Project one BlastRadius onto the dict shape the compliance tool aggregates."""
+    return {
+        "severity": br.vulnerability.severity.value,
+        "cwe_ids": list(br.vulnerability.cwe_ids or []),
+        "package": f"{br.package.name}@{br.package.version}",
+        "affected_agents": [a.name for a in br.affected_agents],
+        "owasp_tags": list(br.owasp_tags),
+        "atlas_tags": list(br.atlas_tags),
+        "nist_ai_rmf_tags": list(br.nist_ai_rmf_tags),
+        "owasp_mcp_tags": list(br.owasp_mcp_tags),
+        "owasp_agentic_tags": list(getattr(br, "owasp_agentic_tags", [])),
+        "nist_800_53_tags": list(getattr(br, "nist_800_53_tags", [])),
+    }
+
+
 async def compliance_impl(
     *,
     config_path: str | None = None,
@@ -56,22 +72,7 @@ async def compliance_impl(
         has_evidence = bool(agents or blast_radii or scan_sources)
 
         # Convert BlastRadius objects to dicts for aggregation
-        br_dicts = []
-        for br in blast_radii:
-            br_dicts.append(
-                {
-                    "severity": br.vulnerability.severity.value,
-                    "cwe_ids": list(br.vulnerability.cwe_ids or []),
-                    "package": f"{br.package.name}@{br.package.version}",
-                    "affected_agents": [a.name for a in br.affected_agents],
-                    "owasp_tags": list(br.owasp_tags),
-                    "atlas_tags": list(br.atlas_tags),
-                    "nist_ai_rmf_tags": list(br.nist_ai_rmf_tags),
-                    "owasp_mcp_tags": list(br.owasp_mcp_tags),
-                    "owasp_agentic_tags": list(getattr(br, "owasp_agentic_tags", [])),
-                    "nist_800_53_tags": list(getattr(br, "nist_800_53_tags", [])),
-                }
-            )
+        br_dicts = [_blast_radius_row(br) for br in blast_radii]
 
         def _build_controls(catalog, tag_field, id_key, *, scored: bool):
             controls = []
