@@ -1069,7 +1069,7 @@ def test_compliance_no_agents(mock_pipeline):
     from agent_bom.mcp_server import create_mcp_server
 
     server = create_mcp_server(profile="full")
-    result = _call_tool(server, "compliance", {})
+    result = _call_tool(server, "compliance", {"source": "local_scan"})
     assert result["overall_score"] == 0.0
     assert result["overall_status"] == "no_data"
     assert result["evaluated_controls"] == 0
@@ -1122,7 +1122,7 @@ def test_compliance_with_findings(mock_pipeline):
     from agent_bom.mcp_server import create_mcp_server
 
     server = create_mcp_server(profile="full")
-    result = _call_tool(server, "compliance", {})
+    result = _call_tool(server, "compliance", {"source": "local_scan"})
     assert result["overall_status"] == "fail"
     assert result["overall_score"] < 100.0
 
