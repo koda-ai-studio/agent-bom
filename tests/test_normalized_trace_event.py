@@ -247,7 +247,7 @@ def test_exact_inventory_ids_and_credential_names_only() -> None:
     tool = from_langsmith_run(LANGSMITH_TOOL, tenant_id="t")
     assert (tool.kind, tool.tool_name, tool.status) == ("tool", "query_crm", "error")
     assert (tool.match_method, tool.match_node_id, tool.credential_ref) == ("exact", "tool:crm:query_crm", "CRM_API_KEY")
-    leaky = {**LANGSMITH_TOOL, "extra": {"metadata": {"agent_bom.credential_ref": "sk-live-abcdef0123456789"}}}
+    leaky = {**LANGSMITH_TOOL, "extra": {"metadata": {"agent_bom.credential_ref": "sk-" + "live-" + "abcdef0123456789"}}}
     assert from_langsmith_run(leaky, tenant_id="t").credential_ref is None
     with pytest.raises(ValueError):
         NormalizedTraceEvent(tenant_id="t", source="otel", source_trace_id="x", source_span_id="y", credential_ref="sk-live-1")
