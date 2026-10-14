@@ -4405,7 +4405,7 @@ export interface paths {
         };
         /**
          * Get Graph Diff
-         * @description Diff two scan snapshots — nodes/edges added, removed, changed.
+         * @description Diff two scan snapshots: summary by default, filtered detail pages, or capped legacy lists.
          */
         get: operations["get_graph_diff_v1_graph_diff_get"];
         put?: never;
@@ -15790,7 +15790,25 @@ export interface components {
              */
             warnRisk: number;
         };
-        /** GraphDiffResponse */
+        /** GraphDiffPagination */
+        GraphDiffPagination: {
+            /** Has More */
+            has_more: boolean;
+            /** Limit */
+            limit: number;
+            /** Next Cursor */
+            next_cursor?: string | null;
+            /** Offset */
+            offset: number;
+            /** Returned */
+            returned: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * GraphDiffResponse
+         * @description ``GET /v1/graph/diff``: ``summary`` (default), ``detail`` rows, or capped ``full`` lists.
+         */
         GraphDiffResponse: {
             /** Attribute Deltas */
             attribute_deltas?: {
@@ -15799,11 +15817,13 @@ export interface components {
                 }[];
             } | null;
             /** Change Kind Index */
-            change_kind_index: {
+            change_kind_index?: {
                 [key: string]: {
                     [key: string]: string;
                 };
-            };
+            } | null;
+            /** Complete */
+            complete?: boolean | null;
             completeness: components["schemas"]["GraphCompleteness"];
             /** Edges Added */
             edges_added?: unknown[] | null;
@@ -15811,12 +15831,47 @@ export interface components {
             edges_changed?: unknown[] | null;
             /** Edges Removed */
             edges_removed?: unknown[] | null;
+            /** Filters */
+            filters?: {
+                [key: string]: string;
+            } | null;
+            /** Items */
+            items?: {
+                [key: string]: unknown;
+            }[] | null;
+            /** Limits */
+            limits?: {
+                [key: string]: number;
+            } | null;
+            /** New */
+            new: string;
             /** Nodes Added */
             nodes_added?: unknown[] | null;
             /** Nodes Changed */
             nodes_changed?: unknown[] | null;
             /** Nodes Removed */
             nodes_removed?: unknown[] | null;
+            /** Old */
+            old: string;
+            /** Omitted Fields */
+            omitted_fields?: string[] | null;
+            pagination?: components["schemas"]["GraphDiffPagination"] | null;
+            /** Returned Changes */
+            returned_changes?: number | null;
+            /** Schema Version */
+            schema_version: string;
+            /** Summary */
+            summary?: {
+                [key: string]: unknown;
+            } | null;
+            /** Total */
+            total?: number | null;
+            /** Total Changes */
+            total_changes?: number | null;
+            /** Truncated */
+            truncated?: boolean | null;
+            /** View */
+            view: string;
         } & {
             [key: string]: unknown;
         };
@@ -33836,11 +33891,27 @@ export interface operations {
     };
     get_graph_diff_v1_graph_diff_get: {
         parameters: {
-            query: {
-                /** @description Old scan ID */
-                old: string;
-                /** @description New scan ID */
-                new: string;
+            query?: {
+                /** @description Old scan ID; omit both old and new to compare the latest two */
+                old?: string | null;
+                /** @description New scan ID; omit both old and new to compare the latest two */
+                new?: string | null;
+                /** @description summary (default): counts per change kind by entity type and relationship plus the most significant changes. detail: a filtered, cursor-paged list of change rows. full: the legacy node/edge lists, capped (see truncated/complete/limits). */
+                view?: "summary" | "detail" | "full";
+                /** @description detail: only this change kind */
+                change?: ("added" | "removed" | "changed") | null;
+                /** @description detail: only node or edge rows */
+                kind?: ("node" | "edge") | null;
+                /** @description detail: only node rows of this entity type */
+                entity_type?: string | null;
+                /** @description detail: only edge rows of this relationship */
+                relationship?: string | null;
+                /** @description detail: the node itself or edges touching it */
+                node_id?: string | null;
+                /** @description detail: rows per page */
+                limit?: number;
+                /** @description detail: pagination.next_cursor; keep filters unchanged */
+                cursor?: string | null;
             };
             header?: never;
             path?: never;

@@ -1071,11 +1071,12 @@ export const api = {
     return get<GraphHistoryResponse>(`/v1/graph/history?${params.toString()}`);
   },
 
-  /** Diff two persisted graph snapshots without loading either full graph */
+  /** Capped node/edge lists for the drift lens; counts come from `summary.totals`. */
   getGraphDiff: (oldScanId: string, newScanId: string) => {
     const params = new URLSearchParams();
     params.set("old", oldScanId);
     params.set("new", newScanId);
+    params.set("view", "full");
     return get<GraphDiffResponse>(`/v1/graph/diff?${params.toString()}`);
   },
 

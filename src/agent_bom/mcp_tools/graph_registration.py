@@ -8,6 +8,7 @@ from pydantic import Field
 
 from agent_bom.mcp_tools.findings import finding_detail_impl, findings_query_impl
 from agent_bom.mcp_tools.graph import deploy_decision_impl, exposure_paths_impl
+from agent_bom.mcp_tools.graph_diff import graph_diff_impl
 from agent_bom.mcp_tools.graph_reach import graph_reach_impl
 
 _TENANT = Field(description="Tenant scope. Defaults to 'default'.")
@@ -150,6 +151,54 @@ def _register_graph_reach(
         )
 
 
+def _register_graph_diff(mcp: Any, read_only: Any, execute_tool_async: Callable[..., Any], truncate_response: Callable[[str], str]) -> None:
+    @mcp.tool(annotations=read_only, title="Graph Diff")
+    async def graph_diff(
+        from_scan_id: Annotated[
+            str | None, Field(max_length=512, description="Older snapshot scan ID. Omit both IDs to compare the latest two snapshots.")
+        ] = None,
+        to_scan_id: Annotated[str | None, Field(max_length=512, description="Newer snapshot scan ID.")] = None,
+        view: Annotated[
+            Literal["summary", "detail"],
+            Field(
+                description=(
+                    "summary (default): counts per change kind by entity type and relationship, plus new critical findings, "
+                    "new credential reach, removed controls and new attack paths. detail: a filtered page of change rows."
+                )
+            ),
+        ] = "summary",
+        change: Annotated[Literal["added", "removed", "changed"] | None, Field(description="detail: only this change kind.")] = None,
+        kind: Annotated[Literal["node", "edge"] | None, Field(description="detail: only node or edge rows.")] = None,
+        entity_type: Annotated[str | None, Field(max_length=64, description="detail: only node rows of this entity type.")] = None,
+        relationship: Annotated[str | None, Field(max_length=64, description="detail: only edge rows of this relationship.")] = None,
+        node_id: Annotated[str | None, Field(max_length=512, description="detail: the node itself or edges touching it.")] = None,
+        limit: Annotated[int, Field(ge=1, le=200, description="detail: rows per page.")] = 50,
+        cursor: Annotated[str | None, Field(max_length=4096, description="pagination.next_cursor; keep the filters unchanged.")] = None,
+        tenant_id: Annotated[str, _TENANT] = "default",
+    ) -> str:
+        """Return what changed between two graph snapshots exactly as /v1/graph/diff does.
+
+        Rows are ordered nodes before edges, then added/removed/changed, then id;
+        ``total`` counts every row matching the filters, not one page.
+        """
+        return await execute_tool_async(
+            "graph_diff",
+            graph_diff_impl,
+            tenant_id=tenant_id,
+            from_scan_id=from_scan_id,
+            to_scan_id=to_scan_id,
+            view=view,
+            change=change,
+            kind=kind,
+            entity_type=entity_type,
+            relationship=relationship,
+            node_id=node_id,
+            limit=limit,
+            cursor=cursor,
+            _truncate_response=truncate_response,
+        )
+
+
 def _register_findings_query(
     mcp: Any, read_only: Any, execute_tool_async: Callable[..., Any], truncate_response: Callable[[str], str]
 ) -> None:
@@ -228,6 +277,7 @@ def register_graph_agent_tools(
         _register_exposure_paths,
         _register_should_i_deploy,
         _register_graph_reach,
+        _register_graph_diff,
         _register_findings_query,
         _register_finding_detail,
     ):

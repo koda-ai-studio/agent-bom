@@ -1075,6 +1075,17 @@ export interface GraphDiffResponse {
   edges_removed: [string, string, string][];
   change_kind_index?: GraphChangeKindIndex | undefined;
   attribute_deltas?: Record<string, GraphAttributeDelta[]> | undefined;
+  /** Exact counts; the lists above stop at the server's row/byte cap when `truncated`. */
+  summary?: { totals: Record<"nodes" | "edges", GraphDiffChangeCounts> } | undefined;
+  truncated?: boolean | undefined;
+  total_changes?: number | undefined;
+  returned_changes?: number | undefined;
+}
+
+export interface GraphDiffChangeCounts {
+  added: number;
+  removed: number;
+  changed: number;
 }
 
 export interface GraphAttributeDelta {

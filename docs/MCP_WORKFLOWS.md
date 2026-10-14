@@ -62,7 +62,7 @@ cannot be invoked. Profiles are not permissions: graph writes still require the
 existing authenticated role, tenant scope and audit reason.
 
 Existing clients that require the complete catalog can explicitly use
-`agent-bom mcp server --profile full`. It retains all 93 tools. The previous
+`agent-bom mcp server --profile full`. It retains all 94 tools. The previous
 28-tool `--profile guided` option remains available for compatibility with all
 eight workflow prompts. Neither is the recommended first-run configuration.
 Third-party tool plugins remain separately opt-in and are exposed only by `full`.
