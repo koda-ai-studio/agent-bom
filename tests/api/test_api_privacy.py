@@ -356,8 +356,8 @@ def test_sqlite_graph_store_delete_tenant_removes_graph_rows(tmp_path) -> None:
         conn.execute("INSERT INTO graph_snapshots (scan_id, tenant_id, created_at) VALUES ('scan-b', 'tenant-b', 'now')")
         conn.execute(
             """
-            INSERT INTO attack_paths (source_node, target_node, scan_id, tenant_id, computed_at)
-            VALUES ('node-a', 'node-b', 'scan-a', 'tenant-a', 'now')
+            INSERT INTO attack_paths (source_node, target_node, scan_id, tenant_id, computed_at, path_key)
+            VALUES ('node-a', 'node-b', 'scan-a', 'tenant-a', 'now', 'path-a')
             """
         )
         conn.execute(
