@@ -45,7 +45,7 @@ def _prompt_scan_findings(prompt_scan: dict) -> list[dict[str, object]]:
                     "name": Path(source_file).name if source_file else "prompt",
                     "asset_type": "prompt_template",
                     "identifier": source_file or None,
-                    "location": source_file or None,
+                    "location": sanitize_path_label(source_file) if source_file else None,
                     "stable_id": _stable_report_finding_id("prompt_asset", source_file),
                     "canonical_id": _stable_report_finding_id("prompt_asset", source_file),
                 },
