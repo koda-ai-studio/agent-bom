@@ -52,3 +52,19 @@ it("keeps labels present when no clear path position exists", () => {
   expect(labels[0]!.style.transform).toContain("translate(500px, 100px)");
   expect(labels[0]!.textContent).toBe("Recorded relationship");
 });
+
+it("moves a caption off a crossing relationship line, not only off nodes and captions", () => {
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => { callback(0); return 1; });
+  vi.stubGlobal("CSS", { escape: (value: string) => value });
+  const labels = fixture();
+  document.querySelector<HTMLElement>(".react-flow__node")!.getBoundingClientRect = () => new DOMRect(-5000, -5000, 10, 10);
+  const vertical = document.querySelector('.react-flow__edge[data-id="b"] path')!;
+  Object.assign(vertical, { getPointAtLength: (at: number) => ({ x: 500, y: at / 5 }) });
+  scheduleRelationshipLabelLayout(labels[0]!);
+  const [ax, ay] = labels[0]!.style.transform.match(/translate\((-?[\d.]+)px, (-?[\d.]+)px\)$/)!.slice(1).map(Number);
+  const [bx, by] = labels[1]!.style.transform.match(/translate\((-?[\d.]+)px, (-?[\d.]+)px\)$/)!.slice(1).map(Number);
+  expect(ay).toBe(100);
+  expect(Math.abs(ax! - 500)).toBeGreaterThan(50);
+  expect(bx).toBe(500);
+  expect(Math.abs(by! - 100)).toBeGreaterThan(10);
+});

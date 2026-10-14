@@ -11,6 +11,7 @@ import { severityColor } from "@/lib/api";
 import type { ReachBreakdown } from "@/lib/effective-reach";
 import { NODE_COLOR_MAP } from "@/lib/graph-utils";
 import { nodeBadges } from "@/lib/graph-node-badges";
+import { canvasNodeLabel } from "@/lib/graph-occurrence-role";
 import {
   ENTITY_ICONS,
   entityIcon,
@@ -39,6 +40,8 @@ export type LineageNodeData = {
   firstSeen?: string | undefined;
   lastSeen?: string | undefined;
   dataSources?: string[] | undefined;
+  /** Distinguishes same-image container occurrences (inventory vs deployment). */
+  occurrenceRole?: string | undefined;
   dimensions?: import("@/lib/graph-schema").NodeDimensions | undefined;
   complianceTags?: string[] | undefined;
   attributes?: Record<string, unknown> | undefined;
@@ -174,12 +177,13 @@ function NodeCard({
         <Icon aria-hidden="true" className={`h-8 w-8 ${iconClass}`} />
       </div>
       <p className="mb-1 w-full min-w-0 break-words line-clamp-3 text-lg font-semibold leading-[1.2] text-foreground [overflow-wrap:anywhere]" style={{ fontSize: "var(--graph-node-label-size, 18px)" }}>
-        {data.label.split(/(?<=[_/@-])/).map((part, index) => <span key={index}>{part}<wbr /></span>)}
+        {canvasNodeLabel(data.label).split(/(?<=[_/@-])/).map((part, index) => <span key={index}>{part}<wbr /></span>)}
       </p>
       <NodeBadgeRow badges={badges}>
         <span className="text-xs text-ink-secondary">
           {data.entityType === "application" ? "Application" : NODE_TYPE_BADGES[data.nodeType]}
         </span>
+        {data.occurrenceRole && <span data-testid="graph-occurrence-role" className="rounded border border-outline-strong px-1 text-[10px] font-medium uppercase tracking-wide text-ink-secondary">{data.occurrenceRole}</span>}
       </NodeBadgeRow>
       {data.runtimeEvidenceTier && data.runtimeEvidenceTier !== "static_scan" && <div className="mt-1">
         <RuntimeEvidenceChip tier={data.runtimeEvidenceTier} />

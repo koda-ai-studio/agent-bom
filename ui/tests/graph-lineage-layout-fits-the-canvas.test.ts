@@ -197,6 +197,21 @@ describe("the raw lineage layout is shaped like the canvas it lands on", () => {
     }
   });
 
+  it("keeps a short rank in one column so no relationship is drawn through a sibling", () => {
+    // Three inputs resolving to one package: wrapping that rank into two
+    // sub-columns routes the far column's links through the near one.
+    const ids = ["source", "image", "deployment", "package", "finding"];
+    const nodes: Node[] = ids.map((id) => ({ id, position: { x: 0, y: 0 }, data: {} }));
+    const edges: Edge[] = [
+      { id: "a", source: "source", target: "package" }, { id: "b", source: "image", target: "package" },
+      { id: "c", source: "deployment", target: "package" }, { id: "d", source: "package", target: "finding" },
+    ];
+    const laid = applyDagreLayout(nodes, edges, { ...READABLE_LINEAGE_DAGRE_LR, direction: "LR" }).nodes;
+    const x = new Map(laid.map((n) => [n.id, n.position.x]));
+    expect(new Set(["source", "image", "deployment"].map((id) => x.get(id))).size).toBe(1);
+    expect(x.get("source")!).toBeLessThan(x.get("package")!);
+  });
+
   it("is deterministic for identical input", () => {
     const run = () => {
       const { nodes, edges } = fanout([6, 10]);

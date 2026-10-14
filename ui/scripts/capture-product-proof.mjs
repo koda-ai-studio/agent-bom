@@ -3133,7 +3133,7 @@ async function main() {
           await expect(p.locator(".react-flow__node")).toHaveCount(fixture.nodes.length);
           await fitReactFlow(p);
           await scrollTo(p, 0);
-        }, { expectedText: [/Demo data/i, "Attack-path analysis complete", scopeShowcaseHeadline(fixture), ...fixture.nodes.map(n => new RegExp(n.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/-/g, "[- ]"), "i"))],
+        }, { expectedText: [/Demo data/i, "Path analysis complete for this snapshot", scopeShowcaseHeadline(fixture), ...fixture.nodes.map(n => new RegExp(n.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/-/g, "[- ]"), "i"))],
           expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph"],
           minGraphNodes: fixture.nodes.length, maxGraphNodes: fixture.nodes.length,
           minGraphEdges: fixture.edges.length, maxGraphEdges: fixture.edges.length,
@@ -3489,12 +3489,12 @@ async function main() {
           await finding.press("Space");
           const receipt = p.getByLabel("Relationship details", { exact: true });
           await expect(receipt).toBeVisible();
-          await expect(receipt.getByLabel("Recorded link evidence")).toContainText("bundled_advisory_scanner");
+          await expect(receipt.getByLabel("Relationship summary")).toContainText("Bundled advisory database");
           await fitReactFlow(p);
           await scrollTo(p, 0);
         }, {
-          expectedText: ["Has finding", "static_evidence", "bundled_advisory_scanner", "pinned-package.txt", "CVE-2023-4863",
-            "1 critical · 1 finding · 1 snapshot path", "Attack-path analysis complete", /Reference evidence lab/i],
+          expectedText: ["Has finding", "pillow@9.0.0 is recorded as affected by CVE-2023-4863.", "Bundled advisory database", "Technical details", "Image inventory", "Deployment occurrence", "pinned-package.txt", "CVE-2023-4863",
+            "1 high finding · 1 KEV-listed · 1 snapshot path", "Path analysis complete for this snapshot", /Reference evidence lab/i],
           expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph"],
           minGraphNodes: 5, maxGraphNodes: 5, minGraphEdges: 4, maxGraphEdges: 4,
           minGraphNodeFontPx: 12, minGraphEdgeLabelFontPx: 12,
@@ -3862,9 +3862,10 @@ async function main() {
 
 function scopeShowcaseHeadline(fixture) {
   const findings = fixture.nodes.filter((item) => ["vulnerability", "misconfiguration"].includes(item.entity_type));
-  const critical = findings.filter((item) => item.severity === "critical" || item.attributes.is_kev === true);
-  const paths = fixture.attack_paths.length;
-  return `${critical.length} critical · ${findings.length} ${findings.length === 1 ? "finding" : "findings"} · ${paths} ${paths === 1 ? "snapshot path" : "snapshot paths"}`;
+  const counts = ["critical", "high", "medium", "low"].map((sev) => [sev, findings.filter((item) => item.severity === sev).length]).filter(([, n]) => n > 0);
+  const kev = findings.filter((item) => item.entity_type === "vulnerability" && item.attributes.is_kev === true).length, paths = fixture.attack_paths.length;
+  const noun = findings.length === 1 ? "finding" : "findings", sevText = counts.length === 1 && counts[0][1] === findings.length ? `${findings.length} ${counts[0][0]} ${noun}` : `${findings.length} ${noun}: ${counts.map(([sev, n]) => `${n} ${sev}`).join(", ")}`;
+  return `${sevText}${kev ? ` · ${kev} KEV-listed` : ""} · ${paths} ${paths === 1 ? "snapshot path" : "snapshot paths"}`;
 }
 
 function checkAdvisoryFixtures() {

@@ -27,8 +27,8 @@ export function graphAnalysisStatusCopy(status: GraphAnalysisStatus | undefined)
   }
   if (status.status === "complete") {
     return {
-      label: "Attack-path analysis complete",
-      detail: "The persisted snapshot records a complete attack-path analysis run.",
+      label: "Path analysis complete for this snapshot",
+      detail: "Path analysis finished over the collected data only. Assets, permissions or activity this snapshot did not collect are not covered, so this is not a statement that the environment is secure.",
       tone: "ok",
     };
   }

@@ -1,0 +1,51 @@
+import { describe, expect, it } from "vitest";
+
+import { canvasNodeLabel, containerOccurrenceRole } from "@/lib/graph-occurrence-role";
+import { buildUnifiedFlowGraph } from "@/lib/unified-graph-flow";
+import { createFocusedGraphFilters } from "@/components/lineage-filter";
+import { EntityType, RelationshipType, type UnifiedGraphData, type UnifiedNode } from "@/lib/graph-schema";
+
+const at = "2026-06-01T00:00:00Z";
+const digest = "sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a";
+
+function node(id: string, entityType: EntityType, label: string, dataSources: string[]): UnifiedNode {
+  return {
+    id, entity_type: entityType, label, category_uid: 0, class_uid: 0, type_uid: 0, status: "active",
+    risk_score: 0, severity: "none", severity_id: 0, first_seen: at, last_seen: at, attributes: {},
+    compliance_tags: [], data_sources: dataSources, dimensions: {},
+  };
+}
+
+function contains(source: string): UnifiedGraphData["edges"][number] {
+  return { id: `${source}-pkg`, source, target: "pkg", relationship: RelationshipType.CONTAINS, direction: "directed",
+    weight: 1, traversable: true, first_seen: at, last_seen: at, evidence: {}, activity_id: 1 };
+}
+
+describe("container occurrence roles", () => {
+  it("derives the role from the recorded collector, not the label", () => {
+    expect(containerOccurrenceRole(["cyclonedx_sbom"])).toBe("Image inventory");
+    expect(containerOccurrenceRole(["kubernetes_iac"])).toBe("Deployment occurrence");
+    expect(containerOccurrenceRole(["kubernetes_iac", "cyclonedx_sbom"])).toBeUndefined();
+    expect(containerOccurrenceRole(["test"])).toBeUndefined();
+  });
+
+  it("keeps the digest off the canvas label and in the full label", () => {
+    expect(canvasNodeLabel(`reference-evidence-api@${digest}`)).toBe("reference-evidence-api");
+    expect(canvasNodeLabel("pillow@9.0.0")).toBe("pillow@9.0.0");
+  });
+
+  it("labels same-image occurrences only when they would otherwise read as duplicates", () => {
+    const graph = {
+      scan_id: "s", tenant_id: "default", created_at: at, attack_paths: [], interaction_risks: [],
+      nodes: [
+        node("c-sbom", EntityType.CONTAINER, `reference-evidence-api@${digest}`, ["cyclonedx_sbom"]),
+        node("c-k8s", EntityType.CONTAINER, `reference-evidence-api@${digest}`, ["kubernetes_iac"]),
+        node("c-solo", EntityType.CONTAINER, "model-serving", ["cyclonedx_sbom"]),
+        node("pkg", EntityType.PACKAGE, "pillow@9.0.0", ["cyclonedx_sbom"]),
+      ],
+      edges: [contains("c-sbom"), contains("c-k8s"), contains("c-solo")],
+    } as unknown as UnifiedGraphData;
+    const roles = Object.fromEntries(buildUnifiedFlowGraph(graph, { ...createFocusedGraphFilters(), layers: { ...createFocusedGraphFilters().layers, container: true, package: true } }).nodes.map((item) => [item.id, item.data.occurrenceRole]));
+    expect(roles).toMatchObject({ "c-sbom": "Image inventory", "c-k8s": "Deployment occurrence", "c-solo": undefined });
+  });
+});

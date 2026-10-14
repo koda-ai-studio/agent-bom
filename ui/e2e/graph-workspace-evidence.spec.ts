@@ -59,11 +59,14 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     const receipt = page.getByLabel("Relationship details", {exact: true});
     await expect(receipt.getByText("root ↔ conditional", {exact: true})).toBeVisible();
     await expect(receipt.getByText(/does not establish execution/)).toBeVisible();
+    await receipt.getByText("Technical details", {exact: true}).click();
     await receipt.getByText("Recorded evidence", {exact: true}).click();
     await expect(receipt.getByText(/fixture-package@1.0/)).toBeVisible();
     await page.keyboard.press("Escape"); await expect(edge).toBeFocused();
     const usageEdge = page.locator('.react-flow__edge[data-id="edge:server:0"]');
     await usageEdge.focus(); await usageEdge.press("Space");
+    await expect(receipt.getByLabel("Relationship summary")).toContainText("Whether a tool was actually called.");
+    await receipt.getByText("Technical details", {exact: true}).click();
     await expect(receipt.getByRole("region", { name: "Why linked" })).toContainText("It does not establish that a tool was called.");
     await expect(receipt.getByLabel("Recorded link evidence")).toContainText("configured");
     const freshness = receipt.getByLabel("Relationship evidence and freshness");

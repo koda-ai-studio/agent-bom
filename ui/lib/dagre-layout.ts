@@ -124,6 +124,9 @@ export interface LayoutOptions {
  * small graphs keep the exact one-node-per-rank reading they have today.
  */
 const MIN_ASPECT_FIT_GAIN = 1.25;
+// Wrapping a rank draws the far sub-column's links through the near one. A
+// rank this short is never the portrait tower the reflow exists to fix.
+const MIN_WRAPPED_RANK = 5;
 
 export function fitRanksToAspect(
   nodes: Node[],
@@ -149,7 +152,7 @@ export function fitRanksToAspect(
   const rankKeys = [...ranks.keys()].sort((a, b) => a - b);
   const rankSizes = rankKeys.map((key) => ranks.get(key)!.length);
   const tallestRank = Math.max(...rankSizes);
-  if (tallestRank < 2) return nodes;
+  if (tallestRank < MIN_WRAPPED_RANK) return nodes;
 
   const columnStep = nodeWidth + nodeSep;
   const rowStep = nodeHeight + nodeSep;
