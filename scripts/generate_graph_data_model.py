@@ -133,7 +133,6 @@ ANALYSES: tuple[tuple[str, str, str, frozenset[str]], ...] = (
 TIER_MEANING = {
     "modeled_infrastructure": "Configuration read from a provider or inventory API.",
     "static_scan": "A scanner read files, manifests or source.",
-    "static_evidence": "Static evidence supplied with the input (contract tier; no registered collector uses it).",
     "recorded": "Logs, audit trails, usage history or attestations recorded the activity.",
     "runtime_observed": "The runtime proxy, gateway or feedback loop observed it live.",
     "derived": "Computed from other edges; must name `derived_via`.",
@@ -151,7 +150,6 @@ _REGISTRY_MODULES = frozenset(
         "graph/edge_evidence.py",
         "graph/ocsf.py",
         "graph/container.py",
-        "graph_schema.py",
     }
 )
 _NON_EMITTING_CALLS = frozenset(

@@ -94,15 +94,15 @@ Same column name in several tables here, but no table owns it, so no join is dra
 
 ## Tables
 
-| Table | Backends | Columns | Partitioned |
-|---|---|---|---|
-| `attestation_replay` | SQLite | 4 |  |
-| `audit_chain_checkpoint` | Postgres, SQLite | 4 |  |
-| `audit_events` | ClickHouse | 10 | yes |
-| `audit_log` | Postgres, SQLite | 10 |  |
-| `cis_benchmark_checks` | Postgres, ClickHouse | 22 | yes |
-| `compliance_controls` | ClickHouse | 11 | yes |
-| `evaluation_runs` | Postgres, SQLite | 5 |  |
-| `governance_audit_log` | Postgres, SQLite | 8 |  |
-| `hub_framework_refs` | Postgres, SQLite | 4 |  |
-| `policy_results` | Postgres | 10 |  |
+| Table | Backends | Columns | Partitioned | Lifetime |
+|---|---|---|---|---|
+| `attestation_replay` | SQLite | 4 |  | persistent |
+| `audit_chain_checkpoint` | Postgres, SQLite | 4 |  | persistent |
+| `audit_events` | ClickHouse | 10 | yes | persistent |
+| `audit_log` | Postgres, SQLite | 10 |  | persistent |
+| `cis_benchmark_checks` | Postgres, ClickHouse | 22 | yes | persistent |
+| `compliance_controls` | ClickHouse | 11 | yes | persistent |
+| `evaluation_runs` | Postgres, SQLite | 5 |  | persistent |
+| `governance_audit_log` | Postgres, SQLite | 8 |  | persistent |
+| `hub_framework_refs` | Postgres, SQLite | 4 |  | persistent |
+| `policy_results` | Postgres | 10 |  | persistent |

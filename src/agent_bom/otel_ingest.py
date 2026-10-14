@@ -19,6 +19,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 
+from agent_bom.runtime.name_candidates import candidate_name_basis
 from agent_bom.runtime.trace_input import duration_ms as _duration_ms
 
 _ADK_TOOL_RE = re.compile(r"^adk\.tool\.(.+)$")
@@ -113,6 +114,7 @@ class FlaggedCall:
     package_name: str = ""
     matched_cve: str = ""
     matched_cves: list[str] = field(default_factory=list)
+    correlation_basis: str = field(default="candidate_name", init=False)
 
 
 @dataclass
@@ -607,7 +609,6 @@ def flag_vulnerable_tool_calls(
         return None
 
     for trace in traces:
-        tool_lower = trace.tool_name.lower()
         server_match = None
         package_match = None
         matched_cves: list[str] = []
@@ -622,9 +623,7 @@ def flag_vulnerable_tool_calls(
 
         # Check against vulnerable package names (prefer explicit package attr, then fuzzy tool-name match)
         for pkg_name, cves in vuln_packages.items():
-            explicit_match = trace.package_name and trace.package_name.lower() == pkg_name.lower()
-            fuzzy_match = pkg_name.lower() in tool_lower or tool_lower in pkg_name.lower()
-            if explicit_match or fuzzy_match:
+            if candidate_name_basis(tool=trace.tool_name, package=trace.package_name, package_name=pkg_name):
                 package_match = pkg_name
                 matched_cves.extend(cves)
                 break
@@ -639,7 +638,7 @@ def flag_vulnerable_tool_calls(
             flagged.append(
                 FlaggedCall(
                     trace=trace,
-                    reason="; ".join(reason_parts),
+                    reason="Name-based candidate: " + "; ".join(reason_parts),
                     severity="high" if server_match else "medium",
                     server=server_match[0] if server_match else trace.server_name,
                     package_name=package_match or trace.package_name,

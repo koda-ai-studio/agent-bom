@@ -10,7 +10,7 @@ from typing import Any
 
 GRAPH_ENVELOPE_VERSION = "agent-bom.graph/v1"
 EVIDENCE_VERSION = "agent-bom.graph-evidence/v1"
-EVIDENCE_TIERS = frozenset({"modeled_infrastructure", "static_evidence", "runtime_observed", "static_scan", "recorded", "derived"})
+EVIDENCE_TIERS = frozenset({"modeled_infrastructure", "runtime_observed", "static_scan", "recorded", "derived"})
 
 
 def validate_graph_version(payload: dict[str, Any]) -> None:

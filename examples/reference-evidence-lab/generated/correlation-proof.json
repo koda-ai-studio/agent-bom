@@ -10,7 +10,7 @@
       ]
     }
   ],
-  "artifact_sha256": "sha256:6d1c4ffa8456c8a1f84fda3d092f748ad1e272110f2ef46c397d6371e0463dff",
+  "artifact_sha256": "sha256:48cd3c4326d7a812848af64733c399327f0a0c6e12ed6ce12c853ea433dd317b",
   "capture_fixture": {
     "fix_first": {
       "attack_campaigns": [
@@ -576,7 +576,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "runtime_stable_id",
-                  "identity_version": "scoped-identity.v4",
+                  "identity_version": "scoped-identity.v5",
                   "observation_count": 1,
                   "observations": [
                     {
@@ -653,7 +653,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "runtime_stable_id",
-                  "identity_version": "scoped-identity.v4",
+                  "identity_version": "scoped-identity.v5",
                   "observation_count": 3,
                   "observations": [
                     {
@@ -771,7 +771,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "provider_identity_id",
-                  "identity_version": "scoped-identity.v4",
+                  "identity_version": "scoped-identity.v5",
                   "observation_count": 1,
                   "observations": [
                     {
@@ -849,7 +849,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "cloud_resource_id",
-                  "identity_version": "scoped-identity.v4",
+                  "identity_version": "scoped-identity.v5",
                   "observation_count": 1,
                   "observations": [
                     {
@@ -1033,7 +1033,7 @@
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
                 "direction": "directed",
-                "evidence_tier": "static_evidence",
+                "evidence_tier": "static_scan",
                 "freshness": "fresh",
                 "relationship": "vulnerable_to",
                 "relationship_provenance": "recorded",
@@ -1184,7 +1184,7 @@
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
                 "direction": "directed",
-                "evidence_tier": "static_evidence",
+                "evidence_tier": "static_scan",
                 "freshness": "fresh",
                 "reason_codes": [],
                 "relationship": "vulnerable_to",
@@ -1405,7 +1405,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "snapshot_scoped_runtime_occurrence",
-                  "identity_version": "scoped-identity.v4",
+                  "identity_version": "scoped-identity.v5",
                   "observation_count": 1,
                   "observations": [
                     {
@@ -1482,7 +1482,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "purl",
-                  "identity_version": "scoped-identity.v4",
+                  "identity_version": "scoped-identity.v5",
                   "observation_count": 3,
                   "observations": [
                     {
@@ -1599,7 +1599,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "canonical_id",
-                  "identity_version": "scoped-identity.v4",
+                  "identity_version": "scoped-identity.v5",
                   "observation_count": 1,
                   "observations": [
                     {
@@ -1752,7 +1752,7 @@
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
                 "direction": "directed",
-                "evidence_tier": "static_evidence",
+                "evidence_tier": "static_scan",
                 "freshness": "fresh",
                 "relationship": "contains",
                 "relationship_provenance": "recorded",
@@ -1771,7 +1771,7 @@
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
                 "direction": "directed",
-                "evidence_tier": "static_evidence",
+                "evidence_tier": "static_scan",
                 "freshness": "fresh",
                 "relationship": "vulnerable_to",
                 "relationship_provenance": "recorded",
@@ -1901,7 +1901,7 @@
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
                 "direction": "directed",
-                "evidence_tier": "static_evidence",
+                "evidence_tier": "static_scan",
                 "freshness": "fresh",
                 "reason_codes": [],
                 "relationship": "contains",
@@ -1922,7 +1922,7 @@
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
                 "direction": "directed",
-                "evidence_tier": "static_evidence",
+                "evidence_tier": "static_scan",
                 "freshness": "fresh",
                 "reason_codes": [],
                 "relationship": "vulnerable_to",
@@ -2143,7 +2143,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "snapshot_scoped_runtime_occurrence",
-                  "identity_version": "scoped-identity.v4",
+                  "identity_version": "scoped-identity.v5",
                   "observation_count": 1,
                   "observations": [
                     {
@@ -2220,7 +2220,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "purl",
-                  "identity_version": "scoped-identity.v4",
+                  "identity_version": "scoped-identity.v5",
                   "observation_count": 3,
                   "observations": [
                     {
@@ -2337,7 +2337,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "canonical_id",
-                  "identity_version": "scoped-identity.v4",
+                  "identity_version": "scoped-identity.v5",
                   "observation_count": 1,
                   "observations": [
                     {
@@ -2488,7 +2488,7 @@
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
                 "direction": "directed",
-                "evidence_tier": "static_evidence",
+                "evidence_tier": "static_scan",
                 "freshness": "fresh",
                 "relationship": "depends_on",
                 "relationship_provenance": "recorded",
@@ -2507,7 +2507,7 @@
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
                 "direction": "directed",
-                "evidence_tier": "static_evidence",
+                "evidence_tier": "static_scan",
                 "freshness": "fresh",
                 "relationship": "vulnerable_to",
                 "relationship_provenance": "recorded",
@@ -2635,7 +2635,7 @@
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
                 "direction": "directed",
-                "evidence_tier": "static_evidence",
+                "evidence_tier": "static_scan",
                 "freshness": "fresh",
                 "reason_codes": [],
                 "relationship": "depends_on",
@@ -2656,7 +2656,7 @@
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
                 "direction": "directed",
-                "evidence_tier": "static_evidence",
+                "evidence_tier": "static_scan",
                 "freshness": "fresh",
                 "reason_codes": [],
                 "relationship": "vulnerable_to",
@@ -2878,7 +2878,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "snapshot_scoped_missing_exact_identity",
-                  "identity_version": "scoped-identity.v4",
+                  "identity_version": "scoped-identity.v5",
                   "observation_count": 1,
                   "observations": [
                     {
@@ -2954,7 +2954,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "purl",
-                  "identity_version": "scoped-identity.v4",
+                  "identity_version": "scoped-identity.v5",
                   "observation_count": 3,
                   "observations": [
                     {
@@ -3071,7 +3071,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "canonical_id",
-                  "identity_version": "scoped-identity.v4",
+                  "identity_version": "scoped-identity.v5",
                   "observation_count": 1,
                   "observations": [
                     {
@@ -3450,7 +3450,7 @@
             "correlation": {
               "conflict_fields": [],
               "freshness": "fresh",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 1,
               "observations": [
                 {
@@ -3502,7 +3502,7 @@
             "correlation": {
               "conflict_fields": [],
               "freshness": "fresh",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 1,
               "observations": [
                 {
@@ -3553,7 +3553,7 @@
             "correlation": {
               "conflict_fields": [],
               "freshness": "fresh",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 1,
               "observations": [
                 {
@@ -3606,7 +3606,7 @@
             "correlation": {
               "conflict_fields": [],
               "freshness": "fresh",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 1,
               "observations": [
                 {
@@ -3643,10 +3643,10 @@
           "confidence": 1.0,
           "direction": "directed",
           "evidence": {
-            "evidence_tier": "static_evidence",
+            "evidence_tier": "static_scan",
             "source": "cyclonedx_sbom",
             "source_kind": "cyclonedx_sbom",
-            "tier": "static_evidence"
+            "tier": "static_scan"
           },
           "first_seen": "2026-08-30T04:01:00+00:00",
           "id": "contains:container:sbom:reference-api:package:iac:pillow",
@@ -3656,13 +3656,13 @@
             "correlation": {
               "conflict_fields": [],
               "freshness": "fresh",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 1,
               "observations": [
                 {
                   "confidence": 1.0,
                   "direction": "directed",
-                  "evidence_digest": "sha256:d40d8a40d682af9ec569c395a9b858f947ed6907144c19f5c72c655d0dc8c2d7",
+                  "evidence_digest": "sha256:9f2e4bbede15b7586bfdade8690ec9d8f4d1903d73055b28392d508ff51067f7",
                   "scan_id": "reference-image-sbom-scan",
                   "snapshot_created_at": "2026-08-30T04:01:00+00:00",
                   "source_edge_id": "contains:container:sbom:reference-api:package:sbom:pillow",
@@ -3707,7 +3707,7 @@
             "correlation": {
               "conflict_fields": [],
               "freshness": "fresh",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 1,
               "observations": [
                 {
@@ -3744,10 +3744,10 @@
           "confidence": 1.0,
           "direction": "directed",
           "evidence": {
-            "evidence_tier": "static_evidence",
+            "evidence_tier": "static_scan",
             "source": "bundled_advisory_scanner",
             "source_kind": "bundled_advisory_scanner",
-            "tier": "static_evidence"
+            "tier": "static_scan"
           },
           "first_seen": "2026-08-30T04:01:00+00:00",
           "id": "vulnerable_to:package:iac:pillow:vulnerability:sbom:cve-2023-4863",
@@ -3757,13 +3757,13 @@
             "correlation": {
               "conflict_fields": [],
               "freshness": "fresh",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 1,
               "observations": [
                 {
                   "confidence": 1.0,
                   "direction": "directed",
-                  "evidence_digest": "sha256:01e165b03519050a1f4db2105c0286f7ca17104f03c9ade5025c20b52d1caa46",
+                  "evidence_digest": "sha256:0cdfa2014f98470d579f9bfcdda495b76fd63c095edc9ceaf99eedccaf712271",
                   "scan_id": "reference-image-sbom-scan",
                   "snapshot_created_at": "2026-08-30T04:01:00+00:00",
                   "source_edge_id": "vulnerable_to:package:sbom:pillow:vulnerability:sbom:cve-2023-4863",
@@ -3808,7 +3808,7 @@
             "correlation": {
               "conflict_fields": [],
               "freshness": "fresh",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 1,
               "observations": [
                 {
@@ -3845,10 +3845,10 @@
           "confidence": 1.0,
           "direction": "directed",
           "evidence": {
-            "evidence_tier": "static_evidence",
+            "evidence_tier": "static_scan",
             "source": "repository_parser",
             "source_kind": "repository_parser",
-            "tier": "static_evidence"
+            "tier": "static_scan"
           },
           "first_seen": "2026-08-30T04:00:00+00:00",
           "id": "depends_on:source:pinned-package:package:iac:pillow",
@@ -3858,13 +3858,13 @@
             "correlation": {
               "conflict_fields": [],
               "freshness": "fresh",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 1,
               "observations": [
                 {
                   "confidence": 1.0,
                   "direction": "directed",
-                  "evidence_digest": "sha256:3ea695d957eaf1a29e0bc83e79b11c987ba55c6ab79d2f31aa30f23e28549095",
+                  "evidence_digest": "sha256:cdd142469af21351429a63edab0bd8b69d4f61483b7ddecc9fb87b4f307091e7",
                   "scan_id": "reference-repository-scan",
                   "snapshot_created_at": "2026-08-30T04:00:00+00:00",
                   "source_edge_id": "depends_on:source:pinned-package:package:repo:pillow",
@@ -3898,7 +3898,7 @@
             "correlation": {
               "conflict_fields": [],
               "identity_basis": "runtime_stable_id",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 3,
               "observations": [
                 {
@@ -4015,7 +4015,7 @@
             "correlation": {
               "conflict_fields": [],
               "identity_basis": "snapshot_scoped_runtime_occurrence",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 1,
               "observations": [
                 {
@@ -4091,7 +4091,7 @@
             "correlation": {
               "conflict_fields": [],
               "identity_basis": "snapshot_scoped_runtime_occurrence",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 1,
               "observations": [
                 {
@@ -4169,7 +4169,7 @@
             "correlation": {
               "conflict_fields": [],
               "identity_basis": "cloud_resource_id",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 1,
               "observations": [
                 {
@@ -4247,7 +4247,7 @@
             "correlation": {
               "conflict_fields": [],
               "identity_basis": "provider_identity_id",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 1,
               "observations": [
                 {
@@ -4324,7 +4324,7 @@
             "correlation": {
               "conflict_fields": [],
               "identity_basis": "purl",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 3,
               "observations": [
                 {
@@ -4441,7 +4441,7 @@
             "correlation": {
               "conflict_fields": [],
               "identity_basis": "runtime_stable_id",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 1,
               "observations": [
                 {
@@ -4518,7 +4518,7 @@
             "correlation": {
               "conflict_fields": [],
               "identity_basis": "snapshot_scoped_missing_exact_identity",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 1,
               "observations": [
                 {
@@ -4598,7 +4598,7 @@
             "correlation": {
               "conflict_fields": [],
               "identity_basis": "runtime_stable_id",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 2,
               "observations": [
                 {
@@ -4695,7 +4695,7 @@
             "correlation": {
               "conflict_fields": [],
               "identity_basis": "canonical_id",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 1,
               "observations": [
                 {
@@ -4916,7 +4916,7 @@
       {
         "age_hours": 0.016667,
         "created_at": "2026-08-30T04:05:00+00:00",
-        "digest": "sha256:095c97733c0843b8b0df4dcad9cdc6d6416ba1e0b2b980359b2f91296d2ef9af",
+        "digest": "sha256:b790087501c1307903f8cde5dfc034fe5b745a76997836ea8e7253b69e1dea3c",
         "edge_count": 2,
         "freshness": "fresh",
         "node_count": 3,
@@ -4925,7 +4925,7 @@
           "algorithm": "hmac-sha256",
           "key_id": "reference-lab-v1",
           "schema_version": "agent-bom.correlation-receipt-signature/v1",
-          "value": "sha256:7982a17609339e39ce8280d362004f1ca31b8fcaaa43ce3c6661701245f4454c"
+          "value": "sha256:c57c075451fb6d10a1b375a276b931b42dd0bcae841eeba849f6678d7db410c5"
         },
         "source_kinds": [
           "identity_model"
@@ -4934,7 +4934,7 @@
       {
         "age_hours": 0.083333,
         "created_at": "2026-08-30T04:01:00+00:00",
-        "digest": "sha256:11d7484b424abceb90525bd668f39c659fe192ba5f3fa9ce07b9ed6c8a78bf08",
+        "digest": "sha256:f39f0df3d275024de455f7cd30558a5297c6a96fce90da0c0caaa9d4f2ea926e",
         "edge_count": 2,
         "freshness": "fresh",
         "node_count": 3,
@@ -4943,7 +4943,7 @@
           "algorithm": "hmac-sha256",
           "key_id": "reference-lab-v1",
           "schema_version": "agent-bom.correlation-receipt-signature/v1",
-          "value": "sha256:43257f7c211d99e5dd00edef05986c51efb3e8325612b1dfac678aa67d080510"
+          "value": "sha256:a7eef396870b7f905785d3326eb0a2907169ca2fc392761e4163cbf06d6e2085"
         },
         "source_kinds": [
           "bundled_advisory_scanner",
@@ -4953,7 +4953,7 @@
       {
         "age_hours": 0.066667,
         "created_at": "2026-08-30T04:02:00+00:00",
-        "digest": "sha256:50cbd1f5c794c8bb47c12fa894149b594a5834b31cfba608caaf5398cdf00422",
+        "digest": "sha256:12af777319119f1bd1d3a21db0ad0c097a90a4599fef1a476c069cce5037f16b",
         "edge_count": 3,
         "freshness": "fresh",
         "node_count": 4,
@@ -4962,7 +4962,7 @@
           "algorithm": "hmac-sha256",
           "key_id": "reference-lab-v1",
           "schema_version": "agent-bom.correlation-receipt-signature/v1",
-          "value": "sha256:40d5456b41a68c2c3f627f62d5e7487ff6e69d0989e2d345568ffbab5d420ca0"
+          "value": "sha256:15fdc743f99134dfa779f50036fbe24220b9cce4c2ef4d8d266de17bce2c0ce4"
         },
         "source_kinds": [
           "kubernetes_iac",
@@ -4972,7 +4972,7 @@
       {
         "age_hours": 0.05,
         "created_at": "2026-08-30T04:03:00+00:00",
-        "digest": "sha256:884f525ea2b67117f78dd64bda8195916cb658e46e5f58d1273f5246b7acc482",
+        "digest": "sha256:74ea7a073112aa2f5841a22bfc73d1042e4639e042a008cad11462a69807bf3c",
         "edge_count": 0,
         "freshness": "fresh",
         "node_count": 1,
@@ -4981,7 +4981,7 @@
           "algorithm": "hmac-sha256",
           "key_id": "reference-lab-v1",
           "schema_version": "agent-bom.correlation-receipt-signature/v1",
-          "value": "sha256:404f08fe6e6da7272483bf4c1cfad79f30085e5303abb60a35e8881e4848ae7a"
+          "value": "sha256:07c0347d8e27420d811623ce800084c9d29ad8618759709cf23039c14ca8ad43"
         },
         "source_kinds": [
           "mcp_config"
@@ -4990,7 +4990,7 @@
       {
         "age_hours": 0.1,
         "created_at": "2026-08-30T04:00:00+00:00",
-        "digest": "sha256:94c140a08492041454d1746a7390eeb4ffe2560345eab7a4b5a99d470af2320b",
+        "digest": "sha256:20e39fed8eacafc31d6dd6cb411b89ab928d8d33aa2cb15fdb771e02c6c128dd",
         "edge_count": 1,
         "freshness": "fresh",
         "node_count": 2,
@@ -4999,7 +4999,7 @@
           "algorithm": "hmac-sha256",
           "key_id": "reference-lab-v1",
           "schema_version": "agent-bom.correlation-receipt-signature/v1",
-          "value": "sha256:38ce59e2f65559f64b02001b2ec79c1b97031acfbffede9951fd156a905512c4"
+          "value": "sha256:27d4fc025fea87794e95a48ab9a6793e599378e445782de7795a8f0b666f5e4d"
         },
         "source_kinds": [
           "repository_parser"
@@ -5008,7 +5008,7 @@
       {
         "age_hours": 0.033333,
         "created_at": "2026-08-30T04:04:00+00:00",
-        "digest": "sha256:d1a575772da92bebed8a8748af60a3d69233403dd9d043a160172ff5ec18f7ac",
+        "digest": "sha256:5d88c4d26b6620128631de3b79552dc8b3f41d5e5a3c3720be37df70c68cfa38",
         "edge_count": 1,
         "freshness": "fresh",
         "node_count": 2,
@@ -5017,14 +5017,14 @@
           "algorithm": "hmac-sha256",
           "key_id": "reference-lab-v1",
           "schema_version": "agent-bom.correlation-receipt-signature/v1",
-          "value": "sha256:f08509683a60e0c620894e5c72d317734c5c5ba421989c2eeebdc2e1d83e4cc8"
+          "value": "sha256:520811b96f6232d0006e0bb0feea2bc3bfe0d556fab2c77a8db3a4be21d7c07a"
         },
         "source_kinds": [
           "gateway_runtime"
         ]
       }
     ],
-    "manifest_sha256": "sha256:e53fc04ef271c7157533f30def3680d4caa4f18f7cc68f45098dbe63ac26a9de",
+    "manifest_sha256": "sha256:d412828da0ea19396eb0e927a4c0038e15a5e098ce9b7e82b798bfb470bc57bc",
     "max_age_hours": 168,
     "name": "Reference evidence lab",
     "output_scan_id": "reference-evidence-correlation-v1",
@@ -5076,7 +5076,7 @@
         {
           "age_hours": 0.016667,
           "created_at": "2026-08-30T04:05:00+00:00",
-          "digest": "sha256:095c97733c0843b8b0df4dcad9cdc6d6416ba1e0b2b980359b2f91296d2ef9af",
+          "digest": "sha256:b790087501c1307903f8cde5dfc034fe5b745a76997836ea8e7253b69e1dea3c",
           "edge_count": 2,
           "freshness": "fresh",
           "node_count": 3,
@@ -5085,7 +5085,7 @@
             "algorithm": "hmac-sha256",
             "key_id": "reference-lab-v1",
             "schema_version": "agent-bom.correlation-receipt-signature/v1",
-            "value": "sha256:7982a17609339e39ce8280d362004f1ca31b8fcaaa43ce3c6661701245f4454c"
+            "value": "sha256:c57c075451fb6d10a1b375a276b931b42dd0bcae841eeba849f6678d7db410c5"
           },
           "source_kinds": [
             "identity_model"
@@ -5094,7 +5094,7 @@
         {
           "age_hours": 0.083333,
           "created_at": "2026-08-30T04:01:00+00:00",
-          "digest": "sha256:11d7484b424abceb90525bd668f39c659fe192ba5f3fa9ce07b9ed6c8a78bf08",
+          "digest": "sha256:f39f0df3d275024de455f7cd30558a5297c6a96fce90da0c0caaa9d4f2ea926e",
           "edge_count": 2,
           "freshness": "fresh",
           "node_count": 3,
@@ -5103,7 +5103,7 @@
             "algorithm": "hmac-sha256",
             "key_id": "reference-lab-v1",
             "schema_version": "agent-bom.correlation-receipt-signature/v1",
-            "value": "sha256:43257f7c211d99e5dd00edef05986c51efb3e8325612b1dfac678aa67d080510"
+            "value": "sha256:a7eef396870b7f905785d3326eb0a2907169ca2fc392761e4163cbf06d6e2085"
           },
           "source_kinds": [
             "bundled_advisory_scanner",
@@ -5113,7 +5113,7 @@
         {
           "age_hours": 0.066667,
           "created_at": "2026-08-30T04:02:00+00:00",
-          "digest": "sha256:50cbd1f5c794c8bb47c12fa894149b594a5834b31cfba608caaf5398cdf00422",
+          "digest": "sha256:12af777319119f1bd1d3a21db0ad0c097a90a4599fef1a476c069cce5037f16b",
           "edge_count": 3,
           "freshness": "fresh",
           "node_count": 4,
@@ -5122,7 +5122,7 @@
             "algorithm": "hmac-sha256",
             "key_id": "reference-lab-v1",
             "schema_version": "agent-bom.correlation-receipt-signature/v1",
-            "value": "sha256:40d5456b41a68c2c3f627f62d5e7487ff6e69d0989e2d345568ffbab5d420ca0"
+            "value": "sha256:15fdc743f99134dfa779f50036fbe24220b9cce4c2ef4d8d266de17bce2c0ce4"
           },
           "source_kinds": [
             "kubernetes_iac",
@@ -5132,7 +5132,7 @@
         {
           "age_hours": 0.05,
           "created_at": "2026-08-30T04:03:00+00:00",
-          "digest": "sha256:884f525ea2b67117f78dd64bda8195916cb658e46e5f58d1273f5246b7acc482",
+          "digest": "sha256:74ea7a073112aa2f5841a22bfc73d1042e4639e042a008cad11462a69807bf3c",
           "edge_count": 0,
           "freshness": "fresh",
           "node_count": 1,
@@ -5141,7 +5141,7 @@
             "algorithm": "hmac-sha256",
             "key_id": "reference-lab-v1",
             "schema_version": "agent-bom.correlation-receipt-signature/v1",
-            "value": "sha256:404f08fe6e6da7272483bf4c1cfad79f30085e5303abb60a35e8881e4848ae7a"
+            "value": "sha256:07c0347d8e27420d811623ce800084c9d29ad8618759709cf23039c14ca8ad43"
           },
           "source_kinds": [
             "mcp_config"
@@ -5150,7 +5150,7 @@
         {
           "age_hours": 0.1,
           "created_at": "2026-08-30T04:00:00+00:00",
-          "digest": "sha256:94c140a08492041454d1746a7390eeb4ffe2560345eab7a4b5a99d470af2320b",
+          "digest": "sha256:20e39fed8eacafc31d6dd6cb411b89ab928d8d33aa2cb15fdb771e02c6c128dd",
           "edge_count": 1,
           "freshness": "fresh",
           "node_count": 2,
@@ -5159,7 +5159,7 @@
             "algorithm": "hmac-sha256",
             "key_id": "reference-lab-v1",
             "schema_version": "agent-bom.correlation-receipt-signature/v1",
-            "value": "sha256:38ce59e2f65559f64b02001b2ec79c1b97031acfbffede9951fd156a905512c4"
+            "value": "sha256:27d4fc025fea87794e95a48ab9a6793e599378e445782de7795a8f0b666f5e4d"
           },
           "source_kinds": [
             "repository_parser"
@@ -5168,7 +5168,7 @@
         {
           "age_hours": 0.033333,
           "created_at": "2026-08-30T04:04:00+00:00",
-          "digest": "sha256:d1a575772da92bebed8a8748af60a3d69233403dd9d043a160172ff5ec18f7ac",
+          "digest": "sha256:5d88c4d26b6620128631de3b79552dc8b3f41d5e5a3c3720be37df70c68cfa38",
           "edge_count": 1,
           "freshness": "fresh",
           "node_count": 2,
@@ -5177,7 +5177,7 @@
             "algorithm": "hmac-sha256",
             "key_id": "reference-lab-v1",
             "schema_version": "agent-bom.correlation-receipt-signature/v1",
-            "value": "sha256:f08509683a60e0c620894e5c72d317734c5c5ba421989c2eeebdc2e1d83e4cc8"
+            "value": "sha256:520811b96f6232d0006e0bb0feea2bc3bfe0d556fab2c77a8db3a4be21d7c07a"
           },
           "source_kinds": [
             "gateway_runtime"
@@ -5187,7 +5187,7 @@
       "output": {
         "attack_path_count": 1,
         "edge_count": 9,
-        "graph_digest_sha256": "sha256:c1334039b619929c8955e52ebaea3877357f0c503338fafe5437a36f5a75ab5b",
+        "graph_digest_sha256": "sha256:85bfb44f2bc0d7f719f5d44cd0e9d9104392a32db3cee13511026e65d806d37e",
         "node_count": 10,
         "scan_id": "reference-evidence-correlation-v1"
       },

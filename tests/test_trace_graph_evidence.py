@@ -274,7 +274,7 @@ def test_otlp_route_binds_the_request_tenant_never_the_span_claim(hub):
     assert PROMPT not in json.dumps([record.to_dict() for record in store._observations.values()])
 
 
-def test_managed_pull_signals_and_vulnerable_calls_become_linked_findings(hub):
+def test_managed_pull_signals_persist_but_name_candidates_do_not(hub):
     from types import SimpleNamespace
 
     from agent_bom.api.trace_collection.normalized_events import signals_by_span, stamp_page_signals
@@ -295,15 +295,11 @@ def test_managed_pull_signals_and_vulnerable_calls_become_linked_findings(hub):
     )
     rows = {row["finding_type"]: row for row in hub.list("tenant-a")}
     assert rows["PII_EXPOSURE"]["node_id"] == TOOL
-    assert rows["COMBINATION"]["node_id"] == TOOL
-    assert rows["COMBINATION"]["title"] == "Vulnerable tool exercised at runtime (CVE-2024-0001)"
-    assert "cve_id" not in rows["COMBINATION"]  # the scanner's CVE row stays the single vulnerability count
-    assert rows["COMBINATION"]["evidence"]["count"] == 1
-    assert "MCP04" in rows["COMBINATION"]["owasp_mcp_tags"]
+    assert "COMBINATION" not in rows
 
     # The same signal on the same entity and day deduplicates to one finding.
     record_native_evidence(spans, tenant_id="tenant-a", sink=ingest_runtime_findings)
-    assert len(hub.list_current_page("tenant-a", limit=50)[0]) == 2
+    assert len(hub.list_current_page("tenant-a", limit=50)[0]) == 1
 
 
 def test_pipeline_persist_stores_runtime_edges_status_and_shadow_findings(runtime, hub, tmp_path, monkeypatch):
@@ -348,3 +344,23 @@ def test_imported_span_names_never_store_local_paths():
     record = prepare_trace_page({"spans": spans}, scope=scope, collected_at="2026-10-05T11:00:00+00:00").observations[0]
     assert "/tmp/abomprobe" not in json.dumps(record.to_dict())
     assert record.tool_name == "<path:shadow_tool>"
+
+
+def test_fuzzy_package_candidate_does_not_contaminate_exact_tool_graph(runtime, hub):
+    from agent_bom.otel_ingest import flag_vulnerable_tool_calls, parse_otel_traces
+
+    body = _otlp("name-candidate", "tenant-a")
+    body["resourceSpans"][0]["scopeSpans"][0]["spans"][0]["name"] = "adk.tool.query_crm"
+    flagged = flag_vulnerable_tool_calls(parse_otel_traces(body), {"query": ["CVE-candidate"]})
+    assert len(flagged) == 1
+    summary = record_otlp_evidence(
+        body, tenant_id="tenant-a", flagged=flagged, content_findings=[], sink=ingest_runtime_findings, store=runtime
+    )
+    assert summary["exact_refs"] == 1
+    assert summary["findings"] == summary["findings_persisted"] == 0
+    assert hub.list("tenant-a") == []
+    graph, _ = _build(runtime)
+    edges = _runtime_edges(graph)
+    assert edges
+    assert all("vulnerable_tool_call" not in edge.evidence.get("signals", []) for edge in edges)
+    assert "CVE-candidate" not in json.dumps(graph.to_dict(), default=str)

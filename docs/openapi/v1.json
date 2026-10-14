@@ -61482,9 +61482,12 @@
                                     "evidence_tier": {
                                       "default": "unknown",
                                       "enum": [
-                                        "static_evidence",
+                                        "static_scan",
                                         "modeled_infrastructure",
                                         "runtime_observed",
+                                        "recorded",
+                                        "derived",
+                                        "legacy_unrecorded",
                                         "unknown"
                                       ],
                                       "title": "Evidence Tier",
@@ -66092,9 +66095,12 @@
                                         "evidence_tier": {
                                           "default": "unknown",
                                           "enum": [
-                                            "static_evidence",
+                                            "static_scan",
                                             "modeled_infrastructure",
                                             "runtime_observed",
+                                            "recorded",
+                                            "derived",
+                                            "legacy_unrecorded",
                                             "unknown"
                                           ],
                                           "title": "Evidence Tier",
@@ -67118,9 +67124,12 @@
                                     "evidence_tier": {
                                       "default": "unknown",
                                       "enum": [
-                                        "static_evidence",
+                                        "static_scan",
                                         "modeled_infrastructure",
                                         "runtime_observed",
+                                        "recorded",
+                                        "derived",
+                                        "legacy_unrecorded",
                                         "unknown"
                                       ],
                                       "title": "Evidence Tier",

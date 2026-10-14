@@ -22,13 +22,13 @@ import pytest
 
 class TestEntityType:
     def test_all_entity_types_have_ocsf_mapping(self):
-        from agent_bom.graph_schema import ENTITY_OCSF_MAP, EntityType
+        from agent_bom.graph import ENTITY_OCSF_MAP, EntityType
 
         for et in EntityType:
             assert et.value in ENTITY_OCSF_MAP, f"Missing OCSF mapping for {et}"
 
     def test_inventory_entities_are_category_5(self):
-        from agent_bom.graph_schema import ENTITY_OCSF_MAP, EntityType
+        from agent_bom.graph import ENTITY_OCSF_MAP, EntityType
 
         inventory = [
             EntityType.AGENT,
@@ -44,7 +44,7 @@ class TestEntityType:
             assert ENTITY_OCSF_MAP[et.value]["category_uid"] == 5
 
     def test_finding_entities_are_category_2(self):
-        from agent_bom.graph_schema import ENTITY_OCSF_MAP, EntityType
+        from agent_bom.graph import ENTITY_OCSF_MAP, EntityType
 
         # Only VULNERABILITY and MISCONFIGURATION are findings.
         # CREDENTIAL is inventory (Category 5) — not a finding.
@@ -53,38 +53,38 @@ class TestEntityType:
             assert ENTITY_OCSF_MAP[et.value]["category_uid"] == 2
 
     def test_credential_is_inventory_not_finding(self):
-        from agent_bom.graph_schema import ENTITY_OCSF_MAP, EntityType
+        from agent_bom.graph import ENTITY_OCSF_MAP, EntityType
 
         assert ENTITY_OCSF_MAP[EntityType.CREDENTIAL.value]["category_uid"] == 5
 
     def test_vulnerability_is_security_finding_2001(self):
-        from agent_bom.graph_schema import ENTITY_OCSF_MAP, EntityType
+        from agent_bom.graph import ENTITY_OCSF_MAP, EntityType
 
         assert ENTITY_OCSF_MAP[EntityType.VULNERABILITY.value]["class_uid"] == 2001
 
     def test_misconfiguration_is_compliance_finding_2003(self):
-        from agent_bom.graph_schema import ENTITY_OCSF_MAP, EntityType
+        from agent_bom.graph import ENTITY_OCSF_MAP, EntityType
 
         assert ENTITY_OCSF_MAP[EntityType.MISCONFIGURATION.value]["class_uid"] == 2003
 
 
 class TestRelationshipType:
     def test_all_relationships_are_strings(self):
-        from agent_bom.graph_schema import RelationshipType
+        from agent_bom.graph import RelationshipType
 
         for rt in RelationshipType:
             assert isinstance(rt.value, str)
             assert rt.value == rt.value.lower()
 
     def test_static_relationships_exist(self):
-        from agent_bom.graph_schema import RelationshipType
+        from agent_bom.graph import RelationshipType
 
         static = ["hosts", "uses", "depends_on", "provides_tool", "exposes_cred"]
         for name in static:
             assert name in [r.value for r in RelationshipType]
 
     def test_runtime_relationships_exist(self):
-        from agent_bom.graph_schema import RelationshipType
+        from agent_bom.graph import RelationshipType
 
         runtime = ["invoked", "accessed", "delegated_to"]
         for name in runtime:
@@ -98,7 +98,7 @@ class TestRelationshipType:
 
 class TestUnifiedSeverity:
     def test_severity_to_ocsf_covers_all_levels(self):
-        from agent_bom.graph_schema import SEVERITY_TO_OCSF
+        from agent_bom.graph import SEVERITY_TO_OCSF
 
         assert SEVERITY_TO_OCSF["critical"] == 5
         assert SEVERITY_TO_OCSF["high"] == 4
@@ -108,7 +108,7 @@ class TestUnifiedSeverity:
         assert SEVERITY_TO_OCSF["unknown"] == 0
 
     def test_severity_rank_ordering(self):
-        from agent_bom.graph_schema import SEVERITY_RANK
+        from agent_bom.graph import SEVERITY_RANK
 
         assert SEVERITY_RANK["critical"] > SEVERITY_RANK["high"]
         assert SEVERITY_RANK["high"] > SEVERITY_RANK["medium"]
@@ -116,14 +116,14 @@ class TestUnifiedSeverity:
         assert SEVERITY_RANK["low"] > SEVERITY_RANK["unknown"]
 
     def test_severity_risk_score_ordering(self):
-        from agent_bom.graph_schema import SEVERITY_RISK_SCORE
+        from agent_bom.graph import SEVERITY_RISK_SCORE
 
         assert SEVERITY_RISK_SCORE["critical"] > SEVERITY_RISK_SCORE["high"]
         assert SEVERITY_RISK_SCORE["high"] > SEVERITY_RISK_SCORE["medium"]
         assert SEVERITY_RISK_SCORE["medium"] > SEVERITY_RISK_SCORE["low"]
 
     def test_ocsf_to_syslog_mapping(self):
-        from agent_bom.graph_schema import OCSF_TO_SYSLOG, OCSFSeverity
+        from agent_bom.graph import OCSF_TO_SYSLOG, OCSFSeverity
 
         # Critical OCSF → syslog 2 (Critical)
         assert OCSF_TO_SYSLOG[OCSFSeverity.CRITICAL] == 2
@@ -131,7 +131,7 @@ class TestUnifiedSeverity:
         assert OCSF_TO_SYSLOG[OCSFSeverity.INFORMATIONAL] == 6
 
     def test_severity_badge_keys(self):
-        from agent_bom.graph_schema import SEVERITY_BADGE
+        from agent_bom.graph import SEVERITY_BADGE
 
         assert "critical" in SEVERITY_BADGE
         assert "high" in SEVERITY_BADGE
@@ -139,13 +139,13 @@ class TestUnifiedSeverity:
         assert "low" in SEVERITY_BADGE
 
     def test_ocsf_severity_names(self):
-        from agent_bom.graph_schema import OCSF_SEVERITY_NAMES
+        from agent_bom.graph import OCSF_SEVERITY_NAMES
 
         assert OCSF_SEVERITY_NAMES[5] == "Critical"
         assert OCSF_SEVERITY_NAMES[1] == "Informational"
 
     def test_helper_functions(self):
-        from agent_bom.graph_schema import ocsf_to_severity, severity_rank, severity_to_ocsf
+        from agent_bom.graph import ocsf_to_severity, severity_rank, severity_to_ocsf
 
         assert severity_rank("critical") == 5
         assert severity_rank("unknown") == 0
@@ -158,14 +158,14 @@ class TestUnifiedSeverity:
     def test_context_graph_uses_unified_severity(self):
         """Verify context_graph.py no longer has its own severity dict."""
         from agent_bom.context_graph import _SEVERITY_SCORES
-        from agent_bom.graph_schema import SEVERITY_RISK_SCORE
+        from agent_bom.graph import SEVERITY_RISK_SCORE
 
         # _SEVERITY_SCORES in context_graph IS the same object as SEVERITY_RISK_SCORE
         assert _SEVERITY_SCORES is SEVERITY_RISK_SCORE
 
     def test_output_graph_uses_unified_severity(self):
         """Verify output/graph.py uses graph_schema severity constants."""
-        from agent_bom.graph_schema import SEVERITY_BADGE, SEVERITY_RANK
+        from agent_bom.graph import SEVERITY_BADGE, SEVERITY_RANK
         from agent_bom.output.graph import _SEVERITY_BADGE, _SEVERITY_RANK
 
         assert _SEVERITY_RANK is SEVERITY_RANK
@@ -173,14 +173,14 @@ class TestUnifiedSeverity:
 
     def test_output_ocsf_uses_unified_severity(self):
         """Verify output/ocsf.py uses graph_schema severity mapping."""
-        from agent_bom.graph_schema import SEVERITY_TO_OCSF
+        from agent_bom.graph import SEVERITY_TO_OCSF
         from agent_bom.output.ocsf import _SEVERITY_MAP
 
         assert _SEVERITY_MAP is SEVERITY_TO_OCSF
 
     def test_siem_ocsf_uses_unified_severity(self):
         """Verify siem/ocsf.py uses graph_schema severity mapping."""
-        from agent_bom.graph_schema import OCSF_SEVERITY_NAMES, SEVERITY_TO_OCSF
+        from agent_bom.graph import OCSF_SEVERITY_NAMES, SEVERITY_TO_OCSF
         from agent_bom.siem.ocsf import _SEVERITY_MAP, _SEVERITY_NAMES
 
         assert _SEVERITY_MAP is SEVERITY_TO_OCSF
@@ -194,21 +194,21 @@ class TestUnifiedSeverity:
 
 class TestNodeID:
     def test_stable_node_id_deterministic(self):
-        from agent_bom.graph_schema import stable_node_id
+        from agent_bom.graph import stable_node_id
 
         id1 = stable_node_id("agent", "ns", "claude-desktop")
         id2 = stable_node_id("agent", "ns", "claude-desktop")
         assert id1 == id2
 
     def test_stable_node_id_differs_for_different_inputs(self):
-        from agent_bom.graph_schema import stable_node_id
+        from agent_bom.graph import stable_node_id
 
         id1 = stable_node_id("agent", "ns", "claude-desktop")
         id2 = stable_node_id("agent", "ns", "cursor")
         assert id1 != id2
 
     def test_stable_node_id_case_insensitive(self):
-        from agent_bom.graph_schema import stable_node_id
+        from agent_bom.graph import stable_node_id
 
         id1 = stable_node_id("Agent", "NS", "Claude-Desktop")
         id2 = stable_node_id("agent", "ns", "claude-desktop")
@@ -222,7 +222,7 @@ class TestNodeID:
 
 class TestUnifiedNode:
     def test_auto_populates_ocsf_fields(self):
-        from agent_bom.graph_schema import EntityType, UnifiedNode
+        from agent_bom.graph import EntityType, UnifiedNode
 
         node = UnifiedNode(id="agent:test", entity_type=EntityType.AGENT, label="test")
         assert node.category_uid == 5
@@ -230,7 +230,7 @@ class TestUnifiedNode:
         assert node.type_uid == 400101
 
     def test_auto_populates_severity_id(self):
-        from agent_bom.graph_schema import EntityType, UnifiedNode
+        from agent_bom.graph import EntityType, UnifiedNode
 
         node = UnifiedNode(
             id="vuln:CVE-2024-1234",
@@ -243,7 +243,7 @@ class TestUnifiedNode:
         assert node.class_uid == 2001
 
     def test_auto_populates_timestamps(self):
-        from agent_bom.graph_schema import EntityType, UnifiedNode
+        from agent_bom.graph import EntityType, UnifiedNode
 
         node = UnifiedNode(id="test", entity_type=EntityType.AGENT, label="test")
         assert node.first_seen
@@ -251,7 +251,7 @@ class TestUnifiedNode:
         assert node.first_seen == node.last_seen
 
     def test_serialisation_round_trip(self):
-        from agent_bom.graph_schema import EntityType, NodeDimensions, UnifiedNode
+        from agent_bom.graph import EntityType, NodeDimensions, UnifiedNode
 
         original = UnifiedNode(
             id="server:agent1:mcp-fs",
@@ -274,7 +274,7 @@ class TestUnifiedNode:
         assert restored.compliance_tags == ["OWASP-A01"]
 
     def test_to_ocsf_event(self):
-        from agent_bom.graph_schema import EntityType, UnifiedNode
+        from agent_bom.graph import EntityType, UnifiedNode
 
         node = UnifiedNode(
             id="vuln:CVE-2024-1234",
@@ -297,13 +297,13 @@ class TestUnifiedNode:
 
 class TestUnifiedEdge:
     def test_id_generation(self):
-        from agent_bom.graph_schema import RelationshipType, UnifiedEdge
+        from agent_bom.graph import RelationshipType, UnifiedEdge
 
         edge = UnifiedEdge(source="a", target="b", relationship=RelationshipType.USES)
         assert edge.id == "uses:a:b"
 
     def test_serialisation_round_trip(self):
-        from agent_bom.graph_schema import RelationshipType, UnifiedEdge
+        from agent_bom.graph import RelationshipType, UnifiedEdge
 
         original = UnifiedEdge(
             source="agent:x",
@@ -326,7 +326,7 @@ class TestUnifiedEdge:
 
 def _build_test_graph():
     """Build a small test graph: 2 agents, 1 shared server, 1 vuln."""
-    from agent_bom.graph_schema import (
+    from agent_bom.graph import (
         EntityType,
         RelationshipType,
         UnifiedEdge,
@@ -387,7 +387,7 @@ def _build_test_graph():
 
 class TestUnifiedGraph:
     def test_add_node_dedup(self):
-        from agent_bom.graph_schema import EntityType, UnifiedGraph, UnifiedNode
+        from agent_bom.graph import EntityType, UnifiedGraph, UnifiedNode
 
         g = UnifiedGraph()
         g.add_node(UnifiedNode(id="a", entity_type=EntityType.AGENT, label="a", risk_score=1.0))
@@ -396,7 +396,7 @@ class TestUnifiedGraph:
         assert g.nodes["a"].risk_score == 5.0  # Higher risk_score wins
 
     def test_add_edge_dedup(self):
-        from agent_bom.graph_schema import RelationshipType, UnifiedEdge, UnifiedGraph
+        from agent_bom.graph import RelationshipType, UnifiedEdge, UnifiedGraph
 
         g = UnifiedGraph()
         e = UnifiedEdge(source="a", target="b", relationship=RelationshipType.USES)
@@ -440,7 +440,7 @@ class TestUnifiedGraph:
         assert "agent:b" in reachable  # via SHARES_SERVER
 
     def test_filter_nodes_by_type(self):
-        from agent_bom.graph_schema import EntityType
+        from agent_bom.graph import EntityType
 
         g = _build_test_graph()
         agents = g.filter_nodes(entity_types={EntityType.AGENT})
@@ -480,7 +480,7 @@ class TestUnifiedGraph:
         assert "server:a:fs" in ids
 
     def test_serialisation_round_trip(self):
-        from agent_bom.graph_schema import UnifiedGraph
+        from agent_bom.graph import UnifiedGraph
 
         g = _build_test_graph()
         d = g.to_dict()
@@ -498,7 +498,7 @@ class TestUnifiedGraph:
         assert events[0]["metadata"]["product"]["version"] == "0.75.13"
 
     def test_inventory_view(self):
-        from agent_bom.graph_schema import EntityType
+        from agent_bom.graph import EntityType
 
         g = _build_test_graph()
         inv = g.inventory_view()
@@ -555,7 +555,7 @@ class TestGraphStore:
 
     def test_upsert_bumps_last_seen(self, db):
         from agent_bom.db.graph_store import load_graph, save_graph
-        from agent_bom.graph_schema import EntityType, UnifiedGraph, UnifiedNode
+        from agent_bom.graph import EntityType, UnifiedGraph, UnifiedNode
 
         # First save
         g1 = UnifiedGraph(scan_id="s1")
@@ -591,7 +591,7 @@ class TestGraphStore:
 
     def test_diff_snapshots(self, db):
         from agent_bom.db.graph_store import diff_snapshots, save_graph
-        from agent_bom.graph_schema import (
+        from agent_bom.graph import (
             EntityType,
             RelationshipType,
             UnifiedEdge,
@@ -632,7 +632,7 @@ class TestGraphStore:
 
     def test_attack_paths_persisted(self, db):
         from agent_bom.db.graph_store import load_graph, save_graph
-        from agent_bom.graph_schema import AttackPath
+        from agent_bom.graph import AttackPath
 
         g = _build_test_graph()
         g.attack_paths.append(
@@ -656,7 +656,7 @@ class TestGraphStore:
 
     def test_interaction_risks_persisted(self, db):
         from agent_bom.db.graph_store import load_graph, save_graph
-        from agent_bom.graph_schema import InteractionRisk
+        from agent_bom.graph import InteractionRisk
 
         g = _build_test_graph()
         g.interaction_risks.append(
@@ -708,20 +708,20 @@ class TestGraphBackendBridge:
 
 class TestBackwardCompat:
     def test_mapping_dicts_exist(self):
-        from agent_bom.graph_schema import (
-            _EDGE_KIND_TO_RELATIONSHIP,
-            _NODE_KIND_TO_ENTITY,
+        from agent_bom.graph import (
+            EDGE_KIND_TO_RELATIONSHIP,
+            NODE_KIND_TO_ENTITY,
             EntityType,
             RelationshipType,
         )
 
-        assert _NODE_KIND_TO_ENTITY["agent"] == EntityType.AGENT
-        assert _NODE_KIND_TO_ENTITY["vulnerability"] == EntityType.VULNERABILITY
-        assert _NODE_KIND_TO_ENTITY["iam_role"] == EntityType.SERVICE_ACCOUNT
-        assert _EDGE_KIND_TO_RELATIONSHIP["uses"] == RelationshipType.USES
-        assert _EDGE_KIND_TO_RELATIONSHIP["exposes"] == RelationshipType.EXPOSES_CRED
-        assert _EDGE_KIND_TO_RELATIONSHIP["shares_credential"] == RelationshipType.SHARES_CRED
-        assert _EDGE_KIND_TO_RELATIONSHIP["attached_to"] == RelationshipType.MEMBER_OF
+        assert NODE_KIND_TO_ENTITY["agent"] == EntityType.AGENT
+        assert NODE_KIND_TO_ENTITY["vulnerability"] == EntityType.VULNERABILITY
+        assert NODE_KIND_TO_ENTITY["iam_role"] == EntityType.SERVICE_ACCOUNT
+        assert EDGE_KIND_TO_RELATIONSHIP["uses"] == RelationshipType.USES
+        assert EDGE_KIND_TO_RELATIONSHIP["exposes"] == RelationshipType.EXPOSES_CRED
+        assert EDGE_KIND_TO_RELATIONSHIP["shares_credential"] == RelationshipType.SHARES_CRED
+        assert EDGE_KIND_TO_RELATIONSHIP["attached_to"] == RelationshipType.MEMBER_OF
 
     def test_context_graph_still_exports_old_types(self):
         """Existing consumers that import NodeKind etc. from context_graph still work."""
@@ -734,7 +734,7 @@ class TestBackwardCompat:
         assert EdgeKind.USES.value == "uses"
 
     def test_ocsf_type_uid_computation(self):
-        from agent_bom.graph_schema import EntityType, ocsf_type_uid
+        from agent_bom.graph import EntityType, ocsf_type_uid
 
         assert ocsf_type_uid(EntityType.VULNERABILITY) == 200101
         assert ocsf_type_uid(EntityType.AGENT) == 400101
@@ -756,7 +756,7 @@ class TestBackwardCompat:
         assert EntityType.CREDENTIAL not in FINDING_ENTITY_TYPES
 
     def test_code_topology_types_are_canonical(self):
-        from agent_bom.graph_schema import (
+        from agent_bom.graph import (
             ENTITY_LEGEND,
             RELATIONSHIP_LEGEND,
             EntityType,
@@ -1051,7 +1051,9 @@ class TestGraphSchemaEndpoint:
             assert isinstance(entry["category_uid"], int)
             assert isinstance(entry["class_uid"], int)
             assert entry["emission_status"] in {"emitted", "reserved"}
-            assert isinstance(entry["emission_surfaces"], list) and entry["emission_surfaces"]
+            assert isinstance(entry["emission_surfaces"], list)
+            if entry["emission_status"] == "emitted":
+                assert entry["emission_surfaces"]
             assert isinstance(entry["emission_notes"], str) and entry["emission_notes"]
         for entry in body["edge_kinds"]:
             assert {
@@ -1074,7 +1076,9 @@ class TestGraphSchemaEndpoint:
             assert isinstance(entry["target_types"], list)
             assert isinstance(entry["traversable"], bool)
             assert entry["emission_status"] in {"emitted", "reserved"}
-            assert isinstance(entry["emission_surfaces"], list) and entry["emission_surfaces"]
+            assert isinstance(entry["emission_surfaces"], list)
+            if entry["emission_status"] == "emitted":
+                assert entry["emission_surfaces"]
             assert isinstance(entry["emission_notes"], str) and entry["emission_notes"]
 
     def test_schema_documents_reserved_dead_vocabulary(self):
@@ -1083,8 +1087,8 @@ class TestGraphSchemaEndpoint:
         node_entries = {entry["key"]: entry for entry in body["node_kinds"]}
         edge_entries = {entry["key"]: entry for entry in body["edge_kinds"]}
 
-        reserved_nodes = {"external_import"}
-        reserved_edges = {"imports", "remediates", "acted_as"}
+        reserved_nodes = {"external_import", "tool_call", "environment", "cluster", "credential_ref"}
+        reserved_edges = {"imports", "remediates", "acted_as", "inherits", "lateral_path", "shares_cred", "trace_step"}
         for key in reserved_nodes:
             assert node_entries[key]["emission_status"] == "reserved"
             assert "Reserved" in node_entries[key]["emission_notes"]
@@ -1097,9 +1101,9 @@ class TestGraphSchemaEndpoint:
         # tests/test_graph_schema_emission_honesty.py, which proves it from a
         # real build rather than from this declaration).
         assert edge_entries["owns"]["emission_status"] == "emitted"
-        assert "cloud_inventory" in edge_entries["owns"]["emission_surfaces"]
+        assert "graph/builder.py" in edge_entries["owns"]["emission_surfaces"]
 
-        runtime_nodes = {"tool_call", "resource"}
+        runtime_nodes = {"agent", "tool"}
         runtime_edges = {"called", "used_credential"}
         for key in runtime_nodes:
             assert node_entries[key]["emission_status"] == "emitted"

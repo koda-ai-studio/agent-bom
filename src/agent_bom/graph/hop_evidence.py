@@ -176,7 +176,17 @@ class HopEvidenceReceipt(BaseModel):
     source_snapshot_ids: list[str] = Field(default_factory=list, max_length=50)
     relationship_provenance: Literal["recorded", "unavailable"] = "unavailable"
     correlation_identity_status: Literal["current", "recomputation_required", "unavailable"] = "unavailable"
-    evidence_tier: Literal["static_evidence", "modeled_infrastructure", "runtime_observed", "unknown"] = "unknown"
+    evidence_tier: Literal[
+        "static_scan", "modeled_infrastructure", "runtime_observed", "recorded", "derived", "legacy_unrecorded", "unknown"
+    ] = "unknown"
+
+    @field_validator("evidence_tier", mode="before")
+    @classmethod
+    def _retired_tier(cls, value: Any) -> Any:
+        # Preserve old receipts on read without upgrading a retired heuristic
+        # to a canonical collector claim or rewriting the stored snapshot.
+        return "legacy_unrecorded" if value == "static_evidence" else value
+
     confidence: float | None = Field(default=None, ge=0, le=1)
     freshness: Literal["fresh", "stale", "stale_allowed", "unknown"] = "unknown"
     runtime_observed_state: Literal["observed", "blocked", "not_observed", "unknown"] = "unknown"

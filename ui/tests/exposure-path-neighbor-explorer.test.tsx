@@ -168,7 +168,7 @@ it("retains both directions and multiple relationship types for the same neighbo
 it("requests selected direction with the exact node and snapshot and reports evidence basis", async () => {
   apiMock.getGraphNodeNeighbors.mockResolvedValue({ node_id: "server:database", scan_id: "scan-1", found: true,
     total_neighbors: 1, truncated: false, neighbors: [node("tool:one", "tool", "query")],
-    edges: [{ ...edge("server:database", "tool:one", "provides"), evidence: { evidence_tier: "static_evidence" } }] });
+    edges: [{ ...edge("server:database", "tool:one", "provides"), evidence: { evidence_tier: "static_scan" } }] });
   render(<ExposurePathNeighborExplorer path={path} scanId="scan-1" />);
   fireEvent.click(screen.getByRole("button", { name: /Expand neighbors of database/ }));
   expect(await screen.findByText("Configured / static evidence")).toBeVisible();

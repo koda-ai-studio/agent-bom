@@ -127,7 +127,6 @@ ALLOWED_TOP_LEVEL_MODULES: frozenset[str] = frozenset(
         "glama.py",
         "governance.py",
         "graph_backend.py",
-        "graph_schema.py",
         "guard.py",
         "hardware_evidence.py",
         "history.py",

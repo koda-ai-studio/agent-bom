@@ -180,29 +180,29 @@ Same column name in several tables here, but no table owns it, so no join is dra
 
 ## Tables
 
-| Table | Backends | Columns | Partitioned |
-|---|---|---|---|
-| `access_review_campaigns` | Postgres, SQLite | 6 |  |
-| `access_review_items` | Postgres, SQLite | 6 |  |
-| `agent_bom_tenant_access` | Snowflake | 3 |  |
-| `agent_bom_tenant_binding_keys` | Postgres | 4 |  |
-| `agent_conditional_access_policies` | Postgres, SQLite | 6 |  |
-| `agent_identities` | Postgres, SQLite | 7 |  |
-| `agent_identity_jit_grants` | Postgres, SQLite | 8 |  |
-| `api_keys` | Postgres | 19 |  |
-| `api_rate_limit_hits` | Postgres | 2 |  |
-| `api_rate_limits` | Postgres | 4 |  |
-| `auth_session_attempts` | Postgres | 2 |  |
-| `credential_refs` | Postgres, SQLite | 5 |  |
-| `idempotency_keys` | Postgres, SQLite | 9 |  |
-| `managed_trial_invitations` | Postgres | 9 |  |
-| `managed_trial_tenants` | Postgres | 9 |  |
-| `model_provider_keys` | Postgres, SQLite | 6 |  |
-| `model_virtual_keys` | Postgres, SQLite | 7 |  |
-| `revoked_session_nonces` | Postgres | 2 |  |
-| `scim_groups` | Postgres, SQLite | 6 |  |
-| `scim_users` | Postgres, SQLite | 7 |  |
-| `teams` | Postgres | 6 |  |
-| `tenant_graph_retention_overrides` | Postgres | 3 |  |
-| `tenant_quota_overrides` | Postgres | 3 |  |
-| `tenant_score_config_overrides` | Postgres, SQLite | 3 |  |
+| Table | Backends | Columns | Partitioned | Lifetime |
+|---|---|---|---|---|
+| `access_review_campaigns` | Postgres, SQLite | 6 |  | persistent |
+| `access_review_items` | Postgres, SQLite | 6 |  | persistent |
+| `agent_bom_tenant_access` | Snowflake | 3 |  | persistent |
+| `agent_bom_tenant_binding_keys` | Postgres | 4 |  | persistent |
+| `agent_conditional_access_policies` | Postgres, SQLite | 6 |  | persistent |
+| `agent_identities` | Postgres, SQLite | 7 |  | persistent |
+| `agent_identity_jit_grants` | Postgres, SQLite | 8 |  | persistent |
+| `api_keys` | Postgres | 19 |  | persistent |
+| `api_rate_limit_hits` | Postgres | 2 |  | persistent |
+| `api_rate_limits` | Postgres | 4 |  | persistent |
+| `auth_session_attempts` | Postgres | 2 |  | persistent |
+| `credential_refs` | Postgres, SQLite | 5 |  | persistent |
+| `idempotency_keys` | Postgres, SQLite | 9 |  | persistent |
+| `managed_trial_invitations` | Postgres | 9 |  | persistent |
+| `managed_trial_tenants` | Postgres | 9 |  | persistent |
+| `model_provider_keys` | Postgres, SQLite | 6 |  | persistent |
+| `model_virtual_keys` | Postgres, SQLite | 7 |  | persistent |
+| `revoked_session_nonces` | Postgres | 2 |  | persistent |
+| `scim_groups` | Postgres, SQLite | 6 |  | persistent |
+| `scim_users` | Postgres, SQLite | 7 |  | persistent |
+| `teams` | Postgres | 6 |  | persistent |
+| `tenant_graph_retention_overrides` | Postgres | 3 |  | persistent |
+| `tenant_quota_overrides` | Postgres | 3 |  | persistent |
+| `tenant_score_config_overrides` | Postgres, SQLite | 3 |  | persistent |

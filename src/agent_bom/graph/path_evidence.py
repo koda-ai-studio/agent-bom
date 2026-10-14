@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from collections.abc import Mapping, Sequence
 from typing import Any
 
@@ -12,6 +11,7 @@ from agent_bom.evidence.semantics import ExploitabilityDimension
 from agent_bom.graph.container import AttackPath, UnifiedGraph
 from agent_bom.graph.correlation_scope import CORRELATION_IDENTITY_VERSION
 from agent_bom.graph.edge import UnifiedEdge
+from agent_bom.graph.edge_evidence import recorded_tier
 from agent_bom.graph.hop_evidence import authority_evidence, runtime_evidence_references
 from agent_bom.graph.types import RelationshipType
 
@@ -133,12 +133,7 @@ def _runtime_reasons(receipts: Sequence[Mapping[str, Any]]) -> list[str]:
 
 
 def _evidence_tier(edge: UnifiedEdge) -> str:
-    if _runtime_state(edge) != "not_observed":
-        return "runtime_observed"
-    serialized = json.dumps({"evidence": edge.evidence, "provenance": edge.provenance}, sort_keys=True, default=str).lower()
-    if any(marker in serialized for marker in ("modeled", "modelled", "iac", "cloud_inventory", "cloud-inventory")):
-        return "modeled_infrastructure"
-    return "static_evidence"
+    return recorded_tier(edge.evidence)
 
 
 def _analysis(graph: UnifiedGraph, *, hop_count: int, path: AttackPath | None = None) -> dict[str, Any]:

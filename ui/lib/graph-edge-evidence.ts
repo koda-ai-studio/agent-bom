@@ -1,5 +1,5 @@
 const categories: Record<string, string> = {
-  static: "Static / configured", static_scan: "Static / configured", static_evidence: "Static / configured",
+  static: "Static / configured", static_scan: "Static / configured",
   configured: "Static / configured", configured_target: "Static / configured", configured_delegation: "Static / configured",
   configuration: "Static / configured", recorded_configuration: "Static / configured",
   inferred: "Inferred", inferred_reachability: "Inferred",
@@ -16,7 +16,7 @@ function text(value: unknown): string | null {
 
 // The edge evidence envelope: `tier` is the producer's own classification.
 const tierLabels: Record<string, string> = {
-  static_scan: "Static / configured", static_evidence: "Static / configured",
+  static_scan: "Static / configured",
   modeled_infrastructure: "Modeled", recorded: "Recorded observation",
   runtime_observed: "Runtime observed", derived: "Derived", legacy_unrecorded: "Not recorded",
 };
@@ -27,7 +27,7 @@ function enveloped(evidence: Record<string, unknown>) {
   const blocked = evidence.runtime_observed_state === "blocked" || evidence.blocked === true;
   const label = blocked ? "Runtime blocked" : tierLabels[tier]!;
   const mode: "runtime" | "static" | "inferred" | "unknown" = blocked || tier === "runtime_observed" || tier === "recorded" ? "runtime"
-    : tier === "static_scan" || tier === "static_evidence" ? "static"
+    : tier === "static_scan" ? "static"
     : tier === "modeled_infrastructure" || tier === "derived" ? "inferred" : "unknown";
   return { label, mode, blocked, source: text(evidence.source) };
 }

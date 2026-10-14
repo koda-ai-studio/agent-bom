@@ -15,6 +15,11 @@ describe("graphEdgeEvidence", () => {
     expect(graphEdgeEvidence({ source: "graph-analysis", tier: "derived", derived_via: "x" }).label).toBe("Derived");
   });
 
+  it("does not classify the retired heuristic tier as a static scan", () => {
+    expect(graphEdgeEvidence({ tier: "static_evidence" }).mode).toBe("unknown");
+    expect(graphEdgeEvidence({ evidence_tier: "static_evidence" }).label).toBe("Unclassified");
+  });
+
   it("lets a blocked runtime receipt override the tier", () => {
     const result = graphEdgeEvidence({ source: "runtime-proxy", tier: "runtime_observed", blocked: true });
     expect(result).toMatchObject({ label: "Runtime blocked", blocked: true, mode: "runtime" });

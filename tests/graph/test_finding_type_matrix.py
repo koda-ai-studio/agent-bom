@@ -33,6 +33,7 @@ from agent_bom.graph.severity_floor import counts_as_finding_node
 from agent_bom.graph.types import EntityType
 
 PRODUCERS: dict[FindingType, tuple[str, ...]] = {
+    FindingType.SHADOW_AI: ("shadow",),
     FindingType.CVE: ("demo", "securityhub"),
     FindingType.CIS_FAIL: ("cloud",),
     FindingType.CIS_ERROR: ("cloud",),
@@ -59,7 +60,6 @@ NO_OFFLINE_PRODUCER: dict[FindingType, str] = {
     FindingType.RATE_LIMIT: "needs a runtime-proxy rate-window fixture",
     FindingType.MALICIOUS_PACKAGE: "needs an offline malicious-package feed fixture",
     FindingType.SENSITIVE_DATA: "needs a DSPM object-sampling fixture",
-    FindingType.SHADOW_AI: "produced from imported runtime traces (tests/test_trace_graph_evidence.py)",
 }
 _FINDING_ENTITIES = {EntityType.VULNERABILITY, EntityType.MISCONFIGURATION}
 # Sources whose asset edge depends on evidence a scanner-only report lacks.

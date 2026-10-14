@@ -8,7 +8,6 @@ from typing import Any
 from fastapi.encoders import jsonable_encoder
 from starlette.responses import JSONResponse, Response
 
-from agent_bom.api.attack_path_queue import _derived_attack_path_page as _derived_attack_path_page
 from agent_bom.api.graph_paging import _page_meta, _paginate
 from agent_bom.api.graph_presentation import _fix_first_card_for_path, _path_matches_focus, _path_semantic_key, _serialize_attack_path_batch
 from agent_bom.api.routes.graph_routes.params import (

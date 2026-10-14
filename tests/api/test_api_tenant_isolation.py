@@ -1062,12 +1062,10 @@ async def test_discovery_and_traces_are_tenant_scoped():
             with patch("agent_bom.api.routes.observability._get_analytics_store", return_value=analytics):
                 result = await observability_routes.ingest_traces(req, {"resourceSpans": []})
     assert result["traces"] == 1
-    assert result["persisted_events"] == 1
-    assert analytics.events[0]["event_type"] == "vulnerable_tool_call"
-    assert analytics.events[0]["detector"] == "otel_vulnerable_tool_call"
-    # Trace analytics ingest must carry the authed tenant through to
-    # ClickHouse so cross-tenant queries cannot see each other's events.
-    assert analytics.event_tenants[0] == req.state.tenant_id
+    assert result["persisted_events"] == 0
+    assert result["flagged"][0]["correlation_basis"] == "candidate_name"
+    assert analytics.events == []
+    assert analytics.event_tenants == []
 
 
 @pytest.mark.asyncio
