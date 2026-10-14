@@ -222,7 +222,9 @@ def test_quickstart_run_offline_succeeds_with_empty_vulnerability_db(tmp_path, m
     assert result.exit_code == 0, result.output
     report = json.loads((sample_dir / "agent-bom-report.json").read_text())
     assert report["scan_run"]["outcome"] == "complete"
-    assert report["scan_run"]["issues"] == []
+    # The only issue is the non-coverage receipt that quickstart skips the vulnerability lane.
+    assert [issue["code"] for issue in report["scan_run"]["issues"]] == ["vulnerability_scan_skipped"]
+    assert not any(issue["affects_coverage"] for issue in report["scan_run"]["issues"])
     assert report["coverage_warnings"] == []
     assert report["summary"]["total_agents"] > 0
     assert report["summary"]["total_packages"] > 0
