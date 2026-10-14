@@ -4,9 +4,9 @@ from typing import Any, Literal
 
 from agent_bom.graph.completeness import graph_completeness
 from agent_bom.graph.container import UnifiedGraph
-from agent_bom.graph.path_derivation import _derived_attack_paths
 from agent_bom.graph.rollup import RollupFilters, attack_path_view, drill_down, rollup_view
 from agent_bom.graph.semantic_clusters import SEMANTIC_CLUSTER_KINDS, build_semantic_clusters, semantic_cluster_stats
+from agent_bom.graph.snapshot_paths import resolve_snapshot_attack_paths
 
 
 def _semantic_cluster_payload(
@@ -48,6 +48,7 @@ def _graph_rollup_payload(
     mode: Literal["rollup", "attack_path"],
     offset: int = 0,
     limit: int | None = None,
+    graph_store: Any = None,
 ) -> dict[str, Any]:
     filters = RollupFilters(
         min_severity=min_severity,
@@ -57,5 +58,5 @@ def _graph_rollup_payload(
     if node:
         return drill_down(graph, node, filters=filters, offset=offset, limit=limit)
     if mode == "attack_path":
-        return attack_path_view(graph, _derived_attack_paths(graph), filters=filters)
+        return attack_path_view(graph, resolve_snapshot_attack_paths(graph, graph_store), filters=filters)
     return rollup_view(graph, filters=filters)

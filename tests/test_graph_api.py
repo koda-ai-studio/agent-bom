@@ -304,8 +304,8 @@ class TestScanPipelineWiring:
                 INSERT INTO attack_paths (
                     source_node, target_node, hop_count, composite_risk, summary,
                     path_nodes, path_edges, credential_exposure, tool_exposure,
-                    vuln_ids, scan_id, tenant_id, computed_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    vuln_ids, scan_id, tenant_id, computed_at, path_key
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     "agent:legacy",
@@ -321,6 +321,7 @@ class TestScanPipelineWiring:
                     "legacy-scan",
                     "",
                     "2026-05-01T00:00:00Z",
+                    "legacy-route",
                 ),
             )
             conn.execute(
@@ -1987,11 +1988,12 @@ class TestGraphStoreBackendSelection:
         assert response.status_code == 200
         body = response.json()
         assert len(graph.attack_paths) == 5
-        assert body["summary"]["matched_paths"] == 5
+        # Served paths are unique per hop/edge chain: the byte-identical repeat is one route.
+        assert body["summary"]["matched_paths"] == 4
         assert body["summary"]["presentation_paths"] == 3
-        assert body["summary"]["collapsed_occurrences"] == 2
+        assert body["summary"]["collapsed_occurrences"] == 1
         assert len(body["cards"]) == 3
-        duplicate_card = next(card for card in body["cards"] if card["occurrence_count"] == 3)
+        duplicate_card = next(card for card in body["cards"] if card["occurrence_count"] == 2)
         assert duplicate_card["title"].startswith("CVE-2026-4242 via agent-a")
         assert duplicate_card["affected"]["findings"] == [
             "8ac0c0e8-cc5a-4a7c-aad8-e9b26c7b10d2",

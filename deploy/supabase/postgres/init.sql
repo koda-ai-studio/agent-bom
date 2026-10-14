@@ -576,7 +576,9 @@ CREATE TABLE IF NOT EXISTS attack_paths (
     scan_id             TEXT NOT NULL,
     tenant_id           TEXT NOT NULL DEFAULT 'default',
     computed_at         TEXT NOT NULL,
-    PRIMARY KEY (source_node, target_node, scan_id, tenant_id)
+    finding_ids         TEXT DEFAULT '[]',
+    path_key            TEXT NOT NULL,
+    PRIMARY KEY (tenant_id, scan_id, path_key)
 );
 
 CREATE INDEX IF NOT EXISTS idx_pg_attack_paths_scan ON attack_paths(tenant_id, scan_id);
@@ -596,6 +598,32 @@ CREATE TABLE IF NOT EXISTS interaction_risks (
 );
 
 CREATE INDEX IF NOT EXISTS idx_pg_interaction_risks_scan ON interaction_risks(tenant_id, scan_id);
+
+CREATE TABLE IF NOT EXISTS graph_attack_paths (
+    tenant_id           TEXT NOT NULL DEFAULT 'default',
+    scan_id             TEXT NOT NULL,
+    snapshot_generation TEXT NOT NULL DEFAULT '',
+    path_key            TEXT NOT NULL,
+    path_kind           TEXT NOT NULL,
+    derivation_version  INTEGER NOT NULL,
+    rank_index          INTEGER NOT NULL,
+    source_node         TEXT NOT NULL,
+    target_node         TEXT NOT NULL,
+    hop_count           INTEGER NOT NULL DEFAULT 0,
+    composite_risk      DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+    queue_rank          INTEGER NOT NULL DEFAULT 0,
+    severity_rank       INTEGER NOT NULL DEFAULT 0,
+    has_credential      INTEGER NOT NULL DEFAULT 0,
+    source_type         TEXT NOT NULL DEFAULT '',
+    path_json           TEXT NOT NULL,
+    computed_at         TEXT NOT NULL,
+    PRIMARY KEY (tenant_id, scan_id, path_key)
+);
+
+CREATE INDEX IF NOT EXISTS idx_pg_graph_attack_paths_rank ON graph_attack_paths(tenant_id, scan_id, rank_index);
+CREATE INDEX IF NOT EXISTS idx_pg_graph_attack_paths_source
+    ON graph_attack_paths(tenant_id, scan_id, source_node, rank_index);
+CREATE INDEX IF NOT EXISTS idx_pg_graph_attack_paths_queue ON graph_attack_paths(tenant_id, scan_id, queue_rank);
 
 CREATE TABLE IF NOT EXISTS graph_filter_presets (
     name        TEXT NOT NULL,
@@ -1241,6 +1269,24 @@ BEGIN
 END
 $$;
 
+ALTER TABLE graph_attack_paths ENABLE ROW LEVEL SECURITY;
+ALTER TABLE graph_attack_paths FORCE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public'
+          AND tablename = 'graph_attack_paths'
+          AND policyname = 'graph_attack_paths_tenant_isolation'
+    ) THEN
+        CREATE POLICY graph_attack_paths_tenant_isolation ON graph_attack_paths
+            USING (public.abom_rls_bypass() OR tenant_id = public.abom_current_tenant())
+            WITH CHECK (public.abom_rls_bypass() OR tenant_id = public.abom_current_tenant());
+    END IF;
+END
+$$;
+
 ALTER TABLE interaction_risks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE interaction_risks FORCE ROW LEVEL SECURITY;
 
@@ -1745,6 +1791,7 @@ $$;
 --   graph_snapshots    — graph snapshot summary + recency cursor
 --   graph_correlation_runs — immutable multi-snapshot correlation requests and state
 --   attack_paths       — persisted fix-first attack-path projections
+--   graph_attack_paths — complete ranked path set materialized per graph snapshot
 --   interaction_risks  — agent interaction / toxic-combo risk overlays
 --   graph_filter_presets — tenant-scoped saved graph filters
 --   graph_scenarios      — tenant-scoped proposed graph changes pinned to snapshots

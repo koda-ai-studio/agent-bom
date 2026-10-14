@@ -10,12 +10,13 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
-from typing import Any, Iterable, Iterator, Mapping
+from typing import Any, Iterable, Iterator, Mapping, Sequence
 
 from agent_bom.api.graph_store import _node_search_text
 from agent_bom.graph import RelationshipType
 from agent_bom.graph.correlation import CorrelationRunStatus, validate_correlation_update
 from agent_bom.graph.severity_floor import counts_as_finding
+from agent_bom.graph.snapshot_paths import SNAPSHOT_PATH_COLUMNS, SnapshotPath, occurrence_path_keys, snapshot_path_rows
 
 from .postgres_graph_support import _CORRELATION_RUN_COLUMNS, _correlation_run_from_row, _execute_many_batched
 
@@ -61,9 +62,12 @@ _ATTACK_PATH_UPSERT_SQL = """
                     source_node, target_node, hop_count, composite_risk,
                     summary, path_nodes, path_edges, credential_exposure,
                     tool_exposure, vuln_ids, reachability, reachability_basis,
-                    technique_mappings, hop_evidence, analysis, scan_id, tenant_id, computed_at
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (source_node, target_node, scan_id, tenant_id) DO UPDATE SET
+                    technique_mappings, hop_evidence, analysis, scan_id, tenant_id, computed_at,
+                    finding_ids, path_key
+                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (tenant_id, scan_id, path_key) DO UPDATE SET
+                    source_node = EXCLUDED.source_node,
+                    target_node = EXCLUDED.target_node,
                     hop_count = EXCLUDED.hop_count,
                     composite_risk = EXCLUDED.composite_risk,
                     summary = EXCLUDED.summary,
@@ -77,7 +81,8 @@ _ATTACK_PATH_UPSERT_SQL = """
                     technique_mappings = EXCLUDED.technique_mappings,
                     hop_evidence = EXCLUDED.hop_evidence,
                     analysis = EXCLUDED.analysis,
-                    computed_at = EXCLUDED.computed_at
+                    computed_at = EXCLUDED.computed_at,
+                    finding_ids = EXCLUDED.finding_ids
                 """
 
 _INTERACTION_RISK_UPSERT_SQL = """
@@ -124,12 +129,27 @@ _COMPLETE_CORRELATION_SQL = """
 # transaction before the new one-shot producers are consumed.
 _SNAPSHOT_REPLACE_TABLES = (
     "graph_node_search",
+    "graph_attack_paths",
     "attack_paths",
     "interaction_risks",
     "graph_edges",
     "graph_nodes",
     "graph_snapshots",
 )
+
+
+def _write_snapshot_paths(
+    conn: Any, rows: Sequence[SnapshotPath] | None, *, scan: str, tenant: str, generation: str, now: str, batch_size: int
+) -> None:
+    if rows is None:
+        return
+    sql = (
+        f"INSERT INTO graph_attack_paths ({', '.join(SNAPSHOT_PATH_COLUMNS)}) "  # nosec B608 - static columns
+        f"VALUES ({', '.join('%s' for _ in SNAPSHOT_PATH_COLUMNS)})"
+    )
+    _execute_many_batched(
+        conn, sql, snapshot_path_rows(rows, tenant=tenant, scan=scan, generation=generation, now=now), batch_size=batch_size
+    )
 
 
 def _edge_upsert_sql(scope_predicate: str) -> str:
@@ -376,7 +396,7 @@ def _edge_rows(
 
 
 def _attack_path_rows(attack_paths: Iterable[Any], *, scan: str, tenant: str, now: str) -> Iterator[tuple[Any, ...]]:
-    for ap in attack_paths:
+    for path_key, ap in occurrence_path_keys(attack_paths):
         yield (
             ap.source,
             ap.target,
@@ -396,6 +416,8 @@ def _attack_path_rows(attack_paths: Iterable[Any], *, scan: str, tenant: str, no
             scan,
             tenant,
             now,
+            json.dumps(ap.finding_ids),
+            path_key,
         )
 
 

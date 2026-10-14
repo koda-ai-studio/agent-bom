@@ -15,7 +15,7 @@ import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Generator, Iterable, Mapping
+from typing import Any, Generator, Iterable, Mapping, Sequence
 
 from agent_bom.db.graph_bootstrap import backfill_edge_metadata
 from agent_bom.db.graph_revision import ensure_sqlite_revisions
@@ -45,6 +45,7 @@ from agent_bom.db.graph_store_schema import _GRAPH_EVIDENCE_INCLUDED_TABLES as _
 from agent_bom.db.graph_store_schema import _GRAPH_PURGEABLE_TABLES as _GRAPH_PURGEABLE_TABLES
 from agent_bom.db.graph_store_schema import _GRAPH_SCHEMA_VERSION as _GRAPH_SCHEMA_VERSION
 from agent_bom.db.graph_store_schema import _GRAPH_TENANT_TABLE_KEYS as _GRAPH_TENANT_TABLE_KEYS
+from agent_bom.db.graph_store_schema import ATTACK_PATH_ORDER, ATTACK_PATH_SELECT, attack_path_from_row, upgrade_attack_path_identity
 from agent_bom.db.graph_store_schema import DEFAULT_GRAPH_TENANT_ID as DEFAULT_GRAPH_TENANT_ID
 from agent_bom.db.graph_store_schema import GRAPH_SNAPSHOT_KINDS as GRAPH_SNAPSHOT_KINDS
 from agent_bom.db.graph_store_schema import _batched_rows as _batched_rows
@@ -76,14 +77,10 @@ from agent_bom.db.graph_store_write import (
     _write_edges,
     _write_interaction_risks,
     _write_nodes,
+    _write_snapshot_paths,
     _write_snapshot_row,
 )
 from agent_bom.db.graph_write_admission import graph_writer_admission
-from agent_bom.storage import sqlite_wal, state_home
-
-if TYPE_CHECKING:
-    pass
-
 from agent_bom.graph import (
     AttackPath,
     EntityType,
@@ -95,7 +92,6 @@ from agent_bom.graph import (
     UnifiedGraph,
     UnifiedNode,
     _now_iso,
-    technique_mappings_from_json,
 )
 from agent_bom.graph.analysis import (
     GraphAnalysisStatus,
@@ -104,7 +100,9 @@ from agent_bom.graph.analysis import (
 )
 from agent_bom.graph.container import GraphCompleteness, resolve_node_budget
 from agent_bom.graph.severity_floor import severity_floor_sql
+from agent_bom.graph.snapshot_paths import SnapshotPath, prepare_snapshot_paths
 from agent_bom.security import sanitize_text
+from agent_bom.storage import sqlite_wal, state_home
 
 logger = logging.getLogger(__name__)
 
@@ -198,6 +196,7 @@ def _init_db(conn: sqlite3.Connection, *, backfill_legacy_tenants: bool = True) 
         conn.execute("ALTER TABLE attack_paths ADD COLUMN hop_evidence TEXT DEFAULT '[]'")
     if "analysis" not in existing_columns:
         conn.execute("ALTER TABLE attack_paths ADD COLUMN analysis TEXT DEFAULT '{}'")
+    upgrade_attack_path_identity(conn)
     edge_columns = {row["name"] for row in conn.execute("PRAGMA table_info(graph_edges)").fetchall()}
     # v3 adds replay metadata. Empty valid_from is interpreted as first_seen for
     # stores created before this migration, so old snapshots remain queryable.
@@ -449,6 +448,7 @@ def save_graph(conn: sqlite3.Connection, graph: UnifiedGraph) -> None:
         attack_paths=graph.attack_paths,
         interaction_risks=graph.interaction_risks,
         analysis_status=graph.analysis_status,
+        snapshot_paths=prepare_snapshot_paths(graph),
     )
 
 
@@ -470,15 +470,14 @@ def save_graph_streaming(
     correlation_result_manifest: Mapping[str, Any] | None = None,
     correlation_completed_at: str = "",
     correlation_execution_owner: str = "",
+    snapshot_paths: Sequence[SnapshotPath] | None = None,
 ) -> dict[str, int]:
     """Persist a graph snapshot from streamed node/edge iterables.
 
-    Unlike :func:`save_graph`, this never requires a fully materialised
-    ``UnifiedGraph``. ``nodes`` and ``edges`` are consumed lazily and flushed to
-    SQLite in bounded batches, and the snapshot's node/edge/severity/type
-    breakdowns are accumulated incrementally as rows stream through — so a
-    producer that yields nodes/edges on the fly keeps peak RSS flat regardless
-    of graph size (#4055). Writes are byte-identical to ``save_graph``.
+    ``nodes``/``edges`` are consumed lazily in bounded batches with stats
+    accumulated incrementally, so peak RSS stays flat (#4055); writes are
+    byte-identical to ``save_graph``. ``snapshot_paths`` become the snapshot's
+    stored path index in the same transaction.
 
     Precondition — the caller must yield **deduplicated** items: unique node
     ``id`` and unique ``(source, target, relationship)`` edge keys, exactly the
@@ -526,6 +525,7 @@ def save_graph_streaming(
         evidence_manifest_sha256=evidence_manifest_sha256,
         write_generation=write_generation,
     )
+    _write_snapshot_paths(conn, snapshot_paths, scan=scan, tenant=tenant, now=now)
     if correlation_result_manifest is not None:
         _complete_correlation_run_atomically(
             conn,
@@ -628,9 +628,9 @@ def load_graph(
         query += " ORDER BY risk_score DESC, id LIMIT ?"
         params.append(budget)
     else:
-        # Preserve persisted node order independently of the planner's index
-        # choice. Correlation receipts hash the ordered snapshot serialization.
-        query += " ORDER BY rowid"
+        # One explicit order, shared with Postgres, independent of the planner's
+        # index choice. Correlation receipts hash the ordered snapshot serialization.
+        query += " ORDER BY id"
 
     node_ids: set[str] = set()
     for row in conn.execute(query, params):
@@ -726,27 +726,8 @@ def load_graph(
         )
 
     if not relationship_types:
-        apq = "SELECT * FROM attack_paths WHERE tenant_id = ? AND scan_id = ? ORDER BY rowid"
-        apparams: list[Any] = [tenant_id, effective_scan_id]
-        for row in conn.execute(apq, apparams):
-            graph.attack_paths.append(
-                AttackPath(
-                    source=row["source_node"],
-                    target=row["target_node"],
-                    hops=json.loads(row["path_nodes"]),
-                    edges=json.loads(row["path_edges"]),
-                    composite_risk=row["composite_risk"],
-                    summary=row["summary"] or "",
-                    credential_exposure=json.loads(row["credential_exposure"]),
-                    tool_exposure=json.loads(row["tool_exposure"]),
-                    vuln_ids=json.loads(row["vuln_ids"]),
-                    reachability=row["reachability"] or "unknown",
-                    reachability_basis=json.loads(row["reachability_basis"] or "[]"),
-                    hop_evidence=json.loads(row["hop_evidence"] or "[]"),
-                    analysis=json.loads(row["analysis"] or "{}"),
-                    technique_mappings=technique_mappings_from_json(row["technique_mappings"]),
-                )
-            )
+        apq = f"SELECT {ATTACK_PATH_SELECT} FROM attack_paths WHERE tenant_id = ? AND scan_id = ? ORDER BY {ATTACK_PATH_ORDER}"  # nosec B608
+        graph.attack_paths.extend(attack_path_from_row(row) for row in conn.execute(apq, (tenant_id, effective_scan_id)))
 
         irq = "SELECT * FROM interaction_risks WHERE tenant_id = ? AND scan_id = ? ORDER BY rowid"
         irparams: list[Any] = [tenant_id, effective_scan_id]
@@ -832,7 +813,7 @@ def _snapshot_digests(conn: sqlite3.Connection, *, tenant_id: str, scan_id: str)
                reachability, reachability_basis, technique_mappings, hop_evidence, analysis
         FROM attack_paths
         WHERE tenant_id = ? AND scan_id = ?
-        ORDER BY source_node, target_node
+        ORDER BY source_node, target_node, path_key
         """,
         (tenant_id, scan_id),
     ):

@@ -18,7 +18,7 @@ from agent_bom.graph.edge_lookup import _edge_relationships_for_hops as _edge_re
 from agent_bom.graph.edge_lookup import _EdgeLookup as _EdgeLookup
 from agent_bom.graph.edge_lookup import _rel_value as _rel_value
 from agent_bom.graph.node import UnifiedNode
-from agent_bom.graph.path_evidence import package_path_covers_rollup, rank_attack_path
+from agent_bom.graph.path_evidence import package_path_covers_rollup, rank_unique_paths, tag_path_kinds
 from agent_bom.graph.path_evidence import with_technique_mappings as _with_technique_mappings
 from agent_bom.graph.reachability_truth import node_reachability
 from agent_bom.graph.types import EntityType, RelationshipType
@@ -457,6 +457,17 @@ def _derived_toxic_combination_paths(graph: UnifiedGraph) -> list[AttackPath]:
     return paths
 
 
+def _cached_path_boost(graph: UnifiedGraph, hops: list[str], cache: dict[str, list[tuple[str, str, str, float]]]) -> float:
+    """Path risk boost from per-hop signals; first occurrence of a kind wins, as in whole-path scoring."""
+    boosts: dict[str, float] = {}
+    for hop_id in hops:
+        if hop_id not in cache:
+            cache[hop_id] = _fusion_signals_for_path(graph, [hop_id])
+        for kind, _label, _detail, boost in cache[hop_id]:
+            boosts.setdefault(kind, boost)
+    return sum(boosts.values())
+
+
 def _component_finding(node: UnifiedNode) -> bool:
     # Credential assessments use their own bounded, owner-scoped derivation.
     return (
@@ -465,16 +476,10 @@ def _component_finding(node: UnifiedNode) -> bool:
     )
 
 
-def _derived_attack_paths(graph: UnifiedGraph) -> list[AttackPath]:
-    """Derive fix-first paths when a snapshot lacks materialised path rows.
-
-    Derive recorded agent/server/component/finding chains for snapshots without
-    path rows. Credential assessments also retain their exact owner and real
-    topology hops. Equivalent persisted paths take precedence.
-
-    Governance / CNAPP / effective-permission chains (privilege escalation,
-    over-scoped tool access, drift, data exposure) are derived and merged in
-    both branches so they surface even when materialised vuln paths exist.
+def _derived_attack_paths(graph: UnifiedGraph, *, kinds: dict[int, str] | None = None) -> list[AttackPath]:
+    """The snapshot's served path set: persisted fusion rows, governance / CNAPP /
+    effective-permission chains, credential-owner paths and agent/server/component/
+    finding chains, ranked and unique per chain (equivalent persisted rows win).
     """
     governance_paths = _derived_governance_attack_paths(graph) + _derived_toxic_combination_paths(graph)
     for path in governance_paths:
@@ -515,6 +520,7 @@ def _derived_attack_paths(graph: UnifiedGraph) -> list[AttackPath]:
 
     paths: list[AttackPath] = []
     seen: set[tuple[str, str, str, str]] = set()
+    signal_cache: dict[str, list[tuple[str, str, str, float]]] = {}
 
     for finding in graph.nodes.values():
         if not _component_finding(finding):
@@ -582,7 +588,7 @@ def _derived_attack_paths(graph: UnifiedGraph) -> list[AttackPath]:
                     risk += min(10.0, len(tools) * 0.75)
                     # Fuse governance / CNAPP / runtime evidence into the score so
                     # exposed, drifting, or unscoped-identity paths rank higher.
-                    risk += sum(boost for _k, _l, _d, boost in _fusion_signals_for_path(graph, hop_ids))
+                    risk += _cached_path_boost(graph, hop_ids, signal_cache)
                     from agent_bom.graph.asset_entity import finding_ids_for_asset_path
 
                     stamped_finding_ids = finding_ids_for_asset_path(getattr(finding, "attributes", None), hop_ids)
@@ -615,21 +621,18 @@ def _derived_attack_paths(graph: UnifiedGraph) -> list[AttackPath]:
                         )
                     )
 
-    # Persisted paths are occurrences, so retain them all for accurate matched-
-    # path counts. Only suppress an ordinary derived path when an equivalent
-    # persisted/governance occurrence already exists.
+    # Derived paths never displace an equivalent persisted/governance path.
     combined = [*materialized, *governance_paths]
 
     def path_key(path: AttackPath) -> tuple[str, str, tuple[str, ...], tuple[str, ...]]:
         return path.source, path.target, tuple(path.hops), tuple(path.edges)
 
     existing_keys = {path_key(path) for path in combined}
-    for derived_path in [*credential_finding_paths(graph), *paths]:
+    credential_paths = credential_finding_paths(graph)
+    for derived_path in [*credential_paths, *paths]:
         derived_path_key = path_key(derived_path)
         if derived_path_key not in existing_keys:
             combined.append(derived_path)
             existing_keys.add(derived_path_key)
-    return _with_technique_mappings(
-        sorted(combined, key=rank_attack_path),
-        graph,
-    )
+    tag_path_kinds(kinds, fusion=materialized, governance=governance_paths, credential=credential_paths)
+    return _with_technique_mappings(rank_unique_paths(combined), graph)

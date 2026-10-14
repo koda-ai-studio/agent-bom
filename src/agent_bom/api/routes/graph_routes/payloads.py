@@ -21,6 +21,7 @@ from agent_bom.graph.analysis import analysis_status_map_to_dict
 from agent_bom.graph.completeness import graph_completeness
 from agent_bom.graph.path_derivation import _build_edge_lookup, _derived_attack_paths
 from agent_bom.graph.scope import GraphScopeKind, select_observed_scope
+from agent_bom.graph.snapshot_paths import resolve_snapshot_attack_paths
 
 logger = logging.getLogger("agent_bom.api.routes.graph")
 
@@ -163,10 +164,12 @@ def _overlay_filter_and_respond(
     return _filtered_graph_response(filtered, offset=offset, limit=limit)
 
 
-def _fix_first_graph_view_payload(graph: UnifiedGraph, *, cve: str, package: str, agent: str, limit: int) -> dict[str, Any]:
+def _fix_first_graph_view_payload(
+    graph: UnifiedGraph, *, cve: str, package: str, agent: str, limit: int, graph_store: Any = None
+) -> dict[str, Any]:
     from agent_bom.graph.path_ranking import criticality_rank_meta, path_rank_tuple
 
-    available_paths = _derived_attack_paths(graph)
+    available_paths = resolve_snapshot_attack_paths(graph, graph_store)
     _ensure_attack_campaigns(graph, available_paths)
     ranked_paths = sorted(
         (path for path in available_paths if _path_matches_focus(graph, path, cve=cve, package=package, agent=agent)),
@@ -318,6 +321,7 @@ def _governance_graph_payload(
     node_limit: int,
     edge_limit: int,
     attack_path_limit: int,
+    graph_store: Any = None,
 ) -> dict[str, Any]:
     governance_types = {
         EntityType.MANAGED_IDENTITY,
@@ -336,7 +340,10 @@ def _governance_graph_payload(
     candidate_edges = [e for e in keep_edges if e.source in node_id_window and e.target in node_id_window]
     edges = candidate_edges[:edge_limit]
 
-    matching_paths = [p for p in _derived_attack_paths(graph) if p.hops and any(hop in governance_ids for hop in p.hops)]
+    # The live overlay can add governance topology the persisted index never saw.
+    overlay_changed = any(int(overlay_stats.get(key) or 0) for key in ("nodes_added", "edges_added"))
+    source_paths = _derived_attack_paths(graph) if overlay_changed else resolve_snapshot_attack_paths(graph, graph_store)
+    matching_paths = [p for p in source_paths if p.hops and any(hop in governance_ids for hop in p.hops)]
     attack_paths = _serialize_attack_path_batch(
         matching_paths[:attack_path_limit],
         keep_edges,

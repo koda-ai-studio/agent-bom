@@ -226,7 +226,13 @@ def _attack_paths_store_columns() -> set[str]:
     insert_match = re.search(r"INSERT INTO attack_paths\s*\(([^)]*)\)", source)
     assert insert_match, "attack_paths INSERT not found in postgres_graph.py"
     columns.update(col.strip() for col in insert_match.group(1).split(",") if col.strip())
+    from agent_bom.db.graph_store_schema import ATTACK_PATH_SELECT
+
+    # Shared path reads interpolate this column list; parse it directly.
+    columns.update(col.strip() for col in ATTACK_PATH_SELECT.split(","))
     for select_match in re.finditer(r"SELECT\s+((?:(?!\bFROM\b)[\s\S])*?)\s+FROM attack_paths", source):
+        if "{" in select_match.group(1):
+            continue
         for token in select_match.group(1).split(","):
             token = token.strip()
             if re.fullmatch(r"[a-z_]+", token):

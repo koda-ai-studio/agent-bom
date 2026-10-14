@@ -128,7 +128,8 @@ class MockConnection:
                     cursor.rowcount = 0
                     self._cursors.append(cursor)
                     return cursor
-                self._store[table][params[0]] = params
+                key = (params[16], params[15], params[19]) if "insert into attack_paths" in sql_lower and len(params) >= 20 else params[0]
+                self._store[table][key] = params
         elif sql_lower.startswith("with recursive chain") and "audit_log" in sql_lower:
             # Model the chain-ordered walk (`_list_entries_chronological`): follow
             # prev_signature -> hmac_signature links from the genesis row instead
@@ -316,8 +317,10 @@ class MockConnection:
                     rows = [
                         r for r in rows if r[16] == tenant_id and r[15] == scan_id and (not requested_sources or r[0] in requested_sources)
                     ]
-                rows.sort(key=lambda r: (-float(r[3]), str(r[0]), str(r[1])))
-                cursor.rows = [(r[0], r[1], r[5], r[6], r[3], r[4], r[7], r[8], r[9], r[10], r[11], r[12], r[13], r[14]) for r in rows]
+                rows.sort(key=lambda r: (-float(r[3]), str(r[19])))
+                cursor.rows = [
+                    (r[0], r[1], r[5], r[6], r[3], r[4], r[7], r[8], r[9], r[10], r[11], r[12], r[13], r[14], r[18]) for r in rows
+                ]
             elif params:
                 for table_data in self._store.values():
                     for pk, row in table_data.items():

@@ -53,8 +53,19 @@ async def containment_ancestors(
 async def page_attack_context(
     graph_store: Any, *, scan_id: str, tenant_id: str, node_ids: set[str], call_store: Any
 ) -> tuple[list[Any], list[UnifiedNode]]:
-    """Read path records and their supplemental hop nodes off the event loop."""
-    paths = await call_store(graph_store.attack_paths_for_sources, scan_id=scan_id, tenant_id=tenant_id, source_ids=node_ids)
+    """Read path records and their supplemental hop nodes off the event loop.
+
+    A snapshot with a current path index serves its complete ranked set, so the
+    page agrees with ``/v1/graph/attack-paths``; older snapshots keep reading
+    the fusion rows they were written with.
+    """
+    stored = None
+    if getattr(graph_store, "snapshot_attack_paths", None) is not None:
+        stored = await call_store(graph_store.snapshot_attack_paths, scan_id=scan_id, tenant_id=tenant_id, source_ids=node_ids)
+    if stored is not None:
+        paths = list(stored.paths)
+    else:
+        paths = await call_store(graph_store.attack_paths_for_sources, scan_id=scan_id, tenant_id=tenant_id, source_ids=node_ids)
     hop_ids = {hop for path in paths for hop in path.hops}
     nodes = await call_store(graph_store.nodes_by_ids, scan_id=scan_id, tenant_id=tenant_id, node_ids=hop_ids - node_ids)
     return paths, nodes

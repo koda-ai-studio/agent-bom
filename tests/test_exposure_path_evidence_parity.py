@@ -4,6 +4,7 @@ import pytest
 
 from agent_bom.api.routes.graph import _exposure_path_for_attack_path
 from agent_bom.graph import AttackPath, EntityType, RelationshipType, UnifiedEdge, UnifiedNode
+from agent_bom.graph.snapshot_paths import resolve_snapshot_attack_paths
 from agent_bom.mcp_tools.graph import _exposure_path_payload
 
 
@@ -538,9 +539,8 @@ async def test_reopened_snapshot_keeps_asset_occurrences_scoped_across_surfaces(
     store = SQLiteGraphStore(database)
     loaded = store.load_graph(tenant_id="tenant-a", scan_id="shared-scan")
     assert loaded is not None
-    api = _exposure_path_for_attack_path(
-        loaded.attack_paths[0], nodes_by_id=loaded.nodes, edges=loaded.edges, rank=1, scan_id=loaded.scan_id
-    )
+    served = resolve_snapshot_attack_paths(loaded, store)
+    api = _exposure_path_for_attack_path(served[0], nodes_by_id=loaded.nodes, edges=loaded.edges, rank=1, scan_id=loaded.scan_id)
     payload = json.loads(await exposure_paths_for_tenant(tenant_id="tenant-a", scan_id="shared-scan", _get_graph_store=lambda: store))
     assert payload["count"] == 1
     mcp = payload["paths"][0]

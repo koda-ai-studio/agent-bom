@@ -111,6 +111,24 @@ def ranked_persisted_path_page(
     )
 
 
+def ranked_snapshot_path_page(
+    graph_store: Any,
+    *,
+    scan_id: str,
+    tenant_id: str,
+    offset: int,
+    limit: int,
+    filters: AttackPathFilters,
+) -> RankedPathPage | None:
+    """Read a queue page in the order fixed at persist; ``None`` without a current index."""
+    reader = getattr(graph_store, "snapshot_queue_page", None)
+    page = reader(tenant_id=tenant_id, scan_id=scan_id, offset=offset, limit=limit, **filters.active()) if reader is not None else None
+    if page is None:
+        return None
+    ranking = _ranking_meta(snapshot_total=page.snapshot_total, window=page.snapshot_total or 1)
+    return RankedPathPage(page.scan_id, page.created_at, page.paths, page.total, page.snapshot_total, ranking)
+
+
 def ranked_derived_path_page(
     graph: Any,
     derived_paths: list[AttackPath],
@@ -136,4 +154,5 @@ __all__ = [
     "attack_path_rank_window",
     "ranked_derived_path_page",
     "ranked_persisted_path_page",
+    "ranked_snapshot_path_page",
 ]

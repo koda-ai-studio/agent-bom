@@ -1583,6 +1583,7 @@ jobs:
           uv run pytest -q --tb=short \
             tests/test_postgres_integration.py \
             tests/test_graph_snapshot_ownership.py \
+            tests/test_postgres_graph_snapshot_paths.py \
             tests/test_report_jobs_postgres.py \
             tests/test_export_destination_postgres.py \
             tests/test_export_schedule_postgres.py \
