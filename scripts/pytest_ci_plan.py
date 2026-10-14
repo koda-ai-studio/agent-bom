@@ -46,6 +46,7 @@ AUTHORIZATION_CONTRACTS = (
     "tests/test_websocket_auth_fails_closed.py",
 )
 MCP_TOOL_CONTRACTS = (
+    "tests/test_mcp_server.py",
     "tests/test_mcp_operator_registration.py",
     "tests/test_mcp_catalog_drift.py",
     "tests/test_regression_quality.py",

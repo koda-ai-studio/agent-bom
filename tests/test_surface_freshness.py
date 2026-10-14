@@ -240,7 +240,7 @@ def test_glama_listing_rejects_exact_public_schema_when_directory_api_is_stale(m
     """One fresh public surface must not hide a reachable stale machine API."""
     script = _load_script("check_glama_listing.py")
     current_page = "v0.98.3 MCP server mode exposes 77 MCP tools"
-    schema_page = "".join(f'<a href="/mcp/servers/msaad00/agent-bom/tools/tool_{index}">tool_{index}</a>' for index in range(77))
+    schema_page = "".join(f'<a href="/mcp/servers/koda-ai-studio/agent-bom/tools/tool_{index}">tool_{index}</a>' for index in range(77))
 
     def fetch(url, _timeout):
         return schema_page if url.endswith("/schema") else current_page
@@ -258,7 +258,7 @@ def test_glama_listing_rejects_exact_public_schema_when_directory_api_is_stale(m
 def test_glama_listing_marks_schema_only_success_as_degraded(monkeypatch, capsys):
     script = _load_script("check_glama_listing.py")
     current_page = "v0.98.3 MCP server mode exposes 2 MCP tools"
-    schema_page = "".join(f'<a href="/mcp/servers/msaad00/agent-bom/tools/tool_{index}">tool_{index}</a>' for index in range(2))
+    schema_page = "".join(f'<a href="/mcp/servers/koda-ai-studio/agent-bom/tools/tool_{index}">tool_{index}</a>' for index in range(2))
 
     def fetch(url, _timeout):
         return schema_page if url.endswith("/schema") else current_page
@@ -854,7 +854,7 @@ def test_ghcr_pagination_still_follows_a_same_origin_next_link(monkeypatch):
     assert result["status"] == "fresh"
 
 
-def _glama_schema_state(tools, *, namespace="msaad00", slug="agent-bom", null_reference=-5, description=""):
+def _glama_schema_state(tools, *, namespace="koda-ai-studio", slug="agent-bom", null_reference=-5, description=""):
     """Encode the public schema route's reference-table JSON, without JS execution."""
     values = []
 
@@ -891,7 +891,7 @@ def test_glama_checks_public_embedded_schemas_when_api_requires_auth(monkeypatch
     tools = [{"name": "scan", "inputSchema": {"type": "object"}}] if mismatch else expected
     contract = tmp_path / "contract.json"
     contract.write_text(json.dumps(expected))
-    schema = '<a href="/mcp/servers/msaad00/agent-bom/tools/scan">scan</a>' + _glama_schema_state(tools)
+    schema = '<a href="/mcp/servers/koda-ai-studio/agent-bom/tools/scan">scan</a>' + _glama_schema_state(tools)
     monkeypatch.setattr(
         script, "_fetch", lambda url, timeout: schema if url.endswith("/schema") else "v0.103.2 MCP server mode exposes 1 MCP tools"
     )
@@ -933,7 +933,7 @@ def test_glama_requires_exact_schema_proof_when_contract_is_requested(monkeypatc
         script,
         "_fetch",
         lambda url, timeout: (
-            '<a href="/mcp/servers/msaad00/agent-bom/tools/scan">scan</a>'
+            '<a href="/mcp/servers/koda-ai-studio/agent-bom/tools/scan">scan</a>'
             if url.endswith("/schema")
             else "v0.103.2 MCP server mode exposes 1 MCP tools"
         ),
@@ -1569,7 +1569,7 @@ def test_glama_empty_directory_api_needs_exact_schema_contract(monkeypatch, caps
     tools = [{"name": "scan", "inputSchema": {"type": "object"}}] if mismatch else expected
     contract = tmp_path / "contract.json"
     contract.write_text(json.dumps(expected))
-    schema = '<a href="/mcp/servers/msaad00/agent-bom/tools/scan">scan</a>' + _glama_schema_state(tools)
+    schema = '<a href="/mcp/servers/koda-ai-studio/agent-bom/tools/scan">scan</a>' + _glama_schema_state(tools)
     monkeypatch.setattr(
         script, "_fetch", lambda url, timeout: schema if url.endswith("/schema") else "v0.103.2 MCP server mode exposes 1 MCP tools"
     )
