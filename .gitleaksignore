@@ -76,3 +76,6 @@ cc3d86f9b6cca9ed3ee186f287ded454fd573207:tests/test_helm_replica_safety.py:gener
 # Historical non-functional detector input in the discovery characterization
 # fixture. The current fixture assembles the same input at runtime.
 458278cf05e2d297dfef9be50a278f701070cea4:tests/test_discovery_characterization.py:generic-api-key:110
+
+# Non-functional fixture value in a normalized-trace test asserting that credential values are rejected.
+615cdc9b75406cdd3a89ef34c2a48c52550c66ac:tests/test_normalized_trace_event.py:generic-api-key:244

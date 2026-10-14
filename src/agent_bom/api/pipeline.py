@@ -39,6 +39,7 @@ from agent_bom.api.graph_persistence import (
 from agent_bom.api.graph_persistence import (
     _record_graph_persistence as _record_graph_persistence,
 )
+from agent_bom.api.hub_ingest import ingest_runtime_findings
 from agent_bom.api.models import JobStatus, ScanJob, StepStatus
 from agent_bom.api.scan_analysis_stages import (
     analyse_reachability_stage,
@@ -411,16 +412,14 @@ def pipeline_dag_events_jsonl(job: ScanJob) -> str:
 
 
 def _persist_graph_snapshot(
-    job: ScanJob,
-    report_json: dict[str, Any],
-    *,
-    lock: threading.Lock | None = None,
-    write_generation: str = "",
+    job: ScanJob, report_json: dict[str, Any], *, lock: threading.Lock | None = None, write_generation: str = ""
 ) -> None:
     """Persist through the graph service using the pipeline's current store factory."""
     from agent_bom.api.graph_persistence import persist_graph_snapshot
 
-    persist_graph_snapshot(job, report_json, store_factory=_get_graph_store, lock=lock, write_generation=write_generation)
+    persist_graph_snapshot(
+        job, report_json, store_factory=_get_graph_store, lock=lock, write_generation=write_generation, finding_sink=ingest_runtime_findings
+    )
 
 
 # ─── ScanPipeline ────────────────────────────────────────────────────────────

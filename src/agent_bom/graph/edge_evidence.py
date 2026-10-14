@@ -68,6 +68,7 @@ SOURCE_TIERS: dict[str, str] = {
     "runtime-feedback": _RUNTIME,
     "runtime-proxy": _RUNTIME,
     "runtime-identity": _RUNTIME,
+    "runtime-trace": _RUNTIME,
     "source-ast": _STATIC,
     "ast_analysis": _STATIC,
     "framework-agent": _STATIC,

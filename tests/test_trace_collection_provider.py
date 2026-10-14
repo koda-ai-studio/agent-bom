@@ -32,7 +32,7 @@ def collect(payload):
             return httpx.Response(200, json={"data": [{"id": "project"}]})
         assert request.url.params["cursor"] == "previous"
         assert request.url.params["limit"] == "100"
-        assert request.url.params["fields"] == "core,basic,time,metadata"
+        assert request.url.params["fields"] == "core,basic,time,metadata,model,usage"
         return httpx.Response(200, json=payload)
 
     with httpx.Client(transport=httpx.MockTransport(handle)) as client:

@@ -7,7 +7,7 @@ from typing import Any
 
 from agent_bom.api.storage.runtime_records import RuntimeObservationRecord, RuntimeSessionRecord, _observation_from_json, _session_from_json
 
-FILTER_FIELDS = {"session_id", "source", "agent_name", "connection_id"}
+FILTER_FIELDS = {"session_id", "source", "agent_name", "connection_id", "surface"}
 
 
 def session_keys(session_ids: list[str]) -> list[str]:
