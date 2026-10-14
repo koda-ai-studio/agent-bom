@@ -58,9 +58,9 @@ Follow **CVE-2023-4863 in pillow@9.0.0** through recorded relationships between 
 
 <a href="images/correlation-graph-live.png"><img src="images/correlation-graph-live.png" alt="Reference lab graph linking a Pillow advisory, workload, container, tool and modeled data asset" width="1440"></a>
 
-**Inspect the evidence behind an arrow.** Select a relationship to see its direction, retained snapshot, timestamps and recorded source evidence. This focused view shows three independent sources (a repository pin, an image SBOM and a modeled Kubernetes workload) resolving to one package, with the advisory receipt open; modeled cloud permissions and downstream effects remain separate claims.
+**Inspect the evidence behind an arrow.** Select a relationship to see its direction, retained snapshot, timestamps and recorded source evidence. This focused view shows three parsed inputs (a repository pin, an image SBOM and a modeled Kubernetes workload) resolving to one package, with the plain-language relationship evidence open; modeled cloud permissions and downstream effects remain separate claims.
 
-<p align="center"><a href="images/graph-relationship-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="images/graph-relationship-light-live.png"><img src="images/graph-relationship-dark-live.png" alt="Repository pin, image SBOM and Kubernetes workload resolving to one pillow package linked to KEV-listed CVE-2023-4863, with the advisory receipt open" width="1440"></picture></a></p>
+<p align="center"><a href="images/graph-relationship-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="images/graph-relationship-light-live.png"><img src="images/graph-relationship-dark-live.png" alt="Repository pin, image inventory and Kubernetes deployment occurrence resolving to one pillow package linked to KEV-listed CVE-2023-4863, with the plain-language relationship evidence open" width="1440"></picture></a></p>
 
 **Find a path → Explore connections → Inspect evidence → Remediate.** Keep the snapshot and selected finding in scope as you move through the workflow. Expand within a hop limit and browse relationships in bounded pages; incomplete views remain labeled. Configured permissions, observed activity and downstream effects have separate evidence requirements.
 

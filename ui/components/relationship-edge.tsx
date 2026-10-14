@@ -8,6 +8,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { accessEvidenceQualifier } from "@/lib/graph-access-evidence";
 import { scheduleRelationshipLabelLayout } from "@/lib/relationship-label-layout";
 import { relationshipPath } from "@/lib/relationship-routing";
 
@@ -63,6 +64,14 @@ export function RelationshipBadge({ relationship, children }: {
   </span>;
 }
 
+/** The evidence qualifier reads as a second, quieter line instead of wrapping mid-phrase. */
+export function qualifiedLabel(relationship: string, label: React.ReactNode, data: EdgeProps["data"]): React.ReactNode {
+  const qualifier = accessEvidenceQualifier(relationship, data as Parameters<typeof accessEvidenceQualifier>[1]);
+  const suffix = ` · ${qualifier}`;
+  if (!qualifier || typeof label !== "string" || !label.endsWith(suffix)) return label;
+  return <>{label.slice(0, -suffix.length)}<span className="sr-only"> · </span><span className="graph-relationship-qualifier">{qualifier}</span></>;
+}
+
 export function RelationshipEdge(props: EdgeProps) {
   const nodes = useStore(state => state.nodes);
   const zoom = useStore(state => state.transform[2]);
@@ -87,7 +96,7 @@ export function RelationshipEdge(props: EdgeProps) {
         fontSize: Math.max(Number(props.labelStyle?.fontSize) || 12, 12.5 / Math.max(zoom, 0.16)),
         pointerEvents: "none",
       }}>
-        <RelationshipBadge relationship={relationship}>{props.label}</RelationshipBadge>
+        <RelationshipBadge relationship={relationship}>{qualifiedLabel(relationship, props.label, props.data)}</RelationshipBadge>
       </div>
     </EdgeLabelRenderer>}
   </>;

@@ -1,5 +1,3 @@
-import type { EnrichedVuln } from "@/lib/findings-view";
-
 export type IssueTypeFilter = "all" | "vulnerability" | "misconfiguration" | "secret" | "pii" | "identity" | "unclassified";
 
 export type IssueType = Exclude<IssueTypeFilter, "all">;
@@ -13,97 +11,6 @@ export type IssueSeverityMatrix = Record<IssueType, SeverityBucket> & {
   byType: Record<IssueType, number>;
   openTotal: number;
 };
-
-// Mirrors src/agent_bom/finding_scope.py (pinned by tests/test_finding_class_parity.py).
-const VULNERABILITY_TYPES = new Set([
-  "CVE",
-  "MALICIOUS_PACKAGE",
-  "MALICIOUS_MODEL",
-  "SAST",
-  "INJECTION",
-  "MCP_BLOCKLIST",
-  "EXFILTRATION",
-  "CLOAKING",
-]);
-const MISCONFIGURATION_TYPES = new Set([
-  "CIS_FAIL",
-  "CIS_ERROR",
-  "CLOUD_BEST_PRACTICE_FAIL",
-  "CLOUD_BEST_PRACTICE_ERROR",
-  "PROMPT_SECURITY",
-  "TOOL_DRIFT",
-  "SKILL_RISK",
-  "RATE_LIMIT",
-  "COMBINATION",
-  "MODEL_INTEGRITY",
-  "LICENSE",
-  "BROWSER_EXT",
-  "SHADOW_AI",
-]);
-const SECRET_TYPES = new Set(["CREDENTIAL_EXPOSURE"]);
-// Personal / sensitive data shares the secret scanner as a source, so it must
-// be decided by finding type before the source check below.
-const PII_TYPES = new Set(["PII_EXPOSURE", "SENSITIVE_DATA"]);
-const IDENTITY_TYPES = new Set(["CIEM_OVER_PRIVILEGE"]);
-
-export type IssueTypeSignals = {
-  id: string;
-  impact_category?: string | undefined;
-  finding_type?: string | undefined;
-  finding_class?: IssueType | undefined;
-  sources?: string[] | undefined;
-  advisory_sources?: string[] | undefined;
-  framework_tags?: string[] | undefined;
-  exposed_credentials?: string[] | undefined;
-};
-
-/** Classify any finding-like signal into vuln / misconfig / secret / pii / identity. */
-export function classifyIssueTypeFromSignals(signals: IssueTypeSignals): IssueType | null {
-  if (signals.finding_class) return signals.finding_class;
-  const findingType = (signals.finding_type ?? "").trim().toUpperCase();
-  const sources = [...(signals.sources ?? []), ...(signals.advisory_sources ?? [])]
-    .map((source) => source.trim().toUpperCase());
-  const creds = signals.exposed_credentials ?? [];
-
-  if (PII_TYPES.has(findingType)) {
-    return "pii";
-  }
-  if (SECRET_TYPES.has(findingType) || sources.includes("SECRET_SCAN") || creds.length > 0) {
-    return "secret";
-  }
-  if (IDENTITY_TYPES.has(findingType)) {
-    return "identity";
-  }
-  if (
-    MISCONFIGURATION_TYPES.has(findingType) ||
-    sources.includes("CLOUD_CIS") ||
-    sources.includes("CLOUD_SECURITY")
-  ) {
-    return "misconfiguration";
-  }
-  if (VULNERABILITY_TYPES.has(findingType) || sources.includes("SAST") || /^(cve-|ghsa-)/i.test(signals.id.trim())) {
-    return "vulnerability";
-  }
-  return "unclassified";
-}
-
-export function classifyFindingIssueType(vuln: EnrichedVuln): IssueType | null {
-  return classifyIssueTypeFromSignals({
-    id: vuln.id,
-    impact_category: vuln.impact_category,
-    finding_type: vuln.finding_type,
-    finding_class: vuln.finding_class,
-    sources: vuln.sources,
-    advisory_sources: vuln.advisory_sources,
-    framework_tags: vuln.framework_tags,
-    exposed_credentials: vuln.exposed_credentials,
-  });
-}
-
-export function matchesIssueTypeFilter(vuln: EnrichedVuln, filter: IssueTypeFilter): boolean {
-  if (filter === "all") return true;
-  return classifyFindingIssueType(vuln) === filter;
-}
 
 export const ISSUE_TYPE_FILTERS: { key: IssueTypeFilter; label: string; hint: string }[] = [
   { key: "all", label: "All types", hint: "Every issue class" },
@@ -142,39 +49,6 @@ export function emptyIssueSeverityMatrix(): IssueSeverityMatrix {
     byType: { vulnerability: 0, misconfiguration: 0, secret: 0, pii: 0, identity: 0, unclassified: 0 },
     openTotal: 0,
   };
-}
-
-function normalizeSeverityBand(value: string | null | undefined): SeverityBand | null {
-  const s = value?.toLowerCase();
-  if (s === "critical" || s === "high" || s === "medium" || s === "low") return s;
-  return null;
-}
-
-/** Build severity × issue-type matrix (shared axis for CVEs, misconfigs, secrets). */
-export function buildIssueSeverityMatrix(
-  items: Array<{
-    id: string;
-    severity?: string | null | undefined;
-    impact_category?: string | undefined;
-    finding_type?: string | undefined;
-    sources?: string[] | undefined;
-    advisory_sources?: string[] | undefined;
-    framework_tags?: string[] | undefined;
-    exposed_credentials?: string[] | undefined;
-  }>,
-): IssueSeverityMatrix {
-  const matrix = emptyIssueSeverityMatrix();
-  for (const item of items) {
-    const band = normalizeSeverityBand(item.severity);
-    if (!band) continue;
-    const issue = classifyIssueTypeFromSignals(item);
-    if (!issue) continue;
-    matrix[issue][band] += 1;
-    matrix.totals[band] += 1;
-    matrix.byType[issue] += 1;
-    matrix.openTotal += 1;
-  }
-  return matrix;
 }
 
 export function findingsHref(opts: {

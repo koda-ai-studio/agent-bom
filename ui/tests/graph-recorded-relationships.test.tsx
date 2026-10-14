@@ -32,7 +32,7 @@ it.each([
   expect(await screen.findByText(`Outgoing → · ${title}`)).toBeVisible();
 });
 it.each([
-  { relationship: "can_access", direction: "directed", incoming: true, text: "← Incoming · Can Access" },
+  { relationship: "can_access", direction: "directed", incoming: true, text: "← Incoming · Can Access · not verified" },
   { relationship: "shares_server", direction: "bidirectional", incoming: false, text: "Bidirectional ↔ · Shares Server" },
   { relationship: "vulnerable_to", direction: "directed", incoming: false, text: "Outgoing → · Has finding" },
 ])("retains $relationship meaning and recorded direction", async ({ relationship, direction, incoming, text }) => {
@@ -49,7 +49,7 @@ it("uses recorded labels, retains identifiers and inspects the canonical endpoin
   const inspect = vi.fn();
   render(<GraphRecordedRelationshipScope scanId="s-1" nodeId="agent:one"><GraphRecordedRelationships scanId="s-1" nodeId="agent:one" onInspectNode={inspect} /></GraphRecordedRelationshipScope>);
   const link = await screen.findByRole("button", { name: "Recorded server name" });
-  expect(screen.getByText("Outgoing → · Uses")).toBeVisible();
+  expect(screen.getByText("Outgoing → · Uses · not verified")).toBeVisible();
   fireEvent.click(link);
   expect(inspect).toHaveBeenCalledWith("server:opaque-id");
   fireEvent.click(screen.getByText("Canonical identifiers"));

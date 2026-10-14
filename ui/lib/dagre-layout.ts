@@ -124,6 +124,9 @@ export interface LayoutOptions {
  * small graphs keep the exact one-node-per-rank reading they have today.
  */
 const MIN_ASPECT_FIT_GAIN = 1.25;
+// Wrapping a rank draws the far sub-column's links through the near one. A
+// rank this short is never the portrait tower the reflow exists to fix.
+const MIN_WRAPPED_RANK = 5;
 
 export function fitRanksToAspect(
   nodes: Node[],
@@ -149,7 +152,7 @@ export function fitRanksToAspect(
   const rankKeys = [...ranks.keys()].sort((a, b) => a - b);
   const rankSizes = rankKeys.map((key) => ranks.get(key)!.length);
   const tallestRank = Math.max(...rankSizes);
-  if (tallestRank < 2) return nodes;
+  if (tallestRank < MIN_WRAPPED_RANK) return nodes;
 
   const columnStep = nodeWidth + nodeSep;
   const rowStep = nodeHeight + nodeSep;
@@ -219,6 +222,85 @@ export function fitRanksToAspect(
   });
 }
 
+/** Straight-line crossings between links that share no endpoint. */
+export function countStraightCrossings(nodes: Node[], edges: Edge[]): number {
+  const at = new Map(nodes.map((node) => [node.id, node.position]));
+  const segments = edges.flatMap((edge) => {
+    const a = at.get(edge.source), b = at.get(edge.target);
+    return a && b && edge.source !== edge.target ? [{ edge, a, b }] : [];
+  });
+  const side = (p: { x: number; y: number }, q: { x: number; y: number }, r: { x: number; y: number }) =>
+    Math.sign((q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x));
+  let crossings = 0;
+  for (let i = 0; i < segments.length; i += 1) {
+    for (let j = i + 1; j < segments.length; j += 1) {
+      const s = segments[i]!, t = segments[j]!;
+      if ([s.edge.source, s.edge.target].some((id) => id === t.edge.source || id === t.edge.target)) continue;
+      if (side(s.a, s.b, t.a) * side(s.a, s.b, t.b) < 0 && side(t.a, t.b, s.a) * side(t.a, t.b, s.b) < 0) crossings += 1;
+    }
+  }
+  return crossings;
+}
+
+// Above this size the quadratic crossing count is skipped; large graphs use
+// the overview renderers and dagre's own ordering.
+const CROSSING_REDUCTION_NODE_CAP = 120;
+
+/**
+ * Dagre's ordering is heuristic and can leave a crossing two siblings would
+ * resolve by trading places. Swap adjacent nodes within a rank (same x) and
+ * keep a swap only when it lowers the total crossing count.
+ */
+export function reduceRankCrossings(nodes: Node[], edges: Edge[]): Node[] {
+  if (nodes.length < 4 || nodes.length > CROSSING_REDUCTION_NODE_CAP) return nodes;
+  let current = nodes;
+  let best = countStraightCrossings(current, edges);
+  if (best === 0) return nodes;
+  for (let pass = 0; pass < 8 && best > 0; pass += 1) {
+    let improved = false;
+    const ranks = new Map<number, Node[]>();
+    for (const node of current) ranks.set(Math.round(node.position.x), [...(ranks.get(Math.round(node.position.x)) ?? []), node]);
+    for (const rank of ranks.values()) {
+      rank.sort((a, b) => a.position.y - b.position.y);
+      for (let index = 0; index + 1 < rank.length; index += 1) {
+        const upper = rank[index]!, lower = rank[index + 1]!;
+        const swapped = current.map((node) => node.id === upper.id ? { ...node, position: { ...node.position, y: lower.position.y } }
+          : node.id === lower.id ? { ...node, position: { ...node.position, y: upper.position.y } } : node);
+        const crossings = countStraightCrossings(swapped, edges);
+        if (crossings < best) {
+          best = crossings;
+          current = swapped;
+          rank[index] = { ...lower, position: { ...lower.position, y: upper.position.y } };
+          rank[index + 1] = { ...upper, position: { ...upper.position, y: lower.position.y } };
+          improved = true;
+        }
+      }
+    }
+    if (!improved) break;
+  }
+  return current;
+}
+
+/**
+ * A tall left-to-right layout is fitted by its height, so horizontal room is
+ * free: widen the gaps between ranks (never their order) toward a modest
+ * aspect so relationship captions fit between card columns. The target sits
+ * below typical canvas aspects, so the fit zoom does not drop.
+ */
+const CAPTION_ROOM_ASPECT = 1.6;
+const MAX_RANK_STRETCH = 2;
+
+export function stretchRanksForCaptions(nodes: Node[], nodeWidth: number, nodeHeight: number): Node[] {
+  if (nodes.length < 2) return nodes;
+  const xs = nodes.map((node) => node.position.x), ys = nodes.map((node) => node.position.y);
+  const minX = Math.min(...xs), span = Math.max(...xs) - minX;
+  const height = Math.max(...ys) - Math.min(...ys) + nodeHeight;
+  if (span <= 0) return nodes;
+  const stretch = Math.min(MAX_RANK_STRETCH, (CAPTION_ROOM_ASPECT * height - nodeWidth) / span);
+  if (!(stretch > 1)) return nodes;
+  return nodes.map((node) => ({ ...node, position: { ...node.position, x: minX + (node.position.x - minX) * stretch } }));
+}
+
 export function applyDagreLayout(
   nodes: Node[],
   edges: Edge[],
@@ -263,21 +345,23 @@ export function applyDagreLayout(
     };
   });
 
+  const orderedNodes = isHorizontal ? reduceRankCrossings(layoutNodes, edges) : layoutNodes;
   const fittedNodes =
     isHorizontal && fitAspect
-      ? fitRanksToAspect(layoutNodes, {
+      ? fitRanksToAspect(orderedNodes, {
           aspect: fitAspect,
           nodeWidth,
           nodeHeight,
           rankSep,
           nodeSep,
         })
-      : layoutNodes;
+      : orderedNodes;
 
+  const roomyNodes = isHorizontal && fitAspect ? stretchRanksForCaptions(fittedNodes, nodeWidth, nodeHeight) : fittedNodes;
   return {
     nodes: minSeparation
-      ? enforceMinNodeSeparation(fittedNodes, minSeparation)
-      : fittedNodes,
+      ? enforceMinNodeSeparation(roomyNodes, minSeparation)
+      : roomyNodes,
     edges,
   };
 }

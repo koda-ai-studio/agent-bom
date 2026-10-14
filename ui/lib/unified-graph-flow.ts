@@ -27,6 +27,8 @@ import {
 } from "@/lib/graph-utils";
 import { displayContextDescription } from "@/lib/context-graph";
 import { FLOW_NODE_TYPES, lineageNodeTypeForEntity } from "@/lib/graph-entity-mapping";
+import { assignOccurrenceRoles } from "@/lib/graph-occurrence-role";
+import { CONSEQUENTIAL_RELATIONSHIPS, isObservedAccess } from "@/lib/graph-access-evidence";
 import {
   EntityType,
   type UnifiedEdge,
@@ -44,11 +46,23 @@ export interface UnifiedGraphFlowFilters {
   maxDepth: number;
 }
 
+export interface FindingSeverityCounts {
+  critical: number;
+  high: number;
+  medium: number;
+  low: number;
+  unrated: number;
+}
+
 export interface UnifiedGraphFlowSummary {
   agents: number;
   servers: number;
   findings: number;
+  /** Findings with a recorded critical severity. KEV status and risk scores never raise this. */
   critical: number;
+  findingSeverity: FindingSeverityCounts;
+  /** Findings listed in CISA KEV, counted independently of severity. */
+  kevListed: number;
   attackPaths: number;
   runtimeEdges: number;
   /** Rolling 30-day spend across the nodes currently visible, in USD. */
@@ -230,6 +244,7 @@ export function buildUnifiedFlowGraph(
   const visibleNodeTypes = new Set(
     prunedNodes.map((node) => node.data.nodeType),
   );
+  assignOccurrenceRoles(prunedNodes);
   const summary = buildSummary(prunedNodes, graph);
   const legend = legendForNodeTypes(visibleNodeTypes);
 
@@ -595,10 +610,14 @@ function toFlowEdge(edge: UnifiedEdge): Edge {
   const reachScore = readReachScore(edge.evidence?.effective_reach_score);
   const reachColor = reachStrokeColor(reachScore);
   const strokeColor = reachColor ?? color;
-  const dashed = DASHED_RELATIONSHIPS.has(relationship);
   const evidenceMode = graphEdgeEvidenceMode(edge);
+  const evidenceBlocked = graphEdgeEvidence(edge.evidence ?? {}).blocked;
+  // Access-shaped links dash unless runtime evidence shows the access was used.
+  const dashed = CONSEQUENTIAL_RELATIONSHIPS.has(relationship)
+    ? !isObservedAccess(relationship, { evidenceMode, evidenceBlocked })
+    : DASHED_RELATIONSHIPS.has(relationship);
   // Motion denotes a recorded runtime receipt; severity alone is not activity.
-  const animated = evidenceMode === "runtime" && !graphEdgeEvidence(edge.evidence ?? {}).blocked;
+  const animated = evidenceMode === "runtime" && !evidenceBlocked;
   const marker = { type: MarkerType.ArrowClosed, color: strokeColor, width: 14, height: 10 };
 
   return {
@@ -608,10 +627,11 @@ function toFlowEdge(edge: UnifiedEdge): Edge {
     type: "smoothstep",
     data: {
       relationship,
-      relationshipLabel: relationshipEdgeLabelText(relationship, { evidenceMode }),
+      relationshipLabel: relationshipEdgeLabelText(relationship, { evidenceMode, evidenceBlocked }),
       relationshipCategory: legend.layer,
       evidenceMode,
-      hoverDescription: `${relationshipEdgeLabelText(relationship, { evidenceMode })} · ${graphEdgeEvidenceLabel(edge)} · ${edge.direction === "bidirectional" ? "Bidirectional" : "Directed"} · Traversal ${edge.traversable ? "eligible" : "not enabled"}. Select to inspect evidence.`,
+      evidenceBlocked,
+      hoverDescription: `${relationshipEdgeLabelText(relationship, { evidenceMode, evidenceBlocked })} · ${graphEdgeEvidenceLabel(edge)} · ${edge.direction === "bidirectional" ? "Bidirectional" : "Directed"} · Traversal ${edge.traversable ? "eligible" : "not enabled"}. Select to inspect evidence.`,
       direction: edge.direction,
       traversable: edge.traversable,
     },
@@ -639,15 +659,15 @@ function buildSummary(
   nodes: Node<LineageNodeData>[],
   graph: UnifiedGraphData,
 ): UnifiedGraphFlowSummary {
-  const findings = nodes.filter((node) =>
-    FINDING_NODE_TYPES.has(node.data.nodeType),
-  ).length;
-  const critical = nodes.filter(
-    (node) =>
-      FINDING_NODE_TYPES.has(node.data.nodeType) &&
-      (node.data.severity?.toLowerCase() === "critical" ||
-        node.data.isCritical),
-  ).length;
+  const findingNodes = nodes.filter((node) => FINDING_NODE_TYPES.has(node.data.nodeType));
+  const findings = findingNodes.length;
+  const findingSeverity: FindingSeverityCounts = { critical: 0, high: 0, medium: 0, low: 0, unrated: 0 };
+  for (const node of findingNodes) {
+    const severity = node.data.severity?.toLowerCase();
+    if (severity === "critical" || severity === "high" || severity === "medium" || severity === "low") findingSeverity[severity] += 1;
+    else findingSeverity.unrated += 1;
+  }
+  const kevListed = findingNodes.filter((node) => node.data.isKev === true).length;
   const visibleNodeIds = new Set(nodes.map((node) => node.id));
   const runtimeEdges = graph.edges.filter(
     (edge) =>
@@ -671,7 +691,9 @@ function buildSummary(
     agents: nodes.filter((node) => node.data.nodeType === "agent").length,
     servers: nodes.filter((node) => node.data.nodeType === "server").length,
     findings,
-    critical,
+    critical: findingSeverity.critical,
+    findingSeverity,
+    kevListed,
     attackPaths: graph.attack_paths.length,
     runtimeEdges,
     costUsd30d: Math.round(costUsd30d * 1e6) / 1e6,

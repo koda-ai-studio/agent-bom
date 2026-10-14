@@ -10,7 +10,7 @@ function validPath(): AttackPath {
     hop_evidence: ["uses", "contains"].map((relationship, i) => ({
       source_node_id: ["a", "b"][i]!, target_node_id: ["b", "c"][i]!, relationship,
       source_snapshot_ids: ["scan"], relationship_provenance: "recorded", correlation_identity_status: "current",
-      evidence_tier: "static_evidence", confidence: 1, freshness: "fresh", runtime_observed_state: "not_observed",
+      evidence_tier: "static_scan", confidence: 1, freshness: "fresh", runtime_observed_state: "not_observed",
       direction: "directed", traversable: true, complete: true, truncated: false,
     })),
   } as AttackPath;

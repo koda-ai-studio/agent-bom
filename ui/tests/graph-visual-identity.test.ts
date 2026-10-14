@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Box, Boxes, Container, Layers, Network } from "lucide-react";
+import { Box, Boxes, Container, Earth, Layers, Network, Rocket, Ship, Webhook } from "lucide-react";
 
 import { ENTITY_ICONS, entityIcon, type LineageNodeType } from "@/lib/entity-icons";
 import { NODE_TYPE_LEGEND_ORDER, legendItemForNodeType } from "@/lib/graph-utils";
@@ -21,8 +21,16 @@ describe("graph entity visual identity", () => {
     expect(entityIcon("not-a-type")).toBe(Box);
   });
 
+  it("uses glyphs that read instantly for containers, environments and API gateways", () => {
+    expect(ENTITY_ICONS.container).toBe(Container);
+    expect(ENTITY_ICONS.environment).toBe(Earth);
+    expect(ENTITY_ICONS.apiGateway).toBe(Webhook);
+    expect(Object.values(ENTITY_ICONS)).not.toContain(Ship);
+    expect(Object.values(ENTITY_ICONS)).not.toContain(Rocket);
+  });
+
   it("does not reuse the generic cube and stack glyphs for infrastructure types", () => {
-    const generic = new Set<unknown>([Box, Boxes, Container, Layers, Network]);
+    const generic = new Set<unknown>([Box, Boxes, Layers, Network]);
     const infrastructure: LineageNodeType[] = ["container", "cloudResource", "environment", "fleet", "cluster"];
     expect(infrastructure.filter((type) => generic.has(ENTITY_ICONS[type]))).toEqual([]);
   });

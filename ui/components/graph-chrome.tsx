@@ -7,25 +7,16 @@
 
 import { useState, useCallback } from "react";
 import {
-  Boxes,
-  Bug,
   ChevronDown,
-  Cloud,
-  Database,
   Download,
-  FolderTree,
-  KeyRound,
   Loader2,
   Maximize2,
   Minimize2,
-  Server,
-  Shield,
-  Wrench,
 } from "lucide-react";
 import { useReactFlow } from "@xyflow/react";
 import { api, type GraphExportFormat } from "@/lib/api";
 import type { LegendItem } from "@/lib/graph-utils";
-import { entityIcon } from "@/lib/entity-icons";
+import { entityIcon, type LineageNodeType } from "@/lib/entity-icons";
 import { NodeBadgeChip, SeverityRingSwatch } from "@/components/graph-node-badges";
 
 // ─── Legend Bar ──────────────────────────────────────────────────────────────
@@ -315,6 +306,15 @@ function LegendMarker({ item }: { item: LegendItem }) {
   );
 }
 
+// Static legends without a nodeType still resolve through ENTITY_ICONS, so a
+// keyword row can never show a different glyph from the node it describes.
+const LEGEND_KEYWORD_TYPES: ReadonlyArray<readonly [string, LineageNodeType]> = [
+  ["agent", "agent"], ["identity", "managedIdentity"], ["grant", "accessGrant"], ["policy", "policy"],
+  ["permission", "accessGrant"], ["server", "server"], ["package", "package"], ["cred", "credential"],
+  ["tool", "tool"], ["vuln", "vulnerability"], ["cve", "vulnerability"], ["model", "model"],
+  ["dataset", "dataset"], ["cloud", "provider"], ["provider", "provider"], ["fleet", "fleet"], ["cluster", "cluster"],
+];
+
 function LegendIcon({ item }: { item: LegendItem }) {
   const className = "h-3.5 w-3.5 shrink-0";
 
@@ -329,20 +329,10 @@ function LegendIcon({ item }: { item: LegendItem }) {
   // legends and relationship rows): keyword-match the label to a glyph.
   if (item.kind === "edge") return null;
   const label = item.label.toLowerCase();
-  if (label.includes("agent")) return <Shield className={className} style={{ color: item.color }} />;
-  if (label.includes("identity") || label.includes("grant") || label.includes("policy") || label.includes("permission")) {
-    return <KeyRound className={className} style={{ color: item.color }} />;
-  }
-  if (label.includes("server")) return <Server className={className} style={{ color: item.color }} />;
-  if (label.includes("package")) return <Boxes className={className} style={{ color: item.color }} />;
-  if (label.includes("cred")) return <KeyRound className={className} style={{ color: item.color }} />;
-  if (label.includes("tool")) return <Wrench className={className} style={{ color: item.color }} />;
-  if (label.includes("vuln") || label.includes("cve")) return <Bug className={className} style={{ color: item.color }} />;
-  if (label.includes("model")) return <Database className={className} style={{ color: item.color }} />;
-  if (label.includes("dataset")) return <Database className={className} style={{ color: item.color }} />;
-  if (label.includes("cloud")) return <Cloud className={className} style={{ color: item.color }} />;
-  if (label.includes("provider") || label.includes("fleet") || label.includes("cluster")) {
-    return <FolderTree className={className} style={{ color: item.color }} />;
+  const nodeType = LEGEND_KEYWORD_TYPES.find(([keyword]) => label.includes(keyword))?.[1];
+  if (nodeType) {
+    const Icon = entityIcon(nodeType);
+    return <Icon className={className} style={{ color: item.color }} />;
   }
   return null;
 }

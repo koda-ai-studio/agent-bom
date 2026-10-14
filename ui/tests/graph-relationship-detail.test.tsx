@@ -5,27 +5,49 @@ import type { UnifiedEdge } from "@/lib/graph-schema";
 
 const edge: UnifiedEdge = { id: "edge-a", source: "agent-a", target: "function-a", relationship: "uses", direction: "directed", weight: 1, traversable: false,
   first_seen: "2026-10-12T00:00:00Z", last_seen: "2026-10-12T00:01:00Z", evidence: { basis: "configured_target", source: "workflow" }, activity_id: 0 };
+function show(ui: React.ReactElement) {
+  const view = render(ui);
+  fireEvent.click(screen.getByText("Technical details"));
+  return view;
+}
+
 describe("relationship inspector", () => {
+  it("leads with a plain-language summary and keeps collector ids behind Technical details", () => {
+    render(<GraphRelationshipDetail edge={{ ...edge, relationship: "vulnerable_to", evidence: { tier: "static_scan", source: "bundled_advisory_scanner", evidence_tier: "static_scan" } }}
+      scanId="snapshot-a" sourceLabel="pillow@9.0.0" targetLabel="CVE-2023-4863" onClose={vi.fn()} />);
+    const summary = screen.getByLabelText("Relationship summary");
+    expect(summary).toHaveTextContent("pillow@9.0.0 is recorded as affected by CVE-2023-4863.");
+    expect(summary).toHaveTextContent("Bundled advisory database");
+    expect(summary).toHaveTextContent("Static — read from files, manifests or configuration");
+    expect(summary).toHaveTextContent("Recorded 2026-10-12 00:01 UTC");
+    expect(summary).toHaveTextContent("Whether the vulnerable code is loaded or reachable at runtime.");
+    expect(summary).not.toHaveTextContent("bundled_advisory_scanner");
+    const technical = screen.getByText("Technical details").closest("details")!;
+    expect(technical).not.toHaveAttribute("open");
+    expect(technical).toContainElement(screen.getByText("bundled_advisory_scanner"));
+    expect(technical).toContainElement(screen.getByLabelText("Relationship evidence and freshness"));
+  });
+
   it.each([
     { evidence: { source: "source-ast" }, title: "Configured delegation" },
     { evidence: {}, title: "Delegation (unverified)" },
     { evidence: { data_source: "runtime-proxy" }, title: "Delegated To" },
   ])("qualifies delegation as $title", ({ evidence, title }) => {
-    render(<GraphRelationshipDetail edge={{ ...edge, relationship: "delegated_to", evidence }} scanId="snapshot-a" sourceLabel="Planner" targetLabel="Worker" onClose={vi.fn()} />);
+    show(<GraphRelationshipDetail edge={{ ...edge, relationship: "delegated_to", evidence }} scanId="snapshot-a" sourceLabel="Planner" targetLabel="Worker" onClose={vi.fn()} />);
     expect(screen.getByRole("heading", { name: title })).toBeVisible();
   });
   it.each([
-    { relationship: "uses", sourceLabel: "Planner", targetLabel: "Invoice function", title: "Uses" },
+    { relationship: "uses", sourceLabel: "Planner", targetLabel: "Invoice function", title: "Uses · configured" },
     { relationship: "vulnerable_to", sourceLabel: "MCP server", targetLabel: "CVE-2025-29927", title: "Has finding" },
   ])("preserves $relationship without inventing an entity type", ({ relationship, sourceLabel, targetLabel, title }) => {
-    render(<GraphRelationshipDetail edge={{ ...edge, relationship }} scanId="snapshot-a" sourceLabel={sourceLabel} targetLabel={targetLabel} onClose={vi.fn()} />);
+    show(<GraphRelationshipDetail edge={{ ...edge, relationship }} scanId="snapshot-a" sourceLabel={sourceLabel} targetLabel={targetLabel} onClose={vi.fn()} />);
     expect(screen.getByRole("heading", { name: title })).toBeVisible();
     expect(screen.getByText(`${sourceLabel} → ${targetLabel}`)).toBeVisible();
     expect(screen.getByText(/does not establish execution/)).toBeVisible();
   });
   it("shows recorded direction, scope and evidence without promoting execution", () => {
     const close = vi.fn();
-    render(<GraphRelationshipDetail edge={edge} scanId="snapshot-a" sourceLabel="Planner" targetLabel="Invoice function" onClose={close} />);
+    show(<GraphRelationshipDetail edge={edge} scanId="snapshot-a" sourceLabel="Planner" targetLabel="Invoice function" onClose={close} />);
     expect(screen.getByText("Planner → Invoice function")).toBeVisible();
     expect(screen.getByText("snapshot-a")).toBeVisible();
     expect(screen.getByText(/does not establish execution/)).toBeVisible();
@@ -36,7 +58,7 @@ describe("relationship inspector", () => {
   });
   it("shows unavailable timestamps honestly and closes with Escape", () => {
     const close = vi.fn();
-    render(<GraphRelationshipDetail edge={{ ...edge, first_seen: "", last_seen: "", direction: "bidirectional" }} scanId="s" sourceLabel="Planner" targetLabel="Worker" onClose={close} />);
+    show(<GraphRelationshipDetail edge={{ ...edge, first_seen: "", last_seen: "", direction: "bidirectional" }} scanId="s" sourceLabel="Planner" targetLabel="Worker" onClose={close} />);
     expect(screen.getByText("Planner ↔ Worker")).toBeVisible();
     expect(screen.getByText("Graph first seen").nextElementSibling).toHaveTextContent("Not recorded");
     expect(screen.getByText("Graph last seen").nextElementSibling).toHaveTextContent("Not recorded");
@@ -59,14 +81,14 @@ it.each([
   ["depends_on", "The source is linked to a dependency in the collected inventory. This does not establish that vulnerable code runs."],
   ["vulnerable_to", "The source is linked to a security finding. Review its affected asset, evidence, and remediation before choosing a fix."],
 ])("explains %s without opening raw evidence", (relationship, explanation) => {
-  render(<GraphRelationshipDetail edge={{ ...edge, relationship }} scanId="s" sourceLabel="Source" targetLabel="Target" onClose={vi.fn()} />);
+  show(<GraphRelationshipDetail edge={{ ...edge, relationship }} scanId="s" sourceLabel="Source" targetLabel="Target" onClose={vi.fn()} />);
   expect(screen.getByText(explanation)).toBeVisible();
   expect(screen.getByText("workflow")).toBeVisible();
   expect(screen.getByText("configured_target")).toBeVisible();
 });
 
 it("explains conservative tool impact without claiming a traced exploit", () => {
-  render(<GraphRelationshipDetail edge={{ ...edge, relationship: "exploitable_via", evidence: { mapping_method: "server_scope_conservative", package: "example", version: "1.2", source: "scan" } }} scanId="s" sourceLabel="Finding" targetLabel="Tool" onClose={vi.fn()} />);
+  show(<GraphRelationshipDetail edge={{ ...edge, relationship: "exploitable_via", evidence: { mapping_method: "server_scope_conservative", package: "example", version: "1.2", source: "scan" } }} scanId="s" sourceLabel="Finding" targetLabel="Tool" onClose={vi.fn()} />);
   expect(screen.getByText(/shares a server with the affected package/)).toBeVisible();
   expect(screen.getByText(/exact package-to-tool call path is not established/)).toBeVisible();
   expect(screen.getByText("example")).toBeVisible();
@@ -74,12 +96,12 @@ it("explains conservative tool impact without claiming a traced exploit", () => 
 });
 
 it("does not infer a source receipt from the relationship verb", () => {
-  render(<GraphRelationshipDetail edge={{ ...edge, evidence: {} }} scanId="s" sourceLabel="Agent" targetLabel="Server" onClose={vi.fn()} />);
+  show(<GraphRelationshipDetail edge={{ ...edge, evidence: {} }} scanId="s" sourceLabel="Agent" targetLabel="Server" onClose={vi.fn()} />);
   expect(screen.getByText("Source evidence not recorded for this link.")).toBeVisible();
 });
 
 it.each(["future_relationship", "constructor"])("keeps unknown %s relationships neutral", relationship => {
-  render(<GraphRelationshipDetail edge={{ ...edge, relationship, evidence: { source: { unexpected: true }, mapping_method: ["not-a-method"] } }} scanId="s" sourceLabel="A" targetLabel="B" onClose={vi.fn()} />);
+  show(<GraphRelationshipDetail edge={{ ...edge, relationship, evidence: { source: { unexpected: true }, mapping_method: ["not-a-method"] } }} scanId="s" sourceLabel="A" targetLabel="B" onClose={vi.fn()} />);
   expect(screen.getByText(/Review its source evidence before drawing a security conclusion/)).toBeVisible();
   expect(screen.queryByLabelText("Recorded link evidence")).not.toBeInTheDocument();
 });
@@ -105,7 +127,7 @@ it.each([
   [{ evidence_tier: ["runtime_observed"], observed_at: { time: "invalid" } }, "Not recorded"],
   [{}, "Not recorded"],
 ])("shows the recorded evidence kind without deriving it from traversal: %j", (evidence, expected) => {
-  render(<GraphRelationshipDetail edge={{ ...edge, relationship: "invoked", traversable: true, evidence }} scanId="s" sourceLabel="A" targetLabel="B" onClose={vi.fn()} />);
+  show(<GraphRelationshipDetail edge={{ ...edge, relationship: "invoked", traversable: true, evidence }} scanId="s" sourceLabel="A" targetLabel="B" onClose={vi.fn()} />);
   expect(screen.getByText("Evidence type").nextElementSibling).toHaveTextContent(expected);
   expect(screen.getByText("Source observed at").nextElementSibling).toHaveTextContent("Not recorded");
   expect(screen.getByText("Graph last seen").nextElementSibling).toHaveTextContent(edge.last_seen);
@@ -113,13 +135,13 @@ it.each([
 });
 
 it("does not label a misconfiguration as a CVE", () => {
-  render(<GraphRelationshipDetail edge={{ ...edge, relationship: "vulnerable_to" }} scanId="s" sourceLabel="Server" targetLabel="Missing authentication" onClose={vi.fn()} />);
+  show(<GraphRelationshipDetail edge={{ ...edge, relationship: "vulnerable_to" }} scanId="s" sourceLabel="Server" targetLabel="Missing authentication" onClose={vi.fn()} />);
   expect(screen.getByRole("heading", { name: "Has finding" })).toBeVisible();
 });
 
 it("keeps source observation, receipt timestamp and graph freshness distinct", () => {
   const observed = "2026-09-01T01:00:00Z", event = "2026-09-02T02:00:00Z";
-  render(<GraphRelationshipDetail edge={{ ...edge, evidence: { observed_at: observed, timestamp: event, evidence_tier: "runtime_blocked" } }} scanId="s" sourceLabel="A" targetLabel="B" onClose={vi.fn()} />);
+  show(<GraphRelationshipDetail edge={{ ...edge, evidence: { observed_at: observed, timestamp: event, evidence_tier: "runtime_blocked" } }} scanId="s" sourceLabel="A" targetLabel="B" onClose={vi.fn()} />);
   expect(screen.getByText("Source observed at").nextElementSibling).toHaveTextContent(observed);
   expect(screen.getByText("Receipt timestamp").nextElementSibling).toHaveTextContent(event);
   expect(screen.getByText("Graph last seen").nextElementSibling).toHaveTextContent(edge.last_seen);
@@ -127,6 +149,6 @@ it("keeps source observation, receipt timestamp and graph freshness distinct", (
 });
 
 it("labels a scan-recorded link without a per-edge receipt by its snapshot origin", () => {
-  render(<GraphRelationshipDetail edge={{ ...edge, evidence: {}, source_scan_id: "scan-1" }} scanId="s" sourceLabel="Agent" targetLabel="Server" onClose={vi.fn()} />);
+  show(<GraphRelationshipDetail edge={{ ...edge, evidence: {}, source_scan_id: "scan-1" }} scanId="s" sourceLabel="Agent" targetLabel="Server" onClose={vi.fn()} />);
   expect(screen.getByText("Evidence type").nextElementSibling).toHaveTextContent("Scan inventory · no per-edge receipt");
 });

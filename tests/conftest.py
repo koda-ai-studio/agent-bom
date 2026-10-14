@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import atexit
 import importlib
 import inspect
 import logging
 import os
+import shutil
 import sys
 import tempfile
 import types
@@ -37,6 +39,15 @@ os.environ.setdefault("COLUMNS", "200")
 # AGENT_BOM_STATE_DIR / store paths can never be the suite's write target.
 _TEST_HOME = str(Path(tempfile.mkdtemp(prefix="agent-bom-test-home-")).resolve())
 _TEST_STATE_DIR = str(Path(tempfile.mkdtemp(prefix="agent-bom-test-state-")).resolve())
+
+
+def _remove_test_dirs() -> None:
+    # Each worker's state dir reaches ~2 GB; leaving them behind fills the disk.
+    for path in (_TEST_HOME, _TEST_STATE_DIR):
+        shutil.rmtree(path, ignore_errors=True)
+
+
+atexit.register(_remove_test_dirs)
 os.environ["HOME"] = _TEST_HOME
 os.environ["AGENT_BOM_STATE_DIR"] = _TEST_STATE_DIR
 # The suite's state dir doubles as the pinned demo data dir, so demo-estate
