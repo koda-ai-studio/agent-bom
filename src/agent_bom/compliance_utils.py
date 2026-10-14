@@ -13,6 +13,8 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
+from agent_bom.compliance_coverage import TAG_MAPPED_FRAMEWORKS
+from agent_bom.finding import LEGACY_CONTROL_FIELDS
 from agent_bom.models import BlastRadius
 
 _FIELD_TO_VULN_KEY: dict[str, str] = {
@@ -31,6 +33,19 @@ _FIELD_TO_VULN_KEY: dict[str, str] = {
     "fedramp_tags": "fedramp",
     "pci_dss_tags": "pci_dss",
 }
+
+
+# Every spelling a framework key takes on a qualified ``framework:control`` tag.
+# A colon-bearing control whose prefix is not one of these (``A06:2021``,
+# ``LLM06:2025``) is an identifier, not a qualifier, and must not pass through
+# as if ``A06`` were a framework.
+_KNOWN_FRAMEWORK_KEYS: frozenset[str] = frozenset(
+    {
+        *_FIELD_TO_VULN_KEY.values(),
+        *(framework for _, framework in LEGACY_CONTROL_FIELDS),
+        *(key for m in TAG_MAPPED_FRAMEWORKS for key in (m.output_key, m.summary_prefix, m.slug.replace("-", "_"))),
+    }
+)
 
 
 def _merged_tags(*groups: Iterable[str]) -> list[str]:
@@ -83,7 +98,9 @@ def framework_qualified_finding_tags(finding: object) -> list[str]:
         control_text = str(control or "").strip()
         if not control_text:
             return
-        value = control_text if ":" in control_text else f"{framework_text or 'generic'}:{control_text}"
+        prefix, sep, _ = control_text.partition(":")
+        already_qualified = bool(sep) and prefix in _KNOWN_FRAMEWORK_KEYS
+        value = control_text if already_qualified else f"{framework_text or 'generic'}:{control_text}"
         if value not in seen:
             seen.add(value)
             tags.append(value)

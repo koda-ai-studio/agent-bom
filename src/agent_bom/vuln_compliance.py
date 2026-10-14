@@ -49,7 +49,7 @@ def tag_vulnerability(vuln: Vulnerability, package: Package) -> dict[str, list[s
     if pkg_lower in VECTOR_STORE_PACKAGES:
         owasp_llm.append("LLM08")  # Vector and Embedding Weaknesses
     if cwe_ids:
-        for t in controls_for_cwes(cwe_ids, "owasp_llm", normalize=False):
+        for t in controls_for_cwes(cwe_ids, "owasp_llm"):
             if t not in owasp_llm:
                 owasp_llm.append(t)
     if owasp_llm:
@@ -86,7 +86,7 @@ def tag_vulnerability(vuln: Vulnerability, package: Package) -> dict[str, list[s
     if is_kev:
         nist_csf.append("RS.MI-01")
     if cwe_ids:
-        for t in controls_for_cwes(cwe_ids, "nist_csf", normalize=False):
+        for t in controls_for_cwes(cwe_ids, "nist_csf"):
             if t not in nist_csf:
                 nist_csf.append(t)
     tags["nist_csf"] = sorted(finding_taggable_controls("nist_csf_tags", nist_csf))
@@ -102,7 +102,7 @@ def tag_vulnerability(vuln: Vulnerability, package: Package) -> dict[str, list[s
     if has_fix:
         nist_53.append("CM-6")
     if cwe_ids:
-        for t in controls_for_cwes(cwe_ids, "nist_800_53", normalize=False):
+        for t in controls_for_cwes(cwe_ids, "nist_800_53"):
             if t not in nist_53:
                 nist_53.append(t)
     tags["nist_800_53"] = sorted(finding_taggable_controls("nist_800_53_tags", nist_53))
@@ -123,7 +123,7 @@ def tag_vulnerability(vuln: Vulnerability, package: Package) -> dict[str, list[s
     if is_kev:
         cis.append("CIS-16.12")
     if cwe_ids:
-        for t in controls_for_cwes(cwe_ids, "cis", normalize=False):
+        for t in controls_for_cwes(cwe_ids, "cis"):
             if t not in cis:
                 cis.append(t)
     tags["cis"] = sorted(finding_taggable_controls("cis_tags", cis))
@@ -153,7 +153,7 @@ def tag_vulnerability(vuln: Vulnerability, package: Package) -> dict[str, list[s
     if has_fix:
         soc2.append("CC8.1")
     if cwe_ids:
-        for t in controls_for_cwes(cwe_ids, "soc2", normalize=False):
+        for t in controls_for_cwes(cwe_ids, "soc2"):
             if t not in soc2:
                 soc2.append(t)
     tags["soc2"] = sorted(finding_taggable_controls("soc2_tags", soc2))
@@ -163,7 +163,7 @@ def tag_vulnerability(vuln: Vulnerability, package: Package) -> dict[str, list[s
     if has_fix:
         eu.append("ART-17")
     if cwe_ids:
-        eu.extend(controls_for_cwes(cwe_ids, "eu_ai_act", normalize=False))
+        eu.extend(controls_for_cwes(cwe_ids, "eu_ai_act"))
     tags["eu_ai_act"] = sorted(set(eu))
 
     # ── OWASP MCP Top 10 ───────────────────────────────────────────────

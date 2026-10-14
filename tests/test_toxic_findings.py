@@ -456,3 +456,88 @@ def test_agent_reaches_privileged_scans_edges_once():
     g.edges = _CountingList(g.edges)
     _match_agent_reaches_privileged(g)
     assert g.edges.iter_count == 1
+
+
+# ── Control tags resolve against the shipped catalogs ───────────────────────
+
+_RULE_GRAPHS = {
+    "PUBLIC_EXPOSED_KEV": _graph_public_exposed_kev,
+    "PUBLIC_EXPOSED_RCE": _graph_public_exposed_rce,
+    "PUBLIC_EXPOSED_NETWORK_EXPLOITABLE": _graph_public_exposed_network_exploitable,
+    "PUBLIC_EXPOSED_VULNERABLE": _graph_public_exposed_vulnerable,
+    "PUBLIC_TO_SENSITIVE_DATA": _graph_public_to_sensitive,
+    "OVERPERMISSIONED_TO_SENSITIVE": _graph_overpermissioned_to_sensitive,
+    "AGENT_REACHES_PRIVILEGED": _graph_agent_reaches_privileged,
+    "PUBLIC_PERMISSION_LATERAL": _graph_public_permission_lateral,
+}
+
+
+def _emitted(rule_id: str):
+    hits = _by_rule(build_toxic_combination_findings(_RULE_GRAPHS[rule_id]()), rule_id)
+    assert hits, rule_id
+    return hits[0]
+
+
+def test_every_rule_has_a_triggering_graph():
+    assert set(_RULE_GRAPHS) == {rule.id for rule in TOXIC_RULES}
+
+
+def test_every_toxic_finding_carries_scored_catalog_controls():
+    from agent_bom.compliance_coverage import TAG_MAPPED_FRAMEWORKS, control_key_for_tag
+
+    catalogs = {m.tag_field: m.catalog for m in TAG_MAPPED_FRAMEWORKS}
+    for rule_id in _RULE_GRAPHS:
+        finding = _emitted(rule_id)
+        resolved = {
+            (field, tag)
+            for field in catalogs
+            if field != "attack_tags"
+            for tag in getattr(finding, field)
+            if control_key_for_tag(tag, catalogs[field]) is not None
+        }
+        assert resolved, f"{rule_id} has no catalog-resolvable control besides ATT&CK"
+        for tag in finding.owasp_tags:
+            assert control_key_for_tag(tag, catalogs["owasp_tags"]) == tag, (rule_id, tag)
+
+
+def test_toxic_combination_control_table_uses_only_catalog_ids():
+    from agent_bom.compliance_coverage import TAG_MAPPED_FRAMEWORKS
+    from agent_bom.evidence.toxic_combination_controls import TOXIC_COMBINATION_CONTROLS
+
+    catalogs = {m.tag_field: m.catalog for m in TAG_MAPPED_FRAMEWORKS}
+    assert set(TOXIC_COMBINATION_CONTROLS) == {rule.id for rule in TOXIC_RULES}
+    for rule_id, fields in TOXIC_COMBINATION_CONTROLS.items():
+        for field, controls in fields.items():
+            assert set(controls) <= set(catalogs[field]), (rule_id, field)
+
+
+def test_toxic_findings_never_mislabel_web_owasp_as_llm():
+    for rule_id in _RULE_GRAPHS:
+        finding = _emitted(rule_id)
+        llm = [c.control for c in finding.normalized_controls() if c.framework == "owasp_llm"]
+        assert all(c.startswith("LLM") and ":" not in c for c in llm), (rule_id, llm)
+
+
+def test_agent_reaching_privilege_is_excessive_agency():
+    finding = _emitted("AGENT_REACHES_PRIVILEGED")
+    assert finding.owasp_tags == ["LLM06"]
+    assert "AC-6" in finding.nist_800_53_tags
+
+
+def test_combination_shape_controls_match_emitted_tags():
+    from agent_bom.framework_mapping import controls_for_finding_shape
+
+    for rule_id in _RULE_GRAPHS:
+        finding = _emitted(rule_id)
+        shape = controls_for_finding_shape(FindingType.COMBINATION, source=FindingSource.GRAPH_ANALYSIS, rule_id=rule_id)
+        assert shape, rule_id
+        for field, controls in shape.items():
+            assert set(controls) <= set(getattr(finding, field)), (rule_id, field)
+
+
+def test_toxic_controls_survive_report_to_findings():
+    report = _report_with_toxic_data(_graph_agent_reaches_privileged())
+    combos = [f for f in report.to_findings() if f.finding_type is FindingType.COMBINATION]
+    assert combos
+    assert "LLM06" in combos[0].owasp_tags
+    assert "AC-6" in combos[0].nist_800_53_tags

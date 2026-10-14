@@ -30,12 +30,13 @@ Design notes:
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from agent_bom.cloud.normalization import coerce_truthy
 from agent_bom.core.severity import severity_rank
 from agent_bom.domain.finding_rehydrate import findings_from_dicts as toxic_combination_findings_from_data
 from agent_bom.finding import Asset, Finding, FindingSource, FindingType
+from agent_bom.framework_mapping import controls_for_finding_shape
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.types import EntityType, RelationshipType
@@ -142,7 +143,6 @@ class ToxicRule:
     description: str
     remediation: str
     match: Callable[[UnifiedGraph], list[ToxicMatch]]
-    owasp_tags: tuple[str, ...] = field(default_factory=tuple)
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -437,7 +437,6 @@ TOXIC_RULES: tuple[ToxicRule, ...] = (
         ),
         remediation=("Patch or remove the vulnerable component immediately and remove public exposure until remediation is verified."),
         match=_match_public_exposed_kev,
-        owasp_tags=("A06:2021",),
     ),
     ToxicRule(
         id="PUBLIC_EXPOSED_RCE",
@@ -449,7 +448,6 @@ TOXIC_RULES: tuple[ToxicRule, ...] = (
         ),
         remediation=("Patch the vulnerable component or remove the public path before leaving the workload in service."),
         match=_match_public_exposed_rce,
-        owasp_tags=("A06:2021",),
     ),
     ToxicRule(
         id="PUBLIC_EXPOSED_NETWORK_EXPLOITABLE",
@@ -464,7 +462,6 @@ TOXIC_RULES: tuple[ToxicRule, ...] = (
             "component; prioritize when paired with low complexity or no privileges."
         ),
         match=_match_public_exposed_network_exploitable,
-        owasp_tags=("A06:2021",),
     ),
     ToxicRule(
         id="PUBLIC_EXPOSED_VULNERABLE",
@@ -481,7 +478,6 @@ TOXIC_RULES: tuple[ToxicRule, ...] = (
             "access block) or patch the vulnerable component — ideally both."
         ),
         match=_match_public_exposed_vulnerable,
-        owasp_tags=("A06:2021",),
     ),
     ToxicRule(
         id="PUBLIC_TO_SENSITIVE_DATA",
@@ -498,7 +494,6 @@ TOXIC_RULES: tuple[ToxicRule, ...] = (
             "private network boundary and tighten its access policy."
         ),
         match=_match_public_to_sensitive_data,
-        owasp_tags=("A01:2021",),
     ),
     ToxicRule(
         id="OVERPERMISSIONED_TO_SENSITIVE",
@@ -515,7 +510,6 @@ TOXIC_RULES: tuple[ToxicRule, ...] = (
             "least-privilege and require just-in-time elevation for write access."
         ),
         match=_match_overpermissioned_to_sensitive,
-        owasp_tags=("A01:2021",),
     ),
     ToxicRule(
         id="AGENT_REACHES_PRIVILEGED",
@@ -532,7 +526,6 @@ TOXIC_RULES: tuple[ToxicRule, ...] = (
             "them to the agent, and scope the agent's tools to the minimum required."
         ),
         match=_match_agent_reaches_privileged,
-        owasp_tags=("LLM06:2025",),
     ),
     ToxicRule(
         id="PUBLIC_PERMISSION_LATERAL",
@@ -549,7 +542,6 @@ TOXIC_RULES: tuple[ToxicRule, ...] = (
             "the exposed identity cannot pivot across accounts or roles."
         ),
         match=_match_public_permission_lateral,
-        owasp_tags=("A01:2021",),
     ),
 )
 
@@ -635,7 +627,7 @@ def _finding_from_match(graph: UnifiedGraph, rule: ToxicRule, match: ToxicMatch)
         if et in {EntityType.VULNERABILITY, EntityType.MISCONFIGURATION}:
             finding_node_id = nid
             break
-    return Finding(
+    finding = Finding(
         finding_type=FindingType.COMBINATION,
         source=FindingSource.GRAPH_ANALYSIS,
         asset=_asset_for(entry),
@@ -647,13 +639,16 @@ def _finding_from_match(graph: UnifiedGraph, rule: ToxicRule, match: ToxicMatch)
         description=f"{rule.description} {match.detail}".strip(),
         remediation_guidance=rule.remediation,
         attack_tags=list(rule.mitre),
-        owasp_tags=list(rule.owasp_tags),
         evidence=evidence,
         risk_score=_SEVERITY_RISK.get(severity, 5.0),
         is_actionable=True,
         impact_category="toxic_combination",
         id=_combination_finding_id(rule.id, match.dedupe_key),
     )
+    control_tags = controls_for_finding_shape(FindingType.COMBINATION, source=FindingSource.GRAPH_ANALYSIS, rule_id=rule.id)
+    for tag_field, controls in control_tags.items():
+        setattr(finding, tag_field, controls)
+    return finding
 
 
 def _entity_type_of(graph: UnifiedGraph, node_id: str) -> str:
