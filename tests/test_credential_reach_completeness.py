@@ -250,3 +250,68 @@ def test_name_only_server_link_stays_a_primary_path():
 
 def test_rollup_without_its_package_path_is_kept():
     assert _vuln_hops(_rollup_graph(["pkg:p"], package_edge=False)) == [["agent:a", "server:s", "vuln:CVE-1"]]
+
+
+def _chain_to(g: UnifiedGraph, credential: str, length: int) -> None:
+    """agent:a -> tool:0 -> ... -> tool:{length-1} -> credential."""
+    prev = "agent:a"
+    for i in range(length):
+        nid = f"tool:{credential}:{i}"
+        _node(g, nid, E.TOOL)
+        _edge(g, prev, nid, R.INVOKED if i else R.USES)
+        prev = nid
+    _edge(g, prev, credential, R.USED_CREDENTIAL)
+
+
+def test_long_redundant_route_to_an_already_reached_credential_is_complete():
+    """A depth-bound frontier that only re-reaches known credentials cut nothing off."""
+    from agent_bom.evidence.scan_run import ScanOutcome, effective_scan_run
+    from agent_bom.graph.credential_reach import credential_routes
+    from agent_bom.graph.scan_findings import attach_graph_derived_findings
+    from agent_bom.models import AIBOMReport
+
+    g = UnifiedGraph()
+    _node(g, "agent:a", E.AGENT)
+    _node(g, "cred:x", E.CREDENTIAL)
+    _edge(g, "agent:a", "cred:x", R.USES)
+    _chain_to(g, "cred:x", 6)
+    routes = credential_routes(g, ["agent:a"], analyzer="credential_reach")
+    assert list(routes["agent:a"]) == ["cred:x"]
+    status = g.analysis_status["credential_reach"]
+    assert status.status.value == "complete"
+    assert status.reason_codes == ()
+
+    report = AIBOMReport(agents=[])
+    attach_graph_derived_findings(report, g)
+    assert report.coverage_warnings == []
+    assert effective_scan_run(report).outcome is not ScanOutcome.PARTIAL
+
+
+def test_credential_only_past_the_depth_bound_is_limited():
+    from agent_bom.graph.credential_reach import credential_routes
+
+    g = UnifiedGraph()
+    _node(g, "agent:a", E.AGENT)
+    _node(g, "cred:near", E.CREDENTIAL)
+    _node(g, "cred:far", E.CREDENTIAL)
+    _edge(g, "agent:a", "cred:near", R.USES)
+    _chain_to(g, "cred:far", 6)
+    routes = credential_routes(g, ["agent:a"], analyzer="credential_reach")
+    assert list(routes["agent:a"]) == ["cred:near"]
+    status = g.analysis_status["credential_reach"]
+    assert status.status.value == "limited"
+    assert status.reason_codes == ("depth_budget",)
+
+
+def test_cut_off_credential_behind_an_already_expanded_node_is_limited():
+    """The frontier re-enters shallow nodes; a credential beyond them still counts."""
+    from agent_bom.graph.credential_reach import credential_routes
+
+    g = UnifiedGraph()
+    _node(g, "agent:a", E.AGENT)
+    _node(g, "cred:far", E.CREDENTIAL)
+    _chain_to(g, "cred:far", 8)
+    # A shortcut from deep in the chain back to a shallow, already-expanded tool.
+    _edge(g, "tool:cred:far:5", "tool:cred:far:1", R.INVOKED)
+    credential_routes(g, ["agent:a"], analyzer="credential_reach")
+    assert g.analysis_status["credential_reach"].reason_codes == ("depth_budget",)

@@ -50,17 +50,20 @@ def credential_routes(
         reached: dict[str, Route] = {owner: ([owner], [])}
         credentials: dict[str, Route] = {}
         queue = deque([owner])
+        frontier: list[str] = []
         local_edges = 0
+        exhausted = False
         while queue:
             current = queue.popleft()
             hops, rels = reached[current]
             if len(rels) >= MAX_DEPTH:
                 if outgoing.get(current):
-                    reasons.add("depth_budget")
+                    frontier.append(current)
                 continue
             for edge in outgoing.get(current, []):
                 if local_edges >= MAX_AGENT_EDGES:
                     reasons.add("agent_budget")
+                    exhausted = True
                     queue.clear()
                     break
                 examined += 1
@@ -74,6 +77,11 @@ def credential_routes(
                     results += 1
                 else:
                     queue.append(edge.target)
+        if frontier and not exhausted:
+            probed, cut_off = _credential_beyond(graph, outgoing, frontier, reached, MAX_AGENT_EDGES - local_edges)
+            examined += probed
+            if cut_off:
+                reasons.add("depth_budget")
         routes[owner] = credentials
     graph.analysis_status[analyzer] = GraphAnalysisStatus(
         status=GraphAnalysisState.LIMITED if reasons else GraphAnalysisState.COMPLETE,
@@ -82,6 +90,39 @@ def credential_routes(
         observed={"edges": examined, "results": results, "agents": len(routes)},
     )
     return routes
+
+
+def _credential_beyond(
+    graph: UnifiedGraph,
+    outgoing: dict[str, list[UnifiedEdge]],
+    frontier: list[str],
+    reached: dict[str, Route],
+    budget: int,
+) -> tuple[int, bool]:
+    """Whether the depth bound actually hid a credential from this owner.
+
+    The bounded walk is breadth-first, so every reached node shallower than
+    the bound was fully expanded and every credential within the bound was
+    recorded. Only frontier nodes have unexplored edges; a credential is cut
+    off exactly when one is reachable from the frontier without passing back
+    through an already-expanded node. Returns ``(edges_examined, cut_off)``;
+    an exhausted probe budget cannot prove completeness, so it reports a cut.
+    """
+    seen = set(reached)
+    stack = list(frontier)
+    examined = 0
+    while stack:
+        for edge in outgoing.get(stack.pop(), []):
+            if examined >= budget:
+                return examined, True
+            examined += 1
+            if edge.target in seen:
+                continue
+            if graph.nodes[edge.target].entity_type in CREDENTIAL_TYPES:
+                return examined, True
+            seen.add(edge.target)
+            stack.append(edge.target)
+    return examined, False
 
 
 def _credential_leading_edges(graph: UnifiedGraph) -> dict[str, list[UnifiedEdge]]:

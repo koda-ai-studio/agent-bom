@@ -330,3 +330,59 @@ def test_empty_estate_rest_reads_are_successful_and_coverage_is_unknown(estate):
                 assert response.json()["collection_coverage"]["status"] == "unknown"
     finally:
         disable_trusted_proxy_env()
+
+
+def _record_path(estate, month, target, risk, status, tenant="path-tenant"):
+    from agent_bom.graph.container import AttackPath
+
+    jobs, graph_store = estate
+    scan = job(month, tenant=tenant, target=target, findings=[])
+    scan.result.update(scan_id=scan.job_id, scan_run={"outcome": "complete"})
+    graph = UnifiedGraph(scan_id=scan.job_id, tenant_id=tenant, created_at=scan.completed_at)
+    for name in ("entry", "mid-" + target, "jewel"):
+        graph.add_node(UnifiedNode(id=name, entity_type=EntityType.SERVER, label=name))
+    graph.attack_paths.append(
+        AttackPath(source="entry", target="jewel", hops=["entry", "mid-" + target, "jewel"], edges=["uses", "uses"], composite_risk=risk)
+    )
+    graph.analysis_status["credential_reach"] = status
+    graph_store.save_graph(graph)
+    jobs.put(scan)
+    return scan.job_id
+
+
+def test_current_estate_keeps_the_worst_source_analysis_status(estate):
+    from agent_bom.graph.analysis import GraphAnalysisState, GraphAnalysisStatus
+
+    _record_path(estate, 8, "repo-a", 90.0, GraphAnalysisStatus(status=GraphAnalysisState.LIMITED, reason_codes=("agent_budget",)))
+    _record_path(estate, 9, "repo-b", 10.0, GraphAnalysisStatus(status=GraphAnalysisState.LIMITED, reason_codes=("depth_budget",)))
+    _record_path(estate, 10, "repo-c", 20.0, GraphAnalysisStatus(status=GraphAnalysisState.COMPLETE))
+    projected = current("path-tenant")
+    assert projected.scan_id.startswith("current-estate:")
+    status = projected.analysis_status["credential_reach"]
+    assert status.status is GraphAnalysisState.LIMITED
+    assert status.reason_codes == ("agent_budget", "depth_budget")
+
+
+def test_current_estate_does_not_inherit_source_stored_path_state(estate):
+    from agent_bom.graph.analysis import GraphAnalysisState, GraphAnalysisStatus
+
+    _, graph_store = estate
+    scan_id = _record_path(estate, 8, "repo-a", 90.0, GraphAnalysisStatus(status=GraphAnalysisState.COMPLETE))
+    source = graph_store.load_graph(scan_id=scan_id, tenant_id="path-tenant")
+    source.analysis_status["paths"] = GraphAnalysisStatus(status=GraphAnalysisState.COMPLETE, observed={"count": 1})
+    graph_store.save_graph(source)
+    assert "paths" not in current("path-tenant").analysis_status
+
+
+def test_merged_analysis_status_ranks_failure_above_limits():
+    from agent_bom.graph.analysis import GraphAnalysisState, GraphAnalysisStatus, merge_analysis_statuses
+
+    complete = GraphAnalysisStatus(status=GraphAnalysisState.COMPLETE, observed={"edges": 2})
+    limited = GraphAnalysisStatus(status=GraphAnalysisState.LIMITED, reason_codes=("agent_budget",), observed={"edges": 3})
+    failed = GraphAnalysisStatus(status=GraphAnalysisState.FAILED, reason_codes=("error",))
+    merged = merge_analysis_statuses([{"x": complete, "y": complete}, {"x": limited}, {"x": failed}])
+    assert merged["x"].status is GraphAnalysisState.FAILED
+    assert merged["x"].reason_codes == ("agent_budget", "error")
+    assert merged["x"].observed == {"edges": 5}
+    assert merged["y"] == complete
+    assert merge_analysis_statuses([]) == {}

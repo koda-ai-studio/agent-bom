@@ -114,8 +114,11 @@ def credential_finding_paths(graph: UnifiedGraph) -> list[AttackPath]:
             if not isinstance(credential, str):
                 continue
             if len(paths) >= MAX_PATHS:
+                previous = graph.analysis_status["credential_finding_paths"]
                 status = replace(
-                    graph.analysis_status["credential_finding_paths"], status=GraphAnalysisState.LIMITED, reason_codes=("path_budget",)
+                    previous,
+                    status=GraphAnalysisState.LIMITED,
+                    reason_codes=tuple(sorted({*previous.reason_codes, "path_budget"})),
                 )
                 graph.analysis_status["credential_finding_paths"] = status
                 for path in paths:
