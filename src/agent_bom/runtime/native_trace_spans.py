@@ -6,10 +6,12 @@ bind it to the authenticated connection before persisting or correlating it.
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 from typing import Any
 
 from agent_bom.runtime.cloud_trace_claims import CLOUD_TRACE_ATTRIBUTES
+from agent_bom.runtime.normalized_trace import NORMALIZED_ATTRIBUTE, from_langfuse_observation, from_langsmith_run
 
 
 def _text(value: object) -> str:
@@ -66,6 +68,11 @@ def native_span(row: dict[str, Any], *, provider: str, include_content: bool) ->
             attrs[key] = value
     if lf and isinstance(row.get("isRootObservation"), bool):
         attrs["agent_bom.logical_root"] = "true" if row["isRootObservation"] else "false"
+    normalize = from_langfuse_observation if lf else from_langsmith_run
+    try:
+        attrs[NORMALIZED_ATTRIBUTE] = json.dumps(normalize(row, tenant_id="").to_dict(), sort_keys=True)
+    except ValueError:
+        attrs["agent_bom.normalization"] = "rejected"
     if include_content:
         output = row.get("output" if lf else "outputs")
         if output is not None:

@@ -18,6 +18,7 @@ from typing import Any
 from agent_bom.api.runtime_event_store import RuntimeObservationRecord, sanitize_runtime_metadata
 from agent_bom.api.storage.runtime_records import RuntimeMetadataCache
 from agent_bom.runtime.cloud_trace_claims import cloud_trace_claims
+from agent_bom.runtime.normalized_trace import NORMALIZED_ATTRIBUTE, NormalizedTraceEvent
 
 
 @dataclass(frozen=True)
@@ -180,10 +181,21 @@ def prepare_trace_page(payload: dict[str, Any], *, scope: TraceImportScope, coll
                 trace_id=cache.bounded(trace_id, max_len=512),
                 span_id=cache.bounded(native_id, max_len=512),
                 summary={"message": native_name},
-                metadata=sanitize_runtime_metadata(metadata, _cache=cache),
+                metadata=_with_normalized(sanitize_runtime_metadata(metadata, _cache=cache), attrs, scope, native_id),
             )
         )
     return PreparedTracePage(observations=records, rejected=dict(sorted(rejected.items())))
+
+
+def _with_normalized(metadata: dict[str, Any], attrs: dict[str, str], scope: TraceImportScope, native_id: str) -> dict[str, Any]:
+    """Attach the canonical event, bound to the connection tenant, after metadata sanitization."""
+    try:
+        event = NormalizedTraceEvent.from_dict(json.loads(attrs[NORMALIZED_ATTRIBUTE])).bind_tenant(scope.tenant_id)
+    except (KeyError, TypeError, ValueError):
+        return metadata
+    if event.source != scope.provider or event.source_span_id != native_id:
+        return metadata
+    return {**metadata, "normalized": event.to_dict()}
 
 
 def _collection_time(scope: TraceImportScope, collected_at: str) -> str:

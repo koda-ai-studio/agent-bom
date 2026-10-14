@@ -55,7 +55,7 @@ def _validate_record(row: dict[str, Any], state: CollectionState) -> None:
 def _payload(client: httpx.Client, credentials: dict[str, str], state: CollectionState) -> Any:
     params = {
         "limit": str(PAGE_LIMIT),
-        "fields": "core,basic,time,metadata",
+        "fields": "core,basic,time,metadata,model,usage",
         "fromStartTime": state.window_start,
         "toStartTime": state.window_end,
     }

@@ -186,7 +186,7 @@ def fetch_langfuse_traces(
     params = {
         "limit": _bounded_limit(limit),
         **window,
-        "fields": "core,basic,metadata" + (",io" if include_content else ""),
+        "fields": "core,basic,metadata,model,usage" + (",io" if include_content else ""),
         "expandMetadata": "server,mcp_server,package,dependency",
     }
     resolved, owns = _client_or_default(client)
@@ -438,7 +438,7 @@ def _native_page_request(
             "limit": page_limit,
             "fromStartTime": window_start,
             "toStartTime": window_end,
-            "fields": "core,basic,time,metadata" + (",io" if include_content else ""),
+            "fields": "core,basic,time,metadata,model,usage" + (",io" if include_content else ""),
         }
         if cursor:
             params["cursor"] = cursor
@@ -471,6 +471,9 @@ def _native_page_request(
                 "parent_run_id",
                 "session_id",
                 "trace_id",
+                "prompt_tokens",
+                "completion_tokens",
+                "total_cost",
             ],
         }
         if include_content:
