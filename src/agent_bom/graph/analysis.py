@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Mapping
+from typing import TYPE_CHECKING, Any, Iterable, Mapping
 
 if TYPE_CHECKING:
     from agent_bom.evidence.semantics import CompletenessEntry
@@ -104,3 +104,44 @@ def not_recorded_analysis_status() -> GraphAnalysisStatus:
         status=GraphAnalysisState.NOT_RECORDED,
         reason_codes=("legacy_snapshot",),
     )
+
+
+# Higher is less trustworthy: a merged view is only as complete as its worst source.
+_SEVERITY = {
+    GraphAnalysisState.COMPLETE: 0,
+    GraphAnalysisState.LIMITED: 1,
+    GraphAnalysisState.NOT_RECORDED: 2,
+    GraphAnalysisState.SKIPPED: 3,
+    GraphAnalysisState.FAILED: 4,
+}
+
+
+def merge_analysis_statuses(sources: Iterable[Mapping[str, GraphAnalysisStatus]]) -> dict[str, GraphAnalysisStatus]:
+    """Combine per-source analyzer statuses for a view assembled from several snapshots.
+
+    The worst state wins, reason codes are unioned so no source's bound is
+    hidden, configured limits keep their largest value and observed counts add.
+    """
+    grouped: dict[str, list[GraphAnalysisStatus]] = {}
+    for source in sources:
+        for name, entry in source.items():
+            grouped.setdefault(str(name), []).append(entry)
+    merged: dict[str, GraphAnalysisStatus] = {}
+    for name, statuses in sorted(grouped.items()):
+        if len(statuses) == 1:
+            merged[name] = statuses[0]
+            continue
+        limits: dict[str, int] = {}
+        observed: dict[str, int] = {}
+        for status in statuses:
+            for key, value in status.limits.items():
+                limits[key] = max(limits.get(key, value), value)
+            for key, value in status.observed.items():
+                observed[key] = observed.get(key, 0) + value
+        merged[name] = GraphAnalysisStatus(
+            status=max((status.status for status in statuses), key=_SEVERITY.__getitem__),
+            reason_codes=tuple(sorted({code for status in statuses for code in status.reason_codes})),
+            limits=limits,
+            observed=observed,
+        )
+    return merged
