@@ -84,8 +84,23 @@ _SERVER_CARD_TOOLS = [
         "name": "should_i_deploy",
         "description": (
             "Pre-deployment gate: resolves a candidate (package, CVE, resource, or graph node) against the"
-            " latest security-graph snapshot and returns an allow/warn/block decision from its top ExposurePath risk score"
+            " every ranked path of the latest security-graph snapshot and returns allow/warn/block from the matched paths' risk"
         ),
+        "annotations": {"readOnlyHint": True},
+    },
+    {
+        "name": "graph_reach",
+        "description": "Page what can reach a graph node (or what it reaches) over recorded edges, with walk completeness",
+        "annotations": {"readOnlyHint": True},
+    },
+    {
+        "name": "findings_query",
+        "description": "Query tenant findings with the /v1/findings filters, sort and cursor in a compact projection",
+        "annotations": {"readOnlyHint": True},
+    },
+    {
+        "name": "finding_detail",
+        "description": "One finding with the graph paths that carry it, who reaches it, and its triage/VEX state",
         "annotations": {"readOnlyHint": True},
     },
     {

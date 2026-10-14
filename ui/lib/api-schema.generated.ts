@@ -16091,12 +16091,22 @@ export interface components {
             paths: {
                 [key: string]: unknown;
             }[];
+            /** Ranking */
+            ranking?: {
+                [key: string]: unknown;
+            } | null;
+            /** Risk Scale */
+            risk_scale?: {
+                [key: string]: unknown;
+            } | null;
             /** Scan Id */
             scan_id?: string | null;
             /** Schema Version */
             schema_version: string;
             /** Snapshot Generation */
             snapshot_generation?: string | null;
+            /** Snapshot Total */
+            snapshot_total?: number | null;
             /** Stats */
             stats?: {
                 [key: string]: unknown;
@@ -16107,6 +16117,8 @@ export interface components {
             tool: string;
             /** Total */
             total?: number | null;
+            /** View */
+            view?: string | null;
         } & {
             [key: string]: unknown;
         };

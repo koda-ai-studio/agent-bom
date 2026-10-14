@@ -1,7 +1,7 @@
 # MCP Server — Connect agent-bom to AI Assistants
 
 agent-bom starts with 8 focused MCP tools. Select a task profile for graph, cloud, runtime or audit work;
-`--profile full` explicitly exposes the complete compatibility catalog of 90 MCP tools. Clients that negotiate the
+`--profile full` explicitly exposes the complete compatibility catalog of 93 MCP tools. Clients that negotiate the
 MCP SDK's legacy `2025-11-25` handshake can connect over stdio or
 Streamable HTTP. The `2026-07-28` protocol also supports stateless requests,
 `server/discover`, per-request capabilities, required HTTP headers, and private
@@ -206,7 +206,7 @@ For prerequisite checks and bounded identity paths, use [`consequence_assessment
 
 For scoped historical permission receipts, use [`compromise_assessment`](MCP_WORKFLOWS.md#assess-an-assumed-compromise) in the graph profile.
 
-## Tool Categories (90 tools)
+## Tool Categories (93 tools)
 
 These categories describe `--profile full`, not the default startup catalog.
 The [profile guide](MCP_WORKFLOWS.md) lists the smaller task surfaces.
@@ -215,7 +215,7 @@ The [profile guide](MCP_WORKFLOWS.md) lists the smaller task surfaces.
 |----------|-------|-------------|
 | **Scan** | `scan`, `code_scan`, `vector_db_scan`, `gpu_infra_scan`, `ai_inventory_scan` | Discover agents; execute Semgrep SAST with typed findings/clean/skipped/failed status; scan packages, vector stores, GPU infra, and AI usage |
 | **Check** | `check`, `verify`, `marketplace_check`, `license_compliance_scan` | Pre-install CVE gate, integrity verification, marketplace trust, and license policy |
-| **Blast Radius** | `blast_radius`, `exposure_paths`, `compromise_assessment`, `consequence_assessment`, `graph_correlate`, `graph_correlation_status`, `should_i_deploy` | Map package → vulnerability finding → MCP server (tools + credential env names) → connected agents; correlate exact snapshot receipts; return ranked ExposurePath JSON and allow/warn/block deploy guidance for headless agents |
+| **Blast Radius** | `blast_radius`, `exposure_paths`, `compromise_assessment`, `consequence_assessment`, `graph_correlate`, `graph_correlation_status`, `should_i_deploy`, `graph_reach`, `findings_query`, `finding_detail` | Map package → vulnerability finding → MCP server (tools + credential env names) → connected agents; correlate exact snapshot receipts; return ranked ExposurePath JSON and allow/warn/block deploy guidance for headless agents |
 | **Registry** | `registry_lookup`, `inventory`, `where`, `fleet_scan` | Query the MCP registry, inspect discovery paths, and summarize fleet inventories |
 | **Compliance** | `compliance`, `cis_benchmark`, `aisvs_benchmark` | Run OWASP, NIST, MITRE ATLAS, CIS, and AISVS-aligned posture checks |
 | **Policy** | `policy_check`, `remediate` | Evaluate policies and generate guided remediation plans |
@@ -226,11 +226,11 @@ The [profile guide](MCP_WORKFLOWS.md) lists the smaller task surfaces.
 | **AI supply chain** | `dataset_card_scan`, `training_pipeline_scan`, `browser_extension_scan`, `model_provenance_scan`, `prompt_scan`, `model_file_scan`, `ingest_external_scan`, `runtime_evidence_ingest` | Scan AI artifacts, prompts, model files, and browser extensions; import tool-agnostic SARIF/SBOM/scanner evidence without executing its producer; merge CWPP runtime signals |
 
 <details>
-<summary>Complete current catalog (90 tools)</summary>
+<summary>Complete current catalog (93 tools)</summary>
 
 `scan`, `check`, `intel_lookup`, `intel_match`, `intel_sources`,
 `intel_daily_brief`, `youcom_search`, `blast_radius`, `exposure_paths`, `compromise_assessment`, `consequence_assessment`, `graph_correlate`,
-`graph_correlation_status`, `should_i_deploy`,
+`graph_correlation_status`, `should_i_deploy`, `graph_reach`, `findings_query`, `finding_detail`,
 `policy_check`, `registry_lookup`, `generate_sbom`, `compliance`, `remediate`,
 `skill_scan`, `skill_verify`, `skill_trust`, `verify`, `inventory_summary`,
 `inventory_list`, `inventory_asset`, `where`, `tool_risk_assessment`,
@@ -264,6 +264,35 @@ agents:
   it, and what fix path is recommended.
 - `should_i_deploy` returns allow/warn/block deploy guidance based on matched
   `ExposurePath` risk and caller-supplied thresholds.
+
+`exposure_paths` ranks exactly as the dashboard attack-path queue and
+`GET /v1/graph/attack-paths` do: `ranking.order` is evidence tier, KEV,
+severity, composite risk, then credential count, and every path carries
+`rank`, `evidenceTier`, `isKev` and `severity`. Totals, server-side filters
+(`min_severity`, `kev`, `has_credential`, `source_type`, `target_id`,
+`finding_id`, `credential_id`, `node_id`, `min_risk`) and cursor pages match
+that route. The default `view="summary"` keeps the default answer under 16 KB;
+`view="full"` adds hops, relationships, nodes and edges. `should_i_deploy`
+matches the candidate against every ranked path of the snapshot and reports
+`searchedPaths` of `total`.
+
+Three more read-only tools answer follow-up questions from the same evidence:
+
+- `graph_reach(node_id, direction="in"|"out")` pages what can reach a node (the
+  `GET /v1/graph/impact` walk) or what it reaches, with walk completeness.
+- `findings_query` is `GET /v1/findings` (filters, sort, cursor, totals) with a
+  compact row projection; `risk_score` is 0-10 and `effective_reach_score` 0-100.
+- `finding_detail(finding_id)` returns the finding, the graph paths that carry
+  it, who reaches it, and its triage/VEX state.
+
+`blast_radius` takes credentials, tools and reachability from those graph
+paths. When the graph cannot be read they are `null` with a `graph.status`
+reason, never an empty list. `compliance` returns the tenant's persisted
+`/v1/compliance/summary` when completed scans exist (`source:
+"persisted_tenant_compliance"`); pass `framework` and `control` to page the
+driving finding ids. It scans local MCP configurations only with
+`source="local_scan"` or when no persisted evidence exists, and labels that
+result `source: "local_scan"`.
 
 Both tools are read-only decision aids. They do not modify repositories,
 create tickets, deploy workloads, or mutate cloud resources. Use proxy,

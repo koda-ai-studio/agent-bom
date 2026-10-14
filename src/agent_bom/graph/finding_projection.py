@@ -9,6 +9,7 @@ from agent_bom.graph.build_indexes import BuildIndexes
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.edge_evidence import edge_evidence
+from agent_bom.graph.finding_row_projection import row_compliance_tags
 from agent_bom.graph.mcp_audit_projection import project_mcp_audit_findings
 from agent_bom.graph.node import UnifiedNode, stable_node_id
 from agent_bom.graph.types import EntityType, RelationshipType
@@ -141,50 +142,73 @@ def project_iac(graph: UnifiedGraph, iac_data: dict[str, Any] | None) -> None:
             )
 
 
-def project_skill_audit(graph: UnifiedGraph, skill_audit: dict[str, Any] | None, indexes: BuildIndexes) -> None:
-    if skill_audit:
-        for index, finding in enumerate(skill_audit.get("findings", []), start=1):
-            category = str(finding.get("category", "skill_audit") or "skill_audit").lower()
-            package_name = str(finding.get("package", "") or "").strip()
-            server_name = str(finding.get("server", "") or "").strip()
-            source_file = str(finding.get("source_file", "") or "").strip()
-            finding_id = f"misconfig:skill_audit:{category}:{index}"
-            graph.add_node(
-                UnifiedNode(
-                    id=finding_id,
-                    entity_type=EntityType.MISCONFIGURATION,
-                    label=str(finding.get("title", "") or category or "Skill audit finding"),
-                    severity=str(finding.get("severity", "medium") or "medium").lower(),
-                    attributes={
-                        "category": category,
-                        "detail": finding.get("detail", ""),
-                        "source_file": source_file,
-                        "package": package_name,
-                        "server": server_name,
-                        "recommendation": finding.get("recommendation", ""),
-                        "context": finding.get("context", ""),
-                        "ai_analysis": finding.get("ai_analysis"),
-                        "ai_adjusted_severity": finding.get("ai_adjusted_severity"),
-                    },
-                    compliance_tags=[f"skill_audit:{category}"],
-                    data_sources=["skill-audit"],
+def project_skill_audit(graph: UnifiedGraph, skill_audit: dict[str, Any] | None, indexes: BuildIndexes, findings: Any = None) -> None:
+    """Project skill-audit items onto the report's SKILL finding ids when the report carries them.
+
+    Each audit item pairs with the first unused SKILL row of the same title and
+    category, so the row's ``finding_node_id`` resolves here. A report with no
+    SKILL rows (pre-unified-stream) keeps the positional legacy keys.
+    """
+    if not skill_audit:
+        return
+    rows = [row for row in findings or [] if isinstance(row, dict) and row.get("source") == "SKILL" and row.get("id")]
+    for index, finding in enumerate(skill_audit.get("findings", []), start=1):
+        category = str(finding.get("category", "skill_audit") or "skill_audit").lower()
+        package_name = str(finding.get("package", "") or "").strip()
+        server_name = str(finding.get("server", "") or "").strip()
+        source_file = str(finding.get("source_file", "") or "").strip()
+        row = _claim_skill_row(rows, finding, category) if rows else None
+        if rows and row is None:
+            continue
+        finding_id = f"misconfig:skill_audit:{row['id']}" if row else f"misconfig:skill_audit:{category}:{index}"
+        attributes = {
+            "category": category,
+            "detail": finding.get("detail", ""),
+            "source_file": source_file,
+            "package": package_name,
+            "server": server_name,
+            "recommendation": finding.get("recommendation", ""),
+            "context": finding.get("context", ""),
+            "ai_analysis": finding.get("ai_analysis"),
+            "ai_adjusted_severity": finding.get("ai_adjusted_severity"),
+        }
+        if row:
+            attributes["finding_id"] = row["id"]
+        graph.add_node(
+            UnifiedNode(
+                id=finding_id,
+                entity_type=EntityType.MISCONFIGURATION,
+                label=str(finding.get("title", "") or category or "Skill audit finding"),
+                severity=str((row or {}).get("severity") or finding.get("severity", "medium") or "medium").lower(),
+                attributes=attributes,
+                compliance_tags=sorted({f"skill_audit:{category}", *(row_compliance_tags(row) if row else ())}),
+                data_sources=["skill-audit"],
+            )
+        )
+        for target_id in _resolve_skill_audit_target_ids(
+            finding,
+            package_name_to_ids=indexes.package_name_to_ids,
+            server_name_to_ids=indexes.server_name_to_ids,
+            agent_name_to_ids=indexes.agent_name_to_ids,
+            agent_config_path_to_id=indexes.agent_config_path_to_id,
+        ):
+            graph.add_edge(
+                UnifiedEdge(
+                    source=finding_id,
+                    target=target_id,
+                    relationship=RelationshipType.AFFECTS,
+                    evidence=edge_evidence("skill-audit", "static_scan"),
                 )
             )
-            for target_id in _resolve_skill_audit_target_ids(
-                finding,
-                package_name_to_ids=indexes.package_name_to_ids,
-                server_name_to_ids=indexes.server_name_to_ids,
-                agent_name_to_ids=indexes.agent_name_to_ids,
-                agent_config_path_to_id=indexes.agent_config_path_to_id,
-            ):
-                graph.add_edge(
-                    UnifiedEdge(
-                        source=finding_id,
-                        target=target_id,
-                        relationship=RelationshipType.AFFECTS,
-                        evidence=edge_evidence("skill-audit", "static_scan"),
-                    )
-                )
+
+
+def _claim_skill_row(rows: list[dict[str, Any]], finding: dict[str, Any], category: str) -> dict[str, Any] | None:
+    title = str(finding.get("title") or "Skill security finding")
+    for position, row in enumerate(rows):
+        evidence = row["evidence"] if isinstance(row.get("evidence"), dict) else {}
+        if row.get("title") == title and str(evidence.get("category") or "").lower() == category:
+            return rows.pop(position)
+    return None
 
 
 def project_toxic_combinations(graph: UnifiedGraph, toxic_data: list[dict[str, Any]] | dict[str, Any] | None) -> None:

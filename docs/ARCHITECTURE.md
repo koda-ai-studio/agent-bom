@@ -514,7 +514,7 @@ agent-bom ships a curated control set per framework, sized to the AI/MCP/agent t
 | MITRE | ATLAS | 65 techniques | ~90 | Applicability overlay (not scored): LLM/AI techniques — prompt injection, jailbreak, supply-chain, exfiltration, agent tool abuse — that the observed findings make applicable |
 | MITRE | ATT&CK Enterprise | 691 techniques | ~700 | Applicability overlay (not scored): techniques MITRE's CWE → CAPEC → ATT&CK data associates with the weaknesses observed in the estate |
 | Regulatory | EU AI Act | 6 articles | ~113 | Articles 9/10/12/14/15/17 (risk mgmt, data governance, record-keeping, human oversight, accuracy/robustness/cybersecurity, QMS); technical evidence only, not a legal classification |
-| Regulatory | ISO/IEC 27001:2022 | 9 Annex A controls | 93 | Supplier, vulnerability, cryptography, secure-dev, evidence collection |
+| Regulatory | ISO/IEC 27001:2022 | 25 Annex A controls | 93 | Supplier, vulnerability, cryptography, secure-dev, evidence collection; identity, access, malware and logging controls reached through NIST's SP 800-53 crosswalk |
 | Regulatory | SOC 2 TSC | 9 criteria | ~64 | Common Criteria 6.x / 7.x / 8.x / 9.x (access, monitoring, change mgmt, vendor risk) |
 | Regulatory | CIS Controls v8 | 10 safeguards | 153 | Software inventory, vulnerability mgmt, secure-dev (CIS 02 / 07 / 16) |
 | Regulatory | CMMC 2.0 Level 2 | 17 practices | 110 | RA / SI / SC / CM / AC / IA practices most relevant to vulnerable-package risk |
@@ -563,7 +563,7 @@ graph TB
 | Output | `src/agent_bom/output/__init__.py` | JSON, CycloneDX, SARIF, SPDX, console |
 | Policy | `src/agent_bom/policy.py` | Policy-as-code engine (17 conditions) |
 | Proxy | `src/agent_bom/proxy.py` | Runtime MCP proxy (7 inline detectors) |
-| MCP Server | `src/agent_bom/mcp_server*.py` | FastMCP server (90 tools across core, operator, runtime-catalog, and specialized modules) |
+| MCP Server | `src/agent_bom/mcp_server*.py` | FastMCP server (93 tools across core, operator, runtime-catalog, and specialized modules) |
 | Cloud | `src/agent_bom/cloud/` | AWS, Azure, GCP, Snowflake, Databricks, ClickHouse estate inventory; CIS posture where published and Databricks security best practices |
 | Cloud side-scan | `src/agent_bom/cloud/side_scan.py`, `src/agent_bom/cloud/side_scan_targets.py`, `src/agent_bom/cloud/side_scan_lifecycle.py`, `src/agent_bom/cloud/side_scan_provider_adapters.py` | Agentless workload side-scan (CWPP) — AWS EBS plus injected-SDK Azure Managed Disk and GCP Persistent Disk lifecycle adapters with durable ownership/cleanup state; Azure/GCP share CLI, REST, MCP, UI, and scheduler surfaces plus SQLite/Postgres lifecycle persistence. Credentialed live-cloud proof remains outstanding. |
 | Registry sweep | `src/agent_bom/cloud/registry_sweep.py` | Registry-wide image enumeration + scan (ECR/ACR/GAR), digest-deduped, capped |

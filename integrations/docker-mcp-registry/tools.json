@@ -158,37 +158,6 @@
     ]
   },
   {
-    "name": "exposure_paths",
-    "description": "Return ranked ExposurePath JSON for headless security agents.\n\nThis is the agent-native graph surface: Claude, Cursor, Codex,\nWindsurf, Cortex, and other MCP clients can request the same\ninvestigation objects used by the dashboard without scraping UI state.",
-    "arguments": [
-      {
-        "name": "tenant_id",
-        "type": "string",
-        "desc": "Tenant ID for the graph snapshot. Defaults to 'default'."
-      },
-      {
-        "name": "scan_id",
-        "type": "string",
-        "desc": "Optional historical scan ID. Omit for the current tenant estate."
-      },
-      {
-        "name": "limit",
-        "type": "integer",
-        "desc": "Maximum number of ranked exposure paths to return."
-      },
-      {
-        "name": "min_risk",
-        "type": "number",
-        "desc": "Minimum path risk score to include."
-      },
-      {
-        "name": "cursor",
-        "type": "string",
-        "desc": "Continue with pagination.next_cursor; keep the risk filter unchanged."
-      }
-    ]
-  },
-  {
     "name": "policy_check",
     "description": "Evaluate a security policy against current scan results.\n\nRuns a scan, then evaluates the provided policy rules against the\nfindings. Policies can gate on severity thresholds, CISA KEV status,\nAI risk flags, credential exposure, and denied packages.\n\nArgs:\n    policy_json: JSON string containing policy rules. Example:\n        {\"rules\": [{\"id\": \"no-critical\", \"severity_gte\": \"critical\",\n        \"action\": \"fail\"}, {\"id\": \"no-kev\", \"kev\": true, \"action\": \"fail\"}]}\n\nReturns:\n    JSON with passed (bool), violations list, failure_count, and\n    warning_count.",
     "arguments": [
@@ -217,17 +186,47 @@
   },
   {
     "name": "compliance",
-    "description": "Get OWASP LLM Top 10 / OWASP MCP Top 10 / MITRE ATLAS / NIST AI RMF compliance posture.\n\nScans local MCP configurations, maps findings to 47 security controls\nacross four AI security frameworks, and returns per-control\npass/warning/fail status with an overall compliance score.\n\nArgs:\n    config_path: Path to a specific MCP config directory.\n                 If not provided, auto-discovers all local agent configs.\n    image: Docker image reference to scan (e.g. \"nginx:1.25\").\n\nReturns:\n    JSON with overall_score (0-100), overall_status (pass/warning/fail/no_data),\n    and per-control details for OWASP LLM Top 10 (10 controls),\n    OWASP MCP Top 10 (10 controls), MITRE ATLAS (13 techniques),\n    and NIST AI RMF (14 subcategories). Plus a nist_800_53_catalog line:\n    the vendor-asserted, catalog-backed NIST SP 800-53 Rev 5 score over\n    evaluated controls only (with ISO-27001-by-id attribution), scored\n    independently and NOT folded into overall_score.",
+    "description": "Return compliance posture with its source: the tenant's persisted evidence, or a labelled local scan.\n\nWith completed scans in the control plane, ``summary`` is exactly\n``/v1/compliance/summary``; ``framework`` adds ``/v1/compliance/{framework}``\nand ``control`` pages the driving finding ids from\n``/v1/findings?framework=&control=``. Otherwise (or with\nsource='local_scan') it scans local MCP configurations and labels that scope.",
     "arguments": [
       {
         "name": "config_path",
         "type": "string",
-        "desc": "Path to MCP client config directory. Auto-discovers all if omitted."
+        "desc": "Local scan only: MCP client config directory. Auto-discovers if omitted."
       },
       {
         "name": "image",
         "type": "string",
-        "desc": "Docker image to scan, e.g. 'nginx:1.25'."
+        "desc": "Local scan only: Docker image to scan, e.g. 'nginx:1.25'."
+      },
+      {
+        "name": "tenant_id",
+        "type": "string",
+        "desc": "Tenant scope for persisted compliance. Defaults to 'default'."
+      },
+      {
+        "name": "source",
+        "type": "string",
+        "desc": "auto: persisted tenant evidence when it exists, else a labelled local scan. persisted / local_scan force one."
+      },
+      {
+        "name": "framework",
+        "type": "string",
+        "desc": "Persisted only: add one framework's controls, e.g. 'soc2'."
+      },
+      {
+        "name": "control",
+        "type": "string",
+        "desc": "Persisted only: page the finding ids driving this control."
+      },
+      {
+        "name": "limit",
+        "type": "integer",
+        "desc": "Driving finding ids per page."
+      },
+      {
+        "name": "cursor",
+        "type": "string",
+        "desc": "driving_findings.next_cursor from the previous page."
       }
     ]
   },
@@ -244,6 +243,82 @@
         "name": "image",
         "type": "string",
         "desc": "Docker image to scan, e.g. 'nginx:1.25'."
+      }
+    ]
+  },
+  {
+    "name": "exposure_paths",
+    "description": "Return the attack-path queue in the dashboard's order, with why each path ranks where it does.\n\nRanking is ``ranking.order`` (evidence tier, KEV, severity, composite risk,\ncredential count); every path carries ``rank``, ``evidenceTier``, ``isKev`` and\n``severity``. Totals, filters and cursor pages match ``/v1/graph/attack-paths``.",
+    "arguments": [
+      {
+        "name": "tenant_id",
+        "type": "string",
+        "desc": "Tenant scope. Defaults to 'default'."
+      },
+      {
+        "name": "scan_id",
+        "type": "string",
+        "desc": "Optional historical scan ID. Omit for the current tenant estate."
+      },
+      {
+        "name": "limit",
+        "type": "integer",
+        "desc": "Maximum ranked exposure paths to return."
+      },
+      {
+        "name": "view",
+        "type": "string",
+        "desc": "summary (default): rank, risk, KEV, evidence tier, endpoints, finding/credential ids. full adds hops, relationships, nodes and edges."
+      },
+      {
+        "name": "min_risk",
+        "type": "number",
+        "desc": "Minimum composite path risk (0-100)."
+      },
+      {
+        "name": "min_severity",
+        "type": "string",
+        "desc": "Worst on-path finding at least this severe."
+      },
+      {
+        "name": "kev",
+        "type": "boolean",
+        "desc": "Only paths through a known-exploited finding (true) or none (false)."
+      },
+      {
+        "name": "has_credential",
+        "type": "boolean",
+        "desc": "Only paths that do (true) or do not (false) expose a credential."
+      },
+      {
+        "name": "source_type",
+        "type": "string",
+        "desc": "Entrypoint entity type, e.g. 'agent'."
+      },
+      {
+        "name": "target_id",
+        "type": "string",
+        "desc": "Only paths ending at this graph node id."
+      },
+      {
+        "name": "finding_id",
+        "type": "string",
+        "desc": "CVE, advisory or finding node id on the path."
+      },
+      {
+        "name": "credential_id",
+        "type": "string",
+        "desc": "Credential name or node id exposed on the path."
+      },
+      {
+        "name": "node_id",
+        "type": "string",
+        "desc": "Any graph node the path passes through."
+      },
+      {
+        "name": "cursor",
+        "type": "string",
+        "desc": "pagination.next_cursor; keep the filters unchanged."
       }
     ]
   }

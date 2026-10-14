@@ -51,6 +51,8 @@ describe("compliance control provenance", () => {
     expect(evidenceReasonLabel("unrated_severity_finding")).toBe("Unrated-severity finding");
     expect(evidenceReasonLabel("no_observed_signal")).toBe("No observed signal");
     expect(evidenceReasonLabel("scan_evidence_age_unknown")).toBe("Scan age unknown");
+    expect(evidenceReasonLabel("detective_evidence_not_collected")).toBe("Scan lane not run");
+    expect(evidenceReasonLabel("vulnerability_coverage_incomplete")).toBe("Vulnerability scan incomplete");
     expect(evidenceReasonLabel(undefined)).toBeNull();
     expect(evidenceReasonLabel("mystery_code")).toBeNull();
   });
@@ -58,6 +60,8 @@ describe("compliance control provenance", () => {
   it("offers a next-step CTA only where a missing input is implied", () => {
     expect(evidenceReasonCta("no_completed_scan")).toEqual({ label: "New Scan", href: "/scan" });
     expect(evidenceReasonCta("scan_evidence_age_unknown")).toEqual({ label: "New Scan", href: "/scan" });
+    expect(evidenceReasonCta("detective_evidence_not_collected")).toEqual({ label: "New Scan", href: "/scan" });
+    expect(evidenceReasonCta("vulnerability_coverage_incomplete")).toEqual({ label: "New Scan", href: "/scan" });
     expect(evidenceReasonCta("no_observed_signal")).toEqual({
       label: "Connect a source",
       href: "/connections",

@@ -5,13 +5,16 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from typing import Any
 
+from agent_bom.compliance_coverage import rows_by_control_key, scoring_catalog
 from agent_bom.compliance_nist_catalog import evaluated_control_status as _evaluated_control_status
 from agent_bom.evidence.control_modes import (
     DETECTIVE_CONTROLS,
     MODE_CORRECTIVE,
     MODE_DETECTIVE,
     detective_control_status,
+    requires_vulnerability_coverage,
 )
+from agent_bom.evidence.detective_evidence import DetectiveScanEvidence
 from agent_bom.evidence.scoring import ComplianceVerdict, score_compliance
 
 
@@ -24,6 +27,8 @@ def _control_evaluation(
     detective_ids: frozenset[str],
     scan_count: int,
     latest_scan: str | None,
+    vulnerability_coverage_incomplete: bool = False,
+    lane_status: tuple[str, str] | None = None,
 ) -> tuple[str, str, str]:
     """Return ``(evaluation_mode, status, evidence_reason)`` for one control."""
     if not scored:
@@ -42,7 +47,11 @@ def _control_evaluation(
         # inventory". Findings mapped here would be proof it works, so
         # the status comes from evidence freshness, not from findings.
         mode = MODE_DETECTIVE
-        status, reason = detective_control_status(scan_count=scan_count, latest_scan=latest_scan)
+        status, reason = lane_status or detective_control_status(
+            scan_count=scan_count,
+            latest_scan=latest_scan,
+            vulnerability_coverage_incomplete=vulnerability_coverage_incomplete,
+        )
     elif scan_count == 0:
         # No completed scans means no evidence was gathered for this
         # control. Rendering "pass" here reads as a clean audit when in
@@ -74,6 +83,8 @@ def _build_controls(
     scored: bool = True,
     scan_count: int,
     latest_scan: str | None,
+    vulnerability_coverage_incomplete: bool = False,
+    scan_evidence: DetectiveScanEvidence | None = None,
 ) -> list[dict]:
     """Build per-control compliance entries from blast_radius data.
 
@@ -81,8 +92,10 @@ def _build_controls(
     (see :mod:`agent_bom.evidence.control_modes`):
 
     * ``detective`` — the scan IS the control operating. A fresh completed
-      scan is ``pass``; stale evidence is ``fail``; no scan is
-      ``not_assessed``. Findings never fail a detective control.
+      scan is ``pass``; stale evidence is ``fail``; no scan, or a scan whose
+      vulnerability lane was incomplete (for controls that rest on it), is
+      ``not_assessed``. With ``scan_evidence``, only scans whose lane (inventory
+      or vulnerability) ran evidence the control. Findings never fail it.
     * ``corrective`` — attested by the ABSENCE of an open finding. An open
       finding fails/warns by worst severity; no mapped finding stays
       ``not_evaluated`` (absence of a CVE is not proof of implementation).
@@ -116,6 +129,8 @@ def _build_controls(
             detective_ids=detective_ids,
             scan_count=scan_count,
             latest_scan=latest_scan,
+            vulnerability_coverage_incomplete=vulnerability_coverage_incomplete and requires_vulnerability_coverage(tag_field, code),
+            lane_status=scan_evidence.control_status(tag_field, code) if scan_evidence and code in detective_ids else None,
         )
         controls.append(
             {
@@ -131,6 +146,33 @@ def _build_controls(
                 "affected_packages": sorted(affected_pkgs),
                 "affected_agents": sorted(affected_agents),
             }
+        )
+    return controls
+
+
+def _build_framework_controls(
+    all_blast: list[dict],
+    frameworks: Iterable[Any],
+    *,
+    scan_count: int,
+    latest_scan: str | None,
+    vulnerability_coverage_incomplete: bool,
+    scan_evidence: DetectiveScanEvidence | None = None,
+) -> dict[str, list[dict]]:
+    """Build every tag-mapped framework's control entries against its scoring catalog, keyed by output key."""
+    controls: dict[str, list[dict]] = {}
+    for metadata in frameworks:
+        catalog = scoring_catalog(metadata)
+        controls[metadata.output_key] = _build_controls(
+            rows_by_control_key(all_blast, catalog, metadata.tag_field),
+            catalog,
+            metadata.tag_field,
+            "code",
+            scored=metadata.scored,
+            scan_count=scan_count,
+            latest_scan=latest_scan,
+            vulnerability_coverage_incomplete=vulnerability_coverage_incomplete,
+            scan_evidence=scan_evidence,
         )
     return controls
 

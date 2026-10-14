@@ -59,14 +59,16 @@ def get_bundled_attack_techniques() -> dict[str, str]:
 # Legacy alias kept for callers that import ATTACK_TECHNIQUES directly from
 # this module.  Evaluated lazily to avoid a network call on import.
 class _LazyTechniquesProxy:
-    """Behaves like a dict but loads data on first access."""
+    """Behaves like a dict over the ACTIVE catalog, resolved on every access.
 
-    _data: dict[str, str] | None = None
+    Not memoized: a process-lifetime copy kept serving the pre-sync catalog in
+    a long-running server after ``sync_catalog`` while the taggers and the
+    compliance scorer read the synced one. The parsed catalog file is already
+    cached by mtime in :mod:`agent_bom.mitre_fetch`.
+    """
 
     def _load(self) -> dict[str, str]:
-        if self._data is None:
-            self._data = get_attack_techniques()
-        return self._data
+        return get_attack_techniques()
 
     def __getitem__(self, key: str) -> str:
         return self._load()[key]

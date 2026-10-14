@@ -10,7 +10,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from agent_bom.compliance_coverage import TAG_MAPPED_FRAMEWORKS, ComplianceFrameworkMetadata, control_key_for_tag
+from agent_bom.compliance_coverage import TAG_MAPPED_FRAMEWORKS, ComplianceFrameworkMetadata, control_key_for_tag, scoring_catalog
 from agent_bom.compliance_utils import effective_blast_radius_tags, framework_qualified_finding_tags
 from agent_bom.models import AIBOMReport
 from agent_bom.output.cyclonedx_fmt import to_cyclonedx
@@ -83,10 +83,11 @@ def _severity_from_blast_radius(br: object) -> str:
 
 
 def _blast_radius_evidence(report: AIBOMReport, metadata: ComplianceFrameworkMetadata) -> dict[str, list[_EvidenceRow]]:
+    catalog = scoring_catalog(metadata)
     evidence: dict[str, list[_EvidenceRow]] = {}
     for index, br in enumerate(report.blast_radii, start=1):
         for tag in effective_blast_radius_tags(br).get(metadata.tag_field, []):
-            control = _control_key(tag, metadata.catalog)
+            control = _control_key(tag, catalog)
             if control is None:
                 continue
             row = _EvidenceRow(
@@ -110,13 +111,14 @@ def _finding_evidence(report: AIBOMReport, metadata: ComplianceFrameworkMetadata
         metadata.summary_prefix,
         metadata.slug.replace("-", "_"),
     }
+    catalog = scoring_catalog(metadata)
     evidence: dict[str, list[_EvidenceRow]] = {}
     for finding in unified_export_findings(report):
         for qualified_tag in framework_qualified_finding_tags(finding):
             framework_key, _, control_value = qualified_tag.partition(":")
             if framework_key not in accepted_frameworks:
                 continue
-            control = _control_key(control_value, metadata.catalog)
+            control = _control_key(control_value, catalog)
             if control is None:
                 continue
             row = _EvidenceRow(
@@ -234,7 +236,7 @@ def export_compliance_bundle(
 
     # Build control mapping
     control_mapping = {}
-    for ctrl_id, ctrl_desc in metadata.catalog.items():
+    for ctrl_id, ctrl_desc in scoring_catalog(metadata).items():
         evidence_rows = mapped_evidence.get(ctrl_id, [])
         status = "not_evaluated"
         if evidence_rows:
@@ -262,7 +264,7 @@ def export_compliance_bundle(
         # all-categories critical count the posture surfaces report.
         f"Critical package CVEs: {len(report.critical_vulns)}",
         "",
-        "Controls mapped: " + ", ".join(metadata.catalog.keys()),
+        "Controls mapped: " + ", ".join(control_mapping),
         "",
         "Note: this local CLI bundle is evidence-backed but unsigned unless AGENT_BOM_AUDIT_HMAC_KEY is set. "
         "For tenant-scoped signed reports, use the API compliance report endpoint.",

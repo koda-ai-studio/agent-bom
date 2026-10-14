@@ -124,7 +124,7 @@ def test_scan_report_helper_findings_match_contract_schema() -> None:
     payload = to_json(report)
     jsonschema.validate(payload, _load(CONTRACTS / "scan-report.schema.json"))
 
-    helper_sources = {"PROMPT_SCAN", "BROWSER_EXTENSION_SCAN"}
+    helper_sources = {"PROMPT_SCAN", "BROWSER_EXT"}
     helper_findings = [finding for finding in payload["findings"] if finding.get("source") in helper_sources]
     assert {finding["source"] for finding in helper_findings} == helper_sources
     assert all(finding["schema_version"] == "1" for finding in helper_findings)

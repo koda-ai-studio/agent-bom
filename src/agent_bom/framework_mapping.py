@@ -435,8 +435,8 @@ def is_framework_relevant(
 # carry no package advisory, so the CVE taggers never see them. Without this
 # table they reached every report with empty control lists and dropped out of
 # the compliance narrative entirely. Conservative by design: only controls whose
-# objective the finding directly evidences, only IDs present in the shipped
-# catalogs, and ISO only through NIST's published 800-53 crosswalk.
+# objective the finding directly evidences, only IDs in the scoring catalogs (pinned
+# by test_compliance_catalog_alignment), and ISO only via NIST's 800-53 crosswalk.
 
 # Committed credentials are CWE-798; its curated row (LLM02, PR.AA-01, CC6.1,
 # CIS-16.1, IA-5, SC-28) is the one mapping source for them.
@@ -642,7 +642,7 @@ def _build_framework_control_catalog() -> None:
     # official copyrighted titles). Imported locally to keep this resolution
     # layer's public import surface minimal.
     from agent_bom.cis_controls import CIS_CONTROLS
-    from agent_bom.iso_27001 import ISO_27001
+    from agent_bom.iso_27001 import ISO_27001, ISO_27001_DIRECT
     from agent_bom.soc2 import SOC2_TSC
 
     global NIST_800_53_EVIDENCED_CONTROLS
@@ -667,7 +667,7 @@ def _build_framework_control_catalog() -> None:
     crosswalk = framework_catalog.nist_to_iso_crosswalk()
     iso_ids = {iso for ids in crosswalk.values() for iso in ids} | set(ISO_27001)
     FRAMEWORK_CONTROL_CATALOG[FRAMEWORK_ISO_27001] = {
-        control_id: ControlSpec(control_id, ISO_27001.get(control_id), reference_only=True) for control_id in sorted(iso_ids)
+        control_id: ControlSpec(control_id, ISO_27001_DIRECT.get(control_id), reference_only=True) for control_id in sorted(iso_ids)
     }
 
     FRAMEWORK_CONTROL_CATALOG[FRAMEWORK_SOC2] = {

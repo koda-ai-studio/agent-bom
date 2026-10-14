@@ -815,6 +815,7 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "server",
       "agent",
       "config_file",
+      "api_gateway",
       "role",
       "service_account",
       "service_principal",
@@ -1481,6 +1482,7 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
     "direction": "directed",
     "source_types": [
       "cloud_resource",
+      "resource",
       "data_store",
       "server"
     ],

@@ -29,6 +29,7 @@ from agent_bom.api.routes.graph_routes._admission import _GraphAdmissionRoute
 from agent_bom.api.routes.graph_routes.params import _parse_entity_type_filter
 from agent_bom.graph import SEVERITY_RANK
 from agent_bom.graph.completeness import graph_completeness
+from agent_bom.graph.reach_view import reach_interpretation
 from agent_bom.graph.semantic_clusters import SEMANTIC_CLUSTER_KINDS
 from agent_bom.graph.view_payloads import _semantic_cluster_payload
 from agent_bom.security import sanitize_error
@@ -69,13 +70,7 @@ async def get_graph_impact(
         "scan_id": identity[0] if identity else scan_id or "",
         "tenant_id": tenant_id,
         "snapshot_generation": identity[1] if identity else None,
-        "interpretation": {
-            "basis": "recorded_reverse_reachability",
-            "execution": "not_established",
-            "collection_coverage": "unknown",
-            "traversable_only": False,
-            "max_depth": max_depth,
-        },
+        "interpretation": reach_interpretation(max_depth=max_depth),
     }
 
 
