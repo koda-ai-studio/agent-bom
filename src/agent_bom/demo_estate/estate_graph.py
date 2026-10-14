@@ -586,8 +586,9 @@ def _project_incident_chains(
 ) -> tuple[int, int]:
     """Draw every multi-hop correlated chain as consecutive traversable edges.
 
-    ``ACCESSED`` is the runtime relationship: each hop is a step the estate's own
-    audit evidence recorded, not an inferred network reachability claim.
+    ``TRACE_STEP`` is the recorded relationship: each hop is a step one correlated
+    trace touched in the estate's own audit evidence, not an inferred network
+    reachability claim, so any asset pair may be consecutive.
     """
     chain_edges = 0
     paths = 0
@@ -607,7 +608,7 @@ def _project_incident_chains(
                 UnifiedEdge(
                     source=source,
                     target=target,
-                    relationship=RelationshipType.ACCESSED,
+                    relationship=RelationshipType.TRACE_STEP,
                     evidence={
                         "source": ESTATE_DATA_SOURCE,
                         "tier": "recorded",
@@ -618,7 +619,7 @@ def _project_incident_chains(
                     provenance={"source": ESTATE_DATA_SOURCE, "trace_id": correlation.trace_id},
                 )
             )
-            edge_ids.append(f"{RelationshipType.ACCESSED.value}:{source}:{target}")
+            edge_ids.append(f"{RelationshipType.TRACE_STEP.value}:{source}:{target}")
             chain_edges += 1
         graph.attack_paths.append(
             AttackPath(

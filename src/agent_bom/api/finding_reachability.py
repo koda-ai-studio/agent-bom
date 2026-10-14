@@ -29,6 +29,7 @@ _REACHABILITY_EVIDENCE_EDGES = frozenset(
         RelationshipType.USED_CREDENTIAL.value,
         RelationshipType.ACCESSED.value,
         RelationshipType.DELEGATED_TO.value,
+        RelationshipType.TRACE_STEP.value,
     }
 )
 

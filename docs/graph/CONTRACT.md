@@ -105,6 +105,7 @@ restores the previous derivation behavior.
 | `invoked` | agent → tool | Runtime tool invocation. | Emitted **only** by proxy / gateway runtime. Never emitted by static scans. |
 | `accessed` | tool → resource | Runtime resource access. | Emitted **only** by proxy / gateway runtime. |
 | `delegated_to` | agent → agent | Runtime delegation between agents. | Emitted **only** by proxy / gateway runtime. |
+| `trace_step` | asset → asset | Consecutive assets one correlated multi-source trace touched. | Emitted from correlated audit evidence (tier `recorded`); a sequence, not an access claim. |
 | `correlates_with` | local agent ↔ cloud agent | High-confidence cross-environment match. | Emitted only when cloud account/subscription/project + region + model ID all match (#1892). |
 | `possibly_correlates_with` | local agent ↔ cloud agent | Partial cross-environment match. | Emitted on partial-key matches; never conflated with the strict path. |
 | `attached_to` (legacy `EdgeKind`) | iam_role → agent | Workload identity correlation. | Bridged onto `member_of` in the unified graph. |

@@ -17,6 +17,7 @@ const explanations: Record<string, string> = {
   delegated_to: "The graph records delegation between these endpoints. The relationship name alone does not establish runtime execution.",
   invoked: "The graph records an invocation relationship. Review the receipt to distinguish attempted, blocked, failed and completed activity.",
   called: "The graph records a call relationship. Review the receipt to distinguish attempted, blocked, failed and completed activity.",
+  trace_step: "One correlated trace touched these assets in sequence. The step comes from recorded audit evidence, not from a confirmed access path.",
 };
 
 const fields = [

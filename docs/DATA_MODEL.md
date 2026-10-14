@@ -62,7 +62,7 @@ runtime response validation. The generated UI types consume the same OpenAPI.
 | `ServerSurface` | 10 | `mcp-server`, `container-image`, `oci-tarball`, `filesystem`, `sbom`, `external-scan`, `os-packages`, `sast`, `ai-inventory`, `other` |
 | `AgentStatus` | 2 | `configured`, `installed-not-configured` |
 | `EntityType` | 42 | `agent`, `server`, `package`, `tool`, `tool_call`, `model`, `dataset`, `framework`, `container`, `cloud_resource`, `resource`, `source_file`, `code_module`, `config_file`, `external_import`, `ci_job`, `directory`, `vulnerability`, `misconfiguration`, `credential`, `credential_ref`, `org`, `account`, `user`, `group`, `role`, `policy`, `service_account`, `service_principal`, `federated_identity`, `managed_identity`, `access_grant`, `access_policy`, `blueprint`, `drift_incident`, `data_store`, `api_gateway`, `application`, `provider`, `environment`, `fleet`, `cluster` |
-| `RelationshipType` | 49 | `hosts`, `uses`, `uses_framework`, `depends_on`, `provides_tool`, `exposes_cred`, `reaches_tool`, `serves_model`, `contains`, `imports`, `defines`, `runs`, `configures`, `observes`, `affects`, `vulnerable_to`, `exploitable_via`, `remediates`, `triggers`, `shares_server`, `shares_cred`, `lateral_path`, `manages`, `owns`, `part_of`, `member_of`, `assumes`, `trusts`, `attached`, `inherits`, `can_access`, `cross_account_trust`, `authenticates_as`, `scoped_to`, `governs`, `exhibits_drift`, `exposed_to`, `stores`, `has_permission`, `protects`, `acted_as`, `invoked`, `called`, `used_credential`, `accessed`, `delegated_to`, `correlates_with`, `possibly_correlates_with`, `belongs_to` |
+| `RelationshipType` | 50 | `hosts`, `uses`, `uses_framework`, `depends_on`, `provides_tool`, `exposes_cred`, `reaches_tool`, `serves_model`, `contains`, `imports`, `defines`, `runs`, `configures`, `observes`, `affects`, `vulnerable_to`, `exploitable_via`, `remediates`, `triggers`, `shares_server`, `shares_cred`, `lateral_path`, `manages`, `owns`, `part_of`, `member_of`, `assumes`, `trusts`, `attached`, `inherits`, `can_access`, `cross_account_trust`, `authenticates_as`, `scoped_to`, `governs`, `exhibits_drift`, `exposed_to`, `stores`, `has_permission`, `protects`, `acted_as`, `invoked`, `called`, `used_credential`, `accessed`, `delegated_to`, `trace_step`, `correlates_with`, `possibly_correlates_with`, `belongs_to` |
 
 ### Live Schema Cross-Checks
 
@@ -292,7 +292,7 @@ The effective-permissions overlay inherits a principal's access through the
 access is recorded on `HAS_PERMISSION` as `access="group"` and is not, by itself,
 a privilege escalation (only assume/trust chains are).
 
-### Relationship types (49)
+### Relationship types (50)
 
 | Group | Relationships | Direction |
 |---|---|---|
@@ -303,7 +303,7 @@ a privilege escalation (only assume/trust chains are).
 | Ownership and identity | `MANAGES`, `OWNS`, `PART_OF`, `MEMBER_OF`, `ASSUMES`, `TRUSTS`, `ATTACHED`, `INHERITS`, `CAN_ACCESS`, `CROSS_ACCOUNT_TRUST` | hierarchical / access path |
 | Agent-identity governance | `AUTHENTICATES_AS`, `SCOPED_TO`, `GOVERNS`, `EXHIBITS_DRIFT` | agent → identity → grant → tool; agent ↔ drift |
 | Cloud-CNAPP | `EXPOSED_TO`, `STORES`, `HAS_PERMISSION`, `PROTECTS` | internet exposure; data-at-rest; effective permission; WAF/gateway fronts a resource |
-| Runtime | `ACTED_AS`, `INVOKED`, `CALLED`, `USED_CREDENTIAL`, `ACCESSED`, `DELEGATED_TO` | source → target, time-stamped |
+| Runtime | `ACTED_AS`, `INVOKED`, `CALLED`, `USED_CREDENTIAL`, `ACCESSED`, `DELEGATED_TO`, `TRACE_STEP` | source → target, time-stamped |
 | Cross-environment correlation | `CORRELATES_WITH`, `POSSIBLY_CORRELATES_WITH` | local ↔ cloud agent correlation |
 | ASPM | `BELONGS_TO` | finding / component → application |
 

@@ -41,6 +41,7 @@ _DATA_ACCESS_RELS = frozenset(
         RelationshipType.HAS_PERMISSION,
         RelationshipType.CAN_ACCESS,
         RelationshipType.ACCESSED,
+        RelationshipType.TRACE_STEP,
     }
 )
 _VULN_RELS = frozenset({RelationshipType.VULNERABLE_TO, RelationshipType.EXPLOITABLE_VIA})

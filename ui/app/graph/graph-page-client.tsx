@@ -370,6 +370,7 @@ const RELATIONSHIP_SCOPE_MAP: Record<
   runtime: [
     RelationshipType.INVOKED,
     RelationshipType.ACCESSED,
+    RelationshipType.TRACE_STEP,
     RelationshipType.CALLED,
     RelationshipType.USED_CREDENTIAL,
     RelationshipType.DELEGATED_TO,

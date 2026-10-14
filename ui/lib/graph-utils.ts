@@ -295,6 +295,7 @@ export const RELATIONSHIP_LEGEND_ORDER = [
   "invoked",
   "called",
   "accessed",
+  "trace_step",
   "used_credential",
   "delegated_to",
   "acted_as",
@@ -315,6 +316,7 @@ const DASHED_LEGEND_RELATIONSHIPS = new Set<string>([
   "invoked",
   "called",
   "accessed",
+  "trace_step",
   "used_credential",
   "delegated_to",
 ]);
@@ -379,6 +381,8 @@ const RELATIONSHIP_DESCRIPTION_OVERRIDES: Record<string, string> = {
     "The same real-world asset was matched across environments or sources.",
   possibly_correlates_with:
     "Low-confidence cross-environment match — treat as a lead, not a fact.",
+  trace_step:
+    "Consecutive assets one correlated trace touched in recorded audit evidence.",
 };
 
 function fallbackRelationshipLabel(relationship: string): string {
@@ -534,6 +538,7 @@ const HIGH_SIGNAL_RELATIONSHIPS = new Set([
   "lateral_path",
   "exploitable_via",
   "accessed",
+  "trace_step",
   "invoked",
 ]);
 

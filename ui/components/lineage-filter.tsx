@@ -442,7 +442,7 @@ const SCOPE_RELATIONSHIPS: Record<
     "has_permission",
     "exhibits_drift",
   ],
-  runtime: ["invoked", "called", "accessed", "used_credential", "delegated_to"],
+  runtime: ["invoked", "called", "accessed", "used_credential", "delegated_to", "trace_step"],
   governance: [
     "manages",
     "owns",

@@ -86,6 +86,7 @@ const RELATIONSHIP_SCOPE_MAP: Record<
     RelationshipType.INVOKED,
     RelationshipType.CALLED,
     RelationshipType.ACCESSED,
+    RelationshipType.TRACE_STEP,
     RelationshipType.USED_CREDENTIAL,
     RelationshipType.DELEGATED_TO,
   ]),
@@ -113,6 +114,7 @@ const RUNTIME_RELATIONSHIPS: Set<string> = new Set([
   RelationshipType.INVOKED,
   RelationshipType.CALLED,
   RelationshipType.ACCESSED,
+  RelationshipType.TRACE_STEP,
   RelationshipType.USED_CREDENTIAL,
   RelationshipType.DELEGATED_TO,
 ]);

@@ -1204,7 +1204,7 @@ class UnifiedGraph:
 
 # ── Dynamic relationship set ─────────────────────────────────────────────
 
-_DYNAMIC_RELS = {RelationshipType.INVOKED, RelationshipType.ACCESSED, RelationshipType.DELEGATED_TO}
+_DYNAMIC_RELS = {RelationshipType.INVOKED, RelationshipType.ACCESSED, RelationshipType.DELEGATED_TO, RelationshipType.TRACE_STEP}
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -1335,6 +1335,7 @@ RELATIONSHIP_LEGEND: list[LegendEntry] = [
     LegendEntry(key="used_credential", label="Used Credential (runtime)", color="#fbbf24"),
     LegendEntry(key="accessed", label="Accessed (runtime)", color="#3b82f6"),
     LegendEntry(key="delegated_to", label="Delegated To (runtime)", color="#a855f7"),
+    LegendEntry(key="trace_step", label="Trace Step (recorded)", color="#6366f1"),
     # Cross-environment correlation (#1892)
     LegendEntry(key="correlates_with", label="Correlates With (cross-env)", color="#0ea5e9"),
     LegendEntry(key="possibly_correlates_with", label="Possibly Correlates With (low confidence)", color="#7dd3fc"),

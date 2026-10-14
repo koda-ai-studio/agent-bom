@@ -40,6 +40,7 @@ const RELATIONSHIP_ICONS: Record<string, LucideIcon> = {
   triggers: CirclePlay,
   stores: Database,
   accessed: Database,
+  trace_step: GitBranch,
   protects: ShieldCheck,
   governs: ShieldCheck,
   trusts: ShieldCheck,

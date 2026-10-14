@@ -573,6 +573,7 @@ export enum GraphEdgeKind {
   SHARES_CRED = "shares_cred",
   SHARES_SERVER = "shares_server",
   STORES = "stores",
+  TRACE_STEP = "trace_step",
   TRIGGERS = "triggers",
   TRUSTS = "trusts",
   USED_CREDENTIAL = "used_credential",
@@ -581,9 +582,11 @@ export enum GraphEdgeKind {
   VULNERABLE_TO = "vulnerable_to",
 }
 
-export type GraphEdgeKindKey = "accessed" | "acted_as" | "affects" | "assumes" | "attached" | "authenticates_as" | "belongs_to" | "called" | "can_access" | "configures" | "contains" | "correlates_with" | "cross_account_trust" | "defines" | "delegated_to" | "depends_on" | "exhibits_drift" | "exploitable_via" | "exposed_to" | "exposes_cred" | "governs" | "has_permission" | "hosts" | "imports" | "inherits" | "invoked" | "lateral_path" | "manages" | "member_of" | "observes" | "owns" | "part_of" | "possibly_correlates_with" | "protects" | "provides_tool" | "reaches_tool" | "remediates" | "runs" | "scoped_to" | "serves_model" | "shares_cred" | "shares_server" | "stores" | "triggers" | "trusts" | "used_credential" | "uses" | "uses_framework" | "vulnerable_to";
+export type GraphEdgeKindKey = "accessed" | "acted_as" | "affects" | "assumes" | "attached" | "authenticates_as" | "belongs_to" | "called" | "can_access" | "configures" | "contains" | "correlates_with" | "cross_account_trust" | "defines" | "delegated_to" | "depends_on" | "exhibits_drift" | "exploitable_via" | "exposed_to" | "exposes_cred" | "governs" | "has_permission" | "hosts" | "imports" | "inherits" | "invoked" | "lateral_path" | "manages" | "member_of" | "observes" | "owns" | "part_of" | "possibly_correlates_with" | "protects" | "provides_tool" | "reaches_tool" | "remediates" | "runs" | "scoped_to" | "serves_model" | "shares_cred" | "shares_server" | "stores" | "trace_step" | "triggers" | "trusts" | "used_credential" | "uses" | "uses_framework" | "vulnerable_to";
 
-export const GRAPH_EDGE_KINDS: readonly GraphEdgeKindKey[] = ["accessed", "acted_as", "affects", "assumes", "attached", "authenticates_as", "belongs_to", "called", "can_access", "configures", "contains", "correlates_with", "cross_account_trust", "defines", "delegated_to", "depends_on", "exhibits_drift", "exploitable_via", "exposed_to", "exposes_cred", "governs", "has_permission", "hosts", "imports", "inherits", "invoked", "lateral_path", "manages", "member_of", "observes", "owns", "part_of", "possibly_correlates_with", "protects", "provides_tool", "reaches_tool", "remediates", "runs", "scoped_to", "serves_model", "shares_cred", "shares_server", "stores", "triggers", "trusts", "used_credential", "uses", "uses_framework", "vulnerable_to"] as const;
+export type GraphTraversalClass = "authority" | "correlation" | "dependency" | "derived" | "exposure" | "finding" | "governance" | "runtime" | "structural";
+
+export const GRAPH_EDGE_KINDS: readonly GraphEdgeKindKey[] = ["accessed", "acted_as", "affects", "assumes", "attached", "authenticates_as", "belongs_to", "called", "can_access", "configures", "contains", "correlates_with", "cross_account_trust", "defines", "delegated_to", "depends_on", "exhibits_drift", "exploitable_via", "exposed_to", "exposes_cred", "governs", "has_permission", "hosts", "imports", "inherits", "invoked", "lateral_path", "manages", "member_of", "observes", "owns", "part_of", "possibly_correlates_with", "protects", "provides_tool", "reaches_tool", "remediates", "runs", "scoped_to", "serves_model", "shares_cred", "shares_server", "stores", "trace_step", "triggers", "trusts", "used_credential", "uses", "uses_framework", "vulnerable_to"] as const;
 
 export interface GraphEdgeKindMeta {
   label: string;
@@ -593,6 +596,7 @@ export interface GraphEdgeKindMeta {
   source_types: readonly GraphNodeKindKey[];
   target_types: readonly GraphNodeKindKey[];
   traversable: boolean;
+  traversal_class: GraphTraversalClass;
 }
 
 export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> = {
@@ -603,16 +607,24 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
     "direction": "directed",
     "source_types": [
       "tool",
-      "tool_call"
+      "tool_call",
+      "user",
+      "service_account",
+      "service_principal",
+      "federated_identity",
+      "role",
+      "agent"
     ],
     "target_types": [
       "cloud_resource",
       "dataset",
       "credential",
       "credential_ref",
-      "resource"
+      "resource",
+      "data_store"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "runtime"
   },
   "acted_as": {
     "label": "Acted As (runtime)",
@@ -628,7 +640,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
     "target_types": [
       "agent"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "runtime"
   },
   "affects": {
     "label": "Affects",
@@ -644,9 +657,28 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "server",
       "container",
       "source_file",
-      "config_file"
+      "config_file",
+      "agent",
+      "cluster",
+      "model",
+      "cloud_resource",
+      "role",
+      "service_account",
+      "service_principal",
+      "data_store",
+      "dataset",
+      "api_gateway",
+      "application",
+      "tool",
+      "framework",
+      "ci_job",
+      "access_policy",
+      "account",
+      "org",
+      "resource"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "finding"
   },
   "assumes": {
     "label": "Assumes",
@@ -657,12 +689,23 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "user",
       "service_account",
       "service_principal",
-      "federated_identity"
-    ],
-    "target_types": [
+      "federated_identity",
+      "agent",
+      "server",
+      "container",
+      "cluster",
+      "model",
+      "cloud_resource",
       "role"
     ],
-    "traversable": true
+    "target_types": [
+      "role",
+      "service_account",
+      "service_principal",
+      "managed_identity"
+    ],
+    "traversable": true,
+    "traversal_class": "authority"
   },
   "attached": {
     "label": "Attached",
@@ -681,7 +724,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "policy",
       "access_grant"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "authority"
   },
   "authenticates_as": {
     "label": "Authenticates As",
@@ -689,12 +733,16 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
     "category": "governance",
     "direction": "directed",
     "source_types": [
-      "agent"
+      "agent",
+      "credential"
     ],
     "target_types": [
-      "managed_identity"
+      "managed_identity",
+      "service_account",
+      "service_principal"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "authority"
   },
   "belongs_to": {
     "label": "Belongs To (application)",
@@ -713,7 +761,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
     "target_types": [
       "application"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "structural"
   },
   "called": {
     "label": "Called (runtime)",
@@ -728,7 +777,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "tool",
       "server"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "runtime"
   },
   "can_access": {
     "label": "Can Access",
@@ -742,15 +792,36 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "role",
       "service_account",
       "service_principal",
-      "federated_identity"
+      "federated_identity",
+      "agent",
+      "server",
+      "container",
+      "cluster",
+      "model",
+      "cloud_resource",
+      "application",
+      "tool",
+      "managed_identity"
     ],
     "target_types": [
       "cloud_resource",
       "dataset",
       "credential",
-      "resource"
+      "resource",
+      "data_store",
+      "cluster",
+      "container",
+      "model",
+      "server",
+      "agent",
+      "config_file",
+      "role",
+      "service_account",
+      "service_principal",
+      "managed_identity"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "authority"
   },
   "configures": {
     "label": "Configures",
@@ -766,7 +837,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "ci_job",
       "tool"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "structural"
   },
   "contains": {
     "label": "Contains",
@@ -777,7 +849,28 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "container",
       "cluster",
       "fleet",
-      "directory"
+      "directory",
+      "org",
+      "data_store",
+      "account",
+      "cloud_resource",
+      "source_file",
+      "environment",
+      "agent",
+      "server",
+      "model",
+      "role",
+      "service_account",
+      "service_principal",
+      "dataset",
+      "api_gateway",
+      "application",
+      "tool",
+      "package",
+      "framework",
+      "config_file",
+      "ci_job",
+      "access_policy"
     ],
     "target_types": [
       "package",
@@ -785,9 +878,31 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "container",
       "directory",
       "source_file",
-      "config_file"
+      "config_file",
+      "agent",
+      "org",
+      "data_store",
+      "code_module",
+      "account",
+      "environment",
+      "application",
+      "cloud_resource",
+      "api_gateway",
+      "cluster",
+      "model",
+      "role",
+      "service_account",
+      "service_principal",
+      "dataset",
+      "tool",
+      "framework",
+      "ci_job",
+      "access_policy",
+      "vulnerability",
+      "misconfiguration"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "structural"
   },
   "correlates_with": {
     "label": "Correlates With (cross-env)",
@@ -802,7 +917,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "agent",
       "server"
     ],
-    "traversable": true
+    "traversable": false,
+    "traversal_class": "correlation"
   },
   "cross_account_trust": {
     "label": "Cross-Account Trust",
@@ -821,7 +937,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "service_principal",
       "federated_identity"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "authority"
   },
   "defines": {
     "label": "Defines",
@@ -836,7 +953,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "tool",
       "ci_job"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "structural"
   },
   "delegated_to": {
     "label": "Delegated To (runtime)",
@@ -849,7 +967,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
     "target_types": [
       "agent"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "runtime"
   },
   "depends_on": {
     "label": "Depends On",
@@ -861,12 +980,19 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "container",
       "config_file",
       "source_file",
-      "framework"
+      "framework",
+      "directory",
+      "cloud_resource",
+      "data_store"
     ],
     "target_types": [
-      "package"
+      "package",
+      "container",
+      "cloud_resource",
+      "data_store"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "dependency"
   },
   "exhibits_drift": {
     "label": "Exhibits Drift",
@@ -879,7 +1005,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
     "target_types": [
       "drift_incident"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "governance"
   },
   "exploitable_via": {
     "label": "Exploitable Via",
@@ -894,7 +1021,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "tool",
       "credential"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "finding"
   },
   "exposed_to": {
     "label": "Exposed To",
@@ -905,14 +1033,19 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "cloud_resource",
       "server",
       "agent",
-      "data_store"
+      "data_store",
+      "container",
+      "api_gateway"
     ],
     "target_types": [
       "cloud_resource",
       "resource",
-      "data_store"
+      "data_store",
+      "agent",
+      "account"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "exposure"
   },
   "exposes_cred": {
     "label": "Exposes Credential",
@@ -926,7 +1059,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
     "target_types": [
       "credential"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "authority"
   },
   "governs": {
     "label": "Governs",
@@ -934,14 +1068,20 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
     "category": "governance",
     "direction": "directed",
     "source_types": [
-      "access_policy"
+      "access_policy",
+      "blueprint",
+      "policy"
     ],
     "target_types": [
       "agent",
       "managed_identity",
-      "tool"
+      "tool",
+      "drift_incident",
+      "org",
+      "account"
     ],
-    "traversable": false
+    "traversable": false,
+    "traversal_class": "governance"
   },
   "has_permission": {
     "label": "Has Permission",
@@ -950,6 +1090,7 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
     "direction": "directed",
     "source_types": [
       "user",
+      "group",
       "role",
       "service_account",
       "service_principal",
@@ -959,9 +1100,12 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "cloud_resource",
       "data_store",
       "resource",
-      "tool"
+      "tool",
+      "account",
+      "org"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "authority"
   },
   "hosts": {
     "label": "Hosts",
@@ -982,7 +1126,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "server",
       "cloud_resource"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "structural"
   },
   "imports": {
     "label": "Imports",
@@ -998,7 +1143,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "code_module",
       "package"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "dependency"
   },
   "inherits": {
     "label": "Inherits",
@@ -1016,7 +1162,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "policy",
       "role"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "authority"
   },
   "invoked": {
     "label": "Invoked (runtime)",
@@ -1025,13 +1172,19 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
     "direction": "directed",
     "source_types": [
       "agent",
-      "user"
+      "user",
+      "service_account",
+      "service_principal",
+      "federated_identity",
+      "role"
     ],
     "target_types": [
       "tool",
-      "tool_call"
+      "tool_call",
+      "cloud_resource"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "runtime"
   },
   "lateral_path": {
     "label": "Lateral Path",
@@ -1044,7 +1197,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
     "target_types": [
       "agent"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "derived"
   },
   "manages": {
     "label": "Manages",
@@ -1065,7 +1219,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "environment",
       "cloud_resource"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "governance"
   },
   "member_of": {
     "label": "Member Of",
@@ -1079,15 +1234,18 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "service_account",
       "service_principal",
       "federated_identity",
-      "agent"
+      "agent",
+      "managed_identity"
     ],
     "target_types": [
       "account",
       "group",
       "agent",
-      "fleet"
+      "fleet",
+      "role"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "authority"
   },
   "observes": {
     "label": "Observes",
@@ -1101,7 +1259,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "agent",
       "server"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "structural"
   },
   "owns": {
     "label": "Owns",
@@ -1120,9 +1279,18 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
     "target_types": [
       "environment",
       "cloud_resource",
-      "agent"
+      "agent",
+      "data_store",
+      "api_gateway",
+      "user",
+      "group",
+      "role",
+      "service_account",
+      "service_principal",
+      "policy"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "governance"
   },
   "part_of": {
     "label": "Part Of",
@@ -1133,15 +1301,24 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "account",
       "agent",
       "server",
-      "container"
+      "container",
+      "cloud_resource",
+      "ci_job",
+      "tool",
+      "resource"
     ],
     "target_types": [
       "org",
       "fleet",
       "cluster",
-      "environment"
+      "environment",
+      "cloud_resource",
+      "application",
+      "server",
+      "resource"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "structural"
   },
   "possibly_correlates_with": {
     "label": "Possibly Correlates With (low confidence)",
@@ -1156,7 +1333,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "agent",
       "server"
     ],
-    "traversable": false
+    "traversable": false,
+    "traversal_class": "correlation"
   },
   "protects": {
     "label": "Protects (WAF/gateway)",
@@ -1172,7 +1350,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "data_store",
       "resource"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "exposure"
   },
   "provides_tool": {
     "label": "Provides Tool",
@@ -1185,7 +1364,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
     "target_types": [
       "tool"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "structural"
   },
   "reaches_tool": {
     "label": "Credential Reaches Tool",
@@ -1199,7 +1379,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
     "target_types": [
       "tool"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "authority"
   },
   "remediates": {
     "label": "Remediates",
@@ -1213,7 +1394,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "vulnerability",
       "misconfiguration"
     ],
-    "traversable": false
+    "traversable": false,
+    "traversal_class": "finding"
   },
   "runs": {
     "label": "Runs",
@@ -1228,7 +1410,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "server",
       "agent"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "structural"
   },
   "scoped_to": {
     "label": "Scoped To",
@@ -1243,7 +1426,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
     "target_types": [
       "tool"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "governance"
   },
   "serves_model": {
     "label": "Serves Model",
@@ -1253,12 +1437,14 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
     "source_types": [
       "server",
       "agent",
-      "framework"
+      "framework",
+      "container"
     ],
     "target_types": [
       "model"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "dependency"
   },
   "shares_cred": {
     "label": "Shares Credential",
@@ -1271,7 +1457,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
     "target_types": [
       "agent"
     ],
-    "traversable": true
+    "traversable": false,
+    "traversal_class": "correlation"
   },
   "shares_server": {
     "label": "Shares Server",
@@ -1284,7 +1471,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
     "target_types": [
       "agent"
     ],
-    "traversable": true
+    "traversable": false,
+    "traversal_class": "correlation"
   },
   "stores": {
     "label": "Stores",
@@ -1300,7 +1488,60 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "dataset",
       "data_store"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "structural"
+  },
+  "trace_step": {
+    "label": "Trace Step (recorded)",
+    "color": "#6366f1",
+    "category": "runtime",
+    "direction": "directed",
+    "source_types": [
+      "agent",
+      "server",
+      "container",
+      "cluster",
+      "model",
+      "cloud_resource",
+      "role",
+      "service_account",
+      "service_principal",
+      "data_store",
+      "dataset",
+      "api_gateway",
+      "application",
+      "tool",
+      "package",
+      "framework",
+      "config_file",
+      "ci_job",
+      "access_policy",
+      "user"
+    ],
+    "target_types": [
+      "agent",
+      "server",
+      "container",
+      "cluster",
+      "model",
+      "cloud_resource",
+      "role",
+      "service_account",
+      "service_principal",
+      "data_store",
+      "dataset",
+      "api_gateway",
+      "application",
+      "tool",
+      "package",
+      "framework",
+      "config_file",
+      "ci_job",
+      "access_policy",
+      "user"
+    ],
+    "traversable": true,
+    "traversal_class": "runtime"
   },
   "triggers": {
     "label": "Triggers",
@@ -1313,7 +1554,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
     "target_types": [
       "misconfiguration"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "finding"
   },
   "trusts": {
     "label": "Trusts",
@@ -1333,7 +1575,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "service_principal",
       "federated_identity"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "authority"
   },
   "used_credential": {
     "label": "Used Credential (runtime)",
@@ -1349,7 +1592,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "credential_ref",
       "credential"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "runtime"
   },
   "uses": {
     "label": "Uses",
@@ -1362,7 +1606,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
     "target_types": [
       "server"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "dependency"
   },
   "uses_framework": {
     "label": "Uses Framework",
@@ -1375,7 +1620,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
     "target_types": [
       "framework"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "dependency"
   },
   "vulnerable_to": {
     "label": "Vulnerable To",
@@ -1388,13 +1634,18 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "container",
       "agent",
       "credential",
-      "credential_ref"
+      "credential_ref",
+      "tool",
+      "cloud_resource",
+      "role",
+      "directory"
     ],
     "target_types": [
       "vulnerability",
       "misconfiguration"
     ],
-    "traversable": true
+    "traversable": true,
+    "traversal_class": "finding"
   },
 };
 

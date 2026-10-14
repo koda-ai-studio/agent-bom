@@ -111,6 +111,7 @@ _ASSETS = (
     E.CI_JOB,
     E.ACCESS_POLICY,
 )
+_TRACE_ASSETS = (*_ASSETS, E.USER)
 _ACCESSIBLE = (E.DATA_STORE, E.DATASET, E.CLUSTER, E.CONTAINER, E.MODEL, E.SERVER, E.AGENT, E.CONFIG_FILE, E.CLOUD_RESOURCE, E.RESOURCE)
 
 _SPECS: tuple[RelationshipSpec, ...] = (
@@ -303,6 +304,8 @@ _SPECS: tuple[RelationshipSpec, ...] = (
         extra=tuple(product((*_HUMAN_AND_WORKLOAD, E.ROLE, E.AGENT), (E.CLOUD_RESOURCE, E.DATA_STORE, E.DATASET, E.RESOURCE))),
     ),
     _spec(R.DELEGATED_TO, T.RUNTIME, "runtime", (E.AGENT,), (E.AGENT,)),
+    # Consecutive assets one correlated trace touched, across vendors' audit logs.
+    _spec(R.TRACE_STEP, T.RUNTIME, "runtime", _TRACE_ASSETS, _TRACE_ASSETS),
     _spec(
         R.CORRELATES_WITH,
         T.CORRELATION,

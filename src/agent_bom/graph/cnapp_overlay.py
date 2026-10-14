@@ -226,6 +226,18 @@ def _content_classification_evidence(node: UnifiedNode) -> dict[str, object]:
     return evidence
 
 
+_DATA_ACCESS_RELATIONSHIPS = frozenset(
+    {
+        RelationshipType.CAN_ACCESS,
+        RelationshipType.HAS_PERMISSION,
+        RelationshipType.ACCESSED,
+        RelationshipType.TRACE_STEP,
+        RelationshipType.STORES,
+        RelationshipType.EXPOSED_TO,
+    }
+)
+
+
 def apply_cnapp_overlay(graph: UnifiedGraph) -> dict[str, int]:
     """Enrich ``graph`` with exposure + data-store structure in place.
 
@@ -454,16 +466,9 @@ def apply_cnapp_overlay(graph: UnifiedGraph) -> dict[str, int]:
                 node.attributes["data_regulatory_frameworks"] = frameworks
             sensitive_ids.add(node.id)
 
-    # Who/what can reach sensitive data stores. This is intentionally derived
-    # from existing permission/runtime edges so DSPM risk follows the same graph
-    # evidence as the rest of ContextGraph.
-    access_relationships = {
-        RelationshipType.CAN_ACCESS,
-        RelationshipType.HAS_PERMISSION,
-        RelationshipType.ACCESSED,
-        RelationshipType.STORES,
-        RelationshipType.EXPOSED_TO,
-    }
+    # Who/what can reach sensitive data stores, from the same permission/runtime
+    # edges as the rest of ContextGraph.
+    access_relationships = _DATA_ACCESS_RELATIONSHIPS
     sensitive_access_paths = 0
     for node_id in sorted(sensitive_ids):
         node = graph.nodes.get(node_id)
