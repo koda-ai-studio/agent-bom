@@ -248,7 +248,7 @@ function buildGraph() {
         target_node_id: target,
         relationship: graphEdge?.relationship ?? "related",
         source_snapshot_ids: [SCAN_ID],
-        evidence_tier: "static_evidence",
+        evidence_tier: "static_scan",
         confidence: 1,
         freshness: "fresh",
         runtime_observed_state: "not_observed",
@@ -3493,7 +3493,7 @@ async function main() {
           await fitReactFlow(p);
           await scrollTo(p, 0);
         }, {
-          expectedText: ["Has finding", "static_evidence", "bundled_advisory_scanner", "pinned-package.txt", "CVE-2023-4863",
+          expectedText: ["Has finding", "static_scan", "bundled_advisory_scanner", "pinned-package.txt", "CVE-2023-4863",
             "1 critical · 1 finding · 1 snapshot path", "Attack-path analysis complete", /Reference evidence lab/i],
           expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph"],
           minGraphNodes: 5, maxGraphNodes: 5, minGraphEdges: 4, maxGraphEdges: 4,
