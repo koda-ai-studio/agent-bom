@@ -22,8 +22,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 PYPROJECT = ROOT / "pyproject.toml"
 README = ROOT / "README.md"
-DEFAULT_URL = "https://glama.ai/mcp/servers/msaad00/agent-bom"
-DEFAULT_API_URL = "https://glama.ai/api/mcp/v1/servers/msaad00/agent-bom"
+DEFAULT_URL = "https://glama.ai/mcp/servers/koda-ai-studio/agent-bom"
+DEFAULT_API_URL = "https://glama.ai/api/mcp/v1/servers/koda-ai-studio/agent-bom"
 DEFAULT_SCHEMA_URL = f"{DEFAULT_URL}/schema"
 _MAX_TOOL_NAMES_BYTES = 2 * 1024 * 1024
 # Distinct from failure: Glama has not yet rebuilt from a release that is still

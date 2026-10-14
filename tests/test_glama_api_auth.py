@@ -20,6 +20,12 @@ def checker(monkeypatch):
     return module
 
 
+def test_default_endpoints_use_current_repository_namespace(checker):
+    assert checker.DEFAULT_URL == "https://glama.ai/mcp/servers/koda-ai-studio/agent-bom"
+    assert checker.DEFAULT_API_URL == "https://glama.ai/api/mcp/v1/servers/koda-ai-studio/agent-bom"
+    assert checker.DEFAULT_SCHEMA_URL == checker.DEFAULT_URL + "/schema"
+
+
 def test_directory_key_is_bearer_and_transport_cannot_redirect_or_proxy(checker, monkeypatch):
     monkeypatch.setenv("GLAMA_API_KEY", "test-key")
     monkeypatch.setattr(checker, "_fetch", MagicMock(side_effect=AssertionError("authenticated API must not use anonymous fetch")))

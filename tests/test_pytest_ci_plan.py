@@ -125,6 +125,7 @@ def test_mcp_registration_edits_select_tool_contracts(tmp_path: Path) -> None:
     expected = sorted(
         tmp_path / "tests" / name
         for name in (
+            "test_mcp_server.py",
             "test_mcp_tool_output_contract.py",
             "test_mcp_strict_args.py",
             "test_deployment.py",

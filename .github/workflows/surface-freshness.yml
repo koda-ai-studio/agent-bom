@@ -9,7 +9,7 @@ name: Surface Freshness
 #
 # Optional repo variables (Settings -> Secrets and variables -> Actions -> Variables):
 #   SMITHERY_SERVER_QUALIFIED_NAME — override Smithery listing name; defaults to agentbom/agent-bom
-#   GLAMA_LISTING_URL  — override Glama listing URL (default: glama.ai/.../msaad00/agent-bom)
+#   GLAMA_LISTING_URL  — override Glama listing URL (default: glama.ai/.../koda-ai-studio/agent-bom)
 #   GLAMA_API_URL      — override Glama public inventory API URL
 #   DOCKER_IMAGE       — override default ghcr.io/msaad00/agent-bom
 

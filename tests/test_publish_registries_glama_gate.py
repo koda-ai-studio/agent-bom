@@ -75,3 +75,10 @@ def test_publisher_retains_actual_glama_failure_responses() -> None:
     upload = next(step for step in steps if "upload-artifact@" in step.get("uses", ""))
     assert upload["if"] == "always()"
     assert upload["with"]["retention-days"] == 7
+
+
+def test_publisher_passes_configured_glama_endpoints_to_verifier() -> None:
+    steps = _workflow()["jobs"]["glama"]["steps"]
+    verify = next(step for step in steps if step.get("name") == "Verify Glama listing freshness")
+    for name in ("GLAMA_LISTING_URL", "GLAMA_API_URL", "GLAMA_SCHEMA_URL"):
+        assert verify["env"].get(name) == "${{ vars." + name + " }}"
