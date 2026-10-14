@@ -109,6 +109,8 @@ const EVIDENCE_REASON_LABEL: Record<string, string> = {
   fresh_scan_evidence: "Fresh scan evidence",
   stale_scan_evidence: "Stale scan evidence",
   future_scan_evidence: "Scan timestamp in the future",
+  detective_evidence_not_collected: "Scan lane not run",
+  vulnerability_coverage_incomplete: "Vulnerability scan incomplete",
   // Corrective controls (attested by the absence of an open finding).
   no_mapped_finding: "No mapped finding",
   unrated_severity_finding: "Unrated-severity finding",
@@ -137,6 +139,8 @@ export function evidenceReasonCta(reason: string | null | undefined): EvidenceRe
   switch (reason) {
     case "no_completed_scan":
     case "scan_evidence_age_unknown":
+    case "detective_evidence_not_collected":
+    case "vulnerability_coverage_incomplete":
       return { label: "New Scan", href: "/scan" };
     case "no_observed_signal":
       return { label: "Connect a source", href: "/connections" };
