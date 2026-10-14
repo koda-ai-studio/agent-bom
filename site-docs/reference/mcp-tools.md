@@ -19,11 +19,11 @@ invoke them.
 scan tools. Use `--profile full` for the complete 90-tool catalog.
 
 <details>
-<summary>Explicit full-profile catalog (90 tools)</summary>
+<summary>Explicit full-profile catalog (93 tools)</summary>
 
 `scan`, `check`, `intel_lookup`, `intel_match`, `intel_sources`,
 `intel_daily_brief`, `youcom_search`, `blast_radius`, `exposure_paths`, `compromise_assessment`, `consequence_assessment`, `graph_correlate`,
-`graph_correlation_status`, `should_i_deploy`,
+`graph_correlation_status`, `should_i_deploy`, `graph_reach`, `findings_query`, `finding_detail`,
 `policy_check`, `registry_lookup`, `generate_sbom`, `compliance`, `remediate`,
 `skill_scan`, `skill_verify`, `skill_trust`, `verify`, `inventory_summary`,
 `inventory_list`, `inventory_asset`, `where`, `tool_risk_assessment`,
@@ -118,6 +118,24 @@ should_i_deploy(candidate="requests", tenant_id="default", block_risk=80)
 Use this as a decision aid in CI or assistant workflows. It returns reasons,
 matched paths, and a verdict; it does not deploy, remediate, or open pull
 requests.
+
+### graph_reach
+Page what can reach a graph node (`direction="in"`, the `/v1/graph/impact` walk) or what it reaches.
+```
+graph_reach(node_id="vuln:CVE-2023-4863", direction="in", entity_types=["agent"])
+```
+
+### findings_query
+Query findings exactly as `GET /v1/findings`, with a compact projection and cursor.
+```
+findings_query(severity="critical", kev=True, limit=25)
+```
+
+### finding_detail
+One finding with the graph paths that carry it, its reachers, and its triage/VEX state.
+```
+finding_detail(finding_id="<id from findings_query>")
+```
 
 ### registry_lookup
 Look up an MCP server in the 1185-entry server security metadata registry.

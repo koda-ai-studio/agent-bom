@@ -100,11 +100,9 @@ def test_mapping_is_idempotent() -> None:
 
 
 def test_every_mapped_control_exists_in_its_catalog() -> None:
-    from agent_bom.compliance_coverage import TAG_MAPPED_FRAMEWORKS, control_key_for_tag
-    from agent_bom.framework_mapping import nist_to_iso
+    from agent_bom.compliance_coverage import TAG_MAPPED_FRAMEWORKS, control_key_for_tag, scoring_catalog
 
-    catalogs = {metadata.tag_field: dict(metadata.catalog) for metadata in TAG_MAPPED_FRAMEWORKS}
-    crosswalk_iso = {iso for nist_id in catalogs["nist_800_53_tags"] for iso in nist_to_iso(nist_id)}
+    catalogs = {metadata.tag_field: scoring_catalog(metadata) for metadata in TAG_MAPPED_FRAMEWORKS}
     findings = [
         _secret(),
         _secret(file="x/.mcp.json"),
@@ -114,10 +112,7 @@ def test_every_mapped_control_exists_in_its_catalog() -> None:
     for finding in findings:
         for field, catalog in catalogs.items():
             for control in getattr(finding, field, []):
-                if field == "iso_27001_tags":
-                    assert control in catalog or control in crosswalk_iso, (field, control)
-                else:
-                    assert control_key_for_tag(control, catalog) is not None, (field, control)
+                assert control_key_for_tag(control, catalog) is not None, (field, control)
 
 
 def test_client_side_web_flaws_are_not_data_at_rest_controls() -> None:

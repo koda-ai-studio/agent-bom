@@ -318,7 +318,7 @@ def test_browser_extension_risks_are_normalized_into_top_level_findings(monkeypa
 
     assert result.exit_code == 0
     data = json.loads(out_file.read_text())
-    browser_findings = [finding for finding in data["findings"] if finding.get("source") == "BROWSER_EXTENSION_SCAN"]
+    browser_findings = [finding for finding in data["findings"] if finding.get("source") == "BROWSER_EXT"]
     assert len(browser_findings) == 1
     assert browser_findings[0]["severity"] == "critical"
     assert browser_findings[0]["asset"]["asset_type"] == "browser_extension"

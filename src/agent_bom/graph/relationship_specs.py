@@ -112,7 +112,19 @@ _ASSETS = (
     E.ACCESS_POLICY,
 )
 _TRACE_ASSETS = (*_ASSETS, E.USER)
-_ACCESSIBLE = (E.DATA_STORE, E.DATASET, E.CLUSTER, E.CONTAINER, E.MODEL, E.SERVER, E.AGENT, E.CONFIG_FILE, E.CLOUD_RESOURCE, E.RESOURCE)
+_ACCESSIBLE = (
+    E.DATA_STORE,
+    E.DATASET,
+    E.CLUSTER,
+    E.CONTAINER,
+    E.MODEL,
+    E.SERVER,
+    E.AGENT,
+    E.CONFIG_FILE,
+    E.CLOUD_RESOURCE,
+    E.RESOURCE,
+    E.API_GATEWAY,
+)
 
 _SPECS: tuple[RelationshipSpec, ...] = (
     _spec(
@@ -355,7 +367,7 @@ _SPECS: tuple[RelationshipSpec, ...] = (
         # it, and a data share exposing data to an external account.
         extra=((E.SERVER, E.AGENT), (E.DATA_STORE, E.ACCOUNT)),
     ),
-    _spec(R.STORES, T.STRUCTURAL, "exposure", (E.CLOUD_RESOURCE, E.DATA_STORE, E.SERVER), (E.DATASET, E.DATA_STORE)),
+    _spec(R.STORES, T.STRUCTURAL, "exposure", (E.CLOUD_RESOURCE, E.RESOURCE, E.DATA_STORE, E.SERVER), (E.DATASET, E.DATA_STORE)),
     _spec(
         R.HAS_PERMISSION,
         T.AUTHORITY,

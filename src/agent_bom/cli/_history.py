@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any, Optional, cast
 import click
 from rich.console import Console
 
+from agent_bom.cli._history_reload import blast_radius_cwe_ids, finding_cwe_index, finding_ownership_index, saved_coverage_receipts
 from agent_bom.compliance_coverage import blast_radius_tag_kwargs
 from agent_bom.output import print_diff
 from agent_bom.output.compliance_narrative import ACCEPTED_FRAMEWORK_SLUGS
@@ -39,6 +40,11 @@ class _NarrativeReport:
     # report them stale rather than inheriting today's date.
     generated_at: "datetime | None" = None
     non_advisory_findings: int = 0
+    # The saved run's coverage receipts, so a partial vulnerability lane in the
+    # artifact keeps its detective controls unpassed on reload.
+    scan_run: Any = None
+    scan_performance_data: Any = None
+    coverage_warnings: Any = None
 
     @property
     def total_agents(self) -> int:
@@ -68,6 +74,11 @@ def _report_from_json(data: dict) -> "_NarrativeReport":
     package_server_links: set[tuple[str, tuple[str, str, str]]] = set()
     agent_server_links: set[tuple[str, str]] = set()
 
+    raw_findings = [row for row in data.get("findings") or [] if isinstance(row, dict)]
+    # Reports saved before package rows carried ``cwe_ids`` still have them on
+    # the unified finding stream.
+    finding_cwes = finding_cwe_index(raw_findings)
+
     for br in data.get("blast_radius", []):
         pkg_spec = str(br.get("package", ""))
         if "@" in pkg_spec:
@@ -76,12 +87,14 @@ def _report_from_json(data: dict) -> "_NarrativeReport":
             pkg_name, pkg_version = pkg_spec, "unknown"
         ecosystem = str(br.get("ecosystem") or "pypi")
 
+        vuln_id = str(br.get("id") or br.get("vulnerability_id") or "UNKNOWN")
         vuln = Vulnerability(
-            id=str(br.get("id") or br.get("vulnerability_id") or "UNKNOWN"),
+            id=vuln_id,
             summary=str(br.get("summary") or "No description available"),
             severity=Severity(str(br.get("severity") or "unknown").lower()),
             fixed_version=br.get("fixed_version"),
             is_kev=bool(br.get("is_kev")),
+            cwe_ids=blast_radius_cwe_ids(br, (vuln_id, pkg_spec), finding_cwes),
         )
         package_key = (ecosystem, pkg_name, pkg_version)
         package = package_index.get(package_key)
@@ -136,22 +149,7 @@ def _report_from_json(data: dict) -> "_NarrativeReport":
 
     # The package block has no owner/SLA; the unified finding stream does. Join
     # on (advisory, package@version) so the headline never invents either.
-    raw_findings = [row for row in data.get("findings") or [] if isinstance(row, dict)]
-    ownership: dict[tuple[str, str], dict[str, object]] = {}
-    for row in raw_findings:
-        if str(row.get("finding_type") or "CVE") != "CVE":
-            continue
-        raw_evidence = row.get("evidence")
-        evidence: dict = raw_evidence if isinstance(raw_evidence, dict) else {}
-        key = (
-            str(row.get("cve_id") or row.get("vulnerability_id") or ""),
-            f"{evidence.get('package_name') or ''}@{evidence.get('package_version') or ''}",
-        )
-        slot = ownership.setdefault(key, {"owner": None, "sla_due_at": None})
-        slot["owner"] = slot["owner"] or row.get("owner")
-        due = row.get("sla_due_at")
-        if isinstance(due, str) and due and (not slot["sla_due_at"] or due < str(slot["sla_due_at"])):
-            slot["sla_due_at"] = due
+    ownership = finding_ownership_index(raw_findings)
     narrative_rows: list[Any] = list(blast_radii)
     for blast_radius in blast_radii:
         slot = ownership.get((blast_radius.vulnerability.id, f"{blast_radius.package.name}@{blast_radius.package.version}"), {})
@@ -165,6 +163,7 @@ def _report_from_json(data: dict) -> "_NarrativeReport":
 
     summary = data.get("summary") or {}
     return _NarrativeReport(
+        **saved_coverage_receipts(data),
         agents=[agents_by_name[name] for name in sorted(agents_by_name)],
         blast_radii=narrative_rows,
         summary_total_agents=int(summary.get("total_agents") or 0),

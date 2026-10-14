@@ -63,7 +63,15 @@ describe("finding-issue-type", () => {
   });
 
   it("keeps an unknown signal visible as unclassified", () => {
-    expect(classifyIssueTypeFromSignals({ id: "custom-finding", finding_type: "SAST" })).toBe("unclassified");
+    expect(classifyIssueTypeFromSignals({ id: "custom-finding", finding_type: "VENDOR_SPECIFIC" })).toBe("unclassified");
+  });
+
+  it("classifies every scanner finding type like the backend", () => {
+    expect(classifyIssueTypeFromSignals({ id: "f-1", finding_type: "SAST" })).toBe("vulnerability");
+    expect(classifyIssueTypeFromSignals({ id: "f-2", finding_type: "MALICIOUS_MODEL" })).toBe("vulnerability");
+    expect(classifyIssueTypeFromSignals({ id: "f-3", finding_type: "SKILL_RISK" })).toBe("misconfiguration");
+    expect(classifyIssueTypeFromSignals({ id: "f-4", finding_type: "SENSITIVE_DATA" })).toBe("pii");
+    expect(classifyIssueTypeFromSignals({ id: "f-5", finding_type: "LICENSE" })).toBe("misconfiguration");
   });
 
   it("builds a severity × issue-type matrix", () => {

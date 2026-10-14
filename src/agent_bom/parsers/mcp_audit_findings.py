@@ -22,11 +22,14 @@ def enforcement_dict_to_finding(raw: dict) -> "Finding":
         finding_type = FindingType.PROMPT_SECURITY
     surface_name = sanitize_text(raw.get("surface_name") or tool_name or server_name, max_len=200)
     surface_type = raw.get("surface_type") or ("mcp_tool" if tool_name else "mcp_server")
-    if surface_type not in {"mcp_tool", "mcp_resource", "mcp_prompt", "mcp_server"}:
+    # A row naming no tool or surface (server-level capability combos) is about the server.
+    if surface_type not in {"mcp_tool", "mcp_resource", "mcp_prompt", "mcp_server"} or not (raw.get("surface_name") or tool_name):
         surface_type = "mcp_server"
     identity = sanitize_text(raw.get("server_identity") or server_name, max_len=500)
     raw_evidence = raw.get("evidence")
-    extra_evidence = raw_evidence if isinstance(raw_evidence, dict) else {}
+    extra_evidence = dict(raw_evidence) if isinstance(raw_evidence, dict) else {}
+    # Without a source rule id, the detector's reason is what tells two rows on one surface apart.
+    extra_evidence.setdefault("rule_id", sanitize_text(f"{category}: {reason}", max_len=300))
 
     return Finding(
         finding_type=finding_type,
