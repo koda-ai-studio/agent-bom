@@ -108,26 +108,30 @@ release predates them. In **Investigation → Explore connections**, select a
 snapshot and search for a package or agent. Start with its bounded neighborhood,
 then use **Show more connections** or **Expand** to inspect related entities.
 
-**Repository — connect source, configuration and dependencies.** The repository
-view shows source imports, deployment configuration, a CI job, the workload
-container and a package advisory. The fixture models configured relationships;
-it does not establish that the CI job ran or that a workload was deployed.
+**Repository — connect source, configuration and dependencies.** A sample
+service links its source imports, deployment configuration and CI job to the
+published container, two vulnerable packages and a CI misconfiguration. The
+fixture models configured relationships; it does not establish that the CI job
+ran or that a workload was deployed.
 
-<picture><source media="(prefers-color-scheme: light)" srcset="images/graph-repository-light-live.png"><img src="images/graph-repository-dark-live.png" alt="Repository branches into source dependencies, deployment configuration and a CI job, with the package advisory visible" width="1440"></picture>
+<picture><source media="(prefers-color-scheme: light)" srcset="images/graph-repository-light-live.png"><img src="images/graph-repository-dark-live.png" alt="Sample repository linking source, deployment configuration and a CI job to a container, vulnerable npm and PyPI packages, their advisories and a CI misconfiguration" width="1440"></picture>
 
-**Environment — see the agent alongside its infrastructure.** Follow the
-production environment into the workload cluster, agent, model, MCP server,
-exposed tool and dependency. Entity types, relationship labels and arrows use
-the same language throughout the workspace.
+**Environment — see agents alongside their infrastructure.** A sample
+production AI environment holds two agents and an internet-facing model-serving
+workload. Follow each to its MCP server, vulnerable package, KEV-listed
+advisory, exposed API key and the customer data store that key can reach.
+Badges show the provider, environment tier and package ecosystem; rings show
+the worst linked finding.
 
-<picture><source media="(prefers-color-scheme: light)" srcset="images/graph-environment-light-live.png"><img src="images/graph-environment-dark-live.png" alt="Environment connects a workload cluster and AI agent with its model, MCP server, tool and dependency" width="1440"></picture>
+<picture><source media="(prefers-color-scheme: light)" srcset="images/graph-environment-light-live.png"><img src="images/graph-environment-dark-live.png" alt="Sample production AI environment where two agents and a model-serving workload reach vulnerable packages, a KEV-listed advisory, an exposed API key and a customer data store" width="1440"></picture>
 
-**Cloud estate — inspect accounts, workloads, identities and data.** Follow the
-account's cluster and private API endpoint, then inspect a role's configured
-storage permission and the related finding. Configuration does not prove
-reachability or effective access.
+**Cloud estate — inspect accounts, workloads, identities and data.** A sample
+account exposes a workload through a public API gateway; the workload carries a
+critical advisory and authenticates as a role with permission to a PII bucket.
+Misconfigurations sit beside the assets they affect. Configuration does not
+prove reachability or effective access.
 
-<picture><source media="(prefers-color-scheme: light)" srcset="images/graph-cloud-light-live.png"><img src="images/graph-cloud-dark-live.png" alt="Cloud account branches into cluster workloads, a private endpoint, an identity and storage with a review finding" width="1440"></picture>
+<picture><source media="(prefers-color-scheme: light)" srcset="images/graph-cloud-light-live.png"><img src="images/graph-cloud-dark-live.png" alt="Sample cloud account where a public API gateway exposes a workload with a critical advisory that authenticates as a role permitted to read a PII bucket" width="1440"></picture>
 
 These three views use explicitly labeled synthetic UI fixtures. Each is captured
 through its actual **View & layers** preset; none is live-cloud evidence.
@@ -139,11 +143,12 @@ snapshot. This capture uses labeled synthetic UI fixtures.
 <picture><source media="(prefers-color-scheme: light)" srcset="images/context-map-light-live.png"><img src="images/context-map-live.png" alt="Selected Next.js package with its MCP server, vulnerability and scoped findings action" width="1440"></picture>
 
 **Open the relationship evidence.** Select an arrow to inspect its direction,
-snapshot, first/last seen timestamps and source receipt. The view below comes
-from the reference lab's recorded local gateway call, with modeled infrastructure
-clearly labeled. It does not establish a cloud execution or downstream effect.
+snapshot, first/last seen timestamps and source receipt. In the reference lab
+below, a repository pin, an image SBOM and a modeled Kubernetes workload resolve
+to one `pillow@9.0.0`; its advisory link came from the bundled scanner. It does
+not establish a cloud execution or downstream effect.
 
-<picture><source media="(prefers-color-scheme: light)" srcset="images/graph-relationship-light-live.png"><img src="images/graph-relationship-dark-live.png" alt="Local gateway invocation and its recorded runtime evidence in the relationship inspector" width="1440"></picture>
+<picture><source media="(prefers-color-scheme: light)" srcset="images/graph-relationship-light-live.png"><img src="images/graph-relationship-dark-live.png" alt="Repository pin, image SBOM and Kubernetes workload resolving to one pillow package linked to KEV-listed CVE-2023-4863, with the advisory receipt open" width="1440"></picture>
 
 **Follow the finding into action.** Switch to **Find a path** to investigate
 recorded finding paths, then use the scoped findings and remediation links.

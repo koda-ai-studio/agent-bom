@@ -394,6 +394,8 @@ export function SecurityGraphInvestigation({
       containerWidth: canvasWidth,
       maxCanvasHeight: embedded ? 600 : 680,
     });
+    // Narrow canvases keep the step-through focused view on the default layout.
+    if (plan.columns < 2) return null;
     const nodes = applySerpentinePath(layout.nodes, hops, plan.columns);
     return nodes === layout.nodes ? null : { plan, nodes };
   }, [attackPath, canvasWidth, embedded, focusMode, layout.nodes]);
@@ -651,7 +653,7 @@ export function SecurityGraphInvestigation({
         ref={canvasRef}
         id="security-graph-investigation-canvas"
         className={`relative bg-surface-muted ${embedded ? "h-[clamp(24rem,42vh,34rem)]" : "h-[clamp(32rem,56vh,42rem)]"}`}
-        style={pathLayout && pathLayout.plan.columns > 1 ? { height: pathLayout.plan.canvasHeight } : undefined}
+        style={pathLayout ? { height: pathLayout.plan.canvasHeight } : undefined}
         data-testid="security-graph-investigation"
         data-path-layout={pathLayout ? `serpentine-${pathLayout.plan.columns}x${pathLayout.plan.rows}` : undefined}
       >

@@ -31,6 +31,8 @@ export interface SerpentinePlan {
 }
 
 const NARROW_CANVAS_PX = 640;
+/** Room for the canvas controls and edge captions outside the fitted card boxes. */
+const CANVAS_BREATHING_PX = 56;
 
 export function planSerpentinePath(
   count: number,
@@ -69,7 +71,7 @@ export function planSerpentinePath(
   }
   const canvasHeight = Math.min(
     maxCanvasHeight,
-    Math.max(minCanvasHeight, Math.ceil(best.height * best.zoom * frame)),
+    Math.max(minCanvasHeight, Math.ceil(best.height * best.zoom * frame) + CANVAS_BREATHING_PX),
   );
   return { ...best, canvasHeight };
 }
