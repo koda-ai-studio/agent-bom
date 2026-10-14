@@ -1875,7 +1875,9 @@ def test_zero_finding_partial_secret_scan_is_preserved_and_fails_closed(monkeypa
     assert payload["ai_inventory"]["secrets"]["warnings"] == ["Stopped at 2 files"]
     assert "secret_scan" in payload["scan_sources"]
     assert payload["scan_run"]["outcome"] == "partial"
-    assert payload["scan_run"]["issues"] == [
+    # --no-scan also records a non-coverage vulnerability_scan_skipped receipt.
+    assert "vulnerability_scan_skipped" in {issue["code"] for issue in payload["scan_run"]["issues"]}
+    assert [issue for issue in payload["scan_run"]["issues"] if issue["affects_coverage"]] == [
         {
             "code": "scanner_coverage_gap",
             "stage": "scanning",
@@ -1941,14 +1943,15 @@ def test_model_scan_refusal_is_preserved_and_fails_closed(tmp_path):
     assert result.exit_code != 0, result.output
     payload = json.loads(output.read_text(encoding="utf-8"))
     assert payload["scan_run"]["outcome"] == "partial"
-    issues = payload["scan_run"]["issues"]
+    # Coverage issues only; --no-scan also records a non-coverage skip receipt.
+    issues = [issue for issue in payload["scan_run"]["issues"] if issue["affects_coverage"]]
     assert len(issues) == 2
     assert {issue["source"] for issue in issues} == {"model-scan"}
     assert {issue["code"] for issue in issues} == {"scanner_coverage_gap"}
     assert all(issue["affects_coverage"] is True for issue in issues)
     assert any(issue["message"].startswith("Model scan:") for issue in issues)
     assert any(issue["message"].startswith("Model manifest scan:") for issue in issues)
-    assert "escapes safe scan roots" in payload["scan_run"]["issues"][0]["message"]
+    assert "escapes safe scan roots" in issues[0]["message"]
 
 
 @pytest.mark.parametrize(

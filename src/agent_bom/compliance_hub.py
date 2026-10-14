@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from agent_bom.compliance_coverage import normalize_framework_slug
+from agent_bom.compliance_coverage import TAG_MAPPED_FRAMEWORKS, normalize_framework_slug
 
 # The framework vocabulary + selection engine were consolidated into
 # ``framework_mapping``. Re-exported here so existing callers importing these
@@ -74,38 +74,23 @@ __all__ = [
 ]
 
 
+def _tag_evidenced_frameworks(finding: "Finding") -> list[str]:
+    """Framework slugs on which ``finding`` carries at least one control tag."""
+    return [metadata.slug for metadata in TAG_MAPPED_FRAMEWORKS if getattr(finding, metadata.tag_field, None)]
+
+
 def apply_hub_classification(finding: "Finding", *, include_gov: bool = False) -> "Finding":
-    """Populate `finding.applicable_frameworks` using the hub selection table.
+    """Populate a finding's control tags and its ``applicable_frameworks``.
 
-    Idempotent and additive: existing entries are preserved, the hub-derived
-    slugs are merged in (deduped, canonical order). Used by every finding
-    generator and ingestion adapter so a finding's framework classification
-    is consistent regardless of which entry point produced it.
+    Applicability is the union of any existing entries, the hub selection
+    table for the finding's source/asset/finding type, and every framework on
+    which the finding carries a control tag. Hub posture counts by
+    ``applicable_frameworks`` and ``/v1/compliance`` counts by control tags, so
+    a tagged framework missing from applicability would count the finding on
+    one surface and not the other.
 
-    Returns the same finding for fluent chaining.
+    Idempotent and additive. Returns the same finding for fluent chaining.
     """
-    selected = select_frameworks(
-        finding.source,
-        asset_type=finding.asset.asset_type,
-        finding_type=finding.finding_type,
-        include_gov=include_gov,
-    )
-    seen: set[str] = set()
-    normalized_frameworks: list[str] = []
-    for slug in finding.applicable_frameworks:
-        canonical = normalize_framework_slug(str(slug))
-        if canonical not in seen:
-            seen.add(canonical)
-            normalized_frameworks.append(canonical)
-    finding.applicable_frameworks = normalized_frameworks
-    for slug in selected:
-        if slug not in seen:
-            finding.applicable_frameworks.append(slug)
-            seen.add(slug)
-    # Re-order to canonical so consumers can hash the list reliably.
-    finding.applicable_frameworks = [slug for slug in ALL_FRAMEWORKS if slug in seen] + [
-        slug for slug in finding.applicable_frameworks if slug not in ALL_FRAMEWORKS
-    ]
     location = finding.asset.location or (finding.evidence.get("file") if isinstance(finding.evidence, dict) else None)
     rule_id = finding.evidence.get("rule_id") if isinstance(finding.evidence, dict) else None
     shape_tags = controls_for_finding_shape(
@@ -119,4 +104,16 @@ def apply_hub_classification(finding: "Finding", *, include_gov: bool = False) -
     for tag_field, controls in shape_tags.items():
         existing = list(getattr(finding, tag_field))
         setattr(finding, tag_field, existing + [control for control in controls if control not in existing])
+
+    selected = [normalize_framework_slug(str(slug)) for slug in finding.applicable_frameworks]
+    selected += select_frameworks(
+        finding.source,
+        asset_type=finding.asset.asset_type,
+        finding_type=finding.finding_type,
+        include_gov=include_gov,
+    )
+    selected += _tag_evidenced_frameworks(finding)
+    seen = set(selected)
+    # Canonical order so consumers can hash the list reliably.
+    finding.applicable_frameworks = [slug for slug in ALL_FRAMEWORKS if slug in seen] + sorted(seen - set(ALL_FRAMEWORKS))
     return finding

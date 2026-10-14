@@ -1,10 +1,10 @@
 {
  "demo": {
-  "html": "7c788402ed0d538a49ce8190818bc501fe10aa08ae4fcc2e63af47654cc1dde8",
+  "html": "f3a54f79d7b0a14146043061c5672bb4120d1f5048e15248afe1e3a6305a577e",
   "html_offline": "2da7ff6e10e3406d056325d28d982b8898bf8184d9f34888315079f83e380281",
-  "sarif_exclude_unfixable": "ddee1538cc6b4149fdd3950d5e801d0b3a3dbe880b410c857a51153439798923",
-  "sarif_file": "0bfe7c9dbceb836ac575cdeafb0fb58649301e9e2bd5cd170019ab544e320ae2",
-  "sarif_stdout": "ddee1538cc6b4149fdd3950d5e801d0b3a3dbe880b410c857a51153439798923"
+  "sarif_exclude_unfixable": "14f1ba71f4f83e376052263b24dcbb687bf67acee2fc2ae64369ceef3ebf99a5",
+  "sarif_file": "bf0d6810c355303929988a48fbbfebcc87d43044c24002bb2d238222e6a89ed9",
+  "sarif_stdout": "14f1ba71f4f83e376052263b24dcbb687bf67acee2fc2ae64369ceef3ebf99a5"
  },
  "empty": {
   "html": "5ebe2ead369836345dc0e8884ccbb407fb901520d2f03c853aef17e31732a01a",

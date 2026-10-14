@@ -884,9 +884,9 @@ def _row_matches_framework(row: Mapping[str, Any], filters: Mapping[str, str]) -
     With a ``control`` code the match is exact containment in the framework's
     control codes, mirroring the compliance per-control count (``code in tags``)
     so the drilled queue reconciles with the badge the user clicked. Without a
-    control it is a framework-level match: any control tagged for the framework,
-    or — for bulk-ingested rows whose per-framework tags are redacted at rest —
-    the framework slug present in ``applicable_frameworks``.
+    control it is a framework-level match: any tagged code in the framework's
+    scoring catalog (what ``/v1/compliance`` counts), or — bulk-ingested rows
+    only — the slug in ``applicable_frameworks``.
     """
     tag_field = filters.get("framework_tag_field")
     if tag_field is None:
@@ -900,12 +900,12 @@ def _row_matches_framework(row: Mapping[str, Any], filters: Mapping[str, str]) -
 
     if control:
         return control in codes
-    if codes:
+    from agent_bom.compliance_coverage import normalize_framework_slug, scored_control_codes
+
+    if scored_control_codes(tag_field, codes):
         return True
     slug = filters.get("framework_slug")
-    if slug:
-        from agent_bom.compliance_coverage import normalize_framework_slug
-
+    if slug and row.get("origin") == "bulk_ingest":
         wanted = normalize_framework_slug(slug)
         applicable = row.get("applicable_frameworks")
         if isinstance(applicable, (list, tuple, set)):

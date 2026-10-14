@@ -491,6 +491,7 @@ def _nist_report(tmp_path):
                         "affected_servers": ["filesystem"],
                         "owasp_tags": [],
                         "nist_800_53_tags": ["SI-10"],
+                        "cwe_ids": ["CWE-20"],
                     }
                 ],
             }
