@@ -16,9 +16,9 @@ import pytest
 from agent_bom.canonical_ids import snowflake_cortex_agent_node_id, snowflake_cortex_tool_node_id
 from agent_bom.cloud.snowflake_discovery.cortex_agents import parse_agent_spec
 from agent_bom.cloud.snowflake_discovery.cortex_telemetry import (
+    CALLER_SCOPED_FIELDS,
     FIELD_MAP,
     NORMALIZED_FIELDS,
-    PENDING_FIELDS,
     UNSUPPLIED_FIELDS,
     fetch_cortex_agent_spans,
     normalize_cortex_span,
@@ -101,7 +101,7 @@ def test_documented_field_maps_to_canonical_field(field: str, expected: object) 
 def test_field_coverage_matches_the_documented_mapping() -> None:
     event = _normalize()
     supplied = {field for field, value in event.items() if value not in (None, [], "")}
-    assert supplied == set(NORMALIZED_FIELDS) - set(UNSUPPLIED_FIELDS) - set(PENDING_FIELDS)
+    assert supplied == set(NORMALIZED_FIELDS) - set(UNSUPPLIED_FIELDS) - set(CALLER_SCOPED_FIELDS)
     mapped = {target for _source, targets, _status in FIELD_MAP for target in targets.replace(" ", "").split("/")}
     assert supplied - mapped == {"tenant_id", "source", "signals", "match_method", "match_node_id"}
 
@@ -177,3 +177,18 @@ def test_agent_spec_declares_tools_and_resources() -> None:
         {"name": "W", "type": "web_search", "resources": []},
     ]
     assert parse_agent_spec(None) is None and parse_agent_spec("not json") is None
+
+
+def test_principal_uses_the_tenant_keyed_digest_only_when_the_caller_supplies_it() -> None:
+    from functools import partial
+
+    from agent_bom.runtime.normalized_trace import principal_digest
+
+    row = {key: json.dumps(value) if isinstance(value, dict) else value for key, value in ROW.items()}
+    kwargs = {"account": ACCOUNT, "database": "DB", "schema": "AGENTS", "agent_name": "HELPDESK", "tenant_id": "t1"}
+    assert normalize_cortex_span(row, **kwargs)["principal_hash"] is None
+    digest = partial(principal_digest, "t1", deployment_key=b"k" * 32)
+    keyed = normalize_cortex_span(row, principal=digest, **kwargs)["principal_hash"]
+    other_tenant = normalize_cortex_span(row, principal=partial(principal_digest, "t2", deployment_key=b"k" * 32), **kwargs)
+    assert keyed.startswith("h1:") and keyed != other_tenant["principal_hash"]
+    assert "FAKE_USER" not in keyed

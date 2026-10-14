@@ -16,6 +16,7 @@ import re
 from typing import Any
 
 from agent_bom.canonical_ids import snowflake_cortex_agent_node_id, snowflake_cortex_tool_node_id, snowflake_stored_fqn
+from agent_bom.runtime.normalized_trace import PrincipalDigest
 
 from ..snowflake_common import _CONTROL_CHAR_RE, _parse_json_object
 from ._base import _for_each_row, _warn_with
@@ -82,7 +83,8 @@ FIELD_MAP: tuple[tuple[str, str, str], ...] = (
 # credits live in ACCOUNT_USAGE.CORTEX_AGENT_USAGE_HISTORY.TOKEN_CREDITS.
 UNSUPPLIED_FIELDS = ("model_provider", "mcp_server_ref", "credential_ref", "cost_usd")
 # Sourced from the span but left empty until the shared tenant-keyed digest is wired in.
-PENDING_FIELDS = ("principal_hash",)
+# Supplied only when the caller passes the tenant-keyed digest.
+CALLER_SCOPED_FIELDS = ("principal_hash",)
 
 _PLANNING_MODEL = "snow.ai.observability.agent.planning.model"
 _TOOL_NAME_RE = re.compile(r"(^|[._])tool[._]name$", re.IGNORECASE)
@@ -151,16 +153,6 @@ def _content_digest(attrs: dict[str, Any]) -> str | None:
     return _sha256(json.dumps([content_input, content_output], sort_keys=True, default=str))
 
 
-def _principal_digest(tenant_id: str | None, user_id: str) -> str | None:
-    """Tenant-keyed principal digest; empty until the shared keyed digest is wired in.
-
-    A plain hash of a user name is dictionary-reversible and joins across
-    tenants, so no local fallback is computed.
-    """
-    del tenant_id, user_id
-    return None
-
-
 def normalize_cortex_span(
     row: dict[str, Any],
     *,
@@ -170,8 +162,13 @@ def normalize_cortex_span(
     agent_name: str,
     declared_tools: set[str] | frozenset[str] = frozenset(),
     tenant_id: str | None = None,
+    principal: PrincipalDigest | None = None,
 ) -> dict[str, Any]:
-    """One ``GET_AI_OBSERVABILITY_EVENTS`` span row -> normalized trace event (no raw content)."""
+    """One ``GET_AI_OBSERVABILITY_EVENTS`` span row -> normalized trace event (no raw content).
+
+    ``principal`` is the tenant-keyed digest from the caller that owns the tenant scope; without it the
+    user is not recorded.
+    """
     trace = _parse_json_object(row.get("trace"))
     record = _parse_json_object(row.get("record"))
     attrs = _parse_json_object(row.get("record_attributes"))
@@ -220,7 +217,7 @@ def normalize_cortex_span(
         "tool_name": tool_name or None,
         "mcp_server_ref": None,
         "resource_refs": sorted({f"warehouse:{warehouse}"} if warehouse else set()),
-        "principal_hash": _principal_digest(tenant_id, user) if user else None,
+        "principal_hash": principal(user) if user and principal else None,
         "role_name": _text(resource.get("snow.session.role.primary.name")) or None,
         "credential_ref": None,
         "input_tokens": _int_or_none(_first(attrs, _INPUT_TOKENS_RE)),
