@@ -187,7 +187,7 @@ async def test_persisted_authority_reaches_mcp_and_python_client(tmp_path, nativ
     db = tmp_path / "transport.db"
     SQLiteGraphStore(db).save_graph(graph)
     store = SQLiteGraphStore(db)
-    mcp = json.loads(await exposure_paths_impl(scan_id=graph.scan_id, _get_graph_store=lambda: store))
+    mcp = json.loads(await exposure_paths_impl(scan_id=graph.scan_id, view="full", _get_graph_store=lambda: store))
     restored = store.load_graph(scan_id=graph.scan_id)
     api = _serialize_both(restored.attack_paths[0], nodes=list(restored.nodes.values()), edges=restored.edges)[1]
     # The SDK must retain the server's projection, including qualifications.
