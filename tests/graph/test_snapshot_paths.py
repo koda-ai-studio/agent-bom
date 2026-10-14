@@ -294,7 +294,8 @@ def test_stored_paths_equal_derivation_when_fusion_rows_need_read_adjustment(sto
     assert _dicts(stored.paths) == _dicts(derived)
     capped = next(path for path in stored.paths if path.target == "vuln:CVE-1" and path.summary.endswith("fused"))
     assert capped.composite_risk == 39.0
-    assert store.load_graph(tenant_id="tenant-a", scan_id="fusion").attack_paths[1].composite_risk == 90.0
+    persisted = store.load_graph(tenant_id="tenant-a", scan_id="fusion").attack_paths
+    assert next(path for path in persisted if path.summary == "fused").composite_risk == 90.0
 
 
 @pytest.mark.parametrize("store_backed", ["on", "off"])
@@ -362,8 +363,10 @@ def test_served_paths_are_unique_and_never_degenerate(estate: str, tmp_path: Pat
     assert len(identities) == len(set(identities)), "served paths repeat a hop/edge chain"
     hop_sets = [tuple(path.hops) for path in paths]
     assert len(hop_sets) == len(set(hop_sets)) or estate == "demo"
-    degenerate = [path.hops for path in paths if len(path.hops) < 2 or path.source == path.target]
+    degenerate = [path.hops for path in paths if not path.hops or (len(path.hops) > 1 and path.source == path.target)]
     assert degenerate == []
+    # Standing principal findings stay first-class single-hop entries.
+    assert all(len(path.hops) > 1 or path.source == path.target == path.hops[0] for path in paths)
 
 
 def test_per_hop_signal_cache_scores_paths_exactly_like_whole_path_scoring() -> None:

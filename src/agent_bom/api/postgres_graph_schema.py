@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from .postgres_graph_path_identity import ADD_IDENTITY_COLUMNS
+
 _GRAPH_TABLES_DDL: tuple[str, ...] = (
     """
                 CREATE TABLE IF NOT EXISTS graph_nodes (
@@ -146,7 +148,9 @@ _GRAPH_TABLES_MIGRATION_DDL: tuple[str, ...] = (
                     scan_id TEXT NOT NULL,
                     tenant_id TEXT NOT NULL DEFAULT 'default',
                     computed_at TEXT NOT NULL,
-                    PRIMARY KEY (source_node, target_node, scan_id, tenant_id)
+                    finding_ids TEXT DEFAULT '[]',
+                    path_key TEXT NOT NULL,
+                    PRIMARY KEY (tenant_id, scan_id, path_key)
                 )
                 """,
     "CREATE INDEX IF NOT EXISTS idx_pg_attack_paths_scan ON attack_paths(tenant_id, scan_id)",
@@ -162,6 +166,7 @@ _GRAPH_TABLES_MIGRATION_DDL: tuple[str, ...] = (
     "ALTER TABLE attack_paths ADD COLUMN IF NOT EXISTS reachability_basis TEXT DEFAULT '[]'",
     "ALTER TABLE attack_paths ADD COLUMN IF NOT EXISTS hop_evidence TEXT DEFAULT '[]'",
     "ALTER TABLE attack_paths ADD COLUMN IF NOT EXISTS analysis TEXT DEFAULT '{}'",
+    *ADD_IDENTITY_COLUMNS,
     "ALTER TABLE graph_snapshots ADD COLUMN IF NOT EXISTS analysis_status TEXT NOT NULL DEFAULT '{}'",
     "ALTER TABLE graph_edges ADD COLUMN IF NOT EXISTS valid_from TEXT DEFAULT ''",
     "ALTER TABLE graph_edges ADD COLUMN IF NOT EXISTS valid_to TEXT DEFAULT NULL",

@@ -29,7 +29,7 @@ from agent_bom.db.graph_revision import ensure_postgres_read_revision, revision_
 from agent_bom.db.graph_store import (
     normalize_graph_tenant_id,
 )
-from agent_bom.graph import technique_mappings_from_json
+from agent_bom.db.graph_store_schema import ATTACK_PATH_ORDER, ATTACK_PATH_SELECT
 from agent_bom.graph.analysis import GraphAnalysisStatus, analysis_status_map_from_dict, analysis_status_map_to_dict
 from agent_bom.graph.completeness import (
     COMPLIANCE_NODE_BUDGET,
@@ -50,7 +50,8 @@ from .postgres_common import (
 from .postgres_graph_correlation import PostgresGraphCorrelationMixin
 from .postgres_graph_history import PostgresGraphHistoryMixin
 from .postgres_graph_inventory import PostgresGraphInventoryMixin
-from .postgres_graph_paths import PostgresGraphPathsMixin
+from .postgres_graph_path_identity import backfill_attack_path_keys, ensure_attack_path_identity_key
+from .postgres_graph_paths import PostgresGraphPathsMixin, attack_path_from_pg_row
 from .postgres_graph_schema import _GRAPH_TABLES_DDL, _GRAPH_TABLES_MIGRATION_DDL
 from .postgres_graph_support import (
     _ALLOWED_ENTITY_TYPES,
@@ -182,12 +183,14 @@ class PostgresGraphStore(
             # the scoped bypass.
             conn.commit()
             with bypass_tenant_rls(audit=False), _maintenance_connection(self._maintenance_pool) as maintenance_conn:
+                backfill_attack_path_keys(maintenance_conn)
                 _backfill_empty_tenant_ids(maintenance_conn)
                 maintenance_conn.execute(
                     "UPDATE graph_snapshots SET snapshot_generation = replace(gen_random_uuid()::text, '-', '') "
                     "WHERE snapshot_generation = ''"
                 )
                 maintenance_conn.commit()
+            ensure_attack_path_identity_key(conn)
             _apply_tenant_session(conn)
             _ensure_tenant_rls(conn, "graph_nodes", "tenant_id")
             _ensure_tenant_rls(conn, "graph_edges", "tenant_id")
@@ -288,6 +291,7 @@ class PostgresGraphStore(
             _execute_many_batched(conn, _INTERACTION_RISK_UPSERT_SQL, risk_rows, batch_size=batch_size)
             edge_count = edge_counter[0]
 
+            tokens = revision_tokens(write_generation)
             conn.execute(
                 _SNAPSHOT_UPSERT_SQL,
                 (
@@ -302,10 +306,10 @@ class PostgresGraphStore(
                     snapshot_kind,
                     correlation_id or None,
                     evidence_manifest_sha256,
-                    *revision_tokens(write_generation),
+                    *tokens,
                 ),
             )
-            _write_snapshot_paths(conn, snapshot_paths, scan=scan, tenant=tenant, now=now, batch_size=batch_size)
+            _write_snapshot_paths(conn, snapshot_paths, scan=scan, tenant=tenant, generation=tokens[0], now=now, batch_size=batch_size)
             if correlation_result_manifest is not None:
                 _complete_correlation_in_write(
                     conn,
@@ -352,7 +356,6 @@ class PostgresGraphStore(
         tenant_id = normalize_graph_tenant_id(tenant_id)
         _assert_allowed_entity_types(entity_types)
         from agent_bom.graph import (
-            AttackPath,
             InteractionRisk,
             RelationshipType,
             UnifiedEdge,
@@ -465,40 +468,14 @@ class PostgresGraphStore(
                 )
 
             if not relationship_types:
-                for row in conn.execute(
-                    """
-                    SELECT source_node, target_node, path_nodes, path_edges, composite_risk,
-                           summary, credential_exposure, tool_exposure, vuln_ids,
-                           reachability, reachability_basis, technique_mappings,
-                           hop_evidence, analysis
-                    FROM attack_paths
-                    WHERE tenant_id = %s AND scan_id = %s
-                    ORDER BY source_node, target_node, composite_risk DESC, path_nodes
-                    """,
-                    (tenant_id, effective_scan_id),
-                ).fetchall():
-                    graph.attack_paths.append(
-                        AttackPath(
-                            source=row[0],
-                            target=row[1],
-                            hops=_decode_json_array(row[2], field="attack path nodes"),
-                            edges=_decode_json_array(row[3], field="attack path edges"),
-                            composite_risk=row[4],
-                            summary=row[5] or "",
-                            credential_exposure=_decode_json_array(row[6], field="attack path credential exposure"),
-                            tool_exposure=_decode_json_array(row[7], field="attack path tool exposure"),
-                            vuln_ids=_decode_json_array(row[8], field="attack path vulnerability IDs"),
-                            reachability=row[9] or "unknown",
-                            reachability_basis=_decode_json_array(row[10], field="attack path reachability basis"),
-                            hop_evidence=[
-                                dict(item)
-                                for item in _decode_json_array(row[12], field="attack path hop evidence")
-                                if isinstance(item, dict)
-                            ],
-                            analysis=_decode_json_object(row[13], field="attack path analysis"),
-                            technique_mappings=technique_mappings_from_json(row[11]),
-                        )
-                    )
+                graph.attack_paths.extend(
+                    attack_path_from_pg_row(row)
+                    for row in conn.execute(
+                        f"SELECT {ATTACK_PATH_SELECT} FROM attack_paths WHERE tenant_id = %s AND scan_id = %s "  # nosec B608
+                        f"ORDER BY {ATTACK_PATH_ORDER}",
+                        (tenant_id, effective_scan_id),
+                    ).fetchall()
+                )
 
                 for row in conn.execute(
                     """
@@ -847,7 +824,7 @@ class PostgresGraphStore(
                    reachability, reachability_basis, technique_mappings, hop_evidence, analysis
             FROM attack_paths
             WHERE tenant_id = %s AND scan_id = %s
-            ORDER BY source_node, target_node
+            ORDER BY source_node, target_node, path_key
             """,
             (tenant_id, scan_id),
         ).fetchall():

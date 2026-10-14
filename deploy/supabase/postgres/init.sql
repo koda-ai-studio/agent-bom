@@ -576,7 +576,9 @@ CREATE TABLE IF NOT EXISTS attack_paths (
     scan_id             TEXT NOT NULL,
     tenant_id           TEXT NOT NULL DEFAULT 'default',
     computed_at         TEXT NOT NULL,
-    PRIMARY KEY (source_node, target_node, scan_id, tenant_id)
+    finding_ids         TEXT DEFAULT '[]',
+    path_key            TEXT NOT NULL,
+    PRIMARY KEY (tenant_id, scan_id, path_key)
 );
 
 CREATE INDEX IF NOT EXISTS idx_pg_attack_paths_scan ON attack_paths(tenant_id, scan_id);

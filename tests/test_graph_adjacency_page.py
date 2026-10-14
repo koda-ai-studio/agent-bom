@@ -355,7 +355,12 @@ def test_generation_backfill_under_non_superuser_migration_owner(monkeypatch, up
                 assert all(len(row[0]) == 32 for row in revisions)
                 assert revisions[0] != revisions[1]
                 assert revisions != generations
-                assert conn.execute("SELECT version FROM control_plane_schema_versions WHERE component='graph'").fetchone()[0] == 6
+                # Alembic head carries the graph marker forward; the additive replay stops at v6.
+                expected_version = 8 if upgrade_path == "migration" else 6
+                assert (
+                    conn.execute("SELECT version FROM control_plane_schema_versions WHERE component='graph'").fetchone()[0]
+                    == expected_version
+                )
                 conn.commit()  # Release read locks before replaying DDL in another connection.
                 # Replaying bootstrap must preserve both ownership and read tokens.
                 with psycopg.connect(owner_url) as replay:

@@ -45,6 +45,7 @@ from agent_bom.db.graph_store_schema import _GRAPH_EVIDENCE_INCLUDED_TABLES as _
 from agent_bom.db.graph_store_schema import _GRAPH_PURGEABLE_TABLES as _GRAPH_PURGEABLE_TABLES
 from agent_bom.db.graph_store_schema import _GRAPH_SCHEMA_VERSION as _GRAPH_SCHEMA_VERSION
 from agent_bom.db.graph_store_schema import _GRAPH_TENANT_TABLE_KEYS as _GRAPH_TENANT_TABLE_KEYS
+from agent_bom.db.graph_store_schema import ATTACK_PATH_ORDER, ATTACK_PATH_SELECT, attack_path_from_row, upgrade_attack_path_identity
 from agent_bom.db.graph_store_schema import DEFAULT_GRAPH_TENANT_ID as DEFAULT_GRAPH_TENANT_ID
 from agent_bom.db.graph_store_schema import GRAPH_SNAPSHOT_KINDS as GRAPH_SNAPSHOT_KINDS
 from agent_bom.db.graph_store_schema import _batched_rows as _batched_rows
@@ -91,7 +92,6 @@ from agent_bom.graph import (
     UnifiedGraph,
     UnifiedNode,
     _now_iso,
-    technique_mappings_from_json,
 )
 from agent_bom.graph.analysis import (
     GraphAnalysisStatus,
@@ -196,6 +196,7 @@ def _init_db(conn: sqlite3.Connection, *, backfill_legacy_tenants: bool = True) 
         conn.execute("ALTER TABLE attack_paths ADD COLUMN hop_evidence TEXT DEFAULT '[]'")
     if "analysis" not in existing_columns:
         conn.execute("ALTER TABLE attack_paths ADD COLUMN analysis TEXT DEFAULT '{}'")
+    upgrade_attack_path_identity(conn)
     edge_columns = {row["name"] for row in conn.execute("PRAGMA table_info(graph_edges)").fetchall()}
     # v3 adds replay metadata. Empty valid_from is interpreted as first_seen for
     # stores created before this migration, so old snapshots remain queryable.
@@ -627,9 +628,9 @@ def load_graph(
         query += " ORDER BY risk_score DESC, id LIMIT ?"
         params.append(budget)
     else:
-        # Preserve persisted node order independently of the planner's index
-        # choice. Correlation receipts hash the ordered snapshot serialization.
-        query += " ORDER BY rowid"
+        # One explicit order, shared with Postgres, independent of the planner's
+        # index choice. Correlation receipts hash the ordered snapshot serialization.
+        query += " ORDER BY id"
 
     node_ids: set[str] = set()
     for row in conn.execute(query, params):
@@ -725,27 +726,8 @@ def load_graph(
         )
 
     if not relationship_types:
-        apq = "SELECT * FROM attack_paths WHERE tenant_id = ? AND scan_id = ? ORDER BY rowid"
-        apparams: list[Any] = [tenant_id, effective_scan_id]
-        for row in conn.execute(apq, apparams):
-            graph.attack_paths.append(
-                AttackPath(
-                    source=row["source_node"],
-                    target=row["target_node"],
-                    hops=json.loads(row["path_nodes"]),
-                    edges=json.loads(row["path_edges"]),
-                    composite_risk=row["composite_risk"],
-                    summary=row["summary"] or "",
-                    credential_exposure=json.loads(row["credential_exposure"]),
-                    tool_exposure=json.loads(row["tool_exposure"]),
-                    vuln_ids=json.loads(row["vuln_ids"]),
-                    reachability=row["reachability"] or "unknown",
-                    reachability_basis=json.loads(row["reachability_basis"] or "[]"),
-                    hop_evidence=json.loads(row["hop_evidence"] or "[]"),
-                    analysis=json.loads(row["analysis"] or "{}"),
-                    technique_mappings=technique_mappings_from_json(row["technique_mappings"]),
-                )
-            )
+        apq = f"SELECT {ATTACK_PATH_SELECT} FROM attack_paths WHERE tenant_id = ? AND scan_id = ? ORDER BY {ATTACK_PATH_ORDER}"  # nosec B608
+        graph.attack_paths.extend(attack_path_from_row(row) for row in conn.execute(apq, (tenant_id, effective_scan_id)))
 
         irq = "SELECT * FROM interaction_risks WHERE tenant_id = ? AND scan_id = ? ORDER BY rowid"
         irparams: list[Any] = [tenant_id, effective_scan_id]
@@ -831,7 +813,7 @@ def _snapshot_digests(conn: sqlite3.Connection, *, tenant_id: str, scan_id: str)
                reachability, reachability_basis, technique_mappings, hop_evidence, analysis
         FROM attack_paths
         WHERE tenant_id = ? AND scan_id = ?
-        ORDER BY source_node, target_node
+        ORDER BY source_node, target_node, path_key
         """,
         (tenant_id, scan_id),
     ):

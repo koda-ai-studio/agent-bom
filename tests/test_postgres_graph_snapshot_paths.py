@@ -127,3 +127,50 @@ def test_queue_page_reads_stored_order_and_facets(store) -> None:
     expected = rank_attack_paths(_derived_attack_paths(loaded), loaded.nodes, min_severity="critical", has_credential=True)
     assert page is not None and page.total == len(expected)
     assert [path.to_dict() for path in page.paths] == [path.to_dict() for path in expected[2:7]]
+
+
+def _parity_graph(tenant: str, scan: str) -> UnifiedGraph:
+    graph = UnifiedGraph(scan_id=scan, tenant_id=tenant, created_at="2026-10-12T00:00:00Z")
+    for node_id, kind in (
+        ("server:z", EntityType.SERVER),
+        ("agent:a", EntityType.AGENT),
+        ("vuln:CVE-1", EntityType.VULNERABILITY),
+        ("server:b", EntityType.SERVER),
+        ("vuln:CVE-0", EntityType.VULNERABILITY),
+    ):
+        graph.add_node(UnifiedNode(id=node_id, entity_type=kind, label=node_id, severity="high"))
+    for source, target, rel in (
+        ("server:z", "vuln:CVE-1", RelationshipType.VULNERABLE_TO),
+        ("agent:a", "server:z", RelationshipType.USES),
+        ("server:b", "vuln:CVE-0", RelationshipType.VULNERABLE_TO),
+        ("agent:a", "server:b", RelationshipType.USES),
+    ):
+        graph.add_edge(UnifiedEdge(source=source, target=target, relationship=rel))
+    # Emitted out of rank order, with two distinct routes sharing endpoints.
+    for hops, edges, risk, finding in (
+        (["server:b", "vuln:CVE-0"], ["vulnerable_to"], 10.0, "F0"),
+        (["agent:a", "server:z", "vuln:CVE-1"], ["uses", "vulnerable_to"], 90.0, "F1"),
+        (["agent:a", "vuln:CVE-1"], ["vulnerable_to"], 90.0, "F2"),
+    ):
+        graph.attack_paths.append(
+            AttackPath(source=hops[0], target=hops[-1], hops=hops, edges=edges, composite_risk=risk, finding_ids=[finding])
+        )
+    return graph
+
+
+def test_load_order_and_finding_ids_match_across_backends(store) -> None:
+    from agent_bom.graph.snapshot_paths import path_identity
+
+    scan, tenant = f"parity-{uuid4().hex[:10]}", f"tp-{uuid4().hex[:8]}"
+    written = _parity_graph(tenant, scan)
+    with tenant_scope(tenant):
+        store.save_graph(written)
+        loaded = store.load_graph(tenant_id=tenant, scan_id=scan)
+        _, _, page, total = store.attack_paths(tenant_id=tenant, scan_id=scan)
+        store.delete_snapshot(tenant_id=tenant, scan_id=scan)
+
+    expected = sorted(written.attack_paths, key=lambda path: (-path.composite_risk, path_identity(path)))
+    assert [(path.hops, path.finding_ids) for path in loaded.attack_paths] == [(path.hops, path.finding_ids) for path in expected]
+    assert [path.hops for path in page] == [path.hops for path in expected] and total == 3
+    assert list(loaded.nodes) == sorted(written.nodes)
+    assert [(edge.source, edge.target) for edge in loaded.edges] == sorted((edge.source, edge.target) for edge in written.edges)

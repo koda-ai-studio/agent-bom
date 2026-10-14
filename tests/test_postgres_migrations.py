@@ -55,7 +55,7 @@ _FORK_GUARD_INDEX_CANON = "createuniqueindexifnotexistsaudit_log_team_prevsig_un
 
 # The newest migration. One place to update when a revision lands, so the
 # single-head property and the head's identity do not drift apart.
-ALEMBIC_HEAD = "20261013_01"
+ALEMBIC_HEAD = "20261013_02"
 
 
 def _canonical_sql(text: str) -> str:
@@ -1054,3 +1054,70 @@ def test_runtime_trace_import_policy_guard_finds_policy_on_resolved_table() -> N
     assert "FROM pg_policy" in source
     assert "p.polrelid = to_regclass('runtime_trace_imports')" in source
     assert "current_schema()" not in source
+
+
+def test_live_attack_path_identity_upgrade_keys_legacy_rows_and_keeps_distinct_routes(monkeypatch):
+    """Legacy endpoint-keyed rows get their route key; afterwards two routes share endpoints."""
+    import json
+    import os
+    from uuid import uuid4
+
+    import pytest
+
+    admin_url = os.environ.get("AGENT_BOM_POSTGRES_ADMIN_URL")
+    if not admin_url:
+        pytest.skip("AGENT_BOM_POSTGRES_ADMIN_URL required for real migration execution")
+    import psycopg
+    from psycopg import sql
+
+    from agent_bom.graph import AttackPath
+    from agent_bom.graph.snapshot_paths import path_identity
+
+    migration = _load_module(VERSIONS_DIR / "20261013_02_attack_path_identity.py", "attack_path_identity_live")
+    assert (migration.revision, migration.down_revision) == ("20261013_02", "20261013_01")
+    hops, edges = ["agent:a", "server:s", "vuln:CVE-1"], ["uses", "vulnerable_to"]
+    insert = (
+        "INSERT INTO attack_paths (source_node, target_node, composite_risk, path_nodes, path_edges, scan_id, tenant_id, computed_at)"
+        " VALUES (%s, %s, %s, %s, %s, %s, %s, 'now')"
+    )
+    with psycopg.connect(admin_url) as conn:
+        schema = "attack_path_identity_" + uuid4().hex
+        conn.execute(sql.SQL("CREATE SCHEMA {}").format(sql.Identifier(schema)))
+        conn.execute(sql.SQL("SET LOCAL search_path TO {}").format(sql.Identifier(schema)))
+        conn.execute("CREATE TABLE control_plane_schema_versions (component TEXT PRIMARY KEY,version INTEGER,updated_at TIMESTAMPTZ)")
+        conn.execute("INSERT INTO control_plane_schema_versions VALUES ('graph',7,now())")
+        conn.execute(
+            "CREATE TABLE attack_paths (source_node TEXT NOT NULL, target_node TEXT NOT NULL, composite_risk DOUBLE PRECISION,"
+            " path_nodes JSONB DEFAULT '[]'::jsonb, path_edges JSONB DEFAULT '[]'::jsonb, scan_id TEXT NOT NULL,"
+            " tenant_id TEXT NOT NULL, computed_at TEXT NOT NULL, PRIMARY KEY (source_node, target_node, scan_id, tenant_id))"
+        )
+        for tenant in ("ta", "tb"):
+            conn.execute(insert, ("agent:a", "vuln:CVE-1", 70.0, json.dumps(hops), json.dumps(edges), "s0", tenant))
+        bind = SimpleNamespace(connection=SimpleNamespace(driver_connection=conn))
+        monkeypatch.setattr(migration, "op", SimpleNamespace(execute=conn.execute, get_bind=lambda: bind))
+        migration.upgrade()
+        migration.upgrade()
+
+        expected = path_identity(AttackPath(source="agent:a", target="vuln:CVE-1", hops=hops, edges=edges))
+        assert conn.execute("SELECT tenant_id, path_key, finding_ids FROM attack_paths ORDER BY tenant_id").fetchall() == [
+            ("ta", expected, "[]"),
+            ("tb", expected, "[]"),
+        ]
+        pk = conn.execute(
+            "SELECT array_agg(a.attname ORDER BY k.ord) FROM pg_constraint c, unnest(c.conkey) WITH ORDINALITY k(attnum, ord)"
+            " JOIN pg_attribute a ON a.attnum = k.attnum WHERE c.conrelid = to_regclass('attack_paths') AND c.contype = 'p'"
+            " AND a.attrelid = c.conrelid"
+        ).fetchone()[0]
+        assert pk == ["tenant_id", "scan_id", "path_key"]
+        assert conn.execute("SELECT version FROM control_plane_schema_versions").fetchone()[0] == 8
+        conn.execute(
+            insert.replace("computed_at)", "computed_at, path_key)").replace("'now')", "'now', 'second-route')"),
+            ("agent:a", "vuln:CVE-1", 90.0, json.dumps(["agent:a", "vuln:CVE-1"]), json.dumps(["vulnerable_to"]), "s0", "ta"),
+        )
+
+        migration.downgrade()
+        assert conn.execute("SELECT tenant_id, composite_risk FROM attack_paths ORDER BY tenant_id").fetchall() == [
+            ("ta", 90.0),
+            ("tb", 70.0),
+        ]
+        conn.rollback()  # fixture-only schema and rows never persist

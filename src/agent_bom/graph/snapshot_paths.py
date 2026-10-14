@@ -75,6 +75,16 @@ def path_identity(path: AttackPath) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:40]
 
 
+def occurrence_path_keys(paths: Iterable[AttackPath]) -> Iterator[tuple[str, AttackPath]]:
+    """Key each path by :func:`path_identity`; repeats of a chain get ``:<ordinal>``."""
+    occurrences: dict[str, int] = {}
+    for path in paths:
+        identity = path_identity(path)
+        ordinal = occurrences.get(identity, 0)
+        occurrences[identity] = ordinal + 1
+        yield (identity if ordinal == 0 else f"{identity}:{ordinal}"), path
+
+
 def _detached_copy(path: AttackPath) -> AttackPath:
     return AttackPath.from_dict(path.to_dict())
 
@@ -111,15 +121,12 @@ def materialize_snapshot_paths(graph: UnifiedGraph) -> list[SnapshotPath]:
     nodes = graph.nodes
     queue_order = sorted(range(len(tagged)), key=lambda index: attack_path_rank_key(tagged[index][0], nodes))
     queue_rank = {index: position for position, index in enumerate(queue_order)}
-    occurrences: dict[str, int] = {}
     rows: list[SnapshotPath] = []
-    for rank_index, (path, kind) in enumerate(tagged):
-        identity = path_identity(path)
-        ordinal = occurrences.get(identity, 0)
-        occurrences[identity] = ordinal + 1
+    keys = occurrence_path_keys(path for path, _ in tagged)
+    for rank_index, ((key, path), (_, kind)) in enumerate(zip(keys, tagged)):
         rows.append(
             SnapshotPath(
-                identity if ordinal == 0 else f"{identity}:{ordinal}",
+                key,
                 kind,
                 rank_index,
                 path,
@@ -280,6 +287,7 @@ __all__ = [
     "StoredQueuePage",
     "queue_filter_sql",
     "materialize_snapshot_paths",
+    "occurrence_path_keys",
     "path_from_json",
     "path_identity",
     "paths_analysis_status",

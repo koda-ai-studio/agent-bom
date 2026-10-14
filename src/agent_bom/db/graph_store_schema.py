@@ -14,8 +14,11 @@ if TYPE_CHECKING:
 
 from agent_bom.core.settings import env_raw
 from agent_bom.graph import (
+    AttackPath,
     EntityType,
+    technique_mappings_from_json,
 )
+from agent_bom.graph.snapshot_paths import occurrence_path_keys
 
 logger = logging.getLogger("agent_bom.db.graph_store")
 
@@ -26,7 +29,7 @@ DEFAULT_GRAPH_TENANT_ID = "default"
 GRAPH_SNAPSHOT_KINDS = frozenset({"scan", "correlation"})
 
 
-_GRAPH_SCHEMA_VERSION = 7
+_GRAPH_SCHEMA_VERSION = 8
 
 
 _DEFAULT_GRAPH_WRITE_BATCH_SIZE = 1000
@@ -64,12 +67,47 @@ _GRAPH_TENANT_TABLE_KEYS: dict[str, tuple[str, ...]] = {
     "graph_edges": ("source_id", "target_id", "relationship", "scan_id"),
     "graph_snapshots": ("scan_id",),
     "graph_correlation_runs": ("correlation_id",),
-    "attack_paths": ("source_node", "target_node", "scan_id"),
+    "attack_paths": ("path_key", "scan_id"),
     "interaction_risks": ("pattern", "agents", "scan_id"),
 }
 
 
-_CREATE_TABLES = """\
+_ATTACK_PATHS_DDL = """\
+CREATE TABLE IF NOT EXISTS attack_paths (
+    source_node     TEXT NOT NULL,
+    target_node     TEXT NOT NULL,
+    hop_count       INTEGER DEFAULT 0,
+    composite_risk  REAL DEFAULT 0.0,
+    summary         TEXT DEFAULT '',
+    path_nodes      TEXT DEFAULT '[]',
+    path_edges      TEXT DEFAULT '[]',
+    credential_exposure TEXT DEFAULT '[]',
+    tool_exposure   TEXT DEFAULT '[]',
+    vuln_ids        TEXT DEFAULT '[]',
+    reachability    TEXT DEFAULT 'unknown',
+    reachability_basis TEXT DEFAULT '[]',
+    technique_mappings TEXT DEFAULT '[]',
+    hop_evidence     TEXT DEFAULT '[]',
+    analysis         TEXT DEFAULT '{}',
+    scan_id         TEXT NOT NULL,
+    tenant_id       TEXT NOT NULL DEFAULT 'default',
+    computed_at     TEXT NOT NULL,
+    finding_ids     TEXT DEFAULT '[]',
+    -- snapshot_paths.occurrence_path_keys: hop/edge chain hash, ordinal-suffixed on repeats.
+    path_key        TEXT NOT NULL,
+    PRIMARY KEY (tenant_id, scan_id, path_key)
+);
+"""
+
+_ATTACK_PATH_INDEXES = """\
+CREATE INDEX IF NOT EXISTS idx_ap_risk ON attack_paths(composite_risk DESC);
+CREATE INDEX IF NOT EXISTS idx_ap_scan ON attack_paths(scan_id);
+CREATE INDEX IF NOT EXISTS idx_ap_tenant_scan ON attack_paths(tenant_id, scan_id);
+"""
+
+
+_CREATE_TABLES = (
+    """\
 -- ── Graph nodes (one row per node per scan) ──
 CREATE TABLE IF NOT EXISTS graph_nodes (
     id              TEXT NOT NULL,
@@ -227,33 +265,12 @@ CREATE TABLE IF NOT EXISTS graph_correlation_runs (
 );
 CREATE INDEX IF NOT EXISTS idx_gcr_recent ON graph_correlation_runs(tenant_id, created_at DESC);
 
--- ── Attack paths (per scan) ──
-CREATE TABLE IF NOT EXISTS attack_paths (
-    source_node     TEXT NOT NULL,
-    target_node     TEXT NOT NULL,
-    hop_count       INTEGER DEFAULT 0,
-    composite_risk  REAL DEFAULT 0.0,
-    summary         TEXT DEFAULT '',
-    path_nodes      TEXT DEFAULT '[]',
-    path_edges      TEXT DEFAULT '[]',
-    credential_exposure TEXT DEFAULT '[]',
-    tool_exposure   TEXT DEFAULT '[]',
-    vuln_ids        TEXT DEFAULT '[]',
-    reachability    TEXT DEFAULT 'unknown',
-    reachability_basis TEXT DEFAULT '[]',
-    technique_mappings TEXT DEFAULT '[]',
-    hop_evidence     TEXT DEFAULT '[]',
-    analysis         TEXT DEFAULT '{}',
-    scan_id         TEXT NOT NULL,
-    tenant_id       TEXT NOT NULL DEFAULT 'default',
-    computed_at     TEXT NOT NULL,
-    PRIMARY KEY (source_node, target_node, scan_id, tenant_id)
-);
 
-CREATE INDEX IF NOT EXISTS idx_ap_risk ON attack_paths(composite_risk DESC);
-CREATE INDEX IF NOT EXISTS idx_ap_scan ON attack_paths(scan_id);
-CREATE INDEX IF NOT EXISTS idx_ap_tenant_scan ON attack_paths(tenant_id, scan_id);
-
+-- ── Attack paths (per scan, one row per route occurrence) ──
+"""
+    + _ATTACK_PATHS_DDL
+    + _ATTACK_PATH_INDEXES
+    + """
 -- ── Snapshot-materialized attack paths (complete ranked set, one row per occurrence) ──
 CREATE TABLE IF NOT EXISTS graph_attack_paths (
     tenant_id           TEXT NOT NULL DEFAULT 'default',
@@ -304,6 +321,7 @@ CREATE TABLE IF NOT EXISTS graph_retention_state (
     last_purged_count INTEGER DEFAULT 0
 );
 """
+)
 
 
 # Tables purged (in FK-safe order) when a graph snapshot ages out of the
@@ -317,6 +335,97 @@ _GRAPH_PURGEABLE_TABLES = (
     "graph_nodes",
     "graph_snapshots",
 )
+
+
+_LEGACY_ATTACK_PATH_COLUMNS = (
+    "source_node",
+    "target_node",
+    "hop_count",
+    "composite_risk",
+    "summary",
+    "path_nodes",
+    "path_edges",
+    "credential_exposure",
+    "tool_exposure",
+    "vuln_ids",
+    "reachability",
+    "reachability_basis",
+    "technique_mappings",
+    "hop_evidence",
+    "analysis",
+    "scan_id",
+    "tenant_id",
+    "computed_at",
+)
+
+
+def _json_list(raw: Any) -> list[Any]:
+    try:
+        value = json.loads(raw or "[]")
+    except (TypeError, ValueError):
+        return []
+    return value if isinstance(value, list) else []
+
+
+# Every persisted-path read uses this column list and order on both backends:
+# highest risk first, ties broken by the stable route key.
+ATTACK_PATH_SELECT = (
+    "source_node, target_node, path_nodes, path_edges, composite_risk, summary, credential_exposure, tool_exposure, "
+    "vuln_ids, reachability, reachability_basis, technique_mappings, hop_evidence, analysis, finding_ids"
+)
+ATTACK_PATH_ORDER = "composite_risk DESC, path_key"
+
+
+def attack_path_from_row(row: sqlite3.Row) -> AttackPath:
+    return AttackPath(
+        source=row["source_node"],
+        target=row["target_node"],
+        hops=json.loads(row["path_nodes"]),
+        edges=json.loads(row["path_edges"]),
+        composite_risk=row["composite_risk"],
+        summary=row["summary"] or "",
+        credential_exposure=json.loads(row["credential_exposure"]),
+        tool_exposure=json.loads(row["tool_exposure"]),
+        vuln_ids=json.loads(row["vuln_ids"]),
+        reachability=row["reachability"] or "unknown",
+        reachability_basis=json.loads(row["reachability_basis"] or "[]"),
+        hop_evidence=json.loads(row["hop_evidence"] or "[]"),
+        analysis=json.loads(row["analysis"] or "{}"),
+        technique_mappings=technique_mappings_from_json(row["technique_mappings"]),
+        finding_ids=json.loads(row["finding_ids"] or "[]"),
+    )
+
+
+def upgrade_attack_path_identity(conn: sqlite3.Connection) -> None:
+    """Rebuild a pre-occurrence ``attack_paths`` table keyed by route, not endpoints.
+
+    The old key (source, target, scan, tenant) let a second route between the
+    same endpoints overwrite the first. SQLite cannot alter a primary key, so
+    the table is rebuilt once and every existing row gets its computed key.
+    """
+    columns = {row[1] for row in conn.execute("PRAGMA table_info(attack_paths)").fetchall()}
+    if "path_key" in columns:
+        return
+    conn.execute("ALTER TABLE attack_paths RENAME TO attack_paths_pre_identity")
+    conn.execute(_ATTACK_PATHS_DDL)
+    names = ", ".join(_LEGACY_ATTACK_PATH_COLUMNS)
+    rows = conn.execute(
+        f"SELECT {names} FROM attack_paths_pre_identity ORDER BY tenant_id, scan_id, rowid"  # nosec B608 - static columns
+    ).fetchall()
+    scopes: dict[tuple[str, str], list[Sequence[Any]]] = {}
+    for row in rows:
+        scopes.setdefault((row[16], row[15]), []).append(tuple(row))
+    upgraded: list[tuple[Any, ...]] = []
+    for scoped in scopes.values():
+        paths = (AttackPath(source=row[0], target=row[1], hops=_json_list(row[5]), edges=_json_list(row[6])) for row in scoped)
+        upgraded.extend((*row, key) for row, (key, _) in zip(scoped, occurrence_path_keys(paths)))
+    conn.executemany(
+        f"INSERT INTO attack_paths ({names}, path_key) VALUES ({', '.join('?' for _ in range(len(_LEGACY_ATTACK_PATH_COLUMNS) + 1))})",  # nosec B608
+        upgraded,
+    )
+    conn.execute("DROP TABLE attack_paths_pre_identity")
+    for statement in filter(None, (part.strip() for part in _ATTACK_PATH_INDEXES.split(";"))):
+        conn.execute(statement)
 
 
 def _graph_retention_days() -> int:

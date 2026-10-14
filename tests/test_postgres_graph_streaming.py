@@ -236,6 +236,7 @@ def test_streaming_serializes_and_replaces_same_snapshot(monkeypatch):
     assert conn.advisory_locks == [("t1\x1fscan-retry",)]
     assert conn.deleted_tables == [
         "graph_node_search",
+        "graph_attack_paths",
         "attack_paths",
         "interaction_risks",
         "graph_edges",
@@ -570,6 +571,7 @@ def test_edge_and_attack_path_reads_accept_native_jsonb_and_preserve_tenant(monk
         [],
         [],
         {},
+        ["F-native"],
     )
 
     class _NativeJsonbRelatedConn(_RecordingConn):
@@ -608,6 +610,7 @@ def test_edge_and_attack_path_reads_accept_native_jsonb_and_preserve_tenant(monk
     assert paths[0].tool_exposure == ["run_shell"]
     assert paths[0].reachability == "confirmed"
     assert paths[0].reachability_basis == ["graph_path"]
+    assert paths[0].finding_ids == ["F-native"]
     assert ("paths", ("tenant-alpha", "scan-jsonb", "agent:native")) in conn.read_params
     edge_params = next(params for kind, params in conn.read_params if kind == "edges")
     assert edge_params[:2] == ("tenant-alpha", "scan-jsonb")
@@ -724,7 +727,7 @@ def test_postgres_written_receipts_and_node_types_decode_without_loss(monkeypatc
             if normalized.startswith("select source_node, target_node, path_nodes"):
                 assert params[:2] == ["receipt-tenant", "receipt-scan"]
                 return _FakeCursor(
-                    [tuple(row[index] for index in (0, 1, 5, 6, 3, 4, 7, 8, 9, 10, 11, 12, 13, 14)) for row in self.path_rows]
+                    [tuple(row[index] for index in (0, 1, 5, 6, 3, 4, 7, 8, 9, 10, 11, 12, 13, 14, 18)) for row in self.path_rows]
                 )
             if normalized.startswith("select id, entity_type, label"):
                 assert params[:2] == ["receipt-tenant", "receipt-scan"]

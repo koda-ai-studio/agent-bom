@@ -7,7 +7,8 @@ from typing import Any
 from agent_bom.db.graph_store import (
     normalize_graph_tenant_id,
 )
-from agent_bom.graph import technique_mappings_from_json
+from agent_bom.db.graph_store_schema import ATTACK_PATH_ORDER, ATTACK_PATH_SELECT
+from agent_bom.graph import AttackPath, technique_mappings_from_json
 from agent_bom.graph.completeness import (
     graph_completeness,
 )
@@ -21,6 +22,27 @@ from .postgres_graph_support import (
     _decode_json_object,
 )
 from .postgres_graph_traversal import PostgresGraphTraversalMixin
+
+
+def attack_path_from_pg_row(row: Any) -> AttackPath:
+    """Decode one row selected with :data:`ATTACK_PATH_SELECT`."""
+    return AttackPath(
+        source=row[0],
+        target=row[1],
+        hops=_decode_json_array(row[2], field="attack path nodes"),
+        edges=_decode_json_array(row[3], field="attack path edges"),
+        composite_risk=row[4],
+        summary=row[5] or "",
+        credential_exposure=_decode_json_array(row[6], field="attack path credential exposure"),
+        tool_exposure=_decode_json_array(row[7], field="attack path tool exposure"),
+        vuln_ids=_decode_json_array(row[8], field="attack path vulnerability IDs"),
+        reachability=row[9] or "unknown",
+        reachability_basis=_decode_json_array(row[10], field="attack path reachability basis"),
+        hop_evidence=[dict(item) for item in _decode_json_array(row[12], field="attack path hop evidence") if isinstance(item, dict)],
+        analysis=_decode_json_object(row[13], field="attack path analysis"),
+        technique_mappings=technique_mappings_from_json(row[11]),
+        finding_ids=[str(item) for item in _decode_json_array(row[14], field="attack path finding IDs")],
+    )
 
 
 class PostgresGraphPathsMixin(PostgresGraphTraversalMixin):
@@ -110,41 +132,11 @@ class PostgresGraphPathsMixin(PostgresGraphTraversalMixin):
         placeholders = ",".join(["%s"] * len(source_ids))
         with _tenant_connection(self._pool) as conn:
             rows = conn.execute(
-                f"""
-                SELECT source_node, target_node, path_nodes, path_edges, composite_risk,
-                       summary, credential_exposure, tool_exposure, vuln_ids,
-                       reachability, reachability_basis, technique_mappings,
-                       hop_evidence, analysis
-                FROM attack_paths
-                WHERE tenant_id = %s AND scan_id = %s AND source_node IN ({placeholders})
-                ORDER BY composite_risk DESC, source_node ASC, target_node ASC
-                """,  # nosec B608 - placeholders are generated internally
+                f"SELECT {ATTACK_PATH_SELECT} FROM attack_paths WHERE tenant_id = %s AND scan_id = %s "  # nosec B608
+                f"AND source_node IN ({placeholders}) ORDER BY {ATTACK_PATH_ORDER}",
                 [tenant_id, effective_scan_id, *sorted(source_ids)],
             ).fetchall()
-
-        from agent_bom.graph import AttackPath
-
-        return [
-            AttackPath(
-                source=row[0],
-                target=row[1],
-                hops=_decode_json_array(row[2], field="attack path nodes"),
-                edges=_decode_json_array(row[3], field="attack path edges"),
-                composite_risk=row[4],
-                summary=row[5] or "",
-                credential_exposure=_decode_json_array(row[6], field="attack path credential exposure"),
-                tool_exposure=_decode_json_array(row[7], field="attack path tool exposure"),
-                vuln_ids=_decode_json_array(row[8], field="attack path vulnerability IDs"),
-                reachability=row[9] or "unknown",
-                reachability_basis=_decode_json_array(row[10], field="attack path reachability basis"),
-                hop_evidence=[
-                    dict(item) for item in _decode_json_array(row[12], field="attack path hop evidence") if isinstance(item, dict)
-                ],
-                analysis=_decode_json_object(row[13], field="attack path analysis"),
-                technique_mappings=technique_mappings_from_json(row[11]),
-            )
-            for row in rows
-        ]
+        return [attack_path_from_pg_row(row) for row in rows]
 
     def attack_paths(
         self,
@@ -169,45 +161,14 @@ class PostgresGraphPathsMixin(PostgresGraphTraversalMixin):
                 (tenant_id, effective_scan_id),
             ).fetchone()
             rows = conn.execute(
-                """
-                SELECT source_node, target_node, path_nodes, path_edges, composite_risk,
-                       summary, credential_exposure, tool_exposure, vuln_ids,
-                       reachability, reachability_basis, technique_mappings,
-                       hop_evidence, analysis
-                FROM attack_paths
-                WHERE tenant_id = %s AND scan_id = %s
-                ORDER BY composite_risk DESC, source_node ASC, target_node ASC
-                LIMIT %s OFFSET %s
-                """,
+                f"SELECT {ATTACK_PATH_SELECT} FROM attack_paths WHERE tenant_id = %s AND scan_id = %s "  # nosec B608
+                f"ORDER BY {ATTACK_PATH_ORDER} LIMIT %s OFFSET %s",
                 (tenant_id, effective_scan_id, limit, offset),
             ).fetchall()
-
-        from agent_bom.graph import AttackPath
-
         return (
             effective_scan_id,
             str(snapshot_row[0]) if snapshot_row else "",
-            [
-                AttackPath(
-                    source=row[0],
-                    target=row[1],
-                    hops=_decode_json_array(row[2], field="attack path nodes"),
-                    edges=_decode_json_array(row[3], field="attack path edges"),
-                    composite_risk=row[4],
-                    summary=row[5] or "",
-                    credential_exposure=_decode_json_array(row[6], field="attack path credential exposure"),
-                    tool_exposure=_decode_json_array(row[7], field="attack path tool exposure"),
-                    vuln_ids=_decode_json_array(row[8], field="attack path vulnerability IDs"),
-                    reachability=row[9] or "unknown",
-                    reachability_basis=_decode_json_array(row[10], field="attack path reachability basis"),
-                    hop_evidence=[
-                        dict(item) for item in _decode_json_array(row[12], field="attack path hop evidence") if isinstance(item, dict)
-                    ],
-                    analysis=_decode_json_object(row[13], field="attack path analysis"),
-                    technique_mappings=technique_mappings_from_json(row[11]),
-                )
-                for row in rows
-            ],
+            [attack_path_from_pg_row(row) for row in rows],
             int((total_row[0] if total_row else 0) or 0),
         )
 
