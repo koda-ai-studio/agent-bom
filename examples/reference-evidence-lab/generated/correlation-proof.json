@@ -10,7 +10,7 @@
       ]
     }
   ],
-  "artifact_sha256": "sha256:21dc87f85427add4c6d3a53ce3b781a26bb571b8559e21823d9cdf57fb4ace5f",
+  "artifact_sha256": "sha256:6d1c4ffa8456c8a1f84fda3d092f748ad1e272110f2ef46c397d6371e0463dff",
   "capture_fixture": {
     "fix_first": {
       "attack_campaigns": [
@@ -1290,7 +1290,7 @@
               }
             ],
             "id": "container:iac:reference-api::vulnerability:sbom:cve-2023-4863::container:iac:reference-api->package:iac:pillow->vulnerability:sbom:cve-2023-4863",
-            "label": "reference-finding-cve-2023-4863 via reference-evidence-api@sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a",
+            "label": "CVE-2023-4863 via reference-evidence-api@sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a",
             "nodeIds": [
               "container:iac:reference-api",
               "package:iac:pillow",
@@ -2028,7 +2028,7 @@
               }
             ],
             "id": "container:sbom:reference-api::vulnerability:sbom:cve-2023-4863::container:sbom:reference-api->package:iac:pillow->vulnerability:sbom:cve-2023-4863",
-            "label": "reference-finding-cve-2023-4863 via reference-evidence-api@sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a",
+            "label": "CVE-2023-4863 via reference-evidence-api@sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a",
             "nodeIds": [
               "container:sbom:reference-api",
               "package:iac:pillow",
@@ -2762,7 +2762,7 @@
               }
             ],
             "id": "source:pinned-package::vulnerability:sbom:cve-2023-4863::source:pinned-package->package:iac:pillow->vulnerability:sbom:cve-2023-4863",
-            "label": "reference-finding-cve-2023-4863 via pinned-package.txt",
+            "label": "CVE-2023-4863 via pinned-package.txt",
             "nodeIds": [
               "source:pinned-package",
               "package:iac:pillow",
