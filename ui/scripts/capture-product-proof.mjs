@@ -11,6 +11,11 @@ import process from "node:process";
 import { assertCaptureSnapshotScope, graphResponseWithPagination } from "./product-proof-scope.mjs";
 import { waitForOwnedServer } from "./product-proof-server.mjs";
 import { captureSourceProvenance } from "./product-proof-provenance.mjs";
+import {
+  SCOPE_SHOWCASE_PRESETS,
+  buildScopeShowcase as buildScopeShowcaseFixture,
+  checkScopeShowcase,
+} from "./product-proof-scope-showcase.mjs";
 
 const UI_ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 const REPO_ROOT = path.resolve(UI_ROOT, "..");
@@ -85,6 +90,7 @@ if (
   throw new Error("Reference evidence lab explicit policy smoke is not verified");
 }
 const REFERENCE_CORRELATION_ID = REFERENCE_LAB.correlation.correlation_id;
+const REFERENCE_RELATIONSHIP_LAYERS = "sourceFile,container,package,vulnerability";
 const referenceGraph = REFERENCE_LAB.capture_fixture.graph;
 const referenceSnapshots = [
   {
@@ -329,59 +335,9 @@ function buildGraph() {
 
 const graph = buildGraph();
 
-// Three explicitly synthetic scope fixtures exercise the shipped presets.
-// Shared native IDs identify entities; names never manufacture a relationship.
+const referenceKevCve = referenceGraph.nodes.find((item) => item.label === "CVE-2023-4863");
 function buildScopeShowcase(kind) {
-  const definitions = {
-    cloud: {
-      nodes: [
-        ["account:demo", "account", "Production account", { provider: "AWS", account_id: "123456789012" }],
-        ["cluster:demo", "cluster", "AI workloads", { region: "us-east-1" }],
-        ["container:demo", "container", "Document worker"],
-        ["role:demo", "role", "Document reader"],
-        ["data:demo", "data_store", "Document archive", { service: "S3", region: "us-east-1" }],
-        ["resource:demo", "cloud_resource", "Private API endpoint", { service: "API Gateway" }],
-        ["finding:demo", "misconfiguration", "Review storage access", { description: "Synthetic policy review finding" }],
-      ],
-      edges: [["account:demo", "cluster:demo", "hosts"], ["cluster:demo", "container:demo", "hosts"],
-        ["account:demo", "role:demo", "contains"], ["role:demo", "data:demo", "has_permission"],
-        ["account:demo", "resource:demo", "contains"], ["finding:demo", "data:demo", "affects"]],
-    },
-    repository: {
-      nodes: [["repo:demo", "directory", "document-service/", { path: "document-service/" }],
-        ["source:demo", "source_file", "app.py", { language: "Python" }],
-        ["config:demo", "config_file", "deployment.yaml"], ["ci:demo", "ci_job", "Build and scan"],
-        ["package:demo", "package", "pillow@9.0.0", { ecosystem: "pypi", version: "9.0.0" }],
-        ["container:demo", "container", "Document worker"],
-        ["cve:demo", "vulnerability", "CVE-2023-4863", { ...referenceGraph.nodes.find(n => n.label === "CVE-2023-4863").attributes, simulated: true }]],
-      edges: [["repo:demo", "source:demo", "contains"], ["repo:demo", "config:demo", "contains"],
-        ["repo:demo", "ci:demo", "contains"], ["source:demo", "package:demo", "imports"],
-        ["config:demo", "container:demo", "configures"], ["ci:demo", "container:demo", "configures"],
-        ["package:demo", "cve:demo", "vulnerable_to"]],
-    },
-    environment: {
-      nodes: [["env:demo", "environment", "Production AI", { environment: "production" }],
-        ["cluster:demo", "cluster", "AI workloads"], ["container:demo", "container", "Document worker"],
-        ["agent:demo", "agent", "Document processing agent"], ["server:demo", "server", "Image processing MCP"],
-        ["tool:demo", "tool", "render_image"], ["model:demo", "model", "Document reasoning model"],
-        ["package:demo", "package", "pillow@9.0.0", { ecosystem: "pypi", version: "9.0.0" }]],
-      edges: [["env:demo", "cluster:demo", "hosts"], ["cluster:demo", "container:demo", "hosts"],
-        ["env:demo", "agent:demo", "contains"], ["agent:demo", "server:demo", "uses"],
-        ["agent:demo", "model:demo", "uses"], ["server:demo", "tool:demo", "provides_tool"],
-        ["server:demo", "package:demo", "depends_on"]],
-    },
-  };
-  const fixture = definitions[kind];
-  const nodes = fixture.nodes.map(([id, type, label, attributes = {}]) => node(id, type, label,
-    ["vulnerability", "misconfiguration"].includes(type) ? "high" : "none", 0,
-    { ...attributes, simulated: true, environment: "production", data_sources: ["synthetic-scope-fixture"] }));
-  const edges = fixture.edges.map(([source, target, relation]) => edge(source, target, relation, 1,
-    { evidence_tier: "modeled_infrastructure", modeled: true, source_kind: "synthetic-scope-fixture" }));
-  return { ...graph, nodes, edges, attack_paths: [], interaction_risks: [],
-    stats: { total_nodes: nodes.length, total_edges: edges.length, attack_path_count: 0, interaction_risk_count: 0,
-      node_types: Object.fromEntries(nodes.map(n => [n.entity_type, nodes.filter(v => v.entity_type === n.entity_type).length])),
-      severity_counts: { high: nodes.filter(n => n.severity === "high").length, none: nodes.filter(n => n.severity === "none").length } },
-    pagination: { total: nodes.length, offset: 0, limit: nodes.length, has_more: false } };
+  return buildScopeShowcaseFixture(kind, { node, edge, base: graph, advisory, referenceCve: referenceKevCve });
 }
 
 function graphScenario() {
@@ -2846,7 +2802,7 @@ async function writeScreenshotManifest(outputDir = IMAGE_DIR) {
     ...["cloud", "repository", "environment"].flatMap(scope => ["dark", "light"].map(theme => ({
       path: `graph-${scope}-${theme}-live.png`,
       page: `/graph?lens=estate&rollup=0&scan=${SCAN_ID}&capture=1`,
-      scope: `Explicitly synthetic ${scope} inventory projected through the shipped graph scope preset; configured relationships do not establish execution or effective access`,
+      scope: `Explicitly synthetic ${scope} estate with published advisories, derived attack paths and recorded relationships, projected through the shipped graph scope preset; fictional identifiers, no execution or effective-access claim`,
       presentation: `${theme} desktop`,
     }))),
     ...["dark", "light"].flatMap((theme) => [
@@ -2947,8 +2903,8 @@ async function writeScreenshotManifest(outputDir = IMAGE_DIR) {
     },
     ...["dark", "light"].map((theme) => ({
       path: `graph-relationship-${theme}-live.png`,
-      page: `/graph?capture=1&scan=${REFERENCE_CORRELATION_ID}&layers=server,agent,tool`,
-      scope: "Reference evidence lab local gateway invocation with relationship direction, snapshot, timestamps and recorded runtime evidence; modeled infrastructure remains separate",
+      page: `/graph?capture=1&scan=${REFERENCE_CORRELATION_ID}&layers=${REFERENCE_RELATIONSHIP_LAYERS}`,
+      scope: "Reference evidence lab correlation: a repository pin, a CycloneDX image SBOM and a modeled Kubernetes workload resolve to one pillow@9.0.0 linked to KEV-listed CVE-2023-4863, with the advisory receipt open",
       presentation: `${theme} desktop`,
       evidence_artifact: path.relative(REPO_ROOT, REFERENCE_LAB_PROOF_PATH),
       evidence_sha256: referenceLabActualDigest,
@@ -3163,7 +3119,7 @@ async function main() {
       }, theme);
       return capturePage;
     };
-    for (const [scope, preset] of [["cloud", "Cloud estate"], ["repository", "Repository"], ["environment", "Environment"]]) {
+    for (const [scope, preset] of SCOPE_SHOWCASE_PRESETS) {
       const fixture = buildScopeShowcase(scope);
       for (const theme of ["dark", "light"]) {
         const p = await newCapturePage(theme, { width: 1440, height: 900 }, fixture);
@@ -3177,7 +3133,7 @@ async function main() {
           await expect(p.locator(".react-flow__node")).toHaveCount(fixture.nodes.length);
           await fitReactFlow(p);
           await scrollTo(p, 0);
-        }, { expectedText: [/Demo data/i, "0 snapshot paths", ...fixture.nodes.map(n => new RegExp(n.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"))],
+        }, { expectedText: [/Demo data/i, "Attack-path analysis complete", scopeShowcaseHeadline(fixture), ...fixture.nodes.map(n => new RegExp(n.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"))],
           expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph"],
           minGraphNodes: fixture.nodes.length, maxGraphNodes: fixture.nodes.length,
           minGraphEdges: fixture.edges.length, maxGraphEdges: fixture.edges.length,
@@ -3525,22 +3481,22 @@ async function main() {
     for (const theme of ["dark", "light"]) {
       const relationshipPage = await newCapturePage(theme, { width: 1440, height: 900 });
       await capture(relationshipPage,
-        `/graph?capture=1&scan=${REFERENCE_CORRELATION_ID}&layers=server,agent,tool`,
+        `/graph?capture=1&scan=${REFERENCE_CORRELATION_ID}&layers=${REFERENCE_RELATIONSHIP_LAYERS}`,
         `graph-relationship-${theme}-live.png`, async (p) => {
-          await expect(p.locator(".react-flow__node")).toHaveCount(3);
-          const invocation = p.locator('.react-flow__edge[data-id="invoked:agent:model:reference-workload:tool:runtime:render-untrusted-image"]');
-          await invocation.focus();
-          await invocation.press("Space");
+          await expect(p.locator(".react-flow__node")).toHaveCount(5);
+          const finding = p.locator('.react-flow__edge[data-id="vulnerable_to:package:iac:pillow:vulnerability:sbom:cve-2023-4863"]');
+          await finding.focus();
+          await finding.press("Space");
           const receipt = p.getByLabel("Relationship details", { exact: true });
           await expect(receipt).toBeVisible();
-          await receipt.getByText("Recorded evidence", { exact: true }).click();
-          await expect(receipt).toContainText("gateway_runtime");
+          await expect(receipt.getByLabel("Recorded link evidence")).toContainText("bundled_advisory_scanner");
           await fitReactFlow(p);
           await scrollTo(p, 0);
         }, {
-          expectedText: ["Invoked (runtime)", "Recorded evidence", "runtime_observed", "gateway_runtime", /Reference evidence lab/i],
+          expectedText: ["Has finding", "static_evidence", "bundled_advisory_scanner", "pinned-package.txt", "CVE-2023-4863",
+            "1 critical · 1 finding · 1 snapshot path", "Attack-path analysis complete", /Reference evidence lab/i],
           expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph"],
-          minGraphNodes: 3, maxGraphNodes: 3, minGraphEdges: 2, maxGraphEdges: 2,
+          minGraphNodes: 5, maxGraphNodes: 5, minGraphEdges: 4, maxGraphEdges: 4,
           minGraphNodeFontPx: 12, minGraphEdgeLabelFontPx: 12,
           viewportSelectors: ['[aria-label="Relationship details"]'],
           assertEdgeLabelsClearOfNodes: true, assertNoHorizontalOverflow: true,
@@ -3904,7 +3860,15 @@ async function main() {
   }
 }
 
+function scopeShowcaseHeadline(fixture) {
+  const findings = fixture.nodes.filter((item) => ["vulnerability", "misconfiguration"].includes(item.entity_type));
+  const critical = findings.filter((item) => item.severity === "critical" || item.attributes.is_kev === true);
+  const paths = fixture.attack_paths.length;
+  return `${critical.length} critical · ${findings.length} ${findings.length === 1 ? "finding" : "findings"} · ${paths} ${paths === 1 ? "snapshot path" : "snapshot paths"}`;
+}
+
 function checkAdvisoryFixtures() {
+  for (const [scope] of SCOPE_SHOWCASE_PRESETS) checkScopeShowcase(buildScopeShowcase(scope), advisory, referenceKevCve);
   const context = contextGraph();
   for (const node of context.nodes.filter(node => node.kind === "vulnerability")) {
     const facts = advisory(node.label);
