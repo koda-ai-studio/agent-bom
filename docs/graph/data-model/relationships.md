@@ -279,6 +279,16 @@ Class `authority` · directed · traversable · required evidence `source`, `tie
 
 Emitted by: `graph/builder.py`, `graph/builder_cloud_principals.py`, `graph/builder_snowflake_objects.py`, `graph/cloud_rbac.py`, `graph/effective_permissions.py`
 
+## `hosted_on`
+
+Class `dependency` · directed · traversable · required evidence `source`, `tier` · 12 pairs
+
+- `agent` → `cloud_resource`, `cluster`, `container`, `fleet`
+- `container` → `cloud_resource`, `cluster`, `container`, `fleet`
+- `server` → `cloud_resource`, `cluster`, `container`, `fleet`
+
+Emitted by: `graph/builder_cloud_lineage.py`, `graph/hosting_projection.py`
+
 ## `hosts`
 
 Class `structural` · directed · traversable · required evidence `source`, `tier` · 25 pairs

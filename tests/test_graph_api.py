@@ -1062,9 +1062,13 @@ class TestPersistedGraphQueries:
         assert truncated is False
         assert depth_limited is False
         assert resource_id in reachable
-        assert "agent:cloud-agent" in reachable
         assert [account_id, resource_id] in paths
-        assert [account_id, resource_id, "agent:cloud-agent"] in paths
+        # The agent runs on the resource: the hop is agent -> resource (HOSTED_ON).
+        agent_paths, agent_reachable, _, _ = store.bfs_paths(
+            tenant_id="default", scan_id="identity-hop-scan", source="agent:cloud-agent", max_depth=1
+        )
+        assert resource_id in agent_reachable
+        assert ["agent:cloud-agent", resource_id] in agent_paths
 
         _, bounded_reachable, budget_truncated, depth_limited = store.bfs_paths(
             tenant_id="default",
@@ -1075,7 +1079,8 @@ class TestPersistedGraphQueries:
         assert resource_id in bounded_reachable
         assert "agent:cloud-agent" not in bounded_reachable
         assert budget_truncated is False
-        assert depth_limited is True
+        # Nothing lies beyond the resource in the forward direction any more.
+        assert depth_limited is False
 
     def test_sqlite_graph_store_impact_of_uses_reverse_edges(self, tmp_path):
         store = SQLiteGraphStore(tmp_path / "graph.db")

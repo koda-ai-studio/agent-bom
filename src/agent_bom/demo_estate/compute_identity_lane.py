@@ -1,5 +1,8 @@
 """Seeded multi-source compute lane: one VM, many sources, one graph node.
 
+An in-cluster MCP server runs in a pod scheduled on one VM, and two VMs carry
+an OS CVE, so paths run agent → server → pod → VM → CVE and VM → CVE.
+
 Every VM in this lane is reported the way a real estate reports it: the
 inventory scan lists the instance, CloudTrail records an assumed role stopping
 it by ARN, a workload side scan names it as its target and a posture finding
@@ -46,6 +49,43 @@ def _side_scan_target(index: int) -> dict[str, Any]:
         "account_id": DEMO_COMPUTE_ACCOUNT,
         "location": DEMO_COMPUTE_REGION,
         "status": "eligible",
+    }
+
+
+def _vm_cve(index: int) -> dict[str, Any]:
+    """An OS-package CVE an agentless scanner reported on a lane VM."""
+    return {
+        "id": f"demo-compute-cve-{index:02d}",
+        "finding_type": "CVE",
+        "cve_id": ("CVE-2024-6387", "CVE-2023-38408")[index % 2],
+        "source": "CLOUD_SECURITY",
+        "severity": "high",
+        "title": ("OpenSSH signal handler race", "OpenSSH ssh-agent PKCS#11 remote code execution")[index % 2],
+        "asset": {"name": f"compute-{index:02d}", "asset_type": "cloud_resource", "identifier": demo_compute_arn(index), "provider": "aws"},
+    }
+
+
+def _hosted_mcp_agent() -> dict[str, Any]:
+    """An in-cluster MCP server whose pod is scheduled on lane VM 0."""
+    return {
+        "name": "cluster-ops-agent",
+        "type": "custom",
+        "source": "kubernetes",
+        "mcp_servers": [
+            {
+                "name": "ops/runbook-mcp/server",
+                "url": "http://runbook-mcp.ops.svc.cluster.local:8000",
+                "transport": "sse",
+                "connection_metadata": {
+                    "k8s_pod_uid": "0d3e5f7a-1b2c-4d5e-8f90-a1b2c3d4e5f6",
+                    "k8s_pod": "runbook-mcp",
+                    "k8s_namespace": "ops",
+                    "k8s_cluster": "demo-compute",
+                    "k8s_node": _hostname(0),
+                    "k8s_node_provider_id": f"aws:///{DEMO_COMPUTE_REGION}a/{_instance_id(0)}",
+                },
+            }
+        ],
     }
 
 
@@ -121,7 +161,9 @@ def compute_lane_report(*, vms: int = DEMO_COMPUTE_VMS, decoys: int = DEMO_HOSTN
     }
     if not evidence:
         return {"cloud_inventory": inventory}
+    findings.extend(_vm_cve(index) for index in range(min(2, vms)))
     return {
+        "agents": [_hosted_mcp_agent()],
         "cloud_inventory": {**inventory, "side_scan_targets": side_scan},
         "cloud_audit_trail": {"status": "ok", "provider": "aws", "account": DEMO_COMPUTE_ACCOUNT, "behavioral_edges": audit},
         "findings": findings,
@@ -135,7 +177,8 @@ def project_compute_lane(graph: UnifiedGraph, *, tenant_id: str, evidence: bool,
         graph.add_node(node)
     for edge in lane.edges:
         graph.add_edge(edge)
-    graph.analysis_status[ANALYZER] = lane.analysis_status[ANALYZER]
+    if ANALYZER in lane.analysis_status:
+        graph.analysis_status[ANALYZER] = lane.analysis_status[ANALYZER]
     account_node_id = f"account:aws:{DEMO_COMPUTE_ACCOUNT}"
     if org_node_id and org_node_id in graph.nodes and account_node_id in graph.nodes:
         graph.add_edge(

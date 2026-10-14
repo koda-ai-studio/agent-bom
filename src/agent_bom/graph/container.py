@@ -971,6 +971,7 @@ class UnifiedGraph:
                 e.relationship
                 in (
                     RelationshipType.HOSTS,
+                    RelationshipType.HOSTED_ON,
                     RelationshipType.USES,
                     RelationshipType.DEPENDS_ON,
                     RelationshipType.PROVIDES_TOOL,
@@ -1229,6 +1230,7 @@ ENTITY_LEGEND: list[LegendEntry] = [
 RELATIONSHIP_LEGEND: list[LegendEntry] = [
     # Static inventory
     LegendEntry(key="hosts", label="Hosts", color="#6b7280"),
+    LegendEntry(key="hosted_on", label="Hosted On", color="#78716c"),
     LegendEntry(key="uses", label="Uses", color="#10b981"),
     LegendEntry(key="uses_framework", label="Uses Framework", color="#06b6d4"),
     LegendEntry(key="depends_on", label="Depends On", color="#52525b"),

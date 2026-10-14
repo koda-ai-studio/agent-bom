@@ -13,6 +13,7 @@ from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.credential_projection import project_credentials
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.edge_evidence import edge_evidence
+from agent_bom.graph.hosting_projection import project_server_hosting
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
 from agent_bom.graph.package_projection import (
     _add_vuln_node,
@@ -285,6 +286,7 @@ def _project_server(graph: UnifiedGraph, agent: AgentScope, srv_dict: Mapping[st
     if agent.static_inventory:
         return
     tool_ids = _project_tools(graph, agent, srv_dict, srv_id, indexes)
+    project_server_hosting(graph, srv_id, srv_dict, agent.data_source_tag)
     project_credentials(graph, srv_dict, srv_id, tool_ids, agent.data_source_tag, configured_by=agent.agent_id)
 
 

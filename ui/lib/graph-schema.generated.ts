@@ -552,6 +552,7 @@ export enum GraphEdgeKind {
   EXPOSES_CRED = "exposes_cred",
   GOVERNS = "governs",
   HAS_PERMISSION = "has_permission",
+  HOSTED_ON = "hosted_on",
   HOSTS = "hosts",
   IMPORTS = "imports",
   INHERITS = "inherits",
@@ -582,11 +583,11 @@ export enum GraphEdgeKind {
   VULNERABLE_TO = "vulnerable_to",
 }
 
-export type GraphEdgeKindKey = "accessed" | "acted_as" | "affects" | "assumes" | "attached" | "authenticates_as" | "belongs_to" | "called" | "can_access" | "configures" | "contains" | "correlates_with" | "cross_account_trust" | "defines" | "delegated_to" | "depends_on" | "exhibits_drift" | "exploitable_via" | "exposed_to" | "exposes_cred" | "governs" | "has_permission" | "hosts" | "imports" | "inherits" | "invoked" | "lateral_path" | "manages" | "member_of" | "observes" | "owns" | "part_of" | "possibly_correlates_with" | "protects" | "provides_tool" | "reaches_tool" | "remediates" | "runs" | "scoped_to" | "serves_model" | "shares_cred" | "shares_server" | "stores" | "trace_step" | "triggers" | "trusts" | "used_credential" | "uses" | "uses_framework" | "vulnerable_to";
+export type GraphEdgeKindKey = "accessed" | "acted_as" | "affects" | "assumes" | "attached" | "authenticates_as" | "belongs_to" | "called" | "can_access" | "configures" | "contains" | "correlates_with" | "cross_account_trust" | "defines" | "delegated_to" | "depends_on" | "exhibits_drift" | "exploitable_via" | "exposed_to" | "exposes_cred" | "governs" | "has_permission" | "hosted_on" | "hosts" | "imports" | "inherits" | "invoked" | "lateral_path" | "manages" | "member_of" | "observes" | "owns" | "part_of" | "possibly_correlates_with" | "protects" | "provides_tool" | "reaches_tool" | "remediates" | "runs" | "scoped_to" | "serves_model" | "shares_cred" | "shares_server" | "stores" | "trace_step" | "triggers" | "trusts" | "used_credential" | "uses" | "uses_framework" | "vulnerable_to";
 
 export type GraphTraversalClass = "authority" | "correlation" | "dependency" | "derived" | "exposure" | "finding" | "governance" | "runtime" | "structural";
 
-export const GRAPH_EDGE_KINDS: readonly GraphEdgeKindKey[] = ["accessed", "acted_as", "affects", "assumes", "attached", "authenticates_as", "belongs_to", "called", "can_access", "configures", "contains", "correlates_with", "cross_account_trust", "defines", "delegated_to", "depends_on", "exhibits_drift", "exploitable_via", "exposed_to", "exposes_cred", "governs", "has_permission", "hosts", "imports", "inherits", "invoked", "lateral_path", "manages", "member_of", "observes", "owns", "part_of", "possibly_correlates_with", "protects", "provides_tool", "reaches_tool", "remediates", "runs", "scoped_to", "serves_model", "shares_cred", "shares_server", "stores", "trace_step", "triggers", "trusts", "used_credential", "uses", "uses_framework", "vulnerable_to"] as const;
+export const GRAPH_EDGE_KINDS: readonly GraphEdgeKindKey[] = ["accessed", "acted_as", "affects", "assumes", "attached", "authenticates_as", "belongs_to", "called", "can_access", "configures", "contains", "correlates_with", "cross_account_trust", "defines", "delegated_to", "depends_on", "exhibits_drift", "exploitable_via", "exposed_to", "exposes_cred", "governs", "has_permission", "hosted_on", "hosts", "imports", "inherits", "invoked", "lateral_path", "manages", "member_of", "observes", "owns", "part_of", "possibly_correlates_with", "protects", "provides_tool", "reaches_tool", "remediates", "runs", "scoped_to", "serves_model", "shares_cred", "shares_server", "stores", "trace_step", "triggers", "trusts", "used_credential", "uses", "uses_framework", "vulnerable_to"] as const;
 
 export interface GraphEdgeKindMeta {
   label: string;
@@ -1108,6 +1109,25 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
     "traversable": true,
     "traversal_class": "authority"
   },
+  "hosted_on": {
+    "label": "Hosted On",
+    "color": "#78716c",
+    "category": "inventory",
+    "direction": "directed",
+    "source_types": [
+      "agent",
+      "server",
+      "container"
+    ],
+    "target_types": [
+      "container",
+      "cluster",
+      "cloud_resource",
+      "fleet"
+    ],
+    "traversable": true,
+    "traversal_class": "dependency"
+  },
   "hosts": {
     "label": "Hosts",
     "color": "#6b7280",
@@ -1328,11 +1348,29 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
     "direction": "bidirectional",
     "source_types": [
       "agent",
-      "server"
+      "server",
+      "cloud_resource",
+      "cluster",
+      "container",
+      "role",
+      "service_account",
+      "service_principal",
+      "user",
+      "managed_identity",
+      "data_store"
     ],
     "target_types": [
       "agent",
-      "server"
+      "server",
+      "cloud_resource",
+      "cluster",
+      "container",
+      "role",
+      "service_account",
+      "service_principal",
+      "user",
+      "managed_identity",
+      "data_store"
     ],
     "traversable": false,
     "traversal_class": "correlation"

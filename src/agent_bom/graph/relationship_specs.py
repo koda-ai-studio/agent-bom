@@ -134,6 +134,16 @@ _SPECS: tuple[RelationshipSpec, ...] = (
         (E.PROVIDER, E.ENVIRONMENT, E.FLEET, E.ACCOUNT, E.CLOUD_RESOURCE),
         (E.ACCOUNT, E.ORG, E.AGENT, E.SERVER, E.CLOUD_RESOURCE),
     ),
+    # A workload runs on its host: an agent or server in a container or on a
+    # VM, a container (pod) on a node VM, a cluster or a managed fleet. The
+    # structural rollup stays HOSTS; this is the runtime dependency paths walk.
+    _spec(
+        R.HOSTED_ON,
+        T.DEPENDENCY,
+        "inventory",
+        (E.AGENT, E.SERVER, E.CONTAINER),
+        (E.CONTAINER, E.CLUSTER, E.CLOUD_RESOURCE, E.FLEET),
+    ),
     _spec(R.USES, T.DEPENDENCY, "inventory", (E.AGENT,), (E.SERVER,)),
     _spec(R.USES_FRAMEWORK, T.DEPENDENCY, "inventory", (E.AGENT,), (E.FRAMEWORK,)),
     _spec(

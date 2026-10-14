@@ -59,6 +59,7 @@ const RELATIONSHIP_SCOPE_MAP: Record<
   all: null,
   inventory: new Set<string>([
     RelationshipType.HOSTS,
+    RelationshipType.HOSTED_ON,
     RelationshipType.USES,
     RelationshipType.DEPENDS_ON,
     RelationshipType.PROVIDES_TOOL,

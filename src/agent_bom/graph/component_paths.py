@@ -38,8 +38,18 @@ _SCOPE_KINDS = frozenset(
     {EntityType.ENVIRONMENT.value, EntityType.ACCOUNT.value, EntityType.ORG.value, EntityType.PROVIDER.value, EntityType.FLEET.value}
 )
 # A vulnerable workload that runs on its own is a path even when nothing holds
-# it. A cloud resource's own CVE already ranks through its toxic combination.
+# it: a server, a container, or a compute instance (VM) nothing is hosted on.
 _STANDALONE_HOLDERS = frozenset({EntityType.SERVER.value, EntityType.CONTAINER.value})
+_COMPUTE_RESOURCE_TYPES = frozenset({"instance", "virtual_machine", "vm", "compute_instance"})
+
+
+def _standalone(node: UnifiedNode) -> bool:
+    kind = _kind(node)
+    if kind == EntityType.CLOUD_RESOURCE.value:
+        return str(node.attributes.get("resource_type") or "").casefold() in _COMPUTE_RESOURCE_TYPES
+    return kind in _STANDALONE_HOLDERS
+
+
 _UNVERIFIED_SUMMARY = (
     "Unverified structural candidate: graph topology connects the agent and vulnerable "
     "package/server, but no executable graph or symbol path has been proven."
@@ -173,7 +183,7 @@ def derive_component_paths(
                 counts.reasons.add("holder_chain_budget")
             for chain in chains:
                 hops = ([chain[0].source] if chain else []) + [edge.target for edge in chain] or [holder.id]
-                if len(hops) == 1 and _kind(holder) not in _STANDALONE_HOLDERS:
+                if len(hops) == 1 and not _standalone(holder):
                     continue
                 hops = [*hops, finding.id]
                 key = tuple(hops)

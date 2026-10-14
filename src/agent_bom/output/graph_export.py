@@ -666,6 +666,7 @@ _NEO4J_LABELS: dict[str, str] = {
 # AIBOM edge kind → Neo4j relationship type
 _NEO4J_REL_TYPES: dict[str, str] = {
     "hosts": "HOSTS",
+    "hosted_on": "HOSTED_ON",
     "uses": "USES_SERVER",
     "depends_on": "DEPENDS_ON",
     "affects": "AFFECTS",
@@ -689,7 +690,6 @@ _GRAPHML_KEYS = [
 
 
 def _xml_escape(text: str) -> str:
-    """Escape special XML characters."""
     return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;").replace("'", "&apos;")
 
 
