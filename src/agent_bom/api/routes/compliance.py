@@ -84,6 +84,7 @@ from agent_bom.api.routes.compliance_routes.scoring import (
 from agent_bom.backpressure import BackpressureRejectedError, adaptive_backpressure
 from agent_bom.compliance_nist_catalog import build_nist_800_53_catalog_line, build_nist_800_53_drill
 from agent_bom.compliance_nist_catalog import evaluated_control_status as _evaluated_control_status  # noqa: F401
+from agent_bom.evidence.scan_run import result_vulnerability_coverage_incomplete
 from agent_bom.evidence.scoring import score_compliance
 from agent_bom.rbac import require_authenticated_permission
 from agent_bom.security import sanitize_error
@@ -142,6 +143,7 @@ def _build_compliance(tenant_jobs: list[Any], *, scan_id: str | None = None) -> 
     authoritative_occurrences: dict[str, tuple[tuple[str, str, str], dict[str, Any]]] = {}
     latest_scan_job: Any | None = None
     scan_count = 0
+    vulnerability_coverage_incomplete = False
     has_mcp_context = False
     has_agent_context = False
     all_scan_sources: set[str] = set()
@@ -150,6 +152,10 @@ def _build_compliance(tenant_jobs: list[Any], *, scan_id: str | None = None) -> 
         if job.status != JobStatus.DONE or not job.result:
             continue
         scan_count += 1
+        # A counted scan whose vulnerability lane was partial means the estate
+        # was not fully scanned, so no vulnerability-scanning control may claim
+        # a pass off this evidence set.
+        vulnerability_coverage_incomplete = vulnerability_coverage_incomplete or result_vulnerability_coverage_incomplete(job.result)
         for row in _result_compliance_evidence(job.result):
             occurrence_id = str(row.get("id") or row.get("canonical_id") or "")
             if not occurrence_id:
@@ -179,6 +185,7 @@ def _build_compliance(tenant_jobs: list[Any], *, scan_id: str | None = None) -> 
             scored=metadata.scored,
             scan_count=scan_count,
             latest_scan=latest_scan,
+            vulnerability_coverage_incomplete=vulnerability_coverage_incomplete,
         )
         for metadata in TAG_MAPPED_FRAMEWORKS
     }

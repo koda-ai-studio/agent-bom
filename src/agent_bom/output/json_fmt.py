@@ -913,6 +913,7 @@ def _blast_radius_json_entry(
         "advisory_coverage_state": br.vulnerability.advisory_coverage_state,
         "match_confidence_tier": br.vulnerability.match_confidence_tier,
         "cvss_score": br.vulnerability.cvss_score,
+        "cwe_ids": list(br.vulnerability.cwe_ids or []),
         **vulnerability_enrichment_metadata(br.vulnerability),
         "exploit_likelihood": br.vulnerability.exploit_likelihood,
         "published_at": br.vulnerability.published_at,

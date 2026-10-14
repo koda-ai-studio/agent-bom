@@ -61,6 +61,7 @@ async def compliance_impl(
             br_dicts.append(
                 {
                     "severity": br.vulnerability.severity.value,
+                    "cwe_ids": list(br.vulnerability.cwe_ids or []),
                     "package": f"{br.package.name}@{br.package.version}",
                     "affected_agents": [a.name for a in br.affected_agents],
                     "owasp_tags": list(br.owasp_tags),

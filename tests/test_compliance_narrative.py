@@ -30,6 +30,7 @@ def _make_vuln(
     severity: Severity = Severity.HIGH,
     fixed_version: str | None = "2.0.0",
     is_kev: bool = False,
+    cwe_ids: list[str] | None = None,
 ) -> Vulnerability:
     return Vulnerability(
         id=vuln_id,
@@ -37,6 +38,7 @@ def _make_vuln(
         severity=severity,
         fixed_version=fixed_version,
         is_kev=is_kev,
+        cwe_ids=list(cwe_ids or []),
     )
 
 
@@ -473,7 +475,9 @@ def test_multi_framework_tags_affect_multiple_frameworks():
         owasp_tags=["LLM05"],
         owasp_mcp_tags=["MCP04"],
         nist_tags=["MAP-3.5"],
-        cmmc_tags=["RA.L2-3.11.2"],
+        # Corrective practice: RA.L2-3.11.2 is detective (the scan evidences it)
+        # and a finding never fails it.
+        cmmc_tags=["SI.L2-3.14.1"],
     )
     report = _make_report(blast_radii=[br])
     result = generate_compliance_narrative(report)
@@ -527,7 +531,11 @@ def test_same_control_id_does_not_bleed_between_frameworks():
     status_by_slug = {fn.slug: fn.status for fn in result.framework_narratives}
 
     assert status_by_slug["nist-800-53"] == "action_required"
-    assert status_by_slug["fedramp"] == "not_evaluated"
+    # FedRAMP's only evaluated controls are its detective RA-5/CM-8 (the scan
+    # itself) — the NIST SI-10 finding must not bleed into it.
+    fedramp = next(fn for fn in result.framework_narratives if fn.slug == "fedramp")
+    assert fedramp.status != "action_required"
+    assert fedramp.failing_controls == []
     assert result.remediation_impact
     assert result.remediation_impact[0].frameworks_impacted == ["NIST 800-53"]
 
@@ -539,8 +547,8 @@ def test_narrative_carries_nist_800_53_catalog_line():
     """The auditor narrative surfaces the catalog-backed NIST 800-53 line
     (vendor-asserted), scored over evaluated controls only, with ISO-by-id
     attribution — the SAME representation the /v1/compliance API line reports."""
-    br = _make_blast_radius(vuln=_make_vuln(severity=Severity.HIGH), owasp_tags=[])
-    br.nist_800_53_tags = ["SI-10"]  # curated CWE-backed evidencing check
+    br = _make_blast_radius(vuln=_make_vuln(severity=Severity.HIGH, cwe_ids=["CWE-20"]), owasp_tags=[])
+    br.nist_800_53_tags = ["SI-10"]  # curated CWE-backed evidencing check (cwe:CWE-20)
     report = _make_report(blast_radii=[br])
 
     result = generate_compliance_narrative(report)

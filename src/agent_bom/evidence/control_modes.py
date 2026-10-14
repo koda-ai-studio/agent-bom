@@ -48,6 +48,8 @@ __all__ = [
     "is_detective_control",
     "detective_control_status",
     "finding_taggable_controls",
+    "requires_vulnerability_coverage",
+    "INVENTORY_DETECTIVE_CONTROLS",
 ]
 
 MODE_DETECTIVE = "detective"
@@ -76,6 +78,22 @@ DETECTIVE_CONTROLS: dict[str, frozenset[str]] = {
     #   CC7.1 detection procedures that identify newly discovered vulnerabilities
     #   and configuration changes that introduce them
     "soc2_tags": frozenset({"CC7.1"}),
+    # FedRAMP Moderate selects the same 800-53 controls; its catalog keys are
+    # the bare 800-53 IDs (emitted tags carry a ``FedRAMP-`` prefix).
+    "fedramp_tags": frozenset({"RA-5", "CM-8"}),
+    # CMMC 2.0 Level 2
+    #   RA.L2-3.11.2 "Vulnerability scanning" (800-171 3.11.2, RA-5's counterpart)
+    "cmmc_tags": frozenset({"RA.L2-3.11.2"}),
+}
+
+# Detective controls evidenced by DISCOVERY (the component inventory) rather
+# than by the vulnerability lane. Every other detective control asserts that
+# vulnerabilities were identified, so a scan whose vulnerability coverage was
+# incomplete is not evidence that it operated.
+INVENTORY_DETECTIVE_CONTROLS: dict[str, frozenset[str]] = {
+    "nist_800_53_tags": frozenset({"CM-8"}),
+    "fedramp_tags": frozenset({"CM-8"}),
+    "cis_tags": frozenset({"CIS-02.1"}),
 }
 
 
@@ -85,6 +103,10 @@ UNEVALUABLE_CONTROLS: dict[str, frozenset[str]] = {
     # RA-7 "Risk Response" — whether the organization responds to findings.
     # IR-5 "Incident Monitoring" — whether incidents are tracked and documented.
     "nist_800_53_tags": frozenset({"RA-7", "IR-5"}),
+    "fedramp_tags": frozenset({"RA-7", "IR-5"}),
+    # CM.L2-3.4.3 "Track, review, and control changes" — a vulnerable dependency
+    # says nothing about whether change control operates.
+    "cmmc_tags": frozenset({"CM.L2-3.4.3"}),
 }
 
 
@@ -113,7 +135,12 @@ def finding_taggable_controls(tag_field: str, control_ids: Iterable[str]) -> set
     CWE-table entry cannot re-introduce one through the back door.
     """
     excluded = DETECTIVE_CONTROLS.get(tag_field, frozenset()) | UNEVALUABLE_CONTROLS.get(tag_field, frozenset())
-    return {control_id for control_id in control_ids if control_id not in excluded}
+    return {control_id for control_id in control_ids if control_id.removeprefix("FedRAMP-") not in excluded}
+
+
+def requires_vulnerability_coverage(tag_field: str, control_id: str) -> bool:
+    """True when a detective control's pass rests on the vulnerability lane."""
+    return is_detective_control(tag_field, control_id) and control_id not in INVENTORY_DETECTIVE_CONTROLS.get(tag_field, frozenset())
 
 
 # Forward clock drift between a scanner host and the control plane that is
@@ -139,6 +166,7 @@ def detective_control_status(
     latest_scan: str | None,
     now: datetime | None = None,
     max_age_days: int | None = None,
+    vulnerability_coverage_incomplete: bool = False,
 ) -> tuple[str, str]:
     """Score a detective control from scan evidence. Returns ``(status, reason)``.
 
@@ -160,15 +188,24 @@ def detective_control_status(
       ``("fail", "future_scan_evidence")``. ``reference - completed`` is
       negative for a future timestamp and so can never exceed the window: a scan
       dated +10 years read as fresh on every subsequent request, permanently.
+    * Otherwise-passing evidence whose vulnerability lane was incomplete (the
+      caller passes ``vulnerability_coverage_incomplete``, derived by
+      :func:`agent_bom.evidence.scan_run.vulnerability_coverage_incomplete`) —
+      ``("not_assessed", "vulnerability_coverage_incomplete")``. A partial scan
+      is not evidence that vulnerabilities were identified. Stale evidence still
+      fails: monitoring lapsed regardless of what the last scan covered.
     """
     from agent_bom import config
 
     if scan_count <= 0:
         return "not_assessed", "no_completed_scan"
 
+    passing = ("pass", "fresh_scan_evidence")
+    if vulnerability_coverage_incomplete:
+        passing = ("not_assessed", "vulnerability_coverage_incomplete")
     window_days = config.COMPLIANCE_DETECTIVE_EVIDENCE_MAX_AGE_DAYS if max_age_days is None else max_age_days
     if window_days <= 0:
-        return "pass", "fresh_scan_evidence"
+        return passing
 
     completed = _parse_timestamp(latest_scan)
     if completed is None:
@@ -184,4 +221,4 @@ def detective_control_status(
     # timestamp further ahead than that is not a datable scan.
     if -age > _MAX_FORWARD_CLOCK_SKEW:
         return "fail", "future_scan_evidence"
-    return "pass", "fresh_scan_evidence"
+    return passing

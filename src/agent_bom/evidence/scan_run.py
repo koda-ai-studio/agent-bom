@@ -9,6 +9,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from enum import Enum
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, Literal
 
 from agent_bom.coverage import is_graph_analysis_gap, is_scope_exclusion
@@ -369,6 +370,49 @@ def vulnerability_coverage_incomplete(report: Any) -> bool:
     return False
 
 
+def result_vulnerability_coverage_incomplete(result: Any) -> bool:
+    """:func:`vulnerability_coverage_incomplete` over a serialized scan result.
+
+    The API stores the JSON report, not the ``AIBOMReport``; rebuild just the
+    fields the shared derivation reads so the control plane and the CLI can
+    never disagree about whether a scan's vulnerability lane was complete.
+    """
+    if not isinstance(result, dict):
+        return False
+    return vulnerability_coverage_incomplete(serialized_coverage_view(result))
+
+
+def serialized_coverage_view(result: dict[str, Any]) -> SimpleNamespace:
+    """The report attributes :func:`vulnerability_coverage_incomplete` reads,
+    rebuilt from a serialized (JSON) scan report."""
+    raw_run = result.get("scan_run")
+    run_payload: dict[str, Any] = raw_run if isinstance(raw_run, dict) else {}
+    try:
+        outcome = ScanOutcome(str(run_payload.get("outcome") or ScanOutcome.COMPLETE.value))
+    except ValueError:
+        outcome = ScanOutcome.PARTIAL
+    issues = [
+        ScanIssue(
+            code=str(raw.get("code") or ""),
+            stage=str(raw.get("stage") or ""),
+            source=str(raw.get("source") or ""),
+            message=str(raw.get("message") or ""),
+            affects_coverage=raw.get("affects_coverage") is not False,
+        )
+        for raw in run_payload.get("issues") or []
+        if isinstance(raw, dict)
+    ]
+    raw_summary = result.get("summary")
+    summary: dict[str, Any] = raw_summary if isinstance(raw_summary, dict) else {}
+    return SimpleNamespace(
+        scan_performance_data=result.get("scan_performance") or result.get("scan_performance_data"),
+        scan_run=SimpleNamespace(outcome=outcome, issues=issues, scopes=[]),
+        coverage_warnings=result.get("coverage_warnings") or [],
+        agents=[],
+        total_packages=summary.get("total_packages", 0),
+    )
+
+
 __all__ = [
     "ScanIssue",
     "ScanOutcome",
@@ -376,6 +420,8 @@ __all__ = [
     "ScanScope",
     "ScanScopeStatus",
     "effective_scan_run",
+    "result_vulnerability_coverage_incomplete",
+    "serialized_coverage_view",
     "vulnerability_coverage_caveat",
     "vulnerability_coverage_incomplete",
 ]
