@@ -514,7 +514,7 @@ agent-bom ships a curated control set per framework, sized to the AI/MCP/agent t
 | MITRE | ATLAS | 65 techniques | ~90 | Applicability overlay (not scored): LLM/AI techniques — prompt injection, jailbreak, supply-chain, exfiltration, agent tool abuse — that the observed findings make applicable |
 | MITRE | ATT&CK Enterprise | 691 techniques | ~700 | Applicability overlay (not scored): techniques MITRE's CWE → CAPEC → ATT&CK data associates with the weaknesses observed in the estate |
 | Regulatory | EU AI Act | 6 articles | ~113 | Articles 9/10/12/14/15/17 (risk mgmt, data governance, record-keeping, human oversight, accuracy/robustness/cybersecurity, QMS); technical evidence only, not a legal classification |
-| Regulatory | ISO/IEC 27001:2022 | 9 Annex A controls | 93 | Supplier, vulnerability, cryptography, secure-dev, evidence collection |
+| Regulatory | ISO/IEC 27001:2022 | 25 Annex A controls | 93 | Supplier, vulnerability, cryptography, secure-dev, evidence collection; identity, access, malware and logging controls reached through NIST's SP 800-53 crosswalk |
 | Regulatory | SOC 2 TSC | 9 criteria | ~64 | Common Criteria 6.x / 7.x / 8.x / 9.x (access, monitoring, change mgmt, vendor risk) |
 | Regulatory | CIS Controls v8 | 10 safeguards | 153 | Software inventory, vulnerability mgmt, secure-dev (CIS 02 / 07 / 16) |
 | Regulatory | CMMC 2.0 Level 2 | 17 practices | 110 | RA / SI / SC / CM / AC / IA practices most relevant to vulnerable-package risk |

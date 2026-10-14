@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from typing import Any
 
-from agent_bom.compliance_coverage import rows_by_control_key
+from agent_bom.compliance_coverage import rows_by_control_key, scoring_catalog
 from agent_bom.compliance_nist_catalog import evaluated_control_status as _evaluated_control_status
 from agent_bom.evidence.control_modes import (
     DETECTIVE_CONTROLS,
@@ -159,11 +159,13 @@ def _build_framework_controls(
     vulnerability_coverage_incomplete: bool,
     scan_evidence: DetectiveScanEvidence | None = None,
 ) -> dict[str, list[dict]]:
-    """Build every tag-mapped framework's control entries, keyed by output key."""
-    return {
-        metadata.output_key: _build_controls(
-            rows_by_control_key(all_blast, dict(metadata.catalog), metadata.tag_field),
-            dict(metadata.catalog),
+    """Build every tag-mapped framework's control entries against its scoring catalog, keyed by output key."""
+    controls: dict[str, list[dict]] = {}
+    for metadata in frameworks:
+        catalog = scoring_catalog(metadata)
+        controls[metadata.output_key] = _build_controls(
+            rows_by_control_key(all_blast, catalog, metadata.tag_field),
+            catalog,
             metadata.tag_field,
             "code",
             scored=metadata.scored,
@@ -172,8 +174,7 @@ def _build_framework_controls(
             vulnerability_coverage_incomplete=vulnerability_coverage_incomplete,
             scan_evidence=scan_evidence,
         )
-        for metadata in frameworks
-    }
+    return controls
 
 
 def _count_statuses(controls: list[dict]) -> tuple[int, int, int]:

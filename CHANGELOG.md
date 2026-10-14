@@ -56,6 +56,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 - Compliance controls are no longer passed or failed on evidence that never ran. "Scan for vulnerabilities" and "component inventory" controls (NIST RA-5 / CM-8, FedRAMP RA-5 / CM-8, CMMC `RA.L2-3.11.2`, CIS `CIS-02.1` / `CIS-07.1` / `CIS-07.5`, SOC 2 `CC7.1`, NIST CSF `ID.RA-01` / `ID.RA-02` / `DE.CM-09`) pass only on a scan whose inventory or vulnerability lane actually ran, scored from that lane's latest scan. IaC-only, browser-only, secrets-only, cloud-benchmark-only and `--no-scan` runs now read `not_assessed` (reason `detective_evidence_not_collected`) instead of `pass`, and a partial vulnerability lane reads `not_assessed` (reason `vulnerability_coverage_incomplete`). `--no-scan` records a `vulnerability_scan_skipped` receipt in `scan_run`. NIST 800-53 catalog controls are evaluated only by a finding's own evidencing checks, so SR-3 and SI-4 no longer fail on every CVE. CMMC no longer tags `RA.L2-3.11.2` or `CM.L2-3.4.3` onto CVEs.
 
+- ISO/IEC 27001 findings reached through NIST's SP 800-53 crosswalk (for example `A.5.17` and `A.5.16` on committed credentials) were tagged but missing from the ISO catalog, so `/v1/compliance` and the evidence export dropped them. The bundled ISO catalog now lists all 25 Annex A controls a tagger can emit, by identifier with agent-bom's own short descriptors. A test enumerates every tagger and fails on any emitted ID its framework's catalog does not contain.
+
+- `/v1/compliance` and the evidence export scored MITRE ATT&CK against the bundled catalog, while the taggers and CLI narrative used the active (synced) catalog. All surfaces now use one resolver, so a technique that exists only in a synced catalog appears everywhere. The documented technique count still comes from the bundled catalog.
+
+- A finding's `applicable_frameworks` now lists exactly the frameworks it has control tags for. Hub posture counts by `applicable_frameworks` and `/v1/compliance` counts by tags, so the two counts now match. Findings with no control tags still use the source/asset/finding-type selection table.
+
 ### Security
 
 - API local-path scans: a set-but-blank `AGENT_BOM_API_LOCAL_PATH_SCANS` no longer enables local filesystem scans. A blank value is treated as unset and falls through to `AGENT_BOM_ENABLE_LOCAL_PATH_SCANS`, then to the disabled default.

@@ -73,20 +73,13 @@ _DISPLAY_NAME_OVERRIDES: dict[str, str] = {
 
 def _get_catalog(slug: str) -> tuple[dict[str, str], str, str]:
     """Return (catalog_dict, tag_field_on_blast_radius, display_name) for a framework slug."""
-    from agent_bom.compliance_coverage import TAG_MAPPED_FRAMEWORKS
+    from agent_bom.compliance_coverage import TAG_MAPPED_FRAMEWORKS, scoring_catalog
 
-    framework_map: dict[str, tuple[dict[str, str], str, str]] = {}
     for metadata in TAG_MAPPED_FRAMEWORKS:
-        catalog = dict(metadata.catalog)
-        if metadata.slug == "attack":
-            from agent_bom.mitre_attack import get_attack_techniques
-
-            catalog = get_attack_techniques()
-        framework_map[metadata.slug] = (catalog, metadata.tag_field, _DISPLAY_NAME_OVERRIDES.get(metadata.slug, metadata.report_label))
-    entry = framework_map.get(slug)
-    if entry is None:
-        raise ValueError(f"Unknown framework '{slug}'. Supported: {', '.join(framework_map.keys())}")
-    return entry
+        if metadata.slug == slug:
+            display_name = _DISPLAY_NAME_OVERRIDES.get(metadata.slug, metadata.report_label)
+            return scoring_catalog(metadata), metadata.tag_field, display_name
+    raise ValueError(f"Unknown framework '{slug}'. Supported: {', '.join(m.slug for m in TAG_MAPPED_FRAMEWORKS)}")
 
 
 def _all_framework_slugs() -> list[str]:

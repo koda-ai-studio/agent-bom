@@ -1977,6 +1977,36 @@
    ],
    "iso_27001": [
     {
+     "code": "A.5.10",
+     "findings": 0,
+     "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
+     "triggered": false
+    },
+    {
+     "code": "A.5.14",
+     "findings": 0,
+     "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
+     "triggered": false
+    },
+    {
+     "code": "A.5.15",
+     "findings": 0,
+     "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
+     "triggered": false
+    },
+    {
+     "code": "A.5.16",
+     "findings": 0,
+     "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
+     "triggered": false
+    },
+    {
+     "code": "A.5.17",
+     "findings": 0,
+     "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
+     "triggered": false
+    },
+    {
      "code": "A.5.19",
      "findings": 0,
      "name": "Supplier-relationship information security",
@@ -2007,15 +2037,81 @@
      "triggered": false
     },
     {
+     "code": "A.5.33",
+     "findings": 0,
+     "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
+     "triggered": false
+    },
+    {
+     "code": "A.8.15",
+     "findings": 0,
+     "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
+     "triggered": false
+    },
+    {
+     "code": "A.8.16",
+     "findings": 0,
+     "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
+     "triggered": false
+    },
+    {
+     "code": "A.8.18",
+     "findings": 0,
+     "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
+     "triggered": false
+    },
+    {
+     "code": "A.8.19",
+     "findings": 0,
+     "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
+     "triggered": false
+    },
+    {
+     "code": "A.8.2",
+     "findings": 0,
+     "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
+     "triggered": false
+    },
+    {
+     "code": "A.8.20",
+     "findings": 0,
+     "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
+     "triggered": false
+    },
+    {
      "code": "A.8.24",
      "findings": 0,
      "name": "Use of cryptographic protection",
      "triggered": false
     },
     {
+     "code": "A.8.26",
+     "findings": 0,
+     "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
+     "triggered": false
+    },
+    {
      "code": "A.8.28",
      "findings": 0,
      "name": "Secure development / coding practices",
+     "triggered": false
+    },
+    {
+     "code": "A.8.3",
+     "findings": 0,
+     "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
+     "triggered": false
+    },
+    {
+     "code": "A.8.4",
+     "findings": 0,
+     "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
+     "triggered": false
+    },
+    {
+     "code": "A.8.7",
+     "findings": 0,
+     "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
      "triggered": false
     },
     {
