@@ -135,9 +135,7 @@ def _manifest_roots(findings: list[Any]) -> list[str]:
     return sorted(roots, key=lambda r: (-(r.count("/") + 1) if r else 0, r))
 
 
-_NON_APPLICATION_ASSET_TYPES = frozenset(
-    {"package", "agent", "mcp_server", "server", "mcp_tool", "tool", "identity", "credential", "cloud_resource"}
-)
+_NON_APPLICATION_ASSET_TYPES = frozenset({"package", "agent", "mcp_server", "server", "mcp_tool", "tool", "identity", "credential"})
 
 
 def _app_identity(finding: Any, manifest_roots: list[str]) -> tuple[str, str]:

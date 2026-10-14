@@ -1511,6 +1511,10 @@ def cloud_org_architecture_finding_to_finding(finding: dict, *, provider: str, o
     )
 
 
+def _tool_name(tool: Any) -> str:
+    return str(tool.get("name", "") if isinstance(tool, dict) else getattr(tool, "name", "") or "")
+
+
 def _agent_server_graph_links(br: Any, entity_name: "Callable[[object], str]") -> tuple[list[dict[str, str]], list[str], list[str]]:
     """Observed agent→server pairs plus the graph ids every surface shares.
 
@@ -1518,7 +1522,7 @@ def _agent_server_graph_links(br: Any, entity_name: "Callable[[object], str]") -
     an exposure path names graph nodes rather than display labels.
     """
     affected = {getattr(server, "stable_id", ""): server.name for server in br.affected_servers}
-    tools = {getattr(tool, "name", "") for tool in br.exposed_tools}
+    tools = {_tool_name(tool) for tool in br.exposed_tools}
     credentials = set(br.exposed_credentials)
     links: list[dict[str, str]] = []
     tool_refs: dict[str, None] = {}
@@ -1532,8 +1536,10 @@ def _agent_server_graph_links(br: Any, entity_name: "Callable[[object], str]") -
             links.append(
                 {"agent": entity_name(agent), "server": server_name, "agent_ref": agent_graph_id_for(agent), "server_ref": server_ref}
             )
-            tool_refs.update((f"tool:{server_ref}:{tool.name}", None) for tool in server.tools if tool.name in tools)
-            credential_refs.update((f"cred:{server_ref}:{name}", None) for name in server.credential_names if name in credentials)
+            tool_names = (_tool_name(tool) for tool in getattr(server, "tools", []) or [])
+            tool_refs.update((f"tool:{server_ref}:{name}", None) for name in tool_names if name and name in tools)
+            credential_names = getattr(server, "credential_names", []) or []
+            credential_refs.update((f"cred:{server_ref}:{name}", None) for name in credential_names if name in credentials)
     return links, list(tool_refs), list(credential_refs)
 
 
