@@ -265,3 +265,32 @@ def test_credential_budget_survives_path_evidence_annotation(monkeypatch):
     assert [p.hops[-2] for p in paths] == ["cred:1"]
     assert paths[0].analysis["status"] == "limited"
     assert paths[0].analysis["reason_codes"] == ["agent_budget"]
+
+
+def test_path_budget_keeps_the_agent_budget_reason(monkeypatch):
+    from agent_bom.graph import credential_findings, credential_reach
+    from agent_bom.graph.container import UnifiedGraph
+    from agent_bom.graph.edge import UnifiedEdge
+    from agent_bom.graph.node import UnifiedNode
+    from agent_bom.graph.toxic_findings import build_toxic_combination_findings_data
+    from agent_bom.graph.types import EntityType, RelationshipType
+
+    monkeypatch.setattr(credential_reach, "MAX_AGENT_EDGES", 3)
+    monkeypatch.setattr(credential_findings, "MAX_PATHS", 2)
+    graph = UnifiedGraph()
+    for a in range(3):
+        agent, server = f"agent:{a}", f"server:{a}"
+        graph.add_node(UnifiedNode(id=agent, label=agent, entity_type=EntityType.AGENT, severity="high"))
+        graph.add_node(UnifiedNode(id=server, label=server, entity_type=EntityType.SERVER, severity="high"))
+        graph.add_edge(UnifiedEdge(source=agent, target=server, relationship=RelationshipType.USES))
+        for c in range(4 if a == 0 else 1):
+            cred = f"cred:{a}:{c}"
+            graph.add_node(UnifiedNode(id=cred, label=cred, entity_type=EntityType.CREDENTIAL, severity="high"))
+            graph.add_edge(UnifiedEdge(source=server, target=cred, relationship=RelationshipType.EXPOSES_CRED))
+    credential_findings.project_credential_findings(graph, build_toxic_combination_findings_data(graph))
+    paths = credential_findings.credential_finding_paths(graph)
+    status = graph.analysis_status["credential_finding_paths"]
+    assert len(paths) == 2
+    assert status.status.value == "limited"
+    assert status.reason_codes == ("agent_budget", "path_budget")
+    assert all(path.analysis["reason_codes"] == ["agent_budget", "path_budget"] for path in paths)

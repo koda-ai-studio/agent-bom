@@ -33,10 +33,11 @@ from agent_bom.api.models import JobStatus
 from agent_bom.api.neptune_graph import NeptuneGraphStore
 from agent_bom.core.settings import env_raw
 from agent_bom.graph import UnifiedGraph
+from agent_bom.graph.analysis import GraphAnalysisStatus, merge_analysis_statuses
 from agent_bom.storage.state_home import state_dir
 
 CURRENT_PREFIX = "current-estate:"
-_PROJECTION_FORMAT = 1
+_PROJECTION_FORMAT = 2
 _READS = frozenset(
     {
         "load_graph",
@@ -350,6 +351,7 @@ class CurrentGraphStore:
     def _materialize(self, tenant: str, identity: str, selected: Any, revisions: tuple[tuple[str, str], ...]) -> None:
         created_at = max((scan_evidence_authority_key(job)[0] for job in selected), default="")
         graph = UnifiedGraph(scan_id=identity, tenant_id=tenant, created_at=created_at)
+        source_statuses: list[dict[str, GraphAnalysisStatus]] = []
         for scan, generation in revisions:
             if not generation:
                 continue
@@ -362,6 +364,9 @@ class CurrentGraphStore:
                 graph.add_edge(edge)
             graph.attack_paths.extend(source.attack_paths)
             graph.interaction_risks.extend(source.interaction_risks)
+            # Stored-path state describes the source snapshot's own rows, not this
+            # projection; omitting it makes reads derive paths for the merged view.
+            source_statuses.append({name: entry for name, entry in source.analysis_status.items() if name != "paths"})
         if self._revisions(tenant, (scan for scan, _ in revisions)) != revisions:
             raise HTTPException(409, "Current estate evidence changed during assembly; retry the read.")
         try:
@@ -372,6 +377,8 @@ class CurrentGraphStore:
                 edges=graph.edges,
                 attack_paths=graph.attack_paths,
                 interaction_risks=graph.interaction_risks,
+                # A bound hit while analysing any source still bounds the view.
+                analysis_status=merge_analysis_statuses(source_statuses),
                 created_at=graph.created_at,
                 snapshot_kind="correlation",
                 correlation_id=identity,
