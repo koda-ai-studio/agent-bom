@@ -13,6 +13,10 @@ from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.store_backed import open_store_backed_unified_graph
 from agent_bom.graph.types import EntityType, RelationshipType
 
+# Hand-built graphs here use placeholder relationship pairs to exercise graph
+# mechanics; producers are held to the contract in test_graph_relationship_contract.
+pytestmark = pytest.mark.graph_contract("warn")
+
 
 def _edge(graph, source, target, relationship, **kwargs):
     edge = UnifiedEdge(source=source, target=target, relationship=relationship, **kwargs)

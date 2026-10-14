@@ -598,3 +598,6 @@ AGENT_BOM_MCP_SCAN_AUTH_FILE
 
 # Operator-managed trace connection configuration (secret_source also supports _FILE).
 AGENT_BOM_TRACE_CONNECTIONS
+
+# Graph relationship-contract mode (warn|enforce|strict), re-read on each violation so tests can pin strict.
+AGENT_BOM_GRAPH_CONTRACT

@@ -29,11 +29,17 @@ import tracemalloc
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 from agent_bom.api.graph_store import SQLiteGraphStore
 from agent_bom.graph import RelationshipType, UnifiedEdge
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.types import EntityType, NodeStatus
+
+# Hand-built graphs here use placeholder relationship pairs to exercise graph
+# mechanics; producers are held to the contract in test_graph_relationship_contract.
+pytestmark = pytest.mark.graph_contract("warn")
 
 # A 4x span, both well above the write batch window so the ratio reflects the
 # true bounded fraction (batch buffer + prior-id digest) rather than batch noise.

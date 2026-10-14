@@ -62,6 +62,7 @@ from agent_bom.graph.build_workspace import (
 )
 from agent_bom.graph.container import GraphCompleteness, UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge, merge_edge_evidence
+from agent_bom.graph.edge_evidence import merge_edge_provenance, normalize_edge_evidence
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.types import EntityType
 from agent_bom.graph.util import _now_iso
@@ -396,14 +397,22 @@ class StoreBackedUnifiedGraph(UnifiedGraph):
         # writes those in-place changes back instead of silently losing them.
         self._mark_dirty(node.id)
 
+    def add_stored_edge(self, edge: UnifiedEdge) -> None:
+        self.add_edge(edge)
+
     def add_edge(self, edge: UnifiedEdge) -> None:
+        # Entity-pair checks need endpoint types, which cost a store read per
+        # edge here; ``audit_graph_contract`` checks pairs once after the build.
+        normalize_edge_evidence(edge.evidence, edge.provenance)
         key = _edge_key(edge)
         existing_payload = self._backend.get_edge_payload(self._tenant, key)
         if existing_payload is not None:
-            if edge.evidence:
-                stored = _edge_from_payload(json.loads(existing_payload))
-                if merge_edge_evidence(stored.evidence, edge.evidence):
-                    self._backend.add_edge_payloads(self._tenant, [_edge_to_row(stored)])
+            stored = _edge_from_payload(json.loads(existing_payload))
+            before = (stored.confidence, json.dumps(stored.provenance, sort_keys=True, default=str))
+            changed = merge_edge_evidence(stored.evidence, edge.evidence)
+            merge_edge_provenance(stored, edge)
+            if changed or before != (stored.confidence, json.dumps(stored.provenance, sort_keys=True, default=str)):
+                self._backend.add_edge_payloads(self._tenant, [_edge_to_row(stored)])
             return
         self._backend.add_edge_payloads(self._tenant, [_edge_to_row(edge)])
 

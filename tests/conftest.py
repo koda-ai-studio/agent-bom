@@ -122,6 +122,10 @@ os.environ.setdefault("AGENT_BOM_DEMO_STORY_PREWARM", "0")
 # Write-time posture precompute runs on a background thread; tests that count
 # read-time computations opt in explicitly.
 os.environ.setdefault("AGENT_BOM_POSTURE_PRECOMPUTE", "0")
+# Every graph producer must satisfy the relationship contract under test;
+# production defaults to warn and records counts in analysis_status. A module
+# opts out with ``pytest.mark.graph_contract("warn")`` (see pytest_runtest_setup).
+os.environ.setdefault("AGENT_BOM_GRAPH_CONTRACT", "strict")
 
 
 @pytest.fixture(autouse=True)
@@ -587,6 +591,13 @@ def pytest_fixture_setup(fixturedef: pytest.FixtureDef[Any], request: pytest.Fix
     del fixturedef, request
     yield
     _sync_api_auth_after_local_fixtures()
+
+
+@pytest.hookimpl(tryfirst=True)
+def pytest_runtest_setup(item: pytest.Item) -> None:
+    """Pin the graph contract mode before any fixture, including module-scoped ones, builds a graph."""
+    marker = item.get_closest_marker("graph_contract")
+    os.environ["AGENT_BOM_GRAPH_CONTRACT"] = marker.args[0] if marker else "strict"
 
 
 @pytest.hookimpl(tryfirst=True)

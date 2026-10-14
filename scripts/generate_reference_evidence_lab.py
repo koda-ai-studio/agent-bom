@@ -27,6 +27,7 @@ from agent_bom.gateway_server import GatewaySettings, create_gateway_app  # noqa
 from agent_bom.gateway_upstreams import UpstreamConfig, UpstreamRegistry  # noqa: E402
 from agent_bom.graph import EntityType, RelationshipType, UnifiedEdge, UnifiedGraph, UnifiedNode  # noqa: E402
 from agent_bom.graph.correlation_service import CorrelationRequest, GraphCorrelationService  # noqa: E402
+from agent_bom.graph.edge_evidence import edge_evidence  # noqa: E402
 from agent_bom.iac import scan_iac_with_context  # noqa: E402
 from agent_bom.parsers import scan_project_directory  # noqa: E402
 from agent_bom.sbom import load_sbom  # noqa: E402
@@ -101,10 +102,7 @@ def _edge(
     runtime_state: str = "not_observed",
 ) -> UnifiedEdge:
     observed = _timestamp(index)
-    evidence: dict[str, Any] = {
-        "source_kind": source_kind,
-        "evidence_tier": evidence_tier,
-    }
+    evidence = edge_evidence(source_kind, evidence_tier, source_kind=source_kind, evidence_tier=evidence_tier)
     if evidence_tier == "modeled_infrastructure":
         evidence["modeled"] = True
     if runtime_state != "not_observed":
@@ -515,7 +513,7 @@ def _snapshots(
         _edge(
             "service:reference-api",
             "workload:reference-api",
-            RelationshipType.USES,
+            RelationshipType.EXPOSED_TO,
             scan_id=iac.scan_id,
             source_kind="kubernetes_iac",
             evidence_tier="modeled_infrastructure",
@@ -524,8 +522,8 @@ def _snapshots(
     )
     iac.add_edge(
         _edge(
-            "workload:reference-api",
             "container:iac:reference-api",
+            "workload:reference-api",
             RelationshipType.CONTAINS,
             scan_id=iac.scan_id,
             source_kind="kubernetes_iac",

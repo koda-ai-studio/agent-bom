@@ -14,6 +14,7 @@ from agent_bom.api.agent_identity_store import (
 from agent_bom.graph.cnapp_overlay import apply_cnapp_overlay
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
+from agent_bom.graph.edge_evidence import fixture_edge_evidence
 from agent_bom.graph.effective_permissions import apply_effective_permissions
 from agent_bom.graph.governance_overlay import apply_governance_overlay
 from agent_bom.graph.node import UnifiedNode
@@ -26,6 +27,7 @@ ShowcaseProfile = Literal["baseline", "current"]
 
 SHOWCASE_TENANT = "default"
 SHOWCASE_SCAN_ID = "showcase"
+SHOWCASE_SOURCE = "demo-showcase"
 SHOWCASE_BASELINE_SCAN_ID = "showcase-baseline"
 # Bumped when the seeded snapshot's *shape or content* changes so
 # ``_showcase_seed_is_current`` treats an older seed as stale and refreshes it. A
@@ -438,20 +440,11 @@ def build_showcase_graph(
     def node(i: str, t: EntityType, label: str, **attrs) -> str:
         severity = attrs.pop("severity", "")
         risk_score = attrs.pop("risk_score", 0.0)
-        g.add_node(
-            UnifiedNode(
-                id=i,
-                entity_type=t,
-                label=label,
-                severity=severity,
-                risk_score=risk_score,
-                attributes=attrs,
-            )
-        )
+        g.add_node(UnifiedNode(id=i, entity_type=t, label=label, severity=severity, risk_score=risk_score, attributes=attrs))
         return i
 
-    def edge(s: str, d: str, r: RelationshipType, **kw) -> None:
-        g.add_edge(UnifiedEdge(source=s, target=d, relationship=r, **kw))
+    def edge(s: str, d: str, r: RelationshipType, evidence: dict[str, Any] | None = None, **kw) -> None:
+        g.add_edge(UnifiedEdge(source=s, target=d, relationship=r, evidence=fixture_edge_evidence(r, SHOWCASE_SOURCE, evidence), **kw))
 
     for aid, label in SHOWCASE_AGENTS.items():
         node(f"agent:{aid}", EntityType.AGENT, label, environment="production")
@@ -532,7 +525,7 @@ def build_showcase_graph(
         cid = f"call:{i}"
         node(cid, EntityType.TOOL_CALL, "observed invocation")
         edge(f"agent:{aid}", cid, RelationshipType.INVOKED)
-        edge(cid, tid, RelationshipType.INVOKED)
+        edge(cid, tid, RelationshipType.CALLED)
 
     node(
         "cloud:pii-bucket",
@@ -623,12 +616,12 @@ def build_showcase_graph(
     edge("role:data-pipeline", "pol:s3-write", RelationshipType.ATTACHED)
     edge("role:readonly", "pol:readonly", RelationshipType.ATTACHED)
 
-    edge("user:alice", "role:prod-admin", RelationshipType.TRUSTS)
+    edge("user:alice", "role:prod-admin", RelationshipType.ASSUMES)
     if is_baseline:
-        edge("user:bob", "role:readonly", RelationshipType.TRUSTS)
+        edge("user:bob", "role:readonly", RelationshipType.ASSUMES)
     else:
-        edge("user:bob", "role:data-pipeline", RelationshipType.TRUSTS)
-        edge("user:bob", "role:prod-admin", RelationshipType.TRUSTS)
+        edge("user:bob", "role:data-pipeline", RelationshipType.ASSUMES)
+        edge("user:bob", "role:prod-admin", RelationshipType.ASSUMES)
 
     edge("role:prod-admin", "cloud:pii-bucket", RelationshipType.CAN_ACCESS)
     edge("role:prod-admin", "cloud:payments-db", RelationshipType.CAN_ACCESS)
@@ -639,8 +632,8 @@ def build_showcase_graph(
 
     # cursor drives the shell-runner (AWS creds + run_shell) → toxic combo with
     # prod-admin; data-pipeline maps to the least-privilege pipeline role.
-    edge("agent:cursor", "role:prod-admin", RelationshipType.CAN_ACCESS)
-    edge("agent:data-pipeline", "role:data-pipeline", RelationshipType.CAN_ACCESS)
+    edge("agent:cursor", "role:prod-admin", RelationshipType.ASSUMES)
+    edge("agent:data-pipeline", "role:data-pipeline", RelationshipType.ASSUMES)
 
     # Retired MCP server — removed in the current snapshot so drift shows a removal.
     if is_baseline:
@@ -698,6 +691,7 @@ def _ensure_showcase_edge(
     for edge in graph.edges:
         if edge.source == source and edge.target == target and edge.relationship == relationship:
             return
+    kwargs["evidence"] = fixture_edge_evidence(relationship, SHOWCASE_SOURCE, kwargs.get("evidence"))
     graph.add_edge(UnifiedEdge(source=source, target=target, relationship=relationship, **kwargs))
 
 

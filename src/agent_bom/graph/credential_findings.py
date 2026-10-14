@@ -70,6 +70,8 @@ def project_credential_findings(graph: UnifiedGraph, findings: Any) -> None:
         )
         receipt = {
             "source": "graph-analysis",
+            "tier": "derived",
+            "derived_via": _RULE,
             "basis": "graph_topology",
             "evidence_basis": "modeled",
             "rule_id": _RULE,

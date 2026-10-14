@@ -35,6 +35,10 @@ from agent_bom.graph.remediation_receipts import (
 )
 from agent_bom.graph.types import EntityType, RelationshipType
 
+# Hand-built graphs here use placeholder relationship pairs to exercise graph
+# mechanics; producers are held to the contract in test_graph_relationship_contract.
+pytestmark = pytest.mark.graph_contract("warn")
+
 NOW = datetime(2026, 9, 20, 15, tzinfo=timezone.utc)
 READ = "storage.objects.get"
 WRITE = "storage.objects.create"

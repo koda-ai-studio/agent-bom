@@ -102,6 +102,7 @@ _DYNAMIC_RELATIONSHIP_VALUES = {
     RelationshipType.INVOKED.value,
     RelationshipType.ACCESSED.value,
     RelationshipType.DELEGATED_TO.value,
+    RelationshipType.TRACE_STEP.value,
 }
 
 
@@ -155,7 +156,7 @@ def _attach_sibling_relationships(
         return
     for edge in edges:
         if edge.source in node_ids and edge.target in node_ids:
-            graph.add_edge(edge)
+            graph.add_stored_edge(edge)
 
 
 def _drilldown_subtree_budget() -> int:

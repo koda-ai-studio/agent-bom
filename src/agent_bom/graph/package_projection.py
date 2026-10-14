@@ -302,6 +302,7 @@ def _package_evidence(pkg_dict: dict[str, Any], data_source_tag: str) -> dict[st
 
     evidence = {
         "source": data_source_tag,
+        "tier": "static_scan",
         "package": pkg_dict.get("name", ""),
         "version": pkg_dict.get("version", ""),
         "ecosystem": pkg_dict.get("ecosystem", ""),
@@ -373,6 +374,7 @@ def _blast_radius_package_evidence(br_dict: dict[str, Any], data_source_tag: str
     name, version = _blast_radius_package_identity(br_dict)
     evidence = {
         "source": data_source_tag,
+        "tier": "static_scan",
         "package": br_dict.get("package", ""),
         "package_name": name,
         "package_version": version,

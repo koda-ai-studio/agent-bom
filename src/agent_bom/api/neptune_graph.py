@@ -457,7 +457,7 @@ class NeptuneGraphStore:
         for row in edge_rows:
             edge = self._edge_from_record(row)
             if edge.source in graph.nodes and edge.target in graph.nodes:
-                graph.add_edge(edge)
+                graph.add_stored_edge(edge)
         # No query-side limit on this backend; cap after the load so the
         # declared completeness contract matches every other store.
         return apply_node_budget(graph, node_budget)

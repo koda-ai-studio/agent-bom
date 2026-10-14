@@ -88,6 +88,7 @@ class RelationshipType(str, Enum):
     USED_CREDENTIAL = "used_credential"  # tool call → credential reference (runtime)
     ACCESSED = "accessed"  # tool/tool call → resource (runtime)
     DELEGATED_TO = "delegated_to"  # agent → agent (runtime)
+    TRACE_STEP = "trace_step"  # asset → next asset one correlated multi-source trace touched (recorded)
 
     # ── Cross-environment correlation (#1892) ──
     # CORRELATES_WITH is reserved for HIGH-confidence local↔cloud agent

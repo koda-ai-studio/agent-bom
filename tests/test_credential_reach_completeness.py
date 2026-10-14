@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
+import pytest
+
 from agent_bom.graph.container import AttackPath, UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.types import EntityType as E
 from agent_bom.graph.types import RelationshipType as R
+
+# Budget mechanics are exercised with shortcut agent-to-credential edges.
+pytestmark = pytest.mark.graph_contract("warn")
 
 _RULE = "AGENT_REACHES_PRIVILEGED"
 

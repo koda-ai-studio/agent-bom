@@ -40,6 +40,10 @@ from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.store_backed import StoreBackedUnifiedGraph, open_store_backed_unified_graph
 from agent_bom.graph.types import EntityType, NodeStatus, RelationshipType
 
+# Hand-built graphs here use placeholder relationship pairs to exercise graph
+# mechanics; producers are held to the contract in test_graph_relationship_contract.
+pytestmark = pytest.mark.graph_contract("warn")
+
 _FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
 
 

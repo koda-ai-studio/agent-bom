@@ -25,6 +25,10 @@ from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.types import EntityType, RelationshipType
 from agent_bom.mitre_attack import get_attack_techniques
 
+# Hand-built graphs here use placeholder relationship pairs to exercise graph
+# mechanics; producers are held to the contract in test_graph_relationship_contract.
+pytestmark = pytest.mark.graph_contract("warn")
+
 
 def _kill_chain_graph(tenant_id: str = "t", scan_id: str = "s") -> UnifiedGraph:
     """internet→vuln workload→ASSUMES role→HAS_PERMISSION(assume_chain)→data store."""

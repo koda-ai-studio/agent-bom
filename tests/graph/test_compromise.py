@@ -9,6 +9,10 @@ from pydantic import ValidationError
 from agent_bom.graph import EntityType, RelationshipType, UnifiedEdge, UnifiedGraph, UnifiedNode
 from agent_bom.graph.compromise import CompromiseRequest, assess_direct_compromise
 
+# Hand-built graphs here use placeholder relationship pairs to exercise graph
+# mechanics; producers are held to the contract in test_graph_relationship_contract.
+pytestmark = pytest.mark.graph_contract("warn")
+
 AT = datetime(2026, 10, 9, 12, 0, tzinfo=timezone.utc)
 STAMP = "2026-10-09T11:59:00+00:00"
 

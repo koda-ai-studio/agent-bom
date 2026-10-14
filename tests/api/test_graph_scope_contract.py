@@ -17,6 +17,10 @@ from agent_bom.graph.repo_structure_overlay import apply_repo_structure_overlay
 from agent_bom.graph.repo_trust_overlay import apply_repo_trust_overlay
 from agent_bom.graph.scope import select_observed_scope
 
+# Hand-built graphs here use placeholder relationship pairs to exercise graph
+# mechanics; producers are held to the contract in test_graph_relationship_contract.
+pytestmark = pytest.mark.graph_contract("warn")
+
 PROXY_SECRET = "synthetic-test-proxy-secret-with-32-bytes"
 
 

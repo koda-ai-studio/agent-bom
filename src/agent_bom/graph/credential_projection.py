@@ -9,6 +9,7 @@ from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.correlation_scope import runtime_stable_identity
 from agent_bom.graph.credential_identity import slot_receipt
 from agent_bom.graph.edge import UnifiedEdge
+from agent_bom.graph.edge_evidence import edge_evidence
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
 from agent_bom.graph.types import EntityType, RelationshipType
 from agent_bom.security import sanitize_text
@@ -50,6 +51,7 @@ def _add_credential(graph: UnifiedGraph, cred_id: str, srv_id: str, env_key: str
             target=cred_id,
             relationship=RelationshipType.EXPOSES_CRED,
             weight=2.0,
+            evidence=edge_evidence(data_source_tag or "agent_discovery", "static_scan"),
         )
     )
     for tool_id in tool_ids:
@@ -60,6 +62,7 @@ def _add_credential(graph: UnifiedGraph, cred_id: str, srv_id: str, env_key: str
                 relationship=RelationshipType.REACHES_TOOL,
                 evidence={
                     "source": data_source_tag,
+                    "tier": "static_scan",
                     "server": srv_id,
                     "credential_env_var": env_key,
                     "mapping_method": "server_scope_conservative",
@@ -100,6 +103,7 @@ def _add_identity_bindings(graph: UnifiedGraph, srv_dict: Mapping[str, Any], cre
                 relationship=RelationshipType.AUTHENTICATES_AS,
                 evidence={
                     "source": evidence_source,
+                    "tier": "modeled_infrastructure",
                     "credential_ref": env_key,
                     "mapping_method": "explicit_identity_binding",
                     "confidence": "high",

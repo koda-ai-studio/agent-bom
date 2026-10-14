@@ -11,6 +11,10 @@ from agent_bom.api.stores import set_graph_store
 from agent_bom.graph import EntityType, RelationshipType, UnifiedEdge, UnifiedGraph, UnifiedNode
 from tests.auth_helpers import disable_trusted_proxy_env, enable_trusted_proxy_env, proxy_headers
 
+# Hand-built graphs here use placeholder relationship pairs to exercise graph
+# mechanics; producers are held to the contract in test_graph_relationship_contract.
+pytestmark = pytest.mark.graph_contract("warn")
+
 
 def _graph(tenant: str, count: int = 1100) -> UnifiedGraph:
     graph = UnifiedGraph(tenant_id=tenant, scan_id="estate")

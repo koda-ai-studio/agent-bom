@@ -352,6 +352,7 @@ markers = [
     "output_performance: measured export and API projection scale assertions — dedicated CI lane only",
     "live_cluster: tests that require a reachable local Kubernetes cluster (e.g. kind) — opt-in only",
     "real_vuln_db_sync: test drives sync_db itself; opts out of the autouse no-download patch",
+    "graph_contract(mode): run the test under AGENT_BOM_GRAPH_CONTRACT=mode instead of strict",
 ]
 
 [tool.mypy]

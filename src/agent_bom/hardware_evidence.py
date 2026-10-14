@@ -69,6 +69,7 @@ from typing import Any
 
 from agent_bom.core.severity import normalize_severity
 from agent_bom.graph import EntityType, RelationshipType, UnifiedEdge, UnifiedGraph, UnifiedNode
+from agent_bom.graph.edge_evidence import edge_evidence
 from agent_bom.graph.node import stable_node_id
 
 SCHEMA_VERSION = "agent-bom.hardware-evidence/v1"
@@ -330,7 +331,7 @@ def _ingest_host(
             )
         )
         # GPU is part of the host.
-        graph.add_edge(UnifiedEdge(source=gpu_id, target=host_id, relationship=RelationshipType.PART_OF))
+        _link_to_host(graph, gpu_id, host_id)
         targets[f"gpu:{model.lower()}"] = gpu_id
 
     # ── Advisories → affected asset ──
@@ -368,8 +369,13 @@ def _add_firmware_node(
         )
     )
     # Firmware is part of the host.
-    graph.add_edge(UnifiedEdge(source=node_id, target=host_id, relationship=RelationshipType.PART_OF))
+    _link_to_host(graph, node_id, host_id)
     return node_id
+
+
+def _link_to_host(graph: UnifiedGraph, part_id: str, host_id: str) -> None:
+    evidence = edge_evidence(_DATA_SOURCE, "recorded")
+    graph.add_edge(UnifiedEdge(source=part_id, target=host_id, relationship=RelationshipType.PART_OF, evidence=evidence))
 
 
 def _ingest_advisory(

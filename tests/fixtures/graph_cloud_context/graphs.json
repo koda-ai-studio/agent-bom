@@ -36,6 +36,14 @@
         },
         "reason_codes": [],
         "status": "complete"
+      },
+      "relationship_contract": {
+        "limits": {},
+        "observed": {
+          "edges_checked": 19
+        },
+        "reason_codes": [],
+        "status": "complete"
       }
     },
     "attack_campaigns": [],
@@ -56,7 +64,8 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
-          "source": "cloud-inventory"
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "owns:account:aws:123456789012:cloud_resource:aws:s3:bucket:aws-bucket",
@@ -81,7 +90,8 @@
         "direction": "directed",
         "evidence": {
           "hierarchy": "account_contains_resource",
-          "source": "cloud-inventory"
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "contains:account:aws:123456789012:cloud_resource:aws:s3:bucket:aws-bucket",
@@ -105,7 +115,8 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
-          "source": "cloud-inventory"
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "owns:account:aws:123456789012:cloud_resource:aws:s3:bucket:known-private",
@@ -130,7 +141,8 @@
         "direction": "directed",
         "evidence": {
           "hierarchy": "account_contains_resource",
-          "source": "cloud-inventory"
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "contains:account:aws:123456789012:cloud_resource:aws:s3:bucket:known-private",
@@ -154,7 +166,8 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
-          "source": "cloud-inventory"
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "owns:account:aws:123456789012:cloud_resource:aws:s3:bucket:unknown-exposure",
@@ -179,7 +192,8 @@
         "direction": "directed",
         "evidence": {
           "hierarchy": "account_contains_resource",
-          "source": "cloud-inventory"
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "contains:account:aws:123456789012:cloud_resource:aws:s3:bucket:unknown-exposure",
@@ -203,7 +217,8 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
-          "source": "cloud-inventory"
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "owns:account:aws:123456789012:cloud_resource:aws:s3:bucket:known-public",
@@ -228,7 +243,8 @@
         "direction": "directed",
         "evidence": {
           "hierarchy": "account_contains_resource",
-          "source": "cloud-inventory"
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "contains:account:aws:123456789012:cloud_resource:aws:s3:bucket:known-public",
@@ -252,7 +268,8 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
-          "source": "cloud-inventory"
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "owns:account:aws:123456789012:cloud_resource:aws:rds:database:scoped/123456789012/us-east-1//name/aws-db",
@@ -277,7 +294,8 @@
         "direction": "directed",
         "evidence": {
           "hierarchy": "account_contains_resource",
-          "source": "cloud-inventory"
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "contains:account:aws:123456789012:cloud_resource:aws:rds:database:scoped/123456789012/us-east-1//name/aws-db",
@@ -301,7 +319,8 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
-          "source": "cloud-inventory"
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "owns:account:aws:123456789012:cloud_resource:aws:eks:container_cluster:scoped/123456789012/us-east-1//name/aws-eks",
@@ -326,7 +345,8 @@
         "direction": "directed",
         "evidence": {
           "hierarchy": "account_contains_resource",
-          "source": "cloud-inventory"
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "contains:account:aws:123456789012:cloud_resource:aws:eks:container_cluster:scoped/123456789012/us-east-1//name/aws-eks",
@@ -350,7 +370,8 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
-          "source": "cloud-inventory"
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "owns:account:aws:123456789012:cloud_resource:aws:ecr:container_registry:scoped/123456789012/us-east-1//name/aws-ecr",
@@ -375,7 +396,8 @@
         "direction": "directed",
         "evidence": {
           "hierarchy": "account_contains_resource",
-          "source": "cloud-inventory"
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "contains:account:aws:123456789012:cloud_resource:aws:ecr:container_registry:scoped/123456789012/us-east-1//name/aws-ecr",
@@ -398,7 +420,10 @@
         "canonical_id": "981b6734-6ec7-57a7-959f-bebb59580f33",
         "confidence": 1.0,
         "direction": "directed",
-        "evidence": {},
+        "evidence": {
+          "source": "cnapp-overlay",
+          "tier": "modeled_infrastructure"
+        },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "stores:cloud_resource:aws:s3:bucket:aws-bucket:data_store:cloud_resource:aws:s3:bucket:aws-bucket",
         "last_seen": "2026-09-30T12:00:00+00:00",
@@ -422,7 +447,10 @@
         "canonical_id": "6df4897e-2a76-5c10-adb1-1ee11b490e72",
         "confidence": 1.0,
         "direction": "directed",
-        "evidence": {},
+        "evidence": {
+          "source": "cnapp-overlay",
+          "tier": "modeled_infrastructure"
+        },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "stores:cloud_resource:aws:s3:bucket:known-private:data_store:cloud_resource:aws:s3:bucket:known-private",
         "last_seen": "2026-09-30T12:00:00+00:00",
@@ -446,7 +474,10 @@
         "canonical_id": "004cc30b-aad7-585c-9065-534f5f15c6a5",
         "confidence": 1.0,
         "direction": "directed",
-        "evidence": {},
+        "evidence": {
+          "source": "cnapp-overlay",
+          "tier": "modeled_infrastructure"
+        },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "stores:cloud_resource:aws:s3:bucket:unknown-exposure:data_store:cloud_resource:aws:s3:bucket:unknown-exposure",
         "last_seen": "2026-09-30T12:00:00+00:00",
@@ -470,7 +501,10 @@
         "canonical_id": "3e575718-62e7-5adb-be34-f8aed15b8767",
         "confidence": 1.0,
         "direction": "directed",
-        "evidence": {},
+        "evidence": {
+          "source": "cnapp-overlay",
+          "tier": "modeled_infrastructure"
+        },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "stores:cloud_resource:aws:s3:bucket:known-public:data_store:cloud_resource:aws:s3:bucket:known-public",
         "last_seen": "2026-09-30T12:00:00+00:00",
@@ -495,7 +529,9 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
-          "reason": "internet_exposed_data_store"
+          "reason": "internet_exposed_data_store",
+          "source": "cnapp-overlay",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "exposed_to:cloud_resource:aws:s3:bucket:known-public:data_store:cloud_resource:aws:s3:bucket:known-public",
@@ -1391,6 +1427,14 @@
           },
           "reason_codes": [],
           "status": "complete"
+        },
+        "relationship_contract": {
+          "limits": {},
+          "observed": {
+            "edges_checked": 19
+          },
+          "reason_codes": [],
+          "status": "complete"
         }
       },
       "attack_campaign_count": 0,
@@ -1454,6 +1498,14 @@
         },
         "reason_codes": [],
         "status": "complete"
+      },
+      "relationship_contract": {
+        "limits": {},
+        "observed": {
+          "edges_checked": 10
+        },
+        "reason_codes": [],
+        "status": "complete"
       }
     },
     "attack_campaigns": [],
@@ -1474,7 +1526,8 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
-          "source": "cloud-inventory"
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "owns:account:azure:sub-1:cloud_resource:azure:storage:bucket:azblob",
@@ -1499,7 +1552,8 @@
         "direction": "directed",
         "evidence": {
           "hierarchy": "account_contains_resource",
-          "source": "cloud-inventory"
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "contains:account:azure:sub-1:cloud_resource:azure:storage:bucket:azblob",
@@ -1523,7 +1577,8 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
-          "source": "cloud-inventory"
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "owns:account:azure:sub-1:cloud_resource:azure:container_cluster:/subscriptions/sub-1/aks",
@@ -1548,7 +1603,8 @@
         "direction": "directed",
         "evidence": {
           "hierarchy": "account_contains_resource",
-          "source": "cloud-inventory"
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "contains:account:azure:sub-1:cloud_resource:azure:container_cluster:/subscriptions/sub-1/aks",
@@ -1572,7 +1628,8 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
-          "source": "cloud-inventory"
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "owns:account:azure:sub-1:cloud_resource:azure:container_registry:/subscriptions/sub-1/acr",
@@ -1597,7 +1654,8 @@
         "direction": "directed",
         "evidence": {
           "hierarchy": "account_contains_resource",
-          "source": "cloud-inventory"
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "contains:account:azure:sub-1:cloud_resource:azure:container_registry:/subscriptions/sub-1/acr",
@@ -1621,7 +1679,8 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
-          "source": "cloud-inventory"
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "owns:account:azure:sub-1:cloud_resource:azure:database:/subscriptions/sub-1/db",
@@ -1646,7 +1705,8 @@
         "direction": "directed",
         "evidence": {
           "hierarchy": "account_contains_resource",
-          "source": "cloud-inventory"
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "contains:account:azure:sub-1:cloud_resource:azure:database:/subscriptions/sub-1/db",
@@ -1669,7 +1729,10 @@
         "canonical_id": "7c56e83d-b90a-5e2f-a477-6f45d98ac900",
         "confidence": 1.0,
         "direction": "directed",
-        "evidence": {},
+        "evidence": {
+          "source": "cnapp-overlay",
+          "tier": "modeled_infrastructure"
+        },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "stores:cloud_resource:azure:storage:bucket:azblob:data_store:cloud_resource:azure:storage:bucket:azblob",
         "last_seen": "2026-09-30T12:00:00+00:00",
@@ -1693,7 +1756,10 @@
         "canonical_id": "7c12328b-5f3b-5551-953f-240386215c7d",
         "confidence": 1.0,
         "direction": "directed",
-        "evidence": {},
+        "evidence": {
+          "source": "cnapp-overlay",
+          "tier": "modeled_infrastructure"
+        },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "stores:cloud_resource:azure:database:/subscriptions/sub-1/db:data_store:cloud_resource:azure:database:/subscriptions/sub-1/db",
         "last_seen": "2026-09-30T12:00:00+00:00",
@@ -2287,6 +2353,14 @@
           },
           "reason_codes": [],
           "status": "complete"
+        },
+        "relationship_contract": {
+          "limits": {},
+          "observed": {
+            "edges_checked": 10
+          },
+          "reason_codes": [],
+          "status": "complete"
         }
       },
       "attack_campaign_count": 0,
@@ -2349,6 +2423,14 @@
         },
         "reason_codes": [],
         "status": "complete"
+      },
+      "relationship_contract": {
+        "limits": {},
+        "observed": {
+          "edges_checked": 15
+        },
+        "reason_codes": [],
+        "status": "complete"
       }
     },
     "attack_campaigns": [],
@@ -2368,7 +2450,10 @@
         "canonical_id": "22e4328b-d83d-5fc2-a1ba-d69d01e23e5e",
         "confidence": 1.0,
         "direction": "directed",
-        "evidence": {},
+        "evidence": {
+          "source": "mcp-scan",
+          "tier": "static_scan"
+        },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "hosts:provider:aws-bedrock:agent:cloud-assistant",
         "last_seen": "2026-09-30T12:00:00+00:00",
@@ -2393,7 +2478,8 @@
         "evidence": {
           "provider": "aws",
           "scope_key": "org_id",
-          "source": "cloud_origin"
+          "source": "cloud_origin",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "hosts:provider:aws:org:aws:org-1",
@@ -2419,7 +2505,8 @@
         "evidence": {
           "provider": "aws",
           "scope_key": "account_id",
-          "source": "cloud_origin"
+          "source": "cloud_origin",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "hosts:provider:aws:account:aws:123456789012",
@@ -2445,7 +2532,8 @@
         "evidence": {
           "provider": "aws",
           "scope_key": "org_id",
-          "source": "cloud_origin"
+          "source": "cloud_origin",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "part_of:account:aws:123456789012:org:aws:org-1",
@@ -2471,7 +2559,8 @@
         "evidence": {
           "provider": "aws",
           "scope_key": "account_id",
-          "source": "cloud_origin"
+          "source": "cloud_origin",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "hosts:account:aws:123456789012:cloud_resource:aws:bedrock:agent:agent-1",
@@ -2497,7 +2586,8 @@
         "evidence": {
           "provider": "aws",
           "scope_key": "account_id",
-          "source": "cloud_origin"
+          "source": "cloud_origin",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "contains:account:aws:123456789012:cloud_resource:aws:bedrock:agent:agent-1",
@@ -2523,7 +2613,8 @@
         "evidence": {
           "provider": "aws",
           "service": "bedrock",
-          "source": "cloud_origin"
+          "source": "cloud_origin",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "hosts:provider:aws:cloud_resource:aws:bedrock:agent:agent-1",
@@ -2548,7 +2639,8 @@
         "direction": "directed",
         "evidence": {
           "resource_id": "agent-1",
-          "source": "cloud_origin"
+          "source": "cloud_origin",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "hosts:cloud_resource:aws:bedrock:agent:agent-1:agent:cloud-assistant",
@@ -2573,7 +2665,8 @@
         "direction": "directed",
         "evidence": {
           "principal_type": "iam-role",
-          "source": "cloud_principal"
+          "source": "cloud_principal",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "member_of:role:aws:role-1:account:aws:123456789012",
@@ -2598,7 +2691,8 @@
         "direction": "directed",
         "evidence": {
           "principal_type": "iam-role",
-          "source": "cloud_principal"
+          "source": "cloud_principal",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "manages:role:aws:role-1:cloud_resource:aws:bedrock:agent:agent-1",
@@ -2623,7 +2717,8 @@
         "direction": "directed",
         "evidence": {
           "principal_type": "iam-role",
-          "source": "cloud_principal"
+          "source": "cloud_principal",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "can_access:role:aws:role-1:cloud_resource:aws:bedrock:agent:agent-1",
@@ -2648,7 +2743,8 @@
         "direction": "directed",
         "evidence": {
           "principal_type": "iam-role",
-          "source": "cloud_principal"
+          "source": "cloud_principal",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "attached:role:aws:role-1:policy:aws:policy-1",
@@ -2675,6 +2771,7 @@
           "principal_type": "iam-role",
           "source": "cloud_principal_trust",
           "source_field": "",
+          "tier": "modeled_infrastructure",
           "trusted_principal_type": "role"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
@@ -2701,6 +2798,7 @@
         "evidence": {
           "principal_type": "iam-role",
           "source": "cloud_principal",
+          "tier": "modeled_infrastructure",
           "via": "cloud_resource:aws:bedrock:agent:agent-1"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
@@ -2726,6 +2824,7 @@
         "direction": "directed",
         "evidence": {
           "access": "direct",
+          "derived_via": "direct",
           "permission_derivation": {
             "basis": "recorded_graph_connections",
             "path_selection": "one_shortest_path_per_grant_and_access",
@@ -2741,7 +2840,9 @@
             ],
             "source_scan_id": "cloud-context",
             "truncated": false
-          }
+          },
+          "source": "effective-permissions",
+          "tier": "derived"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "has_permission:role:aws:role-1:cloud_resource:aws:bedrock:agent:agent-1",
@@ -3411,6 +3512,14 @@
           },
           "reason_codes": [],
           "status": "complete"
+        },
+        "relationship_contract": {
+          "limits": {},
+          "observed": {
+            "edges_checked": 15
+          },
+          "reason_codes": [],
+          "status": "complete"
         }
       },
       "attack_campaign_count": 0,
@@ -3482,6 +3591,14 @@
         },
         "reason_codes": [],
         "status": "complete"
+      },
+      "relationship_contract": {
+        "limits": {},
+        "observed": {
+          "edges_checked": 9
+        },
+        "reason_codes": [],
+        "status": "complete"
       }
     },
     "attack_campaigns": [],
@@ -3502,7 +3619,8 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
-          "source": "cloud-inventory"
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "owns:account:gcp:proj-1:cloud_resource:gcp:gcs:bucket:gcs-bucket",
@@ -3527,7 +3645,8 @@
         "direction": "directed",
         "evidence": {
           "hierarchy": "account_contains_resource",
-          "source": "cloud-inventory"
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "contains:account:gcp:proj-1:cloud_resource:gcp:gcs:bucket:gcs-bucket",
@@ -3551,7 +3670,8 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
-          "source": "cloud-inventory"
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "owns:account:gcp:proj-1:cloud_resource:gcp:gke:container_cluster:scoped/proj-1/us-central1//native/gke-1",
@@ -3576,7 +3696,8 @@
         "direction": "directed",
         "evidence": {
           "hierarchy": "account_contains_resource",
-          "source": "cloud-inventory"
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "contains:account:gcp:proj-1:cloud_resource:gcp:gke:container_cluster:scoped/proj-1/us-central1//native/gke-1",
@@ -3600,7 +3721,8 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
-          "source": "cloud-inventory"
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "owns:account:gcp:proj-1:cloud_resource:gcp:run:function:scoped/proj-1/us-central1//name/gcp-run",
@@ -3625,7 +3747,8 @@
         "direction": "directed",
         "evidence": {
           "hierarchy": "account_contains_resource",
-          "source": "cloud-inventory"
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "contains:account:gcp:proj-1:cloud_resource:gcp:run:function:scoped/proj-1/us-central1//name/gcp-run",
@@ -3649,7 +3772,8 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
-          "source": "cloud-inventory"
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "owns:account:gcp:proj-1:cloud_resource:gcp:cloudsql:database:scoped/proj-1/us-central1//name/gcp-sql",
@@ -3674,7 +3798,8 @@
         "direction": "directed",
         "evidence": {
           "hierarchy": "account_contains_resource",
-          "source": "cloud-inventory"
+          "source": "cloud-inventory",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "contains:account:gcp:proj-1:cloud_resource:gcp:cloudsql:database:scoped/proj-1/us-central1//name/gcp-sql",
@@ -3697,7 +3822,10 @@
         "canonical_id": "6b9e20e0-8767-53b0-90cd-9f7dfd52c193",
         "confidence": 1.0,
         "direction": "directed",
-        "evidence": {},
+        "evidence": {
+          "source": "cnapp-overlay",
+          "tier": "modeled_infrastructure"
+        },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "stores:cloud_resource:gcp:gcs:bucket:gcs-bucket:data_store:cloud_resource:gcp:gcs:bucket:gcs-bucket",
         "last_seen": "2026-09-30T12:00:00+00:00",
@@ -4232,6 +4360,14 @@
           },
           "reason_codes": [],
           "status": "complete"
+        },
+        "relationship_contract": {
+          "limits": {},
+          "observed": {
+            "edges_checked": 9
+          },
+          "reason_codes": [],
+          "status": "complete"
         }
       },
       "attack_campaign_count": 0,
@@ -4294,6 +4430,14 @@
         },
         "reason_codes": [],
         "status": "complete"
+      },
+      "relationship_contract": {
+        "limits": {},
+        "observed": {
+          "edges_checked": 9
+        },
+        "reason_codes": [],
+        "status": "complete"
       }
     },
     "attack_campaigns": [],
@@ -4314,7 +4458,8 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
-          "source": "snowflake-objects"
+          "source": "snowflake-objects",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "owns:account:snowflake:ACME-PROD:data_store:snowflake:DB.PUBLIC.ORDERS",
@@ -4339,7 +4484,8 @@
         "direction": "directed",
         "evidence": {
           "hierarchy": "account_contains_resource",
-          "source": "snowflake-objects"
+          "source": "snowflake-objects",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "contains:account:snowflake:ACME-PROD:data_store:snowflake:DB.PUBLIC.ORDERS",
@@ -4363,7 +4509,8 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
-          "source": "snowflake-objects"
+          "source": "snowflake-objects",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "owns:account:snowflake:ACME-PROD:data_store:snowflake:DB.PUBLIC.CUSTOMERS",
@@ -4388,7 +4535,8 @@
         "direction": "directed",
         "evidence": {
           "hierarchy": "account_contains_resource",
-          "source": "snowflake-objects"
+          "source": "snowflake-objects",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "contains:account:snowflake:ACME-PROD:data_store:snowflake:DB.PUBLIC.CUSTOMERS",
@@ -4412,7 +4560,8 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
-          "source": "snowflake-services"
+          "source": "snowflake-services",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "owns:account:snowflake:ACME-PROD:cloud_resource:snowflake:warehouse:WH1",
@@ -4437,7 +4586,8 @@
         "direction": "directed",
         "evidence": {
           "hierarchy": "account_contains_resource",
-          "source": "snowflake-services"
+          "source": "snowflake-services",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "contains:account:snowflake:ACME-PROD:cloud_resource:snowflake:warehouse:WH1",
@@ -4461,7 +4611,8 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
-          "source": "snowflake-services"
+          "source": "snowflake-services",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "owns:account:snowflake:ACME-PROD:data_store:snowflake:db:DB",
@@ -4486,7 +4637,8 @@
         "direction": "directed",
         "evidence": {
           "hierarchy": "account_contains_resource",
-          "source": "snowflake-services"
+          "source": "snowflake-services",
+          "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "contains:account:snowflake:ACME-PROD:data_store:snowflake:db:DB",
@@ -4509,7 +4661,10 @@
         "canonical_id": "46f610d9-71c6-5105-9276-d453988842c6",
         "confidence": 1.0,
         "direction": "directed",
-        "evidence": {},
+        "evidence": {
+          "source": "cnapp-overlay",
+          "tier": "modeled_infrastructure"
+        },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "stores:cloud_resource:snowflake:warehouse:WH1:data_store:cloud_resource:snowflake:warehouse:WH1",
         "last_seen": "2026-09-30T12:00:00+00:00",
@@ -4898,6 +5053,14 @@
             "invalid_source_validity": 0,
             "principal_count": 1,
             "privilege_escalations": 0
+          },
+          "reason_codes": [],
+          "status": "complete"
+        },
+        "relationship_contract": {
+          "limits": {},
+          "observed": {
+            "edges_checked": 9
           },
           "reason_codes": [],
           "status": "complete"

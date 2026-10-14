@@ -105,11 +105,14 @@ restores the previous derivation behavior.
 | `invoked` | agent → tool | Runtime tool invocation. | Emitted **only** by proxy / gateway runtime. Never emitted by static scans. |
 | `accessed` | tool → resource | Runtime resource access. | Emitted **only** by proxy / gateway runtime. |
 | `delegated_to` | agent → agent | Runtime delegation between agents. | Emitted **only** by proxy / gateway runtime. |
+| `trace_step` | asset → asset | Consecutive assets one correlated multi-source trace touched. | Emitted from correlated audit evidence (tier `recorded`); a sequence, not an access claim. |
 | `correlates_with` | local agent ↔ cloud agent | High-confidence cross-environment match. | Emitted only when cloud account/subscription/project + region + model ID all match (#1892). |
 | `possibly_correlates_with` | local agent ↔ cloud agent | Partial cross-environment match. | Emitted on partial-key matches; never conflated with the strict path. |
 | `attached_to` (legacy `EdgeKind`) | iam_role → agent | Workload identity correlation. | Bridged onto `member_of` in the unified graph. |
 
 Edges carry `weight` and `evidence` (a metadata dict). Bidirectional edges (`shares_server`, `shares_cred`, `correlates_with`) are stored once but traversed both ways.
+
+Every relationship has one `RelationshipSpec` in `agent_bom.graph.relationship_specs`: its traversal class, the exact `(source, target)` entity pairs it may connect, direction, default traversability and required evidence keys. `GET /v1/graph/schema` publishes the registry (`traversal_class`, `allowed_pairs`, `required_evidence`). Every edge's `evidence` names its collector in `source` and the kind of claim in `tier` (`modeled_infrastructure`, `static_scan`, `static_evidence`, `recorded`, `runtime_observed`, `derived`; edges rehydrated from snapshots written before the envelope carry `legacy_unrecorded`). `AGENT_BOM_GRAPH_CONTRACT` sets what a violation does: `warn` (default) keeps the edge and counts it in `analysis_status.relationship_contract`, `enforce` drops an edge whose pair is not allowed, and `strict` raises.
 
 ### Provider authorization receipts
 

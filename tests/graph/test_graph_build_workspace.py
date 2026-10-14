@@ -37,6 +37,10 @@ from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.types import EntityType, NodeStatus
 
+# Hand-built graphs here use placeholder relationship pairs to exercise graph
+# mechanics; producers are held to the contract in test_graph_relationship_contract.
+pytestmark = pytest.mark.graph_contract("warn")
+
 
 @pytest.fixture(autouse=True)
 def _force_sqlite_backends(monkeypatch: pytest.MonkeyPatch) -> None:

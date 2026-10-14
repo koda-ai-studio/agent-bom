@@ -28,8 +28,9 @@ The rows file contains exactly `nodes` and `edges` arrays. Every node requires a
 unique source ID, a supported graph entity type, a label and a timezone-aware
 observation time. Optional columns retain `cloud_provider`, `account_id`,
 `organization_id`, `environment` and `repository` context. Every edge requires
-source/target IDs present in that export, a supported relationship type and an
-observation time. Duplicate IDs, duplicate relationships and dangling endpoints
+source/target IDs present in that export, a supported relationship type whose
+source and target kinds the relationship contract allows (`allowed_pairs` in
+`GET /v1/graph/schema`) and an observation time. Duplicate IDs, duplicate relationships and dangling endpoints
 are errors. Use account-qualified native IDs when multiple accounts share an
 export; display labels are never identity keys.
 

@@ -446,7 +446,7 @@ class PostgresGraphStore(
             for row in conn.execute(edge_query, edge_params).fetchall():
                 if row[0] not in node_ids or row[1] not in node_ids:
                     continue
-                graph.add_edge(
+                graph.add_stored_edge(
                     UnifiedEdge(
                         source=row[0],
                         target=row[1],

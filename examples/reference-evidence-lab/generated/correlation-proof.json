@@ -10,7 +10,7 @@
       ]
     }
   ],
-  "artifact_sha256": "sha256:f62c9aa410f6c85f9ae0f42dc96b9b35041d7be2d0afc3736108ed03f2dc8228",
+  "artifact_sha256": "sha256:6be58583ebb57052b0dbcc43f35b3d4235da54b4be9ba131e2c3a6a3dd4b56da",
   "capture_fixture": {
     "fix_first": {
       "attack_campaigns": [
@@ -44,8 +44,8 @@
           "partition": "bucket:42",
           "path_count": 1,
           "priority_method": "structural_path_rank.v1",
-          "priority_score": 34.0,
-          "top_path_summary": "Internet-exposed Public reference-evidence-api service is linked to reference-evidence-workload; is linked to reference-evidence-workload; has recorded permission to Modeled customer records — potential route to sensitive data (3 hop chain)."
+          "priority_score": 48.0,
+          "top_path_summary": "Internet-exposed Public reference-evidence-api service is linked to internet-exposed reference-evidence-workload; is linked to reference-evidence-workload; has recorded permission to Modeled customer records — potential route to sensitive data (3 hop chain)."
         }
       ],
       "cards": [
@@ -83,10 +83,10 @@
               "reason_codes": [],
               "status": "complete"
             },
-            "composite_risk": 34.0,
+            "composite_risk": 48.0,
             "credential_exposure": [],
             "edges": [
-              "uses",
+              "exposed_to",
               "authenticates_as",
               "has_permission"
             ],
@@ -99,7 +99,7 @@
                 "direction": "directed",
                 "evidence_tier": "modeled_infrastructure",
                 "freshness": "fresh",
-                "relationship": "uses",
+                "relationship": "exposed_to",
                 "relationship_provenance": "recorded",
                 "runtime_observed_state": "not_observed",
                 "runtime_references": [],
@@ -157,6 +157,7 @@
               "data-store:reference-customer-records"
             ],
             "mitre_technique_ids": [
+              "T1190",
               "T1530"
             ],
             "reachability": "confirmed",
@@ -165,9 +166,21 @@
               "directed_provenance_backed_hops"
             ],
             "source": "service:reference-api",
-            "summary": "Internet-exposed Public reference-evidence-api service is linked to reference-evidence-workload; is linked to reference-evidence-workload; has recorded permission to Modeled customer records — potential route to sensitive data (3 hop chain).",
+            "summary": "Internet-exposed Public reference-evidence-api service is linked to internet-exposed reference-evidence-workload; is linked to reference-evidence-workload; has recorded permission to Modeled customer records — potential route to sensitive data (3 hop chain).",
             "target": "data-store:reference-customer-records",
             "technique_mappings": [
+              {
+                "catalog": "attack",
+                "confidence": 0.7,
+                "evidence_basis": "modeled",
+                "hop_index": 0,
+                "provenance": "modeled exposed_to edge into agent 'agent:model:reference-workload'",
+                "tactics": [
+                  "initial-access"
+                ],
+                "technique_id": "T1190",
+                "technique_name": "Exploit Public-Facing Application"
+              },
               {
                 "catalog": "attack",
                 "confidence": 0.7,
@@ -199,7 +212,7 @@
               "serverName": "Public reference-evidence-api service"
             },
             "edgeIds": [
-              "uses:service:reference-api:agent:model:reference-workload",
+              "exposed_to:service:reference-api:agent:model:reference-workload",
               "authenticates_as:agent:model:reference-workload:identity:model:reference-workload",
               "has_permission:identity:model:reference-workload:data-store:reference-customer-records"
             ],
@@ -268,7 +281,7 @@
                 "evidence_tier": "modeled_infrastructure",
                 "freshness": "fresh",
                 "reason_codes": [],
-                "relationship": "uses",
+                "relationship": "exposed_to",
                 "relationship_provenance": "recorded",
                 "runtime_observed_state": "not_observed",
                 "runtime_outcome": "unknown",
@@ -459,8 +472,8 @@
               {
                 "confidence": 1.0,
                 "direction": "directed",
-                "id": "uses:service:reference-api:agent:model:reference-workload",
-                "relationship": "uses",
+                "id": "exposed_to:service:reference-api:agent:model:reference-workload",
+                "relationship": "exposed_to",
                 "source": "service:reference-api",
                 "target": "agent:model:reference-workload",
                 "traversable": true
@@ -484,7 +497,7 @@
                 "traversable": true
               }
             ],
-            "riskScore": 34.0,
+            "riskScore": 48.0,
             "schemaVersion": "agent-bom.graph-evidence/v1",
             "severity": "unknown",
             "source": {
@@ -515,7 +528,7 @@
               "role": "server",
               "severity": "high"
             },
-            "summary": "Internet-exposed Public reference-evidence-api service is linked to reference-evidence-workload; is linked to reference-evidence-workload; has recorded permission to Modeled customer records — potential route to sensitive data (3 hop chain).",
+            "summary": "Internet-exposed Public reference-evidence-api service is linked to internet-exposed reference-evidence-workload; is linked to reference-evidence-workload; has recorded permission to Modeled customer records — potential route to sensitive data (3 hop chain).",
             "target": {
               "entityType": "data_store",
               "evidenceProvenance": {
@@ -945,7 +958,7 @@
             "reference-evidence-workload",
             "Modeled customer records"
           ],
-          "summary": "Internet-exposed Public reference-evidence-api service is linked to reference-evidence-workload; is linked to reference-evidence-workload; has recorded permission to Modeled customer records — potential route to sensitive data (3 hop chain).",
+          "summary": "Internet-exposed Public reference-evidence-api service is linked to internet-exposed reference-evidence-workload; is linked to reference-evidence-workload; has recorded permission to Modeled customer records — potential route to sensitive data (3 hop chain).",
           "title": "Modeled customer records via reference-evidence-workload"
         }
       ],
@@ -969,7 +982,7 @@
         "collapsed_occurrences": 0,
         "covered_findings": 0,
         "edge_count": 9,
-        "highest_risk": 34.0,
+        "highest_risk": 48.0,
         "matched_paths": 1,
         "node_count": 10,
         "presentation_paths": 1,
@@ -1043,8 +1056,8 @@
           "partition": "bucket:42",
           "path_count": 1,
           "priority_method": "structural_path_rank.v1",
-          "priority_score": 34.0,
-          "top_path_summary": "Internet-exposed Public reference-evidence-api service is linked to reference-evidence-workload; is linked to reference-evidence-workload; has recorded permission to Modeled customer records — potential route to sensitive data (3 hop chain)."
+          "priority_score": 48.0,
+          "top_path_summary": "Internet-exposed Public reference-evidence-api service is linked to internet-exposed reference-evidence-workload; is linked to reference-evidence-workload; has recorded permission to Modeled customer records — potential route to sensitive data (3 hop chain)."
         }
       ],
       "attack_paths": [
@@ -1068,10 +1081,10 @@
             "reason_codes": [],
             "status": "complete"
           },
-          "composite_risk": 34.0,
+          "composite_risk": 48.0,
           "credential_exposure": [],
           "edges": [
-            "uses",
+            "exposed_to",
             "authenticates_as",
             "has_permission"
           ],
@@ -1084,7 +1097,7 @@
               "direction": "directed",
               "evidence_tier": "modeled_infrastructure",
               "freshness": "fresh",
-              "relationship": "uses",
+              "relationship": "exposed_to",
               "relationship_provenance": "recorded",
               "runtime_observed_state": "not_observed",
               "runtime_references": [],
@@ -1142,6 +1155,7 @@
             "data-store:reference-customer-records"
           ],
           "mitre_technique_ids": [
+            "T1190",
             "T1530"
           ],
           "reachability": "confirmed",
@@ -1150,9 +1164,21 @@
             "directed_provenance_backed_hops"
           ],
           "source": "service:reference-api",
-          "summary": "Internet-exposed Public reference-evidence-api service is linked to reference-evidence-workload; is linked to reference-evidence-workload; has recorded permission to Modeled customer records — potential route to sensitive data (3 hop chain).",
+          "summary": "Internet-exposed Public reference-evidence-api service is linked to internet-exposed reference-evidence-workload; is linked to reference-evidence-workload; has recorded permission to Modeled customer records — potential route to sensitive data (3 hop chain).",
           "target": "data-store:reference-customer-records",
           "technique_mappings": [
+            {
+              "catalog": "attack",
+              "confidence": 0.7,
+              "evidence_basis": "modeled",
+              "hop_index": 0,
+              "provenance": "modeled exposed_to edge into agent 'agent:model:reference-workload'",
+              "tactics": [
+                "initial-access"
+              ],
+              "technique_id": "T1190",
+              "technique_name": "Exploit Public-Facing Application"
+            },
             {
               "catalog": "attack",
               "confidence": 0.7,
@@ -1182,62 +1208,15 @@
       "edges": [
         {
           "activity_id": 1,
-          "canonical_id": "8ae02f55-c28b-56c1-a58f-151cbe1447ed",
-          "confidence": 1.0,
-          "direction": "directed",
-          "evidence": {
-            "evidence_tier": "modeled_infrastructure",
-            "modeled": true,
-            "source_kind": "kubernetes_iac"
-          },
-          "first_seen": "2026-08-30T04:02:00+00:00",
-          "id": "contains:agent:model:reference-workload:container:iac:reference-api",
-          "last_seen": "2026-08-30T04:02:00+00:00",
-          "provenance": {
-            "artifact": "examples/reference-evidence-lab",
-            "correlation": {
-              "conflict_fields": [],
-              "freshness": "fresh",
-              "identity_version": "scoped-identity.v4",
-              "observation_count": 1,
-              "observations": [
-                {
-                  "confidence": 1.0,
-                  "direction": "directed",
-                  "evidence_digest": "sha256:559ee24fcbf610a002f4882e5822aedfb0c0c6ef1e630990727c5f4c09678835",
-                  "scan_id": "reference-kubernetes-iac-scan",
-                  "snapshot_created_at": "2026-08-30T04:02:00+00:00",
-                  "source_edge_id": "contains:workload:reference-api:container:iac:reference-api",
-                  "traversable": true
-                }
-              ],
-              "source_scan_ids": [
-                "reference-kubernetes-iac-scan"
-              ]
-            },
-            "source": "kubernetes_iac"
-          },
-          "relationship": "contains",
-          "source": "agent:model:reference-workload",
-          "source_id": "agent:model:reference-workload",
-          "source_run_id": "reference-evidence-correlation-v1",
-          "source_scan_id": "reference-evidence-correlation-v1",
-          "target": "container:iac:reference-api",
-          "target_id": "container:iac:reference-api",
-          "traversable": true,
-          "valid_from": "2026-08-30T04:02:00+00:00",
-          "valid_to": null,
-          "weight": 1.0
-        },
-        {
-          "activity_id": 1,
           "canonical_id": "ca279538-98c0-5a28-86f5-29dadba2cab9",
           "confidence": 1.0,
           "direction": "directed",
           "evidence": {
             "evidence_tier": "modeled_infrastructure",
             "modeled": true,
-            "source_kind": "identity_model"
+            "source": "identity_model",
+            "source_kind": "identity_model",
+            "tier": "modeled_infrastructure"
           },
           "first_seen": "2026-08-30T04:05:00+00:00",
           "id": "authenticates_as:agent:model:reference-workload:identity:model:reference-workload",
@@ -1253,7 +1232,7 @@
                 {
                   "confidence": 1.0,
                   "direction": "directed",
-                  "evidence_digest": "sha256:b23bb8ea4fe34241722cb99f66bbf05fb4d07b3d8a8bcbd7f58fb347cf14efc7",
+                  "evidence_digest": "sha256:d55f39620cec549818355fdf28ba820a55cf26348d7773a1a9751ecf4d19e799",
                   "scan_id": "reference-identity-permission-scan",
                   "snapshot_created_at": "2026-08-30T04:05:00+00:00",
                   "source_edge_id": "authenticates_as:agent:model:reference-workload:identity:model:reference-workload",
@@ -1287,7 +1266,9 @@
             "evidence_tier": "runtime_observed",
             "runtime_observed": true,
             "runtime_observed_state": "observed",
-            "source_kind": "gateway_runtime"
+            "source": "gateway_runtime",
+            "source_kind": "gateway_runtime",
+            "tier": "runtime_observed"
           },
           "first_seen": "2026-08-30T04:04:00+00:00",
           "id": "invoked:agent:model:reference-workload:tool:runtime:render-untrusted-image",
@@ -1303,7 +1284,7 @@
                 {
                   "confidence": 1.0,
                   "direction": "directed",
-                  "evidence_digest": "sha256:c61e6cc368eec0a40e0d6b4d3fd650bd0dbc90cf1d43b0b5d8145d86628e1a46",
+                  "evidence_digest": "sha256:6415cd83450f4ec5cb799c2d7052014f6d010e23130248a5823761fc290c1230",
                   "scan_id": "reference-runtime-observation",
                   "snapshot_created_at": "2026-08-30T04:04:00+00:00",
                   "source_edge_id": "invoked:agent:runtime:reference-workload:tool:runtime:render-untrusted-image",
@@ -1330,6 +1311,57 @@
         },
         {
           "activity_id": 1,
+          "canonical_id": "0d9ff224-0a8b-51bd-8cd3-06e08f885395",
+          "confidence": 1.0,
+          "direction": "directed",
+          "evidence": {
+            "evidence_tier": "modeled_infrastructure",
+            "modeled": true,
+            "source": "kubernetes_iac",
+            "source_kind": "kubernetes_iac",
+            "tier": "modeled_infrastructure"
+          },
+          "first_seen": "2026-08-30T04:02:00+00:00",
+          "id": "contains:container:iac:reference-api:agent:model:reference-workload",
+          "last_seen": "2026-08-30T04:02:00+00:00",
+          "provenance": {
+            "artifact": "examples/reference-evidence-lab",
+            "correlation": {
+              "conflict_fields": [],
+              "freshness": "fresh",
+              "identity_version": "scoped-identity.v4",
+              "observation_count": 1,
+              "observations": [
+                {
+                  "confidence": 1.0,
+                  "direction": "directed",
+                  "evidence_digest": "sha256:32afcd2bfc5ded0e48e02aa50f464a4b33c7ce1cc1814fa092af1d1052ce4373",
+                  "scan_id": "reference-kubernetes-iac-scan",
+                  "snapshot_created_at": "2026-08-30T04:02:00+00:00",
+                  "source_edge_id": "contains:container:iac:reference-api:workload:reference-api",
+                  "traversable": true
+                }
+              ],
+              "source_scan_ids": [
+                "reference-kubernetes-iac-scan"
+              ]
+            },
+            "source": "kubernetes_iac"
+          },
+          "relationship": "contains",
+          "source": "container:iac:reference-api",
+          "source_id": "container:iac:reference-api",
+          "source_run_id": "reference-evidence-correlation-v1",
+          "source_scan_id": "reference-evidence-correlation-v1",
+          "target": "agent:model:reference-workload",
+          "target_id": "agent:model:reference-workload",
+          "traversable": true,
+          "valid_from": "2026-08-30T04:02:00+00:00",
+          "valid_to": null,
+          "weight": 1.0
+        },
+        {
+          "activity_id": 1,
           "canonical_id": "63563a89-3eda-5322-9b21-e1ee6cd9546d",
           "confidence": 1.0,
           "direction": "directed",
@@ -1338,7 +1370,9 @@
             "image_digest": "sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a",
             "modeled": true,
             "sbom_artifact": "examples/reference-evidence-lab/sbom.cdx.json",
-            "source_kind": "kubernetes_iac_sbom_projection"
+            "source": "kubernetes_iac_sbom_projection",
+            "source_kind": "kubernetes_iac_sbom_projection",
+            "tier": "modeled_infrastructure"
           },
           "first_seen": "2026-08-30T04:02:00+00:00",
           "id": "contains:container:iac:reference-api:package:iac:pillow",
@@ -1354,7 +1388,7 @@
                 {
                   "confidence": 1.0,
                   "direction": "directed",
-                  "evidence_digest": "sha256:de664182994000a3fae5b5ce2539aff54b382f44d407551261453120c2ef8e42",
+                  "evidence_digest": "sha256:d3480c44206f60e974f98ceb4c1ffab5c1d6d5c315efcfb67fde0eb711c03d16",
                   "scan_id": "reference-kubernetes-iac-scan",
                   "snapshot_created_at": "2026-08-30T04:02:00+00:00",
                   "source_edge_id": "contains:container:iac:reference-api:package:iac:pillow",
@@ -1386,7 +1420,9 @@
           "direction": "directed",
           "evidence": {
             "evidence_tier": "static_evidence",
-            "source_kind": "cyclonedx_sbom"
+            "source": "cyclonedx_sbom",
+            "source_kind": "cyclonedx_sbom",
+            "tier": "static_evidence"
           },
           "first_seen": "2026-08-30T04:01:00+00:00",
           "id": "contains:container:sbom:reference-api:package:iac:pillow",
@@ -1402,7 +1438,7 @@
                 {
                   "confidence": 1.0,
                   "direction": "directed",
-                  "evidence_digest": "sha256:b7817d04a8cf8169b8fd692cabd1f40c2c690df9133f2d4909f2f533d6930f6b",
+                  "evidence_digest": "sha256:d40d8a40d682af9ec569c395a9b858f947ed6907144c19f5c72c655d0dc8c2d7",
                   "scan_id": "reference-image-sbom-scan",
                   "snapshot_created_at": "2026-08-30T04:01:00+00:00",
                   "source_edge_id": "contains:container:sbom:reference-api:package:sbom:pillow",
@@ -1435,7 +1471,9 @@
           "evidence": {
             "evidence_tier": "modeled_infrastructure",
             "modeled": true,
-            "source_kind": "identity_model"
+            "source": "identity_model",
+            "source_kind": "identity_model",
+            "tier": "modeled_infrastructure"
           },
           "first_seen": "2026-08-30T04:05:00+00:00",
           "id": "has_permission:identity:model:reference-workload:data-store:reference-customer-records",
@@ -1451,7 +1489,7 @@
                 {
                   "confidence": 1.0,
                   "direction": "directed",
-                  "evidence_digest": "sha256:b23bb8ea4fe34241722cb99f66bbf05fb4d07b3d8a8bcbd7f58fb347cf14efc7",
+                  "evidence_digest": "sha256:d55f39620cec549818355fdf28ba820a55cf26348d7773a1a9751ecf4d19e799",
                   "scan_id": "reference-identity-permission-scan",
                   "snapshot_created_at": "2026-08-30T04:05:00+00:00",
                   "source_edge_id": "has_permission:identity:model:reference-workload:data-store:reference-customer-records",
@@ -1483,7 +1521,9 @@
           "direction": "directed",
           "evidence": {
             "evidence_tier": "static_evidence",
-            "source_kind": "bundled_advisory_scanner"
+            "source": "bundled_advisory_scanner",
+            "source_kind": "bundled_advisory_scanner",
+            "tier": "static_evidence"
           },
           "first_seen": "2026-08-30T04:01:00+00:00",
           "id": "vulnerable_to:package:iac:pillow:vulnerability:sbom:cve-2023-4863",
@@ -1499,7 +1539,7 @@
                 {
                   "confidence": 1.0,
                   "direction": "directed",
-                  "evidence_digest": "sha256:4d5e3f57653f444b7bd214329a4d0609c075dffa3ea08ff01bc249c6cabec205",
+                  "evidence_digest": "sha256:01e165b03519050a1f4db2105c0286f7ca17104f03c9ade5025c20b52d1caa46",
                   "scan_id": "reference-image-sbom-scan",
                   "snapshot_created_at": "2026-08-30T04:01:00+00:00",
                   "source_edge_id": "vulnerable_to:package:sbom:pillow:vulnerability:sbom:cve-2023-4863",
@@ -1526,16 +1566,18 @@
         },
         {
           "activity_id": 1,
-          "canonical_id": "49e42f13-9495-5048-b208-502f63977c36",
+          "canonical_id": "b6dd5b62-e930-5921-b709-72617e3b93ec",
           "confidence": 1.0,
           "direction": "directed",
           "evidence": {
             "evidence_tier": "modeled_infrastructure",
             "modeled": true,
-            "source_kind": "kubernetes_iac"
+            "source": "kubernetes_iac",
+            "source_kind": "kubernetes_iac",
+            "tier": "modeled_infrastructure"
           },
           "first_seen": "2026-08-30T04:02:00+00:00",
-          "id": "uses:service:reference-api:agent:model:reference-workload",
+          "id": "exposed_to:service:reference-api:agent:model:reference-workload",
           "last_seen": "2026-08-30T04:02:00+00:00",
           "provenance": {
             "artifact": "examples/reference-evidence-lab",
@@ -1548,10 +1590,10 @@
                 {
                   "confidence": 1.0,
                   "direction": "directed",
-                  "evidence_digest": "sha256:559ee24fcbf610a002f4882e5822aedfb0c0c6ef1e630990727c5f4c09678835",
+                  "evidence_digest": "sha256:32afcd2bfc5ded0e48e02aa50f464a4b33c7ce1cc1814fa092af1d1052ce4373",
                   "scan_id": "reference-kubernetes-iac-scan",
                   "snapshot_created_at": "2026-08-30T04:02:00+00:00",
-                  "source_edge_id": "uses:service:reference-api:workload:reference-api",
+                  "source_edge_id": "exposed_to:service:reference-api:workload:reference-api",
                   "traversable": true
                 }
               ],
@@ -1561,7 +1603,7 @@
             },
             "source": "kubernetes_iac"
           },
-          "relationship": "uses",
+          "relationship": "exposed_to",
           "source": "service:reference-api",
           "source_id": "service:reference-api",
           "source_run_id": "reference-evidence-correlation-v1",
@@ -1580,7 +1622,9 @@
           "direction": "directed",
           "evidence": {
             "evidence_tier": "static_evidence",
-            "source_kind": "repository_parser"
+            "source": "repository_parser",
+            "source_kind": "repository_parser",
+            "tier": "static_evidence"
           },
           "first_seen": "2026-08-30T04:00:00+00:00",
           "id": "depends_on:source:pinned-package:package:iac:pillow",
@@ -1596,7 +1640,7 @@
                 {
                   "confidence": 1.0,
                   "direction": "directed",
-                  "evidence_digest": "sha256:a61c56697d4f07ff0aeb2161c87c897d6cbeebb98492eae577c36ba65d58d32f",
+                  "evidence_digest": "sha256:3ea695d957eaf1a29e0bc83e79b11c987ba55c6ab79d2f31aa30f23e28549095",
                   "scan_id": "reference-repository-scan",
                   "snapshot_created_at": "2026-08-30T04:00:00+00:00",
                   "source_edge_id": "depends_on:source:pinned-package:package:repo:pillow",
@@ -2539,7 +2583,7 @@
         "attack_path_count": 1,
         "highest_interaction_risk": 0.0,
         "interaction_risk_count": 0,
-        "max_attack_path_risk": 34.0,
+        "max_attack_path_risk": 48.0,
         "node_types": {
           "agent": 1,
           "container": 2,
@@ -2555,9 +2599,9 @@
           "authenticates_as": 1,
           "contains": 3,
           "depends_on": 1,
+          "exposed_to": 1,
           "has_permission": 1,
           "invoked": 1,
-          "uses": 1,
           "vulnerable_to": 1
         },
         "severity_counts": {
@@ -2634,7 +2678,7 @@
       {
         "age_hours": 0.016667,
         "created_at": "2026-08-30T04:05:00+00:00",
-        "digest": "sha256:c961e2a439ca838fbedc2ffb9bcd50b5e48b93c1668e03287c87168c1097c24e",
+        "digest": "sha256:96c703254281fc470d8c51864d97619b4095b5bca86fadaebc56b6825cfd1709",
         "edge_count": 2,
         "freshness": "fresh",
         "node_count": 3,
@@ -2643,7 +2687,7 @@
           "algorithm": "hmac-sha256",
           "key_id": "reference-lab-v1",
           "schema_version": "agent-bom.correlation-receipt-signature/v1",
-          "value": "sha256:aec66e1b9d09e5814d623ae33b229d3aaf6f736f705a33487271f3df1bbb9242"
+          "value": "sha256:4874946314e96b253084c3ca008e4748040f976efe80afb7523d319e6a4e5825"
         },
         "source_kinds": [
           "identity_model"
@@ -2652,7 +2696,7 @@
       {
         "age_hours": 0.083333,
         "created_at": "2026-08-30T04:01:00+00:00",
-        "digest": "sha256:ba42ac8e8bbb4441cf8096d4b8a8efc3d36aa8b3721829d5eacecf92cb98fbf0",
+        "digest": "sha256:d31297e9f087f9523e27ea42e3b1dd8b81b2735bde167c07fc04001803e2cf52",
         "edge_count": 2,
         "freshness": "fresh",
         "node_count": 3,
@@ -2661,7 +2705,7 @@
           "algorithm": "hmac-sha256",
           "key_id": "reference-lab-v1",
           "schema_version": "agent-bom.correlation-receipt-signature/v1",
-          "value": "sha256:9d514b663ccbe2a3216a1875efc734408c810a962f358f416314ebd547a42d1d"
+          "value": "sha256:67119a6c64115f14ff283947b7ccfd116f4ecdc9c7351d465ab6be3e56714d20"
         },
         "source_kinds": [
           "bundled_advisory_scanner",
@@ -2671,7 +2715,7 @@
       {
         "age_hours": 0.066667,
         "created_at": "2026-08-30T04:02:00+00:00",
-        "digest": "sha256:ff8acd531ed97c0118ef903a8e2a14c520422ff7a7550643fd25e6aea61ca347",
+        "digest": "sha256:6c88ef8a2c0071c44c2665cc9e14afa526a5d7523917c1f6b7a918d189d1a334",
         "edge_count": 3,
         "freshness": "fresh",
         "node_count": 4,
@@ -2680,7 +2724,7 @@
           "algorithm": "hmac-sha256",
           "key_id": "reference-lab-v1",
           "schema_version": "agent-bom.correlation-receipt-signature/v1",
-          "value": "sha256:46dfc5253eba64ad4a90788156841131158eebd9e411b583578b7ae6fa2604d2"
+          "value": "sha256:f71cc106d33c57313e6a99860609a8a1b531ad81fb06579d5a1580f801c85353"
         },
         "source_kinds": [
           "kubernetes_iac",
@@ -2708,7 +2752,7 @@
       {
         "age_hours": 0.1,
         "created_at": "2026-08-30T04:00:00+00:00",
-        "digest": "sha256:140763e376d7295b08a986c729542dd5c8178e9d99d95b603c75ed5bc0d32db4",
+        "digest": "sha256:10d8a79c547b468bb711315a66cfd24ff034fd5e0573e4b4c4610a9871bb2633",
         "edge_count": 1,
         "freshness": "fresh",
         "node_count": 2,
@@ -2717,7 +2761,7 @@
           "algorithm": "hmac-sha256",
           "key_id": "reference-lab-v1",
           "schema_version": "agent-bom.correlation-receipt-signature/v1",
-          "value": "sha256:7684f9e111536499f7dd0519b8cc4a51dcd289086a417d60da0c6a7cd1c0d337"
+          "value": "sha256:89c5cbd47d048c149376980170f7564bc6589c9e697ebca6057e45cff18c152f"
         },
         "source_kinds": [
           "repository_parser"
@@ -2726,7 +2770,7 @@
       {
         "age_hours": 0.033333,
         "created_at": "2026-08-30T04:04:00+00:00",
-        "digest": "sha256:056f86108ec2acf3885fa074be3a21323b3d8310a690861e615e3611ae78aa31",
+        "digest": "sha256:581216a0e2755aad4e4926297a9ece8e56a18cb1c717c28a34ba7a7a8ca8dfa4",
         "edge_count": 1,
         "freshness": "fresh",
         "node_count": 2,
@@ -2735,14 +2779,14 @@
           "algorithm": "hmac-sha256",
           "key_id": "reference-lab-v1",
           "schema_version": "agent-bom.correlation-receipt-signature/v1",
-          "value": "sha256:bd1ef1725c3dd59de345ccee5fdcc0a19a496c61d55201d8e17cd273aa03d622"
+          "value": "sha256:29fd35f40259bbc8b0882d0e579c6d7aaad9233e8af11c6de12fe06e81667cf8"
         },
         "source_kinds": [
           "gateway_runtime"
         ]
       }
     ],
-    "manifest_sha256": "sha256:c47462b1fa18fea55d5364d44742239bbfeefa23cda4df4d8c92ac74260baac6",
+    "manifest_sha256": "sha256:71d86b85cf9ad51c71a0657876b799e0f14d26cf0e51a75e4320ebca7916988f",
     "max_age_hours": 168,
     "name": "Reference evidence lab",
     "output_scan_id": "reference-evidence-correlation-v1",
@@ -2794,7 +2838,7 @@
         {
           "age_hours": 0.016667,
           "created_at": "2026-08-30T04:05:00+00:00",
-          "digest": "sha256:c961e2a439ca838fbedc2ffb9bcd50b5e48b93c1668e03287c87168c1097c24e",
+          "digest": "sha256:96c703254281fc470d8c51864d97619b4095b5bca86fadaebc56b6825cfd1709",
           "edge_count": 2,
           "freshness": "fresh",
           "node_count": 3,
@@ -2803,7 +2847,7 @@
             "algorithm": "hmac-sha256",
             "key_id": "reference-lab-v1",
             "schema_version": "agent-bom.correlation-receipt-signature/v1",
-            "value": "sha256:aec66e1b9d09e5814d623ae33b229d3aaf6f736f705a33487271f3df1bbb9242"
+            "value": "sha256:4874946314e96b253084c3ca008e4748040f976efe80afb7523d319e6a4e5825"
           },
           "source_kinds": [
             "identity_model"
@@ -2812,7 +2856,7 @@
         {
           "age_hours": 0.083333,
           "created_at": "2026-08-30T04:01:00+00:00",
-          "digest": "sha256:ba42ac8e8bbb4441cf8096d4b8a8efc3d36aa8b3721829d5eacecf92cb98fbf0",
+          "digest": "sha256:d31297e9f087f9523e27ea42e3b1dd8b81b2735bde167c07fc04001803e2cf52",
           "edge_count": 2,
           "freshness": "fresh",
           "node_count": 3,
@@ -2821,7 +2865,7 @@
             "algorithm": "hmac-sha256",
             "key_id": "reference-lab-v1",
             "schema_version": "agent-bom.correlation-receipt-signature/v1",
-            "value": "sha256:9d514b663ccbe2a3216a1875efc734408c810a962f358f416314ebd547a42d1d"
+            "value": "sha256:67119a6c64115f14ff283947b7ccfd116f4ecdc9c7351d465ab6be3e56714d20"
           },
           "source_kinds": [
             "bundled_advisory_scanner",
@@ -2831,7 +2875,7 @@
         {
           "age_hours": 0.066667,
           "created_at": "2026-08-30T04:02:00+00:00",
-          "digest": "sha256:ff8acd531ed97c0118ef903a8e2a14c520422ff7a7550643fd25e6aea61ca347",
+          "digest": "sha256:6c88ef8a2c0071c44c2665cc9e14afa526a5d7523917c1f6b7a918d189d1a334",
           "edge_count": 3,
           "freshness": "fresh",
           "node_count": 4,
@@ -2840,7 +2884,7 @@
             "algorithm": "hmac-sha256",
             "key_id": "reference-lab-v1",
             "schema_version": "agent-bom.correlation-receipt-signature/v1",
-            "value": "sha256:46dfc5253eba64ad4a90788156841131158eebd9e411b583578b7ae6fa2604d2"
+            "value": "sha256:f71cc106d33c57313e6a99860609a8a1b531ad81fb06579d5a1580f801c85353"
           },
           "source_kinds": [
             "kubernetes_iac",
@@ -2868,7 +2912,7 @@
         {
           "age_hours": 0.1,
           "created_at": "2026-08-30T04:00:00+00:00",
-          "digest": "sha256:140763e376d7295b08a986c729542dd5c8178e9d99d95b603c75ed5bc0d32db4",
+          "digest": "sha256:10d8a79c547b468bb711315a66cfd24ff034fd5e0573e4b4c4610a9871bb2633",
           "edge_count": 1,
           "freshness": "fresh",
           "node_count": 2,
@@ -2877,7 +2921,7 @@
             "algorithm": "hmac-sha256",
             "key_id": "reference-lab-v1",
             "schema_version": "agent-bom.correlation-receipt-signature/v1",
-            "value": "sha256:7684f9e111536499f7dd0519b8cc4a51dcd289086a417d60da0c6a7cd1c0d337"
+            "value": "sha256:89c5cbd47d048c149376980170f7564bc6589c9e697ebca6057e45cff18c152f"
           },
           "source_kinds": [
             "repository_parser"
@@ -2886,7 +2930,7 @@
         {
           "age_hours": 0.033333,
           "created_at": "2026-08-30T04:04:00+00:00",
-          "digest": "sha256:056f86108ec2acf3885fa074be3a21323b3d8310a690861e615e3611ae78aa31",
+          "digest": "sha256:581216a0e2755aad4e4926297a9ece8e56a18cb1c717c28a34ba7a7a8ca8dfa4",
           "edge_count": 1,
           "freshness": "fresh",
           "node_count": 2,
@@ -2895,7 +2939,7 @@
             "algorithm": "hmac-sha256",
             "key_id": "reference-lab-v1",
             "schema_version": "agent-bom.correlation-receipt-signature/v1",
-            "value": "sha256:bd1ef1725c3dd59de345ccee5fdcc0a19a496c61d55201d8e17cd273aa03d622"
+            "value": "sha256:29fd35f40259bbc8b0882d0e579c6d7aaad9233e8af11c6de12fe06e81667cf8"
           },
           "source_kinds": [
             "gateway_runtime"
@@ -2905,7 +2949,7 @@
       "output": {
         "attack_path_count": 1,
         "edge_count": 9,
-        "graph_digest_sha256": "sha256:f130e2781bfa88f653a1b1064dd29ebad928647470b4f11e3126c7a0381b2c19",
+        "graph_digest_sha256": "sha256:c1334039b619929c8955e52ebaea3877357f0c503338fafe5437a36f5a75ab5b",
         "node_count": 10,
         "scan_id": "reference-evidence-correlation-v1"
       },
@@ -2992,10 +3036,10 @@
       "reason_codes": [],
       "status": "complete"
     },
-    "composite_risk": 34.0,
+    "composite_risk": 48.0,
     "credential_exposure": [],
     "edges": [
-      "uses",
+      "exposed_to",
       "authenticates_as",
       "has_permission"
     ],
@@ -3008,7 +3052,7 @@
         "direction": "directed",
         "evidence_tier": "modeled_infrastructure",
         "freshness": "fresh",
-        "relationship": "uses",
+        "relationship": "exposed_to",
         "relationship_provenance": "recorded",
         "runtime_observed_state": "not_observed",
         "runtime_references": [],
@@ -3066,6 +3110,7 @@
       "data-store:reference-customer-records"
     ],
     "mitre_technique_ids": [
+      "T1190",
       "T1530"
     ],
     "reachability": "confirmed",
@@ -3074,9 +3119,21 @@
       "directed_provenance_backed_hops"
     ],
     "source": "service:reference-api",
-    "summary": "Internet-exposed Public reference-evidence-api service is linked to reference-evidence-workload; is linked to reference-evidence-workload; has recorded permission to Modeled customer records — potential route to sensitive data (3 hop chain).",
+    "summary": "Internet-exposed Public reference-evidence-api service is linked to internet-exposed reference-evidence-workload; is linked to reference-evidence-workload; has recorded permission to Modeled customer records — potential route to sensitive data (3 hop chain).",
     "target": "data-store:reference-customer-records",
     "technique_mappings": [
+      {
+        "catalog": "attack",
+        "confidence": 0.7,
+        "evidence_basis": "modeled",
+        "hop_index": 0,
+        "provenance": "modeled exposed_to edge into agent 'agent:model:reference-workload'",
+        "tactics": [
+          "initial-access"
+        ],
+        "technique_id": "T1190",
+        "technique_name": "Exploit Public-Facing Application"
+      },
       {
         "catalog": "attack",
         "confidence": 0.7,

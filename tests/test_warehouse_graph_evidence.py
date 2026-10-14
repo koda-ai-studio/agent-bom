@@ -21,7 +21,7 @@ def fixture():
             {"ASSET_ID": "A", "KIND": "agent", "NAME": "Assistant", "SEEN": "2026-09-29T12:00:00Z"},
             {"ASSET_ID": "a", "KIND": "data_store", "NAME": "Orders", "SEEN": "2026-09-29T13:00:00Z"},
         ],
-        "edges": [{"source": "A", "target": "a", "relationship": "uses", "observed_at": "2026-09-29T14:00:00Z"}],
+        "edges": [{"source": "A", "target": "a", "relationship": "accessed", "observed_at": "2026-09-29T14:00:00Z"}],
     }
     return rows, mapping
 

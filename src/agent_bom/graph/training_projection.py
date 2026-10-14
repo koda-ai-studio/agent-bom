@@ -6,6 +6,7 @@ from typing import Any
 
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
+from agent_bom.graph.edge_evidence import edge_evidence
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
 from agent_bom.graph.types import EntityType, RelationshipType
 
@@ -60,6 +61,7 @@ def project_serving_configs(graph: UnifiedGraph, serving_configs: list[dict[str,
                     source=container_id,
                     target=model_id,
                     relationship=RelationshipType.SERVES_MODEL,
+                    evidence=edge_evidence("serving-config", "static_scan"),
                 )
             )
 

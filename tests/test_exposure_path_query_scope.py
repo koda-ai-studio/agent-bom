@@ -8,6 +8,10 @@ from agent_bom.api.graph_store import SQLiteGraphStore
 from agent_bom.graph import AttackPath, EntityType, RelationshipType, UnifiedEdge, UnifiedGraph, UnifiedNode
 from agent_bom.mcp_tools.graph import exposure_paths_impl
 
+# Hand-built graphs here use placeholder relationship pairs to exercise graph
+# mechanics; producers are held to the contract in test_graph_relationship_contract.
+pytestmark = pytest.mark.graph_contract("warn")
+
 
 def star(scan_id: str, tenant_id: str = "default", size: int = 1_000) -> UnifiedGraph:
     graph = UnifiedGraph(scan_id=scan_id, tenant_id=tenant_id)

@@ -12,6 +12,7 @@ from agent_bom.graph.build_indexes import BuildIndexes
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.credential_projection import project_credentials
 from agent_bom.graph.edge import UnifiedEdge
+from agent_bom.graph.edge_evidence import edge_evidence
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
 from agent_bom.graph.package_projection import (
     _add_vuln_node,
@@ -59,6 +60,11 @@ class AgentScope:
     provider_name: str = ""
     provider_id: str = ""
     agent_env: str = ""
+
+
+def _discovery_evidence(data_source: str) -> dict[str, Any]:
+    """Inventory edges read from agent / MCP configuration are static-scan claims."""
+    return edge_evidence(data_source or "agent_discovery", "static_scan")
 
 
 def _scope(agent_dict: dict[str, Any], report_data_source: str) -> AgentScope:
@@ -165,6 +171,7 @@ def _project_agent(graph: UnifiedGraph, agent: AgentScope, indexes: BuildIndexes
                 source=agent.provider_id,
                 target=agent.agent_id,
                 relationship=RelationshipType.HOSTS,
+                evidence=_discovery_evidence(agent.data_source_tag),
             )
         )
     lineage(
@@ -197,7 +204,14 @@ def _add_server_node(graph: UnifiedGraph, agent: AgentScope, srv_dict: Mapping[s
                 data_sources=[agent.data_source_tag],
             )
         )
-        graph.add_edge(UnifiedEdge(source=agent.agent_id, target=srv_id, relationship=RelationshipType.CONTAINS))
+        graph.add_edge(
+            UnifiedEdge(
+                source=agent.agent_id,
+                target=srv_id,
+                relationship=RelationshipType.CONTAINS,
+                evidence=_discovery_evidence(agent.data_source_tag),
+            )
+        )
 
     if not agent.static_inventory:
         graph.add_node(
@@ -248,6 +262,7 @@ def _project_server(graph: UnifiedGraph, agent: AgentScope, srv_dict: Mapping[st
                 source=agent.agent_id,
                 target=srv_id,
                 relationship=RelationshipType.USES,
+                evidence=_discovery_evidence(agent.data_source_tag),
             )
         )
         indexes.server_to_agents[srv_name].append(agent.agent_id)
@@ -370,6 +385,7 @@ def _project_tools(graph: UnifiedGraph, agent: AgentScope, srv_dict: Mapping[str
                 source=srv_id,
                 target=tool_id,
                 relationship=RelationshipType.PROVIDES_TOOL,
+                evidence=_discovery_evidence(agent.data_source_tag),
             )
         )
     return tool_ids

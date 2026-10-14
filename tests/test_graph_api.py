@@ -39,6 +39,10 @@ from agent_bom.graph import (
 from agent_bom.graph.analysis import GraphAnalysisState, GraphAnalysisStatus
 from agent_bom.graph.container import apply_node_budget
 
+# Hand-built graphs here use placeholder relationship pairs to exercise graph
+# mechanics; producers are held to the contract in test_graph_relationship_contract.
+pytestmark = pytest.mark.graph_contract("warn")
+
 
 def _build_persisted_graph(db, scan_id="test-scan-001"):
     """Build and persist a test graph."""

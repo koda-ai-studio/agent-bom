@@ -16,6 +16,10 @@ import pytest
 from agent_bom.graph import UnifiedGraph
 from agent_bom.graph.container import GraphCompleteness
 
+# Hand-built graphs here use placeholder relationship pairs to exercise graph
+# mechanics; producers are held to the contract in test_graph_relationship_contract.
+pytestmark = pytest.mark.graph_contract("warn")
+
 
 def test_a_graph_defaults_to_complete() -> None:
     graph = UnifiedGraph(scan_id="s1", tenant_id="t1")

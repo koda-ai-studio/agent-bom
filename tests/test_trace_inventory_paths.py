@@ -1,8 +1,14 @@
 """An inventory finding path is attributable, bounded and never execution proof."""
 
+import pytest
+
 from agent_bom.api.graph_store import SQLiteGraphStore
 from agent_bom.api.trace_inventory_paths import attach_inventory_paths
 from agent_bom.graph import EntityType, RelationshipType, UnifiedEdge, UnifiedGraph, UnifiedNode
+
+# Hand-built graphs here use placeholder relationship pairs to exercise graph
+# mechanics; producers are held to the contract in test_graph_relationship_contract.
+pytestmark = pytest.mark.graph_contract("warn")
 
 
 def test_only_recorded_directed_occurrence_paths_are_attached(tmp_path):

@@ -204,6 +204,7 @@ from agent_bom.graph.cloud_service_projection import project_aws_services, proje
 from agent_bom.graph.cloud_storage_projection import project_buckets, project_databases, project_side_scan_targets
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
+from agent_bom.graph.edge_evidence import edge_evidence
 from agent_bom.graph.finding_projection import _resolve_skill_audit_target_ids as _resolve_skill_audit_target_ids
 from agent_bom.graph.finding_projection import (
     project_iac,
@@ -808,12 +809,8 @@ def _add_cloud_org_architecture_findings(graph: UnifiedGraph, report_json: Mappi
                     dimensions=NodeDimensions(cloud_provider=provider),
                 )
             )
-            graph.add_edge(
-                UnifiedEdge(
-                    source=misconfig_id,
-                    target=target_id,
-                    relationship=RelationshipType.AFFECTS,
-                )
+            _add_rel_edge(
+                graph, misconfig_id, target_id, RelationshipType.AFFECTS, edge_evidence(f"{provider}-organizations", "static_scan")
             )
 
 

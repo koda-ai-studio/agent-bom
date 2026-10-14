@@ -32812,6 +32812,7 @@
           "used_credential",
           "accessed",
           "delegated_to",
+          "trace_step",
           "correlates_with",
           "possibly_correlates_with",
           "belongs_to"

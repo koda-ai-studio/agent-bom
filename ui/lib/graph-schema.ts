@@ -137,6 +137,7 @@ export enum RelationshipType {
   INVOKED = "invoked",
   CALLED = "called",
   ACCESSED = "accessed",
+  TRACE_STEP = "trace_step",
   USED_CREDENTIAL = "used_credential",
   DELEGATED_TO = "delegated_to",
   // Cross-environment correlation (#1892)
@@ -645,6 +646,7 @@ export const RELATIONSHIP_COLOR_MAP: Record<string, string> & Record<Relationshi
   [RelationshipType.INVOKED]: "#10b981",
   [RelationshipType.CALLED]: "#a855f7",
   [RelationshipType.ACCESSED]: "#3b82f6",
+  [RelationshipType.TRACE_STEP]: "#6366f1",
   [RelationshipType.USED_CREDENTIAL]: "#facc15",
   [RelationshipType.DELEGATED_TO]: "#a855f7",
   [RelationshipType.CORRELATES_WITH]: "#0ea5e9",
@@ -935,6 +937,12 @@ export const RELATIONSHIP_LEGEND: LegendEntry[] = [
     key: "accessed",
     label: "Accessed (runtime)",
     color: RELATIONSHIP_COLOR_MAP[RelationshipType.ACCESSED],
+    shape: "circle",
+  },
+  {
+    key: "trace_step",
+    label: "Trace Step (recorded)",
+    color: RELATIONSHIP_COLOR_MAP[RelationshipType.TRACE_STEP],
     shape: "circle",
   },
   {

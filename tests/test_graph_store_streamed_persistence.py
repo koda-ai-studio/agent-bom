@@ -29,6 +29,10 @@ from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.snapshot_paths import prepare_snapshot_paths
 from agent_bom.graph.types import EntityType, RelationshipType
 
+# Hand-built graphs here use placeholder relationship pairs to exercise graph
+# mechanics; producers are held to the contract in test_graph_relationship_contract.
+pytestmark = pytest.mark.graph_contract("warn")
+
 
 def _sample_graph(scan_id: str) -> UnifiedGraph:
     g = UnifiedGraph(scan_id=scan_id, tenant_id="acme")

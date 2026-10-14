@@ -162,9 +162,15 @@ function render(schema) {
           source_types: e.source_types,
           target_types: e.target_types,
           traversable: e.traversable,
+          traversal_class: e.traversal_class,
         }).replace(/\n/g, "\n  ")},`,
     )
     .join("\n");
+
+  const traversalUnion = [...new Set(edgeKinds.map((e) => e.traversal_class))]
+    .sort()
+    .map((value) => JSON.stringify(value))
+    .join(" | ");
 
   const nodeKindList = nodeKinds.map((n) => JSON.stringify(n.key)).join(", ");
   const edgeKindList = edgeKinds.map((e) => JSON.stringify(e.key)).join(", ");
@@ -234,6 +240,8 @@ ${edgeEnum}
 
 export type GraphEdgeKindKey = ${edgeUnion};
 
+export type GraphTraversalClass = ${traversalUnion};
+
 export const GRAPH_EDGE_KINDS: readonly GraphEdgeKindKey[] = [${edgeKindList}] as const;
 
 export interface GraphEdgeKindMeta {
@@ -244,6 +252,7 @@ export interface GraphEdgeKindMeta {
   source_types: readonly GraphNodeKindKey[];
   target_types: readonly GraphNodeKindKey[];
   traversable: boolean;
+  traversal_class: GraphTraversalClass;
 }
 
 export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> = {

@@ -7,6 +7,10 @@ from agent_bom.graph import AttackPath, EntityType, RelationshipType, UnifiedEdg
 from agent_bom.graph.snapshot_paths import resolve_snapshot_attack_paths
 from agent_bom.mcp_tools.graph import _exposure_path_payload
 
+# Hand-built graphs here use placeholder relationship pairs to exercise graph
+# mechanics; producers are held to the contract in test_graph_relationship_contract.
+pytestmark = pytest.mark.graph_contract("warn")
+
 
 def _serialize_both(
     path: AttackPath,
