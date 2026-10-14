@@ -62,6 +62,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 - A finding's `applicable_frameworks` now always includes every framework it carries a control tag for, in addition to the frameworks the source/asset/finding-type selection table assigns. Hub posture counts by `applicable_frameworks` and `/v1/compliance` counts by tags, so the hub no longer omits a finding that `/v1/compliance` counts.
 
+- `/v1/findings?framework=X` now matches a scan finding only when it carries an X control tag, like `/v1/compliance/X`. Falling back to `applicable_frameworks` listed every SBOM CVE under PCI DSS while the PCI DSS line counted none. Bulk-ingested findings, which carry only the producer's applicability, still match on it.
+
+- IaC findings now carry the NIST SP 800-53 controls their rule declares (for example `AC-3`, `AU-2`) in `nist_800_53_tags`, and the FedRAMP Moderate subset in `fedramp_tags`, so the NIST 800-53 and FedRAMP lines count them. Only controls in the bundled catalog are tagged, and detective controls (RA-5, CM-8) never are. CIS AWS Foundations Benchmark IDs are not CIS Controls v8 safeguards and stay out of `cis_tags`.
+
+- The CIS Foundations Benchmark scorecard line no longer counts Databricks security checks, which are vendor best practice (Databricks publishes no CIS benchmark). They remain listed by `/v1/cis/checks`.
+
 ### Security
 
 - API local-path scans: a set-but-blank `AGENT_BOM_API_LOCAL_PATH_SCANS` no longer enables local filesystem scans. A blank value is treated as unset and falls through to `AGENT_BOM_ENABLE_LOCAL_PATH_SCANS`, then to the disabled default.
