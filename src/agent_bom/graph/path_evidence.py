@@ -566,3 +566,27 @@ def rank_attack_path(path: AttackPath) -> tuple:
         tuple(path.hops),
         tuple(path.edges),
     )
+
+
+def tag_path_kinds(kinds: dict[int, str] | None, **families: list[AttackPath]) -> None:
+    if kinds is None:
+        return
+    for family, members in families.items():
+        kinds.update({id(path): family for path in members})
+
+
+def rank_unique_paths(paths: list[AttackPath]) -> list[AttackPath]:
+    """One served path per hop/edge chain (highest-ranked wins); never empty or a loop.
+
+    A single-hop entry is a standing principal finding (admin-equivalent role,
+    toxic combination) that must still reach the queue, so it is kept.
+    """
+    unique: list[AttackPath] = []
+    served: set[tuple[str, str, tuple[str, ...], tuple[str, ...]]] = set()
+    for path in sorted(paths, key=rank_attack_path):
+        identity = (path.source, path.target, tuple(path.hops), tuple(path.edges))
+        if identity in served or not path.hops or (len(path.hops) > 1 and path.source == path.target):
+            continue
+        served.add(identity)
+        unique.append(path)
+    return unique

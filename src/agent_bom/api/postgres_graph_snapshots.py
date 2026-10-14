@@ -91,6 +91,7 @@ class PostgresGraphSnapshotsMixin(PostgresGraphStoreBase):
         with _tenant_connection(self._pool) as conn:
             for table in (
                 "graph_node_search",
+                "graph_attack_paths",
                 "attack_paths",
                 "interaction_risks",
                 "graph_edges",
@@ -123,6 +124,7 @@ class PostgresGraphSnapshotsMixin(PostgresGraphStoreBase):
                     return 0
             for table in (
                 "graph_node_search",
+                "graph_attack_paths",
                 "attack_paths",
                 "interaction_risks",
                 "graph_edges",

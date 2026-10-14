@@ -203,6 +203,8 @@ async def test_deploy_decision_does_not_approve_structural_candidates(topology_s
 @pytest.mark.asyncio
 async def test_exposure_paths_discloses_bounded_derivation(topology_store, monkeypatch):
     monkeypatch.setattr("agent_bom.mcp_tools.graph.GRAPH_INVESTIGATION_NODE_BUDGET", 2, raising=False)
+    # Only read-time derivation is bounded; a current stored path index covers the whole snapshot.
+    monkeypatch.setattr(topology_store, "snapshot_attack_paths", lambda **_kwargs: None)
     payload = json.loads(await exposure_paths_impl(scan_id="topology", _get_graph_store=lambda: topology_store))
     assert payload["completeness"]["complete"] is False
     assert payload["completeness"]["reason"] == "node_budget"
@@ -305,7 +307,7 @@ async def test_exposure_cursor_pages_materialized_paths(topology_store):
     seen = []
     for _ in range(3):
         page = json.loads(await exposure_paths_impl(limit=1, cursor=cursor, _get_graph_store=lambda: topology_store))
-        assert page["count_metadata"]["source"] == "persisted_graph_paths"
+        assert page["count_metadata"]["source"] == "derived_graph_paths"
         seen.extend(path["target"]["id"] for path in page["paths"])
         cursor = page["pagination"]["next_cursor"]
     assert seen == ["vuln:0", "vuln:1", "vuln:2"]

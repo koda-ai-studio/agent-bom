@@ -792,8 +792,7 @@ async def get_graph_rollup(
     if min_severity and min_severity.lower() not in SEVERITY_RANK:
         raise HTTPException(status_code=422, detail=f"Unsupported severity: {min_severity}")
 
-    # Cache the small summary, never the hydrated estate. Durable generation
-    # prevents same-ID replacement from replaying counts from an older snapshot.
+    # Cache the small summary, never the hydrated estate; the durable generation stops same-ID replays of older counts.
     from agent_bom.api import graph_rollup_cache
 
     identity = await _runtime._graph_store_call(
@@ -870,6 +869,7 @@ async def get_graph_rollup(
             mode=mode,
             offset=offset,
             limit=limit,
+            graph_store=graph_store,
         )
         if identity is not None:
             await _runtime._graph_store_call(verify_generation, graph_store, tenant=tenant, identity=identity, has_rows=bool(graph.nodes))

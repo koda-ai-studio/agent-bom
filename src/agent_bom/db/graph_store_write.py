@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import sqlite3
 from collections import defaultdict
-from collections.abc import Iterable, Iterator, Mapping
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -25,6 +25,7 @@ from agent_bom.graph.analysis import GraphAnalysisStatus, analysis_status_map_to
 from agent_bom.graph.correlation import CorrelationRunStatus, validate_correlation_update
 from agent_bom.graph.observation_scope import comparable_observation_sql
 from agent_bom.graph.severity_floor import counts_as_finding
+from agent_bom.graph.snapshot_paths import SNAPSHOT_PATH_COLUMNS, SnapshotPath, occurrence_path_keys, snapshot_path_rows
 
 
 @dataclass
@@ -69,7 +70,7 @@ def _clear_snapshot_rows(conn: sqlite3.Connection, *, tenant: str, scan: str) ->
     # retried producer and make graph_snapshots counts contradict graph rows.
     # The first DELETE also takes SQLite's write lock, serializing concurrent
     # writers before any streamed batch is consumed.
-    for table in ("attack_paths", "interaction_risks", "graph_edges", "graph_nodes", "graph_snapshots"):
+    for table in ("graph_attack_paths", "attack_paths", "interaction_risks", "graph_edges", "graph_nodes", "graph_snapshots"):
         conn.execute(
             f"DELETE FROM {table} WHERE tenant_id = ? AND scan_id = ?",  # nosec B608 - static table list
             (tenant, scan),
@@ -239,7 +240,7 @@ def _carry_forward_edge_continuity(conn: sqlite3.Connection, *, previous_scan: s
 
 def _write_attack_paths(conn: sqlite3.Connection, attack_paths: Iterable[AttackPath], *, scan: str, tenant: str, now: str) -> int:
     attack_path_count = 0
-    for ap in attack_paths:
+    for path_key, ap in occurrence_path_keys(attack_paths):
         attack_path_count += 1
         conn.execute(
             """\
@@ -247,8 +248,9 @@ def _write_attack_paths(conn: sqlite3.Connection, attack_paths: Iterable[AttackP
                 source_node, target_node, hop_count, composite_risk,
                 summary, path_nodes, path_edges, credential_exposure,
                 tool_exposure, vuln_ids, reachability, reachability_basis,
-                technique_mappings, hop_evidence, analysis, scan_id, tenant_id, computed_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                technique_mappings, hop_evidence, analysis, scan_id, tenant_id, computed_at,
+                finding_ids, path_key
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 ap.source,
@@ -269,9 +271,25 @@ def _write_attack_paths(conn: sqlite3.Connection, attack_paths: Iterable[AttackP
                 scan,
                 tenant,
                 now,
+                json.dumps(ap.finding_ids),
+                path_key,
             ),
         )
     return attack_path_count
+
+
+def _write_snapshot_paths(conn: sqlite3.Connection, rows: Sequence[SnapshotPath] | None, *, scan: str, tenant: str, now: str) -> None:
+    if rows is None:
+        return
+    generation = conn.execute(
+        "SELECT snapshot_generation FROM graph_snapshots WHERE tenant_id = ? AND scan_id = ?",
+        (tenant, scan),
+    ).fetchone()[0]
+    placeholders = ", ".join("?" for _ in SNAPSHOT_PATH_COLUMNS)
+    conn.executemany(
+        f"INSERT INTO graph_attack_paths ({', '.join(SNAPSHOT_PATH_COLUMNS)}) VALUES ({placeholders})",  # nosec B608 - static columns
+        snapshot_path_rows(rows, tenant=tenant, scan=scan, generation=generation, now=now),
+    )
 
 
 def _write_interaction_risks(conn: sqlite3.Connection, interaction_risks: Iterable[InteractionRisk], *, scan: str, tenant: str) -> None:

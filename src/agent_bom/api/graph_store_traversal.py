@@ -2,22 +2,21 @@
 
 from __future__ import annotations
 
-import json
 import sqlite3
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     pass
 
-from agent_bom.api.graph_store_base import SQLiteGraphStoreBase
+from agent_bom.api.graph_store_snapshot_paths import SQLiteSnapshotPathsMixin
 from agent_bom.db import graph_store as sqlite_graph_store
+from agent_bom.db.graph_store_schema import ATTACK_PATH_ORDER, ATTACK_PATH_SELECT, attack_path_from_row
 from agent_bom.graph import (
     AttackPath,
     RelationshipType,
     UnifiedEdge,
     UnifiedGraph,
     UnifiedNode,
-    technique_mappings_from_json,
 )
 from agent_bom.graph.completeness import (
     bounded_walk_reason,
@@ -26,7 +25,7 @@ from agent_bom.graph.completeness import (
 from agent_bom.graph.ports import GraphStoreProtocol as GraphStoreProtocol
 
 
-class SQLiteGraphTraversalMixin(SQLiteGraphStoreBase):
+class SQLiteGraphTraversalMixin(SQLiteSnapshotPathsMixin):
     if TYPE_CHECKING:
 
         def _frontier_edge_query(
@@ -347,35 +346,11 @@ class SQLiteGraphTraversalMixin(SQLiteGraphStoreBase):
                 return []
             placeholders = ",".join("?" for _ in source_ids)
             rows = conn.execute(
-                f"""
-                SELECT source_node, target_node, path_nodes, path_edges, composite_risk,
-                       summary, credential_exposure, tool_exposure, vuln_ids,
-                       reachability, reachability_basis, technique_mappings,
-                       hop_evidence, analysis
-                FROM attack_paths
-                WHERE tenant_id = ? AND scan_id = ? AND source_node IN ({placeholders})
-                """,  # nosec B608 - placeholders are generated internally
+                f"SELECT {ATTACK_PATH_SELECT} FROM attack_paths WHERE tenant_id = ? AND scan_id = ? "  # nosec B608
+                f"AND source_node IN ({placeholders}) ORDER BY {ATTACK_PATH_ORDER}",
                 [tenant_id, effective_scan_id, *source_ids],
             ).fetchall()
-            return [
-                AttackPath(
-                    source=row["source_node"],
-                    target=row["target_node"],
-                    hops=json.loads(row["path_nodes"]),
-                    edges=json.loads(row["path_edges"]),
-                    composite_risk=row["composite_risk"],
-                    summary=row["summary"] or "",
-                    credential_exposure=json.loads(row["credential_exposure"]),
-                    tool_exposure=json.loads(row["tool_exposure"]),
-                    vuln_ids=json.loads(row["vuln_ids"]),
-                    reachability=row["reachability"] or "unknown",
-                    reachability_basis=json.loads(row["reachability_basis"] or "[]"),
-                    hop_evidence=json.loads(row["hop_evidence"] or "[]"),
-                    analysis=json.loads(row["analysis"] or "{}"),
-                    technique_mappings=technique_mappings_from_json(row["technique_mappings"]),
-                )
-                for row in rows
-            ]
+            return [attack_path_from_row(row) for row in rows]
         finally:
             conn.close()
 
@@ -400,42 +375,11 @@ class SQLiteGraphTraversalMixin(SQLiteGraphStoreBase):
                 (tenant_id, effective_scan_id),
             ).fetchone()[0]
             rows = conn.execute(
-                """
-                SELECT source_node, target_node, path_nodes, path_edges, composite_risk,
-                       summary, credential_exposure, tool_exposure, vuln_ids,
-                       reachability, reachability_basis, technique_mappings,
-                       hop_evidence, analysis
-                FROM attack_paths
-                WHERE tenant_id = ? AND scan_id = ?
-                ORDER BY composite_risk DESC, source_node ASC, target_node ASC
-                LIMIT ? OFFSET ?
-                """,
+                f"SELECT {ATTACK_PATH_SELECT} FROM attack_paths WHERE tenant_id = ? AND scan_id = ? "  # nosec B608
+                f"ORDER BY {ATTACK_PATH_ORDER} LIMIT ? OFFSET ?",
                 (tenant_id, effective_scan_id, limit, offset),
             ).fetchall()
-            return (
-                effective_scan_id,
-                created_at,
-                [
-                    AttackPath(
-                        source=row["source_node"],
-                        target=row["target_node"],
-                        hops=json.loads(row["path_nodes"]),
-                        edges=json.loads(row["path_edges"]),
-                        composite_risk=row["composite_risk"],
-                        summary=row["summary"] or "",
-                        credential_exposure=json.loads(row["credential_exposure"]),
-                        tool_exposure=json.loads(row["tool_exposure"]),
-                        vuln_ids=json.loads(row["vuln_ids"]),
-                        reachability=row["reachability"] or "unknown",
-                        reachability_basis=json.loads(row["reachability_basis"] or "[]"),
-                        hop_evidence=json.loads(row["hop_evidence"] or "[]"),
-                        analysis=json.loads(row["analysis"] or "{}"),
-                        technique_mappings=technique_mappings_from_json(row["technique_mappings"]),
-                    )
-                    for row in rows
-                ],
-                int(total or 0),
-            )
+            return effective_scan_id, created_at, [attack_path_from_row(row) for row in rows], int(total or 0)
         finally:
             conn.close()
 

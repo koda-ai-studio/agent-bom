@@ -18,7 +18,7 @@ from agent_bom.graph.correlation import GraphCorrelationRun
 
 # Keep the historical logger name so log routing and filters are unchanged.
 logger = logging.getLogger("agent_bom.api.postgres_graph")
-_GRAPH_STORAGE_SCHEMA_VERSION = 6
+_GRAPH_STORAGE_SCHEMA_VERSION = 8
 _DB_NOW_ISO = "to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"')"
 _DB_LEASE_ISO = "to_char(now() AT TIME ZONE 'UTC' + (%s * INTERVAL '1 second'), 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"')"
 
@@ -79,6 +79,7 @@ _DEFAULT_GRAPH_WRITE_BATCH_SIZE = 1000
 # snapshot. Mirrors ``graph_store._GRAPH_PURGEABLE_TABLES`` plus the search index.
 _GRAPH_RETENTION_PURGE_TABLES = (
     "graph_node_search",
+    "graph_attack_paths",
     "attack_paths",
     "interaction_risks",
     "graph_edges",
@@ -90,7 +91,7 @@ _GRAPH_TENANT_TABLE_KEYS: dict[str, tuple[str, ...]] = {
     "graph_edges": ("source_id", "target_id", "relationship", "scan_id"),
     "graph_snapshots": ("scan_id",),
     "graph_correlation_runs": ("correlation_id",),
-    "attack_paths": ("source_node", "target_node", "scan_id"),
+    "attack_paths": ("path_key", "scan_id"),
     "interaction_risks": ("pattern", "agents", "scan_id"),
     "graph_filter_presets": ("name",),
     "graph_node_search": ("node_id", "scan_id"),
@@ -262,6 +263,7 @@ class PostgresGraphStoreBase:
             correlation_result_manifest: Mapping[str, Any] | None = None,
             correlation_completed_at: str = "",
             correlation_execution_owner: str = "",
+            snapshot_paths: Sequence[Any] | None = None,
         ) -> dict[str, int]: ...
 
         def _walk_graph(

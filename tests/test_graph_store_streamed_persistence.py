@@ -26,6 +26,7 @@ from agent_bom.graph.analysis import GraphAnalysisState, GraphAnalysisStatus
 from agent_bom.graph.container import AttackPath, InteractionRisk, UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.node import UnifiedNode
+from agent_bom.graph.snapshot_paths import prepare_snapshot_paths
 from agent_bom.graph.types import EntityType, RelationshipType
 
 
@@ -58,7 +59,11 @@ def _snapshot_rows(conn, scan_id: str, tenant_id: str) -> dict[str, list]:
     return {
         "nodes": rows("SELECT * FROM graph_nodes WHERE tenant_id=? AND scan_id=? ORDER BY id"),
         "edges": rows("SELECT * FROM graph_edges WHERE tenant_id=? AND scan_id=? ORDER BY source_id,target_id,relationship"),
-        "attack_paths": rows("SELECT * FROM attack_paths WHERE tenant_id=? AND scan_id=? ORDER BY source_node,target_node"),
+        "attack_paths": rows("SELECT * FROM attack_paths WHERE tenant_id=? AND scan_id=? ORDER BY path_key"),
+        "graph_attack_paths": rows(
+            "SELECT path_key, path_kind, rank_index, queue_rank, path_json FROM graph_attack_paths "
+            "WHERE tenant_id=? AND scan_id=? ORDER BY path_key"
+        ),
         "interaction_risks": rows("SELECT * FROM interaction_risks WHERE tenant_id=? AND scan_id=? ORDER BY pattern"),
         "snapshot": rows(
             "SELECT node_count, edge_count, risk_summary, node_type_counts, analysis_status "
@@ -97,6 +102,8 @@ def test_streaming_persist_matches_save_graph(tmp_path) -> None:
         rows_a = _snapshot_rows(conn, "s1", "acme")
 
     with gs.open_graph_db(db_b) as conn:
+        # Streaming callers supply the snapshot path index save_graph derives.
+        snapshot_paths = prepare_snapshot_paths(streamed)
         gs.save_graph_streaming(
             conn,
             scan_id="s1",
@@ -107,6 +114,7 @@ def test_streaming_persist_matches_save_graph(tmp_path) -> None:
             attack_paths=iter(streamed.attack_paths),
             interaction_risks=iter(streamed.interaction_risks),
             analysis_status=streamed.analysis_status,
+            snapshot_paths=snapshot_paths,
         )
         rows_b = _snapshot_rows(conn, "s1", "acme")
 

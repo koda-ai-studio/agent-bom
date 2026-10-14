@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from .postgres_graph_path_identity import ADD_IDENTITY_COLUMNS
+
 _GRAPH_TABLES_DDL: tuple[str, ...] = (
     """
                 CREATE TABLE IF NOT EXISTS graph_nodes (
@@ -146,7 +148,9 @@ _GRAPH_TABLES_MIGRATION_DDL: tuple[str, ...] = (
                     scan_id TEXT NOT NULL,
                     tenant_id TEXT NOT NULL DEFAULT 'default',
                     computed_at TEXT NOT NULL,
-                    PRIMARY KEY (source_node, target_node, scan_id, tenant_id)
+                    finding_ids TEXT DEFAULT '[]',
+                    path_key TEXT NOT NULL,
+                    PRIMARY KEY (tenant_id, scan_id, path_key)
                 )
                 """,
     "CREATE INDEX IF NOT EXISTS idx_pg_attack_paths_scan ON attack_paths(tenant_id, scan_id)",
@@ -162,6 +166,7 @@ _GRAPH_TABLES_MIGRATION_DDL: tuple[str, ...] = (
     "ALTER TABLE attack_paths ADD COLUMN IF NOT EXISTS reachability_basis TEXT DEFAULT '[]'",
     "ALTER TABLE attack_paths ADD COLUMN IF NOT EXISTS hop_evidence TEXT DEFAULT '[]'",
     "ALTER TABLE attack_paths ADD COLUMN IF NOT EXISTS analysis TEXT DEFAULT '{}'",
+    *ADD_IDENTITY_COLUMNS,
     "ALTER TABLE graph_snapshots ADD COLUMN IF NOT EXISTS analysis_status TEXT NOT NULL DEFAULT '{}'",
     "ALTER TABLE graph_edges ADD COLUMN IF NOT EXISTS valid_from TEXT DEFAULT ''",
     "ALTER TABLE graph_edges ADD COLUMN IF NOT EXISTS valid_to TEXT DEFAULT NULL",
@@ -184,6 +189,31 @@ _GRAPH_TABLES_MIGRATION_DDL: tuple[str, ...] = (
                 )
                 """,
     "CREATE INDEX IF NOT EXISTS idx_pg_interaction_risks_scan ON interaction_risks(tenant_id, scan_id)",
+    """
+                CREATE TABLE IF NOT EXISTS graph_attack_paths (
+                    tenant_id TEXT NOT NULL DEFAULT 'default',
+                    scan_id TEXT NOT NULL,
+                    snapshot_generation TEXT NOT NULL DEFAULT '',
+                    path_key TEXT NOT NULL,
+                    path_kind TEXT NOT NULL,
+                    derivation_version INTEGER NOT NULL,
+                    rank_index INTEGER NOT NULL,
+                    source_node TEXT NOT NULL,
+                    target_node TEXT NOT NULL,
+                    hop_count INTEGER NOT NULL DEFAULT 0,
+                    composite_risk DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+                    queue_rank INTEGER NOT NULL DEFAULT 0,
+                    severity_rank INTEGER NOT NULL DEFAULT 0,
+                    has_credential INTEGER NOT NULL DEFAULT 0,
+                    source_type TEXT NOT NULL DEFAULT '',
+                    path_json TEXT NOT NULL,
+                    computed_at TEXT NOT NULL,
+                    PRIMARY KEY (tenant_id, scan_id, path_key)
+                )
+                """,
+    "CREATE INDEX IF NOT EXISTS idx_pg_graph_attack_paths_rank ON graph_attack_paths(tenant_id, scan_id, rank_index)",
+    "CREATE INDEX IF NOT EXISTS idx_pg_graph_attack_paths_source ON graph_attack_paths(tenant_id, scan_id, source_node, rank_index)",
+    "CREATE INDEX IF NOT EXISTS idx_pg_graph_attack_paths_queue ON graph_attack_paths(tenant_id, scan_id, queue_rank)",
     """
                 CREATE TABLE IF NOT EXISTS graph_filter_presets (
                     name TEXT NOT NULL,
