@@ -64,8 +64,8 @@ kind, then rescan the same scope to check what changed.
 
 <p align="center"><a href="docs/images/graph-environment-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/graph-environment-light-live.png"><img src="docs/images/graph-environment-dark-live.png" alt="Sample production AI environment: Document Intake Agent uses a document-tools MCP server that depends on pillow 9.0.0, linked to KEV-listed CVE-2023-4863; Support Triage Agent uses a ticketing MCP server that references TICKETING_API_KEY, which can access a customer ticket archive" width="1100"></picture></a></p>
 
-*Current-source preview with a fictional sample estate; the published `0.108.4`
-UI predates this workspace. Dashed use, credential and access links are
+*Current-source preview with a fictional sample estate; the published `0.108.4` UI predates
+this workspace. Dashed use, credential and access links are
 configured or modeled, not observed at runtime. Path analysis covers the
 collected snapshot only.*
 
@@ -123,7 +123,7 @@ reference-lab output). From the repository root:
 
 ```bash
 cd ui && npm ci && npm run build
-npm run capture:product-proof   # writes docs/images/*-live.png
+npm run capture:product-proof   # refreshes the README screenshots in docs/images
 ```
 
 To explore a labeled demo estate in the current-source dashboard instead
