@@ -45,7 +45,10 @@ def detective_lanes_evidenced(report: Any) -> frozenset[str]:
     and not skipped". A ``--no-scan`` receipt always withholds the vulnerability
     lane.
     """
-    inventoried = int(getattr(report, "total_packages", 0) or 0) > 0
+    inventoried = int(getattr(report, "total_packages", 0) or 0) > 0 or any(
+        str(getattr(br, "finding_type", None) or "CVE") == "CVE" and getattr(getattr(br, "package", None), "name", None)
+        for br in getattr(report, "blast_radii", None) or []
+    )
     lanes = {LANE_INVENTORY} if inventoried else set()
     if vulnerability_scan_skipped(effective_scan_run(report)):
         return frozenset(lanes)
