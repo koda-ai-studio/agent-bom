@@ -42,7 +42,7 @@ export function AttackPathCorrelationProof({
 
   const kinds = new Map<string, string>();
   for (const receipt of receipts) {
-    if (receipt.evidence_tier === "static_evidence") kinds.set("static_evidence", "Static evidence");
+    if (receipt.evidence_tier === "static_scan") kinds.set("static_scan", "Read from files or configuration");
     if (receipt.evidence_tier === "modeled_infrastructure") kinds.set("modeled_infrastructure", "Modeled infrastructure");
     if (receipt.runtime_observed_state === "observed") kinds.set("runtime_observed", "Runtime observed");
     if (receipt.runtime_observed_state === "blocked") kinds.set("runtime_blocked", "Runtime blocked");

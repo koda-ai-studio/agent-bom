@@ -433,8 +433,8 @@ export function SecurityGraphInvestigation({
     if (!attackPath) return [] as Array<{ label: string; tone: string }>;
     const receipts = attackPath.hop_evidence ?? [];
     const badges: Array<{ label: string; tone: string }> = [];
-    if (receipts.some((receipt) => receipt.evidence_tier === "static_evidence")) {
-      badges.push({ label: "Static evidence", tone: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300" });
+    if (receipts.some((receipt) => receipt.evidence_tier === "static_scan")) {
+      badges.push({ label: "Read from files or configuration", tone: "border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300" });
     }
     if (receipts.some((receipt) => receipt.evidence_tier === "modeled_infrastructure")) {
       badges.push({ label: "Modeled infrastructure", tone: "border-violet-500/30 bg-violet-500/10 text-violet-700 dark:text-violet-300" });

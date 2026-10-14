@@ -45,7 +45,7 @@ describe("AttackPathCorrelationProof", () => {
           relationship_provenance: "recorded",
           correlation_identity_status: "current",
           source_snapshot_ids: ["reference-image-sbom-scan"],
-          evidence_tier: "static_evidence",
+          evidence_tier: "static_scan",
           confidence: 1,
           freshness: "fresh",
           runtime_observed_state: "not_observed",
@@ -61,7 +61,7 @@ describe("AttackPathCorrelationProof", () => {
           relationship_provenance: "recorded",
           correlation_identity_status: "current",
           source_snapshot_ids: ["reference-image-sbom-scan"],
-          evidence_tier: "static_evidence",
+          evidence_tier: "static_scan",
           confidence: 1,
           freshness: "fresh",
           runtime_observed_state: "not_observed",
@@ -76,6 +76,7 @@ describe("AttackPathCorrelationProof", () => {
     render(<AttackPathCorrelationProof path={path} nodes={nodes} />);
 
     expect(screen.getByText("Hop receipts complete")).toBeInTheDocument();
+    expect(screen.getByText("Read from files or configuration")).toBeInTheDocument();
     expect(screen.queryByText("Path verified")).not.toBeInTheDocument();
     expect(screen.getByText("3/3 directed traversable hops evidenced")).toBeInTheDocument();
     expect(screen.getByText(`reference-api@${digest}`)).toBeInTheDocument();
@@ -160,7 +161,7 @@ describe("AttackPathCorrelationProof", () => {
           relationship_provenance: "recorded",
           correlation_identity_status: "current",
           source_snapshot_ids: ["sbom-scan"],
-          evidence_tier: "static_evidence",
+          evidence_tier: "static_scan",
           confidence: 1,
           freshness: "fresh",
           runtime_observed_state: "not_observed",
@@ -205,7 +206,7 @@ it("shows the server ranking reasons without deriving a browser score", () => {
 it("keeps the receipt summary consistent with the receipts listed for inspection", () => {
   const receipt = (source: string, target: string, relationship: string) => ({
     source_node_id: source, target_node_id: target, relationship, source_snapshot_ids: ["scan-1"],
-    relationship_provenance: "unavailable", correlation_identity_status: "current", evidence_tier: "static_evidence",
+    relationship_provenance: "unavailable", correlation_identity_status: "current", evidence_tier: "static_scan",
     confidence: 1, freshness: "unknown", runtime_observed_state: "not_observed", direction: "directed",
     traversable: true, complete: false, truncated: false,
   });
