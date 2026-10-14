@@ -246,24 +246,6 @@ def _derive_on_read(graph: UnifiedGraph) -> list[AttackPath]:
     return _derived_attack_paths(graph)
 
 
-def derived_paths_revision(paths: list[AttackPath]) -> str:
-    payload = json.dumps([(p.hops, p.edges, p.composite_risk, p.reachability) for p in paths], sort_keys=True)
-    return hashlib.sha256(payload.encode()).hexdigest()
-
-
-def exposure_path_page(
-    graph_store: Any, *, tenant_id: str, scan_id: str, offset: int, limit: int
-) -> tuple[str, str, list[AttackPath], int, str, str]:
-    """``(scan_id, created_at, page, total, source, revision)``: index first, else persisted rows."""
-    reader = getattr(graph_store, "snapshot_attack_paths", None)
-    stored = reader(tenant_id=tenant_id, scan_id=scan_id) if reader is not None else None
-    if stored is None:
-        effective, created_at, page, total = graph_store.attack_paths(tenant_id=tenant_id, scan_id=scan_id, offset=offset, limit=limit)
-        return effective, created_at, page, total, "persisted_graph_paths", ""
-    page = stored.paths[offset : offset + limit]
-    return stored.scan_id, stored.created_at, page, len(stored.paths), "derived_graph_paths", derived_paths_revision(stored.paths)
-
-
 def resolve_snapshot_attack_paths(graph: UnifiedGraph, graph_store: Any) -> list[AttackPath]:
     """The snapshot's ranked path set: stored rows when current, else derived now.
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import defaultdict
 from typing import Any
 
+from agent_bom.evidence.finding_node_ids import mcp_audit_node_id
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.node import UnifiedNode
@@ -37,7 +38,7 @@ def project_mcp_audit_findings(graph: UnifiedGraph, findings: Any) -> None:
         targets = _asset_targets(identities, asset, evidence)
         if not targets:
             continue
-        node_id = f"misconfig:mcp_audit:{finding_id}"
+        node_id = mcp_audit_node_id(finding_id)
         graph.add_node(
             UnifiedNode(
                 id=node_id,

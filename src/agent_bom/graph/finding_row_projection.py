@@ -21,7 +21,7 @@ from agent_bom.core.asset_types import entity_type_for_asset_type
 from agent_bom.evidence.finding_node_ids import _dict, _text, finding_row_node_id, stamp_finding_node_ids
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
-from agent_bom.graph.edge_evidence import edge_evidence
+from agent_bom.graph.edge_evidence import SOURCE_TIERS, edge_evidence
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.relationship_specs import relationship_spec
 from agent_bom.graph.resource_aliases import _build_cloud_resource_alias_index, _resolve_cloud_resource_node_id
@@ -38,23 +38,23 @@ _ASSET_FALLBACK = {
     "container_image": EntityType.CONTAINER,
     "iam_role": EntityType.ROLE,
 }
-# Finding source -> (edge collector, evidence tier).
+# Finding source -> edge collector; the collector's tier comes from SOURCE_TIERS.
 _COLLECTORS = {
-    "MCP_SCAN": ("mcp-scan", "static_scan"),
-    "CONTAINER": ("container-scan", "static_scan"),
-    "SBOM": ("sbom-ingest", "static_scan"),
-    "CLOUD_CIS": ("cloud-cis", "modeled_infrastructure"),
-    "CLOUD_SECURITY": ("cloud-security", "modeled_infrastructure"),
-    "PROXY": ("runtime-proxy", "runtime_observed"),
-    "SAST": ("sast", "static_scan"),
-    "SKILL": ("skill-audit", "static_scan"),
-    "BROWSER_EXT": ("browser-extension-scan", "static_scan"),
-    "EXTERNAL": ("external-import", "recorded"),
-    "FILESYSTEM": ("filesystem-scan", "static_scan"),
-    "PROMPT_SCAN": ("prompt-scan", "static_scan"),
-    "SECRET_SCAN": ("secret-scan", "static_scan"),
-    "DSPM": ("dspm", "recorded"),
-    "MODEL_SCAN": ("model-scan", "static_scan"),
+    "MCP_SCAN": "mcp-scan",
+    "CONTAINER": "container-scan",
+    "SBOM": "sbom-ingest",
+    "CLOUD_CIS": "cloud-cis",
+    "CLOUD_SECURITY": "cloud-security",
+    "PROXY": "runtime-proxy",
+    "SAST": "sast",
+    "SKILL": "skill-audit",
+    "BROWSER_EXT": "browser-extension-scan",
+    "EXTERNAL": "external-import",
+    "FILESYSTEM": "filesystem-scan",
+    "PROMPT_SCAN": "prompt-scan",
+    "SECRET_SCAN": "secret-scan",
+    "DSPM": "dspm",
+    "MODEL_SCAN": "model-scan",
 }
 
 
@@ -182,7 +182,8 @@ def _evidence(row: dict[str, Any], collector: str, tier: str) -> dict[str, Any]:
 def _collector(row: dict[str, Any]) -> tuple[str, str]:
     if row.get("source") == "GRAPH_ANALYSIS":
         return "graph-analysis", "derived"
-    return _COLLECTORS.get(_text(row.get("source")), ("finding-import", "static_scan"))
+    collector = _COLLECTORS.get(_text(row.get("source")))
+    return (collector, SOURCE_TIERS[collector]) if collector else ("finding-import", "static_scan")
 
 
 def _new_node(row: dict[str, Any], node_id: str, collector: str) -> UnifiedNode:

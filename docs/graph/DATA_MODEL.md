@@ -200,13 +200,13 @@ Every edge carries `evidence.source` (the collector) and `evidence.tier` (`agent
 
 | Tier | Meaning | Registered collectors |
 |---|---|---|
-| `derived` | Computed from other edges; must name `derived_via`. | — |
+| `derived` | Computed from other edges; must name `derived_via`. | `asset-canonicalization` |
 | `legacy_unrecorded` | Read-side label for edges stored before the evidence envelope existed; never written. | — |
-| `modeled_infrastructure` | Configuration read from a provider or inventory API. | `ai-inventory`, `aws-organizations`, `cloud-inventory`, `cloud-rbac`, `cloud_origin`, `cloud_principal`, `cloud_principal_trust`, `cnapp-overlay`, `gcp-organizations`, `nhi-discovery`, `snowflake-cortex-agents`, `snowflake-exfil`, `snowflake-external-data`, `snowflake-integrations`, `snowflake-objects`, `snowflake-organizations`, `snowflake-pipeline`, `snowflake-services`, `vendor-inventory-export` |
-| `recorded` | Logs, audit trails, usage history or attestations recorded the activity. | `access-advisor`, `authorization-evidence`, `cloud-audit-trail`, `cortex-agent-usage`, `governance-overlay`, `hardware-attestation-ingest`, `mcp-audit`, `operator_reported_timestamps`, `snowflake-governance`, `tpm-quote`, `warehouse-export` |
+| `modeled_infrastructure` | Configuration read from a provider or inventory API. | `ai-inventory`, `aws-organizations`, `cloud-cis`, `cloud-inventory`, `cloud-rbac`, `cloud-security`, `cloud_origin`, `cloud_principal`, `cloud_principal_trust`, `cnapp-overlay`, `gcp-organizations`, `nhi-discovery`, `snowflake-cortex-agents`, `snowflake-exfil`, `snowflake-external-data`, `snowflake-integrations`, `snowflake-objects`, `snowflake-organizations`, `snowflake-pipeline`, `snowflake-services`, `vendor-inventory-export` |
+| `recorded` | Logs, audit trails, usage history or attestations recorded the activity. | `access-advisor`, `authorization-evidence`, `cloud-audit-trail`, `cortex-agent-usage`, `dspm`, `external-import`, `governance-overlay`, `hardware-attestation-ingest`, `kubernetes`, `mcp-audit`, `operator_reported_timestamps`, `snowflake-governance`, `tpm-quote`, `warehouse-export` |
 | `runtime_observed` | The runtime proxy, gateway or feedback loop observed it live. | `runtime-feedback`, `runtime-identity`, `runtime-proxy`, `runtime-trace`, `snowflake-cortex-observability` |
 | `static_evidence` | Static evidence supplied with the input (contract tier; no registered collector uses it). | — |
-| `static_scan` | A scanner read files, manifests or source. | `agent_discovery`, `aspm-overlay`, `ast_analysis`, `ci_graph_overlay`, `code_graph_overlay`, `framework-agent`, `github-actions`, `iac`, `mcp-scan`, `repo-structure-overlay`, `repo-trust-overlay`, `skill-audit`, `source-ast` |
+| `static_scan` | A scanner read files, manifests or source. | `agent_discovery`, `aspm-overlay`, `ast_analysis`, `browser-extension-scan`, `ci_graph_overlay`, `code_graph_overlay`, `container-scan`, `filesystem-scan`, `framework-agent`, `github-actions`, `iac`, `mcp-scan`, `model-scan`, `prompt-scan`, `repo-structure-overlay`, `repo-trust-overlay`, `sast`, `sbom-ingest`, `secret-scan`, `skill-audit`, `source-ast` |
 
 Collectors that set their tier at the call site (`edge_evidence(source, tier)`), outside the registry:
 
@@ -250,20 +250,20 @@ Findings (`agent_bom.finding.Finding`) are linked to graph nodes by `graph/asset
 | Finding source | Registered edge collector (name match) | Tier |
 |---|---|---|
 | `BROWSER_EXT` | — | — |
-| `CLOUD_CIS` | — | — |
-| `CLOUD_SECURITY` | — | — |
+| `CLOUD_CIS` | `cloud-cis` | `modeled_infrastructure` |
+| `CLOUD_SECURITY` | `cloud-security` | `modeled_infrastructure` |
 | `CONTAINER` | — | — |
-| `DSPM` | — | — |
+| `DSPM` | `dspm` | `recorded` |
 | `EXTERNAL` | — | — |
 | `FILESYSTEM` | — | — |
 | `GRAPH_ANALYSIS` | — | — |
 | `MCP_SCAN` | `mcp-scan` | `static_scan` |
-| `MODEL_SCAN` | — | — |
-| `PROMPT_SCAN` | — | — |
+| `MODEL_SCAN` | `model-scan` | `static_scan` |
+| `PROMPT_SCAN` | `prompt-scan` | `static_scan` |
 | `PROXY` | — | — |
-| `SAST` | — | — |
+| `SAST` | `sast` | `static_scan` |
 | `SBOM` | — | — |
-| `SECRET_SCAN` | — | — |
+| `SECRET_SCAN` | `secret-scan` | `static_scan` |
 | `SKILL` | — | — |
 
 Finding node id formats (statically detected `UnifiedNode(id=…)` call sites):
@@ -272,11 +272,8 @@ Finding node id formats (statically detected `UnifiedNode(id=…)` call sites):
 |---|---|
 | `misconfiguration` | `misconfig:cloud-org:{provider}:{check_id}` |
 | `misconfiguration` | `misconfig:graph_analysis:{fid}` |
-| `misconfiguration` | `misconfig:iac:{rule_id}:{finding_path}:{finding_line}` |
-| `misconfiguration` | `misconfig:mcp_audit:{finding_id}` |
 | `misconfiguration` | `misconfig:sast:{rule_id}:{finding_path}:{finding_line}` |
 | `misconfiguration` | `misconfig:secret_scan:{finding_id}` |
-| `misconfiguration` | `misconfig:{section_key}:{check_id}` |
 | `misconfiguration` | `toxic:{combo_key}` |
 | `vulnerability` | `stable_node_id(…) — UUIDv5` |
 | `vulnerability` | `vuln:{vuln_id_str}` |
@@ -358,4 +355,4 @@ Static-scan results. A kind can still be emitted through a table or a variable t
 - Relationship types with no detected non-demo emitter: `acted_as`, `imports`, `inherits`, `lateral_path`, `remediates`, `trace_step`
 - Entity types with no detected non-demo emitter: `cluster`, `credential_ref`, `environment`, `external_import`, `tool_call`
 - Registered collectors never named elsewhere in the source: —
-- Finding sources without a same-named registered collector: `BROWSER_EXT`, `CLOUD_CIS`, `CLOUD_SECURITY`, `CONTAINER`, `DSPM`, `EXTERNAL`, `FILESYSTEM`, `GRAPH_ANALYSIS`, `MODEL_SCAN`, `PROMPT_SCAN`, `PROXY`, `SAST`, `SBOM`, `SECRET_SCAN`, `SKILL`
+- Finding sources without a same-named registered collector: `BROWSER_EXT`, `CONTAINER`, `EXTERNAL`, `FILESYSTEM`, `GRAPH_ANALYSIS`, `PROXY`, `SBOM`, `SKILL`

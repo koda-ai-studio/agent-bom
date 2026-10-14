@@ -186,11 +186,8 @@ Id formats:
 
 - `misconfig:cloud-org:{provider}:{check_id}`
 - `misconfig:graph_analysis:{fid}`
-- `misconfig:iac:{rule_id}:{finding_path}:{finding_line}`
-- `misconfig:mcp_audit:{finding_id}`
 - `misconfig:sast:{rule_id}:{finding_path}:{finding_line}`
 - `misconfig:secret_scan:{finding_id}`
-- `misconfig:{section_key}:{check_id}`
 - `toxic:{combo_key}`
 
 ## `model`
