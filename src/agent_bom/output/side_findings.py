@@ -11,8 +11,8 @@ import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from agent_bom.evidence.finding_node_ids import stamp_finding_node_ids
 from agent_bom.finding import FINDING_SCHEMA_VERSION
-from agent_bom.graph.finding_row_projection import stamp_finding_node_ids
 from agent_bom.security import sanitize_path_label
 
 if TYPE_CHECKING:

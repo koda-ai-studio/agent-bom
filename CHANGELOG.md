@@ -35,6 +35,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- Browser-extension findings use the `BROWSER_EXT` finding type and source in JSON output instead of the non-enum `BROWSER_EXTENSION_RISK` / `BROWSER_EXTENSION_SCAN` values; stored rows with the old values still load as `BROWSER_EXT`.
 - Cloud discovery for AWS (AI services, organizations, inventory), Azure, GCP (inventory and authorization), Snowflake, Databricks, CoreWeave, Nebius, Lambda Labs, RunPod, local GPU infrastructure and the NVIDIA advisory check is split into named stages. Each stage keeps its own error isolation and warning text, so discovery output, warnings and API calls are unchanged. Kubernetes GPU parsing shared by CoreWeave and Nebius moves to `cloud/k8s_gpu_common.py`; GCP authorization record normalizers move to `cloud/gcp_authorization_records.py`; Snowflake notebook discovery moves to `cloud/snowflake_notebooks.py`. 35 architecture debt entries are retired.
 
 - Managed-node EKS bootstrap no longer requests an unused Auto Mode policy or a standalone cluster-encryption policy. Encryption permissions remain scoped to the cluster's KMS key through an inline role policy; the cluster-first bootstrap command includes that policy.
