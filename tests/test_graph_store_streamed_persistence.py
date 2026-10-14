@@ -309,11 +309,12 @@ def test_streaming_snapshot_stats_are_golden_and_match_unified_graph_stats(tmp_p
     risk_summary = json.loads(row["risk_summary"])
     node_type_counts = json.loads(row["node_type_counts"])
 
-    # Golden values — pkg:p has no severity so it is absent from risk_summary
-    # (mirrors stats(): severity_counts only counts truthy severities).
+    # Golden values — only finding nodes count toward risk_summary (mirrors
+    # stats()): the agent's and server's rolled-up severities stay out, and
+    # pkg:p has no severity.
     assert node_count == 4
     assert edge_count == 3
-    assert risk_summary == {"high": 1, "medium": 1, "critical": 1}
+    assert risk_summary == {"critical": 1}
     assert node_type_counts == {"agent": 1, "server": 1, "package": 1, "vulnerability": 1}
 
     # And they must match UnifiedGraph.stats() exactly, not just each other.

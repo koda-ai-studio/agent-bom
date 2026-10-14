@@ -10,7 +10,7 @@
       ]
     }
   ],
-  "artifact_sha256": "sha256:f6472c8be51e544421c3540345d9be2f81e010c08fae01dbe6226e85a1af32a2",
+  "artifact_sha256": "sha256:5f5e24b4bf2e8c4c462d51355fad1c33d46c4588371faa354a939820f7bc67c3",
   "capture_fixture": {
     "fix_first": {
       "attack_campaigns": [
@@ -2561,7 +2561,7 @@
           "vulnerable_to": 1
         },
         "severity_counts": {
-          "high": 3
+          "high": 1
         },
         "total_edges": 9,
         "total_nodes": 10,
@@ -2583,7 +2583,7 @@
         "edge_count": 2,
         "node_count": 3,
         "risk_summary": {
-          "high": 2
+          "high": 1
         },
         "scan_id": "reference-image-sbom-scan",
         "snapshot_kind": "scan"
@@ -2592,9 +2592,7 @@
         "created_at": "2026-08-30T04:02:00+00:00",
         "edge_count": 3,
         "node_count": 4,
-        "risk_summary": {
-          "high": 1
-        },
+        "risk_summary": {},
         "scan_id": "reference-kubernetes-iac-scan",
         "snapshot_kind": "scan"
       },
@@ -2654,7 +2652,7 @@
       {
         "age_hours": 0.083333,
         "created_at": "2026-08-30T04:01:00+00:00",
-        "digest": "sha256:91aaedb0af3d5daa88b7aa876c92f770b2ff0b9c428890d259e56e88e7a1b68d",
+        "digest": "sha256:c8f3d5153cd44be44773f6d67cf6d17a88cf1b1e476f0b3c6814cc2916beff4e",
         "edge_count": 2,
         "freshness": "fresh",
         "node_count": 3,
@@ -2663,7 +2661,7 @@
           "algorithm": "hmac-sha256",
           "key_id": "reference-lab-v1",
           "schema_version": "agent-bom.correlation-receipt-signature/v1",
-          "value": "sha256:0d743b34df3aca5185a3004a8ee8683fb17adb7107ba3f90e6fb5b1a9877e5ee"
+          "value": "sha256:315cab83e565788cd06bc0b7d4cf9dc0fa6b9430db26862c1a6674c7aae85fc9"
         },
         "source_kinds": [
           "bundled_advisory_scanner",
@@ -2673,7 +2671,7 @@
       {
         "age_hours": 0.066667,
         "created_at": "2026-08-30T04:02:00+00:00",
-        "digest": "sha256:1eeccf8fcb62f07ebc4bb700774acb629b1bb476af037a56799c052dc56e22ae",
+        "digest": "sha256:ffff4f3f551cae9febef5c2f77f44f9fb4589d2d4d4eb8aa2809ae6567fef78e",
         "edge_count": 3,
         "freshness": "fresh",
         "node_count": 4,
@@ -2682,7 +2680,7 @@
           "algorithm": "hmac-sha256",
           "key_id": "reference-lab-v1",
           "schema_version": "agent-bom.correlation-receipt-signature/v1",
-          "value": "sha256:1845822d85fe359ca7c41d7cff3d69735b450745afe414fceb030331ee90c8f1"
+          "value": "sha256:8b57478b6793288d3cd97b3539144cda35e228edbfdb8f7d171931356f2bfb9f"
         },
         "source_kinds": [
           "kubernetes_iac",
@@ -2744,7 +2742,7 @@
         ]
       }
     ],
-    "manifest_sha256": "sha256:fe781c82f958c2f9aa4cadfa2289aa767629dc7d6716e11add790e8f3336fc3a",
+    "manifest_sha256": "sha256:66051c24b8d7f82edb6696e20e72ecb3ecc63a885235654cdbd0aba3f4ba7927",
     "max_age_hours": 168,
     "name": "Reference evidence lab",
     "output_scan_id": "reference-evidence-correlation-v1",
@@ -2814,7 +2812,7 @@
         {
           "age_hours": 0.083333,
           "created_at": "2026-08-30T04:01:00+00:00",
-          "digest": "sha256:91aaedb0af3d5daa88b7aa876c92f770b2ff0b9c428890d259e56e88e7a1b68d",
+          "digest": "sha256:c8f3d5153cd44be44773f6d67cf6d17a88cf1b1e476f0b3c6814cc2916beff4e",
           "edge_count": 2,
           "freshness": "fresh",
           "node_count": 3,
@@ -2823,7 +2821,7 @@
             "algorithm": "hmac-sha256",
             "key_id": "reference-lab-v1",
             "schema_version": "agent-bom.correlation-receipt-signature/v1",
-            "value": "sha256:0d743b34df3aca5185a3004a8ee8683fb17adb7107ba3f90e6fb5b1a9877e5ee"
+            "value": "sha256:315cab83e565788cd06bc0b7d4cf9dc0fa6b9430db26862c1a6674c7aae85fc9"
           },
           "source_kinds": [
             "bundled_advisory_scanner",
@@ -2833,7 +2831,7 @@
         {
           "age_hours": 0.066667,
           "created_at": "2026-08-30T04:02:00+00:00",
-          "digest": "sha256:1eeccf8fcb62f07ebc4bb700774acb629b1bb476af037a56799c052dc56e22ae",
+          "digest": "sha256:ffff4f3f551cae9febef5c2f77f44f9fb4589d2d4d4eb8aa2809ae6567fef78e",
           "edge_count": 3,
           "freshness": "fresh",
           "node_count": 4,
@@ -2842,7 +2840,7 @@
             "algorithm": "hmac-sha256",
             "key_id": "reference-lab-v1",
             "schema_version": "agent-bom.correlation-receipt-signature/v1",
-            "value": "sha256:1845822d85fe359ca7c41d7cff3d69735b450745afe414fceb030331ee90c8f1"
+            "value": "sha256:8b57478b6793288d3cd97b3539144cda35e228edbfdb8f7d171931356f2bfb9f"
           },
           "source_kinds": [
             "kubernetes_iac",

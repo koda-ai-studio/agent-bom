@@ -9,6 +9,7 @@ import click
 from agent_bom.cli._common import logger
 from agent_bom.cli.agents.scan_pipeline.options import ScanOptions
 from agent_bom.cli.agents.scan_pipeline.state import ScanState
+from agent_bom.output.graph_evidence import has_graph_evidence
 
 
 def _surface_graph_findings(opts: ScanOptions, st: ScanState) -> None:
@@ -20,7 +21,9 @@ def _surface_graph_findings(opts: ScanOptions, st: ScanState) -> None:
     # unified stream (report.to_findings()) is the single source of truth for the
     # toxic COMBINATION count, so the printed count can never contradict it.
     st.scan_graph_surface = None
-    if st.agents:
+    # Agentless scans (IaC, cloud, external reports) still carry graph
+    # evidence, and their findings need the same finding-node FKs.
+    if st.agents or has_graph_evidence(st.report):
         from agent_bom.cli._tenant import resolve_cli_tenant_id as _resolve_cli_tenant_id
         from agent_bom.graph.scan_findings import surface_graph_derived_findings
 

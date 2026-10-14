@@ -25,17 +25,22 @@ def _inventory_label(inventory: str) -> str:
     return inventory
 
 
-def load_inventory_file(run: DiscoveryRun) -> None:
-    """Preload ``--inventory`` so a bad file fails as a parameter error."""
-    if not run.inventory:
-        return
-    run.inventory_label = _inventory_label(run.inventory)
+def _load_one_inventory(path: str) -> dict[str, Any]:
     from agent_bom.inventory import load_inventory
 
     try:
-        run.preloaded_inventory = load_inventory(run.inventory)
+        return load_inventory(path)
     except (OSError, RuntimeError, ValueError, json.JSONDecodeError) as exc:
         raise click.BadParameter(str(exc), param_hint="--inventory") from exc
+
+
+def load_inventory_file(run: DiscoveryRun) -> None:
+    """Preload every ``--inventory`` so a bad file fails as a parameter error."""
+    if not run.inventory:
+        return
+    run.inventory_label = _inventory_label(run.inventory)
+    run.preloaded_inventory = _load_one_inventory(run.inventory)
+    run.preloaded_extra_inventories = [_load_one_inventory(path) for path in run.extra_inventories]
 
 
 def print_discovery_header(run: DiscoveryRun) -> None:
@@ -65,16 +70,26 @@ def discover_agents(run: DiscoveryRun) -> None:
     elif run.inventory:
         ctx.agents = build_agents_from_inventory(run.preloaded_inventory or {"agents": []}, run.inventory)
         con.print(f"\n  [green]✓[/green] {len(ctx.agents)} agent(s) from {run.inventory_label or run.inventory}")
+        for path, data in zip(run.extra_inventories, run.preloaded_extra_inventories, strict=True):
+            extra_agents = build_agents_from_inventory(data, path)
+            ctx.agents.extend(extra_agents)
+            con.print(f"  [green]✓[/green] {len(extra_agents)} agent(s) from {_inventory_label(path)}")
     elif run.no_discover and not run.config_dir:
         # --config-dir is an explicit artifact; it survives --no-discover.
         ctx.agents = []
     elif run.config_dir:
-        con.print(f"\n[bold blue]Scanning config directory: {run.config_dir}...[/bold blue]\n")
-        ctx.agents = _discover_from(run, run.config_dir)
+        ctx.agents = []
+        for config_dir in run.all_config_dirs:
+            con.print(f"\n[bold blue]Scanning config directory: {config_dir}...[/bold blue]\n")
+            ctx.agents.extend(_discover_from(run, config_dir))
     elif run.sbom_file or run.filesystem_paths or run.images:
         # Skip MCP auto-discovery when scanning a specific target
         # (SBOM, filesystem, or image) — saves ~3s startup
         ctx.agents = []
+    elif run.extra_projects:
+        ctx.agents = []
+        for project in run.all_projects:
+            ctx.agents.extend(_discover_from(run, project))
     else:
         ctx.agents = _discover_from(run, run.project)
 
@@ -87,11 +102,12 @@ def load_sbom(run: DiscoveryRun) -> None:
 
     con = run.con
     try:
-        sbom_agents, sbom_fmt = load_sbom_agents(run.sbom_file, run.sbom_name)
-        count = sum(len(server.packages) for agent in sbom_agents for server in agent.mcp_servers)
-        target = run.sbom_name or Path(run.sbom_file).name
-        con.print(f"\n[bold blue]Loaded SBOM ({sbom_fmt}): {count} package(s) from '{target}'[/bold blue]\n")
-        run.ctx.agents.extend(sbom_agents)
+        for sbom_file, sbom_name in run.sbom_inputs:
+            sbom_agents, sbom_fmt = load_sbom_agents(sbom_file, sbom_name)
+            count = sum(len(server.packages) for agent in sbom_agents for server in agent.mcp_servers)
+            target = sbom_name or Path(sbom_file).name
+            con.print(f"\n[bold blue]Loaded SBOM ({sbom_fmt}): {count} package(s) from '{target}'[/bold blue]\n")
+            run.ctx.agents.extend(sbom_agents)
     except json.JSONDecodeError:
         con.print("\n  [red]SBOM error: input is not valid JSON.[/red]")
         sys.exit(1)
@@ -109,16 +125,17 @@ def ingest_external_scan(run: DiscoveryRun) -> None:
 
     con, ctx = run.con, run.ctx
     try:
-        _ext_import = load_external_report(run.external_scan_path)
-        con.print(
-            f"\n  [green]✓[/green] Ingested external {_ext_import.format} report: "
-            f"{len(_ext_import.packages)} package(s), {len(_ext_import.findings)} code/unresolved finding(s)\n"
-        )
-        for _notice in _ext_import.notices:
-            con.print(f"  [yellow]![/yellow] {_notice}")
-            ctx.scan_notices.append({"code": "external_scan_routed", "source": "external-scan", "message": _notice})
-        ctx.agents.append(build_external_agent(_ext_import, run.external_scan_path))
-        ctx.external_findings.extend(_ext_import.findings)
+        for external_scan_path in run.all_external_scan_paths:
+            _ext_import = load_external_report(external_scan_path)
+            con.print(
+                f"\n  [green]✓[/green] Ingested external {_ext_import.format} report: "
+                f"{len(_ext_import.packages)} package(s), {len(_ext_import.findings)} code/unresolved finding(s)\n"
+            )
+            for _notice in _ext_import.notices:
+                con.print(f"  [yellow]![/yellow] {_notice}")
+                ctx.scan_notices.append({"code": "external_scan_routed", "source": "external-scan", "message": _notice})
+            ctx.agents.append(build_external_agent(_ext_import, external_scan_path))
+            ctx.external_findings.extend(_ext_import.findings)
     except (FileNotFoundError, ValueError, json.JSONDecodeError) as e:
         con.print(f"\n  [red]External scan error: {e}[/red]")
         sys.exit(1)
