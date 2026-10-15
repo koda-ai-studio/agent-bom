@@ -7,7 +7,7 @@ Every table agent-bom creates, read from the DDL in the code: the Postgres contr
 
 ## Overview
 
-156 tables in 10 domains. 18 declared foreign keys; 34 logical joins derived from shared key-column names. Arrows count relations that cross domains.
+157 tables in 10 domains. 18 declared foreign keys; 35 logical joins derived from shared key-column names. Arrows count relations that cross domains.
 
 ```mermaid
 flowchart LR
@@ -15,7 +15,7 @@ flowchart LR
   scans["Scans, jobs and reports<br/>15 tables"]
   inventory["Inventory and assets<br/>16 tables"]
   findings["Findings, triage and VEX<br/>23 tables"]
-  graph["Graph nodes, edges, snapshots and attack paths<br/>19 tables"]
+  graph["Graph nodes, edges, snapshots and attack paths<br/>20 tables"]
   runtime["Runtime, gateway and traces<br/>17 tables"]
   compliance["Compliance, audit and evidence<br/>10 tables"]
   connectors["Connectors, delivery and schedules<br/>16 tables"]
@@ -37,7 +37,7 @@ flowchart LR
 | Scans, jobs and reports | 15 | [storage-erd/scans.md](storage-erd/scans.md) |
 | Inventory and assets | 16 | [storage-erd/inventory.md](storage-erd/inventory.md) |
 | Findings, triage and VEX | 23 | [storage-erd/findings.md](storage-erd/findings.md) |
-| Graph nodes, edges, snapshots and attack paths | 19 | [storage-erd/graph.md](storage-erd/graph.md) |
+| Graph nodes, edges, snapshots and attack paths | 20 | [storage-erd/graph.md](storage-erd/graph.md) |
 | Runtime, gateway and traces | 17 | [storage-erd/runtime.md](storage-erd/runtime.md) |
 | Compliance, audit and evidence | 10 | [storage-erd/compliance.md](storage-erd/compliance.md) |
 | Connectors, delivery and schedules | 16 | [storage-erd/connectors.md](storage-erd/connectors.md) |
@@ -149,6 +149,7 @@ Excluded:
 | `graph_correlation_runs` | [Graph nodes, edges, snapshots and attack paths](storage-erd/graph.md) | Postgres, SQLite | `correlation_id`, `tenant_id` | `correlation_id`, `tenant_id` | `tenant_id` | persistent | `deploy/postgres/alembic/versions/20260830_01_graph_correlations.py`, `deploy/postgres/init.sql`, `api/postgres_graph_schema.py` (+1) |
 | `graph_edges` | [Graph nodes, edges, snapshots and attack paths](storage-erd/graph.md) | Postgres, SQLite | `source_id`, `target_id`, `relationship`, `scan_id`, `tenant_id` | `source_id`, `target_id`, `relationship`, `scan_id`, `tenant_id` | `tenant_id` | persistent | `deploy/postgres/init.sql`, `api/postgres_graph_schema.py`, `db/graph_store_schema.py` |
 | `graph_filter_presets` | [Graph nodes, edges, snapshots and attack paths](storage-erd/graph.md) | Postgres | `name`, `tenant_id` | `name`, `tenant_id` | `tenant_id` | persistent | `deploy/postgres/init.sql`, `api/graph_store_support.py`, `api/postgres_graph_schema.py` |
+| `graph_node_aliases` | [Graph nodes, edges, snapshots and attack paths](storage-erd/graph.md) | Postgres, SQLite | `tenant_id`, `alias_id` | `tenant_id`, `alias_id`, `canonical_id`, `scan_id` | `tenant_id` | persistent | `deploy/postgres/alembic/versions/20261014_01_graph_node_aliases.py`, `deploy/postgres/init.sql`, `api/postgres_graph_aliases.py` (+1) |
 | `graph_node_search` | [Graph nodes, edges, snapshots and attack paths](storage-erd/graph.md) | Postgres | `node_id`, `scan_id`, `tenant_id` | `node_id`, `tenant_id`, `scan_id` | `tenant_id` | persistent | `deploy/postgres/init.sql`, `api/postgres_graph_schema.py` |
 | `graph_nodes` | [Graph nodes, edges, snapshots and attack paths](storage-erd/graph.md) | Postgres, SQLite | `id`, `scan_id`, `tenant_id` | `id`, `scan_id`, `tenant_id` | `tenant_id` | persistent | `deploy/postgres/init.sql`, `api/postgres_graph_schema.py`, `db/graph_store_schema.py` |
 | `graph_retention_state` | [Schema metadata and maintenance](storage-erd/other.md) | SQLite | `id` | `id` | **none** | persistent | `db/graph_store_schema.py` |

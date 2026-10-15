@@ -6,6 +6,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
+from agent_bom.evidence.finding_node_ids import benchmark_misconfig_node_id
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.edge_evidence import edge_evidence
@@ -71,7 +72,7 @@ def _project_check(
     if str(check.get("status", "")).upper() != "FAIL":
         return
     check_id = check.get("check_id", "unknown")
-    misconfig_id = f"misconfig:{section_key}:{check_id}"
+    misconfig_id = benchmark_misconfig_node_id(section_key, check_id)
     resource_ids = list(check.get("resource_ids", []))
     graph.add_node(
         UnifiedNode(

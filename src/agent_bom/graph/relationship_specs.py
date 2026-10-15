@@ -134,6 +134,16 @@ _SPECS: tuple[RelationshipSpec, ...] = (
         (E.PROVIDER, E.ENVIRONMENT, E.FLEET, E.ACCOUNT, E.CLOUD_RESOURCE),
         (E.ACCOUNT, E.ORG, E.AGENT, E.SERVER, E.CLOUD_RESOURCE),
     ),
+    # A workload runs on its host: an agent or server in a container or on a
+    # VM, a container (pod) on a node VM, a cluster or a managed fleet. The
+    # structural rollup stays HOSTS; this is the runtime dependency paths walk.
+    _spec(
+        R.HOSTED_ON,
+        T.DEPENDENCY,
+        "inventory",
+        (E.AGENT, E.SERVER, E.CONTAINER),
+        (E.CONTAINER, E.CLUSTER, E.CLOUD_RESOURCE, E.FLEET),
+    ),
     _spec(R.USES, T.DEPENDENCY, "inventory", (E.AGENT,), (E.SERVER,)),
     _spec(R.USES_FRAMEWORK, T.DEPENDENCY, "inventory", (E.AGENT,), (E.FRAMEWORK,)),
     _spec(
@@ -327,12 +337,20 @@ _SPECS: tuple[RelationshipSpec, ...] = (
         direction="bidirectional",
         traversable=False,
     ),
+    # A candidate is never a merge: weak identity signals (host name, address,
+    # name within an account) propose that two workloads, identities or data
+    # stores may be one asset. Pairs stay within one asset family.
     _spec(
         R.POSSIBLY_CORRELATES_WITH,
         T.CORRELATION,
         "correlation",
         (E.AGENT, E.SERVER),
         (E.AGENT, E.SERVER),
+        extra=(
+            *product((E.CLOUD_RESOURCE, E.CLUSTER, E.CONTAINER), (E.CLOUD_RESOURCE, E.CLUSTER, E.CONTAINER)),
+            *product(_WORKLOAD_IDENTITIES + (E.USER, E.MANAGED_IDENTITY), _WORKLOAD_IDENTITIES + (E.USER, E.MANAGED_IDENTITY)),
+            (E.DATA_STORE, E.DATA_STORE),
+        ),
         direction="bidirectional",
         traversable=False,
     ),

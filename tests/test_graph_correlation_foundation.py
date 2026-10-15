@@ -448,7 +448,8 @@ def test_same_fallback_graph_id_without_exact_cloud_identity_remains_snapshot_sc
         snapshots=[CorrelationSnapshot.from_graph(left), CorrelationSnapshot.from_graph(right)],
     )
     assert len(proven.graph.nodes) == 1
-    assert next(iter(proven.graph.nodes.values())).attributes["correlation"]["identity_basis"] == "cloud_resource_id"
+    # A qualified ARN is the strong key asset canonicalization merges on too.
+    assert next(iter(proven.graph.nodes.values())).attributes["correlation"]["identity_basis"] == "strong_key:aws_arn"
 
 
 def test_runtime_and_provider_identity_require_explicit_stable_identifiers() -> None:

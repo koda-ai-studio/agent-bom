@@ -339,7 +339,7 @@ class TestBuildUnifiedGraphFromReport:
         assert g.has_edge("provider:gcp", resource_id)
         assert g.has_edge("provider:gcp", account_id)
         assert g.has_edge(account_id, resource_id)
-        assert g.has_edge(resource_id, "agent:claude-desktop")
+        assert g.has_edge("agent:claude-desktop", resource_id)
         assert g.has_edge(principal_id, resource_id)
         assert any(e.source == principal_id and e.target == account_id and e.relationship == RelationshipType.MEMBER_OF for e in g.edges)
         assert any(e.source == principal_id and e.target == resource_id and e.relationship == RelationshipType.CAN_ACCESS for e in g.edges)
@@ -518,7 +518,7 @@ class TestBuildUnifiedGraphFromReport:
         assert resource.attributes["cloud_origin"]["scope"]["cuda_version"] == "12.2"
         assert resource.dimensions.cloud_provider == "gpu"
         assert g.has_edge("provider:gpu", resource_id)
-        assert g.has_edge(resource_id, "agent:claude-desktop")
+        assert g.has_edge("agent:claude-desktop", resource_id)
 
     def test_k8s_gpu_cluster_promotes_with_aggregated_scope(self):
         # The aggregated k8s-gpu-cluster agent rolls multiple GPU nodes into
@@ -548,7 +548,7 @@ class TestBuildUnifiedGraphFromReport:
         assert resource is not None
         assert resource.attributes["cloud_origin"]["scope"]["node_count"] == 4
         assert resource.attributes["cloud_origin"]["scope"]["gpu_capacity_total"] == 32
-        assert g.has_edge(resource_id, "agent:claude-desktop")
+        assert g.has_edge("agent:claude-desktop", resource_id)
 
     def test_server_nodes(self):
         g = build_unified_graph_from_report(_minimal_report())

@@ -192,9 +192,9 @@ def test_credential_to_tool_reaches_edges_export_with_evidence():
     try:
         graph = load_graph_from_scan(path)
         payload = to_json(graph)
-        edge = next(edge for edge in payload["edges"] if edge["kind"] == "reaches_tool" and edge["target"].endswith("/delete_repo"))
+        edge = next(edge for edge in payload["edges"] if edge["kind"] == "reaches_tool" and edge["target"].endswith(":delete_repo"))
 
-        assert edge["source"] == "cred:server:a/github:GITHUB_TOKEN"
+        assert edge["source"] == "cred:server:a:github:GITHUB_TOKEN"
         assert edge["evidence"]["mapping_method"] == "server_scope_conservative"
         assert edge["evidence"]["confidence"] == "medium"
         assert "|reaches_tool|" in to_mermaid(graph)
@@ -254,8 +254,8 @@ def test_same_env_var_name_stays_scoped_to_each_exported_server():
 
     credential_ids = {node.id for node in graph.nodes if node.kind == "credential"}
     assert credential_ids == {
-        "cred:server:a/github:GITHUB_TOKEN",
-        "cred:server:b/github:GITHUB_TOKEN",
+        "cred:server:a:github:GITHUB_TOKEN",
+        "cred:server:b:github:GITHUB_TOKEN",
     }
     for edge in graph.edges:
         if edge.kind != "reaches_tool":
@@ -324,10 +324,10 @@ def test_redacted_report_keeps_distinct_credential_nodes_and_no_phantom_edges():
     cred_nodes = {node.id for node in graph.nodes if node.kind == "credential"}
     # (a) each distinct credential stays its own node — no collapse to one label.
     assert cred_nodes == {
-        "cred:server:agent-a/openai-srv:OPENAI_API_KEY",
-        "cred:server:agent-a/vector-srv:VECTOR_DB_TOKEN",
-        "cred:server:agent-b/browser-srv:BROWSER_SESSION_TOKEN",
-        "cred:server:agent-b/anthropic-srv:ANTHROPIC_API_KEY",
+        "cred:server:agent-a:openai-srv:OPENAI_API_KEY",
+        "cred:server:agent-a:vector-srv:VECTOR_DB_TOKEN",
+        "cred:server:agent-b:browser-srv:BROWSER_SESSION_TOKEN",
+        "cred:server:agent-b:anthropic-srv:ANTHROPIC_API_KEY",
     }
     assert "cred:***REDACTED***" not in cred_nodes
 
@@ -684,13 +684,13 @@ def test_cli_graph_evaluates_expected_fixture(tmp_path: Path):
                 "name": "cli-eval",
                 "expected_nodes": [
                     "agent:eval-agent",
-                    "server:eval-agent/github",
+                    "server:eval-agent:github",
                     "pkg:npm/next@16.2.6",
                     "cve:CVE-2026-21441",
                 ],
                 "expected_edges": [
-                    ["agent:eval-agent", "server:eval-agent/github", "uses"],
-                    ["server:eval-agent/github", "pkg:npm/next@16.2.6", "depends_on"],
+                    ["agent:eval-agent", "server:eval-agent:github", "uses"],
+                    ["server:eval-agent:github", "pkg:npm/next@16.2.6", "depends_on"],
                     ["pkg:npm/next@16.2.6", "cve:CVE-2026-21441", "affects"],
                 ],
             }

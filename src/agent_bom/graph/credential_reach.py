@@ -5,7 +5,7 @@ from collections.abc import Iterable
 
 from agent_bom.graph.analysis import GraphAnalysisState, GraphAnalysisStatus
 from agent_bom.graph.container import UnifiedGraph
-from agent_bom.graph.edge import UnifiedEdge
+from agent_bom.graph.edge import UnifiedEdge, credential_edge_admits
 from agent_bom.graph.types import EntityType, RelationshipType
 
 MAX_AGENT_EDGES = 5_000
@@ -68,7 +68,7 @@ def credential_routes(
                     break
                 examined += 1
                 local_edges += 1
-                if edge.target in reached:
+                if edge.target in reached or not credential_edge_admits(edge, owner):
                     continue
                 route = (hops + [edge.target], rels + [edge.relationship.value])
                 reached[edge.target] = route
@@ -78,7 +78,7 @@ def credential_routes(
                 else:
                     queue.append(edge.target)
         if frontier and not exhausted:
-            probed, cut_off = _credential_beyond(graph, outgoing, frontier, reached, MAX_AGENT_EDGES - local_edges)
+            probed, cut_off = _credential_beyond(graph, outgoing, frontier, reached, MAX_AGENT_EDGES - local_edges, owner)
             examined += probed
             if cut_off:
                 reasons.add("depth_budget")
@@ -98,6 +98,7 @@ def _credential_beyond(
     frontier: list[str],
     reached: dict[str, Route],
     budget: int,
+    owner: str,
 ) -> tuple[int, bool]:
     """Whether the depth bound actually hid a credential from this owner.
 
@@ -116,7 +117,7 @@ def _credential_beyond(
             if examined >= budget:
                 return examined, True
             examined += 1
-            if edge.target in seen:
+            if edge.target in seen or not credential_edge_admits(edge, owner):
                 continue
             if graph.nodes[edge.target].entity_type in CREDENTIAL_TYPES:
                 return examined, True

@@ -10,7 +10,7 @@
       ]
     }
   ],
-  "artifact_sha256": "sha256:4fa1c0698cc2ccd6d4f4be9173b1c5f9d16824ab590fbea37addaa56b96ec024",
+  "artifact_sha256": "sha256:48cd3c4326d7a812848af64733c399327f0a0c6e12ed6ce12c853ea433dd317b",
   "capture_fixture": {
     "fix_first": {
       "attack_campaigns": [
@@ -576,7 +576,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "runtime_stable_id",
-                  "identity_version": "scoped-identity.v4",
+                  "identity_version": "scoped-identity.v5",
                   "observation_count": 1,
                   "observations": [
                     {
@@ -653,7 +653,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "runtime_stable_id",
-                  "identity_version": "scoped-identity.v4",
+                  "identity_version": "scoped-identity.v5",
                   "observation_count": 3,
                   "observations": [
                     {
@@ -771,7 +771,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "provider_identity_id",
-                  "identity_version": "scoped-identity.v4",
+                  "identity_version": "scoped-identity.v5",
                   "observation_count": 1,
                   "observations": [
                     {
@@ -849,7 +849,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "cloud_resource_id",
-                  "identity_version": "scoped-identity.v4",
+                  "identity_version": "scoped-identity.v5",
                   "observation_count": 1,
                   "observations": [
                     {
@@ -1405,7 +1405,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "snapshot_scoped_runtime_occurrence",
-                  "identity_version": "scoped-identity.v4",
+                  "identity_version": "scoped-identity.v5",
                   "observation_count": 1,
                   "observations": [
                     {
@@ -1482,7 +1482,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "purl",
-                  "identity_version": "scoped-identity.v4",
+                  "identity_version": "scoped-identity.v5",
                   "observation_count": 3,
                   "observations": [
                     {
@@ -1599,7 +1599,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "canonical_id",
-                  "identity_version": "scoped-identity.v4",
+                  "identity_version": "scoped-identity.v5",
                   "observation_count": 1,
                   "observations": [
                     {
@@ -2143,7 +2143,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "snapshot_scoped_runtime_occurrence",
-                  "identity_version": "scoped-identity.v4",
+                  "identity_version": "scoped-identity.v5",
                   "observation_count": 1,
                   "observations": [
                     {
@@ -2220,7 +2220,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "purl",
-                  "identity_version": "scoped-identity.v4",
+                  "identity_version": "scoped-identity.v5",
                   "observation_count": 3,
                   "observations": [
                     {
@@ -2337,7 +2337,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "canonical_id",
-                  "identity_version": "scoped-identity.v4",
+                  "identity_version": "scoped-identity.v5",
                   "observation_count": 1,
                   "observations": [
                     {
@@ -2878,7 +2878,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "snapshot_scoped_missing_exact_identity",
-                  "identity_version": "scoped-identity.v4",
+                  "identity_version": "scoped-identity.v5",
                   "observation_count": 1,
                   "observations": [
                     {
@@ -2954,7 +2954,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "purl",
-                  "identity_version": "scoped-identity.v4",
+                  "identity_version": "scoped-identity.v5",
                   "observation_count": 3,
                   "observations": [
                     {
@@ -3071,7 +3071,7 @@
                 "correlation": {
                   "conflict_fields": [],
                   "identity_basis": "canonical_id",
-                  "identity_version": "scoped-identity.v4",
+                  "identity_version": "scoped-identity.v5",
                   "observation_count": 1,
                   "observations": [
                     {
@@ -3450,7 +3450,7 @@
             "correlation": {
               "conflict_fields": [],
               "freshness": "fresh",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 1,
               "observations": [
                 {
@@ -3502,7 +3502,7 @@
             "correlation": {
               "conflict_fields": [],
               "freshness": "fresh",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 1,
               "observations": [
                 {
@@ -3553,7 +3553,7 @@
             "correlation": {
               "conflict_fields": [],
               "freshness": "fresh",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 1,
               "observations": [
                 {
@@ -3606,7 +3606,7 @@
             "correlation": {
               "conflict_fields": [],
               "freshness": "fresh",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 1,
               "observations": [
                 {
@@ -3656,7 +3656,7 @@
             "correlation": {
               "conflict_fields": [],
               "freshness": "fresh",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 1,
               "observations": [
                 {
@@ -3707,7 +3707,7 @@
             "correlation": {
               "conflict_fields": [],
               "freshness": "fresh",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 1,
               "observations": [
                 {
@@ -3757,7 +3757,7 @@
             "correlation": {
               "conflict_fields": [],
               "freshness": "fresh",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 1,
               "observations": [
                 {
@@ -3808,7 +3808,7 @@
             "correlation": {
               "conflict_fields": [],
               "freshness": "fresh",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 1,
               "observations": [
                 {
@@ -3858,7 +3858,7 @@
             "correlation": {
               "conflict_fields": [],
               "freshness": "fresh",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 1,
               "observations": [
                 {
@@ -3898,7 +3898,7 @@
             "correlation": {
               "conflict_fields": [],
               "identity_basis": "runtime_stable_id",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 3,
               "observations": [
                 {
@@ -4015,7 +4015,7 @@
             "correlation": {
               "conflict_fields": [],
               "identity_basis": "snapshot_scoped_runtime_occurrence",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 1,
               "observations": [
                 {
@@ -4091,7 +4091,7 @@
             "correlation": {
               "conflict_fields": [],
               "identity_basis": "snapshot_scoped_runtime_occurrence",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 1,
               "observations": [
                 {
@@ -4169,7 +4169,7 @@
             "correlation": {
               "conflict_fields": [],
               "identity_basis": "cloud_resource_id",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 1,
               "observations": [
                 {
@@ -4247,7 +4247,7 @@
             "correlation": {
               "conflict_fields": [],
               "identity_basis": "provider_identity_id",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 1,
               "observations": [
                 {
@@ -4324,7 +4324,7 @@
             "correlation": {
               "conflict_fields": [],
               "identity_basis": "purl",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 3,
               "observations": [
                 {
@@ -4441,7 +4441,7 @@
             "correlation": {
               "conflict_fields": [],
               "identity_basis": "runtime_stable_id",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 1,
               "observations": [
                 {
@@ -4518,7 +4518,7 @@
             "correlation": {
               "conflict_fields": [],
               "identity_basis": "snapshot_scoped_missing_exact_identity",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 1,
               "observations": [
                 {
@@ -4598,7 +4598,7 @@
             "correlation": {
               "conflict_fields": [],
               "identity_basis": "runtime_stable_id",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 2,
               "observations": [
                 {
@@ -4695,7 +4695,7 @@
             "correlation": {
               "conflict_fields": [],
               "identity_basis": "canonical_id",
-              "identity_version": "scoped-identity.v4",
+              "identity_version": "scoped-identity.v5",
               "observation_count": 1,
               "observations": [
                 {
@@ -4916,7 +4916,7 @@
       {
         "age_hours": 0.016667,
         "created_at": "2026-08-30T04:05:00+00:00",
-        "digest": "sha256:095c97733c0843b8b0df4dcad9cdc6d6416ba1e0b2b980359b2f91296d2ef9af",
+        "digest": "sha256:b790087501c1307903f8cde5dfc034fe5b745a76997836ea8e7253b69e1dea3c",
         "edge_count": 2,
         "freshness": "fresh",
         "node_count": 3,
@@ -4925,7 +4925,7 @@
           "algorithm": "hmac-sha256",
           "key_id": "reference-lab-v1",
           "schema_version": "agent-bom.correlation-receipt-signature/v1",
-          "value": "sha256:7982a17609339e39ce8280d362004f1ca31b8fcaaa43ce3c6661701245f4454c"
+          "value": "sha256:c57c075451fb6d10a1b375a276b931b42dd0bcae841eeba849f6678d7db410c5"
         },
         "source_kinds": [
           "identity_model"
@@ -4934,7 +4934,7 @@
       {
         "age_hours": 0.083333,
         "created_at": "2026-08-30T04:01:00+00:00",
-        "digest": "sha256:bf8f4183728255a57b1be6ae75de7f8b17932169747210c0c9bf22aac00f5d0b",
+        "digest": "sha256:f39f0df3d275024de455f7cd30558a5297c6a96fce90da0c0caaa9d4f2ea926e",
         "edge_count": 2,
         "freshness": "fresh",
         "node_count": 3,
@@ -4943,7 +4943,7 @@
           "algorithm": "hmac-sha256",
           "key_id": "reference-lab-v1",
           "schema_version": "agent-bom.correlation-receipt-signature/v1",
-          "value": "sha256:8190bd3a7a09f554f6eae5466e8e481fa4e8f63789ea454959a66756d2d92169"
+          "value": "sha256:a7eef396870b7f905785d3326eb0a2907169ca2fc392761e4163cbf06d6e2085"
         },
         "source_kinds": [
           "bundled_advisory_scanner",
@@ -4953,7 +4953,7 @@
       {
         "age_hours": 0.066667,
         "created_at": "2026-08-30T04:02:00+00:00",
-        "digest": "sha256:50cbd1f5c794c8bb47c12fa894149b594a5834b31cfba608caaf5398cdf00422",
+        "digest": "sha256:12af777319119f1bd1d3a21db0ad0c097a90a4599fef1a476c069cce5037f16b",
         "edge_count": 3,
         "freshness": "fresh",
         "node_count": 4,
@@ -4962,7 +4962,7 @@
           "algorithm": "hmac-sha256",
           "key_id": "reference-lab-v1",
           "schema_version": "agent-bom.correlation-receipt-signature/v1",
-          "value": "sha256:40d5456b41a68c2c3f627f62d5e7487ff6e69d0989e2d345568ffbab5d420ca0"
+          "value": "sha256:15fdc743f99134dfa779f50036fbe24220b9cce4c2ef4d8d266de17bce2c0ce4"
         },
         "source_kinds": [
           "kubernetes_iac",
@@ -4972,7 +4972,7 @@
       {
         "age_hours": 0.05,
         "created_at": "2026-08-30T04:03:00+00:00",
-        "digest": "sha256:884f525ea2b67117f78dd64bda8195916cb658e46e5f58d1273f5246b7acc482",
+        "digest": "sha256:74ea7a073112aa2f5841a22bfc73d1042e4639e042a008cad11462a69807bf3c",
         "edge_count": 0,
         "freshness": "fresh",
         "node_count": 1,
@@ -4981,7 +4981,7 @@
           "algorithm": "hmac-sha256",
           "key_id": "reference-lab-v1",
           "schema_version": "agent-bom.correlation-receipt-signature/v1",
-          "value": "sha256:404f08fe6e6da7272483bf4c1cfad79f30085e5303abb60a35e8881e4848ae7a"
+          "value": "sha256:07c0347d8e27420d811623ce800084c9d29ad8618759709cf23039c14ca8ad43"
         },
         "source_kinds": [
           "mcp_config"
@@ -4990,7 +4990,7 @@
       {
         "age_hours": 0.1,
         "created_at": "2026-08-30T04:00:00+00:00",
-        "digest": "sha256:e900fad4a06a24ae41ffff1f94a8471b1d19bfe641698d4b5d9d4f22eadc1c54",
+        "digest": "sha256:20e39fed8eacafc31d6dd6cb411b89ab928d8d33aa2cb15fdb771e02c6c128dd",
         "edge_count": 1,
         "freshness": "fresh",
         "node_count": 2,
@@ -4999,7 +4999,7 @@
           "algorithm": "hmac-sha256",
           "key_id": "reference-lab-v1",
           "schema_version": "agent-bom.correlation-receipt-signature/v1",
-          "value": "sha256:687e963351d87cdfe390a8b12b1db45bbfaddee1e45a20495a89b25ad27b6ebf"
+          "value": "sha256:27d4fc025fea87794e95a48ab9a6793e599378e445782de7795a8f0b666f5e4d"
         },
         "source_kinds": [
           "repository_parser"
@@ -5008,7 +5008,7 @@
       {
         "age_hours": 0.033333,
         "created_at": "2026-08-30T04:04:00+00:00",
-        "digest": "sha256:d1a575772da92bebed8a8748af60a3d69233403dd9d043a160172ff5ec18f7ac",
+        "digest": "sha256:5d88c4d26b6620128631de3b79552dc8b3f41d5e5a3c3720be37df70c68cfa38",
         "edge_count": 1,
         "freshness": "fresh",
         "node_count": 2,
@@ -5017,14 +5017,14 @@
           "algorithm": "hmac-sha256",
           "key_id": "reference-lab-v1",
           "schema_version": "agent-bom.correlation-receipt-signature/v1",
-          "value": "sha256:f08509683a60e0c620894e5c72d317734c5c5ba421989c2eeebdc2e1d83e4cc8"
+          "value": "sha256:520811b96f6232d0006e0bb0feea2bc3bfe0d556fab2c77a8db3a4be21d7c07a"
         },
         "source_kinds": [
           "gateway_runtime"
         ]
       }
     ],
-    "manifest_sha256": "sha256:c2f34f0fb8709b4fc320052ca45aa7f5467c9e5935cb28c87511f31474918327",
+    "manifest_sha256": "sha256:d412828da0ea19396eb0e927a4c0038e15a5e098ce9b7e82b798bfb470bc57bc",
     "max_age_hours": 168,
     "name": "Reference evidence lab",
     "output_scan_id": "reference-evidence-correlation-v1",
@@ -5076,7 +5076,7 @@
         {
           "age_hours": 0.016667,
           "created_at": "2026-08-30T04:05:00+00:00",
-          "digest": "sha256:095c97733c0843b8b0df4dcad9cdc6d6416ba1e0b2b980359b2f91296d2ef9af",
+          "digest": "sha256:b790087501c1307903f8cde5dfc034fe5b745a76997836ea8e7253b69e1dea3c",
           "edge_count": 2,
           "freshness": "fresh",
           "node_count": 3,
@@ -5085,7 +5085,7 @@
             "algorithm": "hmac-sha256",
             "key_id": "reference-lab-v1",
             "schema_version": "agent-bom.correlation-receipt-signature/v1",
-            "value": "sha256:7982a17609339e39ce8280d362004f1ca31b8fcaaa43ce3c6661701245f4454c"
+            "value": "sha256:c57c075451fb6d10a1b375a276b931b42dd0bcae841eeba849f6678d7db410c5"
           },
           "source_kinds": [
             "identity_model"
@@ -5094,7 +5094,7 @@
         {
           "age_hours": 0.083333,
           "created_at": "2026-08-30T04:01:00+00:00",
-          "digest": "sha256:bf8f4183728255a57b1be6ae75de7f8b17932169747210c0c9bf22aac00f5d0b",
+          "digest": "sha256:f39f0df3d275024de455f7cd30558a5297c6a96fce90da0c0caaa9d4f2ea926e",
           "edge_count": 2,
           "freshness": "fresh",
           "node_count": 3,
@@ -5103,7 +5103,7 @@
             "algorithm": "hmac-sha256",
             "key_id": "reference-lab-v1",
             "schema_version": "agent-bom.correlation-receipt-signature/v1",
-            "value": "sha256:8190bd3a7a09f554f6eae5466e8e481fa4e8f63789ea454959a66756d2d92169"
+            "value": "sha256:a7eef396870b7f905785d3326eb0a2907169ca2fc392761e4163cbf06d6e2085"
           },
           "source_kinds": [
             "bundled_advisory_scanner",
@@ -5113,7 +5113,7 @@
         {
           "age_hours": 0.066667,
           "created_at": "2026-08-30T04:02:00+00:00",
-          "digest": "sha256:50cbd1f5c794c8bb47c12fa894149b594a5834b31cfba608caaf5398cdf00422",
+          "digest": "sha256:12af777319119f1bd1d3a21db0ad0c097a90a4599fef1a476c069cce5037f16b",
           "edge_count": 3,
           "freshness": "fresh",
           "node_count": 4,
@@ -5122,7 +5122,7 @@
             "algorithm": "hmac-sha256",
             "key_id": "reference-lab-v1",
             "schema_version": "agent-bom.correlation-receipt-signature/v1",
-            "value": "sha256:40d5456b41a68c2c3f627f62d5e7487ff6e69d0989e2d345568ffbab5d420ca0"
+            "value": "sha256:15fdc743f99134dfa779f50036fbe24220b9cce4c2ef4d8d266de17bce2c0ce4"
           },
           "source_kinds": [
             "kubernetes_iac",
@@ -5132,7 +5132,7 @@
         {
           "age_hours": 0.05,
           "created_at": "2026-08-30T04:03:00+00:00",
-          "digest": "sha256:884f525ea2b67117f78dd64bda8195916cb658e46e5f58d1273f5246b7acc482",
+          "digest": "sha256:74ea7a073112aa2f5841a22bfc73d1042e4639e042a008cad11462a69807bf3c",
           "edge_count": 0,
           "freshness": "fresh",
           "node_count": 1,
@@ -5141,7 +5141,7 @@
             "algorithm": "hmac-sha256",
             "key_id": "reference-lab-v1",
             "schema_version": "agent-bom.correlation-receipt-signature/v1",
-            "value": "sha256:404f08fe6e6da7272483bf4c1cfad79f30085e5303abb60a35e8881e4848ae7a"
+            "value": "sha256:07c0347d8e27420d811623ce800084c9d29ad8618759709cf23039c14ca8ad43"
           },
           "source_kinds": [
             "mcp_config"
@@ -5150,7 +5150,7 @@
         {
           "age_hours": 0.1,
           "created_at": "2026-08-30T04:00:00+00:00",
-          "digest": "sha256:e900fad4a06a24ae41ffff1f94a8471b1d19bfe641698d4b5d9d4f22eadc1c54",
+          "digest": "sha256:20e39fed8eacafc31d6dd6cb411b89ab928d8d33aa2cb15fdb771e02c6c128dd",
           "edge_count": 1,
           "freshness": "fresh",
           "node_count": 2,
@@ -5159,7 +5159,7 @@
             "algorithm": "hmac-sha256",
             "key_id": "reference-lab-v1",
             "schema_version": "agent-bom.correlation-receipt-signature/v1",
-            "value": "sha256:687e963351d87cdfe390a8b12b1db45bbfaddee1e45a20495a89b25ad27b6ebf"
+            "value": "sha256:27d4fc025fea87794e95a48ab9a6793e599378e445782de7795a8f0b666f5e4d"
           },
           "source_kinds": [
             "repository_parser"
@@ -5168,7 +5168,7 @@
         {
           "age_hours": 0.033333,
           "created_at": "2026-08-30T04:04:00+00:00",
-          "digest": "sha256:d1a575772da92bebed8a8748af60a3d69233403dd9d043a160172ff5ec18f7ac",
+          "digest": "sha256:5d88c4d26b6620128631de3b79552dc8b3f41d5e5a3c3720be37df70c68cfa38",
           "edge_count": 1,
           "freshness": "fresh",
           "node_count": 2,
@@ -5177,7 +5177,7 @@
             "algorithm": "hmac-sha256",
             "key_id": "reference-lab-v1",
             "schema_version": "agent-bom.correlation-receipt-signature/v1",
-            "value": "sha256:f08509683a60e0c620894e5c72d317734c5c5ba421989c2eeebdc2e1d83e4cc8"
+            "value": "sha256:520811b96f6232d0006e0bb0feea2bc3bfe0d556fab2c77a8db3a4be21d7c07a"
           },
           "source_kinds": [
             "gateway_runtime"
@@ -5187,7 +5187,7 @@
       "output": {
         "attack_path_count": 1,
         "edge_count": 9,
-        "graph_digest_sha256": "sha256:5dd70c5e89d17a4e1d73f9aa9da892ba4486f6f0d370190dc6364d298dd06ccf",
+        "graph_digest_sha256": "sha256:85bfb44f2bc0d7f719f5d44cd0e9d9104392a32db3cee13511026e65d806d37e",
         "node_count": 10,
         "scan_id": "reference-evidence-correlation-v1"
       },

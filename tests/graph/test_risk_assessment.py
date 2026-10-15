@@ -130,7 +130,7 @@ def test_correlation_uses_winning_observations_assessment(high_assessed: bool) -
         UnifiedGraph(scan_id="new", tenant_id="default", created_at="2026-09-02T00:00:00Z"),
     ]
     observations = [_NodeObservation(CorrelationSnapshot.from_graph(graph), value, "test") for graph, value in zip(snapshots, (high, low))]
-    merged = correlate_node(observations)
+    merged = correlate_node(observations, ("cloud_resource", "risk-node"))
     assert merged.risk_score == 9
     assert merged.risk_assessment == high.risk_assessment
 

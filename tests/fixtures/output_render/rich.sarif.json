@@ -453,7 +453,7 @@
               "id": 1,
               "logicalLocations": [
                 {
-                  "fullyQualifiedName": "server:filesystem",
+                  "fullyQualifiedName": "server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
                   "kind": "server"
                 }
               ],
@@ -470,14 +470,14 @@
                 }
               ],
               "message": {
-                "text": "npm:express@4.17.1"
+                "text": "express@4.17.1"
               }
             },
             {
               "id": 3,
               "logicalLocations": [
                 {
-                  "fullyQualifiedName": "finding:CVE-2026-1001",
+                  "fullyQualifiedName": "vuln:CVE-2026-1001",
                   "kind": "finding"
                 }
               ],
@@ -489,7 +489,7 @@
               "id": 4,
               "logicalLocations": [
                 {
-                  "fullyQualifiedName": "tool:read_file",
+                  "fullyQualifiedName": "tool:server:15c2e86e-efea-5b60-92a1-334a30a65e2a:read_file",
                   "kind": "tool"
                 }
               ],
@@ -501,7 +501,7 @@
               "id": 5,
               "logicalLocations": [
                 {
-                  "fullyQualifiedName": "credential:API_TOKEN",
+                  "fullyQualifiedName": "***REDACTED***",
                   "kind": "credential"
                 }
               ],
@@ -534,59 +534,67 @@
               "riskScore": 10.0,
               "severity": "critical",
               "source": "agent:claude-desktop",
-              "target": "finding:CVE-2026-1001",
+              "target": "vuln:CVE-2026-1001",
               "hops": [
                 "agent:claude-desktop",
-                "server:filesystem",
+                "server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
                 "pkg:npm:express@4.17.1",
-                "finding:CVE-2026-1001"
+                "vuln:CVE-2026-1001"
               ],
               "relationships": [
                 {
-                  "id": "agent:claude-desktop->uses->server:filesystem",
+                  "id": "agent:claude-desktop->uses->server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
                   "type": "uses",
                   "source": "agent:claude-desktop",
-                  "target": "server:filesystem"
+                  "target": "server:15c2e86e-efea-5b60-92a1-334a30a65e2a"
                 },
                 {
-                  "id": "server:filesystem->depends_on->pkg:npm:express@4.17.1",
+                  "id": "server:15c2e86e-efea-5b60-92a1-334a30a65e2a->depends_on->pkg:npm:express@4.17.1",
                   "type": "depends_on",
-                  "source": "server:filesystem",
+                  "source": "server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
                   "target": "pkg:npm:express@4.17.1"
                 },
                 {
-                  "id": "pkg:npm:express@4.17.1->vulnerable_to->finding:CVE-2026-1001",
+                  "id": "pkg:npm:express@4.17.1->vulnerable_to->vuln:CVE-2026-1001",
                   "type": "vulnerable_to",
                   "source": "pkg:npm:express@4.17.1",
-                  "target": "finding:CVE-2026-1001"
+                  "target": "vuln:CVE-2026-1001"
                 },
                 {
-                  "id": "server:filesystem->provides_tool->tool:read_file",
+                  "id": "server:15c2e86e-efea-5b60-92a1-334a30a65e2a->provides_tool->tool:server:15c2e86e-efea-5b60-92a1-334a30a65e2a:read_file",
                   "type": "provides_tool",
-                  "source": "server:filesystem",
-                  "target": "tool:read_file"
+                  "source": "server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
+                  "target": "tool:server:15c2e86e-efea-5b60-92a1-334a30a65e2a:read_file"
                 },
                 {
-                  "id": "server:filesystem->exposes_credential->credential:API_TOKEN",
+                  "id": "server:15c2e86e-efea-5b60-92a1-334a30a65e2a->exposes_credential->cred:server:15c2e86e-efea-5b60-92a1-334a30a65e2a:API_TOKEN",
                   "type": "exposes_credential",
-                  "source": "server:filesystem",
-                  "target": "credential:API_TOKEN"
+                  "source": "server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
+                  "target": "cred:server:15c2e86e-efea-5b60-92a1-334a30a65e2a:API_TOKEN"
                 }
               ],
               "nodeIds": [
                 "agent:claude-desktop",
-                "server:filesystem",
+                "server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
                 "pkg:npm:express@4.17.1",
-                "finding:CVE-2026-1001",
-                "tool:read_file",
-                "credential:API_TOKEN"
+                "vuln:CVE-2026-1001",
+                "tool:server:15c2e86e-efea-5b60-92a1-334a30a65e2a:read_file",
+                "cred:server:15c2e86e-efea-5b60-92a1-334a30a65e2a:API_TOKEN"
               ],
+              "nodeLabels": {
+                "pkg:npm:express@4.17.1": "express@4.17.1",
+                "agent:claude-desktop": "claude-desktop",
+                "server:15c2e86e-efea-5b60-92a1-334a30a65e2a": "filesystem",
+                "vuln:CVE-2026-1001": "CVE-2026-1001",
+                "tool:server:15c2e86e-efea-5b60-92a1-334a30a65e2a:read_file": "read_file",
+                "cred:server:15c2e86e-efea-5b60-92a1-334a30a65e2a:API_TOKEN": "API_TOKEN"
+              },
               "edgeIds": [
-                "agent:claude-desktop->uses->server:filesystem",
-                "server:filesystem->depends_on->pkg:npm:express@4.17.1",
-                "pkg:npm:express@4.17.1->vulnerable_to->finding:CVE-2026-1001",
-                "server:filesystem->provides_tool->tool:read_file",
-                "server:filesystem->exposes_credential->credential:API_TOKEN"
+                "agent:claude-desktop->uses->server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
+                "server:15c2e86e-efea-5b60-92a1-334a30a65e2a->depends_on->pkg:npm:express@4.17.1",
+                "pkg:npm:express@4.17.1->vulnerable_to->vuln:CVE-2026-1001",
+                "server:15c2e86e-efea-5b60-92a1-334a30a65e2a->provides_tool->tool:server:15c2e86e-efea-5b60-92a1-334a30a65e2a:read_file",
+                "server:15c2e86e-efea-5b60-92a1-334a30a65e2a->exposes_credential->cred:server:15c2e86e-efea-5b60-92a1-334a30a65e2a:API_TOKEN"
               ],
               "findings": [
                 "CVE-2026-1001"
@@ -751,7 +759,7 @@
               "id": 1,
               "logicalLocations": [
                 {
-                  "fullyQualifiedName": "server:filesystem",
+                  "fullyQualifiedName": "server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
                   "kind": "server"
                 }
               ],
@@ -768,14 +776,14 @@
                 }
               ],
               "message": {
-                "text": "npm:express@4.17.1"
+                "text": "express@4.17.1"
               }
             },
             {
               "id": 3,
               "logicalLocations": [
                 {
-                  "fullyQualifiedName": "finding:CVE-2026-1002",
+                  "fullyQualifiedName": "vuln:CVE-2026-1002",
                   "kind": "finding"
                 }
               ],
@@ -808,43 +816,49 @@
               "riskScore": 6.5,
               "severity": "high",
               "source": "agent:claude-desktop",
-              "target": "finding:CVE-2026-1002",
+              "target": "vuln:CVE-2026-1002",
               "hops": [
                 "agent:claude-desktop",
-                "server:filesystem",
+                "server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
                 "pkg:npm:express@4.17.1",
-                "finding:CVE-2026-1002"
+                "vuln:CVE-2026-1002"
               ],
               "relationships": [
                 {
-                  "id": "agent:claude-desktop->uses->server:filesystem",
+                  "id": "agent:claude-desktop->uses->server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
                   "type": "uses",
                   "source": "agent:claude-desktop",
-                  "target": "server:filesystem"
+                  "target": "server:15c2e86e-efea-5b60-92a1-334a30a65e2a"
                 },
                 {
-                  "id": "server:filesystem->depends_on->pkg:npm:express@4.17.1",
+                  "id": "server:15c2e86e-efea-5b60-92a1-334a30a65e2a->depends_on->pkg:npm:express@4.17.1",
                   "type": "depends_on",
-                  "source": "server:filesystem",
+                  "source": "server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
                   "target": "pkg:npm:express@4.17.1"
                 },
                 {
-                  "id": "pkg:npm:express@4.17.1->vulnerable_to->finding:CVE-2026-1002",
+                  "id": "pkg:npm:express@4.17.1->vulnerable_to->vuln:CVE-2026-1002",
                   "type": "vulnerable_to",
                   "source": "pkg:npm:express@4.17.1",
-                  "target": "finding:CVE-2026-1002"
+                  "target": "vuln:CVE-2026-1002"
                 }
               ],
               "nodeIds": [
                 "agent:claude-desktop",
-                "server:filesystem",
+                "server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
                 "pkg:npm:express@4.17.1",
-                "finding:CVE-2026-1002"
+                "vuln:CVE-2026-1002"
               ],
+              "nodeLabels": {
+                "pkg:npm:express@4.17.1": "express@4.17.1",
+                "agent:claude-desktop": "claude-desktop",
+                "server:15c2e86e-efea-5b60-92a1-334a30a65e2a": "filesystem",
+                "vuln:CVE-2026-1002": "CVE-2026-1002"
+              },
               "edgeIds": [
-                "agent:claude-desktop->uses->server:filesystem",
-                "server:filesystem->depends_on->pkg:npm:express@4.17.1",
-                "pkg:npm:express@4.17.1->vulnerable_to->finding:CVE-2026-1002"
+                "agent:claude-desktop->uses->server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
+                "server:15c2e86e-efea-5b60-92a1-334a30a65e2a->depends_on->pkg:npm:express@4.17.1",
+                "pkg:npm:express@4.17.1->vulnerable_to->vuln:CVE-2026-1002"
               ],
               "findings": [
                 "CVE-2026-1002"
@@ -974,7 +988,7 @@
               "id": 1,
               "logicalLocations": [
                 {
-                  "fullyQualifiedName": "server:fetcher",
+                  "fullyQualifiedName": "server:6c55de89-f536-5a7d-a7f6-2b25e4397436",
                   "kind": "server"
                 }
               ],
@@ -991,14 +1005,14 @@
                 }
               ],
               "message": {
-                "text": "pypi:requests@2.19.0"
+                "text": "requests@2.19.0"
               }
             },
             {
               "id": 3,
               "logicalLocations": [
                 {
-                  "fullyQualifiedName": "finding:GHSA-aaaa-bbbb-cccc",
+                  "fullyQualifiedName": "vuln:GHSA-aaaa-bbbb-cccc",
                   "kind": "finding"
                 }
               ],
@@ -1027,43 +1041,49 @@
               "riskScore": 0.0,
               "severity": "medium",
               "source": "agent:cursor",
-              "target": "finding:GHSA-aaaa-bbbb-cccc",
+              "target": "vuln:GHSA-aaaa-bbbb-cccc",
               "hops": [
                 "agent:cursor",
-                "server:fetcher",
+                "server:6c55de89-f536-5a7d-a7f6-2b25e4397436",
                 "pkg:pypi:requests@2.19.0",
-                "finding:GHSA-aaaa-bbbb-cccc"
+                "vuln:GHSA-aaaa-bbbb-cccc"
               ],
               "relationships": [
                 {
-                  "id": "agent:cursor->uses->server:fetcher",
+                  "id": "agent:cursor->uses->server:6c55de89-f536-5a7d-a7f6-2b25e4397436",
                   "type": "uses",
                   "source": "agent:cursor",
-                  "target": "server:fetcher"
+                  "target": "server:6c55de89-f536-5a7d-a7f6-2b25e4397436"
                 },
                 {
-                  "id": "server:fetcher->depends_on->pkg:pypi:requests@2.19.0",
+                  "id": "server:6c55de89-f536-5a7d-a7f6-2b25e4397436->depends_on->pkg:pypi:requests@2.19.0",
                   "type": "depends_on",
-                  "source": "server:fetcher",
+                  "source": "server:6c55de89-f536-5a7d-a7f6-2b25e4397436",
                   "target": "pkg:pypi:requests@2.19.0"
                 },
                 {
-                  "id": "pkg:pypi:requests@2.19.0->vulnerable_to->finding:GHSA-aaaa-bbbb-cccc",
+                  "id": "pkg:pypi:requests@2.19.0->vulnerable_to->vuln:GHSA-aaaa-bbbb-cccc",
                   "type": "vulnerable_to",
                   "source": "pkg:pypi:requests@2.19.0",
-                  "target": "finding:GHSA-aaaa-bbbb-cccc"
+                  "target": "vuln:GHSA-aaaa-bbbb-cccc"
                 }
               ],
               "nodeIds": [
                 "agent:cursor",
-                "server:fetcher",
+                "server:6c55de89-f536-5a7d-a7f6-2b25e4397436",
                 "pkg:pypi:requests@2.19.0",
-                "finding:GHSA-aaaa-bbbb-cccc"
+                "vuln:GHSA-aaaa-bbbb-cccc"
               ],
+              "nodeLabels": {
+                "pkg:pypi:requests@2.19.0": "requests@2.19.0",
+                "agent:cursor": "cursor",
+                "server:6c55de89-f536-5a7d-a7f6-2b25e4397436": "fetcher",
+                "vuln:GHSA-aaaa-bbbb-cccc": "GHSA-aaaa-bbbb-cccc"
+              },
               "edgeIds": [
-                "agent:cursor->uses->server:fetcher",
-                "server:fetcher->depends_on->pkg:pypi:requests@2.19.0",
-                "pkg:pypi:requests@2.19.0->vulnerable_to->finding:GHSA-aaaa-bbbb-cccc"
+                "agent:cursor->uses->server:6c55de89-f536-5a7d-a7f6-2b25e4397436",
+                "server:6c55de89-f536-5a7d-a7f6-2b25e4397436->depends_on->pkg:pypi:requests@2.19.0",
+                "pkg:pypi:requests@2.19.0->vulnerable_to->vuln:GHSA-aaaa-bbbb-cccc"
               ],
               "findings": [
                 "GHSA-aaaa-bbbb-cccc"

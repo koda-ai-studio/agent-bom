@@ -20,8 +20,9 @@ from dataclasses import dataclass, field
 
 from agent_bom.graph.analysis import GraphAnalysisState, GraphAnalysisStatus
 from agent_bom.graph.applicability import Applicability, applicability_from_payload, edge_applicability
+from agent_bom.graph.asset_identity import is_compute_instance
 from agent_bom.graph.container import AttackPath, UnifiedGraph
-from agent_bom.graph.edge import UnifiedEdge
+from agent_bom.graph.edge import UnifiedEdge, credential_edge_admits
 from agent_bom.graph.edge_lookup import _rel_value
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.path_evidence import STRUCTURAL_EXPOSURE_SUMMARY, package_path_covers_rollup
@@ -38,8 +39,17 @@ _SCOPE_KINDS = frozenset(
     {EntityType.ENVIRONMENT.value, EntityType.ACCOUNT.value, EntityType.ORG.value, EntityType.PROVIDER.value, EntityType.FLEET.value}
 )
 # A vulnerable workload that runs on its own is a path even when nothing holds
-# it. A cloud resource's own CVE already ranks through its toxic combination.
+# it: a server, a container, or a compute instance (VM) nothing is hosted on.
 _STANDALONE_HOLDERS = frozenset({EntityType.SERVER.value, EntityType.CONTAINER.value})
+
+
+def _standalone(node: UnifiedNode) -> bool:
+    kind = _kind(node)
+    if kind == EntityType.CLOUD_RESOURCE.value:
+        return is_compute_instance(node.attributes.get("resource_type"))
+    return kind in _STANDALONE_HOLDERS
+
+
 _UNVERIFIED_SUMMARY = (
     "Unverified structural candidate: graph topology connects the agent and vulnerable "
     "package/server, but no executable graph or symbol path has been proven."
@@ -173,7 +183,7 @@ def derive_component_paths(
                 counts.reasons.add("holder_chain_budget")
             for chain in chains:
                 hops = ([chain[0].source] if chain else []) + [edge.target for edge in chain] or [holder.id]
-                if len(hops) == 1 and _kind(holder) not in _STANDALONE_HOLDERS:
+                if len(hops) == 1 and not _standalone(holder):
                     continue
                 hops = [*hops, finding.id]
                 key = tuple(hops)
@@ -217,6 +227,7 @@ def _component_path(
     path_boost: Callable[[list[str]], float],
 ) -> AttackPath:
     servers = [hop for hop in hops if hop in graph.nodes and _kind(graph.nodes[hop]) == EntityType.SERVER.value]
+    entry_kind = _kind(graph.nodes[hops[0]]) if hops and hops[0] in graph.nodes else ""
 
     def labels(rel: str) -> list[str]:
         return sorted(
@@ -224,7 +235,9 @@ def _component_path(
                 graph.nodes[e.target].label
                 for server in servers
                 for e in outgoing.get(server, [])
-                if _rel_value(e) == rel and e.target in graph.nodes
+                if _rel_value(e) == rel
+                and e.target in graph.nodes
+                and (entry_kind != EntityType.AGENT.value or credential_edge_admits(e, hops[0]))
             }
         )
 

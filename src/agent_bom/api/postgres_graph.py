@@ -47,6 +47,7 @@ from .postgres_common import (
     _tenant_connection,
     bypass_tenant_rls,
 )
+from .postgres_graph_aliases import PostgresGraphAliasMixin
 from .postgres_graph_correlation import PostgresGraphCorrelationMixin
 from .postgres_graph_history import PostgresGraphHistoryMixin
 from .postgres_graph_inventory import PostgresGraphInventoryMixin
@@ -84,8 +85,8 @@ from .postgres_graph_write import (
     _edge_upsert_sql,
     _interaction_risk_rows,
     _reserve_snapshot,
-    _write_nodes,
     _write_snapshot_paths,
+    write_nodes_and_aliases,
 )
 from .postgres_scan_cache import PostgresScanCache
 
@@ -137,6 +138,7 @@ __all__ = [
 
 
 class PostgresGraphStore(
+    PostgresGraphAliasMixin,
     PostgresGraphPathsMixin,
     PostgresGraphInventoryMixin,
     PostgresGraphHistoryMixin,
@@ -201,6 +203,7 @@ class PostgresGraphStore(
             _ensure_tenant_rls(conn, "interaction_risks", "tenant_id")
             _ensure_tenant_rls(conn, "graph_filter_presets", "tenant_id")
             _ensure_tenant_rls(conn, "graph_node_search", "tenant_id")
+            _ensure_tenant_rls(conn, "graph_node_aliases", "tenant_id")
             _ensure_tenant_rls(conn, "graph_build_workspace_nodes", "tenant_id")
             _ensure_tenant_rls(conn, "graph_build_workspace_edges", "tenant_id")
             conn.commit()
@@ -278,7 +281,8 @@ class PostgresGraphStore(
 
         with _tenant_connection(self._pool) as conn:
             previous_scan = _reserve_snapshot(conn, tenant=tenant, scan=scan, snapshot_kind=snapshot_kind)
-            node_count, severity_counts, type_counts = _write_nodes(conn, nodes, scan=scan, tenant=tenant, batch_size=batch_size)
+            counts = write_nodes_and_aliases(conn, nodes, scan=scan, tenant=tenant, batch_size=batch_size, now=now)
+            node_count, severity_counts, type_counts = counts
             edge_counter = [0]
             scope_predicate = comparable_observation_sql(dialect="postgres", previous="previous", current="incoming")
             edge_rows = _edge_rows(edges, scan=scan, tenant=tenant, now=now, previous_scan=previous_scan, counter=edge_counter)

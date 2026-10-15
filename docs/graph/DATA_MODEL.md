@@ -34,12 +34,12 @@ flowchart LR
     findings_0[drift_incident · misconfiguration · vulnerability]
   end
   ai -- "belongs_to, called, can_access, correlates_with<br/>delegated_to, exposed_to, governs, invoked<br/>lateral_path, member_of, observes, part_of<br/>possibly_correlates_with, provides_tool, reaches_tool, shares_cred<br/>shares_server, trace_step, uses, uses_framework" --> ai
-  ai -- "accessed, can_access, exposed_to, member_of<br/>part_of, serves_model, stores, trace_step" --> cloud
+  ai -- "accessed, can_access, exposed_to, hosted_on<br/>member_of, part_of, serves_model, stores<br/>trace_step" --> cloud
   ai -- "contains, exhibits_drift, governs, vulnerable_to" --> findings
   ai -- "accessed, assumes, authenticates_as, exposes_cred<br/>governs, member_of, part_of, trace_step<br/>used_credential" --> identity
   ai -- "can_access, depends_on, trace_step" --> supply
   cloud -- "belongs_to, can_access, contains, hosts<br/>trace_step" --> ai
-  cloud -- "can_access, contains, depends_on, exposed_to<br/>hosts, part_of, protects, serves_model<br/>stores, trace_step" --> cloud
+  cloud -- "can_access, contains, depends_on, exposed_to<br/>hosted_on, hosts, part_of, possibly_correlates_with<br/>protects, serves_model, stores, trace_step" --> cloud
   cloud -- "contains, vulnerable_to" --> findings
   cloud -- "assumes, contains, exposed_to, hosts<br/>part_of, trace_step" --> identity
   cloud -- "can_access, contains, depends_on, trace_step" --> supply
@@ -51,7 +51,7 @@ flowchart LR
   identity -- "acted_as, belongs_to, can_access, contains<br/>governs, has_permission, hosts, invoked<br/>manages, member_of, owns, reaches_tool<br/>scoped_to, trace_step" --> ai
   identity -- "accessed, can_access, contains, has_permission<br/>hosts, invoked, manages, member_of<br/>owns, part_of, trace_step" --> cloud
   identity -- "contains, governs, vulnerable_to" --> findings
-  identity -- "assumes, attached, authenticates_as, can_access<br/>contains, cross_account_trust, governs, has_permission<br/>hosts, inherits, member_of, owns<br/>part_of, trace_step, trusts" --> identity
+  identity -- "assumes, attached, authenticates_as, can_access<br/>contains, cross_account_trust, governs, has_permission<br/>hosts, inherits, member_of, owns<br/>part_of, possibly_correlates_with, trace_step, trusts" --> identity
   identity -- "can_access, trace_step" --> supply
   supply -- "belongs_to, configures, contains, defines<br/>part_of, runs, trace_step" --> ai
   supply -- "contains, trace_step" --> cloud
@@ -68,17 +68,17 @@ flowchart LR
 |---|---|---|---|---|---|---|
 | `access_grant` | Access Grant | Identity and access | `identity` | 3 / 3001 |  | 1 |
 | `access_policy` | Access Policy | Identity and access | `identity` | 3 / 3001 |  | 1 (+1 demo) |
-| `account` | Account | Identity and access | `identity` | 3 / 3001 |  | 11 (+2 demo) |
+| `account` | Account | Identity and access | `identity` | 3 / 3001 |  | 12 (+2 demo) |
 | `agent` | AI Agent | AI and agents | `orchestration` | 5 / 4001 |  | 12 (+2 demo) |
 | `api_gateway` | API Gateway | Cloud, infrastructure and data | `api_gateway` | 5 / 4001 |  | 1 |
 | `application` | Application | AI and agents | `app` | 5 / 4001 |  | 2 (+1 demo) |
 | `blueprint` | Blueprint | AI and agents | `orchestration` | 5 / 4001 |  | 1 |
 | `ci_job` | CI/CD Job | Code and supply chain | `ci` | 5 / 4001 |  | 1 (+1 demo) |
-| `cloud_resource` | Cloud Resource | Cloud, infrastructure and data | `infra` | 5 / 4001 |  | 13 (+2 demo) |
+| `cloud_resource` | Cloud Resource | Cloud, infrastructure and data | `infra` | 5 / 4001 |  | 15 (+2 demo) |
 | `cluster` | Cluster | Cloud, infrastructure and data | `infra` | 5 / 4001 |  | 0 (+1 demo) |
 | `code_module` | Code Module | Code and supply chain | `code` | 5 / 4001 |  | 2 |
 | `config_file` | Config File | Code and supply chain | `code` | 5 / 4001 |  | 2 (+1 demo) |
-| `container` | Container | Cloud, infrastructure and data | `infra` | 5 / 4001 |  | 2 (+1 demo) |
+| `container` | Container | Cloud, infrastructure and data | `infra` | 5 / 4001 |  | 3 (+1 demo) |
 | `credential` | Credential | Identity and access | `identity` | 5 / 4001 |  | 2 (+1 demo) |
 | `credential_ref` | Credential Reference | Identity and access | `identity` | 5 / 4001 |  | 0 |
 | `data_store` | Data Store | Cloud, infrastructure and data | `asset` | 5 / 4001 |  | 8 (+1 demo) |
@@ -95,23 +95,23 @@ flowchart LR
 | `misconfiguration` | Misconfiguration | Findings | `finding` | 2 / 2003 | yes | 6 (+2 demo) |
 | `model` | Model | Cloud, infrastructure and data | `asset` | 5 / 4001 |  | 3 (+1 demo) |
 | `org` | Organization | Identity and access | `identity` | 3 / 3001 |  | 4 (+2 demo) |
-| `package` | Package | Code and supply chain | `package` | 5 / 4001 |  | 4 (+2 demo) |
+| `package` | Package | Code and supply chain | `package` | 5 / 4001 |  | 5 (+2 demo) |
 | `policy` | Policy | Identity and access | `identity` | 3 / 3001 |  | 3 (+1 demo) |
 | `provider` | Provider | Cloud, infrastructure and data | `infra` | 0 / 0 |  | 3 |
 | `resource` | Resource | Cloud, infrastructure and data | `asset` | 5 / 4001 |  | 3 |
-| `role` | Role | Identity and access | `identity` | 3 / 3001 |  | 6 (+2 demo) |
+| `role` | Role | Identity and access | `identity` | 3 / 3001 |  | 7 (+2 demo) |
 | `server` | MCP Server | AI and agents | `mcp_server` | 5 / 4001 |  | 4 (+2 demo) |
 | `service_account` | Service Account | Identity and access | `identity` | 3 / 3001 |  | 4 (+1 demo) |
 | `service_principal` | Service Principal | Identity and access | `identity` | 3 / 3001 |  | 3 (+1 demo) |
 | `source_file` | Source File | Code and supply chain | `code` | 5 / 4001 |  | 3 |
 | `tool` | Tool | AI and agents | `tool` | 5 / 4001 |  | 7 (+2 demo) |
 | `tool_call` | Tool Call | AI and agents | `runtime_evidence` | 5 / 4001 |  | 0 (+1 demo) |
-| `user` | User | Identity and access | `user` | 3 / 3001 |  | 6 (+1 demo) |
+| `user` | User | Identity and access | `user` | 3 / 3001 |  | 7 (+1 demo) |
 | `vulnerability` | Vulnerability | Findings | `finding` | 2 / 2001 | yes | 7 (+2 demo) |
 
 ## Relationships
 
-50 relationship types, one `RelationshipSpec` each (`agent_bom.graph.relationship_specs`). Source and target kinds are the spec's `source_types` / `target_types`; the exact allowed pairs are in [relationship pairs](data-model/relationships.md). *Traversable* is the default for the attack-path view (`UnifiedGraph.attack_path_view` keeps traversable edges only).
+51 relationship types, one `RelationshipSpec` each (`agent_bom.graph.relationship_specs`). Source and target kinds are the spec's `source_types` / `target_types`; the exact allowed pairs are in [relationship pairs](data-model/relationships.md). *Traversable* is the default for the attack-path view (`UnifiedGraph.attack_path_view` keeps traversable edges only).
 
 Consumed by: **FU** Attack-path fusion · **CR** Credential reach · **BR** Dependency reach (blast radius) · **LT** Toxic-combination lateral reach · **MT** ATT&CK / ATLAS hop mapping · **RT** Runtime-observed path evidence.
 
@@ -127,7 +127,7 @@ Consumed by: **FU** Attack-path fusion · **CR** Credential reach · **BR** Depe
 | `called` | `runtime` | runtime | directed | yes | `agent`, `tool_call` | `server`, `tool` | 4 | CR, RT | 2 (+1 demo) |
 | `can_access` | `authority` | identity | directed | yes | `account`, `agent`, `application`, `cloud_resource`, `cluster`, `container` (+10 more) | `agent`, `api_gateway`, `cloud_resource`, `cluster`, `config_file`, `container` (+10 more) | 183 | FU, LT, MT | 4 (+2 demo) |
 | `configures` | `structural` | code_topology | directed | yes | `config_file` | `agent`, `ci_job`, `server`, `tool` | 4 | — | 1 |
-| `contains` | `structural` | inventory | directed | yes | `access_policy`, `account`, `agent`, `api_gateway`, `application`, `ci_job` (+19 more) | `access_policy`, `account`, `agent`, `api_gateway`, `application`, `ci_job` (+21 more) | 93 | FU, BR | 8 (+2 demo) |
+| `contains` | `structural` | inventory | directed | yes | `access_policy`, `account`, `agent`, `api_gateway`, `application`, `ci_job` (+19 more) | `access_policy`, `account`, `agent`, `api_gateway`, `application`, `ci_job` (+21 more) | 93 | FU, BR | 8 (+3 demo) |
 | `correlates_with` | `correlation` | correlation | bidirectional | no | `agent`, `server` | `agent`, `server` | 4 | — | 1 |
 | `cross_account_trust` | `authority` | identity | directed | yes | `account`, `federated_identity`, `role`, `service_principal` | `account`, `federated_identity`, `role`, `service_principal` | 16 | — | 2 |
 | `defines` | `structural` | code_topology | directed | yes | `source_file` | `ci_job`, `code_module`, `tool` | 3 | — | 2 |
@@ -139,6 +139,7 @@ Consumed by: **FU** Attack-path fusion · **CR** Credential reach · **BR** Depe
 | `exposes_cred` | `authority` | inventory | directed | yes | `agent`, `server` | `credential` | 2 | FU, CR, MT | 3 (+1 demo) |
 | `governs` | `governance` | governance | directed | no | `access_policy`, `blueprint`, `policy` | `account`, `agent`, `drift_incident`, `managed_identity`, `org`, `tool` | 10 | — | 2 |
 | `has_permission` | `authority` | identity | directed | yes | `group`, `managed_identity`, `role`, `service_account`, `service_principal`, `user` | `account`, `cloud_resource`, `data_store`, `org`, `resource`, `tool` | 36 | FU, LT, MT | 5 |
+| `hosted_on` | `dependency` | inventory | directed | yes | `agent`, `container`, `server` | `cloud_resource`, `cluster`, `container`, `fleet` | 12 | — | 2 |
 | `hosts` | `structural` | inventory | directed | yes | `account`, `cloud_resource`, `environment`, `fleet`, `provider` | `account`, `agent`, `cloud_resource`, `org`, `server` | 25 | — | 2 |
 | `imports` | `dependency` | code_topology | directed | yes | `code_module`, `source_file` | `code_module`, `external_import`, `package` | 6 | — | 0 |
 | `inherits` | `authority` | identity | directed | yes | `group`, `role`, `service_account`, `service_principal`, `user` | `policy`, `role` | 10 | FU, MT | 0 |
@@ -147,9 +148,9 @@ Consumed by: **FU** Attack-path fusion · **CR** Credential reach · **BR** Depe
 | `manages` | `governance` | governance | directed | yes | `federated_identity`, `group`, `role`, `service_account`, `service_principal`, `user` | `agent`, `cloud_resource`, `environment`, `fleet` | 24 | — | 1 |
 | `member_of` | `authority` | governance | directed | yes | `agent`, `federated_identity`, `group`, `managed_identity`, `role`, `service_account` (+2 more) | `account`, `agent`, `fleet`, `group`, `role` | 31 | — | 4 |
 | `observes` | `structural` | inventory | directed | yes | `framework` | `agent`, `server` | 2 | — | 1 |
-| `owns` | `governance` | governance | directed | yes | `account`, `group`, `org`, `role`, `service_account`, `service_principal` (+1 more) | `agent`, `api_gateway`, `cloud_resource`, `data_store`, `environment`, `group` (+5 more) | 30 | — | 4 |
+| `owns` | `governance` | governance | directed | yes | `account`, `group`, `org`, `role`, `service_account`, `service_principal` (+1 more) | `agent`, `api_gateway`, `cloud_resource`, `data_store`, `environment`, `group` (+5 more) | 30 | — | 5 |
 | `part_of` | `structural` | governance | directed | yes | `account`, `agent`, `ci_job`, `cloud_resource`, `container`, `resource` (+2 more) | `application`, `cloud_resource`, `cluster`, `environment`, `fleet`, `org` (+2 more) | 20 | — | 4 |
-| `possibly_correlates_with` | `correlation` | correlation | bidirectional | no | `agent`, `server` | `agent`, `server` | 4 | — | 1 |
+| `possibly_correlates_with` | `correlation` | correlation | bidirectional | no | `agent`, `cloud_resource`, `cluster`, `container`, `data_store`, `managed_identity` (+5 more) | `agent`, `cloud_resource`, `cluster`, `container`, `data_store`, `managed_identity` (+5 more) | 39 | — | 2 |
 | `protects` | `exposure` | exposure | directed | yes | `api_gateway`, `cloud_resource` | `cloud_resource`, `data_store`, `resource` | 6 | — | 1 |
 | `provides_tool` | `structural` | inventory | directed | yes | `server` | `tool` | 1 | FU, CR, BR, MT | 3 (+1 demo) |
 | `reaches_tool` | `authority` | inventory | directed | yes | `agent`, `credential` | `tool` | 2 | FU, CR, MT | 2 (+1 demo) |
@@ -173,7 +174,7 @@ Consumed by: **FU** Attack-path fusion · **CR** Credential reach · **BR** Depe
 | Class | Relationships |
 |---|---|
 | `structural` | `belongs_to`, `configures`, `contains`, `defines`, `hosts`, `observes`, `part_of`, `provides_tool`, `runs`, `stores` |
-| `dependency` | `depends_on`, `imports`, `serves_model`, `uses`, `uses_framework` |
+| `dependency` | `depends_on`, `hosted_on`, `imports`, `serves_model`, `uses`, `uses_framework` |
 | `authority` | `assumes`, `attached`, `authenticates_as`, `can_access`, `cross_account_trust`, `exposes_cred`, `has_permission`, `inherits`, `member_of`, `reaches_tool`, `trusts` |
 | `exposure` | `exposed_to`, `protects` |
 | `finding` | `affects`, `exploitable_via`, `remediates`, `triggers`, `vulnerable_to` |
@@ -199,12 +200,12 @@ Every edge carries `evidence.source` (the collector) and `evidence.tier` (`agent
 
 | Tier | Meaning | Registered collectors |
 |---|---|---|
-| `derived` | Computed from other edges; must name `derived_via`. | — |
+| `derived` | Computed from other edges; must name `derived_via`. | `asset-canonicalization` |
 | `legacy_unrecorded` | Read-side label for edges stored before the evidence envelope existed; never written. | — |
-| `modeled_infrastructure` | Configuration read from a provider or inventory API. | `ai-inventory`, `aws-organizations`, `cloud-inventory`, `cloud-rbac`, `cloud_origin`, `cloud_principal`, `cloud_principal_trust`, `cnapp-overlay`, `gcp-organizations`, `nhi-discovery`, `snowflake-cortex-agents`, `snowflake-exfil`, `snowflake-external-data`, `snowflake-integrations`, `snowflake-objects`, `snowflake-organizations`, `snowflake-pipeline`, `snowflake-services`, `vendor-inventory-export` |
-| `recorded` | Logs, audit trails, usage history or attestations recorded the activity. | `access-advisor`, `authorization-evidence`, `cloud-audit-trail`, `cortex-agent-usage`, `governance-overlay`, `hardware-attestation-ingest`, `mcp-audit`, `operator_reported_timestamps`, `snowflake-governance`, `tpm-quote`, `warehouse-export` |
+| `modeled_infrastructure` | Configuration read from a provider or inventory API. | `ai-inventory`, `aws-organizations`, `cloud-cis`, `cloud-inventory`, `cloud-rbac`, `cloud-security`, `cloud_origin`, `cloud_principal`, `cloud_principal_trust`, `cnapp-overlay`, `gcp-organizations`, `nhi-discovery`, `snowflake-cortex-agents`, `snowflake-exfil`, `snowflake-external-data`, `snowflake-integrations`, `snowflake-objects`, `snowflake-organizations`, `snowflake-pipeline`, `snowflake-services`, `vendor-inventory-export` |
+| `recorded` | Logs, audit trails, usage history or attestations recorded the activity. | `access-advisor`, `authorization-evidence`, `cloud-audit-trail`, `cortex-agent-usage`, `dspm`, `external-import`, `governance-overlay`, `hardware-attestation-ingest`, `kubernetes`, `mcp-audit`, `operator_reported_timestamps`, `snowflake-governance`, `tpm-quote`, `warehouse-export` |
 | `runtime_observed` | The runtime proxy, gateway or feedback loop observed it live. | `runtime-feedback`, `runtime-identity`, `runtime-proxy`, `runtime-trace`, `snowflake-cortex-observability` |
-| `static_scan` | A scanner read files, manifests or source. | `agent_discovery`, `aspm-overlay`, `ast_analysis`, `ci_graph_overlay`, `code_graph_overlay`, `framework-agent`, `github-actions`, `iac`, `mcp-scan`, `repo-structure-overlay`, `repo-trust-overlay`, `skill-audit`, `source-ast` |
+| `static_scan` | A scanner read files, manifests or source. | `agent_discovery`, `aspm-overlay`, `ast_analysis`, `browser-extension-scan`, `ci_graph_overlay`, `code_graph_overlay`, `container-scan`, `filesystem-scan`, `framework-agent`, `github-actions`, `iac`, `mcp-scan`, `model-scan`, `prompt-scan`, `repo-structure-overlay`, `repo-trust-overlay`, `sast`, `sbom-ingest`, `secret-scan`, `skill-audit`, `source-ast` |
 
 Collectors that set their tier at the call site (`edge_evidence(source, tier)`), outside the registry:
 
@@ -248,20 +249,20 @@ Findings (`agent_bom.finding.Finding`) are linked to graph nodes by `graph/asset
 | Finding source | Registered edge collector (name match) | Tier |
 |---|---|---|
 | `BROWSER_EXT` | — | — |
-| `CLOUD_CIS` | — | — |
-| `CLOUD_SECURITY` | — | — |
+| `CLOUD_CIS` | `cloud-cis` | `modeled_infrastructure` |
+| `CLOUD_SECURITY` | `cloud-security` | `modeled_infrastructure` |
 | `CONTAINER` | — | — |
-| `DSPM` | — | — |
+| `DSPM` | `dspm` | `recorded` |
 | `EXTERNAL` | — | — |
 | `FILESYSTEM` | — | — |
 | `GRAPH_ANALYSIS` | — | — |
 | `MCP_SCAN` | `mcp-scan` | `static_scan` |
-| `MODEL_SCAN` | — | — |
-| `PROMPT_SCAN` | — | — |
+| `MODEL_SCAN` | `model-scan` | `static_scan` |
+| `PROMPT_SCAN` | `prompt-scan` | `static_scan` |
 | `PROXY` | — | — |
-| `SAST` | — | — |
+| `SAST` | `sast` | `static_scan` |
 | `SBOM` | — | — |
-| `SECRET_SCAN` | — | — |
+| `SECRET_SCAN` | `secret-scan` | `static_scan` |
 | `SKILL` | — | — |
 
 Finding node id formats (statically detected `UnifiedNode(id=…)` call sites):
@@ -270,11 +271,8 @@ Finding node id formats (statically detected `UnifiedNode(id=…)` call sites):
 |---|---|
 | `misconfiguration` | `misconfig:cloud-org:{provider}:{check_id}` |
 | `misconfiguration` | `misconfig:graph_analysis:{fid}` |
-| `misconfiguration` | `misconfig:iac:{rule_id}:{finding_path}:{finding_line}` |
-| `misconfiguration` | `misconfig:mcp_audit:{finding_id}` |
 | `misconfiguration` | `misconfig:sast:{rule_id}:{finding_path}:{finding_line}` |
 | `misconfiguration` | `misconfig:secret_scan:{finding_id}` |
-| `misconfiguration` | `misconfig:{section_key}:{check_id}` |
 | `misconfiguration` | `toxic:{combo_key}` |
 | `vulnerability` | `stable_node_id(…) — UUIDv5` |
 | `vulnerability` | `vuln:{vuln_id_str}` |
@@ -356,4 +354,4 @@ Static-scan results. A kind can still be emitted through a table or a variable t
 - Relationship types with no detected non-demo emitter: `acted_as`, `imports`, `inherits`, `lateral_path`, `remediates`, `trace_step`
 - Entity types with no detected non-demo emitter: `cluster`, `credential_ref`, `environment`, `external_import`, `tool_call`
 - Registered collectors never named elsewhere in the source: —
-- Finding sources without a same-named registered collector: `BROWSER_EXT`, `CLOUD_CIS`, `CLOUD_SECURITY`, `CONTAINER`, `DSPM`, `EXTERNAL`, `FILESYSTEM`, `GRAPH_ANALYSIS`, `MODEL_SCAN`, `PROMPT_SCAN`, `PROXY`, `SAST`, `SBOM`, `SECRET_SCAN`, `SKILL`
+- Finding sources without a same-named registered collector: `BROWSER_EXT`, `CONTAINER`, `EXTERNAL`, `FILESYSTEM`, `GRAPH_ANALYSIS`, `PROXY`, `SBOM`, `SKILL`

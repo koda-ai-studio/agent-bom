@@ -274,7 +274,7 @@ def test_custom_connector_scan_saves_reusable_tenant_graph(tmp_path, monkeypatch
     assert graph.nodes and graph.edges
     resource_id = "cloud_resource:customer:inventory:agent:inventory-agent-42"
     assert graph.nodes[resource_id].attributes["cloud_origin"] == origin
-    assert graph.has_edge(resource_id, "agent:review-agent")
+    assert any(e.source == "agent:review-agent" and e.target == resource_id and e.relationship.value == "hosted_on" for e in graph.edges)
     assert not reopened.load_graph(tenant_id="customer-b", scan_id=job.job_id).nodes
     before = (set(graph.nodes), {(e.source, e.target, e.relationship) for e in graph.edges})
     # Re-saving the same report must replace the snapshot without duplicating edges.

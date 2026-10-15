@@ -29,6 +29,7 @@ from agent_bom.discovery.config_parsers import (  # noqa: F401
     parse_mcp_config,
     parse_snowflake_connections,
 )
+from agent_bom.discovery.k8s_hosting import node_provider_ids, pod_hosting_metadata
 from agent_bom.floating_refs import classify_image_reference
 from agent_bom.models import Agent, AgentStatus, AgentType, MCPServer, TransportType
 from agent_bom.security import sanitize_env_vars, sanitize_log_label
@@ -1044,7 +1045,7 @@ def discover_k8s_mcp_servers(
 
     mcp_servers: list[MCPServer] = []
     seen_names: set[str] = set()
-
+    provider_ids = node_provider_ids(_kubectl) if (pod_data or {}).get("items") else {}
     for pod in (pod_data or {}).get("items", []):
         meta = pod.get("metadata", {})
         pod_name = meta.get("name", "unknown")
@@ -1070,7 +1071,6 @@ def discover_k8s_mcp_servers(
             if not (has_label_signal or has_image_signal or has_env_signal):
                 continue
 
-            # Determine transport and URL
             transport = TransportType.STDIO
             url = ""
             ports = container.get("ports", [])
@@ -1081,11 +1081,9 @@ def discover_k8s_mcp_servers(
                 svc_name = labels.get("app", labels.get("app.kubernetes.io/name", pod_name))
                 url = f"http://{svc_name}.{pod_ns}.svc.cluster.local:{port_num}"
 
-            # Sanitize env vars
             raw_env = {e.get("name", ""): e.get("value", "") for e in env_vars if e.get("name")}
             env = sanitize_env_vars(raw_env)
 
-            # Build a unique server name
             container_name = container.get("name", "mcp")
             server_name = f"{pod_ns}/{pod_name}/{container_name}"
             if server_name in seen_names:
@@ -1099,6 +1097,7 @@ def discover_k8s_mcp_servers(
                 transport=transport,
                 url=url,
                 config_path=f"k8s://{pod_ns}/{pod_name}",
+                connection_metadata=pod_hosting_metadata(pod, cluster=context or "", provider_ids=provider_ids),
             )
             mcp_servers.append(server)
 

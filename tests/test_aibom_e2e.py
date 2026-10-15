@@ -20,8 +20,8 @@ from datetime import timezone
 
 from agent_bom.context_graph import (
     build_context_graph,
+    collect_lateral_paths,
     compute_interaction_risks,
-    find_lateral_paths,
     to_serializable,
 )
 from agent_bom.models import (
@@ -46,6 +46,11 @@ from agent_bom.output.graph_export import (
     to_json as graph_to_json,
 )
 from agent_bom.output.json_fmt import to_json
+
+
+def _lateral_paths(graph, source_id, max_depth=4):
+    return collect_lateral_paths(graph, [source_id], max_depth=max_depth)[0]
+
 
 # ── Synthesized test fixtures ────────────────────────────────────────────────
 
@@ -379,7 +384,7 @@ class TestGraphVisualization:
         # Find paths from first agent
         agent_nodes = [nid for nid, n in graph.nodes.items() if n.kind.value == "agent"]
         if agent_nodes:
-            paths = find_lateral_paths(graph, agent_nodes[0])
+            paths = _lateral_paths(graph, agent_nodes[0])
             # Paths may or may not exist depending on graph topology
             assert isinstance(paths, list)
 
@@ -392,7 +397,7 @@ class TestGraphVisualization:
     def test_serializable_output(self):
         agents, blast = self._build_graph_data()
         graph = build_context_graph(agents, blast)
-        paths = find_lateral_paths(graph, list(graph.nodes.keys())[0]) if graph.nodes else []
+        paths = _lateral_paths(graph, list(graph.nodes.keys())[0]) if graph.nodes else []
         risks = compute_interaction_risks(graph)
         data = to_serializable(graph, paths, risks)
         assert "nodes" in data

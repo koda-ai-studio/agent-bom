@@ -11,6 +11,32 @@ from agent_bom.canonical_ids import canonical_graph_edge_id
 from agent_bom.graph.types import RelationshipType
 from agent_bom.graph.util import _now_iso
 
+# Evidence lists that name every contributor; a later source adds to them
+# instead of being dropped by the non-empty-first rule.
+UNION_EVIDENCE_KEYS = ("configured_by",)
+
+
+def credential_edge_admits(edge: "UnifiedEdge", agent_id: str) -> bool:
+    """Whether ``agent_id`` itself configured this server-to-credential slot.
+
+    A server shared by several agents exposes each credential only to the
+    agents whose configuration supplied it; sharing a server never hands one
+    agent another agent's secret.
+    """
+    configured = (edge.evidence or {}).get("configured_by")
+    return not isinstance(configured, list) or not configured or not agent_id or agent_id in configured
+
+
+def _merge_union_keys(stored: dict[str, Any], incoming: dict[str, Any]) -> bool:
+    changed = False
+    for key in UNION_EVIDENCE_KEYS:
+        if isinstance(incoming.get(key), list):
+            union = sorted({*(stored.get(key) or []), *incoming[key]})
+            if stored.get(key) != union:
+                stored[key] = union
+                changed = True
+    return changed
+
 
 def merge_edge_evidence(stored: dict[str, Any], incoming: dict[str, Any]) -> bool:
     """Merge evidence without collapsing provider action/binding receipts.
@@ -19,7 +45,7 @@ def merge_edge_evidence(stored: dict[str, Any], incoming: dict[str, Any]) -> boo
     decisions are complete records: merging actions and bindings independently
     would manufacture combinations the evaluator never assessed.
     """
-    changed = False
+    changed = _merge_union_keys(stored, incoming)
     decisions: dict[str, dict[str, Any]] = {}
     grants: dict[str, dict[str, Any]] = {}
     accesses: dict[str, dict[str, Any]] = {}

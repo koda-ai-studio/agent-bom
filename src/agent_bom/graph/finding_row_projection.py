@@ -21,7 +21,7 @@ from agent_bom.core.asset_types import entity_type_for_asset_type
 from agent_bom.evidence.finding_node_ids import _dict, _text, finding_row_node_id, stamp_finding_node_ids
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
-from agent_bom.graph.edge_evidence import edge_evidence
+from agent_bom.graph.edge_evidence import SOURCE_TIERS, edge_evidence
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.relationship_specs import relationship_spec
 from agent_bom.graph.resource_aliases import _build_cloud_resource_alias_index, _resolve_cloud_resource_node_id
@@ -30,6 +30,7 @@ from agent_bom.security import sanitize_text
 
 _FINDING_ENTITIES = frozenset({EntityType.VULNERABILITY, EntityType.MISCONFIGURATION})
 _NO_INVENTED_ASSET = frozenset({"SECRET_SCAN"})
+_OBSERVED_ASSETS = frozenset({EntityType.CLOUD_RESOURCE, EntityType.DATA_STORE, EntityType.CLUSTER})
 # Asset kinds a scanner names that have no inventory alias of their own.
 _ASSET_FALLBACK = {
     "model_file": EntityType.MODEL,
@@ -37,23 +38,23 @@ _ASSET_FALLBACK = {
     "container_image": EntityType.CONTAINER,
     "iam_role": EntityType.ROLE,
 }
-# Finding source -> (edge collector, evidence tier).
+# Finding source -> edge collector; the collector's tier comes from SOURCE_TIERS.
 _COLLECTORS = {
-    "MCP_SCAN": ("mcp-scan", "static_scan"),
-    "CONTAINER": ("container-scan", "static_scan"),
-    "SBOM": ("sbom-ingest", "static_scan"),
-    "CLOUD_CIS": ("cloud-cis", "modeled_infrastructure"),
-    "CLOUD_SECURITY": ("cloud-security", "modeled_infrastructure"),
-    "PROXY": ("runtime-proxy", "runtime_observed"),
-    "SAST": ("sast", "static_scan"),
-    "SKILL": ("skill-audit", "static_scan"),
-    "BROWSER_EXT": ("browser-extension-scan", "static_scan"),
-    "EXTERNAL": ("external-import", "recorded"),
-    "FILESYSTEM": ("filesystem-scan", "static_scan"),
-    "PROMPT_SCAN": ("prompt-scan", "static_scan"),
-    "SECRET_SCAN": ("secret-scan", "static_scan"),
-    "DSPM": ("dspm", "recorded"),
-    "MODEL_SCAN": ("model-scan", "static_scan"),
+    "MCP_SCAN": "mcp-scan",
+    "CONTAINER": "container-scan",
+    "SBOM": "sbom-ingest",
+    "CLOUD_CIS": "cloud-cis",
+    "CLOUD_SECURITY": "cloud-security",
+    "PROXY": "runtime-proxy",
+    "SAST": "sast",
+    "SKILL": "skill-audit",
+    "BROWSER_EXT": "browser-extension-scan",
+    "EXTERNAL": "external-import",
+    "FILESYSTEM": "filesystem-scan",
+    "PROMPT_SCAN": "prompt-scan",
+    "SECRET_SCAN": "secret-scan",
+    "DSPM": "dspm",
+    "MODEL_SCAN": "model-scan",
 }
 
 
@@ -130,11 +131,28 @@ def _ensure_asset_node(graph: UnifiedGraph, row: dict[str, Any], entity: EntityT
                 id=node_id,
                 entity_type=entity,
                 label=sanitize_text(_text(asset.get("name")) or identifier, max_len=500),
-                attributes={"asset_type": _text(asset.get("asset_type")), "identifier": sanitize_text(identifier, max_len=500)},
+                attributes={
+                    "asset_type": _text(asset.get("asset_type")),
+                    "identifier": sanitize_text(identifier, max_len=500),
+                    **(_native_keys(row, asset, identifier) if entity == EntityType.CLOUD_RESOURCE else {}),
+                },
                 data_sources=[collector],
             )
         )
     return node_id
+
+
+def _native_keys(row: dict[str, Any], asset: dict[str, Any], identifier: str) -> dict[str, str]:
+    """Record the asset's native key so canonicalization can join it with other sources."""
+    keys = {
+        "cloud_provider": _text(asset.get("provider")).casefold(),
+        "account_id": _text(row.get("account_ref") or asset.get("account_ref")),
+    }
+    if identifier.startswith(("arn:", "/subscriptions/", "projects/")):
+        keys["resource_id"] = identifier
+    elif "." in identifier and " " not in identifier and "/" not in identifier:
+        keys["hostname"] = identifier
+    return {key: value for key, value in keys.items() if value}
 
 
 def _edge_for(finding: UnifiedNode, asset: UnifiedNode) -> tuple[str, str, RelationshipType] | None:
@@ -164,7 +182,8 @@ def _evidence(row: dict[str, Any], collector: str, tier: str) -> dict[str, Any]:
 def _collector(row: dict[str, Any]) -> tuple[str, str]:
     if row.get("source") == "GRAPH_ANALYSIS":
         return "graph-analysis", "derived"
-    return _COLLECTORS.get(_text(row.get("source")), ("finding-import", "static_scan"))
+    collector = _COLLECTORS.get(_text(row.get("source")))
+    return (collector, SOURCE_TIERS[collector]) if collector else ("finding-import", "static_scan")
 
 
 def vulnerability_signal_attributes(row: dict[str, Any]) -> dict[str, Any]:
@@ -260,6 +279,9 @@ def project_finding_rows(graph: UnifiedGraph, findings: Any) -> None:
             continue
         source, target, relationship = edge
         graph.add_edge(UnifiedEdge(source=source, target=target, relationship=relationship, evidence=_evidence(row, collector, tier)))
+        if asset is not None and asset.entity_type in _OBSERVED_ASSETS and collector not in asset.data_sources:
+            # A posture source that names a cloud asset is one more observation of it.
+            asset.data_sources.append(collector)
 
 
 __all__ = [

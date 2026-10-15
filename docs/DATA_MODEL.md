@@ -62,7 +62,7 @@ runtime response validation. The generated UI types consume the same OpenAPI.
 | `ServerSurface` | 10 | `mcp-server`, `container-image`, `oci-tarball`, `filesystem`, `sbom`, `external-scan`, `os-packages`, `sast`, `ai-inventory`, `other` |
 | `AgentStatus` | 2 | `configured`, `installed-not-configured` |
 | `EntityType` | 42 | `agent`, `server`, `package`, `tool`, `tool_call`, `model`, `dataset`, `framework`, `container`, `cloud_resource`, `resource`, `source_file`, `code_module`, `config_file`, `external_import`, `ci_job`, `directory`, `vulnerability`, `misconfiguration`, `credential`, `credential_ref`, `org`, `account`, `user`, `group`, `role`, `policy`, `service_account`, `service_principal`, `federated_identity`, `managed_identity`, `access_grant`, `access_policy`, `blueprint`, `drift_incident`, `data_store`, `api_gateway`, `application`, `provider`, `environment`, `fleet`, `cluster` |
-| `RelationshipType` | 50 | `hosts`, `uses`, `uses_framework`, `depends_on`, `provides_tool`, `exposes_cred`, `reaches_tool`, `serves_model`, `contains`, `imports`, `defines`, `runs`, `configures`, `observes`, `affects`, `vulnerable_to`, `exploitable_via`, `remediates`, `triggers`, `shares_server`, `shares_cred`, `lateral_path`, `manages`, `owns`, `part_of`, `member_of`, `assumes`, `trusts`, `attached`, `inherits`, `can_access`, `cross_account_trust`, `authenticates_as`, `scoped_to`, `governs`, `exhibits_drift`, `exposed_to`, `stores`, `has_permission`, `protects`, `acted_as`, `invoked`, `called`, `used_credential`, `accessed`, `delegated_to`, `trace_step`, `correlates_with`, `possibly_correlates_with`, `belongs_to` |
+| `RelationshipType` | 51 | `hosts`, `hosted_on`, `uses`, `uses_framework`, `depends_on`, `provides_tool`, `exposes_cred`, `reaches_tool`, `serves_model`, `contains`, `imports`, `defines`, `runs`, `configures`, `observes`, `affects`, `vulnerable_to`, `exploitable_via`, `remediates`, `triggers`, `shares_server`, `shares_cred`, `lateral_path`, `manages`, `owns`, `part_of`, `member_of`, `assumes`, `trusts`, `attached`, `inherits`, `can_access`, `cross_account_trust`, `authenticates_as`, `scoped_to`, `governs`, `exhibits_drift`, `exposed_to`, `stores`, `has_permission`, `protects`, `acted_as`, `invoked`, `called`, `used_credential`, `accessed`, `delegated_to`, `trace_step`, `correlates_with`, `possibly_correlates_with`, `belongs_to` |
 
 ### Live Schema Cross-Checks
 
@@ -295,11 +295,11 @@ The effective-permissions overlay inherits a principal's access through the
 access is recorded on `HAS_PERMISSION` as `access="group"` and is not, by itself,
 a privilege escalation (only assume/trust chains are).
 
-### Relationship types (50)
+### Relationship types (51)
 
 | Group | Relationships | Direction |
 |---|---|---|
-| Composition | `HOSTS`, `USES`, `USES_FRAMEWORK`, `DEPENDS_ON`, `PROVIDES_TOOL`, `EXPOSES_CRED`, `REACHES_TOOL`, `SERVES_MODEL`, `CONTAINS`, `OBSERVES` | source → target |
+| Composition | `HOSTS`, `HOSTED_ON`, `USES`, `USES_FRAMEWORK`, `DEPENDS_ON`, `PROVIDES_TOOL`, `EXPOSES_CRED`, `REACHES_TOOL`, `SERVES_MODEL`, `CONTAINS`, `OBSERVES` | source → target |
 | Code topology | `IMPORTS`, `DEFINES`, `RUNS`, `CONFIGURES` | source → target |
 | Risk | `AFFECTS`, `VULNERABLE_TO`, `EXPLOITABLE_VIA`, `REMEDIATES`, `TRIGGERS` | mostly bidirectional |
 | Lateral movement | `SHARES_SERVER`, `SHARES_CRED`, `LATERAL_PATH` | symmetric |
@@ -316,28 +316,35 @@ that tool. Because package-to-function call stacks are not always observable,
 the edge evidence records `mapping_method` and `confidence`; conservative
 server-scope mappings must not be presented as exact function-level proof.
 
-### Canonical class → graph node mapping
+### Node identity
 
-| Canonical class | EntityType | Node id pattern |
-|---|---|---|
-| `Agent` | `AGENT` | `agent:{name}` |
-| `MCPServer` | `SERVER` | `server:{name}` |
-| `Package` | `PACKAGE` | `pkg:{ecosystem}/{name}@{version}` |
-| `MCPTool` | `TOOL` | `tool:{server_name}/{tool_name}` |
-| `Vulnerability` | `VULNERABILITY` | `vuln:{id}` |
-| Credentials (env keys) | `CREDENTIAL` | `cred:{server_name}/{key}` |
-| Cloud findings | `CLOUD_RESOURCE` / `MISCONFIGURATION` | `cloud:{provider}/{resource_id}` |
-| Container layers | `CONTAINER` | `container:{image_ref}` |
+Node ids are minted by shared helpers, never spelled by hand in a producer:
+`agent_graph_id` / `mcp_server_graph_id` in `src/agent_bom/canonical_ids.py`
+(remote MCP servers are one node per tenant, launched servers one node per
+host, name-only servers stay under their agent) and the cloud resource keys in
+`src/agent_bom/core/cloud_identity.py`. After projection,
+`src/agent_bom/graph/asset_canonicalize.py` merges every observation that
+shares a strong provider-native key (ARN, ARM id, self link, Kubernetes uid,
+image digest, principal id) onto one node and records the source ids it
+replaced in `attributes.identity.aliases`. The generated
+[security graph data model](graph/DATA_MODEL.md) lists every entity type and
+relationship the code emits.
 
-The mapping lives in `src/agent_bom/graph/builder.py`. If a new
-entity type is added to the enum, the builder must learn to emit it
-or the dashboard will silently miss it.
+`src/agent_bom/context_graph.py` is the separate lateral-movement view behind
+the `context_graph` MCP tool. Its `NodeKind` / `EdgeKind` enums are a subset of
+the unified taxonomy, mapped by `src/agent_bom/graph/compat.py` when serialized.
 
-`src/agent_bom/context_graph.py` still exposes `NodeKind` and `EdgeKind` for
-backward-compatible reachability scoring and the legacy `context_graph` MCP
-tool. Those enums are a strict subset of the canonical taxonomy above and are
-bridged through `src/agent_bom/graph/compat.py` before data reaches the richer
-API/UI graph. They must not be documented as the complete graph schema.
+### Path stores and path ids
+
+`graph_attack_paths` is the authoritative path store: the complete ranked path
+set materialized once per snapshot (`src/agent_bom/graph/snapshot_paths.py`),
+keyed by `path_identity` — a hash of the ordered hop ids and edge
+relationships, with `:<n>` for repeated routes. Reads use it only when the
+snapshot's `analysis_status["paths"]` records the current derivation version.
+The older `attack_paths` table keeps the analysis-time list saved with each
+snapshot (same `path_key`) for consumers that predate materialization. The
+API's exposure-card `id` (`<source>::<target>::<hops>`) is a readable display
+key for one card, not a storage key.
 
 ---
 

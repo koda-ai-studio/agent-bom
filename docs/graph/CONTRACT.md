@@ -365,7 +365,7 @@ These gaps are tracked as roadmap work. None of them block the guarantees in §2
 ## Correlated runtime identity and path proof
 
 Correlation manifests and edge receipts identify the join contract as
-`scoped-identity.v4`. Container occurrences join only when an authoritative
+`scoped-identity.v5`. Container occurrences join only when an authoritative
 runtime identifier and its provider and account, cluster, or host scope match
 within the requesting tenant. Kubernetes pod identifiers additionally require
 container names. Missing identity stays specific to the source snapshot. Image
@@ -817,7 +817,12 @@ SQLite graph mutations use bounded FIFO admission per resolved database path wit
 
 ### Correlation identity scope
 
-New correlations record `scoped-identity.v4`. Exact provider identities include
+New correlations record `scoped-identity.v5`. Assets that carry a strong
+provider-native key (qualified ARN, AWS instance id bound to account and region,
+Azure ARM id, GCP self link, Kubernetes uid, image digest, principal id,
+Snowflake account-qualified name; see `graph/asset_identity.py`) join on that
+key exactly as a single build's asset canonicalization merges them, and take the
+same canonical id. Otherwise exact provider identities include
 recorded provider, account and location scope; runtime IDs also include the
 recorded host and environment. Provider/environment dimensions and attributes
 are equivalent when they agree. Conflicting values remain separate identities.

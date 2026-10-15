@@ -296,7 +296,7 @@ class CorrelationMergeWorkspace:
                 )
                 for _entity_type, _identity, scan_id, snapshot_created_at, identity_basis, payload in rows
             ]
-            merged = _merge_node(node_observations)
+            merged = _merge_node(node_observations, (entity_type, identity))
             if merged.attributes.get("correlation", {}).get("conflict_fields"):
                 node_conflicts += 1
             self._conn.execute(

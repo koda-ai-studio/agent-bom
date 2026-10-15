@@ -1,9 +1,8 @@
 """Deterministic correlation of immutable graph snapshots.
 
-Correlation is deliberately conservative: it merges observations only when
-their typed canonical identity is exact, and it never creates relationships
-that were absent from every input snapshot. Runtime occurrences require recorded location and occurrence identity;
-reusable image artifacts never establish deployment identity.
+Observations merge only on an exact typed identity (a strong provider key,
+or a located runtime occurrence); no relationship absent from every input is
+created, and image artifacts never establish deployment identity.
 """
 
 from __future__ import annotations
@@ -20,6 +19,7 @@ from typing import Any, Iterable, Mapping, Sequence
 from packageurl import PackageURL
 
 from agent_bom.core.severity import SEVERITY_RANK
+from agent_bom.graph.asset_identity import strong_keys
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.correlation_scope import (
     CORRELATION_IDENTITY_VERSION,
@@ -27,18 +27,10 @@ from agent_bom.graph.correlation_scope import (
     merged_identity_version,
     runtime_stable_identity,
 )
-from agent_bom.graph.correlation_scope import (
-    exact_attribute_identity as _exact_attribute_identity,
-)
-from agent_bom.graph.correlation_scope import (
-    identity_digest as _digest,
-)
-from agent_bom.graph.correlation_scope import (
-    identity_entity_value as _entity_value,
-)
-from agent_bom.graph.correlation_scope import (
-    snapshot_scoped_identity as _snapshot_scoped_identity,
-)
+from agent_bom.graph.correlation_scope import exact_attribute_identity as _exact_attribute_identity
+from agent_bom.graph.correlation_scope import identity_digest as _digest
+from agent_bom.graph.correlation_scope import identity_entity_value as _entity_value
+from agent_bom.graph.correlation_scope import snapshot_scoped_identity as _snapshot_scoped_identity
 from agent_bom.graph.credential_identity import credential_occurrence, is_credential_slot
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
@@ -143,13 +135,10 @@ def correlation_graph_digest(graph: UnifiedGraph) -> str:
     encoder = json.JSONEncoder(sort_keys=True, separators=(",", ":"), default=str)
 
     def write(value: Any) -> None:
-        # One node/edge is bounded; encode it in one chunk to avoid the method
-        # call overhead of feeding every punctuation token separately.
+        # One bounded node/edge per chunk avoids per-token update overhead.
         digest.update(encoder.encode(value).encode("utf-8"))
 
-    # This is the exact canonical JSON emitted by _digest above.  Stream each
-    # item so hashing does not duplicate the full graph as dictionaries plus one
-    # giant encoded bytes object at peak RSS.
+    # The canonical JSON of _digest above, streamed per item to bound peak RSS.
     digest.update(b'{"edges":[')
     for index, edge in enumerate(sorted(graph.edges, key=lambda item: str(item.canonical_id))):
         if index:
@@ -218,12 +207,21 @@ def _oci_digest(node: UnifiedNode) -> str:
     return ""
 
 
+def _strong_identity(node: UnifiedNode, entity_type: str) -> tuple[str, str, str] | None:
+    """The key asset canonicalization merges on, so a snapshot merge and one build agree."""
+    strong = strong_keys(node)
+    return (
+        (entity_type, f"{strong[0].provider or 'native'}:{strong[0].namespace}:{strong[0].value}", f"strong_key:{strong[0].namespace}")
+        if strong
+        else None
+    )
+
+
 def correlation_identity(node: UnifiedNode, *, scan_id: str, nodes: Mapping[str, UnifiedNode] | None = None) -> tuple[str, str, str]:
     """Return ``(entity_type, identity, basis)`` for a source observation.
 
-    A container is a runtime occurrence. Image digests identify reusable artifacts
-    and never authorize joins between permission-bearing deployments. Unknown
-    occurrence identity remains snapshot-scoped.
+    A container is a runtime occurrence; image digests never join deployments.
+    Unknown occurrence identity remains snapshot-scoped.
     """
 
     entity_type = _entity_value(node)
@@ -241,9 +239,8 @@ def correlation_identity(node: UnifiedNode, *, scan_id: str, nodes: Mapping[str,
         if account and entity_type == EntityType.ACCOUNT.value:
             return entity_type, _digest({"provider": "snowflake", "account": account}), "snowflake_account_id"
         local_id = str(node.attributes.get("snowflake_local_id") or "")
-        # Legacy object snapshots already carry account_id plus a collected FQN.
-        # Their persisted IDs remain valid. No scope is inferred for legacy users
-        # or roles whose emitting lane did not preserve their account.
+        # Legacy object snapshots keep their persisted ids; no scope is inferred
+        # for legacy users or roles whose lane did not preserve their account.
         if not local_id and node.attributes.get("fqn") and node.id.startswith(f"{entity_type}:snowflake:"):
             local_id = node.id
         if account and local_id:
@@ -288,7 +285,7 @@ def correlation_identity(node: UnifiedNode, *, scan_id: str, nodes: Mapping[str,
         return _snapshot_scoped_identity(node, scan_id=scan_id)
 
     if entity_type in _CLOUD_RESOURCE_ENTITY_TYPES:
-        exact = _exact_attribute_identity(
+        exact = _strong_identity(node, entity_type) or _exact_attribute_identity(
             node,
             keys=(
                 "arn",
@@ -307,7 +304,7 @@ def correlation_identity(node: UnifiedNode, *, scan_id: str, nodes: Mapping[str,
         return exact or _snapshot_scoped_identity(node, scan_id=scan_id)
 
     if entity_type in _PROVIDER_IDENTITY_ENTITY_TYPES:
-        exact = _exact_attribute_identity(
+        exact = _strong_identity(node, entity_type) or _exact_attribute_identity(
             node,
             keys=(
                 "provider_identity_id",
@@ -567,7 +564,11 @@ def _node_observation_receipt(observation: _NodeObservation) -> dict[str, Any]:
     }
 
 
-def _merge_node(observations: Sequence[_NodeObservation]) -> UnifiedNode:
+def _strong_group(observations: Sequence[_NodeObservation]) -> bool:  # joined on a strong key under several source ids
+    return len({item.node.id for item in observations}) > 1 and all(item.identity_basis.startswith("strong_key:") for item in observations)
+
+
+def _merge_node(observations: Sequence[_NodeObservation], key: tuple[str, str]) -> UnifiedNode:
     ordered = sorted(
         observations,
         key=lambda item: (_timestamp_instant(item.snapshot.created_at), item.snapshot.scan_id, item.node.id),
@@ -602,7 +603,7 @@ def _merge_node(observations: Sequence[_NodeObservation]) -> UnifiedNode:
     first_seen_values = [item.node.first_seen for item in ordered if item.node.first_seen]
     last_seen_values = [item.node.last_seen for item in ordered if item.node.last_seen]
     return UnifiedNode(
-        id=newest.id,
+        id=f"{key[0]}:{key[1]}" if _strong_group(observations) else newest.id,
         entity_type=newest.entity_type,
         label=newest.label,
         category_uid=newest.category_uid,
@@ -666,8 +667,7 @@ def _merge_edge(
         source=source_id,
         target=target_id,
         relationship=newest.relationship,
-        # Conservative merge: conflicting directionality cannot expand an
-        # attacker's traversal. Every observation must support bidirectionality.
+        # Bidirectional only when every observation is; conflicts never widen traversal.
         direction="bidirectional" if all(item.edge.direction == "bidirectional" for item in ordered) else "directed",
         weight=max(float(item.edge.weight) for item in ordered),
         traversable=all(bool(item.edge.traversable) for item in ordered),
@@ -718,7 +718,7 @@ def merge_graph_snapshots(
 
     output = UnifiedGraph(scan_id=correlation_id, tenant_id=tenant_id, created_at=created_at or _now_iso())
     output_id_by_key: dict[tuple[str, str], str] = {}
-    merged_nodes = [(key, _merge_node(node_groups[key])) for key in sorted(node_groups)]
+    merged_nodes = [(key, _merge_node(node_groups[key], key)) for key in sorted(node_groups)]
     candidate_id_counts: dict[str, int] = {}
     for _key, node in merged_nodes:
         candidate_id_counts[node.id] = candidate_id_counts.get(node.id, 0) + 1

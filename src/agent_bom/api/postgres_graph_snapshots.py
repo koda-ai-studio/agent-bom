@@ -98,6 +98,7 @@ class PostgresGraphSnapshotsMixin(PostgresGraphStoreBase):
                 "graph_nodes",
                 "graph_snapshots",
                 "graph_filter_presets",
+                "graph_node_aliases",
             ):
                 cursor = conn.execute(f"DELETE FROM {table} WHERE tenant_id = %s", (tenant_id,))  # nosec B608 - table list is static
                 total += max(int(cursor.rowcount or 0), 0)

@@ -206,9 +206,9 @@ def _add_lineage_scope_edges(graph: UnifiedGraph, lineage: _CloudLineage, agent_
     )
     _add_rel_edge(
         graph,
-        lineage.resource_node_id,
         agent_id,
-        RelationshipType.HOSTS,
+        lineage.resource_node_id,
+        RelationshipType.HOSTED_ON,
         {"source": "cloud_origin", "resource_id": lineage.resource_id},
     )
 
