@@ -11,6 +11,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
+from agent_bom.graph.asset_canonicalize import canonicalize_assets
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.credential_findings import project_credential_findings
 from agent_bom.graph.finding_row_projection import project_finding_rows
@@ -40,6 +41,8 @@ def apply_build_analysis(graph: UnifiedGraph, report_json: dict[str, Any], ports
     # Assessments must not feed back into the topology analysis that produced them.
     project_credential_findings(graph, report_json.get("findings"))
     project_finding_rows(graph, report_json.get("findings"))
+    # Assets a finding row named for the first time join the asset they observe.
+    canonicalize_assets(graph)
     audit_graph_contract(graph)
 
 

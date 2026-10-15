@@ -625,6 +625,20 @@ CREATE INDEX IF NOT EXISTS idx_pg_graph_attack_paths_source
     ON graph_attack_paths(tenant_id, scan_id, source_node, rank_index);
 CREATE INDEX IF NOT EXISTS idx_pg_graph_attack_paths_queue ON graph_attack_paths(tenant_id, scan_id, queue_rank);
 
+-- Source node ids replaced by asset canonicalization, per tenant.
+CREATE TABLE IF NOT EXISTS graph_node_aliases (
+    tenant_id        TEXT NOT NULL DEFAULT 'default',
+    alias_id         TEXT NOT NULL,
+    canonical_id     TEXT NOT NULL,
+    entity_type      TEXT NOT NULL DEFAULT '',
+    identity_version TEXT NOT NULL DEFAULT '',
+    scan_id          TEXT NOT NULL DEFAULT '',
+    updated_at       TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY (tenant_id, alias_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_pg_graph_node_aliases_canonical ON graph_node_aliases(tenant_id, canonical_id);
+
 CREATE TABLE IF NOT EXISTS graph_filter_presets (
     name        TEXT NOT NULL,
     tenant_id   TEXT NOT NULL DEFAULT 'default',
@@ -1281,6 +1295,24 @@ BEGIN
           AND policyname = 'graph_attack_paths_tenant_isolation'
     ) THEN
         CREATE POLICY graph_attack_paths_tenant_isolation ON graph_attack_paths
+            USING (public.abom_rls_bypass() OR tenant_id = public.abom_current_tenant())
+            WITH CHECK (public.abom_rls_bypass() OR tenant_id = public.abom_current_tenant());
+    END IF;
+END
+$$;
+
+ALTER TABLE graph_node_aliases ENABLE ROW LEVEL SECURITY;
+ALTER TABLE graph_node_aliases FORCE ROW LEVEL SECURITY;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = 'public'
+          AND tablename = 'graph_node_aliases'
+          AND policyname = 'graph_node_aliases_tenant_isolation'
+    ) THEN
+        CREATE POLICY graph_node_aliases_tenant_isolation ON graph_node_aliases
             USING (public.abom_rls_bypass() OR tenant_id = public.abom_current_tenant())
             WITH CHECK (public.abom_rls_bypass() OR tenant_id = public.abom_current_tenant());
     END IF;

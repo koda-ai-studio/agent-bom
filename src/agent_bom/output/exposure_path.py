@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from agent_bom.canonical_ids import agent_graph_id
 from agent_bom.models import BlastRadius
+from agent_bom.package_utils import canonical_package_key
 
 if TYPE_CHECKING:
     from agent_bom.finding import Finding
@@ -40,13 +42,10 @@ def exposure_path_for_finding(
     pkg_version = package_version(finding)
     ecosystem = package_ecosystem(finding)
     display_name = _display_package_name(pkg_name, pkg_version or None)
-    package_ref = f"pkg:{ecosystem}:{display_name}@{pkg_version or 'unknown'}"
+    package_ref, finding_ref, tool_refs, credential_refs = _graph_node_refs(finding, display_name, pkg_version, ecosystem)
     vuln_id = finding.cve_id or finding.title or finding.asset.name
-    finding_ref = f"finding:{vuln_id}"
     source_ref, server_refs = _primary_runtime_spine_for_finding(finding, package_ref)
     target_ref = finding_ref
-    tool_refs = _tool_refs_for_finding(finding)
-    credential_refs = _credential_refs_for_finding(finding)
     hops = _ordered_unique([source_ref, *server_refs, package_ref, target_ref])
     nodes = _ordered_unique([*hops, *tool_refs[:3], *credential_refs[:3]])
     relationships = _relationships_for_finding(
@@ -94,6 +93,7 @@ def exposure_path_for_finding(
         "hops": hops,
         "relationships": relationships,
         "nodeIds": nodes,
+        "nodeLabels": _node_labels(finding, source_ref, server_refs, package_ref, display_name, pkg_version, vuln_id),
         "edgeIds": [rel["id"] for rel in relationships],
         "findings": [vuln_id],
         "affectedAgents": list(finding.affected_agents[:10]),
@@ -142,9 +142,11 @@ def exposure_path_for_blast_radius(br: BlastRadius, *, rank: int | None = None) 
     return exposure_path_for_report_finding(blast_radius_to_finding(br), br=br, rank=rank)
 
 
-def _chain_token(hop: str) -> str:
-    """Render a single hop ref (``server:database-server``) as a display token."""
+def _chain_token(hop: str, labels: dict[str, str] | None = None) -> str:
+    """Render a single hop ref as a display token, preferring its recorded label."""
 
+    if labels and labels.get(hop):
+        return labels[hop]
     if hop.startswith("pkg:") and hop.count(":") >= 2:
         return hop.split(":", 2)[2]
     return hop.rsplit(":", 1)[-1] if ":" in hop else hop
@@ -161,7 +163,7 @@ def exposure_path_chain(path: dict[str, Any], *, include_tool: bool = True) -> s
         return next((hop for hop in hops if hop.startswith(prefix)), None)
 
     spine: list[str] = [hops[0]]
-    for candidate in (first("server:"), first("pkg:"), path.get("target") or first("finding:")):
+    for candidate in (first("server:"), first("pkg:"), path.get("target") or first("vuln:") or first("finding:")):
         if candidate and candidate not in spine:
             spine.append(candidate)
     if include_tool:
@@ -172,7 +174,8 @@ def exposure_path_chain(path: dict[str, Any], *, include_tool: bool = True) -> s
         tool = first("tool:") or next((node for node in nodes if node.startswith("tool:")), None)
         if tool and tool not in spine:
             spine.append(tool)
-    return " → ".join(_chain_token(hop) for hop in spine)
+    labels = path.get("nodeLabels") if isinstance(path.get("nodeLabels"), dict) else None
+    return " → ".join(_chain_token(hop, labels) for hop in spine)
 
 
 def exposure_path_blast_summary(path: dict[str, Any]) -> str:
@@ -208,35 +211,6 @@ def exposure_path_brief(br: BlastRadius, *, rank: int) -> dict[str, str]:
     return exposure_path_brief_for_finding(blast_radius_to_finding(br), rank=rank)
 
 
-def _agent_label(agent: Any) -> str:
-    return str(getattr(agent, "name", "") or getattr(agent, "stable_id", "") or "unknown-agent")
-
-
-def _server_label(server: Any) -> str:
-    return str(getattr(server, "name", "") or getattr(server, "stable_id", "") or "unknown-server")
-
-
-def _source_ref(br: BlastRadius) -> str:
-    if br.affected_agents:
-        return f"agent:{_agent_label(br.affected_agents[0])}"
-    if br.affected_servers:
-        return f"server:{_server_label(br.affected_servers[0])}"
-    return f"pkg:{br.package.ecosystem}:{_display_package_name(br.package.name, br.package.version)}@{br.package.version or 'unknown'}"
-
-
-def _source_ref_for_finding(
-    finding: Finding,
-    package_name_value: str,
-    package_version_value: str,
-    ecosystem: str,
-) -> str:
-    if finding.affected_agents:
-        return f"agent:{finding.affected_agents[0]}"
-    if finding.affected_servers:
-        return f"server:{finding.affected_servers[0]}"
-    return f"pkg:{ecosystem}:{package_name_value}@{package_version_value or 'unknown'}"
-
-
 def _primary_runtime_spine_for_finding(finding: Finding, package_ref: str) -> tuple[str, list[str]]:
     """Choose one evidence-backed agent → MCP server spine for a finding.
 
@@ -260,61 +234,55 @@ def _primary_runtime_spine_for_finding(finding: Finding, package_ref: str) -> tu
         return package_ref, []
 
     primary_server = runtime_servers[0]
-    links = evidence.get("agent_server_links")
-    if isinstance(links, list):
-        for link in links:
-            if not isinstance(link, dict) or str(link.get("server") or "") != primary_server:
-                continue
-            agent = str(link.get("agent") or "").strip()
-            if agent and agent in finding.affected_agents:
-                return f"agent:{agent}", [f"server:{primary_server}"]
+    links = [link for link in evidence.get("agent_server_links") or [] if isinstance(link, dict)]
+    server_ref = next(
+        (str(link["server_ref"]) for link in links if link.get("server") == primary_server and link.get("server_ref")),
+        f"server:{primary_server}",
+    )
+    for link in links:
+        agent = str(link.get("agent") or "").strip()
+        if str(link.get("server") or "") == primary_server and agent and agent in finding.affected_agents:
+            return str(link.get("agent_ref") or agent_graph_id(agent)), [str(link.get("server_ref") or server_ref)]
 
     if finding.affected_agents:
-        return f"agent:{finding.affected_agents[0]}", [f"server:{primary_server}"]
-    return f"server:{primary_server}", [f"server:{primary_server}"]
+        return agent_graph_id(finding.affected_agents[0]), [server_ref]
+    return server_ref, [server_ref]
 
 
-def _server_refs(br: BlastRadius) -> list[str]:
-    return [f"server:{_server_label(server)}" for server in br.affected_servers]
+def _graph_node_refs(finding: Finding, display_name: str, version: str, ecosystem: str) -> tuple[str, str, list[str], list[str]]:
+    """Package, finding, tool and credential refs spelled as graph node ids."""
+    evidence = finding.evidence if isinstance(finding.evidence, dict) else {}
+    package_ref = f"pkg:{canonical_package_key(display_name, version or 'unknown', ecosystem, evidence.get('package_purl') or None)}"
+    finding_ref = f"vuln:{finding.cve_id}" if finding.cve_id else f"finding:{finding.title or finding.asset.name}"
+    tools = _graph_refs(evidence, "graph_tool_refs") or [f"tool:{tool}" for tool in finding.exposed_tools]
+    credentials = _graph_refs(evidence, "graph_credential_refs") or [f"credential:{name}" for name in finding.exposed_credentials]
+    return package_ref, finding_ref, tools, credentials
 
 
-def _server_refs_for_finding(finding: Finding) -> list[str]:
-    return [f"server:{server}" for server in finding.affected_servers]
+def _graph_refs(evidence: dict[str, Any], key: str) -> list[str]:
+    refs = evidence.get(key)
+    return [str(ref) for ref in refs if str(ref).strip()] if isinstance(refs, list) else []
 
 
-def _tool_refs(br: BlastRadius) -> list[str]:
-    return [f"tool:{tool.name}" for tool in br.exposed_tools]
-
-
-def _tool_refs_for_finding(finding: Finding) -> list[str]:
-    return [f"tool:{tool}" for tool in finding.exposed_tools]
-
-
-def _credential_refs(br: BlastRadius) -> list[str]:
-    return [f"credential:{name}" for name in br.exposed_credentials]
-
-
-def _credential_refs_for_finding(finding: Finding) -> list[str]:
-    return [f"credential:{name}" for name in finding.exposed_credentials]
-
-
-def _relationships(br: BlastRadius, source_ref: str, package_ref: str, finding_ref: str) -> list[dict[str, str]]:
-    rels: list[dict[str, str]] = []
-
-    def add(rel_type: str, source: str, target: str) -> None:
-        rels.append({"id": f"{source}->{rel_type}->{target}", "type": rel_type, "source": source, "target": target})
-
-    for server_ref in _server_refs(br)[:3]:
-        add("uses", source_ref, server_ref)
-        add("depends_on", server_ref, package_ref)
-    if not br.affected_servers:
-        add("depends_on", source_ref, package_ref)
-    add("vulnerable_to", package_ref, finding_ref)
-    for tool_ref in _tool_refs(br)[:3]:
-        add("provides_tool", source_ref, tool_ref)
-    for credential_ref in _credential_refs(br)[:3]:
-        add("exposes_credential", source_ref, credential_ref)
-    return rels
+def _node_labels(
+    finding: Finding, source_ref: str, server_refs: list[str], package_ref: str, display_name: str, version: str, vuln_id: str
+) -> dict[str, str]:
+    """Human labels for graph-id hops, so a chain never renders an opaque id."""
+    labels = {package_ref: f"{display_name}@{version}" if version else display_name, source_ref: "", **dict.fromkeys(server_refs, "")}
+    links = finding.evidence.get("agent_server_links") if isinstance(finding.evidence, dict) else None
+    for link in links if isinstance(links, list) else []:
+        if isinstance(link, dict):
+            labels.update(
+                {
+                    str(link.get("agent_ref") or ""): str(link.get("agent") or ""),
+                    str(link.get("server_ref") or ""): str(link.get("server") or ""),
+                }
+            )
+    labels[f"vuln:{vuln_id}"] = vuln_id
+    evidence = finding.evidence if isinstance(finding.evidence, dict) else {}
+    for ref in [*_graph_refs(evidence, "graph_tool_refs"), *_graph_refs(evidence, "graph_credential_refs")]:
+        labels[ref] = ref.rsplit(":", 1)[-1]
+    return {ref: label for ref, label in labels.items() if ref and label}
 
 
 def _relationships_for_finding(

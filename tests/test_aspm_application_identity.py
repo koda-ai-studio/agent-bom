@@ -53,3 +53,12 @@ def test_real_source_paths_and_resource_names_still_derive_applications() -> Non
             _finding(asset_type="cloud_resource", name="payments-api", location=None, source="CLOUD_CIS"),
         ]
     ) == ["payments-api", "services/billing"]
+
+
+def test_compute_hosts_are_not_applications() -> None:
+    vm = _finding(asset_type="cloud_resource", name="compute-00", location=None, source="CLOUD_SECURITY")
+    vm["asset"]["identifier"] = "arn:aws:ec2:us-east-1:210987654321:instance/i-0abc"
+    host = _finding(asset_type="cloud_resource", name="ip-10-0-0-1.ec2.internal", location=None, source="EXTERNAL")
+    host["asset"]["resource_type"] = "host"
+    service = _finding(asset_type="cloud_resource", name="payments-api", location=None, source="CLOUD_CIS")
+    assert _applications([vm, host, service]) == ["payments-api"]

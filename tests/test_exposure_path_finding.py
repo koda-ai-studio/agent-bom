@@ -121,13 +121,13 @@ def test_non_runtime_inventory_surfaces_do_not_fabricate_agent_server_hops() -> 
     assert finding.asset.asset_type == "package"
     assert finding.asset.name == "chromadb"
     assert path["source"] == "pkg:pypi:chromadb@1.1.1"
-    assert path["hops"] == ["pkg:pypi:chromadb@1.1.1", "finding:CVE-2026-45829"]
+    assert path["hops"] == ["pkg:pypi:chromadb@1.1.1", "vuln:CVE-2026-45829"]
     assert path["relationships"] == [
         {
-            "id": "pkg:pypi:chromadb@1.1.1->vulnerable_to->finding:CVE-2026-45829",
+            "id": "pkg:pypi:chromadb@1.1.1->vulnerable_to->vuln:CVE-2026-45829",
             "type": "vulnerable_to",
             "source": "pkg:pypi:chromadb@1.1.1",
-            "target": "finding:CVE-2026-45829",
+            "target": "vuln:CVE-2026-45829",
         }
     ]
     assert path["affectedAgents"] == ["ai-inventory", "project:crewai"]
@@ -154,11 +154,11 @@ def test_exposure_path_chooses_one_observed_agent_mcp_server_pair() -> None:
     assert path["source"] == "agent:primary-agent"
     assert path["hops"] == [
         "agent:primary-agent",
-        "server:primary-mcp",
+        "server:primary-agent:primary-mcp",
         "pkg:npm:lodash@4.17.20",
-        "finding:CVE-2024-0001",
+        "vuln:CVE-2024-0001",
     ]
-    assert "server:secondary-mcp" not in path["nodeIds"]
+    assert not [node for node in path["nodeIds"] if "secondary" in node]
 
 
 def test_json_and_sarif_exposure_paths_use_finding_native_projection() -> None:

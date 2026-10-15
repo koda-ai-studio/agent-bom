@@ -18,7 +18,7 @@ Class `runtime` · directed · traversable · required evidence `source`, `tier`
 - `tool_call` → `cloud_resource`, `credential`, `credential_ref`, `dataset`, `resource`
 - `user` → `cloud_resource`, `data_store`, `dataset`, `resource`
 
-Emitted by: `graph/builder.py`, `graph/builder_snowflake_governance.py`, `graph/runtime_projection.py`, `graph/trace_projection.py`
+Emitted by: `graph/builder_snowflake_governance.py`, `graph/cloud_audit_projection.py`, `graph/runtime_projection.py`, `graph/trace_projection.py`
 
 ## `acted_as`
 
@@ -164,7 +164,7 @@ Class `structural` · directed · traversable · required evidence `source`, `ti
 - `source_file` → `package`
 - `tool` → `misconfiguration`, `vulnerability`
 
-Emitted by: `graph/agent_projection.py`, `graph/builder.py`, `graph/builder_cloud_inventory.py`, `graph/builder_cloud_lineage.py`, `graph/builder_snowflake_platform.py`, `graph/cloud_context.py`, `graph/code_graph_overlay.py`, `graph/repo_structure_overlay.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
+Emitted by: `graph/agent_projection.py`, `graph/builder.py`, `graph/builder_cloud_inventory.py`, `graph/builder_cloud_lineage.py`, `graph/builder_snowflake_platform.py`, `graph/cloud_context.py`, `graph/code_graph_overlay.py`, `graph/repo_structure_overlay.py`; demo fixtures: `demo_estate/compute_identity_lane.py`, `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
 
 ## `correlates_with`
 
@@ -279,6 +279,16 @@ Class `authority` · directed · traversable · required evidence `source`, `tie
 
 Emitted by: `graph/builder.py`, `graph/builder_cloud_principals.py`, `graph/builder_snowflake_objects.py`, `graph/cloud_rbac.py`, `graph/effective_permissions.py`
 
+## `hosted_on`
+
+Class `dependency` · directed · traversable · required evidence `source`, `tier` · 12 pairs
+
+- `agent` → `cloud_resource`, `cluster`, `container`, `fleet`
+- `container` → `cloud_resource`, `cluster`, `container`, `fleet`
+- `server` → `cloud_resource`, `cluster`, `container`, `fleet`
+
+Emitted by: `graph/builder_cloud_lineage.py`, `graph/hosting_projection.py`
+
 ## `hosts`
 
 Class `structural` · directed · traversable · required evidence `source`, `tier` · 25 pairs
@@ -323,7 +333,7 @@ Class `runtime` · directed · traversable · required evidence `source`, `tier`
 - `service_principal` → `cloud_resource`
 - `user` → `cloud_resource`, `tool`, `tool_call`
 
-Emitted by: `graph/builder.py`, `graph/runtime_projection.py`, `graph/trace_projection.py`; demo fixtures: `demo_estate/showcase_graph.py`
+Emitted by: `graph/cloud_audit_projection.py`, `graph/runtime_projection.py`, `graph/trace_projection.py`; demo fixtures: `demo_estate/showcase_graph.py`
 
 ## `lateral_path`
 
@@ -381,7 +391,7 @@ Class `governance` · directed · traversable · required evidence `source`, `ti
 - `service_principal` → `agent`, `cloud_resource`, `environment`
 - `user` → `agent`, `cloud_resource`, `environment`
 
-Emitted by: `graph/builder.py`, `graph/builder_snowflake_cortex.py`, `graph/builder_snowflake_governance.py`, `graph/cloud_context.py`
+Emitted by: `graph/builder.py`, `graph/builder_snowflake_cortex.py`, `graph/builder_snowflake_governance.py`, `graph/cloud_audit_projection.py`, `graph/cloud_context.py`
 
 ## `part_of`
 
@@ -400,12 +410,21 @@ Emitted by: `graph/builder_cloud_lineage.py`, `graph/builder_network_inventory.p
 
 ## `possibly_correlates_with`
 
-Class `correlation` · bidirectional · not traversable · required evidence `source`, `tier` · 4 pairs
+Class `correlation` · bidirectional · not traversable · required evidence `source`, `tier` · 39 pairs
 
 - `agent` → `agent`, `server`
+- `cloud_resource` → `cloud_resource`, `cluster`, `container`
+- `cluster` → `cloud_resource`, `cluster`, `container`
+- `container` → `cloud_resource`, `cluster`, `container`
+- `data_store` → `data_store`
+- `managed_identity` → `managed_identity`, `role`, `service_account`, `service_principal`, `user`
+- `role` → `managed_identity`, `role`, `service_account`, `service_principal`, `user`
 - `server` → `agent`, `server`
+- `service_account` → `managed_identity`, `role`, `service_account`, `service_principal`, `user`
+- `service_principal` → `managed_identity`, `role`, `service_account`, `service_principal`, `user`
+- `user` → `managed_identity`, `role`, `service_account`, `service_principal`, `user`
 
-Emitted by: `graph/builder_frameworks.py`
+Emitted by: `graph/asset_canonicalize.py`, `graph/builder_frameworks.py`
 
 ## `protects`
 

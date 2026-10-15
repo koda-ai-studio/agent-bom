@@ -348,7 +348,7 @@ _ASSET_SPECS: tuple[dict[str, Any], ...] = (
         "data_classifications": ["phi", "pii"],
     },
     {
-        "asset_id": "mcp:server:clinical-analytics",
+        "asset_id": "server:861f4341-475a-5048-9475-1a467e526e3c",
         "provider": "mcp",
         "resource_type": "server",
         "native_id": "mcp://clinical-analytics",
@@ -368,7 +368,7 @@ _ASSET_SPECS: tuple[dict[str, Any], ...] = (
         "environment": "production",
         "account_scope": "member-ai-prod",
         "tags": {
-            "mcp_server": "mcp:server:clinical-analytics",
+            "mcp_server": "server:861f4341-475a-5048-9475-1a467e526e3c",
             "write_capable": "false",
             "reads_data": "snowflake:table:nh_prod/analytics/phi/patient_summary",
         },

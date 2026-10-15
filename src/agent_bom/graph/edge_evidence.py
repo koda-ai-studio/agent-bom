@@ -84,6 +84,22 @@ SOURCE_TIERS: dict[str, str] = {
     "repo-structure-overlay": _STATIC,
     "repo-trust-overlay": _STATIC,
     "aspm-overlay": _STATIC,
+    # Collectors that turn report finding rows into graph edges.
+    "container-scan": _STATIC,
+    "sbom-ingest": _STATIC,
+    "cloud-cis": _MODELED,
+    "cloud-security": _MODELED,
+    "sast": _STATIC,
+    "browser-extension-scan": _STATIC,
+    "external-import": _RECORDED,
+    "filesystem-scan": _STATIC,
+    "prompt-scan": _STATIC,
+    "secret-scan": _STATIC,
+    "dspm": _RECORDED,
+    "model-scan": _STATIC,
+    # Hosting recorded by the Kubernetes API; candidates derived from identity keys.
+    "kubernetes": _RECORDED,
+    "asset-canonicalization": _DERIVED,
 }
 
 # Collector-name prefixes for families whose names carry a variant suffix.

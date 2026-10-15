@@ -9,6 +9,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime
 from pathlib import Path
 
+from agent_bom.canonical_ids import agent_graph_id_for, mcp_server_graph_id_for
 from agent_bom.finding import Asset, Finding, FindingSource, FindingType, blast_radius_to_finding
 from agent_bom.models import (
     Agent,
@@ -781,11 +782,14 @@ def test_exposure_path_is_embedded_in_sarif_properties():
     assert exposure_path["affectedServers"] == ["prod-mcp"]
     assert exposure_path["reachableTools"] == ["deploy"]
     assert exposure_path["exposedCredentials"] == ["AWS_SECRET_ACCESS_KEY"]
+    agent_id, server_id = agent_graph_id_for(agent), mcp_server_graph_id_for(server, agent)
+    assert agent_id == "agent:prod-agent"
+    assert server_id.startswith("server:")
     assert {
-        "id": "agent:prod-agent->uses->server:prod-mcp",
+        "id": f"{agent_id}->uses->{server_id}",
         "type": "uses",
-        "source": "agent:prod-agent",
-        "target": "server:prod-mcp",
+        "source": agent_id,
+        "target": server_id,
     } in exposure_path["relationships"]
 
 

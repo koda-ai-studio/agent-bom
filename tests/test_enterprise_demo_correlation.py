@@ -65,7 +65,7 @@ def test_primary_incident_correlates_ci_cloud_workload_mcp_data_and_llm() -> Non
         ("cloud_resource:aws:ecr:image:member-copilot@sha256:4f2c8d66a10b490c6f5e7a2f91f7eb04cf9b1001df06d422ad2c42c5bc82f20a"),
         "kubernetes:cluster:eks/member-ai-prod",
         "kubernetes:workload:member-ai-prod/ai-prod/member-copilot",
-        "mcp:server:clinical-analytics",
+        "server:861f4341-475a-5048-9475-1a467e526e3c",
         "mcp:tool:clinical-analytics/execute_sql",
         "snowflake:database:nh_prod/analytics",
         "snowflake:table:nh_prod/analytics/phi/patient_summary",

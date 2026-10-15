@@ -83,8 +83,16 @@ CONTROL_PLANE_SCHEMA_COMPONENTS: tuple[StorageSchemaComponent, ...] = (
     StorageSchemaComponent(
         "graph",
         "sqlite/postgres",
-        ("graph_nodes", "graph_edges", "graph_node_search", "graph_snapshots", "graph_correlation_runs", "graph_attack_paths"),
-        version=8,
+        (
+            "graph_nodes",
+            "graph_edges",
+            "graph_node_search",
+            "graph_snapshots",
+            "graph_correlation_runs",
+            "graph_attack_paths",
+            "graph_node_aliases",
+        ),
+        version=9,
     ),
     StorageSchemaComponent("webhook_subscriptions", "sqlite/postgres", ("webhook_subscriptions",)),
     StorageSchemaComponent("kspm_cluster_posture", "sqlite/postgres", ("kspm_cluster_posture",)),

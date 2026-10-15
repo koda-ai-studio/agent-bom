@@ -11,7 +11,7 @@ flowchart LR
     cloud["Cloud and platform providers<br/>16 built in"]
     traces["Trace connectors<br/>langfuse, langsmith"]
     findings["Finding sources<br/>16 FindingSource values"]
-    collectors["Edge collectors<br/>48 in SOURCE_TIERS"]
+    collectors["Edge collectors<br/>62 in SOURCE_TIERS"]
   end
   subgraph normalize["Normalization"]
     assettype["asset_type → EntityType<br/>49 spellings"]
@@ -43,7 +43,7 @@ flowchart LR
 - Cloud and platform providers (`cloud/__init__.py` `_PROVIDERS`): `aws`, `azure`, `coreweave`, `crusoe`, `databricks`, `gcp`, `huggingface`, `lambda`, `mlflow`, `nebius`, `ollama`, `openai`, `runpod`, `snowflake`, `vastai`, `wandb`
 - Trace connectors (`trace_connectors.py`): `langfuse`, `langsmith`
 - Finding sources (`agent_bom.finding.FindingSource`): `MCP_SCAN`, `CONTAINER`, `SBOM`, `CLOUD_CIS`, `CLOUD_SECURITY`, `PROXY`, `SAST`, `SKILL`, `BROWSER_EXT`, `EXTERNAL`, `FILESYSTEM`, `PROMPT_SCAN`, `SECRET_SCAN`, `GRAPH_ANALYSIS`, `DSPM`, `MODEL_SCAN`
-- Edge collectors (`graph/edge_evidence.py` `SOURCE_TIERS`): `access-advisor`, `agent_discovery`, `ai-inventory`, `aspm-overlay`, `ast_analysis`, `authorization-evidence`, `aws-organizations`, `ci_graph_overlay`, `cloud-audit-trail`, `cloud-inventory`, `cloud-rbac`, `cloud_origin`, `cloud_principal`, `cloud_principal_trust`, `cnapp-overlay`, `code_graph_overlay`, `cortex-agent-usage`, `framework-agent`, `gcp-organizations`, `github-actions`, `governance-overlay`, `hardware-attestation-ingest`, `iac`, `mcp-audit`, `mcp-scan`, `nhi-discovery`, `operator_reported_timestamps`, `repo-structure-overlay`, `repo-trust-overlay`, `runtime-feedback`, `runtime-identity`, `runtime-proxy`, `runtime-trace`, `skill-audit`, `snowflake-cortex-agents`, `snowflake-cortex-observability`, `snowflake-exfil`, `snowflake-external-data`, `snowflake-governance`, `snowflake-integrations`, `snowflake-objects`, `snowflake-organizations`, `snowflake-pipeline`, `snowflake-services`, `source-ast`, `tpm-quote`, `vendor-inventory-export`, `warehouse-export`
+- Edge collectors (`graph/edge_evidence.py` `SOURCE_TIERS`): `access-advisor`, `agent_discovery`, `ai-inventory`, `aspm-overlay`, `asset-canonicalization`, `ast_analysis`, `authorization-evidence`, `aws-organizations`, `browser-extension-scan`, `ci_graph_overlay`, `cloud-audit-trail`, `cloud-cis`, `cloud-inventory`, `cloud-rbac`, `cloud-security`, `cloud_origin`, `cloud_principal`, `cloud_principal_trust`, `cnapp-overlay`, `code_graph_overlay`, `container-scan`, `cortex-agent-usage`, `dspm`, `external-import`, `filesystem-scan`, `framework-agent`, `gcp-organizations`, `github-actions`, `governance-overlay`, `hardware-attestation-ingest`, `iac`, `kubernetes`, `mcp-audit`, `mcp-scan`, `model-scan`, `nhi-discovery`, `operator_reported_timestamps`, `prompt-scan`, `repo-structure-overlay`, `repo-trust-overlay`, `runtime-feedback`, `runtime-identity`, `runtime-proxy`, `runtime-trace`, `sast`, `sbom-ingest`, `secret-scan`, `skill-audit`, `snowflake-cortex-agents`, `snowflake-cortex-observability`, `snowflake-exfil`, `snowflake-external-data`, `snowflake-governance`, `snowflake-integrations`, `snowflake-objects`, `snowflake-organizations`, `snowflake-pipeline`, `snowflake-services`, `source-ast`, `tpm-quote`, `vendor-inventory-export`, `warehouse-export`
 
 ## Normalization
 
@@ -62,12 +62,12 @@ A finding row becomes a finding node through `evidence/finding_node_ids.py`:
 
 | Function | Node id |
 |---|---|
-| `_iac_node_id` | `misconfig:iac:{rule_id}:{path}:{evidence.get('line_number') or 0}` |
-| `_benchmark_node_id` | `misconfig:{section}:{check_id}` |
+| `iac_misconfig_node_id` | `misconfig:iac:{rule_id or 'unknown'}:{path or 'unknown'}:{line or 0}` |
+| `benchmark_misconfig_node_id` | `misconfig:{section}:{check_id or 'unknown'}` |
+| `mcp_audit_node_id` | `misconfig:mcp_audit:{finding_id}` |
+| `skill_audit_node_id` | `misconfig:skill_audit:{key}` |
 | `finding_row_node_id` | `misconfig:{source}:{finding_id}` |
 | `finding_row_node_id` | `vuln:{vuln_id}` |
-| `finding_row_node_id` | `misconfig:mcp_audit:{finding_id}` |
-| `finding_row_node_id` | `misconfig:skill_audit:{finding_id}` |
 
 `graph/resource_aliases.py` (Unambiguous resource aliases used to join findings with discovered cloud assets.) resolves a finding's resource reference to an existing node of type `cloud_resource`, `data_store` by provider-native id, typed name or unambiguous name, scoped to provider and account.
 
@@ -85,8 +85,8 @@ Top-level branches of `correlation_identity`, in evaluation order. The first bra
 | 4 | `entity_type == EntityType.CONTAINER.value` | `container` | `cloud_provider`, `cloud_account_id`, `account_id`, `tenant_id`, `subscription_id`, `project_id`, `cluster_id`, `cluster_arn`, `runtime_host_id`, `environment` | `runtime_occurrence`, `snapshot_scoped_runtime_occurrence` | `container_occurrence`, `snapshot_scoped_identity` |
 | 5 | `entity_type == EntityType.PACKAGE.value` | `package` | `purl` | `purl` | `snapshot_scoped_identity` |
 | 6 | `entity_type in _REPOSITORY_ENTITY_TYPES` | `ci_job`, `code_module`, `config_file`, `directory`, `external_import`, `source_file` | `repository_commit`, `commit_sha`, `git_commit`, `repository_path`, `path`, `source_file`, `config_path` | `repository_commit_path` | `snapshot_scoped_identity` |
-| 7 | `entity_type in _CLOUD_RESOURCE_ENTITY_TYPES` | `account`, `api_gateway`, `cloud_resource`, `cluster`, `data_store`, `dataset`, `org`, `provider`, `resource` | `arn`, `resource_arn`, `kubernetes_uid`, `uid`, `resource_id`, `provider_id`, `object_fqn`, `self_link`, `canonical_id`, `stable_id` | `cloud_resource_id` | `exact_attribute_identity`, `snapshot_scoped_identity` |
-| 8 | `entity_type in _PROVIDER_IDENTITY_ENTITY_TYPES` | `federated_identity`, `group`, `managed_identity`, `role`, `service_account`, `service_principal`, `user` | `provider_identity_id`, `principal_id`, `directory_principal_id`, `object_id`, `subject_id`, `arn`, `client_id`, `canonical_id`, `stable_id` | `provider_identity_id` | `exact_attribute_identity`, `snapshot_scoped_identity` |
+| 7 | `entity_type in _CLOUD_RESOURCE_ENTITY_TYPES` | `account`, `api_gateway`, `cloud_resource`, `cluster`, `data_store`, `dataset`, `org`, `provider`, `resource` | `arn`, `resource_arn`, `kubernetes_uid`, `uid`, `resource_id`, `provider_id`, `object_fqn`, `self_link`, `canonical_id`, `stable_id` | `cloud_resource_id` | `strong_identity`, `exact_attribute_identity`, `snapshot_scoped_identity` |
+| 8 | `entity_type in _PROVIDER_IDENTITY_ENTITY_TYPES` | `federated_identity`, `group`, `managed_identity`, `role`, `service_account`, `service_principal`, `user` | `provider_identity_id`, `principal_id`, `directory_principal_id`, `object_id`, `subject_id`, `arn`, `client_id`, `canonical_id`, `stable_id` | `provider_identity_id` | `strong_identity`, `exact_attribute_identity`, `snapshot_scoped_identity` |
 | 9 | `every other entity type` | `access_grant`, `access_policy`, `application`, `blueprint`, `credential_ref`, `drift_incident`, `environment`, `fleet`, `framework`, `misconfiguration`, `model`, `policy`, `vulnerability` | `canonical_id`, `stable_id` | `canonical_id` | `exact_attribute_identity`, `snapshot_scoped_identity` |
 
 ## Per entity type
@@ -107,7 +107,7 @@ Top-level branches of `correlation_identity`, in evaluation order. The first bra
 | `cluster` | 7 | — | — |
 | `code_module` | 6 | — | `application_entrypoint:source:{…}` |
 | `config_file` | 6 | — | — |
-| `container` | 4 | — | `container:{container_image}` |
+| `container` | 4 | — | `container:k8s:pod:{pod_uid}`, `container:{container_image}` |
 | `credential` | 1 | — | — |
 | `credential_ref` | 9 | — | — |
 | `data_store` | 7 | — | `data_store:snowflake:db:{name}`, `data_store:snowflake:schema:{fqn}`, `data_store:snowflake:share:{share_name}` (+4) |
@@ -121,7 +121,7 @@ Top-level branches of `correlation_identity`, in evaluation order. The first bra
 | `framework` | 9 | — | `stable_node_id(…) — UUIDv5` |
 | `group` | 8 | — | — |
 | `managed_identity` | 8 | — | `managed_identity:{provider}:{identity_id}` |
-| `misconfiguration` | 9 | — | `misconfig:cloud-org:{provider}:{check_id}`, `misconfig:graph_analysis:{fid}`, `misconfig:iac:{rule_id}:{finding_path}:{finding_line}` (+5) |
+| `misconfiguration` | 9 | — | `misconfig:cloud-org:{provider}:{check_id}`, `misconfig:graph_analysis:{fid}`, `misconfig:sast:{rule_id}:{finding_path}:{finding_line}` (+2) |
 | `model` | 9 | — | — |
 | `org` | 7 | — | `org:snowflake:{org_name}` |
 | `package` | 5 | `canonical_package_id` | `stable_node_id(…) — UUIDv5` |

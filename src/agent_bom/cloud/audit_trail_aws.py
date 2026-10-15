@@ -46,4 +46,30 @@ def aws_event_fields(raw: Any) -> dict[str, Any] | None:
     resource = resource or _clean(raw.get("EventSource"))
     if not principal or not action or not resource:
         return None
-    return {"principal": principal, "action": action, "resource": resource, "outcome": aws_event_outcome(raw, action)}
+    return {
+        "principal": principal,
+        "action": action,
+        "resource": resource,
+        "outcome": aws_event_outcome(raw, action),
+        **aws_event_identity(raw),
+    }
+
+
+def aws_event_identity(raw: dict[str, Any]) -> dict[str, str]:
+    """The caller's recorded identity ARN, identity type and region; never request content."""
+    document = raw.get("CloudTrailEvent")
+    if not isinstance(document, str) or len(document) > 1_000_000:
+        return {}
+    try:
+        detail = json.loads(document)
+    except (ValueError, TypeError):
+        return {}
+    identity = detail.get("userIdentity") if isinstance(detail, dict) else None
+    if not isinstance(identity, dict):
+        return {}
+    fields = {
+        "principal_arn": _clean(identity.get("arn")),
+        "principal_type": _clean(identity.get("type")),
+        "region": _clean(detail.get("awsRegion")),
+    }
+    return {key: value for key, value in fields.items() if value}

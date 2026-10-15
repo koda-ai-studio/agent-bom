@@ -5,7 +5,7 @@
 
 Storage tables in this domain. Back to the [storage ERD](../storage-erd.md).
 
-19 tables.
+20 tables.
 
 Scratch tables are temporary SQLite build/correlation workspaces, not durable evidence stores.
 
@@ -62,6 +62,12 @@ erDiagram
     text name PK
     text tenant_id PK
   }
+  graph_node_aliases {
+    text tenant_id PK
+    text alias_id PK
+    text canonical_id
+    text scan_id
+  }
   graph_node_search {
     text node_id PK
     text tenant_id PK
@@ -114,6 +120,7 @@ erDiagram
   graph_snapshots ||..o{ edge_observations : "logical scan_id"
   graph_snapshots ||..o{ graph_attack_paths : "logical scan_id"
   graph_snapshots ||..o{ graph_edges : "logical scan_id"
+  graph_snapshots ||..o{ graph_node_aliases : "logical scan_id"
   graph_snapshots ||..o{ graph_node_search : "logical scan_id"
   graph_snapshots ||..o{ graph_nodes : "logical scan_id"
   graph_snapshots ||..o{ interaction_risks : "logical scan_id"
@@ -129,6 +136,7 @@ erDiagram
 | `graph_snapshots` | `edge_observations` | `scan_id` | logical |
 | `graph_snapshots` | `graph_attack_paths` | `scan_id` | logical |
 | `graph_snapshots` | `graph_edges` | `scan_id` | logical |
+| `graph_snapshots` | `graph_node_aliases` | `scan_id` | logical |
 | `graph_snapshots` | `graph_node_search` | `scan_id` | logical |
 | `graph_snapshots` | `graph_nodes` | `scan_id` | logical |
 | `graph_snapshots` | `interaction_risks` | `scan_id` | logical |
@@ -158,6 +166,7 @@ Same column name in several tables here, but no table owns it, so no join is dra
 | `graph_correlation_runs` | Postgres, SQLite | 17 |  | persistent |
 | `graph_edges` | Postgres, SQLite | 18 |  | persistent |
 | `graph_filter_presets` | Postgres | 5 |  | persistent |
+| `graph_node_aliases` | Postgres, SQLite | 7 |  | persistent |
 | `graph_node_search` | Postgres | 8 |  | persistent |
 | `graph_nodes` | Postgres, SQLite | 18 |  | persistent |
 | `graph_scenarios` | Postgres, SQLite | 12 |  | persistent |

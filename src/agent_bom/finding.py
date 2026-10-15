@@ -5,16 +5,18 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
 from agent_bom.advisory_ids import derive_cve_from_advisory_id, finding_advisory_metadata, vulnerability_enrichment_metadata
-from agent_bom.canonical_ids import canonical_finding_id, canonical_id, source_ids
+from agent_bom.canonical_ids import agent_graph_id_for, canonical_finding_id, canonical_id, mcp_server_graph_id_for, source_ids
 from agent_bom.core.asset_types import entity_type_for_asset_type
 from agent_bom.core.exploitability import fused_triage_priority
 from agent_bom.core.packages import synthesize_purl
 from agent_bom.core.sla import finding_owner, finding_sla_fields
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from agent_bom.domain.remediation_model import Remediation
 
 FINDING_SCHEMA_VERSION = "1"
@@ -1509,6 +1511,38 @@ def cloud_org_architecture_finding_to_finding(finding: dict, *, provider: str, o
     )
 
 
+def _tool_name(tool: Any) -> str:
+    return str(tool.get("name", "") if isinstance(tool, dict) else getattr(tool, "name", "") or "")
+
+
+def _agent_server_graph_links(br: Any, entity_name: "Callable[[object], str]") -> tuple[list[dict[str, str]], list[str], list[str]]:
+    """Observed agent→server pairs plus the graph ids every surface shares.
+
+    Refs are derived from the same canonical helpers the graph builder uses, so
+    an exposure path names graph nodes rather than display labels.
+    """
+    affected = {getattr(server, "stable_id", ""): server.name for server in br.affected_servers}
+    tools = {_tool_name(tool) for tool in br.exposed_tools}
+    credentials = set(br.exposed_credentials)
+    links: list[dict[str, str]] = []
+    tool_refs: dict[str, None] = {}
+    credential_refs: dict[str, None] = {}
+    for agent in br.affected_agents:
+        for server in getattr(agent, "mcp_servers", []) or []:
+            server_name = affected.get(getattr(server, "stable_id", ""))
+            if not server_name:
+                continue
+            server_ref = mcp_server_graph_id_for(server, agent)
+            links.append(
+                {"agent": entity_name(agent), "server": server_name, "agent_ref": agent_graph_id_for(agent), "server_ref": server_ref}
+            )
+            tool_names = (_tool_name(tool) for tool in getattr(server, "tools", []) or [])
+            tool_refs.update((f"tool:{server_ref}:{name}", None) for name in tool_names if name and name in tools)
+            credential_names = getattr(server, "credential_names", []) or []
+            credential_refs.update((f"cred:{server_ref}:{name}", None) for name in credential_names if name in credentials)
+    return links, list(tool_refs), list(credential_refs)
+
+
 def blast_radius_to_finding(br: object) -> "Finding":
     """Convert a BlastRadius instance to a unified Finding.
 
@@ -1535,18 +1569,7 @@ def blast_radius_to_finding(br: object) -> "Finding":
         server.name: str(getattr(getattr(server, "surface", None), "value", None) or getattr(server, "surface", ""))
         for server in br.affected_servers
     }
-    affected_server_ids = {getattr(server, "stable_id", ""): server.name for server in br.affected_servers}
-    agent_server_links: list[dict[str, str]] = []
-    for agent in br.affected_agents:
-        for server in getattr(agent, "mcp_servers", []) or []:
-            server_name = affected_server_ids.get(getattr(server, "stable_id", ""))
-            if server_name:
-                agent_server_links.append(
-                    {
-                        "agent": entity_name(agent),
-                        "server": server_name,
-                    }
-                )
+    agent_server_links, graph_tool_refs, graph_credential_refs = _agent_server_graph_links(br, entity_name)
 
     # Asset: a real MCP server when the vulnerable package is installed behind
     # one; otherwise the package itself. Filesystem, SBOM, image, repository,
@@ -1585,6 +1608,9 @@ def blast_radius_to_finding(br: object) -> "Finding":
         "affected_server_count": len(br.affected_servers),
         "affected_server_surfaces": _sanitized_evidence_field(affected_server_surfaces),
         "agent_server_links": _sanitized_evidence_field(agent_server_links),
+        "graph_tool_refs": _sanitized_evidence_field(graph_tool_refs),
+        "graph_credential_refs": _sanitized_evidence_field(graph_credential_refs),
+        "package_purl": pkg.purl,
         "exposed_credential_count": len(br.exposed_credentials),
         "exposed_tool_count": len(br.exposed_tools),
         "hop_depth": getattr(br, "hop_depth", 1),

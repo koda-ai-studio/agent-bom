@@ -360,7 +360,9 @@ def test_generation_backfill_under_non_superuser_migration_owner(monkeypatch, up
                 assert revisions[0] != revisions[1]
                 assert revisions != generations
                 # Alembic head carries the graph marker forward; the additive replay stops at v6.
-                expected_version = 8 if upgrade_path == "migration" else 6
+                from agent_bom.db.graph_store_schema import _GRAPH_SCHEMA_VERSION
+
+                expected_version = _GRAPH_SCHEMA_VERSION if upgrade_path == "migration" else 6
                 assert (
                     conn.execute("SELECT version FROM control_plane_schema_versions WHERE component='graph'").fetchone()[0]
                     == expected_version

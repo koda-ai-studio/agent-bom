@@ -41,6 +41,7 @@ from typing import Any
 
 from agent_bom.cloud.normalization import coerce_truthy
 from agent_bom.core.severity import SEVERITY_BUCKETS_ASPM, SEVERITY_RANK, SEVERITY_RISK_SCORE
+from agent_bom.graph.asset_identity import is_compute_instance
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
@@ -138,6 +139,18 @@ def _manifest_roots(findings: list[Any]) -> list[str]:
 _NON_APPLICATION_ASSET_TYPES = frozenset({"package", "agent", "mcp_server", "server", "mcp_tool", "tool", "identity", "credential"})
 
 
+_HOST_RESOURCE_TYPES = frozenset({"host", "node"})
+
+
+def _is_compute_host(asset: dict[str, Any]) -> bool:
+    # A VM or host runs applications; naming an application after it would
+    # mint one empty application per machine.
+    resource_type = asset.get("resource_type")
+    if str(resource_type or "").casefold() in _HOST_RESOURCE_TYPES:
+        return True
+    return is_compute_instance(resource_type, asset.get("identifier") or asset.get("stable_id"))
+
+
 def _app_identity(finding: Any, manifest_roots: list[str]) -> tuple[str, str]:
     """Derive ``(app_key, app_label)`` for a finding, deterministically.
 
@@ -155,6 +168,8 @@ def _app_identity(finding: Any, manifest_roots: list[str]) -> tuple[str, str]:
     """
     asset = _finding_asset(finding)
     asset_type = str(asset.get("asset_type") or "").lower()
+    if asset_type == "cloud_resource" and _is_compute_host(asset):
+        return ("", "")
     location = _norm_path(asset.get("location"))
     if location and asset_type in _NON_APPLICATION_ASSET_TYPES and any(ch.isspace() for ch in location):
         # An MCP server's "location" is its launch command, not a source path.

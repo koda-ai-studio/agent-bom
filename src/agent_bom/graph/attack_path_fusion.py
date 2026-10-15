@@ -36,7 +36,7 @@ from typing import Any
 from agent_bom.cloud.normalization import coerce_truthy
 from agent_bom.graph.analysis import GraphAnalysisState, GraphAnalysisStatus
 from agent_bom.graph.container import AttackPath, UnifiedGraph
-from agent_bom.graph.edge import UnifiedEdge
+from agent_bom.graph.edge import UnifiedEdge, credential_edge_admits
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.types import EntityType, RelationshipType
 
@@ -305,6 +305,17 @@ def _compute_fused_attack_paths(graph: UnifiedGraph) -> _FusionComputation:
     )
 
 
+def _owner_admits(graph: UnifiedGraph, edge: UnifiedEdge, hops: list[str]) -> bool:
+    """A credential hop must belong to the nearest agent on the chain, if any."""
+    if _rel(edge) != RelationshipType.EXPOSES_CRED:
+        return True
+    for hop in reversed(hops):
+        node = graph.nodes.get(hop)
+        if node is not None and node.entity_type == EntityType.AGENT:
+            return credential_edge_admits(edge, hop)
+    return True
+
+
 def _walk_from_entry(
     graph: UnifiedGraph,
     entry: UnifiedNode,
@@ -367,7 +378,7 @@ def _walk_from_entry(
             return
 
         for edge in graph.adjacency.get(node_id, []):
-            if not edge.traversable or _rel(edge) not in _TRAVERSABLE_RELS:
+            if not edge.traversable or _rel(edge) not in _TRAVERSABLE_RELS or not _owner_admits(graph, edge, hops):
                 continue
             nxt = edge.target
             if nxt in on_path:  # no cycles

@@ -12,6 +12,7 @@ from agent_bom.core.asset_types import _ASSET_TYPE_ALIASES as _ASSET_TYPE_ALIASE
 from agent_bom.core.asset_types import canonical_asset_type as canonical_asset_type
 from agent_bom.core.asset_types import entity_type_for_asset_type as entity_type_for_asset_type
 from agent_bom.core.asset_types import normalize_asset_type as normalize_asset_type
+from agent_bom.evidence.finding_node_ids import iac_misconfig_node_id
 from agent_bom.graph.types import EntityType, RelationshipType
 
 
@@ -63,11 +64,9 @@ def _iac_node_ids(finding: Any) -> tuple[str | None, str | None]:
     evidence = getattr(finding, "evidence", None)
     if not isinstance(evidence, dict) or not evidence.get("iac"):
         return None, None
-    rule_id = evidence.get("rule_id") or "unknown"
     path = evidence.get("file_path") or "unknown"
-    line = evidence.get("line_number") or 0
     category = str(evidence.get("category") or "iac").lower()
-    return f"misconfig:iac:{rule_id}:{path}:{line}", f"iac_target:{category}:{path}"
+    return iac_misconfig_node_id(evidence.get("rule_id"), path, evidence.get("line_number")), f"iac_target:{category}:{path}"
 
 
 def link_findings_to_graph_nodes(findings: list[Any], graph: Any) -> int:

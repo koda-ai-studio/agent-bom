@@ -137,6 +137,22 @@ def _add_occurrence_edge(graph: UnifiedGraph, source: str, target: str, weight: 
     graph.add_edge(UnifiedEdge(source=source, target=target, relationship=RelationshipType.VULNERABLE_TO, weight=weight, evidence=evidence))
 
 
+def _add_reported_package(graph: UnifiedGraph, pkg_id: str, name: str, version: str, ecosystem: str, data_source_tag: str) -> None:
+    graph.add_node(
+        UnifiedNode(
+            id=pkg_id,
+            entity_type=EntityType.PACKAGE,
+            label=f"{name}@{version}" if version else name,
+            attributes={
+                "version": version,
+                "ecosystem": ecosystem,
+                "canonical_id": canonical_graph_node_id(EntityType.PACKAGE.value, pkg_id),
+            },
+            data_sources=[data_source_tag],
+        )
+    )
+
+
 def project_blast_radius(graph: UnifiedGraph, blast_data: list[dict[str, Any]], indexes: BuildIndexes, data_source_tag: str) -> None:
     for br_dict in blast_data:
         vuln_id_str = br_dict.get("vulnerability_id", "")
@@ -153,6 +169,10 @@ def project_blast_radius(graph: UnifiedGraph, blast_data: list[dict[str, Any]], 
         # Link package → vulnerability
         if pkg_name:
             pkg_id = _package_node_id_from_parts(pkg_name, pkg_version, ecosystem, br_dict.get("package_purl") or br_dict.get("purl"))
+            if not graph.has_node(pkg_id):
+                # The scan reported this package vulnerable without an inventoried
+                # host; the package itself is the asset the finding lands on.
+                _add_reported_package(graph, pkg_id, pkg_name, pkg_version, ecosystem, data_source_tag)
             if graph.has_node(pkg_id):
                 _add_occurrence_edge(
                     graph, pkg_id, vuln_node_id, SEVERITY_RISK_SCORE.get(severity, 1.0), _occurrence_evidence(br_dict, data_source_tag)

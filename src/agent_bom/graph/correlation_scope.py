@@ -8,7 +8,7 @@ from typing import Any
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.types import EntityType
 
-CORRELATION_IDENTITY_VERSION = "scoped-identity.v4"
+CORRELATION_IDENTITY_VERSION = "scoped-identity.v5"
 IDENTIFIER_NAMESPACES = {"resource_arn": "arn", "provider_id": "resource_id", "stable_id": "canonical_id"}
 
 

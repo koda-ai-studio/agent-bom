@@ -31,6 +31,7 @@ class RelationshipType(str, Enum):
 
     # ── Static inventory ──
     HOSTS = "hosts"  # provider → agent
+    HOSTED_ON = "hosted_on"  # workload (agent/server/container) → host it runs on
     USES = "uses"  # agent → server
     USES_FRAMEWORK = "uses_framework"  # agent → framework (LangChain/LangGraph/…)
     DEPENDS_ON = "depends_on"  # server → package; framework → package

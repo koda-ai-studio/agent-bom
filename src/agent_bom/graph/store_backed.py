@@ -47,6 +47,7 @@ from __future__ import annotations
 import json
 from collections import OrderedDict
 from collections.abc import Iterator
+from dataclasses import replace
 from typing import TYPE_CHECKING, Any, Optional
 
 from agent_bom.core.severity import SEVERITY_RANK
@@ -64,6 +65,7 @@ from agent_bom.graph.container import GraphCompleteness, UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge, merge_edge_evidence
 from agent_bom.graph.edge_evidence import merge_edge_provenance, normalize_edge_evidence
 from agent_bom.graph.node import UnifiedNode
+from agent_bom.graph.rekey import normalized_rekey_mapping
 from agent_bom.graph.relationship_contract import ContractRejections
 from agent_bom.graph.types import EntityType
 from agent_bom.graph.util import _now_iso
@@ -418,6 +420,41 @@ class StoreBackedUnifiedGraph(UnifiedGraph):
                 self._backend.add_edge_payloads(self._tenant, [_edge_to_row(stored)])
             return
         self._backend.add_edge_payloads(self._tenant, [_edge_to_row(edge)])
+
+    def rekey_nodes(self, mapping: dict[str, str]) -> int:
+        """Store-backed :meth:`UnifiedGraph.rekey_nodes`: move rows, re-point edges, merge duplicates.
+
+        Every edge touching a re-keyed node is read before anything is deleted,
+        so a re-pointed edge that lands on an existing key merges its evidence
+        exactly as ``add_edge`` does. Returns the number of self-edges dropped.
+        """
+        moves = normalized_rekey_mapping(mapping, self._has_node)
+        if not moves:
+            return 0
+        self.flush()
+        touched: dict[str, UnifiedEdge] = {}
+        for old in sorted(moves):
+            for edge in (*self._collect_edges(source=old), *self._collect_edges(target=old)):
+                touched[_edge_key(edge)] = edge
+        nodes = [(old, self._resolve_node(old)) for old in sorted(moves)]
+        self._backend.delete_edge_payloads(self._tenant, sorted(touched))
+        self._backend.delete_node_payloads(self._tenant, sorted(moves))
+        for old, node in nodes:
+            self._cache.pop(old, None)
+            self._dirty.discard(old)
+            if node is not None:
+                node.id = moves[old]
+                self.add_node(node)
+        dropped = 0
+        for key in sorted(touched):
+            edge = touched[key]
+            source, target = moves.get(edge.source, edge.source), moves.get(edge.target, edge.target)
+            if source == target:
+                dropped += 1
+                continue
+            self.add_edge(replace(edge, source=source, target=target))
+        self.flush()
+        return dropped
 
     # ── Query overrides that must not fan out over the whole node set ─────────
 

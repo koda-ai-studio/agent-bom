@@ -25,11 +25,27 @@ def _dict(value: Any) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
 
 
+def iac_misconfig_node_id(rule_id: Any, path: Any, line: Any) -> str:
+    """One IaC rule hit at one file line; absent parts read ``unknown`` / ``0``, never ``None``."""
+    return f"misconfig:iac:{rule_id or 'unknown'}:{path or 'unknown'}:{line or 0}"
+
+
+def benchmark_misconfig_node_id(section: str, check_id: Any) -> str:
+    return f"misconfig:{section}:{check_id or 'unknown'}"
+
+
+def mcp_audit_node_id(finding_id: str) -> str:
+    return f"misconfig:mcp_audit:{finding_id}"
+
+
+def skill_audit_node_id(key: str) -> str:
+    return f"misconfig:skill_audit:{key}"
+
+
 def _iac_node_id(evidence: dict[str, Any]) -> str | None:
     if not evidence.get("iac"):
         return None
-    rule_id, path = evidence.get("rule_id") or "unknown", evidence.get("file_path") or "unknown"
-    return f"misconfig:iac:{rule_id}:{path}:{evidence.get('line_number') or 0}"
+    return iac_misconfig_node_id(evidence.get("rule_id"), evidence.get("file_path"), evidence.get("line_number"))
 
 
 def _benchmark_node_id(evidence: dict[str, Any]) -> str | None:
@@ -37,7 +53,7 @@ def _benchmark_node_id(evidence: dict[str, Any]) -> str | None:
     check_id = _text(evidence.get("check_id"))
     if not evidence.get("benchmark") or not section or not check_id or _text(evidence.get("status")).upper() != "FAIL":
         return None
-    return f"misconfig:{section}:{check_id}"
+    return benchmark_misconfig_node_id(section, check_id)
 
 
 def _is_mcp_audit(row: dict[str, Any], evidence: dict[str, Any]) -> bool:
@@ -59,9 +75,9 @@ def finding_row_node_id(row: dict[str, Any]) -> str | None:
     if dedicated:
         return dedicated
     if _is_mcp_audit(row, evidence):
-        return f"misconfig:mcp_audit:{finding_id}"
+        return mcp_audit_node_id(finding_id)
     if row.get("source") == "SKILL":
-        return f"misconfig:skill_audit:{finding_id}"
+        return skill_audit_node_id(finding_id)
     source = _text(row.get("source")).lower() or "finding"
     return f"misconfig:{source}:{finding_id}"
 

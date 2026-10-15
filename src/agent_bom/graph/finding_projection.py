@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import PurePath
 from typing import Any
 
+from agent_bom.evidence.finding_node_ids import iac_misconfig_node_id, skill_audit_node_id
 from agent_bom.graph.build_indexes import BuildIndexes
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
@@ -98,7 +99,7 @@ def project_iac(graph: UnifiedGraph, iac_data: dict[str, Any] | None) -> None:
             compliance = list(finding.get("compliance", []))
             attack_techniques = list(finding.get("attack_techniques", []))
             remediation = finding.get("remediation", "")
-            iac_id = f"misconfig:iac:{rule_id}:{finding_path}:{finding_line}"
+            iac_id = iac_misconfig_node_id(rule_id, finding_path, finding_line)
             target_id = f"iac_target:{category}:{finding_path}"
 
             graph.add_node(
@@ -160,7 +161,7 @@ def project_skill_audit(graph: UnifiedGraph, skill_audit: dict[str, Any] | None,
         row = _claim_skill_row(rows, finding, category) if rows else None
         if rows and row is None:
             continue
-        finding_id = f"misconfig:skill_audit:{row['id']}" if row else f"misconfig:skill_audit:{category}:{index}"
+        finding_id = skill_audit_node_id(row["id"]) if row else skill_audit_node_id(f"{category}:{index}")
         attributes = {
             "category": category,
             "detail": finding.get("detail", ""),
