@@ -1566,6 +1566,8 @@ jobs:
           AGENT_BOM_ADJACENCY_TEST_POSTGRES_URL: ${{ env.AGENT_BOM_POSTGRES_ADMIN_URL }}
           ENDPOINT_TEST_POSTGRES_URL: ${{ env.AGENT_BOM_POSTGRES_ADMIN_URL }}
           ENDPOINT_TEST_POSTGRES_APP_URL: postgresql://agent_bom_app:apppass@127.0.0.1:5432/agentbom_test
+          # The DSPM suites create schemas, tables and reader roles of their own.
+          AGENT_BOM_DSPM_TEST_POSTGRES_URL: ${{ env.AGENT_BOM_POSTGRES_ADMIN_URL }}
         # Every suite here SKIPS without AGENT_BOM_POSTGRES_URL, so this job is
         # the only place they ever execute. Two files used to be listed, which
         # left the audit chain, fleet tenancy, hub ingest, partitioning and the
@@ -1575,18 +1577,10 @@ jobs:
         # Postgres ones could not. Add a suite here whenever one starts
         # depending on a live engine.
         #
-        # Three live-PG suites are deliberately NOT listed, each for a reason
-        # that is about the suite rather than the code under test:
-        #   test_postgres_migrated_graph_parity  - connects with a literal
-        #     password; this job authenticates agent_bom_app from a password
-        #     file, so the suite cannot reach the server here.
-        #   test_hub_bulk_ingest                 - asserts >5000 rows/s. A
-        #     shared runner measured 2846. Wall-clock thresholds belong in a
-        #     benchmark, not a correctness gate.
-        #   test_hub_observations_partition_runway - asserts on caplog records
-        #     that do not propagate under this job's logging configuration.
-        # Each is worth fixing so it can join the list; none is worth leaving
-        # the job red for.
+        # tests/test_postgres_ci_suite_coverage.py fails when a suite gated on
+        # AGENT_BOM_POSTGRES_URL or AGENT_BOM_POSTGRES_ADMIN_URL is in neither
+        # this job nor its EXCLUDED map, which records why each exclusion
+        # (currently only a wall-clock throughput benchmark) stays out.
         run: |
           uv run pytest -q --tb=short \
             tests/test_postgres_integration.py \
@@ -1630,7 +1624,50 @@ jobs:
             tests/test_findings_current_sql_contract.py \
             tests/test_jobs_tenant_key_contract.py \
             tests/test_jobs_dispatch_postgres.py \
-            tests/test_findings_cursor_keyset_parity.py
+            tests/test_findings_cursor_keyset_parity.py \
+            tests/api/test_api_hosted_invitations.py \
+            tests/api/test_authenticated_tenant_backends.py \
+            tests/api/test_push_evidence_hardening.py \
+            tests/api/test_push_replacement_scope.py \
+            tests/api/test_session_authorization_backends.py \
+            tests/api/test_store_backed_build_persist.py \
+            tests/api/test_suppression_approval_boundary.py \
+            tests/cloud/test_runtime_workload_evidence_store.py \
+            tests/graph/test_authorization_action_receipts.py \
+            tests/graph/test_graph_build_workspace_postgres.py \
+            tests/graph/test_permission_derivation_receipts.py \
+            tests/graph/test_store_backed_unified_graph_postgres.py \
+            tests/test_campaign_evidence_reconciliation.py \
+            tests/test_cloud_connection_database_scan.py \
+            tests/test_compliance_recovery_import.py \
+            tests/test_connection_broker_database.py \
+            tests/test_control_plane_imports.py \
+            tests/test_db_content_scan.py \
+            tests/test_db_role_preflight_live.py \
+            tests/test_dspm_findings.py \
+            tests/test_exposure_path_query_scope.py \
+            tests/test_finding_graph_parity.py \
+            tests/test_governance_recovery_import.py \
+            tests/test_graph_backend_semantics.py \
+            tests/test_graph_correlation_source_preservation.py \
+            tests/test_graph_observation_scope.py \
+            tests/test_graph_runtime_occurrence_identity.py \
+            tests/test_graph_store_port_contract.py \
+            tests/test_hub_observations_runway_live.py \
+            tests/test_policy_audit_migration_live.py \
+            tests/test_postgres_audit_startup.py \
+            tests/test_postgres_identity_counts.py \
+            tests/test_postgres_inventory_snapshot.py \
+            tests/test_postgres_job_evidence_revision.py \
+            tests/test_postgres_job_payload_cache.py \
+            tests/test_postgres_migrated_graph_parity.py \
+            tests/test_postgres_observation_utc.py \
+            tests/test_postgres_registry_stores.py \
+            tests/test_registry_import.py \
+            tests/test_runtime_recovery_import.py \
+            tests/test_runtime_trace_revision_retention.py \
+            tests/test_scim_recovery_import.py \
+            tests/test_trace_explorer_session_pages.py
 
   # 3b. Alpine/musl compatibility test
   # Runs the test suite inside an Alpine Linux container (musl libc) to catch

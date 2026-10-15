@@ -85,7 +85,11 @@ def test_push_http_route_preserves_targets_after_readback(scan_store):  # noqa: 
             assert response.status_code == 201, response.text
             assert response.json()["target_scope"] == row.result["target_scope"]
             assert response.json()["replacement_scope_status"] == "identified"
-    assert {f["canonical_id"] for f in get_rows()} == {"finding-6", "finding-7"}
+        # Read back on the same client: a second app lifespan would close the
+        # shared Postgres pool that process-wide stores already hold.
+        response = client.get("/v1/findings", params={"origin": "scan", "window_days": 0})
+        assert response.status_code == 200, response.text
+    assert {f["canonical_id"] for f in response.json()["findings"]} == {"finding-6", "finding-7"}
 
 
 @pytest.mark.skipif(not os.environ.get("AGENT_BOM_POSTGRES_URL"), reason="requires isolated live Postgres")

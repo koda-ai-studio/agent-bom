@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import os
 import uuid
+from urllib.parse import urlsplit, urlunsplit
 
 import pytest
 
@@ -235,7 +236,9 @@ def test_live_postgres_scan_is_read_only_redacted_and_honest():
             cur.execute(f'GRANT INSERT ON "{schema}"."locked" TO "{reader_role}"')
 
     try:
-        reader_url = _PG_URL.replace("postgres:abom@", f"{reader_role}:readpw@")
+        parts = urlsplit(_PG_URL)
+        netloc = f"{reader_role}:readpw@{parts.hostname}" + (f":{parts.port}" if parts.port else "")
+        reader_url = urlunsplit((parts.scheme, netloc, parts.path, parts.query, parts.fragment))
         with psycopg.connect(reader_url, autocommit=True, options="-c default_transaction_read_only=on") as reader:
             result = scan_database_content(reader, source=f"postgres://abom/{schema}", schemas=[schema], max_rows=50)
             payload = result.to_dict()

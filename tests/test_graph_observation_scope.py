@@ -45,7 +45,7 @@ def scope_store(request, tmp_path):
 
             def clean():
                 with pool.connection() as conn:
-                    conn.execute("SELECT set_config('app.current_tenant', %s, true)", (tenant,))
+                    conn.execute("SELECT set_config('app.tenant_id', %s, true)", (tenant,))
                     for table in (
                         "graph_node_search",
                         "attack_paths",

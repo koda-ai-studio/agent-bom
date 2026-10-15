@@ -44,30 +44,20 @@ def test_legacy_rows_backfill_and_old_writer_remains_compatible(monkeypatch) -> 
     with psycopg.connect(admin_url, autocommit=True) as conn:
         conn.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(database)))
     try:
+        # Build the real schema at the last revision before the re-key; later
+        # migrations depend on tables a hand-made single-table database lacks.
+        cfg = Config(str(ALEMBIC_DIR / "alembic.ini"))
+        cfg.set_main_option("script_location", str(ALEMBIC_DIR / "alembic"))
+        monkeypatch.setenv("ALEMBIC_DATABASE_URL", _sqlalchemy_url(database_url))
+        command.upgrade(cfg, "20260728_03")
         with psycopg.connect(database_url) as conn:
-            conn.execute(
-                """
-                CREATE TABLE policy_audit_log (
-                    id SERIAL PRIMARY KEY,
-                    entry_id TEXT,
-                    ts TEXT NOT NULL,
-                    team_id TEXT NOT NULL DEFAULT 'default',
-                    data JSONB NOT NULL
-                )
-                """
-            )
-            conn.execute("CREATE UNIQUE INDEX uq_policy_audit_log_entry ON policy_audit_log(entry_id)")
-            conn.execute("ALTER TABLE policy_audit_log ENABLE ROW LEVEL SECURITY")
-            conn.execute("ALTER TABLE policy_audit_log FORCE ROW LEVEL SECURITY")
+            indexdef = conn.execute("SELECT indexdef FROM pg_indexes WHERE indexname = 'uq_policy_audit_log_entry'").fetchone()
+            assert indexdef is not None and "(entry_id)" in indexdef[0], indexdef
             conn.execute(
                 "INSERT INTO policy_audit_log (entry_id, ts, team_id, data) VALUES (%s, %s, %s, %s)",
                 ("shared", "2026-07-28T00:00:00Z", "tenant-a", json.dumps({"entry_id": "shared"})),
             )
 
-        cfg = Config(str(ALEMBIC_DIR / "alembic.ini"))
-        cfg.set_main_option("script_location", str(ALEMBIC_DIR / "alembic"))
-        monkeypatch.setenv("ALEMBIC_DATABASE_URL", _sqlalchemy_url(database_url))
-        command.stamp(cfg, "20260728_03")
         command.upgrade(cfg, "head")
 
         with psycopg.connect(database_url) as conn:

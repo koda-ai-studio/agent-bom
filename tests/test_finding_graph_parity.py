@@ -175,6 +175,7 @@ def test_snapshot_severity_counts_cached_and_live_count_only_findings(tmp_path, 
         live = store.snapshot_stats(tenant_id="default", scan_id=SCAN_ID, entity_types={"agent", "misconfiguration", "vulnerability"})
     finally:
         if backend == "postgres":
+            store.delete_snapshot(tenant_id="default", scan_id=SCAN_ID)
             reset_current_tenant(token)
     expected = {"critical": 1, "low": 1}
     assert graph.stats()["severity_counts"] == expected

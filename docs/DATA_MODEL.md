@@ -386,7 +386,7 @@ single-node `agent-bom serve` deployment.
 ### Postgres — `src/agent_bom/api/postgres_store.py`
 
 Primary transactional control plane. Per-tenant filters on every
-list/put plus session-scoped `app.current_tenant` for RLS.
+list/put plus session-scoped `app.tenant_id` for RLS.
 
 | Table | Source dataclass | Notes |
 |---|---|---|

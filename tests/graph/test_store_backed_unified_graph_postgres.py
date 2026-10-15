@@ -17,7 +17,7 @@ import uuid
 import pytest
 
 _DSN = os.environ.get("AGENT_BOM_POSTGRES_URL", "").strip()
-pytestmark = pytest.mark.skipif(not _DSN, reason="AGENT_BOM_POSTGRES_URL not set")
+pytestmark = [pytest.mark.skipif(not _DSN, reason="AGENT_BOM_POSTGRES_URL not set"), pytest.mark.graph_contract("warn")]
 
 from test_store_backed_unified_graph import (  # noqa: E402  (sibling module; tests/graph is not a package)
     _bidir_graph,
@@ -26,7 +26,7 @@ from test_store_backed_unified_graph import (  # noqa: E402  (sibling module; te
     _synthetic_graph,
 )
 
-from agent_bom.graph.build_workspace import _PostgresWorkspaceBackend  # noqa: E402
+from agent_bom.graph.build_workspace import open_workspace_backend  # noqa: E402
 from agent_bom.graph.node import UnifiedNode  # noqa: E402
 from agent_bom.graph.store_backed import StoreBackedUnifiedGraph  # noqa: E402
 from agent_bom.graph.types import EntityType  # noqa: E402
@@ -34,7 +34,7 @@ from agent_bom.graph.types import EntityType  # noqa: E402
 
 def _pg_store(**kwargs) -> StoreBackedUnifiedGraph:
     wsid = f"sbg-{uuid.uuid4().hex}"
-    backend = _PostgresWorkspaceBackend(_DSN, wsid)
+    backend = open_workspace_backend(workspace_id=wsid, backend="postgres")
     kwargs.setdefault("owns_backend", True)
     return StoreBackedUnifiedGraph(backend, **kwargs)
 
@@ -86,7 +86,7 @@ def test_pg_bidirectional_adjacency_matches_in_ram() -> None:
 
 def test_pg_tenant_isolation_on_shared_backend() -> None:
     wsid = f"sbg-iso-{uuid.uuid4().hex}"
-    backend = _PostgresWorkspaceBackend(_DSN, wsid)
+    backend = open_workspace_backend(workspace_id=wsid, backend="postgres")
     try:
         alpha = StoreBackedUnifiedGraph(backend, tenant_id="alpha", scan_id="a", created_at="2026-07-20T00:00:00Z")
         beta = StoreBackedUnifiedGraph(backend, tenant_id="beta", scan_id="b", created_at="2026-07-20T00:00:00Z")
