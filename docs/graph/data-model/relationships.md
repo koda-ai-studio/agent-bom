@@ -254,7 +254,7 @@ Class `authority` · directed · traversable · required evidence `source`, `tie
 - `agent` → `credential`
 - `server` → `credential`
 
-Emitted by: `graph/compat.py`, `graph/component_paths.py`, `graph/credential_projection.py`; demo fixtures: `demo_estate/showcase_graph.py`
+Emitted by: `graph/component_paths.py`, `graph/credential_projection.py`; demo fixtures: `demo_estate/showcase_graph.py`
 
 ## `governs`
 
@@ -369,7 +369,7 @@ Class `authority` · directed · traversable · required evidence `source`, `tie
 - `service_principal` → `account`, `agent`, `fleet`, `group`
 - `user` → `account`, `agent`, `fleet`, `group`, `role`
 
-Emitted by: `graph/builder.py`, `graph/builder_cloud_lineage.py`, `graph/builder_snowflake_objects.py`, `graph/compat.py`
+Emitted by: `graph/builder.py`, `graph/builder_cloud_lineage.py`, `graph/builder_snowflake_objects.py`
 
 ## `observes`
 
@@ -441,7 +441,7 @@ Class `structural` · directed · traversable · required evidence `source`, `ti
 
 - `server` → `tool`
 
-Emitted by: `graph/agent_projection.py`, `graph/compat.py`, `graph/component_paths.py`; demo fixtures: `demo_estate/showcase_graph.py`
+Emitted by: `graph/agent_projection.py`, `graph/component_paths.py`; demo fixtures: `demo_estate/showcase_graph.py`
 
 ## `reaches_tool`
 
@@ -495,7 +495,7 @@ Class `correlation` · bidirectional · not traversable · required evidence `so
 
 - `agent` → `agent`
 
-Emitted by: `graph/compat.py`
+Emitted by: —
 
 ## `shares_server`
 
@@ -503,7 +503,7 @@ Class `correlation` · bidirectional · not traversable · required evidence `so
 
 - `agent` → `agent`
 
-Emitted by: `graph/blast_projection.py`, `graph/compat.py`
+Emitted by: `graph/blast_projection.py`
 
 ## `stores`
 
@@ -576,7 +576,7 @@ Class `dependency` · directed · traversable · required evidence `source`, `ti
 
 - `agent` → `server`
 
-Emitted by: `graph/agent_projection.py`, `graph/compat.py`; demo fixtures: `demo_estate/showcase_graph.py`
+Emitted by: `graph/agent_projection.py`; demo fixtures: `demo_estate/showcase_graph.py`
 
 ## `uses_framework`
 
@@ -601,4 +601,4 @@ Class `finding` · directed · traversable · required evidence `source`, `tier`
 - `server` → `misconfiguration`, `vulnerability`
 - `tool` → `misconfiguration`, `vulnerability`
 
-Emitted by: `graph/blast_projection.py`, `graph/compat.py`, `graph/component_paths.py`, `graph/credential_findings.py`, `graph/mcp_audit_projection.py`, `graph/package_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
+Emitted by: `graph/blast_projection.py`, `graph/component_paths.py`, `graph/credential_findings.py`, `graph/mcp_audit_projection.py`, `graph/package_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`

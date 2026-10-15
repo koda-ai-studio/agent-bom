@@ -23,7 +23,7 @@ Id formats:
 
 ## `agent`
 
-Emitted by: `graph/agent_projection.py`, `graph/builder_overlays.py`, `graph/builder_snowflake_cortex.py`, `graph/builder_snowflake_governance.py`, `graph/compat.py`, `graph/delta_digest.py`, `graph/dependency_reach.py`, `graph/framework_topology_projection.py`, `graph/governance_overlay.py`, `graph/runtime_projection.py`, `graph/toxic_findings.py`, `graph/trace_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
+Emitted by: `graph/agent_projection.py`, `graph/builder_overlays.py`, `graph/builder_snowflake_cortex.py`, `graph/builder_snowflake_governance.py`, `graph/delta_digest.py`, `graph/dependency_reach.py`, `graph/framework_topology_projection.py`, `graph/governance_overlay.py`, `graph/interaction_risk_ids.py`, `graph/runtime_projection.py`, `graph/toxic_findings.py`, `graph/trace_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
 
 ## `api_gateway`
 
@@ -94,7 +94,7 @@ Id formats:
 
 ## `credential`
 
-Emitted by: `graph/compat.py`, `graph/credential_projection.py`; demo fixtures: `demo_estate/showcase_graph.py`
+Emitted by: `graph/credential_projection.py`; demo fixtures: `demo_estate/showcase_graph.py`
 
 ## `credential_ref`
 
@@ -204,7 +204,7 @@ Id formats:
 
 ## `package`
 
-Emitted by: `graph/agent_projection.py`, `graph/blast_projection.py`, `graph/compat.py`, `graph/dependency_reach.py`, `graph/framework_topology_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
+Emitted by: `graph/agent_projection.py`, `graph/blast_projection.py`, `graph/dependency_reach.py`, `graph/framework_topology_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
 
 Id formats:
 
@@ -241,7 +241,7 @@ Emitted by: `graph/builder_cloud_inventory.py`, `graph/builder_snowflake_cortex.
 
 ## `server`
 
-Emitted by: `context_graph.py`, `graph/agent_projection.py`, `graph/compat.py`, `graph/trace_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
+Emitted by: `context_graph.py`, `graph/agent_projection.py`, `graph/trace_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
 
 Id formats:
 
@@ -249,7 +249,7 @@ Id formats:
 
 ## `service_account`
 
-Emitted by: `graph/authorization_evidence.py`, `graph/builder.py`, `graph/cloud_context.py`, `graph/compat.py`; demo fixtures: `demo_estate/estate_graph.py`
+Emitted by: `graph/authorization_evidence.py`, `graph/builder.py`, `graph/cloud_context.py`; demo fixtures: `demo_estate/estate_graph.py`
 
 ## `service_principal`
 
@@ -265,7 +265,7 @@ Id formats:
 
 ## `tool`
 
-Emitted by: `graph/agent_projection.py`, `graph/ast_tool_projection.py`, `graph/builder_snowflake_cortex.py`, `graph/compat.py`, `graph/governance_overlay.py`, `graph/runtime_projection.py`, `graph/trace_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
+Emitted by: `graph/agent_projection.py`, `graph/ast_tool_projection.py`, `graph/builder_snowflake_cortex.py`, `graph/governance_overlay.py`, `graph/runtime_projection.py`, `graph/trace_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
 
 Id formats:
 
@@ -286,7 +286,7 @@ Id formats:
 
 ## `vulnerability`
 
-Emitted by: `graph/blast_projection.py`, `graph/builder_overlays.py`, `graph/compat.py`, `graph/dependency_reach.py`, `graph/finding_row_projection.py`, `graph/package_projection.py`, `hardware_evidence.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
+Emitted by: `graph/blast_projection.py`, `graph/builder_overlays.py`, `graph/dependency_reach.py`, `graph/finding_row_projection.py`, `graph/package_projection.py`, `hardware_evidence.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
 
 Id formats:
 
