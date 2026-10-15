@@ -166,6 +166,7 @@ from agent_bom.mcp_tools.profiles import _GUIDED_TOOL_NAMES as _GUIDED_TOOL_NAME
 from agent_bom.mcp_tools.request_identity import request_context as _mcp_request_ctx
 from agent_bom.mcp_tools.result_store import scan_result_owner as _scan_result_owner
 from agent_bom.security import sanitize_error
+from agent_bom.storage.state_home import activate_demo_state_dir
 
 logger = logging.getLogger(__name__)
 _ToolReturn = TypeVar("_ToolReturn")
@@ -561,6 +562,7 @@ def create_mcp_server(
     from agent_bom.mcp_tools.profiles import configure_registration, get_profile
 
     get_profile(profile)  # Reject unknown profiles before constructing the server.
+    activate_demo_state_dir()  # Before any tool opens a store; demo mode must never read product data.
     setup_logging(level="INFO")
     _check_mcp_sdk()
 
