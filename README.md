@@ -163,4 +163,4 @@ control mappings are not audit certification.
 
 [Contributing](CONTRIBUTING.md) · [Capabilities and roadmap](docs/ROADMAP.md) · [Support](SUPPORT.md) · [Report an inaccurate finding](https://github.com/koda-ai-studio/agent-bom/issues/new?template=inaccurate_finding.yml) · [Apache-2.0](LICENSE)
 
-Source version: **v0.108.4** · Latest release: **v0.108.4** · [Changelog](CHANGELOG.md)
+Source version: **v0.109.0** · Latest release: **v0.108.4** · [Changelog](CHANGELOG.md)
