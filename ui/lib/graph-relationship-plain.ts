@@ -38,6 +38,7 @@ const WHY: Record<string, (source: string, target: string) => string> = {
   depends_on: (s, t) => `${s} declares ${t} as a dependency.`,
   imports: (s, t) => `${s} imports ${t}.`,
   contains: (s, t) => `${s} contains ${t} in the collected inventory.`,
+  hosted_on: (s, t) => `${s} runs on ${t}.`,
   hosts: (s, t) => `${s} hosts ${t}.`,
   uses: (s, t) => `${s} is configured to use ${t}.`,
   provides_tool: (s, t) => `${s} lists ${t} as an available tool.`,

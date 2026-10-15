@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import uuid
@@ -92,16 +93,20 @@ def legacy_agent_id_v1(agent_type: str, name: str, *, source: str = "", config_p
 
 
 def normalize_command_arg(arg: str) -> str:
-    """Normalize a server command argument for identity comparison."""
+    """Normalize a server command argument for identity comparison.
+
+    Case is preserved: on case-sensitive filesystems ``/srv/TeamA`` and
+    ``/srv/teama`` are different scripts.
+    """
     text = str(arg).strip()
     if not text:
         return ""
     if text.startswith(("/", "~", ".")):
         try:
-            return os.path.normpath(os.path.expanduser(text)).lower()
+            return os.path.normpath(os.path.expanduser(text))
         except (OSError, ValueError):
-            return text.lower()
-    return text.lower()
+            return text
+    return text
 
 
 def mcp_server_identity_discriminator(
@@ -124,7 +129,7 @@ def mcp_server_identity_discriminator(
         path = parsed.path.rstrip("/")
         return f"url:{urlunparse((parsed.scheme.lower(), netloc, path, '', '', ''))}"
 
-    cmd = Path(command or "").name.lower().strip()
+    cmd = Path(command or "").name.strip()
     normalized_args = tuple(value for value in (normalize_command_arg(arg) for arg in (args or [])) if value)
     if cmd or normalized_args:
         arg_str = " ".join(normalized_args)
@@ -146,14 +151,16 @@ def canonical_mcp_server_id(
     args: Sequence[str] | None = None,
 ) -> str:
     if registry_id:
-        identifier = registry_id
-    else:
-        identifier = mcp_server_identity_discriminator(name, command, url=url, args=args)
-    return canonical_id("mcp_server", identifier)
+        return canonical_id("mcp_server", registry_id)
+    identifier = mcp_server_identity_discriminator(name, command, url=url, args=args).strip()
+    # canonical_id lower-cases every part; URL paths and local paths/args are
+    # case-sensitive, so only the discriminator's own normalization applies.
+    return str(uuid.uuid5(AGENT_BOM_ID_NAMESPACE, f"mcp_server:{identifier}"))
 
 
 _AGENT_SCOPE_KEYS = ("source_id", "endpoint_id", "device_id")
 CORTEX_AGENT_SOURCE = "snowflake-cortex-agent"
+PROJECT_CONFIG_SOURCE = "project-config"
 
 
 def _field(record: Any, key: str) -> Any:
@@ -190,7 +197,31 @@ def agent_graph_id_for(record: Any) -> str:
     if _field(record, "source") == CORTEX_AGENT_SOURCE and isinstance(cortex, Mapping):
         if all(str(cortex.get(key) or "").strip() for key in ("database", "schema", "name")):
             return snowflake_cortex_agent_node_id(cortex.get("account"), cortex["database"], cortex["schema"], cortex["name"])
-    return agent_graph_id(_field(record, "name"), agent_identity_scope(record))
+    return agent_graph_id(_field(record, "name"), agent_identity_scope(record) or agent_config_scope(record))
+
+
+def agent_config_scope(record: Any) -> str:
+    """Scope for a project-config agent with no endpoint: its config identity.
+
+    Project configs are named after their directory, so ``.mcp.json`` and
+    ``.vscode/mcp.json`` in one repository share a name. The agent's canonical
+    id is derived from the full config path and survives report serialization,
+    which reduces ``config_path`` itself to a basename.
+    """
+    if _field(record, "source") != PROJECT_CONFIG_SOURCE or not str(_field(record, "config_path") or "").strip():
+        return ""
+    identity = next((str(value) for key in ("canonical_id", "stable_id", "id") if (value := _field(record, key))), "")
+    identity = identity or canonical_agent_id(
+        str(_field(record, "agent_type") or ""), str(_field(record, "name") or ""), config_path=str(_field(record, "config_path"))
+    )
+    return f"cfg-{hashlib.sha256(identity.encode()).hexdigest()[:12]}"
+
+
+def previous_agent_graph_ids(record: Any) -> list[str]:
+    """The name-only id this agent carried before config-path scoping."""
+    current = agent_graph_id_for(record)
+    legacy = agent_graph_id(_field(record, "name"), agent_identity_scope(record))
+    return [legacy] if legacy != current else []
 
 
 def mcp_server_identity_kind(*, url: Any = None, command: Any = "", args: Sequence[Any] | None = None, registry_id: Any = None) -> str:
@@ -258,6 +289,36 @@ def mcp_server_graph_id_for(server: Any, agent: Any) -> str:
         host_scope=agent_identity_scope(agent),
         agent_key=agent_key,
     )
+
+
+def previous_mcp_server_graph_ids(server: Any, agent: Any) -> list[str]:
+    """Ids earlier identity schemes gave this server, so stored references still resolve.
+
+    Before discriminators kept case, the canonical part was lower-cased in
+    full; before canonical server ids, every server lived under its agent.
+    """
+    current = mcp_server_graph_id_for(server, agent)
+    if _field(agent, "source") == CORTEX_AGENT_SOURCE or _field(server, "canonical_id") or _field(server, "stable_id"):
+        return []
+    label = str(_field(server, "name") or "unknown").strip() or "unknown"
+    url, command, args, registry_id = (
+        _field(server, "url"),
+        _field(server, "command") or "",
+        list(_field(server, "args") or []),
+        _field(server, "registry_id"),
+    )
+    if mcp_server_identity_kind(url=url, command=command, args=args, registry_id=registry_id) == "agent":
+        return []
+    agent_key = agent_graph_id_for(agent).removeprefix("agent:")
+    previous: list[str] = []
+    if not registry_id:
+        lowered = canonical_id("mcp_server", mcp_server_identity_discriminator(label, str(command), url=str(url or "") or None, args=args))
+        legacy = mcp_server_graph_id(
+            label, command=command, args=args, url=url, canonical_id=lowered, host_scope=agent_identity_scope(agent), agent_key=agent_key
+        )
+        previous.append(legacy)
+    previous.append(f"server:{agent_key}:{label}")
+    return sorted({value for value in previous if value != current})
 
 
 def canonical_mcp_tool_id(name: str, input_schema: Mapping[str, Any] | bool | None = None, *, server_id: str | None = None) -> str:

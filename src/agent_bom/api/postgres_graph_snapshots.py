@@ -130,6 +130,7 @@ class PostgresGraphSnapshotsMixin(PostgresGraphStoreBase):
                 "interaction_risks",
                 "graph_edges",
                 "graph_nodes",
+                "graph_node_aliases",
                 "graph_snapshots",
             ):
                 cursor = conn.execute(

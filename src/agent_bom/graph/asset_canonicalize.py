@@ -13,13 +13,21 @@ reviewable ``POSSIBLY_CORRELATES_WITH`` candidate.
 from __future__ import annotations
 
 from collections.abc import Iterable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from itertools import combinations
 from typing import Any
 
 from agent_bom.canonical_ids import canonical_graph_node_id
 from agent_bom.graph.analysis import GraphAnalysisState, GraphAnalysisStatus
-from agent_bom.graph.asset_identity import FAMILY_TYPES, IdentityKey, family_of, strong_keys, weak_keys
+from agent_bom.graph.asset_identity import (
+    FAMILY_TYPES,
+    IdentityKey,
+    StrongKeyComponents,
+    family_of,
+    strong_key_components,
+    strong_keys,
+    weak_keys,
+)
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.edge_evidence import edge_evidence
@@ -48,34 +56,6 @@ class _Observation:
     richness: tuple[int, int, str] | None = None
 
 
-@dataclass(slots=True)
-class _Components:
-    parent: dict[str, str] = field(default_factory=dict)
-    keys: dict[str, dict[str, str]] = field(default_factory=dict)
-    conflicts: int = 0
-
-    def find(self, node_id: str) -> str:
-        root = node_id
-        while self.parent[root] != root:
-            root = self.parent[root]
-        while self.parent[node_id] != root:
-            self.parent[node_id], node_id = root, self.parent[node_id]
-        return root
-
-    def union(self, left: str, right: str) -> None:
-        a, b = sorted((self.find(left), self.find(right)))
-        if a == b:
-            return
-        ka, kb = self.keys[a], self.keys[b]
-        if any(ka[namespace] != value for namespace, value in kb.items() if namespace in ka):
-            # Same identifier, but the two components already hold different
-            # values for another strong key: a data error, never a merge.
-            self.conflicts += 1
-            return
-        self.parent[b] = a
-        ka.update(kb)
-
-
 def _observations(graph: UnifiedGraph) -> dict[str, _Observation]:
     observed: dict[str, _Observation] = {}
     for entity_type in sorted({entity for types in FAMILY_TYPES.values() for entity in types}, key=lambda item: item.value):
@@ -91,20 +71,8 @@ def _observations(graph: UnifiedGraph) -> dict[str, _Observation]:
     return observed
 
 
-def _components(observed: dict[str, _Observation]) -> _Components:
-    components = _Components()
-    buckets: dict[tuple[str, IdentityKey], list[str]] = {}
-    for node_id in sorted(observed):
-        item = observed[node_id]
-        components.parent[node_id] = node_id
-        components.keys[node_id] = {}
-        for key in item.strong:
-            components.keys[node_id].setdefault(key.namespace, key.value)
-            buckets.setdefault((item.family, key), []).append(node_id)
-    for (_family, _key), members in sorted(buckets.items(), key=lambda entry: (-entry[0][1].rank, entry[0][0], entry[0][1].text)):
-        for other in members[1:]:
-            components.union(members[0], other)
-    return components
+def _components(observed: dict[str, _Observation]) -> StrongKeyComponents:
+    return strong_key_components({node_id: (item.family, item.strong) for node_id, item in observed.items()})
 
 
 def _richness(item: _Observation) -> tuple[int, int, str]:
@@ -119,9 +87,12 @@ def _merged_entity_type(members: list[_Observation]) -> EntityType:
     return next((preferred for preferred in _TYPE_PREFERENCE if preferred in types), max(members, key=_richness).entity_type)
 
 
-def _canonical_id(members: list[_Observation], entity_type: EntityType) -> tuple[str, IdentityKey]:
-    best = max(key for item in members for key in item.strong)
-    return f"{entity_type.value}:{best.provider or 'native'}:{best.namespace}:{best.value}", best
+def _canonical_id(members: list[_Observation], entity_type: EntityType, identity: tuple[IdentityKey, bool]) -> tuple[str, IdentityKey]:
+    # A key shared with a conflicting component cannot name this one, or the
+    # rekey would collapse the two groups the union-find kept apart.
+    best, unique = identity
+    canonical = f"{entity_type.value}:{best.provider or 'native'}:{best.namespace}:{best.value}"
+    return (canonical if unique else f"{canonical}#{min(item.node_id for item in members)}"), best
 
 
 def _merge_attributes(members: list[_Observation]) -> tuple[dict[str, Any], list[str]]:
@@ -174,18 +145,19 @@ class _Group:
     data_sources: list[str]
 
 
-def _groups(observed: dict[str, _Observation], components: _Components) -> tuple[dict[str, str], list[_Group]]:
+def _groups(observed: dict[str, _Observation], components: StrongKeyComponents) -> tuple[dict[str, str], list[_Group]]:
     members_by_root: dict[str, list[_Observation]] = {}
     for node_id in sorted(observed):
         if observed[node_id].strong:
             members_by_root.setdefault(components.find(node_id), []).append(observed[node_id])
     mapping: dict[str, str] = {}
     groups: list[_Group] = []
-    for members in members_by_root.values():
+    identities = components.identities()
+    for root, members in members_by_root.items():
         if len(members) < 2:
             continue
         entity_type = _merged_entity_type(members)
-        canonical_id, best = _canonical_id(members, entity_type)
+        canonical_id, best = _canonical_id(members, entity_type, identities[root])
         attributes, conflicts = _merge_attributes(members)
         attributes["identity"] = _provenance(members, canonical_id, best, conflicts)
         attributes["canonical_id"] = canonical_graph_node_id(entity_type.value, canonical_id)
@@ -196,7 +168,7 @@ def _groups(observed: dict[str, _Observation], components: _Components) -> tuple
     return mapping, groups
 
 
-def _candidate_edges(observed: dict[str, _Observation], mapping: dict[str, str], components: _Components) -> list[UnifiedEdge]:
+def _candidate_edges(observed: dict[str, _Observation], mapping: dict[str, str], components: StrongKeyComponents) -> list[UnifiedEdge]:
     buckets: dict[tuple[str, str, str], set[str]] = {}
     for item in observed.values():
         for key in item.weak:

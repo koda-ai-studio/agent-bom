@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from agent_bom.canonical_ids import agent_graph_id
+from agent_bom.canonical_ids import agent_graph_id, mcp_server_graph_id
 from agent_bom.models import BlastRadius
 from agent_bom.package_utils import canonical_package_key
 
@@ -235,9 +235,11 @@ def _primary_runtime_spine_for_finding(finding: Finding, package_ref: str) -> tu
 
     primary_server = runtime_servers[0]
     links = [link for link in evidence.get("agent_server_links") or [] if isinstance(link, dict)]
+    # Without recorded refs only the name is known, which the builder scopes to the declaring agent.
+    fallback_agent = agent_graph_id(finding.affected_agents[0]).removeprefix("agent:") if finding.affected_agents else ""
     server_ref = next(
         (str(link["server_ref"]) for link in links if link.get("server") == primary_server and link.get("server_ref")),
-        f"server:{primary_server}",
+        mcp_server_graph_id(primary_server, agent_key=fallback_agent),
     )
     for link in links:
         agent = str(link.get("agent") or "").strip()

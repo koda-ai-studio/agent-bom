@@ -27,7 +27,7 @@ def credential_edge_admits(edge: "UnifiedEdge", agent_id: str) -> bool:
     return not isinstance(configured, list) or not configured or not agent_id or agent_id in configured
 
 
-def _merge_union_keys(stored: dict[str, Any], incoming: dict[str, Any]) -> bool:
+def merge_union_evidence_keys(stored: dict[str, Any], incoming: dict[str, Any]) -> bool:
     changed = False
     for key in UNION_EVIDENCE_KEYS:
         if isinstance(incoming.get(key), list):
@@ -45,7 +45,7 @@ def merge_edge_evidence(stored: dict[str, Any], incoming: dict[str, Any]) -> boo
     decisions are complete records: merging actions and bindings independently
     would manufacture combinations the evaluator never assessed.
     """
-    changed = _merge_union_keys(stored, incoming)
+    changed = merge_union_evidence_keys(stored, incoming)
     decisions: dict[str, dict[str, Any]] = {}
     grants: dict[str, dict[str, Any]] = {}
     accesses: dict[str, dict[str, Any]] = {}

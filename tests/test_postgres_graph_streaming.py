@@ -241,6 +241,7 @@ def test_streaming_serializes_and_replaces_same_snapshot(monkeypatch):
         "interaction_risks",
         "graph_edges",
         "graph_nodes",
+        "graph_node_aliases",
         "graph_snapshots",
     ]
 

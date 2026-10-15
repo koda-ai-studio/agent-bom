@@ -208,11 +208,14 @@ class InteractionRisk:
     risk_score: float
     description: str
     owasp_agentic_tag: Optional[str] = None
+    # Graph node ids of ``agents``; names alone are ambiguous across scopes.
+    agent_node_ids: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "pattern": self.pattern,
             "agents": self.agents,
+            "agent_node_ids": self.agent_node_ids,
             "risk_score": self.risk_score,
             "description": self.description,
             "owasp_agentic_tag": self.owasp_agentic_tag,
@@ -226,6 +229,7 @@ class InteractionRisk:
             risk_score=data.get("risk_score", 0.0),
             description=data.get("description", ""),
             owasp_agentic_tag=data.get("owasp_agentic_tag"),
+            agent_node_ids=[str(item) for item in data.get("agent_node_ids") or []],
         )
 
 

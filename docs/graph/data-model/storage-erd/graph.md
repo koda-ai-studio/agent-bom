@@ -5,7 +5,7 @@
 
 Storage tables in this domain. Back to the [storage ERD](../storage-erd.md).
 
-20 tables.
+21 tables.
 
 Scratch tables are temporary SQLite build/correlation workspaces, not durable evidence stores.
 
@@ -107,6 +107,10 @@ erDiagram
     text scan_id PK
     text node_id PK
   }
+  strong_members {
+    text scan_id PK
+    text node_id PK
+  }
   ws_edges {
     text tenant_id
     integer seq PK
@@ -125,6 +129,7 @@ erDiagram
   graph_snapshots ||..o{ graph_nodes : "logical scan_id"
   graph_snapshots ||..o{ interaction_risks : "logical scan_id"
   graph_snapshots ||..o{ node_observations : "logical scan_id"
+  graph_snapshots ||..o{ strong_members : "logical scan_id"
 ```
 
 ## Relations
@@ -141,6 +146,7 @@ erDiagram
 | `graph_snapshots` | `graph_nodes` | `scan_id` | logical |
 | `graph_snapshots` | `interaction_risks` | `scan_id` | logical |
 | `graph_snapshots` | `node_observations` | `scan_id` | logical |
+| `graph_snapshots` | `strong_members` | `scan_id` | logical |
 
 ## Shared key columns without an owning table
 
@@ -148,7 +154,7 @@ Same column name in several tables here, but no table owns it, so no join is dra
 
 | Column | Tables |
 |---|---|
-| `node_id` | `graph_build_workspace_nodes`, `graph_node_search`, `node_observations`, `ws_nodes` |
+| `node_id` | `graph_build_workspace_nodes`, `graph_node_search`, `node_observations`, `strong_members`, `ws_nodes` |
 | `source_id` | `graph_build_workspace_edges`, `graph_edges`, `ws_edges` |
 | `target_id` | `graph_build_workspace_edges`, `graph_edges`, `ws_edges` |
 | `workspace_id` | `graph_build_workspace_edges`, `graph_build_workspace_nodes` |
@@ -159,7 +165,7 @@ Same column name in several tables here, but no table owns it, so no join is dra
 |---|---|---|---|---|
 | `attack_paths` | Postgres, SQLite | 20 |  | persistent |
 | `edge_groups` | SQLite | 5 |  | scratch |
-| `edge_observations` | SQLite | 9 |  | scratch |
+| `edge_observations` | SQLite | 11 |  | scratch |
 | `graph_attack_paths` | Postgres, SQLite | 17 |  | persistent |
 | `graph_build_workspace_edges` | Postgres | 7 |  | persistent |
 | `graph_build_workspace_nodes` | Postgres | 6 |  | persistent |
@@ -175,5 +181,6 @@ Same column name in several tables here, but no table owns it, so no join is dra
 | `merged_nodes` | SQLite | 4 |  | scratch |
 | `node_groups` | SQLite | 2 |  | scratch |
 | `node_observations` | SQLite | 7 |  | scratch |
+| `strong_members` | SQLite | 4 |  | scratch |
 | `ws_edges` | SQLite | 6 |  | scratch |
 | `ws_nodes` | SQLite | 5 |  | scratch |

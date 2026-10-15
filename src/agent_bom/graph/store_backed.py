@@ -65,7 +65,7 @@ from agent_bom.graph.container import GraphCompleteness, UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge, merge_edge_evidence
 from agent_bom.graph.edge_evidence import merge_edge_provenance, normalize_edge_evidence
 from agent_bom.graph.node import UnifiedNode
-from agent_bom.graph.rekey import normalized_rekey_mapping
+from agent_bom.graph.rekey import normalized_rekey_mapping, rekey_path_references
 from agent_bom.graph.relationship_contract import ContractRejections
 from agent_bom.graph.types import EntityType
 from agent_bom.graph.util import _now_iso
@@ -454,6 +454,7 @@ class StoreBackedUnifiedGraph(UnifiedGraph):
                 continue
             self.add_edge(replace(edge, source=source, target=target))
         self.flush()
+        rekey_path_references(self, moves)
         return dropped
 
     # ── Query overrides that must not fan out over the whole node set ─────────

@@ -19,6 +19,7 @@ from agent_bom.api.routes.graph_routes.params import (
 from agent_bom.graph import AttackPath, EntityType, UnifiedEdge, UnifiedGraph, UnifiedNode
 from agent_bom.graph.analysis import analysis_status_map_to_dict
 from agent_bom.graph.completeness import graph_completeness
+from agent_bom.graph.interaction_risk_ids import interaction_risk_agent_ids
 from agent_bom.graph.path_derivation import _build_edge_lookup, _derived_attack_paths
 from agent_bom.graph.scope import GraphScopeKind, select_observed_scope
 from agent_bom.graph.snapshot_paths import resolve_snapshot_attack_paths
@@ -108,9 +109,11 @@ def _filtered_graph_response(graph: UnifiedGraph, *, offset: int, limit: int) ->
         nodes_by_id=nodes_by_id,
         scan_id=graph.scan_id,
     )
-    interaction_risks = [
-        r.to_dict() for r in graph.interaction_risks if r.agents and all(f"agent:{agent_name}" in paged_ids for agent_name in r.agents)
-    ]
+    interaction_risks = []
+    for risk in graph.interaction_risks:
+        agent_ids = interaction_risk_agent_ids(risk, graph)
+        if agent_ids and all(agent_id in paged_ids for agent_id in agent_ids):
+            interaction_risks.append(risk.to_dict())
 
     return {
         "scan_id": graph.scan_id,

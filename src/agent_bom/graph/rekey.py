@@ -28,6 +28,47 @@ def _key(edge: Any) -> tuple[str, str, str]:
     return (edge.source, edge.target, rel)
 
 
+def _rekey_path(path: Any, moves: Mapping[str, str]) -> Any:
+    hops: list[str] = []
+    edges: list[str] = []
+    receipts: list[dict[str, Any]] = []
+    for index, hop in enumerate(moves.get(hop, hop) for hop in path.hops):
+        if hops and hops[-1] == hop:
+            continue  # both ends of this hop are now one asset
+        if hops:
+            if index - 1 < len(path.edges):
+                edges.append(path.edges[index - 1])
+            if index - 1 < len(path.hop_evidence):
+                receipt = dict(path.hop_evidence[index - 1])
+                receipt["source_node_id"], receipt["target_node_id"] = hops[-1], hop
+                receipts.append(receipt)
+        hops.append(hop)
+    return replace(
+        path,
+        source=moves.get(path.source, path.source),
+        target=moves.get(path.target, path.target),
+        hops=hops,
+        edges=edges,
+        hop_evidence=receipts,
+    )
+
+
+def rekey_path_references(graph: Any, moves: Mapping[str, str]) -> None:
+    """Re-point attack paths and interaction risks at canonical ids; paths that collapse merge."""
+    if not moves:
+        return
+    kept: dict[tuple[str, ...], Any] = {}
+    for path in graph.attack_paths:
+        rewritten = _rekey_path(path, moves) if any(hop in moves for hop in (path.source, path.target, *path.hops)) else path
+        key = (rewritten.source, rewritten.target, *rewritten.hops)
+        if key not in kept or rewritten.composite_risk > kept[key].composite_risk:
+            kept[key] = rewritten
+    graph.attack_paths = list(kept.values())
+    for risk in graph.interaction_risks:
+        if any(node_id in moves for node_id in risk.agent_node_ids):
+            risk.agent_node_ids = list(dict.fromkeys(moves.get(node_id, node_id) for node_id in risk.agent_node_ids))
+
+
 def rekey_in_memory(graph: Any, mapping: Mapping[str, str]) -> int:
     """Re-key nodes in place, touching only edges incident to a moved node.
 
@@ -67,4 +108,5 @@ def rekey_in_memory(graph: Any, mapping: Mapping[str, str]) -> int:
             dropped += 1
             continue
         graph.add_stored_edge(replace(edge, source=source, target=target))
+    rekey_path_references(graph, moves)
     return dropped

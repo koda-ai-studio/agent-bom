@@ -285,6 +285,7 @@ class GraphNodeContextResponse(ReadResponse):
     sources: list[Any]
     impact: Row
     completeness: Row
+    resolved_from: str | None = None
 
 
 class GraphNodeNeighborsResponse(ReadResponse):

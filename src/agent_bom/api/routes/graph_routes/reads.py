@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 
 from agent_bom.api.graph_contracts import GraphIdentifier, IncidentEdgePageResponse, PresetCreate
 from agent_bom.api.graph_generation import optional_generation, verify_generation
+from agent_bom.api.graph_node_alias import resolve_snapshot_node_id
 from agent_bom.api.graph_paging import _enforce_node_offset_cap, _page_meta
 from agent_bom.api.neptune_graph import NeptuneGraphStore
 from agent_bom.api.read_models._base import documented
@@ -289,11 +290,15 @@ async def get_graph_node(
     identity = await _runtime._graph_store_call(
         optional_generation, graph_store, tenant=tenant_id, scan_id=scan_id or "", generation=snapshot_generation, offset=0
     )
+    effective_scan_id = identity[0] if identity else scan_id or ""
+    read_id, resolved_from = await _runtime._graph_store_call(
+        resolve_snapshot_node_id, graph_store, tenant_id=tenant_id, scan_id=effective_scan_id, node_id=node_id
+    )
     node_context = await _runtime._graph_store_call(
         graph_store.node_context,
-        scan_id=identity[0] if identity else scan_id or "",
+        scan_id=effective_scan_id,
         tenant_id=tenant_id,
-        node_id=node_id,
+        node_id=read_id,
     )
     if node_context is None:
         raise HTTPException(status_code=404, detail=f"Node '{node_id}' not found")
@@ -311,6 +316,7 @@ async def get_graph_node(
         "sources": node_context["sources"],
         "impact": node_context["impact"],
         "completeness": node_context.get("completeness") or graph_completeness(returned=1, total=1),
+        "resolved_from": resolved_from,
     }
 
 
@@ -338,21 +344,23 @@ async def get_graph_incident_edges(
 ) -> dict[str, Any]:
     """Page recorded incident relationships without loading the full neighborhood.
 
-    Reuse scan_id and snapshot_generation on every node expansion to avoid mixing
-    snapshots. Keep node_id and direction fixed while following next_cursor.
-    Snapshot replacement invalidates cursors; restart from the first page on 400.
-    Completeness describes only recorded page rows, never source collection,
-    permissions, execution, or the whole estate. Total relationship count is unknown.
+    Reuse scan_id and snapshot_generation on every node expansion; keep node_id and direction fixed while following next_cursor.
+    Snapshot replacement invalidates cursors (400: restart). A replaced id resolves to its canonical node, echoed as resolved_from.
+    Completeness covers only recorded page rows, never collection, permissions, execution or the estate; the total is unknown.
     """
     store = _runtime._get_graph_store_or_503()
     if isinstance(store, NeptuneGraphStore):
         raise HTTPException(status_code=501, detail="Incident relationship paging is not supported by this graph backend")
+    tenant_id = _runtime._tenant(request)
+    read_id, resolved_from = await _runtime._graph_store_call(
+        resolve_snapshot_node_id, store, tenant_id=tenant_id, scan_id=scan_id or "", node_id=node_id
+    )
     try:
         page = await _runtime._graph_store_call(
             store.incident_edges_page,
-            tenant_id=_runtime._tenant(request),
+            tenant_id=tenant_id,
             scan_id=scan_id or "",
-            node_id=node_id,
+            node_id=read_id,
             direction=direction,
             limit=limit,
             cursor=cursor,
@@ -382,7 +390,8 @@ async def get_graph_incident_edges(
         "scan_id": page["scan_id"],
         "evidence_scope": "current_estate" if page["scan_id"].startswith("current-estate:") else "historical_scan",
         "snapshot_generation": page["snapshot_generation"],
-        "node_id": node_id,
+        "node_id": read_id,
+        "resolved_from": resolved_from,
         "found": True,
         "direction": direction,
         "limit": limit,
