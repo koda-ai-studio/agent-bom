@@ -59,7 +59,7 @@ def apply_tenant_suppression_rules(
     summary = {"evaluated": len(blast_radii), "suppressed": 0}
     for br in blast_radii:
         # Re-evaluate persisted overlays against current approval and expiry.
-        if br.suppressed:
+        if br.suppressed and br.suppression_state != "vex":
             br.suppressed = False
             br.suppression_id = None
             br.suppression_state = None

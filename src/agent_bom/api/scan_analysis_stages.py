@@ -227,7 +227,7 @@ def _apply_vex(ctx: ScanContext, report: Any) -> None:
         _vex_doc = load_vex(req.vex)
     except ValueError as vex_exc:
         raise RuntimeError(f"Failed to load VEX file: {vex_exc}") from vex_exc
-    _vex_count = apply_vex(report, _vex_doc)
+    _vex_count = apply_vex(report, _vex_doc, source="operator")
     report.vex_data = vex_to_serializable(_vex_doc)
     # Preserve non-CVE policy findings while replacing stale CVE
     # projections with the VEX-updated blast-radius representation.

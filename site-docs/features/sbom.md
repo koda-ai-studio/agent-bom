@@ -134,9 +134,28 @@ Use `agent-bom scan -p <project>` when the intended scope is the project tree.
 ## VEX (Vulnerability Exploitability eXchange)
 
 ```bash
-# Apply VEX to suppress known non-exploitable findings
+# Apply an operator-supplied VEX document
 agent-bom agents --vex vex-document.json
 
 # Generate VEX from scan results
 agent-bom agents --generate-vex --vex-output vex.json
 ```
+
+A VEX document you pass explicitly (`--vex` on a scan, or the `vex` field of an
+API scan request) is an operator decision. A `not_affected` or `fixed`
+statement that matches a finding's vulnerability (directly or through a
+GHSA/CVE alias) and its product (the statement's package URL, or any product
+when the statement names none) marks the finding suppressed:
+
+- it stays in JSON, SARIF and API output with `suppressed: true`,
+  `suppression_state: "vex"` and a `suppression_reason` carrying the VEX
+  justification and document id; SARIF adds a `suppressions` entry of kind
+  `external`;
+- it leaves active totals, severity counts, risk scores and
+  `--fail-on-severity`/`--fail-on-kev` exit-code gates.
+
+`under_investigation` and `affected` statements never suppress. Each matched
+vulnerability records `vex_source`: `operator` for a document you supplied,
+`discovered` for VEX found inside scanned packages, images, SBOMs or
+repositories. Discovered VEX is evidence only, so a dependency cannot ship a
+statement that lowers your totals or CI gates.

@@ -81,3 +81,21 @@ def finding_package_location(finding: Finding, index: SourceIndex) -> tuple[str,
     if not identity.startswith("pkg:"):
         identity = f"package:{package_ecosystem(finding)}/{package_name(finding)}@{package_version(finding)}"
     return identity, None
+
+
+def finding_image_reference(finding: Finding, report: AIBOMReport) -> str | None:
+    """Return the scanned image a package finding was read from, as a URI.
+
+    A registry or daemon reference is kept whole; a local tarball keeps only its
+    file name, matching how exports redact local paths.
+    """
+    affected = {str(agent) for agent in finding.affected_agents}
+    for agent in report.agents:
+        if agent.name not in affected:
+            continue
+        if agent.config_path.startswith("docker://"):
+            return agent.config_path
+        if agent.config_path.startswith("oci-tar://"):
+            name = Path(agent.config_path.removeprefix("oci-tar://")).name
+            return f"oci-tar://{quote(name)}" if name else None
+    return None

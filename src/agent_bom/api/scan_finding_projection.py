@@ -19,12 +19,23 @@ from agent_bom.finding_runtime_evidence import (
 )
 
 
+def _operator_vex_overlay(item: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "suppressed": True,
+        "actionable": False,
+        "suppression_state": "vex",
+        "suppression_reason": item.get("suppression_reason") or f"vex: {item.get('vex_justification') or item.get('vex_status')}",
+        "unsuppressed_risk_score": item.get("unsuppressed_risk_score"),
+        "risk_score": 0.0,
+    }
+
+
 def _finding_from_blast_radius(item: dict[str, Any], job: ScanJob) -> dict[str, Any]:
     vulnerability_id = item.get("vulnerability_id") or item.get("id") or ""
     package = item.get("package") or item.get("package_name") or ""
     vex_status = item.get("vex_status")
     risk_score = item.get("risk_score", item.get("blast_score", 0))
-    vex_suppressed = False  # Historical or uploaded VEX assertions cannot authorize suppression.
+    vex_suppressed = item.get("vex_source") == "operator" and vex_status in {"not_affected", "fixed"}
     canonical_id = item.get("canonical_id") or item.get("finding_id")
     row = {
         "id": canonical_id or f"{vulnerability_id}:{package}",
@@ -62,7 +73,10 @@ def _finding_from_blast_radius(item: dict[str, Any], job: ScanJob) -> dict[str, 
         "match_confidence_tier": item.get("match_confidence_tier"),
         "vex_status": vex_status,
         "vex_justification": item.get("vex_justification"),
+        "vex_source": item.get("vex_source"),
+        "vex_statement_id": item.get("vex_statement_id"),
         "vex_suppressed": vex_suppressed,
+        **(_operator_vex_overlay(item) if vex_suppressed else {}),
         "compliance_tags": item.get("compliance_tags"),
     }
     for tag_field in (

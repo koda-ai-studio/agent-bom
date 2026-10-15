@@ -33,6 +33,10 @@ def _normalize_artifact_location(physical: dict[str, Any], result: dict[str, Any
     artifact["uriBaseId"] = "%SRCROOT%"
 
 
+def _dockerfile_location() -> dict[str, Any]:
+    return {"artifactLocation": {"uri": "Dockerfile", "uriBaseId": "%SRCROOT%"}}
+
+
 def normalize_document(document: dict[str, Any]) -> dict[str, Any]:
     for run in document.get("runs", []):
         if not isinstance(run, dict):
@@ -41,11 +45,18 @@ def normalize_document(document: dict[str, Any]) -> dict[str, Any]:
         for result in run.get("results", []):
             if not isinstance(result, dict):
                 continue
-            for location in result.get("locations", []):
+            # GitHub rejects the whole upload ("expected a physical location")
+            # when any result lacks one, so a logical-only or locationless
+            # result is anchored to the checked-in image source.
+            locations = result.get("locations")
+            if not isinstance(locations, list) or not locations:
+                result["locations"] = locations = [{}]
+            for location in locations:
                 if not isinstance(location, dict):
                     continue
                 physical = location.get("physicalLocation")
                 if not isinstance(physical, dict):
+                    location["physicalLocation"] = _dockerfile_location()
                     continue
                 _normalize_artifact_location(physical, result)
             # SARIF 2.1 permits logical-only related locations, but GitHub's
@@ -56,7 +67,7 @@ def normalize_document(document: dict[str, Any]) -> dict[str, Any]:
                     continue
                 physical = related.get("physicalLocation")
                 if not isinstance(physical, dict):
-                    related["physicalLocation"] = {"artifactLocation": {"uri": "Dockerfile", "uriBaseId": "%SRCROOT%"}}
+                    related["physicalLocation"] = _dockerfile_location()
                     continue
                 _normalize_artifact_location(physical, result)
     return document

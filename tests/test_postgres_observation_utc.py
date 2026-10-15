@@ -19,7 +19,9 @@ def isolated_observations():
     from agent_bom.api.hub_observations_partition import partitioned_observations_parent_ddl
 
     schema = f"observation_utc_{uuid4().hex}"
-    with psycopg.connect(os.environ["AGENT_BOM_POSTGRES_URL"], autocommit=True) as app:
+    from agent_bom.api.postgres_common import resolve_postgres_secret, resolve_postgres_url
+
+    with psycopg.connect(resolve_postgres_url(), password=resolve_postgres_secret(), autocommit=True) as app:
         role, superuser, bypass = app.execute(
             "SELECT current_user, rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user"
         ).fetchone()

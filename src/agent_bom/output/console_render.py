@@ -11,7 +11,7 @@ from rich.rule import Rule
 from rich.table import Table
 from rich.tree import Tree
 
-from agent_bom.core.severity import SEVERITY_THRESHOLD_LABELS, severity_rank, severity_worst_first_rank
+from agent_bom.core.severity import SEVERITY_THRESHOLD_LABELS, severity_basis, severity_rank, severity_worst_first_rank
 from agent_bom.core.terminal import safe_emoji as safe_emoji
 from agent_bom.models import AgentStatus, AIBOMReport, Severity
 from agent_bom.output.cis_posture import (
@@ -61,6 +61,21 @@ SEVERITY_TEXT: dict[Severity, str] = {
 }
 
 
+_THREAT_TAG_COLORS = (
+    ("owasp_tags", "purple"),
+    ("atlas_tags", "cyan"),
+    ("attack_tags", "red"),
+    ("nist_ai_rmf_tags", "green"),
+    ("owasp_mcp_tags", "yellow"),
+    ("owasp_agentic_tags", "magenta"),
+    ("eu_ai_act_tags", "blue"),
+    ("nist_csf_tags", "bright_green"),
+    ("iso_27001_tags", "bright_cyan"),
+    ("soc2_tags", "bright_yellow"),
+    ("cis_tags", "bright_magenta"),
+)
+
+
 def _sev_badge(severity: Severity) -> str:
     """Render a severity badge with background color: ` CRIT `, ` HIGH `, etc."""
     style = SEVERITY_BADGES.get(severity, "white")
@@ -73,6 +88,11 @@ def _sev_badge(severity: Severity) -> str:
     }
     label = labels.get(severity, f" {severity.value.upper()} ")
     return f"[{style}]{label}[/{style}]"
+
+
+def _finding_sev_badge(finding) -> str:
+    unscored = severity_basis((getattr(finding, "evidence", None) or {}).get("severity_source")) == "default"
+    return _sev_badge(finding_severity(finding)) + (" [dim](unscored)[/dim]" if unscored else "")
 
 
 def _console() -> Console:
@@ -697,56 +717,16 @@ def print_blast_radius(report: AIBOMReport, fixable_only: bool = False) -> None:
 
         # Threats column: actual framework tag IDs per finding
         threat_lines = []
-        if finding.owasp_tags:
-            tags = sorted(finding.owasp_tags)[:3]
-            extra = f" +{len(finding.owasp_tags) - 3}" if len(finding.owasp_tags) > 3 else ""
-            threat_lines.append(f"[purple]{' '.join(tags)}{extra}[/purple]")
-        if finding.atlas_tags:
-            tags = sorted(finding.atlas_tags)[:3]
-            extra = f" +{len(finding.atlas_tags) - 3}" if len(finding.atlas_tags) > 3 else ""
-            threat_lines.append(f"[cyan]{' '.join(tags)}{extra}[/cyan]")
-        if finding.attack_tags:
-            tags = sorted(finding.attack_tags)[:3]
-            extra = f" +{len(finding.attack_tags) - 3}" if len(finding.attack_tags) > 3 else ""
-            threat_lines.append(f"[red]{' '.join(tags)}{extra}[/red]")
-        if finding.nist_ai_rmf_tags:
-            tags = sorted(finding.nist_ai_rmf_tags)[:3]
-            extra = f" +{len(finding.nist_ai_rmf_tags) - 3}" if len(finding.nist_ai_rmf_tags) > 3 else ""
-            threat_lines.append(f"[green]{' '.join(tags)}{extra}[/green]")
-        if finding.owasp_mcp_tags:
-            tags = sorted(finding.owasp_mcp_tags)[:3]
-            extra = f" +{len(finding.owasp_mcp_tags) - 3}" if len(finding.owasp_mcp_tags) > 3 else ""
-            threat_lines.append(f"[yellow]{' '.join(tags)}{extra}[/yellow]")
-        if finding.owasp_agentic_tags:
-            tags = sorted(finding.owasp_agentic_tags)[:3]
-            extra = f" +{len(finding.owasp_agentic_tags) - 3}" if len(finding.owasp_agentic_tags) > 3 else ""
-            threat_lines.append(f"[magenta]{' '.join(tags)}{extra}[/magenta]")
-        if finding.eu_ai_act_tags:
-            tags = sorted(finding.eu_ai_act_tags)[:3]
-            extra = f" +{len(finding.eu_ai_act_tags) - 3}" if len(finding.eu_ai_act_tags) > 3 else ""
-            threat_lines.append(f"[blue]{' '.join(tags)}{extra}[/blue]")
-        if finding.nist_csf_tags:
-            tags = sorted(finding.nist_csf_tags)[:3]
-            extra = f" +{len(finding.nist_csf_tags) - 3}" if len(finding.nist_csf_tags) > 3 else ""
-            threat_lines.append(f"[bright_green]{' '.join(tags)}{extra}[/bright_green]")
-        if finding.iso_27001_tags:
-            tags = sorted(finding.iso_27001_tags)[:3]
-            extra = f" +{len(finding.iso_27001_tags) - 3}" if len(finding.iso_27001_tags) > 3 else ""
-            threat_lines.append(f"[bright_cyan]{' '.join(tags)}{extra}[/bright_cyan]")
-        if finding.soc2_tags:
-            tags = sorted(finding.soc2_tags)[:3]
-            extra = f" +{len(finding.soc2_tags) - 3}" if len(finding.soc2_tags) > 3 else ""
-            threat_lines.append(f"[bright_yellow]{' '.join(tags)}{extra}[/bright_yellow]")
-        if finding.cis_tags:
-            tags = sorted(finding.cis_tags)[:3]
-            extra = f" +{len(finding.cis_tags) - 3}" if len(finding.cis_tags) > 3 else ""
-            threat_lines.append(f"[bright_magenta]{' '.join(tags)}{extra}[/bright_magenta]")
+        for field, color in _THREAT_TAG_COLORS:
+            if tag_values := getattr(finding, field):
+                extra = f" +{len(tag_values) - 3}" if len(tag_values) > 3 else ""
+                threat_lines.append(f"[{color}]{' '.join(sorted(tag_values)[:3])}{extra}[/{color}]")
         threats_display = "\n".join(threat_lines) if threat_lines else "—"
 
         table.add_row(
             f"[{sev_style}]{finding.risk_score:.1f}[/{sev_style}]",
             vuln_display,
-            _sev_badge(sev),
+            _finding_sev_badge(finding),
             epss_display,
             kev_display,
             blast_display,

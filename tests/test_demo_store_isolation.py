@@ -516,3 +516,32 @@ def test_cli_without_demo_estate_stays_ephemeral_by_default(monkeypatch: pytest.
     result = CliRunner().invoke(serve_cmd, ["--api-key", "synthetic-test-only-key"])
     assert result.exit_code == 0, result.output
     assert not os.environ.get("AGENT_BOM_DB")
+
+
+def test_mcp_server_in_demo_mode_never_reads_the_product_store(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    from agent_bom.db.graph_store import default_graph_db_path
+    from agent_bom.mcp_server import create_mcp_server
+
+    monkeypatch.setenv("AGENT_BOM_DEMO_ESTATE", "1")
+    monkeypatch.delenv("AGENT_BOM_DEMO_STATE_DIR", raising=False)
+    monkeypatch.setenv("AGENT_BOM_STATE_DIR", str(tmp_path / "product"))
+
+    create_mcp_server(profile="graph")
+
+    demo_dir = tmp_path / "product" / "demo-estate"
+    assert state_home.state_dir() == demo_dir
+    assert default_graph_db_path().is_relative_to(demo_dir)
+
+
+def test_mcp_server_cli_refuses_demo_mode_pointed_at_the_product_store(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    from click.testing import CliRunner
+
+    from agent_bom.cli._server import mcp_server_cmd
+
+    monkeypatch.setenv("AGENT_BOM_DEMO_ESTATE", "1")
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.delenv("AGENT_BOM_STATE_DIR", raising=False)
+    monkeypatch.setenv("AGENT_BOM_DEMO_STATE_DIR", str(tmp_path / ".agent-bom"))
+    result = CliRunner().invoke(mcp_server_cmd, ["--profile", "graph"])
+    assert result.exit_code != 0
+    assert "must not be the product state directory" in result.output

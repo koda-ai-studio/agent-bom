@@ -33,6 +33,7 @@ if TYPE_CHECKING:
     from agent_bom.output.console_render import (
         SEVERITY_BADGES,
         SEVERITY_TEXT,
+        _finding_sev_badge,
         _sev_badge,
         build_remediation_plan,
         console,
@@ -112,6 +113,7 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "SEVERITY_BADGES": ("agent_bom.output.console_render", "SEVERITY_BADGES"),
     "SEVERITY_TEXT": ("agent_bom.output.console_render", "SEVERITY_TEXT"),
     "_sev_badge": ("agent_bom.output.console_render", "_sev_badge"),
+    "_finding_sev_badge": ("agent_bom.output.console_render", "_finding_sev_badge"),
     "build_remediation_plan": ("agent_bom.output.console_render", "build_remediation_plan"),
     "console": ("agent_bom.output.console_render", "console"),
     "print_agent_tree": ("agent_bom.output.console_render", "print_agent_tree"),

@@ -449,7 +449,11 @@ def vex_options(fn):
                 multiple=True,
                 callback=_single_value("--vex"),
                 metavar="PATH",
-                help="Apply a VEX document (OpenVEX JSON) to suppress resolved vulnerabilities",
+                help=(
+                    "Apply an operator VEX document (OpenVEX/CycloneDX/CSAF). not_affected/fixed statements for a matching"
+                    " vulnerability and product suppress the finding: kept in output with its justification, excluded"
+                    " from totals, risk scores and exit-code gates."
+                ),
             ),
             click.option(
                 "--generate-vex",

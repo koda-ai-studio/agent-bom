@@ -191,6 +191,34 @@ def _collector(row: dict[str, Any]) -> tuple[str, str]:
     return (collector, SOURCE_TIERS[collector]) if collector else ("finding-import", "static_scan")
 
 
+def vulnerability_signal_attributes(row: dict[str, Any]) -> dict[str, Any]:
+    """Exploit signals a vulnerability finding carries onto its graph node.
+
+    Attack-path ranking and toxic-combination rules read ``is_kev`` and EPSS from
+    the node, so dropping them here demotes exploited-in-the-wild paths.
+    """
+    evidence = _dict(row.get("evidence"))
+    attributes: dict[str, Any] = {"is_kev": bool(row.get("is_kev") or evidence.get("is_kev"))}
+    vuln_id = _text(row.get("vulnerability_id")) or _text(row.get("cve_id"))
+    if vuln_id:
+        attributes["vulnerability_id"] = vuln_id
+    for key in ("epss_score", "cvss_score"):
+        value = row.get(key, evidence.get(key))
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            attributes[key] = value
+    fixed = _text(row.get("fixed_version"))
+    if fixed:
+        attributes["fixed_version"] = fixed
+    return attributes
+
+
+def finding_signal_attributes(finding: Any) -> dict[str, Any]:
+    """:func:`vulnerability_signal_attributes` for a ``Finding`` object."""
+    return vulnerability_signal_attributes(
+        {key: getattr(finding, key, None) for key in ("vulnerability_id", "is_kev", "epss_score", "cvss_score", "fixed_version")}
+    )
+
+
 def _new_node(row: dict[str, Any], node_id: str, collector: str) -> UnifiedNode:
     evidence = _dict(row.get("evidence"))
     attributes: dict[str, Any] = {
@@ -202,12 +230,16 @@ def _new_node(row: dict[str, Any], node_id: str, collector: str) -> UnifiedNode:
         value = evidence.get(key)
         if isinstance(value, (str, int)) and value != "":
             attributes[key] = value
-    vuln_id = _text(row.get("vulnerability_id")) or _text(row.get("cve_id"))
-    if vuln_id:
-        attributes["vulnerability_id"] = vuln_id
+    is_vulnerability = node_id.startswith("vuln:")
+    if is_vulnerability:
+        attributes.update(vulnerability_signal_attributes(row))
+    else:
+        vuln_id = _text(row.get("vulnerability_id")) or _text(row.get("cve_id"))
+        if vuln_id:
+            attributes["vulnerability_id"] = vuln_id
     return UnifiedNode(
         id=node_id,
-        entity_type=EntityType.VULNERABILITY if node_id.startswith("vuln:") else EntityType.MISCONFIGURATION,
+        entity_type=EntityType.VULNERABILITY if is_vulnerability else EntityType.MISCONFIGURATION,
         label=sanitize_text(_text(row.get("title")) or _text(row.get("finding_type")) or "Finding", max_len=500),
         severity=_text(row.get("severity")).lower() or "unknown",
         attributes=attributes,
@@ -274,4 +306,11 @@ def project_finding_rows(graph: UnifiedGraph, findings: Any) -> None:
             asset.data_sources.append(collector)
 
 
-__all__ = ["finding_row_node_id", "project_finding_rows", "row_compliance_tags", "stamp_finding_node_ids"]
+__all__ = [
+    "finding_row_node_id",
+    "finding_signal_attributes",
+    "project_finding_rows",
+    "row_compliance_tags",
+    "stamp_finding_node_ids",
+    "vulnerability_signal_attributes",
+]

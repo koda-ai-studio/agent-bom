@@ -229,3 +229,26 @@ def test_legacy_appsec_sca_domain_filter_still_resolves() -> None:
     resp = client.get("/v1/findings?domain=appsec_sca", headers=_AUTH)
     assert resp.status_code == 200
     assert _ids(resp) == {"repo-cve", "sast-weak"}
+
+
+def test_applied_filters_are_echoed_and_a_complete_scoped_page_reports_its_total() -> None:
+    _seed_scan_findings()
+    client = TestClient(app)
+    payload = client.get("/v1/findings?provider=AWS&environment=prod&severity=high", headers=_AUTH).json()
+    assert {f["id"] for f in payload["findings"]} == {"f-aws-prod"}
+    assert payload["filters"] == {"provider": "aws", "environment": "prod", "severity": "high"}
+    assert payload["count_metadata"]["filters"] == payload["filters"]
+    assert payload["total"] == 1
+    assert payload["count_metadata"]["total_kind"] == "exact"
+    assert "total_approximate" not in payload
+
+    kev = client.get("/v1/findings?kev=false&domain=cspm", headers=_AUTH).json()
+    assert kev["filters"] == {"kev": False, "domain": "cspm"}
+    assert kev["total"] == 2
+
+
+def test_a_scoped_page_with_more_rows_keeps_an_unknown_total() -> None:
+    _seed_scan_findings()
+    payload = TestClient(app).get("/v1/findings?provider=aws&limit=1", headers=_AUTH).json()
+    assert payload["has_more"] is True
+    assert payload["total"] is None

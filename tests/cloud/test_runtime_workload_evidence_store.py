@@ -24,8 +24,12 @@ from agent_bom.cloud.runtime_workload_evidence_store import (
     SQLiteRuntimeWorkloadEvidenceStore,
 )
 
-_PG_URL = os.environ.get("AGENT_BOM_POSTGRES_URL")
-_requires_pg = pytest.mark.skipif(not _PG_URL, reason="AGENT_BOM_POSTGRES_URL required for real Postgres tests")
+# The explicit-DSN mode creates and drops its own throwaway table, which the
+# DML-only application role may not do; use the migrator DSN when one is set.
+_PG_URL = os.environ.get("AGENT_BOM_POSTGRES_ADMIN_URL") or os.environ.get("AGENT_BOM_POSTGRES_URL")
+_requires_pg = pytest.mark.skipif(
+    not os.environ.get("AGENT_BOM_POSTGRES_URL"), reason="AGENT_BOM_POSTGRES_URL required for real Postgres tests"
+)
 
 
 def _signal(

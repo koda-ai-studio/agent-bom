@@ -192,10 +192,13 @@ def _apply_vex(opts: ScanOptions, st: ScanState) -> None:
             _vex_doc = load_vex(opts.vex_path)
         except ValueError as exc:
             raise click.ClickException(str(exc)) from exc
-        _vex_count = apply_vex(st.report, _vex_doc)
+        _vex_count = apply_vex(st.report, _vex_doc, source="operator")
         st.report.vex_data = _vex_to_ser(_vex_doc)
         if not opts.quiet:
             st.con.print(f"  [green]✓[/green] VEX applied: {_vex_count} vulnerabilities updated from {opts.vex_path}")
+            _vex_suppressed = sum(1 for br in st.report.blast_radii if br.suppression_state == "vex")
+            if _vex_suppressed:
+                st.con.print(f"    [dim]{_vex_suppressed} finding(s) suppressed as not_affected/fixed (kept in output).[/dim]")
 
 
 def _detect_toxic_combinations(opts: ScanOptions, st: ScanState) -> None:

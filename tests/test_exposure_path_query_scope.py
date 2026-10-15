@@ -114,6 +114,7 @@ def test_postgres_receipt_restart_and_induced_query():
         assert len(store.edges_for_node_ids(tenant_id="default", scan_id=scan_id, node_ids=ids, induced_only=True)) == 1
         assert store.edges_for_node_ids(tenant_id="other", scan_id=scan_id, node_ids=ids, induced_only=True) == []
     finally:
+        PostgresGraphStore().delete_snapshot(tenant_id="default", scan_id=scan_id)
         reset_current_tenant(token)
 
 

@@ -33302,6 +33302,8 @@ export interface operations {
                 has_credential?: boolean | null;
                 /** @description Only paths whose entrypoint node has this entity type */
                 source_type?: string | null;
+                /** @description next_cursor from the previous page (replaces offset) */
+                cursor?: string | null;
             };
             header?: never;
             path?: never;

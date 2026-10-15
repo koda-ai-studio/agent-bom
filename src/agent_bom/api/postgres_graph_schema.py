@@ -37,7 +37,7 @@ _GRAPH_TABLES_DDL: tuple[str, ...] = (
                 """,
     """
                 CREATE INDEX IF NOT EXISTS idx_pg_graph_nodes_scan_id_cover
-                ON graph_nodes(tenant_id, scan_id, id) INCLUDE (attributes)
+                ON graph_nodes(tenant_id, scan_id, id)
                 """,
     """
                 CREATE TABLE IF NOT EXISTS graph_edges (

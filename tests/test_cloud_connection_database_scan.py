@@ -9,12 +9,30 @@ from __future__ import annotations
 
 import os
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
 
 import pytest
 
 from agent_bom.cloud.connection_request import ephemeral_connection_record
 
 _PG_URL = os.environ.get("AGENT_BOM_DSPM_TEST_POSTGRES_URL") or os.environ.get("AGENT_BOM_POSTGRES_URL", "")
+
+
+@contextmanager
+def _as_tenant(tenant_id: str) -> Iterator[None]:
+    """Bind the tenant the way the request middleware and queue worker do.
+
+    Under a Postgres job store the FORCE RLS policies reject a write for any
+    tenant other than the bound one.
+    """
+    from agent_bom.api.postgres_common import reset_current_tenant, set_current_tenant
+
+    token = set_current_tenant(tenant_id)
+    try:
+        yield
+    finally:
+        reset_current_tenant(token)
 
 
 def test_sampling_disabled_does_not_claim_clean(monkeypatch):
@@ -27,7 +45,8 @@ def test_sampling_disabled_does_not_claim_clean(monkeypatch):
         role_ref="postgresql://localhost/db",
         external_id="postgresql://u:p@localhost/db",
     ) as record:
-        summary = _run_database_connection_scan(record, tenant_id="t1")
+        with _as_tenant("t1"):
+            summary = _run_database_connection_scan(record, tenant_id="t1")
 
     assert summary["provider"] == "database"
     dspm = summary["dspm"]
@@ -61,7 +80,8 @@ def test_live_database_connection_scan_is_redacted_and_honest(monkeypatch):
             external_id=_PG_URL,
             auth_params={"engine": "postgres", "schemas": schema, "publicly_accessible": "true"},
         ) as record:
-            summary = _run_database_connection_scan(record, tenant_id="tenant-a")
+            with _as_tenant("tenant-a"):
+                summary = _run_database_connection_scan(record, tenant_id="tenant-a")
     finally:
         with psycopg.connect(_PG_URL, autocommit=True) as admin, admin.cursor() as cur:
             cur.execute(f'DROP SCHEMA IF EXISTS "{schema}" CASCADE')

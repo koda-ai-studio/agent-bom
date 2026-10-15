@@ -19,12 +19,12 @@ import uuid
 import pytest
 
 _DSN = os.environ.get("AGENT_BOM_POSTGRES_URL", "").strip()
-pytestmark = pytest.mark.skipif(not _DSN, reason="AGENT_BOM_POSTGRES_URL not set")
+pytestmark = [pytest.mark.skipif(not _DSN, reason="AGENT_BOM_POSTGRES_URL not set"), pytest.mark.graph_contract("warn")]
 
 from agent_bom.graph import RelationshipType, UnifiedEdge  # noqa: E402
 from agent_bom.graph.build_workspace import (  # noqa: E402
     GraphBuildWorkspace,
-    _PostgresWorkspaceBackend,
+    open_workspace_backend,
 )
 from agent_bom.graph.container import UnifiedGraph  # noqa: E402
 from agent_bom.graph.node import UnifiedNode  # noqa: E402
@@ -95,7 +95,7 @@ def _persist_edge_tuple(e: UnifiedEdge):
 
 
 def _open(workspace_id: str, tenant: str) -> GraphBuildWorkspace:
-    return GraphBuildWorkspace(_PostgresWorkspaceBackend(_DSN, workspace_id), tenant_id=tenant, batch_size=100)
+    return GraphBuildWorkspace(open_workspace_backend(workspace_id=workspace_id, backend="postgres"), tenant_id=tenant, batch_size=100)
 
 
 def test_postgres_workspace_roundtrip_is_byte_identical() -> None:
@@ -134,7 +134,7 @@ def test_postgres_random_access_parity() -> None:
     graph = _graph(400)
     wsid = f"ra-{uuid.uuid4().hex}"
     tenant = "t1"
-    backend = _PostgresWorkspaceBackend(_DSN, wsid)
+    backend = open_workspace_backend(workspace_id=wsid, backend="postgres")
     ws = GraphBuildWorkspace(backend, tenant_id=tenant, batch_size=64)
     try:
         ws.add_nodes(graph.nodes.values())
@@ -167,7 +167,7 @@ def test_postgres_random_access_parity() -> None:
 
 def test_postgres_random_access_reads_are_tenant_scoped() -> None:
     wsid = f"ra-iso-{uuid.uuid4().hex}"
-    backend = _PostgresWorkspaceBackend(_DSN, wsid)
+    backend = open_workspace_backend(workspace_id=wsid, backend="postgres")
     alpha = GraphBuildWorkspace(backend, tenant_id="alpha")
     beta = GraphBuildWorkspace(backend, tenant_id="beta")
     try:
@@ -191,9 +191,9 @@ def test_postgres_random_access_reads_are_tenant_scoped() -> None:
 
 def test_postgres_workspace_tenant_isolation() -> None:
     wsid = f"iso-{uuid.uuid4().hex}"
-    backend_a = _PostgresWorkspaceBackend(_DSN, wsid)
+    backend_a = open_workspace_backend(workspace_id=wsid, backend="postgres")
     alpha = GraphBuildWorkspace(backend_a, tenant_id="alpha")
-    beta = GraphBuildWorkspace(_PostgresWorkspaceBackend(_DSN, wsid), tenant_id="beta")
+    beta = GraphBuildWorkspace(open_workspace_backend(workspace_id=wsid, backend="postgres"), tenant_id="beta")
     try:
         alpha.add_nodes([UnifiedNode(id="shared:1", entity_type=EntityType.AGENT, label="alpha-agent")])
         alpha.add_nodes([UnifiedNode(id="a-only", entity_type=EntityType.VULNERABILITY, label="a")])
@@ -211,13 +211,12 @@ def test_postgres_workspace_tenant_isolation() -> None:
 
 _CHILD_WRITER = """
 import os, sys
-from agent_bom.graph.build_workspace import GraphBuildWorkspace, _PostgresWorkspaceBackend
+from agent_bom.graph.build_workspace import GraphBuildWorkspace, open_workspace_backend
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.types import EntityType
 
-dsn = os.environ["AGENT_BOM_POSTGRES_URL"]
 wsid, tenant, lo, hi = sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4])
-ws = GraphBuildWorkspace(_PostgresWorkspaceBackend(dsn, wsid), tenant_id=tenant, batch_size=50)
+ws = GraphBuildWorkspace(open_workspace_backend(workspace_id=wsid, backend="postgres"), tenant_id=tenant, batch_size=50)
 # NOTE: no ws.close() — close() drops the workspace rows; the parent reads them.
 ws.add_nodes(
     UnifiedNode(id=f"n:{i}", entity_type=EntityType.VULNERABILITY, label=f"L{i}", severity="high")
@@ -241,7 +240,7 @@ def test_postgres_workspace_cross_process_writers() -> None:
     rcs = [p.wait(timeout=120) for p in procs]
     assert rcs == [0, 0], f"child writers failed: {rcs}"
 
-    reader = _PostgresWorkspaceBackend(_DSN, wsid)
+    reader = open_workspace_backend(workspace_id=wsid, backend="postgres")
     read = GraphBuildWorkspace(reader, tenant_id=tenant, batch_size=100)
     try:
         ids = [n.id for n in read.iter_nodes()]

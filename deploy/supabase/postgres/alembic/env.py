@@ -15,7 +15,10 @@ from deploy.supabase.postgres.compose_migrate import (
 config = context.config
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # The default disables every logger that already exists, which silences
+    # agent-bom's own warnings for the rest of any process that migrates
+    # in-process.
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 target_metadata = None
 
