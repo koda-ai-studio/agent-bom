@@ -1667,7 +1667,9 @@ jobs:
             tests/test_runtime_recovery_import.py \
             tests/test_runtime_trace_revision_retention.py \
             tests/test_scim_recovery_import.py \
-            tests/test_trace_explorer_session_pages.py
+            tests/test_trace_explorer_session_pages.py \
+            tests/test_graph_asset_canonicalization.py \
+            tests/test_graph_node_aliases.py
 
   # 3b. Alpine/musl compatibility test
   # Runs the test suite inside an Alpine Linux container (musl libc) to catch
