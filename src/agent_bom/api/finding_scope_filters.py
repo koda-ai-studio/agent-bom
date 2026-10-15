@@ -169,3 +169,37 @@ def _finding_sort_key(row: dict[str, Any], sort: str) -> tuple[float, float, flo
         primary = reach_val
     # Descending: negate, with cvss + severity as deterministic tiebreakers.
     return (-primary, -cvss, -float(sev_rank))
+
+
+_ECHOED_SCOPE_FILTERS = (("provider", "provider"), ("account", "account_ref"), ("environment", "environment"), ("domain", "domain"))
+
+
+def _finding_list_filters(
+    finding_class: str | None,
+    q: str | None,
+    framework: str | None,
+    control: str | None,
+    owner: str | None,
+    sla: str | None,
+    *,
+    severity: str | None = None,
+    scope: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    """Echo every filter the request applied, under its query-parameter name."""
+
+    def _clean(value: str | None) -> str | None:
+        return value.strip() if value and value.strip() else None
+
+    scope = scope or {}
+    filters = {
+        "severity": severity,
+        "kev": scope["kev"] == "true" if "kev" in scope else None,
+        **{key: scope.get(scope_key) for key, scope_key in _ECHOED_SCOPE_FILTERS},
+        "finding_class": finding_class,
+        "q": _clean(q),
+        "framework": _clean(framework),
+        "control": _clean(control),
+        "owner": cleaned_owner.lower() if (cleaned_owner := _clean(owner)) else None,
+        "sla": sla,
+    }
+    return {key: value for key, value in filters.items() if value is not None}

@@ -97,6 +97,7 @@ from agent_bom.api.finding_row_shapes import (  # noqa: F401 - re-exported route
 from agent_bom.api.finding_scope_filters import _canonical_group_key as _canonical_group_key
 from agent_bom.api.finding_scope_filters import _canonical_scope_filters as _canonical_scope_filters
 from agent_bom.api.finding_scope_filters import _finding_identity as _finding_identity
+from agent_bom.api.finding_scope_filters import _finding_list_filters as _finding_list_filters
 from agent_bom.api.finding_scope_filters import _finding_sort_key as _finding_sort_key
 from agent_bom.api.finding_scope_filters import _row_asset_key as _row_asset_key
 from agent_bom.api.finding_scope_filters import _row_matches_scope as _row_matches_scope
@@ -2054,23 +2055,6 @@ def _scope_completeness(scope_metadata: dict[str, Any], warnings: list[str]) -> 
     return completeness
 
 
-def _finding_list_filters(
-    finding_class: str | None, q: str | None, framework: str | None, control: str | None, owner: str | None, sla: str | None
-) -> dict[str, Any]:
-    def _clean(value: str | None) -> str | None:
-        return value.strip() if value and value.strip() else None
-
-    filters = {
-        "finding_class": finding_class,
-        "q": _clean(q),
-        "framework": _clean(framework),
-        "control": _clean(control),
-        "owner": cleaned_owner.lower() if (cleaned_owner := _clean(owner)) else None,
-        "sla": sla,
-    }
-    return {key: value for key, value in filters.items() if value is not None}
-
-
 def _attach_facets(envelope: dict[str, Any], facets: dict, completeness: dict) -> None:
     envelope["facets"] = facets
     envelope["facets_approximate"] = completeness["status"] != "complete"
@@ -2091,10 +2075,15 @@ def _findings_page_envelope(
     *,
     filters: dict[str, Any],
     warnings: list[str],
+    walk_truncated: bool = False,
 ) -> dict[str, Any]:
+    total, total_approximate = page.total, page.total_approximate
+    if total is None and not (page.next_cursor or query.cursor or query.offset or walk_truncated):
+        # A first page with no continuation saw every match, so its size is exact.
+        total, total_approximate = len(page.rows), False
     envelope = finding_list_envelope(
         findings=rows,
-        total=page.total,
+        total=total,
         limit=query.limit,
         offset=0 if query.cursor else query.offset,
         sort=query.sort_key,
@@ -2103,7 +2092,7 @@ def _findings_page_envelope(
         next_cursor=page.next_cursor or "",
         filters=filters,
         warnings=warnings,
-        total_approximate=page.total_approximate,
+        total_approximate=total_approximate,
         source="scan_and_current_ingest_findings",
         scope="tenant current-state findings",
     )
@@ -2183,8 +2172,9 @@ def _list_findings_impl(
         query,
         page,
         _redact_finding_page(rows) if redact_page else rows,
-        filters=_finding_list_filters(finding_class, q, framework, control, owner, sla),
+        filters=_finding_list_filters(finding_class, q, framework, control, owner, sla, severity=query.severity, scope=scope_filters),
         warnings=warnings,
+        walk_truncated=bool(scope_metadata.get("truncated")),
     )
     if scope_completeness is not None:
         envelope["scope_completeness"] = scope_completeness

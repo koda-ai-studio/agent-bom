@@ -24,6 +24,12 @@ export function severityColor(severity: string): string {
   }
 }
 
+/** Severity text with "(unscored)" when no score or advisory rating backed it. */
+export function severityText(severity: string, provenance?: { severity_label?: string | null | undefined; severity_source?: string | null | undefined }): string {
+  if (provenance?.severity_label) return provenance.severity_label;
+  return provenance?.severity_source?.toLowerCase().endsWith("_heuristic") ? `${severity} (unscored)` : severity;
+}
+
 export function severityDot(severity: string): string {
   switch (severity?.toLowerCase()) {
     case "critical":

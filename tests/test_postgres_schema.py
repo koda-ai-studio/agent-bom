@@ -676,3 +676,29 @@ def test_graph_hot_path_indexes_exist():
         assert index_name in indexes
     assert "LOWER(search_text) gin_trgm_ops" in SQL
     assert "WHERE traversable = 1" in SQL
+
+
+def test_no_btree_index_carries_unbounded_json_payloads():
+    """INCLUDE values sit inline in btree leaves (~2.7 kB cap); one wide row would abort the write."""
+    from agent_bom.api.postgres_graph_schema import _GRAPH_TABLES_DDL
+
+    for source in (SQL, *_GRAPH_TABLES_DDL):
+        for included in re.findall(r"INCLUDE\s*\(([^)]*)\)", source):
+            assert not {"attributes", "evidence", "provenance", "data"} & {c.strip() for c in included.split(",")}, included
+
+
+def test_alembic_env_keeps_existing_loggers_enabled():
+    """fileConfig's default disables every existing logger, muting agent-bom warnings after an in-process migration."""
+    import ast
+
+    env = INIT_SQL.parent / "alembic" / "env.py"
+    calls = [
+        node
+        for node in ast.walk(ast.parse(env.read_text()))
+        if isinstance(node, ast.Call) and getattr(node.func, "id", getattr(node.func, "attr", "")) == "fileConfig"
+    ]
+    assert calls
+    for call in calls:
+        keywords = {kw.arg: kw.value for kw in call.keywords}
+        assert isinstance(keywords.get("disable_existing_loggers"), ast.Constant)
+        assert keywords["disable_existing_loggers"].value is False

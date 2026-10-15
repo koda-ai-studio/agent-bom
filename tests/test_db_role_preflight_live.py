@@ -80,6 +80,8 @@ def test_bypassrls_role_is_rejected_by_runtime_guard(monkeypatch: pytest.MonkeyP
         bypass_url = urlunsplit((parts.scheme, netloc, parts.path, parts.query, parts.fragment))
 
         monkeypatch.setenv("AGENT_BOM_POSTGRES_URL", bypass_url)
+        # A mounted password file outranks the DSN password and belongs to the app role.
+        monkeypatch.delenv("AGENT_BOM_POSTGRES_PASSWORD_FILE", raising=False)
         _reset_pool()
 
         with pytest.raises(postgres_common.RlsRolePrivilegeError, match="BYPASSRLS"):

@@ -363,12 +363,15 @@ def test_api_pipeline_applies_vex_and_rebuilds_findings(monkeypatch, tmp_path):
     assert job.result is not None
     assert job.result.get("vex") is not None
     finding = job.result["findings"][0]
-    assert finding["suppressed"] is False
+    # The API request's ``vex`` field is operator-supplied, so it suppresses.
+    assert finding["suppressed"] is True
+    assert finding["suppression_state"] == "vex"
+    assert finding["evidence"]["vex_source"] == "operator"
     assert finding["evidence"]["vex_status"] == "not_affected"
     assert finding["evidence"]["vex_justification"] == "component_not_present"
     br_item = job.result["blast_radius"][0]
     assert br_item["vex_status"] == "not_affected"
-    assert br_item["vex_suppressed"] is False
+    assert br_item["vex_suppressed"] is True
     # The legacy blast-radius projection is the same canonical finding, not a
     # second anonymous row.  Carrying the unified identity lets REST collapse
     # both representations and keeps owner/SLA/triage joins stable.

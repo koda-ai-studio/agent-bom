@@ -30,10 +30,12 @@ class Applicability:
     basis: tuple[str, ...]
     vex_status: str | None = None
     vex_justification: str | None = None
+    vex_source: str | None = None
 
     @property
     def vex_excluded(self) -> bool:
-        return self.vex_status in SUPPRESSING_VEX_STATUSES
+        # VEX shipped inside scanned artifacts is evidence, never an exclusion.
+        return self.vex_status in SUPPRESSING_VEX_STATUSES and self.vex_source != "discovered"
 
     @property
     def unlikely(self) -> bool:
@@ -56,7 +58,7 @@ def applicability_from_row(row: dict[str, Any]) -> dict[str, Any]:
     for key in _REACHABILITY_FIELDS:
         if row.get(key) is not None:
             payload[key] = row[key]
-    for key in ("vex_status", "vex_justification"):
+    for key in ("vex_status", "vex_justification", "vex_source"):
         value = _text(row.get(key))
         if value:
             payload[key] = value
@@ -79,6 +81,7 @@ def applicability_from_payload(payload: dict[str, Any]) -> Applicability:
         basis=tuple(str(item) for item in basis) if isinstance(basis, list) else (),
         vex_status=_text(payload.get("vex_status")),
         vex_justification=_text(payload.get("vex_justification")),
+        vex_source=_text(payload.get("vex_source")),
     )
 
 
@@ -94,6 +97,7 @@ def edge_applicability(edge: Any, vulnerability_attributes: dict[str, Any] | Non
         basis=reach.basis,
         vex_status=_text(attrs.get("vex_status")),
         vex_justification=_text(attrs.get("vex_justification")),
+        vex_source=_text(attrs.get("vex_source")),
     )
 
 
@@ -122,6 +126,7 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
     vex = [payload.get("vex_status") for payload in payloads]
     common_vex = vex[0] if vex and all(value == vex[0] for value in vex) else None
     justifications = {payload.get("vex_justification") for payload in payloads}
+    vex_sources = {payload.get("vex_source") for payload in payloads}
 
     def union(key: str) -> int:
         return len({str(item) for row in rows for item in (row.get(key) or [])})
@@ -142,6 +147,7 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "occurrence_verdicts": dict(sorted(Counter(payload["verdict"] for payload in payloads).items())),
         "vex_status": common_vex,
         "vex_justification": justifications.pop() if common_vex and len(justifications) == 1 else None,
+        "vex_source": vex_sources.pop() if common_vex and len(vex_sources) == 1 else None,
     }
     if any(vex):
         attributes["occurrence_vex"] = dict(sorted(Counter(value or "none" for value in vex).items()))

@@ -15,6 +15,7 @@ from agent_bom.asset_provenance import (
     package_version_provenance,
     sanitize_discovery_provenance,
 )
+from agent_bom.core.severity import severity_basis
 from agent_bom.mcp_blocklist import sanitize_security_intelligence_entry
 from agent_bom.models import AIBOMReport, Severity
 from agent_bom.security import (
@@ -31,9 +32,11 @@ def _severity_state(severity: Severity) -> str:
     return "pending" if severity == Severity.UNKNOWN else "scored"
 
 
-def _severity_label(severity: Severity) -> str:
-    """Human-friendly label that distinguishes advisory-only findings."""
-    return "advisory" if severity == Severity.UNKNOWN else severity.value
+def _severity_label(severity: Severity, severity_source: str | None = None) -> str:
+    """Human-friendly label that distinguishes advisory-only and unscored findings."""
+    if severity == Severity.UNKNOWN:
+        return "advisory"
+    return f"{severity.value} (unscored)" if severity_basis(severity_source) == "default" else severity.value
 
 
 def _package_occurrence_to_dict(occurrence) -> dict[str, object]:
@@ -55,9 +58,10 @@ def _vulnerability_json(v: Any) -> dict[str, Any]:
         "id": v.id,
         "summary": v.summary,
         "severity": v.severity.value,
-        "severity_label": _severity_label(v.severity),
+        "severity_label": _severity_label(v.severity, v.severity_source),
         "severity_state": _severity_state(v.severity),
         "severity_source": v.severity_source,
+        "severity_basis": severity_basis(v.severity_source),
         "advisory_sources": v.all_advisory_sources,
         "primary_advisory_source": v.all_advisory_sources[0] if v.all_advisory_sources else None,
         "advisory_coverage_state": v.advisory_coverage_state,

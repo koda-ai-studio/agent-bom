@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from typing import Any, Literal, Optional, cast
 
@@ -43,6 +44,7 @@ from agent_bom.api.routes.graph_routes.payloads import (
 from agent_bom.cloud.runtime_graph_evidence import _enrich_loaded_graph_runtime_evidence
 from agent_bom.config import GRAPH_INVESTIGATION_NODE_BUDGET
 from agent_bom.graph.completeness import graph_completeness
+from agent_bom.graph.diff_view import decode_cursor, encode_cursor
 from agent_bom.graph.scope import GraphScopeKind
 
 compromise_router = APIRouter(route_class=_GraphAdmissionRoute)
@@ -238,6 +240,27 @@ async def _ranked_queue_page(graph_store: Any, tenant: str, scan_id: str, page_a
     return page.ranked, page.materialized_paths, page.derived_paths, page.source
 
 
+def _attack_path_cursor_scope(tenant: str, scan_id: str | None, filters: dict[str, Any]) -> str:
+    return hashlib.sha256(json.dumps(["attack-paths", tenant, scan_id or "", sorted(filters.items())]).encode()).hexdigest()
+
+
+def _attack_path_continuation(cursor: str, scope: str, *, offset: int, generation: str | None) -> tuple[int, str]:
+    """Offset and pinned generation a ``next_cursor`` carries for this tenant and query."""
+    if offset or generation:
+        raise HTTPException(400, "cursor replaces offset and snapshot_generation; send only the cursor.")
+    try:
+        continuation = decode_cursor(cursor, scope)
+    except ValueError as exc:
+        raise HTTPException(400, "Invalid cursor for this query; restart from the first page.") from exc
+    return continuation["offset"], continuation["revision"]
+
+
+def _attack_path_page_cursors(scope: str, generation: str, offset: int, ranked: Any, cursor: str | None) -> dict[str, Any]:
+    next_offset = offset + len(ranked.paths)
+    has_more = bool(ranked.paths) and next_offset < ranked.total
+    return {"cursor": cursor or "", "next_cursor": encode_cursor(scope, generation, next_offset) if has_more else "", "has_more": has_more}
+
+
 @investigation_router.get("/graph/attack-paths", tags=["graph"], responses={200: _ATTACK_PATHS_OPENAPI_RESPONSE})
 async def get_graph_attack_paths(
     request: Request,
@@ -252,6 +275,7 @@ async def get_graph_attack_paths(
     ),
     has_credential: Optional[bool] = Query(None, description="Only paths that do (true) or do not (false) expose a credential"),
     source_type: Optional[str] = Query(None, max_length=64, description="Only paths whose entrypoint node has this entity type"),
+    cursor: Optional[str] = Query(None, max_length=1024, description="next_cursor from the previous page (replaces offset)"),
 ) -> dict:
     """Return the global attack-path queue independent of node pagination.
 
@@ -265,10 +289,13 @@ async def get_graph_attack_paths(
 
     tenant = _runtime._tenant(request)
     graph_store = _runtime._get_graph_store_or_503()
+    filters = AttackPathFilters(min_severity=min_severity, has_credential=has_credential, source_type=source_type)
+    scope = _attack_path_cursor_scope(tenant, scan_id, filters.active())
+    if cursor:
+        offset, snapshot_generation = _attack_path_continuation(cursor, scope, offset=offset, generation=snapshot_generation)
     identity = await _runtime._graph_store_call(
         pin_generation, graph_store, tenant=tenant, scan_id=scan_id or "", generation=snapshot_generation, offset=offset
     )
-    filters = AttackPathFilters(min_severity=min_severity, has_credential=has_credential, source_type=source_type)
     page_args = {"offset": offset, "limit": limit, "filters": filters}
     ranked, materialized_paths, derived_paths, path_source = await _ranked_queue_page(graph_store, tenant, identity[0], page_args)
     effective_scan_id = ranked.scan_id
@@ -311,6 +338,7 @@ async def get_graph_attack_paths(
 
     await _runtime._graph_store_call(verify_generation, graph_store, tenant=tenant, identity=identity, has_rows=bool(nodes or ranked.paths))
     payload["snapshot_generation"] = identity[1]
+    payload["pagination"].update(_attack_path_page_cursors(scope, identity[1], offset, ranked, cursor))
     return payload
 
 

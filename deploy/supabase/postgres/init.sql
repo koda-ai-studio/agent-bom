@@ -442,7 +442,7 @@ CREATE INDEX IF NOT EXISTS idx_pg_graph_nodes_scan ON graph_nodes(tenant_id, sca
 CREATE INDEX IF NOT EXISTS idx_pg_graph_nodes_scan_order
     ON graph_nodes(tenant_id, scan_id, severity_id DESC, risk_score DESC, label);
 CREATE INDEX IF NOT EXISTS idx_pg_graph_nodes_scan_id_cover
-    ON graph_nodes(tenant_id, scan_id, id) INCLUDE (attributes);
+    ON graph_nodes(tenant_id, scan_id, id);
 
 CREATE TABLE IF NOT EXISTS graph_edges (
     source_id    TEXT NOT NULL,

@@ -48,7 +48,7 @@ def store(request, tmp_path):
             yield PostgresGraphStore(pool=pool)
         finally:
             with pool.connection() as conn:
-                conn.execute("SELECT set_config('app.current_tenant', %s, true)", (request.node.name,))
+                conn.execute("SELECT set_config('app.tenant_id', %s, true)", (request.node.name,))
                 for table in (
                     "graph_node_search",
                     "attack_paths",

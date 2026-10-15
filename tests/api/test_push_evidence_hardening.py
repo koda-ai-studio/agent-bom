@@ -170,6 +170,8 @@ def test_postgres_push_redaction_audit_and_failed_write(monkeypatch):
     headers = {"X-Agent-Bom-Role": "analyst", "X-Agent-Bom-Tenant-ID": tenant, "X-Agent-Bom-Proxy-Secret": PROXY_SECRET}
     token = postgres_common.set_current_tenant(tenant)
     postgres_common.reset_pool()
+    # The cached middleware stack owns a rate limiter bound to the pool just closed.
+    monkeypatch.setattr(app, "middleware_stack", None)
     try:
         jobs, graph, audit = PostgresJobStore(), PostgresGraphStore(), PostgresAuditLog()
         monkeypatch.setattr(stores, "_store", jobs)

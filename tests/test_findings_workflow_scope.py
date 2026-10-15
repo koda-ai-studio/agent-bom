@@ -98,10 +98,10 @@ def test_owner_and_overdue_filters_precede_pagination_and_match_async_export(
 
     assert listed.status_code == 200, listed.text
     assert [row["id"] for row in listed.json()["findings"]] == ["overdue-payments"]
-    # Scope-filtered hub walks are deliberately bounded and do not claim an
-    # exact COUNT. The page and export must still agree on the matching row.
-    assert listed.json()["total"] is None
-    assert listed.json()["total_approximate"] is True
+    # The bounded scope walk exhausted every match on this first page, so its
+    # size is exact. The page and export must still agree on the matching row.
+    assert listed.json()["total"] == 1
+    assert "total_approximate" not in listed.json()
     assert listed.json()["filters"] == {"owner": "payments-security", "sla": "overdue"}
 
     created = client.post(

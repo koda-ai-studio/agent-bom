@@ -38,19 +38,26 @@ def _sync_attack_path_stats(
     *,
     total: int,
     paths: list[AttackPath],
+    complete: bool = False,
 ) -> dict[str, Any]:
     """Align ``attack_path_count`` / ``max_attack_path_risk`` with derived paths.
 
     Topology-only snapshots store zero rows in ``attack_paths`` while serve
     surfaces derive paths on read. Without this sync, ``/v1/graph`` can report
     ``attack_path_count: 0`` next to a non-empty ``/attack-paths`` queue.
+    ``complete`` marks ``total`` as the full served set rather than a lower
+    bound; read-time derivation adds chains persistence never stored, so the
+    served total is then the count of record.
     """
-    if total and int(stats.get("attack_path_count") or 0) == 0:
+    stored = int(stats.get("attack_path_count") or 0)
+    if total and stored == 0:
         return {
             **stats,
             "attack_path_count": total,
             "max_attack_path_risk": max((path.composite_risk for path in paths), default=0.0),
         }
+    if complete and total != stored:
+        return {**stats, "attack_path_count": total}
     return stats
 
 
@@ -84,7 +91,7 @@ def _ensure_attack_campaigns(graph: UnifiedGraph, paths: list[AttackPath] | None
 def _filtered_graph_response(graph: UnifiedGraph, *, offset: int, limit: int) -> dict[str, Any]:
     derived_paths = _derived_attack_paths(graph)
     _ensure_attack_campaigns(graph, derived_paths)
-    stats = _sync_attack_path_stats(graph.stats(), total=len(derived_paths), paths=derived_paths)
+    stats = _sync_attack_path_stats(graph.stats(), total=len(derived_paths), paths=derived_paths, complete=True)
     all_nodes = list(graph.nodes.values())
     paged_nodes, pagination = _paginate(all_nodes, offset, limit)
 
@@ -264,10 +271,10 @@ def _serialize_attack_path_queue(
         for edge in path_edges
         if (edge.source, edge.target) in path_pairs or (edge.is_bidirectional and (edge.target, edge.source) in path_pairs)
     ]
-    stats = _sync_attack_path_stats(stats, total=snapshot_total, paths=paths)
     # Beyond the rank window only the top stored paths were ranked and filtered,
     # so ``total`` counts matches among them: a lower bound, never "complete".
     ranked_all = ranked is None or bool((ranked.ranking or {}).get("complete", True))
+    stats = _sync_attack_path_stats(stats, total=snapshot_total, paths=paths, complete=ranked_all)
     has_more = offset + len(paths) < total
     completeness = graph_completeness(
         returned=len(paths),

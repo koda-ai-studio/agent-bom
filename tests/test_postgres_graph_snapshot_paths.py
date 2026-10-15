@@ -174,3 +174,19 @@ def test_load_order_and_finding_ids_match_across_backends(store) -> None:
     assert [path.hops for path in page] == [path.hops for path in expected] and total == 3
     assert list(loaded.nodes) == sorted(written.nodes)
     assert [(edge.source, edge.target) for edge in loaded.edges] == sorted((edge.source, edge.target) for edge in written.edges)
+
+
+def test_node_with_large_incompressible_attributes_persists(store) -> None:
+    import secrets
+
+    scan, tenant = f"wide-{uuid4().hex[:10]}", f"tw-{uuid4().hex[:8]}"
+    graph = UnifiedGraph(scan_id=scan, tenant_id=tenant)
+    # A brokered database scan records per-table evidence; random tokens defeat
+    # compression the way real hashes and identifiers do.
+    evidence = {f"table_{i}": secrets.token_hex(32) for i in range(160)}
+    graph.add_node(UnifiedNode(id="db:prod", entity_type=EntityType.DATA_STORE, label="prod", attributes={"tables": evidence}))
+    with tenant_scope(tenant):
+        store.save_graph(graph)
+        loaded = store.load_graph(tenant_id=tenant, scan_id=scan)
+        store.delete_snapshot(tenant_id=tenant, scan_id=scan)
+    assert loaded.nodes["db:prod"].attributes["tables"] == evidence

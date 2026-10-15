@@ -157,6 +157,9 @@ def postgres_store() -> Iterator[Any]:
         store.save_graph(_estate())
         yield store
     finally:
+        # The shared "default" tenant must not keep fixture snapshots; the demo
+        # bootstrap refuses to seed next to non-showcase evidence.
+        store.delete_snapshot(tenant_id="default", scan_id="sev-topo")
         reset_current_tenant(token)
 
 

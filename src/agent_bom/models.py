@@ -170,6 +170,8 @@ class Vulnerability:
     # the sub-package the advisory names, instead of unioning identically
     # named symbols across every sub-package of a large module.
     affected_symbols_by_path: dict[str, list[str]] = field(default_factory=dict)
+    vex_source: Optional[str] = None  # "operator" (explicitly supplied) or "discovered" (evidence only)
+    vex_statement_id: Optional[str] = None  # Source VEX document id when present
 
     def __post_init__(self) -> None:
         """Sanitize fixed_version — filter git SHAs and non-version strings."""
@@ -973,12 +975,7 @@ class BlastRadius:
         """
         from agent_bom.vex import is_vex_suppressed
 
-        if self.suppressed:
-            self.risk_score = 0.0
-            self.transitive_risk_score = 0.0
-            return self.risk_score
-
-        if is_vex_suppressed(self.vulnerability):
+        if self.suppressed or is_vex_suppressed(self.vulnerability):
             self.risk_score = 0.0
             self.transitive_risk_score = 0.0
             return self.risk_score
@@ -1108,9 +1105,7 @@ class BlastRadius:
         """
         from agent_bom.vex import is_vex_suppressed
 
-        if self.suppressed:
-            return False
-        if is_vex_suppressed(self.vulnerability):
+        if self.suppressed or is_vex_suppressed(self.vulnerability):
             return False
         if self.vulnerability.is_kev:
             return True  # KEV = always actionable

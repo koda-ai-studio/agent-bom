@@ -38,6 +38,7 @@ from agent_bom.demo_estate.enterprise import EnterpriseEstate, EstateAsset
 from agent_bom.demo_estate.estate_edges import ESTATE_DATA_SOURCE, add_estate_edge, oriented_topology_edge
 from agent_bom.graph.container import AttackPath, UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
+from agent_bom.graph.finding_row_projection import finding_signal_attributes
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
 from agent_bom.graph.types import EntityType, RelationshipType
 
@@ -497,15 +498,12 @@ def project_estate_into_graph(
                     "check_id": str(finding.evidence.get("control_id") or ""),
                     "cloud_provider": finding.provider or "",
                     "resource_ids": [asset_id],
-                    # The prose, not the structured advisory. ``Finding.remediation``
-                    # is a ``Remediation`` dataclass; the graph store persists
-                    # attributes with ``json.dumps(..., default=str)``, so putting
-                    # it here did not fail — it froze the object's Python ``repr``
-                    # into the snapshot and served it as the node's remediation
-                    # text. ``remediation_guidance`` is the plain string the live
-                    # cloud builder already puts under this key.
+                    # The prose, not the ``Remediation`` dataclass: the store
+                    # persists attributes with ``json.dumps(default=str)``, which
+                    # would freeze the object's ``repr`` as remediation text.
                     "recommendation": finding.remediation_guidance or "",
                     "configuration": finding.evidence.get("configuration") or {},
+                    **(finding_signal_attributes(finding) if vulnerability else {}),
                     "synthetic": True,
                     "estate_id": estate.estate_id,
                 },
