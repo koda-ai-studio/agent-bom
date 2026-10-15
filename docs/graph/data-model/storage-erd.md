@@ -7,7 +7,7 @@ Every table agent-bom creates, read from the DDL in the code: the Postgres contr
 
 ## Overview
 
-157 tables in 10 domains. 18 declared foreign keys; 35 logical joins derived from shared key-column names. Arrows count relations that cross domains.
+158 tables in 10 domains. 18 declared foreign keys; 36 logical joins derived from shared key-column names. Arrows count relations that cross domains.
 
 ```mermaid
 flowchart LR
@@ -15,7 +15,7 @@ flowchart LR
   scans["Scans, jobs and reports<br/>15 tables"]
   inventory["Inventory and assets<br/>16 tables"]
   findings["Findings, triage and VEX<br/>23 tables"]
-  graph["Graph nodes, edges, snapshots and attack paths<br/>20 tables"]
+  graph["Graph nodes, edges, snapshots and attack paths<br/>21 tables"]
   runtime["Runtime, gateway and traces<br/>17 tables"]
   compliance["Compliance, audit and evidence<br/>10 tables"]
   connectors["Connectors, delivery and schedules<br/>16 tables"]
@@ -37,7 +37,7 @@ flowchart LR
 | Scans, jobs and reports | 15 | [storage-erd/scans.md](storage-erd/scans.md) |
 | Inventory and assets | 16 | [storage-erd/inventory.md](storage-erd/inventory.md) |
 | Findings, triage and VEX | 23 | [storage-erd/findings.md](storage-erd/findings.md) |
-| Graph nodes, edges, snapshots and attack paths | 20 | [storage-erd/graph.md](storage-erd/graph.md) |
+| Graph nodes, edges, snapshots and attack paths | 21 | [storage-erd/graph.md](storage-erd/graph.md) |
 | Runtime, gateway and traces | 17 | [storage-erd/runtime.md](storage-erd/runtime.md) |
 | Compliance, audit and evidence | 10 | [storage-erd/compliance.md](storage-erd/compliance.md) |
 | Connectors, delivery and schedules | 16 | [storage-erd/connectors.md](storage-erd/connectors.md) |
@@ -215,6 +215,7 @@ Excluded:
 | `side_scan_execution_state` | [Scans, jobs and reports](storage-erd/scans.md) | Postgres, SQLite | `execution_id` | `execution_id`, `tenant_id` | `tenant_id` | persistent | `deploy/postgres/alembic/versions/20260929_04_side_scan_lifecycle.py`, `deploy/postgres/runtime-schema.sql`, `cloud/side_scan_lifecycle_postgres.py` (+1) |
 | `skills_scan_run` | [Scans, jobs and reports](storage-erd/scans.md) | Postgres, SQLite | `tenant_id`, `run_id` | `tenant_id`, `run_id` | `tenant_id` | persistent | `deploy/postgres/runtime-schema.sql`, `api/skills_scan_store.py`, `api/storage/registry_schema.py` |
 | `sources` | [Connectors, delivery and schedules](storage-erd/connectors.md) | SQLite | `source_id` | `source_id`, `tenant_id` | `tenant_id` | persistent | `api/source_store.py` |
+| `strong_members` | [Graph nodes, edges, snapshots and attack paths](storage-erd/graph.md) | SQLite | `scan_id`, `node_id` | `scan_id`, `node_id` | **none** | scratch | `graph/correlation_workspace.py` |
 | `sync_meta` | [Vulnerability intelligence (local database)](storage-erd/vulndb.md) | SQLite | `source` | `source` | **none** | persistent | `db/schema.py` |
 | `teams` | [Tenancy, identity and access](storage-erd/tenancy.md) | Postgres | `team_id` | `team_id` | `team_id` | persistent | `deploy/postgres/init.sql` |
 | `tenant_graph_retention_overrides` | [Tenancy, identity and access](storage-erd/tenancy.md) | Postgres | `tenant_id` | `tenant_id` | `tenant_id` | persistent | `deploy/postgres/runtime-schema.sql`, `api/tenant_graph_retention_store.py` |
@@ -268,6 +269,7 @@ Rows in these tables are not scoped by `tenant_id` / `team_id`. Many are global 
 | `scan_findings` | Findings, triage and VEX | SQLite |
 | `scan_packages` | Inventory and assets | SQLite |
 | `schema_version` | Schema metadata and maintenance | SQLite |
+| `strong_members` | Graph nodes, edges, snapshots and attack paths | SQLite |
 | `sync_meta` | Vulnerability intelligence (local database) | SQLite |
 | `vulns` | Vulnerability intelligence (local database) | SQLite |
 

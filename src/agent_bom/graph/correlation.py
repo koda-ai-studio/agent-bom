@@ -19,14 +19,10 @@ from typing import Any, Iterable, Mapping, Sequence
 from packageurl import PackageURL
 
 from agent_bom.core.severity import SEVERITY_RANK
-from agent_bom.graph.asset_identity import IdentityKey, family_of, strong_key_components, strong_keys
+from agent_bom.graph import correlation_scope as _scope
+from agent_bom.graph.asset_identity import IdentityKey
 from agent_bom.graph.container import UnifiedGraph
-from agent_bom.graph.correlation_scope import (
-    CORRELATION_IDENTITY_VERSION,
-    container_occurrence,
-    merged_identity_version,
-    runtime_stable_identity,
-)
+from agent_bom.graph.correlation_scope import CORRELATION_IDENTITY_VERSION, merged_identity_version, runtime_stable_identity
 from agent_bom.graph.correlation_scope import exact_attribute_identity as _exact_attribute_identity
 from agent_bom.graph.correlation_scope import identity_digest as _digest
 from agent_bom.graph.correlation_scope import identity_entity_value as _entity_value
@@ -207,41 +203,6 @@ def _oci_digest(node: UnifiedNode) -> str:
     return ""
 
 
-def _strong_key_text(key: IdentityKey) -> str:
-    return f"{key.provider or 'native'}:{key.namespace}:{key.value}"
-
-
-def _strong_identity(node: UnifiedNode, entity_type: str) -> tuple[str, str, str] | None:
-    """The key asset canonicalization merges on, so a snapshot merge and one build agree."""
-    strong = strong_keys(node)
-    return (entity_type, _strong_key_text(strong[0]), f"strong_key:{strong[0].namespace}") if strong else None
-
-
-def strong_member_keys(node: UnifiedNode) -> tuple[str, list[IdentityKey]]:
-    return family_of(node), strong_keys(node)
-
-
-def strong_member_identities(
-    members: Mapping[tuple[str, str], tuple[str, Sequence[IdentityKey]]],
-) -> tuple[dict[tuple[str, str], str], int]:
-    """Final identity of every strong-keyed ``(scan_id, node_id)`` and the conflict count.
-
-    Runs the same conflict-guarded grouping as one build's canonicalization over
-    every snapshot at once, so a strong-key conflict keeps observations apart on
-    both paths instead of joining them on a shared best key.
-    """
-    components = strong_key_components({f"{scan}\x00{node}": value for (scan, node), value in members.items()})
-    identities = components.identities()
-    resolved: dict[tuple[str, str], str] = {}
-    for scan, node in members:
-        root = components.find(f"{scan}\x00{node}")
-        if root not in identities:
-            continue
-        key, unique = identities[root]
-        resolved[(scan, node)] = _strong_key_text(key) if unique else f"{_strong_key_text(key)}#{_digest(root)[7:23]}"
-    return resolved, components.conflicts
-
-
 def correlation_identity(node: UnifiedNode, *, scan_id: str, nodes: Mapping[str, UnifiedNode] | None = None) -> tuple[str, str, str]:
     """Return ``(entity_type, identity, basis)`` for a source observation.
 
@@ -272,14 +233,7 @@ def correlation_identity(node: UnifiedNode, *, scan_id: str, nodes: Mapping[str,
             return entity_type, _digest({"provider": "snowflake", "account": account, "local_id": local_id}), "snowflake_account_local_id"
         return _snapshot_scoped_identity(node, scan_id=scan_id)
     if entity_type == EntityType.CONTAINER.value:
-        occurrence = container_occurrence(node)
-        if occurrence:
-            return entity_type, _digest(occurrence), "runtime_occurrence"
-        strong = _strong_identity(node, entity_type) if family_of(node) == "workload" else None
-        if strong:
-            return strong
-        scoped_type, scoped_id, _basis = _snapshot_scoped_identity(node, scan_id=scan_id)
-        return scoped_type, scoped_id, "snapshot_scoped_runtime_occurrence"
+        return _scope.container_identity(node, scan_id=scan_id)
 
     if entity_type == EntityType.PACKAGE.value:
         purl = node.attributes.get("purl")
@@ -313,7 +267,7 @@ def correlation_identity(node: UnifiedNode, *, scan_id: str, nodes: Mapping[str,
         return _snapshot_scoped_identity(node, scan_id=scan_id)
 
     if entity_type in _CLOUD_RESOURCE_ENTITY_TYPES:
-        exact = _strong_identity(node, entity_type) or _exact_attribute_identity(
+        exact = _scope.strong_identity(node, entity_type) or _exact_attribute_identity(
             node,
             keys=(
                 "arn",
@@ -332,7 +286,7 @@ def correlation_identity(node: UnifiedNode, *, scan_id: str, nodes: Mapping[str,
         return exact or _snapshot_scoped_identity(node, scan_id=scan_id)
 
     if entity_type in _PROVIDER_IDENTITY_ENTITY_TYPES:
-        exact = _strong_identity(node, entity_type) or _exact_attribute_identity(
+        exact = _scope.strong_identity(node, entity_type) or _exact_attribute_identity(
             node,
             keys=(
                 "provider_identity_id",
@@ -717,6 +671,26 @@ def _merge_edge(
     )
 
 
+def _group_node_observations(ordered: Sequence[CorrelationSnapshot]) -> tuple[dict[Any, list[_NodeObservation]], dict[Any, Any], int]:
+    """Group every source node by its final identity; strong-keyed nodes by the shared conflict rule."""
+    observed: list[tuple[CorrelationSnapshot, UnifiedNode, str, str, str]] = []
+    strong_members: dict[tuple[str, str], tuple[str, Sequence[IdentityKey]]] = {}
+    for snapshot in ordered:
+        for node in sorted(snapshot.graph.nodes.values(), key=lambda item: item.id):
+            entity_type, identity, basis = correlation_identity(node, scan_id=snapshot.scan_id, nodes=snapshot.graph.nodes)
+            if basis.startswith("strong_key:"):
+                strong_members[(snapshot.scan_id, node.id)] = _scope.strong_member_keys(node)
+            observed.append((snapshot, node, entity_type, identity, basis))
+    resolved, conflicts = _scope.strong_member_identities(strong_members)
+    node_groups: dict[tuple[str, str], list[_NodeObservation]] = {}
+    source_to_key: dict[tuple[str, str], tuple[str, str]] = {}
+    for snapshot, node, entity_type, identity, basis in observed:
+        key = (entity_type, resolved.get((snapshot.scan_id, node.id), identity))
+        source_to_key[(snapshot.scan_id, node.id)] = key
+        node_groups.setdefault(key, []).append(_NodeObservation(snapshot=snapshot, node=node, identity_basis=basis))
+    return node_groups, source_to_key, conflicts
+
+
 def merge_graph_snapshots(
     *,
     correlation_id: str,
@@ -738,21 +712,7 @@ def merge_graph_snapshots(
         raise ValueError("Correlation inputs must be non-empty graph snapshots")
 
     ordered_snapshots = sorted(snapshots, key=lambda item: (_timestamp_instant(item.created_at), item.scan_id))
-    observed: list[tuple[CorrelationSnapshot, UnifiedNode, str, str, str]] = []
-    strong_members: dict[tuple[str, str], tuple[str, Sequence[IdentityKey]]] = {}
-    for snapshot in ordered_snapshots:
-        for node in sorted(snapshot.graph.nodes.values(), key=lambda item: item.id):
-            entity_type, identity, basis = correlation_identity(node, scan_id=snapshot.scan_id, nodes=snapshot.graph.nodes)
-            if basis.startswith("strong_key:"):
-                strong_members[(snapshot.scan_id, node.id)] = strong_member_keys(node)
-            observed.append((snapshot, node, entity_type, identity, basis))
-    resolved, strong_key_conflicts = strong_member_identities(strong_members)
-    node_groups: dict[tuple[str, str], list[_NodeObservation]] = {}
-    source_to_key: dict[tuple[str, str], tuple[str, str]] = {}
-    for snapshot, node, entity_type, identity, basis in observed:
-        key = (entity_type, resolved.get((snapshot.scan_id, node.id), identity))
-        source_to_key[(snapshot.scan_id, node.id)] = key
-        node_groups.setdefault(key, []).append(_NodeObservation(snapshot=snapshot, node=node, identity_basis=basis))
+    node_groups, source_to_key, strong_key_conflicts = _group_node_observations(ordered_snapshots)
 
     output = UnifiedGraph(scan_id=correlation_id, tenant_id=tenant_id, created_at=created_at or _now_iso())
     output_id_by_key: dict[tuple[str, str], str] = {}

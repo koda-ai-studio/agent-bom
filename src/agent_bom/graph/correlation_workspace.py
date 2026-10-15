@@ -29,10 +29,8 @@ from agent_bom.graph.correlation import (
     _relationship_value,
     _timestamp_instant,
     correlation_identity,
-    strong_member_identities,
-    strong_member_keys,
 )
-from agent_bom.graph.correlation_scope import CORRELATION_IDENTITY_VERSION
+from agent_bom.graph.correlation_scope import CORRELATION_IDENTITY_VERSION, strong_member_identities, strong_member_keys
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.node import UnifiedNode
 
@@ -155,6 +153,59 @@ class CorrelationMergeWorkspace:
             """
         )
 
+    def _write_nodes(self, snapshot: CorrelationSnapshot) -> dict[str, tuple[str, str]]:
+        """Stage one snapshot's node observations; returns ``node id -> group key``."""
+        source_to_key: dict[str, tuple[str, str]] = {}
+        node_group_rows: list[tuple[str, str]] = []
+        node_observation_rows: list[tuple[str, str, str, str, str, str, str]] = []
+        strong_rows: list[tuple[str, str, str, str]] = []
+
+        def flush_nodes() -> None:
+            self._conn.executemany(
+                "INSERT OR IGNORE INTO node_groups(entity_type, identity) VALUES (?, ?)",
+                node_group_rows,
+            )
+            self._conn.executemany(
+                """
+                INSERT INTO node_observations(
+                    entity_type, identity, scan_id, snapshot_created_at,
+                    node_id, identity_basis, payload
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                node_observation_rows,
+            )
+            self._conn.executemany("INSERT INTO strong_members(scan_id, node_id, family, keys) VALUES (?, ?, ?, ?)", strong_rows)
+            node_group_rows.clear()
+            node_observation_rows.clear()
+            strong_rows.clear()
+
+        for node in sorted(snapshot.graph.nodes.values(), key=lambda item: item.id):
+            entity_type, identity, basis = correlation_identity(node, scan_id=snapshot.scan_id, nodes=snapshot.graph.nodes)
+            source_to_key[node.id] = (entity_type, identity)
+            if basis.startswith("strong_key:"):
+                family, keys = strong_member_keys(node)
+                encoded = json.dumps([[key.rank, key.namespace, key.value, key.provider] for key in keys], separators=(",", ":"))
+                strong_rows.append((snapshot.scan_id, node.id, family, encoded))
+            node_group_rows.append((entity_type, identity))
+            node_observation_rows.append(
+                (
+                    entity_type,
+                    identity,
+                    snapshot.scan_id,
+                    snapshot.created_at,
+                    node.id,
+                    basis,
+                    json.dumps(node.to_dict(), default=str, separators=(",", ":")),
+                )
+            )
+            if len(node_group_rows) >= _WRITE_BATCH_SIZE:
+                flush_nodes()
+        flush_nodes()
+        node_count = int(self._conn.execute("SELECT COUNT(*) FROM node_groups").fetchone()[0])
+        if node_count > self._max_output_nodes:
+            raise CorrelationMergeBudgetError("node_limit")
+        return source_to_key
+
     def add_snapshot(self, snapshot: CorrelationSnapshot) -> None:
         if snapshot.scan_id in self._snapshots:
             raise ValueError("Correlation snapshot IDs must be unique")
@@ -163,56 +214,8 @@ class CorrelationMergeWorkspace:
         if not snapshot.graph.nodes:
             raise ValueError("Correlation inputs must be non-empty graph snapshots")
 
-        source_to_key: dict[str, tuple[str, str]] = {}
         with self._conn:
-            node_group_rows: list[tuple[str, str]] = []
-            node_observation_rows: list[tuple[str, str, str, str, str, str, str]] = []
-            strong_rows: list[tuple[str, str, str, str]] = []
-
-            def flush_nodes() -> None:
-                self._conn.executemany(
-                    "INSERT OR IGNORE INTO node_groups(entity_type, identity) VALUES (?, ?)",
-                    node_group_rows,
-                )
-                self._conn.executemany(
-                    """
-                    INSERT INTO node_observations(
-                        entity_type, identity, scan_id, snapshot_created_at,
-                        node_id, identity_basis, payload
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    node_observation_rows,
-                )
-                self._conn.executemany("INSERT INTO strong_members(scan_id, node_id, family, keys) VALUES (?, ?, ?, ?)", strong_rows)
-                node_group_rows.clear()
-                node_observation_rows.clear()
-                strong_rows.clear()
-
-            for node in sorted(snapshot.graph.nodes.values(), key=lambda item: item.id):
-                entity_type, identity, basis = correlation_identity(node, scan_id=snapshot.scan_id, nodes=snapshot.graph.nodes)
-                source_to_key[node.id] = (entity_type, identity)
-                if basis.startswith("strong_key:"):
-                    family, keys = strong_member_keys(node)
-                    encoded = json.dumps([[key.rank, key.namespace, key.value, key.provider] for key in keys], separators=(",", ":"))
-                    strong_rows.append((snapshot.scan_id, node.id, family, encoded))
-                node_group_rows.append((entity_type, identity))
-                node_observation_rows.append(
-                    (
-                        entity_type,
-                        identity,
-                        snapshot.scan_id,
-                        snapshot.created_at,
-                        node.id,
-                        basis,
-                        json.dumps(node.to_dict(), default=str, separators=(",", ":")),
-                    )
-                )
-                if len(node_group_rows) >= _WRITE_BATCH_SIZE:
-                    flush_nodes()
-            flush_nodes()
-            node_count = int(self._conn.execute("SELECT COUNT(*) FROM node_groups").fetchone()[0])
-            if node_count > self._max_output_nodes:
-                raise CorrelationMergeBudgetError("node_limit")
+            source_to_key = self._write_nodes(snapshot)
 
             edge_group_rows: list[tuple[str, str, str, str, str]] = []
             edge_observation_rows: list[tuple[str, str, str, str, str, str, str, str, str, str, str]] = []
@@ -345,12 +348,8 @@ class CorrelationMergeWorkspace:
         strong_key_conflicts = self._resolve_strong_identities()
         node_conflicts = 0
         node_rows = self._conn.execute(
-            """
-            SELECT entity_type, identity, scan_id, snapshot_created_at,
-                   identity_basis, payload
-            FROM node_observations
-            ORDER BY entity_type, identity
-            """
+            "SELECT entity_type, identity, scan_id, snapshot_created_at, identity_basis, payload"
+            " FROM node_observations ORDER BY entity_type, identity"
         )
         for (entity_type, identity), rows in groupby(node_rows, key=lambda row: (str(row[0]), str(row[1]))):
             node_observations = [
