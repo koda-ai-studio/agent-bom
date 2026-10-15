@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import click
 from packaging.utils import canonicalize_name
@@ -200,6 +200,13 @@ def _print_apply_outcome(output_console, outcome) -> None:
 # ---------------------------------------------------------------------------
 
 
+def _use_output_console(output_mod: Any, console: Any) -> None:
+    """Point the shared output console at ``console`` until the command returns."""
+    previous = output_mod.console
+    output_mod.console = console
+    click.get_current_context().call_on_close(lambda: setattr(output_mod, "console", previous))
+
+
 @click.command("remediate")
 @click.option("--demo", is_flag=True, help="Scan a curated demo environment with known-vulnerable packages.")
 @click.option("--offline", is_flag=True, help="Use local vulnerability DB only (no network calls).")
@@ -270,9 +277,7 @@ def remediate_cmd(
     runtime_console = _make_console(quiet=quiet or (output_format != "console"), output_format=output_format)
     output_console = _make_console()
     _sync_runtime_consoles(runtime_console)
-    previous_console = output_mod.console
-    output_mod.console = output_console
-    click.get_current_context().call_on_close(lambda: setattr(output_mod, "console", previous_console))
+    _use_output_console(output_mod, output_console)
 
     if open_pr and not apply_changes:
         raise click.ClickException("--open-pr requires --apply")
