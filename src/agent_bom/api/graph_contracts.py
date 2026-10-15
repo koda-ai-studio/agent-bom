@@ -42,6 +42,7 @@ class IncidentEdgePageResponse(BaseModel):
     snapshot_generation: str | None
     scan_id: str
     node_id: str
+    resolved_from: str | None = None
     found: bool
     direction: Literal["in", "out", "both"]
     limit: int
