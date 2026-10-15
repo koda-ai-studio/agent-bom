@@ -134,7 +134,7 @@ Use `agent-bom scan -p <project>` when the intended scope is the project tree.
 ## VEX (Vulnerability Exploitability eXchange)
 
 ```bash
-# Apply VEX to suppress known non-exploitable findings
+# Record VEX statuses (not_affected, fixed, ...) as evidence on matching findings
 agent-bom agents --vex vex-document.json
 
 # Generate VEX from scan results

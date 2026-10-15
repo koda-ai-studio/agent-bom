@@ -182,3 +182,14 @@ def test_fixture_contains_no_credential_material() -> None:
     assert "-----BEGIN PRIVATE KEY-----" not in serialized
     assert not re.search(r"Bearer\s+[A-Za-z0-9._~-]{20,}", serialized)
     assert "synthetic-secret-value" not in serialized
+
+
+def test_fixture_uses_only_reserved_fictional_provider_namespaces() -> None:
+    serialized = json.dumps(load_enterprise_estate().model_dump(mode="json"), sort_keys=True)
+
+    # Tenant-owned provider domains read as real customer namespaces; the public
+    # demo keeps every identity under reserved names such as ``*.example``.
+    for real_namespace in ("onmicrosoft.com", "gserviceaccount.com", "@gmail.com"):
+        assert real_namespace not in serialized, real_namespace
+    assert "northstar-health-ai.example" in serialized
+    assert "@nh-ml-prod.iam.example" in serialized
