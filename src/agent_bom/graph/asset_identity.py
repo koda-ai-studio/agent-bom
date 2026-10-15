@@ -17,7 +17,7 @@ running it.
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 
 from agent_bom.graph.node import UnifiedNode
@@ -245,11 +245,6 @@ def weak_keys(node: UnifiedNode) -> list[IdentityKey]:
 def identity_keys(node: UnifiedNode) -> tuple[list[IdentityKey], list[IdentityKey]]:
     """``(strong, weak)`` keys for a node, each best first."""
     return strong_keys(node), weak_keys(node)
-
-
-def best_strong_key(keys: Iterable[IdentityKey]) -> IdentityKey | None:
-    ordered = sorted(keys, reverse=True)
-    return ordered[0] if ordered else None
 
 
 def is_compute_instance(resource_type: object, native_id: object = "") -> bool:

@@ -5,7 +5,7 @@ in-memory implementation and an optional NetworkX-backed implementation with
 centrality analysis (PageRank, betweenness centrality).
 
 Severity constants and the canonical graph types are defined in
-:mod:`graph_schema` — this module uses them for consistency.
+:mod:`agent_bom.graph.types` — this module uses them for consistency.
 
 Install NetworkX for advanced graph analytics:
     pip install 'agent-bom[graph]'

@@ -8,7 +8,7 @@ Works with raw JSON dicts (same as output/attack_flow.py) so both CLI and
 API can call it without model reconstruction.  Zero new dependencies —
 stdlib ``collections.deque`` for BFS.
 
-Types and severity constants are sourced from :mod:`graph_schema` — the
+Types and severity constants are sourced from :mod:`agent_bom.graph.types` — the
 single source of truth for the entire graph subsystem.
 """
 
@@ -47,7 +47,7 @@ def _untrusted_metadata_text(value: object, *, max_length: int = 1000) -> str:
 
 
 # ── Enums (backward-compat — existing consumers import these) ────────────
-# These map 1:1 to graph_schema.EntityType / RelationshipType but keep the
+# These map 1:1 to agent_bom.graph.EntityType / RelationshipType but keep the
 # original string values so serialised JSON is stable.
 
 

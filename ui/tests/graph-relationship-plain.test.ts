@@ -39,4 +39,8 @@ describe("plain relationship summary", () => {
   it("humanizes an unknown collector id without dropping it", () => {
     expect(plainRelationshipSummary({ ...base, evidence: { source: "warehouse-export:snowflake" } }, "A", "B").source).toBe("Warehouse export: snowflake");
   });
+
+  it("says where a workload runs", () => {
+    expect(plainRelationshipSummary({ ...base, relationship: "hosted_on", evidence: {} }, "cluster-ops", "compute-00").why).toBe("cluster-ops runs on compute-00.");
+  });
 });
