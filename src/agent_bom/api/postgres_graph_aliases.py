@@ -44,8 +44,12 @@ NODE_ALIASES_DDL: tuple[str, ...] = (
     "CREATE INDEX IF NOT EXISTS idx_pg_graph_node_aliases_alias ON graph_node_aliases(tenant_id, alias_id, updated_at)",
 )
 _MAX_LOOKUP = 500
+# An id that is a live node in the alias row's snapshot resolves to itself.
+_LIVE_NODE = "NOT EXISTS (SELECT 1 FROM graph_nodes n WHERE n.id = a.alias_id AND n.scan_id = a.scan_id AND n.tenant_id = a.tenant_id)"
+# Nodes are written first in the same transaction; an alias naming one of them is never recorded.
 _UPSERT_SQL = (
-    f"INSERT INTO graph_node_aliases ({', '.join(NODE_ALIAS_COLUMNS)}) VALUES ({', '.join('%s' for _ in NODE_ALIAS_COLUMNS)}) "  # nosec B608
+    f"INSERT INTO graph_node_aliases ({', '.join(NODE_ALIAS_COLUMNS)}) SELECT {', '.join('%s' for _ in NODE_ALIAS_COLUMNS)} "  # nosec B608
+    "WHERE NOT EXISTS (SELECT 1 FROM graph_nodes WHERE id = %s AND scan_id = %s AND tenant_id = %s) "
     "ON CONFLICT (tenant_id, scan_id, alias_id) DO UPDATE SET "
     + ", ".join(f"{column} = EXCLUDED.{column}" for column in NODE_ALIAS_COLUMNS[2:] if column != "scan_id")
 )
@@ -55,11 +59,13 @@ def write_node_aliases(conn: Any, rows: Sequence[tuple[str, ...]]) -> None:
     """Upsert alias rows inside the caller's tenant-bound transaction."""
     if rows:
         with conn.cursor() as cursor:
-            cursor.executemany(_UPSERT_SQL, rows)
+            cursor.executemany(_UPSERT_SQL, [(*row, row[1], row[5], row[0]) for row in rows])
 
 
 def resolve_node_aliases(conn: Any, *, tenant_id: str, node_ids: Iterable[str], scan_id: str = "") -> dict[str, str]:
     """Map recorded alias ids to canonical ids; RLS and the predicate both bind the tenant.
+
+    A recorded alias equal to a node id that exists in the same snapshot is ignored.
 
     With ``scan_id`` the binding is the one that snapshot recorded; without it,
     the most recently written binding.
@@ -68,11 +74,15 @@ def resolve_node_aliases(conn: Any, *, tenant_id: str, node_ids: Iterable[str], 
     if not ids:
         return {}
     if scan_id:
-        sql = "SELECT alias_id, canonical_id FROM graph_node_aliases WHERE tenant_id = %s AND alias_id = ANY(%s) AND scan_id = %s"
+        sql = (
+            "SELECT alias_id, canonical_id FROM graph_node_aliases a WHERE tenant_id = %s AND alias_id = ANY(%s) AND scan_id = %s"
+            f" AND {_LIVE_NODE}"
+        )
         params: tuple[Any, ...] = (tenant_id, ids, scan_id)
     else:
         sql = (
-            "SELECT alias_id, canonical_id FROM graph_node_aliases WHERE tenant_id = %s AND alias_id = ANY(%s) ORDER BY updated_at, scan_id"
+            "SELECT alias_id, canonical_id FROM graph_node_aliases a WHERE tenant_id = %s AND alias_id = ANY(%s)"
+            f" AND {_LIVE_NODE} ORDER BY updated_at, scan_id"
         )
         params = (tenant_id, ids)
     rows = conn.execute(sql, params).fetchall()

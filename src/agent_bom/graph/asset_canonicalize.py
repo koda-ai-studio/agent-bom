@@ -32,6 +32,7 @@ from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.edge_evidence import edge_evidence
 from agent_bom.graph.node import UnifiedNode
+from agent_bom.graph.node_aliases import drop_live_node_aliases
 from agent_bom.graph.types import EntityType, RelationshipType
 
 ANALYZER = "asset_canonicalization"
@@ -229,6 +230,7 @@ def canonicalize_assets(graph: UnifiedGraph) -> dict[str, str]:
     candidates = _candidate_edges(observed, mapping, components)
     for edge in candidates:
         graph.add_edge(edge)
+    drop_live_node_aliases(graph)
     # A later pass (assets a finding row named after analysis) adds to the first.
     prior = graph.analysis_status.get(ANALYZER)
     if prior is None and not observed:

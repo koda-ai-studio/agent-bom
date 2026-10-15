@@ -11,12 +11,32 @@ from __future__ import annotations
 
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass, field
+from typing import Any
 
 from agent_bom.graph.correlation_scope import CORRELATION_IDENTITY_VERSION
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.types import EntityType
 
 NODE_ALIAS_COLUMNS = ("tenant_id", "alias_id", "canonical_id", "entity_type", "identity_version", "scan_id", "updated_at")
+
+
+def drop_live_node_aliases(graph: Any) -> int:
+    """Remove recorded aliases that equal a live node id; returns how many were dropped.
+
+    Case-preserving ids make a retired lower-cased id of one asset equal the
+    current id of another, and an alias must never redirect a live node.
+    """
+    dropped = 0
+    for node in list(graph.nodes.values()):
+        identity = node.attributes.get("identity")
+        aliases = identity.get("aliases") if isinstance(identity, dict) else None
+        if not isinstance(aliases, list):
+            continue
+        kept = [alias for alias in aliases if not (isinstance(alias, str) and alias in graph.nodes)]
+        if len(kept) != len(aliases):
+            dropped += len(aliases) - len(kept)
+            node.attributes["identity"] = {**identity, "aliases": kept}
+    return dropped
 
 
 @dataclass(slots=True)
