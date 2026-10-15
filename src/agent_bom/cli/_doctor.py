@@ -12,6 +12,7 @@ import click
 from rich.console import Console
 from rich.markup import escape
 
+from agent_bom.core.experimental import feature_status, get_feature
 from agent_bom.core.settings import env_raw
 from agent_bom.scan_cache import CACHE_KEY_PREFIX
 from agent_bom.storage.tiers import StorageTier, classify_storage, storage_selection_from_env
@@ -207,6 +208,7 @@ def doctor_cmd(offline: bool = False) -> None:
                 "cloud_api_deprecations": _section(cloud_api_checks),
                 "cloud_sdk_pin_drift": _section(pin_drift_checks),
                 "postgres_portability": postgres_payload,
+                "experimental": feature_status(),
                 "capabilities": capabilities,
                 "coverage": coverage,
                 **readiness,
@@ -227,6 +229,7 @@ def doctor_cmd(offline: bool = False) -> None:
     _print_section(console, "Cloud SDK pin drift", pin_drift_checks)
     if postgres_checks:
         _print_section(console, "Postgres portability", postgres_checks)
+    _print_section(console, "Experimental features", _experimental_checks())
 
     # Nothing-silent capability view — every gated feature with its state and
     # unlock path, so a skipped/degraded capability is never silent.
@@ -285,11 +288,24 @@ def _storage_tier_checks() -> list[tuple[str, str, str]]:
     for item in classify_storage(storage_selection_from_env()).components:
         label = _STORAGE_COMPONENT_LABELS.get(item.component, item.component)
         if item.tier is StorageTier.EXPERIMENTAL:
-            rows.append((label, f"{item.backend} — experimental; see docs/STORAGE_BACKENDS.md", "warn"))
+            feature = get_feature(f"storage-{item.backend}")
+            rows.append((label, f"{item.backend} — experimental; see {feature.doc}", "warn"))
         elif item.backend == "memory":
             rows.append((label, "memory — local only, not durable", "info"))
         else:
             rows.append((label, f"{item.backend} — {item.tier.value.replace('_', ' ')}", "ok"))
+    return rows
+
+
+def _experimental_checks() -> list[tuple[str, str, str]]:
+    """One row per registered experimental feature (single source: agent_bom.core.experimental)."""
+    rows: list[tuple[str, str, str]] = []
+    for status in feature_status():
+        if status["flag_gated"]:
+            state = "enabled" if status["enabled"] else f"disabled — enable with {status['enabled_by']}"
+        else:
+            state = str(status["enabled_by"])
+        rows.append((str(status["id"]), f"{state}; see {status['doc']}", "info"))
     return rows
 
 

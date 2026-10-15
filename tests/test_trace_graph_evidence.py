@@ -66,6 +66,9 @@ REPORT = {
 }
 
 
+pytestmark = pytest.mark.usefixtures("enable_experimental_traces")
+
+
 def _langfuse_rows(trace: str) -> list[dict]:
     return [
         {

@@ -1659,6 +1659,7 @@ export const api = {
   getActivity: (days = 30) => get<ActivityTimeline>(`/v1/activity?days=${days}`),
   traceCollectionStatus: (connectionId: string, signal?: AbortSignal) => get<import("./api-types").TraceCollectionReceipt>(`/v1/traces/connectors/langfuse/collection?connection_id=${encodeURIComponent(connectionId)}`, signal ? { signal } : {}),
   collectTracePage: (connectionId: string, signal?: AbortSignal) => post<import("./api-types").TraceCollectionReceipt>("/v1/traces/connectors/langfuse/collect", { connection_id: connectionId }, {}, signal, 60000),
+  systemHealth: () => get<HealthResponse>("/v1/system/health"),
   listTraceConnectors: () => get<import("./api-types").TraceConnectorsResponse>("/v1/traces/connectors"),
   pullTraceConnector: (provider: "langfuse" | "langsmith", body: ({ credentials: Record<string, string>; connection_id?: never } | { connection_id: string; credentials?: never }) & { limit: number; screen_content: boolean; max_pages?: number; import_id?: string; window_start?: string; window_end?: string }, signal?: AbortSignal) => post<TraceConnectorPullResponse>(`/v1/traces/connectors/${provider}/pull`, body, {}, signal, 60000),
   ingestTraces: (body: unknown) => post<TraceIngestResponse>("/v1/traces", body),

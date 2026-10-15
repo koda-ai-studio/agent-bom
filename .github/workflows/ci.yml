@@ -516,6 +516,12 @@ jobs:
         # normalization table changed without regenerating the reference.
         run: uv run python scripts/generate_graph_data_model.py --check
 
+      - name: Experimental-feature reference is current
+        if: needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true'
+        # Generator: scripts/generate_experimental_docs.py
+        # Doc: docs/EXPERIMENTAL.md (registry: src/agent_bom/core/experimental.py)
+        run: uv run python scripts/generate_experimental_docs.py --check
+
       - name: CLI reference alignment (fast preflight)
         if: needs.changes.result != 'success' || needs.changes.outputs.docs_only != 'true'
         # Mirrors tests/test_public_docs_cli_alignment.py but runs in Lint so a

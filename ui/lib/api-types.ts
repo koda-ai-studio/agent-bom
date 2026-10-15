@@ -1965,6 +1965,17 @@ export interface HealthResponse {
   auth_configured?: boolean | undefined;
   configured_auth_modes?: string[] | undefined;
   unauthenticated_allowed?: boolean | undefined;
+  experimental_features?: ExperimentalFeatureHealth[] | undefined;
+}
+
+export interface ExperimentalFeatureHealth {
+  id: string;
+  title: string;
+  surfaces: string[];
+  enabled_by: string;
+  doc: string;
+  flag_gated: boolean;
+  enabled: boolean;
 }
 
 export interface VersionInfo {

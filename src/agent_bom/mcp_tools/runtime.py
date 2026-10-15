@@ -10,6 +10,7 @@ from typing import Any, cast
 
 from agent_bom.api.route_offload import call_route as _call_route
 from agent_bom.config import MCP_MAX_FILE_SIZE as _MAX_FILE_SIZE
+from agent_bom.core.experimental import disabled_message, is_enabled
 from agent_bom.mcp_tenant import resolve_mcp_tool_tenant_id
 from agent_bom.mcp_tools.audit import tool_risk_assessment_impl as tool_risk_assessment_impl
 from agent_bom.security import sanitize_error
@@ -542,6 +543,13 @@ def firewall_check_impl(
         return json.dumps({"error": sanitize_error(exc)})
 
 
+def _otel_trace_allowed(otel_trace: str, result: dict) -> bool:
+    if otel_trace and not is_enabled("traces"):
+        result["ml_api_error"] = disabled_message("traces")
+        return False
+    return bool(otel_trace)
+
+
 async def runtime_correlate_impl(
     *,
     config_path: str = "auto",
@@ -578,7 +586,7 @@ async def runtime_correlate_impl(
             }
 
         # ML API provenance via OTel trace
-        if otel_trace:
+        if _otel_trace_allowed(otel_trace, result):
             import json as _json
 
             from agent_bom.otel_ingest import flag_deprecated_models, parse_ml_api_spans

@@ -13,6 +13,8 @@
 # `# reason` comments are stripped by the loader.
 
 AGENT_BOM_AI_MODEL_ADVISORY_FEED
+# Comma list of flag-gated experimental features; read at call time by agent_bom.core.experimental (docs/EXPERIMENTAL.md).
+AGENT_BOM_EXPERIMENTAL
 # CLI machine-readable envelope toggle; read by the entrypoint before config is loaded.
 AGENT_BOM_AGENT_MODE
 # Literal Snowflake object names emitted by the onboarding SQL template; not process environment variables.

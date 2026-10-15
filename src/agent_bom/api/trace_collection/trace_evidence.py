@@ -24,6 +24,7 @@ from agent_bom.api.trace_collection.trace_findings import (
     signal_findings,
     write_findings,
 )
+from agent_bom.core.experimental import is_enabled
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.runtime.normalized_trace import NormalizedTraceEvent
 
@@ -88,6 +89,8 @@ def record_native_evidence(spans: Iterable[Mapping[str, Any]], *, tenant_id: str
 
 def with_trace_events(report_json: dict[str, Any], tenant_id: str, *, store: RuntimeEventStore | None = None) -> dict[str, Any]:
     """Overlay the tenant's canonical trace events for the snapshot window on a shallow copy."""
+    if not is_enabled("traces"):
+        return report_json
     anchor = report_json.get("scan_timestamp") or report_json.get("observed_at") or report_json.get("generated_at")
     window_start, window_end = trace_window(anchor)
     payload: dict[str, Any] = {"events": [], "window_start": window_start, "window_end": window_end}
@@ -105,5 +108,7 @@ def with_trace_events(report_json: dict[str, Any], tenant_id: str, *, store: Run
 
 
 def emit_shadow_findings(graph: UnifiedGraph, tenant_id: str, sink: FindingSink | None) -> int:
+    if not is_enabled("traces"):
+        return 0
     shadow = getattr(getattr(graph, "runtime_trace_projection", None), "shadow", None)
     return write_findings(tenant_id, shadow_findings(tenant_id, shadow), sink) if shadow else 0

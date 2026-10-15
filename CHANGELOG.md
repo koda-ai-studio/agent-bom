@@ -9,7 +9,13 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+
+- Trace pull, trace collection and trace findings (Langfuse, LangSmith, OTel) are experimental and **off by default**. Enable them with `AGENT_BOM_EXPERIMENTAL=traces`. While disabled, `GET /v1/traces/connectors`, `POST /v1/traces/connectors/{provider}/pull`, the trace collection routes and `POST /v1/traces/attack-paths` return `404` with the enable hint; `POST /v1/traces` still accepts OTLP for runtime and cost telemetry but records no trace findings; graph snapshots do not overlay trace events or emit `SHADOW_AI` trace findings; the MCP `runtime_correlate` tool returns the hint for `otel_trace`; and the dashboard labels Platform traces *Experimental* and shows the hint instead of the pull form. Cortex agent coverage is unchanged.
+
 ### Added
+
+- One experimental-feature registry (`agent_bom.core.experimental`) lists every experimental feature with its surfaces, how it is enabled and its doc. `docs/EXPERIMENTAL.md` is generated from it (`scripts/generate_experimental_docs.py --check` runs in CI and `make preflight`), storage tiers read their experimental backends from it, `agent-bom doctor` prints an Experimental features section (and `experimental` in agent-mode JSON), and `GET /v1/system/health` reports `experimental_features` with live enablement.
 
 - `HOSTED_ON` (workload → host, a dependency relationship) records where an agent, MCP server or container runs. A cloud-hosted agent is hosted on its cloud resource (the account and provider `HOSTS` rollup is unchanged), and a Kubernetes-discovered MCP server is hosted on its pod and the pod on the node VM named by the node's provider id (AWS, Azure, GCE); discovery records the pod uid, namespace, node and provider id. Component paths walk these edges, so a CVE on a VM reaches the agent whose server runs on it, and a compute instance with a CVE and nothing hosted gets its own path. Graph exports map the edge to `HOSTED_ON`.
 

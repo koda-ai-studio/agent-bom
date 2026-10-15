@@ -69,6 +69,9 @@ ASSET_EDGE_GAPS: dict[str, str] = {
 }
 
 
+pytestmark = pytest.mark.usefixtures("enable_experimental_traces")
+
+
 def test_every_finding_type_is_classified() -> None:
     assert set(PRODUCERS) | set(NO_OFFLINE_PRODUCER) == set(FindingType)
     assert not set(PRODUCERS) & set(NO_OFFLINE_PRODUCER)

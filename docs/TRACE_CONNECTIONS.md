@@ -1,5 +1,9 @@
 # Managed trace connections
 
+> **Experimental.** Trace pull, trace collection and trace findings are off by
+> default. Enable them on the control plane with `AGENT_BOM_EXPERIMENTAL=traces`.
+> See [EXPERIMENTAL.md](EXPERIMENTAL.md).
+
 Use **Connections → Observability & SIEM** to select an operator-configured Langfuse
 or LangSmith project and import a bounded window of native observations. **Traces → Connect
 platforms** opens the same hub. The browser sends a connection ID using the

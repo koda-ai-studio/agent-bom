@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import pytest
 from starlette.testclient import TestClient
 
 from agent_bom.api.server import app
 from tests.auth_helpers import disable_trusted_proxy_env, enable_trusted_proxy_env, proxy_headers
+
+pytestmark = pytest.mark.usefixtures("enable_experimental_traces")
 
 
 def setup_module() -> None:

@@ -10,6 +10,8 @@ import pytest
 
 from scripts.run_trace_collection_qualification import assess
 
+pytestmark = pytest.mark.usefixtures("enable_experimental_traces")
+
 
 def test_qualification_reconciles_native_scoped_records(tmp_path):
     # The harness intentionally configures process-global stores and auth.

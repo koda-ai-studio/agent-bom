@@ -13058,6 +13058,52 @@
         "title": "ExecScoreConfigUpdateRequest",
         "type": "object"
       },
+      "ExperimentalFeatureHealth": {
+        "properties": {
+          "doc": {
+            "title": "Doc",
+            "type": "string"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "enabled_by": {
+            "title": "Enabled By",
+            "type": "string"
+          },
+          "flag_gated": {
+            "title": "Flag Gated",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "surfaces": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Surfaces",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "surfaces",
+          "enabled_by",
+          "doc",
+          "flag_gated",
+          "enabled"
+        ],
+        "title": "ExperimentalFeatureHealth",
+        "type": "object"
+      },
       "ExportDestinationCreate": {
         "additionalProperties": false,
         "properties": {
@@ -40272,6 +40318,73 @@
           "updated_at"
         ],
         "title": "SyncState",
+        "type": "object"
+      },
+      "SystemHealthResponse": {
+        "properties": {
+          "analytics": {
+            "$ref": "#/components/schemas/AnalyticsHealth"
+          },
+          "auth_configured": {
+            "default": false,
+            "title": "Auth Configured",
+            "type": "boolean"
+          },
+          "auth_required": {
+            "default": true,
+            "title": "Auth Required",
+            "type": "boolean"
+          },
+          "configured_auth_modes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Configured Auth Modes",
+            "type": "array"
+          },
+          "connections_scheduler_enabled": {
+            "default": false,
+            "title": "Connections Scheduler Enabled",
+            "type": "boolean"
+          },
+          "entitlements": {
+            "$ref": "#/components/schemas/EntitlementHealth"
+          },
+          "experimental_features": {
+            "items": {
+              "$ref": "#/components/schemas/ExperimentalFeatureHealth"
+            },
+            "title": "Experimental Features",
+            "type": "array"
+          },
+          "status": {
+            "default": "ok",
+            "title": "Status",
+            "type": "string"
+          },
+          "storage": {
+            "$ref": "#/components/schemas/StorageHealth"
+          },
+          "tracing": {
+            "$ref": "#/components/schemas/TracingHealth"
+          },
+          "unauthenticated_allowed": {
+            "default": false,
+            "title": "Unauthenticated Allowed",
+            "type": "boolean"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version",
+          "tracing",
+          "analytics",
+          "storage"
+        ],
+        "title": "SystemHealthResponse",
         "type": "object"
       },
       "TenantDataCounts": {
@@ -79574,7 +79687,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HealthResponse"
+                  "$ref": "#/components/schemas/SystemHealthResponse"
                 }
               }
             },

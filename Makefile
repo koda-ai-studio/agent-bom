@@ -70,6 +70,7 @@ preflight:  ## Run the drift gates that CI's "Version Alignment" job runs — do
 	@echo "→ vendor coverage matrix";               python scripts/generate_vendor_coverage.py --check
 	@echo "→ CVE matching accuracy";                python scripts/cve_matching_accuracy.py --check
 	@echo "→ env-var reference";                    python scripts/generate_env_var_reference.py --check
+	@echo "→ experimental-feature reference";       python scripts/generate_experimental_docs.py --check
 	@echo "→ SDK patterns.json";                    python sdks/shared/generate-patterns.py --check
 	@echo "→ documentation SVGs";                    python scripts/generate_doc_architecture_svgs.py --check
 	@echo "→ blast-radius SVGs";                     python scripts/generate_blast_radius_svgs.py --check
@@ -80,6 +81,7 @@ preflight-fix:  ## Regenerate every drift artifact so you never push stale OpenA
 	python scripts/generate_v1_schemas.py
 	python scripts/generate_agent_bom_schema.py
 	python scripts/generate_env_var_reference.py
+	python scripts/generate_experimental_docs.py
 	python sdks/shared/generate-patterns.py
 	python scripts/product_metrics_snapshot.py --write
 	python scripts/generate_vendor_coverage.py --write

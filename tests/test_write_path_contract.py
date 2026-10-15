@@ -83,6 +83,7 @@ MALFORMED_TRACE_BODIES = [
 ]
 
 
+@pytest.mark.usefixtures("enable_experimental_traces")
 @pytest.mark.parametrize("body", MALFORMED_TRACE_BODIES)
 @pytest.mark.parametrize("path", ["/v1/traces", "/v1/traces/attack-paths"])
 def test_malformed_trace_body_is_a_client_error(path: str, body: dict[str, Any]) -> None:
@@ -100,6 +101,7 @@ def test_malformed_trace_body_never_leaks_raw_exception_text(path: str, body: di
     assert "Traceback" not in response.text
 
 
+@pytest.mark.usefixtures("enable_experimental_traces")
 def test_trace_sibling_routes_agree_on_status_for_the_same_bad_body() -> None:
     body = {"spans": ["not-an-object"]}
     client = _client()

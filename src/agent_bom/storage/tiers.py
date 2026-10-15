@@ -29,6 +29,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Final
 
+from agent_bom.core.experimental import EXPERIMENTAL_FEATURES
 from agent_bom.core.settings import env_bool, env_flag, env_is_set, env_str
 from agent_bom.storage.factory import validate_configured_sqlite_path
 
@@ -46,13 +47,16 @@ class StorageTier(str, Enum):
     EXPERIMENTAL = "experimental"
 
 
+EXPERIMENTAL_STORAGE_BACKENDS: Final[frozenset[str]] = frozenset(
+    feature.id.removeprefix("storage-") for feature in EXPERIMENTAL_FEATURES if feature.id.startswith("storage-")
+)
+
 BACKEND_TIERS: Final[dict[str, StorageTier]] = {
     "postgres": StorageTier.SUPPORTED,
     "sqlite": StorageTier.SUPPORTED,
     "memory": StorageTier.SUPPORTED,
     "clickhouse": StorageTier.ANALYTICS_SINK,
-    "snowflake": StorageTier.EXPERIMENTAL,
-    "neptune": StorageTier.EXPERIMENTAL,
+    **{backend: StorageTier.EXPERIMENTAL for backend in sorted(EXPERIMENTAL_STORAGE_BACKENDS)},
 }
 
 
