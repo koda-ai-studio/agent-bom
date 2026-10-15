@@ -7,7 +7,14 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 
 from agent_bom.asset_provenance import sanitize_discovery_provenance
-from agent_bom.canonical_ids import agent_graph_id_for, canonical_agent_id, canonical_graph_node_id, mcp_server_graph_id_for, source_ids
+from agent_bom.canonical_ids import (
+    agent_graph_id_for,
+    canonical_agent_id,
+    canonical_graph_node_id,
+    mcp_server_graph_id_for,
+    previous_mcp_server_graph_ids,
+    source_ids,
+)
 from agent_bom.graph.build_indexes import BuildIndexes
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.credential_projection import project_credentials
@@ -251,6 +258,17 @@ def _add_server_node(graph: UnifiedGraph, agent: AgentScope, srv_dict: Mapping[s
     return srv_id
 
 
+def _record_previous_server_ids(graph: UnifiedGraph, srv_id: str, previous: list[str]) -> None:
+    node = graph.nodes.get(srv_id)
+    if node is None or not previous:
+        return
+    identity = node.attributes.get("identity")
+    identity = dict(identity) if isinstance(identity, dict) else {}
+    known = [alias for alias in identity.get("aliases", []) if isinstance(alias, str)]
+    identity["aliases"] = sorted({*known, *previous})
+    node.attributes["identity"] = identity
+
+
 def _server_agents(graph: UnifiedGraph, srv_id: str, agent_id: str) -> list[str]:
     """Every agent that declared this server; a shared node keeps all of them."""
     existing = graph.nodes.get(srv_id)
@@ -263,6 +281,8 @@ def _project_server(graph: UnifiedGraph, agent: AgentScope, srv_dict: Mapping[st
     srv_id = agent.agent_id if agent.sbom_import else mcp_server_graph_id_for(srv_dict, agent.agent_dict)
     surface = srv_dict.get("surface", "mcp-server")
     srv_id = _add_server_node(graph, agent, srv_dict, srv_id, srv_name, surface)
+    if not agent.sbom_import and not agent.static_inventory:
+        _record_previous_server_ids(graph, srv_id, previous_mcp_server_graph_ids(srv_dict, agent.agent_dict))
     indexes.server_name_to_ids[srv_name].append(srv_id)
     if not agent.static_inventory:
         graph.add_edge(

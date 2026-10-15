@@ -265,6 +265,36 @@ def mcp_server_graph_id_for(server: Any, agent: Any) -> str:
     )
 
 
+def previous_mcp_server_graph_ids(server: Any, agent: Any) -> list[str]:
+    """Ids earlier identity schemes gave this server, so stored references still resolve.
+
+    Before discriminators kept case, the canonical part was lower-cased in
+    full; before canonical server ids, every server lived under its agent.
+    """
+    current = mcp_server_graph_id_for(server, agent)
+    if _field(agent, "source") == CORTEX_AGENT_SOURCE or _field(server, "canonical_id") or _field(server, "stable_id"):
+        return []
+    label = str(_field(server, "name") or "unknown").strip() or "unknown"
+    url, command, args, registry_id = (
+        _field(server, "url"),
+        _field(server, "command") or "",
+        list(_field(server, "args") or []),
+        _field(server, "registry_id"),
+    )
+    if mcp_server_identity_kind(url=url, command=command, args=args, registry_id=registry_id) == "agent":
+        return []
+    agent_key = agent_graph_id_for(agent).removeprefix("agent:")
+    previous: list[str] = []
+    if not registry_id:
+        lowered = canonical_id("mcp_server", mcp_server_identity_discriminator(label, str(command), url=str(url or "") or None, args=args))
+        legacy = mcp_server_graph_id(
+            label, command=command, args=args, url=url, canonical_id=lowered, host_scope=agent_identity_scope(agent), agent_key=agent_key
+        )
+        previous.append(legacy)
+    previous.append(f"server:{agent_key}:{label}")
+    return sorted({value for value in previous if value != current})
+
+
 def canonical_mcp_tool_id(name: str, input_schema: Mapping[str, Any] | bool | None = None, *, server_id: str | None = None) -> str:
     schema = json.dumps({} if input_schema is None else input_schema, sort_keys=True, separators=(",", ":"))
     return canonical_id("mcp_tool", server_id or "", name, schema)
