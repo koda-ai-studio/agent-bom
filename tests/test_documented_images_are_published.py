@@ -1,7 +1,7 @@
 """Every image reference we document must name a registry the release publishes to.
 
 `check_release_consistency.py` already asserts the *version* in
-`ghcr.io/msaad00/agent-bom:<version>` equals the release. It never asserted the
+`ghcr.io/koda-ai-studio/agent-bom:<version>` equals the release. It never asserted the
 image exists. The result was a number kept perfectly in sync with an artifact
 that had never been published: GHCR carried only a stale `latest`, while nine
 OpenClaw skills told users to run a versioned tag and the hosted-demo deploy
@@ -23,7 +23,7 @@ DEMO_WORKFLOW = ROOT / ".github" / "workflows" / "demo-deploy-cloudrun.yml"
 _IMAGE_REF = re.compile(r"(?P<repo>(?:ghcr\.io/)?[a-z0-9][a-z0-9._-]*/agent-bom(?:-[a-z]+)?):(?P<tag>[^\s\"'`]+)")
 
 
-OWNER = "msaad00"
+OWNER = "koda-ai-studio"
 
 
 def _expand(text: str) -> str:

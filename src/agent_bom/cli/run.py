@@ -266,7 +266,7 @@ def run_cmd(
     \b
       agent-bom run "npx/@modelcontextprotocol/server-filesystem /tmp"
       agent-bom run "uvx/mcp-server-git" --policy ./policy.json
-      agent-bom run "ghcr.io/msaad00/agent-bom:latest" --audit-log audit.jsonl
+      agent-bom run "ghcr.io/koda-ai-studio/agent-bom:latest" --audit-log audit.jsonl
       agent-bom run "python -m myserver" --rate-limit 30 --detect-credentials
     """
     from agent_bom.api.proxy_replay_store import set_capture_replay

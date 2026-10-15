@@ -26,16 +26,25 @@ def drop_live_node_aliases(graph: Any) -> int:
     Case-preserving ids make a retired lower-cased id of one asset equal the
     current id of another, and an alias must never redirect a live node.
     """
-    dropped = 0
-    for node in list(graph.nodes.values()):
+    # Stream once and keep only nodes that carry aliases: a store-backed graph
+    # must not hold every node in memory at the same time.
+    carriers: list[tuple[str, list[Any]]] = []
+    for node in graph.nodes.values():
         identity = node.attributes.get("identity")
         aliases = identity.get("aliases") if isinstance(identity, dict) else None
-        if not isinstance(aliases, list):
+        if isinstance(aliases, list) and aliases:
+            carriers.append((node.id, aliases))
+    dropped = 0
+    for node_id, aliases in carriers:
+        kept = [alias for alias in aliases if not (isinstance(alias, str) and graph.has_node(alias))]
+        if len(kept) == len(aliases):
             continue
-        kept = [alias for alias in aliases if not (isinstance(alias, str) and alias in graph.nodes)]
-        if len(kept) != len(aliases):
-            dropped += len(aliases) - len(kept)
-            node.attributes["identity"] = {**identity, "aliases": kept}
+        node = graph.get_node(node_id)
+        identity = node.attributes.get("identity") if node is not None else None
+        if node is None or not isinstance(identity, dict):
+            continue
+        dropped += len(aliases) - len(kept)
+        node.attributes["identity"] = {**identity, "aliases": kept}
     return dropped
 
 
