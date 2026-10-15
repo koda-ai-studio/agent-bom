@@ -61086,6 +61086,25 @@
               "description": "Only paths whose entrypoint node has this entity type",
               "title": "Source Type"
             }
+          },
+          {
+            "description": "next_cursor from the previous page (replaces offset)",
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 1024,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "next_cursor from the previous page (replaces offset)",
+              "title": "Cursor"
+            }
           }
         ],
         "responses": {
