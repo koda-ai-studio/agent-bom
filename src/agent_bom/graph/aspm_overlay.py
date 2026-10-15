@@ -138,6 +138,19 @@ def _manifest_roots(findings: list[Any]) -> list[str]:
 _NON_APPLICATION_ASSET_TYPES = frozenset({"package", "agent", "mcp_server", "server", "mcp_tool", "tool", "identity", "credential"})
 
 
+_COMPUTE_HOST_RESOURCE_TYPES = frozenset({"host", "instance", "virtual_machine", "vm", "compute_instance", "node"})
+_COMPUTE_HOST_ID_MARKERS = (":instance/", "/virtualmachines/", "/instances/")
+
+
+def _is_compute_host(asset: dict[str, Any]) -> bool:
+    # A VM or host runs applications; naming an application after it would
+    # mint one empty application per machine.
+    if str(asset.get("resource_type") or "").lower() in _COMPUTE_HOST_RESOURCE_TYPES:
+        return True
+    identifier = str(asset.get("identifier") or asset.get("stable_id") or "").lower()
+    return any(marker in identifier for marker in _COMPUTE_HOST_ID_MARKERS)
+
+
 def _app_identity(finding: Any, manifest_roots: list[str]) -> tuple[str, str]:
     """Derive ``(app_key, app_label)`` for a finding, deterministically.
 
@@ -155,6 +168,8 @@ def _app_identity(finding: Any, manifest_roots: list[str]) -> tuple[str, str]:
     """
     asset = _finding_asset(finding)
     asset_type = str(asset.get("asset_type") or "").lower()
+    if asset_type == "cloud_resource" and _is_compute_host(asset):
+        return ("", "")
     location = _norm_path(asset.get("location"))
     if location and asset_type in _NON_APPLICATION_ASSET_TYPES and any(ch.isspace() for ch in location):
         # An MCP server's "location" is its launch command, not a source path.

@@ -148,7 +148,13 @@ def compute_lane_report(*, vms: int = DEMO_COMPUTE_VMS, decoys: int = DEMO_HOSTN
             "source": "EXTERNAL",
             "severity": "low",
             "title": "Unsigned binary executed",
-            "asset": {"name": _hostname(index), "asset_type": "cloud_resource", "identifier": _hostname(index), "provider": "sensor"},
+            "asset": {
+                "name": _hostname(index),
+                "asset_type": "cloud_resource",
+                "resource_type": "host",
+                "identifier": _hostname(index),
+                "provider": "sensor",
+            },
         }
         for index in range(min(decoys, vms))
     )
