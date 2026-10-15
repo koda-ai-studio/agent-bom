@@ -120,6 +120,17 @@ def _compute_rows(store: Any, tenant: str, old: str, new: str) -> tuple[dict[str
     return result
 
 
+def _resolve_node_filter(store: Any, tenant: str, new_id: str, filters: DiffFilters) -> tuple[DiffFilters, str | None]:
+    if not filters.node_id:
+        return filters, None
+    canonical, resolved_from = resolve_snapshot_node_id(store, tenant_id=tenant, scan_id=new_id, node_id=filters.node_id)
+    return replace(filters, node_id=canonical), resolved_from
+
+
+def _resolution(resolved_from: str | None) -> dict[str, str]:
+    return {"resolved_from": resolved_from} if resolved_from else {}
+
+
 async def graph_diff_read(
     request: Request,
     *,
@@ -146,14 +157,9 @@ async def graph_diff_read(
     tenant = _runtime._tenant(request)
     store = _runtime._get_graph_store_or_503()
     old_id, new_id = await _resolve_pair(store, tenant, old, new)
-    resolved_from = None
-    if node_id:
-        canonical, resolved_from = await _runtime._graph_store_call(
-            resolve_snapshot_node_id, store, tenant_id=tenant, scan_id=new_id, node_id=node_id
-        )
-        filters = replace(filters, node_id=canonical)
+    filters, resolved_from = await _runtime._graph_store_call(_resolve_node_filter, store, tenant, new_id, filters)
     diff, rows = await _runtime._graph_store_call(_compute_rows, store, tenant, old_id, new_id)
-    base: dict[str, Any] = {"schema_version": "v1", "old": old_id, "new": new_id, "view": view}
+    base: dict[str, Any] = {"schema_version": "v1", "old": old_id, "new": new_id, "view": view, **_resolution(resolved_from)}
 
     if view == "full":
         payload = await _runtime._graph_compute_call(full_view, diff, rows)
@@ -197,7 +203,6 @@ async def graph_diff_read(
     next_cursor = encode_cursor(scope, revision, offset + len(page)) if has_more else None
     return {
         **base,
-        **({"resolved_from": resolved_from} if resolved_from else {}),
         "filters": filters.active(),
         "total": len(matched),
         "items": page,

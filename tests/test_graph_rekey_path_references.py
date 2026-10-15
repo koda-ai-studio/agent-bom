@@ -32,7 +32,9 @@ def _seed(graph: UnifiedGraph) -> None:
         )
     )
     graph.attack_paths.append(
-        AttackPath(source="agent:x", target="container:finding/api", hops=["agent:x", "container:finding/api"], edges=["uses"], composite_risk=7.0)
+        AttackPath(
+            source="agent:x", target="container:finding/api", hops=["agent:x", "container:finding/api"], edges=["uses"], composite_risk=7.0
+        )
     )
     graph.interaction_risks.append(
         InteractionRisk(pattern="shared", agents=["x"], risk_score=8.0, description="", agent_node_ids=["container:c1/ns/api"])
@@ -74,7 +76,6 @@ def test_interaction_risk_round_trips_agent_node_ids() -> None:
 
 def test_built_graph_attack_path_hops_are_graph_nodes() -> None:
     from agent_bom.demo_estate.compute_identity_lane import compute_lane_report
-
     from agent_bom.graph.path_derivation import _derived_attack_paths
 
     graph = build_unified_graph_from_report(compute_lane_report())

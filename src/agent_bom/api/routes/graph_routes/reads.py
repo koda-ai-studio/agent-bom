@@ -6,9 +6,9 @@ from typing import Any, Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
 
-from agent_bom.api.graph_node_alias import resolve_snapshot_node_id
 from agent_bom.api.graph_contracts import GraphIdentifier, IncidentEdgePageResponse, PresetCreate
 from agent_bom.api.graph_generation import optional_generation, verify_generation
+from agent_bom.api.graph_node_alias import resolve_snapshot_node_id
 from agent_bom.api.graph_paging import _enforce_node_offset_cap, _page_meta
 from agent_bom.api.neptune_graph import NeptuneGraphStore
 from agent_bom.api.read_models._base import documented
@@ -344,11 +344,9 @@ async def get_graph_incident_edges(
 ) -> dict[str, Any]:
     """Page recorded incident relationships without loading the full neighborhood.
 
-    Reuse scan_id and snapshot_generation on every node expansion to avoid mixing
-    snapshots. Keep node_id and direction fixed while following next_cursor.
-    Snapshot replacement invalidates cursors; restart from the first page on 400.
-    Completeness describes only recorded page rows, never source collection,
-    permissions, execution, or the whole estate. Total relationship count is unknown.
+    Reuse scan_id and snapshot_generation on every node expansion; keep node_id and direction fixed while following next_cursor.
+    Snapshot replacement invalidates cursors (400: restart). A replaced id resolves to its canonical node, echoed as resolved_from.
+    Completeness covers only recorded page rows, never collection, permissions, execution or the estate; the total is unknown.
     """
     store = _runtime._get_graph_store_or_503()
     if isinstance(store, NeptuneGraphStore):

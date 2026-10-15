@@ -79,7 +79,9 @@ def test_incident_edges_resolve_a_replaced_id(store: SQLiteGraphStore) -> None:
 
 
 def test_graph_diff_node_filter_resolves_a_replaced_id(store: SQLiteGraphStore) -> None:
-    body = TestClient(app).get("/v1/graph/diff", params={"old": "scan-a", "new": "scan-b", "view": "detail", "node_id": INVENTORY_ID}).json()
+    body = (
+        TestClient(app).get("/v1/graph/diff", params={"old": "scan-a", "new": "scan-b", "view": "detail", "node_id": INVENTORY_ID}).json()
+    )
     assert body["resolved_from"] == INVENTORY_ID
     assert body["filters"]["node_id"] == CANONICAL
 
@@ -106,7 +108,9 @@ def test_graph_diff_pages_reuse_one_computed_diff(store: SQLiteGraphStore, monke
     client = TestClient(app)
     params = {"old": "scan-a", "new": "scan-b", "view": "detail", "limit": 1}
     first = client.get("/v1/graph/diff", params=params).json()
-    second = client.get("/v1/graph/diff", params={**params, "cursor": first["pagination"]["next_cursor"]} if first["pagination"]["next_cursor"] else params)
+    second = client.get(
+        "/v1/graph/diff", params={**params, "cursor": first["pagination"]["next_cursor"]} if first["pagination"]["next_cursor"] else params
+    )
     assert second.status_code == 200
     assert calls == [("scan-a", "scan-b")]
 
