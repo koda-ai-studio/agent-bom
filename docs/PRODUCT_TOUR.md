@@ -100,3 +100,25 @@ These are application captures, not mockups. Overview, Findings and remediation 
 | Snowflake preview | [Native App installation](snowflake-native-app/INSTALL.md) |
 
 [Choose a deployment](../site-docs/deployment/overview.md) · [Enterprise configuration](ENTERPRISE.md) · [Connect cloud accounts](CLOUD_CONNECT.md)
+
+## Reproduce the README screenshots
+
+The pictured graphs are the committed UI build serving fictional fixtures
+(`ui/scripts/product-proof-scope-showcase.mjs` and the hash-pinned
+reference-lab output). From the repository root:
+
+```bash
+cd ui && npm ci && npm run build
+npm run capture:product-proof   # refreshes the README screenshots in docs/images
+```
+
+To explore a labeled demo estate in the current-source dashboard instead
+(different sample data from the screenshots):
+
+```bash
+make build-ui
+uv run --extra ui agent-bom serve --demo-estate --allow-insecure-no-auth --port 8422
+```
+
+Open **http://127.0.0.1:8422/graph**. Loopback only; the flag disables
+authentication for local evaluation.

@@ -212,8 +212,8 @@ def test_readme_embeds_cli_and_investigation_and_links_workflow_detail() -> None
     for diagram in ("workflow-dark.svg", "architecture-dark.svg", "persona-value-dark.svg"):
         assert diagram not in readme
     assert "docs/PRODUCT_TOUR.md" in readme
-    assert "Current-source preview" in readme
-    assert "published `0.108.4` UI predates" in readme
+    assert "Fictional sample estate" in readme
+    assert "not observed at runtime" in readme
 
 
 def test_persona_table_rows_all_carry_a_concrete_first_action() -> None:
