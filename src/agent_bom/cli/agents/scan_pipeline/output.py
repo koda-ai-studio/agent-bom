@@ -94,6 +94,8 @@ def _print_totals_and_record(opts: ScanOptions, st: ScanState) -> None:
         if _unified:
             _u_counts: dict[str, int] = {}
             for _uf in _unified:
+                if _uf.suppressed:
+                    continue
                 _u_sev = str(_uf.effective_severity() or "unknown").lower()
                 _u_counts[_u_sev] = _u_counts.get(_u_sev, 0) + 1
             _u_order = ["critical", "high", "medium", "low", "unknown"]

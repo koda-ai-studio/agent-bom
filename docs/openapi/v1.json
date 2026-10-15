@@ -13065,8 +13065,16 @@
             "type": "string"
           },
           "enabled": {
-            "title": "Enabled",
-            "type": "boolean"
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Whether the flag enables it now; null when the feature has its own opt-in.",
+            "title": "Enabled"
           },
           "enabled_by": {
             "title": "Enabled By",

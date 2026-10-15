@@ -9033,8 +9033,12 @@ components:
           title: Doc
           type: string
         enabled:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          description: Whether the flag enables it now; null when the feature has
+            its own opt-in.
           title: Enabled
-          type: boolean
         enabled_by:
           title: Enabled By
           type: string

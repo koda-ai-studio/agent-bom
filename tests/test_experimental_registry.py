@@ -132,6 +132,7 @@ def test_system_health_reports_experimental_state(client, monkeypatch: pytest.Mo
     payload = client.get("/v1/system/health", headers=proxy_headers(role="admin", tenant="tenant-a")).json()
     by_id = {item["id"]: item for item in payload["experimental_features"]}
     assert by_id["traces"]["enabled"] is False and by_id["traces"]["flag_gated"] is True
+    assert by_id["storage-snowflake"]["enabled"] is None, "an opt-in the flag does not control is not reported as on"
     monkeypatch.setenv(experimental.EXPERIMENTAL_ENV, "traces")
     payload = client.get("/v1/system/health", headers=proxy_headers(role="admin", tenant="tenant-a")).json()
     assert {item["id"]: item for item in payload["experimental_features"]}["traces"]["enabled"] is True

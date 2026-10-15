@@ -58,6 +58,7 @@ _READS = frozenset(
         "attack_paths",
         "incident_edges_page",
         "node_context",
+        "resolve_node_aliases",
         "compliance_summary",
         "evidence_manifest",
     }

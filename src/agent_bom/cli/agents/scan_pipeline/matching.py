@@ -115,8 +115,10 @@ def _print_scan_verdict(opts: ScanOptions, st: ScanState, input_vulnerability_co
         # printed "Found N vulnerabilities across N finding(s)" above.
         # Surface a severity breakdown here instead so the closer
         # line tells the operator something new.
+        from agent_bom.core.vex_policy import active_blast_radii
+
         sev_counts: dict[str, int] = {}
-        for br in st.blast_radii:
+        for br in active_blast_radii(st.blast_radii):
             # ``BlastRadius.severity`` lives on the wrapped Vulnerability,
             # not the BlastRadius dataclass itself. ``Severity(str, Enum)``
             # holds the canonical token in ``.value`` (e.g. "critical").

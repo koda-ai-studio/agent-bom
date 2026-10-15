@@ -127,7 +127,8 @@ def feature_status() -> list[dict[str, object]]:
             "enabled_by": feature.enabled_by,
             "doc": feature.doc,
             "flag_gated": feature.flag_gated,
-            "enabled": is_enabled(feature.id),
+            # Opt-ins outside the flag (a storage backend, a profile) can't be observed here.
+            "enabled": is_enabled(feature.id) if feature.flag_gated else None,
         }
         for feature in EXPERIMENTAL_FEATURES
     ]

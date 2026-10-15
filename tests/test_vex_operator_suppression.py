@@ -103,6 +103,8 @@ def test_operator_vex_suppresses_matching_finding_across_surfaces(tmp_path):
     assert rows["CVE-2023-4863"]["suppressed"] is True
     assert rows["CVE-2023-4863"]["vex_source"] == "operator"
     assert rows["CVE-2023-50447"]["vex_suppressed"] is False
+    assert doc["finding_summary"]["suppressed"] == 1
+    assert doc["finding_summary"]["total"] == len(report.findings) - 1
 
     sarif = to_sarif(report)
     result = next(r for r in sarif["runs"][0]["results"] if r["ruleId"] == "CVE-2023-4863")
