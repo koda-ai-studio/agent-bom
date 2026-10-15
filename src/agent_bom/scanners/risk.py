@@ -20,7 +20,12 @@ from agent_bom.core.cvss import parse_cvss4_vector as _parse_cvss4_vector  # noq
 from agent_bom.core.cvss import (
     parse_cvss_vector as parse_cvss_vector,
 )
-from agent_bom.core.severity import Severity, severity_from_label
+from agent_bom.core.severity import (  # noqa: F401 - severity_basis re-export
+    DISTRO_SEVERITY_TYPES,
+    Severity,
+    severity_basis,
+    severity_from_label,
+)
 
 _logger = logging.getLogger(__name__)
 
@@ -43,6 +48,32 @@ def advisory_id_severity_fallback(advisory_id: str) -> tuple[Severity, Optional[
         return Severity.MEDIUM, "osv_heuristic"
     if normalized.startswith(_DISTRO_MEDIUM_FALLBACK_PREFIXES):
         return Severity.MEDIUM, "distro_advisory_heuristic"
+    return Severity.UNKNOWN, None
+
+
+def _affected_or_qualitative_severity(vuln_data: dict) -> tuple[Severity, Optional[str]]:
+    for affected in vuln_data.get("affected") or []:
+        if not isinstance(affected, dict):
+            continue
+        severity, severity_source = _first_vendor_severity(
+            ("osv_affected_database", affected.get("database_specific")),
+            ("osv_affected_ecosystem", affected.get("ecosystem_specific")),
+        )
+        if severity != Severity.UNKNOWN:
+            return severity, severity_source
+    return _osv_severity_array_label(vuln_data)
+
+
+def _osv_severity_array_label(vuln_data: dict) -> tuple[Severity, Optional[str]]:
+    """Qualitative ratings in the OSV ``severity`` array (e.g. ``{"type": "Ubuntu", "score": "medium"}``)."""
+    for sev in vuln_data.get("severity") or []:
+        if not isinstance(sev, dict) or str(sev.get("type") or "").upper().startswith("CVSS"):
+            continue
+        severity = severity_from_label(sev.get("score"))
+        if severity == Severity.UNKNOWN:
+            continue
+        kind = str(sev.get("type") or "").strip().lower()
+        return severity, (f"distro_{kind.replace(' ', '_')}" if kind in DISTRO_SEVERITY_TYPES else "osv_severity_label")
     return Severity.UNKNOWN, None
 
 
@@ -146,7 +177,8 @@ def osv_severity_basis(vuln_data: dict, *, advisory_id_fallback: bool = True) ->
     3. With a CVSS score, severity is the FIRST.org qualitative rating band of that score
        (``severity_source="cvss"``); the vector reports the scored version.
     4. Otherwise the advisory's own label: ``database_specific`` (``osv_database``),
-       ``ecosystem_specific`` (``osv_ecosystem``), then ``affected[]`` blocks.
+       ``ecosystem_specific`` (``osv_ecosystem``), then ``affected[]`` blocks,
+       then a qualitative ``severity[]`` entry (distro ratings such as Ubuntu).
     5. Otherwise a conservative advisory-namespace fallback (e.g. GHSA → medium),
        which the offline DB applies at read time instead of persisting.
     """
@@ -187,15 +219,7 @@ def osv_severity_basis(vuln_data: dict, *, advisory_id_fallback: bool = True) ->
         ("osv_ecosystem", vuln_data.get("ecosystem_specific")),
     )
     if severity == Severity.UNKNOWN:
-        for affected in vuln_data.get("affected") or []:
-            if not isinstance(affected, dict):
-                continue
-            severity, severity_source = _first_vendor_severity(
-                ("osv_affected_database", affected.get("database_specific")),
-                ("osv_affected_ecosystem", affected.get("ecosystem_specific")),
-            )
-            if severity != Severity.UNKNOWN:
-                break
+        severity, severity_source = _affected_or_qualitative_severity(vuln_data)
 
     if severity == Severity.UNKNOWN and advisory_id_fallback:
         severity, severity_source = advisory_id_severity_fallback(str(vuln_data.get("id", "")).upper())

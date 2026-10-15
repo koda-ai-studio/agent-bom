@@ -12,6 +12,7 @@ from agent_bom.canonical_ids import agent_graph_id_for, canonical_finding_id, ca
 from agent_bom.core.asset_types import entity_type_for_asset_type
 from agent_bom.core.exploitability import fused_triage_priority
 from agent_bom.core.packages import synthesize_purl
+from agent_bom.core.severity import severity_basis
 from agent_bom.core.sla import finding_owner, finding_sla_fields
 
 if TYPE_CHECKING:
@@ -1634,6 +1635,7 @@ def blast_radius_to_finding(br: object) -> "Finding":
         "published_at": getattr(vuln, "published_at", None),
         "modified_at": getattr(vuln, "modified_at", None),
         "severity_source": getattr(vuln, "severity_source", None),
+        "severity_basis": severity_basis(getattr(vuln, "severity_source", None)),
         "cvss_vector": getattr(vuln, "cvss_vector", None),
         "attack_vector": getattr(vuln, "attack_vector", None),
         "attack_complexity": getattr(vuln, "attack_complexity", None),
@@ -1670,6 +1672,8 @@ def blast_radius_to_finding(br: object) -> "Finding":
         evidence["vex_status"] = vuln.vex_status
     if getattr(vuln, "vex_justification", None):
         evidence["vex_justification"] = vuln.vex_justification
+    if getattr(vuln, "vex_source", None):
+        evidence["vex_source"] = vuln.vex_source
     if getattr(vuln, "aliases", None):
         evidence["advisory_aliases"] = _sanitized_evidence_field(list(vuln.aliases))
     from agent_bom.advisory_ids import all_cve_identifiers
@@ -1704,7 +1708,7 @@ def blast_radius_to_finding(br: object) -> "Finding":
     # Deterministic graph FKs — package/vuln node ids match builder conventions
     # so investigation can join without CVE-label heuristics alone.
     from agent_bom.package_utils import canonical_package_key
-    from agent_bom.vex import is_vex_suppressed
+    from agent_bom.vex import is_vex_suppressed, vex_suppression_reason
 
     package_node_id = f"pkg:{canonical_package_key(pkg.name, pkg.version or '', pkg.ecosystem or '', getattr(pkg, 'purl', None))}"
     finding_node_id = f"vuln:{vuln.id}" if vuln.id else None
@@ -1790,8 +1794,8 @@ def blast_radius_to_finding(br: object) -> "Finding":
         impact_category=getattr(br, "impact_category", None),
         suppressed=bool(getattr(br, "suppressed", False)) or is_vex_suppressed(vuln),
         suppression_id=getattr(br, "suppression_id", None),
-        suppression_state=getattr(br, "suppression_state", None),
-        suppression_reason=getattr(br, "suppression_reason", None),
+        suppression_state=getattr(br, "suppression_state", None) or ("vex" if is_vex_suppressed(vuln) else None),
+        suppression_reason=getattr(br, "suppression_reason", None) or (vex_suppression_reason(vuln) if is_vex_suppressed(vuln) else None),
         unsuppressed_risk_score=getattr(br, "unsuppressed_risk_score", None),
         ai_risk_context=getattr(br, "ai_risk_context", None),
         ai_summary=getattr(br, "ai_summary", None),

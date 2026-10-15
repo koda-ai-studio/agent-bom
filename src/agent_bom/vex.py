@@ -13,6 +13,15 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import TYPE_CHECKING
 
+from agent_bom.core.vex_policy import (  # noqa: F401 - re-exported VEX policy API
+    VEX_SOURCE_DISCOVERED,
+    VEX_SOURCE_OPERATOR,
+    active_blast_radii,
+    apply_vex_suppression,
+    is_vex_suppressed,
+    product_matches,
+    vex_suppression_reason,
+)
 from agent_bom.domain.report_payloads import VexReportPayload
 from agent_bom.package_utils import package_purl
 from agent_bom.redaction.log_values import sanitize_log_value
@@ -564,63 +573,50 @@ def generate_vex(report: "AIBOMReport", auto_triage: bool = False) -> VexDocumen
 # ---------------------------------------------------------------------------
 
 
-def is_vex_suppressed(vuln) -> bool:
-    """VEX assertions alone carry no tenant approval authority.
-
-    Kept for callers of the historical helper; only the separately approved
-    exception overlay on a finding can suppress actionability.
-    """
-    return False
-
-
-def active_blast_radii(blast_radii):
-    """Return findings active after approved-exception overlays."""
-
-    return [br for br in blast_radii if not br.suppressed]
-
-
-def apply_vex(report: "AIBOMReport", vex: VexDocument) -> int:
+def apply_vex(report: "AIBOMReport", vex: VexDocument, *, source: str = VEX_SOURCE_DISCOVERED) -> int:
     """Apply VEX statements to a report's vulnerabilities.
 
-    Sets vex_status and vex_justification on matching Vulnerability objects.
-    Imported assertions are evidence annotations, not suppression approval.
-    Counts, exit codes and severity gates retain these findings until an
-    authenticated admin approves an exact, expiring tenant exception.
-    Returns count of vulnerabilities updated.
+    Sets vex_status, vex_justification and vex_source on matching
+    Vulnerability objects. Statements naming products only match those
+    packages. With ``source="operator"`` (an explicit ``--vex`` file or API
+    ``vex`` field), ``not_affected``/``fixed`` statements suppress the finding:
+    it stays visible with its justification but leaves totals, risk and gates.
+    Discovered VEX is evidence only. Returns count of vulnerabilities updated.
     """
-    # Build lookup: vuln_id → statement
-    vex_map: dict[str, VexStatement] = {}
+    vex_map: dict[str, list[VexStatement]] = {}
     for stmt in vex.statements:
-        vex_map[stmt.vulnerability_id] = stmt
+        vex_map.setdefault(stmt.vulnerability_id, []).append(stmt)
+    document_id = str(vex.metadata.get("id") or "") or None
 
-    def _match_statement(vuln) -> VexStatement | None:
-        matched = vex_map.get(vuln.id)
-        if matched:
-            return matched
-        for alias in vuln.aliases or []:
-            matched = vex_map.get(alias)
-            if matched:
-                return matched
+    def _match_statement(vuln, package) -> VexStatement | None:
+        for key in (vuln.id, *(vuln.aliases or [])):
+            for stmt in vex_map.get(key, []):
+                if product_matches(stmt.products, package):
+                    return stmt
         return None
 
     def _apply_statement(vuln, stmt: VexStatement) -> None:
         vuln.vex_status = stmt.status.value
         vuln.vex_justification = stmt.justification.value if stmt.justification else None
+        vuln.vex_source = source
+        vuln.vex_statement_id = document_id
 
     count = 0
     for agent in report.agents:
         for server in agent.mcp_servers:
             for pkg in server.packages:
                 for vuln in pkg.vulnerabilities:
-                    matched_stmt = _match_statement(vuln)
+                    matched_stmt = _match_statement(vuln, pkg)
                     if matched_stmt:
                         _apply_statement(vuln, matched_stmt)
                         count += 1
 
     for br in report.blast_radii:
-        matched_stmt = _match_statement(br.vulnerability)
+        matched_stmt = _match_statement(br.vulnerability, br.package)
         if matched_stmt:
             _apply_statement(br.vulnerability, matched_stmt)
+        if source == VEX_SOURCE_OPERATOR:
+            apply_vex_suppression(br)
 
     return count
 
