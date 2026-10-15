@@ -221,3 +221,21 @@ def test_html_vuln_and_blast_tables_render_from_finding_stream() -> None:
     assert 'id="blast"' in html
     assert "9.4" in html
     assert "badge-ai" in html
+
+
+def test_legacy_finding_without_graph_links_uses_builder_server_id() -> None:
+    server = _server("legacy-mcp")
+    br = BlastRadius(
+        package=_pkg(),
+        vulnerability=_vuln(),
+        affected_agents=[_agent("legacy-agent", [server])],
+        affected_servers=[server],
+        exposed_credentials=[],
+        exposed_tools=[],
+    )
+    finding = blast_radius_to_finding(br)
+    finding.evidence.pop("agent_server_links", None)
+
+    path = exposure_path_for_finding(finding, rank=1)
+
+    assert path["hops"][:2] == ["agent:legacy-agent", "server:legacy-agent:legacy-mcp"]
