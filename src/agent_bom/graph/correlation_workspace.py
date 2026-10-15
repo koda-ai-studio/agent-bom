@@ -16,6 +16,7 @@ from itertools import groupby
 from pathlib import Path
 from typing import Any
 
+from agent_bom.graph.asset_identity import IdentityKey
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.correlation import (
     CorrelationMergeResult,
@@ -28,6 +29,8 @@ from agent_bom.graph.correlation import (
     _relationship_value,
     _timestamp_instant,
     correlation_identity,
+    strong_member_identities,
+    strong_member_keys,
 )
 from agent_bom.graph.correlation_scope import CORRELATION_IDENTITY_VERSION
 from agent_bom.graph.edge import UnifiedEdge
@@ -120,6 +123,8 @@ class CorrelationMergeWorkspace:
                 scan_id TEXT NOT NULL,
                 snapshot_created_at TEXT NOT NULL,
                 edge_id TEXT NOT NULL,
+                source_node_id TEXT NOT NULL,
+                target_node_id TEXT NOT NULL,
                 payload TEXT NOT NULL,
                 PRIMARY KEY (
                     source_type, source_identity, target_type,
@@ -131,6 +136,13 @@ class CorrelationMergeWorkspace:
                     source_type, source_identity, target_type,
                     target_identity, relationship
                 );
+            CREATE TABLE strong_members (
+                scan_id TEXT NOT NULL,
+                node_id TEXT NOT NULL,
+                family TEXT NOT NULL,
+                keys TEXT NOT NULL,
+                PRIMARY KEY (scan_id, node_id)
+            );
             CREATE TABLE merged_nodes (
                 entity_type TEXT NOT NULL,
                 identity TEXT NOT NULL,
@@ -155,6 +167,7 @@ class CorrelationMergeWorkspace:
         with self._conn:
             node_group_rows: list[tuple[str, str]] = []
             node_observation_rows: list[tuple[str, str, str, str, str, str, str]] = []
+            strong_rows: list[tuple[str, str, str, str]] = []
 
             def flush_nodes() -> None:
                 self._conn.executemany(
@@ -170,12 +183,18 @@ class CorrelationMergeWorkspace:
                     """,
                     node_observation_rows,
                 )
+                self._conn.executemany("INSERT INTO strong_members(scan_id, node_id, family, keys) VALUES (?, ?, ?, ?)", strong_rows)
                 node_group_rows.clear()
                 node_observation_rows.clear()
+                strong_rows.clear()
 
             for node in sorted(snapshot.graph.nodes.values(), key=lambda item: item.id):
                 entity_type, identity, basis = correlation_identity(node, scan_id=snapshot.scan_id, nodes=snapshot.graph.nodes)
                 source_to_key[node.id] = (entity_type, identity)
+                if basis.startswith("strong_key:"):
+                    family, keys = strong_member_keys(node)
+                    encoded = json.dumps([[key.rank, key.namespace, key.value, key.provider] for key in keys], separators=(",", ":"))
+                    strong_rows.append((snapshot.scan_id, node.id, family, encoded))
                 node_group_rows.append((entity_type, identity))
                 node_observation_rows.append(
                     (
@@ -196,7 +215,7 @@ class CorrelationMergeWorkspace:
                 raise CorrelationMergeBudgetError("node_limit")
 
             edge_group_rows: list[tuple[str, str, str, str, str]] = []
-            edge_observation_rows: list[tuple[str, str, str, str, str, str, str, str, str]] = []
+            edge_observation_rows: list[tuple[str, str, str, str, str, str, str, str, str, str, str]] = []
 
             def flush_edges() -> None:
                 self._conn.executemany(
@@ -213,8 +232,9 @@ class CorrelationMergeWorkspace:
                     INSERT INTO edge_observations(
                         source_type, source_identity, target_type,
                         target_identity, relationship, scan_id,
-                        snapshot_created_at, edge_id, payload
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        snapshot_created_at, edge_id, source_node_id,
+                        target_node_id, payload
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     edge_observation_rows,
                 )
@@ -238,6 +258,8 @@ class CorrelationMergeWorkspace:
                         snapshot.scan_id,
                         snapshot.created_at,
                         edge.id,
+                        edge.source,
+                        edge.target,
                         json.dumps(edge.to_dict(), default=str, separators=(",", ":")),
                     )
                 )
@@ -272,12 +294,55 @@ class CorrelationMergeWorkspace:
         self._snapshot_stubs[scan_id] = snapshot
         return snapshot
 
+    def _resolve_strong_identities(self) -> int:
+        """Regroup strong-keyed observations across every snapshot, then re-check budgets.
+
+        Only the keys of strong-keyed observations are held in memory; payloads
+        stay on disk.
+        """
+        members: dict[tuple[str, str], tuple[str, list[IdentityKey]]] = {
+            (str(scan_id), str(node_id)): (
+                str(family),
+                [IdentityKey(int(rank), str(ns), str(value), str(provider)) for rank, ns, value, provider in json.loads(str(keys))],
+            )
+            for scan_id, node_id, family, keys in self._conn.execute("SELECT scan_id, node_id, family, keys FROM strong_members")
+        }
+        resolved, conflicts = strong_member_identities(members)
+        with self._conn:
+            self._conn.executemany(
+                "UPDATE node_observations SET identity = ? WHERE scan_id = ? AND node_id = ? AND identity <> ?",
+                [(identity, scan_id, node_id, identity) for (scan_id, node_id), identity in resolved.items()],
+            )
+            self._conn.executemany(
+                "UPDATE edge_observations SET source_identity = ? WHERE scan_id = ? AND source_node_id = ? AND source_identity <> ?",
+                [(identity, scan_id, node_id, identity) for (scan_id, node_id), identity in resolved.items()],
+            )
+            self._conn.executemany(
+                "UPDATE edge_observations SET target_identity = ? WHERE scan_id = ? AND target_node_id = ? AND target_identity <> ?",
+                [(identity, scan_id, node_id, identity) for (scan_id, node_id), identity in resolved.items()],
+            )
+        node_count = int(
+            self._conn.execute("SELECT COUNT(*) FROM (SELECT DISTINCT entity_type, identity FROM node_observations)").fetchone()[0]
+        )
+        if node_count > self._max_output_nodes:
+            raise CorrelationMergeBudgetError("node_limit")
+        edge_count = int(
+            self._conn.execute(
+                "SELECT COUNT(*) FROM (SELECT DISTINCT source_type, source_identity, target_type, target_identity, relationship"
+                " FROM edge_observations)"
+            ).fetchone()[0]
+        )
+        if edge_count > self._max_output_edges:
+            raise CorrelationMergeBudgetError("edge_limit")
+        return conflicts
+
     def finish(self) -> CorrelationMergeResult:
         if len(self._snapshots) < 2:
             raise ValueError("Correlation requires at least 2 graph snapshots")
         if len(self._snapshots) > 32:
             raise ValueError("Correlation accepts at most 32 graph snapshots")
 
+        strong_key_conflicts = self._resolve_strong_identities()
         node_conflicts = 0
         node_rows = self._conn.execute(
             """
@@ -383,6 +448,7 @@ class CorrelationMergeWorkspace:
                 "edge_count": len(output.edges),
                 "node_conflict_count": node_conflicts,
                 "edge_conflict_count": edge_conflicts,
+                "strong_key_conflict_count": strong_key_conflicts,
             },
         }
         return CorrelationMergeResult(graph=output, manifest=manifest, manifest_sha256=_digest(manifest))

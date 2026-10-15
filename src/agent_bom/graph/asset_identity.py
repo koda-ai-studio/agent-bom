@@ -17,8 +17,8 @@ running it.
 from __future__ import annotations
 
 import re
-from collections.abc import Iterable
-from dataclasses import dataclass
+from collections.abc import Iterable, Mapping, Sequence
+from dataclasses import dataclass, field
 
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.types import EntityType
@@ -162,10 +162,15 @@ def _gcp_keys(node: UnifiedNode, natives: list[str]) -> list[IdentityKey]:
 def _kubernetes_keys(node: UnifiedNode) -> list[IdentityKey]:
     keys: list[IdentityKey] = []
     uid = _attr(node, "kubernetes_uid", "k8s_uid", "pod_uid")
-    if uid:
-        keys.append(IdentityKey(100, "k8s_uid", uid.casefold(), "kubernetes"))
     cluster, namespace = _attr(node, "cluster_id", "cluster_arn", "cluster"), _attr(node, "namespace", "k8s_namespace")
     kind, name = _attr(node, "kubernetes_kind", "k8s_kind"), _attr(node, "kubernetes_name", "k8s_name")
+    container_name = _attr(node, "container_name")
+    if uid and node.entity_type == E.CONTAINER and container_name:
+        keys.append(IdentityKey(100, "k8s_container", f"{uid.casefold()}/{container_name}", "kubernetes"))
+    elif uid and (node.entity_type != E.CONTAINER or kind):
+        # Every container of a pod carries the pod's uid; on a container node it
+        # names one asset only when the node declares itself the object.
+        keys.append(IdentityKey(100, "k8s_uid", uid.casefold(), "kubernetes"))
     if cluster and namespace and kind and name:
         keys.append(IdentityKey(90, "k8s_object", f"{cluster}/{namespace}/{kind.casefold()}/{name}", "kubernetes"))
     return keys
@@ -253,3 +258,77 @@ def is_compute_instance(resource_type: object, native_id: object = "") -> bool:
         return True
     native = str(native_id or "").strip().casefold()
     return bool(_INSTANCE_ID.match(native)) or any(marker in native for marker in _COMPUTE_ID_MARKERS)
+
+
+def strong_keys_conflict(left: Mapping[str, str], right: Mapping[str, str]) -> bool:
+    """Two key sets name different assets when any shared namespace disagrees."""
+    return any(left[namespace] != value for namespace, value in right.items() if namespace in left)
+
+
+@dataclass(slots=True)
+class StrongKeyComponents:
+    """Conflict-guarded union-find over observations sharing strong keys.
+
+    The one merge rule for a single build and for a cross-snapshot merge: a
+    shared key joins two observations unless their components already hold
+    different values for another strong key, which is a recorded conflict.
+    """
+
+    parent: dict[str, str] = field(default_factory=dict)
+    keys: dict[str, dict[str, str]] = field(default_factory=dict)
+    held: dict[str, set[IdentityKey]] = field(default_factory=dict)
+    conflicts: int = 0
+
+    def find(self, member: str) -> str:
+        root = member
+        while self.parent[root] != root:
+            root = self.parent[root]
+        while self.parent[member] != root:
+            self.parent[member], member = root, self.parent[member]
+        return root
+
+    def union(self, left: str, right: str) -> None:
+        a, b = sorted((self.find(left), self.find(right)))
+        if a == b:
+            return
+        if strong_keys_conflict(self.keys[a], self.keys[b]):
+            self.conflicts += 1
+            return
+        self.parent[b] = a
+        self.keys[a].update(self.keys[b])
+        self.held[a] |= self.held[b]
+
+    def identities(self) -> dict[str, tuple[IdentityKey, bool]]:
+        """``root -> (key, unique)``: each component's best key no other component holds.
+
+        ``unique`` is false only when every key a component holds is also held
+        by a component it conflicts with; callers must then disambiguate.
+        """
+        roots = [member for member, parent in self.parent.items() if parent == member and self.held[member]]
+        holders: dict[IdentityKey, int] = {}
+        for root in roots:
+            for key in self.held[root]:
+                holders[key] = holders.get(key, 0) + 1
+        result: dict[str, tuple[IdentityKey, bool]] = {}
+        for root in roots:
+            unique = [key for key in self.held[root] if holders[key] == 1]
+            result[root] = (max(unique), True) if unique else (max(self.held[root]), False)
+        return result
+
+
+def strong_key_components(members: Mapping[str, tuple[str, Sequence[IdentityKey]]]) -> StrongKeyComponents:
+    """Group ``member -> (family, strong keys)``; keys only join within a family."""
+    components = StrongKeyComponents()
+    buckets: dict[tuple[str, IdentityKey], list[str]] = {}
+    for member in sorted(members):
+        family, keys = members[member]
+        components.parent[member] = member
+        components.keys[member] = {}
+        components.held[member] = set(keys)
+        for key in keys:
+            components.keys[member].setdefault(key.namespace, key.value)
+            buckets.setdefault((family, key), []).append(member)
+    for (_family, _key), grouped in sorted(buckets.items(), key=lambda entry: (-entry[0][1].rank, entry[0][0], entry[0][1].text)):
+        for other in grouped[1:]:
+            components.union(grouped[0], other)
+    return components
