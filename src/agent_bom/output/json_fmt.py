@@ -14,6 +14,7 @@ from agent_bom.asset_provenance import (
 )
 from agent_bom.canonical_ids import CANONICAL_ID_SCHEMA_VERSION
 from agent_bom.compliance_utils import effective_blast_radius_tags, framework_qualified_blast_radius_tags
+from agent_bom.core.severity import severity_basis
 from agent_bom.exploitability import fused_triage_priority
 from agent_bom.finding import Finding, _forward_fixed_version
 from agent_bom.mcp_blocklist import sanitize_security_intelligence_entry
@@ -31,6 +32,7 @@ from agent_bom.security import (
     sanitize_text,
     sanitize_url,
 )
+from agent_bom.vex import is_vex_suppressed
 
 SCAN_REPORT_SCHEMA_VERSION = "1.0"
 SCAN_RUN_SCHEMA_VERSION = "1"
@@ -821,7 +823,8 @@ def _blast_radius_json_entry(
         "actionable": br.is_actionable,
         "vulnerability_id": finding.cve_id or br.vulnerability.id,
         "severity": br.vulnerability.severity.value,
-        "severity_label": _severity_label(br.vulnerability.severity),
+        "severity_label": _severity_label(br.vulnerability.severity, br.vulnerability.severity_source),
+        "severity_basis": severity_basis(br.vulnerability.severity_source),
         "severity_state": _severity_state(br.vulnerability.severity),
         "advisory_sources": br.vulnerability.all_advisory_sources,
         "primary_advisory_source": (br.vulnerability.all_advisory_sources[0] if br.vulnerability.all_advisory_sources else None),
@@ -833,9 +836,7 @@ def _blast_radius_json_entry(
         "published_at": br.vulnerability.published_at,
         "modified_at": br.vulnerability.modified_at,
         "nvd_status": br.vulnerability.nvd_status,
-        "vex_status": br.vulnerability.vex_status,
-        "vex_justification": br.vulnerability.vex_justification,
-        "vex_suppressed": False,  # VEX assertions are not authenticated suppression approvals.
+        **_vex_fields(br.vulnerability),
         "suppressed": getattr(br, "suppressed", False),
         "suppression_id": getattr(br, "suppression_id", None),
         "suppression_state": getattr(br, "suppression_state", None),
@@ -928,6 +929,16 @@ def _export_findings_json(report: AIBOMReport) -> list[dict[str, Any]]:
         if not finding.first_seen:
             finding.first_seen = scan_observed_at
     return stamp_finding_node_ids([finding.to_dict() for finding in export_findings])
+
+
+def _vex_fields(vuln) -> dict[str, Any]:
+    return {
+        "vex_status": vuln.vex_status,
+        "vex_justification": vuln.vex_justification,
+        "vex_source": vuln.vex_source,
+        "vex_statement_id": vuln.vex_statement_id,
+        "vex_suppressed": is_vex_suppressed(vuln),
+    }
 
 
 def to_json(report: AIBOMReport) -> dict:

@@ -116,7 +116,9 @@ def test_v5_upgrade_preserves_findings_but_requires_osv_metadata_refresh(tmp_pat
     assert lookup_package(readonly, "Red Hat", "openssl", "3.0.1")[0].epss_probability is None
     readonly.close()
     migrated = init_db(path)
-    assert migrated.execute("SELECT version FROM schema_version").fetchone()[0] == 6
+    from agent_bom.db.schema import _SCHEMA_VERSION
+
+    assert migrated.execute("SELECT version FROM schema_version").fetchone()[0] == _SCHEMA_VERSION
     assert migrated.execute("SELECT count(*) FROM vulns").fetchone()[0] == 1
     assert {r[0] for r in migrated.execute("SELECT source FROM sync_meta")} == {"epss", "kev"}
     _ingest_osv_file(migrated, json.dumps(advisory()).encode(), "advisory.json")
@@ -133,11 +135,14 @@ def test_failed_migration_rolls_back_ddl_and_receipt(tmp_path, monkeypatch):
     import agent_bom.db.schema as schema
 
     conn = init_db(tmp_path / "failure.db")
-    monkeypatch.setattr(schema, "_SCHEMA_VERSION", 7)
-    monkeypatch.setattr(schema, "_MIGRATIONS", [(6, 7, "ALTER TABLE vulns ADD COLUMN partial TEXT; SELECT missing FROM nonexistent;")])
+    current = schema._SCHEMA_VERSION
+    monkeypatch.setattr(schema, "_SCHEMA_VERSION", current + 1)
+    monkeypatch.setattr(
+        schema, "_MIGRATIONS", [(current, current + 1, "ALTER TABLE vulns ADD COLUMN partial TEXT; SELECT missing FROM nonexistent;")]
+    )
     with pytest.raises(sqlite3.OperationalError):
-        schema._migrate(conn, 6)
-    assert conn.execute("SELECT version FROM schema_version").fetchone()[0] == 6
+        schema._migrate(conn, current)
+    assert conn.execute("SELECT version FROM schema_version").fetchone()[0] == current
     assert "partial" not in {row[1] for row in conn.execute("PRAGMA table_info(vulns)")}
     conn.close()
 

@@ -7,7 +7,7 @@ here and imported everywhere else.  No module should define its own.
 from __future__ import annotations
 
 from enum import Enum, IntEnum
-from typing import Any
+from typing import Any, Optional
 
 
 class Severity(str, Enum):
@@ -239,3 +239,30 @@ def evaluated_control_status(sev_breakdown: dict[str, int]) -> str:
     if sev_breakdown.get("medium", 0) > 0 or sev_breakdown.get("low", 0) > 0:
         return "warning"
     return "not_evaluated"
+
+
+DISTRO_SEVERITY_TYPES = frozenset({"ubuntu", "debian", "alpine", "redhat", "red hat", "rhel", "suse", "almalinux", "rocky", "amazon"})
+
+
+def severity_basis(severity_source: Optional[str]) -> Optional[str]:
+    """Collapse a detailed ``severity_source`` into cvss / advisory / distro / default.
+
+    ``default`` marks a namespace fallback with no score or rating behind it,
+    which surfaces render as unscored.
+    """
+    if not severity_source or severity_source == "unknown":
+        return None
+    source = severity_source.lower()
+    if source == "cvss":
+        return "cvss"
+    if source.endswith("_heuristic"):
+        return "default"
+    if source.startswith("distro") or any(name in source for name in DISTRO_SEVERITY_TYPES):
+        return "distro"
+    return "advisory"
+
+
+def severity_display_label(severity: str, severity_source: Optional[str]) -> str:
+    """``Medium (unscored)`` when the band is only a namespace default."""
+    label = severity.capitalize()
+    return f"{label} (unscored)" if severity_basis(severity_source) == "default" else label

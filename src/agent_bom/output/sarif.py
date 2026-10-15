@@ -294,6 +294,7 @@ _SARIF_SUPPRESSION_STATUS = {
     "acknowledged": "accepted",
     "resolved": "accepted",
     "approved": "accepted",
+    "vex": "accepted",
     "risk_accepted": "accepted",
     "under_review": "underReview",
     "pending": "underReview",
@@ -597,12 +598,7 @@ def _cve_sarif_result(
     }
     if finding.fixed_version:
         result_properties["fixed_version"] = finding.fixed_version
-    vex_status = evidence(finding, "vex_status")
-    if vex_status:
-        result_properties["vex_status"] = vex_status
-    vex_justification = evidence(finding, "vex_justification")
-    if vex_justification:
-        result_properties["vex_justification"] = vex_justification
+    result_properties.update({key: value for key in ("vex_status", "vex_justification", "vex_source") if (value := evidence(finding, key))})
     package_provenance = evidence(finding, "package_discovery_provenance")
     if package_provenance:
         result_properties["package_discovery_provenance"] = _sanitize_sarif_property(package_provenance)

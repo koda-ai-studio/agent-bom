@@ -64,7 +64,7 @@ def _validated_db_path(raw: str) -> Path:
 DB_PATH: Path = _validated_db_path(_RAW_DB_PATH)
 
 # Schema version — bump when DDL changes incompatibly
-_SCHEMA_VERSION = 6
+_SCHEMA_VERSION = 7
 
 # Migration scripts: list of (from_version, to_version, sql) tuples.
 # Add a new entry here whenever _SCHEMA_VERSION is bumped.
@@ -103,6 +103,8 @@ _MIGRATIONS: list[tuple[int, int, str]] = [
     ),
     # Re-ingest OSV metadata dropped by older versions; retain known findings.
     (5, 6, "ALTER TABLE vulns ADD COLUMN upstream_ids TEXT DEFAULT ''; DELETE FROM sync_meta WHERE source = 'osv';"),
+    # Re-ingest OSV so qualitative severity[] ratings (distro labels) are stored.
+    (6, 7, "DELETE FROM sync_meta WHERE source = 'osv';"),
 ]
 
 _DDL = """

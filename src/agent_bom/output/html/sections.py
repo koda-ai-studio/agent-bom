@@ -38,6 +38,7 @@ from agent_bom.output.html._common import (
     _PKG_PREVIEW,
     _SEV_COLOR,
     _esc,
+    _finding_sev_badge,
     _sev_badge,
 )
 from agent_bom.security import sanitize_launch_command, sanitize_path_label
@@ -424,7 +425,7 @@ def _vuln_table(
             f'data-match-tier="{_esc(tier or "")}" '
             f'data-cvss="{finding.cvss_score if finding.cvss_score else 0}">'
             f'<td><code class="vuln-id">{_esc(vuln_id)}</code>{tier_hint}{runtime_hint}</td>'
-            f"<td>{_sev_badge(sev)}{vendor_hint}</td>"
+            f"<td>{_finding_sev_badge(finding)}{vendor_hint}</td>"
             f'<td><strong style="color:#e2e8f0">{_esc(pkg_name)}</strong>'
             f'<span style="color:#475569;font-size:.78rem">@{_esc(pkg_version)}</span></td>'
             f"<td>{cvss_bar}</td>"
@@ -486,8 +487,7 @@ def _blast_table(
     sorted_findings = sorted(findings, key=lambda finding: float(finding.risk_score or 0.0), reverse=True)
     rows = []
     for i, finding in enumerate(sorted_findings, 1):
-        sev = severity_value(finding)
-        color = _SEV_COLOR.get(sev, "#6b7280")
+        color = _SEV_COLOR.get(severity_value(finding), "#6b7280")
         risk_score = float(finding.risk_score or 0.0)
         bar_w = int(risk_score * 9)
         ai_badge = '<span class="badge-ai">AI</span>' if finding.ai_risk_context else ""
@@ -502,7 +502,7 @@ def _blast_table(
             f"<tr>"
             f'<td style="color:#475569;font-weight:600">#{i}</td>'
             f'<td><code class="vuln-id">{_esc(vuln_id)}</code></td>'
-            f"<td>{_sev_badge(sev)}</td>"
+            f"<td>{_finding_sev_badge(finding)}</td>"
             f"<td>"
             f'<div style="display:flex;align-items:center;gap:8px">'
             f'<div style="background:#0f172a;border-radius:3px;height:5px;width:90px">'
@@ -579,7 +579,7 @@ def _remediation_list(findings: list["Finding"]) -> str:
         )
         items.append(
             f'<div class="remediation-item">'
-            f'<div style="flex-shrink:0;padding-top:1px">{_sev_badge(severity_value(finding))}</div>'
+            f'<div style="flex-shrink:0;padding-top:1px">{_finding_sev_badge(finding)}</div>'
             f'<div style="flex:1">'
             f'<div style="color:#e2e8f0;font-weight:600">{_esc(package_name(finding))}'
             f'<span style="color:#475569;font-weight:400">@{_esc(package_version(finding))}</span></div>'
@@ -596,7 +596,7 @@ def _remediation_list(findings: list["Finding"]) -> str:
     if no_fix:
         nf_rows = "".join(
             f'<div style="padding:9px 0;border-bottom:1px solid #1e293b;font-size:.82rem">'
-            f"{_sev_badge(severity_value(finding))} "
+            f"{_finding_sev_badge(finding)} "
             f'<code class="vuln-id">{_esc(finding.cve_id or finding.title)}</code> &mdash; '
             f'<strong style="color:#e2e8f0">{_esc(package_name(finding))}</strong>@{_esc(package_version(finding))}'
             f' &mdash; <span style="color:#475569">no fix available &mdash; monitor upstream</span></div>'

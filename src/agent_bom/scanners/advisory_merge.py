@@ -7,7 +7,7 @@ from copy import deepcopy
 from dataclasses import asdict
 
 from agent_bom.advisory_ids import derive_cve_from_advisory_id
-from agent_bom.core.severity import severity_rank
+from agent_bom.core.severity import severity_basis, severity_rank
 from agent_bom.models import Vulnerability
 
 
@@ -34,7 +34,7 @@ def merge_advisory_clusters(records: list[Vulnerability]) -> list[Vulnerability]
     """Collapse transitive aliases; retain the highest authoritative severity.
 
     Advisory DB evidence supersedes an external-only report. Within that tier,
-    severity, score, original advisory ID and serialized content break ties in
+    a scored or rated record beats a namespace default, then severity, score, original advisory ID and serialized content break ties in
     that order. Score, vector and fix always come from the same representative;
     provenance, references and affected symbols retain the whole cluster.
     """
@@ -63,6 +63,8 @@ def merge_advisory_clusters(records: list[Vulnerability]) -> list[Vulnerability]
         representative = min(
             authoritative,
             key=lambda record: (
+                # A namespace default is not a rating; any scored or rated record outranks it.
+                severity_basis(record.severity_source) == "default",
                 -severity_rank(record.severity),
                 -(record.cvss_score if record.cvss_score is not None else -1),
                 _advisory_origin(record),
@@ -74,7 +76,7 @@ def merge_advisory_clusters(records: list[Vulnerability]) -> list[Vulnerability]
         cves = sorted(key for key in keys if key.upper().startswith("CVE-"))
         result.id = cves[0] if cves else min(keys)
         result.aliases = sorted(keys - {result.id})
-        if len(cluster) > 1 or result.id != representative.id:
+        if (len(cluster) > 1 or result.id != representative.id) and severity_basis(representative.severity_source) != "default":
             result.severity_source = f"advisory:{_advisory_origin(representative)}"
         for field in ("advisory_sources", "references", "cwe_ids", "affected_symbols", "upstream_ids"):
             setattr(result, field, sorted({value for record in cluster for value in getattr(record, field)}))

@@ -34,6 +34,10 @@ def project_current_suppressions(rows: list[dict[str, Any]], tenant_id: str) -> 
             ),
             None,
         )
+        operator_vex = row.get("suppression_state") == "vex" and bool(row.get("vex_suppressed")) and row.get("vex_source") == "operator"
+        if operator_vex and match is None:
+            projected.append(row)
+            continue
         historical = bool(
             row.get("suppressed")
             or row.get("vex_suppressed")

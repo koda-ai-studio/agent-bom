@@ -44,6 +44,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- An operator-supplied VEX document (`--vex`, or the API scan request `vex` field) now suppresses findings it marks `not_affected` or `fixed` for a matching vulnerability and product: they stay visible with the VEX justification but leave totals, risk scores, SARIF active results and exit-code gates. Findings record `vex_source` (`operator` or `discovered`); VEX discovered inside scanned artifacts remains evidence only, and `under_investigation`/`affected` never suppress. VEX statements that name products now apply only to those packages.
+
 - Browser-extension findings use the `BROWSER_EXT` finding type and source in JSON output instead of the non-enum `BROWSER_EXTENSION_RISK` / `BROWSER_EXTENSION_SCAN` values; stored rows with the old values still load as `BROWSER_EXT`.
 - Cloud discovery for AWS (AI services, organizations, inventory), Azure, GCP (inventory and authorization), Snowflake, Databricks, CoreWeave, Nebius, Lambda Labs, RunPod, local GPU infrastructure and the NVIDIA advisory check is split into named stages. Each stage keeps its own error isolation and warning text, so discovery output, warnings and API calls are unchanged. Kubernetes GPU parsing shared by CoreWeave and Nebius moves to `cloud/k8s_gpu_common.py`; GCP authorization record normalizers move to `cloud/gcp_authorization_records.py`; Snowflake notebook discovery moves to `cloud/snowflake_notebooks.py`. 35 architecture debt entries are retired.
 
@@ -59,6 +61,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - The largest scanner engines are decomposed into named stages with no change to results: package vulnerability scanning (`scan_packages`), the cloned repository tree scan, the MCP `scan` tool body and the live Kubernetes posture scan. Each now reads as a short orchestrator over input preparation, version resolution, advisory lookups, enrichment and result assembly.
 
 ### Fixed
+
+- Alias merging no longer lets a namespace-default `medium` (an advisory with no score or rating, such as a PYSEC record) outrank a rated alias: CVE-2024-12797 in `cryptography` now takes the GHSA `low` rating. Console and HTML severity badges show "(unscored)" when the band is only that default.
 
 - Whole-queue path searches (the `should_i_deploy` gate and filtered `exposure_paths`, including `/v1/graph/exposure-paths`) read every stored path instead of the first rank window while reporting a complete search; beyond the search cap the answer is a labelled lower bound and the gate never allows. `/v1/graph/attack-paths` marks totals beyond the rank window as lower bounds. The deploy gate rechecks the pinned snapshot generation and returns a retryable error when it changed mid-read.
 

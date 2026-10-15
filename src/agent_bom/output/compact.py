@@ -399,7 +399,7 @@ def print_compact_blast_radius(report: AIBOMReport, limit: int = 10, fixable_onl
     """
     from rich.markup import escape
 
-    from agent_bom.output import _sev_badge, console
+    from agent_bom.output import _finding_sev_badge, console
     from agent_bom.output.finding_views import (
         active_cve_findings,
         cve_findings,
@@ -512,14 +512,14 @@ def print_compact_blast_radius(report: AIBOMReport, limit: int = 10, fixable_onl
                     chain_parts[-1] += f"+{len(cred_names) - 1}"
             blast_display = " → ".join(chain_parts) if chain_parts else "[dim]—[/dim]"
             row = [
-                _sev_badge(finding_severity(finding)),
+                _finding_sev_badge(finding),
                 f"{vuln_id}{kev}",
                 pkg_display,
                 blast_display,
             ]
         else:
             row = [
-                _sev_badge(finding_severity(finding)),
+                _finding_sev_badge(finding),
                 f"{vuln_id}{kev}",
                 pkg_display,
             ]
@@ -687,8 +687,8 @@ def print_compact_graph_findings(report: AIBOMReport, limit: int = 10) -> None:
 
     from agent_bom.core.severity import severity_worst_first_rank
     from agent_bom.finding import Finding
-    from agent_bom.output import _sev_badge, console
-    from agent_bom.output.finding_views import _MACHINE_EXPORT_TYPES, finding_severity
+    from agent_bom.output import _finding_sev_badge, console
+    from agent_bom.output.finding_views import _MACHINE_EXPORT_TYPES
 
     findings = [finding for finding in report.to_findings() if finding.finding_type not in _MACHINE_EXPORT_TYPES]
     if not findings:
@@ -733,8 +733,7 @@ def print_compact_graph_findings(report: AIBOMReport, limit: int = 10) -> None:
         category = finding.finding_type.value
         occurrences = f" [dim]× {occurrence_count} occurrences[/dim]" if occurrence_count > 1 else ""
         console.print(
-            f"  {_sev_badge(finding_severity(finding))} [dim]{escape(category)}[/dim] "
-            f"[bold]{escape(finding.title or '')}[/bold]{occurrences}"
+            f"  {_finding_sev_badge(finding)} [dim]{escape(category)}[/dim] [bold]{escape(finding.title or '')}[/bold]{occurrences}"
         )
         chain_parts: list[str] = []
         if occurrence_count > 1:
