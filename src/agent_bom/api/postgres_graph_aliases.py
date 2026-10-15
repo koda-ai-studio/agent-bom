@@ -45,7 +45,16 @@ NODE_ALIASES_DDL: tuple[str, ...] = (
 )
 _MAX_LOOKUP = 500
 # An id that is a live node in the alias row's snapshot resolves to itself.
-_LIVE_NODE = "NOT EXISTS (SELECT 1 FROM graph_nodes n WHERE n.id = a.alias_id AND n.scan_id = a.scan_id AND n.tenant_id = a.tenant_id)"
+# An alias never shadows a node that exists in the same snapshot.
+_RESOLVE_IN_SNAPSHOT_SQL = (
+    "SELECT alias_id, canonical_id FROM graph_node_aliases a WHERE tenant_id = %s AND alias_id = ANY(%s) AND scan_id = %s"
+    " AND NOT EXISTS (SELECT 1 FROM graph_nodes n WHERE n.id = a.alias_id AND n.scan_id = a.scan_id AND n.tenant_id = a.tenant_id)"
+)
+_RESOLVE_LATEST_SQL = (
+    "SELECT alias_id, canonical_id FROM graph_node_aliases a WHERE tenant_id = %s AND alias_id = ANY(%s)"
+    " AND NOT EXISTS (SELECT 1 FROM graph_nodes n WHERE n.id = a.alias_id AND n.scan_id = a.scan_id AND n.tenant_id = a.tenant_id)"
+    " ORDER BY updated_at, scan_id"
+)
 # Nodes are written first in the same transaction; an alias naming one of them is never recorded.
 _UPSERT_SQL = (
     f"INSERT INTO graph_node_aliases ({', '.join(NODE_ALIAS_COLUMNS)}) SELECT {', '.join('%s' for _ in NODE_ALIAS_COLUMNS)} "  # nosec B608
@@ -74,16 +83,10 @@ def resolve_node_aliases(conn: Any, *, tenant_id: str, node_ids: Iterable[str], 
     if not ids:
         return {}
     if scan_id:
-        sql = (
-            "SELECT alias_id, canonical_id FROM graph_node_aliases a WHERE tenant_id = %s AND alias_id = ANY(%s) AND scan_id = %s"
-            f" AND {_LIVE_NODE}"
-        )
+        sql = _RESOLVE_IN_SNAPSHOT_SQL
         params: tuple[Any, ...] = (tenant_id, ids, scan_id)
     else:
-        sql = (
-            "SELECT alias_id, canonical_id FROM graph_node_aliases a WHERE tenant_id = %s AND alias_id = ANY(%s)"
-            f" AND {_LIVE_NODE} ORDER BY updated_at, scan_id"
-        )
+        sql = _RESOLVE_LATEST_SQL
         params = (tenant_id, ids)
     rows = conn.execute(sql, params).fetchall()
     return {str(row[0]): str(row[1]) for row in rows}
