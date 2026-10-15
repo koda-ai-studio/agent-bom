@@ -208,9 +208,8 @@ def _apply_vex(opts: ScanOptions, st: ScanState) -> None:
                 )
                 order = ("critical", "high", "medium", "low", "unknown")
                 remaining = " · ".join(f"{active[sev]} {sev}" for sev in order if active[sev]) or "none"
-                st.con.print(
-                    f"    [dim]{_vex_suppressed} finding(s) suppressed as not_affected/fixed (kept in output); active package CVEs: {remaining}.[/dim]"
-                )
+                note = f"{_vex_suppressed} finding(s) suppressed as not_affected/fixed (kept in output); active package CVEs: {remaining}."
+                st.con.print(f"    [dim]{note}[/dim]")
 
 
 def _detect_toxic_combinations(opts: ScanOptions, st: ScanState) -> None:
