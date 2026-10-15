@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import json
+from collections import Counter
 
 import click
 
 from agent_bom.cli._common import logger
 from agent_bom.cli.agents.scan_pipeline.options import ScanOptions
 from agent_bom.cli.agents.scan_pipeline.state import ScanState
+from agent_bom.core.vex_policy import active_blast_radii
 from agent_bom.output.graph_evidence import has_graph_evidence
 
 
@@ -198,10 +200,6 @@ def _apply_vex(opts: ScanOptions, st: ScanState) -> None:
             st.con.print(f"  [green]✓[/green] VEX applied: {_vex_count} vulnerabilities updated from {opts.vex_path}")
             _vex_suppressed = sum(1 for br in st.report.blast_radii if br.suppression_state == "vex")
             if _vex_suppressed:
-                from collections import Counter
-
-                from agent_bom.core.vex_policy import active_blast_radii
-
                 active = Counter(
                     str(getattr(br.vulnerability.severity, "value", br.vulnerability.severity)).lower()
                     for br in active_blast_radii(st.report.blast_radii)
