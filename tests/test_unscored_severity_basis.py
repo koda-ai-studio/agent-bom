@@ -65,3 +65,59 @@ def test_finding_and_json_surface_unscored_basis():
     assert row["severity"] == "medium"
     assert row["severity_basis"] == "default"
     assert row["severity_label"] == "medium (unscored)"
+
+
+def test_rated_advisory_outranks_namespace_default_in_alias_merge():
+    from agent_bom.scanners.advisory_merge import merge_advisory_clusters
+
+    ghsa = osv_severity_basis(_ghsa_low_without_cvss() | {"id": "GHSA-79v4-65xg-pq4g", "aliases": ["CVE-2024-12797", "PYSEC-2026-1284"]})
+    pysec = osv_severity_basis({"id": "PYSEC-2026-1284", "aliases": ["CVE-2024-12797", "GHSA-79v4-65xg-pq4g"]})
+    assert pysec.severity == Severity.MEDIUM and severity_basis(pysec.severity_source) == "default"
+    records = [
+        Vulnerability(
+            id="CVE-2024-12797", summary="s", severity=pysec.severity, severity_source=pysec.severity_source, aliases=["PYSEC-2026-1284"]
+        ),
+        Vulnerability(
+            id="CVE-2024-12797", summary="s", severity=ghsa.severity, severity_source=ghsa.severity_source, aliases=["GHSA-79v4-65xg-pq4g"]
+        ),
+    ]
+    for ordering in (records, list(reversed(records))):
+        (merged,) = merge_advisory_clusters(ordering)
+        assert merged.severity == Severity.LOW
+        assert severity_basis(merged.severity_source) == "advisory"
+
+
+def test_alias_merge_of_only_defaults_stays_labelled_default():
+    from agent_bom.scanners.advisory_merge import merge_advisory_clusters
+
+    a = Vulnerability(id="CVE-2024-9", summary="s", severity=Severity.MEDIUM, severity_source="osv_heuristic", aliases=["PYSEC-2024-9"])
+    b = Vulnerability(
+        id="CVE-2024-9", summary="s", severity=Severity.MEDIUM, severity_source="ghsa_heuristic", aliases=["GHSA-aaaa-bbbb-cccc"]
+    )
+    (merged,) = merge_advisory_clusters([a, b])
+    assert severity_basis(merged.severity_source) == "default"
+
+
+def _finding(source: str | None):
+    from agent_bom.finding import blast_radius_to_finding
+
+    vuln = Vulnerability(id="PYSEC-2023-175", summary="s", severity=Severity.MEDIUM, severity_source=source)
+    pkg = Package(name="lib", version="1.0.0", ecosystem="pypi", vulnerabilities=[vuln])
+    return blast_radius_to_finding(
+        BlastRadius(vulnerability=vuln, package=pkg, affected_servers=[], affected_agents=[], exposed_credentials=[], exposed_tools=[])
+    )
+
+
+def test_console_badge_marks_unscored_default():
+    from agent_bom.output.console_render import _finding_sev_badge
+
+    assert "(unscored)" in _finding_sev_badge(_finding("osv_heuristic"))
+    assert "(unscored)" not in _finding_sev_badge(_finding("osv_database"))
+
+
+def test_html_badge_marks_unscored_default():
+    from agent_bom.output.html._common import _finding_sev_badge
+
+    assert "MEDIUM (UNSCORED)" in _finding_sev_badge(_finding("ghsa_heuristic"))
+    rated = _finding_sev_badge(_finding("cvss"))
+    assert "MEDIUM" in rated and "UNSCORED" not in rated

@@ -62,6 +62,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Alias merging no longer lets a namespace-default `medium` (an advisory with no score or rating, such as a PYSEC record) outrank a rated alias: CVE-2024-12797 in `cryptography` now takes the GHSA `low` rating. Console and HTML severity badges show "(unscored)" when the band is only that default.
+
 - Whole-queue path searches (the `should_i_deploy` gate and filtered `exposure_paths`, including `/v1/graph/exposure-paths`) read every stored path instead of the first rank window while reporting a complete search; beyond the search cap the answer is a labelled lower bound and the gate never allows. `/v1/graph/attack-paths` marks totals beyond the rank window as lower bounds. The deploy gate rechecks the pinned snapshot generation and returns a retryable error when it changed mid-read.
 
 - `AGENT_BOM_GRAPH_CONTRACT=enforce` no longer reports a clean contract after dropping edges: the snapshot's `relationship_contract` analysis records `rejected` counts per relationship and entity pair with a bounded sample of edge ids.
