@@ -136,6 +136,7 @@ _SNAPSHOT_REPLACE_TABLES = (
     "interaction_risks",
     "graph_edges",
     "graph_nodes",
+    "graph_node_aliases",
     "graph_snapshots",
 )
 

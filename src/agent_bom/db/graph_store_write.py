@@ -72,7 +72,15 @@ def _clear_snapshot_rows(conn: sqlite3.Connection, *, tenant: str, scan: str) ->
     # retried producer and make graph_snapshots counts contradict graph rows.
     # The first DELETE also takes SQLite's write lock, serializing concurrent
     # writers before any streamed batch is consumed.
-    for table in ("graph_attack_paths", "attack_paths", "interaction_risks", "graph_edges", "graph_nodes", "graph_snapshots"):
+    for table in (
+        "graph_attack_paths",
+        "attack_paths",
+        "interaction_risks",
+        "graph_edges",
+        "graph_nodes",
+        "graph_node_aliases",
+        "graph_snapshots",
+    ):
         conn.execute(
             f"DELETE FROM {table} WHERE tenant_id = ? AND scan_id = ?",  # nosec B608 - static table list
             (tenant, scan),

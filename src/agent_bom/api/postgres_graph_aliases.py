@@ -1,4 +1,4 @@
-"""Postgres persistence for ``graph_node_aliases`` (tenant-keyed node id aliases, FORCE RLS)."""
+"""Postgres persistence for ``graph_node_aliases`` (tenant- and snapshot-keyed node id aliases, FORCE RLS)."""
 
 from __future__ import annotations
 
@@ -19,15 +19,35 @@ NODE_ALIASES_DDL: tuple[str, ...] = (
                     identity_version TEXT NOT NULL DEFAULT '',
                     scan_id TEXT NOT NULL DEFAULT '',
                     updated_at TEXT NOT NULL DEFAULT '',
-                    PRIMARY KEY (tenant_id, alias_id)
+                    PRIMARY KEY (tenant_id, scan_id, alias_id)
                 )
                 """,
     "CREATE INDEX IF NOT EXISTS idx_pg_graph_node_aliases_canonical ON graph_node_aliases(tenant_id, canonical_id)",
+    # Tables created before aliases were snapshot-scoped are keyed (tenant_id, alias_id).
+    """
+                DO $$
+                DECLARE pk_name TEXT;
+                BEGIN
+                    SELECT c.conname INTO pk_name FROM pg_constraint c
+                    WHERE c.conrelid = to_regclass('graph_node_aliases') AND c.contype = 'p';
+                    IF pk_name IS NOT NULL AND NOT EXISTS (
+                        SELECT 1 FROM pg_constraint c
+                        JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = ANY(c.conkey)
+                        WHERE c.conrelid = to_regclass('graph_node_aliases') AND c.contype = 'p' AND a.attname = 'scan_id'
+                    ) THEN
+                        EXECUTE format('ALTER TABLE graph_node_aliases DROP CONSTRAINT %I', pk_name);
+                        ALTER TABLE graph_node_aliases ADD CONSTRAINT graph_node_aliases_pkey PRIMARY KEY (tenant_id, scan_id, alias_id);
+                    END IF;
+                END
+                $$
+                """,
+    "CREATE INDEX IF NOT EXISTS idx_pg_graph_node_aliases_alias ON graph_node_aliases(tenant_id, alias_id, updated_at)",
 )
 _MAX_LOOKUP = 500
 _UPSERT_SQL = (
     f"INSERT INTO graph_node_aliases ({', '.join(NODE_ALIAS_COLUMNS)}) VALUES ({', '.join('%s' for _ in NODE_ALIAS_COLUMNS)}) "  # nosec B608
-    f"ON CONFLICT (tenant_id, alias_id) DO UPDATE SET {', '.join(f'{c} = EXCLUDED.{c}' for c in NODE_ALIAS_COLUMNS[2:])}"
+    "ON CONFLICT (tenant_id, scan_id, alias_id) DO UPDATE SET "
+    + ", ".join(f"{column} = EXCLUDED.{column}" for column in NODE_ALIAS_COLUMNS[2:] if column != "scan_id")
 )
 
 
@@ -38,15 +58,24 @@ def write_node_aliases(conn: Any, rows: Sequence[tuple[str, ...]]) -> None:
             cursor.executemany(_UPSERT_SQL, rows)
 
 
-def resolve_node_aliases(conn: Any, *, tenant_id: str, node_ids: Iterable[str]) -> dict[str, str]:
-    """Map recorded alias ids to canonical ids; RLS and the predicate both bind the tenant."""
+def resolve_node_aliases(conn: Any, *, tenant_id: str, node_ids: Iterable[str], scan_id: str = "") -> dict[str, str]:
+    """Map recorded alias ids to canonical ids; RLS and the predicate both bind the tenant.
+
+    With ``scan_id`` the binding is the one that snapshot recorded; without it,
+    the most recently written binding.
+    """
     ids = sorted({node_id for node_id in node_ids if node_id})[:_MAX_LOOKUP]
     if not ids:
         return {}
-    rows = conn.execute(
-        "SELECT alias_id, canonical_id FROM graph_node_aliases WHERE tenant_id = %s AND alias_id = ANY(%s)",
-        (tenant_id, ids),
-    ).fetchall()
+    if scan_id:
+        sql = "SELECT alias_id, canonical_id FROM graph_node_aliases WHERE tenant_id = %s AND alias_id = ANY(%s) AND scan_id = %s"
+        params: tuple[Any, ...] = (tenant_id, ids, scan_id)
+    else:
+        sql = (
+            "SELECT alias_id, canonical_id FROM graph_node_aliases WHERE tenant_id = %s AND alias_id = ANY(%s) ORDER BY updated_at, scan_id"
+        )
+        params = (tenant_id, ids)
+    rows = conn.execute(sql, params).fetchall()
     return {str(row[0]): str(row[1]) for row in rows}
 
 
@@ -55,6 +84,6 @@ class PostgresGraphAliasMixin:
 
     _pool: Any
 
-    def resolve_node_aliases(self, *, tenant_id: str = "", node_ids: Iterable[str]) -> dict[str, str]:
+    def resolve_node_aliases(self, *, tenant_id: str = "", node_ids: Iterable[str], scan_id: str = "") -> dict[str, str]:
         with _tenant_connection(self._pool) as conn:
-            return resolve_node_aliases(conn, tenant_id=normalize_graph_tenant_id(tenant_id), node_ids=node_ids)
+            return resolve_node_aliases(conn, tenant_id=normalize_graph_tenant_id(tenant_id), node_ids=node_ids, scan_id=scan_id)

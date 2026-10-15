@@ -31,7 +31,7 @@ def _resource_conflicts(claims: dict[str, Any] | None, node: Any) -> bool:
 def _nodes_through_aliases(store: Any, *, tenant_id: str, scan_id: str, identities: set[str]) -> dict[str, Any]:
     """An id a source minted before canonicalization merged it resolves to the canonical node."""
     resolver = getattr(store, "resolve_node_aliases", None)
-    aliases: dict[str, str] = resolver(tenant_id=tenant_id, node_ids=identities) if callable(resolver) else {}
+    aliases: dict[str, str] = resolver(tenant_id=tenant_id, node_ids=identities, scan_id=scan_id) if callable(resolver) else {}
     wanted = identities | set(aliases.values())
     canonical = {node.id: node for node in store.nodes_by_ids(tenant_id=tenant_id, scan_id=scan_id, node_ids=wanted)}
     return {identity: canonical[aliases.get(identity, identity)] for identity in identities if aliases.get(identity, identity) in canonical}

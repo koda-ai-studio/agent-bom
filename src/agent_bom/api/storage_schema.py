@@ -92,7 +92,7 @@ CONTROL_PLANE_SCHEMA_COMPONENTS: tuple[StorageSchemaComponent, ...] = (
             "graph_attack_paths",
             "graph_node_aliases",
         ),
-        version=9,
+        version=10,
     ),
     StorageSchemaComponent("webhook_subscriptions", "sqlite/postgres", ("webhook_subscriptions",)),
     StorageSchemaComponent("kspm_cluster_posture", "sqlite/postgres", ("kspm_cluster_posture",)),

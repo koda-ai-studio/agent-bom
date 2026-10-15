@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any, Generator, Iterable, Mapping, Sequence
 
 from agent_bom.db.graph_bootstrap import backfill_edge_metadata
+from agent_bom.db.graph_node_aliases import upgrade_node_alias_key
 from agent_bom.db.graph_revision import ensure_sqlite_revisions
 from agent_bom.db.graph_store_correlation import _correlation_run_from_row as _correlation_run_from_row
 from agent_bom.db.graph_store_correlation import claim_correlation_run_execution as claim_correlation_run_execution
@@ -197,6 +198,7 @@ def _init_db(conn: sqlite3.Connection, *, backfill_legacy_tenants: bool = True) 
     if "analysis" not in existing_columns:
         conn.execute("ALTER TABLE attack_paths ADD COLUMN analysis TEXT DEFAULT '{}'")
     upgrade_attack_path_identity(conn)
+    upgrade_node_alias_key(conn)
     edge_columns = {row["name"] for row in conn.execute("PRAGMA table_info(graph_edges)").fetchall()}
     # v3 adds replay metadata. Empty valid_from is interpreted as first_seen for
     # stores created before this migration, so old snapshots remain queryable.
