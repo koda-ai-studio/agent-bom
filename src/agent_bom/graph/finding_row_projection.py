@@ -86,7 +86,9 @@ class _AssetIndex:
     def resolve(self, row: dict[str, Any], entity: EntityType | None) -> str | None:
         asset, evidence = _dict(row.get("asset")), _dict(row.get("evidence"))
         identifier = _text(asset.get("identifier"))
-        for candidate in (row.get("node_id"), identifier, evidence.get("resource_id"), evidence.get("identity_id")):
+        # Producers record a node's id without its type prefix (an MCP server's graph uuid).
+        prefixed = f"{entity.value}:{identifier}" if entity is not None and identifier else None
+        for candidate in (row.get("node_id"), identifier, prefixed, evidence.get("resource_id"), evidence.get("identity_id")):
             if self._usable(candidate):
                 return str(candidate)
         if entity == EntityType.CLOUD_RESOURCE and identifier:
