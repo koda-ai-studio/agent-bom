@@ -404,7 +404,7 @@ jobs:
 
       # GHCR carried only a stale `latest`: no release ever pushed a versioned
       # tag there. Nine OpenClaw SKILL.md files instruct users to run
-      # `ghcr.io/msaad00/agent-bom:<version>`, check_release_consistency.py
+      # `ghcr.io/koda-ai-studio/agent-bom:<version>`, check_release_consistency.py
       # asserts those pins equal the release version, and
       # demo-deploy-cloudrun.yml pulls that exact reference to deploy the hosted
       # demo — so a number was kept perfectly in sync with an artifact that did

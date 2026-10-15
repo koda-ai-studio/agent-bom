@@ -666,7 +666,7 @@ def test_surface_freshness_reads_paginated_ghcr_tags(monkeypatch):
         [
             (
                 {"tags": ["v0.81.1"]},
-                Headers({"Link": '</v2/msaad00/agent-bom/tags/list?last=v0.81.1&n=100>; rel="next"'}),
+                Headers({"Link": '</v2/koda-ai-studio/agent-bom/tags/list?last=v0.81.1&n=100>; rel="next"'}),
             ),
             ({"tags": ["v0.89.2"]}, Headers({})),
         ]
@@ -674,13 +674,13 @@ def test_surface_freshness_reads_paginated_ghcr_tags(monkeypatch):
 
     def fake_http_json_response(url, **kwargs):
         assert kwargs["headers"] == {"Authorization": "Bearer token"}
-        assert url.startswith("https://ghcr.io/v2/msaad00/agent-bom/tags/list")
+        assert url.startswith("https://ghcr.io/v2/koda-ai-studio/agent-bom/tags/list")
         return next(pages)
 
     monkeypatch.setattr(script, "_http_json", fake_http_json)
     monkeypatch.setattr(script, "_http_json_response", fake_http_json_response)
 
-    result = script.probe_docker("0.89.2", "ghcr.io/msaad00/agent-bom", timeout=1, attempts=1, backoff=0)
+    result = script.probe_docker("0.89.2", "ghcr.io/koda-ai-studio/agent-bom", timeout=1, attempts=1, backoff=0)
 
     assert result["surface"] == "Docker"
     assert result["status"] == "fresh"
@@ -824,7 +824,7 @@ def test_ghcr_pagination_never_carries_the_token_off_origin(monkeypatch):
 
     monkeypatch.setattr(script, "_http_json_response", fake_http_json_response)
 
-    result = script.probe_docker("0.98.3", "ghcr.io/msaad00/agent-bom", timeout=1, attempts=1, backoff=0)
+    result = script.probe_docker("0.98.3", "ghcr.io/koda-ai-studio/agent-bom", timeout=1, attempts=1, backoff=0)
 
     off_origin = [url for url, _ in dialled if "ghcr.io" not in url]
     assert not off_origin, f"followed a link off ghcr.io: {off_origin}"
@@ -843,13 +843,13 @@ def test_ghcr_pagination_still_follows_a_same_origin_next_link(monkeypatch):
     monkeypatch.setattr(script, "_http_json", lambda url, **_kw: {"token": "ghcr-secret"})
     pages = iter(
         [
-            ({"tags": ["0.98.1"]}, {"Link": '</v2/msaad00/agent-bom/tags/list?n=100&last=0.98.1>; rel="next"'}),
+            ({"tags": ["0.98.1"]}, {"Link": '</v2/koda-ai-studio/agent-bom/tags/list?n=100&last=0.98.1>; rel="next"'}),
             ({"tags": ["0.98.3"]}, {}),
         ]
     )
     monkeypatch.setattr(script, "_http_json_response", lambda url, headers=None, **_kw: next(pages))
 
-    result = script.probe_docker("0.98.3", "ghcr.io/msaad00/agent-bom", timeout=1, attempts=1, backoff=0)
+    result = script.probe_docker("0.98.3", "ghcr.io/koda-ai-studio/agent-bom", timeout=1, attempts=1, backoff=0)
 
     assert result["status"] == "fresh"
 
