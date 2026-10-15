@@ -42,7 +42,7 @@ from agent_bom.output.sarif_taxonomy import (
     _framework_taxa_references,
     _taxonomies_as_tool_extensions,
 )
-from agent_bom.output.source_locations import SourceIndex, finding_package_location, package_source_index
+from agent_bom.output.source_locations import SourceIndex, finding_image_reference, finding_package_location, package_source_index
 from agent_bom.security import sanitize_sensitive_payload, sanitize_text, sanitize_url
 
 _SARIF_SEVERITY_MAP = {
@@ -541,7 +541,7 @@ def _cve_sarif_result(
         "kind": kind,
         "message": {"text": sanitize_advisory_text("title", message_text, fallback=f"{rule_id} package vulnerability")},
         **_sarif_fingerprint_fields(stable_input=fp_input, artifact_uri=config_path, start_line=start_line),
-        "locations": [_sarif_location(config_path, start_line)],
+        "locations": [_sarif_location(config_path, start_line, scanned_artifact=finding_image_reference(finding, report))],
     }
     related_locations = _exposure_related_locations(exposure_path)
     if related_locations:
@@ -663,10 +663,11 @@ class _SarifCatalog:
         return True
 
 
-def _sarif_location(uri: str, start_line: Any) -> dict[str, Any]:
-    # Installed distributions have an inventory identity, not a checkout file.
+def _sarif_location(uri: str, start_line: Any, *, scanned_artifact: str | None = None) -> dict[str, Any]:
+    # Package identities are logical; code scanning needs the scanned image as a physical artifact.
     if uri.startswith(("self-scan://", "pkg:", "package:")):
-        return {"logicalLocations": [{"fullyQualifiedName": uri}]}
+        logical = {"logicalLocations": [{"fullyQualifiedName": uri}]}
+        return {"physicalLocation": {"artifactLocation": {"uri": scanned_artifact}}, **logical} if scanned_artifact else logical
     location: dict[str, Any] = {"artifactLocation": {"uri": uri, "uriBaseId": "%SRCROOT%"}}
     if type(start_line) is int and start_line > 0:
         location["region"] = {"startLine": start_line, "startColumn": 1}
