@@ -84,7 +84,7 @@ function toNeighborEntries(hopId: string, data: GraphNodeNeighborsResponse): Nei
       : evidence.runtime_outcome === "failed" ? "Failed outcome" : observed === "observed" ? "Runtime observed"
       : observed === "not_observed" ? "Runtime not observed"
       : tier === "runtime_observed" ? "Runtime evidence recorded; outcome unknown"
-      : ["static_evidence", "static_scan", "configured"].includes(String(tier)) ? "Configured / static evidence"
+      : ["static_scan", "configured"].includes(String(tier)) ? "Configured / static evidence"
       : tier === "modeled" || tier === "modeled_infrastructure" ? "Modeled relationship" : "Evidence basis unknown");
     groups.set(key, group);
   }

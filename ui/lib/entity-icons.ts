@@ -8,10 +8,12 @@ import {
   BriefcaseBusiness,
   Bug,
   Building2,
+  Container,
   Cloud,
   Cpu,
   Database,
   DraftingCompass,
+  Earth,
   FileCode,
   FileCog,
   Fingerprint,
@@ -22,14 +24,11 @@ import {
   Library,
   MonitorSmartphone,
   Package,
-  Rocket,
-  Router,
   ScrollText,
   Server,
   Share2,
   ShieldAlert,
   ShieldCheck,
-  Ship,
   ShipWheel,
   Siren,
   Table,
@@ -37,6 +36,7 @@ import {
   User,
   UserCog,
   Users,
+  Webhook,
   Workflow,
   Wrench,
   Zap,
@@ -95,12 +95,13 @@ export type EntityIcon = ComponentType<{
  * legend row for the same type. Every type gets a DISTINCT, on-meaning Lucide
  * icon (enforced by tests/graph-visual-identity.test.ts).
  *
- * Non-obvious picks: container and cluster use the shipping metaphor (the ship
- * carries containers, the helm wheel steers them) so neither reads as the
- * package cube; environment is a deployment target, not a generic layer stack;
- * account is a billing and isolation boundary; fleet is a set of managed
- * endpoints; cloudResource is the compute and service catch-all. Box stays
- * reserved for unknown types so a missing mapping is visible.
+ * Non-obvious picks: container is the shipping-container glyph and cluster the
+ * helm wheel that steers them, so neither reads as the package cube;
+ * environment is a region/estate globe, not a generic layer stack; an API
+ * gateway is the webhook/endpoint glyph; account is a billing and isolation
+ * boundary; fleet is a set of managed endpoints; cloudResource is the compute
+ * and service catch-all. Box stays reserved for unknown types so a missing
+ * mapping is visible.
  */
 export const ENTITY_ICONS: Record<LineageNodeType, EntityIcon> = {
   provider: Cloud,
@@ -115,7 +116,7 @@ export const ENTITY_ICONS: Record<LineageNodeType, EntityIcon> = {
   model: BrainCircuit,
   framework: Library,
   dataset: Table,
-  container: Ship,
+  container: Container,
   cloudResource: Cpu,
   org: Building2,
   account: BriefcaseBusiness,
@@ -126,7 +127,7 @@ export const ENTITY_ICONS: Record<LineageNodeType, EntityIcon> = {
   serviceAccount: UserCog,
   servicePrincipal: Fingerprint,
   federatedIdentity: Handshake,
-  environment: Rocket,
+  environment: Earth,
   fleet: MonitorSmartphone,
   cluster: ShipWheel,
   managedIdentity: BadgeCheck,
@@ -139,7 +140,7 @@ export const ENTITY_ICONS: Record<LineageNodeType, EntityIcon> = {
   configFile: FileCog,
   codeModule: Braces,
   ciJob: Workflow,
-  apiGateway: Router,
+  apiGateway: Webhook,
   toolCall: Zap,
   blueprint: DraftingCompass,
 };

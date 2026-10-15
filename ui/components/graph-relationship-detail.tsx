@@ -9,6 +9,7 @@ import type { GraphRollupEdge } from "@/lib/api-types";
 import type { UnifiedEdge } from "@/lib/graph-schema";
 import { relationshipEdgeLabelText } from "@/lib/graph-utils";
 import { graphEdgeEvidenceMode } from "@/lib/unified-graph-flow";
+import { plainRelationshipSummary } from "@/lib/graph-relationship-plain";
 
 export function GraphRelationshipDetail({ edge, scanId, sourceLabel, targetLabel, onClose, mobile = false }: {
   edge: UnifiedEdge;
@@ -36,23 +37,29 @@ export function GraphRelationshipDetail({ edge, scanId, sourceLabel, targetLabel
     };
   }, [mobile, edge.id]);
   const title = relationshipEdgeLabelText(edge.relationship, { evidenceMode: graphEdgeEvidenceMode(edge) });
+  const plain = plainRelationshipSummary(edge, sourceLabel, targetLabel);
   const content = <div className="space-y-4 text-sm [overflow-wrap:anywhere]">
     <p className="font-medium">{sourceLabel} {edge.direction === "bidirectional" ? "↔" : "→"} {targetLabel}</p>
-    <section aria-label="Why linked" className="space-y-2 rounded-lg border border-outline bg-surface-muted p-3">
-      <h4 className="text-xs font-semibold">Why linked</h4>
-      <GraphRelationshipExplanation edge={edge} />
-    </section>
-    <GraphRelationshipEvidence edge={edge} />
-    <p className="text-xs text-ink-secondary">This recorded relationship does not establish execution or successful data access.</p>
-    <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-xs">
-      <dt className="text-ink-secondary">Snapshot</dt><dd>{scanId}</dd>
-      <dt className="text-ink-secondary">Graph first seen</dt><dd>{edge.first_seen || "Not recorded"}</dd>
+    <dl aria-label="Relationship summary" className="space-y-3 rounded-lg border border-outline bg-surface-muted p-3">
+      {([["Why linked", plain.why], ["Source", plain.source], ["Evidence", plain.kind], ["Freshness", plain.freshness], ["Still unknown", plain.unknown]] as const).map(([label, value]) =>
+        <div key={label}><dt className="text-[11px] font-semibold uppercase tracking-wide text-ink-secondary">{label}</dt><dd className="mt-0.5">{value}</dd></div>)}
     </dl>
-    <details><summary className="cursor-pointer font-medium">Recorded evidence</summary>
-      {Object.keys(edge.evidence ?? {}).length ? <pre className="mt-2 whitespace-pre-wrap break-words text-xs text-ink-secondary">{JSON.stringify(edge.evidence, null, 2)}</pre> : <p className="mt-2 text-xs text-ink-secondary">No source receipt recorded for this relationship.</p>}
-    </details>
-    <details><summary className="cursor-pointer font-medium">Canonical identifiers</summary>
-      <dl className="mt-2 space-y-1 text-xs text-ink-secondary"><dt>Relationship</dt><dd>{edge.id}</dd><dt>Source</dt><dd>{edge.source}</dd><dt>Target</dt><dd>{edge.target}</dd></dl>
+    <p className="text-xs text-ink-secondary">This recorded relationship does not establish execution or successful data access.</p>
+    <details className="rounded-lg border border-outline p-3"><summary className="cursor-pointer font-medium">Technical details</summary>
+      <div className="mt-3 space-y-4">
+        <section aria-label="Why linked" className="space-y-2"><h4 className="text-xs font-semibold">Recorded relationship type</h4><GraphRelationshipExplanation edge={edge} /></section>
+        <GraphRelationshipEvidence edge={edge} />
+        <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-xs">
+          <dt className="text-ink-secondary">Snapshot</dt><dd>{scanId}</dd>
+          <dt className="text-ink-secondary">Graph first seen</dt><dd>{edge.first_seen || "Not recorded"}</dd>
+        </dl>
+        <details><summary className="cursor-pointer font-medium">Recorded evidence</summary>
+          {Object.keys(edge.evidence ?? {}).length ? <pre className="mt-2 whitespace-pre-wrap break-words text-xs text-ink-secondary">{JSON.stringify(edge.evidence, null, 2)}</pre> : <p className="mt-2 text-xs text-ink-secondary">No source receipt recorded for this relationship.</p>}
+        </details>
+        <details><summary className="cursor-pointer font-medium">Canonical identifiers</summary>
+          <dl className="mt-2 space-y-1 text-xs text-ink-secondary"><dt>Relationship</dt><dd>{edge.id}</dd><dt>Source</dt><dd>{edge.source}</dd><dt>Target</dt><dd>{edge.target}</dd></dl>
+        </details>
+      </div>
     </details>
   </div>;
   if (mobile) return <Drawer open onClose={onClose} title={title} eyebrow="Relationship" ariaLabel="Relationship details" closeLabel="Close relationship details" backdropLabel="Dismiss relationship details">{content}</Drawer>;

@@ -41,7 +41,7 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     expect(queries[0]?.scan_id).toBe("snapshot");
     await inspector.getByRole("tab", { name: "Relationships", exact: true }).click();
     await expect(inspector.getByRole("button", { name: "File server", exact: true })).toBeVisible();
-    await expect(inspector.getByText("Bidirectional ↔ · Uses", { exact: true })).toBeVisible();
+    await expect(inspector.getByText("Bidirectional ↔ · Uses · configured", { exact: true })).toBeVisible();
     await inspector.getByRole("button", { name: "Load more recorded relationships" }).click();
     await expect(inspector.getByRole("alert")).toContainText("Snapshot changed");
     await expect(inspector.getByRole("button", { name: "File server", exact: true })).toHaveCount(0);

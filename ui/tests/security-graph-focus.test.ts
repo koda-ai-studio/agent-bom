@@ -315,7 +315,7 @@ describe("correlation outcome focus", () => {
       source_snapshot_ids: ["scan-1"],
       relationship_provenance: "recorded" as const,
       correlation_identity_status: "current" as const,
-      evidence_tier: "static_evidence",
+      evidence_tier: "static_scan",
       confidence: 1,
       freshness: "fresh",
       runtime_observed_state: "not_observed",

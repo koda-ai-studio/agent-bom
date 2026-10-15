@@ -297,6 +297,9 @@ async function routeGraphPage(page: Page, graph = buildDenseGraph()) {
         nodes_changed: ["agent:desktop"],
         edges_added: [["pkg:filesystem:3", "cve:filesystem:3", "vulnerable_to"]],
         edges_removed: [],
+        // Exact server totals exceed the capped lists above.
+        summary: { totals: { nodes: { added: 5, removed: 0, changed: 1 }, edges: { added: 3, removed: 0, changed: 0 } } },
+        truncated: true,
       }),
     });
   });

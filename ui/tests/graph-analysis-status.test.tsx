@@ -42,6 +42,15 @@ describe("GraphAnalysisStatusBanner", () => {
     expect(copy.tone).toBe("neutral");
   });
 
+  it("scopes a complete run to the snapshot instead of implying security assurance", () => {
+    const status = { status: "complete" as const, reason_codes: [], limits: {}, observed: {} };
+    render(<GraphAnalysisStatusBanner status={status} compact />);
+    const badge = screen.getByTestId("graph-analysis-status");
+    expect(badge).toHaveTextContent("Path analysis complete for this snapshot");
+    expect(badge).toHaveAttribute("title", expect.stringMatching(/collected data only/i));
+    expect(graphAnalysisStatusCopy(status).detail).toMatch(/not a statement that the environment is secure/i);
+  });
+
   it("labels legacy snapshots as unverified", () => {
     render(<GraphAnalysisStatusBanner />);
     expect(screen.getByText("Analysis status unavailable")).toBeInTheDocument();

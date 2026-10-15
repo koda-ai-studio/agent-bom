@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { RelationshipBadge } from "@/components/relationship-edge";
+import { RelationshipBadge, qualifiedLabel } from "@/components/relationship-edge";
 
 describe("relationship badges", () => {
   it("keeps ownership and usage readable with different decorative icons", () => {
@@ -19,5 +19,12 @@ describe("relationship badges", () => {
   it("preserves unfamiliar recorded verbs with a neutral fallback icon", () => {
     render(<RelationshipBadge relationship="future_relation">future relation</RelationshipBadge>);
     expect(screen.getByText("future relation")).toBeVisible();
+  });
+
+  it("puts the evidence qualifier on its own line without changing the accessible text", () => {
+    const { container } = render(<RelationshipBadge relationship="can_access">{qualifiedLabel("can_access", "Can Access · modeled", { evidenceMode: "inferred" })}</RelationshipBadge>);
+    expect(container.querySelector(".graph-relationship-qualifier")).toHaveTextContent("modeled");
+    expect(container.textContent).toBe("Can Access · modeled");
+    expect(qualifiedLabel("depends_on", "Depends On", { evidenceMode: "static" })).toBe("Depends On");
   });
 });

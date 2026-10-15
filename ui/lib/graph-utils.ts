@@ -3,6 +3,7 @@
  * Background styling used across all graph views (Lineage, Mesh, Context, Attack Flow).
  */
 
+import { accessEvidenceLegendItems, accessEvidenceQualifier } from "@/lib/graph-access-evidence";
 import { GRAPH_LAYER_ENTITY_TYPES } from "@/lib/graph-entity-mapping";
 import { badgeLegendItems, type NodeBadgeKind, type RingSeverity } from "@/lib/graph-node-badges";
 import type {
@@ -423,7 +424,9 @@ export function relationshipEdgeLabelText(
     if (metadata?.evidenceMode === "static") return "Configured delegation";
     if (metadata?.evidenceMode === "unknown") return "Delegation (unverified)";
   }
-  return relationshipLegendItem(relationship).label;
+  const qualifier = accessEvidenceQualifier(relationship, metadata);
+  const label = relationshipLegendItem(relationship).label;
+  return qualifier ? `${label} · ${qualifier}` : label;
 }
 
 export function relationshipEdgeLabelPresentation(options?: {
@@ -523,6 +526,7 @@ export function legendItemsForVisibleGraph(
 ): LegendItem[] {
   return legendItemsForVisibleNodes(nodes, [
     ...relationshipLegendItemsForVisibleEdges(edges),
+    ...accessEvidenceLegendItems(edges),
     ...badgeLegendItems(nodes),
     ...extras,
   ]);

@@ -28,6 +28,7 @@ import { AlertTriangle, Layers, Loader2, ShieldAlert } from "lucide-react";
 import { AttackPathCard } from "@/components/attack-path-card";
 import { AttackPathTechniqueChain } from "@/components/attack-path-technique-chain";
 import { GraphEvidenceSummary } from "@/components/graph-evidence-summary";
+import { formatGraphHeadline } from "@/lib/graph-headline";
 import { GraphAnalysisStatusBanner } from "@/components/graph-analysis-status";
 import {
   GraphEvidenceExportButton,
@@ -2923,18 +2924,7 @@ function GraphPageInner() {
           data-testid="graph-headline-metrics"
           className="rounded-xl border border-outline bg-surface/80 px-3 py-1.5 text-xs text-ink-secondary"
         >
-          <span className="font-mono text-red-700 dark:text-red-200">
-            {flow.summary.critical.toLocaleString()}
-          </span>{" "}
-          critical ·{" "}
-          <span className="font-mono text-orange-700 dark:text-orange-200">
-            {flow.summary.findings.toLocaleString()}
-          </span>{" "}
-          {flow.summary.findings === 1 ? "finding" : "findings"} ·{" "}
-          <span className="font-mono text-sky-700 dark:text-sky-200">
-            {snapshotAttackPathCount.toLocaleString()}
-          </span>{" "}
-          {snapshotAttackPathCount === 1 ? "snapshot path" : "snapshot paths"}
+          {formatGraphHeadline(flow.summary, snapshotAttackPathCount)}
           {flow.summary.costUsd30d > 0 && (
             <>
               {" · "}
