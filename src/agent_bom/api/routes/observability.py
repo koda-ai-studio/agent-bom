@@ -21,6 +21,7 @@ from agent_bom.api.correlation_cohort_ingest import (
     validate_correlation_cohort_child,
 )
 from agent_bom.api.demo_refresh import demo_daily_evidence_dependency
+from agent_bom.api.experimental_gate import require_experimental
 from agent_bom.api.hub_ingest import ingest_runtime_findings
 from agent_bom.api.idempotency_store import (
     IdempotencyConflictError,
@@ -58,17 +59,24 @@ from agent_bom.api.trace_connection_broker import public_connections, pull_crede
 from agent_bom.api.trace_explorer_read import assemble_trace_explorer
 from agent_bom.canonical_ids import canonical_id
 from agent_bom.config import API_MAX_OCSF_INGEST_EVENTS
+from agent_bom.core.experimental import disabled_message, is_enabled
 from agent_bom.core.severity import ocsf_to_severity
 from agent_bom.rbac import require_authenticated_permission
 from agent_bom.security import sanitize_error, sanitize_text
 
 router = APIRouter(dependencies=[Depends(demo_daily_evidence_dependency)])
-router.include_router(trace_collection_router, dependencies=[cast(Any, require_authenticated_permission("runtime_ingest"))])
+router.include_router(
+    trace_collection_router,
+    dependencies=[cast(Any, require_authenticated_permission("runtime_ingest")), require_experimental("traces")],
+)
 infra_router = APIRouter()
 _logger = logging.getLogger(__name__)
 _RUNTIME_READ: dict[str, Any] = {"tags": ["runtime", "observability"], "dependencies": [require_authenticated_permission("read")]}
 _FINOPS_READ: dict[str, Any] = {"tags": ["observability", "finops"], "dependencies": [require_authenticated_permission("read")]}
-_CONNECTOR_READ: dict[str, Any] = {"tags": ["observability", "connectors"], "dependencies": [require_authenticated_permission("read")]}
+_CONNECTOR_READ: dict[str, Any] = {
+    "tags": ["observability", "connectors"],
+    "dependencies": [require_authenticated_permission("read"), require_experimental("traces")],
+}
 
 
 def _dep(permission: str) -> Any:
@@ -495,8 +503,10 @@ def _ingest_traces_sync(body: dict, tenant_id: str, screen: bool) -> dict:
 
     traces = parse_otel_traces(body)
     flagged = flag_vulnerable_tool_calls(traces, *vulnerable_inventory(_get_store().list_all(tenant_id=tenant_id))) if traces else []
-    evidence = record_otlp_evidence(
-        body, tenant_id=tenant_id, flagged=flagged, content_findings=content_findings, sink=ingest_runtime_findings
+    evidence: Any = (
+        record_otlp_evidence(body, tenant_id=tenant_id, flagged=flagged, content_findings=content_findings, sink=ingest_runtime_findings)
+        if is_enabled("traces")
+        else {"recorded": False, "reason": disabled_message("traces")}
     )
     if not traces:
         return {
@@ -621,7 +631,7 @@ def _nhi_by_credential_for_tenant(tenant_id: str) -> dict[str, list[dict[str, An
     return out
 
 
-@router.post("/traces/attack-paths", tags=["observability"], dependencies=[_dep("read")])
+@router.post("/traces/attack-paths", tags=["observability"], dependencies=[_dep("read"), require_experimental("traces")])
 def correlate_trace_attack_paths(request: Request, body: dict, span_id: str | None = None) -> dict[str, object]:
     """Return name-based finding candidates for traced tool calls.
 
@@ -670,7 +680,7 @@ def list_trace_connectors_route(request: Request) -> dict[str, object]:
 @router.post(
     "/traces/connectors/{provider}/pull",
     tags=["observability", "connectors"],
-    dependencies=[_dep("runtime_ingest")],
+    dependencies=[_dep("runtime_ingest"), require_experimental("traces")],
 )
 def pull_trace_connector(request: Request, provider: str, body: dict) -> dict[str, object]:
     """Import via a managed connection or correlate one-shot provider credentials.

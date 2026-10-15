@@ -9,6 +9,8 @@ from fastapi import HTTPException
 
 from agent_bom.api.routes import observability as routes
 
+pytestmark = pytest.mark.usefixtures("enable_experimental_traces")
+
 
 @pytest.fixture
 def configured(monkeypatch, tmp_path):

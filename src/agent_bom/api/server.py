@@ -31,6 +31,7 @@ from agent_bom.api.dev_auth_state import get_dev_api_key as get_dev_api_key
 from agent_bom.api.dev_auth_state import get_dev_api_role as get_dev_api_role
 from agent_bom.api.dev_auth_state import set_dev_api_key as set_dev_api_key
 from agent_bom.api.error_envelope import ERROR_RESPONSES, install_error_envelope
+from agent_bom.api.experimental_gate import ExperimentalFeatureHealth, SystemHealthResponse
 from agent_bom.api.foreground_activity import ForegroundActivityMiddleware
 from agent_bom.api.middleware import (
     DEFAULT_SCAN_RATE_LIMIT_RPM,
@@ -89,6 +90,7 @@ from agent_bom.api.stores import (
 from agent_bom.api.tracing import configure_otel_tracing, get_tracing_health
 from agent_bom.config import API_JOB_TTL_SECONDS as _JOB_TTL_SECONDS
 from agent_bom.config import resolved_cors_origins_raw
+from agent_bom.core.experimental import feature_status
 from agent_bom.demo_estate import boot_seed as _demo_boot_seed
 from agent_bom.output.brand_tokens import POSITIONING_META, PRODUCT_NAME, TAGLINE_CHAIN
 from agent_bom.storage import state_home as _state_home
@@ -1560,15 +1562,15 @@ async def health() -> PublicHealthResponse:
     return _public_health()
 
 
-@app.get("/v1/system/health", response_model=HealthResponse, tags=["meta"], responses=ERROR_RESPONSES)
-async def system_health() -> HealthResponse:
+@app.get("/v1/system/health", response_model=SystemHealthResponse, tags=["meta"], responses=ERROR_RESPONSES)
+async def system_health() -> SystemHealthResponse:
     """Authenticated operator diagnostics for configured subsystems."""
     from agent_bom.api.auth_posture import get_auth_runtime_status
     from agent_bom.api.connection_scheduler import connections_scheduler_enabled
     from agent_bom.entitlements import load_entitlement_state
 
     auth_runtime = get_auth_runtime_status()
-    return HealthResponse(
+    return SystemHealthResponse(
         status="ok",
         version=__version__,
         auth_required=bool(auth_runtime["auth_required"]),
@@ -1580,6 +1582,7 @@ async def system_health() -> HealthResponse:
         analytics=_analytics_health(),
         storage=_storage_health(),
         entitlements=EntitlementHealth(**load_entitlement_state().health_summary()),
+        experimental_features=[ExperimentalFeatureHealth.model_validate(item) for item in feature_status()],
     )
 
 

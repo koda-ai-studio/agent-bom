@@ -1577,6 +1577,7 @@ async def test_runtime_correlate_with_audit_log(tmp_path):
 
 
 @pytest.mark.asyncio
+@pytest.mark.usefixtures("enable_experimental_traces")
 async def test_runtime_correlate_with_otel_trace(tmp_path):
     from agent_bom.mcp_tools.runtime import runtime_correlate_impl
 

@@ -13236,6 +13236,23 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
+        /** ExperimentalFeatureHealth */
+        ExperimentalFeatureHealth: {
+            /** Doc */
+            doc: string;
+            /** Enabled */
+            enabled: boolean;
+            /** Enabled By */
+            enabled_by: string;
+            /** Flag Gated */
+            flag_gated: boolean;
+            /** Id */
+            id: string;
+            /** Surfaces */
+            surfaces: string[];
+            /** Title */
+            title: string;
+        };
         /** ExportDestinationCreate */
         ExportDestinationCreate: {
             /**
@@ -22921,6 +22938,44 @@ export interface components {
             tenant_id: string;
             /** Updated At */
             updated_at: string;
+        };
+        /** SystemHealthResponse */
+        SystemHealthResponse: {
+            analytics: components["schemas"]["AnalyticsHealth"];
+            /**
+             * Auth Configured
+             * @default false
+             */
+            auth_configured: boolean;
+            /**
+             * Auth Required
+             * @default true
+             */
+            auth_required: boolean;
+            /** Configured Auth Modes */
+            configured_auth_modes?: string[];
+            /**
+             * Connections Scheduler Enabled
+             * @default false
+             */
+            connections_scheduler_enabled: boolean;
+            entitlements?: components["schemas"]["EntitlementHealth"];
+            /** Experimental Features */
+            experimental_features?: components["schemas"]["ExperimentalFeatureHealth"][];
+            /**
+             * Status
+             * @default ok
+             */
+            status: string;
+            storage: components["schemas"]["StorageHealth"];
+            tracing: components["schemas"]["TracingHealth"];
+            /**
+             * Unauthenticated Allowed
+             * @default false
+             */
+            unauthenticated_allowed: boolean;
+            /** Version */
+            version: string;
         };
         /** TenantDataCounts */
         TenantDataCounts: {
@@ -42331,7 +42386,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HealthResponse"];
+                    "application/json": components["schemas"]["SystemHealthResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */

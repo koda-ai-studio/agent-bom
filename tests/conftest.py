@@ -964,3 +964,9 @@ def reset_global_test_state():
     _reset_runtime_state()
     _reset_enrichment_posture_state()
     _reset_scan_warning_state()
+
+
+@pytest.fixture
+def enable_experimental_traces(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Opt a test into the flag-gated ``traces`` experimental feature (off by default)."""
+    monkeypatch.setenv("AGENT_BOM_EXPERIMENTAL", "traces")

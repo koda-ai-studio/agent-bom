@@ -10,6 +10,8 @@ from agent_bom.api.runtime_event_store import SQLiteRuntimeEventStore, set_runti
 from agent_bom.api.server import app, configure_api
 from tests.auth_helpers import disable_trusted_proxy_env, enable_trusted_proxy_env, proxy_headers
 
+pytestmark = pytest.mark.usefixtures("enable_experimental_traces")
+
 
 @pytest.fixture
 def client(monkeypatch, tmp_path):

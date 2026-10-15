@@ -64,30 +64,14 @@ kind, then rescan the same scope to check what changed.
 
 <p align="center"><a href="docs/images/graph-environment-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="docs/images/graph-environment-light-live.png"><img src="docs/images/graph-environment-dark-live.png" alt="Sample production AI environment: Document Intake Agent uses a document-tools MCP server that depends on pillow 9.0.0, linked to KEV-listed CVE-2023-4863; Support Triage Agent uses a ticketing MCP server that references TICKETING_API_KEY, which can access a customer ticket archive" width="1100"></picture></a></p>
 
-*Current-source preview with a fictional sample estate; the published `0.108.4` UI predates
-this workspace. Dashed use, credential and access links are
-configured or modeled, not observed at runtime. Path analysis covers the
-collected snapshot only.*
+*Fictional sample estate. Dashed use, credential and access links are configured
+or modeled, not observed at runtime; path analysis covers the collected snapshot only.*
 
-**Follow one finding from agent to verified fix:**
-
-1. **Select an agent.** Document Intake Agent → document-tools MCP → `pillow@9.0.0`.
-2. **Inspect the finding.** CVE-2023-4863 is high severity and KEV-listed; the
-   headline counts severity and KEV status separately.
-3. **Inspect the evidence.** Select the arrow: why it is linked, which source
-   recorded it, whether it is static, modeled or observed, when, and what
-   remains unknown.
-4. **Choose a remediation.** The [remediation plan](docs/PRODUCT_TOUR.md#engineers-and-grc-fix-and-verify)
-   proposes the fixed version. A graph scenario can preview a change; both are
-   proposals, not verification.
-5. **Rescan the changed input.** The [before/after example](examples/connected-bom/README.md)
-   changes the pin to `pillow@10.0.1`, rescans, and retains both snapshots.
-6. **Compare.** The finding disappears from the second snapshot; an unrelated
-   modeled cloud check remains open. That verifies the changed input, not an
-   installed package or a running deployment.
-
-Steps 1–4 are in the dashboard. Step 5 runs from a source checkout; step 6 is
-the retained snapshot diff (graph drift lens or `rescan-diff.json`).
+**From agent to verified fix:** select Document Intake Agent → inspect
+CVE-2023-4863 (high, KEV-listed) and the evidence on each arrow → take the
+proposed [remediation](docs/PRODUCT_TOUR.md#engineers-and-grc-fix-and-verify) →
+[rescan the changed pin](examples/connected-bom/README.md) and compare snapshots.
+The comparison verifies the changed input, not a running deployment.
 
 **Supporting evidence: one package, three parsed inputs.** A repository pin, an
 image SBOM and a modeled Kubernetes workload resolve to one `pillow@9.0.0`. The
@@ -98,7 +82,7 @@ receipt is open.
 
 *Real parsers, modeled infrastructure; a graph path does not prove exploitation.*
 
-[Explore context, correlation and reachability](docs/PRODUCT_TOUR.md#context-correlation-and-reachability) · [Run the reference lab](examples/reference-evidence-lab/README.md)
+[Explore context, correlation and reachability](docs/PRODUCT_TOUR.md#context-correlation-and-reachability) · [Run the reference lab](examples/reference-evidence-lab/README.md) · [Reproduce these screenshots](docs/PRODUCT_TOUR.md#reproduce-the-readme-screenshots)
 
 <details>
 <summary>Repository and cloud investigations</summary>
@@ -114,30 +98,6 @@ Follow a public API gateway into a vulnerable workload, its role and a PII bucke
 
 </details>
 
-<details>
-<summary>Reproduce these screenshots from a source checkout</summary>
-
-The pictured graphs are the committed UI build serving fictional fixtures
-(`ui/scripts/product-proof-scope-showcase.mjs` and the hash-pinned
-reference-lab output). From the repository root:
-
-```bash
-cd ui && npm ci && npm run build
-npm run capture:product-proof   # refreshes the README screenshots in docs/images
-```
-
-To explore a labeled demo estate in the current-source dashboard instead
-(different sample data from the screenshots):
-
-```bash
-make build-ui
-uv run --extra ui agent-bom serve --demo-estate --allow-insecure-no-auth --port 8422
-```
-
-Open **http://127.0.0.1:8422/graph**. Loopback only; the flag disables
-authentication for local evaluation.
-
-</details>
 
 ## Open the sample graph
 
@@ -146,17 +106,9 @@ pip install 'agent-bom[ui]==0.108.4'
 agent-bom quickstart --run --offline
 ```
 
-The command writes a sample report and verifies its persisted graph. **Run the
-server command it prints in another terminal, then open its exact graph URL.**
-Keep that server running. The UI extra and server process are required.
-
-Offline quickstart skips package-CVE lookup; zero CVEs is not a clean verdict.
-Use the bundled demo above for advisory-backed findings. For your own offline
-scan, first [populate the advisory database](docs/FIRST_RUN.md).
-
-Next, [follow one component and a before/after rescan](examples/connected-bom/README.md).
-That source-checkout example parses changed dependency inputs and retains both
-snapshots; it does not install packages or change a running deployment.
+Run the server command it prints, then open its graph URL. Offline quickstart
+skips package-CVE lookup, so zero CVEs is not a clean verdict; use the bundled
+demo for advisory-backed findings or [populate the advisory database](docs/FIRST_RUN.md).
 
 ## Self-host in your environment
 
@@ -211,4 +163,4 @@ control mappings are not audit certification.
 
 [Contributing](CONTRIBUTING.md) · [Capabilities and roadmap](docs/ROADMAP.md) · [Support](SUPPORT.md) · [Report an inaccurate finding](https://github.com/koda-ai-studio/agent-bom/issues/new?template=inaccurate_finding.yml) · [Apache-2.0](LICENSE)
 
-Source version: **v0.108.4** · Latest release: **v0.108.4** · [Changelog](CHANGELOG.md)
+Source version: **v0.109.0** · Latest release: **v0.108.4** · [Changelog](CHANGELOG.md)

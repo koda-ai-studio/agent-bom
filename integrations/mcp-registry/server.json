@@ -3,7 +3,7 @@
   "name": "io.github.msaad00/agent-bom",
   "description": "Scan AI/MCP dependencies, descriptor injection, risky tool inputs and authentication configuration.",
   "title": "agent-bom",
-  "version": "0.108.4",
+  "version": "0.109.0",
   "repository": {
     "url": "https://github.com/msaad00/agent-bom",
     "source": "github"
@@ -12,7 +12,7 @@
     {
       "registryType": "pypi",
       "identifier": "agent-bom",
-      "version": "0.108.4",
+      "version": "0.109.0",
       "transport": {
         "type": "stdio"
       },

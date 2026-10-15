@@ -30,6 +30,9 @@ _LIST_READS = [path for path in TYPED_READS if "{" not in path and path != "/v1/
 _ADMIN = proxy_headers(role="admin", tenant="contract-empty")
 
 
+pytestmark = pytest.mark.usefixtures("enable_experimental_traces")
+
+
 def _check(client: TestClient, path: str, headers: dict[str, str], model: type[obs.ReadResponse] | None = None) -> list[str]:
     response = client.get(path, headers=headers)
     if response.status_code != 200:
