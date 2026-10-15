@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { ExternalLink, FileSearch, Loader2 } from "lucide-react";
 
-import { severityColor, type FindingTriageDecision, type FindingTriageItem, type FindingTriageJustification } from "@/lib/api";
+import { severityColor, severityText, type FindingTriageDecision, type FindingTriageItem, type FindingTriageJustification } from "@/lib/api";
 import { useAuthState } from "@/components/auth-provider";
 import { buildFindingInvestigationHref } from "@/lib/finding-investigation-href";
 import { remediationHref } from "@/lib/page-links";
@@ -77,7 +77,7 @@ export function FindingDrawer({
       subtitle={findingsDrawerSubtitle(lens)}
       headerAside={
         <span className={`rounded-full border border-outline bg-surface-muted px-2.5 py-1 text-xs font-medium uppercase tracking-wide ${severityColor(vuln.severity)}`}>
-          {vuln.severity}
+          {severityText(vuln.severity, vuln)}
         </span>
       }
     >
