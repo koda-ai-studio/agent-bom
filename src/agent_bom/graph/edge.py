@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from copy import deepcopy
 from dataclasses import dataclass, field
 from typing import Any
@@ -25,6 +26,15 @@ def credential_edge_admits(edge: "UnifiedEdge", agent_id: str) -> bool:
     """
     configured = (edge.evidence or {}).get("configured_by")
     return not isinstance(configured, list) or not configured or not agent_id or agent_id in configured
+
+
+def renamed_union_evidence(evidence: dict[str, Any] | None, rename: Callable[[str], str | None] | None) -> dict[str, Any]:
+    """Copy of ``evidence`` with the node ids in union lists renamed; ids ``rename`` does not know are kept."""
+    result = dict(evidence or {})
+    for key in UNION_EVIDENCE_KEYS:
+        if rename is not None and isinstance(result.get(key), list):
+            result[key] = sorted({rename(str(node_id)) or str(node_id) for node_id in result[key]})
+    return result
 
 
 def merge_union_evidence_keys(stored: dict[str, Any], incoming: dict[str, Any]) -> bool:
