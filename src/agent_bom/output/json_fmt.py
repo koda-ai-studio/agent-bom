@@ -62,7 +62,12 @@ def _build_finding_summary(findings: list[dict[str, object]]) -> dict[str, Any]:
     by_severity = dict.fromkeys(_FINDING_SEVERITIES, 0)
     by_type: dict[str, int] = {}
     by_source: dict[str, int] = {}
+    suppressed = 0
     for finding in findings:
+        if finding.get("suppressed") is True:
+            # Suppressed rows stay in the stream with their reason; active counts exclude them.
+            suppressed += 1
+            continue
         severity = str(finding.get("effective_severity") or finding.get("severity") or "unknown").lower()
         if severity not in by_severity:
             severity = "unknown"
@@ -72,7 +77,8 @@ def _build_finding_summary(findings: list[dict[str, object]]) -> dict[str, Any]:
         by_type[finding_type] = by_type.get(finding_type, 0) + 1
         by_source[source] = by_source.get(source, 0) + 1
     return {
-        "total": len(findings),
+        "total": len(findings) - suppressed,
+        "suppressed": suppressed,
         "by_severity": by_severity,
         "by_type": dict(sorted(by_type.items())),
         "by_source": dict(sorted(by_source.items())),

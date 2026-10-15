@@ -377,6 +377,7 @@
     },
     "by_source": {},
     "by_type": {},
+    "suppressed": 0,
     "total": 0
    },
    "findings": [],
@@ -2521,6 +2522,7 @@
     "by_type": {
      "CVE": 1
     },
+    "suppressed": 0,
     "total": 1
    },
    "findings": [
@@ -5231,6 +5233,7 @@
     "by_type": {
      "CVE": 1
     },
+    "suppressed": 0,
     "total": 1
    },
    "findings": [
@@ -7538,6 +7541,7 @@
     },
     "by_source": {},
     "by_type": {},
+    "suppressed": 0,
     "total": 0
    },
    "findings": [],
@@ -9430,6 +9434,7 @@
     },
     "by_source": {},
     "by_type": {},
+    "suppressed": 0,
     "total": 0
    },
    "findings": [],
@@ -11848,6 +11853,7 @@
     "by_type": {
      "CVE": 1
     },
+    "suppressed": 0,
     "total": 1
    },
    "findings": [
@@ -14424,6 +14430,7 @@
     "by_type": {
      "CVE": 1
     },
+    "suppressed": 0,
     "total": 1
    },
    "findings": [
@@ -16641,6 +16648,7 @@
     },
     "by_source": {},
     "by_type": {},
+    "suppressed": 0,
     "total": 0
    },
    "findings": [],
@@ -18902,6 +18910,7 @@
     "by_type": {
      "CVE": 1
     },
+    "suppressed": 0,
     "total": 1
    },
    "findings": [

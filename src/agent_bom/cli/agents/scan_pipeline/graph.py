@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import json
+from collections import Counter
 
 import click
 
 from agent_bom.cli._common import logger
 from agent_bom.cli.agents.scan_pipeline.options import ScanOptions
 from agent_bom.cli.agents.scan_pipeline.state import ScanState
+from agent_bom.core.vex_policy import active_blast_radii
 from agent_bom.output.graph_evidence import has_graph_evidence
 
 
@@ -198,7 +200,14 @@ def _apply_vex(opts: ScanOptions, st: ScanState) -> None:
             st.con.print(f"  [green]✓[/green] VEX applied: {_vex_count} vulnerabilities updated from {opts.vex_path}")
             _vex_suppressed = sum(1 for br in st.report.blast_radii if br.suppression_state == "vex")
             if _vex_suppressed:
-                st.con.print(f"    [dim]{_vex_suppressed} finding(s) suppressed as not_affected/fixed (kept in output).[/dim]")
+                active = Counter(
+                    str(getattr(br.vulnerability.severity, "value", br.vulnerability.severity)).lower()
+                    for br in active_blast_radii(st.report.blast_radii)
+                )
+                order = ("critical", "high", "medium", "low", "unknown")
+                remaining = " · ".join(f"{active[sev]} {sev}" for sev in order if active[sev]) or "none"
+                note = f"{_vex_suppressed} finding(s) suppressed as not_affected/fixed (kept in output); active package CVEs: {remaining}."
+                st.con.print(f"    [dim]{note}[/dim]")
 
 
 def _detect_toxic_combinations(opts: ScanOptions, st: ScanState) -> None:

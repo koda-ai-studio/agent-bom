@@ -13240,8 +13240,11 @@ export interface components {
         ExperimentalFeatureHealth: {
             /** Doc */
             doc: string;
-            /** Enabled */
-            enabled: boolean;
+            /**
+             * Enabled
+             * @description Whether the flag enables it now; null when the feature has its own opt-in.
+             */
+            enabled: boolean | null;
             /** Enabled By */
             enabled_by: string;
             /** Flag Gated */

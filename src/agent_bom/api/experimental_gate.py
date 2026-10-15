@@ -18,7 +18,7 @@ class ExperimentalFeatureHealth(BaseModel):
     enabled_by: str
     doc: str
     flag_gated: bool
-    enabled: bool
+    enabled: bool | None = Field(description="Whether the flag enables it now; null when the feature has its own opt-in.")
 
 
 class SystemHealthResponse(HealthResponse):
