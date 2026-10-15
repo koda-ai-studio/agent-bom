@@ -46,6 +46,8 @@ _INSTANCE_ID = re.compile(r"^i-[0-9a-f]{8,17}$")
 _DIGEST = re.compile(r"sha256:[0-9a-f]{64}")
 _GCP_PREFIXES = ("https://www.googleapis.com/compute/v1/", "https://compute.googleapis.com/compute/v1/", "//compute.googleapis.com/")
 _IMAGE_TYPES = frozenset({"container_image", "image", "ecr_image"})
+COMPUTE_RESOURCE_TYPES = frozenset({"instance", "virtual_machine", "vm", "compute_instance"})
+_COMPUTE_ID_MARKERS = (":instance/", "/virtualmachines/", "/instances/")
 _HOSTNAME_DENYLIST = frozenset({"localhost", "localhost.localdomain", "ip6-localhost", "host.docker.internal", "kubernetes.default.svc"})
 
 
@@ -243,3 +245,11 @@ def identity_keys(node: UnifiedNode) -> tuple[list[IdentityKey], list[IdentityKe
 def best_strong_key(keys: Iterable[IdentityKey]) -> IdentityKey | None:
     ordered = sorted(keys, reverse=True)
     return ordered[0] if ordered else None
+
+
+def is_compute_instance(resource_type: object, native_id: object = "") -> bool:
+    """A VM by its recorded resource type, or by an instance ARN, ARM id or GCE link."""
+    if str(resource_type or "").casefold() in COMPUTE_RESOURCE_TYPES:
+        return True
+    native = str(native_id or "").strip().casefold()
+    return bool(_INSTANCE_ID.match(native)) or any(marker in native for marker in _COMPUTE_ID_MARKERS)

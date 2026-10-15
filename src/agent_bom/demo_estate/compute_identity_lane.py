@@ -52,6 +52,17 @@ def _side_scan_target(index: int) -> dict[str, Any]:
     }
 
 
+def _sensor_host_asset(index: int) -> dict[str, Any]:
+    """A runtime sensor names the host only by host name."""
+    return {
+        "name": _hostname(index),
+        "asset_type": "cloud_resource",
+        "resource_type": "host",
+        "identifier": _hostname(index),
+        "provider": "sensor",
+    }
+
+
 def _vm_cve(index: int) -> dict[str, Any]:
     """An OS-package CVE an agentless scanner reported on a lane VM."""
     return {
@@ -148,13 +159,7 @@ def compute_lane_report(*, vms: int = DEMO_COMPUTE_VMS, decoys: int = DEMO_HOSTN
             "source": "EXTERNAL",
             "severity": "low",
             "title": "Unsigned binary executed",
-            "asset": {
-                "name": _hostname(index),
-                "asset_type": "cloud_resource",
-                "resource_type": "host",
-                "identifier": _hostname(index),
-                "provider": "sensor",
-            },
+            "asset": _sensor_host_asset(index),
         }
         for index in range(min(decoys, vms))
     )

@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 
 from agent_bom.graph.analysis import GraphAnalysisState, GraphAnalysisStatus
 from agent_bom.graph.applicability import Applicability, applicability_from_payload, edge_applicability
+from agent_bom.graph.asset_identity import is_compute_instance
 from agent_bom.graph.container import AttackPath, UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge, credential_edge_admits
 from agent_bom.graph.edge_lookup import _rel_value
@@ -40,13 +41,12 @@ _SCOPE_KINDS = frozenset(
 # A vulnerable workload that runs on its own is a path even when nothing holds
 # it: a server, a container, or a compute instance (VM) nothing is hosted on.
 _STANDALONE_HOLDERS = frozenset({EntityType.SERVER.value, EntityType.CONTAINER.value})
-_COMPUTE_RESOURCE_TYPES = frozenset({"instance", "virtual_machine", "vm", "compute_instance"})
 
 
 def _standalone(node: UnifiedNode) -> bool:
     kind = _kind(node)
     if kind == EntityType.CLOUD_RESOURCE.value:
-        return str(node.attributes.get("resource_type") or "").casefold() in _COMPUTE_RESOURCE_TYPES
+        return is_compute_instance(node.attributes.get("resource_type"))
     return kind in _STANDALONE_HOLDERS
 
 

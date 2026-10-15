@@ -41,6 +41,7 @@ from typing import Any
 
 from agent_bom.cloud.normalization import coerce_truthy
 from agent_bom.core.severity import SEVERITY_BUCKETS_ASPM, SEVERITY_RANK, SEVERITY_RISK_SCORE
+from agent_bom.graph.asset_identity import is_compute_instance
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
@@ -138,17 +139,16 @@ def _manifest_roots(findings: list[Any]) -> list[str]:
 _NON_APPLICATION_ASSET_TYPES = frozenset({"package", "agent", "mcp_server", "server", "mcp_tool", "tool", "identity", "credential"})
 
 
-_COMPUTE_HOST_RESOURCE_TYPES = frozenset({"host", "instance", "virtual_machine", "vm", "compute_instance", "node"})
-_COMPUTE_HOST_ID_MARKERS = (":instance/", "/virtualmachines/", "/instances/")
+_HOST_RESOURCE_TYPES = frozenset({"host", "node"})
 
 
 def _is_compute_host(asset: dict[str, Any]) -> bool:
     # A VM or host runs applications; naming an application after it would
     # mint one empty application per machine.
-    if str(asset.get("resource_type") or "").lower() in _COMPUTE_HOST_RESOURCE_TYPES:
+    resource_type = asset.get("resource_type")
+    if str(resource_type or "").casefold() in _HOST_RESOURCE_TYPES:
         return True
-    identifier = str(asset.get("identifier") or asset.get("stable_id") or "").lower()
-    return any(marker in identifier for marker in _COMPUTE_HOST_ID_MARKERS)
+    return is_compute_instance(resource_type, asset.get("identifier") or asset.get("stable_id"))
 
 
 def _app_identity(finding: Any, manifest_roots: list[str]) -> tuple[str, str]:
