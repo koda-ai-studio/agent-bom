@@ -3,6 +3,7 @@
 import hashlib
 import json
 from collections.abc import Iterable, Mapping, Sequence
+from datetime import datetime, timezone
 from typing import Any
 
 from agent_bom.graph.asset_identity import IdentityKey, family_of, strong_key_components, strong_keys
@@ -180,3 +181,27 @@ def container_identity(node: UnifiedNode, *, scan_id: str) -> tuple[str, str, st
         return strong
     scoped_type, scoped_id, _basis = snapshot_scoped_identity(node, scan_id=scan_id)
     return scoped_type, scoped_id, "snapshot_scoped_runtime_occurrence"
+
+
+def timestamp_instant(value: str) -> datetime:
+    """Parse one evidence timestamp into a comparable UTC instant."""
+
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ValueError("correlation timestamps must be valid ISO-8601 values") from exc
+    if parsed.tzinfo is None:
+        raise ValueError("correlation timestamps must include a timezone")
+    return parsed.astimezone(timezone.utc)
+
+
+def _timestamp_sort_key(value: str) -> tuple[datetime, str]:
+    return timestamp_instant(value), value
+
+
+def oldest_timestamp(values: Sequence[str]) -> str:
+    return min(values, key=_timestamp_sort_key)
+
+
+def newest_timestamp(values: Sequence[str]) -> str:
+    return max(values, key=_timestamp_sort_key)

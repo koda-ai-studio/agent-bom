@@ -57,10 +57,11 @@ def rekey_path_references(graph: Any, moves: Mapping[str, str]) -> None:
     """Re-point attack paths and interaction risks at canonical ids; paths that collapse merge."""
     if not moves:
         return
-    kept: dict[tuple[str, ...], Any] = {}
+    kept: dict[tuple[str, str, tuple[str, ...], tuple[str, ...]], Any] = {}
     for path in graph.attack_paths:
         rewritten = _rekey_path(path, moves) if any(hop in moves for hop in (path.source, path.target, *path.hops)) else path
-        key = (rewritten.source, rewritten.target, *rewritten.hops)
+        # Same identity as served-path dedupe: one chain of hops can carry distinct relationships.
+        key = (rewritten.source, rewritten.target, tuple(rewritten.hops), tuple(rewritten.edges))
         if key not in kept or rewritten.composite_risk > kept[key].composite_risk:
             kept[key] = rewritten
     graph.attack_paths = list(kept.values())

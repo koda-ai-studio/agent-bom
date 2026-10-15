@@ -12,6 +12,7 @@ import json
 import os
 import sqlite3
 import tempfile
+from collections.abc import Callable, Mapping
 from itertools import groupby
 from pathlib import Path
 from typing import Any
@@ -27,10 +28,10 @@ from agent_bom.graph.correlation import (
     _merge_node,
     _NodeObservation,
     _relationship_value,
-    _timestamp_instant,
     correlation_identity,
 )
 from agent_bom.graph.correlation_scope import CORRELATION_IDENTITY_VERSION, strong_member_identities, strong_member_keys
+from agent_bom.graph.correlation_scope import timestamp_instant as _timestamp_instant
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.node import UnifiedNode
 
@@ -101,6 +102,8 @@ class CorrelationMergeWorkspace:
             );
             CREATE INDEX idx_correlation_node_group
                 ON node_observations(entity_type, identity);
+            CREATE INDEX idx_correlation_node_source
+                ON node_observations(scan_id, node_id);
             CREATE TABLE edge_groups (
                 source_type TEXT NOT NULL,
                 source_identity TEXT NOT NULL,
@@ -339,6 +342,21 @@ class CorrelationMergeWorkspace:
             raise CorrelationMergeBudgetError("edge_limit")
         return conflicts
 
+    def _output_node_resolver(self, output_id_by_key: Mapping[tuple[str, str], str]) -> Callable[[str, str], str | None]:
+        """``(scan id, source node id) -> merged node id``, read from the staged observations."""
+        resolved: dict[tuple[str, str], str | None] = {}
+
+        def output_node_id(scan_id: str, node_id: str) -> str | None:
+            if (scan_id, node_id) not in resolved:
+                row = self._conn.execute(
+                    "SELECT entity_type, identity FROM node_observations WHERE scan_id = ? AND node_id = ?",
+                    (scan_id, node_id),
+                ).fetchone()
+                resolved[(scan_id, node_id)] = output_id_by_key.get((str(row[0]), str(row[1]))) if row else None
+            return resolved[(scan_id, node_id)]
+
+        return output_node_id
+
     def finish(self) -> CorrelationMergeResult:
         if len(self._snapshots) < 2:
             raise ValueError("Correlation requires at least 2 graph snapshots")
@@ -401,6 +419,7 @@ class CorrelationMergeWorkspace:
             output.add_node(node)
             output_id_by_key[(str(entity_type), str(identity))] = node.id
 
+        output_node_id = self._output_node_resolver(output_id_by_key)
         edge_conflicts = 0
         edge_rows = self._conn.execute(
             """
@@ -425,6 +444,7 @@ class CorrelationMergeWorkspace:
                 source_id=output_id_by_key[(source_type, source_identity)],
                 target_id=output_id_by_key[(target_type, target_identity)],
                 correlation_id=self._correlation_id,
+                output_node_id=output_node_id,
             )
             if edge.provenance.get("correlation", {}).get("conflict_fields"):
                 edge_conflicts += 1

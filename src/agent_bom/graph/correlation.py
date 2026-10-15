@@ -12,9 +12,9 @@ import json
 import re
 from copy import deepcopy
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Iterable, Mapping, Sequence
+from functools import partial
+from typing import Any, Callable, Iterable, Mapping, Sequence
 
 from packageurl import PackageURL
 
@@ -26,9 +26,12 @@ from agent_bom.graph.correlation_scope import CORRELATION_IDENTITY_VERSION, merg
 from agent_bom.graph.correlation_scope import exact_attribute_identity as _exact_attribute_identity
 from agent_bom.graph.correlation_scope import identity_digest as _digest
 from agent_bom.graph.correlation_scope import identity_entity_value as _entity_value
+from agent_bom.graph.correlation_scope import newest_timestamp as _newest_timestamp
+from agent_bom.graph.correlation_scope import oldest_timestamp as _oldest_timestamp
 from agent_bom.graph.correlation_scope import snapshot_scoped_identity as _snapshot_scoped_identity
+from agent_bom.graph.correlation_scope import timestamp_instant as _timestamp_instant
 from agent_bom.graph.credential_identity import credential_occurrence, is_credential_slot
-from agent_bom.graph.edge import UnifiedEdge, merge_union_evidence_keys
+from agent_bom.graph.edge import UnifiedEdge, merge_union_evidence_keys, renamed_union_evidence
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
 from agent_bom.graph.types import EntityType, RelationshipType
 from agent_bom.graph.util import _now_iso
@@ -80,30 +83,6 @@ _RUNTIME_ENTITY_TYPES = frozenset(
         EntityType.TOOL_CALL.value,
     }
 )
-
-
-def _timestamp_instant(value: str) -> datetime:
-    """Parse one evidence timestamp into a comparable UTC instant."""
-
-    try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    except ValueError as exc:
-        raise ValueError("correlation timestamps must be valid ISO-8601 values") from exc
-    if parsed.tzinfo is None:
-        raise ValueError("correlation timestamps must include a timezone")
-    return parsed.astimezone(timezone.utc)
-
-
-def _timestamp_sort_key(value: str) -> tuple[datetime, str]:
-    return _timestamp_instant(value), value
-
-
-def _oldest_timestamp(values: Sequence[str]) -> str:
-    return min(values, key=_timestamp_sort_key)
-
-
-def _newest_timestamp(values: Sequence[str]) -> str:
-    return max(values, key=_timestamp_sort_key)
 
 
 def correlation_manifest_digest(value: Mapping[str, Any]) -> str:
@@ -623,6 +602,7 @@ def _merge_edge(
     source_id: str,
     target_id: str,
     correlation_id: str,
+    output_node_id: Callable[[str, str], str | None] | None = None,
 ) -> UnifiedEdge:
     ordered = sorted(
         observations,
@@ -638,9 +618,13 @@ def _merge_edge(
         conflict_fields.append("direction")
     if len({bool(item.edge.traversable) for item in ordered}) > 1:
         conflict_fields.append("traversable")
-    evidence = _project_mapping(item.edge.evidence for item in ordered)
-    for item in ordered:
-        merge_union_evidence_keys(evidence, item.edge.evidence or {})
+    # configured_by names agents by their source-snapshot ids; the merge may rename them.
+    observed_evidence = [
+        renamed_union_evidence(item.edge.evidence, output_node_id and partial(output_node_id, item.snapshot.scan_id)) for item in ordered
+    ]
+    evidence = _project_mapping(observed_evidence)
+    for item_evidence in observed_evidence:
+        merge_union_evidence_keys(evidence, item_evidence)
     provenance[_CORRELATION_ATTR] = {
         "identity_version": merged_identity_version(item.edge.provenance.get(_CORRELATION_ATTR) for item in ordered),
         "observation_count": len(ordered),
@@ -746,6 +730,7 @@ def merge_graph_snapshots(
                 source_id=output_id_by_key[source_key],
                 target_id=output_id_by_key[target_key],
                 correlation_id=correlation_id,
+                output_node_id=lambda scan, node: output_id_by_key.get(source_to_key.get((scan, node), ("", ""))),
             )
         )
 
