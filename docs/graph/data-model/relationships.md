@@ -424,7 +424,7 @@ Class `correlation` · bidirectional · not traversable · required evidence `so
 - `service_principal` → `managed_identity`, `role`, `service_account`, `service_principal`, `user`
 - `user` → `managed_identity`, `role`, `service_account`, `service_principal`, `user`
 
-Emitted by: `graph/asset_canonicalize.py`, `graph/builder_frameworks.py`
+Emitted by: `graph/asset_canonicalize.py`, `graph/builder_frameworks.py`, `graph/finding_row_projection.py`
 
 ## `protects`
 

@@ -59,7 +59,7 @@ Id formats:
 - `cloud_resource:snowflake:warehouse:{name}`
 - `cloud_resource:{cloud}:{service}:bucket:{bucket}`
 - `cloud_resource:{provider}:audit:resource:{resource}`
-- `cloud_resource:{provider}:database:{db_name}`
+- `cloud_resource:{provider}:database:{db_account}:{db_location}:{db_key}`
 - `cloud_resource:{provider}:{bucket_service}:bucket:{name}`
 - `cloud_resource:{provider}:{inst_service}:instance:{instance_id}`
 - `cloud_resource:{provider}:{kind}:{normalized}`

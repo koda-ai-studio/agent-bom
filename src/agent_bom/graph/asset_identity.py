@@ -207,9 +207,11 @@ def strong_keys(node: UnifiedNode) -> list[IdentityKey]:
         keys.extend(_snowflake_keys(node))
     keys.extend(_kubernetes_keys(node))
     if family == "identity" and provider not in {"aws", "azure", "gcp", "snowflake"}:
+        # A directory user id is unique only inside its org; with no org known it proves nothing.
         principal = _attr(node, "provider_identity_id", "principal_id")
-        if principal and provider:
-            keys.append(IdentityKey(90, "principal_id", f"{provider}/{principal}", provider))
+        org = _attr(node, "org_id", "organization_id", "directory_id", "account_id", "domain")
+        if principal and provider and org:
+            keys.append(IdentityKey(90, "principal_id", f"{provider}/{org}/{principal}", provider))
     return sorted(set(keys), reverse=True)
 
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import uuid
@@ -159,6 +160,7 @@ def canonical_mcp_server_id(
 
 _AGENT_SCOPE_KEYS = ("source_id", "endpoint_id", "device_id")
 CORTEX_AGENT_SOURCE = "snowflake-cortex-agent"
+PROJECT_CONFIG_SOURCE = "project-config"
 
 
 def _field(record: Any, key: str) -> Any:
@@ -195,7 +197,31 @@ def agent_graph_id_for(record: Any) -> str:
     if _field(record, "source") == CORTEX_AGENT_SOURCE and isinstance(cortex, Mapping):
         if all(str(cortex.get(key) or "").strip() for key in ("database", "schema", "name")):
             return snowflake_cortex_agent_node_id(cortex.get("account"), cortex["database"], cortex["schema"], cortex["name"])
-    return agent_graph_id(_field(record, "name"), agent_identity_scope(record))
+    return agent_graph_id(_field(record, "name"), agent_identity_scope(record) or agent_config_scope(record))
+
+
+def agent_config_scope(record: Any) -> str:
+    """Scope for a project-config agent with no endpoint: its config identity.
+
+    Project configs are named after their directory, so ``.mcp.json`` and
+    ``.vscode/mcp.json`` in one repository share a name. The agent's canonical
+    id is derived from the full config path and survives report serialization,
+    which reduces ``config_path`` itself to a basename.
+    """
+    if _field(record, "source") != PROJECT_CONFIG_SOURCE or not str(_field(record, "config_path") or "").strip():
+        return ""
+    identity = next((str(value) for key in ("canonical_id", "stable_id", "id") if (value := _field(record, key))), "")
+    identity = identity or canonical_agent_id(
+        str(_field(record, "agent_type") or ""), str(_field(record, "name") or ""), config_path=str(_field(record, "config_path"))
+    )
+    return f"cfg-{hashlib.sha256(identity.encode()).hexdigest()[:12]}"
+
+
+def previous_agent_graph_ids(record: Any) -> list[str]:
+    """The name-only id this agent carried before config-path scoping."""
+    current = agent_graph_id_for(record)
+    legacy = agent_graph_id(_field(record, "name"), agent_identity_scope(record))
+    return [legacy] if legacy != current else []
 
 
 def mcp_server_identity_kind(*, url: Any = None, command: Any = "", args: Sequence[Any] | None = None, registry_id: Any = None) -> str:

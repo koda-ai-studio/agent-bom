@@ -150,7 +150,7 @@ Consumed by: **FU** Attack-path fusion · **CR** Credential reach · **BR** Depe
 | `observes` | `structural` | inventory | directed | yes | `framework` | `agent`, `server` | 2 | — | 1 |
 | `owns` | `governance` | governance | directed | yes | `account`, `group`, `org`, `role`, `service_account`, `service_principal` (+1 more) | `agent`, `api_gateway`, `cloud_resource`, `data_store`, `environment`, `group` (+5 more) | 30 | — | 5 |
 | `part_of` | `structural` | governance | directed | yes | `account`, `agent`, `ci_job`, `cloud_resource`, `container`, `resource` (+2 more) | `application`, `cloud_resource`, `cluster`, `environment`, `fleet`, `org` (+2 more) | 20 | — | 4 |
-| `possibly_correlates_with` | `correlation` | correlation | bidirectional | no | `agent`, `cloud_resource`, `cluster`, `container`, `data_store`, `managed_identity` (+5 more) | `agent`, `cloud_resource`, `cluster`, `container`, `data_store`, `managed_identity` (+5 more) | 39 | — | 2 |
+| `possibly_correlates_with` | `correlation` | correlation | bidirectional | no | `agent`, `cloud_resource`, `cluster`, `container`, `data_store`, `managed_identity` (+5 more) | `agent`, `cloud_resource`, `cluster`, `container`, `data_store`, `managed_identity` (+5 more) | 39 | — | 3 |
 | `protects` | `exposure` | exposure | directed | yes | `api_gateway`, `cloud_resource` | `cloud_resource`, `data_store`, `resource` | 6 | — | 1 |
 | `provides_tool` | `structural` | inventory | directed | yes | `server` | `tool` | 1 | FU, CR, BR, MT | 2 (+1 demo) |
 | `reaches_tool` | `authority` | inventory | directed | yes | `agent`, `credential` | `tool` | 2 | FU, CR, MT | 2 (+1 demo) |
