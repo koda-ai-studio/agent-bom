@@ -80,7 +80,7 @@ _DOMAIN_SPECS: tuple[tuple[str, str, str, str], ...] = (
     (
         "graph",
         "Graph nodes, edges, snapshots and attack paths",
-        "attack_paths interaction_risks merged_nodes",
+        "attack_paths interaction_risks merged_nodes strong_members",
         "graph_ edge_ node_ ws_",
     ),
     (

@@ -82,9 +82,11 @@ def _resolve_cloud_resource_node_id(
     # A native reference must match exactly: its account/path is authority,
     # never a hint to discard when a foreign same-named asset exists.
     qualified = raw.startswith(("arn:", "/", "https://", "projects/", "folders/", "organizations/"))
-    if type_hint and not qualified:
+    # A short name is unique only inside one account; without one it names nothing.
+    by_name = not qualified and bool(_clean_graph_part(account_id))
+    if type_hint and by_name:
         candidate_sets.append(index.get((provider_key, f"typed:{type_hint}:{raw_tail}"), set()))
-    if not qualified:
+    if by_name:
         candidate_sets.append(index.get((provider_key, f"name:{raw_tail}"), set()))
 
     for candidates in candidate_sets:

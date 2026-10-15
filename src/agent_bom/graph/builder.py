@@ -1466,6 +1466,13 @@ def _wire_network_entry_exposure_paths(
                     )
 
 
+def _account_scoped_principal(principal: dict[str, Any], principal_id: str, account_node_id: str) -> str:
+    """A bare name is unique only inside its account; an ARN already names the account."""
+    if principal.get("arn") or not account_node_id:
+        return principal_id
+    return f"{account_node_id.split(':', 2)[-1]}/{principal_id}"
+
+
 def _add_inventory_principal(
     graph: UnifiedGraph,
     principal: dict[str, Any],
@@ -1483,7 +1490,7 @@ def _add_inventory_principal(
     if not principal_id:
         return
     entity_type = _identity_entity_type(principal_type)
-    principal_node_id = _identity_node_id(entity_type, provider, principal_id)
+    principal_node_id = _identity_node_id(entity_type, provider, _account_scoped_principal(principal, principal_id, account_node_id))
     node_attributes: dict[str, Any] = {
         "principal_id": principal_id,
         "principal_name": principal_name,
@@ -1644,7 +1651,7 @@ def _add_inventory_group(
     if not group_id:
         return
     group_name = _clean_graph_part(group.get("name")) or group_id
-    group_node_id = _identity_node_id(EntityType.GROUP, provider, group_id)
+    group_node_id = _identity_node_id(EntityType.GROUP, provider, _account_scoped_principal(group, group_id, account_node_id))
     privilege = _clean_graph_part(group.get("privilege_level")) or "unknown"
     graph.add_node(
         UnifiedNode(

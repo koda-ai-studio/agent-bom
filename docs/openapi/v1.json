@@ -21489,6 +21489,17 @@
             "title": "Node",
             "type": "object"
           },
+          "resolved_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved From"
+          },
           "scan_id": {
             "title": "Scan Id",
             "type": "string"
@@ -23640,6 +23651,17 @@
             },
             "title": "Nodes",
             "type": "array"
+          },
+          "resolved_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved From"
           },
           "scan_id": {
             "title": "Scan Id",
@@ -63725,7 +63747,7 @@
     },
     "/v1/graph/incident-edges": {
       "get": {
-        "description": "Page recorded incident relationships without loading the full neighborhood.\n\nReuse scan_id and snapshot_generation on every node expansion to avoid mixing\nsnapshots. Keep node_id and direction fixed while following next_cursor.\nSnapshot replacement invalidates cursors; restart from the first page on 400.\nCompleteness describes only recorded page rows, never source collection,\npermissions, execution, or the whole estate. Total relationship count is unknown.",
+        "description": "Page recorded incident relationships without loading the full neighborhood.\n\nReuse scan_id and snapshot_generation on every node expansion; keep node_id and direction fixed while following next_cursor.\nSnapshot replacement invalidates cursors (400: restart). A replaced id resolves to its canonical node, echoed as resolved_from.\nCompleteness covers only recorded page rows, never collection, permissions, execution or the estate; the total is unknown.",
         "operationId": "get_graph_incident_edges_v1_graph_incident_edges_get",
         "parameters": [
           {

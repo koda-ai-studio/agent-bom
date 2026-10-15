@@ -2,9 +2,10 @@
 
 import hashlib
 import json
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 
+from agent_bom.graph.asset_identity import IdentityKey, family_of, strong_key_components, strong_keys
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.types import EntityType
 
@@ -131,3 +132,51 @@ def runtime_stable_identity(node: UnifiedNode, *, scan_id: str) -> tuple[str, st
         return snapshot_scoped_identity(node, scan_id=scan_id)
     exact = exact_attribute_identity(node, keys=("runtime_id", "stable_id", "canonical_id"), basis="runtime_stable_id")
     return exact or snapshot_scoped_identity(node, scan_id=scan_id)
+
+
+def _strong_key_text(key: IdentityKey) -> str:
+    return f"{key.provider or 'native'}:{key.namespace}:{key.value}"
+
+
+def strong_identity(node: UnifiedNode, entity_type: str) -> tuple[str, str, str] | None:
+    """The key asset canonicalization merges on, so a snapshot merge and one build agree."""
+    strong = strong_keys(node)
+    return (entity_type, _strong_key_text(strong[0]), f"strong_key:{strong[0].namespace}") if strong else None
+
+
+def strong_member_keys(node: UnifiedNode) -> tuple[str, list[IdentityKey]]:
+    return family_of(node), strong_keys(node)
+
+
+def strong_member_identities(
+    members: Mapping[tuple[str, str], tuple[str, Sequence[IdentityKey]]],
+) -> tuple[dict[tuple[str, str], str], int]:
+    """Final identity of every strong-keyed ``(scan_id, node_id)`` and the conflict count.
+
+    Runs the same conflict-guarded grouping as one build's canonicalization over
+    every snapshot at once, so a strong-key conflict keeps observations apart on
+    both paths instead of joining them on a shared best key.
+    """
+    components = strong_key_components({f"{scan}\x00{node}": value for (scan, node), value in members.items()})
+    identities = components.identities()
+    resolved: dict[tuple[str, str], str] = {}
+    for scan, node in members:
+        root = components.find(f"{scan}\x00{node}")
+        if root not in identities:
+            continue
+        key, unique = identities[root]
+        resolved[(scan, node)] = _strong_key_text(key) if unique else f"{_strong_key_text(key)}#{identity_digest(root)[7:23]}"
+    return resolved, components.conflicts
+
+
+def container_identity(node: UnifiedNode, *, scan_id: str) -> tuple[str, str, str]:
+    """A located runtime occurrence, else the workload's strong key, else snapshot-scoped."""
+    entity_type = identity_entity_value(node)
+    occurrence = container_occurrence(node)
+    if occurrence:
+        return entity_type, identity_digest(occurrence), "runtime_occurrence"
+    strong = strong_identity(node, entity_type) if family_of(node) == "workload" else None
+    if strong:
+        return strong
+    scoped_type, scoped_id, _basis = snapshot_scoped_identity(node, scan_id=scan_id)
+    return scoped_type, scoped_id, "snapshot_scoped_runtime_occurrence"

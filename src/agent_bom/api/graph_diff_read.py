@@ -5,10 +5,14 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import threading
+from collections import OrderedDict
+from dataclasses import replace
 from typing import Any
 
 from fastapi import HTTPException, Request
 
+from agent_bom.api.graph_node_alias import resolve_snapshot_node_id
 from agent_bom.api.routes.graph_routes import _runtime
 from agent_bom.graph.attack_path_queue import attack_path_rank_window
 from agent_bom.graph.completeness import graph_completeness
@@ -83,10 +87,48 @@ def _revision(store: Any, tenant: str, old: str, new: str, total: int) -> str:
     return hashlib.sha256(json.dumps([identities, total]).encode()).hexdigest()[:32]
 
 
+_ROWS_CACHE_SIZE = 8
+_rows_cache: OrderedDict[tuple[Any, ...], tuple[dict[str, Any], list[dict[str, Any]]]] = OrderedDict()
+_rows_cache_lock = threading.Lock()
+
+
+def _rows_cache_key(store: Any, tenant: str, old: str, new: str) -> tuple[Any, ...] | None:
+    """Both snapshot generations are in the key, so a replaced snapshot is never served stale."""
+    try:
+        generations = tuple(tuple(store.snapshot_identity(tenant_id=tenant, scan_id=scan, for_paging=True)) for scan in (old, new))
+    except NotImplementedError:
+        return None
+    return (id(store), tenant, old, new, generations)
+
+
 def _compute_rows(store: Any, tenant: str, old: str, new: str) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    key = _rows_cache_key(store, tenant, old, new)
+    if key is not None:
+        with _rows_cache_lock:
+            cached = _rows_cache.get(key)
+            if cached is not None:
+                _rows_cache.move_to_end(key)
+                return cached
     diff = store.diff_snapshots(old, new, tenant_id=tenant)
     changed = [str(entry) for entry in diff.get("nodes_changed") or [] if not isinstance(entry, dict)]
-    return diff, diff_rows(diff, changed_node_meta=_changed_node_meta(store, tenant, new, changed))
+    result = (diff, diff_rows(diff, changed_node_meta=_changed_node_meta(store, tenant, new, changed)))
+    if key is not None:
+        with _rows_cache_lock:
+            _rows_cache[key] = result
+            while len(_rows_cache) > _ROWS_CACHE_SIZE:
+                _rows_cache.popitem(last=False)
+    return result
+
+
+def _resolve_node_filter(store: Any, tenant: str, new_id: str, filters: DiffFilters) -> tuple[DiffFilters, str | None]:
+    if not filters.node_id:
+        return filters, None
+    canonical, resolved_from = resolve_snapshot_node_id(store, tenant_id=tenant, scan_id=new_id, node_id=filters.node_id)
+    return replace(filters, node_id=canonical), resolved_from
+
+
+def _resolution(resolved_from: str | None) -> dict[str, str]:
+    return {"resolved_from": resolved_from} if resolved_from else {}
 
 
 async def graph_diff_read(
@@ -115,8 +157,9 @@ async def graph_diff_read(
     tenant = _runtime._tenant(request)
     store = _runtime._get_graph_store_or_503()
     old_id, new_id = await _resolve_pair(store, tenant, old, new)
+    filters, resolved_from = await _runtime._graph_store_call(_resolve_node_filter, store, tenant, new_id, filters)
     diff, rows = await _runtime._graph_store_call(_compute_rows, store, tenant, old_id, new_id)
-    base: dict[str, Any] = {"schema_version": "v1", "old": old_id, "new": new_id, "view": view}
+    base: dict[str, Any] = {"schema_version": "v1", "old": old_id, "new": new_id, "view": view, **_resolution(resolved_from)}
 
     if view == "full":
         payload = await _runtime._graph_compute_call(full_view, diff, rows)

@@ -176,7 +176,10 @@ def project_databases(
         }
         if isinstance(db_classification, dict):
             db_attributes["content_classification"] = db_classification
-        node_id = f"cloud_resource:{provider}:database:{db_name}"
+        # Database names repeat across accounts and regions; the id carries both.
+        db_account, db_location = _clean_graph_part(db_attributes["account_id"]), _clean_graph_part(db_attributes["location"])
+        db_key = _clean_graph_part(db.get("id") or db.get("arn")) or db_name
+        node_id = f"cloud_resource:{provider}:database:{db_account}:{db_location}:{db_key}"
         graph.add_node(
             UnifiedNode(
                 id=node_id,

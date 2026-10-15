@@ -1,8 +1,9 @@
-"""Node ids replaced by asset canonicalization stay resolvable, per tenant."""
+"""Node ids replaced by asset canonicalization stay resolvable, per tenant and snapshot."""
 
 from __future__ import annotations
 
 import os
+import sqlite3
 import uuid
 
 import pytest
@@ -80,6 +81,42 @@ def test_trace_claim_naming_a_replaced_id_binds_to_the_canonical_node(tmp_path) 
     assert binding["alias_of"] == INVENTORY_ID
 
 
+def test_deleting_a_snapshot_removes_only_its_alias_bindings(tmp_path) -> None:
+    store = SQLiteGraphStore(tmp_path / "graph.db")
+    store.save_graph(_graph("tenant-a", "scan-1"))
+    store.save_graph(_graph("tenant-a", "scan-2"))
+
+    assert store.delete_snapshot(tenant_id="tenant-a", scan_id="scan-1") > 0
+
+    assert store.resolve_node_aliases(tenant_id="tenant-a", node_ids={INVENTORY_ID}, scan_id="scan-1") == {}
+    assert store.resolve_node_aliases(tenant_id="tenant-a", node_ids={INVENTORY_ID}, scan_id="scan-2") == {INVENTORY_ID: CANONICAL}
+
+
+def test_legacy_tenant_keyed_alias_table_is_rekeyed_by_snapshot(tmp_path) -> None:
+    path = tmp_path / "graph.db"
+    with sqlite3.connect(path) as conn:
+        conn.executescript(
+            """
+            CREATE TABLE graph_node_aliases (
+                tenant_id TEXT NOT NULL DEFAULT 'default', alias_id TEXT NOT NULL, canonical_id TEXT NOT NULL,
+                entity_type TEXT NOT NULL DEFAULT '', identity_version TEXT NOT NULL DEFAULT '',
+                scan_id TEXT NOT NULL DEFAULT '', updated_at TEXT NOT NULL DEFAULT '', PRIMARY KEY (tenant_id, alias_id)
+            );
+            CREATE INDEX idx_gna_canonical ON graph_node_aliases(tenant_id, canonical_id);
+            INSERT INTO graph_node_aliases VALUES ('tenant-a', 'old-id', 'canonical-id', 'cloud_resource', 'v', 'scan-0', 't0');
+            """
+        )
+
+    store = SQLiteGraphStore(path)
+    store.save_graph(_graph("tenant-a", "scan-1"))
+
+    with sqlite3.connect(path) as conn:
+        key = [row[1] for row in sorted(conn.execute("PRAGMA table_info(graph_node_aliases)"), key=lambda row: row[5]) if row[5]]
+    assert key == ["tenant_id", "scan_id", "alias_id"]
+    assert store.resolve_node_aliases(tenant_id="tenant-a", node_ids={"old-id"}, scan_id="scan-0") == {"old-id": "canonical-id"}
+    assert store.resolve_node_aliases(tenant_id="tenant-a", node_ids={INVENTORY_ID}, scan_id="scan-1") == {INVENTORY_ID: CANONICAL}
+
+
 @pytest.mark.skipif(not os.environ.get("AGENT_BOM_POSTGRES_URL"), reason="AGENT_BOM_POSTGRES_URL not set")
 def test_postgres_aliases_are_tenant_isolated() -> None:
     from agent_bom.api.postgres_common import reset_current_tenant, set_current_tenant
@@ -111,3 +148,22 @@ def test_postgres_aliases_are_tenant_isolated() -> None:
     finally:
         as_tenant(tenant_a, lambda: store.delete_tenant(tenant_id=tenant_a))
         as_tenant(tenant_b, lambda: store.delete_tenant(tenant_id=tenant_b))
+
+
+@pytest.mark.skipif(not os.environ.get("AGENT_BOM_POSTGRES_URL"), reason="AGENT_BOM_POSTGRES_URL not set")
+def test_postgres_alias_bindings_are_kept_per_snapshot() -> None:
+    from agent_bom.api.postgres_common import reset_current_tenant, set_current_tenant
+    from agent_bom.api.postgres_graph import PostgresGraphStore
+
+    store = PostgresGraphStore()
+    tenant = f"alias-s-{uuid.uuid4().hex[:8]}"
+    token = set_current_tenant(tenant)
+    try:
+        store.save_graph(_graph(tenant, "scan-1"))
+        store.save_graph(_graph(tenant, "scan-2"))
+        store.delete_snapshot(tenant_id=tenant, scan_id="scan-1")
+        assert store.resolve_node_aliases(tenant_id=tenant, node_ids={INVENTORY_ID}, scan_id="scan-1") == {}
+        assert store.resolve_node_aliases(tenant_id=tenant, node_ids={INVENTORY_ID}, scan_id="scan-2") == {INVENTORY_ID: CANONICAL}
+    finally:
+        store.delete_tenant(tenant_id=tenant)
+        reset_current_tenant(token)

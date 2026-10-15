@@ -86,24 +86,31 @@ class _AssetIndex:
     def resolve(self, row: dict[str, Any], entity: EntityType | None) -> str | None:
         asset, evidence = _dict(row.get("asset")), _dict(row.get("evidence"))
         identifier = _text(asset.get("identifier"))
-        for candidate in (row.get("node_id"), identifier, evidence.get("resource_id"), evidence.get("identity_id")):
+        # Producers record a node's id without its type prefix (an MCP server's graph uuid).
+        prefixed = f"{entity.value}:{identifier}" if entity is not None and identifier else None
+        for candidate in (row.get("node_id"), identifier, prefixed, evidence.get("resource_id"), evidence.get("identity_id")):
             if self._usable(candidate):
                 return str(candidate)
         if entity == EntityType.CLOUD_RESOURCE and identifier:
             provider = _text(asset.get("provider")) or _text(row.get("provider")) or _text(asset.get("location"))
-            resolved = _resolve_cloud_resource_node_id(self.graph, provider, identifier, alias_index=self.aliases)
+            account = _text(row.get("account_ref") or asset.get("account_ref"))
+            resolved = _resolve_cloud_resource_node_id(self.graph, provider, identifier, alias_index=self.aliases, account_id=account)
             if self._usable(resolved):
                 return resolved
         for key in (asset.get("canonical_id"), asset.get("stable_id")):
             matches = self.by_identity.get(key) if isinstance(key, str) else None
             if matches and len(matches) == 1:
                 return next(iter(matches))
-        name = _text(asset.get("name"))
-        if entity is not None and name:
-            matches = self.by_label.get((entity, name))
-            if matches and len(matches) == 1:
-                return next(iter(matches))
         return None
+
+    def label_candidates(self, row: dict[str, Any], entity: EntityType | None, asset_id: str) -> list[str]:
+        """Same-label nodes a name-only row may describe; a display name proposes, never binds."""
+        asset = _dict(row.get("asset"))
+        name = _text(asset.get("name"))
+        qualified = any(_text(asset.get(key)) for key in ("identifier", "canonical_id", "stable_id"))
+        if entity is None or not name or qualified:
+            return []
+        return sorted(node_id for node_id in self.by_label.get((entity, name), ()) if node_id != asset_id)
 
 
 def _asset_entity(row: dict[str, Any]) -> EntityType | None:
@@ -243,6 +250,22 @@ def _new_node(row: dict[str, Any], node_id: str, collector: str) -> UnifiedNode:
     )
 
 
+def _propose_label_matches(graph: UnifiedGraph, asset: UnifiedNode, candidates: list[str], collector: str) -> None:
+    spec = relationship_spec(RelationshipType.POSSIBLY_CORRELATES_WITH)
+    for candidate_id in candidates:
+        candidate = graph.nodes.get(candidate_id)
+        if candidate is None or spec is None or not spec.allows(asset.entity_type, candidate.entity_type):
+            continue
+        graph.add_edge(
+            UnifiedEdge(
+                source=asset.id,
+                target=candidate_id,
+                relationship=RelationshipType.POSSIBLY_CORRELATES_WITH,
+                evidence=edge_evidence(collector, "derived", "finding_row", derived_via="label_match"),
+            )
+        )
+
+
 def project_finding_rows(graph: UnifiedGraph, findings: Any) -> None:
     """Give every finding row a node with its compliance tags, attached to its asset."""
     if not isinstance(findings, list):
@@ -275,11 +298,12 @@ def project_finding_rows(graph: UnifiedGraph, findings: Any) -> None:
             asset_id = _ensure_asset_node(graph, row, entity, collector)
         asset = graph.nodes.get(asset_id) if asset_id else None
         edge = _edge_for(node, asset) if asset is not None else None
-        if edge is None:
+        if asset is None or edge is None:
             continue
         source, target, relationship = edge
         graph.add_edge(UnifiedEdge(source=source, target=target, relationship=relationship, evidence=_evidence(row, collector, tier)))
-        if asset is not None and asset.entity_type in _OBSERVED_ASSETS and collector not in asset.data_sources:
+        _propose_label_matches(graph, asset, index.label_candidates(row, entity, asset.id), collector)
+        if asset.entity_type in _OBSERVED_ASSETS and collector not in asset.data_sources:
             # A posture source that names a cloud asset is one more observation of it.
             asset.data_sources.append(collector)
 

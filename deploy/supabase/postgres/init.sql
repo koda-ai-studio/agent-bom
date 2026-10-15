@@ -625,7 +625,7 @@ CREATE INDEX IF NOT EXISTS idx_pg_graph_attack_paths_source
     ON graph_attack_paths(tenant_id, scan_id, source_node, rank_index);
 CREATE INDEX IF NOT EXISTS idx_pg_graph_attack_paths_queue ON graph_attack_paths(tenant_id, scan_id, queue_rank);
 
--- Source node ids replaced by asset canonicalization, per tenant.
+-- Source node ids replaced by asset canonicalization, per tenant and snapshot.
 CREATE TABLE IF NOT EXISTS graph_node_aliases (
     tenant_id        TEXT NOT NULL DEFAULT 'default',
     alias_id         TEXT NOT NULL,
@@ -634,10 +634,11 @@ CREATE TABLE IF NOT EXISTS graph_node_aliases (
     identity_version TEXT NOT NULL DEFAULT '',
     scan_id          TEXT NOT NULL DEFAULT '',
     updated_at       TEXT NOT NULL DEFAULT '',
-    PRIMARY KEY (tenant_id, alias_id)
+    PRIMARY KEY (tenant_id, scan_id, alias_id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_pg_graph_node_aliases_canonical ON graph_node_aliases(tenant_id, canonical_id);
+CREATE INDEX IF NOT EXISTS idx_pg_graph_node_aliases_alias ON graph_node_aliases(tenant_id, alias_id, updated_at);
 
 CREATE TABLE IF NOT EXISTS graph_filter_presets (
     name        TEXT NOT NULL,

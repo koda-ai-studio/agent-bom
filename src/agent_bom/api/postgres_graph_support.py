@@ -18,7 +18,7 @@ from agent_bom.graph.correlation import GraphCorrelationRun
 
 # Keep the historical logger name so log routing and filters are unchanged.
 logger = logging.getLogger("agent_bom.api.postgres_graph")
-_GRAPH_STORAGE_SCHEMA_VERSION = 9
+_GRAPH_STORAGE_SCHEMA_VERSION = 10
 _DB_NOW_ISO = "to_char(now() AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"')"
 _DB_LEASE_ISO = "to_char(now() AT TIME ZONE 'UTC' + (%s * INTERVAL '1 second'), 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"')"
 
@@ -84,6 +84,7 @@ _GRAPH_RETENTION_PURGE_TABLES = (
     "interaction_risks",
     "graph_edges",
     "graph_nodes",
+    "graph_node_aliases",
     "graph_snapshots",
 )
 _GRAPH_TENANT_TABLE_KEYS: dict[str, tuple[str, ...]] = {
@@ -95,7 +96,7 @@ _GRAPH_TENANT_TABLE_KEYS: dict[str, tuple[str, ...]] = {
     "interaction_risks": ("pattern", "agents", "scan_id"),
     "graph_filter_presets": ("name",),
     "graph_node_search": ("node_id", "scan_id"),
-    "graph_node_aliases": ("alias_id",),
+    "graph_node_aliases": ("alias_id", "scan_id"),
 }
 
 

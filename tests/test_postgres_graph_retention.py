@@ -227,6 +227,7 @@ def postgres_delete_snapshot_tables() -> tuple[str, ...]:
         "interaction_risks",
         "graph_edges",
         "graph_nodes",
+        "graph_node_aliases",
         "graph_snapshots",
     )
 

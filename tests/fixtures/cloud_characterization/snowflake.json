@@ -528,7 +528,7 @@
          "declared_capabilities": [],
          "schema_findings": [],
          "schema_rule_findings": [],
-         "server_canonical_id": "af7ce2e8-788f-55ec-b1d5-09f780eb0caf"
+         "server_canonical_id": "c415432e-34ce-5a86-97c9-9d3913466385"
         },
         {
          "name": "my_execute_sql_helper",
@@ -542,7 +542,7 @@
          "declared_capabilities": [],
          "schema_findings": [],
          "schema_rule_findings": [],
-         "server_canonical_id": "af7ce2e8-788f-55ec-b1d5-09f780eb0caf"
+         "server_canonical_id": "c415432e-34ce-5a86-97c9-9d3913466385"
         },
         {
          "name": "search_docs",
@@ -556,7 +556,7 @@
          "declared_capabilities": [],
          "schema_findings": [],
          "schema_rule_findings": [],
-         "server_canonical_id": "af7ce2e8-788f-55ec-b1d5-09f780eb0caf"
+         "server_canonical_id": "c415432e-34ce-5a86-97c9-9d3913466385"
         }
        ],
        "resources": [],

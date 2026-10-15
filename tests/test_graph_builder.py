@@ -920,13 +920,17 @@ class TestCISMisconfigNodes:
                         "resource_id": f"arn:aws:{resource_type}:::prod",
                         "resource_name": "prod",
                         "resource_type": resource_type,
+                        "account_id": "111111111111",
                     },
                     dimensions=NodeDimensions(cloud_provider="aws"),
                 )
             )
 
-        assert _resolve_cloud_resource_node_id(graph, "aws", "prod") is None
-        assert _resolve_cloud_resource_node_id(graph, "aws", "bucket/prod") == "cloud_resource:aws:bucket:prod"
+        assert _resolve_cloud_resource_node_id(graph, "aws", "prod", account_id="111111111111") is None
+        # A short name proves nothing outside an account, so it binds only when one is named.
+        assert _resolve_cloud_resource_node_id(graph, "aws", "bucket/prod") is None
+        assert _resolve_cloud_resource_node_id(graph, "aws", "bucket/prod", account_id="222222222222") is None
+        assert _resolve_cloud_resource_node_id(graph, "aws", "bucket/prod", account_id="111111111111") == "cloud_resource:aws:bucket:prod"
 
 
 class TestSASTNodes:

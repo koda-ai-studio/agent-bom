@@ -14,6 +14,7 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
+from agent_bom.api.graph_node_alias import resolve_snapshot_node_id
 from agent_bom.graph.completeness import impact_completeness
 from agent_bom.graph.reach_view import reach_interpretation
 from agent_bom.graph.types import EntityType
@@ -164,12 +165,15 @@ async def _graph_reach(store: Any, query: _ReachQuery, truncate: Any) -> str:
     pinned_scan_id, generation = identity
     if query.generation is not None and query.generation != generation:
         return _invalid("Graph snapshot changed; restart the query from its first page.", "cursor")
+    node_id, resolved_from = await asyncio.to_thread(
+        resolve_snapshot_node_id, store, tenant_id=query.tenant_id, scan_id=pinned_scan_id, node_id=query.node_id
+    )
     walk = await asyncio.to_thread(
         _walk,
         store,
         tenant_id=query.tenant_id,
         scan_id=pinned_scan_id,
-        node_id=query.node_id,
+        node_id=node_id,
         direction=query.direction,
         max_depth=query.max_depth,
     )
@@ -188,7 +192,8 @@ async def _graph_reach(store: Any, query: _ReachQuery, truncate: Any) -> str:
         "tenant_id": query.tenant_id,
         "scan_id": pinned_scan_id,
         "snapshot_generation": generation,
-        "node_id": query.node_id,
+        "node_id": node_id,
+        "resolved_from": resolved_from,
         "direction": query.direction,
         "max_depth": query.max_depth,
         "entity_types": query.entity_types,

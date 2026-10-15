@@ -30,7 +30,7 @@ DEFAULT_GRAPH_TENANT_ID = "default"
 GRAPH_SNAPSHOT_KINDS = frozenset({"scan", "correlation"})
 
 
-_GRAPH_SCHEMA_VERSION = 9
+_GRAPH_SCHEMA_VERSION = 10
 
 
 _DEFAULT_GRAPH_WRITE_BATCH_SIZE = 1000
@@ -70,7 +70,7 @@ _GRAPH_TENANT_TABLE_KEYS: dict[str, tuple[str, ...]] = {
     "graph_correlation_runs": ("correlation_id",),
     "attack_paths": ("path_key", "scan_id"),
     "interaction_risks": ("pattern", "agents", "scan_id"),
-    "graph_node_aliases": ("alias_id",),
+    "graph_node_aliases": ("alias_id", "scan_id"),
 }
 
 
@@ -336,6 +336,7 @@ _GRAPH_PURGEABLE_TABLES = (
     "interaction_risks",
     "graph_edges",
     "graph_nodes",
+    "graph_node_aliases",
     "graph_snapshots",
 )
 

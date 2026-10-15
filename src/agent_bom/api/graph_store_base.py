@@ -184,14 +184,14 @@ class SQLiteGraphStoreBase:
         finally:
             select_cur.close()
 
-    def resolve_node_aliases(self, *, tenant_id: str = "", node_ids: Iterable[str]) -> dict[str, str]:
-        """Map node ids that canonicalization replaced to their canonical id, within one tenant."""
+    def resolve_node_aliases(self, *, tenant_id: str = "", node_ids: Iterable[str], scan_id: str = "") -> dict[str, str]:
+        """Map node ids that canonicalization replaced to their canonical id, within one tenant and snapshot."""
         tenant_id = sqlite_graph_store.normalize_graph_tenant_id(tenant_id)
         conn = self._open_ro_conn()
         if conn is None:
             return {}
         try:
-            return resolve_node_aliases(conn, tenant_id=tenant_id, node_ids=node_ids)
+            return resolve_node_aliases(conn, tenant_id=tenant_id, node_ids=node_ids, scan_id=scan_id)
         finally:
             conn.close()
 
@@ -239,6 +239,7 @@ class SQLiteGraphStoreBase:
                 "interaction_risks",
                 "graph_edges",
                 "graph_nodes",
+                "graph_node_aliases",
                 "graph_snapshots",
             ):
                 cursor = conn.execute(

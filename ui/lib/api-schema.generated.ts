@@ -4577,11 +4577,9 @@ export interface paths {
          * Get Graph Incident Edges
          * @description Page recorded incident relationships without loading the full neighborhood.
          *
-         *     Reuse scan_id and snapshot_generation on every node expansion to avoid mixing
-         *     snapshots. Keep node_id and direction fixed while following next_cursor.
-         *     Snapshot replacement invalidates cursors; restart from the first page on 400.
-         *     Completeness describes only recorded page rows, never source collection,
-         *     permissions, execution, or the whole estate. Total relationship count is unknown.
+         *     Reuse scan_id and snapshot_generation on every node expansion; keep node_id and direction fixed while following next_cursor.
+         *     Snapshot replacement invalidates cursors (400: restart). A replaced id resolves to its canonical node, echoed as resolved_from.
+         *     Completeness covers only recorded page rows, never collection, permissions, execution or the estate; the total is unknown.
          */
         get: operations["get_graph_incident_edges_v1_graph_incident_edges_get"];
         put?: never;
@@ -16384,6 +16382,8 @@ export interface components {
             node: {
                 [key: string]: unknown;
             };
+            /** Resolved From */
+            resolved_from?: string | null;
             /** Scan Id */
             scan_id: string;
             /** Snapshot Generation */
@@ -17229,6 +17229,8 @@ export interface components {
             nodes: {
                 [key: string]: unknown;
             }[];
+            /** Resolved From */
+            resolved_from?: string | null;
             /** Scan Id */
             scan_id: string;
             /** Snapshot Generation */

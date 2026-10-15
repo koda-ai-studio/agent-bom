@@ -14737,6 +14737,11 @@ components:
           additionalProperties: true
           title: Node
           type: object
+        resolved_from:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Resolved From
         scan_id:
           title: Scan Id
           type: string
@@ -16239,6 +16244,11 @@ components:
             type: object
           title: Nodes
           type: array
+        resolved_from:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Resolved From
         scan_id:
           title: Scan Id
           type: string
@@ -42918,15 +42928,14 @@ paths:
         neighborhood.
 
 
-        Reuse scan_id and snapshot_generation on every node expansion to avoid mixing
+        Reuse scan_id and snapshot_generation on every node expansion; keep node_id
+        and direction fixed while following next_cursor.
 
-        snapshots. Keep node_id and direction fixed while following next_cursor.
+        Snapshot replacement invalidates cursors (400: restart). A replaced id resolves
+        to its canonical node, echoed as resolved_from.
 
-        Snapshot replacement invalidates cursors; restart from the first page on 400.
-
-        Completeness describes only recorded page rows, never source collection,
-
-        permissions, execution, or the whole estate. Total relationship count is unknown.'
+        Completeness covers only recorded page rows, never collection, permissions,
+        execution or the estate; the total is unknown.'
       operationId: get_graph_incident_edges_v1_graph_incident_edges_get
       parameters:
       - description: Exact canonical node ID

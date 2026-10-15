@@ -20,6 +20,7 @@ from typing import Any, Protocol
 from agent_bom.core.severity import SEVERITY_RANK
 from agent_bom.event_normalization import build_event_ref, build_event_relationships
 from agent_bom.graph.container import UnifiedGraph
+from agent_bom.graph.interaction_risk_ids import interaction_risk_agent_ids
 from agent_bom.graph.risk_scale import RISK_SCALE_MAX
 from agent_bom.graph.types import EntityType
 from agent_bom.posture_streaming import PostureEvent, WebhookDestination, WebhookOutbox, default_webhook_outbox
@@ -238,7 +239,7 @@ def compute_delta_alerts(
     for risk in new_graph.interaction_risks:
         key = (risk.pattern, tuple(sorted(risk.agents)))
         if key not in old_risk_keys and risk.risk_score >= 7.0:
-            node_ids = [f"agent:{a}" for a in risk.agents]
+            node_ids = interaction_risk_agent_ids(risk, new_graph)
             details = {
                 "node_ids": node_ids,
                 "scan_id": new_graph.scan_id,

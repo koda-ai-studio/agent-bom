@@ -107,7 +107,7 @@ def to_ocsf_batch(
 # Syslog facility: 1 = user-level
 _FACILITY = 1
 
-# OCSF severity → syslog severity (RFC 5424 §6.2.1) — from graph_schema
+# OCSF severity → syslog severity (RFC 5424 §6.2.1) — from agent_bom.core.severity
 _SYSLOG_SEVERITY = OCSF_TO_SYSLOG
 
 
