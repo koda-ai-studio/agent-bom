@@ -196,6 +196,11 @@ def _apply_vex(opts: ScanOptions, st: ScanState) -> None:
         st.report.vex_data = _vex_to_ser(_vex_doc)
         if not opts.quiet:
             st.con.print(f"  [green]✓[/green] VEX applied: {_vex_count} vulnerabilities updated from {opts.vex_path}")
+            if _vex_count:
+                st.con.print(
+                    "    [dim]VEX statuses are recorded as evidence; findings stay active in totals and exit-code"
+                    " gates until an admin approves a scoped exception.[/dim]"
+                )
 
 
 def _detect_toxic_combinations(opts: ScanOptions, st: ScanState) -> None:
