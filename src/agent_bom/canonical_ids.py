@@ -92,16 +92,20 @@ def legacy_agent_id_v1(agent_type: str, name: str, *, source: str = "", config_p
 
 
 def normalize_command_arg(arg: str) -> str:
-    """Normalize a server command argument for identity comparison."""
+    """Normalize a server command argument for identity comparison.
+
+    Case is preserved: on case-sensitive filesystems ``/srv/TeamA`` and
+    ``/srv/teama`` are different scripts.
+    """
     text = str(arg).strip()
     if not text:
         return ""
     if text.startswith(("/", "~", ".")):
         try:
-            return os.path.normpath(os.path.expanduser(text)).lower()
+            return os.path.normpath(os.path.expanduser(text))
         except (OSError, ValueError):
-            return text.lower()
-    return text.lower()
+            return text
+    return text
 
 
 def mcp_server_identity_discriminator(
@@ -124,7 +128,7 @@ def mcp_server_identity_discriminator(
         path = parsed.path.rstrip("/")
         return f"url:{urlunparse((parsed.scheme.lower(), netloc, path, '', '', ''))}"
 
-    cmd = Path(command or "").name.lower().strip()
+    cmd = Path(command or "").name.strip()
     normalized_args = tuple(value for value in (normalize_command_arg(arg) for arg in (args or [])) if value)
     if cmd or normalized_args:
         arg_str = " ".join(normalized_args)
@@ -146,10 +150,11 @@ def canonical_mcp_server_id(
     args: Sequence[str] | None = None,
 ) -> str:
     if registry_id:
-        identifier = registry_id
-    else:
-        identifier = mcp_server_identity_discriminator(name, command, url=url, args=args)
-    return canonical_id("mcp_server", identifier)
+        return canonical_id("mcp_server", registry_id)
+    identifier = mcp_server_identity_discriminator(name, command, url=url, args=args).strip()
+    # canonical_id lower-cases every part; URL paths and local paths/args are
+    # case-sensitive, so only the discriminator's own normalization applies.
+    return str(uuid.uuid5(AGENT_BOM_ID_NAMESPACE, f"mcp_server:{identifier}"))
 
 
 _AGENT_SCOPE_KEYS = ("source_id", "endpoint_id", "device_id")
