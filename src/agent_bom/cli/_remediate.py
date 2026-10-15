@@ -270,7 +270,9 @@ def remediate_cmd(
     runtime_console = _make_console(quiet=quiet or (output_format != "console"), output_format=output_format)
     output_console = _make_console()
     _sync_runtime_consoles(runtime_console)
+    previous_console = output_mod.console
     output_mod.console = output_console
+    click.get_current_context().call_on_close(lambda: setattr(output_mod, "console", previous_console))
 
     if open_pr and not apply_changes:
         raise click.ClickException("--open-pr requires --apply")

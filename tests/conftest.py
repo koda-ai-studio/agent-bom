@@ -752,6 +752,9 @@ def _restore_store_singletons(snapshot: list[tuple[Any, str, Any]]) -> None:
             pass
 
 
+_OUTPUT_CONSOLE_BASELINE: Any = None
+
+
 def _snapshot_output_console() -> Any:
     """Capture the shared Rich console the CLI renders through.
 
@@ -762,14 +765,18 @@ def _snapshot_output_console() -> Any:
     console into later CLI tests, whose output then lands in the stale console
     instead of Click's captured stdout — surfacing as empty ``result.output``
     (e.g. test_diff_quiet_prints_compact_summary asserting on missing text).
-    Snapshot the barrel console and restore it verbatim after each test.
+    Restore the console captured before the first test, not a per-test
+    snapshot: once one test leaks, every later per-test snapshot is the leak.
     """
-    try:
-        import agent_bom.output as output_mod
+    global _OUTPUT_CONSOLE_BASELINE
+    if _OUTPUT_CONSOLE_BASELINE is None:
+        try:
+            import agent_bom.output as output_mod
 
-        return getattr(output_mod, "console", None)
-    except Exception:
-        return None
+            _OUTPUT_CONSOLE_BASELINE = getattr(output_mod, "console", None)
+        except Exception:
+            return None
+    return _OUTPUT_CONSOLE_BASELINE
 
 
 def _restore_output_console(console_obj: Any) -> None:

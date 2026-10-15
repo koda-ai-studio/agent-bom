@@ -104,6 +104,17 @@ def test_remediate_demo_offline_runs():
     assert result.exit_code == 0, result.output
 
 
+def test_remediate_restores_the_shared_output_console():
+    import agent_bom.output as output_mod
+
+    before = output_mod.console
+    runner = CliRunner()
+    with _patch_scan():
+        result = runner.invoke(remediate_cmd, ["--demo", "--offline"])
+    assert result.exit_code == 0
+    assert output_mod.console is before
+
+
 def test_default_scan_restores_offline_mode_on_discovery_error(monkeypatch):
     """Helper scans must not leak process-global offline mode after failures."""
     import agent_bom.scanners as scanners

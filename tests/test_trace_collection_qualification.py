@@ -17,7 +17,7 @@ def test_qualification_reconciles_native_scoped_records(tmp_path):
     # The harness intentionally configures process-global stores and auth.
     root = Path(__file__).resolve().parents[1]
     output = tmp_path / "qualification"
-    subprocess.run(
+    completed = subprocess.run(
         [
             sys.executable,
             "-c",
@@ -49,10 +49,11 @@ assert limits == {2}, limits
         ],
         cwd=root,
         env={**os.environ, "PYTHONPATH": os.pathsep.join((str(root / "src"), str(root)))},
-        check=True,
         capture_output=True,
+        text=True,
         timeout=60,
     )
+    assert completed.returncode == 0, completed.stderr[-4000:]
     receipt = json.loads((output / "receipt.json").read_text())
     assert receipt["failed_requests"] == 0
     assert receipt["reconciled"] is True
