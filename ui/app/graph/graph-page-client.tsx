@@ -2366,7 +2366,7 @@ function GraphPageInner() {
   const fitVisible = useCallback(() => {
     // Reserve room for readability-sized cards as their glyphs settle at the
     // new zoom, without a second camera movement after a user starts clicking.
-    void reactFlow.fitView({ ...viewportOptions, padding: Math.max(0.16, viewportOptions.padding), duration: 240 });
+    void reactFlow.fitView({ ...viewportOptions, padding: Math.max(0.2, viewportOptions.padding), duration: 240 });
   }, [reactFlow, viewportOptions]);
   const fitSelection = useCallback(async () => {
     if (rollupNavigationActive) {
