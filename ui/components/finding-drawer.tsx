@@ -46,6 +46,7 @@ export function FindingDrawer({
   onTriageDecision,
   onClose,
   lens = "ops",
+  scanId,
 }: {
   vuln: EnrichedVuln;
   triage: FindingTriageItem | undefined;
@@ -57,6 +58,7 @@ export function FindingDrawer({
   ) => void;
   onClose: () => void;
   lens?: FindingsLens | undefined;
+  scanId?: string | undefined;
 }) {
   const { hasCapability } = useAuthState();
   const canManageExceptions = hasCapability("exceptions.manage");
@@ -91,7 +93,7 @@ export function FindingDrawer({
         ariaLabel="Finding detail views"
       />
 
-      {tab === "overview" ? <OverviewTab vuln={vuln} /> : null}
+      {tab === "overview" ? <OverviewTab vuln={vuln} scanId={scanId} /> : null}
       {tab === "evidence" ? <EvidenceTab vuln={vuln} /> : null}
       {tab === "triage" ? (
         <TriageTab
@@ -109,7 +111,7 @@ export function FindingDrawer({
 
 // ── Overview ──────────────────────────────────────────────────────────────────
 
-function OverviewTab({ vuln }: { vuln: EnrichedVuln }) {
+function OverviewTab({ vuln, scanId }: { vuln: EnrichedVuln; scanId?: string | undefined }) {
   const scope = findingWorkloadScope(vuln);
   const summary = vuln.attack_vector_summary ?? vuln.summary ?? vuln.description ?? "No advisory summary available.";
   const fixCandidates = vuln.remediation_items.filter((item) => item.fixed_version || item.command || item.verify_command);
@@ -140,7 +142,7 @@ function OverviewTab({ vuln }: { vuln: EnrichedVuln }) {
         {fixValue || guidance ? <p className="mt-1 text-xs text-ink-secondary">Apply the fix, then rescan the affected asset to verify the result.</p> : null}
         <div className="mt-3 flex flex-wrap gap-3">
           {fixValue || guidance || fixCandidates.length ? (
-            <Link href={remediationHref({ q: vuln.id })} className="rounded-lg bg-accent-mint px-3 py-2 text-sm font-medium text-black">
+            <Link href={remediationHref({ q: vuln.id, scan: scanId || undefined })} className="rounded-lg bg-accent-mint px-3 py-2 text-sm font-medium text-black">
               Review remediation
             </Link>
           ) : null}

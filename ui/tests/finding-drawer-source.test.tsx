@@ -104,3 +104,12 @@ it("keeps the generic next action only when no remediation is recorded", () => {
   render(<FindingDrawer vuln={base} triage={undefined} triageBusy={false} onTriageDecision={vi.fn()} onClose={vi.fn()} />);
   expect(screen.getByText("Review the evidence and determine the appropriate fix.")).toBeVisible();
 });
+
+it("keeps the pinned scan on the remediation link", () => {
+  const fixable = { ...base, fixed_version: "5.4" };
+  const { unmount } = render(<FindingDrawer vuln={fixable} scanId="scan-pinned" triage={undefined} triageBusy={false} onTriageDecision={vi.fn()} onClose={vi.fn()} />);
+  expect(screen.getByRole("link", { name: "Review remediation" })).toHaveAttribute("href", "/remediation?q=CVE-2020-14343&scan=scan-pinned");
+  unmount();
+  render(<FindingDrawer vuln={{ ...fixable, scan_id: "origin-scan" }} triage={undefined} triageBusy={false} onTriageDecision={vi.fn()} onClose={vi.fn()} />);
+  expect(screen.getByRole("link", { name: "Review remediation" })).toHaveAttribute("href", "/remediation?q=CVE-2020-14343");
+});
