@@ -2312,7 +2312,7 @@ function GraphPageInner() {
         : viewportOptions;
       // Scenario views share width with the decision panel and app navigation.
       // Allow the complete proposed context to fit shorter desktop canvases.
-      if (selectedScenarioId) return { ...options, minZoom: 0.05, maxZoom: 1 };
+      if (selectedScenarioId) return { ...options, padding: Math.max(0.2, options.padding), minZoom: 0.05, maxZoom: 1 };
       if (compactInvestigationTopology && !narrowViewport) return { ...options, minZoom: 0.05, maxZoom: displayNodes.length <= 6 ? 2 : 1 };
       return rollupNavigationActive ? { ...viewportOptions, minZoom: 0.05, maxZoom: 1 } : selectedScenarioId && !scenarioExpanded ? { ...options, minZoom: 0.75, maxZoom: 1 } : options;
     },
