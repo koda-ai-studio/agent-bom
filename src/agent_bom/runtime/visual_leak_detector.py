@@ -6,7 +6,7 @@ credentials, PII, customer data, and internal URLs through pixels.
 ``CredentialLeakDetector`` only scans text responses; this detector
 closes the visual channel.
 
-Design: see ``docs/SECURITY_AUTH_TENANCY_AUDIT.md`` §Appendix and
+Design: see ``docs/RUNTIME_REFERENCE.md`` and
 issue #1568.
 
 Opt-in install:

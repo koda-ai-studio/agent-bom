@@ -117,7 +117,7 @@ the caller wants to explore or to invoke — not by whether it is human.
 
 - No managed multi-tenant SaaS.
 - No 1,000+ verified MCP app connectors — govern **your** upstream MCP servers via proxy/gateway.
-- No Cedar policy engine — YAML/conditional rules + firewall plugins (see `docs/archive/ROADMAP_QUICK_WINS.md`).
+- No Cedar policy engine — YAML/conditional rules + firewall plugins.
 - No turnkey CrowdStrike/SIEM tiles — OCSF/OTLP export hooks; operator wires SIEM.
 
 ## Runtime surfaces
