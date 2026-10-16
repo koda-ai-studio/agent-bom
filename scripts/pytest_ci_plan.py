@@ -517,6 +517,7 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
                     "tests/api/test_no_ui_and_auth_posture.py",
                     "tests/api/test_api_auth_boundary.py",
                     "tests/api/test_public_operation_authorization.py",
+                    "tests/api/test_operation_scope_coverage.py",
                     "tests/api/test_auth_contract_matrix.py",
                     "tests/test_dashboard_release_packaging.py",
                     "tests/test_cli_serve_auth_enforce.py",

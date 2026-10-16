@@ -46,6 +46,13 @@ def _exported_relative_paths() -> list[str]:
     return paths
 
 
+@pytest.fixture(autouse=True)
+def _isolate_dashboard_mount_registry(monkeypatch):
+    # Mounting a fixture app must not change public routes on the process app.
+    monkeypatch.setattr(middleware_module, "_DASHBOARD_SPA_ROUTES", middleware_module._DASHBOARD_SPA_ROUTES)
+    monkeypatch.setattr(middleware_module, "_DASHBOARD_PUBLIC_FILES", middleware_module._DASHBOARD_PUBLIC_FILES)
+
+
 @pytest.fixture
 def _registered_spa_routes(monkeypatch):
     monkeypatch.setattr(
