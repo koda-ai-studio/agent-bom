@@ -56,6 +56,14 @@ def normalize_package_ecosystem(ecosystem: str) -> str:
     return _PURL_TYPE_ALIASES.get(eco, eco)
 
 
+def package_lookup_names(name: str, ecosystem: str) -> tuple[str, ...]:
+    """Equivalent native/PURL spellings without folding case-sensitive names."""
+    name = normalize_package_name(name, ecosystem)
+    if normalize_package_ecosystem(ecosystem) == "maven" and "/" in name:
+        return name, name.replace("/", ":", 1)
+    return (name,)
+
+
 def legacy_package_lookup_names(name: str, ecosystem: str) -> tuple[str, ...]:
     """Lossy pre-v8 DB spellings, usable only as unverified migration candidates."""
     eco = normalize_package_ecosystem(ecosystem)

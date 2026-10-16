@@ -404,6 +404,9 @@ def test_unverified_scanner_match_survives_postgres_api_replay(migrated_fresh_da
         # Fresh store instances read database receipts, not writer-side objects.
         monkeypatch.setattr(stores, "_store", PostgresJobStore())
         monkeypatch.setattr(stores, "_graph_store", PostgresGraphStore())
+        # A previous migration test may have built middleware against a pool
+        # that its fixture closed. Bind this request stack to this fresh database.
+        monkeypatch.setattr(app, "middleware_stack", None)
         client = TestClient(app)
         response = client.get("/v1/findings", params={"q": "CVE-2026-1234", "window_days": 0})
         assert response.status_code == 200

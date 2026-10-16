@@ -21,7 +21,7 @@ from typing import Optional
 
 from agent_bom.advisory_ids import MATCH_CONFIDENCE_UNVERIFIED_RANGE
 from agent_bom.api.tracing import get_tracer
-from agent_bom.core.packages import legacy_package_lookup_names, normalize_package_name
+from agent_bom.core.packages import legacy_package_lookup_names, normalize_package_name, package_lookup_names
 from agent_bom.core.versions.osv import range_match_state
 from agent_bom.os_advisory import OS_DISTRO_COMPARATOR_FAMILIES
 
@@ -175,6 +175,8 @@ def lookup_package(
     """
     norm_name = normalize_package_name(name, ecosystem)
     eco_lower = ecosystem.lower()
+    exact_names = package_lookup_names(norm_name, ecosystem)
+    exact_slots = ", ".join("?" for _ in exact_names)
     legacy_names = (norm_name, *legacy_package_lookup_names(norm_name, ecosystem))
     legacy_slots = ", ".join("?" for _ in legacy_names)
 
@@ -195,10 +197,11 @@ def lookup_package(
             JOIN vulns v ON v.id = a.vuln_id
             LEFT JOIN epss_scores e ON e.cve_id = v.id
             LEFT JOIN kev_entries k ON k.cve_id = v.id
-            WHERE a.ecosystem = ? AND (a.package_name = ? OR ({limit_projection} IS NULL AND a.package_name IN ({legacy_slots})))
+            WHERE a.ecosystem = ? AND (a.package_name IN ({exact_slots})
+                OR ({limit_projection} IS NULL AND a.package_name IN ({legacy_slots})))
             ORDER BY v.cvss_score DESC NULLS LAST
             """,  # nosec B608 - projection is one of two static SQL literals; values are bound
-            (eco_lower, norm_name, *legacy_names),
+            (eco_lower, *exact_names, *legacy_names),
         ).fetchall()
 
         epss_map, kev_map = _load_cve_enrichment(conn, rows)
@@ -486,8 +489,9 @@ def _select_vulnerability_rows(rows: list[sqlite3.Row], version: Optional[str]) 
 
 def _package_rows_with_legacy_candidates(grouped: dict[tuple[str, str], list[sqlite3.Row]], ecosystem: str, name: str) -> list[sqlite3.Row]:
     name = normalize_package_name(name, ecosystem)
-    rows = list(grouped.get((ecosystem.lower(), name), []))
-    for legacy in legacy_package_lookup_names(name, ecosystem):
+    exact_names = package_lookup_names(name, ecosystem)
+    rows = [row for value in exact_names for row in grouped.get((ecosystem.lower(), value), [])]
+    for legacy in set(legacy_package_lookup_names(name, ecosystem)) - set(exact_names):
         rows.extend(row for row in grouped.get((ecosystem.lower(), legacy), []) if row["limit_version"] is None)
     return rows
 
@@ -496,7 +500,9 @@ def _lookup_pairs(packages: list[tuple[str, str, str]]) -> list[tuple[str, str]]
     pairs: set[tuple[str, str]] = set()
     for ecosystem, name, _ in packages:
         name = normalize_package_name(name, ecosystem)
-        pairs.update((ecosystem.lower(), value) for value in (name, *legacy_package_lookup_names(name, ecosystem)))
+        pairs.update(
+            (ecosystem.lower(), value) for value in (*package_lookup_names(name, ecosystem), *legacy_package_lookup_names(name, ecosystem))
+        )
     return sorted(pairs)
 
 
@@ -589,10 +595,11 @@ def package_in_db(conn: sqlite3.Connection, ecosystem: str, name: str) -> bool:
     """
     if _limit_projection(conn) == "NULL":
         return False
-    norm_name = normalize_package_name(name, ecosystem)
+    names = package_lookup_names(name, ecosystem)
+    slots = ", ".join("?" for _ in names)
     row = conn.execute(
-        "SELECT 1 FROM affected WHERE ecosystem = ? AND package_name = ? AND limit_version IS NOT NULL LIMIT 1",
-        (ecosystem.lower(), norm_name),
+        f"SELECT 1 FROM affected WHERE ecosystem = ? AND package_name IN ({slots}) AND limit_version IS NOT NULL LIMIT 1",  # nosec B608
+        (ecosystem.lower(), *names),
     ).fetchone()
     return row is not None
 
@@ -608,7 +615,7 @@ def package_in_db_batch(
     if _limit_projection(conn) == "NULL":
         return set()
     normalized = {(ecosystem.lower(), normalize_package_name(name, ecosystem)) for ecosystem, name in packages}
-    pairs = list(normalized)
+    pairs = list({(eco, alias) for eco, name in normalized for alias in package_lookup_names(name, eco)})
     chunk_size = 400
     present: set[tuple[str, str]] = set()
 
@@ -623,7 +630,10 @@ def package_in_db_batch(
             FROM affected
             WHERE (ecosystem, package_name) IN (VALUES {placeholders}) AND limit_version IS NOT NULL
         """  # nosec B608
-        present.update((row["ecosystem"], row["package_name"]) for row in conn.execute(query, params).fetchall())
+        present.update(
+            (row["ecosystem"], normalize_package_name(row["package_name"], row["ecosystem"]))
+            for row in conn.execute(query, params).fetchall()
+        )
 
     return present
 
