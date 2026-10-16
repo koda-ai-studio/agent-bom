@@ -50,7 +50,7 @@ export function GraphRelationshipDetail({ edge, scanId, sourceLabel, targetLabel
         <section aria-label="Why linked" className="space-y-2"><h4 className="text-xs font-semibold">Recorded relationship type</h4><GraphRelationshipExplanation edge={edge} /></section>
         <GraphRelationshipEvidence edge={edge} />
         <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2 text-xs">
-          <dt className="text-ink-secondary">Snapshot</dt><dd>{scanId}</dd>
+          <dt className="text-ink-secondary">Snapshot</dt><dd>{scanId || "Derived inventory (not persisted)"}</dd>
           <dt className="text-ink-secondary">Graph first seen</dt><dd>{edge.first_seen || "Not recorded"}</dd>
         </dl>
         <details><summary className="cursor-pointer font-medium">Recorded evidence</summary>
@@ -81,7 +81,7 @@ export function GraphRollupRelationshipDetail({ edge, scanId, sourceLabel, targe
       <p className="font-medium">{sourceLabel} · {targetLabel}</p>
       <p className="text-ink-secondary">These relationships connect entities inside the two scopes. Explore a scope to inspect the actual endpoints and their evidence.</p>
       <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-2 text-xs">
-        <dt>Snapshot</dt><dd>{scanId}</dd>
+        <dt>Snapshot</dt><dd>{scanId || "Derived inventory (not persisted)"}</dd>
         <dt>Recorded directions</dt><dd>{directions.length > 1 ? `Mixed: ${directions.join(", ")}` : directions[0] || "Not recorded"}</dd>
         {edge.relationships.map(relationship => <div key={relationship} className="contents"><dt>{relationshipEdgeLabelText(relationship, { evidenceMode: "unknown" })}</dt><dd>{edge.relationship_counts?.[relationship] ?? "Count unavailable"}</dd></div>)}
       </dl>

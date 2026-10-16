@@ -8767,6 +8767,10 @@ export interface components {
         AgentFlowEdge: {
             /** Animated */
             animated?: boolean | null;
+            /** Data */
+            data?: {
+                [key: string]: unknown;
+            } | null;
             /** Id */
             id: string;
             /** Label */
@@ -8934,6 +8938,10 @@ export interface components {
         AgentLifecycleResponse: {
             /** Edges */
             edges: components["schemas"]["AgentFlowEdge"][];
+            /** Graph */
+            graph: {
+                [key: string]: unknown;
+            };
             /** Nodes */
             nodes: components["schemas"]["AgentFlowNode"][];
             stats: components["schemas"]["AgentDetailSummary"];

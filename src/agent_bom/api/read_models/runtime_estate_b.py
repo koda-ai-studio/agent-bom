@@ -189,6 +189,7 @@ class AgentFlowNode(ReadModel):
 
 
 class AgentFlowEdge(ReadModel):
+    data: dict[str, Any] | None = None
     id: str
     source: str
     target: str
@@ -234,6 +235,7 @@ class AgentDetailResponse(ReadResponse):
 
 
 class AgentLifecycleResponse(ReadResponse):
+    graph: dict[str, Any]
     nodes: list[AgentFlowNode]
     edges: list[AgentFlowEdge]
     stats: AgentDetailSummary

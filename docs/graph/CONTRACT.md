@@ -32,6 +32,24 @@ query completeness does not establish complete collection. Finding severity and
 recorded connections do not by themselves establish assessed risk or execution.
 
 
+## Agent inventory lifecycle view
+
+Open **Agents → an agent → Lifecycle graph** to inspect its configured inventory.
+The initial view shows server connections. Select **Packages and advisories** or
+**Tools and credentials**, then choose a server, to inspect a smaller neighborhood.
+Counts describe unique entities across the supplied agent inventory; the canvas
+states how many loaded entities are shown. **Export** saves the complete response,
+including canonical graph IDs and relationship receipts.
+
+`GET /v1/agents/{agent_name}/lifecycle` uses the shared inventory graph projection.
+The legacy `nodes`/`edges` envelope remains available, with each edge's canonical
+receipt in `data`; `graph` carries the shared graph representation. Shared packages
+retain every server relationship, ecosystems remain distinct, credential slots
+remain server scoped, and tools are not silently limited to ten. These are
+configured relationships, not proof of execution, exploitation or effective access.
+This derived view does not invent a persisted scan ID. Existing endpoint
+authorization and tenant selection apply.
+
 ## 1. Coverage
 
 ### Entity types

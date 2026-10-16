@@ -594,3 +594,10 @@ def test_package_matching_selects_alias_severity_contract(tmp_path):
     test.write_text("def test_alias(): pass\n")
     for source in ("src/agent_bom/scanners/package_scan.py", "src/agent_bom/scanners/package_versions.py"):
         assert test in select_targeted_tests(changed_files=[Path(source)], root=tmp_path)
+
+
+@pytest.mark.parametrize("source", ["src/agent_bom/api/routes/discovery.py", "src/agent_bom/graph/lifecycle.py"])
+def test_lifecycle_edits_select_cross_surface_credential_agreement(tmp_path, source):
+    contract = tmp_path / "tests/test_credential_key_detector_agreement.py"
+    _write(contract, 1)
+    assert contract in select_targeted_tests(changed_files=[Path(source)], root=tmp_path)

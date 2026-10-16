@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { chromium, expect } from "@playwright/test";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { gunzipSync } from "node:zlib";
 import { once } from "node:events";
@@ -933,40 +933,24 @@ function scanJob() {
   };
 }
 
+let lifecycleFixture;
 function agentLifecycleFixture() {
-  const nodes = [
-    ["agent", "developer-copilot", 40, 220, {}],
-    ["server", "github-enterprise MCP", 300, 100, {}],
-    ["server", "filesystem MCP", 300, 340, {}],
-    ["package", "next", 570, 80, { version: "15.2.2", ecosystem: "npm" }],
-    ["tool", "create_pull_request", 570, 220, {}],
-    ["credential", "DEMO_CRED_REF", 570, 360, { description: "Reference only; no value" }],
-    ["cve", "CVE-2025-29927", 840, 80, { severity: "critical", fixed_version: "15.2.3" }],
-  ].map(([nodeType, label, x, y, extra], index) => ({
-    id: `lifecycle-${index + 1}`,
-    type: "lifecycleNode",
-    position: { x, y },
-    data: { nodeType, label, ...extra },
-  }));
-  const edges = [
-    [0, 1], [0, 2], [1, 3], [1, 4], [1, 5], [3, 6],
-  ].map(([source, target], index) => ({
-    id: `lifecycle-edge-${index + 1}`,
-    source: nodes[source].id,
-    target: nodes[target].id,
-    type: "smoothstep",
-  }));
-  return {
-    nodes,
-    edges,
-    stats: {
-      total_servers: 2,
-      total_packages: 1,
-      total_tools: 1,
-      total_credentials: 1,
-      total_vulnerabilities: 1,
-    },
-  };
+  if (lifecycleFixture) return lifecycleFixture;
+  // Exercise the same projection as the API; no parallel hand-built lifecycle IDs.
+  const result = spawnSync(process.env.PYTHON ?? "python", ["-c", [
+    "import json, sys",
+    "from agent_bom.graph.lifecycle import agent_lifecycle_view",
+    "print(json.dumps(agent_lifecycle_view(json.load(sys.stdin), tenant_id='product-proof')))",
+  ].join("\n")], {
+    cwd: REPO_ROOT,
+    env: { ...process.env, PYTHONPATH: path.join(REPO_ROOT, "src") },
+    input: JSON.stringify(scanAgents().find(agent => agent.name === "developer-copilot")),
+    encoding: "utf8",
+    maxBuffer: 8 * 1024 * 1024,
+  });
+  if (result.error || result.status !== 0) throw new Error("Lifecycle capture requires the repository Python environment (set PYTHON)");
+  lifecycleFixture = JSON.parse(result.stdout);
+  return lifecycleFixture;
 }
 
 function fleetAgentFromScan(agent, index) {
@@ -3459,15 +3443,15 @@ async function main() {
       minGraphEdges: 5,
     });
     await capture(page, "/agents?name=developer-copilot&view=lifecycle&capture=1", "agent-lifecycle-live.png", async (agentsPage) => {
-      await agentsPage.getByText("Lifecycle Graph", { exact: true }).waitFor({ state: "visible", timeout: 20_000 });
+      await agentsPage.getByText("Configured inventory", { exact: true }).waitFor({ state: "visible", timeout: 20_000 });
       await fitReactFlow(agentsPage);
       await scrollTo(agentsPage, 0);
     }, {
-      expectedText: ["Lifecycle Graph", "developer-copilot", "github-enterprise MCP", "create_pull_request", "CVE-2025-29927"],
+      expectedText: ["Configured inventory", "developer-copilot", "github-enterprise MCP", "Server connections", "Packages and advisories"],
       rejectedText: [/Loading/i],
       expectedApiPaths: ["/v1/agents/developer-copilot/lifecycle"],
-      minGraphNodes: 7,
-      minGraphEdges: 6,
+      minGraphNodes: 3,
+      minGraphEdges: 2,
     });
     await page.setViewportSize({ width: 1440, height: 820 });
     await capture(page, `/graph?lens=mesh&scan=${SCAN_ID}&agent=agent%3Adeveloper-copilot&capture=1`, "mesh-live.png", async (meshPage) => {

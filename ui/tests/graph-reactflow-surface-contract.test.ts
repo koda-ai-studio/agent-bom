@@ -8,17 +8,16 @@ describe("interactive React Flow surface contract", () => {
   it.each([
     "app/graph/graph-page-client.tsx",
     "components/security-graph-investigation.tsx",
-    "app/agents/page.tsx",
   ])("keeps evidence topology immutable in %s", (path) => {
     expect(source(path)).toContain("deleteKeyCode={null}");
   });
 
   it.each([
-    "app/agents/page.tsx",
+    "components/security-graph-investigation.tsx",
   ])("persists personal node positions and viewport in %s", (path) => {
     const content = source(path);
     expect(content).toContain("useGraphPresentation");
-    expect(content).toContain("defaultViewport={presentation.viewport}");
+    expect(content).toContain("defaultViewport={presentation.restoredViewport ?? presentation.viewport}");
     expect(content).toContain("nodesDraggable=");
     expect(content).toContain("presentation.editing");
     expect(content).toContain("onNodesChange={presentation.onNodesChange}");
@@ -57,7 +56,6 @@ describe("interactive React Flow surface contract", () => {
 
   it.each([
     "app/graph/graph-page-client.tsx",
-    "app/agents/page.tsx",
   ])("does not treat transient auth loading as logout in %s", (path) => {
     const content = source(path);
     expect(content).toContain("ownerActive: Boolean(session)");
@@ -69,6 +67,13 @@ describe("interactive React Flow surface contract", () => {
     expect(content).toContain("ownerActive={Boolean(session)}");
     expect(content).toContain("ownerActive,");
     expect(content).toContain('localMode={session?.recommended_ui_mode === "no_auth"}');
+  });
+
+  it("delegates lifecycle interactions to the shared evidence renderer", () => {
+    const content = source("app/agents/page.tsx");
+    expect(content).toContain("<SecurityGraphInvestigation");
+    expect(content).toContain("lifecycleInventoryView(data.graph");
+    expect(content).not.toContain("<ReactFlow");
   });
 
   it("bounds the agent lifecycle canvas inside the application shell", () => {
