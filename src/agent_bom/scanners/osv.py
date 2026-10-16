@@ -16,6 +16,7 @@ from agent_bom.core.errors import (
     UpstreamInvalidResponseError,
     UpstreamRateLimitedError,
 )
+from agent_bom.core.versions.osv import is_release_range, range_limits, range_match_state, range_windows
 from agent_bom.enrichment_posture import enrichment_source_available, record_enrichment_source
 from agent_bom.http_client import OfflineModeError, create_client, request_with_retry
 from agent_bom.models import Package
@@ -108,7 +109,9 @@ def package_lookup_names(pkg: Package) -> list[str]:
 
 def osv_query_names(pkg: Package) -> list[str]:
     """Keep upstream query spelling separate from normalized local identity."""
-    if pkg.ecosystem.lower() in {"go", "nuget"}:
+    if pkg.ecosystem.lower() == "maven":
+        return list(dict.fromkeys(name.strip().replace("/", ":", 1) for name in pkg.lookup_names if name.strip()))
+    if pkg.ecosystem.lower() in {"go", "golang", "nuget"}:
         return list(dict.fromkeys(name.strip() for name in pkg.lookup_names if name.strip()))
     return package_lookup_names(pkg)
 
@@ -122,100 +125,40 @@ def parse_fixed_version(
     allow_prerelease: bool = False,
     aliases: tuple[str, ...] = (),
 ) -> Optional[str]:
-    from agent_bom.version_utils import (
-        compare_version_order,
-        is_prerelease_version,
-        version_in_range,
-    )
+    from agent_bom.version_utils import compare_version_order, is_prerelease_version
 
-    norm_inputs = candidate_package_names(package_name, ecosystem, source_package, aliases)
-    prerelease_candidate: Optional[str] = None
-    # ``same_branch_fix`` is the fix from the affected branch that actually
-    # CONTAINS the installed version (introduced <= current < fixed); it is
-    # preferred so a multi-branch advisory never advises a cross-branch jump
-    # (e.g. urllib3 1.26.4 -> 1.26.18, not the 2.x fix 2.0.7). ``fallback_fix``
-    # (earliest valid fix) is used only when no branch contains the version.
-    same_branch_fix: Optional[str] = None
-    fallback_fix: Optional[str] = None
-    has_current = bool(current_version and current_version not in ("unknown", "latest", ""))
-
-    def _consider_fallback(candidate: str) -> None:
-        nonlocal fallback_fix
-        if fallback_fix is None:
-            fallback_fix = candidate
-            return
-        order = compare_version_order(candidate, fallback_fix, ecosystem)
-        if order is not None and order < 0:
-            fallback_fix = candidate
-
+    names = candidate_package_names(package_name, ecosystem, source_package, aliases)
+    has_current = bool(current_version and current_version not in ("unknown", "latest"))
+    stable: list[str] = []
+    prereleases: list[str] = []
     for affected in vuln_data.get("affected", []):
         pkg = affected.get("package", {})
-        pkg_name = pkg.get("name", "")
-        if not pkg_name:
-            _logger.debug("Skipping affected entry with empty package name in %s", vuln_data.get("id", "?"))
-            continue
         osv_eco = pkg.get("ecosystem", ecosystem)
-        if not ecosystem_matches(osv_eco, ecosystem):
-            _logger.debug(
-                "Skipping cross-ecosystem affected entry %s/%s (want %s) in %s",
-                osv_eco,
-                pkg_name,
-                ecosystem,
-                vuln_data.get("id", "?"),
-            )
+        if not pkg.get("name") or not ecosystem_matches(osv_eco, ecosystem):
             continue
-        osv_norm = normalize_package_name(pkg_name, osv_eco)
-        if osv_norm not in norm_inputs:
+        if normalize_package_name(pkg["name"], osv_eco) not in names:
             continue
-        for rng in affected.get("ranges", []):
-            introduced: Optional[str] = None
-            for event in rng.get("events", []):
-                if "introduced" in event:
-                    introduced = event.get("introduced") or None
+        for rng in filter(is_release_range, affected.get("ranges", [])):
+            events = rng.get("events", [])
+            for introduced, fixed, last in range_windows(events, ecosystem):
+                if not isinstance(fixed, str) or not is_valid_fix_version(fixed):
                     continue
-                if "fixed" not in event:
+                # An explicit version pin can establish membership independently
+                # of a range, but cannot borrow that range's remediation. Unknown
+                # comparisons and lost/invalid limits cannot support a fix either.
+                if has_current and not any(
+                    range_match_state(current_version, introduced, fixed, last, ecosystem, limit) == "affected"
+                    for limit in range_limits(events)
+                ):
                     continue
-                fixed = event["fixed"]
-                if not is_valid_fix_version(fixed):
-                    continue
-                try:
-                    if has_current:
-                        current_cmp = compare_version_order(current_version, fixed, ecosystem)
-                        if current_cmp is not None and current_cmp > 0:
-                            _logger.debug(
-                                "Skipping fix %s < current %s for %s",
-                                fixed,
-                                current_version,
-                                package_name,
-                            )
-                            continue
-                    prerelease = is_prerelease_version(fixed, ecosystem)
-                except Exception as exc:  # noqa: BLE001  # broad-except: per-ecosystem version grammars raise heterogeneous errors; falls back to plain ordering
-                    _logger.debug("Version parse failed for %r: %s", fixed, exc)
-                    if has_current:
-                        current_cmp = compare_version_order(current_version, fixed, ecosystem)
-                        if current_cmp is not None and current_cmp > 0:
-                            continue
-                    prerelease = False
-
-                if prerelease:
-                    if prerelease_candidate is None:
-                        prerelease_candidate = fixed
-                    continue
-
-                if has_current and same_branch_fix is None and version_in_range(current_version, introduced, fixed, None, ecosystem):
-                    same_branch_fix = fixed
-                _consider_fallback(fixed)
-
-    if same_branch_fix is not None:
-        return same_branch_fix
-    if fallback_fix is not None:
-        return fallback_fix
-    if allow_prerelease:
-        return prerelease_candidate
-    if prerelease_candidate:
-        _logger.debug("Suppressing prerelease-only fix %s for %s", prerelease_candidate, package_name)
-    return None
+                (prereleases if is_prerelease_version(fixed, ecosystem) else stable).append(fixed)
+    candidates = stable or (prereleases if allow_prerelease else [])
+    chosen = None
+    for candidate in candidates:
+        order = compare_version_order(candidate, chosen, ecosystem) if chosen is not None else None
+        if chosen is None or (order is not None and order < 0):
+            chosen = candidate
+    return chosen
 
 
 def _collect_batch_vulns(

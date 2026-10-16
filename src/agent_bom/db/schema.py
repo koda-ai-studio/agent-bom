@@ -64,7 +64,7 @@ def _validated_db_path(raw: str) -> Path:
 DB_PATH: Path = _validated_db_path(_RAW_DB_PATH)
 
 # Schema version — bump when DDL changes incompatibly
-_SCHEMA_VERSION = 7
+_SCHEMA_VERSION = 8
 
 # Migration scripts: list of (from_version, to_version, sql) tuples.
 # Add a new entry here whenever _SCHEMA_VERSION is bumped.
@@ -105,6 +105,33 @@ _MIGRATIONS: list[tuple[int, int, str]] = [
     (5, 6, "ALTER TABLE vulns ADD COLUMN upstream_ids TEXT DEFAULT ''; DELETE FROM sync_meta WHERE source = 'osv';"),
     # Re-ingest OSV so qualitative severity[] ratings (distro labels) are stored.
     (6, 7, "DELETE FROM sync_meta WHERE source = 'osv';"),
+    # Older OSV ingestion discarded limit events. Preserve those rows as
+    # unverified candidates until a full refresh restores their source bounds.
+    (
+        7,
+        8,
+        """
+        ALTER TABLE affected RENAME TO affected_v7;
+        CREATE TABLE affected (
+            vuln_id TEXT NOT NULL REFERENCES vulns(id) ON DELETE CASCADE,
+            ecosystem TEXT NOT NULL,
+            package_name TEXT NOT NULL,
+            introduced TEXT,
+            fixed TEXT,
+            last_affected TEXT,
+            limit_version TEXT DEFAULT '',
+            PRIMARY KEY (vuln_id, ecosystem, package_name, introduced, fixed, last_affected, limit_version)
+        );
+        INSERT INTO affected
+            (vuln_id, ecosystem, package_name, introduced, fixed, last_affected, limit_version)
+        SELECT a.vuln_id, a.ecosystem, a.package_name, a.introduced, a.fixed, a.last_affected,
+            CASE WHEN v.source = 'osv' OR a.ecosystem IN ('go', 'golang', 'maven') THEN NULL ELSE '' END
+        FROM affected_v7 a JOIN vulns v ON v.id = a.vuln_id;
+        DROP TABLE affected_v7;
+        CREATE INDEX IF NOT EXISTS idx_affected_pkg ON affected(ecosystem, package_name);
+        DELETE FROM sync_meta WHERE source IN ('osv', 'ghsa');
+        """,
+    ),
 ]
 
 _DDL = """
@@ -139,11 +166,12 @@ CREATE TABLE IF NOT EXISTS affected (
     introduced      TEXT,               -- semver or "" (means all)
     fixed           TEXT,               -- semver or "" (means no fix)
     last_affected   TEXT,
+    limit_version   TEXT DEFAULT '',   -- exclusive range limit; never a fix
     -- One row per vulnerable window. Advisories that fix several release
     -- branches emit multiple windows for the same package, and those windows
     -- routinely share an ``introduced`` bound (commonly "0"), so the bound
     -- alone cannot identify a row without silently overwriting siblings.
-    PRIMARY KEY (vuln_id, ecosystem, package_name, introduced, fixed, last_affected)
+    PRIMARY KEY (vuln_id, ecosystem, package_name, introduced, fixed, last_affected, limit_version)
 );
 CREATE INDEX IF NOT EXISTS idx_affected_pkg ON affected(ecosystem, package_name);
 

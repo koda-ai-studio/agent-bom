@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Any, Optional, cast
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
-from agent_bom.advisory_ids import MATCH_CONFIDENCE_AMBIGUOUS_DISTRO_RELEASE, upstream_advisory_ids
+from agent_bom.advisory_ids import MATCH_CONFIDENCE_AMBIGUOUS_DISTRO_RELEASE, MATCH_CONFIDENCE_UNVERIFIED_RANGE, upstream_advisory_ids
 from agent_bom.atlas import tag_blast_radius as tag_atlas_techniques
 from agent_bom.cis_controls import tag_blast_radius as tag_cis_controls
 from agent_bom.cmmc import tag_blast_radius as tag_cmmc
@@ -41,6 +41,8 @@ from agent_bom.config import (
 # Vulnerabilities in these carry elevated risk because they run inside AI
 # agents that have credentials and tool access.
 from agent_bom.constants import AI_PACKAGES as _AI_FRAMEWORK_PACKAGES
+from agent_bom.core.versions.osv import before_limit, is_release_range, range_limits
+from agent_bom.core.versions.osv import range_windows as _range_windows
 from agent_bom.coverage import is_scope_exclusion
 from agent_bom.cpe_match import cpe_vendor_hint as _cpe_vendor_hint
 from agent_bom.eu_ai_act import tag_blast_radius as tag_eu_ai_act
@@ -257,7 +259,12 @@ def _suppress_unfixed_os_advisories(packages: list[Package]) -> int:
         vulns = getattr(pkg, "vulnerabilities", None)
         if not vulns:
             continue
-        kept = [v for v in vulns if (v.fixed_version or "").strip() or v.match_confidence_tier == MATCH_CONFIDENCE_AMBIGUOUS_DISTRO_RELEASE]
+        kept = [
+            v
+            for v in vulns
+            if (v.fixed_version or "").strip()
+            or v.match_confidence_tier in {MATCH_CONFIDENCE_AMBIGUOUS_DISTRO_RELEASE, MATCH_CONFIDENCE_UNVERIFIED_RANGE}
+        ]
         removed += len(vulns) - len(kept)
         pkg.vulnerabilities = kept
     _bump_scan_perf("unfixed_os_findings_suppressed", removed)
@@ -697,35 +704,6 @@ def _version_matches_list(version: str, versions_list: list[str], ecosystem: str
     return False
 
 
-def _range_windows(events: list[dict]) -> list[tuple[str | None, str | None, str | None]]:
-    """Split OSV range ``events`` into ``(introduced, fixed, last_affected)`` windows.
-
-    A window opens on ``introduced`` and closes on ``fixed`` or
-    ``last_affected``; one left open at the end runs through latest. A range
-    with no ``introduced`` at all is vulnerable from 0.
-    """
-    windows: list[tuple[str | None, str | None, str | None]] = []
-    introduced: str | None = None
-    window_open = False
-    for event in events:
-        if "introduced" in event:
-            if window_open:
-                windows.append((introduced, None, None))
-            introduced = event["introduced"]
-            window_open = True
-        elif "fixed" in event:
-            windows.append((introduced, event["fixed"], None))
-            introduced, window_open = None, False
-        elif "last_affected" in event:
-            windows.append((introduced, None, event["last_affected"]))
-            introduced, window_open = None, False
-    if window_open:
-        windows.append((introduced, None, None))
-    if not windows:
-        windows.append((None, None, None))
-    return windows
-
-
 def _version_in_window(
     version: str,
     window: tuple[str | None, str | None, str | None],
@@ -777,6 +755,50 @@ def _warn_unresolvable_git_bounds(advisory_id: str, package_name: str, package_v
         f"package only by git commit, which carries no order against a release version. The package may be "
         f"affected; check the advisory directly."
     )
+
+
+def _matches_advisory_ranges(ranges: list[dict], package_version: str, ecosystem: str, advisory_id: str, package_name: str) -> bool:
+    """Evaluate each range independently, retaining unknown-bound warnings."""
+    # Check ranges
+    comparable_windows = 0
+    for rng in ranges:
+        if not is_release_range(rng):
+            continue
+
+        events = rng.get("events", [])
+
+        limits = [before_limit(package_version, limit, ecosystem) for limit in range_limits(events)]
+        if True not in limits:
+            if all(value is False for value in limits):
+                comparable_windows += 1  # evaluated and outside the exclusive limit
+            else:
+                _emit_scan_warning(
+                    f"{advisory_id}: {package_name}@{package_version} has an "
+                    "unresolvable advisory range limit; affected status is unknown. Check the source advisory."
+                )
+                comparable_windows += 1  # already emitted the specific uncertainty
+            continue
+        # A range may carry several vulnerable windows as alternating
+        # introduced/fixed events. Collect them first, then test each on its
+        # own: treating a later ``introduced`` as a reset of the running
+        # verdict discards an earlier window the version already matched.
+        for window in _range_windows(events, ecosystem):
+            # A commit SHA carries no order relative to a release version:
+            # placing one inside such a window needs the repository's commit
+            # graph, which the scanner does not have. Drop the window here
+            # so the guess never reaches the comparator.
+            if _window_has_commit_bound(window):
+                continue
+            comparable_windows += 1
+            if _version_in_window(package_version, window, ecosystem):
+                return True
+
+    if not comparable_windows:
+        # Every window for this package was commit-bounded. The advisory is
+        # real but unresolvable here — surface it instead of letting it look
+        # like a clean result.
+        _warn_unresolvable_git_bounds(advisory_id, package_name, package_version)
+    return False
 
 
 def _is_version_affected(
@@ -844,42 +866,12 @@ def _is_version_affected(
             # Fall through to the ranges — but only the ecosystem-typed ones: a
             # GIT tag walk cannot place an ecosystem version string, and its
             # ``introduced: 0`` would match everything.
-            ranges = [rng for rng in ranges if (rng.get("type") or "ECOSYSTEM") in ("SEMVER", "ECOSYSTEM")]
+            ranges = [rng for rng in ranges if is_release_range(rng)]
             if not ranges:
                 continue
 
-        # Check ranges
-        comparable_windows = 0
-        for rng in ranges:
-            rng_type = rng.get("type", "")
-            # Accept SEMVER, ECOSYSTEM, or missing type (common in OSV data).
-            if rng_type and rng_type not in ("SEMVER", "ECOSYSTEM", "GIT"):
-                continue
-
-            events = rng.get("events", [])
-            # A range may carry several vulnerable windows as alternating
-            # introduced/fixed events. Collect them first, then test each on its
-            # own: treating a later ``introduced`` as a reset of the running
-            # verdict discards an earlier window the version already matched.
-            for window in _range_windows(events):
-                # A commit SHA carries no order relative to a release version:
-                # placing one inside such a window needs the repository's commit
-                # graph, which the scanner does not have. Drop the window here
-                # so the guess never reaches the comparator. A commit range
-                # bounded only by ``introduced: 0`` is still decidable — it
-                # means "vulnerable from the first commit, unfixed" — so it is
-                # kept rather than treated as unresolvable.
-                if _window_has_commit_bound(window):
-                    continue
-                comparable_windows += 1
-                if _version_in_window(package_version, window, ecosystem):
-                    return True
-
-        if not comparable_windows:
-            # Every window for this package was commit-bounded. The advisory is
-            # real but unresolvable here — surface it instead of letting it look
-            # like a clean result.
-            _warn_unresolvable_git_bounds(vuln_data.get("id", "unknown"), package_name, package_version)
+        if _matches_advisory_ranges(ranges, package_version, ecosystem, vuln_data.get("id", "unknown"), package_name):
+            return True
 
     # Matching coordinates were evaluated, but no version window matched.
     if found_package:

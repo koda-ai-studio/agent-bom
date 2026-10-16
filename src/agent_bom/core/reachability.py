@@ -33,6 +33,10 @@ class ReachabilityAssessment:
         return self.verdict in {ReachabilityVerdict.CONFIRMED, ReachabilityVerdict.LIKELY}
 
 
+def review_only_match(tier: str | None) -> bool:
+    return tier in {"unverified_range", "ambiguous_distro_release", "nvd_cpe_candidate"}
+
+
 def assess_reachability(
     *,
     graph_reachable: bool | None = None,
@@ -43,6 +47,7 @@ def assess_reachability(
     exposed_credentials: bool = False,
     exposed_tools: bool = False,
     declaration_only: bool = False,
+    match_confidence_tier: str | None = None,
 ) -> ReachabilityAssessment:
     """Return one conservative verdict from all available evidence.
 
@@ -50,6 +55,9 @@ def assess_reachability(
     Credentials and tools describe impact if exploitation occurs; they do not
     prove that the vulnerable code is executable.
     """
+
+    if review_only_match(match_confidence_tier):
+        return ReachabilityAssessment(ReachabilityVerdict.UNKNOWN, ("unverified_advisory_match",))
 
     symbol = (symbol_reachability or "").strip().lower()
     negative: list[str] = []
@@ -106,6 +114,9 @@ def node_reachability(attributes: dict[str, object] | None) -> ReachabilityAsses
     """Normalize persisted vulnerability-node reachability attributes."""
 
     attrs = attributes or {}
+    match_tier = str(attrs.get("match_confidence_tier") or "")
+    if review_only_match(match_tier):
+        return assess_reachability(match_confidence_tier=match_tier)
     explicit = str(attrs.get("reachability") or "").strip().lower()
     if explicit in {"confirmed", "likely", "unlikely"}:
         basis = attrs.get("reachability_basis")

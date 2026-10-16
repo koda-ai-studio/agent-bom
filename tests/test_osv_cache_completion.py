@@ -183,7 +183,9 @@ async def test_previous_query_spelling_cache_cannot_hide_corrected_lookup(cache,
         cache, [package], [{"results": [{"vulns": [{"id": "GHSA-recovered"}]}]}], monkeypatch, ecosystems=lambda _: [osv_ecosystem]
     )
     assert len(calls) == 1
-    assert result[f"{ecosystem}:{name.lower()}@1.0.0"] == [{"id": "GHSA-recovered"}]
+    from agent_bom.core.packages import normalize_package_name
+
+    assert result[f"{ecosystem}:{normalize_package_name(name, ecosystem)}@1.0.0"] == [{"id": "GHSA-recovered"}]
     assert cache._conn.execute("SELECT vulns_json FROM osv_cache WHERE cache_key = ?", (old_key,)).fetchone()[0] == "[]"
 
 

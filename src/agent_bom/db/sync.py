@@ -35,6 +35,8 @@ from pathlib import Path
 from typing import Any, Callable, Optional
 from urllib.parse import quote, urljoin, urlparse
 
+from agent_bom.core.versions.osv import before_limit, is_release_range, range_limits, range_windows
+from agent_bom.db.lookup import _comparator_ecosystem
 from agent_bom.db.osv_metadata import osv_relationship_metadata
 from agent_bom.models import Severity
 from agent_bom.package_utils import ALPINE_SECDB_BRANCHES as _ALPINE_SECDB_BRANCHES
@@ -324,14 +326,17 @@ def _window_coverage(windows: list[dict]) -> Callable[[str], bool]:
     if not windows:
         return lambda _version: False
 
-    from agent_bom.db.lookup import _comparator_ecosystem
     from agent_bom.version_utils import compare_version_order, normalize_introduced
 
     comparator = _comparator_ecosystem(windows[0]["ecosystem"])
-    bounds = [(normalize_introduced(w["introduced"]), w["fixed"] or None, w["last_affected"] or None) for w in windows]
+    bounds = [
+        (normalize_introduced(w["introduced"]), w["fixed"] or None, w["last_affected"] or None, w.get("limit_version", "")) for w in windows
+    ]
 
     def covered(version: str) -> bool:
-        for intro, fix, last in bounds:
+        for intro, fix, last, limit in bounds:
+            if before_limit(version, limit, comparator) is not True:
+                continue
             if intro:
                 cmp = compare_version_order(version, intro, comparator)
                 if cmp is None or cmp < 0:
@@ -397,56 +402,36 @@ def _parse_osv_entry(data: dict) -> Optional[tuple[dict, list[dict]]]:
         range_rows: list[dict] = []
 
         for rng in aff.get("ranges", []):
+            if not is_release_range(rng):
+                continue
             # OSV encodes per-branch fixes as alternating introduced/fixed
             # events inside ONE range. Each pair is its own vulnerable window;
             # keeping only the last one hides every earlier branch.
-            windows: list[tuple[str, str, str]] = []
-            introduced: Optional[str] = None
-            window_open = False
-            for event in rng.get("events", []):
-                if "introduced" in event:
-                    if window_open:
-                        windows.append((introduced or "", "", ""))
-                    introduced = event["introduced"]
-                    window_open = True
-                if "fixed" in event:
-                    fixed = event["fixed"]
-                    # A GIT range's ``fixed`` is a commit SHA. Left unguarded it
-                    # became the advisory's ``fixed_version`` — the string
-                    # rendered to users as "upgrade to <sha>".
-                    if fixed_version is None and not _is_commit_bound(fixed):
-                        fixed_version = fixed
-                    windows.append((introduced or "", fixed, ""))
-                    introduced = None
-                    window_open = False
-                if "last_affected" in event:
-                    windows.append((introduced or "", "", event["last_affected"]))
-                    introduced = None
-                    window_open = False
-            if window_open:
-                # Introduced with no fix yet — vulnerable through latest.
-                windows.append((introduced or "", "", ""))
-            if not windows:
-                windows.append(("", "", ""))
+            windows = range_windows(rng.get("events", []), _comparator_ecosystem(ecosystem))
+            for _, fixed, _ in windows:
+                if fixed_version is None and fixed and not _is_commit_bound(fixed):
+                    fixed_version = fixed
 
-            for win_introduced, win_fixed, win_last_affected in windows:
-                # A commit SHA carries no order against a release version, so a
-                # window bounded by one can never be matched — storing it only
-                # adds a row that reads as real coverage. Worse, a commit window
-                # whose fix event is absent degenerates to "vulnerable through
-                # latest" and matches every version.
-                if any(_is_commit_bound(bound) for bound in (win_introduced, win_fixed, win_last_affected)):
-                    continue
-                range_rows.append(
-                    {
-                        "vuln_id": vuln_id,
-                        "ecosystem": ecosystem.lower(),
-                        "package_name": norm_name,
-                        "introduced": win_introduced,
-                        "fixed": win_fixed,
-                        "last_affected": win_last_affected,
-                    }
-                )
+            for limit_version in range_limits(rng.get("events", [])):
+                for win_introduced, win_fixed, win_last_affected in windows:
+                    # A commit SHA carries no order against a release version, so a
+                    # window bounded by one can never be matched — storing it only
+                    # adds a row that reads as real coverage. Worse, a commit window
+                    # whose fix event is absent degenerates to "vulnerable through
+                    # latest" and matches every version.
+                    if any(_is_commit_bound(bound) for bound in (win_introduced, win_fixed, win_last_affected, limit_version)):
+                        continue
+                    range_rows.append(
+                        {
+                            "vuln_id": vuln_id,
+                            "ecosystem": ecosystem.lower(),
+                            "package_name": norm_name,
+                            "introduced": win_introduced or "",
+                            "fixed": win_fixed or "",
+                            "last_affected": win_last_affected or "",
+                            "limit_version": limit_version,
+                        }
+                    )
 
         # OSV defines the affected set as the union of versions and ranges. GIT
         # bounds cannot place a package release, and an ECOSYSTEM range may
@@ -471,6 +456,7 @@ def _parse_osv_entry(data: dict) -> Optional[tuple[dict, list[dict]]]:
                     "introduced": version,
                     "fixed": "",
                     "last_affected": version,
+                    "limit_version": "",
                 }
             )
         affected_rows.extend(range_rows)
@@ -530,9 +516,9 @@ def _ingest_osv_file(conn: sqlite3.Connection, content: bytes, filename: str) ->
         conn.execute(
             """
             INSERT OR REPLACE INTO affected
-                (vuln_id, ecosystem, package_name, introduced, fixed, last_affected)
+                (vuln_id, ecosystem, package_name, introduced, fixed, last_affected, limit_version)
             VALUES
-                (:vuln_id, :ecosystem, :package_name, :introduced, :fixed, :last_affected)
+                (:vuln_id, :ecosystem, :package_name, :introduced, :fixed, :last_affected, :limit_version)
             """,
             aff,
         )

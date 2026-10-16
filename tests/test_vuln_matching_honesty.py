@@ -197,11 +197,11 @@ def test_lookup_prefers_matched_range_fix_over_rollup():
     assert _resolve_fixed_version(row) == "4.0.4"
 
 
-def test_lookup_missing_range_fix_falls_back_to_rollup():
+def test_lookup_missing_range_fix_does_not_borrow_another_branch_rollup():
     from agent_bom.db.lookup import _resolve_fixed_version
 
     row = _Row(ecosystem="PyPI", fixed="", fixed_version="2.5.4")
-    assert _resolve_fixed_version(row) == "2.5.4"
+    assert _resolve_fixed_version(row) is None
 
 
 def test_lookup_does_not_present_invalid_sha_rollup_as_fix():

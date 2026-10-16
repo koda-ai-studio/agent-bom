@@ -438,9 +438,9 @@ def test_fixed_version_skips_prerelease():
                         "events": [
                             {"introduced": "0"},
                             {"fixed": "3.0.0rc1"},
-                            {"fixed": "3.0.0"},
                         ],
-                    }
+                    },
+                    {"type": "ECOSYSTEM", "events": [{"introduced": "0"}, {"fixed": "3.0.0"}]},
                 ],
             }
         ]
