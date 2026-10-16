@@ -95,3 +95,17 @@ it("never nudges a caption outside the visible canvas", () => {
   expect(y - 22).toBeGreaterThanOrEqual(40);
   expect(y - 22).toBeGreaterThanOrEqual(142);
 });
+
+it("uses measured card boundaries when fixed nudges cannot clear a tall endpoint", () => {
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => { callback(0); return 1; });
+  vi.stubGlobal("CSS", { escape: (value: string) => value });
+  const labels = fixture();
+  document.querySelector<HTMLElement>(".react-flow")!.getBoundingClientRect = () => new DOMRect(0, 40, 1000, 500);
+  document.querySelector<HTMLElement>(".react-flow__node")!.getBoundingClientRect = () => new DOMRect(-1000, 60, 4000, 240);
+  labels[1]!.remove();
+  labels[0]!.getBoundingClientRect = () => new DOMRect(450, 78, 100, 44);
+  scheduleRelationshipLabelLayout(labels[0]!);
+  const y = Number(labels[0]!.style.transform.match(/translate\((-?[\d.]+)px, (-?[\d.]+)px\)$/)![2]);
+  expect(y - 22).toBeGreaterThanOrEqual(302);
+  expect(y + 22).toBeLessThanOrEqual(540);
+});

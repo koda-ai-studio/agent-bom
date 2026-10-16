@@ -71,10 +71,22 @@ export function scheduleRelationshipLabelLayout(label: HTMLElement | null) {
         // A short link can lie wholly inside its endpoint cards: nudge the
         // caption off the line, nearest the midpoint first, in growing steps.
         const scaleX = Math.abs(matrix.a) || 1, scaleY = Math.abs(matrix.d) || 1;
-        nodeClear = onPath.slice(0, 24).flatMap(({ x, y }) => [4, 16, 32, 56].flatMap(gap => {
+        const nudges = onPath.slice(0, 24).flatMap(({ x, y }) => [4, 16, 32, 56].flatMap(gap => {
           const dx = (bounds.width / 2 + gap) / scaleX, dy = (bounds.height / 2 + gap) / scaleY;
           return [{ x, y: y - dy }, { x, y: y + dy }, { x: x - dx, y }, { x: x + dx, y }];
-        })).sort(byDistance).map(point => ({ point, box: boxAt(point) })).filter(clearOfNodes);
+        }));
+        // Wrapped labels and evidence badges make endpoint cards taller than
+        // fixed nudges anticipate. Try their measured boundaries while keeping
+        // the caption inside the canvas, rather than restoring an overlap.
+        const centerX = (fallback.box.left + fallback.box.right) / 2;
+        const centerY = (fallback.box.top + fallback.box.bottom) / 2;
+        const boundaries = frame.width > 0 && frame.height > 0 ? nodes.filter(node => intersects(fallback.box, node)).flatMap(node => [
+          { x: preferred.x, y: preferred.y + (node.top - 4 - bounds.height / 2 - centerY) / scaleY },
+          { x: preferred.x, y: preferred.y + (node.bottom + 4 + bounds.height / 2 - centerY) / scaleY },
+          { x: preferred.x + (node.left - 4 - bounds.width / 2 - centerX) / scaleX, y: preferred.y },
+          { x: preferred.x + (node.right + 4 + bounds.width / 2 - centerX) / scaleX, y: preferred.y },
+        ]) : [];
+        nodeClear = [...nudges, ...boundaries].sort(byDistance).map(point => ({ point, box: boxAt(point) })).filter(clearOfNodes);
       }
       const clearOfEdges = nodeClear.filter(({ box }) => !onForeignEdge(box, element.dataset.edgeId!));
       const candidates = clearOfEdges.length ? clearOfEdges : nodeClear;
