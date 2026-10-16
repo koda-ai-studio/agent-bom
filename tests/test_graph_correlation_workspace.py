@@ -101,3 +101,30 @@ def test_disk_backed_merge_applies_exact_output_budget_progressively() -> None:
         workspace.add_snapshot(older)
         with pytest.raises(CorrelationMergeBudgetError, match="node_limit"):
             workspace.add_snapshot(newer)
+
+
+def test_disk_backed_merge_preserves_competing_exposure_assertions(tmp_path: Path) -> None:
+    snapshots = []
+    for scan, exposed, timestamp in [("posture", True, "2026-08-30T10:00:00+00:00"), ("inventory", False, "2026-08-30T11:00:00+00:00")]:
+        graph = UnifiedGraph(scan_id=scan, tenant_id="tenant-a", created_at=timestamp)
+        graph.add_node(
+            UnifiedNode(
+                id="bucket:logs",
+                entity_type=EntityType.CLOUD_RESOURCE,
+                label="logs",
+                attributes={"cloud_provider": "aws", "arn": "arn:aws:s3:::audit-logs", "public": exposed},
+            )
+        )
+        snapshots.append(CorrelationSnapshot.from_graph(graph))
+    actual = _workspace_merge(snapshots, tmp_path)
+    expected = merge_graph_snapshots(
+        correlation_id="corr-parity", tenant_id="tenant-a", snapshots=snapshots, created_at="2026-08-30T12:00:00+00:00"
+    )
+    node = next(iter(actual.graph.nodes.values()))
+    assert node.attributes["public"] is True
+    assert {(entry["source"], entry["value"]) for entry in node.attributes["correlation"]["conflicts"]["public"]} == {
+        ("posture", True),
+        ("inventory", False),
+    }
+    assert actual.graph.to_dict() == expected.graph.to_dict()
+    assert snapshots[1].graph.nodes["bucket:logs"].attributes["public"] is False

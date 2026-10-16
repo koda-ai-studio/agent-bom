@@ -321,3 +321,112 @@ def test_cloudtrail_reader_keeps_the_recorded_caller_identity_only() -> None:
     assert record["principal_arn"] == f"arn:aws:sts::{ACCOUNT}:assumed-role/deploy-role/session-1"
     assert record["principal_type"] == "AssumedRole" and record["region"] == REGION
     assert "requestParameters" not in json.dumps(record)
+
+
+def _conflicting_exposure_graph(graph: UnifiedGraph) -> UnifiedGraph:
+    graph.add_node(_resource("a-security", data_source="security", arn=ARN, internet_exposed=True, owner="security"))
+    graph.add_node(
+        _resource("z-inventory", data_source="inventory", arn=ARN, internet_exposed=False, owner="platform", description="richer inventory")
+    )
+    return graph
+
+
+def _assert_risky_value_kept(node: UnifiedNode, status: dict) -> None:
+    from agent_bom.graph.rollup import _is_exposed
+
+    assert node.attributes["internet_exposed"] is True
+    assert _is_exposed(node)
+    competing = node.attributes["identity"]["conflicts"]["internet_exposed"]
+    assert {(record["value"], record["source"]) for record in competing} == {(True, "security"), (False, "inventory")}
+    assert "owner" not in node.attributes["identity"]["conflicts"]  # non-security fields keep precedence, no receipt bloat
+    assert set(node.attributes["identity"]["conflict_fields"]) >= {"internet_exposed", "owner"}
+    assert node.attributes["owner"] == "platform"
+    assert status["observed"]["conflicts"] == 2
+    assert status["observed"]["security_assertion_conflicts"] == 1
+    assert "conflicting_security_assertions" in status["reason_codes"]
+
+
+@pytest.mark.parametrize("backend", ["memory", "sqlite"])
+def test_conflicting_exposure_keeps_the_risky_assertion_and_counts_it(backend: str) -> None:
+    graph: UnifiedGraph = (
+        UnifiedGraph(scan_id="conflict", tenant_id="t")
+        if backend == "memory"
+        else open_store_backed_unified_graph(backend=backend, tenant_id="t", capacity=2, page_size=2)
+    )
+    try:
+        canonicalize_assets(_conflicting_exposure_graph(graph))
+        assert len(graph.nodes) == 1
+        node = next(iter(graph.nodes.values()))
+        _assert_risky_value_kept(node, graph.analysis_status["asset_canonicalization"].to_dict())
+    finally:
+        if backend != "memory":
+            graph.close()  # type: ignore[attr-defined]
+
+
+def test_second_canonicalization_pass_keeps_the_recorded_conflict() -> None:
+    graph = _conflicting_exposure_graph(UnifiedGraph(scan_id="conflict", tenant_id="t"))
+    canonicalize_assets(graph)
+    graph.add_node(_resource("finding-row", data_source="findings", arn=ARN))
+    canonicalize_assets(graph)
+    node = next(iter(graph.nodes.values()))
+    assert node.attributes["internet_exposed"] is True
+    assert {record["source"] for record in node.attributes["identity"]["conflicts"]["internet_exposed"]} == {"security", "inventory"}
+
+
+def test_snapshot_correlation_keeps_the_risky_assertion() -> None:
+    from agent_bom.graph.rollup import _is_exposed
+
+    exposed = UnifiedGraph(scan_id="sec", tenant_id="t", created_at="2026-10-01T00:00:00+00:00")
+    exposed.add_node(_resource(CANONICAL, data_source="security", arn=ARN, internet_exposed=True))
+    later = UnifiedGraph(scan_id="inv", tenant_id="t", created_at="2026-10-02T00:00:00+00:00")
+    later.add_node(_resource(CANONICAL, data_source="inventory", arn=ARN, internet_exposed=False))
+
+    result = merge_graph_snapshots(
+        correlation_id="corr", tenant_id="t", snapshots=[CorrelationSnapshot.from_graph(exposed), CorrelationSnapshot.from_graph(later)]
+    )
+    node = result.graph.nodes[CANONICAL]
+    assert node.attributes["internet_exposed"] is True and _is_exposed(node)
+    competing = node.attributes["correlation"]["conflicts"]["internet_exposed"]
+    assert {(record["value"], record["source"]) for record in competing} == {(True, "sec"), (False, "inv")}
+
+
+def test_repeated_merge_does_not_invent_claims_or_double_count_conflicts() -> None:
+    graph = _conflicting_exposure_graph(UnifiedGraph(scan_id="source-scan", tenant_id="t"))
+    canonicalize_assets(graph)
+    node = next(iter(graph.nodes.values()))
+    assertions = node.attributes["identity"]["conflicts"]
+    for index in range(3):
+        graph.add_node(_resource(f"finding-{index}", data_source="findings", arn=ARN))
+        canonicalize_assets(graph)
+        node = next(iter(graph.nodes.values()))
+        assert node.attributes["identity"]["conflicts"] == assertions
+        assert graph.analysis_status["asset_canonicalization"].observed["conflicts"] == 2
+    records = assertions["internet_exposed"]
+    assert {record["scan_id"] for record in records} == {"source-scan"}
+    assert {record["node_id"] for record in records} == {"a-security", "z-inventory"}
+    assert {record["source"] for record in records} == {"security", "inventory"}
+
+
+@pytest.mark.parametrize("positive", [True, "true", "yes", 1])
+def test_positive_security_flags_survive_unknown_or_negative_inventory(positive: object) -> None:
+    graph = UnifiedGraph(scan_id="conflict", tenant_id="t")
+    graph.add_node(_resource("security", data_source="posture", arn=ARN, internet_exposed=positive))
+    graph.add_node(_resource("inventory", data_source="inventory", arn=ARN, internet_exposed=False, description="richer"))
+    canonicalize_assets(graph)
+    assert next(iter(graph.nodes.values())).attributes["internet_exposed"] is True
+
+
+def test_security_assertion_receipts_survive_snapshot_recorrelation() -> None:
+    graph = _conflicting_exposure_graph(UnifiedGraph(scan_id="original", tenant_id="t", created_at="2026-10-01T00:00:00+00:00"))
+    canonicalize_assets(graph)
+    receipts = next(iter(graph.nodes.values())).attributes["identity"]["conflicts"]
+    later = UnifiedGraph(scan_id="later", tenant_id="t", created_at="2026-10-02T00:00:00+00:00")
+    later.add_node(_resource(CANONICAL, data_source="inventory", arn=ARN))
+    snapshots = [CorrelationSnapshot.from_graph(graph), CorrelationSnapshot.from_graph(later)]
+    kwargs = {"correlation_id": "corr", "tenant_id": "t", "created_at": "2026-10-03T00:00:00+00:00"}
+    result = merge_graph_snapshots(snapshots=snapshots, **kwargs)
+    reverse = merge_graph_snapshots(snapshots=list(reversed(snapshots)), **kwargs)
+    node = result.graph.nodes[CANONICAL]
+    assert node.attributes["internet_exposed"] is True
+    assert node.attributes["correlation"]["conflicts"] == receipts
+    assert result.graph.to_dict() == reverse.graph.to_dict()
