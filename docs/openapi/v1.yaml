@@ -939,6 +939,12 @@ components:
           - type: boolean
           - type: 'null'
           title: Animated
+        data:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Data
         id:
           title: Id
           type: string
@@ -1277,6 +1283,10 @@ components:
             $ref: '#/components/schemas/AgentFlowEdge'
           title: Edges
           type: array
+        graph:
+          additionalProperties: true
+          title: Graph
+          type: object
         nodes:
           items:
             $ref: '#/components/schemas/AgentFlowNode'
@@ -1285,6 +1295,7 @@ components:
         stats:
           $ref: '#/components/schemas/AgentDetailSummary'
       required:
+      - graph
       - nodes
       - edges
       - stats

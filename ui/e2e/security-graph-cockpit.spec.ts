@@ -2160,3 +2160,25 @@ for (const theme of ["light", "dark"] as const) {
     });
   }
 }
+
+test("embedded investigation opens the clicked relationship's exact receipt", async ({ page }) => {
+  await routeCockpit(page);
+  await page.goto("/security-graph?lens=attack-path");
+  await expectCockpitVisible(page);
+  const view = page.getByTestId("security-graph-investigation");
+  await view.scrollIntoViewIfNeeded();
+  const edge = view.locator(".react-flow__edge").first();
+  const edgeId = await edge.getAttribute("data-id");
+  const point = await edge.locator(".react-flow__edge-interaction").evaluate(element => {
+    const path = element as SVGPathElement;
+    const local = path.getPointAtLength(path.getTotalLength() * 0.35);
+    const screen = new DOMPoint(local.x, local.y).matrixTransform(path.getScreenCTM()!);
+    return { x: screen.x, y: screen.y };
+  });
+  await page.mouse.click(point.x, point.y);
+  const dialog = page.getByRole("dialog", { name: "Relationship details" });
+  await expect(dialog).toBeVisible();
+  await dialog.getByText("Technical details", { exact: true }).click();
+  await dialog.getByText("Canonical identifiers", { exact: true }).click();
+  await expect(dialog).toContainText(edgeId!);
+});
