@@ -360,6 +360,16 @@ def _reset_api_runtime_state() -> None:
     except Exception:
         pass
 
+    # Sidebar responses include agent IDs derived from the current test's
+    # discovery inputs. Keeping them across tests makes detail reads resolve
+    # another app's IDs against newly reset stores and return spurious 404s.
+    try:
+        from agent_bom.api.routes.discovery import _clear_agents_response_cache_for_tests
+
+        _clear_agents_response_cache_for_tests()
+    except Exception:
+        pass
+
     # Request activity from one test must not defer the next test's background work.
     try:
         from agent_bom.api import foreground_activity

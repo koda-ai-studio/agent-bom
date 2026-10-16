@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import Any
 
 from agent_bom.api.models import ScanJob
+from agent_bom.package_utils import canonical_package_identity, normalize_package_ecosystem, normalize_package_name
 
 
 def _scan_source_labels(job: ScanJob) -> list[str]:
@@ -66,7 +67,17 @@ def _package_identity(finding: dict[str, Any]) -> tuple[str, str, str]:
         package, suffix = package.rsplit("@", 1)
         version = version or suffix
     ecosystem = str(finding.get("ecosystem") or evidence.get("ecosystem") or "").strip().lower()
-    return package.lower(), version, ecosystem
+    asset = finding.get("asset")
+    asset = asset if isinstance(asset, dict) else {}
+    purl = finding.get("package_purl") or finding.get("purl") or evidence.get("purl") or asset.get("identifier")
+    if isinstance(purl, str) and purl.startswith("pkg:"):
+        purl_eco, purl_name, purl_version = canonical_package_identity("", "", "", purl)
+        ecosystem = ecosystem or purl_eco
+        package = package or purl_name
+        version = version or purl_version
+    package = package or str(asset.get("name") or "").strip()
+    ecosystem = normalize_package_ecosystem(ecosystem)
+    return normalize_package_name(package, ecosystem), version, ecosystem
 
 
 def _package_base_name(finding: dict[str, Any]) -> str:

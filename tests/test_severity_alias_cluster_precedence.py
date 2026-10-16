@@ -125,7 +125,8 @@ def test_online_and_offline_alias_clusters_share_order_independent_evidence():
         {"id": "GHSA-aaaa-bbbb-cccc", "aliases": ["CVE-2026-1234"], "summary": "lower", "database_specific": {"severity": "MODERATE"}},
         {"id": "PYSEC-2026-42", "aliases": ["CVE-2026-1234"], "summary": "higher", "database_specific": {"severity": "HIGH"}},
     ]
-    online = [build_vulnerabilities(list(order), Package(name="example", version="", ecosystem="pypi")) for order in permutations(raw)]
+    # Alias severity is tested on an installed version; unresolved versions are coverage gaps.
+    online = [build_vulnerabilities(list(order), Package(name="example", version="1.0", ecosystem="pypi")) for order in permutations(raw)]
     assert all(len(rows) == 1 and rows[0].severity == Severity.HIGH for rows in online)
     assert asdict(online[0][0]) == asdict(online[1][0])
     offline = _merge([_local(r["id"], r["database_specific"]["severity"], r["aliases"], None) for r in raw])

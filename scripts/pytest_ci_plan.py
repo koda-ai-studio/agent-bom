@@ -536,6 +536,18 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
             "src/agent_bom/api/neptune_graph.py",
         }:
             selected.update(candidate for candidate in available if candidate.name == "test_neptune_unsupported_501.py")
+        if normalized.as_posix() in {"src/agent_bom/scanners/package_scan.py", "src/agent_bom/scanners/package_versions.py"}:
+            selected.update(
+                candidate
+                for candidate in available
+                if candidate.name
+                in {
+                    "test_severity_alias_cluster_precedence.py",
+                    "test_scanner_advisory_identity_boundaries.py",
+                    "test_osv_fixed_version_accuracy.py",
+                    "test_scanners.py",
+                }
+            )
         if normalized.as_posix() in CURRENT_EVIDENCE_SOURCES:
             selected.update(root / path for path in CURRENT_EVIDENCE_CONTRACTS if root / path in available)
             selected.update(candidate for candidate in available if candidate.stem.startswith(("test_graph_", "test_inventory_")))

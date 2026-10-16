@@ -167,3 +167,23 @@ def test_postgres_alias_bindings_are_kept_per_snapshot() -> None:
     finally:
         store.delete_tenant(tenant_id=tenant)
         reset_current_tenant(token)
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+def test_ambiguous_alias_never_selects_an_arbitrary_node(tmp_path, reverse) -> None:
+    from agent_bom.graph.container import UnifiedGraph
+    from agent_bom.graph.node import UnifiedNode
+    from agent_bom.graph.types import EntityType
+
+    store = SQLiteGraphStore(tmp_path / "ambiguous.db")
+    graph = UnifiedGraph(tenant_id="tenant-a", scan_id="scan-a")
+    ids = ["dataset:one", "dataset:two"]
+    for node_id in reversed(ids) if reverse else ids:
+        graph.add_node(
+            UnifiedNode(id=node_id, entity_type=EntityType.DATASET, label="data", attributes={"identity": {"aliases": ["dataset:data"]}})
+        )
+    store.save_graph(graph)
+    for scan in ("scan-a", ""):
+        assert store.resolve_node_aliases(tenant_id="tenant-a", node_ids=["dataset:data"], scan_id=scan) == {}
+    # Rejecting an ambiguous alias must not discard either observation.
+    assert set(store.load_graph(tenant_id="tenant-a", scan_id="scan-a").nodes) == set(ids)

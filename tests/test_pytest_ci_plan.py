@@ -584,3 +584,13 @@ def test_frontdoor_edits_select_distribution_and_operator_contracts(tmp_path: Pa
     for path in [*expected, tmp_path / "tests/test_unrelated.py"]:
         _write(path, 1)
     assert select_targeted_tests(changed_files=[Path(source)], root=tmp_path) == expected
+
+
+def test_package_matching_selects_alias_severity_contract(tmp_path):
+    from scripts.pytest_ci_plan import select_targeted_tests
+
+    test = tmp_path / "tests" / "test_severity_alias_cluster_precedence.py"
+    test.parent.mkdir()
+    test.write_text("def test_alias(): pass\n")
+    for source in ("src/agent_bom/scanners/package_scan.py", "src/agent_bom/scanners/package_versions.py"):
+        assert test in select_targeted_tests(changed_files=[Path(source)], root=tmp_path)
