@@ -2094,8 +2094,19 @@ function GraphPageInner() {
   const renderedNodeCount = displayNodes.length;
 
   const baseDisplayEdges = useMemo(() => {
+    const readableEdges = readableGraphEdges(layoutEdges, localNeighborhoodIds, {
+      baseOpacity: 1,
+      highSignalOpacity: 1,
+      inactiveOpacity: 0.06,
+      captureMode,
+      zoom: graphViewport.zoom,
+      nodeLabels: graphNodeDisplayLabels(displayNodes),
+      // Past this many edges the captions overlap into noise, so they follow
+      // the selection instead of blanketing the canvas. A capture keeps them.
+      maxLabeledEdges: captureMode ? Number.POSITIVE_INFINITY : GRAPH_EDGE_LABEL_BUDGET,
+    });
     if (attackPathEdgeKeys) {
-      return layoutEdges
+      return readableEdges
         .filter((edge) =>
           attackPathEdgeKeys.has(`${edge.source}=>${edge.target}`),
         )
@@ -2103,16 +2114,8 @@ function GraphPageInner() {
           const inPath = attackPathEdgeKeys.has(
             `${edge.source}=>${edge.target}`,
           );
-          const relationshipLabel = typeof edge.data?.relationship === "string"
-            ? edge.data.relationship === "vulnerable_to"
-              ? "Vulnerable"
-              : edge.data.relationship.replace(/_/g, " ")
-            : typeof edge.data?.relationshipLabel === "string"
-              ? edge.data.relationshipLabel
-              : undefined;
           return {
             ...edge,
-            label: relationshipLabel,
             labelShowBg: true,
             labelBgPadding: [8, 4],
             labelBgBorderRadius: 6,
@@ -2143,7 +2146,7 @@ function GraphPageInner() {
         });
     }
     if (blastRadius) {
-      return layoutEdges.map((edge): Edge => {
+      return readableEdges.map((edge): Edge => {
         const inBlast =
           blastRadius.nodeIds.has(edge.source) &&
           blastRadius.nodeIds.has(edge.target);
@@ -2169,7 +2172,7 @@ function GraphPageInner() {
       });
     }
     if (reachabilitySummary) {
-      return layoutEdges.map((edge): Edge => {
+      return readableEdges.map((edge): Edge => {
         const inReach =
           reachabilitySummary.edgeKeys.has(`${edge.source}=>${edge.target}`) ||
           reachabilitySummary.edgeKeys.has(`${edge.target}=>${edge.source}`);
@@ -2194,17 +2197,7 @@ function GraphPageInner() {
         };
       });
     }
-    return readableGraphEdges(layoutEdges, localNeighborhoodIds, {
-      baseOpacity: 1,
-      highSignalOpacity: 1,
-      inactiveOpacity: 0.06,
-      captureMode,
-      zoom: graphViewport.zoom,
-      nodeLabels: graphNodeDisplayLabels(displayNodes),
-      // Past this many edges the captions overlap into noise, so they follow
-      // the selection instead of blanketing the canvas. A capture keeps them.
-      maxLabeledEdges: captureMode ? Number.POSITIVE_INFINITY : GRAPH_EDGE_LABEL_BUDGET,
-    }).map((edge) => ({
+    return readableEdges.map((edge) => ({
       ...edge,
       // ReactFlow measures label backgrounds when label content changes.
       // A stable group font prevents Fit/zoom from outgrowing that background.
