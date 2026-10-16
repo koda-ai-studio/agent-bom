@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "purpose": "Identify recorded agent sources in the dashboard. Logos do not indicate endorsement, verification, or risk.",
+  "assets": [
+    {
+      "path": "ui/public/logos/openai.svg",
+      "vendor": "OpenAI",
+      "source_page": "https://openai.com/brand/",
+      "source_archive": "https://cdn.openai.com/brand/openai-logos.zip",
+      "source_path": "OpenAI-logos/SVGs/OAI_OpenAI-Blossom_White.svg",
+      "sha256": "01d158767c4eec0e47bd617e67759c33da0accd1438be1a8d29dfdb99ce87285",
+      "terms": "Exact OpenAI logo asset used only to identify the supported OpenAI and Codex integration family under OpenAI's published brand guidelines; OpenAI marks remain OpenAI property.",
+      "repository_source": "docs/images/vendor/openai-blossom-white.svg"
+    },
+    {
+      "path": "ui/public/logos/copilot.svg",
+      "vendor": "GitHub Copilot",
+      "source_page": "https://simpleicons.org/?q=githubcopilot",
+      "source_repo": "https://github.com/simple-icons/simple-icons",
+      "source_commit": "34c22501f9ac9f22b12f825677ccbab1fb22e14b",
+      "source_path": "icons/githubcopilot.svg",
+      "sha256": "1d8a4a13c08d5fa0eba2a830ba531dfadbad26dc093000fd6da734de16a011d8",
+      "license": "CC0-1.0",
+      "terms": "Unmodified Simple Icons vector used for nominative technical documentation; GitHub trademarks remain GitHub property.",
+      "repository_source": "docs/images/vendor/simple-icons/githubcopilot.svg"
+    },
+    {
+      "path": "ui/public/logos/windsurf.svg",
+      "vendor": "Windsurf",
+      "source_page": "https://simpleicons.org/?q=windsurf",
+      "source_repo": "https://github.com/simple-icons/simple-icons",
+      "source_commit": "34c22501f9ac9f22b12f825677ccbab1fb22e14b",
+      "source_path": "icons/windsurf.svg",
+      "sha256": "310a4f7fd2a2591ec45cba3313790f42ad8b805896e825c8fcbfada06f8dda7a",
+      "license": "CC0-1.0",
+      "terms": "Unmodified Simple Icons vector used for nominative technical documentation; Windsurf trademarks remain with their owner.",
+      "repository_source": "docs/images/vendor/simple-icons/windsurf.svg"
+    }
+  ]
+}

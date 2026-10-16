@@ -1,6 +1,7 @@
 import type { Edge, Node } from "@xyflow/react";
 
 import type { LineageNodeData, LineageNodeType } from "@/components/lineage-nodes";
+import { agentSource } from "@/lib/agent-source";
 import { NODE_COLOR_MAP } from "@/lib/graph-utils";
 import { RELATIONSHIP_COLOR_MAP } from "@/lib/graph-schema";
 
@@ -363,7 +364,7 @@ export function buildLargeGraphOverviewModel(
       x: position.x,
       y: position.y,
       label: data.label,
-      color: NODE_COLOR_MAP[data.nodeType] ?? "#71717a",
+      color: agentSource(data)?.accent ?? NODE_COLOR_MAP[data.nodeType] ?? "#71717a",
       size: nodeSize(data),
       nodeType: data.nodeType,
       severity: data.severity,

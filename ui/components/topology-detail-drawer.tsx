@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useState } from "react";
 import { Lock, Package, Server, ShieldAlert, Users, Wrench } from "lucide-react";
 
+import { AgentSourceMark } from "@/components/agent-source-mark";
+import { agentSource } from "@/lib/agent-source";
 import { Drawer } from "@/components/drawer";
 import type { Agent } from "@/lib/api";
 import {
@@ -82,6 +84,7 @@ export function TopologyDetailDrawer({
       bodyClassName="topology-detail-body"
       eyebrow={selection.kind === "agent" ? "Agent runtime" : "Service display group"}
       title={title}
+      headerAside={agent ? <AgentSourceMark source={agentSource({ agentType: agent.agent_type })} className="h-9 w-9" /> : undefined}
       subtitle={subtitle}
     >
       <div className="flex h-full min-h-0 flex-col">
