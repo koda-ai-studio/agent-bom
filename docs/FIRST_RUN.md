@@ -3,6 +3,11 @@
 This guide is the canonical quickstart for `agent-bom`. It gives new users a
 deterministic path from install to a real inventory and graph.
 
+**Investigating through an assistant?** Follow the
+[three MCP workflows](MCP_WORKFLOWS.md): find affected agents, inspect an
+exposure path's receipts, and compare retained scans. The credential-free
+example saves actual MCP responses and measures time to the first useful result.
+
 **Hosting the control plane?** See [`DEPLOY_QUICKSTART.md`](DEPLOY_QUICKSTART.md) —
 `scripts/deploy/install.sh pilot` for local Docker, or EKS/AKS/GKE/Snowflake
 paths with read-only cloud connect.

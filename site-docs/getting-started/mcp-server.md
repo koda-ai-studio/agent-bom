@@ -1,5 +1,10 @@
 # MCP Server Setup
 
+Start with [three investigation workflows](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/MCP_WORKFLOWS.md):
+find affected agents, explain an exposure path with receipts, and compare scans
+after a change. Each has an example prompt, expected artifact and next action;
+the credential-free walkthrough makes real MCP calls and records local timing.
+
 agent-bom starts with 8 scan-profile tools and 3 workflow prompts. Select `--profile graph`,
 `cloud`, `runtime`, or `audit` for specialized tasks. Read `profiles://catalog` for startup commands.
 The explicit `--profile full` catalog exposes 94 tools, 7 resources and 8 workflow prompts so agents can

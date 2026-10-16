@@ -141,6 +141,7 @@ proxy and gateway deployments add runtime evidence.
 For coding assistants, run `agent-bom mcp server`.
 Start with eight focused tools in the default profile.
 [Choose an MCP profile](docs/MCP_SERVER.md) for graph, cloud, runtime or audit work.
+[Try three investigations](docs/MCP_WORKFLOWS.md): affected agents, exposure receipts and a before/after scan comparison.
 [Import existing scanner reports](docs/IMPORTERS.md) without replacing their source evidence.
 
 Prefer an isolated invocation? Use `uvx agent-bom scan .` or check a dependency
