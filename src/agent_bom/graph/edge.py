@@ -9,6 +9,7 @@ from dataclasses import dataclass, field, replace
 from typing import Any
 
 from agent_bom.canonical_ids import canonical_graph_edge_id, legacy_canonical_id_v2
+from agent_bom.graph.runtime_receipts import merge_runtime_receipts
 from agent_bom.graph.types import RelationshipType
 from agent_bom.graph.util import _now_iso
 
@@ -51,12 +52,9 @@ def merge_union_evidence_keys(stored: dict[str, Any], incoming: dict[str, Any]) 
 def merge_edge_evidence(stored: dict[str, Any], incoming: dict[str, Any]) -> bool:
     """Merge evidence without collapsing provider action/binding receipts.
 
-    Other evidence keeps the established non-empty-first behavior. Authorization
-    decisions are complete records: merging actions and bindings independently
-    would manufacture combinations the evaluator never assessed.
+    Other evidence keeps the established non-empty-first behavior. Combining
+    independent actions and bindings would manufacture unassessed permissions.
     """
-    from agent_bom.graph.runtime_receipts import merge_runtime_receipts
-
     changed = merge_union_evidence_keys(stored, incoming)
     changed = merge_runtime_receipts(stored, incoming) or changed
     decisions: dict[str, dict[str, Any]] = {}

@@ -18,8 +18,12 @@ detections. Nothing in this module asserts observed attacker activity.
 
 from __future__ import annotations
 
+from agent_bom.graph.compromise import _scope_gaps
+from agent_bom.graph.consequence.eligibility import _receipt_scope
 from agent_bom.graph.container import AttackPath, TechniqueMapping, UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
+from agent_bom.graph.hop_evidence import HopAuthorityEvidence, authority_evidence, runtime_evidence_references
+from agent_bom.graph.path_evidence import _runtime_outcome, _runtime_state, resolve_typed_hop
 from agent_bom.graph.types import EntityType, RelationshipType
 
 # A catalog identifier is not evidence of its prerequisites. These narrow rules
@@ -53,9 +57,6 @@ def _storage_read_receipt(graph: UnifiedGraph, edge: UnifiedEdge) -> bool:
     T1530: https://attack.mitre.org/techniques/T1530/ (object-storage data).
     A recorded allow supplies a modeled prerequisite, not collection/exfiltration.
     """
-    from agent_bom.graph.compromise import _scope_gaps
-    from agent_bom.graph.consequence.eligibility import _receipt_scope
-    from agent_bom.graph.hop_evidence import HopAuthorityEvidence, authority_evidence
 
     raw = authority_evidence(edge.evidence)
     if raw is None or raw["status"] != "recorded":
@@ -81,8 +82,6 @@ def _storage_read_receipt(graph: UnifiedGraph, edge: UnifiedEdge) -> bool:
 
 def _candidate(graph: UnifiedGraph, edge: UnifiedEdge) -> tuple[str, str, str, str] | None:
     """Return (technique, catalog, basis, explanation) for supported prerequisites."""
-    from agent_bom.graph.hop_evidence import runtime_evidence_references
-    from agent_bom.graph.path_evidence import _runtime_outcome, _runtime_state
 
     source, target = graph.nodes.get(edge.source), graph.nodes.get(edge.target)
     if source is None or target is None or _runtime_outcome(edge) in {"blocked", "failed"}:
@@ -181,7 +180,6 @@ def derive_attack_path_techniques(
             # ATT&CK/ATLAS annotate evidence-backed paths.  They must never
             # manufacture exploitability from structural topology.
             continue
-        from agent_bom.graph.path_evidence import resolve_typed_hop
 
         edge, _ = resolve_typed_hop(graph, hops[i], hops[i + 1], rel.value)
         if edge is None or not edge.traversable or edge.direction != "directed":

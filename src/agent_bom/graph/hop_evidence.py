@@ -8,6 +8,7 @@ from typing import Annotated, Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
 from agent_bom.graph.container import AttackPath
+from agent_bom.graph.runtime_receipts import runtime_records
 
 EvidenceId = Annotated[str, Field(min_length=1, max_length=1024)]
 
@@ -174,7 +175,6 @@ def _runtime_reference(evidence: Mapping[str, Any]) -> list[dict[str, str]]:
 
 def runtime_evidence_references(evidence: Mapping[str, Any]) -> list[dict[str, str]]:
     """Project references from complete source records, bounded and deduplicated."""
-    from agent_bom.graph.runtime_receipts import runtime_records
 
     result: list[dict[str, str]] = []
     for record in runtime_records(dict(evidence)):
