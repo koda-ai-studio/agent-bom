@@ -1,6 +1,6 @@
 # agent-bom
 
-<!-- mcp-name: io.github.msaad00/agent-bom -->
+<!-- mcp-name: io.github.koda-ai-studio/agent-bom -->
 
 **Open security scanner and self-hosted control plane for AI, MCP, and cloud infrastructure.**
 

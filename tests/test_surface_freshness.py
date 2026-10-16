@@ -595,6 +595,7 @@ def test_surface_freshness_does_not_close_on_degraded_evidence(monkeypatch, tmp_
         }
 
     monkeypatch.setattr(script, "probe_pypi", fresh("PyPI"))
+    monkeypatch.setattr(script, "probe_mcp_registry", fresh("MCP Registry"))
     monkeypatch.setattr(script, "probe_docker", fresh("Docker"))
     monkeypatch.setattr(
         script,
@@ -629,6 +630,7 @@ def test_legacy_glama_tool_count_flag_is_still_accepted(monkeypatch, tmp_path):
         return probe
 
     monkeypatch.setattr(script, "probe_pypi", record("PyPI"))
+    monkeypatch.setattr(script, "probe_mcp_registry", record("MCP Registry"))
     monkeypatch.setattr(script, "probe_docker", record("Docker"))
     monkeypatch.setattr(script, "probe_glama", record("Glama"))
     monkeypatch.setattr(script, "probe_smithery", record("Smithery"))
@@ -745,6 +747,7 @@ def test_surface_freshness_main_skips_blank_docker_and_smithery_env(monkeypatch,
         seen["smithery"] = qualified_name
         return {"surface": "Smithery", "status": "fresh", "version": "catalog-live", "expected": expected}
 
+    monkeypatch.setattr(script, "probe_mcp_registry", lambda *a, **kw: {"surface": "MCP Registry", "status": "fresh"})
     monkeypatch.setattr(script, "probe_docker", fake_docker)
     monkeypatch.setattr(script, "probe_smithery", fake_smithery)
 
@@ -778,6 +781,7 @@ def test_default_invocation_derives_the_expected_tool_count(monkeypatch, tmp_pat
 
     for name, attribute in (
         ("PyPI", "probe_pypi"),
+        ("MCP Registry", "probe_mcp_registry"),
         ("Docker", "probe_docker"),
         ("Glama", "probe_glama"),
         ("Smithery", "probe_smithery"),
@@ -1177,6 +1181,7 @@ def test_non_smithery_drift_still_blocks_fail_on_stale_gate(monkeypatch, tmp_pat
         },
     )
 
+    monkeypatch.setattr(script, "probe_mcp_registry", lambda *a, **kw: {"surface": "MCP Registry", "status": "fresh"})
     out = tmp_path / "report.json"
     assert script.main(["--expected", "0.103.2", "--out", str(out), "--fail-on-stale"]) == 1
     report = json.loads(out.read_text())
@@ -1191,6 +1196,7 @@ def test_smithery_drift_among_other_fresh_surfaces_preserves_required_gate(monke
         return lambda expected, *args, **kwargs: {"surface": name, "status": "fresh", "version": expected, "expected": expected}
 
     monkeypatch.setattr(script, "probe_pypi", fresh("PyPI"))
+    monkeypatch.setattr(script, "probe_mcp_registry", fresh("MCP Registry"))
     monkeypatch.setattr(script, "probe_docker", fresh("Docker"))
     monkeypatch.setattr(script, "probe_glama", fresh("Glama"))
     monkeypatch.setattr(

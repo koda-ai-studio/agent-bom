@@ -11,8 +11,12 @@ from __future__ import annotations
 
 import ast
 import importlib.util
+import json
 import sys
 from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 SMOKE = ROOT / "scripts/smoke_mcp_wheel.py"
@@ -86,3 +90,30 @@ def test_ci_and_release_use_a_clean_unlocked_wheel_install() -> None:
         assert "python -m venv" in body
         assert 'bin/pip" install --disable-pip-version-check dist/*.whl' in body
         assert "scripts/smoke_mcp_wheel.py" in body
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "found,reject_unknown,reason", [(False, True, "unknown"), (True, False, "unknown"), (True, True, "unknown"), (True, True, "internal")]
+)
+async def test_tool_smoke_requires_useful_result_and_strict_arguments(found, reject_unknown, reason):
+    calls = []
+
+    class Session:
+        async def call_tool(self, name, arguments):
+            calls.append((name, arguments))
+            invalid = "unexpected_argument" in arguments
+            text = json.dumps({"found": found, "package": "@modelcontextprotocol/server-filesystem"})
+            if invalid:
+                text = "Unknown argument(s): unexpected_argument" if reason == "unknown" else "Internal server error"
+            return SimpleNamespace(
+                is_error=invalid and reject_unknown,
+                content=[SimpleNamespace(type="text", text=text)],
+            )
+
+    if found and reject_unknown and reason == "unknown":
+        await smoke._exercise_tools(Session())
+        assert len(calls) == 2
+    else:
+        with pytest.raises(RuntimeError):
+            await smoke._exercise_tools(Session())
