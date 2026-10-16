@@ -9,12 +9,12 @@ import uuid
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import quote, urlparse, urlunparse
 
 from agent_bom.package_utils import canonical_package_key
 
 AGENT_BOM_ID_NAMESPACE = uuid.UUID("7f3e4b2a-9c1d-5f8e-a0b4-12c3d4e5f6a7")
-CANONICAL_ID_SCHEMA_VERSION = "2"
+CANONICAL_ID_SCHEMA_VERSION = "3"
 
 
 def _part_to_text(value: Any) -> str:
@@ -28,13 +28,23 @@ def _part_to_text(value: Any) -> str:
 
 
 def canonical_fingerprint(*parts: Any) -> str:
-    """Return the normalized fingerprint material used for canonical IDs."""
-    return ":".join(text.lower().strip() for text in (_part_to_text(part) for part in parts) if text)
+    """Versioned, case-preserving structured identity; callers normalize semantics.
+
+    JSON boundaries retain empty values, types and separators. Lowercasing or
+    colon-joining arbitrary source identifiers can merge unrelated resources.
+    """
+    return "v3:" + json.dumps(parts, sort_keys=True, separators=(",", ":"), default=_part_to_text)
 
 
 def canonical_id(*parts: Any) -> str:
-    """Return a deterministic UUID v5 for normalized content parts."""
+    """Return a deterministic UUID v5 from the current identity schema."""
     return str(uuid.uuid5(AGENT_BOM_ID_NAMESPACE, canonical_fingerprint(*parts)))
+
+
+def legacy_canonical_id_v2(*parts: Any) -> str:
+    """Reproduce old IDs for explicit compatibility, never for a new identity."""
+    fingerprint = ":".join(text.lower().strip() for text in (_part_to_text(part) for part in parts) if text)
+    return str(uuid.uuid5(AGENT_BOM_ID_NAMESPACE, fingerprint))
 
 
 def source_ids(**values: Any) -> dict[str, str]:
@@ -81,6 +91,27 @@ def canonical_agent_id(
     return canonical_id("agent", agent_type, name)
 
 
+def legacy_agent_id_v2(
+    agent_type: str,
+    name: str,
+    *,
+    source_id: str = "",
+    device_fingerprint: str = "",
+    config_path: str = "",
+) -> str:
+    """Frozen v2 derivation for explicit migration receipts."""
+    fingerprint = (device_fingerprint or "").strip()
+    if fingerprint:
+        return legacy_canonical_id_v2("agent", agent_type, f"device:{fingerprint}")
+    source = (source_id or "").strip()
+    if source:
+        return legacy_canonical_id_v2("agent", agent_type, f"source:{source}", f"name:{name}")
+    location = (config_path or "").strip()
+    if location:
+        return legacy_canonical_id_v2("agent", agent_type, f"config:{location}", f"name:{name}")
+    return legacy_canonical_id_v2("agent", agent_type, name)
+
+
 def legacy_agent_id_v1(agent_type: str, name: str, *, source: str = "", config_path: str = "") -> str:
     """Return the pre-v2 Agent-model identity for migration/alias matching.
 
@@ -89,7 +120,7 @@ def legacy_agent_id_v1(agent_type: str, name: str, *, source: str = "", config_p
     persisted fleet rows can be upgraded without discarding lifecycle state.
     """
     discriminator = source or config_path or name
-    return canonical_id("agent", agent_type, discriminator)
+    return legacy_canonical_id_v2("agent", agent_type, discriminator)
 
 
 def normalize_command_arg(arg: str) -> str:
@@ -153,8 +184,7 @@ def canonical_mcp_server_id(
     if registry_id:
         return canonical_id("mcp_server", registry_id)
     identifier = mcp_server_identity_discriminator(name, command, url=url, args=args).strip()
-    # canonical_id lower-cases every part; URL paths and local paths/args are
-    # case-sensitive, so only the discriminator's own normalization applies.
+    # Retain the historical case-preserving UUID format for this discriminator.
     return str(uuid.uuid5(AGENT_BOM_ID_NAMESPACE, f"mcp_server:{identifier}"))
 
 
@@ -186,7 +216,8 @@ def agent_identity_scope(record: Any) -> str:
 def agent_graph_id(name: Any, scope: str = "") -> str:
     """Graph node id of a discovered agent: ``agent:[<scope>:]<name>``."""
     label = str(name or "unknown").strip() or "unknown"
-    scope_part = str(scope or "").strip().replace(":", "%3A")
+    scope_part = quote(str(scope or "").strip(), safe="")
+    label = quote(label, safe="")
     return f"agent:{scope_part}:{label}" if scope_part else f"agent:{label}"
 
 
@@ -201,27 +232,55 @@ def agent_graph_id_for(record: Any) -> str:
 
 
 def agent_config_scope(record: Any) -> str:
-    """Scope for a project-config agent with no endpoint: its config identity.
+    """Config identity for every agent without a stronger endpoint scope.
 
-    Project configs are named after their directory, so ``.mcp.json`` and
-    ``.vscode/mcp.json`` in one repository share a name. The agent's canonical
-    id is derived from the full config path and survives report serialization,
-    which reduces ``config_path`` itself to a basename.
+    Reports redact config paths to basenames but retain canonical identity.
+    Prefer that receipt; a basename alone cannot reconstruct the full path.
     """
-    if _field(record, "source") != PROJECT_CONFIG_SOURCE or not str(_field(record, "config_path") or "").strip():
+    if not str(_field(record, "config_path") or "").strip():
         return ""
     identity = next((str(value) for key in ("canonical_id", "stable_id", "id") if (value := _field(record, key))), "")
     identity = identity or canonical_agent_id(
-        str(_field(record, "agent_type") or ""), str(_field(record, "name") or ""), config_path=str(_field(record, "config_path"))
+        str(_field(record, "agent_type") or _field(record, "type") or ""),
+        str(_field(record, "name") or ""),
+        config_path=str(_field(record, "config_path")),
     )
     return f"cfg-{hashlib.sha256(identity.encode()).hexdigest()[:12]}"
 
 
+def _legacy_agent_graph_id(name: Any, scope: str = "") -> str:
+    """Frozen v2 graph spelling, including its lossy percent escaping."""
+    label = str(name or "unknown").strip() or "unknown"
+    scope_part = str(scope or "").strip().replace(":", "%3A")
+    return f"agent:{scope_part}:{label}" if scope_part else f"agent:{label}"
+
+
 def previous_agent_graph_ids(record: Any) -> list[str]:
-    """The name-only id this agent carried before config-path scoping."""
+    """Candidate old spellings; persistence rejects ambiguous alias bindings."""
     current = agent_graph_id_for(record)
-    legacy = agent_graph_id(_field(record, "name"), agent_identity_scope(record))
-    return [legacy] if legacy != current else []
+    scope = agent_identity_scope(record)
+    previous = {_legacy_agent_graph_id(_field(record, "name"), scope)}
+    if isinstance(record, Mapping) and isinstance(record.get("previous_graph_ids"), list):
+        previous.update(value for value in record["previous_graph_ids"] if isinstance(value, str) and value)
+    elif not scope and _field(record, "source") == PROJECT_CONFIG_SOURCE and _field(record, "config_path"):
+        # Do not hash a redacted basename as though it were the original path.
+        # New exports carry these receipts from the full model before redaction.
+        location = str(_field(record, "config_path"))
+        identities = []
+        if not isinstance(record, Mapping) or os.path.isabs(location):
+            identities.append(
+                legacy_agent_id_v2(
+                    str(_field(record, "agent_type") or _field(record, "type") or ""),
+                    str(_field(record, "name") or ""),
+                    config_path=location,
+                )
+            )
+        elif prior := _field(record, "canonical_id") or _field(record, "stable_id") or _field(record, "id"):
+            identities.append(str(prior))
+        for identity in identities:
+            old_scope = f"cfg-{hashlib.sha256(identity.encode()).hexdigest()[:12]}"
+            previous.add(_legacy_agent_graph_id(_field(record, "name"), old_scope))
+    return sorted(previous - {current})
 
 
 def mcp_server_identity_kind(*, url: Any = None, command: Any = "", args: Sequence[Any] | None = None, registry_id: Any = None) -> str:
@@ -264,7 +323,7 @@ def mcp_server_graph_id(
     identity = str(canonical_id or "").strip() or canonical_mcp_server_id(
         label, str(command or ""), registry_id=str(registry_id or "") or None, url=str(url or "") or None, args=list(args or [])
     )
-    scope = str(host_scope or "").strip().replace(":", "%3A")
+    scope = quote(str(host_scope or "").strip(), safe="")
     if kind == "host" and scope:
         return f"server:{scope}:{identity}"
     return f"server:{identity}"
@@ -298,8 +357,6 @@ def previous_mcp_server_graph_ids(server: Any, agent: Any) -> list[str]:
     full; before canonical server ids, every server lived under its agent.
     """
     current = mcp_server_graph_id_for(server, agent)
-    if _field(agent, "source") == CORTEX_AGENT_SOURCE or _field(server, "canonical_id") or _field(server, "stable_id"):
-        return []
     label = str(_field(server, "name") or "unknown").strip() or "unknown"
     url, command, args, registry_id = (
         _field(server, "url"),
@@ -307,18 +364,20 @@ def previous_mcp_server_graph_ids(server: Any, agent: Any) -> list[str]:
         list(_field(server, "args") or []),
         _field(server, "registry_id"),
     )
-    if mcp_server_identity_kind(url=url, command=command, args=args, registry_id=registry_id) == "agent":
-        return []
-    agent_key = agent_graph_id_for(agent).removeprefix("agent:")
-    previous: list[str] = []
-    if not registry_id:
-        lowered = canonical_id("mcp_server", mcp_server_identity_discriminator(label, str(command), url=str(url or "") or None, args=args))
-        legacy = mcp_server_graph_id(
-            label, command=command, args=args, url=url, canonical_id=lowered, host_scope=agent_identity_scope(agent), agent_key=agent_key
-        )
-        previous.append(legacy)
-    previous.append(f"server:{agent_key}:{label}")
-    return sorted({value for value in previous if value != current})
+    kind = mcp_server_identity_kind(url=url, command=command, args=args, registry_id=registry_id)
+    agent_ids = [agent_graph_id_for(agent), *previous_agent_graph_ids(agent)]
+    previous = {f"server:{agent_id.removeprefix('agent:')}:{label}" for agent_id in agent_ids}
+    if kind != "agent" and _field(agent, "source") != CORTEX_AGENT_SOURCE:
+        explicit = _field(server, "canonical_id") or _field(server, "stable_id")
+        identities = {str(explicit)} if explicit else {canonical_mcp_server_id(label, str(command), url=url, args=args)}
+        if registry_id:
+            identities.add(legacy_canonical_id_v2("mcp_server", registry_id))
+        elif not explicit:
+            identities.add(legacy_canonical_id_v2("mcp_server", mcp_server_identity_discriminator(label, str(command), url=url, args=args)))
+        # Frozen pre-v3 spelling: do not run the old scope through new escaping.
+        scope = agent_identity_scope(agent).strip().replace(":", "%3A")
+        previous.update(f"server:{scope}:{identity}" if kind == "host" and scope else f"server:{identity}" for identity in identities)
+    return sorted(previous - {current})
 
 
 def canonical_mcp_tool_id(name: str, input_schema: Mapping[str, Any] | bool | None = None, *, server_id: str | None = None) -> str:
@@ -461,3 +520,30 @@ def snowflake_cortex_tool_node_id(agent_node_id: str, agent_name: Any, tool_name
     """Tool id matching the agent projection's ``tool:server:<agent>:<server>:<tool>`` form."""
     agent_key = agent_node_id.removeprefix("agent:")
     return f"tool:server:{agent_key}:{snowflake_cortex_agent_server_name(agent_name)}:{tool_name}"
+
+
+def previous_agent_canonical_ids(agent: Any) -> list[str]:
+    """Frozen old-version receipts, computed before config-path redaction."""
+    kind = agent.agent_type.value if hasattr(agent.agent_type, "value") else str(agent.agent_type)
+    prior = [
+        legacy_agent_id_v2(
+            kind,
+            agent.name,
+            source_id=agent.source_id or "",
+            device_fingerprint=agent.device_fingerprint or "",
+            config_path=agent.config_path,
+        )
+    ]
+    if not (agent.source_id or agent.device_fingerprint):
+        prior.append(legacy_agent_id_v1(kind, agent.name, source=agent.source or "", config_path=agent.config_path))
+    return list(dict.fromkeys(identity for identity in prior if identity != agent.stable_id))
+
+
+def agent_identity_export(agent: Any) -> dict[str, Any]:
+    """The same identity receipts on manifest and scan entity exports."""
+    return {
+        "id": agent.stable_id,
+        "canonical_id": agent.canonical_id,
+        "previous_canonical_ids": agent.previous_canonical_ids,
+        "previous_graph_ids": agent.previous_graph_ids,
+    }

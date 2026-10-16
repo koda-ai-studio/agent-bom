@@ -10,7 +10,7 @@
       ]
     }
   ],
-  "artifact_sha256": "sha256:48cd3c4326d7a812848af64733c399327f0a0c6e12ed6ce12c853ea433dd317b",
+  "artifact_sha256": "sha256:59bda65db7b0d17777cee66fc275a6903769ac68fadb4f4ea0bde2d9e8f3ad7c",
   "capture_fixture": {
     "fix_first": {
       "attack_campaigns": [
@@ -1154,8 +1154,7 @@
             },
             "exposedCredentials": [],
             "findings": [
-              "reference-finding-cve-2023-4863",
-              "CVE-2023-4863"
+              "reference-finding-cve-2023-4863"
             ],
             "hopEvidence": [
               {
@@ -1438,7 +1437,7 @@
                   "status": "not_assessed"
                 }
               },
-              "canonical_id": "96ba397c-b3d9-5d6a-8121-e4e9d99aa521",
+              "canonical_id": "e68abb93-3377-5bdb-a756-fdeaccb90818",
               "category_uid": 5,
               "class_uid": 4001,
               "compliance_tags": [],
@@ -1685,7 +1684,7 @@
           },
           "risk_reasons": [
             {
-              "detail": "2 vulnerability or misconfiguration finding(s) anchor this path.",
+              "detail": "1 vulnerability or misconfiguration finding(s) anchor this path.",
               "kind": "finding",
               "label": "Finding in chain"
             }
@@ -1892,8 +1891,7 @@
             },
             "exposedCredentials": [],
             "findings": [
-              "reference-finding-cve-2023-4863",
-              "CVE-2023-4863"
+              "reference-finding-cve-2023-4863"
             ],
             "hopEvidence": [
               {
@@ -2176,7 +2174,7 @@
                 },
                 "sbom": "examples/reference-evidence-lab/sbom.cdx.json"
               },
-              "canonical_id": "4043f8e6-7924-5159-a4ad-92d7f9f44979",
+              "canonical_id": "4ceb4874-b3c8-5c45-b041-72fdfb3eb076",
               "category_uid": 5,
               "class_uid": 4001,
               "compliance_tags": [],
@@ -2423,7 +2421,7 @@
           },
           "risk_reasons": [
             {
-              "detail": "2 vulnerability or misconfiguration finding(s) anchor this path.",
+              "detail": "1 vulnerability or misconfiguration finding(s) anchor this path.",
               "kind": "finding",
               "label": "Finding in chain"
             }
@@ -2626,8 +2624,7 @@
             },
             "exposedCredentials": [],
             "findings": [
-              "reference-finding-cve-2023-4863",
-              "CVE-2023-4863"
+              "reference-finding-cve-2023-4863"
             ],
             "hopEvidence": [
               {
@@ -2910,7 +2907,7 @@
                   "status": "not_assessed"
                 }
               },
-              "canonical_id": "1d50f955-4bfc-5013-b023-5a92383660ae",
+              "canonical_id": "51763b2f-9c6d-5e55-b8db-af290a56829a",
               "category_uid": 5,
               "class_uid": 4001,
               "compliance_tags": [],
@@ -3157,7 +3154,7 @@
           },
           "risk_reasons": [
             {
-              "detail": "2 vulnerability or misconfiguration finding(s) anchor this path.",
+              "detail": "1 vulnerability or misconfiguration finding(s) anchor this path.",
               "kind": "finding",
               "label": "Finding in chain"
             }
@@ -3432,7 +3429,7 @@
       "edges": [
         {
           "activity_id": 1,
-          "canonical_id": "ca279538-98c0-5a28-86f5-29dadba2cab9",
+          "canonical_id": "0d318f1c-07ac-55b9-9ef4-ba1b8b48a7a1",
           "confidence": 1.0,
           "direction": "directed",
           "evidence": {
@@ -3483,7 +3480,7 @@
         },
         {
           "activity_id": 1,
-          "canonical_id": "a2546e54-3ea4-5391-8302-16b36ae665de",
+          "canonical_id": "09f51203-2a06-5963-abf4-2f2588cc7aaa",
           "confidence": 1.0,
           "direction": "directed",
           "evidence": {
@@ -3535,7 +3532,7 @@
         },
         {
           "activity_id": 1,
-          "canonical_id": "0d9ff224-0a8b-51bd-8cd3-06e08f885395",
+          "canonical_id": "8ac6ef17-a843-5b9d-bc8f-509f046d99ca",
           "confidence": 1.0,
           "direction": "directed",
           "evidence": {
@@ -3586,7 +3583,7 @@
         },
         {
           "activity_id": 1,
-          "canonical_id": "63563a89-3eda-5322-9b21-e1ee6cd9546d",
+          "canonical_id": "dc5515f8-d6b7-5bd4-ae49-33b7a7862a54",
           "confidence": 1.0,
           "direction": "directed",
           "evidence": {
@@ -3639,7 +3636,7 @@
         },
         {
           "activity_id": 1,
-          "canonical_id": "ef950a5c-c480-546b-9da6-22395f43f227",
+          "canonical_id": "a6cb36c4-bb8a-5918-8515-3fc46c1e23ed",
           "confidence": 1.0,
           "direction": "directed",
           "evidence": {
@@ -3689,7 +3686,7 @@
         },
         {
           "activity_id": 1,
-          "canonical_id": "a67199ac-9dc7-5233-a3fe-254d1558f2af",
+          "canonical_id": "68d72535-b348-5b90-a524-1b1ffe5fd014",
           "confidence": 1.0,
           "direction": "directed",
           "evidence": {
@@ -3740,7 +3737,7 @@
         },
         {
           "activity_id": 1,
-          "canonical_id": "b1364864-7fd7-5369-b73c-0a7055b5fb5d",
+          "canonical_id": "2941dee5-f391-5cfc-84b2-e4f32cac32e0",
           "confidence": 1.0,
           "direction": "directed",
           "evidence": {
@@ -3790,7 +3787,7 @@
         },
         {
           "activity_id": 1,
-          "canonical_id": "b6dd5b62-e930-5921-b709-72617e3b93ec",
+          "canonical_id": "1cb8e11c-0788-5bff-a8c8-86785be4c2c5",
           "confidence": 1.0,
           "direction": "directed",
           "evidence": {
@@ -3841,7 +3838,7 @@
         },
         {
           "activity_id": 1,
-          "canonical_id": "5b2cd6e0-e972-5ec6-9778-5244a88f65d2",
+          "canonical_id": "c23a1d0f-1466-5f06-b5b0-4aeb6eaa4eec",
           "confidence": 1.0,
           "direction": "directed",
           "evidence": {
@@ -4048,7 +4045,7 @@
               "status": "not_assessed"
             }
           },
-          "canonical_id": "96ba397c-b3d9-5d6a-8121-e4e9d99aa521",
+          "canonical_id": "e68abb93-3377-5bdb-a756-fdeaccb90818",
           "category_uid": 5,
           "class_uid": 4001,
           "compliance_tags": [],
@@ -4124,7 +4121,7 @@
             },
             "sbom": "examples/reference-evidence-lab/sbom.cdx.json"
           },
-          "canonical_id": "4043f8e6-7924-5159-a4ad-92d7f9f44979",
+          "canonical_id": "4ceb4874-b3c8-5c45-b041-72fdfb3eb076",
           "category_uid": 5,
           "class_uid": 4001,
           "compliance_tags": [],
@@ -4550,7 +4547,7 @@
               "status": "not_assessed"
             }
           },
-          "canonical_id": "1d50f955-4bfc-5013-b023-5a92383660ae",
+          "canonical_id": "51763b2f-9c6d-5e55-b8db-af290a56829a",
           "category_uid": 5,
           "class_uid": 4001,
           "compliance_tags": [],
@@ -4916,7 +4913,7 @@
       {
         "age_hours": 0.016667,
         "created_at": "2026-08-30T04:05:00+00:00",
-        "digest": "sha256:b790087501c1307903f8cde5dfc034fe5b745a76997836ea8e7253b69e1dea3c",
+        "digest": "sha256:76e8aca54ce17458a80ad1b7b68ba8b534b8f5210b7f48e242b9141106e177b9",
         "edge_count": 2,
         "freshness": "fresh",
         "node_count": 3,
@@ -4925,7 +4922,7 @@
           "algorithm": "hmac-sha256",
           "key_id": "reference-lab-v1",
           "schema_version": "agent-bom.correlation-receipt-signature/v1",
-          "value": "sha256:c57c075451fb6d10a1b375a276b931b42dd0bcae841eeba849f6678d7db410c5"
+          "value": "sha256:e81cb01236c4f2e050092ecceb3bb5da7da111bbd4b1358e767988e4217ff98a"
         },
         "source_kinds": [
           "identity_model"
@@ -4934,7 +4931,7 @@
       {
         "age_hours": 0.083333,
         "created_at": "2026-08-30T04:01:00+00:00",
-        "digest": "sha256:f39f0df3d275024de455f7cd30558a5297c6a96fce90da0c0caaa9d4f2ea926e",
+        "digest": "sha256:aaec337adf250dfeb2420de148e0acec03cb42323017568af8aa2a2311fe1993",
         "edge_count": 2,
         "freshness": "fresh",
         "node_count": 3,
@@ -4943,7 +4940,7 @@
           "algorithm": "hmac-sha256",
           "key_id": "reference-lab-v1",
           "schema_version": "agent-bom.correlation-receipt-signature/v1",
-          "value": "sha256:a7eef396870b7f905785d3326eb0a2907169ca2fc392761e4163cbf06d6e2085"
+          "value": "sha256:2c0dd898b9a39ae2eac89702bfa6e39b123643cb51e58822e4218d7a282613bb"
         },
         "source_kinds": [
           "bundled_advisory_scanner",
@@ -4953,7 +4950,7 @@
       {
         "age_hours": 0.066667,
         "created_at": "2026-08-30T04:02:00+00:00",
-        "digest": "sha256:12af777319119f1bd1d3a21db0ad0c097a90a4599fef1a476c069cce5037f16b",
+        "digest": "sha256:7e66f3a93b45e0cfa2140d9b0486e60f1432e44a96db7429478f61f3a17a0330",
         "edge_count": 3,
         "freshness": "fresh",
         "node_count": 4,
@@ -4962,7 +4959,7 @@
           "algorithm": "hmac-sha256",
           "key_id": "reference-lab-v1",
           "schema_version": "agent-bom.correlation-receipt-signature/v1",
-          "value": "sha256:15fdc743f99134dfa779f50036fbe24220b9cce4c2ef4d8d266de17bce2c0ce4"
+          "value": "sha256:fae08590f685bd0d952055b515ef6badab4f195720a9f46b561374c4e447d2c8"
         },
         "source_kinds": [
           "kubernetes_iac",
@@ -4990,7 +4987,7 @@
       {
         "age_hours": 0.1,
         "created_at": "2026-08-30T04:00:00+00:00",
-        "digest": "sha256:20e39fed8eacafc31d6dd6cb411b89ab928d8d33aa2cb15fdb771e02c6c128dd",
+        "digest": "sha256:6ae8cc93ddfe3d9d5ee6378bf8e6c1e07719f9f2a87adeee8f17f16738925b36",
         "edge_count": 1,
         "freshness": "fresh",
         "node_count": 2,
@@ -4999,7 +4996,7 @@
           "algorithm": "hmac-sha256",
           "key_id": "reference-lab-v1",
           "schema_version": "agent-bom.correlation-receipt-signature/v1",
-          "value": "sha256:27d4fc025fea87794e95a48ab9a6793e599378e445782de7795a8f0b666f5e4d"
+          "value": "sha256:e84b1f829b42e5a812c7d424acd3392eaaa986cc39fc67552310e6d063749bd3"
         },
         "source_kinds": [
           "repository_parser"
@@ -5008,7 +5005,7 @@
       {
         "age_hours": 0.033333,
         "created_at": "2026-08-30T04:04:00+00:00",
-        "digest": "sha256:5d88c4d26b6620128631de3b79552dc8b3f41d5e5a3c3720be37df70c68cfa38",
+        "digest": "sha256:21798c6d25560ff4ae44e43c2d8f3cba4226d4824a8803e47bacf84d1fffba50",
         "edge_count": 1,
         "freshness": "fresh",
         "node_count": 2,
@@ -5017,14 +5014,14 @@
           "algorithm": "hmac-sha256",
           "key_id": "reference-lab-v1",
           "schema_version": "agent-bom.correlation-receipt-signature/v1",
-          "value": "sha256:520811b96f6232d0006e0bb0feea2bc3bfe0d556fab2c77a8db3a4be21d7c07a"
+          "value": "sha256:8fc51d390dbe24fd782036a743155d3e03aa9a0c54ae54a7d995562cac8d5e91"
         },
         "source_kinds": [
           "gateway_runtime"
         ]
       }
     ],
-    "manifest_sha256": "sha256:d412828da0ea19396eb0e927a4c0038e15a5e098ce9b7e82b798bfb470bc57bc",
+    "manifest_sha256": "sha256:ba2354d8d72d8f2cfcc1cce8c1c524a3e4e2a41f3ad4895a959eef6bb7882439",
     "max_age_hours": 168,
     "name": "Reference evidence lab",
     "output_scan_id": "reference-evidence-correlation-v1",
@@ -5076,7 +5073,7 @@
         {
           "age_hours": 0.016667,
           "created_at": "2026-08-30T04:05:00+00:00",
-          "digest": "sha256:b790087501c1307903f8cde5dfc034fe5b745a76997836ea8e7253b69e1dea3c",
+          "digest": "sha256:76e8aca54ce17458a80ad1b7b68ba8b534b8f5210b7f48e242b9141106e177b9",
           "edge_count": 2,
           "freshness": "fresh",
           "node_count": 3,
@@ -5085,7 +5082,7 @@
             "algorithm": "hmac-sha256",
             "key_id": "reference-lab-v1",
             "schema_version": "agent-bom.correlation-receipt-signature/v1",
-            "value": "sha256:c57c075451fb6d10a1b375a276b931b42dd0bcae841eeba849f6678d7db410c5"
+            "value": "sha256:e81cb01236c4f2e050092ecceb3bb5da7da111bbd4b1358e767988e4217ff98a"
           },
           "source_kinds": [
             "identity_model"
@@ -5094,7 +5091,7 @@
         {
           "age_hours": 0.083333,
           "created_at": "2026-08-30T04:01:00+00:00",
-          "digest": "sha256:f39f0df3d275024de455f7cd30558a5297c6a96fce90da0c0caaa9d4f2ea926e",
+          "digest": "sha256:aaec337adf250dfeb2420de148e0acec03cb42323017568af8aa2a2311fe1993",
           "edge_count": 2,
           "freshness": "fresh",
           "node_count": 3,
@@ -5103,7 +5100,7 @@
             "algorithm": "hmac-sha256",
             "key_id": "reference-lab-v1",
             "schema_version": "agent-bom.correlation-receipt-signature/v1",
-            "value": "sha256:a7eef396870b7f905785d3326eb0a2907169ca2fc392761e4163cbf06d6e2085"
+            "value": "sha256:2c0dd898b9a39ae2eac89702bfa6e39b123643cb51e58822e4218d7a282613bb"
           },
           "source_kinds": [
             "bundled_advisory_scanner",
@@ -5113,7 +5110,7 @@
         {
           "age_hours": 0.066667,
           "created_at": "2026-08-30T04:02:00+00:00",
-          "digest": "sha256:12af777319119f1bd1d3a21db0ad0c097a90a4599fef1a476c069cce5037f16b",
+          "digest": "sha256:7e66f3a93b45e0cfa2140d9b0486e60f1432e44a96db7429478f61f3a17a0330",
           "edge_count": 3,
           "freshness": "fresh",
           "node_count": 4,
@@ -5122,7 +5119,7 @@
             "algorithm": "hmac-sha256",
             "key_id": "reference-lab-v1",
             "schema_version": "agent-bom.correlation-receipt-signature/v1",
-            "value": "sha256:15fdc743f99134dfa779f50036fbe24220b9cce4c2ef4d8d266de17bce2c0ce4"
+            "value": "sha256:fae08590f685bd0d952055b515ef6badab4f195720a9f46b561374c4e447d2c8"
           },
           "source_kinds": [
             "kubernetes_iac",
@@ -5150,7 +5147,7 @@
         {
           "age_hours": 0.1,
           "created_at": "2026-08-30T04:00:00+00:00",
-          "digest": "sha256:20e39fed8eacafc31d6dd6cb411b89ab928d8d33aa2cb15fdb771e02c6c128dd",
+          "digest": "sha256:6ae8cc93ddfe3d9d5ee6378bf8e6c1e07719f9f2a87adeee8f17f16738925b36",
           "edge_count": 1,
           "freshness": "fresh",
           "node_count": 2,
@@ -5159,7 +5156,7 @@
             "algorithm": "hmac-sha256",
             "key_id": "reference-lab-v1",
             "schema_version": "agent-bom.correlation-receipt-signature/v1",
-            "value": "sha256:27d4fc025fea87794e95a48ab9a6793e599378e445782de7795a8f0b666f5e4d"
+            "value": "sha256:e84b1f829b42e5a812c7d424acd3392eaaa986cc39fc67552310e6d063749bd3"
           },
           "source_kinds": [
             "repository_parser"
@@ -5168,7 +5165,7 @@
         {
           "age_hours": 0.033333,
           "created_at": "2026-08-30T04:04:00+00:00",
-          "digest": "sha256:5d88c4d26b6620128631de3b79552dc8b3f41d5e5a3c3720be37df70c68cfa38",
+          "digest": "sha256:21798c6d25560ff4ae44e43c2d8f3cba4226d4824a8803e47bacf84d1fffba50",
           "edge_count": 1,
           "freshness": "fresh",
           "node_count": 2,
@@ -5177,7 +5174,7 @@
             "algorithm": "hmac-sha256",
             "key_id": "reference-lab-v1",
             "schema_version": "agent-bom.correlation-receipt-signature/v1",
-            "value": "sha256:520811b96f6232d0006e0bb0feea2bc3bfe0d556fab2c77a8db3a4be21d7c07a"
+            "value": "sha256:8fc51d390dbe24fd782036a743155d3e03aa9a0c54ae54a7d995562cac8d5e91"
           },
           "source_kinds": [
             "gateway_runtime"
@@ -5187,7 +5184,7 @@
       "output": {
         "attack_path_count": 1,
         "edge_count": 9,
-        "graph_digest_sha256": "sha256:85bfb44f2bc0d7f719f5d44cd0e9d9104392a32db3cee13511026e65d806d37e",
+        "graph_digest_sha256": "sha256:634da4b27dba29d589dd5f8f28a48d50e49c30eef05eacc57c02ae4e458e3053",
         "node_count": 10,
         "scan_id": "reference-evidence-correlation-v1"
       },

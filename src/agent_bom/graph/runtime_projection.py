@@ -5,14 +5,13 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from typing import Any
 
-from agent_bom.canonical_ids import agent_graph_id
+from agent_bom.canonical_ids import agent_graph_id, canonical_id
 from agent_bom.graph.analysis import GraphAnalysisState, GraphAnalysisStatus
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
 from agent_bom.graph.projection_support import _add_rel_edge, _mapping_list
 from agent_bom.graph.types import EntityType, RelationshipType
-from agent_bom.graph.util import clean_graph_part as _clean_graph_part
 from agent_bom.runtime.incident_feedback import (
     RuntimeIncidentRecord,
     incident_attribute,
@@ -271,17 +270,9 @@ def _project_agent_feedback(
     unprojected = 0
     for record in records:
         for target, is_node_id in iter_observed_targets(record):
-            target_id = target if is_node_id else f"tool:observed:{_clean_graph_part(target) or 'unknown'}"
+            target_id = target if is_node_id else f"tool:observed:{canonical_id(agent_node_id, data_source_tag, target)}"
             if not is_node_id:
-                graph.add_node(
-                    UnifiedNode(
-                        id=target_id,
-                        entity_type=EntityType.TOOL,
-                        label=target,
-                        attributes={"source": "runtime-feedback", "observed": True},
-                        data_sources=[data_source_tag, "runtime-feedback"],
-                    )
-                )
+                graph.add_node(_observed_tool_node(target_id, target, agent_node_id, data_source_tag))
             target_node = graph.get_node(target_id)
             # Skip a node absent this scan (dangling) or one no runtime reach can type.
             relationship = _OBSERVED_REACH.get(target_node.entity_type) if target_node is not None else None
@@ -401,3 +392,20 @@ def project_runtime_session(graph: UnifiedGraph, runtime_graph: dict[str, Any] |
         graph.analysis_status[_RUNTIME_SESSION_STATUS] = GraphAnalysisStatus(
             status=GraphAnalysisState.LIMITED, reason_codes=("dangling_endpoint",), observed={"skipped_edges": dangling}
         )
+
+
+def _observed_tool_node(node_id: str, label: str, agent_id: str, source: str) -> UnifiedNode:
+    return UnifiedNode(
+        id=node_id,
+        entity_type=EntityType.TOOL,
+        label=label,
+        attributes={
+            "source": "runtime-feedback",
+            "observed": True,
+            "identity_resolution": "label_only",
+            "inventory_identity_proven": False,
+            "agent_id": agent_id,
+            "observed_label": label,
+        },
+        data_sources=[source, "runtime-feedback"],
+    )

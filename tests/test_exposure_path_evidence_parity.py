@@ -493,7 +493,8 @@ def test_exposure_projection_matches_occurrences_unknown_risk_and_parallel_edges
     parallel = UnifiedEdge(source="agent:a", target="pkg:p", relationship=RelationshipType.INVOKED)
     mcp, api = _serialize_both(path, nodes=nodes, edges=[selected[1], parallel, selected[0]])
     for payload in (mcp, api):
-        assert payload["findings"] == ["occurrence-a", "CVE-2026-1"]
+        assert payload["findings"] == ["occurrence-a"]
+        assert payload["target"]["label"] == "CVE-2026-1"
         assert "riskScore" not in payload["source"]  # unassessed is not zero risk
         assert payload["target"]["role"] == "finding"
         assert payload["target"]["entityType"] == "vulnerability"

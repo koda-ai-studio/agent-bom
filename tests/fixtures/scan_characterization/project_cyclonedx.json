@@ -9,7 +9,7 @@
     "properties": [
      {
       "name": "agent-bom:canonical-id-schema-version",
-      "value": "2"
+      "value": "3"
      },
      {
       "name": "agent-bom:config-path",
@@ -30,6 +30,10 @@
      {
       "name": "agent-bom:discovery-provenance:source-type",
       "value": "local_discovery"
+     },
+     {
+      "name": "agent-bom:previous-canonical-id",
+      "value": "<UUID>"
      },
      {
       "name": "agent-bom:previous-canonical-id",
@@ -571,7 +575,7 @@
    "properties": [
     {
      "name": "agent-bom:canonical-id-schema-version",
-     "value": "2"
+     "value": "3"
     },
     {
      "name": "agent-bom:ml-models",

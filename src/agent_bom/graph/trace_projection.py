@@ -73,6 +73,7 @@ class _Aggregate:
     sources: set[str] = field(default_factory=set)
     trace_ids: set[str] = field(default_factory=set)
     signals: set[str] = field(default_factory=set)
+    identity_bindings: set[tuple[str, str, str]] = field(default_factory=set)
 
     def add(self, event: NormalizedTraceEvent) -> None:
         moment = event.started_at or ""
@@ -123,12 +124,16 @@ class _Binder:
         if self.graph.has_node(ref):
             return self.graph.get_node(ref)
         if self._canonical is None:
-            self._canonical = {
-                str(node.attributes["canonical_id"]): node.id
-                for kind in (E.AGENT, E.TOOL, E.SERVER, E.CREDENTIAL, E.CLOUD_RESOURCE, E.DATASET, E.DATA_STORE)
-                for node in self.graph.iter_nodes_by_type(kind)
-                if isinstance(node.attributes.get("canonical_id"), str)
-            }
+            candidates: dict[str, set[str]] = {}
+            for kind in (E.AGENT, E.TOOL, E.SERVER, E.CREDENTIAL, E.CREDENTIAL_REF, E.CLOUD_RESOURCE, E.DATASET, E.DATA_STORE):
+                for node in self.graph.iter_nodes_by_type(kind):
+                    identity = node.attributes.get("identity")
+                    aliases = identity.get("aliases", []) if isinstance(identity, dict) else []
+                    refs = [node.canonical_id, *(aliases if isinstance(aliases, list) else [])]
+                    for candidate in refs:
+                        if isinstance(candidate, str) and candidate:
+                            candidates.setdefault(candidate, set()).add(node.id)
+            self._canonical = {key: next(iter(values)) for key, values in candidates.items() if len(values) == 1}
         node_id = self._canonical.get(ref)
         return self.graph.get_node(node_id) if node_id else None
 
@@ -143,11 +148,12 @@ class _Binder:
 
     def credential(self, holder: UnifiedNode, server: UnifiedNode | None, name: str) -> UnifiedNode | None:
         servers = [server.id] if server is not None else self._servers_of(holder)
+        matches: dict[str, UnifiedNode] = {}
         for server_id in servers:
             node = self.node(f"cred:{server_id}:{name}")
             if node is not None and node.entity_type in (E.CREDENTIAL, E.CREDENTIAL_REF):
-                return node
-        return None
+                matches[node.id] = node
+        return next(iter(matches.values())) if len(matches) == 1 else None
 
     def _servers_of(self, holder: UnifiedNode) -> list[str]:
         if holder.entity_type == E.TOOL:
@@ -230,7 +236,24 @@ class _Projector:
         if spec is None or not spec.allows(source.entity_type, target.entity_type):
             self.observed["disallowed_pairs"] += 1
             return
-        self.aggregates.setdefault((source.id, relationship.value, target.id), _Aggregate()).add(event)
+        aggregate = self.aggregates.setdefault((source.id, relationship.value, target.id), _Aggregate())
+        aggregate.add(event)
+        current: NormalizedTraceEvent | None = event
+        visited: set[tuple[str, str, str]] = set()
+        for _ in range(_MAX_PARENT_HOPS):
+            if current is None:
+                break
+            key = (current.source, current.source_trace_id, current.source_span_id)
+            if key in visited:
+                break
+            visited.add(key)
+            refs = [current.agent_ref, current.match_node_id, current.mcp_server_ref, *current.resource_refs]
+            for ref in refs:
+                bound = self.binder.node(ref)
+                if bound is not None and bound.id in {source.id, target.id} and ref != bound.id:
+                    method = "canonical_id" if ref == bound.canonical_id else "recorded_alias"
+                    aggregate.identity_bindings.add((str(ref), bound.id, method))
+            current = self.spans.get((current.source, current.source_trace_id, current.parent_span_id)) if current.parent_span_id else None
 
     def project(self, event: NormalizedTraceEvent) -> None:
         own = self.own_node(event)
@@ -292,6 +315,10 @@ def _evidence(aggregate: _Aggregate, start: str, end: str) -> dict[str, Any]:
         window_start=start,
         window_end=end,
     )
+    if aggregate.identity_bindings:
+        evidence["identity_bindings"] = [
+            {"reported_ref": ref, "node_id": node, "method": method} for ref, node, method in sorted(aggregate.identity_bindings)
+        ]
     sanitized = sanitize_sensitive_payload(evidence)
     return sanitized if isinstance(sanitized, dict) else evidence
 

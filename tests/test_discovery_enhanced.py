@@ -149,7 +149,9 @@ def test_cloud_asset_lifecycle_states_preserved_in_report(provider, service, res
     assert serialized["metadata"]["cloud_state"]["raw_state"] == raw_state
 
     graph = build_unified_graph_from_report(data)
-    graph_agent = graph.nodes[f"agent:{service}:{expected}"]
+    from agent_bom.canonical_ids import agent_graph_id_for
+
+    graph_agent = graph.nodes[agent_graph_id_for(agent)]
     assert graph_agent.first_seen == "2026-04-27T09:00:00Z"
     assert graph_agent.last_seen == "2026-04-28T09:00:00Z"
     assert graph_agent.attributes["discovered_at"] == "2026-04-27T09:00:00Z"

@@ -174,3 +174,8 @@ def _unsupported_traversal_errors() -> tuple[type[BaseException], ...]:
     from agent_bom.api.neptune_graph import NeptuneGraphStoreUnsupportedOperationError
 
     return (NeptuneGraphStoreUnsupportedOperationError,)
+
+
+SQLITE_INVENTORY_SEARCH_CLAUSE = (
+    "(LOWER(label) LIKE ? ESCAPE '\\' OR LOWER(json_remove(attributes, '$._agent_bom_canonical_id')) LIKE ? ESCAPE '\\')"
+)

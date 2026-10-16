@@ -90,7 +90,7 @@ Emitted by: `graph/finding_row_projection.py`, `graph/hosting_projection.py`, `g
 Id formats:
 
 - `container:k8s:pod:{pod_uid}`
-- `container:{container_image}`
+- `container:serving-config:{…}`
 
 ## `credential`
 
@@ -120,7 +120,7 @@ Emitted by: `graph/training_projection.py`; demo fixtures: `demo_estate/estate_g
 
 Id formats:
 
-- `dataset:{dataset_name}`
+- `dataset:card:{…}`
 
 ## `directory`
 

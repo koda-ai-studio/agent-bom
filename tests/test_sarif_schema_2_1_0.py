@@ -413,10 +413,13 @@ def test_sarif_exposure_chain_in_message_and_related_locations() -> None:
     # Idiomatic SARIF: each hop is a relatedLocation logicalLocation.
     related = result["relatedLocations"]
     fq_names = [loc["logicalLocations"][0]["fullyQualifiedName"] for loc in related]
-    assert "agent:cursor" in fq_names
-    # Hops are graph node ids: a name-only server stays under its agent.
-    assert "server:cursor:database-server" in fq_names
-    assert "tool:server:cursor:database-server:run_query" in fq_names
+    from agent_bom.canonical_ids import agent_graph_id_for, mcp_server_graph_id_for
+
+    agent = _full_chain_report().agents[0]
+    server_id = mcp_server_graph_id_for(agent.mcp_servers[0], agent)
+    assert agent_graph_id_for(agent) in fq_names
+    assert server_id in fq_names
+    assert f"tool:{server_id}:run_query" in fq_names
 
 
 def test_sarif_exposure_chain_document_is_schema_valid(sarif_validator: Draft7Validator) -> None:

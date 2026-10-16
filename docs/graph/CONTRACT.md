@@ -76,6 +76,36 @@ source. Ordinary metadata still follows the existing precedence rules. Collect
 fresh evidence and review its scope before treating an earlier positive claim
 as resolved.
 
+### Canonical identity version 3
+
+New scan exports declare `canonical_id_schema_version: "3"`. Structured,
+case-preserving components distinguish embedded separators, empty values and
+case-sensitive resource identifiers. Agent graph IDs include source or config
+scope; exports retain the graph aliases calculated before config-path redaction.
+Two same-named agents in different config files remain separate occurrences.
+
+An upgrade does not rewrite stored snapshots. SQLite and Postgres persist new
+canonical-ID receipts and read historical rows with their original version-2
+identity. Exported IDs already recorded in imported graphs are retained. A
+rescan creates version-3 IDs; consumers comparing new exports with older ones
+must use the declared identity version and explicit aliases, not labels. Fleet
+migration retains an existing approval only when its source/device or exact
+local type, name and config scope agrees. Ambiguous matches remain separate.
+
+Aliases resolve only when one node owns the alias within the selected tenant
+and snapshot. An omitted snapshot on the store alias lookup uses its latest scan;
+an older binding cannot revive an alias that is now ambiguous. Trace edges may
+bind an explicit recorded alias and retain `identity_bindings` with the reported
+reference and resolved node. A matching display name remains a candidate and
+does not become an execution edge.
+
+Training datasets and serving configurations without a stable native identifier
+retain separate source observations. A shared label, image or unqualified model
+suffix does not establish identity. Serving-configuration nodes do not assert a
+running container; label-only runtime targets do not assert inventory identity.
+Select the node receipt to inspect its source and scope before comparing it with
+another observation.
+
 ### Cloud identity correlation and governance
 
 Azure role assignments join collected managed identities and service principals

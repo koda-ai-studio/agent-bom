@@ -53,7 +53,8 @@ _RESOLVE_IN_SNAPSHOT_SQL = (
 _RESOLVE_LATEST_SQL = (
     "SELECT alias_id, canonical_id FROM graph_node_aliases a WHERE tenant_id = %s AND alias_id = ANY(%s)"
     " AND NOT EXISTS (SELECT 1 FROM graph_nodes n WHERE n.id = a.alias_id AND n.scan_id = a.scan_id AND n.tenant_id = a.tenant_id)"
-    " ORDER BY updated_at, scan_id"
+    " AND a.scan_id = (SELECT s.scan_id FROM graph_snapshots s WHERE s.tenant_id = a.tenant_id"
+    " AND s.snapshot_kind = 'scan' ORDER BY s.created_at DESC, s.scan_id DESC LIMIT 1)"
 )
 # Nodes are written first in the same transaction; an alias naming one of them is never recorded.
 _UPSERT_SQL = (
@@ -77,7 +78,8 @@ def resolve_node_aliases(conn: Any, *, tenant_id: str, node_ids: Iterable[str], 
     A recorded alias equal to a node id that exists in the same snapshot is ignored.
 
     With ``scan_id`` the binding is the one that snapshot recorded; without it,
-    the most recently written binding.
+    the latest scan snapshot, matching the default graph read. Missing or
+    ambiguous current bindings never fall back to an older snapshot.
     """
     ids = sorted({node_id for node_id in node_ids if node_id})[:_MAX_LOOKUP]
     if not ids:

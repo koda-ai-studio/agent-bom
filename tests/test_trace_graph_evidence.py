@@ -13,14 +13,14 @@ from agent_bom.api.native_trace_import import TraceImportScope, prepare_trace_pa
 from agent_bom.api.runtime_event_store import InMemoryRuntimeEventStore
 from agent_bom.api.trace_collection.normalized_events import tenant_principal
 from agent_bom.api.trace_collection.trace_evidence import emit_shadow_findings, record_otlp_evidence, with_trace_events
-from agent_bom.canonical_ids import mcp_server_graph_id
+from agent_bom.canonical_ids import agent_graph_id_for, mcp_server_graph_id
 from agent_bom.graph.builder import build_unified_graph_from_report
 from agent_bom.graph.credential_reach import credential_routes
 from agent_bom.graph.path_derivation import _derived_attack_paths
 from agent_bom.graph.trace_projection import STATUS_KEY
 from agent_bom.runtime.native_trace_spans import native_span
 
-AGENT = "agent:billing-agent"
+LEGACY_AGENT = "agent:billing-agent"
 SERVER = mcp_server_graph_id("crm", command="npx", args=["crm-mcp"])
 TOOL = f"tool:{SERVER}:query_crm"
 CREDENTIAL = f"cred:{SERVER}:CRM_API_KEY"
@@ -65,6 +65,8 @@ REPORT = {
     ],
 }
 
+
+AGENT = agent_graph_id_for(REPORT["agents"][0])
 
 pytestmark = pytest.mark.usefixtures("enable_experimental_traces")
 
@@ -367,3 +369,19 @@ def test_fuzzy_package_candidate_does_not_contaminate_exact_tool_graph(runtime, 
     assert edges
     assert all("vulnerable_tool_call" not in edge.evidence.get("signals", []) for edge in edges)
     assert "CVE-candidate" not in json.dumps(graph.to_dict(), default=str)
+
+
+def test_old_exact_agent_reference_resolves_only_through_recorded_alias(runtime):
+    graph_input = with_trace_events(copy.deepcopy(REPORT), "tenant-a", store=runtime)
+    # Keep the imported source claim in its legacy spelling, then prove the
+    # drawn edge uses the current scoped node, never a new name-only node.
+    encoded = json.dumps(graph_input).replace(AGENT, LEGACY_AGENT)
+    graph = build_unified_graph_from_report(json.loads(encoded), scan_id="scan-1", tenant_id="tenant-a")
+    assert any(edge.source == AGENT and edge.target == TOOL for edge in _runtime_edges(graph))
+    assert LEGACY_AGENT not in graph.nodes
+    assert LEGACY_AGENT in graph.nodes[AGENT].attributes["identity"]["aliases"]
+    assert any(
+        binding == {"reported_ref": LEGACY_AGENT, "node_id": AGENT, "method": "recorded_alias"}
+        for edge in _runtime_edges(graph)
+        for binding in edge.evidence.get("identity_bindings", [])
+    )

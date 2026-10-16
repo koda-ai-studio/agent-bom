@@ -451,7 +451,7 @@ class PostgresGraphStore(
                 if row[0] not in node_ids or row[1] not in node_ids:
                     continue
                 graph.add_stored_edge(
-                    UnifiedEdge(
+                    UnifiedEdge.from_stored(
                         source=row[0],
                         target=row[1],
                         relationship=RelationshipType(row[2]),

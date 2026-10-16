@@ -2,6 +2,7 @@
 
 import pytest
 
+from agent_bom.canonical_ids import agent_graph_id_for
 from agent_bom.graph.builder import _resolve_skill_audit_target_ids, build_unified_graph_from_report
 
 
@@ -26,7 +27,8 @@ def test_explicit_skill_source_does_not_cross_bind_same_basename(reverse, source
     finding_id = "misconfig:skill_audit:shell_access:1"
     assert finding_id in graph.nodes
     targets = {edge.target for edge in graph.edges if edge.source == finding_id and edge.target.startswith("agent:")}
-    assert targets == expected
+    expected_ids = {agent_graph_id_for(agent) for agent in agents if "agent:" + agent["name"] in expected}
+    assert targets == expected_ids
     assert graph.nodes[finding_id].attributes["source_file"] == source_file
 
 

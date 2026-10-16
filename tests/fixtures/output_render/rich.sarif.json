@@ -441,7 +441,7 @@
               "id": 0,
               "logicalLocations": [
                 {
-                  "fullyQualifiedName": "agent:claude-desktop",
+                  "fullyQualifiedName": "agent:cfg-3c465df1f13e:claude-desktop",
                   "kind": "agent"
                 }
               ],
@@ -512,9 +512,9 @@
           ],
           "properties": {
             "advisory_id": "CVE-2026-1001",
-            "asset_canonical_id": "3299765d-a493-5ba7-aa95-0da62719b03b",
-            "occurrence_id": "2e04de4c-5ac1-58ee-807e-102186f3fa2c",
-            "canonical_id": "2e04de4c-5ac1-58ee-807e-102186f3fa2c",
+            "asset_canonical_id": "49d580a3-4ff6-556b-a1dc-b4a47dacddba",
+            "occurrence_id": "613e723b-20fb-5ddc-9765-160b9791b01a",
+            "canonical_id": "613e723b-20fb-5ddc-9765-160b9791b01a",
             "owner": null,
             "sla_due_at": "2026-01-09T03:04:05+00:00",
             "sla_due_at_source": "severity-kev/v1",
@@ -533,19 +533,19 @@
               "summary": "CVE-2026-1001 affects express@4.17.1 with confirmed reachability.",
               "riskScore": 10.0,
               "severity": "critical",
-              "source": "agent:claude-desktop",
+              "source": "agent:cfg-3c465df1f13e:claude-desktop",
               "target": "vuln:CVE-2026-1001",
               "hops": [
-                "agent:claude-desktop",
+                "agent:cfg-3c465df1f13e:claude-desktop",
                 "server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
                 "pkg:npm:express@4.17.1",
                 "vuln:CVE-2026-1001"
               ],
               "relationships": [
                 {
-                  "id": "agent:claude-desktop->uses->server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
+                  "id": "agent:cfg-3c465df1f13e:claude-desktop->uses->server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
                   "type": "uses",
-                  "source": "agent:claude-desktop",
+                  "source": "agent:cfg-3c465df1f13e:claude-desktop",
                   "target": "server:15c2e86e-efea-5b60-92a1-334a30a65e2a"
                 },
                 {
@@ -574,7 +574,7 @@
                 }
               ],
               "nodeIds": [
-                "agent:claude-desktop",
+                "agent:cfg-3c465df1f13e:claude-desktop",
                 "server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
                 "pkg:npm:express@4.17.1",
                 "vuln:CVE-2026-1001",
@@ -583,14 +583,14 @@
               ],
               "nodeLabels": {
                 "pkg:npm:express@4.17.1": "express@4.17.1",
-                "agent:claude-desktop": "claude-desktop",
+                "agent:cfg-3c465df1f13e:claude-desktop": "claude-desktop",
                 "server:15c2e86e-efea-5b60-92a1-334a30a65e2a": "filesystem",
                 "vuln:CVE-2026-1001": "CVE-2026-1001",
                 "tool:server:15c2e86e-efea-5b60-92a1-334a30a65e2a:read_file": "read_file",
                 "cred:server:15c2e86e-efea-5b60-92a1-334a30a65e2a:API_TOKEN": "API_TOKEN"
               },
               "edgeIds": [
-                "agent:claude-desktop->uses->server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
+                "agent:cfg-3c465df1f13e:claude-desktop->uses->server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
                 "server:15c2e86e-efea-5b60-92a1-334a30a65e2a->depends_on->pkg:npm:express@4.17.1",
                 "pkg:npm:express@4.17.1->vulnerable_to->vuln:CVE-2026-1001",
                 "server:15c2e86e-efea-5b60-92a1-334a30a65e2a->provides_tool->tool:server:15c2e86e-efea-5b60-92a1-334a30a65e2a:read_file",
@@ -747,7 +747,7 @@
               "id": 0,
               "logicalLocations": [
                 {
-                  "fullyQualifiedName": "agent:claude-desktop",
+                  "fullyQualifiedName": "agent:cfg-3c465df1f13e:claude-desktop",
                   "kind": "agent"
                 }
               ],
@@ -794,9 +794,9 @@
           ],
           "properties": {
             "advisory_id": "CVE-2026-1002",
-            "asset_canonical_id": "3299765d-a493-5ba7-aa95-0da62719b03b",
-            "occurrence_id": "60123401-7f01-53eb-937f-b4486757d568",
-            "canonical_id": "60123401-7f01-53eb-937f-b4486757d568",
+            "asset_canonical_id": "49d580a3-4ff6-556b-a1dc-b4a47dacddba",
+            "occurrence_id": "c4d03914-1b1b-5b93-8f2f-36136d38f962",
+            "canonical_id": "c4d03914-1b1b-5b93-8f2f-36136d38f962",
             "owner": null,
             "sla_due_at": "2026-02-01T03:04:05+00:00",
             "sla_due_at_source": "severity-kev/v1",
@@ -815,19 +815,19 @@
               "summary": "CVE-2026-1002 affects express@4.17.1 with likely reachability.",
               "riskScore": 6.5,
               "severity": "high",
-              "source": "agent:claude-desktop",
+              "source": "agent:cfg-3c465df1f13e:claude-desktop",
               "target": "vuln:CVE-2026-1002",
               "hops": [
-                "agent:claude-desktop",
+                "agent:cfg-3c465df1f13e:claude-desktop",
                 "server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
                 "pkg:npm:express@4.17.1",
                 "vuln:CVE-2026-1002"
               ],
               "relationships": [
                 {
-                  "id": "agent:claude-desktop->uses->server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
+                  "id": "agent:cfg-3c465df1f13e:claude-desktop->uses->server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
                   "type": "uses",
-                  "source": "agent:claude-desktop",
+                  "source": "agent:cfg-3c465df1f13e:claude-desktop",
                   "target": "server:15c2e86e-efea-5b60-92a1-334a30a65e2a"
                 },
                 {
@@ -844,19 +844,19 @@
                 }
               ],
               "nodeIds": [
-                "agent:claude-desktop",
+                "agent:cfg-3c465df1f13e:claude-desktop",
                 "server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
                 "pkg:npm:express@4.17.1",
                 "vuln:CVE-2026-1002"
               ],
               "nodeLabels": {
                 "pkg:npm:express@4.17.1": "express@4.17.1",
-                "agent:claude-desktop": "claude-desktop",
+                "agent:cfg-3c465df1f13e:claude-desktop": "claude-desktop",
                 "server:15c2e86e-efea-5b60-92a1-334a30a65e2a": "filesystem",
                 "vuln:CVE-2026-1002": "CVE-2026-1002"
               },
               "edgeIds": [
-                "agent:claude-desktop->uses->server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
+                "agent:cfg-3c465df1f13e:claude-desktop->uses->server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
                 "server:15c2e86e-efea-5b60-92a1-334a30a65e2a->depends_on->pkg:npm:express@4.17.1",
                 "pkg:npm:express@4.17.1->vulnerable_to->vuln:CVE-2026-1002"
               ],
@@ -976,7 +976,7 @@
               "id": 0,
               "logicalLocations": [
                 {
-                  "fullyQualifiedName": "agent:cursor",
+                  "fullyQualifiedName": "agent:cfg-97fa322c7835:cursor",
                   "kind": "agent"
                 }
               ],
@@ -1023,9 +1023,9 @@
           ],
           "properties": {
             "advisory_id": "GHSA-aaaa-bbbb-cccc",
-            "asset_canonical_id": "faaab13b-8361-52cf-9569-b07fb5f94df5",
-            "occurrence_id": "f6500310-056b-582d-a77d-9b0b0f63281c",
-            "canonical_id": "f6500310-056b-582d-a77d-9b0b0f63281c",
+            "asset_canonical_id": "db5433db-6eed-5bad-be25-4442d133f3a7",
+            "occurrence_id": "fd85ea8e-6d1b-5bbf-8b37-05f6f04ea199",
+            "canonical_id": "fd85ea8e-6d1b-5bbf-8b37-05f6f04ea199",
             "owner": null,
             "sla_due_at": "2026-04-02T03:04:05+00:00",
             "sla_due_at_source": "severity-kev/v1",
@@ -1040,19 +1040,19 @@
               "summary": "GHSA-aaaa-bbbb-cccc affects requests@2.19.0 with likely reachability.",
               "riskScore": 0.0,
               "severity": "medium",
-              "source": "agent:cursor",
+              "source": "agent:cfg-97fa322c7835:cursor",
               "target": "vuln:GHSA-aaaa-bbbb-cccc",
               "hops": [
-                "agent:cursor",
+                "agent:cfg-97fa322c7835:cursor",
                 "server:6c55de89-f536-5a7d-a7f6-2b25e4397436",
                 "pkg:pypi:requests@2.19.0",
                 "vuln:GHSA-aaaa-bbbb-cccc"
               ],
               "relationships": [
                 {
-                  "id": "agent:cursor->uses->server:6c55de89-f536-5a7d-a7f6-2b25e4397436",
+                  "id": "agent:cfg-97fa322c7835:cursor->uses->server:6c55de89-f536-5a7d-a7f6-2b25e4397436",
                   "type": "uses",
-                  "source": "agent:cursor",
+                  "source": "agent:cfg-97fa322c7835:cursor",
                   "target": "server:6c55de89-f536-5a7d-a7f6-2b25e4397436"
                 },
                 {
@@ -1069,19 +1069,19 @@
                 }
               ],
               "nodeIds": [
-                "agent:cursor",
+                "agent:cfg-97fa322c7835:cursor",
                 "server:6c55de89-f536-5a7d-a7f6-2b25e4397436",
                 "pkg:pypi:requests@2.19.0",
                 "vuln:GHSA-aaaa-bbbb-cccc"
               ],
               "nodeLabels": {
                 "pkg:pypi:requests@2.19.0": "requests@2.19.0",
-                "agent:cursor": "cursor",
+                "agent:cfg-97fa322c7835:cursor": "cursor",
                 "server:6c55de89-f536-5a7d-a7f6-2b25e4397436": "fetcher",
                 "vuln:GHSA-aaaa-bbbb-cccc": "GHSA-aaaa-bbbb-cccc"
               },
               "edgeIds": [
-                "agent:cursor->uses->server:6c55de89-f536-5a7d-a7f6-2b25e4397436",
+                "agent:cfg-97fa322c7835:cursor->uses->server:6c55de89-f536-5a7d-a7f6-2b25e4397436",
                 "server:6c55de89-f536-5a7d-a7f6-2b25e4397436->depends_on->pkg:pypi:requests@2.19.0",
                 "pkg:pypi:requests@2.19.0->vulnerable_to->vuln:GHSA-aaaa-bbbb-cccc"
               ],
@@ -1189,7 +1189,7 @@
             "text": "Hardcoded AWS secret key"
           },
           "fingerprints": {
-            "agent-bom/v1": "d3cb6dad4554c58ec3581b12be78cb49d63c105c3006c89dc648381ca35ab333"
+            "agent-bom/v1": "b88c536ce77335eeb0ba6782384ef75eb77d4f02138255377dcd26996523b8a4"
           },
           "partialFingerprints": {
             "primaryLocationLineHash": "897da58c5dc46e143bd2f776f243f819fbf54ef23f96ffec38b4d316f03d7ac8"
@@ -1197,9 +1197,9 @@
           "properties": {
             "advisory_id": "finding/CREDENTIAL_EXPOSURE",
             "cwe_ids": [],
-            "asset_canonical_id": "ff4e768d-3fe7-5172-a062-f5ef0a52d5e3",
-            "occurrence_id": "549c548f-d4d2-563a-8b9b-0d145714b172",
-            "canonical_id": "549c548f-d4d2-563a-8b9b-0d145714b172",
+            "asset_canonical_id": "5fc22edf-8aea-5a3f-bb2a-ac7e9530c52a",
+            "occurrence_id": "b87167c9-eddb-5878-93ff-a089ea95fbb2",
+            "canonical_id": "b87167c9-eddb-5878-93ff-a089ea95fbb2",
             "risk_score": 8.0,
             "asset_type": "package",
             "asset_name": "config.env",
@@ -1239,7 +1239,7 @@
             "text": "SQL string construction"
           },
           "fingerprints": {
-            "agent-bom/v1": "6048ee5085968db0a4fdf311beed39cb54123a6ae50212ef1cee0fb8d7c991a9"
+            "agent-bom/v1": "92b1058aaee57c43fee005812155fa67066e1f68d25ddd9d9381213dd5cf0bfd"
           },
           "partialFingerprints": {
             "primaryLocationLineHash": "5dca059b276d25d5982f27206746e245e420fe6810693b4e268c55c4a7252d86"
@@ -1249,9 +1249,9 @@
             "cwe_ids": [
               "CWE-89"
             ],
-            "asset_canonical_id": "02b31146-02c2-53ca-b3cb-88a04e3bb0f7",
-            "occurrence_id": "106c203b-4e7e-5eb8-a727-83c0fb29cdca",
-            "canonical_id": "106c203b-4e7e-5eb8-a727-83c0fb29cdca",
+            "asset_canonical_id": "8a736d4f-953b-56df-a046-eea82ca0ffb4",
+            "occurrence_id": "069a1cbd-ea98-5443-9240-d023c211e7ce",
+            "canonical_id": "069a1cbd-ea98-5443-9240-d023c211e7ce",
             "risk_score": 5.0,
             "asset_type": "source_file",
             "asset_name": "db.py",
@@ -1317,14 +1317,14 @@
             "text": "Agent exposes a production credential"
           },
           "fingerprints": {
-            "agent-bom/v1": "e3f2c61409c2dd2274a4ba1336b0753f60593a465ae6f2e7f46f6d8fc9eeded1"
+            "agent-bom/v1": "0d64d2636f784a559942b3e5eec5af2fec76bbf45129ab71d89e8a9c3d3d4269"
           },
           "properties": {
             "advisory_id": "finding/CREDENTIAL_EXPOSURE/agent_credential_exposure",
             "cwe_ids": [],
-            "asset_canonical_id": "eda96777-6e13-53bf-828f-d20fb8d80c3e",
-            "occurrence_id": "710bd0c0-4d8b-51d9-8db5-71e24ba7fbda",
-            "canonical_id": "710bd0c0-4d8b-51d9-8db5-71e24ba7fbda",
+            "asset_canonical_id": "e95e6817-44ee-594c-8150-0f93911a7b1b",
+            "occurrence_id": "50f98fdf-fb45-5c02-b84a-aff5029b5d22",
+            "canonical_id": "50f98fdf-fb45-5c02-b84a-aff5029b5d22",
             "risk_score": 0.0,
             "asset_type": "agent",
             "asset_name": "payments-agent",
@@ -1372,14 +1372,14 @@
             "text": "Imported advisory without a package"
           },
           "fingerprints": {
-            "agent-bom/v1": "851e9ed084c8b350af8d500e689b2f03abe2a1413be2adc0afcc39e3a3ddc17d"
+            "agent-bom/v1": "7575fab8631b4999b4c263d8c0a3fc3b99414930c311679338891e2989911ecb"
           },
           "properties": {
             "advisory_id": "finding/CVE",
             "cwe_ids": [],
-            "asset_canonical_id": "7762e995-9518-5067-9818-5d4d5418d790",
-            "occurrence_id": "9f54fa9f-280e-5739-8c26-fb59fa7388ea",
-            "canonical_id": "9f54fa9f-280e-5739-8c26-fb59fa7388ea",
+            "asset_canonical_id": "99e08b44-3a53-5f71-9f94-44db942517a1",
+            "occurrence_id": "a215c950-9856-5510-9856-71a33657668d",
+            "canonical_id": "a215c950-9856-5510-9856-71a33657668d",
             "risk_score": 0.0,
             "asset_type": "package",
             "asset_name": "imported-advisory",
@@ -1415,14 +1415,14 @@
             "text": "Databricks CIS check"
           },
           "fingerprints": {
-            "agent-bom/v1": "e7709b3b07f9bd2166f00cbe1beadc353f888f63fc74a2d044db3f287cccd091"
+            "agent-bom/v1": "a871ac8527e3499e0ab668047fd13903df022227043706db706faaafabe267c1"
           },
           "properties": {
             "advisory_id": "finding/CIS_FAIL",
             "cwe_ids": [],
-            "asset_canonical_id": "d0382446-fdf3-524f-87de-d1ddadfc47dd",
-            "occurrence_id": "d0a4d7fe-9c27-572d-ac4d-7d7d00e5730f",
-            "canonical_id": "d0a4d7fe-9c27-572d-ac4d-7d7d00e5730f",
+            "asset_canonical_id": "52ead4ad-40f5-57fb-aaca-ed5761d04031",
+            "occurrence_id": "7e00260b-b4e7-5736-8a5a-5f517c7a19e1",
+            "canonical_id": "7e00260b-b4e7-5736-8a5a-5f517c7a19e1",
             "risk_score": 0.0,
             "asset_type": "cloud_resource",
             "asset_name": "workspace",

@@ -108,6 +108,6 @@ def rekey_in_memory(graph: Any, mapping: Mapping[str, str]) -> int:
         if source == target:
             dropped += 1
             continue
-        graph.add_stored_edge(replace(edge, source=source, target=target))
+        graph.add_stored_edge(edge.with_endpoints(source, target))
     rekey_path_references(graph, moves)
     return dropped

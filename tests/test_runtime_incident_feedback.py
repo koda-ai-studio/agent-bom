@@ -171,7 +171,10 @@ def test_inline_records_mark_agent_and_edge(tmp_path):
     assert {e.relationship for e in feedback_edges} == {RelationshipType.INVOKED}
     assert {e.evidence["incident_kind"] for e in feedback_edges} == {"reached_credential", "lateral_movement"}
     assert all(e.evidence["tier"] == "runtime_observed" for e in feedback_edges)
-    assert graph.get_node("tool:observed:read_secret") is not None
+    targets = [node for node in graph.nodes.values() if node.attributes.get("observed_label") == "read_secret"]
+    assert len(targets) == 1
+    assert targets[0].attributes["agent_id"] == "agent:billing-agent"
+    assert targets[0].attributes["inventory_identity_proven"] is False
 
 
 def test_records_loaded_from_path(tmp_path):

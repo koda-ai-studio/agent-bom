@@ -580,12 +580,12 @@ def _add_snowflake_source_lanes(graph: UnifiedGraph, report_json: dict[str, Any]
                 graph.add_node(node)
             for edge in staged.edges:
                 if store_backed:
-                    edge.source = staged.nodes[edge.source].attributes["_snowflake_projection_id"]
-                    edge.target = staged.nodes[edge.target].attributes["_snowflake_projection_id"]
+                    source = staged.nodes[edge.source].attributes["_snowflake_projection_id"]
+                    target = staged.nodes[edge.target].attributes["_snowflake_projection_id"]
                 else:
-                    edge.source = remap[edge.source]
-                    edge.target = remap[edge.target]
-                graph.add_edge(edge)
+                    source = remap[edge.source]
+                    target = remap[edge.target]
+                graph.add_edge(edge.with_endpoints(source, target))
             graph.analysis_status.update(staged.analysis_status)
 
 
