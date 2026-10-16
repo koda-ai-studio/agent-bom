@@ -9,9 +9,9 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/msaad00/agent-bom"
+    "url": "https://github.com/koda-ai-studio/agent-bom"
   },
-  "homepage": "https://github.com/msaad00/agent-bom",
+  "homepage": "https://github.com/koda-ai-studio/agent-bom",
   "transport": "stdio",
   "command": "agent-bom",
   "args": [

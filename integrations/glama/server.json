@@ -3,7 +3,7 @@
   "description": "Security scanner and graph for agentic infrastructure. Starts with 8 focused MCP tools. Audit descriptor injection, risky tool inputs, excess capabilities and authentication configuration.",
   "version": "0.109.0",
   "license": "Apache-2.0",
-  "repository": "https://github.com/msaad00/agent-bom",
+  "repository": "https://github.com/koda-ai-studio/agent-bom",
   "transport": "stdio",
   "command": "agent-bom",
   "args": ["mcp", "server"],
