@@ -174,6 +174,8 @@ def test_mesh_cli_credential_count_uses_the_canonical_predicate(capsys: pytest.C
 
 def test_agent_lifecycle_credential_nodes_use_the_canonical_predicate(monkeypatch: pytest.MonkeyPatch) -> None:
     """Credential nodes in the lifecycle graph are the third copy of the judgement."""
+    from starlette.requests import Request
+
     from agent_bom.api.routes import discovery
 
     server = {"name": "warehouse", "packages": [], "tools": [], "env": _mixed_env()}
@@ -186,7 +188,8 @@ def test_agent_lifecycle_credential_nodes_use_the_canonical_predicate(monkeypatc
 
     monkeypatch.setattr(discovery, "get_agent_detail", _fake_detail)
 
-    graph = asyncio.run(discovery.get_agent_lifecycle(None, "a1"))  # type: ignore[arg-type]
+    request = Request({"type": "http", "state": {"tenant_id": "credential-agreement"}})
+    graph = asyncio.run(discovery.get_agent_lifecycle(request, "a1"))
     labels = sorted(node["data"]["label"] for node in graph["nodes"] if node["data"]["nodeType"] == "credential")
 
     assert labels == sorted(CREDENTIAL_ENV)

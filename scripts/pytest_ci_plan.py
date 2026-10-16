@@ -435,6 +435,8 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
                 )
                 if root / "tests" / name in available
             )
+        if normalized.as_posix() in {"src/agent_bom/api/routes/discovery.py", "src/agent_bom/graph/lifecycle.py"}:
+            selected.update(candidate for candidate in available if candidate.name == "test_credential_key_detector_agreement.py")
         if normalized.as_posix() in GRAPH_PROJECTION_SOURCES:
             selected.update(
                 candidate for candidate in available if "graph" in candidate.stem or candidate.stem == "test_runtime_incident_feedback"
