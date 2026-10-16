@@ -62,20 +62,22 @@ def test_local_manifest_keeps_same_launch_in_distinct_agent_scopes():
 
 
 def test_json_snapshot_keeps_local_server_and_capability_occurrences():
+    from agent_bom.api.models import JobStatus, ScanJob, ScanRequest
+    from agent_bom.api.scan_job_views import _job_response_payload
     from agent_bom.models import Agent, AgentType, AIBOMReport, MCPPrompt, MCPResource, MCPServer, MCPTool
     from agent_bom.output.json_fmt import _build_ai_bom_entities_snapshot
 
     agents = [
         Agent(
-            name="reader",
+            name="Workspace reader",
             agent_type=AgentType.CUSTOM,
             config_path=f"/workspace/{scope}/mcp.json",
             mcp_servers=[
                 MCPServer(
-                    name="reader",
-                    command="npx",
-                    args=["reader"],
-                    tools=[MCPTool(name="read", description="Read")],
+                    name="read-service",
+                    command="python",
+                    args=["server.py"],
+                    tools=[MCPTool(name="read", description="Read records")],
                     resources=[MCPResource(uri="file:///workspace/file", name="file")],
                     prompts=[MCPPrompt(name="read", description="Read")],
                 )
@@ -88,3 +90,11 @@ def test_json_snapshot_keeps_local_server_and_capability_occurrences():
         assert len(snapshot[key]) == 2, key
         assert len({row["id"] for row in snapshot[key]}) == 2
     assert set(snapshot["servers"][0]["tool_ids"]).isdisjoint(snapshot["servers"][1]["tool_ids"])
+    job = ScanJob(
+        job_id="scope",
+        status=JobStatus.DONE,
+        created_at="2026-10-16T00:00:00Z",
+        request=ScanRequest(),
+        result={"ai_bom_entities": snapshot},
+    )
+    assert _job_response_payload(job).model_dump(mode="json")["result"]["ai_bom_entities"] == snapshot

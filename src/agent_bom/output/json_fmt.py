@@ -12,7 +12,7 @@ from agent_bom.asset_provenance import (
     package_version_provenance,
     sanitize_discovery_provenance,
 )
-from agent_bom.canonical_ids import CANONICAL_ID_SCHEMA_VERSION, agent_identity_export, mcp_server_graph_id_for
+from agent_bom.canonical_ids import CANONICAL_ID_SCHEMA_VERSION, agent_identity_export, canonical_id, mcp_server_graph_id_for
 from agent_bom.compliance_utils import effective_blast_radius_tags, framework_qualified_blast_radius_tags
 from agent_bom.core.severity import severity_basis
 from agent_bom.exploitability import fused_triage_priority
@@ -359,7 +359,7 @@ def _build_ai_bom_entities_snapshot(report: AIBOMReport) -> dict:
             relationships.append({"from": agent.stable_id, "to": server_id, "type": "uses"})
 
             for tool in server.tools:
-                tool_id = f"{server_id}:tool:{tool.stable_id}"
+                tool_id = canonical_id("tool_occurrence", server_id, tool.stable_id)
                 if tool_id not in tools:
                     tools[tool_id] = {
                         "id": tool_id,
@@ -378,7 +378,7 @@ def _build_ai_bom_entities_snapshot(report: AIBOMReport) -> dict:
                 relationships.append({"from": server_id, "to": tool_id, "type": "exposes_tool"})
 
             for resource in server.resources:
-                resource_id = f"{server_id}:resource:{resource.stable_id}"
+                resource_id = canonical_id("resource_occurrence", server_id, resource.stable_id)
                 if resource_id not in resources:
                     resources[resource_id] = {
                         "id": resource_id,
@@ -395,7 +395,7 @@ def _build_ai_bom_entities_snapshot(report: AIBOMReport) -> dict:
                 relationships.append({"from": server_id, "to": resource_id, "type": "exposes_resource"})
 
             for prompt in server.prompts:
-                prompt_id = f"{server_id}:prompt:{prompt.stable_id}"
+                prompt_id = canonical_id("prompt_occurrence", server_id, prompt.stable_id)
                 if prompt_id not in prompts:
                     prompts[prompt_id] = {
                         "id": prompt_id,
