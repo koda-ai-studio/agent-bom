@@ -166,7 +166,7 @@ function NodeCard({
   return (
     <div title={data.label} data-graph-entity="true" data-rollup-container={isRollupContainer ? "true" : undefined}
       className={`flex w-[220px] flex-col items-center text-center transition-opacity ${data.dimmed ? "opacity-25" : ""}`}>
-      <div className={`graph-entity-glyph relative mb-3 flex h-[72px] w-[72px] items-center justify-center rounded-full border-2 shadow-sm ${
+      <div style={{ width: "var(--graph-node-glyph-size, 72px)", height: "var(--graph-node-glyph-size, 72px)" }} className={`graph-entity-glyph relative mb-3 flex h-[72px] w-[72px] items-center justify-center rounded-full border-2 shadow-sm ${
         isRollupContainer ? "border-outline-strong bg-surface-elevated" : `${borderClass} ${bgClass}`
       } ${data.highlighted ? `ring-2 ${ring ? "ring-offset-[10px]" : "ring-offset-4"} ring-offset-[var(--surface)] ${ringClass}` : ""}`}>
         {ring && !isRollupContainer && <SeverityRingMark ring={ring} />}
@@ -174,16 +174,16 @@ function NodeCard({
           className={`!h-1 !w-1 !border-0 !bg-transparent ${target ? "" : "!opacity-0"}`} />
         <Handle type="source" position={data.reverseFlow ? Position.Left : Position.Right}
           className={`!h-1 !w-1 !border-0 !bg-transparent ${source ? "" : "!opacity-0"}`} />
-        <Icon aria-hidden="true" className={`h-8 w-8 ${iconClass}`} />
+        <Icon aria-hidden="true" style={{ width: "var(--graph-node-icon-size, 32px)", height: "var(--graph-node-icon-size, 32px)" }} className={`h-8 w-8 ${iconClass}`} />
       </div>
       <p className="mb-1 w-full min-w-0 break-words line-clamp-3 text-lg font-semibold leading-[1.2] text-foreground [overflow-wrap:anywhere]" style={{ fontSize: "var(--graph-node-label-size, 18px)" }}>
         {canvasNodeLabel(data.label).split(/(?<=[_/@-])/).map((part, index) => <span key={index}>{part}<wbr /></span>)}
       </p>
       <NodeBadgeRow badges={badges}>
-        <span className="text-xs text-ink-secondary">
+        <span style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} className="text-xs text-ink-secondary">
           {data.entityType === "application" ? "Application" : NODE_TYPE_BADGES[data.nodeType]}
         </span>
-        {data.occurrenceRole && <span data-testid="graph-occurrence-role" className="rounded border border-outline-strong px-1 text-[10px] font-medium uppercase tracking-wide text-ink-secondary">{data.occurrenceRole}</span>}
+        {data.occurrenceRole && <span style={{ fontSize: "var(--graph-node-meta-size, 10px)" }} data-testid="graph-occurrence-role" className="rounded border border-outline-strong px-1 text-[10px] font-medium uppercase tracking-wide text-ink-secondary">{data.occurrenceRole}</span>}
       </NodeBadgeRow>
       {data.runtimeEvidenceTier && data.runtimeEvidenceTier !== "static_scan" && <div className="mt-1">
         <RuntimeEvidenceChip tier={data.runtimeEvidenceTier} />

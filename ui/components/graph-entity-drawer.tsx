@@ -40,6 +40,7 @@ export function GraphEntityDrawer({
   onShowImpact,
   remediationHref,
   enrich = true,
+  suppliedDetail,
 }: {
   data: LineageNodeData;
   onClose: () => void;
@@ -55,6 +56,8 @@ export function GraphEntityDrawer({
   remediationHref?: string | undefined;
   /** When true and scanId is set, refresh node detail from /v1/graph/node. */
   enrich?: boolean;
+  /** A parent-owned request; null means pending/unavailable, undefined fetches locally. */
+  suppliedDetail?: GraphNodeDetailResponse | null;
 }) {
   const [loading, setLoading] = useState(false);
   const nodeId = nodeIdFromLineageData(data);
@@ -65,14 +68,15 @@ export function GraphEntityDrawer({
   } | null>(null);
   // Canvas and detail requests may finish in either order. Reapply the richer
   // evidence to each canvas update, but only for the same node and snapshot.
-  const detail = enrich && loadedDetail && loadedDetail.scanId === scanId && loadedDetail.response.node.id === nodeId
+  const localDetail = enrich && loadedDetail && loadedDetail.scanId === scanId && loadedDetail.response.node.id === nodeId
     ? loadedDetail.response : null;
+  const detail = suppliedDetail === undefined ? localDetail : suppliedDetail?.node.id === nodeId ? suppliedDetail : null;
   const enriched = useMemo(() => detail ? mergeGraphNodeDetail(data, detail) : data, [data, detail]);
 
   useEffect(() => {
     setLoadedDetail(null);
     setLoading(false);
-    if (data.rollup?.is_container || data.rollup?.has_children || !enrich || !scanId || !nodeId) return;
+    if (suppliedDetail !== undefined || data.rollup?.is_container || data.rollup?.has_children || !enrich || !scanId || !nodeId) return;
     let cancelled = false;
     setLoading(true);
     void api
@@ -90,7 +94,7 @@ export function GraphEntityDrawer({
     return () => {
       cancelled = true;
     };
-  }, [data.rollup, enrich, nodeId, scanId]);
+  }, [data.rollup, enrich, nodeId, scanId, suppliedDetail]);
 
   const layer = useMemo(
     () => semanticLayerForNodeType(enriched.nodeType),
