@@ -19,6 +19,9 @@ from __future__ import annotations
 import importlib
 import os
 import sys
+import time
+
+import pytest
 
 # conftest.py holds the isolation registries under test. It is loaded by pytest
 # as a plugin, not necessarily importable by name, so put its directory on the
@@ -101,3 +104,20 @@ def test_reset_clears_leaked_audit_dedupe() -> None:
     # the next test re-claiming the same id sees it as new again.
     conftest._reset_proxy_route_state()
     assert proxy_routes._claim_audit_event("default", "evt-isolation-guard") is True
+
+
+@pytest.mark.asyncio
+async def test_api_reset_discards_previous_agents_response(monkeypatch) -> None:
+    """A prior app's cached IDs must not outlive the test's stores and discovery inputs."""
+    from agent_bom.api.routes import discovery
+
+    tenant = "cache-isolation"
+    old = {"agents": [{"canonical_id": "previous-app-agent"}], "count": 1}
+    current = {"agents": [{"canonical_id": "current-app-agent"}], "count": 1}
+    discovery._agents_response_cache[tenant] = (time.monotonic(), old)
+    monkeypatch.setattr(discovery, "_tenant_id", lambda request: tenant)
+    monkeypatch.setattr(discovery, "_build_agents_response", lambda tenant_id: current)
+
+    assert await discovery.list_agents(None, refresh=False) == old
+    conftest._reset_api_runtime_state()
+    assert await discovery.list_agents(None, refresh=False) == current

@@ -2,6 +2,7 @@
 
 import importlib.util
 import io
+import json
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -24,6 +25,15 @@ def test_default_endpoints_use_current_repository_namespace(checker):
     assert checker.DEFAULT_URL == "https://glama.ai/mcp/servers/koda-ai-studio/agent-bom"
     assert checker.DEFAULT_API_URL == "https://glama.ai/api/mcp/v1/servers/koda-ai-studio/agent-bom"
     assert checker.DEFAULT_SCHEMA_URL == checker.DEFAULT_URL + "/schema"
+
+
+def test_glama_manifests_use_current_repository_namespace():
+    repository = "https://github.com/koda-ai-studio/agent-bom"
+    listing = json.loads((ROOT / "glama.json").read_text())
+    server = json.loads((ROOT / "integrations/glama/server.json").read_text())
+    assert listing["repository"]["url"] == repository
+    assert listing["homepage"] == repository
+    assert server["repository"] == repository
 
 
 def test_directory_key_is_bearer_and_transport_cannot_redirect_or_proxy(checker, monkeypatch):
