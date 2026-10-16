@@ -582,6 +582,8 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
             "src/agent_bom/api/neptune_graph.py",
         }:
             selected.update(candidate for candidate in available if candidate.name == "test_neptune_unsupported_501.py")
+        if normalized.as_posix().startswith("src/agent_bom/scanners/"):
+            selected.update(candidate for candidate in available if candidate.name == "test_cli_scanners_init_exports.py")
         if normalized.as_posix() in {"src/agent_bom/scanners/package_scan.py", "src/agent_bom/scanners/package_versions.py"}:
             selected.update(
                 candidate

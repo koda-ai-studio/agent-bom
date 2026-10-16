@@ -32,7 +32,6 @@ SCANNERS_PUBLIC_SYMBOLS = (
     "ScannerPhase",
     "ScannerRegistration",
     "_AI_FRAMEWORK_PACKAGES",
-    "_HOP_RISK_FACTORS",
     "_NON_OSV_ECOSYSTEMS",
     "_bump_scan_perf",
     "_db_covered_ecosystems",
@@ -129,3 +128,8 @@ def test_scanners_init_forwards_legacy_mutable_patch_targets(monkeypatch: pytest
 
     assert package_scan.console is sentinel
     assert package_scan._scan_cache_instance is sentinel
+
+
+def test_scanners_do_not_export_unsupported_hop_risk_discounts() -> None:
+    scanners = importlib.import_module("agent_bom.scanners")
+    assert not hasattr(scanners, "_HOP_RISK_FACTORS")
