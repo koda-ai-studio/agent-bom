@@ -959,3 +959,8 @@ metadata describes the underlying definition and must not replace the scoped
 `id` when joining inventory relationships. CycloneDX derives each MCP component
 reference from that same scoped server identity; identical remote endpoints can
 still share one component while retaining every declaring agent dependency.
+
+A validated UUIDv5 component reference imported from an SBOM is retained on re-export,
+including through the manifest and JSON inventory. This is declared document
+identity; it does not authorize execution or establish a runtime observation.
+Invalid or executable-source declarations cannot override local instance scope.

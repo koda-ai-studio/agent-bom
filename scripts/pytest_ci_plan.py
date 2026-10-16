@@ -288,6 +288,26 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
                     "test_discovery_enhanced.py",
                 }
             )
+        if normalized.as_posix() in {
+            "src/agent_bom/canonical_ids.py",
+            "src/agent_bom/models.py",
+            "src/agent_bom/agent_manifest.py",
+            "src/agent_bom/evidence/occurrence_ids.py",
+            "src/agent_bom/output/cyclonedx_fmt.py",
+            "src/agent_bom/output/json_fmt.py",
+            "src/agent_bom/parsers/sbom_topology.py",
+        }:
+            selected.update(
+                candidate
+                for candidate in available
+                if candidate.name
+                in {
+                    "test_occurrence_ids.py",
+                    "test_evidence_portability.py",
+                    "test_aibom_e2e.py",
+                    "test_agent_manifest_identity.py",
+                }
+            )
         if normalized.suffix == ".md" and (
             normalized.as_posix() == "README.md" or normalized.as_posix().startswith(("docs/", "site-docs/"))
         ):

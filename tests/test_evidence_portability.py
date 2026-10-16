@@ -105,11 +105,13 @@ def test_cyclonedx_import_retains_multiple_server_memberships(tmp_path):
     report = _report([first])
     report.agents[0].mcp_servers.append(MCPServer(name="other-tools", packages=[second]))
     source = tmp_path / "bom.json"
-    source.write_text(json.dumps(to_cyclonedx(report)))
+    original = to_cyclonedx(report)
+    source.write_text(json.dumps(original))
     agent, _ = load_sbom_agent(str(source))
     assert {s.name: {p.name for p in s.packages} for s in agent.mcp_servers} == {"tools": {"a"}, "other-tools": {"b"}}
     assert len({server.stable_id for server in agent.mcp_servers}) == 2
-    assert {s.name: s.stable_id for s in agent.mcp_servers} == {s.name: s.stable_id for s in report.agents[0].mcp_servers}
+    declared = {c["name"]: c["bom-ref"] for c in original["components"] if c["bom-ref"].startswith("mcp-server-")}
+    assert {s.name: "mcp-server-" + s.stable_id for s in agent.mcp_servers} == declared
     exported = to_cyclonedx(AIBOMReport(agents=[agent]))
     servers = {
         c["name"]: c
@@ -117,6 +119,13 @@ def test_cyclonedx_import_retains_multiple_server_memberships(tmp_path):
         if any(p.get("name") == "agent-bom:type" and p.get("value") == "mcp-server" for p in c.get("properties", []))
     }
     assert set(servers) == {"tools", "other-tools"}
+    assert {name: row["bom-ref"] for name, row in servers.items()} == declared
+    from agent_bom.agent_manifest import build_local_agent_manifest
+    from agent_bom.output.json_fmt import _build_ai_bom_entities_snapshot
+
+    imported_ids = {ref.removeprefix("mcp-server-") for ref in declared.values()}
+    assert {row["id"] for row in build_local_agent_manifest([agent])["mcp_servers"]} == imported_ids
+    assert {row["id"] for row in _build_ai_bom_entities_snapshot(AIBOMReport(agents=[agent]))["servers"]} == imported_ids
     memberships = {
         name: json.loads(next(p["value"] for p in component["properties"] if p["name"] == "agent-bom:inventory-members"))
         for name, component in servers.items()

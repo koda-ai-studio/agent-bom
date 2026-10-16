@@ -12,9 +12,10 @@ from agent_bom.asset_provenance import (
     package_version_provenance,
     sanitize_discovery_provenance,
 )
-from agent_bom.canonical_ids import CANONICAL_ID_SCHEMA_VERSION, agent_identity_export, canonical_id, mcp_server_graph_id_for
+from agent_bom.canonical_ids import CANONICAL_ID_SCHEMA_VERSION, agent_identity_export, canonical_id
 from agent_bom.compliance_utils import effective_blast_radius_tags, framework_qualified_blast_radius_tags
 from agent_bom.core.severity import severity_basis
+from agent_bom.evidence.occurrence_ids import server_occurrence_id
 from agent_bom.exploitability import fused_triage_priority
 from agent_bom.finding import Finding, _forward_fixed_version
 from agent_bom.mcp_blocklist import sanitize_security_intelligence_entry
@@ -334,7 +335,7 @@ def _build_ai_bom_entities_snapshot(report: AIBOMReport) -> dict:
         )
 
         for server in agent.mcp_servers:
-            server_id = canonical_id("mcp_server_occurrence", mcp_server_graph_id_for(server, agent))
+            server_id = server_occurrence_id(server, agent)
             server_ids.append(server_id)
             if server_id not in servers:
                 servers[server_id] = {

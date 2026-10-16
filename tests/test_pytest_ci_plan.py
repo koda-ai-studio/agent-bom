@@ -660,3 +660,30 @@ def test_package_verification_sources_select_installed_receipt_contract(tmp_path
     expected = tmp_path / "tests/test_package_remediation_verification.py"
     _write(expected, 1)
     assert select_targeted_tests(changed_files=[Path(source)], root=tmp_path) == [expected]
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "canonical_ids.py",
+        "models.py",
+        "agent_manifest.py",
+        "evidence/occurrence_ids.py",
+        "output/cyclonedx_fmt.py",
+        "output/json_fmt.py",
+        "parsers/sbom_topology.py",
+    ],
+)
+def test_inventory_identity_edits_select_portable_round_trip_consumers(tmp_path, source):
+    expected = sorted(
+        tmp_path / "tests" / name
+        for name in (
+            "test_occurrence_ids.py",
+            "test_evidence_portability.py",
+            "test_aibom_e2e.py",
+            "test_agent_manifest_identity.py",
+        )
+    )
+    for path in expected:
+        _write(path, 1)
+    assert select_targeted_tests(changed_files=[Path("src/agent_bom") / source], root=tmp_path) == expected
