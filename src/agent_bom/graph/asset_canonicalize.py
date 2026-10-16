@@ -18,6 +18,7 @@ from itertools import combinations
 from typing import Any
 
 from agent_bom.canonical_ids import canonical_graph_node_id
+from agent_bom.cloud.normalization import coerce_truthy
 from agent_bom.graph.analysis import GraphAnalysisState, GraphAnalysisStatus
 from agent_bom.graph.asset_identity import (
     FAMILY_TYPES,
@@ -40,6 +41,21 @@ IDENTITY_SOURCE = "asset-canonicalization"
 MAX_WEAK_BUCKET = 5
 _NATIVE_ATTRIBUTES = ("arn", "resource_arn", "resource_id", "identifier", "kubernetes_uid", "image_digest", "principal_id")
 _BOOKKEEPING = frozenset({"identity", "canonical_id", "source_ids", "stable_id", "risk_assessment"})
+# Security assertions where one observation's risky value must survive the
+# merge: the exposure/toxicity predicates read these, so a quieter inventory
+# record can never hide a positive finding. Value is the risky boolean.
+_RISKY_BOOLEANS: dict[str, bool] = {
+    "internet_exposed": True,
+    "toxic_exposed_vulnerable": True,
+    "toxic_exposed_sensitive": True,
+    "public": True,
+    "publicly_accessible": True,
+    "is_public": True,
+    "on_attack_path": True,
+    "admin": True,
+    "privileged": True,
+    "encrypted": False,
+}
 # A cluster outranks a generic resource record of the same native id.
 _TYPE_PREFERENCE = (EntityType.CLUSTER, EntityType.DATA_STORE, EntityType.CONTAINER, EntityType.ROLE)
 
@@ -96,22 +112,34 @@ def _canonical_id(members: list[_Observation], entity_type: EntityType, identity
     return (canonical if unique else f"{canonical}#{min(item.node_id for item in members)}"), best
 
 
-def _merge_attributes(members: list[_Observation]) -> tuple[dict[str, Any], list[str]]:
+def _merge_attributes(members: list[_Observation]) -> tuple[dict[str, Any], dict[str, list[dict[str, Any]]]]:
     ordered = sorted(members, key=_richness, reverse=True)
     merged = dict(ordered[0].attributes)
-    conflicts: set[str] = set()
-    for item in ordered[1:]:
+    asserted: dict[str, list[dict[str, Any]]] = {}
+    for item in ordered:
+        source = ",".join(item.data_sources) or item.node_id
         for key, value in item.attributes.items():
             if key in _BOOKKEEPING or value in (None, "", [], {}):
                 continue
+            entries = asserted.setdefault(key, [])
+            if not any(entry["value"] == value and entry["source"] == source for entry in entries):
+                entries.append({"value": value, "source": source})
             if merged.get(key) in (None, "", [], {}):
                 merged[key] = value
-            elif merged[key] != value:
-                conflicts.add(key)
-    return merged, sorted(conflicts)
+    conflicts: dict[str, list[dict[str, Any]]] = {}
+    for key, entries in asserted.items():
+        if len({repr(entry["value"]) for entry in entries}) < 2:
+            continue
+        conflicts[key] = sorted(entries, key=lambda entry: (entry["source"], repr(entry["value"])))
+        risky = _RISKY_BOOLEANS.get(key)
+        if risky is not None and any(coerce_truthy(entry["value"]) is risky for entry in entries):
+            merged[key] = risky
+    return merged, conflicts
 
 
-def _provenance(members: list[_Observation], canonical_id: str, best: IdentityKey, conflicts: list[str]) -> dict[str, Any]:
+def _provenance(
+    members: list[_Observation], canonical_id: str, best: IdentityKey, conflicts: dict[str, list[dict[str, Any]]]
+) -> dict[str, Any]:
     aliases: set[str] = set()
     observations: dict[tuple[str, str], dict[str, str]] = {}
     for item in members:
@@ -133,7 +161,8 @@ def _provenance(members: list[_Observation], canonical_id: str, best: IdentityKe
         "basis": best.namespace,
         "aliases": sorted(aliases - {canonical_id}),
         "observations": [observations[key] for key in sorted(observations)],
-        "conflict_fields": conflicts,
+        "conflict_fields": sorted(conflicts),
+        "conflicts": conflicts,
     }
 
 
@@ -144,6 +173,8 @@ class _Group:
     label: str
     attributes: dict[str, Any]
     data_sources: list[str]
+    security_conflicts: int = 0
+    attribute_conflicts: int = 0
 
 
 def _groups(observed: dict[str, _Observation], components: StrongKeyComponents) -> tuple[dict[str, str], list[_Group]]:
@@ -164,7 +195,8 @@ def _groups(observed: dict[str, _Observation], components: StrongKeyComponents) 
         attributes["canonical_id"] = canonical_graph_node_id(entity_type.value, canonical_id)
         sources = list(dict.fromkeys(source for item in sorted(members, key=_richness, reverse=True) for source in item.data_sources))
         label = max(members, key=_richness).label
-        groups.append(_Group(canonical_id, entity_type, label, attributes, sources))
+        security = sum(1 for key in conflicts if key in _RISKY_BOOLEANS)
+        groups.append(_Group(canonical_id, entity_type, label, attributes, sources, security, len(conflicts)))
         mapping.update({item.node_id: canonical_id for item in members if item.node_id != canonical_id})
     return mapping, groups
 
@@ -236,16 +268,31 @@ def canonicalize_assets(graph: UnifiedGraph) -> dict[str, str]:
     if prior is None and not observed:
         return mapping  # nothing in the graph carries an asset identity key
     before = prior.observed if prior is not None else {}
-    conflicts = components.conflicts + int(before.get("conflicts", 0))
+    # Differing descriptive fields (an ARN vs a bare id) are recorded but do not
+    # limit the analysis; a disagreement on a security assertion does.
+    security_conflicts = sum(group.security_conflicts for group in groups)
+    conflicts = components.conflicts + security_conflicts + int(before.get("conflicts", 0))
+    reasons = tuple(
+        code
+        for code, present in (
+            ("conflicting_strong_keys", components.conflicts or "conflicting_strong_keys" in (prior.reason_codes if prior else ())),
+            (
+                "conflicting_security_attributes",
+                security_conflicts or "conflicting_security_attributes" in (prior.reason_codes if prior else ()),
+            ),
+        )
+        if present
+    )
     graph.analysis_status[ANALYZER] = GraphAnalysisStatus(
         status=GraphAnalysisState.LIMITED if conflicts else GraphAnalysisState.COMPLETE,
-        reason_codes=("conflicting_strong_keys",) if conflicts else (),
+        reason_codes=reasons,
         observed={
             "observations": max(len(observed), int(before.get("observations", 0))),
             "merged_groups": len(groups) + int(before.get("merged_groups", 0)),
             "aliases": len(mapping) + int(before.get("aliases", 0)),
             "candidate_edges": len(candidates),
             "conflicts": conflicts,
+            "attribute_conflicts": sum(group.attribute_conflicts for group in groups) + int(before.get("attribute_conflicts", 0)),
             "self_edges_dropped": dropped + int(before.get("self_edges_dropped", 0)),
         },
     )

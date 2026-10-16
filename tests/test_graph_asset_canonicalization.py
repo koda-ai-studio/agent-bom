@@ -321,3 +321,52 @@ def test_cloudtrail_reader_keeps_the_recorded_caller_identity_only() -> None:
     assert record["principal_arn"] == f"arn:aws:sts::{ACCOUNT}:assumed-role/deploy-role/session-1"
     assert record["principal_type"] == "AssumedRole" and record["region"] == REGION
     assert "requestParameters" not in json.dumps(record)
+
+
+def _conflicting_exposure(graph: UnifiedGraph) -> None:
+    for name, exposed, owner in (("a-security", True, "security"), ("z-inventory", False, "platform")):
+        extra = {"description": "richer inventory observation"} if name == "z-inventory" else {}
+        graph.add_node(
+            UnifiedNode(
+                id=name,
+                entity_type=EntityType.CLOUD_RESOURCE,
+                label=name,
+                attributes={"cloud_provider": "aws", "arn": ARN, "internet_exposed": exposed, "owner": owner, **extra},
+                data_sources=[name],
+            )
+        )
+
+
+@pytest.mark.parametrize("backend", ["memory", "sqlite"])
+def test_conflicting_exposure_keeps_risky_value_and_records_assertions(backend: str) -> None:
+    from agent_bom.graph.rollup import _is_exposed
+
+    store_backed = backend != "memory"
+    graph: UnifiedGraph = (
+        open_store_backed_unified_graph(backend=backend, tenant_id="conflict-tenant", capacity=2, page_size=2)
+        if store_backed
+        else UnifiedGraph(scan_id="conflict", tenant_id="conflict-tenant")
+    )
+    try:
+        _conflicting_exposure(graph)
+        canonicalize_assets(graph)
+        nodes = list(graph.nodes.values())
+        assert len(nodes) == 1
+        node = nodes[0]
+        assert node.attributes["internet_exposed"] is True
+        assert _is_exposed(node)
+        conflicts = node.attributes["identity"]["conflicts"]
+        assert conflicts["internet_exposed"] == [
+            {"value": True, "source": "a-security"},
+            {"value": False, "source": "z-inventory"},
+        ]
+        assert {entry["value"] for entry in conflicts["owner"]} == {"security", "platform"}
+        assert node.attributes["owner"] == "platform"  # non-security field keeps richness precedence
+        assert node.attributes["identity"]["conflict_fields"] == ["internet_exposed", "owner"]
+        observed = graph.analysis_status["asset_canonicalization"].observed
+        assert observed["conflicts"] == 1
+        assert observed["attribute_conflicts"] == 2
+        assert "conflicting_security_attributes" in graph.analysis_status["asset_canonicalization"].reason_codes
+    finally:
+        if store_backed:
+            graph.close()  # type: ignore[attr-defined]
