@@ -74,7 +74,13 @@ def _browser(base: str, scan_id: str, graph: dict, output: Path, started: float)
                 if response is None or response.status != 200:
                     raise RuntimeError("Graph page did not load")
                 page.locator(".react-flow__node").first.wait_for(timeout=60000)
-                page.locator(".react-flow__edge").first.wait_for(timeout=30000)
+                # A straight horizontal or vertical edge has a zero-area box, which visibility checks
+                # treat as hidden; require an attached edge whose path actually draws a line.
+                page.locator(".react-flow__edge-path").first.wait_for(state="attached", timeout=30000)
+                page.wait_for_function(
+                    "() => [...document.querySelectorAll('.react-flow__edge-path')].some(p => p.getTotalLength() > 0)",
+                    timeout=30000,
+                )
                 rendered = page.locator(".react-flow__node").evaluate_all("nodes => nodes.map(node => node.dataset.id)")
                 if not set(rendered).intersection(node["id"] for node in graph["nodes"]):
                     raise RuntimeError("Rendered graph does not contain the persisted sample nodes")
