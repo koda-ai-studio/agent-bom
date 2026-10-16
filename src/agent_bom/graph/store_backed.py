@@ -47,7 +47,6 @@ from __future__ import annotations
 import json
 from collections import OrderedDict
 from collections.abc import Iterator
-from dataclasses import replace
 from typing import TYPE_CHECKING, Any, Optional
 
 from agent_bom.core.severity import SEVERITY_RANK
@@ -452,7 +451,7 @@ class StoreBackedUnifiedGraph(UnifiedGraph):
             if source == target:
                 dropped += 1
                 continue
-            self.add_edge(replace(edge, source=source, target=target))
+            self.add_edge(edge.with_endpoints(source, target))
         self.flush()
         rekey_path_references(self, moves)
         return dropped

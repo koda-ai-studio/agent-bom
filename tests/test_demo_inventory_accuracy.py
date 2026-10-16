@@ -65,13 +65,13 @@ def test_demo_agents_keep_unique_identity_across_all_inventory_exports() -> None
     assert len(set(ids)) == 5
 
     report_json = to_json(AIBOMReport(agents=agents))
-    assert report_json["canonical_id_schema_version"] == "2"
+    assert report_json["canonical_id_schema_version"] == "3"
     entity_agents = report_json["ai_bom_entities"]["agents"]
     assert len(entity_agents) == 5
     assert len({agent["id"] for agent in entity_agents}) == 5
 
     cyclonedx = to_cyclonedx(AIBOMReport(agents=agents))
-    assert {prop["name"]: prop["value"] for prop in cyclonedx["metadata"]["properties"]}["agent-bom:canonical-id-schema-version"] == "2"
+    assert {prop["name"]: prop["value"] for prop in cyclonedx["metadata"]["properties"]}["agent-bom:canonical-id-schema-version"] == "3"
     agent_components = [
         component
         for component in cyclonedx["components"]
@@ -81,7 +81,7 @@ def test_demo_agents_keep_unique_identity_across_all_inventory_exports() -> None
     assert len({component["bom-ref"] for component in agent_components}) == 5
 
     manifest = build_local_agent_manifest(agents)
-    assert manifest["canonical_id_schema_version"] == "2"
+    assert manifest["canonical_id_schema_version"] == "3"
     assert len(manifest["agents"]) == 5
     assert len({agent["id"] for agent in manifest["agents"]}) == 5
 

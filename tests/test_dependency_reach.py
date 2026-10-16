@@ -199,7 +199,7 @@ def _built_graph_for_agents() -> UnifiedGraph:
 def test_agent_risk_is_the_worst_vulnerability_it_structurally_reaches() -> None:
     graph = _built_graph_for_agents()
     vuln_risks = {node.id: node.risk_score for node in graph.nodes_by_type(EntityType.VULNERABILITY)}
-    agent = graph.get_node("agent:cursor")
+    agent = next(node for node in graph.nodes_by_type(EntityType.AGENT) if node.label == "cursor")
 
     assert agent is not None
     assert max(vuln_risks.values()) > 0
@@ -210,7 +210,7 @@ def test_agent_risk_is_the_worst_vulnerability_it_structurally_reaches() -> None
 
 def test_agent_without_reachable_vulnerabilities_stays_unassessed() -> None:
     graph = _built_graph_for_agents()
-    agent = graph.get_node("agent:claude-desktop")
+    agent = next(node for node in graph.nodes_by_type(EntityType.AGENT) if node.label == "claude-desktop")
 
     assert agent is not None
     assert agent.risk_score == 0

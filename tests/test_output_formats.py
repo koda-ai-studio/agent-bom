@@ -783,7 +783,7 @@ def test_exposure_path_is_embedded_in_sarif_properties():
     assert exposure_path["reachableTools"] == ["deploy"]
     assert exposure_path["exposedCredentials"] == ["AWS_SECRET_ACCESS_KEY"]
     agent_id, server_id = agent_graph_id_for(agent), mcp_server_graph_id_for(server, agent)
-    assert agent_id == "agent:prod-agent"
+    assert agent_id.startswith("agent:cfg-") and agent_id.endswith(":prod-agent")
     assert server_id.startswith("server:")
     assert {
         "id": f"{agent_id}->uses->{server_id}",

@@ -601,3 +601,21 @@ def test_lifecycle_edits_select_cross_surface_credential_agreement(tmp_path, sou
     contract = tmp_path / "tests/test_credential_key_detector_agreement.py"
     _write(contract, 1)
     assert contract in select_targeted_tests(changed_files=[Path(source)], root=tmp_path)
+
+
+@pytest.mark.parametrize("source", ["canonical_ids.py", "graph/edge.py", "graph/rekey.py"])
+def test_identity_edits_select_persistence_and_export_consumers(tmp_path, source):
+    names = [
+        "graph/test_snowflake_account_staging.py",
+        "graph/test_occurrence_applicability.py",
+        "graph/test_asset_entity.py",
+        "test_entrypoint_registries.py",
+        "test_mcp_server_scheme_aliases.py",
+        "test_dependency_reach.py",
+        "test_sarif_schema_2_1_0.py",
+        "test_demo_inventory_accuracy.py",
+    ]
+    expected = sorted(tmp_path / "tests" / name for name in names)
+    for path in expected:
+        _write(path, 1)
+    assert select_targeted_tests(changed_files=[Path("src/agent_bom") / source], root=tmp_path) == expected

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from collections.abc import Callable
 from copy import deepcopy
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 
 from agent_bom.canonical_ids import canonical_graph_edge_id, legacy_canonical_id_v2
@@ -233,6 +233,11 @@ class UnifiedEdge:
         """Stable edge identity for scan-history joins without changing edge.id."""
         rel = self.relationship.value if isinstance(self.relationship, RelationshipType) else str(self.relationship)
         return self._recorded_canonical_id or canonical_graph_edge_id(self.source, self.target, rel)
+
+    def with_endpoints(self, source: str, target: str) -> UnifiedEdge:
+        """Retain a receipt only while it identifies the same relationship endpoints."""
+        recorded = self._recorded_canonical_id if (source, target) == (self.source, self.target) else ""
+        return replace(self, source=source, target=target, _recorded_canonical_id=recorded)
 
     def storage_provenance(self) -> dict[str, Any]:
         """Keep the identity receipt separate from relationship evidence."""
