@@ -3601,7 +3601,7 @@ async function main() {
         awaitResponses: [
           (response) => new URL(response.url()).pathname === "/v1/graph/rollup" && response.ok(),
         ],
-        expectedText: ["Investigation", "Prioritized findings and scopes", "aggregated relationship rows"],
+        expectedText: ["Investigation", "Which collected scope needs investigation?", "aggregated relationship rows"],
         expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/rollup", "/v1/graph/scenarios"],
         readySelector: '[data-testid="graph-rollup-decision-surface"]',
         assertNoHorizontalOverflow: true,
