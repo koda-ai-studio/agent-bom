@@ -39,7 +39,7 @@ def test_even_a_currently_unique_name_cannot_establish_identity():
 
 def test_local_manifest_keeps_same_launch_in_distinct_agent_scopes():
     from agent_bom.agent_manifest import build_local_agent_manifest
-    from agent_bom.canonical_ids import mcp_server_graph_id_for
+    from agent_bom.canonical_ids import canonical_id, mcp_server_graph_id_for
     from agent_bom.models import Agent, AgentType, MCPServer, MCPTool
 
     agents = [
@@ -52,13 +52,23 @@ def test_local_manifest_keeps_same_launch_in_distinct_agent_scopes():
         for scope in ("one", "two")
     ]
     manifest = build_local_agent_manifest(agents + agents)
-    expected = {mcp_server_graph_id_for(agent.mcp_servers[0], agent) for agent in agents}
+    expected = {canonical_id("mcp_server_occurrence", mcp_server_graph_id_for(agent.mcp_servers[0], agent)) for agent in agents}
     assert len(expected) == 2
     assert {server["id"] for server in manifest["mcp_servers"]} == expected
     assert {server_id for agent in manifest["agents"] for server_id in agent["mcp_server_ids"]} == expected
     assert manifest["summary"]["tools"] == 2
     assert manifest["graph"]["stats"]["nodes"] == 6
     assert manifest["graph"]["stats"]["edges"] == 4
+
+    from agent_bom.models import AIBOMReport
+    from agent_bom.output.cyclonedx_fmt import to_cyclonedx
+    from agent_bom.output.json_fmt import _build_ai_bom_entities_snapshot
+
+    report = AIBOMReport(agents=agents)
+    snapshot = _build_ai_bom_entities_snapshot(report)
+    cdx = to_cyclonedx(report)
+    assert {row["id"] for row in snapshot["servers"]} == expected
+    assert {row["bom-ref"].removeprefix("mcp-server-") for row in cdx["components"] if row["name"] == "read-service"} == expected
 
 
 def test_json_snapshot_keeps_local_server_and_capability_occurrences():

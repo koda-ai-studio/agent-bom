@@ -334,7 +334,7 @@ def _build_ai_bom_entities_snapshot(report: AIBOMReport) -> dict:
         )
 
         for server in agent.mcp_servers:
-            server_id = mcp_server_graph_id_for(server, agent)
+            server_id = canonical_id("mcp_server_occurrence", mcp_server_graph_id_for(server, agent))
             server_ids.append(server_id)
             if server_id not in servers:
                 servers[server_id] = {

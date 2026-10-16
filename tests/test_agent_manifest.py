@@ -8,7 +8,7 @@ from agent_bom.api import stores as api_stores
 from agent_bom.api.fleet_store import FleetAgent, FleetLifecycleState, InMemoryFleetStore
 from agent_bom.api.mcp_observation_store import InMemoryMCPObservationStore, MCPObservation
 from agent_bom.api.server import app
-from agent_bom.canonical_ids import mcp_server_graph_id_for
+from agent_bom.canonical_ids import canonical_id, mcp_server_graph_id_for
 from agent_bom.cli import main
 from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, TransportType
 
@@ -210,5 +210,5 @@ def test_local_manifest_dedups_and_unions_duplicate_rows() -> None:
     assert set(server_row["discovery"]["sources"]) == {"config:/cfg/a.json", "process:pid:42"}
 
     # The single deduped server id is the one referenced by the agent.
-    assert server_row["id"] == mcp_server_graph_id_for(shared, agent)
+    assert server_row["id"] == canonical_id("mcp_server_occurrence", mcp_server_graph_id_for(shared, agent))
     assert server_row["id"] in payload["agents"][0]["mcp_server_ids"]
