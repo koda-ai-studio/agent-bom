@@ -2612,6 +2612,12 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
         throw new Error(`Proof regions overlap on ${urlPath}: ${overlaps.join(" | ")}`);
       }
     }
+    if (options.maxGraphBottomGapPx !== undefined) {
+      const gap = await page.locator("[data-graph-adaptive-frame]").evaluate(frame => window.innerHeight - frame.getBoundingClientRect().bottom);
+      if (gap < 0 || gap > options.maxGraphBottomGapPx) {
+        throw new Error(`Graph framing on ${urlPath} leaves ${gap}px below the canvas`);
+      }
+    }
     if (options.readmeTextContract) {
       const textMetrics = await page.locator(options.readmeTextContract.selector).evaluate((root, contract) => {
         const readmeScale = Math.min(1, contract.targetWidthPx / window.innerWidth);
@@ -3402,7 +3408,7 @@ async function main() {
       minGraphNodes: 7,
       minGraphEdges: 6,
     });
-    await page.setViewportSize({ width: 1440, height: 1120 });
+    await page.setViewportSize({ width: 1440, height: 820 });
     await capture(page, `/graph?lens=mesh&scan=${SCAN_ID}&agent=agent%3Adeveloper-copilot&capture=1`, "mesh-live.png", async (meshPage) => {
       // ReactFlow can preserve a hidden, pre-measurement node tree across an
       // App Router transition. A hard reload gives the capture a fresh canvas
@@ -3425,20 +3431,28 @@ async function main() {
         await showAll.click();
         await meshPage.waitForTimeout(800);
       }
+      const inspector = meshPage.getByTestId("graph-entity-drawer");
+      if (await inspector.isVisible()) await inspector.getByRole("button", { name: "Close", exact: true }).click();
       await fitReactFlow(meshPage);
       await meshPage.waitForTimeout(500);
       await scrollTo(meshPage, 0);
     }, {
       expectedText: [
         "Investigation",
-        "developer-copilot",
+        "Developer Copilot",
         "Sre Runbook Agent",
         "filesystem MCP",
         "Uses",
       ],
       expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/query"],
-      minGraphNodes: 4,
-      minGraphEdges: 3,
+      minGraphNodes: 5,
+      minGraphEdges: 5,
+      minGraphNodeFontPx: 12,
+      minGraphEdgeLabelFontPx: 12,
+      assertNodeLabelsWithinBounds: true,
+      assertEdgeLabelsClearOfNodes: true,
+      assertNoHorizontalOverflow: true,
+      maxGraphBottomGapPx: 64,
     });
     await page.setViewportSize({ width: 1440, height: 980 });
     await capture(page, `/security-graph?lens=attack-path&scan=${SCAN_ID}&capture=1`, "security-graph-live.png", async (securityGraphPage) => {

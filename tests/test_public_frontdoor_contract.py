@@ -366,3 +366,17 @@ def test_support_and_contributor_feedback_links_use_the_active_repository() -> N
         content = (ROOT / filename).read_text()
         assert "https://github.com/koda-ai-studio/agent-bom/issues/new?template=feedback.yml" in content
         assert "https://github.com/msaad00/agent-bom" not in content
+
+
+def test_pypi_graph_examples_share_readme_identity_and_evidence_story() -> None:
+    pypi = (ROOT / "docs/registry/PYPI_README.md").read_text()
+    for filename in ("graph-environment-dark-live.png", "graph-relationship-dark-live.png"):
+        assert filename in pypi
+    assert "image inventory and deployment occurrence stay distinct" in pypi
+    assert "does not prove execution or exploitation" in pypi
+
+
+def test_mesh_storefront_capture_does_not_leave_a_portrait_blank_tail() -> None:
+    header = (ROOT / "docs/images/mesh-live.png").read_bytes()[:24]
+    width, height = struct.unpack(">II", header[16:24])
+    assert width / height >= 1.6, "A small neighborhood should fill a landscape storefront image"
