@@ -83,3 +83,25 @@ def test_built_graph_attack_path_hops_are_graph_nodes() -> None:
     graph.attack_paths = _derived_attack_paths(graph)
     assert graph.attack_paths
     assert_paths_reference_nodes(graph)
+
+
+@pytest.mark.parametrize("backend", ["memory", "sqlite"])
+def test_rekeyed_stored_edge_gets_identity_for_its_new_endpoints(backend):
+    from contextlib import nullcontext
+
+    from agent_bom.canonical_ids import canonical_graph_edge_id
+    from agent_bom.graph.edge import UnifiedEdge
+    from agent_bom.graph.types import RelationshipType
+
+    context = nullcontext(UnifiedGraph()) if backend == "memory" else open_store_backed_unified_graph(backend="sqlite", capacity=1)
+    with context as graph:
+        for name in ("old", "target"):
+            graph.add_node(UnifiedNode(id=name, entity_type=EntityType.AGENT if name == "old" else EntityType.SERVER, label=name))
+        edge = UnifiedEdge.from_dict({"source": "old", "target": "target", "relationship": "uses", "canonical_id": "historical-receipt"})
+        assert edge.with_endpoints("old", "target").canonical_id == "historical-receipt"
+        graph.add_edge(edge)
+        graph.rekey_nodes({"old": "new"})
+        result = list(graph.edges)
+        assert len(result) == 1
+        assert result[0].canonical_id == canonical_graph_edge_id("new", "target", RelationshipType.USES.value)
+        assert edge.canonical_id == "historical-receipt"

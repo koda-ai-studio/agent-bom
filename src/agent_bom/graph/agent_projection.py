@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from collections import Counter
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Protocol
 
 from agent_bom.asset_provenance import sanitize_discovery_provenance
@@ -69,7 +68,7 @@ class AgentScope:
     provider_name: str = ""
     provider_id: str = ""
     agent_env: str = ""
-    previous_agent_id: str = ""
+    previous_agent_ids: list[str] = field(default_factory=list)
 
 
 def _discovery_evidence(data_source: str) -> dict[str, Any]:
@@ -95,7 +94,7 @@ def _scope(agent_dict: dict[str, Any], report_data_source: str) -> AgentScope:
     agent.data_source_tag = str(agent.agent_dict["source"]) if agent.repository_inventory else report_data_source
     agent.inventory_type = EntityType.DIRECTORY if agent.repository_inventory else EntityType.SOURCE_FILE
     agent.agent_id = _inventory_node_id(agent, agent_graph_id_for(agent.agent_dict))
-    agent.previous_agent_id = next((_inventory_node_id(agent, old) for old in previous_agent_graph_ids(agent.agent_dict)), "")
+    agent.previous_agent_ids = [_inventory_node_id(agent, old) for old in previous_agent_graph_ids(agent.agent_dict)]
     agent.agent_node_key = agent.agent_id.removeprefix("agent:")
     agent.agent_type = agent.agent_dict.get("type", agent.agent_dict.get("agent_type", ""))
     agent.provider_name = str(agent.agent_dict.get("source") or "local").strip() or "local"
@@ -139,10 +138,13 @@ def _add_agent_node(graph: UnifiedGraph, agent: AgentScope) -> None:
                 "agent_type": agent.agent_type,
                 "canonical_id": (canonical_graph_node_id(agent.inventory_type.value, agent.agent_id) if agent.static_inventory else None)
                 or agent.agent_dict.get("canonical_id")
-                or (
-                    canonical_agent_id(agent.agent_type, agent.agent_name, source_id=agent.agent_scope)
-                    if agent.agent_scope
-                    else agent.agent_dict.get("stable_id") or canonical_agent_id(agent.agent_type, agent.agent_name)
+                or (None if agent.agent_scope or agent.agent_dict.get("device_fingerprint") else agent.agent_dict.get("stable_id"))
+                or canonical_agent_id(
+                    agent.agent_type,
+                    agent.agent_name,
+                    source_id=agent.agent_scope,
+                    device_fingerprint=str(agent.agent_dict.get("device_fingerprint") or ""),
+                    config_path=str(agent.agent_dict.get("config_path") or ""),
                 ),
                 "source_ids": source_ids(source_id=agent.agent_scope, stable_id=agent.agent_dict.get("stable_id")),
                 "status": agent.agent_dict.get("status", ""),
@@ -291,9 +293,10 @@ def _project_server(graph: UnifiedGraph, agent: AgentScope, srv_dict: Mapping[st
     srv_id = _add_server_node(graph, agent, srv_dict, srv_id, srv_name, surface)
     if not agent.sbom_import and not agent.static_inventory:
         previous = previous_mcp_server_graph_ids(srv_dict, agent.agent_dict)
-        old_key = agent.previous_agent_id.removeprefix("agent:")
-        if old_key and srv_id.startswith(f"server:{agent.agent_node_key}:"):
-            previous.append(f"server:{old_key}:{srv_id.removeprefix(f'server:{agent.agent_node_key}:')}")
+        for old_id in agent.previous_agent_ids:
+            old_key = old_id.removeprefix("agent:")
+            if old_key and srv_id.startswith(f"server:{agent.agent_node_key}:"):
+                previous.append(f"server:{old_key}:{srv_id.removeprefix(f'server:{agent.agent_node_key}:')}")
         _record_previous_server_ids(graph, srv_id, previous)
     indexes.server_name_to_ids[srv_name].append(srv_id)
     if not agent.static_inventory:
@@ -439,11 +442,12 @@ def project_agents(graph: UnifiedGraph, agents: list[dict[str, Any]], data_sourc
     indexes = BuildIndexes()
     scopes = [_scope(record, data_source) for record in agents]
     # A previous id several agents shared names no single agent; aliasing it would guess.
-    shared = Counter(scope.previous_agent_id for scope in scopes if scope.previous_agent_id)
+    targets: dict[str, set[str]] = {}
     for scope in scopes:
-        if shared[scope.previous_agent_id] > 1:
-            scope.previous_agent_id = ""
+        for alias in scope.previous_agent_ids:
+            targets.setdefault(alias, set()).add(scope.agent_id)
+    for scope in scopes:
+        scope.previous_agent_ids = [alias for alias in scope.previous_agent_ids if len(targets[alias]) == 1]
         _project_agent(graph, scope, indexes, lineage)
-        if scope.previous_agent_id:
-            _record_previous_server_ids(graph, scope.agent_id, [scope.previous_agent_id])
+        _record_previous_server_ids(graph, scope.agent_id, scope.previous_agent_ids)
     return indexes

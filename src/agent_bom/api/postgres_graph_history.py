@@ -107,7 +107,11 @@ class PostgresGraphHistoryMixin(PostgresGraphSnapshotsMixin):
             "valid_from": row[8] or row[6],
             "valid_to": row[9],
             "confidence": float(row[10] if row[10] is not None else 1.0),
-            "provenance": _decode_json_object(row[11], field="edge provenance"),
+            "provenance": {
+                key: value
+                for key, value in _decode_json_object(row[11], field="edge provenance").items()
+                if key != "_agent_bom_canonical_id"
+            },
             "source_scan_id": row[12] or row[16],
             "source_run_id": row[13] or "",
             "evidence": _decode_json_object(row[14], field="edge evidence"),

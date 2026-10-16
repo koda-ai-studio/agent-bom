@@ -638,7 +638,7 @@ def load_graph(
     for row in conn.execute(query, params):
         sev = row["severity"] or ""
         graph.add_node(
-            UnifiedNode(
+            UnifiedNode.from_stored(
                 id=row["id"],
                 entity_type=EntityType(row["entity_type"]),
                 label=row["label"],
@@ -707,7 +707,7 @@ def load_graph(
         if row["source_id"] not in node_ids or row["target_id"] not in node_ids:
             continue
         graph.add_stored_edge(
-            UnifiedEdge(
+            UnifiedEdge.from_stored(
                 source=row["source_id"],
                 target=row["target_id"],
                 relationship=RelationshipType(row["relationship"]),

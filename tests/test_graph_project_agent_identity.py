@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from agent_bom.canonical_ids import agent_graph_id_for
 from agent_bom.graph.builder import build_unified_graph_from_report
 from agent_bom.graph.types import EntityType, RelationshipType
 
@@ -60,15 +61,19 @@ def test_code_level_agent_constructs_fold_into_the_project_agent() -> None:
         _project_report([_framework_agent("fa-agent", "agent"), _framework_agent("fa-executor", "executor")])
     )
 
-    assert _agent_ids(graph) == ["agent:project:sampleapp"]
-    host = graph.nodes["agent:project:sampleapp"]
+    assert _agent_ids(graph) == [agent_graph_id_for(_project_report([])["agents"][0])]
+    host = graph.nodes[agent_graph_id_for(_project_report([])["agents"][0])]
     assert [item["name"] for item in host.attributes["code_agents"]] == ["agent", "executor"]
     framework_edges = [
-        edge for edge in graph.edges if edge.source == "agent:project:sampleapp" and edge.relationship == RelationshipType.USES_FRAMEWORK
+        edge
+        for edge in graph.edges
+        if edge.source == agent_graph_id_for(_project_report([])["agents"][0]) and edge.relationship == RelationshipType.USES_FRAMEWORK
     ]
     assert len(framework_edges) == 1
     model_edges = [
-        edge for edge in graph.edges if edge.source == "agent:project:sampleapp" and edge.relationship == RelationshipType.SERVES_MODEL
+        edge
+        for edge in graph.edges
+        if edge.source == agent_graph_id_for(_project_report([])["agents"][0]) and edge.relationship == RelationshipType.SERVES_MODEL
     ]
     assert len(model_edges) == 1
 
@@ -92,8 +97,10 @@ def test_multi_agent_topology_participants_stay_distinct_agents() -> None:
         )
     )
 
-    assert _agent_ids(graph) == ["agent:project:sampleapp", "fa-crew", "fa-researcher"]
-    assert [item["name"] for item in graph.nodes["agent:project:sampleapp"].attributes["code_agents"]] == ["helper"]
+    assert _agent_ids(graph) == [agent_graph_id_for(_project_report([])["agents"][0]), "fa-crew", "fa-researcher"]
+    assert [item["name"] for item in graph.nodes[agent_graph_id_for(_project_report([])["agents"][0])].attributes["code_agents"]] == [
+        "helper"
+    ]
 
 
 def test_framework_agents_without_a_project_host_keep_their_nodes() -> None:

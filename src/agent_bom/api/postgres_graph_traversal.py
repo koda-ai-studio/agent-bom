@@ -36,7 +36,7 @@ class PostgresGraphTraversalMixin(PostgresGraphSnapshotsMixin):
     def _node_from_row(row: Sequence[Any]) -> UnifiedNode:
         from agent_bom.graph import EntityType, NodeDimensions, NodeStatus, UnifiedNode
 
-        return UnifiedNode(
+        return UnifiedNode.from_stored(
             id=row[0],
             entity_type=EntityType(row[1]),
             label=row[2],
@@ -87,7 +87,7 @@ class PostgresGraphTraversalMixin(PostgresGraphSnapshotsMixin):
     def _edge_from_row(row: Sequence[Any]) -> Any:
         from agent_bom.graph import RelationshipType, UnifiedEdge
 
-        return UnifiedEdge(
+        return UnifiedEdge.from_stored(
             source=row[0],
             target=row[1],
             relationship=RelationshipType(row[2]),

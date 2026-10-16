@@ -519,7 +519,7 @@ def _sync_scan_agents_to_fleet(agents: list, tenant_id: str = "default") -> None
     always populated after every scan — closing the gap where scan_jobs had
     data but fleet_agents stayed empty.
     """
-    from agent_bom.api.fleet_store import FleetAgent, FleetLifecycleState, match_discovered_fleet_agent
+    from agent_bom.api.fleet_store import FleetAgent, FleetLifecycleState, discovered_fleet_identity, match_discovered_fleet_agent
     from agent_bom.fleet.trust_scoring import compute_trust_score
 
     store = _get_fleet_store()
@@ -536,11 +536,7 @@ def _sync_scan_agents_to_fleet(agents: list, tenant_id: str = "default") -> None
         canonical_id = _optional_str(getattr(agent, "canonical_id", ""))
         existing = match_discovered_fleet_agent(
             existing_agents,
-            canonical_id=canonical_id,
-            agent_type=agent_type,
-            name=agent.name,
-            config_path=agent.config_path or "",
-            previous_canonical_ids=list(getattr(agent, "previous_canonical_ids", []) or []),
+            **discovered_fleet_identity(agent),
             claimed_agent_ids=claimed_agent_ids,
         )
         server_count = len(agent.mcp_servers)

@@ -356,3 +356,18 @@ def test_lifecycle_projection_round_trip_with_forced_tenant_isolation(migrated_f
         assert not store.load_graph(tenant_id="other-tenant", scan_id=graph.scan_id).nodes
     finally:
         reset_current_tenant(token)
+
+
+def test_identity_upgrade_preserves_snapshot_ids_and_ambiguous_aliases(migrated_fresh_database):
+    from agent_bom.api.postgres_common import reset_current_tenant, set_current_tenant
+    from agent_bom.api.postgres_graph import PostgresGraphStore
+    from tests.test_canonical_identity_boundaries import graph_identity_storage_contract
+    from tests.test_graph_node_aliases import latest_snapshot_alias_contract
+
+    store = PostgresGraphStore()
+    token = set_current_tenant("identity-contract")
+    try:
+        graph_identity_storage_contract(store)
+        latest_snapshot_alias_contract(store, tenant="identity-contract")
+    finally:
+        reset_current_tenant(token)

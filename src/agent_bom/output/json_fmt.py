@@ -12,7 +12,7 @@ from agent_bom.asset_provenance import (
     package_version_provenance,
     sanitize_discovery_provenance,
 )
-from agent_bom.canonical_ids import CANONICAL_ID_SCHEMA_VERSION
+from agent_bom.canonical_ids import CANONICAL_ID_SCHEMA_VERSION, agent_identity_export
 from agent_bom.compliance_utils import effective_blast_radius_tags, framework_qualified_blast_radius_tags
 from agent_bom.core.severity import severity_basis
 from agent_bom.exploitability import fused_triage_priority
@@ -320,9 +320,7 @@ def _build_ai_bom_entities_snapshot(report: AIBOMReport) -> dict:
         agent_provenance = agent_discovery_provenance(agent)
         agents.append(
             {
-                "id": agent.stable_id,
-                "canonical_id": agent.canonical_id,
-                "previous_canonical_ids": agent.previous_canonical_ids,
+                **agent_identity_export(agent),
                 "name": agent.name,
                 "agent_type": agent.agent_type.value,
                 "type": agent.agent_type.value,

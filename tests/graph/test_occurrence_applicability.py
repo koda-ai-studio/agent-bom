@@ -114,7 +114,7 @@ def test_vex_status_matches_the_finding(vex_report: dict) -> None:
 
 def test_without_vex_the_same_occurrence_keeps_its_paths(demo_report: dict) -> None:
     graph = build_unified_graph_from_report(copy.deepcopy(demo_report), scan_id="demo")
-    assert sorted(path.source for path in _paths_to(graph, VULN)) == ["agent:cursor", "agent:data-pipeline", "agent:langchain-service"]
+    assert sorted(graph.nodes[path.source].label for path in _paths_to(graph, VULN)) == ["cursor", "data-pipeline", "langchain-service"]
     assert graph.analysis_status["component_paths"].to_dict()["observed"]["vex_excluded"] == 0
 
 
@@ -153,7 +153,7 @@ def test_opposite_reachability_occurrences_keep_their_own_verdicts(demo_report: 
     assert _occurrence_edge(graph, REQUESTS, VULN).evidence["applicability"]["verdict"] == "likely"
     assert _occurrence_edge(graph, "pkg:pypi:requests@2.27.0", VULN).evidence["applicability"]["verdict"] == "unlikely"
     paths = _paths_to(graph, VULN)
-    assert sorted(path.source for path in paths) == ["agent:data-pipeline", "agent:langchain-service"]
+    assert sorted(graph.nodes[path.source].label for path in paths) == ["data-pipeline", "langchain-service"]
     assert {tuple(_occurrence_basis(path)) for path in paths} == {("dependency_path", "direct_agent_dependency")}
 
     node = graph.nodes[VULN].attributes

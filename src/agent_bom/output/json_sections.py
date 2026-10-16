@@ -263,6 +263,7 @@ def _agent_json(agent: Any) -> dict[str, Any]:
         "stable_id": agent.stable_id,
         "canonical_id": agent.canonical_id,
         "previous_canonical_ids": agent.previous_canonical_ids,
+        "previous_graph_ids": agent.previous_graph_ids,
         "agent_type": agent.agent_type.value,
         "type": agent.agent_type.value,
         "config_path": sanitize_path_label(agent.config_path) if agent.config_path else "",

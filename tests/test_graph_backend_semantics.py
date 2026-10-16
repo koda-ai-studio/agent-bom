@@ -301,14 +301,14 @@ class TestNodeBudgetBoundsTheRead:
         store.save_graph(big)
 
         built = 0
-        real_node = sqlite_graph_store.UnifiedNode
+        real_post_init = sqlite_graph_store.UnifiedNode.__post_init__
 
-        def counting_node(*args: Any, **kwargs: Any) -> UnifiedNode:
+        def counting_node(node: UnifiedNode) -> None:
             nonlocal built
             built += 1
-            return real_node(*args, **kwargs)
+            real_post_init(node)
 
-        monkeypatch.setattr(sqlite_graph_store, "UnifiedNode", counting_node)
+        monkeypatch.setattr(sqlite_graph_store.UnifiedNode, "__post_init__", counting_node)
         graph = store.load_graph(tenant_id="default", node_budget=budget)
 
         assert len(graph.nodes) == budget

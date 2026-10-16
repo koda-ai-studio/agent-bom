@@ -151,10 +151,12 @@ def test_exposure_path_chooses_one_observed_agent_mcp_server_pair() -> None:
 
     path = exposure_path_for_finding(blast_radius_to_finding(br), rank=1)
 
-    assert path["source"] == "agent:primary-agent"
+    from agent_bom.canonical_ids import agent_graph_id_for, mcp_server_graph_id_for
+
+    assert path["source"] == agent_graph_id_for(primary_agent)
     assert path["hops"] == [
-        "agent:primary-agent",
-        "server:primary-agent:primary-mcp",
+        agent_graph_id_for(primary_agent),
+        mcp_server_graph_id_for(primary_server, primary_agent),
         "pkg:npm:lodash@4.17.20",
         "vuln:CVE-2024-0001",
     ]

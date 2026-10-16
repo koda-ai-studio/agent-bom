@@ -252,7 +252,7 @@ class SQLiteGraphStoreBase:
 
     @staticmethod
     def _node_from_row(row: sqlite3.Row) -> UnifiedNode:
-        return UnifiedNode(
+        return UnifiedNode.from_stored(
             id=row["id"],
             entity_type=EntityType(row["entity_type"]),
             label=row["label"],

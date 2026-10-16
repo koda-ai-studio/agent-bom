@@ -5,10 +5,10 @@ from __future__ import annotations
 import json
 from collections.abc import Callable
 from copy import deepcopy
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 
-from agent_bom.canonical_ids import canonical_graph_edge_id
+from agent_bom.canonical_ids import canonical_graph_edge_id, legacy_canonical_id_v2
 from agent_bom.graph.types import RelationshipType
 from agent_bom.graph.util import _now_iso
 
@@ -205,6 +205,8 @@ class UnifiedEdge:
 
     # OCSF activity
     activity_id: int = 1  # 1=Create, 2=Update, 3=Close
+    # Stored identity is immutable across canonical-identity schema upgrades.
+    _recorded_canonical_id: str = field(default="", repr=False, compare=False)
 
     def __post_init__(self) -> None:
         if not self.first_seen:
@@ -230,7 +232,26 @@ class UnifiedEdge:
     def canonical_id(self) -> str:
         """Stable edge identity for scan-history joins without changing edge.id."""
         rel = self.relationship.value if isinstance(self.relationship, RelationshipType) else str(self.relationship)
-        return canonical_graph_edge_id(self.source, self.target, rel)
+        return self._recorded_canonical_id or canonical_graph_edge_id(self.source, self.target, rel)
+
+    def with_endpoints(self, source: str, target: str) -> UnifiedEdge:
+        """Retain a receipt only while it identifies the same relationship endpoints."""
+        recorded = self._recorded_canonical_id if (source, target) == (self.source, self.target) else ""
+        return replace(self, source=source, target=target, _recorded_canonical_id=recorded)
+
+    def storage_provenance(self) -> dict[str, Any]:
+        """Keep the identity receipt separate from relationship evidence."""
+        return {**self.provenance, "_agent_bom_canonical_id": self.canonical_id}
+
+    @classmethod
+    def from_stored(cls, **values: Any) -> UnifiedEdge:
+        provenance = dict(values.get("provenance") or {})
+        recorded = provenance.pop("_agent_bom_canonical_id", "")
+        rel = values["relationship"]
+        rel = rel.value if isinstance(rel, RelationshipType) else str(rel)
+        values["provenance"] = provenance
+        values["_recorded_canonical_id"] = recorded or legacy_canonical_id_v2("graph_edge", rel, values["source"], values["target"])
+        return cls(**values)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -262,6 +283,7 @@ class UnifiedEdge:
             source=data["source"],
             target=data["target"],
             relationship=RelationshipType(data["relationship"]),
+            _recorded_canonical_id=str(data.get("canonical_id") or ""),
             direction=data.get("direction", "directed"),
             weight=data.get("weight", 1.0),
             traversable=data.get("traversable", True),

@@ -28,8 +28,9 @@ from agent_bom.canonical_ids import (
     canonical_mcp_server_id,
     canonical_mcp_tool_id,
     canonical_package_id,
-    legacy_agent_id_v1,
     mcp_server_fingerprint,
+    previous_agent_canonical_ids,
+    previous_agent_graph_ids,
 )
 from agent_bom.core.exploitability import parse_cvss_vector_signals
 from agent_bom.core.package_artifacts import normalize_artifact_version, package_lookup_names
@@ -844,17 +845,14 @@ class Agent:
         )
 
     @property
+    def previous_graph_ids(self) -> list[str]:
+        """Graph compatibility receipts computed before config-path redaction."""
+        return previous_agent_graph_ids(self)
+
+    @property
     def previous_canonical_ids(self) -> list[str]:
-        """Pre-v2 aliases used to migrate persisted rows and historical joins."""
-        if self.source_id or self.device_fingerprint:
-            return []
-        legacy_id = legacy_agent_id_v1(
-            self.agent_type.value,
-            self.name,
-            source=self.source or "",
-            config_path=self.config_path,
-        )
-        return [] if legacy_id == self.stable_id else [legacy_id]
+        """Explicit old-version receipts; consumers must reject ambiguous matches."""
+        return previous_agent_canonical_ids(self)
 
     @property
     def canonical_id(self) -> str:

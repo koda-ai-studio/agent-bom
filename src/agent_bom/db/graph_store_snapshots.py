@@ -129,7 +129,7 @@ def load_rollup_graph(
     ).fetchone()
     for node_id, entity_type, label, severity, risk_score, attributes in json.loads(node_batch[0]):
         graph.add_node(
-            UnifiedNode(
+            UnifiedNode.from_stored(
                 id=node_id,
                 entity_type=EntityType(entity_type),
                 label=label,
@@ -151,7 +151,7 @@ def load_rollup_graph(
     for source, target, relationship in json.loads(edge_batch[0]):
         if source in graph.nodes and target in graph.nodes:
             graph.add_stored_edge(
-                UnifiedEdge(
+                UnifiedEdge.from_stored(
                     source=source,
                     target=target,
                     relationship=RelationshipType(relationship),
@@ -214,7 +214,7 @@ def prior_delta_digest(
 
 
 def _node_from_snapshot_row(row: sqlite3.Row) -> UnifiedNode:
-    return UnifiedNode(
+    return UnifiedNode.from_stored(
         id=row["id"],
         entity_type=EntityType(row["entity_type"]),
         label=row["label"],
@@ -235,7 +235,7 @@ def _node_from_snapshot_row(row: sqlite3.Row) -> UnifiedNode:
 
 
 def _edge_from_snapshot_row(row: sqlite3.Row) -> UnifiedEdge:
-    return UnifiedEdge(
+    return UnifiedEdge.from_stored(
         source=row["source_id"],
         target=row["target_id"],
         relationship=RelationshipType(row["relationship"]),

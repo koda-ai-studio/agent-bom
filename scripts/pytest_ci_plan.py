@@ -248,6 +248,24 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
 
     for changed in changed_files:
         normalized = Path(changed.as_posix().removeprefix("./"))
+        if normalized.as_posix() in {"src/agent_bom/canonical_ids.py", "src/agent_bom/graph/edge.py", "src/agent_bom/graph/rekey.py"}:
+            selected.update(
+                candidate
+                for candidate in available
+                if candidate.parent.name == "graph"
+                or candidate.name
+                in {
+                    "test_entrypoint_registries.py",
+                    "test_mcp_server_scheme_aliases.py",
+                    "test_dependency_reach.py",
+                    "test_sarif_schema_2_1_0.py",
+                    "test_demo_inventory_accuracy.py",
+                    "test_graph_rekey_path_references.py",
+                    "test_scan_pipeline_characterization.py",
+                    "test_output_formats.py",
+                    "test_discovery_enhanced.py",
+                }
+            )
         if normalized.suffix == ".md" and (
             normalized.as_posix() == "README.md" or normalized.as_posix().startswith(("docs/", "site-docs/"))
         ):

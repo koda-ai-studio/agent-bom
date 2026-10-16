@@ -349,7 +349,7 @@ def sync_fleet(request: Request, body: PushPayload | None = None) -> dict[str, A
     Trust scores are recomputed for all synced agents.
     """
     from agent_bom.api.audit_log import log_action
-    from agent_bom.api.fleet_store import FleetAgent, FleetLifecycleState, match_discovered_fleet_agent
+    from agent_bom.api.fleet_store import FleetAgent, FleetLifecycleState, discovered_fleet_identity, match_discovered_fleet_agent
     from agent_bom.discovery import discover_all
     from agent_bom.fleet.trust_scoring import compute_trust_score
 
@@ -499,17 +499,8 @@ def sync_fleet(request: Request, body: PushPayload | None = None) -> dict[str, A
         claimed_agent_ids: set[str] = set()
         matched_discovery: list[tuple[Any, FleetAgent | None]] = []
         for discovered_agent in discovered:
-            discovered_type = (
-                discovered_agent.agent_type.value if hasattr(discovered_agent.agent_type, "value") else str(discovered_agent.agent_type)
-            )
             match = match_discovered_fleet_agent(
-                existing_agents,
-                canonical_id=str(getattr(discovered_agent, "canonical_id", "") or ""),
-                agent_type=discovered_type,
-                name=discovered_agent.name,
-                config_path=discovered_agent.config_path or "",
-                previous_canonical_ids=list(getattr(discovered_agent, "previous_canonical_ids", []) or []),
-                claimed_agent_ids=claimed_agent_ids,
+                existing_agents, **discovered_fleet_identity(discovered_agent), claimed_agent_ids=claimed_agent_ids
             )
             if match is not None:
                 claimed_agent_ids.add(match.agent_id)

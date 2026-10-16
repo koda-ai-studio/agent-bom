@@ -81,7 +81,7 @@ def test_attack_path_finding_ids_prefer_stamped_attributes():
             attributes={"finding_id": "fid-abc"},
         )
     }
-    assert _finding_ids_for_nodes(nodes, ["vuln:CVE-1"], ["CVE-1"]) == ["fid-abc", "CVE-1"]
+    assert _finding_ids_for_nodes(nodes, ["vuln:CVE-1"], ["CVE-1"]) == ["fid-abc"]
 
 
 def test_link_report_findings_stamps_persisted_graph_nodes():

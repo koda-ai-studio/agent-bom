@@ -107,11 +107,11 @@ Top-level branches of `correlation_identity`, in evaluation order. The first bra
 | `cluster` | 7 | — | — |
 | `code_module` | 6 | — | `application_entrypoint:source:{…}` |
 | `config_file` | 6 | — | — |
-| `container` | 4 | — | `container:k8s:pod:{pod_uid}`, `container:{container_image}` |
+| `container` | 4 | — | `container:k8s:pod:{pod_uid}`, `container:serving-config:{…}` |
 | `credential` | 1 | — | — |
 | `credential_ref` | 9 | — | — |
 | `data_store` | 7 | — | `data_store:snowflake:db:{name}`, `data_store:snowflake:schema:{fqn}`, `data_store:snowflake:share:{share_name}` (+4) |
-| `dataset` | 7 | — | `dataset:{dataset_name}` |
+| `dataset` | 7 | — | `dataset:card:{…}` |
 | `directory` | 6 | — | `directory:manifest:{agent_node_key}:{srv_name}` |
 | `drift_incident` | 9 | — | — |
 | `environment` | 9 | — | `env:{provider}:{account_scope}:{environment}` |
