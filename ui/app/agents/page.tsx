@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -12,25 +12,13 @@ import {
   type DiscoveryEnvelope,
   type DiscoveryProvenance,
   type AgentLifecycleResponse,
-  type AttackFlowNodeData,
   OWASP_LLM_TOP10,
   MITRE_ATLAS,
 } from "@/lib/api";
+import { lifecycleInventoryView, type LifecycleView } from "@/lib/agent-lifecycle-view";
+import { SecurityGraphInvestigation } from "@/components/security-graph-investigation";
 import { FrameworkTagChips } from "@/components/framework-tag-chips";
 import { SeverityBadge } from "@/components/severity-badge";
-import {
-  ReactFlow,
-  Background,
-  Controls,
-  MiniMap,
-  Handle,
-  Position,
-  ReactFlowProvider,
-  useReactFlow,
-  type Node,
-  type Edge,
-} from "@xyflow/react";
-import "@xyflow/react/dist/style.css";
 import {
   ArrowLeft,
   ArrowRight,
@@ -65,18 +53,6 @@ import { DataTable, type DataTableColumn } from "@/components/data-table";
 import { StatStrip } from "@/components/stat-strip";
 import { Collapsible } from "@/components/collapsible";
 import { Drawer } from "@/components/drawer";
-import { GraphInteractionToolbar } from "@/components/graph-chrome";
-import { useGraphPresentation } from "@/hooks/use-graph-presentation";
-import { graphTopologyKey } from "@/lib/graph-presentation";
-import {
-  ATTACK_FLOW_MINIMAP_COLORS,
-  ATTACK_FLOW_NODE_CLASS_MAP,
-  ATTACK_FLOW_SEVERITY_NODE_CLASS_MAP,
-  graphNodeDisplayLabels,
-  readableGraphEdges,
-} from "@/lib/graph-utils";
-import { useAuthState } from "@/components/auth-provider";
-
 // ─── Agents List Helpers ────────────────────────────────────────────────────
 
 function isMcpServer(server: Agent["mcp_servers"][number]): boolean {
@@ -1270,276 +1246,52 @@ function AgentDetail({ agentName }: { agentName: string }) {
 
 // ─── Lifecycle Graph Constants ──────────────────────────────────────────────
 
-const NODE_ICONS: Record<string, React.ElementType> = {
-  cve: Bug,
-  package: Package,
-  server: Server,
-  agent: ShieldAlert,
-  credential: KeyRound,
-  tool: Wrench,
-};
-
-// ─── Lifecycle Custom Node ──────────────────────────────────────────────────
-
-function LifecycleNode({ data }: { data: AttackFlowNodeData }) {
-  const nodeType = data.nodeType;
-  const Icon = NODE_ICONS[nodeType] ?? Bug;
-
-  const border = nodeType === "cve" && data.severity
-    ? ATTACK_FLOW_SEVERITY_NODE_CLASS_MAP[data.severity.toLowerCase()] ?? ATTACK_FLOW_NODE_CLASS_MAP[nodeType]
-    : ATTACK_FLOW_NODE_CLASS_MAP[nodeType];
-
-  return (
-    <div className={`rounded-lg border-2 px-3 py-2 min-w-[140px] max-w-[200px] shadow-lg ${border}`}>
-      <Handle type="target" position={Position.Left} className="!bg-[color:var(--text-tertiary)] !w-2 !h-2" />
-      <div className="flex items-center gap-2">
-        <Icon className="w-3.5 h-3.5 shrink-0 text-[color:var(--text-secondary)]" />
-        <span className="text-xs font-semibold text-[color:var(--foreground)] truncate">{data.label}</span>
-      </div>
-      {data.version && (
-        <div className="text-[10px] text-[color:var(--text-tertiary)] mt-0.5 font-mono">{data.version}</div>
-      )}
-      {data.severity && (
-        <div className="mt-1"><SeverityBadge severity={data.severity} /></div>
-      )}
-      {data.description && (
-        <div className="text-[10px] text-[color:var(--text-tertiary)] mt-0.5 truncate">{data.description}</div>
-      )}
-      <Handle type="source" position={Position.Right} className="!bg-[color:var(--text-tertiary)] !w-2 !h-2" />
-    </div>
-  );
-}
-
-const nodeTypes = { lifecycleNode: LifecycleNode };
-
-// ─── Lifecycle Stats Bar ────────────────────────────────────────────────────
-
-function StatsBar({ stats }: { stats: Record<string, number> }) {
-  const items = [
-    { label: "Servers", value: stats.total_servers ?? 0, color: "text-blue-400" },
-    { label: "Packages", value: stats.total_packages ?? 0, color: "text-[color:var(--text-secondary)]" },
-    { label: "Tools", value: stats.total_tools ?? 0, color: "text-purple-400" },
-    { label: "Credentials", value: stats.total_credentials ?? 0, color: "text-yellow-400" },
-    { label: "Vulns", value: stats.total_vulnerabilities ?? 0, color: "text-red-400" },
-  ];
-  return (
-    <div className="flex items-center gap-4 text-xs">
-      {items?.map((s) => (
-        <div key={s.label} className="flex items-center gap-1">
-          <span className={`font-bold ${s.color}`}>{s.value}</span>
-          <span className="text-[color:var(--text-tertiary)]">{s.label}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ─── Lifecycle Detail Panel ─────────────────────────────────────────────────
-
-function DetailPanel({
-  node,
-  onClose,
-}: {
-  node: Node<AttackFlowNodeData>;
-  onClose: () => void;
-}) {
-  const d = node.data;
-  const Icon = NODE_ICONS[d.nodeType] ?? Bug;
-  return (
-    <div className="agents-flow-drawer">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[color:var(--border-subtle)]">
-        <div className="flex items-center gap-2">
-          <Icon className="w-4 h-4 text-[color:var(--text-secondary)]" />
-          <span className="font-semibold text-sm">{d.label}</span>
-        </div>
-        <button onClick={onClose} className="text-[color:var(--text-tertiary)] hover:text-[color:var(--foreground)]">
-          <X className="w-4 h-4" />
-        </button>
-      </div>
-      <div className="px-4 py-3 space-y-2 text-xs">
-        <div className="flex justify-between text-[color:var(--text-secondary)]">
-          <span>Type</span>
-          <span className="text-[color:var(--foreground)] capitalize">{d.nodeType}</span>
-        </div>
-        {d.severity && (
-          <div className="flex justify-between">
-            <span className="text-[color:var(--text-secondary)]">Severity</span>
-            <SeverityBadge severity={d.severity} />
-          </div>
-        )}
-        {d.cvss_score != null && (
-          <div className="flex justify-between text-[color:var(--text-secondary)]">
-            <span>CVSS</span>
-            <span className="text-[color:var(--foreground)]">{d.cvss_score}</span>
-          </div>
-        )}
-        {d.version && (
-          <div className="flex justify-between text-[color:var(--text-secondary)]">
-            <span>Version</span>
-            <span className="text-[color:var(--foreground)] font-mono">{d.version}</span>
-          </div>
-        )}
-        {d.ecosystem && (
-          <div className="flex justify-between text-[color:var(--text-secondary)]">
-            <span>Ecosystem</span>
-            <span className="text-[color:var(--foreground)]">{d.ecosystem}</span>
-          </div>
-        )}
-        {d.agent_type && (
-          <div className="flex justify-between text-[color:var(--text-secondary)]">
-            <span>Agent Type</span>
-            <span className="text-[color:var(--foreground)]">{d.agent_type}</span>
-          </div>
-        )}
-        {d.description && (
-          <div className="text-[color:var(--text-secondary)] pt-1 border-t border-[color:var(--border-subtle)]">
-            <span className="block mb-0.5">Description</span>
-            <span className="text-[color:var(--text-secondary)]">{d.description}</span>
-          </div>
-        )}
-        {d.fixed_version && (
-          <div className="flex justify-between text-[color:var(--text-secondary)]">
-            <span>Fix Available</span>
-            <span className="text-emerald-400 font-mono">{d.fixed_version}</span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── Lifecycle Flow Canvas ──────────────────────────────────────────────────
-
-function LifecycleFlow({
-  data,
-  agentName,
-}: {
-  data: AgentLifecycleResponse;
-  agentName: string;
-}) {
-  const { session, loading: authLoading } = useAuthState();
-  const flowInstance = useReactFlow();
-  const [selectedNode, setSelectedNode] = useState<Node<AttackFlowNodeData> | null>(null);
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const lifecycleEdges = useMemo(
-    () => readableGraphEdges(data.edges as Edge[], undefined, { nodeLabels: graphNodeDisplayLabels(data.nodes as Node[]) }),
-    [data.edges, data.nodes],
-  );
-  const presentation = useGraphPresentation({
-    nodes: data.nodes as Node[],
-    scope: {
-      tenantId: session?.tenant_id || "local",
-      subject: session?.subject || session?.auth_method || "local-viewer",
-      snapshotId: agentName,
-      lens: "agent-lifecycle",
-      scope: graphTopologyKey(data.nodes as Node[], lifecycleEdges),
-    },
-    layout: "agent-lifecycle",
-    enabled: !authLoading && Boolean(session),
-    ownerActive: Boolean(session),
-    localMode: session?.recommended_ui_mode === "no_auth",
-  });
-
-  useEffect(() => {
-    if (!presentation.hasSavedState) {
-      setTimeout(() => flowInstance.fitView({ padding: 0.2 }), 100);
-    }
-  }, [data, flowInstance, presentation.hasSavedState]);
-
-  const onNodeClick = useCallback((_: unknown, node: Node) => {
-    setSelectedNode(node as Node<AttackFlowNodeData>);
-    setSelectedNodeId(node.id);
-  }, []);
-
-  const fitVisible = useCallback(
-    () => void flowInstance.fitView({ padding: 0.2, duration: 240 }),
-    [flowInstance],
-  );
-  const fitSelection = useCallback(() => {
-    const node = selectedNodeId ? flowInstance.getNode(selectedNodeId) : undefined;
-    if (node) void flowInstance.fitView({ nodes: [node], padding: 0.7, duration: 240 });
-  }, [flowInstance, selectedNodeId]);
-
+function LifecycleFlow({ data, agentName }: { data: AgentLifecycleResponse; agentName: string }) {
+  const [view, setView] = useState<LifecycleView>("servers");
+  const servers = data.graph?.nodes.filter(node => node.entity_type === "server") ?? [];
+  const [serverId, setServerId] = useState(servers[0]?.id ?? "");
+  const selectedServer = servers.some(node => node.id === serverId) ? serverId : servers[0]?.id ?? "";
+  const visible = data.graph ? lifecycleInventoryView(data.graph, view, selectedServer) : null;
   const handleExport = () => {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${agentName}-lifecycle.json`;
-    a.click();
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${agentName}-lifecycle.json`;
+    link.click();
     URL.revokeObjectURL(url);
   };
-
-  return (
-    <div className="relative w-full h-full">
-      {/* Header bar */}
-      <div className="agents-flow-header">
-        <div className="flex items-center gap-4">
-          <Link
-            href={`/agents?name=${encodeURIComponent(agentName)}`}
-            className="agents-inline-link"
-          >
-            <ArrowLeft className="w-4 h-4" /> {agentName}
-          </Link>
-          <span className="text-[color:var(--text-tertiary)]">|</span>
-          <span className="text-sm font-semibold text-[color:var(--text-secondary)]">Lifecycle Graph</span>
-        </div>
-        <div className="flex items-center gap-4">
-          <StatsBar stats={data.stats} />
-          {presentation.enabled && presentation.nodes.length > 0 && <GraphInteractionToolbar
-            editing={presentation.editing}
-            hasSelection={Boolean(selectedNodeId)}
-            onFitVisible={fitVisible}
-            onFitSelection={fitSelection}
-            onAutoLayout={() => { presentation.autoLayout(); window.setTimeout(fitVisible, 0); }}
-            onReset={() => { presentation.reset(); window.setTimeout(fitVisible, 0); }}
-            onToggleEditing={presentation.toggleEditing}
-          />}
-          <button
-            onClick={handleExport}
-            className="agents-flow-export"
-          >
-            <Download className="w-3.5 h-3.5" /> Export
-          </button>
-        </div>
+  return <div className="space-y-4 p-3 sm:p-6" data-testid="agent-lifecycle-graph">
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="min-w-0">
+        <Link href="/agents" className="agents-back-link"><ArrowLeft className="h-4 w-4" /> Agents</Link>
+        <h1 className="mt-2 text-lg font-semibold">Configured inventory</h1>
+        <p className="mb-1 break-words text-sm font-medium">{agentName}</p>
+        <p className="max-w-xl text-sm text-muted">Explore packages, tools, credentials and advisories for this agent. These relationships do not prove execution or effective access.</p>
       </div>
-
-      <ReactFlow
-        key={presentation.storageKey}
-        nodes={presentation.nodes}
-        edges={lifecycleEdges}
-        nodeTypes={nodeTypes}
-        onNodeClick={onNodeClick}
-        onPaneClick={() => { setSelectedNode(null); setSelectedNodeId(null); }}
-        fitView={!presentation.hasSavedState}
-        defaultViewport={presentation.viewport}
-        minZoom={0.1}
-        maxZoom={2}
-        deleteKeyCode={null}
-        nodesDraggable={presentation.editing}
-        nodesConnectable={false}
-        onNodesChange={presentation.onNodesChange}
-        onNodeDragStop={presentation.onNodeDragStop}
-        onMoveEnd={presentation.onMoveEnd}
-        className="!bg-[color:var(--surface)]"
-      >
-        <Background color="#27272a" gap={20} />
-        <Controls className="agents-flow-controls" />
-        <MiniMap
-          nodeColor={(n) => ATTACK_FLOW_MINIMAP_COLORS[(n.data as AttackFlowNodeData)?.nodeType] ?? "#52525b"}
-          className="!bg-[color:var(--surface-muted)] !border-[color:var(--border-subtle)] !rounded-lg"
-          maskColor="rgba(0,0,0,0.7)"
-        />
-      </ReactFlow>
-
-      {selectedNode && (
-        <DetailPanel node={selectedNode} onClose={() => { setSelectedNode(null); setSelectedNodeId(null); }} />
-      )}
+      <button onClick={handleExport} className="agents-flow-export"><Download className="h-4 w-4" /> Export</button>
     </div>
-  );
+    <div className="flex flex-wrap gap-x-5 gap-y-2 text-sm" aria-label="Unique inventory counts">
+      {[["Servers", data.stats.total_servers], ["Packages", data.stats.total_packages], ["Tools", data.stats.total_tools],
+        ["Credential slots", data.stats.total_credentials], ["Advisories", data.stats.total_vulnerabilities]].map(([label, count]) =>
+        <span key={label}><strong>{count ?? 0}</strong> {label}</span>)}
+    </div>
+    <div className="flex flex-wrap items-center gap-2" aria-label="Inventory view">
+      {([["servers", "Server connections"], ["packages", "Packages and advisories"], ["tools", "Tools and credentials"]] as const).map(([key, label]) =>
+        <button key={key} type="button" aria-pressed={view === key} className={`graph-page-action ${view === key ? "bg-surface-elevated ring-1 ring-outline" : ""}`} onClick={() => setView(key)}>{label}</button>)}
+      {view !== "servers" && <label className="flex min-w-0 max-w-full items-center gap-2 text-sm">Server
+        <select aria-label="Inventory server" className="min-w-0 max-w-full rounded border border-outline bg-surface p-2"
+          value={selectedServer} onChange={event => setServerId(event.target.value)}>
+          {servers.map(server => <option key={server.id} value={server.id}>{server.label}{servers.filter(item => item.label === server.label).length > 1 ? ` · ${server.id.slice(-8)}` : ""}</option>)}
+        </select>
+      </label>}
+    </div>
+    {visible && <p className="text-xs text-muted" role="status">Showing {visible.nodes.length} of {data.graph!.nodes.length} loaded entities. Choose a view and server to inspect their recorded relationships; export includes the complete inventory.</p>}
+    {visible ? <SecurityGraphInvestigation key={`${view}:${selectedServer}`} graph={visible} attackPath={null} focusMode={false}
+      onFocusModeChange={() => {}} fullGraphHref="/graph" embedded /> :
+      <PageEmptyState title="Lifecycle evidence unavailable" detail="Refresh this view against a server that provides the shared inventory graph." />}
+  </div>;
 }
-
-// ─── Lifecycle View ─────────────────────────────────────────────────────────
 
 function AgentLifecycle({ agentName }: { agentName: string }) {
   const [data, setData] = useState<AgentLifecycleResponse | null>(null);
@@ -1577,9 +1329,7 @@ function AgentLifecycle({ agentName }: { agentName: string }) {
 
   return (
     <div className="h-[calc(100dvh-6rem)] w-full bg-[color:var(--surface)]">
-      <ReactFlowProvider>
-        <LifecycleFlow data={data} agentName={agentName} />
-      </ReactFlowProvider>
+      <LifecycleFlow data={data} agentName={agentName} />
     </div>
   );
 }

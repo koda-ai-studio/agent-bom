@@ -17,6 +17,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { ChevronLeft, ChevronRight, Focus, GitBranch, Loader2, SlidersHorizontal } from "lucide-react";
 
+import { GraphRelationshipDetail } from "@/components/graph-relationship-detail";
 import { GraphEntityDrawer } from "@/components/graph-entity-drawer";
 import { relationshipEdgeTypes } from "@/components/relationship-edge";
 import { FullscreenButton, GraphInteractionToolbar, GraphLegend } from "@/components/graph-chrome";
@@ -111,6 +112,7 @@ function InvestigationFlow({
   edges,
   viewportInput,
   onNodeSelect,
+  onEdgeSelect,
   selectedNodeId,
   presentationScope,
   persistenceEnabled,
@@ -129,6 +131,7 @@ function InvestigationFlow({
     mode: "lineage" | "context";
   };
   onNodeSelect: (id: string) => void;
+  onEdgeSelect: (edge: Edge) => void;
   selectedNodeId: string | null;
   presentationScope: GraphPresentationScope;
   persistenceEnabled: boolean;
@@ -293,11 +296,18 @@ function InvestigationFlow({
           onNodeDragStop={presentation.onNodeDragStop}
           onMoveEnd={presentation.onMoveEnd}
           onNodeClick={(_, node) => { setNavigationId(node.id); onNodeSelect(node.id); }}
+          onEdgeClick={(_, edge) => onEdgeSelect(edge)}
+          onKeyDownCapture={event => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            const id = event.target instanceof Element ? event.target.closest(".react-flow__edge")?.getAttribute("data-id") : null;
+            const edge = id ? presentedEdges.find(item => item.id === id) : undefined;
+            if (edge) { event.preventDefault(); event.stopPropagation(); onEdgeSelect(edge); }
+          }}
           proOptions={{ hideAttribution: true }}
         >
           <Background color={BACKGROUND_COLOR} gap={BACKGROUND_GAP} />
           <Controls className={CONTROLS_CLASS} showInteractive={false} onFitView={fitVisible} orientation={embedded ? "horizontal" : "vertical"} />
-          {shouldShowGraphMiniMap(viewportInput) && (
+          {!compact && shouldShowGraphMiniMap(viewportInput) && (
             <MiniMap
               className={MINIMAP_CLASS}
               style={{ background: MINIMAP_BG }}
@@ -341,6 +351,7 @@ export function SecurityGraphInvestigation({
   const captureMode = useCaptureMode();
   const { session, loading: authLoading } = useAuthState();
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [selectedEdge, setSelectedEdge] = useState<Edge | null>(null);
   const [drawerData, setDrawerData] = useState<LineageNodeData | null>(null);
   const [blastLoading, setBlastLoading] = useState(false);
   const [blastActive, setBlastActive] = useState(false);
@@ -476,6 +487,15 @@ export function SecurityGraphInvestigation({
     }),
     [attackPath, displayEdges, focusMode, layout.nodes, scanId, session?.auth_method, session?.subject, session?.tenant_id],
   );
+
+  const selectedRelationship = useMemo(() => {
+    if (!selectedEdge || !displayEdges.some(edge => edge.id === selectedEdge.id)) return null;
+    // Bind to the exact displayed edge, including endpoints. A parallel edge
+    // between the same nodes must never donate a different relationship receipt.
+    return activeGraph?.edges.find(edge => edge.id === selectedEdge.id
+      && edge.source === selectedEdge.source && edge.target === selectedEdge.target
+      && edge.relationship === selectedEdge.data?.relationship) ?? null;
+  }, [activeGraph, displayEdges, selectedEdge]);
 
   const selectedNode = useMemo(
     () => layout.nodes.find((node) => node.id === selectedNodeId) ?? null,
@@ -692,7 +712,8 @@ export function SecurityGraphInvestigation({
               nodes={canvasNodes as Node<LineageNodeData>[]}
               edges={displayEdges}
               viewportInput={viewportInput}
-              onNodeSelect={setSelectedNodeId}
+              onNodeSelect={id => { setSelectedEdge(null); setSelectedNodeId(id); }}
+              onEdgeSelect={edge => { setSelectedNodeId(null); setSelectedEdge(edge); }}
               selectedNodeId={selectedNodeId}
               presentationScope={presentationScope}
               persistenceEnabled={!authLoading && Boolean(session)}
@@ -705,6 +726,11 @@ export function SecurityGraphInvestigation({
           </ReactFlowProvider>
         )}
       </div>
+
+      {selectedRelationship && <GraphRelationshipDetail edge={selectedRelationship} scanId={scanId ?? ""}
+        sourceLabel={activeGraph?.nodes.find(node => node.id === selectedRelationship.source)?.label ?? selectedRelationship.source}
+        targetLabel={activeGraph?.nodes.find(node => node.id === selectedRelationship.target)?.label ?? selectedRelationship.target}
+        onClose={() => setSelectedEdge(null)} mobile />}
 
       {drawerData && (
         <div className="border-t border-outline p-4">
@@ -720,9 +746,9 @@ export function SecurityGraphInvestigation({
             }}
             blastRadiusActive={blastActive}
             blastRadiusLoading={blastLoading}
-            onShowBlastRadius={() => void handleShowImpact()}
-            onExpandNeighbors={() => void handleExpandNeighbors()}
-            onShowImpact={() => void handleShowImpact()}
+            onShowBlastRadius={scanId ? () => void handleShowImpact() : undefined}
+            onExpandNeighbors={scanId ? () => void handleExpandNeighbors() : undefined}
+            onShowImpact={scanId ? () => void handleShowImpact() : undefined}
             remediationHref="/remediation"
           />
         </div>
