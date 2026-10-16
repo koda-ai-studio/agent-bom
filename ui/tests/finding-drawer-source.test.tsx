@@ -104,3 +104,8 @@ it("keeps the generic next action only when no remediation is recorded", () => {
   render(<FindingDrawer vuln={base} triage={undefined} triageBusy={false} onTriageDecision={vi.fn()} onClose={vi.fn()} />);
   expect(screen.getByText("Review the evidence and determine the appropriate fix.")).toBeVisible();
 });
+
+it("keeps the finding snapshot on its remediation link", () => {
+  render(<FindingDrawer vuln={{ ...base, scan_id: "scan-original", fixed_version: "6.0" }} triage={undefined} triageBusy={false} onTriageDecision={vi.fn()} onClose={vi.fn()} />);
+  expect(screen.getByRole("link", { name: "Review remediation" })).toHaveAttribute("href", "/remediation?q=CVE-2020-14343&scan=scan-original");
+});

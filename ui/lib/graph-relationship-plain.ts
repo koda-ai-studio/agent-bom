@@ -38,21 +38,11 @@ const WHY: Record<string, (source: string, target: string) => string> = {
   depends_on: (s, t) => `${s} declares ${t} as a dependency.`,
   imports: (s, t) => `${s} imports ${t}.`,
   contains: (s, t) => `${s} contains ${t} in the collected inventory.`,
-  hosted_on: (s, t) => `${s} runs on ${t}.`,
-  hosts: (s, t) => `${s} hosts ${t}.`,
   uses: (s, t) => `${s} is configured to use ${t}.`,
   provides_tool: (s, t) => `${s} lists ${t} as an available tool.`,
   exposes_cred: (s, t) => `${s} references the credential ${t}.`,
   shares_cred: (s, t) => `${s} and ${t} reference the same credential.`,
-  can_access: (s, t) => `${s} is granted access to ${t}.`,
-  has_permission: (s, t) => `${s} holds a permission on ${t}.`,
-  assumes: (s, t) => `${s} can assume ${t}.`,
-  authenticates_as: (s, t) => `${s} authenticates as ${t}.`,
-  exposed_to: (s, t) => `${s} is exposed to ${t}.`,
   configures: (s, t) => `${s} configures ${t}.`,
-  delegated_to: (s, t) => `${s} delegates work to ${t}.`,
-  invoked: (s, t) => `${s} invoked ${t}.`,
-  called: (s, t) => `${s} called ${t}.`,
   correlates_with: (s, t) => `${s} and ${t} match on recorded identity fields.`,
   possibly_correlates_with: (s, t) => `${s} and ${t} may be the same asset; the match is not confirmed.`,
 };
@@ -62,6 +52,35 @@ const CODE = new Set(["depends_on", "contains", "imports", "hosts"]);
 const TOOL = new Set(["uses", "provides_tool", "uses_framework"]);
 const CRED = new Set(["exposes_cred", "shares_cred"]);
 const FINDING = new Set(["vulnerable_to", "exploitable_via", "affects"]);
+
+const EVIDENCE_ACTIONS: Record<string, string> = {
+  can_access: "access", has_permission: "hold a permission on", assumes: "assume",
+  authenticates_as: "authenticate as", exposed_to: "be exposed to", accessed: "access",
+  hosted_on: "run on", hosts: "host", invoked: "invoke", called: "call",
+  delegated_to: "delegate work to",
+};
+
+function qualifiedRelationship(edge: PlainEdge, source: string, target: string): string | null {
+  if (!Object.hasOwn(EVIDENCE_ACTIONS, edge.relationship)) return null;
+  const action = EVIDENCE_ACTIONS[edge.relationship]!;
+  const { mode, blocked } = graphEdgeEvidence(edge.evidence ?? {});
+  if (blocked) return `${source} had an attempt to ${action} ${target} blocked; completion is not established.`;
+  if (mode === "inferred") {
+    return edge.relationship === "can_access"
+      ? `${source} is modeled as able to access ${target}.`
+      : `${source} is modeled to ${action} ${target}.`;
+  }
+  if (mode === "static") {
+    return edge.relationship === "can_access"
+      ? `${source} is configured with access to ${target}.`
+      : `${source} is configured to ${action} ${target}.`;
+  }
+  const relation = edge.relationship.replaceAll("_", " ");
+  if (mode === "unknown") return `The snapshot links ${source} to ${target} as ${relation}; the evidence basis is not recorded.`;
+  // A receipt establishes the recorded activity, not successful execution or
+  // continuing effective authority. Denials and attempts are valid observations.
+  return `A recorded ${relation} observation links ${source} to ${target}; its outcome is limited to the receipt.`;
+}
 
 function text(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
@@ -86,8 +105,10 @@ export function plainRelationshipSummary(edge: PlainEdge, sourceLabel: string, t
   const packageName = text(evidence.package);
   const why = edge.relationship === "vulnerable_to" && evidence.derived_via === "package" && packageName
     ? `${sourceLabel} contains ${packageName}, which is recorded as affected by ${targetLabel}.`
-    : (Object.hasOwn(WHY, edge.relationship) ? WHY[edge.relationship]!(sourceLabel, targetLabel) : `The snapshot records a link from ${sourceLabel} to ${targetLabel}.`);
-  const kind = mode === "runtime" ? (blocked ? "Observed at runtime — blocked" : "Observed at runtime")
+    : qualifiedRelationship(edge, sourceLabel, targetLabel)
+      ?? (Object.hasOwn(WHY, edge.relationship) ? WHY[edge.relationship]!(sourceLabel, targetLabel) : `The snapshot records a link from ${sourceLabel} to ${targetLabel}.`);
+  const kind = evidence.tier === "recorded" && !blocked ? "Recorded observation"
+    : mode === "runtime" ? (blocked ? "Observed at runtime — blocked" : "Observed at runtime")
     : mode === "static" ? "Static — read from files, manifests or configuration"
     : mode === "inferred" ? "Modeled — derived from collected configuration, not observed"
     : graphEdgeEvidenceLabel(edge);
@@ -96,7 +117,8 @@ export function plainRelationshipSummary(edge: PlainEdge, sourceLabel: string, t
     : receiptAt ? `Receipt ${formatTime(receiptAt)}`
     : lastSeen ? `Recorded ${formatTime(lastSeen)} (link record time, not source activity)` : "Not recorded";
   const unknown = FINDING.has(edge.relationship) ? "Whether the vulnerable code is loaded or reachable at runtime."
-    : ACCESS.has(edge.relationship) ? (mode === "runtime" ? "What was accessed beyond this recorded activity." : "Whether this access was ever exercised.")
+    : ACCESS.has(edge.relationship) ? (blocked ? "Whether a later attempt succeeded; this attempt was blocked."
+      : mode === "runtime" ? "Whether access succeeded unless the receipt records that outcome, and what occurred beyond it." : "Whether this access was ever exercised.")
     : CRED.has(edge.relationship) ? "Whether the secret value was read or used."
     : TOOL.has(edge.relationship) ? "Whether a tool was actually called."
     : CODE.has(edge.relationship) ? "Whether this component's code actually runs."

@@ -33,6 +33,7 @@ from agent_bom.graph.correlation_scope import timestamp_instant as _timestamp_in
 from agent_bom.graph.credential_identity import credential_occurrence, is_credential_slot
 from agent_bom.graph.edge import UnifiedEdge, merge_union_evidence_keys, renamed_union_evidence
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
+from agent_bom.graph.security_assertions import resolve_security_assertions
 from agent_bom.graph.types import EntityType, RelationshipType
 from agent_bom.graph.util import _now_iso
 
@@ -536,6 +537,9 @@ def _merge_node(observations: Sequence[_NodeObservation], key: tuple[str, str]) 
     )
     newest = ordered[-1].node
     attributes = _project_mapping(item.node.attributes for item in ordered)
+    assertions = resolve_security_assertions(
+        ((item.snapshot.scan_id, item.snapshot.scan_id, item.node.id, item.node.attributes) for item in ordered), attributes
+    )
     source_scan_ids = sorted({item.snapshot.scan_id for item in ordered})
     identity_basis = sorted({item.identity_basis for item in ordered})
     attributes[_CORRELATION_ATTR] = {
@@ -543,9 +547,12 @@ def _merge_node(observations: Sequence[_NodeObservation], key: tuple[str, str]) 
         "identity_basis": identity_basis[0] if len(identity_basis) == 1 else identity_basis,
         "observation_count": len(ordered),
         "source_scan_ids": source_scan_ids,
-        "conflict_fields": _conflict_fields(item.node.attributes for item in ordered),
+        "conflict_fields": sorted(set(_conflict_fields(item.node.attributes for item in ordered)) | assertions.keys()),
         "observations": [_node_observation_receipt(item) for item in ordered],
     }
+
+    if assertions:
+        attributes[_CORRELATION_ATTR]["conflicts"] = assertions
 
     severity_source = max(
         ordered,
