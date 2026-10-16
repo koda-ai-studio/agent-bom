@@ -208,3 +208,38 @@ def test_server_aliases_retain_frozen_scope_escaping_and_registry_v2_ids():
     registry = {"name": "registered", "registry_id": "org.example/service"}
     registry["canonical_id"] = canonical_mcp_server_id(registry["name"], registry_id=registry["registry_id"])
     assert f"server:{legacy_canonical_id_v2('mcp_server', registry['registry_id'])}" in previous_mcp_server_graph_ids(registry, agent)
+
+
+def test_mcp_launch_argument_boundaries_are_not_display_strings():
+    from agent_bom.canonical_ids import canonical_mcp_server_id
+
+    assert canonical_mcp_server_id("same", "python", args=["a b", "c"]) != canonical_mcp_server_id("same", "python", args=["a", "b c"])
+    assert canonical_mcp_server_id("same", "python", args=["", "x"]) != canonical_mcp_server_id("same", "python", args=["x"])
+
+
+def test_mcp_launch_executable_paths_do_not_collapse_by_basename():
+    from agent_bom.canonical_ids import canonical_mcp_server_id
+
+    assert canonical_mcp_server_id("same", "/opt/one/python", args=["server.py"]) != canonical_mcp_server_id("same", "/opt/two/python", args=["server.py"])
+
+
+def test_mcp_remote_query_routes_do_not_collapse():
+    from agent_bom.canonical_ids import canonical_mcp_server_id
+
+    assert canonical_mcp_server_id("same", url="https://mcp.example/endpoint?workspace=one") != canonical_mcp_server_id("same", url="https://mcp.example/endpoint?workspace=two")
+
+
+def test_registry_artifact_does_not_merge_distinct_service_endpoints():
+    from agent_bom.canonical_ids import canonical_mcp_server_id
+
+    assert canonical_mcp_server_id("same", registry_id="same-package", url="https://one.example/mcp") != canonical_mcp_server_id("same", registry_id="same-package", url="https://two.example/mcp")
+
+
+def test_discovery_keeps_same_launch_under_distinct_agent_configs():
+    from agent_bom.discovery.identity import deduplicate_discovered_agents
+    from agent_bom.models import Agent, AgentType, MCPServer
+
+    agents = [Agent(name="same", agent_type=AgentType.CUSTOM, config_path=path, mcp_servers=[MCPServer(name="server", command="npx", args=["mcp-package"])]) for path in ("/work/one/mcp.json", "/work/two/mcp.json")]
+    result = deduplicate_discovered_agents(agents)
+    assert len(result) == 2
+    assert all(len(agent.mcp_servers) == 1 for agent in result)
