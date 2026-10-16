@@ -320,7 +320,7 @@ The chart supports component-specific service-account overrides for scanner, gat
 Install:
 
 ```bash
-helm install agent-bom oci://ghcr.io/msaad00/charts/agent-bom \
+helm install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom \
   --version 0.109.0 \
   -n agent-bom --create-namespace \
   -f values.agent-bom.yaml
@@ -392,7 +392,7 @@ EOF
 Then install:
 
 ```bash
-helm install agent-bom oci://ghcr.io/msaad00/charts/agent-bom \
+helm install agent-bom oci://ghcr.io/koda-ai-studio/charts/agent-bom \
   --version 0.109.0 \
   -n agent-bom --create-namespace \
   -f deploy/helm/agent-bom/examples/eks-control-plane-sqlite-pilot-values.yaml
