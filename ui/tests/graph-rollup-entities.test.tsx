@@ -42,6 +42,6 @@ it.each([false, true])("distinguishes same-name scope cards (compact=%s)", (comp
     { ...leaf, id: "agent:cfg-a0fa3719e962:reader", label: "Workspace reader", entity_type: "agent" },
   ]).nodes;
   render(<ReactFlowProvider>{nodes.map(n => <GraphScopeNode key={n.id} item={n.data.rollup!} compact={compact} identityContext={n.data.identityContext} />)}</ReactFlowProvider>);
-  expect(screen.getByText("Config 926bd270c907")).toBeVisible();
-  expect(screen.getByText("Config a0fa3719e962")).toBeVisible();
+  expect(screen.getByText("Instance 1")).toBeVisible();
+  expect(screen.getByText("Instance 2")).toBeVisible();
 });

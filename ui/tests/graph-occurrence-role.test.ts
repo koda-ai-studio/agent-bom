@@ -51,7 +51,7 @@ describe("container occurrence roles", () => {
 });
 
 describe("same-name instance context", () => {
-  it("shows the recorded config scope without recovering redacted filesystem paths", () => {
+  it("uses plain display ordinals when readable source context is unavailable", () => {
     const graph = {
       scan_id: "s", nodes: [
         node("agent:cfg-926bd270c907:reader", EntityType.AGENT, "Workspace reader", []),
@@ -59,7 +59,7 @@ describe("same-name instance context", () => {
       ], edges: [], attack_paths: [], interaction_risks: [],
     } as unknown as UnifiedGraphData;
     const result = buildUnifiedFlowGraph(graph, createFocusedGraphFilters());
-    expect(result.nodes.map((n) => n.data.identityContext)).toEqual(["Config 926bd270c907", "Config a0fa3719e962"]);
+    expect(result.nodes.map((n) => n.data.identityContext)).toEqual(["Instance 1", "Instance 2"]);
     expect(result.nodes.map((n) => n.data.label)).toEqual(["Workspace reader", "Workspace reader"]);
     expect(new Set(result.nodes.map((n) => n.id)).size).toBe(2);
   });
@@ -86,5 +86,17 @@ it("does not turn unknown or redacted scope into an invented config path", () =>
   const result = buildUnifiedFlowGraph(graph, createFocusedGraphFilters());
   const hints = result.nodes.map((n) => n.data.identityContext);
   expect(new Set(hints).size).toBe(2);
-  for (const hint of hints) expect(hint).toMatch(/^Instance [a-f0-9]{8}$/);
+  for (const hint of hints) expect(hint).toMatch(/^Instance [12]$/);
+});
+
+
+it("prefers recorded readable workspace context over canonical identifiers", () => {
+  const one = node("agent:cfg-926bd270c907:reader", EntityType.AGENT, "reader", []);
+  const two = node("agent:cfg-a0fa3719e962:reader", EntityType.AGENT, "reader", []);
+  one.attributes = { workspace_name: "Billing", config_path: "/private/company/one/mcp.json" };
+  two.attributes = { workspace_name: "Analytics", config_path: "/private/company/two/mcp.json" };
+  const graph = { nodes: [one, two], edges: [], attack_paths: [], interaction_risks: [] } as unknown as UnifiedGraphData;
+  const result = buildUnifiedFlowGraph(graph, createFocusedGraphFilters());
+  expect(result.nodes.map(n => n.data.identityContext)).toEqual(["Workspace: Billing", "Workspace: Analytics"]);
+  expect(result.nodes.map(n => n.id)).toEqual([one.id, two.id]);
 });
