@@ -15,11 +15,11 @@ export function AgentSourceMark({ source, className = "", style }: {
   return (
     <span role="img" aria-label={`Source: ${source.label}`} title={`Source: ${source.label}`}
       data-agent-source={source.id}
-      className={`inline-flex shrink-0 items-center justify-center rounded-full p-1 ${className}`}
+      className={`inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full p-1 ${className}`}
       style={{ background: source.darkMark ? "#202123" : "#ffffff", color: "#202123", ...style }}>
       {source.src && source.src !== failedSrc
         // eslint-disable-next-line @next/next/no-img-element
-        ? <img src={source.src} alt="" className="h-full w-full object-contain" onError={() => setFailedSrc(source.src)} />
+        ? <img src={source.src} alt="" className={`h-full w-full object-contain ${source.id === "openai" ? "scale-[1.8]" : ""}`} onError={() => setFailedSrc(source.src)} />
         : <span className="text-[0.6em] font-semibold leading-none" style={{ color: source.darkMark ? "#ffffff" : "#202123" }}>{source.monogram}</span>}
     </span>
   );
