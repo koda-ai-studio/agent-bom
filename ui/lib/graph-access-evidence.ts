@@ -16,7 +16,7 @@ export function accessEvidenceQualifier(relationship: string, metadata: Evidence
   return "evidence unspecified";
 }
 
-/** Observed (non-blocked) runtime access draws solid; everything else is permission, drawn dashed. */
+/** Only non-blocked runtime receipts draw solid; dashed links do not establish permission or success. */
 export function isObservedAccess(relationship: string, metadata: EvidenceMetadata): boolean {
   return accessEvidenceQualifier(relationship, metadata) === "observed";
 }
