@@ -17,3 +17,9 @@ it("adapts to a short window and keeps a dense context readable", () => {
   expect(frame.height).toBeLessThanOrEqual(340);
   expect(frame.fitAll).toBe(false);
 });
+
+it("reports the available aspect independently of the chosen canvas height", () => {
+  const base = { availableHeight: 600, inspector: true, bounds: { x: 0, y: 0, width: 1000, height: 700 } };
+  expect(graphAdaptiveFrame({ ...base, width: 600 }).layoutAspect).toBe(1);
+  expect(graphAdaptiveFrame({ ...base, width: 1200 }).layoutAspect).toBe(2);
+});

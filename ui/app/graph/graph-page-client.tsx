@@ -647,6 +647,7 @@ function GraphPageInner() {
   const reactFlow = useReactFlow();
   const graphViewport = useViewport();
   const [narrowViewport, setNarrowViewport] = useState(false);
+  const [canvasLayoutAspect, setCanvasLayoutAspect] = useState(2.2);
   useEffect(() => {
     const query = window.matchMedia("(max-width: 639px)");
     const update = () => setNarrowViewport(query.matches);
@@ -1777,7 +1778,7 @@ function GraphPageInner() {
           : selectedScenarioId
             ? { rankSep: 112, nodeSep: 12, nodeWidth: 240, nodeHeight: 208, minSeparation: { width: 240, height: 208, gap: 24 } }
           : compactInvestigationTopology
-            ? investigationLayout
+            ? { ...investigationLayout, fitAspect: canvasLayoutAspect }
             : filters.agentName
               ? { rankSep: 152, nodeSep: 52 }
               : {},
@@ -3854,6 +3855,7 @@ function GraphPageInner() {
                 anchorId={selectedNodeId ?? investigationMode?.rootId}
                 inspector={Boolean(selectedNode || selectedRelationship) && !narrowViewport}
                 preserveViewport={presentation.restoredSavedState}
+                onLayoutAspect={setCanvasLayoutAspect}
               />
               <Background color={BACKGROUND_COLOR} gap={BACKGROUND_GAP} />
               <Controls orientation={selectedScenarioId ? "horizontal" : "vertical"} position="bottom-left" className={CONTROLS_CLASS} />

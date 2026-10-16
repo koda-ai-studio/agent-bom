@@ -6,12 +6,13 @@ import { graphAdaptiveFrame } from "@/lib/graph-adaptive-frame";
 
 /** Fit measured compact contexts after a docked inspector changes canvas width.
  * Only geometry changes trigger a fit; hover and evidence updates do not. */
-export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, preserveViewport }: {
+export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, preserveViewport, onLayoutAspect }: {
   enabled: boolean;
   layoutKey: string;
   anchorId?: string | null | undefined;
   inspector: boolean;
   preserveViewport: boolean;
+  onLayoutAspect: (aspect: number) => void;
 }) {
   const initialized = useNodesInitialized();
   const width = useStore(state => state.width);
@@ -41,7 +42,7 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     return () => observer.disconnect();
   }, [canvas]);
   useEffect(() => {
-    if (!enabled || !initialized || !width || !height) return;
+    if (!enabled || !initialized || !width || !height || !windowHeight) return;
     const frameElement = canvas?.closest<HTMLElement>("[data-graph-adaptive-frame]");
     if (!frameElement) return;
     const nodes = getNodes();
@@ -49,6 +50,7 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
       bounds: getNodesBounds(nodes), width, inspector,
       availableHeight: windowHeight - spaceAbove - 24,
     });
+    onLayoutAspect(frameSize.layoutAspect);
     frameElement.style.setProperty("--graph-adaptive-height", `${frameSize.height}px`);
     if (preserveViewport) return;
     const frame = requestAnimationFrame(() => {
@@ -58,6 +60,6 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
       });
     });
     return () => cancelAnimationFrame(frame);
-  }, [enabled, initialized, width, height, layoutKey, anchorId, inspector, preserveViewport, windowHeight, spaceAbove, canvas, fitView, getNodes]);
+  }, [enabled, initialized, width, height, layoutKey, anchorId, inspector, preserveViewport, windowHeight, spaceAbove, canvas, fitView, getNodes, onLayoutAspect]);
   return null;
 }

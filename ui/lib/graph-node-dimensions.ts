@@ -66,10 +66,7 @@ export function compactInvestigationLayout(explicitContext: boolean, nodeCount: 
   return readableLineageDagreLr({
     nodeWidth: LINEAGE_NODE_WIDTH,
     nodeHeight: LINEAGE_NODE_HEIGHT,
-    rankSep: 96,
-    // Do not stretch a bounded context to an assumed full-width canvas. The
-    // measured viewport (including a docked inspector) owns its framing.
-    fitAspect: 0,
+    rankSep: 128,
     nodeSep: 32,
     minSeparation: { width: LINEAGE_NODE_WIDTH, height: LINEAGE_NODE_HEIGHT, gap: 24 },
   });

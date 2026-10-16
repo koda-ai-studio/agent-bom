@@ -290,13 +290,13 @@ export function reduceRankCrossings(nodes: Node[], edges: Edge[]): Node[] {
 const CAPTION_ROOM_ASPECT = 1.6;
 const MAX_RANK_STRETCH = 2;
 
-export function stretchRanksForCaptions(nodes: Node[], nodeWidth: number, nodeHeight: number): Node[] {
+export function stretchRanksForCaptions(nodes: Node[], nodeWidth: number, nodeHeight: number, canvasAspect = CAPTION_ROOM_ASPECT): Node[] {
   if (nodes.length < 2) return nodes;
   const xs = nodes.map((node) => node.position.x), ys = nodes.map((node) => node.position.y);
   const minX = Math.min(...xs), span = Math.max(...xs) - minX;
   const height = Math.max(...ys) - Math.min(...ys) + nodeHeight;
   if (span <= 0) return nodes;
-  const stretch = Math.min(MAX_RANK_STRETCH, (CAPTION_ROOM_ASPECT * height - nodeWidth) / span);
+  const stretch = Math.min(MAX_RANK_STRETCH, (Math.min(CAPTION_ROOM_ASPECT, canvasAspect) * height - nodeWidth) / span);
   if (!(stretch > 1)) return nodes;
   return nodes.map((node) => ({ ...node, position: { ...node.position, x: minX + (node.position.x - minX) * stretch } }));
 }
@@ -357,7 +357,7 @@ export function applyDagreLayout(
         })
       : orderedNodes;
 
-  const roomyNodes = isHorizontal && fitAspect ? stretchRanksForCaptions(fittedNodes, nodeWidth, nodeHeight) : fittedNodes;
+  const roomyNodes = isHorizontal && fitAspect ? stretchRanksForCaptions(fittedNodes, nodeWidth, nodeHeight, fitAspect) : fittedNodes;
   return {
     nodes: minSeparation
       ? enforceMinNodeSeparation(roomyNodes, minSeparation)

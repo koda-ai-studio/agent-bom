@@ -14,5 +14,5 @@ export function graphAdaptiveFrame({ bounds, width, availableHeight, inspector }
   const viewport = getViewportForBounds(bounds, width, height, 0.05, 2, 0.08);
   // Below this scale full cards become hard to read. Start at a neighborhood;
   // explicit Fit all still makes the complete returned topology available.
-  return { height, fitAll: viewport.zoom >= 0.7 };
+  return { height, fitAll: viewport.zoom >= 0.7, layoutAspect: Math.round(width / ceiling * 100) / 100 };
 }
