@@ -73,7 +73,7 @@ from agent_bom.package_utils import (
 from agent_bom.pci_dss import tag_blast_radius as tag_pci_dss
 from agent_bom.reachability_cve import advisory_affected_symbols_by_path, advisory_affected_symbols_list
 from agent_bom.scanners import cpython_advisory as runtime_cve
-from agent_bom.scanners.blast_radius import _HOP_RISK_FACTORS, expand_blast_radius_hops
+from agent_bom.scanners.blast_radius import expand_blast_radius_hops
 from agent_bom.scanners.osv import candidate_package_names as _candidate_package_names
 from agent_bom.scanners.osv import ecosystem_matches as _ecosystem_matches
 from agent_bom.scanners.osv import enrich_results_if_needed as _enrich_results_if_needed_impl
@@ -2174,5 +2174,10 @@ def scan_agents_sync(
             )
         )
     if blast_radius_depth > 1:
+        if show_scan_banner:
+            console.print(
+                "[yellow]--blast-radius-depth retains direct scanner scope: shared configuration does not prove delegation. "
+                "Use typed graph paths to inspect recorded relationships.[/yellow]"
+            )
         expand_blast_radius_hops(blast_radii, agents, max_depth=blast_radius_depth)
     return blast_radii

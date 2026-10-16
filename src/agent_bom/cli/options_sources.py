@@ -346,9 +346,9 @@ def scan_control_options(fn):
                 show_default=True,
                 metavar="N",
                 help=(
-                    "Multi-hop blast radius depth (1-5). Traces agent-to-agent delegation chains "
-                    "through shared MCP servers. Higher values reveal transitive risk but increase "
-                    "analysis time. Default 1 = direct impact only."
+                    "Compatibility option: scanner results retain direct scope at every depth. "
+                    "Shared configuration does not prove delegation; inspect typed graph paths "
+                    "for recorded cross-agent relationships."
                 ),
             ),
             click.option("--no-tree", is_flag=True, help="Skip dependency tree output"),

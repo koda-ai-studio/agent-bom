@@ -634,3 +634,10 @@ def test_hop_receipts_select_path_and_correlation_consumers(tmp_path, source):
     for path in expected:
         _write(path, 1)
     assert select_targeted_tests(changed_files=[Path(f"src/agent_bom/graph/{source}.py")], root=tmp_path) == expected
+
+
+@pytest.mark.parametrize("module", ["__init__", "multi_hop", "package_scan"])
+def test_scanner_edits_select_public_import_contract(tmp_path: Path, module: str) -> None:
+    contract = tmp_path / "tests/test_cli_scanners_init_exports.py"
+    _write(contract, 1)
+    assert select_targeted_tests(changed_files=[Path(f"src/agent_bom/scanners/{module}.py")], root=tmp_path) == [contract]

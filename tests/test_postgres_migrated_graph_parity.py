@@ -455,3 +455,15 @@ def test_unverified_scanner_match_survives_postgres_api_replay(migrated_fresh_da
         assert not other.nodes
     finally:
         reset_current_tenant(token)
+
+
+def test_direct_scanner_scope_survives_postgres_replay(migrated_fresh_database):
+    from agent_bom.api.postgres_common import reset_current_tenant, set_current_tenant
+    from agent_bom.api.postgres_graph import PostgresGraphStore
+    from tests.test_multi_hop_blast_radius import direct_scope_storage_contract
+
+    token = set_current_tenant("scope-contract")
+    try:
+        direct_scope_storage_contract(PostgresGraphStore())
+    finally:
+        reset_current_tenant(token)
