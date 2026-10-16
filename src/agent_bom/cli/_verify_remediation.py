@@ -8,6 +8,8 @@ from typing import Any
 
 import click
 
+from agent_bom.cli._remediate import remediate_cmd
+
 
 def _pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     result = {}
@@ -87,7 +89,5 @@ def compare(ctx: click.Context, before: Path, after: Path, max_age_seconds: int,
 
 
 def register_remediation_commands(group: click.Group) -> None:
-    from agent_bom.cli._remediate import remediate_cmd
-
     group.add_command(remediate_cmd, "remediate")
     group.add_command(verify_remediation, "verify-remediation")
