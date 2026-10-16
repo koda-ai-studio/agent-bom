@@ -16,6 +16,7 @@ erDiagram
     text introduced PK
     text fixed PK
     text last_affected PK
+    text limit_version PK
   }
   cpe_matches {
     text cve_id PK
@@ -59,7 +60,7 @@ Same column name in several tables here, but no table owns it, so no join is dra
 
 | Table | Backends | Columns | Partitioned | Lifetime |
 |---|---|---|---|---|
-| `affected` | SQLite | 6 |  | persistent |
+| `affected` | SQLite | 7 |  | persistent |
 | `cpe_matches` | SQLite | 9 |  | persistent |
 | `epss_scores` | SQLite | 4 |  | persistent |
 | `kev_entries` | SQLite | 5 |  | persistent |

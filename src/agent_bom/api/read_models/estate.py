@@ -69,6 +69,7 @@ class FindingRow(ReadModel):
     effective_reach: EffectiveReach | None = None
     effective_reach_band: str | None = None
     effective_reach_score: Num | None = None
+    reachability: str | None = None
     graph_reachable: bool | None = None
     graph_min_hop_distance: int | None = None
     graph_reachable_from_agents: list[str] | None = None

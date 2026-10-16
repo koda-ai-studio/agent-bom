@@ -260,12 +260,12 @@ def test_cyclonedx_maven_purl_matches_groupid_artifact_advisories(tmp_path):
 
     def lookup_package_side_effect(_conn, ecosystem: str, name: str, version: str):
         lookup_calls.append((ecosystem, name, version))
-        if (ecosystem, name, version) == ("maven", "org.apache.logging.log4j:log4j-core", "2.14.1"):
+        if (ecosystem, name, version) == ("maven", "org.apache.logging.log4j/log4j-core", "2.14.1"):
             return [lv]
         return []
 
     def package_in_db_side_effect(_conn, ecosystem: str, name: str) -> bool:
-        return ecosystem == "maven" and name == "org.apache.logging.log4j:log4j-core"
+        return ecosystem == "maven" and name == "org.apache.logging.log4j/log4j-core"
 
     with (
         patch("agent_bom.db.schema.db_freshness_days", return_value=1),
@@ -277,7 +277,7 @@ def test_cyclonedx_maven_purl_matches_groupid_artifact_advisories(tmp_path):
         count, covered = _scan_packages_local_db(packages)
 
     assert pkg.lookup_names == ["log4j-core", "org.apache.logging.log4j:log4j-core"]
-    assert ("maven", "org.apache.logging.log4j:log4j-core", "2.14.1") in lookup_calls
+    assert ("maven", "org.apache.logging.log4j/log4j-core", "2.14.1") in lookup_calls
     assert count == 1
     assert covered == {"maven:log4j-core@2.14.1"}
     assert [v.id for v in pkg.vulnerabilities] == ["CVE-2021-44228"]

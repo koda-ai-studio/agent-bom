@@ -109,3 +109,13 @@ it("keeps the finding snapshot on its remediation link", () => {
   render(<FindingDrawer vuln={{ ...base, scan_id: "scan-original", fixed_version: "6.0" }} triage={undefined} triageBusy={false} onTriageDecision={vi.fn()} onClose={vi.fn()} />);
   expect(screen.getByRole("link", { name: "Review remediation" })).toHaveAttribute("href", "/remediation?q=CVE-2020-14343&scan=scan-original");
 });
+
+it("keeps a review-only advisory match unknown despite a legacy green score", async () => {
+  const user = userEvent.setup();
+  render(<FindingDrawer vuln={{ ...base, match_confidence_tier: "unverified_range", effective_reach_band: "green", effective_reach_score: 5, runtime_evidence: { state: "observed", observed_count: 1 } }} triage={undefined} triageBusy={false} onTriageDecision={vi.fn()} onClose={vi.fn()} />);
+  await user.click(screen.getByRole("tab", { name: "Evidence" }));
+  expect(screen.getByText("Reachability unknown")).toBeVisible();
+  expect(screen.getByText("Related runtime activity: observed")).toBeVisible();
+  expect(screen.queryByText(/Reach green|Reported reachability is green/i)).not.toBeInTheDocument();
+  expect(screen.getByText(/advisory match needs verification/i)).toBeVisible();
+});

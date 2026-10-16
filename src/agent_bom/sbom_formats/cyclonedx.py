@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 from collections import defaultdict, deque
+from copy import deepcopy
 
 from agent_bom.advisory_ids import upstream_advisory_ids
 from agent_bom.checksums import add_checksum
@@ -142,9 +144,20 @@ def vulnerability_source(vuln: Vulnerability) -> dict[str, str]:
     return {"name": "OSV", "url": f"https://osv.dev/vulnerability/{vuln.id}"}
 
 
-def vulnerability_enrichment_properties(vuln: Vulnerability) -> list[dict[str, str]]:
+def vulnerability_enrichment_properties(vuln: Vulnerability, pkg_ref: str = "") -> list[dict[str, str]]:
     """Preserve scalar intelligence with the CVE supplying each value."""
     vuln_properties: list[dict[str, str]] = []
+    if vuln.match_confidence_tier or vuln.fixed_version:
+        vuln_properties.append(
+            {
+                "name": "agent-bom:match-evidence",
+                "value": json.dumps(
+                    {"affects_ref": pkg_ref, "match_confidence_tier": vuln.match_confidence_tier, "fixed_version": vuln.fixed_version},
+                    sort_keys=True,
+                ),
+            }
+        )
+
     if vuln.upstream_ids:
         vuln_properties.append({"name": "agent-bom:upstream_ids", "value": ",".join(vuln.upstream_ids)})
     for key in ("epss_cve_id", "kev_cve_id"):
@@ -182,3 +195,80 @@ def restore_vulnerability_enrichment(vuln: Vulnerability, vuln_data: dict) -> No
     if vuln.is_kev:
         vuln.kev_date_added = props.get("agent-bom:kev_date_added")
         vuln.kev_due_date = props.get("agent-bom:kev_due_date")
+
+
+def vulnerability_for_component(vuln: Vulnerability, record: dict, component_ref: str) -> Vulnerability:
+    """Restore package-scoped matching evidence without sharing mutable observations."""
+    observation = deepcopy(vuln)
+    tiers = set()
+    fixes: set[str | None] = set()
+    for prop in record.get("properties", []):
+        if not isinstance(prop, dict) or prop.get("name") != "agent-bom:match-evidence":
+            continue
+        try:
+            receipt = json.loads(prop.get("value", ""))
+        except (ValueError, TypeError):
+            continue
+        if isinstance(receipt, dict) and receipt.get("affects_ref") == component_ref:
+            if "fixed_version" in receipt:
+                fix = receipt["fixed_version"]
+                fixes.add(fix if isinstance(fix, str) and 0 < len(fix) <= 256 else None)
+            tier = receipt.get("match_confidence_tier")
+            if isinstance(tier, str) and tier:
+                tiers.add(tier)
+    if tiers:
+        observation.match_confidence_tier = next(iter(tiers)) if len(tiers) == 1 else "unverified_range"
+    if fixes:
+        observation.fixed_version = next(iter(fixes)) if len(fixes) == 1 else None
+    from agent_bom.core.reachability import review_only_match
+
+    if review_only_match(observation.match_confidence_tier):
+        observation.fixed_version = None
+    return observation
+
+
+def merge_properties(current: list[dict], incoming: list[dict]) -> list[dict]:
+    """Merge component properties without dropping later security evidence."""
+    merged = [dict(prop) for prop in current]
+    positions = {str(prop.get("name")): index for index, prop in enumerate(merged)}
+    seen = {(str(prop.get("name")), str(prop.get("value"))) for prop in merged}
+    for prop in incoming:
+        name = str(prop.get("name") or "")
+        value = str(prop.get("value") or "")
+        if (name, value) in seen:
+            continue
+        if name == "agent-bom:tool-count" and name in positions:
+            index = positions[name]
+            try:
+                current_count = int(str(merged[index].get("value") or "0"))
+                incoming_count = int(value)
+            except ValueError:
+                pass
+            else:
+                if incoming_count > current_count:
+                    seen.discard((name, str(merged[index].get("value") or "")))
+                    merged[index] = dict(prop)
+                    seen.add((name, value))
+                continue
+        merged.append(dict(prop))
+        seen.add((name, value))
+        positions.setdefault(name, len(merged) - 1)
+    return merged
+
+
+def merge_vulnerability_observation(by_id: dict[str, dict], observation: dict) -> None:
+    """Merge a vulnerability ID into one entry with all affected components."""
+    vuln_id = str(observation["id"])
+    existing = by_id.get(vuln_id)
+    if existing is None:
+        by_id[vuln_id] = observation
+        return
+    if existing.get("recommendation") != observation.get("recommendation"):
+        existing.pop("recommendation", None)
+    affected_refs = {
+        str(affected.get("ref")) for affected in [*existing.get("affects", []), *observation.get("affects", [])] if affected.get("ref")
+    }
+    existing["affects"] = [{"ref": ref} for ref in sorted(affected_refs)]
+    incoming_properties = observation.get("properties")
+    if isinstance(incoming_properties, list):
+        existing["properties"] = merge_properties(existing.get("properties", []), incoming_properties)
