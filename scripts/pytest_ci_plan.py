@@ -565,6 +565,7 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
                     "test_severity_alias_cluster_precedence.py",
                     "test_scanner_advisory_identity_boundaries.py",
                     "test_osv_fixed_version_accuracy.py",
+                    "test_cve_matching_accuracy_gate.py",
                     "test_scanners.py",
                 }
             )
