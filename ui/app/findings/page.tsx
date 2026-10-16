@@ -1233,6 +1233,7 @@ function FindingsPage() {
               triageBusy={triageBusyKey === triageKey(selectedVuln.id, selectedVuln.packages[0] ?? "*")}
               onTriageDecision={handleTriageDecision}
               onClose={() => setSelectedId(null)}
+              scanId={paramScan ?? undefined}
               />
           )}
         </>

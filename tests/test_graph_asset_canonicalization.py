@@ -341,8 +341,10 @@ def _assert_risky_value_kept(node: UnifiedNode, status: dict) -> None:
     assert "owner" not in node.attributes["identity"]["conflicts"]  # non-security fields keep precedence, no receipt bloat
     assert set(node.attributes["identity"]["conflict_fields"]) >= {"internet_exposed", "owner"}
     assert node.attributes["owner"] == "platform"
-    assert status["observed"]["conflicts"] == 2
+    # Competing security assertions limit the analysis; descriptive differences are reported, not counted.
+    assert status["observed"]["conflicts"] == 1
     assert status["observed"]["security_assertion_conflicts"] == 1
+    assert status["observed"]["attribute_conflicts"] == 2
     assert "conflicting_security_assertions" in status["reason_codes"]
 
 
@@ -400,7 +402,7 @@ def test_repeated_merge_does_not_invent_claims_or_double_count_conflicts() -> No
         canonicalize_assets(graph)
         node = next(iter(graph.nodes.values()))
         assert node.attributes["identity"]["conflicts"] == assertions
-        assert graph.analysis_status["asset_canonicalization"].observed["conflicts"] == 2
+        assert graph.analysis_status["asset_canonicalization"].observed["conflicts"] == 1
     records = assertions["internet_exposed"]
     assert {record["scan_id"] for record in records} == {"source-scan"}
     assert {record["node_id"] for record in records} == {"a-security", "z-inventory"}

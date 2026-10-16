@@ -259,7 +259,9 @@ def canonicalize_assets(graph: UnifiedGraph) -> dict[str, str]:
     attribute_conflicts = sum(len(identity.get("conflict_fields", [])) for identity in identities)
     security_conflicts = sum(len(identity.get("conflicts", {})) for identity in identities)
     strong_conflicts = components.conflicts + int(before.get("strong_key_conflicts", before.get("conflicts", 0)))
-    conflicts = strong_conflicts + attribute_conflicts
+    # Differing descriptive fields across sources are normal; only competing
+    # identities and competing security assertions limit the analysis.
+    conflicts = strong_conflicts + security_conflicts
     reasons = []
     if strong_conflicts:
         reasons.append("conflicting_strong_keys")
@@ -277,6 +279,7 @@ def canonicalize_assets(graph: UnifiedGraph) -> dict[str, str]:
             "candidate_edges": len(candidates),
             "conflicts": conflicts,
             "strong_key_conflicts": strong_conflicts,
+            "attribute_conflicts": attribute_conflicts,
             "security_assertion_conflicts": security_conflicts,
             "self_edges_dropped": dropped + int(before.get("self_edges_dropped", 0)),
         },

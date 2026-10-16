@@ -106,6 +106,10 @@ it("keeps the generic next action only when no remediation is recorded", () => {
 });
 
 it("keeps the finding snapshot on its remediation link", () => {
+  const { unmount } = render(<FindingDrawer vuln={{ ...base, scan_id: "scan-original", fixed_version: "6.0" }} triage={undefined} triageBusy={false} onTriageDecision={vi.fn()} onClose={vi.fn()} scanId="scan-pinned" />);
+  expect(screen.getByRole("link", { name: "Review remediation" })).toHaveAttribute("href", "/remediation?q=CVE-2020-14343&scan=scan-pinned");
+  unmount();
+  // Without a pinned snapshot the plan is the current one, even when the finding names its source scan.
   render(<FindingDrawer vuln={{ ...base, scan_id: "scan-original", fixed_version: "6.0" }} triage={undefined} triageBusy={false} onTriageDecision={vi.fn()} onClose={vi.fn()} />);
-  expect(screen.getByRole("link", { name: "Review remediation" })).toHaveAttribute("href", "/remediation?q=CVE-2020-14343&scan=scan-original");
+  expect(screen.getByRole("link", { name: "Review remediation" })).toHaveAttribute("href", "/remediation?q=CVE-2020-14343");
 });
