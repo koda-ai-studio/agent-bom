@@ -55,7 +55,10 @@ def merge_edge_evidence(stored: dict[str, Any], incoming: dict[str, Any]) -> boo
     decisions are complete records: merging actions and bindings independently
     would manufacture combinations the evaluator never assessed.
     """
+    from agent_bom.graph.runtime_receipts import merge_runtime_receipts
+
     changed = merge_union_evidence_keys(stored, incoming)
+    changed = merge_runtime_receipts(stored, incoming) or changed
     decisions: dict[str, dict[str, Any]] = {}
     grants: dict[str, dict[str, Any]] = {}
     accesses: dict[str, dict[str, Any]] = {}

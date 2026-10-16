@@ -33484,6 +33484,8 @@ export interface operations {
                                          */
                                         status: "recorded" | "partial";
                                     } | null;
+                                    /** Canonical Edge Id */
+                                    canonical_edge_id?: string | null;
                                     /**
                                      * Complete
                                      * @default false
@@ -35692,6 +35694,8 @@ export interface operations {
                                              */
                                             status: "recorded" | "partial";
                                         } | null;
+                                        /** Canonical Edge Id */
+                                        canonical_edge_id?: string | null;
                                         /**
                                          * Complete
                                          * @default false
@@ -36016,6 +36020,8 @@ export interface operations {
                                          */
                                         status: "recorded" | "partial";
                                     } | null;
+                                    /** Canonical Edge Id */
+                                    canonical_edge_id?: string | null;
                                     /**
                                      * Complete
                                      * @default false

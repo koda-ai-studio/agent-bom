@@ -41436,6 +41436,12 @@ paths:
                                       title: HopAuthorityEvidence
                                       type: object
                                     - type: 'null'
+                                  canonical_edge_id:
+                                    anyOf:
+                                    - maxLength: 256
+                                      type: string
+                                    - type: 'null'
+                                    title: Canonical Edge Id
                                   complete:
                                     default: false
                                     title: Complete
@@ -44719,6 +44725,12 @@ paths:
                                           title: HopAuthorityEvidence
                                           type: object
                                         - type: 'null'
+                                      canonical_edge_id:
+                                        anyOf:
+                                        - maxLength: 256
+                                          type: string
+                                        - type: 'null'
+                                        title: Canonical Edge Id
                                       complete:
                                         default: false
                                         title: Complete
@@ -45474,6 +45486,12 @@ paths:
                                       title: HopAuthorityEvidence
                                       type: object
                                     - type: 'null'
+                                  canonical_edge_id:
+                                    anyOf:
+                                    - maxLength: 256
+                                      type: string
+                                    - type: 'null'
+                                    title: Canonical Edge Id
                                   complete:
                                     default: false
                                     title: Complete

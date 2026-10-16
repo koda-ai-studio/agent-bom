@@ -93,6 +93,9 @@ export function GraphHopEvidenceInspector({
                   ["Identity correlation", humanize(receipt.correlation_identity_status)],
                 ].map(([label, value]) => <div key={label}><dt className="text-xs text-ink-secondary">{label}</dt><dd className="mt-0.5 break-words">{value}</dd></div>)}
               </dl>
+              <div><p className="text-xs text-ink-secondary">Source relationship</p>
+                <p className="mt-1 break-all font-mono text-xs">{receipt.canonical_edge_id || "Not recorded"}</p>
+              </div>
               <div><p className="text-xs text-ink-secondary">Source snapshots</p>
                 {snapshots.length ? <ul className="mt-1 space-y-1">{snapshots.map((snapshot, snapshotIndex) => <li key={`${snapshot}:${snapshotIndex}`} className="break-all font-mono text-xs">{snapshot}</li>)}</ul> : <p>Not recorded</p>}
               </div>

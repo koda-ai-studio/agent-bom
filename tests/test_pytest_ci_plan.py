@@ -619,3 +619,18 @@ def test_identity_edits_select_persistence_and_export_consumers(tmp_path, source
     for path in expected:
         _write(path, 1)
     assert select_targeted_tests(changed_files=[Path("src/agent_bom") / source], root=tmp_path) == expected
+
+
+@pytest.mark.parametrize("source", ["path_evidence", "hop_evidence", "runtime_receipts", "attack_path_mitre", "technique_mapping"])
+def test_hop_receipts_select_path_and_correlation_consumers(tmp_path, source):
+    names = [
+        "test_exposure_path_evidence_parity.py",
+        "test_mcp_exposure_paths.py",
+        "test_trace_graph_evidence.py",
+        "test_graph_correlation_service.py",
+        "api/test_graph_snapshot_path_routes.py",
+    ]
+    expected = sorted(tmp_path / "tests" / name for name in names)
+    for path in expected:
+        _write(path, 1)
+    assert select_targeted_tests(changed_files=[Path(f"src/agent_bom/graph/{source}.py")], root=tmp_path) == expected

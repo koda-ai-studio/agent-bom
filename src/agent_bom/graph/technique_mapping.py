@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import math
+import re
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -11,7 +13,7 @@ from typing import Any
 class TechniqueMapping:
     """A typed MITRE ATT&CK / ATLAS technique mapped to one hop of an attack path.
 
-    These are *potential* techniques derived from the graph's observed evidence
+    These are *potential* techniques derived from the graph's recorded evidence
     (the hop's edge relationship type + the target node's entity type + the
     edge's evidence), NOT a claim that the technique was detected being used.
     ``technique_id`` / ``tactics`` always resolve against the bundled catalog
@@ -24,11 +26,18 @@ class TechniqueMapping:
     technique_name: str = ""
     catalog: str = "attack"  # "attack" | "atlas"
     tactics: list[str] = field(default_factory=list)
-    provenance: str = ""  # observed evidence that produced the mapping
+    provenance: str = ""  # qualified source facts that produced the mapping
     confidence: float | None = None  # 0..1 mapping confidence, unavailable without a basis
     evidence_basis: str | None = None
 
     def __post_init__(self) -> None:
+        if (
+            not isinstance(self.confidence, (int, float))
+            or isinstance(self.confidence, bool)
+            or not math.isfinite(self.confidence)
+            or not 0 <= self.confidence <= 1
+        ):
+            self.confidence = None
         if self.evidence_basis not in {"observed", "runtime_observed", "inferred", "modeled"}:
             self.evidence_basis = None
             self.confidence = None
@@ -47,14 +56,23 @@ class TechniqueMapping:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> TechniqueMapping:
+        technique_id = data.get("technique_id")
+        if not isinstance(technique_id, str) or not re.fullmatch(r"(?:AML\.)?T\d{4}(?:\.\d{3})?", technique_id):
+            raise ValueError("invalid technique identifier")
+        tactics = data.get("tactics", [])
+        if not isinstance(tactics, list) or any(not isinstance(item, str) for item in tactics):
+            raise ValueError("invalid technique tactics")
+        hop_index = int(data.get("hop_index", 0))
+        if hop_index < 0 or isinstance(data.get("hop_index"), bool):
+            raise ValueError("invalid hop index")
         return cls(
-            hop_index=int(data.get("hop_index", 0)),
-            technique_id=data["technique_id"],
+            hop_index=hop_index,
+            technique_id=technique_id,
             technique_name=data.get("technique_name", ""),
             catalog=data.get("catalog", "attack"),
-            tactics=list(data.get("tactics", [])),
+            tactics=tactics,
             provenance=data.get("provenance", ""),
-            confidence=float(data["confidence"]) if data.get("confidence") is not None and data.get("evidence_basis") else None,
+            confidence=data.get("confidence") if data.get("evidence_basis") else None,
             evidence_basis=data.get("evidence_basis"),
         )
 
@@ -75,4 +93,11 @@ def technique_mappings_from_json(raw: object) -> list["TechniqueMapping"]:
         data = raw
     if not isinstance(data, list):
         return []
-    return [TechniqueMapping.from_dict(m) for m in data if isinstance(m, dict)]
+    mappings = []
+    for item in data:
+        if isinstance(item, dict):
+            try:
+                mappings.append(TechniqueMapping.from_dict(item))
+            except (ValueError, TypeError, OverflowError):
+                continue
+    return mappings

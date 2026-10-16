@@ -61621,6 +61621,18 @@
                                         }
                                       ]
                                     },
+                                    "canonical_edge_id": {
+                                      "anyOf": [
+                                        {
+                                          "maxLength": 256,
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ],
+                                      "title": "Canonical Edge Id"
+                                    },
                                     "complete": {
                                       "default": false,
                                       "title": "Complete",
@@ -66234,6 +66246,18 @@
                                             }
                                           ]
                                         },
+                                        "canonical_edge_id": {
+                                          "anyOf": [
+                                            {
+                                              "maxLength": 256,
+                                              "type": "string"
+                                            },
+                                            {
+                                              "type": "null"
+                                            }
+                                          ],
+                                          "title": "Canonical Edge Id"
+                                        },
                                         "complete": {
                                           "default": false,
                                           "title": "Complete",
@@ -67262,6 +67286,18 @@
                                           "type": "null"
                                         }
                                       ]
+                                    },
+                                    "canonical_edge_id": {
+                                      "anyOf": [
+                                        {
+                                          "maxLength": 256,
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ],
+                                      "title": "Canonical Edge Id"
                                     },
                                     "complete": {
                                       "default": false,

@@ -455,6 +455,15 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
             )
         if normalized.as_posix() in {"src/agent_bom/api/routes/discovery.py", "src/agent_bom/graph/lifecycle.py"}:
             selected.update(candidate for candidate in available if candidate.name == "test_credential_key_detector_agreement.py")
+        if normalized.as_posix() in {
+            f"src/agent_bom/graph/{name}.py"
+            for name in ("edge", "path_evidence", "hop_evidence", "runtime_receipts", "attack_path_mitre", "technique_mapping")
+        }:
+            selected.update(
+                candidate
+                for candidate in available
+                if any(part in candidate.stem for part in ("attack_path", "exposure_path", "correlation", "trace_graph", "snapshot_path"))
+            )
         if normalized.as_posix() in GRAPH_PROJECTION_SOURCES:
             selected.update(
                 candidate for candidate in available if "graph" in candidate.stem or candidate.stem == "test_runtime_incident_feedback"

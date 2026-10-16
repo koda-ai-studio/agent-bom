@@ -55,7 +55,7 @@ describe("GraphHopEvidenceInspector", () => {
     render(<GraphHopEvidenceInspector hops={hops.slice(0, 2)} receipts={[malformed as unknown as GraphHopEvidence]} />);
     fireEvent.click(screen.getByRole("button", {name: /1\. Agent/}));
     expect(screen.getByText("Evidence incomplete")).toBeInTheDocument();
-    expect(screen.getByText("Not recorded")).toBeInTheDocument();
+    expect(screen.getAllByText("Not recorded")).toHaveLength(2);
   });
 
   it.each([undefined, "false"])("does not infer traversal from legacy value %s", (traversable) => {
@@ -92,4 +92,13 @@ describe("GraphHopEvidenceInspector", () => {
     render(<GraphHopEvidenceInspector hops={[]} />);
     expect(screen.getByText("This path has no relationships to inspect.")).toBeInTheDocument();
   });
+});
+
+
+it("exposes the exact recorded relationship identity in expanded evidence", () => {
+  const canonical_edge_id = "9f014346-1475-5439-a280-1c96fd3d8acc";
+  render(<GraphHopEvidenceInspector hops={hops.slice(0, 2)} receipts={[{...receipt(0), canonical_edge_id}]} />);
+  fireEvent.click(screen.getByRole("button", {name: /1\. Agent/}));
+  expect(screen.getByText("Source relationship")).toBeInTheDocument();
+  expect(screen.getByText(canonical_edge_id)).toBeInTheDocument();
 });
