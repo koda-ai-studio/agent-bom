@@ -4,7 +4,7 @@ import sys
 from types import ModuleType
 
 from agent_bom.scanners import package_scan as _package_scan
-from agent_bom.scanners.blast_radius import _HOP_RISK_FACTORS, expand_blast_radius_hops
+from agent_bom.scanners.blast_radius import expand_blast_radius_hops
 from agent_bom.scanners.package_scan import (
     _AI_FRAMEWORK_PACKAGES,
     _NON_OSV_ECOSYSTEMS,
@@ -90,7 +90,6 @@ __all__ = [
     "ScannerPhase",
     "ScannerRegistration",
     "_AI_FRAMEWORK_PACKAGES",
-    "_HOP_RISK_FACTORS",
     "_NON_OSV_ECOSYSTEMS",
     "_bump_scan_perf",
     "_db_covered_ecosystems",

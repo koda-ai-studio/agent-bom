@@ -2,9 +2,9 @@
 
 agent-bom already *authenticates* calling agents (``agent_identity`` reads the
 MCP ``_meta.agent_identity`` token; the gateway/proxy bind policy via
-``bound_agents``) and *models* delegation (``delegation_chain`` /
-``transitive_agents`` / ``ACTED_AS``). This module closes the governance gap:
-nobody was checking whether that inter-agent authentication is *weak*.
+``bound_agents``). This module evaluates explicit delegation metadata and
+identity policy for weak inter-agent authentication. Shared inventory alone
+does not establish a delegation relationship.
 
 It is **reference-only**. agent-bom does not become an auth broker, does not
 mint or exchange tokens, and never emits secret values. It inspects discovered

@@ -921,7 +921,8 @@ class BlastRadius:
     all_server_tools: list[MCPTool] = field(default_factory=list)  # Full tool set before CWE filtering
     attack_vector_summary: Optional[str] = None  # Human-readable attack path description
 
-    # Multi-hop delegation fields
+    # Legacy multi-hop fields retained for stored-report compatibility.
+    # Inventory-only scans do not populate these as access or execution proof.
     hop_depth: int = 1  # How many hops from the vulnerable package (1 = direct)
     delegation_chain: list[str] = field(default_factory=list)  # e.g. ["server1→agent1→server2→agent2"]
     transitive_agents: list[dict[str, Any]] = field(default_factory=list)  # Agents reached via delegation

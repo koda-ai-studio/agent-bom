@@ -1,14 +1,8 @@
-"""Tests for multi-hop blast radius delegation chain tracking.
-
-Covers:
-- 1-hop default behavior (unchanged)
-- 2-hop delegation chain discovery
-- Cycle detection (agent A → server B → agent C → server B)
-- Risk amplification decreases with hops
-- Depth limit enforcement
-"""
+"""Configured overlap must not become delegation, credential access, or risk."""
 
 from __future__ import annotations
+
+import pytest
 
 from agent_bom.models import (
     Agent,
@@ -76,178 +70,80 @@ def _make_blast_radius(
     return br
 
 
-class TestDefaultOneHop:
-    """When depth=1 (default), no multi-hop expansion happens."""
-
-    def test_no_op_at_depth_1(self):
-        srv = _make_server("srv1")
-        agent1 = _make_agent("agent1", [srv])
-        pkg = _make_pkg()
-        vuln = _make_vuln()
-        br = _make_blast_radius(vuln, pkg, [srv], [agent1])
-
-        expand_blast_radius_hops([br], [agent1], max_depth=1)
-
-        assert br.hop_depth == 1
-        assert br.delegation_chain == []
-        assert br.transitive_agents == []
-        assert br.transitive_risk_score == 0.0
-
-    def test_no_op_at_depth_0(self):
-        """Depth < 1 is clamped to 1."""
-        srv = _make_server("srv1")
-        agent1 = _make_agent("agent1", [srv])
-        br = _make_blast_radius(_make_vuln(), _make_pkg(), [srv], [agent1])
-
-        expand_blast_radius_hops([br], [agent1], max_depth=0)
-
-        assert br.hop_depth == 1
-        assert br.transitive_agents == []
+def test_shared_configuration_is_not_delegation_or_credential_access():
+    vulnerable = _make_server("vulnerable")
+    common = _make_server("common")
+    secret = _make_server("private", cred_names=["OTHER_TENANT_API_KEY"])
+    first = _make_agent("first", [vulnerable, common])
+    second = _make_agent("second", [common, secret])
+    result = _make_blast_radius(_make_vuln(), _make_pkg(), [vulnerable], [first])
+    expand_blast_radius_hops([result], [first, second], max_depth=5)
+    assert result.transitive_agents == []
+    assert result.transitive_credentials == []
+    assert result.delegation_chain == []
+    assert result.graph_reachable is None
 
 
-class TestTwoHopDelegation:
-    """Two-hop: vuln → pkg → server1 → agent1 → server2 → agent2."""
-
-    def test_finds_transitive_agent(self):
-        shared_srv = _make_server("shared-server")
-        other_srv = _make_server("other-server")
-
-        agent1 = _make_agent("agent1", [shared_srv, other_srv])
-        agent2 = _make_agent("agent2", [other_srv])
-
-        pkg = _make_pkg()
-        vuln = _make_vuln()
-        br = _make_blast_radius(vuln, pkg, [shared_srv], [agent1])
-
-        expand_blast_radius_hops([br], [agent1, agent2], max_depth=2)
-
-        assert br.hop_depth == 2
-        assert len(br.transitive_agents) == 1
-        assert br.transitive_agents[0]["name"] == "agent2"
-        assert br.transitive_agents[0]["hop"] == 2
-        assert len(br.delegation_chain) == 1
-
-    def test_transitive_credentials_collected(self):
-        shared_srv = _make_server("shared-server")
-        secret_srv = _make_server("secret-server", cred_names=["AWS_SECRET_KEY"])
-
-        agent1 = _make_agent("agent1", [shared_srv, secret_srv])
-        agent2 = _make_agent("agent2", [secret_srv])
-
-        br = _make_blast_radius(_make_vuln(), _make_pkg(), [shared_srv], [agent1])
-
-        expand_blast_radius_hops([br], [agent1, agent2], max_depth=2)
-
-        assert "AWS_SECRET_KEY" in br.transitive_credentials
+@pytest.mark.parametrize("depth", [0, 1, 2, 3, 5, 10])
+@pytest.mark.parametrize("remote", [False, True])
+def test_overlap_and_cycles_preserve_only_direct_scanner_scope(depth, remote):
+    vulnerable = _make_server("vulnerable")
+    common = _make_server("common", cred_names=["OTHER_API_KEY"])
+    if remote:
+        common.url = "https://shared.example/mcp"
+        common.transport = TransportType.SSE
+    first = _make_agent("same-label", [vulnerable, common])
+    second = _make_agent("same-label", [common, vulnerable])
+    second.config_path = "/other/config.json"
+    second.parent_agent = first.name
+    result = _make_blast_radius(_make_vuln(), _make_pkg(), [vulnerable], [first])
+    before = result.model_dump() if hasattr(result, "model_dump") else repr(result)
+    expand_blast_radius_hops([result], [first, second], max_depth=depth)
+    assert result.hop_depth == 1
+    assert result.delegation_chain == []
+    assert result.transitive_agents == [] and result.transitive_credentials == []
+    assert result.transitive_risk_score == 0
+    assert result.graph_reachable is None and result.graph_min_hop_distance is None
+    assert (result.model_dump() if hasattr(result, "model_dump") else repr(result)) == before
 
 
-class TestCycleDetection:
-    """BFS should not loop when agents share servers cyclically."""
-
-    def test_no_infinite_loop(self):
-        srv_a = _make_server("srv-a")
-        srv_b = _make_server("srv-b")
-
-        agent1 = _make_agent("agent1", [srv_a, srv_b])
-        agent2 = _make_agent("agent2", [srv_b, srv_a])
-
-        br = _make_blast_radius(_make_vuln(), _make_pkg(), [srv_a], [agent1])
-
-        # Should complete without hanging
-        expand_blast_radius_hops([br], [agent1, agent2], max_depth=3)
-
-        # agent2 found once via srv_b
-        assert len(br.transitive_agents) == 1
-        assert br.transitive_agents[0]["name"] == "agent2"
+def test_compatibility_call_does_not_rewrite_existing_evidence():
+    result = _make_blast_radius(_make_vuln(), _make_pkg(), [], [])
+    result.delegation_chain = ["historical supplied receipt"]
+    result.transitive_agents = [{"name": "historical", "evidence_id": "receipt-1"}]
+    result.hop_depth = 2
+    result.transitive_risk_score = 4.2
+    before = repr(result)
+    expand_blast_radius_hops([result], [], max_depth=5)
+    assert repr(result) == before
 
 
-class TestRiskAmplification:
-    """Risk score decreases with hop distance."""
+def test_direct_scope_is_preserved_in_json_findings_and_graph():
+    from agent_bom.graph.builder import build_unified_graph_from_report
+    from agent_bom.graph.types import RelationshipType
+    from agent_bom.models import AIBOMReport
+    from agent_bom.output.json_fmt import to_json
 
-    def test_hop2_factor(self):
-        srv1 = _make_server("srv1")
-        srv2 = _make_server("srv2")
-        agent1 = _make_agent("agent1", [srv1, srv2])
-        agent2 = _make_agent("agent2", [srv2])
-
-        br = _make_blast_radius(_make_vuln(), _make_pkg(), [srv1], [agent1])
-        br.risk_score = 8.0
-
-        expand_blast_radius_hops([br], [agent1, agent2], max_depth=2)
-
-        assert br.transitive_risk_score == 8.0 * 0.7  # hop 2 factor
-
-    def test_hop3_factor(self):
-        srv1 = _make_server("srv1")
-        srv2 = _make_server("srv2")
-        srv3 = _make_server("srv3")
-
-        agent1 = _make_agent("agent1", [srv1, srv2])
-        agent2 = _make_agent("agent2", [srv2, srv3])
-        agent3 = _make_agent("agent3", [srv3])
-
-        br = _make_blast_radius(_make_vuln(), _make_pkg(), [srv1], [agent1])
-        br.risk_score = 10.0
-
-        expand_blast_radius_hops([br], [agent1, agent2, agent3], max_depth=3)
-
-        assert br.hop_depth == 3
-        assert br.transitive_risk_score == 10.0 * 0.5  # hop 3 factor
-        assert len(br.transitive_agents) == 2
-
-    def test_risk_decreases_with_depth(self):
-        """Higher hop depth = lower transitive risk factor."""
-        from agent_bom.scanners import _HOP_RISK_FACTORS
-
-        prev = 1.1
-        for hop in range(1, 6):
-            factor = _HOP_RISK_FACTORS[hop]
-            assert factor < prev, f"Factor at hop {hop} ({factor}) should be less than {prev}"
-            prev = factor
+    vulnerable = _make_server("vulnerable")
+    common = _make_server("common", cred_names=["OTHER_API_KEY"])
+    first, second = _make_agent("first", [vulnerable, common]), _make_agent("second", [common])
+    result = _make_blast_radius(_make_vuln(), _make_pkg(), [vulnerable], [first])
+    expand_blast_radius_hops([result], [first, second], max_depth=5)
+    payload = to_json(AIBOMReport(agents=[first, second], blast_radii=[result], tool_version="0.0.0"))
+    row = payload["blast_radius"][0]
+    assert row["hop_depth"] == 1
+    assert row["transitive_agents"] == [] and row["transitive_credentials"] == []
+    assert row["transitive_risk_score"] == 0
+    graph = build_unified_graph_from_report(payload)
+    assert not any(edge.relationship == RelationshipType.DELEGATED_TO for edge in graph.edges)
 
 
-class TestDepthLimit:
-    """Max depth is clamped to [1, 5]."""
+def test_cli_help_does_not_promise_delegation_from_shared_configuration():
+    from click.testing import CliRunner
 
-    def test_depth_clamped_to_5(self):
-        srv1 = _make_server("srv1")
-        srv2 = _make_server("srv2")
-        agent1 = _make_agent("agent1", [srv1, srv2])
-        agent2 = _make_agent("agent2", [srv2])
+    from agent_bom.cli import main
 
-        br = _make_blast_radius(_make_vuln(), _make_pkg(), [srv1], [agent1])
-
-        # max_depth=10 should clamp to 5
-        expand_blast_radius_hops([br], [agent1, agent2], max_depth=10)
-
-        assert br.hop_depth <= 5
-
-    def test_no_transitive_at_depth_1(self):
-        """Even with shared servers, depth=1 returns no transitive agents."""
-        srv = _make_server("shared")
-        agent1 = _make_agent("a1", [srv])
-        agent2 = _make_agent("a2", [srv])
-
-        br = _make_blast_radius(_make_vuln(), _make_pkg(), [srv], [agent1])
-
-        expand_blast_radius_hops([br], [agent1, agent2], max_depth=1)
-
-        assert br.transitive_agents == []
-
-
-class TestMultipleBlastRadii:
-    """expand_blast_radius_hops handles multiple blast radius entries."""
-
-    def test_multiple_brs_expanded(self):
-        srv1 = _make_server("srv1")
-        srv2 = _make_server("srv2")
-        agent1 = _make_agent("agent1", [srv1, srv2])
-        agent2 = _make_agent("agent2", [srv2])
-
-        br1 = _make_blast_radius(_make_vuln("CVE-1"), _make_pkg("pkg1"), [srv1], [agent1])
-        br2 = _make_blast_radius(_make_vuln("CVE-2"), _make_pkg("pkg2"), [srv1], [agent1])
-
-        expand_blast_radius_hops([br1, br2], [agent1, agent2], max_depth=2)
-
-        assert len(br1.transitive_agents) == 1
-        assert len(br2.transitive_agents) == 1
+    result = CliRunner().invoke(main, ["scan", "--help-all"])
+    assert result.exit_code == 0
+    assert "Shared configuration does not prove delegation" in " ".join(result.output.split())
+    assert "Higher values reveal transitive risk" not in result.output

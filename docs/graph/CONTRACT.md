@@ -922,3 +922,17 @@ cannot recover scope lost by the original join. To qualify an investigation,
 submit the original snapshots to `/v1/graph/correlations`, wait for completion,
 and open the new output snapshot and its source receipts. Incompletely located
 observations may remain separate; this is preferable to fabricating connectivity.
+
+### Scanner inventory and cross-agent paths
+
+`agent-bom scan --blast-radius-depth 5` keeps the same direct scanner scope as
+the default scan. The option remains accepted for command compatibility. Two
+agents configuring the same server name, launch recipe, or remote endpoint do
+not establish delegation or access to each other's credentials. No hop-based
+risk score is synthesized from that overlap.
+
+Use the graph investigation's typed relationships and hop receipts to examine
+recorded cross-agent paths. A modeled path, runtime attempt, blocked operation,
+and successful execution remain distinct. Legacy transitive fields in stored
+reports are retained as supplied historical data; this compatibility option
+does not validate or rewrite them.
