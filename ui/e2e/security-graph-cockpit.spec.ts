@@ -14,6 +14,28 @@ async function inspectPathAssessment(detail: Locator, expected: string | RegExp)
 }
 
 
+async function visibleGraphLabelCollisions(page: Page) {
+  return page.locator(".react-flow").evaluate(flow => {
+    const labels = [...flow.querySelectorAll(".react-flow__edge-text, .relationship-badge")]
+      .map(element => ({ text: element.textContent, rect: element.getBoundingClientRect() }));
+    const nodes = [...flow.querySelectorAll(".react-flow__node")].flatMap(node => {
+      const card = node.querySelector("[data-graph-entity]");
+      return (card ? [...card.children] : [node]).map(content => {
+        const box = content.getBoundingClientRect();
+        const pad = content.classList.contains("graph-entity-glyph") ? 8 : 0;
+        return { text: node.textContent, rect: new DOMRect(box.left - pad, box.top - pad, box.width + pad * 2, box.height + pad * 2) };
+      }).filter(({ rect }) => rect.width > 0 && rect.height > 0);
+    });
+    const overlaps = (left: DOMRect, right: DOMRect) => left.left < right.right && left.right > right.left
+      && left.top < right.bottom && left.bottom > right.top;
+    return labels.flatMap((left, index) => [
+      ...labels.slice(index + 1).filter(right => overlaps(left.rect, right.rect)).map(right => `${left.text} overlaps ${right.text}`),
+      ...nodes.filter(node => overlaps(left.rect, node.rect)).map(node => `${left.text} intersects ${node.text}`),
+    ]);
+  });
+}
+
+
 type GraphNode = {
   id: string;
   entity_type: string;
@@ -564,9 +586,8 @@ for (const proof of [
     await expect(canvas.locator('[data-id="proposal:scenario-private-endpoint:private-endpoint"]')).toHaveCount(0);
     await expect(canvas.locator('[data-id="cred:gh-token"]')).toHaveCount(0);
     await expect(canvas.locator('.react-flow__edge[data-id="server:github->cred:gh-token:exposes_cred"]')).toHaveCount(0);
-    await expect.poll(() => canvas.locator(".react-flow__viewport").evaluate(
-      (element) => new DOMMatrixReadOnly(getComputedStyle(element).transform).a,
-    )).toBeGreaterThanOrEqual(0.75);
+    // Zoom-aware typography can remain readable below the former fixed 0.75
+    // zoom floor. Assert actual rendered text size and containment below.
     const canvasBox = await canvas.boundingBox();
     expect(canvasBox).not.toBeNull();
     expect(canvasBox!.height).toBeGreaterThanOrEqual(240);
@@ -583,21 +604,11 @@ for (const proof of [
         const issues = [];
         if (box.left < frame.left || box.right > frame.right || box.top < frame.top || box.bottom > frame.bottom) issues.push(`Clipped: ${node.textContent}`);
         if (overlap) issues.push(`Controls overlap: ${node.textContent}`);
-        for (const el of text) if (parseFloat(getComputedStyle(el).fontSize) * zoom < 12) issues.push(`Small text: ${el.textContent} (${parseFloat(getComputedStyle(el).fontSize) * zoom}px)`);
+        for (const el of text) if (parseFloat(getComputedStyle(el).fontSize) * zoom < 12 - 0.01) issues.push(`Small text: ${el.textContent} (${parseFloat(getComputedStyle(el).fontSize) * zoom}px)`);
         return issues;
       });
     })).toEqual([]);
-    const labelCollisions = await canvas.evaluate(flow => {
-      const labels = [...flow.querySelectorAll(".react-flow__edge-text, .relationship-badge")];
-      const nodes = [...flow.querySelectorAll('[data-graph-entity="true"]')];
-      return labels.flatMap(label => {
-        const box = label.getBoundingClientRect();
-        return nodes.filter(node => {
-          const peer = node.getBoundingClientRect();
-          return box.left < peer.right && box.right > peer.left && box.top < peer.bottom && box.bottom > peer.top;
-        }).map(node => `${label.textContent} overlaps ${node.textContent}`);
-      });
-    });
+    const labelCollisions = await visibleGraphLabelCollisions(page);
     expect(labelCollisions).toEqual([]);
     await expect(canvas.locator(".react-flow__node")).toHaveCount(4);
     await page.screenshot({ path: testInfo.outputPath(`scenario-first-view-${proof.theme}-${capture}.png`) });
@@ -2013,15 +2024,7 @@ for (const width of [1440, 1920]) for (const theme of ["light", "dark"]) {
     await page.locator(".react-flow__controls-fitview").click();
     await page.waitForLoadState("networkidle");
     await page.screenshot({ path: testInfo.outputPath("reference-captions.png"), fullPage: true });
-    const collisions = await page.locator(".graph-relationship-label").evaluateAll(labels => {
-      const boxes = labels.map(element => ({ text: element.textContent, rect: element.getBoundingClientRect() }));
-      const nodes = [...document.querySelectorAll(".react-flow__node")].map(element => ({ text: element.textContent, rect: element.getBoundingClientRect() }));
-      const overlaps = (left: DOMRect, right: DOMRect) => left.left < right.right && left.right > right.left && left.top < right.bottom && left.bottom > right.top;
-      return boxes.flatMap((left, index) => [
-        ...boxes.slice(index + 1).filter(right => overlaps(left.rect, right.rect)).map(right => `${left.text} overlaps ${right.text}`),
-        ...nodes.filter(node => overlaps(left.rect, node.rect)).map(node => `${left.text} intersects ${node.text}`),
-      ]);
-    });
+    const collisions = await visibleGraphLabelCollisions(page);
     expect(collisions).toEqual([]);
   });
 }

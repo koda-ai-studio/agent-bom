@@ -58,8 +58,13 @@ export function relationshipPath(edge: Endpoints, obstacles: Obstacle[]): [strin
   const targetNode = obstacles.find(node => node.id === edge.target);
   const start = Math.max(edge.sourceX + 32, sourceNode ? sourceNode.x + sourceNode.width + 24 : edge.sourceX + 32);
   const end = Math.min(edge.targetX - 32, targetNode ? targetNode.x - 24 : edge.targetX - 32);
+  // Ease into and out of the horizontal lane over the available clear space.
+  // Keep both transition endpoints outside every intervening node, with
+  // horizontal tangents where each cubic meets the straight segment.
+  const entry = Math.max(start + 32, Math.min(start + 96, ...between.map(node => node.x - 24)));
+  const exit = Math.min(end - 32, Math.max(end - 96, ...between.map(node => node.x + node.width + 24)));
   return [
-    `M${edge.sourceX},${edge.sourceY} C${start},${edge.sourceY} ${start},${lane} ${start + 32},${lane} L${end - 32},${lane} C${end},${lane} ${end},${edge.targetY} ${edge.targetX},${edge.targetY}`,
-    start + (end - start) * (edge.targetY < edge.sourceY ? 0.3 : edge.targetY > edge.sourceY ? 0.7 : 0.5), lane,
+    `M${edge.sourceX},${edge.sourceY} C${start},${edge.sourceY} ${start + (entry - start) / 2},${lane} ${entry},${lane} L${exit},${lane} C${exit + (end - exit) / 2},${lane} ${end},${edge.targetY} ${edge.targetX},${edge.targetY}`,
+    entry + (exit - entry) * (edge.targetY < edge.sourceY ? 0.3 : edge.targetY > edge.sourceY ? 0.7 : 0.5), lane,
   ];
 }

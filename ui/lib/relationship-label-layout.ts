@@ -12,9 +12,23 @@ export function scheduleRelationshipLabelLayout(label: HTMLElement | null) {
   requestAnimationFrame(() => {
     pending.delete(canvas);
     if (!canvas.isConnected) return;
-    const nodes = [...canvas.querySelectorAll(".react-flow__node")].map(node => node.getBoundingClientRect());
+    const nodeElements = [...canvas.querySelectorAll(".react-flow__node")];
     // Dense estates use the bounded investigation view for readable labels.
-    if (nodes.length > 80 || canvas.querySelectorAll(".graph-relationship-label").length > 160) return;
+    if (nodeElements.length > 80 || canvas.querySelectorAll(".graph-relationship-label").length > 160) return;
+    const nodes = nodeElements.flatMap(node => {
+      const card = node.querySelector<HTMLElement>("[data-graph-entity]");
+      if (!card) return [node.getBoundingClientRect()];
+      // Circular cards reserve a wide rectangular footprint for their names.
+      // Empty space beside the glyph must not push an edge's caption off its
+      // line. Avoid the visible glyph/ring and each actual content row instead.
+      return [...card.children].flatMap(child => {
+        const box = child.getBoundingClientRect();
+        if (box.width <= 0 || box.height <= 0) return [];
+        const ring = child.classList.contains("graph-entity-glyph") ? 8 : 0;
+        return [{ left: box.left - ring, right: box.right + ring,
+          top: box.top - ring, bottom: box.bottom + ring }];
+      });
+    });
     // Sampled screen-space points of every drawn relationship, bucketed on a
     // coarse grid, so a caption is not parked on top of a different line.
     const CELL = 32;

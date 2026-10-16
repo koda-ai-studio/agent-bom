@@ -9,7 +9,7 @@ import { relationshipEdgeTypes } from "@/components/relationship-edge";
 import { GraphRollupChildPager } from "@/components/graph-rollup-child-pager";
 import { GraphRollupCountNotice } from "@/components/graph-rollup-count-notice";
 import { completeDirectedHopCount, visibleGraphFocus } from "@/lib/security-graph-focus";
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
@@ -80,7 +80,7 @@ import {
 } from "@/components/lineage-nodes";
 import { useGraphLayout } from "@/lib/use-graph-layout";
 import { serpentinePositions } from "@/lib/path-serpentine-layout";
-import { COMPACT_GRAPH_MIN_ZOOM, compactInvestigationLayout, readableLineageDagreLr } from "@/lib/graph-node-dimensions";
+import { COMPACT_GRAPH_MIN_ZOOM, compactInvestigationLayout, readableGraphNodeStyle, readableLineageDagreLr } from "@/lib/graph-node-dimensions";
 import { effectiveLodBandForGraph, useLodBand } from "@/lib/lod-renderer";
 import {
   aggregateSiblings,
@@ -2094,8 +2094,19 @@ function GraphPageInner() {
   const renderedNodeCount = displayNodes.length;
 
   const baseDisplayEdges = useMemo(() => {
+    const readableEdges = readableGraphEdges(layoutEdges, localNeighborhoodIds, {
+      baseOpacity: 1,
+      highSignalOpacity: 1,
+      inactiveOpacity: 0.06,
+      captureMode,
+      zoom: graphViewport.zoom,
+      nodeLabels: graphNodeDisplayLabels(displayNodes),
+      // Past this many edges the captions overlap into noise, so they follow
+      // the selection instead of blanketing the canvas. A capture keeps them.
+      maxLabeledEdges: captureMode ? Number.POSITIVE_INFINITY : GRAPH_EDGE_LABEL_BUDGET,
+    });
     if (attackPathEdgeKeys) {
-      return layoutEdges
+      return readableEdges
         .filter((edge) =>
           attackPathEdgeKeys.has(`${edge.source}=>${edge.target}`),
         )
@@ -2103,16 +2114,8 @@ function GraphPageInner() {
           const inPath = attackPathEdgeKeys.has(
             `${edge.source}=>${edge.target}`,
           );
-          const relationshipLabel = typeof edge.data?.relationship === "string"
-            ? edge.data.relationship === "vulnerable_to"
-              ? "Vulnerable"
-              : edge.data.relationship.replace(/_/g, " ")
-            : typeof edge.data?.relationshipLabel === "string"
-              ? edge.data.relationshipLabel
-              : undefined;
           return {
             ...edge,
-            label: relationshipLabel,
             labelShowBg: true,
             labelBgPadding: [8, 4],
             labelBgBorderRadius: 6,
@@ -2143,7 +2146,7 @@ function GraphPageInner() {
         });
     }
     if (blastRadius) {
-      return layoutEdges.map((edge): Edge => {
+      return readableEdges.map((edge): Edge => {
         const inBlast =
           blastRadius.nodeIds.has(edge.source) &&
           blastRadius.nodeIds.has(edge.target);
@@ -2169,7 +2172,7 @@ function GraphPageInner() {
       });
     }
     if (reachabilitySummary) {
-      return layoutEdges.map((edge): Edge => {
+      return readableEdges.map((edge): Edge => {
         const inReach =
           reachabilitySummary.edgeKeys.has(`${edge.source}=>${edge.target}`) ||
           reachabilitySummary.edgeKeys.has(`${edge.target}=>${edge.source}`);
@@ -2194,17 +2197,7 @@ function GraphPageInner() {
         };
       });
     }
-    return readableGraphEdges(layoutEdges, localNeighborhoodIds, {
-      baseOpacity: 1,
-      highSignalOpacity: 1,
-      inactiveOpacity: 0.06,
-      captureMode,
-      zoom: graphViewport.zoom,
-      nodeLabels: graphNodeDisplayLabels(displayNodes),
-      // Past this many edges the captions overlap into noise, so they follow
-      // the selection instead of blanketing the canvas. A capture keeps them.
-      maxLabeledEdges: captureMode ? Number.POSITIVE_INFINITY : GRAPH_EDGE_LABEL_BUDGET,
-    }).map((edge) => ({
+    return readableEdges.map((edge) => ({
       ...edge,
       // ReactFlow measures label backgrounds when label content changes.
       // A stable group font prevents Fit/zoom from outgrowing that background.
@@ -2319,7 +2312,7 @@ function GraphPageInner() {
         : viewportOptions;
       // Scenario views share width with the decision panel and app navigation.
       // Allow the complete proposed context to fit shorter desktop canvases.
-      if (selectedScenarioId) return { ...options, minZoom: 0.05, maxZoom: 1 };
+      if (selectedScenarioId) return { ...options, padding: Math.max(0.2, options.padding), minZoom: 0.05, maxZoom: 1 };
       if (compactInvestigationTopology && !narrowViewport) return { ...options, minZoom: 0.05, maxZoom: displayNodes.length <= 6 ? 2 : 1 };
       return rollupNavigationActive ? { ...viewportOptions, minZoom: 0.05, maxZoom: 1 } : selectedScenarioId && !scenarioExpanded ? { ...options, minZoom: 0.75, maxZoom: 1 } : options;
     },
@@ -3794,12 +3787,7 @@ function GraphPageInner() {
             />
           ) : (
             <ReactFlow
-              style={{
-                "--graph-node-label-size": `${Math.min(28, Math.max(18, 15 / Math.max(graphViewport.zoom, 0.16)))}px`,
-                "--graph-node-glyph-size": `${Math.min(112, Math.max(72, 64 / Math.max(graphViewport.zoom, 0.16)))}px`,
-                "--graph-node-icon-size": `${Math.min(48, Math.max(32, 28 / Math.max(graphViewport.zoom, 0.16)))}px`,
-                "--graph-node-meta-size": `${Math.min(18, Math.max(12, 12 / Math.max(graphViewport.zoom, 0.16)))}px`,
-              } as CSSProperties}
+              style={readableGraphNodeStyle(graphViewport.zoom)}
               className={selectedScenarioId ? "scenario-context-canvas" : undefined}
               key={captureMode ? `lineage-capture:${scenarioExpanded ? "full" : "context"}` : `${presentation.storageKey}:${presentation.restoredSavedState ? "restored" : "initial"}:${scenarioExpanded ? "full" : "context"}`}
               nodes={presentation.nodes}

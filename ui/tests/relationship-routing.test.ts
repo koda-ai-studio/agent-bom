@@ -47,3 +47,13 @@ describe("relationship routing", () => {
     expect(relationshipPath(edge, [{ id: "finding", x: 0, y: 0, width: 220, height: 180 }])[2]).toBe(36);
   });
 });
+
+it("gives detour bends room to turn before reaching a clear horizontal lane", () => {
+  const [path] = relationshipPath(edge, [{ id: "middle", x: 260, y: 0, width: 220, height: 180 }]);
+  const points = path.match(/-?\d+(?:\.\d+)?/g)!.map(Number);
+  // The first cubic arrives horizontally with a substantial easing interval,
+  // instead of forcing the entire turn into the old 32-unit elbow.
+  expect(points[6]! - points[2]!).toBeGreaterThanOrEqual(64);
+  expect(points[6]!).toBeLessThan(260);
+  expect(points[7]).toBeLessThan(0);
+});

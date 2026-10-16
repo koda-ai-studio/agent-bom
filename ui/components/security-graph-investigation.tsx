@@ -10,6 +10,7 @@ import {
   ReactFlowProvider,
   useReactFlow,
   useNodesInitialized,
+  useViewport,
   type Edge,
   type Node,
 } from "@xyflow/react";
@@ -37,7 +38,7 @@ import {
   minimapNodeColor,
   readableGraphEdges,
 } from "@/lib/graph-utils";
-import { readableLineageDagreLr } from "@/lib/graph-node-dimensions";
+import { readableGraphNodeStyle, readableLineageDagreLr } from "@/lib/graph-node-dimensions";
 import { graphFitViewOptions, shouldShowGraphMiniMap } from "@/lib/graph-viewport";
 import { decideGraphRenderer } from "@/lib/graph-renderer-switch";
 import { mergeGraphNodeDetail } from "@/lib/graph-entity-detail";
@@ -139,6 +140,7 @@ function InvestigationFlow({
 }) {
   const reactFlow = useReactFlow<Node<LineageNodeData>, Edge>();
   const { fitView } = reactFlow;
+  const viewport = useViewport();
   const nodesInitialized = useNodesInitialized();
   const [compact, setCompact] = useState(false);
   const [navigationId, setNavigationId] = useState<string | null>(null);
@@ -162,7 +164,12 @@ function InvestigationFlow({
   const responsiveScope = useMemo(() => compact
     ? { ...presentationScope, scope: `${presentationScope.scope}:readable-mobile` }
     : presentationScope, [compact, presentationScope]);
-  const fitOptions = useMemo(() => graphFitViewOptions(viewportInput), [viewportInput]);
+  const fitOptions = useMemo(() => {
+    const options = graphFitViewOptions(viewportInput);
+    // Text and badges grow as the viewport fits; reserve room for that final
+    // measured size so the last finding is not clipped below the canvas.
+    return { ...options, padding: Math.max(0.2, options.padding) };
+  }, [viewportInput]);
   const fitOptionsRef = useRef(fitOptions);
   fitOptionsRef.current = fitOptions;
 
@@ -176,10 +183,12 @@ function InvestigationFlow({
   });
   const presentedEdges = useMemo(
     () => readableGraphEdges(edges, undefined, {
-      zoom: presentation.viewport.zoom,
+      baseOpacity: 1,
+      highSignalOpacity: 1,
+      zoom: viewport.zoom,
       nodeLabels: graphNodeDisplayLabels(nodes),
     }),
-    [edges, nodes, presentation.viewport.zoom],
+    [edges, nodes, viewport.zoom],
   );
   const focusNode = useCallback((id: string) => {
     setNavigationId(id);
@@ -259,6 +268,7 @@ function InvestigationFlow({
       </div>}
       <div className="relative min-h-0 flex-1">
         <ReactFlow
+          style={readableGraphNodeStyle(viewport.zoom)}
           key={`${presentation.storageKey}:${presentation.restoredSavedState ? "restored" : "fresh"}`}
           nodes={presentation.nodes}
           edges={presentedEdges}
