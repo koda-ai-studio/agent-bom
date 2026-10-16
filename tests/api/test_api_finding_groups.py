@@ -314,3 +314,57 @@ def test_nav_issue_counts_reuse_one_grouped_walk_while_evidence_is_unchanged(mon
     assert {k: v for k, v in first["issues"].items() if k != "window"} == {k: v for k, v in second["issues"].items() if k != "window"}
     assert other["issues"]["total"] == 0
     assert len(walks) == 2
+
+
+def test_groups_keep_ecosystems_and_reconcile_occurrence_drilldown() -> None:
+    tenant = "finding-group-ecosystems"
+    set_job_store(InMemoryJobStore())
+    job = ScanJob(job_id="scan-ecosystems", tenant_id=tenant, created_at="2026-10-16T00:00:00Z", request=ScanRequest())
+    job.status = JobStatus.DONE
+    job.completed_at = "2026-10-16T00:01:00Z"
+    job.result = {
+        "findings": [
+            _finding("pkg:pypi/requests@2.0?image=one"),
+            _finding("pkg:pypi/requests@2.0?image=two"),
+            _finding("pkg:npm/requests@2.0?image=three"),
+        ]
+    }
+    _get_store().put(job)
+    client = TestClient(app)
+    headers = proxy_headers(role="analyst", tenant=tenant)
+    raw = client.get("/v1/findings?limit=10&window_days=0", headers=headers).json()
+    grouped = client.get("/v1/findings?group_occurrences=true&include_facets=true&limit=10&window_days=0", headers=headers).json()
+    assert grouped["total"] == 2
+    assert sorted(row["occurrence_count"] for row in grouped["findings"]) == [1, 2]
+    assert sum(row["occurrence_count"] for row in grouped["findings"]) == raw["total"] == 3
+    assert {item["finding_id"] for row in grouped["findings"] for item in row["occurrences"]} == {
+        row["finding_id"] for row in raw["findings"]
+    }
+    assert grouped["facets"]["severity"]["high"] == 2
+    assert (
+        client.get("/v1/findings?group_occurrences=true&window_days=0", headers=proxy_headers(role="analyst", tenant="other")).json()[
+            "total"
+        ]
+        == 0
+    )
+
+
+def test_group_identity_normalizes_known_ecosystem_aliases_and_pypi_names() -> None:
+    from agent_bom.api.finding_grouping import _finding_group_identity
+
+    common = {"vulnerability_id": "CVE-2026-1000"}
+    assert _finding_group_identity({**common, "package_name": "Example_Pkg", "ecosystem": "PyPI"}) == _finding_group_identity(
+        {**common, "package_name": "example-pkg", "ecosystem": "pypi"}
+    )
+    assert _finding_group_identity({**common, "package_name": "example.org/mod", "ecosystem": "golang"}) == _finding_group_identity(
+        {**common, "package_name": "example.org/mod", "ecosystem": "go"}
+    )
+
+
+def test_group_identity_does_not_coalesce_distinct_purl_only_packages() -> None:
+    from agent_bom.api.finding_grouping import _finding_group_identity
+
+    common = {"vulnerability_id": "CVE-2026-1000"}
+    assert _finding_group_identity({**common, "asset": {"identifier": "pkg:pypi/one@1"}}) != _finding_group_identity(
+        {**common, "asset": {"identifier": "pkg:pypi/two@1"}}
+    )

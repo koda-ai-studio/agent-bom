@@ -10,7 +10,7 @@ from fastapi import HTTPException
 from agent_bom.api import finding_cursor
 from agent_bom.api.finding_list_envelope import finding_list_envelope
 from agent_bom.api.finding_list_helpers import _FINDING_GROUP_MAX_OCCURRENCES, _FINDING_GROUP_OCCURRENCE_SAMPLE, _normalize_facet_severity
-from agent_bom.api.finding_row_shapes import _package_base_name, _row_vuln_id
+from agent_bom.api.finding_row_shapes import _package_identity, _row_vuln_id
 from agent_bom.api.finding_scope_filters import _finding_identity as _finding_identity
 from agent_bom.api.finding_view_filters import _copy_first_page_metadata as _copy_first_page_metadata
 from agent_bom.canonical_ids import canonical_id
@@ -153,7 +153,8 @@ def _finding_group_identity(row: dict[str, Any]) -> tuple[str, str]:
     supplied_key = str(row.get("finding_group_key") or "").strip()
     vulnerability_id = _row_vuln_id(row).lower()
     if vulnerability_id:
-        group_key = f"vulnerability:{vulnerability_id}:{_package_base_name(row).lower()}"
+        package, _, ecosystem = _package_identity(row)
+        group_key = f"vulnerability:{vulnerability_id}:{ecosystem or 'unknown'}:{package}"
     else:
         group_key = f"occurrence:{_finding_identity(row)}"
     # Persisted metadata is an optimization, not authority. A row can be

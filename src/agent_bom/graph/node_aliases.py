@@ -66,8 +66,15 @@ class NodeAliasCollector:
             yield node
 
     def records(self, *, tenant: str, scan: str, now: str) -> list[tuple[str, str, str, str, str, str, str]]:
-        """Rows in :data:`NODE_ALIAS_COLUMNS` order; one row per alias, the latest snapshot wins."""
-        latest = {alias: (canonical, entity) for alias, canonical, entity in self.rows}
+        """Persist only unambiguous bindings within this snapshot.
+
+        A retired label shared by distinct nodes is not identity evidence.
+        Keep both observations, but never select a target by insertion order.
+        """
+        targets: dict[str, set[tuple[str, str]]] = {}
+        for alias, canonical, entity in self.rows:
+            targets.setdefault(alias, set()).add((canonical, entity))
+        latest = {alias: next(iter(values)) for alias, values in targets.items() if len(values) == 1}
         return [
             (tenant, alias, canonical, entity, CORRELATION_IDENTITY_VERSION, scan, now)
             for alias, (canonical, entity) in sorted(latest.items())
