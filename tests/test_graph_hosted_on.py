@@ -153,7 +153,13 @@ def test_demo_compute_lane_meets_its_identity_and_hosting_contract() -> None:
     keys = Counter((family_of(node), key.text) for node in graph.nodes.values() if family_of(node) for key in strong_keys(node))
     paths = _derived_attack_paths(graph)
 
-    assert status["merged_groups"] == DEMO_COMPUTE_VMS and status["conflicts"] == 0
+    assert status["merged_groups"] == DEMO_COMPUTE_VMS
+    assert status["strong_key_conflicts"] == status["security_assertion_conflicts"] == 0
+    # Each VM combines collector-specific descriptions of the same strong identity.
+    # These attribute disagreements remain visible rather than claiming no conflicts.
+    fields = Counter(field for node in graph.nodes.values() for field in node.attributes.get("identity", {}).get("conflict_fields", []))
+    assert fields == dict.fromkeys(("cloud_service", "resource_id", "resource_kind", "resource_name"), DEMO_COMPUTE_VMS)
+    assert status["conflicts"] == sum(fields.values())
     assert status["candidate_edges"] == DEMO_HOSTNAME_DECOYS
     assert not [key for key, count in keys.items() if count > 1]
     assert any("hosted_on" in path.edges for path in paths)
