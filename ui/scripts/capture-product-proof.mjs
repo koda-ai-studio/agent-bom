@@ -2793,6 +2793,15 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
         }));
         if (overflow.length) throw new Error(`Graph node labels overflow on ${urlPath}: ${overflow.join(" | ")}`);
       }
+      if (options.assertGraphNodesWithinCanvas) {
+        const clipped = await page.locator(".react-flow__node").evaluateAll(nodes => nodes.flatMap(node => {
+          const bounds = node.getBoundingClientRect();
+          const frame = node.closest(".react-flow").getBoundingClientRect();
+          return bounds.left < frame.left - 1 || bounds.right > frame.right + 1
+            || bounds.top < frame.top - 1 || bounds.bottom > frame.bottom + 1 ? [node.dataset.id] : [];
+        }));
+        if (clipped.length) throw new Error(`Graph nodes clipped on ${urlPath}: ${clipped.join(", ")}`);
+      }
       if (options.assertEdgeLabelsClearOfNodes) {
         const collisions = await page.evaluate(() => {
           const nodes = [...document.querySelectorAll(".react-flow__node")]
@@ -3520,6 +3529,7 @@ async function main() {
       minGraphNodes: 7, minGraphEdges: 6,
       minGraphBadgeFontPx: 11, minGraphEdgeLabelFontPx: 12,
       maxGraphLabelOffsetPx: 32,
+      assertGraphNodesWithinCanvas: true,
     });
     const correlationPage = await newCapturePage("dark", { width: 1120, height: 900 });
     await capture(

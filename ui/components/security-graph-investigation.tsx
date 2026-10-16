@@ -164,7 +164,12 @@ function InvestigationFlow({
   const responsiveScope = useMemo(() => compact
     ? { ...presentationScope, scope: `${presentationScope.scope}:readable-mobile` }
     : presentationScope, [compact, presentationScope]);
-  const fitOptions = useMemo(() => graphFitViewOptions(viewportInput), [viewportInput]);
+  const fitOptions = useMemo(() => {
+    const options = graphFitViewOptions(viewportInput);
+    // Text and badges grow as the viewport fits; reserve room for that final
+    // measured size so the last finding is not clipped below the canvas.
+    return { ...options, padding: Math.max(0.2, options.padding) };
+  }, [viewportInput]);
   const fitOptionsRef = useRef(fitOptions);
   fitOptionsRef.current = fitOptions;
 
