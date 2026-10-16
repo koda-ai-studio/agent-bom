@@ -292,7 +292,9 @@ async def test_enrich_fetches_records_missing_affected_even_with_summary():
     assert fetched == ["PYSEC-2024-225"]
     enriched = out["pypi:cryptography@2.3"][0]
     assert enriched.get("affected"), "record must gain affected data after enrichment"
-    assert parse_fixed_version(enriched, "cryptography", "PyPI", current_version="2.3") == "42.0.4"
+    # An explicit pin outside the range retains membership, but has no
+    # same-window fix receipt. Do not borrow the 42.x branch remediation.
+    assert parse_fixed_version(enriched, "cryptography", "PyPI", current_version="2.3") is None
 
 
 @pytest.mark.asyncio

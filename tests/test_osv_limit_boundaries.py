@@ -238,3 +238,15 @@ def test_unknown_range_is_not_suppressed_as_a_known_unfixed_distro_advisory():
     )
     assert _suppress_unfixed_os_advisories([package]) == 0
     assert len(package.vulnerabilities) == 1
+
+
+@pytest.mark.parametrize(
+    "events",
+    [
+        [{"introduced": "0"}, {"last_affected": "1.9"}, {"introduced": "2.0"}, {"fixed": "2.2"}],
+        [{"introduced": "0"}, {"fixed": "4.0"}, {"limit": "1.0"}],
+    ],
+)
+def test_fix_requires_membership_in_the_same_complete_window(events):
+    data = advisory(events, versions=["1.5"])
+    assert parse_fixed_version(data, "boundary-example", "pypi", "1.5") is None

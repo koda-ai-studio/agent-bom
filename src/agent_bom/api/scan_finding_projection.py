@@ -11,6 +11,7 @@ from agent_bom.api.finding_suppression import project_current_suppressions
 from agent_bom.api.models import ScanJob
 from agent_bom.api.scan_graph_view import _effective_reach_lookup as _effective_reach_lookup
 from agent_bom.api.scan_snapshot_read import verified_snapshot_findings
+from agent_bom.core.reachability import review_only_match
 from agent_bom.finding_runtime_evidence import (
     attach_runtime_evidence_to_finding,
     build_incident_runtime_evidence_index,
@@ -165,6 +166,10 @@ def _iter_scan_findings(job: ScanJob) -> list[dict[str, Any]]:
             }
             row.setdefault("effective_reach_score", composite)
             row.setdefault("effective_reach_band", band_from_composite(composite))
+        if review_only_match(row.get("match_confidence_tier")):
+            # A CVE-level composite may belong to another, verified occurrence.
+            # Never project it as the reach of an unresolved package match.
+            row.update(effective_reach=None, effective_reach_score=None, effective_reach_band=None, reachability="unknown")
         row.setdefault("framework_tags", compliance_tags_from_finding_row(row))
         # Scan completion is authoritative observation time for scan-spine rows.
         # Do not infer first-seen history from the currently retained job set.

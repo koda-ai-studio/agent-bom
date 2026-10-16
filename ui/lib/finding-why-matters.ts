@@ -1,5 +1,5 @@
 import { buildFindingInvestigationHref } from "@/lib/finding-investigation-href";
-import { findingWorkloadScope, type EnrichedVuln } from "@/lib/findings-view";
+import { advisoryMatchNeedsReview, findingWorkloadScope, type EnrichedVuln } from "@/lib/findings-view";
 
 export interface WhyItMattersLink {
   href: string;
@@ -16,6 +16,7 @@ export interface WhyItMattersNarrative {
 }
 
 function reachSentence(vuln: EnrichedVuln): string | null {
+  if (advisoryMatchNeedsReview(vuln)) return "This advisory match needs verification. Package applicability and reachability remain unknown; review the source advisory and refresh local vulnerability data.";
   const band = vuln.effective_reach_band?.trim();
   if (!band) return null;
   const score =

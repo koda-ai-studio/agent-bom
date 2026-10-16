@@ -61,8 +61,8 @@ class TestNormalizePackageName:
         """npm packages can have underscores — don't replace them."""
         assert normalize_package_name("my_pkg", "npm") == "my_pkg"
 
-    def test_go_lowercases(self):
-        assert normalize_package_name("github.com/Foo/Bar", "go") == "github.com/foo/bar"
+    def test_go_preserves_case_sensitive_module_path(self):
+        assert normalize_package_name("github.com/Foo/Bar", "go") == "github.com/Foo/Bar"
 
     def test_empty_name(self):
         assert normalize_package_name("", "pypi") == ""

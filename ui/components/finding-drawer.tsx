@@ -1,5 +1,7 @@
 "use client";
 
+import { advisoryMatchNeedsReview } from "@/lib/findings-view";
+
 import Link from "next/link";
 import { useEffect, useState, type ReactNode } from "react";
 import { ExternalLink, FileSearch, Loader2 } from "lucide-react";
@@ -467,10 +469,11 @@ function TriageTab({
 // ── Shared bits ───────────────────────────────────────────────────────────────
 
 function ReachBadges({ vuln }: { vuln: EnrichedVuln }) {
-  if (!vuln.effective_reach_band && !vuln.runtime_evidence?.state) return null;
+  const reviewOnly = advisoryMatchNeedsReview(vuln);
+  if (!reviewOnly && !vuln.effective_reach_band && !vuln.runtime_evidence?.state) return null;
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {vuln.effective_reach_band ? (
+      {reviewOnly ? <p className="text-sm text-ink-secondary">Reachability unknown</p> : vuln.effective_reach_band ? (
         <span className="rounded border border-amber-500/30 dark:border-amber-800/60 bg-amber-500/10 dark:bg-amber-950/40 px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-amber-700 dark:text-amber-300">
           Reach {vuln.effective_reach_band}
           {typeof vuln.effective_reach_score === "number" ? ` (${vuln.effective_reach_score.toFixed(0)})` : ""}

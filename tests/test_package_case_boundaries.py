@@ -4,6 +4,7 @@ import json
 
 import pytest
 
+from agent_bom.canonical_ids import canonical_package_id
 from agent_bom.core.packages import canonical_package_key, normalize_package_name
 from agent_bom.db.lookup import lookup_package, lookup_packages_batch
 from agent_bom.db.schema import init_db
@@ -22,6 +23,8 @@ from agent_bom.scanners.package_scan import _is_version_affected
 )
 def test_case_sensitive_coordinates_keep_identity_and_matching_scope(tmp_path, ecosystem, name, other, purl):
     assert canonical_package_key(name, "1.0.0", ecosystem) != canonical_package_key(other, "1.0.0", ecosystem)
+    assert canonical_package_id(name, "1.0.0", ecosystem) != canonical_package_id(other, "1.0.0", ecosystem)
+    assert canonical_package_id(name, "1.0.0", ecosystem, purl) == canonical_package_id(name, "1.0.0", ecosystem)
     assert canonical_package_key(name, "1.0.0", ecosystem, purl) == canonical_package_key(name, "1.0.0", ecosystem)
     data = {
         "id": "OSV-CASE-TEST",

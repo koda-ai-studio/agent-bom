@@ -147,11 +147,14 @@ def vulnerability_source(vuln: Vulnerability) -> dict[str, str]:
 def vulnerability_enrichment_properties(vuln: Vulnerability, pkg_ref: str = "") -> list[dict[str, str]]:
     """Preserve scalar intelligence with the CVE supplying each value."""
     vuln_properties: list[dict[str, str]] = []
-    if vuln.match_confidence_tier:
+    if vuln.match_confidence_tier or vuln.fixed_version:
         vuln_properties.append(
             {
                 "name": "agent-bom:match-evidence",
-                "value": json.dumps({"affects_ref": pkg_ref, "match_confidence_tier": vuln.match_confidence_tier}, sort_keys=True),
+                "value": json.dumps(
+                    {"affects_ref": pkg_ref, "match_confidence_tier": vuln.match_confidence_tier, "fixed_version": vuln.fixed_version},
+                    sort_keys=True,
+                ),
             }
         )
 
@@ -198,6 +201,7 @@ def vulnerability_for_component(vuln: Vulnerability, record: dict, component_ref
     """Restore package-scoped matching evidence without sharing mutable observations."""
     observation = deepcopy(vuln)
     tiers = set()
+    fixes: set[str | None] = set()
     for prop in record.get("properties", []):
         if not isinstance(prop, dict) or prop.get("name") != "agent-bom:match-evidence":
             continue
@@ -206,11 +210,20 @@ def vulnerability_for_component(vuln: Vulnerability, record: dict, component_ref
         except (ValueError, TypeError):
             continue
         if isinstance(receipt, dict) and receipt.get("affects_ref") == component_ref:
+            if "fixed_version" in receipt:
+                fix = receipt["fixed_version"]
+                fixes.add(fix if isinstance(fix, str) and 0 < len(fix) <= 256 else None)
             tier = receipt.get("match_confidence_tier")
             if isinstance(tier, str) and tier:
                 tiers.add(tier)
     if tiers:
         observation.match_confidence_tier = next(iter(tiers)) if len(tiers) == 1 else "unverified_range"
+    if fixes:
+        observation.fixed_version = next(iter(fixes)) if len(fixes) == 1 else None
+    from agent_bom.core.reachability import review_only_match
+
+    if review_only_match(observation.match_confidence_tier):
+        observation.fixed_version = None
     return observation
 
 

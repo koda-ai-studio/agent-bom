@@ -52,7 +52,7 @@ def test_candidate_match_evidence_survives_sbom_exports(tmp_path):
     cdx = to_cyclonedx(report)
     entry = cdx["vulnerabilities"][0]
     receipt = json.loads(next(p["value"] for p in entry["properties"] if p["name"] == "agent-bom:match-evidence"))
-    assert receipt == {"affects_ref": entry["affects"][0]["ref"], "match_confidence_tier": "unverified_range"}
+    assert receipt == {"affects_ref": entry["affects"][0]["ref"], "match_confidence_tier": "unverified_range", "fixed_version": None}
     assert "recommendation" not in entry
     assert "agent-bom:match-confidence-tier=unverified_range" in json.dumps(to_spdx(report))
 
@@ -88,6 +88,9 @@ def test_candidate_keeps_one_finding_and_uncertainty_after_storage_and_api(tmp_p
     assert len(rows) == 1
     assert rows[0]["match_confidence_tier"] == "unverified_range"
     assert rows[0]["reachability"] == "unknown"
+    assert rows[0]["effective_reach_score"] is None
+    assert rows[0]["effective_reach_band"] is None
+    assert rows[0]["effective_reach"] is None
     response = client.get("/v1/graph", params={"scan_id": report.scan_id})
     assert response.status_code == 200
     assert response.json()["nodes"] and response.json()["edges"]
@@ -116,4 +119,6 @@ def test_component_scoped_match_evidence_survives_cyclonedx_reimport(tmp_path):
     packages = {p.name: p for p in parse_cyclonedx(cdx)}
     assert packages["candidate"].vulnerabilities[0].match_confidence_tier == "unverified_range"
     assert packages["known"].vulnerabilities[0].match_confidence_tier == "osv_range"
+    assert packages["known"].vulnerabilities[0].fixed_version == "2.0"
+    assert packages["candidate"].vulnerabilities[0].fixed_version is None
     assert packages["candidate"].vulnerabilities[0] is not packages["known"].vulnerabilities[0]

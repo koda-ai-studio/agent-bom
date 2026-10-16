@@ -396,3 +396,8 @@ export function verifiedRepositoryLocation(value: unknown): string | undefined {
   if (value.includes("\\") || value.split("/").some(part => part === ".." || part === "." || !part)) return undefined;
   return value;
 }
+
+/** A retained advisory candidate is not verified package applicability. */
+export function advisoryMatchNeedsReview(vuln: Pick<EnrichedVuln, "match_confidence_tier">): boolean {
+  return ["unverified_range", "ambiguous_distro_release", "nvd_cpe_candidate"].includes(vuln.match_confidence_tier ?? "");
+}

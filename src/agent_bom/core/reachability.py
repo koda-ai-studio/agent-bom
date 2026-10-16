@@ -33,7 +33,7 @@ class ReachabilityAssessment:
         return self.verdict in {ReachabilityVerdict.CONFIRMED, ReachabilityVerdict.LIKELY}
 
 
-def _review_only_match(tier: str | None) -> bool:
+def review_only_match(tier: str | None) -> bool:
     return tier in {"unverified_range", "ambiguous_distro_release", "nvd_cpe_candidate"}
 
 
@@ -56,7 +56,7 @@ def assess_reachability(
     prove that the vulnerable code is executable.
     """
 
-    if _review_only_match(match_confidence_tier):
+    if review_only_match(match_confidence_tier):
         return ReachabilityAssessment(ReachabilityVerdict.UNKNOWN, ("unverified_advisory_match",))
 
     symbol = (symbol_reachability or "").strip().lower()
@@ -115,7 +115,7 @@ def node_reachability(attributes: dict[str, object] | None) -> ReachabilityAsses
 
     attrs = attributes or {}
     match_tier = str(attrs.get("match_confidence_tier") or "")
-    if _review_only_match(match_tier):
+    if review_only_match(match_tier):
         return assess_reachability(match_confidence_tier=match_tier)
     explicit = str(attrs.get("reachability") or "").strip().lower()
     if explicit in {"confirmed", "likely", "unlikely"}:

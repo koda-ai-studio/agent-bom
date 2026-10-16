@@ -371,3 +371,50 @@ def test_identity_upgrade_preserves_snapshot_ids_and_ambiguous_aliases(migrated_
         latest_snapshot_alias_contract(store, tenant="identity-contract")
     finally:
         reset_current_tenant(token)
+
+
+def test_unverified_scanner_match_survives_postgres_api_replay(migrated_fresh_database, tmp_path, monkeypatch):
+    from starlette.testclient import TestClient
+
+    from agent_bom.api import stores
+    from agent_bom.api.models import JobStatus, ScanJob, ScanRequest
+    from agent_bom.api.postgres_common import reset_current_tenant, set_current_tenant
+    from agent_bom.api.postgres_graph import PostgresGraphStore
+    from agent_bom.api.postgres_job_store import PostgresJobStore
+    from agent_bom.api.server import app
+    from agent_bom.graph.builder import build_unified_graph_from_report
+    from agent_bom.output import to_json
+    from tests.test_scanner_range_surfaces import _candidate_report
+
+    payload = to_json(_candidate_report(tmp_path))
+    jobs, graphs = PostgresJobStore(), PostgresGraphStore()
+    token = set_current_tenant("default")
+    try:
+        jobs.put(
+            ScanJob(
+                job_id="candidate-scan",
+                tenant_id="default",
+                status=JobStatus.DONE,
+                created_at="2026-10-16T00:00:00Z",
+                request=ScanRequest(),
+                result=payload,
+            )
+        )
+        graphs.save_graph(build_unified_graph_from_report(payload, scan_id="candidate-scan", tenant_id="default"))
+        # Fresh store instances read database receipts, not writer-side objects.
+        monkeypatch.setattr(stores, "_store", PostgresJobStore())
+        monkeypatch.setattr(stores, "_graph_store", PostgresGraphStore())
+        client = TestClient(app)
+        response = client.get("/v1/findings", params={"q": "CVE-2026-1234", "window_days": 0})
+        assert response.status_code == 200
+        rows = response.json()["findings"]
+        assert len(rows) == 1
+        assert rows[0]["match_confidence_tier"] == "unverified_range"
+        assert rows[0]["reachability"] == "unknown"
+        assert rows[0]["effective_reach_score"] is None
+        graph = client.get("/v1/graph", params={"scan_id": "candidate-scan"}).json()
+        assert graph["nodes"] and graph["edges"]
+        other = PostgresGraphStore().load_graph(scan_id="candidate-scan", tenant_id="other")
+        assert not other.nodes
+    finally:
+        reset_current_tenant(token)
