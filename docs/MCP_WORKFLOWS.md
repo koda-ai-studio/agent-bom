@@ -135,7 +135,9 @@ retained alongside the fictional configuration and graph exports.
 repeat the same collection scope, check coverage and retain independent change
 and runtime receipts. Missing records in an incomplete scan are not verified
 fixes. This example changes dependency input only; it cannot close a deployed
-remediation. For a reviewed real-world comparison, use
+remediation. For an installed Python dependency update, use
+[Verify an installed package update](operations/PACKAGE_REMEDIATION_VERIFICATION.md).
+For reviewed relationship comparisons, use
 [Measure an investigation and rescan](operations/INVESTIGATION_MEASUREMENT.md).
 
 ## Choose a profile for other work

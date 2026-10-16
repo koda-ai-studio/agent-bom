@@ -641,3 +641,17 @@ def test_scanner_edits_select_public_import_contract(tmp_path: Path, module: str
     contract = tmp_path / "tests/test_cli_scanners_init_exports.py"
     _write(contract, 1)
     assert select_targeted_tests(changed_files=[Path(f"src/agent_bom/scanners/{module}.py")], root=tmp_path) == [contract]
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "src/agent_bom/evidence/package_remediation.py",
+        "src/agent_bom/cli/_verify_remediation.py",
+        "src/agent_bom/core/versions/osv.py",
+    ],
+)
+def test_package_verification_sources_select_installed_receipt_contract(tmp_path, source):
+    expected = tmp_path / "tests/test_package_remediation_verification.py"
+    _write(expected, 1)
+    assert select_targeted_tests(changed_files=[Path(source)], root=tmp_path) == [expected]
