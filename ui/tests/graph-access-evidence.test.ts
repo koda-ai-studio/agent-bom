@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { accessEvidenceLegendItems } from "@/lib/graph-access-evidence";
 import { createFocusedGraphFilters } from "@/components/lineage-filter";
 import { EntityType, RelationshipType, type UnifiedGraphData, type UnifiedNode } from "@/lib/graph-schema";
 import { legendItemsForVisibleGraph, relationshipEdgeLabelText } from "@/lib/graph-utils";
@@ -13,7 +14,7 @@ describe("configured versus observed access", () => {
     ["can_access", { evidenceMode: "runtime" }, "Can Access · observed"],
     ["can_access", { evidenceMode: "runtime", evidenceBlocked: true }, "Can Access · blocked"],
     ["uses", { evidenceMode: "static" }, "Uses · configured"],
-    ["exposes_cred", { evidenceMode: "unknown" }, "Exposes Credential · not verified"],
+    ["exposes_cred", { evidenceMode: "unknown" }, "Exposes Credential · evidence unspecified"],
     ["assumes", { evidenceMode: "static" }, "Assumes · configured"],
     ["depends_on", { evidenceMode: "static" }, "Depends On"],
     ["delegated_to", { evidenceMode: "static" }, "Configured delegation"],
@@ -42,6 +43,15 @@ describe("configured versus observed access", () => {
     expect(byId.get("permitted")?.style?.strokeDasharray).toBeDefined();
     expect(byId.get("seen")?.style?.strokeDasharray).toBeUndefined();
     const legend = legendItemsForVisibleGraph(flow.nodes, flow.edges).map((item) => [item.label, item.lineStyle]);
-    expect(legend).toEqual(expect.arrayContaining([["Permitted · not observed", "dashed"], ["Observed at runtime", "solid"]]));
+    expect(legend).toEqual(expect.arrayContaining([["Configured / modeled", "dashed"], ["Observed at runtime", "solid"]]));
   });
 });
+
+ it("does not describe missing evidence or a blocked attempt as permitted access", () => {
+   const legend = accessEvidenceLegendItems([
+     { data: { relationship: "uses", evidenceMode: "unknown" } },
+     { data: { relationship: "can_access", evidenceMode: "runtime", evidenceBlocked: true } },
+   ]);
+   expect(legend.map(item => item.label)).toEqual(["Blocked at runtime", "Evidence unspecified"]);
+   expect(legend.every(item => item.dashed)).toBe(true);
+ });

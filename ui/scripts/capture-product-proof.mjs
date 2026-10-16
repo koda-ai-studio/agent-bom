@@ -160,7 +160,8 @@ function edge(source, target, relationship, weight = 1, evidence = {}) {
     traversable: true,
     first_seen: CREATED_AT,
     last_seen: CREATED_AT,
-    evidence,
+    // Hand-authored sample topology is modeled; it is not a runtime receipt.
+    evidence: { tier: "modeled_infrastructure", source: "gallery-fixture", ...evidence },
     activity_id: 1,
   };
 }
@@ -3443,6 +3444,7 @@ async function main() {
         "Sre Runbook Agent",
         "filesystem MCP",
         "Uses",
+        "modeled",
       ],
       expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/query"],
       minGraphNodes: 5,
