@@ -62,7 +62,14 @@ class TechniqueMapping:
         tactics = data.get("tactics", [])
         if not isinstance(tactics, list) or any(not isinstance(item, str) for item in tactics):
             raise ValueError("invalid technique tactics")
-        hop_index = int(data.get("hop_index", 0))
+        raw_index = data.get("hop_index", 0)
+        if not isinstance(raw_index, (int, str)) or isinstance(raw_index, bool):
+            raise ValueError("invalid hop index")
+        if not all(isinstance(data.get(key, ""), str) for key in ("technique_name", "provenance")):
+            raise ValueError("invalid technique description")
+        if data.get("catalog", "attack") not in ("attack", "atlas"):
+            raise ValueError("invalid technique catalog")
+        hop_index = int(raw_index)
         if hop_index < 0 or isinstance(data.get("hop_index"), bool):
             raise ValueError("invalid hop index")
         return cls(

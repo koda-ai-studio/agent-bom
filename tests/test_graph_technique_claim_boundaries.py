@@ -95,3 +95,11 @@ def test_unqualified_mapping_confidence_stays_unavailable(confidence):
     assert len(mappings) == 1
     assert mappings[0].confidence is None
     json.dumps(mappings[0].to_dict(), allow_nan=False)
+
+
+@pytest.mark.parametrize("field,value", [("hop_index", 1.5), ("catalog", {}), ("technique_name", []), ("provenance", {})])
+def test_legacy_malformed_mapping_fields_do_not_shift_or_break_hops(field, value):
+    from agent_bom.graph.technique_mapping import technique_mappings_from_json
+
+    invalid = {"technique_id": "T1530", "hop_index": 1, field: value}
+    assert technique_mappings_from_json([invalid]) == []
