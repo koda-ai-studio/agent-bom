@@ -78,6 +78,7 @@ from agent_bom.scanners.osv import enrich_results_if_needed as _enrich_results_i
 from agent_bom.scanners.osv import is_valid_fix_version as _is_valid_fix_version
 from agent_bom.scanners.osv import package_lookup_names as _package_lookup_names
 from agent_bom.scanners.osv import parse_fixed_version, query_osv_batch_impl
+from agent_bom.scanners.package_versions import eligible_advisories
 from agent_bom.scanners.package_versions import is_unresolved_package as _is_unresolved_package
 from agent_bom.scanners.package_versions import is_unresolved_version as _is_unresolved_version
 from agent_bom.scanners.risk import (
@@ -795,8 +796,8 @@ def _is_version_affected(
     - ``last_affected``: version > last_affected means NOT affected
 
     Returns True if the version IS affected, False if it's been fixed
-    or is outside all affected ranges.  Returns True (conservative) if
-    version parsing fails or no range data is available.
+    or explicitly names a different package/ecosystem. Missing query-stub
+    scope retains the upstream association; incomparable bounds do not match.
     """
     from agent_bom.version_utils import compare_version_order
 
@@ -880,14 +881,13 @@ def _is_version_affected(
             # like a clean result.
             _warn_unresolvable_git_bounds(vuln_data.get("id", "unknown"), package_name, package_version)
 
-    # If we found the package in affected but no range matched AND no version
-    # list was present, assume affected (conservative — the advisory was issued
-    # for this package but has incomplete range data).
+    # Matching coordinates were evaluated, but no version window matched.
     if found_package:
         return False  # ranges were checked and version is outside all of them
 
-    # No affected data for this package — trust OSV's original query response
-    return True
+    # Explicit other coordinates contradict a cache/query association;
+    # preserve the upstream association only for incomplete query stubs.
+    return not any(entry.get("package", {}).get("name") for entry in vuln_data.get("affected", []))
 
 
 def build_vulnerabilities(vuln_data_list: list[dict], package: Package) -> list[Vulnerability]:
@@ -898,7 +898,7 @@ def build_vulnerabilities(vuln_data_list: list[dict], package: Package) -> list[
     """
     vulns = []
 
-    for raw_vuln_data in vuln_data_list:
+    for raw_vuln_data in eligible_advisories(vuln_data_list, package, _emit_scan_warning):
         vuln_data = _scope_advisory_to_package_release(raw_vuln_data, package)
         if vuln_data is None:
             continue

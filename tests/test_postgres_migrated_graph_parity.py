@@ -291,3 +291,31 @@ def test_comparable_trends_round_trip_and_tenant_isolation(migrated_fresh_databa
     bounded = postgres.get_history(tenant_id="budget")
     assert bounded[-1].comparison_metadata == {"history_processing_limit": True}
     assert sum(len(str(row.comparison_metadata)) for row in bounded) < 16 * 1024 * 1024
+
+
+def test_ambiguous_alias_replay_keeps_nodes_without_inventing_identity(migrated_fresh_database):
+    from agent_bom.api.postgres_common import reset_current_tenant, set_current_tenant
+    from agent_bom.api.postgres_graph import PostgresGraphStore
+    from agent_bom.graph import EntityType, UnifiedGraph, UnifiedNode
+
+    tenant = "ambiguous-alias-replay"
+    token = set_current_tenant(tenant)
+    store = PostgresGraphStore()
+    try:
+        for scan, ids in (("one", ["dataset:a", "dataset:b"]), ("two", ["dataset:b", "dataset:a"])):
+            graph = UnifiedGraph(tenant_id=tenant, scan_id=scan)
+            for node_id in ids:
+                graph.add_node(
+                    UnifiedNode(
+                        id=node_id, entity_type=EntityType.DATASET, label="data", attributes={"identity": {"aliases": ["dataset:data"]}}
+                    )
+                )
+            store.save_graph(graph)
+            store.save_graph(graph)
+            assert store.resolve_node_aliases(tenant_id=tenant, scan_id=scan, node_ids=["dataset:data"]) == {}
+            assert set(store.load_graph(tenant_id=tenant, scan_id=scan).nodes) == set(ids)
+        assert store.resolve_node_aliases(tenant_id=tenant, node_ids=["dataset:data"]) == {}
+        assert store.resolve_node_aliases(tenant_id="other", node_ids=["dataset:data"]) == {}
+    finally:
+        store.delete_tenant(tenant_id=tenant)
+        reset_current_tenant(token)

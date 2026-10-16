@@ -214,12 +214,10 @@ def test_cross_ecosystem_versions_do_not_flag_our_package():
             {"package": {"name": "foo", "ecosystem": "npm"}, "versions": ["1.0.0"]},
         ],
     }
-    # foo/PyPI is not listed at all -> no same-ecosystem affected entry found ->
-    # conservative True (trust OSV's original match); the npm versions list must
-    # not be what decides it.
-    assert _is_version_affected(vuln, "foo", "1.0.0", "PyPI") is True
-    # And a different version still must not be filtered on the npm list.
-    assert _is_version_affected(vuln, "foo", "2.0.0", "PyPI") is True
+    # Explicit npm coordinates contradict a PyPI match even if a cached or
+    # upstream query associated the record with it. Neither npm version applies.
+    assert _is_version_affected(vuln, "foo", "1.0.0", "PyPI") is False
+    assert _is_version_affected(vuln, "foo", "2.0.0", "PyPI") is False
 
 
 # --- Defect 1: enrich gate + determinism -----------------------------------
