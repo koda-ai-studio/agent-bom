@@ -23,6 +23,9 @@ See also:
 
 ## Quick Start
 
+For task-oriented prompts and a credential-free example with saved evidence,
+start with [affected agents, exposure evidence and scan comparison](MCP_WORKFLOWS.md).
+
 ### Claude Desktop
 
 Add to your `claude_desktop_config.json` (macOS: `~/Library/Application Support/Claude/`):
