@@ -3620,7 +3620,9 @@ async function main() {
           });
           const minFont = Math.min(...text.map(element => parseFloat(getComputedStyle(element).fontSize) * scale));
           const contained = box.left >= frame.left && box.right <= frame.right && box.top >= frame.top && box.bottom <= frame.bottom;
-          return separate && contained && minFont >= 12 ? [] : [{ id: node.dataset.id, separate, contained, minFont, scale,
+          // Browser matrix serialization can round a 12px effective font down
+          // by a few ten-thousandths of a pixel after an adaptive zoom.
+          return separate && contained && minFont >= 12 - 0.01 ? [] : [{ id: node.dataset.id, separate, contained, minFont, scale,
             box: box.toJSON(), frame: frame.toJSON() }];
         })), { timeout: 10_000 }).toEqual([]);
       },
