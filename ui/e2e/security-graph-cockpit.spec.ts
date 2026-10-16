@@ -2090,3 +2090,95 @@ test("unconnected proposal items remain usable on a narrow screen", async ({ pag
   await item.click();
   await expect(page.getByTestId("graph-drawer-tab-overview")).toBeVisible();
 });
+
+test("embedded investigation opens the selected relationship receipt with the keyboard", async ({ page }) => {
+  await routeCockpit(page);
+  await page.goto("/security-graph?lens=attack-path");
+  await expectCockpitVisible(page);
+  const edge = page.getByTestId("security-graph-investigation").locator(".react-flow__edge").first();
+  await expect(edge).toBeAttached();
+  await edge.focus();
+  await edge.press("Enter");
+  await expect(page.getByRole("dialog", { name: "Relationship details" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Relationship details" })).toContainText("does not establish execution");
+});
+
+for (const theme of ["light", "dark"] as const) {
+  for (const width of [1440, 390]) {
+    test(`lifecycle inventory and receipt remain usable ${theme} ${width}`, async ({ page }, testInfo) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.addInitScript(theme => localStorage.setItem("agent-bom-theme", theme), theme);
+      await routeCockpit(page);
+      const graph = buildCockpitGraph();
+      graph.edges.forEach((edge, index) => { edge.evidence = { tier: "static_scan", source: `lifecycle-receipt-${index}` }; });
+      const counts = (type: string) => graph.nodes.filter(node => node.entity_type === type).length;
+      const fixture = process.env.AGENT_BOM_LIFECYCLE_PROOF
+        ? JSON.parse(readFileSync(process.env.AGENT_BOM_LIFECYCLE_PROOF, "utf8"))
+        : { graph, nodes: [], edges: [], stats: { total_servers: counts("server"), total_packages: counts("package"),
+          total_tools: counts("tool"), total_credentials: counts("credential"), total_vulnerabilities: counts("vulnerability") } };
+      await page.route("**/v1/agents/lifecycle-proof/lifecycle", route => route.fulfill({ json: fixture }));
+      await page.goto("/agents?name=lifecycle-proof&view=lifecycle");
+      const view = page.getByTestId("agent-lifecycle-graph");
+      await expect(view.getByRole("heading", { name: "Configured inventory" })).toBeVisible();
+      await expect(view).toContainText("do not prove execution or effective access");
+      await expect(view.locator(".react-flow__node").first()).toBeVisible();
+      await expect(view.locator(".react-flow__edge").first()).toBeAttached();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+      await page.screenshot({ path: testInfo.outputPath(`lifecycle-${theme}-${width}.png`), fullPage: true });
+      const edge = view.locator(".react-flow__edge").first();
+      const edgeId = await edge.getAttribute("data-id");
+      const receipt = fixture.graph.edges.find((item: GraphEdge) => item.id === edgeId);
+      expect(receipt).toBeTruthy();
+      await edge.focus();
+      await edge.press("Enter");
+      const dialog = page.getByRole("dialog", { name: "Relationship details" });
+      await expect(dialog).toBeVisible();
+      await expect(dialog).toContainText("does not establish execution");
+      await dialog.getByText("Technical details", { exact: true }).click();
+      await dialog.getByText("Canonical identifiers", { exact: true }).click();
+      await expect(dialog).toContainText(receipt.source);
+      await expect(dialog).toContainText(receipt.target);
+      await page.screenshot({ path: testInfo.outputPath(`lifecycle-receipt-${theme}-${width}.png`), fullPage: true });
+      await dialog.getByRole("button", { name: "Close relationship details" }).click();
+      await view.getByRole("button", { name: "Packages and advisories", exact: true }).click();
+      await expect(view.getByRole("combobox", { name: "Inventory server" })).toBeVisible();
+      await expect(view.locator('.react-flow__node[data-id]').first()).toBeVisible();
+      await expect(view.locator('.react-flow__edge')).not.toHaveCount(0);
+      if (width === 390) {
+        await expect(view.locator(".react-flow__minimap")).toHaveCount(0);
+        await view.getByRole("button", { name: "Next graph node" }).click();
+        await expect(view).toContainText("Focused view · 2 of");
+        const serverId = fixture.graph.nodes.find((node: GraphNode) => node.entity_type === "server").id;
+        await expect.poll(() => view.locator(`.react-flow__node[data-id="${serverId}"]`).evaluate(node => {
+          const box = node.getBoundingClientRect();
+          const canvas = node.closest(".react-flow")!.getBoundingClientRect();
+          return Math.abs(box.x + box.width / 2 - canvas.x - canvas.width / 2);
+        })).toBeLessThan(20);
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false);
+      await page.screenshot({ path: testInfo.outputPath(`lifecycle-packages-${theme}-${width}.png`), fullPage: true });
+    });
+  }
+}
+
+test("embedded investigation opens the clicked relationship's exact receipt", async ({ page }) => {
+  await routeCockpit(page);
+  await page.goto("/security-graph?lens=attack-path");
+  await expectCockpitVisible(page);
+  const view = page.getByTestId("security-graph-investigation");
+  await view.scrollIntoViewIfNeeded();
+  const edge = view.locator(".react-flow__edge").first();
+  const edgeId = await edge.getAttribute("data-id");
+  const point = await edge.locator(".react-flow__edge-interaction").evaluate(element => {
+    const path = element as SVGPathElement;
+    const local = path.getPointAtLength(path.getTotalLength() * 0.35);
+    const screen = new DOMPoint(local.x, local.y).matrixTransform(path.getScreenCTM()!);
+    return { x: screen.x, y: screen.y };
+  });
+  await page.mouse.click(point.x, point.y);
+  const dialog = page.getByRole("dialog", { name: "Relationship details" });
+  await expect(dialog).toBeVisible();
+  await dialog.getByText("Technical details", { exact: true }).click();
+  await dialog.getByText("Canonical identifiers", { exact: true }).click();
+  await expect(dialog).toContainText(edgeId!);
+});

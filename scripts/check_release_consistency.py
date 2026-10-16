@@ -45,6 +45,9 @@ PRODUCT_SCREENSHOT_INPUTS = (
     "ui/scripts/product-proof-provenance.mjs",
     "examples/reference-evidence-lab",
     "scripts/generate_reference_evidence_lab.py",
+    "src/agent_bom/graph",
+    "src/agent_bom/canonical_ids.py",
+    "src/agent_bom/core/packages.py",
 )
 # Defensive: none of the directories above currently contain colocated tests,
 # but a future one must not silently start counting toward the digest.

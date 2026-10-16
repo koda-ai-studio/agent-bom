@@ -319,3 +319,40 @@ def test_ambiguous_alias_replay_keeps_nodes_without_inventing_identity(migrated_
     finally:
         store.delete_tenant(tenant_id=tenant)
         reset_current_tenant(token)
+
+
+def test_lifecycle_projection_round_trip_with_forced_tenant_isolation(migrated_fresh_database):
+    from agent_bom.api.postgres_common import reset_current_tenant, set_current_tenant
+    from agent_bom.api.postgres_graph import PostgresGraphStore
+    from agent_bom.graph import UnifiedGraph
+    from agent_bom.graph.lifecycle import agent_lifecycle_view
+
+    package = {"name": "shared", "version": "1.0", "ecosystem": "npm"}
+    view = agent_lifecycle_view(
+        {
+            "name": "fixture",
+            "agent_type": "custom",
+            "mcp_servers": [
+                {"name": "same", "url": "https://one.example/mcp", "packages": [package]},
+                {"name": "same", "url": "https://two.example/mcp", "packages": [package]},
+            ],
+        },
+        tenant_id="lifecycle-tenant",
+    )
+    graph = UnifiedGraph.from_dict(view["graph"])
+    graph.scan_id = "lifecycle-replay"
+    store = PostgresGraphStore()
+    token = set_current_tenant("lifecycle-tenant")
+    try:
+        store.save_graph(graph)
+        loaded = store.load_graph(tenant_id="lifecycle-tenant", scan_id=graph.scan_id)
+        assert set(loaded.nodes) == set(graph.nodes)
+        assert {edge.id: edge.evidence for edge in loaded.edges} == {edge.id: edge.evidence for edge in graph.edges}
+        assert len([edge for edge in loaded.edges if edge.relationship.value == "depends_on"]) == 2
+    finally:
+        reset_current_tenant(token)
+    token = set_current_tenant("other-tenant")
+    try:
+        assert not store.load_graph(tenant_id="other-tenant", scan_id=graph.scan_id).nodes
+    finally:
+        reset_current_tenant(token)

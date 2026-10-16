@@ -2962,6 +2962,7 @@ export interface AgentDetailResponse {
 }
 
 export interface AgentLifecycleResponse {
+  graph?: import("@/lib/graph-schema").UnifiedGraphData;
   nodes: AttackFlowNode[];
   edges: AttackFlowEdge[];
   stats: Record<string, number>;

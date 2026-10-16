@@ -1250,6 +1250,18 @@
             ],
             "title": "Animated"
           },
+          "data": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -1770,6 +1782,11 @@
             "title": "Edges",
             "type": "array"
           },
+          "graph": {
+            "additionalProperties": true,
+            "title": "Graph",
+            "type": "object"
+          },
           "nodes": {
             "items": {
               "$ref": "#/components/schemas/AgentFlowNode"
@@ -1782,6 +1799,7 @@
           }
         },
         "required": [
+          "graph",
           "nodes",
           "edges",
           "stats"
