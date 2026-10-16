@@ -35,6 +35,12 @@ const REFERENCE_LAB_DIGEST_PATH = path.join(
   "generated",
   "correlation-proof.sha256",
 );
+// The generated taxonomy owns direction and traversal, including correlations.
+const graphSchemaSource = await fs.readFile(path.join(UI_ROOT, "lib/graph-schema.generated.ts"), "utf8");
+const graphRelationshipJson = graphSchemaSource.match(/export const GRAPH_EDGE_KIND_META:[^\n]+ = (\{[\s\S]*?\n\});/);
+if (!graphRelationshipJson) throw new Error("Generated graph relationship taxonomy is missing");
+// The TypeScript generator appends a comma after the final dictionary entry.
+const graphRelationshipSpecs = JSON.parse(graphRelationshipJson[1].replace(/,\s*}$/, "\n}"));
 const galleryAdvisories = JSON.parse(await fs.readFile(path.join(UI_ROOT, "fixtures/gallery-advisories.json"), "utf8")).advisories;
 const advisoryById = new Map(galleryAdvisories.map((item) => [item.id, item]));
 function advisory(id) {
@@ -150,17 +156,20 @@ function node(id, entityType, label, severity = "none", riskScore = 0, attribute
 }
 
 function edge(source, target, relationship, weight = 1, evidence = {}) {
+  const spec = graphRelationshipSpecs[relationship];
+  if (!spec) throw new Error(`Unknown sample relationship: ${relationship}`);
   return {
     id: `${source}->${target}:${relationship}`,
     source,
     target,
     relationship,
-    direction: "directed",
+    direction: spec.direction,
     weight,
-    traversable: true,
+    traversable: spec.traversable,
     first_seen: CREATED_AT,
     last_seen: CREATED_AT,
-    evidence,
+    // Hand-authored sample topology is modeled; it is not a runtime receipt.
+    evidence: { tier: "modeled_infrastructure", source: "gallery-fixture", ...evidence },
     activity_id: 1,
   };
 }
@@ -2612,6 +2621,12 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
         throw new Error(`Proof regions overlap on ${urlPath}: ${overlaps.join(" | ")}`);
       }
     }
+    if (options.maxGraphBottomGapPx !== undefined) {
+      const gap = await page.locator("[data-graph-adaptive-frame]").evaluate(frame => window.innerHeight - frame.getBoundingClientRect().bottom);
+      if (gap < 0 || gap > options.maxGraphBottomGapPx) {
+        throw new Error(`Graph framing on ${urlPath} leaves ${gap}px below the canvas`);
+      }
+    }
     if (options.readmeTextContract) {
       const textMetrics = await page.locator(options.readmeTextContract.selector).evaluate((root, contract) => {
         const readmeScale = Math.min(1, contract.targetWidthPx / window.innerWidth);
@@ -2676,6 +2691,17 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
           throw new Error(`Unreadable graph node text on ${urlPath}: ${smallestPrimaryFont}px`);
         }
       }
+      if (options.minGraphBadgeFontPx) {
+        const sizes = await page.locator(".react-flow__node [data-node-badge], .react-flow__node .graph-finding-metadata > span").evaluateAll(badges => badges.map(badge => {
+          const viewport = badge.closest(".react-flow__viewport");
+          const transform = viewport ? getComputedStyle(viewport).transform : "none";
+          const scale = transform === "none" ? 1 : new DOMMatrixReadOnly(transform).a;
+          return Number.parseFloat(getComputedStyle(badge).fontSize) * scale;
+        }));
+        if (!sizes.length || sizes.some(size => !Number.isFinite(size) || size < options.minGraphBadgeFontPx)) {
+          throw new Error(`Unreadable graph evidence badges on ${urlPath}: ${Math.min(...sizes)}px`);
+        }
+      }
       if (options.minGraphEdgeLabelFontPx) {
         const edgeLabelFonts = await page.locator(".react-flow__edge-text, .relationship-badge").evaluateAll((labels) =>
           labels
@@ -2705,6 +2731,26 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
           throw new Error(
             `Unreadable or missing graph relationship labels on ${urlPath}: ${edgeLabelFonts.length}/${graphEdgeCount} labels, minimum ${Math.min(...edgeLabelFonts)}px`,
           );
+        }
+      }
+      if (options.maxGraphLabelOffsetPx) {
+        const distances = await page.locator(".graph-relationship-label[data-edge-id]").evaluateAll(labels => labels.map(label => {
+          const frame = label.getBoundingClientRect();
+          const canvas = label.closest(".react-flow");
+          const edge = [...canvas.querySelectorAll(".react-flow__edge[data-id]")].find(edge => edge.dataset.id === label.dataset.edgeId);
+          const path = edge?.querySelector(".react-flow__edge-path");
+          const matrix = path?.getScreenCTM();
+          if (!matrix) return Infinity;
+          const length = path.getTotalLength();
+          return Math.min(...Array.from({ length: 201 }, (_, index) => {
+            const point = path.getPointAtLength(length * index / 200);
+            const x = matrix.a * point.x + matrix.c * point.y + matrix.e;
+            const y = matrix.b * point.x + matrix.d * point.y + matrix.f;
+            return Math.hypot(x - (frame.left + frame.right) / 2, y - (frame.top + frame.bottom) / 2);
+          }));
+        }));
+        if (!distances.length || distances.some(distance => distance > options.maxGraphLabelOffsetPx)) {
+          throw new Error(`Detached graph relationship captions on ${urlPath}: ${Math.max(...distances)}px from their line`);
         }
       }
       if (options.minGraphWidthFillRatio) {
@@ -2747,10 +2793,31 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
         }));
         if (overflow.length) throw new Error(`Graph node labels overflow on ${urlPath}: ${overflow.join(" | ")}`);
       }
+      if (options.assertGraphNodesWithinCanvas) {
+        const clipped = await page.locator(".react-flow__node").evaluateAll(nodes => nodes.flatMap(node => {
+          const bounds = node.getBoundingClientRect();
+          const frame = node.closest(".react-flow").getBoundingClientRect();
+          return bounds.left < frame.left - 1 || bounds.right > frame.right + 1
+            || bounds.top < frame.top - 1 || bounds.bottom > frame.bottom + 1 ? [node.dataset.id] : [];
+        }));
+        if (clipped.length) throw new Error(`Graph nodes clipped on ${urlPath}: ${clipped.join(", ")}`);
+      }
       if (options.assertEdgeLabelsClearOfNodes) {
         const collisions = await page.evaluate(() => {
           const nodes = [...document.querySelectorAll(".react-flow__node")]
-            .map((node) => ({ label: (node.textContent ?? "").trim(), rect: node.getBoundingClientRect() }))
+            .flatMap((node) => {
+              const card = node.querySelector("[data-graph-entity]");
+              // Circular nodes have empty margins beside their glyph. Check
+              // the visible glyph/ring and content rows, not that empty space.
+              return (card ? [...card.children] : [node]).map(content => {
+                const box = content.getBoundingClientRect();
+                const pad = content.classList.contains("graph-entity-glyph") ? 8 : 0;
+                return { label: (node.textContent ?? "").trim(), rect: {
+                  left: box.left - pad, right: box.right + pad, top: box.top - pad, bottom: box.bottom + pad,
+                  width: box.width, height: box.height,
+                } };
+              });
+            })
             .filter(({ rect }) => rect.width > 0 && rect.height > 0);
           const labels = [...document.querySelectorAll(".react-flow__edge-text, .relationship-badge")]
             .map((label) => ({ label: (label.textContent ?? "").trim(), rect: label.getBoundingClientRect() }))
@@ -3137,7 +3204,7 @@ async function main() {
           expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph"],
           minGraphNodes: fixture.nodes.length, maxGraphNodes: fixture.nodes.length,
           minGraphEdges: fixture.edges.length, maxGraphEdges: fixture.edges.length,
-          minGraphNodeFontPx: 12, minGraphEdgeLabelFontPx: 12,
+          minGraphNodeFontPx: 12, minGraphEdgeLabelFontPx: 12, minGraphBadgeFontPx: 11,
           assertEdgeLabelsClearOfNodes: true, assertNoHorizontalOverflow: true });
         await p.close();
       }
@@ -3402,7 +3469,7 @@ async function main() {
       minGraphNodes: 7,
       minGraphEdges: 6,
     });
-    await page.setViewportSize({ width: 1440, height: 1120 });
+    await page.setViewportSize({ width: 1440, height: 820 });
     await capture(page, `/graph?lens=mesh&scan=${SCAN_ID}&agent=agent%3Adeveloper-copilot&capture=1`, "mesh-live.png", async (meshPage) => {
       // ReactFlow can preserve a hidden, pre-measurement node tree across an
       // App Router transition. A hard reload gives the capture a fresh canvas
@@ -3425,20 +3492,30 @@ async function main() {
         await showAll.click();
         await meshPage.waitForTimeout(800);
       }
+      const inspector = meshPage.getByTestId("graph-entity-drawer");
+      if (await inspector.isVisible()) await inspector.getByRole("button", { name: "Close", exact: true }).click();
       await fitReactFlow(meshPage);
       await meshPage.waitForTimeout(500);
       await scrollTo(meshPage, 0);
     }, {
       expectedText: [
         "Investigation",
-        "developer-copilot",
+        "Developer Copilot",
         "Sre Runbook Agent",
         "filesystem MCP",
         "Uses",
+        "modeled",
       ],
       expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/query"],
-      minGraphNodes: 4,
-      minGraphEdges: 3,
+      minGraphNodes: 5,
+      minGraphEdges: 5,
+      minGraphNodeFontPx: 12,
+      minGraphEdgeLabelFontPx: 12,
+      assertNodeLabelsWithinBounds: true,
+      assertEdgeLabelsClearOfNodes: true,
+      assertNoHorizontalOverflow: true,
+      maxGraphBottomGapPx: 64,
+      minGraphBadgeFontPx: 11,
     });
     await page.setViewportSize({ width: 1440, height: 980 });
     await capture(page, `/security-graph?lens=attack-path&scan=${SCAN_ID}&capture=1`, "security-graph-live.png", async (securityGraphPage) => {
@@ -3449,6 +3526,10 @@ async function main() {
       expectedText: ["Investigation", "contractor-reviewer", "Developer Copilot", "CVE-2025-29927"],
       expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/views/fix-first"],
       readySelector: '[data-testid="selected-exposure-path"]',
+      minGraphNodes: 7, minGraphEdges: 6,
+      minGraphBadgeFontPx: 11, minGraphEdgeLabelFontPx: 12,
+      maxGraphLabelOffsetPx: 32,
+      assertGraphNodesWithinCanvas: true,
     });
     const correlationPage = await newCapturePage("dark", { width: 1120, height: 900 });
     await capture(
@@ -3584,7 +3665,9 @@ async function main() {
           });
           const minFont = Math.min(...text.map(element => parseFloat(getComputedStyle(element).fontSize) * scale));
           const contained = box.left >= frame.left && box.right <= frame.right && box.top >= frame.top && box.bottom <= frame.bottom;
-          return separate && contained && minFont >= 12 ? [] : [{ id: node.dataset.id, separate, contained, minFont, scale,
+          // Browser matrix serialization can round a 12px effective font down
+          // by a few ten-thousandths of a pixel after an adaptive zoom.
+          return separate && contained && minFont >= 12 - 0.01 ? [] : [{ id: node.dataset.id, separate, contained, minFont, scale,
             box: box.toJSON(), frame: frame.toJSON() }];
         })), { timeout: 10_000 }).toEqual([]);
       },

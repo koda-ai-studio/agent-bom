@@ -40,6 +40,10 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     await expect(inspector.getByRole("heading", {name: "root", exact: true})).toBeVisible();
     expect(queries[0]?.max_nodes).toBe(4);
     await expect(page.locator(".react-flow__node")).toHaveCount(4);
+    // A root investigation adds a reachability overlay; it must retain the
+    // recorded verbs and uncertainty just like the ordinary graph.
+    await expect(page.locator(".graph-relationship-label")).toHaveCount(3);
+    await expect(page.locator(".graph-relationship-label").filter({hasText: /configured/})).toHaveCount(3);
     if (width === 390) await inspector.getByRole("button", {name: "Close", exact: true}).click();
     await page.getByRole("button", {name: "Show more connections", exact: true}).click();
     await expect(page.locator(".react-flow__node")).toHaveCount(8);

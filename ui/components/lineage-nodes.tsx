@@ -537,7 +537,7 @@ function FindingNode({
       source={false}
       subtitle={data.description}
       footer={
-        <div className="flex flex-wrap gap-1 mt-1">
+        <div className="graph-finding-metadata flex flex-wrap justify-center gap-1 mt-1 [&>span]:text-[length:var(--graph-node-meta-size,12px)]">
           {data.severity && (
             <span
               className={`text-[10px] px-1.5 py-0.5 rounded border font-mono uppercase ${severityColor(data.severity)}`}

@@ -17,6 +17,7 @@ export function NodeBadgeChip({ badge }: { badge: ChipBadge }) {
       title={badge.description}
       aria-label={badge.description}
       data-node-badge={badge.kind}
+      style={{ fontSize: "var(--graph-node-meta-size, 11px)", lineHeight: 1.3 }}
       className={`inline-flex items-center rounded border px-1.5 py-px text-[11px] font-semibold leading-4 tracking-wide ${nodeBadgeClass(badge)}`}
     >
       {badge.label}

@@ -946,7 +946,7 @@ main > div {
 [data-theme="light"] { --graph-canvas: #f1f5fa; }
 .react-flow { background-color: var(--graph-canvas); }
 /* Scenario cards share width with the decision panel; keep metadata legible. */
-.scenario-context-canvas .react-flow__node :is(span, p, .text-xs) { font-size: max(16px, 1em); }
+.scenario-context-canvas .react-flow__node :is(span, p, .text-xs) { font-size: max(16px, var(--graph-node-meta-size, 16px), 1em); }
 
 .investigation-navigation summary:focus-visible,
 .investigation-queue summary:focus-visible { outline: 2px solid var(--foreground); outline-offset: 4px; border-radius: 0.25rem; }

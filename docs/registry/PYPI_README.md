@@ -104,9 +104,19 @@ helm upgrade --install agent-bom deploy/helm/agent-bom \
 
 ![agent-bom dashboard overview](https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/docs/images/dashboard-live.png)
 
-### Agent mesh graph
+### Follow an agent to its findings
 
-![agent-bom agent mesh graph](https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/docs/images/mesh-live.png)
+![Sample production environment showing agents, MCP servers, dependencies and findings, with modeled access labeled](https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/docs/images/graph-environment-dark-live.png)
+
+Follow Document Intake Agent → document-tools MCP → pillow@9.0.0 → CVE-2023-4863. This is a fictional sample estate; dashed access and credential links are modeled, not observed execution.
+
+### Inspect why two records are linked
+
+![Repository pin, image inventory and deployment occurrence resolve to one package, with relationship evidence open](https://raw.githubusercontent.com/koda-ai-studio/agent-bom/main/docs/images/graph-relationship-dark-live.png)
+
+Real parsers, modeled local infrastructure: a repository pin, image SBOM and Kubernetes workload resolve to one package. The image inventory and deployment occurrence stay distinct. Select an arrow to inspect its source and evidence; a graph path does not prove execution or exploitation.
+
+[Explore the reference evidence lab](https://github.com/koda-ai-studio/agent-bom/tree/main/examples/reference-evidence-lab) · [Graph guide](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/GALLERY.md)
 
 ## What it scans
 
