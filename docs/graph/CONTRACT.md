@@ -84,6 +84,15 @@ case-sensitive resource identifiers. Agent graph IDs include source or config
 scope; exports retain the graph aliases calculated before config-path redaction.
 Two same-named agents in different config files remain separate occurrences.
 
+MCP instance IDs retain the complete executable, argv element boundaries,
+working directory and configured environment in an opaque fingerprint. URL
+paths, parameters and query routing remain significant. A registry artifact
+is metadata, not proof of a shared endpoint or process. Configured stdio
+launches stay scoped to their declaring agent; matching recipes do not prove
+one runtime process. Remote endpoint nodes can be shared, while every agent
+retains its own relationship. Earlier recipe/name IDs remain explicit alias
+candidates and are not resolved when multiple current instances claim them.
+
 An upgrade does not rewrite stored snapshots. SQLite and Postgres persist new
 canonical-ID receipts and read historical rows with their original version-2
 identity. Exported IDs already recorded in imported graphs are retained. A

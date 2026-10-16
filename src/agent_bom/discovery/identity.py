@@ -4,37 +4,30 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from agent_bom.canonical_ids import mcp_server_identity_discriminator
+from agent_bom.canonical_ids import agent_graph_id_for
 from agent_bom.models import Agent, AgentStatus, AgentType, MCPResource, MCPServer, MCPTool, Package
 
 
 def server_identity_key(server: MCPServer) -> str:
-    """Return a stable identity key independent of discovery source.
-
-    Shares the non-registry url/command/name discriminator with
-    ``canonical_mcp_server_id`` so a server's dedup identity and its served
-    canonical id stay in lock-step.
-    """
-    if server.registry_id:
-        return f"registry:{server.registry_id.strip().lower()}"
-    return mcp_server_identity_discriminator(server.name, server.command, url=server.url, args=server.args)
+    """Use the served instance identity, including endpoint and argv boundaries."""
+    return server.canonical_id
 
 
 def deduplicate_discovered_agents(agents: list[Agent]) -> list[Agent]:
-    """Collapse duplicate MCP servers across config/process/container/k8s sources.
+    """Merge repeated declarations only within the same agent identity.
 
-    The first source wins for user-facing placement. Later sources enrich the
-    same server with additional tools, resources, packages, env keys, warnings,
-    and provenance labels instead of creating duplicate graph nodes.
+    Equal URLs may describe a shared remote endpoint, but must not discard
+    another agent's relationship to it. Equal launch recipes do not prove the
+    same process across configuration, container and runtime observations.
     """
-    seen: dict[str, MCPServer] = {}
+    seen: dict[tuple[str, str, str], MCPServer] = {}
     merged_agents: list[Agent] = []
 
     for agent in agents:
         deduped_servers: list[MCPServer] = []
         for server in agent.mcp_servers:
             _record_source(server, agent)
-            key = server_identity_key(server)
+            key = (agent.stable_id, agent_graph_id_for(agent), server_identity_key(server))
             existing = seen.get(key)
             if existing is None:
                 seen[key] = server

@@ -269,6 +269,11 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
                 in {
                     "test_entrypoint_registries.py",
                     "test_mcp_server_scheme_aliases.py",
+                    "test_graph_canonical_node_ids.py",
+                    "test_canonical_identity_boundaries.py",
+                    "test_discovery_identity.py",
+                    "test_scan_characterization.py",
+                    "test_output_render_characterization.py",
                     "test_dependency_reach.py",
                     "test_sarif_schema_2_1_0.py",
                     "test_demo_inventory_accuracy.py",

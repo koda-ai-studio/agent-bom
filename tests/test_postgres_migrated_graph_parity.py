@@ -373,6 +373,18 @@ def test_identity_upgrade_preserves_snapshot_ids_and_ambiguous_aliases(migrated_
         reset_current_tenant(token)
 
 
+def test_mcp_instance_configurations_survive_postgres_replay(migrated_fresh_database):
+    from agent_bom.api.postgres_common import reset_current_tenant, set_current_tenant
+    from agent_bom.api.postgres_graph import PostgresGraphStore
+    from tests.test_canonical_identity_boundaries import mcp_instance_storage_contract
+
+    token = set_current_tenant("tenant")
+    try:
+        mcp_instance_storage_contract(PostgresGraphStore())
+    finally:
+        reset_current_tenant(token)
+
+
 def test_merged_runtime_receipts_survive_postgres_replay(migrated_fresh_database):
     from dataclasses import replace
 

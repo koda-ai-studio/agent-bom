@@ -6,7 +6,7 @@ from typing import Any
 
 from agent_bom.api.graph_node_alias import resolve_snapshot_node_id
 from agent_bom.api.graph_store import SQLiteGraphStore
-from agent_bom.canonical_ids import legacy_canonical_id_v2, mcp_server_identity_discriminator
+from agent_bom.canonical_ids import legacy_canonical_id_v2
 from agent_bom.graph.builder import build_unified_graph_from_report
 from agent_bom.graph.types import EntityType
 
@@ -31,10 +31,9 @@ def _server(graph: Any) -> Any:
 
 
 def _legacy_id(server_id: str, script: str) -> str:
-    current = str(server_id).rsplit(":", 1)[-1]
-    legacy = legacy_canonical_id_v2("mcp_server", mcp_server_identity_discriminator("files", "node", args=[script]))
-    assert legacy != current
-    return server_id[: -len(current)] + legacy
+    # Frozen pre-instance spelling: no config owner scope and joined argv.
+    legacy = legacy_canonical_id_v2("mcp_server", f"cmd:node:{script}")
+    return "server:" + legacy
 
 
 def test_mixed_case_server_old_lowercased_id_resolves(tmp_path: Any) -> None:
@@ -49,11 +48,14 @@ def test_mixed_case_server_old_lowercased_id_resolves(tmp_path: Any) -> None:
     assert resolve_snapshot_node_id(store, tenant_id="default", scan_id="scan-a", node_id=legacy) == (server.id, legacy)
 
 
-def test_lowercase_server_records_no_case_scheme_alias() -> None:
+def test_lowercase_server_retains_prior_recipe_and_name_aliases() -> None:
     graph = build_unified_graph_from_report(_report("/srv/teama/server.js"), scan_id="scan-a", tenant_id="default")
     server = _server(graph)
     # Earlier configured and name-only graph ids remain explicit aliases.
-    assert server.attributes["identity"]["aliases"] == ["server:cfg-bc01a49e73e6:claude-desktop:files", "server:claude-desktop:files"]
+    aliases = server.attributes["identity"]["aliases"]
+    assert {"server:cfg-bc01a49e73e6:claude-desktop:files", "server:claude-desktop:files"} <= set(aliases)
+    assert _legacy_id(server.id, "/srv/teama/server.js") in aliases
+    assert server.id not in aliases
 
 
 def test_name_only_server_keeps_previous_unscoped_alias() -> None:
