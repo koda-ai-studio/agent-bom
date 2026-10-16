@@ -373,6 +373,40 @@ def test_identity_upgrade_preserves_snapshot_ids_and_ambiguous_aliases(migrated_
         reset_current_tenant(token)
 
 
+def test_merged_runtime_receipts_survive_postgres_replay(migrated_fresh_database):
+    from dataclasses import replace
+
+    from agent_bom.api.postgres_common import reset_current_tenant, set_current_tenant
+    from agent_bom.api.postgres_graph import PostgresGraphStore
+    from agent_bom.graph.path_evidence import annotate_attack_path_evidence
+    from tests.test_exposure_path_evidence_parity import _serialize_both
+    from tests.test_graph_typed_hop_boundaries import graph_and_path
+
+    graph, path = graph_and_path()
+    edge = graph.edges[0]
+    graph.add_edge(replace(edge, evidence={"event_id": "event:2", "blocked": True}))
+    graph.attack_paths = [annotate_attack_path_evidence(path, graph)]
+    token = set_current_tenant("tenant")
+    try:
+        PostgresGraphStore().save_graph(graph)
+        restored = PostgresGraphStore().load_graph(tenant_id="tenant", scan_id="snapshot")
+        assert restored is not None
+        for payload in _serialize_both(restored.attack_paths[0], nodes=list(restored.nodes.values()), edges=restored.edges):
+            receipt = payload["hopEvidence"][0]
+            assert receipt["canonical_edge_id"] == edge.canonical_id
+            assert receipt["runtime_outcome"] == "blocked"
+            assert {r["event_id"] for r in receipt["runtime_references"]} == {"event:1", "event:2"}
+            assert payload["reachability"] == "unknown"
+    finally:
+        reset_current_tenant(token)
+    token = set_current_tenant("other")
+    try:
+        other = PostgresGraphStore().load_graph(tenant_id="other", scan_id="snapshot")
+        assert other is None or (not other.nodes and not other.edges and not other.attack_paths)
+    finally:
+        reset_current_tenant(token)
+
+
 def test_unverified_scanner_match_survives_postgres_api_replay(migrated_fresh_database, tmp_path, monkeypatch):
     from starlette.testclient import TestClient
 

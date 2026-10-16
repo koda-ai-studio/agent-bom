@@ -1,9 +1,8 @@
 """Typed MITRE ATT&CK / ATLAS technique enrichment for attack paths (#4108).
 
 Derives *potential* technique/tactic mappings for each hop of an
-:class:`~agent_bom.graph.container.AttackPath` from the OBSERVED GRAPH EVIDENCE —
-the hop's edge relationship type, the target node's entity type, and the edge's
-evidence dict — never by parsing the human-readable ``summary`` / edge-label
+:class:`~agent_bom.graph.container.AttackPath` from source-backed prerequisites
+in the hop's typed edge and evidence — never by parsing the human-readable ``summary`` / edge-label
 text. A hop whose evidence maps to no known technique is left UNMAPPED
 (fail-closed / honest): the kill-chain surfaces only the techniques the evidence
 supports.
@@ -19,61 +18,30 @@ detections. Nothing in this module asserts observed attacker activity.
 
 from __future__ import annotations
 
-from agent_bom.cloud.normalization import coerce_truthy
+from agent_bom.graph.compromise import _scope_gaps
+from agent_bom.graph.consequence.eligibility import _receipt_scope
 from agent_bom.graph.container import AttackPath, TechniqueMapping, UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
-from agent_bom.graph.node import UnifiedNode
+from agent_bom.graph.hop_evidence import HopAuthorityEvidence, authority_evidence, runtime_evidence_references
+from agent_bom.graph.path_evidence import _runtime_outcome, _runtime_state, resolve_typed_hop
 from agent_bom.graph.types import EntityType, RelationshipType
 
-# ── Evidence → technique rules ───────────────────────────────────────────────
-#
-# Each rule keys off the OBSERVED edge relationship (and, where the signal needs
-# it, the target node's entity type or the edge evidence). ``catalog`` selects
-# which bundled catalog validates the id and supplies its tactics.
-
+# A catalog identifier is not evidence of its prerequisites. These narrow rules
+# map recorded behavior/permissions to potential techniques, never detections.
 _ATTACK = "attack"
 _ATLAS = "atlas"
-
-# Data-store targets — reaching a crown-jewel store is a "collection" signal.
-_DATA_ACCESS_RELS = frozenset(
-    {
-        RelationshipType.STORES,
-        RelationshipType.HAS_PERMISSION,
-        RelationshipType.CAN_ACCESS,
-        RelationshipType.ACCESSED,
-        RelationshipType.TRACE_STEP,
-    }
-)
+MAPPED_RELATIONSHIPS = frozenset({RelationshipType.CAN_ACCESS, RelationshipType.INVOKED})
 _VULN_RELS = frozenset({RelationshipType.VULNERABLE_TO, RelationshipType.EXPLOITABLE_VIA})
-_CRED_RELS = frozenset({RelationshipType.EXPOSES_CRED})
-_TOOL_RELS = frozenset({RelationshipType.REACHES_TOOL, RelationshipType.PROVIDES_TOOL})
-_ASSUME_RELS = frozenset({RelationshipType.ASSUMES, RelationshipType.INHERITS})
-_CRED_TYPES = frozenset({EntityType.CREDENTIAL, EntityType.CREDENTIAL_REF})
-
-
-def _resolve_hop(
-    graph: UnifiedGraph,
-    source_id: str,
-    target_id: str,
-    rel: RelationshipType,
-) -> UnifiedEdge | None:
-    """Return the observed edge object for this hop (carries edge evidence)."""
-    for edge in graph.adjacency.get(source_id, []):
-        if (
-            edge.source == source_id
-            and edge.target == target_id
-            and edge.relationship == rel
-            and edge.traversable
-            and edge.direction == "directed"
-        ):
-            return edge
-    return None
+_STORAGE_READS = {
+    ("gcp", "storage.objects.get"),
+    ("azure", "Microsoft.Storage/storageAccounts/blobServices/containers/blobs/read"),
+}
 
 
 def relationship_evidence_basis(edge: UnifiedEdge) -> str | None:
     """Use explicit collector semantics; topology alone never implies observation."""
     for values in (edge.provenance, edge.evidence):
-        for key in ("basis", "evidence_basis", "evidence_tier"):
+        for key in ("basis", "evidence_basis", "evidence_tier", "tier"):
             value = values.get(key)
             if value in ("observed", "runtime_observed", "inferred", "modeled"):
                 return str(value)
@@ -84,53 +52,69 @@ def relationship_evidence_basis(edge: UnifiedEdge) -> str | None:
     return None
 
 
-def _candidate(
-    rel: RelationshipType,
-    source: UnifiedNode | None,
-    target: UnifiedNode | None,
-    edge: UnifiedEdge | None,
-) -> tuple[str, str, float, str] | None:
-    """Map one hop's observed evidence to ``(technique_id, catalog, confidence, provenance)``.
+def _storage_read_receipt(graph: UnifiedGraph, edge: UnifiedEdge) -> bool:
+    """Exact native authorization scope; no generic database/storage inference.
 
-    Returns ``None`` when no evidence maps to a technique (the hop stays unmapped).
-    Provenance is composed only from the relationship enum + node entity type +
-    edge evidence — never from the path summary or human edge-label text.
+    T1530: https://attack.mitre.org/techniques/T1530/ (object-storage data).
+    A recorded allow supplies a modeled prerequisite, not collection/exfiltration.
     """
-    target_type = target.entity_type if target is not None else None
-    target_ref = target.id if target is not None else "?"
-    prov_target = target_type.value if target_type is not None else "node"
 
-    # Reaching a crown-jewel data store — Data from Cloud Storage (collection).
-    if target_type == EntityType.DATA_STORE and rel in _DATA_ACCESS_RELS:
-        return "T1530", _ATTACK, 0.7, f"observed {rel.value} edge into {prov_target} '{target_ref}'"
+    raw = authority_evidence(edge.evidence)
+    if raw is None or raw["status"] != "recorded":
+        return False
+    authority = HopAuthorityEvidence.model_validate(raw)
+    scoped = _receipt_scope(graph, edge)
+    source, target = scoped.nodes.get(edge.source), scoped.nodes.get(edge.target)
+    if source is None or target is None or source.attributes.get("authorization_boundaries_truncated"):
+        return False
+    # Conflicting/negative receipts stay unresolved; never select the allow.
+    if any(record.decision != "allow" for record in authority.decisions):
+        return False
+    boundaries = source.attributes.get("authorization_boundaries", [])
+    if isinstance(boundaries, list) and any(isinstance(row, dict) and row.get("target_node_id") == edge.target for row in boundaries):
+        return False
+    return any(
+        (record.provider, record.action) in _STORAGE_READS
+        and bool(record.binding_ids and record.observed_at)
+        and not _scope_gaps(record, source, target)
+        for record in authority.decisions
+    )
 
-    # Exploiting a vulnerability. From an internet-exposed entry it maps to
-    # Exploit Public-Facing Application; elsewhere to Exploitation for Priv Esc.
-    if rel in _VULN_RELS or target_type == EntityType.VULNERABILITY:
-        if source is not None and coerce_truthy(source.attributes.get("internet_exposed")):
-            return "T1190", _ATTACK, 0.85, f"observed {rel.value} edge from internet-exposed entry into {prov_target} '{target_ref}'"
-        return "T1068", _ATTACK, 0.8, f"observed {rel.value} edge into {prov_target} '{target_ref}'"
 
-    # Harvesting exposed credentials — Unsecured Credentials (credential-access).
-    if rel in _CRED_RELS or target_type in _CRED_TYPES:
-        return "T1552", _ATTACK, 0.8, f"observed {rel.value} edge into {prov_target} '{target_ref}'"
+def _candidate(graph: UnifiedGraph, edge: UnifiedEdge) -> tuple[str, str, str, str] | None:
+    """Return (technique, catalog, basis, explanation) for supported prerequisites."""
 
-    # Reaching an agent tool — ATLAS AI Agent Tool Invocation.
-    if rel in _TOOL_RELS or target_type == EntityType.TOOL:
-        return "AML.T0053", _ATLAS, 0.65, f"observed {rel.value} edge into {prov_target} '{target_ref}'"
-
-    # Privilege escalation via an assume-chain effective permission.
-    if rel == RelationshipType.HAS_PERMISSION and (edge is not None and (edge.evidence or {}).get("access") == "assume_chain"):
-        return "T1548", _ATTACK, 0.75, f"observed {rel.value} edge (assume_chain) into {prov_target} '{target_ref}'"
-
-    # Assuming a role / inheriting a principal — Valid Accounts.
-    if rel in _ASSUME_RELS:
-        return "T1078", _ATTACK, 0.7, f"observed {rel.value} edge into {prov_target} '{target_ref}'"
-
-    # Internet exposure edge — Exploit Public-Facing Application (initial-access).
-    if rel == RelationshipType.EXPOSED_TO:
-        return "T1190", _ATTACK, 0.7, f"observed {rel.value} edge into {prov_target} '{target_ref}'"
-
+    if edge.relationship not in MAPPED_RELATIONSHIPS:
+        return None
+    source, target = graph.nodes.get(edge.source), graph.nodes.get(edge.target)
+    if source is None or target is None or _runtime_outcome(edge) in {"blocked", "failed"}:
+        return None
+    if edge.relationship == RelationshipType.CAN_ACCESS and _storage_read_receipt(graph, edge):
+        return (
+            "T1530",
+            _ATTACK,
+            "modeled",
+            "modeled cloud-object read permission at collection; data collection and current access unproven",
+        )
+    # AML.T0053 requires AI-agent tool invocation, not a tool listing. An exact
+    # runtime reference identifies the recorded attempt, not successful abuse.
+    # https://atlas.mitre.org/techniques/AML.T0053
+    if (
+        edge.relationship == RelationshipType.INVOKED
+        and source.entity_type == EntityType.AGENT
+        and target.entity_type == EntityType.TOOL
+        and relationship_evidence_basis(edge) == "runtime_observed"
+        and _runtime_state(edge) == "observed"
+        and runtime_evidence_references(edge.evidence)
+    ):
+        return (
+            "AML.T0053",
+            _ATLAS,
+            "runtime_observed",
+            "runtime_observed agent tool invocation attempt; adversarial intent and outcome unproven",
+        )
+    # Generic vulnerability, exposure, credential reference, role assumption,
+    # and tool inventory do not establish the prerequisites of a technique.
     return None
 
 
@@ -199,17 +183,15 @@ def derive_attack_path_techniques(
             # ATT&CK/ATLAS annotate evidence-backed paths.  They must never
             # manufacture exploitability from structural topology.
             continue
-        source = graph.nodes.get(hops[i])
-        target = graph.nodes.get(hops[i + 1])
-        edge = _resolve_hop(graph, hops[i], hops[i + 1], rel)
-        if edge is None:
+
+        edge, _ = resolve_typed_hop(graph, hops[i], hops[i + 1], rel.value)
+        if edge is None or not edge.traversable or edge.direction != "directed":
             continue
-        candidate = _candidate(rel, source, target, edge)
+        candidate = _candidate(graph, edge)
         if candidate is None:
             continue
-        technique_id, catalog, confidence, provenance = candidate
-        basis = relationship_evidence_basis(edge)
-        provenance = provenance.replace("observed ", f"{basis or 'unclassified'} ", 1)
+        technique_id, catalog, basis, provenance = candidate
+        provenance += f"; edge {edge.canonical_id}"
         if catalog == _ATLAS:
             resolved = _atlas_meta(technique_id, catalogs)
             if resolved is None:
@@ -229,7 +211,7 @@ def derive_attack_path_techniques(
                 catalog=catalog,
                 tactics=tactics,
                 provenance=provenance,
-                confidence=min(confidence, edge.confidence) if basis else None,
+                confidence=None,  # No calibrated technique-mapping score is available.
                 evidence_basis=basis,
             )
         )

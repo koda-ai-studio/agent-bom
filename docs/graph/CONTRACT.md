@@ -451,10 +451,25 @@ Incomplete or historical evidence remains unavailable for verification. API and
 MCP exposure projections also check the matching directed topology. Page-size
 limits on the path queue do not certify or invalidate an individual hop receipt.
 
-MITRE mappings describe potential techniques supported by matching directed,
-traversable edges. Their `evidence_basis` preserves observed, inferred, or modeled
-provenance; absent provenance leaves confidence unavailable. A mapped technique
-is not evidence that an attacker used it.
+Each hop must identify exactly one directed relationship by source, target and
+relationship type. Missing types or conflicting duplicate records remain unknown.
+`canonical_edge_id` identifies the recorded source edge in API/MCP receipts and
+the expanded UI inspector. Merged runtime observations retain separate event and
+trace references; a denial or failed aggregate cannot disappear when another
+source reports an attempt. Incomplete or bounded runtime receipt lists prevent
+verification. An invocation attempt does not establish successful downstream use.
+
+MITRE mappings describe potential techniques with source-backed prerequisites.
+[T1530](https://attack.mitre.org/techniques/T1530/) requires cloud-object storage
+context: the path mapper accepts an exact recorded native read permission and
+labels it modeled at collection, with current access and collection unproven.
+[AML.T0053](https://atlas.mitre.org/techniques/AML.T0053) requires an AI-agent tool
+invocation: an exact runtime reference supports an attempt, with adversarial
+intent and outcome unproven. Generic vulnerability, credential, role, datastore
+or tool-inventory edges do not meet those prerequisites. Mapping confidence stays
+unavailable without a calibrated basis. A mapped technique is not evidence that
+an attacker used it. Malformed legacy mapping entries are skipped independently;
+the stored historical payload is not rewritten.
 
 Attack-path campaigns expose `priority_score` with
 `priority_method: structural_path_rank.v1` for structural prioritization.

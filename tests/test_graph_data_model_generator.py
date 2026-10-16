@@ -249,3 +249,13 @@ def test_workspace_tables_are_labeled_scratch():
     page = gen.render()[f"{storage.DOMAIN_DOC_DIR}/graph.md"]
     for table in scratch:
         assert any(line.startswith(f"| `{table.name}` |") and "scratch" in line for line in page.splitlines())
+
+
+def test_technique_relationship_inventory_requires_source_backed_prerequisites() -> None:
+    from agent_bom.graph.attack_path_mitre import MAPPED_RELATIONSHIPS
+
+    assert MAPPED_RELATIONSHIPS == frozenset({RelationshipType.CAN_ACCESS, RelationshipType.INVOKED})
+    text = _all_docs_text()
+    assert "MAPPED_RELATIONSHIPS" in text
+    assert "requires source-backed prerequisites" in text
+    assert "_DATA_ACCESS_RELS" not in text

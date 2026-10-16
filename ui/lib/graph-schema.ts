@@ -439,6 +439,7 @@ export type HopAuthorityEvidence = {
 };
 
 export interface GraphHopEvidence {
+  canonical_edge_id?: string | null;
   runtime_references?: Array<{ event_id?: string; trace_id?: string }> | undefined;
   source_node_id: string;
   target_node_id: string;

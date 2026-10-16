@@ -13,6 +13,9 @@ from agent_bom.graph.correlation_scope import CORRELATION_IDENTITY_VERSION
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.edge_evidence import recorded_tier
 from agent_bom.graph.hop_evidence import authority_evidence, runtime_evidence_references
+from agent_bom.graph.runtime_receipts import runtime_outcome as _runtime_outcome
+from agent_bom.graph.runtime_receipts import runtime_receipts_limited
+from agent_bom.graph.runtime_receipts import runtime_state as _runtime_state
 from agent_bom.graph.types import RelationshipType
 
 HopEdges = dict[tuple[str, str], list[UnifiedEdge]]
@@ -33,14 +36,6 @@ def _qualify_structural_summary(summary: str) -> str:
     if summary in {_LEGACY_STRUCTURAL_SUMMARY, f"Unverified structural candidate. {_LEGACY_STRUCTURAL_SUMMARY}"}:
         return STRUCTURAL_EXPOSURE_SUMMARY
     return summary
-
-
-_RUNTIME_RELATIONSHIPS = frozenset(
-    {
-        RelationshipType.INVOKED.value,
-        RelationshipType.ACCESSED.value,
-    }
-)
 
 
 def _relationship(edge: UnifiedEdge) -> str:
@@ -92,37 +87,6 @@ def _freshness(edge: UnifiedEdge) -> str:
     return str(value or "unknown")
 
 
-def _runtime_state(edge: UnifiedEdge) -> str:
-    # A denial is an observed attempt, never evidence of a completed action.
-    # Negative facts win even if another source supplied an "observed" label.
-    if (
-        edge.evidence.get("blocked") is True
-        or edge.evidence.get("decision") in ("blocked", "denied", "explicit_deny", "implicit_deny")
-        or edge.evidence.get("runtime_observed_state") == "blocked"
-        or edge.provenance.get("runtime_observed_state") == "blocked"
-    ):
-        return "blocked"
-    explicit = edge.evidence.get("runtime_observed_state") or edge.provenance.get("runtime_observed_state")
-    if explicit in ("observed", "blocked", "not_observed"):
-        return str(explicit)
-    if _relationship(edge) in _RUNTIME_RELATIONSHIPS or edge.evidence.get("runtime_observed"):
-        return "observed"
-    return "not_observed"
-
-
-def _runtime_outcome(edge: UnifiedEdge) -> str:
-    """Retain failed aggregate attempts without inferring downstream success."""
-    if _runtime_state(edge) == "blocked":
-        return "blocked"
-    observed = edge.evidence.get("observation_count")
-    failed = edge.evidence.get("failure_count")
-    if type(observed) is int and type(failed) is int and observed > 0 and failed == observed:
-        return "failed"
-    # A permitted invocation or an event without an error is not an outcome
-    # receipt. Mixed aggregates also cannot identify which action succeeded.
-    return "unknown"
-
-
 def _runtime_reasons(receipts: Sequence[Mapping[str, Any]]) -> list[str]:
     reasons: list[str] = []
     if any(item.get("runtime_observed_state") == "blocked" or item.get("runtime_outcome") == "blocked" for item in receipts):
@@ -155,25 +119,35 @@ def _analysis(graph: UnifiedGraph, *, hop_count: int, path: AttackPath | None = 
     return result
 
 
-def _edge_for_hop(
+def resolve_typed_hop(
     graph: UnifiedGraph, source: str, target: str, relationship: str, hop_edges: HopEdges | None = None
-) -> UnifiedEdge | None:
+) -> tuple[UnifiedEdge | None, str | None]:
+    """Resolve one exact directed key; never choose a representative witness."""
+    if not relationship:
+        return None, "hop_relationship_missing"
+    try:
+        RelationshipType(relationship)
+    except ValueError:
+        return None, "unsupported_hop_relationship"
     candidates = [
         edge
         for edge in (hop_edges.get((source, target), []) if hop_edges is not None else graph.adjacency.get(source, []))
-        if edge.target == target and (not relationship or _relationship(edge) == relationship)
+        if edge.source == source and edge.target == target and _relationship(edge) == relationship
     ]
-    if not candidates:
-        return None
-    return max(
-        candidates,
-        key=lambda edge: (
-            bool(edge.traversable),
-            bool(_source_snapshot_ids(edge, graph)),
-            float(edge.confidence),
-            edge.id,
-        ),
-    )
+    if len(candidates) != 1:
+        return None, "ambiguous_hop_relationship" if candidates else "hop_relationship_not_recorded"
+    return candidates[0], None
+
+
+def _runtime_hop_receipt(edge: UnifiedEdge) -> dict[str, Any]:
+    state, outcome = _runtime_state(edge), _runtime_outcome(edge)
+    return {
+        "canonical_edge_id": edge.canonical_id,
+        "reason_codes": ["runtime_receipts_limited"] if runtime_receipts_limited(edge.evidence) else [],
+        "runtime_observed_state": state,
+        "runtime_references": runtime_evidence_references(edge.evidence) if state in {"observed", "blocked"} else [],
+        **({"runtime_outcome": outcome} if outcome != "unknown" else {}),
+    }
 
 
 def annotate_attack_path_evidence(path: AttackPath, graph: UnifiedGraph, *, hop_edges: HopEdges | None = None) -> AttackPath:
@@ -183,13 +157,14 @@ def annotate_attack_path_evidence(path: AttackPath, graph: UnifiedGraph, *, hop_
     receipts: list[dict[str, Any]] = []
     for index, (source, target) in enumerate(zip(path.hops, path.hops[1:])):
         relationship = path.edges[index] if index < len(path.edges) else ""
-        edge = _edge_for_hop(graph, source, target, relationship, hop_edges)
+        edge, gap = resolve_typed_hop(graph, source, target, relationship, hop_edges)
         if edge is None:
             receipts.append(
                 {
                     "source_node_id": source,
                     "target_node_id": target,
                     "relationship": relationship,
+                    "reason_codes": [gap],
                     "source_snapshot_ids": [],
                     "relationship_provenance": "unavailable",
                     "correlation_identity_status": "unavailable",
@@ -212,19 +187,18 @@ def annotate_attack_path_evidence(path: AttackPath, graph: UnifiedGraph, *, hop_
                 "source_node_id": source,
                 "target_node_id": target,
                 "relationship": _relationship(edge),
+                **_runtime_hop_receipt(edge),
                 "source_snapshot_ids": source_ids,
                 "relationship_provenance": "recorded" if _has_relationship_provenance(edge) else "unavailable",
                 "correlation_identity_status": "current" if _correlation_identity_current(edge) else "recomputation_required",
                 "evidence_tier": _evidence_tier(edge),
                 "confidence": float(edge.confidence),
                 "freshness": freshness,
-                "runtime_observed_state": _runtime_state(edge),
-                "runtime_references": runtime_evidence_references(edge.evidence) if _runtime_state(edge) in {"observed", "blocked"} else [],
-                **({"runtime_outcome": _runtime_outcome(edge)} if _runtime_outcome(edge) != "unknown" else {}),
                 "direction": edge.direction,
                 "traversable": bool(edge.traversable),
                 "complete": bool(
                     edge.traversable
+                    and not runtime_receipts_limited(edge.evidence)
                     and edge.direction == "directed"
                     and source_ids
                     and _has_relationship_provenance(edge)

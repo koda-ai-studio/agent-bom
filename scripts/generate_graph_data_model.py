@@ -112,15 +112,8 @@ ANALYSES: tuple[tuple[str, str, str, frozenset[str]], ...] = (
     (
         "MT",
         "ATT&CK / ATLAS hop mapping",
-        "graph/attack_path_mitre.py `_DATA_ACCESS_RELS`, `_VULN_RELS`, `_CRED_RELS`, `_TOOL_RELS`, `_ASSUME_RELS`",
-        frozenset(
-            r.value
-            for r in attack_path_mitre._DATA_ACCESS_RELS
-            | attack_path_mitre._VULN_RELS
-            | attack_path_mitre._CRED_RELS
-            | attack_path_mitre._TOOL_RELS
-            | attack_path_mitre._ASSUME_RELS
-        ),
+        "graph/attack_path_mitre.py `MAPPED_RELATIONSHIPS` (requires source-backed prerequisites)",
+        frozenset(r.value for r in attack_path_mitre.MAPPED_RELATIONSHIPS),
     ),
     (
         "RT",
