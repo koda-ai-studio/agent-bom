@@ -70,7 +70,7 @@ for (const theme of ["light", "dark"]) test(`three evidence sources stay readabl
   await page.locator('.react-flow__node[data-id="vuln:demo"]').click();
   await expect(page.getByTestId("graph-entity-drawer")).toBeVisible();
   await expect.poll(async () => page.locator(".react-flow .graph-entity-glyph").evaluateAll(es => Math.min(...es.map(e => e.getBoundingClientRect().width))))
-    .toBeGreaterThanOrEqual(50);
+    .toBeGreaterThanOrEqual(62);
   const before = (await page.locator(".react-flow").boundingBox())!;
   await page.screenshot({ path: info.outputPath(`evidence-${theme}.png`), animations: "disabled" });
   await page.setViewportSize({ width: 1680, height: 900 });

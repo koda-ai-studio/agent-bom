@@ -2363,8 +2363,12 @@ function GraphPageInner() {
     ownerActive: Boolean(session),
     localMode: session?.recommended_ui_mode === "no_auth",
   });
-  const fitVisible = useCallback(() => {
-    void reactFlow.fitView({ ...viewportOptions, duration: 240 });
+  const fitVisible = useCallback(async () => {
+    await reactFlow.fitView({ ...viewportOptions, duration: 240 });
+    // Readability-sized captions and glyphs settle after the zoom changes.
+    // Refit their measured bounds once, only for the explicit Fit all action.
+    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    await reactFlow.fitView({ ...viewportOptions, duration: 0 });
   }, [reactFlow, viewportOptions]);
   const fitSelection = useCallback(async () => {
     if (rollupNavigationActive) {
@@ -3792,7 +3796,12 @@ function GraphPageInner() {
             />
           ) : (
             <ReactFlow
-              style={{ "--graph-node-label-size": `${Math.min(24, Math.max(18, 13 / Math.max(graphViewport.zoom, 0.16)))}px` } as CSSProperties}
+              style={{
+                "--graph-node-label-size": `${Math.min(28, Math.max(18, 15 / Math.max(graphViewport.zoom, 0.16)))}px`,
+                "--graph-node-glyph-size": `${Math.min(112, Math.max(72, 64 / Math.max(graphViewport.zoom, 0.16)))}px`,
+                "--graph-node-icon-size": `${Math.min(48, Math.max(32, 28 / Math.max(graphViewport.zoom, 0.16)))}px`,
+                "--graph-node-meta-size": `${Math.min(16, Math.max(10, 10.5 / Math.max(graphViewport.zoom, 0.16)))}px`,
+              } as CSSProperties}
               className={selectedScenarioId ? "scenario-context-canvas" : undefined}
               key={captureMode ? `lineage-capture:${scenarioExpanded ? "full" : "context"}` : `${presentation.storageKey}:${presentation.restoredSavedState ? "restored" : "initial"}:${scenarioExpanded ? "full" : "context"}`}
               nodes={presentation.nodes}

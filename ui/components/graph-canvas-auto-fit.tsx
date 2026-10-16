@@ -31,13 +31,12 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     const frame = canvas?.closest<HTMLElement>("[data-graph-adaptive-frame]");
     if (!frame) return;
     const measure = () => setSpaceAbove(Math.max(0, frame.getBoundingClientRect().top));
-    // Opening filters can move the canvas without changing its width. Observe
-    // the preceding chrome, not graph mutations or every pan/hover frame.
+    // Deliberate view controls change usable space. A new-snapshot notice
+    // must not move the operator's pinned camera, so do not observe all chrome.
     const observer = new ResizeObserver(measure);
     observer.observe(frame);
-    for (let element: Element | null = frame; element && element.tagName !== "MAIN"; element = element.parentElement) {
-      for (let sibling = element.previousElementSibling; sibling; sibling = sibling.previousElementSibling) observer.observe(sibling);
-    }
+    const controls = frame.closest("main")?.querySelector('[data-testid="graph-view-controls"]');
+    if (controls) observer.observe(controls);
     measure();
     return () => observer.disconnect();
   }, [canvas]);
