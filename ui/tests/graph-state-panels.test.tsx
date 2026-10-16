@@ -97,3 +97,12 @@ describe('Graph loading states', () => {
     expect(screen.getByTestId('graph-refresh-overlay')).toHaveTextContent('Refreshing graph window')
   })
 })
+
+it('offers scan and import steps for unloaded inventory instead of filter advice', () => {
+  render(<GraphEmptyState inventoryEmpty title="No nodes match the current graph scope"
+    detail="No results for these filters." suggestions={["Lower severity."]} />)
+  expect(screen.getByText('No graph inventory loaded')).toBeInTheDocument()
+  expect(screen.getByRole('link', {name: 'Start a scan'})).toHaveAttribute('href', '/scan')
+  expect(screen.getByRole('link', {name: 'Import a report from Overview'})).toHaveAttribute('href', '/')
+  expect(screen.queryByText('Lower severity.')).not.toBeInTheDocument()
+})

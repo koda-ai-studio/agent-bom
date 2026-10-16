@@ -11,6 +11,7 @@ import {
   useReactFlow,
   useNodesInitialized,
   useViewport,
+  useStore,
   type Edge,
   type Node,
 } from "@xyflow/react";
@@ -145,9 +146,12 @@ function InvestigationFlow({
   const { fitView } = reactFlow;
   const viewport = useViewport();
   const nodesInitialized = useNodesInitialized();
+  const canvasWidth = useStore(state => state.width);
+  const canvasHeight = useStore(state => state.height);
   const [compact, setCompact] = useState(false);
   const [navigationId, setNavigationId] = useState<string | null>(null);
   const [overview, setOverview] = useState(false);
+  const manualViewportScope = useRef<string | null>(null);
   useEffect(() => {
     if (!embedded) return;
     const media = window.matchMedia("(max-width: 639px)");
@@ -199,14 +203,15 @@ function InvestigationFlow({
     void fitView({ nodes: [{ id }], minZoom: 1, maxZoom: 1, padding: 0.08, duration: 200 });
   }, [fitView]);
   useEffect(() => {
-    if (nodes.length === 0 || !nodesInitialized || presentation.hasSavedState) return;
+    if (nodes.length === 0 || !nodesInitialized || !canvasWidth || !canvasHeight || presentation.restoredSavedState || manualViewportScope.current === presentation.storageKey) return;
     const raf = requestAnimationFrame(() => {
       if (compact && navigationNode) focusNode(navigationNode.id);
       else void fitView(fitOptionsRef.current);
     });
     return () => cancelAnimationFrame(raf);
-  }, [compact, fitView, focusNode, navigationNode, nodes, nodesInitialized, presentation.hasSavedState]);
+  }, [canvasWidth, canvasHeight, compact, fitView, focusNode, navigationNode, nodes, nodesInitialized, presentation.restoredSavedState, presentation.storageKey]);
   const fitVisible = useCallback(() => {
+    manualViewportScope.current = null;
     setOverview(true);
     void fitView({ ...fitOptions, duration: 240 });
   }, [fitOptions, fitView]);
@@ -294,6 +299,12 @@ function InvestigationFlow({
           deleteKeyCode={null}
           onNodesChange={presentation.onNodesChange}
           onNodeDragStop={presentation.onNodeDragStop}
+          onMoveStart={event => {
+            // An automatic fit also emits move events. Only operator gestures
+            // pin this mount; a newly persisted automatic camera can still fit
+            // when opening the queue or resizing the canvas.
+            if (event) manualViewportScope.current = presentation.storageKey;
+          }}
           onMoveEnd={presentation.onMoveEnd}
           onNodeClick={(_, node) => { setNavigationId(node.id); onNodeSelect(node.id); }}
           onEdgeClick={(_, edge) => onEdgeSelect(edge)}

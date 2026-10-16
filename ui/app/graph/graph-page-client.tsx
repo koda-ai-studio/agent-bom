@@ -648,6 +648,7 @@ function GraphPageInner() {
   const graphViewport = useViewport();
   const [narrowViewport, setNarrowViewport] = useState(false);
   const [canvasLayoutAspect, setCanvasLayoutAspect] = useState(2.2);
+  const [graphNavigationMount, setGraphNavigationMount] = useState<HTMLDivElement | null>(null);
   useEffect(() => {
     const query = window.matchMedia("(max-width: 639px)");
     const update = () => setNarrowViewport(query.matches);
@@ -3693,6 +3694,7 @@ function GraphPageInner() {
             </div>
           )}
           {!rollupNavigationActive && !rollupDecisionActive && graphRenderer.kind === "react-flow" && displayNodes.length > 0 && <GraphLegendDock items={legendItems} separated />}
+          <div ref={setGraphNavigationMount} />
           <div data-graph-adaptive-frame className={`relative flex ${selectedAttackPath ? "h-[max(24rem,calc(100dvh-25rem))] sm:h-[clamp(24rem,50dvh,36rem)]" : selectedScenarioId ? "h-[max(24rem,calc(100dvh-25rem))] sm:h-[max(28rem,calc(100dvh-21rem))]" : "h-[var(--graph-adaptive-height,clamp(22rem,60dvh,48rem))]"} shrink-0 overflow-hidden rounded-lg border border-outline bg-surface`}>
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <GraphScenarioUnconnected
@@ -3745,6 +3747,7 @@ function GraphPageInner() {
             <div className="flex h-full items-center justify-center p-6 text-sm text-ink-secondary">No connected nodes in this proposal view. Select an unconnected item to inspect its details.</div>
           ) : displayNodes.length === 0 ? (
             <GraphEmptyState
+              inventoryEmpty={estateNodeCount === 0 && !investigationMode && !selectedScenarioId}
               title="No nodes match the current graph scope"
               detail={investigationMode && investigationMode.nodeCount > 0 ? `${investigationMode.nodeCount} nodes were returned, but the active display filters hide them. This does not establish an absence of risk.` : "No results for these layers, severity and scope."}
               suggestions={[
@@ -3845,6 +3848,8 @@ function GraphPageInner() {
               }}
             >
               <GraphCanvasAutoFit
+                navigationMount={graphNavigationMount}
+                navigationIds={selectedAttackPath?.hops}
                 enabled={!layoutPending && !selectedScenarioId && !selectedAttackPath}
                 layoutKey={compactLayoutKey}
                 anchorId={selectedNodeId ?? investigationMode?.rootId}

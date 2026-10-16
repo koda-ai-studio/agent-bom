@@ -837,6 +837,42 @@ test("ranked path selection opens the ordered path and can expand the interactiv
 });
 
 for (const theme of ["light", "dark"] as const) {
+  test(`selected graph refits after its desktop queue changes canvas width ${theme}`, async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.addInitScript(value => localStorage.setItem("agent-bom-theme", value), theme);
+    await routeCockpit(page);
+    await page.goto(`/security-graph?lens=attack-path&scan=${scanId}&path=top`);
+    await openPathQueue(page);
+    await page.getByLabel("Attack path queue").getByRole("button", { name: /#2/ }).click();
+    const graph = page.getByTestId("security-graph-investigation").locator(".react-flow");
+    await expect(graph.locator(".react-flow__node")).toHaveCount(3);
+    for (const width of [1440, 1280]) {
+      await page.setViewportSize({ width, height: 1000 });
+      await expect.poll(() => graph.evaluate(canvas => {
+        const viewport = canvas.getBoundingClientRect();
+        return [...canvas.querySelectorAll(".react-flow__node")].every(node => {
+          const box = node.getBoundingClientRect();
+          return box.left >= viewport.left - 2 && box.right <= viewport.right + 2
+            && box.top >= viewport.top - 2 && box.bottom <= viewport.bottom + 2;
+        });
+      })).toBe(true);
+    }
+    const box = await graph.boundingBox();
+    const viewport = graph.locator(".react-flow__viewport");
+    const beforePan = await viewport.getAttribute("style");
+    await page.mouse.move(box!.x + 100, box!.y + box!.height - 60);
+    await page.mouse.down();
+    await page.mouse.move(box!.x + 150, box!.y + box!.height - 60, { steps: 5 });
+    await page.mouse.up();
+    await expect(viewport).not.toHaveAttribute("style", beforePan!);
+    const pinned = await viewport.getAttribute("style");
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.waitForTimeout(500);
+    await expect(viewport).toHaveAttribute("style", pinned!);
+  });
+}
+
+for (const theme of ["light", "dark"] as const) {
 test(`mobile ranked path selection moves the ordered path into view ${theme}`, async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.addInitScript((value) => window.localStorage.setItem("agent-bom-theme", value), theme);

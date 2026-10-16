@@ -153,3 +153,31 @@ def test_root_bootstrap_assets_are_public_only_when_actually_mounted(monkeypatch
         assert not APIKeyMiddleware._is_dashboard_public_request(path, "POST")
     assert not APIKeyMiddleware._is_dashboard_public_request("/secrets.js", "GET")
     assert not APIKeyMiddleware._is_dashboard_public_request("/v1/findings", "GET")
+
+
+@pytest.mark.parametrize("path", ["/graph", "/security-graph"])
+def test_missing_dashboard_explains_bundle_gap_without_opening_api(tmp_path, monkeypatch, path):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+
+    from agent_bom.api import server as server_module
+
+    monkeypatch.setenv("AGENT_BOM_API_KEY", "fixture-key")
+    monkeypatch.delenv("AGENT_BOM_NO_UI", raising=False)
+    monkeypatch.delenv("AGENT_BOM_NO_AUTH", raising=False)
+    monkeypatch.setattr(middleware_module, "_DASHBOARD_SPA_ROUTES", frozenset())
+    monkeypatch.setattr(middleware_module, "_DASHBOARD_PUBLIC_FILES", frozenset())
+    monkeypatch.setattr(server_module, "_dashboard_dist_dir", lambda: tmp_path / "missing-ui")
+    application = FastAPI()
+    application.add_middleware(APIKeyMiddleware, api_key="fixture-key")
+    application.get("/v1/graph")(lambda: {"private": True})
+    server_module._mount_dashboard(application)
+    with TestClient(application) as client:
+        response = client.get(path)
+        assert response.status_code == 503
+        assert "Dashboard not bundled" in response.text
+        assert "pip install" in response.text
+        assert client.get("/v1/graph").status_code == 401
+        assert not APIKeyMiddleware._is_dashboard_public_request("/v1/graph", "GET")
+        assert not APIKeyMiddleware._is_dashboard_public_request(path, "POST")
+        assert not APIKeyMiddleware._is_dashboard_public_request(path + "/unknown", "GET")
