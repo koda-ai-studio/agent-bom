@@ -227,8 +227,8 @@ def project_blast_radius(graph: UnifiedGraph, blast_data: list[dict[str, Any]], 
 
 
 def project_shared_servers(graph: UnifiedGraph, indexes: BuildIndexes) -> None:
-    for srv_name, agent_names in indexes.server_to_agents.items():
-        unique = sorted(set(agent_names))
+    for srv_id, agent_ids in indexes.server_to_agents.items():
+        unique = sorted(set(agent_ids))
         if len(unique) >= 2:
             for i, a1 in enumerate(unique):
                 for a2 in unique[i + 1 :]:
@@ -238,8 +238,9 @@ def project_shared_servers(graph: UnifiedGraph, indexes: BuildIndexes) -> None:
                             target=a2,
                             relationship=RelationshipType.SHARES_SERVER,
                             direction="bidirectional",
+                            traversable=False,
                             weight=3.0,
-                            evidence=edge_evidence("blast-radius", "derived", derived_via="shared_server", server=srv_name),
+                            evidence=edge_evidence("blast-radius", "derived", derived_via="shared_server", server=srv_id),
                         )
                     )
 

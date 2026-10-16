@@ -305,7 +305,7 @@ Stable ids come from `agent_bom.canonical_ids` (UUIDv5 over normalized parts).
 | `canonical_id` | `(*parts: 'Any') -> 'str'` |
 | `canonical_mcp_prompt_id` | `(name: 'str', arguments: 'Sequence[Mapping[str, Any]] | None' = None, *, server_id: 'str | None' = None) -> 'str'` |
 | `canonical_mcp_resource_id` | `(uri: 'str', mime_type: 'str | None' = None, *, server_id: 'str | None' = None) -> 'str'` |
-| `canonical_mcp_server_id` | `(name: 'str', command: 'str' = '', *, registry_id: 'str | None' = None, url: 'str | None' = None, args: 'Sequence[str] | None' = None) -> 'str'` |
+| `canonical_mcp_server_id` | `(name: 'str', command: 'str' = '', *, registry_id: 'str | None' = None, url: 'str | None' = None, args: 'Sequence[str] | None' = None, working_dir: 'str | None' = None, environment: 'Mapping[str, Any] | None' = None) -> 'str'` |
 | `canonical_mcp_tool_id` | `(name: 'str', input_schema: 'Mapping[str, Any] | bool | None' = None, *, server_id: 'str | None' = None) -> 'str'` |
 | `canonical_package_id` | `(name: 'str', version: 'str', ecosystem: 'str', purl: 'str | None' = None) -> 'str'` |
 <!-- trace-event-schema:start -->

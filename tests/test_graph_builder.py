@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from agent_bom.canonical_ids import agent_graph_id_for
+from agent_bom.canonical_ids import agent_graph_id_for, mcp_server_graph_id_for
 from agent_bom.graph import EntityType, NodeDimensions, RelationshipType, UnifiedGraph, UnifiedNode
 from agent_bom.graph.builder import _resolve_cloud_resource_node_id, build_unified_graph_from_report
 from agent_bom.graph.rollup import rollup_view
@@ -97,6 +97,8 @@ def _minimal_report():
 
 _BASE_AGENT = agent_graph_id_for(_minimal_report()["agents"][0])
 _BASE_AGENT_KEY = _BASE_AGENT.removeprefix("agent:")
+_BASE_SERVER = mcp_server_graph_id_for(_minimal_report()["agents"][0]["mcp_servers"][0], _minimal_report()["agents"][0])
+_CURSOR_SERVER = mcp_server_graph_id_for(_minimal_report()["agents"][1]["mcp_servers"][0], _minimal_report()["agents"][1])
 
 
 class TestBuildUnifiedGraphFromReport:
@@ -135,7 +137,7 @@ class TestBuildUnifiedGraphFromReport:
         credential = next(
             node
             for node in graph.nodes_by_type(EntityType.CREDENTIAL)
-            if node.label == "GITHUB_TOKEN" and node.attributes["server"].endswith(":mcp-fs")
+            if node.label == "GITHUB_TOKEN" and node.attributes["server"] == _BASE_SERVER
         )
         identity = graph.get_node("managed_identity:github:app/deployer")
 
@@ -578,8 +580,8 @@ class TestBuildUnifiedGraphFromReport:
 
     def test_tool_nodes_include_capability_facets(self):
         g = build_unified_graph_from_report(_minimal_report())
-        read_tool = g.nodes[f"tool:server:{_BASE_AGENT_KEY}:mcp-fs:read_file"]
-        write_tool = g.nodes[f"tool:server:{_BASE_AGENT_KEY}:mcp-fs:write_file"]
+        read_tool = g.nodes[f"tool:{_BASE_SERVER}:read_file"]
+        write_tool = g.nodes[f"tool:{_BASE_SERVER}:write_file"]
 
         assert "read" in read_tool.attributes["capabilities"]
         assert "write" in write_tool.attributes["capabilities"]
@@ -599,16 +601,16 @@ class TestBuildUnifiedGraphFromReport:
 
         github_creds = {node.id for node in g.nodes_by_type(EntityType.CREDENTIAL) if node.label == "GITHUB_TOKEN"}
         assert github_creds == {
-            f"cred:server:{_BASE_AGENT_KEY}:mcp-fs:GITHUB_TOKEN",
-            "cred:server:cursor:mcp-fs:GITHUB_TOKEN",
+            f"cred:{_BASE_SERVER}:GITHUB_TOKEN",
+            f"cred:{_CURSOR_SERVER}:GITHUB_TOKEN",
         }
         assert not any(edge.relationship == RelationshipType.SHARES_CRED for edge in g.edges)
 
     def test_credential_to_tool_reaches_edges(self):
         g = build_unified_graph_from_report(_minimal_report())
-        github_cred_id = f"cred:server:{_BASE_AGENT_KEY}:mcp-fs:GITHUB_TOKEN"
-        read_tool_id = f"tool:server:{_BASE_AGENT_KEY}:mcp-fs:read_file"
-        write_tool_id = f"tool:server:{_BASE_AGENT_KEY}:mcp-fs:write_file"
+        github_cred_id = f"cred:{_BASE_SERVER}:GITHUB_TOKEN"
+        read_tool_id = f"tool:{_BASE_SERVER}:read_file"
+        write_tool_id = f"tool:{_BASE_SERVER}:write_file"
 
         assert g.has_edge(github_cred_id, read_tool_id)
         assert g.has_edge(github_cred_id, write_tool_id)
@@ -617,7 +619,7 @@ class TestBuildUnifiedGraphFromReport:
             for edge in g.edges
             if edge.source == github_cred_id and edge.target == write_tool_id and edge.relationship == RelationshipType.REACHES_TOOL
         )
-        assert edge.evidence["server"] == f"server:{_BASE_AGENT_KEY}:mcp-fs"
+        assert edge.evidence["server"] == f"{_BASE_SERVER}"
         assert edge.evidence["credential_env_var"] == "GITHUB_TOKEN"
         assert edge.evidence["mapping_method"] == "server_scope_conservative"
         assert edge.evidence["confidence"] == "medium"
@@ -628,12 +630,12 @@ class TestBuildUnifiedGraphFromReport:
 
         g = build_unified_graph_from_report(report)
 
-        cursor_cred_id = "cred:server:cursor:mcp-fs:GITHUB_TOKEN"
-        claude_cred_id = f"cred:server:{_BASE_AGENT_KEY}:mcp-fs:OPENAI_API_KEY"
-        assert g.has_edge(cursor_cred_id, "tool:server:cursor:mcp-fs:delete_repo")
+        cursor_cred_id = f"cred:{_CURSOR_SERVER}:GITHUB_TOKEN"
+        claude_cred_id = f"cred:{_BASE_SERVER}:OPENAI_API_KEY"
+        assert g.has_edge(cursor_cred_id, f"tool:{_CURSOR_SERVER}:delete_repo")
         assert not any(
             edge.source == claude_cred_id
-            and edge.target == "tool:server:cursor:mcp-fs:delete_repo"
+            and edge.target == f"tool:{_CURSOR_SERVER}:delete_repo"
             and edge.relationship == RelationshipType.REACHES_TOOL
             for edge in g.edges
         )
@@ -656,8 +658,8 @@ class TestBuildUnifiedGraphFromReport:
     def test_vulnerability_to_tool_exploitable_via_edges(self):
         g = build_unified_graph_from_report(_minimal_report())
         vuln_id = "vuln:CVE-2024-1234"
-        read_tool_id = f"tool:server:{_BASE_AGENT_KEY}:mcp-fs:read_file"
-        write_tool_id = f"tool:server:{_BASE_AGENT_KEY}:mcp-fs:write_file"
+        read_tool_id = f"tool:{_BASE_SERVER}:read_file"
+        write_tool_id = f"tool:{_BASE_SERVER}:write_file"
 
         assert g.has_edge(vuln_id, read_tool_id)
         assert g.has_edge(vuln_id, write_tool_id)
@@ -677,8 +679,8 @@ class TestBuildUnifiedGraphFromReport:
 
         g = build_unified_graph_from_report(report)
 
-        assert g.has_edge("vuln:CVE-2024-1234", f"tool:server:{_BASE_AGENT_KEY}:mcp-fs:read_file")
-        assert not g.has_edge("vuln:CVE-2024-1234", "tool:server:cursor:mcp-fs:delete_repo")
+        assert g.has_edge("vuln:CVE-2024-1234", f"tool:{_BASE_SERVER}:read_file")
+        assert not g.has_edge("vuln:CVE-2024-1234", f"tool:{_CURSOR_SERVER}:delete_repo")
 
     def test_unknown_package_version_does_not_emit_exploitable_via(self):
         report = _minimal_report()
@@ -694,7 +696,7 @@ class TestBuildUnifiedGraphFromReport:
 
     def test_server_to_package_edge(self):
         g = build_unified_graph_from_report(_minimal_report())
-        assert g.has_edge(f"server:{_BASE_AGENT_KEY}:mcp-fs", "pkg:npm:express@4.18.0")
+        assert g.has_edge(f"{_BASE_SERVER}", "pkg:npm:express@4.18.0")
 
     def test_package_edges_include_discovery_provenance(self):
         report = _minimal_report()
@@ -712,7 +714,7 @@ class TestBuildUnifiedGraphFromReport:
         report["agents"][0]["mcp_servers"][0]["packages"][0]["occurrence_count"] = 1
         g = build_unified_graph_from_report(report)
 
-        edge = next(e for e in g.edges if e.source == f"server:{_BASE_AGENT_KEY}:mcp-fs" and e.target == "pkg:npm:express@4.18.0")
+        edge = next(e for e in g.edges if e.source == f"{_BASE_SERVER}" and e.target == "pkg:npm:express@4.18.0")
         assert edge.evidence["source"] == "mcp-scan"
         assert edge.evidence["purl"] == "pkg:npm/express@4.18.0"
         assert edge.evidence["version_provenance"]["resolved_version"] == "4.18.0"
@@ -742,33 +744,33 @@ class TestBuildUnifiedGraphFromReport:
     def test_graph_nodes_and_edges_emit_canonical_ids_without_replacing_readable_ids(self):
         g = build_unified_graph_from_report(_minimal_report())
         agent = g.nodes[f"{_BASE_AGENT}"]
-        edge = next(e for e in g.edges if e.source == f"{_BASE_AGENT}" and e.target == f"server:{_BASE_AGENT_KEY}:mcp-fs")
+        edge = next(e for e in g.edges if e.source == f"{_BASE_AGENT}" and e.target == f"{_BASE_SERVER}")
 
         assert agent.to_dict()["id"] == f"{_BASE_AGENT}"
         assert agent.to_dict()["canonical_id"] == agent.canonical_id
-        assert edge.to_dict()["id"] == f"uses:{_BASE_AGENT}:server:{_BASE_AGENT_KEY}:mcp-fs"
+        assert edge.to_dict()["id"] == f"uses:{_BASE_AGENT}:{_BASE_SERVER}"
         assert edge.to_dict()["canonical_id"] == edge.canonical_id
 
     def test_agent_to_server_edge(self):
         g = build_unified_graph_from_report(_minimal_report())
-        assert g.has_edge(f"{_BASE_AGENT}", f"server:{_BASE_AGENT_KEY}:mcp-fs")
+        assert g.has_edge(f"{_BASE_AGENT}", f"{_BASE_SERVER}")
 
-    def test_shared_server_edge(self):
+    def test_same_named_local_launches_do_not_imply_shared_server(self):
         g = build_unified_graph_from_report(_minimal_report())
-        # claude-desktop and cursor both use mcp-fs
-        assert g.has_edge(f"{_BASE_AGENT}", "agent:cursor") or g.has_edge("agent:cursor", f"{_BASE_AGENT}")
+        # The same recipe in two configurations is not one shared process.
+        assert not any(edge.relationship == RelationshipType.SHARES_SERVER for edge in g.edges)
 
     def test_blast_radius_does_not_cross_product_same_named_servers(self):
         g = build_unified_graph_from_report(_minimal_report())
         vuln_id = "vuln:CVE-2024-1234"
-        assert g.has_edge(f"server:{_BASE_AGENT_KEY}:mcp-fs", vuln_id)
-        assert not g.has_edge("server:cursor:mcp-fs", vuln_id)
+        assert g.has_edge(f"{_BASE_SERVER}", vuln_id)
+        assert not g.has_edge(_CURSOR_SERVER, vuln_id)
 
     def test_blast_radius_accepts_object_shaped_affected_servers(self):
         report = _minimal_report()
         report["blast_radius"][0]["affected_servers"] = [{"name": "mcp-fs"}]
         g = build_unified_graph_from_report(report)
-        assert g.has_edge(f"server:{_BASE_AGENT_KEY}:mcp-fs", "vuln:CVE-2024-1234")
+        assert g.has_edge(f"{_BASE_SERVER}", "vuln:CVE-2024-1234")
 
     def test_same_env_var_name_does_not_create_shared_credential_edge(self):
         g = build_unified_graph_from_report(_minimal_report())
@@ -1055,7 +1057,7 @@ class TestSkillAuditNodes:
 
         assert g.has_edge("misconfig:skill_audit:shell_access:1", f"{_BASE_AGENT}")
         assert g.has_edge("misconfig:skill_audit:unknown_package:2", "pkg:npm:express@4.18.0")
-        assert g.has_edge("misconfig:skill_audit:unverified_server:3", f"server:{_BASE_AGENT_KEY}:mcp-fs")
+        assert g.has_edge("misconfig:skill_audit:unverified_server:3", f"{_BASE_SERVER}")
         assert not g.has_edge("misconfig:skill_audit:unverified_server:3", "server:cursor:mcp-git")
 
 

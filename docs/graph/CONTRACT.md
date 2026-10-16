@@ -91,7 +91,10 @@ is metadata, not proof of a shared endpoint or process. Configured stdio
 launches stay scoped to their declaring agent; matching recipes do not prove
 one runtime process. Remote endpoint nodes can be shared, while every agent
 retains its own relationship. Earlier recipe/name IDs remain explicit alias
-candidates and are not resolved when multiple current instances claim them.
+candidates and are not resolved when multiple current instances claim them. A `SHARES_SERVER`
+correlation requires the same resolved server node, never an equal display name
+or launch recipe. It is non-traversable and does not establish delegation,
+execution or effective access.
 
 An upgrade does not rewrite stored snapshots. SQLite and Postgres persist new
 canonical-ID receipts and read historical rows with their original version-2

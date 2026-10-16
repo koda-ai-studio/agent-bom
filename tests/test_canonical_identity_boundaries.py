@@ -335,6 +335,7 @@ def mcp_instance_storage_contract(store):
     assert {node.id for node in graph.nodes.values() if node.entity_type == EntityType.SERVER} == server_ids
     assert len([node for node in graph.nodes.values() if node.entity_type == EntityType.TOOL]) == 2
     assert len([edge for edge in graph.edges if edge.relationship == RelationshipType.USES]) == 2
+    assert not any(edge.relationship == RelationshipType.SHARES_SERVER for edge in graph.edges)
     old_id = "server:" + str(uuid.uuid5(AGENT_BOM_ID_NAMESPACE, "mcp_server:cmd:python:server.py"))
     assert all(old_id in graph.nodes[node_id].attributes["identity"]["aliases"] for node_id in server_ids)
     store.save_graph(graph)
@@ -349,3 +350,58 @@ def test_mcp_instance_export_and_sqlite_replay_preserve_relationships(tmp_path):
     from agent_bom.api.graph_store import SQLiteGraphStore
 
     mcp_instance_storage_contract(SQLiteGraphStore(tmp_path / "instances.db"))
+
+
+def test_shared_server_correlation_requires_one_resolved_instance():
+    from agent_bom.graph.builder import build_unified_graph_from_report
+    from agent_bom.graph.types import RelationshipType
+
+    def build(first, second):
+        return build_unified_graph_from_report(
+            {
+                "agents": [
+                    {"name": name, "config_path": f"/{name}/mcp.json", "mcp_servers": [server]}
+                    for name, server in (("one", first), ("two", second))
+                ]
+            }
+        )
+
+    separate = build({"name": "same", "url": "https://one.example/mcp"}, {"name": "same", "url": "https://two.example/mcp"})
+    assert not any(edge.relationship == RelationshipType.SHARES_SERVER for edge in separate.edges)
+    shared = build({"name": "one", "url": "https://shared.example/mcp"}, {"name": "two", "url": "https://shared.example/mcp"})
+    edges = [edge for edge in shared.edges if edge.relationship == RelationshipType.SHARES_SERVER]
+    assert len(edges) == 1
+    assert not edges[0].traversable
+    assert edges[0].evidence["server"] in shared.nodes
+
+
+def test_historical_server_child_receipts_bind_only_when_unique():
+    import uuid
+
+    from agent_bom.canonical_ids import AGENT_BOM_ID_NAMESPACE
+    from agent_bom.graph.builder import build_unified_graph_from_report
+    from agent_bom.graph.trace_projection import _Binder
+    from agent_bom.graph.types import EntityType, RelationshipType
+
+    server = {
+        "name": "service",
+        "command": "python",
+        "args": ["server.py"],
+        "tools": [{"name": "read"}],
+        "credential_env_vars": ["API_KEY"],
+    }
+    agent = {"name": "one", "config_path": "/one/config.json", "mcp_servers": [server]}
+    old_server = "server:" + str(uuid.uuid5(AGENT_BOM_ID_NAMESPACE, "mcp_server:cmd:python:server.py"))
+    old_tool, old_cred = f"tool:{old_server}:read", f"cred:{old_server}:API_KEY"
+    runtime = {"edges": [{"source_node_id": "agent:one", "target_node_id": old_tool, "interaction_type": "tool_call"}]}
+    graph = build_unified_graph_from_report({"agents": [agent], "runtime_session_graph": runtime})
+    binder = _Binder(graph)
+    assert binder.node(old_tool).entity_type == EntityType.TOOL
+    assert binder.node(old_cred).entity_type == EntityType.CREDENTIAL
+    assert len([e for e in graph.edges if e.relationship == RelationshipType.INVOKED]) == 1
+    other = {**agent, "name": "two", "config_path": "/two/config.json"}
+    ambiguous = build_unified_graph_from_report({"agents": [agent, other], "runtime_session_graph": runtime})
+    binder = _Binder(ambiguous)
+    assert binder.node(old_tool) is None
+    assert binder.node(old_cred) is None
+    assert not any(e.relationship == RelationshipType.INVOKED for e in ambiguous.edges)
