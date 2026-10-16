@@ -2733,6 +2733,26 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
           );
         }
       }
+      if (options.maxGraphLabelOffsetPx) {
+        const distances = await page.locator(".graph-relationship-label[data-edge-id]").evaluateAll(labels => labels.map(label => {
+          const frame = label.getBoundingClientRect();
+          const canvas = label.closest(".react-flow");
+          const edge = [...canvas.querySelectorAll(".react-flow__edge[data-id]")].find(edge => edge.dataset.id === label.dataset.edgeId);
+          const path = edge?.querySelector(".react-flow__edge-path");
+          const matrix = path?.getScreenCTM();
+          if (!matrix) return Infinity;
+          const length = path.getTotalLength();
+          return Math.min(...Array.from({ length: 201 }, (_, index) => {
+            const point = path.getPointAtLength(length * index / 200);
+            const x = matrix.a * point.x + matrix.c * point.y + matrix.e;
+            const y = matrix.b * point.x + matrix.d * point.y + matrix.f;
+            return Math.hypot(x - (frame.left + frame.right) / 2, y - (frame.top + frame.bottom) / 2);
+          }));
+        }));
+        if (!distances.length || distances.some(distance => distance > options.maxGraphLabelOffsetPx)) {
+          throw new Error(`Detached graph relationship captions on ${urlPath}: ${Math.max(...distances)}px from their line`);
+        }
+      }
       if (options.minGraphWidthFillRatio) {
         const fillRatio = await page.evaluate(() => {
           const canvas = document.querySelector(".react-flow")?.getBoundingClientRect();
@@ -3485,6 +3505,9 @@ async function main() {
       expectedText: ["Investigation", "contractor-reviewer", "Developer Copilot", "CVE-2025-29927"],
       expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/views/fix-first"],
       readySelector: '[data-testid="selected-exposure-path"]',
+      minGraphNodes: 7, minGraphEdges: 6,
+      minGraphBadgeFontPx: 11, minGraphEdgeLabelFontPx: 12,
+      maxGraphLabelOffsetPx: 32,
     });
     const correlationPage = await newCapturePage("dark", { width: 1120, height: 900 });
     await capture(

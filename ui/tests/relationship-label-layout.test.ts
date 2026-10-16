@@ -109,3 +109,19 @@ it("uses measured card boundaries when fixed nudges cannot clear a tall endpoint
   expect(y - 22).toBeGreaterThanOrEqual(302);
   expect(y + 22).toBeLessThanOrEqual(540);
 });
+
+it("keeps a caption on its link when only the empty circular-card margin overlaps", () => {
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => { callback(0); return 1; });
+  vi.stubGlobal("CSS", { escape: (value: string) => value });
+  const labels = fixture();
+  labels[1]!.remove();
+  document.querySelector('.react-flow__edge[data-id="b"]')!.remove();
+  const node = document.querySelector<HTMLElement>(".react-flow__node")!;
+  node.getBoundingClientRect = () => new DOMRect(450, 60, 240, 180);
+  node.innerHTML = '<div data-graph-entity="true"><div class="graph-entity-glyph"></div><p>Agent name</p><span>Agent</span></div>';
+  node.querySelector<HTMLElement>(".graph-entity-glyph")!.getBoundingClientRect = () => new DOMRect(560, 64, 72, 72);
+  node.querySelector("p")!.getBoundingClientRect = () => new DOMRect(450, 150, 240, 30);
+  node.querySelector("span")!.getBoundingClientRect = () => new DOMRect(565, 184, 40, 16);
+  scheduleRelationshipLabelLayout(labels[0]!);
+  expect(labels[0]!.style.transform).toContain("translate(500px, 100px)");
+});

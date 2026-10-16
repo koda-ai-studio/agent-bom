@@ -9,7 +9,7 @@ import { relationshipEdgeTypes } from "@/components/relationship-edge";
 import { GraphRollupChildPager } from "@/components/graph-rollup-child-pager";
 import { GraphRollupCountNotice } from "@/components/graph-rollup-count-notice";
 import { completeDirectedHopCount, visibleGraphFocus } from "@/lib/security-graph-focus";
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
@@ -80,7 +80,7 @@ import {
 } from "@/components/lineage-nodes";
 import { useGraphLayout } from "@/lib/use-graph-layout";
 import { serpentinePositions } from "@/lib/path-serpentine-layout";
-import { COMPACT_GRAPH_MIN_ZOOM, compactInvestigationLayout, readableLineageDagreLr } from "@/lib/graph-node-dimensions";
+import { COMPACT_GRAPH_MIN_ZOOM, compactInvestigationLayout, readableGraphNodeStyle, readableLineageDagreLr } from "@/lib/graph-node-dimensions";
 import { effectiveLodBandForGraph, useLodBand } from "@/lib/lod-renderer";
 import {
   aggregateSiblings,
@@ -3787,12 +3787,7 @@ function GraphPageInner() {
             />
           ) : (
             <ReactFlow
-              style={{
-                "--graph-node-label-size": `${Math.min(28, Math.max(18, 15 / Math.max(graphViewport.zoom, 0.16)))}px`,
-                "--graph-node-glyph-size": `${Math.min(112, Math.max(72, 64 / Math.max(graphViewport.zoom, 0.16)))}px`,
-                "--graph-node-icon-size": `${Math.min(48, Math.max(32, 28 / Math.max(graphViewport.zoom, 0.16)))}px`,
-                "--graph-node-meta-size": `${Math.min(22, Math.max(12, 12 / Math.max(graphViewport.zoom, 0.16)))}px`,
-              } as CSSProperties}
+              style={readableGraphNodeStyle(graphViewport.zoom)}
               className={selectedScenarioId ? "scenario-context-canvas" : undefined}
               key={captureMode ? `lineage-capture:${scenarioExpanded ? "full" : "context"}` : `${presentation.storageKey}:${presentation.restoredSavedState ? "restored" : "initial"}:${scenarioExpanded ? "full" : "context"}`}
               nodes={presentation.nodes}
