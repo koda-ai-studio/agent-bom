@@ -30,6 +30,7 @@ from agent_bom.graph.types import EntityType, RelationshipType
 # map recorded behavior/permissions to potential techniques, never detections.
 _ATTACK = "attack"
 _ATLAS = "atlas"
+MAPPED_RELATIONSHIPS = frozenset({RelationshipType.CAN_ACCESS, RelationshipType.INVOKED})
 _VULN_RELS = frozenset({RelationshipType.VULNERABLE_TO, RelationshipType.EXPLOITABLE_VIA})
 _STORAGE_READS = {
     ("gcp", "storage.objects.get"),
@@ -83,6 +84,8 @@ def _storage_read_receipt(graph: UnifiedGraph, edge: UnifiedEdge) -> bool:
 def _candidate(graph: UnifiedGraph, edge: UnifiedEdge) -> tuple[str, str, str, str] | None:
     """Return (technique, catalog, basis, explanation) for supported prerequisites."""
 
+    if edge.relationship not in MAPPED_RELATIONSHIPS:
+        return None
     source, target = graph.nodes.get(edge.source), graph.nodes.get(edge.target)
     if source is None or target is None or _runtime_outcome(edge) in {"blocked", "failed"}:
         return None

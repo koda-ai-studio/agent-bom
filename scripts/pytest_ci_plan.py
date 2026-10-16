@@ -462,7 +462,18 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
             selected.update(
                 candidate
                 for candidate in available
-                if any(part in candidate.stem for part in ("attack_path", "exposure_path", "correlation", "trace_graph", "snapshot_path"))
+                if any(
+                    part in candidate.stem
+                    for part in (
+                        "attack_path",
+                        "exposure_path",
+                        "correlation",
+                        "trace_graph",
+                        "snapshot_path",
+                        "graph_data_model_generator",
+                        "credential_reach_completeness",
+                    )
+                )
             )
         if normalized.as_posix() in GRAPH_PROJECTION_SOURCES:
             selected.update(
