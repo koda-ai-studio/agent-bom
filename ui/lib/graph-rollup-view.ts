@@ -2,6 +2,7 @@ import { MarkerType, type Edge, type Node } from "@xyflow/react";
 
 import type { LineageNodeData, LineageNodeType } from "@/components/lineage-nodes";
 import type { GraphRollupContainer, GraphRollupEdge } from "@/lib/api-types";
+import { assignCollisionScopes } from "@/lib/graph-occurrence-role";
 import { severityRank } from "@/lib/severity";
 import { FLOW_NODE_TYPES, lineageNodeTypeForEntity } from "@/lib/graph-entity-mapping";
 
@@ -119,6 +120,7 @@ export function buildRollupFlowGraph(
       ...(container.has_children ? { className: "cursor-pointer" } : {}),
     };
   });
+  assignCollisionScopes(nodes);
   // The roll-up used to return no edges at all, so the canvas drew a grid of
   // disconnected cards and the view had to tell the reader that "aggregate
   // cards are not rendered relationship evidence" — a security graph admitting
