@@ -39,7 +39,8 @@ const REFERENCE_LAB_DIGEST_PATH = path.join(
 const graphSchemaSource = await fs.readFile(path.join(UI_ROOT, "lib/graph-schema.generated.ts"), "utf8");
 const graphRelationshipJson = graphSchemaSource.match(/export const GRAPH_EDGE_KIND_META:[^\n]+ = (\{[\s\S]*?\n\});/);
 if (!graphRelationshipJson) throw new Error("Generated graph relationship taxonomy is missing");
-const graphRelationshipSpecs = JSON.parse(graphRelationshipJson[1]);
+// The TypeScript generator appends a comma after the final dictionary entry.
+const graphRelationshipSpecs = JSON.parse(graphRelationshipJson[1].replace(/,\s*}$/, "\n}"));
 const galleryAdvisories = JSON.parse(await fs.readFile(path.join(UI_ROOT, "fixtures/gallery-advisories.json"), "utf8")).advisories;
 const advisoryById = new Map(galleryAdvisories.map((item) => [item.id, item]));
 function advisory(id) {
