@@ -59,6 +59,9 @@ def catalog_remediation(row: Mapping[str, Any]) -> str | None:
 
 def restored_public_fields(row: Mapping[str, Any]) -> dict[str, Any]:
     fields: dict[str, Any] = {}
+    reachability = row.get("reachability")
+    if isinstance(reachability, str) and reachability in {"confirmed", "likely", "unknown", "unlikely"}:
+        fields["reachability"] = reachability
     if (provenance := safe_finding_provenance(row.get("provenance"))) is not None:
         fields["provenance"] = provenance
     if (guidance := catalog_remediation(row)) is not None:

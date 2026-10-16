@@ -38,13 +38,11 @@ def test_fix_lower_than_current_skipped():
     assert result is None
 
 
-def test_fix_equal_to_current_returned():
-    """OSV 'fixed' means first non-affected — equal to current is valid."""
+def test_fix_equal_to_current_is_already_unaffected():
+    """The fixed boundary is excluded: an unaffected install needs no remediation."""
     vuln = _vuln([_affected(name="pillow", ecosystem="PyPI", fixed="9.0.0")])
-    # Equal means "this version is the fix" — should NOT be skipped
-    # Actually 9.0.0 < 9.0.0 is False, so it passes through
     result = parse_fixed_version(vuln, "pillow", "PyPI", current_version="9.0.0")
-    assert result == "9.0.0"
+    assert result is None
 
 
 def test_fix_higher_than_current_returned():

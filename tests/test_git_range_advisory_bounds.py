@@ -189,8 +189,8 @@ def test_db_sync_never_recommends_a_commit_sha_as_the_fix() -> None:
     assert affected_rows == [], "a commit-bounded window contributes no usable row"
 
 
-def test_db_sync_keeps_a_decidable_commit_range() -> None:
-    """``introduced: "0"`` needs no SHA ordering — keep it, as the matcher does."""
+def test_db_sync_does_not_project_unbounded_git_history_as_release_versions() -> None:
+    """An unbounded commit range still needs a commit-to-release mapping."""
     from agent_bom.db.sync import _parse_osv_entry
 
     advisory = {
@@ -205,13 +205,11 @@ def test_db_sync_keeps_a_decidable_commit_range() -> None:
     }
     parsed = _parse_osv_entry(advisory)
     assert parsed is not None
-    assert [(r["introduced"], r["fixed"]) for r in parsed[1]] == [("0", "")]
+    assert parsed[1] == []
 
 
-def test_commit_range_bounded_only_from_zero_is_still_decidable() -> None:
-    """``introduced: "0"`` with no fix is OSV's "vulnerable from the first
-    commit, unfixed" — no SHA ordering is needed to answer that, so dropping it
-    would be a self-inflicted false negative."""
+def test_commit_range_from_zero_remains_unknown_for_release_versions() -> None:
+    """A repository-wide bound does not establish membership for a release."""
     advisory = {
         "id": "OSV-2022-GIT-UNFIXED",
         "summary": "OSS-Fuzz issue with no release-version bound",
@@ -228,8 +226,8 @@ def test_commit_range_bounded_only_from_zero_is_still_decidable() -> None:
             }
         ],
     }
-    assert _is_version_affected(advisory, "pillow", "999.0.0", "pypi") is True
-    assert not consume_scan_warnings(), "nothing was unresolvable, so nothing to warn about"
+    assert _is_version_affected(advisory, "pillow", "999.0.0", "pypi") is False
+    assert any("OSV-2022-GIT-UNFIXED" in warning for warning in consume_scan_warnings())
 
 
 def test_commit_introduced_bound_is_unresolvable_and_warned() -> None:

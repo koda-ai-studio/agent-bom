@@ -207,6 +207,7 @@ def upstream_enrichment_fields(annotations: dict) -> dict:
         "epss_cve_id": annotations.get("epss-cve-id"),
         "kev_cve_id": annotations.get("kev-cve-id"),
         "kev_due_date": annotations.get("kev-due-date"),
+        "match_confidence_tier": annotations.get("match-confidence-tier"),
     }
 
 
@@ -215,7 +216,7 @@ def upstream_enrichment_statements(vuln) -> list[str]:
     statements: list[str] = []
     if vuln.upstream_ids:
         statements.append(f"agent-bom:upstream-ids={','.join(vuln.upstream_ids)}")
-    for key in ("epss_cve_id", "kev_cve_id"):
+    for key in ("epss_cve_id", "kev_cve_id", "match_confidence_tier"):
         value = getattr(vuln, key)
         if value:
             statements.append(f"agent-bom:{key.replace('_', '-')}={value}")

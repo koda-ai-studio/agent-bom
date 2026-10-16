@@ -13640,6 +13640,8 @@ export interface components {
             provenance?: unknown;
             /** Provider */
             provider?: string | null;
+            /** Reachability */
+            reachability?: string | null;
             /** Remediation Guidance */
             remediation_guidance?: unknown;
             /** Remediation Versions */

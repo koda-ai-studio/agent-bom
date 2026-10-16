@@ -402,3 +402,18 @@ def test_posture_withholds_grade_when_no_package_was_evaluated() -> None:
 
     assert scorecard.grade == "N/A"
     assert scorecard.no_data is True
+
+
+def test_native_maven_coordinates_share_lookup_and_coverage_without_case_folding():
+    from agent_bom.db.lookup import package_in_db, package_in_db_batch
+
+    conn = _seed_kev_db()
+    conn.execute("UPDATE affected SET package_name = 'Org.Example:Library'")
+    for name in ("Org.Example:Library", "Org.Example/Library"):
+        rows = lookup_package(conn, "maven", name, "2.14.1")
+        assert len(rows) == 1 and rows[0].is_kev
+        assert package_in_db(conn, "maven", name)
+    assert package_in_db_batch(conn, [("maven", "Org.Example:Library")]) == {("maven", "Org.Example/Library")}
+    assert not lookup_package(conn, "maven", "org.example:library", "2.14.1")
+    assert not package_in_db(conn, "maven", "org.example:library")
+    assert not package_in_db_batch(conn, [("maven", "org.example:library")])

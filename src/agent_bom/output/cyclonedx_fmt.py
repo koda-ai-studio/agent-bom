@@ -33,6 +33,8 @@ from agent_bom.output.dependency_hierarchy import (
     imported_bom_unknown,
 )
 from agent_bom.package_utils import synthesize_purl
+from agent_bom.sbom_formats.cyclonedx import merge_properties as _merge_properties
+from agent_bom.sbom_formats.cyclonedx import merge_vulnerability_observation as _merge_vulnerability_observation
 from agent_bom.sbom_formats.cyclonedx import vulnerability_enrichment_properties, vulnerability_source
 from agent_bom.security import sanitize_launch_command, sanitize_path_label
 from agent_bom.vex import vex_justification_to_cdx
@@ -45,35 +47,6 @@ def _sanitize_bom_ref(raw: str) -> str:
     Replace invalid characters (``@``, ``/``, spaces, etc.) with ``-``.
     """
     return re.sub(r"[^a-zA-Z0-9._-]", "-", raw)
-
-
-def _merge_properties(current: list[dict], incoming: list[dict]) -> list[dict]:
-    """Merge component properties without dropping later security evidence."""
-    merged = [dict(prop) for prop in current]
-    positions = {str(prop.get("name")): index for index, prop in enumerate(merged)}
-    seen = {(str(prop.get("name")), str(prop.get("value"))) for prop in merged}
-    for prop in incoming:
-        name = str(prop.get("name") or "")
-        value = str(prop.get("value") or "")
-        if (name, value) in seen:
-            continue
-        if name == "agent-bom:tool-count" and name in positions:
-            index = positions[name]
-            try:
-                current_count = int(str(merged[index].get("value") or "0"))
-                incoming_count = int(value)
-            except ValueError:
-                pass
-            else:
-                if incoming_count > current_count:
-                    seen.discard((name, str(merged[index].get("value") or "")))
-                    merged[index] = dict(prop)
-                    seen.add((name, value))
-                continue
-        merged.append(dict(prop))
-        seen.add((name, value))
-        positions.setdefault(name, len(merged) - 1)
-    return merged
 
 
 def _merge_bom_ref_items(items: list[dict]) -> list[dict]:
@@ -209,7 +182,7 @@ def _cyclonedx_vulnerability(
     cwes = _cwe_ids_to_integers(vuln.cwe_ids)
     if cwes:
         entry["cwes"] = cwes
-    vuln_properties = vulnerability_enrichment_properties(vuln)
+    vuln_properties = vulnerability_enrichment_properties(vuln, pkg_ref)
     # Severity-derived remediation SLA (KEV override) — one source of truth in
     # agent_bom.graph.sla. Only emitted when an anchor + policy make a deadline real.
     from agent_bom.graph.sla import sla_due_at as _compute_sla_due_at
@@ -271,22 +244,6 @@ def _cyclonedx_vulnerability(
                 analysis["justification"] = justification
         entry["analysis"] = analysis
     return entry
-
-
-def _merge_vulnerability_observation(by_id: dict[str, dict], observation: dict) -> None:
-    """Merge a vulnerability ID into one entry with all affected components."""
-    vuln_id = str(observation["id"])
-    existing = by_id.get(vuln_id)
-    if existing is None:
-        by_id[vuln_id] = observation
-        return
-    affected_refs = {
-        str(affected.get("ref")) for affected in [*existing.get("affects", []), *observation.get("affects", [])] if affected.get("ref")
-    }
-    existing["affects"] = [{"ref": ref} for ref in sorted(affected_refs)]
-    incoming_properties = observation.get("properties")
-    if isinstance(incoming_properties, list):
-        existing["properties"] = _merge_properties(existing.get("properties", []), incoming_properties)
 
 
 def _append_discovery_provenance_properties(properties: list[dict], provenance: dict | None) -> None:

@@ -100,7 +100,7 @@ def test_the_gate_detects_a_window_collapse_regression(entries: list[dict]) -> N
     original = package_scan._range_windows
     try:
         # The historical bug: keep only the last window of a multi-window range.
-        package_scan._range_windows = lambda events: (original(events) or [])[-1:]
+        package_scan._range_windows = lambda events, ecosystem="": (original(events, ecosystem) or [])[-1:]
         mutated = harness.score(entries)
     finally:
         package_scan._range_windows = original

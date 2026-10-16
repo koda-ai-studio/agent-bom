@@ -9809,6 +9809,11 @@ components:
           - type: string
           - type: 'null'
           title: Provider
+        reachability:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Reachability
         remediation_guidance:
           title: Remediation Guidance
         remediation_versions:

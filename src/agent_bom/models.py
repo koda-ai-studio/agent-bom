@@ -150,7 +150,7 @@ class Vulnerability:
     )  # CVE-level framework tags, e.g. {"nist_csf": ["ID.RA-01"], "cis": ["CIS-02.3"]}
     advisory_sources: list[str] = field(default_factory=list)  # osv / ghsa / nvidia_csaf / nvd / epss / cisa_kev
     # distro_confirmed | osv_range | osv_ecosystem | unfixed_distro |
-    # ambiguous_distro_release | nvd_cpe_candidate
+    # ambiguous_distro_release | nvd_cpe_candidate | unverified_range
     match_confidence_tier: Optional[str] = None
     cvss_vector: Optional[str] = None
     attack_vector: Optional[str] = None
@@ -1057,6 +1057,7 @@ class BlastRadius:
             exposed_credentials=bool(self.exposed_credentials),
             exposed_tools=bool(self.exposed_tools),
             declaration_only=self.package.reachability_evidence == "declaration_only",
+            match_confidence_tier=self.vulnerability.match_confidence_tier,
         )
         reach_adjustment = 0.0
         if reach.verdict == "confirmed":
@@ -1092,6 +1093,7 @@ class BlastRadius:
             exposed_credentials=bool(self.exposed_credentials),
             exposed_tools=bool(self.exposed_tools),
             declaration_only=self.package.reachability_evidence == "declaration_only",
+            match_confidence_tier=self.vulnerability.match_confidence_tier,
         ).verdict
 
     @property
