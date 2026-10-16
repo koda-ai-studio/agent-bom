@@ -12,7 +12,7 @@
   <a href="https://glama.ai/mcp/servers/msaad00/agent-bom"><img src="https://img.shields.io/badge/MCP-Glama-7c3aed?style=flat" alt="Glama MCP server"></a>
   <a href="https://smithery.ai/servers/agentbom/agent-bom"><img src="https://img.shields.io/badge/MCP-Smithery-1f6feb?style=flat" alt="Smithery MCP server"></a>
 </p>
-<!-- mcp-name: io.github.msaad00/agent-bom -->
+<!-- mcp-name: io.github.koda-ai-studio/agent-bom -->
 
 <p align="center"><b>Find vulnerable software behind your AI agents—and trace the exposure evidence.</b></p>
 
