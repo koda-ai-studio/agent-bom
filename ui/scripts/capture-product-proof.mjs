@@ -2796,7 +2796,19 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
       if (options.assertEdgeLabelsClearOfNodes) {
         const collisions = await page.evaluate(() => {
           const nodes = [...document.querySelectorAll(".react-flow__node")]
-            .map((node) => ({ label: (node.textContent ?? "").trim(), rect: node.getBoundingClientRect() }))
+            .flatMap((node) => {
+              const card = node.querySelector("[data-graph-entity]");
+              // Circular nodes have empty margins beside their glyph. Check
+              // the visible glyph/ring and content rows, not that empty space.
+              return (card ? [...card.children] : [node]).map(content => {
+                const box = content.getBoundingClientRect();
+                const pad = content.classList.contains("graph-entity-glyph") ? 8 : 0;
+                return { label: (node.textContent ?? "").trim(), rect: {
+                  left: box.left - pad, right: box.right + pad, top: box.top - pad, bottom: box.bottom + pad,
+                  width: box.width, height: box.height,
+                } };
+              });
+            })
             .filter(({ rect }) => rect.width > 0 && rect.height > 0);
           const labels = [...document.querySelectorAll(".react-flow__edge-text, .relationship-badge")]
             .map((label) => ({ label: (label.textContent ?? "").trim(), rect: label.getBoundingClientRect() }))
