@@ -178,6 +178,8 @@ function InvestigationFlow({
   });
   const presentedEdges = useMemo(
     () => readableGraphEdges(edges, undefined, {
+      baseOpacity: 1,
+      highSignalOpacity: 1,
       zoom: viewport.zoom,
       nodeLabels: graphNodeDisplayLabels(nodes),
     }),

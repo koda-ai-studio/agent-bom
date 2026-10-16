@@ -13,6 +13,8 @@ export function scheduleRelationshipLabelLayout(label: HTMLElement | null) {
     pending.delete(canvas);
     if (!canvas.isConnected) return;
     const nodeElements = [...canvas.querySelectorAll(".react-flow__node")];
+    // Dense estates use the bounded investigation view for readable labels.
+    if (nodeElements.length > 80 || canvas.querySelectorAll(".graph-relationship-label").length > 160) return;
     const nodes = nodeElements.flatMap(node => {
       const card = node.querySelector<HTMLElement>("[data-graph-entity]");
       if (!card) return [node.getBoundingClientRect()];
@@ -27,8 +29,6 @@ export function scheduleRelationshipLabelLayout(label: HTMLElement | null) {
           top: box.top - ring, bottom: box.bottom + ring }];
       });
     });
-    // Dense estates use the bounded investigation view for readable labels.
-    if (nodeElements.length > 80 || canvas.querySelectorAll(".graph-relationship-label").length > 160) return;
     // Sampled screen-space points of every drawn relationship, bucketed on a
     // coarse grid, so a caption is not parked on top of a different line.
     const CELL = 32;
