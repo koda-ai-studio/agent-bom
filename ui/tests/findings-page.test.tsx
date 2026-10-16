@@ -224,7 +224,7 @@ describe("FindingsPage", () => {
     expect(within(drawer).queryByText("Last scanned")).not.toBeInTheDocument();
     expect(within(drawer).queryByText(/Source did not provide/i)).not.toBeInTheDocument();
     expect(within(drawer).getByText("Next action")).toBeInTheDocument();
-    expect(within(drawer).getByRole("link", { name: "Review remediation" })).toHaveAttribute("href", "/remediation?q=CVE-2026-1234");
+    expect(within(drawer).getByRole("link", { name: "Review remediation" })).toHaveAttribute("href", "/remediation?q=CVE-2026-1234&scan=scan-1");
     expect(within(drawer).queryByText("finding-1")).not.toBeInTheDocument();
 
     const closeButtons = within(drawer).getAllByRole("button", { name: "Close" });

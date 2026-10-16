@@ -20,12 +20,13 @@ describe("plain relationship summary", () => {
 
   it("keeps configured access distinct from observed access", () => {
     const configured = plainRelationshipSummary({ ...base, relationship: "can_access", evidence: { tier: "modeled_infrastructure", source: "identity_model" } }, "TICKETING_API_KEY", "customer-ticket-archive");
+    expect(configured.why).toBe("TICKETING_API_KEY is modeled as able to access customer-ticket-archive.");
     expect(configured.kind).toBe("Modeled — derived from collected configuration, not observed");
     expect(configured.unknown).toBe("Whether this access was ever exercised.");
     const observed = plainRelationshipSummary({ ...base, relationship: "can_access", evidence: { tier: "runtime_observed", source: "gateway_runtime", observed_at: "2026-09-01T01:00:00Z" } }, "agent", "store");
     expect(observed.kind).toBe("Observed at runtime");
     expect(observed.freshness).toBe("Observed 2026-09-01 01:00 UTC");
-    expect(observed.unknown).toBe("What was accessed beyond this recorded activity.");
+    expect(observed.unknown).toBe("Whether access succeeded unless the receipt records that outcome, and what occurred beyond it.");
   });
 
   it("says what is missing instead of inventing a source or time", () => {
@@ -41,6 +42,24 @@ describe("plain relationship summary", () => {
   });
 
   it("says where a workload runs", () => {
-    expect(plainRelationshipSummary({ ...base, relationship: "hosted_on", evidence: {} }, "cluster-ops", "compute-00").why).toBe("cluster-ops runs on compute-00.");
+    expect(plainRelationshipSummary({ ...base, relationship: "hosted_on", evidence: {} }, "cluster-ops", "compute-00").why).toBe("The snapshot links cluster-ops to compute-00 as hosted on; the evidence basis is not recorded.");
   });
+});
+
+it.each([
+  ["static_scan", "A is configured with access to B."],
+  ["modeled_infrastructure", "A is modeled as able to access B."],
+  ["runtime_observed", "A recorded can access observation links A to B; its outcome is limited to the receipt."],
+  ["legacy_unrecorded", "The snapshot links A to B as can access; the evidence basis is not recorded."],
+])("qualifies access with %s evidence", (tier, why) => {
+  expect(plainRelationshipSummary({ ...base, relationship: "can_access", evidence: { tier } }, "A", "B").why).toBe(why);
+});
+
+it("never describes blocked access as successful or a recorded inventory receipt as runtime", () => {
+  const blocked = plainRelationshipSummary({ ...base, relationship: "can_access", evidence: { tier: "runtime_observed", blocked: true } }, "A", "B");
+  expect(blocked.why).toContain("attempt to access B blocked");
+  expect(blocked.unknown).toContain("this attempt was blocked");
+  const recorded = plainRelationshipSummary({ ...base, relationship: "hosted_on", evidence: { tier: "recorded" } }, "A", "B");
+  expect(recorded.kind).toBe("Recorded observation");
+  expect(recorded.why).not.toContain("runs on");
 });

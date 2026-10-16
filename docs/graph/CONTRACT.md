@@ -41,6 +41,23 @@ carries one of its values. The generated [entity reference](data-model/entities.
 lists each type, its emitter modules and observed ID formats. Production emitters
 are listed separately from demo fixtures; vocabulary alone does not prove emission.
 
+### Conflicting security observations
+
+When sources identify the same asset but disagree about a boolean exposure or
+privilege flag, the merged projection retains an explicit positive risk value.
+It does not establish current effective access or successful execution. Review
+`attributes.identity.conflicts` (single-build canonicalization) or
+`attributes.correlation.conflicts` (snapshot correlation) for the competing
+normalized values, sources, snapshot IDs and node IDs. Unknown values remain
+unknown. Original snapshots are unchanged.
+
+Canonicalization reports `conflicting_attributes` and, for security flags,
+`conflicting_security_assertions` with limited analysis status. Repeated merges
+retain the original receipts instead of attributing a merged value to every
+source. Ordinary metadata still follows the existing precedence rules. Collect
+fresh evidence and review its scope before treating an earlier positive claim
+as resolved.
+
 ### Cloud identity correlation and governance
 
 Azure role assignments join collected managed identities and service principals
