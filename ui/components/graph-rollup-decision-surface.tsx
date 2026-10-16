@@ -148,8 +148,9 @@ export function GraphRollupDecisionSurface({
         <div>
           <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
             <Layers className="h-4 w-4 text-emerald-600 dark:text-emerald-300" />
-            Prioritized findings and scopes
+            Which collected scope needs investigation?
           </p>
+          <p className="mt-1 text-sm text-ink-secondary">Open a scope, then inspect its findings and relationship evidence.</p>
           <p className="mt-1 text-xs text-ink-secondary">
             {nodeScopeLabel} in this evidence scope. Severity does not establish connectivity or assessed risk.
           </p>
@@ -161,6 +162,11 @@ export function GraphRollupDecisionSurface({
             {edgeScopeLabel}
           </p>
         </div>
+        {visible[0] && <button type="button"
+          className="graph-page-action min-h-11 max-w-full whitespace-normal text-left [overflow-wrap:anywhere]"
+          onClick={() => visible[0]!.has_children ? onDrill(visible[0]!) : onInvestigate(visible[0]!)}>
+          Start with {visible[0].label}
+        </button>}
       </div>
 
       <div className="flex flex-wrap items-center gap-2 border-b border-outline px-4 py-2.5 text-xs">

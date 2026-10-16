@@ -31,12 +31,14 @@ export function GraphControlGroup({
 }
 
 export function GraphEmptyState({
+  inventoryEmpty = false,
   title,
   detail,
   suggestions,
   command,
   actions,
 }: {
+  inventoryEmpty?: boolean;
   title: string;
   detail: string;
   suggestions: string[];
@@ -45,12 +47,15 @@ export function GraphEmptyState({
 }) {
   return (
     <PageEmptyState
-      compact
-      title={title}
-      detail={detail}
-      suggestions={suggestions}
-      command={command}
-      actions={actions}
+      compact={!inventoryEmpty}
+      title={inventoryEmpty ? "No graph inventory loaded" : title}
+      detail={inventoryEmpty ? "Start a scan or import a report to create graph evidence. An empty canvas does not establish an absence of risk." : detail}
+      suggestions={inventoryEmpty ? ["Choose the environment to scan, then open its graph snapshot."] : suggestions}
+      command={inventoryEmpty ? "agent-bom scan -f json -o report.json" : command}
+      actions={inventoryEmpty ? [
+        { label: "Start a scan", href: "/scan" },
+        { label: "Import a report from Overview", href: "/" },
+      ] : actions}
     />
   );
 }

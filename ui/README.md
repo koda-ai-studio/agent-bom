@@ -13,6 +13,18 @@ agent-bom serve
 
 That starts the API on `http://localhost:8422` and serves the bundled dashboard.
 
+If `/graph` or `/security-graph` returns **Dashboard not bundled** (HTTP 503),
+the installation is missing built UI assets. Use the published package in a
+fresh virtual environment, or run the API and development UI separately as
+shown below. These two exact GET/HEAD diagnostic pages are public; nested
+paths, mutations and API routes retain the configured authentication policy.
+`--no-ui` does not register these pages.
+
+An empty graph prompts a scan or report import. It does not mean that the
+environment is safe. On small screens, Previous/Next targets individual loaded
+nodes; panning and Fit all reveal connections. A vendor badge supplements the
+agent glyph only when collected source metadata identifies the vendor.
+
 ## UI development
 
 The Next.js ESLint plugin's `fast-glob` dependency is replaced with the published

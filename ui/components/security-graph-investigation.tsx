@@ -11,6 +11,7 @@ import {
   useReactFlow,
   useNodesInitialized,
   useViewport,
+  useStore,
   type Edge,
   type Node,
 } from "@xyflow/react";
@@ -145,9 +146,12 @@ function InvestigationFlow({
   const { fitView } = reactFlow;
   const viewport = useViewport();
   const nodesInitialized = useNodesInitialized();
+  const canvasWidth = useStore(state => state.width);
+  const canvasHeight = useStore(state => state.height);
   const [compact, setCompact] = useState(false);
   const [navigationId, setNavigationId] = useState<string | null>(null);
   const [overview, setOverview] = useState(false);
+  const manualViewportScope = useRef<string | null>(null);
   useEffect(() => {
     if (!embedded) return;
     const media = window.matchMedia("(max-width: 639px)");
@@ -199,14 +203,15 @@ function InvestigationFlow({
     void fitView({ nodes: [{ id }], minZoom: 1, maxZoom: 1, padding: 0.08, duration: 200 });
   }, [fitView]);
   useEffect(() => {
-    if (nodes.length === 0 || !nodesInitialized || presentation.hasSavedState) return;
+    if (nodes.length === 0 || !nodesInitialized || !canvasWidth || !canvasHeight || presentation.restoredSavedState || manualViewportScope.current === presentation.storageKey) return;
     const raf = requestAnimationFrame(() => {
       if (compact && navigationNode) focusNode(navigationNode.id);
       else void fitView(fitOptionsRef.current);
     });
     return () => cancelAnimationFrame(raf);
-  }, [compact, fitView, focusNode, navigationNode, nodes, nodesInitialized, presentation.hasSavedState]);
+  }, [canvasWidth, canvasHeight, compact, fitView, focusNode, navigationNode, nodes, nodesInitialized, presentation.restoredSavedState, presentation.storageKey]);
   const fitVisible = useCallback(() => {
+    manualViewportScope.current = null;
     setOverview(true);
     void fitView({ ...fitOptions, duration: 240 });
   }, [fitOptions, fitView]);
@@ -247,14 +252,14 @@ function InvestigationFlow({
           </span>
           <div className="flex gap-1">
             <button type="button" aria-label="Previous graph node" disabled={navigationIndex === 0}
-              className="graph-page-action min-h-8 px-1 disabled:opacity-40"
+              className="graph-page-action min-h-11 min-w-11 justify-center px-1 disabled:opacity-40"
               onClick={() => focusNode(navigationNodes[navigationIndex - 1]!.id)}><ChevronLeft className="h-4 w-4" /></button>
             <button type="button" aria-label="Next graph node" disabled={navigationIndex >= navigationNodes.length - 1}
-              className="graph-page-action min-h-8 px-1 disabled:opacity-40"
+              className="graph-page-action min-h-11 min-w-11 justify-center px-1 disabled:opacity-40"
               onClick={() => focusNode(navigationNodes[navigationIndex + 1]!.id)}><ChevronRight className="h-4 w-4" /></button>
           </div>
           <details className="relative">
-            <summary aria-label="Graph options" title="Graph options" className="graph-page-action flex min-h-8 cursor-pointer list-none items-center [&::-webkit-details-marker]:hidden"><SlidersHorizontal className="h-4 w-4" /><span className="sr-only">Graph options</span></summary>
+            <summary aria-label="Graph options" title="Graph options" className="graph-page-action flex min-h-11 min-w-11 justify-center cursor-pointer list-none items-center [&::-webkit-details-marker]:hidden"><SlidersHorizontal className="h-4 w-4" /><span className="sr-only">Graph options</span></summary>
             <div className="absolute right-0 top-full z-20 mt-2 flex w-64 max-w-[75vw] flex-wrap gap-2 rounded-xl border border-outline bg-surface p-2 shadow-lg">
               {controls}
               {presentation.enabled && layoutControls}
@@ -294,6 +299,12 @@ function InvestigationFlow({
           deleteKeyCode={null}
           onNodesChange={presentation.onNodesChange}
           onNodeDragStop={presentation.onNodeDragStop}
+          onMoveStart={event => {
+            // An automatic fit also emits move events. Only operator gestures
+            // pin this mount; a newly persisted automatic camera can still fit
+            // when opening the queue or resizing the canvas.
+            if (event) manualViewportScope.current = presentation.storageKey;
+          }}
           onMoveEnd={presentation.onMoveEnd}
           onNodeClick={(_, node) => { setNavigationId(node.id); onNodeSelect(node.id); }}
           onEdgeClick={(_, edge) => onEdgeSelect(edge)}

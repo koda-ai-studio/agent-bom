@@ -1643,6 +1643,9 @@ def _mount_dashboard(application: FastAPI) -> None:
 
     ui_dist = _dashboard_dist_dir()
     if not ui_dist.is_dir() or not (ui_dist / "index.html").exists():
+        from agent_bom.api.dashboard_missing import mount_missing_dashboard
+
+        mount_missing_dashboard(application)
         return
 
     from starlette.responses import FileResponse
