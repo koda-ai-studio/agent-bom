@@ -35,6 +35,11 @@ const REFERENCE_LAB_DIGEST_PATH = path.join(
   "generated",
   "correlation-proof.sha256",
 );
+// The generated taxonomy owns direction and traversal, including correlations.
+const graphSchemaSource = await fs.readFile(path.join(UI_ROOT, "lib/graph-schema.generated.ts"), "utf8");
+const graphRelationshipJson = graphSchemaSource.match(/export const GRAPH_EDGE_KIND_META:[^\n]+ = (\{[\s\S]*?\n\});/);
+if (!graphRelationshipJson) throw new Error("Generated graph relationship taxonomy is missing");
+const graphRelationshipSpecs = JSON.parse(graphRelationshipJson[1]);
 const galleryAdvisories = JSON.parse(await fs.readFile(path.join(UI_ROOT, "fixtures/gallery-advisories.json"), "utf8")).advisories;
 const advisoryById = new Map(galleryAdvisories.map((item) => [item.id, item]));
 function advisory(id) {
@@ -150,14 +155,16 @@ function node(id, entityType, label, severity = "none", riskScore = 0, attribute
 }
 
 function edge(source, target, relationship, weight = 1, evidence = {}) {
+  const spec = graphRelationshipSpecs[relationship];
+  if (!spec) throw new Error(`Unknown sample relationship: ${relationship}`);
   return {
     id: `${source}->${target}:${relationship}`,
     source,
     target,
     relationship,
-    direction: "directed",
+    direction: spec.direction,
     weight,
-    traversable: true,
+    traversable: spec.traversable,
     first_seen: CREATED_AT,
     last_seen: CREATED_AT,
     // Hand-authored sample topology is modeled; it is not a runtime receipt.
@@ -2683,6 +2690,17 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
           throw new Error(`Unreadable graph node text on ${urlPath}: ${smallestPrimaryFont}px`);
         }
       }
+      if (options.minGraphBadgeFontPx) {
+        const sizes = await page.locator(".react-flow__node [data-node-badge], .react-flow__node .graph-finding-metadata > span").evaluateAll(badges => badges.map(badge => {
+          const viewport = badge.closest(".react-flow__viewport");
+          const transform = viewport ? getComputedStyle(viewport).transform : "none";
+          const scale = transform === "none" ? 1 : new DOMMatrixReadOnly(transform).a;
+          return Number.parseFloat(getComputedStyle(badge).fontSize) * scale;
+        }));
+        if (!sizes.length || sizes.some(size => !Number.isFinite(size) || size < options.minGraphBadgeFontPx)) {
+          throw new Error(`Unreadable graph evidence badges on ${urlPath}: ${Math.min(...sizes)}px`);
+        }
+      }
       if (options.minGraphEdgeLabelFontPx) {
         const edgeLabelFonts = await page.locator(".react-flow__edge-text, .relationship-badge").evaluateAll((labels) =>
           labels
@@ -3144,7 +3162,7 @@ async function main() {
           expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph"],
           minGraphNodes: fixture.nodes.length, maxGraphNodes: fixture.nodes.length,
           minGraphEdges: fixture.edges.length, maxGraphEdges: fixture.edges.length,
-          minGraphNodeFontPx: 12, minGraphEdgeLabelFontPx: 12,
+          minGraphNodeFontPx: 12, minGraphEdgeLabelFontPx: 12, minGraphBadgeFontPx: 11,
           assertEdgeLabelsClearOfNodes: true, assertNoHorizontalOverflow: true });
         await p.close();
       }
@@ -3455,6 +3473,7 @@ async function main() {
       assertEdgeLabelsClearOfNodes: true,
       assertNoHorizontalOverflow: true,
       maxGraphBottomGapPx: 64,
+      minGraphBadgeFontPx: 11,
     });
     await page.setViewportSize({ width: 1440, height: 980 });
     await capture(page, `/security-graph?lens=attack-path&scan=${SCAN_ID}&capture=1`, "security-graph-live.png", async (securityGraphPage) => {

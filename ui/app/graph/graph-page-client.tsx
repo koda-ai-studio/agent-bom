@@ -3791,7 +3791,7 @@ function GraphPageInner() {
                 "--graph-node-label-size": `${Math.min(28, Math.max(18, 15 / Math.max(graphViewport.zoom, 0.16)))}px`,
                 "--graph-node-glyph-size": `${Math.min(112, Math.max(72, 64 / Math.max(graphViewport.zoom, 0.16)))}px`,
                 "--graph-node-icon-size": `${Math.min(48, Math.max(32, 28 / Math.max(graphViewport.zoom, 0.16)))}px`,
-                "--graph-node-meta-size": `${Math.min(18, Math.max(12, 12 / Math.max(graphViewport.zoom, 0.16)))}px`,
+                "--graph-node-meta-size": `${Math.min(22, Math.max(12, 12 / Math.max(graphViewport.zoom, 0.16)))}px`,
               } as CSSProperties}
               className={selectedScenarioId ? "scenario-context-canvas" : undefined}
               key={captureMode ? `lineage-capture:${scenarioExpanded ? "full" : "context"}` : `${presentation.storageKey}:${presentation.restoredSavedState ? "restored" : "initial"}:${scenarioExpanded ? "full" : "context"}`}
