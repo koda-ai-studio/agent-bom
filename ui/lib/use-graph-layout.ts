@@ -81,8 +81,13 @@ export function useGraphLayout(
   nodes: Node[],
   edges: Edge[],
   options: GraphLayoutOptions = {},
+  enabled = true,
 ): GraphLayoutState {
   const resolvedKind = resolveGraphLayoutKind(kind);
+  // Summary lists and WebGL own their presentation. Keep the hook order stable
+  // without computing an unused layout or transferring the graph to a worker.
+  const inputNodes = enabled ? nodes : EMPTY_NODES;
+  const inputEdges = enabled ? edges : EMPTY_EDGES;
   const dagreOptions = useMemo<LayoutOptions>(() => {
     const requested = options.dagre ?? {};
     if (requested.direction !== undefined) return requested;
@@ -95,32 +100,33 @@ export function useGraphLayout(
     return requested;
   }, [kind, options.dagre]);
   const force = useForceLayout(
-    resolvedKind === "force" ? nodes : EMPTY_NODES,
-    resolvedKind === "force" ? edges : EMPTY_EDGES,
+    resolvedKind === "force" ? inputNodes : EMPTY_NODES,
+    resolvedKind === "force" ? inputEdges : EMPTY_EDGES,
     options.force,
   );
   const radial = useRadialLayout(
-    resolvedKind === "radial" ? nodes : EMPTY_NODES,
-    resolvedKind === "radial" ? edges : EMPTY_EDGES,
+    resolvedKind === "radial" ? inputNodes : EMPTY_NODES,
+    resolvedKind === "radial" ? inputEdges : EMPTY_EDGES,
     options.radial,
   );
   const dagre = useDagreLayout(
-    resolvedKind === "dagre" ? nodes : EMPTY_NODES,
-    resolvedKind === "dagre" ? edges : EMPTY_EDGES,
+    resolvedKind === "dagre" ? inputNodes : EMPTY_NODES,
+    resolvedKind === "dagre" ? inputEdges : EMPTY_EDGES,
     dagreOptions,
   );
   const dagreLr = useDagreLrLayout(
-    resolvedKind === "dagre-lr" ? nodes : EMPTY_NODES,
-    resolvedKind === "dagre-lr" ? edges : EMPTY_EDGES,
+    resolvedKind === "dagre-lr" ? inputNodes : EMPTY_NODES,
+    resolvedKind === "dagre-lr" ? inputEdges : EMPTY_EDGES,
     options.dagreLr,
   );
   const sankey = useSankeyLayout(
-    resolvedKind === "sankey" ? nodes : EMPTY_NODES,
-    resolvedKind === "sankey" ? edges : EMPTY_EDGES,
+    resolvedKind === "sankey" ? inputNodes : EMPTY_NODES,
+    resolvedKind === "sankey" ? inputEdges : EMPTY_EDGES,
     options.sankey,
   );
 
   return useMemo(() => {
+    if (!enabled) return { nodes, edges, pending: false, kind: resolvedKind };
     switch (resolvedKind) {
       case "force":
         return { ...force, kind: resolvedKind };
@@ -133,5 +139,5 @@ export function useGraphLayout(
       case "sankey":
         return { ...sankey, kind: resolvedKind };
     }
-  }, [dagre, dagreLr, force, radial, resolvedKind, sankey]);
+  }, [dagre, dagreLr, force, radial, resolvedKind, sankey, enabled, nodes, edges]);
 }

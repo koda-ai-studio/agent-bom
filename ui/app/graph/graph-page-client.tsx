@@ -1,5 +1,6 @@
 "use client";
 
+import { GraphCanvasAutoFit } from "@/components/graph-canvas-auto-fit";
 import { GraphSnapshotReceipt } from "@/components/graph-snapshot-receipt";
 import { mergeGraphNodeDetail } from "@/lib/graph-entity-detail";
 import { nodeRiskAssessment, nodeRiskLabel } from "@/lib/node-risk-assessment";
@@ -697,6 +698,8 @@ function GraphPageInner() {
   const [error, setError] = useState<string | null>(null);
   const [rateLimited, setRateLimited] = useState(false);
   const [diffError, setDiffError] = useState<string | null>(null);
+  const [comparisonRequested, setComparisonRequested] = useState(false);
+  const [selectedNodeDetail, setSelectedNodeDetail] = useState<{ scanId: string; response: GraphNodeDetailResponse } | null>(null);
   const [graphDiff, setGraphDiff] = useState<GraphDiffResponse | null>(null);
   const [edgeChanges, setEdgeChanges] = useState<GraphEdgeChangesResponse | null>(
     null,
@@ -1008,7 +1011,7 @@ function GraphPageInner() {
     setReachabilitySummary(null);
     setReachabilityError(null);
     setRollupView(null);
-    setRollupStack([]);
+    if (!firstScanSelectionRef.current) setRollupStack([]);
     restoreSummaryOnFilterReset.current = false;
     rollupAutoDescendRef.current = true;
     setRollupDismissed(
@@ -1155,13 +1158,15 @@ function GraphPageInner() {
     return null;
   }, [driftScrubberPair, previousSnapshot, selectedScanId]);
 
+  const needsComparison = comparisonRequested || driftLensActive || Boolean(driftScrubberPair) || graphScopePresetForFilters(filters) === "assetDrift";
+
   useEffect(() => {
     let cancelled = false;
     setGraphDiff(null);
     setDiffError(null);
     setEdgeChanges(null);
     setEdgeChangesError(null);
-    if (!diffPair) {
+    if (!diffPair || !needsComparison) {
       setLoadingDiff(false);
       setLoadingEdgeChanges(false);
       return;
@@ -1191,15 +1196,17 @@ function GraphPageInner() {
     return () => {
       cancelled = true;
     };
-  }, [diffPair]);
+  }, [diffPair, needsComparison]);
 
   useEffect(() => {
+    setSelectedNodeDetail(null);
     if (!selectedNodeId || !selectedScanId) return;
     let cancelled = false;
     api
       .getGraphNode(selectedNodeId, selectedScanId)
       .then((detail) => {
         if (cancelled) return;
+        setSelectedNodeDetail({ scanId: selectedScanId, response: detail });
         setSelectedNode((current) => {
           const currentId = current?.attributes?.node_id;
           if (currentId && currentId !== selectedNodeId) return current;
@@ -1749,8 +1756,8 @@ function GraphPageInner() {
       captureMode, selectedAttackPath: Boolean(selectedAttackPath), rollupActive: rollupNavigationActive,
       graphOnlyFindings: selected.nodes.every(node => ["vulnerability", "misconfiguration"].includes(node.data.nodeType)),
     }).kind === "webgl";
-    if (broadMap) return { ...selected, omittedNodes: 0, pageCount: 1, page: 0 };
-    return boundedGraphElements(selected.nodes, selected.edges, [...(attackPathNodeIds ?? scenarioContextIds ?? [])], canvasPage);
+    if (broadMap) return { ...selected, omittedNodes: 0, pageCount: 1, page: 0, layoutRequired: false };
+    return { ...boundedGraphElements(selected.nodes, selected.edges, [...(attackPathNodeIds ?? scenarioContextIds ?? [])], canvasPage), layoutRequired: true };
   }, [scenarioElements, attackPathNodeIds, scenarioContextIds, canvasPage, investigationMode, captureMode, selectedAttackPath, rollupNavigationActive]);
   const { nodes: layoutNodes, edges: layoutEdges, pending: layoutPending } = useGraphLayout(
     graphLayoutKind,
@@ -1776,6 +1783,7 @@ function GraphPageInner() {
               : {},
       ),
     },
+    layoutInput.layoutRequired && !rollupDecisionActive && !rollupCanvasPending && !rollupCanvasFailed,
   );
   const selectedEvidenceHopCount = selectedAttackPath
     ? Math.max(0, selectedAttackPath.hops.length - 1)
@@ -2311,7 +2319,7 @@ function GraphPageInner() {
       // Scenario views share width with the decision panel and app navigation.
       // Allow the complete proposed context to fit shorter desktop canvases.
       if (selectedScenarioId) return { ...options, minZoom: 0.05, maxZoom: 1 };
-      if (compactInvestigationTopology && !narrowViewport) return { ...options, minZoom: displayNodes.length <= 3 ? 1 : COMPACT_GRAPH_MIN_ZOOM, maxZoom: displayNodes.length <= 3 ? 1.25 : 1 };
+      if (compactInvestigationTopology && !narrowViewport) return { ...options, minZoom: 0.05, maxZoom: displayNodes.length <= 6 ? 2 : 1 };
       return rollupNavigationActive ? { ...viewportOptions, minZoom: 0.05, maxZoom: 1 } : selectedScenarioId && !scenarioExpanded ? { ...options, minZoom: 0.75, maxZoom: 1 } : options;
     },
     [initialAnchorId, viewportOptions, selectedScenarioId, scenarioExpanded, compactInvestigationTopology, narrowViewport, displayNodes.length, rollupNavigationActive],
@@ -2374,15 +2382,7 @@ function GraphPageInner() {
     }
   }, [displayNodes, investigationMode?.rootId, reactFlow, rollupNavigationActive, selectedNodeId, viewportOptions]);
 
-  useEffect(() => {
-    if (!selectedNodeId || narrowViewport) return;
-    // Re-frame the selected neighborhood after the docked inspector takes its
-    // share of the canvas. Otherwise React Flow preserves the pre-drawer zoom
-    // and leaves the reduced canvas looking empty beside the details.
-    let settledFrame = 0;
-    const frame = window.requestAnimationFrame(() => { settledFrame = window.requestAnimationFrame(() => { void fitSelection(); }); });
-    return () => { window.cancelAnimationFrame(frame); window.cancelAnimationFrame(settledFrame); };
-  }, [fitSelection, narrowViewport, selectedNodeId]);
+  const compactLayoutKey = layoutNodes.map(node => `${node.id}:${node.position.x}:${node.position.y}`).join("|");
 
   const autoLayout = useCallback(() => {
     presentation.autoLayout();
@@ -3311,7 +3311,7 @@ function GraphPageInner() {
             stop them from owning a full screen of vertical space on every
             page-load. */}
         {activeSnapshot && (
-          <details className="group graph-drawer-section">
+          <details className="group graph-drawer-section" onToggle={event => { if (event.currentTarget.open) setComparisonRequested(true); }}>
             <summary className="flex flex-wrap items-center justify-between gap-3 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
               <div className="flex items-center gap-3">
                 <span className="text-[10px] uppercase tracking-[0.24em] text-sky-400">
@@ -3321,7 +3321,7 @@ function GraphPageInner() {
                   {graphDiff
                     ? `+${diffCounts.nodesAdded} −${diffCounts.nodesRemoved} nodes · +${diffCounts.edgesAdded} −${diffCounts.edgesRemoved} edges${diffCounts.truncated ? " · lists show the first changes only" : ""}`
                     : previousSnapshot
-                      ? `Compared with ${previousSnapshot.scan_id.slice(0, 12)}`
+                      ? `Compare with ${previousSnapshot.scan_id.slice(0, 12)}`
                       : "No older snapshot available."}
                 </span>
               </div>
@@ -3616,7 +3616,7 @@ function GraphPageInner() {
           ? "relative grid gap-4 px-4 py-3 lg:grid-cols-[minmax(0,1fr)_320px] lg:h-[max(28rem,calc(100dvh-18rem))]"
           : selectedAttackPath
             ? "flex relative min-h-[540px]"
-            : (selectedAttackPath || (compactInvestigationTopology && displayNodes.length <= 4 && !investigationMode)) ? "flex relative min-h-0" : "flex relative min-h-[max(30rem,calc(100dvh-17rem))]"}
+            : "flex relative min-h-0"}
       >
         <div className={`flex-1 relative min-w-0 flex flex-col ${selectedScenario ? "min-h-[26rem] lg:min-h-0" : "min-h-0"}`} data-testid="investigation-graph-workspace">
           {selectedAttackPath && selectedPathDecision && (
@@ -3697,7 +3697,7 @@ function GraphPageInner() {
             </div>
           )}
           {!rollupNavigationActive && !rollupDecisionActive && graphRenderer.kind === "react-flow" && displayNodes.length > 0 && <GraphLegendDock items={legendItems} separated />}
-          <div className={`relative flex h-[max(24rem,calc(100dvh-25rem))] ${(selectedAttackPath || (compactInvestigationTopology && displayNodes.length <= 4 && !investigationMode && !selectedScenarioId)) ? "sm:h-[clamp(24rem,50dvh,36rem)]" : "sm:h-[max(28rem,calc(100dvh-21rem))]"} shrink-0 overflow-hidden rounded-lg border border-outline bg-surface`}>
+          <div data-graph-adaptive-frame className={`relative flex ${selectedAttackPath || selectedScenarioId ? "h-[max(24rem,calc(100dvh-25rem))] sm:h-[max(28rem,calc(100dvh-21rem))]" : "h-[var(--graph-adaptive-height,clamp(22rem,60dvh,48rem))]"} shrink-0 overflow-hidden rounded-lg border border-outline bg-surface`}>
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <GraphScenarioUnconnected
             nodes={scenarioElements.unconnected}
@@ -3848,10 +3848,18 @@ function GraphPageInner() {
                 setBlastError(null);
               }}
             >
+              <GraphCanvasAutoFit
+                enabled={!layoutPending && !selectedScenarioId && !selectedAttackPath}
+                layoutKey={compactLayoutKey}
+                anchorId={selectedNodeId ?? investigationMode?.rootId}
+                inspector={Boolean(selectedNode || selectedRelationship) && !narrowViewport}
+                preserveViewport={presentation.restoredSavedState}
+              />
               <Background color={BACKGROUND_COLOR} gap={BACKGROUND_GAP} />
               <Controls orientation={selectedScenarioId ? "horizontal" : "vertical"} position="bottom-left" className={CONTROLS_CLASS} />
               {minimapExpanded && showMiniMap && (canvasLens !== "estate" || graphViewport.zoom >= 1) && (
                 <MiniMap
+                  position={narrowViewport ? "top-right" : "bottom-right"}
                   style={narrowViewport ? { width: 96, height: 64 } : undefined}
                   nodeColor={minimapNodeColor}
                   className={MINIMAP_CLASS}
@@ -3913,6 +3921,7 @@ function GraphPageInner() {
             <GraphEntityDrawer
               variant={narrowViewport ? "overlay" : "docked"}
               data={selectedNode}
+              suppliedDetail={selectedNodeDetail?.scanId === selectedScanId ? selectedNodeDetail.response : null}
               onInspectNode={(rootId) => void loadRootInvestigation({ rootId })}
               scanId={selectedScanId || undefined}
               enrich={Boolean(selectedScanId)}
