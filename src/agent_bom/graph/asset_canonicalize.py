@@ -258,7 +258,7 @@ def canonicalize_assets(graph: UnifiedGraph) -> dict[str, str]:
     ]
     attribute_conflicts = sum(len(identity.get("conflict_fields", [])) for identity in identities)
     security_conflicts = sum(len(identity.get("conflicts", {})) for identity in identities)
-    strong_conflicts = components.conflicts + int(before.get("strong_key_conflicts", 0))
+    strong_conflicts = components.conflicts + int(before.get("strong_key_conflicts", before.get("conflicts", 0)))
     conflicts = strong_conflicts + attribute_conflicts
     reasons = []
     if strong_conflicts:

@@ -430,3 +430,17 @@ def test_security_assertion_receipts_survive_snapshot_recorrelation() -> None:
     assert node.attributes["internet_exposed"] is True
     assert node.attributes["correlation"]["conflicts"] == receipts
     assert result.graph.to_dict() == reverse.graph.to_dict()
+
+
+def test_recanonicalization_retains_legacy_strong_key_conflict_counts() -> None:
+    from agent_bom.graph.analysis import GraphAnalysisState, GraphAnalysisStatus
+
+    graph = UnifiedGraph(scan_id="legacy", tenant_id="t")
+    graph.add_node(_resource("resource", data_source="inventory", arn=ARN))
+    graph.analysis_status["asset_canonicalization"] = GraphAnalysisStatus(
+        status=GraphAnalysisState.LIMITED, reason_codes=("conflicting_strong_keys",), observed={"conflicts": 2}
+    )
+    canonicalize_assets(graph)
+    status = graph.analysis_status["asset_canonicalization"]
+    assert status.observed["strong_key_conflicts"] == 2
+    assert status.status is GraphAnalysisState.LIMITED
