@@ -54,7 +54,6 @@ function AgentNode({
   const brand = agentSource(data);
   return (
     <div
-      style={brand ? { borderColor: brand.accent } : undefined}
       className={`min-w-[132px] max-w-[168px] rounded-lg border bg-surface-elevated px-3 py-2 shadow-sm transition-colors ${
         data.unlinked
           ? "border-outline hover:border-outline-strong"

@@ -196,7 +196,10 @@ def mounted_operations():
         (method, path)
         for path, methods in operations
         for method in methods or ()
-        if not public_operation(method, path) and path not in {"/v1/auth/me", "/docs/oauth2-redirect"} and path != "/{path:path}"
+        if not public_operation(method, path)
+        and not APIKeyMiddleware._is_dashboard_public_request(path, method)
+        and path not in {"/v1/auth/me", "/docs/oauth2-redirect"}
+        and path != "/{path:path}"
     ]
 
 

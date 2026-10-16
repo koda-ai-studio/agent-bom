@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getNodesBounds, useNodesInitialized, useReactFlow, useStore } from "@xyflow/react";
+import { createPortal } from "react-dom";
+import { getNodesBounds, Panel, useNodesInitialized, useReactFlow, useStore, type Node } from "@xyflow/react";
 import { graphAdaptiveFrame } from "@/lib/graph-adaptive-frame";
 
 /** Fit measured compact contexts after a docked inspector changes canvas width.
  * Only geometry changes trigger a fit; hover and evidence updates do not. */
-export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, preserveViewport, onLayoutAspect }: {
+export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, preserveViewport, onLayoutAspect, navigationIds, navigationMount }: {
+  navigationMount?: HTMLElement | null | undefined;
+  navigationIds?: string[] | undefined;
   enabled: boolean;
   layoutKey: string;
   anchorId?: string | null | undefined;
@@ -60,5 +63,42 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     });
     return () => cancelAnimationFrame(frame);
   }, [enabled, initialized, width, height, layoutKey, anchorId, inspector, preserveViewport, windowHeight, spaceAbove, canvas, fitView, getNodes, onLayoutAspect]);
-  return null;
+  if (!initialized || width >= 640 || width <= 0) return null;
+  const navigator = <GraphNodeNavigator nodes={getNodes()} orderedIds={navigationIds} />;
+  return navigationMount ? createPortal(navigator, navigationMount) : <Panel position="top-center">{navigator}</Panel>;
+}
+
+/** A camera target is not an access hop or a claim that the whole graph is visible. */
+function GraphNodeNavigator({ nodes, orderedIds }: { nodes: Node[]; orderedIds?: string[] | undefined }) {
+  const { fitView } = useReactFlow();
+  const [targetId, setTargetId] = useState<string | null>(null);
+  const byId = new Map(nodes.map(node => [node.id, node]));
+  const ordered = orderedIds
+    ? [...new Set(orderedIds)].flatMap(id => byId.has(id) ? [byId.get(id)!] : [])
+    : nodes;
+  const index = Math.max(0, ordered.findIndex(node => node.id === targetId));
+  const target = ordered[index];
+  if (ordered.length < 2 || !target) return null;
+  const focus = async (node: Node) => {
+    const fitted = await fitView({ nodes: [{ id: node.id }], minZoom: 0.85, maxZoom: 1, padding: 0.15, duration: 200 });
+    if (fitted) setTargetId(node.id);
+  };
+  return <div className="mb-2 rounded-lg border border-outline bg-surface p-2">
+    <div role="group" aria-label="Navigate loaded graph nodes" className="flex items-center gap-2">
+      <button type="button" aria-label="Previous graph node" disabled={index === 0}
+        className="graph-page-action min-h-11 px-3 disabled:opacity-40"
+        onClick={() => void focus(ordered[index - 1]!)}>Previous</button>
+      <div className="min-w-0 flex-1 text-center text-xs text-ink-secondary" aria-live="polite">
+        <span>Canvas target · {index + 1} of {ordered.length}</span>
+        <button type="button" className="block w-full truncate text-foreground underline underline-offset-4"
+          aria-label="Center current graph node" onClick={() => void focus(target)}>
+          {String(target.data.label ?? target.id)}
+        </button>
+        <span className="block">Pan for connections · Fit all for overview</span>
+      </div>
+      <button type="button" aria-label="Next graph node" disabled={index >= ordered.length - 1}
+        className="graph-page-action min-h-11 px-3 disabled:opacity-40"
+        onClick={() => void focus(ordered[index + 1]!)}>Next</button>
+    </div>
+  </div>;
 }

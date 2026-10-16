@@ -94,3 +94,13 @@ it("uses the recorded agent source mark in both the canvas and inspector", () =>
   expect(container.querySelectorAll('img[src="/logos/claude.svg"]')).toHaveLength(2);
   expect(container.querySelector('[data-graph-entity="true"]')).toHaveTextContent("Release helper");
 });
+
+it("retains the agent glyph with a secondary vendor badge", () => {
+  const Renderer = lineageNodeTypes.agentNode;
+  const { container } = render(<ReactFlowProvider><Renderer data={{ label: "Billing Agent", nodeType: "agent", agentType: "claude-code" }} /></ReactFlowProvider>);
+  const glyph = container.querySelector(".graph-entity-glyph");
+  expect(glyph?.querySelector("svg.lucide-bot")).not.toBeNull();
+  expect(glyph?.querySelector('[data-agent-source="claude"]')).not.toBeNull();
+  expect(glyph?.querySelector('[data-agent-source-badge]')).not.toBeNull();
+  expect(glyph?.getAttribute("style")).not.toContain("border-color");
+});

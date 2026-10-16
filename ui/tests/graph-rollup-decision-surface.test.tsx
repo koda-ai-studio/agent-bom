@@ -137,7 +137,7 @@ describe("GraphRollupDecisionSurface", () => {
       />,
     );
 
-    expect(screen.getByText("Prioritized findings and scopes")).toBeInTheDocument();
+    expect(screen.getByText("Which collected scope needs investigation?")).toBeInTheDocument();
     expect(screen.getByText("Toxic combination in scope")).toBeInTheDocument();
     // Internet exposure is a distinct signal from agent exposure paths; the chip must say which.
     expect(screen.getByText("Internet exposure in scope")).toBeInTheDocument();
@@ -238,4 +238,13 @@ it("distinguishes package instances and exposes canonical IDs with their actions
   expect(screen.getByText("pkg:billing")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: /Inspect.*pkg:claims/ }));
   expect(onInspect).toHaveBeenCalledWith(items[1]);
+});
+
+it("starts a scoped investigation from the first ranked returned item", () => {
+  const onDrill = vi.fn();
+  const priority = item("priority", { severity: "critical", has_children: true });
+  render(<GraphRollupDecisionSurface items={[item("quiet"), priority]} edges={[]} onDrill={onDrill} onInvestigate={vi.fn()} />);
+  expect(screen.getByText("Which collected scope needs investigation?")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", {name: "Start with Scope priority"}));
+  expect(onDrill).toHaveBeenCalledWith(priority);
 });

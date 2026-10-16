@@ -509,6 +509,23 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
                 )
                 if root / path in available
             )
+        if normalized.as_posix() in {"src/agent_bom/api/server.py", "src/agent_bom/api/dashboard_missing.py"}:
+            selected.update(
+                root / path
+                for path in (
+                    "tests/api/test_api_dashboard_deeplink_routes.py",
+                    "tests/api/test_no_ui_and_auth_posture.py",
+                    "tests/api/test_api_auth_boundary.py",
+                    "tests/api/test_public_operation_authorization.py",
+                    "tests/api/test_operation_scope_coverage.py",
+                    "tests/api/test_auth_contract_matrix.py",
+                    "tests/test_dashboard_release_packaging.py",
+                    "tests/test_cli_serve_auth_enforce.py",
+                    "tests/test_serve_command.py",
+                    "tests/test_api_route_policy.py",
+                )
+                if root / path in available
+            )
         if normalized.as_posix() in AUTHORIZATION_SOURCES or normalized.as_posix().startswith("src/agent_bom/api/routes/"):
             selected.update(root / path for path in AUTHORIZATION_CONTRACTS if root / path in available)
         if normalized.as_posix() in {
