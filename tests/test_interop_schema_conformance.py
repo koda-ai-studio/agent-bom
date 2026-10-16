@@ -49,6 +49,7 @@ from agent_bom.models import (  # noqa: E402
     MCPTool,
     Package,
     Severity,
+    TransportType,
     Vulnerability,
 )
 from agent_bom.output.cyclonedx_fmt import to_cyclonedx  # noqa: E402
@@ -244,15 +245,15 @@ def _shared_server_cyclonedx_report() -> AIBOMReport:
     )
     left_server = MCPServer(
         name="shared-server",
-        command="npx",
-        args=["shared-server"],
+        transport=TransportType.SSE,
+        url="https://shared.example.test/mcp",
         packages=[left_no_purl, left_pkg],
         tools=[MCPTool(name="query", description="read data")],
     )
     right_server = MCPServer(
         name="shared-server",
-        command="npx",
-        args=["shared-server"],
+        transport=TransportType.SSE,
+        url="https://shared.example.test/mcp",
         packages=[right_no_purl, right_pkg],
         tools=[
             MCPTool(name="query", description="read data"),
@@ -333,6 +334,28 @@ def test_cyclonedx_merges_repeated_dependency_edges_deterministically() -> None:
     shared = next(dependency for dependency in first["dependencies"] if dependency["ref"].startswith("mcp-server-"))
     package_names_by_ref = {component["bom-ref"]: component["name"] for component in first["components"] if component["type"] == "library"}
     assert {package_names_by_ref[ref] for ref in shared["dependsOn"]} == {"local-plugin", "left", "right"}
+
+
+def test_cyclonedx_equal_local_recipes_keep_scope_and_dependency_ownership() -> None:
+    report = _shared_server_cyclonedx_report()
+    for agent in report.agents:
+        server = agent.mcp_servers[0]
+        server.transport = TransportType.STDIO
+        server.url = None
+        server.command = "npx"
+        server.args = ["shared-server"]
+        server.env = {}
+    cdx = to_cyclonedx(report)
+    servers = [row for row in cdx["components"] if row["name"] == "shared-server"]
+    assert len(servers) == 2
+    names = {row["bom-ref"]: row["name"] for row in cdx["components"]}
+    dependency_sets = {
+        frozenset(names[ref] for ref in row["dependsOn"])
+        for row in cdx["dependencies"]
+        if row["ref"] in {server["bom-ref"] for server in servers}
+    }
+    assert dependency_sets == {frozenset({"local-plugin", "left"}), frozenset({"local-plugin", "right"})}
+    _assert_schema_valid("CycloneDX 1.7 scoped launches", "cyclonedx-1.7.schema.json", Draft7Validator, cdx, registry=_cyclonedx_registry())
 
 
 def test_cyclonedx_formulation_is_top_level(report: AIBOMReport) -> None:

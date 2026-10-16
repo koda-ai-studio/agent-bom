@@ -35,3 +35,56 @@ def test_shared_server_retains_all_explicit_memberships():
 
 def test_even_a_currently_unique_name_cannot_establish_identity():
     assert _uses([{"id": "agent", "name": "assistant"}], [{"id": "server", "agent_name": "assistant"}]) == set()
+
+
+def test_local_manifest_keeps_same_launch_in_distinct_agent_scopes():
+    from agent_bom.agent_manifest import build_local_agent_manifest
+    from agent_bom.canonical_ids import mcp_server_graph_id_for
+    from agent_bom.models import Agent, AgentType, MCPServer, MCPTool
+
+    agents = [
+        Agent(
+            name="Workspace reader",
+            agent_type=AgentType.CUSTOM,
+            config_path=f"/workspace/{scope}/mcp.json",
+            mcp_servers=[MCPServer(name="read-service", command="npx", args=["reader"], tools=[MCPTool(name="read", description="Read")])],
+        )
+        for scope in ("one", "two")
+    ]
+    manifest = build_local_agent_manifest(agents + agents)
+    expected = {mcp_server_graph_id_for(agent.mcp_servers[0], agent) for agent in agents}
+    assert len(expected) == 2
+    assert {server["id"] for server in manifest["mcp_servers"]} == expected
+    assert {server_id for agent in manifest["agents"] for server_id in agent["mcp_server_ids"]} == expected
+    assert manifest["summary"]["tools"] == 2
+    assert manifest["graph"]["stats"]["nodes"] == 6
+    assert manifest["graph"]["stats"]["edges"] == 4
+
+
+def test_json_snapshot_keeps_local_server_and_capability_occurrences():
+    from agent_bom.models import Agent, AgentType, AIBOMReport, MCPPrompt, MCPResource, MCPServer, MCPTool
+    from agent_bom.output.json_fmt import _build_ai_bom_entities_snapshot
+
+    agents = [
+        Agent(
+            name="reader",
+            agent_type=AgentType.CUSTOM,
+            config_path=f"/workspace/{scope}/mcp.json",
+            mcp_servers=[
+                MCPServer(
+                    name="reader",
+                    command="npx",
+                    args=["reader"],
+                    tools=[MCPTool(name="read", description="Read")],
+                    resources=[MCPResource(uri="file:///workspace/file", name="file")],
+                    prompts=[MCPPrompt(name="read", description="Read")],
+                )
+            ],
+        )
+        for scope in ("one", "two")
+    ]
+    snapshot = _build_ai_bom_entities_snapshot(AIBOMReport(agents=agents))
+    for key in ("servers", "tools", "resources", "prompts"):
+        assert len(snapshot[key]) == 2, key
+        assert len({row["id"] for row in snapshot[key]}) == 2
+    assert set(snapshot["servers"][0]["tool_ids"]).isdisjoint(snapshot["servers"][1]["tool_ids"])

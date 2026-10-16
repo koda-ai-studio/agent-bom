@@ -27,7 +27,7 @@
          "declared_capabilities": [],
          "schema_findings": [],
          "schema_rule_findings": [],
-         "server_canonical_id": "4d64c7f8-9ab0-5c3f-9c1d-e542999daff7"
+         "server_canonical_id": "a5bcf6ec-9d88-5d8c-9943-8d6c07fcce15"
         },
         {
          "name": "document_retrieve",
@@ -41,7 +41,7 @@
          "declared_capabilities": [],
          "schema_findings": [],
          "schema_rule_findings": [],
-         "server_canonical_id": "4d64c7f8-9ab0-5c3f-9c1d-e542999daff7"
+         "server_canonical_id": "a5bcf6ec-9d88-5d8c-9943-8d6c07fcce15"
         }
        ],
        "resources": [],
@@ -138,7 +138,7 @@
          "declared_capabilities": [],
          "schema_findings": [],
          "schema_rule_findings": [],
-         "server_canonical_id": "9f87ccce-e475-585a-8ad7-94f0f0169e0c"
+         "server_canonical_id": "3507492e-6c8f-5a33-8767-356d9d38f61f"
         },
         {
          "name": "document_retrieve",
@@ -152,7 +152,7 @@
          "declared_capabilities": [],
          "schema_findings": [],
          "schema_rule_findings": [],
-         "server_canonical_id": "9f87ccce-e475-585a-8ad7-94f0f0169e0c"
+         "server_canonical_id": "3507492e-6c8f-5a33-8767-356d9d38f61f"
         }
        ],
        "resources": [],
@@ -528,7 +528,7 @@
          "declared_capabilities": [],
          "schema_findings": [],
          "schema_rule_findings": [],
-         "server_canonical_id": "c415432e-34ce-5a86-97c9-9d3913466385"
+         "server_canonical_id": "772b3d96-c62f-53f5-8999-fde6bba6975e"
         },
         {
          "name": "my_execute_sql_helper",
@@ -542,7 +542,7 @@
          "declared_capabilities": [],
          "schema_findings": [],
          "schema_rule_findings": [],
-         "server_canonical_id": "c415432e-34ce-5a86-97c9-9d3913466385"
+         "server_canonical_id": "772b3d96-c62f-53f5-8999-fde6bba6975e"
         },
         {
          "name": "search_docs",
@@ -556,7 +556,7 @@
          "declared_capabilities": [],
          "schema_findings": [],
          "schema_rule_findings": [],
-         "server_canonical_id": "c415432e-34ce-5a86-97c9-9d3913466385"
+         "server_canonical_id": "772b3d96-c62f-53f5-8999-fde6bba6975e"
         }
        ],
        "resources": [],
@@ -975,7 +975,7 @@
          "declared_capabilities": [],
          "schema_findings": [],
          "schema_rule_findings": [],
-         "server_canonical_id": "bb898470-96ab-5674-8224-33d6675dbbc6"
+         "server_canonical_id": "acf7ed69-2caf-5a02-ad14-9410b0c32e72"
         },
         {
          "name": "SQL_UDF",
@@ -989,7 +989,7 @@
          "declared_capabilities": [],
          "schema_findings": [],
          "schema_rule_findings": [],
-         "server_canonical_id": "bb898470-96ab-5674-8224-33d6675dbbc6"
+         "server_canonical_id": "acf7ed69-2caf-5a02-ad14-9410b0c32e72"
         },
         {
          "name": "SHORT_UDF",
@@ -1003,7 +1003,7 @@
          "declared_capabilities": [],
          "schema_findings": [],
          "schema_rule_findings": [],
-         "server_canonical_id": "bb898470-96ab-5674-8224-33d6675dbbc6"
+         "server_canonical_id": "acf7ed69-2caf-5a02-ad14-9410b0c32e72"
         },
         {
          "name": "JS_PROC",
@@ -1017,7 +1017,7 @@
          "declared_capabilities": [],
          "schema_findings": [],
          "schema_rule_findings": [],
-         "server_canonical_id": "bb898470-96ab-5674-8224-33d6675dbbc6"
+         "server_canonical_id": "acf7ed69-2caf-5a02-ad14-9410b0c32e72"
         },
         {
          "name": "SHORT_PROC",
@@ -1031,7 +1031,7 @@
          "declared_capabilities": [],
          "schema_findings": [],
          "schema_rule_findings": [],
-         "server_canonical_id": "bb898470-96ab-5674-8224-33d6675dbbc6"
+         "server_canonical_id": "acf7ed69-2caf-5a02-ad14-9410b0c32e72"
         }
        ],
        "resources": [],
@@ -1190,7 +1190,7 @@
          "declared_capabilities": [],
          "schema_findings": [],
          "schema_rule_findings": [],
-         "server_canonical_id": "5fb65166-405f-5999-b00c-4335805d2fae"
+         "server_canonical_id": "953167b9-6046-5a56-807c-8fb4fa5e06f4"
         },
         {
          "name": "ai-pkg:torch",
@@ -1204,7 +1204,7 @@
          "declared_capabilities": [],
          "schema_findings": [],
          "schema_rule_findings": [],
-         "server_canonical_id": "5fb65166-405f-5999-b00c-4335805d2fae"
+         "server_canonical_id": "953167b9-6046-5a56-807c-8fb4fa5e06f4"
         },
         {
          "name": "ai-pkg:Sentence-Transformers",
@@ -1218,7 +1218,7 @@
          "declared_capabilities": [],
          "schema_findings": [],
          "schema_rule_findings": [],
-         "server_canonical_id": "5fb65166-405f-5999-b00c-4335805d2fae"
+         "server_canonical_id": "953167b9-6046-5a56-807c-8fb4fa5e06f4"
         },
         {
          "name": "cortex:complete",
@@ -1232,7 +1232,7 @@
          "declared_capabilities": [],
          "schema_findings": [],
          "schema_rule_findings": [],
-         "server_canonical_id": "5fb65166-405f-5999-b00c-4335805d2fae"
+         "server_canonical_id": "953167b9-6046-5a56-807c-8fb4fa5e06f4"
         },
         {
          "name": "cortex:embed",
@@ -1246,7 +1246,7 @@
          "declared_capabilities": [],
          "schema_findings": [],
          "schema_rule_findings": [],
-         "server_canonical_id": "5fb65166-405f-5999-b00c-4335805d2fae"
+         "server_canonical_id": "953167b9-6046-5a56-807c-8fb4fa5e06f4"
         }
        ],
        "resources": [],
@@ -1826,7 +1826,7 @@
          "declared_capabilities": [],
          "schema_findings": [],
          "schema_rule_findings": [],
-         "server_canonical_id": "4d64c7f8-9ab0-5c3f-9c1d-e542999daff7"
+         "server_canonical_id": "a5bcf6ec-9d88-5d8c-9943-8d6c07fcce15"
         },
         {
          "name": "document_retrieve",
@@ -1840,7 +1840,7 @@
          "declared_capabilities": [],
          "schema_findings": [],
          "schema_rule_findings": [],
-         "server_canonical_id": "4d64c7f8-9ab0-5c3f-9c1d-e542999daff7"
+         "server_canonical_id": "a5bcf6ec-9d88-5d8c-9943-8d6c07fcce15"
         }
        ],
        "resources": [],
@@ -1937,7 +1937,7 @@
          "declared_capabilities": [],
          "schema_findings": [],
          "schema_rule_findings": [],
-         "server_canonical_id": "9f87ccce-e475-585a-8ad7-94f0f0169e0c"
+         "server_canonical_id": "3507492e-6c8f-5a33-8767-356d9d38f61f"
         },
         {
          "name": "document_retrieve",
@@ -1951,7 +1951,7 @@
          "declared_capabilities": [],
          "schema_findings": [],
          "schema_rule_findings": [],
-         "server_canonical_id": "9f87ccce-e475-585a-8ad7-94f0f0169e0c"
+         "server_canonical_id": "3507492e-6c8f-5a33-8767-356d9d38f61f"
         }
        ],
        "resources": [],
@@ -2448,7 +2448,7 @@
          "declared_capabilities": [],
          "schema_findings": [],
          "schema_rule_findings": [],
-         "server_canonical_id": "bb898470-96ab-5674-8224-33d6675dbbc6"
+         "server_canonical_id": "acf7ed69-2caf-5a02-ad14-9410b0c32e72"
         },
         {
          "name": "SQL_UDF",
@@ -2462,7 +2462,7 @@
          "declared_capabilities": [],
          "schema_findings": [],
          "schema_rule_findings": [],
-         "server_canonical_id": "bb898470-96ab-5674-8224-33d6675dbbc6"
+         "server_canonical_id": "acf7ed69-2caf-5a02-ad14-9410b0c32e72"
         },
         {
          "name": "SHORT_UDF",
@@ -2476,7 +2476,7 @@
          "declared_capabilities": [],
          "schema_findings": [],
          "schema_rule_findings": [],
-         "server_canonical_id": "bb898470-96ab-5674-8224-33d6675dbbc6"
+         "server_canonical_id": "acf7ed69-2caf-5a02-ad14-9410b0c32e72"
         },
         {
          "name": "JS_PROC",
@@ -2490,7 +2490,7 @@
          "declared_capabilities": [],
          "schema_findings": [],
          "schema_rule_findings": [],
-         "server_canonical_id": "bb898470-96ab-5674-8224-33d6675dbbc6"
+         "server_canonical_id": "acf7ed69-2caf-5a02-ad14-9410b0c32e72"
         },
         {
          "name": "SHORT_PROC",
@@ -2504,7 +2504,7 @@
          "declared_capabilities": [],
          "schema_findings": [],
          "schema_rule_findings": [],
-         "server_canonical_id": "bb898470-96ab-5674-8224-33d6675dbbc6"
+         "server_canonical_id": "acf7ed69-2caf-5a02-ad14-9410b0c32e72"
         }
        ],
        "resources": [],

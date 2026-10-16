@@ -163,8 +163,8 @@ def test_mcpserver_stable_id_deterministic():
     assert len(s1.stable_id) == 36
 
 
-def test_mcpserver_stable_id_uses_registry_id_when_available():
-    """registry_id takes precedence over name+command."""
+def test_mcpserver_stable_id_survives_registry_enrichment():
+    """Artifact metadata does not re-key an already identified launch."""
     s_with_registry = MCPServer(
         name="filesystem",
         command="npx @modelcontextprotocol/server-filesystem",
@@ -176,17 +176,23 @@ def test_mcpserver_stable_id_uses_registry_id_when_available():
         command="npx @modelcontextprotocol/server-filesystem",
         transport=TransportType.STDIO,
     )
-    # registry_id is different from name:command fallback → different IDs
-    assert s_with_registry.stable_id != s_without_registry.stable_id
+    # Same launch identity before and after registry enrichment.
+    assert s_with_registry.stable_id == s_without_registry.stable_id
 
 
-def test_mcpserver_canonical_id_survives_registry_rename():
-    """Registry IDs are authoritative so display-name changes do not split history."""
-    s1 = MCPServer(name="filesystem", command="npx @modelcontextprotocol/server-filesystem", registry_id="modelcontextprotocol/filesystem")
-    s2 = MCPServer(name="File System", command="uvx filesystem-server", registry_id="modelcontextprotocol/filesystem")
+def test_mcpserver_canonical_id_survives_display_rename():
+    """A display rename preserves an exact executable and argv identity."""
+    s1 = MCPServer(name="filesystem", command="npx", args=["filesystem-server"], registry_id="modelcontextprotocol/filesystem")
+    s2 = MCPServer(name="File System", command="npx", args=["filesystem-server"], registry_id="modelcontextprotocol/filesystem")
 
     assert s1.stable_id == s2.stable_id
     assert s1.canonical_id == s1.stable_id
+
+
+def test_registry_artifact_does_not_merge_different_launches():
+    s1 = MCPServer(name="filesystem", command="npx", args=["filesystem-server"], registry_id="modelcontextprotocol/filesystem")
+    s2 = MCPServer(name="filesystem", command="uvx", args=["filesystem-server"], registry_id="modelcontextprotocol/filesystem")
+    assert s1.canonical_id != s2.canonical_id
 
 
 def test_mcpserver_remote_servers_distinct_by_url():

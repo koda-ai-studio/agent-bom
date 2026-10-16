@@ -948,3 +948,14 @@ recorded cross-agent paths. A modeled path, runtime attempt, blocked operation,
 and successful execution remain distinct. Legacy transitive fields in stored
 reports are retained as supplied historical data; this compatibility option
 does not validate or rewrite them.
+
+### Local launch occurrences in inventory exports
+
+The local Agent BOM manifest and JSON inventory snapshot use scoped server
+occurrence IDs for their references. Matching executable arguments in different
+agent configurations do not establish a shared process. JSON tool, resource and
+prompt occurrence IDs retain their parent server scope. Their `canonical_id`
+metadata describes the underlying definition and must not replace the scoped
+`id` when joining inventory relationships. CycloneDX derives each MCP component
+reference from that same scoped server identity; identical remote endpoints can
+still share one component while retaining every declaring agent dependency.

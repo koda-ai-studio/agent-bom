@@ -15,6 +15,8 @@ useDefault = true
 description = "(1) framework_key fields hold registry slugs, not credentials. (2) The named secret-DETECTION test files intentionally contain non-functional fixture secrets to exercise agent-bom's own scanner (mirrors .github/secret_scanning.yml paths-ignore — file-scoped, never a blanket tests/ exclusion). (3) The Azurite emulator's well-known dev AccountKey is a public, Microsoft-documented constant (identical for everyone), not a credential — anchored to that exact value, so a real key can never hide behind it."
 regexTarget = "line"
 regexes = [
+  # Synthetic graph node-label key: scoped server UUID, never an API credential.
+  '''^\s*"server:cfg-[0-9a-f]{12}:api-agent:[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}":\s*"api-agent-server",?\s*$''',
   # Synthetic AKS hostname in characterization history; survives rebased commits.
   '''^\s*"api_server_fqdn":\s*"private\.azmk8s\.io",?\s*$''',
   '''["']?framework_key["']?\s*[:=]''',

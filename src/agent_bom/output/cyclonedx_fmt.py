@@ -21,7 +21,7 @@ from agent_bom.asset_provenance import (
     package_version_provenance,
     sanitize_discovery_provenance,
 )
-from agent_bom.canonical_ids import CANONICAL_ID_SCHEMA_VERSION
+from agent_bom.canonical_ids import CANONICAL_ID_SCHEMA_VERSION, canonical_id, mcp_server_graph_id_for
 from agent_bom.checksums import cyclonedx_hashes, integrity_verdict, strongest_checksum
 from agent_bom.evidence.scan_run import ScanOutcome, effective_scan_run
 from agent_bom.models import AIBOMReport, Vulnerability
@@ -646,7 +646,7 @@ def to_cyclonedx(report: AIBOMReport) -> dict:
         )
 
         for server in agent.mcp_servers:
-            server_ref = _sanitize_bom_ref(f"mcp-server-{server.stable_id}")
+            server_ref = _sanitize_bom_ref(f"mcp-server-{canonical_id('mcp_export', mcp_server_graph_id_for(server, agent))}")
             package_dependencies, server_deps, unresolved = cyclonedx_package_dependencies(
                 server.packages, lambda package_id: _sanitize_bom_ref(f"pkg-{package_id}")
             )

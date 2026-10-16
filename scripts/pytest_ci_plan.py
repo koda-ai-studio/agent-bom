@@ -268,6 +268,11 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
                 or candidate.name
                 in {
                     "test_entrypoint_registries.py",
+                    "test_stable_ids.py",
+                    "test_snowflake_characterization.py",
+                    "test_agent_manifest.py",
+                    "test_agent_manifest_identity.py",
+                    "test_interop_schema_conformance.py",
                     "test_mcp_server_scheme_aliases.py",
                     "test_graph_canonical_node_ids.py",
                     "test_canonical_identity_boundaries.py",

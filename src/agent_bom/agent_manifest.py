@@ -11,7 +11,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable
 from typing import TYPE_CHECKING, Any
 
-from agent_bom.canonical_ids import CANONICAL_ID_SCHEMA_VERSION, agent_identity_export
+from agent_bom.canonical_ids import CANONICAL_ID_SCHEMA_VERSION, agent_identity_export, mcp_server_graph_id_for
 from agent_bom.models import Agent, MCPServer, MCPTool
 from agent_bom.platform_invariants import now_utc_iso
 from agent_bom.security import sanitize_command_args, sanitize_security_warnings, sanitize_text, sanitize_url
@@ -70,10 +70,10 @@ def _tool(tool: MCPTool) -> dict[str, object]:
     }
 
 
-def _server(server: MCPServer) -> dict[str, object]:
+def _server(server: MCPServer, agent: Agent) -> dict[str, object]:
     permission_profile = server.permission_profile
     return {
-        "id": server.stable_id,
+        "id": mcp_server_graph_id_for(server, agent),
         "canonical_id": server.canonical_id,
         "fingerprint": server.fingerprint,
         "name": sanitize_text(server.name, max_len=160),
@@ -117,7 +117,7 @@ def _agent(agent: Agent) -> dict[str, object]:
         "version": sanitize_text(agent.version, max_len=80) if agent.version else None,
         "discovered_at": agent.discovered_at,
         "last_seen": agent.last_seen,
-        "mcp_server_ids": [server.stable_id for server in agent.mcp_servers],
+        "mcp_server_ids": [mcp_server_graph_id_for(server, agent) for server in agent.mcp_servers],
     }
 
 
@@ -529,7 +529,7 @@ def build_local_agent_manifest(
 ) -> dict[str, object]:
     agent_list = list(agents)
     agent_rows = _dedup_rows([_agent(agent) for agent in agent_list], _union_agent_rows)
-    server_rows = _dedup_rows([_server(server) for agent in agent_list for server in agent.mcp_servers], _union_server_rows)
+    server_rows = _dedup_rows([_server(server, agent) for agent in agent_list for server in agent.mcp_servers], _union_server_rows)
     return _manifest(source, agent_rows, server_rows, tenant_id)
 
 

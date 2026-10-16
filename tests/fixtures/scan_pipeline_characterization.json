@@ -1983,7 +1983,7 @@
        "agent:api-agent"
       ],
       "server_ids": [
-       "<UUID>"
+       "server:cfg-e12ed29252b1:api-agent:<UUID>"
       ],
       "status": "configured",
       "type": "custom"
@@ -2040,11 +2040,11 @@
     "relationships": [
      {
       "from": "<UUID>",
-      "to": "<UUID>",
+      "to": "server:cfg-e12ed29252b1:api-agent:<UUID>",
       "type": "uses"
      },
      {
-      "from": "<UUID>",
+      "from": "server:cfg-e12ed29252b1:api-agent:<UUID>",
       "to": "<UUID>",
       "type": "depends_on"
      }
@@ -2064,7 +2064,7 @@
        "source_type": "local_discovery"
       },
       "fingerprint": "<UUID>",
-      "id": "<UUID>",
+      "id": "server:cfg-e12ed29252b1:api-agent:<UUID>",
       "name": "api-agent-server",
       "package_ids": [
        "<UUID>"
@@ -4702,7 +4702,7 @@
        "agent:api-agent"
       ],
       "server_ids": [
-       "<UUID>"
+       "server:cfg-e12ed29252b1:api-agent:<UUID>"
       ],
       "status": "configured",
       "type": "custom"
@@ -4759,11 +4759,11 @@
     "relationships": [
      {
       "from": "<UUID>",
-      "to": "<UUID>",
+      "to": "server:cfg-e12ed29252b1:api-agent:<UUID>",
       "type": "uses"
      },
      {
-      "from": "<UUID>",
+      "from": "server:cfg-e12ed29252b1:api-agent:<UUID>",
       "to": "<UUID>",
       "type": "depends_on"
      }
@@ -4783,7 +4783,7 @@
        "source_type": "local_discovery"
       },
       "fingerprint": "<UUID>",
-      "id": "<UUID>",
+      "id": "server:cfg-e12ed29252b1:api-agent:<UUID>",
       "name": "api-agent-server",
       "package_ids": [
        "<UUID>"
@@ -7368,7 +7368,7 @@
        "agent:api-agent"
       ],
       "server_ids": [
-       "<UUID>"
+       "server:cfg-e12ed29252b1:api-agent:<UUID>"
       ],
       "status": "configured",
       "type": "custom"
@@ -7425,11 +7425,11 @@
     "relationships": [
      {
       "from": "<UUID>",
-      "to": "<UUID>",
+      "to": "server:cfg-e12ed29252b1:api-agent:<UUID>",
       "type": "uses"
      },
      {
-      "from": "<UUID>",
+      "from": "server:cfg-e12ed29252b1:api-agent:<UUID>",
       "to": "<UUID>",
       "type": "depends_on"
      }
@@ -7449,7 +7449,7 @@
        "source_type": "local_discovery"
       },
       "fingerprint": "<UUID>",
-      "id": "<UUID>",
+      "id": "server:cfg-e12ed29252b1:api-agent:<UUID>",
       "name": "api-agent-server",
       "package_ids": [
        "<UUID>"
@@ -9269,7 +9269,7 @@
        "agent:api-agent"
       ],
       "server_ids": [
-       "<UUID>"
+       "server:cfg-e12ed29252b1:api-agent:<UUID>"
       ],
       "status": "configured",
       "type": "custom"
@@ -9326,11 +9326,11 @@
     "relationships": [
      {
       "from": "<UUID>",
-      "to": "<UUID>",
+      "to": "server:cfg-e12ed29252b1:api-agent:<UUID>",
       "type": "uses"
      },
      {
-      "from": "<UUID>",
+      "from": "server:cfg-e12ed29252b1:api-agent:<UUID>",
       "to": "<UUID>",
       "type": "depends_on"
      }
@@ -9350,7 +9350,7 @@
        "source_type": "local_discovery"
       },
       "fingerprint": "<UUID>",
-      "id": "<UUID>",
+      "id": "server:cfg-e12ed29252b1:api-agent:<UUID>",
       "name": "api-agent-server",
       "package_ids": [
        "<UUID>"
@@ -11346,7 +11346,7 @@
        "agent:api-agent"
       ],
       "server_ids": [
-       "<UUID>"
+       "server:cfg-e12ed29252b1:api-agent:<UUID>"
       ],
       "status": "configured",
       "type": "custom"
@@ -11403,11 +11403,11 @@
     "relationships": [
      {
       "from": "<UUID>",
-      "to": "<UUID>",
+      "to": "server:cfg-e12ed29252b1:api-agent:<UUID>",
       "type": "uses"
      },
      {
-      "from": "<UUID>",
+      "from": "server:cfg-e12ed29252b1:api-agent:<UUID>",
       "to": "<UUID>",
       "type": "depends_on"
      }
@@ -11427,7 +11427,7 @@
        "source_type": "local_discovery"
       },
       "fingerprint": "<UUID>",
-      "id": "<UUID>",
+      "id": "server:cfg-e12ed29252b1:api-agent:<UUID>",
       "name": "api-agent-server",
       "package_ids": [
        "<UUID>"
@@ -13931,7 +13931,7 @@
        "agent:api-agent"
       ],
       "server_ids": [
-       "<UUID>"
+       "server:cfg-e12ed29252b1:api-agent:<UUID>"
       ],
       "status": "configured",
       "type": "custom"
@@ -13988,11 +13988,11 @@
     "relationships": [
      {
       "from": "<UUID>",
-      "to": "<UUID>",
+      "to": "server:cfg-e12ed29252b1:api-agent:<UUID>",
       "type": "uses"
      },
      {
-      "from": "<UUID>",
+      "from": "server:cfg-e12ed29252b1:api-agent:<UUID>",
       "to": "<UUID>",
       "type": "depends_on"
      }
@@ -14012,7 +14012,7 @@
        "source_type": "local_discovery"
       },
       "fingerprint": "<UUID>",
-      "id": "<UUID>",
+      "id": "server:cfg-e12ed29252b1:api-agent:<UUID>",
       "name": "api-agent-server",
       "package_ids": [
        "<UUID>"
@@ -16507,7 +16507,7 @@
        "agent:keep-me"
       ],
       "server_ids": [
-       "<UUID>"
+       "server:cfg-18c2f7021ee3:keep-me:<UUID>"
       ],
       "status": "configured",
       "type": "custom"
@@ -16564,11 +16564,11 @@
     "relationships": [
      {
       "from": "<UUID>",
-      "to": "<UUID>",
+      "to": "server:cfg-18c2f7021ee3:keep-me:<UUID>",
       "type": "uses"
      },
      {
-      "from": "<UUID>",
+      "from": "server:cfg-18c2f7021ee3:keep-me:<UUID>",
       "to": "<UUID>",
       "type": "depends_on"
      }
@@ -16588,7 +16588,7 @@
        "source_type": "local_discovery"
       },
       "fingerprint": "<UUID>",
-      "id": "<UUID>",
+      "id": "server:cfg-18c2f7021ee3:keep-me:<UUID>",
       "name": "keep-me-server",
       "package_ids": [
        "<UUID>"
@@ -18427,7 +18427,7 @@
        "agent:api-agent"
       ],
       "server_ids": [
-       "<UUID>"
+       "server:cfg-e12ed29252b1:api-agent:<UUID>"
       ],
       "status": "configured",
       "type": "custom"
@@ -18484,11 +18484,11 @@
     "relationships": [
      {
       "from": "<UUID>",
-      "to": "<UUID>",
+      "to": "server:cfg-e12ed29252b1:api-agent:<UUID>",
       "type": "uses"
      },
      {
-      "from": "<UUID>",
+      "from": "server:cfg-e12ed29252b1:api-agent:<UUID>",
       "to": "<UUID>",
       "type": "depends_on"
      }
@@ -18508,7 +18508,7 @@
        "source_type": "local_discovery"
       },
       "fingerprint": "<UUID>",
-      "id": "<UUID>",
+      "id": "server:cfg-e12ed29252b1:api-agent:<UUID>",
       "name": "api-agent-server",
       "package_ids": [
        "<UUID>"
