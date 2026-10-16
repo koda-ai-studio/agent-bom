@@ -199,11 +199,18 @@ def test_unstamped_historical_rows_keep_v2_identity():
 
 
 def test_server_aliases_retain_frozen_scope_escaping_and_registry_v2_ids():
-    from agent_bom.canonical_ids import canonical_mcp_server_id, legacy_canonical_id_v2, previous_mcp_server_graph_ids
+    import uuid
+
+    from agent_bom.canonical_ids import (
+        AGENT_BOM_ID_NAMESPACE,
+        canonical_mcp_server_id,
+        legacy_canonical_id_v2,
+        previous_mcp_server_graph_ids,
+    )
 
     agent = {"name": "one", "source_id": "host%3Aone"}
     server = {"name": "same", "command": "npx", "args": ["foo"]}
-    identity = canonical_mcp_server_id("same", "npx", args=["foo"])
+    identity = str(uuid.uuid5(AGENT_BOM_ID_NAMESPACE, "mcp_server:cmd:npx:foo"))
     assert f"server:host%3Aone:{identity}" in previous_mcp_server_graph_ids({**server, "canonical_id": identity}, agent)
     registry = {"name": "registered", "registry_id": "org.example/service"}
     registry["canonical_id"] = canonical_mcp_server_id(registry["name"], registry_id=registry["registry_id"])
@@ -405,3 +412,14 @@ def test_historical_server_child_receipts_bind_only_when_unique():
     assert binder.node(old_tool) is None
     assert binder.node(old_cred) is None
     assert not any(e.relationship == RelationshipType.INVOKED for e in ambiguous.edges)
+
+
+def test_new_instance_fingerprint_is_not_invented_as_a_historical_global_alias():
+    from agent_bom.canonical_ids import canonical_mcp_server_id, mcp_server_graph_id, previous_mcp_server_graph_ids
+
+    server = {"name": "service", "command": "python", "args": ["server.py"]}
+    agent = {"name": "a", "config_path": "/a/config.json", "mcp_servers": [server]}
+    current = mcp_server_graph_id(**server)
+    assert current not in previous_mcp_server_graph_ids(server, agent)
+    server["stable_id"] = canonical_mcp_server_id(**server)
+    assert current not in previous_mcp_server_graph_ids(server, agent)

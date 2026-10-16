@@ -387,7 +387,18 @@ def previous_mcp_server_graph_ids(server: Any, agent: Any) -> list[str]:
     previous = {f"server:{agent_id.removeprefix('agent:')}:{label}" for agent_id in agent_ids}
     if (kind != "agent" or registry_id) and _field(agent, "source") != CORTEX_AGENT_SOURCE:
         explicit = _field(server, "canonical_id") or _field(server, "stable_id")
-        identities = {str(explicit)} if explicit else {canonical_mcp_server_id(label, str(command), url=url, args=args)}
+        current_identity = canonical_mcp_server_id(
+            label,
+            str(command),
+            registry_id=registry_id,
+            url=url,
+            args=args,
+            working_dir=_field(server, "working_dir"),
+            environment=_field(server, "env"),
+        )
+        # Only an older explicit receipt can name a previous global node.
+        # The new instance fingerprint never existed in that global namespace.
+        identities = {str(explicit)} if explicit and str(explicit) != current_identity else set()
         if registry_id:
             identities.update({canonical_id("mcp_server", registry_id), legacy_canonical_id_v2("mcp_server", registry_id)})
         else:
