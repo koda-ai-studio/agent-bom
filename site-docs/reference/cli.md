@@ -156,6 +156,7 @@ metadata or environment defaults.
 | `api` | Start the REST API server |
 | `schedule` | Manage recurring scan schedules |
 | `remediate` | Generate a prioritized remediation plan; with explicit `--apply`, patch supported dependency manifests |
+| `verify-remediation` | Capture and compare installed Python metadata against one pinned advisory; retain scoped evidence |
 | `teardown` | Legacy reference cleanup only; the supported EKS platform uses a reviewed `terraform destroy` from `deploy/terraform/platform-eks` |
 
 ### Database And Utilities

@@ -487,9 +487,9 @@ main.add_command(sidecar_injector_cmd, "sidecar-injector")
 # ---------------------------------------------------------------------------
 # Remediate command
 # ---------------------------------------------------------------------------
-from agent_bom.cli._remediate import remediate_cmd  # noqa: E402
+from agent_bom.cli._verify_remediation import register_remediation_commands  # noqa: E402
 
-main.add_command(remediate_cmd, "remediate")
+register_remediation_commands(main)
 
 
 # ---------------------------------------------------------------------------

@@ -254,6 +254,12 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
 
     for changed in changed_files:
         normalized = Path(changed.as_posix().removeprefix("./"))
+        if normalized.as_posix() in {
+            "src/agent_bom/evidence/package_remediation.py",
+            "src/agent_bom/cli/_verify_remediation.py",
+            "src/agent_bom/core/versions/osv.py",
+        }:
+            selected.update(candidate for candidate in available if candidate.name == "test_package_remediation_verification.py")
         if normalized.as_posix() in {"src/agent_bom/canonical_ids.py", "src/agent_bom/graph/edge.py", "src/agent_bom/graph/rekey.py"}:
             selected.update(
                 candidate
