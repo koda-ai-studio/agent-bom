@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: koda-ai-studio/agent-bom@v0.108.4
+      - uses: koda-ai-studio/agent-bom@v0.109.0
         with:
           scan-type: agents
           format: sarif
