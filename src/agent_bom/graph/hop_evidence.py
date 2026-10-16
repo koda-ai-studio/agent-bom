@@ -8,6 +8,7 @@ from typing import Annotated, Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
 from agent_bom.graph.container import AttackPath
+from agent_bom.graph.runtime_receipts import runtime_records
 
 EvidenceId = Annotated[str, Field(min_length=1, max_length=1024)]
 
@@ -147,7 +148,7 @@ class RuntimeEvidenceReference(BaseModel):
         return self
 
 
-def runtime_evidence_references(evidence: Mapping[str, Any]) -> list[dict[str, str]]:
+def _runtime_reference(evidence: Mapping[str, Any]) -> list[dict[str, str]]:
     """Keep valid recorded IDs independently; do not infer one from another."""
     reference: dict[str, str] = {}
     for key in ("event_id", "trace_id"):
@@ -157,7 +158,30 @@ def runtime_evidence_references(evidence: Mapping[str, Any]) -> list[dict[str, s
         except ValidationError:
             continue
         reference.update(validated.model_dump(exclude_none=True))
-    return [reference] if reference else []
+    references = [reference] if reference else []
+    # Trace projection aggregates exact inventory-bound events. Retain bounded
+    # source trace IDs independently; do not pair them with an unrelated event.
+    samples = evidence.get("sample_trace_ids")
+    if isinstance(samples, list):
+        for value in samples[:8]:
+            try:
+                item = RuntimeEvidenceReference.model_validate({"trace_id": value}).model_dump(exclude_none=True)
+            except ValidationError:
+                continue
+            if item not in references:
+                references.append(item)
+    return references[:8]
+
+
+def runtime_evidence_references(evidence: Mapping[str, Any]) -> list[dict[str, str]]:
+    """Project references from complete source records, bounded and deduplicated."""
+
+    result: list[dict[str, str]] = []
+    for record in runtime_records(dict(evidence)):
+        for reference in _runtime_reference(record):
+            if reference not in result:
+                result.append(reference)
+    return result[:8]
 
 
 class HopEvidenceReceipt(BaseModel):
@@ -173,6 +197,7 @@ class HopEvidenceReceipt(BaseModel):
     source_node_id: str
     target_node_id: str
     relationship: str
+    canonical_edge_id: Annotated[str, Field(max_length=256)] | None = None
     source_snapshot_ids: list[str] = Field(default_factory=list, max_length=50)
     relationship_provenance: Literal["recorded", "unavailable"] = "unavailable"
     correlation_identity_status: Literal["current", "recomputation_required", "unavailable"] = "unavailable"

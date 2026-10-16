@@ -326,7 +326,8 @@ def test_bounded_analysis_cannot_promote_a_path_to_confirmed() -> None:
 
 
 def test_confirmed_path_carries_complete_per_hop_evidence() -> None:
-    path = next(path for path in _derived_attack_paths(_ordinary_vulnerability_graph()) if path.target == "vuln:CVE-2026-1")
+    graph = _ordinary_vulnerability_graph()
+    path = next(path for path in _derived_attack_paths(graph) if path.target == "vuln:CVE-2026-1")
 
     assert path.reachability == "confirmed"
     assert len(path.hop_evidence) == 2
@@ -334,6 +335,8 @@ def test_confirmed_path_carries_complete_per_hop_evidence() -> None:
         "source_node_id": "agent:a",
         "target_node_id": "server:a",
         "relationship": "uses",
+        "canonical_edge_id": next(edge.canonical_id for edge in graph.edges if edge.source == "agent:a" and edge.target == "server:a"),
+        "reason_codes": [],
         "source_snapshot_ids": ["scan-a"],
         "relationship_provenance": "recorded",
         "correlation_identity_status": "current",

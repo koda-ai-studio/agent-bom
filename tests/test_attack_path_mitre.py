@@ -1,7 +1,6 @@
 """Typed MITRE ATT&CK / ATLAS technique enrichment for attack paths (#4108).
 
-Mappings are derived from OBSERVED GRAPH EVIDENCE (edge relationship type +
-target node entity type + edge evidence) — never by parsing the human-readable
+Mappings require source-backed technique prerequisites — never by parsing the human-readable
 summary/edge-label text — and every technique/tactic ID resolves against the
 bundled catalog. Hops without mappable evidence stay unmapped (fail-closed).
 These are *potential/mapped* techniques for the kill-chain sequence, never a
@@ -49,7 +48,7 @@ def _kill_chain_graph(tenant_id: str = "t", scan_id: str = "s") -> UnifiedGraph:
             id="role:admin",
             entity_type=EntityType.ROLE,
             label="AdminRole",
-            attributes={"can_escalate_privilege": True, "escalates_to_admin": True},
+            attributes={"can_escalate_privilege": True, "escalates_to_admin": True, "cloud_provider": "gcp", "principal_id": "reader"},
         )
     )
     g.add_edge(UnifiedEdge(source="res:web", target="role:admin", relationship=RelationshipType.ASSUMES))
@@ -59,6 +58,8 @@ def _kill_chain_graph(tenant_id: str = "t", scan_id: str = "s") -> UnifiedGraph:
             entity_type=EntityType.DATA_STORE,
             label="data: cardholder-db",
             attributes={
+                "cloud_provider": "gcp",
+                "resource_id": "projects/_/buckets/vault",
                 "data_sensitivity": "sensitive",
                 "data_regulatory_frameworks": ["PCI-DSS"],
                 "data_classification_tier": "restricted",
@@ -69,8 +70,17 @@ def _kill_chain_graph(tenant_id: str = "t", scan_id: str = "s") -> UnifiedGraph:
         UnifiedEdge(
             source="role:admin",
             target="data_store:vault",
-            relationship=RelationshipType.HAS_PERMISSION,
-            evidence={"access": "assume_chain"},
+            relationship=RelationshipType.CAN_ACCESS,
+            evidence={
+                "source": "authorization-evidence",
+                "provider": "gcp",
+                "principal_id": "reader",
+                "resource": "projects/_/buckets/vault",
+                "action": "storage.objects.get",
+                "decision": "allow",
+                "binding_ids": ["binding:read"],
+                "observed_at": "2026-10-16T00:00:00Z",
+            },
         )
     )
     for edge in g.edges:
@@ -92,27 +102,24 @@ def test_multihop_evidence_maps_to_catalog_techniques_ordered():
 
     mappings = derive_attack_path_techniques(path, g)
 
-    # One mapping per hop that carried mappable evidence, ordered by kill-chain.
-    assert [m.hop_index for m in mappings] == [0, 1]
-    # hop 0: ASSUMES into a role → Valid Accounts (privilege escalation).
-    assert mappings[0].technique_id == "T1078"
+    # Role assumption alone is unmapped. The exact cloud-object read receipt
+    # establishes a modeled prerequisite, not an observed collection event.
+    assert [m.hop_index for m in mappings] == [1]
+    assert mappings[0].technique_id == "T1530"
     assert mappings[0].catalog == "attack"
-    assert "privilege-escalation" in mappings[0].tactics
-    # hop 1: effective permission reaching a crown-jewel data store → collection.
-    assert mappings[1].technique_id == "T1530"
-    assert "collection" in mappings[1].tactics
+    assert "collection" in mappings[0].tactics
 
     catalog = _catalog_ids()
     for m in mappings:
         assert m.technique_id in catalog, f"dangling technique {m.technique_id}"
-        assert 0.0 < m.confidence <= 1.0
+        assert m.confidence is None
         assert m.tactics  # resolved from catalog, never empty
         # Provenance is derived from the observed graph edge, not the summary text.
         assert path.summary not in m.provenance
         assert m.provenance  # non-empty evidence description
 
 
-def test_vulnerable_edge_from_internet_entry_maps_to_exploit_public_facing():
+def test_internet_exposed_vulnerability_does_not_establish_public_application_exploitation():
     g = _kill_chain_graph()
     # Direct exploit hop off the internet-exposed entry.
     path = AttackPath(
@@ -124,9 +131,7 @@ def test_vulnerable_edge_from_internet_entry_maps_to_exploit_public_facing():
         reachability_basis=["graph_path"],
     )
     mappings = derive_attack_path_techniques(path, g)
-    assert len(mappings) == 1
-    assert mappings[0].technique_id == "T1190"  # Exploit Public-Facing Application
-    assert "initial-access" in mappings[0].tactics
+    assert mappings == []
 
 
 def test_unverified_candidate_path_never_gets_exploit_technique_mapping():
@@ -142,12 +147,19 @@ def test_unverified_candidate_path_never_gets_exploit_technique_mapping():
     assert derive_attack_path_techniques(path, g) == []
 
 
-def test_tool_reach_maps_to_atlas_and_resolves():
+def test_referenced_agent_tool_invocation_maps_to_atlas_and_resolves():
     g = UnifiedGraph(scan_id="s", tenant_id="t")
-    g.add_node(UnifiedNode(id="agent:a", entity_type=EntityType.CLOUD_RESOURCE, label="agent", attributes={"internet_exposed": True}))
+    g.add_node(UnifiedNode(id="agent:a", entity_type=EntityType.AGENT, label="agent", attributes={"internet_exposed": True}))
     g.add_node(UnifiedNode(id="tool:shell", entity_type=EntityType.TOOL, label="shell-tool"))
-    g.add_edge(UnifiedEdge(source="agent:a", target="tool:shell", relationship=RelationshipType.REACHES_TOOL))
-    path = AttackPath(source="agent:a", target="tool:shell", hops=["agent:a", "tool:shell"], edges=["reaches_tool"])
+    g.add_edge(
+        UnifiedEdge(
+            source="agent:a",
+            target="tool:shell",
+            relationship=RelationshipType.INVOKED,
+            evidence={"tier": "runtime_observed", "event_id": "event:tool-1"},
+        )
+    )
+    path = AttackPath(source="agent:a", target="tool:shell", hops=["agent:a", "tool:shell"], edges=["invoked"])
 
     mappings = derive_attack_path_techniques(path, g)
 
@@ -295,7 +307,7 @@ def test_mitre_requires_actual_directed_traversable_hop(kind):
     graph = UnifiedGraph(scan_id="proof", tenant_id="tenant")
     graph.add_node(UnifiedNode(id="role", entity_type=EntityType.ROLE, label="role"))
     graph.add_node(UnifiedNode(id="data", entity_type=EntityType.DATA_STORE, label="data"))
-    path = AttackPath(source="role", target="data", hops=["role", "data"], edges=["has_permission"])
+    path = AttackPath(source="role", target="data", hops=["role", "data"], edges=["can_access"])
     if kind != "absent":
         graph.add_edge(
             UnifiedEdge(
@@ -310,24 +322,24 @@ def test_mitre_requires_actual_directed_traversable_hop(kind):
 
 
 @pytest.mark.parametrize("basis", ["observed", "inferred", "modeled"])
-def test_mitre_preserves_explicit_relationship_basis(basis):
+def test_permission_mapping_stays_modeled_even_if_collector_claims_observed(basis):
     graph = _kill_chain_graph()
     for edge in graph.edges:
         edge.provenance = {"basis": basis}
-    path = AttackPath(source="role:admin", target="data_store:vault", hops=["role:admin", "data_store:vault"], edges=["has_permission"])
+    path = AttackPath(source="role:admin", target="data_store:vault", hops=["role:admin", "data_store:vault"], edges=["can_access"])
     mapping = derive_attack_path_techniques(path, graph)[0]
-    assert mapping.evidence_basis == basis
-    assert mapping.provenance.startswith(basis + " ")
-    assert TechniqueMapping.from_dict(mapping.to_dict()).evidence_basis == basis
+    assert mapping.evidence_basis == "modeled"
+    assert mapping.provenance.startswith("modeled ")
+    assert TechniqueMapping.from_dict(mapping.to_dict()).evidence_basis == "modeled"
 
 
 def test_mitre_missing_basis_does_not_claim_observed_confidence():
     graph = _kill_chain_graph()
     for edge in graph.edges:
         edge.provenance = {}
-    path = AttackPath(source="role:admin", target="data_store:vault", hops=["role:admin", "data_store:vault"], edges=["has_permission"])
+    path = AttackPath(source="role:admin", target="data_store:vault", hops=["role:admin", "data_store:vault"], edges=["can_access"])
     mapping = derive_attack_path_techniques(path, graph)[0]
-    assert mapping.evidence_basis is None
+    assert mapping.evidence_basis == "modeled"
     assert mapping.confidence is None
     assert not mapping.provenance.startswith("observed ")
 

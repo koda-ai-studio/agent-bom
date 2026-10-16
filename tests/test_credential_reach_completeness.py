@@ -189,20 +189,13 @@ def test_technique_catalog_loads_once_per_batch(monkeypatch):
     monkeypatch.setattr(mitre_fetch, "build_catalog", count_attack)
     monkeypatch.setattr(atlas_fetch, "build_catalog", count_atlas)
     g = _per_agent(30, creds=1)
-    paths = [
-        AttackPath(
-            source=f"agent:{i}",
-            target=f"cred:{i}:0",
-            hops=[f"agent:{i}", f"server:{i}", f"cred:{i}:0"],
-            edges=["uses", "exposes_cred"],
-            reachability="confirmed",
-        )
-        for i in range(30)
-    ]
+    for i in range(30):
+        _edge(g, f"agent:{i}", f"tool:{i}", R.INVOKED, evidence={"tier": "runtime_observed", "event_id": f"event:{i}"})
+    paths = [AttackPath(source=f"agent:{i}", target=f"tool:{i}", hops=[f"agent:{i}", f"tool:{i}"], edges=["invoked"]) for i in range(30)]
     with_technique_mappings(paths, g)
-    assert any(p.technique_mappings for p in paths)
-    assert calls["attack"] <= 1
-    assert calls["atlas"] <= 1
+    assert all(len(p.technique_mappings) == 1 and p.technique_mappings[0].technique_id == "AML.T0053" for p in paths)
+    assert calls["attack"] == 0
+    assert calls["atlas"] == 1
 
 
 def test_equal_risk_paths_have_deterministic_order():

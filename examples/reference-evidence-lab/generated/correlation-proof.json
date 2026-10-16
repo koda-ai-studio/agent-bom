@@ -10,7 +10,7 @@
       ]
     }
   ],
-  "artifact_sha256": "sha256:59bda65db7b0d17777cee66fc275a6903769ac68fadb4f4ea0bde2d9e8f3ad7c",
+  "artifact_sha256": "sha256:91474fdfef7050cedb4f487ea56b1d2a1133c670f3fa33726e09a48eb353a2cd",
   "capture_fixture": {
     "fix_first": {
       "attack_campaigns": [
@@ -93,12 +93,14 @@
             "finding_ids": [],
             "hop_evidence": [
               {
+                "canonical_edge_id": "1cb8e11c-0788-5bff-a8c8-86785be4c2c5",
                 "complete": true,
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
                 "direction": "directed",
                 "evidence_tier": "modeled_infrastructure",
                 "freshness": "fresh",
+                "reason_codes": [],
                 "relationship": "exposed_to",
                 "relationship_provenance": "recorded",
                 "runtime_observed_state": "not_observed",
@@ -112,12 +114,14 @@
                 "truncated": false
               },
               {
+                "canonical_edge_id": "0d318f1c-07ac-55b9-9ef4-ba1b8b48a7a1",
                 "complete": true,
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
                 "direction": "directed",
                 "evidence_tier": "modeled_infrastructure",
                 "freshness": "fresh",
+                "reason_codes": [],
                 "relationship": "authenticates_as",
                 "relationship_provenance": "recorded",
                 "runtime_observed_state": "not_observed",
@@ -131,12 +135,14 @@
                 "truncated": false
               },
               {
+                "canonical_edge_id": "68d72535-b348-5b90-a524-1b1ffe5fd014",
                 "complete": true,
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
                 "direction": "directed",
                 "evidence_tier": "modeled_infrastructure",
                 "freshness": "fresh",
+                "reason_codes": [],
                 "relationship": "has_permission",
                 "relationship_provenance": "recorded",
                 "runtime_observed_state": "not_observed",
@@ -156,10 +162,7 @@
               "identity:model:reference-workload",
               "data-store:reference-customer-records"
             ],
-            "mitre_technique_ids": [
-              "T1190",
-              "T1530"
-            ],
+            "mitre_technique_ids": [],
             "reachability": "confirmed",
             "reachability_basis": [
               "observed_graph_edges",
@@ -168,32 +171,7 @@
             "source": "service:reference-api",
             "summary": "Internet-exposed Public reference-evidence-api service is linked to internet-exposed reference-evidence-workload; is linked to reference-evidence-workload; has recorded permission to Modeled customer records — potential route to sensitive data (3 hop chain).",
             "target": "data-store:reference-customer-records",
-            "technique_mappings": [
-              {
-                "catalog": "attack",
-                "confidence": 0.7,
-                "evidence_basis": "modeled",
-                "hop_index": 0,
-                "provenance": "modeled exposed_to edge into agent 'agent:model:reference-workload'",
-                "tactics": [
-                  "initial-access"
-                ],
-                "technique_id": "T1190",
-                "technique_name": "Exploit Public-Facing Application"
-              },
-              {
-                "catalog": "attack",
-                "confidence": 0.7,
-                "evidence_basis": "modeled",
-                "hop_index": 2,
-                "provenance": "modeled has_permission edge into data_store 'data-store:reference-customer-records'",
-                "tactics": [
-                  "collection"
-                ],
-                "technique_id": "T1530",
-                "technique_name": "Data from Cloud Storage"
-              }
-            ],
+            "technique_mappings": [],
             "tool_exposure": [],
             "vuln_ids": []
           },
@@ -274,6 +252,7 @@
             "findings": [],
             "hopEvidence": [
               {
+                "canonical_edge_id": "1cb8e11c-0788-5bff-a8c8-86785be4c2c5",
                 "complete": true,
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
@@ -295,6 +274,7 @@
                 "truncated": false
               },
               {
+                "canonical_edge_id": "0d318f1c-07ac-55b9-9ef4-ba1b8b48a7a1",
                 "complete": true,
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
@@ -316,6 +296,7 @@
                 "truncated": false
               },
               {
+                "canonical_edge_id": "68d72535-b348-5b90-a524-1b1ffe5fd014",
                 "complete": true,
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
@@ -1010,12 +991,14 @@
             ],
             "hop_evidence": [
               {
+                "canonical_edge_id": "dc5515f8-d6b7-5bd4-ae49-33b7a7862a54",
                 "complete": true,
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
                 "direction": "directed",
                 "evidence_tier": "modeled_infrastructure",
                 "freshness": "fresh",
+                "reason_codes": [],
                 "relationship": "contains",
                 "relationship_provenance": "recorded",
                 "runtime_observed_state": "not_observed",
@@ -1029,12 +1012,14 @@
                 "truncated": false
               },
               {
+                "canonical_edge_id": "2941dee5-f391-5cfc-84b2-e4f32cac32e0",
                 "complete": true,
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
                 "direction": "directed",
                 "evidence_tier": "static_scan",
                 "freshness": "fresh",
+                "reason_codes": [],
                 "relationship": "vulnerable_to",
                 "relationship_provenance": "recorded",
                 "runtime_observed_state": "not_observed",
@@ -1053,9 +1038,7 @@
               "package:iac:pillow",
               "vulnerability:sbom:cve-2023-4863"
             ],
-            "mitre_technique_ids": [
-              "T1068"
-            ],
+            "mitre_technique_ids": [],
             "reachability": "confirmed",
             "reachability_basis": [
               "insufficient_evidence",
@@ -1064,20 +1047,7 @@
             "source": "container:iac:reference-api",
             "summary": "Unverified structural candidate: graph topology connects the agent and vulnerable package/server, but no executable graph or symbol path has been proven.",
             "target": "vulnerability:sbom:cve-2023-4863",
-            "technique_mappings": [
-              {
-                "catalog": "attack",
-                "confidence": null,
-                "evidence_basis": null,
-                "hop_index": 1,
-                "provenance": "unclassified vulnerable_to edge into vulnerability 'vulnerability:sbom:cve-2023-4863'",
-                "tactics": [
-                  "privilege-escalation"
-                ],
-                "technique_id": "T1068",
-                "technique_name": "Exploitation for Privilege Escalation"
-              }
-            ],
+            "technique_mappings": [],
             "tool_exposure": [],
             "vuln_ids": [
               "CVE-2023-4863"
@@ -1158,6 +1128,7 @@
             ],
             "hopEvidence": [
               {
+                "canonical_edge_id": "dc5515f8-d6b7-5bd4-ae49-33b7a7862a54",
                 "complete": true,
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
@@ -1179,6 +1150,7 @@
                 "truncated": false
               },
               {
+                "canonical_edge_id": "2941dee5-f391-5cfc-84b2-e4f32cac32e0",
                 "complete": true,
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
@@ -1747,12 +1719,14 @@
             ],
             "hop_evidence": [
               {
+                "canonical_edge_id": "a6cb36c4-bb8a-5918-8515-3fc46c1e23ed",
                 "complete": true,
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
                 "direction": "directed",
                 "evidence_tier": "static_scan",
                 "freshness": "fresh",
+                "reason_codes": [],
                 "relationship": "contains",
                 "relationship_provenance": "recorded",
                 "runtime_observed_state": "not_observed",
@@ -1766,12 +1740,14 @@
                 "truncated": false
               },
               {
+                "canonical_edge_id": "2941dee5-f391-5cfc-84b2-e4f32cac32e0",
                 "complete": true,
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
                 "direction": "directed",
                 "evidence_tier": "static_scan",
                 "freshness": "fresh",
+                "reason_codes": [],
                 "relationship": "vulnerable_to",
                 "relationship_provenance": "recorded",
                 "runtime_observed_state": "not_observed",
@@ -1790,9 +1766,7 @@
               "package:iac:pillow",
               "vulnerability:sbom:cve-2023-4863"
             ],
-            "mitre_technique_ids": [
-              "T1068"
-            ],
+            "mitre_technique_ids": [],
             "reachability": "confirmed",
             "reachability_basis": [
               "insufficient_evidence",
@@ -1801,20 +1775,7 @@
             "source": "container:sbom:reference-api",
             "summary": "Unverified structural candidate: graph topology connects the agent and vulnerable package/server, but no executable graph or symbol path has been proven.",
             "target": "vulnerability:sbom:cve-2023-4863",
-            "technique_mappings": [
-              {
-                "catalog": "attack",
-                "confidence": null,
-                "evidence_basis": null,
-                "hop_index": 1,
-                "provenance": "unclassified vulnerable_to edge into vulnerability 'vulnerability:sbom:cve-2023-4863'",
-                "tactics": [
-                  "privilege-escalation"
-                ],
-                "technique_id": "T1068",
-                "technique_name": "Exploitation for Privilege Escalation"
-              }
-            ],
+            "technique_mappings": [],
             "tool_exposure": [],
             "vuln_ids": [
               "CVE-2023-4863"
@@ -1895,6 +1856,7 @@
             ],
             "hopEvidence": [
               {
+                "canonical_edge_id": "a6cb36c4-bb8a-5918-8515-3fc46c1e23ed",
                 "complete": true,
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
@@ -1916,6 +1878,7 @@
                 "truncated": false
               },
               {
+                "canonical_edge_id": "2941dee5-f391-5cfc-84b2-e4f32cac32e0",
                 "complete": true,
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
@@ -2482,12 +2445,14 @@
             ],
             "hop_evidence": [
               {
+                "canonical_edge_id": "c23a1d0f-1466-5f06-b5b0-4aeb6eaa4eec",
                 "complete": true,
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
                 "direction": "directed",
                 "evidence_tier": "static_scan",
                 "freshness": "fresh",
+                "reason_codes": [],
                 "relationship": "depends_on",
                 "relationship_provenance": "recorded",
                 "runtime_observed_state": "not_observed",
@@ -2501,12 +2466,14 @@
                 "truncated": false
               },
               {
+                "canonical_edge_id": "2941dee5-f391-5cfc-84b2-e4f32cac32e0",
                 "complete": true,
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
                 "direction": "directed",
                 "evidence_tier": "static_scan",
                 "freshness": "fresh",
+                "reason_codes": [],
                 "relationship": "vulnerable_to",
                 "relationship_provenance": "recorded",
                 "runtime_observed_state": "not_observed",
@@ -2525,9 +2492,7 @@
               "package:iac:pillow",
               "vulnerability:sbom:cve-2023-4863"
             ],
-            "mitre_technique_ids": [
-              "T1068"
-            ],
+            "mitre_technique_ids": [],
             "reachability": "confirmed",
             "reachability_basis": [
               "insufficient_evidence",
@@ -2536,20 +2501,7 @@
             "source": "source:pinned-package",
             "summary": "Unverified structural candidate: graph topology connects the agent and vulnerable package/server, but no executable graph or symbol path has been proven.",
             "target": "vulnerability:sbom:cve-2023-4863",
-            "technique_mappings": [
-              {
-                "catalog": "attack",
-                "confidence": null,
-                "evidence_basis": null,
-                "hop_index": 1,
-                "provenance": "unclassified vulnerable_to edge into vulnerability 'vulnerability:sbom:cve-2023-4863'",
-                "tactics": [
-                  "privilege-escalation"
-                ],
-                "technique_id": "T1068",
-                "technique_name": "Exploitation for Privilege Escalation"
-              }
-            ],
+            "technique_mappings": [],
             "tool_exposure": [],
             "vuln_ids": [
               "CVE-2023-4863"
@@ -2628,6 +2580,7 @@
             ],
             "hopEvidence": [
               {
+                "canonical_edge_id": "c23a1d0f-1466-5f06-b5b0-4aeb6eaa4eec",
                 "complete": true,
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
@@ -2649,6 +2602,7 @@
                 "truncated": false
               },
               {
+                "canonical_edge_id": "2941dee5-f391-5cfc-84b2-e4f32cac32e0",
                 "complete": true,
                 "confidence": 1.0,
                 "correlation_identity_status": "current",
@@ -3312,12 +3266,14 @@
           "finding_ids": [],
           "hop_evidence": [
             {
+              "canonical_edge_id": "1cb8e11c-0788-5bff-a8c8-86785be4c2c5",
               "complete": true,
               "confidence": 1.0,
               "correlation_identity_status": "current",
               "direction": "directed",
               "evidence_tier": "modeled_infrastructure",
               "freshness": "fresh",
+              "reason_codes": [],
               "relationship": "exposed_to",
               "relationship_provenance": "recorded",
               "runtime_observed_state": "not_observed",
@@ -3331,12 +3287,14 @@
               "truncated": false
             },
             {
+              "canonical_edge_id": "0d318f1c-07ac-55b9-9ef4-ba1b8b48a7a1",
               "complete": true,
               "confidence": 1.0,
               "correlation_identity_status": "current",
               "direction": "directed",
               "evidence_tier": "modeled_infrastructure",
               "freshness": "fresh",
+              "reason_codes": [],
               "relationship": "authenticates_as",
               "relationship_provenance": "recorded",
               "runtime_observed_state": "not_observed",
@@ -3350,12 +3308,14 @@
               "truncated": false
             },
             {
+              "canonical_edge_id": "68d72535-b348-5b90-a524-1b1ffe5fd014",
               "complete": true,
               "confidence": 1.0,
               "correlation_identity_status": "current",
               "direction": "directed",
               "evidence_tier": "modeled_infrastructure",
               "freshness": "fresh",
+              "reason_codes": [],
               "relationship": "has_permission",
               "relationship_provenance": "recorded",
               "runtime_observed_state": "not_observed",
@@ -3375,10 +3335,7 @@
             "identity:model:reference-workload",
             "data-store:reference-customer-records"
           ],
-          "mitre_technique_ids": [
-            "T1190",
-            "T1530"
-          ],
+          "mitre_technique_ids": [],
           "reachability": "confirmed",
           "reachability_basis": [
             "observed_graph_edges",
@@ -3387,32 +3344,7 @@
           "source": "service:reference-api",
           "summary": "Internet-exposed Public reference-evidence-api service is linked to internet-exposed reference-evidence-workload; is linked to reference-evidence-workload; has recorded permission to Modeled customer records — potential route to sensitive data (3 hop chain).",
           "target": "data-store:reference-customer-records",
-          "technique_mappings": [
-            {
-              "catalog": "attack",
-              "confidence": 0.7,
-              "evidence_basis": "modeled",
-              "hop_index": 0,
-              "provenance": "modeled exposed_to edge into agent 'agent:model:reference-workload'",
-              "tactics": [
-                "initial-access"
-              ],
-              "technique_id": "T1190",
-              "technique_name": "Exploit Public-Facing Application"
-            },
-            {
-              "catalog": "attack",
-              "confidence": 0.7,
-              "evidence_basis": "modeled",
-              "hop_index": 2,
-              "provenance": "modeled has_permission edge into data_store 'data-store:reference-customer-records'",
-              "tactics": [
-                "collection"
-              ],
-              "technique_id": "T1530",
-              "technique_name": "Data from Cloud Storage"
-            }
-          ],
+          "technique_mappings": [],
           "tool_exposure": [],
           "vuln_ids": []
         }
@@ -5281,12 +5213,14 @@
     "finding_ids": [],
     "hop_evidence": [
       {
+        "canonical_edge_id": "1cb8e11c-0788-5bff-a8c8-86785be4c2c5",
         "complete": true,
         "confidence": 1.0,
         "correlation_identity_status": "current",
         "direction": "directed",
         "evidence_tier": "modeled_infrastructure",
         "freshness": "fresh",
+        "reason_codes": [],
         "relationship": "exposed_to",
         "relationship_provenance": "recorded",
         "runtime_observed_state": "not_observed",
@@ -5300,12 +5234,14 @@
         "truncated": false
       },
       {
+        "canonical_edge_id": "0d318f1c-07ac-55b9-9ef4-ba1b8b48a7a1",
         "complete": true,
         "confidence": 1.0,
         "correlation_identity_status": "current",
         "direction": "directed",
         "evidence_tier": "modeled_infrastructure",
         "freshness": "fresh",
+        "reason_codes": [],
         "relationship": "authenticates_as",
         "relationship_provenance": "recorded",
         "runtime_observed_state": "not_observed",
@@ -5319,12 +5255,14 @@
         "truncated": false
       },
       {
+        "canonical_edge_id": "68d72535-b348-5b90-a524-1b1ffe5fd014",
         "complete": true,
         "confidence": 1.0,
         "correlation_identity_status": "current",
         "direction": "directed",
         "evidence_tier": "modeled_infrastructure",
         "freshness": "fresh",
+        "reason_codes": [],
         "relationship": "has_permission",
         "relationship_provenance": "recorded",
         "runtime_observed_state": "not_observed",
@@ -5344,10 +5282,7 @@
       "identity:model:reference-workload",
       "data-store:reference-customer-records"
     ],
-    "mitre_technique_ids": [
-      "T1190",
-      "T1530"
-    ],
+    "mitre_technique_ids": [],
     "reachability": "confirmed",
     "reachability_basis": [
       "observed_graph_edges",
@@ -5356,32 +5291,7 @@
     "source": "service:reference-api",
     "summary": "Internet-exposed Public reference-evidence-api service is linked to internet-exposed reference-evidence-workload; is linked to reference-evidence-workload; has recorded permission to Modeled customer records — potential route to sensitive data (3 hop chain).",
     "target": "data-store:reference-customer-records",
-    "technique_mappings": [
-      {
-        "catalog": "attack",
-        "confidence": 0.7,
-        "evidence_basis": "modeled",
-        "hop_index": 0,
-        "provenance": "modeled exposed_to edge into agent 'agent:model:reference-workload'",
-        "tactics": [
-          "initial-access"
-        ],
-        "technique_id": "T1190",
-        "technique_name": "Exploit Public-Facing Application"
-      },
-      {
-        "catalog": "attack",
-        "confidence": 0.7,
-        "evidence_basis": "modeled",
-        "hop_index": 2,
-        "provenance": "modeled has_permission edge into data_store 'data-store:reference-customer-records'",
-        "tactics": [
-          "collection"
-        ],
-        "technique_id": "T1530",
-        "technique_name": "Data from Cloud Storage"
-      }
-    ],
+    "technique_mappings": [],
     "tool_exposure": [],
     "vuln_ids": []
   },
