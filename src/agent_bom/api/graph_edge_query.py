@@ -78,7 +78,7 @@ def edge_query(
 
 
 def _edge_from_row(row: sqlite3.Row) -> UnifiedEdge:
-    return UnifiedEdge(
+    return UnifiedEdge.from_stored(
         source=row["source_id"],
         target=row["target_id"],
         relationship=RelationshipType(row["relationship"]),

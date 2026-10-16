@@ -75,7 +75,7 @@
     "edges": [
       {
         "activity_id": 1,
-        "canonical_id": "fd769ebc-33ef-501a-967a-77f1aabe1eca",
+        "canonical_id": "ec92bc7c-d869-56de-b309-8359a8af1d07",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -100,7 +100,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "1bea890d-6fc4-512f-9360-94c4d23861c7",
+        "canonical_id": "b0cbd210-b02d-5eb8-b7e2-a46d3e0a9666",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -126,7 +126,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "fd706e4a-7086-54e3-9f9d-7a9e2bf1308d",
+        "canonical_id": "73516848-f542-5eb6-9d1b-8abd92c67c77",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -151,7 +151,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "2f70c160-dbfe-5255-8255-5b601405326c",
+        "canonical_id": "7101c2d4-2973-5356-93a6-bf450cb391a7",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -177,7 +177,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "97a1192c-ab2d-5650-9f27-8258100f5238",
+        "canonical_id": "04894985-988b-5639-ab7f-66cf20edcf3e",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -202,7 +202,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "4db990a1-cc81-59f7-87db-92f8e1cd6c6f",
+        "canonical_id": "111d9bad-eb4a-5fb0-937e-15fa4910e7e8",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -228,7 +228,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "b1a747ce-1b1e-57d6-a1e6-4c6dbca3328b",
+        "canonical_id": "dc7c6aa4-5534-577f-b3b4-6aa697efbd38",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -253,7 +253,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "202b8bb6-2c82-528b-a887-3612bd102ce1",
+        "canonical_id": "86de9aeb-df7b-5be4-bd09-51e5da0bb64d",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -279,7 +279,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "e2bd9198-e7c7-5db8-adec-ed4ba3157f58",
+        "canonical_id": "609b0f7a-6f9a-5e82-8fe5-d67004f132e5",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -304,7 +304,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "8ccc1dbc-c3d5-51c2-a4b6-f4e49d821b92",
+        "canonical_id": "6564cca4-11a3-535e-984b-a1a58e2c90e3",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -330,7 +330,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "b07cf81e-d25b-5020-b7fa-d7700b388c21",
+        "canonical_id": "ca5c59c7-6b3b-52fb-803f-bee0bb030501",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -355,7 +355,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "11ad9a10-2f86-5071-801f-4e1f3254cb5a",
+        "canonical_id": "e1465805-e9fd-5ae5-9acc-47e08bde1f2b",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -381,7 +381,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "04c934f3-aad8-55fd-a042-1e0aeb76a3ca",
+        "canonical_id": "5f073845-6d2c-5fd8-856f-b849731d552f",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -406,7 +406,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "0e6fb802-11e7-5c16-ba3c-970579284cf8",
+        "canonical_id": "176ce305-0d39-574f-b2d9-401076234727",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -432,7 +432,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "981b6734-6ec7-57a7-959f-bebb59580f33",
+        "canonical_id": "9f47cec8-1011-563f-b6ed-8b95a15d5ce0",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -459,7 +459,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "6df4897e-2a76-5c10-adb1-1ee11b490e72",
+        "canonical_id": "e26f3f5b-7d23-577f-a0c8-5a57374f43ad",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -486,7 +486,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "004cc30b-aad7-585c-9065-534f5f15c6a5",
+        "canonical_id": "850711ab-f998-5801-b0d5-054671999f7d",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -513,7 +513,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "3e575718-62e7-5adb-be34-f8aed15b8767",
+        "canonical_id": "515ad78d-d8ab-5cf8-a2f3-494fbb65a751",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -540,7 +540,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "89e6e4ca-62d1-5d64-a621-93ee29030a5a",
+        "canonical_id": "a5ce87ff-b54d-53e3-b7d0-a69c42e25f98",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -575,7 +575,7 @@
           "provider": "aws",
           "source": "cloud-inventory"
         },
-        "canonical_id": "302cd1c9-8889-59af-b468-bafd8f028957",
+        "canonical_id": "9938a466-5996-5f20-afd8-edd85bf22bda",
         "category_uid": 0,
         "class_uid": 0,
         "compliance_tags": [],
@@ -622,7 +622,7 @@
           "evidence_tier": "static_scan",
           "source": "cloud-inventory"
         },
-        "canonical_id": "168fc6ee-567e-58fb-9868-c3b19605aa9c",
+        "canonical_id": "3588798e-bea6-5ea7-8597-e53c134d9897",
         "category_uid": 3,
         "class_uid": 3001,
         "compliance_tags": [],
@@ -686,7 +686,7 @@
             "owner": "team-a"
           }
         },
-        "canonical_id": "6a3e88f1-f9ad-502e-8f7c-67572837ec53",
+        "canonical_id": "c8313329-e371-5c64-930c-8327b2d08b29",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -750,7 +750,7 @@
           "resource_type": "bucket",
           "tags": {}
         },
-        "canonical_id": "3f0f67bc-2c1e-5828-88b2-2f6b2b790e4d",
+        "canonical_id": "72d76cda-5358-56b3-9d39-6d665760f7eb",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -813,7 +813,7 @@
           "resource_type": "bucket",
           "tags": {}
         },
-        "canonical_id": "91e05c05-346a-5f4b-a733-567fdcc7b097",
+        "canonical_id": "70c79e5b-0469-588f-9c7c-d6475f0f7381",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -876,7 +876,7 @@
           "resource_type": "bucket",
           "tags": {}
         },
-        "canonical_id": "48947f00-b87b-5f05-9b21-986ffc35cf92",
+        "canonical_id": "31f347f4-a4bb-598a-8266-5cd5e55a7ec4",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -942,7 +942,7 @@
           "state": "",
           "vpc_id": ""
         },
-        "canonical_id": "5597b2cb-bc3d-5691-943a-c53e4d1a29ee",
+        "canonical_id": "120dfc78-f306-5fe3-a3b5-eaed347c626b",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -1007,7 +1007,7 @@
           "resource_type": "database",
           "runtime": ""
         },
-        "canonical_id": "6e3f2b11-53c1-5c7c-9427-4411f0d55296",
+        "canonical_id": "7bd726a4-949b-5dcf-903c-fa0ed1d3195d",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -1072,7 +1072,7 @@
           "resource_type": "container_cluster",
           "runtime": ""
         },
-        "canonical_id": "5e8e0a0a-2651-5781-b84f-0fec15b282d6",
+        "canonical_id": "24130b46-9bc8-5171-a416-8fb95e7db60f",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -1137,7 +1137,7 @@
           "resource_type": "container_registry",
           "runtime": ""
         },
-        "canonical_id": "d51122cb-5b5c-5aa6-a7eb-6a7b96dc7fc7",
+        "canonical_id": "a041dbef-cd43-5355-8063-a3faa63d2e32",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -1195,7 +1195,7 @@
           "location": "us-east-1",
           "resource_name": "aws-bucket"
         },
-        "canonical_id": "589e0b97-794e-5639-9744-e60598b8cd6e",
+        "canonical_id": "c6b910a1-509e-5aac-94d0-17eb00ffe74e",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -1252,7 +1252,7 @@
           "location": "us-east-1",
           "resource_name": "known-private"
         },
-        "canonical_id": "2f8971a1-2588-5610-941b-5bcf50fe4981",
+        "canonical_id": "dcec7740-893d-5be6-acee-bc4d2a73ca1c",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -1308,7 +1308,7 @@
           "location": "us-east-1",
           "resource_name": "unknown-exposure"
         },
-        "canonical_id": "fe328b25-6853-569f-aba3-b2696df5a1d8",
+        "canonical_id": "689b3e04-a62e-5133-9111-cc793379cdd9",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -1364,7 +1364,7 @@
           "location": "us-east-1",
           "resource_name": "known-public"
         },
-        "canonical_id": "9635dd67-0dac-5bc4-858d-ebddfbc0b7bc",
+        "canonical_id": "b02b194e-5dca-5f9d-919a-f16cb50c767a",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -1568,7 +1568,7 @@
     "edges": [
       {
         "activity_id": 1,
-        "canonical_id": "a1bf9c48-34a0-59c7-be0e-40e9706c68e1",
+        "canonical_id": "38753101-9bf7-57d5-b859-1fdabccb8d7b",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -1593,7 +1593,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "57e0da47-8190-5c39-8576-0e1fcb9e5013",
+        "canonical_id": "0833474c-ef1d-5388-ba84-b32cc18acae1",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -1619,7 +1619,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "e6db37b3-1c3c-59d9-ab6c-416e2a8c6063",
+        "canonical_id": "4e25b242-3ca4-53c2-bc14-ab2c7a5606ca",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -1644,7 +1644,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "dc27ff2b-06b4-57af-b798-b8582fed83d1",
+        "canonical_id": "6eab14eb-f795-5b7e-8e9e-e9cc3238bc79",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -1670,7 +1670,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "100f3ce1-62b8-56bc-8d11-28649acaf83a",
+        "canonical_id": "e150545e-9e26-5ce4-a319-ec3befd6d1e4",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -1695,7 +1695,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "d1c6ea2e-8422-53fc-bb7f-e094eec7415a",
+        "canonical_id": "8bcb6f04-56dc-50b0-ad48-e14194fa3e33",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -1721,7 +1721,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "1b4daf1f-8d6d-59e0-a7d6-f9647853e2f6",
+        "canonical_id": "5777c0bb-ebc0-55d3-afdf-2d44683e7a6d",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -1746,7 +1746,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "1b319274-2dda-5b56-b751-0289a9a2bb08",
+        "canonical_id": "a197be3c-a1b6-5175-b846-c5fa974006e5",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -1772,7 +1772,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "7c56e83d-b90a-5e2f-a477-6f45d98ac900",
+        "canonical_id": "950985f3-a779-5487-b0e9-f9b50e2571f2",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -1799,7 +1799,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "7c12328b-5f3b-5551-953f-240386215c7d",
+        "canonical_id": "d4d6be05-32f6-55fb-8773-cda3a5969d34",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -1833,7 +1833,7 @@
           "provider": "azure",
           "source": "cloud-inventory"
         },
-        "canonical_id": "a71492a7-0cf6-522b-ac9f-e54b0a75d97e",
+        "canonical_id": "c67c10ba-8790-5b7b-b5fb-48656a49d714",
         "category_uid": 0,
         "class_uid": 0,
         "compliance_tags": [],
@@ -1880,7 +1880,7 @@
           "evidence_tier": "static_scan",
           "source": "cloud-inventory"
         },
-        "canonical_id": "42bc2f49-744e-5111-8755-51d1f5a9bcb4",
+        "canonical_id": "ebf9d1ff-2290-5c8e-a889-3f816bb7c61a",
         "category_uid": 3,
         "class_uid": 3001,
         "compliance_tags": [],
@@ -1944,7 +1944,7 @@
             "owner": "team-a"
           }
         },
-        "canonical_id": "c0e66100-4e43-59b0-aaee-df4f06a568af",
+        "canonical_id": "15ca2c2f-07f5-520e-bc45-26d1dd1a2a91",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -2011,7 +2011,7 @@
           "state": "",
           "vpc_id": ""
         },
-        "canonical_id": "f078cf20-4978-57db-ac11-e42018d6ef4b",
+        "canonical_id": "31919cbe-b07a-542d-9c8e-6a3fbabf657b",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -2076,7 +2076,7 @@
             "owner": "team-a"
           }
         },
-        "canonical_id": "fb279094-26b4-58d4-9428-881238d9809e",
+        "canonical_id": "68809d09-1759-5d9d-9dec-ec8ce786cf82",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -2141,7 +2141,7 @@
             "owner": "team-a"
           }
         },
-        "canonical_id": "179c1859-3df3-55ab-9918-20cfdaf169aa",
+        "canonical_id": "3a13a1df-9f41-548e-ac03-48eaf70a6c42",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -2206,7 +2206,7 @@
             "owner": "team-a"
           }
         },
-        "canonical_id": "8a4008be-d204-556a-b567-7fb33df6c095",
+        "canonical_id": "fb0d1a9d-e61d-51d5-b7bc-7cf8b2f4a3ef",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -2264,7 +2264,7 @@
           "location": "eastus",
           "resource_name": "azblob"
         },
-        "canonical_id": "6fde1721-e6b9-5d5b-a9b1-1a5611615149",
+        "canonical_id": "1d434f07-1acb-586b-938d-f78ee7a5f201",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -2320,7 +2320,7 @@
           "location": "eastus",
           "resource_name": "az-db"
         },
-        "canonical_id": "b6df3845-4d6b-59c6-96a9-3f2f147f5311",
+        "canonical_id": "693f9420-2f88-501b-8e1c-738ea51192aa",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -2509,7 +2509,7 @@
     "edges": [
       {
         "activity_id": 1,
-        "canonical_id": "22e4328b-d83d-5fc2-a1ba-d69d01e23e5e",
+        "canonical_id": "9fa8c642-6fa2-5503-a2d3-824ed774ce85",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -2534,7 +2534,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "03257111-865e-5d9d-afb3-8c69d9deadbc",
+        "canonical_id": "26752933-4593-579c-8e85-6b1fafbb4bad",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -2561,7 +2561,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "e290103a-5d85-5a84-a8f5-579ea6d182cd",
+        "canonical_id": "dd026a9b-34f4-507a-95c4-e2758065765b",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -2588,7 +2588,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "d9c82239-07b5-5ed9-af5d-c1cfb007a7ba",
+        "canonical_id": "ea1fa0ba-212e-58fb-ba51-29ff09b228b1",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -2615,7 +2615,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "1acda5dc-8fec-5844-a396-e545864f5908",
+        "canonical_id": "04fc47f0-2690-598d-b3cb-59ea3a72c935",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -2642,7 +2642,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "c0ef872c-bb1d-527a-9c92-acfa39f8cdc2",
+        "canonical_id": "fca4f38e-5653-53ee-8287-54da55da8dfa",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -2669,7 +2669,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "985d4e9b-7e86-5c3b-8de0-defb122599cd",
+        "canonical_id": "f88ca074-6dab-5ef2-af86-d9fe5c07a3fe",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -2696,7 +2696,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "27300704-be68-5610-9b15-dfa20a0fcf8b",
+        "canonical_id": "0f12c849-7f9f-5358-8bf9-57862392f200",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -2722,7 +2722,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "a722634d-8dc7-5797-a2ec-0461c8a3cb51",
+        "canonical_id": "7233d6b2-af4e-5dbe-8a63-5c770eae369a",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -2748,7 +2748,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "9593aece-27b7-5604-83df-a498b4170d2c",
+        "canonical_id": "b6410a92-7056-5a8e-a5c4-ab4347fd621d",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -2774,7 +2774,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "7184efae-ee38-5fd3-a856-51a1cfd295c8",
+        "canonical_id": "71a3d371-8500-54b7-822f-bde04bf1b110",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -2800,7 +2800,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "ea1b25fa-f816-5e33-9ae9-4532a7af3e42",
+        "canonical_id": "f703b583-396e-5c86-8133-6fb080b58611",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -2826,7 +2826,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "44ca5d0d-1408-557c-8527-decf6445a735",
+        "canonical_id": "72d736d1-5a4b-5442-a79f-1598d3d69965",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -2854,7 +2854,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "d470f485-cf3d-525b-9902-9404b4d8d30d",
+        "canonical_id": "3e851f80-acfd-52fa-9e67-bc4870563b44",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -2881,7 +2881,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "cc233b89-68af-5533-ace3-e52f423a60b4",
+        "canonical_id": "16f48685-4fb7-5c89-b2bc-50584d411905",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -2929,11 +2929,11 @@
     "nodes": [
       {
         "attributes": {
-          "canonical_id": "f33683a4-3732-5173-ac38-2df1f9121542",
+          "canonical_id": "f14a04b0-bcf6-5387-ba23-17c5174bbbdf",
           "evidence_tier": "static_scan",
           "provider": "aws-bedrock"
         },
-        "canonical_id": "f33683a4-3732-5173-ac38-2df1f9121542",
+        "canonical_id": "f14a04b0-bcf6-5387-ba23-17c5174bbbdf",
         "category_uid": 0,
         "class_uid": 0,
         "compliance_tags": [],
@@ -2972,7 +2972,7 @@
       {
         "attributes": {
           "agent_type": "custom",
-          "canonical_id": "3c42f417-4e49-51b3-904a-84f3e6ba5a64",
+          "canonical_id": "1f420a33-51a5-5c64-80e4-2640231dd210",
           "cloud_origin": {
             "location": "us-east-1",
             "provider": "aws",
@@ -3029,7 +3029,7 @@
           "status": "",
           "tags": []
         },
-        "canonical_id": "3c42f417-4e49-51b3-904a-84f3e6ba5a64",
+        "canonical_id": "1f420a33-51a5-5c64-80e4-2640231dd210",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -3073,7 +3073,7 @@
           "provider": "aws",
           "source": "cloud_origin"
         },
-        "canonical_id": "302cd1c9-8889-59af-b468-bafd8f028957",
+        "canonical_id": "9938a466-5996-5f20-afd8-edd85bf22bda",
         "category_uid": 0,
         "class_uid": 0,
         "compliance_tags": [],
@@ -3142,7 +3142,7 @@
             "org_id": "org-1"
           }
         },
-        "canonical_id": "5a0b12fc-04eb-5967-a521-5088157d9045",
+        "canonical_id": "e01ed463-15b3-56b1-aa6f-64c4a8e37e8d",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -3203,7 +3203,7 @@
           "org_id": "org-1",
           "scope_key": "org_id"
         },
-        "canonical_id": "008934bb-b842-5b91-8a81-237b35fc4c4d",
+        "canonical_id": "c771f08a-f497-55a1-8fb3-8adfbd204fc3",
         "category_uid": 3,
         "class_uid": 3001,
         "compliance_tags": [],
@@ -3266,7 +3266,7 @@
           "evidence_tier": "static_scan",
           "scope_key": "account_id"
         },
-        "canonical_id": "168fc6ee-567e-58fb-9868-c3b19605aa9c",
+        "canonical_id": "3588798e-bea6-5ea7-8597-e53c134d9897",
         "category_uid": 3,
         "class_uid": 3001,
         "compliance_tags": [],
@@ -3363,7 +3363,7 @@
           "source_field": "",
           "tenant_id": ""
         },
-        "canonical_id": "05d6f6b1-e9e5-52b4-afcb-22300ea8b92c",
+        "canonical_id": "d6e3abba-aa15-5b8d-b56f-f7c92deb701b",
         "category_uid": 3,
         "class_uid": 3001,
         "compliance_tags": [],
@@ -3424,7 +3424,7 @@
           "policy_name": "policy-1",
           "privilege_level": "unknown"
         },
-        "canonical_id": "6040e196-b5a9-5abd-babe-867736257520",
+        "canonical_id": "251ea493-4883-5f97-a7a1-d37e58aa3cf9",
         "category_uid": 3,
         "class_uid": 3001,
         "compliance_tags": [],
@@ -3491,7 +3491,7 @@
             "status": "assessed"
           }
         },
-        "canonical_id": "f8d63208-2334-5170-9a2b-4dc7aef96021",
+        "canonical_id": "fb27c674-2b1c-58e7-b570-fa788b83e5e9",
         "category_uid": 3,
         "class_uid": 3001,
         "compliance_tags": [],
@@ -3693,7 +3693,7 @@
     "edges": [
       {
         "activity_id": 1,
-        "canonical_id": "71f73d67-7537-5b53-a72d-f399dfd5ef87",
+        "canonical_id": "11faf2f3-19d0-547d-bf6b-651999eaf474",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -3718,7 +3718,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "5cf49aaa-d2cb-5923-98b6-593819dbb93b",
+        "canonical_id": "88065405-7eb4-54ee-ad9f-fb0db3d1b03b",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -3744,7 +3744,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "73a5f83e-a3bb-5134-849d-986f88788dd0",
+        "canonical_id": "8ec21d74-34be-59a7-ae89-7272f570ca87",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -3769,7 +3769,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "31ad6a31-41e4-5432-8ddc-def6f6c0669b",
+        "canonical_id": "c4be2165-054c-5eab-a448-20167f5fcb47",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -3795,7 +3795,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "34d7b1e6-3fb8-50e3-8d31-8f0e532d0dc9",
+        "canonical_id": "476081df-7b64-5e5f-ac85-18d5122e9f3b",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -3820,7 +3820,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "320469a6-878f-5404-8ef8-79a79ef4771a",
+        "canonical_id": "2ddd8489-94ff-5b9e-a898-2f3953ae5a38",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -3846,7 +3846,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "55159ca6-9164-5243-ba6d-ef01dbfda489",
+        "canonical_id": "2746d4b3-a751-5e15-ad4f-2b553bc52d27",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -3871,7 +3871,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "74b61d3e-0299-5a31-b54f-428fd5ed8a97",
+        "canonical_id": "b98664cf-f7d5-5dea-913b-ca1b1e537b59",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -3897,7 +3897,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "6b9e20e0-8767-53b0-90cd-9f7dfd52c193",
+        "canonical_id": "60cb0e94-bc77-5680-b76b-49982f2b9e57",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -3931,7 +3931,7 @@
           "provider": "gcp",
           "source": "cloud-inventory"
         },
-        "canonical_id": "7db18bb4-d123-580a-a505-d131e1eb58d8",
+        "canonical_id": "d9ccdfae-775e-53b6-a26d-5957dd257ee3",
         "category_uid": 0,
         "class_uid": 0,
         "compliance_tags": [],
@@ -3978,7 +3978,7 @@
           "evidence_tier": "static_scan",
           "source": "cloud-inventory"
         },
-        "canonical_id": "fe714866-84cc-5cd6-a8d5-af5d933c0172",
+        "canonical_id": "86815552-9a9b-567c-b60e-43b203553a06",
         "category_uid": 3,
         "class_uid": 3001,
         "compliance_tags": [],
@@ -4042,7 +4042,7 @@
             "owner": "team-a"
           }
         },
-        "canonical_id": "c90e2046-41f9-5048-990d-5dd85e33bd52",
+        "canonical_id": "6715da1a-0214-5dc3-ad38-24ddd8c4578d",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -4109,7 +4109,7 @@
           "state": "",
           "vpc_id": ""
         },
-        "canonical_id": "43945618-40d4-569c-b3fc-af1244edbf4e",
+        "canonical_id": "2c57c879-2c21-5f6f-b9f4-87ae7c518286",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -4173,7 +4173,7 @@
           "resource_name": "gcp-gke",
           "resource_type": "container_cluster"
         },
-        "canonical_id": "fdb461b0-bba4-57af-8684-2f24b3504d6e",
+        "canonical_id": "0909eebd-5c76-5803-9a27-775a6da03711",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -4237,7 +4237,7 @@
           "resource_name": "gcp-run",
           "resource_type": "function"
         },
-        "canonical_id": "8fd6abb6-0f8f-5bf9-afb2-6906d2d51d6c",
+        "canonical_id": "37cf0eef-c082-50c6-84c3-e7b626d5a12d",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -4301,7 +4301,7 @@
           "resource_name": "gcp-sql",
           "resource_type": "database"
         },
-        "canonical_id": "087695e0-ab4d-5584-9f2c-dd0375ddab59",
+        "canonical_id": "790c3608-b09a-5054-b725-659d7b1094d1",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -4359,7 +4359,7 @@
           "location": "us-central1",
           "resource_name": "gcs-bucket"
         },
-        "canonical_id": "c8559b0e-4b78-5fd5-94fc-d81cb6c72098",
+        "canonical_id": "469c6162-508d-51e3-8474-5412e93cc61a",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -4563,7 +4563,7 @@
     "edges": [
       {
         "activity_id": 1,
-        "canonical_id": "271a39c9-fad1-5c11-8583-77b2e23aa780",
+        "canonical_id": "552353e0-63b0-50ce-8555-de377c0c4f77",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -4588,7 +4588,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "af48f6b8-05b8-53f3-b0bd-05c4c2e4f1c7",
+        "canonical_id": "1f92f657-e2b3-5138-860d-ad8d33ae2459",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -4614,7 +4614,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "a3a7afb7-7a08-5471-963b-a5083481aa61",
+        "canonical_id": "e0d3abf5-3d5b-5479-8477-f5eaa3fc0c75",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -4639,7 +4639,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "2401cf5d-2184-5a81-94aa-d6706bedda1b",
+        "canonical_id": "32ec1341-fdf0-529d-8793-8fedc08e7051",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -4665,7 +4665,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "a75edfcd-282e-53ff-a289-25bd453b6852",
+        "canonical_id": "63935797-d3bf-551a-9ac1-defeda8544d2",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -4690,7 +4690,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "46851320-ee73-56d3-bf18-1ecc65d9d6b9",
+        "canonical_id": "0b014e6f-1b97-5766-b509-3e3370733064",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -4716,7 +4716,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "5c9e5a56-ec15-5f39-aa7e-7a658575d0c1",
+        "canonical_id": "0ff7be74-229a-5384-9399-021984def8ee",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -4741,7 +4741,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "722ee05d-343a-5bea-a438-5dc7c5d922e2",
+        "canonical_id": "c12faad8-fd35-5b93-98db-152bc1cdb1c7",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -4767,7 +4767,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "46f610d9-71c6-5105-9276-d453988842c6",
+        "canonical_id": "79ae2a2b-c1d2-5c58-af6c-2ccdc066961a",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -4809,7 +4809,7 @@
           },
           "source": "snowflake-services"
         },
-        "canonical_id": "5ff3f8b9-8ef4-5c69-b45c-cd1e259e7319",
+        "canonical_id": "a75c98fb-0dc6-5ef7-aec0-0f99af4a8a98",
         "category_uid": 3,
         "class_uid": 3001,
         "compliance_tags": [],
@@ -4867,7 +4867,7 @@
           "snowflake_local_id": "data_store:snowflake:DB.PUBLIC.ORDERS",
           "snowflake_scope_version": "account-lanes.v1"
         },
-        "canonical_id": "71df3745-de47-5e66-9134-b6516d4f2bd2",
+        "canonical_id": "a36a823d-b03b-5de9-b97a-227c94e67bad",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -4925,7 +4925,7 @@
           "snowflake_local_id": "data_store:snowflake:DB.PUBLIC.CUSTOMERS",
           "snowflake_scope_version": "account-lanes.v1"
         },
-        "canonical_id": "07076ede-4f68-5599-a5c1-97afe3058d60",
+        "canonical_id": "a9b038b8-f903-50e5-bc67-40b59520309f",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -4982,7 +4982,7 @@
           "snowflake_scope_version": "account-lanes.v1",
           "state": null
         },
-        "canonical_id": "97a46c79-2afe-501e-b94c-913765168ab0",
+        "canonical_id": "6a4ac12b-57c6-541a-aa69-8bb45f0af5ed",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -5036,7 +5036,7 @@
           "snowflake_local_id": "data_store:snowflake:db:DB",
           "snowflake_scope_version": "account-lanes.v1"
         },
-        "canonical_id": "b5715501-3239-5251-89a7-1e127464f90d",
+        "canonical_id": "fdf1d8e5-4763-5ab5-a0d9-36703cfd1e53",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -5086,7 +5086,7 @@
           "internet_exposed": null,
           "resource_name": "WH1"
         },
-        "canonical_id": "173b5b84-8fd1-5718-883a-84674cf0d3bf",
+        "canonical_id": "fac3acbe-f49b-59d1-8fae-55de4d2d1b02",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],

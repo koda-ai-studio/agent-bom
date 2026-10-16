@@ -7,7 +7,6 @@ from typing import Any
 from agent_bom.canonical_ids import agent_graph_id_for
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
-from agent_bom.graph.projection_support import _agent_identity_scope, _agent_node_id
 from agent_bom.graph.types import EntityType, RelationshipType
 
 
@@ -102,7 +101,7 @@ def _project_host_agent_id(graph: UnifiedGraph, agents_data: Any) -> str | None:
         metadata = agent.get("metadata")
         if not (isinstance(metadata, dict) and metadata.get("project_root")):
             continue
-        node_id = _agent_node_id(agent.get("name"), _agent_identity_scope(agent))
+        node_id = agent_graph_id_for(agent)
         node = graph.nodes.get(node_id)
         if node is not None and node.entity_type == EntityType.AGENT:
             hosts.append(node_id)

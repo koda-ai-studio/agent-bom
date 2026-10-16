@@ -598,7 +598,11 @@
     },
     "name": "project:proj",
     "previous_canonical_ids": [
+     "<UUID>",
      "<UUID>"
+    ],
+    "previous_graph_ids": [
+     "agent:project:proj"
     ],
     "source": "project",
     "stable_id": "<UUID>",
@@ -625,7 +629,11 @@
      "last_seen": "<TS>",
      "name": "project:proj",
      "previous_canonical_ids": [
+      "<UUID>",
       "<UUID>"
+     ],
+     "previous_graph_ids": [
+      "agent:project:proj"
      ],
      "server_ids": [
       "<UUID>",
@@ -1036,7 +1044,7 @@
   "ai_bom_version": "<VERSION>",
   "assets": [],
   "blast_radius": [],
-  "canonical_id_schema_version": "2",
+  "canonical_id_schema_version": "3",
   "codeowners": [],
   "coverage_warnings": [],
   "credential_risk_ranking": [

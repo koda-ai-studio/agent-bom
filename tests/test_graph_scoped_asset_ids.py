@@ -34,16 +34,16 @@ def test_same_named_project_configs_stay_two_agents_in_any_order():
     }
 
 
-def test_endpoint_scoped_agent_id_is_unchanged():
+def test_endpoint_scope_retains_legacy_receipt_while_escaping_name():
     agent = {**_project_agent("/repo/.mcp.json"), "source_id": "laptop-1"}
-    assert ids.agent_graph_id_for(agent) == "agent:laptop-1:project:repo"
-    assert ids.previous_agent_graph_ids(agent) == []
+    assert ids.agent_graph_id_for(agent) == "agent:laptop-1:project%3Arepo"
+    assert ids.previous_agent_graph_ids(agent) == ["agent:laptop-1:project:repo"]
 
 
 def test_previous_name_only_id_is_an_alias_only_when_unambiguous():
     single = _agent_nodes({"agents": [_project_agent("/repo/.mcp.json")]})
     (only,) = single.values()
-    assert only.attributes["identity"]["aliases"] == ["agent:project:repo"]
+    assert "agent:project:repo" in only.attributes["identity"]["aliases"]
     pair = _agent_nodes({"agents": [_project_agent("/repo/.mcp.json"), _project_agent("/repo/.vscode/mcp.json")]})
     assert all("agent:project:repo" not in (node.attributes.get("identity") or {}).get("aliases", []) for node in pair.values())
 

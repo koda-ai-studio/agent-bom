@@ -1,9 +1,7 @@
 """Unified graph store backends for API persistence and querying.
 
-This module gives the API a pluggable graph persistence layer so unified
-graph reads/writes follow the same backend selection model as the rest of
-the control plane. SQLite remains the default local backend; Postgres can
-provide the same contract for multi-tenant API deployments.
+Graph reads and writes share the control plane backend selection. SQLite is
+the local default; Postgres provides the same tenant-scoped contract.
 """
 
 from __future__ import annotations
@@ -23,6 +21,7 @@ from agent_bom.api.graph_store_support import _CREATE_PRESET_TABLE_SQLITE as _CR
 from agent_bom.api.graph_store_support import _DYNAMIC_RELATIONSHIP_VALUES as _DYNAMIC_RELATIONSHIP_VALUES
 from agent_bom.api.graph_store_support import _FINDING_ENTITY_TYPE_VALUES as _FINDING_ENTITY_TYPE_VALUES
 from agent_bom.api.graph_store_support import MAX_NODE_PAGE_OFFSET as MAX_NODE_PAGE_OFFSET
+from agent_bom.api.graph_store_support import SQLITE_INVENTORY_SEARCH_CLAUSE
 from agent_bom.api.graph_store_support import _assert_offset_within_cap as _assert_offset_within_cap
 from agent_bom.api.graph_store_support import _attach_sibling_relationships as _attach_sibling_relationships
 from agent_bom.api.graph_store_support import _drilldown_subtree_budget as _drilldown_subtree_budget
@@ -733,7 +732,7 @@ class SQLiteGraphStore(SQLiteGraphPagesMixin):
                     clauses.append(f"entity_type IN ({','.join('?' for _ in values)})")
                     params.extend(values)
                 if search.strip():
-                    clauses.append("(LOWER(label) LIKE ? ESCAPE '\\' OR LOWER(attributes) LIKE ? ESCAPE '\\')")
+                    clauses.append(SQLITE_INVENTORY_SEARCH_CLAUSE)
                     token = f"%{_escape_like_query(search.strip().lower())}%"
                     params.extend([token, token])
                 if normalized["environment"] and exclude != "environment":

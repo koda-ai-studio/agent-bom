@@ -187,3 +187,24 @@ def test_ambiguous_alias_never_selects_an_arbitrary_node(tmp_path, reverse) -> N
         assert store.resolve_node_aliases(tenant_id="tenant-a", node_ids=["dataset:data"], scan_id=scan) == {}
     # Rejecting an ambiguous alias must not discard either observation.
     assert set(store.load_graph(tenant_id="tenant-a", scan_id="scan-a").nodes) == set(ids)
+
+
+def latest_snapshot_alias_contract(store, tenant="tenant"):
+    from agent_bom.graph import EntityType, UnifiedGraph, UnifiedNode
+
+    first = UnifiedGraph(scan_id="earlier", tenant_id=tenant, created_at="2026-10-15T00:00:00Z")
+    first.add_node(UnifiedNode(id="one", entity_type=EntityType.DATASET, label="same", attributes={"identity": {"aliases": ["retired"]}}))
+    store.save_graph(first)
+    second = UnifiedGraph(scan_id="later", tenant_id=tenant, created_at="2026-10-16T00:00:00Z")
+    for name in ("one", "two"):
+        second.add_node(
+            UnifiedNode(id=name, entity_type=EntityType.DATASET, label="same", attributes={"identity": {"aliases": ["retired"]}})
+        )
+    store.save_graph(second)
+    assert store.resolve_node_aliases(tenant_id=tenant, node_ids={"retired"}) == {}
+    assert store.resolve_node_aliases(tenant_id=tenant, scan_id="earlier", node_ids={"retired"}) == {"retired": "one"}
+    assert set(store.load_graph(tenant_id=tenant, scan_id="later").nodes) == {"one", "two"}
+
+
+def test_latest_snapshot_does_not_resurrect_a_now_ambiguous_alias(tmp_path):
+    latest_snapshot_alias_contract(SQLiteGraphStore(tmp_path / "history.db"))

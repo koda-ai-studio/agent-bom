@@ -28,6 +28,7 @@ def _finding_ids_for_nodes(nodes: dict[str, Any], path_hops: list[str], vuln_ids
 
     ids: list[str] = []
     seen: set[str] = set()
+    represented: set[str] = set()
 
     def _add(value: str | None) -> None:
         cleaned = (value or "").strip()
@@ -42,12 +43,15 @@ def _finding_ids_for_nodes(nodes: dict[str, Any], path_hops: list[str], vuln_ids
         attrs = getattr(node, "attributes", None) or {}
         stamped = finding_ids_for_asset_path(attrs if isinstance(attrs, dict) else None, path_hops)
         if stamped:
+            represented.update({node.id, node.label})
             for value in stamped:
                 _add(value)
         else:
             _add(node.label or node.id)
     for value in vuln_ids:
-        _add(value if isinstance(value, str) else str(value))
+        value = value if isinstance(value, str) else str(value)
+        if value not in represented:
+            _add(value)
     return ids
 
 

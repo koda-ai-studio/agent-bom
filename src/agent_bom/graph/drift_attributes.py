@@ -45,8 +45,8 @@ def _normalize_attributes(raw: Any) -> dict[str, Any]:
             parsed = json.loads(raw)
         except json.JSONDecodeError:
             return {}
-        return parsed if isinstance(parsed, dict) else {}
-    return dict(raw) if isinstance(raw, dict) else {}
+        return _normalize_attributes(parsed)
+    return {key: value for key, value in raw.items() if key != "_agent_bom_canonical_id"} if isinstance(raw, dict) else {}
 
 
 def node_diff_metadata(

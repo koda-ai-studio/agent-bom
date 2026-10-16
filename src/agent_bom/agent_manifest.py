@@ -11,7 +11,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable
 from typing import TYPE_CHECKING, Any
 
-from agent_bom.canonical_ids import CANONICAL_ID_SCHEMA_VERSION
+from agent_bom.canonical_ids import CANONICAL_ID_SCHEMA_VERSION, agent_identity_export
 from agent_bom.models import Agent, MCPServer, MCPTool
 from agent_bom.platform_invariants import now_utc_iso
 from agent_bom.security import sanitize_command_args, sanitize_security_warnings, sanitize_text, sanitize_url
@@ -108,9 +108,7 @@ def _server(server: MCPServer) -> dict[str, object]:
 
 def _agent(agent: Agent) -> dict[str, object]:
     return {
-        "id": agent.stable_id,
-        "canonical_id": agent.canonical_id,
-        "previous_canonical_ids": agent.previous_canonical_ids,
+        **agent_identity_export(agent),
         "name": sanitize_text(agent.name, max_len=160),
         "agent_type": _value(agent.agent_type),
         "status": _value(agent.status),

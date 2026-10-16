@@ -8,7 +8,7 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any
 
-from agent_bom.canonical_ids import canonical_graph_node_id
+from agent_bom.canonical_ids import canonical_graph_node_id, legacy_canonical_id_v2
 from agent_bom.core.severity import (
     OCSF_SEVERITY_NAMES,
     SEVERITY_TO_OCSF,
@@ -128,6 +128,7 @@ class UnifiedNode:
 
     # Dimensions (filterable facets)
     dimensions: NodeDimensions = field(default_factory=NodeDimensions)
+    _recorded_canonical_id: str = field(default="", repr=False, compare=False)
 
     def __post_init__(self) -> None:
         et_val = self.entity_type.value if isinstance(self.entity_type, EntityType) else self.entity_type
@@ -180,7 +181,21 @@ class UnifiedNode:
         if isinstance(candidate, str) and candidate.strip():
             return candidate
         entity_type = self.entity_type.value if isinstance(self.entity_type, EntityType) else str(self.entity_type)
-        return canonical_graph_node_id(entity_type, self.id)
+        return self._recorded_canonical_id or canonical_graph_node_id(entity_type, self.id)
+
+    def storage_attributes(self) -> dict[str, Any]:
+        """Persist generated identity without altering source attributes in exports."""
+        return {**self.attributes, "_agent_bom_canonical_id": self.canonical_id}
+
+    @classmethod
+    def from_stored(cls, **values: Any) -> UnifiedNode:
+        attributes = dict(values.get("attributes") or {})
+        recorded = attributes.pop("_agent_bom_canonical_id", "")
+        kind = values["entity_type"]
+        kind = kind.value if isinstance(kind, EntityType) else str(kind)
+        values["attributes"] = attributes
+        values["_recorded_canonical_id"] = recorded or legacy_canonical_id_v2("graph_node", kind, values["id"])
+        return cls(**values)
 
     def to_dict(self) -> dict[str, Any]:
         return {

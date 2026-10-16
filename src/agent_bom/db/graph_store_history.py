@@ -109,7 +109,7 @@ def _edge_history_row(row: sqlite3.Row) -> dict[str, Any]:
         "valid_from": row["valid_from"] or row["first_seen"],
         "valid_to": row["valid_to"],
         "confidence": float(row["confidence"] if row["confidence"] is not None else 1.0),
-        "provenance": json.loads(row["provenance"] or "{}"),
+        "provenance": {key: value for key, value in json.loads(row["provenance"] or "{}").items() if key != "_agent_bom_canonical_id"},
         "source_scan_id": row["source_scan_id"] or row["scan_id"],
         "source_run_id": row["source_run_id"] or "",
         "evidence": json.loads(row["evidence"] or "{}"),

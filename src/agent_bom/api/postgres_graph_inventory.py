@@ -82,7 +82,9 @@ def _inventory_where(
         clauses.append(f"entity_type IN ({','.join('%s' for _ in values)})")
         params.extend(values)
     if search.strip():
-        clauses.append("(LOWER(label) LIKE %s ESCAPE '\\' OR LOWER(attributes) LIKE %s ESCAPE '\\')")
+        clauses.append(
+            "(LOWER(label) LIKE %s ESCAPE '\\' OR LOWER((attributes::jsonb - '_agent_bom_canonical_id')::text) LIKE %s ESCAPE '\\')"
+        )
         token = f"%{_escape_like_query(search.strip().lower())}%"
         params.extend([token, token])
     if normalized["environment"] and exclude != "environment":

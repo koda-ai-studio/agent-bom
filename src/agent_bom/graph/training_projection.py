@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import quote
 
+from agent_bom.canonical_ids import canonical_id
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.edge_evidence import edge_evidence
@@ -36,7 +38,8 @@ def project_serving_configs(graph: UnifiedGraph, serving_configs: list[dict[str,
         container_image = serving_dict.get("container_image", "")
         if not container_image:
             continue
-        container_id = f"container:{container_image}"
+        # This is a configuration observation, not a running container identity.
+        container_id = f"container:serving-config:{canonical_id(serving_dict)}"
         graph.add_node(
             UnifiedNode(
                 id=container_id,
@@ -44,6 +47,9 @@ def project_serving_configs(graph: UnifiedGraph, serving_configs: list[dict[str,
                 label=serving_dict.get("name") or container_image,
                 attributes={
                     "container_image": container_image,
+                    "inventory_role": "serving_configuration",
+                    "runtime_identity_proven": False,
+                    "identity": {"basis": "source_observation", "aliases": [f"container:{container_image}"]},
                     "framework": serving_dict.get("framework", ""),
                     "source_file": serving_dict.get("source_file", ""),
                     "model_uri": serving_dict.get("model_uri", ""),
@@ -72,10 +78,11 @@ def project_dataset_cards(graph: UnifiedGraph, dataset_cards: dict[str, Any] | N
             dataset_name = dataset_dict.get("name") or dataset_dict.get("source_file") or "unknown-dataset"
             graph.add_node(
                 UnifiedNode(
-                    id=f"dataset:{dataset_name}",
+                    id=f"dataset:card:{canonical_id(dataset_dict)}",
                     entity_type=EntityType.DATASET,
                     label=dataset_name,
                     attributes={
+                        "identity": {"basis": "source_observation", "aliases": [f"dataset:{dataset_name}"]},
                         "description": dataset_dict.get("description", ""),
                         "license": dataset_dict.get("license", ""),
                         "source_url": dataset_dict.get("source_url", ""),
@@ -111,77 +118,19 @@ def _flatten_compliance_tags(raw: Any) -> list[str]:
     return [str(raw)]
 
 
-_MODEL_PROVIDER_PREFIXES = frozenset(
-    {
-        "openai",
-        "azure",
-        "azure_openai",
-        "anthropic",
-        "google",
-        "gemini",
-        "vertex",
-        "vertex_ai",
-        "vertexai",
-        "bedrock",
-        "aws",
-        "cohere",
-        "mistral",
-        "mistralai",
-        "meta",
-        "llama",
-        "huggingface",
-        "hf",
-        "ollama",
-        "together",
-        "groq",
-        "fireworks",
-        "replicate",
-        "xai",
-        "deepseek",
-        "perplexity",
-        "watsonx",
-        "databricks",
-    }
-)
-
-
 def _normalize_model_ref(ref: str) -> str:
-    """Fold a model reference to a canonical fingerprint.
-
-    Lower-cases and strips leading provider-prefix segments
-    (``openai:gpt-4o``, ``openai/gpt-4o``, ``azure/openai/gpt-4o``) so refs
-    naming the same model from different producers collapse to one identity.
-    """
-    label = str(ref or "").strip().lower()
-    if not label:
-        return ""
-    parts = [p for p in label.replace("://", "/").replace(":", "/").split("/") if p]
-    if not parts:
-        return label
-    while len(parts) > 1 and parts[0] in _MODEL_PROVIDER_PREFIXES:
-        parts.pop(0)
-    return "/".join(parts)
+    """Preserve provider, path and case: a label is not a cross-provider identity."""
+    return str(ref or "").strip()
 
 
 def _model_node_id(ref: str) -> str:
-    """Canonical graph node id for a model, shared by every model producer.
-
-    Model provenance, framework ``model_refs``, ``unique_models`` and
-    serving-config URI resolution all route through here so a given model
-    yields exactly ONE node regardless of which source discovered it — the
-    node the ``serves_model`` edges point at also carries the provenance
-    hash/verified attributes.
-    """
-    return f"model:{_normalize_model_ref(ref)}"
+    """Shared model-reference node spelling, without inferred provider aliases."""
+    return f"model:{quote(_normalize_model_ref(ref), safe='')}"
 
 
 def _resolve_model_id(graph: UnifiedGraph, model_uri: str) -> str:
-    """Best-effort link from a serving config model URI to a known model node."""
+    """Only bind an exact recorded model reference; URI suffixes are ambiguous."""
     if not model_uri:
         return ""
-    candidates = [part for part in model_uri.replace("://", "/").replace(":", "/").split("/") if part]
-    for candidate in reversed(candidates):
-        model_id = _model_node_id(candidate)
-        if graph.has_node(model_id):
-            return model_id
-    return ""
+    candidate = _model_node_id(model_uri)
+    return candidate if graph.has_node(candidate) else ""
