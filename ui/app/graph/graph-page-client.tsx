@@ -2363,12 +2363,10 @@ function GraphPageInner() {
     ownerActive: Boolean(session),
     localMode: session?.recommended_ui_mode === "no_auth",
   });
-  const fitVisible = useCallback(async () => {
-    await reactFlow.fitView({ ...viewportOptions, duration: 240 });
-    // Readability-sized captions and glyphs settle after the zoom changes.
-    // Refit their measured bounds once, only for the explicit Fit all action.
-    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
-    await reactFlow.fitView({ ...viewportOptions, duration: 0 });
+  const fitVisible = useCallback(() => {
+    // Reserve room for readability-sized cards as their glyphs settle at the
+    // new zoom, without a second camera movement after a user starts clicking.
+    void reactFlow.fitView({ ...viewportOptions, padding: Math.max(0.16, viewportOptions.padding), duration: 240 });
   }, [reactFlow, viewportOptions]);
   const fitSelection = useCallback(async () => {
     if (rollupNavigationActive) {
