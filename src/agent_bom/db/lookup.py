@@ -19,7 +19,10 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Optional
 
+from agent_bom.advisory_ids import MATCH_CONFIDENCE_UNVERIFIED_RANGE
 from agent_bom.api.tracing import get_tracer
+from agent_bom.core.packages import legacy_package_lookup_names, normalize_package_name
+from agent_bom.core.versions.osv import range_match_state
 from agent_bom.os_advisory import OS_DISTRO_COMPARATOR_FAMILIES
 
 _logger = logging.getLogger(__name__)
@@ -52,8 +55,7 @@ class LocalVuln:
     kev_cve_id: Optional[str] = None  # CVE supplying the selected KEV dates
     aliases: list[str] = field(default_factory=list)
     cwe_ids: list[str] = field(default_factory=list)
-    # Set only by the CPE matcher so the finding surfaces as nvd_cpe_candidate;
-    # left None for OSV/distro rows, which compute their tier downstream.
+    # Explicit candidate tiers override downstream source-based classification.
     match_confidence_tier: Optional[str] = None
 
 
@@ -154,6 +156,12 @@ def _upstream_projection(conn: sqlite3.Connection) -> str:
     return "COALESCE(v.upstream_ids, '')" if "upstream_ids" in columns else "''"
 
 
+def _limit_projection(conn: sqlite3.Connection) -> str:
+    """Read-only pre-v8 bundles have no limit receipt; keep that uncertainty."""
+    columns = {row[1] for row in conn.execute("PRAGMA table_info(affected)")}
+    return "a.limit_version" if "limit_version" in columns else "NULL"
+
+
 def lookup_package(
     conn: sqlite3.Connection,
     ecosystem: str,
@@ -162,35 +170,35 @@ def lookup_package(
 ) -> list[LocalVuln]:
     """Return all vulns affecting the given package/ecosystem from the local DB.
 
-    If ``version`` is provided, only returns vulns where the version falls in the
-    affected range.  Version matching is a simple lexicographic check — for exact
-    semver semantics use ``lookup_package_strict()``.
+    Version matching uses ecosystem ordering. Unresolvable stored bounds are
+    returned as explicitly unverified candidates, with no fix recommendation.
     """
-    from agent_bom.package_utils import normalize_package_name
-
     norm_name = normalize_package_name(name, ecosystem)
     eco_lower = ecosystem.lower()
+    legacy_names = (norm_name, *legacy_package_lookup_names(norm_name, ecosystem))
+    legacy_slots = ", ".join("?" for _ in legacy_names)
 
     span_cm = _LOOKUP_TRACER.start_as_current_span("db.lookup_package") if _LOOKUP_TRACER else nullcontext()
     with span_cm as span:
         upstream_projection = _upstream_projection(conn)
+        limit_projection = _limit_projection(conn)
         rows = conn.execute(
             f"""
             SELECT
                 v.id, v.summary, v.severity, v.cvss_score, v.cvss_vector, v.fixed_version, v.cwe_ids,
                 COALESCE(v.aliases, '') AS aliases, {upstream_projection} AS upstream_ids, v.source,
                 v.published, v.modified,
-                a.ecosystem, a.package_name, a.introduced, a.fixed, a.last_affected,
+                a.ecosystem, a.package_name, a.introduced, a.fixed, a.last_affected, {limit_projection} AS limit_version,
                 e.probability AS epss_prob, e.percentile AS epss_pct,
                 k.date_added AS kev_date, k.due_date AS kev_due_date
             FROM affected a
             JOIN vulns v ON v.id = a.vuln_id
             LEFT JOIN epss_scores e ON e.cve_id = v.id
             LEFT JOIN kev_entries k ON k.cve_id = v.id
-            WHERE a.ecosystem = ? AND a.package_name = ?
+            WHERE a.ecosystem = ? AND (a.package_name = ? OR ({limit_projection} IS NULL AND a.package_name IN ({legacy_slots})))
             ORDER BY v.cvss_score DESC NULLS LAST
             """,  # nosec B608 - projection is one of two static SQL literals; values are bound
-            (eco_lower, norm_name),
+            (eco_lower, norm_name, *legacy_names),
         ).fetchall()
 
         epss_map, kev_map = _load_cve_enrichment(conn, rows)
@@ -301,28 +309,12 @@ def _is_distro_release_ecosystem(ecosystem: str) -> bool:
 
 
 def _resolve_fixed_version(row: sqlite3.Row) -> Optional[str]:
-    """Pick the fixed version to report for a matched affected row.
+    """Only the matched package/range can supply a remediation version.
 
-    Distro releases use the per-release ``affected.fixed`` (empty means *no fix for
-    this release*); application ecosystems keep the existing rollup-then-range
-    preference so a missing range fix can fall back to the advisory-level fix.
+    Advisory-level rollups can belong to another package, ecosystem or branch.
+    Alias recovery below additionally verifies package and range applicability.
     """
-    if _is_distro_release_ecosystem(row["ecosystem"]):
-        return (row["fixed"] or "").strip() or None
-    # Prefer the version-matched range fix over the advisory-level rollup. For a
-    # multi-branch advisory the rollup names the fix on a *different* branch, so
-    # reporting it against an installed version on another branch can advise a
-    # downgrade. Fall back to the rollup only when the matched range carries no
-    # fix, and never present an invalid (e.g. git-SHA) rollup as a usable fix.
-    from agent_bom.scanners.osv import is_valid_fix_version
-
-    matched = (row["fixed"] or "").strip()
-    if matched:
-        return matched
-    rollup = (row["fixed_version"] or "").strip()
-    if rollup and is_valid_fix_version(rollup):
-        return rollup
-    return None
+    return (row["fixed"] or "").strip() or None
 
 
 def _row_identifiers(row: sqlite3.Row) -> set[str]:
@@ -373,6 +365,7 @@ def _alias_cluster_fix(row: sqlite3.Row, rows: list[sqlite3.Row], version: Optio
                 other["fixed"],
                 other["last_affected"],
                 other["ecosystem"],
+                other["limit_version"],
             )
             != "affected"
         ):
@@ -424,61 +417,9 @@ def _cached_version_match_state(
     fixed: Optional[str],
     last_affected: Optional[str],
     ecosystem: str = "",
+    limit_version: Optional[str] = "",
 ) -> str:
-    from agent_bom.version_utils import _looks_like_commit_sha, compare_version_order, normalize_introduced
-
-    # ``introduced: "0"`` is the OSV sentinel for "before every version", not a
-    # version to compare against — see ``normalize_introduced``. Comparing to it
-    # literally dropped every Go pseudo-version out of every sentinel-opened
-    # window, while the OSV walker (which already stripped it) said affected.
-    intro = normalize_introduced(introduced)
-    fix = fixed or None
-    last = last_affected or None
-    # ``ambiguous``: a genuine version-vs-version comparison yielded no ordering
-    # (unusual/unparseable version string) — worth a conservative include.
-    # ``uncomparable``: a bound is a git-commit SHA or other non-version token
-    # that can never establish semver range membership — NOT grounds for
-    # inclusion. Mirrors ``version_utils.version_in_range`` returning False for
-    # SHA bounds so this offline path stops emitting OSS-Fuzz/OSV-2022 false
-    # positives against concrete semver versions.
-    ambiguous = False
-    uncomparable = False
-
-    if intro:
-        if _looks_like_commit_sha(intro):
-            uncomparable = True
-        else:
-            intro_cmp = compare_version_order(version, intro, ecosystem)
-            if intro_cmp is not None and intro_cmp < 0:
-                return "unaffected"
-            if intro_cmp is None:
-                ambiguous = True
-
-    if fix:
-        if _looks_like_commit_sha(fix):
-            uncomparable = True
-        else:
-            fix_cmp = compare_version_order(version, fix, ecosystem)
-            if fix_cmp is not None and fix_cmp >= 0:
-                return "unaffected"
-            if fix_cmp is None:
-                ambiguous = True
-
-    if last:
-        if _looks_like_commit_sha(last):
-            uncomparable = True
-        else:
-            last_cmp = compare_version_order(version, last, ecosystem)
-            if last_cmp is not None and last_cmp > 0:
-                return "unaffected"
-            if last_cmp is None:
-                ambiguous = True
-
-    if ambiguous:
-        return "unknown"
-    if uncomparable:
-        return "uncomparable"
-    return "affected"
+    return range_match_state(version, introduced, fixed, last_affected, ecosystem, limit_version)
 
 
 def _version_match_state(
@@ -487,6 +428,7 @@ def _version_match_state(
     fixed: Optional[str],
     last_affected: Optional[str],
     ecosystem: str = "",
+    limit_version: Optional[str] = "",
 ) -> str:
     """Classify one affected-range row for a version.
 
@@ -495,7 +437,7 @@ def _version_match_state(
     included), or ``uncomparable`` when a bound is a git SHA / non-version token
     that can never match a concrete semver (never a reason to include).
     """
-    return _cached_version_match_state(version, introduced, fixed, last_affected, _comparator_ecosystem(ecosystem))
+    return _cached_version_match_state(version, introduced, fixed, last_affected, _comparator_ecosystem(ecosystem), limit_version)
 
 
 def _select_vulnerability_rows(rows: list[sqlite3.Row], version: Optional[str]) -> list[sqlite3.Row]:
@@ -503,10 +445,9 @@ def _select_vulnerability_rows(rows: list[sqlite3.Row], version: Optional[str]) 
 
     If any row for a vulnerability definitively matches the requested version,
     include the vulnerability. If no rows match but at least one row
-    definitively excludes the version, suppress the vulnerability even if
-    sibling rows are ambiguous (for example, duplicate PYSEC rows with git-SHA
-    fix bounds). If all rows are genuinely ambiguous, include the first one
-    conservatively. Rows whose only signal is ``uncomparable`` (git-SHA /
+    is ambiguous, retain an explicitly unverified candidate unless another
+    window proves membership. An unaffected sibling cannot negate an unknown
+    window because OSV ranges form a union. Rows whose only signal is ``uncomparable`` (git-SHA /
     non-version bounds — e.g. OSV-2022 OSS-Fuzz advisories) are never grounds
     for inclusion, so a concrete semver version does not draw a false positive.
     """
@@ -524,24 +465,39 @@ def _select_vulnerability_rows(rows: list[sqlite3.Row], version: Optional[str]) 
     for vuln_rows in grouped.values():
         affected_row: sqlite3.Row | None = None
         unknown_row: sqlite3.Row | None = None
-        saw_unaffected = False
 
         for row in vuln_rows:
-            state = _version_match_state(version, row["introduced"], row["fixed"], row["last_affected"], row["ecosystem"])
+            state = _version_match_state(
+                version, row["introduced"], row["fixed"], row["last_affected"], row["ecosystem"], row["limit_version"]
+            )
             if state == "affected":
                 affected_row = row
                 break
             if state == "unknown" and unknown_row is None:
                 unknown_row = row
-            if state == "unaffected":
-                saw_unaffected = True
 
         if affected_row is not None:
             selected.append(affected_row)
-        elif not saw_unaffected and unknown_row is not None:
+        elif unknown_row is not None:
             selected.append(unknown_row)
 
     return selected
+
+
+def _package_rows_with_legacy_candidates(grouped: dict[tuple[str, str], list[sqlite3.Row]], ecosystem: str, name: str) -> list[sqlite3.Row]:
+    name = normalize_package_name(name, ecosystem)
+    rows = list(grouped.get((ecosystem.lower(), name), []))
+    for legacy in legacy_package_lookup_names(name, ecosystem):
+        rows.extend(row for row in grouped.get((ecosystem.lower(), legacy), []) if row["limit_version"] is None)
+    return rows
+
+
+def _lookup_pairs(packages: list[tuple[str, str, str]]) -> list[tuple[str, str]]:
+    pairs: set[tuple[str, str]] = set()
+    for ecosystem, name, _ in packages:
+        name = normalize_package_name(name, ecosystem)
+        pairs.update((ecosystem.lower(), value) for value in (name, *legacy_package_lookup_names(name, ecosystem)))
+    return sorted(pairs)
 
 
 def lookup_packages_batch(
@@ -567,16 +523,13 @@ def lookup_packages_batch(
 
     # Deduplicate (ecosystem, name) pairs for the SQL query; keep version
     # info for in-memory filtering afterwards.
-    pair_set: set[tuple[str, str]] = set()
-    for eco, name, _ver in packages:
-        pair_set.add((eco.lower(), name))
-
-    pairs = list(pair_set)
+    pairs = _lookup_pairs(packages)
 
     span_cm = _LOOKUP_TRACER.start_as_current_span("db.lookup_packages_batch") if _LOOKUP_TRACER else nullcontext()
     with span_cm as span:
         # Fetch all rows in chunks
         upstream_projection = _upstream_projection(conn)
+        limit_projection = _limit_projection(conn)
         all_rows: list[sqlite3.Row] = []
         for start in range(0, len(pairs), chunk_size):
             chunk = pairs[start : start + chunk_size]
@@ -591,7 +544,7 @@ def lookup_packages_batch(
                     v.id, v.summary, v.severity, v.cvss_score, v.cvss_vector, v.fixed_version, v.cwe_ids,
                     COALESCE(v.aliases, '') AS aliases, {upstream_projection} AS upstream_ids, v.source,
                     v.published, v.modified,
-                    a.ecosystem, a.package_name, a.introduced, a.fixed, a.last_affected,
+                    a.ecosystem, a.package_name, a.introduced, a.fixed, a.last_affected, {limit_projection} AS limit_version,
                     e.probability AS epss_prob, e.percentile AS epss_pct,
                     k.date_added AS kev_date, k.due_date AS kev_due_date
                 FROM affected a
@@ -614,8 +567,7 @@ def lookup_packages_batch(
         results: dict[tuple[str, str, str], list[LocalVuln]] = {}
         for eco, name, version in packages:
             key = (eco, name, version)
-            eco_lower = eco.lower()
-            rows = grouped.get((eco_lower, name), [])
+            rows = _package_rows_with_legacy_candidates(grouped, eco, name)
 
             vulns: list[LocalVuln] = []
             for row in _select_vulnerability_rows(rows, version):
@@ -635,11 +587,11 @@ def package_in_db(conn: sqlite3.Connection, ecosystem: str, name: str) -> bool:
     Used to decide whether the DB is authoritative for a package (and OSV fallback
     can be skipped) vs. the package simply not being indexed yet.
     """
-    from agent_bom.package_utils import normalize_package_name
-
+    if _limit_projection(conn) == "NULL":
+        return False
     norm_name = normalize_package_name(name, ecosystem)
     row = conn.execute(
-        "SELECT 1 FROM affected WHERE ecosystem = ? AND package_name = ? LIMIT 1",
+        "SELECT 1 FROM affected WHERE ecosystem = ? AND package_name = ? AND limit_version IS NOT NULL LIMIT 1",
         (ecosystem.lower(), norm_name),
     ).fetchone()
     return row is not None
@@ -653,7 +605,9 @@ def package_in_db_batch(
     if not packages:
         return set()
 
-    normalized = {(ecosystem.lower(), name) for ecosystem, name in packages}
+    if _limit_projection(conn) == "NULL":
+        return set()
+    normalized = {(ecosystem.lower(), normalize_package_name(name, ecosystem)) for ecosystem, name in packages}
     pairs = list(normalized)
     chunk_size = 400
     present: set[tuple[str, str]] = set()
@@ -667,7 +621,7 @@ def package_in_db_batch(
         query = f"""
             SELECT DISTINCT ecosystem, package_name
             FROM affected
-            WHERE (ecosystem, package_name) IN (VALUES {placeholders})
+            WHERE (ecosystem, package_name) IN (VALUES {placeholders}) AND limit_version IS NOT NULL
         """  # nosec B608
         present.update((row["ecosystem"], row["package_name"]) for row in conn.execute(query, params).fetchall())
 
@@ -715,13 +669,26 @@ def _local_vuln_from_row(row, rows, version, epss_map, kev_map) -> LocalVuln:
     alias_list = [a for a in raw_aliases.split(",") if a] if raw_aliases else []
     epss_prob, epss_pct, kev_date, kev_due, epss_id, kev_id = _resolve_row_enrichment(row, epss_map, kev_map)
     severity, cvss_score = _current_severity(row["severity"], row["cvss_score"], row["cvss_vector"])
+    unknown_range = row["limit_version"] is None or bool(
+        version
+        and _version_match_state(version, row["introduced"], row["fixed"], row["last_affected"], row["ecosystem"], row["limit_version"])
+        == "unknown"
+    )
+    if unknown_range:
+        from agent_bom.scanners.state import record_scan_warning
+
+        record_scan_warning(
+            "Some local advisory ranges cannot be verified. Findings marked unverified_range are candidates; "
+            "run agent-bom db update to refresh source bounds and review unresolved versions."
+        )
     return LocalVuln(
+        match_confidence_tier=MATCH_CONFIDENCE_UNVERIFIED_RANGE if unknown_range else None,
         id=row["id"],
         summary=row["summary"],
         severity=severity,
         cvss_score=cvss_score,
         cvss_vector=row["cvss_vector"],
-        fixed_version=_resolve_fixed_version_with_aliases(row, rows, version),
+        fixed_version=None if unknown_range else _resolve_fixed_version_with_aliases(row, rows, version),
         epss_probability=epss_prob,
         epss_percentile=epss_pct,
         is_kev=kev_id is not None,

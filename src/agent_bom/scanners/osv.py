@@ -16,6 +16,7 @@ from agent_bom.core.errors import (
     UpstreamInvalidResponseError,
     UpstreamRateLimitedError,
 )
+from agent_bom.core.versions.osv import is_release_range, ordered_range_events
 from agent_bom.enrichment_posture import enrichment_source_available, record_enrichment_source
 from agent_bom.http_client import OfflineModeError, create_client, request_with_retry
 from agent_bom.models import Package
@@ -108,7 +109,9 @@ def package_lookup_names(pkg: Package) -> list[str]:
 
 def osv_query_names(pkg: Package) -> list[str]:
     """Keep upstream query spelling separate from normalized local identity."""
-    if pkg.ecosystem.lower() in {"go", "nuget"}:
+    if pkg.ecosystem.lower() == "maven":
+        return list(dict.fromkeys(name.strip().replace("/", ":", 1) for name in pkg.lookup_names if name.strip()))
+    if pkg.ecosystem.lower() in {"go", "golang", "nuget"}:
         return list(dict.fromkeys(name.strip() for name in pkg.lookup_names if name.strip()))
     return package_lookup_names(pkg)
 
@@ -167,9 +170,9 @@ def parse_fixed_version(
         osv_norm = normalize_package_name(pkg_name, osv_eco)
         if osv_norm not in norm_inputs:
             continue
-        for rng in affected.get("ranges", []):
+        for rng in filter(is_release_range, affected.get("ranges", [])):
             introduced: Optional[str] = None
-            for event in rng.get("events", []):
+            for event in ordered_range_events(rng.get("events", []), ecosystem):
                 if "introduced" in event:
                     introduced = event.get("introduced") or None
                     continue

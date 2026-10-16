@@ -799,6 +799,7 @@ def _blast_radius_json_entry(
         exposed_credentials=bool(br.exposed_credentials),
         exposed_tools=bool(br.exposed_tools),
         declaration_only=br.package.reachability_evidence == "declaration_only",
+        match_confidence_tier=br.vulnerability.match_confidence_tier,
     )
     return {
         "schema_version": BLAST_RADIUS_SCHEMA_VERSION,

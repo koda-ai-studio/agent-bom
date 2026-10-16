@@ -40,7 +40,11 @@ def normalize_package_name(name: str, ecosystem: str = "") -> str:
     """Normalize a package name for consistent matching."""
     if not name:
         return name
-    eco = ecosystem.lower()
+    eco = normalize_package_ecosystem(ecosystem)
+    if eco == "maven":
+        return name.replace(":", "/", 1)
+    if eco == "go":
+        return name
     if eco == "pypi":
         return _NORMALIZE_RE.sub("-", name).lower()
     return name.lower()
@@ -50,6 +54,17 @@ def normalize_package_ecosystem(ecosystem: str) -> str:
     """Normalize ecosystem aliases used by PURLs, OSV, and parsers."""
     eco = (ecosystem or "").strip().lower()
     return _PURL_TYPE_ALIASES.get(eco, eco)
+
+
+def legacy_package_lookup_names(name: str, ecosystem: str) -> tuple[str, ...]:
+    """Lossy pre-v8 DB spellings, usable only as unverified migration candidates."""
+    eco = normalize_package_ecosystem(ecosystem)
+    if eco not in {"go", "maven"}:
+        return ()
+    names = {name.lower()}
+    if eco == "maven":
+        names.add(name.replace("/", ":", 1).lower())
+    return tuple(sorted(names - {name}))
 
 
 def _normalize_package_version(version: str, ecosystem: str) -> str:

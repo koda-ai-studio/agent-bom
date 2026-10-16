@@ -16,6 +16,7 @@ MATCH_CONFIDENCE_OSV_RANGE = "osv_range"
 MATCH_CONFIDENCE_OSV_ECOSYSTEM = "osv_ecosystem"
 MATCH_CONFIDENCE_UNFIXED_DISTRO = "unfixed_distro"
 MATCH_CONFIDENCE_NVD_CPE_CANDIDATE = "nvd_cpe_candidate"
+MATCH_CONFIDENCE_UNVERIFIED_RANGE = "unverified_range"
 # A distro package with no release metadata, matched against every supported
 # release branch at once. The advisory is real for *some* release; whether it is
 # real for the scanned one is unknown, and so is which branch's fix applies.

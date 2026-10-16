@@ -407,7 +407,7 @@ def _vuln_table(
         tier = evidence(finding, "match_confidence_tier", None)
         tier_hint = ""
         if tier:
-            _tier_color = "#f59e0b" if tier in {"nvd_cpe_candidate", "ambiguous_distro_release"} else "#64748b"
+            _tier_color = "#f59e0b" if tier in {"nvd_cpe_candidate", "ambiguous_distro_release", "unverified_range"} else "#64748b"
             tier_hint = (
                 f'<br><span class="match-tier" data-tier="{_esc(tier)}" '
                 f'title="match confidence: {_esc(tier)}" '

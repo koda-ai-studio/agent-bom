@@ -23,6 +23,7 @@ from agent_bom.sbom_formats.cyclonedx import (
     restore_package_metadata,
     restore_vulnerability_enrichment,
     software_components,
+    vulnerability_for_component,
 )
 from agent_bom.sbom_formats.spdx3 import (
     _spdx3_annotation_kv,
@@ -245,7 +246,7 @@ def parse_cyclonedx(data: dict) -> list[Package]:
             affected_ref = affect.get("ref", "")
             affected_pkg = bom_ref_to_pkg.get(affected_ref)
             if affected_pkg is not None and vuln not in affected_pkg.vulnerabilities:
-                affected_pkg.vulnerabilities.append(vuln)
+                affected_pkg.vulnerabilities.append(vulnerability_for_component(vuln, vuln_data, affected_ref))
 
     return packages
 
