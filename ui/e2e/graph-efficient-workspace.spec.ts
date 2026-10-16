@@ -12,7 +12,7 @@ async function fixture(page: Page, topology = graph) {
   await page.route("**/v1/**", r => {
     const u = new URL(r.request().url()); requests.push(u.pathname+u.search);
     if (u.pathname === "/v1/auth/me") return r.fulfill({json: {authenticated: true, auth_required: false, tenant_id: "fixture", role: "admin", auth_method: "anonymous", memberships: [], configured_modes: [], recommended_ui_mode: "no_auth"}});
-    if (u.pathname === "/v1/graph/snapshots") return r.fulfill({json: ["snapshot", "previous"].map(scan_id=>({scan_id,created_at:stamp,node_count:2,edge_count:1}))});
+    if (u.pathname === "/v1/graph/snapshots") return r.fulfill({json: ["snapshot", "previous"].map(scan_id=>({scan_id,created_at:stamp,node_count:topology.nodes.length,edge_count:topology.edges.length}))});
     if (u.pathname === "/v1/graph") return r.fulfill({json: {...topology,pagination:{total:topology.nodes.length,offset:0,limit:100,returned:topology.nodes.length,has_more:false}}});
     if (u.pathname === "/v1/graph/query") return r.fulfill({json: {...topology,roots:[nodes[1]!.id],depth_by_node:{[nodes[0]!.id]:1,[nodes[1]!.id]:0},truncated:false,direction:"reverse",max_depth:1,budget:{}}});
     if (u.pathname.startsWith("/v1/graph/node/")) return r.fulfill({json: {node:nodes[1],sources:[],edges_in:[edge],edges_out:[],neighbors:[nodes[0]!.id],impact:{affected_count:1,max_depth_reached:1,affected_by_type:{package:1}},completeness:{complete:true}}});
@@ -61,7 +61,7 @@ for (const theme of ["light", "dark"]) test(`three evidence sources stay readabl
   const sources = ["pinned-package.txt", "image inventory", "deployment occurrence"].map((label, index) => ({
     ...nodes[0]!, id: `source:${index}`, label, entity_type: index === 0 ? "source_file" : "container", severity: "none",
   }));
-  const topology = { ...graph, nodes: [...sources, ...nodes], edges: [edge, ...sources.map(source => ({
+  const topology = { ...graph, stats: { ...graph.stats, total_nodes: 5, total_edges: 4 }, nodes: [...sources, ...nodes], edges: [edge, ...sources.map(source => ({
     ...edge, id: source.id, source: source.id, target: nodes[0]!.id, relationship: "contains",
   }))] };
   await fixture(page, topology);
@@ -80,4 +80,8 @@ for (const theme of ["light", "dark"]) test(`three evidence sources stay readabl
     return canvas.y + canvas.height <= 900;
   }).toBe(true);
   await page.screenshot({ path: info.outputPath(`evidence-resized-${theme}.png`), animations: "disabled" });
+  await page.getByRole("button", { name: "View & layers" }).click();
+  await expect.poll(async () => (await page.locator(".react-flow").boundingBox())!.height).toBeLessThanOrEqual(320);
+  await page.getByRole("button", { name: "View & layers" }).click();
+  await expect.poll(async () => (await page.locator(".react-flow").boundingBox())!.height).toBeGreaterThan(400);
 });
