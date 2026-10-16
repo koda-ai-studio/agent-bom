@@ -356,7 +356,7 @@ In GitHub Actions the composite action propagates the same code plus parsed
 counts:
 
 ```yaml
-- uses: koda-ai-studio/agent-bom@v0.108.4
+- uses: koda-ai-studio/agent-bom@v0.109.0
   with:
     format: sarif
     severity-threshold: high

@@ -116,8 +116,8 @@ demo for advisory-backed findings or [populate the advisory database](docs/FIRST
 pilot from a [published release checkout](https://github.com/koda-ai-studio/agent-bom/releases):
 
 ```bash
-git clone --depth 1 --branch v0.108.4 https://github.com/koda-ai-studio/agent-bom.git && cd agent-bom
-AGENT_BOM_IMAGE_TAG=0.108.4 docker compose up -d
+git clone --depth 1 --branch v0.109.0 https://github.com/koda-ai-studio/agent-bom.git && cd agent-bom
+AGENT_BOM_IMAGE_TAG=0.109.0 docker compose up -d
 ```
 
 Open **http://localhost:3000**, then **Connections** or **New Scan**. The pilot
@@ -163,4 +163,4 @@ control mappings are not audit certification.
 
 [Contributing](CONTRIBUTING.md) · [Capabilities and roadmap](docs/ROADMAP.md) · [Support](SUPPORT.md) · [Report an inaccurate finding](https://github.com/koda-ai-studio/agent-bom/issues/new?template=inaccurate_finding.yml) · [Apache-2.0](LICENSE)
 
-Source version: **v0.109.0** · Latest release: **v0.108.4** · [Changelog](CHANGELOG.md)
+Source version: **v0.109.0** · Latest release: **v0.109.0** · [Changelog](CHANGELOG.md)
