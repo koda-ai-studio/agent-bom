@@ -147,3 +147,31 @@ def test_cli_help_does_not_promise_delegation_from_shared_configuration():
     assert result.exit_code == 0
     assert "Shared configuration does not prove delegation" in " ".join(result.output.split())
     assert "Higher values reveal transitive risk" not in result.output
+
+
+def direct_scope_storage_contract(store):
+    from agent_bom.graph.builder import build_unified_graph_from_report
+    from agent_bom.graph.types import RelationshipType
+    from agent_bom.models import AIBOMReport
+    from agent_bom.output.json_fmt import to_json
+
+    vulnerable, common = _make_server("vulnerable"), _make_server("common", cred_names=["PRIVATE_API_KEY"])
+    first, second = _make_agent("first", [vulnerable, common]), _make_agent("second", [common])
+    result = _make_blast_radius(_make_vuln(), _make_pkg(), [vulnerable], [first])
+    expand_blast_radius_hops([result], [first, second], max_depth=5)
+    report = to_json(AIBOMReport(agents=[first, second], blast_radii=[result], tool_version="0.0.0"))
+    graph = build_unified_graph_from_report(report, tenant_id="scope-contract", scan_id="direct-scope")
+    store.save_graph(graph)
+    restored = store.load_graph(tenant_id="scope-contract", scan_id="direct-scope")
+    assert restored is not None
+    assert set(restored.nodes) == set(graph.nodes)
+    assert {edge.canonical_id for edge in restored.edges} == {edge.canonical_id for edge in graph.edges}
+    assert not any(edge.relationship == RelationshipType.DELEGATED_TO for edge in restored.edges)
+    assert report["blast_radius"][0]["affected_agents"] == ["first"]
+    assert report["blast_radius"][0]["transitive_credentials"] == []
+
+
+def test_direct_scope_survives_sqlite_replay(tmp_path):
+    from agent_bom.api.graph_store import SQLiteGraphStore
+
+    direct_scope_storage_contract(SQLiteGraphStore(tmp_path / "direct-scope.db"))
