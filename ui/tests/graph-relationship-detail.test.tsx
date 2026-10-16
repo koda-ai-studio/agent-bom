@@ -12,6 +12,14 @@ function show(ui: React.ReactElement) {
 }
 
 describe("relationship inspector", () => {
+  it("words modeled access as modeled, not granted", () => {
+    render(<GraphRelationshipDetail edge={{ ...edge, relationship: "can_access", evidence: { tier: "modeled_infrastructure", source: "identity_model" } }}
+      scanId="snapshot-a" sourceLabel="TICKETING_API_KEY" targetLabel="customer-ticket-archive" onClose={vi.fn()} />);
+    const summary = screen.getByLabelText("Relationship summary");
+    expect(summary).toHaveTextContent("TICKETING_API_KEY is modeled as able to access customer-ticket-archive.");
+    expect(summary).not.toHaveTextContent("granted");
+  });
+
   it("leads with a plain-language summary and keeps collector ids behind Technical details", () => {
     render(<GraphRelationshipDetail edge={{ ...edge, relationship: "vulnerable_to", evidence: { tier: "static_scan", source: "bundled_advisory_scanner", evidence_tier: "static_scan" } }}
       scanId="snapshot-a" sourceLabel="pillow@9.0.0" targetLabel="CVE-2023-4863" onClose={vi.fn()} />);

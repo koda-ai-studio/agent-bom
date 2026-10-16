@@ -38,16 +38,10 @@ const WHY: Record<string, (source: string, target: string) => string> = {
   depends_on: (s, t) => `${s} declares ${t} as a dependency.`,
   imports: (s, t) => `${s} imports ${t}.`,
   contains: (s, t) => `${s} contains ${t} in the collected inventory.`,
-  hosted_on: (s, t) => `${s} runs on ${t}.`,
   hosts: (s, t) => `${s} hosts ${t}.`,
-  uses: (s, t) => `${s} is configured to use ${t}.`,
   provides_tool: (s, t) => `${s} lists ${t} as an available tool.`,
-  exposes_cred: (s, t) => `${s} references the credential ${t}.`,
   shares_cred: (s, t) => `${s} and ${t} reference the same credential.`,
-  can_access: (s, t) => `${s} is granted access to ${t}.`,
   has_permission: (s, t) => `${s} holds a permission on ${t}.`,
-  assumes: (s, t) => `${s} can assume ${t}.`,
-  authenticates_as: (s, t) => `${s} authenticates as ${t}.`,
   exposed_to: (s, t) => `${s} is exposed to ${t}.`,
   configures: (s, t) => `${s} configures ${t}.`,
   delegated_to: (s, t) => `${s} delegates work to ${t}.`,
@@ -56,6 +50,32 @@ const WHY: Record<string, (source: string, target: string) => string> = {
   correlates_with: (s, t) => `${s} and ${t} match on recorded identity fields.`,
   possibly_correlates_with: (s, t) => `${s} and ${t} may be the same asset; the match is not confirmed.`,
 };
+
+type EvidenceMode = "runtime" | "static" | "inferred" | "unknown";
+
+// Relationships whose plain claim depends on how the link was evidenced: a
+// runtime receipt proves activity, configuration proves intent, a model proves
+// neither. [runtime, static, inferred, unknown] verb phrases.
+const BY_EVIDENCE: Record<string, readonly [string, string, string, string]> = {
+  can_access: ["was observed accessing", "is configured with access to", "is modeled as able to access", "is recorded as able to access"],
+  hosted_on: ["was observed running on", "is configured to run on", "is modeled as running on", "is recorded as running on"],
+  assumes: ["was observed assuming", "is configured to be able to assume", "is modeled as able to assume", "is recorded as able to assume"],
+  authenticates_as: ["was observed authenticating as", "is configured to authenticate as", "is modeled as authenticating as", "is recorded as authenticating as"],
+  uses: ["was observed using", "is configured to use", "is modeled as using", "is recorded as using"],
+  exposes_cred: ["was observed using the credential", "references the credential", "is modeled as referencing the credential", "is recorded as referencing the credential"],
+};
+const BLOCKED_VERB: Record<string, string> = {
+  can_access: "access", hosted_on: "run on", assumes: "assume", authenticates_as: "authenticate as", uses: "use", exposes_cred: "use the credential",
+};
+const MODE_INDEX: Record<EvidenceMode, number> = { runtime: 0, static: 1, inferred: 2, unknown: 3 };
+
+function evidenceWhy(relationship: string, mode: EvidenceMode, blocked: boolean, source: string, target: string): string | null {
+  const phrases = Object.hasOwn(BY_EVIDENCE, relationship) ? BY_EVIDENCE[relationship]! : null;
+  if (!phrases) return null;
+  if (mode === "runtime" && blocked) return `${source} was observed attempting to ${BLOCKED_VERB[relationship]} ${target}; the attempt was blocked.`;
+  const suffix = relationship === "exposes_cred" && mode === "static" ? " in its configuration" : "";
+  return `${source} ${phrases[MODE_INDEX[mode]]} ${target}${suffix}.`;
+}
 
 const ACCESS = new Set(["can_access", "has_permission", "assumes", "authenticates_as", "exposed_to", "accessed"]);
 const CODE = new Set(["depends_on", "contains", "imports", "hosts"]);
@@ -86,7 +106,8 @@ export function plainRelationshipSummary(edge: PlainEdge, sourceLabel: string, t
   const packageName = text(evidence.package);
   const why = edge.relationship === "vulnerable_to" && evidence.derived_via === "package" && packageName
     ? `${sourceLabel} contains ${packageName}, which is recorded as affected by ${targetLabel}.`
-    : (Object.hasOwn(WHY, edge.relationship) ? WHY[edge.relationship]!(sourceLabel, targetLabel) : `The snapshot records a link from ${sourceLabel} to ${targetLabel}.`);
+    : evidenceWhy(edge.relationship, mode, blocked, sourceLabel, targetLabel)
+      ?? (Object.hasOwn(WHY, edge.relationship) ? WHY[edge.relationship]!(sourceLabel, targetLabel) : `The snapshot records a link from ${sourceLabel} to ${targetLabel}.`);
   const kind = mode === "runtime" ? (blocked ? "Observed at runtime — blocked" : "Observed at runtime")
     : mode === "static" ? "Static — read from files, manifests or configuration"
     : mode === "inferred" ? "Modeled — derived from collected configuration, not observed"
