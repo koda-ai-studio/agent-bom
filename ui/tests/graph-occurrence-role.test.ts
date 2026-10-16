@@ -49,3 +49,42 @@ describe("container occurrence roles", () => {
     expect(roles).toMatchObject({ "c-sbom": "Image inventory", "c-k8s": "Deployment occurrence", "c-solo": undefined });
   });
 });
+
+describe("same-name instance context", () => {
+  it("shows the recorded config scope without recovering redacted filesystem paths", () => {
+    const graph = {
+      scan_id: "s", nodes: [
+        node("agent:cfg-926bd270c907:reader", EntityType.AGENT, "Workspace reader", []),
+        node("agent:cfg-a0fa3719e962:reader", EntityType.AGENT, "Workspace reader", []),
+      ], edges: [], attack_paths: [], interaction_risks: [],
+    } as unknown as UnifiedGraphData;
+    const result = buildUnifiedFlowGraph(graph, createFocusedGraphFilters());
+    expect(result.nodes.map((n) => n.data.identityContext)).toEqual(["Config 926bd270c907", "Config a0fa3719e962"]);
+    expect(result.nodes.map((n) => n.data.label)).toEqual(["Workspace reader", "Workspace reader"]);
+    expect(new Set(result.nodes.map((n) => n.id)).size).toBe(2);
+  });
+});
+
+it("keeps same-config collisions distinct and hints stable when input order changes", () => {
+  const nodes = [
+    node("agent:cfg-926bd270c907:a", EntityType.AGENT, "reader", []),
+    node("agent:cfg-926bd270c907:b", EntityType.AGENT, "reader", []),
+    node("agent:solo", EntityType.AGENT, "single", []),
+  ];
+  const build = (items: UnifiedNode[]) => buildUnifiedFlowGraph({ nodes: items, edges: [], attack_paths: [], interaction_risks: [] } as unknown as UnifiedGraphData, createFocusedGraphFilters()).nodes;
+  const hints = (items: UnifiedNode[]) => Object.fromEntries(build(items).map((n) => [n.id, n.data.identityContext]));
+  expect(hints(nodes)).toEqual(hints([...nodes].reverse()));
+  expect(new Set(build(nodes).slice(0, 2).map((n) => n.data.identityContext)).size).toBe(2);
+  expect(hints(nodes)["agent:solo"]).toBeUndefined();
+});
+
+it("does not turn unknown or redacted scope into an invented config path", () => {
+  const graph = {
+    nodes: [node("agent:opaque-one", EntityType.AGENT, "reader", []), node("agent:opaque-two", EntityType.AGENT, "reader", [])],
+    edges: [], attack_paths: [], interaction_risks: [],
+  } as unknown as UnifiedGraphData;
+  const result = buildUnifiedFlowGraph(graph, createFocusedGraphFilters());
+  const hints = result.nodes.map((n) => n.data.identityContext);
+  expect(new Set(hints).size).toBe(2);
+  for (const hint of hints) expect(hint).toMatch(/^Instance [a-f0-9]{8}$/);
+});

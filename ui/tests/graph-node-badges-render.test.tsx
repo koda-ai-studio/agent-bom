@@ -55,3 +55,9 @@ describe("graph node badges on the canvas and in the legend", () => {
     for (const chip of nodeChips) expect(legendChips).toContain(chip);
   });
 });
+
+it("renders collision context as visible text, independent of hover", () => {
+  const Renderer = lineageNodeTypes.agentNode;
+  render(<ReactFlowProvider><Renderer data={{ label: "Workspace reader", nodeType: "agent", identityContext: "Config 926bd270c907" }} /></ReactFlowProvider>);
+  expect(screen.getByText("Config 926bd270c907")).toBeVisible();
+});

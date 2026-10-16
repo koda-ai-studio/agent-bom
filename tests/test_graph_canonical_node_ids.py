@@ -77,7 +77,9 @@ def test_equal_stdio_recipes_remain_distinct_per_declaring_agent() -> None:
     assert len(servers) == 3
     identity = canonical_mcp_server_id("fs", "npx", args=stdio["args"])
     assert {node.id for node in servers} == {
-        f"server:device-a:desktop:{identity}", f"server:device-b:desktop:{identity}", f"server:device-b:ide:{identity}"
+        f"server:device-a:desktop:{identity}",
+        f"server:device-b:desktop:{identity}",
+        f"server:device-b:ide:{identity}",
     }
 
 
