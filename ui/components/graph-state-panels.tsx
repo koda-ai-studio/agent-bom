@@ -47,7 +47,7 @@ export function GraphEmptyState({
 }) {
   return (
     <PageEmptyState
-      compact
+      compact={!inventoryEmpty}
       title={inventoryEmpty ? "No graph inventory loaded" : title}
       detail={inventoryEmpty ? "Start a scan or import a report to create graph evidence. An empty canvas does not establish an absence of risk." : detail}
       suggestions={inventoryEmpty ? ["Choose the environment to scan, then open its graph snapshot."] : suggestions}

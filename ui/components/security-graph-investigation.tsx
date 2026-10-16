@@ -252,14 +252,14 @@ function InvestigationFlow({
           </span>
           <div className="flex gap-1">
             <button type="button" aria-label="Previous graph node" disabled={navigationIndex === 0}
-              className="graph-page-action min-h-8 px-1 disabled:opacity-40"
+              className="graph-page-action min-h-11 min-w-11 justify-center px-1 disabled:opacity-40"
               onClick={() => focusNode(navigationNodes[navigationIndex - 1]!.id)}><ChevronLeft className="h-4 w-4" /></button>
             <button type="button" aria-label="Next graph node" disabled={navigationIndex >= navigationNodes.length - 1}
-              className="graph-page-action min-h-8 px-1 disabled:opacity-40"
+              className="graph-page-action min-h-11 min-w-11 justify-center px-1 disabled:opacity-40"
               onClick={() => focusNode(navigationNodes[navigationIndex + 1]!.id)}><ChevronRight className="h-4 w-4" /></button>
           </div>
           <details className="relative">
-            <summary aria-label="Graph options" title="Graph options" className="graph-page-action flex min-h-8 cursor-pointer list-none items-center [&::-webkit-details-marker]:hidden"><SlidersHorizontal className="h-4 w-4" /><span className="sr-only">Graph options</span></summary>
+            <summary aria-label="Graph options" title="Graph options" className="graph-page-action flex min-h-11 min-w-11 justify-center cursor-pointer list-none items-center [&::-webkit-details-marker]:hidden"><SlidersHorizontal className="h-4 w-4" /><span className="sr-only">Graph options</span></summary>
             <div className="absolute right-0 top-full z-20 mt-2 flex w-64 max-w-[75vw] flex-wrap gap-2 rounded-xl border border-outline bg-surface p-2 shadow-lg">
               {controls}
               {presentation.enabled && layoutControls}
