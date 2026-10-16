@@ -100,26 +100,53 @@ curl -fsSL https://api.smithery.ai/servers/agentbom/agent-bom \
 
 ## 2. Official MCP Registry
 
-Automated via `publish-mcp-registry.yml` using GitHub OIDC — no secrets needed.
+`publish-mcp-registry.yml` uses GitHub OIDC. The canonical name is
+`io.github.koda-ai-studio/agent-bom`, matching the current repository owner.
+The former `io.github.msaad00/agent-bom` listing is a separate legacy identity;
+repository redirects do not transfer registry publishing permission.
 
 ### Manual submission
 
 ```bash
-# Our entry is at: integrations/mcp-registry/server.json
-# Validates and publishes automatically on each release
+python3 scripts/check_mcp_registry_identity.py
+python3 scripts/check_mcp_registry_identity.py --published --repository koda-ai-studio/agent-bom
 ```
+
+The first command checks the source identity; the second reads the exact
+manifest version from PyPI and checks package ownership before OIDC is requested.
+Neither command publishes. The workflow validates on a successful release and
+publishes only when `MCP_REGISTRY_PUBLISH_ENABLED=true`, or when an operator
+explicitly dispatches it with `publish=true`.
 
 For PyPI-backed MCP Registry publishing, keep the ownership marker in the
 file referenced by `project.readme` in `pyproject.toml`, not only in
 `README.md`:
 
 ```md
-<!-- mcp-name: io.github.msaad00/agent-bom -->
+<!-- mcp-name: io.github.koda-ai-studio/agent-bom -->
 ```
+
+After a namespace change, publish a new package version with this marker before
+publishing its registry entry. Do not retag an existing release or assume that
+editing the repository README changes an already published wheel's metadata.
+The old listing remains historical; no registry migration or deletion is implied.
 
 ### Verification
 
-Search for "agent-bom" at: https://registry.modelcontextprotocol.io
+```bash
+curl -fsSL 'https://registry.modelcontextprotocol.io/v0.1/servers/io.github.koda-ai-studio%2Fagent-bom/versions/latest'
+```
+
+Check the name, active/latest status, version, repository URL and PyPI installation
+arguments against `integrations/mcp-registry/server.json`. A missing entry or a
+stale version is incomplete distribution, even if other catalogs are current.
+The Surface Freshness workflow checks the official registry using the manifest
+from the exact published release and includes it in `all_required_fresh`.
+Registry metadata is discovery evidence; the separate installed-package MCP
+smoke and exact tool-schema checks establish the advertised server surface.
+
+OIDC namespace rules and package publication order follow the
+[official registry publishing guide](https://github.com/modelcontextprotocol/registry/blob/main/docs/modelcontextprotocol-io/github-actions.mdx).
 
 ---
 

@@ -8,6 +8,7 @@ unnoticed for months (root cause of the 3-month Smithery drift).
 
 Surfaces probed:
     pypi      — https://pypi.org/pypi/agent-bom/json  -> info.version
+    mcp       — official MCP Registry identity, version and installation contract
     docker    — ghcr.io / Docker Hub latest tag       -> resolved via registry API
     glama     — public marketplace listing            -> scripts/check_glama_listing.py
     smithery  — public Smithery catalog API            -> api.smithery.ai
@@ -352,6 +353,47 @@ def probe_pypi(expected: str, **kw: Any) -> dict[str, Any]:
         return _classify("PyPI", None, expected, error=str(exc))
 
 
+def _registry_defaults(value: Any) -> Any:
+    """The registry omits false optional flags when serializing a manifest."""
+    if isinstance(value, dict):
+        return {
+            key: _registry_defaults(child)
+            for key, child in value.items()
+            if not (key in {"isRequired", "isRepeated", "isSecret"} and child is False)
+        }
+    if isinstance(value, list):
+        return [_registry_defaults(child) for child in value]
+    return value
+
+
+def probe_mcp_registry(expected: str, manifest: dict[str, Any], **kw: Any) -> dict[str, Any]:
+    """Verify discovery metadata; this is not runtime or tool-schema proof."""
+    surface = "MCP Registry"
+    try:
+        if manifest["version"] != expected or any(package["version"] != expected for package in manifest["packages"]):
+            raise ValueError("expected manifest is from a different release")
+        name = manifest["name"]
+        url = f"https://registry.modelcontextprotocol.io/v0.1/servers/{urllib.parse.quote(name, safe='')}/versions/latest"
+        data = _http_json(url, **kw)
+        server = data["server"]
+        official = data["_meta"]["io.modelcontextprotocol.registry/official"]
+        if not isinstance(server, dict) or not isinstance(official, dict) or not isinstance(server.get("version"), str):
+            raise ValueError("malformed official registry response")
+        fields = ("name", "title", "description", "version", "repository", "packages")
+        mismatches = [key for key in fields if _registry_defaults(server.get(key)) != _registry_defaults(manifest.get(key))]
+        if official.get("status") != "active" or official.get("isLatest") is not True:
+            mismatches.append("active/latest status")
+        result = _classify(surface, server["version"], expected)
+        result.update({"name": name, "url": url, "installation_contract_matches": "packages" not in mismatches})
+        if mismatches:
+            result.update({"status": "stale", "error": "registry metadata differs: " + ", ".join(mismatches)})
+        return result
+    except RuntimeError as exc:
+        return _classify(surface, None, expected, error=str(exc))
+    except (KeyError, TypeError, ValueError):
+        return _classify(surface, None, expected, error="malformed official registry response or expected manifest")
+
+
 def _require_origin(url: str, origin: str) -> str:
     """Return ``url`` only if it stays on ``origin``.
 
@@ -589,6 +631,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--compare-tool-contract-files", type=Path, nargs=2, metavar=("EXPECTED", "ACTUAL"))
     parser.add_argument("--surface", choices=["all", "smithery"], default="all")
+    parser.add_argument("--mcp-registry-manifest", type=Path, default=ROOT / "integrations/mcp-registry/server.json")
     parser.add_argument("--docker-image", default=_env_or("DOCKER_IMAGE", DEFAULT_DOCKER_IMAGE))
     parser.add_argument("--smithery-server", default=_env_or("SMITHERY_SERVER_QUALIFIED_NAME", DEFAULT_SMITHERY_SERVER))
     parser.add_argument("--timeout", type=float, default=DEFAULT_TIMEOUT)
@@ -659,9 +702,14 @@ def main(argv: list[str] | None = None) -> int:
 
     surfaces = []
     if args.surface == "all":
+        try:
+            registry_manifest = json.loads(args.mcp_registry_manifest.read_text())
+        except (OSError, ValueError) as exc:
+            raise SystemExit("could not load expected official MCP Registry manifest") from exc
         surfaces.extend(
             [
                 probe_pypi(expected, **kw),
+                probe_mcp_registry(expected, registry_manifest, **kw),
                 probe_docker(expected, args.docker_image, **kw),
                 probe_glama(
                     expected,

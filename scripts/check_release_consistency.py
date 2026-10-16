@@ -15,6 +15,7 @@ from typing import NoReturn
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import check_version_alignment as cva  # noqa: E402
+from check_mcp_registry_identity import check_local_identity  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 README = ROOT / "README.md"
@@ -483,6 +484,10 @@ def _assert_no_unmanaged_version_drift(version: str) -> None:
 
 
 def main() -> int:
+    try:
+        registry_manifest = check_local_identity(ROOT)
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        _fail(f"official MCP Registry identity is inconsistent: {exc}")
     version = _load_version()
     published = cva.published_version()
     if cva.parse_semver(published) > cva.parse_semver(version):
@@ -505,7 +510,7 @@ def main() -> int:
             _fail(f"README is missing required storefront marker: {marker}")
 
     required_pypi_markers = [
-        "mcp-name: io.github.msaad00/agent-bom",
+        f"mcp-name: {registry_manifest['name']}",
         "docs/images/demo-latest.gif",
         "docs/images/scan-pipeline-light.svg",
         "docs/images/blast-radius-light.svg",

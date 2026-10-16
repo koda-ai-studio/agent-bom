@@ -4044,7 +4044,7 @@ def test_mcp_registry_server_json_valid():
 
     p = Path(__file__).parent.parent / "integrations" / "mcp-registry" / "server.json"
     data = _json.loads(p.read_text())
-    assert data["name"] == "io.github.msaad00/agent-bom"
+    assert data["name"] == "io.github.koda-ai-studio/agent-bom"
     assert any(pkg["registryType"] == "pypi" for pkg in data["packages"])
 
 
