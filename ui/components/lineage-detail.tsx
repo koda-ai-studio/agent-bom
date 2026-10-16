@@ -1,5 +1,7 @@
 "use client";
 
+import { AgentSourceMark } from "@/components/agent-source-mark";
+import { agentSource } from "@/lib/agent-source";
 import { entityIcon } from "@/lib/entity-icons";
 import { NODE_LABELS } from "@/lib/entity-labels";
 import { nodeRiskLabel } from "@/lib/node-risk-assessment";
@@ -95,6 +97,7 @@ export function LineageDetailPanel({
   footerSlot?: ReactNode;
 }) {
   const Icon = entityIcon(data.nodeType);
+  const brand = agentSource(data);
   const typeLabel = data.nodeType === "server" ? "MCP Server" : data.nodeType === "sharedServer" ? "Shared MCP Server" : NODE_LABELS[data.nodeType];
   const osvUrl =
     data.nodeType === "vulnerability"
@@ -681,6 +684,7 @@ export function LineageDetailPanel({
       <div className="fixed inset-0 z-[80]" data-testid="graph-entity-drawer">
         <Drawer open onClose={onClose} title={data.label} backdropLabel="Dismiss graph details"
           eyebrow={typeLabel} size="none" resizable={false}
+          headerAside={brand ? <AgentSourceMark source={brand} className="h-9 w-9" /> : undefined}
           bodyClassName="!p-0 flex flex-col" footer={footerSlot}>
           {tabBar}
           <div role="tabpanel" data-testid={`graph-drawer-panel-${activeId}`}
@@ -740,7 +744,9 @@ export function LineageDetailPanel({
             {typeLabel}
           </span>
           <div className="mt-2 flex items-start gap-3">
-            <span className="rounded-full border border-outline bg-surface-muted p-2"><Icon aria-hidden="true" className="h-5 w-5 shrink-0 text-ink-secondary" /></span>
+            <span className="rounded-full border border-outline bg-surface-muted p-2" style={brand ? { borderColor: brand.accent } : undefined}>
+              {data.nodeType === "agent" ? <AgentSourceMark source={brand} className="h-5 w-5 text-ink-secondary" /> : <Icon aria-hidden="true" className="h-5 w-5 shrink-0 text-ink-secondary" />}
+            </span>
             <h3 className="min-w-0 self-center break-words text-base font-semibold leading-5 text-foreground [overflow-wrap:anywhere]">
               {data.label}
             </h3>

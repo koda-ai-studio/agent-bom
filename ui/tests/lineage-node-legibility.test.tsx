@@ -82,3 +82,15 @@ describe("lineage node labels", () => {
     expect(source).toContain("line-clamp-2 text-[11px]");
   });
 });
+
+it("uses the recorded agent source mark in both the canvas and inspector", () => {
+  const Renderer = lineageNodeTypes.agentNode;
+  const data = { label: "Release helper", nodeType: "agent" as const, agentType: "claude-code", severity: "critical" };
+  const { container } = render(<ReactFlowProvider>
+    <Renderer data={data} />
+    <LineageDetailPanel data={data} onClose={() => {}} variant="inline" />
+  </ReactFlowProvider>);
+  expect(screen.getAllByRole("img", { name: "Source: Claude Code" })).toHaveLength(2);
+  expect(container.querySelectorAll('img[src="/logos/claude.svg"]')).toHaveLength(2);
+  expect(container.querySelector('[data-graph-entity="true"]')).toHaveTextContent("Release helper");
+});

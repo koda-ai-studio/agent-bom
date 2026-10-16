@@ -157,3 +157,12 @@ describe("large graph overview", () => {
     });
   });
 });
+
+it("keeps agent source colors distinct in the bounded large-graph view", () => {
+  const model = buildLargeGraphOverviewModel([
+    node("claude", { nodeType: "agent", agentType: "claude-code", severity: "critical" }),
+    node("cursor", { nodeType: "agent", agentType: "cursor", severity: "critical" }),
+  ], []);
+  expect(model.nodeById.get("claude")?.color).not.toBe(model.nodeById.get("cursor")?.color);
+  expect(model.nodeById.get("claude")?.severity).toBe("critical");
+});

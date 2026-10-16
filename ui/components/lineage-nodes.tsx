@@ -4,6 +4,8 @@ import type { ComponentType, ReactNode } from "react";
 import { Handle, Position } from "@xyflow/react";
 import { Bug, KeyRound, Package, Wrench } from "lucide-react";
 
+import { AgentSourceMark } from "@/components/agent-source-mark";
+import { agentSource } from "@/lib/agent-source";
 import { NodeBadgeRow, SeverityRingMark } from "@/components/graph-node-badges";
 import { GraphScopeNode } from "@/components/graph-scope-node";
 import type { GraphRollupContainer, GraphCompleteness } from "@/lib/api-types";
@@ -158,6 +160,7 @@ function NodeCard({
   footer,
 }: CardProps) {
   const Icon = entityIcon(data.nodeType);
+  const brand = agentSource(data);
   const isRollupContainer = data.attributes?.rollup_is_container === true;
   const { badges, ring } = nodeBadges(data);
   const environmentRaw = badges.find((badge) => badge.kind === "environment")?.raw;
@@ -166,7 +169,7 @@ function NodeCard({
   return (
     <div title={data.label} data-graph-entity="true" data-rollup-container={isRollupContainer ? "true" : undefined}
       className={`flex w-[220px] flex-col items-center text-center transition-opacity ${data.dimmed ? "opacity-25" : ""}`}>
-      <div style={{ width: "var(--graph-node-glyph-size, 72px)", height: "var(--graph-node-glyph-size, 72px)" }} className={`graph-entity-glyph relative mb-3 flex h-[72px] w-[72px] items-center justify-center rounded-full border-2 shadow-sm ${
+      <div style={{ width: "var(--graph-node-glyph-size, 72px)", height: "var(--graph-node-glyph-size, 72px)", ...(brand && data.agentStatus !== "installed-not-configured" ? { borderColor: brand.accent, backgroundColor: `color-mix(in srgb, ${brand.accent} 10%, var(--surface))` } : {}) }} className={`graph-entity-glyph relative mb-3 flex h-[72px] w-[72px] items-center justify-center rounded-full border-2 shadow-sm ${
         isRollupContainer ? "border-outline-strong bg-surface-elevated" : `${borderClass} ${bgClass}`
       } ${data.highlighted ? `ring-2 ${ring ? "ring-offset-[10px]" : "ring-offset-4"} ring-offset-[var(--surface)] ${ringClass}` : ""}`}>
         {ring && !isRollupContainer && <SeverityRingMark ring={ring} />}
@@ -174,7 +177,9 @@ function NodeCard({
           className={`!h-1 !w-1 !border-0 !bg-transparent ${target ? "" : "!opacity-0"}`} />
         <Handle type="source" position={data.reverseFlow ? Position.Left : Position.Right}
           className={`!h-1 !w-1 !border-0 !bg-transparent ${source ? "" : "!opacity-0"}`} />
-        <Icon aria-hidden="true" style={{ width: "var(--graph-node-icon-size, 32px)", height: "var(--graph-node-icon-size, 32px)" }} className={`h-8 w-8 ${iconClass}`} />
+        {data.nodeType === "agent"
+          ? <AgentSourceMark source={brand} style={{ width: "var(--graph-node-icon-size, 32px)", height: "var(--graph-node-icon-size, 32px)" }} className={`h-8 w-8 ${iconClass}`} />
+          : <Icon aria-hidden="true" style={{ width: "var(--graph-node-icon-size, 32px)", height: "var(--graph-node-icon-size, 32px)" }} className={`h-8 w-8 ${iconClass}`} />}
       </div>
       <p className="mb-1 w-full min-w-0 break-words line-clamp-3 text-lg font-semibold leading-[1.2] text-foreground [overflow-wrap:anywhere]" style={{ fontSize: "var(--graph-node-label-size, 18px)" }}>
         {canvasNodeLabel(data.label).split(/(?<=[_/@-])/).map((part, index) => <span key={index}>{part}<wbr /></span>)}
@@ -266,7 +271,7 @@ function AgentNode({ data }: { data: LineageNodeData }) {
       ringClass="ring-emerald-400"
       iconClass="text-emerald-600 dark:text-emerald-400"
       target={false}
-      subtitle={data.agentType}
+      subtitle={agentSource(data)?.label ?? data.agentType}
       footer={
         <div className="mt-1 flex flex-wrap justify-center gap-x-2 gap-y-1 text-[10px] text-ink-secondary">
           {data.serverCount !== undefined && (

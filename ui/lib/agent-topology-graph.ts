@@ -180,6 +180,7 @@ export function buildTopologyGraph(agents: Agent[]): { nodes: Node[]; edges: Edg
         label: topologyAgentDisplayName(agent),
         slug: agent.name,
         typeLabel: topologyAgentTypeLabel(agent.agent_type || "agent"),
+        agentType: agent.agent_type,
         serverCount: servers.length,
         vulnCount: totalVulns,
         credCount,

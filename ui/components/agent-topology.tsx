@@ -1,5 +1,7 @@
 "use client";
 
+import { AgentSourceMark } from "@/components/agent-source-mark";
+import { agentSource } from "@/lib/agent-source";
 import { countLabel } from "@/lib/count-label";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -42,14 +44,17 @@ function AgentNode({
     label: string;
     slug: string;
     typeLabel: string;
+    agentType?: string;
     serverCount: number;
     vulnCount: number;
     credCount: number;
     unlinked: boolean;
   };
 }) {
+  const brand = agentSource(data);
   return (
     <div
+      style={brand ? { borderColor: brand.accent } : undefined}
       className={`min-w-[132px] max-w-[168px] rounded-lg border bg-surface-elevated px-3 py-2 shadow-sm transition-colors ${
         data.unlinked
           ? "border-outline hover:border-outline-strong"
@@ -61,7 +66,7 @@ function AgentNode({
         position={Position.Right}
         className="!h-1.5 !w-1.5 !border-emerald-500 !bg-emerald-400"
       />
-      <p className="truncate text-xs font-semibold text-foreground">{data.label}</p>
+      <div className="flex items-center gap-2"><AgentSourceMark source={brand} className="h-6 w-6" /><p className="truncate text-xs font-semibold text-foreground">{data.label}</p></div>
       <p className="truncate text-[10px] text-ink-tertiary">{data.typeLabel}</p>
       <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[10px] text-ink-tertiary">
         {!data.unlinked ? <span>{data.serverCount} svc</span> : <span>unlinked</span>}
