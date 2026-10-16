@@ -2,7 +2,7 @@ name: Surface Freshness
 
 # Cross-channel version-freshness monitor. Compares the latest published release
 # against EVERY published distribution surface (PyPI, Docker/ghcr, Glama,
-# Smithery) and
+# official MCP Registry, Smithery) and
 # maintains ONE consolidated tracking issue so a stale surface can never sit
 # unnoticed for months. Closes the gap that let the Smithery listing drift for
 # three months without an alert.
@@ -61,6 +61,7 @@ jobs:
           fi
           git fetch --force --no-tags origin "refs/tags/${TAG}:refs/tags/${TAG}"
           RELEASE_SHA=$(git rev-list -n 1 "refs/tags/${TAG}")
+          git show "${RELEASE_SHA}:integrations/mcp-registry/server.json" > /tmp/surface-mcp-registry.json
           METRICS_JSON=$(git show "${RELEASE_SHA}:docs/PRODUCT_METRICS.json")
           METRICS_VERSION=$(echo "$METRICS_JSON" | jq -er '.version')
           TOOL_COUNT=$(echo "$METRICS_JSON" | jq -er '(first(.metrics[] | select(.name == "MCP default tools") | .value) // first(.metrics[] | select(.name == "MCP tools") | .value))')
@@ -102,6 +103,7 @@ jobs:
             --out /tmp/surface-expected-tool-contract.json
           PYTHONPATH=src python3 scripts/check_surface_freshness.py \
             --expected "$EXPECTED_VERSION" \
+            --mcp-registry-manifest /tmp/surface-mcp-registry.json \
             --expected-tool-count "${{ steps.expected.outputs.tool_count }}" \
             --expected-tool-names-file /tmp/surface-expected-tool-names.json \
             --expected-tool-contract-file /tmp/surface-expected-tool-contract.json \

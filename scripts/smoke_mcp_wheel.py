@@ -24,6 +24,8 @@ never registered (or registered but absent from the card) was invisible to every
 test and every workflow.
 
 Names are compared, not counts. Two counts can match while the sets differ.
+An offline registry lookup also exercises tools/call and rejects unknown
+arguments, so a healthy catalog cannot hide a broken execution path.
 """
 
 from __future__ import annotations
@@ -69,6 +71,19 @@ def _compare(kind: str, live: list[str], expected: set[str]) -> list[str]:
     return problems
 
 
+async def _exercise_tools(session) -> None:
+    """Use bundled public metadata: no host inventory, credentials or network scan."""
+    package = "@modelcontextprotocol/server-filesystem"
+    result = await session.call_tool("registry_lookup", {"package_name": package})
+    payload = json.loads("".join(block.text for block in result.content if block.type == "text"))
+    if result.is_error or payload.get("found") is not True or payload.get("package") != package:
+        raise RuntimeError("installed registry_lookup did not return the requested bundled package")
+    rejected = await session.call_tool("registry_lookup", {"package_name": package, "unexpected_argument": True})
+    rejection = "".join(block.text for block in rejected.content if block.type == "text")
+    if not rejected.is_error or "Unknown argument" not in rejection or "unexpected_argument" not in rejection:
+        raise RuntimeError("installed MCP server did not reject the unknown tool argument with a validation error")
+
+
 async def _smoke() -> dict[str, object]:
     importlib.import_module("agent_bom.mcp_server")
     agent_bom = importlib.import_module("agent_bom")
@@ -95,6 +110,7 @@ async def _smoke() -> dict[str, object]:
             tools = [tool.name for tool in (await session.list_tools()).tools]
             resources = [str(resource.uri) for resource in (await session.list_resources()).resources]
             prompts = [prompt.name for prompt in (await session.list_prompts()).prompts]
+            await _exercise_tools(session)
 
     problems = (
         _compare("tools", tools, expected["tools"])
@@ -118,6 +134,8 @@ async def _smoke() -> dict[str, object]:
         "tool_count": len(tools),
         "resource_count": len(resources),
         "prompt_count": len(prompts),
+        "offline_tool_call": "registry_lookup",
+        "unknown_argument_rejected": True,
     }
 
 

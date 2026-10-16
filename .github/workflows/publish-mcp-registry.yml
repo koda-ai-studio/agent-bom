@@ -69,6 +69,10 @@ jobs:
           echo "Skipping official MCP Registry publish because MCP_REGISTRY_PUBLISH_ENABLED is not true and manual publish was not requested."
           echo "After the repository is registered with the official MCP Registry, set repository variable MCP_REGISTRY_PUBLISH_ENABLED=true or run this workflow manually with publish=true."
 
+      - name: Verify namespace and exact published package ownership
+        if: steps.mode.outputs.publish == 'true'
+        run: python3 scripts/check_mcp_registry_identity.py --published --repository "$GITHUB_REPOSITORY"
+
       - name: Get GitHub OIDC token
         shell: bash
         id: oidc
