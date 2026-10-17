@@ -16,6 +16,7 @@ from functools import lru_cache
 from typing import Any
 
 from agent_bom.api.runtime_event_store import RuntimeObservationRecord, sanitize_runtime_metadata
+from agent_bom.api.storage.cooperative import iter_with_handoffs
 from agent_bom.api.storage.runtime_records import RuntimeMetadataCache
 from agent_bom.runtime.cloud_trace_claims import cloud_trace_claims
 from agent_bom.runtime.normalized_trace import NORMALIZED_ATTRIBUTE, NormalizedTraceEvent, is_local_path
@@ -112,7 +113,9 @@ def _scope_conflict(attrs: dict[str, str], scope: TraceImportScope) -> bool:
     )
 
 
-def prepare_trace_page(payload: dict[str, Any], *, scope: TraceImportScope, collected_at: str) -> PreparedTracePage:
+def prepare_trace_page(
+    payload: dict[str, Any], *, scope: TraceImportScope, collected_at: str, cooperative: bool = False
+) -> PreparedTracePage:
     """Namespace native IDs; report rejected rows without silently losing them."""
     collected_at = _collection_time(scope, collected_at)
     spans = payload.get("spans")
@@ -122,7 +125,7 @@ def prepare_trace_page(payload: dict[str, Any], *, scope: TraceImportScope, coll
     rejected: Counter[str] = Counter()
     cache = RuntimeMetadataCache()
     identity = _page_identity(scope)
-    for span in spans:
+    for span in iter_with_handoffs(spans, enabled=cooperative):
         if not isinstance(span, dict):
             rejected["invalid_span"] += 1
             continue

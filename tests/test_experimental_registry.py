@@ -145,3 +145,46 @@ def test_graph_overlay_skips_trace_events_when_disabled(monkeypatch: pytest.Monk
     report = {"scan_id": "s1"}
     assert with_trace_events(report, "tenant-a") is report
     assert emit_shadow_findings(object(), "tenant-a", None) == 0  # type: ignore[arg-type]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("enabled,status_code", [(False, 404), (True, 200)])
+async def test_feature_gate_does_not_wait_for_storage_workers(monkeypatch, enabled, status_code):
+    import asyncio
+    import threading
+
+    import anyio.to_thread
+    import httpx
+    from fastapi import FastAPI
+
+    from agent_bom.api.experimental_gate import require_experimental
+
+    monkeypatch.setenv("AGENT_BOM_EXPERIMENTAL", "traces" if enabled else "")
+    app = FastAPI()
+    calls = []
+
+    @app.get("/feature", dependencies=[require_experimental("traces")])
+    async def feature():
+        calls.append("served")
+        return {"enabled": True}
+
+    limiter = anyio.to_thread.current_default_thread_limiter()
+    before = limiter.total_tokens
+    limiter.total_tokens = 1
+    entered, release = threading.Event(), threading.Event()
+
+    def occupied():
+        entered.set()
+        assert release.wait(10)
+
+    worker = asyncio.create_task(anyio.to_thread.run_sync(occupied))
+    try:
+        assert await asyncio.to_thread(entered.wait, 2)
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app), base_url="http://test") as client:
+            response = await asyncio.wait_for(client.get("/feature"), 1)
+        assert response.status_code == status_code
+        assert calls == (["served"] if enabled else [])
+    finally:
+        release.set()
+        await worker
+        limiter.total_tokens = before

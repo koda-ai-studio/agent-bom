@@ -13,6 +13,32 @@ def _write(path: Path, lines: int) -> None:
 
 
 @pytest.mark.parametrize(
+    "source",
+    [
+        "api/trace_collection/langfuse.py",
+        "api/native_trace_import.py",
+        "api/storage/cooperative.py",
+        "api/storage/runtime_trace_revisions.py",
+    ],
+)
+def test_trace_collection_edits_select_scheduling_and_replay_contracts(tmp_path, source):
+    expected = sorted(
+        tmp_path / "tests" / name
+        for name in (
+            "test_trace_collection_scheduling.py",
+            "test_trace_collection_store.py",
+            "test_trace_collection_postgres.py",
+            "test_trace_collection_qualification.py",
+            "test_native_trace_import.py",
+            "test_runtime_trace_revision_retention.py",
+        )
+    )
+    for path in expected:
+        _write(path, 1)
+    assert select_targeted_tests(changed_files=[Path("src/agent_bom") / source], root=tmp_path) == expected
+
+
+@pytest.mark.parametrize(
     "source", ["src/agent_bom/security.py", "src/agent_bom/redaction/payload.py", "src/agent_bom/redaction/cloud_coordinates.py"]
 )
 def test_redaction_edits_select_identity_and_traversal_contracts(tmp_path, source):

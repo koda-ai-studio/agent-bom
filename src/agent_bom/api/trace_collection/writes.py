@@ -5,6 +5,7 @@ import json
 
 from agent_bom.analytics_retention import prune_runtime_observations_for_tenant
 from agent_bom.api.runtime_event_store import RuntimeObservationRecord, RuntimeSessionRecord, _merge_session, _session_from_json
+from agent_bom.api.storage.cooperative import iter_with_handoffs
 from agent_bom.api.storage.runtime_trace_revisions import prune_revisions_for_tenant, reconcile_sql
 from agent_bom.api.storage.sql import Dialect, SqlSession
 from agent_bom.api.trace_collection.contracts import MAX_RECEIPTS, CollectionConflictError
@@ -41,14 +42,14 @@ def put_page(tx: SqlSession, tenant: str, connection: str, records: list[Runtime
     # Window imports and resumable collection share native IDs and append-only
     # revisions. A changed native span updates its projection, not its count.
     native = {record.observation_id: record for record in records if record.surface == "imported_trace"}
-    _, first_seen = reconcile_sql(tx, list(native.values()))
+    _, first_seen = reconcile_sql(tx, list(native.values()), cooperative=True)
     records = [record for record in records if record.surface != "imported_trace"] + first_seen
     prior_receipts, retained = _prior_page_rows(tx, tenant, connection, records)
     added = 0
     sessions: dict[str, RuntimeSessionRecord] = {}
     receipts = []
     observations = []
-    for record in records:
+    for record in iter_with_handoffs(records):
         if record.tenant_id != tenant:
             raise CollectionConflictError("Observation tenant does not match collection.")
         payload = record.to_dict()
