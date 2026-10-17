@@ -17,6 +17,7 @@ uv sync --frozen --extra dev --extra api
 # Use a test-only persistent key so fixture audit signatures survive restart.
 export AGENT_BOM_AUDIT_HMAC_KEY="$(openssl rand -hex 32)"
 export AGENT_BOM_WORKER_THREAD_LIMIT=2
+export AGENT_BOM_EXPERIMENTAL=traces
 uv run python -m scripts.run_trace_collection_qualification \
   --output /tmp/trace-qualification-sqlite-001
 ```
@@ -27,6 +28,10 @@ dirty, configuration, serving-loop and worker-thread limits, Python/platform, al
 peak RSS, provider calls, and exact reconciliation outcome. Failed requests
 remain in latency/error totals. Warmup is recorded separately and excluded from
 the baseline. An existing output directory is rejected, not overwritten.
+Trace routes remain disabled by default. The explicit opt-in above is required;
+without it, requests return 404 and the harness retains a failed receipt with
+zero provider calls and unreconciled observations. The CI qualification sets
+this opt-in only for its disposable measurement processes.
 
 Default load is three collection connections in a noisy tenant and one in a
 light tenant: ten pages of 100 observations per connection, with concurrent
@@ -81,6 +86,7 @@ administrator for either runtime login.
 uv sync --frozen --extra dev --extra api --extra postgres
 export AGENT_BOM_POSTGRES_URL='postgresql://agent_bom_app:TEST_PASSWORD@127.0.0.1:5432/agentbom_test'
 export AGENT_BOM_POSTGRES_MAINTENANCE_URL='postgresql://agent_bom_maintenance:TEST_PASSWORD@127.0.0.1:5432/agentbom_test'
+export AGENT_BOM_EXPERIMENTAL=traces
 uv run python -m scripts.run_trace_collection_qualification \
   --backend postgres --output /tmp/trace-qualification-postgres-001
 uv run pytest -q tests/test_trace_collection_postgres.py \

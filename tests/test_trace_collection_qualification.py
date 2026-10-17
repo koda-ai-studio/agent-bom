@@ -60,6 +60,42 @@ assert limits == {2}, limits
     assert receipt["expected_observations"] == 8
 
 
+def test_disabled_routes_retain_failed_qualification_receipt(tmp_path):
+    root = Path(__file__).resolve().parents[1]
+    output = tmp_path / "disabled"
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "scripts.run_trace_collection_qualification",
+            "--output",
+            str(output),
+            "--workers",
+            "1",
+            "--pages",
+            "2",
+            "--rows",
+            "2",
+        ],
+        cwd=root,
+        env={**os.environ, "AGENT_BOM_EXPERIMENTAL": "", "PYTHONPATH": os.pathsep.join((str(root / "src"), str(root)))},
+        capture_output=True,
+        text=True,
+        timeout=60,
+    )
+    assert completed.returncode == 1, completed.stderr[-4000:]
+    assert (output / "receipt.json").exists(), completed.stderr[-4000:]
+    receipt = json.loads((output / "receipt.json").read_text())
+    assert receipt["passed"] is False
+    assert receipt["reconciled"] is False
+    assert receipt["failed_requests"] == receipt["requests"]
+    assert receipt["provider_attempts"] == 0
+    assert receipt["expected_observations"] == 8
+    attempts = [json.loads(line) for line in (output / "attempts.jsonl").read_text().splitlines()]
+    assert len(attempts) == receipt["requests"]
+    assert all(row["status"] == 404 for row in attempts)
+
+
 def attempt(phase, ms, *, ok=True, operation="status"):
     return {"phase": phase, "ms": ms, "ok": ok, "operation": operation}
 

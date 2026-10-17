@@ -686,6 +686,7 @@ def test_trace_capacity_is_opt_in_bounded_and_preserves_every_attempt() -> None:
         "CPUQuota=200%",
         "MemoryMax=2G",
         "AGENT_BOM_WORKER_THREAD_LIMIT=2",
+        "AGENT_BOM_EXPERIMENTAL=traces",
         "--workers 3 --pages 10 --rows 100",
         "--p95-limit-ms 5000 --slowdown-limit 4",
         "status=1",
