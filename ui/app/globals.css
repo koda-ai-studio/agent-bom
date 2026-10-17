@@ -329,7 +329,9 @@ body {
 }
 
 .graph-relationship-label .relationship-badge svg {
-  display: none;
+  display: block;
+  flex-shrink: 0;
+  opacity: 0.75;
 }
 
 .graph-relationship-qualifier {

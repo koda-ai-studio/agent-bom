@@ -29,6 +29,7 @@ for (const theme of ["light", "dark"]) test(`small graph uses its canvas and def
   const requests=await fixture(page);
   await page.goto("/graph?scan=snapshot&root=vuln%3Ademo&lens=context");
   await expect(page.locator(".react-flow__node")).toHaveCount(2);
+  await expect(page.locator(".graph-relationship-label .relationship-badge svg").first()).toBeVisible();
   await expect(page.getByTestId("graph-entity-drawer").getByRole("heading",{name:"CVE-2023-4863",exact:true})).toBeVisible();
   await expect.poll(async()=>Math.round((await page.locator(".react-flow").boundingBox())!.height)).toBeLessThanOrEqual(560);
   await expect.poll(async()=>{
