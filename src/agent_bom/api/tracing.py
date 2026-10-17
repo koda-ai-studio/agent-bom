@@ -9,6 +9,7 @@ import secrets
 from typing import Any, TypedDict
 
 from agent_bom import __version__
+from agent_bom.security import sanitize_error
 
 _logger = logging.getLogger(__name__)
 
@@ -16,6 +17,18 @@ _TRACEPARENT_RE = re.compile(r"^00-([0-9a-f]{32})-([0-9a-f]{16})-([0-9a-f]{2})$"
 _otel_tracing_state = "unconfigured"
 _MAX_TRACESTATE_BYTES = 512
 _MAX_BAGGAGE_BYTES = 512
+
+
+def record_request_exception(span: Any, exc: Exception) -> None:
+    """Retain the failure signal without exporting messages or tracebacks."""
+    from opentelemetry.trace import Status, StatusCode
+
+    message = sanitize_error(exc, generic=True)
+    span.add_event(
+        "exception",
+        {"exception.type": type(exc).__name__, "exception.message": message, "exception.escaped": True},
+    )
+    span.set_status(Status(StatusCode.ERROR, message))
 
 
 class TracingHealthSnapshot(TypedDict):

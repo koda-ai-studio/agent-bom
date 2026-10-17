@@ -95,6 +95,12 @@ OTLP/HTTP through `src/agent_bom/api/tracing.py`. Recommended exporters:
 Correlate traces with audit entries via the `trace_id` field written to
 every `compliance.report_exported` audit entry.
 
+For unhandled API request failures, the request middleware records an error
+status and one exception event with the exception class and a generic message.
+Raw exception text, chained exception messages and tracebacks are omitted from
+that span. Request and trace identifiers remain available for correlation;
+the exception still propagates to the server's error handler.
+
 ## Audit-event OTLP log export
 
 The tamper-evident governance/NHI-lifecycle audit chain
