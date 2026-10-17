@@ -76,7 +76,7 @@ from agent_bom.api.route_policy import (
 )
 from agent_bom.api.storage.deployment import _configured_api_replicas, clustered_control_plane_required
 from agent_bom.api.storage_schema import postgres_deployment_configured
-from agent_bom.api.tracing import configure_otel_tracing, make_request_trace
+from agent_bom.api.tracing import configure_otel_tracing, make_request_trace, record_request_exception
 
 if TYPE_CHECKING:
     from datetime import datetime
@@ -430,7 +430,10 @@ class TrustHeadersMiddleware(BaseHTTPMiddleware):
                 from opentelemetry import trace
 
                 tracer = trace.get_tracer("agent_bom.api")
-                otel_cm = tracer.start_as_current_span(f"{request.method} {request.url.path}")
+                # Disable SDK defaults that export raw exception messages and tracebacks.
+                otel_cm = tracer.start_as_current_span(
+                    f"{request.method} {request.url.path}", record_exception=False, set_status_on_exception=False
+                )
                 span = otel_cm.__enter__()
                 span.set_attribute("http.request.method", request.method)
                 span.set_attribute("url.path", request.url.path)
@@ -474,10 +477,7 @@ class TrustHeadersMiddleware(BaseHTTPMiddleware):
                     span.set_attribute("client.address", str(request.client.host))
         except Exception as exc:
             if span is not None:
-                from opentelemetry.trace import Status, StatusCode
-
-                span.record_exception(exc)
-                span.set_status(Status(StatusCode.ERROR, str(exc)))
+                record_request_exception(span, exc)
             raise
         finally:
             if tenant_token is not None:
