@@ -103,8 +103,8 @@ longer present after the input change is not proof that a deployment was repaire
 
 ## Explore connections and inspect evidence
 
-These graph enhancements are available in current source; the pinned `0.108.4`
-release predates them. In **Investigation → Explore connections**, select a
+These graph views follow current source; check the [release notes](../CHANGELOG.md)
+for your installed version. In **Investigation → Explore connections**, select a
 snapshot and search for a package or agent. Start with its bounded neighborhood,
 then use **Show more connections** or **Expand** to inspect related entities.
 

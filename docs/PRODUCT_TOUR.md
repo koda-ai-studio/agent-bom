@@ -1,8 +1,8 @@
 # Product tour
 
-This tour follows current source. The published `0.108.4` release predates
-the newer investigation workspace and managed trace enhancements. For commands
-that start with the published package, use the [README](../README.md).
+This tour follows current source. Check the [release notes](../CHANGELOG.md)
+for the features included in your installed version. For commands that start
+with the published package, use the [README](../README.md).
 
 <p align="center"><a href="images/graph-environment-dark-live.png"><picture><source media="(prefers-color-scheme: light)" srcset="images/graph-environment-light-live.png"><img src="images/graph-environment-dark-live.png" alt="Sample production AI environment where two agents and a model-serving workload reach vulnerable packages, a KEV-listed advisory, an exposed API key and a customer data store" width="1440"></picture></a></p>
 
@@ -10,7 +10,7 @@ that start with the published package, use the [README](../README.md).
 
 **One investigation workspace:** follow a finding with **Find a path**, or inspect a snapshot with **Explore connections**. Select nodes and relationship arrows for details, expand the connections you need, and carry the finding into remediation. [Repository, environment and cloud gallery](GALLERY.md#explore-connections-and-inspect-evidence) · [Try the connected-BOM walkthrough](../examples/connected-bom/README.md).
 
-These graph enhancements are merged in current source; the published `0.108.4` release predates them. Recorded relationships do not by themselves prove execution or data access.
+These graph views follow current source. Recorded relationships do not by themselves prove execution or data access.
 
 ## Context, correlation and reachability
 

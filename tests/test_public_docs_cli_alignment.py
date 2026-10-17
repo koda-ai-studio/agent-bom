@@ -210,7 +210,8 @@ def test_readme_storefront_is_concise_ordered_and_actionable() -> None:
     assert "Exit `1` is expected" in quick_start
     assert "does not prove" in readme or "do not prove" in readme
     sample = readme.split("## Open the sample graph", 1)[1].split("\n## ", 1)[0]
-    assert "agent-bom[ui]==0.108.4" in sample
+    published = (ROOT / "PUBLISHED_VERSION").read_text(encoding="utf-8").strip()
+    assert f"agent-bom[ui]=={published}" in sample
     assert "server command it prints" in sample and "graph URL" in sample
     assert "skips package-CVE lookup" in sample
     assert "zero CVEs is not a clean verdict" in sample

@@ -88,9 +88,11 @@ OTLP/HTTP through `src/agent_bom/api/tracing.py`. Recommended exporters:
 - **Langfuse-compatible:** point `AGENT_BOM_OTEL_TRACES_ENDPOINT` at the
   Langfuse OTLP/HTTP traces endpoint and set `AGENT_BOM_OTEL_TRACES_HEADERS`
   for Basic auth plus ingestion headers. agent-bom emits redaction-safe
-  `langfuse.*` attributes on runtime proxy and gateway spans, but Langfuse
-  scores, dataset replay, and native trace import remain roadmap work until
-  code and tests land for those paths.
+  `langfuse.*` attributes on runtime proxy and gateway spans. Native Langfuse
+  and LangSmith imports are available behind the experimental traces gate;
+  see [managed trace connections](TRACE_CONNECTIONS.md) for scoped import,
+  persistence and collection limits. Scores and dataset replay remain roadmap
+  work. Attribute compatibility alone does not verify delivery to a collector.
 
 Correlate traces with audit entries via the `trace_id` field written to
 every `compliance.report_exported` audit entry.
