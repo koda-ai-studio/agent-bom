@@ -204,7 +204,12 @@ parsed from the immutable release commit; the live server card is checked
 independently against the same contract. When Glama's machine inventory is
 reachable, its input schemas must also match the live release-bound server
 card. A user-visible Schema page match with an unreachable machine inventory
-is reported as degraded rather than full parity.
+is reported as degraded rather than full parity. The same applies when the API
+returns an empty inventory: an exact public Schema match proves that indexed
+contract, but does not establish Directory API recovery. Inspect
+`inventory_source` and `directory_api` in the freshness JSON for the original
+API status, tool count and schema comparison before retrying or reporting a
+provider issue as resolved.
 
 A Glama hosted release is separate from directory synchronization. Creating
 one remains a maintainer action in Glama: configure the Dockerfile build,

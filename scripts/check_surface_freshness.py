@@ -515,6 +515,8 @@ def probe_glama(
         "version": payload.get("profile_version") or payload.get("listing_version", "—"),
         "listing_version": payload.get("listing_version"),
         "release_metadata_source": payload.get("release_metadata_source"),
+        "inventory_source": payload.get("inventory_source"),
+        "directory_api": payload.get("directory_api"),
         "expected": expected,
         "tool_count": payload.get("tool_count"),
         "expected_tool_count": payload.get("expected_tool_count"),
