@@ -924,3 +924,22 @@ def test_every_main_push_runs_all_release_ui_lanes():
         condition = _ci()["jobs"][name]["if"]
         assert "github.event_name == 'push'" in condition
         assert "github.ref == 'refs/heads/main'" in condition
+
+
+def test_endpoint_qualification_runs_natively_and_retains_failed_receipts():
+    import re
+
+    jobs = _ci()["jobs"]
+    script = next(step["run"] for step in jobs["changes"]["steps"] if step.get("id") == "classify")
+    pattern = re.search(r"grep -Eq '([^']+)'; then\n\s+endpoint=true", script)
+    assert pattern is not None
+    for path in ("src/agent_bom/endpoint/inventory.py", "scripts/qualify_endpoint_collectors.py", "tests/test_endpoint_inventory.py"):
+        assert re.search(pattern[1], path), path
+    job = jobs["endpoint-packaging"]
+    assert set(job["strategy"]["matrix"]["os"]) == {"ubuntu-latest", "macos-latest", "windows-2022"}
+    qualification = next(step for step in job["steps"] if "qualify_endpoint_collectors.py" in step.get("run", ""))
+    assert not qualification.get("continue-on-error", False)
+    artifact = next(step for step in job["steps"] if step.get("with", {}).get("name", "").startswith("endpoint-qualification-"))
+    assert artifact["if"] == "always()"
+    assert artifact["with"]["path"] == qualification["env"]["QUALIFICATION_OUTPUT"]
+    assert artifact["with"]["if-no-files-found"] == "error"
