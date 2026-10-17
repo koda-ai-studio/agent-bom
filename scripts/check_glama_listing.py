@@ -594,6 +594,13 @@ def main(argv: list[str] | None = None) -> int:
     degraded_reason: str | None = None
     last_probe_unreachable = False
     for attempt in range(1, max(1, args.retries) + 1):
+        directory_api: dict[str, object] = {
+            "status": "not_checked",
+            "tool_count": None,
+            "exact_tool_set": None,
+            "exact_input_schemas": None,
+            "http_status": None,
+        }
         release_metadata_source = "listing-text"
         profile_version = None
         actual_tool_count = None
@@ -630,8 +637,18 @@ def main(argv: list[str] | None = None) -> int:
                     expected_tool_names=expected_tool_names,
                     expected_tool_contract=expected_tool_contract,
                 )
+                api_count, api_failures, api_exact_set, api_exact_schemas = api_result
+                directory_api.update(
+                    status="empty" if api_count == 0 else "mismatch" if api_failures else "available",
+                    tool_count=api_count,
+                    exact_tool_set=api_exact_set,
+                    exact_input_schemas=api_exact_schemas,
+                )
             except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, ValueError) as exc:
                 api_error = exc
+                directory_api["status"] = "invalid" if isinstance(exc, ValueError) else "unreachable"
+                if isinstance(exc, urllib.error.HTTPError):
+                    directory_api["http_status"] = exc.code
 
             public_schema_result = False
             if api_result is not None and api_result[0] == 0 and expected_tool_contract is not None and schema_page:
@@ -663,6 +680,9 @@ def main(argv: list[str] | None = None) -> int:
                     public_schema_result = True
                 except ValueError:
                     pass  # Unsupported public data retains the degraded/unavailable status.
+
+            if public_schema_result:
+                degraded_reason = f"Glama Directory API inventory is {directory_api['status']}; using public Schema page evidence"
 
             if schema_tools:
                 inventory_source = "schema-state" if public_schema_result else "schema+api" if api_result is not None else "schema"
@@ -726,6 +746,7 @@ def main(argv: list[str] | None = None) -> int:
                                 "tool_count": actual_tool_count,
                                 "expected_tool_count": tool_count,
                                 "inventory_source": inventory_source,
+                                "directory_api": directory_api,
                                 "exact_tool_set": exact_tool_set,
                                 "exact_input_schemas": exact_input_schemas,
                                 "degraded_reason": degraded_reason,
@@ -765,6 +786,7 @@ def main(argv: list[str] | None = None) -> int:
                     "tool_count": actual_tool_count,
                     "expected_tool_count": tool_count,
                     "inventory_source": inventory_source,
+                    "directory_api": directory_api,
                     "exact_tool_set": exact_tool_set,
                     "exact_input_schemas": exact_input_schemas,
                     "degraded_reason": degraded_reason,

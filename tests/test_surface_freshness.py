@@ -909,7 +909,7 @@ def test_glama_checks_public_embedded_schemas_when_api_requires_auth(monkeypatch
     )
     payload = json.loads(capsys.readouterr().out.strip().splitlines()[-1])
     assert result == int(mismatch)
-    assert payload["status"] == ("stale" if mismatch else "fresh")
+    assert payload["status"] == ("stale" if mismatch else "fresh_degraded")
     assert payload["exact_input_schemas"] is not mismatch
     assert payload["inventory_source"] == "schema-state"
 
@@ -1561,7 +1561,7 @@ def test_glama_exact_schema_contract_covers_empty_directory_api(monkeypatch, cap
     )
     payload = json.loads(capsys.readouterr().out.strip().splitlines()[-1])
     assert result == 0
-    assert payload["status"] == "fresh"
+    assert payload["status"] == "fresh_degraded"
     assert payload["profile_version"] == "0.105.0"
     assert payload["listing_version"] == "0.106.0"
     assert payload["inventory_source"] == "schema-state"
@@ -1589,6 +1589,50 @@ def test_glama_empty_directory_api_needs_exact_schema_contract(monkeypatch, caps
         assert payload["status"] == "stale"
         assert "public API exposes 0 tools; expected 1" in payload["error"]
     else:
-        assert payload["status"] == "fresh"
+        assert payload["status"] == "fresh_degraded"
         assert payload["inventory_source"] == "schema-state"
         assert payload["exact_input_schemas"] is True
+
+
+@pytest.mark.parametrize("api_state", ["empty", "unreachable", "mismatch", "invalid", "available"])
+def test_glama_retains_directory_evidence_through_schema_fallback(monkeypatch, tmp_path, api_state):
+    glama = _load_script("check_glama_listing.py")
+    surface = _load_script("check_surface_freshness.py")
+    expected = [{"name": "scan", "inputSchema": {"type": "object", "additionalProperties": False}}]
+    contract = tmp_path / "contract.json"
+    contract.write_text(json.dumps(expected))
+    schema = _glama_schema_state(expected)
+    monkeypatch.setattr(
+        glama, "_fetch", lambda url, _: schema if url.endswith("/schema") else "v0.103.2 MCP server mode exposes 1 MCP tools"
+    )
+
+    def directory(*_args):
+        if api_state == "unreachable":
+            raise urllib.error.HTTPError("https://glama.ai/api", 401, "Unauthorized", {}, None)
+        if api_state == "invalid":
+            raise ValueError("invalid inventory")
+        tools = [] if api_state == "empty" else [{"name": "scan", "inputSchema": {}}] if api_state == "mismatch" else expected
+        return {"tools": tools}
+
+    def run(command, **_kwargs):
+        output = io.StringIO()
+        with redirect_stdout(output):
+            code = glama.main(command[2:])
+        return subprocess.CompletedProcess(command, code, stdout=output.getvalue())
+
+    monkeypatch.setattr(glama, "_fetch_json", directory)
+    monkeypatch.setattr(surface.subprocess, "run", run)
+    result = surface.probe_glama("0.103.2", expected_tool_count=1, expected_tool_contract_file=contract, attempts=1)
+    assert result["directory_api"]["status"] == api_state
+    assert result["directory_api"]["http_status"] == (401 if api_state == "unreachable" else None)
+    assert result["directory_api"]["tool_count"] == (None if api_state in {"invalid", "unreachable"} else 0 if api_state == "empty" else 1)
+    if api_state in {"empty", "unreachable", "invalid"}:
+        assert result["status"] == "fresh_degraded"
+        assert result["inventory_source"] == "schema-state"
+        assert result["exact_input_schemas"] is True
+        assert result["directory_api"]["exact_input_schemas"] is not True
+        assert result["degraded_reason"]
+        assert result["status"] not in surface.OK_STATUSES
+    else:
+        assert result["status"] == ("fresh" if api_state == "available" else "stale")
+        assert result["directory_api"]["exact_input_schemas"] is (api_state == "available")
