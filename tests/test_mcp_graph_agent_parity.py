@@ -575,3 +575,22 @@ def test_new_tools_are_registered_in_graph_profile() -> None:
     for name in ("graph_reach", "graph_diff", "findings_query", "finding_detail", "should_i_deploy"):
         assert name in PROFILES["graph"].tools
         assert name in PROFILES["guided"].tools
+
+
+def test_summary_omits_only_a_label_repeated_by_its_endpoints():
+    from agent_bom.mcp_tools.exposure_queue import summary_path
+
+    path = {
+        "id": "exact-path-id",
+        "label": "Finding via Agent",
+        "source": {"id": "agent:1", "label": "Agent"},
+        "target": {"id": "finding:1", "label": "Finding"},
+        "nodeIds": ["agent:1", "finding:1"],
+    }
+    result = summary_path(path)
+    assert "label" not in result
+    assert result["id"] == path["id"]
+    assert result["source"]["label"] == "Agent" and result["target"]["label"] == "Finding"
+    assert path["label"] == "Finding via Agent"
+    path["label"] = "Distinct recorded context"
+    assert summary_path(path)["label"] == path["label"]

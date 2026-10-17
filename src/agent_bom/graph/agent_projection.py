@@ -37,6 +37,7 @@ from agent_bom.graph.projection_support import (
     _is_sbom_import,
     _normalized_environment,
     _repository_manifest_directory,
+    server_child_aliases,
 )
 from agent_bom.graph.types import EntityType, RelationshipType
 from agent_bom.mcp_blocklist import sanitize_security_intelligence_entry
@@ -308,10 +309,10 @@ def _project_server(graph: UnifiedGraph, agent: AgentScope, srv_dict: Mapping[st
                 evidence=_discovery_evidence(agent.data_source_tag),
             )
         )
-        indexes.server_to_agents[srv_name].append(agent.agent_id)
-        if not srv_id.startswith(f"server:{agent.agent_node_key}:"):
-            # A canonical node shared under different names is still one server.
-            indexes.server_to_agents[srv_id].append(agent.agent_id)
+        # Equal labels or launch recipes do not establish a shared instance.
+        # The resolved scoped identity also recognizes one remote endpoint
+        # configured under different local names.
+        indexes.server_to_agents[srv_id].append(agent.agent_id)
     indexes.server_name_to_agent_servers[srv_name][agent.agent_id] = srv_id
     indexes.agent_to_server_ids[agent.agent_name].add(srv_id)
     if agent.agent_scope:
@@ -408,6 +409,7 @@ def _project_tools(graph: UnifiedGraph, agent: AgentScope, srv_dict: Mapping[str
                 label=tool_name,
                 attributes={
                     "description": tool_dict.get("description", ""),
+                    "identity": {"aliases": server_child_aliases(graph, srv_id, "tool", tool_name)},
                     "canonical_id": tool_dict.get("canonical_id")
                     or tool_dict.get("stable_id")
                     or canonical_graph_node_id(EntityType.TOOL.value, tool_id),

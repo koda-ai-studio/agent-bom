@@ -567,10 +567,11 @@ export function graphNodeDisplayLabels(
   nodes: Array<Pick<Node, "id" | "data">>,
 ): ReadonlyMap<string, string> {
   return new Map(nodes.map((node) => {
-    const data = node.data as { label?: unknown; name?: unknown; title?: unknown };
+    const data = node.data as { label?: unknown; name?: unknown; title?: unknown; identityContext?: unknown };
     const label = [data.label, data.name, data.title]
       .find((value): value is string => typeof value === "string" && value.trim().length > 0);
-    return [node.id, label ?? "graph node"];
+    const context = typeof data.identityContext === "string" ? data.identityContext : "";
+    return [node.id, context ? `${label ?? "graph node"} · ${context}` : label ?? "graph node"];
   }));
 }
 

@@ -11,6 +11,7 @@ from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
 from agent_bom.graph.projection_support import _add_rel_edge, _mapping_list
+from agent_bom.graph.trace_projection import _Binder
 from agent_bom.graph.types import EntityType, RelationshipType
 from agent_bom.runtime.incident_feedback import (
     RuntimeIncidentRecord,
@@ -354,6 +355,7 @@ def _runtime_identity_evidence(
 
 def project_runtime_session(graph: UnifiedGraph, runtime_graph: dict[str, Any] | None) -> None:
     dangling = 0
+    binder = _Binder(graph)
     if runtime_graph:
         for edge_dict in runtime_graph.get("edges", []):
             rel_str = edge_dict.get("interaction_type", edge_dict.get("relation", ""))
@@ -370,13 +372,14 @@ def project_runtime_session(graph: UnifiedGraph, runtime_graph: dict[str, Any] |
                 continue
             src = edge_dict.get("source_node_id", edge_dict.get("source", ""))
             tgt = edge_dict.get("target_node_id", edge_dict.get("target", ""))
-            if src and tgt and not (graph.has_node(src) and graph.has_node(tgt)):
+            source_node, target_node = binder.node(src), binder.node(tgt)
+            if src and tgt and (source_node is None or target_node is None):
                 dangling += 1
-            elif src and tgt:
+            elif source_node is not None and target_node is not None:
                 graph.add_edge(
                     UnifiedEdge(
-                        source=src,
-                        target=tgt,
+                        source=source_node.id,
+                        target=target_node.id,
                         relationship=rel,
                         evidence={
                             "timestamp": edge_dict.get("timestamp", ""),

@@ -55,3 +55,22 @@ def test_characterization_hostname_exception_does_not_hide_other_values() -> Non
     assert not pattern.fullmatch(line({field: "another-value"}))
     assert not pattern.fullmatch(line({"api_key": hostname}))
     assert not pattern.fullmatch(line({field: hostname, "api_key": "another-value"}))
+
+
+def test_graph_fixture_exception_only_accepts_scoped_server_uuid_labels() -> None:
+    import re
+    import tomllib
+
+    config = tomllib.loads((ROOT / ".gitleaks.toml").read_text())
+    patterns = [re.compile(value) for value in config["allowlist"]["regexes"] if "server:cfg-" in value]
+    assert len(patterns) == 1
+    node_id = "-".join(("575e032b", "5e58", "539e", "85c6", "cd9eba4abff2"))
+    line = f'  "server:cfg-e12ed29252b1:api-agent:{node_id}": "api-agent-server",'
+    assert patterns[0].fullmatch(line)
+    for changed in (
+        line.replace("api-agent-server", "secret-value"),
+        line.replace(node_id, "secret-value"),
+        line.replace("server:cfg-", "api-key:cfg-"),
+        line + ' "api_key": "secret-value"',
+    ):
+        assert not patterns[0].fullmatch(changed)

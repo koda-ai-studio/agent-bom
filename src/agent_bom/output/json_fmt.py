@@ -12,9 +12,10 @@ from agent_bom.asset_provenance import (
     package_version_provenance,
     sanitize_discovery_provenance,
 )
-from agent_bom.canonical_ids import CANONICAL_ID_SCHEMA_VERSION, agent_identity_export
+from agent_bom.canonical_ids import CANONICAL_ID_SCHEMA_VERSION, agent_identity_export, canonical_id
 from agent_bom.compliance_utils import effective_blast_radius_tags, framework_qualified_blast_radius_tags
 from agent_bom.core.severity import severity_basis
+from agent_bom.evidence.occurrence_ids import server_occurrence_id
 from agent_bom.exploitability import fused_triage_priority
 from agent_bom.finding import Finding, _forward_fixed_version
 from agent_bom.mcp_blocklist import sanitize_security_intelligence_entry
@@ -334,10 +335,11 @@ def _build_ai_bom_entities_snapshot(report: AIBOMReport) -> dict:
         )
 
         for server in agent.mcp_servers:
-            server_ids.append(server.stable_id)
-            if server.stable_id not in servers:
-                servers[server.stable_id] = {
-                    "id": server.stable_id,
+            server_id = server_occurrence_id(server, agent)
+            server_ids.append(server_id)
+            if server_id not in servers:
+                servers[server_id] = {
+                    "id": server_id,
                     "canonical_id": server.canonical_id,
                     "name": server.name,
                     "surface": server.surface.value,
@@ -355,12 +357,13 @@ def _build_ai_bom_entities_snapshot(report: AIBOMReport) -> dict:
                         defaults=agent_provenance,
                     ),
                 }
-            relationships.append({"from": agent.stable_id, "to": server.stable_id, "type": "uses"})
+            relationships.append({"from": agent.stable_id, "to": server_id, "type": "uses"})
 
             for tool in server.tools:
-                if tool.stable_id not in tools:
-                    tools[tool.stable_id] = {
-                        "id": tool.stable_id,
+                tool_id = canonical_id("tool_occurrence", server_id, tool.stable_id)
+                if tool_id not in tools:
+                    tools[tool_id] = {
+                        "id": tool_id,
                         "canonical_id": tool.canonical_id,
                         "name": tool.name,
                         "fingerprint": tool.fingerprint,
@@ -371,14 +374,15 @@ def _build_ai_bom_entities_snapshot(report: AIBOMReport) -> dict:
                         "schema_rule_findings": tool.schema_rule_findings,
                         "risk_score": tool.risk_score,
                     }
-                if tool.stable_id not in servers[server.stable_id]["tool_ids"]:
-                    servers[server.stable_id]["tool_ids"].append(tool.stable_id)
-                relationships.append({"from": server.stable_id, "to": tool.stable_id, "type": "exposes_tool"})
+                if tool_id not in servers[server_id]["tool_ids"]:
+                    servers[server_id]["tool_ids"].append(tool_id)
+                relationships.append({"from": server_id, "to": tool_id, "type": "exposes_tool"})
 
             for resource in server.resources:
-                if resource.stable_id not in resources:
-                    resources[resource.stable_id] = {
-                        "id": resource.stable_id,
+                resource_id = canonical_id("resource_occurrence", server_id, resource.stable_id)
+                if resource_id not in resources:
+                    resources[resource_id] = {
+                        "id": resource_id,
                         "canonical_id": resource.canonical_id,
                         "uri": resource.uri,
                         "name": resource.name,
@@ -387,14 +391,15 @@ def _build_ai_bom_entities_snapshot(report: AIBOMReport) -> dict:
                         "content_findings": resource.content_findings,
                         "risk_score": resource.risk_score,
                     }
-                if resource.stable_id not in servers[server.stable_id]["resource_ids"]:
-                    servers[server.stable_id]["resource_ids"].append(resource.stable_id)
-                relationships.append({"from": server.stable_id, "to": resource.stable_id, "type": "exposes_resource"})
+                if resource_id not in servers[server_id]["resource_ids"]:
+                    servers[server_id]["resource_ids"].append(resource_id)
+                relationships.append({"from": server_id, "to": resource_id, "type": "exposes_resource"})
 
             for prompt in server.prompts:
-                if prompt.stable_id not in prompts:
-                    prompts[prompt.stable_id] = {
-                        "id": prompt.stable_id,
+                prompt_id = canonical_id("prompt_occurrence", server_id, prompt.stable_id)
+                if prompt_id not in prompts:
+                    prompts[prompt_id] = {
+                        "id": prompt_id,
                         "canonical_id": prompt.canonical_id,
                         "name": prompt.name,
                         "fingerprint": prompt.fingerprint,
@@ -403,9 +408,9 @@ def _build_ai_bom_entities_snapshot(report: AIBOMReport) -> dict:
                         "content_findings": prompt.content_findings,
                         "risk_score": prompt.risk_score,
                     }
-                if prompt.stable_id not in servers[server.stable_id]["prompt_ids"]:
-                    servers[server.stable_id]["prompt_ids"].append(prompt.stable_id)
-                relationships.append({"from": server.stable_id, "to": prompt.stable_id, "type": "exposes_prompt"})
+                if prompt_id not in servers[server_id]["prompt_ids"]:
+                    servers[server_id]["prompt_ids"].append(prompt_id)
+                relationships.append({"from": server_id, "to": prompt_id, "type": "exposes_prompt"})
 
             for pkg in server.packages:
                 if pkg.stable_id not in packages:
@@ -429,26 +434,18 @@ def _build_ai_bom_entities_snapshot(report: AIBOMReport) -> dict:
                         "occurrences": [_package_occurrence_to_dict(occ) for occ in pkg.occurrences],
                         "vulnerability_count": len(pkg.vulnerabilities),
                     }
-                if pkg.stable_id not in servers[server.stable_id]["package_ids"]:
-                    servers[server.stable_id]["package_ids"].append(pkg.stable_id)
-                relationships.append({"from": server.stable_id, "to": pkg.stable_id, "type": "depends_on"})
+                if pkg.stable_id not in servers[server_id]["package_ids"]:
+                    servers[server_id]["package_ids"].append(pkg.stable_id)
+                relationships.append({"from": server_id, "to": pkg.stable_id, "type": "depends_on"})
 
+    return _snapshot_payload(agents, relationships, servers=servers, tools=tools, resources=resources, prompts=prompts, packages=packages)
+
+
+def _snapshot_payload(agents: list[dict], relationships: list[dict], **entities: dict[str, dict]) -> dict:
     return {
-        "summary": {
-            "agents": len(agents),
-            "servers": len(servers),
-            "tools": len(tools),
-            "resources": len(resources),
-            "prompts": len(prompts),
-            "packages": len(packages),
-            "relationships": len(relationships),
-        },
+        "summary": {"agents": len(agents), **{name: len(rows) for name, rows in entities.items()}, "relationships": len(relationships)},
         "agents": agents,
-        "servers": sorted(servers.values(), key=lambda x: x["id"]),
-        "tools": sorted(tools.values(), key=lambda x: x["id"]),
-        "resources": sorted(resources.values(), key=lambda x: x["id"]),
-        "prompts": sorted(prompts.values(), key=lambda x: x["id"]),
-        "packages": sorted(packages.values(), key=lambda x: x["id"]),
+        **{name: sorted(rows.values(), key=lambda row: row["id"]) for name, rows in entities.items()},
         "relationships": relationships,
     }
 

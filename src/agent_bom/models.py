@@ -715,10 +715,9 @@ class MCPServer:
     def stable_id(self) -> str:
         """Deterministic ID for this MCP server.
 
-        Uses registry_id when available (most stable identifier), otherwise
-        falls back to a url/command/args discriminator that mirrors discovery's
-        dedup identity so distinct servers (e.g. two remote SSE servers with no
-        command but different urls) never collapse onto one ID.
+        Configured endpoints and exact launch recipes remain distinct even
+        when they share a registry artifact. Stdio context includes working
+        directory and environment in the opaque identity, never plaintext.
         """
         if self.surface == ServerSurface.SBOM and self.command == "sbom" and self.imported_canonical_id:
             try:
@@ -733,6 +732,8 @@ class MCPServer:
             registry_id=self.registry_id,
             url=self.url,
             args=self.args,
+            working_dir=self.working_dir,
+            environment=self.env,
         )
 
     @property

@@ -35,3 +35,13 @@ describe("entities in scope navigation", () => {
     expect(screen.queryByText("No severity recorded")).not.toBeInTheDocument();
   });
 });
+
+it.each([false, true])("distinguishes same-name scope cards (compact=%s)", (compact) => {
+  const nodes = buildRollupFlowGraph([
+    { ...leaf, id: "agent:cfg-926bd270c907:reader", label: "Workspace reader", entity_type: "agent" },
+    { ...leaf, id: "agent:cfg-a0fa3719e962:reader", label: "Workspace reader", entity_type: "agent" },
+  ]).nodes;
+  render(<ReactFlowProvider>{nodes.map(n => <GraphScopeNode key={n.id} item={n.data.rollup!} compact={compact} identityContext={n.data.identityContext} />)}</ReactFlowProvider>);
+  expect(screen.getByText("Instance 1")).toBeVisible();
+  expect(screen.getByText("Instance 2")).toBeVisible();
+});

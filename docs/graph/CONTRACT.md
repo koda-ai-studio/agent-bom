@@ -84,6 +84,18 @@ case-sensitive resource identifiers. Agent graph IDs include source or config
 scope; exports retain the graph aliases calculated before config-path redaction.
 Two same-named agents in different config files remain separate occurrences.
 
+MCP instance IDs retain the complete executable, argv element boundaries,
+working directory and configured environment in an opaque fingerprint. URL
+paths, parameters and query routing remain significant. A registry artifact
+is metadata, not proof of a shared endpoint or process. Configured stdio
+launches stay scoped to their declaring agent; matching recipes do not prove
+one runtime process. Remote endpoint nodes can be shared, while every agent
+retains its own relationship. Earlier recipe/name IDs remain explicit alias
+candidates and are not resolved when multiple current instances claim them. A `SHARES_SERVER`
+correlation requires the same resolved server node, never an equal display name
+or launch recipe. It is non-traversable and does not establish delegation,
+execution or effective access.
+
 An upgrade does not rewrite stored snapshots. SQLite and Postgres persist new
 canonical-ID receipts and read historical rows with their original version-2
 identity. Exported IDs already recorded in imported graphs are retained. A
@@ -936,3 +948,19 @@ recorded cross-agent paths. A modeled path, runtime attempt, blocked operation,
 and successful execution remain distinct. Legacy transitive fields in stored
 reports are retained as supplied historical data; this compatibility option
 does not validate or rewrite them.
+
+### Local launch occurrences in inventory exports
+
+The local Agent BOM manifest and JSON inventory snapshot use scoped server
+occurrence IDs for their references. Matching executable arguments in different
+agent configurations do not establish a shared process. JSON tool, resource and
+prompt occurrence IDs retain their parent server scope. Their `canonical_id`
+metadata describes the underlying definition and must not replace the scoped
+`id` when joining inventory relationships. CycloneDX derives each MCP component
+reference from that same scoped server identity; identical remote endpoints can
+still share one component while retaining every declaring agent dependency.
+
+A validated UUIDv5 component reference imported from an SBOM is retained on re-export,
+including through the manifest and JSON inventory. This is declared document
+identity; it does not authorize execution or establish a runtime observation.
+Invalid or executable-source declarations cannot override local instance scope.

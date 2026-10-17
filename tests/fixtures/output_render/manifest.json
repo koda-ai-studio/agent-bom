@@ -1,10 +1,10 @@
 {
  "demo": {
-  "html": "58017e402807e22947df0da984620e546413c87126f008080aee6d479248e913",
-  "html_offline": "81e7611e802710df0a4be00c5041d6f404aa8bd288f98cf7309d2d01287890d5",
-  "sarif_exclude_unfixable": "2838255ab6e36e898922eed32a6ad7e684389fe3829ec9e9578f455d6afe549c",
-  "sarif_file": "a39bc00ebc8e9b416bf1176422a5ebaa22cc6ac6329474a1a88c751536f7e353",
-  "sarif_stdout": "2838255ab6e36e898922eed32a6ad7e684389fe3829ec9e9578f455d6afe549c"
+  "html": "974c6a858b5447bdb382d8501dd4a7dfb7b994a3153390041f42bf7a0bb5c12c",
+  "html_offline": "8b6a3bfd3f52a579c13b692b465b9f1a53492e70e6aceb3041677a4fe343cf51",
+  "sarif_exclude_unfixable": "34fddd7cee3ce418cec126c75dc67858601a12fff2e4f13f2065bbece4d8f8ea",
+  "sarif_file": "8c5810fcae0767b21ca7d2a8720d75d54f391c3b136af3811ba9a505509da931",
+  "sarif_stdout": "34fddd7cee3ce418cec126c75dc67858601a12fff2e4f13f2065bbece4d8f8ea"
  },
  "empty": {
   "html": "5ebe2ead369836345dc0e8884ccbb407fb901520d2f03c853aef17e31732a01a",
@@ -16,8 +16,8 @@
  "rich": {
   "html": "f32a82e1102fcff0f87e056456776b8ce9e2c263c4b8cb474fabc57af1553ca6",
   "html_offline": "ef32d70c78f20d9e37c5fee9bc26c2ac8079fba58a33bab3d418416eecf8e9e3",
-  "sarif_exclude_unfixable": "c22ed8300456b0f4f166b8beafa36793a0df9fc66de717b7d6d36417664661f6",
-  "sarif_file": "be5bdfb8861c64a8c68f23a3e0facbfe9b1b290f4730b1b979295a4e73fc9570",
-  "sarif_stdout": "09f69b384debc14ac5d1acd87cefab68acd0a1f64e5553de83f070e5c0f31f7d"
+  "sarif_exclude_unfixable": "282520a52843ebb216cc864abb305d718804f2e094894dc8eb8aa93a2809d6b5",
+  "sarif_file": "cd2a8a9a1710b6836fabb18a83e451f3fbc644f1fe21e0caf0fa24ed4d5b15ca",
+  "sarif_stdout": "5b24ac539ba3836a6700d6f684e60c32971d2f8cdde042aeefa5ca8e82848d1b"
  }
 }

@@ -32,3 +32,46 @@ export function assignOccurrenceRoles(nodes: Node<LineageNodeData>[]): void {
     for (const node of group) node.data.occurrenceRole = containerOccurrenceRole(node.data.dataSources ?? []);
   }
 }
+
+/** Use only already-public descriptive metadata, never decode identity hashes or paths. */
+function readableContext(node: Node<LineageNodeData>): string | undefined {
+  const attrs = node.data.attributes ?? {};
+  const options: [string, unknown][] = [
+    ["Workspace", attrs.workspace_name], ["Project", attrs.project_name],
+    ["Repository", attrs.repository_name], ["Enrollment", attrs.enrollment_name],
+    ["Environment", attrs.environment ?? node.data.rollup?.context?.environment],
+    ["Workload", node.data.rollup?.context?.workload],
+  ];
+  for (const [kind, raw] of options) {
+    if (typeof raw !== "string") continue;
+    const value = raw.trim();
+    if (!value || value.length > 80 || /[<>\\/\n\r]/.test(value) || /^[a-f0-9-]{12,}$/i.test(value)) continue;
+    return `${kind}: ${value}`;
+  }
+  return undefined;
+}
+
+/** Distinguish collisions without displaying private config paths or launch arguments. */
+export function assignCollisionScopes(nodes: Node<LineageNodeData>[]): void {
+  const groups = new Map<string, Node<LineageNodeData>[]>();
+  for (const node of nodes) {
+    node.data.identityContext = undefined;
+    const key = JSON.stringify([node.data.entityType ?? node.data.nodeType, canvasNodeLabel(node.data.label)]);
+    const group = groups.get(key);
+    if (group) group.push(node);
+    else groups.set(key, [node]);
+  }
+  for (const group of groups.values()) {
+    if (group.length < 2) continue;
+    const candidates = group.map(readableContext);
+    const counts = new Map<string, number>();
+    for (const value of candidates) if (value) counts.set(value, (counts.get(value) ?? 0) + 1);
+    // Ordinals distinguish the visible occurrences. They are display labels,
+    // not persistent identities; full canonical IDs remain in the inspector.
+    const ordinals = new Map([...group].sort((a, b) => a.id.localeCompare(b.id)).map((node, index) => [node.id, index + 1]));
+    group.forEach((node, index) => {
+      const context = candidates[index] ?? `Instance ${ordinals.get(node.id)}`;
+      node.data.identityContext = (counts.get(context) ?? 0) > 1 ? `${context} · instance ${ordinals.get(node.id)}` : context;
+    });
+  }
+}

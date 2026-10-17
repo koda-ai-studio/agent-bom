@@ -199,12 +199,227 @@ def test_unstamped_historical_rows_keep_v2_identity():
 
 
 def test_server_aliases_retain_frozen_scope_escaping_and_registry_v2_ids():
-    from agent_bom.canonical_ids import canonical_mcp_server_id, legacy_canonical_id_v2, previous_mcp_server_graph_ids
+    import uuid
+
+    from agent_bom.canonical_ids import (
+        AGENT_BOM_ID_NAMESPACE,
+        canonical_mcp_server_id,
+        legacy_canonical_id_v2,
+        previous_mcp_server_graph_ids,
+    )
 
     agent = {"name": "one", "source_id": "host%3Aone"}
     server = {"name": "same", "command": "npx", "args": ["foo"]}
-    identity = canonical_mcp_server_id("same", "npx", args=["foo"])
+    identity = str(uuid.uuid5(AGENT_BOM_ID_NAMESPACE, "mcp_server:cmd:npx:foo"))
     assert f"server:host%3Aone:{identity}" in previous_mcp_server_graph_ids({**server, "canonical_id": identity}, agent)
     registry = {"name": "registered", "registry_id": "org.example/service"}
     registry["canonical_id"] = canonical_mcp_server_id(registry["name"], registry_id=registry["registry_id"])
     assert f"server:{legacy_canonical_id_v2('mcp_server', registry['registry_id'])}" in previous_mcp_server_graph_ids(registry, agent)
+
+
+def test_mcp_launch_argument_boundaries_are_not_display_strings():
+    from agent_bom.canonical_ids import canonical_mcp_server_id
+
+    assert canonical_mcp_server_id("same", "python", args=["a b", "c"]) != canonical_mcp_server_id("same", "python", args=["a", "b c"])
+    assert canonical_mcp_server_id("same", "python", args=["", "x"]) != canonical_mcp_server_id("same", "python", args=["x"])
+
+
+def test_mcp_launch_executable_paths_do_not_collapse_by_basename():
+    from agent_bom.canonical_ids import canonical_mcp_server_id
+
+    assert canonical_mcp_server_id("same", "/opt/one/python", args=["server.py"]) != canonical_mcp_server_id(
+        "same", "/opt/two/python", args=["server.py"]
+    )
+
+
+def test_mcp_remote_query_routes_do_not_collapse():
+    from agent_bom.canonical_ids import canonical_mcp_server_id
+
+    assert canonical_mcp_server_id("same", url="https://mcp.example/endpoint?workspace=one") != canonical_mcp_server_id(
+        "same", url="https://mcp.example/endpoint?workspace=two"
+    )
+
+
+def test_registry_artifact_does_not_merge_distinct_service_endpoints():
+    from agent_bom.canonical_ids import canonical_mcp_server_id
+
+    assert canonical_mcp_server_id("same", registry_id="same-package", url="https://one.example/mcp") != canonical_mcp_server_id(
+        "same", registry_id="same-package", url="https://two.example/mcp"
+    )
+
+
+def test_discovery_keeps_same_launch_under_distinct_agent_configs():
+    from agent_bom.discovery.identity import deduplicate_discovered_agents
+    from agent_bom.models import Agent, AgentType, MCPServer
+
+    agents = [
+        Agent(
+            name="same",
+            agent_type=AgentType.CUSTOM,
+            config_path=path,
+            mcp_servers=[MCPServer(name="server", command="npx", args=["mcp-package"])],
+        )
+        for path in ("/work/one/mcp.json", "/work/two/mcp.json")
+    ]
+    result = deduplicate_discovered_agents(agents)
+    assert len(result) == 2
+    assert all(len(agent.mcp_servers) == 1 for agent in result)
+
+
+def test_stdio_graph_instances_keep_declaring_config_scope():
+    from agent_bom.canonical_ids import mcp_server_graph_id_for
+    from agent_bom.models import Agent, AgentType, MCPServer
+
+    agents = [Agent(name="same", agent_type=AgentType.CUSTOM, config_path=path) for path in ("/work/one/mcp.json", "/work/two/mcp.json")]
+    server = MCPServer(name="server", command="npx", args=["mcp-package"])
+    assert mcp_server_graph_id_for(server, agents[0]) != mcp_server_graph_id_for(server, agents[1])
+
+
+def test_remote_server_references_keep_both_declaring_agents():
+    from agent_bom.discovery.identity import deduplicate_discovered_agents
+    from agent_bom.models import Agent, AgentType, MCPServer
+
+    agents = [
+        Agent(
+            name=name,
+            agent_type=AgentType.CUSTOM,
+            config_path=f"/{name}/mcp.json",
+            mcp_servers=[MCPServer(name="server", url="https://service.example/mcp")],
+        )
+        for name in ("one", "two")
+    ]
+    assert len(deduplicate_discovered_agents(agents)) == 2
+
+
+def test_mcp_argument_whitespace_is_data():
+    from agent_bom.canonical_ids import canonical_mcp_server_id
+
+    assert canonical_mcp_server_id("same", "python", args=[" x "]) != canonical_mcp_server_id("same", "python", args=["x"])
+
+
+def test_stdio_configuration_context_keeps_distinct_working_dirs_and_environment():
+    from agent_bom.models import MCPServer
+
+    base = dict(name="server", command="python", args=["server.py"])
+    first = MCPServer(**base, working_dir="/one", env={"WORKSPACE": "one"})
+    second = MCPServer(**base, working_dir="/two", env={"WORKSPACE": "one"})
+    third = MCPServer(**base, working_dir="/one", env={"WORKSPACE": "two"})
+    assert len({first.canonical_id, second.canonical_id, third.canonical_id}) == 3
+
+
+def test_registry_metadata_does_not_rekey_an_existing_endpoint():
+    from agent_bom.models import MCPServer
+
+    server = MCPServer(name="server", url="https://service.example/mcp")
+    original = server.canonical_id
+    server.registry_id = "org.example/server"
+    assert server.canonical_id == original
+
+
+def mcp_instance_storage_contract(store):
+    import uuid
+
+    from agent_bom.canonical_ids import AGENT_BOM_ID_NAMESPACE, mcp_server_graph_id_for
+    from agent_bom.discovery.identity import deduplicate_discovered_agents
+    from agent_bom.graph.builder import build_unified_graph_from_report
+    from agent_bom.graph.types import EntityType, RelationshipType
+    from agent_bom.models import Agent, AgentType, AIBOMReport, MCPServer, MCPTool
+    from agent_bom.output.json_fmt import to_json
+
+    agents = [
+        Agent(
+            name="same",
+            agent_type=AgentType.CUSTOM,
+            config_path=f"/{name}/mcp.json",
+            mcp_servers=[MCPServer(name="service", command="python", args=["server.py"], tools=[MCPTool(name="read", description="Read")])],
+        )
+        for name in ("one", "two")
+    ]
+    report = to_json(AIBOMReport(agents=deduplicate_discovered_agents(agents), blast_radii=[], tool_version="0.0.0"))
+    graph = build_unified_graph_from_report(report, tenant_id="tenant", scan_id="instances")
+    server_ids = {mcp_server_graph_id_for(agent.mcp_servers[0], agent) for agent in agents}
+    assert len(server_ids) == 2
+    assert {node.id for node in graph.nodes.values() if node.entity_type == EntityType.SERVER} == server_ids
+    assert len([node for node in graph.nodes.values() if node.entity_type == EntityType.TOOL]) == 2
+    assert len([edge for edge in graph.edges if edge.relationship == RelationshipType.USES]) == 2
+    assert not any(edge.relationship == RelationshipType.SHARES_SERVER for edge in graph.edges)
+    old_id = "server:" + str(uuid.uuid5(AGENT_BOM_ID_NAMESPACE, "mcp_server:cmd:python:server.py"))
+    assert all(old_id in graph.nodes[node_id].attributes["identity"]["aliases"] for node_id in server_ids)
+    store.save_graph(graph)
+    restored = store.load_graph(tenant_id="tenant", scan_id="instances")
+    assert set(restored.nodes) == set(graph.nodes)
+    assert {edge.canonical_id for edge in restored.edges} == {edge.canonical_id for edge in graph.edges}
+    assert store.resolve_node_aliases(tenant_id="tenant", scan_id="instances", node_ids={old_id}) == {}
+    assert store.resolve_node_aliases(tenant_id="other", scan_id="instances", node_ids={old_id}) == {}
+
+
+def test_mcp_instance_export_and_sqlite_replay_preserve_relationships(tmp_path):
+    from agent_bom.api.graph_store import SQLiteGraphStore
+
+    mcp_instance_storage_contract(SQLiteGraphStore(tmp_path / "instances.db"))
+
+
+def test_shared_server_correlation_requires_one_resolved_instance():
+    from agent_bom.graph.builder import build_unified_graph_from_report
+    from agent_bom.graph.types import RelationshipType
+
+    def build(first, second):
+        return build_unified_graph_from_report(
+            {
+                "agents": [
+                    {"name": name, "config_path": f"/{name}/mcp.json", "mcp_servers": [server]}
+                    for name, server in (("one", first), ("two", second))
+                ]
+            }
+        )
+
+    separate = build({"name": "same", "url": "https://one.example/mcp"}, {"name": "same", "url": "https://two.example/mcp"})
+    assert not any(edge.relationship == RelationshipType.SHARES_SERVER for edge in separate.edges)
+    shared = build({"name": "one", "url": "https://shared.example/mcp"}, {"name": "two", "url": "https://shared.example/mcp"})
+    edges = [edge for edge in shared.edges if edge.relationship == RelationshipType.SHARES_SERVER]
+    assert len(edges) == 1
+    assert not edges[0].traversable
+    assert edges[0].evidence["server"] in shared.nodes
+
+
+def test_historical_server_child_receipts_bind_only_when_unique():
+    import uuid
+
+    from agent_bom.canonical_ids import AGENT_BOM_ID_NAMESPACE
+    from agent_bom.graph.builder import build_unified_graph_from_report
+    from agent_bom.graph.trace_projection import _Binder
+    from agent_bom.graph.types import EntityType, RelationshipType
+
+    server = {
+        "name": "service",
+        "command": "python",
+        "args": ["server.py"],
+        "tools": [{"name": "read"}],
+        "credential_env_vars": ["API_KEY"],
+    }
+    agent = {"name": "one", "config_path": "/one/config.json", "mcp_servers": [server]}
+    old_server = "server:" + str(uuid.uuid5(AGENT_BOM_ID_NAMESPACE, "mcp_server:cmd:python:server.py"))
+    old_tool, old_cred = f"tool:{old_server}:read", f"cred:{old_server}:API_KEY"
+    runtime = {"edges": [{"source_node_id": "agent:one", "target_node_id": old_tool, "interaction_type": "tool_call"}]}
+    graph = build_unified_graph_from_report({"agents": [agent], "runtime_session_graph": runtime})
+    binder = _Binder(graph)
+    assert binder.node(old_tool).entity_type == EntityType.TOOL
+    assert binder.node(old_cred).entity_type == EntityType.CREDENTIAL
+    assert len([e for e in graph.edges if e.relationship == RelationshipType.INVOKED]) == 1
+    other = {**agent, "name": "two", "config_path": "/two/config.json"}
+    ambiguous = build_unified_graph_from_report({"agents": [agent, other], "runtime_session_graph": runtime})
+    binder = _Binder(ambiguous)
+    assert binder.node(old_tool) is None
+    assert binder.node(old_cred) is None
+    assert not any(e.relationship == RelationshipType.INVOKED for e in ambiguous.edges)
+
+
+def test_new_instance_fingerprint_is_not_invented_as_a_historical_global_alias():
+    from agent_bom.canonical_ids import canonical_mcp_server_id, mcp_server_graph_id, previous_mcp_server_graph_ids
+
+    server = {"name": "service", "command": "python", "args": ["server.py"]}
+    agent = {"name": "a", "config_path": "/a/config.json", "mcp_servers": [server]}
+    current = mcp_server_graph_id(**server)
+    assert current not in previous_mcp_server_graph_ids(server, agent)
+    server["stable_id"] = canonical_mcp_server_id(**server)
+    assert current not in previous_mcp_server_graph_ids(server, agent)

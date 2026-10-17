@@ -39,7 +39,7 @@ def test_remote_server_named_differently_by_two_agents_is_one_node() -> None:
     report = {
         "agents": [
             _agent("desktop", [_server("docs", url=REMOTE_URL)]),
-            _agent("ide", [_server("company-docs", url=REMOTE_URL + "/")], source_id="laptop-2"),
+            _agent("ide", [_server("company-docs", url=REMOTE_URL)], source_id="laptop-2"),
         ]
     }
 
@@ -62,7 +62,7 @@ def test_every_producer_names_one_server_with_the_same_id() -> None:
     assert unified == export == {model}
 
 
-def test_same_stdio_server_on_two_devices_is_two_nodes() -> None:
+def test_equal_stdio_recipes_remain_distinct_per_declaring_agent() -> None:
     stdio = {"command": "npx", "args": ["-y", "@example/fs-server", "/srv"]}
     report = {
         "agents": [
@@ -74,9 +74,13 @@ def test_same_stdio_server_on_two_devices_is_two_nodes() -> None:
 
     servers = _servers(build_unified_graph_from_report(report))
 
-    assert len(servers) == 2
+    assert len(servers) == 3
     identity = canonical_mcp_server_id("fs", "npx", args=stdio["args"])
-    assert {node.id for node in servers} == {f"server:device-a:{identity}", f"server:device-b:{identity}"}
+    assert {node.id for node in servers} == {
+        f"server:device-a:desktop:{identity}",
+        f"server:device-b:desktop:{identity}",
+        f"server:device-b:ide:{identity}",
+    }
 
 
 def test_name_only_server_stays_under_its_agent() -> None:

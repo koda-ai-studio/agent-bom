@@ -140,20 +140,14 @@ def normalize_command_arg(arg: str) -> str:
     return text
 
 
-def mcp_server_identity_discriminator(
+def _legacy_mcp_server_discriminator(
     name: str,
     command: str = "",
     *,
     url: str | None = None,
     args: Sequence[str] | None = None,
 ) -> str:
-    """Non-registry server identity key shared by canonical IDs and discovery dedup.
-
-    Mirrors the url/command/name fallback used by discovery's ``server_identity_key``
-    so a server's served canonical id is as fine-grained as its dedup identity:
-    remote SSE/HTTP servers (empty command) stay distinct by url, and stdio servers
-    fold in their normalized args.
-    """
+    """Frozen pre-instance discriminator, used only for historical aliases."""
     if url and url.strip():
         parsed = urlparse(url.strip())
         netloc = parsed.netloc.lower()
@@ -173,6 +167,24 @@ def mcp_server_identity_discriminator(
     return f"name:{name.strip().lower()}"
 
 
+def mcp_server_identity_discriminator(name: str, command: str = "", *, url: str | None = None, args: Sequence[str] | None = None) -> str:
+    """Retain endpoint routes and exact executable/argv boundaries.
+
+    A registry artifact and a launch recipe are not proof of a shared process.
+    The discriminator is hashed before it is exposed as a canonical identity.
+    """
+    if url and url.strip():
+        parsed = urlparse(url.strip())
+        userinfo, separator, host = parsed.netloc.rpartition("@")
+        authority = userinfo + separator + host.lower()
+        # Preserve path, parameters and query: each may select another service.
+        endpoint = urlunparse((parsed.scheme.lower(), authority, parsed.path, parsed.params, parsed.query, ""))
+        return canonical_fingerprint("url", endpoint)
+    if command or args:
+        return canonical_fingerprint("cmd", command, list(args or []), name if not args else None)
+    return canonical_fingerprint("name", name)
+
+
 def canonical_mcp_server_id(
     name: str,
     command: str = "",
@@ -180,12 +192,14 @@ def canonical_mcp_server_id(
     registry_id: str | None = None,
     url: str | None = None,
     args: Sequence[str] | None = None,
+    working_dir: str | None = None,
+    environment: Mapping[str, Any] | None = None,
 ) -> str:
-    if registry_id:
+    if registry_id and not (url or command or args):
         return canonical_id("mcp_server", registry_id)
     identifier = mcp_server_identity_discriminator(name, command, url=url, args=args).strip()
-    # Retain the historical case-preserving UUID format for this discriminator.
-    return str(uuid.uuid5(AGENT_BOM_ID_NAMESPACE, f"mcp_server:{identifier}"))
+    context = None if url else {"working_dir": working_dir, "environment": dict(environment or {})}
+    return canonical_id("mcp_server_instance", identifier, context)
 
 
 _AGENT_SCOPE_KEYS = ("source_id", "endpoint_id", "device_id")
@@ -284,16 +298,10 @@ def previous_agent_graph_ids(record: Any) -> list[str]:
 
 
 def mcp_server_identity_kind(*, url: Any = None, command: Any = "", args: Sequence[Any] | None = None, registry_id: Any = None) -> str:
-    """How far one server identity reaches: ``remote``, ``host`` or ``agent``.
-
-    A url or registry entry names one service for the whole tenant. A launch
-    command with arguments names a process that is only the same server on the
-    same host. A bare command or a name alone proves nothing beyond the agent
-    that declared it: two configs both running ``npx`` are not one server.
-    """
-    if str(url or "").strip() or (str(registry_id or "").strip() and not str(command or "").strip()):
+    """Remote endpoint, configured launch, or unresolved name-only declaration."""
+    if str(url or "").strip():
         return "remote"
-    if any(normalize_command_arg(str(arg or "")) for arg in (args or [])):
+    if command or args:
         return "host"
     return "agent"
 
@@ -308,24 +316,32 @@ def mcp_server_graph_id(
     canonical_id: Any = "",
     host_scope: str = "",
     agent_key: str = "",
+    working_dir: str | None = None,
+    environment: Mapping[str, Any] | None = None,
 ) -> str:
-    """Graph node id of an MCP server, shared by every producer.
+    """Keep configured launches scoped to their declaring agent.
 
-    Remote servers are one node per tenant (``server:<canonical id>``), stdio
-    servers one node per host (``server:<host scope>:<canonical id>``, with an
-    unscoped local scan being one host), and name-only servers stay under the
-    agent that declared them (``server:<agent key>:<name>``).
+    Equal recipes on a host do not establish one running process. Remote
+    endpoint nodes may be shared while each declaring agent retains its edge.
     """
     label = str(name or "unknown").strip() or "unknown"
     kind = mcp_server_identity_kind(url=url, command=command, args=args, registry_id=registry_id)
     if kind == "agent":
         return f"server:{agent_key}:{label}" if agent_key else f"server:{label}"
     identity = str(canonical_id or "").strip() or canonical_mcp_server_id(
-        label, str(command or ""), registry_id=str(registry_id or "") or None, url=str(url or "") or None, args=list(args or [])
+        label,
+        str(command or ""),
+        registry_id=str(registry_id or "") or None,
+        url=str(url or "") or None,
+        args=list(args or []),
+        working_dir=working_dir,
+        environment=environment,
     )
     scope = quote(str(host_scope or "").strip(), safe="")
-    if kind == "host" and scope:
-        return f"server:{scope}:{identity}"
+    if kind == "host":
+        owner = agent_key or scope
+        if owner:
+            return f"server:{owner}:{identity}"
     return f"server:{identity}"
 
 
@@ -347,6 +363,8 @@ def mcp_server_graph_id_for(server: Any, agent: Any) -> str:
         canonical_id=_field(server, "canonical_id") or _field(server, "stable_id") or "",
         host_scope=agent_identity_scope(agent),
         agent_key=agent_key,
+        working_dir=_field(server, "working_dir"),
+        environment=_field(server, "env"),
     )
 
 
@@ -367,16 +385,32 @@ def previous_mcp_server_graph_ids(server: Any, agent: Any) -> list[str]:
     kind = mcp_server_identity_kind(url=url, command=command, args=args, registry_id=registry_id)
     agent_ids = [agent_graph_id_for(agent), *previous_agent_graph_ids(agent)]
     previous = {f"server:{agent_id.removeprefix('agent:')}:{label}" for agent_id in agent_ids}
-    if kind != "agent" and _field(agent, "source") != CORTEX_AGENT_SOURCE:
+    if (kind != "agent" or registry_id) and _field(agent, "source") != CORTEX_AGENT_SOURCE:
         explicit = _field(server, "canonical_id") or _field(server, "stable_id")
-        identities = {str(explicit)} if explicit else {canonical_mcp_server_id(label, str(command), url=url, args=args)}
+        current_identity = canonical_mcp_server_id(
+            label,
+            str(command),
+            registry_id=registry_id,
+            url=url,
+            args=args,
+            working_dir=_field(server, "working_dir"),
+            environment=_field(server, "env"),
+        )
+        # Only an older explicit receipt can name a previous global node.
+        # The new instance fingerprint never existed in that global namespace.
+        identities = {str(explicit)} if explicit and str(explicit) != current_identity else set()
         if registry_id:
-            identities.add(legacy_canonical_id_v2("mcp_server", registry_id))
-        elif not explicit:
-            identities.add(legacy_canonical_id_v2("mcp_server", mcp_server_identity_discriminator(label, str(command), url=url, args=args)))
+            identities.update({canonical_id("mcp_server", registry_id), legacy_canonical_id_v2("mcp_server", registry_id)})
+        else:
+            old = _legacy_mcp_server_discriminator(label, str(command), url=url, args=args)
+            identities.update({str(uuid.uuid5(AGENT_BOM_ID_NAMESPACE, f"mcp_server:{old}")), legacy_canonical_id_v2("mcp_server", old)})
         # Frozen pre-v3 spelling: do not run the old scope through new escaping.
-        scope = agent_identity_scope(agent).strip().replace(":", "%3A")
-        previous.update(f"server:{scope}:{identity}" if kind == "host" and scope else f"server:{identity}" for identity in identities)
+        raw_scope = agent_identity_scope(agent).strip()
+        scopes = {raw_scope.replace(":", "%3A"), quote(raw_scope, safe="")}
+        old_host = not url and any(normalize_command_arg(str(arg or "")) for arg in args)
+        previous.update(
+            f"server:{scope}:{identity}" if old_host and scope else f"server:{identity}" for identity in identities for scope in scopes
+        )
     return sorted(previous - {current})
 
 

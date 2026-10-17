@@ -453,7 +453,7 @@
               "id": 1,
               "logicalLocations": [
                 {
-                  "fullyQualifiedName": "server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
+                  "fullyQualifiedName": "server:cfg-3c465df1f13e:claude-desktop:f988b619-eccc-5298-9a4a-cba0b1d7dc13",
                   "kind": "server"
                 }
               ],
@@ -489,7 +489,7 @@
               "id": 4,
               "logicalLocations": [
                 {
-                  "fullyQualifiedName": "tool:server:15c2e86e-efea-5b60-92a1-334a30a65e2a:read_file",
+                  "fullyQualifiedName": "***REDACTED***",
                   "kind": "tool"
                 }
               ],
@@ -537,21 +537,21 @@
               "target": "vuln:CVE-2026-1001",
               "hops": [
                 "agent:cfg-3c465df1f13e:claude-desktop",
-                "server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
+                "server:cfg-3c465df1f13e:claude-desktop:f988b619-eccc-5298-9a4a-cba0b1d7dc13",
                 "pkg:npm:express@4.17.1",
                 "vuln:CVE-2026-1001"
               ],
               "relationships": [
                 {
-                  "id": "agent:cfg-3c465df1f13e:claude-desktop->uses->server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
+                  "id": "agent:cfg-3c465df1f13e:claude-desktop->uses->server:cfg-3c465df1f13e:claude-desktop:f988b619-eccc-5298-9a4a-cba0b1d7dc13",
                   "type": "uses",
                   "source": "agent:cfg-3c465df1f13e:claude-desktop",
-                  "target": "server:15c2e86e-efea-5b60-92a1-334a30a65e2a"
+                  "target": "server:cfg-3c465df1f13e:claude-desktop:f988b619-eccc-5298-9a4a-cba0b1d7dc13"
                 },
                 {
-                  "id": "server:15c2e86e-efea-5b60-92a1-334a30a65e2a->depends_on->pkg:npm:express@4.17.1",
+                  "id": "server:cfg-3c465df1f13e:claude-desktop:f988b619-eccc-5298-9a4a-cba0b1d7dc13->depends_on->pkg:npm:express@4.17.1",
                   "type": "depends_on",
-                  "source": "server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
+                  "source": "server:cfg-3c465df1f13e:claude-desktop:f988b619-eccc-5298-9a4a-cba0b1d7dc13",
                   "target": "pkg:npm:express@4.17.1"
                 },
                 {
@@ -561,40 +561,40 @@
                   "target": "vuln:CVE-2026-1001"
                 },
                 {
-                  "id": "server:15c2e86e-efea-5b60-92a1-334a30a65e2a->provides_tool->tool:server:15c2e86e-efea-5b60-92a1-334a30a65e2a:read_file",
+                  "id": "server:cfg-3c465df1f13e:claude-desktop:f988b619-eccc-5298-9a4a-cba0b1d7dc13->provides_tool->tool:server:cfg-3c465df1f13e:claude-desktop:f988b619-eccc-5298-9a4a-cba0b1d7dc13:read_file",
                   "type": "provides_tool",
-                  "source": "server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
-                  "target": "tool:server:15c2e86e-efea-5b60-92a1-334a30a65e2a:read_file"
+                  "source": "server:cfg-3c465df1f13e:claude-desktop:f988b619-eccc-5298-9a4a-cba0b1d7dc13",
+                  "target": "tool:server:cfg-3c465df1f13e:claude-desktop:f988b619-eccc-5298-9a4a-cba0b1d7dc13:read_file"
                 },
                 {
-                  "id": "server:15c2e86e-efea-5b60-92a1-334a30a65e2a->exposes_credential->cred:server:15c2e86e-efea-5b60-92a1-334a30a65e2a:API_TOKEN",
+                  "id": "server:cfg-3c465df1f13e:claude-desktop:f988b619-eccc-5298-9a4a-cba0b1d7dc13->exposes_credential->cred:server:cfg-3c465df1f13e:claude-desktop:f988b619-eccc-5298-9a4a-cba0b1d7dc13:API_TOKEN",
                   "type": "exposes_credential",
-                  "source": "server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
-                  "target": "cred:server:15c2e86e-efea-5b60-92a1-334a30a65e2a:API_TOKEN"
+                  "source": "server:cfg-3c465df1f13e:claude-desktop:f988b619-eccc-5298-9a4a-cba0b1d7dc13",
+                  "target": "cred:server:cfg-3c465df1f13e:claude-desktop:f988b619-eccc-5298-9a4a-cba0b1d7dc13:API_TOKEN"
                 }
               ],
               "nodeIds": [
                 "agent:cfg-3c465df1f13e:claude-desktop",
-                "server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
+                "server:cfg-3c465df1f13e:claude-desktop:f988b619-eccc-5298-9a4a-cba0b1d7dc13",
                 "pkg:npm:express@4.17.1",
                 "vuln:CVE-2026-1001",
-                "tool:server:15c2e86e-efea-5b60-92a1-334a30a65e2a:read_file",
-                "cred:server:15c2e86e-efea-5b60-92a1-334a30a65e2a:API_TOKEN"
+                "tool:server:cfg-3c465df1f13e:claude-desktop:f988b619-eccc-5298-9a4a-cba0b1d7dc13:read_file",
+                "cred:server:cfg-3c465df1f13e:claude-desktop:f988b619-eccc-5298-9a4a-cba0b1d7dc13:API_TOKEN"
               ],
               "nodeLabels": {
                 "pkg:npm:express@4.17.1": "express@4.17.1",
                 "agent:cfg-3c465df1f13e:claude-desktop": "claude-desktop",
-                "server:15c2e86e-efea-5b60-92a1-334a30a65e2a": "filesystem",
+                "server:cfg-3c465df1f13e:claude-desktop:f988b619-eccc-5298-9a4a-cba0b1d7dc13": "filesystem",
                 "vuln:CVE-2026-1001": "CVE-2026-1001",
-                "tool:server:15c2e86e-efea-5b60-92a1-334a30a65e2a:read_file": "read_file",
-                "cred:server:15c2e86e-efea-5b60-92a1-334a30a65e2a:API_TOKEN": "API_TOKEN"
+                "tool:server:cfg-3c465df1f13e:claude-desktop:f988b619-eccc-5298-9a4a-cba0b1d7dc13:read_file": "read_file",
+                "cred:server:cfg-3c465df1f13e:claude-desktop:f988b619-eccc-5298-9a4a-cba0b1d7dc13:API_TOKEN": "API_TOKEN"
               },
               "edgeIds": [
-                "agent:cfg-3c465df1f13e:claude-desktop->uses->server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
-                "server:15c2e86e-efea-5b60-92a1-334a30a65e2a->depends_on->pkg:npm:express@4.17.1",
+                "agent:cfg-3c465df1f13e:claude-desktop->uses->server:cfg-3c465df1f13e:claude-desktop:f988b619-eccc-5298-9a4a-cba0b1d7dc13",
+                "server:cfg-3c465df1f13e:claude-desktop:f988b619-eccc-5298-9a4a-cba0b1d7dc13->depends_on->pkg:npm:express@4.17.1",
                 "pkg:npm:express@4.17.1->vulnerable_to->vuln:CVE-2026-1001",
-                "server:15c2e86e-efea-5b60-92a1-334a30a65e2a->provides_tool->tool:server:15c2e86e-efea-5b60-92a1-334a30a65e2a:read_file",
-                "server:15c2e86e-efea-5b60-92a1-334a30a65e2a->exposes_credential->cred:server:15c2e86e-efea-5b60-92a1-334a30a65e2a:API_TOKEN"
+                "server:cfg-3c465df1f13e:claude-desktop:f988b619-eccc-5298-9a4a-cba0b1d7dc13->provides_tool->tool:server:cfg-3c465df1f13e:claude-desktop:f988b619-eccc-5298-9a4a-cba0b1d7dc13:read_file",
+                "server:cfg-3c465df1f13e:claude-desktop:f988b619-eccc-5298-9a4a-cba0b1d7dc13->exposes_credential->cred:server:cfg-3c465df1f13e:claude-desktop:f988b619-eccc-5298-9a4a-cba0b1d7dc13:API_TOKEN"
               ],
               "findings": [
                 "CVE-2026-1001"
@@ -759,7 +759,7 @@
               "id": 1,
               "logicalLocations": [
                 {
-                  "fullyQualifiedName": "server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
+                  "fullyQualifiedName": "server:cfg-3c465df1f13e:claude-desktop:f988b619-eccc-5298-9a4a-cba0b1d7dc13",
                   "kind": "server"
                 }
               ],
@@ -819,21 +819,21 @@
               "target": "vuln:CVE-2026-1002",
               "hops": [
                 "agent:cfg-3c465df1f13e:claude-desktop",
-                "server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
+                "server:cfg-3c465df1f13e:claude-desktop:f988b619-eccc-5298-9a4a-cba0b1d7dc13",
                 "pkg:npm:express@4.17.1",
                 "vuln:CVE-2026-1002"
               ],
               "relationships": [
                 {
-                  "id": "agent:cfg-3c465df1f13e:claude-desktop->uses->server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
+                  "id": "agent:cfg-3c465df1f13e:claude-desktop->uses->server:cfg-3c465df1f13e:claude-desktop:f988b619-eccc-5298-9a4a-cba0b1d7dc13",
                   "type": "uses",
                   "source": "agent:cfg-3c465df1f13e:claude-desktop",
-                  "target": "server:15c2e86e-efea-5b60-92a1-334a30a65e2a"
+                  "target": "server:cfg-3c465df1f13e:claude-desktop:f988b619-eccc-5298-9a4a-cba0b1d7dc13"
                 },
                 {
-                  "id": "server:15c2e86e-efea-5b60-92a1-334a30a65e2a->depends_on->pkg:npm:express@4.17.1",
+                  "id": "server:cfg-3c465df1f13e:claude-desktop:f988b619-eccc-5298-9a4a-cba0b1d7dc13->depends_on->pkg:npm:express@4.17.1",
                   "type": "depends_on",
-                  "source": "server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
+                  "source": "server:cfg-3c465df1f13e:claude-desktop:f988b619-eccc-5298-9a4a-cba0b1d7dc13",
                   "target": "pkg:npm:express@4.17.1"
                 },
                 {
@@ -845,19 +845,19 @@
               ],
               "nodeIds": [
                 "agent:cfg-3c465df1f13e:claude-desktop",
-                "server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
+                "server:cfg-3c465df1f13e:claude-desktop:f988b619-eccc-5298-9a4a-cba0b1d7dc13",
                 "pkg:npm:express@4.17.1",
                 "vuln:CVE-2026-1002"
               ],
               "nodeLabels": {
                 "pkg:npm:express@4.17.1": "express@4.17.1",
                 "agent:cfg-3c465df1f13e:claude-desktop": "claude-desktop",
-                "server:15c2e86e-efea-5b60-92a1-334a30a65e2a": "filesystem",
+                "server:cfg-3c465df1f13e:claude-desktop:f988b619-eccc-5298-9a4a-cba0b1d7dc13": "filesystem",
                 "vuln:CVE-2026-1002": "CVE-2026-1002"
               },
               "edgeIds": [
-                "agent:cfg-3c465df1f13e:claude-desktop->uses->server:15c2e86e-efea-5b60-92a1-334a30a65e2a",
-                "server:15c2e86e-efea-5b60-92a1-334a30a65e2a->depends_on->pkg:npm:express@4.17.1",
+                "agent:cfg-3c465df1f13e:claude-desktop->uses->server:cfg-3c465df1f13e:claude-desktop:f988b619-eccc-5298-9a4a-cba0b1d7dc13",
+                "server:cfg-3c465df1f13e:claude-desktop:f988b619-eccc-5298-9a4a-cba0b1d7dc13->depends_on->pkg:npm:express@4.17.1",
                 "pkg:npm:express@4.17.1->vulnerable_to->vuln:CVE-2026-1002"
               ],
               "findings": [
@@ -988,7 +988,7 @@
               "id": 1,
               "logicalLocations": [
                 {
-                  "fullyQualifiedName": "server:6c55de89-f536-5a7d-a7f6-2b25e4397436",
+                  "fullyQualifiedName": "server:cfg-97fa322c7835:cursor:c6895e2a-2a3a-5bf7-8ae0-51c3e2908f3c",
                   "kind": "server"
                 }
               ],
@@ -1044,21 +1044,21 @@
               "target": "vuln:GHSA-aaaa-bbbb-cccc",
               "hops": [
                 "agent:cfg-97fa322c7835:cursor",
-                "server:6c55de89-f536-5a7d-a7f6-2b25e4397436",
+                "server:cfg-97fa322c7835:cursor:c6895e2a-2a3a-5bf7-8ae0-51c3e2908f3c",
                 "pkg:pypi:requests@2.19.0",
                 "vuln:GHSA-aaaa-bbbb-cccc"
               ],
               "relationships": [
                 {
-                  "id": "agent:cfg-97fa322c7835:cursor->uses->server:6c55de89-f536-5a7d-a7f6-2b25e4397436",
+                  "id": "agent:cfg-97fa322c7835:cursor->uses->server:cfg-97fa322c7835:cursor:c6895e2a-2a3a-5bf7-8ae0-51c3e2908f3c",
                   "type": "uses",
                   "source": "agent:cfg-97fa322c7835:cursor",
-                  "target": "server:6c55de89-f536-5a7d-a7f6-2b25e4397436"
+                  "target": "server:cfg-97fa322c7835:cursor:c6895e2a-2a3a-5bf7-8ae0-51c3e2908f3c"
                 },
                 {
-                  "id": "server:6c55de89-f536-5a7d-a7f6-2b25e4397436->depends_on->pkg:pypi:requests@2.19.0",
+                  "id": "server:cfg-97fa322c7835:cursor:c6895e2a-2a3a-5bf7-8ae0-51c3e2908f3c->depends_on->pkg:pypi:requests@2.19.0",
                   "type": "depends_on",
-                  "source": "server:6c55de89-f536-5a7d-a7f6-2b25e4397436",
+                  "source": "server:cfg-97fa322c7835:cursor:c6895e2a-2a3a-5bf7-8ae0-51c3e2908f3c",
                   "target": "pkg:pypi:requests@2.19.0"
                 },
                 {
@@ -1070,19 +1070,19 @@
               ],
               "nodeIds": [
                 "agent:cfg-97fa322c7835:cursor",
-                "server:6c55de89-f536-5a7d-a7f6-2b25e4397436",
+                "server:cfg-97fa322c7835:cursor:c6895e2a-2a3a-5bf7-8ae0-51c3e2908f3c",
                 "pkg:pypi:requests@2.19.0",
                 "vuln:GHSA-aaaa-bbbb-cccc"
               ],
               "nodeLabels": {
                 "pkg:pypi:requests@2.19.0": "requests@2.19.0",
                 "agent:cfg-97fa322c7835:cursor": "cursor",
-                "server:6c55de89-f536-5a7d-a7f6-2b25e4397436": "fetcher",
+                "server:cfg-97fa322c7835:cursor:c6895e2a-2a3a-5bf7-8ae0-51c3e2908f3c": "fetcher",
                 "vuln:GHSA-aaaa-bbbb-cccc": "GHSA-aaaa-bbbb-cccc"
               },
               "edgeIds": [
-                "agent:cfg-97fa322c7835:cursor->uses->server:6c55de89-f536-5a7d-a7f6-2b25e4397436",
-                "server:6c55de89-f536-5a7d-a7f6-2b25e4397436->depends_on->pkg:pypi:requests@2.19.0",
+                "agent:cfg-97fa322c7835:cursor->uses->server:cfg-97fa322c7835:cursor:c6895e2a-2a3a-5bf7-8ae0-51c3e2908f3c",
+                "server:cfg-97fa322c7835:cursor:c6895e2a-2a3a-5bf7-8ae0-51c3e2908f3c->depends_on->pkg:pypi:requests@2.19.0",
                 "pkg:pypi:requests@2.19.0->vulnerable_to->vuln:GHSA-aaaa-bbbb-cccc"
               ],
               "findings": [

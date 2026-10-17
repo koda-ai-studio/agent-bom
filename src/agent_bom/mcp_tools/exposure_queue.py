@@ -143,6 +143,10 @@ def summary_path(path: dict[str, Any]) -> dict[str, Any]:
     summary = {key: path[key] for key in _SUMMARY_KEYS if key in path}
     summary["source"] = _endpoint(path.get("source") or {})
     summary["target"] = _endpoint(path.get("target") or {})
+    # Preserve exact ids and evidence; omit only text already present in the endpoints.
+    source_label, target_label = summary["source"].get("label"), summary["target"].get("label")
+    if source_label and target_label and summary.get("label") == f"{target_label} via {source_label}":
+        summary.pop("label", None)
     node_ids = list(path.get("nodeIds") or [])
     # Source and target are listed once, as endpoints; ``via`` holds the hops between them.
     summary["via"] = node_ids[1:-1]

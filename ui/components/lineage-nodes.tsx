@@ -44,6 +44,8 @@ export type LineageNodeData = {
   dataSources?: string[] | undefined;
   /** Distinguishes same-image container occurrences (inventory vs deployment). */
   occurrenceRole?: string | undefined;
+  /** Visible distinction for same-name nodes; never substitutes for their IDs. */
+  identityContext?: string | undefined;
   dimensions?: import("@/lib/graph-schema").NodeDimensions | undefined;
   complianceTags?: string[] | undefined;
   attributes?: Record<string, unknown> | undefined;
@@ -190,6 +192,7 @@ function NodeCard({
         </span>
         {data.occurrenceRole && <span style={{ fontSize: "var(--graph-node-meta-size, 10px)" }} data-testid="graph-occurrence-role" className="rounded border border-outline-strong px-1 text-[10px] font-medium uppercase tracking-wide text-ink-secondary">{data.occurrenceRole}</span>}
       </NodeBadgeRow>
+      {data.identityContext && <p data-testid="graph-identity-context" className="mt-1 max-w-full break-words text-xs text-ink-secondary" style={{ fontSize: "var(--graph-node-meta-size, 12px)" }}>{data.identityContext}</p>}
       {data.runtimeEvidenceTier && data.runtimeEvidenceTier !== "static_scan" && <div className="mt-1">
         <RuntimeEvidenceChip tier={data.runtimeEvidenceTier} />
       </div>}
@@ -888,7 +891,7 @@ const DETAIL_RENDERERS: Record<
 };
 
 function AdaptiveLineageNode({ data }: { data: LineageNodeData }) {
-  if (data.rollup) return <GraphScopeNode item={data.rollup} compact={data.rollupCompact} dimmed={data.dimmed} highlighted={data.highlighted} />;
+  if (data.rollup) return <GraphScopeNode item={data.rollup} identityContext={data.identityContext} compact={data.rollupCompact} dimmed={data.dimmed} highlighted={data.highlighted} />;
   if (data.renderBand === "cluster") return <ClusterBubbleNode data={data} />;
   if (data.renderBand === "summary") return <SummaryNode data={data} />;
   const Renderer = DETAIL_RENDERERS[data.nodeType] ?? SummaryNode;

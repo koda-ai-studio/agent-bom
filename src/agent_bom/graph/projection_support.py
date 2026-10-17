@@ -98,3 +98,17 @@ def _normalized_environment(*candidates: object) -> str:
         if text:
             return text
     return ""
+
+
+def server_child_aliases(graph: UnifiedGraph, server_id: str, prefix: str, name: str) -> list[str]:
+    """Carry exact historical server references to their recorded child slot.
+
+    Several current instances may claim a historical slot; consumers must
+    resolve aliases uniquely, never choose an arbitrary candidate.
+    """
+    server = graph.nodes.get(server_id)
+    identity = server.attributes.get("identity") if server else None
+    aliases = identity.get("aliases") if isinstance(identity, dict) else None
+    return (
+        sorted({f"{prefix}:{alias}:{name}" for alias in aliases if isinstance(alias, str) and alias}) if isinstance(aliases, list) else []
+    )

@@ -27,7 +27,7 @@ import {
 } from "@/lib/graph-utils";
 import { displayContextDescription } from "@/lib/context-graph";
 import { FLOW_NODE_TYPES, lineageNodeTypeForEntity } from "@/lib/graph-entity-mapping";
-import { assignOccurrenceRoles } from "@/lib/graph-occurrence-role";
+import { assignCollisionScopes, assignOccurrenceRoles } from "@/lib/graph-occurrence-role";
 import { CONSEQUENTIAL_RELATIONSHIPS, isObservedAccess } from "@/lib/graph-access-evidence";
 import {
   EntityType,
@@ -245,6 +245,7 @@ export function buildUnifiedFlowGraph(
     prunedNodes.map((node) => node.data.nodeType),
   );
   assignOccurrenceRoles(prunedNodes);
+  assignCollisionScopes(prunedNodes);
   const summary = buildSummary(prunedNodes, graph);
   const legend = legendForNodeTypes(visibleNodeTypes);
 
