@@ -191,6 +191,15 @@ Access & keys, Audit history and Control plane security surfaces according to
 server-reported capabilities; they do not create additional tenant memberships.
 Appearance supports light, dark and system preferences saved in the browser.
 
+Browser-cookie verification reuses one derived signing key per API process.
+The configured secret is read on every verification, so rotating the environment
+value or mounted secret file invalidates cookies signed with the previous key;
+restart processes to apply changes to their inherited environment. A configured
+secret file that becomes unreadable does not fall back to the cached key. This
+cache does not retain authentication decisions: expiry, revocation, current
+backing-key permissions, tenant policy and CSRF checks still apply. Malformed
+cookies fail closed before signing-key derivation.
+
 **Sign out** revokes the local browser session and clears in-memory response
 caches. The UI locks immediately, rejects late authentication responses and
 propagates sign-out to other same-origin tabs. A failed revocation remains an
