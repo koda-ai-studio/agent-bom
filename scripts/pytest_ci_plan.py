@@ -18,6 +18,7 @@ AUTHORIZATION_SOURCES = frozenset(
     {
         "src/agent_bom/rbac.py",
         "src/agent_bom/api/auth.py",
+        "src/agent_bom/api/browser_session.py",
         "src/agent_bom/api/middleware.py",
         "src/agent_bom/api/auth_posture.py",
         "src/agent_bom/api/auth_runtime_state.py",
@@ -40,6 +41,8 @@ AUTHORIZATION_CONTRACTS = (
     "tests/test_api_route_policy.py",
     "tests/api/test_operation_scope_coverage.py",
     "tests/api/test_session_authorization_backends.py",
+    "tests/api/test_browser_session_signing_cost.py",
+    "tests/api/test_api_hardening.py",
     "tests/api/test_auth_scope_boundaries.py",
     "tests/api/test_auth_contract_matrix.py",
     "tests/api/test_stream_authorization.py",

@@ -128,7 +128,7 @@ def test_route_and_shared_auth_edits_always_select_mounted_operation_matrix(tmp_
     expected = sorted(tmp_path / path for path in AUTHORIZATION_CONTRACTS)
     for path in expected:
         _write(path, 1)
-    for source in [*AUTHORIZATION_SOURCES, "src/agent_bom/api/routes/new_surface.py"]:
+    for source in [*AUTHORIZATION_SOURCES, "src/agent_bom/api/browser_session.py", "src/agent_bom/api/routes/new_surface.py"]:
         assert select_targeted_tests(changed_files=[Path(source)], root=tmp_path) == expected
 
 
