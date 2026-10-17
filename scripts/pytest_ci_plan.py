@@ -569,6 +569,15 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
                 )
                 if root / path in available
             )
+        if normalized.as_posix() in {
+            "tests/api/test_api_endpoints.py",
+            "tests/api/test_api_dashboard_deeplink_routes.py",
+        }:
+            selected.update(
+                root / "tests/api" / name
+                for name in ("test_api_endpoints.py", "test_api_dashboard_deeplink_routes.py", "test_operation_scope_coverage.py")
+                if root / "tests/api" / name in available
+            )
         if normalized.as_posix() in {"src/agent_bom/api/server.py", "src/agent_bom/api/dashboard_missing.py"}:
             selected.update(
                 root / path

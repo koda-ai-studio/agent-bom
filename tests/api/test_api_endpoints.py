@@ -27,6 +27,15 @@ from agent_bom.models import Severity, Vulnerability
 
 
 @pytest.fixture(autouse=True)
+def _isolate_dashboard_mount_registry(monkeypatch):
+    from agent_bom.api import middleware
+
+    # Fixture apps share the startup registry with the process app.
+    monkeypatch.setattr(middleware, "_DASHBOARD_SPA_ROUTES", middleware._DASHBOARD_SPA_ROUTES)
+    monkeypatch.setattr(middleware, "_DASHBOARD_PUBLIC_FILES", middleware._DASHBOARD_PUBLIC_FILES)
+
+
+@pytest.fixture(autouse=True)
 def _mock_scan_pipeline(monkeypatch):
     """Prevent real MCP discovery during scan CRUD tests.
 

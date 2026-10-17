@@ -714,3 +714,14 @@ def test_technique_receipt_edits_select_source_and_surface_contract(tmp_path, so
     for path in expected:
         _write(path, 1)
     assert select_targeted_tests(changed_files=[Path("src/agent_bom") / source], root=tmp_path) == expected
+
+
+@pytest.mark.parametrize("changed", ["test_api_endpoints.py", "test_api_dashboard_deeplink_routes.py"])
+def test_dashboard_mount_fixtures_select_scope_isolation_contracts(tmp_path, changed):
+    expected = sorted(
+        tmp_path / "tests/api" / name
+        for name in ("test_api_endpoints.py", "test_api_dashboard_deeplink_routes.py", "test_operation_scope_coverage.py")
+    )
+    for path in expected:
+        _write(path, 1)
+    assert select_targeted_tests(changed_files=[Path("tests/api") / changed], root=tmp_path) == expected
