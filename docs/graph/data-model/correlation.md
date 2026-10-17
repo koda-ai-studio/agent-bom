@@ -120,7 +120,7 @@ Top-level branches of `correlation_identity`, in evaluation order. The first bra
 | `fleet` | 9 | — | `endpoint:{endpoint_id}` |
 | `framework` | 9 | — | `stable_node_id(…) — UUIDv5` |
 | `group` | 8 | — | — |
-| `managed_identity` | 8 | — | `managed_identity:{provider}:{identity_id}` |
+| `managed_identity` | 8 | — | `configured_identity:{digest}`, `managed_identity:{provider}:{identity_id}` |
 | `misconfiguration` | 9 | — | `misconfig:cloud-org:{provider}:{check_id}`, `misconfig:graph_analysis:{fid}`, `misconfig:sast:{rule_id}:{finding_path}:{finding_line}` (+2) |
 | `model` | 9 | — | — |
 | `org` | 7 | — | `org:snowflake:{org_name}` |

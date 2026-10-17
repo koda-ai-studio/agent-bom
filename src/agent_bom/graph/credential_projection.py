@@ -10,10 +10,9 @@ from agent_bom.graph.correlation_scope import runtime_stable_identity
 from agent_bom.graph.credential_identity import slot_receipt
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.edge_evidence import edge_evidence
-from agent_bom.graph.node import NodeDimensions, UnifiedNode
+from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.projection_support import server_child_aliases
 from agent_bom.graph.types import EntityType, RelationshipType
-from agent_bom.security import sanitize_text
 
 
 def project_credentials(
@@ -27,7 +26,6 @@ def project_credentials(
     for env_key in env_keys:
         cred_id = f"cred:{srv_id}:{env_key}"
         _add_credential(graph, cred_id, srv_id, env_key, tool_ids, data_source_tag, configured_by)
-        _add_identity_bindings(graph, srv_dict, cred_id, env_key, data_source_tag)
 
 
 def _add_credential(
@@ -77,46 +75,5 @@ def _add_credential(
                     "mapping_method": "server_scope_conservative",
                     "confidence": "medium",
                 },
-            )
-        )
-
-
-def _add_identity_bindings(graph: UnifiedGraph, srv_dict: Mapping[str, Any], cred_id: str, env_key: str, data_source_tag: str) -> None:
-    for binding in srv_dict.get("identity_bindings", []):
-        if not isinstance(binding, Mapping) or binding.get("credential_ref") != env_key:
-            continue
-        identity_id = sanitize_text(str(binding.get("identity_canonical_id") or "").strip())
-        evidence_source = sanitize_text(str(binding.get("evidence_source") or "").strip())
-        if not identity_id or not evidence_source:
-            continue
-        provider = sanitize_text(str(binding.get("provider") or "").strip().lower())
-        graph.add_node(
-            UnifiedNode(
-                id=identity_id,
-                entity_type=EntityType.MANAGED_IDENTITY,
-                label=identity_id.rsplit(":", 1)[-1],
-                attributes={
-                    "canonical_id": identity_id,
-                    "provider": provider,
-                    "evidence_source": evidence_source,
-                    "credential_ref": env_key,
-                },
-                data_sources=[data_source_tag, evidence_source],
-                dimensions=NodeDimensions(cloud_provider=provider),
-            )
-        )
-        graph.add_edge(
-            UnifiedEdge(
-                source=cred_id,
-                target=identity_id,
-                relationship=RelationshipType.AUTHENTICATES_AS,
-                evidence={
-                    "source": evidence_source,
-                    "tier": "modeled_infrastructure",
-                    "credential_ref": env_key,
-                    "mapping_method": "explicit_identity_binding",
-                    "confidence": "high",
-                },
-                confidence=1.0,
             )
         )

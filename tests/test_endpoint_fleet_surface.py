@@ -123,6 +123,31 @@ def test_endpoint_inventory_is_a_privacy_safe_fleet_graph_node() -> None:
     assert "com.example.agent" not in serialized
 
 
+def test_endpoint_connects_only_exact_source_scoped_agents() -> None:
+    from agent_bom.graph.types import RelationshipType
+
+    graph = build_unified_graph_from_report(
+        {
+            "source_id": "device-a",
+            "endpoint_inventory": _endpoint_inventory(),
+            "agents": [{"name": "same", "source_id": scope, "mcp_servers": [{"name": "tools"}]} for scope in ("device-a", "device-b", "")],
+        },
+        tenant_id="tenant-a",
+    )
+    hosts = [edge for edge in graph.edges if edge.source == "endpoint:device-a" and edge.relationship is RelationshipType.HOSTS]
+    assert len(hosts) == 1
+    assert graph.nodes[hosts[0].target].attributes["source_id"] == "device-a"
+    assert hosts[0].evidence["identity_match_basis"] == "exact_source_id"
+    assert hosts[0].evidence["execution_proven"] is False
+    assert graph.nodes["endpoint:device-a"].attributes["bound_agent_count"] == 1
+
+
+def test_endpoint_summary_without_matching_agents_is_explicitly_unbound() -> None:
+    graph = build_unified_graph_from_report({"source_id": "device-a", "endpoint_inventory": _endpoint_inventory()})
+    assert graph.nodes["endpoint:device-a"].attributes["binding_status"] == "unbound"
+    assert graph.nodes["endpoint:device-a"].attributes["bound_agent_count"] == 0
+
+
 def test_sqlite_endpoint_registry_is_tenant_scoped_filterable_and_paged(tmp_path: Path) -> None:
     store = SQLiteFleetStore(str(tmp_path / "fleet.db"))
     for tenant_id, endpoint_id, system in (

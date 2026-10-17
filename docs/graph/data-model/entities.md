@@ -23,7 +23,7 @@ Id formats:
 
 ## `agent`
 
-Emitted by: `graph/agent_projection.py`, `graph/builder_overlays.py`, `graph/builder_snowflake_cortex.py`, `graph/builder_snowflake_governance.py`, `graph/delta_digest.py`, `graph/dependency_reach.py`, `graph/framework_topology_projection.py`, `graph/governance_overlay.py`, `graph/interaction_risk_ids.py`, `graph/runtime_projection.py`, `graph/toxic_findings.py`, `graph/trace_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
+Emitted by: `graph/agent_projection.py`, `graph/builder_overlays.py`, `graph/builder_snowflake_cortex.py`, `graph/builder_snowflake_governance.py`, `graph/delta_digest.py`, `graph/dependency_reach.py`, `graph/endpoint_overlay.py`, `graph/framework_topology_projection.py`, `graph/governance_overlay.py`, `graph/interaction_risk_ids.py`, `graph/runtime_projection.py`, `graph/toxic_findings.py`, `graph/trace_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
 
 ## `api_gateway`
 
@@ -172,10 +172,11 @@ Emitted by: `graph/authorization_evidence.py`, `graph/builder.py`, `graph/cloud_
 
 ## `managed_identity`
 
-Emitted by: `graph/authorization_evidence.py`, `graph/cloud_compute_projection.py`, `graph/cloud_context.py`, `graph/cloud_rbac.py`, `graph/credential_projection.py`, `graph/governance_overlay.py`, `graph/identity_nodes.py`, `graph/nhi_overlay.py`
+Emitted by: `graph/authorization_evidence.py`, `graph/cloud_compute_projection.py`, `graph/cloud_context.py`, `graph/cloud_rbac.py`, `graph/credential_bindings.py`, `graph/governance_overlay.py`, `graph/identity_nodes.py`, `graph/nhi_overlay.py`
 
 Id formats:
 
+- `configured_identity:{digest}`
 - `managed_identity:{provider}:{identity_id}`
 
 ## `misconfiguration`

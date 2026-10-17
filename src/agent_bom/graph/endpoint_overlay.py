@@ -7,8 +7,9 @@ from typing import Any
 
 from agent_bom.api.fleet_store import endpoint_summary_from_inventory
 from agent_bom.graph.container import UnifiedGraph
+from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
-from agent_bom.graph.types import EntityType
+from agent_bom.graph.types import EntityType, RelationshipType
 
 
 def apply_endpoint_inventory_overlay(graph: UnifiedGraph, report: Mapping[str, Any]) -> int:
@@ -25,6 +26,7 @@ def apply_endpoint_inventory_overlay(graph: UnifiedGraph, report: Mapping[str, A
         scan_id=graph.scan_id,
         observed_at=str(report.get("observed_at") or report.get("scan_timestamp") or ""),
     )
+    bound = [node.id for node in graph.iter_nodes_by_type(EntityType.AGENT) if node.attributes.get("source_id") == endpoint_id]
     graph.add_node(
         UnifiedNode(
             id=f"endpoint:{endpoint_id}",
@@ -39,9 +41,26 @@ def apply_endpoint_inventory_overlay(graph: UnifiedGraph, report: Mapping[str, A
                 "privacy": summary.privacy,
                 "completeness": summary.completeness,
                 "last_scan_id": summary.last_scan_id,
+                "bound_agent_count": len(bound),
+                "binding_status": "bound" if bound else "unbound",
             },
             dimensions=NodeDimensions(surface="endpoint", environment="workstation"),
             data_sources=["endpoint_inventory"],
         )
     )
+    for agent_id in bound:
+        graph.add_edge(
+            UnifiedEdge(
+                source=f"endpoint:{endpoint_id}",
+                target=agent_id,
+                relationship=RelationshipType.HOSTS,
+                evidence={
+                    "source": "endpoint_inventory",
+                    "tier": "static_scan",
+                    "identity_match_basis": "exact_source_id",
+                    "source_id": endpoint_id,
+                    "execution_proven": False,
+                },
+            )
+        )
     return 1

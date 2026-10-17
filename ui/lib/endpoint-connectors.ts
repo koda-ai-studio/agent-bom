@@ -38,6 +38,17 @@ export interface EndpointDevice {
   attributes: Record<string, unknown>;
 }
 export interface EndpointInventory {
+  coverage?: {
+    expected_devices: number | null;
+    observed_devices: number;
+    not_observed_devices: number | null;
+    page_devices: number;
+    page_stale_devices: number;
+    page_unknown_freshness_devices: number;
+    page_unbound_devices: number;
+    collection_status: string;
+    collection_gap: string;
+  };
   recent_receipts?: EndpointSync[];
   schema_version: string;
   sync: EndpointSync | null;

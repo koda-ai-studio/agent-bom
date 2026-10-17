@@ -740,7 +740,8 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
     "target_types": [
       "managed_identity",
       "service_account",
-      "service_principal"
+      "service_principal",
+      "role"
     ],
     "traversable": true,
     "traversal_class": "authority"

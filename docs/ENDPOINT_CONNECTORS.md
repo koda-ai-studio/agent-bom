@@ -59,6 +59,12 @@ paginated evidence, not a transactionally consistent vendor snapshot.
 
 The JSON artifact contains canonical device IDs, provider observation time,
 collection time, freshness, scope, the collection denominator and recent receipts.
+Its `coverage` block separates collection-wide expected, observed and not-yet-observed
+devices from `page_*` counts for the returned page: stale observations, unknown
+freshness and devices without an active agent association. Retired associations
+do not count as bound. Partial/failed collection and its gap remain explicit;
+unobserved devices are not classified as clean or individually failed. The
+Connections evidence view shows these same denominators before the device rows.
 It is endpoint evidence, not an AI SBOM, CVE scan, compliance certification, or
 proof that installed software executed. Missing, malformed, stale and future-dated
 observations cannot satisfy posture requirements. A healthy Falcon sensor does
@@ -81,6 +87,13 @@ include tenant, provider and account scope. Existing deployment wrappers and
 already-fetched generic posture ingestion remain supported. The old Falcon JSON
 normalizer now also leaves policy compliance unknown; policies that previously
 relied on `status=normal` to authorize access must supply real compliance evidence.
+
+Local endpoint scan reports connect an endpoint summary to agents only when the
+agent's explicit `source_id` matches the report's endpoint ID. The graph records
+`bound_agent_count` and `binding_status`; a summary with no matching agents stays
+unbound. These static inventory links do not establish execution, effective
+permission or exploitability. Provider-recorded associations remain separate
+from these local source bindings and do not automatically create a risk path.
 
 ```bash
 agent-bom connect endpoints bind-agent DEVICE_ID FLEET_AGENT_ID

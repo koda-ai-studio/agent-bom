@@ -361,6 +361,7 @@ _SPECS: tuple[RelationshipSpec, ...] = (
         "governance",
         (E.AGENT, E.CREDENTIAL),
         (E.MANAGED_IDENTITY, E.SERVICE_ACCOUNT, E.SERVICE_PRINCIPAL),
+        extra=((E.CREDENTIAL, E.ROLE),),
     ),
     _spec(R.SCOPED_TO, T.GOVERNANCE, "governance", (E.MANAGED_IDENTITY, E.ACCESS_GRANT, E.DRIFT_INCIDENT), (E.TOOL,)),
     _spec(
