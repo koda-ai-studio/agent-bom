@@ -184,6 +184,7 @@ metadata or environment defaults.
 
 - `check` supports terminal output by default plus `--format json` for machine-readable pre-install verdicts.
 - `report history` and `report diff` support `--format json` for CI and automation.
+- `report impact after.json --before before.json -o impact.html` creates a local, expandable impact brief. Counts retain distinct identities; missing findings do not verify fixes. Omit `--before` for a single scan or use `--format json` for structured output.
 - `report pipeline-events <scan-job.json>` exports structured scan progress as JSONL for DAG/dashboard consumers.
 - `report query "SELECT ..."` runs read-only SQL against the local scan analytics store.
 - `remediate` is read-only by default and supports `--format json` as the machine-readable remediation contract.

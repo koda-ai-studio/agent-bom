@@ -140,6 +140,12 @@ remediation. For an installed Python dependency update, use
 For reviewed relationship comparisons, use
 [Measure an investigation and rescan](operations/INVESTIGATION_MEASUREMENT.md).
 
+To explain retained scan results to another reviewer, create a
+[shareable impact brief](operations/IMPACT_BRIEF.md) with
+`agent-bom report impact after.json --before before.json -o impact-change.html`.
+This local command reads saved scan JSON. It does not run as an MCP tool or
+turn missing findings into verified fixes.
+
 ## Choose a profile for other work
 
 Start with `agent-bom mcp server`. The default `scan` profile exposes eight tools:
