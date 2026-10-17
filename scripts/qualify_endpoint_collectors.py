@@ -11,13 +11,14 @@ import argparse
 import hashlib
 import json
 import platform
+import socket
 import subprocess
 import time
 from datetime import datetime, timezone
 from pathlib import Path
 
 from agent_bom import __version__
-from agent_bom.endpoint.inventory import collect_endpoint_inventory
+from agent_bom.endpoint.inventory import _default_runner, collect_endpoint_inventory
 
 CORE = {"applications", "processes", "services", "listeners"}
 ALL = CORE | {"containers", "images"}
@@ -46,6 +47,7 @@ def assess(inventory: dict, *, system: str, max_items: int) -> dict:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--timeout-seconds", type=int, choices=range(1, 61), default=5)
     args = parser.parse_args()
     args.output.parent.mkdir(parents=True, exist_ok=True)
     # Reserve the receipt before collection; never replace a previous failed run.
@@ -59,6 +61,7 @@ def main() -> int:
             "machine": platform.machine(),
             "python": platform.python_version(),
             "max_items": 64,
+            "command_timeout_seconds": args.timeout_seconds,
             "evidence": "native-host-collector-execution",
             "universal_os_coverage": False,
         }
@@ -71,7 +74,24 @@ def main() -> int:
         except OSError:
             receipt.update({"source_commit": "unknown", "source_tree": "unknown"})
         try:
-            receipt.update(assess(collect_endpoint_inventory(max_items=64), system=platform.system(), max_items=64))
+            commands = []
+
+            def runner(command, timeout):
+                result = _default_runner(command, timeout)
+                commands.append({"executable": command[0], "status": result.status, "returncode": result.returncode})
+                return result
+
+            # Give the listener collector a known, owned resource even on an
+            # otherwise idle CI host. The socket accepts no external traffic.
+            with socket.socket() as listener:
+                listener.bind(("127.0.0.1", 0))
+                listener.listen(1)
+                port = listener.getsockname()[1]
+                inventory = collect_endpoint_inventory(max_items=64, timeout_seconds=args.timeout_seconds, runner=runner)
+                receipt.update(assess(inventory, system=platform.system(), max_items=64))
+                receipt["fixture_listener_observed"] = any(row.get("port") == port for row in inventory.get("listeners", []))
+                receipt["passed"] = receipt["passed"] and receipt["fixture_listener_observed"]
+            receipt["commands"] = commands
         except Exception as exc:
             receipt.update({"passed": False, "error_type": type(exc).__name__})
         receipt["elapsed_seconds"] = round(time.monotonic() - start, 3)

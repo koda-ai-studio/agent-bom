@@ -19,9 +19,16 @@ stays partial. Optional container/image collection may be unavailable, and
 `all_collectors_complete` remains false. A container without a service manager
 cannot establish host service coverage.
 
-The endpoint CI matrix runs this same command on Linux, macOS and Windows,
+The harness opens an owned loopback TCP listener during collection and requires
+its discovery, so an idle host still has a known listener to inspect. Command
+receipts retain executable names, status and exit codes, excluding arguments and
+command output. The default command deadline is five seconds; use
+`--timeout-seconds 30` for a separately recorded longer-deadline run.
+
+The endpoint CI matrix uses a 30-second command deadline on Linux, macOS and Windows,
 retaining receipts even on failure. Inspect the receipt and runner permissions
-before treating a packaging result as collector qualification.
+before treating a packaging result as collector qualification. A passing run at
+30 seconds does not qualify the normal five-second collector deadline.
 
 ## Optional ClickHouse analytics
 
