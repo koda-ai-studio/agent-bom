@@ -687,3 +687,10 @@ def test_inventory_identity_edits_select_portable_round_trip_consumers(tmp_path,
     for path in expected:
         _write(path, 1)
     assert select_targeted_tests(changed_files=[Path("src/agent_bom") / source], root=tmp_path) == expected
+
+
+@pytest.mark.parametrize("source", ["output/impact_brief.py", "output/impact_html.py", "cli/_impact.py", "cli/_report_group.py"])
+def test_impact_reporting_selects_identity_and_receipt_contract(tmp_path, source):
+    expected = tmp_path / "tests/test_impact_brief.py"
+    _write(expected, 1)
+    assert select_targeted_tests(changed_files=[Path("src/agent_bom") / source], root=tmp_path) == [expected]

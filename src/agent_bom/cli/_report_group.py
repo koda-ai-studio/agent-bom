@@ -22,6 +22,7 @@ from typing import Any
 import click
 
 from agent_bom.cli._grouped_help import SuggestingGroup
+from agent_bom.cli._impact import write_impact_brief
 
 
 @click.group("report", cls=SuggestingGroup, invoke_without_command=True)
@@ -34,6 +35,7 @@ def report_group(ctx: click.Context) -> None:
       history     List saved scan reports
       diff        Diff two scan reports or CycloneDX/SPDX SBOMs
       rescan      Re-scan vulnerable packages to verify remediation
+      impact      Share a bounded impact brief from saved scan evidence
       compliance-narrative  Generate auditor-facing compliance narrative from a saved scan report
       pipeline-events  Export scan pipeline DAG events as JSONL
       query       Run read-only SQL against the local scan analytics store
@@ -45,6 +47,17 @@ def report_group(ctx: click.Context) -> None:
     """
     if ctx.invoked_subcommand is None:
         click.echo(ctx.get_help())
+
+
+@report_group.command("impact")
+@click.argument("scan_json", type=click.Path(exists=True, dir_okay=False, path_type=Path))
+@click.option("--before", type=click.Path(exists=True, dir_okay=False, path_type=Path), help="Earlier saved scan JSON.")
+@click.option("--limit", type=click.IntRange(1, 50), default=10, show_default=True)
+@click.option("--format", "output_format", type=click.Choice(["html", "json"]), default="html", show_default=True)
+@click.option("-o", "--output", type=click.Path(dir_okay=False, path_type=Path), required=True)
+def impact_cmd(scan_json: Path, before: Path | None, limit: int, output_format: str, output: Path) -> None:
+    """Build a local impact brief; missing findings do not verify remediation."""
+    write_impact_brief(scan_json, before=before, limit=limit, output_format=output_format, output=output)
 
 
 @click.command("pipeline-events")
