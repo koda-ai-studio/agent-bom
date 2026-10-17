@@ -1,57 +1,77 @@
-# MITRE ATLAS Coverage
+# MITRE ATLAS associations and source receipts
 
-agent-bom maps blast-radius findings to MITRE ATLAS (Adversarial Threat Landscape
-for Artificial-Intelligence Systems). The coverage model is **two-tier**:
-
-1. A **curated tag-surface** of 65 techniques (`src/agent_bom/atlas.py`,
-   `ATLAS_TECHNIQUES`). These are the techniques the static, agentless
-   blast-radius tagger lights up with high precision.
-2. A **bundled reference catalog** of the full upstream ATLAS publication
-   (`src/agent_bom/data/mitre_atlas_catalog.json`, fetched from
-   [`mitre-atlas/atlas-data`](https://github.com/mitre-atlas/atlas-data)).
-   This is reference data only — used to surface "X of N upstream
-   techniques covered" rollups in the dashboard, SARIF, and JSON outputs.
-
-The curated set stays load-bearing for tagging precision. The full catalog is
-not used for tagging.
-
-## Why a curated subset?
-
-The full upstream catalog (ATLAS 5.6.0 ships 170 techniques + sub-techniques)
-covers everything from passive recon through runtime model evasion campaigns.
-A static SBOM-style scanner can only observe a subset of those signals. The
-curation rules:
-
-- **Include** techniques observable from package metadata, IaC manifests,
-  MCP tool capability, exposed credentials, severity, and CVE category.
-- **Exclude** techniques that fundamentally require runtime model probing,
-  inference-time observation, training-pipeline telemetry, or red-team
-  campaign data — tagging those statically would fabricate signal.
-
-If a curated technique drifts out of the upstream catalog, the
-`test_atlas_curated_subset_stays_in_upstream_catalog` test in
-`tests/test_atlas_fetch.py` fails. Refresh the bundled catalog via
-`agent-bom db update-frameworks --framework atlas`, or fix the curated tag
-map.
-
-## Refreshing the bundled catalog
+Run a scan and retain the JSON artifact:
 
 ```bash
-# Refresh both MITRE ATT&CK and ATLAS bundled catalogs locally.
-agent-bom db update-frameworks --framework atlas
-
-# Inspect freshness (used by the release-time freshness gate).
-agent-bom db framework-status --framework atlas --stale-after-days 180
-
-# Fail-fast in CI (the agent-bom release workflow does exactly this).
-agent-bom db framework-status --framework atlas \
-  --stale-after-days 180 --fail-on-stale --format json
+agent-bom scan --demo --offline -f json -o atlas-example.json
 ```
 
-The release workflow gates on the `atlas-catalog-freshness-gate` job, which
-mirrors the shape of the `mcp-registry-freshness-gate`.
+The demo uses synthetic findings and may exit nonzero for its seeded
+vulnerabilities. Inspect `findings[].atlas_tags` and
+`findings[].evidence.atlas_mapping_evidence`; an empty mapping is a valid result.
+For your own inventory, run `agent-bom scan -f json -o scan.json`, then review each
+association's source chain before using it in an investigation.
 
-## Included — curated 65 techniques
+## What a package mapping means
+
+A package finding must have AI/MCP inventory context and an advisory CWE with
+an explicit relationship in the locally selected catalogs:
+
+`advisory CWE → CAPEC/ATT&CK bridge → ATT&CK technique → ATLAS ATT&CK reference`
+
+The scanner matches the exact ATT&CK ID. It does not promote a sub-technique to
+its parent or infer jailbreak, poisoning, exfiltration, compromise or business
+impact from severity, an AI-looking package name, a declared tool or a credential
+reference. Without a supported chain and source digests, it abstains.
+
+For example, the bundled catalog associates CWE-285 with ATT&CK T1005, and
+ATLAS AML.T0037 explicitly references T1005. This is a weakness association in
+AI/MCP inventory. It is not evidence that anyone collected local data.
+
+The source catalogs are maintained by [MITRE ATT&CK](https://attack.mitre.org/)
+and [MITRE ATLAS](https://github.com/mitre-atlas/atlas-data). The bundled snapshot
+is versioned reference material; catalog membership and vocabulary size are not
+detection coverage. Other finding types retain their own technique evidence.
+
+## Frozen source receipts
+
+New package mappings retain `basis: catalog_weakness_association`, CWE IDs,
+`attack_reference`, the ATLAS version, both normalized catalog SHA-256 digests,
+and `execution_proven: false`. Receipts are frozen when the scan assigns tags;
+viewing an older finding does not recompute its mapping with a newer catalog.
+Legacy tags without receipts remain readable but acquire no retroactive source
+claim. Conflicting catalog receipts remain separate during graph aggregation.
+
+- JSON, SARIF and scan API responses carry the same mapping receipt.
+- CycloneDX properties and SPDX annotations retain package-scoped receipts.
+- HTML and Markdown reports show the source chain and hashes.
+- Scan-result cards expose **Mapping sources**; graph receipts accompany the
+  finding relationship and never create a traversal edge.
+- MITRE ATT&CK and ATLAS are applicability overlays, excluded from control pass
+  rates in the API, dashboard and HTML report.
+
+Neither the presence nor absence of a tag establishes observed execution,
+effective access, exploitability, certification or an audit opinion.
+
+## Inspecting and refreshing catalogs
+
+```bash
+agent-bom db framework-status --framework atlas --stale-after-days 180
+agent-bom db update-frameworks --framework atlas
+agent-bom db framework-status --framework atlas --stale-after-days 180 --fail-on-stale --format json
+```
+
+The update command refreshes the local catalog cache; it does not rewrite a
+past scan's receipts or the package's bundled snapshot. Review catalog status
+and pinned source metadata independently of finding applicability.
+
+## Supported label vocabulary
+
+The following 65 labels are available for findings. This is a vocabulary, not
+a claim that static scanning detects all these techniques. The package mapper
+emits only entries with a supported source chain. The bundled catalog contains
+additional reference entries; `tests/test_atlas_fetch.py` checks that every
+supported label exists in that snapshot.
 
 | Technique | Name |
 |---|---|
@@ -120,33 +140,3 @@ mirrors the shape of the `mcp-registry-freshness-gate`.
 | `AML.T0071` | False RAG Entry Injection |
 | `AML.T0073` | Impersonation |
 | `AML.T0074` | Masquerading |
-
-## Excluded — examples and reasons
-
-The full bundled catalog contains 105 additional sub-techniques and
-runtime-only techniques. Representative excluded entries:
-
-| Technique | Name | Why excluded |
-|---|---|---|
-| `AML.T0000.000` | Journals and Conference Proceedings | Recon sub-technique not observable from artifacts agent-bom inspects |
-| `AML.T0000.001` | Pre-Print Repositories | Same — passive intel collection signal |
-| `AML.T0002.000` | Datasets (Acquire Public AI Artifacts sub) | Acquisition act, not a static observable |
-| `AML.T0003` | Search Victim-Owned Websites | Active recon outside agent-bom scope |
-| `AML.T0005.000` | Train Proxy via Gathered AI Artifacts | Adversary-side training, requires runtime telemetry |
-| `AML.T0005.001` | Train Proxy via Replication | Same |
-| `AML.T0008.001` | Consumer Hardware (Acquire Infrastructure sub) | Adversary procurement signal |
-| `AML.T0015.x` | Evade AI Model sub-techniques | Inference-time evasion — runtime probing required |
-| `AML.T0020.x` | Poison Training Data sub-techniques | Detection requires training-pipeline observability |
-| `AML.T0029.x` | Denial of AI Service sub-techniques | Runtime DoS observation |
-
-A technique is excluded if its primary detection signal is **runtime
-inference**, **training-pipeline telemetry**, or **red-team campaign
-intelligence**, none of which are available to a static, agentless scanner.
-
-## Surface
-
-- **CLI / JSON / SARIF**: every blast-radius row carries `atlas_tags`.
-- **API**: `GET /v1/frameworks/catalogs` returns `frameworks.mitre_atlas`
-  with `atlas_version`, `technique_count`, `curated_count`, and source hash.
-- **Dashboard**: `/compliance` surfaces a MITRE ATLAS catalog rollup tile
-  showing curated coverage vs upstream technique count.

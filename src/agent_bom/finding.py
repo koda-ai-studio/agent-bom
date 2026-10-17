@@ -1596,7 +1596,6 @@ def blast_radius_to_finding(br: object) -> "Finding":
             identifier=pkg.purl or synthesize_purl(pkg.name, pkg.version, pkg.ecosystem),
         )
 
-    # Collect evidence
     evidence: dict = {
         "package_name": pkg.name,
         "package_version": pkg.version,
@@ -1713,8 +1712,10 @@ def blast_radius_to_finding(br: object) -> "Finding":
     package_node_id = f"pkg:{canonical_package_key(pkg.name, pkg.version or '', pkg.ecosystem or '', getattr(pkg, 'purl', None))}"
     finding_node_id = f"vuln:{vuln.id}" if vuln.id else None
 
+    from agent_bom.evidence.finding_response_fields import frozen_atlas_mapping_fields
     from agent_bom.framework_mapping import iso_control_provenance_for_cwes
 
+    evidence.update(frozen_atlas_mapping_fields(br))
     iso_provenance = iso_control_provenance_for_cwes(getattr(vuln, "cwe_ids", []) or [])
     iso_controls = []
     for control in br.iso_27001_tags:

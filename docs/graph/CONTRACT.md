@@ -483,6 +483,20 @@ unavailable without a calibrated basis. A mapped technique is not evidence that
 an attacker used it. Malformed legacy mapping entries are skipped independently;
 the stored historical payload is not rewritten.
 
+Scanner ATLAS tags require an advisory CWE, explicit AI/MCP inventory context,
+and an exact catalog bridge from that CWE through ATT&CK to an ATLAS reference.
+Package names, severity, credentials and declared tool capabilities alone do not
+establish an ATLAS technique. These are weakness associations, with
+`execution_proven: false`; catalog membership is not detection coverage.
+
+New scans freeze `atlas_mapping_evidence` with the CWE, ATT&CK reference, ATLAS
+version and both normalized catalog SHA-256 digests. Finding JSON, SARIF,
+CycloneDX properties, SPDX annotations and graph edge receipts preserve that
+association. The scan's **Mapping sources** disclosure shows the same source
+chain. Historical tags without receipts remain unqualified; reading an old scan
+does not silently re-map it against a newer catalog. Graph merges retain whole
+conflicting catalog receipts instead of combining their hashes or claims.
+
 Attack-path campaigns expose `priority_score` with
 `priority_method: structural_path_rank.v1` for structural prioritization.
 `exploitability` and `expected_risk_reduction` remain nullable, each with its own

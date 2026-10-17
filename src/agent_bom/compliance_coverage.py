@@ -190,8 +190,8 @@ TAG_MAPPED_FRAMEWORKS: tuple[ComplianceFrameworkMetadata, ...] = (
         bundled_unit="techniques",
         source_standard_size="~90",
         coverage=(
-            "Applicability overlay (not scored): LLM/AI techniques — prompt injection, jailbreak, "
-            "supply-chain, exfiltration, agent tool abuse — that the observed findings make applicable"
+            "Applicability overlay (not scored): source-backed technique associations for findings; "
+            "catalog size is not detection coverage or proof of attacker behavior"
         ),
         # ATLAS is the AI counterpart of ATT&CK: an adversary TECHNIQUE matrix,
         # which is why this entry's own catalog and unit are "techniques". The

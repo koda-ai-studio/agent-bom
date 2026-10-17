@@ -161,10 +161,20 @@ class TestCrossModuleConsistency:
     def test_vector_stores_are_ai_packages(self):
         assert VECTOR_STORE_PACKAGES <= AI_PACKAGES
 
-    def test_atlas_uses_shared_ai_packages(self):
-        from agent_bom.atlas import _AI_PACKAGES
+    def test_ai_package_catalog_does_not_establish_atlas_applicability(self):
+        from agent_bom.atlas import tag_blast_radius
+        from agent_bom.models import BlastRadius, Package, Severity, Vulnerability
 
-        assert _AI_PACKAGES is AI_PACKAGES
+        for name in sorted(AI_PACKAGES):
+            finding = BlastRadius(
+                vulnerability=Vulnerability(id="CVE-2026-1000", summary="Dependency weakness", severity=Severity.HIGH, cwe_ids=["CWE-285"]),
+                package=Package(name=name, version="1.0.0", ecosystem="pypi"),
+                affected_servers=[],
+                affected_agents=[],
+                exposed_credentials=[],
+                exposed_tools=[],
+            )
+            assert tag_blast_radius(finding) == [], name
 
     def test_nist_uses_shared_ai_packages(self):
         from agent_bom.nist_ai_rmf import _AI_PACKAGES

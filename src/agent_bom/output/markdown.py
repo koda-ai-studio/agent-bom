@@ -5,6 +5,8 @@ Produces a self-contained Markdown report with summary table and detailed findin
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from agent_bom.compliance_utils import framework_qualified_finding_tags
 from agent_bom.core.severity import severity_policy_rank
 from agent_bom.evidence.scan_run import ScanOutcome, effective_scan_run
@@ -26,6 +28,7 @@ from agent_bom.output.finding_views import (
     with_output_sanitizer_cache,
     workflow_status,
 )
+from agent_bom.output.technique_evidence import markdown_atlas_sources
 from agent_bom.security import sanitize_sensitive_payload
 
 
@@ -80,9 +83,9 @@ def to_markdown(report: AIBOMReport, blast_radii: list[BlastRadius] | None = Non
         lines.append(f"| Unrated | {unrated} |")
     lines.append("")
 
-    trust_lines = _trust_assessment_section(report)
-    if trust_lines:
-        lines.extend(trust_lines)
+    lines.extend(markdown_atlas_sources(cve_rows))
+
+    lines.extend(_trust_assessment_section(report))
 
     if not brs and not policy_findings and scan_run.outcome is ScanOutcome.COMPLETE:
         lines.append("No vulnerabilities found.")
@@ -224,8 +227,6 @@ def to_markdown(report: AIBOMReport, blast_radii: list[BlastRadius] | None = Non
 
 def export_markdown(report: AIBOMReport, output_path: str, blast_radii: list[BlastRadius] | None = None) -> None:
     """Write Markdown report to file."""
-    from pathlib import Path
-
     Path(output_path).write_text(to_markdown(report, blast_radii), encoding="utf-8")
 
 

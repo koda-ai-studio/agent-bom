@@ -21,7 +21,7 @@ from agent_bom.finding import Finding, _forward_fixed_version
 from agent_bom.mcp_blocklist import sanitize_security_intelligence_entry
 from agent_bom.models import AIBOMReport, BlastRadius
 from agent_bom.output.exposure_path import exposure_path_for_report_finding
-from agent_bom.output.finding_views import cve_findings
+from agent_bom.output.finding_views import blast_radius_output_tags, cve_findings
 from agent_bom.output.json_sections import _package_occurrence_to_dict, _severity_label, _severity_state, agents_json
 from agent_bom.output.json_writer import write_json_document
 from agent_bom.output.side_findings import _append_side_findings, stamp_finding_node_ids
@@ -818,7 +818,7 @@ def _blast_radius_json_entry(
         "exposure_path": exposure_path,
         **({"package_name": br.package.name, "package_version": br.package.version, "package_stable_id": br.package.stable_id}),
         "package_canonical_id": br.package.canonical_id,
-        **effective_blast_radius_tags(br),
+        **blast_radius_output_tags(br, finding),
         "risk_score": br.risk_score,
         "reachability": reach.verdict,
         "reachability_basis": list(reach.basis),

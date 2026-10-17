@@ -6,9 +6,12 @@ from free-text row content: scanner rows can embed paths or configuration values
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from functools import lru_cache
 from typing import Any
+
+from agent_bom.atlas import ATLAS_TECHNIQUES
 
 _PROVENANCE_KEYS = frozenset(
     {
@@ -67,3 +70,54 @@ def restored_public_fields(row: Mapping[str, Any]) -> dict[str, Any]:
     if (guidance := catalog_remediation(row)) is not None:
         fields["remediation_guidance"] = guidance
     return fields
+
+
+def safe_atlas_mapping_evidence(value: Any) -> dict[str, dict[str, Any]]:
+    """Restore only structural, scan-time catalog associations, never raw evidence."""
+    if not isinstance(value, Mapping):
+        return {}
+    result = {}
+    for technique in ATLAS_TECHNIQUES:
+        receipt = value.get(technique)
+        if (
+            not isinstance(receipt, Mapping)
+            or receipt.get("basis") != "catalog_weakness_association"
+            or receipt.get("execution_proven") is not False
+        ):
+            continue
+        hashes = {key: receipt.get(key) for key in ("atlas_catalog_sha256", "attack_catalog_sha256")}
+        if any(not isinstance(digest, str) or re.fullmatch(r"[a-f0-9]{64}", digest) is None for digest in hashes.values()):
+            continue
+        attack = receipt.get("attack_reference")
+        if not isinstance(attack, str) or re.fullmatch(r"T\d{4}(?:\.\d{3})?", attack) is None:
+            continue
+        cwes = receipt.get("cwe_ids")
+        if not isinstance(cwes, list):
+            continue
+        safe_cwes = sorted({cwe for cwe in cwes[:100] if isinstance(cwe, str) and re.fullmatch(r"CWE-\d{1,6}", cwe)})
+        if not safe_cwes:
+            continue
+        version = receipt.get("atlas_version")
+        result[technique] = {
+            "basis": "catalog_weakness_association",
+            "execution_proven": False,
+            "cwe_ids": safe_cwes,
+            "attack_reference": attack,
+            **hashes,
+            "atlas_version": version if isinstance(version, str) and re.fullmatch(r"\d{1,4}(?:\.\d{1,4}){1,3}", version) else "unknown",
+            "technique_url": f"https://atlas.mitre.org/techniques/{technique}",
+        }
+    return result
+
+
+def restore_atlas_receipts(payload: dict[str, Any], row: Mapping[str, Any]) -> None:
+    raw = row.get("evidence")
+    if isinstance(raw, Mapping) and (receipts := safe_atlas_mapping_evidence(raw.get("atlas_mapping_evidence"))):
+        payload.setdefault("evidence", {})["atlas_mapping_evidence"] = receipts
+
+
+def frozen_atlas_mapping_fields(br: object) -> dict:
+    """Project only scan-time receipts; never re-map a historical finding."""
+    receipts = getattr(br, "atlas_mapping_evidence", {})
+    supported = {tag: receipts[tag] for tag in getattr(br, "atlas_tags", []) if tag in receipts}
+    return {"atlas_mapping_evidence": supported} if supported else {}

@@ -150,7 +150,7 @@ registry_lookup(server_name="brave-search")
 ```
 
 ### compliance
-Run compliance framework checks (OWASP, MITRE ATLAS, EU AI Act, NIST, CIS, SOC 2, ISO 27001).
+Inspect framework applicability and evaluated controls (OWASP, MITRE ATLAS, EU AI Act, NIST, CIS, SOC 2, ISO 27001). MITRE technique associations are unscored and do not establish observed execution.
 ```
 compliance(frameworks=["owasp-llm", "eu-ai-act"])
 ```
@@ -474,7 +474,7 @@ runtime_evidence_ingest(
 |--------|-------------|
 | `quick-audit` | Run a scoped security audit of local AI agent and MCP setup |
 | `pre-install-check` | Check an MCP server package before installing |
-| `compliance-report` | Generate OWASP, ATLAS, and NIST compliance posture |
+| `compliance-report` | Summarize framework applicability and evaluated-control posture; MITRE associations are unscored |
 | `fleet-audit` | Audit an endpoint or cloud inventory file and return graph-ready findings |
 | `incident-triage` | Prioritize a CVE or suspicious MCP finding using blast radius and runtime evidence |
 | `remediation-plan` | Draft a human-reviewed remediation plan without modifying files |

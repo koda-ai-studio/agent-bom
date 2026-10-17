@@ -4,11 +4,10 @@ Mirrors the offline-first pattern from :mod:`agent_bom.mitre_fetch`:
 
 - agent-bom ships a normalized MITRE ATLAS catalog in-repo
   (`src/agent_bom/data/mitre_atlas_catalog.json`).
-- Scans read that bundled catalog by default; the curated 65-technique tag
-  surface in :mod:`agent_bom.atlas` remains the authoritative tagging map.
-- Operators can refresh from upstream via ``sync_catalog()``; the bundled
-  catalog is the canonical reference for "X of N upstream techniques covered"
-  rollups in dashboards and SARIF metadata.
+- Scans read that bundled catalog by default; :mod:`agent_bom.atlas` joins
+  explicit source relationships within the supported label vocabulary.
+- Operators can refresh the local cache via ``sync_catalog()``. Catalog
+  counts describe reference vocabulary, not detection coverage.
 
 The scan hot path never requires a live network fetch unless the operator
 explicitly enables refresh mode.
@@ -22,6 +21,7 @@ import logging
 import os
 import time
 from datetime import datetime, timezone
+from functools import lru_cache
 from pathlib import Path
 from typing import Optional
 
@@ -96,22 +96,32 @@ def get_catalog_metadata() -> dict:
 
 
 def _load_catalog_file(path: Path) -> Optional[dict]:
-    if not path.exists():
+    """Reuse parsed bytes, with bounded storage and file-replacement invalidation."""
+    try:
+        stat = path.stat()
+    except OSError:
         return None
+    cached = _cached_catalog(path, stat.st_mtime_ns, stat.st_ctime_ns, stat.st_size, path == _sync_catalog_path())
+    return dict(cached) if cached is not None else None
+
+
+@lru_cache(maxsize=4)
+def _cached_catalog(path: Path, mtime_ns: int, ctime_ns: int, size: int, synced: bool) -> Optional[dict]:
+    """File metadata forms the cache key; catalog payloads remain unchanged."""
     try:
         data = json.loads(path.read_text())
-    except (OSError, json.JSONDecodeError) as exc:
-        logger.warning("Failed to read MITRE ATLAS catalog %s: %s", path, exc)
+    except (OSError, json.JSONDecodeError):
+        logger.warning("MITRE ATLAS catalog is unreadable or invalid JSON")
         return None
 
-    if not isinstance(data.get("techniques"), dict):
-        logger.warning("Ignoring invalid MITRE ATLAS catalog at %s: missing techniques", path)
+    if not isinstance(data, dict) or not isinstance(data.get("techniques"), dict):
+        logger.warning("Ignoring invalid MITRE ATLAS catalog: missing techniques")
         return None
 
     data.setdefault("schema_version", _CATALOG_SCHEMA_VERSION)
     data.setdefault("catalog_id", "mitre_atlas")
     data.setdefault("catalog_type", "mitre_atlas")
-    data.setdefault("source", "synced" if path == _sync_catalog_path() else "bundled")
+    data.setdefault("source", "synced" if synced else "bundled")
     data.setdefault("atlas_version", data.get("attack_version", "unknown"))
     data.setdefault("updated_at", "")
     data.setdefault("fetched_at", 0)

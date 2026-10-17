@@ -158,6 +158,11 @@ Discovery uses read-only access by default. Explicit disk side-scans create
 temporary cloud resources. Missing evidence stays unavailable or partial;
 control mappings are not audit certification.
 
+MITRE technique associations provide investigation context, not proof of an
+attack. [ATLAS mapping receipts](docs/ATLAS_COVERAGE.md) retain the weakness
+association and source catalog hashes; modeled graph paths do not establish
+observed execution or effective access.
+
 [Measured matcher proof](site-docs/features/scanning.md#reproducible-matching-evidence) · [Product boundaries](docs/PRODUCT_BOUNDARIES.md) · [Permissions](docs/PERMISSIONS.md) · [Threat model](docs/THREAT_MODEL.md) · [Release verification](docs/RELEASE_VERIFICATION.md) · [Graph data model](docs/graph/DATA_MODEL.md)
 
 ## Contributing and support

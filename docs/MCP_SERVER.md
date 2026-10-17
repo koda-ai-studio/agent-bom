@@ -220,7 +220,7 @@ The [profile guide](MCP_WORKFLOWS.md) lists the smaller task surfaces.
 | **Check** | `check`, `verify`, `marketplace_check`, `license_compliance_scan` | Pre-install CVE gate, integrity verification, marketplace trust, and license policy |
 | **Blast Radius** | `blast_radius`, `exposure_paths`, `compromise_assessment`, `consequence_assessment`, `graph_correlate`, `graph_correlation_status`, `should_i_deploy`, `graph_reach`, `graph_diff`, `findings_query`, `finding_detail` | Map package → vulnerability finding → MCP server (tools + credential env names) → connected agents; correlate exact snapshot receipts; return ranked ExposurePath JSON and allow/warn/block deploy guidance for headless agents |
 | **Registry** | `registry_lookup`, `inventory`, `where`, `fleet_scan` | Query the MCP registry, inspect discovery paths, and summarize fleet inventories |
-| **Compliance** | `compliance`, `cis_benchmark`, `aisvs_benchmark` | Run OWASP, NIST, MITRE ATLAS, CIS, and AISVS-aligned posture checks |
+| **Compliance** | `compliance`, `cis_benchmark`, `aisvs_benchmark` | Inspect framework applicability and evaluated controls; run CIS and AISVS benchmarks. MITRE technique associations are unscored |
 | **Policy** | `policy_check`, `remediate` | Evaluate policies and generate guided remediation plans |
 | **Inventory** | `inventory` | List agents/servers without CVE scanning |
 | **Trust** | `marketplace_check`, `runtime_correlate`, `tool_risk_assessment` | Score package trust, correlate runtime usage, and assess live tool capability risk |
@@ -355,8 +355,10 @@ uses dashed lines where traversal is not established.
 > license analysis, and supply chain provenance verification.
 
 **"Show me my compliance posture"**
-> Runs OWASP LLM Top 10, MITRE ATLAS, NIST AI RMF, and CIS benchmarks
-> against your infrastructure. Returns per-framework pass/fail/warn.
+> Returns framework applicability and evaluated-control status. MITRE technique
+> associations provide investigation context and do not contribute control
+> passes, failures or a compliance score. CIS benchmark results retain their
+> separate evaluated checks.
 
 ## Security Model
 

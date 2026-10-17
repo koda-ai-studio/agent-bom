@@ -2173,22 +2173,8 @@ export const OWASP_MCP_TOP10: Record<string, string> = {
   MCP10: "Context Injection & Over-Sharing",
 };
 
-/** MITRE ATLAS — technique ID → human-readable name */
-export const MITRE_ATLAS: Record<string, string> = {
-  "AML.T0010": "ML Supply Chain Compromise",
-  "AML.T0020": "Poison Training Data",
-  "AML.T0024": "Exfiltration via ML Inference API",
-  "AML.T0043": "Craft Adversarial Data",
-  "AML.T0051": "LLM Prompt Injection",
-  "AML.T0052": "Phishing via AI",
-  "AML.T0054": "LLM Jailbreak",
-  "AML.T0056": "LLM Meta Prompt Extraction",
-  "AML.T0058": "AI Agent Context Poisoning",
-  "AML.T0059": "Activation Triggers",
-  "AML.T0060": "Data from AI Services",
-  "AML.T0061": "AI Agent Tools",
-  "AML.T0062": "Exfiltration via AI Agent Tool Invocation",
-};
+/** ATLAS labels share the scanner vocabulary; catalog size is not detection coverage. */
+export { ATLAS_LABELS as MITRE_ATLAS } from "./atlas-labels.generated";
 
 /** OWASP Agentic Top 10 (2026) — code → human-readable name */
 export const OWASP_AGENTIC_TOP10: Record<string, string> = {

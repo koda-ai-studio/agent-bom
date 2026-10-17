@@ -896,6 +896,7 @@ class BlastRadius:
     ai_risk_context: Optional[str] = None  # AI-native risk explanation when relevant
     owasp_tags: list[str] = field(default_factory=list)  # OWASP LLM Top 10 codes, e.g. ["LLM03", "LLM02"]
     atlas_tags: list[str] = field(default_factory=list)  # MITRE ATLAS technique IDs (AI/ML-specific), e.g. ["AML.T0010"]
+    atlas_mapping_evidence: dict[str, dict[str, Any]] = field(default_factory=dict)  # Catalog receipts frozen when tags are assigned
     attack_tags: list[str] = field(default_factory=list)  # MITRE ATT&CK Enterprise technique IDs, e.g. ["T1059", "T1190"]
     nist_ai_rmf_tags: list[str] = field(default_factory=list)  # NIST AI RMF subcategories, e.g. ["MAP-4.1"]
     owasp_mcp_tags: list[str] = field(default_factory=list)  # OWASP MCP Top 10 codes, e.g. ["MCP04", "MCP01"]

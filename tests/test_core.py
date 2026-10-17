@@ -3141,7 +3141,7 @@ def test_atlas_supply_chain_requires_ai_context():
 
 
 def test_atlas_unsecured_credentials():
-    """AML.T0055 (Unsecured Credentials) is tagged when credentials are exposed."""
+    """Inventory context alone does not establish an adversary technique."""
     from agent_bom.atlas import tag_blast_radius as tag_atlas
 
     br = BlastRadius(
@@ -3153,11 +3153,11 @@ def test_atlas_unsecured_credentials():
         exposed_tools=[],
     )
     tags = tag_atlas(br)
-    assert "AML.T0055" in tags
+    assert tags == []
 
 
 def test_atlas_agent_tool_invocation():
-    """AML.T0053 (AI Agent Tool Invocation) is tagged when tools are reachable."""
+    """Inventory context alone does not establish an adversary technique."""
     from agent_bom.atlas import tag_blast_radius as tag_atlas
     from agent_bom.models import MCPTool
 
@@ -3171,11 +3171,11 @@ def test_atlas_agent_tool_invocation():
         exposed_tools=tools,
     )
     tags = tag_atlas(br)
-    assert "AML.T0053" in tags
+    assert tags == []
 
 
 def test_atlas_prompt_injection_surface():
-    """AML.T0051 is tagged when tools can access prompts/context."""
+    """Inventory context alone does not establish an adversary technique."""
     from agent_bom.atlas import tag_blast_radius as tag_atlas
     from agent_bom.models import MCPTool
 
@@ -3188,11 +3188,11 @@ def test_atlas_prompt_injection_surface():
         exposed_tools=[MCPTool(name="get_system_prompt", description="Read system prompt")],
     )
     tags = tag_atlas(br)
-    assert "AML.T0051" in tags
+    assert tags == []
 
 
 def test_atlas_craft_adversarial_data():
-    """AML.T0043 is tagged when shell/exec tools are reachable."""
+    """Inventory context alone does not establish an adversary technique."""
     from agent_bom.atlas import tag_blast_radius as tag_atlas
     from agent_bom.models import MCPTool
 
@@ -3205,11 +3205,11 @@ def test_atlas_craft_adversarial_data():
         exposed_tools=[MCPTool(name="run_shell", description="Execute shell commands")],
     )
     tags = tag_atlas(br)
-    assert "AML.T0043" in tags
+    assert tags == []
 
 
 def test_atlas_meta_prompt_extraction():
-    """AML.T0056 is tagged when file/data read tools are reachable."""
+    """Inventory context alone does not establish an adversary technique."""
     from agent_bom.atlas import tag_blast_radius as tag_atlas
     from agent_bom.models import MCPTool
 
@@ -3222,11 +3222,11 @@ def test_atlas_meta_prompt_extraction():
         exposed_tools=[MCPTool(name="read_file", description="Read file contents")],
     )
     tags = tag_atlas(br)
-    assert "AML.T0056" in tags
+    assert tags == []
 
 
 def test_atlas_poison_training_data():
-    """AML.T0020 is tagged when AI framework has HIGH+ CVE."""
+    """Inventory context alone does not establish an adversary technique."""
     from agent_bom.atlas import tag_blast_radius as tag_atlas
 
     br = BlastRadius(
@@ -3238,11 +3238,11 @@ def test_atlas_poison_training_data():
         exposed_tools=[],
     )
     tags = tag_atlas(br)
-    assert "AML.T0020" in tags
+    assert tags == []
 
 
 def test_atlas_exfil_via_inference_api():
-    """AML.T0024 + AML.T0055 are tagged when AI framework + creds are present."""
+    """Inventory context alone does not establish an adversary technique."""
     from agent_bom.atlas import tag_blast_radius as tag_atlas
 
     br = BlastRadius(
@@ -3254,8 +3254,7 @@ def test_atlas_exfil_via_inference_api():
         exposed_tools=[],
     )
     tags = tag_atlas(br)
-    assert "AML.T0055" in tags  # unsecured credentials
-    assert "AML.T0024" in tags  # exfil via AI inference API (AI pkg + creds)
+    assert tags == []
 
 
 def test_atlas_label_formatting():
@@ -3373,10 +3372,9 @@ def test_scenario_enterprise_multi_agent():
     assert "LLM02" in br1.owasp_tags  # credentials exposed / read_file tool
     assert "LLM07" not in br1.owasp_tags  # read tools are not system prompt leakage
 
-    # ATLAS: supply chain + credentials + prompt extraction
-    assert "AML.T0010" in br1.atlas_tags
-    assert "AML.T0055" in br1.atlas_tags  # cred exposure → unsecured credentials
-    assert "AML.T0056" in br1.atlas_tags  # read_file = extract system prompt
+    # Inventory and tool capabilities do not establish attacker behavior.
+    assert br1.atlas_tags == []
+    assert br2.atlas_tags == []
 
     # Agent 2 has no CVEs, no blast radius
     assert len(srv3.packages[0].vulnerabilities) == 0
@@ -3527,15 +3525,8 @@ def test_scenario_high_privilege_mcp_server():
     assert "LLM06" in br.owasp_tags  # excessive agency (>5 tools + CRITICAL)
     assert "LLM04" not in br.owasp_tags  # langchain is not a training-data package
 
-    # ATLAS: maximum threat surface
-    assert "AML.T0010" in br.atlas_tags  # supply chain (always)
-    assert "AML.T0055" in br.atlas_tags  # unsecured credentials
-    assert "AML.T0053" in br.atlas_tags  # AI agent tool invocation (tools present)
-    assert "AML.T0043" in br.atlas_tags  # shell = craft adversarial data
-    assert "AML.T0051" in br.atlas_tags  # prompt access
-    assert "AML.T0056" in br.atlas_tags  # file read = extract system prompt
-    assert "AML.T0020" in br.atlas_tags  # AI + CRITICAL = poisoning
-    assert "AML.T0024" in br.atlas_tags  # AI + creds = exfil via inference
+    # No advisory CWE/catalog bridge: attacker techniques remain unqualified.
+    assert br.atlas_tags == []
 
 
 def test_scenario_clean_scan():
@@ -3562,11 +3553,13 @@ def test_scenario_clean_scan():
     assert len(data["blast_radius"]) == 0
 
 
-def test_scenario_json_output_has_atlas_tags():
+def test_scenario_json_output_has_atlas_tags(monkeypatch):
     """JSON output includes atlas_tags field in blast_radius entries."""
     from agent_bom.atlas import tag_blast_radius as tag_atlas
 
-    vuln = Vulnerability(id="CVE-2024-0001", summary="test", severity=Severity.HIGH)
+    monkeypatch.setenv("AGENT_BOM_MITRE_CATALOG_MODE", "bundled")
+    monkeypatch.setenv("AGENT_BOM_ATLAS_CATALOG_MODE", "bundled")
+    vuln = Vulnerability(cwe_ids=["CWE-285"], id="CVE-2024-0001", summary="test", severity=Severity.HIGH)
     pkg = Package(name="lodash", version="4.17.0", ecosystem="npm", vulnerabilities=[vuln])
     srv = MCPServer(name="test", command="npx", packages=[pkg])
     agent = Agent(name="TestAgent", agent_type=AgentType.CUSTOM, config_path="/tmp/test.json", mcp_servers=[srv])
@@ -3586,15 +3579,17 @@ def test_scenario_json_output_has_atlas_tags():
     data = to_json(report)
 
     assert "atlas_tags" in data["blast_radius"][0]
-    assert "AML.T0010" in data["blast_radius"][0]["atlas_tags"]
+    assert "AML.T0037" in data["blast_radius"][0]["atlas_tags"]
 
 
-def test_scenario_sarif_output_has_atlas_tags():
+def test_scenario_sarif_output_has_atlas_tags(monkeypatch):
     """SARIF output includes atlas_tags in result properties."""
     from agent_bom.atlas import tag_blast_radius as tag_atlas
     from agent_bom.owasp import tag_blast_radius as tag_owasp
 
-    vuln = Vulnerability(id="CVE-2024-0002", summary="test", severity=Severity.CRITICAL)
+    monkeypatch.setenv("AGENT_BOM_MITRE_CATALOG_MODE", "bundled")
+    monkeypatch.setenv("AGENT_BOM_ATLAS_CATALOG_MODE", "bundled")
+    vuln = Vulnerability(cwe_ids=["CWE-285"], id="CVE-2024-0002", summary="test", severity=Severity.CRITICAL)
     pkg = Package(name="express", version="4.17.0", ecosystem="npm", vulnerabilities=[vuln])
     srv = MCPServer(name="test", command="npx", packages=[pkg], config_path="/tmp/test.json")
     agent = Agent(name="TestAgent", agent_type=AgentType.CUSTOM, config_path="/tmp/test.json", mcp_servers=[srv])
@@ -3617,7 +3612,7 @@ def test_scenario_sarif_output_has_atlas_tags():
     result = data["runs"][0]["results"][0]
     assert "properties" in result
     assert "atlas_tags" in result["properties"]
-    assert "AML.T0010" in result["properties"]["atlas_tags"]
+    assert "AML.T0037" in result["properties"]["atlas_tags"]
 
 
 # ─── Threat Framework Summary Tests ─────────────────────────────────────────
@@ -3653,7 +3648,7 @@ def test_json_threat_framework_summary(sample_report):
     assert "mitre_atlas" in summary
     assert len(summary["mitre_atlas"]) >= 50  # Full catalog (expanded)
     assert "total_atlas_triggered" in summary
-    assert summary["total_atlas_triggered"] > 0
+    assert summary["total_atlas_triggered"] == 0
 
 
 def test_json_framework_summary_structure(sample_report):
@@ -3731,8 +3726,8 @@ def test_json_framework_llm02_with_credentials(sample_report):
     assert owasp_entries["LLM02"]["triggered"] is True
 
 
-def test_json_framework_atlas_t0010_for_confirmed_agent_path(sample_report):
-    """AML.T0010 is triggered for findings on the sample report's agent path."""
+def test_json_framework_atlas_t0010_not_inferred_from_agent_inventory(sample_report):
+    """A configured agent path does not establish AI supply-chain compromise."""
     from agent_bom.atlas import tag_blast_radius as tag_atlas
 
     for br in sample_report.blast_radii:
@@ -3741,8 +3736,8 @@ def test_json_framework_atlas_t0010_for_confirmed_agent_path(sample_report):
 
     data = to_json(sample_report)
     atlas_entries = {e["technique_id"]: e for e in data["threat_framework_summary"]["mitre_atlas"]}
-    assert atlas_entries["AML.T0010"]["triggered"] is True
-    assert atlas_entries["AML.T0010"]["findings"] > 0
+    assert atlas_entries["AML.T0010"]["triggered"] is False
+    assert atlas_entries["AML.T0010"]["findings"] == 0
 
 
 def test_json_framework_empty_when_no_findings():
