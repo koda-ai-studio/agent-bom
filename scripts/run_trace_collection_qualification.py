@@ -107,6 +107,10 @@ def run(output: Path, *, backend: str, workers: int, pages: int, rows: int, p95_
         set_audit_log(SQLiteAuditLog(str(output / "audit.db")))
         runtime = SQLiteRuntimeEventStore(str(output / "runtime.db"))
         store = TraceCollectionStore(SQLiteBackend(str(output / "runtime.db")))
+    # Provision fixture tables before requests: rejected/disabled routes must
+    # reconcile as missing work and retain a failed receipt, not raise because
+    # the service's lazy initialization was never reached.
+    store.init_schema()
     set_runtime_event_store(runtime)
     configure_api(api_key=secret)
     attempts: list[dict] = []

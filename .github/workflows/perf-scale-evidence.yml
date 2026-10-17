@@ -157,6 +157,7 @@ jobs:
             if sudo systemd-run --quiet --scope -p CPUQuota=200% -p MemoryMax=2G \
               sudo -u "$(id -un)" env \
               AGENT_BOM_WORKER_THREAD_LIMIT=2 \
+              AGENT_BOM_EXPERIMENTAL=traces \
               AGENT_BOM_STATE_DIR="$RUNNER_TEMP/trace-state-$attempt" \
               AGENT_BOM_AUDIT_HMAC_KEY="$(openssl rand -hex 32)" \
               "$GITHUB_WORKSPACE/.venv/bin/python" -m scripts.run_trace_collection_qualification \
