@@ -13,6 +13,7 @@ import json
 import logging
 import os
 import secrets
+import threading
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -23,6 +24,10 @@ CSRF_HEADER_NAME = "x-agent-bom-csrf"
 
 _logger = logging.getLogger(__name__)
 _EPHEMERAL_SIGNING_KEY = secrets.token_bytes(32)
+_SIGNING_KEY_LOCK = threading.Lock()
+# One configured-key fingerprint and derived key per process. Never retain
+# tokens or authentication decisions; revocation and expiry remain live reads.
+_SIGNING_KEY_CACHE: tuple[bytes, bytes] | None = None
 
 
 class BrowserSessionError(Exception):
@@ -59,17 +64,23 @@ def _b64decode(value: str) -> bytes:
 
 
 def _signing_key() -> bytes:
+    global _SIGNING_KEY_CACHE
+
     from agent_bom.api.secret_source import resolve_secret
 
-    configured = resolve_secret("AGENT_BOM_BROWSER_SESSION_SIGNING_KEY")
-    if configured:
-        return hashlib.pbkdf2_hmac(
-            "sha256",
-            configured.encode("utf-8"),
-            b"agent-bom-browser-session-signing-key:v1",
-            600_000,
-            dklen=32,
-        )
+    # Resolve on every call so mounted-file rotation/removal takes effect.
+    # Serialize cold derivations: concurrent untrusted cookies must not each
+    # consume 600,000 PBKDF2 rounds for the same operator-controlled secret.
+    with _SIGNING_KEY_LOCK:
+        configured = resolve_secret("AGENT_BOM_BROWSER_SESSION_SIGNING_KEY")
+        if configured:
+            raw = configured.encode("utf-8")
+            fingerprint = hashlib.sha256(raw).digest()
+            if _SIGNING_KEY_CACHE is None or not hmac.compare_digest(_SIGNING_KEY_CACHE[0], fingerprint):
+                derived = hashlib.pbkdf2_hmac("sha256", raw, b"agent-bom-browser-session-signing-key:v1", 600_000, dklen=32)
+                _SIGNING_KEY_CACHE = (fingerprint, derived)
+            return _SIGNING_KEY_CACHE[1]
+        _SIGNING_KEY_CACHE = None
     if persistent_browser_session_signing_required():
         raise BrowserSessionError("AGENT_BOM_BROWSER_SESSION_SIGNING_KEY is required for clustered browser-session auth")
     _logger.warning(
@@ -115,11 +126,14 @@ def verify_browser_session_token(token: str) -> dict[str, Any]:
     if not token or "." not in token:
         raise BrowserSessionError("browser session cookie is missing or malformed")
     encoded_payload, encoded_signature = token.split(".", 1)
-    expected = hmac.new(_signing_key(), encoded_payload.encode("ascii"), hashlib.sha256).digest()
     try:
+        payload_ascii = encoded_payload.encode("ascii")
         supplied = _b64decode(encoded_signature)
     except Exception as exc:  # noqa: BLE001
         raise BrowserSessionError("browser session signature is malformed") from exc
+    if len(supplied) != hashlib.sha256().digest_size:
+        raise BrowserSessionError("browser session signature is malformed")
+    expected = hmac.new(_signing_key(), payload_ascii, hashlib.sha256).digest()
     if not hmac.compare_digest(supplied, expected):
         raise BrowserSessionError("browser session signature is invalid")
     try:
