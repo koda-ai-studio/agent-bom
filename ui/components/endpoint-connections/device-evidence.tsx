@@ -55,6 +55,22 @@ export function EndpointDeviceEvidence({
             are scoped to tenant and vendor account. Unknown posture does not
             satisfy access policy.
           </p>
+          {inventory.coverage && (
+            <section aria-label="Collection coverage" className="rounded-lg border border-outline bg-surface-muted p-3 text-sm space-y-1">
+              <p>
+                {inventory.coverage.observed_devices} observed / {inventory.coverage.expected_devices ?? "unknown"} expected devices
+                {inventory.coverage.not_observed_devices !== null && ` · ${inventory.coverage.not_observed_devices} not yet observed`}
+              </p>
+              <p>
+                This page: {inventory.coverage.page_devices} devices · {inventory.coverage.page_stale_devices} stale ·{" "}
+                {inventory.coverage.page_unknown_freshness_devices} unknown freshness · {inventory.coverage.page_unbound_devices} without an active agent association
+              </p>
+              <p className="text-xs text-[var(--text-secondary)]">
+                {inventory.coverage.collection_gap && `Collection gap: ${inventory.coverage.collection_gap.replaceAll("_", " ")}. `}
+                Page counts do not describe the whole fleet. An association does not prove a connected risk path or execution.
+              </p>
+            </section>
+          )}
           {tab === "Receipts" && (
             <section
               aria-label="Recent collection receipts"

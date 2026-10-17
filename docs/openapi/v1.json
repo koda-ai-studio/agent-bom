@@ -10395,6 +10395,9 @@
       },
       "DevicePage": {
         "properties": {
+          "coverage": {
+            "$ref": "#/components/schemas/EndpointCoverage"
+          },
           "devices": {
             "items": {
               "$ref": "#/components/schemas/DeviceSignal"
@@ -11302,6 +11305,82 @@
           "tool_capability"
         ],
         "title": "EffectiveReach",
+        "type": "object"
+      },
+      "EndpointCoverage": {
+        "description": "Collection totals and explicitly page-scoped freshness/binding counts.",
+        "properties": {
+          "collection_gap": {
+            "default": "",
+            "title": "Collection Gap",
+            "type": "string"
+          },
+          "collection_status": {
+            "default": "not_started",
+            "enum": [
+              "not_started",
+              "collecting",
+              "partial",
+              "complete",
+              "failed"
+            ],
+            "title": "Collection Status",
+            "type": "string"
+          },
+          "expected_devices": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Devices"
+          },
+          "not_observed_devices": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Not Observed Devices"
+          },
+          "observed_devices": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Observed Devices",
+            "type": "integer"
+          },
+          "page_devices": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Page Devices",
+            "type": "integer"
+          },
+          "page_stale_devices": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Page Stale Devices",
+            "type": "integer"
+          },
+          "page_unbound_devices": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Page Unbound Devices",
+            "type": "integer"
+          },
+          "page_unknown_freshness_devices": {
+            "default": 0,
+            "minimum": 0.0,
+            "title": "Page Unknown Freshness Devices",
+            "type": "integer"
+          }
+        },
+        "title": "EndpointCoverage",
         "type": "object"
       },
       "EnrichmentPostureResponse": {

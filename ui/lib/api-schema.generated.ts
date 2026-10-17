@@ -12154,6 +12154,7 @@ export interface components {
         };
         /** DevicePage */
         DevicePage: {
+            coverage?: components["schemas"]["EndpointCoverage"];
             /** Devices */
             devices: components["schemas"]["DeviceSignal"][];
             /** Limit */
@@ -12470,6 +12471,52 @@ export interface components {
             tool_capability: number;
         } & {
             [key: string]: unknown;
+        };
+        /**
+         * EndpointCoverage
+         * @description Collection totals and explicitly page-scoped freshness/binding counts.
+         */
+        EndpointCoverage: {
+            /**
+             * Collection Gap
+             * @default
+             */
+            collection_gap: string;
+            /**
+             * Collection Status
+             * @default not_started
+             * @enum {string}
+             */
+            collection_status: "not_started" | "collecting" | "partial" | "complete" | "failed";
+            /** Expected Devices */
+            expected_devices?: number | null;
+            /** Not Observed Devices */
+            not_observed_devices?: number | null;
+            /**
+             * Observed Devices
+             * @default 0
+             */
+            observed_devices: number;
+            /**
+             * Page Devices
+             * @default 0
+             */
+            page_devices: number;
+            /**
+             * Page Stale Devices
+             * @default 0
+             */
+            page_stale_devices: number;
+            /**
+             * Page Unbound Devices
+             * @default 0
+             */
+            page_unbound_devices: number;
+            /**
+             * Page Unknown Freshness Devices
+             * @default 0
+             */
+            page_unknown_freshness_devices: number;
         };
         /** EnrichmentPostureResponse */
         EnrichmentPostureResponse: {

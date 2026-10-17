@@ -119,11 +119,26 @@ class ConnectionList(BaseModel):
     connections: list[ConnectionStatus]
 
 
+class EndpointCoverage(BaseModel):
+    """Collection totals and explicitly page-scoped freshness/binding counts."""
+
+    expected_devices: int | None = None
+    observed_devices: int = Field(default=0, ge=0)
+    not_observed_devices: int | None = None
+    page_devices: int = Field(default=0, ge=0)
+    page_stale_devices: int = Field(default=0, ge=0)
+    page_unknown_freshness_devices: int = Field(default=0, ge=0)
+    page_unbound_devices: int = Field(default=0, ge=0)
+    collection_status: Literal["not_started", "collecting", "partial", "complete", "failed"] = "not_started"
+    collection_gap: str = ""
+
+
 class DevicePage(BaseModel):
     schema_version: Literal["endpoint.inventory.v1"] = "endpoint.inventory.v1"
     sync: SyncState | None
     devices: list[DeviceSignal]
     recent_receipts: list[SyncState] = Field(default_factory=list)
+    coverage: EndpointCoverage = Field(default_factory=EndpointCoverage)
     offset: int
     limit: int
 

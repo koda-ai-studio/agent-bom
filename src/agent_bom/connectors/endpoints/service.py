@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from agent_bom.api.connection_crypto import ConnectionSecretError, decrypt_secret, encrypt_secret
 from agent_bom.device_posture import DeviceSignal
 
-from .models import Connection, ConnectionCreate, ConnectionSpec, SyncRequest, SyncState, now
+from .models import Connection, ConnectionCreate, ConnectionSpec, EndpointCoverage, SyncRequest, SyncState, now
 from .providers import falcon_page, freshness, jamf_page
 from .store import EndpointStore
 from .transport import CollectionError, EndpointClient
@@ -120,11 +120,30 @@ def device_page(store: EndpointStore, tenant: str, connection_id: str, *, limit:
     bindings = store.bindings_for_devices(tenant, [device.device_id for device in devices])
     for device in devices:
         device.attributes["agent_bindings"] = bindings.get(device.device_id, [])
+    devices = [fresh_device(device) for device in devices]
+    expected = state.expected_count if state else None
+    observed = state.device_count if state else 0
+    coverage = EndpointCoverage(
+        expected_devices=expected,
+        observed_devices=observed,
+        not_observed_devices=max(0, expected - observed) if expected is not None else None,
+        page_devices=len(devices),
+        page_stale_devices=sum(device.attributes.get("freshness") == "stale" for device in devices),
+        page_unknown_freshness_devices=sum(
+            device.attributes.get("freshness") != "fresh" and device.attributes.get("freshness") != "stale" for device in devices
+        ),
+        page_unbound_devices=sum(
+            not any(binding.get("active") is True for binding in bindings.get(device.device_id, [])) for device in devices
+        ),
+        collection_status=state.status if state else "not_started",
+        collection_gap=state.gap if state else "",
+    )
     return {
         "schema_version": "endpoint.inventory.v1",
         "recent_receipts": [state.model_dump() for state in store.history(tenant, connection_id)],
         "sync": state.model_dump() if state else None,
-        "devices": [fresh_device(signal).to_public_dict() for signal in devices],
+        "devices": [signal.to_public_dict() for signal in devices],
+        "coverage": coverage.model_dump(),
         "offset": offset,
         "limit": limit,
     }

@@ -206,6 +206,7 @@ from agent_bom.graph.cloud_rbac import add_cloud_role_assignments as _add_cloud_
 from agent_bom.graph.cloud_service_projection import project_aws_services, project_gcp_services
 from agent_bom.graph.cloud_storage_projection import project_buckets, project_databases, project_side_scan_targets
 from agent_bom.graph.container import UnifiedGraph
+from agent_bom.graph.credential_bindings import project_credential_bindings
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.edge_evidence import edge_evidence
 from agent_bom.graph.finding_projection import _resolve_skill_audit_target_ids as _resolve_skill_audit_target_ids
@@ -376,6 +377,7 @@ def build_unified_graph(
     project_toxic_combinations(graph, report.get("toxic_combinations"))
     enrich_blast_radius(graph, inputs.blast_radius)
     _project_cloud_authority(graph, inventories, report, inputs.data_source)
+    project_credential_bindings(graph, inputs.agents, inputs.data_source)
     canonicalize_assets(graph)
     apply_build_analysis(graph, report, _analysis_ports())
     if span is not None:

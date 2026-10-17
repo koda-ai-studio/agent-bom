@@ -46,6 +46,9 @@ describe("Endpoint connections", () => {
   });
   it("renders healthy sensor separately from unknown compliance", async () => {
     mock.endpointDevices.mockResolvedValue({
+      coverage: { expected_devices: 100, observed_devices: 50, not_observed_devices: 50,
+        page_devices: 1, page_stale_devices: 0, page_unknown_freshness_devices: 0, page_unbound_devices: 1,
+        collection_status: "partial", collection_gap: "permission_denied" },
       sync,
       offset: 0,
       limit: 25,
@@ -67,6 +70,9 @@ describe("Endpoint connections", () => {
       await screen.findByRole("button", { name: "Inspect evidence" }),
     );
     expect(await screen.findByText("Laptop")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Collection coverage" })).toHaveTextContent("50 observed / 100 expected devices");
+    expect(screen.getByRole("region", { name: "Collection coverage" })).toHaveTextContent("This page: 1 devices");
+    expect(screen.getByRole("region", { name: "Collection coverage" })).toHaveTextContent("1 without an active agent association");
     expect(
       screen.getByRole("dialog", { name: "Endpoint device evidence" }),
     ).toBeInTheDocument();

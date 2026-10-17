@@ -73,12 +73,12 @@ Emitted by: `graph/builder.py`, `graph/builder_cloud_lineage.py`, `graph/governa
 
 ## `authenticates_as`
 
-Class `authority` · directed · traversable · required evidence `source`, `tier` · 6 pairs
+Class `authority` · directed · traversable · required evidence `source`, `tier` · 7 pairs
 
 - `agent` → `managed_identity`, `service_account`, `service_principal`
-- `credential` → `managed_identity`, `service_account`, `service_principal`
+- `credential` → `managed_identity`, `role`, `service_account`, `service_principal`
 
-Emitted by: `graph/credential_projection.py`, `graph/governance_overlay.py`
+Emitted by: `graph/credential_bindings.py`, `graph/governance_overlay.py`
 
 ## `belongs_to`
 
@@ -299,7 +299,7 @@ Class `structural` · directed · traversable · required evidence `source`, `ti
 - `fleet` → `account`, `agent`, `cloud_resource`, `org`, `server`
 - `provider` → `account`, `agent`, `cloud_resource`, `org`, `server`
 
-Emitted by: `graph/agent_projection.py`, `graph/builder_cloud_lineage.py`
+Emitted by: `graph/agent_projection.py`, `graph/builder_cloud_lineage.py`, `graph/endpoint_overlay.py`
 
 ## `imports`
 
@@ -424,7 +424,7 @@ Class `correlation` · bidirectional · not traversable · required evidence `so
 - `service_principal` → `managed_identity`, `role`, `service_account`, `service_principal`, `user`
 - `user` → `managed_identity`, `role`, `service_account`, `service_principal`, `user`
 
-Emitted by: `graph/asset_canonicalize.py`, `graph/builder_frameworks.py`, `graph/finding_row_projection.py`
+Emitted by: `graph/asset_canonicalize.py`, `graph/builder_frameworks.py`, `graph/credential_bindings.py`, `graph/finding_row_projection.py`
 
 ## `protects`
 
