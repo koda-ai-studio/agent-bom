@@ -41,8 +41,8 @@ IDs, page counts, insertion counts, and completed checkpoints for both tenants.
 No failed request or missing work can yield a passing receipt. Queue-overload
 responses also fail the run; this harness does not retry or hide them.
 
-Collection gives other API work a scheduling opportunity between five-record
-batches during normalization and serialization. These short waits retain the
+Collection gives other API work a scheduling opportunity between records
+during normalization and serialization. These short waits retain the
 same worker slot, lease and SQL transaction: they do not expose partial pages
 or add workers. This trades some import throughput for status responsiveness
 under concurrent load. Compare total elapsed time as well as status latency;
