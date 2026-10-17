@@ -22,6 +22,7 @@ import re
 from dataclasses import dataclass, field
 
 from agent_bom.runtime.name_candidates import candidate_name_basis
+from agent_bom.runtime.trace_input import NON_INFERENCE_OPERATIONS
 from agent_bom.runtime.trace_input import duration_ms as _duration_ms
 
 _ADK_TOOL_RE = re.compile(r"^adk\.tool\.(.+)$")
@@ -179,34 +180,14 @@ def _extract_int_attr(attributes: list[dict], key: str) -> int:
 def _is_ml_span(span: dict, scope_name: str) -> bool:
     """Return True if this span represents an ML API call."""
     attrs = span.get("attributes", [])
-    # Provider attributes also occur on tool/agent orchestration. Counting
-    # those wrappers as inference would duplicate call totals and token costs.
-    operation = _extract_attr(attrs, "gen_ai.operation.name")
-    if operation in {
-        "execute_tool",
-        "invoke_agent",
-        "create_agent",
-        "invoke_workflow",
-        "plan",
-        "retrieval",
-        "fetch_response",
-        "create_memory",
-        "create_memory_store",
-        "delete_memory",
-        "delete_memory_store",
-        "search_memory",
-        "update_memory",
-        "upsert_memory",
-    }:
+    if _extract_attr(attrs, "gen_ai.operation.name") in NON_INFERENCE_OPERATIONS:
         return False
-    # Check instrumentation scope name
     if scope_name in _ML_SCOPE_NAMES:
         return True
     # Support current conventions and older instrumentation side by side.
     for attr in attrs:
         if attr.get("key") in {"gen_ai.provider.name", "gen_ai.system"}:
             return True
-    # Check span name pattern
     name = span.get("name", "")
     if _ML_SPAN_PATTERNS.match(name):
         return True
