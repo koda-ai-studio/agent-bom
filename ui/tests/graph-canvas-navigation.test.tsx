@@ -31,6 +31,15 @@ it("navigates mobile graph nodes by exact ID when labels repeat", async () => {
   await waitFor(() => expect(screen.getByRole("button", { name: "Next graph node" })).toBeDisabled());
 });
 
+it("includes the visible target label in its accessible name after navigation", async () => {
+  render(<GraphCanvasAutoFit {...props} navigationIds={["agent:a", "data:c"]} />);
+  const center = screen.getByRole("button", { name: "Center graph node: Same name" });
+  fireEvent.click(center);
+  await waitFor(() => expect(fixture.fitView).toHaveBeenCalledWith(expect.objectContaining({ nodes: [{ id: "agent:a" }] })));
+  fireEvent.click(screen.getByRole("button", { name: "Next graph node" }));
+  expect(await screen.findByRole("button", { name: "Center graph node: Records" })).toHaveTextContent("Records");
+});
+
 it("keeps desktop graph controls uncluttered", () => {
   fixture.width = 1200;
   render(<GraphCanvasAutoFit {...props} />);

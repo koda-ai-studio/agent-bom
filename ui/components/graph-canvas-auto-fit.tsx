@@ -91,7 +91,7 @@ function GraphNodeNavigator({ nodes, orderedIds }: { nodes: Node[]; orderedIds?:
       <div className="min-w-0 flex-1 text-center text-xs text-ink-secondary" aria-live="polite">
         <span>Canvas target · {index + 1} of {ordered.length}</span>
         <button type="button" className="block w-full truncate text-foreground underline underline-offset-4"
-          aria-label="Center current graph node" onClick={() => void focus(target)}>
+          aria-label={`Center graph node: ${String(target.data.label ?? target.id)}`} onClick={() => void focus(target)}>
           {String(target.data.label ?? target.id)}
         </button>
         <span className="block">Pan for connections · Fit all for overview</span>
