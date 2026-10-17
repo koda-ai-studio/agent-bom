@@ -191,6 +191,14 @@ sources must send timezone-aware timestamps. Fields a source cannot supply stay 
 are counted per source in the `normalized.coverage` block of
 `POST /v1/traces` and managed pull responses.
 
+The OTLP cost and tool-call readers also accept current
+`gen_ai.provider.name` and `gen_ai.tool.name` attributes, preferring them over
+legacy `gen_ai.system` and `tool.name` values. Explicit tool, agent, workflow,
+retrieval and memory operations are not counted as model inference calls.
+Legacy ADK span names remain supported. This is OTLP JSON metadata support;
+it does not establish protobuf/gRPC receiver compatibility or provider delivery.
+See the [OpenTelemetry GenAI conventions](https://github.com/open-telemetry/semantic-conventions-genai/blob/main/docs/gen-ai/gen-ai-spans.md).
+
 When a scan snapshot is persisted, events from the 30 days before the snapshot
 timestamp become `runtime_observed` graph edges (`invoked`, `called`,
 `accessed`, `used_credential`) aggregated per source node, relationship and
