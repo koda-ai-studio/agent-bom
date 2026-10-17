@@ -583,7 +583,34 @@ for (const width of [1440, 390]) {
         return { left: box.left, top: box.top, right: box.right, bottom: box.bottom };
       }));
       expect(boxes).toHaveLength(3);
-      for (const box of boxes) expect(box.bottom).toBeLessThanOrEqual(811);
+      if (width === 1440) {
+        for (const box of boxes) expect(box.bottom).toBeLessThanOrEqual(811);
+      } else {
+        // Mobile preserves readable labels by focusing one loaded node at a
+        // time. Prove each exact node can be reached instead of requiring the
+        // whole topology to fit at an unreadable scale.
+        const navigation = page.getByRole("group", { name: "Navigate loaded graph nodes" });
+        const ids = await page.locator(".react-flow__node").evaluateAll(nodes => nodes.map(node => node.getAttribute("data-id")!));
+        await expect(navigation).toBeInViewport();
+        await expect(navigation.getByRole("button", { name: "Previous graph node" })).toBeDisabled();
+        for (const [index, id] of ids.entries()) {
+          if (index > 0) await navigation.getByRole("button", { name: "Next graph node" }).click();
+          await expect(navigation).toContainText(`${index + 1} of ${ids.length}`);
+          await navigation.getByRole("button", { name: /^Center graph node:/ }).click();
+          await expect.poll(async () => page.getByTestId(`rf__node-${id}`).evaluate(element => {
+            const box = element.getBoundingClientRect();
+            const canvas = element.closest(".react-flow")!.getBoundingClientRect();
+            const zoom = new DOMMatrixReadOnly(getComputedStyle(element.closest(".react-flow__viewport")!).transform).a;
+            const label = element.querySelector("p, [data-testid='cluster-pill'] button span")!;
+            return box.left >= canvas.left && box.right <= canvas.right && box.top >= canvas.top &&
+              box.bottom <= Math.min(canvas.bottom, innerHeight) && parseFloat(getComputedStyle(label).fontSize) * zoom >= 12;
+          })).toBe(true);
+        }
+        await expect(navigation.getByRole("button", { name: "Next graph node" })).toBeDisabled();
+        // Return to the package before checking that its inspector survives resize.
+        await navigation.getByRole("button", { name: "Previous graph node" }).click();
+        await expect(navigation).toContainText("2 of 3");
+      }
       const memberLabels = await page.locator(".react-flow__edge-text").evaluateAll((labels) => labels.filter((label) => label.textContent === "22 members").map((label) => {
         const text = label.getBoundingClientRect();
         const background = label.parentElement!.querySelector(".react-flow__edge-textbg")!.getBoundingClientRect();
@@ -823,7 +850,12 @@ for (const theme of ["light", "dark"] as const) {
     await testInfo.attach("mobile-lineage-geometry", { body: JSON.stringify({ headerBox, canvasBox }), contentType: "application/json" });
     await page.screenshot({ path: testInfo.outputPath(`lineage-compact-${theme}.png`) });
     expect(headerBox.height).toBeLessThanOrEqual(240);
-    expect(canvasBox.y).toBeLessThan(390);
+    const navigation = page.getByRole("group", { name: "Navigate loaded graph nodes" });
+    await expect(navigation).toBeInViewport();
+    const navigationBox = (await navigation.boundingBox())!;
+    expect(navigationBox.y + navigationBox.height).toBeLessThanOrEqual(canvasBox.y);
+    expect(canvasBox.height).toBeGreaterThanOrEqual(240);
+    expect(canvasBox.y + canvasBox.height).toBeLessThanOrEqual(844);
     await expect(header.getByLabel("Graph snapshot", { exact: true })).toBeHidden();
     await header.getByText("Snapshot & view", { exact: true }).click();
     await expect(header.getByLabel("Graph snapshot", { exact: true })).toHaveValue(scanId);
