@@ -64,6 +64,23 @@ def test_ambiguous_canonical_binding_preserves_candidates_without_joining():
     assert all(e.evidence["execution_proven"] is False for e in candidates)
 
 
+def test_repeated_ambiguous_binding_cannot_promote_an_earlier_placeholder():
+    payload = report()
+    server = payload["agents"][0]["mcp_servers"][0]
+    server["credential_env_vars"].append("SECOND_TOKEN")
+    server["identity_bindings"].append({**server["identity_bindings"][0], "credential_ref": "SECOND_TOKEN"})
+    graph = build_unified_graph_from_report(payload, container=inventory(count=2), tenant_id="tenant-a")
+    auth = [edge for edge in graph.edges if edge.relationship is RelationshipType.AUTHENTICATES_AS]
+    assert len(auth) == 2
+    assert all(edge.evidence["identity_match_basis"] == "ambiguous_canonical_id" for edge in auth)
+    for edge in auth:
+        assert {
+            candidate.target
+            for candidate in graph.edges
+            if candidate.source == edge.target and candidate.relationship is RelationshipType.POSSIBLY_CORRELATES_WITH
+        } == {"native-0", "native-1"}
+
+
 @pytest.mark.parametrize("reference,provider", [("same-name", "azure"), ("native-id", "gcp")])
 def test_names_and_provider_conflicts_never_bind(reference, provider):
     graph = build_unified_graph_from_report(report(reference, provider), container=inventory(), tenant_id="tenant-a")
