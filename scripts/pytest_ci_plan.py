@@ -536,7 +536,11 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
             "src/agent_bom/graph/blast_projection.py",
             "src/agent_bom/graph/edge.py",
         }:
-            selected.update(candidate for candidate in available if candidate.name in {"test_atlas_mapping.py", "test_atlas_ui_labels.py"})
+            selected.update(
+                candidate
+                for candidate in available
+                if candidate.name in {"test_atlas_mapping.py", "test_atlas_ui_labels.py", "test_constants.py"}
+            )
         if normalized.as_posix() in GRAPH_PROJECTION_SOURCES:
             selected.update(
                 candidate for candidate in available if "graph" in candidate.stem or candidate.stem == "test_runtime_incident_feedback"

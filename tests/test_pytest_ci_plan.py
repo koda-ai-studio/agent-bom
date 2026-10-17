@@ -710,6 +710,7 @@ def test_impact_reporting_selects_identity_and_receipt_contract(tmp_path, source
     ],
 )
 def test_technique_receipt_edits_select_source_and_surface_contract(tmp_path, source):
-    expected = tmp_path / "tests/test_atlas_mapping.py"
-    _write(expected, 1)
-    assert select_targeted_tests(changed_files=[Path("src/agent_bom") / source], root=tmp_path) == [expected]
+    expected = [tmp_path / "tests" / name for name in ("test_atlas_mapping.py", "test_atlas_ui_labels.py", "test_constants.py")]
+    for path in expected:
+        _write(path, 1)
+    assert select_targeted_tests(changed_files=[Path("src/agent_bom") / source], root=tmp_path) == expected
