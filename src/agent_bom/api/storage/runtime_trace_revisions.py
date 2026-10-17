@@ -15,6 +15,7 @@ from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Any
 
 from agent_bom.analytics_retention import analytics_max_trace_revisions
+from agent_bom.api.storage.cooperative import iter_with_handoffs
 
 if TYPE_CHECKING:
     from agent_bom.api.storage.runtime_records import RuntimeObservationRecord, RuntimeSessionRecord
@@ -75,7 +76,9 @@ def _encode_revision(record: RuntimeObservationRecord) -> tuple[str, str]:
     return _content_hash(payload), encoded
 
 
-def _insert_fresh_revisions(conn: Any, records: list[RuntimeObservationRecord], fresh: set[tuple[str, str]], p: str) -> None:
+def _insert_fresh_revisions(
+    conn: Any, records: list[RuntimeObservationRecord], fresh: set[tuple[str, str]], p: str, *, cooperative: bool = False
+) -> None:
     pending: dict[tuple[str, str], RuntimeObservationRecord] = {}
     for record in records:
         identity = (record.tenant_id, record.observation_id)
@@ -85,7 +88,11 @@ def _insert_fresh_revisions(conn: Any, records: list[RuntimeObservationRecord], 
     for start in range(0, len(entries), 100):
         batch = entries[start : start + 100]
         values = ",".join(f"({','.join([p] * 5)})" for _ in batch)
-        params = tuple(value for identity, record in batch for value in (*identity, 1, *_encode_revision(record)))
+        params = tuple(
+            value
+            for identity, record in iter_with_handoffs(batch, enabled=cooperative)
+            for value in (*identity, 1, *_encode_revision(record))
+        )
         conn.execute(
             "INSERT INTO runtime_observation_revisions "  # nosec B608 — bound values, fixed identifiers
             f"(tenant_id,observation_id,revision,content_hash,data) VALUES {values}",
@@ -129,7 +136,7 @@ def _revise_session_sql(conn: Any, old: RuntimeObservationRecord, record: Runtim
 
 
 def reconcile_sql(
-    conn: Any, records: list[RuntimeObservationRecord], *, placeholder: str = "?"
+    conn: Any, records: list[RuntimeObservationRecord], *, placeholder: str = "?", cooperative: bool = False
 ) -> tuple[int, list[RuntimeObservationRecord]]:
     """Reconcile under the tenant write lock; return updates and first-seen rows.
 
@@ -144,7 +151,7 @@ def reconcile_sql(
     updated = 0
     first_seen = []
     fresh = _fresh_identities(conn, records, p)
-    _insert_fresh_revisions(conn, records, fresh, p)
+    _insert_fresh_revisions(conn, records, fresh, p, cooperative=cooperative)
     for record in records:
         if record.surface != "imported_trace":
             first_seen.append(record)

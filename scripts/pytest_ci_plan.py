@@ -426,6 +426,17 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
             selected.update(candidate for candidate in available if candidate.name == "test_symbol_reachability_export.py")
         if normalized.as_posix() in ARTIFACT_VERSION_SOURCES:
             selected.update(candidate for candidate in available if candidate.name in ARTIFACT_VERSION_CONTRACTS)
+        if normalized.as_posix().startswith("src/agent_bom/api/trace_collection/") or normalized.as_posix() in {
+            "src/agent_bom/api/native_trace_import.py",
+            "src/agent_bom/api/storage/cooperative.py",
+            "src/agent_bom/api/storage/runtime_trace_revisions.py",
+        }:
+            selected.update(
+                candidate
+                for candidate in available
+                if candidate.name.startswith("test_trace_collection_")
+                or candidate.name in {"test_native_trace_import.py", "test_runtime_trace_revision_retention.py"}
+            )
         if normalized.as_posix().startswith("src/agent_bom/api/storage/") or normalized.as_posix() in {
             "src/agent_bom/api/compliance_hub_store.py",
             "src/agent_bom/api/postgres_compliance_hub.py",

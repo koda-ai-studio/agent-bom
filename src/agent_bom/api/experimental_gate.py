@@ -32,7 +32,9 @@ def ensure_experimental(feature_id: str) -> None:
 
 
 def require_experimental(feature_id: str) -> Any:
-    def _dependency() -> None:
+    async def _dependency() -> None:
+        # This bounded environment lookup performs no I/O. A synchronous
+        # dependency needlessly queues behind storage/provider worker calls.
         ensure_experimental(feature_id)
 
     return Depends(_dependency)

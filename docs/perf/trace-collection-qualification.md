@@ -41,6 +41,15 @@ IDs, page counts, insertion counts, and completed checkpoints for both tenants.
 No failed request or missing work can yield a passing receipt. Queue-overload
 responses also fail the run; this harness does not retry or hide them.
 
+Collection gives other API work a scheduling opportunity between five-record
+batches during normalization and serialization. These short waits retain the
+same worker slot, lease and SQL transaction: they do not expose partial pages
+or add workers. This trades some import throughput for status responsiveness
+under concurrent load. Compare total elapsed time as well as status latency;
+OS scheduling can extend a wait, so this is not a per-request latency guarantee.
+The in-memory experimental-feature gate runs on the event loop without waiting
+for a storage worker; credential checks and durable writes remain off-loop.
+
 Earlier versions created a new TestClient event loop for each request, bypassing
 the configured shared worker budget. Preserve those receipts, but compare code
 changes using the same harness and limits on both revisions. Do not attribute a
