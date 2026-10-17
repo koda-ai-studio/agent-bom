@@ -1747,6 +1747,18 @@ export interface WorkloadRuntimeEvidence {
   note?: string;
 }
 
+/** Frozen catalog association, not an execution observation. */
+export interface AtlasMappingReceipt {
+  basis: "catalog_weakness_association";
+  execution_proven: false;
+  cwe_ids: string[];
+  attack_reference: string;
+  atlas_catalog_sha256: string;
+  attack_catalog_sha256: string;
+  atlas_version: string;
+  technique_url: string;
+}
+
 export interface BlastRadius {
   vulnerability_id: string;
   canonical_id?: string | undefined;
@@ -1770,6 +1782,7 @@ export interface BlastRadius {
   fixed_version?: string | undefined;
   owasp_tags?: string[] | undefined;
   atlas_tags?: string[] | undefined;
+  atlas_mapping_evidence?: Record<string, AtlasMappingReceipt> | undefined;
   nist_ai_rmf_tags?: string[] | undefined;
   owasp_mcp_tags?: string[] | undefined;
   owasp_agentic_tags?: string[] | undefined;

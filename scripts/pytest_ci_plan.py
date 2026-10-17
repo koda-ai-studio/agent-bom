@@ -524,6 +524,19 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
                     )
                 )
             )
+        if normalized.as_posix() in {
+            "scripts/generate_atlas_labels.py",
+            "ui/lib/atlas-labels.generated.ts",
+            "src/agent_bom/atlas.py",
+            "src/agent_bom/atlas_fetch.py",
+            "src/agent_bom/mitre_fetch.py",
+            "src/agent_bom/framework_mapping.py",
+            "src/agent_bom/evidence/finding_response_fields.py",
+            "src/agent_bom/output/technique_evidence.py",
+            "src/agent_bom/graph/blast_projection.py",
+            "src/agent_bom/graph/edge.py",
+        }:
+            selected.update(candidate for candidate in available if candidate.name in {"test_atlas_mapping.py", "test_atlas_ui_labels.py"})
         if normalized.as_posix() in GRAPH_PROJECTION_SOURCES:
             selected.update(
                 candidate for candidate in available if "graph" in candidate.stem or candidate.stem == "test_runtime_incident_feedback"

@@ -721,7 +721,7 @@ function BlastRadiusCard({ blast }: { blast: BlastRadius }) {
       {((blast.owasp_tags && blast.owasp_tags.length > 0) || (blast.atlas_tags && blast.atlas_tags.length > 0)) && (
         <div className="mt-3 flex flex-wrap items-center gap-1.5">
           <FrameworkTagChips tags={blast.owasp_tags} catalog={OWASP_LLM_TOP10} tone="owasp" showNames />
-          <FrameworkTagChips tags={blast.atlas_tags} catalog={MITRE_ATLAS} tone="atlas" showNames />
+          <FrameworkTagChips tags={blast.atlas_tags} catalog={MITRE_ATLAS} tone="atlas" showNames mappingEvidence={blast.atlas_mapping_evidence} />
         </div>
       )}
     </div>
@@ -840,8 +840,8 @@ function ThreatMatrix({ blastRadius }: { blastRadius: BlastRadius[] }) {
   const owaspCounts: Record<string, number> = {};
   const atlasCounts: Record<string, number> = {};
   for (const br of blastRadius) {
-    for (const tag of br.owasp_tags ?? []) owaspCounts[tag] = (owaspCounts[tag] ?? 0) + 1;
-    for (const tag of br.atlas_tags ?? []) atlasCounts[tag] = (atlasCounts[tag] ?? 0) + 1;
+    for (const tag of new Set(br.owasp_tags ?? [])) owaspCounts[tag] = (owaspCounts[tag] ?? 0) + 1;
+    for (const tag of new Set(br.atlas_tags ?? [])) atlasCounts[tag] = (atlasCounts[tag] ?? 0) + 1;
   }
   const owaspTriggered = Object.keys(owaspCounts).length;
   const atlasTriggered = Object.keys(atlasCounts).length;
@@ -849,7 +849,7 @@ function ThreatMatrix({ blastRadius }: { blastRadius: BlastRadius[] }) {
 
   return (
     <section>
-      <h2 className="text-sm font-semibold text-ink-secondary uppercase tracking-widest mb-3">Threat Framework Coverage</h2>
+      <h2 className="text-sm font-semibold text-ink-secondary uppercase tracking-widest mb-3">Framework Associations</h2>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <FrameworkPanel title="OWASP LLM Top 10" color="purple" counts={owaspCounts} catalog={OWASP_LLM_TOP10} triggered={owaspTriggered} />
         <FrameworkPanel title="MITRE ATLAS" color="cyan" counts={atlasCounts} catalog={MITRE_ATLAS} triggered={atlasTriggered} />
@@ -867,19 +867,23 @@ function FrameworkPanel({
   catalog: Record<string, string>;
   triggered: number;
 }) {
+  const [expanded, setExpanded] = useState(false);
+  const codes = Object.keys(counts).sort();
+  const shown = expanded ? codes : codes.slice(0, 6);
   const dotActive = color === "purple" ? "bg-purple-400" : "bg-cyan-400";
-  const textActive = color === "purple" ? "text-purple-400" : "text-cyan-400";
-  const bgActive = color === "purple" ? "bg-purple-950/40" : "bg-cyan-950/40";
+  const textActive = color === "purple" ? "text-purple-800 dark:text-purple-300" : "text-cyan-800 dark:text-cyan-300";
+  const bgActive = color === "purple" ? "bg-purple-50 dark:bg-purple-950/40" : "bg-cyan-50 dark:bg-cyan-950/40";
   const codeWidth = color === "purple" ? "w-12" : "w-20";
 
   return (
-    <div className="bg-surface border border-outline rounded-xl p-4">
-      <div className="flex items-center justify-between mb-3">
+    <section aria-label={`${title} associations`} className="bg-surface border border-outline rounded-xl p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <h3 className={`text-xs font-semibold ${textActive} uppercase tracking-wider`}>{title}</h3>
-        <span className="text-xs text-ink-tertiary">{triggered}/{Object.keys(catalog).length} triggered</span>
+        <span className="text-xs text-ink-secondary">{triggered} recorded association{triggered === 1 ? "" : "s"}</span>
       </div>
       <div className="space-y-1.5">
-        {Object.entries(catalog).map(([code, name]) => {
+        {shown.map((code) => {
+          const name = catalog[code] ?? "Label unavailable in local catalog";
           const count = counts[code] ?? 0;
           const on = count > 0;
           return (
@@ -892,6 +896,7 @@ function FrameworkPanel({
           );
         })}
       </div>
-    </div>
+      {codes.length > 6 ? <button type="button" aria-expanded={expanded} onClick={() => setExpanded(!expanded)} className="mt-3 text-xs text-ink-secondary underline">{expanded ? "Show fewer associations" : `Show ${codes.length - shown.length} more associations`}</button> : null}
+    </section>
   );
 }

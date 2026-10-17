@@ -41,6 +41,7 @@ from agent_bom.output.html._common import (
     _finding_sev_badge,
     _sev_badge,
 )
+from agent_bom.output.technique_evidence import html_atlas_sources
 from agent_bom.security import sanitize_launch_command, sanitize_path_label
 
 if TYPE_CHECKING:
@@ -1515,16 +1516,15 @@ def _compliance_section(findings: list["Finding"]) -> str:
         return "\n".join(rows), counts
 
     owasp_rows, owasp_counts = _build_rows(OWASP_LLM_TOP10, "owasp_tags")
-    atlas_rows, atlas_counts = _build_rows(ATLAS_TECHNIQUES, "atlas_tags")
+    atlas_rows, atlas_counts = _build_rows(ATLAS_TECHNIQUES, "atlas_tags", overlay=True)
     attack_rows, attack_counts = _build_rows(dict(ATTACK_TECHNIQUES), "attack_tags", overlay=True)
     nist_rows, nist_counts = _build_rows(NIST_AI_RMF, "nist_ai_rmf_tags")
     agentic_rows, agentic_counts = _build_rows(OWASP_AGENTIC_TOP10, "owasp_agentic_tags")
     eu_rows, eu_counts = _build_rows(EU_AI_ACT, "eu_ai_act_tags")
 
-    # ATT&CK is deliberately absent: an applicability overlay has no pass rate,
-    # and folding its 413 techniques in as passes both faked a green headline and
-    # drowned every real framework in the denominator.
-    scored_counts = [owasp_counts, atlas_counts, nist_counts, agentic_counts, eu_counts]
+    # ATT&CK and ATLAS are absent: applicability overlays have no pass rate,
+    # and cannot enter the denominator for control implementation evidence.
+    scored_counts = [owasp_counts, nist_counts, agentic_counts, eu_counts]
 
     # Same scorer as /v1/compliance, the per-framework route, the MCP tool and
     # the evidence bundle — one derivation of status + score. None of these
@@ -1566,7 +1566,7 @@ def _compliance_section(findings: list["Finding"]) -> str:
             f"<tbody>{rows}</tbody></table></details>"
         )
 
-    return (
+    return html_atlas_sources(findings) + (
         f'<section id="compliance">'
         f'<div class="sec-title">&#x1f6e1;&#xfe0f; Compliance Posture'
         f'<sup style="font-size:.7rem;color:#475569;margin-left:6px">'
@@ -1575,7 +1575,7 @@ def _compliance_section(findings: list["Finding"]) -> str:
         f"{_framework_table('OWASP LLM Top 10', owasp_rows, owasp_counts)}"
         f"{_framework_table('OWASP Agentic Top 10', agentic_rows, agentic_counts)}"
         f"{_framework_table('MITRE ATT&CK Enterprise', attack_rows, attack_counts, overlay=True)}"
-        f"{_framework_table('MITRE ATLAS (AI/ML)', atlas_rows, atlas_counts)}"
+        f"{_framework_table('MITRE ATLAS (AI/ML)', atlas_rows, atlas_counts, overlay=True)}"
         f"{_framework_table('NIST AI RMF', nist_rows, nist_counts)}"
         f"{_framework_table('EU AI Act', eu_rows, eu_counts)}"
         f"</div></section>"

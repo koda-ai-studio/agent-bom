@@ -565,6 +565,7 @@ def _cve_sarif_result(
         "sla_due_at_source": finding_sla["sla_due_at_source"],
         "blast_score": finding.risk_score,
         "match_confidence_tier": evidence(finding, "match_confidence_tier"),
+        **({"atlas_mapping_evidence": evidence(finding, "atlas_mapping_evidence")} if evidence(finding, "atlas_mapping_evidence") else {}),
         "cve_ids": _cve_ids_for_finding(finding),
         "cwe_ids": list(finding.cwe_ids),
         "exposure_path": exposure_path,

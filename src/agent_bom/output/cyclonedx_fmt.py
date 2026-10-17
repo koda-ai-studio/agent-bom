@@ -33,6 +33,15 @@ from agent_bom.output.dependency_hierarchy import (
     imported_bom_incomplete,
     imported_bom_unknown,
 )
+from agent_bom.output.finding_views import (
+    atlas_receipts_by_vulnerability,
+    cve_findings,
+    package_ecosystem,
+    package_name,
+    package_version,
+    workflow_status,
+)
+from agent_bom.output.technique_evidence import scoped_vulnerability_properties
 from agent_bom.package_utils import synthesize_purl
 from agent_bom.sbom_formats.cyclonedx import merge_properties as _merge_properties
 from agent_bom.sbom_formats.cyclonedx import merge_vulnerability_observation as _merge_vulnerability_observation
@@ -138,6 +147,7 @@ def _cyclonedx_vulnerability(
     *,
     observed_at: str | None = None,
     workflow: dict[str, str] | None = None,
+    atlas_receipts: list[dict] | None = None,
 ) -> dict:
     """Build one package-scoped CycloneDX vulnerability observation.
 
@@ -197,19 +207,7 @@ def _cyclonedx_vulnerability(
     if sla_due is not None:
         vuln_properties.append({"name": "agent-bom:sla_due_at", "value": sla_due})
         vuln_properties.append({"name": "agent-bom:sla_due_at_source", "value": "severity-kev/v1"})
-    if workflow_data:
-        # A CycloneDX vulnerability can affect more than one component. Owner,
-        # explicit SLA, and workflow state belong to the package observation,
-        # not the globally merged CVE, so retain the affected bom-ref in one
-        # deterministic structured property. The generic sla_due_at above stays
-        # the single severity-policy deadline shared by the vulnerability.
-        scoped_workflow = {"affects_ref": pkg_ref, **workflow_data}
-        vuln_properties.append(
-            {
-                "name": "agent-bom:workflow",
-                "value": json.dumps(scoped_workflow, sort_keys=True, separators=(",", ":")),
-            }
-        )
+    vuln_properties.extend(scoped_vulnerability_properties(pkg_ref, workflow_data, atlas_receipts))
     if vuln.is_kev or vuln.epss_score is not None:
         vuln_properties.append({"name": "agent-bom:exploit_likelihood", "value": vuln.exploit_likelihood})
     # Framework control attribution (CDX 1.7 has no first-class vulnerability
@@ -590,8 +588,7 @@ def to_cyclonedx(report: AIBOMReport) -> dict:
     scan_run = effective_scan_run(report)
     services: list[dict] = []
     vulnerabilities_by_id: dict[str, dict] = {}
-    from agent_bom.output.finding_views import cve_findings, package_ecosystem, package_name, package_version, workflow_status
-
+    atlas_by_vulnerability = atlas_receipts_by_vulnerability(report)
     workflow_by_vulnerability: dict[tuple[str, str, str | None, str], dict[str, str]] = {}
     for finding in cve_findings(report):
         workflow: dict[str, str] = {}
@@ -716,6 +713,7 @@ def to_cyclonedx(report: AIBOMReport) -> dict:
                             pkg_ref,
                             observed_at=report.generated_at.isoformat(),
                             workflow=workflow_by_vulnerability.get((pkg.ecosystem, pkg.name, pkg.version, vuln.id)),
+                            atlas_receipts=atlas_by_vulnerability.get((pkg.ecosystem, pkg.name, pkg.version, vuln.id)),
                         ),
                     )
                 if pkg_ref in seen_component_refs:

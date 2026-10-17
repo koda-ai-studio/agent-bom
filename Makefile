@@ -54,6 +54,7 @@ preflight:  ## Run the drift gates that CI's "Version Alignment" job runs — do
 	@echo "→ OpenAPI artifacts (docs/openapi/)";   python scripts/export_openapi.py --check
 	@echo "→ v1 schemas (docs/schemas/v1/)";        python scripts/generate_v1_schemas.py --check
 	@echo "→ per-agent BOM schema";                python scripts/generate_agent_bom_schema.py --check
+	@echo "→ ATLAS dashboard labels";              python scripts/generate_atlas_labels.py --check
 	@echo "→ Postgres migration contracts";         python -m pytest tests/test_postgres_migrations.py tests/test_postgres_schema_authority.py -q
 	@echo "→ agent capability manifest";             python scripts/generate_agent_capability_manifest.py --check
 	@echo "→ documented surface counts";            python scripts/check-counts.py
@@ -80,6 +81,7 @@ preflight-fix:  ## Regenerate every drift artifact so you never push stale OpenA
 	python scripts/export_openapi.py
 	python scripts/generate_v1_schemas.py
 	python scripts/generate_agent_bom_schema.py
+	python scripts/generate_atlas_labels.py
 	python scripts/generate_env_var_reference.py
 	python scripts/generate_experimental_docs.py
 	python sdks/shared/generate-patterns.py
