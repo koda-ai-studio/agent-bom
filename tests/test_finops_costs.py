@@ -274,6 +274,21 @@ def test_traces_ingest_persists_costs_and_endpoint_reports(client):
     assert costs["budget"]["configured"] is False
 
 
+def test_current_genai_provider_reaches_cost_summary(client):
+    payload = _ml_otlp_payload()
+    scope = payload["resourceSpans"][0]["scopeSpans"][0]
+    scope["scope"]["name"] = "vendor.instrumentation"
+    scope["spans"][0]["name"] = "chat gpt-4o"
+    scope["spans"][0]["attributes"][0]["key"] = "gen_ai.provider.name"
+    response = client.post("/v1/traces", json=payload)
+    assert response.status_code == 200, response.text
+    assert response.json()["llm_calls"] == 1
+    assert response.json()["llm_cost_usd"] == 12.5
+    costs = client.get("/v1/observability/costs").json()
+    assert costs["total_calls"] == 1
+    assert costs["total_cost_usd"] == 12.5
+
+
 def test_set_budget_then_exceeded_flag(client):
     client.post("/v1/traces", json=_ml_otlp_payload())  # $12.50 spend
     put = client.put("/v1/observability/costs/budget", json={"limit_usd": 10.0})

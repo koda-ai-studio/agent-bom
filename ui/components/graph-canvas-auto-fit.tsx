@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { getNodesBounds, Panel, useNodesInitialized, useReactFlow, useStore, type Node } from "@xyflow/react";
+import { Panel, useNodesInitialized, useReactFlow, useStore, type Node } from "@xyflow/react";
 import { graphAdaptiveFrame } from "@/lib/graph-adaptive-frame";
 
 /** Fit measured compact contexts after a docked inspector changes canvas width.
@@ -21,7 +21,7 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
   const width = useStore(state => state.width);
   const height = useStore(state => state.height);
   const canvas = useStore(state => state.domNode);
-  const { fitView, getNodes } = useReactFlow();
+  const { fitView, getNodes, getNodesBounds } = useReactFlow();
   const [windowHeight, setWindowHeight] = useState(0);
   const [spaceAbove, setSpaceAbove] = useState(0);
   useEffect(() => {
@@ -62,7 +62,7 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
       });
     });
     return () => cancelAnimationFrame(frame);
-  }, [enabled, initialized, width, height, layoutKey, anchorId, inspector, preserveViewport, windowHeight, spaceAbove, canvas, fitView, getNodes, onLayoutAspect]);
+  }, [enabled, initialized, width, height, layoutKey, anchorId, inspector, preserveViewport, windowHeight, spaceAbove, canvas, fitView, getNodes, getNodesBounds, onLayoutAspect]);
   if (!initialized || width >= 640 || width <= 0) return null;
   const navigator = <GraphNodeNavigator nodes={getNodes()} orderedIds={navigationIds} />;
   return navigationMount ? createPortal(navigator, navigationMount) : <Panel position="top-center">{navigator}</Panel>;

@@ -8,10 +8,12 @@ Also detects ML API spans (OpenAI, Anthropic, Cohere, etc.) using OpenTelemetry
 GenAI semantic conventions (``gen_ai.*`` attributes) and extracts model provenance:
 provider, model name/version, token usage, and deprecation advisories.
 
-Span naming convention: ``adk.tool.<tool_name>`` for Google ADK, or
-generic ``tool_call`` with ``tool.name`` attribute.
+Tool identity: current ``gen_ai.tool.name``, legacy ``tool.name``, or
+``adk.tool.<tool_name>`` for Google ADK.
 
-GenAI spans: detected via ``gen_ai.system`` attribute or span name patterns.
+GenAI spans: current ``gen_ai.provider.name``, legacy ``gen_ai.system``,
+instrumentation scopes or span names. Explicit non-inference operations do
+not become model cost calls.
 """
 
 from __future__ import annotations
@@ -20,6 +22,7 @@ import re
 from dataclasses import dataclass, field
 
 from agent_bom.runtime.name_candidates import candidate_name_basis
+from agent_bom.runtime.trace_input import NON_INFERENCE_OPERATIONS
 from agent_bom.runtime.trace_input import duration_ms as _duration_ms
 
 _ADK_TOOL_RE = re.compile(r"^adk\.tool\.(.+)$")
@@ -176,15 +179,15 @@ def _extract_int_attr(attributes: list[dict], key: str) -> int:
 
 def _is_ml_span(span: dict, scope_name: str) -> bool:
     """Return True if this span represents an ML API call."""
-    # Check instrumentation scope name
+    attrs = span.get("attributes", [])
+    if _extract_attr(attrs, "gen_ai.operation.name") in NON_INFERENCE_OPERATIONS:
+        return False
     if scope_name in _ML_SCOPE_NAMES:
         return True
-    # Check for gen_ai.system attribute (OTel GenAI semantic conventions)
-    attrs = span.get("attributes", [])
+    # Support current conventions and older instrumentation side by side.
     for attr in attrs:
-        if attr.get("key") == "gen_ai.system":
+        if attr.get("key") in {"gen_ai.provider.name", "gen_ai.system"}:
             return True
-    # Check span name pattern
     name = span.get("name", "")
     if _ML_SPAN_PATTERNS.match(name):
         return True
@@ -261,11 +264,11 @@ def parse_otel_traces(trace_data: dict) -> list[ToolCallTrace]:
 
     for span in spans:
         name = span.get("name", "")
-        tool_name = ""
+        tool_name = _extract_attr(span.get("attributes", []), "gen_ai.tool.name")
 
         # ADK convention: adk.tool.<name>
         m = _ADK_TOOL_RE.match(name)
-        if m:
+        if m and not tool_name:
             tool_name = m.group(1)
 
         # Generic: check attributes for tool.name
@@ -350,8 +353,8 @@ def parse_ml_api_spans(trace_data: dict) -> list[LLMAPICall]:
                     or _extract_attr(resource_attrs, "service.name")
                 )
 
-                # Provider: gen_ai.system (OTel convention) or infer from scope
-                provider = _extract_attr(attrs, "gen_ai.system")
+                # Current convention wins over its deprecated alias.
+                provider = _extract_attr(attrs, "gen_ai.provider.name") or _extract_attr(attrs, "gen_ai.system")
                 if not provider:
                     if "openai" in scope_name.lower():
                         provider = "openai"

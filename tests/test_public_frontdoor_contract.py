@@ -98,7 +98,7 @@ def test_readme_links_to_the_detailed_source_tour():
     tour = (ROOT / "docs/PRODUCT_TOUR.md").read_text()
     assert "docs/PRODUCT_TOUR.md" in readme
     assert "## Product tour" not in readme
-    assert "current source" in tour and "published `0.108.4` release predates" in tour
+    assert "current source" in tour and "release notes" in tour
     for image in ("dashboard-live.png", "correlation-graph-live.png", "graph-relationship-dark-live.png", "remediation-live.png"):
         assert image in tour
         assert (ROOT / "docs/images" / image).is_file()
@@ -140,7 +140,7 @@ def test_scenarios_separate_reproducible_proof_from_synthetic_layout_fixtures() 
     assert "graph-relationship-dark-live.png" in layouts
     assert "context-map-live.png" in layouts
     assert "Select an arrow" in layouts
-    assert "pinned `0.108.4`" in layouts
+    assert "release notes" in layouts and "installed version" in layouts
     assert "does not establish a cloud execution or downstream effect" in layouts
     assert "correlation-path-live.png" in gallery
     assert "correlation-path-live.png" not in readme

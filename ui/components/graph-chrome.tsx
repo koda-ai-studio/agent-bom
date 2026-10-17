@@ -16,6 +16,7 @@ import {
 import { useReactFlow } from "@xyflow/react";
 import { api, type GraphExportFormat } from "@/lib/api";
 import type { LegendItem } from "@/lib/graph-utils";
+import { RelationshipIcon } from "@/components/relationship-edge";
 import { entityIcon, type LineageNodeType } from "@/lib/entity-icons";
 import { NodeBadgeChip, SeverityRingSwatch } from "@/components/graph-node-badges";
 
@@ -249,7 +250,8 @@ function LegendGlyph({ item }: { item: LegendItem }) {
   }
   if (item.kind === "edge") {
     return (
-      <span className="flex w-5 shrink-0 justify-center">
+      <span className={`flex shrink-0 items-center justify-center gap-1 text-ink-secondary ${item.relationship ? "w-11" : "w-5"}`}>
+        {item.relationship && <RelationshipIcon relationship={item.relationship} />}
         <LegendMarker item={item} />
       </span>
     );

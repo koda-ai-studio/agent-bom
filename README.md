@@ -102,7 +102,7 @@ Follow a public API gateway into a vulnerable workload, its role and a PII bucke
 ## Open the sample graph
 
 ```bash
-pip install 'agent-bom[ui]==0.108.4'
+pip install 'agent-bom[ui]==0.109.0'
 agent-bom quickstart --run --offline
 ```
 

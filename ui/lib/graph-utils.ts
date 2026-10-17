@@ -134,6 +134,7 @@ export const EDGE_COLORS = {
 // ─── Legend Items ─────────────────────────────────────────────────────────────
 
 export interface LegendItem {
+  relationship?: string;
   label: string;
   color: string;
   layer?: string | undefined;
@@ -403,6 +404,7 @@ export function relationshipLegendItem(relationship: string): LegendItem {
   const meta = GRAPH_EDGE_KIND_META[relationship as GraphEdgeKindKey];
   const dashed = DASHED_LEGEND_RELATIONSHIPS.has(relationship);
   return {
+    relationship,
     label:
       (Object.hasOwn(RELATIONSHIP_LABEL_OVERRIDES, relationship) ? RELATIONSHIP_LABEL_OVERRIDES[relationship] : undefined) ??
       meta?.label ??

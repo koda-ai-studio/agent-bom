@@ -57,11 +57,15 @@ export function RelationshipBadge({ relationship, children }: {
   relationship: string;
   children: React.ReactNode;
 }) {
-  const Icon = RELATIONSHIP_ICONS[relationship] ?? Link2;
   return <span className="relationship-badge">
-    <Icon aria-hidden="true" width="1em" height="1em" strokeWidth={1.8} />
+    <RelationshipIcon relationship={relationship} />
     <span>{children}</span>
   </span>;
+}
+
+export function RelationshipIcon({ relationship }: { relationship: string }) {
+  const Icon = RELATIONSHIP_ICONS[relationship] ?? Link2;
+  return <Icon aria-hidden="true" width="1em" height="1em" strokeWidth={1.8} />;
 }
 
 /** The evidence qualifier reads as a second, quieter line instead of wrapping mid-phrase. */
