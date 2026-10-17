@@ -20,7 +20,7 @@ the scan hot path does not fetch MITRE or other framework data at runtime.
 | OWASP LLM Top 10 | `owasp.py` | LLM-specific risks |
 | OWASP Agentic Security | `owasp_agentic.py` | Agent autonomy risks |
 | OWASP MCP Top 10 | `owasp_mcp.py` | MCP protocol risks |
-| MITRE ATLAS | `atlas.py` | Adversarial ML tactics |
+| MITRE ATLAS | `atlas.py` | Source-backed weakness associations; not scored as controls |
 | EU AI Act | `eu_ai_act.py` | EU regulatory compliance |
 | NIST AI RMF | `nist_ai_rmf.py` | AI risk management |
 | NIST CSF | `nist_csf.py` | Cybersecurity framework |
@@ -33,6 +33,16 @@ the scan hot path does not fetch MITRE or other framework data at runtime.
 | PCI DSS | `pci_dss.py` | Payment data controls |
 
 ## Benchmark surfaces
+
+MITRE ATT&CK and ATLAS are applicability overlays, excluded from control pass
+rates. For package findings in AI/MCP inventory, ATLAS associations require an
+advisory CWE with an explicit CWE → CAPEC → ATT&CK catalog relationship and a
+matching ATLAS ATT&CK reference. Tool names, credential references, package names
+and severity alone do not establish adversary techniques or observed execution.
+The scan retains catalog hashes and the association chain in
+`atlas_mapping_evidence`. Expand **Mapping sources** on a scan result, or inspect
+the JSON/SARIF receipt and the CycloneDX/SPDX annotations. Missing associations
+mean insufficient mapping evidence, not absence of risk.
 
 | Benchmark | Module | Focus |
 |-----------|--------|-------|

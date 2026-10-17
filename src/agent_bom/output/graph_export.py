@@ -25,10 +25,12 @@ from pathlib import Path
 from typing import Any, Union
 
 from agent_bom.canonical_ids import agent_graph_id_for, mcp_server_graph_id_for
+from agent_bom.constants import is_credential_key
 from agent_bom.core.severity import SEVERITY_THRESHOLD_LABELS, severity_band_rank
 from agent_bom.graph.compat import NODE_KIND_TO_ENTITY
 from agent_bom.output.finding_views import sanitize_output_text, with_output_sanitizer_cache
 from agent_bom.output.package_attributes import _package_node_attributes
+from agent_bom.output.technique_evidence import copy_atlas_graph_receipts
 from agent_bom.security import sanitize_sensitive_payload
 
 # ── Internal graph representation ──────────────────────────────────────────────
@@ -157,8 +159,6 @@ def _credential_names_from_server(server: dict[str, Any]) -> list[str]:
     env = server.get("env")
     if not isinstance(env, dict):
         return []
-    from agent_bom.constants import is_credential_key
-
     return sorted({key for key in env if is_credential_key(key)})
 
 
@@ -307,11 +307,8 @@ _CLOUD_ENTITY_TYPES = frozenset(
 
 
 def _merge_unified_graph_evidence(graph: DepGraph, data: dict[str, Any]) -> None:
-    """Graft canonical cloud, identity, posture and source evidence into exports.
-
-    The base walk handles agents/servers/packages/CVEs; the unified builder
-    owns additional entities and their recorded relationships. Copy only edges
-    whose endpoints survive projection. Enrichment failure retains the base graph.
+    """Copy canonical relationships and receipts whose endpoints survive export.
+    Enrichment failure retains the base agent/server/package/CVE projection.
     """
     try:
         from agent_bom.graph.builder import build_unified_graph_from_report
@@ -319,6 +316,8 @@ def _merge_unified_graph_evidence(graph: DepGraph, data: dict[str, Any]) -> None
         unified = build_unified_graph_from_report(data)
     except Exception:  # noqa: BLE001 — graph export must not fail on cloud enrichment
         return
+
+    copy_atlas_graph_receipts(graph, unified)
 
     # Retain secret/PII AFFECTS endpoints, including files without AST evidence.
     secret_finding_ids = {node.id for node in unified.nodes.values() if node.attributes.get("finding_source") == "SECRET_SCAN"}

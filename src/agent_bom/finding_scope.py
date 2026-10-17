@@ -25,7 +25,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Literal, Optional
 
 from agent_bom.evidence.asset_display import iac_source_label
-from agent_bom.evidence.finding_response_fields import restored_public_fields
+from agent_bom.evidence.finding_response_fields import restore_atlas_receipts, restored_public_fields
 from agent_bom.evidence.finding_status import public_finding_status
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
@@ -636,6 +636,7 @@ def safe_finding_response_payload(row: Mapping[str, Any]) -> dict[str, Any]:
 
     redacted = redact_for_persistence(dict(row), EvidenceTier.SAFE_TO_STORE)
     payload = dict(redacted) if isinstance(redacted, dict) else {}
+    restore_atlas_receipts(payload, row)
     payload.update(cve_alias_metadata(row.get("aliases")))
     payload.update(safe_upstream_enrichment_metadata(row))
 

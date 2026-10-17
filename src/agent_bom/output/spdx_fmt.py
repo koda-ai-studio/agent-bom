@@ -16,7 +16,14 @@ from agent_bom.compliance_utils import framework_qualified_finding_tags
 from agent_bom.models import AIBOMReport
 from agent_bom.output.cloud_context import attach_cloud_context
 from agent_bom.output.dependency_hierarchy import spdx3_package_relationships
-from agent_bom.output.finding_views import cve_findings, package_ecosystem, package_name, package_version
+from agent_bom.output.finding_views import (
+    atlas_receipts_by_vulnerability,
+    cve_findings,
+    package_ecosystem,
+    package_name,
+    package_version,
+    workflow_status,
+)
 from agent_bom.package_utils import synthesize_purl
 from agent_bom.sbom_formats.spdx3 import upstream_enrichment_statements
 
@@ -134,8 +141,7 @@ def to_spdx(report: AIBOMReport) -> dict:
     elements.append(tool_element)
 
     pkg_ref_map: dict[str, str] = {}
-    vuln_compliance_tags = _finding_compliance_tags(report)
-    vuln_workflow = _finding_workflow_metadata(report)
+    vuln_compliance_tags, vuln_workflow, atlas_by_vulnerability = _finding_export_context(report)
 
     for agent in report.agents:
         agent_id = _next_id("SPDXRef-Agent")
@@ -242,6 +248,7 @@ def to_spdx(report: AIBOMReport) -> dict:
                         compliance_tags=vuln_compliance_tags.get(_vulnerability_key(pkg, vuln), []),
                         observed_at=report.generated_at.isoformat(),
                         workflow=vuln_workflow.get(_vulnerability_key(pkg, vuln)),
+                        atlas_receipts=atlas_by_vulnerability.get(_vulnerability_key(pkg, vuln)),
                         cvss_in_assessment=cvss_type is not None,
                     ):
                         _annotate(vuln_element_id, statement)
@@ -398,6 +405,7 @@ def _vulnerability_statements(
     observed_at: str | None = None,
     workflow: dict[str, str] | None = None,
     cvss_in_assessment: bool = False,
+    atlas_receipts: list[dict] | None = None,
 ) -> list[str]:
     """Encode non-core vulnerability enrichments as SPDX annotation statements.
 
@@ -407,6 +415,8 @@ def _vulnerability_statements(
     """
     statements: list[str] = []
     statements.extend(upstream_enrichment_statements(vuln))
+    if atlas_receipts:
+        statements.append("agent-bom:atlas-mapping-evidence=" + json.dumps(atlas_receipts, sort_keys=True, separators=(",", ":")))
     severity_value = vuln.severity.value if hasattr(vuln.severity, "value") else str(vuln.severity)
     # agent-bom's severity may come from a non-CVSS source, so it is carried
     # verbatim rather than re-derived from the CVSS assessment's rating.
@@ -482,8 +492,6 @@ def _finding_compliance_tags(report: AIBOMReport) -> dict[tuple[str, str, str | 
 
 def _finding_workflow_metadata(report: AIBOMReport) -> dict[tuple[str, str, str | None, str], dict[str, str]]:
     """Return persisted owner/SLA/state keyed by package vulnerability."""
-    from agent_bom.output.finding_views import workflow_status
-
     by_vuln: dict[tuple[str, str, str | None, str], dict[str, str]] = {}
     for finding in cve_findings(report):
         metadata: dict[str, str] = {}
@@ -503,3 +511,7 @@ def _finding_workflow_metadata(report: AIBOMReport) -> dict[tuple[str, str, str 
 
 def _vulnerability_key(pkg: Any, vuln: Any) -> tuple[str, str, str | None, str]:
     return (pkg.ecosystem, pkg.name, pkg.version, vuln.id)
+
+
+def _finding_export_context(report: AIBOMReport) -> tuple[dict, dict, dict]:
+    return _finding_compliance_tags(report), _finding_workflow_metadata(report), atlas_receipts_by_vulnerability(report)

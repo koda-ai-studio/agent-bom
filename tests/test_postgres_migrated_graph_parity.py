@@ -479,3 +479,33 @@ def test_direct_scanner_scope_survives_postgres_replay(migrated_fresh_database):
         direct_scope_storage_contract(PostgresGraphStore())
     finally:
         reset_current_tenant(token)
+
+
+def test_atlas_catalog_receipts_round_trip_without_execution_claims(migrated_fresh_database, monkeypatch):
+    from agent_bom.api.postgres_common import reset_current_tenant, set_current_tenant
+    from agent_bom.api.postgres_graph import PostgresGraphStore
+    from agent_bom.graph.builder import build_unified_graph_from_report
+    from agent_bom.output import to_json
+    from tests.test_atlas_mapping import source_backed_report
+
+    monkeypatch.setenv("AGENT_BOM_MITRE_CATALOG_MODE", "bundled")
+    monkeypatch.setenv("AGENT_BOM_ATLAS_CATALOG_MODE", "bundled")
+    payload = to_json(source_backed_report())
+    tenant = "atlas-receipt-tenant"
+    graph = build_unified_graph_from_report(payload, scan_id="atlas-receipt", tenant_id=tenant)
+    token = set_current_tenant(tenant)
+    store = PostgresGraphStore()
+    try:
+        store.save_graph(graph)
+        store.save_graph(graph)
+        loaded = store.load_graph(tenant_id=tenant, scan_id=graph.scan_id)
+        assert loaded is not None
+        assert {edge.id: edge.evidence for edge in loaded.edges} == {edge.id: edge.evidence for edge in graph.edges}
+        receipts = [r for edge in loaded.edges for r in edge.evidence.get("atlas_mapping_receipts", [])]
+        assert receipts
+        assert all(r["techniques"]["AML.T0037"]["execution_proven"] is False for r in receipts)
+        other = store.load_graph(tenant_id="other", scan_id=graph.scan_id)
+        assert not other.nodes and not other.edges
+    finally:
+        store.delete_tenant(tenant_id=tenant)
+        reset_current_tenant(token)

@@ -49,14 +49,32 @@ def merge_union_evidence_keys(stored: dict[str, Any], incoming: dict[str, Any]) 
     return changed
 
 
+def _merge_receipt_sets(stored: dict[str, Any], incoming: dict[str, Any]) -> bool:
+    changed = merge_union_evidence_keys(stored, incoming)
+    changed = merge_runtime_receipts(stored, incoming) or changed
+    # Mapping catalog versions belong to whole receipts. Do not combine a
+    # newer source hash with an older technique claim or discard either one.
+    mapping_records = {
+        json.dumps(record, sort_keys=True, default=str): record
+        for evidence in (stored, incoming)
+        for record in (evidence["atlas_mapping_receipts"] if isinstance(evidence.get("atlas_mapping_receipts"), list) else [])
+        if isinstance(record, dict)
+    }
+    if mapping_records:
+        records = [deepcopy(mapping_records[key]) for key in sorted(mapping_records)]
+        if stored.get("atlas_mapping_receipts") != records:
+            stored["atlas_mapping_receipts"] = records
+            changed = True
+    return changed
+
+
 def merge_edge_evidence(stored: dict[str, Any], incoming: dict[str, Any]) -> bool:
     """Merge evidence without collapsing provider action/binding receipts.
 
     Other evidence keeps the established non-empty-first behavior. Combining
     independent actions and bindings would manufacture unassessed permissions.
     """
-    changed = merge_union_evidence_keys(stored, incoming)
-    changed = merge_runtime_receipts(stored, incoming) or changed
+    changed = _merge_receipt_sets(stored, incoming)
     decisions: dict[str, dict[str, Any]] = {}
     grants: dict[str, dict[str, Any]] = {}
     accesses: dict[str, dict[str, Any]] = {}

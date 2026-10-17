@@ -23,7 +23,7 @@ from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from agent_bom.advisory_ids import MATCH_CONFIDENCE_AMBIGUOUS_DISTRO_RELEASE, MATCH_CONFIDENCE_UNVERIFIED_RANGE, upstream_advisory_ids
-from agent_bom.atlas import tag_blast_radius as tag_atlas_techniques
+from agent_bom.atlas import blast_radius_technique_evidence as atlas_technique_evidence
 from agent_bom.cis_controls import tag_blast_radius as tag_cis_controls
 from agent_bom.cmmc import tag_blast_radius as tag_cmmc
 from agent_bom.compliance_utils import apply_effective_blast_radius_tags
@@ -1247,7 +1247,8 @@ def apply_framework_tags(br: BlastRadius) -> None:
     ``tests/test_compliance_coverage.py`` asserts this covers the registry.
     """
     br.owasp_tags = tag_blast_radius(br)
-    br.atlas_tags = tag_atlas_techniques(br)
+    br.atlas_mapping_evidence = atlas_technique_evidence(br)
+    br.atlas_tags = list(br.atlas_mapping_evidence)
     br.attack_tags = tag_attack_techniques(br)
     br.nist_ai_rmf_tags = tag_nist_ai_rmf(br)
     br.owasp_mcp_tags = tag_owasp_mcp(br)

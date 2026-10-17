@@ -7,6 +7,7 @@ from functools import wraps
 from typing import Any, Callable, ParamSpec, TypeVar
 
 from agent_bom.compliance_coverage import COMPLIANCE_TAG_FIELDS
+from agent_bom.compliance_utils import effective_blast_radius_tags
 from agent_bom.core.packages import canonical_package_key
 from agent_bom.core.severity import normalize_severity
 from agent_bom.finding import Finding, FindingType, blast_radius_to_finding
@@ -394,3 +395,26 @@ def package_graph_node_id(
     if scoped and agent_name and server_name:
         return f"pkg:{agent_name}:{server_name}:{identity}"
     return f"pkg:{identity}"
+
+
+def atlas_receipts_by_vulnerability(report: AIBOMReport) -> dict[tuple[str, str, str | None, str], list[dict[str, Any]]]:
+    """Preserve scan-time mapping receipts for each package/finding occurrence."""
+    result: dict[tuple[str, str, str | None, str], list[dict[str, Any]]] = {}
+    for finding in cve_findings(report):
+        receipts = finding.evidence.get("atlas_mapping_evidence")
+        if not isinstance(receipts, dict) or not receipts:
+            continue
+        key = (package_ecosystem(finding), package_name(finding), package_version(finding), finding.cve_id or finding.id)
+        entry = {"finding_id": finding.id, "techniques": receipts}
+        group = result.setdefault(key, [])
+        if entry not in group:
+            group.append(entry)
+    return result
+
+
+def blast_radius_output_tags(br: BlastRadius, finding: Finding) -> dict[str, Any]:
+    """Framework labels and their frozen source qualification travel together."""
+    tags: dict[str, Any] = dict(effective_blast_radius_tags(br))
+    if receipts := finding.evidence.get("atlas_mapping_evidence"):
+        tags["atlas_mapping_evidence"] = receipts
+    return tags

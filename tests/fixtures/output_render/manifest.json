@@ -1,21 +1,21 @@
 {
  "demo": {
-  "html": "974c6a858b5447bdb382d8501dd4a7dfb7b994a3153390041f42bf7a0bb5c12c",
-  "html_offline": "8b6a3bfd3f52a579c13b692b465b9f1a53492e70e6aceb3041677a4fe343cf51",
-  "sarif_exclude_unfixable": "34fddd7cee3ce418cec126c75dc67858601a12fff2e4f13f2065bbece4d8f8ea",
-  "sarif_file": "8c5810fcae0767b21ca7d2a8720d75d54f391c3b136af3811ba9a505509da931",
-  "sarif_stdout": "34fddd7cee3ce418cec126c75dc67858601a12fff2e4f13f2065bbece4d8f8ea"
+  "html": "e63a8c9d839022d638f13d14a4b503ce985a1f43ac14e0e056ef243e788c0e57",
+  "html_offline": "06aab1442e04854d5a1ac338f00b98829b7c641c812c4a912e50a0e1f2a7b370",
+  "sarif_exclude_unfixable": "ea4bb935ff83231cdb35e484be1fae1f2ea6acf0cb094339a84ea56b04e08c06",
+  "sarif_file": "4e16d8f8b206b1b984e99198858588b6e789e4635e470a5612c14ed51d451bb4",
+  "sarif_stdout": "ea4bb935ff83231cdb35e484be1fae1f2ea6acf0cb094339a84ea56b04e08c06"
  },
  "empty": {
-  "html": "5ebe2ead369836345dc0e8884ccbb407fb901520d2f03c853aef17e31732a01a",
-  "html_offline": "f88d7506c032bc31a5bc5f3ea4ac70739b73d15583b946042f60bf4ea8c614d4",
+  "html": "04d9aac152946857d7c36fc305bcec79ea1d97dd9878d5013535a8792b2fd6ff",
+  "html_offline": "8cace6da9f34d41c6caa533cffb0c288bc40c0ad8dee7b9264ddc26447fae349",
   "sarif_exclude_unfixable": "64384810204cefe6432d755dcc4335786e14050e744be2b44e3449abda3e077b",
   "sarif_file": "6014faedec90d95bc2b539307bca424d40b4af1f6756ac7c38d7211fe14c2637",
   "sarif_stdout": "64384810204cefe6432d755dcc4335786e14050e744be2b44e3449abda3e077b"
  },
  "rich": {
-  "html": "f32a82e1102fcff0f87e056456776b8ce9e2c263c4b8cb474fabc57af1553ca6",
-  "html_offline": "ef32d70c78f20d9e37c5fee9bc26c2ac8079fba58a33bab3d418416eecf8e9e3",
+  "html": "9ff99749467b7d6406510c9b2dec9723a435ad70e20bae142ef8e3c9c2302342",
+  "html_offline": "56dc4c0f4f70934fc8836cf465b42140b072d3d99c7a945845c3d63326d386af",
   "sarif_exclude_unfixable": "282520a52843ebb216cc864abb305d718804f2e094894dc8eb8aa93a2809d6b5",
   "sarif_file": "cd2a8a9a1710b6836fabb18a83e451f3fbc644f1fe21e0caf0fa24ed4d5b15ca",
   "sarif_stdout": "5b24ac539ba3836a6700d6f684e60c32971d2f8cdde042aeefa5ca8e82848d1b"

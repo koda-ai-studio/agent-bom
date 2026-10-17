@@ -694,3 +694,34 @@ def test_impact_reporting_selects_identity_and_receipt_contract(tmp_path, source
     expected = tmp_path / "tests/test_impact_brief.py"
     _write(expected, 1)
     assert select_targeted_tests(changed_files=[Path("src/agent_bom") / source], root=tmp_path) == [expected]
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "atlas.py",
+        "atlas_fetch.py",
+        "mitre_fetch.py",
+        "framework_mapping.py",
+        "evidence/finding_response_fields.py",
+        "output/technique_evidence.py",
+        "graph/blast_projection.py",
+        "graph/edge.py",
+    ],
+)
+def test_technique_receipt_edits_select_source_and_surface_contract(tmp_path, source):
+    expected = [tmp_path / "tests" / name for name in ("test_atlas_mapping.py", "test_atlas_ui_labels.py", "test_constants.py")]
+    for path in expected:
+        _write(path, 1)
+    assert select_targeted_tests(changed_files=[Path("src/agent_bom") / source], root=tmp_path) == expected
+
+
+@pytest.mark.parametrize("changed", ["test_api_endpoints.py", "test_api_dashboard_deeplink_routes.py"])
+def test_dashboard_mount_fixtures_select_scope_isolation_contracts(tmp_path, changed):
+    expected = sorted(
+        tmp_path / "tests/api" / name
+        for name in ("test_api_endpoints.py", "test_api_dashboard_deeplink_routes.py", "test_operation_scope_coverage.py")
+    )
+    for path in expected:
+        _write(path, 1)
+    assert select_targeted_tests(changed_files=[Path("tests/api") / changed], root=tmp_path) == expected

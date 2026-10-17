@@ -2,21 +2,9 @@
 
 import { useState } from "react";
 
-/**
- * A finding's framework tags, bounded.
- *
- * `tag_blast_radius` returns **36** ATLAS techniques for a critical CVE on an
- * agent path with exposed credentials and an execute-capable tool, and can emit
- * 45. Every surface rendered the list unbounded with each technique's full name
- * inline, so one finding buried the evidence under it.
- *
- * The breadth is not the defect — an applicability overlay (#4709) genuinely
- * does put that many techniques in play — so this shows the first few, states
- * how many are hidden, and lets the reader open the rest. The count is never
- * silently cut: a reader can always tell the difference between "six
- * techniques" and "six of thirty-six".
- */
+import type { AtlasMappingReceipt } from "@/lib/api-types";
 
+/** Keep historical tag lists inspectable and qualify source-backed associations. */
 const DEFAULT_VISIBLE = 6;
 
 /**
@@ -28,15 +16,15 @@ const DEFAULT_VISIBLE = 6;
 type Tone = "owasp" | "mcp" | "atlas";
 
 const TONE_CLASS: Record<Tone, string> = {
-  owasp: "bg-purple-950 border-purple-800 text-purple-400",
+  owasp: "bg-purple-50 border-purple-300 text-purple-800 dark:bg-purple-950 dark:border-purple-800 dark:text-purple-300",
   mcp: "bg-[color:var(--severity-medium-bg)] border-[color:var(--severity-medium-border)] text-[color:var(--severity-medium)]",
-  atlas: "bg-cyan-950 border-cyan-800 text-cyan-400",
+  atlas: "bg-cyan-50 border-cyan-300 text-cyan-800 dark:bg-cyan-950 dark:border-cyan-800 dark:text-cyan-300",
 };
 
 const TONE_NAME_CLASS: Record<Tone, string> = {
-  owasp: "text-purple-600",
+  owasp: "text-purple-800 dark:text-purple-300",
   mcp: "text-amber-600",
-  atlas: "text-cyan-600",
+  atlas: "text-cyan-800 dark:text-cyan-300",
 };
 
 export function FrameworkTagChips({
@@ -45,6 +33,7 @@ export function FrameworkTagChips({
   tone,
   showNames = false,
   visible = DEFAULT_VISIBLE,
+  mappingEvidence,
 }: {
   tags: string[] | undefined;
   catalog: Record<string, string>;
@@ -52,16 +41,23 @@ export function FrameworkTagChips({
   /** Render the technique name beside its id. Off in dense rows. */
   showNames?: boolean;
   visible?: number;
+  mappingEvidence?: Record<string, AtlasMappingReceipt> | undefined;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const all = tags ?? [];
+  const all = [...new Set(tags ?? [])];
   if (all.length === 0) return null;
 
   const shown = expanded ? all : all.slice(0, visible);
   const hidden = all.length - shown.length;
+  const receipts = tone === "atlas" ? all.flatMap((tag) => {
+    const receipt = mappingEvidence?.[tag];
+    return receipt?.basis === "catalog_weakness_association" && receipt.execution_proven === false
+      && Array.isArray(receipt.cwe_ids) ? [{ tag, receipt }] : [];
+  }) : [];
 
   return (
     <>
+      {tone === "atlas" ? <span className="w-full text-xs text-ink-secondary">ATLAS associations · execution not established</span> : null}
       {shown.map((tag) => (
         <span
           key={tag}
@@ -83,6 +79,19 @@ export function FrameworkTagChips({
         >
           {expanded ? "show fewer" : `+${hidden} more`}
         </button>
+      ) : null}
+      {receipts.length > 0 ? (
+        <details className="w-full min-w-0 text-xs text-ink-secondary">
+          <summary className="cursor-pointer py-2">Mapping sources</summary>
+          {receipts.map(({ tag, receipt }) => (
+            <div key={tag} className="space-y-1 py-2">
+              <p>{receipt.cwe_ids.join(", ")} → {receipt.attack_reference} → {tag}</p>
+              <p>ATLAS catalog {receipt.atlas_version}</p>
+              <p>ATLAS SHA-256: <code className="break-all">{receipt.atlas_catalog_sha256}</code></p>
+              <p>ATT&amp;CK bridge SHA-256: <code className="break-all">{receipt.attack_catalog_sha256}</code></p>
+            </div>
+          ))}
+        </details>
       ) : null}
     </>
   );

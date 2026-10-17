@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -113,6 +113,23 @@ describe("ScanResultView cloud evidence", () => {
     );
     expect(screen.getByText("Open graph evidence; no attack path is asserted")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Remediation/i })).toHaveAttribute("href", "/remediation?scan=scan-cloud-1");
+  });
+
+  it("reconciles every recorded ATLAS association without a detection denominator", async () => {
+    apiMock.getScan.mockResolvedValue({
+      job_id: "scan-cloud-1", status: "done", created_at: "2026-06-27T00:00:00Z", request: {},
+      result: { agents: [], blast_radius: [{ vulnerability_id: "CVE-2026-1000", severity: "low",
+        affected_agents: [], exposed_credentials: [], exposed_tools: [],
+        atlas_tags: ["AML.T0037", "AML.T0037", "AML.T9999"], owasp_tags: [] }] },
+    });
+    render(<ScanResultView id="scan-cloud-1" />);
+    const heading = await screen.findByRole("heading", { name: "MITRE ATLAS" });
+    const panel = heading.closest("section")!;
+    expect(within(panel).getByText("2 recorded associations")).toBeVisible();
+    expect(within(panel).getByText("Data from Local System")).toBeVisible();
+    expect(within(panel).getByText("AML.T9999")).toBeVisible();
+    expect(within(panel).queryByText(/triggered/)).toBeNull();
+    expect(within(panel).queryByText("Poison Training Data")).toBeNull();
   });
 
   it("filters and paginates dense blast-radius evidence instead of rendering every path", async () => {

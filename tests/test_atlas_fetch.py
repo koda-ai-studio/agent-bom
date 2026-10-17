@@ -224,3 +224,41 @@ def _restore_env(monkeypatch):
     monkeypatch.delenv("AGENT_BOM_ATLAS_CATALOG_MODE", raising=False)
     monkeypatch.delenv("AGENT_BOM_ATLAS_CATALOG_PATH", raising=False)
     yield
+
+
+def test_catalog_reuses_unchanged_bytes_and_refreshes_same_size_replacement(tmp_path, monkeypatch):
+    import json
+    import os
+    from pathlib import Path
+
+    from agent_bom.atlas_fetch import _load_catalog_file
+
+    path = tmp_path / "atlas.json"
+    path.write_text(json.dumps({"techniques": {"AML.T0037": {"attck_reference": "T1005"}}}))
+    original_read = Path.read_text
+    reads = []
+
+    def counted_read(self, *args, **kwargs):
+        reads.append(self)
+        return original_read(self, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "read_text", counted_read)
+    first = _load_catalog_file(path)
+    for _ in range(20):
+        assert _load_catalog_file(path) == first
+    assert reads.count(path) == 1
+    stat = path.stat()
+    path.write_text(json.dumps({"techniques": {"AML.T0037": {"attck_reference": "T1006"}}}))
+    os.utime(path, ns=(stat.st_atime_ns, stat.st_mtime_ns))
+    assert _load_catalog_file(path)["techniques"]["AML.T0037"]["attck_reference"] == "T1006"
+    assert reads.count(path) == 2
+    path.unlink()
+    assert _load_catalog_file(path) is None
+
+
+def test_catalog_non_object_is_unavailable(tmp_path):
+    from agent_bom.atlas_fetch import _load_catalog_file
+
+    path = tmp_path / "invalid-atlas.json"
+    path.write_text("[]")
+    assert _load_catalog_file(path) is None

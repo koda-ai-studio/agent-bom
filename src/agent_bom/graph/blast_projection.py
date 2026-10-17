@@ -116,6 +116,8 @@ def _occurrence_evidence(br_dict: dict[str, Any], data_source_tag: str) -> dict[
     finding_ids = row_finding_ids(br_dict)
     if finding_ids:
         evidence["finding_ids"] = finding_ids
+    if isinstance(receipts := br_dict.get("atlas_mapping_evidence"), dict) and receipts:
+        evidence["atlas_mapping_receipts"] = [{"finding_ids": finding_ids, "techniques": receipts}]
     return evidence
 
 

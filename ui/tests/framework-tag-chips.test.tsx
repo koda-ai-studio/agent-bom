@@ -1,27 +1,10 @@
-/**
- * A CVE's framework tags must stay readable at the count the tagger produces.
- *
- * `agent_bom.atlas.tag_blast_radius` maps a blast radius onto ATLAS techniques
- * from observable signals — tool capabilities, credential exposure, AI package
- * context, severity, vulnerability type. On a critical CVE that sits on an
- * agent path with exposed credentials and an execute-capable tool it returns
- * **36 techniques** (reproduced 2026-08-09; the function can emit 45).
- *
- * Every surface rendered `tags.map(...)` unbounded, and each chip carries the
- * technique's full name, so one finding produced a wall of chips that pushed
- * the evidence below it off screen. The breadth is not wrong — #4709
- * established ATLAS as an applicability overlay, and a critical CVE on an agent
- * path genuinely does put that many techniques in play — so the fix is
- * disclosure, not a narrower mapping: show the first few, keep the count
- * honest, let the reader open the rest.
- */
-
+/** Historical tag lists remain bounded; source receipts qualify new associations. */
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { FrameworkTagChips } from "@/components/framework-tag-chips";
 
-// The 36 techniques the worst-case blast radius actually produced.
+// A historical wide tag list remains inspectable without reclassifying it.
 const ATLAS_36 = [
   "AML.T0010", "AML.T0010.001", "AML.T0012", "AML.T0013", "AML.T0014",
   "AML.T0018", "AML.T0018.000", "AML.T0018.002", "AML.T0024", "AML.T0025",
@@ -77,4 +60,24 @@ describe("FrameworkTagChips", () => {
     render(<FrameworkTagChips tags={["AML.T0010"]} catalog={CATALOG} tone="atlas" />);
     expect(screen.getByTestId("framework-tag-chip")).toHaveAttribute("title", "Technique AML.T0010");
   });
+});
+
+
+it("qualifies ATLAS tags without asserting execution", () => {
+  render(<FrameworkTagChips tags={["AML.T0037"]} catalog={CATALOG} tone="atlas" />);
+  expect(screen.getByText("ATLAS associations · execution not established")).toBeVisible();
+  expect(screen.queryByText("Mapping sources")).toBeNull();
+});
+
+it("exposes the frozen source chain and catalog receipts for mapped tags", () => {
+  render(<FrameworkTagChips tags={["AML.T0037"]} catalog={CATALOG} tone="atlas" mappingEvidence={{
+    "AML.T0037": { basis: "catalog_weakness_association", execution_proven: false,
+      cwe_ids: ["CWE-285"], attack_reference: "T1005", atlas_version: "5.5.0",
+      atlas_catalog_sha256: "a".repeat(64), attack_catalog_sha256: "b".repeat(64),
+      technique_url: "https://atlas.mitre.org/techniques/AML.T0037" },
+  }} />);
+  fireEvent.click(screen.getByText("Mapping sources"));
+  expect(screen.getByText("CWE-285 → T1005 → AML.T0037")).toBeInTheDocument();
+  expect(screen.getByText("a".repeat(64))).toBeInTheDocument();
+  expect(screen.getByText("b".repeat(64))).toBeInTheDocument();
 });
