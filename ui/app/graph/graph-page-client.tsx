@@ -1731,7 +1731,7 @@ function GraphPageInner() {
   const compactInvestigationTopology = investigationLayout !== undefined;
   const compactMobileTopology = narrowViewport && !selectedAttackPath &&
     !rollupNavigationActive && compactGroupedTopology;
-  const graphLayoutKind = compactMobileTopology || (narrowViewport && investigationMode) ? "dagre" : selectedAttackPath || selectedScenarioId || rollupNavigationActive ? "dagre-lr" : "asset-hierarchy";
+  const graphLayoutKind = compactMobileTopology || (narrowViewport && investigationMode) ? "dagre" : selectedAttackPath || selectedScenarioId || rollupNavigationActive || investigationMode ? "dagre-lr" : "asset-hierarchy";
   const scenarioContextIds = useMemo(() => {
     if (!selectedScenarioId || !scenarioComparison?.available || scenarioExpanded || attackPathLens || selectedAttackPath || investigationMode) return undefined;
     return graphScenarioContextIds(aggregated.nodes, aggregated.edges, scenarioComparison.difference, mergedGraphData?.edges);

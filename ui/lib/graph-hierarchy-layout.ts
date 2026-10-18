@@ -109,7 +109,16 @@ export function graphHierarchyLayout(nodes: Node<LineageNodeData>[], edges: Edge
   // camera. Reserve their full three-line caption plus finding footer so
   // stacked findings cannot run into the next entity's glyph.
   const nodeHeight = Math.max(300, options.nodeHeight ?? 0);
-  const compact = nodes.length <= 24;
+  const repository = nodes.some(node => graphRepositoryContext(node.data));
+  const fanIn = new Map<string, number>(), fanOut = new Map<string, number>();
+  for (const edge of rankedEdges) {
+    fanIn.set(edge.target, (fanIn.get(edge.target) ?? 0) + 1);
+    fanOut.set(edge.source, (fanOut.get(edge.source) ?? 0) + 1);
+  }
+  // Compact correlations can still be wide fan-ins/fan-outs. Keep their
+  // aspect-aware wrapping so a small evidence set does not become a tall
+  // column that the adaptive camera can only show one node at a time.
+  const compact = nodes.length <= 24 && (repository || Math.max(0, ...fanIn.values(), ...fanOut.values()) <= 2);
   const layout = applyDagreLayout([...nodes].sort((a,b) => a.id.localeCompare(b.id)), rankedEdges, {
     direction: "LR", nodeWidth: 240, nodeHeight: 224, nodeSep: 40, ...options,
     ...(compact ? { nodeHeight, rankSep: Math.min(options.rankSep ?? 96, 96), fitAspect: undefined,
@@ -139,13 +148,12 @@ export function graphHierarchyLayout(nodes: Node<LineageNodeData>[], edges: Edge
   // Large contexts retain the established wrapped-rank layout. Packing all
   // siblings into one column would recreate the tall fan-out problem.
   const ordered = compact ? orderHierarchyBranches(spaced, rankedEdges) : layout.nodes;
-  const repository = nodes.some(node => graphRepositoryContext(node.data));
   const positioned = new Map((compact && repository ? alignHierarchyBranches(ordered, rankedEdges, rowStep) : ordered).map(node => [node.id, node]));
   return {
     nodes: nodes.map(node => positioned.get(node.id)!),
     edges: edges.map((edge): Edge => ({ ...edge,
       ...(contextEdges.has(edge.id) ? { sourceHandle: "context", targetHandle: "context" } : {}),
-      data: { ...edge.data, quietLabel: true },
+      data: { ...edge.data, quietLabel: !edge.data?.isClusterEdge },
     })),
   };
 }

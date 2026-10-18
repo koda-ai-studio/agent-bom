@@ -954,7 +954,9 @@ for (const theme of ["light", "dark"] as const) {
     }));
     // Card width varies with its label; enforce readable rendered text as well as a usable target.
     expect(sizes.every(size=>size.width>=200 && size.font>=12)).toBe(true);
-    await expect(page.locator(".relationship-badge").first()).toBeVisible();
+    await expect(page.locator(".relationship-badge")).toHaveCount(0);
+    await page.getByTestId("rf__node-server:small").hover();
+    await expect(page.locator(".relationship-badge")).toHaveCount(2);
     const overlaps = await page.locator(".react-flow").evaluate(canvas => {
       const cards = [...canvas.querySelectorAll(".react-flow__node")].map(n => n.getBoundingClientRect());
       return [...canvas.querySelectorAll(".relationship-badge")].filter(label => {
@@ -1000,6 +1002,11 @@ for (const theme of ["light", "dark"] as const) {
     await settledViewportZoom(page);
     await page.getByRole("button", { name: "Fit all", exact: true }).click();
     await settledViewportZoom(page);
+    await expect(page.locator(".graph-relationship-label")).toHaveCount(0);
+    const runtimeEdge = graph.edges.find((edge: { relationship: string }) => edge.relationship === "invoked");
+    expect(runtimeEdge).toBeDefined();
+    await page.getByTestId(`rf__node-${runtimeEdge.source}`).hover();
+    await expect(page.locator(".graph-relationship-label").filter({ hasText: "Invoked (runtime)" })).toBeVisible();
     const metrics = await page.locator(".graph-relationship-label .relationship-badge").evaluateAll(labels => labels.map(label => {
       const text = label.querySelector("span")!;
       const qualifier = text.querySelector<HTMLElement>(".graph-relationship-qualifier");

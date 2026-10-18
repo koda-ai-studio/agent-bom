@@ -4,6 +4,7 @@ import type { LineageNodeData } from "@/components/lineage-nodes";
 import { readableGraphEdges } from "@/lib/graph-utils";
 import { graphHierarchyLayout, orderHierarchyBranches } from "@/lib/graph-hierarchy-layout";
 import { readableLineageDagreLr } from "@/lib/graph-node-dimensions";
+import { graphAdaptiveFrame } from "@/lib/graph-adaptive-frame";
 
 const node = (id: string, nodeType: LineageNodeData["nodeType"]): Node<LineageNodeData> => ({
   id, type: "containerNode", position: { x: 0, y: 0 }, data: { label: id, nodeType },
@@ -13,6 +14,25 @@ const edge = (id: string, source: string, target: string, relationship: string):
 });
 
 describe("evidence-driven graph flow", () => {
+  it("fits a compact three-source correlation without hiding its finding off canvas", () => {
+    const sources = [node("file", "sourceFile"), node("image", "container"), node("deployment", "container")];
+    const entries = [...sources, node("package", "package"), node("finding", "vulnerability")];
+    const links = [...sources.map(n => edge(n.id, n.id, "package", "contains")), edge("finding", "package", "finding", "vulnerable_to")];
+    const result = graphHierarchyLayout(entries, links, readableLineageDagreLr({ fitAspect: 1.65 }));
+    const left = Math.min(...result.nodes.map(n => n.position.x));
+    const top = Math.min(...result.nodes.map(n => n.position.y));
+    const right = Math.max(...result.nodes.map(n => n.position.x + 240));
+    const bottom = Math.max(...result.nodes.map(n => n.position.y + Number(n.style?.minHeight ?? 224)));
+    expect(graphAdaptiveFrame({ bounds: { x: left, y: top, width: right - left, height: bottom - top }, width: 1134, availableHeight: 684, inspector: false }).fitAll).toBe(true);
+  });
+
+  it("keeps aggregate member counts visible when overview relationship captions are quiet", () => {
+    const entries = [node("package", "package"), { ...node("group", "vulnerability"), type: "clusterPillNode" }];
+    const links = [{ ...edge("members", "package", "group", "vulnerable_to"), label: "22 members", data: { relationship: "vulnerable_to", isClusterEdge: true } }];
+    const result = readableGraphEdges(graphHierarchyLayout(entries, links).edges);
+    expect(result[0]!.label).toBe("22 members");
+  });
+
   const nodes = [node("repo", "directory"), node("source", "sourceFile"), node("ci", "ciJob"),
     node("app", "container"), node("package", "package"), node("cve", "vulnerability"), node("warning", "misconfiguration")];
   const edges = [edge("source", "repo", "source", "contains"), edge("build", "repo", "ci", "contains"),
