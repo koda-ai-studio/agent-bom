@@ -8,6 +8,7 @@ attached policies and trust relationships.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -97,7 +98,14 @@ def _resolve_cloud_lineage(agent_dict: dict[str, Any], origin: dict[str, Any], d
     )
     account_id = account_id or _clean_graph_part(origin.get("account_id")) or _clean_graph_part(origin.get("subscription_id"))
     return _CloudLineage(
-        resource_scope=_resource_scope(service, resource_id, account_id, _clean_graph_part(scope.get("cluster"))),
+        resource_scope=_resource_scope(
+            provider,
+            service,
+            resource_id,
+            account_id,
+            _clean_graph_part(scope.get("cluster")),
+            _clean_graph_part(origin.get("location")),
+        ),
         origin=origin,
         provider=provider,
         service=service,
@@ -113,16 +121,31 @@ def _resolve_cloud_lineage(agent_dict: dict[str, Any], origin: dict[str, Any], d
     )
 
 
-def _resource_scope(service: str, resource_id: str, account_id: str, cluster: str) -> str:
-    """Scope a cluster-local Kubernetes id by its project/account and cluster.
+# AWS-issued typed ids (``i-0abc...``, ``vol-...``) are unique across accounts,
+# and hosting/inventory projections key them unscoped, so they keep their id.
+_AWS_GLOBAL_ID = re.compile(r"^[a-z]{1,10}-[0-9a-f]{8,17}$")
+
+
+def _resource_scope(provider: str, service: str, resource_id: str, account_id: str, cluster: str, location: str) -> str:
+    """Scope ids that are unique only inside one account, region or cluster.
 
     A ``namespace/pod`` id is unique only inside one cluster, so the same pod
-    name in two projects or clusters must not become one node. Provider ids
-    keep their existing node ids.
+    name in two projects or clusters must not become one node. AWS short ids
+    (a Bedrock agent id, an endpoint name) are unique only inside one account
+    and region, and an ARN without its account segment names nothing outside
+    one account. Fully qualified provider ids keep their existing node ids.
     """
-    if service != "kubernetes":
+    if service == "kubernetes":
+        return "/".join(part for part in (account_id, cluster) if part and part not in resource_id)
+    if provider != "aws":
         return ""
-    return "/".join(part for part in (account_id, cluster) if part and part not in resource_id)
+    if resource_id.startswith("arn:"):
+        arn = resource_id.split(":", 5)
+        has_account = len(arn) == 6 and bool(arn[4])
+        return "" if has_account or not account_id else account_id
+    if _AWS_GLOBAL_ID.match(resource_id):
+        return ""
+    return "/".join(part for part in (account_id, location) if part and part not in resource_id)
 
 
 def _add_lineage_resource_nodes(graph: UnifiedGraph, lineage: _CloudLineage, agent_metadata: dict[str, Any]) -> None:

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from agent_bom.canonical_ids import canonical_mcp_server_id, mcp_server_graph_id_for
 from agent_bom.discovery.config_parsers import parse_mcp_config
 from agent_bom.graph.builder import build_unified_graph_from_report
@@ -289,6 +291,82 @@ def test_same_gpu_pod_in_two_coreweave_contexts_is_two_resources():
     agents = _gpu_agents("coreweave", single, context="cluster-a") + _gpu_agents("coreweave", single, context="cluster-b")
     assert len({a.config_path for a in agents}) == 2
     assert _gpu_counts(agents) == {"agents": 2, "servers": 2, "pods": 2}
+
+
+_COREWEAVE_ITEMS = {
+    "virtualserver": {
+        "metadata": {"namespace": "ns", "name": "vm"},
+        "spec": {"region": "LAS1", "resources": {"gpu": {"type": "H100", "count": 8}}},
+    },
+    "inferenceservice": {
+        "metadata": {"namespace": "ns", "name": "llm"},
+        "spec": {"predictor": {"containers": [{"name": "kserve", "image": "vllm/vllm-openai:0.4"}]}},
+    },
+    "training": {
+        "metadata": {"namespace": "ns", "name": "worker-0"},
+        "spec": {"containers": [{"name": "t", "image": "img/t:1", "resources": {"limits": {"nvidia.com/gpu": "8", "rdma/ib": "1"}}}]},
+    },
+}
+
+
+def _coreweave_agents(kind: str, context: str | None) -> list[Agent]:
+    import json
+    import subprocess
+    from unittest.mock import patch
+
+    from agent_bom.cloud import coreweave
+
+    stage = {
+        "virtualserver": coreweave._discover_virtual_servers,
+        "inferenceservice": coreweave._discover_inference_services,
+        "training": coreweave._discover_infiniband_jobs,
+    }[kind]
+    completed = subprocess.CompletedProcess(["kubectl"], 0, json.dumps({"items": [_COREWEAVE_ITEMS[kind]]}), "")
+    with patch("shutil.which", return_value="kubectl"), patch("subprocess.run", return_value=completed):
+        return stage(context, None)[0]
+
+
+def _coreweave_graph(agents: list[Agent]):
+    graph = build_unified_graph_from_report(to_json(AIBOMReport(agents=agents)))
+    resources = [
+        n for n in graph.nodes.values() if n.entity_type == EntityType.CLOUD_RESOURCE and n.attributes.get("cloud_provider") == "coreweave"
+    ]
+    return graph, resources
+
+
+@pytest.mark.parametrize("kind", sorted(_COREWEAVE_ITEMS))
+def test_same_coreweave_resource_in_two_contexts_is_two_resources(kind: str) -> None:
+    agents = _coreweave_agents(kind, "cluster-a") + _coreweave_agents(kind, "cluster-b")
+    assert len({a.config_path for a in agents}) == 2
+    graph, resources = _coreweave_graph(agents)
+    assert len(_ids(graph, EntityType.AGENT)) == 2
+    assert len(resources) == 2
+    for resource in resources:
+        assert resource.attributes["scope"]["cluster"] in {"cluster-a", "cluster-b"}
+        unscoped = resource.attributes["identity"]["aliases"]
+        assert unscoped and all(":cluster-" not in alias for alias in unscoped)
+
+
+@pytest.mark.parametrize("kind", sorted(_COREWEAVE_ITEMS))
+def test_same_coreweave_resource_in_one_context_is_one_resource(kind: str) -> None:
+    agents = _coreweave_agents(kind, "cluster-a") + _coreweave_agents(kind, "cluster-a")
+    graph, resources = _coreweave_graph(agents)
+    assert len(_ids(graph, EntityType.AGENT)) == 1
+    assert len(resources) == 1
+
+
+@pytest.mark.parametrize("kind", sorted(_COREWEAVE_ITEMS))
+def test_context_scoped_coreweave_agent_keeps_its_unscoped_id_as_alias(kind: str) -> None:
+    unscoped = _coreweave_agents(kind, None)[0]
+    scoped = _coreweave_agents(kind, "cluster-a")[0]
+    from agent_bom.canonical_ids import agent_graph_id_for
+
+    old_id = agent_graph_id_for(unscoped)
+    assert agent_graph_id_for(scoped) != old_id
+    assert old_id in scoped.previous_graph_ids
+    graph, _resources = _coreweave_graph([scoped])
+    node = graph.nodes[agent_graph_id_for(scoped)]
+    assert old_id in node.attributes["identity"]["aliases"]
 
 
 def test_multi_container_gpu_pod_is_one_agent_with_a_server_per_container():

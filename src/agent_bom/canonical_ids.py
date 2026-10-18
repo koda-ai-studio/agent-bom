@@ -271,6 +271,28 @@ def _legacy_agent_graph_id(name: Any, scope: str = "") -> str:
     return f"agent:{scope_part}:{label}" if scope_part else f"agent:{label}"
 
 
+def _relocated_config_graph_ids(record: Any) -> list[str]:
+    """Ids an agent had under the config locations its producer replaced.
+
+    A producer that narrows an ambiguous location (for example, adding the
+    kube context to ``namespace/name``) records the old location in
+    ``metadata.previous_config_paths`` so stored references keep resolving.
+    """
+    metadata = _field(record, "metadata")
+    paths = metadata.get("previous_config_paths") if isinstance(metadata, Mapping) else None
+    if not isinstance(paths, list):
+        return []
+    kind = _field(record, "agent_type") or _field(record, "type") or ""
+    agent_type = str(getattr(kind, "value", kind))
+    name = str(_field(record, "name") or "")
+    out = []
+    for path in paths:
+        if isinstance(path, str) and path.strip():
+            identity = canonical_agent_id(agent_type, name, config_path=path)
+            out.append(agent_graph_id(_field(record, "name"), f"cfg-{hashlib.sha256(identity.encode()).hexdigest()[:12]}"))
+    return out
+
+
 def previous_agent_graph_ids(record: Any) -> list[str]:
     """Candidate old spellings; persistence rejects ambiguous alias bindings."""
     current = agent_graph_id_for(record)
@@ -278,7 +300,10 @@ def previous_agent_graph_ids(record: Any) -> list[str]:
     previous = {_legacy_agent_graph_id(_field(record, "name"), scope)}
     if isinstance(record, Mapping) and isinstance(record.get("previous_graph_ids"), list):
         previous.update(value for value in record["previous_graph_ids"] if isinstance(value, str) and value)
-    elif not scope and _field(record, "source") == PROJECT_CONFIG_SOURCE and _field(record, "config_path"):
+        return sorted(previous - {current})
+    if not scope:
+        previous.update(_relocated_config_graph_ids(record))
+    if not scope and _field(record, "source") == PROJECT_CONFIG_SOURCE and _field(record, "config_path"):
         # Do not hash a redacted basename as though it were the original path.
         # New exports carry these receipts from the full model before redaction.
         location = str(_field(record, "config_path"))

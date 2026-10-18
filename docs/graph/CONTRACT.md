@@ -94,7 +94,10 @@ retains its own relationship. Earlier recipe/name IDs remain explicit alias
 candidates and are not resolved when multiple current instances claim them. A `SHARES_SERVER`
 correlation requires the same resolved server node, never an equal display name
 or launch recipe. It is non-traversable and does not establish delegation,
-execution or effective access.
+execution or effective access. Pairwise `SHARES_SERVER` edges are emitted only
+for groups of up to 16 agents; every shared server node records
+`shared_agent_count` and `shares_server_pairwise`, so a larger group is read from
+the server's `uses` edges instead of a quadratic agent mesh.
 
 An upgrade does not rewrite stored snapshots. SQLite and Postgres persist new
 canonical-ID receipts and read historical rows with their original version-2

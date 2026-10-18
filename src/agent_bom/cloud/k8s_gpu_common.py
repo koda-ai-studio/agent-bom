@@ -111,6 +111,8 @@ def build_training_agent(
     gpu_limits: str,
     config_path: str,
     project_id: str | None = None,
+    cluster: str | None = None,
+    previous_config_paths: list[str] | None = None,
 ) -> Agent:
     """Build the ``<provider>-training`` agent for an InfiniBand training pod."""
     label = f"{provider}-training"
@@ -139,7 +141,9 @@ def build_training_agent(
                 resource_id=f"{pod_ns}/{pod_name}",
                 resource_name=pod_name,
                 project_id=project_id,
-                raw_identity={"namespace": pod_ns, "pod": pod_name, "image": image_ref},
+                cluster=cluster,
+                raw_identity={"namespace": pod_ns, "pod": pod_name, "image": image_ref, **({"context": cluster} if cluster else {})},
             ),
+            **({"previous_config_paths": previous_config_paths} if previous_config_paths else {}),
         },
     )
