@@ -47,7 +47,8 @@ def _nebius_get_all(url: str, api_key: str, items_key: str, params: dict | None 
     """Paginate through a Nebius REST API list endpoint.
 
     Nebius uses ``nextPageToken`` / ``pageToken`` for cursor-based pagination.
-    Fetches all pages and returns the merged items list.
+    Returns merged items only after a valid terminal page. Malformed pages,
+    repeated cursors, and the safety cap fail the affected discovery stage.
 
     Args:
         url: Full endpoint URL.
@@ -58,6 +59,7 @@ def _nebius_get_all(url: str, api_key: str, items_key: str, params: dict | None 
     all_items: list = []
     page_params = dict(params or {})
     _max_pages = 50  # safety cap — prevents infinite loops on malformed responses
+    seen_tokens = {page_params["pageToken"]} if isinstance(page_params.get("pageToken"), str) else set()
 
     with http_client.create_sync_client(timeout=_API_TIMEOUT) as client:
         headers = {"Authorization": f"Bearer {api_key}", "Accept": "application/json"}
@@ -72,18 +74,30 @@ def _nebius_get_all(url: str, api_key: str, items_key: str, params: dict | None 
             if resp is None:
                 raise CloudDiscoveryError("Nebius: request failed after retries")
             resp.raise_for_status()
-            data = resp.json()
+            try:
+                data = resp.json()
+            except ValueError:
+                raise CloudDiscoveryError("Nebius: invalid response page") from None
+            if not isinstance(data, dict):
+                raise CloudDiscoveryError("Nebius: invalid response page")
 
             # Nebius API uses both "models"/"instances" keys and a generic "data" fallback
-            items = data.get(items_key, data.get("data", []))
-            all_items.extend(items if isinstance(items, list) else [])
+            items = data.get(items_key, data.get("data"))
+            if not isinstance(items, list) or any(not isinstance(item, dict) for item in items):
+                raise CloudDiscoveryError("Nebius: invalid response page items")
+            all_items.extend(items)
 
-            next_token = data.get("nextPageToken") or data.get("next_page_token", "")
+            next_token = data.get("nextPageToken", data.get("next_page_token"))
+            if next_token is not None and not isinstance(next_token, str):
+                raise CloudDiscoveryError("Nebius: invalid pagination cursor")
             if not next_token:
-                break
+                return all_items
+            if next_token in seen_tokens:
+                raise CloudDiscoveryError("Nebius: repeated pagination cursor")
+            seen_tokens.add(next_token)
             page_params["pageToken"] = next_token
 
-    return all_items
+    raise CloudDiscoveryError("Nebius: pagination page limit reached before completion")
 
 
 def discover(
