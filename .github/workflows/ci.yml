@@ -2061,7 +2061,8 @@ jobs:
         run: |
           docker save agent-bom:test -o /tmp/agent-bom-test.tar
           chmod 0644 /tmp/agent-bom-test.tar
-          docker run --rm -v /tmp:/workspace agent-bom:test \
+          # Private atomic exports must belong to the host validation process.
+          docker run --rm --user "$(id -u):$(id -g)" -v /tmp:/workspace agent-bom:test \
             agents --image-tar /workspace/agent-bom-test.tar --no-scan -f json -o /workspace/native-image-scan.json
           python3 - <<'PY'
           import json
