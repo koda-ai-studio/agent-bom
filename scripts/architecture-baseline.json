@@ -4156,21 +4156,23 @@
     "output/compliance_narrative.py::generate_compliance_narrative": {
       "function_lines": 127
     },
-    "output/console_render.py": {
-      "deferred_imports": 34,
-      "file_lines": 2206
+    "output/console_frameworks.py": {
+      "deferred_imports": 11
     },
-    "output/console_render.py::build_remediation_plan": {
-      "complexity": 51,
-      "function_lines": 312
+    "output/console_remediation.py": {
+      "deferred_imports": 3
+    },
+    "output/console_render.py": {
+      "deferred_imports": 13,
+      "file_lines": 970
     },
     "output/console_render.py::print_agent_tree": {
       "complexity": 22,
       "function_lines": 99
     },
     "output/console_render.py::print_blast_radius": {
-      "complexity": 31,
-      "function_lines": 154
+      "complexity": 22,
+      "function_lines": 114
     },
     "output/console_render.py::print_cis_findings": {
       "complexity": 16,
@@ -4183,21 +4185,11 @@
     "output/console_render.py::print_export_hint": {
       "function_lines": 166
     },
-    "output/console_render.py::print_posture_summary": {
-      "complexity": 47,
-      "function_lines": 216
+    "output/console_style.py": {
+      "deferred_imports": 1
     },
-    "output/console_render.py::print_remediation_plan": {
-      "complexity": 23,
-      "function_lines": 132
-    },
-    "output/console_render.py::print_summary": {
-      "complexity": 26,
-      "function_lines": 164
-    },
-    "output/console_render.py::print_threat_frameworks": {
-      "complexity": 47,
-      "function_lines": 298
+    "output/console_summary.py": {
+      "deferred_imports": 1
     },
     "output/csv_fmt.py": {
       "deferred_imports": 2
