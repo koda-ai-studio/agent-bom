@@ -21410,6 +21410,17 @@
             "title": "Node Id",
             "type": "string"
           },
+          "resolved_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved From"
+          },
           "scan_id": {
             "title": "Scan Id",
             "type": "string"
@@ -21693,6 +21704,17 @@
           "node_id": {
             "title": "Node Id",
             "type": "string"
+          },
+          "resolved_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved From"
           },
           "scan_id": {
             "title": "Scan Id",
@@ -21984,6 +22006,17 @@
             "title": "Reachable Nodes",
             "type": "array"
           },
+          "resolved_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved From"
+          },
           "source": {
             "title": "Source",
             "type": "string"
@@ -22027,15 +22060,19 @@
         "properties": {
           "compliance_prefixes": {
             "items": {
+              "maxLength": 128,
               "type": "string"
             },
+            "maxItems": 100,
             "title": "Compliance Prefixes",
             "type": "array"
           },
           "data_sources": {
             "items": {
+              "maxLength": 128,
               "type": "string"
             },
+            "maxItems": 100,
             "title": "Data Sources",
             "type": "array"
           },
@@ -22056,8 +22093,10 @@
           },
           "entity_types": {
             "items": {
+              "maxLength": 128,
               "type": "string"
             },
+            "maxItems": 100,
             "title": "Entity Types",
             "type": "array"
           },
@@ -22099,16 +22138,20 @@
           },
           "relationship_types": {
             "items": {
+              "maxLength": 128,
               "type": "string"
             },
+            "maxItems": 100,
             "title": "Relationship Types",
             "type": "array"
           },
           "roots": {
             "description": "One or more starting node IDs",
             "items": {
+              "maxLength": 512,
               "type": "string"
             },
+            "maxItems": 500,
             "minItems": 1,
             "title": "Roots",
             "type": "array"
@@ -22381,6 +22424,17 @@
               }
             ],
             "title": "Path Nodes"
+          },
+          "resolved_from": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved From"
           },
           "scan_id": {
             "title": "Scan Id",
@@ -31494,6 +31548,17 @@
       "PostureDimension": {
         "additionalProperties": true,
         "properties": {
+          "assessed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assessed"
+          },
           "details": {
             "title": "Details",
             "type": "string"
@@ -63719,6 +63784,7 @@
             "schema": {
               "anyOf": [
                 {
+                  "maximum": 3650,
                   "minimum": 0,
                   "type": "integer"
                 },
@@ -64218,7 +64284,7 @@
     },
     "/v1/graph/node-neighbors": {
       "get": {
-        "description": "Return a bounded set of a node's direct graph neighbors for inline expand.\n\nThis is the read side of the dashboard's progressive-disclosure attack-path\nview: expanding one hop loads only that hop's direct neighbors instead of the\nwhole graph. It is deliberately lazy and bounded \u2014 fan-out is capped by\n``limit``; ``total_neighbors`` is null when source evidence is incomplete.\nA completely read high-degree neighborhood reports its known total with\n``truncated`` set, so the UI can render a \"+N more\" affordance rather than\nexploding the view. Neighbor node metadata (entity type, label, severity)\ntravels with the payload so the client never needs a second round trip per\nneighbor id. An unknown node id returns an empty payload (200, ``found``\nfalse) instead of raising, so a stale client id degrades quietly in-place.",
+        "description": "Return a bounded set of a node's direct graph neighbors for inline expand.\n\nThe read side of progressive-disclosure attack-path views: one hop's direct\nneighbors, fan-out capped by ``limit``; ``total_neighbors`` is null when source\nevidence is incomplete, and a fully read high-degree neighborhood reports its\ntotal with ``truncated`` set (\"+N more\"). Neighbor metadata travels with the\npayload. A replaced id resolves (``resolved_from``); an unknown id returns 200\nwith ``found`` false, so a stale client id degrades quietly in place.",
         "operationId": "get_graph_node_neighbors_v1_graph_node_neighbors_get",
         "parameters": [
           {
@@ -64407,7 +64473,7 @@
     },
     "/v1/graph/node/{node_id}/neighbors": {
       "get": {
-        "description": "Return a bounded set of a node's direct graph neighbors for inline expand.\n\nThis is the read side of the dashboard's progressive-disclosure attack-path\nview: expanding one hop loads only that hop's direct neighbors instead of the\nwhole graph. It is deliberately lazy and bounded \u2014 fan-out is capped by\n``limit``; ``total_neighbors`` is null when source evidence is incomplete.\nA completely read high-degree neighborhood reports its known total with\n``truncated`` set, so the UI can render a \"+N more\" affordance rather than\nexploding the view. Neighbor node metadata (entity type, label, severity)\ntravels with the payload so the client never needs a second round trip per\nneighbor id. An unknown node id returns an empty payload (200, ``found``\nfalse) instead of raising, so a stale client id degrades quietly in-place.",
+        "description": "Return a bounded set of a node's direct graph neighbors for inline expand.\n\nThe read side of progressive-disclosure attack-path views: one hop's direct\nneighbors, fan-out capped by ``limit``; ``total_neighbors`` is null when source\nevidence is incomplete, and a fully read high-degree neighborhood reports its\ntotal with ``truncated`` set (\"+N more\"). Neighbor metadata travels with the\npayload. A replaced id resolves (``resolved_from``); an unknown id returns 200\nwith ``found`` false, so a stale client id degrades quietly in place.",
         "operationId": "get_graph_node_neighbors_v1_graph_node__node_id__neighbors_get",
         "parameters": [
           {
@@ -64830,7 +64896,7 @@
     },
     "/v1/graph/rollup": {
       "get": {
-        "description": "Collapse the estate along ``CONTAINS`` into a small, readable view.\n\nPast a few hundred nodes the raw topology is an unreadable hairball. This\nendpoint rolls the graph up along the containment hierarchy\n(org -> account/project -> app -> resource) so a 1000+ node estate renders\nas a handful of top-level containers, each carrying aggregate descendant\ncounts, worst-severity, a per-severity histogram, and exposure / toxic\nflags. ``?node=<id>`` returns one level of direct children for on-demand\ndrill-down, paged by ``offset``/``limit`` with ``pagination`` and truthful\n``completeness``; ``?mode=attack_path`` returns the nodes/edges on materialised\nattack paths first with the rest collapsed.\n\nBackend for the UI graph-navigation surface. Read-only: never mutates the\nsource graph.",
+        "description": "Collapse the estate along ``CONTAINS`` into a small, readable view.\n\nRolls the graph up along containment (org -> account/project -> app ->\nresource) so a 1000+ node estate renders as a few top-level containers, each\nwith descendant counts, worst severity, a severity histogram and exposure /\ntoxic flags. ``?node=<id>`` (a replaced id resolves, echoed as\n``resolved_from``) returns one level of direct children, paged by\n``offset``/``limit`` with truthful ``completeness``; ``?mode=attack_path``\nreturns materialised attack-path nodes/edges first. Read-only.",
         "operationId": "get_graph_rollup_v1_graph_rollup_get",
         "parameters": [
           {
@@ -65718,7 +65784,7 @@
     },
     "/v1/graph/should-i-deploy": {
       "post": {
-        "description": "Return the MCP-compatible allow/warn/block deploy decision over REST.",
+        "description": "Return the MCP-compatible allow/warn/block/not_found deploy decision over REST.",
         "operationId": "post_graph_should_i_deploy_v1_graph_should_i_deploy_post",
         "requestBody": {
           "content": {
@@ -65797,6 +65863,7 @@
             "schema": {
               "anyOf": [
                 {
+                  "maximum": 3650,
                   "minimum": 0,
                   "type": "integer"
                 },
@@ -76206,6 +76273,7 @@
             "required": false,
             "schema": {
               "default": 0,
+              "maximum": 1000000000,
               "minimum": 0,
               "title": "Offset",
               "type": "integer"
@@ -76338,6 +76406,8 @@
             "required": false,
             "schema": {
               "default": 0,
+              "maximum": 1000000000,
+              "minimum": 0,
               "title": "Offset",
               "type": "integer"
             }
@@ -76598,6 +76668,8 @@
             "required": false,
             "schema": {
               "default": 0,
+              "maximum": 1000000000,
+              "minimum": 0,
               "title": "Offset",
               "type": "integer"
             }
@@ -76722,6 +76794,8 @@
             "required": false,
             "schema": {
               "default": 0,
+              "maximum": 1000000000,
+              "minimum": 0,
               "title": "Offset",
               "type": "integer"
             }
@@ -76854,6 +76928,7 @@
             "required": false,
             "schema": {
               "default": 0,
+              "maximum": 1000000000,
               "minimum": 0,
               "title": "Offset",
               "type": "integer"

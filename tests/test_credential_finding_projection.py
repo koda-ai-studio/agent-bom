@@ -79,8 +79,22 @@ def test_missing_owner_or_wrong_source_cannot_create_graph_links():
     graph = build_unified_graph_from_report(inventory)
     before = (len(graph.nodes), len(graph.edges))
     row = findings[0].to_dict()
-    project_credential_findings(graph, [None, {**row, "node_id": "agent:absent"}, {**row, "source": "MCP_SCAN"}])
+    unresolvable = {**row, "node_id": "agent:absent", "asset": {**row["asset"], "identifier": "absent"}}
+    project_credential_findings(graph, [None, unresolvable, {**row, "source": "MCP_SCAN"}])
     assert (len(graph.nodes), len(graph.edges)) == before
+
+
+def test_foreign_scoped_owner_rebinds_through_the_agent_identity():
+    from agent_bom.graph.credential_findings import project_credential_findings
+
+    inventory, _, findings = _scan()
+    graph = build_unified_graph_from_report(inventory)
+    row = findings[0].to_dict()
+    owner = row["node_id"]
+    project_credential_findings(graph, [{**row, "node_id": "agent:cfg-elsewhere:pushed"}])
+    finding_node = f"misconfig:graph_analysis:{row['id']}"
+    assert finding_node in graph.nodes
+    assert any(edge.source == owner and edge.target == finding_node for edge in graph.edges)
 
 
 def test_persisted_api_returns_high_paths_and_scoped_counts(api):  # noqa: F811

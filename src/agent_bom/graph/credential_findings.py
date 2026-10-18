@@ -23,11 +23,54 @@ _RULE = "AGENT_REACHES_PRIVILEGED"
 MAX_PATHS = 10_000
 
 
+def _agents_by_identity(graph: UnifiedGraph) -> dict[str, set[str]]:
+    index: dict[str, set[str]] = {}
+    for node in graph.nodes.values():
+        if node.entity_type != EntityType.AGENT:
+            continue
+        for key in ("canonical_id", "stable_id"):
+            value = node.attributes.get(key)
+            if isinstance(value, str) and value:
+                index.setdefault(value, set()).add(node.id)
+    return index
+
+
+def _rebind_owner(graph: UnifiedGraph, row: dict[str, Any], index: dict[str, set[str]]) -> str | None:
+    """The agent a row names when its recorded graph id came from another scope.
+
+    A pushed report keeps the scanner's ``agent:cfg-...`` ids while the control
+    plane scopes the same agent by its source. The agent's canonical id is the
+    join; an ambiguous match binds nothing.
+    """
+    owner = row.get("node_id")
+    if isinstance(owner, str) and owner in graph.nodes:
+        return owner
+    raw_asset = row.get("asset")
+    asset: dict[str, Any] = raw_asset if isinstance(raw_asset, dict) else {}
+    matches = index.get(str(asset.get("identifier") or "")) or set()
+    return next(iter(matches)) if len(matches) == 1 else None
+
+
+def _rebind_reference(node_id: str, recorded_owner: Any, owner: str) -> str:
+    """Move a credential id recorded under the scanner's agent key onto the resolved agent key."""
+    if not isinstance(recorded_owner, str) or recorded_owner == owner:
+        return node_id
+    old_prefix = f"cred:server:{recorded_owner.removeprefix('agent:')}:"
+    if node_id.startswith(old_prefix):
+        return f"cred:server:{owner.removeprefix('agent:')}:{node_id[len(old_prefix) :]}"
+    return node_id
+
+
 def project_credential_findings(graph: UnifiedGraph, findings: Any) -> None:
     """Materialize report occurrences after topology evaluation, idempotently."""
     if not isinstance(findings, list):
         return
-    owners = dict.fromkeys(owner for row in findings if isinstance(row, dict) and isinstance(owner := row.get("node_id"), str))
+    index = _agents_by_identity(graph)
+    bound: dict[int, str] = {}
+    for row in findings:
+        if isinstance(row, dict) and (resolved := _rebind_owner(graph, row, index)) is not None:
+            bound[id(row)] = resolved
+    owners = dict.fromkeys(bound.values())
     routes = credential_routes(graph, owners, analyzer="credential_finding_projection")
     for row in findings:
         if not isinstance(row, dict) or row.get("source") != "GRAPH_ANALYSIS" or row.get("finding_type") != "COMBINATION":
@@ -35,7 +78,7 @@ def project_credential_findings(graph: UnifiedGraph, findings: Any) -> None:
         evidence = row.get("evidence")
         if not isinstance(evidence, dict) or evidence.get("rule_id") != _RULE:
             continue
-        fid, owner = row.get("id"), row.get("node_id")
+        fid, owner = row.get("id"), bound.get(id(row))
         if not isinstance(fid, str) or not fid or not isinstance(owner, str):
             continue
         agent = graph.nodes.get(owner)
@@ -44,7 +87,9 @@ def project_credential_findings(graph: UnifiedGraph, findings: Any) -> None:
         raw_ids = evidence.get("node_ids")
         if not isinstance(raw_ids, list):
             continue
-        credentials = sorted({nid for nid in raw_ids if isinstance(nid, str) and nid in routes.get(owner, {})})
+        recorded = row.get("node_id")
+        references = {_rebind_reference(nid, recorded, owner) for nid in raw_ids if isinstance(nid, str)}
+        credentials = sorted(nid for nid in references if nid in routes.get(owner, {}))
         node_id = f"misconfig:graph_analysis:{fid}"
         severity = str(row.get("severity") or "unknown").lower()
         graph.add_node(
@@ -136,7 +181,7 @@ def credential_finding_paths(graph: UnifiedGraph) -> list[AttackPath]:
                     target=node.id,
                     hops=hops + [node.id],
                     edges=rels + [RelationshipType.VULNERABLE_TO.value],
-                    composite_risk=min(39.0, SEVERITY_RANK.get(node.severity, 0) * 20.0 * 0.35),
+                    composite_risk=min(100.0, SEVERITY_RANK.get(node.severity, 0) * 20.0),
                     summary="Modeled credential-reach finding from recorded topology; successful use, effective permission, "
                     "and exploitation require separate evidence. The final hop links the credential to its assessment.",
                     credential_exposure=[graph.nodes[credential].label],

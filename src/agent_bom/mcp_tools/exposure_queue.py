@@ -24,6 +24,7 @@ from agent_bom.graph.container import AttackPath
 from agent_bom.graph.edge_lookup import _build_edge_lookup
 from agent_bom.graph.exposure import _exposure_path_for_attack_path
 from agent_bom.graph.exposure_cursor import decode_exposure_cursor
+from agent_bom.graph.node_alias_resolution import resolve_snapshot_node_ids
 from agent_bom.mcp_errors import CODE_UNSUPPORTED_BACKEND, CODE_VALIDATION_INVALID_ARGUMENT, mcp_error_json
 
 VIEWS = ("summary", "full")
@@ -39,6 +40,7 @@ _SUMMARY_KEYS = (
     "severity",
     "isKev",
     "evidenceTier",
+    "evidenceConfidence",
     "graphReachability",
     "reachability",
     "findings",
@@ -177,12 +179,25 @@ def project_paths(
             path, nodes_by_id=nodes_by_id, edges=edges, rank=rank, scan_id=scan_id, edge_lookup=edge_lookup
         )
         fields = path_rank_fields(path, nodes_by_id)
+        factors = fields["ranking_factors"]
         payload.update(
             severity=fields["severity"],
             isKev=fields["is_kev"],
             evidenceTier=fields["evidence_tier"],
+            evidenceConfidence=factors["evidence_confidence"],
             graphReachable=fields["graph_reachable"],
             graphReachability=fields["graph_reachability"],
+            rankingFactors={
+                "order": factors["order"],
+                "evidenceTier": factors["evidence_tier"],
+                "isKev": factors["is_kev"],
+                "severity": factors["severity"],
+                "severityScored": factors["severity_scored"],
+                "evidenceConfidence": factors["evidence_confidence"],
+                "compositeRisk": factors["composite_risk"],
+                "credentialCount": factors["credential_count"],
+                "reasons": factors["reasons"],
+            },
         )
         payload["provenance"] = {"source": "mcp_exposure_paths", "scanId": scan_id}
         projected.append(payload)
@@ -256,6 +271,19 @@ async def snapshot_changed(store: Any, tenant_id: str, identity: tuple[str, str]
     pinned_scan_id, generation = identity
     final_identity = await asyncio.to_thread(store.snapshot_identity, tenant_id=tenant_id, scan_id=pinned_scan_id, for_paging=True)
     return tuple(final_identity) != (pinned_scan_id, generation) or (has_rows and not generation)
+
+
+async def _resolve_query_node_ids(store: Any, tenant_id: str, scan_id: str, query: PathQuery) -> PathQuery:
+    """Filter ids a snapshot replaced match the canonical node, as on every node read."""
+    fields = {name: getattr(query, name) for name in ("target_id", "credential_id", "node_id") if getattr(query, name)}
+    if not fields:
+        return query
+    _ordered, mapping = await asyncio.to_thread(
+        resolve_snapshot_node_ids, store, tenant_id=tenant_id, scan_id=scan_id, node_ids=list(dict.fromkeys(fields.values()))
+    )
+    if not mapping:
+        return query
+    return replace(query, **{name: mapping.get(value, value) for name, value in fields.items()})
 
 
 async def nodes_for(store: Any, tenant_id: str, scan_id: str, node_ids: set[str]) -> list[Any]:
@@ -415,6 +443,21 @@ def _fit(payload: dict[str, Any], read: _Read, *, view: str, offset: int, limit:
         selected = selected[: max(1, returned // 2)]
 
 
+def _cursor_snapshot(cursor: str | None) -> str | None:
+    """The snapshot a cursor pinned, read before validation so aliases resolve in it.
+
+    Only selects which of the caller's own snapshots resolves aliases; the full
+    scope and snapshot check in :func:`_continuation` still decides validity.
+    """
+    if not cursor or len(cursor) > 4096:
+        return None
+    try:
+        pinned = json.loads(base64.b64decode(cursor, altchars=b"-_", validate=True)).get("scan")
+    except (ValueError, TypeError, AttributeError):
+        return None
+    return pinned if isinstance(pinned, str) and pinned and "\x00" not in pinned else None
+
+
 def _continuation(cursor: str | None, *, scope: str, scan_id: str | None) -> tuple[dict[str, Any], str | None, int] | str:
     if not cursor:
         return {}, scan_id, 0
@@ -456,6 +499,8 @@ async def exposure_paths_for_tenant(
     scan_id, resolution_error = await _resolve_scan(tenant_id, scan_id)
     if resolution_error:
         return resolution_error
+    # Page two resolves aliases in the snapshot page one pinned, not the latest.
+    query = await _resolve_query_node_ids(_get_graph_store(), tenant_id, scan_id or _cursor_snapshot(cursor) or "", query)
     # Cursors locate evidence; authorization always comes from the caller's
     # tenant. Pin the snapshot and filters so a new scan cannot shift page two.
     scope = hashlib.sha256(json.dumps([tenant_id, sorted(query.active().items())], default=str).encode()).hexdigest()

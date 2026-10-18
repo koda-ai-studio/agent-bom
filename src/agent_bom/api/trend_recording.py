@@ -6,6 +6,7 @@ import logging
 from collections.abc import Mapping
 from typing import Any
 
+from agent_bom.api.exec_posture import tenant_headline_posture
 from agent_bom.baseline import TrendPoint
 from agent_bom.security import sanitize_error, sanitize_text
 
@@ -43,8 +44,15 @@ def trend_point_from_scan_result(
     scan_id: str | None = None,
     completed_at: str | None = None,
     scope_id: str | None = None,
+    headline: Mapping[str, Any] | None = None,
 ) -> TrendPoint | None:
-    """Build one honest, retry-safe trend point from canonical scan JSON."""
+    """Build one honest, retry-safe trend point from canonical scan JSON.
+
+    ``headline`` is the tenant posture the overview serves after this scan was
+    persisted; when given, the point records that grade and score so the trend
+    and the posture endpoints are one derivation. The scan must still carry a
+    gradable scorecard: an ungradable scan never adds a point.
+    """
     from agent_bom.api.trend_comparison import comparison_metadata
 
     scorecard = result.get("posture_scorecard")
@@ -57,6 +65,15 @@ def trend_point_from_scan_result(
         score = float(scorecard["score"])
     except (KeyError, TypeError, ValueError):
         return None
+    if headline is not None:
+        headline_grade = str(headline.get("grade") or "").strip().upper()
+        headline_score = score
+        try:
+            headline_score = float(headline["score"])
+        except (KeyError, TypeError, ValueError):
+            headline_grade = ""
+        if headline_grade and headline_grade != "N/A":
+            grade, score = headline_grade, headline_score
     resolved_scan_id = str(scan_id or result.get("scan_id") or "").strip()
     if not resolved_scan_id:
         return None
@@ -87,14 +104,21 @@ def record_scan_trend_best_effort(
     scan_id: str | None = None,
     completed_at: str | None = None,
     scope_id: str | None = None,
+    headline_posture: bool = False,
 ) -> bool:
-    """Persist one trend point; return whether a gradable point was recorded."""
+    """Persist one trend point; return whether a gradable point was recorded.
+
+    ``headline_posture`` is for callers that have already persisted the job:
+    the point then records the tenant's current headline posture.
+    """
+    headline = tenant_headline_posture(str(tenant_id or "default")) if headline_posture else None
     point = trend_point_from_scan_result(
         result,
         tenant_id=tenant_id,
         scan_id=scan_id,
         completed_at=completed_at,
         scope_id=scope_id,
+        headline=headline,
     )
     if point is None:
         return False

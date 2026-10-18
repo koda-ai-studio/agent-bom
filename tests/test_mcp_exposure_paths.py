@@ -135,7 +135,7 @@ async def test_deploy_decision_does_not_approve_without_matching_evidence():
     response = await deploy_decision_impl(candidate="safe-service", _get_graph_store=lambda: _GraphStore())
     payload = json.loads(response)
 
-    assert payload["decision"] == "warn"
+    assert payload["decision"] == "not_found"
     assert payload["maxRisk"] is None
     assert payload["evidenceStatus"] == "not_evaluated"
     assert payload["matchedPathCount"] == 0
@@ -177,13 +177,13 @@ async def test_exposure_paths_derives_persisted_topology_with_limits(topology_st
     assert payload["total"] == 3
     assert payload["completeness"]["complete"] is False
     assert all(path["reachability"] == "unknown" for path in payload["paths"])
-    assert all(path["riskScore"] <= 39 for path in payload["paths"])
+    assert all(path["evidenceConfidence"] == "structural" for path in payload["paths"])
     assert payload["paths"][0]["nodeIds"][:3] == ["agent:a", "server:s", "pkg:p"]
-    filtered = json.loads(await exposure_paths_impl(scan_id="topology", min_risk=40, _get_graph_store=lambda: topology_store))
+    filtered = json.loads(await exposure_paths_impl(scan_id="topology", min_risk=100, _get_graph_store=lambda: topology_store))
     assert filtered["count"] == 0
     assert filtered["total"] == 0
     assert filtered["snapshot_total"] == 3
-    assert "min_risk=40" in filtered["message"]
+    assert "min_risk=100" in filtered["message"]
 
 
 @pytest.mark.asyncio
@@ -499,3 +499,47 @@ async def test_exposure_snapshot_lookup_unavailable_is_retryable(monkeypatch):
     payload = json.loads(await exposure_paths_impl(scan_id="snapshot"))
     assert payload["error"]["code"] == "AGENTBOM_MCP_UPSTREAM_UNAVAILABLE"
     assert "/private/customer.db" not in json.dumps(payload)
+
+
+def test_cursor_resolves_aliases_in_its_pinned_snapshot_after_a_new_scan():
+    """A new scan between pages must not re-resolve page two against the latest snapshot."""
+    import asyncio
+    import base64
+    import hashlib
+
+    from agent_bom.mcp_tools import exposure_queue as q
+
+    class Store:
+        latest = "scan-1"
+
+        def resolve_node_aliases(self, *, tenant_id, scan_id, node_ids):
+            return {node: f"node:{scan_id or self.latest}" for node in node_ids if node == "old-node"}
+
+    async def resolve(tenant_id, scan_id):
+        return scan_id, None
+
+    seen: list[tuple[str, str]] = []
+
+    async def read(store, tenant_id, scan_id, query, offset, limit, continuation):
+        seen.append((scan_id, query.target_id))
+        return json.dumps({"ok": True})
+
+    async def run() -> None:
+        store = Store()
+        first = await q._resolve_query_node_ids(store, "tenant-a", "scan-1", q.PathQuery(target_id="old-node"))
+        scope = hashlib.sha256(json.dumps(["tenant-a", sorted(first.active().items())], default=str).encode()).hexdigest()
+        pinned = {"v": 1, "scope": scope, "scan": "scan-1", "revision": "gen-1", "offset": 1}
+        cursor = base64.urlsafe_b64encode(json.dumps(pinned).encode()).decode()
+        original = q._read_exposure
+        q._read_exposure = read
+        try:
+            store.latest = "scan-2"
+            result = await q.exposure_paths_for_tenant(
+                tenant_id="tenant-a", target_id="old-node", cursor=cursor, _get_graph_store=lambda: store, _resolve_scan=resolve
+            )
+        finally:
+            q._read_exposure = original
+        assert "error" not in json.loads(result), result
+
+    asyncio.run(run())
+    assert seen == [("scan-1", "node:scan-1")]

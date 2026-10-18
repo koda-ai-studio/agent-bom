@@ -26,7 +26,7 @@ from agent_bom.core.errors import DegradedCoverage, UpstreamError, UpstreamInval
 from agent_bom.enrichment_posture import record_enrichment_source
 from agent_bom.http_client import create_client, request_with_retry
 from agent_bom.models import Vulnerability, compute_confidence
-from agent_bom.scanners.enrichment_apply import apply_intel, apply_kev_entry, vuln_cve_ids
+from agent_bom.scanners.enrichment_apply import apply_intel, join_kev_status, vuln_cve_ids
 from agent_bom.scanners.enrichment_apply import calculate_exploitability as calculate_exploitability
 from agent_bom.scanners.state import record_degraded_coverage, record_scan_warning
 from agent_bom.scanners.upstream import upstream_request
@@ -638,27 +638,27 @@ def extract_cve_ids(vulnerabilities: list[Vulnerability], *, include_upstream: b
     return sorted({cve for vuln in vulnerabilities for cve in vuln_cve_ids(vuln, include_upstream=include_upstream)})
 
 
-async def join_kev_catalog(vulnerabilities: list[Vulnerability], *, offline: bool = False) -> int:
+async def join_kev_catalog(vulnerabilities: list[Vulnerability], *, offline: bool = False, timeout: float = 30.0) -> int:
     """Join only the CISA KEV catalog onto *vulnerabilities*; return the KEV hit count.
 
-    ``--fail-on-kev`` needs KEV evidence without the rest of ``--enrich``
-    (NVD, EPSS). Online this is one catalog request (served from the 24h cache
-    when fresh); offline it reads only a within-TTL local cache or the air-gap
-    bundle and never touches the network. Either way the catalog source is
-    recorded in the enrichment posture the gate reads.
+    Every scan runs it, without the rest of ``--enrich``: one catalog request
+    (24h cache) or, offline, only a local cache / air-gap bundle. ``kev_status``
+    reads ``unknown`` when the catalog is unavailable, never "not exploited".
     """
-    if offline or _offline_enrichment_enabled():
-        kev_data = _cached_kev_catalog(offline=True)
-    else:
-        async with create_client(timeout=30.0) as client:
-            kev_data = await fetch_cisa_kev_catalog(client)
-    if not kev_data:
-        return 0
-    return sum(1 for vuln in vulnerabilities if apply_kev_entry(vuln, vuln_cve_ids(vuln), kev_data))
+    kev_data: dict = {}
+    try:
+        if offline or _offline_enrichment_enabled():
+            kev_data = _cached_kev_catalog(offline=True)
+        else:
+            async with create_client(timeout=timeout) as client:
+                kev_data = await fetch_cisa_kev_catalog(client)
+    finally:
+        join_kev_status(vulnerabilities, kev_data or {})
+    return sum(1 for vuln in vulnerabilities if vuln.is_kev)
 
 
-def join_kev_catalog_sync(vulnerabilities: list[Vulnerability], *, offline: bool = False) -> int:
-    return asyncio.run(join_kev_catalog(vulnerabilities, offline=offline))
+def join_kev_catalog_sync(vulnerabilities: list[Vulnerability], *, offline: bool = False, timeout: float = 30.0) -> int:
+    return asyncio.run(join_kev_catalog(vulnerabilities, offline=offline, timeout=timeout))
 
 
 async def enrich_vulnerabilities(
@@ -818,9 +818,9 @@ async def enrich_vulnerabilities(
         elif enable_nvd and nvd_total:
             console.print("  [yellow]⚠[/yellow] NVD data unavailable")
 
-        # Enrich each vulnerability — match by primary ID or CVE aliases; count
-        # each vulnerability once regardless of how many sources enriched it.
+        # Match by primary ID or CVE aliases; count each vulnerability once however many sources enriched it.
         enriched_count = sum(1 for vuln in vulnerabilities if apply_intel(vuln, epss_data, kev_data, nvd_data if enable_nvd else {}))
+        join_kev_status(vulnerabilities, kev_data, consulted=enable_kev)
 
     # Persist enrichment caches to disk
     _save_enrichment_cache()

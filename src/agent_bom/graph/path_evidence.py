@@ -20,6 +20,24 @@ from agent_bom.graph.types import RelationshipType
 
 HopEdges = dict[tuple[str, str], list[UnifiedEdge]]
 
+_TRACE_ORDER_RELATIONSHIPS = frozenset({RelationshipType.TRACE_STEP.value})
+
+# Reachability qualifiers derived here; recomputed on every annotation pass.
+_ANNOTATION_BASIS = frozenset(
+    {
+        "incomplete_hop_evidence",
+        "stale_evidence_allowed",
+        "directed_provenance_backed_hops",
+        "blocked_runtime_hop",
+        "failed_runtime_outcome",
+        "correlation_recomputation_required",
+        "analysis_not_recorded",
+        "analysis_limited",
+        "analysis_skipped",
+        "analysis_failed",
+    }
+)
+
 STRUCTURAL_EXPOSURE_SUMMARY = (
     "Graph topology links an agent/server to a vulnerable component. Listed tools and "
     "credential references are context; effective permission, successful use, and exploitation "
@@ -150,76 +168,92 @@ def _runtime_hop_receipt(edge: UnifiedEdge) -> dict[str, Any]:
     }
 
 
+def _hop_receipt(graph: UnifiedGraph, source: str, target: str, relationship: str, hop_edges: HopEdges | None) -> dict[str, Any]:
+    """One classified receipt, or an explicit gap, for a single ordered hop."""
+    edge, gap = resolve_typed_hop(graph, source, target, relationship, hop_edges)
+    if edge is None:
+        return {
+            "source_node_id": source,
+            "target_node_id": target,
+            "relationship": relationship,
+            "reason_codes": [gap],
+            "source_snapshot_ids": [],
+            "relationship_provenance": "unavailable",
+            "correlation_identity_status": "unavailable",
+            "evidence_tier": "unknown",
+            "confidence": 0.0,
+            "freshness": "unknown",
+            "runtime_observed_state": "not_observed",
+            "direction": "unknown",
+            "traversable": False,
+            "complete": False,
+            "truncated": False,
+        }
+    source_ids = _source_snapshot_ids(edge, graph)
+    freshness = _freshness(edge)
+    authority = authority_evidence(edge.evidence)
+    runtime_receipt = _runtime_hop_receipt(edge)
+    # Trace order records which assets one correlated trace touched in
+    # sequence. It is a real receipt, but not an access/exposure hop, so it
+    # can never complete an attack path on its own.
+    trace_order = _relationship(edge) in _TRACE_ORDER_RELATIONSHIPS
+    if trace_order:
+        runtime_receipt["reason_codes"] = [*runtime_receipt["reason_codes"], "trace_order_not_access"]
+    return {
+        "source_node_id": source,
+        "target_node_id": target,
+        "relationship": _relationship(edge),
+        **runtime_receipt,
+        "source_snapshot_ids": source_ids,
+        "relationship_provenance": "recorded" if _has_relationship_provenance(edge) else "unavailable",
+        "correlation_identity_status": "current" if _correlation_identity_current(edge) else "recomputation_required",
+        "evidence_tier": _evidence_tier(edge),
+        "confidence": float(edge.confidence),
+        "freshness": freshness,
+        "direction": edge.direction,
+        "traversable": bool(edge.traversable),
+        "complete": bool(
+            edge.traversable
+            and not trace_order
+            and not runtime_receipts_limited(edge.evidence)
+            and edge.direction == "directed"
+            and source_ids
+            and _has_relationship_provenance(edge)
+            and _correlation_identity_current(edge)
+            and freshness in {"fresh", "stale_allowed"}
+            and edge.source == source
+            and edge.target == target
+        ),
+        "truncated": False,
+        **({"authority": authority} if authority is not None else {}),
+    }
+
+
 def annotate_attack_path_evidence(path: AttackPath, graph: UnifiedGraph, *, hop_edges: HopEdges | None = None) -> AttackPath:
     """Attach deterministic hop receipts and conservatively classify truth."""
 
     path.summary = _qualify_structural_summary(path.summary)
-    receipts: list[dict[str, Any]] = []
-    for index, (source, target) in enumerate(zip(path.hops, path.hops[1:])):
-        relationship = path.edges[index] if index < len(path.edges) else ""
-        edge, gap = resolve_typed_hop(graph, source, target, relationship, hop_edges)
-        if edge is None:
-            receipts.append(
-                {
-                    "source_node_id": source,
-                    "target_node_id": target,
-                    "relationship": relationship,
-                    "reason_codes": [gap],
-                    "source_snapshot_ids": [],
-                    "relationship_provenance": "unavailable",
-                    "correlation_identity_status": "unavailable",
-                    "evidence_tier": "unknown",
-                    "confidence": 0.0,
-                    "freshness": "unknown",
-                    "runtime_observed_state": "not_observed",
-                    "direction": "unknown",
-                    "traversable": False,
-                    "complete": False,
-                    "truncated": False,
-                }
-            )
-            continue
-        source_ids = _source_snapshot_ids(edge, graph)
-        freshness = _freshness(edge)
-        authority = authority_evidence(edge.evidence)
-        receipts.append(
-            {
-                "source_node_id": source,
-                "target_node_id": target,
-                "relationship": _relationship(edge),
-                **_runtime_hop_receipt(edge),
-                "source_snapshot_ids": source_ids,
-                "relationship_provenance": "recorded" if _has_relationship_provenance(edge) else "unavailable",
-                "correlation_identity_status": "current" if _correlation_identity_current(edge) else "recomputation_required",
-                "evidence_tier": _evidence_tier(edge),
-                "confidence": float(edge.confidence),
-                "freshness": freshness,
-                "direction": edge.direction,
-                "traversable": bool(edge.traversable),
-                "complete": bool(
-                    edge.traversable
-                    and not runtime_receipts_limited(edge.evidence)
-                    and edge.direction == "directed"
-                    and source_ids
-                    and _has_relationship_provenance(edge)
-                    and _correlation_identity_current(edge)
-                    and freshness in {"fresh", "stale_allowed"}
-                    and edge.source == source
-                    and edge.target == target
-                ),
-                "truncated": False,
-                **({"authority": authority} if authority is not None else {}),
-            }
-        )
+    receipts = [
+        _hop_receipt(graph, source, target, path.edges[index] if index < len(path.edges) else "", hop_edges)
+        for index, (source, target) in enumerate(zip(path.hops, path.hops[1:]))
+    ]
 
     analysis = _analysis(graph, hop_count=max(len(path.hops) - 1, 0), path=path)
-    truncated = analysis.get("status") in {"limited", "skipped", "failed", "not_recorded"}
-    if truncated:
+    analysis_status = str(analysis.get("status") or "not_recorded")
+    analysis_reason = None if analysis_status == "complete" else f"analysis_{analysis_status}"
+    if analysis_reason is not None:
+        # Missing or bounded analysis says nothing about whether this hop was
+        # cut short; record it as a reason, never as truncation.
         for receipt in receipts:
-            receipt["truncated"] = True
+            receipt["reason_codes"] = list(dict.fromkeys([*receipt["reason_codes"], analysis_reason]))
+    # Re-annotation (e.g. once the analyzer status is recorded) must not keep
+    # qualifiers an earlier pass derived from different evidence.
+    promoted_earlier = "directed_provenance_backed_hops" in path.reachability_basis
+    basis = [item for item in path.reachability_basis if item not in _ANNOTATION_BASIS]
     if any(receipt.get("correlation_identity_status") == "recomputation_required" for receipt in receipts):
-        if "correlation_recomputation_required" not in path.reachability_basis:
-            path.reachability_basis.append("correlation_recomputation_required")
+        basis.append("correlation_recomputation_required")
+    if analysis_reason is not None:
+        basis.append(analysis_reason)
     path.hop_evidence = receipts
     path.analysis = analysis
 
@@ -227,30 +261,34 @@ def annotate_attack_path_evidence(path: AttackPath, graph: UnifiedGraph, *, hop_
     # single-node structural finding satisfies ``all([])`` and is promoted to
     # confirmed despite having no directed, provenance-backed hop.
     all_complete = (
-        bool(receipts)
+        analysis_reason is None
+        and bool(receipts)
         and len(receipts) == max(len(path.hops) - 1, 0)
         and all(receipt["complete"] and not receipt["truncated"] for receipt in receipts)
     )
     stale = any(str(receipt["freshness"]).startswith("stale") for receipt in receipts)
     runtime_reasons = _runtime_reasons(receipts)
+    # Evidence completeness qualifies reachability only. ``composite_risk``
+    # keeps the producer's severity/KEV/exposure order; clamping it here made
+    # every structural path tie at one value.
     if runtime_reasons:
         path.reachability = "unknown"
-        path.composite_risk = min(path.composite_risk, 39.0)
-        path.reachability_basis = list(dict.fromkeys([*path.reachability_basis, *runtime_reasons]))
+        basis.extend(runtime_reasons)
     elif not all_complete and path.reachability != "unlikely":
         path.reachability = "unknown"
-        path.composite_risk = min(path.composite_risk, 39.0)
-        if "incomplete_hop_evidence" not in path.reachability_basis:
-            path.reachability_basis.append("incomplete_hop_evidence")
+        basis.append("incomplete_hop_evidence")
     elif stale:
         if path.reachability == "confirmed":
             path.reachability = "likely"
-        if "stale_evidence_allowed" not in path.reachability_basis:
-            path.reachability_basis.append("stale_evidence_allowed")
+        basis.append("stale_evidence_allowed")
     elif all_complete and path.reachability in {"unknown", "likely"}:
         path.reachability = "confirmed"
-        if "directed_provenance_backed_hops" not in path.reachability_basis:
-            path.reachability_basis.append("directed_provenance_backed_hops")
+        basis.append("directed_provenance_backed_hops")
+    elif all_complete and path.reachability == "confirmed" and promoted_earlier:
+        # Keep the qualifier an earlier pass added; a producer-confirmed path
+        # keeps its own basis.
+        basis.append("directed_provenance_backed_hops")
+    path.reachability_basis = list(dict.fromkeys(basis))
     return path
 
 

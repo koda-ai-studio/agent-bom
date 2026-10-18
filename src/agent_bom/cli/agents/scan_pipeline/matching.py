@@ -6,7 +6,6 @@ import time as _time
 from types import SimpleNamespace
 from typing import Any
 
-from agent_bom.cli._common import logger
 from agent_bom.cli.agents.scan_pipeline.helpers import _agents_patchable, _exit_incomplete_scan_with_partial_summary
 from agent_bom.cli.agents.scan_pipeline.options import ScanOptions
 from agent_bom.cli.agents.scan_pipeline.state import ScanState
@@ -92,20 +91,15 @@ def _scan_with_progress(opts: ScanOptions, st: ScanState) -> None:
 
 
 def _join_kev_catalog(opts: ScanOptions, st: ScanState) -> None:
-    if opts.fail_on_kev and not opts.enrich and st.blast_radii:
-        # The KEV gate needs catalog evidence; fetch just that rather
-        # than failing closed on a lookup nobody asked to run.
-        from agent_bom.enrichment import join_kev_catalog_sync
-
-        _kev_vulns = list({id(br.vulnerability): br.vulnerability for br in st.blast_radii}.values())
-        try:
-            _kev_hits = join_kev_catalog_sync(_kev_vulns, offline=opts.offline)
-            if _kev_hits:
-                st.con.print(f"  [red]⚠[/red] CISA KEV: {_kev_hits} actively exploited vulnerabilit{'y' if _kev_hits == 1 else 'ies'}")
-        except Exception as _kev_exc:  # noqa: BLE001
-            from agent_bom.security import sanitize_error
-
-            logger.debug("KEV catalog join unavailable: %s", sanitize_error(_kev_exc, generic=True))
+    """Report the KEV join the scanner ran (``--enrich`` prints its own summary)."""
+    if opts.enrich or not st.blast_radii:
+        return
+    vulns = list({id(br.vulnerability): br.vulnerability for br in st.blast_radii}.values())
+    hits = sum(1 for vuln in vulns if vuln.is_kev)
+    if hits:
+        st.con.print(f"  [red]⚠[/red] CISA KEV: {hits} actively exploited vulnerabilit{'y' if hits == 1 else 'ies'}")
+    elif any(getattr(vuln, "kev_status", None) == "unknown" for vuln in vulns):
+        st.con.print("  [yellow]⚠[/yellow] CISA KEV catalog unavailable — actively exploited CVEs cannot be ruled out")
 
 
 def _print_scan_verdict(opts: ScanOptions, st: ScanState, input_vulnerability_count: int) -> None:

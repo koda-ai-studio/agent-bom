@@ -110,7 +110,10 @@ Use this when an AI agent needs the same ranked investigation queue that a
 human reviews in the graph cockpit.
 
 ### should_i_deploy
-Return an allow/warn/block deployment decision from matched ExposurePath risk.
+Return an allow/warn/block deployment decision from matched ExposurePath risk,
+or `not_found` when no path names the candidate exactly (package name,
+`name@version`, purl, CVE/finding id or node id). A KEV finding reached from an
+agent with credential exposure blocks unless reachability is `unlikely`.
 ```
 should_i_deploy(candidate="requests", tenant_id="default", block_risk=80)
 ```

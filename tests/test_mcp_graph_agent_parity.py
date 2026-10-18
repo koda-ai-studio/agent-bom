@@ -253,8 +253,11 @@ def test_default_exposure_answer_fits_the_agent_budget(estate: _Estate) -> None:
     assert len(raw) <= 16_000
     assert "nodes" not in payload and "edges" not in payload
     sizes = [len(json.dumps(path, separators=(",", ":"))) for path in payload["paths"]]
-    # Path ids embed every hop id, so a long misconfiguration id costs ~250 bytes on its own.
-    assert sum(sizes) / len(sizes) <= 1_000 and max(sizes) <= 1_200
+    # Path ids embed every hop id, so a long misconfiguration id costs ~380 bytes
+    # across ``id``, ``target`` and ``via``, and a credential path repeats the
+    # credential name in three hop ids. Critical misconfiguration paths rank by
+    # their own score instead of tying at a capped value.
+    assert sum(sizes) / len(sizes) <= 1_300 and max(sizes) <= 1_300
     for path in payload["paths"]:
         assert {"id", "rank", "riskScore", "severity", "isKev", "evidenceTier", "source", "target", "findings"} <= set(path)
         assert payload["risk_scale"]["riskScore"].startswith("0-100")

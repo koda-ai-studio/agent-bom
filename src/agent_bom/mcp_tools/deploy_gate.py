@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from agent_bom.graph.attack_path_queue import AttackPathFilters, QueuePage
+from agent_bom.graph.attack_path_queue_rank import path_has_agent_entrypoint, path_has_credential, path_is_kev
 from agent_bom.graph.container import AttackPath
 from agent_bom.mcp_errors import CODE_UPSTREAM_UNAVAILABLE, CODE_VALIDATION_INVALID_ARGUMENT, mcp_error_json
 from agent_bom.mcp_tools.exposure_queue import (
@@ -37,28 +38,55 @@ class _Search:
     matched: list[tuple[int, AttackPath]]
     projected: list[dict[str, Any]]
     stats: dict[str, Any]
+    blocking: list[AttackPath]
 
     @property
     def complete(self) -> bool:
         return self.page.covers_all_matches
 
 
-def _candidate_haystack(path: AttackPath, nodes_by_id: dict[str, Any]) -> list[str]:
-    values = [
-        path.source,
-        path.target,
-        path.summary,
-        *path.hops,
-        *path.vuln_ids,
-        *path.finding_ids,
-        *path.credential_exposure,
-        *path.tool_exposure,
-    ]
+def _unversioned(value: str) -> str:
+    """``name@version`` / ``pkg:eco/name@version`` without the version."""
+    head, sep, _version = value.rpartition("@")
+    return head if sep and head and not head.endswith("/") else value
+
+
+def _node_identifiers(node: Any) -> set[str]:
+    """Exact identifiers a candidate may name: id, label, package name, purl."""
+    attributes = getattr(node, "attributes", None) or {}
+    values = {str(getattr(node, "id", "") or ""), str(getattr(node, "label", "") or "")}
+    for key in ("name", "package_name", "purl", "native_id", "resource_id", "resource_name", "vulnerability_id", "finding_id"):
+        value = attributes.get(key)
+        if isinstance(value, str):
+            values.add(value)
+    kind = getattr(getattr(node, "entity_type", ""), "value", getattr(node, "entity_type", ""))
+    if kind == "package":
+        values |= {_unversioned(value) for value in list(values)}
+    return values
+
+
+def _candidate_keys(path: AttackPath, nodes_by_id: dict[str, Any]) -> set[str]:
+    """Every exact identifier on the path; a candidate must equal one of them.
+
+    Substring matching made ``pillow`` match unrelated summaries and any label
+    containing the text, so a gate answered about paths the caller never named.
+    """
+    values = {path.source, path.target, *path.hops, *path.vuln_ids, *path.finding_ids}
     for hop in path.hops:
         node = nodes_by_id.get(hop)
         if node is not None:
-            values.append(str(getattr(node, "label", "") or ""))
-    return [str(value).lower() for value in values if value]
+            values |= _node_identifiers(node)
+    return {value.strip().lower() for value in values if isinstance(value, str) and value.strip()}
+
+
+def _blocking_exposure(path: AttackPath, nodes_by_id: dict[str, Any]) -> bool:
+    """A KEV finding reached from an agent with credential exposure, not disproven."""
+    return (
+        str(path.reachability or "").lower() != "unlikely"
+        and path_is_kev(path, nodes_by_id)
+        and path_has_agent_entrypoint(path, nodes_by_id)
+        and path_has_credential(path, nodes_by_id)
+    )
 
 
 def _decision_for_risk(risk: float, *, warn_risk: float, block_risk: float) -> str:
@@ -95,10 +123,9 @@ async def _search(store: Any, tenant_id: str, scan_id: str | None, candidate: st
     labels = {
         node.id: node for node in await nodes_for(store, tenant_id, ranked.scan_id, {hop for path in ranked.paths for hop in path.hops})
     }
-    needle = candidate.lower()
-    matched = [
-        (index + 1, path) for index, path in enumerate(ranked.paths) if any(needle in value for value in _candidate_haystack(path, labels))
-    ]
+    needle = candidate.strip().lower()
+    matched = [(index + 1, path) for index, path in enumerate(ranked.paths) if needle in _candidate_keys(path, labels)]
+    blocking = [path for _rank, path in matched if _blocking_exposure(path, labels)]
     evaluated = matched[:DEPLOY_EVALUATION_CAP]
     nodes, edges = await hydrate(store, tenant_id, ranked.scan_id, [path for _rank, path in evaluated])
     projected = project_paths(
@@ -116,28 +143,43 @@ async def _search(store: Any, tenant_id: str, scan_id: str | None, candidate: st
             SNAPSHOT_CHANGED_MESSAGE,
             details={"retryable": True, "reason": "snapshot_changed", "evidenceStatus": "not_evaluated"},
         )
-    return _Search(page, identity[1], matched, projected, stats)
+    return _Search(page, identity[1], matched, projected, stats, blocking)
 
 
 def _verdict(search: _Search, *, warn_risk: float, block_risk: float) -> tuple[str, float | None, str, list[str]]:
     matched, projected = search.matched, search.projected
     max_risk = max((float(path.composite_risk or 0.0) for _rank, path in matched), default=None)
-    decision = _decision_for_risk(max_risk, warn_risk=warn_risk, block_risk=block_risk) if max_risk is not None else "warn"
     evaluated = bool(matched) and len(matched) <= DEPLOY_EVALUATION_CAP
     evaluated = evaluated and all(path.get("reachability") in {"likely", "confirmed"} for path in projected)
-    if decision == "allow" and (not evaluated or not search.complete):
-        decision = "warn"
     reasons: list[str] = []
-    if matched:
+    if max_risk is None:
+        # Nothing on the snapshot names this candidate exactly. That is neither
+        # an approval nor a review signal about the candidate.
+        decision = "not_found"
+        reasons.append(
+            "No exposure path in this snapshot names the candidate exactly (package name, name@version, purl, "
+            "finding or node id); it was not evaluated and this is not an approval to deploy."
+        )
+    else:
+        decision = _decision_for_risk(max_risk, warn_risk=warn_risk, block_risk=block_risk)
+        if search.blocking:
+            # Fail closed: a known-exploited finding reachable from an agent that
+            # carries credentials blocks unless reachability evidence disproves it.
+            decision = "block"
+        if decision == "allow" and (not evaluated or not search.complete):
+            decision = "warn"
         top = projected[0]
         reasons.append(f"Top matched exposure path risk is {top.get('riskScore', 0)} for {top.get('label') or top.get('id')}.")
+        if search.blocking:
+            reasons.append(
+                f"{len(search.blocking)} matched path(s) reach a CISA KEV finding from an agent with credential exposure; "
+                "blocked until reachability evidence rules the path out."
+            )
         findings = sorted({str(finding) for path in projected for finding in path.get("findings", []) if finding})
         if findings:
             reasons.append(f"Matched findings: {', '.join(findings[:5])}.")
         if not evaluated or not search.complete:
             reasons.append("Reachability is unverified or path evidence is incomplete; this is not an approval to deploy.")
-    else:
-        reasons.append("No matching exposure path evidence was found for the candidate; this is not an approval to deploy.")
     if not search.complete:
         reasons.append("Only part of the snapshot's paths could be searched; widen the graph budget before relying on this gate.")
     # Deliberately two-valued. A CI gate that needs to tell "no paths matched"

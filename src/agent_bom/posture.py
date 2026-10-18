@@ -35,6 +35,7 @@ from typing import TYPE_CHECKING, Mapping
 
 from agent_bom.compliance_utils import effective_blast_radius_tags
 from agent_bom.core.severity import severity_policy_rank
+from agent_bom.evidence.posture_dimensions import DimensionScore, assessed_weighted_total, lane_summary, mark_skipped_vulnerability_lane
 from agent_bom.evidence.scan_run import vulnerability_coverage_caveat, vulnerability_coverage_incomplete
 from agent_bom.scorecard import summarize_scorecard_coverage
 from agent_bom.vex import active_blast_radii
@@ -185,25 +186,6 @@ class PostureScorecard:
             "policy_source": self.policy_source,
             "no_data": self.no_data,
             "dimensions": {k: v.to_dict() for k, v in self.dimensions.items()},
-        }
-
-
-@dataclass
-class DimensionScore:
-    """Score for a single posture dimension."""
-
-    name: str
-    score: float  # 0-100
-    weight: float  # 0-1
-    details: str = ""
-
-    def to_dict(self) -> dict:
-        return {
-            "name": self.name,
-            "score": self.score,
-            "weight": self.weight,
-            "weighted_score": round(self.score * self.weight, 1),
-            "details": self.details,
         }
 
 
@@ -473,6 +455,7 @@ def compute_posture_scorecard(
         details=config_detail,
     )
 
+    vuln_lane_skipped = mark_skipped_vulnerability_lane(report, dimensions)
     # ── Did-we-scan guard ──
     # A grade requires real evaluated inputs. When a scan examined ZERO gradable
     # artifacts (no packages, no MCP servers, no active findings), every
@@ -527,13 +510,11 @@ def compute_posture_scorecard(
         )
 
     # ── Final score ──
-    total_score = sum(d.score * d.weight for d in dimensions.values())
-    total_score = round(min(100.0, max(0.0, total_score)), 1)
+    total_score = assessed_weighted_total(dimensions)
     grade = _score_to_grade(total_score, resolved.grade_thresholds)
 
-    # Build summary. Keep vulnerability cleanliness separate from
-    # best-practice/configuration quality so clean scans do not read as
-    # contradictory when optional metadata is incomplete.
+    # Build summary: keep vulnerability cleanliness apart from config quality so
+    # clean scans never read as contradictory when optional metadata is missing.
     if total_vulns == 0:
         if grade in ("A", "B"):
             summary = f"No vulnerabilities found; strong best-practice/config posture ({grade}, {total_score}%)"
@@ -560,6 +541,7 @@ def compute_posture_scorecard(
         else:
             summary = f"Weak best-practice/config posture ({grade}, {total_score}%) — immediate attention required"
 
+    summary = lane_summary(summary, skipped=vuln_lane_skipped, grade=grade, score=total_score)
     coverage_caveat = vulnerability_coverage_caveat(report)
     if coverage_caveat:
         summary = f"{summary}. {coverage_caveat}."

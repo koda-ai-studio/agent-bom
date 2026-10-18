@@ -46,7 +46,10 @@ def test_current_suppression_is_visible_and_remediation_tracks_expiry(scan_store
     assert _plan()["remediation_plan"]
     activate_suppression(exc, actor="admin")
     exceptions.put(exc, tenant_id="history-tenant")
-    finding = get_rows()[0]
+    # Suppressed evidence leaves the default open list and its counts, and
+    # stays visible under ``all`` and ``suppressed``.
+    assert get_rows() == []
+    finding = get_rows(status="all")[0]
     assert finding["suppressed"] is True
     assert finding["suppression_id"] == exc.exception_id
     assert finding["status"] == "suppressed"

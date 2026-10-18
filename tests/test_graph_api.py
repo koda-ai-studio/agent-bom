@@ -1392,6 +1392,10 @@ class _RecordingGraphStore:
             "summary": {"added": 0, "removed": 0, "changed": 0, "unchanged": 0},
         }
 
+    def snapshots_by_ids(self, *, tenant_id: str, scan_ids: set[str]) -> list[dict]:
+        self.calls.append(("snapshots_by_ids", tenant_id, tuple(sorted(scan_ids))))
+        return [{"scan_id": scan_id} for scan_id in scan_ids]
+
     def list_snapshots(self, *, tenant_id: str = "", limit: int = 50, since: str | None = None) -> list[dict]:
         self.calls.append(("list_snapshots", tenant_id, limit))
         return [{"scan_id": self.graph.scan_id, "created_at": self.graph.created_at, "node_count": 1, "edge_count": 0, "risk_summary": {}}]
@@ -1897,6 +1901,7 @@ class TestGraphStoreBackendSelection:
         assert body["cards"][0]["exposure_path"]["reachability"] == "unknown"
         assert body["cards"][0]["exposure_path"]["reachabilityBasis"] == [
             "graph_path",
+            "analysis_not_recorded",
             "incomplete_hop_evidence",
         ]
         assert body["cards"][0]["rank_meta"]["reachability"] == "unknown"
@@ -2721,7 +2726,8 @@ class TestGraphStoreBackendSelection:
         )
         assert second.status_code == 200
         assert second.json()["pagination"]["cursor"] == next_cursor
-        assert second.json()["completeness"]["status"] == "truncated"
+        assert second.json()["pagination"]["has_more"] is False
+        assert second.json()["completeness"]["status"] == "complete"
 
     def test_graph_cursor_rejects_invalid_values(self, recording_graph_store):
         client = TestClient(app)

@@ -114,7 +114,10 @@ def test_push_ignores_producer_grade_and_counts_versions_without_double_counting
     report = _normalize_pushed_report(PushPayload(**body), fallback_scan_id="report")
     assert report["summary"]["unique_packages"] == 2
     assert report["finding_summary"]["total"] == 2
-    assert "posture_scorecard" not in report
+    scorecard = report["posture_scorecard"]
+    assert (scorecard["grade"], scorecard["score"]) != ("A", 100)
+    assert report["posture_grade"] == scorecard["grade"]
+    assert "1 vulns (1 critical)" in scorecard["dimensions"]["vulnerability_posture"]["details"]
 
 
 def test_push_failure_keeps_attempt_but_no_false_commit_receipt(durable_push, monkeypatch):

@@ -1962,6 +1962,8 @@ export interface PostureDimension {
   weight: number;
   weighted_score: number;
   details: string;
+  /** False when the lane this dimension grades was skipped (e.g. --no-scan). */
+  assessed?: boolean;
 }
 
 export interface PostureScorecard {

@@ -92,7 +92,7 @@ def _node_rows(nodes: Iterable[UnifiedNode], stats: _SnapshotStats, *, scan: str
         stats.node_count += 1
         et = node.entity_type.value if isinstance(node.entity_type, EntityType) else node.entity_type
         stats.type_counts[et] += 1
-        if node.severity and counts_as_finding(entity_type=et, node_id=node.id):
+        if node.severity and counts_as_finding(entity_type=et, node_id=node.id, attributes=node.attributes):
             stats.severity_counts[node.severity] += 1
         yield (
             node.id,

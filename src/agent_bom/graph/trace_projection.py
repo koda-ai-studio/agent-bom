@@ -20,6 +20,7 @@ from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.edge_evidence import edge_evidence
 from agent_bom.graph.node import UnifiedNode
+from agent_bom.graph.node_aliases import server_child_parts
 from agent_bom.graph.relationship_specs import relationship_spec
 from agent_bom.graph.types import EntityType, RelationshipType
 from agent_bom.runtime.normalized_trace import NormalizedTraceEvent, is_weak_principal
@@ -135,7 +136,20 @@ class _Binder:
                             candidates.setdefault(candidate, set()).add(node.id)
             self._canonical = {key: next(iter(values)) for key, values in candidates.items() if len(values) == 1}
         node_id = self._canonical.get(ref)
+        if node_id is None:
+            node_id = self._server_child(ref)
         return self.graph.get_node(node_id) if node_id else None
+
+    def _server_child(self, ref: str) -> str | None:
+        """A historical tool/credential id read through its parent server's unique alias."""
+        canonical = self._canonical or {}
+        targets = set()
+        for prefix, parent, name in server_child_parts(ref):
+            server = parent if self.graph.has_node(parent) else canonical.get(parent)
+            child = f"{prefix}:{server}:{name}" if server else ""
+            if child and self.graph.has_node(child):
+                targets.add(child)
+        return next(iter(targets)) if len(targets) == 1 else None
 
     def name_candidates(self, entity_type: EntityType, name: str) -> list[str]:
         if self._names is None:

@@ -161,7 +161,7 @@ Consumed by: **FU** Attack-path fusion · **CR** Credential reach · **BR** Depe
 | `shares_cred` | `correlation` | lateral_movement | bidirectional | no | `agent` | `agent` | 1 | — | 0 |
 | `shares_server` | `correlation` | lateral_movement | bidirectional | no | `agent` | `agent` | 1 | — | 1 |
 | `stores` | `structural` | exposure | directed | yes | `cloud_resource`, `data_store`, `resource`, `server` | `data_store`, `dataset` | 8 | FU | 1 |
-| `trace_step` | `runtime` | runtime | directed | yes | `access_policy`, `agent`, `api_gateway`, `application`, `ci_job`, `cloud_resource` (+14 more) | `access_policy`, `agent`, `api_gateway`, `application`, `ci_job`, `cloud_resource` (+14 more) | 400 | FU | 0 (+1 demo) |
+| `trace_step` | `runtime` | runtime | directed | yes | `access_policy`, `agent`, `api_gateway`, `application`, `ci_job`, `cloud_resource` (+14 more) | `access_policy`, `agent`, `api_gateway`, `application`, `ci_job`, `cloud_resource` (+14 more) | 400 | — | 0 (+1 demo) |
 | `triggers` | `finding` | vulnerability | directed | yes | `vulnerability` | `misconfiguration` | 1 | — | 1 |
 | `trusts` | `authority` | identity | directed | yes | `account`, `role` | `account`, `federated_identity`, `group`, `role`, `service_account`, `service_principal` (+1 more) | 14 | — | 2 |
 | `used_credential` | `runtime` | runtime | directed | yes | `agent`, `tool`, `tool_call` | `credential`, `credential_ref` | 6 | CR, RT | 2 |
@@ -187,7 +187,7 @@ Consumed by: **FU** Attack-path fusion · **CR** Credential reach · **BR** Depe
 
 | Code | Analysis | Defined in | Relationships |
 |---|---|---|---|
-| FU | Attack-path fusion | graph/attack_path_fusion.py `_TRAVERSABLE_RELS` | `accessed`, `assumes`, `authenticates_as`, `can_access`, `contains`, `depends_on`, `exploitable_via`, `exposed_to`, `exposes_cred`, `has_permission`, `inherits`, `provides_tool`, `reaches_tool`, `scoped_to`, `stores`, `trace_step`, `uses`, `vulnerable_to` |
+| FU | Attack-path fusion | graph/attack_path_fusion.py `_TRAVERSABLE_RELS` | `accessed`, `assumes`, `authenticates_as`, `can_access`, `contains`, `depends_on`, `exploitable_via`, `exposed_to`, `exposes_cred`, `has_permission`, `inherits`, `provides_tool`, `reaches_tool`, `scoped_to`, `stores`, `uses`, `vulnerable_to` |
 | CR | Credential reach | graph/credential_reach.py `_CHAIN` | `called`, `exposes_cred`, `invoked`, `provides_tool`, `reaches_tool`, `used_credential`, `uses` |
 | BR | Dependency reach (blast radius) | graph/dependency_reach.py `_REACH_EDGE_TYPES` + `_VULN_TO_PACKAGE_EDGE_TYPES` | `affects`, `contains`, `depends_on`, `provides_tool`, `uses`, `vulnerable_to` |
 | LT | Toxic-combination lateral reach | graph/toxic_findings.py `_LATERAL_RELS` | `assumes`, `can_access`, `has_permission` |

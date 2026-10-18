@@ -210,9 +210,11 @@ async def get_graph_edge_changes(
     new: str = Query(..., description="New scan ID"),
 ) -> dict:
     """Return edge lifecycle changes between two scan snapshots."""
-    changes = await _runtime._graph_store_call(
-        _runtime._get_graph_store_or_503().changed_edges_between_scans, old, new, tenant_id=_runtime._tenant(request)
-    )
+
+    graph_store = _runtime._get_graph_store_or_503()
+    tenant = _runtime._tenant(request)
+    old, new = await _runtime.require_graph_snapshot_ids(graph_store, tenant, old, new)
+    changes = await _runtime._graph_store_call(graph_store.changed_edges_between_scans, old, new, tenant_id=tenant)
     if isinstance(changes, dict):
         kinds = ("added", "removed", "changed", "unchanged")
         returned = sum(len(changes.get(f"edges_{kind}") or []) for kind in kinds)
@@ -441,7 +443,7 @@ async def get_graph_exposure_paths(
 
 @investigation_router.post("/graph/should-i-deploy", tags=["graph"])
 async def post_graph_should_i_deploy(request: Request, body: GraphDeployDecisionRequest) -> dict:
-    """Return the MCP-compatible allow/warn/block deploy decision over REST."""
+    """Return the MCP-compatible allow/warn/block/not_found deploy decision over REST."""
     _ = (body.tenant_id, body.context)  # SDK compatibility/future policy context; request tenant scope is authoritative today.
     from agent_bom.mcp_tools.graph import deploy_decision_for_tenant
 

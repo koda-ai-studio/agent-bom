@@ -125,7 +125,7 @@ describe("AttackPathCorrelationProof", () => {
     expect(screen.getByText("Hop receipts incomplete")).toBeInTheDocument();
     expect(screen.queryByText("Directed-hop receipt count unavailable")).not.toBeInTheDocument();
     expect(screen.getByText("0/2 hops fully evidenced · 1 of 2 hop receipts recorded")).toBeInTheDocument();
-    expect(screen.getByText("Gaps: not traversable, freshness not established, path analysis not complete")).toBeInTheDocument();
+    expect(screen.getByText("Gaps: not traversable, freshness not established, path analysis not recorded")).toBeInTheDocument();
     expect(screen.getByText("Stale allowed")).toHaveClass("text-amber-700");
     expect(screen.queryByText("Path verified")).not.toBeInTheDocument();
   });
@@ -201,6 +201,28 @@ it("shows the server ranking reasons without deriving a browser score", () => {
   expect(screen.getByText("Why this path ranks here")).toBeInTheDocument();
   fireEvent.click(screen.getByText("Why this path ranks here"));
   expect(screen.getByText(/Recorded credential edge raises review priority/)).toBeVisible();
+});
+
+it("renders the server's ranking factors when no fix-first card explains the order", () => {
+  const path = {
+    source: "agent:a", target: "vuln:v", hops: ["agent:a", "vuln:v"], edges: ["uses"], hop_evidence: [],
+    ranking_factors: {
+      order: ["evidence_tier", "is_kev", "severity", "evidence_confidence", "composite_risk", "credential_count"],
+      evidence_tier: 3, is_kev: true, severity: "unknown", severity_scored: false, evidence_confidence: "structural",
+      composite_risk: 90.6, credential_count: 1,
+      reasons: ["Evidence tier 3: finding reached from an agent or through a credential.", "No scored finding on the path (unscored)."],
+    },
+  } as unknown as GraphAttackPath;
+  render(<AttackPathCorrelationProof path={path} />);
+  fireEvent.click(screen.getByText("Why this path ranks here"));
+  const factors = screen.getByTestId("attack-path-ranking-factors");
+  expect(factors).toHaveTextContent("Tier 3");
+  expect(factors).toHaveTextContent("KEV yes");
+  expect(factors).toHaveTextContent("Severity unscored");
+  expect(factors).toHaveTextContent("Evidence topology only");
+  expect(factors).toHaveTextContent("Risk 90.6/100");
+  expect(screen.getByText("No scored finding on the path (unscored).")).toBeVisible();
+  expect(screen.queryByText(/without ranking explanations/)).not.toBeInTheDocument();
 });
 
 it("keeps the receipt summary consistent with the receipts listed for inspection", () => {

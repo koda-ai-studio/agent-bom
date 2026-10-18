@@ -1,6 +1,6 @@
 """Bounded (streamed) SQLite snapshot search-index refresh (#4075, PR-2).
 
-``_refresh_snapshot_search_index`` used to ``.fetchall()`` every node row of the
+``refresh_snapshot_search_index`` used to ``.fetchall()`` every node row of the
 snapshot and reconstruct a full ``UnifiedNode`` for each before inserting the
 search mirror — an O(N) second materialisation of the whole node set, executed
 at the persist peak while the builder's in-memory graph is still resident. This
@@ -18,6 +18,7 @@ import pytest
 
 import agent_bom.db.graph_store as sg
 from agent_bom.api.graph_store import SQLiteGraphStore
+from agent_bom.api.storage.sqlite_graph_search import refresh_snapshot_search_index
 from agent_bom.graph import RelationshipType, UnifiedEdge
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.node import UnifiedNode
@@ -57,7 +58,8 @@ def _refresh_peak(tmp_path: Path, n: int, monkeypatch) -> int:
     store.save_graph(_synthetic_graph("s", n))
     with sg.open_graph_db(store._db_path) as conn:
         tracemalloc.start()
-        store._refresh_snapshot_search_index(conn, tenant_id="t1", scan_id="s")
+        conn.execute("BEGIN IMMEDIATE")
+        refresh_snapshot_search_index(conn, tenant_id="t1", scan_id="s", batch_size=500)
         _, peak = tracemalloc.get_traced_memory()
         tracemalloc.stop()
         conn.commit()

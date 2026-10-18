@@ -14667,6 +14667,11 @@ components:
         node_id:
           title: Node Id
           type: string
+        resolved_from:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Resolved From
         scan_id:
           title: Scan Id
           type: string
@@ -14876,6 +14881,11 @@ components:
         node_id:
           title: Node Id
           type: string
+        resolved_from:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Resolved From
         scan_id:
           title: Scan Id
           type: string
@@ -15071,6 +15081,11 @@ components:
             type: string
           title: Reachable Nodes
           type: array
+        resolved_from:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Resolved From
         source:
           title: Source
           type: string
@@ -15106,12 +15121,16 @@ components:
       properties:
         compliance_prefixes:
           items:
+            maxLength: 128
             type: string
+          maxItems: 100
           title: Compliance Prefixes
           type: array
         data_sources:
           items:
+            maxLength: 128
             type: string
+          maxItems: 100
           title: Data Sources
           type: array
         direction:
@@ -15128,7 +15147,9 @@ components:
           type: boolean
         entity_types:
           items:
+            maxLength: 128
             type: string
+          maxItems: 100
           title: Entity Types
           type: array
         include_attack_paths:
@@ -15163,13 +15184,17 @@ components:
           type: string
         relationship_types:
           items:
+            maxLength: 128
             type: string
+          maxItems: 100
           title: Relationship Types
           type: array
         roots:
           description: One or more starting node IDs
           items:
+            maxLength: 512
             type: string
+          maxItems: 500
           minItems: 1
           title: Roots
           type: array
@@ -15333,6 +15358,11 @@ components:
             type: array
           - type: 'null'
           title: Path Nodes
+        resolved_from:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Resolved From
         scan_id:
           title: Scan Id
           type: string
@@ -21517,6 +21547,11 @@ components:
     PostureDimension:
       additionalProperties: true
       properties:
+        assessed:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Assessed
         details:
           title: Details
           type: string
@@ -42907,7 +42942,8 @@ paths:
         required: false
         schema:
           anyOf:
-          - minimum: 0
+          - maximum: 3650
+            minimum: 0
             type: integer
           - type: 'null'
           description: Default read-window in days; 0 = all retained history
@@ -43259,18 +43295,23 @@ paths:
       - graph
   /v1/graph/node-neighbors:
     get:
-      description: "Return a bounded set of a node's direct graph neighbors for inline\
-        \ expand.\n\nThis is the read side of the dashboard's progressive-disclosure\
-        \ attack-path\nview: expanding one hop loads only that hop's direct neighbors\
-        \ instead of the\nwhole graph. It is deliberately lazy and bounded \u2014\
-        \ fan-out is capped by\n``limit``; ``total_neighbors`` is null when source\
-        \ evidence is incomplete.\nA completely read high-degree neighborhood reports\
-        \ its known total with\n``truncated`` set, so the UI can render a \"+N more\"\
-        \ affordance rather than\nexploding the view. Neighbor node metadata (entity\
-        \ type, label, severity)\ntravels with the payload so the client never needs\
-        \ a second round trip per\nneighbor id. An unknown node id returns an empty\
-        \ payload (200, ``found``\nfalse) instead of raising, so a stale client id\
-        \ degrades quietly in-place."
+      description: 'Return a bounded set of a node''s direct graph neighbors for inline
+        expand.
+
+
+        The read side of progressive-disclosure attack-path views: one hop''s direct
+
+        neighbors, fan-out capped by ``limit``; ``total_neighbors`` is null when source
+
+        evidence is incomplete, and a fully read high-degree neighborhood reports
+        its
+
+        total with ``truncated`` set ("+N more"). Neighbor metadata travels with the
+
+        payload. A replaced id resolves (``resolved_from``); an unknown id returns
+        200
+
+        with ``found`` false, so a stale client id degrades quietly in place.'
       operationId: get_graph_node_neighbors_v1_graph_node_neighbors_get
       parameters:
       - in: query
@@ -43395,18 +43436,23 @@ paths:
       - graph
   /v1/graph/node/{node_id}/neighbors:
     get:
-      description: "Return a bounded set of a node's direct graph neighbors for inline\
-        \ expand.\n\nThis is the read side of the dashboard's progressive-disclosure\
-        \ attack-path\nview: expanding one hop loads only that hop's direct neighbors\
-        \ instead of the\nwhole graph. It is deliberately lazy and bounded \u2014\
-        \ fan-out is capped by\n``limit``; ``total_neighbors`` is null when source\
-        \ evidence is incomplete.\nA completely read high-degree neighborhood reports\
-        \ its known total with\n``truncated`` set, so the UI can render a \"+N more\"\
-        \ affordance rather than\nexploding the view. Neighbor node metadata (entity\
-        \ type, label, severity)\ntravels with the payload so the client never needs\
-        \ a second round trip per\nneighbor id. An unknown node id returns an empty\
-        \ payload (200, ``found``\nfalse) instead of raising, so a stale client id\
-        \ degrades quietly in-place."
+      description: 'Return a bounded set of a node''s direct graph neighbors for inline
+        expand.
+
+
+        The read side of progressive-disclosure attack-path views: one hop''s direct
+
+        neighbors, fan-out capped by ``limit``; ``total_neighbors`` is null when source
+
+        evidence is incomplete, and a fully read high-degree neighborhood reports
+        its
+
+        total with ``truncated`` set ("+N more"). Neighbor metadata travels with the
+
+        payload. A replaced id resolves (``resolved_from``); an unknown id returns
+        200
+
+        with ``found`` false, so a stale client id degrades quietly in place.'
       operationId: get_graph_node_neighbors_v1_graph_node__node_id__neighbors_get
       parameters:
       - in: path
@@ -43700,28 +43746,20 @@ paths:
         view.
 
 
-        Past a few hundred nodes the raw topology is an unreadable hairball. This
+        Rolls the graph up along containment (org -> account/project -> app ->
 
-        endpoint rolls the graph up along the containment hierarchy
+        resource) so a 1000+ node estate renders as a few top-level containers, each
 
-        (org -> account/project -> app -> resource) so a 1000+ node estate renders
+        with descendant counts, worst severity, a severity histogram and exposure
+        /
 
-        as a handful of top-level containers, each carrying aggregate descendant
+        toxic flags. ``?node=<id>`` (a replaced id resolves, echoed as
 
-        counts, worst-severity, a per-severity histogram, and exposure / toxic
+        ``resolved_from``) returns one level of direct children, paged by
 
-        flags. ``?node=<id>`` returns one level of direct children for on-demand
+        ``offset``/``limit`` with truthful ``completeness``; ``?mode=attack_path``
 
-        drill-down, paged by ``offset``/``limit`` with ``pagination`` and truthful
-
-        ``completeness``; ``?mode=attack_path`` returns the nodes/edges on materialised
-
-        attack paths first with the rest collapsed.
-
-
-        Backend for the UI graph-navigation surface. Read-only: never mutates the
-
-        source graph.'
+        returns materialised attack-path nodes/edges first. Read-only.'
       operationId: get_graph_rollup_v1_graph_rollup_get
       parameters:
       - description: Scan snapshot ID; latest if omitted
@@ -44320,8 +44358,8 @@ paths:
       - graph
   /v1/graph/should-i-deploy:
     post:
-      description: Return the MCP-compatible allow/warn/block deploy decision over
-        REST.
+      description: Return the MCP-compatible allow/warn/block/not_found deploy decision
+        over REST.
       operationId: post_graph_should_i_deploy_v1_graph_should_i_deploy_post
       requestBody:
         content:
@@ -44387,7 +44425,8 @@ paths:
         required: false
         schema:
           anyOf:
-          - minimum: 0
+          - maximum: 3650
+            minimum: 0
             type: integer
           - type: 'null'
           description: Default read-window in days; 0 = all retained history
@@ -51227,6 +51266,7 @@ paths:
         required: false
         schema:
           default: 0
+          maximum: 1000000000
           minimum: 0
           title: Offset
           type: integer
@@ -51307,6 +51347,8 @@ paths:
         required: false
         schema:
           default: 0
+          maximum: 1000000000
+          minimum: 0
           title: Offset
           type: integer
       - in: header
@@ -51484,6 +51526,8 @@ paths:
         required: false
         schema:
           default: 0
+          maximum: 1000000000
+          minimum: 0
           title: Offset
           type: integer
       - in: header
@@ -51561,6 +51605,8 @@ paths:
         required: false
         schema:
           default: 0
+          maximum: 1000000000
+          minimum: 0
           title: Offset
           type: integer
       - in: header
@@ -51641,6 +51687,7 @@ paths:
         required: false
         schema:
           default: 0
+          maximum: 1000000000
           minimum: 0
           title: Offset
           type: integer

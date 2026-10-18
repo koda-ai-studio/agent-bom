@@ -12,6 +12,7 @@ import logging
 import os
 import shutil
 import subprocess
+from typing import Any
 
 from agent_bom import http_client
 from agent_bom.discovery_envelope import RedactionStatus, ScanMode, attach_envelope_to_agents
@@ -377,6 +378,47 @@ def _kubectl_get_all_pods() -> subprocess.CompletedProcess[str]:
     )
 
 
+def _k8s_gpu_pod_agent(project_id: str, pod_ns: str, pod_name: str, containers: list[tuple[str, str, Any]]) -> Agent:
+    """One agent per GPU pod, one server per GPU container."""
+    servers = [
+        MCPServer(
+            name=f"nebius-k8s-gpu:{pod_ns}/{pod_name}/{container_name}",
+            command="docker",
+            args=["run", image_ref],
+            transport=TransportType.STDIO,
+            packages=container_image_packages(image_ref),
+        )
+        for container_name, image_ref, _gpus in containers
+    ]
+    first_name, first_image, _ = containers[0]
+    gpus = [str(count) for _name, _image, count in containers]
+    raw_identity: dict[str, Any] = {"namespace": pod_ns, "pod": pod_name}
+    if len(containers) == 1:
+        raw_identity.update({"container": first_name, "image": first_image})
+    return Agent(
+        name=f"nebius-k8s-gpu:{pod_ns}/{pod_name}",
+        agent_type=AgentType.CUSTOM,
+        config_path=f"nebius://{project_id}/k8s-gpu/{pod_ns}/{pod_name}",
+        source="nebius-k8s-gpu",
+        version=f"gpu-request:{'+'.join(gpus)}",
+        mcp_servers=servers,
+        metadata={
+            "image": first_image,
+            "container": first_name,
+            "containers": [{"name": name, "image": image} for name, image, _ in containers],
+            "cloud_origin": build_cloud_origin(
+                provider="nebius",
+                service="kubernetes",
+                resource_type="gpu-pod",
+                resource_id=f"{pod_ns}/{pod_name}",
+                resource_name=pod_name,
+                project_id=project_id,
+                raw_identity=raw_identity,
+            ),
+        },
+    )
+
+
 def _discover_k8s_gpu_pods(
     api_key: str,
     project_id: str,
@@ -402,41 +444,15 @@ def _discover_k8s_gpu_pods(
             return agents, warnings
 
         data = json.loads(result.stdout)
-        # Check all container types (including init containers) for GPU resource requests
+        # Check all container types (including init containers) for GPU resource requests.
+        # One pod is one workload: each GPU container is a server under the pod's agent.
+        pods: dict[tuple[str, str], list[tuple[str, str, Any]]] = {}
         for pod_ns, pod_name, container, image_ref, gpu_limit, gpu_request in iter_gpu_containers(
             data.get("items", []), include_init_containers=True
         ):
-            container_name = container.get("name", "unknown")
-            server = MCPServer(
-                name=f"nebius-k8s-gpu:{pod_ns}/{pod_name}/{container_name}",
-                command="docker",
-                args=["run", image_ref],
-                transport=TransportType.STDIO,
-                packages=container_image_packages(image_ref),
-            )
-            agents.append(
-                Agent(
-                    name=f"nebius-k8s-gpu:{pod_ns}/{pod_name}",
-                    agent_type=AgentType.CUSTOM,
-                    config_path=f"nebius://{project_id}/k8s-gpu/{pod_ns}/{pod_name}",
-                    source="nebius-k8s-gpu",
-                    version=f"gpu-request:{gpu_request or gpu_limit}",
-                    mcp_servers=[server],
-                    metadata={
-                        "image": image_ref,
-                        "container": container_name,
-                        "cloud_origin": build_cloud_origin(
-                            provider="nebius",
-                            service="kubernetes",
-                            resource_type="gpu-pod",
-                            resource_id=f"{pod_ns}/{pod_name}",
-                            resource_name=pod_name,
-                            project_id=project_id,
-                            raw_identity={"namespace": pod_ns, "pod": pod_name, "container": container_name, "image": image_ref},
-                        ),
-                    },
-                )
-            )
+            pods.setdefault((pod_ns, pod_name), []).append((container.get("name", "unknown"), image_ref, gpu_request or gpu_limit))
+        for (pod_ns, pod_name), containers in pods.items():
+            agents.append(_k8s_gpu_pod_agent(project_id, pod_ns, pod_name, containers))
 
     except json.JSONDecodeError as exc:
         warnings.append(f"kubectl produced invalid JSON for GPU pods: {exc}")

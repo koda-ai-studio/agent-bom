@@ -2239,7 +2239,8 @@ def _list_findings_view_impl(
     from agent_bom.api.routes.enterprise import build_tenant_triage_state_index
 
     def fetch_page(page_limit: int, source_cursor: str | None) -> dict[str, Any]:
-        page_status = "open" if suppressed_only else status
+        # ``open`` excludes suppressed evidence, so the suppressed view walks every lifecycle row.
+        page_status = "all" if suppressed_only else status
         return _list_findings_impl(
             request,
             limit=page_limit,

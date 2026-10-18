@@ -28,6 +28,18 @@ def _page_meta(total: int, offset: int, limit: int, *, cursor: str | None = None
     }
 
 
+def page_truncated(*, cursor: str | None, next_cursor: str | None, offset: int, returned: int, total: int) -> bool:
+    """Whether more rows follow this page.
+
+    A keyset page is final once no ``next_cursor`` is issued: ``offset`` stays 0
+    across cursor pages, so the offset arithmetic would call every last page
+    truncated.
+    """
+    if cursor:
+        return bool(next_cursor)
+    return bool(next_cursor) or offset + returned < total
+
+
 def _enforce_node_offset_cap(offset: int, cursor: str | None) -> None:
     """Reject deep OFFSET pagination that would force an O(offset) row scan.
 
@@ -49,3 +61,8 @@ def _coalesce_alias(primary: str | None, alias: str | None, *, primary_name: str
     if primary and alias and primary != alias:
         raise HTTPException(status_code=422, detail=f"Conflicting query parameters: {primary_name} and {alias_name}")
     return primary or alias or ""
+
+
+def path_order(hops: list[str]) -> tuple[int, tuple[str, ...]]:
+    """One backend-independent order for offset paging over BFS paths (emission order differs by store)."""
+    return len(hops), tuple(hops)

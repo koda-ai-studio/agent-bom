@@ -9,7 +9,7 @@ snapshot, a trace claim or a saved link resolve it to the canonical id.
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -79,3 +79,58 @@ class NodeAliasCollector:
             (tenant, alias, canonical, entity, CORRELATION_IDENTITY_VERSION, scan, now)
             for alias, (canonical, entity) in sorted(latest.items())
         ]
+
+
+# Server children are ``<prefix>:<server id>:<name>``. Their historical ids are
+# the parent server's historical ids with the same suffix, so they are derived
+# from the one server alias at read time instead of being stored per child
+# (N tools x K server aliases rows).
+SERVER_CHILD_PREFIXES = ("tool", "cred")
+_MAX_CHILD_SPLITS = 16
+
+
+def server_child_parts(node_id: str) -> list[tuple[str, str, str]]:
+    """Every ``(prefix, server ref, child name)`` reading of a child id; names may contain colons."""
+    prefix, separator, rest = node_id.partition(":")
+    if not separator or prefix not in SERVER_CHILD_PREFIXES or not rest.startswith("server:"):
+        return []
+    parts: list[tuple[str, str, str]] = []
+    position = rest.find(":", len("server:"))
+    while position != -1 and len(parts) < _MAX_CHILD_SPLITS:
+        parent, name = rest[:position], rest[position + 1 :]
+        if name:
+            parts.append((prefix, parent, name))
+        position = rest.find(":", position + 1)
+    return parts
+
+
+def resolve_with_server_children(
+    ids: Sequence[str],
+    resolve_direct: Callable[[list[str]], dict[str, str]],
+    live: Callable[[list[str]], set[str]],
+) -> dict[str, str]:
+    """Direct alias bindings plus server-child ids derived from their parent server's binding.
+
+    A derived child binds only when exactly one reading resolves to a live child
+    node in the snapshot, and never when the requested id is itself a live node.
+    """
+    resolved = resolve_direct(list(ids))
+    pending = {node_id: server_child_parts(node_id) for node_id in ids if node_id not in resolved}
+    pending = {node_id: parts for node_id, parts in pending.items() if parts}
+    if not pending:
+        return resolved
+    parents = sorted({parent for parts in pending.values() for _prefix, parent, _name in parts})
+    parent_map = resolve_direct(parents)
+    derived = {
+        node_id: {f"{prefix}:{parent_map[parent]}:{name}" for prefix, parent, name in parts if parent in parent_map}
+        for node_id, parts in pending.items()
+    }
+    derived = {node_id: targets for node_id, targets in derived.items() if targets}
+    if not derived:
+        return resolved
+    present = live(sorted({*derived, *(target for targets in derived.values() for target in targets)}))
+    for node_id, targets in derived.items():
+        live_targets = targets & present
+        if node_id not in present and len(live_targets) == 1:
+            resolved[node_id] = next(iter(live_targets))
+    return resolved

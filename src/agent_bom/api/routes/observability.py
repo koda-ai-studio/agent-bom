@@ -57,12 +57,17 @@ from agent_bom.api.trace_collection.routes import router as trace_collection_rou
 from agent_bom.api.trace_collection.trace_evidence import record_otlp_evidence, vulnerable_inventory
 from agent_bom.api.trace_connection_broker import public_connections, pull_credentials
 from agent_bom.api.trace_explorer_read import assemble_trace_explorer
+from agent_bom.api.trend_comparison import push_scope_id
+from agent_bom.api.trend_recording import record_scan_trend_best_effort
 from agent_bom.canonical_ids import canonical_id
 from agent_bom.config import API_MAX_OCSF_INGEST_EVENTS
 from agent_bom.core.experimental import disabled_message, is_enabled
 from agent_bom.core.severity import ocsf_to_severity
 from agent_bom.rbac import require_authenticated_permission
 from agent_bom.security import sanitize_error, sanitize_text
+
+#: Offsets past this are rejected (422); larger values overflow the store's 64-bit OFFSET.
+_MAX_RUNTIME_OFFSET = 1_000_000_000
 
 router = APIRouter(dependencies=[Depends(demo_daily_evidence_dependency)])
 router.include_router(
@@ -1085,10 +1090,10 @@ async def receive_push(request: Request, body: PushPayload) -> dict:
                     fleet_store.put_endpoint(endpoint)
                     endpoint_persisted = True
                 _persist_graph_snapshot(job, job_result, write_generation=graph_write_generation)
-                # SQLite/Postgres job stores serialize on put, while graph
-                # persistence adds its receipt to job.result. Persist once more
-                # before exposing the completed idempotency receipt.
+                # Job stores serialize on put and graph persistence adds its receipt
+                # to job.result: persist once more before the idempotency receipt.
                 job_store.put(job)
+                _record_push_trend(job, job_result, body)
             except Exception:
                 if graph_snapshot_preexisted:
                     _logger.warning(
@@ -1202,6 +1207,18 @@ def _release_push_idempotency_claim(
         )
     except Exception as exc:  # noqa: BLE001
         _logger.error("Push idempotency rollback failed: %s", sanitize_text(sanitize_error(exc, generic=True)))
+
+
+def _record_push_trend(job: ScanJob, job_result: dict, body: PushPayload) -> None:
+    """Record the posture trend point once the pushed job is durable (best effort)."""
+    record_scan_trend_best_effort(
+        job_result,
+        tenant_id=job.tenant_id,
+        scan_id=job.job_id,
+        completed_at=job.completed_at,
+        scope_id=push_scope_id(body.source_id, body.target_scope),
+        headline_posture=True,
+    )
 
 
 def _pushed_job_receipt(job: ScanJob) -> dict[str, Any]:
@@ -1389,7 +1406,7 @@ def ingest_runtime_events(request: Request, body: dict | list[dict]) -> dict[str
 def list_runtime_sessions(
     request: Request,
     limit: Annotated[int, Query(ge=1, le=500)] = 100,
-    offset: int = 0,
+    offset: Annotated[int, Query(ge=0, le=_MAX_RUNTIME_OFFSET)] = 0,
 ) -> dict[str, object]:
     """List tenant-scoped runtime sessions derived from persisted observations."""
     tenant_id = _tenant_id(request)
@@ -1411,7 +1428,7 @@ def list_runtime_observations(
     request: Request,
     session_id: str | None = None,
     limit: Annotated[int, Query(ge=1, le=500)] = 100,
-    offset: int = 0,
+    offset: Annotated[int, Query(ge=0, le=_MAX_RUNTIME_OFFSET)] = 0,
 ) -> dict[str, object]:
     """List metadata-only runtime observations for the active tenant."""
     tenant_id = _tenant_id(request)
@@ -1438,7 +1455,7 @@ def list_runtime_observation_revisions(
     request: Request,
     observation_id: Annotated[str, Query(min_length=1, max_length=512)],
     limit: Annotated[int, Query(ge=1, le=500)] = 100,
-    offset: Annotated[int, Query(ge=0)] = 0,
+    offset: Annotated[int, Query(ge=0, le=_MAX_RUNTIME_OFFSET)] = 0,
 ) -> dict[str, object]:
     """Read tenant-scoped metadata history; it is not independent provider proof."""
     tenant_id = _tenant_id(request)
@@ -1458,7 +1475,7 @@ async def trace_explorer(
     request: Request,
     limit: Annotated[int, Query(ge=1, le=200)] = 100,
     scan_id: Annotated[str | None, Query(max_length=512)] = None,
-    offset: Annotated[int, Query(ge=0)] = 0,
+    offset: Annotated[int, Query(ge=0, le=_MAX_RUNTIME_OFFSET)] = 0,
     session_id: Annotated[str | None, Query(min_length=1, max_length=512)] = None,
     source: Annotated[str | None, Query(min_length=1, max_length=512)] = None,
     agent_name: Annotated[str | None, Query(min_length=1, max_length=512)] = None,
@@ -1617,7 +1634,7 @@ def list_runtime_session_observations(
     request: Request,
     session_id: str,
     limit: Annotated[int, Query(ge=1, le=500)] = 100,
-    offset: int = 0,
+    offset: Annotated[int, Query(ge=0, le=_MAX_RUNTIME_OFFSET)] = 0,
 ) -> dict[str, object]:
     """List observations for one runtime session in the active tenant."""
     tenant_id = _tenant_id(request)

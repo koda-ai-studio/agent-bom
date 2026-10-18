@@ -76,7 +76,6 @@ class SQLiteGraphSnapshotMixin(SQLiteGraphTraversalMixin):
             conn.execute(_CREATE_PRESET_TABLE_SQLITE)
             ensure_search_index(conn)
             sqlite_graph_store.save_graph(conn, graph)
-            self._refresh_snapshot_search_index(conn, tenant_id=graph.tenant_id, scan_id=graph.scan_id)
             sqlite_graph_store._backfill_empty_tenant_ids(conn, _API_GRAPH_TENANT_TABLE_KEYS)
             conn.commit()
 
@@ -122,7 +121,6 @@ class SQLiteGraphSnapshotMixin(SQLiteGraphTraversalMixin):
                 write_generation=write_generation,
                 snapshot_paths=snapshot_paths,
             )
-            self._refresh_snapshot_search_index(conn, tenant_id=tenant_id, scan_id=scan_id)
             sqlite_graph_store._backfill_empty_tenant_ids(conn, _API_GRAPH_TENANT_TABLE_KEYS)
             conn.commit()
             return counts

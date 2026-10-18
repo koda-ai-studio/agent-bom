@@ -94,12 +94,61 @@ def path_evidence_tier(path: AttackPath, nodes_by_id: Mapping[str, Any]) -> int:
     return TIER_NO_EVIDENCE
 
 
+_CONFIDENCE_RANK = {"verified": 4, "likely": 3, "structural": 2, "unassessed": 1, "disproven": 0}
+
+_TIER_LABELS = {
+    TIER_EXPLOITABLE_ENTRYPOINT: "finding reached from an agent or through a credential",
+    TIER_FINDING: "finding on the path",
+    TIER_EXPOSURE_ONLY: "credential or tool exposure without a finding",
+    TIER_NO_EVIDENCE: "no finding, credential or tool on the path",
+}
+
+_CONFIDENCE_REASONS = {
+    "verified": "Every hop has a complete, directed, provenance-backed receipt.",
+    "likely": "Hop evidence supports the path with stale or producer-assessed receipts.",
+    "structural": "Graph topology only; hop receipts do not establish end-to-end reachability.",
+    "unassessed": "Hop evidence was never evaluated for this path.",
+    "disproven": "Applicability evidence marks this path unlikely.",
+}
+
+RANKING_ORDER: tuple[str, ...] = (
+    "evidence_tier",
+    "is_kev",
+    "severity",
+    "evidence_confidence",
+    "composite_risk",
+    "credential_count",
+)
+
+
+def path_evidence_confidence(path: AttackPath) -> str:
+    """How far hop receipts support the path, independent of its risk score.
+
+    ``unassessed`` marks a path that never went through hop-evidence
+    annotation, so it cannot outrank an annotated path that ties on tier,
+    KEV state and severity.
+    """
+    reachability = str(path.reachability or "unknown").lower()
+    if reachability == "unlikely":
+        return "disproven"
+    # Complete hops prove the route, not that the finding applies to this occurrence.
+    if "insufficient_evidence" in (path.reachability_basis or []):
+        return "structural"
+    if reachability == "confirmed":
+        return "verified"
+    if reachability == "likely":
+        return "likely"
+    analysis = path.analysis if isinstance(path.analysis, Mapping) else {}
+    return "structural" if analysis.get("status") else "unassessed"
+
+
 def attack_path_rank_key(path: AttackPath, nodes_by_id: Mapping[str, Any]) -> tuple[Any, ...]:
     """Ascending sort key: best path first, fully deterministic."""
     return (
         -path_evidence_tier(path, nodes_by_id),
         -int(path_is_kev(path, nodes_by_id)),
         -severity_rank(path_severity(path, nodes_by_id)),
+        -_CONFIDENCE_RANK[path_evidence_confidence(path)],
         -float(path.composite_risk or 0.0),
         -len(path.credential_exposure),
         path.source,
@@ -150,14 +199,43 @@ def ranking_node_ids(paths: list[AttackPath]) -> set[str]:
     return ids
 
 
+def path_ranking_factors(path: AttackPath, nodes_by_id: Mapping[str, Any]) -> dict[str, Any]:
+    """The values the queue sorts on, in sort order, with plain-language reasons."""
+    tier = path_evidence_tier(path, nodes_by_id)
+    kev = path_is_kev(path, nodes_by_id)
+    severity = path_severity(path, nodes_by_id)
+    scored = severity != "unknown"
+    confidence = path_evidence_confidence(path)
+    risk = float(path.composite_risk or 0.0)
+    reasons = [f"Evidence tier {tier}: {_TIER_LABELS[tier]}."]
+    if kev:
+        reasons.append("A finding on the path is in the CISA Known Exploited Vulnerabilities catalog.")
+    reasons.append(f"Worst finding severity on the path: {severity}." if scored else "No scored finding on the path (unscored).")
+    reasons.append(_CONFIDENCE_REASONS[confidence])
+    reasons.append(f"Composite risk {risk:g}/100 orders paths that tie on the factors above.")
+    return {
+        "order": list(RANKING_ORDER),
+        "evidence_tier": tier,
+        "is_kev": kev,
+        "severity": severity,
+        "severity_scored": scored,
+        "evidence_confidence": confidence,
+        "composite_risk": risk,
+        "credential_count": len(path.credential_exposure),
+        "reasons": reasons,
+    }
+
+
 def path_rank_fields(path: AttackPath, nodes_by_id: Mapping[str, Any]) -> dict[str, Any]:
     reachability = path_graph_reachability(path, nodes_by_id)
+    factors = path_ranking_factors(path, nodes_by_id)
     return {
-        "severity": path_severity(path, nodes_by_id),
+        "severity": factors["severity"],
         "graph_reachable": reachability != "no_finding_on_path",
         "graph_reachability": reachability,
-        "evidence_tier": path_evidence_tier(path, nodes_by_id),
-        "is_kev": path_is_kev(path, nodes_by_id),
+        "evidence_tier": factors["evidence_tier"],
+        "is_kev": factors["is_kev"],
+        "ranking_factors": factors,
     }
 
 
@@ -175,7 +253,10 @@ __all__ = [
     "path_evidence_tier",
     "path_graph_reachability",
     "path_matches_filters",
+    "path_evidence_confidence",
     "path_rank_fields",
+    "path_ranking_factors",
+    "RANKING_ORDER",
     "path_severity",
     "rank_attack_paths",
     "ranking_node_ids",

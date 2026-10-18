@@ -465,7 +465,8 @@ async def test_create_scan_and_push_stamp_request_tenant(monkeypatch, package_co
     assert pushed_job.completed_at is not None
     assert pushed_job.result["summary"]["total_packages"] == package_count
     assert pushed_job.result["summary"]["total_vulnerabilities"] == 0
-    assert "posture_scorecard" not in pushed_job.result
+    # The control plane recomputes posture from the pushed evidence; a client-sent score is never trusted.
+    assert pushed_job.result.get("posture_scorecard", {}).get("overall_score") != 82
 
     listed = await scan_routes.list_jobs(req)
     pushed_summary = next(job for job in listed["jobs"] if job["job_id"] == pushed["job_id"])

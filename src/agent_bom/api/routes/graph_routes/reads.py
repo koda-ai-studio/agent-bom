@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 from agent_bom.api.graph_contracts import GraphIdentifier, IncidentEdgePageResponse, PresetCreate
 from agent_bom.api.graph_generation import optional_generation, verify_generation
 from agent_bom.api.graph_node_alias import resolve_snapshot_node_id
-from agent_bom.api.graph_paging import _enforce_node_offset_cap, _page_meta
+from agent_bom.api.graph_paging import _enforce_node_offset_cap, _page_meta, page_truncated
 from agent_bom.api.neptune_graph import NeptuneGraphStore
 from agent_bom.api.read_models._base import documented
 from agent_bom.api.read_models.graph import (
@@ -28,6 +28,7 @@ from agent_bom.api.read_models.graph import (
 from agent_bom.api.routes.graph_routes import _runtime
 from agent_bom.api.routes.graph_routes._admission import _GraphAdmissionRoute
 from agent_bom.api.routes.graph_routes.params import _parse_entity_type_filter
+from agent_bom.api.time_window import MAX_WINDOW_DAYS
 from agent_bom.graph import SEVERITY_RANK
 from agent_bom.graph.completeness import graph_completeness
 from agent_bom.graph.reach_view import reach_interpretation
@@ -55,11 +56,15 @@ async def get_graph_impact(
     identity = await _runtime._graph_store_call(
         optional_generation, graph_store, tenant=tenant_id, scan_id=scan_id or "", generation=snapshot_generation, offset=0
     )
+    effective_scan_id = identity[0] if identity else scan_id or ""
+    read_id, resolved_from = await _runtime._graph_store_call(
+        resolve_snapshot_node_id, graph_store, tenant_id=tenant_id, scan_id=effective_scan_id, node_id=node
+    )
     impact = await _runtime._graph_store_call(
         graph_store.impact_of,
-        scan_id=identity[0] if identity else scan_id or "",
+        scan_id=effective_scan_id,
         tenant_id=tenant_id,
-        node_id=node,
+        node_id=read_id,
         max_depth=max_depth,
     )
     if impact is None:
@@ -72,6 +77,7 @@ async def get_graph_impact(
         "tenant_id": tenant_id,
         "snapshot_generation": identity[1] if identity else None,
         "interpretation": reach_interpretation(max_depth=max_depth),
+        "resolved_from": resolved_from,
     }
 
 
@@ -93,6 +99,8 @@ async def search_graph(
     _enforce_node_offset_cap(offset, cursor)
     graph_store = _runtime._get_graph_store_or_503()
     tenant_id = _runtime._tenant(request)
+    if scan_id:
+        (scan_id,) = await _runtime.require_graph_snapshot_ids(graph_store, tenant_id, scan_id)
     identity = await _runtime._graph_store_call(
         optional_generation,
         graph_store,
@@ -147,8 +155,10 @@ async def search_graph(
         "completeness": graph_completeness(
             returned=len(results),
             total=total,
-            truncated=bool(next_cursor) or offset + len(results) < total,
-            reason="search_page_limit" if bool(next_cursor) or offset + len(results) < total else "",
+            truncated=page_truncated(cursor=cursor, next_cursor=next_cursor, offset=offset, returned=len(results), total=total),
+            reason="search_page_limit"
+            if page_truncated(cursor=cursor, next_cursor=next_cursor, offset=offset, returned=len(results), total=total)
+            else "",
         ),
     }
 
@@ -270,8 +280,8 @@ async def list_graph_agents(
         "completeness": graph_completeness(
             returned=len(agents),
             total=total,
-            truncated=bool(next_cursor) or offset + len(agents) < total,
-            reason="agent_page_limit" if bool(next_cursor) or offset + len(agents) < total else "",
+            truncated=(more := page_truncated(cursor=cursor, next_cursor=next_cursor, offset=offset, returned=len(agents), total=total)),
+            reason="agent_page_limit" if more else "",
         ),
     }
 
@@ -407,7 +417,7 @@ async def get_graph_incident_edges(
 async def get_graph_snapshots(
     request: Request,
     limit: int = Query(50, ge=1, le=500, description="Max snapshots"),
-    window_days: int | None = Query(None, ge=0, description="Default read-window in days; 0 = all retained history"),
+    window_days: int | None = Query(None, ge=0, le=MAX_WINDOW_DAYS, description="Default read-window in days; 0 = all retained history"),
 ) -> list[dict]:
     """List persisted scan snapshots ordered by creation time.
 
@@ -438,7 +448,7 @@ async def get_graph_snapshots(
 async def get_graph_history(
     request: Request,
     limit: int = Query(50, ge=1, le=500, description="Max snapshots"),
-    window_days: int | None = Query(None, ge=0, description="Default read-window in days; 0 = all retained history"),
+    window_days: int | None = Query(None, ge=0, le=MAX_WINDOW_DAYS, description="Default read-window in days; 0 = all retained history"),
 ) -> dict:
     """Return retained graph history and adjacent diff summaries for the request tenant.
 
@@ -486,10 +496,14 @@ async def get_graph_compliance(
     Returns per-framework finding counts, severity breakdown, affected entity
     counts, and the list of tagged findings. Filter by framework to drill down.
     """
+    graph_store = _runtime._get_graph_store_or_503()
+    tenant = _runtime._tenant(request)
+    if scan_id:
+        (scan_id,) = await _runtime.require_graph_snapshot_ids(graph_store, tenant, scan_id)
     return await _runtime._graph_store_call(
-        _runtime._get_graph_store_or_503().compliance_summary,
+        graph_store.compliance_summary,
         scan_id=scan_id or "",
-        tenant_id=_runtime._tenant(request),
+        tenant_id=tenant,
         framework=framework or "",
     )
 

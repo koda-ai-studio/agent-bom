@@ -617,7 +617,9 @@ def _project_incident_chains(
                     provenance={"source": ESTATE_DATA_SOURCE, "trace_id": correlation.trace_id},
                 )
             )
-            edge_ids.append(f"{RelationshipType.TRACE_STEP.value}:{source}:{target}")
+            # ``AttackPath.edges`` holds the typed relationship per hop, never an
+            # edge id: hop receipts resolve (source, target, relationship).
+            edge_ids.append(RelationshipType.TRACE_STEP.value)
             chain_edges += 1
         graph.attack_paths.append(
             AttackPath(
@@ -630,6 +632,9 @@ def _project_incident_chains(
                     f"{correlation.kind.replace('_', ' ')} correlated across "
                     f"{len(hops)} assets from {len(correlation.sources)} evidence source(s)"
                 ),
+                # Trace order records what one correlated trace touched, not an
+                # access or exposure route between consecutive assets.
+                reachability_basis=["trace_order_correlation"],
             )
         )
         paths += 1

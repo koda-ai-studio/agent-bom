@@ -198,6 +198,7 @@ class PostureDimension(ReadModel):
     score: Num
     weight: Num
     weighted_score: Num
+    assessed: bool | None = None
 
 
 class ScanScorecard(ReadModel):

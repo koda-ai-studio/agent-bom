@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import re
 import sqlite3
 from collections.abc import Iterable, Iterator
@@ -18,17 +17,14 @@ from agent_bom.api.graph_store_support import (
     _API_GRAPH_TENANT_TABLE_KEYS,
     _CREATE_PRESET_TABLE_SQLITE,
     _escape_like_query,
-    _node_search_text,
 )
 from agent_bom.api.storage.sqlite_graph_search import ensure_search_index
 from agent_bom.db import graph_store as sqlite_graph_store
 from agent_bom.db.graph_bootstrap import ensure_read_schema, invalidate_read_schema
 from agent_bom.db.graph_node_aliases import resolve_node_aliases
+from agent_bom.db.graph_node_search import sqlite_node_from_row
 from agent_bom.db.graph_write_admission import graph_writer_admission
 from agent_bom.graph import (
-    EntityType,
-    NodeDimensions,
-    NodeStatus,
     UnifiedEdge,
     UnifiedNode,
 )
@@ -132,58 +128,6 @@ class SQLiteGraphStoreBase:
         params = [escaped, f"{escaped}-%", f"{escaped} %", f"% {escaped}-%", f"% {escaped} %"]
         return clause, params
 
-    def _refresh_snapshot_search_index(self, conn: sqlite3.Connection, *, tenant_id: str, scan_id: str) -> None:
-        tenant_id = sqlite_graph_store.normalize_graph_tenant_id(tenant_id)
-        conn.execute("DELETE FROM graph_node_search WHERE tenant_id = ? AND scan_id = ?", (tenant_id, scan_id))
-        # Stream the snapshot's node rows in bounded batches rather than
-        # ``.fetchall()`` of every row + a full ``UnifiedNode`` per row: this
-        # refresh runs at the persist peak while the builder's in-memory graph is
-        # still resident, so a fetchall added a second O(N) materialisation of the
-        # whole node set on top of it. A separate read cursor iterates a different
-        # table (graph_nodes) than the one being written (graph_node_search), so
-        # interleaving the reads and the batched inserts is safe on one
-        # connection; peak stays proportional to the batch size, not the snapshot
-        # size (#4075). Rows written are byte-identical to the fetchall path.
-        batch_size = sqlite_graph_store._graph_write_batch_size()
-        select_cur = conn.execute(
-            """
-            SELECT
-                id, entity_type, label, category_uid, class_uid, type_uid,
-                status, risk_score, severity, severity_id, first_seen, last_seen,
-                attributes, compliance_tags, data_sources, dimensions
-            FROM graph_nodes
-            WHERE tenant_id = ? AND scan_id = ?
-            """,
-            (tenant_id, scan_id),
-        )
-        insert_sql = """
-            INSERT INTO graph_node_search (
-                tenant_id, scan_id, node_id, entity_type, severity, compliance_tags, data_sources, search_text
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """
-
-        def _search_row(row: sqlite3.Row) -> tuple[Any, ...]:
-            node = self._node_from_row(row)
-            return (
-                tenant_id,
-                scan_id,
-                node.id,
-                node.entity_type.value if hasattr(node.entity_type, "value") else str(node.entity_type),
-                node.severity.lower(),
-                " ".join(node.compliance_tags).lower(),
-                " ".join(node.data_sources).lower(),
-                _node_search_text(node),
-            )
-
-        try:
-            while True:
-                batch = select_cur.fetchmany(batch_size)
-                if not batch:
-                    break
-                conn.executemany(insert_sql, [_search_row(row) for row in batch])
-        finally:
-            select_cur.close()
-
     def resolve_node_aliases(self, *, tenant_id: str = "", node_ids: Iterable[str], scan_id: str = "") -> dict[str, str]:
         """Map node ids that canonicalization replaced to their canonical id, within one tenant and snapshot."""
         tenant_id = sqlite_graph_store.normalize_graph_tenant_id(tenant_id)
@@ -250,27 +194,7 @@ class SQLiteGraphStoreBase:
             conn.commit()
             return total
 
-    @staticmethod
-    def _node_from_row(row: sqlite3.Row) -> UnifiedNode:
-        return UnifiedNode.from_stored(
-            id=row["id"],
-            entity_type=EntityType(row["entity_type"]),
-            label=row["label"],
-            category_uid=row["category_uid"],
-            class_uid=row["class_uid"],
-            type_uid=row["type_uid"],
-            status=NodeStatus(row["status"]),
-            risk_score=row["risk_score"],
-            severity=row["severity"] or "",
-            severity_id=row["severity_id"],
-            first_seen=row["first_seen"],
-            last_seen=row["last_seen"],
-            attributes=json.loads(row["attributes"]),
-            compliance_tags=json.loads(row["compliance_tags"]),
-            data_sources=json.loads(row["data_sources"]),
-            dimensions=NodeDimensions.from_dict(json.loads(row["dimensions"])),
-        )
-
+    _node_from_row = staticmethod(sqlite_node_from_row)
     _edge_from_row = staticmethod(sqlite_edge_from_row)
 
     @staticmethod

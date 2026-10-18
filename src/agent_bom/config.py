@@ -488,21 +488,21 @@ def scan_snapshots_enabled() -> bool:
 
 
 # ── Enrichment Cache ──────────────────────────────────────────────────────
-# Used by enrichment.py for persistent NVD + EPSS disk cache.
-#
-# 7-day TTL balances freshness vs. API rate limits.  10,000 entries covers
-# most enterprise scans without unbounded disk/memory growth.
-
+# NVD + EPSS disk cache: 7-day TTL vs. API rate limits; 10,000 entries bounds growth.
 ENRICHMENT_TTL_SECONDS = _int("AGENT_BOM_ENRICHMENT_TTL", 604_800)
 ENRICHMENT_MAX_CACHE_ENTRIES = _int("AGENT_BOM_ENRICHMENT_MAX_CACHE", 10_000)
 
 
+# Every scan's KEV join (read per call): "" cache then network, "cache" local only, "off" disabled.
+KEV_DEFAULT_JOIN_MODE = _str("AGENT_BOM_KEV_DEFAULT_JOIN", "")
+
+
+def kev_default_join_mode() -> str:
+    return _str("AGENT_BOM_KEV_DEFAULT_JOIN", "").strip().lower()
+
+
 # ── API Server Limits ─────────────────────────────────────────────────────
-# Used by api/server.py for the REST API job queue.
-#
-# 10 concurrent scan jobs prevents resource exhaustion on shared hosts.
-# Completed job evidence has a separate bounded TTL. The 200-job in-memory ceiling triggers
-# LRU eviction for long-running API instances.
+# REST job queue: 10 concurrent scans bound shared hosts; the 200-job in-memory LRU ceiling and a separate evidence TTL bound memory.
 
 API_MAX_CONCURRENT_JOBS = _int("AGENT_BOM_API_MAX_JOBS", 10)
 API_SCAN_WORKERS = _int("AGENT_BOM_API_SCAN_WORKERS", min(4, (os.cpu_count() or 2)))

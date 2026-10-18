@@ -5,7 +5,7 @@ from __future__ import annotations
 import sqlite3
 from collections.abc import Iterable, Sequence
 
-from agent_bom.graph.node_aliases import NODE_ALIAS_COLUMNS
+from agent_bom.graph.node_aliases import NODE_ALIAS_COLUMNS, resolve_with_server_children
 
 NODE_ALIASES_DDL = """\
 CREATE TABLE IF NOT EXISTS graph_node_aliases (
@@ -71,19 +71,48 @@ def resolve_node_aliases(conn: sqlite3.Connection, *, tenant_id: str, node_ids: 
     ids = sorted({node_id for node_id in node_ids if node_id})[:_MAX_LOOKUP]
     if not ids:
         return {}
-    placeholders = ",".join("?" for _ in ids)
-    scope, params = (
-        ("AND scan_id = ?", [scan_id])
-        if scan_id
-        else (
-            "AND a.scan_id = (SELECT s.scan_id FROM graph_snapshots s WHERE s.tenant_id = a.tenant_id "
-            "AND s.snapshot_kind = 'scan' ORDER BY s.created_at DESC, s.scan_id DESC LIMIT 1)",
-            [],
-        )
+    return resolve_with_server_children(
+        ids,
+        lambda batch: _resolve_direct(conn, tenant_id, batch, scan_id),
+        lambda batch: _live_ids(conn, tenant_id, batch, scan_id),
     )
-    rows = conn.execute(
-        f"SELECT alias_id, canonical_id FROM graph_node_aliases a WHERE tenant_id = ? AND alias_id IN ({placeholders}) {scope} "  # nosec B608
-        f"AND NOT EXISTS ({_LIVE_NODE}) ORDER BY updated_at, scan_id",
-        [tenant_id, *ids, *params],
-    ).fetchall()
-    return {str(row[0]): str(row[1]) for row in rows}
+
+
+def _snapshot_scope(alias: str, scan_id: str) -> tuple[str, list[str]]:
+    if scan_id:
+        return f"AND {alias}.scan_id = ?", [scan_id]
+    return (
+        f"AND {alias}.scan_id = (SELECT s.scan_id FROM graph_snapshots s WHERE s.tenant_id = {alias}.tenant_id "  # nosec B608 - alias is a fixed internal table alias
+        "AND s.snapshot_kind = 'scan' ORDER BY s.created_at DESC, s.scan_id DESC LIMIT 1)",
+        [],
+    )
+
+
+def _resolve_direct(conn: sqlite3.Connection, tenant_id: str, ids: list[str], scan_id: str) -> dict[str, str]:
+    resolved: dict[str, str] = {}
+    scope, params = _snapshot_scope("a", scan_id)
+    for start in range(0, len(ids), _MAX_LOOKUP):
+        batch = ids[start : start + _MAX_LOOKUP]
+        placeholders = ",".join("?" for _ in batch)
+        rows = conn.execute(
+            f"SELECT alias_id, canonical_id FROM graph_node_aliases a WHERE tenant_id = ? AND alias_id IN ({placeholders}) {scope} "  # nosec B608
+            f"AND NOT EXISTS ({_LIVE_NODE}) ORDER BY updated_at, scan_id",
+            [tenant_id, *batch, *params],
+        ).fetchall()
+        resolved.update({str(row[0]): str(row[1]) for row in rows})
+    return resolved
+
+
+def _live_ids(conn: sqlite3.Connection, tenant_id: str, ids: list[str], scan_id: str) -> set[str]:
+    """Ids that are nodes in the snapshot the alias reads are scoped to."""
+    live: set[str] = set()
+    scope, params = _snapshot_scope("n", scan_id)
+    for start in range(0, len(ids), _MAX_LOOKUP):
+        batch = ids[start : start + _MAX_LOOKUP]
+        placeholders = ",".join("?" for _ in batch)
+        rows = conn.execute(
+            f"SELECT n.id FROM graph_nodes n WHERE n.tenant_id = ? AND n.id IN ({placeholders}) {scope}",  # nosec B608
+            [tenant_id, *batch, *params],
+        ).fetchall()
+        live.update(str(row[0]) for row in rows)
+    return live
