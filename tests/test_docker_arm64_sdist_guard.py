@@ -5,6 +5,8 @@ from __future__ import annotations
 import hashlib
 from pathlib import Path
 
+import yaml
+
 ROOT = Path(__file__).resolve().parents[1]
 VENDOR_ROOT = ROOT / "deploy/docker/vendor/tree-sitter-typescript-0.23.2"
 HEADERS = {
@@ -55,6 +57,6 @@ def test_release_shaped_multiarch_gate_guards_every_main_commit() -> None:
 
     required_job = workflow.split("\n  test:\n", 1)[1].split("\n  # 6. Dogfood", 1)[0]
     assert "name: Test (Python 3.13)" in required_job
-    assert "needs: [changes, test-core, docker]" in required_job
+    assert {"changes", "test-core", "docker"} <= set(yaml.safe_load(workflow)["jobs"]["test"]["needs"])
     assert "DOCKER_RESULT: ${{ needs.docker.result }}" in required_job
     assert 'if [ "$DOCKER_REQUIRED" = "true" ] && [ "$DOCKER_RESULT" != "success" ]' in required_job

@@ -125,6 +125,11 @@ for (const theme of ["light", "dark"]) test(`fit all includes complete shared-se
     return boxes.flatMap((a, i) => boxes.slice(i + 1).filter(b => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top).map(b => [a.label, b.label]));
   });
   expect(overlaps).toEqual([]);
+  const titleLines = await page.locator("[data-graph-entity] > p").evaluateAll(titles => titles.map(title => {
+    const zoom = new DOMMatrixReadOnly(getComputedStyle(title.closest(".react-flow__viewport")!).transform).a;
+    return title.getBoundingClientRect().height / (parseFloat(getComputedStyle(title).lineHeight) * zoom);
+  }));
+  expect(Math.max(...titleLines)).toBeLessThanOrEqual(2.1);
   const primaryFonts = await page.locator(".react-flow__node").evaluateAll(nodes => nodes.map(node => {
     const viewport = node.closest(".react-flow__viewport")!;
     const zoom = new DOMMatrixReadOnly(getComputedStyle(viewport).transform).a;
@@ -156,4 +161,16 @@ for (const theme of ["light", "dark"]) test(`complete correlation captions remai
     }).map(element => ({ label: element.getAttribute("title"), bounds: element.getBoundingClientRect().toJSON(), canvas: bounds.toJSON() }));
   })).toEqual([]);
   await page.screenshot({ path: info.outputPath(`complete-correlation-${theme}.png`), animations: "disabled" });
+});
+
+
+test("larger investigation captions stay inside ordinary layout cards", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 820 });
+  const servers = Array.from({ length: 15 }, (_, i) => node(`server-${i}`, "server", `Server ${i}`));
+  await fixture(page, [node("role", "role", "prod-ai-admin"), node("agent", "agent", "Developer Copilot"), ...servers],
+    [edge("role", "agent", "can_access"), ...servers.map(server => edge("agent", server.id, "uses"))]);
+  await page.goto("/graph?scan=snapshot&root=agent&lens=context&capture=1");
+  await expect(page.locator(".react-flow__node")).toHaveCount(17);
+  await expect.poll(() => page.locator("[data-graph-entity]").evaluateAll(cards =>
+    Math.max(...cards.map(card => parseFloat(getComputedStyle(card).width))))).toBeLessThanOrEqual(240);
 });
