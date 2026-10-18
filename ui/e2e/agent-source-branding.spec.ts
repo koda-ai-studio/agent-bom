@@ -34,6 +34,9 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     await expect(inspector.getByRole("img", { name: "Source: Claude Code" })).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath(`source-inspector-${theme}-${width}.png`), animations: "disabled" });
     await inspector.getByRole("button", { name: "Close", exact: true }).click();
+    const views = page.getByRole("group", { name: "Investigation view" });
+    // A phone opens an investigation as a list; the canvas is one tap away.
+    if (await views.isVisible()) await views.getByRole("button", { name: "Graph", exact: true }).click();
     await page.getByRole("button", { name: "Fit all", exact: true }).click();
     const canvas = page.locator(".react-flow");
     for (const source of ["claude", "cursor", "openai", "windsurf"]) {
