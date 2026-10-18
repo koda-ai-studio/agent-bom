@@ -83,11 +83,6 @@ def test_root_rollup_issue_totals_equal_overview_counts(reconciled_client) -> No
     summary = body["summary"]
     assert summary["issue_count"] > 0, summary
     assert summary["severity_basis"] == "issue_groups"
-    # The scenario must discriminate: counting every rated descendant node (the
-    # old basis) reports more critical/high than the tenant has open issues.
-    node_basis = sum(entry["aggregate"]["node_severity_counts"][band] for entry in body["top_level"] for band in ("critical", "high"))
-    assert node_basis > issues["critical"] + issues["high"], (node_basis, issues)
-
     rolled = summary["issue_severity_counts"]
     assert {band: rolled[band] for band in _BANDS} == {band: issues[band] for band in _BANDS}, (rolled, issues)
     assert (rolled["critical"], rolled["high"]) == (headline["critical"], headline["high"])

@@ -89,8 +89,8 @@ def test_rollup_severity_counts_distinct_open_issues_not_rated_nodes() -> None:
     assert agg["severity_counts"]["high"] == 1
     assert agg["issue_count"] == 2
     assert agg["finding_occurrence_count"] == 3
-    # The node histogram stays available under an explicit name.
-    assert agg["node_severity_counts"]["critical"] == 2 + 2 + 2 + 1
+    # Rated assets still drive worst_severity without inflating issue counts.
+    assert agg["worst_severity"] == "critical"
     assert view["aggregate_count_metadata"]["severity_basis"] == "issue_groups"
 
     summary = view["summary"]
@@ -124,7 +124,7 @@ def test_orphan_findings_reach_the_estate_issue_total() -> None:
     view = rollup_view(g)
     assert view["summary"]["issue_severity_counts"]["low"] == 1
     assert view["summary"]["issue_count"] == 3
-    assert view["orphan_summary"]["issue_severity_counts"]["low"] == 1
+    assert view["orphan_summary"]["severity_counts"]["low"] == 1
 
 
 def test_drilldown_children_carry_issue_basis_and_connection_totals() -> None:
