@@ -667,8 +667,15 @@ export function readableGraphEdges(
         }
       : defaultLabelPresentation;
 
+    // React Flow's arrow occupies one quarter of its marker viewport. Keep
+    // its triangle about nine screen pixels wide, independent of zoom/stroke.
+    const readableMarker = (marker: Edge["markerEnd"]) => typeof marker === "object"
+      ? { ...marker, width: 36 / Math.max(zoom, 0.16), height: 30 / Math.max(zoom, 0.16), markerUnits: "userSpaceOnUse" }
+      : marker;
     return {
       ...edge,
+      ...(edge.markerEnd ? { markerEnd: readableMarker(edge.markerEnd) } : {}),
+      ...(edge.markerStart ? { markerStart: readableMarker(edge.markerStart) } : {}),
       label,
       ariaLabel: relationship
         ? `${relationshipEdgeLabelText(relationship, edge.data as Record<string, unknown>)} relationship from ${nodeLabels?.get(edge.source) ?? "source node"} to ${nodeLabels?.get(edge.target) ?? "target node"}`

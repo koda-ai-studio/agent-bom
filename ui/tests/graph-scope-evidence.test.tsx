@@ -23,5 +23,5 @@ it("keeps an empty scope explicit", () => {
 
 it("does not classify aggregated links as observed when their receipt is unavailable", () => {
   render(<GraphScopeEvidence edges={[{ data: { evidenceMode: "runtime", aggregate: true } }]} />);
-  expect(screen.getByLabelText("Visible relationship evidence")).toHaveTextContent("Unknown");
+  expect(screen.getByLabelText("Visible relationship evidence")).toHaveTextContent("Bundled (expand for evidence)");
 });

@@ -5,8 +5,8 @@ import { Handle, Position } from "@xyflow/react";
 import { Bug, FolderGit2, KeyRound, Package, Wrench } from "lucide-react";
 import { graphRepositoryContext } from "@/lib/graph-repository-context";
 
-import { AgentSourceMark, SourceBadge } from "@/components/agent-source-mark";
-import { agentSource, entitySource } from "@/lib/agent-source";
+import { SourceBadge } from "@/components/agent-source-mark";
+import { entitySource } from "@/lib/agent-source";
 import { NodeBadgeRow, SeverityRingMark } from "@/components/graph-node-badges";
 import { GraphScopeNode } from "@/components/graph-scope-node";
 import type { GraphRollupContainer, GraphCompleteness } from "@/lib/api-types";
@@ -171,8 +171,7 @@ function NodeCard({
 }: CardProps) {
   const repository = graphRepositoryContext(data);
   const Icon = repository ? FolderGit2 : entityIcon(data.nodeType);
-  const brand = agentSource(data);
-  const provider = repository?.source ?? (data.nodeType !== "agent" ? entitySource(data) : null);
+  const provider = repository?.source ?? entitySource(data);
   const displayTitle = typeof data.attributes?.display_title === "string" && data.attributes.display_title.trim() ? data.attributes.display_title : data.label;
   const isRollupContainer = data.attributes?.rollup_is_container === true;
   const { badges, ring } = nodeBadges(data);
@@ -191,9 +190,7 @@ function NodeCard({
         <Handle type="source" position={data.reverseFlow ? Position.Left : Position.Right}
           className={`!h-1 !w-1 !border-0 !bg-transparent ${source ? "" : "!opacity-0"}`} />
         <ContextHandles />
-        {data.nodeType === "agent"
-          ? <AgentSourceMark source={brand} style={{ width: "var(--graph-node-icon-size, 32px)", height: "var(--graph-node-icon-size, 32px)" }} className={`h-8 w-8 ${iconClass}`} />
-          : <Icon aria-hidden="true" style={{ width: "var(--graph-node-icon-size, 32px)", height: "var(--graph-node-icon-size, 32px)", ...(provider ? { transform: "translate(-28%, -28%)" } : {}) }} className={`h-8 w-8 ${iconClass}`} />}
+        <Icon aria-hidden="true" style={{ width: "var(--graph-node-icon-size, 32px)", height: "var(--graph-node-icon-size, 32px)", ...(provider ? { transform: "translate(-28%, -28%)" } : {}) }} className={`h-8 w-8 ${iconClass}`} />
         {provider && <SourceBadge source={provider} graph className="absolute -bottom-1 -right-1"
           style={{ width: "calc(var(--graph-node-meta-size, 12px) * 2.2)", height: "calc(var(--graph-node-meta-size, 12px) * 2.2)" }} />}
       </div>
@@ -289,7 +286,7 @@ function AgentNode({ data }: { data: LineageNodeData }) {
       ringClass="ring-emerald-400"
       iconClass="text-emerald-600 dark:text-emerald-400"
       target={false}
-      subtitle={agentSource(data)?.label ?? data.agentType}
+      subtitle={entitySource(data)?.label ?? data.agentType}
       footer={
         <div className="mt-1 flex flex-wrap justify-center gap-x-2 gap-y-1 text-[10px] text-ink-secondary">
           {data.serverCount !== undefined && (

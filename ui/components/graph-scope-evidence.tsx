@@ -7,7 +7,7 @@ export function GraphScopeEvidence({ edges }: { edges: readonly EvidenceEdge[] }
   const counts = new Map<string, number>();
   for (const edge of edges) {
     const value = edge.data?.evidenceLabel;
-    const label = typeof value === "string" && !["Not recorded", "Unclassified", "Scan inventory · no per-edge receipt"].includes(value)
+    const label = edge.data?.isClusterEdge || edge.data?.aggregate ? "Bundled (expand for evidence)" : typeof value === "string" && !["Not recorded", "Unclassified", "Scan inventory · no per-edge receipt"].includes(value)
       ? value : "Unknown";
     counts.set(label, (counts.get(label) ?? 0) + 1);
   }

@@ -27,12 +27,21 @@ export async function runGraphQualityCapture({ newCapturePage, buildScopeShowcas
   crossVendor.nodes.find(n => n.id === "server:snowflake").attributes.provider = "snowflake";
   crossVendor.edges.forEach((edge, i) => { edge.evidence = i === 0 ? { tier: "runtime_observed", source: "synthetic-runtime-fixture" } : i === 1 ? {} : { tier: "static_scan", source: "synthetic-config-fixture" }; });
   const cases = [["repository", buildScopeShowcase("repository")], ["cloud", buildScopeShowcase("cloud")], ["identity", identity], ["dependency", dependency], ["ai-mcp", buildScopeShowcase("environment")], ["cross-vendor", crossVendor]];
+  const cyclic = structuredClone(dependency);
+  const prototype = cyclic.nodes.find(n => n.id === "pkg:next");
+  for (const id of ["pkg:shared", "pkg:helper"]) cyclic.nodes.push({ ...structuredClone(prototype), id, label: `${id.slice(4)}-library@1.0.0`, severity: "none", risk_score: 0, attributes: { simulated: true, version: "1.0.0", ecosystem: "npm" } });
+  for (const [source, target] of [["source:server", "pkg:shared"], ["pkg:next", "pkg:shared"], ["pkg:shared", "pkg:helper"], ["pkg:helper", "pkg:shared"]]) cyclic.edges.push({ ...structuredClone(cyclic.edges[0]), id: `${source}->${target}:depends_on`, source, target, relationship: "depends_on" });
+  const grouped = structuredClone(dependency);
+  grouped.nodes = [grouped.nodes[0], ...Array.from({ length: 90 }, (_, i) => ({ ...structuredClone(prototype), id: `pkg:fixture-${i}`, label: `workspace-component-${i}@1.0.0`, severity: "none", risk_score: 0, attributes: { simulated: true, version: "1.0.0", ecosystem: "npm" } }))];
+  grouped.edges = grouped.nodes.slice(1).map(n => ({ ...structuredClone(grouped.edges[0]), id: `bundle-${n.id}`, source: grouped.nodes[0].id, target: n.id, relationship: "contains" }));
+  cases.push(["shared-cycle", cyclic], ["grouped", grouped]);
   // Recompute synthetic subset statistics; no path analysis is claimed for subsets.
   for (const [, fixture] of cases) {
     const counts = key => fixture.nodes.reduce((acc, n) => ({ ...acc, [n[key]]: (acc[n[key]] ?? 0) + 1 }), {});
     const severities = { critical: 0, high: 0, medium: 0, low: 0 };
     for (const n of fixture.nodes) if (["vulnerability", "misconfiguration"].includes(n.entity_type) && n.severity in severities) severities[n.severity]++;
-    fixture.stats = { ...fixture.stats, node_types: counts("entity_type"), severity_counts: severities,
+    fixture.pagination = { total: fixture.nodes.length, offset: 0, limit: fixture.nodes.length, has_more: false };
+    fixture.stats = { ...fixture.stats, total_nodes: fixture.nodes.length, total_edges: fixture.edges.length, node_types: counts("entity_type"), severity_counts: severities,
       relationship_types: fixture.edges.reduce((acc, e) => ({ ...acc, [e.relationship]: (acc[e.relationship] ?? 0) + 1 }), {}),
       analysis_status: fixture.attack_paths.length ? fixture.stats.analysis_status : {} };
   }
@@ -46,7 +55,12 @@ export async function runGraphQualityCapture({ newCapturePage, buildScopeShowcas
       await page.goto(`${baseUrl}/graph?lens=estate&rollup=0&scan=${graph.scan_id}&capture=1`);
       await page.getByRole("heading", { name: "Investigation", exact: true }).waitFor();
       await expect(page.locator(".react-flow__node").first()).toBeVisible();
-      await fitReactFlow(page);
+      if (viewport.width >= 640) await fitReactFlow(page);
+      else {
+        await page.getByRole("button", { name: /^Center graph node:/ }).click();
+        await page.waitForTimeout(300);
+      }
+      await page.evaluate(() => window.scrollTo(0, 0));
       await expect(page.getByLabel("Visible relationship evidence")).toBeVisible();
       const audit = await page.evaluate(auditRenderedGraph, { edges: fixture.edges });
       await fs.writeFile(path.join(output, `${key}-geometry.json`), JSON.stringify(await page.locator(".react-flow__edge").evaluateAll(edges => edges.map(e => ({ id: e.dataset.id, path: e.querySelector(".react-flow__edge-path")?.outerHTML, markers: [...document.querySelectorAll("marker")].map(m => m.outerHTML) }))), null, 2));
@@ -64,6 +78,7 @@ export async function runGraphQualityCapture({ newCapturePage, buildScopeShowcas
           await target.focus();
           await page.keyboard.press("Enter");
           await expect(page.getByLabel("Finding investigation")).toBeVisible();
+          await page.waitForTimeout(400);
           await page.screenshot({ path: path.join(output, `${key}-finding.png`) });
         }
       }

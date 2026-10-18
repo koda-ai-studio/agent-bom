@@ -631,7 +631,7 @@ export function LineageDetailPanel({
   // present (identity + lifecycle); the rest appear only when they carry data
   // so the drawer never shows an empty tab.
   const tabs: { id: TabId; label: string; content: ReactNode }[] = [
-    { id: "overview", label: "Overview", content: <>{typeSection}{headerSlot}</> },
+    { id: "overview", label: "Overview", content: data.nodeType === "misconfiguration" || data.nodeType === "vulnerability" ? <>{headerSlot}{typeSection}</> : <>{typeSection}{headerSlot}</> },
     ...(hasRelationships
       ? [
           {
