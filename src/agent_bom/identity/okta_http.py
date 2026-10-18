@@ -3,12 +3,22 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 from urllib.parse import urlsplit
 
 MAX_PAGES = 20
 MAX_RECORDS = 2000
 MAX_BYTES = 2 * 1024 * 1024
+
+
+class PartialCollectionError(ValueError):
+    """Validated prefix plus an explicit bound; never a complete inventory."""
+
+    def __init__(self, records: list[dict[str, Any]], reason_code: str) -> None:
+        self.records = records
+        self.reason_code = reason_code
+        super().__init__("Okta collection bound reached")
 
 
 def org_origin(value: str) -> str:
@@ -22,6 +32,8 @@ def org_origin(value: str) -> str:
         or parsed.path not in ("", "/")
         or parsed.query
         or parsed.fragment
+        or len(host) > 253
+        or any(not re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", label) for label in host.split("."))
         or not any(host.endswith(suffix) for suffix in (".okta.com", ".oktapreview.com", ".okta-emea.com"))
     ):
         raise ValueError("An HTTPS Okta tenant origin is required")
@@ -83,8 +95,10 @@ class MetadataReader:
                     ids.add(record["id"])
                     records.append(record)
                 if len(records) > MAX_RECORDS:
-                    raise ValueError("Okta record collection bound reached")
+                    raise PartialCollectionError(records[:MAX_RECORDS], "record_limit")
                 if not next_url:
                     return records
+                if len(records) == MAX_RECORDS:
+                    raise PartialCollectionError(records, "record_limit")
                 url = next_url
-        raise ValueError("Okta page collection bound reached")
+        raise PartialCollectionError(records, "page_limit")

@@ -81,8 +81,10 @@ def _nebius_get_all(url: str, api_key: str, items_key: str, params: dict | None 
             if not isinstance(data, dict):
                 raise CloudDiscoveryError("Nebius: invalid response page")
 
-            # Nebius API uses both "models"/"instances" keys and a generic "data" fallback
-            items = data.get(items_key, data.get("data"))
+            # ProtoJSON omits empty repeated fields. Accept a terminal empty
+            # object and the native "items" field, but not an unrelated payload.
+            empty = [] if set(data) <= {"nextPageToken", "next_page_token"} else None
+            items = data.get(items_key, data.get("items", data.get("data", empty)))
             if not isinstance(items, list) or any(not isinstance(item, dict) for item in items):
                 raise CloudDiscoveryError("Nebius: invalid response page items")
             all_items.extend(items)

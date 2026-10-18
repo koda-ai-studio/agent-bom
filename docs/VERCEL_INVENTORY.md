@@ -15,6 +15,7 @@ Next, inspect `coverage`, `configuration_checks`, and `persistence` in the repor
 
 ## Failure and evidence boundaries
 
+- Deployment reads use a fixed window covering the last 24 hours, sent as `since`/`until` timestamps and retained in the deployment receipt. Older history is outside this collection scope. The [Vercel deployment API](https://github.com/vercel/sdk/blob/main/src/models/getdeploymentsop.ts) defines these timestamp filters.
 - Pagination is bounded to 20 pages, 2,000 records per capability, and 2 MiB per response. Missing, repeated, or invalid continuation state is incomplete coverage.
 - Projects must match the requested team. Deployments must identify a project in the collected inventory. Malformed or conflicting records cannot become a complete snapshot.
 - Exit 0 means inventory collection completed. It does not establish clean security posture. Configuration checks can be `pass`, `fail`, `unknown`, or `not_applicable`.

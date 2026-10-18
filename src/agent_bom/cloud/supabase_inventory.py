@@ -77,6 +77,7 @@ def _findings(payload: Any, project: dict[str, Any], observed_at: str) -> list[d
         if not isinstance(row, dict):
             raise ValueError("Invalid Supabase advisor")
         native_id = _text(row.get("cache_key"), 2048)
+        identity_digest = hashlib.sha256(row["cache_key"].encode()).hexdigest()
         rule = _text(row.get("name"))
         level = _text(row.get("level"))
         title = _text(row.get("title"), 1000)
@@ -104,7 +105,7 @@ def _findings(payload: Any, project: dict[str, Any], observed_at: str) -> list[d
             "contract": "v1-experimental",
             "severity_mapping": "ERROR=high,WARN=medium,INFO=info;otherwise=unknown",
         }
-        fid = stable_id("supabase-security-advisors", project["organization_id"], project["ref"], native_id)
+        fid = stable_id("supabase-security-advisors", project["organization_id"], project["ref"], identity_digest)
         finding = Finding(
             id=fid,
             finding_type=FindingType.CLOUD_BEST_PRACTICE_FAIL,
@@ -213,14 +214,15 @@ def collect_report(*, project_refs: list[str], token: str, client: httpx.Client 
                     receipt["state"] = "collected"
                 else:
                     assert project is not None and inventory is not None
+                    if project["status"] != "ACTIVE_HEALTHY":
+                        receipt["state"] = "paused" if project["status"] == "INACTIVE" else "unavailable"
+                        report["status"] = "partial"
+                        continue
                     findings = _findings(payload, project, observed_at)
                     inventory["findings"] = findings
                     report["findings"].extend(findings)
                     receipt["state"] = "collected" if findings else "empty"
-                    receipt["evaluated"] = project["status"] == "ACTIVE_HEALTHY"
-                    if not receipt["evaluated"]:
-                        receipt["state"] = "paused" if project["status"] == "INACTIVE" else "unavailable"
-                        report["status"] = "partial"
+                    receipt["evaluated"] = True
                 receipt["complete"] = True
                 receipt["ingested"] = True
             except (ValueError, TypeError):

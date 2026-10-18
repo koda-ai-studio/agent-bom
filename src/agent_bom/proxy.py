@@ -23,7 +23,6 @@ import sys
 import tempfile
 import time
 import uuid
-from contextlib import nullcontext
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -40,6 +39,7 @@ from agent_bom.api.tracing import (
     parse_baggage,
     parse_traceparent,
     parse_tracestate,
+    sanitized_span,
 )
 from agent_bom.async_stdin import create_async_stdin_reader, read_async_stdin_line
 from agent_bom.langfuse_otel import set_langfuse_runtime_attributes
@@ -692,7 +692,7 @@ async def _fetch_enabled_gateway_policies(
     from agent_bom.http_client import create_client
 
     url = base_url.rstrip("/") + "/v1/gateway/policies?enabled=true"
-    span_cm = _PROXY_TRACER.start_as_current_span("proxy.fetch_gateway_policies") if _PROXY_TRACER else nullcontext()
+    span_cm = sanitized_span(_PROXY_TRACER, "proxy.fetch_gateway_policies")
     with span_cm as span:
         if span is not None:
             span.set_attribute("agent_bom.proxy.control_plane_url", base_url.rstrip("/"))
@@ -744,7 +744,7 @@ async def _push_proxy_audit_batch(
         "alerts": alerts,
         "summary": summary,
     }
-    span_cm = _PROXY_TRACER.start_as_current_span("proxy.push_audit_batch") if _PROXY_TRACER else nullcontext()
+    span_cm = sanitized_span(_PROXY_TRACER, "proxy.push_audit_batch")
     with span_cm as span:
         if span is not None:
             span.set_attribute("agent_bom.proxy.audit_alert_count", len(alerts))
@@ -1131,7 +1131,7 @@ async def _proxy_sse_server(
         async with httpx.AsyncClient(timeout=30) as client:
             # Fetch tool list from the remote server
             try:
-                span_cm = _PROXY_TRACER.start_as_current_span("proxy.sse_tools_list") if _PROXY_TRACER else nullcontext()
+                span_cm = sanitized_span(_PROXY_TRACER, "proxy.sse_tools_list")
                 with span_cm as span:
                     if span is not None:
                         span.set_attribute("agent_bom.proxy.upstream_url", url.rstrip("/"))
@@ -1329,7 +1329,7 @@ async def _proxy_sse_server(
                 call_counter += 1
                 try:
                     span_name = "proxy.sse_tools_call" if is_tool_call else "proxy.sse_gated_message"
-                    span_cm = _PROXY_TRACER.start_as_current_span(span_name) if _PROXY_TRACER else nullcontext()
+                    span_cm = sanitized_span(_PROXY_TRACER, span_name)
                     with span_cm as span:
                         if span is not None:
                             span.set_attribute("agent_bom.proxy.subject", tool_name)
