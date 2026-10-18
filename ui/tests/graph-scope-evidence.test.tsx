@@ -21,6 +21,13 @@ it("keeps an empty scope explicit", () => {
   expect(screen.getByText(/No visible relationships/)).toBeVisible();
 });
 
+it("distinguishes loaded evidence from the sampled map projection", () => {
+  render(<GraphScopeEvidence scope="loaded" edges={[{ data: { evidenceLabel: "Static / configured" } }]} />);
+  expect(screen.getByLabelText("Loaded relationship evidence")).toHaveTextContent("Static / configured 1");
+  expect(screen.getByText(/Loaded links/)).toHaveTextContent("open an asset");
+  expect(screen.queryByText(/Visible links/)).not.toBeInTheDocument();
+});
+
 it("does not classify aggregated links as observed when their receipt is unavailable", () => {
   render(<GraphScopeEvidence edges={[{ data: { evidenceMode: "runtime", aggregate: true } }]} />);
   expect(screen.getByLabelText("Visible relationship evidence")).toHaveTextContent("Bundled (expand for evidence)");

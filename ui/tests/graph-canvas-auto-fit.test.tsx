@@ -43,3 +43,27 @@ it("does not replace a manual camera when virtualized nodes reinitialize", async
   await act(() => vi.advanceTimersByTimeAsync(50));
   expect(flow.fitView).toHaveBeenCalledTimes(4);
 });
+
+it("finishes camera settling when measurement restarts during an initial fit", async () => {
+  vi.useFakeTimers();
+  vi.stubGlobal("requestAnimationFrame", (callback: () => void) => setTimeout(callback, 0));
+  vi.stubGlobal("cancelAnimationFrame", clearTimeout);
+  vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
+  flow.frame = document.createElement("div");
+  flow.frame.setAttribute("data-graph-adaptive-frame", "");
+  let finishFirst!: (value: boolean) => void;
+  flow.fitView.mockImplementationOnce(() => new Promise<boolean>(resolve => { finishFirst = resolve; }));
+  const onLayoutAspect = vi.fn();
+  const view = () => <GraphCanvasAutoFit enabled layoutKey="settling" inspector={false} preserveViewport={false} onLayoutAspect={onLayoutAspect} />;
+  const rendered = render(view());
+  await act(() => vi.advanceTimersByTimeAsync(50));
+  expect(flow.fitView).toHaveBeenCalledTimes(1);
+  flow.initialized = false;
+  rendered.rerender(view());
+  flow.initialized = true;
+  rendered.rerender(view());
+  await act(() => vi.advanceTimersByTimeAsync(50));
+  expect(flow.fitView).toHaveBeenCalledTimes(3);
+  await act(async () => { finishFirst(true); await vi.advanceTimersByTimeAsync(50); });
+  expect(flow.fitView).toHaveBeenCalledTimes(3);
+});

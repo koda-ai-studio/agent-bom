@@ -882,12 +882,17 @@ test("estate map renders a recorded scan without fabricating environment metadat
   await viewControls.getByRole("button", { name: "View & layers" }).click();
   // Real dependency scans collapse sibling packages initially; expand through the public control.
   const collapsedPackages = page.getByRole("button", { name: /^Expand \d+ members$/ });
-  // The group may be outside the initial camera and virtualized until fitted.
-  await page.getByRole("button", { name: "Fit all", exact: true }).click();
-  await expect(collapsedPackages.first()).toBeVisible();
-  await collapsedPackages.first().click();
   const sigma = page.getByTestId("sigma-graph-overview");
+  const fitAll = page.getByRole("button", { name: "Fit all", exact: true });
+  await expect.poll(async () => await sigma.isVisible() || await collapsedPackages.first().isVisible() || await fitAll.isVisible()).toBe(true);
+  // The group may be outside the initial camera and virtualized until fitted.
+  if (!await sigma.isVisible()) {
+    if (!await collapsedPackages.first().isVisible()) await fitAll.click();
+    await expect(collapsedPackages.first()).toBeVisible();
+    await collapsedPackages.first().click();
+  }
   await expect(sigma).toBeVisible();
+  await expect(page.getByLabel("Loaded relationship evidence")).toContainText("the map may show a subset");
   await expectSigmaCanvases(page);
   const readyMs = performance.now() - start;
   await sigma.getByText("Map controls", { exact: true }).click();

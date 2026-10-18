@@ -68,13 +68,14 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     let cancelled = false;
     const frames: number[] = [];
     frames.push(requestAnimationFrame(() => {
-      lastAutoFitKey.current = autoFitKey;
       void fitView(options).then(() => {
         // Zoom changes readable glyph/caption dimensions. Allow their resize
         // measurements to settle before the final camera fit.
         if (cancelled) return;
         frames.push(requestAnimationFrame(() => frames.push(requestAnimationFrame(() => {
-          if (!cancelled) void fitView(options);
+          if (!cancelled) void fitView(options).then(fitted => {
+            if (!cancelled && fitted) lastAutoFitKey.current = autoFitKey;
+          });
         }))));
       });
     }));

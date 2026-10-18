@@ -3692,7 +3692,7 @@ function GraphPageInner() {
           {investigationMode?.truncated && investigationMode.nodeCount < 24 && !loadingGraph && <button type="button" className="graph-page-action min-h-11 sm:min-h-7" onClick={() => void loadRootInvestigation({ rootId: investigationMode.rootId, rootLabel: investigationMode.rootLabel, direction: investigationDirection, nodeLimit: Math.min(24, Math.max(8, investigationMode.nodeCount * 2)) })}>Show more connections</button>}
             </div>
           )}
-          {!rollupNavigationActive && !rollupDecisionActive && displayNodes.length > 0 && <GraphScopeEvidence edges={displayEdges} />}
+          {!rollupNavigationActive && !rollupDecisionActive && displayNodes.length > 0 && <GraphScopeEvidence edges={displayEdges} scope={graphRenderer.kind === "webgl" ? "loaded" : "visible"} />}
           {!rollupNavigationActive && !rollupDecisionActive && graphRenderer.kind === "react-flow" && displayNodes.length > 0 && <GraphLegendDock items={legendItems} separated />}
           <div ref={setGraphNavigationMount} />
           <div data-graph-adaptive-frame data-graph-annotations={graphLayoutKind === "asset-hierarchy" ? "on-demand" : undefined} className={`relative flex ${selectedAttackPath ? "h-[max(24rem,calc(100dvh-25rem))] sm:h-[clamp(24rem,50dvh,36rem)]" : selectedScenarioId ? "h-[max(24rem,calc(100dvh-25rem))] sm:h-[max(28rem,calc(100dvh-21rem))]" : "h-[var(--graph-adaptive-height,clamp(22rem,60dvh,48rem))]"} shrink-0 overflow-hidden rounded-lg border border-outline bg-surface`}>
