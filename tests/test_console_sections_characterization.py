@@ -154,11 +154,25 @@ def _assert_golden(key: str, value: str) -> None:
 
 @pytest.mark.parametrize("populated", [False, True], ids=["empty", "populated"])
 @pytest.mark.parametrize("color", [False, True], ids=["plain", "ansi"])
+@pytest.mark.parametrize("no_color_env", [False, True], ids=["color-env", "no-color-env"])
 @pytest.mark.parametrize("section", SECTIONS)
-def test_console_section_bytes(monkeypatch, populated, color, section):
+def test_console_section_bytes(monkeypatch, populated, color, no_color_env, section):
+    if no_color_env:
+        monkeypatch.setenv("NO_COLOR", "1")
+    else:
+        monkeypatch.delenv("NO_COLOR", raising=False)
     stream = StringIO()
     monkeypatch.setattr(
-        output, "console", Console(file=stream, width=100, force_terminal=color, color_system="standard" if color else None)
+        output,
+        "console",
+        Console(
+            file=stream,
+            width=100,
+            force_terminal=color,
+            force_jupyter=False,
+            no_color=not color,
+            color_system="standard" if color else None,
+        ),
     )
     getattr(console_render, section)(_report(populated))
     _assert_golden(f"{section}:{populated}:{color}", stream.getvalue())
