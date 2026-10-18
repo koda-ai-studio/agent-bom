@@ -947,16 +947,13 @@ def _materialize_showcase_attack_paths(graph: UnifiedGraph) -> bool:
     # that list temporarily detached, then merge both evidence families.
     materialized = list(graph.attack_paths)
     graph.attack_paths = []
-    # Hop receipts copy the analyzer status at annotation time. Recording it
-    # only after derivation stamped every derived path ``not_recorded`` while
-    # the snapshot header said the same analysis was complete.
+    # Hop receipts copy the analyzer status at annotation time, so record it before derivation.
     _record_showcase_attack_path_analysis(graph, count_paths=False)
     try:
         from agent_bom.graph.path_derivation import _derived_attack_paths
         from agent_bom.graph.path_evidence import with_technique_mappings
 
-        # Estate correlation chains arrive pre-built; give them the same hop
-        # receipts and analysis qualification as every derived path family.
+        # Pre-built estate chains get the same hop receipts as every derived path family.
         with_technique_mappings(materialized, graph)
         derived = _derived_attack_paths(graph)
     except Exception:  # noqa: BLE001 — never block the snapshot save on path shaping
@@ -987,11 +984,7 @@ def _materialize_showcase_attack_paths(graph: UnifiedGraph) -> bool:
 
 
 def _record_showcase_attack_path_analysis(graph: UnifiedGraph, *, count_paths: bool = True) -> None:
-    """Record the showcase path analysis as complete.
-
-    ``count_paths=False`` records completion before derivation, when there is
-    no finalized queue to count yet.
-    """
+    """Record the showcase path analysis as complete (``count_paths=False`` before derivation)."""
 
     # Persistence keys paths by source/target within a scan, so duplicate
     # in-memory variants collapse to one served path. Report the persisted

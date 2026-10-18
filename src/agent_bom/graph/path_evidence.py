@@ -168,75 +168,75 @@ def _runtime_hop_receipt(edge: UnifiedEdge) -> dict[str, Any]:
     }
 
 
+def _hop_receipt(graph: UnifiedGraph, source: str, target: str, relationship: str, hop_edges: HopEdges | None) -> dict[str, Any]:
+    """One classified receipt, or an explicit gap, for a single ordered hop."""
+    edge, gap = resolve_typed_hop(graph, source, target, relationship, hop_edges)
+    if edge is None:
+        return {
+            "source_node_id": source,
+            "target_node_id": target,
+            "relationship": relationship,
+            "reason_codes": [gap],
+            "source_snapshot_ids": [],
+            "relationship_provenance": "unavailable",
+            "correlation_identity_status": "unavailable",
+            "evidence_tier": "unknown",
+            "confidence": 0.0,
+            "freshness": "unknown",
+            "runtime_observed_state": "not_observed",
+            "direction": "unknown",
+            "traversable": False,
+            "complete": False,
+            "truncated": False,
+        }
+    source_ids = _source_snapshot_ids(edge, graph)
+    freshness = _freshness(edge)
+    authority = authority_evidence(edge.evidence)
+    runtime_receipt = _runtime_hop_receipt(edge)
+    # Trace order records which assets one correlated trace touched in
+    # sequence. It is a real receipt, but not an access/exposure hop, so it
+    # can never complete an attack path on its own.
+    trace_order = _relationship(edge) in _TRACE_ORDER_RELATIONSHIPS
+    if trace_order:
+        runtime_receipt["reason_codes"] = [*runtime_receipt["reason_codes"], "trace_order_not_access"]
+    return {
+        "source_node_id": source,
+        "target_node_id": target,
+        "relationship": _relationship(edge),
+        **runtime_receipt,
+        "source_snapshot_ids": source_ids,
+        "relationship_provenance": "recorded" if _has_relationship_provenance(edge) else "unavailable",
+        "correlation_identity_status": "current" if _correlation_identity_current(edge) else "recomputation_required",
+        "evidence_tier": _evidence_tier(edge),
+        "confidence": float(edge.confidence),
+        "freshness": freshness,
+        "direction": edge.direction,
+        "traversable": bool(edge.traversable),
+        "complete": bool(
+            edge.traversable
+            and not trace_order
+            and not runtime_receipts_limited(edge.evidence)
+            and edge.direction == "directed"
+            and source_ids
+            and _has_relationship_provenance(edge)
+            and _correlation_identity_current(edge)
+            and freshness in {"fresh", "stale_allowed"}
+            and edge.source == source
+            and edge.target == target
+        ),
+        "truncated": False,
+        **({"authority": authority} if authority is not None else {}),
+    }
+
+
 def annotate_attack_path_evidence(path: AttackPath, graph: UnifiedGraph, *, hop_edges: HopEdges | None = None) -> AttackPath:
     """Attach deterministic hop receipts and conservatively classify truth."""
 
     path.summary = _qualify_structural_summary(path.summary)
-    receipts: list[dict[str, Any]] = []
-    for index, (source, target) in enumerate(zip(path.hops, path.hops[1:])):
-        relationship = path.edges[index] if index < len(path.edges) else ""
-        edge, gap = resolve_typed_hop(graph, source, target, relationship, hop_edges)
-        if edge is None:
-            receipts.append(
-                {
-                    "source_node_id": source,
-                    "target_node_id": target,
-                    "relationship": relationship,
-                    "reason_codes": [gap],
-                    "source_snapshot_ids": [],
-                    "relationship_provenance": "unavailable",
-                    "correlation_identity_status": "unavailable",
-                    "evidence_tier": "unknown",
-                    "confidence": 0.0,
-                    "freshness": "unknown",
-                    "runtime_observed_state": "not_observed",
-                    "direction": "unknown",
-                    "traversable": False,
-                    "complete": False,
-                    "truncated": False,
-                }
-            )
-            continue
-        source_ids = _source_snapshot_ids(edge, graph)
-        freshness = _freshness(edge)
-        authority = authority_evidence(edge.evidence)
-        runtime_receipt = _runtime_hop_receipt(edge)
-        # Trace order records which assets one correlated trace touched in
-        # sequence. It is a real receipt, but not an access/exposure hop, so it
-        # can never complete an attack path on its own.
-        trace_order = _relationship(edge) in _TRACE_ORDER_RELATIONSHIPS
-        if trace_order:
-            runtime_receipt["reason_codes"] = [*runtime_receipt["reason_codes"], "trace_order_not_access"]
-        receipts.append(
-            {
-                "source_node_id": source,
-                "target_node_id": target,
-                "relationship": _relationship(edge),
-                **runtime_receipt,
-                "source_snapshot_ids": source_ids,
-                "relationship_provenance": "recorded" if _has_relationship_provenance(edge) else "unavailable",
-                "correlation_identity_status": "current" if _correlation_identity_current(edge) else "recomputation_required",
-                "evidence_tier": _evidence_tier(edge),
-                "confidence": float(edge.confidence),
-                "freshness": freshness,
-                "direction": edge.direction,
-                "traversable": bool(edge.traversable),
-                "complete": bool(
-                    edge.traversable
-                    and not trace_order
-                    and not runtime_receipts_limited(edge.evidence)
-                    and edge.direction == "directed"
-                    and source_ids
-                    and _has_relationship_provenance(edge)
-                    and _correlation_identity_current(edge)
-                    and freshness in {"fresh", "stale_allowed"}
-                    and edge.source == source
-                    and edge.target == target
-                ),
-                "truncated": False,
-                **({"authority": authority} if authority is not None else {}),
-            }
-        )
+    receipts = [
+        _hop_receipt(graph, source, target, path.edges[index] if index < len(path.edges) else "", hop_edges)
+        for index, (source, target) in enumerate(zip(path.hops, path.hops[1:]))
+    ]
 
     analysis = _analysis(graph, hop_count=max(len(path.hops) - 1, 0), path=path)
     analysis_status = str(analysis.get("status") or "not_recorded")
