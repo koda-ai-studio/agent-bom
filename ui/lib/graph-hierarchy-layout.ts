@@ -3,7 +3,6 @@ import type { LineageNodeData } from "@/components/lineage-nodes";
 import { applyDagreLayout, reduceRankCrossings, type LayoutOptions } from "@/lib/dagre-layout";
 
 const FINDINGS = new Set(["vulnerability", "misconfiguration", "driftIncident"]);
-const STRUCTURAL_LABELS = new Set(["contains", "hosts", "vulnerable_to", "has_finding"]);
 
 /** Rank by recorded relationships; finding arrows retain their original direction. */
 export function graphHierarchyLayout(nodes: Node<LineageNodeData>[], edges: Edge[], options: LayoutOptions = {}) {
@@ -36,14 +35,19 @@ export function graphHierarchyLayout(nodes: Node<LineageNodeData>[], edges: Edge
   const rowStep = nodeHeight + Math.max(24, options.minSeparation?.gap ?? 0, options.nodeSep ?? 32);
   const rows = Math.max(0, ...[...ranks.values()].map(rank => rank.length));
   const packed = [...ranks.values()].flatMap(rank => rank.sort((a,b) => a.position.y - b.position.y).map((node, index) => ({
-    ...node, position: { x: node.position.x, y: ((rows - rank.length) / 2 + index) * rowStep },
+    ...node, style: { ...node.style, minHeight: nodeHeight },
+    position: { x: node.position.x, y: ((rows - rank.length) / 2 + index) * rowStep },
   })));
-  const positioned = new Map(reduceRankCrossings(packed, rankedEdges).map(node => [node.id, node]));
+  const span = Math.max(0, ...packed.map(node => node.position.x));
+  const height = Math.max(0, rows - 1) * rowStep + nodeHeight;
+  const stretch = span > 0 ? Math.max(1, Math.min(2, ((options.fitAspect ?? 2.2) * height - (options.nodeWidth ?? 240)) / span)) : 1;
+  const spaced = packed.map(node => ({ ...node, position: { ...node.position, x: node.position.x * stretch } }));
+  const positioned = new Map(reduceRankCrossings(spaced, rankedEdges).map(node => [node.id, node]));
   return {
     nodes: nodes.map(node => positioned.get(node.id)!),
     edges: edges.map((edge): Edge => ({ ...edge,
       ...(contextEdges.has(edge.id) ? { sourceHandle: "context", targetHandle: "context" } : {}),
-      data: { ...edge.data, quietLabel: STRUCTURAL_LABELS.has(String(edge.data?.relationship)) },
+      data: { ...edge.data, quietLabel: true },
     })),
   };
 }

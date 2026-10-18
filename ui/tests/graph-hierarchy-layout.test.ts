@@ -51,11 +51,11 @@ describe("evidence-driven graph flow", () => {
     expect(positions(graphHierarchyLayout(nodes, edges))).toEqual(positions(graphHierarchyLayout([...nodes].reverse(), [...edges].reverse())));
   });
 
-  it("hides repetitive structure labels and reveals them on selection", () => {
+  it("keeps overview connections quiet and reveals relationship labels on selection", () => {
     const result = graphHierarchyLayout(nodes, edges);
     const quiet = readableGraphEdges(result.edges);
     expect(quiet.find(e => e.id === "source")?.label).toBeUndefined();
-    expect(quiet.find(e => e.id === "config")?.label).toBeDefined();
+    expect(quiet.find(e => e.id === "config")?.label).toBeUndefined();
     const selected = readableGraphEdges(result.edges, new Set(["repo", "source"]));
     expect(selected.find(e => e.id === "source")?.label).toBeDefined();
     expect(quiet.find(e => e.id === "source")?.ariaLabel).toContain("relationship");

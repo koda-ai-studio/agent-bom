@@ -188,7 +188,9 @@ function pickLegendPreview(items: LegendItem[], limit: number): LegendItem[] {
     picked.push(item);
     if (picked.length >= Math.max(1, limit - 1)) break;
   }
-  if (edges[0]) picked.push(edges[0]);
+  // Keep evidence semantics visible even when relationship text is on demand.
+  const evidence = edges.find(item => !item.relationship && item.description);
+  if (evidence ?? edges[0]) picked.push((evidence ?? edges[0])!);
   return picked.slice(0, limit);
 }
 
