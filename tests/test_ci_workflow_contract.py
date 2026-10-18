@@ -35,6 +35,19 @@ def test_main_docker_pulls_authenticate_before_setup_and_build() -> None:
             assert steps.index(login) < steps.index(step)
 
 
+def test_native_image_export_is_owned_by_host_validator() -> None:
+    steps = _ci()["jobs"]["docker"]["steps"]
+    step = next(step for step in steps if step.get("name") == "agent-bom native image tar scan gate")
+    script = step["run"]
+    # Atomic JSON exports are private (0600). A different container UID makes
+    # an otherwise successful scan unreadable to the host validation process.
+    assert 'docker run --rm --user "$(id -u):$(id -g)"' in script
+    assert "-o /workspace/native-image-scan.json" in script
+    assert 'json.load(open("/tmp/native-image-scan.json"))' in script
+    assert "if total_packages <= 0:" in script
+    assert not step.get("continue-on-error", False)
+
+
 def test_postgres_registry_credentials_exclude_forks_and_dependabot() -> None:
     service = _ci()["jobs"]["postgres-integration"]["services"]["postgres"]
     trusted = (
