@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_valida
 
 from agent_bom.graph.container import AttackPath
 from agent_bom.graph.runtime_receipts import runtime_records
+from agent_bom.graph.types import RelationshipType
 
 EvidenceId = Annotated[str, Field(min_length=1, max_length=1024)]
 
@@ -224,6 +225,19 @@ class HopEvidenceReceipt(BaseModel):
     reason_codes: list[str] = Field(default_factory=list, max_length=20)
     authority: HopAuthorityEvidence | None = None
 
+    @field_validator("relationship")
+    @classmethod
+    def _typed_relationship(cls, value: str) -> str:
+        # A hop names a typed relationship value; an edge id or free text is
+        # not a relationship and cannot be presented as one. Empty is the
+        # recorded ``hop_relationship_missing`` gap.
+        if value and value not in _RELATIONSHIP_VALUES:
+            raise ValueError("unsupported_hop_relationship")
+        return value
+
+
+_RELATIONSHIP_VALUES = frozenset(item.value for item in RelationshipType)
+
 
 def exposure_hop_evidence(path: AttackPath) -> list[dict]:
     """Return one classified receipt or explicit gap for every ordered hop."""
@@ -237,11 +251,17 @@ def exposure_hop_evidence(path: AttackPath) -> list[dict]:
             if (receipt.source_node_id, receipt.target_node_id, receipt.relationship) != (source, target, relationship):
                 raise ValueError("hop_identity_mismatch")
         except (ValidationError, ValueError):
-            receipt = HopEvidenceReceipt(
+            if relationship and relationship not in _RELATIONSHIP_VALUES:
+                reason = "unsupported_hop_relationship"
+            else:
+                reason = "hop_evidence_not_recorded" if missing else "invalid_hop_receipt"
+            # Built without validation so an untyped legacy relationship is
+            # reported verbatim as the gap it is.
+            receipt = HopEvidenceReceipt.model_construct(
                 source_node_id=source,
                 target_node_id=target,
                 relationship=relationship,
-                reason_codes=["hop_evidence_not_recorded" if missing else "invalid_hop_receipt"],
+                reason_codes=[reason],
             )
         payload = receipt.model_dump(mode="json")
         payload["runtime_references"] = (

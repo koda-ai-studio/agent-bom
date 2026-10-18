@@ -136,7 +136,7 @@ def credential_finding_paths(graph: UnifiedGraph) -> list[AttackPath]:
                     target=node.id,
                     hops=hops + [node.id],
                     edges=rels + [RelationshipType.VULNERABLE_TO.value],
-                    composite_risk=min(39.0, SEVERITY_RANK.get(node.severity, 0) * 20.0 * 0.35),
+                    composite_risk=min(100.0, SEVERITY_RANK.get(node.severity, 0) * 20.0),
                     summary="Modeled credential-reach finding from recorded topology; successful use, effective permission, "
                     "and exploitation require separate evidence. The final hop links the credential to its assessment.",
                     credential_exposure=[graph.nodes[credential].label],

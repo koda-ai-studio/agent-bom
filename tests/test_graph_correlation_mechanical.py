@@ -190,7 +190,7 @@ def test_evidence_annotation_preserves_fused_path_identity_when_provenance_is_in
     path = graph.attack_paths[0]
     assert path.summary.startswith("Internet-exposed ")
     assert path.reachability == "unknown"
-    assert path.composite_risk <= 39.0
+    assert "incomplete_hop_evidence" in path.reachability_basis
     assert path.hop_evidence[0]["complete"] is False
 
 
@@ -209,7 +209,7 @@ def test_zero_hop_structural_candidate_cannot_be_confirmed() -> None:
 
     assert path.hop_evidence == []
     assert path.reachability == "unknown"
-    assert path.composite_risk <= 39.0
+    assert path.composite_risk == 91.0
     assert "incomplete_hop_evidence" in path.reachability_basis
 
 
@@ -242,7 +242,7 @@ def test_bidirectional_hop_remains_structural_not_confirmed() -> None:
     assert path.hop_evidence[0]["direction"] == "bidirectional"
     assert path.hop_evidence[0]["complete"] is False
     assert path.reachability == "unknown"
-    assert path.composite_risk <= 39.0
+    assert path.composite_risk == 90.0
 
 
 def test_stale_allowed_hop_cannot_be_promoted_to_confirmed() -> None:
@@ -319,9 +319,10 @@ def test_bounded_analysis_cannot_promote_a_path_to_confirmed() -> None:
 
     annotate_attack_path_evidence(path, graph)
 
-    assert path.hop_evidence[0]["truncated"] is True
+    assert path.hop_evidence[0]["truncated"] is False
+    assert "analysis_limited" in path.hop_evidence[0]["reason_codes"]
     assert path.reachability == "unknown"
-    assert path.composite_risk <= 39.0
+    assert path.composite_risk == 80.0
     assert "incomplete_hop_evidence" in path.reachability_basis
 
 
@@ -403,7 +404,8 @@ def test_missing_analyzer_status_cannot_confirm_fresh_hops() -> None:
     annotate_attack_path_evidence(path, graph)
 
     assert path.analysis["status"] == "not_recorded"
-    assert path.hop_evidence[0]["truncated"] is True
+    assert path.hop_evidence[0]["truncated"] is False
+    assert "analysis_not_recorded" in path.hop_evidence[0]["reason_codes"]
     assert path.reachability == "unknown"
     dimensions = exposure_evidence_dimensions(path, graph.nodes[path.target])
     assert dimensions["reachability"]["status"] == "unavailable"

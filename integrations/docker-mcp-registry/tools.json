@@ -248,7 +248,7 @@
   },
   {
     "name": "exposure_paths",
-    "description": "Return the attack-path queue in the dashboard's order, with why each path ranks where it does.\n\nRanking is ``ranking.order`` (evidence tier, KEV, severity, composite risk,\ncredential count); every path carries ``rank``, ``evidenceTier``, ``isKev`` and\n``severity``. Totals, filters and cursor pages match ``/v1/graph/attack-paths``.",
+    "description": "Return the attack-path queue in the dashboard's order, with why each path ranks where it does.\n\nRanking is ``ranking.order`` (evidence tier, KEV, severity, evidence confidence,\ncomposite risk, credential count); every path carries ``rank``, ``evidenceTier``,\n``isKev``, ``severity``, ``evidenceConfidence`` and ``rankingFactors``. Totals,\nfilters and cursor pages match ``/v1/graph/attack-paths``.",
     "arguments": [
       {
         "name": "tenant_id",

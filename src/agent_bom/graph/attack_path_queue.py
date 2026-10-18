@@ -13,7 +13,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any
 
-from agent_bom.graph.attack_path_queue_rank import rank_attack_paths, ranking_node_ids
+from agent_bom.graph.attack_path_queue_rank import RANKING_ORDER, rank_attack_paths, ranking_node_ids
 from agent_bom.graph.container import AttackPath
 from agent_bom.graph.path_derivation import _derived_attack_paths
 
@@ -76,7 +76,7 @@ def _ranking_meta(*, snapshot_total: int, window: int) -> dict[str, Any]:
     complete = snapshot_total <= window
     return {
         "method": "exploitability_evidence",
-        "order": ["evidence_tier", "is_kev", "severity", "composite_risk", "credential_count", "source", "target"],
+        "order": [*RANKING_ORDER, "source", "target"],
         "window": window,
         "complete": complete,
         "scope": "all_snapshot_paths" if complete else "top_window_by_stored_composite_risk",

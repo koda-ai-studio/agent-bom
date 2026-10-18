@@ -947,12 +947,21 @@ def _materialize_showcase_attack_paths(graph: UnifiedGraph) -> bool:
     # that list temporarily detached, then merge both evidence families.
     materialized = list(graph.attack_paths)
     graph.attack_paths = []
+    # Hop receipts copy the analyzer status at annotation time. Recording it
+    # only after derivation stamped every derived path ``not_recorded`` while
+    # the snapshot header said the same analysis was complete.
+    _record_showcase_attack_path_analysis(graph, count_paths=False)
     try:
         from agent_bom.graph.path_derivation import _derived_attack_paths
+        from agent_bom.graph.path_evidence import with_technique_mappings
 
+        # Estate correlation chains arrive pre-built; give them the same hop
+        # receipts and analysis qualification as every derived path family.
+        with_technique_mappings(materialized, graph)
         derived = _derived_attack_paths(graph)
     except Exception:  # noqa: BLE001 — never block the snapshot save on path shaping
         _logger.warning("demo estate attack-path materialization failed", exc_info=True)
+        graph.analysis_status.pop("attack_path_fusion", None)
         graph.attack_paths = materialized
         return False
 
@@ -977,13 +986,19 @@ def _materialize_showcase_attack_paths(graph: UnifiedGraph) -> bool:
     return True
 
 
-def _record_showcase_attack_path_analysis(graph: UnifiedGraph) -> None:
-    """Record completion after estate projection has finalized the path queue."""
+def _record_showcase_attack_path_analysis(graph: UnifiedGraph, *, count_paths: bool = True) -> None:
+    """Record the showcase path analysis as complete.
+
+    ``count_paths=False`` records completion before derivation, when there is
+    no finalized queue to count yet.
+    """
 
     # Persistence keys paths by source/target within a scan, so duplicate
     # in-memory variants collapse to one served path. Report the persisted
     # cardinality instead of the pre-upsert list length.
-    persisted_path_count = len({(path.source, path.target) for path in graph.attack_paths})
+    observed: dict[str, int] = {}
+    if count_paths:
+        observed["paths"] = len({(path.source, path.target) for path in graph.attack_paths})
 
     # Record that the run completed. Without this the snapshot reads
     # ``not_recorded`` and the graph header says "Analysis status unavailable"
@@ -994,5 +1009,5 @@ def _record_showcase_attack_path_analysis(graph: UnifiedGraph) -> None:
 
     graph.analysis_status["attack_path_fusion"] = GraphAnalysisStatus(
         status=GraphAnalysisState.COMPLETE,
-        observed={"paths": persisted_path_count},
+        observed=observed,
     )

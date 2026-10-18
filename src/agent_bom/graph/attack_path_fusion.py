@@ -93,7 +93,6 @@ _TRAVERSABLE_RELS = frozenset(
         RelationshipType.EXPOSED_TO,
         RelationshipType.STORES,
         RelationshipType.ACCESSED,
-        RelationshipType.TRACE_STEP,
     }
 )
 

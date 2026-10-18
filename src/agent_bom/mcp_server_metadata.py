@@ -84,7 +84,8 @@ _SERVER_CARD_TOOLS = [
         "name": "should_i_deploy",
         "description": (
             "Pre-deployment gate: resolves a candidate (package, CVE, resource, or graph node) against the"
-            " every ranked path of the latest security-graph snapshot and returns allow/warn/block from the matched paths' risk"
+            " every ranked path of the latest security-graph snapshot by exact identifier and returns allow/warn/block from"
+            " the matched paths' risk and KEV exposure, or not_found when no path names the candidate"
         ),
         "annotations": {"readOnlyHint": True},
     },
