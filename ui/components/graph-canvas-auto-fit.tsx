@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Panel, useNodesInitialized, useReactFlow, useStore, type Node } from "@xyflow/react";
+import { Panel, useNodesInitialized, useReactFlow, useStore, type Node, type FitViewOptions } from "@xyflow/react";
+import { graphInspectorTargets } from "@/lib/graph-inspector-framing";
 import { graphAdaptiveFrame } from "@/lib/graph-adaptive-frame";
 
 /** Fit measured compact contexts after a docked inspector changes canvas width.
@@ -21,9 +22,10 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
   const width = useStore(state => state.width);
   const height = useStore(state => state.height);
   const canvas = useStore(state => state.domNode);
-  const { fitView, getNodes, getNodesBounds } = useReactFlow();
+  const { fitView, getNodes, getNodesBounds, getEdges } = useReactFlow();
   const [windowHeight, setWindowHeight] = useState(0);
   const [spaceAbove, setSpaceAbove] = useState(0);
+  const lastAutoFitKey = useRef<string | null>(null);
   useEffect(() => {
     const resize = () => setWindowHeight(window.innerHeight);
     resize();
@@ -33,7 +35,9 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
   useEffect(() => {
     const frame = canvas?.closest<HTMLElement>("[data-graph-adaptive-frame]");
     if (!frame) return;
-    const measure = () => setSpaceAbove(Math.max(0, frame.getBoundingClientRect().top));
+    // Clicking a control can scroll the document before its resize is measured.
+    // Use a stable document offset so returning to the top does not clip the canvas.
+    const measure = () => setSpaceAbove(Math.max(0, frame.getBoundingClientRect().top + window.scrollY));
     // Deliberate view controls change usable space. A new-snapshot notice
     // must not move the operator's pinned camera, so do not observe all chrome.
     const observer = new ResizeObserver(measure);
@@ -55,14 +59,39 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     onLayoutAspect(frameSize.layoutAspect);
     frameElement.style.setProperty("--graph-adaptive-height", `${frameSize.height}px`);
     if (preserveViewport) return;
-    const frame = requestAnimationFrame(() => {
-      const anchor = nodes.find(node => node.id === anchorId) ?? nodes[0];
-      void fitView({ padding: 0.08, duration: 0, minZoom: 0.05, maxZoom: 2,
-        ...(!frameSize.fitAll && anchor ? { nodes: [{ id: anchor.id }], minZoom: 0.85, maxZoom: 1.1 } : {}),
+    // Virtualization toggles initialized while the operator pans or zooms.
+    // Only a new layout/frame may replace that deliberate camera position.
+    const autoFitKey = JSON.stringify([layoutKey, width, height, anchorId, inspector, windowHeight, spaceAbove]);
+    if (lastAutoFitKey.current === autoFitKey) return;
+    const anchor = nodes.find(node => node.id === anchorId) ?? nodes[0];
+    const options: FitViewOptions = { padding: 0.08, duration: 0, minZoom: 0.05, maxZoom: 2,
+      ...(!frameSize.fitAll && anchor ? { nodes: inspector && width >= 640 ? graphInspectorTargets(anchor.id, nodes.map(node => node.id), getEdges()) : [{ id: anchor.id }], minZoom: inspector && width >= 640 ? 0.45 : 0.85, maxZoom: 1.1 } : {}),
+    };
+    const fitIds = options.nodes ? new Set(options.nodes.map(node => node.id)) : null;
+    // A focused root can resize without changing the whole graph's envelope.
+    // Convergence must measure exactly the nodes passed to fitView.
+    const fittedBounds = () => getNodesBounds(fitIds ? getNodes().filter(node => fitIds.has(node.id)) : getNodes());
+    let cancelled = false;
+    const frames: number[] = [];
+    const settle = (pass: number) => {
+      const before = fittedBounds();
+      void fitView(options).then(fitted => {
+        // Zoom changes readable glyph/caption dimensions. Their observer and
+        // React Flow measurements can finish after a second camera fit. Keep
+        // fitting until measured bounds settle, with a bounded four-pass budget.
+        if (cancelled) return;
+        frames.push(requestAnimationFrame(() => frames.push(requestAnimationFrame(() => {
+          if (cancelled) return;
+          const after = fittedBounds();
+          const stable = before.x === after.x && before.y === after.y && before.width === after.width && before.height === after.height;
+          if (pass > 0 && fitted && stable) lastAutoFitKey.current = autoFitKey;
+          else if (pass < 3) settle(pass + 1);
+        }))));
       });
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [enabled, initialized, width, height, layoutKey, anchorId, inspector, preserveViewport, windowHeight, spaceAbove, canvas, fitView, getNodes, getNodesBounds, onLayoutAspect]);
+    };
+    frames.push(requestAnimationFrame(() => settle(0)));
+    return () => { cancelled = true; frames.forEach(cancelAnimationFrame); };
+  }, [enabled, initialized, width, height, layoutKey, anchorId, inspector, preserveViewport, windowHeight, spaceAbove, canvas, fitView, getNodes, getNodesBounds, getEdges, onLayoutAspect]);
   if (!initialized || width >= 640 || width <= 0) return null;
   const navigator = <GraphNodeNavigator nodes={getNodes()} orderedIds={navigationIds} />;
   return navigationMount ? createPortal(navigator, navigationMount) : <Panel position="top-center">{navigator}</Panel>;

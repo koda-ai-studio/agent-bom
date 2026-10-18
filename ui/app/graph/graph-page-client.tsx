@@ -1,5 +1,7 @@
 "use client";
 
+import { activateGraphNodeFromKeyboard } from "@/lib/graph-keyboard-selection";
+import { GraphScopeEvidence } from "@/components/graph-scope-evidence";
 import { GraphCanvasAutoFit } from "@/components/graph-canvas-auto-fit";
 import { GraphSnapshotReceipt } from "@/components/graph-snapshot-receipt";
 import { mergeGraphNodeDetail } from "@/lib/graph-entity-detail";
@@ -8,7 +10,7 @@ import { GraphHopEvidenceInspector } from "@/components/graph-hop-evidence-inspe
 import { relationshipEdgeTypes } from "@/components/relationship-edge";
 import { GraphRollupChildPager } from "@/components/graph-rollup-child-pager";
 import { GraphRollupCountNotice } from "@/components/graph-rollup-count-notice";
-import { completeDirectedHopCount, visibleGraphFocus } from "@/lib/security-graph-focus";
+import { completeDirectedHopCount, visibleGraphFocus, pathRelationshipIds } from "@/lib/security-graph-focus";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -19,6 +21,7 @@ import {
   ReactFlow,
   ReactFlowProvider,
   useReactFlow,
+  useNodesInitialized,
   useViewport,
   type Edge,
   type Node,
@@ -503,16 +506,6 @@ function mergeNodeDetail(
   return merged;
 }
 
-function buildPathEdgeKeys(hops: string[]): Set<string> {
-  const keys = new Set<string>();
-  for (let index = 0; index < hops.length - 1; index += 1) {
-    const source = hops[index];
-    const target = hops[index + 1];
-    keys.add(`${source}=>${target}`);
-    keys.add(`${target}=>${source}`);
-  }
-  return keys;
-}
 
 function graphErrorState(message: string): {
   title: string;
@@ -645,6 +638,7 @@ export default function GraphPageClient() {
 
 function GraphPageInner() {
   const reactFlow = useReactFlow();
+  const nodesInitialized = useNodesInitialized();
   const graphViewport = useViewport();
   const [narrowViewport, setNarrowViewport] = useState(false);
   const [canvasLayoutAspect, setCanvasLayoutAspect] = useState(2.2);
@@ -1842,10 +1836,10 @@ function GraphPageInner() {
     [activeFocusId, layoutEdges],
   );
 
-  const attackPathEdgeKeys = useMemo(
+  const attackPathEdgeIds = useMemo(
     () =>
-      selectedAttackPath ? buildPathEdgeKeys(selectedAttackPath.hops) : null,
-    [selectedAttackPath],
+      selectedAttackPath ? pathRelationshipIds(layoutEdges, selectedAttackPath) : null,
+    [selectedAttackPath, layoutEdges],
   );
   const attackPathNodeOrder = useMemo(
     () =>
@@ -2106,15 +2100,13 @@ function GraphPageInner() {
       // the selection instead of blanketing the canvas. A capture keeps them.
       maxLabeledEdges: captureMode ? Number.POSITIVE_INFINITY : GRAPH_EDGE_LABEL_BUDGET,
     });
-    if (attackPathEdgeKeys) {
+    if (attackPathEdgeIds) {
       return readableEdges
         .filter((edge) =>
-          attackPathEdgeKeys.has(`${edge.source}=>${edge.target}`),
+          attackPathEdgeIds.has(edge.id),
         )
         .map((edge): Edge => {
-          const inPath = attackPathEdgeKeys.has(
-            `${edge.source}=>${edge.target}`,
-          );
+          const inPath = attackPathEdgeIds.has(edge.id);
           return {
             ...edge,
             labelShowBg: true,
@@ -2129,6 +2121,7 @@ function GraphPageInner() {
               fontSize: Math.max(12, Math.min(20, 13 / Math.max(graphViewport.zoom, 0.2))),
               fontWeight: 650,
             },
+            data: { ...edge.data, directionEmphasis: inPath, pathEmphasis: inPath },
             animated: captureMode ? false : Boolean(inPath || edge.animated),
             style: {
               ...edge.style,
@@ -2153,6 +2146,7 @@ function GraphPageInner() {
           blastRadius.nodeIds.has(edge.target);
         return {
           ...edge,
+          data: { ...edge.data, directionEmphasis: inBlast },
           animated: captureMode ? false : Boolean(inBlast || edge.animated),
           style: {
             ...edge.style,
@@ -2179,6 +2173,7 @@ function GraphPageInner() {
           reachabilitySummary.edgeKeys.has(`${edge.target}=>${edge.source}`);
         return {
           ...edge,
+          data: { ...edge.data, directionEmphasis: inReach },
           animated: captureMode ? false : Boolean(inReach || edge.animated),
           style: {
             ...edge.style,
@@ -2207,12 +2202,12 @@ function GraphPageInner() {
         : {}),
       // Unselected links retain their relationship labels and evidence while
       // using one legible theme-aware stroke. Focus restores semantic emphasis.
-      ...(!localNeighborhoodIds ? { style: { ...edge.style, stroke: "var(--text-tertiary)" } } : {}),
+      ...(!localNeighborhoodIds || localNeighborhoodIds.size > 13 ? { style: { ...edge.style, stroke: "var(--text-tertiary)" } } : {}),
     }));
   }, [
     layoutEdges,
     localNeighborhoodIds,
-    attackPathEdgeKeys,
+    attackPathEdgeIds,
     reachabilitySummary,
     blastRadius,
     captureMode,
@@ -2221,14 +2216,14 @@ function GraphPageInner() {
   ]);
 
   const accessibleBaseDisplayEdges = useMemo(
-    () => readableGraphEdges(baseDisplayEdges, undefined, {
+    () => readableGraphEdges(baseDisplayEdges.map(edge => ({ ...edge, selected: selectedRelationship?.scanId === selectedScanId && selectedRelationship.id === edge.id })), undefined, {
       captureMode,
       zoom: graphViewport.zoom,
       nodeLabels: graphNodeDisplayLabels(displayNodes),
       preserveVisualStyle: true,
       preserveLabelState: true,
     }),
-    [baseDisplayEdges, captureMode, displayNodes, graphViewport.zoom],
+    [baseDisplayEdges, captureMode, displayNodes, graphViewport.zoom, selectedRelationship, selectedScanId],
   );
 
   // Drift lens edge emphasis — new/changed edges adopt their change-kind colour
@@ -2286,6 +2281,9 @@ function GraphPageInner() {
     },
     [captureMode, displayEdges.length, displayNodes.length, rollupNavigationActive],
   );
+  const [manualCameraScope, setManualCameraScope] = useState<string | null>(null);
+  const cameraScope = JSON.stringify([selectedScanId, filters, selectedNodeId, selectedRelationship?.id, selectedAttackPathKey, investigationMode?.rootId]);
+  const manualCamera = manualCameraScope === cameraScope;
   const initialViewportRequest = useMemo<ReturnType<typeof graphInitialFitViewOptions>>(() => {
     if (!narrowViewport && compactInvestigationTopology) return { ...viewportOptions, minZoom: COMPACT_GRAPH_MIN_ZOOM, maxZoom: 1 };
     if (scenarioExpanded || scenarioContextIds || (investigationMode && displayNodes.length <= 8)) return { ...viewportOptions, maxZoom: 1 };
@@ -2358,10 +2356,11 @@ function GraphPageInner() {
     localMode: session?.recommended_ui_mode === "no_auth",
   });
   const fitVisible = useCallback(() => {
+    setManualCameraScope(cameraScope);
     // Reserve room for readability-sized cards as their glyphs settle at the
     // new zoom, without a second camera movement after a user starts clicking.
     void reactFlow.fitView({ ...viewportOptions, padding: Math.max(0.2, viewportOptions.padding), duration: 240 });
-  }, [reactFlow, viewportOptions]);
+  }, [reactFlow, viewportOptions, cameraScope]);
   const fitSelection = useCallback(async () => {
     if (rollupNavigationActive) {
       await reactFlow.fitView({ ...viewportOptions, minZoom: 0.16, maxZoom: 1, padding: 0.04 });
@@ -3693,6 +3692,7 @@ function GraphPageInner() {
           {investigationMode?.truncated && investigationMode.nodeCount < 24 && !loadingGraph && <button type="button" className="graph-page-action min-h-11 sm:min-h-7" onClick={() => void loadRootInvestigation({ rootId: investigationMode.rootId, rootLabel: investigationMode.rootLabel, direction: investigationDirection, nodeLimit: Math.min(24, Math.max(8, investigationMode.nodeCount * 2)) })}>Show more connections</button>}
             </div>
           )}
+          {!rollupNavigationActive && !rollupDecisionActive && displayNodes.length > 0 && <GraphScopeEvidence edges={displayEdges} scope={graphRenderer.kind === "webgl" ? "loaded" : "visible"} />}
           {!rollupNavigationActive && !rollupDecisionActive && graphRenderer.kind === "react-flow" && displayNodes.length > 0 && <GraphLegendDock items={legendItems} separated />}
           <div ref={setGraphNavigationMount} />
           <div data-graph-adaptive-frame data-graph-annotations={graphLayoutKind === "asset-hierarchy" ? "on-demand" : undefined} className={`relative flex ${selectedAttackPath ? "h-[max(24rem,calc(100dvh-25rem))] sm:h-[clamp(24rem,50dvh,36rem)]" : selectedScenarioId ? "h-[max(24rem,calc(100dvh-25rem))] sm:h-[max(28rem,calc(100dvh-21rem))]" : "h-[var(--graph-adaptive-height,clamp(22rem,60dvh,48rem))]"} shrink-0 overflow-hidden rounded-lg border border-outline bg-surface`}>
@@ -3797,7 +3797,10 @@ function GraphPageInner() {
               edges={displayEdges}
               nodeTypes={lineageNodeTypesAdaptive}
               edgeTypes={relationshipEdgeTypes}
-              fitView={!presentation.hasSavedState && !presentation.restoredSavedState}
+              // Ordinary views have one camera owner: GraphCanvasAutoFit.
+              // A concurrent animated initial fit can resize LOD cards after
+              // the measured fit has settled, leaving the root offscreen.
+              fitView={Boolean(selectedScenarioId || selectedAttackPath) && !manualCamera && !presentation.hasSavedState && !presentation.restoredSavedState}
               fitViewOptions={initialViewportOptions}
               defaultViewport={presentation.restoredViewport ?? presentation.viewport}
               minZoom={canvasLens === "estate" ? 0.05 : 0.16}
@@ -3816,11 +3819,13 @@ function GraphPageInner() {
               onlyRenderVisibleElements={shouldVirtualizeReactFlowNodes({
                 nodeCount: displayNodes.length,
                 rollupActive: rollupNavigationActive,
+                nodesInitialized,
               })}
               defaultEdgeOptions={{ type: "smoothstep" }}
               proOptions={{ hideAttribution: true }}
               onEdgeClick={(_event, edge) => inspectRelationship(edge)}
               onKeyDownCapture={event => {
+                if (activateGraphNodeFromKeyboard(event)) return;
                 if (event.key !== "Enter" && event.key !== " ") return;
                 const id = event.target instanceof Element ? event.target.closest(".react-flow__edge")?.getAttribute("data-id") : null;
                 const edge = id ? displayEdges.find(item => item.id === id) : undefined;
@@ -3854,7 +3859,7 @@ function GraphPageInner() {
                 layoutKey={compactLayoutKey}
                 anchorId={selectedNodeId ?? investigationMode?.rootId}
                 inspector={Boolean(selectedNode || selectedRelationship) && !narrowViewport}
-                preserveViewport={presentation.restoredSavedState}
+                preserveViewport={manualCamera || presentation.restoredSavedState}
                 onLayoutAspect={setCanvasLayoutAspect}
               />
               <Background color={BACKGROUND_COLOR} gap={BACKGROUND_GAP} />

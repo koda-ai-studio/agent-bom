@@ -275,7 +275,7 @@ it("names every relationship in a small neighborhood without hover", () => {
 });
 
 it("qualifies configured and unverified delegation in visible and accessible labels", () => {
-  for (const [evidenceMode, expected] of [["static", "Configured delegation"], ["unknown", "Delegation (unverified)"], ["runtime", "Delegated To"]]) {
+  for (const [evidenceMode, expected] of [["static", "Configured delegation"], ["unknown", "Delegation (unverified)"], ["runtime", "Delegated To · observed"]]) {
     const [edge] = readableGraphEdges([{
       id: "delegation", source: "planner", target: "worker",
       data: {relationship: "delegated_to", evidenceMode},

@@ -1,5 +1,7 @@
 "use client";
 
+import { activateGraphNodeFromKeyboard } from "@/lib/graph-keyboard-selection";
+import { GraphScopeEvidence } from "@/components/graph-scope-evidence";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -44,7 +46,7 @@ import { readableGraphNodeStyle, readableLineageDagreLr } from "@/lib/graph-node
 import { graphFitViewOptions, shouldShowGraphMiniMap } from "@/lib/graph-viewport";
 import { decideGraphRenderer } from "@/lib/graph-renderer-switch";
 import { mergeGraphNodeDetail } from "@/lib/graph-entity-detail";
-import { buildFocusedGraphData, layersForFocusedPath } from "@/lib/security-graph-focus";
+import { buildFocusedGraphData, layersForFocusedPath, pathRelationshipIds } from "@/lib/security-graph-focus";
 import { hopReceiptCoverage } from "@/lib/hop-receipt-coverage";
 import { buildUnifiedFlowGraph } from "@/lib/unified-graph-flow";
 import { useGraphLayout } from "@/lib/use-graph-layout";
@@ -310,6 +312,7 @@ function InvestigationFlow({
           onNodeClick={(_, node) => { setNavigationId(node.id); onNodeSelect(node.id); }}
           onEdgeClick={(_, edge) => onEdgeSelect(edge)}
           onKeyDownCapture={event => {
+                if (activateGraphNodeFromKeyboard(event)) return;
             if (event.key !== "Enter" && event.key !== " ") return;
             const id = event.target instanceof Element ? event.target.closest(".react-flow__edge")?.getAttribute("data-id") : null;
             const edge = id ? presentedEdges.find(item => item.id === id) : undefined;
@@ -433,11 +436,14 @@ export function SecurityGraphInvestigation({
     return nodes === layout.nodes ? null : { plan, nodes };
   }, [attackPath, canvasWidth, embedded, focusMode, layout.nodes]);
   const canvasNodes = pathLayout?.nodes ?? layout.nodes;
+  const pathEdges = useMemo(() => focusMode && attackPath ? pathRelationshipIds(layout.edges, attackPath) : new Set<string>(), [focusMode, attackPath, layout.edges]);
   const displayEdges = useMemo(
     () => readableGraphEdges(layout.edges.map(edge => ({ ...edge, data: { ...edge.data,
+      pathEmphasis: pathEdges.has(edge.id),
+      directionEmphasis: pathEdges.has(edge.id) || edge.id === selectedEdge?.id || edge.source === selectedNodeId || edge.target === selectedNodeId,
       quietLabel: edge.data?.quietLabel && edge.id !== selectedEdge?.id && edge.source !== selectedNodeId && edge.target !== selectedNodeId,
     } })), undefined, { nodeLabels: graphNodeDisplayLabels(layout.nodes) }),
-    [layout.edges, layout.nodes, selectedEdge?.id, selectedNodeId],
+    [layout.edges, layout.nodes, selectedEdge?.id, selectedNodeId, pathEdges],
   );
   const legendItems = useMemo(
     () => legendItemsForVisibleGraph(layout.nodes, displayEdges),
@@ -647,6 +653,7 @@ export function SecurityGraphInvestigation({
 
   return (
     <section className="overflow-hidden rounded-2xl border border-outline bg-surface">
+      <GraphScopeEvidence edges={displayEdges} />
       {!embedded && (<div className="flex flex-wrap items-center justify-between gap-3 border-b border-outline px-4 py-3">
         <div>
           <h2 className="text-sm font-semibold text-foreground">Interactive graph</h2>

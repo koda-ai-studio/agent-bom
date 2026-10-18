@@ -11,6 +11,7 @@ import path from "node:path";
 import process from "node:process";
 import { assertCaptureSnapshotScope, graphResponseWithPagination } from "./product-proof-scope.mjs";
 import { waitForOwnedServer } from "./product-proof-server.mjs";
+import { runGraphQualityCapture } from "./graph-quality-capture.mjs";
 import { captureSourceProvenance } from "./product-proof-provenance.mjs";
 import {
   SCOPE_SHOWCASE_PRESETS,
@@ -3193,6 +3194,10 @@ async function main() {
       }, theme);
       return capturePage;
     };
+    if (process.env.GRAPH_QUALITY_OUTPUT) {
+      await runGraphQualityCapture({ newCapturePage, buildScopeShowcase, graph, baseUrl: BASE_URL, output: process.env.GRAPH_QUALITY_OUTPUT, fitReactFlow });
+      if (process.argv.includes("--graph-quality-only")) return;
+    }
     for (const [scope, preset] of SCOPE_SHOWCASE_PRESETS) {
       const fixture = buildScopeShowcase(scope);
       for (const theme of ["dark", "light"]) {
@@ -3207,7 +3212,7 @@ async function main() {
           await expect(p.locator(".react-flow__node")).toHaveCount(fixture.nodes.length);
           await fitReactFlow(p);
           await scrollTo(p, 0);
-        }, { expectedText: [/Demo data/i, "Path analysis complete for this snapshot", scopeShowcaseHeadline(fixture), ...fixture.nodes.map(n => new RegExp(n.label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/-/g, "[- ]"), "i"))],
+        }, { expectedText: [/Demo data/i, "Path analysis complete for this snapshot", scopeShowcaseHeadline(fixture), ...fixture.nodes.map(n => new RegExp((n.attributes?.display_title || n.label).replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/-/g, "[- ]"), "i"))],
           expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph"],
           minGraphNodes: fixture.nodes.length, maxGraphNodes: fixture.nodes.length,
           minGraphEdges: fixture.edges.length, maxGraphEdges: fixture.edges.length,

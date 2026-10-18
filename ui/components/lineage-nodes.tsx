@@ -1,12 +1,12 @@
 "use client";
 
-import type { ComponentType, ReactNode } from "react";
-import { Handle, Position } from "@xyflow/react";
+import { useEffect, useRef, type ComponentType, type ReactNode } from "react";
+import { Handle, Position, useNodeId, useUpdateNodeInternals } from "@xyflow/react";
 import { Bug, FolderGit2, KeyRound, Package, Wrench } from "lucide-react";
 import { graphRepositoryContext } from "@/lib/graph-repository-context";
 
-import { AgentSourceMark, SourceBadge } from "@/components/agent-source-mark";
-import { agentSource } from "@/lib/agent-source";
+import { SourceBadge } from "@/components/agent-source-mark";
+import { entitySource } from "@/lib/agent-source";
 import { NodeBadgeRow, SeverityRingMark } from "@/components/graph-node-badges";
 import { GraphScopeNode } from "@/components/graph-scope-node";
 import type { GraphRollupContainer, GraphCompleteness } from "@/lib/api-types";
@@ -169,9 +169,25 @@ function NodeCard({
   subtitle,
   footer,
 }: CardProps) {
+  const nodeId = useNodeId();
+  const updateNodeInternals = useUpdateNodeInternals();
+  const glyphRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!nodeId || !glyphRef.current || typeof ResizeObserver === "undefined") return;
+    // Readable glyphs resize with zoom. React Flow must remeasure their handles
+    // or arrows land above the visible circle's centre after fitting the view.
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => updateNodeInternals(nodeId));
+    });
+    observer.observe(glyphRef.current);
+    return () => { observer.disconnect(); cancelAnimationFrame(frame); };
+  }, [nodeId, updateNodeInternals]);
   const repository = graphRepositoryContext(data);
   const Icon = repository ? FolderGit2 : entityIcon(data.nodeType);
-  const brand = agentSource(data);
+  const provider = repository?.source ?? entitySource(data);
+  const displayTitle = typeof data.attributes?.display_title === "string" && data.attributes.display_title.trim() ? data.attributes.display_title : data.label;
   const isRollupContainer = data.attributes?.rollup_is_container === true;
   const { badges, ring } = nodeBadges(data);
   const environmentRaw = badges.find((badge) => badge.kind === "environment")?.raw;
@@ -180,7 +196,7 @@ function NodeCard({
   return (
     <div title={data.label} data-graph-entity="true" data-rollup-container={isRollupContainer ? "true" : undefined}
       className={`flex w-[220px] flex-col items-center text-center transition-opacity ${data.dimmed ? "opacity-25" : ""}`}>
-      <div style={{ width: "var(--graph-node-glyph-size, 72px)", height: "var(--graph-node-glyph-size, 72px)" }} className={`graph-entity-glyph relative mb-3 flex h-[72px] w-[72px] items-center justify-center rounded-full border-2 shadow-sm ${
+      <div ref={glyphRef} style={{ width: "var(--graph-node-glyph-size, 72px)", height: "var(--graph-node-glyph-size, 72px)" }} className={`graph-entity-glyph relative mb-3 flex h-[72px] w-[72px] items-center justify-center rounded-full border-2 shadow-sm ${
         isRollupContainer ? "border-outline-strong bg-surface-elevated" : `${borderClass} ${bgClass}`
       } ${data.highlighted ? `ring-2 ${ring ? "ring-offset-[10px]" : "ring-offset-4"} ring-offset-[var(--surface)] ${ringClass}` : ""}`}>
         {ring && !isRollupContainer && <SeverityRingMark ring={ring} />}
@@ -189,14 +205,12 @@ function NodeCard({
         <Handle type="source" position={data.reverseFlow ? Position.Left : Position.Right}
           className={`!h-1 !w-1 !border-0 !bg-transparent ${source ? "" : "!opacity-0"}`} />
         <ContextHandles />
-        {data.nodeType === "agent"
-          ? <AgentSourceMark source={brand} style={{ width: "var(--graph-node-icon-size, 32px)", height: "var(--graph-node-icon-size, 32px)" }} className={`h-8 w-8 ${iconClass}`} />
-          : <Icon aria-hidden="true" style={{ width: "var(--graph-node-icon-size, 32px)", height: "var(--graph-node-icon-size, 32px)", ...(repository?.source ? { transform: "translate(-28%, -28%)" } : {}) }} className={`h-8 w-8 ${iconClass}`} />}
-        {repository?.source && <SourceBadge source={repository.source} graph className="absolute -bottom-1 -right-1"
-          style={{ width: "calc(var(--graph-node-meta-size, 12px) * 2.2)", height: "calc(var(--graph-node-meta-size, 12px) * 2.2)" }} />}
+        <Icon aria-hidden="true" style={{ width: "var(--graph-node-icon-size, 32px)", height: "var(--graph-node-icon-size, 32px)", ...(provider ? { transform: "translate(-52%, -20%)" } : {}) }} className={`h-8 w-8 ${iconClass}`} />
+        {provider && <SourceBadge source={provider} graph className="absolute"
+          style={{ left: "calc(50% + 4px)", bottom: "-6%", width: "calc(var(--graph-node-meta-size, 12px) * 2.8)", height: "calc(var(--graph-node-meta-size, 12px) * 2.8)" }} />}
       </div>
       <p className="mb-1 w-full min-w-0 break-words line-clamp-3 text-lg font-semibold leading-[1.2] text-foreground [overflow-wrap:anywhere]" style={{ fontSize: "var(--graph-node-label-size, 18px)" }}>
-        {canvasNodeLabel(repository?.slug || data.label).split(/(?<=[_/@-])/).map((part, index) => <span key={index}>{part}<wbr /></span>)}
+        {canvasNodeLabel(repository?.slug || displayTitle).split(/(?<=[_/@-])/).map((part, index) => <span key={index}>{part}<wbr /></span>)}
       </p>
       <NodeBadgeRow badges={badges}>
         <span style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} className="text-xs text-ink-secondary">
@@ -233,7 +247,7 @@ const NODE_TYPE_BADGES: Record<LineageNodeType, string> = {
   server: "Server",
   package: "Package",
   vulnerability: "CVE",
-  misconfiguration: "Config",
+  misconfiguration: "Finding",
   credential: "Cred ref",
   tool: "Tool",
   model: "Model",
@@ -261,7 +275,7 @@ const NODE_TYPE_BADGES: Record<LineageNodeType, string> = {
   dataStore: "Data",
   directory: "Folder",
   sourceFile: "Source",
-  configFile: "Config",
+  configFile: "Config file",
   codeModule: "Module",
   ciJob: "CI job",
   apiGateway: "Gateway",
@@ -287,7 +301,7 @@ function AgentNode({ data }: { data: LineageNodeData }) {
       ringClass="ring-emerald-400"
       iconClass="text-emerald-600 dark:text-emerald-400"
       target={false}
-      subtitle={agentSource(data)?.label ?? data.agentType}
+      subtitle={entitySource(data)?.label ?? data.agentType}
       footer={
         <div className="mt-1 flex flex-wrap justify-center gap-x-2 gap-y-1 text-[10px] text-ink-secondary">
           {data.serverCount !== undefined && (
@@ -551,7 +565,6 @@ function FindingNode({
       ringClass="ring-white/50"
       iconClass={accentClass}
       source={false}
-      subtitle={data.description}
       footer={
         <div className="graph-finding-metadata flex flex-wrap justify-center gap-1 mt-1 [&>span]:text-[length:var(--graph-node-meta-size,12px)]">
           {data.severity && (

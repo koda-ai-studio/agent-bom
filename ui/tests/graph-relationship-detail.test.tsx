@@ -31,7 +31,7 @@ describe("relationship inspector", () => {
   it.each([
     { evidence: { source: "source-ast" }, title: "Configured delegation" },
     { evidence: {}, title: "Delegation (unverified)" },
-    { evidence: { data_source: "runtime-proxy" }, title: "Delegated To" },
+    { evidence: { data_source: "runtime-proxy" }, title: "Delegated To · observed" },
   ])("qualifies delegation as $title", ({ evidence, title }) => {
     show(<GraphRelationshipDetail edge={{ ...edge, relationship: "delegated_to", evidence }} scanId="snapshot-a" sourceLabel="Planner" targetLabel="Worker" onClose={vi.fn()} />);
     expect(screen.getByRole("heading", { name: title })).toBeVisible();

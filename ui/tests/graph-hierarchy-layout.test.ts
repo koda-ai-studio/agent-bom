@@ -39,6 +39,35 @@ describe("evidence-driven graph flow", () => {
     }
   });
 
+  it("reserves finding footer space in a compact branched AI environment", () => {
+    const entries = [node("environment", "environment"), node("model", "container"), node("triage", "agent"), node("intake", "agent"), node("torch", "package"), node("tickets", "server"), node("documents", "server"), node("cve", "vulnerability"), node("credential", "credential"), node("pillow", "package")];
+    const pairs = [["environment", "model"], ["environment", "triage"], ["environment", "intake"], ["model", "torch"], ["triage", "tickets"], ["intake", "documents"], ["torch", "cve"], ["tickets", "credential"], ["documents", "pillow"]];
+    const links = pairs.map(([source, target]) => edge(`${source}-${target}`, source!, target!, "contains"));
+    const result = graphHierarchyLayout(entries, links, readableLineageDagreLr({ fitAspect: 2.2 }));
+    for (const a of result.nodes) for (const b of result.nodes) {
+      if (a.id !== b.id && Math.abs(a.position.x - b.position.x) < 240) {
+        expect(Math.abs(a.position.y - b.position.y)).toBeGreaterThanOrEqual(324);
+      }
+    }
+    expect(result.nodes.every(n => Number(n.style?.minHeight) >= 300)).toBe(true);
+    expect(result.edges.map(e => [e.source, e.target])).toEqual(links.map(e => [e.source, e.target]));
+  });
+
+  it("reserves subtitle space for cross-vendor server and model branches", () => {
+    const entries = [node("agent", "agent"), node("server", "server"), node("model", "model"), node("dataset", "dataset"), node("tool", "tool")];
+    entries[1]!.data.description = "Warehouse connection";
+    entries[2]!.data.description = "Model deployment";
+    const links = ["server", "model", "dataset"].map(id => edge(id, "agent", id, "uses"));
+    links.push(edge("tool", "server", "tool", "has_tool"));
+    const { nodes } = graphHierarchyLayout(entries, links, readableLineageDagreLr());
+    for (const a of nodes) for (const b of nodes) {
+      if (a.id !== b.id && Math.abs(a.position.x - b.position.x) < 240) {
+        expect(Math.abs(a.position.y - b.position.y)).toBeGreaterThanOrEqual(324);
+      }
+    }
+    expect(nodes.every(n => Number(n.style?.minHeight) >= 300)).toBe(true);
+  });
+
   it("keeps aggregate member counts visible when overview relationship captions are quiet", () => {
     const entries = [node("package", "package"), { ...node("group", "vulnerability"), type: "clusterPillNode" }];
     const links = [{ ...edge("members", "package", "group", "vulnerable_to"), label: "22 members", data: { relationship: "vulnerable_to", isClusterEdge: true } }];

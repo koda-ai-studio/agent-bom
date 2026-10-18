@@ -50,6 +50,9 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     expect(queries.at(-1)?.max_nodes).toBe(8);
     if (width === 390 && await inspector.isVisible()) await inspector.getByRole("button", {name: "Close", exact: true}).click();
     expect(queries.every(q => q.scan_id === "snapshot" && q.roots[0] === root)).toBe(true);
+    // The docked inspector keeps the selected root readable after expansion.
+    // Explicitly frame the overview before selecting a different branch.
+    if (width === 1440) await page.getByRole("button", {name: "Fit all", exact: true}).click();
     // Selecting a recorded node does not implicitly fetch or expand its graph.
     const count = queries.length;
     await page.locator('[data-id="role:conditional"]').click();

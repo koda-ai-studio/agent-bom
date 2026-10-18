@@ -167,3 +167,30 @@ export function buildFocusedGraphData(
 export function visibleGraphFocus(nodes: ReadonlyArray<{ id: string }>, requestedId: string | null): string | null {
   return requestedId !== null && nodes.some((node) => node.id === requestedId) ? requestedId : null;
 }
+
+/** Match recorded path steps; adjacent assets alone do not identify a verb. */
+export function pathRelationshipIds(
+  edges: ReadonlyArray<{ id: string; source: string; target: string; data?: Record<string, unknown> | undefined }>,
+  path: Pick<AttackPath, "hops" | "edges">,
+): Set<string> {
+  const steps = new Map<string, Set<string>>();
+  for (let i = 0; i + 1 < path.hops.length; i++) {
+    const verb = path.edges[i];
+    if (!verb) continue;
+    const key = JSON.stringify([path.hops[i], path.hops[i + 1]]);
+    const values = steps.get(key) ?? new Set<string>();
+    values.add(verb);
+    steps.set(key, values);
+  }
+  return new Set(edges.filter(edge => {
+    const forward = steps.get(JSON.stringify([edge.source, edge.target]));
+    const reverse = steps.get(JSON.stringify([edge.target, edge.source]));
+    const relationship = edge.data?.relationship;
+    // An explicit edge ID identifies its receipt in either visual orientation.
+    // Finding context is drawn after the asset but retains its affects arrow.
+    // Other directed verbs must follow the recorded path orientation.
+    return forward?.has(edge.id) || reverse?.has(edge.id) ||
+      (typeof relationship === "string" && (forward?.has(relationship) ||
+        ((edge.data?.direction === "bidirectional" || relationship === "affects") && reverse?.has(relationship))));
+  }).map(edge => edge.id));
+}

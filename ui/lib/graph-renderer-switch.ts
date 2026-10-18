@@ -39,8 +39,9 @@ export interface GraphRendererDecision {
 export function shouldVirtualizeReactFlowNodes({
   rollupActive = false,
   nodeCount,
-}: Pick<GraphRendererDecisionInput, "rollupActive"> & { nodeCount?: number }): boolean {
-  return !rollupActive && (nodeCount === undefined || nodeCount > 80);
+  nodesInitialized = true,
+}: Pick<GraphRendererDecisionInput, "rollupActive"> & { nodeCount?: number; nodesInitialized?: boolean }): boolean {
+  return nodesInitialized && !rollupActive && (nodeCount === undefined || nodeCount > 80);
 }
 
 export function decideGraphRenderer({

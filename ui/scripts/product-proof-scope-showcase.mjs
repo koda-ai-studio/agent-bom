@@ -51,7 +51,7 @@ function definitions({ cve, kevCve }) {
         ["dir:src", "directory", "src/", { path: "src" }],
         ["dir:deploy", "directory", "deploy/", { path: "deploy" }],
         ["dir:workflows", "directory", ".github/workflows/", { path: ".github/workflows" }],
-        ["finding:ci-token", "misconfiguration", "Workflow publishes with a long-lived registry token", {}, "high", 7.5],
+        ["finding:ci-token", "misconfiguration", "Workflow publishes with a long-lived registry token", { display_title: "Long-lived registry token", path: ".github/workflows/publish.yaml", recommendation: "Replace the long-lived registry token with short-lived workload credentials where supported; review workflow permissions before changing authentication." }, "high", 7.5],
         ["source:server", "source_file", "src/server.ts", { language: "TypeScript" }],
         ["config:values", "config_file", "deploy/values.yaml"],
         ["config:workflow", "config_file", "publish.yaml", { path: ".github/workflows/publish.yaml" }],

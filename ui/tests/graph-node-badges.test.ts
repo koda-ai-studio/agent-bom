@@ -95,3 +95,12 @@ describe("badgeLegendItems", () => {
     expect(badgeLegendItems([{ data: input({}) }])).toEqual([]);
   });
 });
+
+it("labels every provider in the repository coverage matrix from explicit metadata", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { resolve } = await import("node:path");
+  const coverage = JSON.parse(readFileSync(resolve(__dirname, "../../docs/VENDOR_COVERAGE.json"), "utf8"));
+  for (const { provider } of coverage.cloud_matrix.rows) {
+    expect(nodeBadges({ nodeType: "cloudResource", attributes: { cloud_provider: provider } }).badges.some(badge => badge.kind === "provider"), provider).toBe(true);
+  }
+});

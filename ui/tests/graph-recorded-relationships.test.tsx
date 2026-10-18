@@ -23,7 +23,7 @@ beforeEach(() => { fetchPage.mockReset(); });
 it.each([
   { evidence: { source: "source-ast" }, title: "Configured delegation" },
   { evidence: {}, title: "Delegation (unverified)" },
-  { evidence: { data_source: "runtime-proxy" }, title: "Delegated To" },
+  { evidence: { data_source: "runtime-proxy" }, title: "Delegated To · observed" },
 ])("qualifies delegation consistently in recorded rows: $title", async ({ evidence, title }) => {
   const response = page();
   response.edges[0] = { ...response.edges[0]!, relationship: "delegated_to", evidence };

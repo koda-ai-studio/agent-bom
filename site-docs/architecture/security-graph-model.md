@@ -334,14 +334,21 @@ and requires a retry. Choosing a different snapshot replaces the investigation
 scope. No full scan report is required merely to select a graph entity.
 
 The overview keeps connection captions quiet; selecting a node reveals its
-relationship labels, and selecting an arrow opens the exact evidence. Line
-styles and the legend retain configured, modeled and observed distinctions.
+relationship labels, and selecting a link opens the exact evidence. The visible
+relationship summary counts each recorded evidence kind, including mixed and
+unknown receipts. Colors and line styles identify relationships; they do not
+establish observed execution. Enter or Space opens a focused node or link. Overview connectors keep arrowheads
+quiet; hover, keyboard focus or selection reveals recorded direction. Active
+path investigations retain directional emphasis. An arrow is a relationship
+direction, not evidence of execution or exploitation.
+Finding details show recorded source location, priority factors and remediation;
+missing context stays explicit and recorded guidance is not a verified fix.
 Repository roots marked by the collector show a repository glyph and recorded
 slug, with a host badge when available. Ordinary folders retain their folder
 glyph. Repository details separate the scanned branch and commit from the
 default branch; missing remote or revision metadata is shown as not recorded.
 
-Select an arrow for its recorded source, target, direction and evidence. The same
+Select a link for its recorded source, target, direction and evidence. The same
 inspector docks beside the graph on desktop and opens as a keyboard-accessible
 drawer on mobile. **Fit all** frames displayed nodes; **Readable view** restores
 readable zoom. Neither action fetches evidence. Filters, traversal budgets and

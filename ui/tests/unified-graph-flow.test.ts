@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { buildUnifiedFlowGraph } from "@/lib/unified-graph-flow";
-import { createFocusedGraphFilters, createInvestigationGraphFilters } from "@/components/lineage-filter";
+import { createExpandedGraphFilters, createFocusedGraphFilters, createInvestigationGraphFilters } from "@/components/lineage-filter";
 import {
   EntityType,
   RelationshipType,
@@ -50,6 +50,20 @@ function edge(source: string, target: string, relationship: RelationshipType): U
 }
 
 describe("buildUnifiedFlowGraph", () => {
+  it("retains recorded assets without relationships in expanded topology", () => {
+    const graph = {
+      scan_id: "isolated-inventory", tenant_id: "default", created_at: createdAt,
+      nodes: [node("a", EntityType.AGENT, "Planner"), node("s", EntityType.SERVER, "Tools"), node("m", EntityType.MODEL, "Recorded model")],
+      edges: [edge("a", "s", RelationshipType.USES)], attack_paths: [], interaction_risks: [],
+    } as unknown as UnifiedGraphData;
+    const filters = createExpandedGraphFilters();
+    const flow = buildUnifiedFlowGraph(graph, filters);
+    expect(flow.nodes.map(item => item.id)).toEqual(["a", "s", "m"]);
+    expect(flow.edges).toHaveLength(1);
+    expect(buildUnifiedFlowGraph(graph, { ...filters, layers: { ...filters.layers, model: false } }).nodes.map(item => item.id)).toEqual(["a", "s"]);
+    expect(buildUnifiedFlowGraph(graph, { ...filters, agentName: "Planner" }).nodes.map(item => item.id)).toEqual(["a", "s"]);
+  });
+
   it.each(["directed", "bidirectional"] as const)("preserves recorded %s arrow direction", (direction) => {
     const graph = {
       scan_id: "direction", tenant_id: "default", created_at: createdAt,
@@ -127,7 +141,7 @@ describe("buildUnifiedFlowGraph", () => {
     } as unknown as UnifiedGraphData;
     const filters = createFocusedGraphFilters();
     filters.layers.cloudResource = true;
-    expect(buildUnifiedFlowGraph(graph, filters).nodes).toHaveLength(0);
+    expect(buildUnifiedFlowGraph(graph, filters).nodes.map((item) => item.id)).toEqual(["endpoint"]);
     const retained = new Set(["endpoint"]);
     expect(buildUnifiedFlowGraph(graph, filters, retained).nodes.map((item) => item.id)).toEqual(["endpoint"]);
     expect(buildUnifiedFlowGraph(graph, filters, retained).edges).toHaveLength(0);
@@ -323,4 +337,27 @@ it.each([false, true])("preserves explicit risk assessment through the flow adap
   const data = buildUnifiedFlowGraph(graph, createFocusedGraphFilters(), new Set([agent.id])).nodes[0]!.data;
   expect(data.riskScore).toBe(0);
   expect(data.riskAssessment?.status).toBe(assessed ? "assessed" : "not_assessed");
+});
+
+it("preserves same-named assets across every catalogued vendor and keeps only recorded cross-vendor links", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { resolve } = await import("node:path");
+  const coverage = JSON.parse(readFileSync(resolve(__dirname, "../../docs/VENDOR_COVERAGE.json"), "utf8"));
+  const providers = [...new Set<string>([...coverage.cloud_matrix.rows.map((row: { provider: string }) => row.provider), "okta", "supabase", "vercel", "langfuse", "langsmith"])];
+  const nodes = providers.flatMap(provider => ["account-a", "account-b"].map(account => ({
+    ...node(`${provider}:${account}:workload`, EntityType.CONTAINER, "production-api"),
+    attributes: { cloud_provider: provider, account_id: account },
+    dimensions: { cloud_provider: provider, account_id: account },
+  })));
+  const edges = [
+    { ...edge(nodes[0]!.id, nodes[2]!.id, RelationshipType.DEPENDS_ON), evidence: { tier: "static_scan", source: "synthetic-config" } },
+    { ...edge(nodes[2]!.id, nodes[0]!.id, RelationshipType.DEPENDS_ON), evidence: {} },
+  ];
+  const graph = { scan_id: "vendor-scopes", tenant_id: "tenant-a", created_at: createdAt, nodes, edges, attack_paths: [], interaction_risks: [] } as unknown as UnifiedGraphData;
+  const flow = buildUnifiedFlowGraph(graph, createInvestigationGraphFilters(createFocusedGraphFilters()), new Set(nodes.map(n => n.id)));
+  expect(flow.nodes.map(n => n.id).sort()).toEqual(nodes.map(n => n.id).sort());
+  expect(flow.edges.map(e => [e.id, e.source, e.target, e.data?.relationship])).toEqual(edges.map(e => [e.id, e.source, e.target, e.relationship]));
+  expect(flow.edges.map(e => e.data?.evidenceLabel)).toEqual(["Static / configured", "Not recorded"]);
+  expect(flow.nodes.every(n => n.data.identityContext)).toBe(true);
+  expect(graph.edges).toEqual(edges);
 });

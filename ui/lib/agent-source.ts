@@ -16,6 +16,11 @@ type SourceInput = {
 };
 
 const BRANDS: Record<string, AgentSource> = {
+  okta: { id: "okta", label: "Okta", src: "/logos/okta.svg", monogram: "Ok", accent: "#70809c" },
+  databricks: { id: "databricks", label: "Databricks", src: "/logos/databricks.svg", monogram: "Da", accent: "#70809c" },
+  kubernetes: { id: "kubernetes", label: "Kubernetes", src: "/logos/kubernetes.svg", monogram: "Ku", accent: "#70809c" },
+  clickhouse: { id: "clickhouse", label: "ClickHouse", src: "/logos/clickhouse.svg", monogram: "Cl", accent: "#70809c" },
+
   claude: { id: "claude", label: "Claude", src: "/logos/claude.svg", monogram: "Cl", accent: "#c76b4e" },
   cursor: { id: "cursor", label: "Cursor", src: "/logos/cursor.svg", monogram: "Cu", accent: "#8170d5" },
   openai: { id: "openai", label: "OpenAI", src: "/logos/openai.svg", monogram: "OA", accent: "#169c88", darkMark: true },
@@ -76,4 +81,15 @@ export function agentSource(data: SourceInput): AgentSource | null {
   const sources = declared.length ? declared : (data.dataSources ?? []).map(lookup).filter((source): source is AgentSource => source !== null);
   // Several collected sources do not establish one vendor identity.
   return sources.length && new Set(sources.map(source => source.id)).size === 1 ? sources[0]! : null;
+}
+
+/** Hosting/provider marks require explicit metadata and never come from names. */
+export function entitySource(data: SourceInput & { dimensions?: { cloud_provider?: string | null | undefined } | undefined }): AgentSource | null {
+  if (data.nodeType === "agent") return agentSource(data);
+  if (["vulnerability", "misconfiguration", "package", "sourceFile", "configFile", "directory", "credential"].includes(data.nodeType ?? "")) return null;
+  const declared = [data.dimensions?.cloud_provider, data.attributes?.cloud_provider, data.attributes?.provider, data.attributes?.vendor]
+    .filter((value): value is string => typeof value === "string" && Boolean(value.trim()));
+  const sources = declared.map(lookup);
+  // Conflicting or unknown explicit metadata must not become a guessed brand.
+  return sources.length && sources.every(Boolean) && new Set(sources.map(source => source!.id)).size === 1 ? sources[0]! : null;
 }

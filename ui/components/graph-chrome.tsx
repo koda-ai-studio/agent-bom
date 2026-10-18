@@ -139,7 +139,7 @@ export function GraphLegendDock({
               title={item.label}
             >
               <LegendGlyph item={item} />
-              <span className="truncate">{item.label}</span>
+              <span className="truncate">{item.kind === "edge" && item.relationship ? `e.g. ${item.label}` : item.label}</span>
             </span>
           ))}
           {items.length > preview.length ? (
