@@ -5,14 +5,14 @@ import type { MinSeparationOptions } from "@/lib/dagre-layout";
 import type { CSSProperties } from "react";
 
 /** Bounded investigations reserve more metadata space when Fit all lowers zoom. */
-export function readableGraphNodeStyle(zoom: number, boundedContext = false): CSSProperties {
+export function readableGraphNodeStyle(zoom: number, boundedContext = false, roomyCaptions = boundedContext): CSSProperties {
   const scale = Math.max(Number.isFinite(zoom) ? zoom : 1, 0.16);
   return {
-    "--graph-node-card-width": boundedContext ? "clamp(220px, 30vw, 340px)" : "220px",
-    "--graph-node-label-size": `${Math.min(boundedContext ? 36 : 28, Math.max(18, 15 / scale))}px`,
+    "--graph-node-card-width": roomyCaptions ? "clamp(220px, 30vw, 340px)" : "220px",
+    "--graph-node-label-size": `${Math.min(roomyCaptions ? 36 : boundedContext ? 30 : 28, Math.max(18, 15 / scale))}px`,
     "--graph-node-glyph-size": `${Math.min(112, Math.max(72, 64 / scale))}px`,
     "--graph-node-icon-size": `${Math.min(48, Math.max(32, 28 / scale))}px`,
-    "--graph-node-meta-size": `${Math.min(boundedContext ? 32 : 24, Math.max(12, 12 / scale))}px`,
+    "--graph-node-meta-size": `${Math.min(roomyCaptions ? 32 : boundedContext ? 28 : 24, Math.max(12, 12 / scale))}px`,
   } as CSSProperties;
 }
 

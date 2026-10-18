@@ -3847,7 +3847,7 @@ function GraphPageInner() {
             />
           ) : (
             <ReactFlow
-              style={readableGraphNodeStyle(graphViewport.zoom, Boolean(investigationContext))}
+              style={readableGraphNodeStyle(graphViewport.zoom, Boolean(investigationContext), Boolean(investigationContext) && compactInvestigationTopology && !narrowViewport)}
               className={selectedScenarioId ? "scenario-context-canvas" : undefined}
               key={captureMode ? `lineage-capture:${scenarioExpanded ? "full" : "context"}` : `${presentation.storageKey}:${presentation.restoredSavedState ? "restored" : "initial"}:${scenarioExpanded ? "full" : "context"}`}
               nodes={presentation.nodes}

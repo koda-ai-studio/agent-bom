@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { getViewportForBounds, type Edge, type Node } from "@xyflow/react";
 import { graphFitViewOptions } from "@/lib/graph-viewport";
 import { applyDagreLayout } from "@/lib/dagre-layout";
-import { COMPACT_GRAPH_MIN_ZOOM, compactInvestigationLayout, READABLE_LINEAGE_DAGRE_LR } from "@/lib/graph-node-dimensions";
+import { COMPACT_GRAPH_MIN_ZOOM, compactInvestigationLayout, readableGraphNodeStyle, READABLE_LINEAGE_DAGRE_LR } from "@/lib/graph-node-dimensions";
 
 function contextGraph() {
   const layers = [["asset"], ["bucket", "table"], ["role", "user", "service"], ["agent", "tool", "repo", "workload", "package"], ["finding"]];
@@ -54,4 +54,11 @@ describe("bounded investigation layout", () => {
     expect(zoom * 18).toBeGreaterThan(11);
     expect(zoom * 18).toBeGreaterThan(fit(previous.nodes, 300, 140) * 11 * 1.5);
   });
+});
+
+it("keeps captions inside the ordinary footprint beyond the compact context limit", () => {
+  const layout = compactInvestigationLayout(true, 17, true);
+  const style = readableGraphNodeStyle(0.4, true, Boolean(layout)) as Record<string, string>;
+  expect(parseFloat(style["--graph-node-card-width"]!)).toBeLessThanOrEqual(READABLE_LINEAGE_DAGRE_LR.nodeWidth!);
+  expect(parseFloat(style["--graph-node-label-size"]!)).toBeLessThanOrEqual(30);
 });
