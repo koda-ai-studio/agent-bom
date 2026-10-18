@@ -1,4 +1,4 @@
-import type { Edge } from "@xyflow/react";
+import type { Edge, Node } from "@xyflow/react";
 
 const QUALIFIER_SEPARATOR = " · ";
 
@@ -6,27 +6,32 @@ function relationshipOf(edge: Edge): string {
   return typeof edge.data?.relationship === "string" ? edge.data.relationship : "";
 }
 
-/**
- * Hide a derived ``shares_*`` link when the view already draws the shared
- * resource connected to both endpoints. The derived edge restates that fact,
- * adds a crossing line and distorts the layout ranks. It stays available when
- * the shared resource is not in view.
- */
-export function hideRedundantDerivedEdges(edges: Edge[]): Edge[] {
-  const neighbours = new Map<string, Set<string>>();
+/** Hide shared-server correlations only when their supporting server use is visible. */
+export function hideRedundantDerivedEdges(
+  edges: Edge[],
+  nodes: Node[] = [],
+  recordedEdges: readonly { id?: string; evidence?: Record<string, unknown> }[] = [],
+): Edge[] {
+  const servers = new Set(nodes.filter(node => !node.hidden && node.data.nodeType === "server").map(node => node.id));
+  const uses = new Map<string, Set<string>>();
   for (const edge of edges) {
-    if (relationshipOf(edge).startsWith("shares_")) continue;
-    for (const [from, to] of [[edge.source, edge.target], [edge.target, edge.source]] as const) {
-      const set = neighbours.get(from) ?? new Set<string>();
-      set.add(to);
-      neighbours.set(from, set);
-    }
+    if (edge.hidden || relationshipOf(edge) !== "uses" || !servers.has(edge.target)) continue;
+    const targets = uses.get(edge.source) ?? new Set<string>();
+    targets.add(edge.target);
+    uses.set(edge.source, targets);
   }
+  const evidenceById = new Map(recordedEdges.map(edge => [edge.id, edge.evidence]));
   return edges.filter(edge => {
-    if (!relationshipOf(edge).startsWith("shares_")) return true;
-    const left = neighbours.get(edge.source), right = neighbours.get(edge.target);
+    // Credential and other correlations need their own evidence proof; server
+    // co-use or a common account is not enough to hide them.
+    if (relationshipOf(edge) !== "shares_server") return true;
+    const left = uses.get(edge.source), right = uses.get(edge.target);
     if (!left || !right) return true;
-    for (const shared of left) if (right.has(shared)) return false;
+    const recordedServer = evidenceById.get(edge.id)?.server;
+    if (typeof recordedServer === "string" && recordedServer) {
+      return !(left.has(recordedServer) && right.has(recordedServer));
+    }
+    for (const server of left) if (right.has(server)) return false;
     return true;
   });
 }

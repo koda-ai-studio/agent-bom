@@ -2225,6 +2225,12 @@ test("opening the full graph from a selected path keeps that path", async ({ pag
   const detail = page.getByTestId("selected-exposure-path");
   await expect(detail.getByRole("heading", { name: "Claude Desktop → CVE-2025-7783" })).toBeVisible();
   const lineage = page.getByRole("link", { name: /^Open lineage/ }).first();
-  await expect(lineage).toHaveAttribute("href", /lens=attack-path/);
+  await expect(lineage).toHaveAttribute("href", /^\/graph\?/);
   await expect(lineage).toHaveAttribute("href", /path=/);
+  await lineage.click();
+  await expect(page.getByTestId("selected-exposure-path")).toHaveCount(0);
+  await expect(page.locator(".react-flow__node")).toHaveCount(4);
+  for (const id of ["agent:desktop", "server:github", "pkg:form-data", "cve:form-data"]) {
+    await expect(page.locator(`.react-flow__node[data-id="${id}"]`)).toBeVisible();
+  }
 });

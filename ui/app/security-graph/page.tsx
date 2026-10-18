@@ -604,7 +604,7 @@ function AttackPathInvestigationContent() {
     if (selectedAttackPath) {
       const params = new URLSearchParams({ lens: "attack-path", path: attackPathKey(selectedAttackPath) });
       if (selectedScanId) params.set("scan", selectedScanId);
-      return withFindingContext(`/security-graph?${params.toString()}`, searchParams);
+      return withFindingContext(`/graph?${params.toString()}`, searchParams);
     }
     if (investigationRoot) {
       return withFindingContext(buildGraphInvestigationHref({

@@ -13,7 +13,7 @@ const edge = (source: string, target: string, relationship: string) => ({
 type FixtureNode = ReturnType<typeof node>;
 type FixtureEdge = ReturnType<typeof edge>;
 
-async function fixture(page: Page, nodes: FixtureNode[], edges: FixtureEdge[]) {
+async function fixture(page: Page, nodes: FixtureNode[], edges: FixtureEdge[], truncated = false) {
   const graph = { scan_id: "snapshot", tenant_id: "fixture", created_at: stamp, nodes, edges, attack_paths: [], interaction_risks: [],
     stats: { total_nodes: nodes.length, total_edges: edges.length, severity_counts: {} } };
   await page.route("**/health", r => r.fulfill({ json: { status: "ok" } }));
@@ -22,7 +22,7 @@ async function fixture(page: Page, nodes: FixtureNode[], edges: FixtureEdge[]) {
     if (u.pathname === "/v1/auth/me") return r.fulfill({ json: { authenticated: true, auth_required: false, tenant_id: "fixture", role: "admin", auth_method: "anonymous", memberships: [], configured_modes: [], recommended_ui_mode: "no_auth" } });
     if (u.pathname === "/v1/graph/snapshots") return r.fulfill({ json: [{ scan_id: "snapshot", created_at: stamp, snapshot_kind: "scan", node_count: nodes.length, edge_count: edges.length }] });
     if (u.pathname === "/v1/graph") return r.fulfill({ json: { ...graph, pagination: { total: nodes.length, offset: 0, limit: 100, returned: nodes.length, has_more: false } } });
-    if (u.pathname === "/v1/graph/query") return r.fulfill({ json: { ...graph, roots: ["agent"], depth_by_node: { agent: 0 }, truncated: false, direction: "both", max_depth: 1, budget: {} } });
+    if (u.pathname === "/v1/graph/query") return r.fulfill({ json: { ...graph, roots: ["agent"], depth_by_node: { agent: 0 }, truncated, direction: "both", max_depth: 1, budget: {} } });
     if (u.pathname.startsWith("/v1/graph/node/")) {
       const id = decodeURIComponent(u.pathname.split("/").at(-1)!);
       return r.fulfill({ json: { node: nodes.find(n => n.id === id), sources: [], edges_in: edges.filter(e => e.target === id), edges_out: edges.filter(e => e.source === id), neighbors: [], impact: { node_id: id, affected_nodes: [], affected_by_type: {}, affected_count: 0, max_depth_reached: 0 }, completeness: { complete: true } } });
@@ -195,3 +195,31 @@ test("reset view restores the investigation defaults for the same root", async (
   await expect(page).toHaveURL(/root=agent/);
   await expect(page.getByRole("button", { name: "All relationships", exact: true })).toHaveAttribute("aria-pressed", "true");
 });
+
+for (const theme of ["light", "dark"] as const) {
+  for (const width of [1440, 390]) test(`shared account preserves shared-server evidence ${theme} ${width}`, async ({ page }) => {
+    await page.addInitScript(t => localStorage.setItem("agent-bom-theme", t), theme);
+    const nodes = [node("agent", "agent", "Root Agent"), node("peer", "agent", "Peer Agent"), node("account", "account", "Common Account")];
+    await fixture(page, nodes, [edge("account", "agent", "contains"), edge("account", "peer", "contains"), edge("agent", "peer", "shares_server")]);
+    await openAgentContext(page, width);
+    await expect(page.locator(".react-flow__node")).toHaveCount(3);
+    await expect(page.locator('.react-flow__edge[data-id="agent:shares_server:peer"]')).toHaveCount(1);
+  });
+
+  test(`same-root reload preserves the selected drawer entity and action ${theme}`, async ({ page }) => {
+    await page.addInitScript(t => localStorage.setItem("agent-bom-theme", t), theme);
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await fixture(page, [node("agent", "agent", "Root Agent"), node("role", "role", "Selected Role")], [edge("agent", "role", "can_access")], true);
+    await page.goto("/graph?scan=snapshot&root=agent&lens=context&capture=1");
+    const drawer = page.getByTestId("graph-entity-drawer");
+    await drawer.getByRole("button", { name: "Close", exact: true }).click();
+    await page.locator('.react-flow__node[data-id="role"]').click();
+    await expect(drawer.getByRole("heading", { name: "Selected Role", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "Show more connections", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Show more connections", exact: true })).toBeVisible();
+    await expect(drawer.getByRole("heading", { name: "Selected Role", exact: true })).toBeVisible();
+    const request = page.waitForRequest(r => new URL(r.url()).pathname === "/v1/graph/query");
+    await drawer.getByRole("button", { name: "Expand", exact: true }).click();
+    expect((await request).postDataJSON()).toMatchObject({ roots: ["role"] });
+  });
+}
