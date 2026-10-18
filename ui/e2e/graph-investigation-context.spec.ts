@@ -93,6 +93,14 @@ for (const theme of ["light", "dark"]) test(`fit all includes complete shared-se
       return r.width && r.height && (r.left < bounds.left || r.right > bounds.right || r.top < bounds.top || r.bottom > bounds.bottom);
     }).map(element => element.getAttribute("data-edge-id") ?? element.id ?? String(element.className));
   })).toEqual([]);
+  const overlaps = await page.locator("[data-graph-entity]").evaluateAll(cards => {
+    const boxes = cards.map(card => {
+      const parts = [...card.children].filter(child => getComputedStyle(child).visibility !== "hidden" && getComputedStyle(child).display !== "none").map(child => child.getBoundingClientRect());
+      return { label: card.getAttribute("title"), left: Math.min(...parts.map(r => r.left)), right: Math.max(...parts.map(r => r.right)), top: Math.min(...parts.map(r => r.top)), bottom: Math.max(...parts.map(r => r.bottom)) };
+    });
+    return boxes.flatMap((a, i) => boxes.slice(i + 1).filter(b => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top).map(b => [a.label, b.label]));
+  });
+  expect(overlaps).toEqual([]);
   const badgeFonts = await page.locator(".react-flow__node [data-node-badge]").evaluateAll(badges => badges.map(badge => {
     const transform = getComputedStyle(badge.closest(".react-flow__viewport")!).transform;
     return parseFloat(getComputedStyle(badge).fontSize) * new DOMMatrixReadOnly(transform).a;
