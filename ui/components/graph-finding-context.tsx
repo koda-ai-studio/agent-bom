@@ -6,9 +6,9 @@ export function GraphFindingContext({ data }: { data: LineageNodeData }) {
   const attrs = data.attributes ?? {};
   const text = (...keys: string[]) => keys.map(key => attrs[key]).find(value => typeof value === "string" && value.trim()) as string | undefined;
   const path = text("file_path", "path");
-  const line = attrs.start_line ?? attrs.line;
+  const line = attrs.start_line ?? attrs.line ?? attrs.line_number;
   const location = path ? `${path}${typeof line === "number" && Number.isInteger(line) && line > 0 ? `:${line}` : ""}` : "Source location not recorded";
-  const recommendation = text("recommendation");
+  const recommendation = text("recommendation", "remediation");
   const fixedVersion = data.fixedVersion || text("fixed_version");
   const severity = data.severity?.toLowerCase();
   const factors = [

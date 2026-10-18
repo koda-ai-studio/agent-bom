@@ -15,3 +15,10 @@ it("exposes missing context without inventing source, remediation or exploitatio
   expect(screen.getByText("Remediation not recorded")).toBeVisible();
   expect(screen.queryByText(/Known exploited/)).not.toBeInTheDocument();
 });
+
+it("reads the source and remediation fields emitted by IaC graph projection", () => {
+  render(<GraphFindingContext data={{ nodeType: "misconfiguration", label: "Public storage", attributes: { file_path: "infra/main.tf", line_number: 24, remediation: "Disable public access" } }} />);
+  expect(screen.getByText("infra/main.tf:24")).toBeVisible();
+  expect(screen.getByText("Disable public access")).toBeVisible();
+  expect(screen.queryByText("Remediation not recorded")).not.toBeInTheDocument();
+});
