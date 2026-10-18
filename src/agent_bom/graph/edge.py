@@ -226,6 +226,8 @@ class UnifiedEdge:
     activity_id: int = 1  # 1=Create, 2=Update, 3=Close
     # Stored identity is immutable across canonical-identity schema upgrades.
     _recorded_canonical_id: str = field(default="", repr=False, compare=False)
+    # Inputs of a stored row's legacy id, hashed only if the id is read.
+    _legacy_identity: tuple[str, ...] = field(default=(), repr=False, compare=False)
 
     def __post_init__(self) -> None:
         if not self.first_seen:
@@ -251,12 +253,15 @@ class UnifiedEdge:
     def canonical_id(self) -> str:
         """Stable edge identity for scan-history joins without changing edge.id."""
         rel = self.relationship.value if isinstance(self.relationship, RelationshipType) else str(self.relationship)
+        if not self._recorded_canonical_id and self._legacy_identity:
+            self._recorded_canonical_id = legacy_canonical_id_v2(*self._legacy_identity)
         return self._recorded_canonical_id or canonical_graph_edge_id(self.source, self.target, rel)
 
     def with_endpoints(self, source: str, target: str) -> UnifiedEdge:
         """Retain a receipt only while it identifies the same relationship endpoints."""
-        recorded = self._recorded_canonical_id if (source, target) == (self.source, self.target) else ""
-        return replace(self, source=source, target=target, _recorded_canonical_id=recorded)
+        if (source, target) == (self.source, self.target):
+            return replace(self, source=source, target=target)
+        return replace(self, source=source, target=target, _recorded_canonical_id="", _legacy_identity=())
 
     def storage_provenance(self) -> dict[str, Any]:
         """Keep the identity receipt separate from relationship evidence."""
@@ -269,7 +274,9 @@ class UnifiedEdge:
         rel = values["relationship"]
         rel = rel.value if isinstance(rel, RelationshipType) else str(rel)
         values["provenance"] = provenance
-        values["_recorded_canonical_id"] = recorded or legacy_canonical_id_v2("graph_edge", rel, values["source"], values["target"])
+        values["_recorded_canonical_id"] = recorded
+        if not recorded:
+            values["_legacy_identity"] = ("graph_edge", rel, values["source"], values["target"])
         return cls(**values)
 
     def to_dict(self) -> dict[str, Any]:

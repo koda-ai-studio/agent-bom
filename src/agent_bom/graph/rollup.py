@@ -18,10 +18,10 @@ follow-up consumes.
 
 from __future__ import annotations
 
-from collections import Counter, defaultdict, deque
-from collections.abc import Iterable, Sequence
+from collections import Counter, defaultdict
+from collections.abc import Sequence
 from dataclasses import dataclass, field
-from typing import Any, Optional, cast
+from typing import Any, Optional
 
 from agent_bom.cloud.normalization import coerce_truthy
 from agent_bom.core.severity import OCSF_SEVERITY_NAMES, SEVERITY_BUCKETS_WORST_FIRST, SEVERITY_RANK
@@ -29,6 +29,11 @@ from agent_bom.graph.completeness import graph_completeness
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.path_derivation import _node_type_value
+from agent_bom.graph.rollup_edges import combine_reasons as _combine_reasons
+from agent_bom.graph.rollup_edges import cross_container_edge_rows, edge_projection
+from agent_bom.graph.rollup_edges import descendants as _descendants
+from agent_bom.graph.rollup_edges import edge_count_metadata as _edge_count_metadata
+from agent_bom.graph.rollup_issues import ISSUE_SEVERITY_BASIS, ISSUE_SEVERITY_DEFINITION, IssueTally, build_issue_index
 from agent_bom.graph.types import EntityType, RelationshipType
 
 # Severity buckets reported in every roll-up histogram, worst → least.
@@ -138,24 +143,12 @@ def _source_total_nodes(graph: UnifiedGraph) -> int:
     return graph.completeness.total_nodes or len(graph.nodes)
 
 
-def _combine_reasons(*reasons: str) -> str:
-    """Merge truncation reasons, deduped and order-preserving.
-
-    A roll-up can be cut twice — once by the loader's node budget and again by
-    the orphan limit. Reporting only one hides the other, so both travel as a
-    comma-separated list under the single ``reason`` key clients already read.
-    """
-    merged: list[str] = []
-    for reason in reasons:
-        for part in reason.split(","):
-            cleaned = part.strip()
-            if cleaned and cleaned not in merged:
-                merged.append(cleaned)
-    return ",".join(merged)
-
-
 def _severity_bucket(node: UnifiedNode) -> str:
-    sev = (node.severity or "").lower()
+    return _bucket_for(node.severity or "")
+
+
+def _bucket_for(severity: str) -> str:
+    sev = severity.lower()
     if sev in {"informational"}:
         return "info"
     if sev in _SEVERITY_ORDER:
@@ -179,7 +172,12 @@ class RollupAggregate:
 
     descendant_count: int = 0
     by_type: dict[str, int] = field(default_factory=dict)
+    # Distinct open finding issues (the overview's basis), not rated nodes.
     severity_counts: dict[str, int] = field(default_factory=dict)
+    # Every descendant node's own rating, rated assets included.
+    node_severity_counts: dict[str, int] = field(default_factory=dict)
+    issue_count: int = 0
+    finding_occurrence_count: int = 0
     worst_severity: str = "none"
     worst_severity_rank: int = 0
     internet_exposed: bool = False
@@ -191,7 +189,10 @@ class RollupAggregate:
         return {
             "descendant_count": self.descendant_count,
             "by_type": dict(sorted(self.by_type.items())),
-            "severity_counts": {sev: self.severity_counts.get(sev, 0) for sev in _SEVERITY_ORDER},
+            "severity_counts": _histogram(self.severity_counts),
+            "node_severity_counts": _histogram(self.node_severity_counts),
+            "issue_count": self.issue_count,
+            "finding_occurrence_count": self.finding_occurrence_count,
             "worst_severity": self.worst_severity,
             "worst_severity_rank": self.worst_severity_rank,
             "internet_exposed": self.internet_exposed,
@@ -199,6 +200,15 @@ class RollupAggregate:
             "exposed_count": self.exposed_count,
             "toxic_count": self.toxic_count,
         }
+
+
+def _histogram(counts: dict[str, int]) -> dict[str, int]:
+    return {sev: counts.get(sev, 0) for sev in _SEVERITY_ORDER}
+
+
+def _issue_histogram(tally: IssueTally) -> dict[str, int]:
+    counts: Counter[str] = Counter(_bucket_for(sev) for sev in tally.severities())
+    return _histogram(counts)
 
 
 @dataclass(slots=True)
@@ -298,7 +308,12 @@ def _edge_is_containment(graph: UnifiedGraph, edge: Any) -> bool:
     )
 
 
-def _contains_children(graph: UnifiedGraph) -> dict[str, list[str]]:
+def _containment_flags(graph: UnifiedGraph) -> list[bool]:
+    """Classify every edge once; the tree build and the edge projection share it."""
+    return [_edge_is_containment(graph, edge) for edge in graph.edges]
+
+
+def _contains_children(graph: UnifiedGraph, flags: Optional[Sequence[bool]] = None) -> dict[str, list[str]]:
     """Map container_id -> sorted direct containment children (deterministic).
 
     Walks ``CONTAINS`` and account→``CLOUD_RESOURCE`` ``HOSTS``/``OWNS`` edges
@@ -308,8 +323,9 @@ def _contains_children(graph: UnifiedGraph) -> dict[str, list[str]]:
     output is stable across runs regardless of edge insertion order.
     """
     children: dict[str, set[str]] = defaultdict(set)
-    for edge in graph.edges:
-        if not _edge_is_containment(graph, edge):
+    flags = _containment_flags(graph) if flags is None else flags
+    for edge, contained in zip(graph.edges, flags):
+        if not contained:
             continue
         if edge.source == edge.target:
             continue
@@ -344,25 +360,29 @@ def _roots(graph: UnifiedGraph, children: dict[str, list[str]], parents: dict[st
     return []
 
 
-def _descendants(root: str, children: dict[str, list[str]]) -> list[str]:
-    """All transitive CONTAINS descendants of *root* (excludes root). Bounded by
-    a visited set so cycles terminate; returned sorted for determinism."""
-    seen: set[str] = set()
-    queue: deque[str] = deque(children.get(root, []))
-    while queue:
-        current = queue.popleft()
-        if current in seen or current == root:
-            continue
-        seen.add(current)
-        for kid in children.get(current, []):
-            if kid not in seen:
-                queue.append(kid)
-    return sorted(seen)
-
-
 def containment_descendants(graph: UnifiedGraph, root: str) -> list[str]:
     """Typed containment descendants of *root*, as the roll-up defines them."""
     return _descendants(root, _contains_children(graph))
+
+
+# Per-node roll-up facts: (type, severity bucket, rank, exposed, toxic, issue keys).
+_NodeFact = tuple[str, str, int, bool, bool, tuple[str, ...]]
+
+
+def _node_facts(graph: UnifiedGraph) -> dict[str, _NodeFact]:
+    """Derive each node's roll-up facts once; nested scopes revisit a node many times."""
+    issues = build_issue_index(graph)
+    return {
+        nid: (
+            _node_type_value(node),
+            _severity_bucket(node),
+            SEVERITY_RANK.get((node.severity or "").lower(), 0),
+            _is_exposed(node),
+            _is_toxic(node),
+            issues.get(nid, ()),
+        )
+        for nid, node in graph.nodes.items()
+    }
 
 
 def _aggregate(
@@ -371,10 +391,13 @@ def _aggregate(
     *,
     filters: Optional[RollupFilters] = None,
     memberships: Optional[Counter[str]] = None,
+    facts: Optional[dict[str, _NodeFact]] = None,
 ) -> RollupAggregate:
     agg = RollupAggregate()
     severity_counts: dict[str, int] = defaultdict(int)
     by_type: dict[str, int] = defaultdict(int)
+    tally = IssueTally()
+    node_facts = facts if facts is not None else _node_facts(graph)
     active_filters = filters if filters is not None and filters.active() else None
     for nid in descendant_ids:
         node = graph.nodes.get(nid)
@@ -382,24 +405,28 @@ def _aggregate(
             continue
         if active_filters is not None and not active_filters.matches(node):
             continue
+        entity_type, bucket, rank, exposed, toxic, keys = node_facts[nid]
         agg.descendant_count += 1
         if memberships is not None:
             memberships[nid] += 1
-        by_type[_node_type_value(node)] += 1
-        bucket = _severity_bucket(node)
+        by_type[entity_type] += 1
         severity_counts[bucket] += 1
-        rank = SEVERITY_RANK.get((node.severity or "").lower(), 0)
+        if keys:
+            tally.add(node, keys)
         if rank > agg.worst_severity_rank:
             agg.worst_severity_rank = rank
             agg.worst_severity = bucket
-        if _is_exposed(node):
+        if exposed:
             agg.internet_exposed = True
             agg.exposed_count += 1
-        if _is_toxic(node):
+        if toxic:
             agg.toxic_combo = True
             agg.toxic_count += 1
     agg.by_type = dict(by_type)
-    agg.severity_counts = dict(severity_counts)
+    agg.node_severity_counts = dict(severity_counts)
+    agg.severity_counts = _issue_histogram(tally)
+    agg.issue_count = tally.issue_count
+    agg.finding_occurrence_count = tally.occurrences
     return agg
 
 
@@ -421,6 +448,8 @@ def _aggregate_count_metadata(graph: UnifiedGraph, memberships: Counter[str]) ->
         "shared_descendants": sum(count > 1 for count in memberships.values()),
         "extra_memberships": membership_count - distinct_count,
         "additive": membership_count == distinct_count,
+        "severity_basis": ISSUE_SEVERITY_BASIS,
+        "severity_definition": ISSUE_SEVERITY_DEFINITION,
         "source_truncated": graph.completeness.truncated,
         "reason": graph.completeness.reason if graph.completeness.truncated else "",
     }
@@ -430,135 +459,51 @@ def _container_for(node: UnifiedNode, child_map: dict[str, list[str]]) -> bool:
     return _node_type_value(node) in _CONTAINER_TYPES or bool(child_map.get(node.id))
 
 
-# Cap on aggregated cross-container edges returned. Ordered by weight, so the
-# cut keeps the heaviest relationships — the ones a reviewer would look at first.
-_MAX_CROSS_CONTAINER_EDGES = 400
-
-
-def _container_of(node_ids: Iterable[str], children: dict[str, list[str]]) -> dict[str, str]:
-    """Map every descendant to the visible container it rolls up into."""
-    owner: dict[str, str] = {}
-    for container_id in node_ids:
-        owner[container_id] = container_id
-        for descendant in _descendants(container_id, children):
-            owner.setdefault(descendant, container_id)
-    return owner
-
-
 def cross_container_edges(
     graph: UnifiedGraph,
     container_ids: Sequence[str],
     children: dict[str, list[str]],
 ) -> list[dict[str, Any]]:
-    """Aggregate NON-containment edges into container-to-container relationships.
-
-    Containment defines the nesting. Other recorded relationships are counted
-    between the visible scopes while retaining direction and per-kind counts.
-    The aggregate is not proof of a direct or executable path between scopes.
-
-    Self-edges (both endpoints inside one container) are dropped: they are
-    internal detail the container already stands for, and drawing them would
-    put a loop on every card.
-    """
-    rows, _source_total = _cross_container_edge_rows(graph, container_ids, children)
+    """Aggregate NON-containment edges into container-to-container relationships."""
+    rows, _source_total, _connections = cross_container_edge_rows(graph, container_ids, children, _containment_flags(graph))
     return rows
-
-
-def _cross_container_edge_rows(
-    graph: UnifiedGraph,
-    container_ids: Sequence[str],
-    children: dict[str, list[str]],
-) -> tuple[list[dict[str, Any]], int]:
-    """Return the bounded edge rows and their pre-cap source total.
-
-    ``cross_container_edges`` remains the public list-returning helper for
-    callers that only need the projection. Roll-up responses use this richer
-    helper so the 400-row presentation cap can never look exhaustive.
-    """
-    owner = _container_of(container_ids, children)
-    if not owner:
-        return [], 0
-
-    aggregated: dict[tuple[str, str], dict[str, Any]] = {}
-    for edge in graph.edges:
-        if _edge_is_containment(graph, edge):
-            continue
-        source_container = owner.get(edge.source)
-        target_container = owner.get(edge.target)
-        if not source_container or not target_container:
-            continue
-        if source_container == target_container:
-            continue
-        key = (source_container, target_container)
-        entry = aggregated.get(key)
-        relationship = edge.relationship.value if isinstance(edge.relationship, RelationshipType) else str(edge.relationship)
-        if entry is None:
-            aggregated[key] = {
-                "source": source_container,
-                "target": target_container,
-                "count": 1,
-                "relationships": {relationship},
-                "directions": {edge.direction},
-                "relationship_counts": {relationship: 1},
-            }
-            continue
-        entry["count"] = int(entry["count"]) + 1
-        cast(set, entry["relationships"]).add(relationship)
-        cast(set, entry["directions"]).add(edge.direction)
-        counts = cast(dict[str, int], entry["relationship_counts"])
-        counts[relationship] = counts.get(relationship, 0) + 1
-
-    rows = [
-        {
-            "source": entry["source"],
-            "target": entry["target"],
-            "count": entry["count"],
-            "relationships": sorted(cast(set, entry["relationships"])),
-            "directions": sorted(cast(set, entry["directions"])),
-            "relationship_counts": dict(sorted(entry["relationship_counts"].items())),
-        }
-        for entry in aggregated.values()
-    ]
-    # Heaviest first, then deterministic by endpoint so the truncation is stable.
-    rows.sort(key=lambda row: (-int(row["count"]), str(row["source"]), str(row["target"])))
-    source_total = len(rows)
-    return rows[:_MAX_CROSS_CONTAINER_EDGES], source_total
-
-
-def _edge_count_metadata(
-    graph: UnifiedGraph,
-    *,
-    returned: int,
-    source_total: int,
-) -> dict[str, Any]:
-    """Describe relationship-row loss independently from node completeness.
-
-    ``source_total`` is exact for the graph materialised by the caller. If that
-    source graph was already bounded, ``source_truncated`` and the inherited
-    reason make clear that this is not an estate-wide denominator.
-    """
-    row_truncated = source_total > returned
-    source_truncated = graph.completeness.truncated
-    return {
-        "definition": "Aggregated non-containment container-to-container relationship rows in the roll-up source graph.",
-        "source_total": source_total,
-        "returned": returned,
-        "truncated": row_truncated or source_truncated,
-        "source_truncated": source_truncated,
-        "reason": _combine_reasons(
-            graph.completeness.reason if source_truncated else "",
-            "rollup_edge_limit" if row_truncated else "",
-        ),
-    }
 
 
 def _edge_projection(
     graph: UnifiedGraph,
-    container_ids: Sequence[str],
+    entries: Sequence[dict[str, Any]],
     children: dict[str, list[str]],
+    flags: Sequence[bool],
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    rows, source_total = _cross_container_edge_rows(graph, container_ids, children)
-    return rows, _edge_count_metadata(graph, returned=len(rows), source_total=source_total)
+    return edge_projection(graph, entries, children, flags)
+
+
+def _orphan_summary(graph: UnifiedGraph, agg: RollupAggregate, *, total: int, shown: int, truncated_ids: list[str]) -> dict[str, Any]:
+    """Aggregate over every orphan plus a bounded sample of the truncated tail."""
+    return {
+        "total": total,
+        "shown": shown,
+        "truncated": len(truncated_ids),
+        "by_type": dict(sorted(agg.by_type.items())),
+        "severity_counts": _histogram(agg.node_severity_counts),
+        "issue_severity_counts": _histogram(agg.severity_counts),
+        "issue_count": agg.issue_count,
+        "worst_severity": agg.worst_severity,
+        "worst_severity_rank": agg.worst_severity_rank,
+        "internet_exposed": agg.internet_exposed,
+        "toxic_combo": agg.toxic_combo,
+        "exposed_count": agg.exposed_count,
+        "toxic_count": agg.toxic_count,
+        "sample": [
+            {
+                "id": graph.nodes[nid].id,
+                "label": graph.nodes[nid].label,
+                "entity_type": _node_type_value(graph.nodes[nid]),
+                "severity": graph.nodes[nid].severity or "",
+            }
+            for nid in truncated_ids[:_ORPHAN_SUMMARY_SAMPLE]
+        ],
+    }
 
 
 def rollup_view(
@@ -575,9 +520,11 @@ def rollup_view(
 
     Deterministic and bounded; the source graph is never mutated.
     """
-    children = _contains_children(graph)
+    flags = _containment_flags(graph)
+    children = _contains_children(graph, flags)
     parents = _contains_parents(children)
     root_ids = _roots(graph, children, parents)
+    facts = _node_facts(graph)
 
     containers: list[RollupContainer] = []
     memberships: Counter[str] = Counter()
@@ -587,7 +534,7 @@ def rollup_view(
         if node is None:
             continue
         descendants = _descendants(root_id, children)
-        agg = _aggregate(descendants, graph, filters=filters, memberships=memberships)
+        agg = _aggregate(descendants, graph, filters=filters, memberships=memberships, facts=facts)
         # When filters are active, drop containers whose descendants were all
         # filtered out — they carry no risk worth surfacing.
         if filters is not None and filters.active() and agg.descendant_count == 0 and not (filters.matches(node)):
@@ -641,7 +588,7 @@ def rollup_view(
                 is_container=_container_for(node, children),
                 has_children=bool(children.get(nid)),
                 direct_child_count=len(children.get(nid, [])),
-                aggregate=_aggregate(_descendants(nid, children), graph, filters=filters, memberships=memberships),
+                aggregate=_aggregate(_descendants(nid, children), graph, filters=filters, memberships=memberships, facts=facts),
                 context=_instance_context(node, graph),
             )
         )
@@ -657,31 +604,14 @@ def rollup_view(
 
     # Node-level aggregate over every orphan (matching nodes only), plus a
     # bounded per-item sample of the truncated tail for drill-in.
-    orphan_agg = _aggregate(orphan_ids, graph, filters=filters)
-    orphan_summary = {
-        "total": len(orphan_ids),
-        "shown": len(orphans),
-        "truncated": len(truncated_orphan_ids),
-        "by_type": dict(sorted(orphan_agg.by_type.items())),
-        "severity_counts": {sev: orphan_agg.severity_counts.get(sev, 0) for sev in _SEVERITY_ORDER},
-        "worst_severity": orphan_agg.worst_severity,
-        "worst_severity_rank": orphan_agg.worst_severity_rank,
-        "internet_exposed": orphan_agg.internet_exposed,
-        "toxic_combo": orphan_agg.toxic_combo,
-        "exposed_count": orphan_agg.exposed_count,
-        "toxic_count": orphan_agg.toxic_count,
-        "sample": [
-            {
-                "id": graph.nodes[nid].id,
-                "label": graph.nodes[nid].label,
-                "entity_type": _node_type_value(graph.nodes[nid]),
-                "severity": graph.nodes[nid].severity or "",
-            }
-            for nid in truncated_orphan_ids[:_ORPHAN_SUMMARY_SAMPLE]
-        ],
-    }
+    orphan_agg = _aggregate(orphan_ids, graph, filters=filters, facts=facts)
+    # Every finding in the loaded graph, roots and orphans included: the
+    # number that reconciles with the tenant's open-issue total.
+    estate_agg = _aggregate(list(graph.nodes), graph, filters=filters, facts=facts)
+    orphan_summary = _orphan_summary(graph, orphan_agg, total=len(orphan_ids), shown=len(orphans), truncated_ids=truncated_orphan_ids)
 
-    relationship_edges, edge_count_metadata = _edge_projection(graph, [c.id for c in top_level], children)
+    top_level_rows = [c.to_dict() for c in top_level]
+    relationship_edges, edge_count_metadata = _edge_projection(graph, top_level_rows, children, flags)
 
     return {
         "scan_id": graph.scan_id,
@@ -689,7 +619,7 @@ def rollup_view(
         "created_at": graph.created_at,
         "mode": "rollup",
         "filters": _filters_dict(filters),
-        "top_level": [c.to_dict() for c in top_level],
+        "top_level": top_level_rows,
         # Container-to-container relationships, so the collapsed view renders as
         # a graph rather than a grid of disconnected cards. Containment is
         # excluded: it is the nesting the roll-up already expresses.
@@ -709,6 +639,10 @@ def rollup_view(
             "orphan_count": len(orphan_ids),
             "orphan_shown_count": len(orphans),
             "orphan_truncated_count": len(truncated_orphan_ids),
+            "issue_severity_counts": _histogram(estate_agg.severity_counts),
+            "issue_count": estate_agg.issue_count,
+            "finding_occurrence_count": estate_agg.finding_occurrence_count,
+            "severity_basis": ISSUE_SEVERITY_BASIS,
         },
         # Two independent cuts: the loader's node budget (recorded on the source
         # graph) and this roll-up's own orphan limit. Either one makes the view
@@ -766,10 +700,10 @@ def drill_down(
             ),
         }
 
-    children = _contains_children(graph)
+    children = _contains_children(graph, flags := _containment_flags(graph))
     direct = children.get(node_id, [])
     parent = graph.nodes[node_id]
-
+    facts = _node_facts(graph)
     child_entries: list[RollupContainer] = []
     memberships: Counter[str] = Counter()
     for child_id in direct:
@@ -777,7 +711,7 @@ def drill_down(
         if child is None:
             continue
         descendants = _descendants(child_id, children)
-        agg = _aggregate(descendants, graph, filters=filters, memberships=memberships)
+        agg = _aggregate(descendants, graph, filters=filters, memberships=memberships, facts=facts)
         if filters is not None and filters.active() and agg.descendant_count == 0 and not filters.matches(child):
             continue
         child_entries.append(
@@ -798,8 +732,8 @@ def drill_down(
     matching_total = len(child_entries)
     page = child_entries[offset : None if limit is None else offset + limit]
     page_cut = len(page) < matching_total
-
-    relationship_edges, edge_count_metadata = _edge_projection(graph, [c.id for c in page], children)
+    page_rows = [c.to_dict() for c in page]
+    relationship_edges, edge_count_metadata = _edge_projection(graph, page_rows, children, flags)
 
     return {
         "scan_id": graph.scan_id,
@@ -813,7 +747,7 @@ def drill_down(
             "severity": parent.severity or "",
         },
         "filters": _filters_dict(filters),
-        "children": [c.to_dict() for c in page],
+        "children": page_rows,
         # Same edges one level down. This is where they matter most: an org has
         # one root, so nothing crosses at the top, while its accounts reach each
         # other constantly.

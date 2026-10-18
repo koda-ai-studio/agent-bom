@@ -83,7 +83,7 @@ from agent_bom.api.graph_contracts import (
 from agent_bom.api.graph_contracts import (
     ScopedGraphResponse as ScopedGraphResponse,
 )
-from agent_bom.api.graph_generation import optional_generation, verify_generation
+from agent_bom.api.graph_generation import optional_generation, snapshot_fingerprint, verify_generation
 from agent_bom.api.graph_page_context import containment_ancestors, page_attack_context
 from agent_bom.api.graph_paging import _coalesce_alias, _enforce_node_offset_cap, _paginate, path_order
 from agent_bom.api.graph_presentation import (
@@ -798,12 +798,15 @@ async def get_graph_rollup(
         generation=snapshot_generation,
         offset=offset if node else 0,
     )
+    cache_identity = identity
+    if identity is None and not offset:
+        cache_identity = await _runtime._graph_store_call(snapshot_fingerprint, graph_store, tenant=tenant, scan_id=requested_scan_id)
     cache_key = None
-    if identity and identity[1]:
+    if cache_identity and cache_identity[1]:
         cache_key = (
             id(graph_store),
             tenant,
-            identity,
+            cache_identity,
             getattr(request.state, "api_key_id", ""),
             getattr(request.state, "api_key_name", ""),
             getattr(request.state, "api_key_role", ""),
@@ -819,7 +822,7 @@ async def get_graph_rollup(
         cached = graph_rollup_cache.get(cache_key)
         if cached is not None:
             return cached
-        requested_scan_id = identity[0]
+        requested_scan_id = cache_identity[0]
 
     node, resolved_from = await _runtime.resolve_node_id(graph_store, tenant, requested_scan_id, node) if node else (node, None)
     try:

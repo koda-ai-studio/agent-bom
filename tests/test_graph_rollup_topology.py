@@ -133,6 +133,7 @@ def test_rollup_reports_relationship_rows_cut_by_the_edge_cap() -> None:
         "returned": 400,
         "truncated": True,
         "source_truncated": False,
+        "connections_definition": "Each entry's connections count other returned entries it is linked to, before the row cap.",
         "reason": "rollup_edge_limit",
     }
 

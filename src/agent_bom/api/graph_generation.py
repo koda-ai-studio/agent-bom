@@ -40,3 +40,23 @@ def optional_generation(store: Any, *, tenant: str, scan_id: str, generation: st
         if exc.status_code == 501 and not offset and generation is None:
             return None
         raise
+
+
+def snapshot_fingerprint(store: Any, *, tenant: str, scan_id: str) -> tuple[str, str] | None:
+    """Cache identity for a snapshot the backend cannot pin to a generation.
+
+    Built from the snapshot's own receipt, so a re-save that changes its
+    timestamp or size misses the cache. ``None`` disables caching.
+    """
+    reader = getattr(store, "snapshots_by_ids", None)
+    if not callable(reader):
+        return None
+    try:
+        resolved = resolve_graph_scan_id(tenant, scan_id) or store.latest_snapshot_id(tenant_id=tenant, snapshot_kind="scan")
+        rows = reader(tenant_id=tenant, scan_ids={resolved}) if resolved else []
+    except Exception:  # noqa: BLE001 - an unreadable receipt only costs the cache
+        return None
+    row = next((item for item in rows if item.get("scan_id") == resolved), None)
+    if row is None:
+        return None
+    return resolved, f"receipt:{row.get('created_at')}:{row.get('node_count')}:{row.get('edge_count')}"
