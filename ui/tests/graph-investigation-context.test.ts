@@ -53,7 +53,7 @@ describe("investigation context presentation", () => {
     expect(result!.nodes).toHaveLength(entries.length);
   });
 
-  it("leaves large, unanchored and path views to their bounded navigation", () => {
+  it("leaves unanchored and path views to their bounded navigation", () => {
     expect(graphInvestigationContext(nodes, edges, {})).toBeNull();
     expect(graphInvestigationContext(nodes, edges, { rootId: "missing" })).toBeNull();
     expect(graphInvestigationContext(nodes, edges, { rootId: "agent", pathSelected: true })).toBeNull();

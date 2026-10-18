@@ -1763,6 +1763,7 @@ function GraphPageInner() {
     ? { ...scenarioElements, ...selectInvestigationContext(investigationContext, selectedContextGroup) }
     : { ...scenarioElements, omittedNodes: 0, crossContextEdges: 0 }, [scenarioElements, investigationContext, selectedContextGroup]);
   const selectContextGroup = useCallback((id: string) => {
+    setCanvasPage(0);
     if (investigationContext && selectedNodeId && !selectInvestigationContext(investigationContext, id).nodes.some(node => node.id === selectedNodeId)) {
       setSelectedNodeId(null);
       setSelectedNode(null);
@@ -3732,7 +3733,7 @@ function GraphPageInner() {
           {!rollupNavigationActive && !rollupDecisionActive && displayNodes.length > 0 && <GraphScopeEvidence edges={displayEdges} scope={graphRenderer.kind === "webgl" ? "loaded" : "visible"} />}
           {investigationContext && graphRenderer.kind === "react-flow" && <GraphInvestigationContextControls
             groups={investigationContext.groups} selected={selectedContextGroup}
-            visibleNodes={contextElements.nodes.length} loadedNodes={scenarioElements.nodes.length}
+            visibleNodes={displayNodes.length} loadedNodes={scenarioElements.nodes.length}
             crossContextEdges={contextElements.crossContextEdges} onSelect={selectContextGroup} />}
           {!rollupNavigationActive && !rollupDecisionActive && graphRenderer.kind === "react-flow" && displayNodes.length > 0 && <GraphLegendDock items={legendItems} separated />}
           <div ref={setGraphNavigationMount} />

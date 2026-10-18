@@ -130,3 +130,21 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     expect(violations).toEqual([]);
   });
 }
+
+test("identity context survives bounded expansion and grouped drilldown", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const queries = await fixture(page);
+  await page.goto(`/graph?lens=context&scan=snapshot&root=${root}`);
+  for (const count of [4, 8, 16]) {
+    await expect(page.locator(".react-flow__node")).toHaveCount(count);
+    await page.getByRole("button", { name: "Show more connections", exact: true }).click();
+  }
+  await expect(page.locator(".react-flow__node")).toHaveCount(3);
+  await page.getByRole("button", { name: "Expand 22 members", exact: true }).click();
+  await expect(page.locator(".react-flow__node")).toHaveCount(24);
+  const context = page.getByLabel("Investigation context", { exact: true });
+  await expect(context).toContainText("24 of 24 nodes in this view");
+  await context.getByRole("button", { name: "Identity and access context", exact: true }).click();
+  await expect(page.locator(".react-flow__node")).toHaveCount(2);
+  expect(queries.map(query => query.max_nodes)).toEqual([4, 8, 16, 24]);
+});

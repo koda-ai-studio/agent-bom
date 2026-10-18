@@ -28,7 +28,7 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     await page.goto("/graph?scan=snapshot&root=agent&lens=context");
     const controls = page.getByLabel("Investigation context", { exact: true });
     await expect(controls).toBeVisible();
-    await expect(controls).toContainText("4 of 4 loaded nodes shown");
+    await expect(controls).toContainText("4 of 4 nodes in this view");
     if (width === 390) {
       await page.getByTestId("graph-entity-drawer").getByRole("button", { name: "Close", exact: true }).click();
       await expect(page.getByRole("group", { name: "Navigate loaded graph nodes" })).toContainText("Developer agent");
@@ -36,7 +36,7 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     if (width === 390) await controls.getByLabel("Graph context", { exact: true }).selectOption("identity");
     else await controls.getByRole("button", { name: "Identity and access context", exact: true }).click();
     await expect(page.locator(".react-flow__node")).toHaveCount(2);
-    await expect(controls).toContainText("2 of 4 loaded nodes shown");
+    await expect(controls).toContainText("2 of 4 nodes in this view");
     await expect(page).toHaveURL(/context_view=identity/);
     await expect.poll(async () => {
       const positions = await page.locator(".react-flow__node").evaluateAll(items => Object.fromEntries(items.map(n => [n.getAttribute("data-id"), { x: (n as HTMLElement).style.transform, y: n.getBoundingClientRect().y, left: n.getBoundingClientRect().x }])));
