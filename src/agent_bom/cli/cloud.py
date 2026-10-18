@@ -23,7 +23,7 @@ from agent_bom.cli._grouped_help import GroupedGroup
 CLOUD_CATEGORIES: OrderedDict[str, list[str]] = OrderedDict(
     [
         ("Cloud Providers", ["scan", "aws", "azure", "gcp"]),
-        ("AI Platforms", ["snowflake", "databricks", "huggingface", "ollama", "supabase"]),
+        ("AI Platforms", ["snowflake", "databricks", "huggingface", "ollama", "supabase", "vercel"]),
         ("Posture", ["posture", "resilience"]),
     ]
 )
@@ -66,10 +66,11 @@ def cloud():
 
 # ── Register cloud provider commands (reuse from _cloud_group.py) ────────────
 
-from agent_bom.cli._cloud_group import aws_cmd, azure_cmd, gcp_cmd, resilience_cmd, scan_cmd, supabase_cmd  # noqa: E402
+from agent_bom.cli._cloud_group import aws_cmd, azure_cmd, gcp_cmd, resilience_cmd, scan_cmd, supabase_cmd, vercel_cmd  # noqa: E402
 
 cloud.add_command(scan_cmd, "scan")
 cloud.add_command(supabase_cmd, "supabase")
+cloud.add_command(vercel_cmd, "vercel")
 cloud.add_command(aws_cmd, "aws")
 cloud.add_command(azure_cmd, "azure")
 cloud.add_command(gcp_cmd, "gcp")

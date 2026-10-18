@@ -1091,5 +1091,7 @@ cloud_group.add_command(runtime_evidence_ingest_cmd, "runtime-evidence-ingest")
 
 # Explicit-project platform inventory has its own bounded credential contract.
 from agent_bom.cli._supabase_inventory import supabase_cmd  # noqa: E402
+from agent_bom.cli._vercel_inventory import vercel_cmd  # noqa: E402
 
 cloud_group.add_command(supabase_cmd, "supabase")
+cloud_group.add_command(vercel_cmd, "vercel")
