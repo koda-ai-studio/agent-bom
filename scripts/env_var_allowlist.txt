@@ -378,7 +378,7 @@ AGENT_BOM_OIDC_SCOPES
 AGENT_BOM_OIDC_TENANT_CLAIM
 AGENT_BOM_OIDC_TENANT_PROVIDERS_JSON
 AGENT_BOM_OKTA_DISCOVERY  # opt-in flag (default OFF) gating read-only Okta non-human-identity discovery; read in identity/okta_nhi.py
-AGENT_BOM_OKTA_TOKEN  # SSWS/bearer token for read-only Okta NHI discovery (tokens-only, no passwords); never stored, read in identity/okta_nhi.py
+AGENT_BOM_OKTA_TOKEN  # SSWS token for read-only Okta NHI discovery (tokens-only, no passwords); never stored, read in identity/okta_nhi.py
 AGENT_BOM_OKTA_ORG_URL  # Okta org base URL for read-only NHI discovery; read in identity/okta_nhi.py
 # Local metadata-only entitlement file for self-hosted packaging.
 AGENT_BOM_ENTITLEMENT_FILE
@@ -603,3 +603,7 @@ AGENT_BOM_TRACE_CONNECTIONS
 
 # Graph relationship-contract mode (warn|enforce|strict), re-read on each violation so tests can pin strict.
 AGENT_BOM_GRAPH_CONTRACT
+
+AGENT_BOM_OKTA_CLIENT_ID  # OAuth service-app client ID for DPoP discovery
+AGENT_BOM_OKTA_KEY_ID  # Public signing key ID for Okta private_key_jwt
+AGENT_BOM_OKTA_PRIVATE_KEY_FILE  # Owner-only local RSA PEM path; key stays local

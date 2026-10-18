@@ -22,6 +22,7 @@ from collections import defaultdict
 from collections.abc import Iterable, Mapping
 from typing import Any
 
+from agent_bom.canonical_ids import canonical_id
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.node import UnifiedNode
@@ -39,6 +40,34 @@ def _tool_label_index(graph: UnifiedGraph) -> dict[str, list[str]]:
     return index
 
 
+def _org_membership(graph: UnifiedGraph, identity: DiscoveredNonHumanIdentity, nid: str) -> tuple[int, int]:
+    added_nodes = added_edges = 0
+    if identity.provider == "okta" and identity.source_scope:
+        account_id = "account:okta:" + canonical_id(identity.source_scope)
+        if account_id not in graph.nodes:
+            graph.add_node(
+                UnifiedNode(
+                    id=account_id,
+                    entity_type=EntityType.ACCOUNT,
+                    label=identity.source_scope,
+                    data_sources=[_OVERLAY_SOURCE],
+                    attributes={"provider": "okta", "org_url": identity.source_scope},
+                )
+            )
+            added_nodes += 1
+        graph.add_edge(
+            UnifiedEdge(
+                source=nid,
+                target=account_id,
+                relationship=RelationshipType.MEMBER_OF,
+                provenance={"source": _OVERLAY_SOURCE},
+                evidence={"kind": "provider_inventory", "provider": "okta", "basis": "org_api_collection"},
+            )
+        )
+        added_edges += 1
+    return added_nodes, added_edges
+
+
 def apply_nhi_overlay(
     graph: UnifiedGraph,
     identities: Iterable[DiscoveredNonHumanIdentity],
@@ -54,7 +83,12 @@ def apply_nhi_overlay(
 
     for identity in identities:
         try:
-            nid = f"managed_identity:{identity.provider}:{identity.identity_id}"
+            scoped_id = (
+                canonical_id(identity.source_scope, identity.identity_type, identity.identity_id)
+                if identity.source_scope
+                else identity.identity_id
+            )
+            nid = f"managed_identity:{identity.provider}:{scoped_id}"
             if nid in graph.nodes:
                 continue
             graph.add_node(
@@ -71,6 +105,7 @@ def apply_nhi_overlay(
                         "discovered": True,
                         "provider": identity.provider,
                         "identity_id": identity.identity_id,
+                        "source_scope": identity.source_scope,
                         "identity_type": identity.identity_type,
                         "status": identity.status,
                         "owner": identity.owner,
@@ -82,6 +117,9 @@ def apply_nhi_overlay(
                 )
             )
             added_nodes += 1
+            org_nodes, org_edges = _org_membership(graph, identity, nid)
+            added_nodes += org_nodes
+            added_edges += org_edges
 
             for scope in identity.scopes:
                 scope_name = scope.strip().lower()
@@ -129,7 +167,8 @@ def serialize_discovery_result(result: Any) -> dict[str, Any]:
     status = getattr(result, "status", None)
     return {
         "status": getattr(status, "value", str(status) if status is not None else "ok"),
-        "provider": identities[0].provider if identities else None,
+        "provider": getattr(result, "provider", None) or (identities[0].provider if identities else None),
+        "coverage": list(getattr(result, "coverage", ())),
         "org_url": getattr(result, "org_url", None),
         "warnings": list(getattr(result, "warnings", ()) or ()),
         "identities": [identity.to_dict() for identity in identities],
@@ -149,13 +188,20 @@ def merge_discovery_results(results: Iterable[Any]) -> dict[str, Any]:
     any_ok = False
     for result in results:
         payload = serialize_discovery_result(result)
-        providers.append({"provider": payload.get("provider"), "status": payload.get("status"), "count": len(payload["identities"])})
+        providers.append(
+            {
+                "provider": payload.get("provider"),
+                "status": payload.get("status"),
+                "count": len(payload["identities"]),
+                "coverage": payload["coverage"],
+            }
+        )
         if getattr(result, "ok", False):
             any_ok = True
             identities.extend(payload["identities"])
         warnings.extend(payload.get("warnings", []))
     return {
-        "status": "ok" if any_ok else "empty",
+        "status": "partial" if any(p["status"] in {"partial", "error"} for p in providers) else "ok" if any_ok else "empty",
         "providers": providers,
         "warnings": warnings,
         "identities": identities,
@@ -193,6 +239,7 @@ def apply_nhi_overlay_from_report(graph: UnifiedGraph, report_json: Any) -> dict
         identities.append(
             DiscoveredNonHumanIdentity(
                 identity_id=identity_id,
+                source_scope=_opt_str(raw.get("source_scope")),
                 name=str(raw.get("name") or identity_id),
                 identity_type=str(raw.get("identity_type") or "service_account"),
                 provider=str(raw.get("provider") or "unknown"),
