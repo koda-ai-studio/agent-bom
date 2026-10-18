@@ -155,8 +155,10 @@ def _assert_golden(key: str, value: str) -> None:
 @pytest.mark.parametrize("populated", [False, True], ids=["empty", "populated"])
 @pytest.mark.parametrize("color", [False, True], ids=["plain", "ansi"])
 @pytest.mark.parametrize("no_color_env", [False, True], ids=["color-env", "no-color-env"])
+@pytest.mark.parametrize("terminal", ["dumb", "xterm-256color"])
 @pytest.mark.parametrize("section", SECTIONS)
-def test_console_section_bytes(monkeypatch, populated, color, no_color_env, section):
+def test_console_section_bytes(monkeypatch, populated, color, no_color_env, terminal, section):
+    monkeypatch.setenv("TERM", terminal)
     if no_color_env:
         monkeypatch.setenv("NO_COLOR", "1")
     else:
@@ -168,8 +170,11 @@ def test_console_section_bytes(monkeypatch, populated, color, no_color_env, sect
         Console(
             file=stream,
             width=100,
+            height=25,
             force_terminal=color,
             force_jupyter=False,
+            force_interactive=False,
+            legacy_windows=False,
             no_color=not color,
             color_system="standard" if color else None,
         ),
