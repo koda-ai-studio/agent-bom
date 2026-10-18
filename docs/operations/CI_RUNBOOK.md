@@ -36,12 +36,16 @@ jobs does not establish a green main commit.
 | Full correctness suite, Python 3.11/3.12/3.13/3.14 (3.11 with coverage floor) | no | yes | yes |
 | Graph performance, Output scale performance, Extra-gated SDK smoke | no | yes | yes |
 | Postgres Integration Contract (live RLS, migrations, schema parity) | yes (required through aggregation) | yes | yes |
-| Test (Alpine/musl) | no | subset; full on dependency changes | full suite nightly, subset manual |
+| Test (Alpine/musl) | subset on relevant changes; full on dependencies | subset; full on dependency changes | full suite nightly, subset manual |
 | Docker (multi-arch) + image scans | no | yes | nightly only |
-| UI E2E and container smoke (Playwright, bundle budget) | no | when UI inputs change | yes |
+| UI E2E and container smoke (Playwright, bundle budget) | when UI inputs or CI setup change | every main push | yes |
 | Dogfood GitHub Action | no | when action inputs change | yes |
 | ClusterFuzzLite (`cflite-pr.yml`) | no | short batch on parser changes | weekly long batch |
 | Runtime Helm Acceptance (`runtime-acceptance.yml`) | only gateway/runtime changes | API/Helm/Postgres/UI-gateway changes | manual |
+
+The required `Test (Python 3.13)` context also requires Alpine and UI E2E
+when their path filters select them. Failed classification runs both lanes;
+a missing, failed, or cancelled selected lane fails that context.
 
 Branch protection stays strict (PR branches must be up to date with `main`),
 so the sharded suite always runs on the merge result that lands. If a shard

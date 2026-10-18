@@ -358,10 +358,8 @@ PR_EXCLUDED_POST_MERGE_JOBS = (
     "graph-performance",
     "output-scale-performance",
     "sdk-import-smoke",
-    "test-alpine",
     "action-dogfood",
     "docker",
-    "ui-e2e",
 )
 
 
@@ -576,7 +574,7 @@ def test_correctness_gate_rejects_a_failed_lane_that_the_event_does_not_require(
             assert not _run_correctness_gate(event, results), (event, lane)
 
 
-def test_ui_pr_lane_is_fast_and_e2e_runs_after_merge() -> None:
+def test_ui_validation_and_e2e_run_in_separate_jobs() -> None:
     jobs = _ci()["jobs"]
     fast = {step.get("name") for step in jobs["ui"]["steps"]}
     assert {"UI lint", "UI tests", "Graph schema codegen — Python ↔ TypeScript drift gate"} <= fast
@@ -956,3 +954,59 @@ def test_endpoint_qualification_runs_natively_and_retains_failed_receipts():
     assert artifact["if"] == "always()"
     assert artifact["with"]["path"] == qualification["env"]["QUALIFICATION_OUTPUT"]
     assert artifact["with"]["if-no-files-found"] == "error"
+
+
+def test_compatibility_lanes_follow_paths_on_prs_and_fail_closed() -> None:
+    from types import SimpleNamespace
+
+    jobs = _ci()["jobs"]
+    for name, flag in (("test-alpine", "alpine"), ("ui-e2e", "ui")):
+        condition = " ".join(jobs[name]["if"].split()).replace("!cancelled()", "True")
+        condition = condition.replace("&&", "and").replace("||", "or")
+        for event in ("pull_request", "push", "schedule", "workflow_dispatch", "merge_group"):
+            for result in ("success", "failure", "skipped"):
+                for changed in ("true", "false"):
+                    context = {
+                        "github": SimpleNamespace(event_name=event, ref="refs/heads/main"),
+                        "needs": SimpleNamespace(changes=SimpleNamespace(result=result, outputs=SimpleNamespace(**{flag: changed}))),
+                    }
+                    expected = event not in ("pull_request", "push") or result != "success" or changed == "true"
+                    if name == "ui-e2e" and event == "push":
+                        expected = True
+                    assert eval(condition, {"__builtins__": {}}, context) == expected, (name, event, result, changed)
+
+
+def test_ci_and_ui_setup_changes_exercise_ui_validation() -> None:
+    import re
+
+    script = next(step["run"] for step in _ci()["jobs"]["changes"]["steps"] if step.get("id") == "classify")
+    pattern = re.search(r"grep -Eq '([^']+)'; then\n\s+ui=true", script)
+    assert pattern is not None
+    for path in (".github/workflows/ci.yml", ".github/actions/setup-ui/action.yml", "ui/e2e/explore.spec.ts"):
+        assert re.search(pattern[1], path), path
+    assert not re.search(pattern[1], "docs/operator.md")
+
+
+def test_required_context_rejects_missing_or_failed_compatibility_proof() -> None:
+    import os
+    import subprocess
+
+    job = _ci()["jobs"]["test"]
+    assert {"test-alpine", "ui-e2e"} <= set(job["needs"])
+    step = job["steps"][0]
+    base = {**os.environ, "CORE_RESULT": "success", "DOCKER_RESULT": "skipped", "DOCKER_REQUIRED": "false"}
+    for required in ("true", "false"):
+        for outcome in ("success", "skipped", "failure", "cancelled"):
+            for lane in ("ALPINE", "UI_E2E"):
+                env = {
+                    **base,
+                    "ALPINE_REQUIRED": "false",
+                    "ALPINE_RESULT": "skipped",
+                    "UI_E2E_REQUIRED": "false",
+                    "UI_E2E_RESULT": "skipped",
+                    f"{lane}_REQUIRED": required,
+                    f"{lane}_RESULT": outcome,
+                }
+                result = subprocess.run(["bash", "-c", step["run"]], env=env, capture_output=True)
+                expected = outcome == "success" or (outcome == "skipped" and required == "false")
+                assert (result.returncode == 0) == expected, (lane, required, outcome)

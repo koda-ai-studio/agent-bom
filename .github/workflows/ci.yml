@@ -153,7 +153,7 @@ jobs:
           if printf '%s\n' "$changed" | grep -Eq '^(deploy/helm/agent-bom/|scripts/validate_helm_profiles\.py$|\.github/workflows/ci\.yml$)'; then
             helm=true
           fi
-          if printf '%s\n' "$changed" | grep -Eq '^(ui/|docs/openapi/|action\.yml|contracts/|src/agent_bom/(api/(routes/|read_models/|error_envelope\.py|versioning\.py|models\.py|server\.py)|graph/|context_graph\.py|graph_schema\.py)|src/agent_bom/models\.py)'; then
+          if printf '%s\n' "$changed" | grep -Eq '^(ui/|\.github/workflows/ci\.yml$|\.github/actions/setup-ui/|docs/openapi/|action\.yml|contracts/|src/agent_bom/(api/(routes/|read_models/|error_envelope\.py|versioning\.py|models\.py|server\.py)|graph/|context_graph\.py|graph_schema\.py)|src/agent_bom/models\.py)'; then
             ui=true
           fi
           classification="$(printf '%s\n' "$changed" | python3 scripts/classify_ci_changes.py)"
@@ -576,7 +576,7 @@ jobs:
     # PR fast lane for UI-affecting changes: lockfile/toolchain guards, lint,
     # graph-schema drift, and unit tests. `ui-export` builds the NEXT_EXPORT
     # bundle the release packages in parallel. The standalone container smoke,
-    # bundle budget, and Playwright E2E run post-merge in `ui-e2e`. Main pushes run both jobs, so a green
+    # bundle budget, and Playwright E2E run in parallel in `ui-e2e`. Main pushes run both jobs, so a green
     # main run still carries the complete UI proof the release gate reads.
     if: >-
       !cancelled() && (
@@ -741,13 +741,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     needs: changes
-    # Post-merge half of UI validation (standalone build, container boot,
-    # bundle budget, Playwright E2E). Runs on every main push and
-    # on every scheduled or manual run.
+    # Validate affected PR merge results before landing (standalone build,
+    # container boot, bundle budget, Playwright). Also run on every main push
+    # and every scheduled or manual run.
     if: >-
-      !cancelled() && github.event_name != 'pull_request' && (
+      !cancelled() && (
         (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-        github.event_name != 'push' ||
+        (github.event_name != 'pull_request' && github.event_name != 'push') ||
         needs.changes.result != 'success' ||
         needs.changes.outputs.ui == 'true'
       )
@@ -1698,11 +1698,11 @@ jobs:
   # glibc-only assumptions in code, compiled extensions, or path handling.
   test-alpine:
     name: Test (Alpine/musl)
-    # Post-merge: the targeted musl subset on relevant main pushes, the full
+    # Run the targeted musl subset on relevant PRs and main pushes, the full
     # musl suite on dependency changes and every nightly run.
     if: >-
-      !cancelled() && github.event_name != 'pull_request' && (
-        github.event_name != 'push' ||
+      !cancelled() && (
+        (github.event_name != 'pull_request' && github.event_name != 'push') ||
         needs.changes.result != 'success' ||
         needs.changes.outputs.alpine == 'true'
       )
@@ -2098,7 +2098,7 @@ jobs:
           " || true
 
   # Preserve the existing required branch-protection context while making the
-  # conditional release-shaped Docker build part of that context. A new job
+  # applicable Docker, Alpine and UI E2E proof part of that context. A new job
   # name alone is not automatically required by branch protection.
   test:
     name: Test (Python 3.13)
@@ -2106,12 +2106,25 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
-    needs: [changes, test-core, docker]
+    needs: [changes, test-core, docker, test-alpine, ui-e2e]
     if: ${{ !cancelled() }}
     steps:
       - name: Require correctness and applicable release-image proof
         env:
           CORE_RESULT: ${{ needs.test-core.result }}
+          ALPINE_RESULT: ${{ needs.test-alpine.result }}
+          UI_E2E_RESULT: ${{ needs.ui-e2e.result }}
+          ALPINE_REQUIRED: >-
+            ${{
+              (github.event_name != 'pull_request' && github.event_name != 'push') ||
+              needs.changes.result != 'success' || needs.changes.outputs.alpine == 'true'
+            }}
+          UI_E2E_REQUIRED: >-
+            ${{
+              (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+              (github.event_name != 'pull_request' && github.event_name != 'push') ||
+              needs.changes.result != 'success' || needs.changes.outputs.ui == 'true'
+            }}
           DOCKER_RESULT: ${{ needs.docker.result }}
           DOCKER_REQUIRED: >-
             ${{
@@ -2132,7 +2145,20 @@ jobs:
             success|skipped) ;;
             *) echo "Release-image lane ended with: $DOCKER_RESULT" >&2; exit 1 ;;
           esac
-          echo "Correctness and applicable release-image proof passed."
+          for lane in ALPINE UI_E2E; do
+            result_var="${lane}_RESULT"
+            required_var="${lane}_REQUIRED"
+            result="${!result_var}"
+            if [ "${!required_var}" = "true" ] && [ "$result" != "success" ]; then
+              echo "Required $lane proof ended with: $result" >&2
+              exit 1
+            fi
+            case "$result" in
+              success|skipped) ;;
+              *) echo "$lane ended with: $result" >&2; exit 1 ;;
+            esac
+          done
+          echo "Correctness, compatibility, and applicable release-image proof passed."
 
   # 6. Dogfood GitHub Action (test action.yml via uses: ./)
   # Post-merge only; runs on action-affecting main pushes and nightly.
