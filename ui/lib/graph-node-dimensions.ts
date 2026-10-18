@@ -8,10 +8,11 @@ import type { CSSProperties } from "react";
 export function readableGraphNodeStyle(zoom: number, boundedContext = false): CSSProperties {
   const scale = Math.max(Number.isFinite(zoom) ? zoom : 1, 0.16);
   return {
-    "--graph-node-label-size": `${Math.min(boundedContext ? 30 : 28, Math.max(18, 15 / scale))}px`,
+    "--graph-node-card-width": boundedContext ? "clamp(220px, 30vw, 340px)" : "220px",
+    "--graph-node-label-size": `${Math.min(boundedContext ? 36 : 28, Math.max(18, 15 / scale))}px`,
     "--graph-node-glyph-size": `${Math.min(112, Math.max(72, 64 / scale))}px`,
     "--graph-node-icon-size": `${Math.min(48, Math.max(32, 28 / scale))}px`,
-    "--graph-node-meta-size": `${Math.min(boundedContext ? 28 : 24, Math.max(12, 12 / scale))}px`,
+    "--graph-node-meta-size": `${Math.min(boundedContext ? 32 : 24, Math.max(12, 12 / scale))}px`,
   } as CSSProperties;
 }
 
@@ -76,10 +77,10 @@ export const COMPACT_GRAPH_MIN_ZOOM = 0.75;
 export function compactInvestigationLayout(explicitContext: boolean, nodeCount: number): DagreLrOptions | undefined {
   if (!explicitContext || nodeCount < 1 || nodeCount > 16) return undefined;
   return readableLineageDagreLr({
-    nodeWidth: LINEAGE_NODE_WIDTH,
-    nodeHeight: LINEAGE_NODE_HEIGHT,
+    nodeWidth: 360,
+    nodeHeight: 260,
     rankSep: 128,
     nodeSep: 32,
-    minSeparation: { width: LINEAGE_NODE_WIDTH, height: LINEAGE_NODE_HEIGHT, gap: 24 },
+    minSeparation: { width: 360, height: 260, gap: 24 },
   });
 }

@@ -125,6 +125,11 @@ for (const theme of ["light", "dark"]) test(`fit all includes complete shared-se
     return boxes.flatMap((a, i) => boxes.slice(i + 1).filter(b => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top).map(b => [a.label, b.label]));
   });
   expect(overlaps).toEqual([]);
+  const titleLines = await page.locator("[data-graph-entity] > p").evaluateAll(titles => titles.map(title => {
+    const zoom = new DOMMatrixReadOnly(getComputedStyle(title.closest(".react-flow__viewport")!).transform).a;
+    return title.getBoundingClientRect().height / (parseFloat(getComputedStyle(title).lineHeight) * zoom);
+  }));
+  expect(Math.max(...titleLines)).toBeLessThanOrEqual(2.1);
   const primaryFonts = await page.locator(".react-flow__node").evaluateAll(nodes => nodes.map(node => {
     const viewport = node.closest(".react-flow__viewport")!;
     const zoom = new DOMMatrixReadOnly(getComputedStyle(viewport).transform).a;
