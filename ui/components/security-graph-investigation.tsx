@@ -193,6 +193,7 @@ function InvestigationFlow({
       baseOpacity: 1,
       highSignalOpacity: 1,
       zoom: viewport.zoom,
+      preserveLabelState: true,
       nodeLabels: graphNodeDisplayLabels(nodes),
     }),
     [edges, nodes, viewport.zoom],
@@ -433,8 +434,10 @@ export function SecurityGraphInvestigation({
   }, [attackPath, canvasWidth, embedded, focusMode, layout.nodes]);
   const canvasNodes = pathLayout?.nodes ?? layout.nodes;
   const displayEdges = useMemo(
-    () => readableGraphEdges(layout.edges, undefined, { nodeLabels: graphNodeDisplayLabels(layout.nodes) }),
-    [layout.edges, layout.nodes],
+    () => readableGraphEdges(layout.edges.map(edge => ({ ...edge, data: { ...edge.data,
+      quietLabel: edge.data?.quietLabel && edge.id !== selectedEdge?.id && edge.source !== selectedNodeId && edge.target !== selectedNodeId,
+    } })), undefined, { nodeLabels: graphNodeDisplayLabels(layout.nodes) }),
+    [layout.edges, layout.nodes, selectedEdge?.id, selectedNodeId],
   );
   const legendItems = useMemo(
     () => legendItemsForVisibleGraph(layout.nodes, displayEdges),
