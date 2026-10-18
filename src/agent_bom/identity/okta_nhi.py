@@ -34,6 +34,7 @@ from enum import Enum
 from typing import Any
 
 from agent_bom.core.settings import env_str
+from agent_bom.identity.okta_http import MetadataReader, org_origin
 from agent_bom.security import sanitize_text
 
 logger = logging.getLogger(__name__)
@@ -159,8 +160,6 @@ class OktaClient:
     """
 
     def __init__(self, org_url: str, token: str = "", *, auth: Any = None, transport: Any = None) -> None:
-        from agent_bom.identity.okta_http import MetadataReader
-
         self._reader = MetadataReader(org_url, token, auth=auth, transport=transport)
 
     def _get(self, path: str) -> list[dict[str, Any]]:
@@ -327,8 +326,6 @@ def discover_okta_non_human_identities(
 
     resolved_org = (org_url or env_str(_ORG_URL_ENV) or "").strip()
     if resolved_org:
-        from agent_bom.identity.okta_http import org_origin
-
         try:
             resolved_org = org_origin(resolved_org)
         except ValueError:

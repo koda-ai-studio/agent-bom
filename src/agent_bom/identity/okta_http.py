@@ -6,8 +6,6 @@ import json
 from typing import Any
 from urllib.parse import urlsplit
 
-import httpx
-
 MAX_PAGES = 20
 MAX_RECORDS = 2000
 MAX_BYTES = 2 * 1024 * 1024
@@ -50,6 +48,8 @@ class MetadataReader:
         self.transport = transport
 
     def collect(self, path: str) -> list[dict[str, Any]]:
+        import httpx
+
         endpoint = urlsplit(path).path
         url = self.origin + path
         visited: set[str] = set()
