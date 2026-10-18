@@ -3,6 +3,7 @@ import type { Edge, Node } from "@xyflow/react";
 import type { LineageNodeData } from "@/components/lineage-nodes";
 import { readableGraphEdges } from "@/lib/graph-utils";
 import { graphHierarchyLayout } from "@/lib/graph-hierarchy-layout";
+import { readableLineageDagreLr } from "@/lib/graph-node-dimensions";
 
 const node = (id: string, nodeType: LineageNodeData["nodeType"]): Node<LineageNodeData> => ({
   id, type: "containerNode", position: { x: 0, y: 0 }, data: { label: id, nodeType },
@@ -49,6 +50,14 @@ describe("evidence-driven graph flow", () => {
   it("is deterministic under reordered provider responses", () => {
     const positions = (result: ReturnType<typeof graphHierarchyLayout>) => Object.fromEntries(result.nodes.map(n => [n.id, n.position]));
     expect(positions(graphHierarchyLayout(nodes, edges))).toEqual(positions(graphHierarchyLayout([...nodes].reverse(), [...edges].reverse())));
+  });
+
+  it("keeps an expanded repository fan-out wrapped instead of making a tall stack", () => {
+    const folders = Array.from({ length: 40 }, (_, i) => node(`folder-${i}`, "directory"));
+    const result = graphHierarchyLayout([node("repo", "directory"), ...folders], folders.map(n => edge(n.id, "repo", n.id, "contains")), readableLineageDagreLr());
+    const ys = result.nodes.map(n => n.position.y);
+    expect(Math.max(...ys) - Math.min(...ys)).toBeLessThan(4000);
+    expect(result.edges).toHaveLength(40);
   });
 
   it("keeps overview connections quiet and reveals relationship labels on selection", () => {

@@ -2712,6 +2712,7 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
             .filter(Number.isFinite),
         );
         const onDemandLabels = await page.locator('[data-graph-annotations="on-demand"]').count() > 0;
+        if (options.assertQuietGraphLabels && edgeLabelFonts.length) throw new Error(`Overview repeats relationship labels on ${urlPath}`);
         if ((!onDemandLabels && edgeLabelFonts.length < graphEdgeCount) || Math.min(...edgeLabelFonts) < options.minGraphEdgeLabelFontPx) {
           throw new Error(
             `Unreadable or missing graph relationship labels on ${urlPath}: ${edgeLabelFonts.length}/${graphEdgeCount} labels, minimum ${Math.min(...edgeLabelFonts)}px`,
@@ -3201,6 +3202,7 @@ async function main() {
           minGraphEdges: fixture.edges.length, maxGraphEdges: fixture.edges.length,
           minGraphNodeFontPx: 12, minGraphEdgeLabelFontPx: 12, minGraphBadgeFontPx: 11,
           assertGraphNodesSeparated: true, assertGraphNodesWithinCanvas: true,
+          assertQuietGraphLabels: true,
           assertEdgeLabelsClearOfNodes: true, assertNoHorizontalOverflow: true });
         await p.close();
       }

@@ -19,10 +19,11 @@ export function graphHierarchyLayout(nodes: Node<LineageNodeData>[], edges: Edge
   // camera. Reserve their full three-line caption plus finding footer so
   // stacked findings cannot run into the next entity's glyph.
   const nodeHeight = Math.max(300, options.nodeHeight ?? 0);
+  const compact = nodes.length <= 24;
   const layout = applyDagreLayout([...nodes].sort((a,b) => a.id.localeCompare(b.id)), rankedEdges, {
-    direction: "LR", nodeWidth: 240, nodeSep: 40, ...options, nodeHeight,
-    rankSep: Math.min(options.rankSep ?? 96, 96), fitAspect: undefined,
-    minSeparation: { width: 240, gap: 24, ...options.minSeparation, height: nodeHeight },
+    direction: "LR", nodeWidth: 240, nodeHeight: 224, nodeSep: 40, ...options,
+    ...(compact ? { nodeHeight, rankSep: Math.min(options.rankSep ?? 96, 96), fitAspect: undefined,
+      minSeparation: { width: 240, gap: 24, ...options.minSeparation, height: nodeHeight } } : {}),
   });
   // Dagre's dummy edge ranks can leave empty vertical slots. Pack each real
   // rank in its existing order, keeping the evidence-derived horizontal
@@ -42,7 +43,9 @@ export function graphHierarchyLayout(nodes: Node<LineageNodeData>[], edges: Edge
   const height = Math.max(0, rows - 1) * rowStep + nodeHeight;
   const stretch = span > 0 ? Math.max(1, Math.min(2, ((options.fitAspect ?? 2.2) * height - (options.nodeWidth ?? 240)) / span)) : 1;
   const spaced = packed.map(node => ({ ...node, position: { ...node.position, x: node.position.x * stretch } }));
-  const positioned = new Map(reduceRankCrossings(spaced, rankedEdges).map(node => [node.id, node]));
+  // Large contexts retain the established wrapped-rank layout. Packing all
+  // siblings into one column would recreate the tall fan-out problem.
+  const positioned = new Map((compact ? reduceRankCrossings(spaced, rankedEdges) : layout.nodes).map(node => [node.id, node]));
   return {
     nodes: nodes.map(node => positioned.get(node.id)!),
     edges: edges.map((edge): Edge => ({ ...edge,
