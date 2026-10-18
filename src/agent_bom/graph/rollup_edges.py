@@ -9,7 +9,7 @@ disconnected cards. The aggregate is not proof of a direct or executable path.
 from __future__ import annotations
 
 from collections import Counter, defaultdict, deque
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Iterable, Sequence
 from typing import Any, cast
 
 from agent_bom.graph.container import UnifiedGraph
@@ -18,8 +18,6 @@ from agent_bom.graph.types import RelationshipType
 # Cap on aggregated cross-container edges returned. Ordered by weight, so the
 # cut keeps the heaviest relationships — the ones a reviewer would look at first.
 MAX_CROSS_CONTAINER_EDGES = 400
-
-ContainmentPredicate = Callable[[UnifiedGraph, Any], bool]
 
 
 def combine_reasons(*reasons: str) -> str:
@@ -68,7 +66,7 @@ def cross_container_edge_rows(
     graph: UnifiedGraph,
     container_ids: Sequence[str],
     children: dict[str, list[str]],
-    is_containment: ContainmentPredicate,
+    containment: Sequence[bool],
 ) -> tuple[list[dict[str, Any]], int, dict[str, dict[str, Any]]]:
     """Return the bounded edge rows, their pre-cap source total and per-entry totals.
 
@@ -80,8 +78,8 @@ def cross_container_edge_rows(
         return [], 0, {}
 
     aggregated: dict[tuple[str, str], dict[str, Any]] = {}
-    for edge in graph.edges:
-        if is_containment(graph, edge):
+    for edge, contained in zip(graph.edges, containment):
+        if contained:
             continue
         source_container = owner.get(edge.source)
         target_container = owner.get(edge.target)
@@ -142,12 +140,7 @@ def _entry_connections(rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
 
 
 def _connections(connected: int, relationships: int) -> dict[str, Any]:
-    return {
-        "basis": "returned_entries",
-        "definition": "Other entries in this response linked by non-containment relationships; not direct children.",
-        "connected_entry_count": connected,
-        "relationship_count": relationships,
-    }
+    return {"connected_entry_count": connected, "relationship_count": relationships}
 
 
 def edge_count_metadata(graph: UnifiedGraph, *, returned: int, source_total: int) -> dict[str, Any]:
@@ -165,6 +158,7 @@ def edge_count_metadata(graph: UnifiedGraph, *, returned: int, source_total: int
         "returned": returned,
         "truncated": row_truncated or source_truncated,
         "source_truncated": source_truncated,
+        "connections_definition": "Each entry's connections count other returned entries it is linked to, before the row cap.",
         "reason": combine_reasons(
             graph.completeness.reason if source_truncated else "",
             "rollup_edge_limit" if row_truncated else "",
@@ -176,10 +170,10 @@ def edge_projection(
     graph: UnifiedGraph,
     entries: Sequence[dict[str, Any]],
     children: dict[str, list[str]],
-    is_containment: ContainmentPredicate,
+    containment: Sequence[bool],
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Edge rows for the returned entries; each entry gains its uncapped ``connections``."""
-    rows, source_total, connections = cross_container_edge_rows(graph, [entry["id"] for entry in entries], children, is_containment)
+    rows, source_total, connections = cross_container_edge_rows(graph, [entry["id"] for entry in entries], children, containment)
     for entry in entries:
         entry["connections"] = connections.get(entry["id"]) or _connections(0, 0)
     return rows, edge_count_metadata(graph, returned=len(rows), source_total=source_total)

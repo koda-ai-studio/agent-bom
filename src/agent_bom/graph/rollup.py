@@ -308,7 +308,12 @@ def _edge_is_containment(graph: UnifiedGraph, edge: Any) -> bool:
     )
 
 
-def _contains_children(graph: UnifiedGraph) -> dict[str, list[str]]:
+def _containment_flags(graph: UnifiedGraph) -> list[bool]:
+    """Classify every edge once; the tree build and the edge projection share it."""
+    return [_edge_is_containment(graph, edge) for edge in graph.edges]
+
+
+def _contains_children(graph: UnifiedGraph, flags: Optional[Sequence[bool]] = None) -> dict[str, list[str]]:
     """Map container_id -> sorted direct containment children (deterministic).
 
     Walks ``CONTAINS`` and account→``CLOUD_RESOURCE`` ``HOSTS``/``OWNS`` edges
@@ -318,8 +323,9 @@ def _contains_children(graph: UnifiedGraph) -> dict[str, list[str]]:
     output is stable across runs regardless of edge insertion order.
     """
     children: dict[str, set[str]] = defaultdict(set)
-    for edge in graph.edges:
-        if not _edge_is_containment(graph, edge):
+    flags = _containment_flags(graph) if flags is None else flags
+    for edge, contained in zip(graph.edges, flags):
+        if not contained:
             continue
         if edge.source == edge.target:
             continue
@@ -359,19 +365,39 @@ def containment_descendants(graph: UnifiedGraph, root: str) -> list[str]:
     return _descendants(root, _contains_children(graph))
 
 
+# Per-node roll-up facts: (type, severity bucket, rank, exposed, toxic, issue keys).
+_NodeFact = tuple[str, str, int, bool, bool, tuple[str, ...]]
+
+
+def _node_facts(graph: UnifiedGraph) -> dict[str, _NodeFact]:
+    """Derive each node's roll-up facts once; nested scopes revisit a node many times."""
+    issues = build_issue_index(graph)
+    return {
+        nid: (
+            _node_type_value(node),
+            _severity_bucket(node),
+            SEVERITY_RANK.get((node.severity or "").lower(), 0),
+            _is_exposed(node),
+            _is_toxic(node),
+            issues.get(nid, ()),
+        )
+        for nid, node in graph.nodes.items()
+    }
+
+
 def _aggregate(
     descendant_ids: list[str],
     graph: UnifiedGraph,
     *,
     filters: Optional[RollupFilters] = None,
     memberships: Optional[Counter[str]] = None,
-    issues: Optional[dict[str, tuple[str, ...]]] = None,
+    facts: Optional[dict[str, _NodeFact]] = None,
 ) -> RollupAggregate:
     agg = RollupAggregate()
     severity_counts: dict[str, int] = defaultdict(int)
     by_type: dict[str, int] = defaultdict(int)
     tally = IssueTally()
-    issue_keys = issues if issues is not None else {}
+    node_facts = facts if facts is not None else _node_facts(graph)
     active_filters = filters if filters is not None and filters.active() else None
     for nid in descendant_ids:
         node = graph.nodes.get(nid)
@@ -379,23 +405,21 @@ def _aggregate(
             continue
         if active_filters is not None and not active_filters.matches(node):
             continue
+        entity_type, bucket, rank, exposed, toxic, keys = node_facts[nid]
         agg.descendant_count += 1
         if memberships is not None:
             memberships[nid] += 1
-        by_type[_node_type_value(node)] += 1
-        bucket = _severity_bucket(node)
+        by_type[entity_type] += 1
         severity_counts[bucket] += 1
-        keys = issue_keys.get(nid)
         if keys:
             tally.add(node, keys)
-        rank = SEVERITY_RANK.get((node.severity or "").lower(), 0)
         if rank > agg.worst_severity_rank:
             agg.worst_severity_rank = rank
             agg.worst_severity = bucket
-        if _is_exposed(node):
+        if exposed:
             agg.internet_exposed = True
             agg.exposed_count += 1
-        if _is_toxic(node):
+        if toxic:
             agg.toxic_combo = True
             agg.toxic_count += 1
     agg.by_type = dict(by_type)
@@ -441,7 +465,7 @@ def cross_container_edges(
     children: dict[str, list[str]],
 ) -> list[dict[str, Any]]:
     """Aggregate NON-containment edges into container-to-container relationships."""
-    rows, _source_total, _connections = cross_container_edge_rows(graph, container_ids, children, _edge_is_containment)
+    rows, _source_total, _connections = cross_container_edge_rows(graph, container_ids, children, _containment_flags(graph))
     return rows
 
 
@@ -449,8 +473,9 @@ def _edge_projection(
     graph: UnifiedGraph,
     entries: Sequence[dict[str, Any]],
     children: dict[str, list[str]],
+    flags: Sequence[bool],
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-    return edge_projection(graph, entries, children, _edge_is_containment)
+    return edge_projection(graph, entries, children, flags)
 
 
 def rollup_view(
@@ -467,10 +492,11 @@ def rollup_view(
 
     Deterministic and bounded; the source graph is never mutated.
     """
-    children = _contains_children(graph)
+    flags = _containment_flags(graph)
+    children = _contains_children(graph, flags)
     parents = _contains_parents(children)
     root_ids = _roots(graph, children, parents)
-    issues = build_issue_index(graph)
+    facts = _node_facts(graph)
 
     containers: list[RollupContainer] = []
     memberships: Counter[str] = Counter()
@@ -480,7 +506,7 @@ def rollup_view(
         if node is None:
             continue
         descendants = _descendants(root_id, children)
-        agg = _aggregate(descendants, graph, filters=filters, memberships=memberships, issues=issues)
+        agg = _aggregate(descendants, graph, filters=filters, memberships=memberships, facts=facts)
         # When filters are active, drop containers whose descendants were all
         # filtered out — they carry no risk worth surfacing.
         if filters is not None and filters.active() and agg.descendant_count == 0 and not (filters.matches(node)):
@@ -534,7 +560,7 @@ def rollup_view(
                 is_container=_container_for(node, children),
                 has_children=bool(children.get(nid)),
                 direct_child_count=len(children.get(nid, [])),
-                aggregate=_aggregate(_descendants(nid, children), graph, filters=filters, memberships=memberships, issues=issues),
+                aggregate=_aggregate(_descendants(nid, children), graph, filters=filters, memberships=memberships, facts=facts),
                 context=_instance_context(node, graph),
             )
         )
@@ -550,10 +576,10 @@ def rollup_view(
 
     # Node-level aggregate over every orphan (matching nodes only), plus a
     # bounded per-item sample of the truncated tail for drill-in.
-    orphan_agg = _aggregate(orphan_ids, graph, filters=filters, issues=issues)
+    orphan_agg = _aggregate(orphan_ids, graph, filters=filters, facts=facts)
     # Every finding in the loaded graph, roots and orphans included: the
     # number that reconciles with the tenant's open-issue total.
-    estate_agg = _aggregate(list(graph.nodes), graph, filters=filters, issues=issues)
+    estate_agg = _aggregate(list(graph.nodes), graph, filters=filters, facts=facts)
     orphan_summary = {
         "total": len(orphan_ids),
         "shown": len(orphans),
@@ -580,7 +606,7 @@ def rollup_view(
     }
 
     top_level_rows = [c.to_dict() for c in top_level]
-    relationship_edges, edge_count_metadata = _edge_projection(graph, top_level_rows, children)
+    relationship_edges, edge_count_metadata = _edge_projection(graph, top_level_rows, children, flags)
 
     return {
         "scan_id": graph.scan_id,
@@ -669,10 +695,11 @@ def drill_down(
             ),
         }
 
-    children = _contains_children(graph)
+    flags = _containment_flags(graph)
+    children = _contains_children(graph, flags)
     direct = children.get(node_id, [])
     parent = graph.nodes[node_id]
-    issues = build_issue_index(graph)
+    facts = _node_facts(graph)
 
     child_entries: list[RollupContainer] = []
     memberships: Counter[str] = Counter()
@@ -681,7 +708,7 @@ def drill_down(
         if child is None:
             continue
         descendants = _descendants(child_id, children)
-        agg = _aggregate(descendants, graph, filters=filters, memberships=memberships, issues=issues)
+        agg = _aggregate(descendants, graph, filters=filters, memberships=memberships, facts=facts)
         if filters is not None and filters.active() and agg.descendant_count == 0 and not filters.matches(child):
             continue
         child_entries.append(
@@ -704,7 +731,7 @@ def drill_down(
     page_cut = len(page) < matching_total
 
     page_rows = [c.to_dict() for c in page]
-    relationship_edges, edge_count_metadata = _edge_projection(graph, page_rows, children)
+    relationship_edges, edge_count_metadata = _edge_projection(graph, page_rows, children, flags)
 
     return {
         "scan_id": graph.scan_id,

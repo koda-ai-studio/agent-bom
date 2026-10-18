@@ -152,7 +152,7 @@ def test_drilldown_children_carry_issue_basis_and_connection_totals() -> None:
     # ...so each entry carries the uncapped total of connected entries itself.
     assert hub["connections"]["connected_entry_count"] == child_count - 1
     assert hub["connections"]["relationship_count"] == child_count - 1
-    assert hub["connections"]["basis"] == "returned_entries"
+    assert "before the row cap" in page["edge_count_metadata"]["connections_definition"]
 
     small = drill_down(g, "org:wide", offset=0, limit=3)
     assert small["summary"]["direct_child_count"] == child_count
