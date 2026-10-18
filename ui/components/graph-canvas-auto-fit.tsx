@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Panel, useNodesInitialized, useReactFlow, useStore, type Node } from "@xyflow/react";
+import { Panel, useNodesInitialized, useReactFlow, useStore, type Node, type FitViewOptions } from "@xyflow/react";
 import { graphInspectorTargets } from "@/lib/graph-inspector-framing";
 import { graphAdaptiveFrame } from "@/lib/graph-adaptive-frame";
 
@@ -56,13 +56,23 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     onLayoutAspect(frameSize.layoutAspect);
     frameElement.style.setProperty("--graph-adaptive-height", `${frameSize.height}px`);
     if (preserveViewport) return;
-    const frame = requestAnimationFrame(() => {
-      const anchor = nodes.find(node => node.id === anchorId) ?? nodes[0];
-      void fitView({ padding: 0.08, duration: 0, minZoom: 0.05, maxZoom: 2,
-        ...(!frameSize.fitAll && anchor ? { nodes: inspector && width >= 640 ? graphInspectorTargets(anchor.id, nodes.map(node => node.id), getEdges()) : [{ id: anchor.id }], minZoom: inspector && width >= 640 ? 0.45 : 0.85, maxZoom: 1.1 } : {}),
+    const anchor = nodes.find(node => node.id === anchorId) ?? nodes[0];
+    const options: FitViewOptions = { padding: 0.08, duration: 0, minZoom: 0.05, maxZoom: 2,
+      ...(!frameSize.fitAll && anchor ? { nodes: inspector && width >= 640 ? graphInspectorTargets(anchor.id, nodes.map(node => node.id), getEdges()) : [{ id: anchor.id }], minZoom: inspector && width >= 640 ? 0.45 : 0.85, maxZoom: 1.1 } : {}),
+    };
+    let cancelled = false;
+    const frames: number[] = [];
+    frames.push(requestAnimationFrame(() => {
+      void fitView(options).then(() => {
+        // Zoom changes readable glyph/caption dimensions. Allow their resize
+        // measurements to settle before the final camera fit.
+        if (cancelled) return;
+        frames.push(requestAnimationFrame(() => frames.push(requestAnimationFrame(() => {
+          if (!cancelled) void fitView(options);
+        }))));
       });
-    });
-    return () => cancelAnimationFrame(frame);
+    }));
+    return () => { cancelled = true; frames.forEach(cancelAnimationFrame); };
   }, [enabled, initialized, width, height, layoutKey, anchorId, inspector, preserveViewport, windowHeight, spaceAbove, canvas, fitView, getNodes, getNodesBounds, getEdges, onLayoutAspect]);
   if (!initialized || width >= 640 || width <= 0) return null;
   const navigator = <GraphNodeNavigator nodes={getNodes()} orderedIds={navigationIds} />;

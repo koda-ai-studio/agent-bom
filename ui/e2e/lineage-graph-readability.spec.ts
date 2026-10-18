@@ -843,7 +843,8 @@ for (const theme of ["light", "dark"] as const) {
       const box = element.getBoundingClientRect();
       const label = element.querySelector("p")!;
       const zoom = new DOMMatrixReadOnly(getComputedStyle(element.closest(".react-flow__viewport")!).transform).a;
-      return box.width >= 180 && box.left >= 0 && box.right <= innerWidth && box.top >= 0 && box.bottom <= innerHeight && parseFloat(getComputedStyle(label).fontSize) * zoom >= 12;
+      return box.width >= 180 && box.left >= 0 && box.right <= innerWidth && box.top >= 0 && box.bottom <= innerHeight && parseFloat(getComputedStyle(label).fontSize) * zoom >= 12
+        ? true : { left: box.left, right: box.right, top: box.top, bottom: box.bottom, width: box.width, zoom };
     })).toBe(true);
     const headerBox = (await header.boundingBox())!;
     const canvasBox = (await page.getByRole("application").boundingBox())!;
@@ -955,8 +956,8 @@ for (const theme of ["light", "dark"] as const) {
     // Card width varies with its label; enforce readable rendered text as well as a usable target.
     expect(sizes.every(size=>size.width>=200 && size.font>=12)).toBe(true);
     await expect(page.locator(".relationship-badge")).toHaveCount(0);
-    await page.getByTestId("rf__node-server:small").hover();
-    await expect(page.locator(".relationship-badge")).toHaveCount(2);
+    await page.locator(".react-flow__edge").first().focus();
+    await expect(page.locator(".relationship-badge")).toHaveCount(1);
     const overlaps = await page.locator(".react-flow").evaluate(canvas => {
       const cards = [...canvas.querySelectorAll(".react-flow__node")].map(n => n.getBoundingClientRect());
       return [...canvas.querySelectorAll(".relationship-badge")].filter(label => {
@@ -1005,8 +1006,8 @@ for (const theme of ["light", "dark"] as const) {
     await expect(page.locator(".graph-relationship-label")).toHaveCount(0);
     const runtimeEdge = graph.edges.find((edge: { relationship: string }) => edge.relationship === "invoked");
     expect(runtimeEdge).toBeDefined();
-    await page.getByTestId(`rf__node-${runtimeEdge.source}`).hover();
-    await expect(page.locator(".graph-relationship-label").filter({ hasText: "Invoked (runtime)" })).toBeVisible();
+    await page.locator(`.react-flow__edge[data-id="${runtimeEdge.id}"]`).focus();
+    await expect(page.locator(".graph-relationship-label").filter({ hasText: "Invoked · observed" })).toBeVisible();
     const metrics = await page.locator(".graph-relationship-label .relationship-badge").evaluateAll(labels => labels.map(label => {
       const text = label.querySelector("span")!;
       const qualifier = text.querySelector<HTMLElement>(".graph-relationship-qualifier");
@@ -1018,7 +1019,7 @@ for (const theme of ["light", "dark"] as const) {
         lines: (text.getBoundingClientRect().height - qualifierHeight) / lineHeight(text),
         qualifierLines: qualifier ? qualifierHeight / lineHeight(qualifier) : 0 };
     }));
-    expect(metrics.some(metric => metric.verb === "Invoked (runtime)")).toBe(true);
+    expect(metrics.some(metric => metric.verb === "Invoked")).toBe(true);
     // The evidence qualifier sits on its own quieter line; the verb and the qualifier are each held to their own budget.
     expect(metrics.every(metric => metric.wrap !== "anywhere" && metric.lines <= 2.1 && metric.qualifierLines <= 1.1)).toBe(true);
     await page.screenshot({ path: testInfo.outputPath(`expanded-reference-${theme}.png`), fullPage: true });

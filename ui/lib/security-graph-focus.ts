@@ -177,15 +177,20 @@ export function pathRelationshipIds(
   for (let i = 0; i + 1 < path.hops.length; i++) {
     const verb = path.edges[i];
     if (!verb) continue;
-    for (const [source, target] of [[path.hops[i], path.hops[i + 1]], [path.hops[i + 1], path.hops[i]]]) {
-      const key = JSON.stringify([source, target]);
-      const values = steps.get(key) ?? new Set<string>();
-      values.add(verb);
-      steps.set(key, values);
-    }
+    const key = JSON.stringify([path.hops[i], path.hops[i + 1]]);
+    const values = steps.get(key) ?? new Set<string>();
+    values.add(verb);
+    steps.set(key, values);
   }
   return new Set(edges.filter(edge => {
-    const values = steps.get(JSON.stringify([edge.source, edge.target]));
-    return values?.has(edge.id) || (typeof edge.data?.relationship === "string" && values?.has(edge.data.relationship));
+    const forward = steps.get(JSON.stringify([edge.source, edge.target]));
+    const reverse = steps.get(JSON.stringify([edge.target, edge.source]));
+    const relationship = edge.data?.relationship;
+    // An explicit edge ID identifies its receipt in either visual orientation.
+    // Finding context is drawn after the asset but retains its affects arrow.
+    // Other directed verbs must follow the recorded path orientation.
+    return forward?.has(edge.id) || reverse?.has(edge.id) ||
+      (typeof relationship === "string" && (forward?.has(relationship) ||
+        ((edge.data?.direction === "bidirectional" || relationship === "affects") && reverse?.has(relationship))));
   }).map(edge => edge.id));
 }

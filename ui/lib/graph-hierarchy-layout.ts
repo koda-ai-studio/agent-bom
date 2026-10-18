@@ -119,7 +119,10 @@ export function graphHierarchyLayout(nodes: Node<LineageNodeData>[], edges: Edge
   // aspect-aware wrapping so a small evidence set does not become a tall
   // column that the adaptive camera can only show one node at a time.
   const compact = nodes.length <= 24 && (repository || Math.max(0, ...fanIn.values(), ...fanOut.values()) <= 2);
-  const tallCaptions = nodes.some(node => node.data.occurrenceRole || (node.data.label?.length ?? 0) > 32);
+  const captionRanks = sourceRanks(nodes, rankedEdges);
+  const stackedFinding = nodes.some(node => FINDINGS.has(node.data.nodeType) &&
+    (!captionRanks || nodes.some(peer => peer.id !== node.id && captionRanks.get(peer.id) === captionRanks.get(node.id))));
+  const tallCaptions = stackedFinding || nodes.some(node => node.data.occurrenceRole || (node.data.label?.length ?? 0) > 32);
   const layout = applyDagreLayout([...nodes].sort((a,b) => a.id.localeCompare(b.id)), rankedEdges, {
     direction: "LR", nodeWidth: 240, nodeHeight: 224, nodeSep: 40, ...options,
     ...(nodes.length <= 24 && tallCaptions ? { nodeHeight,
