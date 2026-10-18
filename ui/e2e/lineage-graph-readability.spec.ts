@@ -51,7 +51,11 @@ for (const theme of ["light", "dark"] as const) for (const width of [390, 1440])
     await page.goto(`/graph?lens=lineage&scan=${scanId}&rollup=0`);
     const canvas = page.locator(".react-flow").last();
     await expect(page.getByTestId("rf__node-agent:desktop")).toBeVisible();
-    if (width === 1440) await page.getByTestId("rf__node-agent:desktop").click();
+    await settledViewportZoom(page);
+    if (width === 1440) {
+      await page.getByTestId("rf__node-agent:desktop").click();
+      await expect(page.getByTestId("graph-entity-drawer")).toBeVisible();
+    }
     await settledViewportZoom(page);
     const before = await canvas.locator(".react-flow__viewport").getAttribute("style");
     available = true;
