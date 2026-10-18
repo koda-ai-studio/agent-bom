@@ -119,10 +119,11 @@ export function graphHierarchyLayout(nodes: Node<LineageNodeData>[], edges: Edge
   // aspect-aware wrapping so a small evidence set does not become a tall
   // column that the adaptive camera can only show one node at a time.
   const compact = nodes.length <= 24 && (repository || Math.max(0, ...fanIn.values(), ...fanOut.values()) <= 2);
-  const captionRanks = sourceRanks(nodes, rankedEdges);
-  const stackedFinding = nodes.some(node => FINDINGS.has(node.data.nodeType) &&
+  const captionRanks = nodes.length <= 24 ? sourceRanks(nodes, rankedEdges) : null;
+  const stackedFinding = nodes.length <= 24 && nodes.some(node => FINDINGS.has(node.data.nodeType) &&
     (!captionRanks || nodes.some(peer => peer.id !== node.id && captionRanks.get(peer.id) === captionRanks.get(node.id))));
-  const tallCaptions = stackedFinding || nodes.some(node => node.data.occurrenceRole || (node.data.label?.length ?? 0) > 32);
+  const tallCaptions = stackedFinding || nodes.some(node => node.data.occurrenceRole || node.data.description ||
+    node.data.serverName || node.data.agentType || node.data.identityContext || (node.data.label?.length ?? 0) > 32);
   const layout = applyDagreLayout([...nodes].sort((a,b) => a.id.localeCompare(b.id)), rankedEdges, {
     direction: "LR", nodeWidth: 240, nodeHeight: 224, nodeSep: 40, ...options,
     ...(nodes.length <= 24 && tallCaptions ? { nodeHeight,
@@ -153,7 +154,10 @@ export function graphHierarchyLayout(nodes: Node<LineageNodeData>[], edges: Edge
   const spaced = packed.map(node => ({ ...node, position: { ...node.position, x: node.position.x * stretch } }));
   // Large contexts retain the established wrapped-rank layout. Packing all
   // siblings into one column would recreate the tall fan-out problem.
-  const ordered = compact ? orderHierarchyBranches(spaced, rankedEdges) : layout.nodes;
+  const ordered = compact ? orderHierarchyBranches(spaced, rankedEdges)
+    : nodes.length <= 24 && tallCaptions
+      ? layout.nodes.map(node => ({ ...node, style: { ...node.style, minHeight: nodeHeight } }))
+      : layout.nodes;
   const positioned = new Map((compact && repository ? alignHierarchyBranches(ordered, rankedEdges, rowStep) : ordered).map(node => [node.id, node]));
   return {
     nodes: nodes.map(node => positioned.get(node.id)!),

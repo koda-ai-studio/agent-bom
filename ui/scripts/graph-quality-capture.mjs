@@ -72,10 +72,12 @@ export async function runGraphQualityCapture({ newCapturePage, buildScopeShowcas
       const geometry = await page.locator(".react-flow__node").evaluateAll(nodes => {
         const rects = nodes.map(n => ({ id: n.dataset.id, r: n.getBoundingClientRect() }));
         const overlaps = rects.flatMap((a, i) => rects.slice(i + 1).filter(b => a.r.left < b.r.right && a.r.right > b.r.left && a.r.top < b.r.bottom && a.r.bottom > b.r.top).map(b => [a.id, b.id]));
-        return { overlaps, horizontalOverflow: document.documentElement.scrollWidth > window.innerWidth };
+        const canvas = document.querySelector(".react-flow").getBoundingClientRect();
+        const clipped = window.innerWidth >= 640 ? rects.filter(({ r }) => r.left < canvas.left - 2 || r.right > canvas.right + 2 || r.top < canvas.top - 2 || r.bottom > canvas.bottom + 2).map(({ id }) => id) : [];
+        return { overlaps, clipped, horizontalOverflow: document.documentElement.scrollWidth > window.innerWidth };
       });
       await page.screenshot({ path: path.join(output, `${key}.png`) });
-      if (geometry.overlaps.length || geometry.horizontalOverflow || audit.misalignedHandles.length || audit.logos.some(logo => !logo.loaded || logo.overlapsGlyph) || errors.length) throw new Error(JSON.stringify({ geometry, audit, errors }));
+      if (geometry.overlaps.length || geometry.clipped.length || geometry.horizontalOverflow || audit.misalignedHandles.length || audit.logos.some(logo => !logo.loaded || logo.overlapsGlyph) || errors.length) throw new Error(JSON.stringify({ geometry, audit, errors }));
       const finding = fixture.nodes.find(n => n.entity_type === "misconfiguration") ?? fixture.nodes.find(n => n.entity_type === "vulnerability");
       if (finding) {
         const target = page.locator(`.react-flow__node[data-id="${finding.id}"]`);
