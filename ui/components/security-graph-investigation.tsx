@@ -193,6 +193,7 @@ function InvestigationFlow({
       baseOpacity: 1,
       highSignalOpacity: 1,
       zoom: viewport.zoom,
+      preserveLabelState: true,
       nodeLabels: graphNodeDisplayLabels(nodes),
     }),
     [edges, nodes, viewport.zoom],
@@ -412,7 +413,7 @@ export function SecurityGraphInvestigation({
     });
   }, [activeGraph, attackPath, bounded, focusMode]);
 
-  const layout = useGraphLayout("dagre-lr", flow.nodes, flow.edges, {
+  const layout = useGraphLayout(focusMode ? "dagre-lr" : "asset-hierarchy", flow.nodes, flow.edges, {
     dagreLr: readableLineageDagreLr({ rankSep: 96, nodeSep: 40 }),
   });
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -433,8 +434,10 @@ export function SecurityGraphInvestigation({
   }, [attackPath, canvasWidth, embedded, focusMode, layout.nodes]);
   const canvasNodes = pathLayout?.nodes ?? layout.nodes;
   const displayEdges = useMemo(
-    () => readableGraphEdges(layout.edges, undefined, { nodeLabels: graphNodeDisplayLabels(layout.nodes) }),
-    [layout.edges, layout.nodes],
+    () => readableGraphEdges(layout.edges.map(edge => ({ ...edge, data: { ...edge.data,
+      quietLabel: edge.data?.quietLabel && edge.id !== selectedEdge?.id && edge.source !== selectedNodeId && edge.target !== selectedNodeId,
+    } })), undefined, { nodeLabels: graphNodeDisplayLabels(layout.nodes) }),
+    [layout.edges, layout.nodes, selectedEdge?.id, selectedNodeId],
   );
   const legendItems = useMemo(
     () => legendItemsForVisibleGraph(layout.nodes, displayEdges),
@@ -493,6 +496,7 @@ export function SecurityGraphInvestigation({
       lens: "investigation",
       scope: JSON.stringify({
         focus: focusMode && attackPath ? attackPath.hops.join("=>") : "full-snapshot",
+        layout: focusMode ? "dagre-lr" : "evidence-flow-v1",
         topology: graphTopologyKey(layout.nodes, displayEdges),
       }),
     }),

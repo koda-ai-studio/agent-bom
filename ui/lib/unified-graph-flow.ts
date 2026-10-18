@@ -1,6 +1,7 @@
 import { graphEdgeEvidence, graphEdgeEvidenceLabel } from "@/lib/graph-edge-evidence";
 import { NODE_LABELS } from "@/lib/entity-labels";
 import { nodeRiskAssessment } from "@/lib/node-risk-assessment";
+import { graphRepositoryContext } from "@/lib/graph-repository-context";
 import { MarkerType, type Edge, type Node } from "@xyflow/react";
 
 import {
@@ -365,6 +366,8 @@ function toLineageData(
     evidenceNotAfter: stringAttr(node, "not_after"),
   };
 
+  const repository = graphRepositoryContext(data);
+  if (repository?.slug) data.label = repository.slug;
   switch (nodeType) {
     case "provider":
       data.agentCount = countOutgoing(

@@ -3,6 +3,8 @@
 import { AgentSourceMark } from "@/components/agent-source-mark";
 import { agentSource } from "@/lib/agent-source";
 import { entityIcon } from "@/lib/entity-icons";
+import { graphRepositoryContext } from "@/lib/graph-repository-context";
+import { FolderGit2 } from "lucide-react";
 import { NODE_LABELS } from "@/lib/entity-labels";
 import { nodeRiskLabel } from "@/lib/node-risk-assessment";
 import { useEffect, useState, type ReactNode } from "react";
@@ -96,15 +98,17 @@ export function LineageDetailPanel({
   headerSlot?: ReactNode;
   footerSlot?: ReactNode;
 }) {
-  const Icon = entityIcon(data.nodeType);
+  const repository = graphRepositoryContext(data);
+  const Icon = repository ? FolderGit2 : entityIcon(data.nodeType);
   const brand = agentSource(data);
-  const typeLabel = data.nodeType === "server" ? "MCP Server" : data.nodeType === "sharedServer" ? "Shared MCP Server" : NODE_LABELS[data.nodeType];
+  const typeLabel = repository ? "Repository" : data.nodeType === "server" ? "MCP Server" : data.nodeType === "sharedServer" ? "Shared MCP Server" : NODE_LABELS[data.nodeType];
   const osvUrl =
     data.nodeType === "vulnerability"
       ? getOsvVulnerabilityUrl(data.label)
       : null;
   const extraAttributes = Object.entries(data.attributes ?? {}).filter(
     ([key]) => {
+      if (repository && ["repo_url", "full_name", "provider", "host", "branch", "default_branch", "commit_sha", "repository_commit", "git_commit"].includes(key)) return false;
       return !new Set([
         "agent_type",
         "status",
@@ -161,6 +165,14 @@ export function LineageDetailPanel({
   // ---- Node-type primary block (the "what is this node" hero detail) --------
   const typeSection = (
     <>
+      {repository && <div className="space-y-2" aria-label="Repository context">
+        <Row label="Repository" value={repository.slug || data.label} />
+        <Row label="Host" value={repository.host} />
+        <Row label="Remote" value={repository.remote || "Not recorded"} />
+        <Row label="Scanned branch" value={repository.branch || "Not recorded"} />
+        <Row label="Scanned commit" value={repository.commit || "Not recorded"} />
+        {repository.defaultBranch && <Row label="Default branch" value={repository.defaultBranch} />}
+      </div>}
       {data.nodeType === "provider" && data.agentCount !== undefined && (
         <Row label="Hosted agents" value={data.agentCount} />
       )}
@@ -684,7 +696,7 @@ export function LineageDetailPanel({
       <div className="fixed inset-0 z-[80]" data-testid="graph-entity-drawer">
         <Drawer open onClose={onClose} title={data.label} backdropLabel="Dismiss graph details"
           eyebrow={typeLabel} size="none" resizable={false}
-          headerAside={brand ? <AgentSourceMark source={brand} className="h-9 w-9" /> : undefined}
+          headerAside={repository || brand ? <AgentSourceMark source={repository?.source ?? brand} icon={repository ? FolderGit2 : undefined} className="h-9 w-9" /> : undefined}
           bodyClassName="!p-0 flex flex-col" footer={footerSlot}>
           {tabBar}
           <div role="tabpanel" data-testid={`graph-drawer-panel-${activeId}`}
@@ -745,7 +757,7 @@ export function LineageDetailPanel({
           </span>
           <div className="mt-2 flex items-start gap-3">
             <span className="rounded-full border border-outline bg-surface-muted p-2" style={brand ? { borderColor: brand.accent } : undefined}>
-              {data.nodeType === "agent" ? <AgentSourceMark source={brand} className="h-5 w-5 text-ink-secondary" /> : <Icon aria-hidden="true" className="h-5 w-5 shrink-0 text-ink-secondary" />}
+              {data.nodeType === "agent" || repository ? <AgentSourceMark source={repository?.source ?? brand} icon={repository ? FolderGit2 : undefined} className="h-5 w-5 text-ink-secondary" /> : <Icon aria-hidden="true" className="h-5 w-5 shrink-0 text-ink-secondary" />}
             </span>
             <h3 className="min-w-0 self-center break-words text-base font-semibold leading-5 text-foreground [overflow-wrap:anywhere]">
               {data.label}

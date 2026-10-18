@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { auditRenderedGraph } from "./graph-visual-audit.mjs";
 import { chromium, expect } from "@playwright/test";
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -2646,6 +2647,16 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
         throw new Error(`Expected API response ${expectedPath} was not observed on ${urlPath}`);
       }
     }
+    if (options.repositoryVisualAudit) {
+      const audit = await page.evaluate(auditRenderedGraph, { edges: options.repositoryVisualAudit });
+      console.log(`repository visual audit ${filename}: ${JSON.stringify(audit)}`);
+      if (audit.renderedEdges !== options.repositoryVisualAudit.length || audit.crossings.length) {
+        throw new Error(`Repository relationships cross or are missing: ${JSON.stringify(audit)}`);
+      }
+      if (!audit.logos.some(logo => logo.source === "github" && logo.loaded && logo.size >= 18 && !logo.overlapsGlyph)) {
+        throw new Error(`Repository host logo is missing or too small: ${JSON.stringify(audit.logos)}`);
+      }
+    }
     if (options.minGraphNodes) {
       const graphNodeCount = await page.locator(".react-flow__node:visible").count();
       const graphEdgeCount = await page.locator(".react-flow__edge").count();
@@ -2711,7 +2722,9 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
             })
             .filter(Number.isFinite),
         );
-        if (edgeLabelFonts.length < graphEdgeCount || Math.min(...edgeLabelFonts) < options.minGraphEdgeLabelFontPx) {
+        const onDemandLabels = await page.locator('[data-graph-annotations="on-demand"]').count() > 0;
+        if (options.assertQuietGraphLabels && edgeLabelFonts.length) throw new Error(`Overview repeats relationship labels on ${urlPath}`);
+        if ((!onDemandLabels && edgeLabelFonts.length < graphEdgeCount) || Math.min(...edgeLabelFonts) < options.minGraphEdgeLabelFontPx) {
           throw new Error(
             `Unreadable or missing graph relationship labels on ${urlPath}: ${edgeLabelFonts.length}/${graphEdgeCount} labels, minimum ${Math.min(...edgeLabelFonts)}px`,
           );
@@ -2785,6 +2798,16 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
             || bounds.top < frame.top - 1 || bounds.bottom > frame.bottom + 1 ? [node.dataset.id] : [];
         }));
         if (clipped.length) throw new Error(`Graph nodes clipped on ${urlPath}: ${clipped.join(", ")}`);
+      }
+      if (options.assertGraphNodesSeparated) {
+        const collisions = await page.locator(".react-flow__node").evaluateAll(nodes => nodes.flatMap((left, index) => {
+          const a = left.getBoundingClientRect();
+          return nodes.slice(index + 1).filter(right => {
+            const b = right.getBoundingClientRect();
+            return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+          }).map(right => `${left.dataset.id} intersects ${right.dataset.id}`);
+        }));
+        if (collisions.length) throw new Error(`Graph nodes overlap on ${urlPath}: ${collisions.join(" | ")}`);
       }
       if (options.assertEdgeLabelsClearOfNodes) {
         const collisions = await page.evaluate(() => {
@@ -3189,6 +3212,9 @@ async function main() {
           minGraphNodes: fixture.nodes.length, maxGraphNodes: fixture.nodes.length,
           minGraphEdges: fixture.edges.length, maxGraphEdges: fixture.edges.length,
           minGraphNodeFontPx: 12, minGraphEdgeLabelFontPx: 12, minGraphBadgeFontPx: 11,
+          assertGraphNodesSeparated: true, assertGraphNodesWithinCanvas: true,
+          assertQuietGraphLabels: true,
+          repositoryVisualAudit: scope === "repository" ? fixture.edges : undefined,
           assertEdgeLabelsClearOfNodes: true, assertNoHorizontalOverflow: true });
         await p.close();
       }
@@ -3487,7 +3513,6 @@ async function main() {
         "Developer Copilot",
         "Sre Runbook Agent",
         "filesystem MCP",
-        "Uses",
         "modeled",
       ],
       expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/query"],
@@ -3495,6 +3520,7 @@ async function main() {
       minGraphEdges: 5,
       minGraphNodeFontPx: 12,
       minGraphEdgeLabelFontPx: 12,
+      assertQuietGraphLabels: true,
       assertNodeLabelsWithinBounds: true,
       assertEdgeLabelsClearOfNodes: true,
       assertNoHorizontalOverflow: true,
