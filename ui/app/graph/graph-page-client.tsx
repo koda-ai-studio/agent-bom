@@ -2318,7 +2318,7 @@ function GraphPageInner() {
     [captureMode, displayEdges.length, displayNodes.length, rollupNavigationActive],
   );
   const [manualCameraScope, setManualCameraScope] = useState<string | null>(null);
-  const cameraScope = JSON.stringify([selectedScanId, filters, selectedNodeId, selectedRelationship?.id, selectedAttackPathKey, investigationMode?.rootId]);
+  const cameraScope = JSON.stringify([selectedScanId, filters, selectedNodeId, selectedRelationship?.id, selectedAttackPathKey, investigationMode?.rootId, selectedContextGroup, investigationContext ? displayNodes.map(node => node.id) : null]);
   const manualCamera = manualCameraScope === cameraScope;
   const initialViewportRequest = useMemo<ReturnType<typeof graphInitialFitViewOptions>>(() => {
     if (!narrowViewport && compactInvestigationTopology) return { ...viewportOptions, minZoom: COMPACT_GRAPH_MIN_ZOOM, maxZoom: 1 };
@@ -2393,11 +2393,26 @@ function GraphPageInner() {
     ownerActive: Boolean(session),
     localMode: session?.recommended_ui_mode === "no_auth",
   });
+  const fitGeneration = useRef(0);
+  useEffect(() => () => { fitGeneration.current += 1; }, [cameraScope]);
   const fitVisible = useCallback(() => {
     setManualCameraScope(cameraScope);
-    // Reserve room for readability-sized cards as their glyphs settle at the
-    // new zoom, without a second camera movement after a user starts clicking.
-    void reactFlow.fitView({ ...viewportOptions, padding: Math.max(investigationContext ? 0.25 : 0.2, viewportOptions.padding), duration: 240 });
+    const generation = ++fitGeneration.current;
+    const options = { ...viewportOptions, padding: Math.max(investigationContext ? 0.25 : 0.2, viewportOptions.padding) };
+    const fit = () => {
+      if (fitGeneration.current !== generation) return;
+      void reactFlow.fitView({ ...options, duration: 240 }).then(() => {
+        if (!investigationContext) return;
+        // Caption sizes change with zoom. Include their final measured extent,
+        // but abandon the settling pass after a scope change or user movement.
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          if (fitGeneration.current === generation) void reactFlow.fitView({ ...options, duration: 0 });
+        }));
+      });
+    };
+    // Let React Flow apply manual-camera props before enqueueing the fit;
+    // changing its fitView prop otherwise clears the pending imperative fit.
+    requestAnimationFrame(() => requestAnimationFrame(fit));
   }, [reactFlow, viewportOptions, investigationContext, cameraScope]);
   const fitSelection = useCallback(async () => {
     if (rollupNavigationActive) {
@@ -3843,7 +3858,7 @@ function GraphPageInner() {
               // A concurrent animated initial fit can resize LOD cards after
               // the measured fit has settled, leaving the root offscreen.
               fitView={Boolean(selectedScenarioId || selectedAttackPath) && !manualCamera && !presentation.hasSavedState && !presentation.restoredSavedState}
-              fitViewOptions={initialViewportOptions}
+              fitViewOptions={manualCamera ? viewportOptions : initialViewportOptions}
               defaultViewport={presentation.restoredViewport ?? presentation.viewport}
               minZoom={canvasLens === "estate" ? 0.05 : 0.16}
               maxZoom={2.5}
@@ -3878,6 +3893,7 @@ function GraphPageInner() {
               onNodeMouseLeave={onNodeMouseLeave}
               onNodesChange={presentation.onNodesChange}
               onNodeDragStop={presentation.onNodeDragStop}
+              onMoveStart={(event) => { if (event) fitGeneration.current += 1; }}
               onMoveEnd={presentation.onMoveEnd}
               onPaneClick={() => {
                 setSelectedRelationship(null);
@@ -3906,7 +3922,7 @@ function GraphPageInner() {
                 onLayoutAspect={setCanvasLayoutAspect}
               />
               <Background color={BACKGROUND_COLOR} gap={BACKGROUND_GAP} />
-              <Controls {...(investigationContext ? { fitViewOptions: { padding: 0.25, minZoom: 0.05, maxZoom: 2 } } : {})} orientation={selectedScenarioId ? "horizontal" : "vertical"} position="bottom-left" className={CONTROLS_CLASS} />
+              <Controls {...(investigationContext ? { onFitView: fitVisible, fitViewOptions: { padding: 0.25, minZoom: 0.05, maxZoom: 2 } } : {})} orientation={selectedScenarioId ? "horizontal" : "vertical"} position="bottom-left" className={CONTROLS_CLASS} />
               {minimapExpanded && showMiniMap && (canvasLens !== "estate" || graphViewport.zoom >= 1) && (
                 <MiniMap
                   position={narrowViewport ? "top-right" : "bottom-right"}
