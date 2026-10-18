@@ -92,5 +92,11 @@ for (const theme of ["light", "dark"]) test(`fit all includes complete shared-se
       return r.width && r.height && (r.left < bounds.left || r.right > bounds.right || r.top < bounds.top || r.bottom > bounds.bottom);
     }).map(element => element.getAttribute("data-edge-id") ?? element.id ?? String(element.className));
   })).toEqual([]);
+  const badgeFonts = await page.locator(".react-flow__node [data-node-badge]").evaluateAll(badges => badges.map(badge => {
+    const transform = getComputedStyle(badge.closest(".react-flow__viewport")!).transform;
+    return parseFloat(getComputedStyle(badge).fontSize) * new DOMMatrixReadOnly(transform).a;
+  }));
+  expect(badgeFonts.length).toBeGreaterThan(0);
+  expect(Math.min(...badgeFonts)).toBeGreaterThanOrEqual(11);
   await page.screenshot({ path: info.outputPath(`shared-server-${theme}.png`), animations: "disabled" });
 });

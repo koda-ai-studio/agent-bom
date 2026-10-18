@@ -1,3 +1,4 @@
+import { readableGraphNodeStyle } from "@/lib/graph-node-dimensions";
 import { describe, expect, it } from "vitest";
 import type { Edge, Node } from "@xyflow/react";
 import type { LineageNodeData } from "@/components/lineage-nodes";
@@ -68,4 +69,9 @@ it("groups findings by their recorded asset instead of their category alone", ()
   expect(context.groups.find(group => group.id === "dependency")!.nodeIds).toEqual(["package", "package-cve"]);
   expect(context.groups.find(group => group.id === "workload")!.nodeIds).toEqual(["workload", "cloud-policy", "server-cve"]);
   expect(selectInvestigationContext(context, "all").edges).toEqual(edges);
+});
+
+it("keeps bounded investigation metadata readable after fitting all context", () => {
+  const style = readableGraphNodeStyle(0.47, true) as Record<string, string>;
+  expect(parseFloat(style["--graph-node-meta-size"]!) * 0.47).toBeGreaterThanOrEqual(11);
 });
