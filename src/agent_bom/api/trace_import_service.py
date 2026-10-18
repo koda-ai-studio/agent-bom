@@ -152,4 +152,10 @@ def _next_cursor_history(current: TraceImportCheckpoint, cursor: str | None) -> 
 
 def _provider_error(exc: TraceConnectorError) -> dict[str, Any]:
     status = exc.status if isinstance(exc, _TraceConnectorHTTPError) else None
-    return {"code": "rate_limited" if status == 429 else "provider_unavailable", "retryable": status not in {400, 401, 403, 404, 410}}
+    error: dict[str, Any] = {
+        "code": "rate_limited" if status == 429 else "provider_unavailable",
+        "retryable": status not in {400, 401, 403, 404, 410},
+    }
+    if error["retryable"] and isinstance(exc, _TraceConnectorHTTPError) and exc.retry_after > 0:
+        error["retry_after_seconds"] = exc.retry_after
+    return error

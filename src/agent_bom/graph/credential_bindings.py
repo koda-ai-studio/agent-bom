@@ -24,13 +24,29 @@ def _provider(node: UnifiedNode) -> str:
     return str(node.attributes.get("cloud_provider") or node.attributes.get("provider") or node.dimensions.cloud_provider or "").lower()
 
 
+def _reference(binding: Mapping) -> str:
+    return sanitize_text(str(binding.get("identity_canonical_id") or "").strip())
+
+
 def project_credential_bindings(graph: UnifiedGraph, agents: list[dict[str, Any]], source: str) -> None:
     """Build the index once; native IDs shadow aliases and provider conflicts fail closed."""
-    native_nodes = dict(graph.nodes)
+    references = {
+        _reference(binding)
+        for agent in agents
+        for server in agent.get("mcp_servers", [])
+        for binding in server.get("identity_bindings", [])
+        if isinstance(binding, Mapping)
+    } - {""}
+    if not references:
+        return
+    # Snapshot membership before adding placeholders, without retaining every
+    # node object and defeating the store-backed graph's bounded working set.
+    native_ids = {reference for reference in references if graph.get_node(reference) is not None}
     canonical: dict[str, list[str]] = defaultdict(list)
-    for node in native_nodes.values():
-        if node.entity_type in _IDENTITIES and isinstance(node.attributes.get("canonical_id"), str):
-            canonical[node.attributes["canonical_id"]].append(node.id)
+    for node in graph.nodes.values():
+        alias = node.attributes.get("canonical_id")
+        if node.entity_type in _IDENTITIES and isinstance(alias, str) and alias in references:
+            canonical[alias].append(node.id)
     for agent in agents:
         for server in agent.get("mcp_servers", []):
             server_id = agent_graph_id_for(agent) if _is_sbom_import(agent) else mcp_server_graph_id_for(server, agent)
@@ -41,7 +57,7 @@ def project_credential_bindings(graph: UnifiedGraph, agents: list[dict[str, Any]
                 credential = graph.get_node(f"cred:{server_id}:{env_key}")
                 if credential is None or credential.entity_type is not EntityType.CREDENTIAL:
                     continue
-                _project_binding(graph, credential.id, binding, canonical, native_nodes, source)
+                _project_binding(graph, credential.id, binding, canonical, native_ids, source)
 
 
 def _project_binding(
@@ -49,18 +65,18 @@ def _project_binding(
     credential: str,
     binding: Mapping,
     canonical: dict[str, list[str]],
-    native_nodes: dict[str, UnifiedNode],
+    native_ids: set[str],
     source: str,
 ) -> None:
-    reference = sanitize_text(str(binding.get("identity_canonical_id") or "").strip())
+    reference = _reference(binding)
     evidence_source = sanitize_text(str(binding.get("evidence_source") or "").strip())
     provider = sanitize_text(str(binding.get("provider") or "").strip().lower())
     if not reference or not evidence_source:
         return
     # Placeholders added by earlier bindings cannot become new identity evidence.
-    direct = native_nodes.get(reference)
+    direct = reference in native_ids
     # A conflicting live node must never redirect through a shadowing alias.
-    ids = [reference] if direct is not None else canonical.get(reference, [])
+    ids = [reference] if direct else canonical.get(reference, [])
     matches = [
         node_id
         for node_id in ids

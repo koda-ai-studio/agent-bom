@@ -21,6 +21,18 @@ def no_dns(monkeypatch):
     monkeypatch.setattr(connectors, "_validate_pull_url", lambda _: None)
 
 
+@pytest.mark.parametrize("status", [429, 503])
+@pytest.mark.parametrize("header,expected", [("120", 120), ("999999999", 86400), ("api_key=private-value", 0)])
+def test_native_reader_preserves_bounded_retry_timing_without_header_content(status, header, expected):
+    import httpx
+
+    with httpx.Client(transport=httpx.MockTransport(lambda _: httpx.Response(status, headers={"Retry-After": header}))) as client:
+        with pytest.raises(connectors._TraceConnectorHTTPError) as caught:
+            connectors._call_json(client, "GET", "https://example.test")
+    assert caught.value.retry_after == expected
+    assert "private-value" not in str(caught.value)
+
+
 def test_langfuse_page_uses_fixed_window_cursor_and_preserves_native_kinds():
     client = Client({"data": [{"id": "agent", "name": "root", "type": "AGENT"}], "meta": {"cursor": "second"}})
     page = connectors.fetch_trace_page(

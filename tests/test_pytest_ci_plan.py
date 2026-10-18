@@ -221,6 +221,15 @@ def test_gateway_modules_select_cross_surface_enforcement_contracts(tmp_path: Pa
         assert select_targeted_tests(changed_files=[Path(source)], root=tmp_path) == expected
 
 
+def test_credential_bindings_select_store_backed_build_contract(tmp_path: Path) -> None:
+    expected = sorted(
+        tmp_path / path for path in ("tests/test_graph_credential_bindings.py", "tests/graph/test_store_backed_build_wiring.py")
+    )
+    for path in expected:
+        _write(path, 1)
+    assert select_targeted_tests(changed_files=[Path("src/agent_bom/graph/credential_bindings.py")], root=tmp_path) == expected
+
+
 def test_report_projection_edits_select_builder_store_and_runtime_contracts(tmp_path: Path) -> None:
     expected = sorted(
         tmp_path / "tests" / name

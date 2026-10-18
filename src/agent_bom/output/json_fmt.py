@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 from agent_bom.advisory_ids import vulnerability_enrichment_metadata
@@ -23,7 +22,7 @@ from agent_bom.models import AIBOMReport, BlastRadius
 from agent_bom.output.exposure_path import exposure_path_for_report_finding
 from agent_bom.output.finding_views import blast_radius_output_tags, cve_findings
 from agent_bom.output.json_sections import _package_occurrence_to_dict, _severity_label, _severity_state, agents_json
-from agent_bom.output.json_writer import write_json_document
+from agent_bom.output.json_writer import write_json_file
 from agent_bom.output.side_findings import _append_side_findings, stamp_finding_node_ids
 from agent_bom.security import (
     sanitize_command_args,
@@ -1254,5 +1253,4 @@ def export_json(
 ) -> None:
     """Export report as JSON file."""
     data = to_redacted_json(report, report_json=report_json)
-    with Path(output_path).open("w", encoding="utf-8") as fh:
-        write_json_document(data, fh)
+    write_json_file(data, output_path)

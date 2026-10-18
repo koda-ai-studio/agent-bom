@@ -3,7 +3,37 @@
 from __future__ import annotations
 
 import json
-from typing import Any, TextIO
+import os
+import stat
+import tempfile
+from pathlib import Path
+from typing import Any, TextIO, cast
+
+
+def write_json_file(data: dict[str, Any], output_path: str) -> None:
+    """Publish a complete JSON file by same-directory replacement.
+
+    Encoding, write, flush and replacement failures leave an existing report
+    intact. Resolve links to preserve the existing export's symlink behavior.
+    New files are private; replacements preserve the destination's mode bits.
+    This protects publication, not directory durability across power loss.
+    """
+    target = Path(output_path).resolve()
+    if target.exists() and not target.is_file():
+        raise ValueError("JSON report destination must be a regular file")
+    temporary: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=target.parent, prefix=".agent-bom-json-", delete=False) as fh:
+            temporary = Path(fh.name)
+            write_json_document(data, cast(TextIO, fh))
+            fh.flush()
+            os.fsync(fh.fileno())
+        if target.exists():
+            temporary.chmod(stat.S_IMODE(target.stat().st_mode))
+        os.replace(temporary, target)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
 
 
 def write_json_document(data: dict[str, Any], fh: TextIO) -> None:

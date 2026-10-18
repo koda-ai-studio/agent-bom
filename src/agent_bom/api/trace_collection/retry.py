@@ -1,17 +1,8 @@
 """Persisted retry scheduling: one provider attempt per user request, never a retry storm."""
 
 import random
-from email.utils import parsedate_to_datetime
 
-
-def provider_retry_after(value: str | None, *, now: float) -> float:
-    if not value:
-        return 0
-    try:
-        seconds = float(value) if value.isdigit() else parsedate_to_datetime(value).timestamp() - now
-        return min(86400, max(0, seconds))
-    except (ValueError, TypeError, OverflowError):
-        return 0
+from agent_bom.core.http_retry import provider_retry_after as provider_retry_after
 
 
 def retry_delay(failures: int, *, retry_after: float = 0, jitter: float | None = None) -> float:

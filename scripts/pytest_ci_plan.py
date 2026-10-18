@@ -559,6 +559,12 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
             selected.update(
                 candidate for candidate in available if "graph" in candidate.stem or candidate.stem == "test_runtime_incident_feedback"
             )
+        if normalized.as_posix() == "src/agent_bom/graph/credential_bindings.py":
+            selected.update(
+                candidate
+                for candidate in available
+                if candidate.name in {"test_graph_credential_bindings.py", "test_store_backed_build_wiring.py"}
+            )
         if (
             normalized.as_posix().startswith("src/agent_bom/mcp_tools/")
             or normalized.as_posix().startswith("src/agent_bom/mcp_server")
