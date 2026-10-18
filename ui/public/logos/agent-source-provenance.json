@@ -35,6 +35,54 @@
       "license": "CC0-1.0",
       "terms": "Unmodified Simple Icons vector used for nominative technical documentation; Windsurf trademarks remain with their owner.",
       "repository_source": "docs/images/vendor/simple-icons/windsurf.svg"
+    },
+    {
+      "path": "ui/public/logos/okta.svg",
+      "vendor": "Okta",
+      "source_page": "https://simpleicons.org/?q=okta",
+      "source_repo": "https://github.com/msaad00/cloud-ai-security-skills",
+      "source_commit": "63dac785a94b7a9ce56ff2204e5f289ac75236c9",
+      "source_path": "docs/images/vendor-icons/okta.svg",
+      "sha256": "b45143544a125fbd03af4628dc16f9dad27ae01deee5a254b5e4a0bb90909dbf",
+      "license": "CC0-1.0",
+      "terms": "Unmodified Simple Icons vector used for nominative technical documentation; Okta trademarks remain Okta property.",
+      "repository_source": "docs/images/vendor/simple-icons/okta.svg"
+    },
+    {
+      "path": "ui/public/logos/databricks.svg",
+      "vendor": "Databricks",
+      "source_page": "https://simpleicons.org/?q=databricks",
+      "source_repo": "https://github.com/msaad00/cloud-ai-security-skills",
+      "source_commit": "2c8496410e28d8c3a3149fec139a1f178bb501f6",
+      "source_path": "docs/images/vendor-icons/databricks.svg",
+      "sha256": "454aa3efdb318c655e3da2ea844e3577a9c47a20e24d20fff6489362176e5fe4",
+      "license": "CC0-1.0",
+      "terms": "Unmodified Simple Icons vector used for nominative technical documentation; Databricks trademarks remain Databricks property.",
+      "repository_source": "docs/images/vendor/simple-icons/databricks.svg"
+    },
+    {
+      "path": "ui/public/logos/kubernetes.svg",
+      "vendor": "Kubernetes",
+      "source_page": "https://simpleicons.org/?q=kubernetes",
+      "source_repo": "https://github.com/msaad00/cloud-ai-security-skills",
+      "source_commit": "2c8496410e28d8c3a3149fec139a1f178bb501f6",
+      "source_path": "docs/images/vendor-icons/kubernetes.svg",
+      "sha256": "ceee2f4e87fa1533600672190c156194039f744fa9b5da10e83f002178e84b47",
+      "license": "CC0-1.0",
+      "terms": "Unmodified Simple Icons vector used for nominative technical documentation; Kubernetes trademarks remain with their owner.",
+      "repository_source": "docs/images/vendor/simple-icons/kubernetes.svg"
+    },
+    {
+      "path": "ui/public/logos/clickhouse.svg",
+      "vendor": "ClickHouse",
+      "source_page": "https://simpleicons.org/?q=clickhouse",
+      "source_repo": "https://github.com/msaad00/cloud-ai-security-skills",
+      "source_commit": "2c8496410e28d8c3a3149fec139a1f178bb501f6",
+      "source_path": "docs/images/vendor-icons/clickhouse.svg",
+      "sha256": "9fa7c12613763111ca26bbc1fe10994960028bc3da9faf47247de231a0b27589",
+      "license": "CC0-1.0",
+      "terms": "Unmodified Simple Icons vector used for nominative technical documentation; ClickHouse trademarks remain ClickHouse property.",
+      "repository_source": "docs/images/vendor/simple-icons/clickhouse.svg"
     }
   ]
 }

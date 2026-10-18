@@ -16,6 +16,11 @@ type SourceInput = {
 };
 
 const BRANDS: Record<string, AgentSource> = {
+  okta: { id: "okta", label: "Okta", src: "/logos/okta.svg", monogram: "Ok", accent: "#70809c" },
+  databricks: { id: "databricks", label: "Databricks", src: "/logos/databricks.svg", monogram: "Da", accent: "#70809c" },
+  kubernetes: { id: "kubernetes", label: "Kubernetes", src: "/logos/kubernetes.svg", monogram: "Ku", accent: "#70809c" },
+  clickhouse: { id: "clickhouse", label: "ClickHouse", src: "/logos/clickhouse.svg", monogram: "Cl", accent: "#70809c" },
+
   claude: { id: "claude", label: "Claude", src: "/logos/claude.svg", monogram: "Cl", accent: "#c76b4e" },
   cursor: { id: "cursor", label: "Cursor", src: "/logos/cursor.svg", monogram: "Cu", accent: "#8170d5" },
   openai: { id: "openai", label: "OpenAI", src: "/logos/openai.svg", monogram: "OA", accent: "#169c88", darkMark: true },

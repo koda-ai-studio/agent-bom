@@ -13,6 +13,7 @@ export async function runGraphQualityCapture({ newCapturePage, buildScopeShowcas
   };
   const identity = subset(["user:contractor", "sa:jit-review", "role:prod-admin", "agent:developer-copilot", "server:github"]);
   identity.nodes.find(n => n.id === "role:prod-admin").attributes.provider = "aws";
+  identity.nodes.find(n => n.id === "user:contractor").attributes.provider = "okta";
   identity.edges[0].evidence = {};
   identity.edges[1].evidence = { tier: "static_scan", source: "synthetic-identity-config" };
   const dependency = buildScopeShowcase("repository");
