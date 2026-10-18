@@ -334,8 +334,12 @@ and requires a retry. Choosing a different snapshot replaces the investigation
 scope. No full scan report is required merely to select a graph entity.
 
 The overview keeps connection captions quiet; selecting a node reveals its
-relationship labels, and selecting an arrow opens the exact evidence. Line
-styles and the legend retain configured, modeled and observed distinctions.
+relationship labels, and selecting an arrow opens the exact evidence. The visible
+relationship summary counts each recorded evidence kind, including mixed and
+unknown receipts. Colors and line styles identify relationships; they do not
+establish observed execution. Enter or Space opens a focused node or arrow.
+Finding details show recorded source location, priority factors and remediation;
+missing context stays explicit and recorded guidance is not a verified fix.
 Repository roots marked by the collector show a repository glyph and recorded
 slug, with a host badge when available. Ordinary folders retain their folder
 glyph. Repository details separate the scanned branch and commit from the

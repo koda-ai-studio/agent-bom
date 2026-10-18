@@ -1,5 +1,6 @@
 "use client";
 
+import { activateGraphNodeFromKeyboard } from "@/lib/graph-keyboard-selection";
 import { GraphScopeEvidence } from "@/components/graph-scope-evidence";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -311,6 +312,7 @@ function InvestigationFlow({
           onNodeClick={(_, node) => { setNavigationId(node.id); onNodeSelect(node.id); }}
           onEdgeClick={(_, edge) => onEdgeSelect(edge)}
           onKeyDownCapture={event => {
+                if (activateGraphNodeFromKeyboard(event)) return;
             if (event.key !== "Enter" && event.key !== " ") return;
             const id = event.target instanceof Element ? event.target.closest(".react-flow__edge")?.getAttribute("data-id") : null;
             const edge = id ? presentedEdges.find(item => item.id === id) : undefined;

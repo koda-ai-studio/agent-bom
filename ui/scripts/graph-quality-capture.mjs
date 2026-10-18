@@ -49,6 +49,7 @@ export async function runGraphQualityCapture({ newCapturePage, buildScopeShowcas
       await fitReactFlow(page);
       await expect(page.getByLabel("Visible relationship evidence")).toBeVisible();
       const audit = await page.evaluate(auditRenderedGraph, { edges: fixture.edges });
+      await fs.writeFile(path.join(output, `${key}-geometry.json`), JSON.stringify(await page.locator(".react-flow__edge").evaluateAll(edges => edges.map(e => ({ id: e.dataset.id, path: e.querySelector(".react-flow__edge-path")?.outerHTML, markers: [...document.querySelectorAll("marker")].map(m => m.outerHTML) }))), null, 2));
       const geometry = await page.locator(".react-flow__node").evaluateAll(nodes => {
         const rects = nodes.map(n => ({ id: n.dataset.id, r: n.getBoundingClientRect() }));
         const overlaps = rects.flatMap((a, i) => rects.slice(i + 1).filter(b => a.r.left < b.r.right && a.r.right > b.r.left && a.r.top < b.r.bottom && a.r.bottom > b.r.top).map(b => [a.id, b.id]));

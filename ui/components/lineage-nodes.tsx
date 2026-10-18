@@ -553,7 +553,6 @@ function FindingNode({
       ringClass="ring-white/50"
       iconClass={accentClass}
       source={false}
-      subtitle={data.description}
       footer={
         <div className="graph-finding-metadata flex flex-wrap justify-center gap-1 mt-1 [&>span]:text-[length:var(--graph-node-meta-size,12px)]">
           {data.severity && (

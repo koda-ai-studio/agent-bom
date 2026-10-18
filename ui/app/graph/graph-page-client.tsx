@@ -1,5 +1,6 @@
 "use client";
 
+import { activateGraphNodeFromKeyboard } from "@/lib/graph-keyboard-selection";
 import { GraphScopeEvidence } from "@/components/graph-scope-evidence";
 import { GraphCanvasAutoFit } from "@/components/graph-canvas-auto-fit";
 import { GraphSnapshotReceipt } from "@/components/graph-snapshot-receipt";
@@ -3823,6 +3824,7 @@ function GraphPageInner() {
               proOptions={{ hideAttribution: true }}
               onEdgeClick={(_event, edge) => inspectRelationship(edge)}
               onKeyDownCapture={event => {
+                if (activateGraphNodeFromKeyboard(event)) return;
                 if (event.key !== "Enter" && event.key !== " ") return;
                 const id = event.target instanceof Element ? event.target.closest(".react-flow__edge")?.getAttribute("data-id") : null;
                 const edge = id ? displayEdges.find(item => item.id === id) : undefined;
