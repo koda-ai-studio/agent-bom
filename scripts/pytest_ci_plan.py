@@ -614,6 +614,7 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
                     "tests/api/test_server_postgres_rls_preflight.py",
                     "tests/test_schedule_store.py",
                     "tests/test_job_store_selection.py",
+                    "tests/test_postgres_store.py",
                     "tests/api/test_api_dashboard_deeplink_routes.py",
                     "tests/api/test_no_ui_and_auth_posture.py",
                     "tests/api/test_api_auth_boundary.py",

@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from agent_bom.api.models import ScanRequest
+from agent_bom.api.scan_batches import scan_request_targets
 from agent_bom.api.stores import _get_schedule_store, _get_source_store
 
 
@@ -69,7 +70,6 @@ def _enqueue_source_cohort(
         raise RuntimeError("Scheduled correlation max_age_hours must be between 1 and 8760")
 
     from agent_bom.api.routes.sources import _request_for_source, _validate_credential_ref_for_tenant
-    from agent_bom.api.scan_batches import scan_request_targets
     from agent_bom.api.tenant_quota import (
         enforce_active_scan_quota,
         enforce_retained_jobs_quota,
@@ -131,7 +131,6 @@ def _enqueue_source_cohort(
 def _enqueue_source(source_id: str, resolved_tenant_id: str, schedule_id: str | None) -> str:
     from agent_bom.api.routes.scan import enqueue_scan_job
     from agent_bom.api.routes.sources import _request_for_source, _validate_credential_ref_for_tenant
-    from agent_bom.api.scan_batches import scan_request_targets
     from agent_bom.api.tenant_quota import (
         enforce_active_scan_quota,
         enforce_retained_jobs_quota,
