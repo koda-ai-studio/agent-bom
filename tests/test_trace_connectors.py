@@ -6,6 +6,8 @@ as pushed OTLP. HTTP is mocked; credentials are used for auth only.
 
 from __future__ import annotations
 
+import json
+from contextlib import contextmanager
 from typing import Any
 
 import pytest
@@ -40,6 +42,10 @@ class _FakeResponse:
     def __init__(self, payload: Any, status_code: int = 200) -> None:
         self._payload = payload
         self.status_code = status_code
+        self.headers = {}
+
+    def iter_bytes(self):
+        yield json.dumps(self._payload).encode()
 
     def json(self) -> Any:
         return self._payload
@@ -52,6 +58,10 @@ class _FakeClient:
         self.payload = payload
         self.status_code = status_code
         self.calls: list[dict[str, Any]] = []
+
+    @contextmanager
+    def stream(self, *args, **kwargs):
+        yield self.request(*args, **kwargs)
 
     def request(self, method: str, url: str, **kwargs: Any) -> _FakeResponse:
         self.calls.append({"method": method, "url": url, **kwargs})
@@ -235,18 +245,20 @@ def test_provider_cannot_expand_requested_sample():
 
 
 def test_invalid_json_is_a_safe_connector_error():
-    class InvalidJsonClient:
+    class InvalidJsonClient(_FakeClient):
         def request(self, *args, **kwargs):
             class InvalidJsonResponse:
                 status_code = 200
 
-                def json(self):
-                    raise ValueError("private-upstream-response")
+                headers = {}
+
+                def iter_bytes(self):
+                    yield b"private-upstream-response"
 
             return InvalidJsonResponse()
 
     with pytest.raises(TraceConnectorError) as caught:
-        fetch_langsmith_traces(api_key="key", client=InvalidJsonClient())
+        fetch_langsmith_traces(api_key="key", client=InvalidJsonClient(None))
     assert "invalid JSON" in str(caught.value)
     assert "private-upstream-response" not in str(caught.value)
 
