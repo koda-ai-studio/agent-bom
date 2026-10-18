@@ -26,8 +26,9 @@ def _provider(node: UnifiedNode) -> str:
 
 def project_credential_bindings(graph: UnifiedGraph, agents: list[dict[str, Any]], source: str) -> None:
     """Build the index once; native IDs shadow aliases and provider conflicts fail closed."""
+    native_nodes = dict(graph.nodes)
     canonical: dict[str, list[str]] = defaultdict(list)
-    for node in graph.nodes.values():
+    for node in native_nodes.values():
         if node.entity_type in _IDENTITIES and isinstance(node.attributes.get("canonical_id"), str):
             canonical[node.attributes["canonical_id"]].append(node.id)
     for agent in agents:
@@ -40,16 +41,24 @@ def project_credential_bindings(graph: UnifiedGraph, agents: list[dict[str, Any]
                 credential = graph.get_node(f"cred:{server_id}:{env_key}")
                 if credential is None or credential.entity_type is not EntityType.CREDENTIAL:
                     continue
-                _project_binding(graph, credential.id, binding, canonical, source)
+                _project_binding(graph, credential.id, binding, canonical, native_nodes, source)
 
 
-def _project_binding(graph: UnifiedGraph, credential: str, binding: Mapping, canonical: dict[str, list[str]], source: str) -> None:
+def _project_binding(
+    graph: UnifiedGraph,
+    credential: str,
+    binding: Mapping,
+    canonical: dict[str, list[str]],
+    native_nodes: dict[str, UnifiedNode],
+    source: str,
+) -> None:
     reference = sanitize_text(str(binding.get("identity_canonical_id") or "").strip())
     evidence_source = sanitize_text(str(binding.get("evidence_source") or "").strip())
     provider = sanitize_text(str(binding.get("provider") or "").strip().lower())
     if not reference or not evidence_source:
         return
-    direct = graph.get_node(reference)
+    # Placeholders added by earlier bindings cannot become new identity evidence.
+    direct = native_nodes.get(reference)
     # A conflicting live node must never redirect through a shadowing alias.
     ids = [reference] if direct is not None else canonical.get(reference, [])
     matches = [
@@ -65,7 +74,7 @@ def _project_binding(graph: UnifiedGraph, credential: str, binding: Mapping, can
     else:
         basis = "ambiguous_canonical_id" if matches else "unresolved_identity_reference"
         target = reference
-        if direct is not None:
+        if graph.get_node(reference) is not None:
             digest = sha256(f"{credential}\0{provider}\0{reference}".encode()).hexdigest()
             target = f"configured_identity:{digest}"
         graph.add_node(
@@ -85,22 +94,7 @@ def _project_binding(graph: UnifiedGraph, credential: str, binding: Mapping, can
                 dimensions=NodeDimensions(cloud_provider=provider),
             )
         )
-        for candidate in sorted(matches):
-            graph.add_edge(
-                UnifiedEdge(
-                    source=target,
-                    target=candidate,
-                    relationship=RelationshipType.POSSIBLY_CORRELATES_WITH,
-                    confidence=0.0,
-                    evidence={
-                        "source": evidence_source,
-                        "tier": "modeled_infrastructure",
-                        "identity_match_basis": basis,
-                        "execution_proven": False,
-                        "reported_identity_ref": reference,
-                    },
-                )
-            )
+        _project_candidates(graph, target, matches, basis, evidence_source, reference)
     graph.add_edge(
         UnifiedEdge(
             source=credential,
@@ -119,3 +113,22 @@ def _project_binding(graph: UnifiedGraph, credential: str, binding: Mapping, can
             },
         )
     )
+
+
+def _project_candidates(graph: UnifiedGraph, target: str, matches: list[str], basis: str, source: str, reference: str) -> None:
+    for candidate in sorted(matches):
+        graph.add_edge(
+            UnifiedEdge(
+                source=target,
+                target=candidate,
+                relationship=RelationshipType.POSSIBLY_CORRELATES_WITH,
+                confidence=0.0,
+                evidence={
+                    "source": source,
+                    "tier": "modeled_infrastructure",
+                    "identity_match_basis": basis,
+                    "execution_proven": False,
+                    "reported_identity_ref": reference,
+                },
+            )
+        )

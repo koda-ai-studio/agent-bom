@@ -147,7 +147,7 @@ jobs:
           if printf '%s\n' "$changed" | grep -Eq '^(src/|tests/|scripts/|pyproject\.toml|uv\.lock|action\.yml|contracts/|data/|\.github/workflows/ci\.yml$|\.github/actions/)'; then
             python=true
           fi
-          if printf '%s\n' "$changed" | grep -Eq '^(deploy/endpoints/|scripts/(build-[^/]+|render_homebrew_formula\.py)|src/agent_bom/cli/_runtime\.py|tests/test_cli_runtime\.py|pyproject\.toml|uv\.lock|\.github/actions/setup-python/|site-docs/deployment/aws-company-rollout\.md$)'; then
+          if printf '%s\n' "$changed" | grep -Eq '^(deploy/endpoints/|scripts/(build-[^/]+|qualify_endpoint_collectors\.py|render_homebrew_formula\.py)|src/agent_bom/endpoint/|src/agent_bom/cli/_runtime\.py|tests/test_endpoint[^/]*\.py|tests/test_cli_runtime\.py|pyproject\.toml|uv\.lock|\.github/actions/setup-python/|site-docs/deployment/aws-company-rollout\.md$)'; then
             endpoint=true
           fi
           if printf '%s\n' "$changed" | grep -Eq '^(deploy/helm/agent-bom/|scripts/validate_helm_profiles\.py$|\.github/workflows/ci\.yml$)'; then
@@ -984,6 +984,21 @@ jobs:
 
       - name: Install dependencies
         run: uv sync --frozen --extra dev
+
+      - name: Qualify native endpoint collectors
+        env:
+          QUALIFICATION_OUTPUT: ${{ runner.temp }}/endpoint-qualification.json
+        run: uv run python scripts/qualify_endpoint_collectors.py --timeout-seconds 30 --output "$QUALIFICATION_OUTPUT"
+        shell: bash
+
+      - name: Retain native collector receipt
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: endpoint-qualification-${{ matrix.os }}
+          path: ${{ runner.temp }}/endpoint-qualification.json
+          if-no-files-found: error
+          retention-days: 30
 
       - name: Generate endpoint bundle
         env:

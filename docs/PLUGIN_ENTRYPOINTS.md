@@ -37,6 +37,12 @@ plugins. Enabling registration loading imports third-party code and invokes
 registration factories; install and enable only trusted packages. Declared
 capabilities describe the extension but do not sandbox its Python code.
 
+Registration and activated callbacks execute inside the host interpreter with
+its filesystem, network and credential access. Output-size caps and bounded
+registration counts do not limit execution time, memory, subprocesses or side
+effects. Use a separate, least-privileged process/container for packages that
+require an isolation boundary; the entry-point loader does not provide one.
+
 Runtime activation is a **second, explicit opt-in** on top of registration loading
 for the three groups below. A group
 activates only when both `AGENT_BOM_ENABLE_EXTENSION_ENTRYPOINTS` (discovery) and
