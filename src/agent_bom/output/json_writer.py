@@ -19,6 +19,11 @@ def write_json_file(data: dict[str, Any], output_path: str) -> None:
     This protects publication, not directory durability across power loss.
     """
     target = Path(output_path).resolve()
+    if target == Path(os.devnull).resolve():
+        # Null sinks preserve scan verdicts and never replace a device node.
+        with open(os.devnull, "w", encoding="utf-8") as sink:
+            write_json_document(data, sink)
+        return
     if target.exists() and not target.is_file():
         raise ValueError("JSON report destination must be a regular file")
     temporary: Path | None = None

@@ -318,6 +318,12 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
                     "test_agent_manifest_identity.py",
                 }
             )
+        if normalized.as_posix() in {"src/agent_bom/output/json_fmt.py", "src/agent_bom/output/json_writer.py"}:
+            selected.update(
+                candidate
+                for candidate in available
+                if candidate.name in {"test_json_writer.py", "test_cli_scan.py", "test_graceful_low_disk.py"}
+            )
         if normalized.suffix == ".md" and (
             normalized.as_posix() == "README.md" or normalized.as_posix().startswith(("docs/", "site-docs/"))
         ):

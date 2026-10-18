@@ -760,3 +760,11 @@ def test_dashboard_mount_fixtures_select_scope_isolation_contracts(tmp_path, cha
     for path in expected:
         _write(path, 1)
     assert select_targeted_tests(changed_files=[Path("tests/api") / changed], root=tmp_path) == expected
+
+
+@pytest.mark.parametrize("source", ["output/json_fmt.py", "output/json_writer.py"])
+def test_json_publication_selects_null_sink_and_low_disk_contracts(tmp_path, source):
+    expected = sorted(tmp_path / "tests" / name for name in ("test_json_writer.py", "test_cli_scan.py", "test_graceful_low_disk.py"))
+    for path in expected:
+        _write(path, 1)
+    assert select_targeted_tests(changed_files=[Path("src/agent_bom") / source], root=tmp_path) == expected

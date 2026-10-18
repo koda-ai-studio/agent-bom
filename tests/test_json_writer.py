@@ -81,3 +81,20 @@ def test_atomic_export_never_replaces_a_special_file(tmp_path):
         json_fmt.export_json(AIBOMReport(), str(output))
     assert stat.S_ISFIFO(output.stat().st_mode)
     assert list(tmp_path.iterdir()) == [output]
+
+
+def test_null_sink_preserves_device_without_atomic_replacement(monkeypatch):
+    before = os.stat(os.devnull)
+
+    def no_temporary(*args, **kwargs):
+        raise AssertionError("null output must not create a temporary file")
+
+    monkeypatch.setattr(json_writer.tempfile, "NamedTemporaryFile", no_temporary)
+    json_writer.write_json_file({"discarded": True}, os.devnull)
+    after = os.stat(os.devnull)
+    assert (after.st_dev, after.st_ino, after.st_mode) == (before.st_dev, before.st_ino, before.st_mode)
+
+
+def test_null_sink_still_validates_json():
+    with pytest.raises(TypeError):
+        json_writer.write_json_file({"invalid": object()}, os.devnull)
