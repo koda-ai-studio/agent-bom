@@ -7,7 +7,9 @@ describe("graph viewport framing", () => {
     const small = graphFitViewOptions({ nodeCount: 6, edgeCount: 5, mode: "lineage" });
     const dense = graphFitViewOptions({ nodeCount: 120, edgeCount: 520, mode: "lineage" });
 
-    expect(small.maxZoom).toBeGreaterThan(1.6);
+    expect(small.maxZoom).toBeGreaterThan(dense.maxZoom);
+    // A few cards never blow up past a modest zoom to fill the canvas.
+    expect(small.maxZoom).toBeLessThanOrEqual(1.5);
     expect(small.padding).toBeLessThan(0.1);
     expect(dense.maxZoom).toBeLessThan(1);
     expect(dense.padding).toBeGreaterThan(0.18);

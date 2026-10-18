@@ -190,7 +190,7 @@ it("deduplicates membership and retains differing source-file membership on expa
   const [id, group] = [...result.clusters.entries()][0]!;
   expect(group.members).toHaveLength(22);
   expect(result.edges.find((edge) => edge.source === "source:second")?.data?.members).toEqual(["finding:0"]);
-  expect(result.edges.find((edge) => edge.source === "source:second")?.label).toBe("1 member");
+  expect(result.edges.find((edge) => edge.source === "source:second")?.label).toBe("Contains ×1");
   const expanded = aggregateSiblings(nodes, edges, { thresholdN: 20, expandedClusterIds: new Set([id]) });
   expect(expanded.edges).toEqual(edges);
 });

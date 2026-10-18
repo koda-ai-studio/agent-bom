@@ -41,6 +41,7 @@ function optionsKey(options: LayoutOptions): string {
     // dropped before it ever reaches `applyDagreLayout`.
     minSeparation: options.minSeparation ?? null,
     fitAspect: options.fitAspect ?? null,
+    wrapRanks: options.wrapRanks ?? true,
   });
 }
 

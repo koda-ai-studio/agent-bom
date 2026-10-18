@@ -1,5 +1,7 @@
 "use client";
 
+import { GraphConnectionsList } from "@/components/graph-connections-list";
+import { declutterRelationshipLabels, hideRedundantDerivedEdges } from "@/lib/graph-label-declutter";
 import { activateGraphNodeFromKeyboard } from "@/lib/graph-keyboard-selection";
 import { GraphScopeEvidence } from "@/components/graph-scope-evidence";
 import { GraphInvestigationContextControls } from "@/components/graph-investigation-context-controls";
@@ -736,6 +738,8 @@ function GraphPageInner() {
   const [reachabilitySummary, setReachabilitySummary] =
     useState<ReachabilitySummary | null>(null);
   const loadingReachability = false;
+  const quietRootRef = useRef<string | null>(null);
+  const [mobileGraphView, setMobileGraphView] = useState<"list" | "graph">("list");
   const investigationRequestId = useRef(0);
   const investigationAbort = useRef<AbortController | null>(null);
   useEffect(() => () => investigationAbort.current?.abort(), []);
@@ -1209,7 +1213,8 @@ function GraphPageInner() {
         setSelectedNode((current) => {
           const currentId = current?.attributes?.node_id;
           if (currentId && currentId !== selectedNodeId) return current;
-          if (!current) return buildFallbackNodeData(detail.node);
+          // An investigation root is highlighted, not opened; explicit selections open.
+          if (!current) return quietRootRef.current === selectedNodeId ? null : buildFallbackNodeData(detail.node);
           return mergeNodeDetail(current, detail);
         });
       })
@@ -1645,10 +1650,8 @@ function GraphPageInner() {
     );
   }, [canvasAgent, canvasLens, flow.agentNames]);
 
-  const flowNodeDataById = useMemo(
-    () => new Map(flow.nodes.map((node) => [node.id, node.data])),
-    [flow.nodes],
-  );
+  const flowNodeById = useMemo(() => new Map(flow.nodes.map((node) => [node.id, node])), [flow.nodes]);
+  const flowNodeDataById = useMemo(() => new Map(flow.nodes.map((node) => [node.id, node.data])), [flow.nodes]);
   const attackPathNodeIds = useMemo(
     () => (selectedAttackPath ? new Set(selectedAttackPath.hops) : null),
     [selectedAttackPath],
@@ -1658,9 +1661,11 @@ function GraphPageInner() {
   // preset — operator triage (focused) collapses faster than topology
   // review (expanded). Run before layout so the layout engine never positions
   // siblings that the cluster pill is going to hide.
+  // An investigation canvas is bounded: a fan of five or more siblings reads as one
+  // expandable group instead of a column too tall to read at its fitted zoom.
   const aggregationThreshold = selectedAttackPath
     ? Number.MAX_SAFE_INTEGER
-    : filters.vulnOnly
+    : filters.vulnOnly || investigationMode
       ? FOCUSED_AGGREGATION_THRESHOLD
       : EXPANDED_AGGREGATION_THRESHOLD;
 
@@ -1728,7 +1733,9 @@ function GraphPageInner() {
   const compactGroupedTopology = aggregated.clusters.size > 0 && aggregated.nodes.length <= 6;
   const compactMobileTopology = narrowViewport && !selectedAttackPath &&
     !rollupNavigationActive && compactGroupedTopology;
-  const graphLayoutKind = compactMobileTopology || (narrowViewport && investigationMode) ? "dagre" : selectedAttackPath || selectedScenarioId || rollupNavigationActive || investigationMode ? "dagre-lr" : "asset-hierarchy";
+  const graphLayoutKind = compactMobileTopology && !investigationMode ? "dagre" : selectedAttackPath || selectedScenarioId || rollupNavigationActive || investigationMode ? "dagre-lr" : "asset-hierarchy";
+  // A phone reads a root investigation as a list first; the canvas is one tap away.
+  const mobileListActive = Boolean(narrowViewport && investigationMode) && mobileGraphView === "list";
   const scenarioContextIds = useMemo(() => {
     if (!selectedScenarioId || !scenarioComparison?.available || scenarioExpanded || attackPathLens || selectedAttackPath || investigationMode) return undefined;
     return graphScenarioContextIds(aggregated.nodes, aggregated.edges, scenarioComparison.difference, mergedGraphData?.edges);
@@ -1759,9 +1766,13 @@ function GraphPageInner() {
   const selectedContextGroup = investigationContext?.groups.some(group => group.id === requestedContextGroup)
     ? requestedContextGroup!
     : requestedContextGroup === "all" || investigationContext?.anchorId || initialContextViewRef.current === "all" ? "all" : "dependency";
-  const contextElements = useMemo(() => investigationContext
-    ? { ...scenarioElements, ...selectInvestigationContext(investigationContext, selectedContextGroup) }
-    : { ...scenarioElements, omittedNodes: 0, crossContextEdges: 0 }, [scenarioElements, investigationContext, selectedContextGroup]);
+  const contextElements = useMemo(() => {
+    const selected = investigationContext
+      ? { ...scenarioElements, ...selectInvestigationContext(investigationContext, selectedContextGroup) }
+      : { ...scenarioElements, omittedNodes: 0, crossContextEdges: 0 };
+    // A derived shares_* link restates a shared resource the investigation already draws.
+    return investigationMode ? { ...selected, edges: hideRedundantDerivedEdges(selected.edges) } : selected;
+  }, [scenarioElements, investigationContext, selectedContextGroup, investigationMode]);
   const selectContextGroup = useCallback((id: string) => {
     setCanvasPage(0);
     if (investigationContext && selectedNodeId && !selectInvestigationContext(investigationContext, id).nodes.some(node => node.id === selectedNodeId)) {
@@ -1807,7 +1818,7 @@ function GraphPageInner() {
           : selectedScenarioId
             ? { rankSep: 112, nodeSep: 12, nodeWidth: 240, nodeHeight: 208, minSeparation: { width: 240, height: 208, gap: 24 } }
           : compactInvestigationTopology
-            ? { ...investigationLayout, fitAspect: canvasLayoutAspect }
+            ? { ...investigationLayout, fitAspect: canvasLayoutAspect, wrapRanks: false }
             : filters.agentName
               ? { rankSep: 152, nodeSep: 52 }
               : {},
@@ -2252,14 +2263,16 @@ function GraphPageInner() {
   ]);
 
   const accessibleBaseDisplayEdges = useMemo(
-    () => readableGraphEdges(baseDisplayEdges.map(edge => ({ ...edge, selected: selectedRelationship?.scanId === selectedScanId && selectedRelationship.id === edge.id })), undefined, {
+    () => declutterRelationshipLabels(readableGraphEdges(baseDisplayEdges.map(edge => ({ ...edge, selected: selectedRelationship?.scanId === selectedScanId && selectedRelationship.id === edge.id,
+      // A phone shows a relationship's caption only on selection; the list view names every one.
+      ...(narrowViewport && !edge.data?.isClusterEdge && !edge.data?.aggregate ? { label: undefined, data: { ...edge.data, quietLabel: true } } : {}) })), undefined, {
       captureMode,
       zoom: graphViewport.zoom,
       nodeLabels: graphNodeDisplayLabels(displayNodes),
       preserveVisualStyle: true,
       preserveLabelState: true,
-    }),
-    [baseDisplayEdges, captureMode, displayNodes, graphViewport.zoom, selectedRelationship, selectedScanId],
+    })),
+    [baseDisplayEdges, captureMode, displayNodes, graphViewport.zoom, selectedRelationship, selectedScanId, narrowViewport],
   );
 
   // Drift lens edge emphasis — new/changed edges adopt their change-kind colour
@@ -2348,7 +2361,7 @@ function GraphPageInner() {
       // Scenario views share width with the decision panel and app navigation.
       // Allow the complete proposed context to fit shorter desktop canvases.
       if (selectedScenarioId) return { ...options, padding: Math.max(0.2, options.padding), minZoom: 0.05, maxZoom: 1 };
-      if (compactInvestigationTopology && !narrowViewport) return { ...options, minZoom: 0.05, maxZoom: displayNodes.length <= 6 ? 2 : 1 };
+      if (compactInvestigationTopology && !narrowViewport) return { ...options, minZoom: 0.05, maxZoom: displayNodes.length <= 6 ? 1.25 : 1 };
       return rollupNavigationActive ? { ...viewportOptions, minZoom: 0.05, maxZoom: 1 } : selectedScenarioId && !scenarioExpanded ? { ...options, minZoom: 0.75, maxZoom: 1 } : options;
     },
     [initialAnchorId, viewportOptions, selectedScenarioId, scenarioExpanded, compactInvestigationTopology, narrowViewport, displayNodes.length, rollupNavigationActive],
@@ -2625,21 +2638,12 @@ function GraphPageInner() {
       }
       setInvestigationDirection(direction);
 
-      const fallback = request.node
-        ? (flowNodeDataById.get(request.node.id) ??
-          buildFallbackNodeData(request.node))
-        : null;
-      if (fallback) {
-        setSelectedNode({
-          ...fallback,
-          attributes: {
-            ...(fallback.attributes ?? {}),
-            node_id: request.rootId,
-          },
-        });
-      } else {
-        setSelectedNode(null);
-      }
+      // Navigating to a new root opens its details once. Reloading the same root
+      // (more connections, another context) leaves the drawer as the user left it.
+      const quiet = investigationMode?.rootId === request.rootId;
+      const fallback = request.node ? (flowNodeDataById.get(request.node.id) ?? buildFallbackNodeData(request.node)) : null;
+      if (!quiet) setSelectedNode(fallback ? { ...fallback, attributes: { ...(fallback.attributes ?? {}), node_id: request.rootId } } : null);
+      quietRootRef.current = quiet ? request.rootId : null;
       setSelectedNodeId(request.rootId);
       setPinnedFocusId(null);
       setHoveredNodeId(request.rootId);
@@ -2677,9 +2681,7 @@ function GraphPageInner() {
         const rootNode =
           response.nodes.find((node) => node.id === request.rootId) ??
           request.node;
-        if (rootNode) {
-          setSelectedNode(buildFallbackNodeData(rootNode));
-        }
+        if (rootNode && !quiet) setSelectedNode(buildFallbackNodeData(rootNode));
         setGraphData(queryResponseToGraphResponse(response));
         setInvestigationMode({
           rootId: request.rootId,
@@ -3750,9 +3752,15 @@ function GraphPageInner() {
             groups={investigationContext.groups} selected={selectedContextGroup}
             visibleNodes={displayNodes.length} loadedNodes={scenarioElements.nodes.length}
             crossContextEdges={contextElements.crossContextEdges} onSelect={selectContextGroup} />}
-          {!rollupNavigationActive && !rollupDecisionActive && graphRenderer.kind === "react-flow" && displayNodes.length > 0 && <GraphLegendDock items={legendItems} separated />}
-          <div ref={setGraphNavigationMount} />
-          <div data-graph-adaptive-frame data-graph-annotations={graphLayoutKind === "asset-hierarchy" ? "on-demand" : undefined} className={`relative flex ${selectedAttackPath ? "h-[max(24rem,calc(100dvh-25rem))] sm:h-[clamp(24rem,50dvh,36rem)]" : selectedScenarioId ? "h-[max(24rem,calc(100dvh-25rem))] sm:h-[max(28rem,calc(100dvh-21rem))]" : "h-[var(--graph-adaptive-height,clamp(22rem,60dvh,48rem))]"} shrink-0 overflow-hidden rounded-lg border border-outline bg-surface`}>
+          {narrowViewport && investigationMode && displayNodes.length > 0 && <div role="group" aria-label="Investigation view" className="flex gap-2">
+            {(["list", "graph"] as const).map(view => <button key={view} type="button" aria-pressed={mobileGraphView === view} onClick={() => setMobileGraphView(view)}
+              className="graph-page-action min-h-11 flex-1 aria-pressed:bg-surface-elevated">{view === "list" ? "List" : "Graph"}</button>)}
+          </div>}
+          {mobileListActive && <GraphConnectionsList rootId={investigationMode!.rootId} nodes={displayNodes} edges={displayEdges} memberNodes={flowNodeById}
+            onSelect={id => { const node = flowNodeById.get(id); if (node) onNodeClick({} as React.MouseEvent, node); }} />}
+          {!mobileListActive && !rollupNavigationActive && !rollupDecisionActive && graphRenderer.kind === "react-flow" && displayNodes.length > 0 && <GraphLegendDock items={legendItems} separated />}
+          <div ref={setGraphNavigationMount} className={mobileListActive ? "hidden" : undefined} />
+          <div data-graph-adaptive-frame data-graph-annotations={graphLayoutKind === "asset-hierarchy" ? "on-demand" : undefined} className={`${mobileListActive ? "hidden " : ""}relative flex ${selectedAttackPath ? "h-[max(24rem,calc(100dvh-25rem))] sm:h-[clamp(24rem,50dvh,36rem)]" : selectedScenarioId ? "h-[max(24rem,calc(100dvh-25rem))] sm:h-[max(28rem,calc(100dvh-21rem))]" : "h-[var(--graph-adaptive-height,clamp(22rem,60dvh,48rem))]"} shrink-0 overflow-hidden rounded-lg border border-outline bg-surface`}>
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <GraphScenarioUnconnected
             nodes={scenarioElements.unconnected}
@@ -3860,7 +3868,7 @@ function GraphPageInner() {
               fitView={Boolean(selectedScenarioId || selectedAttackPath) && !manualCamera && !presentation.hasSavedState && !presentation.restoredSavedState}
               fitViewOptions={manualCamera ? viewportOptions : initialViewportOptions}
               defaultViewport={presentation.restoredViewport ?? presentation.viewport}
-              minZoom={canvasLens === "estate" ? 0.05 : 0.16}
+              minZoom={0.05}
               maxZoom={2.5}
               zoomOnScroll={!captureMode}
               zoomOnPinch={!captureMode}
@@ -3922,7 +3930,7 @@ function GraphPageInner() {
                 onLayoutAspect={setCanvasLayoutAspect}
               />
               <Background color={BACKGROUND_COLOR} gap={BACKGROUND_GAP} />
-              <Controls {...(investigationContext ? { onFitView: fitVisible, fitViewOptions: { padding: 0.25, minZoom: 0.05, maxZoom: 2 } } : {})} orientation={selectedScenarioId ? "horizontal" : "vertical"} position="bottom-left" className={CONTROLS_CLASS} />
+              <Controls {...(investigationContext ? { onFitView: fitVisible, fitViewOptions: { padding: 0.25, minZoom: 0.05, maxZoom: 1.25 } } : {})} orientation={selectedScenarioId ? "horizontal" : "vertical"} position="bottom-left" className={CONTROLS_CLASS} />
               {minimapExpanded && showMiniMap && (canvasLens !== "estate" || graphViewport.zoom >= 1) && (
                 <MiniMap
                   position={narrowViewport ? "top-right" : "bottom-right"}

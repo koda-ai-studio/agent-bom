@@ -615,7 +615,7 @@ for (const width of [1440, 390]) {
         await navigation.getByRole("button", { name: "Previous graph node" }).click();
         await expect(navigation).toContainText("2 of 3");
       }
-      const memberLabels = await page.locator(".react-flow__edge-text").evaluateAll((labels) => labels.filter((label) => label.textContent === "22 members").map((label) => {
+      const memberLabels = await page.locator(".react-flow__edge-text").evaluateAll((labels) => labels.filter((label) => /×22\b/.test(label.textContent ?? "")).map((label) => {
         const text = label.getBoundingClientRect();
         const background = label.parentElement!.querySelector(".react-flow__edge-textbg")!.getBoundingClientRect();
         return { text: { left: text.left, right: text.right, top: text.top, bottom: text.bottom }, background: { left: background.left, right: background.right, top: background.top, bottom: background.bottom } };

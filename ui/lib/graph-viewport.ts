@@ -37,11 +37,12 @@ export function graphFitViewOptions(input: GraphViewportInput): GraphFitViewOpti
     padding = 0.18;
     maxZoom = 1;
   } else if (nodeCount <= 6) {
+    // A handful of cards must not be blown up to fill the canvas.
     padding = 0.06;
-    maxZoom = 2;
+    maxZoom = 1.25;
   } else if (nodeCount <= 16) {
     padding = 0.08;
-    maxZoom = 1.75;
+    maxZoom = 1.25;
   } else if (nodeCount <= 32) {
     padding = 0.1;
     maxZoom = 1.5;
