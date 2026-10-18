@@ -8,7 +8,8 @@ import { graphAdaptiveFrame } from "@/lib/graph-adaptive-frame";
 
 /** Fit measured compact contexts after a docked inspector changes canvas width.
  * Only geometry changes trigger a fit; hover and evidence updates do not. */
-export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, preserveViewport, onLayoutAspect, navigationIds, navigationMount }: {
+export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, preserveViewport, onLayoutAspect, navigationIds, navigationMount, padding = 0.08 }: {
+  padding?: number;
   navigationMount?: HTMLElement | null | undefined;
   navigationIds?: string[] | undefined;
   enabled: boolean;
@@ -46,7 +47,7 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     if (controls) observer.observe(controls);
     measure();
     return () => observer.disconnect();
-  }, [canvas]);
+  }, [canvas, layoutKey]);
   useEffect(() => {
     if (!enabled || !initialized || !width || !height || !windowHeight) return;
     const frameElement = canvas?.closest<HTMLElement>("[data-graph-adaptive-frame]");
@@ -61,10 +62,10 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     if (preserveViewport) return;
     // Virtualization toggles initialized while the operator pans or zooms.
     // Only a new layout/frame may replace that deliberate camera position.
-    const autoFitKey = JSON.stringify([layoutKey, width, height, anchorId, inspector, windowHeight, spaceAbove]);
+    const autoFitKey = JSON.stringify([layoutKey, width, height, anchorId, inspector, windowHeight, spaceAbove, padding]);
     if (lastAutoFitKey.current === autoFitKey) return;
     const anchor = nodes.find(node => node.id === anchorId) ?? nodes[0];
-    const options: FitViewOptions = { padding: 0.08, duration: 0, minZoom: 0.05, maxZoom: 2,
+    const options: FitViewOptions = { padding, duration: 0, minZoom: 0.05, maxZoom: 2,
       ...(!frameSize.fitAll && anchor ? { nodes: inspector && width >= 640 ? graphInspectorTargets(anchor.id, nodes.map(node => node.id), getEdges()) : [{ id: anchor.id }], minZoom: inspector && width >= 640 ? 0.45 : 0.85, maxZoom: 1.1 } : {}),
     };
     const fitIds = options.nodes ? new Set(options.nodes.map(node => node.id)) : null;
@@ -91,7 +92,7 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     };
     frames.push(requestAnimationFrame(() => settle(0)));
     return () => { cancelled = true; frames.forEach(cancelAnimationFrame); };
-  }, [enabled, initialized, width, height, layoutKey, anchorId, inspector, preserveViewport, windowHeight, spaceAbove, canvas, fitView, getNodes, getNodesBounds, getEdges, onLayoutAspect]);
+  }, [padding, enabled, initialized, width, height, layoutKey, anchorId, inspector, preserveViewport, windowHeight, spaceAbove, canvas, fitView, getNodes, getNodesBounds, getEdges, onLayoutAspect]);
   if (!initialized || width >= 640 || width <= 0) return null;
   const navigator = <GraphNodeNavigator nodes={getNodes()} orderedIds={navigationIds} />;
   return navigationMount ? createPortal(navigator, navigationMount) : <Panel position="top-center">{navigator}</Panel>;

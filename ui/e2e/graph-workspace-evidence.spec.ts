@@ -55,6 +55,12 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     if (width === 1440) await page.getByRole("button", {name: "Fit all", exact: true}).click();
     // Selecting a recorded node does not implicitly fetch or expand its graph.
     const count = queries.length;
+    // An expanded neighborhood can exceed the readable camera. Inspect the
+    // identity group instead of trying to click an offscreen role.
+    const context = page.getByLabel("Investigation context", { exact: true });
+    if (width === 390) await context.getByLabel("Graph context", { exact: true }).selectOption("identity");
+    else await context.getByRole("button", { name: "Identity and access context", exact: true }).click();
+    await expect(page.locator(".react-flow__node")).toHaveCount(2);
     await page.locator('[data-id="role:conditional"]').click();
     await expect(inspector.getByText("Conditional admin", {exact: true})).toBeVisible();
     await expect(inspector.getByText(/request context has not been verified/)).toBeVisible();
@@ -72,6 +78,9 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     await receipt.getByText("Recorded evidence", {exact: true}).click();
     await expect(receipt.getByText(/fixture-package@1.0/)).toBeVisible();
     await page.keyboard.press("Escape"); await expect(edge).toBeFocused();
+    if (width === 390) await context.getByLabel("Graph context", { exact: true }).selectOption("all");
+    else await context.getByRole("button", { name: "All relationships", exact: true }).click();
+    await expect(page.locator(".react-flow__node")).toHaveCount(8);
     const usageEdge = page.locator('.react-flow__edge[data-id="edge:server:0"]');
     await usageEdge.focus(); await usageEdge.press("Space");
     await expect(receipt.getByLabel("Relationship summary")).toContainText("Whether a tool was actually called.");
@@ -121,3 +130,21 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     expect(violations).toEqual([]);
   });
 }
+
+test("identity context survives bounded expansion and grouped drilldown", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const queries = await fixture(page);
+  await page.goto(`/graph?lens=context&scan=snapshot&root=${root}`);
+  for (const count of [4, 8, 16]) {
+    await expect(page.locator(".react-flow__node")).toHaveCount(count);
+    await page.getByRole("button", { name: "Show more connections", exact: true }).click();
+  }
+  await expect(page.locator(".react-flow__node")).toHaveCount(3);
+  await page.getByRole("button", { name: "Expand 22 members", exact: true }).click();
+  await expect(page.locator(".react-flow__node")).toHaveCount(24);
+  const context = page.getByLabel("Investigation context", { exact: true });
+  await expect(context).toContainText("24 of 24 nodes in this view");
+  await context.getByRole("button", { name: "Identity and access context", exact: true }).click();
+  await expect(page.locator(".react-flow__node")).toHaveCount(2);
+  expect(queries.map(query => query.max_nodes)).toEqual([4, 8, 16, 24]);
+});

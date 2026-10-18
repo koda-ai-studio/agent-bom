@@ -57,3 +57,37 @@ it("gives detour bends room to turn before reaching a clear horizontal lane", ()
   expect(points[6]!).toBeLessThan(260);
   expect(points[7]).toBeLessThan(0);
 });
+
+it("uses a clear sibling gap before routing outside the node envelope", () => {
+  const obstacles = [{ id: "upper", x: 260, y: 0, width: 220, height: 170 }, { id: "lower", x: 260, y: 220, width: 220, height: 170 }];
+  const route = relationshipPath({ ...edge, sourceY: 220 }, obstacles);
+  expect(route[2]).toBeGreaterThanOrEqual(186);
+  expect(route[2]).toBeLessThanOrEqual(204);
+});
+
+it("keeps a caption detour clear of an unrelated node in a skipped row", () => {
+  const middle = { id: "middle", x: 132, y: 260, width: 220, height: 160 };
+  const [path] = relationshipPath({ ...edge, sourceX: 150, sourceY: 40, targetX: 70, targetY: 640 }, [
+    { id: "finding", x: 0, y: 0, width: 220, height: 180 }, middle,
+    { id: "data", x: 0, y: 600, width: 220, height: 180 },
+  ]);
+  let previous = [0, 0];
+  const crossings: number[][] = [];
+  for (const match of path.matchAll(/([MLQC])([^MLQC]+)/g)) {
+    const values = match[2]!.trim().split(/[ ,]+/).map(Number);
+    const end = values.slice(-2);
+    if (match[1] !== "M") for (let sample = 0; sample <= 100; sample++) {
+      const t = sample / 100, u = 1 - t;
+      const point = end.map((value, axis) => match[1] === "C"
+        ? u ** 3 * previous[axis]! + 3 * u * u * t * values[axis]! + 3 * u * t * t * values[axis + 2]! + t ** 3 * value
+        : match[1] === "Q"
+        ? u * u * previous[axis]! + 2 * u * t * values[axis]! + t * t * value
+        : u * previous[axis]! + t * value);
+      if (point[0]! > middle.x && point[0]! < middle.x + middle.width && point[1]! > middle.y && point[1]! < middle.y + middle.height) crossings.push(point);
+    }
+    previous = end;
+  }
+  expect(crossings).toEqual([]);
+  expect(path).toMatch(/^M150,40/);
+  expect(path).toMatch(/70,640$/);
+});

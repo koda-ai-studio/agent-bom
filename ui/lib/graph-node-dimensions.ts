@@ -4,14 +4,14 @@ import type { DagreLrOptions } from "@/lib/use-dagre-lr";
 import type { MinSeparationOptions } from "@/lib/dagre-layout";
 import type { CSSProperties } from "react";
 
-/** Keep the same readable entity sizing in every interactive graph projection. */
-export function readableGraphNodeStyle(zoom: number): CSSProperties {
+/** Bounded investigations reserve more metadata space when Fit all lowers zoom. */
+export function readableGraphNodeStyle(zoom: number, boundedContext = false): CSSProperties {
   const scale = Math.max(Number.isFinite(zoom) ? zoom : 1, 0.16);
   return {
-    "--graph-node-label-size": `${Math.min(28, Math.max(18, 15 / scale))}px`,
+    "--graph-node-label-size": `${Math.min(boundedContext ? 30 : 28, Math.max(18, 15 / scale))}px`,
     "--graph-node-glyph-size": `${Math.min(112, Math.max(72, 64 / scale))}px`,
     "--graph-node-icon-size": `${Math.min(48, Math.max(32, 28 / scale))}px`,
-    "--graph-node-meta-size": `${Math.min(24, Math.max(12, 12 / scale))}px`,
+    "--graph-node-meta-size": `${Math.min(boundedContext ? 28 : 24, Math.max(12, 12 / scale))}px`,
   } as CSSProperties;
 }
 

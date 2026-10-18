@@ -125,3 +125,26 @@ it("settles the fitted root even when its size changes inside a stable graph env
   await act(() => vi.advanceTimersByTimeAsync(100));
   expect(flow.fitView).toHaveBeenCalledTimes(3);
 });
+
+it("reclaims canvas space when an expanded investigation removes a control row", async () => {
+  vi.useFakeTimers();
+  vi.stubGlobal("requestAnimationFrame", (callback: () => void) => setTimeout(callback, 0));
+  vi.stubGlobal("cancelAnimationFrame", clearTimeout);
+  vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
+  vi.stubGlobal("innerHeight", 768);
+  flow.frame = document.createElement("div");
+  flow.frame.setAttribute("data-graph-adaptive-frame", "");
+  const bounds = vi.spyOn(flow.frame, "getBoundingClientRect");
+  bounds.mockReturnValue({ top: 400 } as DOMRect);
+  const onLayoutAspect = vi.fn();
+  const view = (layoutKey: string) => <GraphCanvasAutoFit enabled layoutKey={layoutKey} inspector={false} preserveViewport={false} onLayoutAspect={onLayoutAspect} />;
+  const rendered = render(view("partial"));
+  await act(() => vi.advanceTimersByTimeAsync(100));
+  expect(flow.frame.style.getPropertyValue("--graph-adaptive-height")).toBe("344px");
+  // The last page removes Show more connections. The canvas itself has not
+  // resized yet, so its ResizeObserver cannot discover the reclaimed space.
+  bounds.mockReturnValue({ top: 378 } as DOMRect);
+  rendered.rerender(view("complete"));
+  await act(() => vi.advanceTimersByTimeAsync(100));
+  expect(flow.frame.style.getPropertyValue("--graph-adaptive-height")).toBe("366px");
+});
