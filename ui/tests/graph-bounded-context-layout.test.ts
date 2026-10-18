@@ -27,12 +27,17 @@ describe("bounded investigation layout", () => {
     expect(compactInvestigationLayout(false, 12)).toBeUndefined();
     expect(compactInvestigationLayout(true, 0)).toBeUndefined();
     expect(compactInvestigationLayout(true, 17)).toBeUndefined();
-    expect(compactInvestigationLayout(true, 12)).toBeDefined();
+    const estate = compactInvestigationLayout(true, 12)!;
+    const context = compactInvestigationLayout(true, 12, true)!;
+    expect(estate.nodeWidth).toBe(READABLE_LINEAGE_DAGRE_LR.nodeWidth);
+    expect(estate.nodeHeight).toBe(READABLE_LINEAGE_DAGRE_LR.nodeHeight);
+    expect(context.nodeWidth).toBeGreaterThan(estate.nodeWidth!);
+    expect(context.nodeHeight).toBeGreaterThan(estate.nodeHeight!);
   });
 
   it("keeps every node and directed edge in a branching 12-node context without card overlap", () => {
     const graph = contextGraph();
-    const options = compactInvestigationLayout(true, graph.nodes.length)!;
+    const options = compactInvestigationLayout(true, graph.nodes.length, true)!;
     const compact = applyDagreLayout(graph.nodes, graph.edges, { ...options, direction: "LR" });
     const previous = applyDagreLayout(graph.nodes, graph.edges, { ...READABLE_LINEAGE_DAGRE_LR, direction: "LR" });
     expect(compact.nodes.map((n) => n.id)).toEqual(graph.nodes.map((n) => n.id));

@@ -1726,10 +1726,6 @@ function GraphPageInner() {
   // renderers upstream, so ReactFlow only ever lays out small/medium graphs
   // where dagre is the better fit.
   const compactGroupedTopology = aggregated.clusters.size > 0 && aggregated.nodes.length <= 6;
-  // A short investigation should fit as readable cards, not tiny summary pills
-  // separated by the spacing intended for a much larger estate.
-  const investigationLayout = compactInvestigationLayout(Boolean(investigationMode) || (!rollupNavigationActive && flow.nodes.length <= 16), aggregated.nodes.length);
-  const compactInvestigationTopology = investigationLayout !== undefined;
   const compactMobileTopology = narrowViewport && !selectedAttackPath &&
     !rollupNavigationActive && compactGroupedTopology;
   const graphLayoutKind = compactMobileTopology || (narrowViewport && investigationMode) ? "dagre" : selectedAttackPath || selectedScenarioId || rollupNavigationActive || investigationMode ? "dagre-lr" : "asset-hierarchy";
@@ -1755,6 +1751,10 @@ function GraphPageInner() {
     correlation: activeSnapshot?.snapshot_kind === "correlation",
     pathSelected: Boolean(selectedAttackPath || selectedScenarioId || rollupNavigationActive),
   }), [scenarioElements, investigationMode?.rootId, activeSnapshot?.snapshot_kind, selectedAttackPath, selectedScenarioId, rollupNavigationActive]);
+  // A short investigation should fit as readable cards, not tiny summary pills
+  // separated by the spacing intended for a much larger estate.
+  const investigationLayout = compactInvestigationLayout(Boolean(investigationMode) || (!rollupNavigationActive && flow.nodes.length <= 16), aggregated.nodes.length, Boolean(investigationContext));
+  const compactInvestigationTopology = investigationLayout !== undefined;
   const requestedContextGroup = searchParams.get("context_view");
   const selectedContextGroup = investigationContext?.groups.some(group => group.id === requestedContextGroup)
     ? requestedContextGroup!

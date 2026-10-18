@@ -74,13 +74,15 @@ export function readableLineageDagreLr(
 export const COMPACT_GRAPH_MIN_ZOOM = 0.75;
 
 /** A bounded selected context keeps full labels and card-sized layout boxes. */
-export function compactInvestigationLayout(explicitContext: boolean, nodeCount: number): DagreLrOptions | undefined {
+export function compactInvestigationLayout(explicitContext: boolean, nodeCount: number, boundedCaptions = false): DagreLrOptions | undefined {
   if (!explicitContext || nodeCount < 1 || nodeCount > 16) return undefined;
+  const width = boundedCaptions ? 360 : LINEAGE_NODE_WIDTH;
+  const height = boundedCaptions ? 260 : LINEAGE_NODE_HEIGHT;
   return readableLineageDagreLr({
-    nodeWidth: 360,
-    nodeHeight: 260,
+    nodeWidth: width,
+    nodeHeight: height,
     rankSep: 128,
     nodeSep: 32,
-    minSeparation: { width: 360, height: 260, gap: 24 },
+    minSeparation: { width, height, gap: 24 },
   });
 }
