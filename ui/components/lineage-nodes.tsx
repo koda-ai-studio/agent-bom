@@ -207,7 +207,7 @@ function NodeCard({
         <ContextHandles />
         <Icon aria-hidden="true" style={{ width: "var(--graph-node-icon-size, 32px)", height: "var(--graph-node-icon-size, 32px)", ...(provider ? { transform: "translate(-52%, -20%)" } : {}) }} className={`h-8 w-8 ${iconClass}`} />
         {provider && <SourceBadge source={provider} graph className="absolute"
-          style={{ right: "-10%", bottom: "-6%", width: "calc(var(--graph-node-meta-size, 12px) * 2.8)", height: "calc(var(--graph-node-meta-size, 12px) * 2.8)" }} />}
+          style={{ left: "calc(50% + 4px)", bottom: "-6%", width: "calc(var(--graph-node-meta-size, 12px) * 2.8)", height: "calc(var(--graph-node-meta-size, 12px) * 2.8)" }} />}
       </div>
       <p className="mb-1 w-full min-w-0 break-words line-clamp-3 text-lg font-semibold leading-[1.2] text-foreground [overflow-wrap:anywhere]" style={{ fontSize: "var(--graph-node-label-size, 18px)" }}>
         {canvasNodeLabel(repository?.slug || displayTitle).split(/(?<=[_/@-])/).map((part, index) => <span key={index}>{part}<wbr /></span>)}
