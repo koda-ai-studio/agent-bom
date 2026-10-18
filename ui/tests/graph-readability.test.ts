@@ -22,3 +22,10 @@ it("reveals direction for the investigated neighborhood and preserves path empha
   expect(result[1]?.data?.directionEmphasis).toBe(false);
   expect(readableGraphEdges([{ ...links[0]!, data: { directionEmphasis: true } }], undefined, { preserveVisualStyle: true })[0]?.data?.directionEmphasis).toBe(true);
 });
+it("keeps a high-degree parent quiet without losing relationships or direction metadata", () => {
+  const edges = Array.from({ length: 90 }, (_, i) => ({ id: `edge-${i}`, source: "parent", target: `child-${i}`, markerEnd: { type: MarkerType.ArrowClosed }, data: { quietLabel: true, relationship: "contains" } }));
+  const result = readableGraphEdges(edges, new Set(["parent", ...edges.map(e => e.target)]));
+  expect(result).toHaveLength(90);
+  expect(result.every(e => !e.label && !e.data?.directionEmphasis)).toBe(true);
+  expect(result.every(e => e.markerEnd && e.source === "parent")).toBe(true);
+});

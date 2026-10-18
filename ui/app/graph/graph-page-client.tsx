@@ -10,7 +10,7 @@ import { GraphHopEvidenceInspector } from "@/components/graph-hop-evidence-inspe
 import { relationshipEdgeTypes } from "@/components/relationship-edge";
 import { GraphRollupChildPager } from "@/components/graph-rollup-child-pager";
 import { GraphRollupCountNotice } from "@/components/graph-rollup-count-notice";
-import { completeDirectedHopCount, visibleGraphFocus } from "@/lib/security-graph-focus";
+import { completeDirectedHopCount, visibleGraphFocus, pathRelationshipIds } from "@/lib/security-graph-focus";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -505,16 +505,6 @@ function mergeNodeDetail(
   return merged;
 }
 
-function buildPathEdgeKeys(hops: string[]): Set<string> {
-  const keys = new Set<string>();
-  for (let index = 0; index < hops.length - 1; index += 1) {
-    const source = hops[index];
-    const target = hops[index + 1];
-    keys.add(`${source}=>${target}`);
-    keys.add(`${target}=>${source}`);
-  }
-  return keys;
-}
 
 function graphErrorState(message: string): {
   title: string;
@@ -1844,10 +1834,10 @@ function GraphPageInner() {
     [activeFocusId, layoutEdges],
   );
 
-  const attackPathEdgeKeys = useMemo(
+  const attackPathEdgeIds = useMemo(
     () =>
-      selectedAttackPath ? buildPathEdgeKeys(selectedAttackPath.hops) : null,
-    [selectedAttackPath],
+      selectedAttackPath ? pathRelationshipIds(layoutEdges, selectedAttackPath) : null,
+    [selectedAttackPath, layoutEdges],
   );
   const attackPathNodeOrder = useMemo(
     () =>
@@ -2108,15 +2098,13 @@ function GraphPageInner() {
       // the selection instead of blanketing the canvas. A capture keeps them.
       maxLabeledEdges: captureMode ? Number.POSITIVE_INFINITY : GRAPH_EDGE_LABEL_BUDGET,
     });
-    if (attackPathEdgeKeys) {
+    if (attackPathEdgeIds) {
       return readableEdges
         .filter((edge) =>
-          attackPathEdgeKeys.has(`${edge.source}=>${edge.target}`),
+          attackPathEdgeIds.has(edge.id),
         )
         .map((edge): Edge => {
-          const inPath = attackPathEdgeKeys.has(
-            `${edge.source}=>${edge.target}`,
-          );
+          const inPath = attackPathEdgeIds.has(edge.id);
           return {
             ...edge,
             labelShowBg: true,
@@ -2212,12 +2200,12 @@ function GraphPageInner() {
         : {}),
       // Unselected links retain their relationship labels and evidence while
       // using one legible theme-aware stroke. Focus restores semantic emphasis.
-      ...(!localNeighborhoodIds ? { style: { ...edge.style, stroke: "var(--text-tertiary)" } } : {}),
+      ...(!localNeighborhoodIds || localNeighborhoodIds.size > 13 ? { style: { ...edge.style, stroke: "var(--text-tertiary)" } } : {}),
     }));
   }, [
     layoutEdges,
     localNeighborhoodIds,
-    attackPathEdgeKeys,
+    attackPathEdgeIds,
     reachabilitySummary,
     blastRadius,
     captureMode,

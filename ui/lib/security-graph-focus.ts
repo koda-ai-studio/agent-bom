@@ -167,3 +167,25 @@ export function buildFocusedGraphData(
 export function visibleGraphFocus(nodes: ReadonlyArray<{ id: string }>, requestedId: string | null): string | null {
   return requestedId !== null && nodes.some((node) => node.id === requestedId) ? requestedId : null;
 }
+
+/** Match recorded path steps; adjacent assets alone do not identify a verb. */
+export function pathRelationshipIds(
+  edges: ReadonlyArray<{ id: string; source: string; target: string; data?: Record<string, unknown> | undefined }>,
+  path: Pick<AttackPath, "hops" | "edges">,
+): Set<string> {
+  const steps = new Map<string, Set<string>>();
+  for (let i = 0; i + 1 < path.hops.length; i++) {
+    const verb = path.edges[i];
+    if (!verb) continue;
+    for (const [source, target] of [[path.hops[i], path.hops[i + 1]], [path.hops[i + 1], path.hops[i]]]) {
+      const key = JSON.stringify([source, target]);
+      const values = steps.get(key) ?? new Set<string>();
+      values.add(verb);
+      steps.set(key, values);
+    }
+  }
+  return new Set(edges.filter(edge => {
+    const values = steps.get(JSON.stringify([edge.source, edge.target]));
+    return values?.has(edge.id) || (typeof edge.data?.relationship === "string" && values?.has(edge.data.relationship));
+  }).map(edge => edge.id));
+}

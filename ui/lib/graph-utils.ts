@@ -616,6 +616,7 @@ export function readableGraphEdges(
   // budget the labels ride the selection instead: hover or focus a path and its
   // relationships name themselves, the rest stay quiet.
   const labelsAreDense = edges.length > maxLabeledEdges;
+  const activeLinksAreDense = activeNodeIds ? edges.filter(edge => activeNodeIds.has(edge.source) && activeNodeIds.has(edge.target)).length > 12 : false;
 
   return edges.map((edge): Edge => {
     const relationship = edgeRelationship(edge);
@@ -623,6 +624,7 @@ export function readableGraphEdges(
     const active = activeNodeIds
       ? activeNodeIds.has(edge.source) && activeNodeIds.has(edge.target)
       : false;
+    const emphasizeActive = active && !activeLinksAreDense;
     const captureBaseOpacity = captureMode
       ? Math.max(baseOpacity, 0.42)
       : baseOpacity;
@@ -644,12 +646,12 @@ export function readableGraphEdges(
       : computedOpacity;
     const width = numericStrokeWidth(edge);
     const safeSharedLabel = relationship.startsWith("shares_") || relationship === "shares_cred";
-    const mayLabel = (!edge.data?.quietLabel && !labelsAreDense) || active;
+    const mayLabel = (!edge.data?.quietLabel && !labelsAreDense) || emphasizeActive;
     const label = preserveLabelState
       ? edge.label
       : mayLabel
         ? ((safeSharedLabel ? undefined : edge.label) ??
-          (relationship && (active || highSignal || edges.length <= 24)
+          (relationship && (emphasizeActive || highSignal || edges.length <= 24)
             ? relationshipEdgeLabelText(relationship, edge.data as Record<string, unknown>)
             : undefined))
         : undefined;
@@ -674,7 +676,7 @@ export function readableGraphEdges(
       : marker;
     return {
       ...edge,
-      data: { ...edge.data, directionEmphasis: active || edge.data?.directionEmphasis === true },
+      data: { ...edge.data, directionEmphasis: emphasizeActive || edge.data?.directionEmphasis === true },
       ...(edge.markerEnd ? { markerEnd: readableMarker(edge.markerEnd) } : {}),
       ...(edge.markerStart ? { markerStart: readableMarker(edge.markerStart) } : {}),
       label,
@@ -687,14 +689,14 @@ export function readableGraphEdges(
         : captureMode
         ? false
         : quietAnimation
-          ? Boolean(activeNodeIds && active && edge.animated)
+          ? Boolean(activeNodeIds && emphasizeActive && edge.animated)
           : Boolean(edge.animated),
       style: {
         ...edge.style,
         opacity,
         strokeWidth: preserveVisualStyle
           ? width
-          : active
+          : emphasizeActive
           ? Math.max(width, captureMode ? 3 : 2.6)
           : captureMode
             ? Math.max(Math.min(width, highSignal ? 2.2 : 1.6), 1.25)

@@ -101,7 +101,10 @@ export async function runGraphQualityCapture({ newCapturePage, buildScopeShowcas
         const expand = page.getByRole("button", { name: /^Expand 90/ });
         await expect(expand).toBeVisible();
         await expand.click();
-        await expect(page.locator(".react-flow__node")).toHaveCount(91);
+        await expect(page.getByText("Graph · 91 nodes · 90 relationships", { exact: true })).toBeVisible();
+        // React Flow virtualizes offscreen children after expansion.
+        await expect(expand).toHaveCount(0);
+        await expect(page.locator(".react-flow__node").first()).toBeVisible();
         await page.screenshot({ path: path.join(output, `${key}-expanded.png`) });
       } else {
         const edge = fixture.edges[0];

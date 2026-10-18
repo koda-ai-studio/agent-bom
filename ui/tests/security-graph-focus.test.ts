@@ -362,3 +362,15 @@ describe("current estate navigation", () => {
       .toBe("/remediation?cve=CVE-2026-1234&package=example");
   });
 });
+
+it("emphasizes only recorded path relationships, including reverse layout and parallel verbs", async () => {
+  const { pathRelationshipIds } = await import("@/lib/security-graph-focus");
+  const edges = [
+    { id: "a-config-b", source: "a", target: "b", data: { relationship: "configures" } },
+    { id: "a-contains-b", source: "a", target: "b", data: { relationship: "contains" } },
+    { id: "finding-affects-b", source: "finding", target: "b", data: { relationship: "affects" } },
+  ];
+  expect([...pathRelationshipIds(edges, { hops: ["a", "b", "finding"], edges: ["configures", "affects"] })]).toEqual(["a-config-b", "finding-affects-b"]);
+  expect(pathRelationshipIds(edges, { hops: ["a", "b"], edges: ["not-recorded"] }).size).toBe(0);
+  expect([...pathRelationshipIds(edges, { hops: ["a", "b"], edges: ["a-config-b"] })]).toEqual(["a-config-b"]);
+});

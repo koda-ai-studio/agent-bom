@@ -46,7 +46,7 @@ import { readableGraphNodeStyle, readableLineageDagreLr } from "@/lib/graph-node
 import { graphFitViewOptions, shouldShowGraphMiniMap } from "@/lib/graph-viewport";
 import { decideGraphRenderer } from "@/lib/graph-renderer-switch";
 import { mergeGraphNodeDetail } from "@/lib/graph-entity-detail";
-import { buildFocusedGraphData, layersForFocusedPath } from "@/lib/security-graph-focus";
+import { buildFocusedGraphData, layersForFocusedPath, pathRelationshipIds } from "@/lib/security-graph-focus";
 import { hopReceiptCoverage } from "@/lib/hop-receipt-coverage";
 import { buildUnifiedFlowGraph } from "@/lib/unified-graph-flow";
 import { useGraphLayout } from "@/lib/use-graph-layout";
@@ -436,12 +436,13 @@ export function SecurityGraphInvestigation({
     return nodes === layout.nodes ? null : { plan, nodes };
   }, [attackPath, canvasWidth, embedded, focusMode, layout.nodes]);
   const canvasNodes = pathLayout?.nodes ?? layout.nodes;
+  const pathEdges = useMemo(() => focusMode && attackPath ? pathRelationshipIds(layout.edges, attackPath) : new Set<string>(), [focusMode, attackPath, layout.edges]);
   const displayEdges = useMemo(
     () => readableGraphEdges(layout.edges.map(edge => ({ ...edge, data: { ...edge.data,
-      directionEmphasis: edge.id === selectedEdge?.id || edge.source === selectedNodeId || edge.target === selectedNodeId,
+      directionEmphasis: pathEdges.has(edge.id) || edge.id === selectedEdge?.id || edge.source === selectedNodeId || edge.target === selectedNodeId,
       quietLabel: edge.data?.quietLabel && edge.id !== selectedEdge?.id && edge.source !== selectedNodeId && edge.target !== selectedNodeId,
     } })), undefined, { nodeLabels: graphNodeDisplayLabels(layout.nodes) }),
-    [layout.edges, layout.nodes, selectedEdge?.id, selectedNodeId],
+    [layout.edges, layout.nodes, selectedEdge?.id, selectedNodeId, pathEdges],
   );
   const legendItems = useMemo(
     () => legendItemsForVisibleGraph(layout.nodes, displayEdges),
