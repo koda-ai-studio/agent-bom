@@ -1,5 +1,6 @@
 "use client";
 
+import { relationshipLegendItem } from "@/lib/graph-utils";
 import { countLabel } from "@/lib/count-label";
 import { useId, useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, Search } from "lucide-react";
@@ -74,7 +75,7 @@ export function GraphHopEvidenceInspector({
             <span className="min-w-0 flex-1">
               <span className="block break-words text-sm font-medium [overflow-wrap:anywhere]">{index + 1}. {source.label} → {target.label}</span>
               <span className="mt-1 flex flex-wrap items-center gap-2 text-xs text-ink-secondary">
-                <span>{receipt ? humanize(receipt.relationship) : "Relationship evidence unavailable"}</span>
+                <span>{receipt ? (receipt.relationship ? relationshipLegendItem(receipt.relationship).label : humanize(receipt.relationship)) : "Relationship evidence unavailable"}</span>
                 <span className={`rounded-full border px-2 py-0.5 ${negative ? "border-red-500/40 text-red-700 dark:text-red-300" : "border-outline"}`}>{status}</span>
               </span>
             </span>

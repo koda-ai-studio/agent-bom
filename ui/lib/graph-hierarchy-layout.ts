@@ -108,7 +108,9 @@ export function graphHierarchyLayout(nodes: Node<LineageNodeData>[], edges: Edge
   // At overview zoom the native glyph and text grow independently of the
   // camera. Reserve their full three-line caption plus finding footer so
   // stacked findings cannot run into the next entity's glyph.
-  const nodeHeight = Math.max(300, options.nodeHeight ?? 0);
+  // An occurrence chip or identity line adds two scaled metadata rows on top of that.
+  const extraCaption = nodes.some(node => node.data.occurrenceRole || node.data.identityContext);
+  const nodeHeight = Math.max(extraCaption ? 360 : 300, options.nodeHeight ?? 0);
   const repository = nodes.some(node => graphRepositoryContext(node.data));
   const fanIn = new Map<string, number>(), fanOut = new Map<string, number>();
   for (const edge of rankedEdges) {

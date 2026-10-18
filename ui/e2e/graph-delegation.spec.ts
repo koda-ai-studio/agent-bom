@@ -51,7 +51,11 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     const inspector = page.getByTestId("graph-entity-drawer");
     await expect(inspector.getByRole("heading", { name: "Cloud planner", exact: true })).toBeVisible();
     expect(queries[0]).toEqual({ root: source, scan: snapshot });
-    if (width === 390) await inspector.getByRole("button", { name: "Close", exact: true }).click();
+    if (width === 390) {
+      await inspector.getByRole("button", { name: "Close", exact: true }).click();
+      // A phone opens an investigation as a list; the canvas is one tap away.
+      await page.getByRole("group", { name: "Investigation view" }).getByRole("button", { name: "Graph", exact: true }).click();
+    }
     const edge = page.locator('.react-flow__edge[data-id="delegation"]');
     await edge.focus();
     await edge.press("Enter");

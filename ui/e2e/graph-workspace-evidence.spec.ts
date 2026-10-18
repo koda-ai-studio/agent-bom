@@ -30,6 +30,13 @@ async function fixture(page: Page) {
   });
   return queries;
 }
+
+/** Bounded investigations group five or more siblings; expand every group to inspect each card. */
+async function expandGroups(page: Page) {
+  const pill = page.getByRole("button", { name: /^Expand \d+ (members|findings)$/ });
+  // A group can sit outside a phone's clipped canvas; activate it directly.
+  while (await pill.count()) await pill.first().dispatchEvent("click");
+}
 for (const theme of ["light", "dark"] as const) for (const width of [1440, 390]) {
   test(`shared workspace bounds expansion and preserves conditional evidence ${theme} ${width}`, async ({page}, testInfo) => {
     await page.setViewportSize({width, height: 1000});
@@ -42,11 +49,20 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390])
     await expect(page.locator(".react-flow__node")).toHaveCount(4);
     // A root investigation adds a reachability overlay; it must retain the
     // recorded verbs and uncertainty just like the ordinary graph.
-    await expect(page.locator(".graph-relationship-label")).toHaveCount(3);
-    await expect(page.locator(".graph-relationship-label").filter({hasText: /configured/})).toHaveCount(3);
-    if (width === 390) await inspector.getByRole("button", {name: "Close", exact: true}).click();
+    if (width === 390) {
+      // A phone reads the investigation as a list; each relationship group keeps its evidence qualifier.
+      await expect(page.getByTestId("graph-connections-list").getByRole("heading").filter({hasText: /configured/})).toHaveCount(2);
+      if (await inspector.isVisible()) await inspector.getByRole("button", {name: "Close", exact: true}).click();
+      await page.getByRole("group", {name: "Investigation view"}).getByRole("button", {name: "Graph", exact: true}).click();
+    } else {
+      // Repeated verbs from the root show once with their count; each keeps its evidence qualifier.
+      await expect(page.locator(".graph-relationship-label")).toHaveCount(2);
+      await expect(page.locator(".graph-relationship-label").filter({hasText: /configured/})).toHaveCount(2);
+      await expect(page.locator(".graph-relationship-label").filter({hasText: /×2/})).toHaveCount(1);
+    }
+    if (width === 390 && await inspector.isVisible()) await inspector.getByRole("button", {name: "Close", exact: true}).click();
     await page.getByRole("button", {name: "Show more connections", exact: true}).click();
-    await expect(page.locator(".react-flow__node")).toHaveCount(8);
+    await expect.poll(async () => { await expandGroups(page); return page.locator(".react-flow__node").count(); }).toBe(8);
     expect(queries.at(-1)?.max_nodes).toBe(8);
     if (width === 390 && await inspector.isVisible()) await inspector.getByRole("button", {name: "Close", exact: true}).click();
     expect(queries.every(q => q.scan_id === "snapshot" && q.roots[0] === root)).toBe(true);
@@ -136,7 +152,8 @@ test("identity context survives bounded expansion and grouped drilldown", async 
   const queries = await fixture(page);
   await page.goto(`/graph?lens=context&scan=snapshot&root=${root}`);
   for (const count of [4, 8, 16]) {
-    await expect(page.locator(".react-flow__node")).toHaveCount(count);
+    // Each page renders asynchronously; expand whatever group it brings before counting.
+    await expect.poll(async () => { await expandGroups(page); return page.locator(".react-flow__node").count(); }).toBe(count);
     await page.getByRole("button", { name: "Show more connections", exact: true }).click();
   }
   await expect(page.locator(".react-flow__node")).toHaveCount(3);

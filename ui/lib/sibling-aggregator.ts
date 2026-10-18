@@ -18,6 +18,9 @@
 
 import type { Edge, Node } from "@xyflow/react";
 
+import { accessEvidenceQualifier } from "@/lib/graph-access-evidence";
+import { relationshipLegendItem } from "@/lib/graph-utils";
+
 import type {
   LineageNodeData,
   LineageNodeType,
@@ -252,7 +255,7 @@ export function aggregateSiblings(
         source: first.source,
         target: id,
         type: "smoothstep",
-        label: `${linkedMembers.length} ${linkedMembers.length === 1 ? "member" : "members"}`,
+        label: clusterLinkLabel(readEdgeKind(first), links),
         data: {
           relationship: readEdgeKind(first),
           isClusterEdge: true,
@@ -280,6 +283,18 @@ export function aggregateSiblings(
     edges: [...filteredEdges, ...addEdges],
     clusters,
   };
+}
+
+/**
+ * The verb and evidence the grouped links share, with their count:
+ * "Can Access ×6 · configured". Differing evidence is named, never hidden.
+ */
+function clusterLinkLabel(relationship: string, links: Edge[]): string {
+  const members = new Set(links.map((edge) => edge.target)).size;
+  const qualifiers = new Set(links.map((edge) => accessEvidenceQualifier(relationship, edge.data as Record<string, unknown> | undefined) ?? ""));
+  const qualifier = qualifiers.size > 1 ? "mixed evidence" : [...qualifiers][0];
+  const verb = relationship ? relationshipLegendItem(relationship).label : `${members === 1 ? "member" : "members"}`;
+  return `${verb} ×${members}${qualifier ? ` · ${qualifier}` : ""}`;
 }
 
 /** Operator-friendly cluster pill copy. Singular vs plural matters here. */

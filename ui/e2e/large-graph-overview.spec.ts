@@ -689,6 +689,8 @@ test("partial investigations expand only after an explicit request", async ({ pa
   const next = page.waitForRequest(req => req.url().endsWith("/v1/graph/query") && req.postDataJSON().max_nodes === 8);
   await page.getByRole("button", { name: "Show more connections", exact: true }).click();
   await next;
+  // Seven sibling packages arrive as one expandable group; expanding restores every one.
+  await page.getByRole("button", { name: "Expand 7 members", exact: true }).click();
   await expect(page.getByTestId("graph-viewport-scope")).toContainText("8 nodes");
   // Fit every loaded connection, including newly measured off-screen nodes.
   await page.getByRole("button", { name: "Fit all", exact: true }).click();

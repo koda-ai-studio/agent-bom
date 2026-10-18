@@ -600,6 +600,12 @@ function AttackPathInvestigationContent() {
     [focus, graphNodeById, selectedAttackPath],
   );
   const fullGraphHref = useMemo(() => {
+    // Opening the full graph from a selected path keeps that path, not just its first entity.
+    if (selectedAttackPath) {
+      const params = new URLSearchParams({ lens: "attack-path", path: attackPathKey(selectedAttackPath) });
+      if (selectedScanId) params.set("scan", selectedScanId);
+      return withFindingContext(`/security-graph?${params.toString()}`, searchParams);
+    }
     if (investigationRoot) {
       return withFindingContext(buildGraphInvestigationHref({
         scanId: selectedScanId || undefined,
@@ -615,7 +621,7 @@ function AttackPathInvestigationContent() {
     const query = params.toString();
     if (query) params.set("lens", "lineage");
     return withFindingContext(params.size > 0 ? `/security-graph?${params.toString()}` : "/security-graph?lens=lineage", searchParams);
-  }, [focus.agentName, investigationRoot, selectedScanId, searchParams]);
+  }, [focus.agentName, investigationRoot, selectedScanId, searchParams, selectedAttackPath]);
   const resetFocusHref = useMemo(
     () => buildSecurityGraphHref({ scanId: selectedScanId || undefined }),
     [selectedScanId],

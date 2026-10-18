@@ -2724,10 +2724,14 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
             .filter(Number.isFinite),
         );
         const onDemandLabels = await page.locator('[data-graph-annotations="on-demand"]').count() > 0;
+        // A repeated relationship shows once with its count ("Uses ×2"); count the edges each label covers.
+        const labelledEdges = await page.locator(".react-flow__edge-text, .relationship-badge").evaluateAll((labels) => labels
+          .filter((label) => label.getBoundingClientRect().width > 0 && (label.textContent ?? "").trim())
+          .reduce((total, label) => total + Number(/×(\d+)/.exec(label.textContent ?? "")?.[1] ?? 1), 0));
         if (options.assertQuietGraphLabels && edgeLabelFonts.length) throw new Error(`Overview repeats relationship labels on ${urlPath}`);
-        if ((!onDemandLabels && edgeLabelFonts.length < graphEdgeCount) || Math.min(...edgeLabelFonts) < options.minGraphEdgeLabelFontPx) {
+        if ((!onDemandLabels && labelledEdges < graphEdgeCount) || Math.min(...edgeLabelFonts) < options.minGraphEdgeLabelFontPx) {
           throw new Error(
-            `Unreadable or missing graph relationship labels on ${urlPath}: ${edgeLabelFonts.length}/${graphEdgeCount} labels, minimum ${Math.min(...edgeLabelFonts)}px`,
+            `Unreadable or missing graph relationship labels on ${urlPath}: ${labelledEdges}/${graphEdgeCount} labelled edges, minimum ${Math.min(...edgeLabelFonts)}px`,
           );
         }
       }
@@ -3522,7 +3526,8 @@ async function main() {
       ],
       expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/query"],
       minGraphNodes: 5,
-      minGraphEdges: 5,
+      // Both agents' links to the shared server are drawn, so the derived shares_server link is hidden.
+      minGraphEdges: 4,
       minGraphNodeFontPx: 12,
       // This is an explicit agent investigation; retain its evidence captions.
       minGraphEdgeLabelFontPx: 12,

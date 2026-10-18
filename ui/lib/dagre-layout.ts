@@ -101,6 +101,12 @@ export interface LayoutOptions {
    * 2px-label zoom. LR layouts only — see the function docs.
    */
   fitAspect?: number | undefined;
+  /**
+   * Allow {@link fitRanksToAspect} to wrap a tall rank into sub-columns.
+   * Wrapping draws links to the far sub-column through the near one, so a
+   * rooted neighbourhood keeps one column per rank and pans instead.
+   */
+  wrapRanks?: boolean;
 }
 
 /**
@@ -314,6 +320,7 @@ export function applyDagreLayout(
     nodeSep = 30,
     minSeparation,
     fitAspect,
+    wrapRanks = true,
   } = options;
 
   const g = new Graph();
@@ -347,7 +354,7 @@ export function applyDagreLayout(
 
   const orderedNodes = isHorizontal ? reduceRankCrossings(layoutNodes, edges) : layoutNodes;
   const fittedNodes =
-    isHorizontal && fitAspect
+    isHorizontal && fitAspect && wrapRanks
       ? fitRanksToAspect(orderedNodes, {
           aspect: fitAspect,
           nodeWidth,

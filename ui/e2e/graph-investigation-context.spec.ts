@@ -32,6 +32,8 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     await expect(controls).toContainText("4 of 4 nodes in this view");
     if (width === 390) {
       await page.getByTestId("graph-entity-drawer").getByRole("button", { name: "Close", exact: true }).click();
+      await expect(page.getByTestId("graph-connections-list")).toContainText("Developer agent");
+      await page.getByRole("group", { name: "Investigation view" }).getByRole("button", { name: "Graph", exact: true }).click();
       await expect(page.getByRole("group", { name: "Navigate loaded graph nodes" })).toContainText("Developer agent");
     }
     if (width === 390) await controls.getByLabel("Graph context", { exact: true }).selectOption("identity");
@@ -41,7 +43,7 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     await expect(page).toHaveURL(/context_view=identity/);
     await expect.poll(async () => {
       const positions = await page.locator(".react-flow__node").evaluateAll(items => Object.fromEntries(items.map(n => [n.getAttribute("data-id"), { x: (n as HTMLElement).style.transform, y: n.getBoundingClientRect().y, left: n.getBoundingClientRect().x }])));
-      return width >= 640 ? positions.role.left > positions.agent.left : positions.role.y > positions.agent.y;
+      return positions.role.left > positions.agent.left;
     }).toBe(true);
     const relationship = page.locator('.react-flow__edge[data-id="role:can_access:agent"]');
     await relationship.focus(); await relationship.press("Enter");
@@ -170,6 +172,8 @@ test("larger investigation captions stay inside ordinary layout cards", async ({
   await fixture(page, [node("role", "role", "prod-ai-admin"), node("agent", "agent", "Developer Copilot"), ...servers],
     [edge("role", "agent", "can_access"), ...servers.map(server => edge("agent", server.id, "uses"))]);
   await page.goto("/graph?scan=snapshot&root=agent&lens=context&capture=1");
+  // Fifteen sibling servers arrive as one group; expanding restores every card.
+  await page.getByRole("button", { name: "Expand 15 members", exact: true }).click();
   await expect(page.locator(".react-flow__node")).toHaveCount(17);
   await expect.poll(() => page.locator("[data-graph-entity]").evaluateAll(cards =>
     Math.max(...cards.map(card => parseFloat(getComputedStyle(card).width))))).toBeLessThanOrEqual(240);
