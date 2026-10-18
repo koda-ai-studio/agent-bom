@@ -26,6 +26,19 @@ describe("evidence-driven graph flow", () => {
     expect(graphAdaptiveFrame({ bounds: { x: left, y: top, width: right - left, height: bottom - top }, width: 1134, availableHeight: 684, inspector: false }).fitAll).toBe(true);
   });
 
+  it("reserves overview caption space for a multi-source correlation", () => {
+    const entries = [node("file", "sourceFile"), node("image", "container"), node("deployment", "container"), node("package", "package"), node("finding", "vulnerability")];
+    entries[2]!.data.occurrenceRole = "deployment occurrence";
+    const links = entries.slice(0, 3).map(n => edge(n.id, n.id, "package", "contains"));
+    links.push(edge("finding", "package", "finding", "vulnerable_to"));
+    const { nodes } = graphHierarchyLayout(entries, links, readableLineageDagreLr());
+    for (const a of nodes) for (const b of nodes) {
+      if (a.id !== b.id && Math.abs(a.position.x - b.position.x) < 240) {
+        expect(Math.abs(a.position.y - b.position.y)).toBeGreaterThanOrEqual(324);
+      }
+    }
+  });
+
   it("keeps aggregate member counts visible when overview relationship captions are quiet", () => {
     const entries = [node("package", "package"), { ...node("group", "vulnerability"), type: "clusterPillNode" }];
     const links = [{ ...edge("members", "package", "group", "vulnerable_to"), label: "22 members", data: { relationship: "vulnerable_to", isClusterEdge: true } }];
