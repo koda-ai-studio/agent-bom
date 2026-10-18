@@ -1,5 +1,6 @@
 import type { Edge, Node } from "@xyflow/react";
 import type { LineageNodeData } from "@/components/lineage-nodes";
+import { graphRepositoryContext } from "@/lib/graph-repository-context";
 import { applyDagreLayout, countStraightCrossings, reduceRankCrossings, type LayoutOptions } from "@/lib/dagre-layout";
 
 const FINDINGS = new Set(["vulnerability", "misconfiguration", "driftIncident"]);
@@ -137,7 +138,9 @@ export function graphHierarchyLayout(nodes: Node<LineageNodeData>[], edges: Edge
   const spaced = packed.map(node => ({ ...node, position: { ...node.position, x: node.position.x * stretch } }));
   // Large contexts retain the established wrapped-rank layout. Packing all
   // siblings into one column would recreate the tall fan-out problem.
-  const positioned = new Map((compact ? alignHierarchyBranches(orderHierarchyBranches(spaced, rankedEdges), rankedEdges, rowStep) : layout.nodes).map(node => [node.id, node]));
+  const ordered = compact ? orderHierarchyBranches(spaced, rankedEdges) : layout.nodes;
+  const repository = nodes.some(node => graphRepositoryContext(node.data));
+  const positioned = new Map((compact && repository ? alignHierarchyBranches(ordered, rankedEdges, rowStep) : ordered).map(node => [node.id, node]));
   return {
     nodes: nodes.map(node => positioned.get(node.id)!),
     edges: edges.map((edge): Edge => ({ ...edge,

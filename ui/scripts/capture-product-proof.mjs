@@ -2653,7 +2653,7 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
       if (audit.renderedEdges !== options.repositoryVisualAudit.length || audit.crossings.length) {
         throw new Error(`Repository relationships cross or are missing: ${JSON.stringify(audit)}`);
       }
-      if (!audit.logos.some(logo => logo.source === "github" && logo.loaded && logo.size >= 18)) {
+      if (!audit.logos.some(logo => logo.source === "github" && logo.loaded && logo.size >= 18 && !logo.overlapsGlyph)) {
         throw new Error(`Repository host logo is missing or too small: ${JSON.stringify(audit.logos)}`);
       }
     }

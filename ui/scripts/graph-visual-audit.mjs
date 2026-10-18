@@ -32,10 +32,15 @@ export function auditRenderedGraph({ edges }) {
       if (crossed) crossings.push([a.edge.id, b.edge.id]);
     }
   }
-  const logos = [...document.querySelectorAll(".react-flow__node [data-graph-source-badge] img")].map(img => ({
-    source: img.parentElement.getAttribute("data-agent-source"),
-    loaded: img.complete && img.naturalWidth > 0,
-    size: Math.min(img.getBoundingClientRect().width, img.getBoundingClientRect().height),
-  }));
+  const logos = [...document.querySelectorAll(".react-flow__node [data-graph-source-badge] img")].map(img => {
+    const badge = img.getBoundingClientRect();
+    const glyph = img.closest(".graph-entity-glyph")?.querySelector(":scope > svg")?.getBoundingClientRect();
+    return {
+      source: img.parentElement.getAttribute("data-agent-source"),
+      loaded: img.complete && img.naturalWidth > 0,
+      size: Math.min(badge.width, badge.height),
+      overlapsGlyph: Boolean(glyph && badge.left < glyph.right && badge.right > glyph.left && badge.top < glyph.bottom && badge.bottom > glyph.top),
+    };
+  });
   return { renderedEdges: curves.length, crossings, logos };
 }

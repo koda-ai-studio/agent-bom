@@ -191,7 +191,7 @@ function NodeCard({
         <ContextHandles />
         {data.nodeType === "agent"
           ? <AgentSourceMark source={brand} style={{ width: "var(--graph-node-icon-size, 32px)", height: "var(--graph-node-icon-size, 32px)" }} className={`h-8 w-8 ${iconClass}`} />
-          : <Icon aria-hidden="true" style={{ width: "var(--graph-node-icon-size, 32px)", height: "var(--graph-node-icon-size, 32px)" }} className={`h-8 w-8 ${iconClass}`} />}
+          : <Icon aria-hidden="true" style={{ width: "var(--graph-node-icon-size, 32px)", height: "var(--graph-node-icon-size, 32px)", ...(repository?.source ? { transform: "translate(-28%, -28%)" } : {}) }} className={`h-8 w-8 ${iconClass}`} />}
         {repository?.source && <SourceBadge source={repository.source} graph className="absolute -bottom-1 -right-1"
           style={{ width: "calc(var(--graph-node-meta-size, 12px) * 2.2)", height: "calc(var(--graph-node-meta-size, 12px) * 2.2)" }} />}
       </div>
