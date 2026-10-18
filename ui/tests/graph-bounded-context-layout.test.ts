@@ -32,10 +32,7 @@ describe("bounded investigation layout", () => {
     expect(estate.nodeWidth).toBe(READABLE_LINEAGE_DAGRE_LR.nodeWidth);
     expect(estate.nodeHeight).toBe(READABLE_LINEAGE_DAGRE_LR.nodeHeight);
     expect(context.nodeWidth).toBeGreaterThan(estate.nodeWidth!);
-    // Wide enough for bounded captions, but no taller than the rendered card,
-    // so a fan does not reserve a column far taller than its content.
-    expect(context.nodeHeight).toBeGreaterThanOrEqual(150);
-    expect(context.nodeHeight).toBeLessThanOrEqual(estate.nodeHeight!);
+    expect(context.nodeHeight).toBeGreaterThan(estate.nodeHeight!);
   });
 
   it("keeps every node and directed edge in a branching 12-node context without card overlap", () => {

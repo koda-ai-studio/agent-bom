@@ -207,14 +207,16 @@ function NodeCard({
         <Handle type="source" position={data.reverseFlow ? Position.Left : Position.Right}
           className={`!h-1 !w-1 !border-0 !bg-transparent ${source ? "" : "!opacity-0"}`} />
         <ContextHandles />
-        <Icon aria-hidden="true" style={{ width: "var(--graph-node-icon-size, 32px)", height: "var(--graph-node-icon-size, 32px)", ...(provider ? { transform: "translate(-52%, -20%)" } : {}) }} className={`h-8 w-8 ${iconClass}`} />
-        {provider && <SourceBadge source={provider} graph className="absolute"
-          style={{ left: "calc(50% + 4px)", bottom: "-6%", width: "calc(var(--graph-node-meta-size, 12px) * 2.8)", height: "calc(var(--graph-node-meta-size, 12px) * 2.8)" }} />}
+        <Icon aria-hidden="true" style={{ width: "var(--graph-node-icon-size, 32px)", height: "var(--graph-node-icon-size, 32px)" }} className={`h-8 w-8 ${iconClass}`} />
+        {/* A small vendor mark on the ring, like a status badge; the entity glyph stays primary. */}
+        {provider && <SourceBadge source={provider} graph className="absolute shadow-sm"
+          style={{ right: "-10%", bottom: "-10%", width: "38%", height: "38%" }} />}
       </div>
       <p className="mb-1 w-full min-w-0 break-words line-clamp-3 text-lg font-semibold leading-[1.2] text-foreground [overflow-wrap:anywhere]" style={{ fontSize: "var(--graph-node-label-size, 18px)" }}>
         {canvasNodeLabel(repository?.slug || displayTitle).split(/(?<=[_/@-])/).map((part, index) => <span key={index}>{part}<wbr /></span>)}
       </p>
-      <NodeBadgeRow badges={badges}>
+      {/* The vendor mark already names the provider; a second text chip repeats it. */}
+      <NodeBadgeRow badges={provider ? badges.filter((badge) => badge.kind !== "provider") : badges}>
         <span style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} className="text-xs text-ink-secondary">
           {repository ? "Repository" : data.entityType === "application" ? "Application" : NODE_TYPE_BADGES[data.nodeType]}
         </span>

@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { test, expect, type Page } from "@playwright/test";
 
 const stamp = "2026-10-15T00:00:00Z";
@@ -93,6 +94,17 @@ async function labelCollisions(page: Page) {
   });
 }
 
+/** Node cards (glyph and every caption line) that overlap another card. */
+async function cardOverlaps(page: Page) {
+  return page.locator("[data-graph-entity]").evaluateAll(cards => {
+    const boxes = cards.map(card => {
+      const parts = [...card.children].filter(child => getComputedStyle(child).visibility !== "hidden" && getComputedStyle(child).display !== "none").map(child => child.getBoundingClientRect());
+      return { label: card.getAttribute("title"), left: Math.min(...parts.map(r => r.left)), right: Math.max(...parts.map(r => r.right)), top: Math.min(...parts.map(r => r.top)), bottom: Math.max(...parts.map(r => r.bottom)) };
+    });
+    return boxes.flatMap((a, i) => boxes.slice(i + 1).filter(b => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top).map(b => `${a.label} overlaps ${b.label}`));
+  });
+}
+
 async function visibleLabelTexts(page: Page) {
   return page.locator(".react-flow .graph-relationship-label").evaluateAll(els => els
     .filter(el => { const s = getComputedStyle(el); return s.display !== "none" && s.visibility !== "hidden" && Number(s.opacity) > 0 && el.getBoundingClientRect().width > 0; })
@@ -123,7 +135,13 @@ async function openAgentContext(page: Page, width: number) {
 }
 
 const roles = Array.from({ length: 6 }, (_, i) => node(`role-${i + 1}`, "role", `Application role ${i + 1}`));
+const aws = (n: FixtureNode) => ({ ...n, dimensions: { ...n.dimensions, cloud_provider: "aws" } });
 const SCENARIOS = {
+  "aws account contains resources": {
+    nodes: [aws(node("agent", "account", "prod-workloads")), aws(node("bucket", "data_store", "customer-pii-bucket")),
+      aws(node("cluster", "cluster", "payments-eks")), aws(node("gateway", "api_gateway", "public-api-gateway"))],
+    edges: [edge("agent", "bucket", "contains"), edge("agent", "cluster", "contains"), edge("agent", "gateway", "contains")],
+  },
   "agent fans out to six roles": {
     nodes: [node("agent", "agent", "Developer Copilot"), ...roles],
     edges: roles.map(role => edge("agent", role.id, "can_access")),
@@ -143,9 +161,25 @@ for (const [name, scenario] of Object.entries(SCENARIOS)) for (const width of [1
     await expect.poll(() => page.locator(".react-flow__node").count()).toBeGreaterThan(1);
     expect(await edgesThroughNodes(page)).toEqual([]);
     expect(await labelCollisions(page)).toEqual([]);
+    expect(await cardOverlaps(page)).toEqual([]);
     const texts = await visibleLabelTexts(page);
     const repeats = texts.filter((text, index) => texts.indexOf(text) !== index);
     expect(repeats, `repeated labels: ${texts.join(" | ")}`).toEqual([]);
     await page.screenshot({ path: info.outputPath(`${name.replace(/\s+/g, "-")}-${width}.png`), animations: "disabled" });
   });
 }
+
+for (const theme of ["light", "dark"] as const) test(`reference correlation reads without overlaps or false routes ${theme}`, async ({ page }, info) => {
+  const proof = JSON.parse(await readFile("../examples/reference-evidence-lab/generated/correlation-proof.json", "utf8"));
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.addInitScript(t => localStorage.setItem("agent-bom-theme", t), theme);
+  await fixture(page, proof.capture_fixture.graph.nodes, proof.capture_fixture.graph.edges);
+  await page.goto("/graph?capture=1&scan=snapshot&layers=server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile");
+  await expect(page.locator(".react-flow__node")).not.toHaveCount(0);
+  await page.locator(".react-flow__controls-fitview").click();
+  await settle(page);
+  expect(await cardOverlaps(page)).toEqual([]);
+  expect(await edgesThroughNodes(page)).toEqual([]);
+  expect(await labelCollisions(page)).toEqual([]);
+  await page.screenshot({ path: info.outputPath(`reference-correlation-${theme}.png`), animations: "disabled" });
+});

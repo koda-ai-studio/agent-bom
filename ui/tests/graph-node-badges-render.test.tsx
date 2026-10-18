@@ -31,12 +31,13 @@ describe("graph node badges on the canvas and in the legend", () => {
     expect(within(node).queryByText(/15\.2\.2 · npm/)).not.toBeInTheDocument();
   });
 
-  it("renders provider and environment chips without repeating the raw environment subtitle", () => {
+  it("names the provider once with its mark and keeps the environment chip without repeating the raw subtitle", () => {
     const Renderer = lineageNodeTypes.clusterNode;
     render(<ReactFlowProvider><section data-testid="node"><Renderer data={cluster} /></section></ReactFlowProvider>);
     const node = screen.getByTestId("node");
     const chips = [...node.querySelectorAll("[data-node-badge]")].map((chip) => chip.textContent);
-    expect(chips).toEqual(["AWS", "PROD"]);
+    // The vendor mark names the provider; a second "AWS" chip would repeat it.
+    expect(chips).toEqual(["PROD"]);
     expect(within(node).getByLabelText("Environment: production")).toBeInTheDocument();
     expect(within(node).queryByText("production", { exact: true })).not.toBeInTheDocument();
     expect(within(node).getByRole("img", { name: "Source: AWS" })).toBeVisible();
