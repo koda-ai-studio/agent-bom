@@ -49,9 +49,10 @@ def _register_exposure_paths(
     ) -> str:
         """Return the attack-path queue in the dashboard's order, with why each path ranks where it does.
 
-        Ranking is ``ranking.order`` (evidence tier, KEV, severity, composite risk,
-        credential count); every path carries ``rank``, ``evidenceTier``, ``isKev`` and
-        ``severity``. Totals, filters and cursor pages match ``/v1/graph/attack-paths``.
+        Ranking is ``ranking.order`` (evidence tier, KEV, severity, evidence confidence,
+        composite risk, credential count); every path carries ``rank``, ``evidenceTier``,
+        ``isKev``, ``severity``, ``evidenceConfidence`` and ``rankingFactors``. Totals,
+        filters and cursor pages match ``/v1/graph/attack-paths``.
         """
         return await execute_tool_async(
             "exposure_paths",
@@ -93,11 +94,15 @@ def _register_should_i_deploy(
         ] = 80.0,
         view: Annotated[Literal["summary", "full"], Field(description="Projection of matchedPaths.")] = "summary",
     ) -> str:
-        """Return allow / warn / block for a candidate from every stored path of the snapshot.
+        """Return allow / warn / block / not_found for a candidate from every stored path of the snapshot.
 
-        The candidate is matched against all ranked paths (``searchedPaths`` of
-        ``total``), not one page; ``matchedPathCount`` counts every match and
-        ``maxRisk`` is their highest risk. Unverified reachability never yields allow.
+        The candidate must exactly equal a path identifier (package name,
+        name@version, purl, CVE/finding id, node id or label) in any of the
+        ranked paths (``searchedPaths`` of ``total``); ``matchedPathCount``
+        counts every match and ``maxRisk`` is their highest risk. A KEV finding
+        reached from an agent with credential exposure blocks unless ruled
+        unlikely. No exact match returns ``not_found``. Unverified reachability
+        never yields allow.
         """
         return await execute_tool_async(
             "should_i_deploy",

@@ -31,7 +31,7 @@ from agent_bom.graph.path_derivation import _derived_attack_paths
 logger = logging.getLogger(__name__)
 
 # Bump whenever derived paths, their order/fields, or the stored queue rank/facets can change for the same snapshot.
-DERIVATION_VERSION = 3
+DERIVATION_VERSION = 4
 PATHS_ANALYSIS_KEY = "paths"
 
 SNAPSHOT_PATH_COLUMNS = (

@@ -50,6 +50,11 @@ def _standalone(node: UnifiedNode) -> bool:
     return kind in _STANDALONE_HOLDERS
 
 
+# Component path score (0-100): severity 0-70, KEV 15, credentials 0-10,
+# tools 0-5, path signals 0-10. Known exploitation outranks one severity step.
+SEVERITY_RISK_WEIGHT = 0.7
+KEV_RISK_BOOST = 15.0
+
 _UNVERIFIED_SUMMARY = (
     "Unverified structural candidate: graph topology connects the agent and vulnerable "
     "package/server, but no executable graph or symbol path has been proven."
@@ -242,13 +247,21 @@ def _component_path(
         )
 
     credentials, tools = labels(RelationshipType.EXPOSES_CRED.value), labels(RelationshipType.PROVIDES_TOOL.value)
-    risk = node_risk(finding) + min(10.0, len(credentials) * 3.0) + min(10.0, len(tools) * 0.75) + path_boost(hops)
-    if applicability.verdict == "unknown":
-        # Preserve relative investigation priority while keeping unverified
-        # topology below evidence-backed paths.
-        risk, summary = min(39.0, risk * 0.35), _UNVERIFIED_SUMMARY
-    else:
-        summary = STRUCTURAL_EXPOSURE_SUMMARY
+    kev = KEV_RISK_BOOST if finding.attributes.get("is_kev") is True else 0.0
+    # Severity contributes at most SEVERITY_RISK_WEIGHT so KEV and exposure
+    # terms still separate critical/high findings instead of all saturating
+    # at 100.
+    risk = (
+        node_risk(finding) * SEVERITY_RISK_WEIGHT
+        + kev
+        + min(10.0, len(credentials) * 3.0)
+        + min(5.0, len(tools) * 0.5)
+        + min(10.0, path_boost(hops))
+    )
+    # Unproven applicability is a reachability qualifier (``reachability`` /
+    # ``reachability_basis``), not a reason to compress the score: compressing
+    # it tied critical, KEV and low findings at the same capped value.
+    summary = _UNVERIFIED_SUMMARY if applicability.verdict == "unknown" else STRUCTURAL_EXPOSURE_SUMMARY
     return AttackPath(
         source=hops[0],
         target=finding.id,

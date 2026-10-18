@@ -140,7 +140,7 @@ export interface DeployDecisionRequest {
 }
 
 export interface DeployDecision {
-  decision: "allow" | "warn" | "block" | string;
+  decision: "allow" | "warn" | "block" | "not_found" | string;
   reasons?: string[];
   matchedPaths?: JsonValue[];
   matchedPathCount?: number;

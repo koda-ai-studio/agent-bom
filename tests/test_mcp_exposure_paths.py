@@ -135,7 +135,7 @@ async def test_deploy_decision_does_not_approve_without_matching_evidence():
     response = await deploy_decision_impl(candidate="safe-service", _get_graph_store=lambda: _GraphStore())
     payload = json.loads(response)
 
-    assert payload["decision"] == "warn"
+    assert payload["decision"] == "not_found"
     assert payload["maxRisk"] is None
     assert payload["evidenceStatus"] == "not_evaluated"
     assert payload["matchedPathCount"] == 0
@@ -177,13 +177,13 @@ async def test_exposure_paths_derives_persisted_topology_with_limits(topology_st
     assert payload["total"] == 3
     assert payload["completeness"]["complete"] is False
     assert all(path["reachability"] == "unknown" for path in payload["paths"])
-    assert all(path["riskScore"] <= 39 for path in payload["paths"])
+    assert all(path["evidenceConfidence"] == "structural" for path in payload["paths"])
     assert payload["paths"][0]["nodeIds"][:3] == ["agent:a", "server:s", "pkg:p"]
-    filtered = json.loads(await exposure_paths_impl(scan_id="topology", min_risk=40, _get_graph_store=lambda: topology_store))
+    filtered = json.loads(await exposure_paths_impl(scan_id="topology", min_risk=100, _get_graph_store=lambda: topology_store))
     assert filtered["count"] == 0
     assert filtered["total"] == 0
     assert filtered["snapshot_total"] == 3
-    assert "min_risk=40" in filtered["message"]
+    assert "min_risk=100" in filtered["message"]
 
 
 @pytest.mark.asyncio

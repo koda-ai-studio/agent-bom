@@ -100,7 +100,7 @@ def test_structural_crown_jewel_remains_visible_but_is_not_presented_as_confirme
 
     crown_jewel = next(path for path in paths if "Crown jewel" in path.summary)
     assert crown_jewel.reachability == "unknown"
-    assert crown_jewel.composite_risk <= 39
+    assert crown_jewel.composite_risk >= 95
     assert "incomplete_hop_evidence" in crown_jewel.reachability_basis
 
 

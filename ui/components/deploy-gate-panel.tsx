@@ -54,6 +54,15 @@ const VERDICTS: Record<DisplayDecision, Verdict> = {
       "border-[color:var(--status-danger-border)] bg-[color:var(--status-danger-bg)] text-[color:var(--status-danger)]",
     accent: "text-[color:var(--status-danger)]",
   },
+  not_found: {
+    label: "NOT FOUND",
+    detail: "No exposure path in this snapshot names this candidate exactly (package name, name@version, purl, finding or node id). It was not evaluated; this is not an approval to deploy.",
+    icon: ShieldQuestion,
+    container: "border-[color:var(--status-warn-border)] bg-[color:var(--status-warn-bg)]",
+    badge:
+      "border-[color:var(--status-warn-border)] bg-[color:var(--status-warn-bg)] text-[color:var(--status-warn)]",
+    accent: "text-[color:var(--status-warn)]",
+  },
   "insufficient-evidence": {
     label: "INSUFFICIENT EVIDENCE",
     detail: "No matching exposure evidence was returned — gather or refresh graph data before shipping.",
@@ -106,9 +115,11 @@ export function DeployGatePanel({ scanId }: { scanId?: string | undefined }) {
   }
 
   const displayDecision: DisplayDecision | null = result
-    ? result.matchedPathCount === 0 && result.matchedPaths.length === 0
-      ? "insufficient-evidence"
-      : result.decision
+    ? result.decision === "not_found"
+      ? "not_found"
+      : result.matchedPathCount === 0 && result.matchedPaths.length === 0
+        ? "insufficient-evidence"
+        : result.decision
     : null;
   const verdict = displayDecision ? VERDICTS[displayDecision] : null;
   const VerdictIcon = verdict?.icon ?? Rocket;
@@ -193,7 +204,9 @@ export function DeployGatePanel({ scanId }: { scanId?: string | undefined }) {
                 Max path risk
               </div>
               <div className={`font-mono text-2xl font-semibold ${verdict.accent}`}>
-                {displayDecision === "insufficient-evidence" ? "—" : result.maxRisk.toFixed(1)}
+                {displayDecision === "insufficient-evidence" || displayDecision === "not_found" || typeof result.maxRisk !== "number"
+                  ? "—"
+                  : result.maxRisk.toFixed(1)}
               </div>
               <div className="text-[10px] text-[color:var(--text-tertiary)]">
                 warn ≥ {result.thresholds.warnRisk} · block ≥ {result.thresholds.blockRisk}

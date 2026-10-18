@@ -234,10 +234,10 @@ def test_apply_materialises_and_is_idempotent():
     g = _kill_chain_graph()
     stats = apply_attack_path_fusion(g)
     assert stats["fused_attack_paths"] == 1
-    # The structural candidate retains its raw modeled score during discovery,
-    # but the selectable materialized path is capped until every hop has an
-    # edge-level provenance receipt.
-    assert stats["max_fused_risk"] == 39
+    # The structural candidate keeps its modeled score; missing edge-level
+    # provenance receipts are reported through reachability, not by capping
+    # the score.
+    assert stats["max_fused_risk"] == 86
     assert len(g.attack_paths) == 1
     assert g.attack_paths[0].reachability == "unknown"
     # Re-running must not duplicate fusion paths.

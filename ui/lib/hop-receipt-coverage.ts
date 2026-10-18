@@ -27,7 +27,7 @@ export function hopReceiptCoverage(path: AttackPath) {
   }
   const gaps = RECEIPT_CHECKS.filter(([, failed]) => aligned.some(({ receipt }) => failed(receipt))).map(([label]) => label);
   if (aligned.some(({ receipt, index }) => receipt.relationship !== path.edges[index])) gaps.push("relationship differs from path edge");
-  if (path.analysis?.status !== "complete") gaps.push("path analysis not complete");
+  if (path.analysis?.status !== "complete") gaps.push(`path analysis ${(path.analysis?.status || "not_recorded").replaceAll("_", " ")}`);
   const evidenced = aligned.filter(({ receipt, index }) => receipt.relationship === path.edges[index] && !RECEIPT_CHECKS.some(([, failed]) => failed(receipt))).length;
   const complete = completeDirectedHopCount(path);
   const summary = complete !== null

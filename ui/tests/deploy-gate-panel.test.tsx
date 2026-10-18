@@ -119,6 +119,21 @@ describe("DeployGatePanel", () => {
     expect(verdict).not.toHaveTextContent("safe to ship");
   });
 
+  it("renders NOT FOUND when no path names the candidate exactly", async () => {
+    const response = { ...decisionResponse("not_found", 0), maxRisk: null, matchedPathCount: 0, matchedPaths: [] };
+    apiMock.graphShouldIDeploy.mockResolvedValue(response);
+    render(<DeployGatePanel scanId="scan-1" />);
+
+    fireEvent.change(screen.getByLabelText("Deploy candidate"), { target: { value: "pill" } });
+    fireEvent.click(screen.getByRole("button", { name: "Run gate" }));
+
+    const verdict = await screen.findByTestId("deploy-gate-verdict");
+    expect(verdict).toHaveAttribute("data-decision", "not_found");
+    expect(verdict).toHaveTextContent("NOT FOUND");
+    expect(verdict).toHaveTextContent("—");
+    expect(verdict).not.toHaveTextContent("GO");
+  });
+
   it("does not call the endpoint with an empty candidate", () => {
     render(<DeployGatePanel />);
     expect(screen.getByRole("button", { name: "Run gate" })).toBeDisabled();

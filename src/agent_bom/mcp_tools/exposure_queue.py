@@ -40,6 +40,7 @@ _SUMMARY_KEYS = (
     "severity",
     "isKev",
     "evidenceTier",
+    "evidenceConfidence",
     "graphReachability",
     "reachability",
     "findings",
@@ -178,12 +179,25 @@ def project_paths(
             path, nodes_by_id=nodes_by_id, edges=edges, rank=rank, scan_id=scan_id, edge_lookup=edge_lookup
         )
         fields = path_rank_fields(path, nodes_by_id)
+        factors = fields["ranking_factors"]
         payload.update(
             severity=fields["severity"],
             isKev=fields["is_kev"],
             evidenceTier=fields["evidence_tier"],
+            evidenceConfidence=factors["evidence_confidence"],
             graphReachable=fields["graph_reachable"],
             graphReachability=fields["graph_reachability"],
+            rankingFactors={
+                "order": factors["order"],
+                "evidenceTier": factors["evidence_tier"],
+                "isKev": factors["is_kev"],
+                "severity": factors["severity"],
+                "severityScored": factors["severity_scored"],
+                "evidenceConfidence": factors["evidence_confidence"],
+                "compositeRisk": factors["composite_risk"],
+                "credentialCount": factors["credential_count"],
+                "reasons": factors["reasons"],
+            },
         )
         payload["provenance"] = {"source": "mcp_exposure_paths", "scanId": scan_id}
         projected.append(payload)

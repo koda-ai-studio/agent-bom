@@ -192,9 +192,14 @@ def test_demo_estate_incident_hops_are_trace_steps(probe_graphs: dict[str, Unifi
     hops = [edge for edge in graph.edges if edge.evidence.get("correlation_id")]
     assert hops and all(edge.relationship is RelationshipType.TRACE_STEP for edge in hops)
     assert all(edge.evidence["tier"] == "recorded" for edge in hops)
-    hop_ids = {edge.id for edge in hops}
-    chains = [path for path in graph.attack_paths if path.edges and path.edges[0].startswith("trace_step:")]
-    assert chains and all(set(path.edges) <= hop_ids for path in chains)
+    # ``AttackPath.edges`` carries the typed relationship per hop (never an edge
+    # id), and each (source, target, relationship) resolves to a recorded edge.
+    recorded = {(edge.source, edge.target, edge.relationship.value) for edge in hops}
+    chains = [path for path in graph.attack_paths if RelationshipType.TRACE_STEP.value in path.edges]
+    assert chains
+    for path in chains:
+        assert set(path.edges) == {RelationshipType.TRACE_STEP.value}
+        assert all((source, target, rel) in recorded for source, target, rel in zip(path.hops, path.hops[1:], path.edges))
 
 
 def test_no_probe_edge_lacks_evidence_source_or_tier(probe_graphs: dict[str, UnifiedGraph]) -> None:

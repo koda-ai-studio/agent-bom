@@ -1901,6 +1901,7 @@ class TestGraphStoreBackendSelection:
         assert body["cards"][0]["exposure_path"]["reachability"] == "unknown"
         assert body["cards"][0]["exposure_path"]["reachabilityBasis"] == [
             "graph_path",
+            "analysis_not_recorded",
             "incomplete_hop_evidence",
         ]
         assert body["cards"][0]["rank_meta"]["reachability"] == "unknown"

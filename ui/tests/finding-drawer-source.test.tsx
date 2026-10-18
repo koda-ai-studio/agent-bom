@@ -110,6 +110,16 @@ it("keeps the finding snapshot on its remediation link", () => {
   expect(screen.getByRole("link", { name: "Review remediation" })).toHaveAttribute("href", "/remediation?q=CVE-2020-14343&scan=scan-original");
 });
 
+it("labels the finding-level reach score as priority, not path reachability", async () => {
+  const user = userEvent.setup();
+  render(<FindingDrawer vuln={{ ...base, effective_reach_band: "red", effective_reach_score: 84 }} triage={undefined} triageBusy={false} onTriageDecision={vi.fn()} onClose={vi.fn()} />);
+  await user.click(screen.getByRole("tab", { name: "Evidence" }));
+  const badge = screen.getByTestId("finding-exposure-priority");
+  expect(badge).toHaveTextContent("Exposure priority red (84)");
+  expect(badge).toHaveAttribute("title", expect.stringContaining("Attack-path reachability is the hop-receipt verdict"));
+  expect(screen.queryByText(/^Reach red/)).not.toBeInTheDocument();
+});
+
 it("keeps a review-only advisory match unknown despite a legacy green score", async () => {
   const user = userEvent.setup();
   render(<FindingDrawer vuln={{ ...base, match_confidence_tier: "unverified_range", effective_reach_band: "green", effective_reach_score: 5, runtime_evidence: { state: "observed", observed_count: 1 } }} triage={undefined} triageBusy={false} onTriageDecision={vi.fn()} onClose={vi.fn()} />);

@@ -474,8 +474,12 @@ function ReachBadges({ vuln }: { vuln: EnrichedVuln }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       {reviewOnly ? <p className="text-sm text-ink-secondary">Reachability unknown</p> : vuln.effective_reach_band ? (
-        <span className="rounded border border-amber-500/30 dark:border-amber-800/60 bg-amber-500/10 dark:bg-amber-950/40 px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-amber-700 dark:text-amber-300">
-          Reach {vuln.effective_reach_band}
+        <span
+          data-testid="finding-exposure-priority"
+          title="Finding-level priority from severity, exploit signals and exposure. Attack-path reachability is the hop-receipt verdict shown on each path."
+          className="rounded border border-amber-500/30 dark:border-amber-800/60 bg-amber-500/10 dark:bg-amber-950/40 px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-amber-700 dark:text-amber-300"
+        >
+          Exposure priority {vuln.effective_reach_band}
           {typeof vuln.effective_reach_score === "number" ? ` (${vuln.effective_reach_score.toFixed(0)})` : ""}
         </span>
       ) : null}

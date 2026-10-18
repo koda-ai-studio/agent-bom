@@ -65784,7 +65784,7 @@
     },
     "/v1/graph/should-i-deploy": {
       "post": {
-        "description": "Return the MCP-compatible allow/warn/block deploy decision over REST.",
+        "description": "Return the MCP-compatible allow/warn/block/not_found deploy decision over REST.",
         "operationId": "post_graph_should_i_deploy_v1_graph_should_i_deploy_post",
         "requestBody": {
           "content": {

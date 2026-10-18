@@ -443,7 +443,7 @@ async def get_graph_exposure_paths(
 
 @investigation_router.post("/graph/should-i-deploy", tags=["graph"])
 async def post_graph_should_i_deploy(request: Request, body: GraphDeployDecisionRequest) -> dict:
-    """Return the MCP-compatible allow/warn/block deploy decision over REST."""
+    """Return the MCP-compatible allow/warn/block/not_found deploy decision over REST."""
     _ = (body.tenant_id, body.context)  # SDK compatibility/future policy context; request tenant scope is authoritative today.
     from agent_bom.mcp_tools.graph import deploy_decision_for_tenant
 

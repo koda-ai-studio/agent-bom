@@ -509,7 +509,6 @@ def _derived_attack_paths(graph: UnifiedGraph, *, kinds: dict[int, str] | None =
                     path.reachability = strongest.verdict
                     path.reachability_basis = list(strongest.basis)
                 elif vulnerability_nodes:
-                    path.composite_risk = min(path.composite_risk, 39.0)
                     path.reachability_basis = ["structural_topology_only"]
                     if "unverified" not in path.summary.lower():
                         path.summary = f"Unverified structural candidate. {path.summary}".strip()

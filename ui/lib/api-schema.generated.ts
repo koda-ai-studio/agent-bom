@@ -4977,7 +4977,7 @@ export interface paths {
         put?: never;
         /**
          * Post Graph Should I Deploy
-         * @description Return the MCP-compatible allow/warn/block deploy decision over REST.
+         * @description Return the MCP-compatible allow/warn/block/not_found deploy decision over REST.
          */
         post: operations["post_graph_should_i_deploy_v1_graph_should_i_deploy_post"];
         delete?: never;

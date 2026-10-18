@@ -270,8 +270,15 @@ agents:
 
 `exposure_paths` ranks exactly as the dashboard attack-path queue and
 `GET /v1/graph/attack-paths` do: `ranking.order` is evidence tier, KEV,
-severity, composite risk, then credential count, and every path carries
-`rank`, `evidenceTier`, `isKev` and `severity`. Totals, server-side filters
+severity, evidence confidence, composite risk, then credential count, and every
+path carries `rank`, `evidenceTier`, `isKev`, `severity`, `evidenceConfidence`
+and `rankingFactors` (the same values with plain-language reasons; REST
+attack paths carry them as `ranking_factors`). `composite_risk` is 0-100 and
+keeps severity, KEV and exposure order; incomplete hop evidence is reported in
+`reachability` / `reachabilityBasis` and `evidenceConfidence` (`verified`,
+`likely`, `structural`, `unassessed`, `disproven`), never by lowering the
+score. A path with no scored finding reports `severity: "unknown"`
+(`severityScored: false`) and ranks after scored findings. Totals, server-side filters
 (`min_severity`, `kev`, `has_credential`, `source_type`, `target_id`,
 `finding_id`, `credential_id`, `node_id`, `min_risk`) and cursor pages match
 that route. The default `view="summary"` keeps the default answer under 16 KB;
@@ -311,9 +318,15 @@ For a persisted scan, call `exposure_paths(scan_id="<scan-id>")` and inspect
 path rows use the same topology derivation as the dashboard. This fallback
 loads at most the configured graph investigation node budget; a truncated
 result reports a lower-bound total and cannot establish that no paths exist.
-Static candidates retain unknown reachability. `should_i_deploy` returns
-`warn` rather than `allow` when reachability is unverified or the path read is
-incomplete; inspect the linked findings and runtime evidence before deployment.
+Static candidates retain unknown reachability. `should_i_deploy` matches the
+candidate exactly against path identifiers (package name, `name@version`, purl
+with or without version, CVE/finding id, node id or label); substrings do not
+match. It returns `block` when a matched path reaches a CISA KEV finding from an
+agent with credential exposure (unless reachability is `unlikely`) or when
+`maxRisk` reaches `block_risk`; `warn` rather than `allow` when reachability is
+unverified or the path read is incomplete; and `not_found` (with
+`evidenceStatus: "not_evaluated"`, `maxRisk: null`) when no path names the
+candidate. Inspect the linked findings and runtime evidence before deployment.
 
 Continue a larger result with `exposure_paths(cursor="<pagination.next_cursor>")`,
 keeping the same `min_risk`. Stop when `pagination.next_cursor` is null. The
