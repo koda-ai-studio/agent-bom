@@ -36,12 +36,15 @@ def iter_gpu_containers(
     *,
     include_init_containers: bool = False,
 ) -> Iterator[tuple[str, str, dict, str, Any, Any]]:
-    """Yield containers requesting ``nvidia.com/gpu``, first occurrence of each image only.
+    """Yield each container requesting ``nvidia.com/gpu``.
+
+    A shared image is a shared dependency, not a workload identity. Preserve
+    each pod/container observation so inventory and graph projection retain
+    every affected workload when multiple replicas use the same image.
 
     Yields ``(namespace, pod_name, container, image_ref, gpu_limit, gpu_request)``
     where the GPU values are the raw resource quantities (default ``"0"``).
     """
-    seen_images: set[str] = set()
     for pod in pods:
         meta = pod.get("metadata", {})
         pod_name = meta.get("name", "unknown")
@@ -60,9 +63,8 @@ def iter_gpu_containers(
                     continue
 
                 image_ref = container.get("image", "").strip()
-                if not image_ref or image_ref in seen_images:
+                if not image_ref:
                     continue
-                seen_images.add(image_ref)
                 yield pod_ns, pod_name, container, image_ref, gpu_limit, gpu_request
 
 
