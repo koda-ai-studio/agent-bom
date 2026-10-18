@@ -3519,8 +3519,8 @@ async function main() {
       minGraphNodes: 5,
       minGraphEdges: 5,
       minGraphNodeFontPx: 12,
+      // This is an explicit agent investigation; retain its evidence captions.
       minGraphEdgeLabelFontPx: 12,
-      assertQuietGraphLabels: true,
       assertNodeLabelsWithinBounds: true,
       assertEdgeLabelsClearOfNodes: true,
       assertNoHorizontalOverflow: true,
