@@ -110,6 +110,11 @@ def query_payload(
 ) -> dict[str, Any]:
     """Keep traversal limits attached to the projected investigation graph."""
     bounded = truncated or depth_limited
+    stats = filtered_graph.stats()
+    if bounded:
+        # The traversal graph holds only what was walked; its node count is the
+        # page, not the source. A bounded walk cannot know the total.
+        stats["total_nodes_source"] = None
     return {
         "snapshot_generation": snapshot_generation,
         "scan_id": filtered_graph.scan_id,
@@ -128,7 +133,7 @@ def query_payload(
         "nodes": [node.to_dict() for node in filtered_graph.nodes.values()],
         "edges": [edge.to_dict() for edge in filtered_graph.edges],
         "attack_paths": attack_paths,
-        "stats": filtered_graph.stats(),
+        "stats": stats,
         "filters": GraphFilterOptions(
             max_depth=body.max_depth,
             min_severity=body.min_severity,
@@ -144,7 +149,7 @@ def query_payload(
         # "there is no attack path past here".
         "completeness": graph_completeness(
             returned=len(filtered_graph.nodes),
-            total=None if bounded else filtered_graph.stats().get("node_count", len(filtered_graph.nodes)),
+            total=None if bounded else stats.get("node_count", len(filtered_graph.nodes)),
             truncated=bounded,
             reason=bounded_walk_reason(truncated=truncated, depth_limited=depth_limited),
         ),
