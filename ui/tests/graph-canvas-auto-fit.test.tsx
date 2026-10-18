@@ -85,3 +85,19 @@ it("refits when zoom-dependent dimensions arrive after the second camera fit", a
   await act(() => vi.advanceTimersByTimeAsync(100));
   expect(flow.fitView).toHaveBeenCalledTimes(3);
 });
+
+it("keeps canvas height within the page when measured after a control scrolls into view", async () => {
+  vi.useFakeTimers();
+  vi.stubGlobal("requestAnimationFrame", (callback: () => void) => setTimeout(callback, 0));
+  vi.stubGlobal("cancelAnimationFrame", clearTimeout);
+  vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
+  vi.stubGlobal("scrollY", 100);
+  vi.stubGlobal("innerHeight", 768);
+  flow.frame = document.createElement("div");
+  flow.frame.setAttribute("data-graph-adaptive-frame", "");
+  vi.spyOn(flow.frame, "getBoundingClientRect").mockReturnValue({ top: 300 } as DOMRect);
+  render(<GraphCanvasAutoFit enabled layoutKey="scrolled-measurement" inspector={false} preserveViewport={false} onLayoutAspect={vi.fn()} />);
+  await act(() => vi.advanceTimersByTimeAsync(100));
+  // The document offset is 400px, regardless of the temporary 100px scroll.
+  expect(flow.frame.style.getPropertyValue("--graph-adaptive-height")).toBe("344px");
+});

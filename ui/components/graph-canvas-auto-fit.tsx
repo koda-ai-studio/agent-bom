@@ -35,7 +35,9 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
   useEffect(() => {
     const frame = canvas?.closest<HTMLElement>("[data-graph-adaptive-frame]");
     if (!frame) return;
-    const measure = () => setSpaceAbove(Math.max(0, frame.getBoundingClientRect().top));
+    // Clicking a control can scroll the document before its resize is measured.
+    // Use a stable document offset so returning to the top does not clip the canvas.
+    const measure = () => setSpaceAbove(Math.max(0, frame.getBoundingClientRect().top + window.scrollY));
     // Deliberate view controls change usable space. A new-snapshot notice
     // must not move the operator's pinned camera, so do not observe all chrome.
     const observer = new ResizeObserver(measure);
