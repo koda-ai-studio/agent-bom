@@ -79,6 +79,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
         },
@@ -104,6 +105,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
@@ -130,6 +132,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
         },
@@ -155,6 +158,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
@@ -181,6 +185,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
         },
@@ -206,6 +211,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
@@ -232,6 +238,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
         },
@@ -257,6 +264,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
@@ -283,6 +291,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
         },
@@ -308,6 +317,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
@@ -334,6 +344,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
         },
@@ -359,6 +370,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
@@ -385,6 +397,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
         },
@@ -410,6 +423,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
@@ -436,6 +450,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cnapp-overlay",
           "tier": "modeled_infrastructure"
         },
@@ -463,6 +478,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cnapp-overlay",
           "tier": "modeled_infrastructure"
         },
@@ -490,6 +506,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cnapp-overlay",
           "tier": "modeled_infrastructure"
         },
@@ -517,6 +534,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cnapp-overlay",
           "tier": "modeled_infrastructure"
         },
@@ -544,6 +562,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "reason": "internet_exposed_data_store",
           "source": "cnapp-overlay",
           "tier": "modeled_infrastructure"
@@ -1572,6 +1591,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
         },
@@ -1597,6 +1617,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
@@ -1623,6 +1644,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
         },
@@ -1648,6 +1670,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
@@ -1674,6 +1697,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
         },
@@ -1699,6 +1723,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
@@ -1725,6 +1750,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
         },
@@ -1750,6 +1776,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
@@ -1776,6 +1803,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cnapp-overlay",
           "tier": "modeled_infrastructure"
         },
@@ -1803,6 +1831,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cnapp-overlay",
           "tier": "modeled_infrastructure"
         },
@@ -2513,6 +2542,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "mcp-scan",
           "tier": "static_scan"
         },
@@ -2538,6 +2568,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "provider": "aws",
           "scope_key": "org_id",
           "source": "cloud_origin",
@@ -2565,6 +2596,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "provider": "aws",
           "scope_key": "account_id",
           "source": "cloud_origin",
@@ -2592,6 +2624,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "provider": "aws",
           "scope_key": "org_id",
           "source": "cloud_origin",
@@ -2619,6 +2652,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "provider": "aws",
           "scope_key": "account_id",
           "source": "cloud_origin",
@@ -2646,6 +2680,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "provider": "aws",
           "scope_key": "account_id",
           "source": "cloud_origin",
@@ -2673,6 +2708,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "provider": "aws",
           "service": "bedrock",
           "source": "cloud_origin",
@@ -2700,6 +2736,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "resource_id": "agent-1",
           "source": "cloud_origin",
           "tier": "modeled_infrastructure"
@@ -2726,6 +2763,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "principal_type": "iam-role",
           "source": "cloud_principal",
           "tier": "modeled_infrastructure"
@@ -2752,6 +2790,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "principal_type": "iam-role",
           "source": "cloud_principal",
           "tier": "modeled_infrastructure"
@@ -2778,6 +2817,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "principal_type": "iam-role",
           "source": "cloud_principal",
           "tier": "modeled_infrastructure"
@@ -2804,6 +2844,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "principal_type": "iam-role",
           "source": "cloud_principal",
           "tier": "modeled_infrastructure"
@@ -2830,6 +2871,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "principal_type": "iam-role",
           "source": "cloud_principal_trust",
           "source_field": "",
@@ -2858,6 +2900,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "principal_type": "iam-role",
           "source": "cloud_principal",
           "tier": "modeled_infrastructure",
@@ -2887,6 +2930,7 @@
         "evidence": {
           "access": "direct",
           "derived_via": "direct",
+          "freshness": "fresh",
           "permission_derivation": {
             "basis": "recorded_graph_connections",
             "path_selection": "one_shortest_path_per_grant_and_access",
@@ -3697,6 +3741,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
         },
@@ -3722,6 +3767,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
@@ -3748,6 +3794,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
         },
@@ -3773,6 +3820,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
@@ -3799,6 +3847,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
         },
@@ -3824,6 +3873,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
@@ -3850,6 +3900,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
         },
@@ -3875,6 +3926,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
@@ -3901,6 +3953,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cnapp-overlay",
           "tier": "modeled_infrastructure"
         },
@@ -4567,6 +4620,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "snowflake-objects",
           "tier": "modeled_infrastructure"
         },
@@ -4592,6 +4646,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "snowflake-objects",
           "tier": "modeled_infrastructure"
@@ -4618,6 +4673,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "snowflake-objects",
           "tier": "modeled_infrastructure"
         },
@@ -4643,6 +4699,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "snowflake-objects",
           "tier": "modeled_infrastructure"
@@ -4669,6 +4726,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "snowflake-services",
           "tier": "modeled_infrastructure"
         },
@@ -4694,6 +4752,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "snowflake-services",
           "tier": "modeled_infrastructure"
@@ -4720,6 +4779,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "snowflake-services",
           "tier": "modeled_infrastructure"
         },
@@ -4745,6 +4805,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "snowflake-services",
           "tier": "modeled_infrastructure"
@@ -4771,6 +4832,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cnapp-overlay",
           "tier": "modeled_infrastructure"
         },

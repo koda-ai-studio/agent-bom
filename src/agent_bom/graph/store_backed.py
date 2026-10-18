@@ -401,6 +401,10 @@ class StoreBackedUnifiedGraph(UnifiedGraph):
         # writes those in-place changes back instead of silently losing them.
         self._mark_dirty(node.id)
 
+    def write_edges(self, edges: list[UnifiedEdge]) -> None:
+        """Persist edges read from this graph and changed in place, as-is (no evidence merge)."""
+        self._backend.add_edge_payloads(self._tenant, [_edge_to_row(edge) for edge in edges])
+
     def add_stored_edge(self, edge: UnifiedEdge) -> None:
         self.add_edge(edge)
 

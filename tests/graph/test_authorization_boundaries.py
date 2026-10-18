@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 import pytest
 
 from agent_bom.graph.builder import build_unified_graph_from_report
+from agent_bom.graph.container import UnifiedGraph
 from tests.test_graph_authorization_evidence_integration import _azure_inventory, _gcp_inventory
 
 
@@ -74,7 +75,13 @@ def test_native_typed_principal_receipt_is_qualified_by_producer_node_binding():
     from agent_bom.graph.consequence.contracts import ConsequenceRequest
     from agent_bom.graph.consequence.service import assess_consequences
 
-    graph = build_unified_graph_from_report({"scan_id": "native", "cloud_inventory": _gcp_inventory()}, tenant_id="tenant:a")
+    # The snapshot is taken when the fixture's receipts were collected; a much
+    # later snapshot would correctly mark them stale and the consequence unknown.
+    graph = build_unified_graph_from_report(
+        {"scan_id": "native", "cloud_inventory": _gcp_inventory()},
+        tenant_id="tenant:a",
+        container=UnifiedGraph(scan_id="native", tenant_id="tenant:a", created_at="2026-07-17T12:00:00+00:00"),
+    )
     edge = next(e for e in graph.edges if e.evidence.get("source") == "authorization-evidence")
     result = assess_consequences(
         graph,
