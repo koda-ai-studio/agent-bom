@@ -132,6 +132,18 @@ def discover(
 # ── VirtualServer CRDs ────────────────────────────────────────────────────
 
 
+def _context_location(path: str, context: str | None) -> tuple[str, list[str]]:
+    """Config location scoped by kube context, plus the unscoped one it replaces.
+
+    ``namespace/name`` is unique only inside one cluster, so a named context
+    keeps same-named resources in two clusters apart.
+    """
+    unscoped = f"coreweave://{path}"
+    if not context:
+        return unscoped, []
+    return f"coreweave://{quote(context, safe='')}/{path}", [unscoped]
+
+
 def _discover_virtual_servers(
     context: str | None,
     namespace: str | None,
@@ -167,10 +179,14 @@ def _discover_virtual_servers(
             transport=TransportType.UNKNOWN,
         )
 
+        location, previous_paths = _context_location(f"virtualserver/{ns}/{name}", context)
+        raw_identity: dict = {"namespace": ns, "name": name, "kind": "VirtualServer"}
+        if context:
+            raw_identity["context"] = context
         agent = Agent(
             name=f"coreweave-gpu:{ns}/{name}",
             agent_type=AgentType.CUSTOM,
-            config_path=f"coreweave://virtualserver/{ns}/{name}",
+            config_path=location,
             source="coreweave-gpu",
             version=f"gpu:{gpu_type}x{gpu_count}" if gpu_type else "gpu-vm",
             mcp_servers=[server],
@@ -186,8 +202,10 @@ def _discover_virtual_servers(
                     resource_id=f"{ns}/{name}",
                     resource_name=name,
                     location=region or None,
-                    raw_identity={"namespace": ns, "name": name, "kind": "VirtualServer"},
+                    cluster=context,
+                    raw_identity=raw_identity,
                 ),
+                **({"previous_config_paths": previous_paths} if previous_paths else {}),
             },
         )
         agents.append(agent)
@@ -216,12 +234,12 @@ def _discover_inference_services(
         return agents, warnings
 
     for item in data.get("items", []):
-        agents.append(_inference_service_agent(item))
+        agents.append(_inference_service_agent(item, context=context))
 
     return agents, warnings
 
 
-def _inference_service_agent(item: dict) -> Agent:
+def _inference_service_agent(item: dict, *, context: str | None = None) -> Agent:
     """Build the agent for one KServe InferenceService item."""
     meta = item.get("metadata", {})
     spec = item.get("spec", {})
@@ -267,9 +285,19 @@ def _inference_service_agent(item: dict) -> Agent:
             resource_type="inference-service",
             resource_id=f"{ns}/{name}",
             resource_name=name,
-            raw_identity={"namespace": ns, "name": name, "kind": "InferenceService", "image": runtime_image},
+            cluster=context,
+            raw_identity={
+                "namespace": ns,
+                "name": name,
+                "kind": "InferenceService",
+                "image": runtime_image,
+                **({"context": context} if context else {}),
+            },
         ),
     }
+    location, previous_paths = _context_location(f"inferenceservice/{ns}/{name}", context)
+    if previous_paths:
+        metadata["previous_config_paths"] = previous_paths
     if is_nim:
         metadata["is_nim"] = True
         metadata["nim_model"] = nim_model
@@ -277,7 +305,7 @@ def _inference_service_agent(item: dict) -> Agent:
     return Agent(
         name=f"coreweave-inference:{ns}/{name}",
         agent_type=AgentType.CUSTOM,
-        config_path=f"coreweave://inferenceservice/{ns}/{name}",
+        config_path=location,
         source="coreweave-inference",
         version=runtime or "inference",
         mcp_servers=[server],
@@ -357,7 +385,9 @@ def _gpu_pod_agent(pod_ns: str, pod_name: str, containers: list[tuple[str, str, 
         metadata["is_nim"] = True
         metadata["nim_model"] = nim_model
 
-    location = f"coreweave://{quote(context, safe='')}/pod/{pod_ns}/{pod_name}" if context else f"coreweave://pod/{pod_ns}/{pod_name}"
+    location, previous_paths = _context_location(f"pod/{pod_ns}/{pod_name}", context)
+    if previous_paths:
+        metadata["previous_config_paths"] = previous_paths
     return Agent(
         name=f"coreweave-gpu-pod:{pod_ns}/{pod_name}",
         agent_type=AgentType.CUSTOM,
@@ -384,6 +414,7 @@ def _discover_infiniband_jobs(
     data = _kubectl(["get", "pods", *ns_args], context=context)
 
     for pod_ns, pod_name, image_ref, gpu_limits in iter_infiniband_pods(data.get("items", [])):
+        location, previous_paths = _context_location(f"training/{pod_ns}/{pod_name}", context)
         agents.append(
             build_training_agent(
                 provider="coreweave",
@@ -391,7 +422,9 @@ def _discover_infiniband_jobs(
                 pod_name=pod_name,
                 image_ref=image_ref,
                 gpu_limits=gpu_limits,
-                config_path=f"coreweave://training/{pod_ns}/{pod_name}",
+                config_path=location,
+                cluster=context,
+                previous_config_paths=previous_paths,
             )
         )
 
