@@ -15,6 +15,7 @@ from typing import Any
 
 import httpx
 
+from agent_bom.cloud.resource_model import supabase_project_node_id as project_node_id
 from agent_bom.finding import Asset, Finding, FindingSource, FindingType, stable_id
 from agent_bom.security import sanitize_text
 
@@ -22,11 +23,6 @@ API_ROOT = "https://api.supabase.com/v1/projects"
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
 MAX_PROJECTS = 50
 MAX_ADVISORS = 5000
-
-
-def project_node_id(account: str, ref: str) -> str:
-    """Identity uses provider, organization and native project ref, never label."""
-    return "resource:supabase:" + stable_id("supabase", account, "project", ref)
 
 
 def _text(value: Any, limit: int = 512) -> str:

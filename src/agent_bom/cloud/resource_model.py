@@ -21,6 +21,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+from agent_bom.canonical_ids import canonical_id
+
 
 class CloudResourceType(str, Enum):
     """Provider-agnostic resource categories.
@@ -149,6 +151,11 @@ def normalize_azure_inventory(inventory: dict[str, Any]) -> list[CloudResource]:
                 )
             )
     return resources
+
+
+def supabase_project_node_id(account: str, ref: str) -> str:
+    """Identity uses provider, organization and native project ref, never label."""
+    return "resource:supabase:" + canonical_id("supabase", account, "project", ref)
 
 
 def normalize_supabase_inventory(inventory: dict[str, Any]) -> list[CloudResource]:

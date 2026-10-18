@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from agent_bom.cloud.resource_model import normalize_cloud_inventory
-from agent_bom.cloud.supabase_inventory import project_node_id
+from agent_bom.cloud.resource_model import supabase_project_node_id as project_node_id
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
 from agent_bom.graph.projection_support import _add_rel_edge
