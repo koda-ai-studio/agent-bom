@@ -151,8 +151,37 @@ def normalize_azure_inventory(inventory: dict[str, Any]) -> list[CloudResource]:
     return resources
 
 
+def normalize_supabase_inventory(inventory: dict[str, Any]) -> list[CloudResource]:
+    """Normalize allowlisted Management API projects without reading database data."""
+    account = inventory.get("account_id")
+    if not isinstance(account, str) or not account:
+        return []
+    resources: list[CloudResource] = []
+    for project in inventory.get("projects", []):
+        if not isinstance(project, dict) or project.get("organization_id") != account:
+            continue
+        ref, name = project.get("ref"), project.get("name")
+        if not isinstance(ref, str) or not ref or not isinstance(name, str) or not name:
+            continue
+        resources.append(
+            CloudResource(
+                provider="supabase",
+                resource_type=CloudResourceType.DATABASE,
+                native_type="supabase.project",
+                resource_id=f"supabase://{account}/projects/{ref}",
+                name=name,
+                account=account,
+                region=str(project.get("region") or ""),
+                resource_group=ref,
+                raw=dict(project),
+            )
+        )
+    return resources
+
+
 _PROVIDER_NORMALIZERS = {
     "azure": normalize_azure_inventory,
+    "supabase": normalize_supabase_inventory,
 }
 
 
