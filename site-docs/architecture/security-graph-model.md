@@ -333,6 +333,14 @@ retains the scan and snapshot generation; a replaced snapshot clears stale rows
 and requires a retry. Choosing a different snapshot replaces the investigation
 scope. No full scan report is required merely to select a graph entity.
 
+The overview keeps connection captions quiet; selecting a node reveals its
+relationship labels, and selecting an arrow opens the exact evidence. Line
+styles and the legend retain configured, modeled and observed distinctions.
+Repository roots marked by the collector show a repository glyph and recorded
+slug, with a host badge when available. Ordinary folders retain their folder
+glyph. Repository details separate the scanned branch and commit from the
+default branch; missing remote or revision metadata is shown as not recorded.
+
 Select an arrow for its recorded source, target, direction and evidence. The same
 inspector docks beside the graph on desktop and opens as a keyboard-accessible
 drawer on mobile. **Fit all** frames displayed nodes; **Readable view** restores

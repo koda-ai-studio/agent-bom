@@ -4,6 +4,31 @@ import { applyDagreLayout, reduceRankCrossings, type LayoutOptions } from "@/lib
 
 const FINDINGS = new Set(["vulnerability", "misconfiguration", "driftIncident"]);
 
+/** Source-rooted levels keep repository sibling directories in the same rank.
+ * Cycles retain Dagre's cycle-aware ordering instead of inventing a root. */
+function sourceRanks(nodes: Node[], edges: Edge[]): Map<string, number> | null {
+  const incoming = new Map(nodes.map(node => [node.id, 0]));
+  const outgoing = new Map<string, string[]>();
+  for (const edge of edges) {
+    if (!incoming.has(edge.source) || !incoming.has(edge.target)) continue;
+    incoming.set(edge.target, incoming.get(edge.target)! + 1);
+    outgoing.set(edge.source, [...(outgoing.get(edge.source) ?? []), edge.target]);
+  }
+  const queue = nodes.filter(node => incoming.get(node.id) === 0).map(node => node.id).sort();
+  const ranks = new Map(queue.map(id => [id, 0]));
+  let visited = 0;
+  for (let index = 0; index < queue.length; index++) {
+    const id = queue[index]!;
+    visited++;
+    for (const target of outgoing.get(id) ?? []) {
+      ranks.set(target, Math.max(ranks.get(target) ?? 0, ranks.get(id)! + 1));
+      incoming.set(target, incoming.get(target)! - 1);
+      if (incoming.get(target) === 0) queue.push(target);
+    }
+  }
+  return visited === nodes.length ? ranks : null;
+}
+
 /** Rank by recorded relationships; finding arrows retain their original direction. */
 export function graphHierarchyLayout(nodes: Node<LineageNodeData>[], edges: Edge[], options: LayoutOptions = {}) {
   const byId = new Map(nodes.map(node => [node.id, node]));
@@ -29,7 +54,10 @@ export function graphHierarchyLayout(nodes: Node<LineageNodeData>[], edges: Edge
   // rank in its existing order, keeping the evidence-derived horizontal
   // levels and enough room for captions rather than shrinking the canvas.
   const ranks = new Map<number, typeof layout.nodes>();
-  for (const node of layout.nodes) {
+  const levels = compact ? sourceRanks(layout.nodes, rankedEdges) : null;
+  const rankStep = (options.nodeWidth ?? 240) + Math.min(options.rankSep ?? 96, 96);
+  const rankedNodes = levels ? layout.nodes.map(node => ({ ...node, position: { ...node.position, x: levels.get(node.id)! * rankStep } })) : layout.nodes;
+  for (const node of rankedNodes) {
     const x = Math.round(node.position.x);
     ranks.set(x, [...(ranks.get(x) ?? []), node]);
   }

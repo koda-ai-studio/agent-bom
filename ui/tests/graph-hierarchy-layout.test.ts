@@ -60,6 +60,22 @@ describe("evidence-driven graph flow", () => {
     expect(result.edges).toHaveLength(40);
   });
 
+  it("aligns sibling folders even when one branch has a deeper build pipeline", () => {
+    const entries = [node("repo", "directory"), node("src", "directory"), node("deploy", "directory"), node("workflow", "configFile"), node("build", "ciJob"), node("app", "container")];
+    const links = [edge("src", "repo", "src", "contains"), edge("deploy", "repo", "deploy", "contains"), edge("workflow", "src", "workflow", "contains"), edge("build", "workflow", "build", "configures"), edge("app", "build", "app", "configures"), edge("deploy-app", "deploy", "app", "configures")];
+    const result = graphHierarchyLayout(entries, links);
+    expect(result.nodes.find(n => n.id === "src")!.position.x).toBe(result.nodes.find(n => n.id === "deploy")!.position.x);
+    expect(result.edges.map(e => [e.source, e.target])).toEqual(links.map(e => [e.source, e.target]));
+  });
+
+  it("retains cyclic relationships without inventing a hierarchy root", () => {
+    const entries = [node("a", "server"), node("b", "server")];
+    const links = [edge("ab", "a", "b", "uses"), edge("ba", "b", "a", "uses")];
+    const result = graphHierarchyLayout(entries, links);
+    expect(result.edges).toHaveLength(2);
+    expect(result.nodes.every(n => Number.isFinite(n.position.x) && Number.isFinite(n.position.y))).toBe(true);
+  });
+
   it("keeps overview connections quiet and reveals relationship labels on selection", () => {
     const result = graphHierarchyLayout(nodes, edges);
     const quiet = readableGraphEdges(result.edges);
