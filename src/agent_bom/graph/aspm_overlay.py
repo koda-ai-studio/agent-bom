@@ -197,8 +197,22 @@ def _app_identity(finding: Any, manifest_roots: list[str]) -> tuple[str, str]:
     asset_name = asset.get("name")
     if isinstance(asset_name, str) and asset_name.strip():
         clean = asset_name.strip()
+        # A name is unique only inside its provider account (a Vercel team, a
+        # cloud account): the same project name in two accounts is two apps.
+        account = str(asset.get("account_ref") or _finding_field(finding, "account_ref") or "").strip()
+        provider = str(asset.get("provider") or "").strip().lower()
+        if account:
+            return f"{provider}:{account}:{clean.lower()}", clean
         return clean.lower(), clean
     return "", ""
+
+
+def _app_alias_attrs(app_key: str, label: str) -> dict[str, Any]:
+    """An account-scoped app keeps its pre-scope id as a historical alias."""
+    previous = label.lower()
+    if app_key == previous or not app_key.endswith(":" + previous):
+        return {}
+    return {"identity": {"basis": "account_scoped_name", "aliases": [_app_node_id(previous)]}}
 
 
 def _repo_root(segments: list[str]) -> tuple[str, str]:
@@ -267,6 +281,11 @@ def _finding_node_id(graph: UnifiedGraph, finding: Any) -> str | None:
     candidates: list[str] = []
     if isinstance(cve, str) and cve.strip():
         candidates.append(f"vuln:{cve.strip()}")
+    # Connector rows name the node they were projected onto and the asset node.
+    for field_name in ("finding_node_id", "node_id"):
+        val = _finding_field(finding, field_name)
+        if isinstance(val, str) and val.strip():
+            candidates.append(val.strip())
     asset = _finding_asset(finding)
     for field_name in ("stable_id", "canonical_id"):
         val = asset.get(field_name)
@@ -527,14 +546,14 @@ def apply_aspm_overlay(
                 "reachable_finding_count": reachable_count,
                 "finding_sources": sorted(all_sources),
                 "component_count": len({occ["component"] for occ in occurrences.values()}),
+                **_app_alias_attrs(app_key, app["label"]),
             },
             data_sources=[_OVERLAY_SOURCE],
             dimensions=NodeDimensions(surface=GraphSemanticLayer.APP.value),
         )
         if occurrences and not severity_counts.get(_UNKNOWN):
             node.mark_risk_assessed(basis="sum_of_recorded_finding_severity_weights", scope="recorded_application_finding_occurrences")
-        if app_node_id not in graph.nodes:
-            applications_created += 1
+        applications_created += app_node_id not in graph.nodes
         graph.add_node(node)
 
         # BELONGS_TO from each existing finding/component node → application.

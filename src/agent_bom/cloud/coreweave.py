@@ -18,6 +18,7 @@ import json
 import logging
 import shutil
 import subprocess
+from urllib.parse import quote
 
 from agent_bom.discovery_envelope import RedactionStatus, ScanMode, attach_envelope_to_agents
 from agent_bom.models import Agent, AgentType, MCPServer, TransportType
@@ -298,31 +299,49 @@ def _discover_gpu_pods(
     ns_args = ["-n", namespace] if namespace else ["-A"]
     data = _kubectl(["get", "pods", *ns_args], context=context)
 
-    for pod_ns, pod_name, _container, image_ref, gpu_limit, gpu_request in iter_gpu_containers(data.get("items", [])):
-        agents.append(_gpu_pod_agent(pod_ns, pod_name, image_ref, str(gpu_limit), str(gpu_request)))
+    pods: dict[tuple[str, str], list[tuple[str, str, int]]] = {}
+    for pod_ns, pod_name, container, image_ref, gpu_limit, gpu_request in iter_gpu_containers(data.get("items", [])):
+        limit, request = str(gpu_limit), str(gpu_request)
+        gpus = int(limit) if limit != "0" else int(request)
+        pods.setdefault((pod_ns, pod_name), []).append((str(container.get("name") or "unknown"), image_ref, gpus))
+    for (pod_ns, pod_name), containers in pods.items():
+        agents.append(_gpu_pod_agent(pod_ns, pod_name, containers, context=context))
 
     return agents, warnings
 
 
-def _gpu_pod_agent(pod_ns: str, pod_name: str, image_ref: str, gpu_limit: str, gpu_request: str) -> Agent:
-    """Build the agent for one GPU container, flagging NVIDIA NIM images."""
-    gpu_count = int(gpu_limit) if gpu_limit != "0" else int(gpu_request)
-    is_nim = image_ref.startswith(_NIM_IMAGE_PREFIX)
-    nim_model = ""
-    if is_nim:
-        nim_model = image_ref.removeprefix(_NIM_IMAGE_PREFIX).split(":")[0]
+def _gpu_pod_agent(pod_ns: str, pod_name: str, containers: list[tuple[str, str, int]], *, context: str | None = None) -> Agent:
+    """One agent per GPU pod, one server per GPU container; NVIDIA NIM images flagged.
 
-    server = MCPServer(
-        name=f"coreweave-gpu-pod:{pod_ns}/{pod_name}",
-        command="docker",
-        args=["run", image_ref],
-        transport=TransportType.STDIO,
-        packages=container_image_packages(image_ref),
-    )
+    ``namespace/pod`` is unique only inside one cluster, so a named kube
+    context scopes the pod's config path and cloud origin.
+    """
+    gpu_count = sum(gpus for _name, _image, gpus in containers)
+    nim_images = [image for _name, image, _gpus in containers if image.startswith(_NIM_IMAGE_PREFIX)]
+    is_nim = bool(nim_images)
+    nim_model = nim_images[0].removeprefix(_NIM_IMAGE_PREFIX).split(":")[0] if is_nim else ""
+    multi = len(containers) > 1
+    servers = [
+        MCPServer(
+            name=f"coreweave-gpu-pod:{pod_ns}/{pod_name}/{name}" if multi else f"coreweave-gpu-pod:{pod_ns}/{pod_name}",
+            command="docker",
+            args=["run", image_ref],
+            transport=TransportType.STDIO,
+            packages=container_image_packages(image_ref),
+        )
+        for name, image_ref, _gpus in containers
+    ]
+    first_image = containers[0][1]
+    raw_identity: dict = {"namespace": pod_ns, "pod": pod_name}
+    if not multi:
+        raw_identity["image"] = first_image
+    if context:
+        raw_identity["context"] = context
 
     metadata: dict = {
         "gpu_count": gpu_count,
-        "image": image_ref,
+        "image": first_image,
+        "containers": [{"name": name, "image": image} for name, image, _gpus in containers],
         "kind": "Pod",
         "cloud_origin": build_cloud_origin(
             provider="coreweave",
@@ -330,20 +349,22 @@ def _gpu_pod_agent(pod_ns: str, pod_name: str, image_ref: str, gpu_limit: str, g
             resource_type="gpu-pod",
             resource_id=f"{pod_ns}/{pod_name}",
             resource_name=pod_name,
-            raw_identity={"namespace": pod_ns, "pod": pod_name, "image": image_ref},
+            cluster=context,
+            raw_identity=raw_identity,
         ),
     }
     if is_nim:
         metadata["is_nim"] = True
         metadata["nim_model"] = nim_model
 
+    location = f"coreweave://{quote(context, safe='')}/pod/{pod_ns}/{pod_name}" if context else f"coreweave://pod/{pod_ns}/{pod_name}"
     return Agent(
         name=f"coreweave-gpu-pod:{pod_ns}/{pod_name}",
         agent_type=AgentType.CUSTOM,
-        config_path=f"coreweave://pod/{pod_ns}/{pod_name}",
+        config_path=location,
         source="coreweave-gpu",
         version=f"nim:{nim_model}" if is_nim else f"gpu:{gpu_count}",
-        mcp_servers=[server],
+        mcp_servers=servers,
         metadata=metadata,
     )
 

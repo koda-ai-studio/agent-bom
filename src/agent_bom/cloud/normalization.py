@@ -165,6 +165,7 @@ def build_cloud_origin(
     account_id: str | None = None,
     subscription_id: str | None = None,
     project_id: str | None = None,
+    cluster: str | None = None,
     raw_identity: dict[str, Any] | None = None,
     network: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -184,6 +185,9 @@ def build_cloud_origin(
         scope["subscription_id"] = subscription_id
     if project_id:
         scope["project_id"] = project_id
+    if cluster:
+        # Cluster-local ids (``namespace/pod``) are unique only inside one cluster.
+        scope["cluster"] = cluster
 
     envelope: dict[str, Any] = {
         "normalization_version": "1",

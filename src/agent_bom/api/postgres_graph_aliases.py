@@ -7,7 +7,7 @@ from typing import Any
 
 from agent_bom.api.postgres_common import _tenant_connection
 from agent_bom.db.graph_store_schema import normalize_graph_tenant_id
-from agent_bom.graph.node_aliases import NODE_ALIAS_COLUMNS
+from agent_bom.graph.node_aliases import NODE_ALIAS_COLUMNS, resolve_with_server_children
 
 NODE_ALIASES_DDL: tuple[str, ...] = (
     """
@@ -56,6 +56,12 @@ _RESOLVE_LATEST_SQL = (
     " AND a.scan_id = (SELECT s.scan_id FROM graph_snapshots s WHERE s.tenant_id = a.tenant_id"
     " AND s.snapshot_kind = 'scan' ORDER BY s.created_at DESC, s.scan_id DESC LIMIT 1)"
 )
+_LIVE_IN_SNAPSHOT_SQL = "SELECT n.id FROM graph_nodes n WHERE n.tenant_id = %s AND n.id = ANY(%s) AND n.scan_id = %s"
+_LIVE_LATEST_SQL = (
+    "SELECT n.id FROM graph_nodes n WHERE n.tenant_id = %s AND n.id = ANY(%s)"
+    " AND n.scan_id = (SELECT s.scan_id FROM graph_snapshots s WHERE s.tenant_id = n.tenant_id"
+    " AND s.snapshot_kind = 'scan' ORDER BY s.created_at DESC, s.scan_id DESC LIMIT 1)"
+)
 # Nodes are written first in the same transaction; an alias naming one of them is never recorded.
 _UPSERT_SQL = (
     f"INSERT INTO graph_node_aliases ({', '.join(NODE_ALIAS_COLUMNS)}) SELECT {', '.join('%s' for _ in NODE_ALIAS_COLUMNS)} "  # nosec B608
@@ -84,14 +90,22 @@ def resolve_node_aliases(conn: Any, *, tenant_id: str, node_ids: Iterable[str], 
     ids = sorted({node_id for node_id in node_ids if node_id})[:_MAX_LOOKUP]
     if not ids:
         return {}
-    if scan_id:
-        sql = _RESOLVE_IN_SNAPSHOT_SQL
-        params: tuple[Any, ...] = (tenant_id, ids, scan_id)
-    else:
-        sql = _RESOLVE_LATEST_SQL
-        params = (tenant_id, ids)
-    rows = conn.execute(sql, params).fetchall()
-    return {str(row[0]): str(row[1]) for row in rows}
+
+    def direct(batch: list[str]) -> dict[str, str]:
+        if scan_id:
+            rows = conn.execute(_RESOLVE_IN_SNAPSHOT_SQL, (tenant_id, batch, scan_id)).fetchall()
+        else:
+            rows = conn.execute(_RESOLVE_LATEST_SQL, (tenant_id, batch)).fetchall()
+        return {str(row[0]): str(row[1]) for row in rows}
+
+    def live(batch: list[str]) -> set[str]:
+        if scan_id:
+            rows = conn.execute(_LIVE_IN_SNAPSHOT_SQL, (tenant_id, batch, scan_id)).fetchall()
+        else:
+            rows = conn.execute(_LIVE_LATEST_SQL, (tenant_id, batch)).fetchall()
+        return {str(row[0]) for row in rows}
+
+    return resolve_with_server_children(ids, direct, live)
 
 
 class PostgresGraphAliasMixin:

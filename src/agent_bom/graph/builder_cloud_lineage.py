@@ -41,14 +41,21 @@ class _CloudLineage:
     org_id: str
     account_key: str
     account_id: str
+    resource_scope: str = ""
 
     @property
     def cloud_provider_id(self) -> str:
         return f"provider:{self.provider}"
 
     @property
-    def resource_node_id(self) -> str:
+    def unscoped_resource_node_id(self) -> str:
         return f"cloud_resource:{self.provider}:{self.service}:{self.resource_type}:{self.resource_id}"
+
+    @property
+    def resource_node_id(self) -> str:
+        if not self.resource_scope:
+            return self.unscoped_resource_node_id
+        return f"cloud_resource:{self.provider}:{self.service}:{self.resource_type}:{self.resource_scope}:{self.resource_id}"
 
     @property
     def org_node_id(self) -> str:
@@ -90,6 +97,7 @@ def _resolve_cloud_lineage(agent_dict: dict[str, Any], origin: dict[str, Any], d
     )
     account_id = account_id or _clean_graph_part(origin.get("account_id")) or _clean_graph_part(origin.get("subscription_id"))
     return _CloudLineage(
+        resource_scope=_resource_scope(service, resource_id, account_id, _clean_graph_part(scope.get("cluster"))),
         origin=origin,
         provider=provider,
         service=service,
@@ -103,6 +111,18 @@ def _resolve_cloud_lineage(agent_dict: dict[str, Any], origin: dict[str, Any], d
         account_key=account_key,
         account_id=account_id,
     )
+
+
+def _resource_scope(service: str, resource_id: str, account_id: str, cluster: str) -> str:
+    """Scope a cluster-local Kubernetes id by its project/account and cluster.
+
+    A ``namespace/pod`` id is unique only inside one cluster, so the same pod
+    name in two projects or clusters must not become one node. Provider ids
+    keep their existing node ids.
+    """
+    if service != "kubernetes":
+        return ""
+    return "/".join(part for part in (account_id, cluster) if part and part not in resource_id)
 
 
 def _add_lineage_resource_nodes(graph: UnifiedGraph, lineage: _CloudLineage, agent_metadata: dict[str, Any]) -> None:
@@ -133,6 +153,11 @@ def _add_lineage_resource_nodes(graph: UnifiedGraph, lineage: _CloudLineage, age
                 "cloud_state": agent_metadata.get("cloud_state"),
                 "cloud_scope": agent_metadata.get("cloud_scope"),
                 "cloud_timestamps": agent_metadata.get("cloud_timestamps"),
+                **(
+                    {"identity": {"basis": "cloud_origin_scope", "aliases": [lineage.unscoped_resource_node_id]}}
+                    if lineage.resource_scope
+                    else {}
+                ),
             },
             data_sources=lineage.data_sources,
             dimensions=NodeDimensions(cloud_provider=lineage.provider, surface=lineage.service),

@@ -5,12 +5,13 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import uuid
 from collections.abc import Mapping, Sequence
-from pathlib import Path
 from typing import Any
-from urllib.parse import quote, urlparse, urlunparse
+from urllib.parse import parse_qsl, quote, urlencode, urlparse, urlunparse
 
+from agent_bom.constants import is_credential_key
 from agent_bom.package_utils import canonical_package_key
 
 AGENT_BOM_ID_NAMESPACE = uuid.UUID("7f3e4b2a-9c1d-5f8e-a0b4-12c3d4e5f6a7")
@@ -140,48 +141,49 @@ def normalize_command_arg(arg: str) -> str:
     return text
 
 
-def _legacy_mcp_server_discriminator(
-    name: str,
-    command: str = "",
-    *,
-    url: str | None = None,
-    args: Sequence[str] | None = None,
-) -> str:
-    """Frozen pre-instance discriminator, used only for historical aliases."""
-    if url and url.strip():
-        parsed = urlparse(url.strip())
-        netloc = parsed.netloc.lower()
-        path = parsed.path.rstrip("/")
-        return f"url:{urlunparse((parsed.scheme.lower(), netloc, path, '', '', ''))}"
+_NON_IDENTITY_ENV_KEY = re.compile(
+    r"^(?:[A-Z0-9_]*_)?(?:LOG_LEVEL|LOGLEVEL|LOG_FORMAT|DEBUG|VERBOSE|VERBOSITY|NO_COLOR|FORCE_COLOR|TIMEOUT|[A-Z0-9_]*_TIMEOUT(?:_MS|_SECONDS)?)$",
+    re.IGNORECASE,
+)
 
-    cmd = Path(command or "").name.strip()
-    normalized_args = tuple(value for value in (normalize_command_arg(arg) for arg in (args or [])) if value)
-    if cmd or normalized_args:
-        arg_str = " ".join(normalized_args)
-        if not normalized_args:
-            # A bare command with no args is not distinctive enough on its own;
-            # fold in the server name so distinct servers keep distinct identities.
-            return f"cmd:{cmd}:{arg_str}:{name.strip().lower()}"
-        return f"cmd:{cmd}:{arg_str}"
 
-    return f"name:{name.strip().lower()}"
+def _identity_endpoint(url: str) -> str:
+    """Endpoint route without secret material: passwords and credential-named query values."""
+    parsed = urlparse(url.strip())
+    userinfo, separator, host = parsed.netloc.rpartition("@")
+    username = userinfo.split(":", 1)[0]
+    authority = username + separator + host.lower()
+    pairs = parse_qsl(parsed.query, keep_blank_values=True)
+    query = parsed.query
+    if any(is_credential_key(key) for key, _ in pairs):
+        query = urlencode([(key, value) for key, value in pairs if not is_credential_key(key)])
+    # Preserve path, parameters and non-secret query: each may select another service.
+    return urlunparse((parsed.scheme.lower(), authority, parsed.path, parsed.params, query, ""))
+
+
+def _identity_environment(environment: Mapping[str, Any] | None) -> dict[str, Any]:
+    """Environment that selects an instance; secrets keep only their name, settings drop out."""
+    result: dict[str, Any] = {}
+    for key, value in (environment or {}).items():
+        name = str(key)
+        if _NON_IDENTITY_ENV_KEY.match(name):
+            continue
+        result[name] = None if is_credential_key(name) else value
+    return result
 
 
 def mcp_server_identity_discriminator(name: str, command: str = "", *, url: str | None = None, args: Sequence[str] | None = None) -> str:
-    """Retain endpoint routes and exact executable/argv boundaries.
+    """Retain endpoint routes, exact executable/argv boundaries and the configured name.
 
-    A registry artifact and a launch recipe are not proof of a shared process.
+    A registry artifact and a launch recipe are not proof of a shared process:
+    two configured entries running the same recipe are two instances. Secret
+    material never enters the identity, so rotating a credential keeps the id.
     The discriminator is hashed before it is exposed as a canonical identity.
     """
     if url and url.strip():
-        parsed = urlparse(url.strip())
-        userinfo, separator, host = parsed.netloc.rpartition("@")
-        authority = userinfo + separator + host.lower()
-        # Preserve path, parameters and query: each may select another service.
-        endpoint = urlunparse((parsed.scheme.lower(), authority, parsed.path, parsed.params, parsed.query, ""))
-        return canonical_fingerprint("url", endpoint)
+        return canonical_fingerprint("url", _identity_endpoint(url))
     if command or args:
-        return canonical_fingerprint("cmd", command, list(args or []), name if not args else None)
+        return canonical_fingerprint("cmd", command, list(args or []), name)
     return canonical_fingerprint("name", name)
 
 
@@ -198,7 +200,7 @@ def canonical_mcp_server_id(
     if registry_id and not (url or command or args):
         return canonical_id("mcp_server", registry_id)
     identifier = mcp_server_identity_discriminator(name, command, url=url, args=args).strip()
-    context = None if url else {"working_dir": working_dir, "environment": dict(environment or {})}
+    context = None if url else {"working_dir": working_dir, "environment": _identity_environment(environment)}
     return canonical_id("mcp_server_instance", identifier, context)
 
 
@@ -366,52 +368,6 @@ def mcp_server_graph_id_for(server: Any, agent: Any) -> str:
         working_dir=_field(server, "working_dir"),
         environment=_field(server, "env"),
     )
-
-
-def previous_mcp_server_graph_ids(server: Any, agent: Any) -> list[str]:
-    """Ids earlier identity schemes gave this server, so stored references still resolve.
-
-    Before discriminators kept case, the canonical part was lower-cased in
-    full; before canonical server ids, every server lived under its agent.
-    """
-    current = mcp_server_graph_id_for(server, agent)
-    label = str(_field(server, "name") or "unknown").strip() or "unknown"
-    url, command, args, registry_id = (
-        _field(server, "url"),
-        _field(server, "command") or "",
-        list(_field(server, "args") or []),
-        _field(server, "registry_id"),
-    )
-    kind = mcp_server_identity_kind(url=url, command=command, args=args, registry_id=registry_id)
-    agent_ids = [agent_graph_id_for(agent), *previous_agent_graph_ids(agent)]
-    previous = {f"server:{agent_id.removeprefix('agent:')}:{label}" for agent_id in agent_ids}
-    if (kind != "agent" or registry_id) and _field(agent, "source") != CORTEX_AGENT_SOURCE:
-        explicit = _field(server, "canonical_id") or _field(server, "stable_id")
-        current_identity = canonical_mcp_server_id(
-            label,
-            str(command),
-            registry_id=registry_id,
-            url=url,
-            args=args,
-            working_dir=_field(server, "working_dir"),
-            environment=_field(server, "env"),
-        )
-        # Only an older explicit receipt can name a previous global node.
-        # The new instance fingerprint never existed in that global namespace.
-        identities = {str(explicit)} if explicit and str(explicit) != current_identity else set()
-        if registry_id:
-            identities.update({canonical_id("mcp_server", registry_id), legacy_canonical_id_v2("mcp_server", registry_id)})
-        else:
-            old = _legacy_mcp_server_discriminator(label, str(command), url=url, args=args)
-            identities.update({str(uuid.uuid5(AGENT_BOM_ID_NAMESPACE, f"mcp_server:{old}")), legacy_canonical_id_v2("mcp_server", old)})
-        # Frozen pre-v3 spelling: do not run the old scope through new escaping.
-        raw_scope = agent_identity_scope(agent).strip()
-        scopes = {raw_scope.replace(":", "%3A"), quote(raw_scope, safe="")}
-        old_host = not url and any(normalize_command_arg(str(arg or "")) for arg in args)
-        previous.update(
-            f"server:{scope}:{identity}" if old_host and scope else f"server:{identity}" for identity in identities for scope in scopes
-        )
-    return sorted(previous - {current})
 
 
 def canonical_mcp_tool_id(name: str, input_schema: Mapping[str, Any] | bool | None = None, *, server_id: str | None = None) -> str:
