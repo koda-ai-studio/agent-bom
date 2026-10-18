@@ -2374,11 +2374,13 @@ function GraphPageInner() {
         agent: filters.agentName,
         severity: filters.severity,
         path: selectedAttackPathKey,
+        root: investigationMode?.rootId ?? null,
+        context: investigationContext ? selectedContextGroup : null,
         rollup: rollupStack.at(-1)?.id ?? null,
         topology: graphTopologyKey(displayNodes, displayEdges),
       }),
     }),
-    [displayEdges, displayNodes, filters, rollupStack, selectedAttackPath, selectedAttackPathKey, selectedScanId, session?.auth_method, session?.subject, session?.tenant_id],
+    [displayEdges, displayNodes, filters, investigationMode?.rootId, investigationContext, selectedContextGroup, rollupStack, selectedAttackPath, selectedAttackPathKey, selectedScanId, session?.auth_method, session?.subject, session?.tenant_id],
   );
   const presentation = useGraphPresentation({
     nodes: displayNodes,
