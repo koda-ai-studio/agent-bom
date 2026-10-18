@@ -12,6 +12,18 @@ def _write(path: Path, lines: int) -> None:
     path.write_text("x\n" * lines, encoding="utf-8")
 
 
+@pytest.mark.parametrize("module", ["server_routes", "server_storage", "server_dashboard", "server_schedules"])
+def test_server_module_edits_select_auth_and_composition_contracts(tmp_path: Path, module: str) -> None:
+    expected = sorted(
+        tmp_path / "tests/api" / name
+        for name in ("test_server_composition_contract.py", "test_api_auth_boundary.py", "test_api_dashboard_deeplink_routes.py")
+    )
+    for path in expected:
+        _write(path, 1)
+    _write(tmp_path / "tests/test_unrelated.py", 1)
+    assert select_targeted_tests(changed_files=[Path(f"src/agent_bom/api/{module}.py")], root=tmp_path) == expected
+
+
 @pytest.mark.parametrize(
     "source",
     [
