@@ -19,7 +19,7 @@ from typing import Any
 from agent_bom.api.native_trace_import import TraceImportScope, prepare_trace_page
 from agent_bom.api.runtime_event_store import RuntimeEventStore
 from agent_bom.api.storage.runtime_trace_imports import TraceImportCheckpoint, TraceImportConflictError
-from agent_bom.trace_connectors import NativeTracePage, TraceConnectorError, _TraceConnectorHTTPError
+from agent_bom.trace_connectors import NativeTracePage, TraceConnectorError, TraceConnectorResponseTooLargeError, _TraceConnectorHTTPError
 
 
 def import_native_pages(
@@ -151,6 +151,8 @@ def _next_cursor_history(current: TraceImportCheckpoint, cursor: str | None) -> 
 
 
 def _provider_error(exc: TraceConnectorError) -> dict[str, Any]:
+    if isinstance(exc, TraceConnectorResponseTooLargeError):
+        return {"code": "response_too_large", "retryable": False}
     status = exc.status if isinstance(exc, _TraceConnectorHTTPError) else None
     error: dict[str, Any] = {
         "code": "rate_limited" if status == 429 else "provider_unavailable",

@@ -2,13 +2,37 @@
 
 import hashlib
 import json
+from dataclasses import dataclass
+from typing import Any
 
 from agent_bom.analytics_retention import prune_runtime_observations_for_tenant
 from agent_bom.api.runtime_event_store import RuntimeObservationRecord, RuntimeSessionRecord, _merge_session, _session_from_json
 from agent_bom.api.storage.cooperative import iter_with_handoffs
-from agent_bom.api.storage.runtime_trace_revisions import prune_revisions_for_tenant, reconcile_sql
+from agent_bom.api.storage.runtime_trace_revisions import _encode_revision, prune_revisions_for_tenant, reconcile_sql
 from agent_bom.api.storage.sql import Dialect, SqlSession
 from agent_bom.api.trace_collection.contracts import MAX_RECEIPTS, CollectionConflictError
+
+
+@dataclass
+class PreparedPage:
+    records: list[RuntimeObservationRecord]
+    payloads: dict[int, tuple[dict[str, Any], str, str]]
+    revisions: dict[int, tuple[str, str]]
+
+
+def prepare_page(records: list[RuntimeObservationRecord]) -> PreparedPage:
+    """Snapshot and serialize bounded batches before acquiring a write lock."""
+    page = PreparedPage([], {}, {})
+    for start in iter_with_handoffs(range(0, len(records), 32)):
+        for record in records[start : start + 32]:
+            payload = record.to_dict()
+            snapshot = RuntimeObservationRecord(**payload)
+            data = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+            page.records.append(snapshot)
+            page.payloads[id(snapshot)] = (payload, data, hashlib.sha256(data.encode()).hexdigest())
+            if snapshot.surface == "imported_trace":
+                page.revisions[id(snapshot)] = _encode_revision(snapshot)
+    return page
 
 
 def _prior_page_rows(
@@ -36,25 +60,24 @@ def _prior_page_rows(
     return prior_receipts, retained
 
 
-def put_page(tx: SqlSession, tenant: str, connection: str, records: list[RuntimeObservationRecord], *, dialect: Dialect = "sqlite") -> int:
+def put_page(tx: SqlSession, tenant: str, connection: str, page: PreparedPage, *, dialect: Dialect = "sqlite") -> int:
+    records = page.records
     if any(record.tenant_id != tenant for record in records):
         raise CollectionConflictError("Observation tenant does not match collection.")
     # Window imports and resumable collection share native IDs and append-only
     # revisions. A changed native span updates its projection, not its count.
     native = {record.observation_id: record for record in records if record.surface == "imported_trace"}
-    _, first_seen = reconcile_sql(tx, list(native.values()), cooperative=True)
+    _, first_seen = reconcile_sql(tx, list(native.values()), prepared=page.revisions)
     records = [record for record in records if record.surface != "imported_trace"] + first_seen
     prior_receipts, retained = _prior_page_rows(tx, tenant, connection, records)
     added = 0
     sessions: dict[str, RuntimeSessionRecord] = {}
     receipts = []
     observations = []
-    for record in iter_with_handoffs(records):
+    for record in records:
         if record.tenant_id != tenant:
             raise CollectionConflictError("Observation tenant does not match collection.")
-        payload = record.to_dict()
-        data = json.dumps(payload, sort_keys=True, separators=(",", ":"))
-        digest = hashlib.sha256(data.encode()).hexdigest()
+        payload, data, digest = page.payloads[id(record)]
         prior = prior_receipts.get(record.observation_id)
         if prior:
             if prior != digest:

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
 
 import httpx
@@ -18,7 +18,13 @@ MAX_RECORDS = 2000
 
 
 def _collect(
-    client: httpx.Client, token: str, team: str, capability: str, normalizer: Callable[[Any], dict[str, Any]]
+    client: httpx.Client,
+    token: str,
+    team: str,
+    capability: str,
+    normalizer: Callable[[Any], dict[str, Any]],
+    *,
+    window: tuple[datetime, datetime] | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     receipt: dict[str, Any] = {
         "provider": "vercel",
@@ -37,9 +43,14 @@ def _collect(
     }
     rows: dict[str, dict[str, Any]] = {}
     cursor: int | None = None
+    if window is not None:
+        receipt.update(window_start=window[0].isoformat(), window_end=window[1].isoformat())
+        cursor = int(window[1].timestamp() * 1000)
     version = "v10" if capability == "projects" else "v7"
     for _ in range(MAX_PAGES):
         params: dict[str, Any] = {"teamId": team, "limit": 100}
+        if window is not None:
+            params["since"] = int(window[0].timestamp() * 1000)
         if cursor is not None:
             params["until"] = cursor
         payload, state = read_json(
@@ -94,13 +105,21 @@ def collect_report(*, team_id: str, token: str, client: httpx.Client | None = No
     if client is None:
         with httpx.Client(trust_env=False) as owned:
             return collect_report(team_id=team_id, token=token, client=owned)
-    observed = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    now = datetime.now(timezone.utc)
+    observed = now.isoformat().replace("+00:00", "Z")
     projects, project_receipt = _collect(client, token, team_id, "projects", lambda row: project(row, team_id))
     coverage = [project_receipt]
     deployments: list[dict[str, Any]] = []
     if project_receipt["complete"]:
         project_ids = {item["id"] for item in projects}
-        deployments, deployment_receipt = _collect(client, token, team_id, "deployments", lambda row: deployment(row, team_id, project_ids))
+        deployments, deployment_receipt = _collect(
+            client,
+            token,
+            team_id,
+            "deployments",
+            lambda row: deployment(row, team_id, project_ids),
+            window=(now - timedelta(hours=24), now),
+        )
         coverage.append(deployment_receipt)
     else:
         coverage.append(
@@ -136,6 +155,7 @@ def collect_report(*, team_id: str, token: str, client: httpx.Client | None = No
         "configuration_checks": checks,
         "reconcile_absent": False,
         "limitations": [
+            "Deployment coverage is limited to the recorded window of the last 24 hours; older deployments are not evaluated.",
             "Configuration checks do not prove deployment reachability, runtime behavior, or exploitation.",
             "Package vulnerabilities, deployed contents, effective access, and firewall rules are not evaluated.",
         ],

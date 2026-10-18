@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from contextlib import nullcontext
 from dataclasses import dataclass
 from typing import Any, Callable, Protocol
 
@@ -18,7 +17,7 @@ from fastapi.responses import JSONResponse
 
 from agent_bom.api.gateway_request import _strip_gateway_identity_metadata
 from agent_bom.api.metrics import record_gateway_relay
-from agent_bom.api.tracing import inject_trace_headers
+from agent_bom.api.tracing import inject_trace_headers, sanitized_span
 from agent_bom.gateway_upstreams import UpstreamConfig
 from agent_bom.langfuse_otel import set_langfuse_runtime_attributes
 from agent_bom.proxy import extract_tool_name, is_tools_call
@@ -182,7 +181,7 @@ def _annotate_span(context: GatewayForwardContext, span: Any) -> None:
 
 async def _call_upstream(context: GatewayForwardContext, audit: CompletionAudit) -> dict[str, Any]:
     extra_headers, forwarded_message = _trace_request(context)
-    span_cm = context.tracer.start_as_current_span("gateway.relay_upstream") if context.tracer else nullcontext()
+    span_cm = sanitized_span(context.tracer, "gateway.relay_upstream")
     try:
         with span_cm as span:
             if span is not None:
