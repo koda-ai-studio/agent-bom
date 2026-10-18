@@ -116,3 +116,15 @@ def test_grade_summary_and_tiles_use_the_issue_counts() -> None:
     assert "3 critical" not in summary
     # Occurrence counts remain available and still reconcile with /v1/findings.
     assert overview["finding_counts"]["critical"] == counts["critical"] == 3
+
+
+def test_scan_time_dimensions_name_the_single_scan_they_came_from() -> None:
+    _overview, posture, _counts = _surfaces()
+
+    # The headline is tenant-wide; the per-dimension breakdown is one scan's
+    # scorecard and must say so rather than read as the tenant posture.
+    assert posture["basis"] == "exec_posture"
+    basis = posture["dimensions_basis"]
+    assert basis["basis"] == "latest_scan"
+    assert basis["scan_id"] == "posture-one-number-scan"
+    assert basis["completed_at"]
