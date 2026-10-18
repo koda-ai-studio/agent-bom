@@ -44,6 +44,30 @@ export function orderHierarchyBranches(nodes: Node[], edges: Edge[]): Node[] {
   return best;
 }
 
+/** Keep single-parent chains level and leave room for long links between them. */
+function alignHierarchyBranches(nodes: Node[], edges: Edge[], minGap: number): Node[] {
+  const positions = new Map(nodes.map(node => [node.id, node.position]));
+  const ranks = new Map<number, Node[]>();
+  for (const node of nodes) ranks.set(node.position.x, [...(ranks.get(node.position.x) ?? []), node]);
+  for (const x of [...ranks.keys()].sort((a, b) => a - b)) {
+    const rank = ranks.get(x)!.sort((a, b) => a.position.y - b.position.y);
+    const desired = rank.map(node => {
+      const parents = edges.filter(edge => edge.target === node.id).flatMap(edge => {
+        const parent = positions.get(edge.source);
+        return parent && parent.x < x ? [parent.y] : [];
+      }).sort((a, b) => a - b);
+      return parents.length ? parents[Math.floor(parents.length / 2)]! : node.position.y;
+    });
+    const ys: number[] = [];
+    desired.forEach((y, i) => ys.push(i ? Math.max(y, ys[i - 1]! + minGap) : y));
+    // Centre siblings around a shared parent rather than pushing the whole
+    // branch down; already-separated chains keep their exact parent row.
+    const shift = desired.reduce((sum, y, i) => sum + y - ys[i]!, 0) / rank.length;
+    rank.forEach((node, i) => positions.set(node.id, { x, y: ys[i]! + shift }));
+  }
+  return nodes.map(node => ({ ...node, position: positions.get(node.id)! }));
+}
+
 /** Source-rooted levels keep repository sibling directories in the same rank.
  * Cycles retain Dagre's cycle-aware ordering instead of inventing a root. */
 function sourceRanks(nodes: Node[], edges: Edge[]): Map<string, number> | null {
@@ -113,7 +137,7 @@ export function graphHierarchyLayout(nodes: Node<LineageNodeData>[], edges: Edge
   const spaced = packed.map(node => ({ ...node, position: { ...node.position, x: node.position.x * stretch } }));
   // Large contexts retain the established wrapped-rank layout. Packing all
   // siblings into one column would recreate the tall fan-out problem.
-  const positioned = new Map((compact ? orderHierarchyBranches(spaced, rankedEdges) : layout.nodes).map(node => [node.id, node]));
+  const positioned = new Map((compact ? alignHierarchyBranches(orderHierarchyBranches(spaced, rankedEdges), rankedEdges, rowStep) : layout.nodes).map(node => [node.id, node]));
   return {
     nodes: nodes.map(node => positioned.get(node.id)!),
     edges: edges.map((edge): Edge => ({ ...edge,
