@@ -12,6 +12,7 @@ from pydantic import Field, field_validator
 from agent_bom.api.graph_consequence import GraphConsequenceRequest as GraphConsequenceRequest
 from agent_bom.api.graph_consequence import assess_snapshot_consequences as assess_snapshot_consequences
 from agent_bom.api.graph_generation import pin_generation, verify_generation
+from agent_bom.api.graph_node_alias import resolve_assessment_node_ids
 from agent_bom.graph.compromise import CompromiseAssessment, CompromiseRequest, assess_direct_compromise
 
 
@@ -36,6 +37,7 @@ def assess_snapshot(store: Any, body: GraphCompromiseRequest, *, tenant_id: str)
     identity = pin_generation(store, tenant=tenant_id, scan_id=body.scan_id, generation=body.snapshot_generation, offset=0)
     if not identity[1]:
         raise HTTPException(404, "Graph snapshot not found.")
+    body = resolve_assessment_node_ids(store, body, tenant_id=tenant_id, scan_id=identity[0])
     roots = [body.root_node_id]
     if body.affected_node_id and body.affected_node_id not in roots:
         roots.append(body.affected_node_id)

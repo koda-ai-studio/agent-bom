@@ -139,7 +139,10 @@ def vulnerability_enrichment_metadata(value: Any) -> dict[str, Any]:
     """Keep score, dates and attribution together in machine evidence."""
     return {
         **upstream_enrichment_metadata(value),
-        **{key: getattr(value, key, None) for key in ("epss_score", "epss_percentile", "is_kev", "kev_date_added", "kev_due_date")},
+        **{
+            key: getattr(value, key, None)
+            for key in ("epss_score", "epss_percentile", "is_kev", "kev_status", "kev_date_added", "kev_due_date")
+        },
     }
 
 

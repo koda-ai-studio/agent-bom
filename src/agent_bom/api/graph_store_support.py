@@ -62,20 +62,6 @@ def _escape_like_query(query: str) -> str:
     return query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
-def _node_search_text(node: UnifiedNode) -> str:
-    parts: list[str] = [
-        node.id,
-        node.label,
-        node.entity_type.value if hasattr(node.entity_type, "value") else str(node.entity_type),
-        node.severity or "",
-        " ".join(node.compliance_tags),
-        " ".join(node.data_sources),
-        json.dumps(node.attributes, default=str, sort_keys=True),
-        json.dumps(node.dimensions.to_dict(), sort_keys=True),
-    ]
-    return " ".join(part for part in parts if part).lower()
-
-
 def _node_sort_key(node: UnifiedNode) -> tuple[int, float, str, str]:
     return (int(node.severity_id or 0), float(node.risk_score or 0.0), node.label or "", node.id)
 

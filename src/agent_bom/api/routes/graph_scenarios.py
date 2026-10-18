@@ -12,6 +12,7 @@ from uuid import uuid4
 from fastapi import APIRouter, HTTPException, Query, Request, Response
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, model_validator
 
+from agent_bom.api.graph_node_alias import resolve_scenario_aliases
 from agent_bom.api.graph_scenario_store import GraphScenarioConflictError
 from agent_bom.api.neptune_graph import NeptuneGraphStore, NeptuneGraphStoreUnsupportedOperationError
 from agent_bom.api.read_models import GraphScenariosResponse, documented, governance_a
@@ -670,10 +671,9 @@ async def compare_graph_scenario(
         raise HTTPException(status_code=501, detail=sanitize_error(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=503, detail=sanitize_error(exc, generic=True)) from exc
-
-    current["node_count"] = int(stats.get("total_nodes", 0))
-    current["edge_count"] = int(stats.get("total_edges", 0))
+    current.update(node_count=int(stats.get("total_nodes", 0)), edge_count=int(stats.get("total_edges", 0)))
     source_completeness = graph.completeness.to_dict()
+    scenario = await asyncio.to_thread(resolve_scenario_aliases, graph_store, tenant_id, scan_id, scenario)
     observed_refs = _observed_references(scenario)
     if observed_refs:
         try:

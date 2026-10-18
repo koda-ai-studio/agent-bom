@@ -425,6 +425,7 @@
    "posture_scorecard": {
     "dimensions": {
      "active_exploitation": {
+      "assessed": true,
       "details": "No actively exploited vulnerabilities",
       "name": "Active Exploitation",
       "score": 100.0,
@@ -432,6 +433,7 @@
       "weighted_score": 10.0
      },
      "compliance_coverage": {
+      "assessed": true,
       "details": "No findings to map",
       "name": "Compliance Coverage",
       "score": 100.0,
@@ -439,6 +441,7 @@
       "weighted_score": 15.0
      },
      "configuration_quality": {
+      "assessed": true,
       "details": "No servers to evaluate",
       "name": "Configuration Quality",
       "score": 50.0,
@@ -446,6 +449,7 @@
       "weighted_score": 5.0
      },
      "credential_hygiene": {
+      "assessed": true,
       "details": "No credential exposure detected",
       "name": "Credential Hygiene",
       "score": 100.0,
@@ -453,6 +457,7 @@
       "weighted_score": 20.0
      },
      "supply_chain_quality": {
+      "assessed": true,
       "details": "No GitHub-backed packages eligible for OpenSSF Scorecard",
       "name": "Supply Chain Quality",
       "score": 50.0,
@@ -460,6 +465,7 @@
       "weighted_score": 7.5
      },
      "vulnerability_posture": {
+      "assessed": true,
       "details": "No vulnerabilities found",
       "name": "Vulnerability Posture",
       "score": 100.0,
@@ -1906,6 +1912,7 @@
            "kev_cve_id": null,
            "kev_date_added": null,
            "kev_due_date": null,
+           "kev_status": null,
            "match_confidence_tier": null,
            "modified_at": null,
            "nvd_modified": null,
@@ -2278,6 +2285,7 @@
      "kev_cve_id": null,
      "kev_date_added": null,
      "kev_due_date": null,
+     "kev_status": null,
      "layer_attribution": [],
      "malicious_reason": null,
      "match_confidence_tier": null,
@@ -2638,6 +2646,7 @@
       "kev_cve_id": null,
       "kev_date_added": null,
       "kev_due_date": null,
+      "kev_status": null,
       "layer_attribution": [],
       "modified_at": null,
       "network_exploitable": false,
@@ -2949,6 +2958,7 @@
    "posture_scorecard": {
     "dimensions": {
      "active_exploitation": {
+      "assessed": true,
       "details": "No actively exploited vulnerabilities",
       "name": "Active Exploitation",
       "score": 100.0,
@@ -2956,6 +2966,7 @@
       "weighted_score": 10.0
      },
      "compliance_coverage": {
+      "assessed": true,
       "details": "0/1 findings mapped to threat frameworks",
       "name": "Compliance Coverage",
       "score": 0.0,
@@ -2963,6 +2974,7 @@
       "weighted_score": 0.0
      },
      "configuration_quality": {
+      "assessed": true,
       "details": "0/1 verified, 0/1 with tool declarations",
       "name": "Configuration Quality",
       "score": 0.0,
@@ -2970,6 +2982,7 @@
       "weighted_score": 0.0
      },
      "credential_hygiene": {
+      "assessed": true,
       "details": "No credential exposure detected",
       "name": "Credential Hygiene",
       "score": 100.0,
@@ -2977,6 +2990,7 @@
       "weighted_score": 20.0
      },
      "supply_chain_quality": {
+      "assessed": true,
       "details": "No GitHub-backed packages eligible for OpenSSF Scorecard",
       "name": "Supply Chain Quality",
       "score": 50.0,
@@ -2984,6 +2998,7 @@
       "weighted_score": 7.5
      },
      "vulnerability_posture": {
+      "assessed": true,
       "details": "1 vulns (1 high), 0 fixable",
       "name": "Vulnerability Posture",
       "score": 92.0,
@@ -4625,6 +4640,7 @@
            "kev_cve_id": null,
            "kev_date_added": null,
            "kev_due_date": null,
+           "kev_status": null,
            "match_confidence_tier": null,
            "modified_at": null,
            "nvd_modified": null,
@@ -4997,6 +5013,7 @@
      "kev_cve_id": null,
      "kev_date_added": null,
      "kev_due_date": null,
+     "kev_status": null,
      "layer_attribution": [],
      "malicious_reason": null,
      "match_confidence_tier": null,
@@ -5357,6 +5374,7 @@
       "kev_cve_id": null,
       "kev_date_added": null,
       "kev_due_date": null,
+      "kev_status": null,
       "layer_attribution": [],
       "modified_at": null,
       "network_exploitable": false,
@@ -5672,6 +5690,7 @@
    "posture_scorecard": {
     "dimensions": {
      "active_exploitation": {
+      "assessed": true,
       "details": "No actively exploited vulnerabilities",
       "name": "Active Exploitation",
       "score": 100.0,
@@ -5679,6 +5698,7 @@
       "weighted_score": 10.0
      },
      "compliance_coverage": {
+      "assessed": true,
       "details": "0/1 findings mapped to threat frameworks",
       "name": "Compliance Coverage",
       "score": 0.0,
@@ -5686,6 +5706,7 @@
       "weighted_score": 0.0
      },
      "configuration_quality": {
+      "assessed": true,
       "details": "0/1 verified, 0/1 with tool declarations",
       "name": "Configuration Quality",
       "score": 0.0,
@@ -5693,6 +5714,7 @@
       "weighted_score": 0.0
      },
      "credential_hygiene": {
+      "assessed": true,
       "details": "No credential exposure detected",
       "name": "Credential Hygiene",
       "score": 100.0,
@@ -5700,6 +5722,7 @@
       "weighted_score": 20.0
      },
      "supply_chain_quality": {
+      "assessed": true,
       "details": "No GitHub-backed packages eligible for OpenSSF Scorecard",
       "name": "Supply Chain Quality",
       "score": 50.0,
@@ -5707,6 +5730,7 @@
       "weighted_score": 7.5
      },
      "vulnerability_posture": {
+      "assessed": true,
       "details": "1 vulns (1 high), 0 fixable",
       "name": "Vulnerability Posture",
       "score": 92.0,
@@ -7729,17 +7753,19 @@
      "vulnerability_count": 0
     }
    ],
-   "posture_grade": "B",
+   "posture_grade": "C",
    "posture_scorecard": {
     "dimensions": {
      "active_exploitation": {
-      "details": "No actively exploited vulnerabilities",
+      "assessed": false,
+      "details": "Not assessed — vulnerability scanning skipped by request",
       "name": "Active Exploitation",
-      "score": 100.0,
+      "score": 0.0,
       "weight": 0.1,
-      "weighted_score": 10.0
+      "weighted_score": 0.0
      },
      "compliance_coverage": {
+      "assessed": true,
       "details": "No findings to map",
       "name": "Compliance Coverage",
       "score": 100.0,
@@ -7747,6 +7773,7 @@
       "weighted_score": 15.0
      },
      "configuration_quality": {
+      "assessed": true,
       "details": "0/1 verified, 0/1 with tool declarations",
       "name": "Configuration Quality",
       "score": 0.0,
@@ -7754,6 +7781,7 @@
       "weighted_score": 0.0
      },
      "credential_hygiene": {
+      "assessed": true,
       "details": "No credential exposure detected",
       "name": "Credential Hygiene",
       "score": 100.0,
@@ -7761,6 +7789,7 @@
       "weighted_score": 20.0
      },
      "supply_chain_quality": {
+      "assessed": true,
       "details": "No GitHub-backed packages eligible for OpenSSF Scorecard",
       "name": "Supply Chain Quality",
       "score": 50.0,
@@ -7768,18 +7797,19 @@
       "weighted_score": 7.5
      },
      "vulnerability_posture": {
-      "details": "No vulnerabilities found",
+      "assessed": false,
+      "details": "Not assessed — vulnerability scanning skipped by request",
       "name": "Vulnerability Posture",
-      "score": 100.0,
+      "score": 0.0,
       "weight": 0.3,
-      "weighted_score": 30.0
+      "weighted_score": 0.0
      }
     },
-    "grade": "B",
+    "grade": "C",
     "no_data": false,
     "policy_source": "default",
-    "score": 82.5,
-    "summary": "No vulnerabilities found; strong best-practice/config posture (B, 82.5%)"
+    "score": 70.8,
+    "summary": "Vulnerability posture not assessed (scanning skipped); best-practice/config posture C, 70.8%"
    },
    "remediation_plan": [],
    "scan_id": "char-no_scan_supplied_findings",
@@ -9634,6 +9664,7 @@
    "posture_scorecard": {
     "dimensions": {
      "active_exploitation": {
+      "assessed": true,
       "details": "No actively exploited vulnerabilities",
       "name": "Active Exploitation",
       "score": 100.0,
@@ -9641,6 +9672,7 @@
       "weighted_score": 10.0
      },
      "compliance_coverage": {
+      "assessed": true,
       "details": "No findings to map",
       "name": "Compliance Coverage",
       "score": 100.0,
@@ -9648,6 +9680,7 @@
       "weighted_score": 15.0
      },
      "configuration_quality": {
+      "assessed": true,
       "details": "0/1 verified, 0/1 with tool declarations",
       "name": "Configuration Quality",
       "score": 0.0,
@@ -9655,6 +9688,7 @@
       "weighted_score": 0.0
      },
      "credential_hygiene": {
+      "assessed": true,
       "details": "No credential exposure detected",
       "name": "Credential Hygiene",
       "score": 100.0,
@@ -9662,6 +9696,7 @@
       "weighted_score": 20.0
      },
      "supply_chain_quality": {
+      "assessed": true,
       "details": "No GitHub-backed packages eligible for OpenSSF Scorecard",
       "name": "Supply Chain Quality",
       "score": 50.0,
@@ -9669,6 +9704,7 @@
       "weighted_score": 7.5
      },
      "vulnerability_posture": {
+      "assessed": true,
       "details": "No vulnerabilities found",
       "name": "Vulnerability Posture",
       "score": 100.0,
@@ -11269,6 +11305,7 @@
            "kev_cve_id": null,
            "kev_date_added": null,
            "kev_due_date": null,
+           "kev_status": null,
            "match_confidence_tier": null,
            "modified_at": null,
            "nvd_modified": null,
@@ -11641,6 +11678,7 @@
      "kev_cve_id": null,
      "kev_date_added": null,
      "kev_due_date": null,
+     "kev_status": null,
      "layer_attribution": [],
      "malicious_reason": null,
      "match_confidence_tier": null,
@@ -12001,6 +12039,7 @@
       "kev_cve_id": null,
       "kev_date_added": null,
       "kev_due_date": null,
+      "kev_status": null,
       "layer_attribution": [],
       "modified_at": null,
       "network_exploitable": false,
@@ -12312,6 +12351,7 @@
    "posture_scorecard": {
     "dimensions": {
      "active_exploitation": {
+      "assessed": true,
       "details": "No actively exploited vulnerabilities",
       "name": "Active Exploitation",
       "score": 100.0,
@@ -12319,6 +12359,7 @@
       "weighted_score": 10.0
      },
      "compliance_coverage": {
+      "assessed": true,
       "details": "0/1 findings mapped to threat frameworks",
       "name": "Compliance Coverage",
       "score": 0.0,
@@ -12326,6 +12367,7 @@
       "weighted_score": 0.0
      },
      "configuration_quality": {
+      "assessed": true,
       "details": "0/1 verified, 0/1 with tool declarations",
       "name": "Configuration Quality",
       "score": 0.0,
@@ -12333,6 +12375,7 @@
       "weighted_score": 0.0
      },
      "credential_hygiene": {
+      "assessed": true,
       "details": "No credential exposure detected",
       "name": "Credential Hygiene",
       "score": 100.0,
@@ -12340,6 +12383,7 @@
       "weighted_score": 20.0
      },
      "supply_chain_quality": {
+      "assessed": true,
       "details": "No GitHub-backed packages eligible for OpenSSF Scorecard",
       "name": "Supply Chain Quality",
       "score": 50.0,
@@ -12347,6 +12391,7 @@
       "weighted_score": 7.5
      },
      "vulnerability_posture": {
+      "assessed": true,
       "details": "1 vulns (1 high), 0 fixable",
       "name": "Vulnerability Posture",
       "score": 92.0,
@@ -13854,6 +13899,7 @@
            "kev_cve_id": null,
            "kev_date_added": null,
            "kev_due_date": null,
+           "kev_status": null,
            "match_confidence_tier": null,
            "modified_at": null,
            "nvd_modified": null,
@@ -14226,6 +14272,7 @@
      "kev_cve_id": null,
      "kev_date_added": null,
      "kev_due_date": null,
+     "kev_status": null,
      "layer_attribution": [],
      "malicious_reason": null,
      "match_confidence_tier": null,
@@ -14586,6 +14633,7 @@
       "kev_cve_id": null,
       "kev_date_added": null,
       "kev_due_date": null,
+      "kev_status": null,
       "layer_attribution": [],
       "modified_at": null,
       "network_exploitable": false,
@@ -14897,6 +14945,7 @@
    "posture_scorecard": {
     "dimensions": {
      "active_exploitation": {
+      "assessed": true,
       "details": "No actively exploited vulnerabilities",
       "name": "Active Exploitation",
       "score": 100.0,
@@ -14904,6 +14953,7 @@
       "weighted_score": 10.0
      },
      "compliance_coverage": {
+      "assessed": true,
       "details": "0/1 findings mapped to threat frameworks",
       "name": "Compliance Coverage",
       "score": 0.0,
@@ -14911,6 +14961,7 @@
       "weighted_score": 0.0
      },
      "configuration_quality": {
+      "assessed": true,
       "details": "0/1 verified, 0/1 with tool declarations",
       "name": "Configuration Quality",
       "score": 0.0,
@@ -14918,6 +14969,7 @@
       "weighted_score": 0.0
      },
      "credential_hygiene": {
+      "assessed": true,
       "details": "No credential exposure detected",
       "name": "Credential Hygiene",
       "score": 100.0,
@@ -14925,6 +14977,7 @@
       "weighted_score": 20.0
      },
      "supply_chain_quality": {
+      "assessed": true,
       "details": "No GitHub-backed packages eligible for OpenSSF Scorecard",
       "name": "Supply Chain Quality",
       "score": 50.0,
@@ -14932,6 +14985,7 @@
       "weighted_score": 7.5
      },
      "vulnerability_posture": {
+      "assessed": true,
       "details": "1 vulns (1 high), 0 fixable",
       "name": "Vulnerability Posture",
       "score": 92.0,
@@ -16430,6 +16484,7 @@
            "kev_cve_id": null,
            "kev_date_added": null,
            "kev_due_date": null,
+           "kev_status": null,
            "match_confidence_tier": null,
            "modified_at": null,
            "nvd_modified": null,
@@ -16872,6 +16927,7 @@
    "posture_scorecard": {
     "dimensions": {
      "active_exploitation": {
+      "assessed": true,
       "details": "No actively exploited vulnerabilities",
       "name": "Active Exploitation",
       "score": 100.0,
@@ -16879,6 +16935,7 @@
       "weighted_score": 10.0
      },
      "compliance_coverage": {
+      "assessed": true,
       "details": "No findings to map",
       "name": "Compliance Coverage",
       "score": 100.0,
@@ -16886,6 +16943,7 @@
       "weighted_score": 15.0
      },
      "configuration_quality": {
+      "assessed": true,
       "details": "0/1 verified, 0/1 with tool declarations",
       "name": "Configuration Quality",
       "score": 0.0,
@@ -16893,6 +16951,7 @@
       "weighted_score": 0.0
      },
      "credential_hygiene": {
+      "assessed": true,
       "details": "No credential exposure detected",
       "name": "Credential Hygiene",
       "score": 100.0,
@@ -16900,6 +16959,7 @@
       "weighted_score": 20.0
      },
      "supply_chain_quality": {
+      "assessed": true,
       "details": "No GitHub-backed packages eligible for OpenSSF Scorecard",
       "name": "Supply Chain Quality",
       "score": 50.0,
@@ -16907,6 +16967,7 @@
       "weighted_score": 7.5
      },
      "vulnerability_posture": {
+      "assessed": true,
       "details": "1 vulnerability occurrence(s) retained from inventory; analysis verdict unavailable",
       "name": "Vulnerability Posture",
       "score": 0.0,
@@ -18350,6 +18411,7 @@
            "kev_cve_id": null,
            "kev_date_added": null,
            "kev_due_date": null,
+           "kev_status": null,
            "match_confidence_tier": null,
            "modified_at": null,
            "nvd_modified": null,
@@ -18722,6 +18784,7 @@
      "kev_cve_id": null,
      "kev_date_added": null,
      "kev_due_date": null,
+     "kev_status": null,
      "layer_attribution": [],
      "malicious_reason": null,
      "match_confidence_tier": null,
@@ -19082,6 +19145,7 @@
       "kev_cve_id": null,
       "kev_date_added": null,
       "kev_due_date": null,
+      "kev_status": null,
       "layer_attribution": [],
       "modified_at": null,
       "network_exploitable": false,
@@ -19393,6 +19457,7 @@
    "posture_scorecard": {
     "dimensions": {
      "active_exploitation": {
+      "assessed": true,
       "details": "No actively exploited vulnerabilities",
       "name": "Active Exploitation",
       "score": 100.0,
@@ -19400,6 +19465,7 @@
       "weighted_score": 10.0
      },
      "compliance_coverage": {
+      "assessed": true,
       "details": "0/1 findings mapped to threat frameworks",
       "name": "Compliance Coverage",
       "score": 0.0,
@@ -19407,6 +19473,7 @@
       "weighted_score": 0.0
      },
      "configuration_quality": {
+      "assessed": true,
       "details": "0/1 verified, 0/1 with tool declarations",
       "name": "Configuration Quality",
       "score": 0.0,
@@ -19414,6 +19481,7 @@
       "weighted_score": 0.0
      },
      "credential_hygiene": {
+      "assessed": true,
       "details": "No credential exposure detected",
       "name": "Credential Hygiene",
       "score": 100.0,
@@ -19421,6 +19489,7 @@
       "weighted_score": 20.0
      },
      "supply_chain_quality": {
+      "assessed": true,
       "details": "No GitHub-backed packages eligible for OpenSSF Scorecard",
       "name": "Supply Chain Quality",
       "score": 50.0,
@@ -19428,6 +19497,7 @@
       "weighted_score": 7.5
      },
      "vulnerability_posture": {
+      "assessed": true,
       "details": "1 vulns (1 high), 0 fixable",
       "name": "Vulnerability Posture",
       "score": 92.0,

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import hashlib
 import json
 import threading
@@ -36,15 +35,7 @@ async def _resolve_pair(store: Any, tenant: str, old: str | None, new: str | Non
     if bool(old) != bool(new):
         raise HTTPException(status_code=422, detail="Pass both old and new scan IDs, or neither to compare the latest two snapshots.")
     if old and new:
-        from agent_bom.api.graph_scan_ids import resolve_graph_scan_id
-
-        resolved_old = await asyncio.to_thread(resolve_graph_scan_id, tenant, old)
-        resolved_new = await asyncio.to_thread(resolve_graph_scan_id, tenant, new)
-        found = await _runtime._graph_store_call(store.snapshots_by_ids, tenant_id=tenant, scan_ids={resolved_old, resolved_new})
-        present = {str(row.get("scan_id") or "") for row in found or []}
-        missing = sorted({resolved_old, resolved_new} - present)
-        if missing:
-            raise HTTPException(status_code=404, detail="Graph snapshot not found for this tenant.")
+        resolved_old, resolved_new = await _runtime.require_graph_snapshot_ids(store, tenant, old, new)
         return resolved_old, resolved_new
     latest = await _runtime._graph_store_call(store.list_snapshots, tenant_id=tenant, limit=2)
     if len(latest or []) < 2:

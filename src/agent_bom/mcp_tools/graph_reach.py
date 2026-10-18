@@ -14,8 +14,8 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
-from agent_bom.api.graph_node_alias import resolve_snapshot_node_id
 from agent_bom.graph.completeness import impact_completeness
+from agent_bom.graph.node_alias_resolution import resolve_snapshot_node_id
 from agent_bom.graph.reach_view import reach_interpretation
 from agent_bom.graph.types import EntityType
 from agent_bom.mcp_errors import (

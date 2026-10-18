@@ -162,6 +162,24 @@ def precompute_posture_evidence(tenant_id: str) -> None:
     posture_evidence_blocks(request, _get_store().list_all(tenant_id=tenant_id))
 
 
+def tenant_headline_posture(tenant_id: str) -> dict[str, Any] | None:
+    """The grade and score ``/v1/overview`` and ``/v1/posture`` serve right now.
+
+    Trend points recorded after a write use this so the history plots the
+    same headline the posture endpoints report. ``None`` when unavailable.
+    """
+    request = Request({"type": "http", "method": "GET", "path": "/v1/overview", "headers": [], "query_string": b"", "state": {}})
+    request.state.tenant_id = tenant_id
+    try:
+        posture = canonical_posture_payload(request, {})
+    except Exception:  # broad-except: trend history must never fail a write that already committed
+        _logger.warning("Headline posture unavailable for trend recording; using the scan scorecard")
+        return None
+    if posture.get("grade") in (None, "", "N/A"):
+        return None
+    return {"grade": posture.get("grade"), "score": posture.get("score")}
+
+
 def canonical_posture_payload(request: Request, scorecard: dict[str, Any]) -> dict[str, Any]:
     from agent_bom.api.routes.overview import _build_overview
 
@@ -185,4 +203,5 @@ __all__ = [
     "posture_evidence_blocks",
     "precompute_posture_evidence",
     "tenant_exec_posture",
+    "tenant_headline_posture",
 ]

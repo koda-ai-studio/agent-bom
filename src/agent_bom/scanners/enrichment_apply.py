@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Iterable
 from typing import Optional
 
 from agent_bom.advisory_ids import upstream_advisory_ids
@@ -65,6 +66,31 @@ def apply_kev_entry(vuln: Vulnerability, cve_ids: list[str], kev_data: dict) -> 
     vuln.kev_date_added = kev.get("date_added")
     vuln.kev_due_date = kev.get("due_date")
     return True
+
+
+KEV_STATUS_LISTED = "listed"
+KEV_STATUS_NOT_LISTED = "not_listed"
+KEV_STATUS_UNKNOWN = "unknown"
+
+
+def join_kev_status(vulnerabilities: Iterable[Vulnerability], kev_data: dict, *, consulted: bool = True) -> int:
+    """Apply a KEV catalog and record per-vulnerability catalog status; return hits.
+
+    An empty catalog means the catalog was unavailable, not that nothing is
+    exploited: vulnerabilities not already listed become ``unknown``. With
+    ``consulted=False`` (KEV not part of this enrichment) nothing changes.
+    """
+    if not consulted:
+        return 0
+    hits = 0
+    for vuln in vulnerabilities:
+        if kev_data and apply_kev_entry(vuln, vuln_cve_ids(vuln), kev_data):
+            hits += 1
+        if vuln.is_kev:
+            vuln.kev_status = KEV_STATUS_LISTED
+        else:
+            vuln.kev_status = KEV_STATUS_NOT_LISTED if kev_data else KEV_STATUS_UNKNOWN
+    return hits
 
 
 def epss_percentile(value: object) -> float | None:

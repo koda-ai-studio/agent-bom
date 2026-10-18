@@ -128,6 +128,7 @@ class Vulnerability:
     epss_score: Optional[float] = None  # EPSS probability (0.0-1.0)
     epss_percentile: Optional[float] = None  # EPSS percentile (0.0-100.0)
     is_kev: bool = False  # CISA Known Exploited Vulnerability
+    kev_status: Optional[str] = None  # "listed" | "not_listed" | "unknown" (catalog unavailable); None: no KEV join ran
     kev_date_added: Optional[str] = None  # Date added to KEV catalog
     kev_due_date: Optional[str] = None  # Remediation due date
     published_at: Optional[str] = None  # Canonical advisory publish date

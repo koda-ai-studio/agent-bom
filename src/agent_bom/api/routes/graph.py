@@ -85,7 +85,7 @@ from agent_bom.api.graph_contracts import (
 )
 from agent_bom.api.graph_generation import optional_generation, verify_generation
 from agent_bom.api.graph_page_context import containment_ancestors, page_attack_context
-from agent_bom.api.graph_paging import _coalesce_alias, _enforce_node_offset_cap, _paginate
+from agent_bom.api.graph_paging import _coalesce_alias, _enforce_node_offset_cap, _paginate, path_order
 from agent_bom.api.graph_presentation import (
     _finding_ids_for_path as _finding_ids_for_path,
 )
@@ -440,6 +440,7 @@ async def get_graph_paths(
         raise HTTPException(status_code=422, detail="Missing required query parameter: source_id")
     requested_scan_id = _coalesce_alias(scan_id, scan, primary_name="scan_id", alias_name="scan")
     tenant = _runtime._tenant(request)
+    source_node_id, resolved_from = await _runtime.resolve_node_id(graph_store, tenant, requested_scan_id, source_node_id)
     source_nodes = await _runtime._graph_store_call(
         graph_store.nodes_by_ids, scan_id=requested_scan_id, tenant_id=tenant, node_ids={source_node_id}
     )
@@ -454,7 +455,7 @@ async def get_graph_paths(
         max_depth=max_depth,
         traversable_only=True,
     )
-    paged_paths, pagination = _paginate(all_paths, offset, limit)
+    paged_paths, pagination = _paginate(sorted(all_paths, key=path_order), offset, limit)
     attack_paths = await _runtime._graph_store_call(
         graph_store.attack_paths_for_sources, scan_id=requested_scan_id, tenant_id=tenant, source_ids={source_node_id}
     )
@@ -496,6 +497,7 @@ async def get_graph_paths(
             truncated=traversal_truncated or depth_limited or pagination["has_more"],
             reason=_paths_truncation_reason(traversal_truncated, pagination["has_more"], depth_limited),
         ),
+        "resolved_from": resolved_from,
     }
     from agent_bom.db.adoption_events import record_adoption_event_best_effort
 
@@ -516,9 +518,7 @@ async def query_graph(request: Request, body: GraphQueryRequest) -> dict:
     )
     scan_id = identity[0] if identity else body.scan_id or ""
     budget = _enforce_graph_query_budget(body)
-    root_nodes = await _runtime._graph_store_call(graph_store.nodes_by_ids, scan_id=scan_id, tenant_id=tenant_id, node_ids=set(body.roots))
-    known_roots = {node.id for node in root_nodes}
-    missing_roots = [root for root in body.roots if root not in known_roots]
+    body, resolved_roots, missing_roots = await _runtime.resolve_query_roots(graph_store, tenant_id, scan_id, body)
     if missing_roots:
         raise HTTPException(status_code=404, detail={"message": "Root nodes not found", "missing_roots": missing_roots})
 
@@ -585,9 +585,10 @@ async def query_graph(request: Request, body: GraphQueryRequest) -> dict:
         await _runtime._graph_store_call(
             verify_generation, graph_store, tenant=tenant_id, identity=identity, has_rows=bool(filtered_graph.nodes)
         )
-    return query_payload(
+    payload = query_payload(
         body, filtered_graph, depth_by_node, truncated, depth_limited, attack_paths, budget, rel_types, identity[1] if identity else None
     )
+    return {**payload, "resolved_roots": resolved_roots}
 
 
 router.include_router(reads.node_router)
@@ -604,16 +605,12 @@ async def get_graph_node_neighbors(
 ) -> dict:
     """Return a bounded set of a node's direct graph neighbors for inline expand.
 
-    This is the read side of the dashboard's progressive-disclosure attack-path
-    view: expanding one hop loads only that hop's direct neighbors instead of the
-    whole graph. It is deliberately lazy and bounded — fan-out is capped by
-    ``limit``; ``total_neighbors`` is null when source evidence is incomplete.
-    A completely read high-degree neighborhood reports its known total with
-    ``truncated`` set, so the UI can render a "+N more" affordance rather than
-    exploding the view. Neighbor node metadata (entity type, label, severity)
-    travels with the payload so the client never needs a second round trip per
-    neighbor id. An unknown node id returns an empty payload (200, ``found``
-    false) instead of raising, so a stale client id degrades quietly in-place.
+    The read side of progressive-disclosure attack-path views: one hop's direct
+    neighbors, fan-out capped by ``limit``; ``total_neighbors`` is null when source
+    evidence is incomplete, and a fully read high-degree neighborhood reports its
+    total with ``truncated`` set ("+N more"). Neighbor metadata travels with the
+    payload. A replaced id resolves (``resolved_from``); an unknown id returns 200
+    with ``found`` false, so a stale client id degrades quietly in place.
     """
     normalized_direction = direction.strip().lower()
     if normalized_direction not in {"out", "in", "both"}:
@@ -626,6 +623,7 @@ async def get_graph_node_neighbors(
         # The adapter owns the capability error; the wrapper sanitizes it.
         await _runtime._graph_store_call(store.node_context, scan_id=scan_id or "", tenant_id=tenant, node_id=node_id)
     effective_scan_id = scan_id or await _runtime._graph_store_call(store.latest_snapshot_id, tenant_id=tenant)
+    node_id, resolved_from = await _runtime.resolve_node_id(store, tenant, scan_id, node_id) if effective_scan_id else (node_id, None)
     context = (
         await _runtime._graph_store_call(store.node_context, scan_id=effective_scan_id, tenant_id=tenant, node_id=node_id)
         if effective_scan_id
@@ -650,6 +648,7 @@ async def get_graph_node_neighbors(
                 truncated=True,
                 reason="node_not_found" if effective_scan_id else "snapshot_not_found",
             ),
+            "resolved_from": resolved_from,
         }
 
     selected_edges: list = []
@@ -728,6 +727,7 @@ async def get_graph_node_neighbors(
         "neighbors": [node.to_dict() for node in ordered_nodes],
         "edges": [edge.to_dict() for edge in bounded_edges],
         "completeness": completeness,
+        "resolved_from": resolved_from,
     }
 
 
@@ -765,18 +765,13 @@ async def get_graph_rollup(
 ) -> dict:
     """Collapse the estate along ``CONTAINS`` into a small, readable view.
 
-    Past a few hundred nodes the raw topology is an unreadable hairball. This
-    endpoint rolls the graph up along the containment hierarchy
-    (org -> account/project -> app -> resource) so a 1000+ node estate renders
-    as a handful of top-level containers, each carrying aggregate descendant
-    counts, worst-severity, a per-severity histogram, and exposure / toxic
-    flags. ``?node=<id>`` returns one level of direct children for on-demand
-    drill-down, paged by ``offset``/``limit`` with ``pagination`` and truthful
-    ``completeness``; ``?mode=attack_path`` returns the nodes/edges on materialised
-    attack paths first with the rest collapsed.
-
-    Backend for the UI graph-navigation surface. Read-only: never mutates the
-    source graph.
+    Rolls the graph up along containment (org -> account/project -> app ->
+    resource) so a 1000+ node estate renders as a few top-level containers, each
+    with descendant counts, worst severity, a severity histogram and exposure /
+    toxic flags. ``?node=<id>`` (a replaced id resolves, echoed as
+    ``resolved_from``) returns one level of direct children, paged by
+    ``offset``/``limit`` with truthful ``completeness``; ``?mode=attack_path``
+    returns materialised attack-path nodes/edges first. Read-only.
     """
     tenant = _runtime._tenant(request)
     graph_store = _runtime._get_graph_store_or_503()
@@ -826,6 +821,7 @@ async def get_graph_rollup(
             return cached
         requested_scan_id = identity[0]
 
+    node, resolved_from = await _runtime.resolve_node_id(graph_store, tenant, requested_scan_id, node) if node else (node, None)
     try:
         if node:
             # A drill-down reads one container's subtree, so that subtree is all
@@ -874,6 +870,7 @@ async def get_graph_rollup(
         if identity is not None:
             await _runtime._graph_store_call(verify_generation, graph_store, tenant=tenant, identity=identity, has_rows=bool(graph.nodes))
             payload["snapshot_generation"] = identity[1]
+        payload.update({"resolved_from": resolved_from} if resolved_from else {})
         if cache_key:
             graph_rollup_cache.put(cache_key, payload)
         return payload

@@ -247,6 +247,7 @@ class GraphImpactResponse(ReadResponse):
     tenant_id: str
     snapshot_generation: str | None
     interpretation: GraphImpactInterpretation
+    resolved_from: str | None = None
 
 
 class GraphLegendResponse(ReadResponse):
@@ -299,6 +300,7 @@ class GraphNodeNeighborsResponse(ReadResponse):
     neighbors: list[Row]
     edges: list[Row]
     completeness: GraphCompleteness
+    resolved_from: str | None = None
 
 
 class GraphPathHop(ReadModel):
@@ -319,6 +321,7 @@ class GraphPathsResponse(ReadResponse):
     truncated: bool
     depth_limited: bool
     completeness: GraphCompleteness
+    resolved_from: str | None = None
 
 
 class GraphPresetsResponse(RootModel[list[Row]]):
@@ -358,6 +361,7 @@ class GraphRollupResponse(ReadResponse):
     attack_paths: list[Row] | None = None
     path_nodes: list[Row] | None = None
     path_edges: list[Row] | None = None
+    resolved_from: str | None = None
     collapsed: Row | None = None
 
 

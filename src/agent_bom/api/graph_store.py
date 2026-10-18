@@ -26,7 +26,6 @@ from agent_bom.api.graph_store_support import _assert_offset_within_cap as _asse
 from agent_bom.api.graph_store_support import _attach_sibling_relationships as _attach_sibling_relationships
 from agent_bom.api.graph_store_support import _drilldown_subtree_budget as _drilldown_subtree_budget
 from agent_bom.api.graph_store_support import _escape_like_query as _escape_like_query
-from agent_bom.api.graph_store_support import _node_search_text as _node_search_text
 from agent_bom.api.graph_store_support import _node_sort_key as _node_sort_key
 from agent_bom.api.graph_store_support import _typed_containment_subtree as _typed_containment_subtree
 from agent_bom.api.graph_store_support import _unsupported_traversal_errors as _unsupported_traversal_errors

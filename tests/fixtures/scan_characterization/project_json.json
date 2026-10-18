@@ -1777,6 +1777,7 @@
   "posture_scorecard": {
    "dimensions": {
     "active_exploitation": {
+     "assessed": true,
      "details": "No actively exploited vulnerabilities",
      "name": "Active Exploitation",
      "score": 100.0,
@@ -1784,6 +1785,7 @@
      "weighted_score": 10.0
     },
     "compliance_coverage": {
+     "assessed": true,
      "details": "No findings to map",
      "name": "Compliance Coverage",
      "score": 100.0,
@@ -1791,6 +1793,7 @@
      "weighted_score": 15.0
     },
     "configuration_quality": {
+     "assessed": true,
      "details": "0/2 verified, 0/2 with tool declarations",
      "name": "Configuration Quality",
      "score": 0.0,
@@ -1798,6 +1801,7 @@
      "weighted_score": 0.0
     },
     "credential_hygiene": {
+     "assessed": true,
      "details": "1 unique credentials across 1 servers",
      "name": "Credential Hygiene",
      "score": 89.0,
@@ -1805,6 +1809,7 @@
      "weighted_score": 17.8
     },
     "supply_chain_quality": {
+     "assessed": true,
      "details": "No GitHub-backed packages eligible for OpenSSF Scorecard",
      "name": "Supply Chain Quality",
      "score": 50.0,
@@ -1812,6 +1817,7 @@
      "weighted_score": 7.5
     },
     "vulnerability_posture": {
+     "assessed": true,
      "details": "No vulnerabilities found",
      "name": "Vulnerability Posture",
      "score": 100.0,

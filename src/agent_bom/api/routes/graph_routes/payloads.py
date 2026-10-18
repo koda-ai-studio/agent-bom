@@ -9,6 +9,7 @@ from fastapi.encoders import jsonable_encoder
 from starlette.responses import JSONResponse, Response
 
 from agent_bom.api.graph_paging import _page_meta, _paginate
+from agent_bom.api.graph_paging import page_truncated as _page_truncated
 from agent_bom.api.graph_presentation import _fix_first_card_for_path, _path_matches_focus, _path_semantic_key, _serialize_attack_path_batch
 from agent_bom.api.routes.graph_routes.params import (
     _FILTERED_GRAPH_ATTACK_PATH_LIMIT,
@@ -484,7 +485,7 @@ def _encode_node_page(
     response_nodes = [*paged_nodes, *ancestor_nodes]
     response_node_ids = {node.id for node in response_nodes}
     response_edges = _joined_edges(paged_edges, ancestor_edges)
-    page_truncated = bool(next_cursor) or offset + len(paged_nodes) < total
+    page_truncated = _page_truncated(cursor=cursor, next_cursor=next_cursor, offset=offset, returned=len(paged_nodes), total=total)
     payload = {
         "snapshot_generation": identity[1] if identity else None,
         "scan_id": effective_scan_id,
