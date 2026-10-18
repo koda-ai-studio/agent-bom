@@ -268,8 +268,27 @@ def test_cli_rejects_changed_project_scope_without_replacing_snapshot(tmp_path, 
     monkeypatch.setattr(module, "collect_report", lambda **kwargs: narrower)
     result = CliRunner().invoke(cloud_group, args)
     assert result.exit_code == 1
+    assert "Collection scope changed; use a separate graph database" in result.output
     rejected = json.loads(output.read_text())
     assert rejected["persistence"]["graph"] == "failed"
     assert all(not receipt["persisted"] for receipt in rejected["coverage"])
     with open_graph_db(db) as conn:
         assert load_graph(conn).scan_id == before.scan_id
+
+
+def test_redaction_collision_does_not_merge_distinct_advisors():
+    keys = ("token=first-private-token", "token=second-private-token")
+    report, _ = collect(advisors={"lints": [{**lint(), "cache_key": key} for key in keys]})
+    assert report["status"] == "ok"
+    assert len({finding["id"] for finding in report["findings"]}) == 2
+    assert all(key not in json.dumps(report) for key in keys)
+    replay, _ = collect(advisors={"lints": [{**lint(), "cache_key": key} for key in keys]})
+    assert [f["id"] for f in report["findings"]] == [f["id"] for f in replay["findings"]]
+
+
+def test_inactive_project_does_not_emit_unevaluated_advisors():
+    report, _ = collect(payload=project(status="INACTIVE"))
+    assert report["findings"] == []
+    assert report["cloud_inventory"][0]["findings"] == []
+    assert report["coverage"][1]["evaluated"] is False
+    assert report["coverage"][1]["state"] == "paused"

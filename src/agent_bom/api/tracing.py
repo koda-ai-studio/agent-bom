@@ -6,6 +6,8 @@ import logging
 import os
 import re
 import secrets
+from collections.abc import Iterator
+from contextlib import contextmanager
 from typing import Any, TypedDict
 
 from agent_bom import __version__
@@ -29,6 +31,24 @@ def record_request_exception(span: Any, exc: Exception) -> None:
         {"exception.type": type(exc).__name__, "exception.message": message, "exception.escaped": True},
     )
     span.set_status(Status(StatusCode.ERROR, message))
+
+
+@contextmanager
+def sanitized_span(tracer: Any, name: str) -> Iterator[Any]:
+    """Keep child-span failure signals without SDK exception/traceback export.
+
+    Exceptions retain their original identity and propagate to the caller's
+    existing fail-closed policy. No tracing SDK is required when disabled.
+    """
+    if tracer is None:
+        yield None
+        return
+    with tracer.start_as_current_span(name, record_exception=False, set_status_on_exception=False) as span:
+        try:
+            yield span
+        except Exception as exc:  # broad-except: redact any upstream failure before re-raising the original exception.
+            record_request_exception(span, exc)
+            raise
 
 
 class TracingHealthSnapshot(TypedDict):

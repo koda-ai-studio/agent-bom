@@ -273,3 +273,24 @@ def test_collected_native_revision_history_is_bounded(stores, monkeypatch):
     assert sum(retained.values()) <= 3
     assert retained[4] == retained[5] == 1
     assert retained[0] == 0
+
+
+@pytest.mark.parametrize("native", [False, True])
+def test_page_write_never_sleeps_with_a_transaction_open(stores, monkeypatch, native):
+    runtime, store = stores
+    state = store.claim("a", "connection", initial(), now=100)
+    sleeps = []
+
+    def observe_sleep(delay):
+        sleeps.append(store.backend._conn().in_transaction)
+
+    monkeypatch.setattr("agent_bom.api.storage.cooperative.time.sleep", observe_sleep)
+    records = [observation(key=f"event-{i}") for i in range(65)]
+    if native:
+        records = [
+            replace(record, surface="imported_trace", metadata={"project_id": "project", "connection_id": "connection"})
+            for record in records
+        ]
+    done = store.commit("a", "connection", state, records, next_cursor=None, now=101)
+    assert done.persisted == 65
+    assert sleeps == [False, False], "handoffs belong between preparation batches, outside the transaction"

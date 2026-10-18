@@ -16,7 +16,7 @@ def _response(payload):
 
 @pytest.mark.parametrize(
     "payload",
-    [[], {}, {"instances": None}, {"instances": "bad"}, {"instances": ["bad"]}],
+    [[], {"instances": None}, {"instances": "bad"}, {"instances": ["bad"]}],
 )
 def test_malformed_page_is_not_empty_success(payload):
     with patch("agent_bom.http_client.sync_request_with_retry", return_value=_response(payload)):
@@ -85,3 +85,27 @@ def test_malformed_inventory_reaches_discovery_warning():
     assert not agents
     assert len(warnings) == 1
     assert "invalid" in warnings[0]
+
+
+@pytest.mark.parametrize("payload", [{}, {"nextPageToken": ""}, {"items": []}, {"items": [{"id": "one"}]}])
+def test_proto_list_items_and_omitted_empty_field(payload):
+    with patch("agent_bom.http_client.sync_request_with_retry", return_value=_response(payload)):
+        assert _nebius_get_all("https://example.invalid/instances", "fixture-key", "instances") == payload.get("items", [])
+
+
+def test_nebius_incomplete_discovery_has_structured_scan_scope():
+    from types import SimpleNamespace
+
+    from agent_bom.cli.agents.scan_pipeline.report import _collect_cloud_scopes
+
+    state = SimpleNamespace(
+        ctx=SimpleNamespace(
+            cloud_provider_successes=[{"provider": "nebius", "item_count": 2}],
+            cloud_provider_warnings=[{"provider": "nebius", "warning": "pagination failed"}],
+            cloud_provider_failures=[],
+        )
+    )
+    _collect_cloud_scopes(SimpleNamespace(), state)
+    assert state.cloud_scopes[0].name == "cloud:nebius"
+    assert state.cloud_scopes[0].status.value == "partial"
+    assert state.cloud_scopes[0].item_count == 2

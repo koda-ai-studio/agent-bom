@@ -51,6 +51,12 @@ def test_rejects_pagination_destination_before_sending_auth(target):
         "https://example.okta.com/path",
         "https://user:secret@example.okta.com",
         "https://127.0.0.1",
+        r"https://evil.com\.okta.com",
+        "https://%2f.okta.com",
+        "https://.okta.com",
+        "https://a..okta.com",
+        "https://-a.okta.com",
+        "https://a-.okta.com",
     ],
 )
 def test_invalid_org_rejected(url):
@@ -104,3 +110,36 @@ def test_response_byte_bound(monkeypatch):
     )
     with pytest.raises(ValueError, match="bound"):
         client.list_api_tokens()
+
+
+@pytest.mark.parametrize("bound", ["MAX_RECORDS", "MAX_PAGES"])
+def test_bounded_discovery_retains_validated_apps_with_partial_receipt(monkeypatch, bound):
+    from agent_bom.identity.okta_nhi import discover_okta_non_human_identities
+
+    monkeypatch.setattr("agent_bom.identity.okta_http." + bound, 1)
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        if request.url.path.endswith("api-tokens"):
+            return httpx.Response(200, json=[])
+        apps = [
+            {
+                "id": "one",
+                "label": "service",
+                "signOnMode": "OPENID_CONNECT",
+                "credentials": {"oauthClient": {"token_endpoint_auth_method": "private_key_jwt"}},
+                "settings": {"oauthClient": {"grant_types": ["client_credentials"]}},
+            }
+        ]
+        if bound == "MAX_RECORDS":
+            apps.append({**apps[0], "id": "two"})
+        return httpx.Response(200, json=apps, headers={"Link": '<https://example.okta.com/api/v1/apps?after=a>; rel="next"'})
+
+    client = OktaClient("https://example.okta.com", "fixture", transport=httpx.MockTransport(handler))
+    result = discover_okta_non_human_identities(org_url="https://example.okta.com", client=client)
+    assert result.status.value == "partial"
+    assert len(result.identities) == 1
+    assert result.coverage[0]["state"] == "partial"
+    assert result.coverage[0]["reason_code"] == ("record_limit" if bound == "MAX_RECORDS" else "page_limit")
+    assert result.coverage[0]["count"] == 1

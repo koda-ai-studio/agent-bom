@@ -15,7 +15,7 @@ from agent_bom.api.trace_collection.contracts import (
 )
 from agent_bom.api.trace_collection.retry import retry_delay
 from agent_bom.api.trace_collection.schema import CHECKPOINT_DDL, RECEIPT_DDL, RECEIPT_INDEX
-from agent_bom.api.trace_collection.writes import put_page
+from agent_bom.api.trace_collection.writes import prepare_page, put_page
 
 
 class TraceCollectionStore:
@@ -111,6 +111,8 @@ class TraceCollectionStore:
         now: float | None = None,
     ) -> CollectionState:
         require_tenant_id(tenant)
+        page = prepare_page(records)
+        records = page.records
         with self.backend.transaction() as tx:
             self._begin(tx)
             if self.backend.dialect == "postgres":
@@ -136,7 +138,7 @@ class TraceCollectionStore:
                     raise CollectionConflictError("Provider cursor cycle or page limit reached; checkpoint retained.")
                 state.cursor_history.append(cursor_digest)
             state.consecutive_failures = 0
-            state.persisted += put_page(tx, tenant, connection, records, dialect=self.backend.dialect)
+            state.persisted += put_page(tx, tenant, connection, page, dialect=self.backend.dialect)
             state.cursor, state.pages = next_cursor, state.pages + 1
             state.last_success = datetime.fromtimestamp(now, timezone.utc).isoformat()
             state.owner, state.lease_until, state.retry_after = "", 0, 0

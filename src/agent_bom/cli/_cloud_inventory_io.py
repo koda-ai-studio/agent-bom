@@ -9,6 +9,13 @@ import tempfile
 from pathlib import Path
 
 
+class CollectionScopeMismatchError(ValueError):
+    """A safe, actionable rejection that never includes tenant or resource IDs."""
+
+    def __init__(self) -> None:
+        super().__init__("Collection scope changed; use a separate graph database")
+
+
 def _write_report(path: Path, report: dict) -> None:
     """Publish the complete normalized artifact atomically, with private mode."""
     report["evidence_sha256"] = hashlib.sha256(
@@ -63,7 +70,7 @@ def persist_graph(
             conn.execute("BEGIN IMMEDIATE")
             previous = load_graph(conn, tenant_id=tenant, entity_types=scope_entity_types)
             if previous.scan_id and set(previous.nodes) != scope_node_ids:
-                raise ValueError("Collection scope changed; use a separate graph database")
+                raise CollectionScopeMismatchError()
             save_graph(conn, graph)
     except Exception:
         for receipt in report["coverage"]:
