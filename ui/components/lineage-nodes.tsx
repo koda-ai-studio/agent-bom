@@ -2,7 +2,8 @@
 
 import type { ComponentType, ReactNode } from "react";
 import { Handle, Position } from "@xyflow/react";
-import { Bug, KeyRound, Package, Wrench } from "lucide-react";
+import { Bug, FolderGit2, KeyRound, Package, Wrench } from "lucide-react";
+import { graphRepositoryContext } from "@/lib/graph-repository-context";
 
 import { AgentSourceMark } from "@/components/agent-source-mark";
 import { agentSource } from "@/lib/agent-source";
@@ -150,6 +151,13 @@ function RuntimeEvidenceChip({ tier }: { tier: RuntimeEvidenceTier }) {
   );
 }
 
+function ContextHandles() {
+  return <>
+    <Handle type="source" id="context" position={Position.Left} className="!h-1 !w-1 !border-0 !bg-transparent" />
+    <Handle type="target" id="context" position={Position.Right} className="!h-1 !w-1 !border-0 !bg-transparent" />
+  </>;
+}
+
 function NodeCard({
   data,
   borderClass,
@@ -161,7 +169,8 @@ function NodeCard({
   subtitle,
   footer,
 }: CardProps) {
-  const Icon = entityIcon(data.nodeType);
+  const repository = graphRepositoryContext(data);
+  const Icon = repository ? FolderGit2 : entityIcon(data.nodeType);
   const brand = agentSource(data);
   const isRollupContainer = data.attributes?.rollup_is_container === true;
   const { badges, ring } = nodeBadges(data);
@@ -179,19 +188,21 @@ function NodeCard({
           className={`!h-1 !w-1 !border-0 !bg-transparent ${target ? "" : "!opacity-0"}`} />
         <Handle type="source" position={data.reverseFlow ? Position.Left : Position.Right}
           className={`!h-1 !w-1 !border-0 !bg-transparent ${source ? "" : "!opacity-0"}`} />
-        {data.nodeType === "agent"
-          ? <AgentSourceMark source={brand} style={{ width: "var(--graph-node-icon-size, 32px)", height: "var(--graph-node-icon-size, 32px)" }} className={`h-8 w-8 ${iconClass}`} />
+        <ContextHandles />
+        {data.nodeType === "agent" || repository
+          ? <AgentSourceMark source={repository?.source ?? brand} icon={repository ? FolderGit2 : undefined} style={{ width: "var(--graph-node-icon-size, 32px)", height: "var(--graph-node-icon-size, 32px)" }} className={`h-8 w-8 ${iconClass}`} />
           : <Icon aria-hidden="true" style={{ width: "var(--graph-node-icon-size, 32px)", height: "var(--graph-node-icon-size, 32px)" }} className={`h-8 w-8 ${iconClass}`} />}
       </div>
       <p className="mb-1 w-full min-w-0 break-words line-clamp-3 text-lg font-semibold leading-[1.2] text-foreground [overflow-wrap:anywhere]" style={{ fontSize: "var(--graph-node-label-size, 18px)" }}>
-        {canvasNodeLabel(data.label).split(/(?<=[_/@-])/).map((part, index) => <span key={index}>{part}<wbr /></span>)}
+        {canvasNodeLabel(repository?.slug || data.label).split(/(?<=[_/@-])/).map((part, index) => <span key={index}>{part}<wbr /></span>)}
       </p>
       <NodeBadgeRow badges={badges}>
         <span style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} className="text-xs text-ink-secondary">
-          {data.entityType === "application" ? "Application" : NODE_TYPE_BADGES[data.nodeType]}
+          {repository ? "Repository" : data.entityType === "application" ? "Application" : NODE_TYPE_BADGES[data.nodeType]}
         </span>
         {data.occurrenceRole && <span style={{ fontSize: "var(--graph-node-meta-size, 10px)" }} data-testid="graph-occurrence-role" className="rounded border border-outline-strong px-1 text-[10px] font-medium uppercase tracking-wide text-ink-secondary">{data.occurrenceRole}</span>}
       </NodeBadgeRow>
+      {repository && !repository.source && <span className="text-xs text-ink-secondary" style={{ fontSize: "var(--graph-node-meta-size, 12px)" }}>{repository.host}</span>}
       {data.identityContext && <p data-testid="graph-identity-context" className="mt-1 max-w-full break-words text-xs text-ink-secondary" style={{ fontSize: "var(--graph-node-meta-size, 12px)" }}>{data.identityContext}</p>}
       {data.runtimeEvidenceTier && data.runtimeEvidenceTier !== "static_scan" && <div className="mt-1">
         <RuntimeEvidenceChip tier={data.runtimeEvidenceTier} />
@@ -794,6 +805,7 @@ function SummaryNode({ data }: { data: LineageNodeData }) {
         position={data.reverseFlow ? Position.Left : Position.Right}
         className="!w-1.5 !h-1.5"
       />
+      <ContextHandles />
       <div className="flex items-center gap-1">
         <span className="min-w-0 flex-1 break-words line-clamp-2 text-[11px] font-semibold leading-tight">
           {data.label}
@@ -839,6 +851,7 @@ function ClusterBubbleNode({ data }: { data: LineageNodeData }) {
         position={data.reverseFlow ? Position.Left : Position.Right}
         className="!w-1 !h-1 !bg-transparent !border-0"
       />
+      <ContextHandles />
     </div>
   );
 }

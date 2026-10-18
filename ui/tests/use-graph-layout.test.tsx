@@ -107,3 +107,12 @@ describe("graph layout dispatcher", () => {
     expect(result.current.nodes.map((node) => node.position.x)).toEqual([0, 100, 200]);
   });
 });
+
+it("keeps hierarchy output stable when unused layout options are recreated", () => {
+  const { result, rerender } = renderHook(() => useGraphLayout("asset-hierarchy", nodes, edges, { dagre: { direction: "TB" } }));
+  const initialNodes = result.current.nodes;
+  const initialEdges = result.current.edges;
+  rerender();
+  expect(result.current.nodes).toBe(initialNodes);
+  expect(result.current.edges).toBe(initialEdges);
+});

@@ -1731,7 +1731,7 @@ function GraphPageInner() {
   const compactInvestigationTopology = investigationLayout !== undefined;
   const compactMobileTopology = narrowViewport && !selectedAttackPath &&
     !rollupNavigationActive && compactGroupedTopology;
-  const graphLayoutKind = compactMobileTopology || (narrowViewport && investigationMode) ? "dagre" : "dagre-lr";
+  const graphLayoutKind = compactMobileTopology || (narrowViewport && investigationMode) ? "dagre" : selectedAttackPath || rollupNavigationActive ? "dagre-lr" : "asset-hierarchy";
   const scenarioContextIds = useMemo(() => {
     if (!selectedScenarioId || !scenarioComparison?.available || scenarioExpanded || attackPathLens || selectedAttackPath || investigationMode) return undefined;
     return graphScenarioContextIds(aggregated.nodes, aggregated.edges, scenarioComparison.difference, mergedGraphData?.edges);
@@ -2352,7 +2352,7 @@ function GraphPageInner() {
     scope: presentationScope,
     // Keep the saved-layout identity stable across the responsive default.
     // Explicit personal positions and viewport remain authoritative on resize.
-    layout: "dagre-lr",
+    layout: graphLayoutKind === "asset-hierarchy" ? "evidence-flow-v1" : "dagre-lr",
     enabled: !captureMode && !authLoading && Boolean(session),
     ownerActive: Boolean(session),
     localMode: session?.recommended_ui_mode === "no_auth",
@@ -3695,7 +3695,7 @@ function GraphPageInner() {
           )}
           {!rollupNavigationActive && !rollupDecisionActive && graphRenderer.kind === "react-flow" && displayNodes.length > 0 && <GraphLegendDock items={legendItems} separated />}
           <div ref={setGraphNavigationMount} />
-          <div data-graph-adaptive-frame className={`relative flex ${selectedAttackPath ? "h-[max(24rem,calc(100dvh-25rem))] sm:h-[clamp(24rem,50dvh,36rem)]" : selectedScenarioId ? "h-[max(24rem,calc(100dvh-25rem))] sm:h-[max(28rem,calc(100dvh-21rem))]" : "h-[var(--graph-adaptive-height,clamp(22rem,60dvh,48rem))]"} shrink-0 overflow-hidden rounded-lg border border-outline bg-surface`}>
+          <div data-graph-adaptive-frame data-graph-annotations={graphLayoutKind === "asset-hierarchy" ? "on-demand" : undefined} className={`relative flex ${selectedAttackPath ? "h-[max(24rem,calc(100dvh-25rem))] sm:h-[clamp(24rem,50dvh,36rem)]" : selectedScenarioId ? "h-[max(24rem,calc(100dvh-25rem))] sm:h-[max(28rem,calc(100dvh-21rem))]" : "h-[var(--graph-adaptive-height,clamp(22rem,60dvh,48rem))]"} shrink-0 overflow-hidden rounded-lg border border-outline bg-surface`}>
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <GraphScenarioUnconnected
             nodes={scenarioElements.unconnected}

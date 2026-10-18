@@ -104,3 +104,20 @@ it("retains the agent glyph with a secondary vendor badge", () => {
   expect(glyph?.querySelector('[data-agent-source-badge]')).not.toBeNull();
   expect(glyph?.getAttribute("style")).not.toContain("border-color");
 });
+
+it("distinguishes a recorded repository from its child folders without changing circular styling", () => {
+  const Renderer = lineageNodeTypes.containerNode;
+  const { container } = render(<ReactFlowProvider><Renderer data={{ label: "example-org/payments", nodeType: "directory", attributes: { is_repo_root: true, full_name: "example-org/payments", provider: "github" } }} /></ReactFlowProvider>);
+  expect(screen.getByText("Repository", { exact: true })).toBeVisible();
+  expect(screen.queryByText("Folder", { exact: true })).not.toBeInTheDocument();
+  expect(screen.getByRole("img", { name: "Source: GitHub" })).toBeVisible();
+  expect(container.querySelector('.graph-entity-glyph')).toHaveClass("rounded-full");
+  expect(container.querySelector('svg.lucide-folder-git-2')).not.toBeNull();
+});
+
+it("shows unknown repository remote explicitly and keeps scanned revision separate", () => {
+  render(<ReactFlowProvider><LineageDetailPanel data={{ label: "local-repo", nodeType: "directory", attributes: { is_repo_root: true, default_branch: "main" } }} onClose={() => {}} variant="inline" /></ReactFlowProvider>);
+  expect(screen.getByText("Remote not recorded")).toBeVisible();
+  expect(screen.getByText("Scanned commit")).toBeVisible();
+  expect(screen.getByText("Default branch")).toBeVisible();
+});

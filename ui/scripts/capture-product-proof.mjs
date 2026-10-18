@@ -2711,7 +2711,8 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
             })
             .filter(Number.isFinite),
         );
-        if (edgeLabelFonts.length < graphEdgeCount || Math.min(...edgeLabelFonts) < options.minGraphEdgeLabelFontPx) {
+        const onDemandLabels = await page.locator('[data-graph-annotations="on-demand"]').count() > 0;
+        if ((!onDemandLabels && edgeLabelFonts.length < graphEdgeCount) || Math.min(...edgeLabelFonts) < options.minGraphEdgeLabelFontPx) {
           throw new Error(
             `Unreadable or missing graph relationship labels on ${urlPath}: ${edgeLabelFonts.length}/${graphEdgeCount} labels, minimum ${Math.min(...edgeLabelFonts)}px`,
           );
@@ -2785,6 +2786,16 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
             || bounds.top < frame.top - 1 || bounds.bottom > frame.bottom + 1 ? [node.dataset.id] : [];
         }));
         if (clipped.length) throw new Error(`Graph nodes clipped on ${urlPath}: ${clipped.join(", ")}`);
+      }
+      if (options.assertGraphNodesSeparated) {
+        const collisions = await page.locator(".react-flow__node").evaluateAll(nodes => nodes.flatMap((left, index) => {
+          const a = left.getBoundingClientRect();
+          return nodes.slice(index + 1).filter(right => {
+            const b = right.getBoundingClientRect();
+            return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+          }).map(right => `${left.dataset.id} intersects ${right.dataset.id}`);
+        }));
+        if (collisions.length) throw new Error(`Graph nodes overlap on ${urlPath}: ${collisions.join(" | ")}`);
       }
       if (options.assertEdgeLabelsClearOfNodes) {
         const collisions = await page.evaluate(() => {
@@ -3189,6 +3200,7 @@ async function main() {
           minGraphNodes: fixture.nodes.length, maxGraphNodes: fixture.nodes.length,
           minGraphEdges: fixture.edges.length, maxGraphEdges: fixture.edges.length,
           minGraphNodeFontPx: 12, minGraphEdgeLabelFontPx: 12, minGraphBadgeFontPx: 11,
+          assertGraphNodesSeparated: true, assertGraphNodesWithinCanvas: true,
           assertEdgeLabelsClearOfNodes: true, assertNoHorizontalOverflow: true });
         await p.close();
       }

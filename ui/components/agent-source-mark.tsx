@@ -3,17 +3,19 @@
 import { useState, type CSSProperties } from "react";
 import { Bot } from "lucide-react";
 import type { AgentSource } from "@/lib/agent-source";
+import type { EntityIcon } from "@/lib/entity-icons";
 
 /** The agent glyph stays primary; a local vendor badge supplies a secondary cue. */
-export function AgentSourceMark({ source, className = "", style }: {
+export function AgentSourceMark({ source, className = "", style, icon: Icon = Bot }: {
   source: AgentSource | null;
   className?: string;
   style?: CSSProperties;
+  icon?: EntityIcon | undefined;
 }) {
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   return (
     <span className={`relative inline-flex shrink-0 items-center justify-center ${className}`} style={style}>
-      <Bot aria-hidden="true" className="h-full w-full" />
+      <Icon aria-hidden="true" className="h-full w-full" />
       {source && (
     <span role="img" aria-label={`Source: ${source.label}`} title={`Source: ${source.label}`}
       data-agent-source={source.id} data-agent-source-badge="true"

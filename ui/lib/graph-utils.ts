@@ -644,7 +644,7 @@ export function readableGraphEdges(
       : computedOpacity;
     const width = numericStrokeWidth(edge);
     const safeSharedLabel = relationship.startsWith("shares_") || relationship === "shares_cred";
-    const mayLabel = !labelsAreDense || active;
+    const mayLabel = (!edge.data?.quietLabel && !labelsAreDense) || active;
     const label = preserveLabelState
       ? edge.label
       : mayLabel

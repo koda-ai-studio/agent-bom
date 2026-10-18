@@ -3,6 +3,8 @@
 import { useMemo } from "react";
 import { type Edge, type Node } from "@xyflow/react";
 
+import { graphHierarchyLayout } from "@/lib/graph-hierarchy-layout";
+import type { LineageNodeData } from "@/components/lineage-nodes";
 import { GraphLayout } from "@/lib/graph-schema";
 import { type LayoutOptions } from "@/lib/dagre-layout";
 import { type DagreLrOptions, useDagreLrLayout } from "@/lib/use-dagre-lr";
@@ -16,6 +18,7 @@ const EMPTY_EDGES: Edge[] = [];
 
 export type GraphLayoutKind =
   | GraphLayout
+  | "asset-hierarchy"
   | "force"
   | "radial"
   | "dagre"
@@ -28,6 +31,7 @@ export type GraphLayoutKind =
   | "spawn_tree";
 
 export type ResolvedGraphLayoutKind =
+  | "asset-hierarchy"
   | "force"
   | "radial"
   | "dagre"
@@ -52,6 +56,8 @@ export interface GraphLayoutState {
 
 export function resolveGraphLayoutKind(kind: GraphLayoutKind): ResolvedGraphLayoutKind {
   switch (kind) {
+    case "asset-hierarchy":
+      return "asset-hierarchy";
     case GraphLayout.FORCE:
     case "force":
       return "force";
@@ -125,9 +131,19 @@ export function useGraphLayout(
     options.sankey,
   );
 
+  const hierarchyOptionsKey = JSON.stringify(options.dagreLr ?? {});
+  const hierarchy = useMemo(
+    () => enabled && resolvedKind === "asset-hierarchy"
+      ? graphHierarchyLayout(nodes as Node<LineageNodeData>[], edges, JSON.parse(hierarchyOptionsKey) as LayoutOptions)
+      : undefined,
+    [enabled, resolvedKind, nodes, edges, hierarchyOptionsKey],
+  );
+
   return useMemo(() => {
     if (!enabled) return { nodes, edges, pending: false, kind: resolvedKind };
     switch (resolvedKind) {
+      case "asset-hierarchy":
+        return { ...hierarchy!, pending: false, kind: resolvedKind };
       case "force":
         return { ...force, kind: resolvedKind };
       case "radial":
@@ -139,5 +155,5 @@ export function useGraphLayout(
       case "sankey":
         return { ...sankey, kind: resolvedKind };
     }
-  }, [dagre, dagreLr, force, radial, resolvedKind, sankey, enabled, nodes, edges]);
+  }, [dagre, dagreLr, force, radial, resolvedKind, sankey, enabled, nodes, edges, hierarchy]);
 }
