@@ -104,6 +104,7 @@ export async function runGraphQualityCapture({ newCapturePage, buildScopeShowcas
         await expect(page.getByText("Graph · 91 nodes · 90 relationships", { exact: true })).toBeVisible();
         // React Flow virtualizes offscreen children after expansion.
         await expect(expand).toHaveCount(0);
+        await page.waitForTimeout(400);
         await expect(page.locator(".react-flow__node").first()).toBeVisible();
         await page.screenshot({ path: path.join(output, `${key}-expanded.png`) });
       } else {

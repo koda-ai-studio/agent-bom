@@ -11,7 +11,7 @@ export function readableGraphNodeStyle(zoom: number): CSSProperties {
     "--graph-node-label-size": `${Math.min(28, Math.max(18, 15 / scale))}px`,
     "--graph-node-glyph-size": `${Math.min(112, Math.max(72, 64 / scale))}px`,
     "--graph-node-icon-size": `${Math.min(48, Math.max(32, 28 / scale))}px`,
-    "--graph-node-meta-size": `${Math.min(22, Math.max(12, 12 / scale))}px`,
+    "--graph-node-meta-size": `${Math.min(24, Math.max(12, 12 / scale))}px`,
   } as CSSProperties;
 }
 
