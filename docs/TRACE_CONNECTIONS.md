@@ -117,7 +117,12 @@ request-scoped counts. Repeat with the same `import_id` to resume at the committ
 cursor. Optional `window_start` and `window_end` select a timezone-aware window of
 at most 31 days on the first request. Completed imports do not fetch again; start
 a new import to collect provider updates. Page failures retain prior evidence and
-the last committed cursor. Rejected rows keep coverage partial even when every
+the last committed cursor. Native HTTP reads, including project resolution,
+stream at most 2,000,000 decoded response bytes into the JSON buffer and reject
+oversized responses as a whole. HTTP error bodies are not read. A 25-second
+elapsed-time check runs at headers and between transport chunks; an in-flight
+read is bounded separately by the 20-second socket timeout, so this is not a
+hard 25-second end-to-end deadline. Rejected rows keep coverage partial even when every
 page was traversed. Provider pagination does not guarantee an immutable source.
 
 When a managed import returns a retryable `import.error`, inspect its optional

@@ -544,7 +544,7 @@ def consume_azure_events(
             summary["processed"] += 1
             _delete_message(queue_client, message, summary)
 
-    return summary
+    return {**summary, "status": "partial" if summary["errors"] else "ok"}
 
 
 def _delete_message(queue_client: Any, message: Any, summary: dict[str, Any]) -> None:
@@ -552,5 +552,6 @@ def _delete_message(queue_client: Any, message: Any, summary: dict[str, Any]) ->
     try:
         queue_client.delete_message(message)
         summary["deleted"] += 1
-    except Exception as exc:  # noqa: BLE001 — delete failure only means one redelivery
+    except Exception as exc:  # noqa: BLE001 — delete failure leaves acknowledgment uncertain
         logger.warning("Azure queue delete failed during event ingestion: %s", type(exc).__name__)
+        summary["errors"] += 1

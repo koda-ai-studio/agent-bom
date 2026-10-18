@@ -1,5 +1,8 @@
 """Fixed-window native pages never silently truncate or cross project scope."""
 
+import json
+from contextlib import contextmanager
+
 import pytest
 
 from agent_bom import trace_connectors as connectors
@@ -10,10 +13,14 @@ class Client:
         self.payloads = iter(payloads)
         self.calls = []
 
+    @contextmanager
+    def stream(self, *args, **kwargs):
+        yield self.request(*args, **kwargs)
+
     def request(self, method, url, **kwargs):
         self.calls.append((method, url, kwargs))
         payload = next(self.payloads)
-        return type("Response", (), {"status_code": 200, "json": lambda self: payload})()
+        return type("Response", (), {"status_code": 200, "headers": {}, "iter_bytes": lambda self: iter([json.dumps(payload).encode()])})()
 
 
 @pytest.fixture(autouse=True)

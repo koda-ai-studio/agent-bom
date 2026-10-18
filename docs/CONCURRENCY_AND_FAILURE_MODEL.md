@@ -98,7 +98,12 @@ Cloud Connections cadence is a separate loop from `/v1/schedules`:
   event queues (`consume_aws_events` / Azure / GCP) in parallel before due
   claims. Scheduler path passes AWS `wait_seconds=0` so empty SQS long-polls
   do not stall the tick. Events stamp `last_event_at` only; full-scan cadence
-  remains on `last_scan_at`.
+  remains on `last_scan_at`. Drain summaries distinguish `processed` from
+  confirmed queue deletion (`deleted`) or acknowledgment (`acked`). Receive,
+  dispatch, and acknowledgment failures increment `errors` and return
+  `status=partial`; a failed acknowledgment can cause redelivery even after
+  processing succeeds. Successful acknowledgment does not promise exactly-once
+  delivery. Other messages in the batch continue after an individual failure.
 - **Nested org ThreadPool** — when a connection uses
   `inventory_scope=organization`, the brokered scan itself fans member
   accounts/subscriptions/projects through a provider `ThreadPoolExecutor`

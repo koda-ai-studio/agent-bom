@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+from contextlib import contextmanager
+
 import pytest
 
 from agent_bom.otel_ingest import parse_otel_traces
@@ -13,6 +16,10 @@ class Client:
         self.payload = payload
         self.calls = []
 
+    @contextmanager
+    def stream(self, *args, **kwargs):
+        yield self.request(*args, **kwargs)
+
     def request(self, method, url, **kwargs):
         self.calls.append(kwargs)
         payload = self.payload
@@ -20,8 +27,10 @@ class Client:
         class Response:
             status_code = 200
 
-            def json(self):
-                return payload
+            headers = {}
+
+            def iter_bytes(self):
+                yield json.dumps(payload).encode()
 
         return Response()
 
