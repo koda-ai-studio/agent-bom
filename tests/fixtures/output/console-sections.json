@@ -1,0 +1,23 @@
+{
+  "print_posture_summary:False:False": "707d5e801805ddea04c5c200b4459ae0a67e857becac1f4239cca8669a6b5f87",
+  "print_posture_summary:False:True": "8dd770831549e730ed8745b45d2ea8df76bf0855b7e1e5d493e01bf466acfade",
+  "print_posture_summary:True:False": "1db0369c6e3d2eb9a4066a14409f3dc9b6d19cda49df472617e4bb508da37d73",
+  "print_posture_summary:True:True": "547128282d144c4bbc5ad9989c28c060ba6c587291805f1061443a32c005f7cd",
+  "print_remediation_plan:False:False": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "print_remediation_plan:False:True": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "print_remediation_plan:True:False": "e2f9a94932d8bc0770fccd7c4c1a439a613239ba98e6db1d01ec1cdb8bc3a3ca",
+  "print_remediation_plan:True:True": "607964c8ea7b6e045a44b8da6afaa3eb7dfd8dbe1134b157feb23921a85b2697",
+  "print_scan_performance_summary:False:False": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "print_scan_performance_summary:False:True": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "print_scan_performance_summary:True:False": "b7ca7b440446ab71106142dbcee0373fff10b5bcb04e349be5a086f113add8f3",
+  "print_scan_performance_summary:True:True": "46ce6271b8ed03fb46e03299b699e2a670378e137bcf6618cc3a78296ef102fb",
+  "print_summary:False:False": "2742776b0b6b250269200b8bb88478472bfbffe62bec112da05d3f9ad113d5c9",
+  "print_summary:False:True": "01a246cee4110fba029aca787743807a1bddf2bb7b65820126ba2372496dd376",
+  "print_summary:True:False": "d6cae53d6213eec47470df268120ad316cee2a460f22ccd24006324040dee9f5",
+  "print_summary:True:True": "97f0460507e93949c698b2f40a87d3fcbff365a178578e7ad77593ed9a1bc42e",
+  "print_threat_frameworks:False:False": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "print_threat_frameworks:False:True": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "print_threat_frameworks:True:False": "10726fd98a518db89598b4a594a517f41990f9f2e2ff037f207e65b70a680eb1",
+  "print_threat_frameworks:True:True": "6bebc0c49a2fb3eebf1189bfaa3d47c621175032b958f286592b21d9ba76bb4a",
+  "remediation-plan": "3c976430850e7bc93e3813ce02a86c0dddeacb25bbe205d2e351842323d08e78"
+}
