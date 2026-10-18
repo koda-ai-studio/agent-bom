@@ -144,7 +144,10 @@ jobs:
             const inSyncGrace = onlySyncLag && Number.isFinite(releaseAgeHours) && releaseAgeHours < SYNC_GRACE_HOURS;
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const title = "supply-chain-drift: distribution surfaces out of sync";
+            const driftTitle = "supply-chain-drift: distribution surfaces out of sync";
+            const evidenceTitle = "supply-chain-drift: distribution verification incomplete";
+            const onlyPartialEvidence = requiredDrift.length > 0 && requiredDrift.every((s) => s.status === "fresh_degraded");
+            const title = onlyPartialEvidence ? evidenceTitle : driftTitle;
             const labels = ["supply-chain-drift", "security-preventive", "automated"];
 
             const emoji = (s) => ({
@@ -157,8 +160,9 @@ jobs:
 
             const cell = (value) => String(value ?? "—").replaceAll("|", "\\|").replace(/\r?\n/g, "<br>");
             const rows = report.surfaces
-              .map((s) => `| ${s.surface}${s.required === false ? " (advisory)" : ""} | ${cell(s.version)} | ${cell(s.expected)} | ${emoji(s.status)} | ${cell(s.error)} |`)
+              .map((s) => `| ${s.surface}${s.required === false ? " (advisory)" : ""} | ${cell(s.version)} | ${cell(s.expected)} | ${emoji(s.status)} | ${cell(s.error || s.degraded_reason)} |`)
               .join("\n");
+            const glamaEvidenceGap = requiredDrift.some((s) => s.surface === "Glama" && s.status === "fresh_degraded");
 
             const body = [
               `## Distribution surface freshness — expected \`${report.expected}\``,
@@ -167,6 +171,12 @@ jobs:
               "|---------|-----------|----------|--------|--------|",
               rows,
               "",
+              ...(glamaEvidenceGap ? [
+                "**Next action for Glama verification**",
+                "Re-run Surface Freshness after provider action to check the authenticated Directory API. If it still returns an empty inventory while the public schemas match, resolve the API inventory with Glama support. A repository sync alone does not establish API recovery.",
+                "The recorded reason above distinguishes missing API evidence from a stale version or tool schema. This issue remains open until every required verification passes; unchanged probes do not add comments or update it.",
+                "",
+              ] : []),
               `Probe evidence: ${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId} (surface-freshness-evidence artifact; retained for 7 days).`,
               "",
               `Latest probe runs: ${context.serverUrl}/${owner}/${repo}/actions/workflows/surface-freshness.yml`,
@@ -197,7 +207,9 @@ jobs:
               labels: "supply-chain-drift",
               per_page: 100,
             });
-            const candidates = existing.filter((issue) => issue.title === title && !issue.pull_request);
+            // Both states belong to one incident, including issues opened before
+            // API evidence gaps had a distinct title.
+            const candidates = existing.filter((issue) => [driftTitle, evidenceTitle].includes(issue.title) && !issue.pull_request);
             const match = candidates.find((issue) => issue.state === "open") || candidates[0];
 
             if (report.all_required_fresh) {
@@ -216,8 +228,8 @@ jobs:
             if (match) {
               // Preserve the first matching evidence snapshot without daily issue churn.
               const evidence = value => (value || "").replace(/^Probe evidence:.*$/gm, "");
-              if (match.state === "open" && evidence(match.body) === evidence(body)) return;
-              await github.rest.issues.update({ owner, repo, issue_number: match.number, state: "open", body });
+              if (match.state === "open" && match.title === title && evidence(match.body) === evidence(body)) return;
+              await github.rest.issues.update({ owner, repo, issue_number: match.number, state: "open", title, body });
               return;
             }
             await github.rest.issues.create({ owner, repo, title, body, labels });
