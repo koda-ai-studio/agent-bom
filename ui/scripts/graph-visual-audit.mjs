@@ -33,7 +33,13 @@ export function auditRenderedGraph({ edges }) {
     }
   }
   const logos = [...document.querySelectorAll(".react-flow__node [data-graph-source-badge] img")].map(img => {
-    const badge = img.getBoundingClientRect();
+    // OpenAI's source asset has intrinsic whitespace and is scaled inside an
+    // overflow-hidden badge. Audit its painted clip, not the offscreen box.
+    const raw = img.getBoundingClientRect();
+    const clip = img.parentElement.getBoundingClientRect();
+    const badge = { left: Math.max(raw.left, clip.left), right: Math.min(raw.right, clip.right), top: Math.max(raw.top, clip.top), bottom: Math.min(raw.bottom, clip.bottom) };
+    badge.width = badge.right - badge.left;
+    badge.height = badge.bottom - badge.top;
     const glyph = img.closest(".graph-entity-glyph")?.querySelector(":scope > svg")?.getBoundingClientRect();
     return {
       source: img.parentElement.getAttribute("data-agent-source"),

@@ -49,6 +49,7 @@ export async function runGraphQualityCapture({ newCapturePage, buildScopeShowcas
   const results = [];
   for (const [name, fixture] of cases) for (const theme of ["dark", "light"]) for (const viewport of [{ width: 1440, height: 900 }, { width: 1024, height: 768 }, { width: 390, height: 844 }]) {
     const key = `${name}-${theme}-${viewport.width}`;
+    const started = performance.now();
     const page = await newCapturePage(theme, viewport, fixture);
     const errors = [];
     page.on("pageerror", error => errors.push(error.message));
@@ -81,9 +82,39 @@ export async function runGraphQualityCapture({ newCapturePage, buildScopeShowcas
           await expect(page.getByLabel("Finding investigation")).toBeVisible();
           await page.waitForTimeout(400);
           await page.screenshot({ path: path.join(output, `${key}-finding.png`) });
+          await page.getByRole("tab", { name: "Relationships", exact: true }).click();
+          await expect(page.getByText(/recorded relationship.*all pages loaded/)).toBeVisible();
+          const related = fixture.edges.find(e => e.source === finding.id || e.target === finding.id);
+          if (related) {
+            const neighbor = fixture.nodes.find(n => n.id === (related.source === finding.id ? related.target : related.source));
+            await expect(page.getByRole("button", { name: neighbor.label, exact: true })).toBeVisible();
+          }
+          await page.getByText("Export investigation", { exact: true }).click();
+          const downloaded = page.waitForEvent("download");
+          await page.getByRole("button", { name: "Download investigation JSON", exact: true }).click();
+          await (await downloaded).saveAs(path.join(output, `${key}-investigation.json`));
+          await page.screenshot({ path: path.join(output, `${key}-relationships.png`) });
+          await page.getByRole("button", { name: "Close", exact: true }).click();
         }
       }
-      results.push({ key, audit, geometry, errors, evidence: await page.getByLabel("Visible relationship evidence").textContent() });
+      if (name === "grouped") {
+        const expand = page.getByRole("button", { name: /^Expand 90/ });
+        await expect(expand).toBeVisible();
+        await expand.click();
+        await expect(page.locator(".react-flow__node")).toHaveCount(91);
+        await page.screenshot({ path: path.join(output, `${key}-expanded.png`) });
+      } else {
+        const edge = fixture.edges[0];
+        if (edge) {
+          const arrow = page.locator(`.react-flow__edge[data-id="${edge.id}"]`);
+          await arrow.focus();
+          await page.keyboard.press("Enter");
+          await expect(page.getByLabel("Relationship details", { exact: true })).toBeVisible();
+          await expect(page.getByLabel("Relationship summary")).toBeVisible();
+          await page.screenshot({ path: path.join(output, `${key}-edge.png`) });
+        }
+      }
+      results.push({ key, elapsedMs: Math.round(performance.now() - started), audit, geometry, errors, evidence: await page.getByLabel("Visible relationship evidence").textContent() });
       console.log(`Graph quality capture ${key}: ${audit.renderedEdges} edges, ${audit.crossings.length} crossings`);
     } catch (error) {
       await page.screenshot({ path: path.join(output, `${key}-FAILED.png`) });
