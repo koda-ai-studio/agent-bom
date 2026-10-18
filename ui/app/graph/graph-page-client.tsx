@@ -1779,8 +1779,8 @@ function GraphPageInner() {
       ? { ...scenarioElements, ...selectInvestigationContext(investigationContext, selectedContextGroup) }
       : { ...scenarioElements, omittedNodes: 0, crossContextEdges: 0 };
     // A derived shares_* link restates a shared resource the investigation already draws.
-    return investigationMode ? { ...selected, edges: hideRedundantDerivedEdges(selected.edges) } : selected;
-  }, [scenarioElements, investigationContext, selectedContextGroup, investigationMode]);
+    return investigationMode ? { ...selected, edges: hideRedundantDerivedEdges(selected.edges, selected.nodes, mergedGraphData?.edges) } : selected;
+  }, [scenarioElements, investigationContext, selectedContextGroup, investigationMode, mergedGraphData?.edges]);
   const selectContextGroup = useCallback((id: string) => {
     setCanvasPage(0);
     if (investigationContext && selectedNodeId && !selectInvestigationContext(investigationContext, id).nodes.some(node => node.id === selectedNodeId)) {
@@ -2660,7 +2660,8 @@ function GraphPageInner() {
       const fallback = request.node ? (flowNodeDataById.get(request.node.id) ?? buildFallbackNodeData(request.node)) : null;
       if (!quiet) setSelectedNode(fallback ? { ...fallback, attributes: { ...(fallback.attributes ?? {}), node_id: request.rootId } } : null);
       quietRootRef.current = quiet ? request.rootId : null;
-      setSelectedNodeId(request.rootId);
+      // The drawer's data, detail read and action target must keep one identity.
+      if (!quiet) setSelectedNodeId(request.rootId);
       setPinnedFocusId(null);
       setHoveredNodeId(request.rootId);
       setSelectedAttackPathKey(null);
