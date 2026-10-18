@@ -443,6 +443,21 @@ def _fit(payload: dict[str, Any], read: _Read, *, view: str, offset: int, limit:
         selected = selected[: max(1, returned // 2)]
 
 
+def _cursor_snapshot(cursor: str | None) -> str | None:
+    """The snapshot a cursor pinned, read before validation so aliases resolve in it.
+
+    Only selects which of the caller's own snapshots resolves aliases; the full
+    scope and snapshot check in :func:`_continuation` still decides validity.
+    """
+    if not cursor or len(cursor) > 4096:
+        return None
+    try:
+        pinned = json.loads(base64.b64decode(cursor, altchars=b"-_", validate=True)).get("scan")
+    except (ValueError, TypeError, AttributeError):
+        return None
+    return pinned if isinstance(pinned, str) and pinned and "\x00" not in pinned else None
+
+
 def _continuation(cursor: str | None, *, scope: str, scan_id: str | None) -> tuple[dict[str, Any], str | None, int] | str:
     if not cursor:
         return {}, scan_id, 0
@@ -484,7 +499,8 @@ async def exposure_paths_for_tenant(
     scan_id, resolution_error = await _resolve_scan(tenant_id, scan_id)
     if resolution_error:
         return resolution_error
-    query = await _resolve_query_node_ids(_get_graph_store(), tenant_id, scan_id or "", query)
+    # Page two resolves aliases in the snapshot page one pinned, not the latest.
+    query = await _resolve_query_node_ids(_get_graph_store(), tenant_id, scan_id or _cursor_snapshot(cursor) or "", query)
     # Cursors locate evidence; authorization always comes from the caller's
     # tenant. Pin the snapshot and filters so a new scan cannot shift page two.
     scope = hashlib.sha256(json.dumps([tenant_id, sorted(query.active().items())], default=str).encode()).hexdigest()
