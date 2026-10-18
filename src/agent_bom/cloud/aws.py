@@ -708,7 +708,7 @@ def _discover_bedrock(session: Any, region: str, *, account_id: str | None = Non
                 warnings.append(f"Could not get details for Bedrock agent {agent_id}: {exc}")
                 continue
 
-            agent_arn = detail.get("agentArn", f"arn:aws:bedrock:{region}:agent/{agent_id}")
+            agent_arn = detail.get("agentArn") or f"arn:aws:bedrock:{region}:{account_id or ''}:agent/{agent_id}"
             foundation_model = detail.get("foundationModel", "unknown")
             runtime_role_arn = detail.get("agentResourceRoleArn", "")
 

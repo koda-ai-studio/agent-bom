@@ -104,7 +104,9 @@ def test_cloud_origin_agent_is_hosted_on_its_resource_and_account_rollup_is_unch
     }
     graph = build_unified_graph_from_report({"agents": [agent]})
 
-    resource = "cloud_resource:aws:bedrock:agent:AGENT123"
+    # A short Bedrock id is unique only inside its account, so the account scopes it.
+    resource = f"cloud_resource:aws:bedrock:agent:{ACCOUNT}:AGENT123"
+    assert graph.nodes[resource].attributes["identity"]["aliases"] == ["cloud_resource:aws:bedrock:agent:AGENT123"]
     assert graph.has_edge("agent:support-bot", resource)
     assert any(e.relationship == RelationshipType.HOSTED_ON for e in graph.edges_from("agent:support-bot"))
     assert not [e for e in graph.edges_from(resource) if e.relationship == RelationshipType.HOSTS and e.target == "agent:support-bot"]

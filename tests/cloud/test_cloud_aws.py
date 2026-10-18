@@ -514,3 +514,27 @@ def _empty_boto_stub():
     m = MagicMock()
     m.get_paginator.return_value.paginate.return_value = []
     return m
+
+
+def test_bedrock_fallback_arn_carries_account_so_agents_stay_apart():
+    """Without ``agentArn`` the synthesized ARN must not merge two accounts' agents."""
+    from agent_bom.cloud import aws
+
+    def agent_for(account: str):
+        session = MagicMock()
+        client = MagicMock()
+        agents_paginator = MagicMock()
+        agents_paginator.paginate.return_value = [
+            {"agentSummaries": [{"agentId": "AGENT123", "agentName": "a", "agentStatus": "PREPARED"}]}
+        ]
+        groups_paginator = MagicMock()
+        groups_paginator.paginate.return_value = [{"actionGroupSummaries": []}]
+        client.get_paginator.side_effect = lambda op: {"list_agents": agents_paginator, "list_agent_action_groups": groups_paginator}[op]
+        client.get_agent.return_value = {"agent": {"foundationModel": "m"}}
+        session.client.return_value = client
+        agents, _warnings = aws._discover_bedrock(session, "us-east-1", account_id=account)
+        return agents[0]
+
+    one, two = agent_for("111111111111"), agent_for("222222222222")
+    assert one.config_path == "arn:aws:bedrock:us-east-1:111111111111:agent/AGENT123"
+    assert one.config_path != two.config_path
