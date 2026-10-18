@@ -41,6 +41,7 @@ New here? Read [`START_HERE.md`](START_HERE.md) for role-based paths, then
 - [`EDITIONS.md`](EDITIONS.md) · [`PRODUCT_MAP.md`](PRODUCT_MAP.md) — deployment lanes and surface chooser
 - [`CLOUD_CONNECT.md`](CLOUD_CONNECT.md) · [`DATA_SOURCES.md`](DATA_SOURCES.md) · [`INGEST_PATHS.md`](INGEST_PATHS.md) — cloud connections, intake mechanisms, ingest paths
 - [`SUPABASE_INVENTORY.md`](SUPABASE_INVENTORY.md) — scoped project metadata, native security advisors, and graph receipts
+- [Vercel inventory](VERCEL_INVENTORY.md) — scoped team metadata, configuration checks, and graph evidence.
 - [`ENDPOINT_CONNECTORS.md`](ENDPOINT_CONNECTORS.md) · [`DATABASE_EVIDENCE.md`](DATABASE_EVIDENCE.md) — endpoint and database connectors
 - [`TRACE_CONNECTIONS.md`](TRACE_CONNECTIONS.md) — managed trace collection, credential rotation and evidence limits
 - [`EXPERIMENTAL.md`](EXPERIMENTAL.md) — every experimental feature, how it is enabled and where it is documented

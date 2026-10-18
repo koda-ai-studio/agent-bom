@@ -336,6 +336,7 @@ from agent_bom.graph.training_projection import (
 from agent_bom.graph.training_projection import project_dataset_cards, project_model_provenance, project_serving_configs
 from agent_bom.graph.types import EntityType, RelationshipType
 from agent_bom.graph.util import clean_graph_part as _clean_graph_part
+from agent_bom.graph.vercel_projection import project_vercel_inventory
 from agent_bom.security import sanitize_text
 
 _GRAPH_TRACER = get_tracer("agent_bom.graph")
@@ -404,8 +405,10 @@ def _project_inventory_findings(
     # Native cloud assets precede benchmark references to avoid duplicate nodes.
     inventories = list(_iter_cloud_inventories(report.get("cloud_inventory")))
     for inventory in inventories:
-        if inventory.get("provider") == "supabase":
-            project_supabase_inventory(graph, inventory)
+        if native_projector := {"supabase": project_supabase_inventory, "vercel": project_vercel_inventory}.get(
+            str(inventory.get("provider", ""))
+        ):
+            native_projector(graph, inventory)
         else:
             _add_cloud_inventory(graph, inventory, inputs.data_source)
     project_benchmarks(graph, benchmark_inputs(report))

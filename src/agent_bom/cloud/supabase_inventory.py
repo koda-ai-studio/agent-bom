@@ -15,6 +15,7 @@ from typing import Any
 
 import httpx
 
+from agent_bom.cloud.management_http import read_json
 from agent_bom.cloud.resource_model import supabase_project_node_id as project_node_id
 from agent_bom.finding import Asset, Finding, FindingSource, FindingType, stable_id
 from agent_bom.security import sanitize_text
@@ -42,20 +43,7 @@ def _timestamp(value: Any) -> str | None:
 
 
 def _read(client: httpx.Client, path: str, token: str) -> tuple[Any, str]:
-    try:
-        with client.stream(
-            "GET", API_ROOT + path, headers={"Authorization": "Bearer " + token}, follow_redirects=False, timeout=20
-        ) as response:
-            if response.status_code != 200:
-                return None, {401: "unauthenticated", 403: "denied", 429: "rate_limited"}.get(response.status_code, "unavailable")
-            body = bytearray()
-            for chunk in response.iter_bytes(chunk_size=65536):
-                if len(body) + len(chunk) > MAX_RESPONSE_BYTES:
-                    return None, "response_limit"
-                body.extend(chunk)
-            return json.loads(body), "read"
-    except (httpx.HTTPError, UnicodeError, ValueError):
-        return None, "unavailable"
+    return read_json(client, API_ROOT + path, token, max_bytes=MAX_RESPONSE_BYTES)
 
 
 def _project(payload: Any, ref: str) -> dict[str, Any]:

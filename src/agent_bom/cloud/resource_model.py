@@ -201,9 +201,51 @@ def normalize_supabase_inventory(inventory: dict[str, Any]) -> list[CloudResourc
     return resources
 
 
+def normalize_vercel_inventory(inventory: dict[str, Any]) -> list[CloudResource]:
+    """Keep only scoped, declared project/deployment metadata from imports."""
+    account = inventory.get("account_id")
+    if not isinstance(account, str) or not account:
+        return []
+    resources = []
+    allowed = (
+        "id",
+        "name",
+        "account_id",
+        "project_id",
+        "framework",
+        "node_version",
+        "git_fork_protection",
+        "public_source",
+        "git_connected",
+        "git_provider",
+        "sso_protection",
+        "state",
+        "target",
+    )
+    for collection, kind in (("projects", "project"), ("deployments", "deployment")):
+        for item in inventory.get(collection, []):
+            if not isinstance(item, dict) or item.get("account_id") != account:
+                continue
+            if not isinstance(item.get("id"), str) or not isinstance(item.get("name"), str):
+                continue
+            resources.append(
+                CloudResource(
+                    provider="vercel",
+                    resource_type=CloudResourceType.OTHER,
+                    native_type="vercel." + kind,
+                    resource_id=f"vercel://{account}/{collection}/{item['id']}",
+                    name=item["name"],
+                    account=account,
+                    raw={key: item[key] for key in allowed if key in item and (item[key] is None or isinstance(item[key], (str, bool)))},
+                )
+            )
+    return resources
+
+
 _PROVIDER_NORMALIZERS = {
     "azure": normalize_azure_inventory,
     "supabase": normalize_supabase_inventory,
+    "vercel": normalize_vercel_inventory,
 }
 
 

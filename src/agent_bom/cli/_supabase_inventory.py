@@ -2,69 +2,24 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
-import os
-import tempfile
 from pathlib import Path
 from uuid import uuid4
 
 import click
 
+from agent_bom.cli._cloud_inventory_io import _write_report, persist_graph, read_token
 from agent_bom.cli._tenant import resolve_cli_tenant_id_strict
 from agent_bom.security import sanitize_error
 
 
-def _write_report(path: Path, report: dict) -> None:
-    """Publish the complete normalized artifact atomically, with private mode."""
-    report["evidence_sha256"] = hashlib.sha256(
-        json.dumps({key: value for key, value in report.items() if key != "evidence_sha256"}, sort_keys=True).encode()
-    ).hexdigest()
-    temporary: str | None = None
-    try:
-        with tempfile.NamedTemporaryFile(mode="w", dir=path.parent, prefix=".supabase-", delete=False) as stream:
-            temporary = stream.name
-            json.dump(report, stream, indent=2)
-            stream.write("\n")
-        os.replace(temporary, path)
-    finally:
-        if temporary is not None:
-            Path(temporary).unlink(missing_ok=True)
-
-
 def _persist_report(report: dict, graph_db: Path, tenant_id: str, output: Path) -> None:
-    """Persist one stable project scope and publish the actual storage outcome."""
-    from agent_bom.db.graph_store import load_graph, open_graph_db, save_graph
-    from agent_bom.graph.builder import build_unified_graph_from_report
-
-    try:
-        graph_db.parent.mkdir(parents=True, exist_ok=True)
-        descriptor = os.open(graph_db, os.O_CREAT | os.O_RDWR, 0o600)
-        os.close(descriptor)
-        if os.name != "nt" and graph_db.stat().st_mode & 0o077:
-            raise ValueError("Graph database must be private (chmod 600)")
-        for receipt in report["coverage"]:
-            receipt["persisted"] = True
-            receipt["correlated"] = receipt["capability"] == "security_advisors" and any(
-                finding["evidence"]["project_ref"] == receipt["project_ref"] for finding in report["findings"]
-            )
-        graph = build_unified_graph_from_report(report, scan_id=report["scan_id"], tenant_id=tenant_id)
-        with open_graph_db(graph_db) as conn:
-            conn.execute("BEGIN IMMEDIATE")
-            previous = load_graph(conn, tenant_id=tenant_id, entity_types={"cloud_resource"})
-            expected = {node.id for node in graph.nodes.values() if node.attributes.get("project_ref")}
-            if previous.scan_id and set(previous.nodes) != expected:
-                raise ValueError("Project scope changed; use a separate graph database")
-            save_graph(conn, graph)
-    except Exception:
-        for receipt in report["coverage"]:
-            receipt["persisted"] = False
-            receipt["correlated"] = False
-        report["persistence"] = {"graph": "failed"}
-        _write_report(output, report)
-        raise
-    report["persistence"] = {"graph": "persisted", "tenant_id": tenant_id, "scan_id": graph.scan_id}
-    _write_report(output, report)
+    """Retain exact project scope and native-finding correlation receipts."""
+    for receipt in report["coverage"]:
+        receipt["correlated"] = receipt["capability"] == "security_advisors" and any(
+            finding["evidence"]["project_ref"] == receipt["project_ref"] for finding in report["findings"]
+        )
+    expected = {project["node_id"] for inventory in report["cloud_inventory"] for project in inventory["projects"]}
+    persist_graph(report, graph_db, tenant_id, output, scope_entity_types={"cloud_resource"}, scope_node_ids=expected)
 
 
 @click.command("supabase")
@@ -90,20 +45,7 @@ def supabase_cmd(project_refs: tuple[str, ...], token_file: Path, output: Path, 
     from agent_bom.cloud.supabase_inventory import collect_report
 
     try:
-        if token_file.stat().st_size > 65536:
-            raise ValueError("Token file is too large")
-        if os.name != "nt" and token_file.stat().st_mode & 0o077:
-            raise ValueError("Token file must be private (chmod 600)")
-        credential = json.loads(token_file.read_text())
-        if not isinstance(credential, dict):
-            raise ValueError("Token file must contain a token field")
-        token = credential.get("token")
-        if not isinstance(token, str):
-            raise ValueError("Token file must contain a token string")
-        if output.resolve() == token_file.resolve() or (
-            graph_db is not None and (output.resolve() == graph_db.resolve() or graph_db.resolve() == token_file.resolve())
-        ):
-            raise ValueError("Report output must differ from credential and graph files")
+        token = read_token(token_file, output, graph_db)
         tenant_id = resolve_cli_tenant_id_strict(tenant)
         report = collect_report(project_refs=list(project_refs), token=token)
         report["scan_id"] = str(uuid4())
