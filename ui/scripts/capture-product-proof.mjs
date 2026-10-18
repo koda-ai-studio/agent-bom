@@ -3522,7 +3522,8 @@ async function main() {
       ],
       expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph/query"],
       minGraphNodes: 5,
-      minGraphEdges: 5,
+      // Both agents' links to the shared server are drawn, so the derived shares_server link is hidden.
+      minGraphEdges: 4,
       minGraphNodeFontPx: 12,
       // This is an explicit agent investigation; retain its evidence captions.
       minGraphEdgeLabelFontPx: 12,
