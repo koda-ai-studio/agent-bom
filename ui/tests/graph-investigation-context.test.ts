@@ -74,4 +74,6 @@ it("groups findings by their recorded asset instead of their category alone", ()
 it("keeps bounded investigation metadata readable after fitting all context", () => {
   const style = readableGraphNodeStyle(0.47, true) as Record<string, string>;
   expect(parseFloat(style["--graph-node-meta-size"]!) * 0.47).toBeGreaterThanOrEqual(11);
+  const zoomedOut = readableGraphNodeStyle(0.42, true) as Record<string, string>;
+  expect(parseFloat(zoomedOut["--graph-node-label-size"]!) * 0.42).toBeGreaterThanOrEqual(12);
 });
