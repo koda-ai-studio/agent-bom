@@ -83,7 +83,7 @@ def _nebius_get_all(url: str, api_key: str, items_key: str, params: dict | None 
 
             # ProtoJSON omits empty repeated fields. Accept a terminal empty
             # object and the native "items" field, but not an unrelated payload.
-            empty = [] if set(data) <= {"nextPageToken", "next_page_token"} else None
+            empty: list[dict] | None = [] if set(data) <= {"nextPageToken", "next_page_token"} else None
             items = data.get(items_key, data.get("items", data.get("data", empty)))
             if not isinstance(items, list) or any(not isinstance(item, dict) for item in items):
                 raise CloudDiscoveryError("Nebius: invalid response page items")
