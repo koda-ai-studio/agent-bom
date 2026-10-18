@@ -21,6 +21,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+from agent_bom.canonical_ids import canonical_id
+
 
 class CloudResourceType(str, Enum):
     """Provider-agnostic resource categories.
@@ -151,8 +153,57 @@ def normalize_azure_inventory(inventory: dict[str, Any]) -> list[CloudResource]:
     return resources
 
 
+def supabase_project_node_id(account: str, ref: str) -> str:
+    """Identity uses provider, organization and native project ref, never label."""
+    return "resource:supabase:" + canonical_id("supabase", account, "project", ref)
+
+
+def normalize_supabase_inventory(inventory: dict[str, Any]) -> list[CloudResource]:
+    """Normalize allowlisted Management API projects without reading database data."""
+    account = inventory.get("account_id")
+    if not isinstance(account, str) or not account:
+        return []
+    resources: list[CloudResource] = []
+    for project in inventory.get("projects", []):
+        if not isinstance(project, dict) or project.get("organization_id") != account:
+            continue
+        ref, name = project.get("ref"), project.get("name")
+        if not isinstance(ref, str) or not ref or not isinstance(name, str) or not name:
+            continue
+        resources.append(
+            CloudResource(
+                provider="supabase",
+                resource_type=CloudResourceType.DATABASE,
+                native_type="supabase.project",
+                resource_id=f"supabase://{account}/projects/{ref}",
+                name=name,
+                account=account,
+                region=str(project.get("region") or ""),
+                resource_group=ref,
+                raw={
+                    key: project[key]
+                    for key in (
+                        "id",
+                        "ref",
+                        "organization_id",
+                        "name",
+                        "region",
+                        "status",
+                        "node_id",
+                        "database_version",
+                        "database_postgres_engine",
+                        "database_release_channel",
+                    )
+                    if key in project
+                },
+            )
+        )
+    return resources
+
+
 _PROVIDER_NORMALIZERS = {
     "azure": normalize_azure_inventory,
+    "supabase": normalize_supabase_inventory,
 }
 
 

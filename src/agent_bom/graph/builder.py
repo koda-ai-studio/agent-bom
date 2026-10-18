@@ -322,6 +322,7 @@ from agent_bom.graph.runtime_projection import (
 from agent_bom.graph.runtime_projection import (
     _runtime_identity_relationship as _runtime_identity_relationship,
 )
+from agent_bom.graph.supabase_projection import project_supabase_inventory
 from agent_bom.graph.trace_projection import project_report_trace_events
 from agent_bom.graph.training_projection import (
     _flatten_compliance_tags as _flatten_compliance_tags,
@@ -403,7 +404,10 @@ def _project_inventory_findings(
     # Native cloud assets precede benchmark references to avoid duplicate nodes.
     inventories = list(_iter_cloud_inventories(report.get("cloud_inventory")))
     for inventory in inventories:
-        _add_cloud_inventory(graph, inventory, inputs.data_source)
+        if inventory.get("provider") == "supabase":
+            project_supabase_inventory(graph, inventory)
+        else:
+            _add_cloud_inventory(graph, inventory, inputs.data_source)
     project_benchmarks(graph, benchmark_inputs(report))
     project_sast(graph, report.get("sast") or report.get("sast_data"))
     project_iac(graph, report.get("iac_findings") or report.get("iac_findings_data"))

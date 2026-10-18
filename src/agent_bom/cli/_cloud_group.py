@@ -1,25 +1,13 @@
-"""Cloud command group — scan cloud infrastructure.
+"""Cloud inventory, scan and runtime-evidence commands.
 
-Cloud providers: AWS, Azure, GCP (real infrastructure with fleets, IAM, services).
-AI platforms (Snowflake, Databricks, HuggingFace, etc.) are separate — not cloud infra.
-
-One cloud-aware command spans every provider — ``cloud scan`` auto-detects which
-clouds are configured and runs the same CIS + discovery work across them, instead
-of asking the user to remember a separate subcommand per cloud. The per-cloud
-``aws`` / ``azure`` / ``gcp`` commands remain as thin aliases that scope the
-unified path to a single provider, so existing invocations keep working.
-
-Usage::
-
-    agent-bom cloud scan                  # every configured cloud (auto-detect)
-    agent-bom cloud scan --provider aws   # one cloud, same as `cloud aws`
-    agent-bom cloud aws                   # alias → scan --provider aws
-    agent-bom cloud azure                 # alias → scan --provider azure
-    agent-bom cloud gcp                   # alias → scan --provider gcp
+``cloud scan`` discovers configured AWS/Azure/GCP credentials and runs shared
+inventory/CIS paths; per-provider aliases retain their existing behavior.
+``cloud supabase`` requires explicit projects and a private management token.
 """
 
 from __future__ import annotations
 
+import json
 import os
 from typing import TYPE_CHECKING, Optional, cast
 
@@ -490,8 +478,6 @@ def resilience_cmd(output_format: str) -> None:
 
     summary = provider_resilience_summary()
     if output_format == "json":
-        import json
-
         click.echo(json.dumps(summary, indent=2, sort_keys=True))
         return
 
@@ -554,7 +540,6 @@ def registry_scan_cmd(
       agent-bom cloud registry-scan --provider acr --registry myacr.azurecr.io
       agent-bom cloud registry-scan --provider gar --project my-proj --location us
     """
-    import json as _json
 
     from agent_bom.cloud.registry_sweep import sweep_registry
 
@@ -569,7 +554,7 @@ def registry_scan_cmd(
     )
 
     if output_format == "json":
-        click.echo(_json.dumps(report, indent=2, sort_keys=True, default=str))
+        click.echo(json.dumps(report, indent=2, sort_keys=True, default=str))
         return
 
     from rich.console import Console
@@ -641,7 +626,6 @@ def inventory_cmd(
     (Azure), and ``AGENT_BOM_GCP_INVENTORY`` (GCP). A disabled provider reports a
     ``disabled`` status and runs no network call. Reference only.
     """
-    import json as _json
 
     from agent_bom.cloud import aws_inventory, azure_inventory, gcp_inventory
 
@@ -656,7 +640,7 @@ def inventory_cmd(
     reports = [_project_authorization_posture(report) for report in reports]
 
     if output_format == "json":
-        click.echo(_json.dumps({"providers": reports}, indent=2, sort_keys=True, default=str))
+        click.echo(json.dumps({"providers": reports}, indent=2, sort_keys=True, default=str))
         return
 
     from rich.console import Console
@@ -916,7 +900,6 @@ def side_scan_capabilities_cmd(output_format: str) -> None:
     AWS is the shipped CLI executor. Azure/GCP advertise target discovery and a
     lifecycle contract only until credentialed smoke proves otherwise.
     """
-    import json
 
     from rich.console import Console
     from rich.table import Table
@@ -1070,7 +1053,6 @@ def runtime_evidence_ingest_cmd(source_id: str, signals_file: str, no_persist: b
 
     Example: agent-bom cloud runtime-evidence-ingest --source-id edr-1 --file signals.json
     """
-    import json
     from pathlib import Path
 
     from rich.console import Console
@@ -1106,3 +1088,8 @@ def runtime_evidence_ingest_cmd(source_id: str, signals_file: str, no_persist: b
 
 
 cloud_group.add_command(runtime_evidence_ingest_cmd, "runtime-evidence-ingest")
+
+# Explicit-project platform inventory has its own bounded credential contract.
+from agent_bom.cli._supabase_inventory import supabase_cmd  # noqa: E402
+
+cloud_group.add_command(supabase_cmd, "supabase")
