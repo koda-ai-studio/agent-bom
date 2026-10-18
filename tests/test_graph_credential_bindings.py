@@ -8,6 +8,28 @@ from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.types import EntityType, RelationshipType
 
 
+def test_binding_projection_does_not_materialize_unrelated_inventory(monkeypatch):
+    from agent_bom.graph.credential_bindings import project_credential_bindings
+
+    class StreamingNodes:
+        def __iter__(self):
+            pytest.fail("must not copy the complete node mapping")
+
+        def values(self):
+            yield UnifiedNode(
+                id="native-0", entity_type=EntityType.SERVICE_PRINCIPAL, label="native", attributes={"canonical_id": "native-id"}
+            )
+
+        def get(self, key, default=None):
+            assert key in {"native-id", "cred:server:CLOUD_TOKEN"}
+            return default
+
+    graph = UnifiedGraph(scan_id="scan", tenant_id="tenant-a")
+    graph.nodes = StreamingNodes()
+    monkeypatch.setattr("agent_bom.graph.credential_bindings.mcp_server_graph_id_for", lambda *args: "server")
+    project_credential_bindings(graph, report()["agents"], "fixture")
+
+
 def report(reference="native-id", provider="azure"):
     return {
         "agents": [
@@ -79,6 +101,36 @@ def test_repeated_ambiguous_binding_cannot_promote_an_earlier_placeholder():
             for candidate in graph.edges
             if candidate.source == edge.target and candidate.relationship is RelationshipType.POSSIBLY_CORRELATES_WITH
         } == {"native-0", "native-1"}
+
+
+@pytest.mark.parametrize("count", [1, 2])
+def test_store_backed_binding_matches_memory_with_evicted_native_nodes(count):
+    from agent_bom.graph.store_backed import open_store_backed_unified_graph
+
+    payload = report()
+    server = payload["agents"][0]["mcp_servers"][0]
+    server["credential_env_vars"].append("SECOND_TOKEN")
+    server["identity_bindings"].append({**server["identity_bindings"][0], "credential_ref": "SECOND_TOKEN"})
+    memory = inventory(count=count)
+    stored = open_store_backed_unified_graph(backend="sqlite", tenant_id="tenant-a", scan_id="scan", capacity=1)
+    try:
+        for node in memory.nodes.values():
+            stored.add_node(node)
+        for graph in (memory, stored):
+            build_unified_graph_from_report(payload, container=graph, tenant_id="tenant-a")
+        relationships = {RelationshipType.AUTHENTICATES_AS, RelationshipType.POSSIBLY_CORRELATES_WITH}
+
+        def bindings(graph):
+            return sorted(
+                (edge.source, edge.target, edge.relationship.value, edge.evidence["identity_match_basis"])
+                for edge in graph.edges
+                if edge.relationship in relationships
+            )
+
+        assert bindings(stored) == bindings(memory)
+        assert len(bindings(stored)) == (2 if count == 1 else 6)
+    finally:
+        stored.close()
 
 
 @pytest.mark.parametrize("reference,provider", [("same-name", "azure"), ("native-id", "gcp")])

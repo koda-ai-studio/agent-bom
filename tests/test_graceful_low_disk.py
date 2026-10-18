@@ -157,9 +157,9 @@ def test_report_write_enospc_falls_back_to_stdout(monkeypatch, tmp_path, capsys)
     """A full disk on the -o JSON report write emits results to stdout, no traceback."""
     out = tmp_path / "report.json"
 
-    import agent_bom.output.json_fmt as json_fmt
+    import agent_bom.output.json_writer as json_writer
 
-    monkeypatch.setattr(json_fmt.Path, "open", _enospc, raising=False)
+    monkeypatch.setattr(json_writer.tempfile, "NamedTemporaryFile", _enospc)
 
     ctx = _make_ctx(_report())
     # Must NOT raise — the scan already did all the work.

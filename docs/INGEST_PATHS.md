@@ -12,6 +12,19 @@ path normalizes into the same `Finding` / blast-radius model; the difference is
 | Bulk findings into a running control plane | `agent-bom findings push <file> --api-url …` | Rows in `GET /v1/findings` | Dashboard `/findings`, triage queue, compliance hub |
 | VM / registry image only | Trivy → agent-bom (below) | Same as row above | See [VM and registry matrix](#vm-and-registry-matrix) |
 
+For direct `POST /v1/findings/bulk`, `reconcile_absent` defaults to `false`.
+Send the JSON boolean `true` only for a complete source-scoped snapshot: it
+resolves open findings absent from the batch. Strings, numbers and `null` are
+rejected before ingestion, so a malformed flag cannot trigger reconciliation.
+Incremental or partial batches should leave it `false`.
+
+Local JSON report exports to regular files publish only after encoding and writing succeed.
+If either step fails, an existing report stays intact and no partial new report
+is published. Inspect the command's failure before treating a retained report
+as the latest result. This guarantee applies to JSON file exports, not every
+output format or power-loss durability. Special-file destinations (such as named
+pipes or device files) are rejected; use the CLI's stdout output mode for a stream.
+
 ## SARIF (SAST / Semgrep / CodeQL / Bandit)
 
 SARIF is auto-detected by the shared typed importer. For **full scan

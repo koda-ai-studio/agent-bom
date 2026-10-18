@@ -24,10 +24,12 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Protocol, cast
 
+from agent_bom.core.http_retry import provider_retry_after
 from agent_bom.runtime.native_trace_spans import native_span
 from agent_bom.runtime.normalized_trace import PrincipalDigest
 
@@ -46,8 +48,9 @@ class TraceConnectorError(RuntimeError):
 
 
 class _TraceConnectorHTTPError(TraceConnectorError):
-    def __init__(self, status: int) -> None:
+    def __init__(self, status: int, *, retry_after: float = 0) -> None:
         self.status = status
+        self.retry_after = retry_after
         super().__init__(f"trace connector returned HTTP {status}")
 
 
@@ -135,7 +138,8 @@ def _call_json(client: _HttpClient, method: str, url: str, **kwargs: Any) -> Any
         raise TraceConnectorError(f"trace connector request failed: {type(exc).__name__}") from exc
     status = getattr(resp, "status_code", 0)
     if not 200 <= status < 300:
-        raise _TraceConnectorHTTPError(status)
+        delay = provider_retry_after(getattr(resp, "headers", {}).get("Retry-After"), now=time.time())
+        raise _TraceConnectorHTTPError(status, retry_after=delay)
     try:
         return resp.json()
     except (ValueError, TypeError) as exc:

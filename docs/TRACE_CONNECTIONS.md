@@ -120,6 +120,13 @@ a new import to collect provider updates. Page failures retain prior evidence an
 the last committed cursor. Rejected rows keep coverage partial even when every
 page was traversed. Provider pagination does not guarantee an immutable source.
 
+When a managed import returns a retryable `import.error`, inspect its optional
+`retry_after_seconds` and wait at least that long before resuming the same
+`import_id`. Native readers parse provider `Retry-After` seconds or HTTP dates,
+bounded to 24 hours; missing or malformed headers omit this field. Apply client
+backoff when no delay is supplied. The pull request does not sleep or retry
+automatically, and a failed page never advances the committed checkpoint.
+
 Open **Traces** for native kinds, physical parents, missing-parent notices and
 collection revisions. `GET /v1/runtime/observation-revisions?observation_id=...`
 reads paged, tenant-scoped history. SQLite and PostgreSQL store observations,

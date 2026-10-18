@@ -6,7 +6,7 @@ import math
 from typing import Any
 
 from fastapi import HTTPException
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator
 
 from agent_bom.canonical_ids import canonical_finding_id
 
@@ -28,7 +28,7 @@ class BulkFindingsRequest(BaseModel):
         default=None,
         description="Observation timestamp from scan completion; defaults to ingest time when omitted.",
     )
-    reconcile_absent: bool = Field(
+    reconcile_absent: StrictBool = Field(
         default=False,
         description=("When true, mark open findings in the same source scope that are absent from this batch as resolved at observed_at."),
     )
@@ -139,7 +139,7 @@ def _coerce_bulk_cvss(value: Any, *, ordinal: int) -> float | None:
         except ValueError:
             raise HTTPException(
                 status_code=422,
-                detail=f"finding {ordinal}: cvss_score {value!r} is not a number in 0.0-10.0",
+                detail=f"finding {ordinal}: cvss_score must be a number in 0.0-10.0 or null",
             ) from None
     else:
         raise HTTPException(

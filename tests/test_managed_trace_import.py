@@ -76,6 +76,26 @@ def test_failed_page_keeps_prior_evidence_and_cursor_for_retry(tmp_path):
     assert len(store.list_observations("tenant")) == 2
 
 
+def test_throttled_import_exposes_retry_delay_and_preserves_checkpoint(tmp_path):
+    import httpx
+
+    from agent_bom.api.trace_import_service import import_native_pages
+    from agent_bom.trace_connectors import _call_json
+
+    store = SQLiteRuntimeEventStore(str(tmp_path / "runtime.db"))
+    first = import_native_pages(store, scope=scope(), fetch=lambda **kw: page(cursor="next"))
+    before = store.get_trace_import("tenant", first["import_id"])
+
+    def throttled(**kwargs):
+        with httpx.Client(transport=httpx.MockTransport(lambda _: httpx.Response(429, headers={"Retry-After": "120"}))) as client:
+            return _call_json(client, "GET", "https://example.test")
+
+    failed = import_native_pages(store, scope=scope(), fetch=throttled, import_id=first["import_id"])
+    assert failed["error"] == {"code": "rate_limited", "retryable": True, "retry_after_seconds": 120}
+    assert store.get_trace_import("tenant", first["import_id"]) == before
+    assert len(store.list_observations("tenant")) == 1
+
+
 @pytest.mark.parametrize(
     "change", [{"project_id": "other"}, {"tenant_id": "other"}, {"connection_id": "other"}, {"endpoint": "https://other.test"}]
 )

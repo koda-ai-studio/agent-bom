@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 
+import pytest
 from starlette.testclient import TestClient
 
 from agent_bom.api.compliance_hub_store import reset_compliance_hub_store
@@ -66,6 +67,23 @@ def test_non_numeric_cvss_string_rejected_422():
     resp = _post(client, {"id": "f-1", "severity": "high", "cvss_score": "NaNstring"})
     assert resp.status_code == 422, resp.text
     assert "cvss" in resp.text.lower()
+
+
+@pytest.mark.parametrize("value", ["true", "false", "yes", 1, 0, None])
+def test_reconciliation_requires_an_explicit_json_boolean(value):
+    client = _client(f"bulk-val-{uuid4().hex}")
+    response = client.post(
+        "/v1/findings/bulk",
+        json={"source": "connector", "findings": [{"id": "f-1"}], "reconcile_absent": value},
+    )
+    assert response.status_code == 422
+
+
+def test_invalid_cvss_does_not_echo_sensitive_input():
+    client = _client(f"bulk-val-{uuid4().hex}")
+    response = _post(client, {"id": "f-1", "cvss_score": "api_key=private-value"})
+    assert response.status_code == 422
+    assert "private-value" not in response.text
 
 
 def test_out_of_range_cvss_rejected_422():
