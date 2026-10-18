@@ -3797,7 +3797,10 @@ function GraphPageInner() {
               edges={displayEdges}
               nodeTypes={lineageNodeTypesAdaptive}
               edgeTypes={relationshipEdgeTypes}
-              fitView={!manualCamera && !presentation.hasSavedState && !presentation.restoredSavedState}
+              // Ordinary views have one camera owner: GraphCanvasAutoFit.
+              // A concurrent animated initial fit can resize LOD cards after
+              // the measured fit has settled, leaving the root offscreen.
+              fitView={Boolean(selectedScenarioId || selectedAttackPath) && !manualCamera && !presentation.hasSavedState && !presentation.restoredSavedState}
               fitViewOptions={initialViewportOptions}
               defaultViewport={presentation.restoredViewport ?? presentation.viewport}
               minZoom={canvasLens === "estate" ? 0.05 : 0.16}

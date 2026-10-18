@@ -838,6 +838,8 @@ for (const theme of ["light", "dark"] as const) {
     const header = page.locator(".graph-page-header");
     await expect(header.getByTestId("graph-analysis-status")).toContainText("Analysis status unavailable");
     await expect(page.locator(".react-flow__node").first()).toBeVisible();
+    // Judge the settled camera, not a readable frame during an initial animation.
+    await settledViewportZoom(page);
     await page.evaluate(() => window.scrollTo(0, 0));
     await expect.poll(() => page.locator('.react-flow__node[data-id="agent:desktop"]').evaluate(element => {
       const box = element.getBoundingClientRect();
