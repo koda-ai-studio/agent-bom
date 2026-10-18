@@ -226,6 +226,22 @@ def test_provider_normalizer_retains_native_scope_and_configuration():
     assert resources[0].raw["database_version"] == "17.6"
 
 
+def test_normalizer_drops_unexpected_fields_from_imported_inventory():
+    from agent_bom.cloud.resource_model import normalize_cloud_inventory
+    from agent_bom.graph.builder import build_unified_graph_from_report
+
+    report, _ = collect()
+    inventory = report["cloud_inventory"][0]
+    inventory["projects"][0]["database_password"] = "synthetic-do-not-retain"
+    inventory["projects"][0]["api_key"] = "synthetic-do-not-retain"
+    normalized = normalize_cloud_inventory(inventory)[0]
+    assert "database_password" not in normalized.raw
+    assert "api_key" not in normalized.raw
+    graph = build_unified_graph_from_report(report, scan_id="imported", tenant_id="one")
+    node = graph.nodes[report["findings"][0]["node_id"]]
+    assert "database_password" not in node.attributes["configuration"]
+
+
 def test_cli_rejects_changed_project_scope_without_replacing_snapshot(tmp_path, monkeypatch):
     from click.testing import CliRunner
 

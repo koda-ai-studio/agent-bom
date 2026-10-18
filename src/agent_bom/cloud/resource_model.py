@@ -173,7 +173,22 @@ def normalize_supabase_inventory(inventory: dict[str, Any]) -> list[CloudResourc
                 account=account,
                 region=str(project.get("region") or ""),
                 resource_group=ref,
-                raw=dict(project),
+                raw={
+                    key: project[key]
+                    for key in (
+                        "id",
+                        "ref",
+                        "organization_id",
+                        "name",
+                        "region",
+                        "status",
+                        "node_id",
+                        "database_version",
+                        "database_postgres_engine",
+                        "database_release_channel",
+                    )
+                    if key in project
+                },
             )
         )
     return resources
