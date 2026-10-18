@@ -67,18 +67,23 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     };
     let cancelled = false;
     const frames: number[] = [];
-    frames.push(requestAnimationFrame(() => {
-      void fitView(options).then(() => {
-        // Zoom changes readable glyph/caption dimensions. Allow their resize
-        // measurements to settle before the final camera fit.
+    const settle = (pass: number) => {
+      const before = getNodesBounds(getNodes());
+      void fitView(options).then(fitted => {
+        // Zoom changes readable glyph/caption dimensions. Their observer and
+        // React Flow measurements can finish after a second camera fit. Keep
+        // fitting until measured bounds settle, with a bounded four-pass budget.
         if (cancelled) return;
         frames.push(requestAnimationFrame(() => frames.push(requestAnimationFrame(() => {
-          if (!cancelled) void fitView(options).then(fitted => {
-            if (!cancelled && fitted) lastAutoFitKey.current = autoFitKey;
-          });
+          if (cancelled) return;
+          const after = getNodesBounds(getNodes());
+          const stable = before.x === after.x && before.y === after.y && before.width === after.width && before.height === after.height;
+          if (pass > 0 && fitted && stable) lastAutoFitKey.current = autoFitKey;
+          else if (pass < 3) settle(pass + 1);
         }))));
       });
-    }));
+    };
+    frames.push(requestAnimationFrame(() => settle(0)));
     return () => { cancelled = true; frames.forEach(cancelAnimationFrame); };
   }, [enabled, initialized, width, height, layoutKey, anchorId, inspector, preserveViewport, windowHeight, spaceAbove, canvas, fitView, getNodes, getNodesBounds, getEdges, onLayoutAspect]);
   if (!initialized || width >= 640 || width <= 0) return null;

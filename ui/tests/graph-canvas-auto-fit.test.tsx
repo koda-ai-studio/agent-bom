@@ -18,7 +18,7 @@ vi.mock("@xyflow/react", () => ({
 }));
 import { GraphCanvasAutoFit } from "@/components/graph-canvas-auto-fit";
 
-afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); vi.clearAllMocks(); flow.initialized = true; });
+afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); vi.clearAllMocks(); flow.initialized = true; flow.getNodesBounds.mockReturnValue({ x: 0, y: 0, width: 800, height: 1000 }); });
 
 it("does not replace a manual camera when virtualized nodes reinitialize", async () => {
   vi.useFakeTimers();
@@ -65,5 +65,23 @@ it("finishes camera settling when measurement restarts during an initial fit", a
   await act(() => vi.advanceTimersByTimeAsync(50));
   expect(flow.fitView).toHaveBeenCalledTimes(3);
   await act(async () => { finishFirst(true); await vi.advanceTimersByTimeAsync(50); });
+  expect(flow.fitView).toHaveBeenCalledTimes(3);
+});
+
+it("refits when zoom-dependent dimensions arrive after the second camera fit", async () => {
+  vi.useFakeTimers();
+  vi.stubGlobal("requestAnimationFrame", (callback: () => void) => setTimeout(callback, 0));
+  vi.stubGlobal("cancelAnimationFrame", clearTimeout);
+  vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
+  flow.frame = document.createElement("div");
+  flow.frame.setAttribute("data-graph-adaptive-frame", "");
+  flow.fitView.mockResolvedValueOnce(true).mockImplementationOnce(async () => {
+    // Readable glyphs resize after zoom; React Flow receives that measurement
+    // on a later frame, even though all nodes remain initialized.
+    setTimeout(() => flow.getNodesBounds.mockReturnValue({ x: 0, y: 0, width: 800, height: 1100 }), 1);
+    return true;
+  });
+  render(<GraphCanvasAutoFit enabled layoutKey="late-measurement" inspector={false} preserveViewport={false} onLayoutAspect={vi.fn()} />);
+  await act(() => vi.advanceTimersByTimeAsync(100));
   expect(flow.fitView).toHaveBeenCalledTimes(3);
 });
