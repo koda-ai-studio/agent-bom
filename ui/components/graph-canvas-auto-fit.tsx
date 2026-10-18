@@ -54,7 +54,7 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     if (!frameElement) return;
     const nodes = getNodes();
     const frameSize = graphAdaptiveFrame({
-      bounds: getNodesBounds(nodes), width, inspector,
+      bounds: getNodesBounds(nodes), width, inspector, nodeCount: nodes.length,
       availableHeight: windowHeight - spaceAbove - 24,
     });
     onLayoutAspect(frameSize.layoutAspect);
@@ -65,7 +65,7 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     const autoFitKey = JSON.stringify([layoutKey, width, height, anchorId, inspector, windowHeight, spaceAbove, padding]);
     if (lastAutoFitKey.current === autoFitKey) return;
     const anchor = nodes.find(node => node.id === anchorId) ?? nodes[0];
-    const options: FitViewOptions = { padding, duration: 0, minZoom: 0.05, maxZoom: 2,
+    const options: FitViewOptions = { padding, duration: 0, minZoom: 0.05, maxZoom: 1.25,
       ...(!frameSize.fitAll && anchor ? { nodes: inspector && width >= 640 ? graphInspectorTargets(anchor.id, nodes.map(node => node.id), getEdges()) : [{ id: anchor.id }], minZoom: inspector && width >= 640 ? 0.45 : 0.85, maxZoom: 1.1 } : {}),
     };
     const fitIds = options.nodes ? new Set(options.nodes.map(node => node.id)) : null;
