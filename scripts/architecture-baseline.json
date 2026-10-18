@@ -1170,24 +1170,30 @@
       "raw_env_reads": 4
     },
     "api/server.py": {
-      "broad_except": 15,
-      "deferred_imports": 78,
-      "file_lines": 1764,
-      "raw_env_reads": 26
+      "broad_except": 14,
+      "deferred_imports": 33,
+      "file_lines": 990,
+      "raw_env_reads": 7
     },
     "api/server.py::_cleanup_tick": {
       "function_lines": 130
     },
-    "api/server.py::_enqueue_scheduled_scan": {
-      "complexity": 18,
-      "function_lines": 146
-    },
     "api/server.py::_lifespan": {
-      "complexity": 69,
-      "function_lines": 388
+      "complexity": 26,
+      "function_lines": 203
     },
     "api/server.py::configure_api": {
       "function_lines": 82
+    },
+    "api/server_dashboard.py": {
+      "deferred_imports": 2
+    },
+    "api/server_schedules.py": {
+      "deferred_imports": 10
+    },
+    "api/server_storage.py": {
+      "broad_except": 1,
+      "deferred_imports": 33
     },
     "api/session_authorization.py": {
       "deferred_imports": 2
