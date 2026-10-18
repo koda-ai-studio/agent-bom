@@ -67,10 +67,14 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     const options: FitViewOptions = { padding: 0.08, duration: 0, minZoom: 0.05, maxZoom: 2,
       ...(!frameSize.fitAll && anchor ? { nodes: inspector && width >= 640 ? graphInspectorTargets(anchor.id, nodes.map(node => node.id), getEdges()) : [{ id: anchor.id }], minZoom: inspector && width >= 640 ? 0.45 : 0.85, maxZoom: 1.1 } : {}),
     };
+    const fitIds = options.nodes ? new Set(options.nodes.map(node => node.id)) : null;
+    // A focused root can resize without changing the whole graph's envelope.
+    // Convergence must measure exactly the nodes passed to fitView.
+    const fittedBounds = () => getNodesBounds(fitIds ? getNodes().filter(node => fitIds.has(node.id)) : getNodes());
     let cancelled = false;
     const frames: number[] = [];
     const settle = (pass: number) => {
-      const before = getNodesBounds(getNodes());
+      const before = fittedBounds();
       void fitView(options).then(fitted => {
         // Zoom changes readable glyph/caption dimensions. Their observer and
         // React Flow measurements can finish after a second camera fit. Keep
@@ -78,7 +82,7 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
         if (cancelled) return;
         frames.push(requestAnimationFrame(() => frames.push(requestAnimationFrame(() => {
           if (cancelled) return;
-          const after = getNodesBounds(getNodes());
+          const after = fittedBounds();
           const stable = before.x === after.x && before.y === after.y && before.width === after.width && before.height === after.height;
           if (pass > 0 && fitted && stable) lastAutoFitKey.current = autoFitKey;
           else if (pass < 3) settle(pass + 1);

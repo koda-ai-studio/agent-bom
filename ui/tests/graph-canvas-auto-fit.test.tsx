@@ -6,7 +6,7 @@ const flow = vi.hoisted(() => ({
   fitView: vi.fn().mockResolvedValue(true),
   getNodes: vi.fn(() => [{ id: "asset", position: { x: 0, y: 0 }, data: {} }]),
   getEdges: vi.fn(() => []),
-  getNodesBounds: vi.fn(() => ({ x: 0, y: 0, width: 800, height: 1000 })),
+  getNodesBounds: vi.fn<(nodes?: Array<{ id: string }>) => { x: number; y: number; width: number; height: number }>(() => ({ x: 0, y: 0, width: 800, height: 1000 })),
   frame: null as HTMLElement | null,
 }));
 vi.mock("@xyflow/react", () => ({
@@ -18,7 +18,7 @@ vi.mock("@xyflow/react", () => ({
 }));
 import { GraphCanvasAutoFit } from "@/components/graph-canvas-auto-fit";
 
-afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); vi.clearAllMocks(); flow.initialized = true; flow.getNodesBounds.mockReturnValue({ x: 0, y: 0, width: 800, height: 1000 }); });
+afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); vi.clearAllMocks(); flow.initialized = true; flow.getNodes.mockReturnValue([{ id: "asset", position: { x: 0, y: 0 }, data: {} }]); flow.getNodesBounds.mockReturnValue({ x: 0, y: 0, width: 800, height: 1000 }); });
 
 it("does not replace a manual camera when virtualized nodes reinitialize", async () => {
   vi.useFakeTimers();
@@ -100,4 +100,28 @@ it("keeps canvas height within the page when measured after a control scrolls in
   await act(() => vi.advanceTimersByTimeAsync(100));
   // The document offset is 400px, regardless of the temporary 100px scroll.
   expect(flow.frame.style.getPropertyValue("--graph-adaptive-height")).toBe("344px");
+});
+
+it("settles the fitted root even when its size changes inside a stable graph envelope", async () => {
+  vi.useFakeTimers();
+  vi.stubGlobal("requestAnimationFrame", (callback: () => void) => setTimeout(callback, 0));
+  vi.stubGlobal("cancelAnimationFrame", clearTimeout);
+  vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
+  flow.frame = document.createElement("div");
+  flow.frame.setAttribute("data-graph-adaptive-frame", "");
+  flow.getNodes.mockReturnValue([
+    { id: "asset", position: { x: 0, y: 0 }, data: {} },
+    { id: "distant", position: { x: 4000, y: 1000 }, data: {} },
+  ]);
+  let rootWidth = 220;
+  flow.getNodesBounds.mockImplementation(nodes => nodes?.length === 1
+    ? { x: 0, y: 0, width: rootWidth, height: 180 }
+    : { x: 0, y: 0, width: 4220, height: 1180 });
+  flow.fitView.mockResolvedValueOnce(true).mockImplementationOnce(async () => {
+    setTimeout(() => { rootWidth = 300; }, 1);
+    return true;
+  });
+  render(<GraphCanvasAutoFit enabled layoutKey="root-settling" anchorId="asset" inspector={false} preserveViewport={false} onLayoutAspect={vi.fn()} />);
+  await act(() => vi.advanceTimersByTimeAsync(100));
+  expect(flow.fitView).toHaveBeenCalledTimes(3);
 });
