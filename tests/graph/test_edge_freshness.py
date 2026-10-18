@@ -169,3 +169,35 @@ def test_fresh_hops_do_not_promote_a_structural_topology_only_verdict() -> None:
     assert all(receipt["complete"] for receipt in path.hop_evidence)
     assert path.reachability == "unknown"
     assert "directed_provenance_backed_hops" not in path.reachability_basis
+
+
+def _finding_path_graph(applicability: dict[str, object] | None) -> tuple[UnifiedGraph, AttackPath]:
+    graph = _graph()
+    graph.add_node(UnifiedNode(id="pkg:p", entity_type=EntityType.PACKAGE, label="p"))
+    graph.add_node(UnifiedNode(id="vuln:CVE-1", entity_type=EntityType.VULNERABILITY, label="CVE-1", severity="high"))
+    graph.add_edge(_edge("server:s", "pkg:p", RelationshipType.DEPENDS_ON, last_seen=_SNAPSHOT))
+    evidence = {"applicability": applicability} if applicability else {}
+    graph.add_edge(_edge("pkg:p", "vuln:CVE-1", RelationshipType.VULNERABLE_TO, last_seen=_SNAPSHOT, **evidence))
+    graph.analysis_status["attack_path_fusion"] = GraphAnalysisStatus(status=GraphAnalysisState.COMPLETE)
+    stamp_edge_freshness(graph, window_hours=168)
+    path = AttackPath(source="server:s", target="vuln:CVE-1", hops=["server:s", "pkg:p", "vuln:CVE-1"],
+                      edges=[RelationshipType.DEPENDS_ON.value, RelationshipType.VULNERABLE_TO.value])
+    return graph, path
+
+
+def test_fresh_advisory_match_without_applicability_does_not_confirm_the_path() -> None:
+    # A fresh package -> CVE match proves the version is affected, not that the code is reachable.
+    graph, path = _finding_path_graph(None)
+
+    annotate_attack_path_evidence(path, graph)
+
+    assert path.reachability != "confirmed"
+    assert "applicability_unverified" in path.hop_evidence[1]["reason_codes"]
+
+
+def test_fresh_advisory_match_with_likely_applicability_can_confirm() -> None:
+    graph, path = _finding_path_graph({"verdict": "likely", "basis": ["package_reachable"]})
+
+    annotate_attack_path_evidence(path, graph)
+
+    assert path.reachability == "confirmed"

@@ -8,6 +8,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from agent_bom.evidence.semantics import ExploitabilityDimension
+from agent_bom.graph.applicability import advisory_match_unverified
 from agent_bom.graph.container import AttackPath, UnifiedGraph
 from agent_bom.graph.correlation_scope import CORRELATION_IDENTITY_VERSION
 from agent_bom.graph.edge import UnifiedEdge
@@ -194,11 +195,11 @@ def _hop_receipt(graph: UnifiedGraph, source: str, target: str, relationship: st
     freshness = _freshness(edge)
     authority = authority_evidence(edge.evidence)
     runtime_receipt = _runtime_hop_receipt(edge)
-    # Trace order records which assets one correlated trace touched in
-    # sequence. It is a real receipt, but not an access/exposure hop, so it
-    # can never complete an attack path on its own.
+    # Trace order is a real receipt but not an access/exposure hop; it never completes a path alone.
     trace_order = _relationship(edge) in _TRACE_ORDER_RELATIONSHIPS
-    gaps = (["trace_order_not_access"] if trace_order else []) + (["stale_evidence"] if freshness == "stale" else [])
+    unverified = advisory_match_unverified(_relationship(edge), edge, getattr(graph.nodes.get(target), "attributes", None))
+    flags = {"trace_order_not_access": trace_order, "stale_evidence": freshness == "stale", "applicability_unverified": unverified}
+    gaps = [code for code, present in flags.items() if present]
     runtime_receipt["reason_codes"] = [*runtime_receipt["reason_codes"], *gaps]
     return {
         "source_node_id": source,
@@ -216,6 +217,7 @@ def _hop_receipt(graph: UnifiedGraph, source: str, target: str, relationship: st
         "complete": bool(
             edge.traversable
             and not trace_order
+            and not unverified
             and not runtime_receipts_limited(edge.evidence)
             and edge.direction == "directed"
             and source_ids
