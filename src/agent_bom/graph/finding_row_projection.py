@@ -97,7 +97,9 @@ class _AssetIndex:
             resolved = _resolve_cloud_resource_node_id(self.graph, provider, identifier, alias_index=self.aliases, account_id=account)
             if self._usable(resolved):
                 return resolved
-        for key in (asset.get("canonical_id"), asset.get("stable_id")):
+        # The asset identifier is often the inventory entity's canonical id, not its graph id
+        # (a config-scoped agent is ``agent:cfg-…:<name>``, its identifier the agent's stable id).
+        for key in (identifier, asset.get("canonical_id"), asset.get("stable_id")):
             matches = self.by_identity.get(key) if isinstance(key, str) else None
             if matches and len(matches) == 1:
                 return next(iter(matches))
@@ -275,7 +277,9 @@ def project_finding_rows(graph: UnifiedGraph, findings: Any) -> None:
         return
     index = _AssetIndex(graph)
     for row in rows:
-        node_id = finding_row_node_id(row)
+        # A connector projection that already materialized the row owns its node.
+        declared = graph.nodes.get(_text(row.get("finding_node_id")))
+        node_id = declared.id if declared is not None and declared.entity_type in _FINDING_ENTITIES else finding_row_node_id(row)
         if node_id is None:
             continue
         collector, tier = _collector(row)

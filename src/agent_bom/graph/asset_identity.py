@@ -20,6 +20,7 @@ import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 
+from agent_bom.canonical_ids import snowflake_fqn
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.types import EntityType
 
@@ -178,7 +179,14 @@ def _kubernetes_keys(node: UnifiedNode) -> list[IdentityKey]:
 
 def _snowflake_keys(node: UnifiedNode) -> list[IdentityKey]:
     account, fqn = _attr(node, "account_id"), _attr(node, "snowflake_local_id", "fqn", "object_fqn")
-    return [IdentityKey(100, "snowflake_fqn", f"{account}/{fqn}", "snowflake")] if account and fqn else []
+    if not (account and fqn):
+        return []
+    # Object names are the stored names Snowflake reports, which are exact (an
+    # unquoted identifier is already upper-cased there), so only explicit
+    # quoting is resolved. Account case is kept: unproven aliases never merge.
+    if '"' in fqn:
+        fqn = snowflake_fqn(fqn)
+    return [IdentityKey(100, "snowflake_fqn", f"{account}/{fqn}", "snowflake")]
 
 
 def strong_keys(node: UnifiedNode) -> list[IdentityKey]:

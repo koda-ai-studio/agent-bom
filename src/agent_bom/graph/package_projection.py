@@ -196,7 +196,7 @@ def _add_vuln_node(
             target=vuln_node_id,
             relationship=RelationshipType.VULNERABLE_TO,
             weight=SEVERITY_RISK_SCORE.get(severity, 1.0),
-            evidence=package_evidence or {"source": data_source},
+            evidence={**(package_evidence or {"source": data_source}), **({"severity": severity} if severity else {})},
         )
     )
     return vuln_node_id
@@ -381,6 +381,8 @@ def _blast_radius_package_evidence(br_dict: dict[str, Any], data_source_tag: str
         "package_stable_id": br_dict.get("package_stable_id", ""),
         "purl": br_dict.get("package_purl") or br_dict.get("purl", ""),
         "reachability": br_dict.get("reachability", ""),
+        # The CVE node is shared across versions; each occurrence keeps its own rating.
+        "severity": str(br_dict.get("severity") or "").lower(),
     }
     return {key: value for key, value in evidence.items() if value not in (None, "", [])}
 

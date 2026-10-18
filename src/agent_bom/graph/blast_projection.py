@@ -3,7 +3,7 @@
 from typing import Any
 
 from agent_bom.canonical_ids import canonical_graph_node_id, source_ids
-from agent_bom.core.severity import SEVERITY_RISK_SCORE
+from agent_bom.core.severity import SEVERITY_RANK, SEVERITY_RISK_SCORE
 from agent_bom.graph.applicability import aggregate_rows, applicability_from_row, row_finding_ids, stronger_applicability
 from agent_bom.graph.build_indexes import BuildIndexes
 from agent_bom.graph.container import UnifiedGraph
@@ -258,3 +258,20 @@ def enrich_blast_radius(graph: UnifiedGraph, blast_data: list[dict[str, Any]]) -
         vuln_node = graph.get_node(vuln_node_id)
         if vuln_node:
             vuln_node.attributes.update(aggregate_rows(rows))
+            by_package = _severity_by_package(rows)
+            if by_package:
+                vuln_node.attributes["severity_by_package"] = by_package
+
+
+def _severity_by_package(rows: list[dict[str, Any]]) -> dict[str, str]:
+    """Each affected package version's own rating; the shared CVE node shows only the highest."""
+    result: dict[str, str] = {}
+    for row in rows:
+        name, version = _blast_radius_package_identity(row)
+        severity = str(row.get("severity") or "").lower()
+        if not name or not severity:
+            continue
+        label = f"{name}@{version}" if version else name
+        if SEVERITY_RANK.get(severity, 0) >= SEVERITY_RANK.get(result.get(label, ""), 0):
+            result[label] = severity
+    return dict(sorted(result.items()))

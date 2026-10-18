@@ -11,7 +11,6 @@ from agent_bom.graph.credential_identity import slot_receipt
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.edge_evidence import edge_evidence
 from agent_bom.graph.node import UnifiedNode
-from agent_bom.graph.projection_support import server_child_aliases
 from agent_bom.graph.types import EntityType, RelationshipType
 
 
@@ -44,7 +43,6 @@ def _add_credential(
                 "server": srv_id,
                 "servers": [srv_id],
                 "credential_occurrence": occurrence,
-                "identity": {"aliases": server_child_aliases(graph, srv_id, "cred", env_key)},
             },
             data_sources=[data_source_tag],
         )

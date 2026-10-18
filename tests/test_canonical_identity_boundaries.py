@@ -205,8 +205,8 @@ def test_server_aliases_retain_frozen_scope_escaping_and_registry_v2_ids():
         AGENT_BOM_ID_NAMESPACE,
         canonical_mcp_server_id,
         legacy_canonical_id_v2,
-        previous_mcp_server_graph_ids,
     )
+    from agent_bom.graph.mcp_server_aliases import previous_mcp_server_graph_ids
 
     agent = {"name": "one", "source_id": "host%3Aone"}
     server = {"name": "same", "command": "npx", "args": ["foo"]}
@@ -415,7 +415,8 @@ def test_historical_server_child_receipts_bind_only_when_unique():
 
 
 def test_new_instance_fingerprint_is_not_invented_as_a_historical_global_alias():
-    from agent_bom.canonical_ids import canonical_mcp_server_id, mcp_server_graph_id, previous_mcp_server_graph_ids
+    from agent_bom.canonical_ids import canonical_mcp_server_id, mcp_server_graph_id
+    from agent_bom.graph.mcp_server_aliases import previous_mcp_server_graph_ids
 
     server = {"name": "service", "command": "python", "args": ["server.py"]}
     agent = {"name": "a", "config_path": "/a/config.json", "mcp_servers": [server]}

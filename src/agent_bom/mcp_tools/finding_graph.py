@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Callable
 from typing import Any
+from urllib.parse import unquote
 
 from agent_bom.graph.attack_path_queue import AttackPathFilters
 from agent_bom.graph.container import AttackPath
@@ -30,6 +31,37 @@ def finding_node_id(row: dict[str, Any]) -> str:
 
 def _package_matches(path: AttackPath, package: str) -> bool:
     return any(hop.startswith("pkg:") and (hop.endswith(":" + package) or hop.endswith("/" + package)) for hop in path.hops)
+
+
+def _agent_name(node_id: str) -> str:
+    return unquote(node_id.removeprefix("agent:").rsplit(":", 1)[-1])
+
+
+def _occurrence_paths(row: dict[str, Any], paths: list[AttackPath]) -> list[AttackPath]:
+    """Paths carrying this occurrence, not every path through a shared advisory node.
+
+    A ``vuln:<CVE>`` node is shared by every package and agent the advisory
+    affects, so joining on it alone hands one agent's credentials to another.
+    Prefer the path's recorded finding ids; otherwise require the row's own
+    package node and declaring agents. A filter applies only when the row
+    carries its key, and a filter that matches nothing is an answer, not a
+    reason to fall back to the unscoped set.
+    """
+    finding_id = str(row.get("id") or "").strip()
+    if finding_id:
+        tagged = [path for path in paths if finding_id in (path.finding_ids or [])]
+        if tagged:
+            return tagged
+    asset_node = str(row.get("node_id") or "").strip()
+    package = str(row.get("package") or "").strip()
+    if asset_node.startswith("pkg:"):
+        paths = [path for path in paths if asset_node in path.hops]
+    elif package:
+        paths = [path for path in paths if _package_matches(path, package)]
+    agents = {str(name).strip() for name in row.get("affected_agents") or [] if str(name).strip()}
+    if agents:
+        paths = [path for path in paths if any(hop.startswith("agent:") and _agent_name(hop) in agents for hop in path.hops)]
+    return paths
 
 
 def _path_id(path: AttackPath) -> str:
@@ -71,10 +103,7 @@ def project_finding(row: dict[str, Any], snapshot: dict[str, Any]) -> dict[str, 
     if not node_id:
         return unavailable("finding_has_no_graph_node")
     paths: list[AttackPath] = snapshot["paths"]
-    matched = [path for path in paths if node_id in path.hops]
-    package = str(row.get("package") or "").strip()
-    if package and matched:
-        matched = [path for path in matched if _package_matches(path, package)] or matched
+    matched = _occurrence_paths(row, [path for path in paths if node_id in path.hops])
     complete = bool(snapshot["complete"])
     reachers = sorted({path.source for path in matched})
     from_agent = sorted({path.source for path in matched if path.source.startswith("agent:")})

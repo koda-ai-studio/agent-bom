@@ -13,7 +13,6 @@ from agent_bom.canonical_ids import (
     canonical_graph_node_id,
     mcp_server_graph_id_for,
     previous_agent_graph_ids,
-    previous_mcp_server_graph_ids,
     source_ids,
 )
 from agent_bom.graph.build_indexes import BuildIndexes
@@ -22,6 +21,7 @@ from agent_bom.graph.credential_projection import project_credentials
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.edge_evidence import edge_evidence
 from agent_bom.graph.hosting_projection import project_server_hosting
+from agent_bom.graph.mcp_server_aliases import previous_mcp_server_graph_ids
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
 from agent_bom.graph.package_projection import (
     _add_vuln_node,
@@ -37,7 +37,6 @@ from agent_bom.graph.projection_support import (
     _is_sbom_import,
     _normalized_environment,
     _repository_manifest_directory,
-    server_child_aliases,
 )
 from agent_bom.graph.types import EntityType, RelationshipType
 from agent_bom.mcp_blocklist import sanitize_security_intelligence_entry
@@ -409,7 +408,6 @@ def _project_tools(graph: UnifiedGraph, agent: AgentScope, srv_dict: Mapping[str
                 label=tool_name,
                 attributes={
                     "description": tool_dict.get("description", ""),
-                    "identity": {"aliases": server_child_aliases(graph, srv_id, "tool", tool_name)},
                     "canonical_id": tool_dict.get("canonical_id")
                     or tool_dict.get("stable_id")
                     or canonical_graph_node_id(EntityType.TOOL.value, tool_id),
