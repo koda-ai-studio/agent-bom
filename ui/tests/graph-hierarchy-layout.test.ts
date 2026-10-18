@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Edge, Node } from "@xyflow/react";
 import type { LineageNodeData } from "@/components/lineage-nodes";
 import { readableGraphEdges } from "@/lib/graph-utils";
-import { graphHierarchyLayout } from "@/lib/graph-hierarchy-layout";
+import { graphHierarchyLayout, orderHierarchyBranches } from "@/lib/graph-hierarchy-layout";
 import { readableLineageDagreLr } from "@/lib/graph-node-dimensions";
 
 const node = (id: string, nodeType: LineageNodeData["nodeType"]): Node<LineageNodeData> => ({
@@ -85,4 +85,20 @@ describe("evidence-driven graph flow", () => {
     expect(selected.find(e => e.id === "source")?.label).toBeDefined();
     expect(quiet.find(e => e.id === "source")?.ariaLabel).toContain("relationship");
   });
+});
+
+it("groups converging branches across layers without interleaving the independent source path", () => {
+  const positions: Record<string, [number, number]> = {
+    repo: [0, 1], workflowDir: [1, 0], srcDir: [1, 1], deployDir: [1, 2],
+    workflow: [2, 0], source: [2, 1], config: [2, 2], build: [3, 0.5], dependency: [3, 1.5],
+    warning: [4, 0], app: [4, 1], cve: [4, 2],
+  };
+  const entries = Object.entries(positions).map(([id, [x, y]]) => ({ ...node(id, "directory"), position: { x: x * 400, y: y * 350 } }));
+  const links = [["repo", "workflowDir"], ["repo", "srcDir"], ["repo", "deployDir"], ["workflowDir", "workflow"],
+    ["srcDir", "source"], ["deployDir", "config"], ["workflow", "build"], ["source", "dependency"],
+    ["build", "warning"], ["build", "app"], ["config", "app"], ["dependency", "cve"]]
+    .map(([source, target]) => edge(`${source}-${target}`, source!, target!, "contains"));
+  const ordered = orderHierarchyBranches(entries, links);
+  const y = (id: string) => ordered.find(n => n.id === id)!.position.y;
+  expect(y("source") < Math.min(y("workflow"), y("config")) || y("source") > Math.max(y("workflow"), y("config"))).toBe(true);
 });

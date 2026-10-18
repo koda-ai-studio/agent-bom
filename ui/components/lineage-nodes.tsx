@@ -5,7 +5,7 @@ import { Handle, Position } from "@xyflow/react";
 import { Bug, FolderGit2, KeyRound, Package, Wrench } from "lucide-react";
 import { graphRepositoryContext } from "@/lib/graph-repository-context";
 
-import { AgentSourceMark } from "@/components/agent-source-mark";
+import { AgentSourceMark, SourceBadge } from "@/components/agent-source-mark";
 import { agentSource } from "@/lib/agent-source";
 import { NodeBadgeRow, SeverityRingMark } from "@/components/graph-node-badges";
 import { GraphScopeNode } from "@/components/graph-scope-node";
@@ -189,9 +189,11 @@ function NodeCard({
         <Handle type="source" position={data.reverseFlow ? Position.Left : Position.Right}
           className={`!h-1 !w-1 !border-0 !bg-transparent ${source ? "" : "!opacity-0"}`} />
         <ContextHandles />
-        {data.nodeType === "agent" || repository
-          ? <AgentSourceMark source={repository?.source ?? brand} icon={repository ? FolderGit2 : undefined} style={{ width: "var(--graph-node-icon-size, 32px)", height: "var(--graph-node-icon-size, 32px)" }} className={`h-8 w-8 ${iconClass}`} />
+        {data.nodeType === "agent"
+          ? <AgentSourceMark source={brand} style={{ width: "var(--graph-node-icon-size, 32px)", height: "var(--graph-node-icon-size, 32px)" }} className={`h-8 w-8 ${iconClass}`} />
           : <Icon aria-hidden="true" style={{ width: "var(--graph-node-icon-size, 32px)", height: "var(--graph-node-icon-size, 32px)" }} className={`h-8 w-8 ${iconClass}`} />}
+        {repository?.source && <SourceBadge source={repository.source} graph className="absolute -bottom-1 -right-1"
+          style={{ width: "calc(var(--graph-node-meta-size, 12px) * 2.2)", height: "calc(var(--graph-node-meta-size, 12px) * 2.2)" }} />}
       </div>
       <p className="mb-1 w-full min-w-0 break-words line-clamp-3 text-lg font-semibold leading-[1.2] text-foreground [overflow-wrap:anywhere]" style={{ fontSize: "var(--graph-node-label-size, 18px)" }}>
         {canvasNodeLabel(repository?.slug || data.label).split(/(?<=[_/@-])/).map((part, index) => <span key={index}>{part}<wbr /></span>)}

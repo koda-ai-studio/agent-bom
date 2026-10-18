@@ -110,7 +110,10 @@ it("distinguishes a recorded repository from its child folders without changing 
   const { container } = render(<ReactFlowProvider><Renderer data={{ label: "example-org/payments", nodeType: "directory", attributes: { is_repo_root: true, full_name: "example-org/payments", provider: "github" } }} /></ReactFlowProvider>);
   expect(screen.getByText("Repository", { exact: true })).toBeVisible();
   expect(screen.queryByText("Folder", { exact: true })).not.toBeInTheDocument();
-  expect(screen.getByRole("img", { name: "Source: GitHub" })).toBeVisible();
+  const host = screen.getByRole("img", { name: "Source: GitHub" });
+  expect(host).toBeVisible();
+  expect(host.parentElement).toHaveClass("graph-entity-glyph");
+  expect(host).toHaveAttribute("data-graph-source-badge", "true");
   expect(container.querySelector('.graph-entity-glyph')).toHaveClass("rounded-full");
   expect(container.querySelector('svg.lucide-folder-git-2')).not.toBeNull();
 });

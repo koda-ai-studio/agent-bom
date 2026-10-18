@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { auditRenderedGraph } from "./graph-visual-audit.mjs";
 import { chromium, expect } from "@playwright/test";
 import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -2646,6 +2647,16 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
         throw new Error(`Expected API response ${expectedPath} was not observed on ${urlPath}`);
       }
     }
+    if (options.repositoryVisualAudit) {
+      const audit = await page.evaluate(auditRenderedGraph, { edges: options.repositoryVisualAudit });
+      console.log(`repository visual audit ${filename}: ${JSON.stringify(audit)}`);
+      if (audit.renderedEdges !== options.repositoryVisualAudit.length || audit.crossings.length) {
+        throw new Error(`Repository relationships cross or are missing: ${JSON.stringify(audit)}`);
+      }
+      if (!audit.logos.some(logo => logo.source === "github" && logo.loaded && logo.size >= 18)) {
+        throw new Error(`Repository host logo is missing or too small: ${JSON.stringify(audit.logos)}`);
+      }
+    }
     if (options.minGraphNodes) {
       const graphNodeCount = await page.locator(".react-flow__node:visible").count();
       const graphEdgeCount = await page.locator(".react-flow__edge").count();
@@ -3203,6 +3214,7 @@ async function main() {
           minGraphNodeFontPx: 12, minGraphEdgeLabelFontPx: 12, minGraphBadgeFontPx: 11,
           assertGraphNodesSeparated: true, assertGraphNodesWithinCanvas: true,
           assertQuietGraphLabels: true,
+          repositoryVisualAudit: scope === "repository" ? fixture.edges : undefined,
           assertEdgeLabelsClearOfNodes: true, assertNoHorizontalOverflow: true });
         await p.close();
       }
