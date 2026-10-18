@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { getViewportForBounds, type Edge, type Node } from "@xyflow/react";
 import { graphFitViewOptions } from "@/lib/graph-viewport";
 import { applyDagreLayout } from "@/lib/dagre-layout";
-import { COMPACT_GRAPH_MIN_ZOOM, compactInvestigationLayout, READABLE_LINEAGE_DAGRE_LR } from "@/lib/graph-node-dimensions";
+import { COMPACT_GRAPH_MIN_ZOOM, compactInvestigationLayout, readableGraphNodeStyle, READABLE_LINEAGE_DAGRE_LR } from "@/lib/graph-node-dimensions";
 
 function contextGraph() {
   const layers = [["asset"], ["bucket", "table"], ["role", "user", "service"], ["agent", "tool", "repo", "workload", "package"], ["finding"]];
@@ -27,12 +27,17 @@ describe("bounded investigation layout", () => {
     expect(compactInvestigationLayout(false, 12)).toBeUndefined();
     expect(compactInvestigationLayout(true, 0)).toBeUndefined();
     expect(compactInvestigationLayout(true, 17)).toBeUndefined();
-    expect(compactInvestigationLayout(true, 12)).toBeDefined();
+    const estate = compactInvestigationLayout(true, 12)!;
+    const context = compactInvestigationLayout(true, 12, true)!;
+    expect(estate.nodeWidth).toBe(READABLE_LINEAGE_DAGRE_LR.nodeWidth);
+    expect(estate.nodeHeight).toBe(READABLE_LINEAGE_DAGRE_LR.nodeHeight);
+    expect(context.nodeWidth).toBeGreaterThan(estate.nodeWidth!);
+    expect(context.nodeHeight).toBeGreaterThan(estate.nodeHeight!);
   });
 
   it("keeps every node and directed edge in a branching 12-node context without card overlap", () => {
     const graph = contextGraph();
-    const options = compactInvestigationLayout(true, graph.nodes.length)!;
+    const options = compactInvestigationLayout(true, graph.nodes.length, true)!;
     const compact = applyDagreLayout(graph.nodes, graph.edges, { ...options, direction: "LR" });
     const previous = applyDagreLayout(graph.nodes, graph.edges, { ...READABLE_LINEAGE_DAGRE_LR, direction: "LR" });
     expect(compact.nodes.map((n) => n.id)).toEqual(graph.nodes.map((n) => n.id));
@@ -49,4 +54,11 @@ describe("bounded investigation layout", () => {
     expect(zoom * 18).toBeGreaterThan(11);
     expect(zoom * 18).toBeGreaterThan(fit(previous.nodes, 300, 140) * 11 * 1.5);
   });
+});
+
+it("keeps captions inside the ordinary footprint beyond the compact context limit", () => {
+  const layout = compactInvestigationLayout(true, 17, true);
+  const style = readableGraphNodeStyle(0.4, true, Boolean(layout)) as Record<string, string>;
+  expect(parseFloat(style["--graph-node-card-width"]!)).toBeLessThanOrEqual(READABLE_LINEAGE_DAGRE_LR.nodeWidth!);
+  expect(parseFloat(style["--graph-node-label-size"]!)).toBeLessThanOrEqual(30);
 });
