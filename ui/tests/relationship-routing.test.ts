@@ -57,3 +57,10 @@ it("gives detour bends room to turn before reaching a clear horizontal lane", ()
   expect(points[6]!).toBeLessThan(260);
   expect(points[7]).toBeLessThan(0);
 });
+
+it("uses a clear sibling gap before routing outside the node envelope", () => {
+  const obstacles = [{ id: "upper", x: 260, y: 0, width: 220, height: 170 }, { id: "lower", x: 260, y: 220, width: 220, height: 170 }];
+  const route = relationshipPath({ ...edge, sourceY: 220 }, obstacles);
+  expect(route[2]).toBeGreaterThanOrEqual(186);
+  expect(route[2]).toBeLessThanOrEqual(204);
+});

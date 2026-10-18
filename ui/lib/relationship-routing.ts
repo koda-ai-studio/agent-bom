@@ -46,9 +46,21 @@ export function relationshipPath(edge: Endpoints, obstacles: Obstacle[]): [strin
     }
   }
   if (!blocked) return [path, labelX, labelY];
-  const candidates = between.flatMap(node => [node.y - 40, node.y + node.height + 40]);
+  // A fixed 40-unit offset can skip a clear gap between sibling rows and send
+  // the connector outside the fitted node envelope. Include those interior
+  // lanes before choosing the shortest clear route.
+  const rows = [...between].sort((a, b) => a.y - b.y);
+  const gaps = rows.slice(1).flatMap((node, index) => {
+    const previous = rows[index]!;
+    const bottom = previous.y + previous.height;
+    return node.y - bottom > 32 ? [(bottom + node.y) / 2] : [];
+  });
+  const candidates = [...gaps, ...between.flatMap(node => [node.y - 40, node.y + node.height + 40])];
   const lanes = candidates.filter(y => between.every(node => y < node.y - 16 || y > node.y + node.height + 16));
-  lanes.sort((a, b) => (Math.abs(edge.sourceY - a) + Math.abs(edge.targetY - a))
+  const top = Math.min(...obstacles.map(node => node.y));
+  const bottom = Math.max(...obstacles.map(node => node.y + node.height));
+  const outside = (y: number) => Number(y < top || y > bottom);
+  lanes.sort((a, b) => outside(a) - outside(b) || (Math.abs(edge.sourceY - a) + Math.abs(edge.targetY - a))
     - (Math.abs(edge.sourceY - b) + Math.abs(edge.targetY - b)) || a - b);
   const baseLane = lanes[0] ?? Math.min(edge.sourceY, edge.targetY, ...between.map(node => node.y)) - 40;
   const branchLane = baseLane + Math.sign(edge.targetY - edge.sourceY) * 16;

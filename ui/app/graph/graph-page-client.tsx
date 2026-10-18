@@ -2397,8 +2397,8 @@ function GraphPageInner() {
     setManualCameraScope(cameraScope);
     // Reserve room for readability-sized cards as their glyphs settle at the
     // new zoom, without a second camera movement after a user starts clicking.
-    void reactFlow.fitView({ ...viewportOptions, padding: Math.max(0.2, viewportOptions.padding), duration: 240 });
-  }, [reactFlow, viewportOptions, cameraScope]);
+    void reactFlow.fitView({ ...viewportOptions, padding: Math.max(investigationContext ? 0.25 : 0.2, viewportOptions.padding), duration: 240 });
+  }, [reactFlow, viewportOptions, investigationContext, cameraScope]);
   const fitSelection = useCallback(async () => {
     if (rollupNavigationActive) {
       await reactFlow.fitView({ ...viewportOptions, minZoom: 0.16, maxZoom: 1, padding: 0.04 });
@@ -3895,6 +3895,7 @@ function GraphPageInner() {
               }}
             >
               <GraphCanvasAutoFit
+                padding={investigationContext ? 0.25 : 0.08}
                 navigationMount={graphNavigationMount}
                 navigationIds={selectedAttackPath?.hops}
                 enabled={!layoutPending && !selectedScenarioId && !selectedAttackPath}
@@ -3905,7 +3906,7 @@ function GraphPageInner() {
                 onLayoutAspect={setCanvasLayoutAspect}
               />
               <Background color={BACKGROUND_COLOR} gap={BACKGROUND_GAP} />
-              <Controls orientation={selectedScenarioId ? "horizontal" : "vertical"} position="bottom-left" className={CONTROLS_CLASS} />
+              <Controls {...(investigationContext ? { fitViewOptions: { padding: 0.25, minZoom: 0.05, maxZoom: 2 } } : {})} orientation={selectedScenarioId ? "horizontal" : "vertical"} position="bottom-left" className={CONTROLS_CLASS} />
               {minimapExpanded && showMiniMap && (canvasLens !== "estate" || graphViewport.zoom >= 1) && (
                 <MiniMap
                   position={narrowViewport ? "top-right" : "bottom-right"}

@@ -75,3 +75,22 @@ for (const theme of ["light", "dark"]) test(`correlation opens a coherent depend
   await expect(page.locator(".react-flow__node")).toHaveCount(6);
   await page.screenshot({ path: info.outputPath(`correlation-context-${theme}.png`), animations: "disabled" });
 });
+
+for (const theme of ["light", "dark"]) test(`fit all includes complete shared-server connectors ${theme}`, async ({ page }, info) => {
+  await page.setViewportSize({ width: 1440, height: 820 });
+  await page.addInitScript(t => localStorage.setItem("agent-bom-theme", t), theme);
+  const nodes = [node("role", "role", "prod-ai-admin"), node("agent", "agent", "Developer Copilot"), node("peer", "agent", "Sre Runbook Agent"), node("github", "server", "github-enterprise MCP"), node("filesystem", "server", "filesystem MCP")].map(n => ({ ...n, dimensions: { environment: "prod" } }));
+  await fixture(page, nodes, [edge("role", "agent", "can_access"), edge("agent", "github", "uses"), edge("agent", "filesystem", "uses"), edge("agent", "peer", "shares_server"), edge("peer", "filesystem", "uses")]);
+  await page.goto("/graph?scan=snapshot&root=agent&lens=context");
+  await expect(page.locator(".react-flow__node")).toHaveCount(5);
+  await page.getByTestId("graph-entity-drawer").getByRole("button", { name: "Close", exact: true }).click();
+  await page.locator(".react-flow__controls-fitview").click();
+  await expect.poll(() => page.locator(".react-flow").evaluate(canvas => {
+    const bounds = canvas.getBoundingClientRect();
+    return [...canvas.querySelectorAll(".react-flow__edge-path, .graph-relationship-label, .react-flow__node [data-graph-entity]")].filter(element => {
+      const r = element.getBoundingClientRect();
+      return r.width && r.height && (r.left < bounds.left || r.right > bounds.right || r.top < bounds.top || r.bottom > bounds.bottom);
+    }).map(element => element.getAttribute("data-edge-id") ?? element.id ?? String(element.className));
+  })).toEqual([]);
+  await page.screenshot({ path: info.outputPath(`shared-server-${theme}.png`), animations: "disabled" });
+});
