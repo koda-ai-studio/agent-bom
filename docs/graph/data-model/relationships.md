@@ -369,7 +369,7 @@ Class `authority` · directed · traversable · required evidence `source`, `tie
 - `service_principal` → `account`, `agent`, `fleet`, `group`
 - `user` → `account`, `agent`, `fleet`, `group`, `role`
 
-Emitted by: `graph/builder.py`, `graph/builder_cloud_lineage.py`, `graph/builder_snowflake_objects.py`
+Emitted by: `graph/builder.py`, `graph/builder_cloud_lineage.py`, `graph/builder_snowflake_objects.py`, `graph/nhi_overlay.py`
 
 ## `observes`
 

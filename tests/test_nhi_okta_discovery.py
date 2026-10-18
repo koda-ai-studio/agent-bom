@@ -99,11 +99,14 @@ def test_discovers_service_accounts_and_api_tokens_filters_human_apps():
     assert svc.identity_id == "APP1"
     assert svc.name == "billing-svc"
     assert svc.created_at == "2026-01-01T00:00:00Z"
-    assert "client_credentials" in svc.scopes
+    assert svc.scopes == ()
+    assert svc.last_used_at is None
+    assert svc.raw_identity["grant_types"] == ["client_credentials", "read_file"]
 
     tok = next(i for i in result.identities if i.identity_type == "api_token")
     assert tok.identity_id == "TOK1"
     assert tok.owner == "00uHUMAN"
+    assert tok.last_used_at is None
     assert tok.credential_expires_at == "2026-09-01T00:00:00Z"
 
 
@@ -116,7 +119,8 @@ def test_empty_org_is_ok_with_no_identities():
 def test_partial_api_failure_still_returns_other_identities():
     client = _FakeOktaClient(apps=[_service_app("APP1", "svc")], fail_tokens=True)
     result = discover_okta_non_human_identities(client=client)
-    assert result.status is NHIDiscoveryStatus.OK
+    assert result.status is NHIDiscoveryStatus.PARTIAL
+    assert not result.ok
     assert [i.identity_type for i in result.identities] == ["service_account"]
     assert any("API-token listing failed" in w for w in result.warnings)
 
@@ -174,7 +178,7 @@ def _graph_with_tool() -> UnifiedGraph:
     return graph
 
 
-def test_overlay_projects_nhis_as_managed_identity_nodes_with_tool_scope():
+def test_overlay_does_not_turn_oauth_grant_types_into_tool_permissions():
     client = _FakeOktaClient(
         apps=[_service_app("APP1", "billing-svc")],
         tokens=[_api_token("TOK1", "ci-token")],
@@ -190,10 +194,9 @@ def test_overlay_projects_nhis_as_managed_identity_nodes_with_tool_scope():
     assert all(n.attributes["discovered"] is True for n in mi_nodes)
     assert all(n.attributes["provider"] == "okta" for n in mi_nodes)
 
-    # The service app's "read_file" grant matches the tool node → SCOPED_TO edge.
+    # Grant types are protocol flows, not permissions to similarly named tools.
     scoped = [(e.source, e.target) for e in graph.edges if e.relationship == RelationshipType.SCOPED_TO]
-    svc_node = next(n for n in mi_nodes if n.attributes["identity_type"] == "service_account")
-    assert (svc_node.id, "tool:srv:read_file") in scoped
+    assert scoped == []
 
 
 def test_overlay_is_idempotent():
@@ -229,3 +232,104 @@ def test_managed_identity_nodes_are_consumable_by_effective_permissions():
 
 if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(pytest.main([__file__, "-v"]))
+
+
+def test_provider_failure_does_not_echo_secret_exception():
+    class Broken(_FakeOktaClient):
+        def list_api_tokens(self):
+            raise RuntimeError("secret-token-value https://internal.example/private")
+
+    result = discover_okta_non_human_identities(client=Broken())
+    assert result.status is NHIDiscoveryStatus.PARTIAL
+    assert "secret-token-value" not in str(result)
+    assert "internal.example" not in str(result)
+
+
+def test_malformed_listing_is_not_successfully_empty():
+    class Broken(_FakeOktaClient):
+        def list_api_tokens(self):
+            return {"error": "provider unavailable"}
+
+    result = discover_okta_non_human_identities(client=Broken())
+    assert result.status is NHIDiscoveryStatus.PARTIAL
+
+
+def test_result_limit_is_reported_as_partial(monkeypatch):
+    monkeypatch.setattr("agent_bom.identity.okta_nhi._MAX_RESULTS", 1)
+    result = discover_okta_non_human_identities(client=_FakeOktaClient(apps=[_service_app("A", "a"), _service_app("B", "b")]))
+    assert result.status is NHIDiscoveryStatus.PARTIAL
+    assert len(result.identities) == 1
+    assert any("limit" in w for w in result.warnings)
+
+
+def test_okta_identity_ids_are_scoped_to_org():
+    graph = _graph_with_tool()
+    for org in ("https://first.okta.com", "https://second.okta.com"):
+        result = discover_okta_non_human_identities(client=_FakeOktaClient(apps=[_service_app("APP1", "svc")]), org_url=org)
+        apply_nhi_overlay_from_result(graph, result)
+    assert len([n for n in graph.nodes.values() if n.entity_type == EntityType.MANAGED_IDENTITY]) == 2
+
+
+def test_oauth_configuration_constructs_client_without_ssws(monkeypatch):
+    monkeypatch.setenv("AGENT_BOM_OKTA_DISCOVERY", "true")
+    monkeypatch.setenv("AGENT_BOM_OKTA_ORG_URL", "https://example.okta.com")
+    monkeypatch.setenv("AGENT_BOM_OKTA_CLIENT_ID", "fixture")
+    monkeypatch.delenv("AGENT_BOM_OKTA_TOKEN", raising=False)
+    monkeypatch.setattr("agent_bom.identity.okta_oauth.from_environment", lambda org: object())
+    monkeypatch.setattr("agent_bom.identity.okta_nhi.OktaClient", lambda *a, **kw: _FakeOktaClient())
+    assert discover_okta_non_human_identities().ok
+
+
+def test_scoped_okta_graph_contains_observed_org_membership():
+    from agent_bom.graph.builder import build_unified_graph_from_report
+    from agent_bom.graph.nhi_overlay import serialize_discovery_result
+
+    result = discover_okta_non_human_identities(
+        client=_FakeOktaClient(apps=[_service_app("APP1", "svc")]), org_url="https://example.okta.com"
+    )
+    graph = build_unified_graph_from_report(
+        {"scan_id": "fixture", "tenant_id": "fixture", "identity_discovery": serialize_discovery_result(result)}
+    )
+    assert len([n for n in graph.nodes.values() if n.entity_type == EntityType.ACCOUNT]) == 1
+    assert any(e.relationship == RelationshipType.MEMBER_OF for e in graph.edges)
+    assert graph.contract_rejections.total == 0
+
+
+@pytest.mark.parametrize("oauth", [None, [], {"grant_types": [{"client_secret": "never-export"}]}])
+def test_malformed_nested_app_metadata_is_partial_without_exception(oauth):
+    app = _service_app("APP1", "svc")
+    app["settings"]["oauthClient"] = oauth
+    result = discover_okta_non_human_identities(client=_FakeOktaClient(apps=[app]))
+    assert result.status is NHIDiscoveryStatus.PARTIAL
+    assert "never-export" not in repr(result)
+
+
+def test_authentication_configuration_is_metadata_only():
+    app = _service_app("APP1", "svc")
+    app["credentials"] = {
+        "oauthClient": {"client_id": "client-1", "token_endpoint_auth_method": "private_key_jwt", "client_secret": "never-export"}
+    }
+    app["settings"]["oauthClient"]["dpop_bound_access_tokens"] = True
+    result = discover_okta_non_human_identities(client=_FakeOktaClient(apps=[app]))
+    raw = result.identities[0].raw_identity
+    assert raw["client_id"] == "client-1"
+    assert raw["client_authentication"] == "private_key_jwt"
+    assert raw["dpop_bound_access_tokens"] is True
+    assert "never-export" not in repr(result)
+
+
+def test_merged_discovery_keeps_partial_coverage_visible():
+    from agent_bom.graph.nhi_overlay import merge_discovery_results
+
+    result = discover_okta_non_human_identities(client=_FakeOktaClient(apps=[_service_app("APP1", "svc")], fail_tokens=True))
+    merged = merge_discovery_results([result])
+    assert merged["status"] == "partial"
+    assert merged["providers"][0]["provider"] == "okta"
+    assert merged["providers"][0]["coverage"][1]["state"] == "unknown"
+
+
+def test_invalid_org_url_does_not_echo_embedded_credentials():
+    result = discover_okta_non_human_identities(org_url="https://user:never-export@example.okta.com", token="fixture-token", force=True)
+    assert not result.ok
+    assert result.org_url is None
+    assert "never-export" not in repr(result)

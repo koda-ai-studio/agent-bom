@@ -12,9 +12,10 @@ Trust posture (mirrors the cloud read-only providers):
 * **Read-only / reference-only.** Only ``GET`` list endpoints are called; no
   Okta write API is ever invoked and no secret material (token values, client
   secrets) is read — only references and metadata.
-* **Token-authenticated.** A bearer/SSWS token is read from the
-  ``AGENT_BOM_OKTA_TOKEN`` environment variable (no passwords, per the
-  tokens-only policy). The org base URL comes from ``AGENT_BOM_OKTA_ORG_URL``.
+* **Token-authenticated.** An SSWS token is read from the
+  ``AGENT_BOM_OKTA_TOKEN`` environment variable, or a scoped DPoP-bound OAuth
+  token is obtained using a local private-key file. The org base URL comes
+  from ``AGENT_BOM_OKTA_ORG_URL``.
 * **Gated, default OFF.** Discovery only runs when
   ``AGENT_BOM_OKTA_DISCOVERY`` is set to a truthy value. Otherwise it returns a
   ``DISABLED`` status without touching the network.
@@ -27,11 +28,13 @@ Trust posture (mirrors the cloud read-only providers):
 from __future__ import annotations
 
 import logging
-import os
 from collections.abc import Iterable, Iterator
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import Enum
 from typing import Any
+
+from agent_bom.core.settings import env_str
+from agent_bom.security import sanitize_text
 
 logger = logging.getLogger(__name__)
 
@@ -71,6 +74,9 @@ class NHIDiscoveryStatus(str, Enum):
     MISSING_CLIENT = "missing_client"
     """The Okta SDK / HTTP client could not be constructed."""
 
+    PARTIAL = "partial"
+    """At least one collection failed or reached its collection bound."""
+
     ERROR = "error"
     """The flag and credentials were present but the API calls failed."""
 
@@ -104,12 +110,16 @@ class DiscoveredNonHumanIdentity:
     scopes: tuple[str, ...] = ()
     """Granted OAuth2 scopes / token privileges (references, not secrets)."""
 
+    source_scope: str | None = None
+    """Provider tenant origin used to disambiguate native IDs."""
+
     raw_identity: dict[str, Any] = field(default_factory=dict)
     """Low-risk provider fields kept for audit (ids, timestamps — no secrets)."""
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "identity_id": self.identity_id,
+            "source_scope": self.source_scope,
             "name": self.name,
             "identity_type": self.identity_type,
             "provider": self.provider,
@@ -131,6 +141,8 @@ class NHIDiscoveryResult:
     identities: tuple[DiscoveredNonHumanIdentity, ...] = ()
     warnings: tuple[str, ...] = ()
     org_url: str | None = None
+    provider: str | None = None
+    coverage: tuple[dict[str, Any], ...] = ()
 
     @property
     def ok(self) -> bool:
@@ -140,38 +152,47 @@ class NHIDiscoveryResult:
 class OktaClient:
     """Minimal read-only Okta REST client (no third-party SDK required).
 
-    Issues only ``GET`` list calls with an ``SSWS`` token. Tests inject a fake
+    Issues only ``GET`` metadata calls with SSWS or DPoP-bound OAuth.
+    OAuth authentication separately posts to the token endpoint. Tests inject a fake
     client exposing the same ``list_oauth2_service_apps`` / ``list_api_tokens``
     methods, so no live call is ever made under test.
     """
 
-    def __init__(self, org_url: str, token: str) -> None:
-        self._org_url = org_url.rstrip("/")
-        self._token = token
+    def __init__(self, org_url: str, token: str = "", *, auth: Any = None, transport: Any = None) -> None:
+        from agent_bom.identity.okta_http import MetadataReader
+
+        self._reader = MetadataReader(org_url, token, auth=auth, transport=transport)
 
     def _get(self, path: str) -> list[dict[str, Any]]:
-        from agent_bom.http_client import fetch_json
-
-        url = f"{self._org_url}{path}"
-        payload = fetch_json(
-            url,
-            headers={
-                "Authorization": f"SSWS {self._token}",
-                "Accept": "application/json",
-            },
-            timeout=30,
-        )
-        if isinstance(payload, list):
-            return [item for item in payload if isinstance(item, dict)]
-        return []
+        return self._reader.collect(path)
 
     def list_oauth2_service_apps(self) -> list[dict[str, Any]]:
         """List OAuth2 / OIDC service applications (client-credentials NHIs)."""
-        return self._get("/api/v1/apps?filter=status+eq+%22ACTIVE%22&limit=200")
+        return self._get("/api/v1/apps?limit=200")
 
     def list_api_tokens(self) -> list[dict[str, Any]]:
         """List org API tokens (machine credentials)."""
         return self._get("/api/v1/api-tokens?limit=200")
+
+
+def _validated_listing(value: Any) -> list[dict[str, Any]]:
+    if not isinstance(value, list) or any(
+        not isinstance(row, dict) or not isinstance(row.get("id"), str) or not row["id"].strip() for row in value
+    ):
+        raise ValueError("Invalid Okta metadata collection")
+    for row in value:
+        for key in ("settings", "credentials"):
+            if key not in row:
+                continue
+            block = row[key]
+            if not isinstance(block, dict) or ("oauthClient" in block and not isinstance(block["oauthClient"], dict)):
+                raise ValueError("Invalid Okta client configuration")
+            oauth = block.get("oauthClient", {})
+            if "grant_types" in oauth and (
+                not isinstance(oauth["grant_types"], list) or any(not isinstance(g, str) for g in oauth["grant_types"])
+            ):
+                raise ValueError("Invalid Okta grant-type metadata")
+    return value
 
 
 def _is_truthy(value: str | None) -> bool:
@@ -190,7 +211,7 @@ def _is_service_app(app: dict[str, Any]) -> bool:
     return app_type == "service" or bool(grants & _SERVICE_GRANT_TYPES)
 
 
-def _oauth_scopes(app: dict[str, Any]) -> tuple[str, ...]:
+def _oauth_grant_types(app: dict[str, Any]) -> tuple[str, ...]:
     settings = app.get("settings")
     oauth = settings.get("oauthClient", {}) if isinstance(settings, dict) else {}
     grants = oauth.get("grant_types") or []
@@ -203,20 +224,28 @@ def _normalize_service_app(app: dict[str, Any]) -> DiscoveredNonHumanIdentity | 
         return None
     settings = app.get("settings")
     oauth = settings.get("oauthClient", {}) if isinstance(settings, dict) else {}
-    client_id = str(oauth.get("client_id") or "")
+    credentials = app.get("credentials", {}).get("oauthClient", {})
+    client_id = _opt_str(credentials.get("client_id")) or _opt_str(oauth.get("client_id")) or ""
+    auth_method = _opt_str(credentials.get("token_endpoint_auth_method"))
+    dpop = oauth.get("dpop_bound_access_tokens")
     return DiscoveredNonHumanIdentity(
         identity_id=app_id,
         name=str(app.get("label") or app.get("name") or app_id),
         identity_type="service_account",
         status=str(app.get("status") or "active").lower(),
         created_at=_opt_str(app.get("created")),
-        last_used_at=_opt_str(app.get("lastUpdated")),
-        scopes=_oauth_scopes(app),
+        last_used_at=None,
+        scopes=(),
         raw_identity={
             "id": app_id,
             "name": str(app.get("name") or ""),
             "sign_on_mode": str(app.get("signOnMode") or ""),
             "client_id": client_id,
+            "client_authentication": auth_method,
+            "dpop_bound_access_tokens": dpop if isinstance(dpop, bool) else None,
+            "grant_types": list(_oauth_grant_types(app)),
+            "last_updated_at": _opt_str(app.get("lastUpdated")),
+            "scope_coverage": "not_collected",
         },
     )
 
@@ -232,18 +261,20 @@ def _normalize_api_token(token: dict[str, Any]) -> DiscoveredNonHumanIdentity | 
         status=str(token.get("status") or "active").lower(),
         owner=_opt_str(token.get("userId")),
         created_at=_opt_str(token.get("created")),
-        last_used_at=_opt_str(token.get("lastUpdated")),
+        last_used_at=None,
         credential_expires_at=_opt_str(token.get("expiresAt")),
         raw_identity={
             "id": token_id,
             "user_id": str(token.get("userId") or ""),
+            "last_updated_at": _opt_str(token.get("lastUpdated")),
         },
     )
 
 
 def _opt_str(value: Any) -> str | None:
-    text = str(value).strip() if value is not None else ""
-    return text or None
+    if not isinstance(value, str):
+        return None
+    return sanitize_text(value.strip(), max_len=512) or None
 
 
 def _iter_normalized(
@@ -283,69 +314,106 @@ def discover_okta_non_human_identities(
             and ``list_api_tokens()``. When ``None`` a read-only
             :class:`OktaClient` is built from the token + org URL.
         org_url: Okta org base URL; falls back to ``AGENT_BOM_OKTA_ORG_URL``.
-        token: SSWS/bearer token; falls back to ``AGENT_BOM_OKTA_TOKEN``.
+        token: SSWS token; falls back to ``AGENT_BOM_OKTA_TOKEN``.
         force: Bypass the feature-flag gate (when a client is injected directly).
     """
-    flag_on = force or client is not None or _is_truthy(os.environ.get(_DISCOVERY_FLAG_ENV))
+    flag_on = force or client is not None or _is_truthy(env_str(_DISCOVERY_FLAG_ENV))
     if not flag_on:
         return NHIDiscoveryResult(
+            provider="okta",
             status=NHIDiscoveryStatus.DISABLED,
             warnings=(f"Okta NHI discovery is disabled. Set {_DISCOVERY_FLAG_ENV}=1 to enable.",),
         )
 
-    resolved_org = (org_url or os.environ.get(_ORG_URL_ENV) or "").strip()
+    resolved_org = (org_url or env_str(_ORG_URL_ENV) or "").strip()
+    if resolved_org:
+        from agent_bom.identity.okta_http import org_origin
+
+        try:
+            resolved_org = org_origin(resolved_org)
+        except ValueError:
+            return NHIDiscoveryResult(
+                provider="okta", status=NHIDiscoveryStatus.MISSING_CREDENTIALS, warnings=("A valid HTTPS Okta tenant origin is required.",)
+            )
+    oauth_configured = bool(env_str("AGENT_BOM_OKTA_CLIENT_ID"))
 
     if client is None:
-        resolved_token = (token or os.environ.get(_TOKEN_ENV) or "").strip()
-        if not resolved_token or not resolved_org:
+        resolved_token = (token or env_str(_TOKEN_ENV) or "").strip()
+        if (not resolved_token and not oauth_configured) or not resolved_org:
             missing = []
             if not resolved_token:
                 missing.append(_TOKEN_ENV)
             if not resolved_org:
                 missing.append(_ORG_URL_ENV)
             return NHIDiscoveryResult(
+                provider="okta",
                 status=NHIDiscoveryStatus.MISSING_CREDENTIALS,
                 org_url=resolved_org or None,
                 warnings=(f"Okta NHI discovery enabled but missing: {', '.join(missing)}.",),
             )
         try:
-            client = OktaClient(resolved_org, resolved_token)
-        except Exception as exc:  # noqa: BLE001
-            logger.debug("Could not construct Okta client: %s", exc)
+            if oauth_configured:
+                from agent_bom.identity.okta_oauth import from_environment
+
+                client = OktaClient(resolved_org, auth=from_environment(resolved_org))
+            else:
+                client = OktaClient(resolved_org, resolved_token)
+        except Exception:  # noqa: BLE001
+            logger.debug("Could not construct Okta discovery client")
             return NHIDiscoveryResult(
+                provider="okta",
                 status=NHIDiscoveryStatus.MISSING_CLIENT,
                 org_url=resolved_org or None,
                 warnings=("Could not initialise the Okta client for NHI discovery.",),
             )
 
+    return _discover_client(client, resolved_org)
+
+
+def _discover_client(client: Any, resolved_org: str) -> NHIDiscoveryResult:
     warnings: list[str] = []
     raw_apps: list[dict[str, Any]] = []
     raw_tokens: list[dict[str, Any]] = []
     failures = 0
+    coverage: list[dict[str, Any]] = []
 
     try:
-        raw_apps = list(client.list_oauth2_service_apps() or [])
-    except Exception as exc:  # noqa: BLE001
+        raw_apps = _validated_listing(client.list_oauth2_service_apps())
+        coverage.append({"capability": "applications", "state": "complete", "count": len(raw_apps)})
+    except Exception:  # noqa: BLE001
         failures += 1
-        warnings.append(f"Okta service-app listing failed: {exc}")
+        warnings.append("Okta service-app listing failed; coverage is incomplete.")
+        coverage.append({"capability": "applications", "state": "unknown", "count": None})
     try:
-        raw_tokens = list(client.list_api_tokens() or [])
-    except Exception as exc:  # noqa: BLE001
+        raw_tokens = _validated_listing(client.list_api_tokens())
+        coverage.append({"capability": "api_token_metadata", "state": "complete", "count": len(raw_tokens)})
+    except Exception:  # noqa: BLE001
         failures += 1
-        warnings.append(f"Okta API-token listing failed: {exc}")
+        warnings.append("Okta API-token listing failed; coverage is incomplete.")
+        coverage.append({"capability": "api_token_metadata", "state": "unknown", "count": None})
 
-    identities = tuple(_iter_normalized(raw_apps, raw_tokens))[:_MAX_RESULTS]
+    all_identities = tuple(
+        replace(identity, source_scope=resolved_org.rstrip("/") or None) for identity in _iter_normalized(raw_apps, raw_tokens)
+    )
+    identities = all_identities[:_MAX_RESULTS]
+    truncated = len(all_identities) > _MAX_RESULTS
+    if truncated:
+        warnings.append("Okta identity collection limit reached; coverage is incomplete.")
 
-    if failures and not identities:
+    if failures == 2:
         return NHIDiscoveryResult(
+            provider="okta",
             status=NHIDiscoveryStatus.ERROR,
+            coverage=tuple(coverage),
             org_url=resolved_org or None,
             warnings=tuple(warnings),
         )
 
     return NHIDiscoveryResult(
-        status=NHIDiscoveryStatus.OK,
+        provider="okta",
+        status=NHIDiscoveryStatus.PARTIAL if failures or truncated else NHIDiscoveryStatus.OK,
         identities=identities,
+        coverage=tuple(coverage),
         warnings=tuple(warnings),
         org_url=resolved_org or None,
     )
