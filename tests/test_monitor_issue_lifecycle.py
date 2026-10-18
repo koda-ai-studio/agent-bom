@@ -397,3 +397,65 @@ def test_closed_freshness_tracker_stays_closed_during_sync_grace():
         "RELEASE_PUBLISHED_AT": (datetime.now(timezone.utc) - timedelta(hours=2)).isoformat(),
     }
     assert run_monitor("surface-freshness.yml", "freshness", [issue], probe_env=env) == []
+
+
+def _partial_glama_report(*, api_status="empty", extra_surfaces=()):
+    report = json.loads(_freshness_report("fresh_degraded"))
+    report["surfaces"][1].update(
+        version="0.106.1",
+        expected="0.106.1",
+        error=None,
+        degraded_reason=f"Glama Directory API inventory is {api_status}; using public Schema page evidence",
+        directory_api={"status": api_status, "tool_count": 0},
+        exact_tool_set=True,
+        exact_input_schemas=True,
+    )
+    report["surfaces"].extend(extra_surfaces)
+    return {"REPORT": json.dumps(report)}
+
+
+@pytest.mark.parametrize("state", ["open", "closed"])
+def test_partial_glama_evidence_reuses_existing_drift_issue_with_actionable_reason(state):
+    issue = {"number": 5184, "title": "supply-chain-drift: distribution surfaces out of sync", "state": state}
+    events = run_monitor("surface-freshness.yml", "freshness", [issue], probe_env=_partial_glama_report())
+    assert len(events) == 1
+    update = events[0]
+    assert (update["kind"], update["issue_number"], update["state"]) == ("update", 5184, "open")
+    assert update["title"] == "supply-chain-drift: distribution verification incomplete"
+    assert "Glama Directory API inventory is empty" in update["body"]
+    assert "authenticated" in update["body"]
+    assert "provider" in update["body"]
+    # A later identical probe must not produce another update or comment.
+    saved = {**issue, **update, "body": update["body"].replace("/99", "/98")}
+    assert run_monitor("surface-freshness.yml", "freshness", [saved], probe_env=_partial_glama_report()) == []
+
+
+def test_partial_evidence_reason_change_updates_the_same_tracker():
+    created = run_monitor("surface-freshness.yml", "freshness", [], probe_env=_partial_glama_report())[0]
+    issue = {**created, "number": 5184, "state": "open"}
+    events = run_monitor("surface-freshness.yml", "freshness", [issue], probe_env=_partial_glama_report(api_status="unreachable"))
+    assert len(events) == 1 and events[0]["issue_number"] == 5184
+    assert "Glama Directory API inventory is unreachable" in events[0]["body"]
+
+
+@pytest.mark.parametrize("status", ["stale", "unreachable", "not_configured"])
+def test_actual_drift_after_partial_evidence_keeps_the_same_tracker(status):
+    issue = {"number": 5184, "title": "supply-chain-drift: distribution verification incomplete", "state": "open"}
+    env = _partial_glama_report(extra_surfaces=[{"surface": "Docker", "status": status, "required": True}])
+    events = run_monitor("surface-freshness.yml", "freshness", [issue], probe_env=env)
+    assert len(events) == 1
+    assert events[0]["kind"] == "update" and events[0]["issue_number"] == 5184
+    assert events[0]["title"] == "supply-chain-drift: distribution surfaces out of sync"
+
+
+def test_full_recovery_closes_the_renamed_partial_evidence_tracker():
+    issue = {"number": 5184, "title": "supply-chain-drift: distribution verification incomplete", "state": "open"}
+    events = run_monitor("surface-freshness.yml", "freshness", [issue], fresh=True)
+    assert len(events) == 1 and events[0]["issue_number"] == 5184
+    assert events[0]["state"] == "closed"
+
+
+def test_partial_evidence_detail_escapes_markdown_table_delimiters():
+    env = _partial_glama_report(api_status="empty|unknown\nretry")
+    created = run_monitor("surface-freshness.yml", "freshness", [], probe_env=env)[0]
+    assert "empty\\|unknown<br>retry" in created["body"]
