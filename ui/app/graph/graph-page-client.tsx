@@ -2131,6 +2131,7 @@ function GraphPageInner() {
               fontSize: Math.max(12, Math.min(20, 13 / Math.max(graphViewport.zoom, 0.2))),
               fontWeight: 650,
             },
+            data: { ...edge.data, directionEmphasis: inPath },
             animated: captureMode ? false : Boolean(inPath || edge.animated),
             style: {
               ...edge.style,
@@ -2155,6 +2156,7 @@ function GraphPageInner() {
           blastRadius.nodeIds.has(edge.target);
         return {
           ...edge,
+          data: { ...edge.data, directionEmphasis: inBlast },
           animated: captureMode ? false : Boolean(inBlast || edge.animated),
           style: {
             ...edge.style,
@@ -2181,6 +2183,7 @@ function GraphPageInner() {
           reachabilitySummary.edgeKeys.has(`${edge.target}=>${edge.source}`);
         return {
           ...edge,
+          data: { ...edge.data, directionEmphasis: inReach },
           animated: captureMode ? false : Boolean(inReach || edge.animated),
           style: {
             ...edge.style,
@@ -2223,14 +2226,14 @@ function GraphPageInner() {
   ]);
 
   const accessibleBaseDisplayEdges = useMemo(
-    () => readableGraphEdges(baseDisplayEdges, undefined, {
+    () => readableGraphEdges(baseDisplayEdges.map(edge => ({ ...edge, selected: selectedRelationship?.scanId === selectedScanId && selectedRelationship.id === edge.id })), undefined, {
       captureMode,
       zoom: graphViewport.zoom,
       nodeLabels: graphNodeDisplayLabels(displayNodes),
       preserveVisualStyle: true,
       preserveLabelState: true,
     }),
-    [baseDisplayEdges, captureMode, displayNodes, graphViewport.zoom],
+    [baseDisplayEdges, captureMode, displayNodes, graphViewport.zoom, selectedRelationship, selectedScanId],
   );
 
   // Drift lens edge emphasis — new/changed edges adopt their change-kind colour

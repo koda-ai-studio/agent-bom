@@ -48,5 +48,10 @@ export function auditRenderedGraph({ edges }) {
       overlapsGlyph: Boolean(glyph && badge.left < glyph.right && badge.right > glyph.left && badge.top < glyph.bottom && badge.bottom > glyph.top),
     };
   });
-  return { renderedEdges: curves.length, crossings, logos };
+  const glyphs = new Map([...document.querySelectorAll(".react-flow__node")].map(node => [node.getAttribute("data-id"), node.querySelector(".graph-entity-glyph")?.getBoundingClientRect()]));
+  const misalignedHandles = curves.flatMap(({ edge, points }) => [[edge.source, points[0]], [edge.target, points.at(-1)]].flatMap(([id, point]) => {
+    const glyph = glyphs.get(id);
+    return glyph && Math.abs(point.y - (glyph.top + glyph.height / 2)) > 2 ? [{ edge: edge.id, node: id, offset: point.y - (glyph.top + glyph.height / 2) }] : [];
+  }));
+  return { renderedEdges: curves.length, crossings, logos, misalignedHandles };
 }

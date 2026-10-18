@@ -668,12 +668,13 @@ export function readableGraphEdges(
       : defaultLabelPresentation;
 
     // React Flow's arrow occupies one quarter of its marker viewport. Keep
-    // its triangle about nine screen pixels wide, independent of zoom/stroke.
+    // its triangle about six screen pixels wide, independent of zoom/stroke.
     const readableMarker = (marker: NonNullable<Edge["markerEnd"]>) => typeof marker === "object"
-      ? { ...marker, width: 36 / Math.max(zoom, 0.16), height: 30 / Math.max(zoom, 0.16), markerUnits: "userSpaceOnUse" }
+      ? { ...marker, width: 24 / Math.max(zoom, 0.16), height: 20 / Math.max(zoom, 0.16), markerUnits: "userSpaceOnUse" }
       : marker;
     return {
       ...edge,
+      data: { ...edge.data, directionEmphasis: active || edge.data?.directionEmphasis === true },
       ...(edge.markerEnd ? { markerEnd: readableMarker(edge.markerEnd) } : {}),
       ...(edge.markerStart ? { markerStart: readableMarker(edge.markerStart) } : {}),
       label,

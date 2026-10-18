@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { BaseEdge, EdgeLabelRenderer, SmoothStepEdge, useStore, type EdgeProps } from "@xyflow/react";
 import {
   ArrowRightLeft, Box, Bug, CirclePlay, Database, Eye, Fingerprint,
@@ -10,6 +10,7 @@ import {
 
 import { accessEvidenceQualifier } from "@/lib/graph-access-evidence";
 import { scheduleRelationshipLabelLayout } from "@/lib/relationship-label-layout";
+import { relationshipEdgeLabelText } from "@/lib/graph-utils";
 import { relationshipPath } from "@/lib/relationship-routing";
 
 // Icons supplement the recorded verb; they never replace its meaning or imply
@@ -77,6 +78,21 @@ export function qualifiedLabel(relationship: string, label: React.ReactNode, dat
 }
 
 export function RelationshipEdge(props: EdgeProps) {
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const edgeRef = useRef<SVGGElement>(null);
+  // The focusable wrapper belongs to React Flow, outside this component.
+  useLayoutEffect(() => {
+    const wrapper = edgeRef.current?.closest(".react-flow__edge");
+    const focus = () => setFocused(true);
+    const blur = () => setFocused(false);
+    wrapper?.addEventListener("focus", focus);
+    wrapper?.addEventListener("blur", blur);
+    return () => { wrapper?.removeEventListener("focus", focus); wrapper?.removeEventListener("blur", blur); };
+  }, []);
+  const emphasized = hovered || focused || props.selected || props.data?.directionEmphasis === true;
+  const relationship = typeof props.data?.relationship === "string" ? props.data.relationship : "";
+  const label = props.label ?? (emphasized && relationship ? relationshipEdgeLabelText(relationship, props.data) : null);
   const nodes = useStore(state => state.nodes);
   const zoom = useStore(state => state.transform[2]);
   const labelRef = useRef<HTMLDivElement>(null);
@@ -84,26 +100,26 @@ export function RelationshipEdge(props: EdgeProps) {
     id: node.id, x: node.position.x, y: node.position.y,
     width: node.measured?.width ?? 220, height: node.measured?.height ?? 224,
   })) : []);
-  useLayoutEffect(() => { scheduleRelationshipLabelLayout(labelRef.current); }, [path, zoom, props.label, x, y]);
+  useLayoutEffect(() => { scheduleRelationshipLabelLayout(labelRef.current); }, [path, zoom, label, x, y]);
   if (props.data?.isClusterEdge) return <SmoothStepEdge {...props} />;
-  const relationship = typeof props.data?.relationship === "string" ? props.data.relationship : "";
-  return <>
+
+  return <g ref={edgeRef} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
     {typeof props.data?.hoverDescription === "string" && <title>{props.data.hoverDescription}</title>}
     <BaseEdge id={props.id} path={path} style={props.style}
-      {...(props.markerStart ? { markerStart: props.markerStart } : {})}
-      {...(props.markerEnd ? { markerEnd: props.markerEnd } : {})}
+      {...(emphasized && props.markerStart ? { markerStart: props.markerStart } : {})}
+      {...(emphasized && props.markerEnd ? { markerEnd: props.markerEnd } : {})}
       {...(props.interactionWidth !== undefined ? { interactionWidth: props.interactionWidth } : {})} />
-    {props.label != null && <EdgeLabelRenderer>
+    {label != null && <EdgeLabelRenderer>
       <div ref={labelRef} data-edge-id={props.id} data-label-x={x} data-label-y={y} className={`nodrag nopan graph-relationship-label ${props.data?.aggregate ? "graph-aggregate-label" : ""}`} style={{
         position: "absolute",
         transform: `translate(-50%, -50%) translate(${x}px, ${y}px)`,
         fontSize: Math.max(Number(props.labelStyle?.fontSize) || 12, 12.5 / Math.max(zoom, 0.16)),
         pointerEvents: "none",
       }}>
-        <RelationshipBadge relationship={relationship}>{qualifiedLabel(relationship, props.label, props.data)}</RelationshipBadge>
+        <RelationshipBadge relationship={relationship}>{qualifiedLabel(relationship, label, props.data)}</RelationshipBadge>
       </div>
     </EdgeLabelRenderer>}
-  </>;
+  </g>;
 }
 
 export const relationshipEdgeTypes = { smoothstep: RelationshipEdge };

@@ -438,6 +438,7 @@ export function SecurityGraphInvestigation({
   const canvasNodes = pathLayout?.nodes ?? layout.nodes;
   const displayEdges = useMemo(
     () => readableGraphEdges(layout.edges.map(edge => ({ ...edge, data: { ...edge.data,
+      directionEmphasis: edge.id === selectedEdge?.id || edge.source === selectedNodeId || edge.target === selectedNodeId,
       quietLabel: edge.data?.quietLabel && edge.id !== selectedEdge?.id && edge.source !== selectedNodeId && edge.target !== selectedNodeId,
     } })), undefined, { nodeLabels: graphNodeDisplayLabels(layout.nodes) }),
     [layout.edges, layout.nodes, selectedEdge?.id, selectedNodeId],

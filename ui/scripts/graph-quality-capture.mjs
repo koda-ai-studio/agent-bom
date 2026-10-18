@@ -72,7 +72,7 @@ export async function runGraphQualityCapture({ newCapturePage, buildScopeShowcas
         return { overlaps, horizontalOverflow: document.documentElement.scrollWidth > window.innerWidth };
       });
       await page.screenshot({ path: path.join(output, `${key}.png`) });
-      if (geometry.overlaps.length || geometry.horizontalOverflow || audit.logos.some(logo => !logo.loaded || logo.overlapsGlyph) || errors.length) throw new Error(JSON.stringify({ geometry, audit, errors }));
+      if (geometry.overlaps.length || geometry.horizontalOverflow || audit.misalignedHandles.length || audit.logos.some(logo => !logo.loaded || logo.overlapsGlyph) || errors.length) throw new Error(JSON.stringify({ geometry, audit, errors }));
       const finding = fixture.nodes.find(n => n.entity_type === "misconfiguration") ?? fixture.nodes.find(n => n.entity_type === "vulnerability");
       if (finding) {
         const target = page.locator(`.react-flow__node[data-id="${finding.id}"]`);
@@ -108,6 +108,7 @@ export async function runGraphQualityCapture({ newCapturePage, buildScopeShowcas
         if (edge) {
           const arrow = page.locator(`.react-flow__edge[data-id="${edge.id}"]`);
           await arrow.focus();
+          if (edge.direction !== "undirected") await expect(arrow.locator(".react-flow__edge-path")).toHaveAttribute("marker-end", /url/);
           await page.keyboard.press("Enter");
           await expect(page.getByLabel("Relationship details", { exact: true })).toBeVisible();
           await expect(page.getByLabel("Relationship summary")).toBeVisible();
