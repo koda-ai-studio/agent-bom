@@ -30,6 +30,24 @@ sys.path.insert(0, os.path.dirname(__file__))
 import conftest  # noqa: E402
 
 
+def test_runtime_reset_clears_mcp_rate_windows_without_disabling_limits(monkeypatch) -> None:
+    from agent_bom import mcp_server
+
+    monkeypatch.setattr(mcp_server, "_MCP_CALLER_RATE_LIMIT", 2)
+    monkeypatch.setattr(mcp_server, "_MCP_GLOBAL_RATE_LIMIT", 2)
+    mcp_server._caller_rate_windows.clear()
+    assert mcp_server._check_caller_rate_limit("local") is None
+    assert mcp_server._check_caller_rate_limit("local") is None
+    assert mcp_server._check_caller_rate_limit("local") is not None
+
+    # An earlier test exhausted both budgets. The next test must start fresh,
+    # while repeated calls inside that test must still enforce both limits.
+    conftest._reset_runtime_state()
+    assert mcp_server._check_caller_rate_limit("local") is None
+    assert mcp_server._check_caller_rate_limit("other-caller") is None
+    assert mcp_server._check_caller_rate_limit("third-caller") is not None
+
+
 def test_store_singleton_modules_all_import_and_contribute() -> None:
     """Every module in the store-singleton registry imports and has a holder."""
     assert conftest._STORE_SINGLETON_MODULES, "registry must not be empty"

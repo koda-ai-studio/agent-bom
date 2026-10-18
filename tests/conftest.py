@@ -223,6 +223,12 @@ def _no_vuln_db_download(request):
 
 
 def _reset_runtime_state() -> None:
+    # MCP budgets are process-global: calls made by one test must not throttle
+    # another test on the same worker. Do not import the optional MCP server.
+    mcp_server = sys.modules.get("agent_bom.mcp_server")
+    if mcp_server is not None:
+        mcp_server._caller_rate_windows.clear()
+
     # Remove the kill-switch state file between tests so a blocked/CRITICAL
     # state from one test never restores into the next on the same worker.
     try:
