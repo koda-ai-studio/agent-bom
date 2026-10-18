@@ -153,6 +153,8 @@ function RuntimeEvidenceChip({ tier }: { tier: RuntimeEvidenceTier }) {
 
 function ContextHandles() {
   return <>
+    <Handle type="source" id="context-up" position={Position.Top} className="!h-1 !w-1 !border-0 !bg-transparent" />
+    <Handle type="target" id="context-up" position={Position.Bottom} className="!h-1 !w-1 !border-0 !bg-transparent" />
     <Handle type="source" id="context" position={Position.Left} className="!h-1 !w-1 !border-0 !bg-transparent" />
     <Handle type="target" id="context" position={Position.Right} className="!h-1 !w-1 !border-0 !bg-transparent" />
   </>;

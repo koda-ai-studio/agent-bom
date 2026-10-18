@@ -2,6 +2,8 @@
 
 import { activateGraphNodeFromKeyboard } from "@/lib/graph-keyboard-selection";
 import { GraphScopeEvidence } from "@/components/graph-scope-evidence";
+import { GraphInvestigationContextControls } from "@/components/graph-investigation-context-controls";
+import { graphInvestigationContext, selectInvestigationContext, investigationRankEdges, restoreInvestigationEdges } from "@/lib/graph-investigation-context";
 import { GraphCanvasAutoFit } from "@/components/graph-canvas-auto-fit";
 import { GraphSnapshotReceipt } from "@/components/graph-snapshot-receipt";
 import { mergeGraphNodeDetail } from "@/lib/graph-entity-detail";
@@ -918,6 +920,7 @@ function GraphPageInner() {
   // Last URL the filter→URL sync effect wrote, used to break an infinite
   // router.replace loop (see the sync effect below for the full rationale).
   const lastSyncedUrlRef = useRef<string | null>(null);
+  const initialContextViewRef = useRef(searchParams.get("context_view") ?? (searchParams.has("layers") ? "all" : null));
   const captureModeFromLocation = useCaptureMode();
   const captureMode = captureModeFromLocation || searchParams.get("capture") === "1";
 
@@ -1555,6 +1558,9 @@ function GraphPageInner() {
     // of the shareable view state.
     const lens = currentSearch.get("lens") || searchParams.get("lens");
     if (lens) nextParams.set("lens", lens);
+    const contextView = currentSearch.get("context_view") || initialContextViewRef.current
+      || (activeSnapshot?.snapshot_kind === "correlation" ? "dependency" : null);
+    if (contextView) nextParams.set("context_view", contextView);
     if (selectedScenarioId) {
       nextParams.set("scenario", selectedScenarioId);
       nextParams.set("state", attackPathLens ? "current" : scenarioState);
@@ -1606,6 +1612,7 @@ function GraphPageInner() {
     history.replaceState(null, "", url);
   }, [
     activeScopePreset,
+    activeSnapshot?.snapshot_kind,
     attackPathLens,
     captureMode,
     filters,
@@ -1743,8 +1750,32 @@ function GraphPageInner() {
     const ids = new Set(unconnected.map(node => node.id));
     return { ...selected, nodes: selected.nodes.filter(node => !ids.has(node.id)), unconnected };
   }, [aggregated.nodes, aggregated.edges, attackPathNodeIds, scenarioContextIds, scenarioConnectionNotes]);
+  const investigationContext = useMemo(() => graphInvestigationContext(scenarioElements.nodes, scenarioElements.edges, {
+    rootId: investigationMode?.rootId,
+    correlation: activeSnapshot?.snapshot_kind === "correlation",
+    pathSelected: Boolean(selectedAttackPath || selectedScenarioId || rollupNavigationActive),
+  }), [scenarioElements, investigationMode?.rootId, activeSnapshot?.snapshot_kind, selectedAttackPath, selectedScenarioId, rollupNavigationActive]);
+  const requestedContextGroup = searchParams.get("context_view");
+  const selectedContextGroup = investigationContext?.groups.some(group => group.id === requestedContextGroup)
+    ? requestedContextGroup!
+    : requestedContextGroup === "all" || investigationContext?.anchorId || initialContextViewRef.current === "all" ? "all" : "dependency";
+  const contextElements = useMemo(() => investigationContext
+    ? { ...scenarioElements, ...selectInvestigationContext(investigationContext, selectedContextGroup) }
+    : { ...scenarioElements, omittedNodes: 0, crossContextEdges: 0 }, [scenarioElements, investigationContext, selectedContextGroup]);
+  const selectContextGroup = useCallback((id: string) => {
+    if (investigationContext && selectedNodeId && !selectInvestigationContext(investigationContext, id).nodes.some(node => node.id === selectedNodeId)) {
+      setSelectedNodeId(null);
+      setSelectedNode(null);
+      setPinnedFocusId(null);
+      setHoveredNodeId(null);
+    }
+    setSelectedRelationship(null);
+    const url = new URL(window.location.href);
+    url.searchParams.set("context_view", id);
+    history.replaceState(null, "", url);
+  }, [investigationContext, selectedNodeId]);
   const layoutInput = useMemo(() => {
-    const selected = scenarioElements;
+    const selected = contextElements;
     // Decide broad-map rendering before paging the focused React Flow canvas.
     // Otherwise the 100-node page can never reach the WebGL threshold.
     const broadMap = !investigationMode && !scenarioContextIds && decideGraphRenderer({
@@ -1754,11 +1785,13 @@ function GraphPageInner() {
     }).kind === "webgl";
     if (broadMap) return { ...selected, omittedNodes: 0, pageCount: 1, page: 0, layoutRequired: false };
     return { ...boundedGraphElements(selected.nodes, selected.edges, [...(attackPathNodeIds ?? scenarioContextIds ?? [])], canvasPage), layoutRequired: true };
-  }, [scenarioElements, attackPathNodeIds, scenarioContextIds, canvasPage, investigationMode, captureMode, selectedAttackPath, rollupNavigationActive]);
-  const { nodes: layoutNodes, edges: layoutEdges, pending: layoutPending } = useGraphLayout(
+  }, [contextElements, attackPathNodeIds, scenarioContextIds, canvasPage, investigationMode, captureMode, selectedAttackPath, rollupNavigationActive]);
+  const rankedInvestigationEdges = useMemo(() => investigationContext ? investigationRankEdges(investigationContext, layoutInput.edges) : layoutInput.edges,
+    [investigationContext, layoutInput.edges]);
+  const { nodes: layoutNodes, edges: rankedLayoutEdges, pending: layoutPending } = useGraphLayout(
     graphLayoutKind,
     layoutInput.nodes,
-    layoutInput.edges,
+    rankedInvestigationEdges,
     {
       dagre: { direction: "TB", nodeWidth: 240, nodeHeight: 216, rankSep: 32, nodeSep: 24 },
       force: {
@@ -1781,6 +1814,8 @@ function GraphPageInner() {
     },
     layoutInput.layoutRequired && !rollupDecisionActive && !rollupCanvasPending && !rollupCanvasFailed,
   );
+  const layoutEdges = useMemo(() => restoreInvestigationEdges(layoutInput.edges, rankedLayoutEdges, graphLayoutKind === "dagre"),
+    [layoutInput.edges, rankedLayoutEdges, graphLayoutKind]);
   const selectedEvidenceHopCount = selectedAttackPath
     ? Math.max(0, selectedAttackPath.hops.length - 1)
     : 0;
@@ -3693,6 +3728,10 @@ function GraphPageInner() {
             </div>
           )}
           {!rollupNavigationActive && !rollupDecisionActive && displayNodes.length > 0 && <GraphScopeEvidence edges={displayEdges} scope={graphRenderer.kind === "webgl" ? "loaded" : "visible"} />}
+          {investigationContext && graphRenderer.kind === "react-flow" && <GraphInvestigationContextControls
+            groups={investigationContext.groups} selected={selectedContextGroup}
+            visibleNodes={contextElements.nodes.length} loadedNodes={scenarioElements.nodes.length}
+            crossContextEdges={contextElements.crossContextEdges} onSelect={selectContextGroup} />}
           {!rollupNavigationActive && !rollupDecisionActive && graphRenderer.kind === "react-flow" && displayNodes.length > 0 && <GraphLegendDock items={legendItems} separated />}
           <div ref={setGraphNavigationMount} />
           <div data-graph-adaptive-frame data-graph-annotations={graphLayoutKind === "asset-hierarchy" ? "on-demand" : undefined} className={`relative flex ${selectedAttackPath ? "h-[max(24rem,calc(100dvh-25rem))] sm:h-[clamp(24rem,50dvh,36rem)]" : selectedScenarioId ? "h-[max(24rem,calc(100dvh-25rem))] sm:h-[max(28rem,calc(100dvh-21rem))]" : "h-[var(--graph-adaptive-height,clamp(22rem,60dvh,48rem))]"} shrink-0 overflow-hidden rounded-lg border border-outline bg-surface`}>
