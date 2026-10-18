@@ -50,6 +50,22 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
     if (width === 390) await controls.getByLabel("Graph context", { exact: true }).selectOption("all");
     else await controls.getByRole("button", { name: "All relationships", exact: true }).click();
     await expect(page.locator(".react-flow__node")).toHaveCount(4);
+    if (width === 390) {
+      await page.waitForTimeout(1000);
+      const captionCrossings = await page.locator(".react-flow").evaluate(canvas => {
+        const card = canvas.querySelector('.react-flow__node[data-id="agent"] [data-graph-entity]')!;
+        const captions = [...card.children].slice(1).filter(child => getComputedStyle(child).display !== "none" && getComputedStyle(child).visibility !== "hidden").map(child => child.getBoundingClientRect());
+        return [...canvas.querySelectorAll<SVGPathElement>(".react-flow__edge-path")].filter(path => {
+          const matrix = path.getScreenCTM()!;
+          for (let distance = 0; distance <= path.getTotalLength(); distance += 2) {
+            const point = path.getPointAtLength(distance).matrixTransform(matrix);
+            if (captions.some(box => point.x > box.left + 1 && point.x < box.right - 1 && point.y > box.top + 1 && point.y < box.bottom - 1)) return true;
+          }
+          return false;
+        }).map(path => path.closest(".react-flow__edge")?.getAttribute("data-id"));
+      });
+      expect(captionCrossings).toEqual([]);
+    }
     await page.locator(".react-flow").scrollIntoViewIfNeeded();
     await page.screenshot({ path: info.outputPath(`agent-context-${theme}-${width}.png`), animations: "disabled" });
   });

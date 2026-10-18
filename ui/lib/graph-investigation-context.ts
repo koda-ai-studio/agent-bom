@@ -98,6 +98,6 @@ export function restoreInvestigationEdges(original: Edge[], ranked: Edge[], vert
     const source = byId.get(edge.id);
     if (!source || source.source === edge.source) return edge;
     return { ...edge, source: source.source, target: source.target,
-      sourceHandle: vertical ? "context-up" : "context", targetHandle: vertical ? "context-up" : "context" };
+      sourceHandle: vertical ? "context-up" : "context", targetHandle: "context" };
   });
 }

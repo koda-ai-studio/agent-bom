@@ -3,9 +3,82 @@ import { getBezierPath, Position, type EdgeProps } from "@xyflow/react";
 type Obstacle = { id: string; x: number; y: number; width: number; height: number };
 type Endpoints = Pick<EdgeProps, "source" | "target" | "sourceX" | "sourceY" | "targetX" | "targetY" | "sourcePosition" | "targetPosition">;
 
-/** Detour long left-to-right links around intervening entities in bounded views. */
+type Point = [number, number];
+
+function roundedRoute(points: Point[]): string {
+  const distinct = points.filter((point, index) => !index || point[0] !== points[index - 1]![0] || point[1] !== points[index - 1]![1]);
+  let path = `M${distinct[0]![0]},${distinct[0]![1]}`;
+  for (let index = 1; index < distinct.length - 1; index++) {
+    const previous = distinct[index - 1]!, point = distinct[index]!, next = distinct[index + 1]!;
+    const incoming = Math.hypot(point[0] - previous[0], point[1] - previous[1]);
+    const outgoing = Math.hypot(next[0] - point[0], next[1] - point[1]);
+    const radius = Math.min(12, incoming / 2, outgoing / 2);
+    const before = point.map((value, axis) => value + (previous[axis]! - value) * radius / incoming);
+    const after = point.map((value, axis) => value + (next[axis]! - value) * radius / outgoing);
+    path += ` L${before[0]},${before[1]} Q${point[0]},${point[1]} ${after[0]},${after[1]}`;
+  }
+  return `${path} L${distinct.at(-1)![0]},${distinct.at(-1)![1]}`;
+}
+
+/** A vertical rank still uses glyph-side ports. Exit beside the full caption
+ * before turning down, and reverse the route for an incoming relationship. */
+function endpointCaptionRoute(edge: Endpoints, obstacles: Obstacle[], path: string): [string, number, number] | null {
+  if (obstacles.length > 80 || Math.abs(edge.targetY - edge.sourceY) < 80) return null;
+  const forward = edge.sourceY < edge.targetY;
+  const upper = { id: forward ? edge.source : edge.target, x: forward ? edge.sourceX : edge.targetX, y: forward ? edge.sourceY : edge.targetY, position: forward ? edge.sourcePosition : edge.targetPosition };
+  const lower = { id: forward ? edge.target : edge.source, x: forward ? edge.targetX : edge.sourceX, y: forward ? edge.targetY : edge.sourceY, position: forward ? edge.targetPosition : edge.sourcePosition };
+  const upperNode = obstacles.find(node => node.id === upper.id);
+  const lowerNode = obstacles.find(node => node.id === lower.id);
+  if (!upperNode || !lowerNode || ![Position.Left, Position.Right, Position.Bottom].includes(upper.position)) return null;
+  const captionTop = upper.position === Position.Bottom ? upper.y + 8 : 2 * upper.y - upperNode.y + 8;
+  const bottom = upperNode.y + upperNode.height;
+  if (captionTop >= bottom || lowerNode.y < bottom + 16) return null;
+  const coordinates = path.match(/-?\d+(?:\.\d+)?(?:e[+-]?\d+)?/gi)?.map(Number) ?? [];
+  if (coordinates.length !== 8) return null;
+  let crossesCaption = false;
+  for (let step = 1; step < 48 && !crossesCaption; step++) {
+    const t = step / 48, u = 1 - t;
+    const x = u ** 3 * coordinates[0]! + 3 * u ** 2 * t * coordinates[2]! + 3 * u * t ** 2 * coordinates[4]! + t ** 3 * coordinates[6]!;
+    const y = u ** 3 * coordinates[1]! + 3 * u ** 2 * t * coordinates[3]! + 3 * u * t ** 2 * coordinates[5]! + t ** 3 * coordinates[7]!;
+    crossesCaption = x > upperNode.x && x < upperNode.x + upperNode.width && y > captionTop && y < bottom;
+  }
+  if (!crossesCaption) return null;
+  const upperX = upper.position === Position.Left ? upperNode.x - 24 : upperNode.x + upperNode.width + 24;
+  const lowerX = lower.position === Position.Top ? lower.x : lower.position === Position.Left ? lowerNode.x - 24 : lowerNode.x + lowerNode.width + 24;
+  const laneY = (bottom + lowerNode.y) / 2;
+  const points: Point[] = [[upper.x, upper.y], [upperX, upper.y], [upperX, laneY], [lowerX, laneY], [lowerX, lower.y], [lower.x, lower.y]];
+  const intervening = obstacles.filter(node => node.id !== upper.id && node.id !== lower.id
+    && node.y < lower.y && node.y + node.height > upper.y);
+  // A skipped rank can contain another entity. Test every segment, reserving
+  // room for rounded corners, before using an interior or exterior corridor.
+  const clear = (route: Point[]) => route.slice(1).every((point, index) => {
+    const previous = route[index]!;
+    return intervening.every(node => Math.max(previous[0], point[0]) <= node.x - 16
+      || Math.min(previous[0], point[0]) >= node.x + node.width + 16
+      || Math.max(previous[1], point[1]) <= node.y - 16
+      || Math.min(previous[1], point[1]) >= node.y + node.height + 16);
+  });
+  if (clear(points)) return [roundedRoute(forward ? points : points.reverse()), (upperX + lowerX) / 2, laneY];
+  const gap = Math.min(24, (lowerNode.y - bottom) / 3);
+  const firstLane = bottom + gap, lastLane = lowerNode.y - gap;
+  const outerLanes = [Math.min(upperNode.x, lowerNode.x, ...intervening.map(node => node.x)) - 24,
+    Math.max(upperNode.x + upperNode.width, lowerNode.x + lowerNode.width, ...intervening.map(node => node.x + node.width)) + 24];
+  const candidates = outerLanes.map(x => ({ x, route: [
+    [upper.x, upper.y], [upperX, upper.y], [upperX, firstLane], [x, firstLane],
+    [x, lastLane], [lowerX, lastLane], [lowerX, lower.y], [lower.x, lower.y],
+  ] as Point[] })).filter(candidate => clear(candidate.route));
+  const length = (route: Point[]) => route.slice(1).reduce((total, point, index) => total + Math.abs(point[0] - route[index]![0]) + Math.abs(point[1] - route[index]![1]), 0);
+  candidates.sort((a, b) => length(a.route) - length(b.route));
+  const candidate = candidates[0];
+  if (!candidate) return null;
+  return [roundedRoute(forward ? candidate.route : candidate.route.reverse()), candidate.x, (firstLane + lastLane) / 2];
+}
+
+/** Route bounded relationships around captions and intervening entities. */
 export function relationshipPath(edge: Endpoints, obstacles: Obstacle[]): [string, number, number] {
   const [path, labelX, labelY] = getBezierPath(edge);
+  const captionRoute = endpointCaptionRoute(edge, obstacles, path);
+  if (captionRoute) return captionRoute;
   // A serpentine path changes rows on the same side of both circular glyphs.
   // Keep its turn and caption outside the wider name/metadata column.
   if (obstacles.length <= 80 && Math.abs(edge.targetX - edge.sourceX) < 8

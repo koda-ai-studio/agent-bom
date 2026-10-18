@@ -36,6 +36,7 @@ describe("investigation context presentation", () => {
     expect(restored[0]!.source).toBe("role");
     expect(restored[0]!.target).toBe("agent");
     expect(restored[0]!.data).toEqual(edges[0]!.data);
+    expect(restoreInvestigationEdges(visible.edges, ranked, true)[0]).toMatchObject({ source: "role", target: "agent", sourceHandle: "context-up", targetHandle: "context", data: edges[0]!.data });
     expect(edges[0]!.source).toBe("role");
     expect(selectInvestigationContext(context, "all").edges).toEqual(edges);
   });
