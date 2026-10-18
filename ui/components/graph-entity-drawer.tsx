@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { GraphFindingContext } from "@/components/graph-finding-context";
 import { GraphScopeDetail } from "@/components/graph-scope-detail";
 import type { GraphNodeDetailResponse } from "@/lib/api-types";
 import { useEffect, useMemo, useState } from "react";
@@ -132,6 +133,7 @@ export function GraphEntityDrawer({
   const missingLocationFields = locationFields.filter(([, value]) => !value).map(([label]) => label.toLowerCase());
   const headerSlot = (
     <div className="space-y-3 text-xs text-ink-secondary">
+      <GraphFindingContext data={enriched} />
       <AdminAssessment attributes={enriched.attributes ?? {}} />
       {enrich && scanId && nodeId && detail && ["agent", "vulnerability", "user", "role", "group", "service_account", "service_principal", "federated_identity", "managed_identity"].includes(String(detail.node.entity_type)) && <GraphConsequencePanel nodeId={nodeId} scanId={scanId} snapshotGeneration={detail?.snapshot_generation}
         findingRoot={enriched.nodeType === "vulnerability"}

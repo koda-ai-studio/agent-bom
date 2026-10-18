@@ -1,5 +1,6 @@
 "use client";
 
+import { GraphScopeEvidence } from "@/components/graph-scope-evidence";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -647,6 +648,7 @@ export function SecurityGraphInvestigation({
 
   return (
     <section className="overflow-hidden rounded-2xl border border-outline bg-surface">
+      <GraphScopeEvidence edges={displayEdges} />
       {!embedded && (<div className="flex flex-wrap items-center justify-between gap-3 border-b border-outline px-4 py-3">
         <div>
           <h2 className="text-sm font-semibold text-foreground">Interactive graph</h2>

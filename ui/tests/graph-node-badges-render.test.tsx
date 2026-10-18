@@ -39,7 +39,7 @@ describe("graph node badges on the canvas and in the legend", () => {
     expect(chips).toEqual(["AWS", "PROD"]);
     expect(within(node).getByLabelText("Environment: production")).toBeInTheDocument();
     expect(within(node).queryByText("production", { exact: true })).not.toBeInTheDocument();
-    expect(within(node).queryByRole("img")).not.toBeInTheDocument();
+    expect(within(node).getByRole("img", { name: "Source: AWS" })).toBeVisible();
   });
 
   it("builds legend chips from the same renderer as the node chips", () => {

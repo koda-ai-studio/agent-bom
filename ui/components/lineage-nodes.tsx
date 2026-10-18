@@ -6,7 +6,7 @@ import { Bug, FolderGit2, KeyRound, Package, Wrench } from "lucide-react";
 import { graphRepositoryContext } from "@/lib/graph-repository-context";
 
 import { AgentSourceMark, SourceBadge } from "@/components/agent-source-mark";
-import { agentSource } from "@/lib/agent-source";
+import { agentSource, entitySource } from "@/lib/agent-source";
 import { NodeBadgeRow, SeverityRingMark } from "@/components/graph-node-badges";
 import { GraphScopeNode } from "@/components/graph-scope-node";
 import type { GraphRollupContainer, GraphCompleteness } from "@/lib/api-types";
@@ -172,6 +172,8 @@ function NodeCard({
   const repository = graphRepositoryContext(data);
   const Icon = repository ? FolderGit2 : entityIcon(data.nodeType);
   const brand = agentSource(data);
+  const provider = repository?.source ?? (data.nodeType !== "agent" ? entitySource(data) : null);
+  const displayTitle = typeof data.attributes?.display_title === "string" && data.attributes.display_title.trim() ? data.attributes.display_title : data.label;
   const isRollupContainer = data.attributes?.rollup_is_container === true;
   const { badges, ring } = nodeBadges(data);
   const environmentRaw = badges.find((badge) => badge.kind === "environment")?.raw;
@@ -191,12 +193,12 @@ function NodeCard({
         <ContextHandles />
         {data.nodeType === "agent"
           ? <AgentSourceMark source={brand} style={{ width: "var(--graph-node-icon-size, 32px)", height: "var(--graph-node-icon-size, 32px)" }} className={`h-8 w-8 ${iconClass}`} />
-          : <Icon aria-hidden="true" style={{ width: "var(--graph-node-icon-size, 32px)", height: "var(--graph-node-icon-size, 32px)", ...(repository?.source ? { transform: "translate(-28%, -28%)" } : {}) }} className={`h-8 w-8 ${iconClass}`} />}
-        {repository?.source && <SourceBadge source={repository.source} graph className="absolute -bottom-1 -right-1"
+          : <Icon aria-hidden="true" style={{ width: "var(--graph-node-icon-size, 32px)", height: "var(--graph-node-icon-size, 32px)", ...(provider ? { transform: "translate(-28%, -28%)" } : {}) }} className={`h-8 w-8 ${iconClass}`} />}
+        {provider && <SourceBadge source={provider} graph className="absolute -bottom-1 -right-1"
           style={{ width: "calc(var(--graph-node-meta-size, 12px) * 2.2)", height: "calc(var(--graph-node-meta-size, 12px) * 2.2)" }} />}
       </div>
       <p className="mb-1 w-full min-w-0 break-words line-clamp-3 text-lg font-semibold leading-[1.2] text-foreground [overflow-wrap:anywhere]" style={{ fontSize: "var(--graph-node-label-size, 18px)" }}>
-        {canvasNodeLabel(repository?.slug || data.label).split(/(?<=[_/@-])/).map((part, index) => <span key={index}>{part}<wbr /></span>)}
+        {canvasNodeLabel(repository?.slug || displayTitle).split(/(?<=[_/@-])/).map((part, index) => <span key={index}>{part}<wbr /></span>)}
       </p>
       <NodeBadgeRow badges={badges}>
         <span style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} className="text-xs text-ink-secondary">
@@ -233,7 +235,7 @@ const NODE_TYPE_BADGES: Record<LineageNodeType, string> = {
   server: "Server",
   package: "Package",
   vulnerability: "CVE",
-  misconfiguration: "Config",
+  misconfiguration: "Finding",
   credential: "Cred ref",
   tool: "Tool",
   model: "Model",
@@ -261,7 +263,7 @@ const NODE_TYPE_BADGES: Record<LineageNodeType, string> = {
   dataStore: "Data",
   directory: "Folder",
   sourceFile: "Source",
-  configFile: "Config",
+  configFile: "Config file",
   codeModule: "Module",
   ciJob: "CI job",
   apiGateway: "Gateway",

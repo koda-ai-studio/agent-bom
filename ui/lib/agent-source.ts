@@ -77,3 +77,14 @@ export function agentSource(data: SourceInput): AgentSource | null {
   // Several collected sources do not establish one vendor identity.
   return sources.length && new Set(sources.map(source => source.id)).size === 1 ? sources[0]! : null;
 }
+
+/** Hosting/provider marks require explicit metadata and never come from names. */
+export function entitySource(data: SourceInput & { dimensions?: { cloud_provider?: string | null | undefined } | undefined }): AgentSource | null {
+  if (data.nodeType === "agent") return agentSource(data);
+  if (["vulnerability", "misconfiguration", "package", "sourceFile", "configFile", "directory", "credential"].includes(data.nodeType ?? "")) return null;
+  const declared = [data.dimensions?.cloud_provider, data.attributes?.cloud_provider, data.attributes?.provider, data.attributes?.vendor]
+    .filter((value): value is string => typeof value === "string" && Boolean(value.trim()));
+  const sources = declared.map(lookup);
+  // Conflicting or unknown explicit metadata must not become a guessed brand.
+  return sources.length && sources.every(Boolean) && new Set(sources.map(source => source!.id)).size === 1 ? sources[0]! : null;
+}

@@ -124,3 +124,18 @@ it("shows unknown repository remote explicitly and keeps scanned revision separa
   expect(screen.getByText("Scanned commit")).toBeVisible();
   expect(screen.getByText("Default branch")).toBeVisible();
 });
+
+it("distinguishes security findings from config files and preserves the canonical title", () => {
+  const Renderer = lineageNodeTypes.misconfigNode;
+  const { container } = render(<ReactFlowProvider><Renderer data={{ label: "Workflow publishes with a long-lived registry token", nodeType: "misconfiguration", severity: "high", attributes: { display_title: "Long-lived registry token" } }} /></ReactFlowProvider>);
+  expect(screen.getByText("Finding", { exact: true })).toBeVisible();
+  expect(container.querySelector('[data-graph-entity] > p')).toHaveTextContent("Long-lived registry token");
+  expect(screen.getByTitle("Workflow publishes with a long-lived registry token")).toBeVisible();
+});
+
+it("uses explicit provider metadata on infrastructure while keeping its entity glyph", () => {
+  const Renderer = lineageNodeTypes.containerNode;
+  const { container } = render(<ReactFlowProvider><Renderer data={{ label: "production workload", nodeType: "container", attributes: { cloud_provider: "aws" } }} /></ReactFlowProvider>);
+  expect(screen.getByRole("img", { name: "Source: AWS" })).toBeVisible();
+  expect(container.querySelector('.graph-entity-glyph > svg')).not.toBeNull();
+});

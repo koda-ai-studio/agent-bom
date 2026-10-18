@@ -1,7 +1,7 @@
 "use client";
 
 import { AgentSourceMark } from "@/components/agent-source-mark";
-import { agentSource } from "@/lib/agent-source";
+import { entitySource } from "@/lib/agent-source";
 import { entityIcon } from "@/lib/entity-icons";
 import { graphRepositoryContext } from "@/lib/graph-repository-context";
 import { FolderGit2 } from "lucide-react";
@@ -100,7 +100,7 @@ export function LineageDetailPanel({
 }) {
   const repository = graphRepositoryContext(data);
   const Icon = repository ? FolderGit2 : entityIcon(data.nodeType);
-  const brand = agentSource(data);
+  const brand = entitySource(data);
   const typeLabel = repository ? "Repository" : data.nodeType === "server" ? "MCP Server" : data.nodeType === "sharedServer" ? "Shared MCP Server" : NODE_LABELS[data.nodeType];
   const osvUrl =
     data.nodeType === "vulnerability"
@@ -696,7 +696,7 @@ export function LineageDetailPanel({
       <div className="fixed inset-0 z-[80]" data-testid="graph-entity-drawer">
         <Drawer open onClose={onClose} title={data.label} backdropLabel="Dismiss graph details"
           eyebrow={typeLabel} size="none" resizable={false}
-          headerAside={repository || brand ? <AgentSourceMark source={repository?.source ?? brand} icon={repository ? FolderGit2 : undefined} className="h-9 w-9" /> : undefined}
+          headerAside={repository || brand ? <AgentSourceMark source={repository?.source ?? brand} icon={Icon} className="h-9 w-9" /> : undefined}
           bodyClassName="!p-0 flex flex-col" footer={footerSlot}>
           {tabBar}
           <div role="tabpanel" data-testid={`graph-drawer-panel-${activeId}`}
@@ -757,7 +757,7 @@ export function LineageDetailPanel({
           </span>
           <div className="mt-2 flex items-start gap-3">
             <span className="rounded-full border border-outline bg-surface-muted p-2" style={brand ? { borderColor: brand.accent } : undefined}>
-              {data.nodeType === "agent" || repository ? <AgentSourceMark source={repository?.source ?? brand} icon={repository ? FolderGit2 : undefined} className="h-5 w-5 text-ink-secondary" /> : <Icon aria-hidden="true" className="h-5 w-5 shrink-0 text-ink-secondary" />}
+              {brand || repository ? <AgentSourceMark source={repository?.source ?? brand} icon={Icon} className="h-5 w-5 text-ink-secondary" /> : <Icon aria-hidden="true" className="h-5 w-5 shrink-0 text-ink-secondary" />}
             </span>
             <h3 className="min-w-0 self-center break-words text-base font-semibold leading-5 text-foreground [overflow-wrap:anywhere]">
               {data.label}

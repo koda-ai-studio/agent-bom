@@ -622,7 +622,7 @@ function toFlowEdge(edge: UnifiedEdge): Edge {
     : DASHED_RELATIONSHIPS.has(relationship);
   // Motion denotes a recorded runtime receipt; severity alone is not activity.
   const animated = evidenceMode === "runtime" && !evidenceBlocked;
-  const marker = { type: MarkerType.ArrowClosed, color: strokeColor, width: 14, height: 10 };
+  const marker = { type: MarkerType.ArrowClosed, color: strokeColor, width: 20, height: 16 };
 
   return {
     id: edge.id || `${edge.source}:${relationship}:${edge.target}`,
@@ -634,6 +634,7 @@ function toFlowEdge(edge: UnifiedEdge): Edge {
       relationshipLabel: relationshipEdgeLabelText(relationship, { evidenceMode, evidenceBlocked }),
       relationshipCategory: legend.layer,
       evidenceMode,
+      evidenceLabel: graphEdgeEvidenceLabel(edge),
       evidenceBlocked,
       hoverDescription: `${relationshipEdgeLabelText(relationship, { evidenceMode, evidenceBlocked })} · ${graphEdgeEvidenceLabel(edge)} · ${edge.direction === "bidirectional" ? "Bidirectional" : "Directed"} · Traversal ${edge.traversable ? "eligible" : "not enabled"}. Select to inspect evidence.`,
       direction: edge.direction,
