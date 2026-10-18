@@ -60,3 +60,12 @@ describe("investigation context presentation", () => {
     expect(graphInvestigationContext(Array.from({ length: 25 }, (_, i) => node(String(i), "agent")), [], { rootId: "0" })).toBeNull();
   });
 });
+
+it("groups findings by their recorded asset instead of their category alone", () => {
+  const nodes = [node("package", "package"), node("package-cve", "vulnerability"), node("workload", "agent"), node("cloud-policy", "misconfiguration"), node("server-cve", "vulnerability")];
+  const edges = [edge("package", "package-cve", "vulnerable_to"), edge("cloud-policy", "workload", "affects"), edge("server-cve", "workload", "affects")];
+  const context = graphInvestigationContext(nodes, edges, { correlation: true })!;
+  expect(context.groups.find(group => group.id === "dependency")!.nodeIds).toEqual(["package", "package-cve"]);
+  expect(context.groups.find(group => group.id === "workload")!.nodeIds).toEqual(["workload", "cloud-policy", "server-cve"]);
+  expect(selectInvestigationContext(context, "all").edges).toEqual(edges);
+});

@@ -11,8 +11,9 @@ const ACCESS_RELATIONSHIPS = new Set([
 ]);
 const DEPENDENCY_EVIDENCE = new Set<LineageNodeType>([
   "sourceFile", "configFile", "codeModule", "directory", "container", "package",
-  "vulnerability", "misconfiguration",
 ]);
+const FINDINGS = new Set<LineageNodeType>(["vulnerability", "misconfiguration"]);
+const FINDING_RELATIONSHIPS = new Set(["vulnerable_to", "affects"]);
 
 export interface InvestigationContextGroup {
   id: "identity" | "connections" | "dependency" | "workload";
@@ -47,7 +48,13 @@ export function graphInvestigationContext(
     };
   }
   if (!options.correlation || !nodes.some(node => node.data.nodeType === "package")) return null;
-  const dependencyIds = new Set(nodes.filter(node => DEPENDENCY_EVIDENCE.has(node.data.nodeType)).map(node => node.id));
+  const artifactIds = new Set(nodes.filter(node => DEPENDENCY_EVIDENCE.has(node.data.nodeType)).map(node => node.id));
+  const dependencyIds = new Set(artifactIds);
+  for (const edge of edges) {
+    if (!FINDING_RELATIONSHIPS.has(String(edge.data?.relationship))) continue;
+    const findingId = artifactIds.has(edge.source) ? edge.target : artifactIds.has(edge.target) ? edge.source : undefined;
+    if (findingId && FINDINGS.has(byId.get(findingId)?.data.nodeType as LineageNodeType)) dependencyIds.add(findingId);
+  }
   if (!dependencyIds.size || dependencyIds.size === nodes.length) return null;
   return {
     nodes, edges,
