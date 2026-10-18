@@ -478,6 +478,34 @@ def _edge_projection(
     return edge_projection(graph, entries, children, flags)
 
 
+def _orphan_summary(graph: UnifiedGraph, agg: RollupAggregate, *, total: int, shown: int, truncated_ids: list[str]) -> dict[str, Any]:
+    """Aggregate over every orphan plus a bounded sample of the truncated tail."""
+    return {
+        "total": total,
+        "shown": shown,
+        "truncated": len(truncated_ids),
+        "by_type": dict(sorted(agg.by_type.items())),
+        "severity_counts": _histogram(agg.node_severity_counts),
+        "issue_severity_counts": _histogram(agg.severity_counts),
+        "issue_count": agg.issue_count,
+        "worst_severity": agg.worst_severity,
+        "worst_severity_rank": agg.worst_severity_rank,
+        "internet_exposed": agg.internet_exposed,
+        "toxic_combo": agg.toxic_combo,
+        "exposed_count": agg.exposed_count,
+        "toxic_count": agg.toxic_count,
+        "sample": [
+            {
+                "id": graph.nodes[nid].id,
+                "label": graph.nodes[nid].label,
+                "entity_type": _node_type_value(graph.nodes[nid]),
+                "severity": graph.nodes[nid].severity or "",
+            }
+            for nid in truncated_ids[:_ORPHAN_SUMMARY_SAMPLE]
+        ],
+    }
+
+
 def rollup_view(
     graph: UnifiedGraph,
     *,
@@ -580,30 +608,7 @@ def rollup_view(
     # Every finding in the loaded graph, roots and orphans included: the
     # number that reconciles with the tenant's open-issue total.
     estate_agg = _aggregate(list(graph.nodes), graph, filters=filters, facts=facts)
-    orphan_summary = {
-        "total": len(orphan_ids),
-        "shown": len(orphans),
-        "truncated": len(truncated_orphan_ids),
-        "by_type": dict(sorted(orphan_agg.by_type.items())),
-        "severity_counts": _histogram(orphan_agg.node_severity_counts),
-        "issue_severity_counts": _histogram(orphan_agg.severity_counts),
-        "issue_count": orphan_agg.issue_count,
-        "worst_severity": orphan_agg.worst_severity,
-        "worst_severity_rank": orphan_agg.worst_severity_rank,
-        "internet_exposed": orphan_agg.internet_exposed,
-        "toxic_combo": orphan_agg.toxic_combo,
-        "exposed_count": orphan_agg.exposed_count,
-        "toxic_count": orphan_agg.toxic_count,
-        "sample": [
-            {
-                "id": graph.nodes[nid].id,
-                "label": graph.nodes[nid].label,
-                "entity_type": _node_type_value(graph.nodes[nid]),
-                "severity": graph.nodes[nid].severity or "",
-            }
-            for nid in truncated_orphan_ids[:_ORPHAN_SUMMARY_SAMPLE]
-        ],
-    }
+    orphan_summary = _orphan_summary(graph, orphan_agg, total=len(orphan_ids), shown=len(orphans), truncated_ids=truncated_orphan_ids)
 
     top_level_rows = [c.to_dict() for c in top_level]
     relationship_edges, edge_count_metadata = _edge_projection(graph, top_level_rows, children, flags)
@@ -695,12 +700,10 @@ def drill_down(
             ),
         }
 
-    flags = _containment_flags(graph)
-    children = _contains_children(graph, flags)
+    children = _contains_children(graph, flags := _containment_flags(graph))
     direct = children.get(node_id, [])
     parent = graph.nodes[node_id]
     facts = _node_facts(graph)
-
     child_entries: list[RollupContainer] = []
     memberships: Counter[str] = Counter()
     for child_id in direct:
@@ -729,7 +732,6 @@ def drill_down(
     matching_total = len(child_entries)
     page = child_entries[offset : None if limit is None else offset + limit]
     page_cut = len(page) < matching_total
-
     page_rows = [c.to_dict() for c in page]
     relationship_edges, edge_count_metadata = _edge_projection(graph, page_rows, children, flags)
 
