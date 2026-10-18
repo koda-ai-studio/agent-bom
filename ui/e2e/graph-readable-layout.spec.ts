@@ -183,3 +183,15 @@ for (const theme of ["light", "dark"] as const) test(`reference correlation read
   expect(await labelCollisions(page)).toEqual([]);
   await page.screenshot({ path: info.outputPath(`reference-correlation-${theme}.png`), animations: "disabled" });
 });
+
+test("reset view restores the investigation defaults for the same root", async ({ page }) => {
+  const scenario = SCENARIOS["agents sharing an MCP server"];
+  await fixture(page, scenario.nodes, scenario.edges);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/graph?scan=snapshot&root=agent&lens=context&capture=1&context_view=identity");
+  await page.getByTestId("graph-entity-drawer").getByRole("button", { name: "Close", exact: true }).click();
+  await page.getByRole("button", { name: "Reset view", exact: true }).click();
+  await expect(page).toHaveURL(/context_view=all/);
+  await expect(page).toHaveURL(/root=agent/);
+  await expect(page.getByRole("button", { name: "All relationships", exact: true })).toHaveAttribute("aria-pressed", "true");
+});

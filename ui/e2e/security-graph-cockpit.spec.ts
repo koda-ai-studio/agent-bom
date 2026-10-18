@@ -2218,3 +2218,13 @@ test("embedded investigation opens the clicked relationship's exact receipt", as
   await dialog.getByText("Canonical identifiers", { exact: true }).click();
   await expect(dialog).toContainText(edgeId!);
 });
+
+test("opening the full graph from a selected path keeps that path", async ({ page }) => {
+  await routeCockpit(page);
+  await page.goto(`/security-graph?lens=attack-path&scan=${scanId}&path=top`);
+  const detail = page.getByTestId("selected-exposure-path");
+  await expect(detail.getByRole("heading", { name: "Claude Desktop → CVE-2025-7783" })).toBeVisible();
+  const lineage = page.getByRole("link", { name: /^Open lineage/ }).first();
+  await expect(lineage).toHaveAttribute("href", /lens=attack-path/);
+  await expect(lineage).toHaveAttribute("href", /path=/);
+});

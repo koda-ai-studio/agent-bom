@@ -1736,6 +1736,14 @@ function GraphPageInner() {
   const graphLayoutKind = compactMobileTopology && !investigationMode ? "dagre" : selectedAttackPath || selectedScenarioId || rollupNavigationActive || investigationMode ? "dagre-lr" : "asset-hierarchy";
   // A phone reads a root investigation as a list first; the canvas is one tap away.
   const mobileListActive = Boolean(narrowViewport && investigationMode) && mobileGraphView === "list";
+  // "Show more" reads against the root's recorded degree, when the detail read was complete.
+  const rootConnections = useMemo(() => {
+    const detail = selectedNodeDetail?.response;
+    if (!investigationMode || detail?.node?.id !== investigationMode.rootId || detail.completeness?.complete === false) return null;
+    const total = new Set([...(detail.edges_out ?? []).map(edge => edge.target), ...(detail.edges_in ?? []).map(edge => edge.source)]).size;
+    const loaded = new Set((graphData?.edges ?? []).flatMap(edge => edge.source === investigationMode.rootId ? [edge.target] : edge.target === investigationMode.rootId ? [edge.source] : [])).size;
+    return total > loaded ? { loaded, total } : null;
+  }, [selectedNodeDetail, investigationMode, graphData]);
   const scenarioContextIds = useMemo(() => {
     if (!selectedScenarioId || !scenarioComparison?.available || scenarioExpanded || attackPathLens || selectedAttackPath || investigationMode) return undefined;
     return graphScenarioContextIds(aggregated.nodes, aggregated.edges, scenarioComparison.difference, mergedGraphData?.edges);
@@ -2454,6 +2462,14 @@ function GraphPageInner() {
     presentation.reset();
     window.setTimeout(fitVisible, 0);
   }, [fitVisible, presentation]);
+  // The list hides the canvas, so it was measured at zero size; fit once it is shown.
+  useEffect(() => {
+    if (!narrowViewport || !investigationMode || mobileGraphView !== "graph") return;
+    const frame = requestAnimationFrame(() => fitVisible());
+    return () => cancelAnimationFrame(frame);
+    // Fit on the switch itself, not on every later camera or data change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mobileGraphView]);
   const relationshipEvidenceCount = useMemo(
     () =>
       graphData?.edges.filter(
@@ -3197,6 +3213,15 @@ function GraphPageInner() {
             estateSummary={rollupCanvasOwnsPresentation}
             focusedPath={Boolean(selectedAttackPath)}
             onReset={() => {
+              if (investigationMode) {
+                // Same root, investigation defaults: depth 1, every layer and relationship, a fresh fit.
+                setFilters(current => createInvestigationGraphFilters(current));
+                selectContextGroup("all");
+                setCanvasPage(0);
+                presentation.reset();
+                setManualCameraScope(null);
+                return;
+              }
               handleResetFilters();
               if (restoreSummaryOnFilterReset.current) {
                 rollupPreferenceRef.current = "force";
@@ -3744,6 +3769,7 @@ function GraphPageInner() {
               {showMiniMap && <button type="button" aria-pressed={minimapExpanded} onClick={() => setMinimapExpanded((value) => !value)} className="text-foreground underline underline-offset-4">{minimapExpanded ? "Hide minimap" : "Show minimap"}</button>}
               <button type="button" onClick={fitVisible} className="text-foreground underline underline-offset-4">Fit all</button>
 
+          {investigationMode?.truncated && rootConnections && <span data-testid="graph-connection-progress">Showing {rootConnections.loaded} of {rootConnections.total} connections</span>}
           {investigationMode?.truncated && investigationMode.nodeCount < 24 && !loadingGraph && <button type="button" className="graph-page-action min-h-11 sm:min-h-7" onClick={() => void loadRootInvestigation({ rootId: investigationMode.rootId, rootLabel: investigationMode.rootLabel, direction: investigationDirection, nodeLimit: Math.min(24, Math.max(8, investigationMode.nodeCount * 2)) })}>Show more connections</button>}
             </div>
           )}
