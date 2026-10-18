@@ -36,7 +36,10 @@ def scan_posture_inputs(store: Any, tenant_id: str, load_current: Callable[[], A
         job = load_current()
         if job is None or job.result is None:
             return None
-        return copy.deepcopy({key: job.result.get(key) for key in ("summary", "posture_scorecard")})
+        inputs = {key: job.result.get(key) for key in ("summary", "posture_scorecard")}
+        inputs["scan_id"] = job.job_id
+        inputs["completed_at"] = job.completed_at
+        return copy.deepcopy(inputs)
 
     if not callable(reader):
         return compute()

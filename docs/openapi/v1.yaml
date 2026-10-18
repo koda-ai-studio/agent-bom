@@ -21581,6 +21581,28 @@ components:
       - weighted_score
       title: PostureDimension
       type: object
+    PostureDimensionsBasis:
+      additionalProperties: true
+      description: Which evidence the per-dimension breakdown was computed from.
+      properties:
+        basis:
+          const: latest_scan
+          title: Basis
+          type: string
+        completed_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Completed At
+        scan_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Scan Id
+      required:
+      - basis
+      title: PostureDimensionsBasis
+      type: object
     PostureResponse:
       additionalProperties: true
       description: Graded posture; with ``no_data`` true only grade, score and summary
@@ -21610,6 +21632,10 @@ components:
             type: object
           - type: 'null'
           title: Dimensions
+        dimensions_basis:
+          anyOf:
+          - $ref: '#/components/schemas/PostureDimensionsBasis'
+          - type: 'null'
         display:
           anyOf:
           - type: string

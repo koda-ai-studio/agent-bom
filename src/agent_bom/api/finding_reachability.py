@@ -29,9 +29,12 @@ _REACHABILITY_EVIDENCE_EDGES = frozenset(
         RelationshipType.USED_CREDENTIAL.value,
         RelationshipType.ACCESSED.value,
         RelationshipType.DELEGATED_TO.value,
-        RelationshipType.TRACE_STEP.value,
     }
 )
+# Trace order says which assets one correlated trace touched in sequence. It is
+# recorded context, never access or exposure evidence, so a route that needs it
+# cannot mark a finding reachable (the same rule attack-path fusion applies).
+_TRACE_ORDER_EDGES = frozenset({RelationshipType.TRACE_STEP.value})
 
 
 @dataclass(frozen=True, slots=True)
@@ -84,12 +87,12 @@ def _path_has_reachability_evidence(path: AttackPath) -> bool:
     Static inventory edges such as ``uses`` and ``depends_on`` describe useful
     topology, but they do not prove that an agent can reach a vulnerable
     component at runtime. Positive reachability requires an explicit exploit,
-    network-exposure, or runtime-execution relationship.
+    network-exposure, or runtime-execution relationship, and a route that
+    depends on trace order is not one.
     """
 
-    return any(
-        (edge.value if isinstance(edge, RelationshipType) else _text(edge).lower()) in _REACHABILITY_EVIDENCE_EDGES for edge in path.edges
-    )
+    relationships = {edge.value if isinstance(edge, RelationshipType) else _text(edge).lower() for edge in path.edges}
+    return not relationships & _TRACE_ORDER_EDGES and bool(relationships & _REACHABILITY_EVIDENCE_EDGES)
 
 
 def _row_node_ids(row: Mapping[str, Any]) -> set[str]:

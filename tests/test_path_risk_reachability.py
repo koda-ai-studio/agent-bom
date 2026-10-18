@@ -285,6 +285,21 @@ def test_demo_trace_chains_are_unscored_context_ranked_below_scored_findings(see
     assert top[0]["is_kev"] is True
 
 
+def test_demo_paths_mix_confirmed_fresh_chains_with_qualified_unknowns(seeded_demo) -> None:
+    _store, paths = seeded_demo
+    confirmed = [path for path in paths if path.reachability == "confirmed"]
+    unknown = [path for path in paths if path.reachability == "unknown"]
+
+    assert confirmed and unknown
+    for path in confirmed:
+        assert RelationshipType.TRACE_STEP.value not in path.edges
+        assert all(receipt["complete"] and receipt["freshness"] == "fresh" for receipt in path.hop_evidence)
+        assert path.reachability_basis
+    assert any("directed_provenance_backed_hops" in path.reachability_basis for path in confirmed)
+    # Every unknown carries the reason it could not be confirmed.
+    assert all(path.reachability_basis for path in unknown)
+
+
 @pytest.mark.asyncio
 async def test_demo_deploy_gate_blocks_kev_pillow(seeded_demo) -> None:
     from agent_bom.demo_estate.showcase_graph import SHOWCASE_TENANT

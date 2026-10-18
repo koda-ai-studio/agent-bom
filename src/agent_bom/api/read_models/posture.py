@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from agent_bom.api.read_models._base import (
     Completeness,
@@ -201,6 +201,14 @@ class PostureDimension(ReadModel):
     assessed: bool | None = None
 
 
+class PostureDimensionsBasis(ReadModel):
+    """Which evidence the per-dimension breakdown was computed from."""
+
+    basis: Literal["latest_scan"]
+    scan_id: str | None = None
+    completed_at: str | None = None
+
+
 class ScanScorecard(ReadModel):
     grade: str
     score: Num
@@ -216,6 +224,7 @@ class PostureResponse(ReadResponse):
     no_data: bool
     demo_estate_seeding: bool | None = None
     dimensions: dict[str, PostureDimension] | None = None
+    dimensions_basis: PostureDimensionsBasis | None = None
     basis: str | None = None
     breakdown: list[PostureBreakdownItem] | None = None
     display: str | None = None
