@@ -189,7 +189,7 @@ def status_matches(row: Mapping[str, Any], status: str | None) -> bool:
     payload = row.get("payload") if isinstance(row.get("payload"), Mapping) else {}
     row_status = str(row.get("status") or (payload or {}).get("status") or "open").strip().lower() or "open"
     if normalized == "open":
-        return row_status in _LIVE_STATUSES
+        return row_status in _LIVE_STATUSES and row.get("suppressed") is not True  # suppressed: evidence, not live
     return row_status == "resolved"
 
 

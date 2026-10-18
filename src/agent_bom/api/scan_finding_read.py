@@ -165,6 +165,12 @@ def current_open_scan_findings(jobs: list[Any]) -> list[dict[str, Any]]:
         rows = findings_current.current_scan_findings(
             jobs, since=since, scan_id=None, iter_findings=_cached_scan_findings, require_authoritative_evidence=True
         )
-        return [row for row in findings_current.scan_only_findings(rows, tenant_id) if status_matches(row, "open")]
+        # A suppressed finding (operator VEX, accepted exception) is kept as
+        # evidence but is not open; ``finding_summary`` excludes it the same way.
+        return [
+            row
+            for row in findings_current.scan_only_findings(rows, tenant_id)
+            if status_matches(row, "open") and row.get("suppressed") is not True
+        ]
 
     return read_once(("current_open_rows", json.dumps([tenant_id, since, job_keys])), load)

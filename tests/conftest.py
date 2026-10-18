@@ -133,6 +133,9 @@ os.environ.setdefault("AGENT_BOM_DEMO_STORY_PREWARM", "0")
 # Write-time posture precompute runs on a background thread; tests that count
 # read-time computations opt in explicitly.
 os.environ.setdefault("AGENT_BOM_POSTURE_PRECOMPUTE", "0")
+# A plain scan joins the CISA KEV catalog; keep the suite hermetic by reading
+# only local caches (the isolated state dir has none, so KEV reads "unknown").
+os.environ.setdefault("AGENT_BOM_KEV_DEFAULT_JOIN", "cache")
 # Every graph producer must satisfy the relationship contract under test;
 # production defaults to warn and records counts in analysis_status. A module
 # opts out with ``pytest.mark.graph_contract("warn")`` (see pytest_runtest_setup).

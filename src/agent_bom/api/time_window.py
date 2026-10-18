@@ -14,6 +14,10 @@ from typing import Any
 
 from agent_bom import config
 
+#: Upper bound for a requested ``window_days``: ten years. Larger values
+#: overflow ``timedelta`` / ``datetime`` arithmetic, so routes reject them (422).
+MAX_WINDOW_DAYS = 3650
+
 
 def default_window_days() -> int:
     """Return the configured default read-window in days (never negative)."""
@@ -60,6 +64,7 @@ def window_metadata(window_days: int, *, now: datetime | None = None) -> dict[st
 
 
 __all__ = [
+    "MAX_WINDOW_DAYS",
     "default_window_days",
     "normalize_window_days",
     "window_cutoff",

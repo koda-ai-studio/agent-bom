@@ -1,6 +1,6 @@
 """Bounded traversal request and projection shared by graph investigations."""
 
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -10,10 +10,15 @@ from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.severity_floor import node_passes_severity_floor
 from agent_bom.graph.types import RelationshipType
 
+#: Roots per traversal request; each root seeds its own walk under the shared node budget.
+MAX_QUERY_ROOTS = 500
+
 
 class GraphQueryRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    roots: list[str] = Field(..., min_length=1, description="One or more starting node IDs")
+    roots: list[Annotated[str, Field(max_length=512)]] = Field(
+        ..., min_length=1, max_length=MAX_QUERY_ROOTS, description="One or more starting node IDs"
+    )
     scan_id: str = ""
     snapshot_generation: str | None = Field(None, max_length=128, description="Expected read revision; replacement returns 409")
     direction: Literal["forward", "reverse", "both"] = "forward"
@@ -27,10 +32,10 @@ class GraphQueryRequest(BaseModel):
     include_roots: bool = True
     include_attack_paths: bool = False
     min_severity: str = ""
-    entity_types: list[str] = Field(default_factory=list)
-    relationship_types: list[str] = Field(default_factory=list)
-    compliance_prefixes: list[str] = Field(default_factory=list)
-    data_sources: list[str] = Field(default_factory=list)
+    entity_types: list[Annotated[str, Field(max_length=128)]] = Field(default_factory=list, max_length=100)
+    relationship_types: list[Annotated[str, Field(max_length=128)]] = Field(default_factory=list, max_length=100)
+    compliance_prefixes: list[Annotated[str, Field(max_length=128)]] = Field(default_factory=list, max_length=100)
+    data_sources: list[Annotated[str, Field(max_length=128)]] = Field(default_factory=list, max_length=100)
 
 
 def _node_matches_query(

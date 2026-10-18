@@ -74,6 +74,7 @@ from agent_bom.pci_dss import tag_blast_radius as tag_pci_dss
 from agent_bom.reachability_cve import advisory_affected_symbols_by_path, advisory_affected_symbols_list
 from agent_bom.scanners import cpython_advisory as runtime_cve
 from agent_bom.scanners.blast_radius import expand_blast_radius_hops
+from agent_bom.scanners.kev_default_join import join_default_kev_catalog
 from agent_bom.scanners.osv import candidate_package_names as _candidate_package_names
 from agent_bom.scanners.osv import ecosystem_matches as _ecosystem_matches
 from agent_bom.scanners.osv import enrich_results_if_needed as _enrich_results_if_needed_impl
@@ -2174,6 +2175,7 @@ def scan_agents_sync(
                 options=scan_options,
             )
         )
+        join_default_kev_catalog(blast_radii, offline=scan_options.offline)
     if blast_radius_depth > 1:
         if show_scan_banner:
             console.print(

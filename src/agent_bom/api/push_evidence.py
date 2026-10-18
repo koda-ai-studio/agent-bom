@@ -8,6 +8,7 @@ from typing import cast
 from agent_bom.api.audit_log import log_action
 from agent_bom.api.finding_collection import collect_scan_findings
 from agent_bom.api.models import PushPayload, ScanJob, ScanRequest
+from agent_bom.api.posture_recompute import compute_posture_scorecard_from_result
 from agent_bom.api.push_models import normalize_push_coverage
 from agent_bom.mcp_blocklist import sanitize_security_intelligence_entry
 from agent_bom.output.json_fmt import _build_finding_summary
@@ -71,8 +72,11 @@ def normalize_pushed_report(body: PushPayload, *, fallback_scan_id: str) -> dict
         )
     report = normalize_push_coverage(report, source_id=body.source_id, target_scope=body.target_scope)
     derive_push_summary(report)
-    # A producer grade is not a server-computed posture assessment.
-    report.pop("posture_scorecard", None)
+    # A producer grade is not a server-computed posture assessment: replace it
+    # with the scorecard derived here from the retained evidence.
+    scorecard = compute_posture_scorecard_from_result(report).to_dict()
+    report["posture_scorecard"] = scorecard
+    report["posture_grade"] = scorecard["grade"]
     return report
 
 

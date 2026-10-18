@@ -31,7 +31,7 @@ so they cannot regress silently, but they are not part of this reference.
 | `AGENT_BOM_API_MAX_CLOUD_CONNECTIONS_PER_PROVIDER` | `int` | `0` | — |
 | `AGENT_BOM_API_MAX_CLOUD_CONNECTIONS_PER_TENANT` | `int` | `0` | — |
 | `AGENT_BOM_API_MAX_FLEET_AGENTS_PER_TENANT` | `int` | `1000` | — |
-| `AGENT_BOM_API_MAX_JOBS` | `int` | `10` | Used by api/server.py for the REST API job queue.  10 concurrent scan jobs prevents resource exhaustion on shared hosts. Completed job evidence has a separate bounded TTL. The 200-job in-memory ceiling triggers LRU eviction for long-running |
+| `AGENT_BOM_API_MAX_JOBS` | `int` | `10` | Used by api/server.py for the REST API job queue. 10 concurrent scan jobs prevents resource exhaustion on shared hosts. Completed job evidence has a separate bounded TTL. The 200-job in-memory ceiling triggers LRU eviction for long-running  |
 | `AGENT_BOM_API_MAX_JOB_PROGRESS_EVENTS` | `int` | `500` | — |
 | `AGENT_BOM_API_MAX_MEMORY_JOBS` | `int` | `200` | — |
 | `AGENT_BOM_API_MAX_OCSF_INGEST_EVENTS` | `int` | `1000` | — |
@@ -174,7 +174,7 @@ so they cannot regress silently, but they are not part of this reference.
 | Env var | Type | Default | Description |
 |---|---|---|---|
 | `AGENT_BOM_ENRICHMENT_MAX_CACHE` | `int` | `10000` | — |
-| `AGENT_BOM_ENRICHMENT_TTL` | `int` | `604800` | Used by enrichment.py for persistent NVD + EPSS disk cache.  7-day TTL balances freshness vs. API rate limits.  10,000 entries covers most enterprise scans without unbounded disk/memory growth. |
+| `AGENT_BOM_ENRICHMENT_TTL` | `int` | `604800` | NVD + EPSS disk cache: 7-day TTL vs. API rate limits; 10,000 entries bounds growth. |
 
 ## Extension Loading
 | Env var | Type | Default | Description |

@@ -10,6 +10,7 @@ from fastapi import HTTPException
 from pydantic import Field, field_validator
 
 from agent_bom.api.graph_generation import pin_generation, verify_generation
+from agent_bom.api.graph_node_alias import resolve_assessment_node_ids
 from agent_bom.graph.consequence.contracts import ConsequenceAssessment, ConsequenceRequest
 from agent_bom.graph.consequence.service import assess_consequences
 
@@ -34,6 +35,7 @@ def assess_snapshot_consequences(store: Any, body: GraphConsequenceRequest, *, t
     identity = pin_generation(store, tenant=tenant_id, scan_id=body.scan_id, generation=body.snapshot_generation, offset=0)
     if not identity[1]:
         raise HTTPException(404, "Graph snapshot not found.")
+    body = resolve_assessment_node_ids(store, body, tenant_id=tenant_id, scan_id=identity[0])
     roots = list(dict.fromkeys([body.root_node_id, *([body.affected_node_id] if body.affected_node_id else [])]))
     deadline = time.monotonic() + 2.5
     graph, _, truncated = store.traverse_subgraph(

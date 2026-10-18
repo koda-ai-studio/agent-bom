@@ -58,6 +58,13 @@ def connection_scope_id(record: Any) -> str:
     )
 
 
+def push_scope_id(source_id: str | None, target_scope: Any) -> str | None:
+    """A pushing source and its declared target form one comparison scope."""
+    if not source_id:
+        return None
+    return "push:" + _digest([str(source_id), target_scope])
+
+
 def parse_time(value: Any) -> datetime | None:
     if not isinstance(value, str):
         return None

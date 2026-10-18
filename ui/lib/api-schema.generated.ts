@@ -4671,16 +4671,12 @@ export interface paths {
          * Get Graph Node Neighbors
          * @description Return a bounded set of a node's direct graph neighbors for inline expand.
          *
-         *     This is the read side of the dashboard's progressive-disclosure attack-path
-         *     view: expanding one hop loads only that hop's direct neighbors instead of the
-         *     whole graph. It is deliberately lazy and bounded — fan-out is capped by
-         *     ``limit``; ``total_neighbors`` is null when source evidence is incomplete.
-         *     A completely read high-degree neighborhood reports its known total with
-         *     ``truncated`` set, so the UI can render a "+N more" affordance rather than
-         *     exploding the view. Neighbor node metadata (entity type, label, severity)
-         *     travels with the payload so the client never needs a second round trip per
-         *     neighbor id. An unknown node id returns an empty payload (200, ``found``
-         *     false) instead of raising, so a stale client id degrades quietly in-place.
+         *     The read side of progressive-disclosure attack-path views: one hop's direct
+         *     neighbors, fan-out capped by ``limit``; ``total_neighbors`` is null when source
+         *     evidence is incomplete, and a fully read high-degree neighborhood reports its
+         *     total with ``truncated`` set ("+N more"). Neighbor metadata travels with the
+         *     payload. A replaced id resolves (``resolved_from``); an unknown id returns 200
+         *     with ``found`` false, so a stale client id degrades quietly in place.
          */
         get: operations["get_graph_node_neighbors_v1_graph_node_neighbors_get"];
         put?: never;
@@ -4722,16 +4718,12 @@ export interface paths {
          * Get Graph Node Neighbors
          * @description Return a bounded set of a node's direct graph neighbors for inline expand.
          *
-         *     This is the read side of the dashboard's progressive-disclosure attack-path
-         *     view: expanding one hop loads only that hop's direct neighbors instead of the
-         *     whole graph. It is deliberately lazy and bounded — fan-out is capped by
-         *     ``limit``; ``total_neighbors`` is null when source evidence is incomplete.
-         *     A completely read high-degree neighborhood reports its known total with
-         *     ``truncated`` set, so the UI can render a "+N more" affordance rather than
-         *     exploding the view. Neighbor node metadata (entity type, label, severity)
-         *     travels with the payload so the client never needs a second round trip per
-         *     neighbor id. An unknown node id returns an empty payload (200, ``found``
-         *     false) instead of raising, so a stale client id degrades quietly in-place.
+         *     The read side of progressive-disclosure attack-path views: one hop's direct
+         *     neighbors, fan-out capped by ``limit``; ``total_neighbors`` is null when source
+         *     evidence is incomplete, and a fully read high-degree neighborhood reports its
+         *     total with ``truncated`` set ("+N more"). Neighbor metadata travels with the
+         *     payload. A replaced id resolves (``resolved_from``); an unknown id returns 200
+         *     with ``found`` false, so a stale client id degrades quietly in place.
          */
         get: operations["get_graph_node_neighbors_v1_graph_node__node_id__neighbors_get"];
         put?: never;
@@ -4837,18 +4829,13 @@ export interface paths {
          * Get Graph Rollup
          * @description Collapse the estate along ``CONTAINS`` into a small, readable view.
          *
-         *     Past a few hundred nodes the raw topology is an unreadable hairball. This
-         *     endpoint rolls the graph up along the containment hierarchy
-         *     (org -> account/project -> app -> resource) so a 1000+ node estate renders
-         *     as a handful of top-level containers, each carrying aggregate descendant
-         *     counts, worst-severity, a per-severity histogram, and exposure / toxic
-         *     flags. ``?node=<id>`` returns one level of direct children for on-demand
-         *     drill-down, paged by ``offset``/``limit`` with ``pagination`` and truthful
-         *     ``completeness``; ``?mode=attack_path`` returns the nodes/edges on materialised
-         *     attack paths first with the rest collapsed.
-         *
-         *     Backend for the UI graph-navigation surface. Read-only: never mutates the
-         *     source graph.
+         *     Rolls the graph up along containment (org -> account/project -> app ->
+         *     resource) so a 1000+ node estate renders as a few top-level containers, each
+         *     with descendant counts, worst severity, a severity histogram and exposure /
+         *     toxic flags. ``?node=<id>`` (a replaced id resolves, echoed as
+         *     ``resolved_from``) returns one level of direct children, paged by
+         *     ``offset``/``limit`` with truthful ``completeness``; ``?mode=attack_path``
+         *     returns materialised attack-path nodes/edges first. Read-only.
          */
         get: operations["get_graph_rollup_v1_graph_rollup_get"];
         put?: never;
@@ -16355,6 +16342,8 @@ export interface components {
             max_depth_reached: number;
             /** Node Id */
             node_id: string;
+            /** Resolved From */
+            resolved_from?: string | null;
             /** Scan Id */
             scan_id: string;
             /** Snapshot Generation */
@@ -16474,6 +16463,8 @@ export interface components {
             }[];
             /** Node Id */
             node_id: string;
+            /** Resolved From */
+            resolved_from?: string | null;
             /** Scan Id */
             scan_id: string;
             /** Total Neighbors */
@@ -16578,6 +16569,8 @@ export interface components {
             reachable_count: number;
             /** Reachable Nodes */
             reachable_nodes: string[];
+            /** Resolved From */
+            resolved_from?: string | null;
             /** Source */
             source: string;
             /** Source Id */
@@ -16754,6 +16747,8 @@ export interface components {
             path_nodes?: {
                 [key: string]: unknown;
             }[] | null;
+            /** Resolved From */
+            resolved_from?: string | null;
             /** Scan Id */
             scan_id: string;
             /** Snapshot Generation */
@@ -19942,6 +19937,8 @@ export interface components {
         };
         /** PostureDimension */
         PostureDimension: {
+            /** Assessed */
+            assessed?: boolean | null;
             /** Details */
             details: string;
             /** Name */

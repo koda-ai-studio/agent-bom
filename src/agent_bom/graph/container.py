@@ -853,7 +853,7 @@ class UnifiedGraph:
         for node in self.nodes.values():
             et = node.entity_type.value if isinstance(node.entity_type, EntityType) else node.entity_type
             type_counts[et] += 1
-            if node.severity and counts_as_finding(entity_type=et, node_id=node.id):
+            if node.severity and counts_as_finding(entity_type=et, node_id=node.id, attributes=node.attributes):
                 severity_counts[node.severity] += 1
         rel_counts: dict[str, int] = defaultdict(int)
         for edge in self.edges:
