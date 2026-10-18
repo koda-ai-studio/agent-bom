@@ -765,9 +765,10 @@ export interface GraphExposurePathsResponse {
   pagination?: { offset: number; limit: number; returned: number; has_more: boolean; next_cursor: string | null } | undefined;
 }
 
-export type DeployDecision = "allow" | "warn" | "block";
+/** ``not_found``: no exposure path names the candidate exactly; it was not evaluated. */
+export type DeployDecision = "allow" | "warn" | "block" | "not_found";
 
-/** allow/warn/block deploy gate decision from POST /v1/graph/should-i-deploy. */
+/** allow/warn/block/not_found deploy gate decision from POST /v1/graph/should-i-deploy. */
 export interface GraphDeployDecisionResponse {
   schema_version: string;
   tool: string;
@@ -775,7 +776,8 @@ export interface GraphDeployDecisionResponse {
   scan_id: string;
   candidate: { value: string };
   decision: DeployDecision;
-  maxRisk: number;
+  /** Null when no path matched the candidate. */
+  maxRisk: number | null;
   thresholds: { warnRisk: number; blockRisk: number };
   reasons: string[];
   matchedPathCount: number;

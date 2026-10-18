@@ -28,7 +28,7 @@ export function graphAnalysisStatusCopy(status: GraphAnalysisStatus | undefined)
   if (status.status === "complete") {
     return {
       label: "Path analysis complete for this snapshot",
-      detail: "Path analysis finished over the collected data only. Assets, permissions or activity this snapshot did not collect are not covered, so this is not a statement that the environment is secure.",
+      detail: "Path analysis finished over the collected data only. Each path still carries its own hop-receipt verdict, so a complete analysis does not make every path's reachability verified. Assets, permissions or activity this snapshot did not collect are not covered, so this is not a statement that the environment is secure.",
       tone: "ok",
     };
   }

@@ -494,6 +494,24 @@ export interface AttackPath {
   technique_mappings?: TechniqueMapping[];
   /** Deduped, sorted technique IDs across all hops (convenience). */
   mitre_technique_ids?: string[];
+  /** The values the server's queue sorts on, in sort order; absent on legacy payloads. */
+  ranking_factors?: AttackPathRankingFactors;
+}
+
+export type AttackPathEvidenceConfidence = "verified" | "likely" | "structural" | "unassessed" | "disproven";
+
+export interface AttackPathRankingFactors {
+  order: string[];
+  evidence_tier: number;
+  is_kev: boolean;
+  /** Worst finding severity on the path; "unknown" means no scored finding (unscored). */
+  severity: string;
+  severity_scored: boolean;
+  /** Hop-receipt support, separate from composite_risk. */
+  evidence_confidence: AttackPathEvidenceConfidence | string;
+  composite_risk: number;
+  credential_count: number;
+  reasons: string[];
 }
 
 export interface InteractionRisk {
