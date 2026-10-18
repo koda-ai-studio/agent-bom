@@ -21,6 +21,7 @@ import {
   ReactFlow,
   ReactFlowProvider,
   useReactFlow,
+  useNodesInitialized,
   useViewport,
   type Edge,
   type Node,
@@ -637,6 +638,7 @@ export default function GraphPageClient() {
 
 function GraphPageInner() {
   const reactFlow = useReactFlow();
+  const nodesInitialized = useNodesInitialized();
   const graphViewport = useViewport();
   const [narrowViewport, setNarrowViewport] = useState(false);
   const [canvasLayoutAspect, setCanvasLayoutAspect] = useState(2.2);
@@ -2279,6 +2281,9 @@ function GraphPageInner() {
     },
     [captureMode, displayEdges.length, displayNodes.length, rollupNavigationActive],
   );
+  const [manualCameraScope, setManualCameraScope] = useState<string | null>(null);
+  const cameraScope = JSON.stringify([selectedScanId, filters, selectedNodeId, selectedRelationship?.id, selectedAttackPathKey, investigationMode?.rootId]);
+  const manualCamera = manualCameraScope === cameraScope;
   const initialViewportRequest = useMemo<ReturnType<typeof graphInitialFitViewOptions>>(() => {
     if (!narrowViewport && compactInvestigationTopology) return { ...viewportOptions, minZoom: COMPACT_GRAPH_MIN_ZOOM, maxZoom: 1 };
     if (scenarioExpanded || scenarioContextIds || (investigationMode && displayNodes.length <= 8)) return { ...viewportOptions, maxZoom: 1 };
@@ -2351,10 +2356,11 @@ function GraphPageInner() {
     localMode: session?.recommended_ui_mode === "no_auth",
   });
   const fitVisible = useCallback(() => {
+    setManualCameraScope(cameraScope);
     // Reserve room for readability-sized cards as their glyphs settle at the
     // new zoom, without a second camera movement after a user starts clicking.
     void reactFlow.fitView({ ...viewportOptions, padding: Math.max(0.2, viewportOptions.padding), duration: 240 });
-  }, [reactFlow, viewportOptions]);
+  }, [reactFlow, viewportOptions, cameraScope]);
   const fitSelection = useCallback(async () => {
     if (rollupNavigationActive) {
       await reactFlow.fitView({ ...viewportOptions, minZoom: 0.16, maxZoom: 1, padding: 0.04 });
@@ -3791,7 +3797,7 @@ function GraphPageInner() {
               edges={displayEdges}
               nodeTypes={lineageNodeTypesAdaptive}
               edgeTypes={relationshipEdgeTypes}
-              fitView={!presentation.hasSavedState && !presentation.restoredSavedState}
+              fitView={!manualCamera && !presentation.hasSavedState && !presentation.restoredSavedState}
               fitViewOptions={initialViewportOptions}
               defaultViewport={presentation.restoredViewport ?? presentation.viewport}
               minZoom={canvasLens === "estate" ? 0.05 : 0.16}
@@ -3810,6 +3816,7 @@ function GraphPageInner() {
               onlyRenderVisibleElements={shouldVirtualizeReactFlowNodes({
                 nodeCount: displayNodes.length,
                 rollupActive: rollupNavigationActive,
+                nodesInitialized,
               })}
               defaultEdgeOptions={{ type: "smoothstep" }}
               proOptions={{ hideAttribution: true }}
@@ -3849,7 +3856,7 @@ function GraphPageInner() {
                 layoutKey={compactLayoutKey}
                 anchorId={selectedNodeId ?? investigationMode?.rootId}
                 inspector={Boolean(selectedNode || selectedRelationship) && !narrowViewport}
-                preserveViewport={presentation.restoredSavedState}
+                preserveViewport={manualCamera || presentation.restoredSavedState}
                 onLayoutAspect={setCanvasLayoutAspect}
               />
               <Background color={BACKGROUND_COLOR} gap={BACKGROUND_GAP} />

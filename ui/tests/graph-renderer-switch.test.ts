@@ -14,6 +14,8 @@ describe("graph renderer switch", () => {
     expect(shouldVirtualizeReactFlowNodes({ nodeCount: 8 })).toBe(false);
     expect(shouldVirtualizeReactFlowNodes({ nodeCount: 80 })).toBe(false);
     expect(shouldVirtualizeReactFlowNodes({ nodeCount: 81 })).toBe(true);
+    expect(shouldVirtualizeReactFlowNodes({ nodeCount: 81, nodesInitialized: false })).toBe(false);
+    expect(shouldVirtualizeReactFlowNodes({ nodeCount: 81, nodesInitialized: true })).toBe(true);
   });
   it("renders bounded roll-up cards eagerly before the initial fitView", () => {
     expect(shouldVirtualizeReactFlowNodes({ rollupActive: true })).toBe(false);

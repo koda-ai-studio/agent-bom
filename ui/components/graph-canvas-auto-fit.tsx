@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Panel, useNodesInitialized, useReactFlow, useStore, type Node, type FitViewOptions } from "@xyflow/react";
 import { graphInspectorTargets } from "@/lib/graph-inspector-framing";
@@ -25,6 +25,7 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
   const { fitView, getNodes, getNodesBounds, getEdges } = useReactFlow();
   const [windowHeight, setWindowHeight] = useState(0);
   const [spaceAbove, setSpaceAbove] = useState(0);
+  const lastAutoFitKey = useRef<string | null>(null);
   useEffect(() => {
     const resize = () => setWindowHeight(window.innerHeight);
     resize();
@@ -56,6 +57,10 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     onLayoutAspect(frameSize.layoutAspect);
     frameElement.style.setProperty("--graph-adaptive-height", `${frameSize.height}px`);
     if (preserveViewport) return;
+    // Virtualization toggles initialized while the operator pans or zooms.
+    // Only a new layout/frame may replace that deliberate camera position.
+    const autoFitKey = JSON.stringify([layoutKey, width, height, anchorId, inspector, windowHeight, spaceAbove]);
+    if (lastAutoFitKey.current === autoFitKey) return;
     const anchor = nodes.find(node => node.id === anchorId) ?? nodes[0];
     const options: FitViewOptions = { padding: 0.08, duration: 0, minZoom: 0.05, maxZoom: 2,
       ...(!frameSize.fitAll && anchor ? { nodes: inspector && width >= 640 ? graphInspectorTargets(anchor.id, nodes.map(node => node.id), getEdges()) : [{ id: anchor.id }], minZoom: inspector && width >= 640 ? 0.45 : 0.85, maxZoom: 1.1 } : {}),
@@ -63,6 +68,7 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     let cancelled = false;
     const frames: number[] = [];
     frames.push(requestAnimationFrame(() => {
+      lastAutoFitKey.current = autoFitKey;
       void fitView(options).then(() => {
         // Zoom changes readable glyph/caption dimensions. Allow their resize
         // measurements to settle before the final camera fit.

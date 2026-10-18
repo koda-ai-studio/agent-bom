@@ -873,9 +873,17 @@ test("estate map renders a recorded scan without fabricating environment metadat
   await page.route("**/v1/graph/attack-paths?**", route => route.fulfill({ json: { ...response, pagination: { total: graph.attack_paths.length, offset: 0, limit: 100, has_more: false } } }));
   await page.route("**/v1/graph/snapshots?**", route => route.fulfill({ json: [{ scan_id: graph.scan_id, created_at: graph.created_at, node_count: graph.nodes.length, edge_count: graph.edges.length, risk_summary: graph.stats.severity_counts }] }));
   const start = performance.now();
-  await page.goto("/graph?rollup=0&vulnOnly=0&severity=&layers=agent,server,package,framework,vulnerability,container,cloudResource,tool,credential");
+  await page.goto(`/graph?scan=${encodeURIComponent(graph.scan_id)}&rollup=0&vulnOnly=0&severity=&layers=agent,server,package,framework,vulnerability,container,cloudResource,tool,credential`);
+  // A recorded inventory can have no observed findings. Explicitly request its
+  // topology instead of depending on the initial relevant-path filter.
+  const viewControls = page.getByTestId("graph-view-controls");
+  await viewControls.getByRole("button", { name: "View & layers" }).click();
+  await viewControls.getByRole("button", { name: "Expanded topology", exact: true }).click();
+  await viewControls.getByRole("button", { name: "View & layers" }).click();
   // Real dependency scans collapse sibling packages initially; expand through the public control.
   const collapsedPackages = page.getByRole("button", { name: /^Expand \d+ members$/ });
+  // The group may be outside the initial camera and virtualized until fitted.
+  await page.getByRole("button", { name: "Fit all", exact: true }).click();
   await expect(collapsedPackages.first()).toBeVisible();
   await collapsedPackages.first().click();
   const sigma = page.getByTestId("sigma-graph-overview");

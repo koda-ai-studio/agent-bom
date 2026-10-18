@@ -5,7 +5,7 @@ export function GraphFindingContext({ data }: { data: LineageNodeData }) {
   if (!["vulnerability", "misconfiguration"].includes(data.nodeType)) return null;
   const attrs = data.attributes ?? {};
   const text = (...keys: string[]) => keys.map(key => attrs[key]).find(value => typeof value === "string" && value.trim()) as string | undefined;
-  const path = text("file_path", "path");
+  const path = text("file_path", "path", "source_file");
   const line = attrs.start_line ?? attrs.line ?? attrs.line_number;
   const location = path ? `${path}${typeof line === "number" && Number.isInteger(line) && line > 0 ? `:${line}` : ""}` : "Source location not recorded";
   const recommendation = text("recommendation", "remediation");

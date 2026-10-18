@@ -22,3 +22,9 @@ it("reads the source and remediation fields emitted by IaC graph projection", ()
   expect(screen.getByText("Disable public access")).toBeVisible();
   expect(screen.queryByText("Remediation not recorded")).not.toBeInTheDocument();
 });
+
+it("reads the source file emitted by skill-audit graph projection", () => {
+  render(<GraphFindingContext data={{ nodeType: "misconfiguration", label: "Skill audit finding", attributes: { source_file: "skills/deploy/SKILL.md", recommendation: "Restrict tool access" } }} />);
+  expect(screen.getByText("skills/deploy/SKILL.md")).toBeVisible();
+  expect(screen.queryByText("Source location not recorded")).not.toBeInTheDocument();
+});

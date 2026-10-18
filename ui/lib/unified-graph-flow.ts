@@ -233,8 +233,11 @@ export function buildUnifiedFlowGraph(
       )
       .map((node) => node.id),
   );
+  // An unfiltered inventory includes recorded assets even when no relationship
+  // was collected. Missing connections must not make those assets disappear.
+  const showUnconnectedInventory = !filters.vulnOnly && !filters.agentName && !filters.severity;
   const prunedNodes = nodes.filter(
-    (node) => connectedNodeIds.has(node.id) || anchorNodeIds.has(node.id) || retainedNodeIds?.has(node.id),
+    (node) => showUnconnectedInventory || connectedNodeIds.has(node.id) || anchorNodeIds.has(node.id) || retainedNodeIds?.has(node.id),
   );
   const visibleNodeIds = new Set(prunedNodes.map((node) => node.id));
   const edges = prePrunedEdges.filter(
