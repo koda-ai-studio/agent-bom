@@ -82,7 +82,7 @@ def _snapshot_scope(alias: str, scan_id: str) -> tuple[str, list[str]]:
     if scan_id:
         return f"AND {alias}.scan_id = ?", [scan_id]
     return (
-        f"AND {alias}.scan_id = (SELECT s.scan_id FROM graph_snapshots s WHERE s.tenant_id = {alias}.tenant_id "
+        f"AND {alias}.scan_id = (SELECT s.scan_id FROM graph_snapshots s WHERE s.tenant_id = {alias}.tenant_id "  # nosec B608 - alias is a fixed internal table alias
         "AND s.snapshot_kind = 'scan' ORDER BY s.created_at DESC, s.scan_id DESC LIMIT 1)",
         [],
     )
