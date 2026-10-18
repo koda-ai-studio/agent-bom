@@ -1069,7 +1069,7 @@ jobs:
           python-version: "3.13"
 
       - name: Install dependencies
-        run: uv sync --frozen --extra dev --extra api --extra mcp-server
+        run: uv sync --frozen --extra dev --extra api --extra mcp-server --extra otel
 
       - name: Run changed-domain and cross-surface smoke
         run: |
@@ -1084,6 +1084,7 @@ jobs:
           mapfile -t TARGETED < <(uv run python scripts/pytest_ci_plan.py targeted --root . "${CHANGED[@]}")
           SMOKE=(
             tests/test_ci_workflow_contract.py
+            tests/test_runtime_child_span_redaction.py
             tests/test_doc_architecture_svgs.py
             tests/test_public_frontdoor_contract.py
             tests/test_public_release_contracts.py

@@ -238,3 +238,25 @@ def test_provider_cursor_cycle_is_rejected_after_restart_without_committing_page
     assert store.get_trace_import("tenant", first["import_id"]) == before
     assert len(store.list_observations("tenant")) == 2
     assert second["complete"] is False
+
+
+@pytest.mark.parametrize("declared", [False, True])
+def test_oversized_page_is_not_retryable_and_preserves_checkpoint(tmp_path, declared):
+    import httpx
+
+    from agent_bom.api.trace_import_service import import_native_pages
+    from agent_bom.trace_connectors import _call_json
+
+    store = SQLiteRuntimeEventStore(str(tmp_path / "runtime.db"))
+    first = import_native_pages(store, scope=scope(), fetch=lambda **kw: page(cursor="next"))
+    before = store.get_trace_import("tenant", first["import_id"])
+    headers = {"Content-Length": "2000001"} if declared else {}
+    with httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(200, headers=headers, content=b"x" * 2000001))) as client:
+
+        def fetch(**kwargs):
+            return _call_json(client, "GET", "https://example.test")
+
+        failed = import_native_pages(store, scope=scope(), fetch=fetch, import_id=first["import_id"])
+    assert failed["error"] == {"code": "response_too_large", "retryable": False}
+    assert failed["counts"]["committed_pages"] == 0
+    assert store.get_trace_import("tenant", first["import_id"]) == before

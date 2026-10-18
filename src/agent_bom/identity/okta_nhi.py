@@ -34,7 +34,7 @@ from enum import Enum
 from typing import Any
 
 from agent_bom.core.settings import env_str
-from agent_bom.identity.okta_http import MetadataReader, org_origin
+from agent_bom.identity.okta_http import MetadataReader, PartialCollectionError, org_origin
 from agent_bom.security import sanitize_text
 
 logger = logging.getLogger(__name__)
@@ -367,6 +367,19 @@ def discover_okta_non_human_identities(
     return _discover_client(client, resolved_org)
 
 
+def _collect_listing(fetch: Any, capability: str) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    try:
+        try:
+            rows = fetch()
+        except PartialCollectionError as exc:
+            rows = _validated_listing(exc.records)
+            return rows, {"capability": capability, "state": "partial", "count": len(rows), "reason_code": exc.reason_code}
+        rows = _validated_listing(rows)
+        return rows, {"capability": capability, "state": "complete", "count": len(rows)}
+    except Exception:  # broad-except: provider clients can fail with SDK-specific errors; expose only static coverage.
+        return [], {"capability": capability, "state": "unknown", "count": None, "reason_code": "listing_failed"}
+
+
 def _discover_client(client: Any, resolved_org: str) -> NHIDiscoveryResult:
     warnings: list[str] = []
     raw_apps: list[dict[str, Any]] = []
@@ -374,20 +387,16 @@ def _discover_client(client: Any, resolved_org: str) -> NHIDiscoveryResult:
     failures = 0
     coverage: list[dict[str, Any]] = []
 
-    try:
-        raw_apps = _validated_listing(client.list_oauth2_service_apps())
-        coverage.append({"capability": "applications", "state": "complete", "count": len(raw_apps)})
-    except Exception:  # noqa: BLE001
-        failures += 1
-        warnings.append("Okta service-app listing failed; coverage is incomplete.")
-        coverage.append({"capability": "applications", "state": "unknown", "count": None})
-    try:
-        raw_tokens = _validated_listing(client.list_api_tokens())
-        coverage.append({"capability": "api_token_metadata", "state": "complete", "count": len(raw_tokens)})
-    except Exception:  # noqa: BLE001
-        failures += 1
-        warnings.append("Okta API-token listing failed; coverage is incomplete.")
-        coverage.append({"capability": "api_token_metadata", "state": "unknown", "count": None})
+    raw_apps, app_coverage = _collect_listing(client.list_oauth2_service_apps, "applications")
+    raw_tokens, token_coverage = _collect_listing(client.list_api_tokens, "api_token_metadata")
+    coverage.extend((app_coverage, token_coverage))
+    failures = sum(item["state"] == "unknown" for item in coverage)
+    partial = any(item["state"] != "complete" for item in coverage)
+    for item, label in zip(coverage, ("service-app", "API-token")):
+        if item["state"] == "unknown":
+            warnings.append(f"Okta {label} listing failed; coverage is incomplete.")
+        elif item["state"] == "partial":
+            warnings.append(f"Okta {label} listing reached a collection bound; coverage is incomplete.")
 
     all_identities = tuple(
         replace(identity, source_scope=resolved_org.rstrip("/") or None) for identity in _iter_normalized(raw_apps, raw_tokens)
@@ -408,7 +417,7 @@ def _discover_client(client: Any, resolved_org: str) -> NHIDiscoveryResult:
 
     return NHIDiscoveryResult(
         provider="okta",
-        status=NHIDiscoveryStatus.PARTIAL if failures or truncated else NHIDiscoveryStatus.OK,
+        status=NHIDiscoveryStatus.PARTIAL if partial or truncated else NHIDiscoveryStatus.OK,
         identities=identities,
         coverage=tuple(coverage),
         warnings=tuple(warnings),

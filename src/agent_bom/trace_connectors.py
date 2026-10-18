@@ -51,6 +51,10 @@ class TraceConnectorError(RuntimeError):
     """Raised when a trace connector cannot authenticate or reach its API."""
 
 
+class TraceConnectorResponseTooLargeError(TraceConnectorError):
+    """The response exceeds the fixed bound; retrying the same page cannot help."""
+
+
 class _TraceConnectorHTTPError(TraceConnectorError):
     def __init__(self, status: int, *, retry_after: float = 0) -> None:
         self.status = status
@@ -166,12 +170,12 @@ def _call_json(client: _HttpClient, method: str, url: str, **kwargs: Any) -> Any
             except ValueError:
                 declared = 0
             if declared > _MAX_RESPONSE_BYTES:
-                raise TraceConnectorError("trace connector response exceeded size limit")
+                raise TraceConnectorResponseTooLargeError("trace connector response exceeded size limit")
             data = bytearray()
             for chunk in resp.iter_bytes():
                 check_time()
                 if len(data) + len(chunk) > _MAX_RESPONSE_BYTES:
-                    raise TraceConnectorError("trace connector response exceeded size limit")
+                    raise TraceConnectorResponseTooLargeError("trace connector response exceeded size limit")
                 data.extend(chunk)
             check_time()
             try:

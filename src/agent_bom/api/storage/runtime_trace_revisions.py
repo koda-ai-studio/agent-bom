@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Any
 
@@ -77,7 +78,13 @@ def _encode_revision(record: RuntimeObservationRecord) -> tuple[str, str]:
 
 
 def _insert_fresh_revisions(
-    conn: Any, records: list[RuntimeObservationRecord], fresh: set[tuple[str, str]], p: str, *, cooperative: bool = False
+    conn: Any,
+    records: list[RuntimeObservationRecord],
+    fresh: set[tuple[str, str]],
+    p: str,
+    *,
+    cooperative: bool = False,
+    prepared: Mapping[int, tuple[str, str]] | None = None,
 ) -> None:
     pending: dict[tuple[str, str], RuntimeObservationRecord] = {}
     for record in records:
@@ -91,7 +98,7 @@ def _insert_fresh_revisions(
         params = tuple(
             value
             for identity, record in iter_with_handoffs(batch, enabled=cooperative)
-            for value in (*identity, 1, *_encode_revision(record))
+            for value in (*identity, 1, *(prepared[id(record)] if prepared is not None else _encode_revision(record)))
         )
         conn.execute(
             "INSERT INTO runtime_observation_revisions "  # nosec B608 — bound values, fixed identifiers
@@ -136,7 +143,12 @@ def _revise_session_sql(conn: Any, old: RuntimeObservationRecord, record: Runtim
 
 
 def reconcile_sql(
-    conn: Any, records: list[RuntimeObservationRecord], *, placeholder: str = "?", cooperative: bool = False
+    conn: Any,
+    records: list[RuntimeObservationRecord],
+    *,
+    placeholder: str = "?",
+    cooperative: bool = False,
+    prepared: Mapping[int, tuple[str, str]] | None = None,
 ) -> tuple[int, list[RuntimeObservationRecord]]:
     """Reconcile under the tenant write lock; return updates and first-seen rows.
 
@@ -151,7 +163,7 @@ def reconcile_sql(
     updated = 0
     first_seen = []
     fresh = _fresh_identities(conn, records, p)
-    _insert_fresh_revisions(conn, records, fresh, p, cooperative=cooperative)
+    _insert_fresh_revisions(conn, records, fresh, p, cooperative=cooperative, prepared=prepared)
     for record in records:
         if record.surface != "imported_trace":
             first_seen.append(record)
@@ -163,7 +175,7 @@ def reconcile_sql(
             fresh.remove(identity)
             first_seen.append(record)
             continue
-        digest, encoded = _encode_revision(record)
+        digest, encoded = prepared[id(record)] if prepared is not None else _encode_revision(record)
         row = conn.execute(
             f"SELECT data FROM runtime_observations WHERE tenant_id={p} AND observation_id={p}",  # nosec B608
             identity,

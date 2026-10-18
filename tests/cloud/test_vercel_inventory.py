@@ -275,3 +275,24 @@ def test_import_normalizer_drops_nested_values_under_allowlisted_keys():
         }
     )
     assert "never-export" not in str(resources)
+
+
+def test_old_team_history_is_excluded_by_a_fixed_deployment_window():
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        if request.url.path.endswith("projects"):
+            return httpx.Response(200, json={"projects": [PROJECT], "pagination": {"next": None}})
+        if "since" in request.url.params:
+            assert int(request.url.params["until"]) - int(request.url.params["since"]) == 24 * 60 * 60 * 1000
+            return httpx.Response(200, json={"deployments": [DEPLOYMENT], "pagination": {"next": None}})
+        return httpx.Response(200, json={"deployments": [DEPLOYMENT], "pagination": {"next": 100000 - len(calls)}})
+
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        report = collect_report(team_id=TEAM, token="fixture", client=client)
+    assert report["status"] == "ok"
+    assert len(calls) == 2
+    receipt = report["coverage"][1]
+    assert receipt["window_start"] < receipt["window_end"]
+    assert "24 hours" in " ".join(report["limitations"])

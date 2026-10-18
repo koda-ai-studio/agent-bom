@@ -7,7 +7,7 @@ from uuid import uuid4
 
 import click
 
-from agent_bom.cli._cloud_inventory_io import _write_report, persist_graph, read_token
+from agent_bom.cli._cloud_inventory_io import CollectionScopeMismatchError, _write_report, persist_graph, read_token
 from agent_bom.cli._tenant import resolve_cli_tenant_id_strict
 from agent_bom.security import sanitize_error
 
@@ -57,6 +57,8 @@ def supabase_cmd(project_refs: tuple[str, ...], token_file: Path, output: Path, 
         _write_report(output, report)
         if graph_db is not None and report["status"] == "ok":
             _persist_report(report, graph_db, tenant_id, output)
+    except CollectionScopeMismatchError as exc:
+        raise click.ClickException("Collection scope changed; use a separate graph database") from exc
     except Exception as exc:
         raise click.ClickException(sanitize_error(exc, generic=True)) from exc
     click.echo(f"Supabase: {report['status']}; {len(report['cloud_inventory'])} projects; {len(report['findings'])} native findings.")
