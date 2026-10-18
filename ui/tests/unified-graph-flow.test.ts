@@ -340,7 +340,7 @@ it("preserves same-named assets across every catalogued vendor and keeps only re
     { ...edge(nodes[2]!.id, nodes[0]!.id, RelationshipType.DEPENDS_ON), evidence: {} },
   ];
   const graph = { scan_id: "vendor-scopes", tenant_id: "tenant-a", created_at: createdAt, nodes, edges, attack_paths: [], interaction_risks: [] } as unknown as UnifiedGraphData;
-  const flow = buildUnifiedFlowGraph(graph, createInvestigationGraphFilters(), new Set(nodes.map(n => n.id)));
+  const flow = buildUnifiedFlowGraph(graph, createInvestigationGraphFilters(createFocusedGraphFilters()), new Set(nodes.map(n => n.id)));
   expect(flow.nodes.map(n => n.id).sort()).toEqual(nodes.map(n => n.id).sort());
   expect(flow.edges.map(e => [e.id, e.source, e.target, e.data?.relationship])).toEqual(edges.map(e => [e.id, e.source, e.target, e.relationship]));
   expect(flow.edges.map(e => e.data?.evidenceLabel)).toEqual(["Static / configured", "Not recorded"]);
