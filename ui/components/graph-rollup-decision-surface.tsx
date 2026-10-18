@@ -249,15 +249,18 @@ export function GraphRollupDecisionSurface({
 
               <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs md:w-44">
                 {item.has_children && <div>
-                  <p className="text-ink-secondary">Contains <span className="font-semibold tabular-nums text-foreground">{item.aggregate.descendant_count} nodes</span></p>
+                  <p className="text-ink-secondary">Contains <span className="font-semibold tabular-nums text-foreground">{item.aggregate.descendant_count} nodes</span>{item.direct_child_count > 0 && <> · {item.direct_child_count} direct</>}</p>
                 </div>}
                 {item.has_children && <div>
                   <p className="text-ink-secondary">Contained critical / high <span className="font-semibold tabular-nums text-foreground">{critical} / {high}</span></p>
                 </div>}
                 <div>
-                  <p className="tabular-nums text-ink-secondary" title={`${relation.relationships} aggregated relationship evidence records`}>
+                  {/* The server counts linked scopes before any row cap; the in-view count is a fallback. */}
+                  {item.connections ? <p className="tabular-nums text-ink-secondary" title={`${item.connections.relationship_count} relationships to other scopes`}>
+                    Linked to {item.connections.connected_entry_count} other {item.connections.connected_entry_count === 1 ? "scope" : "scopes"}
+                  </p> : <p className="tabular-nums text-ink-secondary" title={`${relation.relationships} aggregated relationship evidence records`}>
                     {relation.containers} connected {relation.containers === 1 ? "node" : "nodes"} in this view
-                  </p>
+                  </p>}
                 </div>
               </div>
 
