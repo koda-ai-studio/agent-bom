@@ -47,7 +47,7 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     if (controls) observer.observe(controls);
     measure();
     return () => observer.disconnect();
-  }, [canvas]);
+  }, [canvas, layoutKey]);
   useEffect(() => {
     if (!enabled || !initialized || !width || !height || !windowHeight) return;
     const frameElement = canvas?.closest<HTMLElement>("[data-graph-adaptive-frame]");

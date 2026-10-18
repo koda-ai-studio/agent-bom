@@ -82,10 +82,18 @@ for (const theme of ["light", "dark"]) test(`fit all includes complete shared-se
   await page.addInitScript(t => localStorage.setItem("agent-bom-theme", t), theme);
   const nodes = [node("role", "role", "prod-ai-admin"), node("agent", "agent", "Developer Copilot"), node("peer", "agent", "Sre Runbook Agent"), node("github", "server", "github-enterprise MCP"), node("filesystem", "server", "filesystem MCP")].map(n => ({ ...n, dimensions: { environment: "prod" } }));
   await fixture(page, nodes, [edge("role", "agent", "can_access"), edge("agent", "github", "uses"), edge("agent", "filesystem", "uses"), edge("agent", "peer", "shares_server"), edge("peer", "filesystem", "uses")]);
-  await page.goto("/graph?scan=snapshot&root=agent&lens=context");
+  await page.goto("/graph?scan=snapshot&root=agent&lens=context&capture=1");
   await expect(page.locator(".react-flow__node")).toHaveCount(5);
   await page.getByTestId("graph-entity-drawer").getByRole("button", { name: "Close", exact: true }).click();
   await page.locator(".react-flow__controls-fitview").click();
+  let previousViewport = "";
+  let stableSamples = 0;
+  await expect.poll(async () => {
+    const current = await page.locator(".react-flow__viewport").evaluate(element => getComputedStyle(element).transform);
+    stableSamples = current === previousViewport ? stableSamples + 1 : 0;
+    previousViewport = current;
+    return stableSamples;
+  }, { intervals: [100] }).toBeGreaterThanOrEqual(4);
   await expect.poll(() => page.locator(".react-flow").evaluate(canvas => {
     const bounds = canvas.getBoundingClientRect();
     return [...canvas.querySelectorAll(".react-flow__edge-path, .graph-relationship-label, .react-flow__node [data-graph-entity]")].filter(element => {
@@ -101,6 +109,12 @@ for (const theme of ["light", "dark"]) test(`fit all includes complete shared-se
     return boxes.flatMap((a, i) => boxes.slice(i + 1).filter(b => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top).map(b => [a.label, b.label]));
   });
   expect(overlaps).toEqual([]);
+  const primaryFonts = await page.locator(".react-flow__node").evaluateAll(nodes => nodes.map(node => {
+    const viewport = node.closest(".react-flow__viewport")!;
+    const zoom = new DOMMatrixReadOnly(getComputedStyle(viewport).transform).a;
+    return Math.max(0, ...[...node.querySelectorAll("span, p")].filter(text => text.textContent?.trim()).map(text => parseFloat(getComputedStyle(text).fontSize) * zoom));
+  }));
+  expect(Math.min(...primaryFonts)).toBeGreaterThanOrEqual(12);
   const badgeFonts = await page.locator(".react-flow__node [data-node-badge]").evaluateAll(badges => badges.map(badge => {
     const transform = getComputedStyle(badge.closest(".react-flow__viewport")!).transform;
     return parseFloat(getComputedStyle(badge).fontSize) * new DOMMatrixReadOnly(transform).a;
