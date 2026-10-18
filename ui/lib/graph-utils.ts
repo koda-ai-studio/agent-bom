@@ -342,6 +342,10 @@ const RELATIONSHIP_LABEL_OVERRIDES: Record<string, string> = {
   cross_account_trust: "Cross-account Trust",
   exposed_to: "Exposed To",
   has_permission: "Has Permission",
+  acted_as: "Acted As",
+  called: "Called",
+  invoked: "Invoked",
+  accessed: "Accessed",
   used_credential: "Used Credential",
   delegated_to: "Delegated To",
 };
@@ -370,13 +374,14 @@ const RELATIONSHIP_DESCRIPTION_OVERRIDES: Record<string, string> = {
   exposed_to: "Internet, account, or environment exposure reaches this asset.",
   stores: "Asset stores or indexes data that may be reachable from the path.",
   has_permission:
-    "Identity has an effective permission on the connected resource.",
-  invoked: "Runtime evidence that an agent invoked a server or tool.",
-  called: "Runtime evidence of a concrete tool call.",
-  accessed: "Runtime evidence that a tool or call accessed an asset.",
-  used_credential: "Runtime evidence that credential material was used.",
+    "Recorded permission relationship. Effective permission depends on policy and runtime context.",
+  acted_as: "Recorded actor-to-identity relationship. Inspect the receipt to determine whether it was observed.",
+  invoked: "Recorded invocation relationship. Inspect the receipt for observation and outcome.",
+  called: "Recorded tool-call relationship. Inspect the receipt for observation and outcome.",
+  accessed: "Recorded access relationship. Inspect the receipt for observation and outcome.",
+  used_credential: "Recorded credential-use relationship. Inspect the receipt for observation and outcome.",
   delegated_to:
-    "Runtime delegation from one actor or tool boundary to another.",
+    "Recorded delegation relationship. Inspect the receipt for configuration, observation and outcome.",
   protects:
     "A WAF, gateway, or edge control fronts the asset and refines its exposure verdict.",
   observes:

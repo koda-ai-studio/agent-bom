@@ -3,6 +3,7 @@ import type { LegendItem } from "@/lib/graph-utils";
 /** Relationships whose consequence depends on whether access was configured or actually used. */
 export const CONSEQUENTIAL_RELATIONSHIPS: ReadonlySet<string> = new Set([
   "can_access", "has_permission", "uses", "exposes_cred", "assumes", "authenticates_as",
+  "acted_as", "called", "invoked", "accessed", "used_credential", "delegated_to",
 ]);
 
 type EvidenceMetadata = { evidenceMode?: unknown; evidenceBlocked?: unknown } | undefined;

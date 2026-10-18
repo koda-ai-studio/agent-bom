@@ -17,6 +17,12 @@ describe("configured versus observed access", () => {
     ["exposes_cred", { evidenceMode: "unknown" }, "Exposes Credential · evidence unspecified"],
     ["assumes", { evidenceMode: "static" }, "Assumes · configured"],
     ["depends_on", { evidenceMode: "static" }, "Depends On"],
+    ["acted_as", { evidenceMode: "inferred" }, "Acted As · modeled"],
+    ["called", { evidenceMode: "static" }, "Called · configured"],
+    ["invoked", { evidenceMode: "unknown" }, "Invoked · evidence unspecified"],
+    ["accessed", { evidenceMode: "runtime" }, "Accessed · observed"],
+    ["used_credential", { evidenceMode: "runtime", evidenceBlocked: true }, "Used Credential · blocked"],
+    ["delegated_to", { evidenceMode: "runtime", evidenceBlocked: true }, "Delegated To · blocked"],
     ["delegated_to", { evidenceMode: "static" }, "Configured delegation"],
     ["uses", undefined, "Uses"],
   ] as const)("labels %s with %j as %s", (relationship, metadata, label) => {
