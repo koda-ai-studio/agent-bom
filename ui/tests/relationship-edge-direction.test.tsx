@@ -38,3 +38,10 @@ describe("progressive relationship direction", () => {
     expect(getByTestId("edge")).toHaveAttribute("marker-end", "url(#recorded-target)");
   });
 });
+
+it("keeps neighborhood labels quiet while explicit path steps remain named", () => {
+  const { queryByText, rerender } = mount({ label: "Affects", data: { ...props.data, directionEmphasis: true } });
+  expect(queryByText("Affects")).not.toBeInTheDocument();
+  rerender(<svg><RelationshipEdge {...props} label="Affects" data={{ ...props.data, directionEmphasis: true, pathEmphasis: true }} /></svg>);
+  expect(queryByText("Affects")).toBeVisible();
+});

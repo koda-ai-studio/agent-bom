@@ -439,6 +439,7 @@ export function SecurityGraphInvestigation({
   const pathEdges = useMemo(() => focusMode && attackPath ? pathRelationshipIds(layout.edges, attackPath) : new Set<string>(), [focusMode, attackPath, layout.edges]);
   const displayEdges = useMemo(
     () => readableGraphEdges(layout.edges.map(edge => ({ ...edge, data: { ...edge.data,
+      pathEmphasis: pathEdges.has(edge.id),
       directionEmphasis: pathEdges.has(edge.id) || edge.id === selectedEdge?.id || edge.source === selectedNodeId || edge.target === selectedNodeId,
       quietLabel: edge.data?.quietLabel && edge.id !== selectedEdge?.id && edge.source !== selectedNodeId && edge.target !== selectedNodeId,
     } })), undefined, { nodeLabels: graphNodeDisplayLabels(layout.nodes) }),

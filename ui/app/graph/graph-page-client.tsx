@@ -2119,7 +2119,7 @@ function GraphPageInner() {
               fontSize: Math.max(12, Math.min(20, 13 / Math.max(graphViewport.zoom, 0.2))),
               fontWeight: 650,
             },
-            data: { ...edge.data, directionEmphasis: inPath },
+            data: { ...edge.data, directionEmphasis: inPath, pathEmphasis: inPath },
             animated: captureMode ? false : Boolean(inPath || edge.animated),
             style: {
               ...edge.style,

@@ -92,7 +92,9 @@ export function RelationshipEdge(props: EdgeProps) {
   }, []);
   const emphasized = hovered || focused || props.selected || props.data?.directionEmphasis === true;
   const relationship = typeof props.data?.relationship === "string" ? props.data.relationship : "";
-  const label = props.label ?? (emphasized && relationship ? relationshipEdgeLabelText(relationship, props.data) : null);
+  const inspectLabel = hovered || focused || props.selected || props.data?.pathEmphasis === true;
+  const label = props.data?.quietLabel && !inspectLabel ? null
+    : props.label ?? (inspectLabel && relationship ? relationshipEdgeLabelText(relationship, props.data) : null);
   const nodes = useStore(state => state.nodes);
   const zoom = useStore(state => state.transform[2]);
   const labelRef = useRef<HTMLDivElement>(null);
