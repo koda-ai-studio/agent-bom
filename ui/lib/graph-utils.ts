@@ -387,8 +387,6 @@ const RELATIONSHIP_DESCRIPTION_OVERRIDES: Record<string, string> = {
   observes:
     "Inventory evidence that an agent or framework watches the connected asset.",
   belongs_to: "Asset is part of the connected application or service.",
-  acted_as:
-    "Runtime evidence that an actor operated under another identity.",
   correlates_with:
     "The same real-world asset was matched across environments or sources.",
   possibly_correlates_with:
