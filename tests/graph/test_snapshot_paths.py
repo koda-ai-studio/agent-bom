@@ -292,8 +292,10 @@ def test_stored_paths_equal_derivation_when_fusion_rows_need_read_adjustment(sto
     assert stored is not None
     derived = _derived_attack_paths(store.load_graph(tenant_id="tenant-a", scan_id="fusion"))
     assert _dicts(stored.paths) == _dicts(derived)
-    capped = next(path for path in stored.paths if path.target == "vuln:CVE-1" and path.summary.endswith("fused"))
-    assert capped.composite_risk == 39.0
+    adjusted = next(path for path in stored.paths if path.target == "vuln:CVE-1" and path.summary.endswith("fused"))
+    # Read adjustment qualifies reachability without rewriting the producer's risk.
+    assert adjusted.composite_risk == 90.0
+    assert adjusted.reachability != "confirmed"
     persisted = store.load_graph(tenant_id="tenant-a", scan_id="fusion").attack_paths
     assert next(path for path in persisted if path.summary == "fused").composite_risk == 90.0
 

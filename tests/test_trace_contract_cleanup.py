@@ -85,7 +85,12 @@ def test_edge_change_completeness_counts_rows(monkeypatch, counts, total):
 
     monkeypatch.setattr(views._runtime, "_get_graph_store_or_503", lambda: store)
     monkeypatch.setattr(views._runtime, "_tenant", lambda request: "tenant-a")
+
+    async def known_snapshots(graph_store, tenant, *scan_ids):
+        return scan_ids
+
     monkeypatch.setattr(views._runtime, "_graph_store_call", call)
+    monkeypatch.setattr(views._runtime, "require_graph_snapshot_ids", known_snapshots)
     result = asyncio.run(views.get_graph_edge_changes(SimpleNamespace(), old="old", new="new"))
     assert result["completeness"]["returned"] == sum(counts)
     assert result["completeness"]["total"] == total

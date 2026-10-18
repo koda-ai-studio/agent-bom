@@ -180,13 +180,25 @@ def test_mcpserver_stable_id_survives_registry_enrichment():
     assert s_with_registry.stable_id == s_without_registry.stable_id
 
 
-def test_mcpserver_canonical_id_survives_display_rename():
-    """A display rename preserves an exact executable and argv identity."""
+def test_mcpserver_configured_name_is_part_of_instance_identity():
+    """Two configured entries running one launch recipe are two instances.
+
+    Merging them would attribute one entry's credentials and blast radius to
+    the other, so the configured name stays in the identity, and a renamed
+    entry is a new instance.
+    """
     s1 = MCPServer(name="filesystem", command="npx", args=["filesystem-server"], registry_id="modelcontextprotocol/filesystem")
     s2 = MCPServer(name="File System", command="npx", args=["filesystem-server"], registry_id="modelcontextprotocol/filesystem")
 
-    assert s1.stable_id == s2.stable_id
+    assert s1.stable_id != s2.stable_id
     assert s1.canonical_id == s1.stable_id
+
+
+def test_mcpserver_canonical_id_survives_secret_rotation():
+    def server(token: str) -> MCPServer:
+        return MCPServer(name="github", command="npx", args=["server-github"], env={"GITHUB_TOKEN": token, "LOG_LEVEL": token[-1]})
+
+    assert server("ghp_old_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1").canonical_id == server("ghp_new_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb2").canonical_id
 
 
 def test_registry_artifact_does_not_merge_different_launches():

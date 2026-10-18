@@ -215,6 +215,8 @@ def _lab_graph() -> UnifiedGraph:
 
 
 def test_reference_lab_container_and_sbom_cve_occurrence_gets_paths() -> None:
+    from agent_bom.graph.attack_path_queue_rank import path_evidence_confidence
+
     graph = _lab_graph()
     vuln = "vulnerability:sbom:cve-2023-4863"
     chains = sorted(tuple(path.hops) for path in _paths_to(graph, vuln))
@@ -226,7 +228,8 @@ def test_reference_lab_container_and_sbom_cve_occurrence_gets_paths() -> None:
     for path in _paths_to(graph, vuln):
         assert path.finding_ids == ["reference-finding-cve-2023-4863"]
         assert _occurrence_basis(path) == ["insufficient_evidence"]
-        assert path.composite_risk <= 39.0
+        # Insufficient applicability evidence limits confidence; it no longer clamps the risk order.
+        assert path_evidence_confidence(path) == "structural"
 
 
 def _estate_graph() -> UnifiedGraph:
@@ -259,7 +262,8 @@ def test_container_image_cve_gets_one_path_from_the_workload_not_the_environment
     assert [tuple(path.hops) for path in paths] == [("workload:api", "image:api", "pkg:libwebp", "vuln:img")]
     assert paths[0].edges == ["depends_on", "depends_on", "vulnerable_to"]
     assert paths[0].finding_ids == ["finding-img"]
-    assert _occurrence_basis(paths[0]) == ["package_reachable"]
+    # The hand-built graph records no analyzer run, which the path states rather than hides.
+    assert _occurrence_basis(paths[0]) == ["package_reachable", "analysis_not_recorded"]
 
 
 def test_container_cve_with_vex_fixed_on_the_edge_is_excluded_and_counted() -> None:

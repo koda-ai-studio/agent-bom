@@ -131,6 +131,9 @@ def path_evidence_confidence(path: AttackPath) -> str:
     reachability = str(path.reachability or "unknown").lower()
     if reachability == "unlikely":
         return "disproven"
+    # Complete hops prove the route, not that the finding applies to this occurrence.
+    if "insufficient_evidence" in (path.reachability_basis or []):
+        return "structural"
     if reachability == "confirmed":
         return "verified"
     if reachability == "likely":
