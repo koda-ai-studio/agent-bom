@@ -14,9 +14,7 @@ import asyncio
 import ipaddress
 import logging
 import os
-import re
 from collections.abc import AsyncIterator
-from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
@@ -25,7 +23,7 @@ from agent_bom import __version__
 from agent_bom import config as _config
 from agent_bom.api import host_guard as _host_guard
 from agent_bom.api import stores as _stores
-from agent_bom.api.audit_log import get_audit_log, warn_if_ephemeral_hmac_key
+from agent_bom.api.audit_log import warn_if_ephemeral_hmac_key
 from agent_bom.api.auth import Role, create_api_key_record, get_key_store
 from agent_bom.api.dev_auth_state import get_dev_api_key as get_dev_api_key
 from agent_bom.api.dev_auth_state import get_dev_api_role as get_dev_api_role
@@ -42,11 +40,10 @@ from agent_bom.api.middleware import (
     RateLimitMiddleware,
     TrustHeadersMiddleware,
     global_ip_rate_limit_rpm,
-    register_dashboard_spa_routes,
 )
 
 # ─── Extracted modules ────────────────────────────────────────────────────────
-from agent_bom.api.models import (
+from agent_bom.api.models import (  # noqa: F401 — legacy model imports
     AnalyticsHealth,
     EntitlementHealth,
     HealthResponse,
@@ -64,7 +61,7 @@ from agent_bom.api.routes.enterprise_routes._session_helpers import _maybe_attac
 from agent_bom.api.scan_snapshot_store import expire_jobs_and_snapshots
 from agent_bom.api.storage.analytics import peek_analytics_store
 from agent_bom.api.storage_schema import postgres_deployment_configured
-from agent_bom.api.stores import (
+from agent_bom.api.stores import (  # noqa: F401 — legacy store injection hooks
     _get_credential_ref_store,
     _get_schedule_store,
     _get_source_store,
@@ -84,7 +81,7 @@ from agent_bom.api.stores import (
     set_source_store,
     set_trend_store,
 )
-from agent_bom.api.stores import (
+from agent_bom.api.stores import (  # noqa: F401 — legacy store injection hooks
     set_job_store as set_job_store,
 )
 from agent_bom.api.tracing import configure_otel_tracing, get_tracing_health
@@ -103,11 +100,6 @@ _logger = logging.getLogger(__name__)
 # ``uvicorn agent_bom.api.server:app`` and multi-worker re-imports as well as
 # the CLI, which activates it earlier.
 _state_home.activate_demo_state_dir()
-_DASHBOARD_CSP_META_RE = re.compile(
-    r"<meta\s+[^>]*(?:http-equiv|httpEquiv)=[\"']Content-Security-Policy[\"'][^>]*>",
-    re.IGNORECASE,
-)
-
 # ─── Dependency check ─────────────────────────────────────────────────────────
 
 
@@ -136,337 +128,32 @@ except ImportError as exc:  # pragma: no cover
 if TYPE_CHECKING:
     import datetime as _datetime
 
-    from fastapi.responses import HTMLResponse
 
 # ─── App ──────────────────────────────────────────────────────────────────────
 
 from contextlib import asynccontextmanager  # noqa: E402
 
-
-def _analytics_backend_config() -> tuple[str, str | None]:
-    """Resolve the requested analytics backend and configured ClickHouse URL."""
-    backend = os.environ.get("AGENT_BOM_ANALYTICS_BACKEND", "").strip().lower()
-    clickhouse_url = os.environ.get("AGENT_BOM_CLICKHOUSE_URL", "").strip() or None
-    if backend in {"", "auto"}:
-        backend = "clickhouse" if clickhouse_url else "disabled"
-    return backend, clickhouse_url
-
-
-def _analytics_health() -> AnalyticsHealth:
-    """Return the active analytics backend contract for operators."""
-    backend, clickhouse_url = _analytics_backend_config()
-    active_store = peek_analytics_store()
-    if active_store is None:
-        return AnalyticsHealth(
-            backend=backend if backend != "disabled" else "disabled",
-            enabled=False,
-            buffered=False,
-            clickhouse_url_configured=bool(clickhouse_url),
-        )
-
-    store_name = type(active_store).__name__
-    buffered = hasattr(active_store, "flush_interval") and hasattr(active_store, "max_batch")
-    return AnalyticsHealth(
-        backend="clickhouse" if "ClickHouse" in store_name or buffered else backend,
-        enabled=store_name != "NullAnalyticsStore",
-        buffered=buffered,
-        clickhouse_url_configured=bool(clickhouse_url),
-        flush_interval_seconds=float(getattr(active_store, "flush_interval", 0.0)) if buffered else None,
-        max_batch=int(getattr(active_store, "max_batch", 0)) if buffered else None,
-        queue_capacity=int(getattr(active_store, "queue_capacity", 0)) if buffered else None,
-        queue_depth=int(getattr(active_store, "queue_depth", 0)) if buffered else None,
-        dropped_count=int(getattr(active_store, "dropped_count", 0)) if buffered else None,
-    )
-
-
-def _backend_name(store: object | None) -> str:
-    if store is None:
-        return "disabled"
-    name = type(store).__name__.lower()
-    if "snowflake" in name:
-        return "snowflake"
-    if "postgres" in name:
-        return "postgres"
-    if "sqlite" in name:
-        return "sqlite"
-    if "clickhouse" in name:
-        return "clickhouse"
-    if "memory" in name:
-        return "inmemory"
-    if "null" in name:
-        return "disabled"
-    return type(store).__name__
-
-
-def _control_plane_backend(storage: StorageHealth) -> str:
-    primary = [storage.job_store, storage.fleet_store, storage.policy_store, storage.source_store]
-    if any(name == "snowflake" for name in primary):
-        return "snowflake"
-    if any(name == "postgres" for name in primary):
-        return "postgres"
-    if any(name == "sqlite" for name in primary):
-        return "sqlite"
-    return "inmemory"
-
-
-def _postgres_portability_health(control_plane_backend: str) -> PostgresPortabilityHealth | None:
-    """Return declarative Postgres posture without blocking the health route."""
-    if control_plane_backend != "postgres":
-        return None
-    from agent_bom.storage.postgres_capabilities import declared_postgres_portability
-
-    posture = declared_postgres_portability()
-    return PostgresPortabilityHealth(
-        provider=posture.provider,
-        declared_hint=posture.declared_hint,
-        contract=posture.contract,
-        evidence=posture.evidence,
-        next_action=posture.next_action,
-    )
-
-
-def _storage_health() -> StorageHealth:
-    try:
-        source_store = _get_source_store()
-    except RuntimeError:
-        source_store = None
-    try:
-        credential_ref_store = _get_credential_ref_store()
-    except RuntimeError:
-        credential_ref_store = None
-    try:
-        schedule_store = _get_schedule_store()
-    except RuntimeError:
-        schedule_store = None
-
-    storage = StorageHealth(
-        job_store=_backend_name(_stores._store or _stores._get_store()),
-        fleet_store=_backend_name(_stores._fleet_store or _stores._get_fleet_store()),
-        policy_store=_backend_name(_stores._policy_store or _stores._get_policy_store()),
-        source_store=_backend_name(_stores._source_store or source_store),
-        credential_ref_store=_backend_name(_stores._credential_ref_store or credential_ref_store),
-        schedule_store=_backend_name(_stores._schedule_store or schedule_store),
-        exception_store=_backend_name(_stores._exception_store or _stores._get_exception_store()),
-        trend_store=_backend_name(_stores._trend_store or _stores._get_trend_store()),
-        graph_store=_backend_name(_stores._graph_store or _stores._get_graph_store()),
-        key_store=_backend_name(get_key_store()),
-        audit_log=_backend_name(get_audit_log()),
-    )
-    storage.control_plane_backend = _control_plane_backend(storage)
-    storage.postgres = _postgres_portability_health(storage.control_plane_backend)
-    return storage
-
-
-def _log_control_plane_auth_posture() -> None:
-    """Emit the control-plane auth-posture warning once, at serving start.
-
-    Reads the *final* runtime auth status so the log reflects the effective
-    posture after every ``configure_api`` call. The module-level
-    ``configure_api_from_env`` runs at import with only environment auth in
-    scope, so emitting from ``configure_api`` itself surfaced a misleading
-    transient "no auth configured" CRITICAL whenever the key arrived via a CLI
-    ``--api-key`` flag (which is not in the environment yet). Logging here — the
-    lifespan startup, after the CLI has reconfigured — avoids that.
-    """
-    from agent_bom.api.auth_posture import get_auth_posture
-
-    posture = get_auth_posture()
-    # One structured line summarizing the single derived posture (effective
-    # sources in precedence order, anonymous state, listener scope, trusted-proxy
-    # and OIDC status). This is the same object /health and the middleware read.
-    _logger.info(posture.summary_line())
-
-    auth_configured = posture.auth_configured
-    unauthenticated_allowed = posture.anonymous_allowed
-    if not auth_configured and not unauthenticated_allowed:
-        _logger.critical(
-            "SECURITY: No control-plane authentication configured; protected API endpoints will fail closed. "
-            "Set AGENT_BOM_API_KEY, AGENT_BOM_API_KEYS, OIDC/SAML/proxy auth, or "
-            "AGENT_BOM_ALLOW_UNAUTHENTICATED_API=1 for local development only."
-        )
-    elif not auth_configured:
-        _logger.warning(
-            "SECURITY: AGENT_BOM_ALLOW_UNAUTHENTICATED_API=1 enables unauthenticated API access. "
-            "Use only for single-user local development."
-        )
-
-
-def _apply_worker_thread_limit() -> None:
-    """Cap offloaded worker threads so they cannot outrun the connection pool.
-
-    AnyIO's default limiter is per-event-loop, so this runs at startup inside
-    the running loop rather than at import time.
-    """
-    import anyio.to_thread
-
-    anyio.to_thread.current_default_thread_limiter().total_tokens = _config.WORKER_THREAD_LIMIT
-
-
-def _validate_configured_registries() -> None:
-    if not os.environ.get("SNOWFLAKE_ACCOUNT") and postgres_deployment_configured():
-        from agent_bom.api.storage.registry_stores import validate_postgres_registries
-
-        validate_postgres_registries()
-
-
-def _preflight_postgres_tenant_isolation() -> None:
-    """Fail bare ASGI startup before traffic when the DB role can bypass RLS."""
-    # Store selection is Snowflake > Postgres > SQLite. A dormant Postgres URL
-    # must not load an optional driver or contact an unused backend when the
-    # selected Snowflake control plane starts.
-    if os.environ.get("SNOWFLAKE_ACCOUNT") or not postgres_deployment_configured():
-        return
-    from agent_bom.api.postgres_common import preflight_rls_capable_role
-
-    preflight_rls_capable_role()
-
-
-def _enqueue_scheduled_scan(
-    scan_config: dict[str, Any],
-    *,
-    schedule_id: str | None = None,
-    tenant_id: str | None = None,
-    scheduled_for: str | None = None,
-) -> str:
-    """Resolve a schedule to one canonical request and enqueue it durably."""
-
-    resolved_tenant_id = tenant_id or scan_config.get("tenant_id", "default")
-    resolved_tenant_id = str(resolved_tenant_id or "default")
-    source_id = str(scan_config.get("source_id") or "").strip()
-    raw_source_ids = scan_config.get("source_ids")
-
-    from agent_bom.api.routes.scan import correlation_cohort_id, enqueue_correlation_cohort, enqueue_scan_job
-
-    if raw_source_ids is not None:
-        if source_id or not isinstance(raw_source_ids, list):
-            raise RuntimeError("Scheduled correlation cohort requires an exact source_ids list without source_id")
-        source_ids = sorted(str(value).strip() for value in raw_source_ids)
-        if not 2 <= len(source_ids) <= 32 or any(not value for value in source_ids) or len(set(source_ids)) != len(source_ids):
-            raise RuntimeError("Scheduled correlation cohort requires 2-32 distinct source ids")
-        if not schedule_id or not scheduled_for:
-            raise RuntimeError("Scheduled correlation cohort requires an exact schedule occurrence")
-        max_age_hours = scan_config.get("max_age_hours", 168)
-        if isinstance(max_age_hours, bool) or not isinstance(max_age_hours, int) or not 1 <= max_age_hours <= 8760:
-            raise RuntimeError("Scheduled correlation max_age_hours must be between 1 and 8760")
-
-        from agent_bom.api.routes.sources import _request_for_source, _validate_credential_ref_for_tenant
-        from agent_bom.api.scan_batches import scan_request_targets
-        from agent_bom.api.tenant_quota import (
-            enforce_active_scan_quota,
-            enforce_retained_jobs_quota,
-            tenant_quota_guard,
-        )
-
-        with tenant_quota_guard(resolved_tenant_id):
-            schedule = _get_schedule_store().get(schedule_id, tenant_id=resolved_tenant_id)
-            scheduled_source_ids = (
-                sorted(str(value).strip() for value in schedule.scan_config.get("source_ids", []))
-                if schedule is not None and isinstance(schedule.scan_config.get("source_ids"), list)
-                else []
-            )
-            scheduled_max_age = schedule.scan_config.get("max_age_hours", 168) if schedule is not None else None
-            if schedule is None or not schedule.enabled or scheduled_source_ids != source_ids or scheduled_max_age != max_age_hours:
-                raise RuntimeError("Scheduled correlation cohort is no longer active in this tenant")
-
-            members: list[tuple[str, ScanRequest]] = []
-            sources = []
-            for member_source_id in source_ids:
-                source = _get_source_store().get(member_source_id, tenant_id=resolved_tenant_id)
-                if source is None or source.tenant_id != resolved_tenant_id or not source.enabled:
-                    raise RuntimeError("Scheduled correlation source is unavailable in this tenant")
-                _validate_credential_ref_for_tenant(resolved_tenant_id, source)
-                request_body = _request_for_source(source)
-                if len(scan_request_targets(request_body)) != 1:
-                    raise RuntimeError("Scheduled correlation source must resolve to exactly one scan target")
-                members.append((member_source_id, request_body))
-                sources.append(source)
-
-            attempted_jobs = len(members) + 1
-            enforce_active_scan_quota(resolved_tenant_id, attempted=attempted_jobs)
-            enforce_retained_jobs_quota(resolved_tenant_id, attempted=attempted_jobs)
-            cohort_id = correlation_cohort_id(
-                tenant_id=resolved_tenant_id,
-                idempotency_key=f"schedule:{schedule_id}:{scheduled_for}",
-            )
-            parent = enqueue_correlation_cohort(
-                tenant_id=resolved_tenant_id,
-                triggered_by=f"scheduler:source-cohort:{schedule_id}",
-                correlation_cohort_id=cohort_id,
-                source_requests=members,
-                max_age_hours=max_age_hours,
-                schedule_id=schedule_id,
-                quota_guarded=True,
-            )
-            from agent_bom.api.pipeline import _now
-
-            run_at = _now()
-            for source, child_job_id in zip(sources, parent.child_job_ids, strict=True):
-                source.last_run_at = run_at
-                source.last_run_status = "pending"
-                source.last_job_id = child_job_id
-                source.updated_at = run_at
-                _get_source_store().put(source, tenant_id=resolved_tenant_id)
-        return parent.job_id
-
-    if source_id:
-        from agent_bom.api.routes.sources import _request_for_source, _validate_credential_ref_for_tenant
-        from agent_bom.api.scan_batches import scan_request_targets
-        from agent_bom.api.tenant_quota import (
-            enforce_active_scan_quota,
-            enforce_retained_jobs_quota,
-            tenant_quota_guard,
-        )
-
-        with tenant_quota_guard(resolved_tenant_id):
-            if schedule_id:
-                schedule = _get_schedule_store().get(schedule_id, tenant_id=resolved_tenant_id)
-                scheduled_source_id = str(schedule.scan_config.get("source_id") or "") if schedule is not None else ""
-                if schedule is None or not schedule.enabled or scheduled_source_id != source_id:
-                    raise RuntimeError("Scheduled source is no longer active in this tenant")
-            source = _get_source_store().get(source_id, tenant_id=resolved_tenant_id)
-            if source is None or source.tenant_id != resolved_tenant_id:
-                raise RuntimeError("Scheduled source is unavailable in this tenant")
-            if not source.enabled:
-                raise RuntimeError("Scheduled source is disabled")
-            _validate_credential_ref_for_tenant(resolved_tenant_id, source)
-            request_body = _request_for_source(source)
-            target_count = len(scan_request_targets(request_body))
-            attempted_jobs = target_count + 1 if target_count > 1 else 1
-            enforce_active_scan_quota(resolved_tenant_id, attempted=attempted_jobs)
-            enforce_retained_jobs_quota(resolved_tenant_id, attempted=attempted_jobs)
-            job = enqueue_scan_job(
-                tenant_id=resolved_tenant_id,
-                triggered_by=f"scheduler:source:{source_id}",
-                request_body=request_body,
-                source_id=source_id,
-                schedule_id=schedule_id,
-                quota_guarded=True,
-            )
-            from agent_bom.api.pipeline import _now
-
-            source.last_run_at = _now()
-            source.last_run_status = job.status.value
-            source.last_job_id = job.job_id
-            source.updated_at = _now()
-            _get_source_store().put(source, tenant_id=resolved_tenant_id)
-        return job.job_id
-
-    request_payload = {key: value for key, value in scan_config.items() if key in ScanRequest.model_fields}
-    legacy_path = scan_config.get("path")
-    if isinstance(legacy_path, str) and legacy_path and not request_payload.get("agent_projects"):
-        request_payload["agent_projects"] = [legacy_path]
-    request_body = ScanRequest(**request_payload)
-    if request_body.discover_host:
-        from agent_bom.api.scan_boundary import require_host_discovery_for_tenant
-
-        require_host_discovery_for_tenant(resolved_tenant_id)
-    job = enqueue_scan_job(
-        tenant_id=resolved_tenant_id,
-        triggered_by="scheduler",
-        request_body=request_body,
-        schedule_id=schedule_id,
-    )
-    return job.job_id
+# Imported after the optional API dependency diagnostic; legacy names remain available.
+from agent_bom.api.server_dashboard import (  # noqa: E402, F401
+    _dashboard_html_response,
+    _DashboardFile,
+    _validated_dashboard_file,
+    mount_dashboard,
+)
+from agent_bom.api.server_schedules import _enqueue_scheduled_scan  # noqa: E402, F401
+from agent_bom.api.server_storage import (  # noqa: E402, F401
+    _analytics_backend_config,
+    _analytics_health,
+    _apply_worker_thread_limit,
+    _backend_name,
+    _control_plane_backend,
+    _log_control_plane_auth_posture,
+    _postgres_portability_health,
+    _preflight_postgres_tenant_isolation,
+    _storage_health,
+    _validate_configured_registries,
+    initialize_storage,
+)
 
 
 async def _prewarm_demo_story() -> None:
@@ -490,192 +177,7 @@ async def _lifespan(app_instance: FastAPI) -> AsyncIterator[None]:
     configure_otel_tracing()
     _preflight_postgres_tenant_isolation()
     _validate_configured_registries()
-    # Priority: Snowflake > Postgres > SQLite > InMemory (lazy default)
-    snowflake_configured = bool(os.environ.get("SNOWFLAKE_ACCOUNT"))
-    if snowflake_configured:
-        from agent_bom.api.snowflake_store import (
-            SnowflakeExceptionStore,
-            SnowflakeFleetStore,
-            SnowflakePolicyStore,
-            SnowflakeScheduleStore,
-            build_connection_params,
-        )
-
-        sf = build_connection_params()
-        if _stores._store is None:
-            _stores._get_store()
-        if _stores._fleet_store is None:
-            set_fleet_store(SnowflakeFleetStore(sf))
-        if _stores._policy_store is None:
-            set_policy_store(SnowflakePolicyStore(sf))
-        if _stores._schedule_store is None:
-            set_schedule_store(SnowflakeScheduleStore(sf))
-        if _stores._exception_store is None:
-            set_exception_store(SnowflakeExceptionStore(sf))
-    elif os.environ.get("AGENT_BOM_GRAPH_BACKEND", "").strip().lower() == "neptune":
-        from agent_bom.api.neptune_graph import NeptuneGraphStore
-
-        if _stores._graph_store is None:
-            set_graph_store(NeptuneGraphStore())
-    elif postgres_deployment_configured():
-        from agent_bom.api import audit_log as _audit_log_mod
-        from agent_bom.api import auth as _auth
-        from agent_bom.api import cost_store as _cost_store_mod
-        from agent_bom.api.audit_log import set_audit_log
-        from agent_bom.api.auth import set_key_store
-        from agent_bom.api.cost_store import set_cost_store
-        from agent_bom.api.postgres_store import (
-            PostgresAuditLog,
-            PostgresCostStore,
-            PostgresCredentialRefStore,
-            PostgresExceptionStore,
-            PostgresFleetStore,
-            PostgresGraphStore,
-            PostgresKeyStore,
-            PostgresPolicyStore,
-            PostgresSourceStore,
-            PostgresTrendStore,
-        )
-
-        if _stores._store is None:
-            _stores._get_store()
-        if _cost_store_mod._COST_STORE is None:
-            set_cost_store(PostgresCostStore())
-        if _stores._fleet_store is None:
-            set_fleet_store(PostgresFleetStore())
-        if _stores._policy_store is None:
-            set_policy_store(PostgresPolicyStore())
-        if _stores._source_store is None:
-            set_source_store(PostgresSourceStore())
-        if _stores._credential_ref_store is None:
-            set_credential_ref_store(PostgresCredentialRefStore())
-        if _stores._exception_store is None:
-            set_exception_store(PostgresExceptionStore())
-        if _stores._trend_store is None:
-            set_trend_store(PostgresTrendStore())
-        if _stores._graph_store is None:
-            set_graph_store(PostgresGraphStore())
-        if _auth._key_store is None:
-            set_key_store(PostgresKeyStore())
-        if _audit_log_mod._audit_log is None:
-            set_audit_log(PostgresAuditLog())
-    elif os.environ.get("AGENT_BOM_DB"):
-        from agent_bom.api import audit_log as _audit_log_mod
-        from agent_bom.api.audit_log import SQLiteAuditLog, set_audit_log
-
-        db_path = os.environ["AGENT_BOM_DB"]
-        if _stores._store is None:
-            _stores._get_store()
-        if _stores._fleet_store is None:
-            from agent_bom.api.fleet_store import SQLiteFleetStore
-
-            set_fleet_store(SQLiteFleetStore(db_path))
-        if _stores._policy_store is None:
-            from agent_bom.api.policy_store import SQLitePolicyStore
-
-            set_policy_store(SQLitePolicyStore(db_path))
-        if _stores._source_store is None:
-            from agent_bom.api.source_store import SQLiteSourceStore
-
-            set_source_store(SQLiteSourceStore(db_path))
-        if _stores._credential_ref_store is None:
-            from agent_bom.api.credential_store import SQLiteCredentialRefStore
-
-            set_credential_ref_store(SQLiteCredentialRefStore(db_path))
-        if _stores._trend_store is None:
-            from agent_bom.baseline import SQLiteTrendStore
-
-            set_trend_store(SQLiteTrendStore(db_path))
-        if _stores._graph_store is None:
-            from agent_bom.api.graph_store import SQLiteGraphStore
-
-            set_graph_store(SQLiteGraphStore())
-        if _audit_log_mod._audit_log is None:
-            set_audit_log(SQLiteAuditLog(db_path))
-
-    if _stores._source_store is None:
-        if postgres_deployment_configured() and not snowflake_configured:
-            from agent_bom.api.postgres_store import PostgresSourceStore
-
-            set_source_store(PostgresSourceStore())
-        elif os.environ.get("AGENT_BOM_DB"):
-            from agent_bom.api.source_store import SQLiteSourceStore
-
-            set_source_store(SQLiteSourceStore(os.environ["AGENT_BOM_DB"]))
-        else:
-            from agent_bom.api.source_store import InMemorySourceStore
-
-            set_source_store(InMemorySourceStore())
-
-    if _stores._credential_ref_store is None:
-        if postgres_deployment_configured() and not snowflake_configured:
-            from agent_bom.api.postgres_store import PostgresCredentialRefStore
-
-            set_credential_ref_store(PostgresCredentialRefStore())
-        elif os.environ.get("AGENT_BOM_DB"):
-            from agent_bom.api.credential_store import SQLiteCredentialRefStore
-
-            set_credential_ref_store(SQLiteCredentialRefStore(os.environ["AGENT_BOM_DB"]))
-        else:
-            from agent_bom.api.credential_store import InMemoryCredentialRefStore
-
-            set_credential_ref_store(InMemoryCredentialRefStore())
-
-    # Skills results share Postgres when configured; Snowflake needs a companion.
-    from agent_bom.api.skills_scan_store import SkillsPersistenceUnavailableError, get_skills_scan_store
-
-    try:
-        get_skills_scan_store()
-    except SkillsPersistenceUnavailableError:
-        _logger.warning("Skills result persistence unavailable: configure a supported Postgres or SQLite store")
-
-    # ── Schedule store ──
-    if _stores._schedule_store is None:
-        if postgres_deployment_configured() and not snowflake_configured:
-            from agent_bom.api.postgres_store import PostgresScheduleStore
-
-            set_schedule_store(PostgresScheduleStore())
-        elif os.environ.get("AGENT_BOM_DB"):
-            from agent_bom.api.schedule_store import SQLiteScheduleStore
-
-            set_schedule_store(SQLiteScheduleStore(os.environ["AGENT_BOM_DB"]))
-        else:
-            from agent_bom.api.schedule_store import InMemoryScheduleStore
-
-            set_schedule_store(InMemoryScheduleStore())
-
-    # ── Analytics store (ClickHouse OLAP — optional) ──
-    analytics_backend, clickhouse_url = _analytics_backend_config()
-    if analytics_backend == "clickhouse" and peek_analytics_store() is None:
-        try:
-            from agent_bom.api.clickhouse_store import BufferedAnalyticsStore, ClickHouseAnalyticsStore
-
-            if not clickhouse_url:
-                raise ValueError("ClickHouse analytics backend requires AGENT_BOM_CLICKHOUSE_URL")
-            base_store = ClickHouseAnalyticsStore(url=clickhouse_url)
-            if os.environ.get("AGENT_BOM_CLICKHOUSE_BUFFERED", "1").strip().lower() not in {"0", "false", "no"}:
-                flush_interval = float(os.environ.get("AGENT_BOM_CLICKHOUSE_FLUSH_INTERVAL", "1.0"))
-                max_batch = int(os.environ.get("AGENT_BOM_CLICKHOUSE_MAX_BATCH", "200"))
-                max_queue = int(os.environ.get("AGENT_BOM_CLICKHOUSE_MAX_QUEUE", "10000"))
-                set_analytics_store(
-                    BufferedAnalyticsStore(
-                        base_store,
-                        flush_interval=flush_interval,
-                        max_batch=max_batch,
-                        max_queue=max_queue,
-                    )
-                )
-                _logger.info(
-                    "ClickHouse analytics store enabled with buffered writes (batch=%s, queue=%s, flush_interval=%.2fs)",
-                    max_batch,
-                    max_queue,
-                    flush_interval,
-                )
-            else:
-                set_analytics_store(base_store)
-                _logger.info("ClickHouse analytics store enabled without buffering")
-        except Exception:
-            _logger.warning("ClickHouse analytics unavailable, using NullAnalyticsStore", exc_info=False)
+    initialize_storage()
 
     # ── Rate-limit key rotation status ──
     try:
@@ -1135,124 +637,9 @@ from agent_bom.api.pipeline import (  # noqa: E402
 )
 
 # ─── Route modules ────────────────────────────────────────────────────────
-from agent_bom.api.routes.adoption import router as _adoption_router  # noqa: E402
-from agent_bom.api.routes.agent_lifecycle import router as _agent_lifecycle_router  # noqa: E402
-from agent_bom.api.routes.agent_manifest import router as _agent_manifest_router  # noqa: E402
-from agent_bom.api.routes.ai_scans import router as _ai_scans_router  # noqa: E402
-from agent_bom.api.routes.assets import router as _assets_router  # noqa: E402
-from agent_bom.api.routes.blueprints import router as _blueprints_router  # noqa: E402
-from agent_bom.api.routes.campaigns import router as _campaigns_router  # noqa: E402
-from agent_bom.api.routes.cloud import router as _cloud_router  # noqa: E402
-from agent_bom.api.routes.cloud_connections import router as _cloud_connections_router  # noqa: E402
-from agent_bom.api.routes.compliance import router as _compliance_router  # noqa: E402
-from agent_bom.api.routes.connectors import router as _connectors_router  # noqa: E402
-from agent_bom.api.routes.credentials import router as _credentials_router  # noqa: E402
-from agent_bom.api.routes.datasets import router as _datasets_router  # noqa: E402
-from agent_bom.api.routes.demo_estate import router as _demo_estate_router  # noqa: E402
-from agent_bom.api.routes.discovery import router as _discovery_router  # noqa: E402
-from agent_bom.api.routes.enterprise import router as _enterprise_router  # noqa: E402
-from agent_bom.api.routes.entitlements import router as _entitlements_router  # noqa: E402
-from agent_bom.api.routes.estate import router as _estate_router  # noqa: E402
-from agent_bom.api.routes.evaluations import router as _evaluations_router  # noqa: E402
-from agent_bom.api.routes.exports import router as _exports_router  # noqa: E402
-from agent_bom.api.routes.fleet import router as _fleet_router  # noqa: E402
-from agent_bom.api.routes.frameworks import router as _frameworks_router  # noqa: E402
-from agent_bom.api.routes.gateway import router as _gateway_router  # noqa: E402
-from agent_bom.api.routes.gateway_feed import router as _gateway_feed_router  # noqa: E402
-from agent_bom.api.routes.governance import router as _governance_router  # noqa: E402
-from agent_bom.api.routes.graph import router as _graph_router  # noqa: E402
-from agent_bom.api.routes.graph_correlations import router as _graph_correlations_router  # noqa: E402
-from agent_bom.api.routes.graph_scenarios import router as _graph_scenarios_router  # noqa: E402
-from agent_bom.api.routes.identities import router as _identities_router  # noqa: E402
-from agent_bom.api.routes.intel import router as _intel_router  # noqa: E402
-from agent_bom.api.routes.inventory_assets import router as _inventory_assets_router  # noqa: E402
-from agent_bom.api.routes.kspm import router as _kspm_router  # noqa: E402
-from agent_bom.api.routes.mcp_config import router as _mcp_config_router  # noqa: E402
-from agent_bom.api.routes.mitre import router as _mitre_router  # noqa: E402
-from agent_bom.api.routes.model_keys import router as _model_keys_router  # noqa: E402
-from agent_bom.api.routes.observability import infra_router as _observability_infra_router  # noqa: E402
-from agent_bom.api.routes.observability import router as _observability_router  # noqa: E402
-from agent_bom.api.routes.overview import router as _overview_router  # noqa: E402
-from agent_bom.api.routes.plugins import router as _plugins_router  # noqa: E402
-from agent_bom.api.routes.posture_streaming import router as _posture_streaming_router  # noqa: E402
-from agent_bom.api.routes.privacy import router as _privacy_router  # noqa: E402
-from agent_bom.api.routes.proxy import router as _proxy_router  # noqa: E402
-from agent_bom.api.routes.proxy import ws_router as _proxy_ws_router  # noqa: E402
-from agent_bom.api.routes.reports import router as _reports_router  # noqa: E402
-from agent_bom.api.routes.runtime_blueprints import router as _runtime_blueprints_router  # noqa: E402
-from agent_bom.api.routes.scan import router as _scan_router  # noqa: E402
-from agent_bom.api.routes.schedules import router as _schedules_router  # noqa: E402
-from agent_bom.api.routes.scim import router as _scim_router  # noqa: E402
-from agent_bom.api.routes.self_posture import router as _self_posture_router  # noqa: E402
-from agent_bom.api.routes.skills import router as _skills_router  # noqa: E402
-from agent_bom.api.routes.sources import router as _sources_router  # noqa: E402
-from agent_bom.api.routes.ticketing import router as _ticketing_router  # noqa: E402
-from agent_bom.api.routes.webhooks import router as _webhooks_router  # noqa: E402
-from agent_bom.api.versioning import create_v1_api_router  # noqa: E402
+from agent_bom.api.server_routes import register_domain_routes  # noqa: E402
 
-_v1_api_router = create_v1_api_router()
-
-for _router in (
-    _adoption_router,
-    _assets_router,
-    _agent_manifest_router,
-    _agent_lifecycle_router,
-    _campaigns_router,
-    _cloud_router,
-    _cloud_connections_router,
-    _compliance_router,
-    _connectors_router,
-    _credentials_router,
-    _datasets_router,
-    _demo_estate_router,
-    _discovery_router,
-    _entitlements_router,
-    _estate_router,
-    _enterprise_router,
-    _exports_router,
-    _fleet_router,
-    _evaluations_router,
-    _frameworks_router,
-    _gateway_router,
-    _gateway_feed_router,
-    _governance_router,
-    _blueprints_router,
-    _graph_router,
-    _graph_correlations_router,
-    _graph_scenarios_router,
-    _identities_router,
-    _intel_router,
-    _inventory_assets_router,
-    _kspm_router,
-    _mcp_config_router,
-    _mitre_router,
-    _model_keys_router,
-    _observability_router,
-    _overview_router,
-    _plugins_router,
-    _posture_streaming_router,
-    _privacy_router,
-    _proxy_router,
-    _reports_router,
-    _runtime_blueprints_router,
-    _scan_router,
-    _ai_scans_router,
-    _schedules_router,
-    _self_posture_router,
-    _skills_router,
-    _sources_router,
-    _ticketing_router,
-    _webhooks_router,
-):
-    _v1_api_router.include_router(_router)
-
-app.include_router(_v1_api_router)
-# SCIM base path is RFC-driven (/scim/v2 by default), not under API_V1_PREFIX.
-app.include_router(_scim_router)
-# Prometheus scrape surface stays unversioned (infra contract).
-app.include_router(_observability_infra_router)
-# Proxy live streams are root-level WebSocket paths (/ws/proxy/*), not /v1.
-app.include_router(_proxy_ws_router)
+register_domain_routes(app)
 
 # Resolve agent-bom-issued (abi_) identity tokens through the lifecycle store so
 # the proxy/gateway honor issuance, rotation overlap, and revocation.
@@ -1456,12 +843,6 @@ def _fail_stuck_running_jobs(store: Any, now: _datetime.datetime) -> None:
 # ─── Meta Routes ─────────────────────────────────────────────────────────────
 
 
-@dataclass(frozen=True)
-class _DashboardFile:
-    path: Path
-    relative_path: str
-
-
 def _dashboard_dist_dir() -> Path:
     return Path(__file__).resolve().parents[1] / "ui_dist"
 
@@ -1477,41 +858,10 @@ def _ui_disabled() -> bool:
     return bool(os.environ.get("AGENT_BOM_NO_UI"))
 
 
-def _validated_dashboard_file(ui_dist: Path, relative_path: str) -> _DashboardFile | None:
-    ui_root = ui_dist.resolve()
-    raw_path = relative_path.strip()
-    if not raw_path:
-        return None
-    if Path(raw_path).is_absolute():
-        return None
-    rel = raw_path.strip("/")
-    if not rel:
-        return None
-    rel_path = Path(rel)
-    candidate = (ui_root / rel_path).resolve()
-    try:
-        normalized = candidate.relative_to(ui_root).as_posix()
-    except ValueError:
-        return None
-    if not candidate.is_file():
-        return None
-    return _DashboardFile(path=candidate, relative_path=normalized)
-
-
 def _dashboard_index_file() -> _DashboardFile | None:
     """Return the packaged dashboard index path when bundled UI assets exist."""
 
     return _validated_dashboard_file(_dashboard_dist_dir(), "index.html")
-
-
-def _dashboard_html_response(dashboard_file: _DashboardFile) -> HTMLResponse:
-    from fastapi.responses import HTMLResponse
-
-    try:
-        html = dashboard_file.path.read_text(encoding="utf-8")
-    except UnicodeDecodeError:
-        html = dashboard_file.path.read_text(encoding="utf-8", errors="replace")
-    return HTMLResponse(_DASHBOARD_CSP_META_RE.sub("", html))
 
 
 @app.api_route("/", methods=["GET", "HEAD"], include_in_schema=False)
@@ -1634,73 +984,7 @@ async def status() -> HealthResponse:
 
 
 def _mount_dashboard(application: FastAPI) -> None:
-    """Mount pre-built Next.js dashboard if ui_dist/ exists in the package."""
-    from fastapi import HTTPException as _HTTPException
-
-    # REST-only mode (`serve --no-ui` / legacy `api`): never mount the dashboard.
-    if os.environ.get("AGENT_BOM_NO_UI"):
-        return
-
-    ui_dist = _dashboard_dist_dir()
-    if not ui_dist.is_dir() or not (ui_dist / "index.html").exists():
-        from agent_bom.api.dashboard_missing import mount_missing_dashboard
-
-        mount_missing_dashboard(application)
-        return
-
-    from starlette.responses import FileResponse
-
-    next_static = ui_dist / "_next"
-    if next_static.is_dir():  # hashed JS/CSS build assets
-        from agent_bom.api.dashboard_assets import InMemoryBuildAssets
-
-        application.mount("/_next", InMemoryBuildAssets(directory=str(next_static)), name="next-static")
-
-    # Pre-build a bounded static file map at startup so request paths are
-    # resolved only as lookup keys.
-    _static_file_map: dict[str, _DashboardFile] = {}
-    for _f in ui_dist.rglob("*"):
-        if not _f.is_file():
-            continue
-        relative = _f.relative_to(ui_dist).as_posix()
-        if relative.startswith("_next"):
-            continue
-        dashboard_file = _validated_dashboard_file(ui_dist, relative)
-        if dashboard_file is not None:
-            _static_file_map[dashboard_file.relative_path] = dashboard_file
-    _index_html = _validated_dashboard_file(ui_dist, "index.html")
-    if _index_html is None:
-        return
-
-    # Auth's public-SPA allowlist is derived from exactly the files the
-    # catch-all below can resolve, so a cold deep-link to a real page never
-    # 401s and a route the SPA does not serve is never allowlisted.
-    register_dashboard_spa_routes(_static_file_map)
-
-    # SPA catch-all for client-side routing
-    @application.api_route("/{path:path}", methods=["GET", "HEAD"], include_in_schema=False)
-    async def _spa_catch_all(path: str, request: Request) -> Response:
-        # Skip API and docs paths
-        if path.startswith(("v1/", "docs", "redoc", "openapi.json", "health", "version", "readyz", "metrics")):
-            raise _HTTPException(status_code=404)
-        # Look up the pre-resolved path — user input is only a dict key,
-        # never used in any filesystem operation (no path-injection risk).
-        normalized_path = path.strip("/")
-        resolved = (
-            _static_file_map.get(path)
-            or (normalized_path and _static_file_map.get(f"{normalized_path}.html"))
-            or (normalized_path and _static_file_map.get(f"{normalized_path}/index.html"))
-        )
-        if resolved:
-            if path.lower().endswith(".html") or resolved.relative_path.lower().endswith(".html"):
-                html_response = _dashboard_html_response(resolved)
-                _maybe_attach_dev_session_cookie(html_response, request)
-                return html_response
-            return FileResponse(resolved.path)
-        # SPA fallback — serve index.html for client-side routing
-        fallback_response = _dashboard_html_response(_index_html)
-        _maybe_attach_dev_session_cookie(fallback_response, request)
-        return fallback_response
+    mount_dashboard(application, _dashboard_dist_dir())
 
 
 _mount_dashboard(app)

@@ -1500,14 +1500,79 @@ def test_ensure_tenant_rls_forces_policy_through_session_helpers():
 # ─── Server lifespan integration ─────────────────────────────────────────────
 
 
-def test_server_lifespan_postgres_env_var():
-    """Startup uses the shared selector for both documented Postgres settings."""
-    import inspect
+@pytest.fixture(params=["AGENT_BOM_POSTGRES_URL", "AGENT_BOM_DB"])
+def initialized_postgres_lifespan(request, monkeypatch):
+    """Exercise actual lifespan wiring without opening external connections."""
+    import asyncio
 
-    from agent_bom.api import server
+    from agent_bom.api import audit_log, auth, cost_store, postgres_store, server, skills_scan_store, stores
 
-    source = inspect.getsource(server._lifespan)
-    assert "postgres_deployment_configured()" in source
+    for name in ("SNOWFLAKE_ACCOUNT", "AGENT_BOM_POSTGRES_URL", "AGENT_BOM_DB", "AGENT_BOM_GRAPH_BACKEND"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv(request.param, "postgresql://unused.example/agent_bom")
+    monkeypatch.setenv("AGENT_BOM_ANALYTICS_BACKEND", "disabled")
+    monkeypatch.setattr(skills_scan_store, "get_skills_scan_store", lambda: object())
+
+    bindings = {
+        "PostgresFleetStore": (stores, "_fleet_store"),
+        "PostgresPolicyStore": (stores, "_policy_store"),
+        "PostgresSourceStore": (stores, "_source_store"),
+        "PostgresCredentialRefStore": (stores, "_credential_ref_store"),
+        "PostgresExceptionStore": (stores, "_exception_store"),
+        "PostgresTrendStore": (stores, "_trend_store"),
+        "PostgresGraphStore": (stores, "_graph_store"),
+        "PostgresScheduleStore": (stores, "_schedule_store"),
+        "PostgresKeyStore": (auth, "_key_store"),
+        "PostgresAuditLog": (audit_log, "_audit_log"),
+        "PostgresCostStore": (cost_store, "_COST_STORE"),
+    }
+    expected = {name: object() for name in bindings}
+    for name, (module, attribute) in bindings.items():
+        monkeypatch.setattr(module, attribute, None)
+        monkeypatch.setattr(postgres_store, name, lambda value=expected[name]: value)
+    # An injected job store must survive startup unchanged.
+    job_store = object()
+    monkeypatch.setattr(stores, "_store", job_store)
+
+    for name in (
+        "preflight_storage_backends",
+        "_log_control_plane_auth_posture",
+        "warn_if_ephemeral_hmac_key",
+        "_apply_worker_thread_limit",
+        "configure_otel_tracing",
+        "_preflight_postgres_tenant_isolation",
+        "_validate_configured_registries",
+    ):
+        monkeypatch.setattr(server, name, lambda: None)
+    monkeypatch.setattr(server._state_home, "activate_demo_state_dir", lambda: None)
+    monkeypatch.setattr(server._host_guard, "log_host_policy", lambda: None)
+
+    class StorageInitializedError(Exception):
+        pass
+
+    initialize = server.initialize_storage
+
+    def stop_after_storage():
+        initialize()
+        raise StorageInitializedError
+
+    monkeypatch.setattr(server, "initialize_storage", stop_after_storage)
+
+    async def start():
+        with pytest.raises(StorageInitializedError):
+            async with server._lifespan(server.app):
+                pytest.fail("startup probe must stop before background workers")
+
+    asyncio.run(start())
+    assert stores._store is job_store
+    actual = {name: getattr(module, attribute) for name, (module, attribute) in bindings.items()}
+    return actual, expected
+
+
+def test_server_lifespan_postgres_env_var(initialized_postgres_lifespan):
+    """Both documented Postgres settings initialize every control-plane store."""
+    actual, expected = initialized_postgres_lifespan
+    assert actual == expected
 
 
 # ─── PostgresScheduleStore ───────────────────────────────────────────────────
@@ -2255,37 +2320,23 @@ def test_scan_cache_key():
 # ─── Lifespan schedule store Postgres path ───────────────────────────────────
 
 
-def test_server_lifespan_postgres_schedule_store():
-    """PostgresScheduleStore is referenced in server lifespan."""
-    import inspect
-
-    from agent_bom.api import server
-
-    source = inspect.getsource(server._lifespan)
-    assert "PostgresScheduleStore" in source
+def test_server_lifespan_postgres_schedule_store(initialized_postgres_lifespan):
+    """Startup installs the durable schedule store used by the scheduler."""
+    actual, expected = initialized_postgres_lifespan
+    assert actual["PostgresScheduleStore"] is expected["PostgresScheduleStore"]
 
 
-def test_server_lifespan_postgres_enterprise_stores():
-    """Postgres-backed enterprise stores are referenced in server lifespan."""
-    import inspect
-
-    from agent_bom.api import server
-
-    source = inspect.getsource(server._lifespan)
-    assert "PostgresKeyStore" in source
-    assert "PostgresExceptionStore" in source
-    assert "PostgresAuditLog" in source
-    assert "PostgresTrendStore" in source
+def test_server_lifespan_postgres_enterprise_stores(initialized_postgres_lifespan):
+    """Startup installs Postgres auth, audit, exception, and trend stores."""
+    actual, expected = initialized_postgres_lifespan
+    for name in ("PostgresKeyStore", "PostgresExceptionStore", "PostgresAuditLog", "PostgresTrendStore"):
+        assert actual[name] is expected[name]
 
 
-def test_server_lifespan_postgres_source_store():
-    """PostgresSourceStore is referenced in server lifespan."""
-    import inspect
-
-    from agent_bom.api import server
-
-    source = inspect.getsource(server._lifespan)
-    assert "PostgresSourceStore" in source
+def test_server_lifespan_postgres_source_store(initialized_postgres_lifespan):
+    """Startup installs the tenant-scoped source store."""
+    actual, expected = initialized_postgres_lifespan
+    assert actual["PostgresSourceStore"] is expected["PostgresSourceStore"]
 
 
 # ─── Audit append tenant alignment (#4276) ────────────────────────────────────
