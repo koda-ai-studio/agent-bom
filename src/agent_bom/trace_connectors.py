@@ -25,6 +25,8 @@ from __future__ import annotations
 import json
 import logging
 import time
+from collections.abc import Iterator, Mapping
+from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Protocol, cast
@@ -41,6 +43,8 @@ LANGSMITH = "langsmith"
 _DEFAULT_LIMIT = 50
 _MAX_LIMIT = 1000
 _HTTP_TIMEOUT = 20.0
+_HTTP_TOTAL_TIMEOUT = 25.0
+_MAX_RESPONSE_BYTES = 2_000_000
 
 
 class TraceConnectorError(RuntimeError):
@@ -84,11 +88,14 @@ def _validate_pull_url(url: str) -> None:
 class _HttpResponse(Protocol):
     status_code: int
 
-    def json(self) -> Any: ...
+    @property
+    def headers(self) -> Mapping[str, str]: ...
+
+    def iter_bytes(self) -> Iterator[bytes]: ...
 
 
 class _HttpClient(Protocol):
-    def request(
+    def stream(
         self,
         method: str,
         url: str,
@@ -98,7 +105,7 @@ class _HttpClient(Protocol):
         headers: dict[str, str] | None = None,
         params: dict[str, Any] | None = None,
         json: Any = None,
-    ) -> _HttpResponse: ...
+    ) -> AbstractContextManager[_HttpResponse]: ...
 
 
 def list_trace_connectors() -> list[dict[str, Any]]:
@@ -132,18 +139,51 @@ def _client_or_default(client: _HttpClient | None) -> tuple[_HttpClient, bool]:
 
 
 def _call_json(client: _HttpClient, method: str, url: str, **kwargs: Any) -> Any:
+    """Bound every native response, including project resolution and errors.
+
+    Check elapsed time at headers and each decoded transport chunk. The socket
+    timeout bounds a stalled read; this cooperative deadline cannot interrupt a
+    read already in progress. Do not coalesce chunks: trickled small chunks must
+    reach the elapsed-time check before a larger buffer fills.
+    """
+    deadline = time.monotonic() + _HTTP_TOTAL_TIMEOUT
+
+    def check_time() -> None:
+        if time.monotonic() >= deadline:
+            raise TraceConnectorError("trace connector response exceeded time limit")
+
     try:
-        resp = client.request(method, url, timeout=_HTTP_TIMEOUT, **kwargs)
+        with client.stream(method, url, timeout=_HTTP_TIMEOUT, **kwargs) as resp:
+            check_time()
+            status = resp.status_code
+            if not 200 <= status < 300:
+                delay = provider_retry_after(resp.headers.get("Retry-After"), now=time.time())
+                raise _TraceConnectorHTTPError(status, retry_after=delay)
+            # Content-Length is only an early rejection hint. Always enforce the
+            # actual decoded size too (missing/false length and compression).
+            try:
+                declared = int(resp.headers.get("Content-Length", "0"))
+            except ValueError:
+                declared = 0
+            if declared > _MAX_RESPONSE_BYTES:
+                raise TraceConnectorError("trace connector response exceeded size limit")
+            data = bytearray()
+            for chunk in resp.iter_bytes():
+                check_time()
+                if len(data) + len(chunk) > _MAX_RESPONSE_BYTES:
+                    raise TraceConnectorError("trace connector response exceeded size limit")
+                data.extend(chunk)
+            check_time()
+            try:
+                payload = json.loads(data)
+            except (ValueError, TypeError, RecursionError) as exc:
+                raise TraceConnectorError("trace connector returned invalid JSON") from exc
+            check_time()
+            return payload
+    except TraceConnectorError:
+        raise
     except Exception as exc:  # noqa: BLE001 — surface a clean, credential-free error
         raise TraceConnectorError(f"trace connector request failed: {type(exc).__name__}") from exc
-    status = getattr(resp, "status_code", 0)
-    if not 200 <= status < 300:
-        delay = provider_retry_after(getattr(resp, "headers", {}).get("Retry-After"), now=time.time())
-        raise _TraceConnectorHTTPError(status, retry_after=delay)
-    try:
-        return resp.json()
-    except (ValueError, TypeError) as exc:
-        raise TraceConnectorError("trace connector returned invalid JSON") from exc
 
 
 def _records(payload: Any, key: str) -> list[dict[str, Any]]:

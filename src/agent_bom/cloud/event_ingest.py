@@ -582,15 +582,17 @@ def consume_aws_events(
             summary["processed"] += 1
             _delete_message(sqs_client, queue_url, receipt, summary)
 
-    return summary
+    return {**summary, "status": "partial" if summary["errors"] else "ok"}
 
 
 def _delete_message(sqs_client: Any, queue_url: str, receipt: str | None, summary: dict[str, Any]) -> None:
     """Best-effort SQS delete; a delete failure is logged, never raised."""
     if not receipt:
+        summary["errors"] += 1
         return
     try:
         sqs_client.delete_message(QueueUrl=queue_url, ReceiptHandle=receipt)
         summary["deleted"] += 1
-    except Exception as exc:  # noqa: BLE001 — delete failure only means one redelivery
+    except Exception as exc:  # noqa: BLE001 — delete failure leaves acknowledgment uncertain
         logger.warning("SQS delete failed during event ingestion: %s", type(exc).__name__)
+        summary["errors"] += 1

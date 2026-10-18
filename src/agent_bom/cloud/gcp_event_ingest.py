@@ -526,15 +526,17 @@ def consume_gcp_events(
             summary["processed"] += 1
             _ack_message(subscriber_client, subscription, ack_id, summary)
 
-    return summary
+    return {**summary, "status": "partial" if summary["errors"] else "ok"}
 
 
 def _ack_message(subscriber_client: Any, subscription: str, ack_id: str | None, summary: dict[str, Any]) -> None:
     """Best-effort Pub/Sub ack; an ack failure is logged, never raised."""
     if not ack_id:
+        summary["errors"] += 1
         return
     try:
         subscriber_client.acknowledge(subscription=subscription, ack_ids=[ack_id])
         summary["acked"] += 1
-    except Exception as exc:  # noqa: BLE001 — ack failure only means one redelivery
+    except Exception as exc:  # noqa: BLE001 — ack failure leaves acknowledgment uncertain
         logger.warning("Pub/Sub ack failed during event ingestion: %s", type(exc).__name__)
+        summary["errors"] += 1
