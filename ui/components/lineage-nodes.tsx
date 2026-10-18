@@ -205,9 +205,9 @@ function NodeCard({
         <Handle type="source" position={data.reverseFlow ? Position.Left : Position.Right}
           className={`!h-1 !w-1 !border-0 !bg-transparent ${source ? "" : "!opacity-0"}`} />
         <ContextHandles />
-        <Icon aria-hidden="true" style={{ width: "var(--graph-node-icon-size, 32px)", height: "var(--graph-node-icon-size, 32px)", ...(provider ? { transform: "translate(-45%, -35%)" } : {}) }} className={`h-8 w-8 ${iconClass}`} />
-        {provider && <SourceBadge source={provider} graph className="absolute -bottom-1 -right-4"
-          style={{ width: "calc(var(--graph-node-meta-size, 12px) * 2.9)", height: "calc(var(--graph-node-meta-size, 12px) * 2.9)" }} />}
+        <Icon aria-hidden="true" style={{ width: "var(--graph-node-icon-size, 32px)", height: "var(--graph-node-icon-size, 32px)", ...(provider ? { transform: "translate(-35%, -20%)" } : {}) }} className={`h-8 w-8 ${iconClass}`} />
+        {provider && <SourceBadge source={provider} graph className="absolute"
+          style={{ right: "-20%", bottom: "-6%", width: "calc(var(--graph-node-meta-size, 12px) * 2.9)", height: "calc(var(--graph-node-meta-size, 12px) * 2.9)" }} />}
       </div>
       <p className="mb-1 w-full min-w-0 break-words line-clamp-3 text-lg font-semibold leading-[1.2] text-foreground [overflow-wrap:anywhere]" style={{ fontSize: "var(--graph-node-label-size, 18px)" }}>
         {canvasNodeLabel(repository?.slug || displayTitle).split(/(?<=[_/@-])/).map((part, index) => <span key={index}>{part}<wbr /></span>)}
