@@ -64,6 +64,9 @@ export async function runGraphQualityCapture({ newCapturePage, buildScopeShowcas
       }
       await page.evaluate(() => window.scrollTo(0, 0));
       await expect(page.getByLabel("Visible relationship evidence")).toBeVisible();
+      // Camera animation and readable glyph resizing have separate layout turns.
+      await expect.poll(async () => (await page.evaluate(auditRenderedGraph, { edges: fixture.edges })).misalignedHandles,
+        { timeout: 5_000, message: "Rendered relationship endpoints settle on the entity glyphs" }).toEqual([]);
       const audit = await page.evaluate(auditRenderedGraph, { edges: fixture.edges });
       await fs.writeFile(path.join(output, `${key}-geometry.json`), JSON.stringify(await page.locator(".react-flow__edge").evaluateAll(edges => edges.map(e => ({ id: e.dataset.id, path: e.querySelector(".react-flow__edge-path")?.outerHTML, markers: [...document.querySelectorAll("marker")].map(m => m.outerHTML) }))), null, 2));
       const geometry = await page.locator(".react-flow__node").evaluateAll(nodes => {
