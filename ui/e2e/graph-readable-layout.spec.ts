@@ -224,19 +224,23 @@ for (const theme of ["light", "dark"] as const) {
   });
 }
 
-test("a bounded correlation opens with every card in frame", async ({ page }) => {
+test("a correlation opens on a readable neighbourhood, never a lone card", async ({ page }, info) => {
   const proof = JSON.parse(await readFile("../examples/reference-evidence-lab/generated/correlation-proof.json", "utf8"));
   await page.setViewportSize({ width: 1440, height: 900 });
   await fixture(page, proof.capture_fixture.graph.nodes, proof.capture_fixture.graph.edges);
   await page.goto("/graph?capture=1&scan=snapshot&layers=server,agent,container,package,vulnerability,tool,serviceAccount,dataStore,sourceFile");
   await expect(page.locator(".react-flow__node")).not.toHaveCount(0);
   await settle(page);
-  // No Fit all click: the first frame itself must show the whole bounded graph.
-  await expect.poll(() => page.locator(".react-flow").evaluate(canvas => {
+  // No Fit all click: the first frame itself must show whole, readable cards in context.
+  const frame = await page.locator(".react-flow").evaluate(canvas => {
     const b = canvas.getBoundingClientRect();
-    return [...canvas.querySelectorAll("[data-graph-entity]")].filter(e => {
-      const r = e.getBoundingClientRect();
-      return r.left < b.left || r.right > b.right || r.top < b.top || r.bottom > b.bottom;
-    }).length;
-  })).toBe(0);
+    const zoom = new DOMMatrixReadOnly(getComputedStyle(canvas.querySelector(".react-flow__viewport")!).transform).a;
+    const cards = [...canvas.querySelectorAll<HTMLElement>("[data-graph-entity]")];
+    const whole = cards.filter(e => { const r = e.getBoundingClientRect(); return r.left >= b.left && r.right <= b.right && r.top >= b.top && r.bottom <= b.bottom; });
+    const label = Math.min(...whole.map(card => parseFloat(getComputedStyle(card.querySelector("p")!).fontSize) * zoom));
+    return { whole: whole.length, label };
+  });
+  expect(frame.whole).toBeGreaterThanOrEqual(3);
+  expect(frame.label).toBeGreaterThanOrEqual(12);
+  await page.screenshot({ path: info.outputPath("correlation-first-frame.png"), animations: "disabled" });
 });

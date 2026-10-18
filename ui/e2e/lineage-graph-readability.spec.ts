@@ -389,7 +389,11 @@ test("lineage graph controls zoom, move, persist, lock, fit, and auto-layout", a
   const canvas = page.locator(".react-flow").last();
   const node = canvas.getByTestId("rf__node-agent:desktop");
   await expect(node).toBeVisible();
-  await expect.poll(() => canvas.locator(".react-flow__viewport").evaluate((element) => new DOMMatrixReadOnly(getComputedStyle(element).transform).a)).toBeCloseTo(1.1, 2);
+  // A dense graph opens on its anchor's neighbourhood at a readable zoom, never a lone card.
+  await expect.poll(async () => {
+    const zoom = await canvas.locator(".react-flow__viewport").evaluate((element) => new DOMMatrixReadOnly(getComputedStyle(element).transform).a);
+    return zoom >= 0.45 && zoom <= 1.1;
+  }).toBe(true);
   const before = await node.boundingBox();
   expect(before).not.toBeNull();
 

@@ -114,9 +114,7 @@ export function graphInitialFitViewOptions(
   const byId = new Map(nodes.map((node) => [node.id, node]));
   const selected = selectedNodeId ? byId.get(selectedNodeId) : undefined;
   const changed = [...proposedChangeIds].sort().map((id) => byId.get(id)).find(Boolean);
-  // A bounded graph fits whole; a single-card anchor would hide most of it
-  // (one card and stray link arcs). Anchor only graphs too large to read at fit.
-  if (!selected && !changed && nodes.length <= 18) return options;
+  if (!selected && !changed && nodes.length <= 6) return options;
   const contextTypes = new Set(["agent", "source_file", "server", "cloud_resource", "identity"]);
   const stable = [...nodes].sort((left, right) => left.id.localeCompare(right.id));
   const anchor = selected ?? changed ?? stable.find((node) => contextTypes.has(node.data.nodeType ?? "")) ?? stable[0];
