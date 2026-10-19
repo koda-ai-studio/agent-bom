@@ -53,11 +53,14 @@ def test_impact_declares_recorded_topology_boundary(api):  # noqa: F811
         "collection_coverage": "unknown",
         "traversable_only": False,
         "max_depth": 4,
+        "traversal_classes": ["authority", "dependency", "derived", "exposure", "runtime"],
+        "excluded_traversal_classes": ["correlation", "finding", "governance", "structural"],
     }
     assert impact["affected_count"] == 1
 
 
-def test_impact_and_canvas_include_the_same_nontraversable_context(api):  # noqa: F811
+def test_impact_leaves_containment_to_the_canvas_context(api):  # noqa: F811
+    """The account holding a resource cannot act on it: it is canvas context, not blast radius."""
     from tests.test_graph_tenant_scope_and_bounds import _container_graph
 
     client, store, headers = api
@@ -74,7 +77,8 @@ def test_impact_and_canvas_include_the_same_nontraversable_context(api):  # noqa
         },
         headers=headers["tenant-a"],
     ).json()
-    assert impact["affected_nodes"] == ["account:root"]
+    assert impact["affected_nodes"] == []
+    assert impact["completeness"]["complete"] is True
     assert {n["id"] for n in context["nodes"]} == {"res:00000", "account:root"}
     assert context["edges"][0]["relationship"] == "contains"
 

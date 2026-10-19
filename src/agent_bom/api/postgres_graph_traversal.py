@@ -16,8 +16,8 @@ from agent_bom.db.graph_store import (
 )
 from agent_bom.graph.completeness import (
     bounded_walk_reason,
-    impact_completeness,
 )
+from agent_bom.graph.reach_view import impact_payload, reach_walk
 
 from .postgres_common import (
     _tenant_connection,
@@ -237,51 +237,39 @@ class PostgresGraphTraversalMixin(PostgresGraphSnapshotsMixin):
         scan_id: str = "",
         node_id: str,
         max_depth: int = 4,
+        direction: str = "reverse",
     ) -> dict[str, Any] | None:
         tenant_id = normalize_graph_tenant_id(tenant_id)
         timeout_ms = self._search_timeout_ms()
         deadline = time.monotonic() + (timeout_ms / 1000) if timeout_ms else None
+        scan_id = scan_id or self.latest_snapshot_id(tenant_id=tenant_id)
+        roots = self.nodes_by_ids(tenant_id=tenant_id, scan_id=scan_id, node_ids={node_id}) if scan_id else []
+        if not roots:
+            return None
         with _tenant_connection(self._pool) as conn:
             self._apply_search_timeout(conn)
-            effective_scan_id, _, visited, depths, _, _, _, truncated, depth_limited = self._walk_graph(
-                conn,
-                tenant_id=tenant_id,
-                scan_id=scan_id,
-                roots=[node_id],
-                direction="reverse",
-                max_depth=max_depth,
-                max_nodes=5000,
-                max_edges=25_000,
-                deadline_monotonic=deadline,
-                traversable_only=False,
-                relationship_types=None,
-                static_only=False,
-                dynamic_only=False,
-                include_roots=True,
-            )
-        if node_id not in visited:
+
+            def walk(**kwargs: Any) -> Any:
+                return self._walk_graph(
+                    conn,
+                    tenant_id=tenant_id,
+                    scan_id=scan_id,
+                    max_nodes=5000,
+                    max_edges=25_000,
+                    deadline_monotonic=deadline,
+                    traversable_only=False,
+                    static_only=False,
+                    dynamic_only=False,
+                    include_roots=True,
+                    **kwargs,
+                )
+
+            result = reach_walk(walk, root=node_id, root_type=roots[0].entity_type, direction=direction, max_depth=max_depth)
+        if node_id not in result.visited:
             return None
-        affected = sorted(visited - {node_id})
-        rows = self.nodes_by_ids(tenant_id=tenant_id, scan_id=effective_scan_id, node_ids=set(affected))
-        by_type: dict[str, int] = {}
-        for node in rows:
-            entity_type = node.entity_type.value if hasattr(node.entity_type, "value") else str(node.entity_type)
-            by_type[entity_type] = by_type.get(entity_type, 0) + 1
-        return {
-            "node_id": node_id,
-            "affected_nodes": affected,
-            "affected_by_type": by_type,
-            "affected_count": len(affected),
-            "max_depth_reached": max((depths.get(value, 0) for value in affected), default=0),
-            # Was a bare "partial"/"complete" string here and absent entirely on
-            # SQLite: one field, two shapes, neither of which said that a
-            # depth-capped reverse walk had left ancestors unvisited.
-            "completeness": impact_completeness(
-                affected_count=len(affected),
-                truncated=truncated,
-                depth_limited=depth_limited,
-            ),
-        }
+        # Was a bare "partial"/"complete" string here and absent entirely on
+        # SQLite: one field, two shapes. Both backends now share one body.
+        return impact_payload(self, tenant_id=tenant_id, scan_id=result.effective_scan_id, node_id=node_id, walk=result)
 
     def traverse_subgraph(
         self,
