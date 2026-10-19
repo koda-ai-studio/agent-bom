@@ -9,6 +9,7 @@ from typing import Any, Optional
 from agent_bom.cpe_match import cpe_vendor_hint as _cpe_vendor_hint
 from agent_bom.malicious import flag_malicious_from_vulns
 from agent_bom.models import Package, Severity, Vulnerability
+from agent_bom.scanners.advisory_merge import self_consistent_aliases
 from agent_bom.scanners.local_data_freshness import local_hits_line
 from agent_bom.scanners.osv import is_valid_fix_version as _is_valid_fix_version
 from agent_bom.scanners.osv import package_lookup_names as _package_lookup_names
@@ -61,7 +62,7 @@ def _local_vuln_to_vulnerability(lv: "Any") -> Vulnerability:
     from agent_bom.advisory_ids import canonical_vulnerability_id, match_confidence_tier
 
     raw_id = lv.id
-    aliases = getattr(lv, "aliases", [])
+    aliases = self_consistent_aliases(raw_id, list(getattr(lv, "aliases", []) or []))
     canonical_id, all_aliases = canonical_vulnerability_id(raw_id, aliases)
 
     if severity == Severity.UNKNOWN:

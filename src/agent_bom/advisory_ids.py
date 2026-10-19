@@ -55,7 +55,9 @@ def canonical_vulnerability_id(advisory_id: str, aliases: Iterable[str] = ()) ->
     alias_list = [alias.strip() for alias in aliases if isinstance(alias, str) and alias.strip()]
     cve_from_alias = next((alias for alias in alias_list if alias.upper().startswith("CVE-")), None)
     derived = derive_cve_from_advisory_id(raw_id)
-    canonical = cve_from_alias or derived or raw_id
+    # A record's own CVE (``CVE-…`` or a distro ``DEBIAN-CVE-…`` id) names it;
+    # a CVE alias only names it when it has none of its own.
+    canonical = derived or cve_from_alias or raw_id
 
     remaining: list[str] = []
     seen = {canonical}

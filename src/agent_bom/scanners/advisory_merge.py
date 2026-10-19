@@ -9,6 +9,30 @@ from dataclasses import asdict
 from agent_bom.advisory_ids import derive_cve_from_advisory_id
 from agent_bom.core.severity import severity_basis, severity_rank
 from agent_bom.models import Vulnerability
+from agent_bom.scanners.state import record_scan_warning
+
+_FUSED_ALIAS_WARNING = (
+    "Some local advisories list aliases for several distinct CVEs (a stale upstream alias group); "
+    "they were matched by their own IDs only. Run `agent-bom db update` to refresh them."
+)
+
+
+def self_consistent_aliases(advisory_id: str, aliases: list[str]) -> list[str]:
+    """Return a stored record's aliases, or none when they name several distinct CVEs.
+
+    One advisory has one CVE. A stored alias set naming two (an alias group
+    fused upstream and kept by a stale DB) would chain unrelated advisories
+    together, so the record is identified by its own ID alone.
+    """
+    cves = {cve for value in [advisory_id, *aliases] if (cve := derive_cve_from_advisory_id(value))}
+    if len(cves) <= 1:
+        return list(aliases)
+    record_scan_warning(_FUSED_ALIAS_WARNING)
+    return []
+
+
+def _primary_cve(vuln: Vulnerability) -> str | None:
+    return vuln.id.strip().upper() if vuln.id.strip().upper().startswith("CVE-") else None
 
 
 def advisory_keys(vuln: Vulnerability) -> set[str]:
@@ -30,6 +54,41 @@ def _advisory_origin(vuln: Vulnerability) -> str:
     return next((alias for alias in vuln.aliases if not alias.upper().startswith("CVE-")), vuln.id)
 
 
+def _alias_clusters(records: list[Vulnerability]) -> list[list[Vulnerability]]:
+    """Group records sharing an advisory key, in first-seen order.
+
+    A cluster never holds two different primary CVEs: a shared alias is not
+    evidence that two separately-identified CVEs are the same advisory.
+    """
+    parents = list(range(len(records)))
+    primaries: dict[int, set[str]] = {index: {cve} if (cve := _primary_cve(record)) else set() for index, record in enumerate(records)}
+
+    def root(index: int) -> int:
+        while parents[index] != index:
+            parents[index] = parents[parents[index]]
+            index = parents[index]
+        return index
+
+    def union(left: int, right: int) -> None:
+        left, right = root(left), root(right)
+        if left == right or (primaries[left] and primaries[right] and primaries[left] != primaries[right]):
+            return
+        parents[left] = right
+        primaries[right] |= primaries[left]
+
+    owners: dict[str, int] = {}
+    for index, record in enumerate(records):
+        for key in sorted(advisory_keys(record)):
+            if key in owners:
+                union(index, owners[key])
+            else:
+                owners[key] = index
+    groups: dict[int, list[Vulnerability]] = {}
+    for index, record in enumerate(records):
+        groups.setdefault(root(index), []).append(record)
+    return list(groups.values())
+
+
 def merge_advisory_clusters(records: list[Vulnerability]) -> list[Vulnerability]:
     """Collapse transitive aliases; retain the highest authoritative severity.
 
@@ -38,27 +97,8 @@ def merge_advisory_clusters(records: list[Vulnerability]) -> list[Vulnerability]
     that order. Score, vector and fix always come from the same representative;
     provenance, references and affected symbols retain the whole cluster.
     """
-    parents = list(range(len(records)))
-
-    def root(index: int) -> int:
-        while parents[index] != index:
-            parents[index] = parents[parents[index]]
-            index = parents[index]
-        return index
-
-    owners: dict[str, int] = {}
-    for index, record in enumerate(records):
-        for key in advisory_keys(record):
-            if key in owners:
-                parents[root(index)] = root(owners[key])
-            else:
-                owners[key] = index
-    groups: dict[int, list[Vulnerability]] = {}
-    for index, record in enumerate(records):
-        groups.setdefault(root(index), []).append(record)
-
     merged: list[Vulnerability] = []
-    for cluster in groups.values():
+    for cluster in _alias_clusters(records):
         authoritative = [record for record in cluster if not _external_only(record)] or cluster
         representative = min(
             authoritative,
