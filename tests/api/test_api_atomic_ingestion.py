@@ -49,7 +49,7 @@ def _isolated_stores(monkeypatch: pytest.MonkeyPatch):
     set_fleet_store(InMemoryFleetStore())
     set_idempotency_store(InMemoryIdempotencyStore())
     stores._jobs.clear()
-    monkeypatch.setattr("agent_bom.api.routes.scan.submit_scan_job", lambda _job: None)
+    monkeypatch.setattr("agent_bom.api.scan_job_dispatch.submit_scan_job", lambda _job: None)
     monkeypatch.setattr("agent_bom.api.routes.observability._persist_graph_snapshot", lambda _job, _report, **_kwargs: None)
     yield
     stores._jobs.clear()
@@ -72,7 +72,7 @@ def test_scan_concurrent_same_key_creates_and_dispatches_one_job(monkeypatch: py
 
     monkeypatch.setattr(idem, "get", _racing_get)
     dispatched: list[str] = []
-    monkeypatch.setattr("agent_bom.api.routes.scan.submit_scan_job", lambda job: dispatched.append(job.job_id))
+    monkeypatch.setattr("agent_bom.api.scan_job_dispatch.submit_scan_job", lambda job: dispatched.append(job.job_id))
 
     def _post() -> tuple[int, dict]:
         response = TestClient(app, raise_server_exceptions=False).post(
@@ -157,7 +157,7 @@ def test_scan_retry_reclaims_expired_crash_reservation_without_duplicate_job(mon
     idem._records[key].created_at = (datetime.now(timezone.utc) - timedelta(seconds=31)).isoformat()  # type: ignore[attr-defined]  # noqa: SLF001
     dispatched: list[str] = []
     monkeypatch.setenv("AGENT_BOM_IDEMPOTENCY_RESERVATION_LEASE_SECONDS", "30")
-    monkeypatch.setattr("agent_bom.api.routes.scan.submit_scan_job", lambda job: dispatched.append(job.job_id))
+    monkeypatch.setattr("agent_bom.api.scan_job_dispatch.submit_scan_job", lambda job: dispatched.append(job.job_id))
 
     response = TestClient(app, raise_server_exceptions=False).post(
         "/v1/scan",
@@ -174,7 +174,7 @@ def test_scan_retry_reclaims_expired_crash_reservation_without_duplicate_job(mon
 
 def test_scan_retry_reconciles_durable_job_before_receipt_without_redispatch(monkeypatch: pytest.MonkeyPatch) -> None:
     dispatched: list[str] = []
-    monkeypatch.setattr("agent_bom.api.routes.scan.submit_scan_job", lambda job: dispatched.append(job.job_id))
+    monkeypatch.setattr("agent_bom.api.scan_job_dispatch.submit_scan_job", lambda job: dispatched.append(job.job_id))
     client = TestClient(app, raise_server_exceptions=False)
     headers = {"Idempotency-Key": "scan-crash-after-job"}
     payload = {"images": ["redis:7"]}
@@ -203,7 +203,7 @@ def test_multi_target_scan_retry_repairs_missing_child_before_committed_receipt(
     set_job_store(jobs)
     set_idempotency_store(idempotency)
     dispatched: list[str] = []
-    monkeypatch.setattr("agent_bom.api.routes.scan.submit_scan_job", lambda job: dispatched.append(job.job_id))
+    monkeypatch.setattr("agent_bom.api.scan_job_dispatch.submit_scan_job", lambda job: dispatched.append(job.job_id))
     client = TestClient(app, raise_server_exceptions=False)
     headers = {"Idempotency-Key": "multi-target-crash"}
     payload = {"images": ["redis:7", "nginx:1.27"], "no_scan": True}
@@ -236,7 +236,7 @@ def test_two_replicas_dispatch_only_the_winning_multi_target_child_repair(tmp_pa
     jobs = SQLiteJobStore(str(tmp_path / "jobs.db"))
     set_job_store(jobs)
     dispatched: list[str] = []
-    monkeypatch.setattr(scan_routes, "submit_scan_job", lambda job: dispatched.append(job.job_id))
+    monkeypatch.setattr("agent_bom.api.scan_job_dispatch.submit_scan_job", lambda job: dispatched.append(job.job_id))
     parent = scan_routes.enqueue_scan_job(
         tenant_id="default",
         triggered_by="api-test",
@@ -283,7 +283,7 @@ def test_multi_target_retry_recovers_mid_dispatch_crash_without_duplicate_handof
             raise RuntimeError("injected handoff interruption")
         submitted.append(job.job_id)
 
-    monkeypatch.setattr(scan_routes, "submit_scan_job", _submit)
+    monkeypatch.setattr("agent_bom.api.scan_job_dispatch.submit_scan_job", _submit)
     client = TestClient(app, raise_server_exceptions=False)
     headers = {"Idempotency-Key": "mid-dispatch-crash"}
 

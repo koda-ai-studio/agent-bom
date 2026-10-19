@@ -140,8 +140,8 @@ def test_test_connection_probe_failures_use_stable_public_states(
 
 
 def test_scan_connection_queues_without_provider_io(monkeypatch, wired):
+    from agent_bom.api import scan_job_submission as scan_routes
     from agent_bom.api.models import ScanJob, ScanRequest
-    from agent_bom.api.routes import scan as scan_routes
 
     _record, offloaded = wired
     dispatched: list[str] = []
@@ -162,7 +162,7 @@ def test_scan_connection_queues_without_provider_io(monkeypatch, wired):
             request=ScanRequest(),
         ),
     )
-    monkeypatch.setattr(scan_routes, "dispatch_scan_job", lambda job: dispatched.append(job.job_id))
+    monkeypatch.setattr("agent_bom.api.scan_job_dispatch.dispatch_scan_job", lambda job: dispatched.append(job.job_id))
 
     result = asyncio.run(cloud_connections.scan_connection(request=SimpleNamespace(headers={}), connection_id="conn-1"))
 
@@ -218,7 +218,7 @@ def test_scan_connection_durable_handoff_does_not_enter_request_backpressure(mon
             request=ScanRequest(),
         ),
     )
-    monkeypatch.setattr(scan_routes, "dispatch_scan_job", lambda job: None)
+    monkeypatch.setattr("agent_bom.api.scan_job_dispatch.dispatch_scan_job", lambda job: None)
 
     accepted = asyncio.run(cloud_connections.scan_connection(request=SimpleNamespace(headers={}), connection_id="conn-1"))
 
@@ -230,7 +230,6 @@ def test_scan_connection_durable_handoff_does_not_enter_request_backpressure(mon
 def test_create_connection_scan_on_create_queues_durable_job(monkeypatch):
     """auto_scan_on_create reserves the same durable job as manual scans."""
     from agent_bom.api.connection_store import InMemoryConnectionStore, set_connection_store
-    from agent_bom.api.routes import scan as scan_routes
     from agent_bom.api.routes.cloud_connections import CloudConnectionCreate
 
     store = InMemoryConnectionStore()
@@ -241,7 +240,7 @@ def test_create_connection_scan_on_create_queues_durable_job(monkeypatch):
     monkeypatch.setattr(cloud_connections, "_actor", lambda request: "tester")
     monkeypatch.setattr(cloud_connections, "_tenant", lambda request: "tenant-bp")
     dispatched: list[object] = []
-    monkeypatch.setattr(scan_routes, "dispatch_scan_job", dispatched.append)
+    monkeypatch.setattr("agent_bom.api.scan_job_dispatch.dispatch_scan_job", dispatched.append)
 
     body = CloudConnectionCreate(
         provider="aws",
@@ -262,8 +261,8 @@ def test_create_connection_scan_on_create_queues_durable_job(monkeypatch):
 
 def test_create_connection_scan_on_create_dispatch_failure_is_sanitized(monkeypatch):
     """A dispatch failure keeps the created row and never exposes raw text."""
+    from agent_bom.api import scan_job_dispatch as scan_routes
     from agent_bom.api.connection_store import InMemoryConnectionStore, set_connection_store
-    from agent_bom.api.routes import scan as scan_routes
     from agent_bom.api.routes.cloud_connections import CloudConnectionCreate
 
     store = InMemoryConnectionStore()

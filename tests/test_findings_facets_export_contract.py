@@ -381,7 +381,7 @@ def test_partial_facet_walk_preserves_the_exact_list_total(
         "freshness": {},
     }
     monkeypatch.setattr(
-        "agent_bom.api.routes.scan._finding_facets_bounded",
+        "agent_bom.api.finding_page_read._finding_facets_bounded",
         lambda *_args, **_kwargs: (
             {
                 **empty_facets,

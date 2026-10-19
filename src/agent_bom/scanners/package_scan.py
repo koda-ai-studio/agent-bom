@@ -1,10 +1,7 @@
-"""Package and agent vulnerability scanning implementation."""
+"""Package and agent vulnerability scanning orchestration."""
 
-# Several imports below intentionally remain available as legacy monkeypatch
-# targets on ``agent_bom.scanners``. They are compatibility surface even when
-# this implementation module does not reference them directly.
+# Legacy facade patch targets intentionally remain public.
 # ruff: noqa: F401
-
 from __future__ import annotations
 
 import asyncio
@@ -27,134 +24,61 @@ from agent_bom.atlas import blast_radius_technique_evidence as atlas_technique_e
 from agent_bom.cis_controls import tag_blast_radius as tag_cis_controls
 from agent_bom.cmmc import tag_blast_radius as tag_cmmc
 from agent_bom.compliance_utils import apply_effective_blast_radius_tags
-from agent_bom.config import (
-    SCANNER_BATCH_DELAY as BATCH_DELAY_SECONDS,
-)
-from agent_bom.config import (
-    SCANNER_BATCH_SIZE as _BATCH_SIZE,
-)
-from agent_bom.config import (
-    SCANNER_MAX_CONCURRENT as MAX_CONCURRENT_REQUESTS,
-)
-
-# Single source of truth for AI/ML package catalog — imported from constants.
-# Vulnerabilities in these carry elevated risk because they run inside AI
-# agents that have credentials and tool access.
 from agent_bom.constants import AI_PACKAGES as _AI_FRAMEWORK_PACKAGES
-from agent_bom.core.versions.osv import before_limit, is_release_range, range_limits
-from agent_bom.core.versions.osv import range_windows as _range_windows
-from agent_bom.coverage import is_scope_exclusion
-from agent_bom.cpe_match import cpe_vendor_hint as _cpe_vendor_hint
 from agent_bom.eu_ai_act import tag_blast_radius as tag_eu_ai_act
 from agent_bom.evidence.scan_run import ScanOutcome, effective_scan_run
 from agent_bom.fedramp import tag_blast_radius as tag_fedramp
-from agent_bom.http_client import OfflineModeError, create_client, request_with_retry
+from agent_bom.http_client import create_client
 from agent_bom.iso_27001 import tag_blast_radius as tag_iso_27001
-from agent_bom.malicious import check_dependency_confusion, check_typosquat, flag_malicious_from_vulns
+from agent_bom.malicious import flag_malicious_from_vulns
 from agent_bom.mitre_attack import tag_blast_radius as tag_attack_techniques
-from agent_bom.models import Agent, BlastRadius, MCPServer, Package, Severity, Vulnerability
+from agent_bom.models import Agent, BlastRadius, MCPServer, Package, Vulnerability
 from agent_bom.nist_800_53 import tag_blast_radius as tag_nist_800_53
 from agent_bom.nist_ai_rmf import tag_blast_radius as tag_nist_ai_rmf
 from agent_bom.nist_csf import tag_blast_radius as tag_nist_csf
-from agent_bom.os_advisory import apk_advisory_ecosystems, rpm_advisory_ecosystems, scope_rpm_advisory
 from agent_bom.owasp import tag_blast_radius
 from agent_bom.owasp_agentic import tag_blast_radius as tag_owasp_agentic
 from agent_bom.owasp_mcp import tag_blast_radius as tag_owasp_mcp
-from agent_bom.package_utils import (
-    alpine_osv_fallback_ecosystems,
-    alpine_release_branch,
-    canonical_package_identity,
-    canonical_package_key,
-    debian_release_branch,
-    normalize_package_name,
-    package_purl,
-    ubuntu_release_branch,
-)
 from agent_bom.pci_dss import tag_blast_radius as tag_pci_dss
 from agent_bom.reachability_cve import advisory_affected_symbols_by_path, advisory_affected_symbols_list
 from agent_bom.scanners import cpython_advisory as runtime_cve
 from agent_bom.scanners.blast_radius import expand_blast_radius_hops
+from agent_bom.scanners.compat_exports import resolve_legacy_export
 from agent_bom.scanners.kev_default_join import join_default_kev_catalog
-from agent_bom.scanners.osv import candidate_package_names as _candidate_package_names
-from agent_bom.scanners.osv import ecosystem_matches as _ecosystem_matches
+from agent_bom.scanners.local_advisories import _scan_local_advisories, merge_scanner_vulnerabilities
 from agent_bom.scanners.osv import enrich_results_if_needed as _enrich_results_if_needed_impl
-from agent_bom.scanners.osv import is_valid_fix_version as _is_valid_fix_version
-from agent_bom.scanners.osv import package_lookup_names as _package_lookup_names
 from agent_bom.scanners.osv import parse_fixed_version, query_osv_batch_impl
-from agent_bom.scanners.package_matching import (
-    _ALPINE_OSV_FALLBACKS as _ALPINE_OSV_FALLBACKS,
+from agent_bom.scanners.package_coverage import (
+    _check_offline_coverage,
+    _detect_coverage_gaps,
+    _flag_remote_lookup_gap,
+    _flag_suspicious_packages,
+    _scan_supplemental_advisories,
+    _select_osv_targets,
 )
-from agent_bom.scanners.package_matching import (
-    _DEBIAN_OSV_FALLBACKS as _DEBIAN_OSV_FALLBACKS,
-)
-from agent_bom.scanners.package_matching import (
-    ECOSYSTEM_MAP as ECOSYSTEM_MAP,
-)
-from agent_bom.scanners.package_matching import (
-    _apply_distro_release_ambiguity as _apply_distro_release_ambiguity,
-)
-from agent_bom.scanners.package_matching import (
-    _db_ecosystems_for_package as _db_ecosystems_for_package,
-)
-from agent_bom.scanners.package_matching import (
-    _emit_scan_warning as _emit_scan_warning,
-)
-from agent_bom.scanners.package_matching import (
-    _is_version_affected as _is_version_affected,
-)
-from agent_bom.scanners.package_matching import (
-    _matches_advisory_ranges as _matches_advisory_ranges,
-)
-from agent_bom.scanners.package_matching import (
-    _osv_ecosystems_for_package as _osv_ecosystems_for_package,
-)
-from agent_bom.scanners.package_matching import (
-    _resolve_osv_ecosystems as _resolve_osv_ecosystems,
-)
-from agent_bom.scanners.package_matching import (
-    _scanners_patchable as _scanners_patchable,
-)
-from agent_bom.scanners.package_matching import (
-    _scope_advisory_to_package_release as _scope_advisory_to_package_release,
-)
-from agent_bom.scanners.package_matching import (
-    _version_in_window as _version_in_window,
-)
-from agent_bom.scanners.package_matching import (
-    _version_matches_list as _version_matches_list,
-)
-from agent_bom.scanners.package_matching import (
-    _warn_unresolvable_git_bounds as _warn_unresolvable_git_bounds,
-)
-from agent_bom.scanners.package_matching import (
-    _window_has_commit_bound as _window_has_commit_bound,
-)
-from agent_bom.scanners.package_matching import (
-    ambiguous_distro_releases as ambiguous_distro_releases,
+from agent_bom.scanners.package_matching import ECOSYSTEM_MAP as ECOSYSTEM_MAP
+from agent_bom.scanners.package_matching import _apply_distro_release_ambiguity as _apply_distro_release_ambiguity
+from agent_bom.scanners.package_matching import _emit_scan_warning as _emit_scan_warning
+from agent_bom.scanners.package_matching import _is_version_affected as _is_version_affected
+from agent_bom.scanners.package_matching import _osv_ecosystems_for_package as _osv_ecosystems_for_package
+from agent_bom.scanners.package_matching import _scanners_patchable as _scanners_patchable
+from agent_bom.scanners.package_matching import _scope_advisory_to_package_release as _scope_advisory_to_package_release
+from agent_bom.scanners.package_preparation import (
+    _NON_OSV_ECOSYSTEMS,
+    _expand_transitive_packages,
+    _prepare_packages,
+    _resolve_local_versions,
+    _resolve_registry_versions,
+    _scan_runtime_packages,
+    _select_scannable_packages,
+    deduplicate_packages,
 )
 from agent_bom.scanners.package_versions import eligible_advisories
 from agent_bom.scanners.package_versions import is_unresolved_package as _is_unresolved_package
-from agent_bom.scanners.package_versions import is_unresolved_version as _is_unresolved_version
-from agent_bom.scanners.risk import (
-    _parse_cvss4_vector,
-    advisory_id_severity_fallback,
-    cvss_to_severity,
-    osv_cvss_vector,
-    parse_cvss_vector,
-    parse_osv_severity,
-    severity_from_label,
-)
-from agent_bom.scanners.state import (
-    _bump_scan_perf,
-    _get_api_semaphore,
-    consume_coverage_warnings,
-    consume_scan_performance,
-    consume_scan_warnings,
-    record_coverage_warning,
-    record_scan_warning,
-    reset_scan_performance,
-    reset_scan_warnings_only,
-)
+from agent_bom.scanners.risk import osv_cvss_vector, parse_osv_severity
+from agent_bom.scanners.scan_options import IncompleteScanError as IncompleteScanError
+from agent_bom.scanners.scan_options import ScanOptions, _logger, _package_db_key, console
+from agent_bom.scanners.state import _bump_scan_perf, _get_api_semaphore
 from agent_bom.scanners.upstream_severity import resolve_upstream_advisory_severity
 from agent_bom.soc2 import tag_blast_radius as tag_soc2
 from agent_bom.vuln_compliance import tag_vulnerability as _tag_vuln
@@ -162,36 +86,14 @@ from agent_bom.vuln_compliance import tag_vulnerability as _tag_vuln
 if TYPE_CHECKING:
     from agent_bom.scan_cache import ScanCache
 
-console = Console(stderr=True)
-_logger = logging.getLogger(__name__)
 
-
-# Module-level offline flag — when True, skip all OSV API calls and scan
-# only against the local SQLite DB.  Set by CLI --offline before scanning.
-# Also synced from http_client._OFFLINE for transport-layer enforcement.
 offline_mode: bool = False
+
+
 _scan_cache_init_lock = threading.Lock()
+
+
 _SCAN_CACHE_UNAVAILABLE = object()
-
-
-@dataclass(frozen=True)
-class ScanOptions:
-    """Immutable per-scan scanner controls.
-
-    The legacy module-level setters remain for CLI compatibility, but request
-    handlers and concurrent scan callers should pass explicit options so tenant
-    policy cannot bleed through shared module state.
-    """
-
-    offline: bool = False
-    compliance_enabled: bool = False
-    resolve_transitive: bool = False
-    prefer_local_db: bool = False
-    demo_advisories: bool = False
-    # Target project directory (the ``-p`` path) for local install resolution.
-    # When set, bare/floating versions are resolved against the target — its
-    # virtualenv for pip, the dir itself for npm/go — never the scanner host.
-    project_dir: Optional[str] = None
 
 
 def default_scan_options(
@@ -215,32 +117,6 @@ def default_scan_options(
     )
 
 
-def _target_venv_python(project_dir: str | None) -> str | None:
-    """Return a Python interpreter inside the TARGET project's virtualenv.
-
-    Local pip resolution must reflect what is installed in the *target* project,
-    not the scanner host. Only a virtualenv shipped with the target counts; when
-    none exists we resolve nothing rather than stamping a host version.
-    """
-    if not project_dir:
-        return None
-    root = Path(project_dir)
-    for rel in (
-        (".venv", "bin", "python"),
-        ("venv", "bin", "python"),
-        (".venv", "Scripts", "python.exe"),
-        ("venv", "Scripts", "python.exe"),
-    ):
-        candidate = root.joinpath(*rel)
-        if candidate.exists():
-            return str(candidate)
-    return None
-
-
-class IncompleteScanError(RuntimeError):
-    """Raised when a scan cannot produce a trustworthy verdict."""
-
-
 def set_offline_mode(value: bool) -> None:
     """Set offline mode in both scanner and http_client transport layer."""
     global offline_mode  # noqa: PLW0603
@@ -250,17 +126,9 @@ def set_offline_mode(value: bool) -> None:
     set_offline(value)
 
 
-# OS/distro ecosystems whose advisories are release-status driven. For these,
-# the Debian/Ubuntu/Alpine/RPM security trackers only assign a fixed version
-# when the maintainers actually ship a fix for the affected release. An entry
-# with no fix is therefore the tracker's "no-dsa / won't-fix / unimportant /
-# end-of-life (open)" verdict — not an actionable, patchable finding.
 _SUPPRESSIBLE_DISTRO_ECOSYSTEMS = frozenset({"deb", "apk"})
 
-# When False (default), distro advisories with no fix available for the scanned
-# release are suppressed so OS-package reporting matches mainstream scanner
-# conventions. Opt back in with set_include_unfixed(True) or the
-# AGENT_BOM_INCLUDE_UNFIXED env var.
+
 include_unfixed: bool = False
 
 
@@ -312,101 +180,10 @@ def _suppress_unfixed_os_advisories(packages: list[Package]) -> int:
     return removed
 
 
-# When True, prefer local DB results and only fall back to OSV API for
-# packages not found in the DB. Legacy compatibility only; concurrent callers
-# should pass ScanOptions(prefer_local_db=...) instead of mutating this.
 prefer_local_db: bool = False
 
-# CVE-level framework tags are always computed so structured outputs stay
-# truthful by default. The CLI --compliance flag still controls whether
-# context-heavy compliance views are rendered explicitly.
-# Legacy compatibility only; per-scan behavior is ScanOptions.compliance_enabled.
+
 compliance_mode: bool = False
-
-# Known non-OSV ecosystems: valid discovery artifacts that cannot be queried
-# against OSV/NVD. These are silently skipped (DEBUG) rather than flagged as
-# errors — the scanner handles them through other pipelines (OCI image scan,
-# model provenance checks, cloud runtime inventory, etc.).
-_NON_OSV_ECOSYSTEMS: frozenset[str] = frozenset(
-    {
-        "docker",  # Image stubs from MCP configs / docker-compose / running containers
-        "container",  # GPU infra image refs (cuda-toolkit, cudnn)
-        "container-image",  # CoreWeave / Nebius pod images
-        "github-action",  # Remote GitHub Action repository references
-        "github-action-workflow",  # Remote reusable-workflow references
-        "ollama",  # Ollama model names — no OSV advisory DB
-        "smithery",  # Smithery MCP marketplace stubs
-        "mcp-registry",  # MCP Registry stubs
-        "azure-runtime",  # Azure Functions / ACA runtime images
-        "nebius-ai-studio",  # Nebius AI Studio model artifacts
-        "nebius-compute-image",  # Nebius compute node images
-        "sast",  # SAST findings represented as packages
-        "unknown",  # Packages with unresolvable ecosystem (e.g. --sbom ingest)
-    }
-)
-
-
-def _warn_unresolved_packages(packages: list[Package]) -> None:
-    if not packages:
-        return
-    names = ", ".join(f"{p.name}@{p.version}" for p in packages[:10])
-    suffix = f" (+{len(packages) - 10} more)" if len(packages) > 10 else ""
-    console.print(f"  [yellow]⚠[/yellow] {len(packages)} package(s) skipped (unresolved version): {names}{suffix}")
-    _logger.warning(
-        "Skipped %d package(s) with unresolved versions: %s",
-        len(packages),
-        names + suffix,
-    )
-    _emit_scan_warning(f"{len(packages)} package(s) skipped due to unresolved versions")
-    record_coverage_warning(
-        {
-            "kind": "package_version_gap",
-            "release": "unresolved-package-versions",
-            "reason": "unresolved_version",
-            "package_count": len(packages),
-            "detail": "Package versions are unresolved or invalid; supply resolved lockfiles or valid release versions.",
-        }
-    )
-
-
-def _flag_remote_lookup_gap(osv_targets: list[Package]) -> None:
-    """Flag packages that NOTHING could answer for: no local data, failed remote.
-
-    A remote lookup error already surfaces as a scan warning, but on its own it
-    does not say whether the answer was lost. When the local advisory DB also
-    holds nothing for the package's ecosystem, a zero-vulnerability result is
-    not a clean bill of health — nothing was consulted at all. Record it in the
-    structured channel so `check` and `scan` can fail closed deterministically
-    instead of reporting a confident ``clean``.
-    """
-    from agent_bom.scanners.state import peek_coverage_warnings
-
-    if not any(warning.get("kind") == "remote_lookup_error" for warning in peek_coverage_warnings()):
-        return
-    target_ecosystems = {eco for package in osv_targets for eco in _db_ecosystems_for_package(package)}
-    covered_ecos = _scanners_patchable("_db_covered_ecosystems")(target_ecosystems)
-    uncovered = [pkg for pkg in osv_targets if not any(eco in covered_ecos for eco in _db_ecosystems_for_package(pkg))]
-    if not uncovered:
-        return
-    gap_ecos = sorted({eco for pkg in uncovered for eco in _db_ecosystems_for_package(pkg)})
-    eco_clause = f" ({', '.join(gap_ecos)})" if gap_ecos else ""
-    _logger.warning(
-        "Remote lookup failed for %d package(s) the local DB has no advisories for%s; results are incomplete",
-        len(uncovered),
-        eco_clause,
-    )
-    _emit_scan_warning(
-        f"remote lookup failed for {len(uncovered)} package(s) in ecosystem(s)"
-        f"{eco_clause} the local vulnerability DB has no advisories for; results are incomplete"
-    )
-    record_coverage_warning(
-        {
-            "kind": "remote_lookup_gap",
-            "release": f"remote-gap:{','.join(gap_ecos)}",
-            "ecosystems": gap_ecos,
-            "package_count": len(uncovered),
-        }
-    )
 
 
 def _db_covered_ecosystems(ecosystems: set[str] | None = None) -> set[str]:
@@ -496,8 +273,6 @@ def _db_covered_ecosystems(ecosystems: set[str] | None = None) -> set[str]:
         _logger.debug("Could not read local DB ecosystem coverage: %s", exc)
         return set()
 
-
-# ── Scan cache (optional, lazy-initialised) ────────────────────────────────
 
 _scan_cache_instance: "ScanCache | object | None" = None
 
@@ -646,264 +421,6 @@ def build_vulnerabilities(vuln_data_list: list[dict], package: Package) -> list[
     return vulns
 
 
-def _strip_extras(name: str) -> str:
-    """Strip pip extras notation: ``requests[security]`` → ``requests``."""
-    import re as _re
-
-    return _re.sub(r"\[.*?\]$", "", name)
-
-
-def deduplicate_packages(packages: list) -> list:
-    """Remove duplicate packages across discovery sources.
-
-    Deduplicates by (ecosystem, normalized_name, version) fingerprint.
-    When duplicates exist, the first occurrence is kept (preserves source ordering).
-
-    This prevents redundant OSV API calls and duplicate vulnerability findings
-    when the same package is discovered from multiple sources (local, K8s, cloud).
-
-    Args:
-        packages: List of Package objects from one or more discovery sources.
-
-    Returns:
-        Deduplicated list, preserving first-seen order.
-    """
-    seen: set[tuple[str, ...]] = set()
-    result = []
-    for pkg in packages:
-        # Use normalized name for dedup (PEP 503: torch == Torch == pytorch)
-        name = getattr(pkg, "name", "") or ""
-        ecosystem = getattr(pkg, "ecosystem", "") or ""
-        version = getattr(pkg, "version", "") or ""
-        key = (*canonical_package_identity(name, version, ecosystem, getattr(pkg, "purl", None)), runtime_cve.runtime_assessment_key(pkg))
-        if key not in seen:
-            seen.add(key)
-            result.append(pkg)
-    return result
-
-
-def merge_scanner_vulnerabilities(pkg: Package, new_vulns: list[Vulnerability]) -> list[Vulnerability]:
-    """Merge alias clusters once, returning only clusters absent from the package."""
-    from agent_bom.scanners.advisory_merge import advisory_keys, merge_advisory_clusters
-
-    previous_keys = {key for record in pkg.vulnerabilities for key in advisory_keys(record)}
-    pkg.vulnerabilities = merge_advisory_clusters([*pkg.vulnerabilities, *new_vulns])
-    return [record for record in pkg.vulnerabilities if not advisory_keys(record) & previous_keys]
-
-
-def merge_local_vulns(pkg: "Any", local_vulns: "list[Any]") -> "list[Vulnerability]":
-    """Use the same alias/severity reconciliation as online advisory scanning."""
-    added = merge_scanner_vulnerabilities(pkg, [_local_vuln_to_vulnerability(record) for record in local_vulns])
-    _apply_distro_release_ambiguity(pkg, pkg.vulnerabilities)
-    return added
-
-
-def _local_vuln_to_vulnerability(lv: "Any") -> Vulnerability:
-    """Convert a LocalVuln (from SQLite DB) to a Vulnerability model object.
-
-    Canonicalizes ID to CVE when available (prefer CVE-xxxx over GHSA/PYSEC).
-    """
-    # Same basis precedence as ``osv_severity_basis`` (online): a CVSS score
-    # decides the band; the stored advisory label only applies without one.
-    cvss_score = getattr(lv, "cvss_score", None)
-    cvss_vector = getattr(lv, "cvss_vector", None)
-    if cvss_score is None and isinstance(cvss_vector, str) and cvss_vector:
-        cvss_score = parse_cvss_vector(cvss_vector)
-    severity_source: Optional[str] = None
-    if cvss_score is not None:
-        severity = cvss_to_severity(cvss_score)
-        severity_source = "cvss"
-    else:
-        severity = severity_from_label(getattr(lv, "severity", None))
-        if severity != Severity.UNKNOWN:
-            label_origin = str(getattr(lv, "source", "") or "osv").lower()
-            severity_source = "osv_database" if label_origin == "osv" else f"{label_origin}_advisory"
-
-    from agent_bom.advisory_ids import canonical_vulnerability_id, match_confidence_tier
-
-    raw_id = lv.id
-    aliases = getattr(lv, "aliases", [])
-    canonical_id, all_aliases = canonical_vulnerability_id(raw_id, aliases)
-
-    if severity == Severity.UNKNOWN:
-        for advisory_id in [str(raw_id), *(str(alias) for alias in aliases)]:
-            fallback, source = advisory_id_severity_fallback(advisory_id)
-            if fallback != Severity.UNKNOWN:
-                severity = fallback
-                severity_source = source
-                break
-
-    advisory_source = getattr(lv, "source", None)
-    fixed_version = lv.fixed_version if _is_valid_fix_version(lv.fixed_version or "") else None
-
-    return Vulnerability(
-        id=canonical_id,
-        summary=lv.summary or "No description available",
-        severity=severity,
-        severity_source=severity_source,
-        cvss_score=cvss_score,
-        cvss_vector=cvss_vector if isinstance(cvss_vector, str) and cvss_vector else None,
-        fixed_version=fixed_version,
-        epss_score=lv.epss_probability,
-        epss_percentile=lv.epss_percentile,
-        is_kev=lv.is_kev,
-        kev_date_added=lv.kev_date_added,
-        kev_due_date=getattr(lv, "kev_due_date", None),
-        published_at=getattr(lv, "published_at", None),
-        modified_at=getattr(lv, "modified_at", None),
-        cwe_ids=getattr(lv, "cwe_ids", []),
-        aliases=all_aliases,
-        upstream_ids=getattr(lv, "upstream_ids", []),
-        epss_cve_id=getattr(lv, "epss_cve_id", None),
-        kev_cve_id=getattr(lv, "kev_cve_id", None),
-        references=[],
-        advisory_sources=[advisory_source] if isinstance(advisory_source, str) and advisory_source else [],
-        match_confidence_tier=getattr(lv, "match_confidence_tier", None)
-        or match_confidence_tier(
-            advisory_source=advisory_source if isinstance(advisory_source, str) else None,
-            db_ecosystem=getattr(lv, "ecosystem", None),
-            package_ecosystem=None,
-            fixed_version=fixed_version,
-        ),
-    )
-
-
-# Threshold above which batch DB lookup is used instead of per-package queries.
-# Batch mode issues a single SQL query per chunk (400 pairs) vs. N individual
-# queries — a significant win for scans with thousands of packages.
-_BATCH_DB_THRESHOLD = 50
-
-
-def _scan_packages_local_db(packages: list[Package]) -> tuple[int, set[str]]:
-    """Query the local SQLite DB for all packages.
-
-    Returns ``(vuln_count, covered_keys)`` where covered_keys is the set of
-    ``ecosystem:norm_name@version`` keys that had at least one entry in the DB
-    (including zero-vuln hits — those are DB hits, not gaps).
-    """
-    try:
-        from agent_bom.db.schema import DB_PATH, db_freshness_days
-
-        freshness = db_freshness_days()
-        if freshness is None:
-            # A cache miss is not a coverage gap while the online OSV path is
-            # available.  The remote lookup result below is authoritative; its
-            # failure path records a coverage warning via
-            # ``_flag_remote_lookup_gap``.
-            _logger.info("Local vulnerability DB not found; falling back to remote lookups")
-            return 0, set()  # No DB yet — fall through to OSV entirely
-    except Exception as exc:
-        _logger.debug("Local DB freshness check failed (falling through to OSV): %s", exc)
-        _emit_scan_warning("local vulnerability DB freshness check failed")
-        return 0, set()
-
-    try:
-        from agent_bom.db import lookup_package
-        from agent_bom.db.schema import init_db, open_existing_db_readonly
-
-        try:
-            # Scans only need read access. Prefer the existing DB in read-only
-            # mode so the hot path avoids init-time integrity work and extra
-            # writable-open overhead on large catalogs.
-            conn = open_existing_db_readonly(DB_PATH) if DB_PATH.exists() else init_db(DB_PATH)
-        except Exception as exc:
-            _logger.debug("Primary local DB open failed, retrying writable init: %s", exc)
-            conn = init_db(DB_PATH)
-    except Exception as exc:
-        _logger.warning("Local DB unavailable: %s", exc)
-        _emit_scan_warning("local vulnerability DB unavailable")
-        return 0, set()
-
-    try:
-        covered: set[str] = set()
-        total = _scan_packages_db_conn(conn, packages, covered)
-    finally:
-        conn.close()
-
-    return total, covered
-
-
-def _scan_packages_db_conn(conn: Any, packages: list[Package], covered: set[str]) -> int:
-    """Scan packages against an initialized vulnerability DB connection."""
-
-    from agent_bom.db import lookup_package
-    from agent_bom.db.lookup import package_in_db
-
-    if len(packages) > _BATCH_DB_THRESHOLD:
-        return _scan_packages_local_db_batch(conn, packages, covered)
-
-    total = 0
-    for pkg in packages:
-        eco_key = pkg.ecosystem.lower()
-        db_ecos = _db_ecosystems_for_package(pkg) or [pkg.ecosystem.lower()]
-        candidate_names = _package_lookup_names(pkg)
-        norm_name = candidate_names[0]
-        db_key = f"{eco_key}:{norm_name}@{pkg.version}"
-        local_vulns = []
-        db_hit = False
-        for db_eco in db_ecos:
-            for candidate_name in candidate_names:
-                local_vulns.extend(lookup_package(conn, db_eco, candidate_name, pkg.version))
-                db_hit = db_hit or package_in_db(conn, db_eco, candidate_name)
-
-        # Only mark as "covered by DB" when the package name actually exists in
-        # the affected table, not merely because the ecosystem is mapped.
-        if db_hit:
-            covered.add(db_key)
-
-        # Long-tail CPE matching: only for components the OSV/distro feeds miss
-        # (no DB hit) and only when explicitly enabled. Review-grade candidates.
-        _attach_cpe_candidates(conn, pkg, candidate_names, local_vulns, db_hit=db_hit)
-
-        if local_vulns:
-            new_vulns = merge_local_vulns(pkg, local_vulns)
-            total += len(new_vulns)
-            for v in new_vulns:
-                v.compliance_tags = _tag_vuln(v, pkg)
-            flag_malicious_from_vulns(pkg)
-
-    return total
-
-
-def _attach_cpe_candidates(
-    conn: Any,
-    pkg: Package,
-    candidate_names: list[str],
-    local_vulns: list[Any],
-    *,
-    db_hit: bool,
-) -> None:
-    """Append opt-in CPE candidate matches for packages not covered by native feeds."""
-    from agent_bom import config
-    from agent_bom.db.lookup import cpe_lookup_package
-
-    if not config.ENABLE_CPE_MATCH or db_hit:
-        return
-    vendor = _cpe_vendor_hint(pkg)
-    for candidate_name in candidate_names:
-        cpe_vulns = cpe_lookup_package(conn, candidate_name, pkg.version, vendor=vendor)
-        if cpe_vulns:
-            local_vulns.extend(cpe_vulns)
-            break
-
-
-def _scan_packages_demo_advisories(packages: list[Package]) -> tuple[int, set[str]]:
-    """Scan packages against the bundled demo advisory manifest."""
-
-    from agent_bom.db.schema import init_db
-    from agent_bom.demo_advisories import seed_demo_advisories
-
-    with tempfile.TemporaryDirectory(prefix="agent-bom-demo-vulns-") as tmp_dir:
-        conn = init_db(Path(tmp_dir) / "vulns.db")
-        try:
-            seed_demo_advisories(conn)
-            covered: set[str] = set()
-            total = _scan_packages_db_conn(conn, packages, covered)
-            return total, covered
-        finally:
-            conn.close()
-
-
 def apply_framework_tags(br: BlastRadius) -> None:
     """Stamp every registered compliance framework's tags onto a blast radius.
 
@@ -929,339 +446,6 @@ def apply_framework_tags(br: BlastRadius) -> None:
     br.nist_800_53_tags = tag_nist_800_53(br)
     br.fedramp_tags = tag_fedramp(br)
     br.pci_dss_tags = tag_pci_dss(br)
-
-
-def _scan_packages_local_db_batch(
-    conn: Any,
-    packages: list[Package],
-    covered: set[str],
-) -> int:
-    """Batch variant of the local DB scan — fewer SQL round-trips.
-
-    Uses :func:`lookup_packages_batch` to fetch all vulnerabilities in bulk,
-    then applies the same dedup / tagging logic as the per-package path.
-    """
-    from agent_bom.db.lookup import lookup_packages_batch, package_in_db_batch
-
-    # Build batch keys: (db_ecosystem, normalized_name, version)
-    pkg_index: list[tuple[Package, list[str], str, str, list[str]]] = []  # (pkg, db_ecos, primary_norm_name, db_key, candidate_names)
-    batch_keys: list[tuple[str, str, str]] = []
-
-    for pkg in packages:
-        eco_key = pkg.ecosystem.lower()
-        db_ecos = _db_ecosystems_for_package(pkg) or [pkg.ecosystem.lower()]
-        candidate_names = _package_lookup_names(pkg)
-        norm_name = candidate_names[0]
-        db_key = f"{eco_key}:{norm_name}@{pkg.version}"
-        pkg_index.append((pkg, db_ecos, norm_name, db_key, candidate_names))
-        for db_eco in db_ecos:
-            for candidate_name in candidate_names:
-                batch_keys.append((db_eco, candidate_name, pkg.version))
-
-    batch_results = lookup_packages_batch(conn, batch_keys)
-    existing_pairs = package_in_db_batch(
-        conn,
-        [
-            (db_eco, candidate_name)
-            for _pkg, db_ecos, _norm_name, _db_key, candidate_names in pkg_index
-            for db_eco in db_ecos
-            for candidate_name in candidate_names
-        ],
-    )
-
-    total = 0
-    for pkg, db_ecos, norm_name, db_key, candidate_names in pkg_index:
-        local_vulns = []
-        for db_eco in db_ecos:
-            for candidate_name in candidate_names:
-                local_vulns.extend(batch_results.get((db_eco, candidate_name, pkg.version), []))
-
-        db_hit = any((db_eco.lower(), candidate_name) in existing_pairs for db_eco in db_ecos for candidate_name in candidate_names)
-        if db_hit:
-            covered.add(db_key)
-
-        _attach_cpe_candidates(conn, pkg, candidate_names, local_vulns, db_hit=db_hit)
-
-        if local_vulns:
-            new_vulns = merge_local_vulns(pkg, local_vulns)
-            total += len(new_vulns)
-            for v in new_vulns:
-                v.compliance_tags = _tag_vuln(v, pkg)
-            flag_malicious_from_vulns(pkg)
-
-    return total
-
-
-def _package_db_key(p: Package) -> str:
-    return f"{p.ecosystem.lower()}:{normalize_package_name(p.name, p.ecosystem)}@{p.version}"
-
-
-def _prepare_packages(packages: list[Package]) -> list[Package]:
-    """Deduplicate across discovery sources (local, K8s, cloud) and normalize names for matching."""
-    original_count = len(packages)
-    packages = deduplicate_packages(packages)
-    deduped = original_count - len(packages)
-    reset_scan_performance()
-    _bump_scan_perf("packages_seen", original_count)
-    if deduped > 0:
-        _bump_scan_perf("packages_deduplicated", deduped)
-        _logger.info("Deduplicated %d duplicate packages (kept %d unique)", deduped, len(packages))
-
-    # Normalize package names for consistent matching (PEP 503 for PyPI)
-    # and strip pip extras notation (OSV doesn't understand extras)
-    for pkg in packages:
-        if pkg.ecosystem.lower() == "pypi":
-            if "[" in pkg.name:
-                pkg.name = _strip_extras(pkg.name)
-            pkg.name = normalize_package_name(pkg.name, pkg.ecosystem)
-    return packages
-
-
-async def _scan_runtime_packages(packages: list[Package], offline: bool) -> tuple[list[Package], int]:
-    """Scan CPython runtimes separately; return the remaining packages and runtime vuln count."""
-    reset_scan_warnings_only()
-    runtime_packages = [package for package in packages if runtime_cve.is_cpython_runtime(package)]
-    runtime_count = await runtime_cve.scan_cpython_runtimes(runtime_packages, offline=offline)
-    packages = [package for package in packages if not runtime_cve.is_cpython_runtime(package)]
-    try:
-        from agent_bom.resolver import reset_performance_stats as _reset_resolver_performance
-
-        _reset_resolver_performance()
-    except Exception:  # noqa: BLE001
-        pass
-    return packages, runtime_count
-
-
-def _apply_installed_versions(packages: list[Package], installed_version: Any) -> int:
-    resolved = 0
-    for pkg in packages:
-        installed_ver = installed_version(pkg)
-        if installed_ver:
-            pkg.version = installed_ver
-            pkg.purl = package_purl(pkg.name, installed_ver, pkg.ecosystem)
-            pkg.version_source = "installed"
-            resolved += 1
-    return resolved
-
-
-def _resolve_local_versions(unresolved: list[Package], target_dir: str | None) -> None:
-    """Resolve versions from packages installed in the target project (``-p``), never the scanner host."""
-    try:
-        from agent_bom.resolvers.runtime_resolver import resolve_go_versions, resolve_npm_versions, resolve_pip_versions
-
-        local_resolved = 0
-        # Resolve pip packages from the target project's virtualenv only.
-        pip_unresolved = [p for p in unresolved if p.ecosystem.lower() == "pypi"]
-        venv_python = _target_venv_python(target_dir)
-        if pip_unresolved and venv_python:
-            pip_versions = resolve_pip_versions(venv_python)
-            local_resolved += _apply_installed_versions(
-                pip_unresolved,
-                lambda pkg: (
-                    pip_versions.get(pkg.name.lower())
-                    or pip_versions.get(pkg.name.lower().replace("-", "_"))
-                    or pip_versions.get(pkg.name.lower().replace("_", "-"))
-                ),
-            )
-
-        # Resolve npm and Go packages from the target project directory.
-        for local_ecosystem, resolve_local_versions in (("npm", resolve_npm_versions), ("go", resolve_go_versions)):
-            eco_unresolved = [p for p in unresolved if p.ecosystem.lower() == local_ecosystem]
-            if not (eco_unresolved and target_dir):
-                continue
-            local_versions = resolve_local_versions(Path(target_dir))
-            local_resolved += _apply_installed_versions(eco_unresolved, lambda pkg: local_versions.get(pkg.name))
-
-        if local_resolved:
-            console.print(f"  [green]✓[/green] Resolved {local_resolved} package version(s) from local install")
-    except Exception as exc:
-        _logger.debug("Local version resolution failed: %s", exc)
-
-
-async def _resolve_registry_versions(packages: list[Package], offline: bool) -> None:
-    still_unresolved = [p for p in packages if _is_unresolved_package(p) and p.ecosystem.lower() in ("npm", "pypi", "conda")]
-    if still_unresolved and not offline:
-        try:
-            from agent_bom.resolver import resolve_all_versions
-
-            resolved_count = await resolve_all_versions(still_unresolved)
-            if resolved_count:
-                # Mark these as registry-resolved so output shows confidence
-                for pkg in still_unresolved:
-                    if not _is_unresolved_version(pkg.version):
-                        pkg.version_source = "registry_fallback"
-                console.print(f"  [green]✓[/green] Auto-resolved {resolved_count} package version(s) from registry")
-        except Exception as exc:
-            _logger.warning("Version resolution failed for %d package(s): %s", len(still_unresolved), exc)
-            console.print(f"  [yellow]⚠[/yellow] Version resolution skipped: {exc}")
-            _emit_scan_warning("version resolution failed for one or more packages")
-    elif still_unresolved and offline:
-        _logger.info("Offline mode: skipping registry version resolution for %d package(s)", len(still_unresolved))
-
-
-async def _expand_transitive_packages(packages: list[Package]) -> list[Package]:
-    transitive_ecosystems = {"npm", "pypi", "go"}
-    eligible = [p for p in packages if p.ecosystem.lower() in transitive_ecosystems]
-    if eligible:
-        try:
-            from agent_bom.transitive import resolve_transitive_dependencies
-
-            _logger.info("Resolving transitive dependencies for %d package(s)...", len(eligible))
-            transitive_pkgs = await resolve_transitive_dependencies(eligible)
-            if transitive_pkgs:
-                existing_keys = {_package_db_key(p) for p in packages}
-                new_pkgs = [p for p in transitive_pkgs if _package_db_key(p) not in existing_keys]
-                if new_pkgs:
-                    packages = packages + new_pkgs
-                    packages = deduplicate_packages(packages)
-                    console.print(f"  [cyan]→[/cyan] Transitive resolution: {len(new_pkgs)} additional package(s) queued")
-        except Exception as exc:  # noqa: BLE001
-            _logger.warning("Transitive resolution failed, scanning direct dependencies only: %s", exc)
-            _emit_scan_warning("transitive dependency resolution failed")
-    return packages
-
-
-def _select_scannable_packages(packages: list[Package]) -> list[Package]:
-    # Inventory-only ecosystems have no advisory sources. Exclude them from local DB coverage
-    # accounting and live OSV queries so offline scans do not report them as incomplete SCA.
-    non_osv_packages = [p for p in packages if p.ecosystem.lower() in _NON_OSV_ECOSYSTEMS]
-    for package in non_osv_packages:
-        _logger.debug(
-            "Skipping package %s/%s: ecosystem %r is not OSV-queryable (handled by other pipeline)",
-            package.ecosystem,
-            package.name,
-            package.ecosystem,
-        )
-    if non_osv_packages:
-        _bump_scan_perf("skipped_non_osv_ecosystems", len(non_osv_packages))
-    scannable = [p for p in packages if not _is_unresolved_package(p) and p.ecosystem.lower() not in _NON_OSV_ECOSYSTEMS]
-
-    # Warn about packages that could not be resolved — no silent failures
-    still_unresolved = [p for p in packages if _is_unresolved_package(p) and p.ecosystem.lower() not in _NON_OSV_ECOSYSTEMS]
-    _warn_unresolved_packages(still_unresolved)
-    return scannable
-
-
-def _scan_local_advisories(scannable: list[Package], scan_options: ScanOptions, demo_keys: set[str]) -> tuple[int, set[str], list[Package]]:
-    """Match against demo advisories and the local DB; return count, covered keys and DB targets."""
-    # Demo mode uses bundled advisory rows first so published first-run evidence
-    # is deterministic and does not depend on a user's ambient ~/.agent-bom DB.
-    local_count = 0
-    db_covered: set[str] = set()
-    if scan_options.demo_advisories:
-        demo_count, demo_covered = _scan_packages_demo_advisories(scannable)
-        local_count += demo_count
-        db_covered.update(demo_covered)
-        # The curated demo inventory is a closed evidence set; some entries are intentionally clean or
-        # malicious without a CVE, so a missing row must not fall through to the ambient DB or OSV.
-        db_covered.update(demo_keys)
-
-    # Query the local SQLite DB for packages the demo manifest does not cover; DB hits skip OSV.
-    local_db_targets = [p for p in scannable if _package_db_key(p) not in db_covered]
-    local_db_count, local_db_covered = _scanners_patchable("_scan_packages_local_db")(local_db_targets) if local_db_targets else (0, set())
-    local_count += local_db_count
-    db_covered.update(local_db_covered)
-    if local_count:
-        local_label = "vulnerability found" if local_count == 1 else "vulnerabilities found"
-        source_label = "Demo advisory DB" if scan_options.demo_advisories else "Local DB"
-        if scan_options.offline:
-            mode_note = " (offline mode)"
-        elif scan_options.prefer_local_db:
-            mode_note = " (local advisory cache)"
-        else:
-            mode_note = ""
-        console.print(f"  [green]✓[/green] {source_label}: {local_count} {local_label}{mode_note}")
-    return local_count, db_covered, local_db_targets
-
-
-def _detect_coverage_gaps(scannable: list[Package]) -> list[dict]:
-    """Warn about OS releases (typically EOL) the local DB has no advisory data for; never alters matching."""
-    coverage_gaps: list[dict] = []
-    try:
-        from agent_bom.coverage import detect_release_coverage_gaps
-
-        coverage_gaps = detect_release_coverage_gaps(scannable)
-        for gap in coverage_gaps:
-            record_coverage_warning(gap)
-            detail = str(gap.get("detail") or f"Vulnerability coverage for {gap['release']} is incomplete.")
-            _emit_scan_warning(detail)
-            console.print(f"  [yellow]⚠[/yellow] [bold]Incomplete coverage:[/bold] {detail}")
-    except Exception as exc:  # noqa: BLE001
-        _logger.debug("coverage-gap detection skipped: %s", exc)
-    return coverage_gaps
-
-
-def _select_osv_targets(
-    scannable: list[Package], offline: bool, local_db_targets: list[Package], db_covered: set[str], coverage_gaps: list[dict]
-) -> tuple[list[Package], set[str]]:
-    """Pick packages the local DB does not cover, plus stale or sparse (EOL) ones; also return covered ecosystems."""
-    from agent_bom.coverage import osv_fallback_db_keys
-
-    force_osv_keys = osv_fallback_db_keys(scannable, gaps=coverage_gaps) if not offline else set()
-    sparse_osv_keys = force_osv_keys.copy()
-    # A covered archive is only authoritative while fresh: online scans keep cached findings as
-    # fallback but look for newer advisories even when a stale archive covers the package.
-    if not offline and local_db_targets:
-        from agent_bom.vuln_freshness import compute_freshness
-
-        if compute_freshness().stale:
-            force_osv_keys.update(_package_db_key(package) for package in local_db_targets)
-    inventory_ecosystems = {eco for package in scannable for eco in _db_ecosystems_for_package(package)}
-    covered_ecos = _scanners_patchable("_db_covered_ecosystems")(inventory_ecosystems)
-    # An exact package hit or a complete ecosystem archive is sufficient local evidence; sparse-release
-    # fallbacks override both so EOL coverage cannot be mistaken for a clean result.
-    osv_targets = [
-        p
-        for p in scannable
-        if (_package_db_key(p) not in db_covered and not any(eco in covered_ecos for eco in _db_ecosystems_for_package(p)))
-        or _package_db_key(p) in force_osv_keys
-    ]
-    if force_osv_keys:
-        _logger.info("Refreshing OSV coverage for %d package(s) with stale or sparse local evidence", len(force_osv_keys))
-    if sparse_osv_keys:
-        _emit_scan_warning(f"sparse local DB OSV fallback for {len(sparse_osv_keys)} package(s)")
-    return osv_targets, covered_ecos
-
-
-def _check_offline_coverage(scannable: list[Package], osv_targets: list[Package], covered_ecos: set[str], demo: bool) -> None:
-    if not covered_ecos and osv_targets and not demo:
-        # Genuinely empty/missing DB — nothing can be scanned offline.
-        raise IncompleteScanError(
-            "Offline mode requires a populated local vulnerability DB. Run "
-            "`agent-bom db update --source osv` before using `--offline` "
-            "(the all-ecosystems archive can exceed 1 GB), or drop `--offline`."
-        )
-    # A package with no DB rows in an ecosystem the DB covers is clean. Only ecosystems with zero
-    # advisories are a real gap: warn loudly, but keep vulnerabilities found for covered packages.
-    coverage_candidates = [] if demo else scannable
-    uncovered = [p for p in coverage_candidates if not any(eco in covered_ecos for eco in _db_ecosystems_for_package(p))]
-    if not uncovered:
-        return
-    gap_ecos = sorted({eco for p in uncovered for eco in _db_ecosystems_for_package(p)})
-    skipped_names = ", ".join(f"{pkg.name}@{pkg.version}" for pkg in uncovered[:5])
-    suffix = f" (+{len(uncovered) - 5} more)" if len(uncovered) > 5 else ""
-    # A package can map to no DB ecosystem at all; never render an empty "()" in that case.
-    eco_note = f" ({', '.join(gap_ecos)})" if gap_ecos else ""
-    eco_clause = f" {', '.join(gap_ecos)}" if gap_ecos else ""
-    _logger.warning("Offline mode: %d package(s) in ecosystem(s) with no local DB advisories%s skipped", len(uncovered), eco_note)
-    console.print(
-        f"  [yellow]⚠[/yellow] Offline coverage gap: {len(uncovered)} package(s) in "
-        f"ecosystem(s) the local DB has no advisories for{eco_note}: "
-        f"{skipped_names}{suffix}. Run `agent-bom db update` for full coverage."
-    )
-    _emit_scan_warning(
-        f"offline coverage gap: {len(uncovered)} package(s) in ecosystem(s){eco_clause} have no advisories in the local vulnerability DB"
-    )
-    # Structured signal so consumers (e.g. `check`) can fail closed deterministically: a zero-vuln
-    # result for an ecosystem the local DB carries no advisories for is NOT a clean bill of health.
-    record_coverage_warning(
-        {
-            "kind": "offline_ecosystem_gap",
-            "release": f"offline:{','.join(gap_ecos)}",
-            "ecosystems": gap_ecos,
-            "package_count": len(uncovered),
-        }
-    )
 
 
 async def _query_osv_results(
@@ -1313,80 +497,6 @@ def _apply_osv_results(scannable: list[Package], osv_targets: list[Package], res
             if not v.compliance_tags:
                 v.compliance_tags = _tag_vuln(v, pkg)
     return added
-
-
-_AMD_PACKAGE_PREFIXES = tuple(
-    "rocm hip_ hipcc hip_base miopen rocblas rocsolver rccl rocprim rocthrust rocrand rocfft hipsparse hipblas "
-    "composablekernel tensorflow_rocm jax_rocm".split()
-)
-
-
-async def _check_nvidia(packages: list[Package]) -> int:
-    from agent_bom.scanners.nvidia_advisory import check_nvidia_advisories
-
-    return await check_nvidia_advisories(packages)
-
-
-async def _check_amd(packages: list[Package]) -> int:
-    from agent_bom.scanners.amd_advisory import check_amd_advisories
-
-    return check_amd_advisories(packages)
-
-
-async def _check_ghsa(packages: list[Package]) -> int:
-    from agent_bom.scanners.ghsa_advisory import check_github_advisories
-
-    return await check_github_advisories(packages)
-
-
-async def _run_supplemental_check(label: str, packages: list[Package], check: Any) -> int:
-    new_count = 0
-    try:
-        new_count = await check(packages)
-        if new_count:
-            console.print(f"  [green]✓[/green] {label} advisories: {new_count} additional CVE(s)")
-    except Exception as exc:
-        _logger.warning(label + " advisory check failed for %d package(s): %s", len(packages), exc)
-        console.print(f"  [yellow]⚠[/yellow] {label} advisory check skipped: {exc}")
-        _emit_scan_warning(f"{label} advisory enrichment skipped")
-    return new_count or 0
-
-
-async def _scan_supplemental_advisories(scannable: list[Package], offline: bool) -> int:
-    """Query NVIDIA, AMD PSIRT and GitHub advisories; return the additional CVE count."""
-    added = 0
-    # nvidia_advisory.py maps NVIDIA CSAF products to bundling frameworks (torch,
-    # jax, vllm, etc.) so we pass ALL AI packages — not just nvidia-prefixed ones.
-    nvidia_packages = [
-        p
-        for p in scannable
-        if p.name.lower().replace("-", "_") in _AI_FRAMEWORK_PACKAGES or p.name.lower().replace("-", "") in _AI_FRAMEWORK_PACKAGES
-    ]
-    if nvidia_packages and not offline:
-        added += await _run_supplemental_check("NVIDIA", nvidia_packages, _check_nvidia)
-
-    # AMD PSIRT advisories for ROCm / HIP packages.
-    amd_packages = [p for p in scannable if any(p.name.lower().replace("-", "_").startswith(prefix) for prefix in _AMD_PACKAGE_PREFIXES)]
-    if amd_packages:
-        added += await _run_supplemental_check("AMD", amd_packages, _check_amd)
-
-    if scannable and not offline:
-        added += await _run_supplemental_check("GHSA", scannable, _check_ghsa)
-    return added
-
-
-def _flag_suspicious_packages(scannable: list[Package]) -> None:
-    for pkg in scannable:
-        if not pkg.is_malicious:
-            target = check_typosquat(pkg.name, pkg.ecosystem)
-            if target:
-                pkg.is_malicious = True
-                pkg.malicious_reason = f"Possible typosquat of '{target}'"
-            # Dependency confusion check
-            confusion_warning = check_dependency_confusion(pkg)
-            if confusion_warning and not pkg.is_malicious:
-                pkg.is_malicious = True
-                pkg.malicious_reason = confusion_warning
 
 
 def _suppress_unfixed_findings(scannable: list[Package]) -> int:
@@ -1850,3 +960,9 @@ def scan_agents_sync(
             )
         expand_blast_radius_hops(blast_radii, agents, max_depth=blast_radius_depth)
     return blast_radii
+
+
+def __getattr__(name: str) -> Any:
+    value = resolve_legacy_export(name)
+    globals()[name] = value
+    return value

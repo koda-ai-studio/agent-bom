@@ -99,7 +99,7 @@ Lists: `connect` = `src/agent_bom/cli/_connect_sources.py` `_CONNECT_SOURCES`; `
 | databricks | — | ✓ | ✓ |
 | oci | — | — | ✓ |
 
-Lists: `deep_inventory_api` = `src/agent_bom/api/routes/cloud.py` `_INVENTORY_PROVIDERS`; `api_connection` = `src/agent_bom/api/connection_store.py` `SUPPORTED_PROVIDERS`; `scan_scopes` = `src/agent_bom/api/cloud_scan_scopes.py` `CLOUD_PROVIDERS`
+Lists: `deep_inventory_api` = `src/agent_bom/api/cloud_inventory_read.py` `_INVENTORY_PROVIDERS`; `api_connection` = `src/agent_bom/api/connection_store.py` `SUPPORTED_PROVIDERS`; `scan_scopes` = `src/agent_bom/api/cloud_scan_scopes.py` `CLOUD_PROVIDERS`
 
 ### Side-scan
 
@@ -107,7 +107,7 @@ Lists: `deep_inventory_api` = `src/agent_bom/api/routes/cloud.py` `_INVENTORY_PR
 |---|:-:|:-:|
 | aws | ✓ | — |
 
-Lists: `side_scan_capabilities` = `src/agent_bom/cloud/side_scan_lifecycle_status.py` `side_scan_provider_capabilities`; `side_scan_api` = `src/agent_bom/api/routes/cloud.py` `_SIDESCAN_PROVIDERS`
+Lists: `side_scan_capabilities` = `src/agent_bom/cloud/side_scan_lifecycle_status.py` `side_scan_provider_capabilities`; `side_scan_api` = `src/agent_bom/api/cloud_scan_results.py` `_SIDESCAN_PROVIDERS`
 
 ### Scan scope vs AI/agent discovery registry
 
@@ -136,7 +136,7 @@ Provider lanes:
 - API connection: `src/agent_bom/api/connection_store.py` `SUPPORTED_PROVIDERS`
 - Scheduled scans: `src/agent_bom/api/connection_scheduler.py` `_SCHEDULABLE_PROVIDERS`
 - AI/agent discovery: `src/agent_bom/cloud/__init__.py` `_PROVIDERS`
-- Deep inventory: `src/agent_bom/api/routes/cloud.py` `_INVENTORY_PROVIDERS`
+- Deep inventory: `src/agent_bom/api/cloud_inventory_read.py` `_INVENTORY_PROVIDERS`
 - Benchmark posture: `src/agent_bom/cloud/benchmark_inventory.json` `providers`
 - Identity/CIEM: `src/agent_bom/cloud/authorization_evidence.py` `AuthorizationProvider`
 - Data/DSPM: `src/agent_bom/cloud/*_data_classifier.py` `module files`
@@ -159,4 +159,4 @@ Integration categories:
 - Identity / NHI discovery: `src/agent_bom/cli/_identity_group.py` `discover_cmd --provider click.Choice`
 - Advisory sources: `src/agent_bom/advisory_sources.py` `PRIMARY_ADVISORY_SOURCES`, `src/agent_bom/advisory_sources.py` `ENRICHMENT_ADVISORY_SOURCES`
 - IaC rule families: `src/agent_bom/iac/**/*.py` `rule_id="PREFIX-NNN" / "rule_id": "PREFIX-NNN" literals`
-- Agent / MCP clients: `src/agent_bom/models.py` `AgentType`, `src/agent_bom/discovery/__init__.py` `CONFIG_LOCATIONS`, `src/agent_bom/discovery/coverage.py` `supported_clients`
+- Agent / MCP clients: `src/agent_bom/domain/inventory_types.py` `AgentType`, `src/agent_bom/discovery/platform_config.py` `CONFIG_LOCATIONS`, `src/agent_bom/discovery/coverage.py` `supported_clients`

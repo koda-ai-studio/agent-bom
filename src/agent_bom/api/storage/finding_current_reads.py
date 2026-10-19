@@ -32,7 +32,7 @@ def current_order(sort: str, dialect: Dialect = "sqlite") -> str:
 def filters(
     tenant: str, *, since: str | None, origin: str | None, severity: str | None, scan_id: str | None, status: str | None
 ) -> tuple[list[str], list[Any]]:
-    from agent_bom.api.compliance_hub_store import status_sql_predicate
+    from agent_bom.api.storage.hub_filters import status_sql_predicate
 
     where = ["tenant_id = ?"]
     params: list[Any] = [tenant]
@@ -100,8 +100,8 @@ def scoped_page(
     scope: Mapping[str, str],
     metadata: dict[str, Any] | None,
 ) -> Page:
-    from agent_bom.api.compliance_hub_store import collect_scope_filtered_page, scope_filter_batch_size
     from agent_bom.api.finding_lifecycle import enriched_finding_payload
+    from agent_bom.api.storage.hub_filters import collect_scope_filtered_page, scope_filter_batch_size
     from agent_bom.finding_scope import row_matches_scope
 
     def fetch(batch_cursor: str | None, batch_limit: int) -> tuple[list[tuple[dict[str, Any], dict[str, Any]]], str | None]:

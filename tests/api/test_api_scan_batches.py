@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+from agent_bom.api import scan_job_dispatch
 from agent_bom.api.graph_store import SQLiteGraphStore
 from agent_bom.api.models import JobStatus, ScanRequest
 from agent_bom.api.routes import scan as scan_routes
@@ -25,7 +26,7 @@ def test_multi_target_scan_request_creates_parent_and_child_jobs(monkeypatch, tm
     set_tenant_quota_store(InMemoryTenantQuotaStore())
     _jobs.clear()
     submitted: list[str] = []
-    monkeypatch.setattr(scan_routes, "submit_scan_job", lambda job: submitted.append(job.job_id))
+    monkeypatch.setattr(scan_job_dispatch, "submit_scan_job", lambda job: submitted.append(job.job_id))
     monkeypatch.setattr("agent_bom.config.GRAPH_AUTO_CORRELATE", True)
 
     parent = scan_routes.enqueue_scan_job(
@@ -62,7 +63,7 @@ def test_multi_target_scan_request_creates_parent_and_child_jobs(monkeypatch, tm
 
 def test_in_memory_batch_exposes_terminal_auto_correlation_noop(monkeypatch):
     store = _reset_store()
-    monkeypatch.setattr(scan_routes, "submit_scan_job", lambda job: None)
+    monkeypatch.setattr(scan_job_dispatch, "submit_scan_job", lambda job: None)
     monkeypatch.setattr("agent_bom.config.GRAPH_AUTO_CORRELATE", True)
 
     parent = scan_routes.enqueue_scan_job(
@@ -79,7 +80,7 @@ def test_in_memory_batch_exposes_terminal_auto_correlation_noop(monkeypatch):
 
 def test_batch_parent_rolls_up_child_results_without_failing_partial_batch(monkeypatch):
     store = _reset_store()
-    monkeypatch.setattr(scan_routes, "submit_scan_job", lambda job: None)
+    monkeypatch.setattr(scan_job_dispatch, "submit_scan_job", lambda job: None)
     parent = scan_routes.enqueue_scan_job(
         tenant_id="tenant-a",
         triggered_by="api-test",
@@ -147,7 +148,7 @@ def _child_report(image: str, cve: str) -> dict:
 def test_batch_parent_aggregates_child_graph_and_findings(monkeypatch):
     """Parent read path surfaces the union of child graph/findings (#3435)."""
     store = _reset_store()
-    monkeypatch.setattr(scan_routes, "submit_scan_job", lambda job: None)
+    monkeypatch.setattr(scan_job_dispatch, "submit_scan_job", lambda job: None)
     parent = scan_routes.enqueue_scan_job(
         tenant_id="tenant-a",
         triggered_by="api-test",
@@ -197,7 +198,7 @@ def test_batch_parent_aggregates_child_graph_and_findings(monkeypatch):
 def test_batch_parent_partial_aggregation_reports_status(monkeypatch):
     """A partially-complete batch exposes explicit aggregation status + child IDs."""
     store = _reset_store()
-    monkeypatch.setattr(scan_routes, "submit_scan_job", lambda job: None)
+    monkeypatch.setattr(scan_job_dispatch, "submit_scan_job", lambda job: None)
     parent = scan_routes.enqueue_scan_job(
         tenant_id="tenant-a",
         triggered_by="api-test",
@@ -232,7 +233,7 @@ def test_batch_parent_partial_aggregation_reports_status(monkeypatch):
 def test_single_target_scan_request_keeps_single_job_shape(monkeypatch):
     _reset_store()
     submitted: list[str] = []
-    monkeypatch.setattr(scan_routes, "submit_scan_job", lambda job: submitted.append(job.job_id))
+    monkeypatch.setattr(scan_job_dispatch, "submit_scan_job", lambda job: submitted.append(job.job_id))
 
     job = scan_routes.enqueue_scan_job(
         tenant_id="tenant-a",
@@ -287,7 +288,7 @@ def test_scan_over_batch_target_cap_returns_422_not_500(monkeypatch):
     from tests.auth_helpers import enable_trusted_proxy_env, proxy_headers
 
     enable_trusted_proxy_env()
-    monkeypatch.setattr(scan_routes, "submit_scan_job", lambda job: None)
+    monkeypatch.setattr(scan_job_dispatch, "submit_scan_job", lambda job: None)
     _reset_store()
 
     client = TestClient(app)

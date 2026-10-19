@@ -46,6 +46,7 @@ from agent_bom.proxy_audit import (
     drain_proxy_audit_dlq,
     write_audit_record,
 )
+from agent_bom.runtime import proxy_policy_cache, proxy_tracing
 
 
 def test_proxy_message_size_budget_is_two_mib_or_less():
@@ -469,7 +470,7 @@ def test_control_plane_headers_propagate_w3c_trace_context(monkeypatch):
         headers["baggage"] = "tenant=acme"
         return headers
 
-    monkeypatch.setattr(proxy_mod, "inject_current_trace_headers", _fake_inject)
+    monkeypatch.setattr(proxy_tracing, "inject_current_trace_headers", _fake_inject)
     headers = _control_plane_headers("secret-token", "etag-1")
     assert headers["Authorization"] == "Bearer secret-token"
     assert headers["If-None-Match"] == "etag-1"
@@ -566,7 +567,7 @@ def test_gateway_policy_cache_path_honors_env_override(monkeypatch):
 
 def test_gateway_policy_cache_round_trip(tmp_path: Path, monkeypatch):
     cache_path = tmp_path / "gateway-policies.json"
-    monkeypatch.setattr(proxy_mod.time, "time", lambda: 1234.0)
+    monkeypatch.setattr(proxy_policy_cache.time, "time", lambda: 1234.0)
     policies = [
         GatewayPolicy(
             policy_id="p1",
@@ -586,13 +587,13 @@ def test_gateway_policy_cache_round_trip(tmp_path: Path, monkeypatch):
 
 def test_gateway_policy_cache_rejects_stale_entries(tmp_path: Path, monkeypatch):
     cache_path = tmp_path / "gateway-policies.json"
-    monkeypatch.setattr(proxy_mod.time, "time", lambda: 100.0)
+    monkeypatch.setattr(proxy_policy_cache.time, "time", lambda: 100.0)
     _persist_gateway_policies_cache(
         cache_path,
         [GatewayPolicy(policy_id="p1", name="stale", rules=[])],
         "etag-stale",
     )
-    monkeypatch.setattr(proxy_mod.time, "time", lambda: 1000.0)
+    monkeypatch.setattr(proxy_policy_cache.time, "time", lambda: 1000.0)
     loaded_policies, loaded_etag = _load_cached_gateway_policies(cache_path, max_age_seconds=60)
     assert loaded_policies is None
     assert loaded_etag is None
@@ -617,7 +618,7 @@ def _ed25519_private_key_pem() -> str:
 
 def test_gateway_policy_cache_round_trip_requires_valid_signature_when_enabled(tmp_path: Path, monkeypatch):
     cache_path = tmp_path / "gateway-policies.json"
-    monkeypatch.setattr(proxy_mod.time, "time", lambda: 1234.0)
+    monkeypatch.setattr(proxy_policy_cache.time, "time", lambda: 1234.0)
     monkeypatch.setenv("AGENT_BOM_PROXY_POLICY_CACHE_ED25519_PRIVATE_KEY_PEM", _ed25519_private_key_pem())
     _reset_gateway_policy_cache_signer_for_tests()
 
@@ -655,7 +656,7 @@ def test_gateway_policy_cache_signing_key_resolves_from_file_first(tmp_path: Pat
 
 def test_gateway_policy_cache_rejects_signature_mismatch(tmp_path: Path, monkeypatch):
     cache_path = tmp_path / "gateway-policies.json"
-    monkeypatch.setattr(proxy_mod.time, "time", lambda: 1234.0)
+    monkeypatch.setattr(proxy_policy_cache.time, "time", lambda: 1234.0)
     monkeypatch.setenv("AGENT_BOM_PROXY_POLICY_CACHE_ED25519_PRIVATE_KEY_PEM", _ed25519_private_key_pem())
     _reset_gateway_policy_cache_signer_for_tests()
 
@@ -673,7 +674,7 @@ def test_gateway_policy_cache_rejects_signature_mismatch(tmp_path: Path, monkeyp
 
 def test_gateway_policy_cache_rejects_missing_signature_when_enabled(tmp_path: Path, monkeypatch):
     cache_path = tmp_path / "gateway-policies.json"
-    monkeypatch.setattr(proxy_mod.time, "time", lambda: 1234.0)
+    monkeypatch.setattr(proxy_policy_cache.time, "time", lambda: 1234.0)
     monkeypatch.setenv("AGENT_BOM_PROXY_POLICY_CACHE_ED25519_PRIVATE_KEY_PEM", _ed25519_private_key_pem())
     _reset_gateway_policy_cache_signer_for_tests()
 

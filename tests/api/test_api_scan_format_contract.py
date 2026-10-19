@@ -231,7 +231,7 @@ def test_scan_read_endpoint_serves_the_requested_document(tmp_path, monkeypatch)
         _run_scan_sync(job)
         store.put(job)
 
-    monkeypatch.setattr("agent_bom.api.routes.scan.submit_scan_job", _run_inline)
+    monkeypatch.setattr("agent_bom.api.scan_job_dispatch.submit_scan_job", _run_inline)
 
     client = TestClient(app, raise_server_exceptions=False)
     created = client.post("/v1/scan", json={"offline": True, "format": "sarif"})

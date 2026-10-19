@@ -131,7 +131,7 @@ def test_max_transitive_cache_defined():
 
 def test_ai_cache_put_bounded():
     """_ai_cache_put evicts entries when exceeding limit."""
-    from agent_bom import ai_enrich
+    from agent_bom.ai_components import call_state as ai_enrich
 
     original = ai_enrich._MAX_AI_CACHE
     try:

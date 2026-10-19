@@ -40,22 +40,26 @@ SCHEMA_DIR = ROOT / "docs" / "schemas" / "v1"
 INDEX_FILE = SCHEMA_DIR / "index.json"
 
 
-# Models reachable from `agent_bom.api.models`. Filter to classes
-# defined in that module (skip imported BaseModel re-exports) and only
-# proper Pydantic models.
+# Published models retain their import path while domain owners load lazily.
+_MODEL_MODULES = {
+    "agent_bom.api.models",
+    "agent_bom.api.source_models",
+    "agent_bom.api.health_models",
+    "agent_bom.api.compliance_models",
+}
+
+
 def _public_models() -> list[type[BaseModel]]:
     out: list[type[BaseModel]] = []
-    for name, obj in vars(models_module).items():
+    for name, obj in inspect.getmembers(models_module):
         if name.startswith("_"):
             continue
         if not inspect.isclass(obj):
             continue
         if not issubclass(obj, BaseModel) or obj is BaseModel:
             continue
-        # Only the models defined in this module — skip transitive imports
-        # like `from pydantic import BaseModel` and any re-exports from
-        # other internal modules (we want the v1 surface to be one file).
-        if obj.__module__ != models_module.__name__:
+        # Exclude unrelated transitive models from the published v1 surface.
+        if obj.__module__ not in _MODEL_MODULES:
             continue
         out.append(obj)
     return sorted(out, key=lambda cls: cls.__name__)

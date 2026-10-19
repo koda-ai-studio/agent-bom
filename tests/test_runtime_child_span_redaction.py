@@ -9,6 +9,7 @@ from starlette.testclient import TestClient
 from agent_bom import gateway_server, proxy
 from agent_bom.gateway_server import GatewaySettings, create_gateway_app
 from agent_bom.gateway_upstreams import UpstreamConfig, UpstreamRegistry
+from agent_bom.runtime import proxy_tracing
 
 SECRET = "http://10.20.30.40:8443/mcp?api_key=sk-live-SYNTHETIC"
 
@@ -61,7 +62,7 @@ def test_gateway_request_failure_exports_only_sanitized_child_span(tracing, monk
 @pytest.mark.parametrize("operation", ["fetch_gateway_policies", "push_audit_batch"])
 async def test_proxy_control_plane_failure_exports_only_sanitized_span(tracing, monkeypatch, operation):
     tracer, exporter = tracing
-    monkeypatch.setattr(proxy, "_PROXY_TRACER", tracer)
+    monkeypatch.setattr(proxy_tracing, "_PROXY_TRACER", tracer)
     failure = RuntimeError(SECRET)
     failure.__cause__ = ValueError("SYNTHETIC_CAUSE")
 
@@ -87,7 +88,7 @@ async def test_proxy_sse_child_failures_do_not_export_raw_exception(tracing, mon
     from unittest.mock import AsyncMock
 
     tracer, exporter = tracing
-    monkeypatch.setattr(proxy, "_PROXY_TRACER", tracer)
+    monkeypatch.setattr(proxy_tracing, "_PROXY_TRACER", tracer)
     client = AsyncMock()
     client.__aenter__.return_value = client
     client.post.side_effect = RuntimeError(SECRET)

@@ -47,7 +47,7 @@ Emitted by: `graph/ci_graph_overlay.py`; demo fixtures: `demo_estate/estate_grap
 
 ## `cloud_resource`
 
-Emitted by: `api/routes/cloud.py`, `graph/benchmark_projection.py`, `graph/builder.py`, `graph/builder_cloud_lineage.py`, `graph/builder_network_inventory.py`, `graph/builder_snowflake_data_movement.py`, `graph/builder_snowflake_platform.py`, `graph/cloud_audit_projection.py`, `graph/cloud_compute_projection.py`, `graph/cloud_rbac.py`, `graph/cloud_service_projection.py`, `graph/cloud_storage_projection.py`, `graph/finding_projection.py`, `graph/hosting_projection.py`, `graph/resource_aliases.py`, `graph/supabase_projection.py`, `graph/vercel_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
+Emitted by: `api/cloud_scan_results.py`, `graph/benchmark_projection.py`, `graph/builder.py`, `graph/builder_cloud_lineage.py`, `graph/builder_network_inventory.py`, `graph/builder_snowflake_data_movement.py`, `graph/builder_snowflake_platform.py`, `graph/cloud_audit_projection.py`, `graph/cloud_compute_projection.py`, `graph/cloud_rbac.py`, `graph/cloud_service_projection.py`, `graph/cloud_storage_projection.py`, `graph/finding_projection.py`, `graph/hosting_projection.py`, `graph/resource_aliases.py`, `graph/supabase_projection.py`, `graph/vercel_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
 
 Id formats:
 

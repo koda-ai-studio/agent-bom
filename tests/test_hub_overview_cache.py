@@ -46,7 +46,7 @@ class _CountingStore:
 
 
 def _request(tenant: str) -> SimpleNamespace:
-    return SimpleNamespace(tenant=tenant)
+    return SimpleNamespace(state=SimpleNamespace(tenant_id=tenant))
 
 
 def test_snapshot_memoised_and_counts_match_store(monkeypatch):
@@ -296,7 +296,7 @@ def test_hub_snapshot_retries_when_late_component_mutates_revision(monkeypatch, 
     monkeypatch.setattr(overview, "_hub_kev_snapshot", _kev)
     monkeypatch.setattr(overview, "_hub_top_risks", _top_risks)
 
-    snapshot = overview._capture_hub_overview_snapshot(object(), store)
+    snapshot = overview._capture_hub_overview_snapshot(_request("acme"), store)
 
     assert snapshot.revision == 1
     assert snapshot.severity == {"critical": 0, "high": 1}
@@ -328,7 +328,7 @@ def test_hub_snapshot_observes_cross_process_sqlite_mutation(monkeypatch, tmp_pa
         return original_kev(request, **kwargs)
 
     monkeypatch.setattr(overview, "_hub_kev_snapshot", _kev_with_process_mutation)
-    snapshot = overview._capture_hub_overview_snapshot(object(), store)
+    snapshot = overview._capture_hub_overview_snapshot(_request("acme"), store)
 
     assert launched is True
     assert snapshot.revision == store.overview_evidence_revision("acme")
@@ -357,7 +357,7 @@ def test_unstable_hub_snapshot_fails_bounded_without_overview_cache_write(monkey
     monkeypatch.setattr(overview, "_overview_cache_put", lambda *args, **kwargs: writes.append(args))
 
     with pytest.raises(HTTPException) as raised:
-        overview._build_overview(object())
+        overview._build_overview(_request("acme"))
 
     assert raised.value.status_code == 503
     assert raised.value.headers == {"Retry-After": "1"}
@@ -402,7 +402,7 @@ def test_hub_snapshot_fails_closed_when_an_authoritative_component_is_unavailabl
     monkeypatch.setattr("agent_bom.api.compliance_hub_store.get_compliance_hub_store", lambda: store)
 
     with pytest.raises(HTTPException) as raised:
-        overview._capture_hub_overview_snapshot(object(), store)
+        overview._capture_hub_overview_snapshot(_request("acme"), store)
 
     assert raised.value.status_code == 503
     assert raised.value.detail == "Overview evidence is temporarily unavailable; retry the request."

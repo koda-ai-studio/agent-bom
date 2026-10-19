@@ -14,6 +14,7 @@ import httpx
 import pytest
 
 from agent_bom import ai_enrich, config
+from agent_bom.ai_components import provider_discovery, providers
 from agent_bom.ai_enrich import (
     AI_PROVIDER_DESCRIPTORS,
     DEFAULT_MODEL,
@@ -115,7 +116,7 @@ async def test_redaction_applied_at_ollama_boundary(monkeypatch):
             captured["content"] = json["messages"][0]["content"]
             return _Resp()
 
-    with patch("agent_bom.ai_enrich.httpx.AsyncClient", return_value=_Client()):
+    with patch("agent_bom.ai_components.providers.httpx.AsyncClient", return_value=_Client()):
         await ai_enrich._call_ollama_direct("leak sk-abcdefghijkl1234567890 now", "llama3.2")
 
     assert "sk-abcdefghijkl1234567890" not in captured["content"]
@@ -153,12 +154,12 @@ def test_provider_for_model(model, cls):
 
 
 def test_provider_availability_reflects_detection():
-    with patch("agent_bom.ai_enrich._detect_ollama", return_value=True):
+    with patch("agent_bom.ai_components.provider_discovery._detect_ollama", return_value=True):
         assert OllamaProvider().is_available() is True
-    with patch("agent_bom.ai_enrich._detect_ollama", return_value=False):
+    with patch("agent_bom.ai_components.provider_discovery._detect_ollama", return_value=False):
         assert OllamaProvider().is_available() is False
     with (
-        patch("agent_bom.ai_enrich._check_litellm", return_value=True),
+        patch("agent_bom.ai_components.provider_discovery._check_litellm", return_value=True),
         patch.dict("os.environ", {}, clear=True),
     ):
         assert LiteLLMProvider().is_available() is True
@@ -167,7 +168,7 @@ def test_provider_availability_reflects_detection():
 def test_litellm_capability_is_independent_from_selected_model_readiness():
     """An Anthropic-only install is capable, while OpenAI resolution stays strict."""
     with (
-        patch("agent_bom.ai_enrich._check_litellm", return_value=True),
+        patch("agent_bom.ai_components.provider_discovery._check_litellm", return_value=True),
         patch.dict("os.environ", {"ANTHROPIC_API_KEY": "configured"}, clear=True),
     ):
         capability = next(item for item in ai_enrich.describe_ai_providers() if item["name"] == "litellm")
@@ -185,7 +186,7 @@ def test_litellm_capability_is_independent_from_selected_model_readiness():
 def test_litellm_resolution_allows_ambient_workload_identity(model):
     """Bedrock and Vertex SDK ambient identity chains are not env-key gated."""
     with (
-        patch("agent_bom.ai_enrich._check_litellm", return_value=True),
+        patch("agent_bom.ai_components.provider_discovery._check_litellm", return_value=True),
         patch.dict("os.environ", {}, clear=True),
     ):
         resolution = ai_enrich._resolve_ai_provider(model)
@@ -209,7 +210,7 @@ def test_litellm_resolution_allows_ambient_workload_identity(model):
 def test_litellm_status_requires_model_appropriate_readiness(model, environment, expected):
     """An installed adapter is not active until its selected model can authenticate."""
     with (
-        patch("agent_bom.ai_enrich._check_litellm", return_value=True),
+        patch("agent_bom.ai_components.provider_discovery._check_litellm", return_value=True),
         patch.dict("os.environ", environment, clear=True),
     ):
         status = ai_enrich._provider_status("litellm", model)
@@ -231,8 +232,8 @@ def test_litellm_status_requires_model_appropriate_readiness(model, environment,
 )
 def test_ollama_provider_metadata_reflects_endpoint_boundary(monkeypatch, endpoint, expected_local):
     """The provider's local/remote claim must follow its configured endpoint."""
-    monkeypatch.setattr(ai_enrich, "OLLAMA_BASE_URL", endpoint)
-    monkeypatch.setattr(ai_enrich, "_detect_ollama", lambda: True)
+    monkeypatch.setattr(provider_discovery, "OLLAMA_BASE_URL", endpoint)
+    monkeypatch.setattr(provider_discovery, "_detect_ollama", lambda: True)
 
     status = ai_enrich._provider_status("ollama")
 
@@ -243,7 +244,7 @@ def test_ollama_provider_metadata_reflects_endpoint_boundary(monkeypatch, endpoi
 
 @pytest.mark.asyncio
 async def test_ollama_provider_generate_delegates():
-    with patch("agent_bom.ai_enrich._call_ollama_direct", new_callable=AsyncMock, return_value="hi") as m:
+    with patch("agent_bom.ai_components.providers._call_ollama_direct", new_callable=AsyncMock, return_value="hi") as m:
         out = await OllamaProvider().generate("prompt", "ollama/llama3.2", max_tokens=42)
     assert out == "hi"
     # Strips the ollama/ prefix before delegating to the bare-model call.
@@ -252,7 +253,7 @@ async def test_ollama_provider_generate_delegates():
 
 @pytest.mark.asyncio
 async def test_litellm_provider_generate_delegates():
-    with patch("agent_bom.ai_enrich._call_llm_via_litellm", new_callable=AsyncMock, return_value="lit") as m:
+    with patch("agent_bom.ai_components.providers._call_llm_via_litellm", new_callable=AsyncMock, return_value="lit") as m:
         out = await LiteLLMProvider().generate("p", "openai/gpt-4o-mini")
     assert out == "lit"
     m.assert_awaited_once()
@@ -416,7 +417,7 @@ def test_cache_key_includes_execution_posture(monkeypatch):
     monkeypatch.setattr(config, "AI_REDACT_PROMPTS", False)
     variants.add(ai_enrich._cache_key("prompt", "openai/fake", task=EnrichmentTask.TRIAGE, provider="litellm"))
     monkeypatch.setattr(config, "AI_REDACT_PROMPTS", True)
-    monkeypatch.setattr(ai_enrich, "AI_PROMPT_VERSION", "ai-enrichment.test-version")
+    monkeypatch.setattr(providers, "AI_PROMPT_VERSION", "ai-enrichment.test-version")
     variants.add(ai_enrich._cache_key("prompt", "openai/fake", task=EnrichmentTask.TRIAGE, provider="litellm"))
 
     assert baseline not in variants

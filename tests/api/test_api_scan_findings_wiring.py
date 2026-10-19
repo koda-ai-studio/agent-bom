@@ -162,7 +162,7 @@ def wired_client(tmp_path, monkeypatch):
         graph.attack_paths = _derived_attack_paths(graph)
         graph_store.save_graph(graph)
 
-    monkeypatch.setattr("agent_bom.api.routes.scan.submit_scan_job", _complete_synchronously)
+    monkeypatch.setattr("agent_bom.api.scan_job_dispatch.submit_scan_job", _complete_synchronously)
 
     try:
         yield TestClient(app, raise_server_exceptions=False)
@@ -307,7 +307,7 @@ def test_findings_read_survives_unavailable_graph_backend(wired_client, monkeypa
         def attack_paths(self, **_kwargs):
             raise NotImplementedError("graph backend unavailable at secret://internal-host")
 
-    monkeypatch.setattr("agent_bom.api.routes.scan._get_graph_store", lambda: UnavailableGraphStore())
+    monkeypatch.setattr("agent_bom.api.finding_page_read._get_graph_store", lambda: UnavailableGraphStore())
 
     create = wired_client.post("/v1/scan", json={})
     assert create.status_code == 202

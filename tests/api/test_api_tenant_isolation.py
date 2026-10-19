@@ -424,7 +424,7 @@ async def test_create_scan_and_push_stamp_request_tenant(monkeypatch, package_co
             return None
 
     monkeypatch.setattr(scan_routes.asyncio, "get_running_loop", lambda: _Loop())
-    monkeypatch.setattr(scan_routes, "submit_scan_job", lambda _job: None)
+    monkeypatch.setattr("agent_bom.api.scan_job_dispatch.submit_scan_job", lambda _job: None)
 
     created = await scan_routes.create_scan(req, ScanRequest())
     assert created.tenant_id == "tenant-alpha"
@@ -1060,7 +1060,7 @@ async def test_discovery_and_traces_are_tenant_scoped():
 
     with patch("agent_bom.otel_ingest.parse_otel_traces", side_effect=_parse):
         with patch("agent_bom.otel_ingest.flag_vulnerable_tool_calls", side_effect=_flag):
-            with patch("agent_bom.api.routes.observability._get_analytics_store", return_value=analytics):
+            with patch("agent_bom.api.observability_trace_read._get_analytics_store", return_value=analytics):
                 result = await observability_routes.ingest_traces(req, {"resourceSpans": []})
     assert result["traces"] == 1
     assert result["persisted_events"] == 0
@@ -1163,7 +1163,7 @@ async def test_ocsf_ingest_is_tenant_scoped_and_audited(isolated_audit_log):
         ]
     }
 
-    with patch("agent_bom.api.routes.observability._get_analytics_store", return_value=analytics):
+    with patch("agent_bom.api.observability_events._get_analytics_store", return_value=analytics):
         result = await observability_routes.ingest_ocsf(req, payload)
 
     assert result == {
@@ -1218,7 +1218,7 @@ async def test_ocsf_ingest_normalizes_expected_analytics_contract():
         },
     }
 
-    with patch("agent_bom.api.routes.observability._get_analytics_store", return_value=analytics):
+    with patch("agent_bom.api.observability_events._get_analytics_store", return_value=analytics):
         result = await observability_routes.ingest_ocsf(req, payload)
 
     assert result == {
@@ -1306,7 +1306,7 @@ async def test_ocsf_ingest_offloads_sync_persistence(monkeypatch):
         ]
     }
 
-    with patch("agent_bom.api.routes.observability._get_analytics_store", return_value=_Analytics()):
+    with patch("agent_bom.api.observability_events._get_analytics_store", return_value=_Analytics()):
         result = await observability_routes.ingest_ocsf(req, payload)
 
     assert result["ingested"] == 1

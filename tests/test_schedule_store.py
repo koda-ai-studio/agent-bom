@@ -281,7 +281,7 @@ def test_source_schedule_resolves_canonical_source_request_and_links_job(monkeyp
             request=kwargs["request_body"],
         )
 
-    monkeypatch.setattr("agent_bom.api.routes.scan.enqueue_scan_job", _fake_enqueue)
+    monkeypatch.setattr("agent_bom.api.scan_job_submission.enqueue_scan_job", _fake_enqueue)
     try:
         job_id = _enqueue_scheduled_scan(
             {"source_id": "source-repo"},
@@ -349,7 +349,7 @@ def test_source_cohort_schedule_launches_one_exact_durable_cohort_per_occurrence
     # Observe actual local submissions, not recovery attempts entering the
     # dispatch boundary. ``dispatch_scan_job`` owns the process-local claim
     # that collapses a replay of still-pending durable children.
-    monkeypatch.setattr("agent_bom.api.routes.scan.submit_scan_job", lambda job: dispatched.append(job.job_id))
+    monkeypatch.setattr("agent_bom.api.scan_job_dispatch.submit_scan_job", lambda job: dispatched.append(job.job_id))
     config = {"source_ids": ["source-image", "source-repo"], "max_age_hours": 24}
     try:
         first_id = _enqueue_scheduled_scan(
@@ -453,7 +453,7 @@ def test_source_schedule_resolution_and_enqueue_are_fenced_against_delete(monkey
         delete_finished.set()
 
     monkeypatch.setattr("agent_bom.api.routes.sources._request_for_source", _blocking_request)
-    monkeypatch.setattr("agent_bom.api.routes.scan.enqueue_scan_job", _fake_enqueue)
+    monkeypatch.setattr("agent_bom.api.scan_job_submission.enqueue_scan_job", _fake_enqueue)
     schedule_thread = Thread(
         target=_enqueue_scheduled_scan,
         args=({"source_id": source.source_id},),

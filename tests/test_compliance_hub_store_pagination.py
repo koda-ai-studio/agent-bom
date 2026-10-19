@@ -395,7 +395,7 @@ def test_sqlite_severity_breakdown_counts_empty_as_unknown(tmp_path: Any) -> Non
 def test_in_memory_sort_ceiling_warns_once_per_tenant(monkeypatch, caplog) -> None:
     """The in-memory backend re-sorts the whole tenant per read; above the ceiling
     it warns (once per tenant) instead of degrading silently. Results are unchanged."""
-    from agent_bom.api import compliance_hub_store as hub
+    from agent_bom.api.storage import hub_memory as hub
 
     monkeypatch.setattr(hub, "IN_MEMORY_SORT_CEILING", 3)
     store = InMemoryComplianceHubStore()
@@ -414,7 +414,7 @@ def test_in_memory_sort_ceiling_warns_once_per_tenant(monkeypatch, caplog) -> No
 
 
 def test_in_memory_sort_ceiling_silent_below_ceiling(monkeypatch, caplog) -> None:
-    from agent_bom.api import compliance_hub_store as hub
+    from agent_bom.api.storage import hub_memory as hub
 
     monkeypatch.setattr(hub, "IN_MEMORY_SORT_CEILING", 100)
     store = InMemoryComplianceHubStore()

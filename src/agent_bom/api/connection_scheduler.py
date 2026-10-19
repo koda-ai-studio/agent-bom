@@ -374,7 +374,7 @@ def _persist_scan_outcome(
     """
     # Imported lazily to avoid a route-module import at server startup time.
     from agent_bom.api.audit_log import log_action
-    from agent_bom.api.routes.cloud_connections import _mark_connection
+    from agent_bom.api.connection_scan_reports import _mark_connection
 
     details: dict[str, Any] = {
         "tenant_id": record.tenant_id,
@@ -419,7 +419,8 @@ def execute_connection_scan(record: CloudConnectionRecord) -> bool:
     Never raises — returns whether the durable handoff was accepted and
     recorded, so one bad connection cannot sink the loop.
     """
-    from agent_bom.api.routes.cloud_connections import _now, queue_connection_scan_record
+    from agent_bom.api.connection_request_validation import _now
+    from agent_bom.api.connection_scan_worker import queue_connection_scan_record
 
     try:
         with tenant_bound_context(record.tenant_id):

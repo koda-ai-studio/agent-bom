@@ -111,7 +111,7 @@ def _apply_tenant_workflow_metadata(report: Any, *, tenant_id: str) -> None:
     JSON and every requested document format aligned on a rescan without making
     the formatters aware of authentication or persistence.
     """
-    from agent_bom.api.routes.enterprise import build_tenant_triage_owner_index, triage_owner_for
+    from agent_bom.api.routes.enterprise_routes.findings import build_tenant_triage_owner_index, triage_owner_for
 
     try:
         owner_index = build_tenant_triage_owner_index(tenant_id)

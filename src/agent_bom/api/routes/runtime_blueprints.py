@@ -61,7 +61,8 @@ def get_runtime_blueprint(request: Request, blueprint_id: str) -> dict[str, obje
 @router.get("/runtime/blueprints/{blueprint_id}/drift", **documented(RuntimeBlueprintDriftResponse), dependencies=[_dep("read")])
 def get_runtime_blueprint_drift(request: Request, blueprint_id: str) -> dict[str, object]:
     """Evaluate current runtime posture against one role/profile blueprint."""
-    from agent_bom.api.routes.proxy import _build_runtime_production_index, _load_proxy_alerts, _runtime_metrics_for_tenant
+    from agent_bom.api.proxy_runtime_projection import _build_runtime_production_index
+    from agent_bom.api.routes.proxy import _load_proxy_alerts, _runtime_metrics_for_tenant
 
     tenant_id = _request_tenant_id(request)
     try:

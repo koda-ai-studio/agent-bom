@@ -7,395 +7,24 @@ and detects packages from uvx/uv commands.
 
 from __future__ import annotations
 
-import json
-import logging
-import os
 import re
-import time
-import urllib.error
-import urllib.parse
-import urllib.request
-from datetime import datetime, timezone
+from importlib import import_module
 from pathlib import Path
-from typing import Optional
-
-import httpx
+from typing import TYPE_CHECKING, Any
 
 from agent_bom.coverage import record_manifest_parse_warning
-from agent_bom.models import MCPServer, Package
+from agent_bom.models import Package
 from agent_bom.package_utils import package_purl
-from agent_bom.parsers.cargo_lockfile import parse_cargo_lock
-from agent_bom.parsers.maven_properties import dependency_coordinates, local_properties, read_pom
-
-logger = logging.getLogger(__name__)
-
-_GOPROXY_URL = "https://proxy.golang.org"
-_CHECKSUM_DB_URL = "https://sum.golang.org"
-_MAVEN_CENTRAL_URL = "https://search.maven.org"
-_CRATES_IO_URL = "https://crates.io"
+from agent_bom.parsers.go_resolution import _UNRESOLVED_VERSIONS as _UNRESOLVED_VERSIONS
+from agent_bom.parsers.go_resolution import logger as logger
+from agent_bom.parsers.go_resolution import resolve_go_version as resolve_go_version
+from agent_bom.parsers.go_resolution import verify_go_checksums as verify_go_checksums
 
 # Versions that need resolution via the Go module proxy
-_UNRESOLVED_VERSIONS = frozenset({"latest", "(devel)", "", "unknown"})
 
 # Versions that require Maven Central resolution
-_MAVEN_UNRESOLVED_VERSIONS = frozenset({"RELEASE", "LATEST", "", "unknown"})
 
 # Versions that require crates.io resolution
-_CARGO_UNRESOLVED_VERSIONS = frozenset({"*", "", "latest", "unknown"})
-
-
-def _validate_https_url(url: str, param_name: str = "url") -> None:
-    """Raise ValueError if *url* does not use HTTPS.
-
-    All Go public API calls must use HTTPS — no plain-HTTP allowed.
-    """
-    if not url.startswith("https://"):
-        raise ValueError(f"{param_name} must use https:// — got {url!r}. Only HTTPS URLs are accepted.")
-
-
-def verify_go_checksums(
-    go_sum: Path,
-    modules: list[tuple[str, str]],
-    checksum_db_url: str = _CHECKSUM_DB_URL,
-    timeout: int = 10,
-) -> dict[str, str]:
-    """Verify go.sum hashes against the Go checksum database.
-
-    For each module, fetches the expected hash from sum.golang.org and
-    compares against go.sum.  Returns a dict of ``{module@version: status}``
-    where status is one of:
-
-    - ``"ok"``       — hash in go.sum matches the checksum database
-    - ``"mismatch"`` — hash differs; the module may have been tampered with
-      after being published (supply chain attack or corrupted download)
-    - ``"missing"``  — module is not recorded in go.sum at all
-
-    Uses the public Go checksum database (https://sum.golang.org) — no
-    credentials are required.  Rate-limit friendly: only direct dependencies
-    are checked, not every entry in go.sum.
-
-    Security note:
-        A ``"mismatch"`` status means the module content on disk differs from
-        what the checksum database recorded at publish time.  This is a strong
-        signal of either a supply chain compromise or a corrupted download and
-        should be treated as a critical finding.
-
-    Args:
-        go_sum: Path to the ``go.sum`` file.
-        modules: List of ``(module_path, version)`` tuples to verify.
-            Versions must include the ``v`` prefix (e.g. ``"v1.2.3"``).
-        checksum_db_url: Base URL of the Go checksum database.
-            Must be HTTPS.  Defaults to ``https://sum.golang.org``.
-        timeout: HTTP request timeout in seconds.
-
-    Returns:
-        Dict mapping ``"module@version"`` to ``"ok"``, ``"mismatch"``, or
-        ``"missing"``.  Entries where the network request failed are omitted
-        rather than surfaced as errors — a warning is logged instead.
-    """
-    _validate_https_url(checksum_db_url, "checksum_db_url")
-
-    # Build lookup table from go.sum: {module@version: h1:hash}
-    # Skip /go.mod suffix lines — we verify the module zip hash only.
-    sum_entries: dict[str, str] = {}
-    if go_sum.exists():
-        try:
-            for line in go_sum.read_text(encoding="utf-8", errors="replace").splitlines():
-                parts = line.strip().split()
-                if len(parts) < 3:
-                    continue
-                mod, ver_raw, h1 = parts[0], parts[1], parts[2]
-                if ver_raw.endswith("/go.mod"):
-                    continue  # skip go.mod hash lines
-                ver = ver_raw.split("/")[0]
-                sum_entries[f"{mod}@{ver}"] = h1
-        except OSError as exc:
-            logger.warning("Could not read go.sum at %s: %s", go_sum, exc)
-            record_manifest_parse_warning(
-                ecosystem="go",
-                path=str(go_sum),
-                detail="go.sum could not be read; Go checksum verification was not completed",
-            )
-            return {}
-
-    results: dict[str, str] = {}
-    for mod, ver in modules:
-        # Ensure version has the v prefix for the lookup key
-        ver_key = ver if ver.startswith("v") else f"v{ver}"
-        key = f"{mod}@{ver_key}"
-
-        if key not in sum_entries:
-            results[key] = "missing"
-            continue
-
-        local_hash = sum_entries[key]
-
-        # Fetch expected hash from the checksum database
-        lookup_url = f"{checksum_db_url}/lookup/{mod}@{ver_key}"
-        try:
-            from agent_bom.http_client import fetch_bytes
-
-            body = fetch_bytes(lookup_url, timeout=timeout).decode("utf-8", errors="replace")
-        except (OSError, ValueError, ConnectionError, RuntimeError, httpx.HTTPError) as exc:
-            logger.warning(
-                "go.sum verification skipped for %s — checksum DB unreachable: %s",
-                key,
-                exc,
-            )
-            continue
-
-        # The lookup response format (tile protocol):
-        # Line 0: tree size
-        # Line 1: hash (h1:BASE64=)
-        # Line 2+: signed tree head
-        db_hash: Optional[str] = None
-        for line in body.splitlines():
-            line = line.strip()
-            if line.startswith("h1:"):
-                db_hash = line
-                break
-
-        if db_hash is None:
-            logger.warning("Unexpected checksum DB response format for %s", key)
-            continue
-
-        results[key] = "ok" if local_hash == db_hash else "mismatch"
-
-    return results
-
-
-def resolve_go_version(
-    module: str,
-    version: str,
-    proxy_url: str = _GOPROXY_URL,
-    timeout: int = 5,
-) -> str:
-    """Resolve a Go module version using the Go module proxy.
-
-    Queries ``https://proxy.golang.org/{module}/@v/list`` for the available
-    version list and returns the latest stable release (no pre-release
-    suffixes such as ``-rc``, ``-alpha``, ``-beta``, or ``-pre``).
-
-    If *version* is already pinned (not ``"latest"``, ``"(devel)"``,
-    ``""`` or ``"unknown"``), it is returned immediately without any
-    network call.
-
-    Never raises — any network error causes the original version string to
-    be returned so that parsing can continue uninterrupted.
-
-    Args:
-        module: The Go module path (e.g. ``"github.com/gin-gonic/gin"``).
-        version: Current version string.  Pass ``"latest"`` or ``""`` to
-            trigger resolution.
-        proxy_url: Base URL of the Go module proxy.  Must be HTTPS.
-            Defaults to ``https://proxy.golang.org``.
-        timeout: HTTP request timeout in seconds.
-
-    Returns:
-        Resolved version string (e.g. ``"v1.9.1"``), or *version* unchanged
-        if resolution fails or was not needed.
-    """
-    if version not in _UNRESOLVED_VERSIONS:
-        return version
-
-    _validate_https_url(proxy_url, "proxy_url")
-
-    encoded_module = urllib.parse.quote(module, safe="")
-    list_url = f"{proxy_url}/{encoded_module}/@v/list"
-
-    try:
-        from agent_bom.http_client import fetch_bytes
-
-        body = fetch_bytes(list_url, timeout=timeout).decode("utf-8", errors="replace")
-    except Exception as exc:  # noqa: BLE001 — never raise; return original version on any failure
-        logger.warning(
-            "GOPROXY version resolution failed for %s — returning original version: %s",
-            module,
-            exc,
-        )
-        return version
-
-    _prerelease_re = re.compile(r"-(rc|alpha|beta|pre)[\d.]*$", re.IGNORECASE)
-
-    stable_versions: list[str] = []
-    for raw in body.splitlines():
-        v = raw.strip()
-        if not v:
-            continue
-        if _prerelease_re.search(v):
-            continue
-        stable_versions.append(v)
-
-    if not stable_versions:
-        return version
-
-    def _semver_key(v: str) -> tuple[int, ...]:
-        """Return a numeric tuple for semver comparison."""
-        # Strip leading 'v' and any build metadata
-        cleaned = v.lstrip("v").split("+")[0]
-        parts = cleaned.split(".")
-        result = []
-        for part in parts:
-            # Strip any non-numeric suffix (e.g. "1" from "1rc1")
-            numeric = re.match(r"(\d+)", part)
-            result.append(int(numeric.group(1)) if numeric else 0)
-        return tuple(result)
-
-    stable_versions.sort(key=_semver_key)
-    return stable_versions[-1]
-
-
-def resolve_maven_version(
-    group_id: str,
-    artifact_id: str,
-    version: str,
-    *,
-    maven_central_url: str = _MAVEN_CENTRAL_URL,
-    timeout: int = 5,
-) -> str:
-    """Resolve a Maven artifact version using the Maven Central Search API.
-
-    Queries ``https://search.maven.org/solrsearch/select`` for the latest
-    stable release of *group_id*:*artifact_id* and returns it.
-
-    If *version* is already pinned (not ``"RELEASE"``, ``"LATEST"``, ``""``
-    or ``"unknown"``), it is returned immediately without any network call.
-
-    Skips pre-release versions with ``-SNAPSHOT``, ``-RC``, or ``-M``
-    suffixes.  Never raises — any network or parse error causes the original
-    version string to be returned so that parsing can continue uninterrupted.
-
-    Args:
-        group_id: Maven group ID (e.g. ``"org.springframework"``).
-        artifact_id: Maven artifact ID (e.g. ``"spring-core"``).
-        version: Current version string.  Pass ``"RELEASE"`` or ``"LATEST"``
-            to trigger resolution.
-        maven_central_url: Base URL of the Maven Central Search API.
-            Must be HTTPS.  Defaults to ``https://search.maven.org``.
-        timeout: HTTP request timeout in seconds.
-
-    Returns:
-        Resolved version string (e.g. ``"6.1.4"``), or *version* unchanged
-        if resolution fails or was not needed.
-    """
-    if version not in _MAVEN_UNRESOLVED_VERSIONS:
-        return version
-
-    _validate_https_url(maven_central_url, "maven_central_url")
-
-    encoded_group = urllib.parse.quote(group_id, safe="")
-    encoded_artifact = urllib.parse.quote(artifact_id, safe="")
-    query = f"g:{encoded_group}+AND+a:{encoded_artifact}"
-    api_url = f"{maven_central_url}/solrsearch/select?q={query}&rows=10&wt=json"
-
-    _maven_prerelease_re = re.compile(r"-(SNAPSHOT|RC\d*|M\d+)$", re.IGNORECASE)
-
-    try:
-        from agent_bom.http_client import fetch_bytes
-
-        raw_body = fetch_bytes(api_url, timeout=timeout).decode("utf-8", errors="replace")
-    except Exception as exc:  # noqa: BLE001 — never raise; return original on failure
-        logger.warning(
-            "Maven Central version resolution failed for %s:%s — returning original version: %s",
-            group_id,
-            artifact_id,
-            exc,
-        )
-        return version
-
-    try:
-        data = json.loads(raw_body)
-        docs = data.get("response", {}).get("docs", [])
-        for doc in docs:
-            candidate = (doc.get("v") or doc.get("latestVersion") or "").strip()
-            if not candidate:
-                continue
-            if _maven_prerelease_re.search(candidate):
-                continue
-            return candidate
-    except (ValueError, KeyError, AttributeError) as exc:
-        logger.warning(
-            "Failed to parse Maven Central response for %s:%s: %s",
-            group_id,
-            artifact_id,
-            exc,
-        )
-
-    return version
-
-
-def resolve_cargo_version(
-    crate_name: str,
-    version: str,
-    *,
-    crates_io_url: str = _CRATES_IO_URL,
-    timeout: int = 5,
-) -> str:
-    """Resolve a Cargo crate version using the crates.io REST API.
-
-    Queries ``https://crates.io/api/v1/crates/{crate_name}`` and returns
-    the ``max_stable_version`` field, which is the latest non-pre-release
-    version published for the crate.
-
-    If *version* is already pinned (not ``"*"``, ``""``, ``"latest"`` or
-    ``"unknown"``), it is returned immediately without any network call.
-
-    Respects crates.io's rate-limit policy: sleeps 1 second when a network
-    request is actually made.  Never raises — any error causes the original
-    version string to be returned.
-
-    Args:
-        crate_name: Name of the Cargo crate (e.g. ``"serde"``).
-        version: Current version string.  Pass ``"*"`` or ``""`` to trigger
-            resolution.
-        crates_io_url: Base URL of the crates.io API.  Must be HTTPS.
-            Defaults to ``https://crates.io``.
-        timeout: HTTP request timeout in seconds.
-
-    Returns:
-        Resolved version string (e.g. ``"1.0.196"``), or *version* unchanged
-        if resolution fails or was not needed.
-    """
-    if version not in _CARGO_UNRESOLVED_VERSIONS:
-        return version
-
-    _validate_https_url(crates_io_url, "crates_io_url")
-
-    encoded_name = urllib.parse.quote(crate_name, safe="")
-    api_url = f"{crates_io_url}/api/v1/crates/{encoded_name}"
-    from agent_bom import __version__
-
-    user_agent = f"agent-bom/{__version__} (github.com/msaad00/agent-bom)"
-
-    try:
-        from agent_bom.http_client import fetch_bytes
-
-        raw_body = fetch_bytes(api_url, timeout=timeout, headers={"User-Agent": user_agent}).decode("utf-8", errors="replace")
-    except Exception as exc:  # noqa: BLE001 — never raise; return original on failure
-        logger.warning(
-            "crates.io version resolution failed for %s — returning original version: %s",
-            crate_name,
-            exc,
-        )
-        return version
-    finally:
-        # Respect crates.io rate-limit policy: 1 req/sec
-        time.sleep(1)
-
-    try:
-        data = json.loads(raw_body)
-        crate_data = data.get("crate", {})
-        resolved = (crate_data.get("max_stable_version") or "").strip()
-        if resolved:
-            return resolved
-    except (ValueError, KeyError, AttributeError) as exc:
-        logger.warning(
-            "Failed to parse crates.io response for %s: %s",
-            crate_name,
-            exc,
-        )
-
-    return version
 
 
 def _parse_go_mod_requires(
@@ -668,280 +297,6 @@ def parse_go_packages(
                 detail="go.sum contains malformed or truncated entries; Go dependency coverage is partial",
             )
     return packages
-
-
-def _parse_pom_modules(root_dir: Path, depth: int = 0, *, scan_root: Path | None = None) -> list[Package]:
-    """Recursively parse a Maven multi-module project.
-
-    Reads the ``pom.xml`` at *root_dir*, collects its ``<dependency>``
-    elements, then follows any ``<modules>/<module>`` child paths and recurses
-    (up to 3 levels deep to guard against cycles).
-
-    Args:
-        root_dir: Directory containing a ``pom.xml``.
-        depth: Current recursion depth (0 = root, max 3).
-
-    Returns:
-        Flat list of :class:`~agent_bom.models.Package` objects from this POM
-        and all discovered sub-module POMs.
-    """
-    if depth > 3:
-        return []
-
-    import xml.etree.ElementTree as ET  # for ParseError type only
-
-    scan_root = (scan_root or root_dir).resolve()
-    pom = (root_dir / "pom.xml").resolve()
-    if not pom.is_relative_to(scan_root):
-        return []
-    if not pom.exists():
-        return []
-
-    try:
-        xml_root = read_pom(pom)
-    except (ET.ParseError, OSError, ValueError) as exc:
-        logger.debug("Failed to parse pom.xml in %s: %s", root_dir, exc)
-        record_manifest_parse_warning(
-            ecosystem="maven",
-            path=str(pom),
-            detail="pom.xml could not be read within the parser size limit or parsed; Maven dependencies were not scanned",
-        )
-        return []
-
-    # Namespace may or may not be present
-    ns = ""
-    if xml_root.tag.startswith("{"):
-        ns = xml_root.tag.split("}")[0] + "}"
-
-    def _find(el: "ET.Element", tag: str) -> "ET.Element | None":
-        result = el.find(f"{ns}{tag}")
-        return result if result is not None else el.find(tag)
-
-    def _findall(el: "ET.Element", tag: str) -> "list[ET.Element]":
-        results = el.findall(f"{ns}{tag}")
-        return results if results else el.findall(tag)
-
-    properties = local_properties(pom, xml_root, scan_root)
-    non_direct_scopes = {"test", "provided", "system"}
-    packages: list[Package] = []
-
-    for deps_el in _findall(xml_root, "dependencies"):
-        for dep in _findall(deps_el, "dependency"):
-            group_el = _find(dep, "groupId")
-            artifact_el = _find(dep, "artifactId")
-            version_el = _find(dep, "version")
-            scope_el = _find(dep, "scope")
-
-            if group_el is None or artifact_el is None:
-                continue
-
-            group_id = (group_el.text or "").strip()
-            artifact_id = (artifact_el.text or "").strip()
-            if not group_id or not artifact_id:
-                continue
-
-            coordinates = dependency_coordinates(
-                group_id, artifact_id, (version_el.text or "").strip() if version_el is not None else "", properties, pom
-            )
-            if coordinates is None:
-                continue
-            group_id, artifact_id, version = coordinates
-            scope = (scope_el.text or "compile").strip().lower() if scope_el is not None else "compile"
-            is_direct = scope not in non_direct_scopes
-            name = f"{group_id}:{artifact_id}"
-            purl = f"pkg:maven/{group_id}/{artifact_id}@{version}"
-            packages.append(
-                Package(
-                    name=name,
-                    version=version,
-                    ecosystem="maven",
-                    purl=purl,
-                    is_direct=is_direct,
-                )
-            )
-
-    # Recurse into sub-modules declared in <modules><module>...</module></modules>
-    modules_el = _find(xml_root, "modules")
-    if modules_el is not None:
-        for module_el in _findall(modules_el, "module"):
-            module_path = (module_el.text or "").strip()
-            if not module_path:
-                continue
-            sub_dir = root_dir / module_path
-            packages.extend(_parse_pom_modules(sub_dir, depth=depth + 1, scan_root=scan_root))
-
-    return packages
-
-
-def parse_maven_packages(directory: Path, *, resolve_versions: bool = False, scan_root: Path | None = None) -> list[Package]:
-    """Parse packages from pom.xml (Maven/Java projects).
-
-    Supports multi-module Maven projects: if the root ``pom.xml`` contains a
-    ``<modules>`` section, each sub-module's ``pom.xml`` is recursively parsed
-    (up to 3 levels deep).  The result is deduplicated by
-    ``(groupId, artifactId)``; explicit versions are preferred over entries
-    from nested modules with the same coordinates.
-
-    Dependencies with scope ``test``, ``provided``, or ``system`` are included
-    but marked ``is_direct=False`` since they are not deployed at runtime.
-    Dependencies without a ``<version>`` element (version inherited via parent
-    POM) emit coverage warnings. Explicit property references resolve through
-    at most eight local parents within the repository or explicit scan root.
-    No parent POM is fetched remotely.
-
-    Args:
-        directory: Project directory containing ``pom.xml``.
-        resolve_versions: When ``True``, packages with unresolved versions
-            (``"RELEASE"``, ``"LATEST"``, ``""`` or ``"unknown"``) are queried
-            against the Maven Central Search API to obtain their latest stable
-            version.  Default ``False`` — no network calls.
-    """
-    pom = directory / "pom.xml"
-    if not pom.exists():
-        return []
-
-    boundary = scan_root or next((p for p in (directory, *directory.parents) if (p / ".git").exists()), directory)
-    all_packages = _parse_pom_modules(directory, depth=0, scan_root=boundary)
-
-    # Deduplicate by (name, version) — first occurrence wins (root > submodule)
-    maven_seen: set[tuple[str, str]] = set()
-    unique: list[Package] = []
-    for pkg in all_packages:
-        maven_key = (pkg.name, pkg.version)
-        if maven_key not in maven_seen:
-            maven_seen.add(maven_key)
-            unique.append(pkg)
-
-    if resolve_versions:
-        for pkg in unique:
-            if pkg.version in _MAVEN_UNRESOLVED_VERSIONS and ":" in pkg.name:
-                maven_group, maven_artifact = pkg.name.split(":", 1)
-                resolved_ver = resolve_maven_version(maven_group, maven_artifact, pkg.version)
-                if resolved_ver != pkg.version:
-                    pkg.version = resolved_ver
-                    pkg.purl = f"pkg:maven/{maven_group}/{maven_artifact}@{resolved_ver}"
-                    pkg.version_source = "registry_fallback"
-
-    return unique
-
-
-def _cargo_dep_version(spec: object, workspace_spec: object | None = None) -> Optional[str]:
-    """Extract the declared version from a Cargo.toml dependency spec.
-
-    Accepts the short form (``serde = "1.0"``) and the table form
-    (``serde = { version = "1.0", features = [...] }``). Returns None for
-    path/git/workspace deps that carry no concrete version requirement.
-    """
-    if isinstance(spec, str):
-        return spec or None
-    if isinstance(spec, dict):
-        if spec.get("workspace") is True:
-            return _cargo_dep_version(workspace_spec)
-        if "path" in spec or "git" in spec:
-            return None
-        version = spec.get("version")
-        return version if isinstance(version, str) and version else None
-    return None
-
-
-def _cargo_dependency_tables(data: dict) -> list[tuple[dict, bool]]:
-    """Return Cargo dependency tables with direct/development attribution."""
-
-    tables: list[tuple[dict, bool]] = []
-    for table, direct in (("dependencies", True), ("dev-dependencies", False), ("build-dependencies", False)):
-        deps = data.get(table)
-        if isinstance(deps, dict):
-            tables.append((deps, direct))
-
-    targets = data.get("target")
-    if isinstance(targets, dict):
-        for target_cfg in targets.values():
-            if not isinstance(target_cfg, dict):
-                continue
-            for table, direct in (("dependencies", True), ("dev-dependencies", False), ("build-dependencies", False)):
-                deps = target_cfg.get(table)
-                if isinstance(deps, dict):
-                    tables.append((deps, direct))
-    return tables
-
-
-def _parse_cargo_toml(cargo_toml: Path) -> list[Package]:
-    """Parse declared dependencies from Cargo.toml (manifest-only fallback).
-
-    Used when a Rust project has no Cargo.lock. Versions are SemVer *requirements*
-    (e.g. ``"1.0"``, ``"^1.2"``) rather than the exact pins a lockfile carries, so
-    coverage is approximate — but vastly better than the previous silent zero.
-    """
-    try:
-        import tomllib
-
-        data = tomllib.loads(cargo_toml.read_text(encoding="utf-8", errors="replace"))
-    except (OSError, ValueError) as exc:
-        logger.debug("Could not parse Cargo.toml at %s: %s", cargo_toml, exc)
-        record_manifest_parse_warning(
-            ecosystem="cargo",
-            path=str(cargo_toml),
-            detail="Cargo.toml could not be read or parsed; Cargo dependencies were not scanned",
-        )
-        return []
-
-    pkgs: list[Package] = []
-    seen: set[str] = set()
-    workspace = data.get("workspace")
-    workspace_deps = workspace.get("dependencies") if isinstance(workspace, dict) else None
-    if not isinstance(workspace_deps, dict):
-        workspace_deps = {}
-
-    for deps, direct in _cargo_dependency_tables(data):
-        for name, spec in deps.items():
-            version = _cargo_dep_version(spec, workspace_deps.get(name))
-            if not version or name in seen:
-                continue
-            seen.add(name)
-            pkgs.append(
-                Package(
-                    name=name,
-                    version=version,
-                    ecosystem="cargo",
-                    purl=f"pkg:cargo/{name}@{version}",
-                    is_direct=direct,
-                    version_source="manifest",
-                )
-            )
-    return pkgs
-
-
-def parse_cargo_packages(directory: Path, *, resolve_versions: bool = False) -> list[Package]:
-    """Parse packages from Cargo.lock, falling back to Cargo.toml.
-
-    Args:
-        directory: Project directory containing ``Cargo.lock`` and/or ``Cargo.toml``.
-        resolve_versions: When ``True``, packages with unresolved versions
-            (``"*"``, ``""``, ``"latest"`` or ``"unknown"``) are queried
-            against the crates.io REST API to obtain their latest stable
-            version.  Adds a 1-second sleep between requests to respect
-            crates.io rate limits.  Default ``False`` — no network calls.
-    """
-    cargo_packages: list[Package] = []
-    cargo_lock = directory / "Cargo.lock"
-
-    if cargo_lock.exists():
-        cargo_packages = parse_cargo_lock(directory)
-    elif (directory / "Cargo.toml").exists():
-        # Manifest-only project (no lockfile): parse declared deps so the whole
-        # cargo ecosystem isn't silently missed.
-        cargo_packages = _parse_cargo_toml(directory / "Cargo.toml")
-
-    if resolve_versions:
-        for pkg in cargo_packages:
-            if pkg.version in _CARGO_UNRESOLVED_VERSIONS:
-                cargo_resolved = resolve_cargo_version(pkg.name, pkg.version)
-                if cargo_resolved != pkg.version:
-                    pkg.version = cargo_resolved
-                    pkg.purl = f"pkg:cargo/{pkg.name}@{cargo_resolved}"
-                    pkg.version_source = "registry_fallback"
-
-    return cargo_packages
 
 
 def parse_gradle_packages(directory: Path) -> list[Package]:
@@ -1407,109 +762,54 @@ def parse_conda_packages(directory: Path) -> list[Package]:
     return unique
 
 
-def _normalize_python_dist_name(name: str) -> str:
-    return re.sub(r"[-_.]+", "-", name).lower()
+if TYPE_CHECKING:
+    from agent_bom.parsers.cargo_packages import _CARGO_UNRESOLVED_VERSIONS as _CARGO_UNRESOLVED_VERSIONS
+    from agent_bom.parsers.cargo_packages import _CRATES_IO_URL as _CRATES_IO_URL
+    from agent_bom.parsers.cargo_packages import _cargo_dep_version as _cargo_dep_version
+    from agent_bom.parsers.cargo_packages import _cargo_dependency_tables as _cargo_dependency_tables
+    from agent_bom.parsers.cargo_packages import _parse_cargo_toml as _parse_cargo_toml
+    from agent_bom.parsers.cargo_packages import parse_cargo_packages as parse_cargo_packages
+    from agent_bom.parsers.cargo_packages import resolve_cargo_version as resolve_cargo_version
+    from agent_bom.parsers.go_resolution import _CHECKSUM_DB_URL as _CHECKSUM_DB_URL
+    from agent_bom.parsers.go_resolution import _GOPROXY_URL as _GOPROXY_URL
+    from agent_bom.parsers.go_resolution import _validate_https_url as _validate_https_url
+    from agent_bom.parsers.maven_packages import _MAVEN_CENTRAL_URL as _MAVEN_CENTRAL_URL
+    from agent_bom.parsers.maven_packages import _MAVEN_UNRESOLVED_VERSIONS as _MAVEN_UNRESOLVED_VERSIONS
+    from agent_bom.parsers.maven_packages import _parse_pom_modules as _parse_pom_modules
+    from agent_bom.parsers.maven_packages import parse_maven_packages as parse_maven_packages
+    from agent_bom.parsers.maven_packages import resolve_maven_version as resolve_maven_version
+    from agent_bom.parsers.uvx_packages import _normalize_python_dist_name as _normalize_python_dist_name
+    from agent_bom.parsers.uvx_packages import _resolve_uv_cached_version as _resolve_uv_cached_version
+    from agent_bom.parsers.uvx_packages import _uvx_package_from_command as _uvx_package_from_command
+    from agent_bom.parsers.uvx_packages import detect_uvx_package as detect_uvx_package
+
+_EXPORTS = {
+    "_validate_https_url": "agent_bom.parsers.go_resolution",
+    "resolve_maven_version": "agent_bom.parsers.maven_packages",
+    "_parse_pom_modules": "agent_bom.parsers.maven_packages",
+    "parse_maven_packages": "agent_bom.parsers.maven_packages",
+    "resolve_cargo_version": "agent_bom.parsers.cargo_packages",
+    "_cargo_dep_version": "agent_bom.parsers.cargo_packages",
+    "_cargo_dependency_tables": "agent_bom.parsers.cargo_packages",
+    "_parse_cargo_toml": "agent_bom.parsers.cargo_packages",
+    "parse_cargo_packages": "agent_bom.parsers.cargo_packages",
+    "_normalize_python_dist_name": "agent_bom.parsers.uvx_packages",
+    "_resolve_uv_cached_version": "agent_bom.parsers.uvx_packages",
+    "_uvx_package_from_command": "agent_bom.parsers.uvx_packages",
+    "detect_uvx_package": "agent_bom.parsers.uvx_packages",
+    "_CHECKSUM_DB_URL": "agent_bom.parsers.go_resolution",
+    "_GOPROXY_URL": "agent_bom.parsers.go_resolution",
+    "_MAVEN_CENTRAL_URL": "agent_bom.parsers.maven_packages",
+    "_MAVEN_UNRESOLVED_VERSIONS": "agent_bom.parsers.maven_packages",
+    "_CARGO_UNRESOLVED_VERSIONS": "agent_bom.parsers.cargo_packages",
+    "_CRATES_IO_URL": "agent_bom.parsers.cargo_packages",
+}
 
 
-def _resolve_uv_cached_version(name: str) -> tuple[str, Path] | None:
-    """Return an exact package version from uv's local cache, if present."""
-    cache_root = Path(os.environ.get("UV_CACHE_DIR") or Path.home() / ".cache" / "uv")
-    if not cache_root.exists():
-        return None
-
-    wanted = _normalize_python_dist_name(name)
-    matches: list[tuple[float, str, Path]] = []
-    inspected = 0
-    for metadata_path in cache_root.glob("archive-v*/**/*.dist-info/METADATA"):
-        inspected += 1
-        if inspected > 5000:
-            break
-        try:
-            dist_info_name = metadata_path.parent.name.rsplit(".dist-info", 1)[0]
-            candidate_name = dist_info_name.rsplit("-", 1)[0]
-            if _normalize_python_dist_name(candidate_name) != wanted:
-                continue
-            metadata = metadata_path.read_text(encoding="utf-8", errors="replace")
-            version = ""
-            declared_name = ""
-            for line in metadata.splitlines():
-                if line.startswith("Name: "):
-                    declared_name = line.removeprefix("Name: ").strip()
-                elif line.startswith("Version: "):
-                    version = line.removeprefix("Version: ").strip()
-                if declared_name and version:
-                    break
-            if version and (not declared_name or _normalize_python_dist_name(declared_name) == wanted):
-                matches.append((metadata_path.stat().st_mtime, version, metadata_path))
-        except Exception as exc:
-            logger.debug("Failed to inspect uv cache package metadata at %s: %s", metadata_path, exc)
-    if not matches:
-        return None
-    _, version, path = max(matches, key=lambda item: item[0])
-    return version, path
-
-
-def _uvx_package_from_command(name: str, declared_version: str, server: MCPServer) -> Package:
-    is_floating = declared_version in {"latest", "*"}
-    cached = _resolve_uv_cached_version(name) if is_floating else None
-    version = cached[0] if cached else declared_version
-    pkg = Package(
-        name=name,
-        version=version,
-        ecosystem="pypi",
-        purl=f"pkg:pypi/{name}@{version}",
-        is_direct=True,
-    )
-    pkg.declared_version = declared_version
-    if not is_floating:
-        pkg.resolved_version = version
-        pkg.version_source = "command_pin"
-        pkg.version_confidence = "exact"
-        pkg.version_evidence = [{"type": "command_pin", "source_file": server.config_path or "", "parser": "uvx"}]
-    elif cached:
-        _, evidence_path = cached
-        pkg.resolved_version = version
-        pkg.version_source = "tool_cache"
-        pkg.version_confidence = "high"
-        pkg.version_resolved_at = datetime.now(timezone.utc).isoformat()
-        pkg.version_evidence = [{"type": "tool_cache", "path": str(evidence_path), "parser": "uvx"}]
-        pkg.floating_reference = True
-        pkg.floating_reference_reason = "uvx command omitted an explicit package version"
-    else:
-        pkg.resolved_from_registry = True
-        pkg.version_source = "registry_fallback"
-        pkg.registry_version = declared_version
-        pkg.floating_reference = True
-        pkg.floating_reference_reason = "uvx command omitted an explicit package version"
-    return pkg
-
-
-def detect_uvx_package(server: MCPServer) -> list[Package]:
-    """Extract package info from uvx/uv commands."""
-    packages: list[Package] = []
-    if server.command not in ("uvx", "uv"):
-        return packages
-
-    args = list(server.args)
-    index = 0
-    while index < len(args):
-        arg = args[index]
-        # ``uv tool run <pkg>`` stacks two sub-commands before the package.
-        # Reading the token immediately after the FIRST one resolved
-        # ``uv tool run flask==0.12.2`` to a package literally named "run".
-        if arg in ("run", "tool"):
-            index += 1
-            continue
-        if arg == "--from" and index + 1 < len(args):
-            arg = args[index + 1]
-        elif arg.startswith("-"):
-            index += 1
-            continue
-        match = re.match(r"^([a-zA-Z0-9_.-]+)(?:==(.+))?$", arg)
-        if match:
-            name = match.group(1)
-            version = match.group(2) or "latest"
-            packages.append(_uvx_package_from_command(name, version, server))
-        break
-
-    return packages
+def __getattr__(name: str) -> Any:
+    module_name = _EXPORTS.get(name)
+    if module_name is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    value = getattr(import_module(module_name), name)
+    globals()[name] = value
+    return value

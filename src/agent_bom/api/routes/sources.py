@@ -35,14 +35,12 @@ from agent_bom.api.models import (
     SourceUpdate,
 )
 from agent_bom.api.read_models import SourcesResponse, documented, governance_b
-from agent_bom.api.routes.scan import (
-    _sanitize_scan_request_paths,
-    correlation_cohort_id,
-    correlation_cohort_parent_job_id,
-    enqueue_correlation_cohort,
-    enqueue_scan_job,
-)
+from agent_bom.api.routes.scan import correlation_cohort_id
 from agent_bom.api.scan_batches import scan_request_targets
+from agent_bom.api.scan_cohort_submission import enqueue_correlation_cohort
+from agent_bom.api.scan_cohorts import correlation_cohort_parent_job_id
+from agent_bom.api.scan_job_submission import enqueue_scan_job
+from agent_bom.api.scan_request_context import _sanitize_scan_request_paths
 from agent_bom.api.stores import (
     _get_credential_ref_store,
     _get_idempotency_store,

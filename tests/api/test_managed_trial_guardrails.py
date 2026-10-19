@@ -247,12 +247,11 @@ def test_concurrent_idempotent_connection_scan_reserves_one_job_and_one_credit(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from agent_bom.api.idempotency_store import InMemoryIdempotencyStore
-    from agent_bom.api.routes import scan as scan_routes
     from agent_bom.api.stores import set_idempotency_store
 
     record = _stored_connection(id="connection-idempotent")
     set_idempotency_store(InMemoryIdempotencyStore())
-    monkeypatch.setattr(scan_routes, "dispatch_scan_job", lambda job: None)
+    monkeypatch.setattr("agent_bom.api.scan_job_dispatch.dispatch_scan_job", lambda job: None)
 
     def _scan() -> str:
         request = Request(

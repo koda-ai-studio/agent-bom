@@ -1487,7 +1487,7 @@ def test_campaign_source_walks_cursor_pages_and_keeps_occurrence_provenance(monk
             "next_cursor": "second" if kwargs["cursor"] is None else "",
         }
 
-    monkeypatch.setattr("agent_bom.api.routes.scan._list_findings_impl", page)
+    monkeypatch.setattr("agent_bom.api.finding_page_read._list_findings_impl", page)
     request = Request({"type": "http"})
     request.state.tenant_id = "tenant-alpha"
     result = _load_findings(request)
@@ -1515,7 +1515,7 @@ def test_campaign_source_pagination_fails_closed(monkeypatch, failure) -> None:
             "next_cursor": "" if failure == "missing_cursor" or calls == 2 and failure != "repeated_cursor" else "same",
         }
 
-    monkeypatch.setattr("agent_bom.api.routes.scan._list_findings_impl", page)
+    monkeypatch.setattr("agent_bom.api.finding_page_read._list_findings_impl", page)
     request = Request({"type": "http"})
     request.state.tenant_id = "tenant-alpha"
     result = _load_findings(request)
@@ -1544,7 +1544,7 @@ def test_campaign_source_stops_at_budget_without_retiring_owner(monkeypatch) -> 
     preserved = store.get("tenant-alpha", target["id"])
     monkeypatch.setattr("agent_bom.api.routes.campaigns.CAMPAIGN_FINDING_LIMIT", 1)
     monkeypatch.setattr(
-        "agent_bom.api.routes.scan._list_findings_impl",
+        "agent_bom.api.finding_page_read._list_findings_impl",
         lambda request, **kwargs: {"findings": rows[:1], "total": 3, "next_cursor": "more", "has_more": True},
     )
     source = _load_findings(request)
@@ -1589,7 +1589,7 @@ def test_campaign_source_rejects_same_count_generation_change(monkeypatch) -> No
     revisions = iter([("jobs", 1), ("jobs", 2)])
     monkeypatch.setattr("agent_bom.api.routes.campaigns._campaign_source_revision", lambda request: next(revisions))
     monkeypatch.setattr(
-        "agent_bom.api.routes.scan._list_findings_impl",
+        "agent_bom.api.finding_page_read._list_findings_impl",
         lambda request, **kwargs: {"findings": [{"id": "occurrence"}], "total": 1, "has_more": False, "next_cursor": ""},
     )
     request = Request({"type": "http"})

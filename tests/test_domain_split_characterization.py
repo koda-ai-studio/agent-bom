@@ -13,11 +13,23 @@ import hashlib
 import importlib
 import json
 import os
+import runpy
 from pathlib import Path
 
 import pytest
 
 FIXTURE = Path(__file__).parent / "fixtures" / "domain_contracts.json"
+
+
+def test_published_schema_catalog_includes_lazy_domain_models():
+    root = Path(__file__).resolve().parents[1]
+    generator = runpy.run_path(str(root / "scripts" / "generate_v1_schemas.py"))
+    published = json.loads((root / "docs" / "schemas" / "v1" / "index.json").read_text())
+    classes = generator["_public_models"]()
+    assert [model.__name__ for model in classes] == [model["name"] for model in published["models"]]
+    for model in classes:
+        expected = json.loads((root / "docs" / "schemas" / "v1" / f"{model.__name__}.json").read_text())
+        assert model.model_json_schema(mode="serialization") == expected
 
 
 def _assert_golden(name, actual):

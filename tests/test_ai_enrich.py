@@ -8,6 +8,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
+from agent_bom.ai_components import provider_discovery
 from agent_bom.models import (
     Agent,
     AgentType,
@@ -189,7 +190,7 @@ async def test_enrich_blast_radii_with_mock_llm():
     br = _make_blast_radius()
 
     with (
-        patch("agent_bom.ai_enrich._check_litellm", return_value=True),
+        patch("agent_bom.ai_components.provider_discovery._check_litellm", return_value=True),
         patch.dict(os.environ, {"OPENAI_API_KEY": "configured"}),
         patch("agent_bom.ai_enrich._call_llm", new_callable=AsyncMock, return_value="This CVE allows RCE through the OpenClaw agent."),
     ):
@@ -206,7 +207,7 @@ async def test_executive_summary_with_mock_llm():
     report = _make_report()
 
     with (
-        patch("agent_bom.ai_enrich._check_litellm", return_value=True),
+        patch("agent_bom.ai_components.provider_discovery._check_litellm", return_value=True),
         patch.dict(os.environ, {"OPENAI_API_KEY": "configured"}),
         patch("agent_bom.ai_enrich._call_llm", new_callable=AsyncMock, return_value="Critical risk: 1 RCE vulnerability found."),
     ):
@@ -222,7 +223,7 @@ async def test_threat_chains_with_mock_llm():
     report = _make_report()
 
     with (
-        patch("agent_bom.ai_enrich._check_litellm", return_value=True),
+        patch("agent_bom.ai_components.provider_discovery._check_litellm", return_value=True),
         patch.dict(os.environ, {"OPENAI_API_KEY": "configured"}),
         patch(
             "agent_bom.ai_enrich._call_llm",
@@ -243,7 +244,7 @@ async def test_llm_failure_returns_none():
     br = _make_blast_radius()
 
     with (
-        patch("agent_bom.ai_enrich._check_litellm", return_value=True),
+        patch("agent_bom.ai_components.provider_discovery._check_litellm", return_value=True),
         patch("agent_bom.ai_enrich._call_llm", new_callable=AsyncMock, return_value=None),
     ):
         result = await enrich_blast_radii([br])
@@ -272,7 +273,7 @@ async def test_caching_avoids_duplicate_calls():
         return "Mocked analysis"
 
     with (
-        patch("agent_bom.ai_enrich._check_litellm", return_value=True),
+        patch("agent_bom.ai_components.provider_discovery._check_litellm", return_value=True),
         patch.dict(os.environ, {"OPENAI_API_KEY": "configured"}),
         patch("agent_bom.ai_enrich._call_llm", side_effect=mock_call),
     ):
@@ -326,9 +327,9 @@ async def test_huggingface_provider_enriches_without_litellm_or_ollama(monkeypat
     monkeypatch.setenv("HF_TOKEN", "hf_test_token")
 
     with (
-        patch("agent_bom.ai_enrich._detect_ollama", return_value=False),
-        patch("agent_bom.ai_enrich._check_litellm", return_value=False),
-        patch("agent_bom.ai_enrich._check_huggingface", return_value=True),
+        patch("agent_bom.ai_components.provider_discovery._detect_ollama", return_value=False),
+        patch("agent_bom.ai_components.provider_discovery._check_litellm", return_value=False),
+        patch("agent_bom.ai_components.provider_discovery._check_huggingface", return_value=True),
         patch("agent_bom.ai_enrich._call_llm", new_callable=AsyncMock, return_value="HF-backed analysis"),
     ):
         result = await enrich_blast_radii([br], model="huggingface/test-model")
@@ -523,7 +524,7 @@ def test_detect_ollama_when_running():
 
     mock_response = MagicMock()
     mock_response.status_code = 200
-    with patch("agent_bom.ai_enrich.httpx.get", return_value=mock_response):
+    with patch("agent_bom.ai_components.providers.httpx.get", return_value=mock_response):
         assert _detect_ollama() is True
 
 
@@ -531,7 +532,7 @@ def test_detect_ollama_when_not_running():
     """Should return False when Ollama is not running."""
     from agent_bom.ai_enrich import _detect_ollama
 
-    with patch("agent_bom.ai_enrich.httpx.get", side_effect=httpx.ConnectError("Connection refused")):
+    with patch("agent_bom.ai_components.providers.httpx.get", side_effect=httpx.ConnectError("Connection refused")):
         assert _detect_ollama() is False
 
 
@@ -539,7 +540,7 @@ def test_detect_ollama_timeout():
     """Should return False when Ollama times out."""
     from agent_bom.ai_enrich import _detect_ollama
 
-    with patch("agent_bom.ai_enrich.httpx.get", side_effect=httpx.TimeoutException("Timeout")):
+    with patch("agent_bom.ai_components.providers.httpx.get", side_effect=httpx.TimeoutException("Timeout")):
         assert _detect_ollama() is False
 
 
@@ -550,7 +551,7 @@ def test_get_ollama_models():
     mock_response = MagicMock()
     mock_response.status_code = 200
     mock_response.json.return_value = {"models": [{"name": "llama3.2"}, {"name": "mistral"}]}
-    with patch("agent_bom.ai_enrich.httpx.get", return_value=mock_response):
+    with patch("agent_bom.ai_components.providers.httpx.get", return_value=mock_response):
         models = _get_ollama_models()
         assert "llama3.2" in models
         assert "mistral" in models
@@ -560,7 +561,7 @@ def test_get_ollama_models_failure():
     """Should return empty list on Ollama failure."""
     from agent_bom.ai_enrich import _get_ollama_models
 
-    with patch("agent_bom.ai_enrich.httpx.get", side_effect=httpx.ConnectError("Connection refused")):
+    with patch("agent_bom.ai_components.providers.httpx.get", side_effect=httpx.ConnectError("Connection refused")):
         assert _get_ollama_models() == []
 
 
@@ -572,8 +573,8 @@ def test_resolve_model_prefers_ollama():
     from agent_bom.ai_enrich import _resolve_model
 
     with (
-        patch("agent_bom.ai_enrich._detect_ollama", return_value=True),
-        patch("agent_bom.ai_enrich._get_ollama_models", return_value=["llama3.2:latest"]),
+        patch("agent_bom.ai_components.provider_discovery._detect_ollama", return_value=True),
+        patch("agent_bom.ai_components.provider_discovery._get_ollama_models", return_value=["llama3.2:latest"]),
     ):
         result = _resolve_model()
         assert result == "ollama/llama3.2:latest"
@@ -584,8 +585,8 @@ def test_resolve_model_falls_back_to_openai():
     from agent_bom.ai_enrich import _resolve_model
 
     with (
-        patch("agent_bom.ai_enrich._detect_ollama", return_value=False),
-        patch("agent_bom.ai_enrich._check_huggingface", return_value=False),
+        patch("agent_bom.ai_components.provider_discovery._detect_ollama", return_value=False),
+        patch("agent_bom.ai_components.provider_discovery._check_huggingface", return_value=False),
         patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test"}, clear=True),
     ):
         result = _resolve_model()
@@ -597,8 +598,8 @@ def test_resolve_model_no_provider():
     from agent_bom.ai_enrich import DEFAULT_MODEL, _resolve_model
 
     with (
-        patch("agent_bom.ai_enrich._detect_ollama", return_value=False),
-        patch("agent_bom.ai_enrich._check_huggingface", return_value=False),
+        patch("agent_bom.ai_components.provider_discovery._detect_ollama", return_value=False),
+        patch("agent_bom.ai_components.provider_discovery._check_huggingface", return_value=False),
         patch.dict(os.environ, {}, clear=True),
     ):
         result = _resolve_model()
@@ -624,7 +625,7 @@ async def test_call_ollama_direct_success():
     mock_client.__aenter__ = AsyncMock(return_value=mock_client)
     mock_client.__aexit__ = AsyncMock(return_value=False)
 
-    with patch("agent_bom.ai_enrich.httpx.AsyncClient", return_value=mock_client):
+    with patch("agent_bom.ai_components.providers.httpx.AsyncClient", return_value=mock_client):
         result = await _call_ollama_direct("test prompt", "llama3.2")
         assert result == "Analysis of the vulnerability..."
 
@@ -641,7 +642,7 @@ async def test_call_ollama_direct_connection_error():
     mock_client.__aenter__ = AsyncMock(return_value=mock_client)
     mock_client.__aexit__ = AsyncMock(return_value=False)
 
-    with patch("agent_bom.ai_enrich.httpx.AsyncClient", return_value=mock_client):
+    with patch("agent_bom.ai_components.providers.httpx.AsyncClient", return_value=mock_client):
         result = await _call_ollama_direct("test prompt", "llama3.2")
         assert result is None
 
@@ -654,7 +655,7 @@ async def test_call_llm_routes_ollama_to_direct():
     """ollama/ prefix should route to direct API."""
     from agent_bom.ai_enrich import _call_llm
 
-    with patch("agent_bom.ai_enrich._call_ollama_direct", new_callable=AsyncMock, return_value="Ollama response"):
+    with patch("agent_bom.ai_components.providers._call_ollama_direct", new_callable=AsyncMock, return_value="Ollama response"):
         result = await _call_llm("test prompt", "ollama/llama3.2")
         assert result == "Ollama response"
 
@@ -664,7 +665,7 @@ async def test_call_llm_routes_openai_to_litellm():
     """Non-Ollama models should route to litellm."""
     from agent_bom.ai_enrich import _call_llm
 
-    with patch("agent_bom.ai_enrich._call_llm_via_litellm", new_callable=AsyncMock, return_value="OpenAI response"):
+    with patch("agent_bom.ai_components.providers._call_llm_via_litellm", new_callable=AsyncMock, return_value="OpenAI response"):
         result = await _call_llm("test prompt", "openai/gpt-4o-mini")
         assert result == "OpenAI response"
 
@@ -675,10 +676,10 @@ async def test_call_llm_ollama_does_not_fall_back_to_litellm():
     from agent_bom.ai_enrich import _call_llm
 
     with (
-        patch("agent_bom.ai_enrich._call_ollama_direct", new_callable=AsyncMock, return_value=None),
-        patch("agent_bom.ai_enrich._check_huggingface", return_value=False),
-        patch("agent_bom.ai_enrich._check_litellm", return_value=True),
-        patch("agent_bom.ai_enrich._call_llm_via_litellm", new_callable=AsyncMock, return_value="litellm fallback"),
+        patch("agent_bom.ai_components.providers._call_ollama_direct", new_callable=AsyncMock, return_value=None),
+        patch("agent_bom.ai_components.provider_discovery._check_huggingface", return_value=False),
+        patch("agent_bom.ai_components.provider_discovery._check_litellm", return_value=True),
+        patch("agent_bom.ai_components.providers._call_llm_via_litellm", new_callable=AsyncMock, return_value="litellm fallback"),
     ):
         result = await _call_llm("test prompt", "ollama/llama3.2")
         assert result is None
@@ -690,9 +691,9 @@ async def test_call_llm_ollama_no_fallback():
     from agent_bom.ai_enrich import _call_llm
 
     with (
-        patch("agent_bom.ai_enrich._call_ollama_direct", new_callable=AsyncMock, return_value=None),
-        patch("agent_bom.ai_enrich._check_huggingface", return_value=False),
-        patch("agent_bom.ai_enrich._check_litellm", return_value=False),
+        patch("agent_bom.ai_components.providers._call_ollama_direct", new_callable=AsyncMock, return_value=None),
+        patch("agent_bom.ai_components.provider_discovery._check_huggingface", return_value=False),
+        patch("agent_bom.ai_components.provider_discovery._check_litellm", return_value=False),
     ):
         result = await _call_llm("test prompt", "ollama/llama3.2")
         assert result is None
@@ -709,8 +710,8 @@ async def test_enrichment_guard_allows_ollama():
     br = _make_blast_radius()
 
     with (
-        patch("agent_bom.ai_enrich._check_litellm", return_value=False),
-        patch("agent_bom.ai_enrich._detect_ollama", return_value=True),
+        patch("agent_bom.ai_components.provider_discovery._check_litellm", return_value=False),
+        patch("agent_bom.ai_components.provider_discovery._detect_ollama", return_value=True),
         patch("agent_bom.ai_enrich._call_llm", new_callable=AsyncMock, return_value="Ollama analysis"),
     ):
         result = await enrich_blast_radii([br], model="ollama/llama3.2")
@@ -726,9 +727,9 @@ async def test_enrichment_guard_blocks_no_provider():
     br = _make_blast_radius()
 
     with (
-        patch("agent_bom.ai_enrich._check_litellm", return_value=False),
-        patch("agent_bom.ai_enrich._detect_ollama", return_value=False),
-        patch("agent_bom.ai_enrich._check_huggingface", return_value=False),
+        patch("agent_bom.ai_components.provider_discovery._check_litellm", return_value=False),
+        patch("agent_bom.ai_components.provider_discovery._detect_ollama", return_value=False),
+        patch("agent_bom.ai_components.provider_discovery._check_huggingface", return_value=False),
     ):
         result = await enrich_blast_radii([br])
         assert result == 0
@@ -742,8 +743,8 @@ async def test_executive_summary_guard_allows_ollama():
     report = _make_report()
 
     with (
-        patch("agent_bom.ai_enrich._check_litellm", return_value=False),
-        patch("agent_bom.ai_enrich._detect_ollama", return_value=True),
+        patch("agent_bom.ai_components.provider_discovery._check_litellm", return_value=False),
+        patch("agent_bom.ai_components.provider_discovery._detect_ollama", return_value=True),
         patch("agent_bom.ai_enrich._call_llm", new_callable=AsyncMock, return_value="Risk summary"),
     ):
         result = await generate_executive_summary(report, model="ollama/llama3.2")
@@ -757,7 +758,7 @@ def test_has_any_provider_ollama():
     """Should return True for ollama/ model when Ollama is running."""
     from agent_bom.ai_enrich import _has_any_provider
 
-    with patch("agent_bom.ai_enrich._detect_ollama", return_value=True):
+    with patch("agent_bom.ai_components.provider_discovery._detect_ollama", return_value=True):
         assert _has_any_provider("ollama/llama3.2") is True
 
 
@@ -766,7 +767,7 @@ def test_has_any_provider_litellm():
     from agent_bom.ai_enrich import _has_any_provider
 
     with (
-        patch("agent_bom.ai_enrich._check_litellm", return_value=True),
+        patch("agent_bom.ai_components.provider_discovery._check_litellm", return_value=True),
         patch.dict(os.environ, {"OPENAI_API_KEY": "configured"}),
     ):
         assert _has_any_provider("openai/gpt-4o-mini") is True
@@ -777,9 +778,9 @@ def test_has_any_provider_none():
     from agent_bom.ai_enrich import _has_any_provider
 
     with (
-        patch("agent_bom.ai_enrich._detect_ollama", return_value=False),
-        patch("agent_bom.ai_enrich._check_huggingface", return_value=False),
-        patch("agent_bom.ai_enrich._check_litellm", return_value=False),
+        patch("agent_bom.ai_components.provider_discovery._detect_ollama", return_value=False),
+        patch("agent_bom.ai_components.provider_discovery._check_huggingface", return_value=False),
+        patch("agent_bom.ai_components.provider_discovery._check_litellm", return_value=False),
     ):
         assert _has_any_provider("ollama/llama3.2") is False
 
@@ -1348,15 +1349,15 @@ async def test_explicit_local_model_never_falls_back_to_remote_provider(monkeypa
     """An Ollama request is a local-only data-boundary decision."""
     from agent_bom.ai_enrich import _call_llm, _resolve_ai_provider
 
-    monkeypatch.setattr("agent_bom.ai_enrich._detect_ollama", lambda: False)
-    monkeypatch.setattr("agent_bom.ai_enrich._check_huggingface", lambda: True)
-    monkeypatch.setattr("agent_bom.ai_enrich._check_litellm", lambda: True)
+    monkeypatch.setattr("agent_bom.ai_components.provider_discovery._detect_ollama", lambda: False)
+    monkeypatch.setattr("agent_bom.ai_components.provider_discovery._check_huggingface", lambda: True)
+    monkeypatch.setattr("agent_bom.ai_components.provider_discovery._check_litellm", lambda: True)
     monkeypatch.setenv("HF_TOKEN", "configured")
 
     resolution = _resolve_ai_provider("ollama/llama3.2")
     with (
-        patch("agent_bom.ai_enrich._call_huggingface", new_callable=AsyncMock) as hf,
-        patch("agent_bom.ai_enrich._call_llm_via_litellm", new_callable=AsyncMock) as litellm,
+        patch("agent_bom.ai_components.providers._call_huggingface", new_callable=AsyncMock) as hf,
+        patch("agent_bom.ai_components.providers._call_llm_via_litellm", new_callable=AsyncMock) as litellm,
     ):
         result = await _call_llm("sensitive prompt", "ollama/llama3.2")
 
@@ -1521,8 +1522,8 @@ async def test_enrich_skill_audit_refuses_non_loopback_ollama_endpoint(monkeypat
     )
     skill_audit = SkillAuditResult(findings=[], passed=True)
     provider_call = AsyncMock(return_value='{"overall_risk_level":"safe"}')
-    monkeypatch.setattr(ai_enrich, "OLLAMA_BASE_URL", "https://ollama.example.com")
-    monkeypatch.setattr(ai_enrich, "_detect_ollama", lambda: True)
+    monkeypatch.setattr(provider_discovery, "OLLAMA_BASE_URL", "https://ollama.example.com")
+    monkeypatch.setattr(provider_discovery, "_detect_ollama", lambda: True)
     monkeypatch.setattr(ai_enrich, "_call_llm", provider_call)
 
     result = await ai_enrich.enrich_skill_audit(skill_result, skill_audit, model="ollama/llama3.2")
@@ -1646,9 +1647,9 @@ async def test_call_llm_ollama_does_not_fall_back_to_huggingface():
     from agent_bom.ai_enrich import _call_llm
 
     with (
-        patch("agent_bom.ai_enrich._call_ollama_direct", new_callable=AsyncMock, return_value=None),
-        patch("agent_bom.ai_enrich._check_huggingface", return_value=True),
-        patch("agent_bom.ai_enrich._call_huggingface", new_callable=AsyncMock, return_value="HF response"),
+        patch("agent_bom.ai_components.providers._call_ollama_direct", new_callable=AsyncMock, return_value=None),
+        patch("agent_bom.ai_components.provider_discovery._check_huggingface", return_value=True),
+        patch("agent_bom.ai_components.providers._call_huggingface", new_callable=AsyncMock, return_value="HF response"),
     ):
         result = await _call_llm("test prompt", "ollama/llama3.2")
         assert result is None
@@ -1659,7 +1660,7 @@ async def test_call_llm_routes_huggingface_model():
     """huggingface/ prefix should route to HuggingFace directly."""
     from agent_bom.ai_enrich import _call_llm
 
-    with patch("agent_bom.ai_enrich._call_huggingface", new_callable=AsyncMock, return_value="HF direct"):
+    with patch("agent_bom.ai_components.providers._call_huggingface", new_callable=AsyncMock, return_value="HF direct"):
         result = await _call_llm("test prompt", "huggingface/meta-llama/Llama-3.1-8B-Instruct")
         assert result == "HF direct"
 
@@ -1670,8 +1671,8 @@ def test_has_any_provider_with_huggingface(monkeypatch):
 
     monkeypatch.setenv("HF_TOKEN", "hf_test_token")
     with (
-        patch("agent_bom.ai_enrich._detect_ollama", return_value=False),
-        patch("agent_bom.ai_enrich._check_huggingface", return_value=True),
+        patch("agent_bom.ai_components.provider_discovery._detect_ollama", return_value=False),
+        patch("agent_bom.ai_components.provider_discovery._check_huggingface", return_value=True),
     ):
         assert _has_any_provider("ollama/llama3.2") is False
 
@@ -1681,7 +1682,7 @@ def test_has_any_provider_huggingface_model(monkeypatch):
     from agent_bom.ai_enrich import _has_any_provider
 
     monkeypatch.setenv("HF_TOKEN", "hf_test_token")
-    with patch("agent_bom.ai_enrich._check_huggingface", return_value=True):
+    with patch("agent_bom.ai_components.provider_discovery._check_huggingface", return_value=True):
         assert _has_any_provider("huggingface/meta-llama/Llama-3.1-8B-Instruct") is True
 
 
@@ -1689,7 +1690,7 @@ def test_has_any_provider_huggingface_not_installed():
     """Should return False for huggingface/ model when hub not installed."""
     from agent_bom.ai_enrich import _has_any_provider
 
-    with patch("agent_bom.ai_enrich._check_huggingface", return_value=False):
+    with patch("agent_bom.ai_components.provider_discovery._check_huggingface", return_value=False):
         assert _has_any_provider("huggingface/some-model") is False
 
 
@@ -1701,8 +1702,8 @@ def test_resolve_model_picks_best_ollama():
     from agent_bom.ai_enrich import _resolve_model
 
     with (
-        patch("agent_bom.ai_enrich._detect_ollama", return_value=True),
-        patch("agent_bom.ai_enrich._get_ollama_models", return_value=["mistral:latest", "llama3.1:8b"]),
+        patch("agent_bom.ai_components.provider_discovery._detect_ollama", return_value=True),
+        patch("agent_bom.ai_components.provider_discovery._get_ollama_models", return_value=["mistral:latest", "llama3.1:8b"]),
     ):
         result = _resolve_model()
         # llama3.1:8b is higher in OLLAMA_MODEL_PREFERENCE than mistral
@@ -1714,9 +1715,9 @@ def test_resolve_model_huggingface_tier():
     from agent_bom.ai_enrich import HF_DEFAULT_MODEL, _resolve_model
 
     with (
-        patch("agent_bom.ai_enrich._detect_ollama", return_value=True),
-        patch("agent_bom.ai_enrich._get_ollama_models", return_value=[]),
-        patch("agent_bom.ai_enrich._check_huggingface", return_value=True),
+        patch("agent_bom.ai_components.provider_discovery._detect_ollama", return_value=True),
+        patch("agent_bom.ai_components.provider_discovery._get_ollama_models", return_value=[]),
+        patch("agent_bom.ai_components.provider_discovery._check_huggingface", return_value=True),
         patch.dict(os.environ, {"HF_TOKEN": "hf_test123"}),
     ):
         result = _resolve_model()
@@ -1728,9 +1729,9 @@ def test_resolve_model_empty_ollama_models():
     from agent_bom.ai_enrich import _resolve_model
 
     with (
-        patch("agent_bom.ai_enrich._detect_ollama", return_value=True),
-        patch("agent_bom.ai_enrich._get_ollama_models", return_value=[]),
-        patch("agent_bom.ai_enrich._check_huggingface", return_value=False),
+        patch("agent_bom.ai_components.provider_discovery._detect_ollama", return_value=True),
+        patch("agent_bom.ai_components.provider_discovery._get_ollama_models", return_value=[]),
+        patch("agent_bom.ai_components.provider_discovery._check_huggingface", return_value=False),
         patch.dict(os.environ, {"OPENAI_API_KEY": "sk-test"}, clear=True),
     ):
         result = _resolve_model()
@@ -1742,8 +1743,8 @@ def test_resolve_model_ollama_uses_first_available():
     from agent_bom.ai_enrich import _resolve_model
 
     with (
-        patch("agent_bom.ai_enrich._detect_ollama", return_value=True),
-        patch("agent_bom.ai_enrich._get_ollama_models", return_value=["some-obscure-model:latest"]),
+        patch("agent_bom.ai_components.provider_discovery._detect_ollama", return_value=True),
+        patch("agent_bom.ai_components.provider_discovery._get_ollama_models", return_value=["some-obscure-model:latest"]),
     ):
         result = _resolve_model()
         assert result == "ollama/some-obscure-model:latest"

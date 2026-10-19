@@ -311,7 +311,7 @@ def request_scopes_allow(scopes: list[str], method: str, path: str) -> bool:
     self-identity read needs no resource grant; similarly named paths do not.
     Role, tenant and credential-lifecycle checks still apply independently.
     """
-    from agent_bom.api.auth import scopes_allow
+    from agent_bom.core.permission_scopes import scopes_allow
 
     if route_policy(method, path) is None:
         return False

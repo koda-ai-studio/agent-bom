@@ -63,7 +63,7 @@ def _validate_enabled_source_schedule(tenant_id: str, scan_config: dict) -> None
             from pydantic import ValidationError
 
             from agent_bom.api.models import ScanRequest
-            from agent_bom.api.routes.scan import _sanitize_scan_request_paths
+            from agent_bom.api.scan_request_context import _sanitize_scan_request_paths
 
             try:
                 host_request = ScanRequest(discover_host=scan_config["discover_host"])

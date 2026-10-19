@@ -172,7 +172,7 @@ def _install_scan_mocks(
     tick can mix a rejected and an accepted handoff. Provider execution belongs
     to the scan worker and is intentionally outside these scheduler tests.
     """
-    from agent_bom.api.routes import cloud_connections
+    from agent_bom.api import connection_scan_worker as cloud_connections
 
     calls: dict[str, Any] = {"queued_ids": [], "queue_tenants": []}
 

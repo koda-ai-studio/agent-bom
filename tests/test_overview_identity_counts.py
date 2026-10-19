@@ -5,6 +5,7 @@ from types import SimpleNamespace
 import pytest
 from starlette.requests import Request
 
+from agent_bom.api import overview_projection
 from agent_bom.api.agent_identity_store import AgentIdentity, InMemoryAgentIdentityStore, SQLiteAgentIdentityStore
 from agent_bom.api.routes import overview
 
@@ -42,8 +43,8 @@ def test_identity_aggregate_is_uncapped_and_tenant_scoped(tmp_path, monkeypatch,
         )
     )
     monkeypatch.setattr("agent_bom.api.agent_identity_store.get_agent_identity_store", lambda: store)
-    monkeypatch.setattr(overview, "_get_fleet_store", lambda: SimpleNamespace(list_by_tenant=lambda _tenant: []))
-    monkeypatch.setattr(overview, "_tenant_id", lambda _request: "tenant-a")
+    monkeypatch.setattr(overview_projection, "_get_fleet_store", lambda: SimpleNamespace(list_by_tenant=lambda _tenant: []))
+    monkeypatch.setattr(overview_projection, "_tenant_id", lambda _request: "tenant-a")
     snapshot = overview._identity_snapshot(Request({"type": "http"}))
     assert snapshot["managed_identities"] == 1003
     assert snapshot["managed_identities_available"] is True
@@ -56,8 +57,8 @@ def test_identity_failure_is_unavailable_not_zero(monkeypatch):
         raise RuntimeError("synthetic unavailable store")
 
     monkeypatch.setattr("agent_bom.api.agent_identity_store.get_agent_identity_store", fail)
-    monkeypatch.setattr(overview, "_get_fleet_store", fail)
-    monkeypatch.setattr(overview, "_tenant_id", lambda _request: "tenant-a")
+    monkeypatch.setattr(overview_projection, "_get_fleet_store", fail)
+    monkeypatch.setattr(overview_projection, "_tenant_id", lambda _request: "tenant-a")
     snapshot = overview._identity_snapshot(Request({"type": "http"}))
     assert snapshot["managed_identities"] is None
     assert snapshot["fleet_agents"] is None

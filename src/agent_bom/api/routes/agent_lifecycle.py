@@ -76,7 +76,7 @@ async def capture_snapshot(request: Request, body: CaptureSnapshot) -> Lifecycle
     No producer JSON or name-based join is accepted. Registration records an
     operator action; it does not upgrade the exported identity to verified.
     """
-    from agent_bom.api.routes.scan import get_scan_agent_bom
+    from agent_bom.api.routes.scan_exports import get_scan_agent_bom
 
     document = await get_scan_agent_bom(request, body.scan_id, body.agent_id)
     return cast(LifecycleRecord, await _call("capture", require_request_tenant_id(request), document, _actor(request)))

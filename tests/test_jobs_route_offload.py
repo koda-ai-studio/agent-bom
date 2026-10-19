@@ -138,7 +138,7 @@ async def test_per_job_reads_keep_the_event_loop_responsive(path: str) -> None:
             await asyncio.sleep(_TICK_SECONDS)
             ticks += 1
 
-    with patch("agent_bom.api.routes.scan._job_for_request", side_effect=slow_job_lookup):
+    with patch("agent_bom.api.scan_request_context._job_for_request", side_effect=slow_job_lookup):
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
             beat = asyncio.create_task(heartbeat())
