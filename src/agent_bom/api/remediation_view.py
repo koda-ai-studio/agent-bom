@@ -7,6 +7,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
+from agent_bom.compliance_coverage import TAG_MAPPED_FRAMEWORKS, resolve_framework_filter
 from agent_bom.finding import Asset, Finding, FindingSource, FindingType
 from agent_bom.finding_scope import safe_finding_response_payload
 from agent_bom.output.json_fmt import remediation_json
@@ -57,6 +58,10 @@ def remediation_finding_projection(row: dict[str, Any]) -> dict[str, Any]:
         "cis_tags",
     }
     projected = {key: row[key] for key in fields if key in row}
+    qualified = [
+        f"{metadata.slug}:{control}" for metadata in TAG_MAPPED_FRAMEWORKS for control in _strings(projected.get(metadata.tag_field))[:200]
+    ]
+    projected["framework_tags"] = (_strings(row.get("framework_tags"))[:200] + qualified)[:200]
     evidence = row.get("evidence")
     if isinstance(evidence, dict):
         projected["evidence"] = {
@@ -71,6 +76,20 @@ def remediation_finding_projection(row: dict[str, Any]) -> dict[str, Any]:
             if key in evidence
         }
     payload = safe_finding_response_payload(projected)
+    # Restore only sanitized, catalogued tags already present in this finding.
+    # Upgrade actions consume legacy fields; the safe boundary retains the
+    # qualified framework_tags representation instead of those raw arrays.
+    validated_tags = []
+    for tag in _strings(payload.pop("framework_tags", None)):
+        framework, separator, control = tag.partition(":")
+        metadata = resolve_framework_filter(framework) if separator else None
+        if metadata and metadata.tag_field in fields and control in metadata.catalog:
+            validated_tags.append(tag)
+            tags = payload.setdefault(metadata.tag_field, [])
+            if control not in tags:
+                tags.append(control)
+    if validated_tags:
+        payload["framework_tags"] = list(dict.fromkeys(validated_tags))
     # Tier-A redaction drops these lists wholesale. Their entries are reference
     # names (env-var and tool names, as the agent detail and per-scan plan
     # already return), so restore only entries shaped like a name, never a value.

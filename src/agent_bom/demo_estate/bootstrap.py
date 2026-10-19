@@ -319,51 +319,38 @@ def _store_demo_scan_job(report: dict[str, Any], *, tenant_id: str) -> str:
 
 
 def _seed_showcase_posture_trends(report: dict[str, Any], *, tenant_id: str) -> int:
-    """Persist the labeled sample estate's deterministic two-point trajectory.
+    """Record two labeled observations of the same curated finding inventory.
 
-    The current point is derived through the same canonical scan-result adapter
-    used by completed live scans.  The older point represents the explicitly
-    synthetic estate before 25 findings were remediated; it exists only in demo
-    estate mode and uses the graph baseline's timestamp and scan identity.
-    Stable scan IDs make repeated bootstrap calls upserts rather than duplicate
-    history.
+    Each point carries its own bounded finding comparison metadata through the
+    live scan adapter. The stable sample shows still-open findings; historical
+    count and score improvements require separate historical evidence.
+    Stable scan IDs keep repeated bootstrap calls idempotent.
     """
-    from dataclasses import replace
-
     from agent_bom.api.exec_posture import tenant_headline_posture
     from agent_bom.api.stores import _get_trend_store
     from agent_bom.api.trend_recording import trend_point_from_scan_result
-    from agent_bom.posture import _score_to_grade
 
-    # The current point plots the headline /v1/overview and /v1/posture serve,
-    # as live scans do once their job is persisted.
-    current = trend_point_from_scan_result(
-        report,
-        tenant_id=tenant_id,
-        scan_id=SHOWCASE_SCAN_ID,
-        completed_at=SHOWCASE_CURRENT_CREATED_AT,
-        headline=tenant_headline_posture(tenant_id),
+    headline = tenant_headline_posture(tenant_id)
+    observations = (
+        (SHOWCASE_BASELINE_SCAN_ID, SHOWCASE_BASELINE_CREATED_AT),
+        (SHOWCASE_SCAN_ID, SHOWCASE_CURRENT_CREATED_AT),
     )
-    if current is None:
-        return 0
-
-    baseline_score = max(0.0, current.posture_score - 8.0)
-    baseline = replace(
-        current,
-        timestamp=SHOWCASE_BASELINE_CREATED_AT,
-        scan_id=SHOWCASE_BASELINE_SCAN_ID,
-        total_vulns=current.total_vulns + 25,
-        critical=current.critical + 2,
-        high=current.high + 12,
-        medium=current.medium + 8,
-        low=current.low + 3,
-        posture_score=baseline_score,
-        posture_grade=_score_to_grade(baseline_score),
-    )
+    points = [
+        trend_point_from_scan_result(
+            report,
+            tenant_id=tenant_id,
+            scan_id=scan_id,
+            completed_at=timestamp,
+            scope_id="demo-estate:showcase-findings:v1",
+            headline=headline,
+        )
+        for scan_id, timestamp in observations
+    ]
     trend_store = _get_trend_store()
-    trend_store.record(baseline)
-    trend_store.record(current)
-    return 2
+    for point in points:
+        if point is not None:
+            trend_store.record(point)
+    return sum(point is not None for point in points)
 
 
 def _graph_owner_scan_id(graph_store: Any, tenant_id: str) -> str:

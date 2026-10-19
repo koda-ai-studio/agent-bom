@@ -1621,6 +1621,10 @@ for (const theme of ["light", "dark"] as const) {
     await page.goto(`/security-graph?lens=attack-path&scan=${scanId}&node=pkg%3Aform-data&cve=CVE-2025-7783&package=form-data`);
     await page.getByTestId("selected-exposure-path").getByRole("button", { name: "Graph", exact: true }).click();
     await page.locator('.react-flow__node[data-id="pkg:form-data"]').click();
+    const pinned = page.getByText("Pinned form-data@4.0.0", { exact: true });
+    await expect(pinned).toBeVisible();
+    await pinned.scrollIntoViewIfNeeded();
+    await page.screenshot({ path: testInfo.outputPath(`pinned-name-${theme}-${width}.png`) });
     const drawer = page.getByTestId("graph-entity-drawer");
     await drawer.getByTestId("graph-drawer-tab-impact").click();
     const panel = drawer.getByTestId("graph-drawer-panel-impact");
