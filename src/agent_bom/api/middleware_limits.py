@@ -153,10 +153,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         read_rpm: int = DEFAULT_READ_RATE_LIMIT_RPM,
         authenticated_read_rpm: int = DEFAULT_AUTHENTICATED_READ_RATE_LIMIT_RPM,
         *,
-        verify_api_key: Callable[[str], Any],
+        get_key_store: Callable[[], Any],
     ):
         super().__init__(app)
-        self._verify_api_key = verify_api_key
+        self._get_key_store = get_key_store
         self._scan_rpm = _validate_rate_limit("scan_rpm", scan_rpm, max_rpm=MAX_RATE_LIMIT_RPM)
         self._read_rpm = _validate_rate_limit("read_rpm", read_rpm, max_rpm=MAX_RATE_LIMIT_RPM * 5)
         self._authenticated_read_rpm = _validate_rate_limit(
@@ -188,7 +188,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             # deployment (APIKeyMiddleware removed) this is the only verify on the
             # request path — offload it so rate-limit bucketing never stalls the
             # event loop.
-            resolved = await anyio.to_thread.run_sync(self._verify_api_key, raw_key)
+            resolved = await anyio.to_thread.run_sync(self._get_key_store().verify, raw_key)
             if resolved and resolved.tenant_id:
                 return resolved.tenant_id
         return None

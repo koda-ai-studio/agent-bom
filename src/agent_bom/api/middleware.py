@@ -1187,5 +1187,5 @@ class RateLimitMiddleware(_RateLimitMiddleware):
             scan_rpm=scan_rpm,
             read_rpm=read_rpm,
             authenticated_read_rpm=authenticated_read_rpm,
-            verify_api_key=lambda key: get_key_store().verify(key),
+            get_key_store=lambda: get_key_store(),
         )
