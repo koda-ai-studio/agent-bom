@@ -3,22 +3,42 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
-from typing import TYPE_CHECKING, Any, Literal
+from datetime import datetime
+from typing import TYPE_CHECKING, Any
 
 from agent_bom.api.agent_identity_store import (
-    AgentIdentity,
-    AgentJITGrant,
     InMemoryAgentIdentityStore,
 )
 from agent_bom.demo_estate.compute_identity_lane import project_compute_lane
 from agent_bom.demo_estate.id_schemes import record_retired_showcase_ids, showcase_misconfig_id
+from agent_bom.demo_estate.showcase_constants import _SHOWCASE_CURRENT_STAMP as _SHOWCASE_CURRENT_STAMP
+from agent_bom.demo_estate.showcase_constants import _SHOWCASE_CURRENT_TARGET as _SHOWCASE_CURRENT_TARGET
+from agent_bom.demo_estate.showcase_constants import _SHOWCASE_IMPORT_NOW as _SHOWCASE_IMPORT_NOW
+from agent_bom.demo_estate.showcase_constants import SHOWCASE_AGENTS as SHOWCASE_AGENTS
+from agent_bom.demo_estate.showcase_constants import SHOWCASE_BASELINE_CREATED_AT as SHOWCASE_BASELINE_CREATED_AT
+from agent_bom.demo_estate.showcase_constants import SHOWCASE_BASELINE_SCAN_ID as SHOWCASE_BASELINE_SCAN_ID
+from agent_bom.demo_estate.showcase_constants import SHOWCASE_CURRENT_CREATED_AT as SHOWCASE_CURRENT_CREATED_AT
+from agent_bom.demo_estate.showcase_constants import SHOWCASE_ORG_ID as SHOWCASE_ORG_ID
+from agent_bom.demo_estate.showcase_constants import SHOWCASE_PACKAGES as SHOWCASE_PACKAGES
+from agent_bom.demo_estate.showcase_constants import SHOWCASE_SCAN_ID as SHOWCASE_SCAN_ID
+from agent_bom.demo_estate.showcase_constants import SHOWCASE_SERVERS as SHOWCASE_SERVERS
+from agent_bom.demo_estate.showcase_constants import SHOWCASE_SOURCE as SHOWCASE_SOURCE
+from agent_bom.demo_estate.showcase_constants import SHOWCASE_TENANT as SHOWCASE_TENANT
+from agent_bom.demo_estate.showcase_constants import ShowcaseProfile as ShowcaseProfile
 from agent_bom.demo_estate.showcase_findings import (
     SHOWCASE_DRIFT_INCIDENTS,
     bind_mcp_auth_findings,
     demo_mcp_auth_findings,
     project_mcp_auth_findings,
 )
+from agent_bom.demo_estate.showcase_fleet import seed_showcase_fleet_and_runtime as seed_showcase_fleet_and_runtime
+from agent_bom.demo_estate.showcase_identities import _DEMO_IDENTITIES as _DEMO_IDENTITIES
+from agent_bom.demo_estate.showcase_identities import _DEMO_JIT_GRANTS as _DEMO_JIT_GRANTS
+from agent_bom.demo_estate.showcase_identities import _annotate_demo_identity_risk as _annotate_demo_identity_risk
+from agent_bom.demo_estate.showcase_identities import _demo_identity_id as _demo_identity_id
+from agent_bom.demo_estate.showcase_identities import build_demo_identity_store as build_demo_identity_store
+from agent_bom.demo_estate.showcase_identities import demo_identity_records as demo_identity_records
+from agent_bom.demo_estate.showcase_identities import seed_showcase_identities as seed_showcase_identities
 from agent_bom.graph.cnapp_overlay import apply_cnapp_overlay
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
@@ -31,387 +51,8 @@ from agent_bom.graph.types import EntityType, RelationshipType
 if TYPE_CHECKING:
     from agent_bom.graph.ports import GraphStoreProtocol
 
-ShowcaseProfile = Literal["baseline", "current"]
-
-SHOWCASE_TENANT = "default"
-SHOWCASE_SCAN_ID = "showcase"
-SHOWCASE_SOURCE = "demo-showcase"
-SHOWCASE_BASELINE_SCAN_ID = "showcase-baseline"
-# Bumped when the seeded snapshot's *shape or content* changes so
-# ``_showcase_seed_is_current`` treats an older seed as stale and refreshes it. A
-# DB seeded before the enterprise estate was projected in still holds the
-# 112-node showcase; without a bump it would keep it forever and the demo would
-# silently under-report. The same applies to what the projection *writes*: the
-# 08-01/08-08 pair shipped estate finding nodes whose ``recommendation`` was a
-# ``Remediation`` object frozen to its Python repr, and a running demo would have
-# served that snapshot forever. The seven-day gap is the drift lens's window and
-# is preserved on every bump.
-# The October 17 02:00 seed draws one finding set shared with the demo scan.
-_SHOWCASE_CURRENT_TARGET = datetime(2026, 10, 17, 2, 0, 0, tzinfo=timezone.utc)
-_SHOWCASE_IMPORT_NOW = datetime.now(timezone.utc)
-# Preserve the deterministic target once it is in the past. Before then, clamp
-# to the current UTC day's start so a release candidate never presents a
-# snapshot from tomorrow. The seven-day baseline window remains intact.
-_SHOWCASE_CURRENT_STAMP = (
-    _SHOWCASE_CURRENT_TARGET
-    if _SHOWCASE_CURRENT_TARGET <= _SHOWCASE_IMPORT_NOW
-    else _SHOWCASE_IMPORT_NOW.replace(hour=0, minute=0, second=0, microsecond=0)
-)
-SHOWCASE_CURRENT_CREATED_AT = _SHOWCASE_CURRENT_STAMP.isoformat()
-SHOWCASE_BASELINE_CREATED_AT = (_SHOWCASE_CURRENT_STAMP - timedelta(days=7)).isoformat()
-
-# The estate's containment root, once projected, becomes the graph's single
-# top-level container. The hand-built showcase org hangs off it so the demo reads
-# as one estate rather than two unrelated roots.
-SHOWCASE_ORG_ID = "org:corp"
-
-# One shared definition for the hand-built vulnerability paths.  The graph
-# seeder and the demo scan both consume these records so a path cannot render in
-# the graph while the corresponding finding reports unknown reachability.
-SHOWCASE_AGENTS: dict[str, str] = {
-    "cursor": "Cursor IDE Agent",
-    "langchain-service": "LangChain Service Agent",
-    "support-copilot": "Support Copilot",
-    "data-pipeline": "Data Pipeline Agent",
-    "claude-desktop": "Claude Desktop Agent",
-}
-SHOWCASE_SERVERS: dict[str, tuple[str, list[str]]] = {
-    "filesystem-server": ("cursor", ["read_file", "write_file", "list_directory"]),
-    "shell-runner-server": ("cursor", ["run_shell", "exec_command", "read_file"]),
-    "llm-orchestrator-server": ("langchain-service", ["run_chain", "eval_expression", "http_get"]),
-    "vector-db-server": ("langchain-service", ["query_vectors", "upsert_vectors"]),
-    "helpdesk-server": ("support-copilot", ["create_ticket", "search_tickets", "send_reply"]),
-    "email-server": ("support-copilot", ["send_email", "list_inbox"]),
-    "warehouse-server": ("data-pipeline", ["run_query", "execute_sql", "export_csv"]),
-    "etl-server": ("data-pipeline", ["transform_image", "load_data"]),
-    "github-server": ("claude-desktop", ["create_issue", "search_repos", "push_files"]),
-    "team-chat-server": ("claude-desktop", ["send_message", "list_channels"]),
-}
-SHOWCASE_PACKAGES: dict[str, tuple[str, str, str, float]] = {
-    "pyyaml@5.3": ("shell-runner-server", "CVE-2020-14343", "critical", 9.8),
-    "langchain@0.0.150": ("llm-orchestrator-server", "CVE-2023-36258", "critical", 9.8),
-    "pillow@9.0.0": ("etl-server", "CVE-2023-4863", "high", 8.8),
-    "jsonwebtoken@8.5.1": ("helpdesk-server", "CVE-2022-23539", "high", 8.1),
-    "axios@1.4.0": ("helpdesk-server", "CVE-2023-45857", "medium", 6.5),
-    "cryptography@39.0.0": ("warehouse-server", "CVE-2023-50782", "high", 7.5),
-    "ws@8.5.0": ("filesystem-server", "CVE-2024-37890", "high", 7.5),
-    "flask@2.2.0": ("team-chat-server", "CVE-2023-30861", "high", 7.5),
-    "certifi@2022.12.7": ("email-server", "CVE-2023-37920", "high", 7.5),
-    "lodash@4.17.20": ("github-server", "CVE-2021-23337", "high", 7.2),
-    "express@4.17.1": ("filesystem-server", "CVE-2024-29041", "medium", 6.1),
-    "requests@2.28.0": ("vector-db-server", "CVE-2023-32681", "medium", 6.1),
-    "jinja2@3.0.0": ("team-chat-server", "CVE-2024-22195", "medium", 5.4),
-    "node-fetch@2.6.1": ("filesystem-server", "CVE-2022-0235", "medium", 6.1),
-    "werkzeug@2.2.2": ("team-chat-server", "CVE-2023-25577", "high", 7.5),
-}
 
 _logger = logging.getLogger(__name__)
-
-# Deterministic non-human-identity estate for the demo. Identity ids are stable
-# across restarts so the persisted MANAGED_IDENTITY graph nodes and the live
-# identity store agree — the governance overlay re-runs at request time and must
-# not inject a *second*, duplicate set of identities. Each row is shaped to tell
-# one clear NHI-governance story:
-#   * an over-granted but owned + active identity (standing tool scopes it never
-#     uses → right-size),
-#   * a dormant + orphaned admin identity that reaches an exposed resource (the
-#     textbook worst case → deprovision), and
-#   * clean, owned, least-privilege identities for contrast.
-_DEMO_IDENTITIES: tuple[dict[str, Any], ...] = (
-    {
-        "slug": "cursor",
-        "agent_label": "Cursor IDE Agent",
-        "role": "prod-admin",
-        "owner": "platform-team@corp",
-        "owner_type": "team",
-        "allowed_tools": ["run_shell", "exec_command", "read_file", "execute_sql", "query_vectors"],
-        "last_used_days": 1,
-    },
-    {
-        "slug": "support-copilot",
-        "agent_label": "Support Copilot",
-        "role": "support-admin",
-        "owner": "",  # orphaned — no accountable owner
-        "owner_type": "",
-        "allowed_tools": ["send_email", "create_ticket", "search_tickets"],
-        "last_used_days": None,  # never observed → dormant
-        "privileged": True,
-        "internet_exposed": True,
-    },
-    {
-        "slug": "data-pipeline",
-        "agent_label": "Data Pipeline Agent",
-        "role": "data-pipeline",
-        "owner": "data-eng@corp",
-        "owner_type": "team",
-        "allowed_tools": [],  # least privilege — access is JIT-granted
-        "last_used_days": 2,
-    },
-    {
-        "slug": "langchain-service",
-        "agent_label": "LangChain Service Agent",
-        "role": "service",
-        "owner": "ml-platform@corp",
-        "owner_type": "team",
-        "allowed_tools": [],
-        "last_used_days": 3,
-    },
-    {
-        "slug": "claude-desktop",
-        "agent_label": "Claude Desktop Agent",
-        "role": "agent",
-        "owner": "",  # orphaned
-        "owner_type": "",
-        "allowed_tools": [],
-        "last_used_days": None,  # dormant
-    },
-)
-
-# JIT grants that light up ACCESS_GRANT nodes for the least-privilege identities.
-_DEMO_JIT_GRANTS: tuple[tuple[str, str], ...] = (
-    ("cursor", "run_shell"),
-    ("data-pipeline", "execute_sql"),
-    ("langchain-service", "eval_expression"),
-)
-
-
-def _demo_identity_id(slug: str) -> str:
-    return f"demo-nhi-{slug}"
-
-
-def demo_identity_records(tenant_id: str = SHOWCASE_TENANT) -> tuple[list[AgentIdentity], list[AgentJITGrant]]:
-    """Return the deterministic enriched demo identities + JIT grants.
-
-    Single source of truth shared by the persisted graph seed and the live
-    identity-store seed so both carry identical ids and attributes.
-    """
-    now = datetime.now(timezone.utc)
-    issued_at = (now - timedelta(days=120)).isoformat()
-    expires_at = (now + timedelta(days=90)).isoformat()
-
-    identities: list[AgentIdentity] = []
-    by_slug: dict[str, str] = {}
-    for spec in _DEMO_IDENTITIES:
-        slug = str(spec["slug"])
-        identity_id = _demo_identity_id(slug)
-        by_slug[slug] = identity_id
-        last_used_days = spec.get("last_used_days")
-        last_used_at = "" if last_used_days is None else (now - timedelta(days=int(last_used_days))).isoformat()
-        identities.append(
-            AgentIdentity(
-                identity_id=identity_id,
-                agent_id=str(spec["agent_label"]),
-                tenant_id=tenant_id,
-                token_hash=f"demo-nhi-hash-{slug}",
-                token_prefix="demo",
-                role=str(spec.get("role") or "agent"),
-                blueprint_id=str(spec["agent_label"]),
-                status="active",
-                issued_at=issued_at,
-                expires_at=expires_at,
-                allowed_tools=list(spec.get("allowed_tools") or []),
-                owner=str(spec.get("owner") or ""),
-                owner_type=str(spec.get("owner_type") or ""),
-                last_used_at=last_used_at,
-            )
-        )
-
-    grants: list[AgentJITGrant] = []
-    approved_at = (now - timedelta(hours=2)).isoformat()
-    grant_expiry = (now + timedelta(hours=1)).isoformat()
-    for slug, tool_name in _DEMO_JIT_GRANTS:
-        grant_identity_id = by_slug.get(slug)
-        if not grant_identity_id:
-            continue
-        grants.append(
-            AgentJITGrant(
-                grant_id=f"demo-jit-{slug}-{tool_name}",
-                identity_id=grant_identity_id,
-                agent_id=next(str(s["agent_label"]) for s in _DEMO_IDENTITIES if s["slug"] == slug),
-                tenant_id=tenant_id,
-                tool_name=tool_name,
-                status="active",
-                requested_at=approved_at,
-                requested_by="oncall@corp",
-                approved_at=approved_at,
-                approved_by="oncall@corp",
-                starts_at=approved_at,
-                expires_at=grant_expiry,
-                ticket_id=f"OPS-{slug.upper()}",
-            )
-        )
-    return identities, grants
-
-
-def build_demo_identity_store(tenant_id: str = SHOWCASE_TENANT) -> InMemoryAgentIdentityStore:
-    """A throwaway identity store pre-loaded with the demo NHI estate."""
-    store = InMemoryAgentIdentityStore()
-    identities, grants = demo_identity_records(tenant_id)
-    for identity in identities:
-        store.put(identity)
-    for grant in grants:
-        store.put_jit_grant(grant, tenant_id=grant.tenant_id)
-    return store
-
-
-def seed_showcase_identities(tenant_id: str = SHOWCASE_TENANT) -> dict[str, Any]:
-    """Populate the LIVE agent-identity store with the demo NHI estate.
-
-    Idempotent and independent of the graph seed so the NHI/Identity overview
-    tile and the ``/v1/*/nhi/governance`` posture survive a restart even when the
-    graph snapshot already exists. Only ever runs under demo-estate mode.
-    """
-    from agent_bom.api.agent_identity_store import get_agent_identity_store
-
-    store = get_agent_identity_store()
-    existing = {i.identity_id for i in store.list(tenant_id, include_inactive=True, limit=1000)}
-    if any(iid.startswith("demo-nhi-") for iid in existing):
-        return {"seeded": False, "reason": "identities_present", "count": len(existing)}
-
-    identities, grants = demo_identity_records(tenant_id)
-    for identity in identities:
-        store.put(identity)
-    for grant in grants:
-        store.put_jit_grant(grant, tenant_id=grant.tenant_id)
-    return {"seeded": True, "identities": len(identities), "jit_grants": len(grants)}
-
-
-def seed_showcase_fleet_and_runtime(tenant_id: str = SHOWCASE_TENANT) -> dict[str, Any]:
-    """Populate the LIVE fleet and MCP-observation stores from the estate.
-
-    ``/v1/agent-bom/manifest`` — the AI BOM page — is built from exactly two
-    stores: the fleet registry and the MCP observation store. The demo bootstrap
-    seeded the graph, the findings and the identities, but never those two, so
-    the AI BOM read **0 agents / 0 MCP servers / 0 tools** on an estate holding
-    48 agents, 25 servers and 97 tools. The page's own promise is "live
-    inventory from connected agents… not a static upload", and it was showing
-    nothing at all.
-
-    Same contract as :func:`seed_showcase_identities`: idempotent, independent
-    of the graph seed, and only ever under demo-estate mode, so a restart or an
-    already-seeded graph still leaves the AI BOM populated. Older synthetic
-    association revisions are refreshed once so fleet counts and graph links
-    agree; non-demo fleet records are not rewritten.
-    """
-    from agent_bom.api.fleet_store import FleetAgent, FleetLifecycleState
-    from agent_bom.api.mcp_observation_store import MCPObservation
-    from agent_bom.api.stores import _get_fleet_store, _get_mcp_observation_store
-    from agent_bom.demo_estate.enterprise_composition import build_demo_estate
-
-    fleet_store = _get_fleet_store()
-    observation_store = _get_mcp_observation_store()
-    association_revision = "demo-associations-v3"
-    existing = [a for a in fleet_store.list_by_tenant(tenant_id) if a.agent_id.startswith("demo-fleet-")]
-    if existing and all(association_revision in a.tags for a in existing):
-        return {"seeded": False, "reason": "fleet_present"}
-
-    estate = build_demo_estate(tenant_id=tenant_id)
-    by_type: dict[str, list[Any]] = {}
-    for asset in estate.assets:
-        by_type.setdefault(asset.resource_type, []).append(asset)
-
-    servers = by_type.get("server", [])
-    tools_by_server: dict[str, list[Any]] = {}
-    for tool in by_type.get("tool", []):
-        tools_by_server.setdefault(str(tool.tags.get("mcp_server") or ""), []).append(tool)
-
-    now = datetime.now(timezone.utc).isoformat()
-    agents = by_type.get("agent", [])
-    server_ids = {asset.asset_id for asset in servers}
-    agents_by_server: dict[str, list[str]] = {}
-    for agent in agents:
-        target = agent.tags.get("uses_server", "")
-        if target in server_ids:
-            agents_by_server.setdefault(target, []).append(agent.asset_id)
-    for index, asset in enumerate(agents):
-        # Deterministic spread so the fleet reads like a managed estate rather
-        # than one uniform block. A real fleet is mostly approved with a tail of
-        # in-flight and problem agents; every row in one state is the tell that
-        # nothing is actually being governed.
-        bucket = index % 10
-        if bucket == 0:
-            state = FleetLifecycleState.QUARANTINED
-        elif bucket in (1, 2):
-            state = FleetLifecycleState.PENDING_REVIEW
-        elif bucket == 3:
-            state = FleetLifecycleState.DISCOVERED
-        else:
-            state = FleetLifecycleState.APPROVED
-        fleet_store.put(
-            FleetAgent(
-                agent_id=f"demo-fleet-{asset.asset_id}",
-                name=asset.display_name,
-                agent_type=str(asset.tags.get("agent_framework") or "mcp-client"),
-                lifecycle_state=state,
-                owner=str(asset.tags.get("owner") or "platform-engineering"),
-                environment=asset.environment or "production",
-                tags=[t for t in (asset.environment, asset.provider, association_revision) if t],
-                trust_score=round(0.55 + ((index % 9) / 20.0), 2),
-                server_count=int(asset.tags.get("uses_server", "") in server_ids),
-                tenant_id=tenant_id,
-                last_discovery=now,
-                last_scan=now,
-                created_at=now,
-                updated_at=now,
-            )
-        )
-
-    for index, asset in enumerate(servers):
-        tools = tools_by_server.get(asset.asset_id, [])
-        source_ids = sorted(agents_by_server.get(asset.asset_id, []))
-        source_agents = sorted(agent.display_name for agent in agents if agent.asset_id in source_ids)
-        for subject_id in source_ids or [""]:
-            observation_store.put(
-                MCPObservation(
-                    tenant_id=tenant_id,
-                    observation_id=f"demo-obs-{asset.asset_id}:{subject_id}",
-                    agent_id=f"demo-fleet-{subject_id}" if subject_id else "",
-                    server_stable_id=asset.asset_id,
-                    server_name=asset.display_name,
-                    agent_name=source_agents[0] if source_agents else "",
-                    transport=str(asset.tags.get("transport") or "streamable-http"),
-                    url=asset.native_id if str(asset.native_id).startswith("http") else None,
-                    auth_mode=str(asset.tags.get("auth_mode") or "bearer"),
-                    credential_env_vars=[],
-                    observed_via=["demo-estate"],
-                    scan_sources=["demo-estate"],
-                    source_agents=source_agents,
-                    configured_locally=False,
-                    fleet_present=True,
-                    gateway_registered=index % 3 != 0,
-                    runtime_observed=index % 4 != 0,
-                    observed_scopes=sorted({str(t.tags.get("scope") or "read") for t in tools}) or ["read"],
-                    first_seen=now,
-                    last_seen=now,
-                )
-            )
-
-    return {
-        "seeded": True,
-        "fleet_agents": len(agents),
-        "mcp_observations": sum(max(1, len(agents_by_server.get(server.asset_id, []))) for server in servers),
-        "tools": sum(len(v) for v in tools_by_server.values()),
-    }
-
-
-def _annotate_demo_identity_risk(graph: UnifiedGraph) -> None:
-    """Pin privilege / exposure signals the identity record cannot carry.
-
-    ``AgentIdentity`` has no privilege or internet-exposure field, so the
-    governance evaluator would otherwise only see dormancy/ownership. Stamp the
-    curated signals directly onto the persisted MANAGED_IDENTITY node so the demo
-    surfaces at least one clearly high/critical NHI (a dormant, orphaned, admin
-    identity). Node ids are deterministic; safe to call on any showcase snapshot.
-    """
-    for spec in _DEMO_IDENTITIES:
-        node = graph.nodes.get(f"managed_identity:{_demo_identity_id(str(spec['slug']))}")
-        if node is None:
-            continue
-        if spec.get("privileged"):
-            node.attributes["privilege_level"] = "admin"
-            node.attributes["is_admin"] = True
-        if spec.get("internet_exposed"):
-            node.attributes["internet_exposed"] = True
 
 
 class _DriftIncident:

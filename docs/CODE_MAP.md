@@ -70,7 +70,12 @@ the PR. Maintainers would rather discuss placement early than move code later.
   `api/postgres_compliance_hub.py`.
 - **Graph**: `graph/container.py` defines `UnifiedGraph`. Entity and relationship
   enums live in `graph/types.py`; `graph/builder.py` builds the graph from a
-  report. `context_graph.py` is a legacy bridge, so new graph features belong in
+  report. Organization hierarchy and findings live in `graph/organization_*.py`;
+  normalized resources, network entry paths and account-scoped Snowflake lanes
+  have separate projection owners. Demo constants, identities and fleet seeding
+  live in `demo_estate/showcase_constants.py`, `showcase_identities.py` and
+  `showcase_fleet.py`; `showcase_graph.py` composes the demo snapshot.
+  `context_graph.py` is a legacy bridge, so new graph features belong in
   `graph/` ([`GRAPH_MIGRATION.md`](GRAPH_MIGRATION.md)).
   HTTP graph contracts and OpenAPI evidence schemas live in
   `api/graph_contracts.py`; pure path cards, finding/identity links and path

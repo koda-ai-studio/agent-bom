@@ -46,7 +46,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from agent_bom.demo_estate.showcase_graph import SHOWCASE_TENANT
+from agent_bom.demo_estate.showcase_constants import SHOWCASE_TENANT
 
 _logger = logging.getLogger(__name__)
 

@@ -22,7 +22,7 @@ from agent_bom.demo_estate.enterprise_findings import (
     summarize_estate_findings,
     to_finding_view,
 )
-from agent_bom.demo_estate.showcase_graph import SHOWCASE_SCAN_ID
+from agent_bom.demo_estate.showcase_constants import SHOWCASE_SCAN_ID
 
 ENTERPRISE_STORY_SCHEMA_VERSION = "enterprise_demo_story.v1"
 ENTERPRISE_STORY_SCENARIO = (

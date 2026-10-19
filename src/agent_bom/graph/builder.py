@@ -7,15 +7,16 @@ used for current-state views, traversal, attack paths, and temporal diffs.
 
 from __future__ import annotations
 
-import hashlib
-import json
+import hashlib as hashlib
+import json as json
 import logging
 from collections.abc import Mapping
 from typing import Any
 
 from agent_bom.api.tracing import get_tracer
-from agent_bom.cloud.normalization import coerce_truthy
-from agent_bom.core.cloud_identity import cloud_resource_node_id
+from agent_bom.cloud.normalization import coerce_truthy as coerce_truthy
+from agent_bom.core.cloud_identity import cloud_resource_node_id as cloud_resource_node_id
+from agent_bom.graph.agent_cloud_lineage import _add_agent_cloud_lineage as _add_agent_cloud_lineage
 from agent_bom.graph.agent_projection import project_agents
 from agent_bom.graph.asset_canonicalize import canonicalize_assets
 from agent_bom.graph.ast_tool_projection import _apply_ast_tool_overlay as _apply_ast_tool_overlay
@@ -28,12 +29,10 @@ from agent_bom.graph.build_analysis import GraphAnalysisPorts, apply_build_analy
 from agent_bom.graph.build_indexes import BuildIndexes
 from agent_bom.graph.build_input import GraphBuildInput
 from agent_bom.graph.builder_cloud_inventory import _add_management_group_hierarchy, _wire_instance_profile_roles
-from agent_bom.graph.builder_cloud_lineage import (
-    _add_cloud_principal_lineage,
-    _add_lineage_resource_nodes,
-    _add_lineage_scope_edges,
-    _resolve_cloud_lineage,
-)
+from agent_bom.graph.builder_cloud_lineage import _add_cloud_principal_lineage as _add_cloud_principal_lineage
+from agent_bom.graph.builder_cloud_lineage import _add_lineage_resource_nodes as _add_lineage_resource_nodes
+from agent_bom.graph.builder_cloud_lineage import _add_lineage_scope_edges as _add_lineage_scope_edges
+from agent_bom.graph.builder_cloud_lineage import _resolve_cloud_lineage as _resolve_cloud_lineage
 from agent_bom.graph.builder_cloud_principals import _add_access_advisor_grants
 from agent_bom.graph.builder_cloud_principals import (
     _role_last_used_at as _role_last_used_at,
@@ -55,7 +54,8 @@ from agent_bom.graph.builder_network_exposure import (
 from agent_bom.graph.builder_network_exposure import (
     _instance_internet_reachable as _instance_internet_reachable,
 )
-from agent_bom.graph.builder_network_inventory import NETWORK_INVENTORY_STAGES, _NetworkInventoryContext
+from agent_bom.graph.builder_network_inventory import NETWORK_INVENTORY_STAGES as NETWORK_INVENTORY_STAGES
+from agent_bom.graph.builder_network_inventory import _NetworkInventoryContext as _NetworkInventoryContext
 from agent_bom.graph.builder_overlays import (
     _apply_agent_reach_risk as _apply_agent_reach_risk,
 )
@@ -86,7 +86,8 @@ from agent_bom.graph.builder_snowflake_data_movement import (
 from agent_bom.graph.builder_snowflake_data_movement import (
     _SF_EXTERNAL_BUCKET_SERVICE as _SF_EXTERNAL_BUCKET_SERVICE,
 )
-from agent_bom.graph.builder_snowflake_data_movement import _add_snowflake_exfil, _add_snowflake_external_data
+from agent_bom.graph.builder_snowflake_data_movement import _add_snowflake_exfil as _add_snowflake_exfil
+from agent_bom.graph.builder_snowflake_data_movement import _add_snowflake_external_data as _add_snowflake_external_data
 from agent_bom.graph.builder_snowflake_data_movement import (
     _add_snowflake_external_stages as _add_snowflake_external_stages,
 )
@@ -114,7 +115,8 @@ from agent_bom.graph.builder_snowflake_governance import (
 from agent_bom.graph.builder_snowflake_governance import (
     _add_snowflake_access_edges as _add_snowflake_access_edges,
 )
-from agent_bom.graph.builder_snowflake_governance import _add_snowflake_activity, _add_snowflake_governance
+from agent_bom.graph.builder_snowflake_governance import _add_snowflake_activity as _add_snowflake_activity
+from agent_bom.graph.builder_snowflake_governance import _add_snowflake_governance as _add_snowflake_governance
 from agent_bom.graph.builder_snowflake_governance import (
     _aggregate_cortex_agent_usage as _aggregate_cortex_agent_usage,
 )
@@ -124,7 +126,7 @@ from agent_bom.graph.builder_snowflake_governance import (
 from agent_bom.graph.builder_snowflake_governance import (
     _snowflake_access_receipt as _snowflake_access_receipt,
 )
-from agent_bom.graph.builder_snowflake_lane import _needs_account_scope
+from agent_bom.graph.builder_snowflake_lane import _needs_account_scope as _needs_account_scope
 from agent_bom.graph.builder_snowflake_lane import (
     _snowflake_data_store as _snowflake_data_store,
 )
@@ -137,10 +139,11 @@ from agent_bom.graph.builder_snowflake_lane import (
 from agent_bom.graph.builder_snowflake_objects import (
     _add_snowflake_auth_posture as _add_snowflake_auth_posture,
 )
-from agent_bom.graph.builder_snowflake_objects import _add_snowflake_identity, _add_snowflake_object_graph
+from agent_bom.graph.builder_snowflake_objects import _add_snowflake_identity as _add_snowflake_identity
 from agent_bom.graph.builder_snowflake_objects import (
     _add_snowflake_login_threats as _add_snowflake_login_threats,
 )
+from agent_bom.graph.builder_snowflake_objects import _add_snowflake_object_graph as _add_snowflake_object_graph
 from agent_bom.graph.builder_snowflake_objects import (
     _enrich_snowflake_user as _enrich_snowflake_user,
 )
@@ -150,16 +153,18 @@ from agent_bom.graph.builder_snowflake_objects import (
 from agent_bom.graph.builder_snowflake_platform import (
     _add_snowflake_databases as _add_snowflake_databases,
 )
-from agent_bom.graph.builder_snowflake_platform import _add_snowflake_integrations, _add_snowflake_pipeline, _add_snowflake_services
+from agent_bom.graph.builder_snowflake_platform import _add_snowflake_integrations as _add_snowflake_integrations
 from agent_bom.graph.builder_snowflake_platform import (
     _add_snowflake_organization as _add_snowflake_organization,
 )
+from agent_bom.graph.builder_snowflake_platform import _add_snowflake_pipeline as _add_snowflake_pipeline
 from agent_bom.graph.builder_snowflake_platform import (
     _add_snowflake_pipes as _add_snowflake_pipes,
 )
 from agent_bom.graph.builder_snowflake_platform import (
     _add_snowflake_schemas as _add_snowflake_schemas,
 )
+from agent_bom.graph.builder_snowflake_platform import _add_snowflake_services as _add_snowflake_services
 from agent_bom.graph.builder_snowflake_platform import (
     _add_snowflake_streams as _add_snowflake_streams,
 )
@@ -174,19 +179,16 @@ from agent_bom.graph.builder_snowflake_platform import (
 )
 from agent_bom.graph.cloud_audit_projection import add_cloud_audit_behavioral as _add_cloud_audit_behavioral
 from agent_bom.graph.cloud_compute_projection import project_instances, project_security_groups
+from agent_bom.graph.cloud_context import _add_account_resource_hierarchy as _add_account_resource_hierarchy
 from agent_bom.graph.cloud_context import (
-    _add_account_resource_hierarchy,
     _add_identity_node,
-    _environment_from_tags,
     _identity_entity_type,
     _iter_cloud_inventories,
     _policy_document_attrs,
-    _prepare_cloud_payload,
-    _recorded_exposure_attributes,
-    _resource_environment,
     _trust_entries,
     cloud_inventory_sources,
 )
+from agent_bom.graph.cloud_context import _environment_from_tags as _environment_from_tags
 from agent_bom.graph.cloud_context import (
     _normalize_azure_inventory as _normalize_azure_inventory,
 )
@@ -199,6 +201,9 @@ from agent_bom.graph.cloud_context import (
 from agent_bom.graph.cloud_context import (
     _policy_entries as _policy_entries,
 )
+from agent_bom.graph.cloud_context import _prepare_cloud_payload as _prepare_cloud_payload
+from agent_bom.graph.cloud_context import _recorded_exposure_attributes as _recorded_exposure_attributes
+from agent_bom.graph.cloud_context import _resource_environment as _resource_environment
 from agent_bom.graph.cloud_context import (
     _stamp_owning_account as _stamp_owning_account,
 )
@@ -208,7 +213,7 @@ from agent_bom.graph.cloud_storage_projection import project_buckets, project_da
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.credential_bindings import project_credential_bindings
 from agent_bom.graph.edge import UnifiedEdge
-from agent_bom.graph.edge_evidence import edge_evidence
+from agent_bom.graph.edge_evidence import edge_evidence as edge_evidence
 from agent_bom.graph.finding_projection import _resolve_skill_audit_target_ids as _resolve_skill_audit_target_ids
 from agent_bom.graph.finding_projection import (
     project_iac,
@@ -222,7 +227,13 @@ from agent_bom.graph.framework_topology_projection import _add_framework_topolog
 from agent_bom.graph.framework_topology_projection import _AIStackProjection as _AIStackProjection
 from agent_bom.graph.framework_topology_projection import _FrameworkTopology as _FrameworkTopology
 from agent_bom.graph.identity_nodes import identity_node_id as _identity_node_id
+from agent_bom.graph.network_entry_projection import _add_network_edge_inventory as _add_network_edge_inventory
+from agent_bom.graph.network_entry_projection import _wire_network_entry_exposure_paths as _wire_network_entry_exposure_paths
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
+from agent_bom.graph.normalized_resource_projection import _add_normalized_cloud_resources as _add_normalized_cloud_resources
+from agent_bom.graph.organization_aws import _add_aws_organization as _add_aws_organization
+from agent_bom.graph.organization_findings import _add_cloud_org_architecture_findings as _add_cloud_org_architecture_findings
+from agent_bom.graph.organization_gcp import _add_gcp_organization as _add_gcp_organization
 from agent_bom.graph.package_projection import (
     _add_exploitable_via_edges as _add_exploitable_via_edges,
 )
@@ -322,6 +333,8 @@ from agent_bom.graph.runtime_projection import (
 from agent_bom.graph.runtime_projection import (
     _runtime_identity_relationship as _runtime_identity_relationship,
 )
+from agent_bom.graph.snowflake_source_lanes import _add_snowflake_source_lanes as _add_snowflake_source_lanes
+from agent_bom.graph.snowflake_source_lanes import _project_snowflake_lanes as _project_snowflake_lanes
 from agent_bom.graph.supabase_projection import project_supabase_inventory
 from agent_bom.graph.trace_projection import project_report_trace_events
 from agent_bom.graph.training_projection import (
@@ -337,7 +350,7 @@ from agent_bom.graph.training_projection import project_dataset_cards, project_m
 from agent_bom.graph.types import EntityType, RelationshipType
 from agent_bom.graph.util import clean_graph_part as _clean_graph_part
 from agent_bom.graph.vercel_projection import project_vercel_inventory
-from agent_bom.security import sanitize_text
+from agent_bom.security import sanitize_text as sanitize_text
 
 _GRAPH_TRACER = get_tracer("agent_bom.graph")
 _logger = logging.getLogger(__name__)
@@ -477,513 +490,6 @@ def _analysis_ports() -> GraphAnalysisPorts:
         aspm=_apply_aspm_overlay,
         cost=_apply_cost_overlay,
     )
-
-
-def _add_agent_cloud_lineage(
-    graph: UnifiedGraph,
-    *,
-    agent_id: str,
-    agent_dict: dict[str, Any],
-    agent_metadata: dict[str, Any],
-    data_source: str,
-) -> None:
-    """Promote normalized cloud-origin metadata into explicit lineage nodes.
-
-    Cloud providers already normalize runtime identity into ``agent.metadata``.
-    The graph should carry that as inventory too, otherwise cloud-discovered
-    agents remain disconnected from provider/runtime assets.
-    """
-    origin = agent_metadata.get("cloud_origin")
-    if not isinstance(origin, dict):
-        return
-    lineage = _resolve_cloud_lineage(agent_dict, origin, data_source)
-    if lineage is None:
-        return
-    _add_lineage_resource_nodes(graph, lineage, agent_metadata)
-    _add_lineage_scope_edges(graph, lineage, agent_id)
-    principal = agent_metadata.get("cloud_principal")
-    if isinstance(principal, dict):
-        _add_cloud_principal_lineage(graph, lineage, principal, agent_id)
-
-
-def _add_snowflake_source_lanes(graph: UnifiedGraph, report_json: dict[str, Any], data_source: str) -> None:
-    """Stage account-local lanes before any same-name nodes can merge.
-
-    Single-account reports retain their existing node IDs. Mixed or missing
-    account scopes get separate local IDs; labels and FQNs are never account
-    equivalence evidence. Original persisted snapshots are not rewritten.
-    """
-    lane_keys = (
-        "snowflake_object_graph",
-        "snowflake_exfil_graph",
-        "snowflake_login_anomalies",
-        "snowflake_auth_posture",
-        "snowflake_services",
-        "snowflake_pipeline",
-        "snowflake_integrations",
-        "snowflake_external_data",
-        "snowflake_governance",
-        "snowflake_activity",
-    )
-    scopes: dict[tuple[str, str], dict[str, Any]] = {}
-    for key in lane_keys:
-        payload = report_json.get(key)
-        if not isinstance(payload, dict):
-            continue
-        organization = payload.get("organization") if key == "snowflake_services" else None
-        # Organization collection has its own status; retain that independent
-        # evidence even when the containing services inventory is unavailable.
-        organization_ok = isinstance(organization, dict) and organization.get("status") == "ok"
-        if payload.get("status") != "ok" and not organization_ok:
-            continue
-        account = _clean_graph_part(payload.get("account"))
-        scope = ("account", account) if account else ("source", key)
-        scopes.setdefault(scope, {})[key] = payload
-
-    if not scopes:
-        return
-    from contextlib import nullcontext
-    from copy import deepcopy
-
-    from agent_bom.graph.store_backed import StoreBackedUnifiedGraph, open_store_backed_unified_graph
-
-    store_backed = isinstance(graph, StoreBackedUnifiedGraph)
-    for scope, lanes in scopes.items():
-        stage_context = (
-            open_store_backed_unified_graph(scan_id=graph.scan_id, tenant_id=graph.tenant_id, created_at=graph.created_at, backend="sqlite")
-            if store_backed
-            else nullcontext(UnifiedGraph(scan_id=graph.scan_id, tenant_id=graph.tenant_id, created_at=graph.created_at))
-        )
-        with stage_context as staged:
-            _project_snowflake_lanes(staged, lanes, data_source)
-            remap: dict[str, str] = {}
-            account = scope[1] if scope[0] == "account" else ""
-            for staged_node in staged.nodes.values():
-                # Store-backed cached identities must retain their original key.
-                # Clone only the current output node, never the whole graph.
-                node = deepcopy(staged_node) if store_backed else staged_node
-                original_id = node.id
-                provider = _clean_graph_part(node.attributes.get("cloud_provider") or node.dimensions.cloud_provider)
-                account_local = provider == "snowflake" and _needs_account_scope(node, account)
-                if account_local:
-                    node.attributes["snowflake_local_id"] = original_id
-                    node.attributes["snowflake_scope_version"] = "account-lanes.v1"
-                    if account:
-                        node.attributes["account_id"] = account
-                    existing = graph.nodes.get(original_id)
-                    collides = existing is not None and (not account or _clean_graph_part(existing.attributes.get("account_id")) != account)
-                    if len(scopes) > 1 or collides:
-                        # Content framing and SHA-256 preserve case and separators;
-                        # stable_node_id lowercases its inputs and is unsuitable for
-                        # quoted Snowflake identifiers or unproven account aliases.
-                        key = json.dumps([*scope, original_id], separators=(",", ":"))
-                        suffix = hashlib.sha256(key.encode()).hexdigest()
-                        node.id = f"{node.entity_type.value}:snowflake:scoped:{suffix}"
-                        node.attributes["legacy_graph_id"] = original_id
-                if store_backed:
-                    # Persist the mapping in the private staging workspace so
-                    # a large source does not retain an O(nodes) remap in RAM.
-                    staged_node.attributes["_snowflake_projection_id"] = node.id
-                else:
-                    remap[original_id] = node.id
-                graph.add_node(node)
-            for edge in staged.edges:
-                if store_backed:
-                    source = staged.nodes[edge.source].attributes["_snowflake_projection_id"]
-                    target = staged.nodes[edge.target].attributes["_snowflake_projection_id"]
-                else:
-                    source = remap[edge.source]
-                    target = remap[edge.target]
-                graph.add_edge(edge.with_endpoints(source, target))
-            graph.analysis_status.update(staged.analysis_status)
-
-
-def _project_snowflake_lanes(graph: UnifiedGraph, report_json: dict[str, Any], data_source: str) -> None:
-    """Project lanes sharing one explicitly recorded account (or one unknown source)."""
-    _add_snowflake_object_graph(graph, report_json.get("snowflake_object_graph"), data_source)
-    _add_snowflake_exfil(graph, report_json.get("snowflake_exfil_graph"), data_source)
-    _add_snowflake_identity(
-        graph,
-        report_json.get("snowflake_login_anomalies"),
-        report_json.get("snowflake_auth_posture"),
-        data_source,
-    )
-    _add_snowflake_services(graph, report_json.get("snowflake_services"), data_source)
-    _sf_services_payload = report_json.get("snowflake_services")
-    _add_snowflake_organization(
-        graph,
-        _sf_services_payload.get("organization") if isinstance(_sf_services_payload, dict) else None,
-        data_source,
-    )
-    _add_snowflake_pipeline(graph, report_json.get("snowflake_pipeline"), data_source)
-    _add_snowflake_integrations(graph, report_json.get("snowflake_integrations"), data_source)
-    _add_snowflake_external_data(graph, report_json.get("snowflake_external_data"), data_source)
-    _add_snowflake_governance(graph, report_json.get("snowflake_governance"), data_source)
-    _add_snowflake_activity(graph, report_json.get("snowflake_activity"), data_source)
-
-
-def _add_cloud_org_architecture_findings(graph: UnifiedGraph, report_json: Mapping[str, Any], data_source: str) -> None:
-    """Promote org-architecture findings (single-account / flat hierarchy) to MISCONFIGURATION nodes.
-
-    Reads ``aws_organization.findings`` and nested ``cloud_inventory[].gcp_organization.findings``.
-    Works even when status is ``not_in_org`` (hierarchy builder no-ops) so the architecture
-    verdict still lands on the graph. Does not invent CIS tags.
-    """
-    payloads: list[tuple[str, dict[str, Any]]] = []
-    aws_org = report_json.get("aws_organization")
-    if isinstance(aws_org, dict):
-        payloads.append(("aws", aws_org))
-
-    inventory = report_json.get("cloud_inventory")
-    inv_list = inventory if isinstance(inventory, list) else ([inventory] if isinstance(inventory, dict) else [])
-    for entry in inv_list:
-        if not isinstance(entry, dict):
-            continue
-        gcp_org = entry.get("gcp_organization")
-        if isinstance(gcp_org, dict):
-            payloads.append(("gcp", gcp_org))
-
-    for provider, payload in payloads:
-        findings = payload.get("findings")
-        if not isinstance(findings, list):
-            continue
-        org_id = _clean_graph_part(payload.get("org_id"))
-        if provider == "aws":
-            target_id = f"org:aws:{org_id}" if org_id else "org:aws:standalone"
-            target_label = f"AWS org: {org_id or 'standalone account'}"
-        else:
-            target_id = f"org:gcp:{org_id}" if org_id else "org:gcp:standalone"
-            target_label = f"GCP org: {org_id or 'standalone project'}"
-
-        # Ensure a target ORG node exists even for not_in_org (hierarchy layer skipped).
-        if target_id not in graph.nodes:
-            arch = payload.get("architecture") if isinstance(payload.get("architecture"), dict) else {}
-            graph.add_node(
-                UnifiedNode(
-                    id=target_id,
-                    entity_type=EntityType.ORG,
-                    label=target_label,
-                    attributes={
-                        "org_id": org_id,
-                        "cloud_provider": provider,
-                        "status": _clean_graph_part(payload.get("status")),
-                        **({"architecture": arch} if arch else {}),
-                    },
-                    data_sources=sorted({data_source, f"{provider}-organizations"} - {""}),
-                    dimensions=NodeDimensions(cloud_provider=provider, surface="identity"),
-                )
-            )
-
-        for raw in findings:
-            if not isinstance(raw, dict):
-                continue
-            check_id = _clean_graph_part(raw.get("check_id")) or _clean_graph_part(raw.get("title"))
-            if not check_id:
-                continue
-            misconfig_id = f"misconfig:cloud-org:{provider}:{check_id}"
-            if misconfig_id in graph.nodes:
-                continue
-            graph.add_node(
-                UnifiedNode(
-                    id=misconfig_id,
-                    entity_type=EntityType.MISCONFIGURATION,
-                    label=_clean_graph_part(raw.get("title")) or check_id,
-                    severity=str(raw.get("severity") or "medium").lower(),
-                    attributes={
-                        "check_id": check_id,
-                        "category": _clean_graph_part(raw.get("category")) or "estate_architecture",
-                        "evidence": _clean_graph_part(raw.get("detail")),
-                        "cloud_provider": provider,
-                        "account_count": raw.get("account_count"),
-                        "hierarchy_depth": raw.get("hierarchy_depth"),
-                    },
-                    compliance_tags=[f"CLOUD-ORG-{check_id}"],
-                    data_sources=sorted({data_source, f"{provider}-organizations"} - {""}),
-                    dimensions=NodeDimensions(cloud_provider=provider),
-                )
-            )
-            _add_rel_edge(
-                graph, misconfig_id, target_id, RelationshipType.AFFECTS, edge_evidence(f"{provider}-organizations", "static_scan")
-            )
-
-
-def _add_aws_organization(graph: UnifiedGraph, payload: Any, data_source: str) -> None:
-    """Promote the AWS Organization (org → OUs → accounts → SCPs) into the graph.
-
-    The multi-account estate as a navigable ``CONTAINS`` hierarchy: org → OU →
-    account, with SCPs ``GOVERNS``-linked to the OUs/accounts they bound. Account
-    nodes use the same ``account:aws:<id>`` id a per-account scan emits, so the
-    org structure and any inventoried account graph stitch together. Scales to
-    thousands of accounts. Never raises; non-ok payload is a no-op.
-    """
-    prepared = _prepare_cloud_payload(payload, data_source, "aws-organizations")
-    if prepared is None:
-        return
-    _, data_sources = prepared
-    org_id = _clean_graph_part(payload.get("org_id"))
-    org_node_id = f"org:aws:{org_id}" if org_id else "org:aws:organization"
-    graph.add_node(
-        UnifiedNode(
-            id=org_node_id,
-            entity_type=EntityType.ORG,
-            label=f"AWS org: {org_id or 'organization'}",
-            attributes={
-                "org_id": org_id,
-                "cloud_provider": "aws",
-                "master_account_id": _clean_graph_part(payload.get("master_account_id")),
-                "feature_set": _clean_graph_part(payload.get("feature_set")),
-                **({"architecture": payload.get("architecture")} if isinstance(payload.get("architecture"), dict) else {}),
-            },
-            data_sources=data_sources,
-            dimensions=NodeDimensions(cloud_provider="aws", surface="identity"),
-        )
-    )
-
-    def _ou_node_id(ou_id: str) -> str:
-        return f"org:aws:ou:{ou_id}"
-
-    for ou in payload.get("organizational_units", []) or []:
-        if not isinstance(ou, dict):
-            continue
-        ou_id = _clean_graph_part(ou.get("id"))
-        if not ou_id:
-            continue
-        node_id = _ou_node_id(ou_id)
-        graph.add_node(
-            UnifiedNode(
-                id=node_id,
-                entity_type=EntityType.ORG,
-                label=f"{'root' if ou.get('is_root') else 'OU'}: {_clean_graph_part(ou.get('name')) or ou_id}",
-                attributes={"ou_id": ou_id, "is_root": bool(ou.get("is_root")), "cloud_provider": "aws"},
-                data_sources=data_sources,
-                dimensions=NodeDimensions(cloud_provider="aws", surface="identity"),
-            )
-        )
-        parent = _clean_graph_part(ou.get("parent_id"))
-        parent_node = _ou_node_id(parent) if parent else org_node_id
-        _add_rel_edge(graph, parent_node, node_id, RelationshipType.CONTAINS, {"source": "aws-organizations"})
-
-    for acct in payload.get("accounts", []) or []:
-        if not isinstance(acct, dict):
-            continue
-        acct_id = _clean_graph_part(acct.get("id"))
-        if not acct_id:
-            continue
-        acct_node = _add_identity_node(
-            graph,
-            EntityType.ACCOUNT,
-            acct_id,
-            "aws",
-            data_sources,
-            label=f"account: {_clean_graph_part(acct.get('name')) or acct_id}",
-            account_id=acct_id,
-            cloud_provider="aws",
-            account_name=_clean_graph_part(acct.get("name")),
-            account_status=_clean_graph_part(acct.get("status")),
-        )
-        ou_id = _clean_graph_part(acct.get("ou_id"))
-        parent_node = _ou_node_id(ou_id) if ou_id else org_node_id
-        _add_rel_edge(graph, parent_node, acct_node, RelationshipType.CONTAINS, {"source": "aws-organizations"})
-
-    for scp in payload.get("scps", []) or []:
-        if not isinstance(scp, dict):
-            continue
-        scp_id = _clean_graph_part(scp.get("id"))
-        if not scp_id:
-            continue
-        scp_node = f"policy:aws:scp:{scp_id}"
-        graph.add_node(
-            UnifiedNode(
-                id=scp_node,
-                entity_type=EntityType.POLICY,
-                label=f"SCP: {_clean_graph_part(scp.get('name')) or scp_id}",
-                attributes={"scp_id": scp_id, "aws_managed": bool(scp.get("aws_managed")), "cloud_provider": "aws"},
-                data_sources=data_sources,
-                dimensions=NodeDimensions(cloud_provider="aws", surface="identity"),
-            )
-        )
-        _add_rel_edge(graph, org_node_id, scp_node, RelationshipType.OWNS, {"source": "aws-organizations"})
-        for target in scp.get("targets", []) or []:
-            target = _clean_graph_part(target)
-            if not target:
-                continue
-            # A target is an OU id, the root id, or a 12-digit account id.
-            tgt_node = _identity_node_id(EntityType.ACCOUNT, "aws", target) if target.isdigit() else _ou_node_id(target)
-            if tgt_node in graph.nodes:
-                _add_rel_edge(graph, scp_node, tgt_node, RelationshipType.GOVERNS, {"source": "aws-organizations"})
-
-
-def _add_gcp_organization(
-    graph: UnifiedGraph,
-    payload: Any,
-    data_source: str,
-    *,
-    allow_heuristic_authorization: bool = True,
-) -> None:
-    """Promote the GCP Organization (org → folders → projects) into the graph.
-
-    The GCP analogue of :func:`_add_aws_organization` and the Azure
-    management-group hierarchy: the estate as a navigable ``CONTAINS`` roll-up
-    backbone — org → folder → project(ACCOUNT) → resources — with org/folder IAM
-    bindings attached as ``HAS_PERMISSION`` edges (privilege classified, inherited
-    DOWN to every child project) and org-policy constraints as ``GOVERNS`` edges.
-
-    Project nodes use the same ``account:gcp:<project_id>`` id a per-project
-    inventory emits, so the org structure and any inventoried project graph stitch
-    together. Scales to the org/folder project budget. Never raises; a non-ok
-    payload is a no-op.
-    """
-    if not isinstance(payload, dict) or payload.get("status") != "ok":
-        return
-    data_sources = sorted({data_source, "gcp-organizations"} - {""})
-    org_id = _clean_graph_part(payload.get("org_id"))
-    org_node_id = f"org:gcp:{org_id}" if org_id else "org:gcp:organization"
-    graph.add_node(
-        UnifiedNode(
-            id=org_node_id,
-            entity_type=EntityType.ORG,
-            label=f"GCP org: {_clean_graph_part(payload.get('org_name')) or org_id or 'organization'}",
-            attributes={
-                "org_id": org_id,
-                "org_name": _clean_graph_part(payload.get("org_name")),
-                "cloud_provider": "gcp",
-            },
-            data_sources=data_sources,
-            dimensions=NodeDimensions(cloud_provider="gcp", surface="identity"),
-        )
-    )
-
-    def _folder_node_id(folder_id: str) -> str:
-        # folder_id is the resource name "folders/123"; keep it stable + readable.
-        return f"org:gcp:folder:{folder_id.rsplit('/', 1)[-1]}"
-
-    # Folders (the FOLDER tier of the CONTAINS tree). A folder's parent is the org
-    # or another folder; map both to their node ids.
-    folder_ids = {_clean_graph_part(f.get("id")) for f in (payload.get("folders") or []) if isinstance(f, dict)}
-    for folder in payload.get("folders", []) or []:
-        if not isinstance(folder, dict):
-            continue
-        folder_id = _clean_graph_part(folder.get("id"))
-        if not folder_id:
-            continue
-        node_id = _folder_node_id(folder_id)
-        graph.add_node(
-            UnifiedNode(
-                id=node_id,
-                entity_type=EntityType.ORG,
-                label=f"folder: {_clean_graph_part(folder.get('name')) or folder_id}",
-                attributes={"folder_id": folder_id, "cloud_provider": "gcp"},
-                data_sources=data_sources,
-                dimensions=NodeDimensions(cloud_provider="gcp", surface="identity"),
-            )
-        )
-        parent = _clean_graph_part(folder.get("parent_id"))
-        parent_node = _folder_node_id(parent) if parent in folder_ids else org_node_id
-        _add_rel_edge(graph, parent_node, node_id, RelationshipType.CONTAINS, {"source": "gcp-organizations"})
-
-    # Projects (the ACCOUNT tier). Same node id a per-project scan emits so the
-    # org tree and inventoried project graphs stitch together.
-    for project in payload.get("projects", []) or []:
-        if not isinstance(project, dict):
-            continue
-        project_id = _clean_graph_part(project.get("id"))
-        if not project_id:
-            continue
-        project_node = _add_identity_node(
-            graph,
-            EntityType.ACCOUNT,
-            project_id,
-            "gcp",
-            data_sources,
-            label=f"project: {_clean_graph_part(project.get('name')) or project_id}",
-            account_id=project_id,
-            cloud_provider="gcp",
-            account_name=_clean_graph_part(project.get("name")),
-            project_number=_clean_graph_part(project.get("number")),
-        )
-        parent = _clean_graph_part(project.get("parent_id"))
-        parent_node = _folder_node_id(parent) if parent in folder_ids else org_node_id
-        _add_rel_edge(graph, parent_node, project_node, RelationshipType.CONTAINS, {"source": "gcp-organizations"})
-
-    # Org/folder IAM bindings → HAS_PERMISSION from each member to the scope node
-    # (these grant DOWN to every child project — inherited permissions).
-    _GCP_PRINCIPAL_ENTITY = {  # noqa: N806 — local constant lookup
-        "serviceaccount": EntityType.SERVICE_ACCOUNT,
-        "user": EntityType.USER,
-        "group": EntityType.USER,
-    }
-    for binding in (payload.get("iam_bindings", []) or []) if allow_heuristic_authorization else ():
-        if not isinstance(binding, dict):
-            continue
-        role = _clean_graph_part(binding.get("role"))
-        scope_id = _clean_graph_part(binding.get("scope_id"))
-        if not role or not scope_id:
-            continue
-        scope_level = str(binding.get("scope_level", "") or "").lower()
-        scope_node = org_node_id if scope_level == "organization" else _folder_node_id(scope_id)
-        if scope_node not in graph.nodes:
-            continue
-        privilege = str(binding.get("privilege_level", "") or "unknown")
-        for member in binding.get("members", []) or []:
-            member = str(member or "").strip()
-            if not member:
-                continue
-            prefix, _, identity = member.partition(":")
-            identity = (identity or member).strip().lower()
-            if not identity:
-                continue
-            entity = _GCP_PRINCIPAL_ENTITY.get(prefix.strip().lower().replace("-", "").replace("_", ""), EntityType.USER)
-            principal_node = _add_identity_node(
-                graph,
-                entity,
-                identity,
-                "gcp",
-                data_sources,
-                label=f"{prefix or 'principal'}: {identity}",
-                principal_id=identity,
-                cloud_provider="gcp",
-            )
-            graph.add_edge(
-                UnifiedEdge(
-                    source=principal_node,
-                    target=scope_node,
-                    relationship=RelationshipType.HAS_PERMISSION,
-                    evidence={
-                        "source": "gcp-organizations",
-                        "role": role,
-                        "scope": scope_id,
-                        "scope_level": scope_level,
-                        "privilege_level": privilege,
-                        "privileged": privilege == "admin",
-                        "inherited": True,
-                    },
-                )
-            )
-
-    # Org-policy constraints → GOVERNS the scope they apply to (the AWS-SCP analogue).
-    for policy in payload.get("org_policies", []) or []:
-        if not isinstance(policy, dict):
-            continue
-        constraint = _clean_graph_part(policy.get("constraint")) or _clean_graph_part(policy.get("id"))
-        scope_id = _clean_graph_part(policy.get("scope_id"))
-        if not constraint or not scope_id:
-            continue
-        policy_node = f"policy:gcp:orgpolicy:{constraint}"
-        graph.add_node(
-            UnifiedNode(
-                id=policy_node,
-                entity_type=EntityType.POLICY,
-                label=f"org policy: {constraint}",
-                attributes={"constraint": constraint, "cloud_provider": "gcp"},
-                data_sources=data_sources,
-                dimensions=NodeDimensions(cloud_provider="gcp", surface="identity"),
-            )
-        )
-        _add_rel_edge(graph, org_node_id, policy_node, RelationshipType.OWNS, {"source": "gcp-organizations"})
-        scope_is_org = scope_id.startswith("organizations/")
-        scope_node = org_node_id if scope_is_org else _folder_node_id(scope_id)
-        if scope_node in graph.nodes:
-            _add_rel_edge(graph, policy_node, scope_node, RelationshipType.GOVERNS, {"source": "gcp-organizations"})
 
 
 def _add_cloud_inventory(graph: UnifiedGraph, inventory: Any, data_source: str) -> None:
@@ -1199,280 +705,6 @@ def _add_cloud_inventory(graph: UnifiedGraph, inventory: Any, data_source: str) 
                 data_sources=data_sources,
                 allow_heuristic_authorization=allow_heuristic_authorization,
             )
-
-
-def _add_normalized_cloud_resources(
-    graph: UnifiedGraph,
-    inventory: dict[str, Any],
-    *,
-    provider: str,
-    account_id: str,
-    account_node_id: str,
-    region: str,
-    data_sources: list[str],
-    resource_ids: list[str],
-) -> None:
-    """Promote normalized data / secret / registry / network resources into nodes.
-
-    Covers the resource classes the AWS-shaped loops above do not: secret stores
-    (Key Vault), container registries, databases, virtual networks, public IPs,
-    and load balancers. Each becomes a ``CLOUD_RESOURCE`` owned by the account so
-    it shows up in the environment graph and is reachable by blast-radius. Data
-    stores and secret stores carry a data-store keyword in their label so the
-    CNAPP/DSPM overlay can attach its companion; resources with a public IP or an
-    internet-facing frontend are flagged ``internet_exposed`` for exposure
-    analysis. Identity / EXPOSED_TO edges between these and compute/identity nodes
-    are added by the overlays once richer relations are available.
-    """
-    from agent_bom.cloud.resource_model import CloudResourceType, normalize_cloud_inventory
-
-    # normalized type -> (label keyword, graph surface, signals a data store)
-    type_meta = {
-        CloudResourceType.CONTAINER_CLUSTER: ("kubernetes cluster", "container", False),
-        CloudResourceType.SECRET_STORE: ("key vault", "secret-store", True),
-        CloudResourceType.CONTAINER_REGISTRY: ("container registry", "registry", False),
-        CloudResourceType.DATABASE: ("database", "database", True),
-        CloudResourceType.VIRTUAL_NETWORK: ("virtual network", "network", False),
-        CloudResourceType.PUBLIC_IP: ("public ip", "network", False),
-        CloudResourceType.LOAD_BALANCER: ("load balancer", "network", False),
-        CloudResourceType.MESSAGING: ("messaging", "messaging", False),
-        CloudResourceType.CACHE: ("redis cache", "cache", False),
-        CloudResourceType.BLOCK_STORAGE: ("managed disk", "storage", True),
-        CloudResourceType.SERVERLESS_FUNCTION: ("app service", "compute", False),
-    }
-    pip_node_by_arm_id: dict[str, str] = {}
-    load_balancer_nodes: list[tuple[str, dict[str, Any]]] = []
-    for res in normalize_cloud_inventory(inventory):
-        meta = type_meta.get(res.resource_type)
-        if meta is None:
-            continue  # storage / compute / identity handled by the dedicated loops
-        label_keyword, surface, is_data_store = meta
-        name = _clean_graph_part(res.name)
-        if not name:
-            continue
-        node_id = cloud_resource_node_id(provider, res.resource_type.value, res.raw or {}, res.account or account_id, region)
-        raw = res.raw or {}
-        exposure = _recorded_exposure_attributes(raw, "internet_facing")
-        if res.resource_type is CloudResourceType.PUBLIC_IP and raw.get("ip_address"):
-            exposure["internet_exposed"] = True
-            exposure["internet_exposure_evidence"]["public_ip_address"] = sanitize_text(str(raw["ip_address"]))
-        if res.resource_type is CloudResourceType.PUBLIC_IP and res.resource_id:
-            pip_node_by_arm_id[res.resource_id] = node_id
-        if res.resource_type is CloudResourceType.LOAD_BALANCER:
-            load_balancer_nodes.append((node_id, raw))
-        resource_tags = dict(res.tags) if getattr(res, "tags", None) else {}
-        resource_env = _environment_from_tags(resource_tags) or _resource_environment(raw)
-        graph.add_node(
-            UnifiedNode(
-                id=node_id,
-                entity_type=EntityType.CLOUD_RESOURCE,
-                label=f"{label_keyword}: {name}",
-                attributes={
-                    "resource_id": res.resource_id or name,
-                    "resource_name": name,
-                    "resource_type": res.resource_type.value,
-                    "resource_kind": res.native_type,
-                    "cloud_provider": provider,
-                    "location": res.region or region,
-                    **exposure,
-                    "is_data_store": is_data_store,
-                    "tags": resource_tags,
-                    "account_id": account_id,
-                    "environment": resource_env,
-                },
-                data_sources=data_sources,
-                dimensions=NodeDimensions(cloud_provider=provider, surface=surface, environment=resource_env),
-            )
-        )
-        resource_ids.append(node_id)
-        if account_node_id:
-            _add_account_resource_hierarchy(
-                graph,
-                account_node_id,
-                node_id,
-                evidence={"source": "cloud-inventory"},
-            )
-
-    # ── Internet exposure path: public IP → load balancer it fronts ──
-    # The public IP is the internet entry point; the load balancer (and its
-    # backends) sit behind it. EXPOSED_TO from the IP to the LB lets blast-radius
-    # and attack-path analysis start at the internet edge.
-    for lb_node_id, lb_raw in load_balancer_nodes:
-        for pip_arm_id in lb_raw.get("public_ip_ids", []) or []:
-            pip_node_id = pip_node_by_arm_id.get(pip_arm_id)
-            if pip_node_id:
-                graph.add_edge(
-                    UnifiedEdge(
-                        source=pip_node_id,
-                        target=lb_node_id,
-                        relationship=RelationshipType.EXPOSED_TO,
-                        weight=6.0,
-                        evidence={"source": "cloud-inventory", "reason": "public_ip_frontend"},
-                    )
-                )
-
-
-def _add_network_edge_inventory(
-    graph: UnifiedGraph,
-    inventory: dict[str, Any],
-    *,
-    provider: str,
-    account_id: str,
-    account_node_id: str,
-    region: str,
-    data_sources: list[str],
-    resource_ids: list[str],
-    sg_node_by_id: dict[str, str],
-    instance_node_by_id: dict[str, str],
-) -> None:
-    """Promote network-edge inventory into nodes + exposure-relevant edges.
-
-    Emits, from the live inventory payload (all three clouds):
-
-    - **API gateways** (AWS API Gateway, GCP API Gateway/Apigee, Azure API
-      Management) → ``API_GATEWAY`` nodes in the API_GATEWAY semantic layer.
-    - **WAF / Cloud Armor** web ACLs → ``CLOUD_RESOURCE`` nodes.
-    - A ``PROTECTS`` edge from each WAF / API gateway to the resource it fronts,
-      so the CNAPP overlay can refine the fronted resource's exposure verdict.
-    - **Subnets** → ``CLOUD_RESOURCE``; a public subnet is ``internet_exposed``.
-    - **ENIs / NICs** → ``CLOUD_RESOURCE`` wired ``PART_OF`` their instance,
-      subnet, and security group(s) so the network path is traversable; an ENI
-      carrying a public IP marks its instance internet-reachable and emits
-      ``EXPOSED_TO`` the instance.
-    - **Elastic/public IPs** → ``EXPOSED_TO`` the attached instance when known.
-    - **Internet-facing API gateways** → ``EXPOSED_TO`` protected frontends.
-    - NAT/internet gateways, route tables, network ACLs, VPC endpoints, load
-      balancers, and IP addresses → ``CLOUD_RESOURCE`` inventory nodes.
-
-    Never raises into the builder; missing/empty collections are a no-op.
-    """
-    ctx = _NetworkInventoryContext(
-        graph=graph,
-        provider=provider,
-        account_id=account_id,
-        account_node_id=account_node_id,
-        region=region,
-        data_sources=data_sources,
-        resource_ids=resource_ids,
-        sg_node_by_id=sg_node_by_id,
-        instance_node_by_id=instance_node_by_id,
-    )
-    ctx.index_resource_refs()
-    for stage in NETWORK_INVENTORY_STAGES:
-        stage(ctx, inventory)
-    _wire_network_entry_exposure_paths(
-        graph,
-        inventory,
-        provider=provider,
-        subnet_node_by_id=ctx.subnet_node_by_id,
-        instance_node_by_id=instance_node_by_id,
-    )
-
-
-def _wire_network_entry_exposure_paths(
-    graph: UnifiedGraph,
-    inventory: dict[str, Any],
-    *,
-    provider: str,
-    subnet_node_by_id: dict[str, str],
-    instance_node_by_id: dict[str, str],
-) -> None:
-    """Link IGW / public subnet / permissive NACL nodes to reachable instances."""
-    public_subnet_ids = {
-        sn_id
-        for sn in inventory.get("subnets", []) or []
-        if isinstance(sn, dict)
-        for sn_id in [_clean_graph_part(sn.get("id"))]
-        if sn_id and coerce_truthy(sn.get("is_public"))
-    }
-    igw_by_vpc: dict[str, str] = {}
-    for igw in inventory.get("internet_gateways", []) or []:
-        if not isinstance(igw, dict):
-            continue
-        kind = _clean_graph_part(igw.get("kind")) or "internet-gateway"
-        if kind != "internet-gateway":
-            continue
-        ident = _clean_graph_part(igw.get("id"))
-        vpc_id = _clean_graph_part(igw.get("vpc_id"))
-        if not ident or not vpc_id:
-            continue
-        node_id = f"cloud_resource:{provider}:network:internet_gateway:{ident}"
-        if node_id in graph.nodes:
-            graph.nodes[node_id].attributes["internet_exposed"] = True
-            igw_by_vpc[vpc_id] = node_id
-
-    for vpc_id, igw_node in igw_by_vpc.items():
-        for sn in inventory.get("subnets", []) or []:
-            if not isinstance(sn, dict):
-                continue
-            sn_id = _clean_graph_part(sn.get("id"))
-            if sn_id not in public_subnet_ids or _clean_graph_part(sn.get("vpc_id")) != vpc_id:
-                continue
-            sn_node = subnet_node_by_id.get(sn_id)
-            if sn_node:
-                _add_exposure_path_edge(
-                    graph,
-                    source=igw_node,
-                    target=sn_node,
-                    reason="internet_gateway_public_subnet",
-                )
-
-    for sn_id in public_subnet_ids:
-        sn_node = subnet_node_by_id.get(sn_id)
-        if not sn_node:
-            continue
-        for instance in inventory.get("instances", []) or []:
-            if not isinstance(instance, dict):
-                continue
-            if _clean_graph_part(instance.get("subnet_id")) != sn_id:
-                continue
-            inst_node = instance_node_by_id.get(_clean_graph_part(instance.get("instance_id")))
-            if inst_node:
-                _add_exposure_path_edge(
-                    graph,
-                    source=sn_node,
-                    target=inst_node,
-                    reason="public_subnet_instance",
-                )
-
-    for nacl in inventory.get("network_acls", []) or []:
-        if not isinstance(nacl, dict) or not coerce_truthy(nacl.get("internet_exposed")):
-            continue
-        ident = _clean_graph_part(nacl.get("id"))
-        if not ident:
-            continue
-        nacl_node = f"cloud_resource:{provider}:network:network_acl:{ident}"
-        if nacl_node not in graph.nodes:
-            continue
-        for sn_id in nacl.get("subnet_ids", []) or []:
-            sn_clean = _clean_graph_part(sn_id)
-            # A permissive NACL only implies internet reachability when the
-            # subnet is actually public (has an IGW route). A permissive NACL on
-            # a private subnet is not internet exposure — skip it to avoid a
-            # false EXPOSED_TO edge. Mirrors the IGW branch's public gate above.
-            if sn_clean not in public_subnet_ids:
-                continue
-            sn_node = subnet_node_by_id.get(sn_clean)
-            if sn_node:
-                _add_exposure_path_edge(
-                    graph,
-                    source=nacl_node,
-                    target=sn_node,
-                    reason="permissive_network_acl",
-                )
-            for instance in inventory.get("instances", []) or []:
-                if not isinstance(instance, dict):
-                    continue
-                if _clean_graph_part(instance.get("subnet_id")) != sn_clean:
-                    continue
-                inst_node = instance_node_by_id.get(_clean_graph_part(instance.get("instance_id")))
-                if inst_node:
-                    _add_exposure_path_edge(
-                        graph,
-                        source=nacl_node,
-                        target=inst_node,
-                        reason="permissive_network_acl_instance",
-                    )
 
 
 def _account_scoped_principal(principal: dict[str, Any], principal_id: str, account_node_id: str) -> str:
