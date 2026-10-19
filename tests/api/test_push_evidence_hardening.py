@@ -152,7 +152,8 @@ def test_genuine_empty_evidence_retains_complete_coverage():
     assert report["finding_summary"]["total"] == 0
 
 
-def test_postgres_push_redaction_audit_and_failed_write(monkeypatch):
+@pytest.mark.parametrize("tenant_kind", ["random", "high_entropy"])
+def test_postgres_push_redaction_audit_and_failed_write(monkeypatch, tenant_kind):
     import os
     from uuid import uuid4
 
@@ -166,7 +167,10 @@ def test_postgres_push_redaction_audit_and_failed_write(monkeypatch):
     from agent_bom.api.server import configure_api
     from tests.auth_helpers import PROXY_SECRET
 
-    tenant = "push-hardening-" + uuid4().hex
+    # Keep the scope unique across runs while deterministically exercising the
+    # secret detector's entropy threshold, which some opaque tenant IDs cross.
+    prefix = "push-hardening-" if tenant_kind == "random" else "push-hardening-ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-"
+    tenant = prefix + uuid4().hex
     monkeypatch.setenv("AGENT_BOM_TRUST_PROXY_AUTH", "1")
     monkeypatch.setenv("AGENT_BOM_TRUST_PROXY_AUTH_SECRET", PROXY_SECRET)
     configure_api(api_key=None)

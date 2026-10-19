@@ -981,10 +981,14 @@ def log_action(action: str, actor: str = "system", resource: str = "", **details
     from agent_bom.evidence import EvidenceTier, redact_for_persistence
 
     raw_details = dict(details)
+    # Tenant scope is caller-resolved routing metadata, not redactable payload.
+    # Entropy redaction (or metadata truncation) must not collapse distinct
+    # tenants into a shared audit chain or make their records inaccessible.
+    tenant_id = _default_tenant_id(raw_details)
+    raw_details.pop("tenant_id", None)
     audit_details = redact_for_persistence(raw_details, EvidenceTier.SAFE_TO_STORE)
-    if not audit_details.get("tenant_id"):
-        audit_details["tenant_id"] = _default_tenant_id(raw_details)
     audit_details = sanitize_audit_details(audit_details)
+    audit_details["tenant_id"] = tenant_id
     entry = AuditEntry(
         action=action,
         actor=_safe_audit_label(actor, key="actor_id", default="system"),
