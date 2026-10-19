@@ -17,9 +17,11 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
+from agent_bom.api import stores
 from agent_bom.api.graph_store import SQLiteGraphStore
+from agent_bom.api.models import JobStatus, ScanJob, ScanRequest
 from agent_bom.api.server import app
-from agent_bom.api.stores import set_graph_store
+from agent_bom.api.store import InMemoryJobStore
 from agent_bom.graph import UnifiedEdge, UnifiedGraph, UnifiedNode
 from agent_bom.graph.types import EntityType, RelationshipType
 from tests.test_mcp_graph_agent_parity import _api_env, _Estate, demo, demo_dir  # noqa: F401
@@ -37,19 +39,39 @@ def _chain(length: int) -> UnifiedGraph:
     return graph
 
 
+@pytest.fixture(params=[False, True], ids=["empty_prior_jobs", "retained_prior_jobs"])
+def prior_job_store(request, monkeypatch):
+    """Exercise the graph contract after either empty or populated app state."""
+    jobs = InMemoryJobStore()
+    if request.param:
+        jobs.put(
+            ScanJob(
+                job_id="retained-job",
+                tenant_id="default",
+                request=ScanRequest(),
+                status=JobStatus.DONE,
+                created_at="2026-10-18T00:00:00+00:00",
+                completed_at="2026-10-18T00:00:00+00:00",
+                result={"scan_id": "retained-scan", "agents": [], "findings": []},
+            )
+        )
+    monkeypatch.setattr(stores, "_store", jobs)
+    return jobs
+
+
 @pytest.fixture
-def chain_client(tmp_path, monkeypatch):
+def chain_client(tmp_path, monkeypatch, prior_job_store):
     monkeypatch.setenv("AGENT_BOM_ALLOW_UNAUTHENTICATED_API", "1")
     monkeypatch.delenv("AGENT_BOM_API_KEY", raising=False)
     for key in ("MAX_DEPTH", "MAX_NODES", "MAX_EDGES", "TIMEOUT_MS"):
         monkeypatch.delenv(f"AGENT_BOM_GRAPH_QUERY_{key}", raising=False)
     store = SQLiteGraphStore(str(tmp_path / "graph.db"))
+    # Default graph reads resolve the graph/job-store pair. Retained jobs from
+    # another app must not project this chain into an unrelated current estate.
+    monkeypatch.setattr(stores, "_store", InMemoryJobStore())
+    monkeypatch.setattr(stores, "_graph_store", store)
     store.save_graph(_chain(9))
-    set_graph_store(store)
-    try:
-        yield TestClient(app)
-    finally:
-        set_graph_store(None)  # type: ignore[arg-type]
+    yield TestClient(app)
 
 
 def test_query_depth_within_the_published_ceiling_is_clamped_and_disclosed(chain_client) -> None:
