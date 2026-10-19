@@ -83,9 +83,9 @@ _READ_TOOL = MCPTool(name="read_file", description="read a file from disk")
 
 
 def _ui_catalog(name: str) -> dict[str, str]:
-    source = (_REPO_ROOT / "ui" / "lib" / "api.ts").read_text(encoding="utf-8")
+    source = (_REPO_ROOT / "ui" / "lib" / "api-catalogs.ts").read_text(encoding="utf-8")
     match = re.search(rf"export const {name}: Record<string, string> = \{{(.*?)\n\}};", source, re.S)
-    assert match, f"{name} not found in ui/lib/api.ts"
+    assert match, f"{name} not found in ui/lib/api-catalogs.ts"
     return dict(re.findall(r'^\s*"?([A-Za-z0-9.\-]+)"?:\s*"([^"]+)",\s*$', match.group(1), re.M))
 
 

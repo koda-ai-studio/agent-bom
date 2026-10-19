@@ -14,7 +14,7 @@ def _query_parameters(spec: dict, path: str) -> set[str]:
 
 def test_ui_jobs_and_compliance_clients_match_checked_in_openapi() -> None:
     spec = json.loads((ROOT / "docs/openapi/v1.json").read_text(encoding="utf-8"))
-    client = (ROOT / "ui/lib/api.ts").read_text(encoding="utf-8")
+    client = "\n".join((ROOT / f"ui/lib/api-{domain}.ts").read_text(encoding="utf-8") for domain in ("scans", "posture"))
 
     assert {"include_details", "limit", "offset", "q", "status"} <= _query_parameters(spec, "/v1/jobs")
     assert {"scan_id"} <= _query_parameters(spec, "/v1/compliance")
