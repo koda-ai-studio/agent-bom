@@ -14,6 +14,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 
 from agent_bom.compliance_coverage import TAG_MAPPED_FRAMEWORKS
+from agent_bom.compliance_tag_dedupe import drop_generic_duplicates
 from agent_bom.finding import LEGACY_CONTROL_FIELDS
 from agent_bom.models import BlastRadius
 
@@ -120,4 +121,4 @@ def framework_qualified_finding_tags(finding: object) -> list[str]:
             for value in values or []:
                 add(framework, value)
 
-    return sorted(tags)
+    return sorted(drop_generic_duplicates(tags))

@@ -33472,6 +33472,10 @@ export interface operations {
                 source_type?: string | null;
                 /** @description next_cursor from the previous page (replaces offset) */
                 cursor?: string | null;
+                /** @description Only paths through this node (replaced ids resolve to canonical) */
+                node_id?: string | null;
+                /** @description Only paths carrying this finding occurrence */
+                finding_id?: string | null;
             };
             header?: never;
             path?: never;

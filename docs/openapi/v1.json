@@ -61680,6 +61680,46 @@
               "description": "next_cursor from the previous page (replaces offset)",
               "title": "Cursor"
             }
+          },
+          {
+            "description": "Only paths through this node (replaced ids resolve to canonical)",
+            "in": "query",
+            "name": "node_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 512,
+                  "pattern": "^[^\\x00]*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only paths through this node (replaced ids resolve to canonical)",
+              "title": "Node Id"
+            }
+          },
+          {
+            "description": "Only paths carrying this finding occurrence",
+            "in": "query",
+            "name": "finding_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 512,
+                  "pattern": "^[^\\x00]*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only paths carrying this finding occurrence",
+              "title": "Finding Id"
+            }
           }
         ],
         "responses": {
