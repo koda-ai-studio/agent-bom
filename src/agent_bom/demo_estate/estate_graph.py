@@ -39,6 +39,7 @@ from agent_bom.demo_estate.estate_edges import ESTATE_DATA_SOURCE, add_estate_ed
 from agent_bom.demo_estate.estate_packages import project_estate_package_lineage
 from agent_bom.demo_estate.id_schemes import retired_estate_asset_ids
 from agent_bom.graph.container import AttackPath, UnifiedGraph
+from agent_bom.graph.container_kind import container_kind_attributes
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.finding_row_projection import finding_signal_attributes
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
@@ -270,6 +271,7 @@ def _asset_node(asset: EstateAsset, estate: EnterpriseEstate) -> UnifiedNode:
             "resource_id": asset.native_id,
             "resource_name": asset.display_name,
             "resource_type": asset.resource_type,
+            **container_kind_attributes({"resource_type": asset.resource_type}),
             "cloud_provider": asset.provider,
             "account_id": asset.account_scope,
             "account_scope": asset.account_scope,

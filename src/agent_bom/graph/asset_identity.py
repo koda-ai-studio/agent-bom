@@ -21,6 +21,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 
 from agent_bom.canonical_ids import snowflake_fqn
+from agent_bom.graph.container_kind import IMAGE_RESOURCE_TYPES
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.types import EntityType
 
@@ -46,7 +47,6 @@ _NATIVE_ID_KEYS = ("arn", "resource_arn", "instance_arn", "resource_id", "identi
 _INSTANCE_ID = re.compile(r"^i-[0-9a-f]{8,17}$")
 _DIGEST = re.compile(r"sha256:[0-9a-f]{64}")
 _GCP_PREFIXES = ("https://www.googleapis.com/compute/v1/", "https://compute.googleapis.com/compute/v1/", "//compute.googleapis.com/")
-_IMAGE_TYPES = frozenset({"container_image", "image", "ecr_image"})
 COMPUTE_RESOURCE_TYPES = frozenset({"instance", "virtual_machine", "vm", "compute_instance"})
 _COMPUTE_ID_MARKERS = (":instance/", "/virtualmachines/", "/instances/")
 _HOSTNAME_DENYLIST = frozenset({"localhost", "localhost.localdomain", "ip6-localhost", "host.docker.internal", "kubernetes.default.svc"})
@@ -77,7 +77,7 @@ def family_of(node: UnifiedNode) -> str:
 
 def _image_node(node: UnifiedNode) -> bool:
     kind = str(node.attributes.get("resource_type") or "").casefold()
-    return node.entity_type in (E.CONTAINER, E.CLOUD_RESOURCE) and kind in _IMAGE_TYPES
+    return node.entity_type in (E.CONTAINER, E.CLOUD_RESOURCE) and kind in IMAGE_RESOURCE_TYPES
 
 
 def _text(value: object) -> str:

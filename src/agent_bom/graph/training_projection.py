@@ -48,6 +48,7 @@ def project_serving_configs(graph: UnifiedGraph, serving_configs: list[dict[str,
                 attributes={
                     "container_image": container_image,
                     "inventory_role": "serving_configuration",
+                    "container_kind": "image",
                     "runtime_identity_proven": False,
                     "identity": {"basis": "source_observation", "aliases": [f"container:{container_image}"]},
                     "framework": serving_dict.get("framework", ""),

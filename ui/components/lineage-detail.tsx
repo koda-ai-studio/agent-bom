@@ -2,7 +2,7 @@
 
 import { AgentSourceMark } from "@/components/agent-source-mark";
 import { entitySource } from "@/lib/agent-source";
-import { entityIcon } from "@/lib/entity-icons";
+import { containerKindLabel, nodeGlyph } from "@/lib/graph-container-kind";
 import { graphRepositoryContext } from "@/lib/graph-repository-context";
 import { FolderGit2 } from "lucide-react";
 import { NODE_LABELS } from "@/lib/entity-labels";
@@ -99,9 +99,9 @@ export function LineageDetailPanel({
   footerSlot?: ReactNode;
 }) {
   const repository = graphRepositoryContext(data);
-  const Icon = repository ? FolderGit2 : entityIcon(data.nodeType);
+  const Icon = repository ? FolderGit2 : nodeGlyph(data.nodeType, data.attributes);
   const brand = entitySource(data);
-  const typeLabel = repository ? "Repository" : data.nodeType === "server" ? "MCP Server" : data.nodeType === "sharedServer" ? "Shared MCP Server" : NODE_LABELS[data.nodeType];
+  const typeLabel = repository ? "Repository" : data.nodeType === "server" ? "MCP Server" : data.nodeType === "sharedServer" ? "Shared MCP Server" : containerKindLabel(data.nodeType, data.attributes) ?? NODE_LABELS[data.nodeType];
   const osvUrl =
     data.nodeType === "vulnerability"
       ? getOsvVulnerabilityUrl(data.label)

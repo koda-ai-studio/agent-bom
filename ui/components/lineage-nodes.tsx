@@ -15,6 +15,8 @@ import { severityColor } from "@/lib/api";
 import type { ReachBreakdown } from "@/lib/effective-reach";
 import { NODE_COLOR_MAP } from "@/lib/graph-utils";
 import { nodeBadges } from "@/lib/graph-node-badges";
+import { canvasNodeLabel } from "@/lib/graph-occurrence-role";
+import { CONTAINER_KIND_LABELS, containerKind, nodeGlyph } from "@/lib/graph-container-kind";
 import {
   ENTITY_ICONS,
   entityIcon,
@@ -186,7 +188,8 @@ function NodeCard({
     return () => { observer.disconnect(); cancelAnimationFrame(frame); };
   }, [nodeId, updateNodeInternals]);
   const repository = graphRepositoryContext(data);
-  const Icon = repository ? FolderGit2 : entityIcon(data.nodeType);
+  const Icon = repository ? FolderGit2 : nodeGlyph(data.nodeType, data.attributes);
+  const kind = containerKind(data.nodeType, data.attributes);
   const provider = repository?.source ?? entitySource(data);
   const displayTitle = typeof data.attributes?.display_title === "string" && data.attributes.display_title.trim() ? data.attributes.display_title : data.label;
   const isRollupContainer = data.attributes?.rollup_is_container === true;
@@ -216,7 +219,7 @@ function NodeCard({
       {/* The vendor mark already names the provider; a second text chip repeats it. */}
       <NodeBadgeRow badges={provider ? badges.filter((badge) => badge.kind !== "provider") : badges}>
         <span style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} className="text-xs text-ink-secondary">
-          {repository ? "Repository" : data.entityType === "application" ? "Application" : NODE_TYPE_BADGES[data.nodeType]}
+          {repository ? "Repository" : data.entityType === "application" ? "Application" : kind ? CONTAINER_KIND_LABELS[kind] : NODE_TYPE_BADGES[data.nodeType]}
         </span>
         {data.occurrenceRole && <span style={{ fontSize: "var(--graph-node-meta-size, 10px)" }} data-testid="graph-occurrence-role" className="rounded border border-outline-strong px-1 text-[10px] font-medium uppercase tracking-wide text-ink-secondary">{data.occurrenceRole}</span>}
       </NodeBadgeRow>
