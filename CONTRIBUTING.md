@@ -356,7 +356,7 @@ Only document and claim features that are actually implemented and tested. Do no
 
 ## Version bump
 
-Use `scripts/bump-version.py`. It updates the release-managed version surfaces in one go. See `docs/PUBLISHING.md` for the full release checklist.
+Use `scripts/bump-version.py`. It updates the release-managed version surfaces in one go. See `docs/RELEASE_VERIFICATION.md` for the full release checklist.
 
 ---
 

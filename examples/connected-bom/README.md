@@ -53,7 +53,7 @@ For a deployed dashboard, use an authenticated reader bound to the
 component → Findings → Compliance** to retain exact component/snapshot scope.
 Control mappings are not evaluated passes. Missing source detail, freshness,
 and collection coverage remain explicit unknowns. See the
-[deployment guide](../../docs/DEPLOY_QUICKSTART.md) for authentication and storage.
+[deployment guide](../../docs/DEPLOY_PLATFORM.md) for authentication and storage.
 
 This small local workflow does not qualify enterprise scale, production
 deployment, or independent attestation. Live-provider and performance evidence

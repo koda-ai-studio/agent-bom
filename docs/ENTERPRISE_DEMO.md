@@ -50,7 +50,7 @@ links to it or labels it as sample data.
 
 Demo data never mixes with product data: with `AGENT_BOM_DEMO_ESTATE=1`, every
 local store resolves under `AGENT_BOM_DEMO_STATE_DIR` (default
-`<state dir>/demo-estate`). See [DEPLOY_QUICKSTART.md](DEPLOY_QUICKSTART.md#local-pilot-fastest-proof).
+`<state dir>/demo-estate`). See [DEPLOY_PLATFORM.md](DEPLOY_PLATFORM.md#local-pilot-fastest-proof).
 
 The primary story follows one trace through:
 

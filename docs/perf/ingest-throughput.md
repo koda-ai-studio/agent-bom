@@ -76,7 +76,7 @@ schemas in `src/agent_bom/api/postgres_store.py` and exclude search-row,
 attack-path, and interaction-risk tables. Multiply by retention factor and
 add the audit log (`audit_events` is HMAC-chained, append-only) when sizing
 total disk. Production sizing tables for the listed estates live in
-[`docs/ENTERPRISE_DEPLOYMENT.md`](../ENTERPRISE_DEPLOYMENT.md).
+[`docs/DEPLOY_PLATFORM.md`](../DEPLOY_PLATFORM.md).
 
 These 10k-agent / ~52k-node figures are **ingest cardinality + disk floor
 inputs only**. They are not the graph-API query measured ceiling (that remains

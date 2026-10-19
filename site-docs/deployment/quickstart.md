@@ -3,7 +3,7 @@
 Unified entry for **BYOC / self-hosted** rollout: one install script, read-only
 cloud connect, and the intake paths that feed your control plane.
 
-Full doc in the repo: [`docs/DEPLOY_QUICKSTART.md`](https://github.com/msaad00/agent-bom/blob/main/docs/DEPLOY_QUICKSTART.md).
+Full doc in the repo: [`docs/DEPLOY_PLATFORM.md`](https://github.com/msaad00/agent-bom/blob/main/docs/DEPLOY_PLATFORM.md).
 
 ## Install
 

@@ -275,5 +275,5 @@ Use it in this order:
 - [Deployment Overview](overview.md)
 - [SIEM Integration](siem-integration.md)
 - [Canonical Model vs OCSF](../architecture/canonical-vs-ocsf.md)
-- `docs/ENTERPRISE.md`
-- `docs/ENTERPRISE_DEPLOYMENT.md`
+- `docs/TRUST.md`
+- `docs/DEPLOY_PLATFORM.md`

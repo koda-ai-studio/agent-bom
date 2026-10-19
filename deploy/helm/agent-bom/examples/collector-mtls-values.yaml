@@ -10,7 +10,7 @@
 #
 # Prerequisites:
 #   1. Kubernetes Secret `agent-bom-collector-client-tls` with tls.crt + tls.key
-#   2. Control plane API configured for delegated or app-native mTLS (see ENTERPRISE_DEPLOYMENT.md)
+#   2. Control plane API configured for delegated or app-native mTLS (see DEPLOY_PLATFORM.md)
 #   3. Optional CA bundle Secret if the collector must pin a private control-plane CA
 
 controlPlane:

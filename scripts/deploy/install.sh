@@ -11,7 +11,7 @@
 #   scripts/deploy/install.sh connect aws
 #   scripts/deploy/install.sh onboard --url https://agent-bom.example.com --api-key "$KEY"
 #
-# See docs/DEPLOY_QUICKSTART.md for the read-only cloud onboarding story.
+# See docs/DEPLOY_PLATFORM.md for the read-only cloud onboarding story.
 
 set -euo pipefail
 
@@ -107,7 +107,7 @@ Examples:
   scripts/deploy/install.sh onboard --url https://agent-bom.internal.example.com --api-key "$AGENT_BOM_API_KEY"
 
 Docs:
-  docs/DEPLOY_QUICKSTART.md   — onboarding story (deploy → connect → inventory → scans)
+  docs/DEPLOY_PLATFORM.md   — onboarding story (deploy → connect → inventory → scans)
   docs/DEPLOY_PLATFORM.md     — three-tier architecture reference
   docs/CLOUD_CONNECT.md       — read-only multicloud connect model
 EOF
@@ -169,7 +169,7 @@ Post-deploy
   onboard           Fleet bootstrap hints + pilot-verify smoke wrapper.
 
 Run: scripts/deploy/install.sh <target> --help  (via -h on this script)
-Read: docs/DEPLOY_QUICKSTART.md
+Read: docs/DEPLOY_PLATFORM.md
 EOF
 }
 

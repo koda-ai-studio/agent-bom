@@ -1,6 +1,6 @@
 # MCP Server Setup
 
-Start with [three investigation workflows](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/MCP_WORKFLOWS.md):
+Start with [three investigation workflows](https://github.com/koda-ai-studio/agent-bom/blob/main/docs/MCP_SERVER.md):
 find affected agents, explain an exposure path with receipts, and compare scans
 after a change. Each has an example prompt, expected artifact and next action;
 the credential-free walkthrough makes real MCP calls and records local timing.
@@ -203,7 +203,7 @@ Connect with:
 
 ## Client and skill guides
 
-- [MCP client matrix](https://github.com/msaad00/agent-bom/blob/main/docs/MCP_CLIENT_GUIDES.md)
+- [MCP client matrix](https://github.com/msaad00/agent-bom/blob/main/docs/MCP_SERVER.md)
 - [Claude Desktop / Claude Code](https://github.com/msaad00/agent-bom/blob/main/docs/CLAUDE_INTEGRATION.md)
 - [Codex CLI](https://github.com/msaad00/agent-bom/blob/main/docs/CODEX_CLI.md)
 - [Cortex CoCo / Cortex Code](https://github.com/msaad00/agent-bom/blob/main/docs/CORTEX_CODE.md)

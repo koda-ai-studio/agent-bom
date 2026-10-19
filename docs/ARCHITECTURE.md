@@ -1,9 +1,11 @@
 # Architecture
 
+Open security scanner and self-hosted control plane for AI, MCP, and cloud infrastructure.
+
 agent-bom is one Python package (`src/agent_bom/`) with four entry points that
 share the same scanners, graph and stores, plus a separate Next.js UI (`ui/`)
 that talks to the REST API over HTTPS. The product story (intake → scan →
-evidence → control → artifacts) is in [`HOW_IT_WORKS.md`](HOW_IT_WORKS.md);
+evidence → control → artifacts) is in [the evidence workflow](#end-to-end-evidence-workflow);
 the repository map is in [`PROJECT_STRUCTURE.md`](PROJECT_STRUCTURE.md).
 
 ## System overview
@@ -121,7 +123,7 @@ flowchart TB
 
 For a repo-level map of where each layer lives in `src/agent_bom/`, see
 [`PROJECT_STRUCTURE.md`](PROJECT_STRUCTURE.md). For role-based entry paths,
-see [`START_HERE.md`](START_HERE.md).
+see [`FIRST_RUN.md`](FIRST_RUN.md).
 
 ---
 
@@ -292,7 +294,7 @@ API auth mode, tenant scope, RBAC, and audit are enforced in
 `src/agent_bom/api/middleware.py`. MCP and runtime modes have separate transport
 and policy controls. Provider grants and setup are in
 [`CLOUD_CONNECT.md`](CLOUD_CONNECT.md); the enterprise auth surface and
-environment knobs are in [`ENTERPRISE.md`](ENTERPRISE.md).
+environment knobs are in [`TRUST.md`](TRUST.md).
 
 ---
 
@@ -668,3 +670,132 @@ Failure behavior:
   content is ready.
 - Authentication-store failure denies traffic. A configured shared rate limiter
   never falls back to process-local state when it fails to initialize.
+
+## End-to-end evidence workflow
+
+The product begins with read-only intake from repositories and CI, developer
+workstations or enrolled endpoints, images and Kubernetes, cloud and data
+platforms, and MCP/runtime surfaces. It normalizes those observations into the
+same `Finding` + `UnifiedGraph` model, correlates reachable blast radius, and
+then carries ownership, remediation, and verification state to outputs.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/workflow-dark.svg">
+  <img alt="agent-bom end-to-end evidence workflow from supported sources through collection, normalization, correlation, ownership, remediation, verification, reports, control plane, and runtime policy" src="images/workflow-light.svg">
+</picture>
+
+Collectors normally emit normalized evidence and explicit completeness.
+Optional content inspection, remote scanning, enrichment and export have their
+own permission and egress boundaries; see [Trust](TRUST.md). A permission denial, unsupported collector, or partial scan stays
+partial or unavailable; it is never shown as observed or clean.
+
+## What the graph represents
+
+An entity is a package, workload, repository, agent, tool, identity, or other
+resource. A directed relationship records how two entities connect, such as
+"depends on", "runs as", or "has permission". A path is an ordered sequence of
+those relationships. Each relationship retains its source and whether it was
+observed, inferred, or modeled; a drawn connection alone is not exploit proof.
+Inventory is the list of entities. The graph adds the relationships needed to
+explain which findings can affect which systems.
+
+Imported SBOM inventory appears as a source artifact linked to its packages and
+findings. Package names alone do not establish applications, running agents, MCP
+servers, tool access, or credentials. New scans use this classification; retained
+snapshots keep their original evidence and can be compared with a fresh scan.
+
+`UnifiedGraph` is the canonical graph contract for normalized entities,
+relationships, scope, and analysis completeness. `ContextGraph` is the local
+agent/MCP context builder that can project into that contract; it is not a
+separate source of observed cloud truth. **Mesh** focuses on shared agent and
+MCP relationships. **Evidence** refers to the receipts supporting a relationship;
+**Current**, **Proposed**, and **Difference** describe the comparison views.
+Proposed state remains modeled until independently observed. See the
+[graph contract](graph/CONTRACT.md) for the complete vocabulary and guarantees.
+
+## How independent scans become path proof
+
+Retained same-tenant graph snapshots can be correlated with
+`agent-bom graph-correlate create`. The run requires an explicit freshness
+bound and joins compatible, scoped canonical identities: package PURLs,
+repository commit/path identities, Kubernetes UIDs, and provider resource or
+runtime IDs with their tenant and account/cluster scope. Shared OCI digests
+bind image artifacts; they do not merge permission-bearing runtime occurrences.
+Missing runtime identity stays snapshot-scoped. Labels, similar names, and
+mutable image tags never create a cross-source join.
+
+The output is one immutable correlation snapshot with a hash-bound manifest of
+every input receipt, its source kinds, timestamp, digest, counts, and freshness.
+Confirmed attack paths require every hop to be directed, traversable, and
+provenance-backed. Structural candidates remain visible as lower-confidence
+exposure paths, and limited analysis stays labeled rather than presented as
+complete.
+
+The credential-free [reference evidence lab](../examples/reference-evidence-lab/README.md)
+proves this loop with real dependency, SBOM, Kubernetes IaC, and MCP parsers,
+bundled-advisory output for `pillow@9.0.0` / `CVE-2023-4863`, a strict modeled
+identity input, and live local JSON-RPC gateway allow/block smokes. Its label is
+**Reference evidence lab — modeled local infrastructure**; it is not buyer or
+live-cloud evidence.
+
+## Why it's different: symbol-level CVE reachability
+
+Most scanners stop at "this package has a CVE." `agent-bom` joins the
+CVE-affected symbols from OSV/GHSA advisories to your call graph, so you see the
+subset that is actually reachable from your code — typically a fraction of the
+raw match count — and then fuses that verdict into the agent graph. A reachable
+CVE in a package an MCP server exposes to an agent that holds a credential is a
+different risk than the same CVE sitting in dead code, and the product treats it
+that way.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/blast-radius-dark.svg">
+  <img alt="agent-bom blast radius: one vulnerable package fanning out through finding, MCP server, agent, credentials, and reachable tools" src="images/blast-radius-light.svg">
+</picture>
+
+That drilldown — package to finding to MCP server to agent to credentials and
+reachable tools — is the product's center of gravity. Everything else exists to
+produce and act on it. Function-level de-noising joins OSV/GHSA affected symbols
+to Python, npm, Go, Java, Rust, and Ruby call graphs when `--project` AST
+analysis is available; the CVE/CWE/CPE identifiers ride along on the
+reachability verdict. See [`VULNERABILITY_MATCHING.md`](VULNERABILITY_MATCHING.md)
+for the mechanics.
+
+## The three product lanes
+
+Read it as three ways to use the same evidence model: **scan** locally or in CI,
+**centralize** evidence in a self-hosted control plane, and **enforce** runtime
+tool calls through the optional gateway. Every lane uses `Finding` +
+`UnifiedGraph`; sidebar **Findings** is a triage queue inside the control plane,
+not a separate product lane.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="images/how-it-works-dark.svg">
+  <img alt="agent-bom three product lanes: local and CI scanning, a self-hosted control plane, and optional runtime gateway enforcement on one Finding and UnifiedGraph model" src="images/how-it-works-light.svg">
+</picture>
+
+| Lane | What happens | Key output |
+|---|---|---|
+| **1. Scan** | Read-only intake from repos, CI, images, IaC, MCP configs, and cloud accounts. Enrichment joins OSV / GHSA / NVD / KEV / EPSS and scores symbol-level CVE reachability. | SARIF, SBOM, HTML, JSON, and graph exports |
+| **2. Centralize** | `agent-bom serve` runs the self-hosted dashboard, Findings queue, REST API, fleet inventory, audit evidence, and Postgres-backed shared state. | reviewed posture, evidence history, and exports |
+| **3. Enforce** | `agent-bom gateway serve` applies allow / warn / block policy to live MCP tool calls and records signed audit evidence. | runtime decisions and audit trail |
+
+The scan lane computes symbol-level reachability; `UnifiedGraph` turns it into
+blast radius across agents, MCP servers, packages, credentials, and tools. The
+control plane and gateway consume that same evidence instead of rebuilding it.
+Graph-derived enforcement remains globally `off` by default. An operator can
+poll a signed, expiring runtime-facts bundle and retain the last valid bundle;
+legacy missing-evidence behavior is `allow`, while
+`--graph-reachability-failure-mode deny` is the explicit strict choice. Signed
+v2 bundles bind the immutable correlation output and expose analysis
+completeness; strict mode rejects missing, replaced, purged, or bounded output.
+
+## Operator telemetry and runtime evidence
+
+The API preserves W3C trace context and can export configured operator spans
+over OTLP/HTTP. Trace ingest is a separate path that can retain runtime
+evidence. Emitting a span or receiving a transport receipt does not by itself
+verify the producer or an observed downstream effect. See
+[observability configuration](OBSERVABILITY_METRICS.md),
+[managed trace collection](TRACE_CONNECTIONS.md), and
+[runtime evidence boundaries](RUNTIME_REFERENCE.md).

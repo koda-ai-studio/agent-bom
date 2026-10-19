@@ -8,7 +8,7 @@
 # Next step on the disconnected host:
 #   verify sha256sums.txt, copy the bundle to the runtime path, set
 #   AGENT_BOM_DB_PATH and AGENT_BOM_VULN_DB_OFFLINE=1 — see
-#   docs/ENTERPRISE_DEPLOYMENT.md and docs/RELEASE_VERIFICATION.md.
+#   docs/DEPLOY_PLATFORM.md and docs/RELEASE_VERIFICATION.md.
 set -euo pipefail
 
 SOURCE="${AGENT_BOM_DB_SOURCE:-${HOME}/.agent-bom/db/vulns.db}"

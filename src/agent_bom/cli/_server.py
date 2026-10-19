@@ -342,7 +342,7 @@ def _emit_mcp_stdio_workflow_splash(*, profile: str) -> None:
         return
     rows = [
         ("Transport", "stdio"),
-        ("Workflows", f"{len(_MCP_WORKFLOW_NAMES)} prompts; see docs/MCP_WORKFLOWS.md"),
+        ("Workflows", f"{len(_MCP_WORKFLOW_NAMES)} prompts; see docs/MCP_SERVER.md"),
         ("Tools", f"{profile} profile"),
     ]
     _emit_runtime_summary("agent-bom MCP server", rows, err=True)
@@ -1190,7 +1190,7 @@ def mcp_server_cmd(
     \b
     Select graph, cloud, runtime or audit for specialized work. Reconnect after
     changing profiles. Use --profile full for existing workflows needing the
-    complete catalog, or --profile guided. Profiles do not grant authorization; see docs/MCP_WORKFLOWS.md.
+    complete catalog, or --profile guided. Profiles do not grant authorization; see docs/MCP_SERVER.md.
 
     \b
     Usage:
@@ -1258,7 +1258,7 @@ def mcp_server_cmd(
             ("Transport", transport),
             ("Profile", profile),
             ("Bind", f"http://{host}:{port}"),
-            ("Workflows", f"{len(_MCP_WORKFLOW_NAMES)} prompts; see docs/MCP_WORKFLOWS.md"),
+            ("Workflows", f"{len(_MCP_WORKFLOW_NAMES)} prompts; see docs/MCP_SERVER.md"),
             (
                 "Auth",
                 _auth_summary(

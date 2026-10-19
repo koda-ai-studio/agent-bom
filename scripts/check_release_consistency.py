@@ -64,7 +64,7 @@ CANONICAL_TAGLINE_SURFACES: list[Path] = [
     PYPI_README,
     DOCKER_README,
     SITE_INDEX,
-    ROOT / "docs" / "PRODUCT_BRIEF.md",
+    ROOT / "docs" / "ARCHITECTURE.md",
 ]
 MANAGED_IMAGE_REFS: list[tuple[Path, re.Pattern[str]]] = [
     (ROOT / "deploy" / "docker-compose.pilot.yml", re.compile(r"agentbom/agent-bom(?:-ui)?:([0-9]+\.[0-9]+\.[0-9]+)")),
@@ -73,7 +73,7 @@ MANAGED_IMAGE_REFS: list[tuple[Path, re.Pattern[str]]] = [
     (ROOT / "deploy" / "docker-compose.platform.yml", re.compile(r"agentbom/agent-bom(?:-ui)?:([0-9]+\.[0-9]+\.[0-9]+)")),
     (ROOT / "deploy" / "k8s" / "daemonset.yaml", re.compile(r"agentbom/agent-bom:([0-9]+\.[0-9]+\.[0-9]+)")),
     (ROOT / "site-docs" / "deployment" / "docker.md", re.compile(r"agentbom/agent-bom:([0-9]+\.[0-9]+\.[0-9]+)")),
-    (ROOT / "docs" / "RUNTIME_MONITORING.md", re.compile(r"agentbom/agent-bom:([0-9]+\.[0-9]+\.[0-9]+)")),
+    (ROOT / "docs" / "RUNTIME_REFERENCE.md", re.compile(r"agentbom/agent-bom:([0-9]+\.[0-9]+\.[0-9]+)")),
 ]
 MANAGED_VERSION_REFS: list[tuple[Path, re.Pattern[str], str]] = [
     (
@@ -120,7 +120,7 @@ MANAGED_VERSION_REFS: list[tuple[Path, re.Pattern[str], str]] = [
     ),
     (ROOT / "integrations" / "glama" / "server.json", re.compile(r'"version":\s*"([0-9]+\.[0-9]+\.[0-9]+)"'), "Glama manifest version"),
     (
-        ROOT / "docs" / "PUBLISHING.md",
+        ROOT / "docs" / "RELEASE_VERIFICATION.md",
         re.compile(r"(?:--version \"|git tag v|git push origin v)([0-9]+\.[0-9]+\.[0-9]+)"),
         "publishing example version",
     ),
@@ -162,7 +162,7 @@ PUBLISHED_VERSION_REFS: list[tuple[Path, re.Pattern[str], str]] = [
 MANAGED_ACTION_REFS: list[Path] = [
     ROOT / "README.md",
     ROOT / "docs" / "AI_INFRASTRUCTURE_SCANNING.md",
-    ROOT / "docs" / "ENTERPRISE_DEPLOYMENT.md",
+    ROOT / "docs" / "DEPLOY_PLATFORM.md",
     ROOT / "docs" / "MCP_SECURITY_MODEL.md",
     ROOT / "site-docs" / "features" / "policy.md",
 ]
@@ -580,7 +580,7 @@ def main() -> int:
         ROOT / "README.md",
         ROOT / "docs" / "registry" / "PYPI_README.md",
         ROOT / "site-docs",
-        ROOT / "docs" / "PRODUCT_BRIEF.md",
+        ROOT / "docs" / "ARCHITECTURE.md",
         ROOT / "docs" / "MCP_SECURITY_MODEL.md",
     ]
     for root in public_surface_roots:

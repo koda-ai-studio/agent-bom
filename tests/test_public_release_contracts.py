@@ -49,12 +49,10 @@ def test_public_mcp_counts_match_server_card() -> None:
             f"starts with {default_count} focused tools",
             f"`--profile full` compatibility catalog contains {full_count} MCP tools",
         ),
-        "docs/PRODUCT_BRIEF.md": (f"{default_count} default tools; explicit full catalog of {full_count} MCP tools",),
-        "docs/START_HERE.md": (
-            f"stdio MCP server: {default_count} tools",
-            f"`--profile full` catalog ({full_count} tools",
+        "docs/MCP_SERVER.md": (
+            f"starts with {default_count} focused MCP tools",
+            f"complete compatibility catalog of {full_count} MCP tools",
         ),
-        "docs/README.md": (f"run the MCP server with {default_count} default tools",),
     }
     for relative, phrases in expected.items():
         text = _read(relative)

@@ -321,7 +321,7 @@ agent-bom proxy "uvx mcp-server-filesystem /" \
 ## 8. Further reading
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) — component diagram, data flow, module boundaries
-- [RUNTIME_MONITORING.md](RUNTIME_MONITORING.md) — proxy internals, detector configuration
+- [RUNTIME_REFERENCE.md](RUNTIME_REFERENCE.md) — proxy internals, detector configuration
 - [CLAUDE_INTEGRATION.md](CLAUDE_INTEGRATION.md) — Claude Desktop / Claude Code setup and proxy flow
 - [CORTEX_CODE.md](CORTEX_CODE.md) — Cortex CoCo / Cortex Code setup, discovery, permissions, and hooks
 - [AI_INFRASTRUCTURE_SCANNING.md](AI_INFRASTRUCTURE_SCANNING.md) — GPU, CUDA, ML framework scanning

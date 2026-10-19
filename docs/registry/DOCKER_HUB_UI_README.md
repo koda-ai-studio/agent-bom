@@ -36,7 +36,7 @@ volume remains available for the next run.
 Set `AGENT_BOM_API_URL` on the UI server to the API's HTTP(S) origin, for
 example `http://api:8422` inside a Compose network. Browser requests remain
 same-origin through the UI proxy. `NEXT_PUBLIC_API_URL` is accepted as a legacy
-fallback. See the [deployment guide](https://github.com/msaad00/agent-bom/blob/main/docs/DEPLOYMENT.md)
+fallback. See the [deployment guide](https://github.com/msaad00/agent-bom/blob/main/docs/DEPLOY_PLATFORM.md)
 for authentication, proxy, and production settings.
 
 For Kubernetes, check out the repository and configure the

@@ -4,11 +4,11 @@ This guide is the canonical quickstart for `agent-bom`. It gives new users a
 deterministic path from install to a real inventory and graph.
 
 **Investigating through an assistant?** Follow the
-[three MCP workflows](MCP_WORKFLOWS.md): find affected agents, inspect an
+[three MCP workflows](MCP_SERVER.md): find affected agents, inspect an
 exposure path's receipts, and compare retained scans. The credential-free
 example saves actual MCP responses and measures time to the first useful result.
 
-**Hosting the control plane?** See [`DEPLOY_QUICKSTART.md`](DEPLOY_QUICKSTART.md) —
+**Hosting the control plane?** See [`DEPLOY_PLATFORM.md`](DEPLOY_PLATFORM.md) —
 `scripts/deploy/install.sh pilot` for local Docker, or EKS/AKS/GKE/Snowflake
 paths with read-only cloud connect.
 
@@ -402,3 +402,111 @@ Inspect `scan_run` before using the result as a gate: missing or incomplete
 composition evidence stays partial. With `--no-scan`, completion describes
 the requested import, not a fresh vulnerability assessment. Run again without `--no-scan` to refresh
 advisory matches, or rescan the original target to refresh inventory coverage.
+
+## Choose the next workflow
+
+| Task | Artifact and next step |
+|---|---|
+| Scan a repository or gate CI | Export SARIF or an SBOM, then inspect findings and re-scan the same scope. See [CLI reference](cli.md). |
+| Share inventory and evidence | Start the [self-hosted control plane](DEPLOY_PLATFORM.md), then connect a scoped source. |
+| Review cloud posture | Create a [provider grant](CLOUD_CONNECT.md), inspect collection coverage, then investigate supported findings. |
+| Use a coding assistant | Configure an [MCP client](MCP_SERVER.md), choose a task profile, then query the returned evidence. |
+
+## Pre-commit hook
+
+**Use case**: Block secrets, PII, and vulnerable dependencies before they are
+committed, on the developer's machine.
+
+agent-bom publishes consumer-facing hooks in `.pre-commit-hooks.yaml`. Add them
+to your repository's `.pre-commit-config.yaml`:
+
+```yaml
+repos:
+  - repo: https://github.com/msaad00/agent-bom
+    rev: v0.109.0
+    hooks:
+      - id: agent-bom-secrets
+      - id: agent-bom-scan
+```
+
+Then enable the hooks:
+
+```bash
+pip install pre-commit
+pre-commit install
+pre-commit run --all-files   # optional: run immediately
+```
+
+Available hook ids:
+
+| Hook id | Command | Purpose |
+| --- | --- | --- |
+| `agent-bom-secrets` | `agent-bom secrets .` | Scan the working tree for hardcoded secrets and PII. |
+| `agent-bom-scan` | `agent-bom scan --fail-on-severity high` | Scan dependencies, agents, and MCP servers; fail on high-or-above findings. |
+
+pre-commit installs the `agent-bom` package itself into an isolated environment,
+so no separate install step is required for the hooks.
+
+## Baseline diffing in CI
+
+**Problem**: Every run re-reports the same pre-existing findings, so CI stays red
+**Solution**: Diff the report against a saved baseline and gate on new findings only
+
+```bash
+# Save a scan report to use as the baseline
+agent-bom agents --output /var/lib/agent-bom/baseline.json
+
+# Later runs: diff against it and report only what is new
+agent-bom agents --baseline /var/lib/agent-bom/baseline.json \
+               --delta \
+               --output /var/lib/agent-bom/delta.json
+```
+
+`--delta` bases the exit code on new findings only — pre-existing ones are
+suppressed — so a CI gate surfaces exactly what the current change introduced.
+`--save` writes a run to `~/.agent-bom/history/` if you want a diffable trail
+without managing baseline paths yourself.
+
+**This does not reduce scan work.** There is no incremental scan mode: every
+run performs a full inventory of the configured scope. `--baseline` and
+`--delta` are post-scan report filters, so they cut review noise and CI
+failures, not scan time or cost.
+
+## GitLab and Jenkins artifacts
+
+A GitLab job can retain a CycloneDX artifact even when the finding gate fails:
+
+```yaml
+ai-bom-scan:
+  image: python:3.13-slim
+  script:
+    - pip install agent-bom
+    - agent-bom scan . -f cyclonedx -o ai-bom.json --fail-on-severity high
+  artifacts:
+    when: always
+    reports:
+      cyclonedx: ai-bom.json
+    paths:
+      - ai-bom.json
+    expire_in: 30 days
+```
+
+In Jenkins, use the scanner's verdict and retain its JSON evidence:
+
+```groovy
+pipeline {
+    agent any
+    stages {
+        stage('Scan') {
+            steps {
+                sh 'pip install agent-bom'
+                sh 'agent-bom scan . -f json -o scan.json --fail-on-severity high'
+            }
+        }
+    }
+    post { always { archiveArtifacts artifacts: 'scan.json', allowEmptyArchive: true } }
+}
+```
+
+Inspect the saved artifact and collection coverage before assigning remediation.
+An infrastructure failure or missing artifact is not a clean security verdict.

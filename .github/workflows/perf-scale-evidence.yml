@@ -4,7 +4,7 @@ name: Perf Scale Evidence
 # so docs/perf/results/ stays current as the graph builder evolves. The
 # 1k-estate run takes <1 minute on github-hosted runners and is the floor
 # evidence referenced from docs/perf/ingest-throughput.md and
-# docs/ENTERPRISE_DEPLOYMENT.md. Graph API/Postgres benchmark scaffolds are
+# docs/DEPLOY_PLATFORM.md. Graph API/Postgres benchmark scaffolds are
 # dry-run validated here. The opt-in mixed_graph input also measures bounded
 # graph HTTP requests during ingestion; it is not a production capacity claim.
 

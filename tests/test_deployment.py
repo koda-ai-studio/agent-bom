@@ -562,7 +562,7 @@ def test_deployment_freshness_marks_smithery_tool_count_drift() -> None:
 
 
 def test_publishing_guide_does_not_pin_a_stale_mcp_tool_count() -> None:
-    guide = (ROOT / "docs" / "PUBLISHING.md").read_text()
+    guide = (ROOT / "docs" / "RELEASE_VERIFICATION.md").read_text()
 
     assert "--expected-tool-count 84" not in guide
     assert "--expected-tool-count 86" not in guide
@@ -1180,7 +1180,7 @@ def test_deployment_workflow_verdict_requires_explicit_success(overrides, expect
 
 
 def test_smithery_recovery_guidance_requires_external_authorization() -> None:
-    guide = (ROOT / "docs" / "PUBLISHING.md").read_text()
+    guide = (ROOT / "docs" / "RELEASE_VERIFICATION.md").read_text()
     helper = (ROOT / "scripts" / "authorize_smithery_release.py").read_text()
     assert "authorized external OAuth upstream" in guide
     assert "does not issue tokens or grant client access" in guide

@@ -146,7 +146,7 @@ SURFACES = [
     "docs/registry/DOCKER_HUB_README.md",
     "docs/ARCHITECTURE.md",
     "docs/CLAUDE_INTEGRATION.md",
-    "docs/PRODUCT_BRIEF.md",
+    "docs/MCP_SERVER.md",
     "pyproject.toml",
     "action.yml",
 ]
@@ -173,7 +173,7 @@ _check("Pages", str(pages), SURFACES, r"\d+-page")
 REST_SURFACES = [
     "docs/AGENT_CAPABILITY.md",
     "docs/ARCHITECTURE.md",
-    "docs/START_HERE.md",
+    "docs/FIRST_RUN.md",
     "docs/README.md",
 ]
 _check("REST operations", str(rest_operations), REST_SURFACES, r"\d+ (?:REST )?operations")

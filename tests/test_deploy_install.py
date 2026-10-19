@@ -25,7 +25,7 @@ def test_deploy_install_script_list_documents_targets() -> None:
 
 
 def test_deploy_quickstart_doc_exists() -> None:
-    doc = ROOT / "docs" / "DEPLOY_QUICKSTART.md"
+    doc = ROOT / "docs" / "DEPLOY_PLATFORM.md"
     text = doc.read_text(encoding="utf-8")
     assert "scripts/deploy/install.sh" in text
     assert "read-only" in text.lower()

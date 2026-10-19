@@ -49,7 +49,7 @@ def test_airgap_profile_disables_cdn_backed_interactive_docs() -> None:
     env = {entry["name"]: entry["value"] for entry in values["controlPlane"]["api"]["env"]}
     assert env["AGENT_BOM_DISABLE_DOCS"] == "1"
 
-    deployment_docs = (REPO_ROOT / "docs" / "ENTERPRISE_DEPLOYMENT.md").read_text()
+    deployment_docs = (REPO_ROOT / "docs" / "DEPLOY_PLATFORM.md").read_text()
     assert "docs/openapi/v1.yaml" in deployment_docs
 
 

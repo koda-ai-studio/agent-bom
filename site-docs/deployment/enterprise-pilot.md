@@ -80,7 +80,7 @@ object-store encryption for exports/backups, and tenant RLS — not to an
 in-control-plane payload cipher. API tokens are hashed, audit chains are
 HMAC-signed, and cloud-connection secrets use envelope encryption; finding
 bodies rely on your storage encryption. See
-[`docs/ENTERPRISE_DEPLOYMENT.md`](https://github.com/msaad00/agent-bom/blob/main/docs/ENTERPRISE_DEPLOYMENT.md#finding-and-scan-payload-encryption-at-rest-deployment-prerequisite)
+[`docs/DEPLOY_PLATFORM.md`](https://github.com/msaad00/agent-bom/blob/main/docs/DEPLOY_PLATFORM.md#finding-and-scan-payload-encryption-at-rest-deployment-prerequisite)
 for the full buyer checklist.
 
 ## Scale properties

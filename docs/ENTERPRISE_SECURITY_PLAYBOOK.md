@@ -1,7 +1,7 @@
 # Enterprise Security Playbook
 
-> Part of the **[enterprise doc set](ENTERPRISE.md#enterprise-doc-set)**. Start
-> at [`ENTERPRISE.md`](ENTERPRISE.md) for the controls-to-code map and the full
+> Part of the **[enterprise doc set](TRUST.md#operator-references)**. Start
+> at [`TRUST.md`](TRUST.md) for the controls-to-code map and the full
 > index of enterprise docs.
 
 > **Who this is for:** a security or platform team preparing to pilot

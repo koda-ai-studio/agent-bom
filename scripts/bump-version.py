@@ -135,11 +135,11 @@ DOC_TEST_LOCATIONS: list[tuple[str, re.Pattern, str]] = [
         re.compile(r"(\| `)\d+\.\d+\.\d+(` \| Version used by the examples below; verify registry availability before pinning \|)"),
         r"\g<1>{v}\g<2>",
     ),
-    # PUBLISHING.md — version examples
-    ("docs/PUBLISHING.md", re.compile(r'(--version\s+")[^"]+(")', re.M), r"\g<1>{v}\g<2>"),
-    ("docs/PUBLISHING.md", re.compile(r"(--expected\s+)\d+\.\d+\.\d+", re.M), r"\g<1>{v}"),
-    ("docs/PUBLISHING.md", re.compile(r"(git tag v)\S+", re.M), r"\g<1>{v}"),
-    ("docs/PUBLISHING.md", re.compile(r"(git push origin v)\S+", re.M), r"\g<1>{v}"),
+    # RELEASE_VERIFICATION.md — version examples
+    ("docs/RELEASE_VERIFICATION.md", re.compile(r'(--version\s+")[^"]+(")', re.M), r"\g<1>{v}\g<2>"),
+    ("docs/RELEASE_VERIFICATION.md", re.compile(r"(--expected\s+)\d+\.\d+\.\d+", re.M), r"\g<1>{v}"),
+    ("docs/RELEASE_VERIFICATION.md", re.compile(r"(git tag v)\S+", re.M), r"\g<1>{v}"),
+    ("docs/RELEASE_VERIFICATION.md", re.compile(r"(git push origin v)\S+", re.M), r"\g<1>{v}"),
     ("ui/tests/nav.test.tsx", re.compile(r"(version:\s*')\d+\.\d+\.\d+(')"), r"\g<1>{v}\g<2>"),
     ("site-docs/reference/remediate-output.md", re.compile(r'("version":\s*")\d+\.\d+\.\d+(")'), r"\g<1>{v}\g<2>"),
     # docs/demo.tape — version header

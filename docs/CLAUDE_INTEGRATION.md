@@ -130,4 +130,4 @@ For cross-agent correlation across sessions, use the broader runtime protection 
 
 - `agent-bom` is read-only in MCP server mode.
 - Proxy mode is opt-in and wraps the target server command; it does not modify the server itself.
-- Use [MCP_CLIENT_GUIDES.md](MCP_CLIENT_GUIDES.md) for the broader MCP client matrix, [MCP_SERVER.md](MCP_SERVER.md) for the full MCP tool catalog, and [RUNTIME_MONITORING.md](RUNTIME_MONITORING.md) for deployment and policy details.
+- Use [MCP_SERVER.md](MCP_SERVER.md) for the broader MCP client matrix, [MCP_SERVER.md](MCP_SERVER.md) for the full MCP tool catalog, and [RUNTIME_REFERENCE.md](RUNTIME_REFERENCE.md) for deployment and policy details.

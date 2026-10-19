@@ -1,7 +1,7 @@
 # Enterprise Operations and Procurement Evidence
 
-> Part of the **[enterprise doc set](ENTERPRISE.md#enterprise-doc-set)**. Start
-> at [`ENTERPRISE.md`](ENTERPRISE.md) for the controls-to-code map and the full
+> Part of the **[enterprise doc set](TRUST.md#operator-references)**. Start
+> at [`TRUST.md`](TRUST.md) for the controls-to-code map and the full
 > index of enterprise docs.
 
 This page is the release-facing evidence index for self-hosted enterprise
@@ -17,10 +17,10 @@ SIEM, incident process, DPA, and retention policy.
 
 | Review question | Current answer | Evidence |
 |---|---|---|
-| What deployment modes are supported? | CLI, Docker, Compose, Helm/EKS, GitHub Action, endpoint rollout, and Snowflake-supported slices | `docs/ENTERPRISE_DEPLOYMENT.md`, `docs/DEPLOYMENT.md`, `deploy/docker-compose.yml`, `deploy/helm/agent-bom/` |
+| What deployment modes are supported? | CLI, Docker, Compose, Helm/EKS, GitHub Action, endpoint rollout, and Snowflake-supported slices | `docs/DEPLOY_PLATFORM.md`, `docs/DEPLOY_PLATFORM.md`, `deploy/docker-compose.yml`, `deploy/helm/agent-bom/` |
 | Is the production path multi-replica capable? | Yes for Postgres-backed control planes; multi-replica API, UI, HPA, PDB, topology spread, and anti-affinity are packaged in Helm examples | `site-docs/deployment/control-plane-helm.md`, `deploy/helm/agent-bom/examples/eks-production-values.yaml` |
-| Does the app fail closed for unsafe clustered state? | Yes for shared rate limiting, SCIM storage, browser session signing, and static-key clustered use | `docs/ENTERPRISE_DEPLOYMENT.md`, `tests/api/test_api_hardening.py` |
-| Is mTLS supported? | Delegated ingress/sidecar/service-mesh mTLS posture is documented and reported; native app-terminated mTLS is tracked separately | `docs/ENTERPRISE_DEPLOYMENT.md`, `docs/ENTERPRISE_SECURITY_PLAYBOOK.md` |
+| Does the app fail closed for unsafe clustered state? | Yes for shared rate limiting, SCIM storage, browser session signing, and static-key clustered use | `docs/DEPLOY_PLATFORM.md`, `tests/api/test_api_hardening.py` |
+| Is mTLS supported? | Delegated ingress/sidecar/service-mesh mTLS posture is documented and reported; native app-terminated mTLS is tracked separately | `docs/DEPLOY_PLATFORM.md`, `docs/ENTERPRISE_SECURITY_PLAYBOOK.md` |
 | Are network boundaries packaged? | Helm chart includes NetworkPolicy and restricted pod settings; mesh hardening example adds Istio and Kyverno overlays | `deploy/helm/agent-bom/templates/networkpolicy.yaml`, `deploy/helm/agent-bom/examples/eks-istio-kyverno-values.yaml` |
 | Is backup and restore tested? | Yes, Postgres dump, S3-compatible object store upload, restore script, disaster simulation, row-count verification, and tenant distribution check run in CI | `.github/workflows/backup-restore.yml`, `site-docs/deployment/backup-restore.md`, `deploy/ops/restore-postgres-backup.sh` |
 | Is air-gapped import documented? | Yes, release images can be bundled, checksumed, loaded, and pushed to an internal registry | `.github/workflows/airgap-image-bundle.yml`, `site-docs/deployment/airgapped-image-bundle.md`, `scripts/release/build-airgap-image-bundle.sh` |

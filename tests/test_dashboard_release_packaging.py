@@ -184,7 +184,7 @@ def test_release_verification_bundles_the_dashboard_before_building_the_wheel():
 
 def test_enterprise_deployment_states_what_each_artifact_bundles():
     """A blanket 'false' claim shipped while the published image had no dashboard."""
-    body = (ROOT / "docs" / "ENTERPRISE_DEPLOYMENT.md").read_text(encoding="utf-8")
+    body = (ROOT / "docs" / "DEPLOY_PLATFORM.md").read_text(encoding="utf-8")
     assert "false. Verified above." not in body, "the guide still asserts a blanket claim the reader cannot verify"
     assert "The wheel bundles the dashboard" in body
     assert "agentbom/agent-bom" in body

@@ -50,5 +50,5 @@ multi-agent delegation keep their own graph nodes. Only servers with the
 Every surface counts agents the same way: distinct canonical agent IDs in the
 tenant's completed scans, latest observation first. `/v1/inventory`,
 `/v1/agents` (unless the API host is bound to the tenant; see
-[ENTERPRISE_DEPLOYMENT.md](ENTERPRISE_DEPLOYMENT.md)), posture counts,
+[DEPLOY_PLATFORM.md](DEPLOY_PLATFORM.md)), posture counts,
 inventory summary, and the graph report the same number for the same scans.
