@@ -23,7 +23,12 @@ def finding_lane(row: Mapping[str, Any]) -> str:
 
         if asset.get("asset_type") == "iac_resource" or _is_iac_misconfig(None, FindingType.CIS_FAIL, dict(evidence)):
             return "iac"
-        if row.get("finding_type") in {"CIS_FAIL", "CIS_ERROR", "CLOUD_BEST_PRACTICE_FAIL", "CLOUD_BEST_PRACTICE_ERROR"}:
+        if str(row.get("finding_type") or "").strip().upper() in {
+            "CIS_FAIL",
+            "CIS_ERROR",
+            "CLOUD_BEST_PRACTICE_FAIL",
+            "CLOUD_BEST_PRACTICE_ERROR",
+        }:
             return "cloud"
     return "other"
 

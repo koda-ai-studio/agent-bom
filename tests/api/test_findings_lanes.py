@@ -27,6 +27,8 @@ def test_lanes_separate_iac_cloud_and_unknown_without_title_guessing():
         for lane in ("cloud", "iac", "vulnerabilities", "secrets", "identity", "data", "other"):
             assert row_matches_scope(row, {"lane": lane}) is (lane == expected)
     assert not row_matches_scope(cloud("role"), {"lane": "unknown"})
+    imported = {**cloud("role"), "finding_type": " cis_fail ", "lane": "identity"}
+    assert row_matches_scope(imported, {"lane": "cloud"})
 
 
 def test_cloud_groups_are_control_and_provider_scoped():
