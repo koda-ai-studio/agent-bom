@@ -237,8 +237,12 @@ def run(output: Path, *, backend: str, replicas: int = 1) -> dict:
         receipt = {
             "schema": "runtime.capacity.v1",
             "evidence": "synthetic-events/loopback-HTTP/real-SQL",
-            "source_sha": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
-            "source_dirty": bool(subprocess.check_output(["git", "status", "--porcelain"], cwd=ROOT, text=True)),
+            "source_sha": subprocess.check_output(
+                ["git", "-c", f"safe.directory={ROOT}", "rev-parse", "HEAD"], cwd=ROOT, text=True
+            ).strip(),
+            "source_dirty": bool(
+                subprocess.check_output(["git", "-c", f"safe.directory={ROOT}", "status", "--porcelain"], cwd=ROOT, text=True)
+            ),
             "backend": backend,
             "python": platform.python_version(),
             "platform": platform.platform(),

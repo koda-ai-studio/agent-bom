@@ -13,7 +13,8 @@ from scripts.run_trace_collection_qualification import assess
 pytestmark = pytest.mark.usefixtures("enable_experimental_traces")
 
 
-def test_qualification_reconciles_native_scoped_records(tmp_path):
+def test_qualification_reconciles_native_scoped_records(tmp_path, monkeypatch):
+    monkeypatch.setenv("GIT_TEST_ASSUME_DIFFERENT_OWNER", "1")
     # The harness intentionally configures process-global stores and auth.
     root = Path(__file__).resolve().parents[1]
     output = tmp_path / "qualification"
@@ -60,7 +61,8 @@ assert limits == {2}, limits
     assert receipt["expected_observations"] == 8
 
 
-def test_disabled_routes_retain_failed_qualification_receipt(tmp_path):
+def test_disabled_routes_retain_failed_qualification_receipt(tmp_path, monkeypatch):
+    monkeypatch.setenv("GIT_TEST_ASSUME_DIFFERENT_OWNER", "1")
     root = Path(__file__).resolve().parents[1]
     output = tmp_path / "disabled"
     completed = subprocess.run(
