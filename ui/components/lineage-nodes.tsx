@@ -15,7 +15,6 @@ import { severityColor } from "@/lib/api";
 import type { ReachBreakdown } from "@/lib/effective-reach";
 import { NODE_COLOR_MAP } from "@/lib/graph-utils";
 import { nodeBadges } from "@/lib/graph-node-badges";
-import { canvasNodeLabel } from "@/lib/graph-occurrence-role";
 import { CONTAINER_KIND_LABELS, containerKind, nodeGlyph } from "@/lib/graph-container-kind";
 import {
   ENTITY_ICONS,
