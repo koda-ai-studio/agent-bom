@@ -415,7 +415,8 @@ The Azure/GCP disk side-scan is now surface-aligned across CLI
 (`AGENT_BOM_SIDESCAN_SCHEDULER`, off by default) that re-runs each configured
 target on a cadence — every surface driving the same `run_provider_side_scan`
 executor and reading the same durable lifecycle store. The executors ship as
-injected-SDK lifecycle adapters, but no credentialed live smoke is claimed yet
+concrete Azure Managed Disk and GCP Persistent Disk adapters with injected SDK
+clients, but no credentialed live smoke is claimed yet
 (`credentialed_smoke=false`) — live proof requires scoped snapshot/attach/delete
 permissions and execution on the selected collector host. The API uses its own
 configured cloud identity; supplying a collector ID does not dispatch work to a

@@ -785,3 +785,12 @@ def test_json_publication_selects_null_sink_and_low_disk_contracts(tmp_path, sou
     for path in expected:
         _write(path, 1)
     assert select_targeted_tests(changed_files=[Path("src/agent_bom") / source], root=tmp_path) == expected
+
+
+@pytest.mark.parametrize(
+    "source", ["docs/CLOUD_CONNECT.md", "docs/ARCHITECTURE.md", "docs/CLI_MAP.md", "docs/cloud/azure.md", "docs/cloud/gcp.md"]
+)
+def test_cloud_docs_select_provider_capability_contract(tmp_path: Path, source: str) -> None:
+    contract = tmp_path / "tests/test_side_scan_capability_docs.py"
+    _write(contract, 1)
+    assert contract in select_targeted_tests(changed_files=[Path(source)], root=tmp_path)

@@ -330,6 +330,12 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
             selected.update(candidate for candidate in available if candidate.name == "test_docs_front_door.py")
         if normalized.as_posix() in {"README.md", "docs/FIRST_RUN.md", "docs/GALLERY.md", "docs/registry/PYPI_README.md"}:
             selected.update(candidate for candidate in available if candidate.name in PUBLIC_FRONTDOOR_CONTRACTS)
+        if normalized.as_posix() in {
+            "docs/CLOUD_CONNECT.md",
+            "docs/ARCHITECTURE.md",
+            "docs/CLI_MAP.md",
+        } or normalized.as_posix().startswith("docs/cloud/"):
+            selected.update(candidate for candidate in available if candidate.name == "test_side_scan_capability_docs.py")
         if normalized.as_posix() in {"README.md", "docs/GALLERY.md"}:
             selected.update(candidate for candidate in available if candidate.name == "test_product_explanations.py")
         if normalized.as_posix() in {"src/agent_bom/domain/report_payloads.py", "src/agent_bom/api/read_models/scan.py"}:
