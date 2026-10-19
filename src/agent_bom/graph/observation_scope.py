@@ -59,6 +59,18 @@ def observation_scope(
     return (source, left, right)
 
 
+def _endpoint_snapshot_predicates(previous: str, current: str) -> list[str]:
+    return [
+        f"{alias}.tenant_id = {edge_alias}.tenant_id AND {alias}.scan_id = {edge_alias}.scan_id AND {alias}.id = {edge_alias}.{endpoint}"
+        for alias, edge_alias, endpoint in (
+            ("scope_ps", previous, "source_id"),
+            ("scope_pt", previous, "target_id"),
+            ("scope_cs", current, "source_id"),
+            ("scope_ct", current, "target_id"),
+        )
+    ]
+
+
 def comparable_observation_sql(*, dialect: Literal["sqlite", "postgres"], previous: str, current: str) -> str:
     """Indexed endpoint lookups for exact positive scope, using static aliases.
 
@@ -120,17 +132,7 @@ def comparable_observation_sql(*, dialect: Literal["sqlite", "postgres"], previo
     joins = []
     for alias in ("scope_ps", "scope_pt", "scope_cs", "scope_ct"):
         joins.append(f"graph_nodes AS {alias}")
-    predicates = []
-    for alias, edge_alias, endpoint in (
-        ("scope_ps", previous, "source_id"),
-        ("scope_pt", previous, "target_id"),
-        ("scope_cs", current, "source_id"),
-        ("scope_ct", current, "target_id"),
-    ):
-        predicates.append(
-            f"{alias}.tenant_id = {edge_alias}.tenant_id AND {alias}.scan_id = {edge_alias}.scan_id "
-            f"AND {alias}.id = {edge_alias}.{endpoint}"
-        )
+    predicates = _endpoint_snapshot_predicates(previous, current)
     old_source = value(previous + ".evidence", "source")
     new_source = value(current + ".evidence", "source")
     predicates.extend(

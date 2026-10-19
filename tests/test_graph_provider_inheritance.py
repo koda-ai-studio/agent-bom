@@ -103,6 +103,20 @@ def test_two_parents_with_different_providers_leave_it_unset() -> None:
     assert graph.nodes["bucket:shared"].dimensions.cloud_provider == ""
 
 
+@pytest.mark.parametrize("reverse", [False, True])
+def test_distant_conflicting_hosts_do_not_depend_on_edge_order(reverse) -> None:
+    graph = UnifiedGraph(scan_id="deep-hosting")
+    for index in range(20):
+        graph.add_node(_node(f"container:{index}", EntityType.CONTAINER, f"Container {index}", "gcp" if index == 0 else ""))
+    graph.add_node(_node("vm:aws", EntityType.CLOUD_RESOURCE, "AWS host", "aws"))
+    indices = list(range(19))
+    for index in reversed(indices) if reverse else indices:
+        _edge(graph, f"container:{index + 1}", f"container:{index}", RelationshipType.HOSTED_ON)
+    _edge(graph, "container:19", "vm:aws", RelationshipType.HOSTED_ON)
+    inherit_cloud_provider(graph)
+    assert graph.nodes["container:19"].dimensions.cloud_provider == ""
+
+
 def test_attribute_conflict_on_the_parent_is_not_a_provider() -> None:
     graph = UnifiedGraph(scan_id="attr-conflict", tenant_id="default")
     account = _node("account:x", EntityType.ACCOUNT, "x", "aws")

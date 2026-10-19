@@ -8,6 +8,7 @@ along the chain leaves the provider unset rather than picking one.
 
 from __future__ import annotations
 
+from collections import deque
 from typing import Any
 
 from agent_bom.graph.container import UnifiedGraph
@@ -15,7 +16,6 @@ from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.types import EntityType, RelationshipType
 
 DECLARED = "declared"
-_MAX_DEPTH = 8
 
 _SCOPES = frozenset({EntityType.ACCOUNT, EntityType.CLUSTER, EntityType.ENVIRONMENT})
 _INHERITORS = frozenset(
@@ -95,14 +95,25 @@ def _ancestor_providers(graph: UnifiedGraph, parents: dict[str, list[tuple[str, 
     for node_id, node in graph.nodes.items():
         own = declared_provider(node)
         seen[node_id] = {"?"} if own is None else ({own} if own else set())
-    for _ in range(_MAX_DEPTH):
-        changed = False
-        for child, links in parents.items():
-            merged = seen[child].union(*(seen[parent] for parent, _ in links))
-            if merged != seen[child]:
-                seen[child], changed = merged, True
-        if not changed:
-            break
+    children: dict[str, list[str]] = {}
+    for child, links in parents.items():
+        for parent, _ in links:
+            children.setdefault(parent, []).append(child)
+    pending = deque(node_id for node_id, values in seen.items() if values)
+    queued = set(pending)
+    # Propagate only new facts. Cycles converge, and distant conflicts reach
+    # every descendant regardless of edge order or hosting depth.
+    while pending:
+        parent = pending.popleft()
+        queued.remove(parent)
+        for child in children.get(parent, ()):
+            added = seen[parent] - seen[child]
+            if not added:
+                continue
+            seen[child].update(added)
+            if child not in queued:
+                pending.append(child)
+                queued.add(child)
     return seen
 
 
