@@ -19,8 +19,9 @@ import signal
 import sys
 import uuid
 from dataclasses import dataclass
+from importlib import import_module
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Mapping, Optional
+from typing import Any, Mapping, Optional
 
 from agent_bom import proxy_audit as _proxy_audit
 from agent_bom import proxy_policy as _proxy_policy
@@ -31,15 +32,6 @@ from agent_bom.proxy_sandbox import SandboxConfig
 from agent_bom.proxy_scanner import ScanConfig, load_scan_config, scan_jsonrpc_response, scan_tool_call
 from agent_bom.runtime import proxy_relay as _proxy_relay
 from agent_bom.runtime import proxy_session as _proxy_session
-from agent_bom.runtime.proxy_tracing import _PROXY_TRACER as _PROXY_TRACER
-from agent_bom.runtime.proxy_tracing import proxy_span
-from agent_bom.runtime.trace_metadata import inject_jsonrpc_trace_meta as _inject_jsonrpc_trace_meta
-from agent_bom.security import sanitize_text
-
-if TYPE_CHECKING:
-    pass
-from importlib import import_module
-
 from agent_bom.runtime.proxy_messages import (
     _MAX_MESSAGE_BYTES,
     _extract_jsonrpc_trace_meta,
@@ -64,6 +56,10 @@ from agent_bom.runtime.proxy_setup import (
     _response_scan_alerts,
     _start_sandbox_timeout,
 )
+from agent_bom.runtime.proxy_tracing import _PROXY_TRACER as _PROXY_TRACER
+from agent_bom.runtime.proxy_tracing import proxy_span
+from agent_bom.runtime.trace_metadata import inject_jsonrpc_trace_meta as _inject_jsonrpc_trace_meta
+from agent_bom.security import sanitize_text
 
 logger = logging.getLogger("agent_bom.proxy")
 
