@@ -31,6 +31,7 @@ from agent_bom.proxy_sandbox import SandboxConfig
 from agent_bom.proxy_scanner import ScanConfig, load_scan_config, scan_jsonrpc_response, scan_tool_call
 from agent_bom.runtime import proxy_relay as _proxy_relay
 from agent_bom.runtime import proxy_session as _proxy_session
+from agent_bom.runtime.proxy_tracing import _PROXY_TRACER as _PROXY_TRACER
 from agent_bom.runtime.proxy_tracing import proxy_span
 from agent_bom.runtime.trace_metadata import inject_jsonrpc_trace_meta as _inject_jsonrpc_trace_meta
 from agent_bom.security import sanitize_text
