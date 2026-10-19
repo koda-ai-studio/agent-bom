@@ -2975,7 +2975,7 @@
       "file_lines": 779
     },
     "demo_estate/enterprise_ai.py::build_delivery_assets": {
-      "function_lines": 205
+      "function_lines": 203
     },
     "demo_estate/enterprise_ai.py::build_third_party_ai_assets": {
       "complexity": 16,
@@ -3010,11 +3010,11 @@
     },
     "demo_estate/estate_graph.py": {
       "deferred_imports": 1,
-      "file_lines": 674
+      "file_lines": 680
     },
     "demo_estate/estate_graph.py::project_estate_into_graph": {
       "complexity": 17,
-      "function_lines": 264
+      "function_lines": 250
     },
     "demo_estate/presentation.py::build_enterprise_demo_story": {
       "function_lines": 125
@@ -3041,10 +3041,10 @@
       "api_imports": 5,
       "broad_except": 2,
       "deferred_imports": 15,
-      "file_lines": 1005
+      "file_lines": 1007
     },
     "demo_estate/showcase_graph.py::build_showcase_graph": {
-      "function_lines": 230
+      "function_lines": 231
     },
     "demo_estate/showcase_graph.py::seed_showcase_fleet_and_runtime": {
       "function_lines": 116
@@ -3475,8 +3475,8 @@
       "deferred_imports": 1
     },
     "graph/container.py": {
-      "deferred_imports": 1,
-      "file_lines": 1295
+      "deferred_imports": 2,
+      "file_lines": 1256
     },
     "graph/container.py::UnifiedGraph.filtered_view": {
       "complexity": 16
@@ -3569,9 +3569,6 @@
     "graph/nhi_overlay.py": {
       "broad_except": 1
     },
-    "graph/observation_scope.py::comparable_observation_sql": {
-      "function_lines": 83
-    },
     "graph/path_derivation.py": {
       "deferred_imports": 1
     },
@@ -3609,16 +3606,16 @@
       "function_lines": 211
     },
     "graph/rollup.py": {
-      "file_lines": 914
+      "file_lines": 905
     },
     "graph/rollup.py::attack_path_view": {
       "function_lines": 82
     },
     "graph/rollup.py::drill_down": {
-      "function_lines": 113
+      "function_lines": 102
     },
     "graph/rollup.py::rollup_view": {
-      "function_lines": 162
+      "function_lines": 141
     },
     "graph/scan_findings.py": {
       "broad_except": 6,
@@ -4758,7 +4755,7 @@
     "proxy.py": {
       "broad_except": 4,
       "deferred_imports": 8,
-      "file_lines": 950,
+      "file_lines": 947,
       "raw_env_reads": 3
     },
     "proxy.py::_maybe_block_on_firewall": {
