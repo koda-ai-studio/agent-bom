@@ -144,7 +144,7 @@ SLO or openCypher endpoint.
 | **Discovery** | Auto-detect 29 first-class MCP client types plus dynamic/project surfaces |
 | **CVE scanning** | OSV + NVD CVSS v4 + EPSS + CISA KEV + GHSA |
 | **Blast radius** | Map CVE impact: package → vulnerability finding → MCP server (tools + credential env names) → connected agents |
-| **Registry** | 1185 MCP server security metadata entries |
+| **Registry** | 1238 MCP server security metadata entries |
 | **Compliance** | Framework applicability and evaluated controls; MITRE ATLAS associations are unscored |
 | **Runtime proxy** | Policy enforcement, credential leak detection, audit logging |
 | **SBOM** | CycloneDX 1.7, SPDX 3.0 output |
