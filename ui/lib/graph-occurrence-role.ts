@@ -11,7 +11,7 @@ export function containerOccurrenceRole(dataSources: readonly string[]): string 
   const image = dataSources.some((source) => IMAGE_SOURCE.test(source));
   const deployment = dataSources.some((source) => DEPLOYMENT_SOURCE.test(source));
   if (image === deployment) return undefined;
-  return image ? "Image inventory" : "Deployment occurrence";
+  return image ? "Image inventory" : "Deployment";
 }
 
 /** The full digest belongs in the details panel; the canvas keeps the readable name. */

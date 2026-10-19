@@ -24,7 +24,7 @@ function contains(source: string): UnifiedGraphData["edges"][number] {
 describe("container occurrence roles", () => {
   it("derives the role from the recorded collector, not the label", () => {
     expect(containerOccurrenceRole(["cyclonedx_sbom"])).toBe("Image inventory");
-    expect(containerOccurrenceRole(["kubernetes_iac"])).toBe("Deployment occurrence");
+    expect(containerOccurrenceRole(["kubernetes_iac"])).toBe("Deployment");
     expect(containerOccurrenceRole(["kubernetes_iac", "cyclonedx_sbom"])).toBeUndefined();
     expect(containerOccurrenceRole(["test"])).toBeUndefined();
   });
@@ -46,7 +46,7 @@ describe("container occurrence roles", () => {
       edges: [contains("c-sbom"), contains("c-k8s"), contains("c-solo")],
     } as unknown as UnifiedGraphData;
     const roles = Object.fromEntries(buildUnifiedFlowGraph(graph, { ...createFocusedGraphFilters(), layers: { ...createFocusedGraphFilters().layers, container: true, package: true } }).nodes.map((item) => [item.id, item.data.occurrenceRole]));
-    expect(roles).toMatchObject({ "c-sbom": "Image inventory", "c-k8s": "Deployment occurrence", "c-solo": undefined });
+    expect(roles).toMatchObject({ "c-sbom": "Image inventory", "c-k8s": "Deployment", "c-solo": undefined });
   });
 });
 
