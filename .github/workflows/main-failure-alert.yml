@@ -30,7 +30,9 @@ jobs:
   # reflex. The supply-chain drift trackers already self-close on green; this
   # makes the CI tracker behave the same way.
   resolve:
-    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' }}
+    # A cancelled run is not evidence either way, but it can be the newest run
+    # on main; reconciling on it keeps a green predecessor from being stranded.
+    if: ${{ contains(fromJSON('["success","cancelled"]'), github.event.workflow_run.conclusion) && github.event.workflow_run.head_branch == 'main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -43,23 +45,38 @@ jobs:
         with:
           script: |
             const workflow = context.payload.workflow_run.name;
-            const htmlUrl = context.payload.workflow_run.html_url;
-            const sha = context.payload.workflow_run.head_sha.slice(0, 7);
             const title = `ci-regression: ${workflow} failing on main`;
             const owner = context.repo.owner;
             const repo = context.repo.repo;
+            // The exact-head full pipeline is the release proof, so one green run
+            // at the current main head is sufficient recovery evidence.
+            const RECOVERY_STREAK = 1;
+            const FAILURE_STREAK = workflow === "CI/CD Pipeline" || workflow === "Release" ? 3 : 5;
 
             // Completion events can arrive after a newer run has started or finished.
             const run = context.payload.workflow_run;
             const {data} = await github.rest.actions.listWorkflowRuns({
-              owner, repo, workflow_id: run.workflow_id, branch: "main", per_page: 1,
+              owner, repo, workflow_id: run.workflow_id, branch: "main", per_page: 20,
             });
             const latest = data.workflow_runs[0];
             if (!latest || latest.id !== run.id || latest.run_attempt !== run.run_attempt) return;
+
+            // Only green and red runs are evidence; cancelled, skipped and neutral are not.
+            const failed = new Set(["failure", "timed_out", "startup_failure"]);
+            const decisive = data.workflow_runs
+              .map((past) => (past.id === run.id ? {...past, ...run, status: "completed"} : past))
+              .filter((past) => past.status === "completed" && (past.conclusion === "success" || failed.has(past.conclusion)));
+            let greens = 0;
+            for (const past of decisive) {
+              if (past.conclusion !== "success") break;
+              greens += 1;
+            }
+            if (greens < RECOVERY_STREAK) return;
+            const green = decisive[0];
             // CI recovery must describe the current branch, not an older green SHA.
             if (workflow === "CI/CD Pipeline") {
               const {data: branch} = await github.rest.repos.getBranch({owner, repo, branch: "main"});
-              if (branch.commit.sha !== run.head_sha) return;
+              if (branch.commit.sha !== green.head_sha) return;
             }
 
             const existing = await github.paginate(github.rest.issues.listForRepo, {
@@ -69,28 +86,34 @@ jobs:
               labels: "ci-regression",
               per_page: 100,
             });
-            const match = existing.find((issue) => issue.title === title);
+            const match = existing.find((issue) => issue.title === title && issue.state === "open" && !issue.pull_request);
             if (!match) {
               return;
             }
+            // The body keeps the failure evidence; the comment records the recovery.
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number: match.number,
+              body: [
+                `**${workflow}** is green on \`main\` again: ${greens} consecutive green run${greens === 1 ? "" : "s"}.`,
+                "",
+                `- SHA: \`${(green.head_sha || "").slice(0, 7)}\``,
+                `- Run: ${green.html_url}`,
+                "",
+                `Closed automatically. Reopens after ${FAILURE_STREAK} consecutive failed runs on main; cancelled runs are ignored.`,
+              ].join("\n"),
+            });
             await github.rest.issues.update({
               owner,
               repo,
               issue_number: match.number,
               state: "closed",
               state_reason: "completed",
-              body: [
-                `**${workflow}** is green on \`main\` again.`,
-                "",
-                `- SHA: \`${sha}\``,
-                `- Run: ${htmlUrl}`,
-                "",
-                "Closed automatically. Reopens on the next failure.",
-              ].join("\n"),
             });
 
   alert:
-    if: ${{ github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.head_branch == 'main' }}
+    if: ${{ contains(fromJSON('["failure","timed_out","startup_failure"]'), github.event.workflow_run.conclusion) && github.event.workflow_run.head_branch == 'main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -120,7 +143,7 @@ jobs:
               `- Actor: @${context.payload.workflow_run.actor.login}`,
               `- Latest runs: ${context.serverUrl}/${owner}/${repo}/actions/workflows/${context.payload.workflow_run.workflow_id}`,
               "",
-              `Opened automatically after ${FAILURE_STREAK} consecutive failed runs on main; closes on the next green run.`,
+              `Opened automatically after ${FAILURE_STREAK} consecutive failed runs on main (cancelled runs ignored); closes with a comment on the next green run at the main head.`,
             ].join("\n");
 
             // Completion events can arrive after a newer run has started or finished.
