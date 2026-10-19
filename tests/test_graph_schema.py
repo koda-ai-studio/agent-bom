@@ -1101,7 +1101,9 @@ class TestGraphSchemaEndpoint:
         # tests/test_graph_schema_emission_honesty.py, which proves it from a
         # real build rather than from this declaration).
         assert edge_entries["owns"]["emission_status"] == "emitted"
-        assert "graph/builder.py" in edge_entries["owns"]["emission_surfaces"]
+        assert {"graph/cloud_context.py", "graph/organization_aws.py", "graph/organization_gcp.py"} <= set(
+            edge_entries["owns"]["emission_surfaces"]
+        )
 
         runtime_nodes = {"agent", "tool"}
         runtime_edges = {"called", "used_credential"}

@@ -45,6 +45,8 @@ def test_graph_report_consumers_cannot_silently_add_an_unforwarded_section():
     root = Path(__file__).resolve().parents[1] / "src" / "agent_bom"
     consumers = [
         "graph/builder.py",
+        "graph/organization_findings.py",
+        "graph/snowflake_source_lanes.py",
         "graph/build_analysis.py",
         "graph/benchmark_projection.py",
         "graph/nhi_overlay.py",
