@@ -12,6 +12,7 @@ from typing import Any
 
 from agent_bom.api.scim_errors import SCIM_ERROR_SCHEMA as SCIM_ERROR_SCHEMA
 from agent_bom.api.scim_errors import scim_error_body as scim_error_body
+from agent_bom.core.settings import env_bool
 from agent_bom.platform_invariants import ReservedTenantIdError, validate_customer_tenant_id
 
 _SCIM_ROLE_VALUES = ("admin", "analyst", "viewer")
@@ -41,7 +42,7 @@ class SCIMBearerTokenBinding:
 
 
 def _env_flag(name: str) -> bool:
-    return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
+    return env_bool(name, False, on_invalid="default")
 
 
 def scim_base_path() -> str:

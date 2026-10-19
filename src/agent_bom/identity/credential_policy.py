@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from datetime import datetime, timezone
 from typing import Any, Iterable
 
@@ -12,17 +11,11 @@ from agent_bom.core.credential_policy import (
     classify_credential_record,
     credential_governance_summary,
 )
+from agent_bom.core.settings import env_int
 
 
 def _env_int(name: str, default: int | None = None) -> int | None:
-    raw = os.environ.get(name, "").strip()
-    if not raw:
-        return default
-    try:
-        parsed = int(raw)
-    except ValueError:
-        return default
-    return parsed if parsed >= 0 else default
+    return env_int(name, default, minimum=0, on_invalid="default")
 
 
 def near_expiry_days() -> int:

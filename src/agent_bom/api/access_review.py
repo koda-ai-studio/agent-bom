@@ -34,6 +34,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Protocol
 
 from agent_bom.api.storage_schema import ensure_sqlite_schema_version, postgres_deployment_configured
+from agent_bom.core.timestamps import parse_timestamp as _parse_iso
 from agent_bom.storage.factory import validate_sqlite_path
 
 # Review decisions a reviewer may record against one item.
@@ -58,23 +59,6 @@ def _now() -> datetime:
 
 def _iso(dt: datetime) -> str:
     return dt.isoformat()
-
-
-def _parse_iso(raw: str | None) -> datetime | None:
-    if not raw:
-        return None
-    text = raw.strip()
-    if not text:
-        return None
-    if text.endswith("Z"):
-        text = f"{text[:-1]}+00:00"
-    try:
-        parsed = datetime.fromisoformat(text)
-    except ValueError:
-        return None
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=timezone.utc)
-    return parsed
 
 
 @dataclass

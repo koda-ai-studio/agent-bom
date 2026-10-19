@@ -211,9 +211,9 @@ describe("buildInventory", () => {
 
 describe("filterAssetRows / sort / summary", () => {
   const rows: AssetRow[] = [
-    baseRow({ id: "a", label: "requests", severity: "critical", severityRank: 4, findingCount: 3, criticalCount: 2, dataSources: ["sbom"] }),
-    baseRow({ id: "b", label: "flask", severity: "low", severityRank: 1, findingCount: 0, dataSources: ["image-scan"] }),
-    baseRow({ id: "c", label: "boto3", severity: "high", severityRank: 3, findingCount: 1, highCount: 1, dataSources: ["sbom"] }),
+    baseRow({ id: "a", label: "requests", severity: "critical", severityRank: 5, findingCount: 3, criticalCount: 2, dataSources: ["sbom"] }),
+    baseRow({ id: "b", label: "flask", severity: "low", severityRank: 2, findingCount: 0, dataSources: ["image-scan"] }),
+    baseRow({ id: "c", label: "boto3", severity: "high", severityRank: 4, findingCount: 1, highCount: 1, dataSources: ["sbom"] }),
   ];
 
   it("filters by query across label and data source", () => {

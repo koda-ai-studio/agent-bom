@@ -48,6 +48,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import IO, Optional
 
+from agent_bom.core.settings import env_int
 from agent_bom.coverage import record_scan_input_warning
 from agent_bom.models import Package, PackageOccurrence
 from agent_bom.package_utils import parse_debian_source_name
@@ -109,13 +110,8 @@ _MAX_DECOMPRESSION_RATIO = 100
 
 
 def _env_int(name: str, default: int) -> int:
-    raw = os.environ.get(name, "").strip()
-    if not raw:
-        return default
-    try:
-        return max(1, int(raw))
-    except ValueError:
-        return default
+    value = env_int(name, None, on_invalid="default")
+    return default if value is None else max(1, value)
 
 
 def _max_json_member_bytes() -> int:

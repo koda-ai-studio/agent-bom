@@ -5,19 +5,9 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
+from agent_bom.core.timestamps import parse_timestamp as _parse_iso_timestamp
+
 _FEED_STALE_AFTER_SECONDS = 120
-
-
-def _parse_iso_timestamp(value: str | None) -> datetime | None:
-    if not value:
-        return None
-    try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    except ValueError:
-        return None
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=timezone.utc)
-    return parsed.astimezone(timezone.utc)
 
 
 def build_gateway_feed_health(

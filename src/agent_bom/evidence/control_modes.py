@@ -39,6 +39,8 @@ from __future__ import annotations
 from collections.abc import Iterable
 from datetime import datetime, timedelta, timezone
 
+from agent_bom.core.timestamps import parse_timestamp as _parse_timestamp
+
 __all__ = [
     "DETECTIVE_CONTROLS",
     "UNEVALUABLE_CONTROLS",
@@ -160,18 +162,6 @@ def requires_vulnerability_coverage(tag_field: str, control_id: str) -> bool:
 # Forward clock drift between a scanner host and the control plane that is
 # ordinary NTP skew rather than an untrustworthy timestamp.
 _MAX_FORWARD_CLOCK_SKEW = timedelta(minutes=5)
-
-
-def _parse_timestamp(value: str | None) -> datetime | None:
-    if not value:
-        return None
-    try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-    except ValueError:
-        return None
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=timezone.utc)
-    return parsed
 
 
 def detective_control_status(

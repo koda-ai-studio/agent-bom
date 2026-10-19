@@ -12,13 +12,13 @@ from agent_bom.api.auth_runtime_state import AuthPostureError as AuthPostureErro
 from agent_bom.api.auth_runtime_state import apply_auth_posture as apply_auth_posture
 from agent_bom.api.auth_runtime_state import get_auth_posture as get_auth_posture
 from agent_bom.api.auth_runtime_state import get_auth_runtime_status as get_auth_runtime_status
-from agent_bom.core.settings import env_str
+from agent_bom.core.settings import env_bool, env_str
 
 _TRUSTED_PROXY_SECRET_MIN_BYTES = 32
 
 
 def _env_flag(name: str) -> bool:
-    return env_str(name).lower() in {"1", "true", "yes", "on"}
+    return env_bool(name, False, on_invalid="default")
 
 
 def _secret_min_bytes(secret: str) -> int:

@@ -17,6 +17,8 @@ import threading
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from agent_bom.core.settings import env_bool
+
 SESSION_COOKIE_NAME = "agent_bom_session"
 SIGNED_OUT_COOKIE_NAME = "agent_bom_signed_out"
 CSRF_COOKIE_NAME = "agent_bom_csrf"
@@ -35,7 +37,7 @@ class BrowserSessionError(Exception):
 
 
 def _env_flag(name: str) -> bool:
-    return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
+    return env_bool(name, False, on_invalid="default")
 
 
 def _configured_api_replicas() -> int:

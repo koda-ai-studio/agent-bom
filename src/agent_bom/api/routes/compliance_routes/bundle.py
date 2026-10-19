@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import AsyncIterator
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any, cast
 
 from fastapi import HTTPException
@@ -12,23 +12,21 @@ from fastapi.responses import StreamingResponse
 
 from agent_bom.api.models import JobStatus
 from agent_bom.api.routes.compliance_routes.evidence import _result_compliance_evidence
+from agent_bom.core.timestamps import parse_timestamp
 from agent_bom.evidence.control_modes import MODE_DETECTIVE
 from agent_bom.evidence.scoring import score_compliance
 
 
 def _parse_iso_or_default(value: str | None, default: datetime) -> datetime:
-    """Parse an ISO-8601 timestamp; fall back to ``default`` on missing/invalid."""
+    """Use the default for missing input; reject invalid timestamps with HTTP 400."""
     if not value:
         return default
-    try:
-        parsed = datetime.fromisoformat(value)
-    except ValueError as exc:
+    parsed = parse_timestamp(value)
+    if parsed is None:
         raise HTTPException(
             status_code=400,
             detail=f"Invalid timestamp '{value}'. Use ISO-8601 with timezone.",
-        ) from exc
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=timezone.utc)
+        )
     return parsed
 
 

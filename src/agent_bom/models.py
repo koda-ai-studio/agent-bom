@@ -37,6 +37,7 @@ from agent_bom.core.package_artifacts import normalize_artifact_version, package
 from agent_bom.core.packages import normalize_package_name as normalize_package_name
 from agent_bom.core.reachability import assess_reachability
 from agent_bom.core.severity import Severity as Severity
+from agent_bom.core.severity import severity_rank
 from agent_bom.domain.codeowners import apply_codeowners
 from agent_bom.evidence.scan_run import ScanRun
 from agent_bom.package_utils import (
@@ -1380,7 +1381,6 @@ class AIBOMReport:
             return []
         from agent_bom.finding import ast_flow_dict_to_finding, is_ast_security_flow
 
-        severity_rank = {"low": 1, "medium": 2, "high": 3, "critical": 4}
         by_sink: dict[tuple[object, ...], Finding] = {}
         for raw in block.get("flow_findings", []):
             if not isinstance(raw, dict) or not is_ast_security_flow(raw):
@@ -1398,7 +1398,7 @@ class AIBOMReport:
                 categories.add(str(current.evidence.get("category", "")))
                 categories.update(str(item) for item in current.evidence.get("detector_categories", []))
             categories.discard("")
-            if current is None or severity_rank.get(finding.severity, 0) > severity_rank.get(current.severity, 0):
+            if current is None or severity_rank(finding.severity) > severity_rank(current.severity):
                 finding.evidence["detector_categories"] = sorted(categories)
                 by_sink[key] = finding
             else:

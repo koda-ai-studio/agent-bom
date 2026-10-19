@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import base64
-from hashlib import sha256
 from typing import Any, Mapping
 
 from agent_bom.cloud.authorization_evidence import EvidenceSourceState
+from agent_bom.core.ids import legacy_provider_binding_id
 
 
 def _get(value: Any, name: str, default: Any = None) -> Any:
@@ -55,10 +55,10 @@ def _bindings(policy: Any, resource: str) -> tuple[list[dict[str, Any]], int]:
             dropped += 1
             continue
         condition = _condition(_get(raw, "condition"))
-        digest = sha256("\x1f".join((resource, role, *members, condition["expression"] if condition else "")).encode()).hexdigest()[:24]
+        binding_id = legacy_provider_binding_id("gcp:iam-binding:", resource, role, *members, condition["expression"] if condition else "")
         bindings.append(
             {
-                "id": f"gcp:iam-binding:{digest}",
+                "id": binding_id,
                 "role": role,
                 "members": members,
                 "condition": condition,

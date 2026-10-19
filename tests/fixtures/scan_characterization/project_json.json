@@ -2058,6 +2058,12 @@
      "triggered": false
     },
     {
+     "code": "A.6.8",
+     "findings": 0,
+     "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
+     "triggered": false
+    },
+    {
      "code": "A.8.15",
      "findings": 0,
      "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
@@ -2113,6 +2119,12 @@
     },
     {
      "code": "A.8.3",
+     "findings": 0,
+     "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
+     "triggered": false
+    },
+    {
+     "code": "A.8.32",
      "findings": 0,
      "name": "Reached through the NIST SP 800-53 Rev 5 crosswalk",
      "triggered": false

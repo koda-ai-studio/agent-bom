@@ -6,6 +6,8 @@ import os
 import sqlite3
 from typing import Any, Protocol
 
+from agent_bom.core.settings import env_int
+
 _DEFAULT_ANALYTICS_MAX_EVENTS = 50_000
 _DEFAULT_ANALYTICS_MAX_PACKAGES = 500_000
 _DEFAULT_ANALYTICS_MAX_FINDINGS = 250_000
@@ -59,13 +61,7 @@ def analytics_max_events() -> int:
 
 
 def _env_cap(name: str, default: int) -> int:
-    raw = os.environ.get(name)
-    if raw is None:
-        return default
-    try:
-        return int(raw)
-    except ValueError:
-        return default
+    return env_int(name, default, on_invalid="default")
 
 
 def analytics_max_packages() -> int:

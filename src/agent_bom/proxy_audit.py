@@ -23,7 +23,7 @@ from agent_bom.audit_integrity import (
     compute_audit_record_mac,
     persist_ephemeral_chain_key,
 )
-from agent_bom.core.settings import SettingError, env_int, env_str
+from agent_bom.core.settings import env_bool, env_int, env_opt
 from agent_bom.event_normalization import build_agentic_identity_graph_projection, build_proxy_event_relationships
 from agent_bom.runtime import audit_delivery as _audit_delivery
 
@@ -43,15 +43,15 @@ _AUDIT_CHAIN_LOCK = threading.Lock()
 
 
 def _env_flag_enabled(name: str) -> bool:
-    return env_str(name).lower() in {"1", "true", "yes", "on", "enabled"}
+    return env_bool(name, False, on_invalid="default", truthy={"1", "true", "yes", "on", "enabled"})
 
 
 def _env_positive_int(name: str, default: int) -> int:
-    try:
-        return max(1, env_int(name, default))
-    except SettingError as exc:
-        logger.warning("%s; using %d", exc, default)
-        return default
+    value = env_int(name, None, on_invalid="default")
+    if value is None:
+        # Blank/unset used to clamp the default; malformed input did not.
+        return max(1, default) if not env_opt(name) else default
+    return max(1, value)
 
 
 class RotatingAuditLog:

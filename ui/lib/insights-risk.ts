@@ -1,13 +1,8 @@
+import { severityRank } from "@/lib/severity";
 import type { Agent, BlastRadius, ScanResult, Vulnerability } from "@/lib/api";
 import type { EpssVsCvssPoint, PipelineStats } from "@/components/charts";
 
-const SEVERITY_RANK: Record<string, number> = {
-  critical: 4,
-  high: 3,
-  medium: 2,
-  low: 1,
-  none: 0,
-};
+
 
 const SEVERITY_SCORE: Record<string, number> = {
   critical: 90,
@@ -138,7 +133,7 @@ export function buildEpssVsCvss(blasts: BlastRadius[]): EpssVsCvssPoint[] {
     });
   }
   return out.sort((a, b) => {
-    const severityDelta = (SEVERITY_RANK[b.severity] ?? 0) - (SEVERITY_RANK[a.severity] ?? 0);
+    const severityDelta = severityRank(b.severity) - severityRank(a.severity);
     return severityDelta || b.blast - a.blast;
   });
 }
@@ -174,7 +169,7 @@ export function buildBlastRadiusSummary(blasts: BlastRadius[], limit = 8): Blast
       servers: new Set<string>(),
     };
     const severity = normalizeSeverity(blast.severity);
-    if ((SEVERITY_RANK[severity] ?? 0) > (SEVERITY_RANK[entry.severity] ?? 0)) {
+    if (severityRank(severity) > severityRank(entry.severity)) {
       entry.severity = severity;
     }
     entry.score = Math.max(entry.score, blastPriority(blast));

@@ -23,6 +23,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
+from agent_bom.core.timestamps import parse_timestamp as _parse_ts
 from agent_bom.domain.report_payloads import OSVResponseCachePayload, VulnerabilityFreshnessPayload
 
 # Default freshness target: refresh / mark stale once the cache crosses a day.
@@ -211,18 +212,6 @@ def _read_sync_meta(db_path: Path) -> list[tuple[str, str | None, int]]:
     except Exception:
         return []
     return [(str(r[0]), r[1], int(r[2] or 0)) for r in rows]
-
-
-def _parse_ts(ts: str | None) -> datetime | None:
-    if not ts:
-        return None
-    try:
-        dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
-    except ValueError:
-        return None
-    if dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
-    return dt
 
 
 def compute_freshness(

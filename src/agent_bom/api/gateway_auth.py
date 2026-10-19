@@ -13,6 +13,7 @@ from fastapi import HTTPException, Request
 
 from agent_bom.api.auth import Role, get_key_store
 from agent_bom.api.gateway_request import _sanitize_for_log
+from agent_bom.core.settings import env_bool
 from agent_bom.core.tenancy import require_explicit_tenant_id
 from agent_bom.runtime.gateway_settings import GatewaySettings
 from agent_bom.security import sanitize_text
@@ -73,7 +74,7 @@ def _is_loopback_host(host: str) -> bool:
 
 
 def _env_flag_enabled(name: str) -> bool:
-    return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on", "enabled"}
+    return env_bool(name, False, on_invalid="default", truthy={"1", "true", "yes", "on", "enabled"})
 
 
 def _enforce_gateway_auth_posture(settings: GatewaySettings) -> None:

@@ -30,6 +30,7 @@ from uuid import uuid4
 
 from agent_bom.api.secret_source import resolve_secret
 from agent_bom.api.storage_schema import ensure_sqlite_schema_version, postgres_deployment_configured
+from agent_bom.core.settings import env_bool, env_int
 from agent_bom.security import sanitize_path_label, sanitize_sensitive_payload
 
 logger = logging.getLogger(__name__)
@@ -47,19 +48,11 @@ _MAX_APPEND_RETRIES = 50
 
 
 def _env_enabled(name: str) -> bool:
-    value = os.environ.get(name, "")
-    return value.strip().lower() in {"1", "true", "yes", "on"}
+    return env_bool(name, False, on_invalid="default")
 
 
 def _env_int(name: str) -> int | None:
-    value = (os.environ.get(name) or "").strip()
-    if not value:
-        return None
-    try:
-        parsed = int(value)
-    except ValueError:
-        return None
-    return parsed if parsed >= 0 else None
+    return env_int(name, None, minimum=0, on_invalid="default")
 
 
 def _configured_control_plane_replicas() -> int:

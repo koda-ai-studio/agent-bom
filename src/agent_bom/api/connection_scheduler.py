@@ -76,6 +76,7 @@ from agent_bom.config import (
     CONNECTIONS_SCHEDULER_MIN_INTERVAL_MINUTES,
     CONNECTIONS_SCHEDULER_POLL_SECONDS,
 )
+from agent_bom.core.timestamps import parse_timestamp as _parse_iso
 from agent_bom.security import sanitize_error, sanitize_text
 
 logger = logging.getLogger(__name__)
@@ -109,19 +110,6 @@ def connections_scheduler_enabled() -> bool:
         return False
     raw = os.environ.get("AGENT_BOM_CONNECTIONS_SCHEDULER", "")
     return raw.strip().lower() in {"1", "true", "yes", "on", "enabled"}
-
-
-def _parse_iso(value: str | None) -> datetime | None:
-    """Parse a stored ISO timestamp into an aware UTC datetime (tolerant)."""
-    if not value:
-        return None
-    try:
-        parsed = datetime.fromisoformat(value)
-    except ValueError:
-        return None
-    if parsed.tzinfo is None:
-        return parsed.replace(tzinfo=timezone.utc)
-    return parsed.astimezone(timezone.utc)
 
 
 def _effective_interval_minutes(record: CloudConnectionRecord) -> int | None:

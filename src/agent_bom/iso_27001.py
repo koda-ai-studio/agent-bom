@@ -57,6 +57,7 @@ ISO_27001_CROSSWALK_IDS: tuple[str, ...] = (
     "A.5.16",
     "A.5.17",
     "A.5.33",
+    "A.6.8",
     "A.8.2",
     "A.8.3",
     "A.8.4",
@@ -67,6 +68,7 @@ ISO_27001_CROSSWALK_IDS: tuple[str, ...] = (
     "A.8.19",
     "A.8.20",
     "A.8.26",
+    "A.8.32",
 )
 
 _CROSSWALK_LABEL = "Reached through the NIST SP 800-53 Rev 5 crosswalk"

@@ -8,6 +8,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+from agent_bom.core.settings import env_int
+
 _logger = logging.getLogger(__name__)
 
 ReportArtifactBackend = Literal["local", "s3"]
@@ -26,10 +28,7 @@ def _env_str(name: str, default: str = "") -> str:
 
 
 def _env_int(name: str, default: int) -> int:
-    raw = os.environ.get(name)
-    if raw is None or not str(raw).strip():
-        return default
-    return int(raw)
+    return env_int(name, default, on_invalid="raise")
 
 
 def _safe_segment(value: str) -> str:
