@@ -89,29 +89,46 @@ def _alias_clusters(records: list[Vulnerability]) -> list[list[Vulnerability]]:
     return list(groups.values())
 
 
-def merge_advisory_clusters(records: list[Vulnerability]) -> list[Vulnerability]:
+# Release-scoped OS ecosystems: an empty fix authoritatively means "no fix for
+# this release", so a sibling record's fix (often another branch) never fills it.
+_RELEASE_SCOPED_ECOSYSTEMS = frozenset({"deb", "apk", "rpm"})
+
+
+def fix_fallback_allowed(package: object) -> bool:
+    """Whether a cluster may fill a missing fix from a sibling record for ``package``."""
+    return str(getattr(package, "ecosystem", "") or "").lower() not in _RELEASE_SCOPED_ECOSYSTEMS
+
+
+def _rank(record: Vulnerability) -> tuple:
+    return (
+        # A namespace default is not a rating; any scored or rated record outranks it.
+        severity_basis(record.severity_source) == "default",
+        -severity_rank(record.severity),
+        -(record.cvss_score if record.cvss_score is not None else -1),
+        _advisory_origin(record),
+        json.dumps(asdict(record), sort_keys=True, default=str),
+    )
+
+
+def merge_advisory_clusters(records: list[Vulnerability], *, fix_fallback: bool = False) -> list[Vulnerability]:
     """Collapse transitive aliases; retain the highest authoritative severity.
 
     Advisory DB evidence supersedes an external-only report. Within that tier,
     a scored or rated record beats a namespace default, then severity, score, original advisory ID and serialized content break ties in
-    that order. Score, vector and fix always come from the same representative;
-    provenance, references and affected symbols retain the whole cluster.
+    that order. Score and vector always come from the same representative. The
+    fix does too, unless the representative has none and ``fix_fallback`` is
+    set: then the highest-ranked authoritative record carrying a fix supplies
+    it (one call's records all describe one package, so no other package's
+    range can contribute). Provenance, references and affected symbols retain
+    the whole cluster.
     """
     merged: list[Vulnerability] = []
     for cluster in _alias_clusters(records):
-        authoritative = [record for record in cluster if not _external_only(record)] or cluster
-        representative = min(
-            authoritative,
-            key=lambda record: (
-                # A namespace default is not a rating; any scored or rated record outranks it.
-                severity_basis(record.severity_source) == "default",
-                -severity_rank(record.severity),
-                -(record.cvss_score if record.cvss_score is not None else -1),
-                _advisory_origin(record),
-                json.dumps(asdict(record), sort_keys=True, default=str),
-            ),
-        )
+        authoritative = sorted((record for record in cluster if not _external_only(record)), key=_rank) or sorted(cluster, key=_rank)
+        representative = authoritative[0]
         result = deepcopy(representative)
+        if fix_fallback and not (result.fixed_version or "").strip():
+            result.fixed_version = next((record.fixed_version for record in authoritative if (record.fixed_version or "").strip()), None)
         keys = set().union(*(advisory_keys(record) for record in cluster))
         cves = sorted(key for key in keys if key.upper().startswith("CVE-"))
         result.id = cves[0] if cves else min(keys)

@@ -414,9 +414,9 @@ def build_vulnerabilities(vuln_data_list: list[dict], package: Package) -> list[
             )
         )
 
-    from agent_bom.scanners.advisory_merge import merge_advisory_clusters
+    from agent_bom.scanners.advisory_merge import fix_fallback_allowed, merge_advisory_clusters
 
-    vulns = merge_advisory_clusters(vulns)
+    vulns = merge_advisory_clusters(vulns, fix_fallback=fix_fallback_allowed(package))
     _apply_distro_release_ambiguity(package, vulns)
     return vulns
 

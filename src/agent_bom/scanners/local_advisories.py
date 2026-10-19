@@ -24,10 +24,10 @@ from agent_bom.vuln_compliance import tag_vulnerability as _tag_vuln
 
 def merge_scanner_vulnerabilities(pkg: Package, new_vulns: list[Vulnerability]) -> list[Vulnerability]:
     """Merge alias clusters once, returning only clusters absent from the package."""
-    from agent_bom.scanners.advisory_merge import advisory_keys, merge_advisory_clusters
+    from agent_bom.scanners.advisory_merge import advisory_keys, fix_fallback_allowed, merge_advisory_clusters
 
     previous_keys = {key for record in pkg.vulnerabilities for key in advisory_keys(record)}
-    pkg.vulnerabilities = merge_advisory_clusters([*pkg.vulnerabilities, *new_vulns])
+    pkg.vulnerabilities = merge_advisory_clusters([*pkg.vulnerabilities, *new_vulns], fix_fallback=fix_fallback_allowed(pkg))
     return [record for record in pkg.vulnerabilities if not advisory_keys(record) & previous_keys]
 
 
