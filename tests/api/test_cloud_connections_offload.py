@@ -146,8 +146,7 @@ def test_scan_connection_queues_without_provider_io(monkeypatch, wired):
     _record, offloaded = wired
     dispatched: list[str] = []
     monkeypatch.setattr(
-        cloud_connections,
-        "_run_connection_scan",
+        "agent_bom.api.connection_scan_worker._run_connection_scan",
         lambda *args, **kwargs: pytest.fail("the request must not run provider I/O"),
     )
     monkeypatch.setattr(

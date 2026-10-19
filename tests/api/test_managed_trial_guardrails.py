@@ -325,8 +325,7 @@ def test_connection_test_and_scan_revalidate_stale_trial_records_before_executio
         lambda _record: broker_calls.append("test") or SimpleNamespace(capabilities=("bedrock:list-agents",)),
     )
     monkeypatch.setattr(
-        cloud_connections,
-        "_run_connection_scan",
+        "agent_bom.api.connection_scan_worker._run_connection_scan",
         lambda _record, _tenant_id: scan_calls.append("scan"),
     )
 

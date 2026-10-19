@@ -145,8 +145,7 @@ def test_durable_connection_worker_revalidates_stored_trial_envelope(
 
     monkeypatch.setattr(managed_trial, "enforce_stored_connection_envelope", _guard)
     monkeypatch.setattr(
-        cloud_connections,
-        "_run_connection_scan",
+        "agent_bom.api.connection_scan_worker._run_connection_scan",
         lambda *_args, **_kwargs: pytest.fail("worker ran provider I/O before validation"),
     )
 

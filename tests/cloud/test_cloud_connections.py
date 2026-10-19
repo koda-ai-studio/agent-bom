@@ -877,7 +877,7 @@ def test_api_create_rejects_invalid_scan_mode() -> None:
 def test_api_create_persists_auto_scan_on_create_false(monkeypatch: pytest.MonkeyPatch) -> None:
     scanned: list[str] = []
     monkeypatch.setattr(
-        "agent_bom.api.routes.cloud_connections._run_connection_scan",
+        "agent_bom.api.connection_scan_worker._run_connection_scan",
         lambda record, tenant_id: scanned.append(record.id) or {"scan_id": "should-not-run"},
     )
     client = TestClient(_app())
@@ -907,7 +907,7 @@ def test_api_create_auto_scan_on_create_true_dispatches_durable_job(monkeypatch:
 def test_api_create_auto_scan_on_create_false_does_not_invoke_scan(monkeypatch: pytest.MonkeyPatch) -> None:
     scanned: list[str] = []
     monkeypatch.setattr(
-        "agent_bom.api.routes.cloud_connections._run_connection_scan",
+        "agent_bom.api.connection_scan_worker._run_connection_scan",
         lambda record, tenant_id: scanned.append(record.id) or {"scan_id": "x"},
     )
     client = TestClient(_app())

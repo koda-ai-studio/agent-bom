@@ -87,7 +87,7 @@ def test_current_remediation_requires_finding_read_scope(monkeypatch):
 def test_remediation_reads_retained_jobs_once_and_does_not_query_graph(scan_store, monkeypatch):  # noqa: F811
     from unittest.mock import Mock
 
-    from agent_bom.api.routes import scan
+    from agent_bom.api import finding_page_read
 
     row = pushed(8, scope="v1:" + "a" * 64)
     template = row.result["findings"][0]
@@ -107,8 +107,8 @@ def test_remediation_reads_retained_jobs_once_and_does_not_query_graph(scan_stor
         client.headers.update(proxy_headers(role="analyst", tenant="history-tenant"))
         reads = Mock(wraps=scan_store.list_all)
         monkeypatch.setattr(scan_store, "list_all", reads)
-        graph_reads = Mock(wraps=scan._project_findings_reachability)
-        monkeypatch.setattr(scan, "_project_findings_reachability", graph_reads)
+        graph_reads = Mock(wraps=finding_page_read._project_findings_reachability)
+        monkeypatch.setattr(finding_page_read, "_project_findings_reachability", graph_reads)
         response = client.get("/v1/findings/remediation")
         assert response.status_code == 200
         assert response.json()["source_findings"] == 1001
@@ -137,8 +137,8 @@ def test_grouped_findings_and_facets_share_one_current_evidence_fold(scan_store,
 def test_collect_shared_advisory_uses_bounded_asset_identity_lookups(monkeypatch):
     from unittest.mock import Mock
 
+    from agent_bom.api import finding_collection
     from agent_bom.api.finding_collection import collect_scan_findings
-    from agent_bom.api.routes import scan
 
     row = pushed(8, scope="v1:" + "a" * 64)
     template = row.result["findings"][0]
@@ -147,11 +147,11 @@ def test_collect_shared_advisory_uses_bounded_asset_identity_lookups(monkeypatch
         {**template, "id": f"finding-{i}", "canonical_id": f"finding-{i}", "package": "shared-lib", "asset": {"stable_id": f"asset-{i}"}}
         for i in range(count)
     ]
-    reads = Mock(wraps=scan._row_asset_key)
-    monkeypatch.setattr(scan, "_row_asset_key", reads)
+    reads = Mock(wraps=finding_collection._row_asset_key)
+    monkeypatch.setattr(finding_collection, "_row_asset_key", reads)
     findings = collect_scan_findings(row)
     assert len(findings) == count
-    assert reads.call_count <= count * 8
+    assert 0 < reads.call_count <= count * 8
 
 
 def test_remediation_preserves_existing_taxonomy_tags_through_safe_projection():
