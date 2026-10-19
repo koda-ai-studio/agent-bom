@@ -5,18 +5,16 @@ import { Bot } from "lucide-react";
 import type { AgentSource } from "@/lib/agent-source";
 import type { EntityIcon } from "@/lib/entity-icons";
 
-/** Local, accessible source badge shared by glyph overlays and graph nodes. */
-export function SourceBadge({ source, className = "", style, graph = false }: {
+/** Local, accessible source badge for list and table glyphs; graph canvases use GraphProviderMark. */
+export function SourceBadge({ source, className = "", style }: {
   source: AgentSource;
   className?: string;
   style?: CSSProperties;
-  graph?: boolean;
 }) {
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   return (
     <span role="img" aria-label={`Source: ${source.label}`} title={`Source: ${source.label}`}
       data-agent-source={source.id} data-agent-source-badge="true"
-      data-graph-source-badge={graph ? "true" : undefined}
       className={`inline-flex items-center justify-center overflow-hidden rounded-full border border-outline p-0.5 ${className}`}
       style={{ background: source.darkMark ? "#202123" : "#ffffff", color: "#202123", ...style }}>
       {source.src && source.src !== failedSrc

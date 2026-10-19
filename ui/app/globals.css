@@ -948,6 +948,24 @@ main > div {
 :root { --graph-canvas: #242d3b; }
 [data-theme="light"] { --graph-canvas: #f1f5fa; }
 .react-flow { background-color: var(--graph-canvas); }
+/* Provider marks: a canvas cut-out ring, then a ≥3:1 outline that turns dashed when inherited. */
+.graph-provider-mark {
+  display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; overflow: hidden;
+  border-radius: 9999px; border: 2px solid var(--graph-canvas); background: var(--surface); color: var(--foreground);
+  outline: 1.5px solid var(--border-strong); outline-offset: -3.5px;
+}
+.graph-provider-mark[data-provider-basis="inherited"] { outline-style: dashed; }
+/* Inline marks sit on chips and cards, not the canvas: no cut-out ring. */
+.graph-provider-mark-inline { border-width: 0; outline-width: 1px; outline-offset: -1px; }
+.graph-provider-mark-inline .graph-provider-mark-glyph { width: 74%; height: 74%; }
+.graph-provider-mark-inline .graph-provider-mark-glyph-aws { width: 90%; height: 90%; }
+.graph-provider-mark-dark { background: #202123; }
+.graph-provider-mark-glyph { width: 64%; height: 64%; object-fit: contain; }
+/* AWS has no symbol-only mark; its wide logo gets the disc's full width. */
+.graph-provider-mark-glyph-aws { width: 82%; height: 82%; }
+.graph-provider-mark-glyph-openai { transform: scale(1.6); }
+/* Black-ink artwork: invert lightness, keep hue (the AWS smile stays orange). */
+:root:not([data-theme="light"]) .graph-provider-mark-mono .graph-provider-mark-glyph { filter: invert(1) hue-rotate(180deg); }
 /* Scenario cards share width with the decision panel; keep metadata legible. */
 .scenario-context-canvas .react-flow__node :is(span, p, .text-xs) { font-size: max(16px, var(--graph-node-meta-size, 16px), 1em); }
 
