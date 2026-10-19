@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 import sys
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from click.testing import CliRunner
@@ -18,6 +18,12 @@ from agent_bom.cli import cli_main, main
 from agent_bom.cli._agent_mode import dumps_envelope, success_envelope, summarize_scan_data
 from agent_bom.models import Agent, AgentType, BlastRadius, MCPServer, Package, Severity, Vulnerability
 from agent_bom.scanners import IncompleteScanError
+
+
+@pytest.fixture(autouse=True)
+def stub_kev_feed(monkeypatch):
+    """CLI tests never fetch live KEV data through the default enrichment join."""
+    monkeypatch.setattr("agent_bom.enrichment.fetch_cisa_kev_catalog", AsyncMock(return_value={}))
 
 
 def test_cli_generates_vex_after_reachability_stamping():

@@ -5,9 +5,9 @@ from __future__ import annotations
 import asyncio
 import logging
 
+from agent_bom import enrichment
 from agent_bom.compliance_utils import apply_effective_blast_radius_tags
 from agent_bom.config import kev_default_join_mode
-from agent_bom.enrichment import join_kev_catalog
 from agent_bom.models import BlastRadius
 from agent_bom.scanners.enrichment_apply import join_kev_status
 
@@ -36,7 +36,7 @@ def join_default_kev_catalog(blast_radii: list[BlastRadius], *, offline: bool) -
     already_listed = {id(v) for v in vulns if v.is_kev}
     try:
         asyncio.run(
-            join_kev_catalog(vulns, offline=offline or mode == "cache", timeout=_DEFAULT_KEV_JOIN_TIMEOUT_SECONDS),
+            enrichment.join_kev_catalog(vulns, offline=offline or mode == "cache", timeout=_DEFAULT_KEV_JOIN_TIMEOUT_SECONDS),
         )
     except Exception as exc:  # noqa: BLE001 - KEV is advisory context; the scan result stands
         _logger.warning("CISA KEV catalog join unavailable: %s", type(exc).__name__)
