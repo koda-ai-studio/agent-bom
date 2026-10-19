@@ -20,6 +20,7 @@ from agent_bom.demo_estate.compute_identity_lane import compute_lane_report
 from agent_bom.demo_estate.enterprise_composition import build_demo_estate
 from agent_bom.demo_estate.enterprise_findings import build_estate_findings
 from agent_bom.demo_estate.enterprise_risk import build_vulnerability_evidence
+from agent_bom.demo_estate.id_schemes import showcase_misconfig_id
 from agent_bom.domain.finding_rehydrate import finding_from_dict
 from agent_bom.evidence.finding_node_ids import finding_row_node_id, mcp_audit_node_id, stamp_finding_node_ids
 from agent_bom.finding import Asset, Finding, FindingSource, FindingType
@@ -38,8 +39,14 @@ SHOWCASE_FINDING_SOURCE = "demo-showcase"
 
 # (node id, title, severity, affected cloud node, its label)
 _SHOWCASE_MISCONFIGURATIONS: tuple[tuple[str, str, str, str, str], ...] = (
-    ("mc:pii-public", "S3 bucket customer-pii-prod is publicly readable", "high", "cloud:pii-bucket", "customer-pii-prod (S3)"),
-    ("mc:sg-open", "Security group sg-prod allows 0.0.0.0/0 on port 22", "", "cloud:bastion", "prod-bastion (EC2)"),
+    (
+        showcase_misconfig_id("pii-public"),
+        "S3 bucket customer-pii-prod is publicly readable",
+        "high",
+        "cloud:pii-bucket",
+        "customer-pii-prod (S3)",
+    ),
+    (showcase_misconfig_id("sg-open"), "Security group sg-prod allows 0.0.0.0/0 on port 22", "", "cloud:bastion", "prod-bastion (EC2)"),
 )
 
 # (incident id, blueprint / agent label, drift score, violations, violated tool)

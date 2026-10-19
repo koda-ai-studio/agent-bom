@@ -31,6 +31,7 @@ from dataclasses import dataclass
 
 from agent_bom.canonical_ids import mcp_server_graph_id
 from agent_bom.demo_estate.enterprise import EstateAsset
+from agent_bom.demo_estate.id_schemes import estate_package_asset_id
 
 # Tag key naming an asset's AI lane; graph projection, surfaces gate and tests read it.
 AI_LANE_TAG = "ai_lane"
@@ -704,10 +705,9 @@ def build_delivery_assets(
                 name, version, ecosystem = catalog[(workload_seed + package_slot) % len(catalog)]
                 assets.append(
                     EstateAsset(
-                        # Keyed by the image digest, not the workload name: the
-                        # same service name recurs across clusters, and keying on
-                        # it collapsed four images' package lists into one.
-                        asset_id=f"package:{ecosystem.lower()}:{name}@{version}:{digest[:12]}",
+                        # Keyed by image digest, not workload name: the name recurs
+                        # across clusters and collapsed four images' packages.
+                        asset_id=estate_package_asset_id(ecosystem, name, version, digest),
                         tenant_id=tenant_id,
                         provider=account.provider,
                         resource_type="package",

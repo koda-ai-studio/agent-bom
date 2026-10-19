@@ -318,7 +318,7 @@ def test_demo_estate_graph_is_a_rich_multi_agent_estate(demo_estate_client: Test
     # Configuration errors must not masquerade as CVEs or invented packages.
     assert "CVE-2024-S3ACL" not in labels
     assert not any("reqeusts" in (label or "") for label in labels)
-    public_bucket = next(n for n in nodes if n.get("id") == "mc:pii-public")
+    public_bucket = next(n for n in nodes if n.get("id") == "misconfig:showcase:pii-public")
     assert public_bucket["entity_type"] == "misconfiguration"
     assert public_bucket["severity"] == "high"
 
@@ -1162,7 +1162,7 @@ def test_demo_estate_graph_carries_the_projected_estate(demo_estate_client: Test
 
     assert len(nodes) >= 2500, len(nodes)
     # org → account → environment → asset, all four levels present.
-    assert "organization:northstar-health-ai" in node_ids
+    assert "org:enterprise:northstar-health-ai" in node_ids
     assert "account:aws:123456789012" in node_ids
     assert "env:aws:123456789012:production" in node_ids
     assert "cloud_resource:aws:iam:role:member-copilot-prod" in node_ids
@@ -1171,14 +1171,14 @@ def test_demo_estate_graph_carries_the_projected_estate(demo_estate_client: Test
     assert by_type["misconfiguration"] >= 439, by_type
 
     contains = {(row.get("source"), row.get("target")) for row in payload.get("edges") or [] if row.get("relationship") == "contains"}
-    assert ("organization:northstar-health-ai", "account:aws:123456789012") in contains
+    assert ("org:enterprise:northstar-health-ai", "account:aws:123456789012") in contains
     assert ("account:aws:123456789012", "env:aws:123456789012:production") in contains
     assert (
         "env:aws:123456789012:production",
         "cloud_resource:aws:iam:role:member-copilot-prod",
     ) in contains
     # One estate, one root: the hand-built showcase org hangs off the estate org.
-    assert ("organization:northstar-health-ai", "org:corp") in contains
+    assert ("org:enterprise:northstar-health-ai", "org:corp") in contains
 
 
 def test_demo_estate_graph_incident_chain_is_traversable(demo_estate_client: TestClient) -> None:
@@ -1275,16 +1275,16 @@ def test_demo_estate_graph_rolls_up_to_a_readable_estate(demo_estate_client: Tes
     top_level = rollup.get("top_level") or []
     containers = [row for row in top_level if row.get("is_container") and row.get("has_children")]
     root_ids = {row.get("id") for row in containers}
-    assert "organization:northstar-health-ai" in root_ids, root_ids
+    assert "org:enterprise:northstar-health-ai" in root_ids, root_ids
 
-    root = next(row for row in containers if row["id"] == "organization:northstar-health-ai")
+    root = next(row for row in containers if row["id"] == "org:enterprise:northstar-health-ai")
     assert root["aggregate"]["descendant_count"] >= 2500, root["aggregate"]
     assert rollup["summary"]["total_nodes_source"] >= 2500, rollup["summary"]
 
     accounts = demo_estate_client.get(
         "/v1/graph/rollup",
         headers=VIEWER,
-        params={"node": "organization:northstar-health-ai"},
+        params={"node": "org:enterprise:northstar-health-ai"},
     ).json()
     account_ids = {row.get("id") for row in accounts.get("children") or []}
     assert "account:aws:123456789012" in account_ids

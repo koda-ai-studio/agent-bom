@@ -48,6 +48,18 @@ def drop_live_node_aliases(graph: Any) -> int:
     return dropped
 
 
+def record_node_aliases(node: UnifiedNode, aliases: Iterable[str]) -> None:
+    """Add retired ids to a node's ``identity.aliases`` so persistence keeps them resolvable."""
+    retired = {alias for alias in aliases if isinstance(alias, str) and alias and alias != node.id}
+    if not retired:
+        return
+    identity = node.attributes.get("identity")
+    identity = dict(identity) if isinstance(identity, dict) else {}
+    known = [alias for alias in identity.get("aliases", []) if isinstance(alias, str)]
+    identity["aliases"] = sorted({*known, *retired})
+    node.attributes["identity"] = identity
+
+
 @dataclass(slots=True)
 class NodeAliasCollector:
     """Collect ``(alias_id, canonical_id, entity_type)`` while nodes stream to storage."""

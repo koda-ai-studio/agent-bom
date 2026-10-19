@@ -36,10 +36,12 @@ from typing import TYPE_CHECKING
 from agent_bom.core.severity import SEVERITY_RISK_SCORE, normalize_severity
 from agent_bom.demo_estate.enterprise import EnterpriseEstate, EstateAsset
 from agent_bom.demo_estate.estate_edges import ESTATE_DATA_SOURCE, add_estate_edge, oriented_topology_edge
+from agent_bom.demo_estate.id_schemes import retired_estate_asset_ids
 from agent_bom.graph.container import AttackPath, UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.finding_row_projection import finding_signal_attributes
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
+from agent_bom.graph.node_aliases import record_node_aliases
 from agent_bom.graph.types import EntityType, RelationshipType
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
@@ -199,7 +201,7 @@ def estate_org_node_id(estate: EnterpriseEstate) -> str:
     for asset in estate.assets:
         if asset.resource_type == _ORG_RESOURCE_TYPE:
             return asset.asset_id
-    return f"organization:{estate.estate_id}"
+    return f"org:enterprise:{estate.estate_id}"
 
 
 def _account_providers(estate: EnterpriseEstate) -> dict[str, str]:
@@ -251,7 +253,7 @@ def _asset_node(asset: EstateAsset, estate: EnterpriseEstate) -> UnifiedNode:
     ``summarize_estate_findings``.
     """
     exposed = asset.tags.get("internet_facing") == "true"
-    return UnifiedNode(
+    node = UnifiedNode(
         id=asset.asset_id,
         entity_type=entity_type_for_resource_type(asset.resource_type),
         label=asset.display_name,
@@ -289,6 +291,8 @@ def _asset_node(asset: EstateAsset, estate: EnterpriseEstate) -> UnifiedNode:
             surface=asset.resource_type,
         ),
     )
+    record_node_aliases(node, retired_estate_asset_ids(asset.asset_id, asset.resource_type, asset.native_id, asset.tags))
+    return node
 
 
 # Finding types that are a VULNERABILITY on the graph rather than a
@@ -331,21 +335,22 @@ def project_estate_into_graph(
     account_providers = _account_providers(estate)
 
     org_asset = next((a for a in estate.assets if a.asset_id == org_id), None)
-    graph.add_node(
-        UnifiedNode(
-            id=org_id,
-            entity_type=EntityType.ORG,
-            label=org_asset.display_name if org_asset is not None else estate.display_name,
-            attributes={
-                "org_id": org_asset.native_id if org_asset is not None else estate.estate_id,
-                "estate_id": estate.estate_id,
-                "synthetic": True,
-                "fictional": True,
-                "disclosure": estate.disclosure,
-            },
-            data_sources=[ESTATE_DATA_SOURCE],
-        )
+    org_node = UnifiedNode(
+        id=org_id,
+        entity_type=EntityType.ORG,
+        label=org_asset.display_name if org_asset is not None else estate.display_name,
+        attributes={
+            "org_id": org_asset.native_id if org_asset is not None else estate.estate_id,
+            "estate_id": estate.estate_id,
+            "synthetic": True,
+            "fictional": True,
+            "disclosure": estate.disclosure,
+        },
+        data_sources=[ESTATE_DATA_SOURCE],
     )
+    if org_asset is not None:
+        record_node_aliases(org_node, retired_estate_asset_ids(org_id, org_asset.resource_type, org_asset.native_id, org_asset.tags))
+    graph.add_node(org_node)
 
     def _edge(source: str, target: str, relationship: RelationshipType, **kwargs: object) -> None:
         add_estate_edge(graph, source, target, relationship, **kwargs)

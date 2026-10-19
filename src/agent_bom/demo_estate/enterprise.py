@@ -235,7 +235,7 @@ class EnterpriseEstate(BaseModel):
 
 _ASSET_SPECS: tuple[dict[str, Any], ...] = (
     {
-        "asset_id": "organization:northstar-health-ai",
+        "asset_id": "org:enterprise:northstar-health-ai",
         "provider": "enterprise",
         "resource_type": "organization",
         "native_id": "northstar-health-ai",

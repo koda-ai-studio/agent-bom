@@ -12,6 +12,7 @@ from agent_bom.api.agent_identity_store import (
     InMemoryAgentIdentityStore,
 )
 from agent_bom.demo_estate.compute_identity_lane import project_compute_lane
+from agent_bom.demo_estate.id_schemes import record_retired_showcase_ids, showcase_misconfig_id
 from agent_bom.demo_estate.showcase_findings import (
     SHOWCASE_DRIFT_INCIDENTS,
     bind_mcp_auth_findings,
@@ -549,20 +550,20 @@ def build_showcase_graph(
     )
     if is_baseline:
         node(
-            "mc:pii-private",
+            showcase_misconfig_id("pii-private"),
             EntityType.MISCONFIGURATION,
             "S3 bucket customer-pii-prod blocks public ACLs",
         )
-        edge("mc:pii-private", "cloud:pii-bucket", RelationshipType.AFFECTS)
+        edge(showcase_misconfig_id("pii-private"), "cloud:pii-bucket", RelationshipType.AFFECTS)
     else:
         node(
-            "mc:pii-public",
+            showcase_misconfig_id("pii-public"),
             EntityType.MISCONFIGURATION,
             "S3 bucket customer-pii-prod is publicly readable",
             severity="high",
             risk_score=8.2,
         )
-        edge("mc:pii-public", "cloud:pii-bucket", RelationshipType.AFFECTS)
+        edge(showcase_misconfig_id("pii-public"), "cloud:pii-bucket", RelationshipType.AFFECTS)
 
     node(
         "cloud:payments-db",
@@ -574,12 +575,13 @@ def build_showcase_graph(
 
     node("cloud:bastion", EntityType.CLOUD_RESOURCE, "prod-bastion (EC2)", resource_type="ec2")
     node(
-        "mc:sg-open",
+        showcase_misconfig_id("sg-open"),
         EntityType.MISCONFIGURATION,
         "Security group sg-prod allows 0.0.0.0/0 on port 22",
         network_exposure=[{"resource": "prod-bastion", "from_port": 22, "to_port": 22, "protocol": "tcp", "scope": "internet"}],
     )
-    edge("mc:sg-open", "cloud:bastion", RelationshipType.AFFECTS)
+    edge(showcase_misconfig_id("sg-open"), "cloud:bastion", RelationshipType.AFFECTS)
+    record_retired_showcase_ids(g)
 
     node("cloud:logs-bucket", EntityType.CLOUD_RESOURCE, "app-logs (S3)", resource_type="s3")
 
