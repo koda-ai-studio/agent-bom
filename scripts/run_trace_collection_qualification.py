@@ -242,8 +242,12 @@ def run(output: Path, *, backend: str, workers: int, pages: int, rows: int, p95_
         receipt = {
             "schema": "trace.qualification.v1",
             "evidence": "synthetic-provider/in-process-ASGI/real-SQL",
-            "source_sha": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
-            "source_dirty": bool(subprocess.check_output(["git", "status", "--porcelain"], cwd=ROOT, text=True)),
+            "source_sha": subprocess.check_output(
+                ["git", "-c", f"safe.directory={ROOT}", "rev-parse", "HEAD"], cwd=ROOT, text=True
+            ).strip(),
+            "source_dirty": bool(
+                subprocess.check_output(["git", "-c", f"safe.directory={ROOT}", "status", "--porcelain"], cwd=ROOT, text=True)
+            ),
             "python": platform.python_version(),
             "platform": platform.platform(),
             "backend": backend,
