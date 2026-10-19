@@ -1698,7 +1698,7 @@ jobs:
   # Runs the test suite inside an Alpine Linux container (musl libc) to catch
   # glibc-only assumptions in code, compiled extensions, or path handling.
   test-alpine:
-    name: Test (Alpine/musl)
+    name: Test (Alpine/musl, shard ${{ matrix.shard }})
     # Run the targeted musl subset on relevant PRs and main pushes, the full
     # musl suite on dependency changes and every nightly run.
     if: >-
@@ -1708,15 +1708,18 @@ jobs:
         needs.changes.outputs.alpine == 'true'
       )
     runs-on: ubuntu-latest
-    # Version and dependency changes run the full suite under musl. The serial
-    # suite reached only 82% at the 45-minute ceiling as the repository grew.
-    # Use two workers: bounded parallelism recovers wall time while staying
-    # below the four-worker hosted-runner OOM threshold documented above.
-    # Keep a finite timeout so a genuinely hung run releases the runner.
+    # Full musl runs reached 98-99% at the 45-minute ceiling with two workers.
+    # Split the exhaustive file plan across two runners, keeping two workers
+    # per runner below the hosted-runner OOM threshold. Targeted runs need only
+    # one runner. Every shard retains the same finite timeout and test markers.
     timeout-minutes: 45
     permissions:
       contents: read
     needs: [changes]
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON((needs.changes.outputs.alpine_full == 'true' || github.event_name == 'schedule') && '[0, 1]' || '[0]') }}
     container:
       image: python:3.14.3-alpine3.23@sha256:faee120f7885a06fcc9677922331391fa690d911c020abb9e8025ff3d908e510
     steps:
@@ -1762,12 +1765,23 @@ jobs:
           uv sync --frozen --extra dev --extra api --extra mcp-server --extra snowflake
 
       - name: Run tests (musl)
+        shell: bash
         env:
           ALPINE_FULL: ${{ needs.changes.outputs.alpine_full == 'true' || github.event_name == 'schedule' }}
+          ALPINE_SHARD: ${{ matrix.shard }}
         run: |
           set -euxo pipefail
           if [ "${ALPINE_FULL}" = "true" ]; then
-            uv run pytest tests/ -q --tb=short -m "not network and not slow" -x --durations=20 -n 2 --dist worksteal
+            TESTS=()
+            while IFS= read -r test_file; do
+              TESTS+=("$test_file")
+            done < <(uv run python scripts/pytest_ci_plan.py shard --index "$ALPINE_SHARD" --total 2)
+            if [ "${#TESTS[@]}" -eq 0 ]; then
+              echo "::error::Alpine shard $ALPINE_SHARD selected no test modules" >&2
+              exit 1
+            fi
+            echo "Alpine shard $ALPINE_SHARD/2: ${#TESTS[@]} test modules"
+            uv run pytest "${TESTS[@]}" -q --tb=short -m "not network and not slow" -x --durations=20 -n 2 --dist worksteal
           else
             uv run pytest -q --tb=short -m "not network and not slow" --durations=20 \
               tests/api/test_api_auth_me.py \

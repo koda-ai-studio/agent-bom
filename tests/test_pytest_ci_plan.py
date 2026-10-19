@@ -93,13 +93,14 @@ def test_dependency_and_checker_changes_select_pin_agreement(tmp_path: Path, sou
     assert select_targeted_tests(changed_files=[Path(source)], root=tmp_path) == [contract]
 
 
-def test_shard_plan_is_deterministic_disjoint_and_complete(tmp_path: Path) -> None:
+@pytest.mark.parametrize("total", [2, 4])
+def test_shard_plan_is_deterministic_disjoint_and_complete(tmp_path: Path, total: int) -> None:
     for index, lines in enumerate((200, 150, 120, 90, 70, 50, 30, 20, 10)):
         _write(tmp_path / f"group_{index % 3}" / f"test_{index}.py", lines)
 
     files = discover_test_files(tmp_path)
-    first = plan_shards(files, total=4)
-    second = plan_shards(files, total=4)
+    first = plan_shards(files, total=total)
+    second = plan_shards(files, total=total)
 
     assert first == second
     assert {path for shard in first for path in shard} == set(files)

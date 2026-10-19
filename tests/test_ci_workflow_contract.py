@@ -326,7 +326,7 @@ def test_version_alignment_fails_fast_when_uv_lock_is_stale() -> None:
 
 
 def test_alpine_full_suite_timeout_leaves_musl_headroom() -> None:
-    """Full-suite Alpine runs must leave cleanup margin over the 34m51s baseline."""
+    """Every musl shard retains a finite 45-minute execution ceiling."""
     assert _ci()["jobs"]["test-alpine"]["timeout-minutes"] == 45
 
 
@@ -334,10 +334,25 @@ def test_alpine_full_suite_uses_bounded_parallelism() -> None:
     """The musl full suite must finish without overcommitting the hosted runner."""
     text = CI_WORKFLOW.read_text(encoding="utf-8")
     alpine = text.split("      - name: Run tests (musl)", 1)[1].split("  # 3c. Release Surface Consistency Check", 1)[0]
-    full_suite = next(line.strip() for line in alpine.splitlines() if "uv run pytest tests/" in line)
+    full_suite = next(line.strip() for line in alpine.splitlines() if 'uv run pytest "${TESTS[@]}"' in line)
 
     assert "-n 2" in full_suite
     assert "--dist worksteal" in full_suite
+
+
+def test_alpine_full_suite_shards_without_dropping_coverage() -> None:
+    job = _ci()["jobs"]["test-alpine"]
+    assert job["strategy"]["fail-fast"] is False
+    assert job["strategy"]["matrix"]["shard"] == (
+        "${{ fromJSON((needs.changes.outputs.alpine_full == 'true' || github.event_name == 'schedule') && '[0, 1]' || '[0]') }}"
+    )
+    step = next(step for step in job["steps"] if step.get("name") == "Run tests (musl)")
+    assert step["shell"] == "bash"
+    assert step["env"]["ALPINE_SHARD"] == "${{ matrix.shard }}"
+    assert 'scripts/pytest_ci_plan.py shard --index "$ALPINE_SHARD" --total 2' in step["run"]
+    assert 'if [ "${#TESTS[@]}" -eq 0 ]; then' in step["run"]
+    assert '-m "not network and not slow"' in step["run"]
+    assert "not graph_performance" not in step["run"]
 
 
 def test_pull_request_pytest_reports_slowest_tests() -> None:
