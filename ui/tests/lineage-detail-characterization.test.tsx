@@ -25,7 +25,7 @@ const rich: Partial<LineageNodeData> = {
 const digest = (html: string) => createHash("sha256").update(html).digest("hex");
 beforeEach(() => {
   vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-01-03T00:00:00Z"));
-  vi.spyOn(Date.prototype, "toLocaleString").mockImplementation(function () { return this.toISOString(); });
+  vi.spyOn(Date.prototype, "toLocaleString").mockImplementation(function (this: Date) { return this.toISOString(); });
   localStorage.clear();
 });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
