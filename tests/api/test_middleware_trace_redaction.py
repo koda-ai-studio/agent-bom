@@ -9,7 +9,7 @@ import pytest
 from starlette.applications import Starlette
 from starlette.requests import Request
 
-from agent_bom.api import middleware
+from agent_bom.api import middleware_headers as middleware
 
 
 @pytest.mark.asyncio

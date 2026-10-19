@@ -12,16 +12,11 @@ from __future__ import annotations
 
 import ctypes
 import gc
-import json
 import logging
 import sys
 import threading
-import uuid
-from collections.abc import Iterable
 from concurrent.futures import Future, ThreadPoolExecutor
 from contextlib import ExitStack
-from datetime import datetime, timezone
-from enum import Enum
 from typing import Any
 
 from agent_bom.api.graph_persistence import (
@@ -41,6 +36,45 @@ from agent_bom.api.graph_persistence import (
 )
 from agent_bom.api.hub_ingest import ingest_runtime_findings
 from agent_bom.api.models import JobStatus, ScanJob, StepStatus
+from agent_bom.api.pipeline_events import (
+    _PIPELINE_PREDECESSORS as _PIPELINE_PREDECESSORS,
+)
+from agent_bom.api.pipeline_events import (
+    _PIPELINE_STEP_INDEX as _PIPELINE_STEP_INDEX,
+)
+from agent_bom.api.pipeline_events import (
+    _PIPELINE_SUCCESSORS as _PIPELINE_SUCCESSORS,
+)
+from agent_bom.api.pipeline_events import (
+    _TERMINAL_STEP_STATUSES as _TERMINAL_STEP_STATUSES,
+)
+from agent_bom.api.pipeline_events import (
+    PIPELINE_DAG_EDGES as PIPELINE_DAG_EDGES,
+)
+from agent_bom.api.pipeline_events import (
+    PIPELINE_DAG_EVENT_SCHEMA as PIPELINE_DAG_EVENT_SCHEMA,
+)
+from agent_bom.api.pipeline_events import (
+    PIPELINE_STEPS as PIPELINE_STEPS,
+)
+from agent_bom.api.pipeline_events import (
+    ScanPipeline as ScanPipeline,
+)
+from agent_bom.api.pipeline_events import (
+    _now as _now,
+)
+from agent_bom.api.pipeline_events import (
+    iter_pipeline_dag_event_records as iter_pipeline_dag_event_records,
+)
+from agent_bom.api.pipeline_events import (
+    pipeline_dag_events_jsonl as pipeline_dag_events_jsonl,
+)
+from agent_bom.api.pipeline_fleet import (
+    _optional_str as _optional_str,
+)
+from agent_bom.api.pipeline_fleet import (
+    sync_scan_agents_to_fleet,
+)
 from agent_bom.api.scan_analysis_stages import (
     analyse_reachability_stage,
     attach_repo_evidence,
@@ -75,7 +109,7 @@ from agent_bom.api.stores import (
 from agent_bom.api.tenant_worker import run_tenant_bound
 from agent_bom.config import API_SCAN_WORKER_RECYCLE_JOBS, API_SCAN_WORKERS
 from agent_bom.core.tenancy import require_explicit_tenant_id
-from agent_bom.security import sanitize_error, sanitize_sensitive_payload, sanitize_text
+from agent_bom.security import sanitize_error, sanitize_text
 
 _logger = logging.getLogger(__name__)
 
@@ -310,107 +344,6 @@ def _release_scan_memory() -> None:
         pass
 
 
-# ─── Constants ───────────────────────────────────────────────────────────────
-
-PIPELINE_STEPS = ["discovery", "extraction", "scanning", "enrichment", "analysis", "output"]
-PIPELINE_DAG_EVENT_SCHEMA = "agent-bom.pipeline.dag.events.v1"
-PIPELINE_DAG_EDGES = [{"source": source, "target": target} for source, target in zip(PIPELINE_STEPS, PIPELINE_STEPS[1:], strict=False)]
-_PIPELINE_STEP_INDEX = {step_id: index for index, step_id in enumerate(PIPELINE_STEPS)}
-_PIPELINE_PREDECESSORS = {
-    step_id: [edge["source"] for edge in PIPELINE_DAG_EDGES if edge["target"] == step_id] for step_id in PIPELINE_STEPS
-}
-_PIPELINE_SUCCESSORS = {step_id: [edge["target"] for edge in PIPELINE_DAG_EDGES if edge["source"] == step_id] for step_id in PIPELINE_STEPS}
-_TERMINAL_STEP_STATUSES = {
-    StepStatus.DONE.value,
-    StepStatus.FAILED.value,
-    StepStatus.SKIPPED.value,
-}
-
-
-# ─── Helpers ─────────────────────────────────────────────────────────────────
-
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
-def iter_pipeline_dag_event_records(
-    progress_lines: Iterable[str],
-    *,
-    scan_id: str,
-    tenant_id: str | None = None,
-) -> list[dict[str, Any]]:
-    """Return dashboard-ready DAG step records from structured progress lines.
-
-    The API already emits JSON step progress records for SSE consumers. This
-    helper keeps that wire behavior intact while giving local tests, report
-    exporters, and dashboards a stable JSONL artifact shape that includes the
-    scan pipeline DAG edges needed to render progress as a graph.
-    """
-    records: list[dict[str, Any]] = []
-    for sequence, line in enumerate(progress_lines):
-        try:
-            event = json.loads(line)
-        except (TypeError, ValueError):
-            continue
-        if not isinstance(event, dict) or event.get("type") != "step":
-            continue
-        step_id = event.get("step_id")
-        status = event.get("status")
-        if not isinstance(step_id, str) or step_id not in _PIPELINE_STEP_INDEX:
-            continue
-        if isinstance(status, StepStatus):
-            status = status.value
-        if not isinstance(status, str):
-            continue
-
-        emitted_at = event.get("completed_at") or event.get("started_at")
-        record: dict[str, Any] = {
-            "schema_version": PIPELINE_DAG_EVENT_SCHEMA,
-            "type": "pipeline_dag_step",
-            "event_id": f"{scan_id}:{sequence}:{step_id}:{status}",
-            "scan_id": scan_id,
-            "sequence": sequence,
-            "emitted_at": emitted_at if isinstance(emitted_at, str) else None,
-            "step": {
-                "id": step_id,
-                "index": _PIPELINE_STEP_INDEX[step_id],
-                "status": status,
-                "message": event.get("message") if isinstance(event.get("message"), str) else "",
-                "started_at": event.get("started_at") if isinstance(event.get("started_at"), str) else None,
-                "completed_at": event.get("completed_at") if isinstance(event.get("completed_at"), str) else None,
-                "stats": event.get("stats") if isinstance(event.get("stats"), dict) else {},
-                "sub_step": event.get("sub_step") if isinstance(event.get("sub_step"), str) else None,
-                "progress_pct": event.get("progress_pct") if isinstance(event.get("progress_pct"), int) else None,
-            },
-            "dag": {
-                "node_id": step_id,
-                "depends_on": list(_PIPELINE_PREDECESSORS[step_id]),
-                "next_steps": list(_PIPELINE_SUCCESSORS[step_id]),
-                "edges": [dict(edge) for edge in PIPELINE_DAG_EDGES],
-            },
-            "dashboard": {
-                "lane": "scan_pipeline",
-                "render": "dag_step",
-                "terminal": status in _TERMINAL_STEP_STATUSES,
-            },
-        }
-        if tenant_id:
-            record["tenant_id"] = tenant_id
-        records.append(record)
-    return records
-
-
-def pipeline_dag_events_jsonl(job: ScanJob) -> str:
-    """Serialize a scan job's structured pipeline events as JSONL."""
-    records = iter_pipeline_dag_event_records(
-        list(job.progress),
-        scan_id=job.job_id,
-        tenant_id=job.tenant_id,
-    )
-    return "\n".join(json.dumps(record, sort_keys=True) for record in records)
-
-
 def _persist_graph_snapshot(
     job: ScanJob, report_json: dict[str, Any], *, lock: threading.Lock | None = None, write_generation: str = ""
 ) -> None:
@@ -420,177 +353,6 @@ def _persist_graph_snapshot(
     persist_graph_snapshot(
         job, report_json, store_factory=_get_graph_store, lock=lock, write_generation=write_generation, finding_sink=ingest_runtime_findings
     )
-
-
-# ─── ScanPipeline ────────────────────────────────────────────────────────────
-
-
-class ScanPipeline:
-    """Track scan pipeline steps and emit structured events to job.progress."""
-
-    def __init__(self, job: ScanJob, lock: threading.Lock | None = None) -> None:
-        self._job = job
-        self._lock = lock
-        self._steps: dict[str, dict[str, Any]] = {}
-        for step_id in PIPELINE_STEPS:
-            self._steps[step_id] = {
-                "type": "step",
-                "step_id": step_id,
-                "status": StepStatus.PENDING,
-                "message": f"Pending: {step_id}",
-                "started_at": None,
-                "completed_at": None,
-                "stats": {},
-                "sub_step": None,
-                "progress_pct": None,
-            }
-
-    def start_step(self, step_id: str, message: str, sub_step: str | None = None) -> None:
-        """Mark a step as running and emit event."""
-        event = self._steps[step_id]
-        event["status"] = StepStatus.RUNNING
-        event["message"] = message
-        event["started_at"] = _now()
-        event["sub_step"] = sub_step
-        self._emit(event)
-
-    def update_step(
-        self,
-        step_id: str,
-        message: str,
-        stats: dict[str, Any] | None = None,
-        progress_pct: int | None = None,
-    ) -> None:
-        """Update a running step with new message/stats."""
-        event = self._steps[step_id]
-        event["message"] = message
-        if stats:
-            event["stats"].update(stats)
-        if progress_pct is not None:
-            event["progress_pct"] = progress_pct
-        self._emit(event)
-
-    def complete_step(self, step_id: str, message: str, stats: dict[str, Any] | None = None) -> None:
-        """Mark a step as done."""
-        event = self._steps[step_id]
-        event["status"] = StepStatus.DONE
-        event["message"] = message
-        event["completed_at"] = _now()
-        if stats:
-            event["stats"].update(stats)
-        self._emit(event)
-
-    def fail_step(self, step_id: str, message: str) -> None:
-        """Mark a step as failed."""
-        event = self._steps[step_id]
-        event["status"] = StepStatus.FAILED
-        event["message"] = message
-        event["completed_at"] = _now()
-        self._emit(event)
-
-    def skip_step(self, step_id: str, message: str) -> None:
-        """Mark a step as skipped."""
-        event = self._steps[step_id]
-        event["status"] = StepStatus.SKIPPED
-        event["message"] = message
-        event["completed_at"] = _now()
-        self._emit(event)
-
-    def _emit(self, event: dict[str, Any]) -> None:
-        """Serialize step event to job.progress for SSE pickup (thread-safe)."""
-        # Convert enum values to strings for JSON serialization
-        serializable = {k: (v.value if isinstance(v, Enum) else v) for k, v in event.items()}
-        line = json.dumps(sanitize_sensitive_payload(serializable))
-        if self._lock:
-            with self._lock:
-                self._job.progress.append(line)
-        else:
-            self._job.progress.append(line)
-
-
-# ─── Fleet sync ──────────────────────────────────────────────────────────────
-
-
-def _sync_scan_agents_to_fleet(agents: list, tenant_id: str = "default") -> None:
-    """Sync discovered agents from a scan into the fleet registry.
-
-    Creates new FleetAgent entries for previously unseen agents and updates
-    counts/trust scores for existing ones.  This ensures the fleet table is
-    always populated after every scan — closing the gap where scan_jobs had
-    data but fleet_agents stayed empty.
-    """
-    from agent_bom.api.fleet_store import FleetAgent, FleetLifecycleState, discovered_fleet_identity, match_discovered_fleet_agent
-    from agent_bom.fleet.trust_scoring import compute_trust_score
-
-    store = _get_fleet_store()
-    now = _now()
-
-    # Collect all agents for a single batch upsert (atomicity)
-    to_upsert: list[FleetAgent] = []
-
-    existing_agents = store.list_by_tenant(tenant_id)
-    claimed_agent_ids: set[str] = set()
-
-    for agent in agents:
-        agent_type = agent.agent_type.value if hasattr(agent.agent_type, "value") else str(agent.agent_type)
-        canonical_id = _optional_str(getattr(agent, "canonical_id", ""))
-        existing = match_discovered_fleet_agent(
-            existing_agents,
-            **discovered_fleet_identity(agent),
-            claimed_agent_ids=claimed_agent_ids,
-        )
-        server_count = len(agent.mcp_servers)
-        pkg_count = sum(len(s.packages) for s in agent.mcp_servers)
-        cred_count = sum(len(s.credential_names) for s in agent.mcp_servers)
-        vuln_count = sum(s.total_vulnerabilities for s in agent.mcp_servers)
-
-        score, factors = compute_trust_score(agent)
-
-        if existing:
-            claimed_agent_ids.add(existing.agent_id)
-            existing.canonical_id = canonical_id
-            existing.name = agent.name
-            existing.agent_type = agent_type
-            existing.config_path = agent.config_path or ""
-            existing.source_id = _optional_str(getattr(agent, "source_id", "")) or existing.source_id
-            existing.device_fingerprint = _optional_str(getattr(agent, "device_fingerprint", "")) or existing.device_fingerprint
-            existing.server_count = server_count
-            existing.package_count = pkg_count
-            existing.credential_count = cred_count
-            existing.vuln_count = vuln_count
-            existing.trust_score = score
-            existing.trust_factors = factors
-            existing.updated_at = now
-            to_upsert.append(existing)
-        else:
-            fleet_agent = FleetAgent(
-                agent_id=str(uuid.uuid4()),
-                canonical_id=canonical_id,
-                device_fingerprint=_optional_str(getattr(agent, "device_fingerprint", "")),
-                name=agent.name,
-                agent_type=agent_type,
-                config_path=agent.config_path or "",
-                source_id=_optional_str(getattr(agent, "source_id", "")),
-                lifecycle_state=FleetLifecycleState.DISCOVERED,
-                trust_score=score,
-                trust_factors=factors,
-                server_count=server_count,
-                package_count=pkg_count,
-                credential_count=cred_count,
-                vuln_count=vuln_count,
-                tenant_id=tenant_id,
-                last_discovery=now,
-                created_at=now,
-                updated_at=now,
-            )
-            to_upsert.append(fleet_agent)
-
-    if to_upsert:
-        store.batch_put(to_upsert)
-
-
-def _optional_str(value: object) -> str:
-    return value if isinstance(value, str) else ""
 
 
 # ─── Scan Pipeline Runner ───────────────────────────────────────────────────
@@ -1054,3 +816,7 @@ def _run_scan_sync(job: ScanJob) -> None:
         _handle_failure(ctx, exc)
     finally:
         _finalize(ctx)
+
+
+def _sync_scan_agents_to_fleet(agents: list, tenant_id: str = "default") -> None:
+    sync_scan_agents_to_fleet(agents, tenant_id, get_fleet_store=_get_fleet_store)

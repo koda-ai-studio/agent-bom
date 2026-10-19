@@ -26,3 +26,10 @@ def clustered_control_plane_required() -> bool:
         "yes",
         "on",
     } or _configured_api_replicas() > 1
+
+
+def _production_or_clustered_control_plane() -> bool:
+    from agent_bom.config import resolved_deployment_env
+
+    deployment = resolved_deployment_env()
+    return deployment in {"prod", "production"} or clustered_control_plane_required()

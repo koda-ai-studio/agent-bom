@@ -1773,7 +1773,7 @@ def test_rate_limit_middleware_uses_postgres_store_when_available(monkeypatch):
     fake_store.hit.return_value = (1, 1_700_000_060)
 
     monkeypatch.setenv("AGENT_BOM_POSTGRES_URL", "postgresql://example/test")
-    with patch("agent_bom.api.middleware.PostgresRateLimitStore", return_value=fake_store):
+    with patch("agent_bom.api.middleware_limits.PostgresRateLimitStore", return_value=fake_store):
         test_app = Starlette(routes=[Route("/v1/auth/me", dummy)])
         test_app.add_middleware(RateLimitMiddleware, scan_rpm=3, read_rpm=10)
         client = TestClient(test_app)
@@ -1793,7 +1793,7 @@ def test_rate_limit_middleware_fails_closed_when_postgres_store_unavailable(monk
         return StarletteJSONResponse({"ok": True})
 
     monkeypatch.setenv("AGENT_BOM_POSTGRES_URL", "postgresql://example/test")
-    with patch("agent_bom.api.middleware.PostgresRateLimitStore", side_effect=RuntimeError("boom")):
+    with patch("agent_bom.api.middleware_limits.PostgresRateLimitStore", side_effect=RuntimeError("boom")):
         test_app = Starlette(routes=[Route("/v1/auth/me", dummy)])
         test_app.add_middleware(RateLimitMiddleware, scan_rpm=3, read_rpm=10)
         client = TestClient(test_app)
@@ -1831,7 +1831,7 @@ def test_rate_limit_middleware_respects_explicit_shared_rate_limit_requirement(m
         return StarletteJSONResponse({"ok": True})
 
     monkeypatch.setenv("AGENT_BOM_REQUIRE_SHARED_RATE_LIMIT", "1")
-    with patch("agent_bom.api.middleware.PostgresRateLimitStore", side_effect=RuntimeError("boom")):
+    with patch("agent_bom.api.middleware_limits.PostgresRateLimitStore", side_effect=RuntimeError("boom")):
         test_app = Starlette(routes=[Route("/v1/auth/me", dummy)])
         test_app.add_middleware(RateLimitMiddleware, scan_rpm=3, read_rpm=10)
         client = TestClient(test_app)
