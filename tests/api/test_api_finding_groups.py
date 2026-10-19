@@ -187,7 +187,7 @@ def test_grouping_projects_graph_reachability_once_after_the_occurrence_walk(mon
         return SimpleNamespace(rows=rows, truncated=False)
 
     monkeypatch.setattr(
-        "agent_bom.api.routes.scan.project_persisted_graph_reachability",
+        "agent_bom.api.finding_page_read.project_persisted_graph_reachability",
         project_once,
     )
     from agent_bom import finding_scope
@@ -291,8 +291,8 @@ def test_nav_issue_counts_refresh_immediately_when_a_new_scan_lands() -> None:
 
 
 def test_nav_issue_counts_reuse_one_grouped_walk_while_evidence_is_unchanged(monkeypatch) -> None:
+    from agent_bom.api import finding_snapshot_read as scan_routes
     from agent_bom.api.compliance_hub_store import get_compliance_hub_store
-    from agent_bom.api.routes import scan as scan_routes
 
     tenant = "finding-group-nav-cache"
     set_job_store(InMemoryJobStore())

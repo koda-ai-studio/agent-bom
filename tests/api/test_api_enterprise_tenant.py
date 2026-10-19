@@ -609,7 +609,7 @@ async def test_finding_triage_openvex_current_scope_matches_canonical_finding_fi
     monkeypatch,
 ):
     """A filtered Findings export must not include tenant-wide VEX decisions."""
-    from agent_bom.api.routes import scan as scan_routes
+    from agent_bom.api import finding_snapshot_read as scan_routes
 
     for vulnerability_id, package in (
         ("CVE-2026-0101", "pkg:pypi/requests@2.31.0"),
@@ -692,7 +692,7 @@ async def test_finding_triage_openvex_current_scope_matches_canonical_finding_fi
 
 def test_current_findings_snapshot_forwards_the_canonical_scope(monkeypatch):
     """Internal exports must not silently broaden a canonical finding scope."""
-    from agent_bom.api.routes import scan as scan_routes
+    from agent_bom.api import finding_snapshot_read as scan_routes
 
     captured: dict[str, object] = {}
 

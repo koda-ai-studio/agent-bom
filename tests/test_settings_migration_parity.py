@@ -477,7 +477,7 @@ def test_ai_litellm_readiness(monkeypatch, clean_ai_env, env, model, ready):
 def test_ai_huggingface_token_presence(monkeypatch, clean_ai_env, raw, configured):
     from agent_bom import ai_enrich
 
-    monkeypatch.setattr(ai_enrich, "_check_huggingface", lambda: True)
+    monkeypatch.setattr("agent_bom.ai_components.provider_discovery._check_huggingface", lambda: True)
     _set(monkeypatch, "HF_TOKEN", raw)
     assert ai_enrich._provider_status("huggingface").configured is configured
     assert ai_enrich.HuggingFaceProvider().is_available() is configured

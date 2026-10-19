@@ -424,7 +424,7 @@ def test_sync_kev_mocked(tmp_db):
 def test_sync_epss_mocked(tmp_db):
     csv_content = b"cve,epss,percentile\nCVE-2024-1,0.95,99.5\nCVE-2024-2,0.10,50.0\n"
 
-    with patch("agent_bom.db.sync._fetch_epss_csv_bytes", return_value=csv_content):
+    with patch("agent_bom.db.sync_exploit_feeds._fetch_epss_csv_bytes", return_value=csv_content):
         count = sync_epss(tmp_db, url="https://fake/epss.csv.gz")
 
     assert count == 2

@@ -195,10 +195,10 @@ def test_concurrent_conflicting_bindings_are_atomic(tmp_path):
 
 @pytest.fixture
 def client(monkeypatch, store):
+    from agent_bom.api import scan_request_context as routes
     from agent_bom.api.agent_identity_store import InMemoryAgentIdentityStore, issue_identity
     from agent_bom.api.models import JobStatus, ScanJob, ScanRequest
     from agent_bom.api.routes import agent_lifecycle
-    from agent_bom.api.routes import scan as routes
     from agent_bom.api.store import InMemoryJobStore
 
     app = FastAPI()
