@@ -10,18 +10,65 @@ IAM role, SSO).  Only *read* permissions are needed — no write APIs are ever c
 
 from __future__ import annotations
 
-import io
 import json
 import logging
 import os
-import zipfile
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
-from email.parser import Parser as EmailParser
 from functools import partial
-from pathlib import Path
 from typing import Any
 
+from agent_bom.cloud.aws_iam import (
+    _AWS_MANAGED_PRIVILEGE as _AWS_MANAGED_PRIVILEGE,
+)
+from agent_bom.cloud.aws_iam import (
+    _WRITE_VERBS as _WRITE_VERBS,
+)
+from agent_bom.cloud.aws_iam import (
+    _account_id_from_arn as _account_id_from_arn,
+)
+from agent_bom.cloud.aws_iam import (
+    _classify_policy_actions as _classify_policy_actions,
+)
+from agent_bom.cloud.aws_iam import (
+    _enrich_agents_with_iam as _enrich_agents_with_iam,
+)
+from agent_bom.cloud.aws_iam import (
+    _extract_trust_principals as _extract_trust_principals,
+)
+from agent_bom.cloud.aws_iam import (
+    _policy_actions_from_document as _policy_actions_from_document,
+)
+from agent_bom.cloud.aws_iam import (
+    _policy_privilege as _policy_privilege,
+)
+from agent_bom.cloud.aws_iam import (
+    _principal_name_from_id as _principal_name_from_id,
+)
+from agent_bom.cloud.aws_iam import (
+    _principal_type_from_aws_principal as _principal_type_from_aws_principal,
+)
+from agent_bom.cloud.aws_iam import (
+    _principal_values as _principal_values,
+)
+from agent_bom.cloud.aws_iam import (
+    _role_name_from_arn as _role_name_from_arn,
+)
+from agent_bom.cloud.aws_lambda_packages import (
+    _dedupe_packages as _dedupe_packages,
+)
+from agent_bom.cloud.aws_lambda_packages import (
+    _extract_lambda_packages as _extract_lambda_packages,
+)
+from agent_bom.cloud.aws_lambda_packages import (
+    _packages_from_layer as _packages_from_layer,
+)
+from agent_bom.cloud.aws_lambda_packages import (
+    _parse_node_packages_from_zip as _parse_node_packages_from_zip,
+)
+from agent_bom.cloud.aws_lambda_packages import (
+    _parse_python_packages_from_zip as _parse_python_packages_from_zip,
+)
 from agent_bom.discovery_envelope import DiscoveryEnvelope, RedactionStatus, ScanMode
 from agent_bom.models import Agent, AgentType, MCPServer, MCPTool, Package, ServerSurface, TransportType
 from agent_bom.security import sanitize_text
@@ -36,7 +83,6 @@ from .normalization import (
     build_package_purl,
     normalize_cloud_lifecycle_state,
     parse_container_image_package,
-    sanitize_discovery_warning,
 )
 
 logger = logging.getLogger(__name__)
@@ -414,269 +460,6 @@ def _resolve_account_id(session: Any) -> str | None:
     return account_id or None
 
 
-def _role_name_from_arn(role_arn: str) -> str:
-    """Extract the IAM role name/path segment accepted by GetRole."""
-    marker = ":role/"
-    if marker not in role_arn:
-        return role_arn.rsplit("/", 1)[-1].strip()
-    return role_arn.split(marker, 1)[1].strip()
-
-
-def _account_id_from_arn(arn: str) -> str:
-    parts = arn.split(":")
-    return parts[4] if len(parts) > 4 else ""
-
-
-def _principal_type_from_aws_principal(principal_id: str) -> str:
-    if principal_id.endswith(":root"):
-        return "account"
-    if ":role/" in principal_id:
-        return "iam-role"
-    if ":user/" in principal_id:
-        return "user"
-    return "account" if principal_id.isdigit() else "federated-identity"
-
-
-def _principal_name_from_id(principal_id: str) -> str:
-    if principal_id.endswith(":root"):
-        account_id = _account_id_from_arn(principal_id)
-        return account_id or principal_id
-    return principal_id.rsplit("/", 1)[-1]
-
-
-def _principal_values(value: Any) -> list[str]:
-    if value in (None, ""):
-        return []
-    if isinstance(value, str):
-        return [value]
-    if isinstance(value, list):
-        return [str(item) for item in value if str(item or "").strip()]
-    return [str(value)]
-
-
-def _extract_trust_principals(policy_document: Any, *, account_id: str | None) -> list[dict[str, str]]:
-    """Extract low-risk trust principals from an AssumeRole policy document."""
-    if not isinstance(policy_document, dict):
-        return []
-    statements = policy_document.get("Statement", [])
-    if isinstance(statements, dict):
-        statements = [statements]
-    if not isinstance(statements, list):
-        return []
-
-    entries: list[dict[str, str]] = []
-    seen: set[tuple[str, str]] = set()
-    for statement in statements:
-        if not isinstance(statement, dict) or statement.get("Effect") != "Allow":
-            continue
-        principal = statement.get("Principal")
-        if not isinstance(principal, dict):
-            continue
-        for raw_value in _principal_values(principal.get("AWS")):
-            if raw_value == "*":
-                continue
-            principal_type = _principal_type_from_aws_principal(raw_value)
-            principal_account = raw_value if raw_value.isdigit() else _account_id_from_arn(raw_value)
-            relationship = "cross_account_trust" if account_id and principal_account and principal_account != account_id else "trusts"
-            key = (principal_type, raw_value)
-            if key in seen:
-                continue
-            seen.add(key)
-            entries.append(
-                {
-                    "principal_type": principal_type,
-                    "principal_id": principal_account if principal_type == "account" and principal_account else raw_value,
-                    "principal_name": _principal_name_from_id(raw_value),
-                    "relationship": relationship,
-                    "source_field": "AssumeRolePolicyDocument.Principal.AWS",
-                }
-            )
-        for raw_value in _principal_values(principal.get("Service")):
-            key = ("service-principal", raw_value)
-            if key in seen:
-                continue
-            seen.add(key)
-            entries.append(
-                {
-                    "principal_type": "service-principal",
-                    "principal_id": raw_value,
-                    "principal_name": raw_value,
-                    "relationship": "trusts",
-                    "source_field": "AssumeRolePolicyDocument.Principal.Service",
-                }
-            )
-        for raw_value in _principal_values(principal.get("Federated")):
-            key = ("federated-identity", raw_value)
-            if key in seen:
-                continue
-            seen.add(key)
-            entries.append(
-                {
-                    "principal_type": "federated-identity",
-                    "principal_id": raw_value,
-                    "principal_name": _principal_name_from_id(raw_value),
-                    "relationship": "trusts",
-                    "source_field": "AssumeRolePolicyDocument.Principal.Federated",
-                }
-            )
-    return entries
-
-
-# Canonical AWS-managed policy → privilege level (name is authoritative, no fetch needed).
-_AWS_MANAGED_PRIVILEGE: dict[str, str] = {
-    "administratoraccess": "admin",
-    "iamfullaccess": "admin",
-    "poweruseraccess": "write",
-    "readonlyaccess": "read",
-    "viewonlyaccess": "read",
-    "securityaudit": "read",
-}
-# Action verbs that imply write/mutate (vs read).
-_WRITE_VERBS = ("create", "delete", "put", "update", "modify", "write", "attach", "detach", "remove", "set", "tag", "untag", "run")
-
-
-def _classify_policy_actions(actions: list[str]) -> str:
-    """Classify an action list as admin / write / read."""
-    admin = {"*", "*:*", "iam:*"}
-    has_write = False
-    for raw in actions:
-        action = str(raw).lower()
-        if action in admin or action.endswith(":*") and action.startswith("iam"):
-            return "admin"
-        if action == "*":
-            return "admin"
-        verb = action.split(":", 1)[-1]
-        if any(verb.startswith(w) for w in _WRITE_VERBS) or action.endswith(":*"):
-            has_write = True
-    return "write" if has_write else "read"
-
-
-def _policy_actions_from_document(document: Any) -> list[str]:
-    """Extract the Action strings from an IAM policy document (Allow statements)."""
-    actions: list[str] = []
-    statements = document.get("Statement", []) if isinstance(document, dict) else []
-    if isinstance(statements, dict):
-        statements = [statements]
-    for stmt in statements:
-        if not isinstance(stmt, dict) or stmt.get("Effect") != "Allow":
-            continue
-        raw = stmt.get("Action", [])
-        actions.extend([raw] if isinstance(raw, str) else [a for a in raw if isinstance(a, str)])
-    return actions
-
-
-def _policy_privilege(iam: Any, policy_arn: str, policy_name: str, *, warnings: list[str]) -> tuple[str, list[str], dict[str, Any] | None]:
-    """Return (privilege_level, sampled_actions, raw_document) for an attached policy.
-
-    AWS-managed policies are classified by their canonical name (no API call) and
-    carry no document. Customer-managed policies are fetched and classified by
-    their actions, and the raw document is returned so the effective-permissions
-    overlay can run real policy evaluation.
-    Degrades to ('unknown', [], None) on any error — never blocks discovery.
-    """
-    name_key = (policy_name or policy_arn).rsplit("/", 1)[-1].lower()
-    if ":aws:policy/" in policy_arn and name_key in _AWS_MANAGED_PRIVILEGE:
-        return _AWS_MANAGED_PRIVILEGE[name_key], [], None
-    if ":aws:policy/" in policy_arn:
-        # Unknown AWS-managed policy — name still hints at privilege.
-        if "fullaccess" in name_key or "admin" in name_key:
-            return "admin", [], None
-        if "readonly" in name_key or "viewonly" in name_key:
-            return "read", [], None
-    try:
-        version_id = iam.get_policy(PolicyArn=policy_arn)["Policy"]["DefaultVersionId"]
-        document = iam.get_policy_version(PolicyArn=policy_arn, VersionId=version_id)["PolicyVersion"]["Document"]
-        actions = _policy_actions_from_document(document)
-        return _classify_policy_actions(actions), sorted(set(actions))[:25], document if isinstance(document, dict) else None
-    except Exception as exc:  # noqa: BLE001
-        warnings.append(f"IAM policy action lookup skipped for {policy_name or policy_arn}: {sanitize_discovery_warning(exc)}")
-        return "unknown", [], None
-
-
-def _enrich_agents_with_iam(session: Any, agents: list[Agent], *, account_id: str | None, warnings: list[str]) -> None:
-    """Attach live IAM role policy/trust metadata to discovered principals."""
-
-    def _cloud_principal_metadata(agent: Agent) -> dict[str, object] | None:
-        value = agent.metadata.get("cloud_principal")
-        return value if isinstance(value, dict) else None
-
-    role_arns = sorted(
-        {
-            str(principal.get("principal_id") or "").strip()
-            for agent in agents
-            if (principal := _cloud_principal_metadata(agent))
-            and str(principal.get("principal_type") or "").lower() in {"iam-role", "role"}
-            and str(principal.get("principal_id") or "").strip()
-        }
-    )
-    if not role_arns:
-        return
-
-    iam = session.client("iam")
-    enriched: dict[str, dict[str, Any]] = {}
-    for role_arn in role_arns:
-        role_name = _role_name_from_arn(role_arn)
-        try:
-            role_detail = iam.get_role(RoleName=role_name).get("Role", {})
-            paginator = iam.get_paginator("list_attached_role_policies")
-            policies = []
-            for page in paginator.paginate(RoleName=role_name):
-                for policy in page.get("AttachedPolicies", []):
-                    policy_arn = str(policy.get("PolicyArn") or "")
-                    policy_name = str(policy.get("PolicyName") or policy_arn or "")
-                    if not (policy_arn or policy_name):
-                        continue
-                    privilege_level, actions, document = _policy_privilege(iam, policy_arn, policy_name, warnings=warnings)
-                    policy_entry: dict[str, Any] = {
-                        "policy_id": policy_arn,
-                        "policy_name": policy_name,
-                        "attachment_type": "managed",
-                        "privilege_level": privilege_level,
-                        "actions": actions,
-                        "source_field": "ListAttachedRolePolicies.AttachedPolicies",
-                    }
-                    # Retain the raw document (customer-managed only) so the graph
-                    # can run real effective-permission evaluation.
-                    if isinstance(document, dict):
-                        policy_entry["policy_document"] = document
-                    policies.append(policy_entry)
-        except Exception as exc:
-            warnings.append(f"IAM role enrichment skipped for {role_name}: {sanitize_discovery_warning(exc)}")
-            continue
-        enriched[role_arn] = {
-            "policies": policies,
-            "trust_principals": _extract_trust_principals(
-                role_detail.get("AssumeRolePolicyDocument"),
-                account_id=account_id,
-            ),
-        }
-
-    for agent in agents:
-        principal_value = agent.metadata.get("cloud_principal")
-        if not isinstance(principal_value, dict):
-            continue
-        principal = principal_value
-        role_arn = str(principal.get("principal_id") or "").strip()
-        payload = enriched.get(role_arn)
-        if not payload:
-            continue
-        existing_policies = principal.get("policies")
-        if not isinstance(existing_policies, list):
-            existing_policies = []
-        by_id = {
-            str(policy.get("policy_id") or policy.get("arn") or policy.get("name") or ""): policy
-            for policy in existing_policies
-            if isinstance(policy, dict)
-        }
-        for policy in payload["policies"]:
-            if policy["policy_id"]:
-                by_id[policy["policy_id"]] = policy
-        principal["policies"] = list(by_id.values())
-        principal["trust_principals"] = payload["trust_principals"]
-        principal["iam_enriched"] = True
-        principal["iam_enrichment_source"] = "aws-iam"
-
-
 # ---------------------------------------------------------------------------
 # Bedrock discovery
 # ---------------------------------------------------------------------------
@@ -855,164 +638,6 @@ def _extract_tools_from_schema(action_group_detail: dict) -> list[MCPTool]:
         logger.warning("Failed to parse OpenAPI spec for Lambda tool extraction: %s", sanitize_text(exc))
 
     return tools
-
-
-# ---------------------------------------------------------------------------
-# Lambda package extraction
-# ---------------------------------------------------------------------------
-
-
-def _extract_lambda_packages(
-    session: Any,
-    lambda_arn: str,
-    region: str,
-    warnings: list[str],
-) -> list[Package]:
-    """Extract packages from a Lambda function's layers and deployment package."""
-    lambda_client = session.client("lambda", region_name=region)
-    packages: list[Package] = []
-    get_function = getattr(lambda_client, "get_function", None)
-    if not callable(get_function):
-        return packages
-
-    try:
-        func_config = get_function(FunctionName=lambda_arn)
-        config = func_config.get("Configuration", {})
-        runtime = config.get("Runtime", "")
-
-        # Determine ecosystem from runtime
-        ecosystem = "pypi" if "python" in runtime else "npm" if "node" in runtime else "unknown"
-
-        # Extract from layers
-        for layer in config.get("Layers", []):
-            layer_arn = layer.get("Arn", "")
-            try:
-                layer_packages = _packages_from_layer(lambda_client, layer_arn, ecosystem)
-                packages.extend(layer_packages)
-            except Exception as exc:
-                warnings.append(f"Could not extract packages from Lambda layer {layer_arn}: {exc}")
-
-        # Extract from the function's own deployment package. Most functions
-        # bundle their dependencies inline (vendored into the zip) rather than
-        # in a layer, so scanning layers alone misses the common case.
-        code_location = func_config.get("Code", {}).get("Location", "")
-        if code_location and ecosystem in ("pypi", "npm"):
-            try:
-                from agent_bom.http_client import fetch_bytes
-
-                code_bytes = fetch_bytes(code_location, timeout=60)
-                with zipfile.ZipFile(io.BytesIO(code_bytes)) as zf:
-                    if ecosystem == "pypi":
-                        packages.extend(_parse_python_packages_from_zip(zf))
-                    else:
-                        packages.extend(_parse_node_packages_from_zip(zf))
-            except Exception as exc:
-                warnings.append(f"Could not extract packages from Lambda deployment package {lambda_arn}: {exc}")
-
-    except Exception as exc:
-        warnings.append(f"Could not get Lambda function {lambda_arn}: {exc}")
-
-    return _dedupe_packages(packages)
-
-
-def _packages_from_layer(
-    lambda_client: Any,
-    layer_arn: str,
-    ecosystem: str,
-) -> list[Package]:
-    """Download and parse a Lambda layer to extract package metadata."""
-    packages: list[Package] = []
-
-    # Get the layer version (ARN includes version)
-    response = lambda_client.get_layer_version_by_arn(Arn=layer_arn)
-    download_url = response.get("Content", {}).get("Location", "")
-    if not download_url:
-        return packages
-
-    # Download the layer zip
-    from agent_bom.http_client import fetch_bytes
-
-    layer_bytes = fetch_bytes(download_url, timeout=60)
-
-    # Parse the zip for package metadata
-    with zipfile.ZipFile(io.BytesIO(layer_bytes)) as zf:
-        if ecosystem == "pypi":
-            packages = _parse_python_packages_from_zip(zf)
-        elif ecosystem == "npm":
-            packages = _parse_node_packages_from_zip(zf)
-
-    return packages
-
-
-def _dedupe_packages(packages: list[Package]) -> list[Package]:
-    """Drop duplicate packages when the same dep appears in a layer and the
-    function's own zip (or across multiple layers)."""
-    seen: set[tuple[str, str, str]] = set()
-    unique: list[Package] = []
-    for pkg in packages:
-        key = (pkg.ecosystem, pkg.name.lower(), pkg.version)
-        if key in seen:
-            continue
-        seen.add(key)
-        unique.append(pkg)
-    return unique
-
-
-def _parse_python_packages_from_zip(zf: zipfile.ZipFile) -> list[Package]:
-    """Extract Python package info from .dist-info/METADATA files in a zip."""
-    packages: list[Package] = []
-    seen: set[str] = set()
-
-    for name in zf.namelist():
-        if name.endswith(".dist-info/METADATA"):
-            try:
-                metadata_text = zf.read(name).decode("utf-8", errors="replace")
-                parser = EmailParser()
-                msg = parser.parsestr(metadata_text)
-                pkg_name = msg.get("Name", "")
-                pkg_version = msg.get("Version", "")
-                if pkg_name and pkg_version and pkg_name.lower() not in seen:
-                    seen.add(pkg_name.lower())
-                    packages.append(
-                        Package(
-                            name=pkg_name,
-                            version=pkg_version,
-                            ecosystem="pypi",
-                            purl=build_package_purl(ecosystem="pypi", name=pkg_name, version=pkg_version),
-                        )
-                    )
-            except Exception:
-                continue
-
-    return packages
-
-
-def _parse_node_packages_from_zip(zf: zipfile.ZipFile) -> list[Package]:
-    """Extract Node.js package info from node_modules/*/package.json in a zip."""
-    packages: list[Package] = []
-    seen: set[str] = set()
-
-    for name in zf.namelist():
-        parts = Path(name).parts
-        if len(parts) >= 3 and parts[-1] == "package.json" and "node_modules" in parts:
-            try:
-                data = json.loads(zf.read(name))
-                pkg_name = data.get("name", "")
-                pkg_version = data.get("version", "")
-                if pkg_name and pkg_version and pkg_name not in seen:
-                    seen.add(pkg_name)
-                    packages.append(
-                        Package(
-                            name=pkg_name,
-                            version=pkg_version,
-                            ecosystem="npm",
-                            purl=build_package_purl(ecosystem="npm", name=pkg_name, version=pkg_version),
-                        )
-                    )
-            except Exception:
-                continue
-
-    return packages
 
 
 # ---------------------------------------------------------------------------
