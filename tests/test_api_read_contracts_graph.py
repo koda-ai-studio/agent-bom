@@ -24,6 +24,7 @@ from agent_bom.graph import AttackPath, EntityType, RelationshipType, UnifiedEdg
 GRAPH_TYPED_READS: dict[str, type[BaseModel]] = {
     "/v1/graph": graph_models.GraphPageResponse,
     "/v1/graph/agents": graph_models.GraphAgentsResponse,
+    "/v1/graph/changes": graph_models.GraphEstateChangesResponse,
     "/v1/graph/clusters": graph_models.GraphClustersResponse,
     "/v1/graph/compliance": graph_models.GraphComplianceResponse,
     "/v1/graph/diff": graph_models.GraphDiffResponse,
@@ -125,6 +126,7 @@ def graph_client(tmp_path: Any, monkeypatch: pytest.MonkeyPatch):
 LIVE_REQUESTS: dict[str, str] = {
     "/v1/graph": "/v1/graph",
     "/v1/graph/agents": "/v1/graph/agents",
+    "/v1/graph/changes": "/v1/graph/changes",
     "/v1/graph/clusters": "/v1/graph/clusters",
     "/v1/graph/compliance": "/v1/graph/compliance",
     "/v1/graph/diff": "/v1/graph/diff?old=contract-s1&new=contract-s2",

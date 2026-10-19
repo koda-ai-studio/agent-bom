@@ -15,12 +15,14 @@ from agent_bom.api.graph_contracts import (
     GraphDeployDecisionRequest,
     ScopedGraphResponse,
 )
+from agent_bom.api.graph_estate_changes import graph_estate_changes_read
 from agent_bom.api.graph_generation import pin_generation, verify_generation
 from agent_bom.api.read_models._base import documented
 from agent_bom.api.read_models.graph import (
     GraphActiveEdgesResponse,
     GraphDiffResponse,
     GraphEdgeChangesResponse,
+    GraphEstateChangesResponse,
     GraphExposurePathsResponse,
     GraphGovernanceResponse,
     GraphNhiGovernanceResponse,
@@ -190,6 +192,16 @@ async def get_graph_diff(
         limit=limit,
         cursor=cursor,
     )
+
+
+@investigation_router.get("/graph/changes", **documented(GraphEstateChangesResponse), tags=["graph"])
+async def get_graph_estate_changes(
+    request: Request,
+    limit: int = Query(50, ge=1, le=100, description="Target scopes per page"),
+    offset: int = Query(0, ge=0, description="pagination.next_offset from the previous page"),
+) -> dict:
+    """What changed in the current estate: each target scope against its own previous completed snapshot."""
+    return await graph_estate_changes_read(request, limit=limit, offset=offset)
 
 
 @investigation_router.get("/graph/edges/active", **documented_list(GraphActiveEdgesResponse), tags=["graph"])

@@ -294,6 +294,9 @@ Four more read-only tools answer follow-up questions from the same evidence:
   summary (counts per change kind by entity type and relationship, new critical
   findings, new credential reach, removed controls, new attack paths) of the
   latest two snapshots; `view="detail"` pages change rows with filters and a cursor.
+  `view="estate"` is `GET /v1/graph/changes`: each current source (target scope)
+  against its own previous completed snapshot, with first observations listed
+  separately and never counted as additions.
 - `findings_query` is `GET /v1/findings` (filters, sort, cursor, totals) with a
   compact row projection; `risk_score` is 0-10 and `effective_reach_score` 0-100.
 - `finding_detail(finding_id)` returns the finding, the graph paths that carry
