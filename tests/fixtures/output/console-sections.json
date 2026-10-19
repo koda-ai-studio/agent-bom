@@ -17,7 +17,7 @@
   "print_summary:True:True": "897d4da5fea5305dde14e15b857cb7e692eb6513e98c57846f3f1e3fdcebc510",
   "print_threat_frameworks:False:False": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
   "print_threat_frameworks:False:True": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-  "print_threat_frameworks:True:False": "10726fd98a518db89598b4a594a517f41990f9f2e2ff037f207e65b70a680eb1",
-  "print_threat_frameworks:True:True": "8929751e79be397422f1a546d44573db76828a4de702a641a21559d868c2c3b5",
+  "print_threat_frameworks:True:False": "da4425a3f0a04bb2be6418176028aac3e402a440b2cc82315aa15804c15f6f1a",
+  "print_threat_frameworks:True:True": "1bee89ddb7fadfca8218d8a9305c91b9b69b6fc9116791c768b2b96cbfdb10fd",
   "remediation-plan": "3c976430850e7bc93e3813ce02a86c0dddeacb25bbe205d2e351842323d08e78"
 }
