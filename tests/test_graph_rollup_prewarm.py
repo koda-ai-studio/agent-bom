@@ -14,10 +14,10 @@ import time
 import pytest
 from fastapi.testclient import TestClient
 
-from agent_bom.api import graph_rollup_cache, graph_rollup_prewarm
+from agent_bom.api import graph_rollup_cache, graph_rollup_prewarm, stores
 from agent_bom.api.graph_store import SQLiteGraphStore
 from agent_bom.api.server import app
-from agent_bom.api.stores import set_graph_store
+from agent_bom.api.store import InMemoryJobStore
 from agent_bom.graph import UnifiedEdge, UnifiedGraph, UnifiedNode
 from agent_bom.graph.types import EntityType, RelationshipType
 
@@ -41,11 +41,11 @@ def store(tmp_path, monkeypatch):
     monkeypatch.setattr(graph_rollup_cache, "_CACHE", type(graph_rollup_cache._CACHE)())
     graph_store = SQLiteGraphStore(str(tmp_path / "graph.db"))
     graph_store.save_graph(_graph())
-    set_graph_store(graph_store)
-    try:
-        yield graph_store
-    finally:
-        set_graph_store(None)  # type: ignore[arg-type]
+    # Current-estate reads join graph snapshots with completed scan jobs.
+    # Keep both stores local so unrelated jobs cannot replace this graph.
+    monkeypatch.setattr(stores, "_store", InMemoryJobStore())
+    monkeypatch.setattr(stores, "_graph_store", graph_store)
+    yield graph_store
 
 
 def _count_loads(monkeypatch, graph_store: SQLiteGraphStore) -> list[str]:
