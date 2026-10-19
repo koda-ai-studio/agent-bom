@@ -210,7 +210,7 @@ function NodeCard({
         <Icon aria-hidden="true" style={{ width: "var(--graph-node-icon-size, 32px)", height: "var(--graph-node-icon-size, 32px)" }} className={`h-8 w-8 ${iconClass}`} />
         {/* A small vendor mark on the ring, like a status badge; the entity glyph stays primary. */}
         {provider && <GraphProviderMark source={provider} attributes={repository ? undefined : data.attributes} className="absolute"
-          style={{ right: "-12%", bottom: "-12%", width: "48%", height: "48%" }} />}
+          style={{ right: "-15%", bottom: "-15%", width: "48%", height: "48%" }} />}
       </div>
       <SegmentedLabel text={repository?.slug || displayTitle} className="mb-1 w-full min-w-0 line-clamp-3 text-lg font-semibold leading-[1.2] text-foreground" style={{ fontSize: "var(--graph-node-label-size, 18px)" }} />
       {/* The vendor mark already names the provider; a second text chip repeats it. */}
