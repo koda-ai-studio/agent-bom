@@ -1042,6 +1042,7 @@ function FindingsPage() {
 
           <div id="finding-lane-results" role="tabpanel" aria-labelledby={`finding-lane-${lane}`}>
           {lane === "all" || lane === "vulnerabilities" ? <FindingsQueueTable
+            columnProfile={lane === "vulnerabilities" ? "vulnerabilities" : "all"}
             controlsContainerId="findings-table-controls"
             vulns={displayed}
             sortKey={sortKey}

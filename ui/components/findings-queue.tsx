@@ -3,7 +3,7 @@
 import { ChevronDown, ChevronRight, ChevronUp, ExternalLink } from "lucide-react";
 import { createPortal } from "react-dom";
 import { Fragment, useLayoutEffect, useState, type ReactNode } from "react";
-import { FINDING_COLUMN_LABELS, defaultFindingColumns, readFindingColumns, writeFindingColumns, type FindingColumnKey, type FindingColumnPreferences } from "@/lib/finding-columns";
+import { FINDING_COLUMN_LABELS, defaultFindingColumns, readFindingColumns, writeFindingColumns, type FindingColumnKey, type FindingColumnPreferences, type FindingColumnProfile } from "@/lib/finding-columns";
 
 import { useAuthState } from "@/components/auth-provider";
 import { Drawer } from "@/components/drawer";
@@ -117,6 +117,11 @@ function renderPercentValue(value: number | undefined, missingLabel: string) {
   );
 }
 
+function packageVersionLabel(vuln: EnrichedVuln): string {
+  const name = vuln.packages[0] ?? "";
+  return vuln.current_version ? `${name}@${vuln.current_version}` : name;
+}
+
 export function FindingsQueueTable({
   vulns,
   sortKey,
@@ -128,6 +133,7 @@ export function FindingsQueueTable({
   onSelect,
   triageByKey = new Map(),
   controlsContainerId,
+  columnProfile = "all",
 }: {
   vulns: EnrichedVuln[];
   sortKey: SortKey;
@@ -142,16 +148,17 @@ export function FindingsQueueTable({
   lens?: FindingsLens;
   triageByKey?: ReadonlyMap<string, FindingTriageItem>;
   controlsContainerId?: string;
+  columnProfile?: FindingColumnProfile;
 }) {
   const { hasCapability } = useAuthState();
   const canManageExceptions = hasCapability("exceptions.manage");
   const compactLayout = useCompactFindingsLayout();
-  const [preferences, setPreferences] = useState<FindingColumnPreferences>(defaultFindingColumns);
-  useLayoutEffect(() => { setPreferences(readFindingColumns()); }, []);
+  const [preferences, setPreferences] = useState<FindingColumnPreferences>(() => defaultFindingColumns(columnProfile));
+  useLayoutEffect(() => { setPreferences(readFindingColumns(columnProfile)); }, [columnProfile]);
   const [controlsContainer, setControlsContainer] = useState<HTMLElement | null>(null);
   useLayoutEffect(() => { setControlsContainer(controlsContainerId ? document.getElementById(controlsContainerId) : null); }, [controlsContainerId]);
   const columns = preferences.order.filter((key) => !preferences.hidden.includes(key));
-  const updateColumns = (next: FindingColumnPreferences) => { setPreferences(next); writeFindingColumns(next); };
+  const updateColumns = (next: FindingColumnPreferences) => { setPreferences(next); writeFindingColumns(next, columnProfile); };
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const toggleOccurrences = (rowKey: string) => {
     setExpandedGroups((current) => {
@@ -165,8 +172,8 @@ export function FindingsQueueTable({
 
   return (
     <div className="overflow-hidden rounded-xl border border-outline">
-      {controlsContainer ? createPortal(<FindingColumnsChooser preferences={preferences} onChange={updateColumns} inline />, controlsContainer)
-        : <FindingColumnsChooser preferences={preferences} onChange={updateColumns} />}
+      {controlsContainer ? createPortal(<FindingColumnsChooser profile={columnProfile} preferences={preferences} onChange={updateColumns} inline />, controlsContainer)
+        : <FindingColumnsChooser profile={columnProfile} preferences={preferences} onChange={updateColumns} />}
       {compactLayout ? (
       <div className="divide-y divide-outline bg-background">
         {vulns.map((vuln) => {
@@ -314,7 +321,7 @@ function MobileFindingCard({
   const due = formatSlaDue(vuln.sla_due_at);
   const fields: Record<FindingColumnKey, ReactNode> = {
     priority: <span className={`inline-block rounded border px-1.5 py-0.5 text-xs ${severityColor(vuln.severity)}`} title={`Severity source: ${vuln.severity_source || "unreported"}`}>{severityText(vuln.severity, vuln)}</span>,
-    asset: affectedScope.slice(0, 2).join(", ") || "Unavailable",
+    asset: [...vuln.packages.map((name, index) => index === 0 ? packageVersionLabel(vuln) : name), ...vuln.agents, ...vuln.affected_servers].slice(0, 2).join(", ") || "Unavailable",
     detection: <DetectionEvidence vuln={vuln} />,
     observed: <ObservedEvidence vuln={vuln} />,
     remediation: `${vuln.fixed_version ? `Upgrade ${vuln.fixed_version}` : "Fix not provided"} · ${remediationLifecycle(vuln)}`,
@@ -599,10 +606,10 @@ function EngineeringCells({
             <a
               href={`/findings?q=${encodeURIComponent(packageName)}`}
               onClick={(event) => event.stopPropagation()}
-              title={packageName}
+              title={packageVersionLabel(vuln)}
               className="line-clamp-2 font-mono text-ink-secondary underline decoration-dotted underline-offset-2 [overflow-wrap:anywhere] transition hover:text-foreground"
             >
-              {packageName}
+              {packageVersionLabel(vuln)}
             </a>
           ) : (
             <span className="font-mono text-ink-tertiary">Unavailable</span>
@@ -753,7 +760,7 @@ function ObservationDate({ label, value }: { label: string; value: string | null
 function DetectionEvidence({ vuln }: { vuln: EnrichedVuln }) {
   return <span className="flex flex-col gap-1 break-words"><span>Source: {vuln.detection_source ? humanizeEnum(vuln.detection_source) : "Unavailable"}</span><span>Type: {vuln.finding_type ? humanizeEnum(vuln.finding_type) : "Unavailable"}</span></span>;
 }
-function FindingColumnsChooser({ preferences, onChange, inline = false }: { preferences: FindingColumnPreferences; onChange: (next: FindingColumnPreferences) => void; inline?: boolean }) {
+function FindingColumnsChooser({ preferences, onChange, inline = false, profile }: { profile: FindingColumnProfile; preferences: FindingColumnPreferences; onChange: (next: FindingColumnPreferences) => void; inline?: boolean }) {
   const [open, setOpen] = useState(false);
   const compact = useCompactFindingsLayout();
   const [anchorTop, setAnchorTop] = useState(80);
@@ -779,7 +786,7 @@ function FindingColumnsChooser({ preferences, onChange, inline = false }: { pref
           <button type="button" aria-label={`Move ${FINDING_COLUMN_LABELS[key]} down`} disabled={index === preferences.order.length - 1} onClick={() => move(key, 1)} className="rounded border border-outline p-1 text-ink-secondary disabled:opacity-40"><ChevronDown className="h-4 w-4" /></button>
         </li>)}
       </ul>
-      <button type="button" onClick={() => onChange(defaultFindingColumns())} className="rounded border border-outline px-3 py-1.5 text-sm text-ink-secondary">Reset view</button>
+      <button type="button" onClick={() => onChange(defaultFindingColumns(profile))} className="rounded border border-outline px-3 py-1.5 text-sm text-ink-secondary">Reset view</button>
     </div>
     </Drawer>
   </div>;

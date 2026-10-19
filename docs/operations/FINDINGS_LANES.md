@@ -3,7 +3,9 @@
 Open **Findings** to start with Vulnerabilities. Select Cloud config, IaC,
 Secrets, Identity, or Data to use that lane's evidence columns. Other retains
 runtime, policy, and unclassified findings. All findings is the cross-lane queue
-with links to Overview and Investigation.
+with links to Overview and Investigation. Vulnerabilities shows package versions,
+reach/exploit evidence, and remediation by default. Its column preferences are
+saved separately from All findings; Reset view restores the selected view.
 
 Tabs show **issue groups**, under the current time window and filters. Package
 advisories group their asset occurrences; cloud checks group by provider,

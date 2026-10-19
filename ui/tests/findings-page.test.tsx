@@ -658,7 +658,6 @@ describe("FindingsPage", () => {
     expect(screen.queryByRole("button", { name: "Finding" })).not.toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Priority" })).toHaveAttribute("aria-sort", "descending");
     fireEvent.click(screen.getByText("Columns", { exact: true }));
-    fireEvent.click(screen.getByRole("checkbox", { name: "Reach / exploit" }));
     fireEvent.click(screen.getByRole("checkbox", { name: "Owner / SLA" }));
     expect(screen.getByRole("columnheader", { name: "Reach / exploit" })).toBeInTheDocument();
     expect(screen.getByRole("columnheader", { name: "Owner / SLA" })).toBeInTheDocument();
@@ -773,12 +772,11 @@ describe("FindingsPage", () => {
 
     expect(await screen.findByText("CVE-2026-1234")).toBeInTheDocument();
     fireEvent.click(screen.getByText("Columns", { exact: true }));
-    fireEvent.click(screen.getByRole("checkbox", { name: "Reach / exploit" }));
     expect(screen.getByText("Reachable · 2 hops")).toBeInTheDocument();
   });
 
   it("retains compliance evidence as optional columns in the same queue", async () => {
-    navigationState.query = "lens=trust";
+    navigationState.query = "lane=all&lens=trust";
     apiMock.listFindings.mockResolvedValue({
       schema_version: "v1",
       findings: [
