@@ -40,6 +40,10 @@ def _container_graph(tenant: str, children: int) -> UnifiedGraph:
 
 @pytest.fixture
 def api(tmp_path, monkeypatch):
+    from agent_bom.backpressure import reset_backpressure_for_tests
+
+    # This standalone app owns its request latency history as well as its store.
+    reset_backpressure_for_tests()
     store = SQLiteGraphStore(tmp_path / "graph.db")
     # "default" holds its own evidence so a fall-through to it is observable.
     for tenant in (*TENANTS, "default"):
@@ -58,8 +62,11 @@ def api(tmp_path, monkeypatch):
     app.include_router(routes.router, prefix="/v1")
     app.add_middleware(APIKeyMiddleware, api_key="", allow_unauthenticated=False)
     app.add_middleware(TrustHeadersMiddleware)
-    with TestClient(app) as client:
-        yield client, store, headers
+    try:
+        with TestClient(app) as client:
+            yield client, store, headers
+    finally:
+        reset_backpressure_for_tests()
 
 
 def _labels(payload: dict) -> set[str]:
