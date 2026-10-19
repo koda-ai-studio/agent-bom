@@ -50,6 +50,17 @@ _N_LARGE = 12000
 _BATCH = "256"
 
 
+@pytest.fixture(autouse=True)
+def _isolate_persist_measurement(monkeypatch):
+    from agent_bom.api import graph_rollup_prewarm
+
+    # tracemalloc includes every thread in the process. Reader cache warm-up
+    # materialises views after commit and is outside this write-path contract.
+    # Disable new work and drain any prior work before measuring allocations.
+    monkeypatch.setenv("AGENT_BOM_GRAPH_ROLLUP_PREWARM", "0")
+    assert graph_rollup_prewarm.wait_idle(30), "prior reader warm-up did not finish"
+
+
 def _synthetic_graph(scan: str, n: int) -> UnifiedGraph:
     g = UnifiedGraph(scan_id=scan, tenant_id="t1")
     for i in range(n):
@@ -117,6 +128,18 @@ def _full_copy_peak(n: int) -> int:
     tracemalloc.stop()
     assert len(g.nodes) == n
     return peak
+
+
+def test_persist_measurement_does_not_schedule_reader_warmup(tmp_path: Path, monkeypatch) -> None:
+    """A registered reader hook must not add allocations to the write-only probe."""
+    from agent_bom.api import graph_rollup_prewarm
+
+    assert graph_rollup_prewarm.wait_idle(10), "prior reader warm-up did not finish"
+    warmed: list[str] = []
+    monkeypatch.setattr(graph_rollup_prewarm, "prewarm_rollup", lambda store, *, tenant_id: warmed.append(tenant_id))
+    _persist_peak(tmp_path, monkeypatch, 32)
+    assert graph_rollup_prewarm.wait_idle(10), "reader warm-up did not finish"
+    assert warmed == [], "reader warm-up ran inside a persistence-only measurement"
 
 
 def test_persist_of_large_new_snapshot_adds_no_second_full_copy(tmp_path: Path, monkeypatch) -> None:
