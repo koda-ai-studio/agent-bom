@@ -3072,7 +3072,7 @@ function GraphPageInner() {
         event.preventDefault();
         void runSearch();
       }}
-      className="flex min-w-0 flex-1 flex-wrap items-center gap-2"
+      className="flex min-w-[min(100%,22rem)] flex-1 items-center gap-2"
     >
       <input
         aria-label="Search nodes, tags, severities, or attributes"
@@ -3080,7 +3080,6 @@ function GraphPageInner() {
         onChange={(event) => setSearchQuery(event.target.value)}
         placeholder="Search nodes, tags, severities, or attributes"
         className="graph-page-search"
-        style={{ minWidth: 0 }}
       />
       <button
         type="submit"
@@ -3876,6 +3875,7 @@ function GraphPageInner() {
             />
           ) : graphRenderer.kind === "webgl" ? (
             <SigmaGraphOverview
+              embedded
               nodes={displayNodes}
               edges={displayEdges}
               legendItems={legendItems}
