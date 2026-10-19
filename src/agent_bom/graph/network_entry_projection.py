@@ -107,6 +107,56 @@ def _wire_network_entry_exposure_paths(
     _wire_permissive_acls(graph, inventory, public_subnet_ids, subnet_node_by_id, provider, instance_node_by_id)
 
 
+def _wire_gateway_subnets(
+    graph: UnifiedGraph,
+    inventory: dict[str, Any],
+    public_subnet_ids: set[str],
+    subnet_node_by_id: dict[str, str],
+    igw_by_vpc: dict[str, str],
+) -> None:
+    for vpc_id, igw_node in igw_by_vpc.items():
+        for sn in inventory.get("subnets", []) or []:
+            if not isinstance(sn, dict):
+                continue
+            sn_id = _clean_graph_part(sn.get("id"))
+            if sn_id not in public_subnet_ids or _clean_graph_part(sn.get("vpc_id")) != vpc_id:
+                continue
+            sn_node = subnet_node_by_id.get(sn_id)
+            if sn_node:
+                _add_exposure_path_edge(
+                    graph,
+                    source=igw_node,
+                    target=sn_node,
+                    reason="internet_gateway_public_subnet",
+                )
+
+
+def _wire_public_subnet_instances(
+    graph: UnifiedGraph,
+    inventory: dict[str, Any],
+    public_subnet_ids: set[str],
+    subnet_node_by_id: dict[str, str],
+    instance_node_by_id: dict[str, str],
+) -> None:
+    for sn_id in public_subnet_ids:
+        sn_node = subnet_node_by_id.get(sn_id)
+        if not sn_node:
+            continue
+        for instance in inventory.get("instances", []) or []:
+            if not isinstance(instance, dict):
+                continue
+            if _clean_graph_part(instance.get("subnet_id")) != sn_id:
+                continue
+            inst_node = instance_node_by_id.get(_clean_graph_part(instance.get("instance_id")))
+            if inst_node:
+                _add_exposure_path_edge(
+                    graph,
+                    source=sn_node,
+                    target=inst_node,
+                    reason="public_subnet_instance",
+                )
+
+
 def _wire_permissive_acls(
     graph: UnifiedGraph,
     inventory: dict[str, Any],
@@ -153,53 +203,3 @@ def _wire_permissive_acls(
                         target=inst_node,
                         reason="permissive_network_acl_instance",
                     )
-
-
-def _wire_public_subnet_instances(
-    graph: UnifiedGraph,
-    inventory: dict[str, Any],
-    public_subnet_ids: set[str],
-    subnet_node_by_id: dict[str, str],
-    instance_node_by_id: dict[str, str],
-) -> None:
-    for sn_id in public_subnet_ids:
-        sn_node = subnet_node_by_id.get(sn_id)
-        if not sn_node:
-            continue
-        for instance in inventory.get("instances", []) or []:
-            if not isinstance(instance, dict):
-                continue
-            if _clean_graph_part(instance.get("subnet_id")) != sn_id:
-                continue
-            inst_node = instance_node_by_id.get(_clean_graph_part(instance.get("instance_id")))
-            if inst_node:
-                _add_exposure_path_edge(
-                    graph,
-                    source=sn_node,
-                    target=inst_node,
-                    reason="public_subnet_instance",
-                )
-
-
-def _wire_gateway_subnets(
-    graph: UnifiedGraph,
-    inventory: dict[str, Any],
-    public_subnet_ids: set[str],
-    subnet_node_by_id: dict[str, str],
-    igw_by_vpc: dict[str, str],
-) -> None:
-    for vpc_id, igw_node in igw_by_vpc.items():
-        for sn in inventory.get("subnets", []) or []:
-            if not isinstance(sn, dict):
-                continue
-            sn_id = _clean_graph_part(sn.get("id"))
-            if sn_id not in public_subnet_ids or _clean_graph_part(sn.get("vpc_id")) != vpc_id:
-                continue
-            sn_node = subnet_node_by_id.get(sn_id)
-            if sn_node:
-                _add_exposure_path_edge(
-                    graph,
-                    source=igw_node,
-                    target=sn_node,
-                    reason="internet_gateway_public_subnet",
-                )

@@ -1,4 +1,4 @@
-"""Organization aws for unified graph construction."""
+"""AWS organization hierarchy, account and service-control policy projection."""
 
 from __future__ import annotations
 
@@ -46,14 +46,59 @@ def _add_aws_organization(graph: UnifiedGraph, payload: Any, data_source: str) -
     )
 
     _project_aws_units(graph, payload, data_sources, org_node_id)
-
     _project_aws_accounts(graph, payload, data_sources, org_node_id)
-
     _project_aws_scps(graph, payload, data_sources, org_node_id)
 
 
 def _ou_node_id(ou_id: str) -> str:
     return f"org:aws:ou:{ou_id}"
+
+
+def _project_aws_units(graph: UnifiedGraph, payload: dict[str, Any], data_sources: list[str], org_node_id: str) -> None:
+    for ou in payload.get("organizational_units", []) or []:
+        if not isinstance(ou, dict):
+            continue
+        ou_id = _clean_graph_part(ou.get("id"))
+        if not ou_id:
+            continue
+        node_id = _ou_node_id(ou_id)
+        graph.add_node(
+            UnifiedNode(
+                id=node_id,
+                entity_type=EntityType.ORG,
+                label=f"{'root' if ou.get('is_root') else 'OU'}: {_clean_graph_part(ou.get('name')) or ou_id}",
+                attributes={"ou_id": ou_id, "is_root": bool(ou.get("is_root")), "cloud_provider": "aws"},
+                data_sources=data_sources,
+                dimensions=NodeDimensions(cloud_provider="aws", surface="identity"),
+            )
+        )
+        parent = _clean_graph_part(ou.get("parent_id"))
+        parent_node = _ou_node_id(parent) if parent else org_node_id
+        _add_rel_edge(graph, parent_node, node_id, RelationshipType.CONTAINS, {"source": "aws-organizations"})
+
+
+def _project_aws_accounts(graph: UnifiedGraph, payload: dict[str, Any], data_sources: list[str], org_node_id: str) -> None:
+    for acct in payload.get("accounts", []) or []:
+        if not isinstance(acct, dict):
+            continue
+        acct_id = _clean_graph_part(acct.get("id"))
+        if not acct_id:
+            continue
+        acct_node = _add_identity_node(
+            graph,
+            EntityType.ACCOUNT,
+            acct_id,
+            "aws",
+            data_sources,
+            label=f"account: {_clean_graph_part(acct.get('name')) or acct_id}",
+            account_id=acct_id,
+            cloud_provider="aws",
+            account_name=_clean_graph_part(acct.get("name")),
+            account_status=_clean_graph_part(acct.get("status")),
+        )
+        ou_id = _clean_graph_part(acct.get("ou_id"))
+        parent_node = _ou_node_id(ou_id) if ou_id else org_node_id
+        _add_rel_edge(graph, parent_node, acct_node, RelationshipType.CONTAINS, {"source": "aws-organizations"})
 
 
 def _project_aws_scps(graph: UnifiedGraph, payload: dict[str, Any], data_sources: list[str], org_node_id: str) -> None:
@@ -83,50 +128,3 @@ def _project_aws_scps(graph: UnifiedGraph, payload: dict[str, Any], data_sources
             tgt_node = _identity_node_id(EntityType.ACCOUNT, "aws", target) if target.isdigit() else _ou_node_id(target)
             if tgt_node in graph.nodes:
                 _add_rel_edge(graph, scp_node, tgt_node, RelationshipType.GOVERNS, {"source": "aws-organizations"})
-
-
-def _project_aws_accounts(graph: UnifiedGraph, payload: dict[str, Any], data_sources: list[str], org_node_id: str) -> None:
-    for acct in payload.get("accounts", []) or []:
-        if not isinstance(acct, dict):
-            continue
-        acct_id = _clean_graph_part(acct.get("id"))
-        if not acct_id:
-            continue
-        acct_node = _add_identity_node(
-            graph,
-            EntityType.ACCOUNT,
-            acct_id,
-            "aws",
-            data_sources,
-            label=f"account: {_clean_graph_part(acct.get('name')) or acct_id}",
-            account_id=acct_id,
-            cloud_provider="aws",
-            account_name=_clean_graph_part(acct.get("name")),
-            account_status=_clean_graph_part(acct.get("status")),
-        )
-        ou_id = _clean_graph_part(acct.get("ou_id"))
-        parent_node = _ou_node_id(ou_id) if ou_id else org_node_id
-        _add_rel_edge(graph, parent_node, acct_node, RelationshipType.CONTAINS, {"source": "aws-organizations"})
-
-
-def _project_aws_units(graph: UnifiedGraph, payload: dict[str, Any], data_sources: list[str], org_node_id: str) -> None:
-    for ou in payload.get("organizational_units", []) or []:
-        if not isinstance(ou, dict):
-            continue
-        ou_id = _clean_graph_part(ou.get("id"))
-        if not ou_id:
-            continue
-        node_id = _ou_node_id(ou_id)
-        graph.add_node(
-            UnifiedNode(
-                id=node_id,
-                entity_type=EntityType.ORG,
-                label=f"{'root' if ou.get('is_root') else 'OU'}: {_clean_graph_part(ou.get('name')) or ou_id}",
-                attributes={"ou_id": ou_id, "is_root": bool(ou.get("is_root")), "cloud_provider": "aws"},
-                data_sources=data_sources,
-                dimensions=NodeDimensions(cloud_provider="aws", surface="identity"),
-            )
-        )
-        parent = _clean_graph_part(ou.get("parent_id"))
-        parent_node = _ou_node_id(parent) if parent else org_node_id
-        _add_rel_edge(graph, parent_node, node_id, RelationshipType.CONTAINS, {"source": "aws-organizations"})

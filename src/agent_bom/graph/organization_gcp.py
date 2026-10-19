@@ -1,4 +1,4 @@
-"""Organization gcp for unified graph construction."""
+"""GCP organization hierarchy, inherited IAM and organization-policy projection."""
 
 from __future__ import annotations
 
@@ -70,31 +70,57 @@ def _folder_node_id(folder_id: str) -> str:
     return f"org:gcp:folder:{folder_id.rsplit('/', 1)[-1]}"
 
 
-def _project_gcp_policies(graph: UnifiedGraph, payload: dict[str, Any], data_sources: list[str], org_node_id: str) -> None:
-    # Org-policy constraints → GOVERNS the scope they apply to (the AWS-SCP analogue).
-    for policy in payload.get("org_policies", []) or []:
-        if not isinstance(policy, dict):
+def _project_gcp_folders(
+    graph: UnifiedGraph, payload: dict[str, Any], data_sources: list[str], org_node_id: str, folder_ids: set[str]
+) -> None:
+    for folder in payload.get("folders", []) or []:
+        if not isinstance(folder, dict):
             continue
-        constraint = _clean_graph_part(policy.get("constraint")) or _clean_graph_part(policy.get("id"))
-        scope_id = _clean_graph_part(policy.get("scope_id"))
-        if not constraint or not scope_id:
+        folder_id = _clean_graph_part(folder.get("id"))
+        if not folder_id:
             continue
-        policy_node = f"policy:gcp:orgpolicy:{constraint}"
+        node_id = _folder_node_id(folder_id)
         graph.add_node(
             UnifiedNode(
-                id=policy_node,
-                entity_type=EntityType.POLICY,
-                label=f"org policy: {constraint}",
-                attributes={"constraint": constraint, "cloud_provider": "gcp"},
+                id=node_id,
+                entity_type=EntityType.ORG,
+                label=f"folder: {_clean_graph_part(folder.get('name')) or folder_id}",
+                attributes={"folder_id": folder_id, "cloud_provider": "gcp"},
                 data_sources=data_sources,
                 dimensions=NodeDimensions(cloud_provider="gcp", surface="identity"),
             )
         )
-        _add_rel_edge(graph, org_node_id, policy_node, RelationshipType.OWNS, {"source": "gcp-organizations"})
-        scope_is_org = scope_id.startswith("organizations/")
-        scope_node = org_node_id if scope_is_org else _folder_node_id(scope_id)
-        if scope_node in graph.nodes:
-            _add_rel_edge(graph, policy_node, scope_node, RelationshipType.GOVERNS, {"source": "gcp-organizations"})
+        parent = _clean_graph_part(folder.get("parent_id"))
+        parent_node = _folder_node_id(parent) if parent in folder_ids else org_node_id
+        _add_rel_edge(graph, parent_node, node_id, RelationshipType.CONTAINS, {"source": "gcp-organizations"})
+
+
+def _project_gcp_projects(
+    graph: UnifiedGraph, payload: dict[str, Any], data_sources: list[str], org_node_id: str, folder_ids: set[str]
+) -> None:
+    # Projects (the ACCOUNT tier). Same node id a per-project scan emits so the
+    # org tree and inventoried project graphs stitch together.
+    for project in payload.get("projects", []) or []:
+        if not isinstance(project, dict):
+            continue
+        project_id = _clean_graph_part(project.get("id"))
+        if not project_id:
+            continue
+        project_node = _add_identity_node(
+            graph,
+            EntityType.ACCOUNT,
+            project_id,
+            "gcp",
+            data_sources,
+            label=f"project: {_clean_graph_part(project.get('name')) or project_id}",
+            account_id=project_id,
+            cloud_provider="gcp",
+            account_name=_clean_graph_part(project.get("name")),
+            project_number=_clean_graph_part(project.get("number")),
+        )
+        parent = _clean_graph_part(project.get("parent_id"))
+        parent_node = _folder_node_id(parent) if parent in folder_ids else org_node_id
+        _add_rel_edge(graph, parent_node, project_node, RelationshipType.CONTAINS, {"source": "gcp-organizations"})
 
 
 def _project_gcp_bindings(
@@ -156,54 +182,28 @@ def _project_gcp_bindings(
             )
 
 
-def _project_gcp_projects(
-    graph: UnifiedGraph, payload: dict[str, Any], data_sources: list[str], org_node_id: str, folder_ids: set[str]
-) -> None:
-    # Projects (the ACCOUNT tier). Same node id a per-project scan emits so the
-    # org tree and inventoried project graphs stitch together.
-    for project in payload.get("projects", []) or []:
-        if not isinstance(project, dict):
+def _project_gcp_policies(graph: UnifiedGraph, payload: dict[str, Any], data_sources: list[str], org_node_id: str) -> None:
+    # Org-policy constraints → GOVERNS the scope they apply to (the AWS-SCP analogue).
+    for policy in payload.get("org_policies", []) or []:
+        if not isinstance(policy, dict):
             continue
-        project_id = _clean_graph_part(project.get("id"))
-        if not project_id:
+        constraint = _clean_graph_part(policy.get("constraint")) or _clean_graph_part(policy.get("id"))
+        scope_id = _clean_graph_part(policy.get("scope_id"))
+        if not constraint or not scope_id:
             continue
-        project_node = _add_identity_node(
-            graph,
-            EntityType.ACCOUNT,
-            project_id,
-            "gcp",
-            data_sources,
-            label=f"project: {_clean_graph_part(project.get('name')) or project_id}",
-            account_id=project_id,
-            cloud_provider="gcp",
-            account_name=_clean_graph_part(project.get("name")),
-            project_number=_clean_graph_part(project.get("number")),
-        )
-        parent = _clean_graph_part(project.get("parent_id"))
-        parent_node = _folder_node_id(parent) if parent in folder_ids else org_node_id
-        _add_rel_edge(graph, parent_node, project_node, RelationshipType.CONTAINS, {"source": "gcp-organizations"})
-
-
-def _project_gcp_folders(
-    graph: UnifiedGraph, payload: dict[str, Any], data_sources: list[str], org_node_id: str, folder_ids: set[str]
-) -> None:
-    for folder in payload.get("folders", []) or []:
-        if not isinstance(folder, dict):
-            continue
-        folder_id = _clean_graph_part(folder.get("id"))
-        if not folder_id:
-            continue
-        node_id = _folder_node_id(folder_id)
+        policy_node = f"policy:gcp:orgpolicy:{constraint}"
         graph.add_node(
             UnifiedNode(
-                id=node_id,
-                entity_type=EntityType.ORG,
-                label=f"folder: {_clean_graph_part(folder.get('name')) or folder_id}",
-                attributes={"folder_id": folder_id, "cloud_provider": "gcp"},
+                id=policy_node,
+                entity_type=EntityType.POLICY,
+                label=f"org policy: {constraint}",
+                attributes={"constraint": constraint, "cloud_provider": "gcp"},
                 data_sources=data_sources,
                 dimensions=NodeDimensions(cloud_provider="gcp", surface="identity"),
             )
         )
-        parent = _clean_graph_part(folder.get("parent_id"))
-        parent_node = _folder_node_id(parent) if parent in folder_ids else org_node_id
-        _add_rel_edge(graph, parent_node, node_id, RelationshipType.CONTAINS, {"source": "gcp-organizations"})
+        _add_rel_edge(graph, org_node_id, policy_node, RelationshipType.OWNS, {"source": "gcp-organizations"})
+        scope_is_org = scope_id.startswith("organizations/")
+        scope_node = org_node_id if scope_is_org else _folder_node_id(scope_id)
+        if scope_node in graph.nodes:
+            _add_rel_edge(graph, policy_node, scope_node, RelationshipType.GOVERNS, {"source": "gcp-organizations"})
