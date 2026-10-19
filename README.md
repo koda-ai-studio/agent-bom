@@ -139,6 +139,8 @@ SPDX, JSON and HTML**. Cloud connectors and fleet sync collect inventory;
 proxy and gateway deployments add runtime evidence.
 
 For coding assistants, run `agent-bom mcp server`.
+In Claude Code, install the plugin with `/plugin marketplace add koda-ai-studio/agent-bom`
+then `/plugin install agent-bom@agent-bom` ([details](integrations/claude-code/README.md)).
 Start with eight focused tools in the default profile.
 [Choose an MCP profile](docs/MCP_SERVER.md) for graph, cloud, runtime or audit work.
 [Try three investigations](docs/MCP_SERVER.md): affected agents, exposure receipts and a before/after scan comparison.

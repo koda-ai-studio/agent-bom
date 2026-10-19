@@ -1,0 +1,14 @@
+{
+  "name": "agent-bom",
+  "owner": { "name": "koda-ai-studio", "url": "https://github.com/koda-ai-studio" },
+  "description": "agent-bom for Claude Code: scan agents, MCP servers and packages from your session.",
+  "plugins": [
+    {
+      "name": "agent-bom",
+      "source": "./integrations/claude-code",
+      "description": "Scan MCP servers, agents and packages for CVEs, supply-chain risk and exposed credentials; check a server before you add it; plan fixes.",
+      "category": "security",
+      "tags": ["security", "mcp", "sbom", "supply-chain", "vulnerabilities"]
+    }
+  ]
+}
