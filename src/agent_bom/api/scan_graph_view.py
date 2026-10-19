@@ -17,32 +17,20 @@ async def _scan_graph_compute_call(fn: Callable[..., Any], /, *args: Any, **kwar
 
 
 def _effective_reach_lookup(job: ScanJob) -> dict[str, dict[str, Any]]:
-    """Build a per-vuln lookup of the effective-reach breakdown.
+    """Build a per-occurrence lookup of agent/tool/credential reach context.
 
-    Builds a one-shot context graph from the job's ``agents`` +
-    ``blast_radius`` and runs :func:`agent_bom.effective_reach.annotate_graph`.
-    Returned dict is keyed by *vulnerability_id* (e.g. ``CVE-2024-1234``)
-    so the various finding shapes (top-level, blast-radius, package
-    inner-vuln) can all hydrate from the same map.
+    Keyed by finding identity (``canonical_id`` / ``finding_id``), never by
+    CVE id: unrelated occurrences share CVE ids, and only an occurrence the
+    context graph links to an agent may carry agent, tool or credential reach.
     """
     result = job.result or {}
+    blast = result.get("blast_radius", []) or result.get("blast_radii", []) or []
     try:
-        from agent_bom.context_graph import NodeKind, build_context_graph
+        from agent_bom.effective_reach import occurrence_contexts_for_report
 
-        graph = build_context_graph(
-            result.get("agents", []) or [],
-            result.get("blast_radius", []) or result.get("blast_radii", []) or [],
-        )
+        return occurrence_contexts_for_report(result.get("agents", []) or [], blast)
     except Exception:  # pragma: no cover - never break the findings list
         return {}
-    out: dict[str, dict[str, Any]] = {}
-    for node in graph.nodes.values():
-        if node.kind != NodeKind.VULNERABILITY:
-            continue
-        breakdown = node.metadata.get("effective_reach")
-        if isinstance(breakdown, dict):
-            out[node.label] = breakdown
-    return out
 
 
 def _attach_unified_graph_view(payload: dict[str, Any], result: dict[str, Any], *, scan_id: str, tenant_id: str) -> dict[str, Any]:

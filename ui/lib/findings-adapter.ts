@@ -134,6 +134,8 @@ export function collectUnifiedFindings(findings: UnifiedFinding[]): LaneFinding[
       graph_reachable: finding.graph_reachable ?? null,
       graph_min_hop_distance: finding.graph_min_hop_distance ?? null,
       graph_reachable_from_agents: finding.graph_reachable_from_agents ?? [],
+      graph_reachable_from: finding.graph_reachable_from ?? [],
+      graph_reachable_from_count: finding.graph_reachable_from_count ?? null,
       lifecycle_status: finding.status ?? undefined,
       observation_status: finding.observation_status,
       reconfirmation: finding.reconfirmation,

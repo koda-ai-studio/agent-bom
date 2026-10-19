@@ -777,4 +777,4 @@ async def get_agent_lifecycle(request: Request, agent_name: str) -> dict:
     from agent_bom.graph.lifecycle import agent_lifecycle_view
 
     detail = await get_agent_detail(request, agent_name)
-    return agent_lifecycle_view(detail["agent"], tenant_id=_tenant_id(request))
+    return agent_lifecycle_view(detail["agent"], tenant_id=_tenant_id(request), blast_radius=detail.get("blast_radius") or [])

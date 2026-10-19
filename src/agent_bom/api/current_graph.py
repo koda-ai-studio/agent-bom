@@ -153,6 +153,34 @@ class _ProjectionLock:
                     self._cond.notify_all()
 
 
+def graph_scan_id(job: Any) -> str:
+    """The snapshot id a completed job's graph was stored under."""
+    return str((job.result or {}).get("scan_id") or job.job_id)
+
+
+def available_sources(graph_store: Any, tenant: str, jobs: list[Any]) -> tuple[list[Any], tuple[tuple[str, str], ...], set[str]]:
+    """Select the current job per target scope, retaining history where graph evidence is missing.
+
+    Track absent snapshots in the revision key too: a late graph commit
+    must invalidate the projection even if its job row never changes.
+    Exceptions from the backing store deliberately propagate.
+    """
+    missing: dict[str, str] = {}
+    reasons: set[str] = set()
+    while True:
+        eligible = [job for job in jobs if graph_scan_id(job) not in missing]
+        selected, _ = _finding_snapshot_jobs(eligible, since=None, require_authoritative_evidence=False)
+        selected.sort(key=scan_evidence_authority_key)
+        reasons.update(reason for job in selected for reason in scan_collection_incomplete_reasons(job))
+        sources = list(dict.fromkeys(graph_scan_id(job) for job in selected))
+        revisions = tuple(graph_store.snapshot_identity(tenant_id=tenant, scan_id=scan, for_paging=True) for scan in sources)
+        absent = {source: generation for source, generation in revisions if not generation}
+        if not absent:
+            return selected, tuple((*revisions, *sorted(missing.items()))), reasons
+        missing.update(absent)
+        reasons.add("graph_evidence_unavailable")
+
+
 class CurrentGraphStore:
     """Add default current scope to graph reads over any durable graph backend."""
 
@@ -232,26 +260,7 @@ class CurrentGraphStore:
         return tuple(self._graph_store.snapshot_identity(tenant_id=tenant, scan_id=scan, for_paging=True) for scan in scan_ids)
 
     def _available_sources(self, tenant: str, jobs: list[Any]) -> tuple[list[Any], tuple[tuple[str, str], ...], set[str]]:
-        """Retain available target history while declaring missing graph evidence.
-
-        Track absent snapshots in the revision key too: a late graph commit
-        must invalidate the projection even if its job row never changes.
-        Exceptions from the backing store deliberately propagate.
-        """
-        missing: dict[str, str] = {}
-        reasons: set[str] = set()
-        while True:
-            eligible = [job for job in jobs if str((job.result or {}).get("scan_id") or job.job_id) not in missing]
-            selected, _ = _finding_snapshot_jobs(eligible, since=None, require_authoritative_evidence=False)
-            selected.sort(key=scan_evidence_authority_key)
-            reasons.update(reason for job in selected for reason in scan_collection_incomplete_reasons(job))
-            sources = list(dict.fromkeys(str((job.result or {}).get("scan_id") or job.job_id) for job in selected))
-            revisions = self._revisions(tenant, sources)
-            absent = {source: generation for source, generation in revisions if not generation}
-            if not absent:
-                return selected, tuple((*revisions, *sorted(missing.items()))), reasons
-            missing.update(absent)
-            reasons.add("graph_evidence_unavailable")
+        return available_sources(self._graph_store, tenant, jobs)
 
     def _resolved_id(self, tenant: str) -> str:
         return read_once((f"current-graph:{id(self)}", tenant), lambda: self._resolve_current_id(tenant))

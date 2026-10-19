@@ -430,9 +430,11 @@ def test_default_cli_scan_projects_evidence_bearing_graph_path_onto_rows():
     assert finding_row["graph_reachable_from_agents"] == ["agent:assistant"]
 
 
-def test_default_cli_scan_keeps_topology_only_graph_path_unknown():
+def test_default_cli_scan_labels_topology_only_graph_path_likely():
     blast_row, finding_row = _cve_rows(_cli_json_with_injected_path(["uses", "depends_on", "vulnerable_to"]))
 
-    assert blast_row["graph_reachable"] is None
-    assert blast_row["graph_min_hop_distance"] is None
-    assert finding_row["graph_reachable"] is None
+    assert blast_row["graph_reachable"] is True
+    assert blast_row["graph_min_hop_distance"] == 2
+    assert finding_row["graph_reachable"] is True
+    assert blast_row["reachability"] == "likely"
+    assert finding_row["reachability"] == "likely"

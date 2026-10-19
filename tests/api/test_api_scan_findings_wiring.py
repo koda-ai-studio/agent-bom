@@ -203,13 +203,12 @@ def test_scan_vuln_flows_to_findings_and_attack_paths(wired_client):
     focused = wired_client.get("/v1/graph", params={"scan_id": reachable["scan_id"]})
     assert focused.status_code == 200, focused.text
     assert focused.json()["nodes"]
-    # A derived agent -> server -> package -> CVE dependency chain is useful
-    # topology, but it is not evidence that the vulnerability is reachable at
-    # runtime. Keep the finding unknown until the path carries an explicit
-    # execution, network, or exploit edge.
-    assert reachable["graph_reachable"] is None
-    assert reachable["graph_min_hop_distance"] is None
-    assert reachable["graph_reachable_from_agents"] == []
+    # A derived agent -> server -> package -> CVE chain is an inbound path, so
+    # the finding agrees with the path list; it is a modeled path, so its
+    # reachability verdict is likely, never confirmed.
+    assert reachable["graph_reachable"] is True
+    assert reachable["graph_reachable_from_agents"]
+    assert reachable.get("reachability") != "confirmed"
 
     unassessed = next(row for row in finding_rows if row.get("vulnerability_id") == NON_OVERLAP_CVE)
     assert unassessed["graph_reachable"] is None
@@ -243,6 +242,9 @@ def test_findings_reachability_projection_is_tenant_scoped_and_bounded():
             )
             return "scan-alpha", "2026-07-27T00:00:00Z", [path], MAX_FINDING_REACHABILITY_PATHS + 1
 
+    from agent_bom.api.finding_reachability import clear_reachability_index_cache
+
+    clear_reachability_index_cache()
     store = RecordingGraphStore()
     result = project_persisted_graph_reachability(
         [
@@ -252,17 +254,13 @@ def test_findings_reachability_projection_is_tenant_scoped_and_bounded():
         graph_store=store,  # type: ignore[arg-type]
         tenant_id="tenant-alpha",
         scan_id="scan-alpha",
-        path_limit=50_000,
+        path_limit=2,
     )
 
-    assert store.calls == [
-        {
-            "tenant_id": "tenant-alpha",
-            "scan_id": "scan-alpha",
-            "offset": 0,
-            "limit": MAX_FINDING_REACHABILITY_PATHS,
-        }
-    ]
+    # Every read is tenant- and snapshot-scoped and paged; a ceiling below the
+    # snapshot's path count is reported as truncated.
+    assert all(call["tenant_id"] == "tenant-alpha" and call["scan_id"] == "scan-alpha" for call in store.calls)
+    assert all(int(call["limit"]) <= MAX_FINDING_REACHABILITY_PATHS for call in store.calls)
     assert result.truncated is True
     assert result.rows[0]["graph_reachable"] is True
     assert result.rows[0]["graph_min_hop_distance"] == 2
@@ -270,7 +268,9 @@ def test_findings_reachability_projection_is_tenant_scoped_and_bounded():
     assert result.rows[1]["graph_reachable"] is None
 
 
-def test_structural_dependency_path_does_not_assert_graph_reachability():
+def test_structural_dependency_path_marks_inbound_graph_reachability():
+    """``graph_reachable`` = any inbound path; the verdict ladder keeps it at likely."""
+
     class StructuralGraphStore:
         def attack_paths(self, **_kwargs):
             path = AttackPath(
@@ -294,9 +294,12 @@ def test_structural_dependency_path_does_not_assert_graph_reachability():
         scan_id="scan-alpha",
     )
 
-    assert result.rows[0]["graph_reachable"] is None
-    assert result.rows[0]["graph_min_hop_distance"] is None
-    assert result.rows[0]["graph_reachable_from_agents"] == []
+    assert result.rows[0]["graph_reachable"] is True
+    assert result.rows[0]["graph_min_hop_distance"] == 3
+    assert result.rows[0]["graph_reachable_from_agents"] == ["agent:structural"]
+    from agent_bom.graph.reachability_truth import assess_reachability
+
+    assert assess_reachability(graph_reachable=result.rows[0]["graph_reachable"]).verdict == "likely"
 
 
 def test_findings_read_survives_unavailable_graph_backend(wired_client, monkeypatch):

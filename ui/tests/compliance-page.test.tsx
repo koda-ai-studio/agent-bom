@@ -177,6 +177,12 @@ describe("CompliancePage (dense restyle)", () => {
     expect(await screen.findByText("cis benchmark")).toBeVisible();
   });
 
+  it("opens the control a finding links to inside its framework", async () => {
+    navigation.query = "framework=owasp-llm&control=LLM01";
+    render(<CompliancePage />);
+    expect(await screen.findByRole("dialog", { name: /Control details for LLM01/i })).toBeVisible();
+  });
+
   it("explains when a requested framework is absent from the assessment", async () => {
     navigation.query = "framework=missing-framework";
     render(<CompliancePage />);

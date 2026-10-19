@@ -47,7 +47,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Literal
 
-from agent_bom.context_graph import ContextGraph, EdgeKind, GraphNode, NodeKind
+from agent_bom.context_graph import ContextGraph, EdgeKind, GraphNode, NodeKind, _finding_package_identity, build_context_graph
 
 # ── Capability weighting (deterministic) ──────────────────────────────────
 #
@@ -381,18 +381,25 @@ def compute(node: GraphNode, graph: ContextGraph) -> ReachScore:
     capability/credential context) so callers can score generic
     finding-shaped nodes too.
     """
-    cvss = float(node.metadata.get("cvss_score") or 0.0)
-    epss = float(node.metadata.get("epss_score") or 0.0)
-    is_kev = bool(node.metadata.get("is_kev"))
     symbol_reachability = node.metadata.get("symbol_reachability")
+    return ReachScore(
+        cvss=float(node.metadata.get("cvss_score") or 0.0),
+        epss=float(node.metadata.get("epss_score") or 0.0),
+        is_kev=bool(node.metadata.get("is_kev")),
+        symbol_reachability=str(symbol_reachability) if symbol_reachability else None,
+        **_server_context(graph, _affected_servers(graph, node.id)),
+    )
 
+
+def _server_context(graph: ContextGraph, server_ids: list[str]) -> dict:
+    """Tool, credential and agent reach of exactly ``server_ids``."""
     tool_capability = 0.0
     cred_visibility = 0.0
     reachable_tools: list[str] = []
     reachable_creds: list[str] = []
     reachable_agents: set[str] = set()
 
-    for server_id in _affected_servers(graph, node.id):
+    for server_id in server_ids:
         for tool in _tools_for_server(graph, server_id):
             weight, label = _max_capability_weight(tool)
             if weight > tool_capability:
@@ -409,20 +416,111 @@ def compute(node: GraphNode, graph: ContextGraph) -> ReachScore:
         for agent_name in _agents_for_server(graph, server_id):
             reachable_agents.add(agent_name)
 
-    reachable_tools.sort()
-    reachable_creds.sort()
+    return {
+        "tool_capability": tool_capability,
+        "cred_visibility": cred_visibility,
+        "agent_breadth": len(reachable_agents),
+        "reachable_tools": tuple(sorted(reachable_tools)),
+        "reachable_creds": tuple(sorted(reachable_creds)),
+        "reachable_agents": tuple(sorted(reachable_agents)),
+    }
 
+
+def _occurrence_servers(graph: ContextGraph, blast_row: dict) -> list[str]:
+    """Servers the graph links to this one occurrence (vuln + package + owners)."""
+    _ecosystem, name, version = _finding_package_identity(blast_row)
+    package_ref = f"{name}@{version}" if version else name
+    agents = set(blast_row.get("affected_agents") or [])
+    servers = set(blast_row.get("affected_servers") or [])
+    target = f"vuln:{blast_row.get('vulnerability_id', '')}"
+    out: list[str] = []
+    for edge in graph.edges:
+        if edge.kind != EdgeKind.VULNERABLE_TO or edge.target != target or package_ref not in edge.metadata.get("packages", []):
+            continue
+        server = graph.nodes.get(edge.source)
+        if server is None or (agents and server.metadata.get("agent") not in agents) or (servers and server.label not in servers):
+            continue
+        out.append(edge.source)
+    return sorted(set(out))
+
+
+_CONTEXT_LISTS = ("reachable_tools", "reachable_creds", "reachable_agents")
+
+
+def _occurrence_key(identity: str, agent: str) -> str:
+    return f"{identity}\x1f{agent}"
+
+
+def occurrence_contexts(graph: ContextGraph, blast_data: list[dict]) -> dict[str, dict[str, object]]:
+    """Tool/credential/agent context keyed by (finding identity, agent).
+
+    A CVE id is shared by unrelated occurrences (a cluster image and an MCP
+    server can both carry it), and an occurrence id can repeat across blast
+    rows for different owners, so context is resolved per blast row, per
+    owning agent, over only the servers the graph links to that agent.
+    """
+    servers_by_key: dict[str, set[str]] = {}
+    for blast_row in blast_data:
+        identities = {str(blast_row[key]) for key in ("canonical_id", "finding_id") if blast_row.get(key)}
+        if not identities or not blast_row.get("vulnerability_id"):
+            continue
+        for server_id in _occurrence_servers(graph, blast_row):
+            agent = str((graph.nodes[server_id].metadata or {}).get("agent") or "")
+            if not agent:
+                continue
+            for identity in identities:
+                servers_by_key.setdefault(_occurrence_key(identity, agent), set()).add(server_id)
+    out: dict[str, dict[str, object]] = {}
+    for key, server_ids in servers_by_key.items():
+        context = _server_context(graph, sorted(server_ids))
+        if context["reachable_agents"]:
+            out[key] = {**context, **{name: list(context[name]) for name in _CONTEXT_LISTS}}
+    return out
+
+
+def occurrence_contexts_for_report(agents: list[dict], blast_data: list[dict]) -> dict[str, dict[str, object]]:
+    """Build the report's context graph once and resolve per-occurrence context."""
+    return occurrence_contexts(build_context_graph(agents, blast_data), blast_data)
+
+
+def occurrence_context_for_row(reach: dict[str, dict], row: dict) -> dict[str, object] | None:
+    """Combine the row's own (occurrence, agent) contexts; ``None`` if it names no linked agent."""
+    identities = [str(row[key]) for key in ("canonical_id", "id", "finding_id") if row.get(key)]
+    agents = [str(agent) for agent in row.get("affected_agents") or [] if agent]
+    keys = (_occurrence_key(identity, agent) for agent in dict.fromkeys(agents) for identity in dict.fromkeys(identities))
+    contexts = [reach[key] for key in keys if key in reach]
+    if not contexts:
+        return None
+    combined: dict[str, object] = {
+        "tool_capability": max(float(ctx.get("tool_capability") or 0.0) for ctx in contexts),
+        "cred_visibility": max(float(ctx.get("cred_visibility") or 0.0) for ctx in contexts),
+    }
+    for name in _CONTEXT_LISTS:
+        combined[name] = sorted({str(item) for ctx in contexts for item in ctx.get(name) or []})
+    combined["agent_breadth"] = len(combined["reachable_agents"])  # type: ignore[arg-type]
+    return combined
+
+
+def occurrence_score(row: dict, context: dict | None) -> ReachScore:
+    """Score one finding row from its own CVE attributes plus its own context."""
+
+    def _float(value: object) -> float:
+        try:
+            return float(value or 0.0)  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            return 0.0
+
+    ctx = context or {}
     return ReachScore(
-        cvss=cvss,
-        epss=epss,
-        is_kev=is_kev,
-        tool_capability=tool_capability,
-        cred_visibility=cred_visibility,
-        agent_breadth=len(reachable_agents),
-        reachable_tools=tuple(reachable_tools),
-        reachable_creds=tuple(reachable_creds),
-        reachable_agents=tuple(sorted(reachable_agents)),
-        symbol_reachability=str(symbol_reachability) if symbol_reachability else None,
+        cvss=_float(row.get("cvss_score")),
+        epss=_float(row.get("epss_score")),
+        is_kev=bool(row.get("is_kev") or row.get("cisa_kev")),
+        tool_capability=_float(ctx.get("tool_capability")),
+        cred_visibility=_float(ctx.get("cred_visibility")),
+        agent_breadth=len(ctx.get("reachable_agents") or ()),
+        reachable_tools=tuple(ctx.get("reachable_tools") or ()),
+        reachable_creds=tuple(ctx.get("reachable_creds") or ()),
+        reachable_agents=tuple(ctx.get("reachable_agents") or ()),
     )
 
 
@@ -468,4 +566,7 @@ __all__ = [
     "ReachScore",
     "annotate_graph",
     "compute",
+    "occurrence_context_for_row",
+    "occurrence_contexts",
+    "occurrence_score",
 ]

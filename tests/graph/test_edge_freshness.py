@@ -112,13 +112,13 @@ def _path_graph(*, tool_hop_seen: datetime) -> tuple[UnifiedGraph, AttackPath]:
     return graph, path
 
 
-def test_fresh_directed_provenance_backed_path_is_confirmed() -> None:
+def test_fresh_directed_provenance_backed_path_is_likely_not_confirmed() -> None:
     graph, path = _path_graph(tool_hop_seen=_SNAPSHOT)
 
     annotate_attack_path_evidence(path, graph)
 
     assert [receipt["freshness"] for receipt in path.hop_evidence] == ["fresh", "fresh"]
-    assert path.reachability == "confirmed"
+    assert path.reachability == "likely"
     assert "directed_provenance_backed_hops" in path.reachability_basis
 
 
@@ -199,9 +199,9 @@ def test_fresh_advisory_match_without_applicability_does_not_confirm_the_path() 
     assert "applicability_unverified" in path.hop_evidence[1]["reason_codes"]
 
 
-def test_fresh_advisory_match_with_likely_applicability_can_confirm() -> None:
+def test_fresh_advisory_match_with_likely_applicability_is_likely() -> None:
     graph, path = _finding_path_graph({"verdict": "likely", "basis": ["package_reachable"]})
 
     annotate_attack_path_evidence(path, graph)
 
-    assert path.reachability == "confirmed"
+    assert path.reachability == "likely"

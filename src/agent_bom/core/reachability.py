@@ -33,6 +33,11 @@ class ReachabilityAssessment:
         return self.verdict in {ReachabilityVerdict.CONFIRMED, ReachabilityVerdict.LIKELY}
 
 
+# Only function-level or runtime-observed evidence proves the vulnerable code
+# executes; a graph path or package presence alone tops out at ``likely``.
+CONFIRMING_BASIS = frozenset({"function_reachable", "runtime_observed"})
+
+
 def review_only_match(tier: str | None) -> bool:
     return tier in {"unverified_range", "ambiguous_distro_release", "nvd_cpe_candidate"}
 
@@ -68,13 +73,13 @@ def assess_reachability(
     if negative:
         return ReachabilityAssessment(ReachabilityVerdict.UNLIKELY, tuple(negative))
 
-    positive: list[str] = []
-    if graph_reachable is True:
-        positive.append("graph_path")
     if symbol == "function_reachable":
-        positive.append("function_reachable")
-    if positive:
-        return ReachabilityAssessment(ReachabilityVerdict.CONFIRMED, tuple(positive))
+        proven = ("function_reachable", *(("graph_path",) if graph_reachable is True else ()))
+        return ReachabilityAssessment(ReachabilityVerdict.CONFIRMED, proven)
+    # A modeled graph path is structural: it shows the topology connects, not
+    # that the vulnerable code executes.
+    if graph_reachable is True:
+        return ReachabilityAssessment(ReachabilityVerdict.LIKELY, ("graph_path",))
 
     if symbol == "unknown":
         return ReachabilityAssessment(ReachabilityVerdict.UNKNOWN, ("analysis_incomplete",))
@@ -121,6 +126,8 @@ def node_reachability(attributes: dict[str, object] | None) -> ReachabilityAsses
     if explicit in {"confirmed", "likely", "unlikely"}:
         basis = attrs.get("reachability_basis")
         normalized_basis = tuple(str(item) for item in basis) if isinstance(basis, list) else ("persisted_verdict",)
+        if explicit == "confirmed" and not CONFIRMING_BASIS.intersection(normalized_basis):
+            return ReachabilityAssessment(ReachabilityVerdict.LIKELY, normalized_basis)
         return ReachabilityAssessment(ReachabilityVerdict(explicit), normalized_basis)
     graph_value = attrs.get("graph_reachable")
     dependency_value = attrs.get("dependency_reachable")

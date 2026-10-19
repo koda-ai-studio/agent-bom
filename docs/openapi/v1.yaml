@@ -9764,6 +9764,13 @@ components:
           - type: boolean
           - type: 'null'
           title: Graph Reachable
+        graph_reachable_from:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Graph Reachable From
         graph_reachable_from_agents:
           anyOf:
           - items:
@@ -9771,6 +9778,11 @@ components:
             type: array
           - type: 'null'
           title: Graph Reachable From Agents
+        graph_reachable_from_count:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Graph Reachable From Count
         id:
           title: Id
           type: string
@@ -14293,6 +14305,91 @@ components:
           - $ref: '#/components/schemas/GraphEdgeChangeSummary'
           - type: 'null'
       title: GraphEdgeChangesResponse
+      type: object
+    GraphEstateChangesPagination:
+      additionalProperties: true
+      properties:
+        has_more:
+          title: Has More
+          type: boolean
+        limit:
+          title: Limit
+          type: integer
+        next_offset:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Next Offset
+        offset:
+          title: Offset
+          type: integer
+        returned:
+          title: Returned
+          type: integer
+        total:
+          title: Total
+          type: integer
+      required:
+      - offset
+      - limit
+      - returned
+      - total
+      - has_more
+      title: GraphEstateChangesPagination
+      type: object
+    GraphEstateChangesResponse:
+      additionalProperties: true
+      description: '``GET /v1/graph/changes``: each target scope''s current snapshot
+        against its own previous snapshot.
+
+
+        ``sources`` are scopes with a previous snapshot; ``new_sources`` are first
+
+        observations and are never counted as additions. ``totals`` cover the
+
+        returned page of scopes; ``completeness`` says whether more scopes exist.'
+      properties:
+        completeness:
+          $ref: '#/components/schemas/GraphCompleteness'
+        completeness_reasons:
+          items:
+            type: string
+          title: Completeness Reasons
+          type: array
+        evidence_scope:
+          title: Evidence Scope
+          type: string
+        new_sources:
+          items:
+            additionalProperties: true
+            type: object
+          title: New Sources
+          type: array
+        pagination:
+          $ref: '#/components/schemas/GraphEstateChangesPagination'
+        schema_version:
+          title: Schema Version
+          type: string
+        sources:
+          items:
+            additionalProperties: true
+            type: object
+          title: Sources
+          type: array
+        totals:
+          additionalProperties: true
+          title: Totals
+          type: object
+      required:
+      - schema_version
+      - evidence_scope
+      - sources
+      - new_sources
+      - totals
+      - pagination
+      - completeness
+      - completeness_reasons
+      title: GraphEstateChangesResponse
       type: object
     GraphEvidenceManifestResponse:
       additionalProperties: true
@@ -41397,6 +41494,30 @@ paths:
           - type: 'null'
           description: next_cursor from the previous page (replaces offset)
           title: Cursor
+      - description: Only paths through this node (replaced ids resolve to canonical)
+        in: query
+        name: node_id
+        required: false
+        schema:
+          anyOf:
+          - maxLength: 512
+            pattern: ^[^\x00]*$
+            type: string
+          - type: 'null'
+          description: Only paths through this node (replaced ids resolve to canonical)
+          title: Node Id
+      - description: Only paths carrying this finding occurrence
+        in: query
+        name: finding_id
+        required: false
+        schema:
+          anyOf:
+          - maxLength: 512
+            pattern: ^[^\x00]*$
+            type: string
+          - type: 'null'
+          description: Only paths carrying this finding occurrence
+          title: Finding Id
       responses:
         '200':
           content:
@@ -42245,6 +42366,58 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
           description: Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE)
       summary: Get Graph Attack Paths
+      tags:
+      - graph
+  /v1/graph/changes:
+    get:
+      description: 'What changed in the current estate: each target scope against
+        its own previous completed snapshot.'
+      operationId: get_graph_estate_changes_v1_graph_changes_get
+      parameters:
+      - description: Target scopes per page
+        in: query
+        name: limit
+        required: false
+        schema:
+          default: 50
+          description: Target scopes per page
+          maximum: 100
+          minimum: 1
+          title: Limit
+          type: integer
+      - description: pagination.next_offset from the previous page
+        in: query
+        name: offset
+        required: false
+        schema:
+          default: 0
+          description: pagination.next_offset from the previous page
+          minimum: 0
+          title: Offset
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GraphEstateChangesResponse'
+          description: Successful Response
+        4XX:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: 'Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED,
+            403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413
+            PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429
+            RATE_LIMITED'
+        5XX:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE)
+      summary: Get Graph Estate Changes
       tags:
       - graph
   /v1/graph/clusters:

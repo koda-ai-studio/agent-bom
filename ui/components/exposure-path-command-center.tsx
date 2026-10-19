@@ -154,9 +154,13 @@ export function ExposurePathCommandCenter({
       graphViewRef.current?.scrollIntoView({ block: "start", behavior: "instant" });
     }
   };
+  const committedView = useRef(view);
   useLayoutEffect(() => {
     // Controlled view updates can commit after an event's animation frame.
-    // Scroll only once the graph section is mounted, before painting it.
+    // Scroll only once the graph section is mounted, before painting it, and
+    // only for a switch: the initial view must leave the page title in place.
+    if (committedView.current === view) return;
+    committedView.current = view;
     if (view === "graph") graphViewRef.current?.scrollIntoView({ block: "start", behavior: "instant" });
   }, [view]);
   const fixLabel = pathFixLabel(path);

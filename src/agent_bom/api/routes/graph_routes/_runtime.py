@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, Callable, TypeVar
 
 from fastapi import HTTPException, Request
 
+from agent_bom.api.current_graph import CURRENT_PREFIX
 from agent_bom.api.graph_node_alias import resolve_snapshot_node_id, resolve_snapshot_node_ids
 from agent_bom.api.graph_scan_ids import resolve_graph_scan_id
 from agent_bom.api.neptune_graph import NeptuneGraphStoreUnsupportedOperationError
@@ -96,14 +97,25 @@ async def require_graph_snapshot_ids(store: Any, tenant_id: str, *scan_ids: str)
     rather than "no such snapshot".
     """
     resolved = [await asyncio.to_thread(resolve_graph_scan_id, tenant_id, scan_id) for scan_id in scan_ids]
+    # The current-estate id is a derived projection, never a recorded snapshot
+    # row; the store resolves it to the caller tenant's live generation.
+    for index, scan_id in enumerate(resolved):
+        if scan_id.startswith(CURRENT_PREFIX):
+            live_id, generation = await _graph_store_call(store.snapshot_identity, tenant_id=tenant_id, scan_id=scan_id)
+            if not generation or not str(live_id).startswith(CURRENT_PREFIX):
+                raise HTTPException(status_code=404, detail="Graph snapshot not found for this tenant.")
+            resolved[index] = str(live_id)
+    recorded = {scan_id for scan_id in resolved if not scan_id.startswith(CURRENT_PREFIX)}
+    if not recorded:
+        return resolved
     try:
-        found = await _graph_store_call(store.snapshots_by_ids, tenant_id=tenant_id, scan_ids=set(resolved))
+        found = await _graph_store_call(store.snapshots_by_ids, tenant_id=tenant_id, scan_ids=recorded)
     except HTTPException as exc:
         if exc.status_code != 501:
             raise
         # A backend that cannot list snapshots (experimental Neptune) answers the read itself.
         return resolved
-    if set(resolved) - {str(row.get("scan_id") or "") for row in found or []}:
+    if recorded - {str(row.get("scan_id") or "") for row in found or []}:
         raise HTTPException(status_code=404, detail="Graph snapshot not found for this tenant.")
     return resolved
 

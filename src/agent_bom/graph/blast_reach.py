@@ -110,8 +110,8 @@ def apply_graph_path_reachability_to_blast_radii(
 ) -> int:
     """Stamp ``graph_reachable*`` from evidence-bearing attack paths.
 
-    Uses the same rule as the findings API: only a path carrying an exploit,
-    exposure or runtime edge counts, and a path must pass through the row's own
+    Uses the findings API rule: non-trace-order paths count as graph reach,
+    without confirming execution. A path must pass through the row's own
     package node so a shared CVE on another package is not marked reachable.
     Unmatched rows keep ``None``. Returns the number of rows marked reachable.
     """

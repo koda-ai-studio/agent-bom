@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
@@ -69,7 +70,18 @@ def remediation_finding_projection(row: dict[str, Any]) -> dict[str, Any]:
             )
             if key in evidence
         }
-    return safe_finding_response_payload(projected)
+    payload = safe_finding_response_payload(projected)
+    # Tier-A redaction drops these lists wholesale. Their entries are reference
+    # names (env-var and tool names, as the agent detail and per-scan plan
+    # already return), so restore only entries shaped like a name, never a value.
+    for key in ("exposed_credentials", "exposed_tools"):
+        names = [value for value in _strings(row.get(key))[:200] if _REFERENCE_NAME.fullmatch(value)]
+        if names:
+            payload[key] = list(dict.fromkeys(names))
+    return payload
+
+
+_REFERENCE_NAME = re.compile(r"[A-Za-z_][A-Za-z0-9_.\-]{0,127}")
 
 
 def _strings(value: Any) -> list[str]:

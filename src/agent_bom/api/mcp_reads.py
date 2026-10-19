@@ -13,6 +13,7 @@ from fastapi import HTTPException
 
 from agent_bom.api.finding_view_filters import _finding_triage_state
 from agent_bom.api.graph_diff_read import graph_diff_read
+from agent_bom.api.graph_estate_changes import graph_estate_changes_read
 from agent_bom.api.routes.compliance import get_compliance_by_framework, get_compliance_summary
 from agent_bom.api.routes.enterprise import build_tenant_triage_state_index
 from agent_bom.api.routes.scan import list_findings
@@ -43,6 +44,7 @@ __all__ = [
     "get_compliance_by_framework",
     "get_compliance_summary",
     "graph_diff_read",
+    "graph_estate_changes_read",
     "has_completed_scans",
     "list_findings",
     "persisted_finding",

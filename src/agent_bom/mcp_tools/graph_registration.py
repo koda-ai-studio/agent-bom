@@ -164,11 +164,13 @@ def _register_graph_diff(mcp: Any, read_only: Any, execute_tool_async: Callable[
         ] = None,
         to_scan_id: Annotated[str | None, Field(max_length=512, description="Newer snapshot scan ID.")] = None,
         view: Annotated[
-            Literal["summary", "detail"],
+            Literal["summary", "detail", "estate"],
             Field(
                 description=(
                     "summary (default): counts per change kind by entity type and relationship, plus new critical findings, "
-                    "new credential reach, removed controls and new attack paths. detail: a filtered page of change rows."
+                    "new credential reach, removed controls and new attack paths. detail: a filtered page of change rows. "
+                    "estate: each current source against its own previous snapshot, as /v1/graph/changes; "
+                    "first observations are listed separately, never counted as additions."
                 )
             ),
         ] = "summary",
@@ -177,11 +179,12 @@ def _register_graph_diff(mcp: Any, read_only: Any, execute_tool_async: Callable[
         entity_type: Annotated[str | None, Field(max_length=64, description="detail: only node rows of this entity type.")] = None,
         relationship: Annotated[str | None, Field(max_length=64, description="detail: only edge rows of this relationship.")] = None,
         node_id: Annotated[str | None, Field(max_length=512, description="detail: the node itself or edges touching it.")] = None,
-        limit: Annotated[int, Field(ge=1, le=200, description="detail: rows per page.")] = 50,
+        limit: Annotated[int, Field(ge=1, le=200, description="detail: rows per page; estate: sources per page (max 100).")] = 50,
         cursor: Annotated[str | None, Field(max_length=4096, description="pagination.next_cursor; keep the filters unchanged.")] = None,
+        offset: Annotated[int, Field(ge=0, description="estate: pagination.next_offset from the previous page.")] = 0,
         tenant_id: Annotated[str, _TENANT] = "default",
     ) -> str:
-        """Return what changed between two graph snapshots exactly as /v1/graph/diff does.
+        """Return what changed between two graph snapshots exactly as /v1/graph/diff does, or per source with view=estate.
 
         Rows are ordered nodes before edges, then added/removed/changed, then id;
         ``total`` counts every row matching the filters, not one page.
@@ -200,6 +203,7 @@ def _register_graph_diff(mcp: Any, read_only: Any, execute_tool_async: Callable[
             node_id=node_id,
             limit=limit,
             cursor=cursor,
+            offset=offset,
             _truncate_response=truncate_response,
         )
 

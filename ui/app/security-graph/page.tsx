@@ -38,7 +38,7 @@ import { GraphLensSwitcher } from "@/components/graph-lens-switcher";
 import { DeployGatePanel } from "@/components/deploy-gate-panel";
 import { ExposurePathLens } from "@/components/exposure-path-lens";
 import { GraphEmptyState, GraphPanelSkeleton } from "@/components/graph-state-panels";
-import { GraphAnalysisStatusBanner, graphAnalysisStatusCopy } from "@/components/graph-analysis-status";
+import { graphAnalysisStatusCopy } from "@/components/graph-analysis-status";
 import { GraphCampaignPanel } from "@/components/graph-campaign-panel";
 import {
   GraphCorrelationWorkflow,
@@ -89,6 +89,8 @@ import {
 } from "@/lib/attack-paths";
 import { FindingInvestigationContext } from "@/components/finding-investigation-context";
 import { buildFindingAssetHref, withFindingContext } from "@/lib/finding-investigation-href";
+import { clientQueueFocus, emptyQueueCopy, focusedPathEmptyState, serverPathFocus } from "@/lib/finding-path-focus";
+import { InvestigationEmptyQueue } from "@/components/investigation-empty-queue";
 import { SecurityGraphInvestigation } from "@/components/security-graph-investigation";
 import { GraphSurface } from "@/app/graph/graph-surface";
 import type { UnifiedGraphData, UnifiedNode } from "@/lib/graph-schema";
@@ -257,10 +259,6 @@ function AttackPathInvestigationContent() {
     [investigationStep, setInvestigationStep],
   );
 
-  const focusLabel = useMemo(() => {
-    const parts = [focus.nodeId, focus.cve, focus.packageName, focus.agentName].filter(Boolean);
-    return parts.length > 0 ? parts.join(" · ") : null;
-  }, [focus.agentName, focus.cve, focus.nodeId, focus.packageName]);
   const hasFocusContext = Boolean(
     focus.cve || focus.packageName || focus.agentName || focus.nodeId || focus.findingId,
   );
@@ -346,6 +344,7 @@ function AttackPathInvestigationContent() {
           scanId: selectedScanId,
           offset: 0,
           limit: ATTACK_PATH_FETCH_PAGE,
+          ...serverPathFocus({ nodeId: focus.nodeId, findingId: focus.findingId }),
         });
         if (cancelled) return;
         setGraphData(graph);
@@ -427,6 +426,15 @@ function AttackPathInvestigationContent() {
     return nodes;
   }, [fixFirstCards, graphData?.nodes]);
 
+  // Name the focus in words; the raw node id stays in the URL and node details.
+  const focusLabel = useMemo(() => {
+    const nodeLabel = focus.nodeId
+      ? graphNodeById.get(graphData?.focus?.node_id || focus.nodeId)?.label || focus.packageName || focus.cve || "Selected asset"
+      : "";
+    const parts = [...new Set([nodeLabel, focus.cve, focus.packageName, focus.agentName].filter(Boolean))];
+    return parts.length > 0 ? parts.join(" · ") : null;
+  }, [focus.agentName, focus.cve, focus.nodeId, focus.packageName, graphData?.focus?.node_id, graphNodeById]);
+
   const cardByPathKey = useMemo(() => {
     const next = new Map<string, FixFirstPathCard>();
     for (const card of fixFirstCards) {
@@ -444,15 +452,32 @@ function AttackPathInvestigationContent() {
     [campaigns, selectedCampaignId],
   );
 
+  const serverFocus = graphData?.focus ?? null;
   const allAttackPaths = useMemo(() => selectAttackPathQueue(
     graphData?.attack_paths,
     fixFirstCards.map((card) => card.attack_path),
     graphNodeById,
-    hasFocusContext ? focus : {},
+    clientQueueFocus(hasFocusContext ? focus : {}, Boolean(serverFocus)),
     selectedCampaign?.member_paths,
-  ), [fixFirstCards, focus, graphData?.attack_paths, graphNodeById, hasFocusContext, selectedCampaign]);
+  ), [fixFirstCards, focus, graphData?.attack_paths, graphNodeById, hasFocusContext, selectedCampaign, serverFocus]);
+  const tenantHasGraphData = snapshots.some((snapshot) => snapshot.node_count > 0)
+    || (graphData?.count_metadata?.snapshot_total ?? 0) > 0;
+  const focusedEmpty = focusedPathEmptyState({
+    serverFocused: Boolean(serverFocus),
+    coversAllMatches: serverFocus?.covers_all_matches ?? false,
+    cve: focus.cve,
+    currentEstate: selectedScanId.startsWith("current-estate:"),
+  });
   const relatedPackagePathsHref = useMemo(() => {
     if (!focus.findingId || !focus.nodeId || !focus.cve || allAttackPaths.length > 0) return null;
+    if (serverFocus) {
+      // The server checked the whole queue for this occurrence; offering the
+      // package's other paths is a deliberate, labelled widening of scope.
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("finding");
+      params.set("related_finding", focus.findingId);
+      return `${pathname}?${params.toString()}`;
+    }
     const relatedFocus = { ...focus, findingId: "" };
     const hasRelatedPath = [...(graphData?.attack_paths ?? []), ...fixFirstCards.map(card => card.attack_path)]
       .some(path => matchesAttackPathFocus(path, graphNodeById, relatedFocus));
@@ -462,7 +487,7 @@ function AttackPathInvestigationContent() {
     params.delete("finding");
     params.set("related_finding", focus.findingId);
     return `${pathname}?${params.toString()}`;
-  }, [allAttackPaths.length, fixFirstCards, focus, graphData?.attack_paths, graphNodeById, pathname, searchParams]);
+  }, [allAttackPaths.length, fixFirstCards, focus, graphData?.attack_paths, graphNodeById, pathname, searchParams, serverFocus]);
   const presentationAttackPaths = useMemo(
     () => dedupeAttackPathsForPresentation(allAttackPaths, graphNodeById),
     [allAttackPaths, graphNodeById],
@@ -507,6 +532,7 @@ function AttackPathInvestigationContent() {
         offset: nextOffset,
         snapshotGeneration: graphData.snapshot_generation,
         limit: ATTACK_PATH_FETCH_PAGE,
+        ...serverPathFocus(focus),
       }, { signal: controller.signal });
       if (controller.signal.aborted) return;
       // Validate before scheduling a state update; preserve loaded evidence on mismatch.
@@ -523,6 +549,7 @@ function AttackPathInvestigationContent() {
     }
   }, [
     attackPaths.length,
+    focus,
     graphData,
     hiddenLoadedAttackPathCount,
     pathHasMoreFromApi,
@@ -943,57 +970,21 @@ function AttackPathInvestigationContent() {
           </div>
         </section>
       ) : allAttackPaths.length === 0 ? (
-        <section className="rounded-3xl border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4">
-          <div className="mb-4">
-            <GraphAnalysisStatusBanner status={graphData?.stats.analysis_status?.attack_path_fusion} />
-          </div>
-          <GraphEmptyState
-            title={pathHasMoreFromApi ? "No matching paths in loaded pages" : relatedPackagePathsHref ? "No path is linked to this finding record" : emptyGraphState.title}
-            detail={pathHasMoreFromApi ? "Continue through the queue to check later pages against this focus. Unloaded paths remain unknown." : relatedPackagePathsHref
-              ? "Paths match this package and advisory in the selected snapshot, but their evidence does not link the selected finding record. Open that broader context explicitly."
-              : emptyGraphState.detail}
-            suggestions={emptyGraphState.suggestions}
-            command="agent-bom scan -p . -f graph"
-          />
-          {queueContinuation}
-          <div className="mt-4 flex flex-wrap gap-3 border-t border-[color:var(--border-subtle)] pt-4">
-            {focus.nodeId ? (
-              <Link href={buildFindingAssetHref({ findingScanId: searchParams.get("finding_scan") || focus.scanId, nodeId: focus.nodeId, findingId: focus.findingId, scanId: selectedScanId })} className="sg-action">
-                Inspect linked asset
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            ) : null}
-            {relatedPackagePathsHref ? (
-              <Link href={relatedPackagePathsHref} className="sg-action">
-                Show related package and advisory paths
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            ) : null}
-            <Link
-              href={fullGraphHref}
-              className="sg-filter-chip"
-            >
-              Open full graph
-              <GitBranch className="h-3.5 w-3.5" />
-            </Link>
-            <Link
-              href={buildFindingsHref({ scanId: selectedScanId || undefined })}
-              className="sg-filter-chip"
-            >
-              Review findings
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-            {hasFocusContext && (
-              <Link
-                href={resetFocusHref}
-                className="sg-filter-chip"
-              >
-                Clear focus
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-            )}
-          </div>
-        </section>
+        <InvestigationEmptyQueue
+          analysisStatus={graphData?.stats.analysis_status?.attack_path_fusion}
+          copy={emptyQueueCopy({ focused: focusedEmpty, morePagesUnloaded: pathHasMoreFromApi, relatedHref: relatedPackagePathsHref, fallback: emptyGraphState })}
+          suggestions={emptyGraphState.suggestions}
+          tenantHasGraphData={tenantHasGraphData}
+          continuation={serverFocus ? null : queueContinuation}
+          neighbourhood={focus.nodeId ? {
+            href: buildFindingAssetHref({ findingScanId: searchParams.get("finding_scan") || focus.scanId, nodeId: serverFocus?.node_id || focus.nodeId, findingId: focus.findingId, scanId: selectedScanId }),
+            label: serverFocus ? "Open package neighbourhood" : "Inspect linked asset",
+          } : null}
+          relatedHref={relatedPackagePathsHref}
+          fullGraphHref={fullGraphHref}
+          findingsHref={buildFindingsHref({ scanId: selectedScanId || undefined })}
+          resetFocusHref={hasFocusContext ? resetFocusHref : null}
+        />
       ) : attackPaths.length === 0 ? (
         <section className="rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4 space-y-4">
           <InvestigationFilterDrawer>

@@ -99,7 +99,7 @@ def test_reannotation_after_analysis_is_recorded_drops_stale_basis() -> None:
     path = annotate_attack_path_evidence(_path(), graph)
     graph.analysis_status["attack_path_fusion"] = GraphAnalysisStatus(status=GraphAnalysisState.COMPLETE)
     annotate_attack_path_evidence(path, graph)
-    assert path.reachability == "confirmed"
+    assert path.reachability == "likely"
     assert "analysis_not_recorded" not in path.reachability_basis
     assert "incomplete_hop_evidence" not in path.reachability_basis
     assert all(receipt["reason_codes"] == [] for receipt in path.hop_evidence)
@@ -293,17 +293,21 @@ def test_demo_trace_chains_are_unscored_context_ranked_below_scored_findings(see
     assert top[0]["is_kev"] is True
 
 
-def test_demo_paths_mix_confirmed_fresh_chains_with_qualified_unknowns(seeded_demo) -> None:
+def test_demo_paths_mix_likely_fresh_chains_with_qualified_unknowns(seeded_demo) -> None:
+    from agent_bom.core.reachability import CONFIRMING_BASIS
+
     _store, paths = seeded_demo
-    confirmed = [path for path in paths if path.reachability == "confirmed"]
+    likely = [path for path in paths if path.reachability == "likely"]
     unknown = [path for path in paths if path.reachability == "unknown"]
 
-    assert confirmed and unknown
-    for path in confirmed:
+    assert likely and unknown
+    # A modeled path is never labelled confirmed without function/runtime evidence.
+    assert all(CONFIRMING_BASIS.intersection(path.reachability_basis) for path in paths if path.reachability == "confirmed")
+    chains = [path for path in likely if "directed_provenance_backed_hops" in path.reachability_basis]
+    assert chains
+    for path in chains:
         assert RelationshipType.TRACE_STEP.value not in path.edges
         assert all(receipt["complete"] and receipt["freshness"] == "fresh" for receipt in path.hop_evidence)
-        assert path.reachability_basis
-    assert any("directed_provenance_backed_hops" in path.reachability_basis for path in confirmed)
     # Every unknown carries the reason it could not be confirmed.
     assert all(path.reachability_basis for path in unknown)
 

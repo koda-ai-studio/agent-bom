@@ -10,6 +10,7 @@ type ContractEnvelope<T, Rows> = { [K in keyof T as K extends keyof Rows ? never
 
 /** Shared API response and request contracts. */
 
+import type { GraphPathFocus } from "./graph-path-focus";
 import type {
   AttackPath,
   UnifiedEdge,
@@ -390,6 +391,7 @@ export interface UnifiedGraphResponse extends Omit<
   attack_paths: GraphAttackPath[];
   pagination: GraphPagination;
   completeness?: GraphCompleteness | undefined;
+  focus?: GraphPathFocus | undefined;
   count_metadata?: {
     source?: "persisted_graph_paths" | "derived_graph_paths" | string;
     returned?: number;
@@ -1084,6 +1086,49 @@ export interface GraphDiffResponse {
   returned_changes?: number | undefined;
 }
 
+export interface GraphEstateSnapshotRef {
+  scan_id: string;
+  job_id: string;
+  captured_at: string;
+}
+
+/** One target scope compared with its own previous completed snapshot. */
+export interface GraphEstateChangeSource {
+  scope_id: string;
+  label: string;
+  old: GraphEstateSnapshotRef;
+  new: GraphEstateSnapshotRef;
+  counts: Record<"nodes" | "edges", GraphDiffChangeCounts>;
+  total_changes: number;
+  nodes_by_entity_type: Record<string, GraphDiffChangeCounts>;
+  highlights: Record<string, unknown>;
+  skipped_snapshots: number;
+}
+
+/** A scope with no earlier snapshot to compare: never counted as additions. */
+export interface GraphEstateFirstObservation {
+  scope_id: string;
+  label: string;
+  new: GraphEstateSnapshotRef;
+  reason: "first_observation" | "previous_graph_unavailable";
+  node_count: number;
+  edge_count: number;
+  skipped_snapshots: number;
+}
+
+export type GraphEstateChangesResponse = ContractEnvelope<
+  ApiSchemas["GraphEstateChangesResponse"],
+  {
+    sources: GraphEstateChangeSource[];
+    new_sources: GraphEstateFirstObservation[];
+    totals: Record<"nodes" | "edges", GraphDiffChangeCounts> & {
+      changed_sources: number;
+      unchanged_sources: number;
+      new_sources: number;
+    };
+  }
+>;
+
 export interface GraphDiffChangeCounts {
   added: number;
   removed: number;
@@ -1613,6 +1658,8 @@ export interface UnifiedFinding {
   graph_reachable?: boolean | null | undefined;
   graph_min_hop_distance?: number | null | undefined;
   graph_reachable_from_agents?: string[] | undefined;
+  graph_reachable_from?: string[] | undefined;
+  graph_reachable_from_count?: number | null | undefined;
   scan_id?: string | undefined;
   scan_sources?: string[] | undefined;
   status?: string | undefined;
@@ -1831,6 +1878,8 @@ export interface BlastRadius {
   /** Agent node ids whose dependency closure reaches the vulnerable
    *  package (e.g. ["agent:cursor", "agent:claude-desktop"]). */
   graph_reachable_from_agents?: string[] | undefined;
+  graph_reachable_from?: string[] | undefined;
+  graph_reachable_from_count?: number | null | undefined;
 }
 
 export interface AttackFlowNodeData {

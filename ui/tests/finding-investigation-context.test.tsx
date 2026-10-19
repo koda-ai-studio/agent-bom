@@ -17,6 +17,12 @@ describe("finding return context", () => {
     expect(screen.getByText(/Graph relationships require their own evidence/)).toBeVisible();
     expect(screen.getByRole("link", { name: "Return to finding" })).toHaveAttribute("href", "/findings?finding=f-1&scan=original&window=0");
   });
+  it("names the finding by its advisory and keeps the record id secondary", () => {
+    params = new URLSearchParams({ finding: "16530e6c-ddaf", cve: "CVE-2023-36258", finding_scan: "showcase" });
+    render(<FindingInvestigationContext />);
+    expect(screen.getByText("Finding CVE-2023-36258")).toBeVisible();
+    expect(screen.getByText(/Record 16530e6c-ddaf/)).toBeVisible();
+  });
   it("adds no finding context to an ordinary graph", () => {
     params = new URLSearchParams({ scan: "s-1" });
     render(<FindingInvestigationContext />);

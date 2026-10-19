@@ -126,3 +126,52 @@ async def test_lifecycle_inventory_does_not_derive_exploitation_paths(lifecycle)
         for edge in lifecycle["graph"]["edges"]
         if edge["relationship"] == "reaches_tool"
     )
+
+
+@pytest.mark.asyncio
+async def test_lifecycle_counts_the_advisories_the_agent_detail_reports(monkeypatch):
+    """Inventory packages carry no vulnerability list; the detail's blast rows do."""
+    agent = agent_fixture()
+    for server in agent["mcp_servers"]:
+        for package in server["packages"]:
+            package["vulnerabilities"] = []
+    blast = [
+        {
+            "vulnerability_id": "CVE-2023-36258",
+            "package_name": "shared",
+            "package_version": "1.0",
+            "ecosystem": "npm",
+            "severity": "critical",
+            "affected_servers": ["same"],
+        },
+        {
+            "vulnerability_id": "CVE-2026-2000",
+            "package_name": "shared",
+            "package_version": "1.0",
+            "ecosystem": "pypi",
+            "severity": "medium",
+            "affected_servers": [],
+        },
+        {
+            "vulnerability_id": "CVE-2026-3000",
+            "package_name": "elsewhere",
+            "package_version": "9.9",
+            "ecosystem": "npm",
+            "severity": "high",
+            "affected_servers": ["same"],
+        },
+    ]
+
+    async def detail(*args):
+        return {"agent": agent, "summary": {"total_vulnerabilities": 3}, "blast_radius": blast}
+
+    monkeypatch.setattr(discovery, "get_agent_detail", detail)
+    view = await discovery.get_agent_lifecycle(
+        Request({"type": "http", "headers": [], "state": {"tenant_id": "lifecycle-fixture"}}), "agent"
+    )
+    advisories = {n["data"]["label"] for n in view["nodes"] if n["data"]["nodeType"] == "cve"}
+    assert advisories == {"CVE-2023-36258", "CVE-2026-2000"}
+    assert view["stats"]["total_vulnerabilities"] == 2
+    assert view["stats"]["severity_breakdown"]["critical"] == 1
+    # The detail rows are not mutated into the agent inventory the caller holds.
+    assert all(not package["vulnerabilities"] for server in agent["mcp_servers"] for package in server["packages"])

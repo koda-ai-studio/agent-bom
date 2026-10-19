@@ -1,3 +1,5 @@
+import { complianceEvidenceHref } from "@/lib/finding-controls";
+import { exposurePriorityLabel } from "@/lib/plain-labels";
 import { buildFindingInvestigationHref } from "@/lib/finding-investigation-href";
 import { advisoryMatchNeedsReview, findingWorkloadScope, type EnrichedVuln } from "@/lib/findings-view";
 
@@ -19,17 +21,13 @@ function reachSentence(vuln: EnrichedVuln): string | null {
   if (advisoryMatchNeedsReview(vuln)) return "This advisory match needs verification. Package applicability and reachability remain unknown; review the source advisory and refresh local vulnerability data.";
   const band = vuln.effective_reach_band?.trim();
   if (!band) return null;
-  const score =
-    typeof vuln.effective_reach_score === "number"
-      ? ` (score ${vuln.effective_reach_score.toFixed(0)})`
-      : "";
   const hop =
     typeof vuln.graph_min_hop_distance === "number" && vuln.graph_min_hop_distance > 0
       ? ` with a ${vuln.graph_min_hop_distance}-hop graph path`
       : vuln.graph_reachable
         ? " with a reported graph path"
         : "";
-  return `Reported reachability is ${band}${score}${hop}. Inspect the path evidence before concluding that the finding is exploitable.`;
+  return `${exposurePriorityLabel(band, vuln.effective_reach_score)}${hop}. Inspect the path evidence before concluding that the finding is exploitable.`;
 }
 
 function runtimeSentence(vuln: EnrichedVuln): string | null {
@@ -71,7 +69,7 @@ function exposureSentence(vuln: EnrichedVuln): string | null {
   return sentence;
 }
 
-export function buildWhyItMatters(vuln: EnrichedVuln): WhyItMattersNarrative | null {
+export function buildWhyItMatters(vuln: EnrichedVuln, options?: { scanId?: string | undefined }): WhyItMattersNarrative | null {
   const paragraphs = [
     reachSentence(vuln),
     runtimeSentence(vuln),
@@ -88,7 +86,7 @@ export function buildWhyItMatters(vuln: EnrichedVuln): WhyItMattersNarrative | n
 
   const links: WhyItMattersLink[] = [];
   if (vuln.graph_reachable || vuln.effective_reach_band || vuln.node_id || vuln.finding_node_id) {
-    links.push({ href: buildFindingInvestigationHref(vuln), label: "Open investigation" });
+    links.push({ href: buildFindingInvestigationHref(vuln, options), label: "Open investigation" });
   }
   if (vuln.runtime_evidence?.state === "blocked") {
     links.push({ href: "/traces", label: "Open trace explorer" });
@@ -96,7 +94,7 @@ export function buildWhyItMatters(vuln: EnrichedVuln): WhyItMattersNarrative | n
     links.push({ href: "/runtime", label: "Review runtime posture" });
   }
   if (vuln.framework_tags?.length) {
-    links.push({ href: "/compliance", label: "View compliance evidence" });
+    links.push({ href: complianceEvidenceHref(vuln, options?.scanId), label: "View compliance evidence" });
   }
 
   const headline = "Reported scope and activity";

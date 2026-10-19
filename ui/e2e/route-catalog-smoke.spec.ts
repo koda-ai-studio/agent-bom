@@ -51,7 +51,7 @@ test("representative global actions change state, focus content, and navigate", 
   await expect(page.locator("#main-content")).toBeFocused();
 
   await page.getByText("Search pages...", { exact: true }).click();
-  await page.getByPlaceholder("Search pages and commands...").fill("Jobs");
+  await page.getByPlaceholder("Search pages, CVEs, agents, packages...").fill("Jobs");
   await page.getByRole("link", { name: /Scan Jobs/ }).click();
   await page.waitForURL((url) => url.pathname === "/jobs");
 });

@@ -24,6 +24,7 @@ function Harness({ actions = [], onClose = vi.fn() }: { actions?: CommandPalette
       setQuery={setQuery}
       onClose={onClose}
       actions={actions}
+      searchEntities={async () => []}
       links={[{ href: "/findings", label: "Findings", group: "Scan", icon: Icon }]}
     />
   );
@@ -46,7 +47,7 @@ describe("CommandPalette", () => {
       />
     );
 
-    fireEvent.change(screen.getByPlaceholderText("Search pages and commands..."), { target: { value: "share" } });
+    fireEvent.change(screen.getByPlaceholderText("Search pages, CVEs, agents, packages..."), { target: { value: "share" } });
 
     expect(screen.getByRole("button", { name: /copy current url/i })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /findings/i })).not.toBeInTheDocument();

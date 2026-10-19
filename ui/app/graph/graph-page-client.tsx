@@ -157,7 +157,6 @@ import {
   type UnifiedGraphResponse,
 } from "@/lib/api";
 import type {
-  GraphDiffNode,
   GraphRollupContainer,
   GraphRollupResponse,
 } from "@/lib/api-types";
@@ -205,6 +204,14 @@ import {
   proposedGraphFromComparison,
   type GraphScenarioViewState,
 } from "@/lib/graph-scenario";
+import { GraphChangesEntry } from "@/components/graph-changes-entry";
+import { GraphChangesPanel } from "@/components/graph-changes-panel";
+import { GraphSnapshotDiff } from "@/components/graph-snapshot-diff";
+import { useGraphEstateChanges } from "@/hooks/use-graph-estate-changes";
+import { useEstateHighlight } from "@/hooks/use-estate-highlight";
+import { snapshotChangesHeadline } from "@/lib/graph-estate-changes";
+
+export { DiffPreview } from "@/components/graph-snapshot-diff";
 
 // Start with a small ranked selection. The API also returns supporting ancestors;
 // this request limit is not a promise about returned or rendered node counts.
@@ -714,6 +721,7 @@ function GraphPageInner() {
     useState<DriftScrubberPair | null>(null);
   const [driftLensActive, setDriftLensActive] = useState(false);
   const [driftFilter, setDriftFilter] = useState<DriftLensFilter>("all");
+  const [changesOpen, setChangesOpen] = useState(false);
   const [evidenceLensActive, setEvidenceLensActive] = useState(false);
   const [evidenceFilter, setEvidenceFilter] =
     useState<EvidenceLensFilter>("all");
@@ -1160,6 +1168,11 @@ function GraphPageInner() {
     }
     return null;
   }, [driftScrubberPair, previousSnapshot, selectedScanId]);
+
+  const viewingCurrentEstate = selectedScanId.startsWith("current-estate:");
+  const graphChanges = useGraphEstateChanges({ scanId: selectedScanId, enabled: viewingCurrentEstate, ready: Boolean(graphData) });
+  const highlight = useEstateHighlight({ scanId: selectedScanId, currentEstate: viewingCurrentEstate, estateChanges: graphChanges.estateChanges,
+    setPair: setDriftScrubberPair, setLensActive: setDriftLensActive, setPanelOpen: setChangesOpen });
 
   const needsComparison = comparisonRequested || driftLensActive || Boolean(driftScrubberPair) || graphScopePresetForFilters(filters) === "assetDrift";
 
@@ -2035,23 +2048,26 @@ function GraphPageInner() {
   // Drift lens (#3192) — classify the currently-rendered snapshot against the
   // previous one using the diff index the server tags. The lens is inert unless
   // a diff exists AND the operator armed it, so the default view never changes.
-  const [driftIndex, diffCounts] = useMemo(() => [buildDriftIndex(graphDiff), diffChangeCounts(graphDiff)] as const, [graphDiff]);
+  // Estate highlights merge per-source diffs; an explicit snapshot pair always wins.
+  const lensDiff = graphDiff ?? (diffPair ? null : highlight.diff);
+  const [driftIndex, diffCounts] = useMemo(() => [buildDriftIndex(lensDiff), diffChangeCounts(graphDiff)] as const, [lensDiff, graphDiff]);
   const driftAttributeSummaryList = useMemo(
     () => driftAttributeSummaries(driftIndex),
     [driftIndex],
   );
   const driftLensEngaged =
-    driftLensActive && Boolean(graphDiff) && driftIndex.hasChanges;
+    driftLensActive && Boolean(lensDiff) && driftIndex.hasChanges;
 
   // Keep the lens honest: a snapshot with no older baseline (or no changes)
   // disarms the lens and resets the focus chip so it can never linger as a
   // stale overlay on the default view.
   useEffect(() => {
-    if (!graphDiff) {
+    if (!lensDiff) {
       setDriftLensActive(false);
       setDriftFilter("all");
     }
-  }, [graphDiff]);
+  }, [lensDiff]);
+
 
   const displayNodes = useMemo<Node<LineageNodeData>[]>(() => {
     let nodes = baseDisplayNodes;
@@ -2506,6 +2522,7 @@ function GraphPageInner() {
   const showViewportScope = !rollupDecisionActive && Boolean(rollupNavigationActive || selectedScenarioId || investigationMode || initialViewportOptions.nodes || displayNodes.length > 6) && graphRenderer.kind === "react-flow";
   const showScopeEvidence = !rollupNavigationActive && !rollupDecisionActive && displayNodes.length > 0;
   const showContextControls = Boolean(investigationContext) && graphRenderer.kind === "react-flow";
+  const showChangesEntry = Boolean(selectedScanId) && !mobileListActive && !selectedScenarioId;
   const showLegend = !mobileListActive && !rollupNavigationActive && !rollupDecisionActive && graphRenderer.kind === "react-flow" && displayNodes.length > 0;
 
   // Soft re-frame when drift/evidence lenses engage so ring emphasis stays in view.
@@ -3368,7 +3385,7 @@ function GraphPageInner() {
                 Advanced controls
               </span>
               <p className="mt-1 text-xs text-ink-secondary">
-                Scope, evidence overlays, snapshot diff, and the ranked path queue.
+                Scope, evidence overlays, drift lens, and the ranked path queue.
               </p>
             </div>
             <span className="text-[10px] uppercase tracking-[0.18em] text-ink-tertiary group-open:hidden">
@@ -3386,98 +3403,7 @@ function GraphPageInner() {
             Evidence, drift, and operator tools
           </h3>
           <div className="space-y-3 border-t border-outline/80 px-3 py-3">
-        {/* Snapshot diff + how-to-read default-collapsed so the canvas owns the
-            viewport. The four redundant SnapshotMetaCards (Snapshot/Topology/
-            Scope/Window) were removed — the inline summary above already
-            surfaces nodes / edges / captured-at / paging. Keep the diff and
-            the help available via <details> for operators who need them but
-            stop them from owning a full screen of vertical space on every
-            page-load. */}
-        {activeSnapshot && (
-          <details className="group graph-drawer-section" onToggle={event => { if (event.currentTarget.open) setComparisonRequested(true); }}>
-            <summary className="flex flex-wrap items-center justify-between gap-3 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
-              <div className="flex items-center gap-3">
-                <span className="text-[10px] uppercase tracking-[0.24em] text-sky-400">
-                  Snapshot diff
-                </span>
-                <span className="text-xs text-ink-tertiary">
-                  {graphDiff
-                    ? `+${diffCounts.nodesAdded} −${diffCounts.nodesRemoved} nodes · +${diffCounts.edgesAdded} −${diffCounts.edgesRemoved} edges${diffCounts.truncated ? " · lists show the first changes only" : ""}`
-                    : previousSnapshot
-                      ? `Compare with ${previousSnapshot.scan_id.slice(0, 12)}`
-                      : "No older snapshot available."}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                {loadingDiff && (
-                  <span className="flex items-center gap-1 text-xs text-sky-400">
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                    loading
-                  </span>
-                )}
-                <span className="text-[10px] uppercase tracking-[0.18em] text-ink-tertiary group-open:hidden">
-                  show
-                </span>
-                <span className="text-[10px] uppercase tracking-[0.18em] text-ink-tertiary hidden group-open:inline">
-                  hide
-                </span>
-              </div>
-            </summary>
-            {diffError ? (
-              <div className="graph-callout-amber">
-                {diffError}
-              </div>
-            ) : loadingDiff && !graphDiff ? (
-              <DiffLoadingGrid />
-            ) : (
-              <div className="mt-3 grid gap-2 md:grid-cols-3 xl:grid-cols-5">
-                <DiffMetric
-                  label="nodes added"
-                  value={diffCounts.nodesAdded}
-                  tone="green"
-                />
-                <DiffMetric
-                  label="nodes removed"
-                  value={diffCounts.nodesRemoved}
-                  tone="amber"
-                />
-                <DiffMetric
-                  label="nodes changed"
-                  value={diffCounts.nodesChanged}
-                  tone="blue"
-                />
-                <DiffMetric
-                  label="edges added"
-                  value={diffCounts.edgesAdded}
-                  tone="green"
-                />
-                <DiffMetric
-                  label="edges removed"
-                  value={diffCounts.edgesRemoved}
-                  tone="amber"
-                />
-              </div>
-            )}
-            {graphDiff &&
-              (graphDiff.nodes_added.length > 0 ||
-                graphDiff.nodes_changed.length > 0 ||
-                graphDiff.nodes_removed.length > 0) && (
-                <div className="mt-3 grid gap-2 lg:grid-cols-3">
-                  <DiffPreview label="Added" items={graphDiff.nodes_added} />
-                  <DiffPreview
-                    label="Changed"
-                    items={graphDiff.nodes_changed}
-                  />
-                  <DiffPreview
-                    label="Removed"
-                    items={graphDiff.nodes_removed}
-                  />
-                </div>
-              )}
-          </details>
-        )}
-
-        {graphDiff && (
+        {lensDiff && (
           <details className="rounded-2xl border border-outline bg-background/70 p-3">
             <summary className="cursor-pointer list-none text-xs font-medium text-ink-secondary [&::-webkit-details-marker]:hidden">
               Snapshot drift lens · {drift.critical} critical changes
@@ -3771,7 +3697,7 @@ function GraphPageInner() {
             />
           )}
           {/* One status bar: counts, evidence, context and legend, instead of four stacked bands. */}
-          {(showViewportScope || showScopeEvidence || showContextControls || showLegend) && <div data-testid="graph-status-bar" className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-outline px-3 py-1.5">
+          {(showViewportScope || showChangesEntry || showScopeEvidence || showContextControls || showLegend) && <div data-testid="graph-status-bar" className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-outline px-3 py-1.5">
           {showViewportScope && (
             <div className="flex min-w-0 max-w-full flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground" data-testid="graph-viewport-scope">
               <span>{scenarioContextIds ? "Changes and neighbors" : rollupNavigationActive ? (rollupView?.mode === "drilldown" ? `Within ${rollupView.node?.label ?? "selected scope"}` : "Scope overview") : "Graph"} · {displayNodes.length.toLocaleString()} {rollupNavigationActive ? "entities" : "nodes"} · {displayEdges.length.toLocaleString()} {rollupNavigationActive ? `aggregate link${displayEdges.length === 1 ? "" : "s"}` : `relationship${displayEdges.length === 1 ? "" : "s"}`}{scenarioElements.unconnected.length > 0 && ` · ${scenarioElements.unconnected.length} unconnected items`}</span>
@@ -3783,6 +3709,11 @@ function GraphPageInner() {
           {investigationMode?.truncated && investigationMode.nodeCount < 24 && !loadingGraph && <button type="button" className="graph-page-action min-h-11 sm:min-h-7" onClick={() => void loadRootInvestigation({ rootId: investigationMode.rootId, rootLabel: investigationMode.rootLabel, direction: investigationDirection, nodeLimit: Math.min(24, Math.max(8, investigationMode.nodeCount * 2)) })}>Show more connections</button>}
             </div>
           )}
+          {showChangesEntry && <GraphChangesEntry loading={graphChanges.loading || loadingDiff} error={graphChanges.error ?? diffError}
+            headline={viewingCurrentEstate ? graphChanges.headline : snapshotChangesHeadline(graphDiff ? diffCounts : null, Boolean(previousSnapshot))}
+            baseline={viewingCurrentEstate ? "previous scans" : "previous snapshot"} highlighting={driftLensEngaged}
+            onOpen={() => { setChangesOpen(true); if (!viewingCurrentEstate) setComparisonRequested(true); }}
+            onClearHighlight={() => { setDriftLensActive(false); setDriftFilter("all"); highlight.clear(); }} />}
           {showScopeEvidence && <GraphScopeEvidence edges={displayEdges} scope={graphRenderer.kind === "webgl" ? "loaded" : "visible"} inline />}
           {showContextControls && investigationContext && <GraphInvestigationContextControls inline
             groups={investigationContext.groups} selected={selectedContextGroup}
@@ -3790,6 +3721,15 @@ function GraphPageInner() {
             crossContextEdges={contextElements.crossContextEdges} onSelect={selectContextGroup} />}
           {showLegend && <div className="ml-auto text-right has-[details[open]]:ml-0 has-[details[open]]:basis-full"><GraphLegendDock items={legendItems} popover /></div>}
           </div>}
+          <GraphChangesPanel open={changesOpen} changes={viewingCurrentEstate ? graphChanges.estateChanges : null}
+            loading={graphChanges.loading} error={graphChanges.error}
+            title={viewingCurrentEstate ? "Changed since previous scans" : "Changed since previous snapshot"}
+            highlighting={driftLensEngaged} highlightLoading={highlight.loading} highlightError={highlight.error}
+            highlightAvailable={!viewingCurrentEstate && Boolean(graphDiff) && driftIndex.hasChanges}
+            selectedPair={viewingCurrentEstate ? driftScrubberPair : null}
+            diffDetails={<GraphSnapshotDiff diff={graphDiff} counts={diffCounts} loading={loadingDiff} error={diffError} showCounts={!viewingCurrentEstate} />}
+            onClose={() => setChangesOpen(false)} onHighlight={() => void highlight.highlight()}
+            onOpenDiff={pair => { highlight.openPair(pair); setComparisonRequested(true); }} />
           {narrowViewport && investigationMode && displayNodes.length > 0 && <div role="group" aria-label="Investigation view" className="flex gap-2">
             {(["list", "graph"] as const).map(view => <button key={view} type="button" aria-pressed={mobileGraphView === view} onClick={() => setMobileGraphView(view)}
               className="graph-page-action min-h-11 flex-1 aria-pressed:bg-surface-elevated">{view === "list" ? "List" : "Graph"}</button>)}
@@ -4249,107 +4189,6 @@ function PathTagList({
             {tag}
           </span>
         ))}
-      </div>
-    </div>
-  );
-}
-
-function DiffMetric({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: number;
-  tone: "green" | "amber" | "blue";
-}) {
-  const toneClass =
-    tone === "green"
-      ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200"
-      : tone === "amber"
-        ? "border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-200"
-        : "border-sky-500/20 bg-sky-500/10 text-sky-700 dark:text-sky-200";
-
-  return (
-    <div className={`rounded-xl border px-3 py-2 ${toneClass}`}>
-      <p className="text-[10px] uppercase tracking-[0.18em] text-ink-tertiary">
-        {label}
-      </p>
-      <p className="mt-1 font-mono text-lg text-foreground">{value}</p>
-    </div>
-  );
-}
-
-function DiffLoadingGrid() {
-  return (
-    <div
-      className="mt-3 grid gap-2 md:grid-cols-3 xl:grid-cols-5"
-      data-testid="graph-diff-loading"
-    >
-      {[
-        "nodes added",
-        "nodes removed",
-        "nodes changed",
-        "edges added",
-        "edges removed",
-      ].map((label) => (
-        <div
-          key={label}
-          className="rounded-xl border border-outline bg-surface/70 px-3 py-2"
-        >
-          <p className="text-[10px] uppercase tracking-[0.18em] text-ink-tertiary">
-            {label}
-          </p>
-          <div className="mt-2 h-6 w-12 animate-pulse rounded-full bg-surface-elevated" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-type DiffPreviewItem = GraphDiffNode | string;
-
-function diffItemKey(item: DiffPreviewItem): string {
-  return typeof item === "string" ? item : item.id;
-}
-
-function diffItemLabel(item: DiffPreviewItem): string {
-  if (typeof item === "string") return item;
-  return item.label || item.id;
-}
-
-export function DiffPreview({
-  label,
-  items,
-}: {
-  label: string;
-  items: DiffPreviewItem[];
-}) {
-  const visible = items.slice(0, 5);
-  return (
-    <div className="rounded-xl border border-outline bg-surface/70 p-3">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-[10px] uppercase tracking-[0.18em] text-ink-tertiary">
-          {label}
-        </p>
-        <span className="font-mono text-[11px] text-ink-tertiary">
-          {items.length}
-        </span>
-      </div>
-      <div className="mt-2 space-y-1">
-        {visible.map((item) => (
-          <p
-            key={`${label}-${diffItemKey(item)}`}
-            className="truncate font-mono text-[11px] text-ink-secondary"
-          >
-            {diffItemLabel(item)}
-          </p>
-        ))}
-        {items.length > visible.length && (
-          <p className="text-[11px] text-ink-tertiary">
-            +{items.length - visible.length} more
-          </p>
-        )}
       </div>
     </div>
   );

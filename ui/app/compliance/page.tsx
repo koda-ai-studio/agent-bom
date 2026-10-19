@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
+import { useRequestedControl } from "@/hooks/use-requested-control";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -134,6 +135,7 @@ function CompliancePageContent() {
   const queryParam = searchParams.get("q") ?? "";
   const scanParam = searchParams.get("scan") ?? "";
   const frameworkParam = searchParams.get("framework") ?? "";
+  const controlParam = searchParams.get("control") ?? "";
   const [data, setData] = useState<ComplianceResponse | null>(null);
   const [mitreCatalog, setMitreCatalog] = useState<FrameworkCatalogMetadata | null>(null);
   const [atlasCatalog, setAtlasCatalog] = useState<MitreAtlasCatalogMetadata | null>(null);
@@ -337,6 +339,8 @@ function CompliancePageContent() {
   useEffect(() => {
     setControlQuery(queryParam);
   }, [queryParam]);
+
+  const requestedControlMissing = useRequestedControl(frameworkParam, controlParam, selectedSection, setSelectedControl);
 
   useEffect(() => {
     void Promise.allSettled([
@@ -725,6 +729,9 @@ function CompliancePageContent() {
 
       {frameworkParam && !frameworks.some((framework) => framework.id === frameworkParam) ? (
         <p role="status" className="text-sm text-ink-secondary">Requested framework is unavailable in this assessment.</p>
+      ) : null}
+      {requestedControlMissing ? (
+        <p role="status" className="text-sm text-ink-secondary">Control {controlParam} is mapped by the finding but is not evaluated in this {selectedSection?.title} assessment.</p>
       ) : null}
 
       {/* ── View Toggle ────────────────────────────────────────────────── */}

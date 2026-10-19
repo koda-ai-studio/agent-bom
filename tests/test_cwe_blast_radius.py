@@ -232,10 +232,10 @@ def test_rce_exposure_alone_is_not_confirmed_reachability():
     assert br.reachability == "likely"
 
 
-def test_rce_with_graph_path_is_confirmed_reachability():
+def test_rce_with_graph_path_alone_is_likely_reachability():
     br = _make_blast_radius(["CWE-94"])
     br.graph_reachable = True
-    assert br.reachability == "confirmed"
+    assert br.reachability == "likely"
 
 
 def test_xss_is_not_confirmed_reachability():

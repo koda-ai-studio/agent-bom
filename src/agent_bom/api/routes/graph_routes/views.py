@@ -6,7 +6,7 @@ import hashlib
 import json
 from typing import Any, Literal, Optional, cast
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from agent_bom.api.graph_compromise import GraphCompromiseRequest, GraphCompromiseResponse, assess_snapshot
 from agent_bom.api.graph_contracts import (
@@ -15,12 +15,14 @@ from agent_bom.api.graph_contracts import (
     GraphDeployDecisionRequest,
     ScopedGraphResponse,
 )
+from agent_bom.api.graph_estate_changes import graph_estate_changes_read
 from agent_bom.api.graph_generation import pin_generation, verify_generation
 from agent_bom.api.read_models._base import documented
 from agent_bom.api.read_models.graph import (
     GraphActiveEdgesResponse,
     GraphDiffResponse,
     GraphEdgeChangesResponse,
+    GraphEstateChangesResponse,
     GraphExposurePathsResponse,
     GraphGovernanceResponse,
     GraphNhiGovernanceResponse,
@@ -29,6 +31,7 @@ from agent_bom.api.read_models.graph import (
 from agent_bom.api.routes.graph_routes import _runtime
 from agent_bom.api.routes.graph_routes._admission import _GraphAdmissionRoute
 from agent_bom.api.routes.graph_routes.consequences import router as consequence_router
+from agent_bom.api.routes.graph_routes.focus import PathFocusQuery, focused_queue_page
 from agent_bom.api.routes.graph_routes.params import (
     _GOVERNANCE_ATTACK_PATH_LIMIT,
     _GOVERNANCE_EDGE_LIMIT,
@@ -191,6 +194,16 @@ async def get_graph_diff(
     )
 
 
+@investigation_router.get("/graph/changes", **documented(GraphEstateChangesResponse), tags=["graph"])
+async def get_graph_estate_changes(
+    request: Request,
+    limit: int = Query(50, ge=1, le=100, description="Target scopes per page"),
+    offset: int = Query(0, ge=0, description="pagination.next_offset from the previous page"),
+) -> dict:
+    """What changed in the current estate: each target scope against its own previous completed snapshot."""
+    return await graph_estate_changes_read(request, limit=limit, offset=offset)
+
+
 @investigation_router.get("/graph/edges/active", **documented_list(GraphActiveEdgesResponse), tags=["graph"])
 async def get_active_graph_edges(
     request: Request,
@@ -242,6 +255,17 @@ async def _ranked_queue_page(graph_store: Any, tenant: str, scan_id: str, page_a
     return page.ranked, page.materialized_paths, page.derived_paths, page.source
 
 
+async def _queue_page(
+    graph_store: Any, tenant: str, scan_id: str, page_args: dict[str, Any], path_focus: PathFocusQuery
+) -> tuple[Any, int, int, str, dict[str, Any] | None]:
+    """The ranked queue page, or its slice through one node or finding occurrence."""
+    if path_focus.active():
+        return await focused_queue_page(
+            graph_store, tenant, scan_id, node_id=path_focus.node_id, finding_id=path_focus.finding_id, **page_args
+        )
+    return (*await _ranked_queue_page(graph_store, tenant, scan_id, page_args), None)
+
+
 def _attack_path_cursor_scope(tenant: str, scan_id: str | None, filters: dict[str, Any]) -> str:
     return hashlib.sha256(json.dumps(["attack-paths", tenant, scan_id or "", sorted(filters.items())]).encode()).hexdigest()
 
@@ -278,6 +302,7 @@ async def get_graph_attack_paths(
     has_credential: Optional[bool] = Query(None, description="Only paths that do (true) or do not (false) expose a credential"),
     source_type: Optional[str] = Query(None, max_length=64, description="Only paths whose entrypoint node has this entity type"),
     cursor: Optional[str] = Query(None, max_length=1024, description="next_cursor from the previous page (replaces offset)"),
+    path_focus: PathFocusQuery = Depends(),
 ) -> dict:
     """Return the global attack-path queue independent of node pagination.
 
@@ -292,33 +317,23 @@ async def get_graph_attack_paths(
     tenant = _runtime._tenant(request)
     graph_store = _runtime._get_graph_store_or_503()
     filters = AttackPathFilters(min_severity=min_severity, has_credential=has_credential, source_type=source_type)
-    scope = _attack_path_cursor_scope(tenant, scan_id, filters.active())
+    active_filters = {**filters.active(), **path_focus.active()}
+    scope = _attack_path_cursor_scope(tenant, scan_id, active_filters)
     if cursor:
         offset, snapshot_generation = _attack_path_continuation(cursor, scope, offset=offset, generation=snapshot_generation)
     identity = await _runtime._graph_store_call(
         pin_generation, graph_store, tenant=tenant, scan_id=scan_id or "", generation=snapshot_generation, offset=offset
     )
     page_args = {"offset": offset, "limit": limit, "filters": filters}
-    ranked, materialized_paths, derived_paths, path_source = await _ranked_queue_page(graph_store, tenant, identity[0], page_args)
+    ranked, materialized_paths, derived_paths, path_source, focus = await _queue_page(
+        graph_store, tenant, identity[0], page_args, path_focus
+    )
     effective_scan_id = ranked.scan_id
     hop_ids = {hop for path in ranked.paths for hop in path.hops}
-    nodes = await _runtime._graph_store_call(
-        graph_store.nodes_by_ids,
-        scan_id=effective_scan_id,
-        tenant_id=tenant,
-        node_ids=hop_ids,
-    )
-    path_edges = await _runtime._graph_store_call(
-        graph_store.edges_for_node_ids,
-        scan_id=effective_scan_id,
-        tenant_id=tenant,
-        node_ids=hop_ids,
-    )
-    stats = await _runtime._graph_store_call(
-        graph_store.snapshot_stats,
-        scan_id=effective_scan_id,
-        tenant_id=tenant,
-    )
+    read = {"scan_id": effective_scan_id, "tenant_id": tenant}
+    nodes = await _runtime._graph_store_call(graph_store.nodes_by_ids, **read, node_ids=hop_ids)
+    path_edges = await _runtime._graph_store_call(graph_store.edges_for_node_ids, **read, node_ids=hop_ids)
+    stats = await _runtime._graph_store_call(graph_store.snapshot_stats, **read)
     payload = await _runtime._graph_compute_call(
         _serialize_attack_path_queue,
         scan_id=effective_scan_id,
@@ -335,12 +350,14 @@ async def get_graph_attack_paths(
         materialized_paths=materialized_paths,
         derived_paths=derived_paths,
         ranked=ranked,
-        filters=filters.active(),
+        filters=active_filters,
     )
 
     await _runtime._graph_store_call(verify_generation, graph_store, tenant=tenant, identity=identity, has_rows=bool(nodes or ranked.paths))
     payload["snapshot_generation"] = identity[1]
     payload["pagination"].update(_attack_path_page_cursors(scope, identity[1], offset, ranked, cursor))
+    if focus is not None:
+        payload["focus"] = focus
     return payload
 
 

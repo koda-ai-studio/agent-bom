@@ -4,17 +4,18 @@ import { buildFindingAssetHref, buildFindingInvestigationHref, buildFindingRetur
 import { defaultOperatorLanding, OVERVIEW_LANDING } from "@/lib/operator-landing";
 
 describe("buildFindingInvestigationHref", () => {
-  it("pins investigation to the scan that supplied the finding", () => {
+  it("opens the current estate rather than the scan that supplied the finding", () => {
     const finding = { id: "CVE-2026-0001", packages: ["pillow@9.0.0"], agents: [], scan_id: "scan-evidence-1" };
     const params = new URL(buildFindingInvestigationHref(finding), "http://localhost").searchParams;
-    expect(params.get("scan")).toBe("scan-evidence-1");
+    expect(params.has("scan")).toBe(false);
     expect(params.get("package")).toBe("pillow@9.0.0");
   });
 
-  it("preserves occurrence provenance when a page supplies a different snapshot", () => {
-    const finding = { id: "CVE-2026-0001", packages: [], agents: [], scan_id: "scan-evidence-1" };
+  it("navigates the snapshot the page is browsing and keeps occurrence provenance", () => {
+    const finding = { id: "CVE-2026-0001", finding_id: "f-1", packages: [], agents: [], scan_id: "scan-evidence-1" };
     const params = new URL(buildFindingInvestigationHref(finding, { scanId: "scan-selected" }), "http://localhost").searchParams;
-    expect(params.get("scan")).toBe("scan-evidence-1");
+    expect(params.get("scan")).toBe("scan-selected");
+    expect(params.get("finding_scan")).toBe("scan-evidence-1");
   });
 
   it("prefers stamped graph FKs over free-floating CVE-only links", () => {

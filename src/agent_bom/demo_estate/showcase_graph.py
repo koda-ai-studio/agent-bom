@@ -491,7 +491,7 @@ def build_showcase_graph(
             cvss_score=advisory.cvss_score if advisory else score,
             fixed_version=advisory.fixed if advisory else "",
             cwe_ids=[advisory.cwe] if advisory and advisory.cwe else [],
-            reachability="confirmed",
+            reachability="likely",
             reachability_basis=["graph_path"],
             graph_reachable=True,
         )

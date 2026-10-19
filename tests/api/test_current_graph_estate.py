@@ -386,3 +386,30 @@ def test_merged_analysis_status_ranks_failure_above_limits():
     assert merged["x"].observed == {"edges": 5}
     assert merged["y"] == complete
     assert merge_analysis_statuses([]) == {}
+
+
+def test_search_and_compliance_accept_the_returned_current_estate_id(estate):
+    from starlette.testclient import TestClient
+
+    from agent_bom.api.server import app
+    from tests.auth_helpers import disable_trusted_proxy_env, enable_trusted_proxy_env, proxy_headers
+
+    record(estate, 8, "repo-a", "langchain-package")
+    enable_trusted_proxy_env()
+    try:
+        with TestClient(app, headers=proxy_headers(tenant="history-tenant")) as client:
+            current_id = client.get("/v1/graph", params={"limit": 10}).json()["scan_id"]
+            assert current_id.startswith("current-estate:")
+            found = client.get("/v1/graph/search", params={"q": "langchain", "scan_id": current_id})
+            assert found.status_code == 200, found.text
+            assert [node["id"] for node in found.json()["results"]] == ["langchain-package"]
+            assert found.json()["filters"]["scan_id"] == current_id
+            compliance = client.get("/v1/graph/compliance", params={"scan_id": current_id})
+            assert compliance.status_code == 200, compliance.text
+        with TestClient(app, headers=proxy_headers(tenant="other-tenant")) as other:
+            # Another tenant replaying the id reads only its own (empty) estate.
+            foreign = other.get("/v1/graph/search", params={"q": "langchain", "scan_id": current_id})
+            assert foreign.status_code in {200, 404}, foreign.text
+            assert "langchain-package" not in foreign.text
+    finally:
+        disable_trusted_proxy_env()

@@ -75,6 +75,8 @@ class FindingRow(ReadModel):
     graph_reachable: bool | None = None
     graph_min_hop_distance: int | None = None
     graph_reachable_from_agents: list[str] | None = None
+    graph_reachable_from: list[str] | None = None
+    graph_reachable_from_count: int | None = None
     affected_agents: list[str] | None = None
     affected_servers: list[str] | None = None
     occurrence_count: int | None = None

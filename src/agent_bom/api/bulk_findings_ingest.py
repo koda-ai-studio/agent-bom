@@ -9,6 +9,7 @@ from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator
 
 from agent_bom.canonical_ids import canonical_finding_id
+from agent_bom.evidence.finding_reach_sources import CLIENT_REACH_CLAIM_FIELDS, without_fields
 
 _BULK_FINDINGS_MAX_ITEMS = 1000
 _BULK_FINDINGS_SOURCE_MAX_LENGTH = 128
@@ -155,7 +156,8 @@ def _coerce_bulk_cvss(value: Any, *, ordinal: int) -> float | None:
 
 
 def _normalized_bulk_finding(row: dict[str, Any], *, source: str, batch_id: str, ordinal: int) -> dict[str, Any]:
-    payload = dict(row)
+    # A pushed row cannot corroborate its own reachability; only the server's path join can.
+    payload = without_fields(row, CLIENT_REACH_CLAIM_FIELDS)
     client_id = row.get("id")
     # Client-stable ids win; otherwise derive a content-deterministic id so
     # resends collapse (idempotent) rather than mint a fresh batch_id:ordinal.

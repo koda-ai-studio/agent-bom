@@ -11,6 +11,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Mapping
 
+from agent_bom.evidence.compliance_tag_dedupe import drop_generic_duplicates
+
 RUNTIME_STATE_STATIC = "static"
 RUNTIME_STATE_OBSERVED = "observed"
 RUNTIME_STATE_BLOCKED = "blocked"
@@ -246,7 +248,7 @@ def compliance_tags_from_finding_row(row: Mapping[str, Any]) -> list[str]:
             if isinstance(control, dict):
                 add(str(control.get("framework") or "generic"), control.get("control") or control.get("id"))
 
-    return sorted(tags)
+    return sorted(drop_generic_duplicates(tags))
 
 
 __all__ = [

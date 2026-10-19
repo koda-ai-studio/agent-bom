@@ -59,7 +59,7 @@ describe("buildWhyItMatters", () => {
     );
 
     expect(narrative).not.toBeNull();
-    expect(narrative?.paragraphs.join(" ")).toMatch(/Reported reachability is high/);
+    expect(narrative?.paragraphs.join(" ")).toMatch(/High exposure priority · 82\/100 with a 2-hop graph path/);
     expect(narrative?.paragraphs.join(" ")).toMatch(/Runtime enforcement recorded blocked/);
     expect(narrative?.paragraphs.join(" ")).toMatch(/Reported scope includes/);
     // Compliance mapping is now scannable chip data, not a run-on paragraph.
@@ -68,7 +68,7 @@ describe("buildWhyItMatters", () => {
       expect.arrayContaining([
         expect.stringMatching(/^\/security-graph/),
         "/traces",
-        "/compliance",
+        "/compliance?q=pillow",
       ]),
     );
   });

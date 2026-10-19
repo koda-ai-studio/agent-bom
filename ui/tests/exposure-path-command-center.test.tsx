@@ -433,3 +433,20 @@ it("scrolls to the graph only after a controlled view commits its section", () =
     HTMLElement.prototype.scrollIntoView = original;
   }
 });
+
+it("does not scroll the page when the graph view is the initial view", () => {
+  const scroll = vi.fn();
+  const original = HTMLElement.prototype.scrollIntoView;
+  HTMLElement.prototype.scrollIntoView = scroll;
+  try {
+    const props = { path: basePath, onViewChange: vi.fn(), graphSlot: <div>Graph loaded</div> };
+    const { rerender } = render(<ExposurePathCommandCenter {...props} view="graph" />);
+    render(<ExposurePathCommandCenter path={basePath} graphSlot={<div>Uncontrolled graph</div>} />);
+    expect(scroll).not.toHaveBeenCalled();
+    rerender(<ExposurePathCommandCenter {...props} view="path" />);
+    rerender(<ExposurePathCommandCenter {...props} view="graph" />);
+    expect(scroll).toHaveBeenCalledTimes(1);
+  } finally {
+    HTMLElement.prototype.scrollIntoView = original;
+  }
+});

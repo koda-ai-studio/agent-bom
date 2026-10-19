@@ -12,6 +12,7 @@ from agent_bom.api.models import ScanJob
 from agent_bom.api.scan_graph_view import _effective_reach_lookup as _effective_reach_lookup
 from agent_bom.api.scan_snapshot_read import verified_snapshot_findings
 from agent_bom.core.reachability import review_only_match
+from agent_bom.evidence.finding_reach_sources import SERVER_STAMPED_REACH_FIELDS
 from agent_bom.finding_runtime_evidence import (
     attach_runtime_evidence_to_finding,
     build_incident_runtime_evidence_index,
@@ -142,34 +143,6 @@ def _iter_scan_findings(job: ScanJob) -> list[dict[str, Any]]:
         workload_runtime_index = None
 
     def _attach_reach(row: dict[str, Any]) -> dict[str, Any]:
-        nonlocal reach
-        if reach is None:
-            reach = _effective_reach_lookup(job)
-        from agent_bom.symbol_reach_triage import adjust_effective_reach_breakdown, symbol_reachability_from_payload
-
-        vuln_id = row.get("vulnerability_id") or row.get("cve_id") or row.get("id") or ""
-        breakdown = reach.get(str(vuln_id))
-        sym = symbol_reachability_from_payload(row)
-        if breakdown:
-            adjusted = adjust_effective_reach_breakdown(breakdown, sym)
-            row["effective_reach"] = adjusted
-            row.setdefault("effective_reach_score", adjusted.get("composite"))
-            row.setdefault("effective_reach_band", adjusted.get("band"))
-        elif sym:
-            from agent_bom.symbol_reach_triage import apply_composite_delta, band_from_composite
-
-            composite = apply_composite_delta(0.0, sym)
-            row["effective_reach"] = {
-                "composite": composite,
-                "band": band_from_composite(composite),
-                "symbol_reachability": sym,
-            }
-            row.setdefault("effective_reach_score", composite)
-            row.setdefault("effective_reach_band", band_from_composite(composite))
-        if review_only_match(row.get("match_confidence_tier")):
-            # A CVE-level composite may belong to another, verified occurrence.
-            # Never project it as the reach of an unresolved package match.
-            row.update(effective_reach=None, effective_reach_score=None, effective_reach_band=None, reachability="unknown")
         row.setdefault("framework_tags", compliance_tags_from_finding_row(row))
         # Scan completion is authoritative observation time for scan-spine rows.
         # Do not infer first-seen history from the currently retained job set.
@@ -184,7 +157,43 @@ def _iter_scan_findings(job: ScanJob) -> list[dict[str, Any]]:
     findings = verified_snapshot_findings(
         job, lambda: collect_scan_findings(job, _attach_reach), _attach_reach, merge=merge_finding_representations, use_reach=use_reach
     )
+    # Score after representations merge so backfilled CVSS/EPSS/KEV and the
+    # merged occurrence's own agents are what the composite sees.
+    occurrence_reach = reach if reach is not None else _effective_reach_lookup(job)
+    for row in findings:
+        _score_occurrence_reach(row, occurrence_reach)
+        for key in SERVER_STAMPED_REACH_FIELDS:  # an imported result cannot pre-stamp path sources
+            row.pop(key, None)
     return _project_finding_owners_and_suppressions(findings, tenant_id)
+
+
+def _score_occurrence_reach(row: dict[str, Any], reach: dict[str, dict[str, Any]]) -> None:
+    from agent_bom.effective_reach import occurrence_context_for_row, occurrence_score
+    from agent_bom.symbol_reach_triage import (
+        adjust_effective_reach_breakdown,
+        apply_composite_delta,
+        band_from_composite,
+        symbol_reachability_from_payload,
+    )
+
+    if review_only_match(row.get("match_confidence_tier")):
+        # An unresolved package match has no verified occurrence to score.
+        row.update(effective_reach=None, effective_reach_score=None, effective_reach_band=None, reachability="unknown")
+        return
+    if row.get("effective_reach_score") is not None and not isinstance(row.get("effective_reach"), dict):
+        return  # A producer-supplied composite is authoritative for its own row.
+    context = occurrence_context_for_row(reach, row)
+    sym = symbol_reachability_from_payload(row)
+    if context is not None or any(row.get(key) not in (None, "", False) for key in ("cvss_score", "epss_score", "is_kev", "cisa_kev")):
+        breakdown = adjust_effective_reach_breakdown(occurrence_score(row, context).as_breakdown(), sym)
+    elif sym:
+        composite = apply_composite_delta(0.0, sym)
+        breakdown = {"composite": composite, "band": band_from_composite(composite), "symbol_reachability": sym}
+    else:
+        return
+    row["effective_reach"] = breakdown
+    row["effective_reach_score"] = breakdown.get("composite")
+    row["effective_reach_band"] = breakdown.get("band")
 
 
 def _project_finding_owners_and_suppressions(findings: list[dict[str, Any]], tenant_id: str) -> list[dict[str, Any]]:

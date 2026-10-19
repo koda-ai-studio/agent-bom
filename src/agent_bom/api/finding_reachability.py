@@ -1,16 +1,20 @@
-"""Bounded projection of persisted graph paths onto finding-list rows.
+"""Projection of persisted graph paths onto finding-list rows.
 
 The graph store is the durable source for ranked ExposurePaths. Findings are a
-separate current-state projection, so this module joins only the current page
-to a bounded path window and leaves unassessed rows unknown instead of
-inventing ``False`` evidence.
+separate current-state projection, so this module joins rows against an index
+of every evidence-bearing path in the materialized snapshot (built once per
+snapshot generation) and leaves unassessed rows unknown instead of inventing
+``False`` evidence.
 """
 
 from __future__ import annotations
 
+import threading
+from collections import OrderedDict
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Iterable, Mapping
 
+from agent_bom.evidence.finding_reach_sources import stamp_reach_sources
 from agent_bom.graph.types import RelationshipType
 
 if TYPE_CHECKING:
@@ -18,19 +22,11 @@ if TYPE_CHECKING:
     from agent_bom.graph.ports import GraphStoreProtocol
 
 
+# Page size for reading a snapshot's paths, and the hard ceiling of paths one
+# snapshot index holds (beyond it the projection reports ``truncated``).
 MAX_FINDING_REACHABILITY_PATHS = 1000
+MAX_SNAPSHOT_REACHABILITY_PATHS = 200_000
 
-_REACHABILITY_EVIDENCE_EDGES = frozenset(
-    {
-        RelationshipType.EXPLOITABLE_VIA.value,
-        RelationshipType.EXPOSED_TO.value,
-        RelationshipType.INVOKED.value,
-        RelationshipType.CALLED.value,
-        RelationshipType.USED_CREDENTIAL.value,
-        RelationshipType.ACCESSED.value,
-        RelationshipType.DELEGATED_TO.value,
-    }
-)
 # Trace order says which assets one correlated trace touched in sequence. It is
 # recorded context, never access or exposure evidence, so a route that needs it
 # cannot mark a finding reachable (the same rule attack-path fusion applies).
@@ -47,6 +43,7 @@ class FindingReachabilityProjection:
 class _ReachabilityEvidence:
     min_hops: int
     agents: set[str]
+    sources: set[str]
 
 
 def _text(value: object) -> str:
@@ -82,17 +79,17 @@ def _path_vulnerability_ids(path: AttackPath) -> set[str]:
 
 
 def _path_has_reachability_evidence(path: AttackPath) -> bool:
-    """Return whether a path contains an observed reachability edge.
+    """Return whether a persisted path makes its finding ``graph_reachable``.
 
-    Static inventory edges such as ``uses`` and ``depends_on`` describe useful
-    topology, but they do not prove that an agent can reach a vulnerable
-    component at runtime. Positive reachability requires an explicit exploit,
-    network-exposure, or runtime-execution relationship, and a route that
-    depends on trace order is not one.
+    ``graph_reachable`` means any inbound attack path reaches the finding,
+    including a structural ``depends_on`` chain from a workload. It is not
+    proof of execution: the verdict ladder keeps such a path at ``likely``.
+    A route that depends on trace order is never a path, because trace order
+    records sequence, not access.
     """
 
     relationships = {edge.value if isinstance(edge, RelationshipType) else _text(edge).lower() for edge in path.edges}
-    return not relationships & _TRACE_ORDER_EDGES and bool(relationships & _REACHABILITY_EVIDENCE_EDGES)
+    return bool(relationships) and not relationships & _TRACE_ORDER_EDGES
 
 
 def _row_node_ids(row: Mapping[str, Any]) -> set[str]:
@@ -158,7 +155,7 @@ def project_persisted_graph_reachability(
     graph_store: GraphStoreProtocol,
     tenant_id: str,
     scan_id: str | None,
-    path_limit: int = MAX_FINDING_REACHABILITY_PATHS,
+    path_limit: int = MAX_SNAPSHOT_REACHABILITY_PATHS,
 ) -> FindingReachabilityProjection:
     """Project one bounded, tenant-scoped path read onto a findings page.
 
@@ -172,18 +169,83 @@ def project_persisted_graph_reachability(
         row.setdefault("graph_reachable", None)
         row.setdefault("graph_min_hop_distance", None)
         row.setdefault("graph_reachable_from_agents", [])
+        row.update(graph_reachable_from=[], graph_reachable_from_count=None)  # server-stamped only
     if not projected or not any(_row_vulnerability_ids(row) or _row_finding_ids(row) for row in projected):
         return FindingReachabilityProjection(projected, truncated=False)
 
-    bounded_limit = max(1, min(int(path_limit), MAX_FINDING_REACHABILITY_PATHS))
-    effective_scan_id, _created_at, paths, total = graph_store.attack_paths(
-        tenant_id=tenant_id,
-        scan_id=scan_id or "",
-        offset=0,
-        limit=bounded_limit,
-    )
-    project_attack_path_reachability(projected, paths, scan_id=effective_scan_id or "")
-    return FindingReachabilityProjection(projected, truncated=total > len(paths))
+    index = _snapshot_index(graph_store, tenant_id=tenant_id, scan_id=scan_id or "", path_limit=path_limit)
+    # Rows only carry their job's scan id, which never equals the correlated
+    # current-estate snapshot id, so the cross-scan guard applies only when the
+    # caller asked for one scan.
+    _stamp_rows(projected, index, scan_id=index.scan_id if scan_id else None)
+    return FindingReachabilityProjection(projected, truncated=index.truncated)
+
+
+@dataclass(frozen=True, slots=True)
+class _PathIndex:
+    scan_id: str
+    by_finding: dict[str, list[AttackPath]]
+    by_vulnerability: dict[str, list[AttackPath]]
+    truncated: bool = False
+
+
+_INDEX_CACHE: OrderedDict[tuple[str, str, str, int, int], _PathIndex] = OrderedDict()
+_INDEX_CACHE_LOCK = threading.Lock()
+_INDEX_CACHE_MAX = 16
+
+
+def clear_reachability_index_cache() -> None:
+    with _INDEX_CACHE_LOCK:
+        _INDEX_CACHE.clear()
+
+
+def _build_index(paths: Iterable[AttackPath], *, scan_id: str = "", truncated: bool = False) -> _PathIndex:
+    by_finding: dict[str, list[AttackPath]] = {}
+    by_vulnerability: dict[str, list[AttackPath]] = {}
+    for path in paths:
+        if not _path_has_reachability_evidence(path):
+            continue
+        for finding_id in set(path.finding_ids):
+            by_finding.setdefault(finding_id, []).append(path)
+        for vulnerability_id in _path_vulnerability_ids(path):
+            by_vulnerability.setdefault(vulnerability_id, []).append(path)
+    return _PathIndex(scan_id, by_finding, by_vulnerability, truncated)
+
+
+def _snapshot_index(graph_store: GraphStoreProtocol, *, tenant_id: str, scan_id: str, path_limit: int) -> _PathIndex:
+    """Index every evidence-bearing path of one snapshot, built once per generation.
+
+    The cache key is the tenant plus the snapshot's identity (id, creation
+    time, path count); a newly saved snapshot changes it. Snapshots are
+    immutable once saved, so a per-process cache is safe across workers.
+    """
+    ceiling = max(1, min(int(path_limit), MAX_SNAPSHOT_REACHABILITY_PATHS))
+    effective_scan_id, created_at, _probe, total = graph_store.attack_paths(tenant_id=tenant_id, scan_id=scan_id, offset=0, limit=1)
+    key = (tenant_id, str(effective_scan_id or ""), str(created_at or ""), int(total), ceiling)
+    with _INDEX_CACHE_LOCK:
+        cached = _INDEX_CACHE.get(key)
+        if cached is not None:
+            _INDEX_CACHE.move_to_end(key)
+            return cached
+    paths: list[AttackPath] = []
+    while len(paths) < min(int(total), ceiling):
+        _sid, _created, page, _total = graph_store.attack_paths(
+            tenant_id=tenant_id,
+            scan_id=str(effective_scan_id or scan_id),
+            offset=len(paths),
+            limit=min(MAX_FINDING_REACHABILITY_PATHS, ceiling - len(paths)),
+        )
+        if not page:
+            break
+        paths.extend(page)
+    index = _build_index(paths, scan_id=str(effective_scan_id or ""), truncated=int(total) > len(paths))
+    if len(paths) < min(int(total), ceiling):
+        return index  # A short read (snapshot replaced mid-walk) is never cached.
+    with _INDEX_CACHE_LOCK:
+        _INDEX_CACHE[key] = index
+        while len(_INDEX_CACHE) > _INDEX_CACHE_MAX:
+            _INDEX_CACHE.popitem(last=False)
+    return index
 
 
 def project_attack_path_reachability(
@@ -194,55 +256,55 @@ def project_attack_path_reachability(
 ) -> int:
     """Stamp evidence-bearing ``paths`` onto matching ``rows`` in place.
 
-    Only paths with an observed reachability edge count; topology-only paths
-    leave rows untouched. When ``scan_id`` is given, rows stamped with another
-    scan are skipped. Returns the number of rows marked reachable.
+    Structural paths establish graph reachability, not confirmed execution.
+    Trace-order paths leave rows untouched. When ``scan_id`` is given, rows from
+    another scan are skipped. Returns the number of rows marked reachable.
     """
+    return _stamp_rows(rows, _build_index(paths), scan_id=scan_id)
 
-    paths_by_finding: dict[str, list[AttackPath]] = {}
-    paths_by_vulnerability: dict[str, list[AttackPath]] = {}
-    for path in paths:
-        if not _path_has_reachability_evidence(path):
+
+def _row_evidence(row: dict[str, Any], path_index: _PathIndex) -> _ReachabilityEvidence | None:
+    candidates: dict[int, AttackPath] = {}
+    for finding_id in _row_finding_ids(row):
+        candidates.update((id(path), path) for path in path_index.by_finding.get(finding_id, ()))
+    for vulnerability_id in _row_vulnerability_ids(row):
+        candidates.update((id(path), path) for path in path_index.by_vulnerability.get(vulnerability_id, ()))
+    evidence: _ReachabilityEvidence | None = None
+    for path in candidates.values():
+        if not _path_matches_row(path, row):
             continue
-        for finding_id in set(path.finding_ids):
-            paths_by_finding.setdefault(finding_id, []).append(path)
-        for vulnerability_id in _path_vulnerability_ids(path):
-            paths_by_vulnerability.setdefault(vulnerability_id, []).append(path)
+        distance = _path_hop_distance(path, row)
+        if evidence is None:
+            evidence = _ReachabilityEvidence(min_hops=distance, agents=set(), sources=set())
+        evidence.min_hops = min(evidence.min_hops, distance)
+        evidence.agents.update(_reaching_agents(path))
+        evidence.sources.add(path.source)
+    return evidence
 
-    evidence_by_row: dict[int, _ReachabilityEvidence] = {}
-    for index, row in enumerate(rows):
+
+def _apply_evidence(row: dict[str, Any], evidence: _ReachabilityEvidence) -> None:
+    prior_distance = row.get("graph_min_hop_distance")
+    row["graph_reachable"] = True
+    row["graph_min_hop_distance"] = (
+        min(prior_distance, evidence.min_hops)
+        if isinstance(prior_distance, int) and not isinstance(prior_distance, bool) and prior_distance >= 0
+        else evidence.min_hops
+    )
+    prior_agents = row.get("graph_reachable_from_agents")
+    if isinstance(prior_agents, list):
+        evidence.agents.update(_text(value) for value in prior_agents if _text(value))
+    row["graph_reachable_from_agents"] = sorted(evidence.agents)
+    stamp_reach_sources(row, evidence.sources)
+
+
+def _stamp_rows(rows: list[dict[str, Any]], path_index: _PathIndex, *, scan_id: str | None) -> int:
+    stamped = 0
+    for row in rows:
         row_scan = _text(row.get("scan_id"))
         if scan_id is not None and row_scan and row_scan != scan_id:
             continue
-        candidates: dict[int, AttackPath] = {}
-        for finding_id in _row_finding_ids(row):
-            candidates.update((id(path), path) for path in paths_by_finding.get(finding_id, ()))
-        for vulnerability_id in _row_vulnerability_ids(row):
-            candidates.update((id(path), path) for path in paths_by_vulnerability.get(vulnerability_id, ()))
-        for path in candidates.values():
-            if not _path_matches_row(path, row):
-                continue
-            distance = _path_hop_distance(path, row)
-            evidence = evidence_by_row.get(index)
-            if evidence is None:
-                evidence = _ReachabilityEvidence(min_hops=distance, agents=set())
-                evidence_by_row[index] = evidence
-            else:
-                evidence.min_hops = min(evidence.min_hops, distance)
-            evidence.agents.update(_reaching_agents(path))
-
-    for index, evidence in evidence_by_row.items():
-        row = rows[index]
-        prior_distance = row.get("graph_min_hop_distance")
-        row["graph_reachable"] = True
-        row["graph_min_hop_distance"] = (
-            min(prior_distance, evidence.min_hops)
-            if isinstance(prior_distance, int) and not isinstance(prior_distance, bool) and prior_distance >= 0
-            else evidence.min_hops
-        )
-        prior_agents = row.get("graph_reachable_from_agents")
-        if isinstance(prior_agents, list):
-            evidence.agents.update(_text(value) for value in prior_agents if _text(value))
-        row["graph_reachable_from_agents"] = sorted(evidence.agents)
-
-    return len(evidence_by_row)
+        evidence = _row_evidence(row, path_index)
+        if evidence is not None:
+            _apply_evidence(row, evidence)
+            stamped += 1
+    return stamped

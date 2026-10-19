@@ -514,6 +514,15 @@ unknown, including when a high-priority asset is present. API and MCP legacy
 evidence dimensions cannot support that verdict. Projection qualification does
 not rewrite stored path receipts.
 
+Reachability verdict ladder (`agent_bom.core.reachability`): `unlikely` when
+graph, symbol or dependency evidence disproves reach; `confirmed` only with
+function-level (`function_reachable`) or runtime-observed (`runtime_observed`)
+basis; `likely` for a modeled graph path (`graph_path`, including complete
+`directed_provenance_backed_hops`), package or dependency reachability;
+otherwise `unknown`. A persisted `confirmed` whose basis lacks a confirming
+entry is read as `likely`. `graph_reachable` still means any inbound attack
+path, and keeps its ranking boost.
+
 ### Inspect recorded authorization
 
 In a selected hop, open **Recorded authority** to inspect an evaluator's action,

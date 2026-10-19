@@ -1065,7 +1065,7 @@ class BlastRadius:
             match_confidence_tier=self.vulnerability.match_confidence_tier,
         )
         reach_adjustment = 0.0
-        if reach.verdict == "confirmed":
+        if reach.verdict == "confirmed" or "graph_path" in reach.basis:
             reach_adjustment = RISK_REACHABLE_BOOST
         elif reach.verdict == "unlikely":
             reach_adjustment = -RISK_UNREACHABLE_PENALTY
@@ -1084,8 +1084,8 @@ class BlastRadius:
         """Classify how reachable this vulnerability is through the blast radius.
 
         Returns:
-            "confirmed"  — graph-path or function-level evidence proves reach
-            "likely"     — package/dependency evidence supports reach
+            "confirmed"  — function-level (or runtime) evidence proves reach
+            "likely"     — a graph path or package/dependency evidence supports reach
             "unlikely"   — graph/symbol/dependency evidence disproves reach
             "unknown"    — structural or exposure context without path proof
         """

@@ -132,6 +132,33 @@ class GraphDiffResponse(ReadResponse):
     completeness: GraphCompleteness
 
 
+class GraphEstateChangesPagination(ReadModel):
+    offset: int
+    limit: int
+    returned: int
+    total: int
+    has_more: bool
+    next_offset: int | None = None
+
+
+class GraphEstateChangesResponse(ReadResponse):
+    """``GET /v1/graph/changes``: each target scope's current snapshot against its own previous snapshot.
+
+    ``sources`` are scopes with a previous snapshot; ``new_sources`` are first
+    observations and are never counted as additions. ``totals`` cover the
+    returned page of scopes; ``completeness`` says whether more scopes exist.
+    """
+
+    schema_version: str
+    evidence_scope: str
+    sources: list[Row]
+    new_sources: list[Row]
+    totals: Row
+    pagination: GraphEstateChangesPagination
+    completeness: GraphCompleteness
+    completeness_reasons: list[str]
+
+
 class GraphActiveEdgesResponse(RootModel[list[Row]]):
     """``GET /v1/graph/edges/active``: edge versions active at ``at``."""
 

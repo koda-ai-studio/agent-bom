@@ -7,6 +7,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from agent_bom.core.reachability import CONFIRMING_BASIS
 from agent_bom.evidence.semantics import ExploitabilityDimension
 from agent_bom.graph.applicability import advisory_match_unverified
 from agent_bom.graph.container import AttackPath, UnifiedGraph
@@ -251,7 +252,6 @@ def annotate_attack_path_evidence(path: AttackPath, graph: UnifiedGraph, *, hop_
             receipt["reason_codes"] = list(dict.fromkeys([*receipt["reason_codes"], analysis_reason]))
     # Re-annotation (e.g. once the analyzer status is recorded) must not keep
     # qualifiers an earlier pass derived from different evidence.
-    promoted_earlier = "directed_provenance_backed_hops" in path.reachability_basis
     basis = [item for item in path.reachability_basis if item not in _ANNOTATION_BASIS]
     if any(receipt.get("correlation_identity_status") == "recomputation_required" for receipt in receipts):
         basis.append("correlation_recomputation_required")
@@ -281,17 +281,14 @@ def annotate_attack_path_evidence(path: AttackPath, graph: UnifiedGraph, *, hop_
         path.reachability = "unknown"
         basis.extend(["incomplete_hop_evidence", *(["stale_hop_evidence"] if any(r["freshness"] == "stale" for r in receipts) else [])])
     elif stale:
-        if path.reachability == "confirmed":
-            path.reachability = "likely"
+        path.reachability = "likely" if path.reachability == "confirmed" else path.reachability
         basis.append("stale_evidence_allowed")
     elif all_complete and path.reachability in {"unknown", "likely"} and "structural_topology_only" not in basis:
-        # Current hops prove the topology, not use; a producer's structural-only verdict stands.
-        path.reachability = "confirmed"
+        # Hops prove topology, not execution: a modeled path tops out at likely.
+        path.reachability = "likely"
         basis.append("directed_provenance_backed_hops")
-    elif all_complete and path.reachability == "confirmed" and promoted_earlier:
-        # Keep the qualifier an earlier pass added; a producer-confirmed path
-        # keeps its own basis.
-        basis.append("directed_provenance_backed_hops")
+    if path.reachability == "confirmed" and not CONFIRMING_BASIS.intersection(basis):
+        path.reachability = "likely"
     path.reachability_basis = list(dict.fromkeys(basis))
     return path
 
@@ -513,6 +510,10 @@ def qualify_exposure_reachability(payload: dict[str, Any]) -> dict[str, Any]:
         payload["summary"] = "Structural exposure candidate; available hop evidence does not establish end-to-end reachability."
         if payload.get("label") == previous_summary:
             payload["label"] = payload["summary"]
+    if payload.get("reachability") == "confirmed" and not CONFIRMING_BASIS.intersection(payload.get("reachabilityBasis") or []):
+        payload["reachability"] = "likely"  # persisted while a modeled path still meant "confirmed"
+        if dimensions["reachability"].get("verdict") == "confirmed":
+            dimensions["reachability"] = {**dimensions["reachability"], "verdict": "likely"}
     return payload
 
 
