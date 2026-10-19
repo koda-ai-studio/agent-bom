@@ -43,9 +43,8 @@ for (const theme of ["light", "dark"]) test(`small graph uses its canvas and def
   const transform = await page.locator(".react-flow__viewport").getAttribute("style");
   await page.locator('.react-flow__node[data-id="package:demo"]').hover();
   await expect(page.locator(".react-flow__viewport")).toHaveAttribute("style", transform!);
-  await page.getByRole("button", { name: "View & layers" }).click();
-  await page.locator("summary").filter({ hasText: "Advanced controls" }).click();
-  await page.locator("summary").filter({ hasText: /^Snapshot diff/ }).click();
+  await expect(page.getByTestId("graph-changes-entry")).toContainText("Compare with previous snapshot");
+  await page.getByTestId("graph-changes-entry").getByRole("button", { name: /changed since previous snapshot/i }).click();
   await expect.poll(() => requests.filter(p => p.startsWith("/v1/graph/diff?")).length).toBe(1);
   await expect.poll(() => requests.filter(p => p.startsWith("/v1/graph/edges/changes?")).length).toBe(1);
 });

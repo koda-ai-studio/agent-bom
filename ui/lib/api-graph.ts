@@ -27,6 +27,7 @@ import type {
   GraphSearchResponse,
   GraphAgentsResponse,
   GraphDiffResponse,
+  GraphEstateChangesResponse,
   GraphEdgeChangesResponse,
   InventorySummaryResponse,
   InventorySummaryFilters,
@@ -138,6 +139,14 @@ export const graphApi = {
     params.set("new", newScanId);
     params.set("view", "full");
     return get<GraphDiffResponse>(`/v1/graph/diff?${params.toString()}`);
+  },
+
+
+  /** Per-source changes: each current target scope against its own previous snapshot. */
+  getGraphEstateChanges: (options?: { limit?: number; offset?: number; signal?: AbortSignal }) => {
+    const params = new URLSearchParams({ limit: String(options?.limit ?? 50) });
+    if (options?.offset) params.set("offset", String(options.offset));
+    return get<GraphEstateChangesResponse>(`/v1/graph/changes?${params.toString()}`, options?.signal ? { signal: options.signal } : {});
   },
 
 

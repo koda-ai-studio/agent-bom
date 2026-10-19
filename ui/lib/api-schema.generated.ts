@@ -4254,6 +4254,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/graph/changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Graph Estate Changes
+         * @description What changed in the current estate: each target scope against its own previous completed snapshot.
+         */
+        get: operations["get_graph_estate_changes_v1_graph_changes_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/graph/clusters": {
         parameters: {
             query?: never;
@@ -16134,6 +16154,55 @@ export interface components {
             /** Scan Id Old */
             scan_id_old?: string | null;
             summary?: components["schemas"]["GraphEdgeChangeSummary"] | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphEstateChangesPagination */
+        GraphEstateChangesPagination: {
+            /** Has More */
+            has_more: boolean;
+            /** Limit */
+            limit: number;
+            /** Next Offset */
+            next_offset?: number | null;
+            /** Offset */
+            offset: number;
+            /** Returned */
+            returned: number;
+            /** Total */
+            total: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * GraphEstateChangesResponse
+         * @description ``GET /v1/graph/changes``: each target scope's current snapshot against its own previous snapshot.
+         *
+         *     ``sources`` are scopes with a previous snapshot; ``new_sources`` are first
+         *     observations and are never counted as additions. ``totals`` cover the
+         *     returned page of scopes; ``completeness`` says whether more scopes exist.
+         */
+        GraphEstateChangesResponse: {
+            completeness: components["schemas"]["GraphCompleteness"];
+            /** Completeness Reasons */
+            completeness_reasons: string[];
+            /** Evidence Scope */
+            evidence_scope: string;
+            /** New Sources */
+            new_sources: {
+                [key: string]: unknown;
+            }[];
+            pagination: components["schemas"]["GraphEstateChangesPagination"];
+            /** Schema Version */
+            schema_version: string;
+            /** Sources */
+            sources: {
+                [key: string]: unknown;
+            }[];
+            /** Totals */
+            totals: {
+                [key: string]: unknown;
+            };
         } & {
             [key: string]: unknown;
         };
@@ -33852,6 +33921,49 @@ export interface operations {
                     } & {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE) */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    get_graph_estate_changes_v1_graph_changes_get: {
+        parameters: {
+            query?: {
+                /** @description Target scopes per page */
+                limit?: number;
+                /** @description pagination.next_offset from the previous page */
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GraphEstateChangesResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */

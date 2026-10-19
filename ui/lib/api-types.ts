@@ -1086,6 +1086,49 @@ export interface GraphDiffResponse {
   returned_changes?: number | undefined;
 }
 
+export interface GraphEstateSnapshotRef {
+  scan_id: string;
+  job_id: string;
+  captured_at: string;
+}
+
+/** One target scope compared with its own previous completed snapshot. */
+export interface GraphEstateChangeSource {
+  scope_id: string;
+  label: string;
+  old: GraphEstateSnapshotRef;
+  new: GraphEstateSnapshotRef;
+  counts: Record<"nodes" | "edges", GraphDiffChangeCounts>;
+  total_changes: number;
+  nodes_by_entity_type: Record<string, GraphDiffChangeCounts>;
+  highlights: Record<string, unknown>;
+  skipped_snapshots: number;
+}
+
+/** A scope with no earlier snapshot to compare: never counted as additions. */
+export interface GraphEstateFirstObservation {
+  scope_id: string;
+  label: string;
+  new: GraphEstateSnapshotRef;
+  reason: "first_observation" | "previous_graph_unavailable";
+  node_count: number;
+  edge_count: number;
+  skipped_snapshots: number;
+}
+
+export type GraphEstateChangesResponse = ContractEnvelope<
+  ApiSchemas["GraphEstateChangesResponse"],
+  {
+    sources: GraphEstateChangeSource[];
+    new_sources: GraphEstateFirstObservation[];
+    totals: Record<"nodes" | "edges", GraphDiffChangeCounts> & {
+      changed_sources: number;
+      unchanged_sources: number;
+      new_sources: number;
+    };
+  }
+>;
+
 export interface GraphDiffChangeCounts {
   added: number;
   removed: number;
