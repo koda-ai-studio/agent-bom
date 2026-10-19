@@ -262,9 +262,9 @@ def _reset_enrichment_posture_state() -> None:
     # memory and under the per-process state dir for 24h; every later offline
     # scan on the worker would join that catalog instead of its own fixtures.
     try:
-        from agent_bom.enrichment import reset_enrichment_caches_for_tests
+        from tests.enrichment_cache_reset import reset_enrichment_caches
 
-        reset_enrichment_caches_for_tests()
+        reset_enrichment_caches()
     except Exception:
         pass
 

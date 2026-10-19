@@ -17,6 +17,7 @@ import pytest
 
 import agent_bom.cli  # noqa: F401  # agent_bom.enrichment cannot be the first agent_bom import (import cycle)
 from agent_bom import enrichment
+from tests.enrichment_cache_reset import reset_enrichment_caches
 
 _LIVE_LIKE_KEV = {"CVE-2023-4863": {"date_added": "2023-09-13", "due_date": "2023-10-04"}}
 
@@ -40,7 +41,7 @@ def test_reset_clears_memory_and_disk_enrichment_caches() -> None:
     _leave_kev_catalog_behind()
     _leave_nvd_epss_caches_behind()
 
-    enrichment.reset_enrichment_caches_for_tests()
+    reset_enrichment_caches()
 
     assert enrichment._kev_cache is None
     assert enrichment._kev_cache_time is None
