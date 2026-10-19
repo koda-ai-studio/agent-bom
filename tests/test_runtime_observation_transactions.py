@@ -70,7 +70,7 @@ def test_postgres_runtime_insert_round_trips_are_bounded(tmp_path):
 
 
 def test_runtime_batch_redaction_reuses_field_values_without_cross_batch_state(monkeypatch):
-    from agent_bom.api.routes import observability
+    from agent_bom.api import observability_events as observability
     from agent_bom.api.storage import runtime_records
     from agent_bom.redaction import payload
 

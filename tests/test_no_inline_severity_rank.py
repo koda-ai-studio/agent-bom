@@ -24,8 +24,8 @@ NON_RANKING_MAPS = {
     "demo_estate/enterprise_risk.py": "[('critical', 0.55), ('high', 0.28), ('low', 0.02), ('medium', 0.09)]",
     "api/risk_campaigns.py": "[('critical', 9.0), ('high', 7.0), ('info', 0.5), ('low', 1.5), ('medium', 4.0)]",
     "domain/skill_findings.py": "[('critical', 9.0), ('high', 7.5), ('low', 2.5), ('medium', 5.0)]",
-    "api/routes/cloud.py": "[('critical', 100), ('high', 80), ('low', 20), ('medium', 50)]",
-    "api/routes/overview.py": "[('critical', 9.0), ('high', 7.0), ('low', 1.5), ('medium', 4.0)]",
+    "api/cloud_scan_results.py": "[('critical', 100), ('high', 80), ('low', 20), ('medium', 50)]",
+    "api/overview_rollup.py": "[('critical', 9.0), ('high', 7.0), ('low', 1.5), ('medium', 4.0)]",
 }
 
 
