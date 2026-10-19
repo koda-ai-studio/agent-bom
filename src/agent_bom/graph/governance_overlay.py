@@ -31,6 +31,11 @@ from agent_bom.graph.types import EntityType, NodeStatus, RelationshipType
 _OVERLAY_SOURCE = "governance-overlay"
 
 
+def drift_incident_severity(drift_score: float) -> str:
+    """Severity of an open behavioural-drift incident from its drift score."""
+    return "high" if drift_score >= 0.66 else "medium" if drift_score >= 0.33 else "low"
+
+
 def _label_index(graph: UnifiedGraph, entity_type: EntityType) -> dict[str, list[str]]:
     index: dict[str, list[str]] = defaultdict(list)
     for node in graph.nodes.values():
@@ -350,7 +355,7 @@ def apply_governance_overlay(
                 f"drift: {incident.blueprint_id}",
                 status=NodeStatus.VULNERABLE,
                 risk_score=round(min(10.0, score * 10.0), 2),
-                severity="high" if score >= 0.66 else "medium" if score >= 0.33 else "low",
+                severity=drift_incident_severity(score),
                 attributes={
                     "incident_id": incident.incident_id,
                     "blueprint_id": incident.blueprint_id,
