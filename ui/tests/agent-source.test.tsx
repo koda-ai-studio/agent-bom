@@ -42,7 +42,7 @@ describe("recorded agent source identity", () => {
   });
 
   it("has an honest mark or monogram for each supported client and a neutral custom fallback", () => {
-    const models = readFileSync(resolve(__dirname, "../../src/agent_bom/models.py"), "utf8");
+    const models = readFileSync(resolve(__dirname, "../../src/agent_bom/domain/inventory_types.py"), "utf8");
     const body = models.split("class AgentType(str, Enum):")[1]!.split("class TransportType")[0]!;
     const types = [...body.matchAll(/= "([^"]+)"/g)].map(match => match[1]!);
     for (const agentType of types.filter(type => type !== "custom")) {
