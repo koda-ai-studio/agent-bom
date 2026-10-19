@@ -15,6 +15,7 @@ from agent_bom.api.scan_report_support import (
     _rendered_result_document,
     _surface_graph_derived_findings,
 )
+from agent_bom.core.severity import severity_at_or_above
 from agent_bom.evidence.scan_run import VULNERABILITY_SCAN_SKIPPED_MESSAGE
 from agent_bom.parsers.sbom_context import imported_cloud_inventory
 from agent_bom.scanners.mcp_audit import attach_passive_mcp_audit
@@ -114,8 +115,6 @@ def _record_enrichment_step(ctx: ScanContext) -> None:
 def _filter_and_suppress(ctx: ScanContext) -> None:
     req = ctx.req
     if req.min_severity:
-        from agent_bom.core.severity import severity_at_or_above
-
         ctx.blast_radii = [br for br in ctx.blast_radii if severity_at_or_above(br.vulnerability.severity.value, req.min_severity)]
     try:
         from agent_bom.api.stores import _get_exception_store
