@@ -11,7 +11,7 @@ from collections import Counter
 import pytest
 
 from agent_bom.graph.container import UnifiedGraph
-from agent_bom.graph.types import EntityType
+from agent_bom.graph.types import EntityType, RelationshipType
 
 
 class _CapturingStore:
@@ -87,3 +87,34 @@ def test_report_finding_node_ids_resolve_in_the_graph(demo_graph: UnifiedGraph) 
     ]
     assert len(package_rows) > 700
     assert all(str(row.get("node_id") or "").startswith("pkg:") for row in package_rows)
+
+
+def _pairs(graph: UnifiedGraph) -> Counter:
+    return Counter(
+        (edge.relationship, graph.nodes[edge.source].entity_type, graph.nodes[edge.target].entity_type)
+        for edge in graph.edges
+        if edge.source in graph.nodes and edge.target in graph.nodes
+    )
+
+
+def test_package_to_cve_is_one_finding_edge_not_a_containment_copy(demo_graph: UnifiedGraph) -> None:
+    pairs = _pairs(demo_graph)
+    vulnerable_to = pairs[(RelationshipType.VULNERABLE_TO, EntityType.PACKAGE, EntityType.VULNERABILITY)]
+    assert vulnerable_to > 700
+    assert pairs[(RelationshipType.CONTAINS, EntityType.PACKAGE, EntityType.VULNERABILITY)] == 0
+    assert pairs[(RelationshipType.AFFECTS, EntityType.VULNERABILITY, EntityType.PACKAGE)] <= vulnerable_to
+
+
+def test_package_vulnerabilities_still_roll_up_under_their_package(demo_graph: UnifiedGraph) -> None:
+    from agent_bom.graph.rollup import _contains_children
+
+    children = _contains_children(demo_graph)
+    parented = {child for kids in children.values() for child in kids}
+    vulns = {
+        edge.target
+        for edge in demo_graph.edges
+        if edge.relationship == RelationshipType.VULNERABLE_TO and demo_graph.nodes[edge.source].entity_type == EntityType.PACKAGE
+    }
+    assert len(vulns) > 700
+    orphaned = [node_id for node_id in vulns if node_id not in parented]
+    assert not orphaned, orphaned[:5]

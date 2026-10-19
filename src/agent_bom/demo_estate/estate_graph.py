@@ -314,6 +314,20 @@ def _finding_node_id(finding: Finding) -> str:
     return f"{prefix}:demo-estate:{finding.id}"
 
 
+def _add_finding_edges(graph: UnifiedGraph, finding_node: str, asset_id: str, *, vulnerability: bool) -> None:
+    """AFFECTS for correlation (fusion, CNAPP overlay) plus exactly one roll-up parent edge.
+
+    Without a parent, findings blow past the 200-orphan cap. A package CVE's
+    parent is the VULNERABLE_TO edge the roll-up already walks as package
+    containment (and ``cnapp_overlay`` reads); a CONTAINS copy stored it twice.
+    """
+    add_estate_edge(graph, finding_node, asset_id, RelationshipType.AFFECTS)
+    if not (vulnerability and graph.nodes[asset_id].entity_type == EntityType.PACKAGE):
+        add_estate_edge(graph, asset_id, finding_node, RelationshipType.CONTAINS)
+    if vulnerability:
+        add_estate_edge(graph, asset_id, finding_node, RelationshipType.VULNERABLE_TO)
+
+
 def project_estate_into_graph(
     graph: UnifiedGraph,
     estate: EnterpriseEstate,
@@ -520,20 +534,7 @@ def project_estate_into_graph(
                 ),
             )
         )
-        # Two edges, two jobs. AFFECTS is the correlation the rest of the
-        # product reads (it is what the live builder emits for a CIS
-        # misconfiguration, and what attack-path fusion and the CNAPP overlay
-        # traverse). CONTAINS is what the roll-up walks: without it 439 findings
-        # sit outside the containment tree, blow past the 200-orphan cap, and the
-        # default estate view degrades into a truncated chip list instead of
-        # account → environment → resource → finding.
-        _edge(node_id, asset_id, RelationshipType.AFFECTS)
-        _edge(asset_id, node_id, RelationshipType.CONTAINS)
-        if vulnerability:
-            # The reverse edge the live builder emits for a vulnerable
-            # component, and the one ``cnapp_overlay`` reads to decide which
-            # resources are vulnerable at all.
-            _edge(asset_id, node_id, RelationshipType.VULNERABLE_TO)
+        _add_finding_edges(graph, node_id, asset_id, vulnerability=vulnerability)
         finding_count += 1
 
         principal = str(finding.evidence.get("identity_asset_id") or "")
