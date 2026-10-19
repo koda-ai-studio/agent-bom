@@ -34,7 +34,7 @@ standard library.
 | An IaC misconfiguration rule | `iac/` | `iac/dockerfile_rules.py`, `iac/cloudformation_rules.py`, `iac/terraform_security_*.py` |
 | A cloud inventory or CIS benchmark check | `cloud/` | `cloud/aws_cis/` (one module per control family), `cloud/azure_cis/`, `cloud/gcp_cis/` |
 | Non-human identity discovery (Okta, Entra) | `identity/` | `identity/__init__.py` |
-| A new MCP client or agent config location | `discovery/` | `discovery/__init__.py` (`CONFIG_LOCATIONS`) |
+| A new MCP client or agent config location | `discovery/` | `discovery/platform_config.py` (`CONFIG_LOCATIONS`), `discovery/local_sources.py` |
 | A graph node, edge, projection or traversal | `graph/` | `graph/container.py`, `graph/types.py`, `graph/builder.py` |
 | A runtime detector, proxy or gateway behavior | `runtime/` | `runtime/detectors.py`, `runtime/patterns.py`, `runtime/gateway_relay.py` |
 | An output format (SARIF, CycloneDX, HTML, …) | `output/` | existing formatter for the closest format |
@@ -50,13 +50,24 @@ the PR. Maintainers would rather discuss placement early than move code later.
 
 ## Canonical models
 
-- **Finding**: `finding.py` defines `Finding`, the unified finding model.
-  `FindingType` covers CVEs, CIS failures, credential exposure, SAST, runtime
+- **Finding**: `domain/finding_model.py` defines `Finding`, the unified finding
+  model; `domain/finding_types.py` owns its enums and asset types. `FindingType`
+  covers CVEs, CIS failures, credential exposure, SAST, runtime
   detections, skill risk and more. Emit `Finding` objects rather than defining
   a new result shape; add a `FindingType` only for a genuinely new category.
-- **Packages and vulnerabilities**: `models.py` defines `Package`,
-  `Vulnerability`, `Agent`, `MCPServer` and `BlastRadius`, the inventory side of
-  a scan.
+  `finding.py` retains converters and lazy compatibility imports.
+- **Packages and vulnerabilities**: `domain/package_model.py`,
+  `domain/vulnerability_model.py`, `domain/agent_model.py` and
+  `domain/mcp_model.py` own the inventory models. `models.py` retains
+  `BlastRadius`, `AIBOMReport` and lazy compatibility imports.
+- **API contracts**: `api/models.py` owns scan/job contracts. Source,
+  health and compliance models live in `api/source_models.py`,
+  `api/health_models.py` and `api/compliance_models.py`; the schema generator
+  includes all four owners.
+- **Finding storage**: `api/storage/hub_contract.py` defines the hub protocol;
+  `hub_memory.py`, `hub_sqlite.py` and `hub_schema.py` own the in-memory,
+  SQLite and schema implementations. PostgreSQL remains in
+  `api/postgres_compliance_hub.py`.
 - **Graph**: `graph/container.py` defines `UnifiedGraph`. Entity and relationship
   enums live in `graph/types.py`; `graph/builder.py` builds the graph from a
   report. `context_graph.py` is a legacy bridge, so new graph features belong in
