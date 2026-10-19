@@ -9,7 +9,7 @@ from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator
 
 from agent_bom.canonical_ids import canonical_finding_id
-from agent_bom.finding_reach_sources import CLIENT_REACH_CLAIM_FIELDS, without_fields
+from agent_bom.evidence.finding_reach_sources import CLIENT_REACH_CLAIM_FIELDS, without_fields
 
 _BULK_FINDINGS_MAX_ITEMS = 1000
 _BULK_FINDINGS_SOURCE_MAX_LENGTH = 128

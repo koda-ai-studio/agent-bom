@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Mapping
 
-from agent_bom.compliance_tag_dedupe import drop_generic_duplicates
+from agent_bom.evidence.compliance_tag_dedupe import drop_generic_duplicates
 
 RUNTIME_STATE_STATIC = "static"
 RUNTIME_STATE_OBSERVED = "observed"

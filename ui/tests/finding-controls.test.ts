@@ -3,6 +3,13 @@ import { describe, expect, it } from "vitest";
 import { complianceEvidenceHref, groupFindingControls } from "@/lib/finding-controls";
 
 describe("groupFindingControls", () => {
+  it("preserves unqualified legacy tags without inventing a framework mapping", () => {
+    const groups = groupFindingControls(["SOC2-CC7.1", "NIST-SI-2", "SOC2-CC7.1", "", "   "]);
+    expect(groups).toEqual([{ framework: "other", label: "Other mappings", controls: [
+      { code: "NIST-SI-2", href: null }, { code: "SOC2-CC7.1", href: null },
+    ] }]);
+  });
+
   it("counts a control once even when the API also lists its legacy generic copy", () => {
     const groups = groupFindingControls(["cis:CIS-02.3", "generic:CIS-02.3", "iso_27001:A.5.19", "generic:A.5.19", "generic:LEGACY-1"]);
     // Same order as the compliance page sections; unmapped tags last.

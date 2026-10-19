@@ -128,7 +128,10 @@ const BUDGETS = {
   // Main measures 4018.6 KiB in Linux CI; the account/settings candidate
   // measures 4021.8 KiB locally. Retain 10.2 KiB of total headroom for these
   // existing and new routes; largest-chunk and shared-runtime caps stay fixed.
-  totalClientJsBytes: 4_128_768,
+  // Estate changes, entity search, and finding journeys measure 4033.8 KiB
+  // on Linux CI and macOS. Allow 22.2 KiB of bounded feature headroom;
+  // shared-runtime and largest-chunk limits stay fixed.
+  totalClientJsBytes: 4_153_344,
   largestChunkBytes: 950_000,
   sharedAppBytes: 450_000,
 };

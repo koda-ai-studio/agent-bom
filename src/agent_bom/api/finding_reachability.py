@@ -14,7 +14,7 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Iterable, Mapping
 
-from agent_bom.finding_reach_sources import stamp_reach_sources
+from agent_bom.evidence.finding_reach_sources import stamp_reach_sources
 from agent_bom.graph.types import RelationshipType
 
 if TYPE_CHECKING:
@@ -256,9 +256,9 @@ def project_attack_path_reachability(
 ) -> int:
     """Stamp evidence-bearing ``paths`` onto matching ``rows`` in place.
 
-    Only paths with an observed reachability edge count; topology-only paths
-    leave rows untouched. When ``scan_id`` is given, rows stamped with another
-    scan are skipped. Returns the number of rows marked reachable.
+    Structural paths establish graph reachability, not confirmed execution.
+    Trace-order paths leave rows untouched. When ``scan_id`` is given, rows from
+    another scan are skipped. Returns the number of rows marked reachable.
     """
     return _stamp_rows(rows, _build_index(paths), scan_id=scan_id)
 

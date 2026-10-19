@@ -59,7 +59,7 @@ from agent_bom.api.storage.sqlite_connection import open_wal_connection
 from agent_bom.api.storage_schema import ensure_sqlite_schema_version, postgres_deployment_configured
 from agent_bom.core.severity import severity_policy_rank
 from agent_bom.core.tenancy import require_explicit_tenant_id
-from agent_bom.finding_reach_sources import SERVER_STAMPED_REACH_FIELDS, without_fields
+from agent_bom.evidence.finding_reach_sources import SERVER_STAMPED_REACH_FIELDS, without_fields
 from agent_bom.storage.factory import validate_sqlite_path
 
 _logger = logging.getLogger(__name__)

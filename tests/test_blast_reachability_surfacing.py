@@ -199,7 +199,7 @@ def test_evidence_bearing_graph_path_marks_blast_row_reachable(reachable_setup) 
     assert br.graph_reachable_from_agents == ["agent:cursor"]
 
 
-def test_topology_only_graph_path_leaves_blast_row_unknown(reachable_setup) -> None:
+def test_topology_only_graph_path_is_reachable_but_not_execution_confirmed(reachable_setup) -> None:
     from agent_bom.graph.blast_reach import apply_graph_path_reachability_to_blast_radii
 
     blast_radii, _ = reachable_setup
@@ -207,10 +207,11 @@ def test_topology_only_graph_path_leaves_blast_row_unknown(reachable_setup) -> N
 
     stamped = apply_graph_path_reachability_to_blast_radii(blast_radii, [_path(br, edges=["uses", "depends_on", "vulnerable_to"])])
 
-    assert stamped == 0
-    assert br.graph_reachable is None
-    assert br.graph_min_hop_distance is None
-    assert br.graph_reachable_from_agents == []
+    assert stamped == 1
+    assert br.graph_reachable is True
+    assert br.graph_min_hop_distance == 2
+    assert br.graph_reachable_from_agents == ["agent:cursor"]
+    assert br.reachability == "likely"
 
 
 def test_evidence_path_through_another_package_does_not_mark_shared_cve(reachable_setup) -> None:

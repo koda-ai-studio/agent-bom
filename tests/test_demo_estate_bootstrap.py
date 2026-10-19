@@ -420,8 +420,16 @@ def test_demo_estate_hero_findings_carry_the_persisted_graph_path(demo_estate_cl
         or (row.get("evidence") or {}).get("package_name") == "pyyaml"
         for row in graph_hero
     )
-    assert all("cursor" in (row.get("affected_agents") or []) for row in graph_hero)
-    assert all("shell-runner-server" in (row.get("affected_servers") or []) for row in graph_hero)
+    agent_path_rows = [row for row in graph_hero if "agent:cursor" in (row.get("graph_reachable_from") or [])]
+    assert agent_path_rows, "the original agent path must remain visible"
+    assert all("cursor" in (row.get("affected_agents") or []) for row in agent_path_rows)
+    assert all("shell-runner-server" in (row.get("affected_servers") or []) for row in agent_path_rows)
+    # Workload paths now establish structural reach too. They must carry their
+    # own source evidence without borrowing the hero agent/server context.
+    workload_rows = [row for row in graph_hero if row not in agent_path_rows]
+    assert workload_rows
+    assert all(row.get("graph_reachable_from") for row in workload_rows)
+    assert all(not row.get("affected_agents") and not row.get("affected_servers") for row in workload_rows)
 
 
 def test_demo_estate_graph_evidence_covers_every_hand_built_path(demo_estate_client: TestClient) -> None:

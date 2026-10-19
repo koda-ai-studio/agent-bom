@@ -43,6 +43,7 @@ export function groupFindingControls(
     const [framework, ...rest] = tag.split(":");
     const control = rest.join(":").trim();
     if (framework && control) pairs.push([normalizeFramework(framework), control]);
+    else if (!tag.includes(":") && tag.trim()) pairs.push(["generic", tag.trim()]);
   }
   for (const control of controls ?? []) {
     const framework = typeof control.framework === "string" ? control.framework : "generic";
