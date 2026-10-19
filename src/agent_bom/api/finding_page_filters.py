@@ -8,6 +8,7 @@ from typing import Any
 
 from agent_bom.api import compliance_hub_store, finding_cursor, findings_current
 from agent_bom.api.finding_kev_total import exact_kev_total
+from agent_bom.api.finding_list_totals import fill_resume_total, resume_page_total
 from agent_bom.api.finding_merge import MergedScanBulkPage as MergedScanBulkPage
 from agent_bom.api.finding_merge import _merged_scan_bulk_page as _merged_scan_bulk_page
 from agent_bom.api.finding_merge import _resolve_bulk_findings_total as _resolve_bulk_findings_total
@@ -127,9 +128,9 @@ def _scoped_findings_page(
 
 def _merged_unscoped_page(query: _FindingListQuery, scan_findings: list[dict[str, Any]], bulk_list: Callable[..., Any]) -> _FindingListPage:
     if query.merged_cursor is not None:
-        # Resume pages stay approximate to avoid an O(table) count per page.
         rows, next_cursor = _merged_page(query, scan_findings, bulk_list)
-        return _FindingListPage(rows=rows, total=None, total_approximate=True, next_cursor=next_cursor)
+        total, approximate = resume_page_total(query, bulk_list, scan_count=len(scan_findings))
+        return _FindingListPage(rows=rows, total=total, total_approximate=approximate, next_cursor=next_cursor)
     probe = bulk_list(
         query.tenant_id,
         limit=1,
@@ -175,6 +176,7 @@ def _bulk_only_page(query: _FindingListQuery, bulk_list: Callable[..., Any]) -> 
         window_days=query.window_days,
         status=query.status_key,
     )
+    total, total_approximate = fill_resume_total(query, bulk_list, total, total_approximate)
     return _FindingListPage(rows=rows, total=total, total_approximate=total_approximate, next_cursor=next_cursor)
 
 
