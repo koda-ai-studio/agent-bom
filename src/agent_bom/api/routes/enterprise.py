@@ -40,6 +40,7 @@ import anyio.to_thread
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
 
+from agent_bom.api.finding_scope_filters import normalize_export_filters
 from agent_bom.api.models import FalsePositiveRequest as FalsePositiveRequest
 from agent_bom.api.models import FindingClass, FindingTriageVexIngestRequest
 from agent_bom.api.read_models._base import documented
@@ -451,6 +452,7 @@ def export_finding_triage_vex(
     domain: Annotated[str | None, Query(max_length=32)] = None,
     window_days: Annotated[int | None, Query(ge=0, le=3650)] = None,
     status: Annotated[str | None, Query(max_length=16)] = None,
+    lane: Annotated[str | None, Query(max_length=32)] = None,
     finding_class: FindingClass | None = None,
     kev: bool | None = None,
     framework: Annotated[str | None, Query(max_length=64)] = None,
@@ -460,7 +462,7 @@ def export_finding_triage_vex(
     reachability: Literal["reachable", "unreachable", "unassessed"] | None = None,
     triage: Literal["not_affected", "affected", "under_investigation", "untriaged"] | None = None,
 ) -> dict:
-    """Export signed OpenVEX for eligible tenant-scoped not_affected triage decisions."""
+    """Export signed OpenVEX for eligible tenant-scoped triage decisions."""
     from agent_bom.api.compliance_signing import describe_signer_disclosure, sign_compliance_bundle
     from agent_bom.api.routes.scan import current_findings_snapshot
     from agent_bom.vex import VexDocument, VexJustification, VexStatement, VexStatus, export_openvex
@@ -486,6 +488,7 @@ def export_finding_triage_vex(
         "domain": domain,
         "window_days": window_days,
         "status": status,
+        "lane": lane,
         "finding_class": getattr(finding_class, "value", finding_class),
         "kev": kev,
         "framework": framework,
@@ -495,11 +498,7 @@ def export_finding_triage_vex(
         "reachability": reachability,
         "triage": triage,
     }
-    finding_filters: dict[str, Any] = {}
-    for key, value in finding_filter_values.items():
-        if value is None or (isinstance(value, str) and not value.strip()):
-            continue
-        finding_filters[key] = value.strip() if isinstance(value, str) else value
+    finding_filters = normalize_export_filters(finding_filter_values)
     active_filters = dict(triage_filters)
     if view_scope == "current":
         active_filters["scope"] = view_scope

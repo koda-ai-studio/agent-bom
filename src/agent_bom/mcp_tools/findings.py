@@ -24,6 +24,8 @@ _SUMMARY_FIELDS = (
     "id",
     "title",
     "severity",
+    "severity_source",
+    "lane",
     "cve_id",
     "package",
     "risk_score",
@@ -63,6 +65,7 @@ def _encode(payload: dict[str, Any], truncate: Callable[[str], str] | None) -> s
 async def findings_query_impl(
     *,
     tenant_id: str = "default",
+    lane: str | None = None,
     q: str | None = None,
     severity: str | None = None,
     scan_id: str | None = None,
@@ -90,6 +93,7 @@ async def findings_query_impl(
             )
     tenant_id = resolve_mcp_tool_tenant_id(tenant_id)
     optional = {
+        "lane": lane,
         "q": q,
         "severity": severity,
         "scan_id": scan_id,

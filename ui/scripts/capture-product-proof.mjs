@@ -3853,7 +3853,7 @@ async function main() {
       });
       await scrollTo(findingsPage, 0);
     }, {
-      expectedText: ["Findings", "15 findings", /Detection/i, /Observed/i, /Remediation/i, "CVE-2025-29927", "CVE-2024-23334"],
+      expectedText: ["Findings", "15 findings", /Reach \/ exploit/i, /Remediation/i, "CVE-2025-29927", "CVE-2024-23334"],
       expectedApiPaths: ["/v1/findings", "/v1/findings/triage"],
       rejectedText: ["17 findings", /Reachable (critical|high|medium|low) package/i],
     });

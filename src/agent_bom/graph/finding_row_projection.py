@@ -40,6 +40,7 @@ _ASSET_FALLBACK = {
 }
 # Finding source -> edge collector; the collector's tier comes from SOURCE_TIERS.
 _COLLECTORS = {
+    "IAC_SCAN": "iac",
     "MCP_SCAN": "mcp-scan",
     "CONTAINER": "container-scan",
     "SBOM": "sbom-ingest",

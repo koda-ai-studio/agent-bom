@@ -48,6 +48,7 @@ export const findingsApi = {
     sla?: "overdue" | "due" | "unassigned";
     reachability?: "reachable" | "unreachable" | "unassessed";
     triage?: "not_affected" | "affected" | "under_investigation" | "untriaged";
+    lane?: string;
     findingClass?: "vulnerability" | "misconfiguration" | "secret" | "pii" | "identity" | "unclassified";
     status?: "open" | "resolved" | "all";
     // Known-exploited only, or explicitly everything else. Omit for no filter —
@@ -78,6 +79,7 @@ export const findingsApi = {
     if (filters?.sla) params.set("sla", filters.sla);
     if (filters?.reachability) params.set("reachability", filters.reachability);
     if (filters?.triage) params.set("triage", filters.triage);
+    if (filters?.lane) params.set("lane", filters.lane);
     if (filters?.findingClass) params.set("finding_class", filters.findingClass);
     if (filters?.kev != null) params.set("kev", String(filters.kev));
     if (filters?.status) params.set("status", filters.status);
@@ -221,6 +223,7 @@ export const findingsApi = {
     domain?: string;
     windowDays?: number;
     status?: string;
+    lane?: string;
     findingClass?: string;
     kev?: boolean;
     framework?: string;
@@ -245,6 +248,7 @@ export const findingsApi = {
     if (filters?.domain) params.set("domain", filters.domain);
     if (filters?.windowDays != null) params.set("window_days", String(filters.windowDays));
     if (filters?.status) params.set("status", filters.status);
+    if (filters?.lane) params.set("lane", filters.lane);
     if (filters?.findingClass) params.set("finding_class", filters.findingClass);
     if (filters?.kev != null) params.set("kev", String(filters.kev));
     if (filters?.framework) params.set("framework", filters.framework);

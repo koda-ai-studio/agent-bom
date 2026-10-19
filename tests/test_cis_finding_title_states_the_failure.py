@@ -19,16 +19,11 @@ stated the opposite.
 
 The outcome now travels in the title:
 
-    CIS 1.16 not met: No full-admin IAM policies attached
-    CIS 1.16 not evaluated: No full-admin IAM policies attached   (status ERROR)
+    Failed CIS 1.16 — No full-admin IAM policies attached
+    Unevaluated CIS 1.16 — No full-admin IAM policies attached   (status ERROR)
 
-Phrasing it as "not met" rather than negating the control name is deliberate:
-CIS control names are assertions, so "<control> not met" is grammatical for all
-of them, where mechanical negation ("No root account access keys" -> ?) is not.
-
-The control name itself stays intact after the colon and in
-``evidence["control_title"]``, so anything mapping a finding back to its
-benchmark control keeps working.
+The outcome prefix leaves the control name intact in the title and in
+``evidence["control_title"]`` for benchmark mapping.
 """
 
 from __future__ import annotations
@@ -61,7 +56,7 @@ def build(**overrides: object):
 def test_a_failing_control_is_not_titled_as_if_it_passed() -> None:
     finding = build()
     assert finding.title != "CIS 1.16: No full-admin IAM policies attached"
-    assert "not met" in finding.title, finding.title
+    assert "Failed" in finding.title, finding.title
 
 
 def test_the_title_still_names_the_control_and_its_id() -> None:
@@ -76,8 +71,8 @@ def test_an_unevaluated_control_says_so_rather_than_claiming_failure() -> None:
     """ERROR is not FAIL. Claiming a control failed when it could not be read
     is the same class of dishonesty in the other direction."""
     finding = build(status="ERROR", severity="")
-    assert "not evaluated" in finding.title, finding.title
-    assert "not met" not in finding.title
+    assert "Unevaluated" in finding.title, finding.title
+    assert "Failed" not in finding.title
 
 
 @pytest.mark.parametrize(
@@ -93,8 +88,8 @@ def test_the_phrasing_reads_correctly_for_real_control_names(control: str) -> No
     """Every one of these is an assertion of the good state, taken from the
     live AWS benchmark. "<control> not met" has to work for all of them."""
     finding = build(title=control)
-    assert finding.title.endswith(f": {control}")
-    assert "not met" in finding.title
+    assert finding.title.endswith(f"— {control}")
+    assert "Failed" in finding.title
 
 
 def test_a_vendor_best_practice_keeps_its_own_label() -> None:
@@ -103,7 +98,7 @@ def test_a_vendor_best_practice_keeps_its_own_label() -> None:
         provider="databricks",
     )
     assert "Databricks best practice" in finding.title
-    assert "not met" in finding.title
+    assert "Failed" in finding.title
 
 
 def test_the_outcome_is_in_the_title_not_only_the_evidence() -> None:
@@ -113,4 +108,4 @@ def test_the_outcome_is_in_the_title_not_only_the_evidence() -> None:
     finding = build()
     assert "action" in finding.description.lower()
     assert "failed" not in finding.description.lower()
-    assert "not met" in finding.title
+    assert "Failed" in finding.title

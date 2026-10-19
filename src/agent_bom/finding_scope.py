@@ -25,6 +25,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Literal, Optional
 
 from agent_bom.evidence.asset_display import iac_source_label
+from agent_bom.evidence.finding_lanes import finding_lane, lane_response_fields
 from agent_bom.evidence.finding_response_fields import restore_atlas_receipts, restored_public_fields
 from agent_bom.evidence.finding_status import public_finding_status
 
@@ -790,7 +791,7 @@ def safe_finding_response_payload(row: Mapping[str, Any]) -> dict[str, Any]:
     if owner is not None:
         payload["owner"] = mask_email(owner)
 
-    return canonical_finding_payload(payload)
+    return {**canonical_finding_payload(payload), **lane_response_fields(row)}
 
 
 def canonical_finding_payload(row: Mapping[str, Any]) -> dict[str, Any]:
@@ -801,6 +802,7 @@ def canonical_finding_payload(row: Mapping[str, Any]) -> dict[str, Any]:
     persisted fields (``last_seen`` and ``scan_count``).
     """
     payload = dict(row)
+    payload["lane"] = finding_lane(row)
     payload["finding_class"] = finding_class_for_row(payload)
     for key in _CANONICAL_NULLABLE_FINDING_FIELDS:
         payload.setdefault(key, None)
@@ -915,26 +917,7 @@ def _row_matches_framework(row: Mapping[str, Any], filters: Mapping[str, str]) -
     return False
 
 
-def row_matches_scope(row: dict, filters: Mapping[str, str]) -> bool:
-    """Return True when a finding row matches every active scope filter.
-
-    Single source of truth for the ``/v1/findings`` scope predicate, shared by
-    the route (in-memory scan findings) and the hub store (bulk-ingested current
-    rows) so the two paths can never diverge on the overlapping-lens semantics.
-
-    ``provider`` / ``account_ref`` / ``environment`` are exact, lowercased
-    equality checks. ``domain`` matches membership in the finding's overlapping
-    coverage-lens set (:func:`lenses_for_row`), so ``domain=aspm`` returns
-    SAST + secrets + repo dependencies + IaC and ``domain=vuln`` returns every
-    CVE. ``framework`` / ``control`` power the compliance drill-through
-    (:func:`_row_matches_framework`). The caller is responsible for
-    pre-canonicalizing the filter values (lowercased/trimmed, ``appsec_sca`` ->
-    ``aspm`` legacy alias applied, framework resolved to its tag field).
-    """
-    for key in ("provider", "account_ref", "environment"):
-        wanted = filters.get(key)
-        if wanted is not None and str(row.get(key) or "").strip().lower() != wanted:
-            return False
+def _row_matches_assignment(row: dict, filters: Mapping[str, str]) -> bool:
     wanted_owner = filters.get("owner")
     if wanted_owner is not None and str(row.get("owner") or "").strip().lower() != wanted_owner:
         return False
@@ -956,11 +939,38 @@ def row_matches_scope(row: dict, filters: Mapping[str, str]) -> bool:
             overdue = due_at <= datetime.now(timezone.utc)
             if (wanted_sla == "overdue") is not overdue:
                 return False
+    return True
+
+
+def row_matches_scope(row: dict, filters: Mapping[str, str]) -> bool:
+    """Return True when a finding row matches every active scope filter.
+
+    Single source of truth for the ``/v1/findings`` scope predicate, shared by
+    the route (in-memory scan findings) and the hub store (bulk-ingested current
+    rows) so the two paths can never diverge on the overlapping-lens semantics.
+
+    ``provider`` / ``account_ref`` / ``environment`` are exact, lowercased
+    equality checks. ``domain`` matches membership in the finding's overlapping
+    coverage-lens set (:func:`lenses_for_row`), so ``domain=aspm`` returns
+    SAST + secrets + repo dependencies + IaC and ``domain=vuln`` returns every
+    CVE. ``framework`` / ``control`` power the compliance drill-through
+    (:func:`_row_matches_framework`). The caller is responsible for
+    pre-canonicalizing the filter values (lowercased/trimmed, ``appsec_sca`` ->
+    ``aspm`` legacy alias applied, framework resolved to its tag field).
+    """
+    for key in ("provider", "account_ref", "environment"):
+        wanted = filters.get(key)
+        if wanted is not None and str(row.get(key) or "").strip().lower() != wanted:
+            return False
+    if not _row_matches_assignment(row, filters):
+        return False
     wanted_domain = filters.get("domain")
     if wanted_domain is not None:
         lenses = lenses_for_row(row) or ({domain_for_row(row) or ""} if domain_for_row(row) else set())
         if wanted_domain not in lenses:
             return False
+    if filters.get("lane") is not None and finding_lane(row) != filters["lane"]:
+        return False
     wanted_class = filters.get("finding_class")
     if wanted_class is not None and finding_class_for_row(row) != wanted_class:
         return False

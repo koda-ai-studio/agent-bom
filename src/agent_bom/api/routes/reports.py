@@ -99,6 +99,7 @@ async def create_report_job(request: Request, body: ReportJobRequest) -> dict:
         owner=body.owner,
         sla=body.sla,
         finding_class=body.finding_class,
+        lane=body.lane,
         finding_status=body.status,
         window_days=normalize_window_days(body.window_days),
         created_at=_now(),

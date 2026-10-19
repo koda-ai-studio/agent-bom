@@ -237,7 +237,7 @@
       "schema": "ReportJob.json"
     },
     {
-      "doc": "Request body for ``POST /v1/reports``.",
+      "doc": "Public findings report request schema.",
       "name": "ReportJobRequest",
       "schema": "ReportJobRequest.json"
     },

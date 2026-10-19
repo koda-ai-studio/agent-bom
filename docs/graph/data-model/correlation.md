@@ -10,7 +10,7 @@ flowchart LR
   subgraph sources["Sources"]
     cloud["Cloud and platform providers<br/>16 built in"]
     traces["Trace connectors<br/>langfuse, langsmith"]
-    findings["Finding sources<br/>16 FindingSource values"]
+    findings["Finding sources<br/>17 FindingSource values"]
     collectors["Edge collectors<br/>62 in SOURCE_TIERS"]
   end
   subgraph normalize["Normalization"]
@@ -42,7 +42,7 @@ flowchart LR
 
 - Cloud and platform providers (`cloud/__init__.py` `_PROVIDERS`): `aws`, `azure`, `coreweave`, `crusoe`, `databricks`, `gcp`, `huggingface`, `lambda`, `mlflow`, `nebius`, `ollama`, `openai`, `runpod`, `snowflake`, `vastai`, `wandb`
 - Trace connectors (`trace_connectors.py`): `langfuse`, `langsmith`
-- Finding sources (`agent_bom.finding.FindingSource`): `MCP_SCAN`, `CONTAINER`, `SBOM`, `CLOUD_CIS`, `CLOUD_SECURITY`, `PROXY`, `SAST`, `SKILL`, `BROWSER_EXT`, `EXTERNAL`, `FILESYSTEM`, `PROMPT_SCAN`, `SECRET_SCAN`, `GRAPH_ANALYSIS`, `DSPM`, `MODEL_SCAN`
+- Finding sources (`agent_bom.finding.FindingSource`): `IAC_SCAN`, `MCP_SCAN`, `CONTAINER`, `SBOM`, `CLOUD_CIS`, `CLOUD_SECURITY`, `PROXY`, `SAST`, `SKILL`, `BROWSER_EXT`, `EXTERNAL`, `FILESYSTEM`, `PROMPT_SCAN`, `SECRET_SCAN`, `GRAPH_ANALYSIS`, `DSPM`, `MODEL_SCAN`
 - Edge collectors (`graph/edge_evidence.py` `SOURCE_TIERS`): `access-advisor`, `agent_discovery`, `ai-inventory`, `aspm-overlay`, `asset-canonicalization`, `ast_analysis`, `authorization-evidence`, `aws-organizations`, `browser-extension-scan`, `ci_graph_overlay`, `cloud-audit-trail`, `cloud-cis`, `cloud-inventory`, `cloud-rbac`, `cloud-security`, `cloud_origin`, `cloud_principal`, `cloud_principal_trust`, `cnapp-overlay`, `code_graph_overlay`, `container-scan`, `cortex-agent-usage`, `dspm`, `external-import`, `filesystem-scan`, `framework-agent`, `gcp-organizations`, `github-actions`, `governance-overlay`, `hardware-attestation-ingest`, `iac`, `kubernetes`, `mcp-audit`, `mcp-scan`, `model-scan`, `nhi-discovery`, `operator_reported_timestamps`, `prompt-scan`, `repo-structure-overlay`, `repo-trust-overlay`, `runtime-feedback`, `runtime-identity`, `runtime-proxy`, `runtime-trace`, `sast`, `sbom-ingest`, `secret-scan`, `skill-audit`, `snowflake-cortex-agents`, `snowflake-cortex-observability`, `snowflake-exfil`, `snowflake-external-data`, `snowflake-governance`, `snowflake-integrations`, `snowflake-objects`, `snowflake-organizations`, `snowflake-pipeline`, `snowflake-services`, `source-ast`, `tpm-quote`, `vendor-inventory-export`, `warehouse-export`
 
 ## Normalization
