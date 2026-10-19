@@ -13,6 +13,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from agent_bom import config
+from agent_bom.api.finding_read_context import read_once
 
 #: Upper bound for a requested ``window_days``: ten years. Larger values
 #: overflow ``timedelta`` / ``datetime`` arithmetic, so routes reject them (422).
@@ -40,7 +41,8 @@ def window_cutoff(window_days: int, *, now: datetime | None = None) -> datetime 
     """Return the cutoff datetime for *window_days*, or ``None`` when unbounded."""
     if window_days <= 0:
         return None
-    now_dt = now or datetime.now(timezone.utc)
+    # One aggregate read pins "now" so every page shares one cutoff (and cache key).
+    now_dt = now or read_once(("time_window", "now"), lambda: datetime.now(timezone.utc))
     if now_dt.tzinfo is None:
         now_dt = now_dt.replace(tzinfo=timezone.utc)
     return now_dt - timedelta(days=window_days)

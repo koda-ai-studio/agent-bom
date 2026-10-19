@@ -60,6 +60,40 @@ def test_reachability_filter_walks_source_pages_before_returning(monkeypatch) ->
     assert result["filters"]["reachability"] == "reachable"
 
 
+def test_reachability_filter_total_is_exact_beyond_the_first_page(monkeypatch) -> None:
+    pages = {
+        None: ([{"finding_id": f"a{i}", "cve_id": "CVE-1", "graph_reachable": None} for i in range(3)], "page-2"),
+        "page-2": ([{"finding_id": f"b{i}", "cve_id": "CVE-1", "graph_reachable": None} for i in range(4)], "page-3"),
+        "page-3": ([{"finding_id": "c0", "cve_id": "CVE-1", "graph_reachable": True}], ""),
+    }
+
+    def _raw_page(_request_obj, **kwargs):
+        rows, next_cursor = pages[kwargs["cursor"]]
+        if kwargs["limit"] < len(rows):
+            raise AssertionError("the fixture pages are fixed-size")
+        return _page(rows, next_cursor=next_cursor)
+
+    monkeypatch.setattr(scan_routes, "_list_findings_impl", _raw_page)
+
+    result = scan_routes._list_findings_view_impl(
+        _request(),
+        q=None,
+        severity=None,
+        scan_id=None,
+        sort="effective_reach",
+        limit=3,
+        offset=0,
+        cursor=None,
+        approximate_total=False,
+        reachability="unassessed",
+    )
+
+    assert [row["finding_id"] for row in result["findings"]] == ["a0", "a1", "a2"]
+    assert result["total"] == 7
+    assert result.get("total_approximate", False) is False
+    assert result["next_cursor"] == "page-2"
+
+
 def test_triage_filter_preserves_occurrence_identity_and_projects_decision(monkeypatch) -> None:
     monkeypatch.setattr(
         scan_routes,

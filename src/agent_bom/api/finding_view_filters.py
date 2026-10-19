@@ -74,6 +74,7 @@ class _ViewWalk(NamedTuple):
     next_cursor: str | None
     exhausted: bool
     truncated: bool
+    total_matches: int | None = None
 
 
 def _walk_view_filtered_findings(
@@ -105,9 +106,23 @@ def _walk_view_filtered_findings(
             exhausted = True
             break
     truncated = not exhausted and rows_seen >= _FINDINGS_VIEW_FILTER_MAX_ROWS
+    total_matches = len(matches) if exhausted else None
+    if not exhausted and not truncated and cursor is None:
+        # Count (without retaining) the rest of the stream so the first page
+        # reports an exact total; the walk budget still bounds the work.
+        counted, count_cursor = len(matches), source_cursor
+        while count_cursor and rows_seen < _FINDINGS_VIEW_FILTER_MAX_ROWS:
+            page = fetch_page(min(1000, _FINDINGS_VIEW_FILTER_MAX_ROWS - rows_seen), count_cursor)
+            raw_rows = page.get("findings")
+            page_rows = [row for row in raw_rows if isinstance(row, dict)] if isinstance(raw_rows, list) else []
+            rows_seen += len(page_rows)
+            counted += sum(1 for row in map(row_filter, page_rows) if row is not None)
+            count_cursor = str(page.get("next_cursor") or "") or None
+        total_matches = counted if count_cursor is None else None
+        truncated = count_cursor is not None
     if truncated:
         warnings.append(f"Finding view filters inspected {_FINDINGS_VIEW_FILTER_MAX_ROWS} rows; additional occurrences remain.")
-    return _ViewWalk(matches, first_page, warnings, source_cursor, exhausted, truncated)
+    return _ViewWalk(matches, first_page, warnings, source_cursor, exhausted, truncated, total_matches)
 
 
 def _copy_first_page_metadata(envelope: dict[str, Any], first_page: dict[str, Any] | None, keys: tuple[str, ...]) -> None:
@@ -137,7 +152,7 @@ def _view_filters(
 def _view_envelope(
     walk: _ViewWalk, *, limit: int, offset: int, cursor: str | None, sort: str, scan_id: str | None, filters: dict[str, Any]
 ) -> dict[str, Any]:
-    total = len(walk.matches) if walk.exhausted and cursor is None else None
+    total = walk.total_matches if cursor is None else None
     envelope = finding_list_envelope(
         findings=walk.matches[:limit] if cursor else walk.matches[offset : offset + limit],
         total=total,

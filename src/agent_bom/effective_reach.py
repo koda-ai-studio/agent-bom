@@ -47,7 +47,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Literal
 
-from agent_bom.context_graph import ContextGraph, EdgeKind, GraphNode, NodeKind
+from agent_bom.context_graph import ContextGraph, EdgeKind, GraphNode, NodeKind, _finding_package_identity, build_context_graph
 
 # ── Capability weighting (deterministic) ──────────────────────────────────
 #
@@ -428,8 +428,6 @@ def _server_context(graph: ContextGraph, server_ids: list[str]) -> dict:
 
 def _occurrence_servers(graph: ContextGraph, blast_row: dict) -> list[str]:
     """Servers the graph links to this one occurrence (vuln + package + owners)."""
-    from agent_bom.context_graph import _finding_package_identity
-
     _ecosystem, name, version = _finding_package_identity(blast_row)
     package_ref = f"{name}@{version}" if version else name
     agents = set(blast_row.get("affected_agents") or [])
@@ -478,6 +476,11 @@ def occurrence_contexts(graph: ContextGraph, blast_data: list[dict]) -> dict[str
         if context["reachable_agents"]:
             out[key] = {**context, **{name: list(context[name]) for name in _CONTEXT_LISTS}}
     return out
+
+
+def occurrence_contexts_for_report(agents: list[dict], blast_data: list[dict]) -> dict[str, dict[str, object]]:
+    """Build the report's context graph once and resolve per-occurrence context."""
+    return occurrence_contexts(build_context_graph(agents, blast_data), blast_data)
 
 
 def occurrence_context_for_row(reach: dict[str, dict], row: dict) -> dict[str, object] | None:

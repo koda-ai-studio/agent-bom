@@ -56,6 +56,7 @@ from agent_bom.api.finding_grouping import _group_occurrence_rows as _group_occu
 from agent_bom.api.finding_grouping import _grouped_severity_counts as _grouped_severity_counts
 from agent_bom.api.finding_grouping import _groups_envelope as _groups_envelope
 from agent_bom.api.finding_grouping import attach_lane_counts, lane_severity_counts, select_group_lane
+from agent_bom.api.finding_kev_total import exact_kev_total
 from agent_bom.api.finding_list_envelope import HUB_LIST_OFFSET_CEILING as _HUB_LIST_OFFSET_CEILING
 from agent_bom.api.finding_list_envelope import finding_list_envelope
 from agent_bom.api.finding_list_helpers import (  # noqa: F401 - re-exported route-module API
@@ -1667,7 +1668,7 @@ def _project_findings_reachability(
         )
         if projection.truncated:
             warnings.append(
-                "Graph reachability projection is bounded to the highest-risk 1000 persisted paths; unmatched findings remain unassessed."
+                "Graph reachability projection is bounded to the highest-risk 200000 persisted paths; unmatched findings remain unassessed."
             )
         return projection.rows, warnings
     except Exception as exc:  # noqa: BLE001 — optional evidence must not fail the findings list
@@ -1910,17 +1911,14 @@ def _scoped_findings_page(
     use_merged: bool,
     scope_metadata: dict[str, Any],
 ) -> _FindingListPage:
-    """Scope filters run inside the store, batched and keyset-paged.
-
-    Scope keys live in the payload or are computed, so they cannot be one SQL
-    predicate; the walk stays on the keyset path and ``total`` is approximate.
-    """
+    """Scope filters run inside the store, batched and keyset-paged; ``total`` is approximate except for KEV-only reads."""
     scope_kwargs = {"scope": dict(query.scope_filters), "scope_metadata": scope_metadata}
     if use_merged:
         rows, next_cursor = _merged_page(query, scan_findings, bulk_list, **scope_kwargs)
     else:
         rows, _total, next_cursor = _bulk_page(query, bulk_list, include_total=False, **scope_kwargs)
-    return _FindingListPage(rows=rows, total=None, total_approximate=True, next_cursor=next_cursor)
+    total = exact_kev_total(query, len(scan_findings), bulk_list, compliance_hub_store.get_compliance_hub_store())
+    return _FindingListPage(rows=rows, total=total, total_approximate=total is None, next_cursor=next_cursor)
 
 
 def _merged_unscoped_page(query: _FindingListQuery, scan_findings: list[dict[str, Any]], bulk_list: Callable[..., Any]) -> _FindingListPage:

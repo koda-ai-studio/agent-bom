@@ -366,6 +366,13 @@ def _reset_api_runtime_state() -> None:
     except Exception:
         pass
 
+    try:
+        from agent_bom.api.finding_reachability import clear_reachability_index_cache
+
+        clear_reachability_index_cache()
+    except Exception:
+        pass
+
     # Read-path count caches are process-global and TTL'd, so a count captured
     # against one test's store would otherwise be served to the next test on the
     # same worker — which swaps the store but not the cache.

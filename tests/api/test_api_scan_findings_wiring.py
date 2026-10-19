@@ -243,6 +243,9 @@ def test_findings_reachability_projection_is_tenant_scoped_and_bounded():
             )
             return "scan-alpha", "2026-07-27T00:00:00Z", [path], MAX_FINDING_REACHABILITY_PATHS + 1
 
+    from agent_bom.api.finding_reachability import clear_reachability_index_cache
+
+    clear_reachability_index_cache()
     store = RecordingGraphStore()
     result = project_persisted_graph_reachability(
         [
@@ -252,17 +255,13 @@ def test_findings_reachability_projection_is_tenant_scoped_and_bounded():
         graph_store=store,  # type: ignore[arg-type]
         tenant_id="tenant-alpha",
         scan_id="scan-alpha",
-        path_limit=50_000,
+        path_limit=2,
     )
 
-    assert store.calls == [
-        {
-            "tenant_id": "tenant-alpha",
-            "scan_id": "scan-alpha",
-            "offset": 0,
-            "limit": MAX_FINDING_REACHABILITY_PATHS,
-        }
-    ]
+    # Every read is tenant- and snapshot-scoped and paged; a ceiling below the
+    # snapshot's path count is reported as truncated.
+    assert all(call["tenant_id"] == "tenant-alpha" and call["scan_id"] == "scan-alpha" for call in store.calls)
+    assert all(int(call["limit"]) <= MAX_FINDING_REACHABILITY_PATHS for call in store.calls)
     assert result.truncated is True
     assert result.rows[0]["graph_reachable"] is True
     assert result.rows[0]["graph_min_hop_distance"] == 2

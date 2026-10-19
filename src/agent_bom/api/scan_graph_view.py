@@ -26,11 +26,9 @@ def _effective_reach_lookup(job: ScanJob) -> dict[str, dict[str, Any]]:
     result = job.result or {}
     blast = result.get("blast_radius", []) or result.get("blast_radii", []) or []
     try:
-        from agent_bom.context_graph import build_context_graph
-        from agent_bom.effective_reach import occurrence_contexts
+        from agent_bom.effective_reach import occurrence_contexts_for_report
 
-        graph = build_context_graph(result.get("agents", []) or [], blast)
-        return occurrence_contexts(graph, blast)
+        return occurrence_contexts_for_report(result.get("agents", []) or [], blast)
     except Exception:  # pragma: no cover - never break the findings list
         return {}
 
