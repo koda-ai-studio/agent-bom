@@ -10,7 +10,7 @@ import { FLOW_NODE_TYPES, lineageNodeTypeForEntity } from "@/lib/graph-entity-ma
 const MIN_COLUMNS = 3;
 // Scope cards keep summary facts visible. Reserve a separate lane for link labels.
 const NODE_CARD_MAX_WIDTH = 280;
-const NODE_COLUMN_GAP = 200;
+const NODE_COLUMN_GAP = 160;
 const NODE_WIDTH = NODE_CARD_MAX_WIDTH + NODE_COLUMN_GAP;
 const NODE_HEIGHT = 280;
 // A graph canvas is landscape — roughly 2.2:1 at a laptop viewport. A grid
@@ -100,9 +100,40 @@ function rollupEdgeWidth(count: number): number {
   return 1;
 }
 
+/** A rolled-up link; `reverse` is the opposite direction drawn on the same line. */
+export type DisplayRollupEdge = GraphRollupEdge & { reverse?: GraphRollupEdge };
+
+/** Opposite links between two scopes share a line, so drawing both stacked their labels. */
+export function mergeReciprocalRollupEdges(edges: readonly GraphRollupEdge[]): DisplayRollupEdge[] {
+  const byPair = new Map(edges.map(edge => [`${edge.source}\u0000${edge.target}`, edge]));
+  const merged: DisplayRollupEdge[] = [];
+  const consumed = new Set<GraphRollupEdge>();
+  for (const edge of edges) {
+    if (consumed.has(edge)) continue;
+    const reverse = edge.source === edge.target ? undefined : byPair.get(`${edge.target}\u0000${edge.source}`);
+    if (!reverse) { merged.push(edge); continue; }
+    consumed.add(reverse);
+    const counts = edge.relationship_counts && reverse.relationship_counts
+      ? Object.entries(reverse.relationship_counts).reduce<Record<string, number>>((total, [kind, count]) => ({ ...total, [kind]: (total[kind] ?? 0) + count }), { ...edge.relationship_counts })
+      : null;
+    merged.push({
+      ...edge,
+      count: edge.count + reverse.count,
+      relationships: [...new Set([...edge.relationships, ...reverse.relationships])],
+      relationship_counts: counts,
+      reverse,
+    });
+  }
+  return merged;
+}
+
+function oneWay(edge: GraphRollupEdge): boolean {
+  return edge.directions?.length === 1 && ["directed", "bidirectional"].includes(edge.directions[0]!);
+}
+
 export function buildRollupFlowGraph(
   containers: GraphRollupContainer[],
-  options?: { columns?: number; edges?: GraphRollupEdge[] | undefined },
+  options?: { columns?: number; edges?: DisplayRollupEdge[] | undefined },
 ): { nodes: Node<LineageNodeData>[]; edges: Edge[] } {
   const compact = containers.length > 24;
   const width = compact ? 332 : NODE_WIDTH;
@@ -141,9 +172,9 @@ export function buildRollupFlowGraph(
       label: `${edge.count.toLocaleString()} relationship${edge.count === 1 ? "" : "s"}`,
       data: { aggregate: edge, hoverDescription: `${edge.count} recorded relationship${edge.count === 1 ? "" : "s"} between entities · ${edge.directions?.join(", ") || "Direction not recorded"}. Select to inspect the aggregate.` },
       ariaLabel: `${edge.count} recorded relationship${edge.count === 1 ? "" : "s"} between entities; ${edge.directions?.length === 1 ? edge.directions[0] : edge.directions?.length ? "mixed directions" : "direction unavailable"}`,
-      ...(edge.directions?.length === 1 && ["directed", "bidirectional"].includes(edge.directions[0]!)
+      ...(oneWay(edge) && (!edge.reverse || oneWay(edge.reverse))
         ? { markerEnd: { type: MarkerType.ArrowClosed, color: "var(--text-secondary)" } } : {}),
-      ...(edge.directions?.length === 1 && edge.directions[0] === "bidirectional"
+      ...((edge.reverse ? oneWay(edge) && oneWay(edge.reverse) : edge.directions?.length === 1 && edge.directions[0] === "bidirectional")
         ? { markerStart: { type: MarkerType.ArrowClosed, color: "var(--text-secondary)" } } : {}),
       animated: false,
       style: { strokeWidth: rollupEdgeWidth(edge.count) },

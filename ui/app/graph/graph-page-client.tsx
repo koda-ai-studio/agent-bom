@@ -161,7 +161,7 @@ import type {
   GraphRollupContainer,
   GraphRollupResponse,
 } from "@/lib/api-types";
-import { buildRollupFlowGraph } from "@/lib/graph-rollup-view";
+import { buildRollupFlowGraph, mergeReciprocalRollupEdges } from "@/lib/graph-rollup-view";
 import { boundedGraphElements } from "@/lib/graph-neighbor-expansion";
 import { buildUnifiedFlowGraph } from "@/lib/unified-graph-flow";
 import {
@@ -1402,6 +1402,9 @@ function GraphPageInner() {
           return;
         }
         setRollupView(result);
+        // A deep-linked scope only knows its id until the server names it.
+        const named = result.node;
+        if (named?.label) setRollupStack(current => current.map(crumb => crumb.id === named.id && crumb.label === crumb.id ? { ...crumb, label: named.label } : crumb));
         setRollupUnavailable(false);
         setRollupError(null);
       })
@@ -1429,13 +1432,15 @@ function GraphPageInner() {
     rollupChildPageKey,
   ]);
 
+  const rollupDisplayEdges = useMemo(() => mergeReciprocalRollupEdges(rollupView?.edges ?? []), [rollupView?.edges]);
+
   const flow = useMemo(() => {
     if (rollupNavigationActive && rollupView) {
       const items =
         rollupView.mode === "drilldown"
           ? (rollupView.children ?? [])
           : (rollupView.top_level ?? []);
-      const rollupFlow = buildRollupFlowGraph(items, { edges: rollupView.edges });
+      const rollupFlow = buildRollupFlowGraph(items, { edges: rollupDisplayEdges });
       return {
         nodes: rollupFlow.nodes,
         edges: rollupFlow.edges,
@@ -1507,6 +1512,7 @@ function GraphPageInner() {
     rollupCanvasPending,
     rollupCanvasFailed,
     rollupView,
+    rollupDisplayEdges,
   ]);
   const snapshotAttackPathCount = resolveSnapshotAttackPathCount({
     pageTotal: attackPathQueue?.pagination.total,
@@ -4009,7 +4015,7 @@ function GraphPageInner() {
           </div>
           </div>
           {!selectedNode && selectedRelationship?.scanId === selectedScanId && (() => {
-            const aggregate = rollupNavigationActive ? rollupView?.edges?.find(item => `rollup:${item.source}->${item.target}` === selectedRelationship.id) : undefined;
+            const aggregate = rollupNavigationActive ? rollupDisplayEdges.find(item => `rollup:${item.source}->${item.target}` === selectedRelationship.id) : undefined;
             if (aggregate && displayEdges.some(item => item.id === selectedRelationship.id)) return <GraphRollupRelationshipDetail
               edge={aggregate} scanId={selectedScanId}
               sourceLabel={rollupItems.find(item => item.id === aggregate.source)?.label || aggregate.source}

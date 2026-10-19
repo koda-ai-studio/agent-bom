@@ -5,11 +5,11 @@ import { X } from "lucide-react";
 import { GraphRelationshipExplanation } from "@/components/graph-relationship-explanation";
 import { GraphRelationshipEvidence } from "@/components/graph-relationship-evidence";
 import { Drawer } from "@/components/drawer";
-import type { GraphRollupEdge } from "@/lib/api-types";
 import type { UnifiedEdge } from "@/lib/graph-schema";
 import { relationshipEdgeLabelText } from "@/lib/graph-utils";
 import { graphEdgeEvidenceMode } from "@/lib/unified-graph-flow";
 import { plainRelationshipSummary } from "@/lib/graph-relationship-plain";
+import type { DisplayRollupEdge } from "@/lib/graph-rollup-view";
 
 export function GraphRelationshipDetail({ edge, scanId, sourceLabel, targetLabel, onClose, mobile = false }: {
   edge: UnifiedEdge;
@@ -72,17 +72,20 @@ export function GraphRelationshipDetail({ edge, scanId, sourceLabel, targetLabel
 
 /** An aggregate is a summary of receipts, never a synthetic direct edge. */
 export function GraphRollupRelationshipDetail({ edge, scanId, sourceLabel, targetLabel, onClose, onInspectNode }: {
-  edge: GraphRollupEdge; scanId: string; sourceLabel: string; targetLabel: string;
+  edge: DisplayRollupEdge; scanId: string; sourceLabel: string; targetLabel: string;
   onClose: () => void; onInspectNode: (id: string) => void;
 }) {
   const directions = edge.directions ?? [];
   return <Drawer open onClose={onClose} title={`${edge.count} recorded relationship${edge.count === 1 ? "" : "s"}`} eyebrow="Between scopes" ariaLabel="Scope relationship details" closeLabel="Close relationship details" backdropLabel="Dismiss relationship details" size="md">
     <div className="space-y-4 text-sm [overflow-wrap:anywhere]">
-      <p className="font-medium">{sourceLabel} · {targetLabel}</p>
+      <p className="font-medium">{sourceLabel} {edge.reverse ? "↔" : "·"} {targetLabel}</p>
       <p className="text-ink-secondary">These relationships connect entities inside the two scopes. Explore a scope to inspect the actual endpoints and their evidence.</p>
       <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-2 text-xs">
         <dt>Snapshot</dt><dd>{scanId || "Derived inventory (not persisted)"}</dd>
-        <dt>Recorded directions</dt><dd>{directions.length > 1 ? `Mixed: ${directions.join(", ")}` : directions[0] || "Not recorded"}</dd>
+        {edge.reverse ? <>
+          <dt>{sourceLabel} → {targetLabel}</dt><dd>{edge.count - edge.reverse.count}</dd>
+          <dt>{targetLabel} → {sourceLabel}</dt><dd>{edge.reverse.count}</dd>
+        </> : <><dt>Recorded directions</dt><dd>{directions.length > 1 ? `Mixed: ${directions.join(", ")}` : directions[0] || "Not recorded"}</dd></>}
         {edge.relationships.map(relationship => <div key={relationship} className="contents"><dt>{relationshipEdgeLabelText(relationship, { evidenceMode: "unknown" })}</dt><dd>{edge.relationship_counts?.[relationship] ?? "Count unavailable"}</dd></div>)}
       </dl>
       <p className="text-xs text-ink-secondary">Aggregate links do not establish an end-to-end executable path. Counts cover the source graph used for this view.</p>

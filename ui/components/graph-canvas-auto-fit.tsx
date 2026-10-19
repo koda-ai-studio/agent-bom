@@ -65,7 +65,8 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     const autoFitKey = JSON.stringify([layoutKey, width, height, anchorId, inspector, windowHeight, spaceAbove, padding]);
     if (lastAutoFitKey.current === autoFitKey) return;
     const anchor = nodes.find(node => node.id === anchorId) ?? nodes[0];
-    const options: FitViewOptions = { padding, duration: 0, minZoom: 0.05, maxZoom: 1.25,
+    // The zoom controls sit at the bottom-left; keep fitted cards out from under them.
+    const options: FitViewOptions = { padding: { top: padding, right: padding, bottom: padding, left: "72px" }, duration: 0, minZoom: 0.05, maxZoom: 1.25,
       // Too large to read whole: open on the anchor's neighbourhood, never a lone card.
       // A phone keeps one readable card (its list view gives the overview).
       ...(!frameSize.fitAll && anchor ? width >= 640
