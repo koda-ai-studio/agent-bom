@@ -50,12 +50,12 @@ the PR. Maintainers would rather discuss placement early than move code later.
 
 ## Canonical models
 
-- **Finding**: `domain/finding_model.py` defines `Finding`, the unified finding
-  model; `domain/finding_types.py` owns its enums and asset types. `FindingType`
+- **Finding**: `domain/finding_model.py` defines `Finding` and `Asset`;
+  `domain/finding_types.py` owns their enums and control-tag helpers. `FindingType`
   covers CVEs, CIS failures, credential exposure, SAST, runtime
   detections, skill risk and more. Emit `Finding` objects rather than defining
   a new result shape; add a `FindingType` only for a genuinely new category.
-  `finding.py` retains converters and lazy compatibility imports.
+  `finding.py` retains converters and compatibility imports.
 - **Packages and vulnerabilities**: `domain/package_model.py`,
   `domain/vulnerability_model.py`, `domain/agent_model.py` and
   `domain/mcp_model.py` own the inventory models. `models.py` retains
