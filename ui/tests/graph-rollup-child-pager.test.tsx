@@ -29,6 +29,14 @@ describe("GraphRollupChildPager", () => {
     expect(onPage).toHaveBeenCalledWith(0);
   });
 
+  it("names top-level scopes when it pages the estate overview", () => {
+    const onPage = vi.fn();
+    render(<GraphRollupChildPager pagination={{ ...firstPage, limit: 100, returned: 100, next_offset: 100 }} scope="top_level" onPage={onPage} />);
+    expect(screen.getByText("Showing 1–100 of 250 top-level scopes")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Next scopes" }));
+    expect(onPage).toHaveBeenCalledWith(100);
+  });
+
   it("renders nothing when every child fits in one page or metadata is absent", () => {
     const { container, rerender } = render(<GraphRollupChildPager onPage={() => undefined} />);
     expect(container).toBeEmptyDOMElement();

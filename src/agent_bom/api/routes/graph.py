@@ -216,7 +216,14 @@ def _graph_query_budget() -> dict[str, int]:
     }
 
 
-def _enforce_graph_query_budget(body: GraphQueryRequest) -> dict[str, int]:
+def _apply_graph_query_budget(body: GraphQueryRequest) -> tuple[GraphQueryRequest, dict[str, int], dict[str, dict[str, int]]]:
+    """Clamp a request to the deployment budget and say what was clamped.
+
+    The schema publishes the absolute ceilings; the budget is lower and set per
+    deployment, so a request between the two is served at the budget with the
+    clamp disclosed in ``budget_applied`` rather than rejected against limits
+    the published contract allows.
+    """
     budget = _graph_query_budget()
     requested = {
         "max_depth": body.max_depth,
@@ -224,17 +231,10 @@ def _enforce_graph_query_budget(body: GraphQueryRequest) -> dict[str, int]:
         "max_edges": body.max_edges,
         "timeout_ms": body.timeout_ms,
     }
-    violations = {key: {"requested": value, "allowed": budget[key]} for key, value in requested.items() if value > budget[key]}
-    if violations:
-        raise HTTPException(
-            status_code=422,
-            detail={
-                "message": "Graph query exceeds tenant query budget",
-                "violations": violations,
-                "budget": budget,
-            },
-        )
-    return budget
+    applied = {key: {"requested": value, "applied": budget[key]} for key, value in requested.items() if value > budget[key]}
+    if applied:
+        body = body.model_copy(update={key: value["applied"] for key, value in applied.items()})
+    return body, budget, applied
 
 
 @router.get("/graph", **documented(GraphPageResponse), tags=["graph"])
@@ -517,7 +517,7 @@ async def query_graph(request: Request, body: GraphQueryRequest) -> dict:
         optional_generation, graph_store, tenant=tenant_id, scan_id=body.scan_id or "", generation=body.snapshot_generation, offset=0
     )
     scan_id = identity[0] if identity else body.scan_id or ""
-    budget = _enforce_graph_query_budget(body)
+    body, budget, budget_applied = _apply_graph_query_budget(body)
     body, resolved_roots, missing_roots = await _runtime.resolve_query_roots(graph_store, tenant_id, scan_id, body)
     if missing_roots:
         raise HTTPException(status_code=404, detail={"message": "Root nodes not found", "missing_roots": missing_roots})
@@ -586,7 +586,16 @@ async def query_graph(request: Request, body: GraphQueryRequest) -> dict:
             verify_generation, graph_store, tenant=tenant_id, identity=identity, has_rows=bool(filtered_graph.nodes)
         )
     payload = query_payload(
-        body, filtered_graph, depth_by_node, truncated, depth_limited, attack_paths, budget, rel_types, identity[1] if identity else None
+        body,
+        filtered_graph,
+        depth_by_node,
+        truncated,
+        depth_limited,
+        attack_paths,
+        budget,
+        rel_types,
+        identity[1] if identity else None,
+        budget_applied=budget_applied,
     )
     return {**payload, "resolved_roots": resolved_roots}
 
@@ -755,12 +764,12 @@ async def get_graph_rollup(
     exposed: bool = Query(False, description="Only roll up internet-exposed descendants"),
     toxic: bool = Query(False, description="Only roll up toxic-combination descendants"),
     mode: Literal["rollup", "attack_path"] = Query("rollup", description="rollup (default) or attack_path-first view"),
-    offset: int = Query(0, ge=0, le=1_000_000, description="Drill-down only: ranked-children page offset"),
+    offset: int = Query(0, ge=0, le=1_000_000, description="Page offset into the ranked top level, or the drill-down's ranked children"),
     limit: int = Query(
         _ROLLUP_DRILLDOWN_DEFAULT_LIMIT,
         ge=1,
         le=_ROLLUP_DRILLDOWN_MAX_LIMIT,
-        description="Drill-down only: maximum direct children returned per page",
+        description="Maximum top-level entries (or drill-down direct children) returned per page",
     ),
 ) -> dict:
     """Collapse the estate along ``CONTAINS`` into a small, readable view.
@@ -768,10 +777,12 @@ async def get_graph_rollup(
     Rolls the graph up along containment (org -> account/project -> app ->
     resource) so a 1000+ node estate renders as a few top-level containers, each
     with descendant counts, worst severity, a severity histogram and exposure /
-    toxic flags. ``?node=<id>`` (a replaced id resolves, echoed as
-    ``resolved_from``) returns one level of direct children, paged by
-    ``offset``/``limit`` with truthful ``completeness``; ``?mode=attack_path``
-    returns materialised attack-path nodes/edges first. Read-only.
+    toxic flags. The ranked top level is paged by ``offset``/``limit``
+    (``pagination`` carries the ranked total). ``?node=<id>`` (a replaced id
+    resolves, echoed as ``resolved_from``) returns one level of direct
+    children, paged the same way, with truthful ``completeness``;
+    ``?mode=attack_path`` returns materialised attack-path nodes/edges first.
+    Read-only.
     """
     tenant = _runtime._tenant(request)
     graph_store = _runtime._get_graph_store_or_503()
@@ -796,7 +807,7 @@ async def get_graph_rollup(
         tenant=tenant,
         scan_id=requested_scan_id,
         generation=snapshot_generation,
-        offset=offset if node else 0,
+        offset=offset if mode == "rollup" else 0,
     )
     cache_identity = identity
     if identity is None and not offset:
@@ -816,8 +827,8 @@ async def get_graph_rollup(
             exposed,
             toxic,
             mode,
-            offset if node else 0,
-            limit if node else 0,
+            offset if mode == "rollup" or node else 0,
+            limit if mode == "rollup" or node else 0,
         )
         cached = graph_rollup_cache.get(cache_key)
         if cached is not None:

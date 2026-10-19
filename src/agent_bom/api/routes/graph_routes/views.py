@@ -435,6 +435,8 @@ async def get_graph_exposure_paths(
         cursor=cursor,
         _get_graph_store=lambda: graph_store,
         _truncate_response=lambda value: value,
+        # REST has no MCP transport budget: `limit` (max 100) is honoured.
+        _max_response_chars=None,
     )
     payload = json.loads(raw)
     _raise_mcp_error_as_http(payload)
