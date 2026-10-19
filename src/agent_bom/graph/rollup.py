@@ -508,6 +508,8 @@ def rollup_view(
     graph: UnifiedGraph,
     *,
     filters: Optional[RollupFilters] = None,
+    offset: int = 0,
+    limit: Optional[int] = None,
 ) -> dict[str, Any]:
     """Collapse the graph along CONTAINS into a small top-level container view.
 
@@ -516,8 +518,13 @@ def rollup_view(
     flags rolled up from every descendant. An estate of thousands of nodes
     renders as a handful of account / app containers.
 
+    ``offset``/``limit`` page the ranked top level the way drill-down pages
+    children: ranking runs over every entry first, so pages are stable and
+    disjoint, and ``pagination`` reports the whole ranked total.
+
     Deterministic and bounded; the source graph is never mutated.
     """
+    offset = max(0, offset)
     flags = _containment_flags(graph)
     children = _contains_children(graph, flags)
     parents = _contains_parents(children)
@@ -608,7 +615,9 @@ def rollup_view(
     estate_agg = _aggregate(list(graph.nodes), graph, filters=filters, facts=facts)
     orphan_summary = _orphan_summary(graph, orphan_agg, total=len(orphan_ids), shown=len(orphans), truncated_ids=truncated_orphan_ids)
 
-    top_level_rows = [c.to_dict() for c in top_level]
+    page = top_level[offset : None if limit is None else offset + limit]
+    page_cut = len(page) < len(top_level)
+    top_level_rows = [c.to_dict() for c in page]
     relationship_edges, edge_count_metadata = _edge_projection(graph, top_level_rows, children, flags)
 
     return {
@@ -633,6 +642,7 @@ def rollup_view(
             "total_nodes_source": _source_total_nodes(graph),
             "total_edges": len(graph.edges),
             "top_level_count": len(top_level),
+            "returned_top_level_count": len(page),
             "container_count": len(containers),
             "orphan_count": len(orphan_ids),
             "orphan_shown_count": len(orphans),
@@ -642,15 +652,18 @@ def rollup_view(
             "finding_occurrence_count": estate_agg.finding_occurrence_count,
             "severity_basis": ISSUE_SEVERITY_BASIS,
         },
-        # Two independent cuts: the loader's node budget (recorded on the source
-        # graph) and this roll-up's own orphan limit. Either one makes the view
-        # non-exhaustive, so both are folded into one honest verdict.
+        "pagination": _page_meta(offset=offset, limit=limit, returned=len(page), total=len(top_level)),
+        # Three independent cuts: the loader's node budget (recorded on the
+        # source graph), this page of the ranked top level, and the orphan
+        # limit. Any one makes the view non-exhaustive, so all are folded into
+        # one honest verdict.
         "completeness": graph_completeness(
-            returned=len(top_level),
+            returned=len(page),
             total=len(containers) + len(orphan_ids),
-            truncated=bool(truncated_orphan_ids) or graph.completeness.truncated,
+            truncated=page_cut or bool(truncated_orphan_ids) or graph.completeness.truncated,
             reason=_combine_reasons(
                 graph.completeness.reason if graph.completeness.truncated else "",
+                "top_level_page_limit" if page_cut else "",
                 "orphan_limit" if truncated_orphan_ids else "",
             ),
         ),

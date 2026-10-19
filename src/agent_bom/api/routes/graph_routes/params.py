@@ -7,6 +7,7 @@ from typing import Any
 
 from fastapi import HTTPException
 
+from agent_bom.api.graph_query import GRAPH_QUERY_ABSOLUTE_LIMITS, GRAPH_QUERY_DEFAULT_BUDGET
 from agent_bom.graph import EntityType, GraphSemanticLayer, RelationshipType, UnifiedEdge
 from agent_bom.graph.path_derivation import _rel_value
 from agent_bom.mcp_errors import CODE_UNSUPPORTED_BACKEND, CODE_UPSTREAM_UNAVAILABLE
@@ -14,20 +15,8 @@ from agent_bom.mcp_errors import CODE_UNSUPPORTED_BACKEND, CODE_UPSTREAM_UNAVAIL
 _ALLOWED_ENTITY_TYPES = {entity_type.value for entity_type in EntityType}
 
 
-_GRAPH_QUERY_ABSOLUTE_LIMITS = {
-    "max_depth": 10,
-    "max_nodes": 5000,
-    "max_edges": 25_000,
-    "timeout_ms": 5000,
-}
-
-
-_GRAPH_QUERY_DEFAULT_BUDGET = {
-    "max_depth": 5,
-    "max_nodes": 1000,
-    "max_edges": 10_000,
-    "timeout_ms": 2500,
-}
+_GRAPH_QUERY_ABSOLUTE_LIMITS = GRAPH_QUERY_ABSOLUTE_LIMITS
+_GRAPH_QUERY_DEFAULT_BUDGET = GRAPH_QUERY_DEFAULT_BUDGET
 
 
 _FILTERED_GRAPH_ATTACK_PATH_LIMIT = 100

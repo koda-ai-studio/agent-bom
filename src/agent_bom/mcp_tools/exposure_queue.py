@@ -13,7 +13,7 @@ import hashlib
 import json
 from collections.abc import Callable
 from dataclasses import dataclass, replace
-from typing import Any
+from typing import Any, Literal
 
 from agent_bom.cloud.runtime_graph_evidence import _enrich_loaded_graph_runtime_evidence
 from agent_bom.config import GRAPH_INVESTIGATION_NODE_BUDGET, MCP_MAX_RESPONSE_CHARS
@@ -396,8 +396,13 @@ def _envelope(tenant_id: str, read: _Read, query: PathQuery, view: str, limit: i
     return payload
 
 
-def _fit(payload: dict[str, Any], read: _Read, *, view: str, offset: int, limit: int, scope: str) -> str:
-    """Fit whole path objects into the transport budget; omitted paths stay on the cursor."""
+def _fit(payload: dict[str, Any], read: _Read, *, view: str, offset: int, limit: int, scope: str, max_chars: int | None) -> str:
+    """Fit whole path objects into the transport budget; omitted paths stay on the cursor.
+
+    ``max_chars=None`` (REST) applies no transport budget: ``limit`` is honoured
+    as requested. When the budget does cut the page, ``pagination.limit`` is
+    the limit actually applied and ``requested_limit`` what was asked for.
+    """
     ranking_complete = bool(payload["ranking"].get("complete", True))
     derivation_truncated = read.page.derivation_truncated
     search_cut = ranking_complete and not derivation_truncated and not read.covered
@@ -414,7 +419,16 @@ def _fit(payload: dict[str, Any], read: _Read, *, view: str, offset: int, limit:
             payload["stats"] = read.stats
         payload["count"] = returned
         next_cursor = _encode_cursor(scope, read.page.ranked.scan_id, offset + returned, read.revision) if has_more and returned else None
-        payload["pagination"] = {"offset": offset, "limit": limit, "returned": returned, "has_more": has_more, "next_cursor": next_cursor}
+        pagination: dict[str, Any] = {
+            "offset": offset,
+            "limit": limit,
+            "returned": returned,
+            "has_more": has_more,
+            "next_cursor": next_cursor,
+        }
+        if returned < len(read.projected):
+            pagination.update(limit=returned, requested_limit=limit, limit_reason="response_budget")
+        payload["pagination"] = pagination
         reason = (
             "node_budget"
             if derivation_truncated
@@ -433,7 +447,7 @@ def _fit(payload: dict[str, Any], read: _Read, *, view: str, offset: int, limit:
             reason=reason,
         )
         encoded = json.dumps(payload, separators=(",", ":"), default=str)
-        if len(encoded) <= MCP_MAX_RESPONSE_CHARS:
+        if max_chars is None or len(encoded) <= max_chars:
             return encoded
         if returned <= 1:
             return mcp_error_json(
@@ -478,6 +492,7 @@ async def exposure_paths_for_tenant(
     _get_graph_store: Callable[[], Any],
     _resolve_scan: Callable[..., Any],
     _truncate_response: Callable[[str], str] | None = None,
+    _max_response_chars: int | None | Literal["mcp"] = "mcp",
     **filters: Any,
 ) -> str:
     """Return the ranked ExposurePath page for an already-authenticated tenant.
@@ -511,7 +526,10 @@ async def exposure_paths_for_tenant(
     read = await _read_exposure(_get_graph_store(), tenant_id, scan_id, query, offset, limit, continuation)
     if isinstance(read, str):
         return read
-    encoded = _fit(_envelope(tenant_id, read, query, view, limit), read, view=view, offset=offset, limit=limit, scope=scope)
+    max_chars = MCP_MAX_RESPONSE_CHARS if _max_response_chars == "mcp" else _max_response_chars
+    encoded = _fit(
+        _envelope(tenant_id, read, query, view, limit), read, view=view, offset=offset, limit=limit, scope=scope, max_chars=max_chars
+    )
     return _truncate_response(encoded) if _truncate_response is not None else encoded
 
 

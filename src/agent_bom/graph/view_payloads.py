@@ -59,4 +59,4 @@ def _graph_rollup_payload(
         return drill_down(graph, node, filters=filters, offset=offset, limit=limit)
     if mode == "attack_path":
         return attack_path_view(graph, resolve_snapshot_attack_paths(graph, graph_store), filters=filters)
-    return rollup_view(graph, filters=filters)
+    return rollup_view(graph, filters=filters, offset=offset, limit=limit)

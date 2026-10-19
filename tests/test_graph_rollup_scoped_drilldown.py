@@ -388,7 +388,7 @@ class TestRollupEndpointScopesItsFetch:
     def test_top_level_projection_matches_full_payload(self, api_store, client):
         from agent_bom.graph.rollup import rollup_view
 
-        expected = rollup_view(_full_materialisation(api_store, API_TENANT))
+        expected = rollup_view(_full_materialisation(api_store, API_TENANT), limit=200)
         response = client.get("/v1/graph/rollup", params={"scan_id": SCAN})
         assert response.status_code == 200, response.text
         assert response.json() == expected | {
@@ -401,7 +401,7 @@ class TestRollupEndpointScopesItsFetch:
         assert response.status_code == 200, response.text
         from agent_bom.graph.rollup import rollup_view
 
-        assert response.json() == rollup_view(_full_materialisation(api_store, API_TENANT)) | {
+        assert response.json() == rollup_view(_full_materialisation(api_store, API_TENANT), limit=200) | {
             "snapshot_generation": api_store.snapshot_identity(tenant_id=API_TENANT, scan_id=SCAN, for_paging=True)[1]
         }
 

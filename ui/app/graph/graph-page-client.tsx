@@ -1366,7 +1366,7 @@ function GraphPageInner() {
     setRollupError(null);
     setRollupUnavailable(false);
     const drillNode = rollupStack.at(-1)?.id;
-    const childOffset = drillNode && rollupChildPage?.key === rollupChildPageKey ? rollupChildPage.offset : 0;
+    const childOffset = rollupChildPage?.key === rollupChildPageKey ? rollupChildPage.offset : 0;
 
     api
       .getGraphRollup(selectedScanId, {
@@ -3763,9 +3763,10 @@ function GraphPageInner() {
             </section>
           )}
           {rollupNavigationActive && !loadingRollup && <GraphRollupCountNotice metadata={rollupView?.aggregate_count_metadata} />}
-          {rollupNavigationActive && !loadingRollup && rollupView?.mode === "drilldown" && (
+          {rollupNavigationActive && !loadingRollup && (rollupView?.mode === "drilldown" || rollupView?.mode === "rollup") && (
             <GraphRollupChildPager
               pagination={rollupView.pagination}
+              scope={rollupView.mode === "rollup" ? "top_level" : "children"}
               onPage={(offset) => setRollupChildPage({ key: rollupChildPageKey, offset, generation: rollupView?.snapshot_generation })}
             />
           )}
