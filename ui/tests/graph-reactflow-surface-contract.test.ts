@@ -70,14 +70,14 @@ describe("interactive React Flow surface contract", () => {
   });
 
   it("delegates lifecycle interactions to the shared evidence renderer", () => {
-    const content = source("app/agents/page.tsx");
+    const content = source("app/agents/agent-lifecycle.tsx");
     expect(content).toContain("<SecurityGraphInvestigation");
     expect(content).toContain("lifecycleInventoryView(data.graph");
     expect(content).not.toContain("<ReactFlow");
   });
 
   it("bounds the agent lifecycle canvas inside the application shell", () => {
-    const content = source("app/agents/page.tsx");
+    const content = source("app/agents/agent-lifecycle.tsx");
     expect(content).toContain('className="h-[calc(100dvh-6rem)] w-full');
     expect(content).not.toContain('className="h-screen w-screen');
   });
