@@ -13,6 +13,7 @@ from rich.console import Console
 from rich.table import Table
 
 from agent_bom.cli._grouped_help import SuggestingGroup
+from agent_bom.core.settings import env_bool
 from agent_bom.core.severity import severity_worst_first_rank
 from agent_bom.skills_policy import SkillsPolicyError, evaluate_skills_policy, load_skills_policy
 from agent_bom.skills_service import rescan_skill_catalog, scan_skill_targets, verify_skill_targets
@@ -21,9 +22,7 @@ _CI_DEFAULT_FAIL_VERDICT = "suspicious"
 
 
 def _env_flag(name: str) -> bool:
-    """Return True when an environment variable is set to a truthy value."""
-    value = os.environ.get(name)
-    return value is not None and value.strip().lower() in {"1", "true", "yes", "on"}
+    return env_bool(name, False, on_invalid="default")
 
 
 def _resolve_ci_fail_verdict(ci: bool, fail_on_verdict: str | None) -> str | None:

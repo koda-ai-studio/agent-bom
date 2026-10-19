@@ -14,6 +14,8 @@ from typing import Any
 from cryptography.hazmat.primitives.ciphers import algorithms
 from cryptography.hazmat.primitives.cmac import CMAC
 
+from agent_bom.core.settings import env_bool
+
 _logger = logging.getLogger(__name__)
 _AUDIT_CHAIN_EPHEMERAL_KEY: bytes | None = None
 
@@ -21,7 +23,7 @@ CHAIN_KEY_SIDECAR_SUFFIX = ".chain-key"
 
 
 def _env_truthy(name: str) -> bool:
-    return (os.environ.get(name) or "").strip().lower() in {"1", "true", "yes", "on"}
+    return env_bool(name, False, on_invalid="default")
 
 
 def _split_hmac_keys(configured: str) -> list[bytes]:

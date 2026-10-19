@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import replace
 from datetime import datetime
-from hashlib import sha256
 from typing import Any, Mapping
 
 from agent_bom.cloud.authorization_evidence import (
@@ -19,6 +18,7 @@ from agent_bom.cloud.authorization_evidence import (
     EvidenceSourceState,
     RoleDefinitionEvidence,
 )
+from agent_bom.core.ids import legacy_provider_binding_id
 
 _ALL_PRINCIPALS_ID = "00000000-0000-0000-0000-000000000000"
 
@@ -34,8 +34,7 @@ def _text(value: Any) -> str:
 
 
 def _stable_id(*parts: str) -> str:
-    digest = sha256("\x1f".join(parts).encode()).hexdigest()[:24]
-    return f"azure:legacy-role-assignment:{digest}"
+    return legacy_provider_binding_id("azure:legacy-role-assignment:", *parts)
 
 
 def _unavailable_state(status: str) -> EvidenceSourceState:

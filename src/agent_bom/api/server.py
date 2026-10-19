@@ -88,6 +88,7 @@ from agent_bom.api.tracing import configure_otel_tracing, get_tracing_health
 from agent_bom.config import API_JOB_TTL_SECONDS as _JOB_TTL_SECONDS
 from agent_bom.config import resolved_cors_origins_raw
 from agent_bom.core.experimental import feature_status
+from agent_bom.core.settings import env_flag as _env_truthy
 from agent_bom.demo_estate import boot_seed as _demo_boot_seed
 from agent_bom.output.brand_tokens import POSITIONING_META, PRODUCT_NAME, TAGLINE_CHAIN
 from agent_bom.storage import state_home as _state_home
@@ -395,10 +396,6 @@ DEFAULT_RATE_LIMIT_RPM = DEFAULT_SCAN_RATE_LIMIT_RPM
 _rate_limit_rpm: int = DEFAULT_RATE_LIMIT_RPM
 _env_api_keys_seeded = False
 _runtime_api_key_seeded = False
-
-
-def _env_truthy(name: str) -> bool:
-    return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _parse_cors_origins_from_env(default: list[str]) -> tuple[list[str], bool]:

@@ -123,17 +123,18 @@ def env_first(*names: str, default: str = "") -> str:
     return default
 
 
-def env_bool(name: str, default: bool = False, *, on_invalid: OnInvalid = "raise") -> bool:
-    """Accepts 1/true/yes/on and 0/false/no/off, case-insensitively."""
+def env_bool(name: str, default: bool = False, *, on_invalid: OnInvalid = "raise", truthy: Collection[str] = TRUTHY) -> bool:
+    """Read a boolean; ``truthy`` preserves callers with legacy flag vocabularies."""
     value = env_opt(name)
     if value is None:
         return default
     normalized = value.lower()
-    if normalized in TRUTHY:
+    if normalized in truthy:
         return True
     if normalized in FALSY:
         return False
-    _invalid(name, value, "one of 1/true/yes/on or 0/false/no/off", on_invalid, default)
+    accepted = "1/true/yes/on" if truthy == TRUTHY else "/".join(sorted(truthy))
+    _invalid(name, value, f"one of {accepted} or 0/false/no/off", on_invalid, default)
     return default
 
 
@@ -159,14 +160,20 @@ def _range_text(kind: str, minimum: float | None, maximum: float | None) -> str:
     return kind
 
 
+@overload
+def env_int(name: str, default: int, *, minimum: int | None = None, maximum: int | None = None, on_invalid: OnInvalid = "raise") -> int: ...
+@overload
+def env_int(
+    name: str, default: int | None, *, minimum: int | None = None, maximum: int | None = None, on_invalid: OnInvalid = "raise"
+) -> int | None: ...
 def env_int(
     name: str,
-    default: int,
+    default: int | None,
     *,
     minimum: int | None = None,
     maximum: int | None = None,
     on_invalid: OnInvalid = "raise",
-) -> int:
+) -> int | None:
     """Base-10 integer, optionally bounded (inclusive)."""
     value = env_opt(name)
     if value is None:

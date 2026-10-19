@@ -10,21 +10,15 @@ from agent_bom.api.secret_rotation_adapters import (
     resolve_secret_rotation_adapter,
     supported_secret_rotation_adapters,
 )
+from agent_bom.core.settings import env_bool, env_int
 
 
 def _env_enabled(name: str) -> bool:
-    return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
+    return env_bool(name, False, on_invalid="default")
 
 
 def _env_int(name: str) -> int | None:
-    raw = os.environ.get(name, "").strip()
-    if not raw:
-        return None
-    try:
-        parsed = int(raw)
-    except ValueError:
-        return None
-    return parsed if parsed >= 0 else None
+    return env_int(name, None, minimum=0, on_invalid="default")
 
 
 def _configured_api_replicas() -> int:

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import math
-import os
 import random
 import time
 from collections import deque
@@ -15,6 +14,8 @@ from threading import Lock
 from typing import Any, AsyncIterator, TypeVar
 
 import anyio.to_thread
+
+from agent_bom.core.settings import env_bool, env_int, env_raw
 
 T = TypeVar("T")
 
@@ -278,21 +279,13 @@ def _percentile(values: list[float], percentile: float) -> float:
 
 
 def _env_bool(name: str, default: bool) -> bool:
-    raw = os.environ.get(name)
-    if raw is None:
-        return default
-    return raw.strip().lower() in {"1", "true", "yes", "on"}
+    # Historically an explicitly blank/invalid opt-in flag disables it.
+    return default if env_raw(name) is None else env_bool(name, False, on_invalid="default")
 
 
 def _env_int(name: str, default: int, *, minimum: int, maximum: int) -> int:
-    raw = os.environ.get(name)
-    if raw is None:
-        return default
-    try:
-        value = int(raw)
-    except ValueError:
-        return default
-    return min(max(value, minimum), maximum)
+    value = env_int(name, None, on_invalid="default")
+    return default if value is None else min(max(value, minimum), maximum)
 
 
 def _path_env_key(path: str, suffix: str) -> str:

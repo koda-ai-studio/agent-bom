@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 from fnmatch import fnmatch
 from typing import TYPE_CHECKING
 
-from agent_bom.core.severity import severity_worst_first_rank
+from agent_bom.core.severity import severity_rank, severity_worst_first_rank
 from agent_bom.domain.report_payloads import LicenseCoveragePayload, LicenseReportPayload, LicenseSummaryPayload
 from agent_bom.models import Agent
 
@@ -216,8 +216,6 @@ class LicenseReport:
 # SPDX expression parsing
 # ---------------------------------------------------------------------------
 
-_RISK_ORDER = {"low": 0, "medium": 1, "high": 2, "critical": 3}
-
 
 def _parse_expression_keys(expression: str) -> list[str]:
     """Parse an SPDX expression into individual license keys.
@@ -309,13 +307,13 @@ def categorize_license(spdx_id: str) -> tuple[str, str]:
     # Determine if OR or AND dominates
     if " OR " in normalized and " AND " not in normalized:
         # Pure OR: pick most permissive
-        return min(categories, key=lambda c: _RISK_ORDER.get(c[1], 99))
+        return min(categories, key=lambda c: severity_rank(c[1]))
     elif " AND " in normalized and " OR " not in normalized:
         # Pure AND: pick most restrictive
-        return max(categories, key=lambda c: _RISK_ORDER.get(c[1], 99))
+        return max(categories, key=lambda c: severity_rank(c[1]))
     else:
         # Mixed: let the parser handle it, take most restrictive (conservative)
-        return max(categories, key=lambda c: _RISK_ORDER.get(c[1], 99))
+        return max(categories, key=lambda c: severity_rank(c[1]))
 
 
 def _matches_pattern(license_id: str, patterns: list[str]) -> bool:

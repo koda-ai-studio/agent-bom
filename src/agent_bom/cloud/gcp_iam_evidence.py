@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import replace
 from datetime import datetime
-from hashlib import sha256
 from typing import Any, Mapping
 
 from agent_bom.cloud.authorization_evidence import (
@@ -21,6 +20,7 @@ from agent_bom.cloud.authorization_evidence import (
     ResourceAncestry,
     RoleDefinitionEvidence,
 )
+from agent_bom.core.ids import legacy_provider_binding_id
 
 
 def _records(value: Any) -> tuple[Mapping[str, Any], ...]:
@@ -46,8 +46,7 @@ def _ordered_strings(value: Any) -> tuple[str, ...]:
 
 
 def _stable_id(*parts: str) -> str:
-    digest = sha256("\x1f".join(parts).encode()).hexdigest()[:24]
-    return f"gcp:legacy-iam-binding:{digest}"
+    return legacy_provider_binding_id("gcp:legacy-iam-binding:", *parts)
 
 
 def _unavailable_state(status: str) -> EvidenceSourceState:

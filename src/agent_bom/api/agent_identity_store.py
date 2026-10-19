@@ -14,7 +14,6 @@ import builtins
 import hashlib
 import json
 import logging
-import os
 import secrets
 import sqlite3
 import threading
@@ -69,6 +68,7 @@ from agent_bom.api.identity_policies import (
     set_conditional_policy_status as set_conditional_policy_status,
 )
 from agent_bom.api.storage_schema import ensure_sqlite_schema_version
+from agent_bom.core.settings import env_int
 from agent_bom.core.tenancy import require_explicit_tenant_id
 
 TOKEN_PREFIX = "abi"
@@ -830,14 +830,7 @@ DEFAULT_TOKEN_ROTATION_DAYS = 90
 
 
 def _env_int(name: str, default: int) -> int:
-    raw = (os.environ.get(name) or "").strip()
-    if not raw:
-        return default
-    try:
-        parsed = int(raw)
-    except ValueError:
-        return default
-    return parsed if parsed >= 0 else default
+    return env_int(name, default, minimum=0, on_invalid="default")
 
 
 def nhi_deprovision_days() -> int:

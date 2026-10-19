@@ -1,3 +1,4 @@
+import { severityRank, SEVERITY_ORDER } from "@/lib/severity";
 import { formatExposureEntityTitle, formatExposurePathSequence } from "@/lib/entity-display";
 import type { GraphHopEvidence } from "@/lib/graph-schema";
 
@@ -118,21 +119,15 @@ export interface ExposurePath {
   } | undefined;
 }
 
-const SEVERITY_RANK: Record<string, number> = {
-  critical: 4,
-  high: 3,
-  medium: 2,
-  low: 1,
-  none: 0,
-};
+
 
 export function exposureSeverityRank(severity: ExposureSeverity | undefined): number {
-  return SEVERITY_RANK[String(severity ?? "none").toLowerCase()] ?? 0;
+  return severityRank(severity);
 }
 
 export function normalizeExposureSeverity(severity: ExposureSeverity | undefined): ExposureSeverity {
   const normalized = String(severity ?? "none").toLowerCase();
-  return normalized in SEVERITY_RANK ? normalized : severity ?? "none";
+  return Object.hasOwn(SEVERITY_ORDER, normalized) ? normalized : severity ?? "none";
 }
 
 export function uniqueExposureValues(values: (string | undefined | null)[]): string[] {

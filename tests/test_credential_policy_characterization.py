@@ -80,7 +80,7 @@ def test_naive_and_offset_timestamps_preserve_output_normalization():
         result = classify_credential({"credential_expires_at": timestamp}, now=NOW)
         assert result["days_until_expiry"] == 0
         assert result["state"] == "near_expiry"
-        assert result["credential_expires_at"].endswith("+02:00" if timestamp.endswith("+02:00") else "+00:00")
+        assert result["credential_expires_at"] == "2026-09-27T12:00:00+00:00"
 
 
 def test_collection_sorts_by_priority_then_name_and_retains_duplicates():

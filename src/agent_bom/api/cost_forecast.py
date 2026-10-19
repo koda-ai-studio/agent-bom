@@ -21,6 +21,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from agent_bom.api.cost_store import CostBudget, LLMCostRecord
+from agent_bom.core.timestamps import parse_timestamp as _parse_ts
 
 # Trailing windows for the burn-rate estimate, in hours. The shorter window
 # reacts fast to a fresh spike; the longer one smooths out diurnal noise. We
@@ -38,26 +39,6 @@ _MIN_RATE_SPAN_HOURS = 6.0
 # A runway beyond this many days is reported as "ample" rather than a precise
 # figure — extrapolating a tiny burn rate years out is noise, not signal.
 _MAX_RUNWAY_DAYS = 3650.0
-
-
-def _parse_ts(value: str) -> datetime | None:
-    """Parse an ISO-8601 ``observed_at`` into an aware UTC datetime, or None.
-
-    Tolerates a trailing ``Z`` and naive timestamps (assumed UTC). Never raises
-    — an unparseable record is simply skipped from the projection.
-    """
-    text = (value or "").strip()
-    if not text:
-        return None
-    if text.endswith(("Z", "z")):
-        text = text[:-1] + "+00:00"
-    try:
-        parsed = datetime.fromisoformat(text)
-    except ValueError:
-        return None
-    if parsed.tzinfo is None:
-        return parsed.replace(tzinfo=timezone.utc)
-    return parsed.astimezone(timezone.utc)
 
 
 def _window_spend(timed: Sequence[tuple[datetime, float]], now: datetime, hours: float) -> tuple[float, float]:

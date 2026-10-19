@@ -32,6 +32,7 @@ from typing import Any, cast
 from urllib.parse import urlparse
 
 from agent_bom.api.oidc import OIDCError, claims_have_role_signal, claims_to_role, claims_to_tenant
+from agent_bom.core.settings import env_bool
 
 
 class SAMLError(Exception):
@@ -69,7 +70,7 @@ def saml_enabled_from_env() -> bool:
 
 
 def _env_flag(name: str) -> bool:
-    return os.environ.get(name, "").strip().lower() in {"1", "true", "yes"}
+    return env_bool(name, False, on_invalid="default", truthy={"1", "true", "yes"})
 
 
 def _optional_env_flag(name: str) -> bool | None:

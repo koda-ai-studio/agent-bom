@@ -38,6 +38,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Final
 
+from agent_bom.core.settings import env_int
 from agent_bom.security import sanitize_text
 
 if TYPE_CHECKING:
@@ -106,14 +107,7 @@ _signer_init_error: str | None = None
 
 
 def _env_int(name: str) -> int | None:
-    value = (os.environ.get(name) or "").strip()
-    if not value:
-        return None
-    try:
-        parsed = int(value)
-    except ValueError:
-        return None
-    return parsed if parsed >= 0 else None
+    return env_int(name, None, minimum=0, on_invalid="default")
 
 
 def _describe_rotation_posture() -> dict[str, object]:

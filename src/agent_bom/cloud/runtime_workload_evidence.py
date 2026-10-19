@@ -49,6 +49,7 @@ from typing import Any, Iterable, Mapping
 
 from agent_bom.canonical_ids import canonical_id
 from agent_bom.cloud.runtime_source_auth import RuntimeSourcePrincipal, SourceAuthenticationError
+from agent_bom.core.timestamps import parse_timestamp as _parse_ts
 from agent_bom.security import sanitize_text
 
 logger = logging.getLogger(__name__)
@@ -165,19 +166,6 @@ def canonical_workload_id(provider: str, account_id: str, workload_ref: str) -> 
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-
-
-def _parse_ts(value: str) -> datetime | None:
-    text = (value or "").strip()
-    if not text:
-        return None
-    if text.endswith("Z"):
-        text = text[:-1] + "+00:00"
-    try:
-        parsed = datetime.fromisoformat(text)
-    except ValueError:
-        return None
-    return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=timezone.utc)
 
 
 def normalize_runtime_observed_at(value: str) -> str | None:

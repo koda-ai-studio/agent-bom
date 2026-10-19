@@ -16,10 +16,11 @@ When neither a policy window nor a KEV deadline can be computed the deadline is 
 from __future__ import annotations
 
 from collections.abc import Mapping
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any
 
 from agent_bom.core.severity import normalize_severity
+from agent_bom.core.timestamps import parse_timestamp as _parse_iso
 
 # Severity → remediation window in days from the finding's first-seen anchor.
 # Built-in product defaults; ``info``/``unknown`` intentionally
@@ -30,26 +31,6 @@ SEVERITY_SLA_DAYS: dict[str, int] = {
     "medium": 90,
     "low": 180,
 }
-
-
-def _parse_iso(value: object) -> datetime | None:
-    """Parse a date or datetime string into a tz-aware UTC datetime, or None.
-
-    Accepts full ISO-8601 datetimes and bare ``YYYY-MM-DD`` dates (CISA KEV due
-    dates are date-only). Naive values are treated as UTC.
-    """
-    if not isinstance(value, str):
-        return None
-    text = value.strip()
-    if not text:
-        return None
-    try:
-        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
-    except ValueError:
-        return None
-    if parsed.tzinfo is None:
-        parsed = parsed.replace(tzinfo=timezone.utc)
-    return parsed
 
 
 def sla_due_at(
