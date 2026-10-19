@@ -95,15 +95,15 @@ def test_the_gate_detects_a_window_collapse_regression(entries: list[dict]) -> N
     This is the test that makes the rest of the gate trustworthy.
     """
     harness = _load_harness()
-    from agent_bom.scanners import package_scan
+    from agent_bom.scanners import package_matching
 
-    original = package_scan._range_windows
+    original = package_matching._range_windows
     try:
         # The historical bug: keep only the last window of a multi-window range.
-        package_scan._range_windows = lambda events, ecosystem="": (original(events, ecosystem) or [])[-1:]
+        package_matching._range_windows = lambda events, ecosystem="": (original(events, ecosystem) or [])[-1:]
         mutated = harness.score(entries)
     finally:
-        package_scan._range_windows = original
+        package_matching._range_windows = original
 
     assert mutated.false_negative > 0, (
         "reintroducing the multi-window collapse did not produce a single miss — the gate has no teeth and would pass a real regression"
