@@ -14,6 +14,7 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Iterable, Mapping
 
+from agent_bom.finding_reach_sources import stamp_reach_sources
 from agent_bom.graph.types import RelationshipType
 
 if TYPE_CHECKING:
@@ -42,6 +43,7 @@ class FindingReachabilityProjection:
 class _ReachabilityEvidence:
     min_hops: int
     agents: set[str]
+    sources: set[str]
 
 
 def _text(value: object) -> str:
@@ -167,6 +169,7 @@ def project_persisted_graph_reachability(
         row.setdefault("graph_reachable", None)
         row.setdefault("graph_min_hop_distance", None)
         row.setdefault("graph_reachable_from_agents", [])
+        row.update(graph_reachable_from=[], graph_reachable_from_count=None)  # server-stamped only
     if not projected or not any(_row_vulnerability_ids(row) or _row_finding_ids(row) for row in projected):
         return FindingReachabilityProjection(projected, truncated=False)
 
@@ -260,43 +263,48 @@ def project_attack_path_reachability(
     return _stamp_rows(rows, _build_index(paths), scan_id=scan_id)
 
 
+def _row_evidence(row: dict[str, Any], path_index: _PathIndex) -> _ReachabilityEvidence | None:
+    candidates: dict[int, AttackPath] = {}
+    for finding_id in _row_finding_ids(row):
+        candidates.update((id(path), path) for path in path_index.by_finding.get(finding_id, ()))
+    for vulnerability_id in _row_vulnerability_ids(row):
+        candidates.update((id(path), path) for path in path_index.by_vulnerability.get(vulnerability_id, ()))
+    evidence: _ReachabilityEvidence | None = None
+    for path in candidates.values():
+        if not _path_matches_row(path, row):
+            continue
+        distance = _path_hop_distance(path, row)
+        if evidence is None:
+            evidence = _ReachabilityEvidence(min_hops=distance, agents=set(), sources=set())
+        evidence.min_hops = min(evidence.min_hops, distance)
+        evidence.agents.update(_reaching_agents(path))
+        evidence.sources.add(path.source)
+    return evidence
+
+
+def _apply_evidence(row: dict[str, Any], evidence: _ReachabilityEvidence) -> None:
+    prior_distance = row.get("graph_min_hop_distance")
+    row["graph_reachable"] = True
+    row["graph_min_hop_distance"] = (
+        min(prior_distance, evidence.min_hops)
+        if isinstance(prior_distance, int) and not isinstance(prior_distance, bool) and prior_distance >= 0
+        else evidence.min_hops
+    )
+    prior_agents = row.get("graph_reachable_from_agents")
+    if isinstance(prior_agents, list):
+        evidence.agents.update(_text(value) for value in prior_agents if _text(value))
+    row["graph_reachable_from_agents"] = sorted(evidence.agents)
+    stamp_reach_sources(row, evidence.sources)
+
+
 def _stamp_rows(rows: list[dict[str, Any]], path_index: _PathIndex, *, scan_id: str | None) -> int:
-    paths_by_finding = path_index.by_finding
-    paths_by_vulnerability = path_index.by_vulnerability
-    evidence_by_row: dict[int, _ReachabilityEvidence] = {}
-    for index, row in enumerate(rows):
+    stamped = 0
+    for row in rows:
         row_scan = _text(row.get("scan_id"))
         if scan_id is not None and row_scan and row_scan != scan_id:
             continue
-        candidates: dict[int, AttackPath] = {}
-        for finding_id in _row_finding_ids(row):
-            candidates.update((id(path), path) for path in paths_by_finding.get(finding_id, ()))
-        for vulnerability_id in _row_vulnerability_ids(row):
-            candidates.update((id(path), path) for path in paths_by_vulnerability.get(vulnerability_id, ()))
-        for path in candidates.values():
-            if not _path_matches_row(path, row):
-                continue
-            distance = _path_hop_distance(path, row)
-            evidence = evidence_by_row.get(index)
-            if evidence is None:
-                evidence = _ReachabilityEvidence(min_hops=distance, agents=set())
-                evidence_by_row[index] = evidence
-            else:
-                evidence.min_hops = min(evidence.min_hops, distance)
-            evidence.agents.update(_reaching_agents(path))
-
-    for index, evidence in evidence_by_row.items():
-        row = rows[index]
-        prior_distance = row.get("graph_min_hop_distance")
-        row["graph_reachable"] = True
-        row["graph_min_hop_distance"] = (
-            min(prior_distance, evidence.min_hops)
-            if isinstance(prior_distance, int) and not isinstance(prior_distance, bool) and prior_distance >= 0
-            else evidence.min_hops
-        )
-        prior_agents = row.get("graph_reachable_from_agents")
-        if isinstance(prior_agents, list):
-            evidence.agents.update(_text(value) for value in prior_agents if _text(value))
-        row["graph_reachable_from_agents"] = sorted(evidence.agents)
-
-    return len(evidence_by_row)
+        evidence = _row_evidence(row, path_index)
+        if evidence is not None:
+            _apply_evidence(row, evidence)
+            stamped += 1
+    return stamped

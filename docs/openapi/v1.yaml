@@ -9764,6 +9764,13 @@ components:
           - type: boolean
           - type: 'null'
           title: Graph Reachable
+        graph_reachable_from:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Graph Reachable From
         graph_reachable_from_agents:
           anyOf:
           - items:
@@ -9771,6 +9778,11 @@ components:
             type: array
           - type: 'null'
           title: Graph Reachable From Agents
+        graph_reachable_from_count:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Graph Reachable From Count
         id:
           title: Id
           type: string

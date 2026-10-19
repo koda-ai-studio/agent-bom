@@ -13631,8 +13631,12 @@ export interface components {
             graph_min_hop_distance?: number | null;
             /** Graph Reachable */
             graph_reachable?: boolean | null;
+            /** Graph Reachable From */
+            graph_reachable_from?: string[] | null;
             /** Graph Reachable From Agents */
             graph_reachable_from_agents?: string[] | null;
+            /** Graph Reachable From Count */
+            graph_reachable_from_count?: number | null;
             /** Id */
             id: string;
             /** Is Kev */

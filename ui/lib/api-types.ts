@@ -1613,6 +1613,8 @@ export interface UnifiedFinding {
   graph_reachable?: boolean | null | undefined;
   graph_min_hop_distance?: number | null | undefined;
   graph_reachable_from_agents?: string[] | undefined;
+  graph_reachable_from?: string[] | undefined;
+  graph_reachable_from_count?: number | null | undefined;
   scan_id?: string | undefined;
   scan_sources?: string[] | undefined;
   status?: string | undefined;
@@ -1831,6 +1833,8 @@ export interface BlastRadius {
   /** Agent node ids whose dependency closure reaches the vulnerable
    *  package (e.g. ["agent:cursor", "agent:claude-desktop"]). */
   graph_reachable_from_agents?: string[] | undefined;
+  graph_reachable_from?: string[] | undefined;
+  graph_reachable_from_count?: number | null | undefined;
 }
 
 export interface AttackFlowNodeData {

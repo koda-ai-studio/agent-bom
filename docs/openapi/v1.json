@@ -14193,6 +14193,20 @@
             ],
             "title": "Graph Reachable"
           },
+          "graph_reachable_from": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Graph Reachable From"
+          },
           "graph_reachable_from_agents": {
             "anyOf": [
               {
@@ -14206,6 +14220,17 @@
               }
             ],
             "title": "Graph Reachable From Agents"
+          },
+          "graph_reachable_from_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Graph Reachable From Count"
           },
           "id": {
             "title": "Id",

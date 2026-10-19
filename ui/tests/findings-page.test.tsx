@@ -772,7 +772,7 @@ describe("FindingsPage", () => {
 
     expect(await screen.findByText("CVE-2026-1234")).toBeInTheDocument();
     fireEvent.click(screen.getByText("Columns", { exact: true }));
-    expect(screen.getByText("Reachable · 2 hops")).toBeInTheDocument();
+    expect(screen.getByText("Reachable · 2 hops · via developer-copilot")).toBeInTheDocument();
   });
 
   it("retains compliance evidence as optional columns in the same queue", async () => {

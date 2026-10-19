@@ -185,6 +185,7 @@ def _finding_blast_radius(row: dict[str, Any], fallback_cve: str) -> dict[str, A
         "fixed_version": row.get("fixed_version"),
         "graph_reachable": row.get("graph_reachable"),
         "graph_min_hop_distance": row.get("graph_min_hop_distance"),
+        "graph_reachable_from": string_list(row.get("graph_reachable_from")),
         "owner": row.get("owner"),
         "sla_due_at": row.get("sla_due_at"),
         "sla_due_at_source": row.get("sla_due_at_source"),

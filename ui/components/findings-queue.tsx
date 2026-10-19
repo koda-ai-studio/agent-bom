@@ -21,22 +21,26 @@ import {
 import { getOsvVulnerabilityUrl } from "@/lib/vulnerabilities";
 import { controlLabels, triageForFinding } from "@/lib/findings-workspace";
 import { humanizeEnum } from "@/lib/enum-labels";
+import { reachabilitySource, reachabilitySourceLabel } from "@/lib/reachability-source";
 
 function ReachabilityBadge({
   reachable,
   hops,
+  source,
 }: {
   reachable: boolean | null | undefined;
   hops: number | null | undefined;
+  source?: string | null | undefined;
 }) {
   if (reachable === true) {
     const hopLabel = typeof hops === "number" && hops > 0 ? ` · ${hops} hop${hops === 1 ? "" : "s"}` : "";
+    const viaLabel = source ? ` · via ${reachabilitySourceLabel(source)}` : "";
     return (
       <span
-        title="An agent's USES/DEPENDS_ON closure reaches this package"
+        title={source ? `An inbound graph path from ${source} reaches this finding` : "An inbound graph path reaches this finding"}
         className="text-xs font-mono bg-[color:var(--severity-medium-bg)] border border-[color:var(--severity-medium-border)] text-[color:var(--severity-medium)] rounded px-1.5 py-0.5"
       >
-        Reachable{hopLabel}
+        Reachable{hopLabel}{viaLabel}
       </span>
     );
   }
@@ -584,7 +588,7 @@ function EngineeringCells({
     reach: (<td className="px-3 py-3">
         <div className="flex flex-col items-start gap-1">
           <div className="flex flex-wrap items-center gap-1">
-            <ReachabilityBadge reachable={vuln.graph_reachable} hops={vuln.graph_min_hop_distance} />
+            <ReachabilityBadge reachable={vuln.graph_reachable} hops={vuln.graph_min_hop_distance} source={reachabilitySource(vuln)} />
             {(vuln.is_kev ?? vuln.cisa_kev) ? <CisaKevBadge /> : null}
           </div>
           {typeof vuln.epss_score === "number" ? (

@@ -12,6 +12,7 @@ from agent_bom.api.models import ScanJob
 from agent_bom.api.scan_graph_view import _effective_reach_lookup as _effective_reach_lookup
 from agent_bom.api.scan_snapshot_read import verified_snapshot_findings
 from agent_bom.core.reachability import review_only_match
+from agent_bom.finding_reach_sources import SERVER_STAMPED_REACH_FIELDS
 from agent_bom.finding_runtime_evidence import (
     attach_runtime_evidence_to_finding,
     build_incident_runtime_evidence_index,
@@ -161,6 +162,8 @@ def _iter_scan_findings(job: ScanJob) -> list[dict[str, Any]]:
     occurrence_reach = reach if reach is not None else _effective_reach_lookup(job)
     for row in findings:
         _score_occurrence_reach(row, occurrence_reach)
+        for key in SERVER_STAMPED_REACH_FIELDS:  # an imported result cannot pre-stamp path sources
+            row.pop(key, None)
     return _project_finding_owners_and_suppressions(findings, tenant_id)
 
 

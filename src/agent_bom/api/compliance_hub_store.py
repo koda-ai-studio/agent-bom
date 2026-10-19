@@ -59,6 +59,7 @@ from agent_bom.api.storage.sqlite_connection import open_wal_connection
 from agent_bom.api.storage_schema import ensure_sqlite_schema_version, postgres_deployment_configured
 from agent_bom.core.severity import severity_policy_rank
 from agent_bom.core.tenancy import require_explicit_tenant_id
+from agent_bom.finding_reach_sources import SERVER_STAMPED_REACH_FIELDS, without_fields
 from agent_bom.storage.factory import validate_sqlite_path
 
 _logger = logging.getLogger(__name__)
@@ -410,11 +411,10 @@ def _redact_finding(payload: dict[str, Any]) -> dict[str, Any]:
     """Redact one hub finding payload for persistence."""
     from agent_bom.finding_scope import safe_finding_response_payload
 
-    clean = {key: value for key, value in safe_finding_response_payload(payload).items() if value is not None}
-    # The public finding contract uses an empty list for assessed-or-unknown
-    # agent reachability, but persisting that default in every ledger row adds
-    # no evidence and defeats reference-table compaction at scale. Non-empty
-    # observed agent ids remain durable.
+    # Path sources are stamped at read time only; a stored copy could forge corroboration.
+    safe = safe_finding_response_payload(without_fields(payload, SERVER_STAMPED_REACH_FIELDS))
+    clean = {key: value for key, value in without_fields(safe, SERVER_STAMPED_REACH_FIELDS).items() if value is not None}
+    # Persisting the empty agent-list default adds no evidence and defeats compaction.
     if not clean.get("graph_reachable_from_agents"):
         clean.pop("graph_reachable_from_agents", None)
     # Classification and lane are derived on read; persisting them wastes

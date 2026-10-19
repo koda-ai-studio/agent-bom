@@ -33,6 +33,8 @@ _SUMMARY_FIELDS = (
     "effective_reach_band",
     "is_kev",
     "graph_reachable",
+    "graph_reachable_from",
+    "graph_reachable_from_count",
     "status",
     "lifecycle_status",
     "finding_node_id",

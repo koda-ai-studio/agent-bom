@@ -28,6 +28,7 @@ from agent_bom.evidence.asset_display import iac_source_label
 from agent_bom.evidence.finding_lanes import finding_lane, lane_response_fields
 from agent_bom.evidence.finding_response_fields import restore_atlas_receipts, restored_public_fields
 from agent_bom.evidence.finding_status import public_finding_status
+from agent_bom.finding_reach_sources import safe_reach_sources
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from agent_bom.finding import FindingSource, FindingType
@@ -722,23 +723,17 @@ def safe_finding_response_payload(row: Mapping[str, Any]) -> dict[str, Any]:
         if (agent_id := _safe_optional_text(value, max_len=512)) is not None
     ]
 
-    # "Reachable" is not a free-standing opinion: `dependency_reach` defines it
-    # as `bool(reachable_from)`, and the engine stamps the agent list from the
-    # same report that sets the flag. A row asserting reachability while naming
-    # nobody therefore contradicts the word, and would still collect
-    # RISK_REACHABLE_BOOST and outrank findings the engine actually proved.
-    # `None` is the model's documented "engine did not run" state and leaves
-    # scoring untouched, so an unsupported claim costs nothing rather than
-    # buying rank. Checked against the sanitised list, not the raw one.
-    #
-    # `False` is deliberately still accepted: a genuinely unreachable finding
-    # carries no corroborating fields either, so rejecting it would break
-    # round-trip of our own export. Telling those apart needs a provenance
-    # field saying the engine ran.
+    # "Reachable" must name what reaches it: an agent, or a server-stamped
+    # inbound-path source (persistence strips client-sent sources). A claim
+    # naming nobody would still collect RISK_REACHABLE_BOOST, so it becomes
+    # `None` ("engine did not run"). `False` is still accepted: a genuinely
+    # unreachable finding carries no corroboration either.
+    sources, source_count = safe_reach_sources(row, lambda value: _safe_optional_text(value, max_len=512))
+    payload["graph_reachable_from"], payload["graph_reachable_from_count"] = sources, source_count
     graph_reachable = row.get("graph_reachable")
     if not isinstance(graph_reachable, bool):
         payload["graph_reachable"] = None
-    elif graph_reachable and not payload["graph_reachable_from_agents"]:
+    elif graph_reachable and not (payload["graph_reachable_from_agents"] or sources):
         payload["graph_reachable"] = None
     else:
         payload["graph_reachable"] = graph_reachable
