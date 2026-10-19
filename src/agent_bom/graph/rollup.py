@@ -524,7 +524,6 @@ def rollup_view(
 
     Deterministic and bounded; the source graph is never mutated.
     """
-    offset = max(0, offset)
     flags = _containment_flags(graph)
     children = _contains_children(graph, flags)
     parents = _contains_parents(children)
@@ -654,9 +653,8 @@ def rollup_view(
         },
         "pagination": _page_meta(offset=offset, limit=limit, returned=len(page), total=len(top_level)),
         # Three independent cuts: the loader's node budget (recorded on the
-        # source graph), this page of the ranked top level, and the orphan
-        # limit. Any one makes the view non-exhaustive, so all are folded into
-        # one honest verdict.
+        # source graph), this top-level page, and the orphan limit. Any one
+        # makes the view non-exhaustive; all fold into one honest verdict.
         "completeness": graph_completeness(
             returned=len(page),
             total=len(containers) + len(orphan_ids),

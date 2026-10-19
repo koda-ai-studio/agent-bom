@@ -15,6 +15,7 @@ from collections.abc import Callable, Mapping
 from typing import TYPE_CHECKING, Any
 
 from agent_bom import __version__
+from agent_bom.api.graph_commit_hooks import run_commit_hooks
 from agent_bom.api.trace_collection.trace_evidence import emit_shadow_findings, with_trace_events
 from agent_bom.api.trace_collection.trace_findings import FindingSink
 from agent_bom.graph.snapshot_paths import prepare_snapshot_paths
@@ -331,16 +332,6 @@ def _record_completion(
                     job.progress.append(f"Graph delta export ready: {delivery['ocsf_event_count'] if delivery else 0} OCSF event(s)")
 
 
-def _schedule_rollup_prewarm(store_factory: Callable[[], GraphStoreProtocol], tenant_id: str) -> None:
-    """Hand the committed snapshot's first roll-up views to the background warm-up."""
-    try:
-        from agent_bom.api import graph_rollup_prewarm
-
-        graph_rollup_prewarm.schedule_rollup_prewarm(store_factory, tenant_id=tenant_id)
-    except Exception as exc:  # noqa: BLE001 - warming is an optimisation and never fails the write
-        _logger.debug("graph rollup warm-up not scheduled: %s", sanitize_text(exc))
-
-
 def persist_graph_snapshot(
     job: ScanJob,
     report_json: dict[str, Any],
@@ -379,7 +370,7 @@ def persist_graph_snapshot(
             node_count = counts.get("nodes", len(graph.nodes))
             edge_count = counts.get("edges", len(graph.edges))
             _record_graph_persistence(job, status="persisted", scan_id=scan_id, nodes=node_count, edges=edge_count, lock=lock)
-            _schedule_rollup_prewarm(store_factory, tenant_id)
+            run_commit_hooks(store_factory, tenant_id=tenant_id)
             emit_shadow_findings(graph, tenant_id, finding_sink)
             alerts, delivery = _notify_after_commit(job, graph, prior_digest, tenant_id=tenant_id, scan_id=scan_id, lock=lock)
             _record_completion(

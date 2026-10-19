@@ -587,18 +587,9 @@ async def query_graph(request: Request, body: GraphQueryRequest) -> dict:
             verify_generation, graph_store, tenant=tenant_id, identity=identity, has_rows=bool(filtered_graph.nodes)
         )
     payload = query_payload(
-        body,
-        filtered_graph,
-        depth_by_node,
-        truncated,
-        depth_limited,
-        attack_paths,
-        budget,
-        rel_types,
-        identity[1] if identity else None,
-        budget_applied=budget_applied,
+        body, filtered_graph, depth_by_node, truncated, depth_limited, attack_paths, budget, rel_types, identity[1] if identity else None
     )
-    return {**payload, "resolved_roots": resolved_roots}
+    return {**payload, "budget_applied": budget_applied, "resolved_roots": resolved_roots}
 
 
 router.include_router(reads.node_router)
