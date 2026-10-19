@@ -252,6 +252,19 @@ def _evict_oldest(cache: dict[str, dict], max_entries: int) -> None:
         del cache[key]
 
 
+def reset_enrichment_caches_for_tests() -> None:
+    """Drop the in-memory and on-disk KEV / NVD / EPSS caches for this process."""
+    global _kev_cache, _kev_cache_time, _enrichment_cache_loaded, _offline_bundle_epss_loaded  # noqa: PLW0603
+    _kev_cache = None
+    _kev_cache_time = None
+    _nvd_file_cache.clear()
+    _epss_file_cache.clear()
+    _enrichment_cache_loaded = False
+    _offline_bundle_epss_loaded = False
+    for path in (_KEV_CACHE_FILE, _ENRICHMENT_CACHE_DIR / "nvd_cache.json", _ENRICHMENT_CACHE_DIR / "epss_cache.json"):
+        path.unlink(missing_ok=True)
+
+
 def _load_enrichment_cache() -> None:
     """Load NVD + EPSS caches from disk (once)."""
     global _nvd_file_cache, _epss_file_cache, _enrichment_cache_loaded  # noqa: PLW0603

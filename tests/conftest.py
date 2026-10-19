@@ -258,6 +258,15 @@ def _reset_enrichment_posture_state() -> None:
         reset_enrichment_posture_for_tests()
     except Exception:
         pass
+    # A scan that reaches the live CISA KEV / EPSS / NVD feeds caches them in
+    # memory and under the per-process state dir for 24h; every later offline
+    # scan on the worker would join that catalog instead of its own fixtures.
+    try:
+        from agent_bom.enrichment import reset_enrichment_caches_for_tests
+
+        reset_enrichment_caches_for_tests()
+    except Exception:
+        pass
 
 
 def _reset_scan_warning_state() -> None:
