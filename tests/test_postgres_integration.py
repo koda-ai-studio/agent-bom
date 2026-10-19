@@ -832,24 +832,43 @@ def test_postgres_managed_trial_invitation_is_digest_only_email_bound_and_single
 
 def test_demo_estate_bootstrap_uses_secret_aware_migrated_postgres(monkeypatch):
     """Compose's password-free app DSN must still persist demo findings."""
+    from agent_bom.api import stores as api_stores
+    from agent_bom.api.postgres_common import reset_current_tenant, reset_pool, set_current_tenant
+    from agent_bom.api.postgres_graph import PostgresGraphStore
     from agent_bom.api.postgres_store import PostgresJobStore
     from agent_bom.api.stores import set_job_store
     from agent_bom.cloud.runtime_workload_evidence_store import reset_runtime_workload_evidence_store
     from agent_bom.demo_estate.bootstrap import maybe_bootstrap_demo_estate
 
+    # Reproduce the graph singleton retained after an earlier app lifespan closes.
+    inherited = PostgresGraphStore()
+    inherited._pool.close()
+    reset_pool()
+    monkeypatch.setattr(api_stores, "_graph_store", inherited)
+    tenant_id = f"demo-secret-aware-{uuid4().hex}"
+
     monkeypatch.setenv("AGENT_BOM_DEMO_ESTATE", "1")
     monkeypatch.setenv("AGENT_BOM_DEMO_ESTATE_FORCE", "1")
     store = PostgresJobStore()
     set_job_store(store)
+    # This standalone bootstrap owns both stores, just as a fresh app lifespan does.
+    graph_store = PostgresGraphStore()
+    monkeypatch.setattr(api_stores, "_graph_store", graph_store)
     reset_runtime_workload_evidence_store()
 
-    summary = maybe_bootstrap_demo_estate()
+    token = set_current_tenant(tenant_id)
+    try:
+        summary = maybe_bootstrap_demo_estate(tenant_id=tenant_id)
 
-    assert summary.get("scan_error") is not True
-    assert summary.get("seeded") is True
-    assert int(summary.get("findings") or 0) > 0
-    jobs = store.list_all(tenant_id="default")
-    assert any(job.job_id == summary["job_id"] and job.result and job.result.get("findings") for job in jobs)
+        assert summary.get("scan_error") is not True
+        assert summary.get("seeded") is True
+        assert int(summary.get("findings") or 0) > 0
+        assert summary.get("graph_error") is not True
+        assert graph_store.snapshot_identity(tenant_id=tenant_id, scan_id=summary["graph_owner_scan_id"])[1]
+        jobs = store.list_all(tenant_id=tenant_id)
+        assert any(job.job_id == summary["job_id"] and job.result and job.result.get("findings") for job in jobs)
+    finally:
+        reset_current_tenant(token)
 
 
 def test_runtime_workload_evidence_shared_pool_roundtrip_and_rls():

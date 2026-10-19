@@ -99,7 +99,10 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
           if (cancelled) return;
           const after = fittedBounds();
           const stable = before.x === after.x && before.y === after.y && before.width === after.width && before.height === after.height;
-          if (pass > 0 && fitted && stable) lastAutoFitKey.current = autoFitKey;
+          // Caption dimensions can oscillate around a zoom threshold. Once
+          // the bounded budget is spent, keep this camera until geometry or
+          // scope changes instead of restarting on virtualization updates.
+          if (fitted && ((pass > 0 && stable) || pass === 3)) lastAutoFitKey.current = autoFitKey;
           else if (pass < 3) settle(pass + 1);
         }))));
       });
