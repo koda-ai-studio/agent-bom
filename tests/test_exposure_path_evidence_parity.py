@@ -112,7 +112,7 @@ def test_exposure_path_surfaces_carry_independent_evidence_dimensions() -> None:
         dimensions = payload["evidenceDimensions"]
         assert dimensions["reachability"] == {
             "status": "complete",
-            "verdict": "confirmed",
+            "verdict": "likely",
             "basis": ["directed_provenance_backed_hops"],
         }
         # AV:N is advisory metadata; it does not assess this environment.

@@ -24,9 +24,10 @@ The useful result is a supported investigation and a next action:
 | **Is this path supported?** | Per-hop direction, provenance, freshness and reachability basis; distinguish dependency reachability, recorded permissions and observed runtime activity. |
 | **Did the change remove this exposure?** | Re-scan the same scope, compare retained snapshots and inspect remaining findings before closing the work. |
 
-A confirmed graph path describes provenance-backed traversal within collected
-evidence. It does not prove exploitation, effective access to every resource,
-or complete estate coverage. The experimental [consequence assessment](GRAPH_CONSEQUENCES.md)
+A provenance-backed graph path is labelled `likely`: it shows the collected
+topology connects, not that the vulnerable code executes. Only function-level
+(symbol) or runtime-observed evidence yields `confirmed`. Neither verdict proves
+exploitation, effective access to every resource, or complete estate coverage. The experimental [consequence assessment](GRAPH_CONSEQUENCES.md)
 keeps assumed compromise, exploitation prerequisites, stopping controls and
 missing evidence separate. [Evidence boundaries](PRODUCT_BOUNDARIES.md) ·
 [Measure an investigation](operations/INVESTIGATION_MEASUREMENT.md).

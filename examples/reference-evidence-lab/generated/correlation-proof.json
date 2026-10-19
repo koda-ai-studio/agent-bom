@@ -10,7 +10,7 @@
       ]
     }
   ],
-  "artifact_sha256": "sha256:49120f2d8a67ce52d416620bfa0b6cb7df4f3b2ccf90dd2892731d9ea2a25459",
+  "artifact_sha256": "sha256:775b4fdf9516ec3815e13b7bd53a03fe8d7cd6fb1b71de9ffc1a5bf81687519c",
   "capture_fixture": {
     "fix_first": {
       "attack_campaigns": [
@@ -163,7 +163,7 @@
               "data-store:reference-customer-records"
             ],
             "mitre_technique_ids": [],
-            "reachability": "confirmed",
+            "reachability": "likely",
             "reachability_basis": [
               "observed_graph_edges",
               "directed_provenance_backed_hops"
@@ -245,7 +245,7 @@
                   "directed_provenance_backed_hops"
                 ],
                 "status": "complete",
-                "verdict": "confirmed"
+                "verdict": "likely"
               }
             },
             "exposedCredentials": [],
@@ -443,7 +443,7 @@
               "source": "graph_attack_path"
             },
             "rank": 1,
-            "reachability": "confirmed",
+            "reachability": "likely",
             "reachabilityBasis": [
               "observed_graph_edges",
               "directed_provenance_backed_hops"
@@ -912,7 +912,7 @@
             "environment_weight": 1.0,
             "environments": [],
             "raw_severity": "high",
-            "reachability": "confirmed",
+            "reachability": "likely",
             "tool_capabilities": []
           },
           "risk_reasons": [
@@ -3369,7 +3369,7 @@
             "data-store:reference-customer-records"
           ],
           "mitre_technique_ids": [],
-          "reachability": "confirmed",
+          "reachability": "likely",
           "reachability_basis": [
             "observed_graph_edges",
             "directed_provenance_backed_hops"
@@ -5316,7 +5316,7 @@
       "data-store:reference-customer-records"
     ],
     "mitre_technique_ids": [],
-    "reachability": "confirmed",
+    "reachability": "likely",
     "reachability_basis": [
       "observed_graph_edges",
       "directed_provenance_backed_hops"

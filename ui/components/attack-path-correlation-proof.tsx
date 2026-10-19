@@ -42,7 +42,7 @@ export function AttackPathCorrelationProof({
     });
   const expectedHopCount = Math.max(path.hops.length - 1, 0);
   const coverage = hopReceiptCoverage(path);
-  const pathEvidenceComplete = path.reachability === "confirmed" && coverage.complete !== null;
+  const pathEvidenceComplete = (path.reachability === "confirmed" || path.reachability === "likely") && coverage.complete !== null;
   const proofLabel = pathEvidenceComplete ? "Hop receipts complete" : "Hop receipts incomplete";
   const missingNodes = path.hops.filter((id) => !nodeById.has(id));
   const sourceCount = new Set(receipts.flatMap((receipt) =>

@@ -330,7 +330,7 @@ def test_confirmed_path_carries_complete_per_hop_evidence() -> None:
     graph = _ordinary_vulnerability_graph()
     path = next(path for path in _derived_attack_paths(graph) if path.target == "vuln:CVE-2026-1")
 
-    assert path.reachability == "confirmed"
+    assert path.reachability == "likely"
     assert len(path.hop_evidence) == 2
     assert path.hop_evidence[0] == {
         "source_node_id": "agent:a",
@@ -371,11 +371,11 @@ def test_attack_path_evidence_survives_sqlite_round_trip(tmp_path: Path) -> None
 
     assert restored.hop_evidence == path.hop_evidence
     assert restored.analysis == path.analysis
-    assert restored.reachability == "confirmed"
+    assert restored.reachability == "likely"
     assert exposure_evidence_dimensions(restored, graph.nodes[restored.target])["reachability"] == {
         "status": "complete",
-        "verdict": "confirmed",
-        "basis": ["import_path"],
+        "verdict": "likely",
+        "basis": ["import_path", "directed_provenance_backed_hops"],
     }
 
 

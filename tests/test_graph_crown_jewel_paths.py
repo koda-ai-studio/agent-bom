@@ -91,7 +91,7 @@ def test_crown_jewel_ranks_at_top_of_derived_paths():
     assert all_paths
     top = max(all_paths, key=lambda p: p.composite_risk)
     assert "Crown jewel" in top.summary and top.composite_risk >= 95
-    assert top.reachability == "confirmed"
+    assert top.reachability == "likely"
     assert all(receipt["complete"] for receipt in top.hop_evidence)
 
 

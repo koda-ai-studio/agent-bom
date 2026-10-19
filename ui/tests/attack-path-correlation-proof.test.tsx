@@ -6,7 +6,7 @@ import type { GraphAttackPath } from "@/lib/api-types";
 import type { UnifiedNode } from "@/lib/graph-schema";
 
 describe("AttackPathCorrelationProof", () => {
-  it("summarizes verified proof and keeps exact per-hop receipts inspectable", () => {
+  it("summarizes complete receipts on a modeled (likely) path and keeps exact per-hop receipts inspectable", () => {
     const digest = "sha256:7d3e21c47d244111d7502503e9868ce01f2dfd77f0d71d876a3a8da1f477d58a";
     const nodes = [
       { id: "service:api", entity_type: "server", label: "Public API" },
@@ -17,7 +17,7 @@ describe("AttackPathCorrelationProof", () => {
     const path = {
       source: "service:api",
       target: "vulnerability:webp",
-      reachability: "confirmed",
+      reachability: "likely",
       analysis: { status: "complete" },
       hops: nodes.map((node) => node.id),
       edges: ["contains", "contains", "vulnerable_to"],

@@ -252,7 +252,7 @@ class TestBlastRadiusEnrichment:
         assert vuln is not None
         assert vuln.attributes.get("affected_agent_count") == 1
         assert vuln.attributes.get("affected_server_count") == 1
-        assert vuln.attributes.get("reachability") == "confirmed"
+        assert vuln.attributes.get("reachability") == "likely"
         assert vuln.attributes.get("actionable") is True
 
 

@@ -7,6 +7,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from agent_bom.core.reachability import CONFIRMING_BASIS
 from agent_bom.evidence.semantics import ExploitabilityDimension
 from agent_bom.graph.applicability import advisory_match_unverified
 from agent_bom.graph.container import AttackPath, UnifiedGraph
@@ -285,13 +286,14 @@ def annotate_attack_path_evidence(path: AttackPath, graph: UnifiedGraph, *, hop_
             path.reachability = "likely"
         basis.append("stale_evidence_allowed")
     elif all_complete and path.reachability in {"unknown", "likely"} and "structural_topology_only" not in basis:
-        # Current hops prove the topology, not use; a producer's structural-only verdict stands.
-        path.reachability = "confirmed"
+        # Current hops prove the topology, not that vulnerable code executes:
+        # a modeled path tops out at likely; a producer's structural-only verdict stands.
+        path.reachability = "likely"
         basis.append("directed_provenance_backed_hops")
     elif all_complete and path.reachability == "confirmed" and promoted_earlier:
-        # Keep the qualifier an earlier pass added; a producer-confirmed path
-        # keeps its own basis.
         basis.append("directed_provenance_backed_hops")
+    if path.reachability == "confirmed" and not CONFIRMING_BASIS.intersection(basis):
+        path.reachability = "likely"
     path.reachability_basis = list(dict.fromkeys(basis))
     return path
 
@@ -513,6 +515,11 @@ def qualify_exposure_reachability(payload: dict[str, Any]) -> dict[str, Any]:
         payload["summary"] = "Structural exposure candidate; available hop evidence does not establish end-to-end reachability."
         if payload.get("label") == previous_summary:
             payload["label"] = payload["summary"]
+    if payload.get("reachability") == "confirmed" and not CONFIRMING_BASIS.intersection(payload.get("reachabilityBasis") or []):
+        # Paths persisted while a modeled graph path still meant "confirmed".
+        payload["reachability"] = "likely"
+        if dimensions["reachability"].get("verdict") == "confirmed":
+            dimensions["reachability"] = {**dimensions["reachability"], "verdict": "likely"}
     return payload
 
 
