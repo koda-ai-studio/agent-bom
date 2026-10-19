@@ -3422,7 +3422,7 @@ class TestGraphStoreBackendSelection:
         assert response.status_code == 200
         assert response.json()["truncated"] is True
 
-    def test_graph_query_enforces_operator_budget(self, recording_graph_store, monkeypatch):
+    def test_graph_query_clamps_to_operator_budget(self, recording_graph_store, monkeypatch):
         monkeypatch.setenv("AGENT_BOM_GRAPH_QUERY_MAX_NODES", "2")
         recording_graph_store.graph = UnifiedGraph(scan_id="store-scan", tenant_id="default")
         recording_graph_store.graph.add_node(UnifiedNode(id="agent:a", entity_type=EntityType.AGENT, label="agent-a"))
@@ -3433,9 +3433,12 @@ class TestGraphStoreBackendSelection:
             json={"roots": ["agent:a"], "max_nodes": 3},
         )
 
-        assert response.status_code == 422
-        assert response.json()["detail"]["violations"] == {"max_nodes": {"requested": 3, "allowed": 2}}
-        assert not any(call[0] == "nodes_by_ids" for call in recording_graph_store.calls)
+        assert response.status_code == 200
+        body = response.json()
+        assert body["budget_applied"] == {"max_nodes": {"requested": 3, "applied": 2}}
+        assert body["max_nodes"] == 2
+        traversal = next(call for call in recording_graph_store.calls if call[0] == "traverse_subgraph")
+        assert traversal[6] == 2
 
     def test_graph_query_returns_effective_budget(self, recording_graph_store, monkeypatch):
         monkeypatch.setenv("AGENT_BOM_GRAPH_QUERY_MAX_DEPTH", "6")

@@ -60,9 +60,15 @@ def impact_completeness(*, affected_count: int, truncated: bool, depth_limited: 
     depends on this" and "we stopped looking".
     """
     bounded = truncated or depth_limited
-    return graph_completeness(
+    payload = graph_completeness(
         returned=affected_count,
         total=None if bounded else affected_count,
         truncated=bounded,
         reason=bounded_walk_reason(truncated=truncated, depth_limited=depth_limited),
     )
+    # ``total`` is always present: ``null`` says "unknown", which an absent key
+    # does not, and ``lower_bound`` carries what the bounded walk did reach.
+    payload.setdefault("total", None)
+    if bounded:
+        payload["lower_bound"] = max(0, affected_count)
+    return payload

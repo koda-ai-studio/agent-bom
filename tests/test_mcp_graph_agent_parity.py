@@ -448,7 +448,11 @@ def test_graph_reach_filters_entity_types(demo: _Estate) -> None:
     assert page["items"] and all(item["entityType"] == "agent" for item in page["items"])
     assert page["total"] == page["affected_by_type"]["agent"]
     out = demo.mcp(graph_reach_impl, node_id=page["items"][0]["id"], direction="out", max_depth=4)
-    assert node in {item["id"] for item in out["items"]}
+    reached = {item["id"]: item["entityType"] for item in out["items"]}
+    # Findings are context, never reach: the agent reaches the asset the finding names.
+    assert not {"vulnerability", "misconfiguration"} & set(reached.values())
+    entry = demo.mcp(graph_reach_impl, node_id=node, max_depth=1, limit=100)
+    assert {item["id"] for item in entry["items"]} & set(reached)
 
 
 # ── P1-9: findings tools reuse the findings route ────────────────────────────

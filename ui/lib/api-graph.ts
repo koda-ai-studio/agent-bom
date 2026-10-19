@@ -476,7 +476,7 @@ export const graphApi = {
       exposed?: boolean;
       toxic?: boolean;
       mode?: "rollup" | "attack_path";
-      /** Drill-down page; the server defaults to the first 200 children. */
+      /** Top-level or drill-down page; the server defaults to the first 200 entries. */
       offset?: number;
       limit?: number;
       snapshotGeneration?: string | undefined;

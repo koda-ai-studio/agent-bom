@@ -36,7 +36,7 @@ from __future__ import annotations
 import logging
 import os
 import time
-from typing import Any, Literal, Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from starlette.responses import Response
@@ -129,7 +129,8 @@ from agent_bom.api.graph_presentation import (
     _serialize_attack_path_batch as _serialize_attack_path_batch,
 )
 from agent_bom.api.graph_query import GraphQueryRequest, _filtered_query_graph, query_payload
-from agent_bom.api.graph_store import containment_drilldown_graph
+from agent_bom.api.graph_rollup_prewarm import load_rollup_source, rollup_cache_key
+from agent_bom.api.graph_store import containment_drilldown_graph as containment_drilldown_graph
 from agent_bom.api.neptune_graph import NeptuneGraphStore
 from agent_bom.api.read_models._base import documented
 from agent_bom.api.read_models.graph import GraphNodeNeighborsResponse, GraphPageResponse, GraphPathsResponse, GraphRollupResponse
@@ -216,7 +217,14 @@ def _graph_query_budget() -> dict[str, int]:
     }
 
 
-def _enforce_graph_query_budget(body: GraphQueryRequest) -> dict[str, int]:
+def _apply_graph_query_budget(body: GraphQueryRequest) -> tuple[GraphQueryRequest, dict[str, int], dict[str, dict[str, int]]]:
+    """Clamp a request to the deployment budget and say what was clamped.
+
+    The schema publishes the absolute ceilings; the budget is lower and set per
+    deployment, so a request between the two is served at the budget with the
+    clamp disclosed in ``budget_applied`` rather than rejected against limits
+    the published contract allows.
+    """
     budget = _graph_query_budget()
     requested = {
         "max_depth": body.max_depth,
@@ -224,17 +232,10 @@ def _enforce_graph_query_budget(body: GraphQueryRequest) -> dict[str, int]:
         "max_edges": body.max_edges,
         "timeout_ms": body.timeout_ms,
     }
-    violations = {key: {"requested": value, "allowed": budget[key]} for key, value in requested.items() if value > budget[key]}
-    if violations:
-        raise HTTPException(
-            status_code=422,
-            detail={
-                "message": "Graph query exceeds tenant query budget",
-                "violations": violations,
-                "budget": budget,
-            },
-        )
-    return budget
+    applied = {key: {"requested": value, "applied": budget[key]} for key, value in requested.items() if value > budget[key]}
+    if applied:
+        body = body.model_copy(update={key: value["applied"] for key, value in applied.items()})
+    return body, budget, applied
 
 
 @router.get("/graph", **documented(GraphPageResponse), tags=["graph"])
@@ -517,7 +518,7 @@ async def query_graph(request: Request, body: GraphQueryRequest) -> dict:
         optional_generation, graph_store, tenant=tenant_id, scan_id=body.scan_id or "", generation=body.snapshot_generation, offset=0
     )
     scan_id = identity[0] if identity else body.scan_id or ""
-    budget = _enforce_graph_query_budget(body)
+    body, budget, budget_applied = _apply_graph_query_budget(body)
     body, resolved_roots, missing_roots = await _runtime.resolve_query_roots(graph_store, tenant_id, scan_id, body)
     if missing_roots:
         raise HTTPException(status_code=404, detail={"message": "Root nodes not found", "missing_roots": missing_roots})
@@ -588,7 +589,7 @@ async def query_graph(request: Request, body: GraphQueryRequest) -> dict:
     payload = query_payload(
         body, filtered_graph, depth_by_node, truncated, depth_limited, attack_paths, budget, rel_types, identity[1] if identity else None
     )
-    return {**payload, "resolved_roots": resolved_roots}
+    return {**payload, "budget_applied": budget_applied, "resolved_roots": resolved_roots}
 
 
 router.include_router(reads.node_router)
@@ -755,12 +756,12 @@ async def get_graph_rollup(
     exposed: bool = Query(False, description="Only roll up internet-exposed descendants"),
     toxic: bool = Query(False, description="Only roll up toxic-combination descendants"),
     mode: Literal["rollup", "attack_path"] = Query("rollup", description="rollup (default) or attack_path-first view"),
-    offset: int = Query(0, ge=0, le=1_000_000, description="Drill-down only: ranked-children page offset"),
+    offset: int = Query(0, ge=0, le=1_000_000, description="Page offset into the ranked top level, or the drill-down's ranked children"),
     limit: int = Query(
         _ROLLUP_DRILLDOWN_DEFAULT_LIMIT,
         ge=1,
         le=_ROLLUP_DRILLDOWN_MAX_LIMIT,
-        description="Drill-down only: maximum direct children returned per page",
+        description="Maximum top-level entries (or drill-down direct children) returned per page",
     ),
 ) -> dict:
     """Collapse the estate along ``CONTAINS`` into a small, readable view.
@@ -768,10 +769,12 @@ async def get_graph_rollup(
     Rolls the graph up along containment (org -> account/project -> app ->
     resource) so a 1000+ node estate renders as a few top-level containers, each
     with descendant counts, worst severity, a severity histogram and exposure /
-    toxic flags. ``?node=<id>`` (a replaced id resolves, echoed as
-    ``resolved_from``) returns one level of direct children, paged by
-    ``offset``/``limit`` with truthful ``completeness``; ``?mode=attack_path``
-    returns materialised attack-path nodes/edges first. Read-only.
+    toxic flags. The ranked top level is paged by ``offset``/``limit``
+    (``pagination`` carries the ranked total). ``?node=<id>`` (a replaced id
+    resolves, echoed as ``resolved_from``) returns one level of direct
+    children, paged the same way, with truthful ``completeness``;
+    ``?mode=attack_path`` returns materialised attack-path nodes/edges first.
+    Read-only.
     """
     tenant = _runtime._tenant(request)
     graph_store = _runtime._get_graph_store_or_503()
@@ -796,28 +799,24 @@ async def get_graph_rollup(
         tenant=tenant,
         scan_id=requested_scan_id,
         generation=snapshot_generation,
-        offset=offset if node else 0,
+        offset=offset if mode == "rollup" else 0,
     )
     cache_identity = identity
     if identity is None and not offset:
         cache_identity = await _runtime._graph_store_call(snapshot_fingerprint, graph_store, tenant=tenant, scan_id=requested_scan_id)
     cache_key = None
     if cache_identity and cache_identity[1]:
-        cache_key = (
-            id(graph_store),
+        cache_key = rollup_cache_key(
+            graph_store,
             tenant,
             cache_identity,
-            getattr(request.state, "api_key_id", ""),
-            getattr(request.state, "api_key_name", ""),
-            getattr(request.state, "api_key_role", ""),
-            tuple(sorted(getattr(request.state, "api_key_scopes", []) or [])),
-            node,
-            min_severity,
-            exposed,
-            toxic,
-            mode,
-            offset if node else 0,
-            limit if node else 0,
+            node=node,
+            min_severity=min_severity,
+            exposed=exposed,
+            toxic=toxic,
+            mode=mode,
+            offset=offset,
+            limit=limit,
         )
         cached = graph_rollup_cache.get(cache_key)
         if cached is not None:
@@ -826,34 +825,18 @@ async def get_graph_rollup(
 
     node, resolved_from = await _runtime.resolve_node_id(graph_store, tenant, requested_scan_id, node) if node else (node, None)
     try:
-        if node:
-            # A drill-down reads one container's subtree, so that subtree is all
-            # this request fetches. Loading the whole snapshot to return twenty
-            # children made the cost of the answer track estate size rather than
-            # answer size (5k nodes 54ms -> 80k nodes 1169ms, twenty children
-            # either way).
-            graph = await _runtime._graph_store_call(
-                containment_drilldown_graph,
-                graph_store,
-                node_id=node,
-                scan_id=requested_scan_id,
-                tenant_id=tenant,
-            )
-        else:
-            load_kwargs: dict[str, Any] = {
-                "scan_id": requested_scan_id,
-                "tenant_id": tenant,
-            }
-            if mode != "attack_path":
-                load_kwargs["relationship_types"] = _ROLLUP_RELATIONSHIPS
-            # SQLite can avoid hydrating evidence JSON for an aggregate-only
-            # view. Other stores retain the full, equivalent load. Attack-path
-            # mode always needs the complete evidence records.
-            rollup_loader = getattr(graph_store, "load_rollup_graph", None)
-            if mode == "rollup" and callable(rollup_loader):
-                graph = await _runtime._graph_store_call(rollup_loader, scan_id=requested_scan_id, tenant_id=tenant)
-            else:
-                graph = await _runtime._graph_store_call(graph_store.load_graph, **load_kwargs)
+        # A drill-down reads only one container's subtree (its cost tracks the
+        # answer, not the estate); the top level uses the store's aggregate-only
+        # roll-up projection when it has one; attack-path mode needs the full
+        # evidence records.
+        graph = await _runtime._graph_store_call(
+            load_rollup_source,
+            graph_store,
+            tenant_id=tenant,
+            scan_id=requested_scan_id,
+            node=node,
+            mode=mode,
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=sanitize_error(exc)) from exc
 

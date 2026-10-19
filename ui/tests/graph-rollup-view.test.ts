@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { GraphRollupContainer } from "@/lib/api-types";
 import {
   buildRollupFlowGraph,
+  mergeReciprocalRollupEdges,
   rollupContainerSubtitle,
   rollupEntityToNodeType,
 } from "@/lib/graph-rollup-view";
@@ -118,10 +119,37 @@ describe("buildRollupFlowGraph", () => {
     expect(nodes).toHaveLength(2);
     expect(nodes[0]?.id).toBe("account:prod");
     expect(nodes[0]?.position).toEqual({ x: 0, y: 0 });
-    expect(nodes[1]?.position).toEqual({ x: 480, y: 0 });
+    expect(nodes[1]?.position).toEqual({ x: 440, y: 0 });
     expect(nodes[1]!.position.x - nodes[0]!.position.x).toBeGreaterThanOrEqual(300 + 32);
     expect(nodes[0]?.data.attributes?.rollup_has_children).toBe(true);
     expect(nodes[0]?.data.rollup).toEqual(sampleContainer());
     expect(nodes[0]?.data.description).toContain("select to inspect scope");
+  });
+});
+
+describe("mergeReciprocalRollupEdges", () => {
+  const forward = { source: "env:dev", target: "env:prod", count: 2, relationships: ["uses"], directions: ["directed"], relationship_counts: { uses: 2 } };
+  const backward = { source: "env:prod", target: "env:dev", count: 1, relationships: ["accessed"], directions: ["directed"], relationship_counts: { accessed: 1 } };
+
+  it("draws a reciprocal pair once so their labels cannot overlap", () => {
+    const merged = mergeReciprocalRollupEdges([forward, backward]);
+    expect(merged).toHaveLength(1);
+    expect(merged[0]).toMatchObject({ source: "env:dev", target: "env:prod", count: 3, reverse: backward });
+    expect(merged[0]?.relationships).toEqual(["uses", "accessed"]);
+    expect(merged[0]?.relationship_counts).toEqual({ uses: 2, accessed: 1 });
+  });
+
+  it("keeps one-way links and unknown kind counts as they are", () => {
+    expect(mergeReciprocalRollupEdges([forward])).toEqual([forward]);
+    const merged = mergeReciprocalRollupEdges([forward, { ...backward, relationship_counts: null }]);
+    expect(merged[0]?.relationship_counts).toBeNull();
+  });
+
+  it("marks both ends of a merged reciprocal link on the canvas", () => {
+    const containers = [sampleContainer({ id: "env:dev" }), sampleContainer({ id: "env:prod" })];
+    const { edges } = buildRollupFlowGraph(containers, { edges: mergeReciprocalRollupEdges([forward, backward]) });
+    expect(edges).toHaveLength(1);
+    expect(edges[0]?.label).toBe("3 relationships");
+    expect(edges[0]?.markerStart).toEqual(edges[0]?.markerEnd);
   });
 });

@@ -37,14 +37,14 @@ def get(key: tuple[Any, ...]) -> dict[str, Any] | None:
     return cast(dict[str, Any], json.loads(zlib.decompress(payload)))
 
 
-def put(key: tuple[Any, ...], value: dict[str, Any]) -> None:
+def put(key: tuple[Any, ...], value: dict[str, Any], *, ttl: float | None = None) -> None:
     if len(repr(key)) > 4096:
         return
     payload = zlib.compress(json.dumps(value, separators=(",", ":")).encode(), 1)
     if len(payload) > _MAX_ENTRY_BYTES:
         return
     with _LOCK:
-        _CACHE[key] = (time.monotonic() + _TTL_SECONDS, payload)
+        _CACHE[key] = (time.monotonic() + (_TTL_SECONDS if ttl is None else ttl), payload)
         _CACHE.move_to_end(key)
         while len(_CACHE) > _MAX_ENTRIES or sum(len(entry[1]) for entry in _CACHE.values()) > _MAX_BYTES:
             _CACHE.popitem(last=False)

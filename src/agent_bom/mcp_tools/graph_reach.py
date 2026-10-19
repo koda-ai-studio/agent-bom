@@ -1,8 +1,9 @@
 """``graph_reach``: what can reach a node, or what a node reaches, over recorded edges.
 
-Inbound reach is the store walk behind ``/v1/graph/impact`` (``impact_of``);
-outbound reach is the same bounded walk in the forward direction. Both page
-the walk's node set with a generation-pinned cursor.
+Both directions are the store walk behind ``/v1/graph/impact`` (``impact_of``),
+reverse for inbound and forward for outbound, over the same reach classes
+(:mod:`agent_bom.graph.reach_view`). Both page the walk's node set with a
+generation-pinned cursor.
 """
 
 from __future__ import annotations
@@ -14,7 +15,6 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
-from agent_bom.graph.completeness import impact_completeness
 from agent_bom.graph.node_alias_resolution import resolve_snapshot_node_id
 from agent_bom.graph.reach_view import reach_interpretation
 from agent_bom.graph.types import EntityType
@@ -29,8 +29,6 @@ from agent_bom.mcp_tenant import resolve_mcp_tool_tenant_id
 from agent_bom.mcp_tools.graph import _resolve_exposure_snapshot, guarded_graph_read
 from agent_bom.mcp_tools.storage import default_graph_store
 
-_WALK_NODE_BUDGET = 5000
-_WALK_EDGE_BUDGET = 25_000
 _ENTITY_TYPES = frozenset(member.value for member in EntityType)
 
 
@@ -77,41 +75,17 @@ def _decode_cursor(cursor: str, scope: str) -> dict[str, Any]:
 
 
 def _walk(store: Any, *, tenant_id: str, scan_id: str, node_id: str, direction: str, max_depth: int) -> dict[str, Any] | None:
-    """One bounded walk; inbound is exactly the REST impact walk."""
-    if direction == "in":
-        impact = store.impact_of(tenant_id=tenant_id, scan_id=scan_id, node_id=node_id, max_depth=max_depth)
-        if impact is None:
-            return None
-        return {**impact, "types": None}
-    graph, _depths, _truncated = store.traverse_subgraph(
+    """One bounded walk; inbound is exactly the REST impact walk, outbound the same walk forward."""
+    impact = store.impact_of(
         tenant_id=tenant_id,
         scan_id=scan_id,
-        roots=[node_id],
-        direction="forward",
+        node_id=node_id,
         max_depth=max_depth,
-        max_nodes=_WALK_NODE_BUDGET,
-        max_edges=_WALK_EDGE_BUDGET,
-        include_roots=True,
+        direction="reverse" if direction == "in" else "forward",
     )
-    if node_id not in graph.nodes:
+    if impact is None:
         return None
-    types = {nid: _type_value(node) for nid, node in graph.nodes.items() if nid != node_id}
-    by_type: dict[str, int] = {}
-    for kind in types.values():
-        by_type[kind] = by_type.get(kind, 0) + 1
-    affected = sorted(types)
-    return {
-        "node_id": node_id,
-        "affected_nodes": affected,
-        "affected_by_type": by_type,
-        "affected_count": len(affected),
-        "completeness": impact_completeness(
-            affected_count=len(affected),
-            truncated=bool(graph.completeness.truncated),
-            depth_limited=bool(graph.completeness.depth_limited),
-        ),
-        "types": types,
-    }
+    return {**impact, "types": None}
 
 
 @dataclass(slots=True)

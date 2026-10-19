@@ -14,6 +14,30 @@ from agent_bom.graph.types import RelationshipType
 MAX_QUERY_ROOTS = 500
 
 
+# Absolute request ceilings (the schema maximums) and the lower default
+# deployment budget, tunable per deployment through AGENT_BOM_GRAPH_QUERY_<KEY>.
+GRAPH_QUERY_ABSOLUTE_LIMITS = {
+    "max_depth": 10,
+    "max_nodes": 5000,
+    "max_edges": 25_000,
+    "timeout_ms": 5000,
+}
+GRAPH_QUERY_DEFAULT_BUDGET = {
+    "max_depth": 5,
+    "max_nodes": 1000,
+    "max_edges": 10_000,
+    "timeout_ms": 2500,
+}
+
+
+def _budget_note(key: str) -> str:
+    return (
+        f"Schema maximum is the absolute ceiling. The deployment budget (AGENT_BOM_GRAPH_QUERY_{key.upper()}, "
+        f"default {GRAPH_QUERY_DEFAULT_BUDGET[key]}) clamps a larger request; the response's budget_applied "
+        "lists each clamped limit as requested/applied."
+    )
+
+
 class GraphQueryRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     roots: list[Annotated[str, Field(max_length=512)]] = Field(
@@ -22,10 +46,10 @@ class GraphQueryRequest(BaseModel):
     scan_id: str = ""
     snapshot_generation: str | None = Field(None, max_length=128, description="Expected read revision; replacement returns 409")
     direction: Literal["forward", "reverse", "both"] = "forward"
-    max_depth: int = Field(4, ge=1, le=10)
-    max_nodes: int = Field(500, ge=1, le=5000)
-    max_edges: int = Field(10_000, ge=1, le=25_000)
-    timeout_ms: int = Field(2500, ge=100, le=5000)
+    max_depth: int = Field(4, ge=1, le=GRAPH_QUERY_ABSOLUTE_LIMITS["max_depth"], description=_budget_note("max_depth"))
+    max_nodes: int = Field(500, ge=1, le=GRAPH_QUERY_ABSOLUTE_LIMITS["max_nodes"], description=_budget_note("max_nodes"))
+    max_edges: int = Field(10_000, ge=1, le=GRAPH_QUERY_ABSOLUTE_LIMITS["max_edges"], description=_budget_note("max_edges"))
+    timeout_ms: int = Field(2500, ge=100, le=GRAPH_QUERY_ABSOLUTE_LIMITS["timeout_ms"], description=_budget_note("timeout_ms"))
     traversable_only: bool = False
     static_only: bool = False
     dynamic_only: bool = False
@@ -126,6 +150,8 @@ def query_payload(
         "max_edges": body.max_edges,
         "timeout_ms": body.timeout_ms,
         "budget": budget,
+        # Filled by the route with every limit the deployment budget clamped.
+        "budget_applied": {},
         "truncated": truncated,
         "depth_limited": depth_limited,
         "missing_roots": [],

@@ -14622,6 +14622,11 @@ components:
         collection_coverage:
           title: Collection Coverage
           type: string
+        excluded_traversal_classes:
+          items:
+            type: string
+          title: Excluded Traversal Classes
+          type: array
         execution:
           title: Execution
           type: string
@@ -14631,12 +14636,19 @@ components:
         traversable_only:
           title: Traversable Only
           type: boolean
+        traversal_classes:
+          items:
+            type: string
+          title: Traversal Classes
+          type: array
       required:
       - basis
       - execution
       - collection_coverage
       - traversable_only
       - max_depth
+      - traversal_classes
+      - excluded_traversal_classes
       title: GraphImpactInterpretation
       type: object
     GraphImpactResponse:
@@ -15162,18 +15174,27 @@ components:
           type: boolean
         max_depth:
           default: 4
+          description: Schema maximum is the absolute ceiling. The deployment budget
+            (AGENT_BOM_GRAPH_QUERY_MAX_DEPTH, default 5) clamps a larger request;
+            the response's budget_applied lists each clamped limit as requested/applied.
           maximum: 10.0
           minimum: 1.0
           title: Max Depth
           type: integer
         max_edges:
           default: 10000
+          description: Schema maximum is the absolute ceiling. The deployment budget
+            (AGENT_BOM_GRAPH_QUERY_MAX_EDGES, default 10000) clamps a larger request;
+            the response's budget_applied lists each clamped limit as requested/applied.
           maximum: 25000.0
           minimum: 1.0
           title: Max Edges
           type: integer
         max_nodes:
           default: 500
+          description: Schema maximum is the absolute ceiling. The deployment budget
+            (AGENT_BOM_GRAPH_QUERY_MAX_NODES, default 1000) clamps a larger request;
+            the response's budget_applied lists each clamped limit as requested/applied.
           maximum: 5000.0
           minimum: 1.0
           title: Max Nodes
@@ -15215,6 +15236,9 @@ components:
           type: boolean
         timeout_ms:
           default: 2500
+          description: Schema maximum is the absolute ceiling. The deployment budget
+            (AGENT_BOM_GRAPH_QUERY_TIMEOUT_MS, default 2500) clamps a larger request;
+            the response's budget_applied lists each clamped limit as requested/applied.
           maximum: 5000.0
           minimum: 100.0
           title: Timeout Ms
@@ -43808,13 +43832,17 @@ paths:
         with descendant counts, worst severity, a severity histogram and exposure
         /
 
-        toxic flags. ``?node=<id>`` (a replaced id resolves, echoed as
+        toxic flags. The ranked top level is paged by ``offset``/``limit``
 
-        ``resolved_from``) returns one level of direct children, paged by
+        (``pagination`` carries the ranked total). ``?node=<id>`` (a replaced id
 
-        ``offset``/``limit`` with truthful ``completeness``; ``?mode=attack_path``
+        resolves, echoed as ``resolved_from``) returns one level of direct
 
-        returns materialised attack-path nodes/edges first. Read-only.'
+        children, paged the same way, with truthful ``completeness``;
+
+        ``?mode=attack_path`` returns materialised attack-path nodes/edges first.
+
+        Read-only.'
       operationId: get_graph_rollup_v1_graph_rollup_get
       parameters:
       - description: Scan snapshot ID; latest if omitted
@@ -43888,24 +43916,28 @@ paths:
           - attack_path
           title: Mode
           type: string
-      - description: 'Drill-down only: ranked-children page offset'
+      - description: Page offset into the ranked top level, or the drill-down's ranked
+          children
         in: query
         name: offset
         required: false
         schema:
           default: 0
-          description: 'Drill-down only: ranked-children page offset'
+          description: Page offset into the ranked top level, or the drill-down's
+            ranked children
           maximum: 1000000
           minimum: 0
           title: Offset
           type: integer
-      - description: 'Drill-down only: maximum direct children returned per page'
+      - description: Maximum top-level entries (or drill-down direct children) returned
+          per page
         in: query
         name: limit
         required: false
         schema:
           default: 200
-          description: 'Drill-down only: maximum direct children returned per page'
+          description: Maximum top-level entries (or drill-down direct children) returned
+            per page
           maximum: 1000
           minimum: 1
           title: Limit

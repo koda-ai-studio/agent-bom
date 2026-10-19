@@ -4832,10 +4832,12 @@ export interface paths {
          *     Rolls the graph up along containment (org -> account/project -> app ->
          *     resource) so a 1000+ node estate renders as a few top-level containers, each
          *     with descendant counts, worst severity, a severity histogram and exposure /
-         *     toxic flags. ``?node=<id>`` (a replaced id resolves, echoed as
-         *     ``resolved_from``) returns one level of direct children, paged by
-         *     ``offset``/``limit`` with truthful ``completeness``; ``?mode=attack_path``
-         *     returns materialised attack-path nodes/edges first. Read-only.
+         *     toxic flags. The ranked top level is paged by ``offset``/``limit``
+         *     (``pagination`` carries the ranked total). ``?node=<id>`` (a replaced id
+         *     resolves, echoed as ``resolved_from``) returns one level of direct
+         *     children, paged the same way, with truthful ``completeness``;
+         *     ``?mode=attack_path`` returns materialised attack-path nodes/edges first.
+         *     Read-only.
          */
         get: operations["get_graph_rollup_v1_graph_rollup_get"];
         put?: never;
@@ -16314,12 +16316,16 @@ export interface components {
             basis: string;
             /** Collection Coverage */
             collection_coverage: string;
+            /** Excluded Traversal Classes */
+            excluded_traversal_classes: string[];
             /** Execution */
             execution: string;
             /** Max Depth */
             max_depth: number;
             /** Traversable Only */
             traversable_only: boolean;
+            /** Traversal Classes */
+            traversal_classes: string[];
         } & {
             [key: string]: unknown;
         };
@@ -16618,16 +16624,19 @@ export interface components {
             include_roots: boolean;
             /**
              * Max Depth
+             * @description Schema maximum is the absolute ceiling. The deployment budget (AGENT_BOM_GRAPH_QUERY_MAX_DEPTH, default 5) clamps a larger request; the response's budget_applied lists each clamped limit as requested/applied.
              * @default 4
              */
             max_depth: number;
             /**
              * Max Edges
+             * @description Schema maximum is the absolute ceiling. The deployment budget (AGENT_BOM_GRAPH_QUERY_MAX_EDGES, default 10000) clamps a larger request; the response's budget_applied lists each clamped limit as requested/applied.
              * @default 10000
              */
             max_edges: number;
             /**
              * Max Nodes
+             * @description Schema maximum is the absolute ceiling. The deployment budget (AGENT_BOM_GRAPH_QUERY_MAX_NODES, default 1000) clamps a larger request; the response's budget_applied lists each clamped limit as requested/applied.
              * @default 500
              */
             max_nodes: number;
@@ -16660,6 +16669,7 @@ export interface components {
             static_only: boolean;
             /**
              * Timeout Ms
+             * @description Schema maximum is the absolute ceiling. The deployment budget (AGENT_BOM_GRAPH_QUERY_TIMEOUT_MS, default 2500) clamps a larger request; the response's budget_applied lists each clamped limit as requested/applied.
              * @default 2500
              */
             timeout_ms: number;
@@ -35095,9 +35105,9 @@ export interface operations {
                 toxic?: boolean;
                 /** @description rollup (default) or attack_path-first view */
                 mode?: "rollup" | "attack_path";
-                /** @description Drill-down only: ranked-children page offset */
+                /** @description Page offset into the ranked top level, or the drill-down's ranked children */
                 offset?: number;
-                /** @description Drill-down only: maximum direct children returned per page */
+                /** @description Maximum top-level entries (or drill-down direct children) returned per page */
                 limit?: number;
             };
             header?: never;

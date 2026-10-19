@@ -36,6 +36,7 @@ import {
   type SigmaNodeAttributes,
 } from "@/lib/sigma-graph-overview";
 
+
 type SigmaGraphOverviewProps = {
   legendItems: LegendItem[];
   embedded?: boolean;
@@ -243,7 +244,7 @@ export function SigmaGraphOverview({
           labelDensity: 0.08,
           labelFont: "Inter, ui-sans-serif, system-ui, sans-serif",
           labelGridCellSize: 170,
-          labelRenderedSizeThreshold: 3,
+          labelRenderedSizeThreshold: 4.5,
           labelSize: 11,
           minCameraRatio: 0.04,
           maxCameraRatio: 4,
@@ -264,7 +265,7 @@ export function SigmaGraphOverview({
               // Parent focus marks unrelated nodes hidden; retain them as faded context here.
               hidden: selectedNodeIdRef.current ? false : data.hidden,
               highlighted: selected,
-              size: selected ? 6 : neighbor ? 4 : 2.2,
+              size: selected ? 7 : neighbor ? 5 : 3.2,
               zIndex: selected ? 4 : data.zIndex,
               ...(dimmedBySelection ? { color: palette.stage, size: 0.5 } : {}),
             };
@@ -310,8 +311,15 @@ export function SigmaGraphOverview({
             if (!label) return;
             const position = activeRenderer.graphToViewport({ x: group.x, y: group.centerY });
             const beside = activeRenderer.graphToViewport({ x: group.x + 120, y: group.y });
-            const anchor = { x: Math.max(80, Math.min(dimensions.width - 80, position.x)), y: Math.max(52, position.y - 28) };
-            const readable = (model.groups.length <= 8 || Math.abs(beside.x - position.x) >= 65) && !placed.some(p => Math.abs(p.x - anchor.x) < 160 && Math.abs(p.y - anchor.y) < 52);
+            // Sit the label above its cloud; centred on it, the label hid the assets it counts.
+            const radius = group.y - 36 - group.centerY;
+            const edges = [group.centerY - radius, group.centerY + radius].map(y => activeRenderer.graphToViewport({ x: group.x, y }).y);
+            const x = Math.max(80, Math.min(dimensions.width - 80, position.x));
+            // Above the cloud first, then below it when another label already sits there.
+            // The top band holds the asset-type and legend controls.
+            const anchor = [{ x, y: Math.min(...edges) - 40 }, { x, y: Math.max(...edges) + 6 }]
+              .find(candidate => candidate.y >= 52 && !placed.some(p => Math.abs(p.x - candidate.x) < 140 && Math.abs(p.y - candidate.y) < 44)) ?? { x, y: -1000 };
+            const readable = (model.groups.length <= 8 || Math.abs(beside.x - position.x) >= 65) && anchor.y > -1000;
             if (readable) placed.push(anchor);
             label.style.display = readable && position.x >= 0 && position.y >= 0 && position.x <= dimensions.width && position.y <= dimensions.height ? "block" : "none";
             label.style.transform = `translate(${anchor.x}px, ${anchor.y}px) translateX(-50%)`;
@@ -470,7 +478,7 @@ export function SigmaGraphOverview({
           {overviewConnections.map(edge => <line key={`${edge.source}:${edge.target}`} stroke="currentColor" strokeOpacity="0.25" strokeWidth="1" strokeDasharray="3 5"><title>{countLabel(edge.count, "recorded relationship")} between groups</title></line>)}
         </svg>}
         <div ref={groupLabelsRef} hidden={Boolean(focused)} className="pointer-events-none absolute inset-0 overflow-hidden">
-          {model.groups.map((group) => <button type="button" key={group.key} onClick={() => enterScope(group.key)} className="pointer-events-auto absolute left-0 top-0 hidden max-w-36 rounded border border-outline bg-surface/95 px-2 py-1 text-center text-xs text-foreground">{group.label}<span className="block text-ink-secondary">{group.count} displayed / {group.loadedCount} loaded</span></button>)}
+          {model.groups.map((group) => <button type="button" key={group.key} onClick={() => enterScope(group.key)} className="pointer-events-auto absolute left-0 top-0 hidden max-w-36 rounded border border-outline bg-surface/95 px-2 py-1 text-center text-xs text-foreground">{group.label}<span className="block text-ink-secondary">{group.count === group.loadedCount ? group.count.toLocaleString() : `${group.count.toLocaleString()} of ${group.loadedCount.toLocaleString()} shown`}</span></button>)}
         </div>
         {model.scopes.length > 0 && <details ref={scopeControlsRef} className="absolute left-3 top-3 max-w-64 rounded border border-outline bg-surface/95 p-2 text-xs">
           <summary className="cursor-pointer">{grouping === "environment" ? "Environment groups" : "Asset types"} ({model.scopes.length})</summary>
