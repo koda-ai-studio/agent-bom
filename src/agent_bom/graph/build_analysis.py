@@ -17,6 +17,7 @@ from agent_bom.graph.credential_findings import project_credential_findings
 from agent_bom.graph.edge_freshness import stamp_edge_freshness
 from agent_bom.graph.finding_row_projection import project_finding_rows
 from agent_bom.graph.interaction_risk_ids import bind_interaction_risk_agent_ids
+from agent_bom.graph.provider_inheritance import inherit_cloud_provider
 from agent_bom.graph.relationship_contract import audit_graph_contract
 
 _logger = logging.getLogger("agent_bom.graph.builder")
@@ -48,6 +49,8 @@ def apply_build_analysis(graph: UnifiedGraph, report_json: dict[str, Any], ports
     bind_interaction_risk_agent_ids(graph)
     # Assets a finding row named for the first time join the asset they observe.
     canonicalize_assets(graph)
+    # Merged assets inherit the provider their recorded host or scope proves.
+    inherit_cloud_provider(graph)
     # Edges the assessment projections added after fusion.
     _stamp_freshness(graph)
     audit_graph_contract(graph)
