@@ -76,22 +76,46 @@ for (const theme of ["light", "dark"] as const) for (const width of [390, 1440])
   });
 }
 
+test("viewport settling rejects a slow sample while the transform is changing", async ({ page }) => {
+  await page.setContent('<div class="react-flow__viewport"></div>');
+  await page.evaluate(() => {
+    const viewport = document.querySelector<HTMLElement>(".react-flow__viewport")!;
+    const computedStyle = window.getComputedStyle.bind(window);
+    let reads = 0;
+    window.getComputedStyle = (element, pseudo) => {
+      if (element === viewport) {
+        reads += 1;
+        viewport.style.transform = `scale(${reads === 1 ? 0.8 : reads === 2 ? 0.9 : 1.1})`;
+        // Reproduce a busy browser during the old helper's separate zoom read.
+        if (reads === 2) {
+          const deadline = performance.now() + 400;
+          while (performance.now() < deadline) { /* simulate main-thread work */ }
+        }
+      }
+      return computedStyle(element, pseudo);
+    };
+  });
+  expect(await settledViewportZoom(page)).toBe(1.1);
+});
+
 async function settledViewportZoom(page: Page): Promise<number> {
   let previous = "";
-  let unchangedSince = Date.now();
+  let unchangedSince = 0;
   let zoom = 0;
   await expect.poll(async () => {
-    const transform = await page.locator(".react-flow__viewport").evaluate(
-      element => getComputedStyle(element).transform,
-    );
-    if (transform !== previous) {
-      previous = transform;
-      unchangedSince = Date.now();
+    // Sample the transform, zoom and time together in the browser. Slow
+    // protocol calls must not count as evidence that an animation has settled.
+    const sample = await page.locator(".react-flow__viewport").evaluate(element => {
+      const transform = getComputedStyle(element).transform;
+      return { transform, zoom: new DOMMatrixReadOnly(transform).a, time: performance.now() };
+    });
+    zoom = sample.zoom;
+    if (sample.transform !== previous) {
+      previous = sample.transform;
+      unchangedSince = sample.time;
+      return false;
     }
-    zoom = await page.locator(".react-flow__viewport").evaluate(
-      element => new DOMMatrixReadOnly(getComputedStyle(element).transform).a,
-    );
-    return Date.now() - unchangedSince >= 350;
+    return sample.time - unchangedSince >= 350;
   }, { intervals: [100] }).toBe(true);
   return zoom;
 }
