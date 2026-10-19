@@ -960,9 +960,9 @@ main > div {
 .graph-provider-mark-inline .graph-provider-mark-glyph { width: 74%; height: 74%; }
 .graph-provider-mark-inline .graph-provider-mark-glyph-aws { width: 90%; height: 90%; }
 .graph-provider-mark-dark { background: #202123; }
-.graph-provider-mark-glyph { width: 64%; height: 64%; object-fit: contain; }
+.graph-provider-mark-glyph { width: 74%; height: 74%; object-fit: contain; }
 /* AWS has no symbol-only mark; its wide logo gets the disc's full width. */
-.graph-provider-mark-glyph-aws { width: 82%; height: 82%; }
+.graph-provider-mark-glyph-aws { width: 86%; height: 86%; }
 .graph-provider-mark-glyph-openai { transform: scale(1.6); }
 /* Black-ink artwork: invert lightness, keep hue (the AWS smile stays orange). */
 :root:not([data-theme="light"]) .graph-provider-mark-mono .graph-provider-mark-glyph { filter: invert(1) hue-rotate(180deg); }
