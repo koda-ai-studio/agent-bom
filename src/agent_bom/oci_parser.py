@@ -40,7 +40,6 @@ import os
 import posixpath
 import re
 import sqlite3
-import struct
 import tarfile
 import tempfile
 import zipfile
@@ -53,6 +52,54 @@ from agent_bom.coverage import record_scan_input_warning
 from agent_bom.models import Package, PackageOccurrence
 from agent_bom.package_utils import parse_debian_source_name
 from agent_bom.parsers.cpython_runtime import _python_metadata_kind, extract_cpython_runtime
+from agent_bom.parsers.oci_metadata import (
+    _MAX_LEGACY_RPMDB_BYTES as _MAX_LEGACY_RPMDB_BYTES,
+)
+from agent_bom.parsers.oci_metadata import (
+    _RPM_HDR_MAGIC as _RPM_HDR_MAGIC,
+)
+from agent_bom.parsers.oci_metadata import (
+    _RPM_TYPE_INT32 as _RPM_TYPE_INT32,
+)
+from agent_bom.parsers.oci_metadata import (
+    _RPM_TYPE_STRING as _RPM_TYPE_STRING,
+)
+from agent_bom.parsers.oci_metadata import (
+    _RPMTAG_EPOCH as _RPMTAG_EPOCH,
+)
+from agent_bom.parsers.oci_metadata import (
+    _RPMTAG_NAME as _RPMTAG_NAME,
+)
+from agent_bom.parsers.oci_metadata import (
+    _RPMTAG_RELEASE as _RPMTAG_RELEASE,
+)
+from agent_bom.parsers.oci_metadata import (
+    _RPMTAG_VERSION as _RPMTAG_VERSION,
+)
+from agent_bom.parsers.oci_metadata import (
+    LayerMetadata as LayerMetadata,
+)
+from agent_bom.parsers.oci_metadata import (
+    _build_layer_metadata as _build_layer_metadata,
+)
+from agent_bom.parsers.oci_metadata import (
+    _normalize_dockerfile_instruction as _normalize_dockerfile_instruction,
+)
+from agent_bom.parsers.oci_metadata import (
+    _normalize_layer_id as _normalize_layer_id,
+)
+from agent_bom.parsers.oci_metadata import (
+    _parse_legacy_rpmdb_bytes as _parse_legacy_rpmdb_bytes,
+)
+from agent_bom.parsers.oci_metadata import (
+    _parse_rfc822_name_version as _parse_rfc822_name_version,
+)
+from agent_bom.parsers.oci_metadata import (
+    _parse_rpm_header_blob as _parse_rpm_header_blob,
+)
+from agent_bom.parsers.oci_metadata import (
+    is_node_package_manifest_path as is_node_package_manifest_path,
+)
 
 _logger = logging.getLogger(__name__)
 _MAX_JSON_MEMBER_BYTES = 100 * 1024 * 1024
@@ -250,16 +297,7 @@ _RPM_BDB_PATHS = ("var/lib/rpm/Packages", "./var/lib/rpm/Packages")
 _RPM_NDB_PATHS = ("var/lib/rpm/Packages.db", "./var/lib/rpm/Packages.db")
 _RPM_MANIFEST_PATHS = ("var/log/installed-rpms", "./var/log/installed-rpms")
 _RPM_MANIFEST_RE = re.compile(r"^(?P<name>.+)-(?P<version>[0-9][^-]*)-(?P<release>\S+)$")
-_MAX_LEGACY_RPMDB_BYTES = 512 * 1024 * 1024
-# RPM header magic (8 bytes)
-_RPM_HDR_MAGIC = b"\x8e\xad\xe8\x01\x00\x00\x00\x00"
-_RPMTAG_NAME = 1000
-_RPMTAG_VERSION = 1001
-_RPMTAG_RELEASE = 1002
-_RPMTAG_EPOCH = 1003
 _RPMTAG_ARCH = 1022
-_RPM_TYPE_INT32 = 4
-_RPM_TYPE_STRING = 6
 
 
 @dataclass
@@ -295,25 +333,6 @@ class OCIParseResult:
 _PACKAGE_METADATA_WARNING_DETAIL = "Container package metadata could not be parsed; image inventory is incomplete."
 
 
-def is_node_package_manifest_path(member_path: str) -> bool:
-    """Return whether a path is an npm package-root manifest.
-
-    Packages may contain subpath ``package.json`` files for export conditions
-    (for example ``nanoid/non-secure/package.json``).  Those are not inventory
-    candidates and a missing name/version there is not incomplete coverage.
-    """
-    normalized = member_path.replace("\\", "/")
-    marker = "/node_modules/"
-    if marker not in normalized or not normalized.endswith("/package.json"):
-        return False
-    if normalized.count(marker) != 1:
-        return False
-    relative = normalized.split(marker, 1)[1].split("/")
-    if len(relative) == 2:
-        return not relative[0].startswith("@") and relative[1] == "package.json"
-    return len(relative) == 3 and relative[0].startswith("@") and relative[2] == "package.json"
-
-
 def _append_oci_warning(
     warnings: list[str],
     coverage_warnings: list[OCIInputWarning],
@@ -347,77 +366,6 @@ def _mark_package_metadata_gap(
 
 class OCIParseError(Exception):
     """Raised when an OCI image cannot be parsed."""
-
-
-@dataclass(frozen=True)
-class LayerMetadata:
-    """Build and filesystem provenance for a concrete image layer."""
-
-    layer_index: int
-    layer_id: str
-    layer_path: str
-    created_by: Optional[str] = None
-    dockerfile_instruction: Optional[str] = None
-
-
-def _normalize_layer_id(layer_path: str) -> str:
-    """Return a stable layer identifier from a tar/layout path."""
-    layer_path = layer_path.lstrip("./")
-    if layer_path.startswith("blobs/sha256/"):
-        return f"sha256:{layer_path.rsplit('/', 1)[-1]}"
-    if layer_path.endswith("/layer.tar"):
-        return layer_path[: -len("/layer.tar")]
-    return layer_path
-
-
-def _normalize_dockerfile_instruction(created_by: Optional[str]) -> Optional[str]:
-    """Convert raw OCI history ``created_by`` text into a Dockerfile-like instruction."""
-    if not created_by:
-        return None
-
-    raw = created_by.strip()
-    for prefix in ("/bin/sh -c #(nop) ", "cmd /S /C #(nop) "):
-        if raw.startswith(prefix):
-            return raw[len(prefix) :].strip() or raw
-
-    for prefix in ("/bin/sh -c ", "cmd /S /C "):
-        if raw.startswith(prefix):
-            command = raw[len(prefix) :].strip()
-            return f"RUN {command}" if command else "RUN"
-
-    return raw
-
-
-def _build_layer_metadata(layer_paths: list[str], config: dict | None = None) -> list[LayerMetadata]:
-    """Map image layers to normalized build-step metadata."""
-    histories = (config or {}).get("history", [])
-    metadata: list[LayerMetadata] = []
-    history_cursor = 0
-
-    for index, layer_path in enumerate(layer_paths, start=1):
-        created_by: str | None = None
-        dockerfile_instruction: str | None = None
-
-        while history_cursor < len(histories):
-            entry = histories[history_cursor]
-            history_cursor += 1
-            if entry.get("empty_layer"):
-                continue
-            created_by = entry.get("created_by")
-            dockerfile_instruction = _normalize_dockerfile_instruction(created_by)
-            break
-
-        metadata.append(
-            LayerMetadata(
-                layer_index=index,
-                layer_id=_normalize_layer_id(layer_path),
-                layer_path=layer_path,
-                created_by=created_by,
-                dockerfile_instruction=dockerfile_instruction,
-            )
-        )
-
-    return metadata
 
 
 def _resolve_tar_member(tf: tarfile.TarFile, member_path: str) -> tarfile.TarInfo | None:
@@ -485,127 +433,6 @@ def _zip_compressed_size(zf: zipfile.ZipFile) -> int:
     for info in zf.infolist():
         total += max(0, int(info.compress_size))
     return total
-
-
-# ─── RPM header parser ────────────────────────────────────────────────────────
-
-
-def _parse_rpm_header_blob(blob: bytes) -> Optional[tuple[str, str]]:
-    """Parse a minimal RPM header blob and return (name, version) or None.
-
-    RPM header layout (big-endian):
-    - 8 bytes magic  -- PRESENT on legacy BerkeleyDB/NDB records, ABSENT in the
-      ``rpmdb.sqlite`` ``Packages.blob`` column
-    - 4 bytes nindex (number of tag entries)
-    - 4 bytes hsize (size of data section)
-    - nindex × 16-byte entries: tag(4) type(4) offset(4) count(4)
-    - data section (hsize bytes)
-
-    Both framings are accepted. Requiring the magic meant every blob from a
-    ``rpmdb.sqlite`` returned None, so RHEL 9+, UBI9, Fedora 33+, Amazon Linux
-    2023 and Rocky 9 images -- everything on RPM >= 4.16, which is the default
-    backend -- reported **zero** OS packages and therefore zero OS CVEs. A
-    scanner that finds nothing on the most common enterprise base image is the
-    "reports less than it found" failure, and it looks clean.
-    """
-    if len(blob) < 16:
-        return None
-    try:
-        if blob[:8] == _RPM_HDR_MAGIC:
-            nindex = struct.unpack_from(">I", blob, 8)[0]
-            index_start = 16
-        else:
-            # sqlite framing: the record begins at nindex directly.
-            nindex = struct.unpack_from(">I", blob, 0)[0]
-            index_start = 8
-        # A wild nindex means this is not a header at all; bound it before it
-        # becomes a multi-gigabyte slice.
-        if nindex == 0 or nindex > 100_000:
-            return None
-        data_start = index_start + nindex * 16
-
-        if data_start > len(blob):
-            return None
-
-        tags: dict[int, tuple[int, int]] = {}  # tag → (type, offset)
-        for i in range(nindex):
-            pos = index_start + i * 16
-            tag = struct.unpack_from(">I", blob, pos)[0]
-            type_ = struct.unpack_from(">I", blob, pos + 4)[0]
-            offset = struct.unpack_from(">I", blob, pos + 8)[0]
-            tags[tag] = (type_, offset)
-
-        def _read_str(tag_id: int) -> str:
-            if tag_id not in tags:
-                return ""
-            type_, offset = tags[tag_id]
-            if type_ != _RPM_TYPE_STRING:
-                return ""
-            abs_pos = data_start + offset
-            end = blob.find(b"\x00", abs_pos)
-            if end == -1:
-                return ""
-            return blob[abs_pos:end].decode("utf-8", errors="ignore")
-
-        def _read_int32(tag_id: int) -> int:
-            if tag_id not in tags:
-                return 0
-            type_, offset = tags[tag_id]
-            abs_pos = data_start + offset
-            if type_ != _RPM_TYPE_INT32 or abs_pos < data_start or abs_pos + 4 > len(blob):
-                return 0
-            return struct.unpack_from(">I", blob, abs_pos)[0]
-
-        name = _read_str(_RPMTAG_NAME)
-        version = _read_str(_RPMTAG_VERSION)
-        release = _read_str(_RPMTAG_RELEASE)
-        epoch = _read_int32(_RPMTAG_EPOCH)
-        if not name or not version:
-            return None
-        full_version = f"{version}-{release}" if release else version
-        if epoch:
-            full_version = f"{epoch}:{full_version}"
-        return name, full_version
-    except (struct.error, OverflowError):
-        return None
-
-
-def _parse_legacy_rpmdb_bytes(database: bytes) -> list[tuple[str, str]]:
-    """Extract embedded RPM header records from BerkeleyDB or NDB payloads.
-
-    Both legacy backends store canonical RPM header blobs as record values. The
-    database page/index format is backend-specific, but the value format is not:
-    every package header starts with ``_RPM_HDR_MAGIC`` and carries bounded index
-    and data lengths. Scanning for those self-describing records avoids a native
-    BerkeleyDB dependency while preserving exact RPM name/version/release data.
-    """
-    packages: list[tuple[str, str]] = []
-    seen: set[tuple[str, str]] = set()
-    cursor = 0
-    while True:
-        start = database.find(_RPM_HDR_MAGIC, cursor)
-        if start < 0:
-            break
-        cursor = start + len(_RPM_HDR_MAGIC)
-        if start + 16 > len(database):
-            continue
-        try:
-            nindex, hsize = struct.unpack_from(">II", database, start + 8)
-        except struct.error:
-            continue
-        if nindex > 100_000 or hsize > _MAX_LEGACY_RPMDB_BYTES:
-            continue
-        record_size = 16 + nindex * 16 + hsize
-        end = start + record_size
-        if record_size < 16 or end > len(database):
-            continue
-        parsed = _parse_rpm_header_blob(database[start:end])
-        if parsed is None or parsed[0] == "gpg-pubkey" or parsed in seen:
-            continue
-        seen.add(parsed)
-        packages.append(parsed)
-        cursor = end
-    return packages
 
 
 def _query_legacy_rpmdb(layer_tf: tarfile.TarFile, database_path: str) -> list[tuple[str, str]]:
@@ -689,25 +516,6 @@ def _add_package(
     existing_keys = {(occ.layer_index, occ.layer_id, occ.package_path or "") for occ in package.occurrences}
     if occurrence_key not in existing_keys:
         package.occurrences.append(occurrence)
-
-
-def _parse_rfc822_name_version(fileobj: IO[bytes]) -> tuple[str, str]:
-    """Extract ``Name``/``Version`` from an RFC822 Python metadata stream.
-
-    Shared by the modern ``*.dist-info/METADATA`` and the legacy
-    ``*.egg-info/PKG-INFO`` (or ``*.egg-info/METADATA``) parsers — both use the
-    same header format, only the file location differs.
-    """
-    pkg_name = pkg_version = ""
-    for raw_line in fileobj:
-        line = raw_line.decode("utf-8", errors="ignore").strip()
-        if line.startswith("Name:"):
-            pkg_name = line.split(":", 1)[1].strip()
-        elif line.startswith("Version:"):
-            pkg_version = line.split(":", 1)[1].strip()
-        if pkg_name and pkg_version:
-            break
-    return pkg_name, pkg_version
 
 
 def _read_os_release_from_layer(layer_tf: tarfile.TarFile, deleted_paths: set[str]) -> tuple[str | None, str | None]:

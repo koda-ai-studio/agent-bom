@@ -626,9 +626,8 @@ def test_authenticated_request_derives_the_key_hash_once(monkeypatch: pytest.Mon
 
         return _Store()
 
+    middleware = RateLimitMiddleware(lambda scope, receive, send: None)
     monkeypatch.setattr("agent_bom.api.middleware.get_key_store", exploding_key_store)
-
-    middleware = RateLimitMiddleware.__new__(RateLimitMiddleware)
     resolved = asyncio.run(middleware._resolve_tenant_scope(_Request(), "raw-key"))
 
     assert resolved == "default"
@@ -661,9 +660,8 @@ def test_non_api_key_auth_still_resolves_tenant_through_the_key_store(
 
         return _Store()
 
+    middleware = RateLimitMiddleware(lambda scope, receive, send: None)
     monkeypatch.setattr("agent_bom.api.middleware.get_key_store", key_store)
-
-    middleware = RateLimitMiddleware.__new__(RateLimitMiddleware)
     resolved = asyncio.run(middleware._resolve_tenant_scope(_Request(), "raw-key"))
 
     assert resolved == "tenant-from-key"

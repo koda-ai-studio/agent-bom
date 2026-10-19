@@ -2,28 +2,16 @@
 
 from __future__ import annotations
 
-import asyncio
-import hashlib
 import hmac
-import io
 import logging
 import os
 import secrets
-import sys
-import time
-import uuid
-import zlib
-from collections import deque
 from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import dataclass
-from datetime import datetime as _dt
-from datetime import timezone as _tz
-from functools import lru_cache
 from typing import TYPE_CHECKING, cast
 
 import anyio.to_thread
 
-from agent_bom import __version__
 from agent_bom.api.auth import get_key_store
 from agent_bom.api.auth_posture import _AUTH_POSTURE as _AUTH_POSTURE
 from agent_bom.api.auth_posture import _AUTH_RUNTIME_STATUS as _AUTH_RUNTIME_STATUS
@@ -31,9 +19,7 @@ from agent_bom.api.auth_posture import _EMPTY_AUTH_POSTURE as _EMPTY_AUTH_POSTUR
 from agent_bom.api.auth_posture import _TRUSTED_PROXY_SECRET_MIN_BYTES as _TRUSTED_PROXY_SECRET_MIN_BYTES
 from agent_bom.api.auth_posture import AuthPosture as AuthPosture
 from agent_bom.api.auth_posture import AuthPostureError as AuthPostureError
-from agent_bom.api.auth_posture import _configured_listener_host as _configured_listener_host
-from agent_bom.api.auth_posture import _env_flag as _env_flag
-from agent_bom.api.auth_posture import _is_loopback_listener as _is_loopback_listener
+from agent_bom.api.auth_posture import _configured_listener_host, _env_flag, _is_loopback_listener, get_trusted_proxy_auth_status
 from agent_bom.api.auth_posture import _secret_min_bytes as _secret_min_bytes
 from agent_bom.api.auth_posture import _trusted_proxy_secret_is_strong as _trusted_proxy_secret_is_strong
 from agent_bom.api.auth_posture import apply_auth_posture as apply_auth_posture
@@ -41,7 +27,6 @@ from agent_bom.api.auth_posture import configure_auth_runtime as configure_auth_
 from agent_bom.api.auth_posture import derive_auth_posture as derive_auth_posture
 from agent_bom.api.auth_posture import get_auth_posture as get_auth_posture
 from agent_bom.api.auth_posture import get_auth_runtime_status as get_auth_runtime_status
-from agent_bom.api.auth_posture import get_trusted_proxy_auth_status as get_trusted_proxy_auth_status
 from agent_bom.api.auth_posture import trusted_proxy_auth_usable as trusted_proxy_auth_usable
 from agent_bom.api.auth_posture import validate_auth_posture as validate_auth_posture
 from agent_bom.api.browser_session import (
@@ -53,17 +38,99 @@ from agent_bom.api.browser_session import (
     verify_csrf,
 )
 from agent_bom.api.error_envelope import (
-    _build_error_envelope,
-    with_middleware_error_envelope,
-)
-from agent_bom.api.error_envelope import (
     _with_middleware_error_envelope as _with_middleware_error_envelope,
 )
 from agent_bom.api.error_envelope import install_error_envelope as install_error_envelope
+from agent_bom.api.error_envelope import (
+    with_middleware_error_envelope,
+)
 from agent_bom.api.host_guard import browser_origin_trusted
+from agent_bom.api.middleware_body import (
+    MaxBodySizeMiddleware as MaxBodySizeMiddleware,
+)
+from agent_bom.api.middleware_headers import (
+    _API_CSP as _API_CSP,
+)
+from agent_bom.api.middleware_headers import (
+    _DOCS_CSP as _DOCS_CSP,
+)
+from agent_bom.api.middleware_headers import (
+    TrustHeadersMiddleware as TrustHeadersMiddleware,
+)
+from agent_bom.api.middleware_headers import (
+    _cache_control as _cache_control,
+)
+from agent_bom.api.middleware_headers import (
+    _content_security_policy as _content_security_policy,
+)
+from agent_bom.api.middleware_headers import (
+    _hsts_max_age_seconds as _hsts_max_age_seconds,
+)
+from agent_bom.api.middleware_headers import (
+    _is_hashed_build_asset as _is_hashed_build_asset,
+)
+from agent_bom.api.middleware_headers import (
+    describe_security_header_posture as describe_security_header_posture,
+)
+from agent_bom.api.middleware_headers import (
+    hsts_header_value as hsts_header_value,
+)
+from agent_bom.api.middleware_limits import (
+    _API_KEY_VERIFIED_AUTH_METHODS as _API_KEY_VERIFIED_AUTH_METHODS,
+)
+from agent_bom.api.middleware_limits import (
+    _RATE_LIMIT_FINGERPRINT_FALLBACK as _RATE_LIMIT_FINGERPRINT_FALLBACK,
+)
+from agent_bom.api.middleware_limits import (
+    _TENANT_SCOPED_AUTH_METHODS as _TENANT_SCOPED_AUTH_METHODS,
+)
+from agent_bom.api.middleware_limits import (
+    DEFAULT_AUTHENTICATED_READ_RATE_LIMIT_RPM as DEFAULT_AUTHENTICATED_READ_RATE_LIMIT_RPM,
+)
+from agent_bom.api.middleware_limits import (
+    DEFAULT_GLOBAL_IP_RATE_LIMIT_RPM as DEFAULT_GLOBAL_IP_RATE_LIMIT_RPM,
+)
+from agent_bom.api.middleware_limits import (
+    DEFAULT_READ_RATE_LIMIT_RPM as DEFAULT_READ_RATE_LIMIT_RPM,
+)
+from agent_bom.api.middleware_limits import (
+    DEFAULT_SCAN_RATE_LIMIT_RPM as DEFAULT_SCAN_RATE_LIMIT_RPM,
+)
+from agent_bom.api.middleware_limits import (
+    MAX_RATE_LIMIT_RPM as MAX_RATE_LIMIT_RPM,
+)
+from agent_bom.api.middleware_limits import (
+    GlobalRateLimitMiddleware as GlobalRateLimitMiddleware,
+)
+from agent_bom.api.middleware_limits import (
+    RateLimitMiddleware as _RateLimitMiddleware,
+)
+from agent_bom.api.middleware_limits import (
+    _build_rate_limit_store as _build_rate_limit_store,
+)
+from agent_bom.api.middleware_limits import (
+    _rate_limit_fingerprint as _rate_limit_fingerprint,
+)
+from agent_bom.api.middleware_limits import (
+    _rate_limit_fingerprint_key as _rate_limit_fingerprint_key,
+)
+from agent_bom.api.middleware_limits import (
+    _shared_rate_limit_required as _shared_rate_limit_required,
+)
+from agent_bom.api.middleware_limits import (
+    _validate_rate_limit as _validate_rate_limit,
+)
+from agent_bom.api.middleware_limits import (
+    get_rate_limit_key_status as get_rate_limit_key_status,
+)
+from agent_bom.api.middleware_limits import (
+    get_rate_limit_runtime_status as get_rate_limit_runtime_status,
+)
+from agent_bom.api.middleware_limits import (
+    global_ip_rate_limit_rpm as global_ip_rate_limit_rpm,
+)
 from agent_bom.api.rate_limit_store import InMemoryRateLimitStore as InMemoryRateLimitStore
 from agent_bom.api.rate_limit_store import PostgresRateLimitStore as PostgresRateLimitStore
-from agent_bom.api.rate_limit_store import record_rate_limit_hit
 from agent_bom.api.route_policy import (
     PUBLIC_OPERATIONS,
     ROLE_RULES,
@@ -74,13 +141,12 @@ from agent_bom.api.route_policy import (
     required_scope,
     scope_catalog,
 )
-from agent_bom.api.storage.deployment import _configured_api_replicas, clustered_control_plane_required
+from agent_bom.api.storage.deployment import _production_or_clustered_control_plane as _production_or_clustered_control_plane
+from agent_bom.api.storage.deployment import clustered_control_plane_required
 from agent_bom.api.storage_schema import postgres_deployment_configured
-from agent_bom.api.tracing import configure_otel_tracing, make_request_trace, record_request_exception
+from agent_bom.core.settings import env_raw
 
 if TYPE_CHECKING:
-    from datetime import datetime
-
     from agent_bom.api.auth import Role
     from agent_bom.api.oidc import OIDCConfig
 
@@ -89,54 +155,9 @@ from starlette.requests import Request as StarletteRequest
 from starlette.responses import JSONResponse, Response
 from starlette.types import ASGIApp
 
-from agent_bom.api.dashboard_csp import dashboard_csp_header, describe_dashboard_csp_posture
 from agent_bom.security import sanitize_text
 
 _logger = logging.getLogger(__name__)
-_RATE_LIMIT_FINGERPRINT_FALLBACK = secrets.token_bytes(32)
-_TENANT_SCOPED_AUTH_METHODS = {
-    "api_key",
-    "browser_session",
-    "browser_session_static_api_key",
-    "oidc",
-    "proxy_header",
-    "saml",
-    "scim_bearer",
-    "static_api_key",
-}
-# Auth methods whose ``request.state.tenant_id`` was set from a KeyStore-verified
-# ApiKey. Re-verifying the same raw key can only return the same tenant, so the
-# rate limiter reads the state instead of paying a second scrypt derivation.
-# Deliberately narrow: "static_api_key" is NOT here because the static key never
-# reaches the KeyStore, so its verify returns None and buckets differently.
-_API_KEY_VERIFIED_AUTH_METHODS = {"api_key", "saml"}
-_API_CSP = "default-src 'self'"
-# /docs (Swagger UI) and /redoc serve HTML shells that load swagger-ui /
-# redoc bundles + a favicon from public CDNs (cdn.jsdelivr.net,
-# fastapi.tiangolo.com). The strict default-src 'self' API CSP blocks
-# them, leaving a blank page. We narrowly relax CSP for these two
-# documentation routes — they remain disable-able via
-# AGENT_BOM_DISABLE_DOCS for production deployments per the
-# _EXEMPT_PATHS toggle below.
-_DOCS_CSP = (
-    "default-src 'self'; "
-    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
-    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
-    # Favicon is served from /brand/mark.svg (self); keep jsdelivr for swagger assets.
-    "img-src 'self' data: https://cdn.jsdelivr.net; "
-    "font-src 'self' data: https://cdn.jsdelivr.net; "
-    "worker-src 'self' blob:; "
-    "connect-src 'self'"
-)
-
-
-def _content_security_policy(path: str, content_type: str) -> str:
-    """Return a route-aware CSP that keeps the API strict and the dashboard usable."""
-    if path in {"/docs", "/redoc"} and "text/html" in content_type:
-        return _DOCS_CSP
-    if "text/html" in content_type and not path.startswith(("/v1/", "/docs", "/redoc", "/openapi.json")):
-        return dashboard_csp_header()
-    return _API_CSP
 
 
 def static_api_key_allowed() -> bool:
@@ -149,372 +170,6 @@ def static_api_key_rejection_message() -> str:
         "AGENT_BOM_API_KEY static-key auth is disabled for clustered control planes. "
         "Use tenant-scoped API keys, OIDC, SAML, or trusted proxy auth instead."
     )
-
-
-_PROXY_CONTROL_PLANE_MTLS_MODES = {"app_native", "delegated", "disabled"}
-
-
-def _production_or_clustered_control_plane() -> bool:
-    from agent_bom.config import resolved_deployment_env
-
-    deployment = resolved_deployment_env()
-    return deployment in {"prod", "production"} or clustered_control_plane_required()
-
-
-def _app_native_mtls_config() -> dict[str, object]:
-    cert_file = os.environ.get("AGENT_BOM_TLS_CERT_FILE", "").strip()
-    key_file = os.environ.get("AGENT_BOM_TLS_KEY_FILE", "").strip()
-    client_ca_file = os.environ.get("AGENT_BOM_TLS_CLIENT_CA_FILE", "").strip()
-    require_client_cert = _env_flag("AGENT_BOM_TLS_REQUIRE_CLIENT_CERT")
-    complete = bool(cert_file and key_file and client_ca_file and require_client_cert)
-    missing = []
-    if not cert_file:
-        missing.append("AGENT_BOM_TLS_CERT_FILE")
-    if not key_file:
-        missing.append("AGENT_BOM_TLS_KEY_FILE")
-    if not client_ca_file:
-        missing.append("AGENT_BOM_TLS_CLIENT_CA_FILE")
-    if not require_client_cert:
-        missing.append("AGENT_BOM_TLS_REQUIRE_CLIENT_CERT")
-    return {
-        "cert_file_configured": bool(cert_file),
-        "key_file_configured": bool(key_file),
-        "client_ca_file_configured": bool(client_ca_file),
-        "require_client_cert": require_client_cert,
-        "complete": complete,
-        "missing_evidence": missing,
-    }
-
-
-def describe_control_plane_direct_listener_posture(
-    *,
-    listener_host: str | None = None,
-    mtls_ok: bool | None = None,
-    trusted_proxy_ok: bool | None = None,
-) -> dict[str, object]:
-    """Return non-secret direct-listener posture for operator policy surfaces."""
-
-    host = _configured_listener_host(listener_host)
-    loopback = _is_loopback_listener(host)
-    production_or_clustered = _production_or_clustered_control_plane()
-    if mtls_ok is None or trusted_proxy_ok is None:
-        mtls = describe_proxy_control_plane_mtls_posture(listener_host=host)
-        if mtls_ok is None:
-            mtls_ok = mtls.get("status") == "ok" and mtls.get("mtls_mode") in {"app_native", "delegated"}
-        if trusted_proxy_ok is None:
-            trusted_proxy_ok = get_trusted_proxy_auth_status().get("status") == "ok"
-    unsafe = bool(production_or_clustered and not loopback and not mtls_ok and not trusted_proxy_ok)
-    return {
-        "host": host,
-        "loopback": loopback,
-        "production_or_clustered": production_or_clustered,
-        "trusted_proxy_attestation": "enabled" if trusted_proxy_ok else "disabled",
-        "mtls_enforced": bool(mtls_ok),
-        "status": "unknown" if host == "unknown" else ("unsafe" if unsafe else "ok"),
-        "message": (
-            "Listener address is not declared; set AGENT_BOM_API_HOST to the ASGI server's actual bind address."
-            if host == "unknown"
-            else "Production or clustered control planes must not expose a non-loopback listener without "
-            "trusted-proxy attestation or app-native mTLS."
-            if unsafe
-            else "Direct listener posture is acceptable for the declared deployment mode."
-        ),
-    }
-
-
-def require_safe_control_plane_listener(listener_host: str | None = None) -> None:
-    """Fail closed for unsafe production/clustered direct listener exposure."""
-
-    posture = describe_control_plane_direct_listener_posture(listener_host=listener_host)
-    if posture["status"] == "unsafe":
-        raise RuntimeError(str(posture["message"]))
-
-
-def describe_proxy_control_plane_mtls_posture(*, listener_host: str | None = None) -> dict[str, object]:
-    """Return non-secret proxy-to-control-plane mTLS posture.
-
-    Delegated ingress or service-mesh mTLS remains the production default.
-    App-native mTLS is available as a fallback for non-mesh deployments and is
-    reported here only from non-secret environment posture.
-    """
-
-    raw_mode = os.environ.get("AGENT_BOM_PROXY_CONTROL_PLANE_MTLS_MODE", "disabled").strip().lower() or "disabled"
-    provider = os.environ.get("AGENT_BOM_PROXY_CONTROL_PLANE_MTLS_PROVIDER", "").strip()
-    client_ca_ref = os.environ.get("AGENT_BOM_PROXY_CONTROL_PLANE_MTLS_CLIENT_CA_REF", "").strip()
-    evidence_ref = os.environ.get("AGENT_BOM_PROXY_CONTROL_PLANE_MTLS_EVIDENCE_REF", "").strip()
-    cert_header = os.environ.get("AGENT_BOM_PROXY_CONTROL_PLANE_MTLS_CERT_HEADER", "").strip()
-    trusted_proxy = get_trusted_proxy_auth_status()
-    app_native = _app_native_mtls_config()
-    effective_mode = "app_native" if raw_mode == "app_native" or app_native["complete"] else raw_mode
-    mtls_mode = "none" if effective_mode == "disabled" else effective_mode
-
-    base: dict[str, object] = {
-        "mode": effective_mode,
-        "declared_mode": raw_mode,
-        "mtls_mode": mtls_mode,
-        "supported_modes": sorted(_PROXY_CONTROL_PLANE_MTLS_MODES),
-        "mode_env": "AGENT_BOM_PROXY_CONTROL_PLANE_MTLS_MODE",
-        "provider": provider or None,
-        "client_ca_ref_configured": bool(client_ca_ref),
-        "client_cert_header_configured": bool(cert_header),
-        "evidence_ref": evidence_ref or None,
-        "trusted_proxy_auth_status": trusted_proxy.get("status"),
-        "trusted_proxy_issuer_pinned": bool(trusted_proxy.get("issuer_pinned")),
-        "trusted_proxy_attestation": "enabled" if trusted_proxy.get("status") == "ok" else "disabled",
-        "app_native_mtls": app_native,
-    }
-    if raw_mode not in _PROXY_CONTROL_PLANE_MTLS_MODES:
-        return {
-            **base,
-            "status": "misconfigured",
-            "enforced": False,
-            "message": (
-                "Unsupported AGENT_BOM_PROXY_CONTROL_PLANE_MTLS_MODE. Use disabled or delegated; "
-                "terminate and verify mTLS in ingress, Envoy, or a service mesh, or use app_native with TLS env vars."
-            ),
-        }
-    if effective_mode == "app_native":
-        status = "ok" if app_native["complete"] else "needs_evidence"
-        missing = list(cast(list[str], app_native["missing_evidence"]))
-        direct = describe_control_plane_direct_listener_posture(
-            listener_host=listener_host,
-            mtls_ok=status == "ok",
-            trusted_proxy_ok=trusted_proxy.get("status") == "ok",
-        )
-        return {
-            **base,
-            "status": status,
-            "enforced": status == "ok",
-            "missing_evidence": missing,
-            "direct_listener": direct,
-            "message": (
-                "App-native mTLS is configured for the FastAPI control plane."
-                if status == "ok"
-                else "App-native mTLS was requested, but TLS certificate, key, client CA, or client-cert enforcement is incomplete."
-            ),
-        }
-    if effective_mode == "disabled":
-        direct = describe_control_plane_direct_listener_posture(
-            listener_host=listener_host,
-            mtls_ok=False,
-            trusted_proxy_ok=trusted_proxy.get("status") == "ok",
-        )
-        return {
-            **base,
-            "status": "disabled",
-            "enforced": False,
-            "direct_listener": direct,
-            "message": "Proxy-to-control-plane mTLS posture is disabled or not declared.",
-        }
-
-    trusted_ok = trusted_proxy.get("status") == "ok"
-    status = "ok" if client_ca_ref and evidence_ref and trusted_ok else "needs_evidence"
-    missing = []
-    if not client_ca_ref:
-        missing.append("AGENT_BOM_PROXY_CONTROL_PLANE_MTLS_CLIENT_CA_REF")
-    if not evidence_ref:
-        missing.append("AGENT_BOM_PROXY_CONTROL_PLANE_MTLS_EVIDENCE_REF")
-    if not trusted_ok:
-        missing.append("trusted proxy auth with issuer pinning")
-    direct = describe_control_plane_direct_listener_posture(
-        listener_host=listener_host,
-        mtls_ok=status == "ok",
-        trusted_proxy_ok=trusted_ok,
-    )
-    return {
-        **base,
-        "status": status,
-        "enforced": True,
-        "missing_evidence": missing,
-        "direct_listener": direct,
-        "message": (
-            "Delegated mTLS is declared and backed by client-CA evidence plus trusted-proxy issuer pinning."
-            if status == "ok"
-            else "Delegated mTLS is declared, but operator evidence is incomplete."
-        ),
-    }
-
-
-def _hsts_max_age_seconds() -> int:
-    raw = (os.environ.get("AGENT_BOM_HSTS_MAX_AGE_SECONDS") or "31536000").strip()
-    try:
-        return max(0, int(raw))
-    except ValueError:
-        return 31_536_000
-
-
-def hsts_header_value() -> str:
-    """Return the configured Strict-Transport-Security header value.
-
-    ``preload`` is intentionally opt-in because browser preload enrollment is
-    sticky and must be a deliberate operator decision for the deployment domain.
-    """
-
-    value = f"max-age={_hsts_max_age_seconds()}; includeSubDomains"
-    if _env_flag("AGENT_BOM_HSTS_PRELOAD"):
-        value += "; preload"
-    return value
-
-
-def describe_security_header_posture() -> dict[str, object]:
-    """Return non-secret security-header posture for operator policy surfaces."""
-
-    return {
-        "hsts": {
-            "header": hsts_header_value(),
-            "max_age_seconds": _hsts_max_age_seconds(),
-            "include_subdomains": True,
-            "preload": _env_flag("AGENT_BOM_HSTS_PRELOAD"),
-            "preload_env": "AGENT_BOM_HSTS_PRELOAD",
-            "max_age_env": "AGENT_BOM_HSTS_MAX_AGE_SECONDS",
-            "preload_guidance": ("Only enable preload after confirming HTTPS is permanent for the domain and every subdomain."),
-        },
-        "csp": {"api": _API_CSP, "dashboard": describe_dashboard_csp_posture()},
-    }
-
-
-def _is_hashed_build_asset(method: str, path: str, status_code: int) -> bool:
-    return method in {"GET", "HEAD"} and status_code in {200, 304} and path.startswith("/_next/static/") and ".." not in path
-
-
-def _cache_control(method: str, path: str, status_code: int, is_event_stream: bool) -> str:
-    if is_event_stream:
-        return "no-store, no-transform"
-    if _is_hashed_build_asset(method, path, status_code):
-        # Public, content-hashed build output: a new build changes the URL, so
-        # browsers may keep it instead of refetching every chunk on every page.
-        return "public, max-age=31536000, immutable"
-    return "no-store"
-
-
-class TrustHeadersMiddleware(BaseHTTPMiddleware):
-    """Add trust + standard security headers to every response."""
-
-    async def dispatch(self, request: StarletteRequest, call_next: RequestResponseEndpoint) -> Response:
-        trace_meta = make_request_trace(dict(request.headers))
-        request_id = request.headers.get("x-request-id") or str(uuid.uuid4())
-        request.state.request_id = request_id
-        # A percent-encoded NUL in a path parameter is decoded before routing and
-        # then handed to psycopg as a text value, which raises `DataError:
-        # PostgreSQL text fields cannot contain NUL (0x00) bytes` deep inside a
-        # store and surfaces as a bare 500. Reject the whole request here so the
-        # class is closed for every route rather than one path id at a time.
-        if "\x00" in request.url.path:
-            return _build_error_envelope(
-                status_code=400,
-                detail="Request path contains a NUL (0x00) byte",
-                correlation_id=request_id,
-            )
-        # Same failure through query parameters (scan_id, node, q, source, ...):
-        # 422 matches the per-route identifier validators that predate this.
-        if any("\x00" in key or "\x00" in value for key, value in request.query_params.multi_items()):
-            return _build_error_envelope(
-                status_code=422,
-                detail="Query parameter contains a NUL (0x00) byte",
-                correlation_id=request_id,
-            )
-        request.state.trace_id = trace_meta["trace_id"]
-        request.state.span_id = trace_meta["span_id"]
-        request.state.parent_span_id = trace_meta["parent_span_id"]
-        request.state.traceparent = trace_meta["traceparent"]
-        request.state.tracestate = trace_meta["tracestate"]
-        request.state.baggage = trace_meta["baggage"]
-        if not hasattr(request.state, "tenant_id"):
-            request.state.tenant_id = "default"
-        tenant_token = None
-        otel_cm = None
-        span = None
-        start = time.perf_counter()
-        try:
-            if configure_otel_tracing():
-                from opentelemetry import trace
-
-                tracer = trace.get_tracer("agent_bom.api")
-                # Disable SDK defaults that export raw exception messages and tracebacks.
-                otel_cm = tracer.start_as_current_span(
-                    f"{request.method} {request.url.path}", record_exception=False, set_status_on_exception=False
-                )
-                span = otel_cm.__enter__()
-                span.set_attribute("http.request.method", request.method)
-                span.set_attribute("url.path", request.url.path)
-                span.set_attribute("agent_bom.request_id", request_id)
-                span.set_attribute("agent_bom.trace_id", str(trace_meta["trace_id"]))
-                span.set_attribute("agent_bom.span_id", str(trace_meta["span_id"]))
-                span.set_attribute("agent_bom.incoming_traceparent", bool(trace_meta["incoming_traceparent"]))
-                if trace_meta["parent_span_id"]:
-                    span.set_attribute("agent_bom.parent_span_id", str(trace_meta["parent_span_id"]))
-                if trace_meta["tracestate"]:
-                    span.set_attribute("agent_bom.tracestate_present", True)
-                if trace_meta["baggage"]:
-                    span.set_attribute("agent_bom.baggage_present", True)
-            if postgres_deployment_configured():
-                from agent_bom.api.postgres_common import set_current_tenant
-
-                tenant_token = set_current_tenant(getattr(request.state, "tenant_id", "default"))
-            response = await call_next(request)
-            elapsed_ms = round((time.perf_counter() - start) * 1000, 2)
-            _logger.info(
-                "api request complete method=%s path=%s status=%s request_id=%s trace_id=%s span_id=%s tenant_id=%s duration_ms=%s",
-                request.method,
-                request.url.path,
-                getattr(response, "status_code", "unknown"),
-                request_id,
-                trace_meta["trace_id"],
-                trace_meta["span_id"],
-                getattr(request.state, "tenant_id", "default"),
-                elapsed_ms,
-            )
-            if span is not None:
-                span.set_attribute("http.response.status_code", int(getattr(response, "status_code", 500)))
-                span.set_attribute("agent_bom.tenant_id", str(getattr(request.state, "tenant_id", "default")))
-                span.set_attribute("agent_bom.duration_ms", elapsed_ms)
-                span.set_attribute("http.route", str(request.scope.get("path", request.url.path)))
-                if getattr(request.state, "api_key_role", None):
-                    span.set_attribute("agent_bom.auth.role", str(request.state.api_key_role))
-                if getattr(request.state, "api_key_name", None):
-                    span.set_attribute("agent_bom.auth.subject", str(request.state.api_key_name))
-                if request.client and request.client.host:
-                    span.set_attribute("client.address", str(request.client.host))
-        except Exception as exc:
-            if span is not None:
-                record_request_exception(span, exc)
-            raise
-        finally:
-            if tenant_token is not None:
-                from agent_bom.api.postgres_common import reset_current_tenant
-
-                reset_current_tenant(tenant_token)
-            if otel_cm is not None:
-                otel_cm.__exit__(*sys.exc_info())
-        response.headers["X-Request-ID"] = request_id
-        response.headers["X-Trace-ID"] = str(trace_meta["trace_id"])
-        response.headers["X-Span-ID"] = str(trace_meta["span_id"])
-        response.headers["traceparent"] = str(trace_meta["traceparent"])
-        if trace_meta["parent_span_id"]:
-            response.headers["X-Parent-Span-ID"] = str(trace_meta["parent_span_id"])
-        if trace_meta["tracestate"]:
-            response.headers["tracestate"] = str(trace_meta["tracestate"])
-        if trace_meta["baggage"]:
-            response.headers["baggage"] = str(trace_meta["baggage"])
-        response.headers["X-Agent-Bom-Read-Only"] = "true"
-        response.headers["X-Agent-Bom-No-Credential-Storage"] = "true"
-        response.headers["X-Agent-Bom-Version"] = __version__
-        # Standard security headers
-        response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["X-Frame-Options"] = "DENY"
-        # SSE must reach clients before connection renewal. Keep the security
-        # no-store policy while disabling intermediary compression/buffering.
-        is_event_stream = response.headers.get("content-type", "").split(";", 1)[0].strip().lower() == "text/event-stream"
-        response.headers["Cache-Control"] = _cache_control(request.method, request.url.path, response.status_code, is_event_stream)
-        response.headers["Content-Security-Policy"] = _content_security_policy(
-            request.url.path,
-            response.headers.get("content-type", ""),
-        )
-        response.headers["Strict-Transport-Security"] = hsts_header_value()
-        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
-        response.headers["X-API-Version"] = "v1"
-        return response
 
 
 @dataclass(frozen=True)
@@ -1326,92 +981,199 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         return await call_with_request_tenant(request, call_next, authenticate=self.dispatch)
 
 
-DEFAULT_SCAN_RATE_LIMIT_RPM = 600
-# Anonymous / unidentified read budget. Kept where it was so raising the
-# authenticated budget below does not widen the pre-auth abuse surface.
-DEFAULT_READ_RATE_LIMIT_RPM = DEFAULT_SCAN_RATE_LIMIT_RPM * 5
-# Reads on a bucket we resolved to a tenant or API key. A cursor walk of a
-# large tenant is thousands of requests, so a connector or SIEM doing a full
-# sync through the public API was being 429'd partway through a legitimate
-# paginated read. Still bounded, and still under the coarse per-IP ceiling.
-DEFAULT_AUTHENTICATED_READ_RATE_LIMIT_RPM = DEFAULT_READ_RATE_LIMIT_RPM * 2
-MAX_RATE_LIMIT_RPM = 60_000
-# Coarse per-client-IP ceiling enforced OUTERMOST (before authentication) so an
-# unauthenticated flood is capped regardless of auth outcome. Deliberately much
-# higher than the per-tenant read budget so it never trips legitimate
-# single-tenant traffic; it exists to bound abuse from a single source address.
-DEFAULT_GLOBAL_IP_RATE_LIMIT_RPM = DEFAULT_READ_RATE_LIMIT_RPM * 4
+# ─── structured error envelope ───────────────────────────
+
+# Map HTTP status codes to stable string codes that downstream consumers can
+# pin on without parsing free-form messages. The mapping is intentionally
+# narrow — every API error funnels through one of these buckets, with anything
+# else falling back to ``INTERNAL_ERROR``.
 
 
-def _build_rate_limit_store(window_seconds: int) -> InMemoryRateLimitStore | PostgresRateLimitStore:
-    """Build the shared/in-memory limiter store with fail-closed semantics."""
-    if postgres_deployment_configured():
-        try:
-            return PostgresRateLimitStore(window_seconds=window_seconds)
-        except Exception as exc:
-            raise RuntimeError(
-                "Configured Postgres rate limiter could not initialize; refusing to fall back to process-local state"
-            ) from exc
-    if _shared_rate_limit_required():
-        raise RuntimeError(
-            "Shared rate limiting is required for multi-replica or fail-closed deployments. "
-            "Configure AGENT_BOM_POSTGRES_URL before starting the API."
-        )
-    return InMemoryRateLimitStore(window_seconds=window_seconds)
+_PROXY_CONTROL_PLANE_MTLS_MODES = {"app_native", "delegated", "disabled"}
 
 
-def global_ip_rate_limit_rpm() -> int:
-    """Resolve the coarse per-IP ceiling, honoring an operator override."""
-    raw = (os.environ.get("AGENT_BOM_GLOBAL_IP_RATE_LIMIT_RPM") or "").strip()
-    if raw:
-        try:
-            return _validate_rate_limit("global_ip_rpm", int(raw), max_rpm=MAX_RATE_LIMIT_RPM * 5)
-        except ValueError:
-            _logger.warning("Invalid AGENT_BOM_GLOBAL_IP_RATE_LIMIT_RPM=%r; using default", raw)
-    return DEFAULT_GLOBAL_IP_RATE_LIMIT_RPM
+def _app_native_mtls_config() -> dict[str, object]:
+    cert_file = env_raw("AGENT_BOM_TLS_CERT_FILE", "").strip()
+    key_file = env_raw("AGENT_BOM_TLS_KEY_FILE", "").strip()
+    client_ca_file = env_raw("AGENT_BOM_TLS_CLIENT_CA_FILE", "").strip()
+    require_client_cert = _env_flag("AGENT_BOM_TLS_REQUIRE_CLIENT_CERT")
+    complete = bool(cert_file and key_file and client_ca_file and require_client_cert)
+    missing = []
+    if not cert_file:
+        missing.append("AGENT_BOM_TLS_CERT_FILE")
+    if not key_file:
+        missing.append("AGENT_BOM_TLS_KEY_FILE")
+    if not client_ca_file:
+        missing.append("AGENT_BOM_TLS_CLIENT_CA_FILE")
+    if not require_client_cert:
+        missing.append("AGENT_BOM_TLS_REQUIRE_CLIENT_CERT")
+    return {
+        "cert_file_configured": bool(cert_file),
+        "key_file_configured": bool(key_file),
+        "client_ca_file_configured": bool(client_ca_file),
+        "require_client_cert": require_client_cert,
+        "complete": complete,
+        "missing_evidence": missing,
+    }
 
 
-def _validate_rate_limit(name: str, value: int, *, max_rpm: int) -> int:
-    try:
-        rpm = int(value)
-    except (TypeError, ValueError) as exc:
-        raise ValueError(f"{name} must be an integer") from exc
-    if rpm < 1:
-        raise ValueError(f"{name} must be at least 1")
-    if rpm > max_rpm:
-        raise ValueError(f"{name} must be <= {max_rpm}")
-    return rpm
+def describe_control_plane_direct_listener_posture(
+    *,
+    listener_host: str | None = None,
+    mtls_ok: bool | None = None,
+    trusted_proxy_ok: bool | None = None,
+) -> dict[str, object]:
+    """Return non-secret direct-listener posture for operator policy surfaces."""
+
+    host = _configured_listener_host(listener_host)
+    loopback = _is_loopback_listener(host)
+    production_or_clustered = _production_or_clustered_control_plane()
+    if mtls_ok is None or trusted_proxy_ok is None:
+        mtls = describe_proxy_control_plane_mtls_posture(listener_host=host)
+        if mtls_ok is None:
+            mtls_ok = mtls.get("status") == "ok" and mtls.get("mtls_mode") in {"app_native", "delegated"}
+        if trusted_proxy_ok is None:
+            trusted_proxy_ok = get_trusted_proxy_auth_status().get("status") == "ok"
+    unsafe = bool(production_or_clustered and not loopback and not mtls_ok and not trusted_proxy_ok)
+    return {
+        "host": host,
+        "loopback": loopback,
+        "production_or_clustered": production_or_clustered,
+        "trusted_proxy_attestation": "enabled" if trusted_proxy_ok else "disabled",
+        "mtls_enforced": bool(mtls_ok),
+        "status": "unknown" if host == "unknown" else ("unsafe" if unsafe else "ok"),
+        "message": (
+            "Listener address is not declared; set AGENT_BOM_API_HOST to the ASGI server's actual bind address."
+            if host == "unknown"
+            else "Production or clustered control planes must not expose a non-loopback listener without "
+            "trusted-proxy attestation or app-native mTLS."
+            if unsafe
+            else "Direct listener posture is acceptable for the declared deployment mode."
+        ),
+    }
 
 
-class RateLimitMiddleware(BaseHTTPMiddleware):
-    """Tenant-aware sliding window rate limiter with bounded memory.
+def require_safe_control_plane_listener(listener_host: str | None = None) -> None:
+    """Fail closed for unsafe production/clustered direct listener exposure."""
 
-    Write / ingest POSTs (scan jobs and CWPP runtime-evidence ingest) share the
-    tighter ``scan_rpm`` bucket. Everything else uses ``read_rpm``.
+    posture = describe_control_plane_direct_listener_posture(listener_host=listener_host)
+    if posture["status"] == "unsafe":
+        raise RuntimeError(str(posture["message"]))
+
+
+def describe_proxy_control_plane_mtls_posture(*, listener_host: str | None = None) -> dict[str, object]:
+    """Return non-secret proxy-to-control-plane mTLS posture.
+
+    Delegated ingress or service-mesh mTLS remains the production default.
+    App-native mTLS is available as a fallback for non-mesh deployments and is
+    reported here only from non-secret environment posture.
     """
 
-    # Health/readiness/liveness probes must never self-throttle: orchestrators
-    # (k8s, ELB, uptime monitors) hit these on short intervals and a probe storm
-    # would otherwise consume the per-tenant/IP read budget and 429 the probes.
-    # These stay behind the OUTERMOST GlobalRateLimitMiddleware flood cap, so an
-    # anonymous flood is still bounded pre-auth — this only removes the finer
-    # per-tenant/IP read limiter for liveness endpoints.
-    _HEALTH_EXEMPT_PATHS = frozenset(
-        {
-            "/health",
-            "/healthz",
-            "/livez",
-            "/readyz",
-            "/ping",
+    raw_mode = env_raw("AGENT_BOM_PROXY_CONTROL_PLANE_MTLS_MODE", "disabled").strip().lower() or "disabled"
+    provider = env_raw("AGENT_BOM_PROXY_CONTROL_PLANE_MTLS_PROVIDER", "").strip()
+    client_ca_ref = env_raw("AGENT_BOM_PROXY_CONTROL_PLANE_MTLS_CLIENT_CA_REF", "").strip()
+    evidence_ref = env_raw("AGENT_BOM_PROXY_CONTROL_PLANE_MTLS_EVIDENCE_REF", "").strip()
+    cert_header = env_raw("AGENT_BOM_PROXY_CONTROL_PLANE_MTLS_CERT_HEADER", "").strip()
+    trusted_proxy = get_trusted_proxy_auth_status()
+    app_native = _app_native_mtls_config()
+    effective_mode = "app_native" if raw_mode == "app_native" or app_native["complete"] else raw_mode
+    mtls_mode = "none" if effective_mode == "disabled" else effective_mode
+
+    base: dict[str, object] = {
+        "mode": effective_mode,
+        "declared_mode": raw_mode,
+        "mtls_mode": mtls_mode,
+        "supported_modes": sorted(_PROXY_CONTROL_PLANE_MTLS_MODES),
+        "mode_env": "AGENT_BOM_PROXY_CONTROL_PLANE_MTLS_MODE",
+        "provider": provider or None,
+        "client_ca_ref_configured": bool(client_ca_ref),
+        "client_cert_header_configured": bool(cert_header),
+        "evidence_ref": evidence_ref or None,
+        "trusted_proxy_auth_status": trusted_proxy.get("status"),
+        "trusted_proxy_issuer_pinned": bool(trusted_proxy.get("issuer_pinned")),
+        "trusted_proxy_attestation": "enabled" if trusted_proxy.get("status") == "ok" else "disabled",
+        "app_native_mtls": app_native,
+    }
+    if raw_mode not in _PROXY_CONTROL_PLANE_MTLS_MODES:
+        return {
+            **base,
+            "status": "misconfigured",
+            "enforced": False,
+            "message": (
+                "Unsupported AGENT_BOM_PROXY_CONTROL_PLANE_MTLS_MODE. Use disabled or delegated; "
+                "terminate and verify mTLS in ingress, Envoy, or a service mesh, or use app_native with TLS env vars."
+            ),
         }
-    )
-    # Write/ingest doors that must not burn the generous read RPM budget.
-    _WRITE_RATE_LIMIT_PATHS = frozenset(
-        {
-            "/v1/cloud/runtime-evidence/ingest",
-            "/v1/cloud/connections/events/ingest",
+    if effective_mode == "app_native":
+        status = "ok" if app_native["complete"] else "needs_evidence"
+        missing = list(cast(list[str], app_native["missing_evidence"]))
+        direct = describe_control_plane_direct_listener_posture(
+            listener_host=listener_host,
+            mtls_ok=status == "ok",
+            trusted_proxy_ok=trusted_proxy.get("status") == "ok",
+        )
+        return {
+            **base,
+            "status": status,
+            "enforced": status == "ok",
+            "missing_evidence": missing,
+            "direct_listener": direct,
+            "message": (
+                "App-native mTLS is configured for the FastAPI control plane."
+                if status == "ok"
+                else "App-native mTLS was requested, but TLS certificate, key, client CA, or client-cert enforcement is incomplete."
+            ),
         }
+    if effective_mode == "disabled":
+        direct = describe_control_plane_direct_listener_posture(
+            listener_host=listener_host,
+            mtls_ok=False,
+            trusted_proxy_ok=trusted_proxy.get("status") == "ok",
+        )
+        return {
+            **base,
+            "status": "disabled",
+            "enforced": False,
+            "direct_listener": direct,
+            "message": "Proxy-to-control-plane mTLS posture is disabled or not declared.",
+        }
+
+    return _delegated_mtls_posture(base, trusted_proxy, client_ca_ref, evidence_ref, listener_host)
+
+
+def _delegated_mtls_posture(
+    base: dict[str, object], trusted_proxy: dict, client_ca_ref: str, evidence_ref: str, listener_host: str | None
+) -> dict[str, object]:
+    trusted_ok = trusted_proxy.get("status") == "ok"
+    status = "ok" if client_ca_ref and evidence_ref and trusted_ok else "needs_evidence"
+    missing = []
+    if not client_ca_ref:
+        missing.append("AGENT_BOM_PROXY_CONTROL_PLANE_MTLS_CLIENT_CA_REF")
+    if not evidence_ref:
+        missing.append("AGENT_BOM_PROXY_CONTROL_PLANE_MTLS_EVIDENCE_REF")
+    if not trusted_ok:
+        missing.append("trusted proxy auth with issuer pinning")
+    direct = describe_control_plane_direct_listener_posture(
+        listener_host=listener_host,
+        mtls_ok=status == "ok",
+        trusted_proxy_ok=trusted_ok,
     )
+    return {
+        **base,
+        "status": status,
+        "enforced": True,
+        "missing_evidence": missing,
+        "direct_listener": direct,
+        "message": (
+            "Delegated mTLS is declared and backed by client-CA evidence plus trusted-proxy issuer pinning."
+            if status == "ok"
+            else "Delegated mTLS is declared, but operator evidence is incomplete."
+        ),
+    }
+
+
+class RateLimitMiddleware(_RateLimitMiddleware):
+    """Compose tenant rate limiting with the current API key store."""
 
     def __init__(
         self,
@@ -1419,473 +1181,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         scan_rpm: int = DEFAULT_SCAN_RATE_LIMIT_RPM,
         read_rpm: int = DEFAULT_READ_RATE_LIMIT_RPM,
         authenticated_read_rpm: int = DEFAULT_AUTHENTICATED_READ_RATE_LIMIT_RPM,
-    ):
-        super().__init__(app)
-        self._scan_rpm = _validate_rate_limit("scan_rpm", scan_rpm, max_rpm=MAX_RATE_LIMIT_RPM)
-        self._read_rpm = _validate_rate_limit("read_rpm", read_rpm, max_rpm=MAX_RATE_LIMIT_RPM * 5)
-        self._authenticated_read_rpm = _validate_rate_limit(
-            "authenticated_read_rpm", authenticated_read_rpm, max_rpm=MAX_RATE_LIMIT_RPM * 10
+    ) -> None:
+        super().__init__(
+            app,
+            scan_rpm=scan_rpm,
+            read_rpm=read_rpm,
+            authenticated_read_rpm=authenticated_read_rpm,
+            get_key_store=lambda: get_key_store(),
         )
-        self._window = 60
-        self._store = self._build_store()
-
-    def _build_store(self) -> InMemoryRateLimitStore | PostgresRateLimitStore:
-        return _build_rate_limit_store(self._window)
-
-    async def _resolve_tenant_scope(self, request: StarletteRequest, raw_key: str) -> str | None:
-        tenant_id = getattr(request.state, "tenant_id", "").strip() or None
-        auth_method = str(getattr(request.state, "auth_method", "") or "")
-        # APIKeyMiddleware sets ``tenant_id`` and ``auth_method`` together from
-        # the very ApiKey it just verified, so for these methods the state IS the
-        # answer and re-deriving it is pure waste — a second ~21.5ms scrypt on
-        # every authenticated request. The broader check below deliberately
-        # excludes "default", which is exactly the single-tenant and hosted-demo
-        # case, so without this clause the common path paid the cost every time.
-        if tenant_id and auth_method in _API_KEY_VERIFIED_AUTH_METHODS:
-            return tenant_id
-        if tenant_id and tenant_id != "default" and auth_method in _TENANT_SCOPED_AUTH_METHODS:
-            return tenant_id
-        if raw_key:
-            # ``verify`` runs the same ~21ms scrypt (or a blocking DB read) as the
-            # auth middleware. When APIKeyMiddleware has already authenticated the
-            # request the guard above short-circuits, but in the anonymous/demo
-            # deployment (APIKeyMiddleware removed) this is the only verify on the
-            # request path — offload it so rate-limit bucketing never stalls the
-            # event loop.
-            resolved = await anyio.to_thread.run_sync(get_key_store().verify, raw_key)
-            if resolved and resolved.tenant_id:
-                return resolved.tenant_id
-        return None
-
-    async def _bucket_key(self, request: StarletteRequest, is_scan: bool) -> str:
-        bucket_type = "scan" if is_scan else "read"
-        auth = request.headers.get("authorization", "")
-        raw_key = auth[7:] if auth.startswith("Bearer ") else request.headers.get("x-api-key", "")
-        tenant_scope = await self._resolve_tenant_scope(request, raw_key)
-        if tenant_scope:
-            scope = f"tenant:{tenant_scope}"
-        elif raw_key:
-            auth_hash = _rate_limit_fingerprint(raw_key)
-            scope = f"auth:{auth_hash}"
-        else:
-            client_ip = request.client.host if request.client else "unknown"
-            scope = f"ip:{client_ip}"
-        return f"{scope}:{bucket_type}"
-
-    @staticmethod
-    def _is_dashboard_static_asset(path: str, method: str) -> bool:
-        if method not in {"GET", "HEAD"}:
-            return False
-        if path.startswith("/_next/"):
-            return True
-        if path in {"/favicon.ico", "/robots.txt", "/manifest.json", "/apple-touch-icon.png"}:
-            return True
-        return False
-
-    @classmethod
-    def _is_write_rate_limited(cls, path: str, method: str) -> bool:
-        """True when the request should consume the tighter scan/write RPM bucket."""
-        if method != "POST":
-            return False
-        if path.startswith("/v1/scan"):
-            return True
-        if path.startswith("/v1/cloud/connections"):
-            return True
-        return path in cls._WRITE_RATE_LIMIT_PATHS
-
-    @with_middleware_error_envelope
-    async def dispatch(self, request: StarletteRequest, call_next: RequestResponseEndpoint) -> Response:
-        if self._is_dashboard_static_asset(request.url.path, request.method):
-            return await call_next(request)
-
-        if request.url.path in self._HEALTH_EXEMPT_PATHS:
-            return await call_next(request)
-
-        now = time.time()
-
-        is_scan = self._is_write_rate_limited(request.url.path, request.method)
-        key = await self._bucket_key(request, is_scan)
-        if is_scan:
-            limit = self._scan_rpm
-        elif key.startswith("ip:"):
-            # No tenant and no API key resolved — the anonymous budget, which
-            # is deliberately tighter than the authenticated one below.
-            limit = self._read_rpm
-        else:
-            limit = self._authenticated_read_rpm
-
-        hit_count, reset_at = await record_rate_limit_hit(self._store, key, now)
-        remaining = max(0, limit - hit_count)
-
-        if hit_count > limit:
-            retry_after = max(int(reset_at - now), 1)
-            return JSONResponse(
-                status_code=429,
-                content={"detail": "Rate limit exceeded"},
-                headers={
-                    "Retry-After": str(retry_after),
-                    "X-RateLimit-Limit": str(limit),
-                    "X-RateLimit-Remaining": "0",
-                    "X-RateLimit-Reset": str(reset_at),
-                },
-            )
-
-        response = await call_next(request)
-        response.headers["X-RateLimit-Limit"] = str(limit)
-        response.headers["X-RateLimit-Remaining"] = str(remaining)
-        response.headers["X-RateLimit-Reset"] = str(reset_at)
-        return response
-
-
-class GlobalRateLimitMiddleware(BaseHTTPMiddleware):
-    """Coarse per-client-IP request ceiling enforced OUTERMOST.
-
-    Mounted before :class:`APIKeyMiddleware` so an unauthenticated flood is
-    capped regardless of auth outcome — a rejected (401) request never reaches
-    the inner tenant/auth-scoped :class:`RateLimitMiddleware`, so without this
-    backstop an anonymous attacker could pound the auth layer without being
-    throttled. Keyed on the transport peer address; the inner limiter keeps
-    fine-grained per-tenant budgets.
-    """
-
-    def __init__(self, app: ASGIApp, rpm: int = DEFAULT_GLOBAL_IP_RATE_LIMIT_RPM):
-        super().__init__(app)
-        self._rpm = _validate_rate_limit("global_ip_rpm", rpm, max_rpm=MAX_RATE_LIMIT_RPM * 5)
-        self._window = 60
-        self._store = _build_rate_limit_store(self._window)
-
-    def _bucket_key(self, request: StarletteRequest) -> str:
-        client_ip = request.client.host if request.client else "unknown"
-        return f"global-ip:{client_ip}"
-
-    @with_middleware_error_envelope
-    async def dispatch(self, request: StarletteRequest, call_next: RequestResponseEndpoint) -> Response:
-        if RateLimitMiddleware._is_dashboard_static_asset(request.url.path, request.method):
-            return await call_next(request)
-
-        now = time.time()
-        key = self._bucket_key(request)
-        hit_count, reset_at = await record_rate_limit_hit(self._store, key, now)
-        if hit_count > self._rpm:
-            retry_after = max(int(reset_at - now), 1)
-            return JSONResponse(
-                status_code=429,
-                content={"detail": "Global rate limit exceeded"},
-                headers={
-                    "Retry-After": str(retry_after),
-                    "X-RateLimit-Scope": "global-ip",
-                },
-            )
-        return await call_next(request)
-
-
-def _shared_rate_limit_required() -> bool:
-    return clustered_control_plane_required()
-
-
-def get_rate_limit_runtime_status() -> dict[str, object]:
-    """Report whether API rate limiting is shared across replicas."""
-    postgres_configured = postgres_deployment_configured()
-    replicas = _configured_api_replicas()
-    shared_required = _shared_rate_limit_required()
-    backend = "postgres_shared" if postgres_configured else "inmemory_single_process"
-    return {
-        "backend": backend,
-        "postgres_configured": postgres_configured,
-        "configured_api_replicas": replicas,
-        "shared_required": shared_required,
-        "shared_across_replicas": postgres_configured,
-        "fail_closed": postgres_configured or shared_required,
-        "message": (
-            "Rate limiting uses Postgres-backed shared state across replicas."
-            if postgres_configured
-            else (
-                "Rate limiting is process-local only because the API is configured for a single replica. "
-                "Multi-replica deployments must configure AGENT_BOM_POSTGRES_URL."
-            )
-        ),
-    }
-
-
-def _rate_limit_fingerprint_key() -> bytes:
-    from agent_bom.api.secret_source import resolve_secret
-
-    key = resolve_secret("AGENT_BOM_RATE_LIMIT_KEY")
-    return key.encode() if key else _RATE_LIMIT_FINGERPRINT_FALLBACK
-
-
-@lru_cache(maxsize=4096)
-def _rate_limit_fingerprint(raw_key: str) -> str:
-    return hashlib.pbkdf2_hmac(
-        "sha256",
-        raw_key.encode(),
-        _rate_limit_fingerprint_key(),
-        200_000,
-        dklen=8,
-    ).hex()
-
-
-def get_rate_limit_key_status(now: "datetime | None" = None) -> dict:
-    """Report rate-limit fingerprint key configuration and rotation status.
-
-    Returns a structured dict suitable for surfacing in /v1/auth/policy and
-    operator dashboards. Status values:
-
-    - "ephemeral":         no key configured; using process-local random key
-    - "ok":                key configured and within rotation interval
-    - "rotation_due":      key age past AGENT_BOM_RATE_LIMIT_KEY_ROTATION_DAYS
-    - "max_age_exceeded":  key age past AGENT_BOM_RATE_LIMIT_KEY_MAX_AGE_DAYS
-    - "unknown_age":       key configured but no last-rotated timestamp set
-    """
-    from agent_bom.api.secret_source import resolve_secret
-    from agent_bom.config import (
-        RATE_LIMIT_KEY_LAST_ROTATED,
-        RATE_LIMIT_KEY_MAX_AGE_DAYS,
-        RATE_LIMIT_KEY_ROTATION_DAYS,
-    )
-
-    raw_key = resolve_secret("AGENT_BOM_RATE_LIMIT_KEY")
-    fallback_source = None
-
-    if not raw_key:
-        production_or_clustered = _production_or_clustered_control_plane()
-        return {
-            "status": "ephemeral",
-            "severity": "warning" if production_or_clustered else "info",
-            "production_or_clustered": production_or_clustered,
-            "rotation_days": RATE_LIMIT_KEY_ROTATION_DAYS,
-            "max_age_days": RATE_LIMIT_KEY_MAX_AGE_DAYS,
-            "fallback_source": None,
-            "last_rotated": None,
-            "age_days": None,
-            "message": (
-                (
-                    "No AGENT_BOM_RATE_LIMIT_KEY configured. Rate-limit fingerprints use a "
-                    "process-local random key that resets on restart and breaks shared bucket "
-                    "scoping across replicas. Set AGENT_BOM_RATE_LIMIT_KEY for production."
-                )
-                if production_or_clustered
-                else (
-                    "No AGENT_BOM_RATE_LIMIT_KEY configured. Rate-limit fingerprints use a "
-                    "process-local random key that resets on restart; this is acceptable for "
-                    "single-process local development."
-                )
-            ),
-        }
-
-    if not RATE_LIMIT_KEY_LAST_ROTATED:
-        return {
-            "status": "unknown_age",
-            "rotation_days": RATE_LIMIT_KEY_ROTATION_DAYS,
-            "max_age_days": RATE_LIMIT_KEY_MAX_AGE_DAYS,
-            "fallback_source": fallback_source,
-            "last_rotated": None,
-            "age_days": None,
-            "message": (
-                "Rate-limit key is configured but AGENT_BOM_RATE_LIMIT_KEY_LAST_ROTATED is "
-                "unset. Set it to an ISO-8601 timestamp when the key was last rotated to "
-                "enable rotation tracking."
-            ),
-        }
-
-    try:
-        rotated = _dt.fromisoformat(RATE_LIMIT_KEY_LAST_ROTATED)
-    except ValueError:
-        return {
-            "status": "unknown_age",
-            "rotation_days": RATE_LIMIT_KEY_ROTATION_DAYS,
-            "max_age_days": RATE_LIMIT_KEY_MAX_AGE_DAYS,
-            "fallback_source": fallback_source,
-            "last_rotated": RATE_LIMIT_KEY_LAST_ROTATED,
-            "age_days": None,
-            "message": (
-                "AGENT_BOM_RATE_LIMIT_KEY_LAST_ROTATED is set but is not a valid ISO-8601 "
-                "timestamp. Use a value like '2026-04-17T00:00:00+00:00'."
-            ),
-        }
-
-    if rotated.tzinfo is None:
-        rotated = rotated.replace(tzinfo=_tz.utc)
-    current = now or _dt.now(_tz.utc)
-    age_days = max(0, int((current - rotated).total_seconds() // 86400))
-
-    if age_days >= RATE_LIMIT_KEY_MAX_AGE_DAYS:
-        status = "max_age_exceeded"
-        message = (
-            f"Rate-limit key is {age_days} days old, exceeding the configured maximum "
-            f"({RATE_LIMIT_KEY_MAX_AGE_DAYS} days). Rotate AGENT_BOM_RATE_LIMIT_KEY now and "
-            "update AGENT_BOM_RATE_LIMIT_KEY_LAST_ROTATED."
-        )
-    elif age_days >= RATE_LIMIT_KEY_ROTATION_DAYS:
-        status = "rotation_due"
-        message = (
-            f"Rate-limit key is {age_days} days old, past the rotation interval ({RATE_LIMIT_KEY_ROTATION_DAYS} days). Schedule a rotation."
-        )
-    else:
-        status = "ok"
-        message = f"Rate-limit key is {age_days} days old; rotation interval is {RATE_LIMIT_KEY_ROTATION_DAYS} days."
-
-    return {
-        "status": status,
-        "rotation_days": RATE_LIMIT_KEY_ROTATION_DAYS,
-        "max_age_days": RATE_LIMIT_KEY_MAX_AGE_DAYS,
-        "fallback_source": fallback_source,
-        "last_rotated": rotated.isoformat(),
-        "age_days": age_days,
-        "message": message,
-    }
-
-
-class MaxBodySizeMiddleware(BaseHTTPMiddleware):
-    """Reject oversized bodies and enforce read deadline + throughput floor (slowloris mitigation).
-
-    Three-layer protection:
-    1. Content-Length fast-path: reject before reading if header exceeds limit.
-    2. Streaming body drain with asyncio timeout: covers chunked/streaming uploads
-       that omit Content-Length — a common slowloris vector.
-    3. Throughput floor (audit-5 PR-C): even within the 30s deadline an attacker
-       can keep a connection alive indefinitely by trickling just enough bytes
-       per second to avoid the timeout. Once the body reaches a small warmup
-       threshold, the middleware tracks bytes/second over a rolling window and
-       aborts the request when sustained throughput drops below the floor.
-       Tunable via env so legitimate slow clients in restricted environments
-       can keep working.
-    """
-
-    _BODY_TIMEOUT_SECONDS = 30
-    """Hard read deadline; covers slow legitimate clients but bounds slowloris attacks."""
-
-    _THROUGHPUT_WINDOW_SECONDS = 5.0
-    """Rolling window for the throughput floor."""
-
-    _THROUGHPUT_WARMUP_BYTES = 4096
-    """Don't enforce the floor until the body crosses this many bytes —
-    protects tiny POSTs from being penalised by the connect/TLS handshake delay."""
-
-    _DEFAULT_THROUGHPUT_FLOOR_BPS = 256
-    """Bytes/second floor over the rolling window once warmup is past."""
-
-    def __init__(self, app: ASGIApp, max_bytes: int = 10 * 1024 * 1024, path_limits: dict[str, int] | None = None):
-        super().__init__(app)
-        self._max_bytes = max_bytes
-        self._path_limits = path_limits or {}
-
-    @classmethod
-    def _throughput_floor_bps(cls) -> int:
-        """Read the throughput floor from env so operators can tune it."""
-        raw = (os.environ.get("AGENT_BOM_BODY_MIN_BPS") or "").strip()
-        if not raw:
-            return cls._DEFAULT_THROUGHPUT_FLOOR_BPS
-        try:
-            value = int(raw)
-        except ValueError:
-            return cls._DEFAULT_THROUGHPUT_FLOOR_BPS
-        # 0 disables the floor entirely (debug/load-test escape hatch).
-        return max(0, value)
-
-    @with_middleware_error_envelope
-    async def dispatch(self, request: StarletteRequest, call_next: RequestResponseEndpoint) -> Response:
-        path = getattr(request, "scope", {}).get("path", "")
-        max_bytes = self._path_limits.get(path, self._max_bytes) if request.method == "POST" else self._max_bytes
-
-        def too_large() -> JSONResponse:
-            return JSONResponse(
-                status_code=413,
-                content={
-                    "detail": f"Request body too large: exceeds the configured upload budget ({max_bytes} bytes)",
-                    "max_bytes": max_bytes,
-                },
-            )
-
-        encoding = request.headers.get("content-encoding", "identity").strip().lower()
-        compressed = encoding == "gzip" and path in self._path_limits and request.method == "POST"
-        if encoding != "identity" and not compressed:
-            return JSONResponse(status_code=415, content={"detail": "Unsupported request Content-Encoding"})
-        content_length = request.headers.get("content-length")
-        if content_length:
-            try:
-                cl = int(content_length)
-                if cl < 0:
-                    raise ValueError
-            except (ValueError, OverflowError):
-                return JSONResponse(status_code=400, content={"detail": "Invalid Content-Length header"})
-            if cl > max_bytes:
-                return too_large()
-        if request.method in ("POST", "PUT", "PATCH") or content_length or compressed:
-            # Drain every body under the same deadline, including clients that
-            # provide Content-Length. BytesIO avoids retaining a chunk list plus
-            # a second full-size joined copy. Reuse the cached body downstream.
-            min_bps = self._throughput_floor_bps()
-            window = self._THROUGHPUT_WINDOW_SECONDS
-            warmup = self._THROUGHPUT_WARMUP_BYTES
-            chunk_history: deque[tuple[float, int]] = deque()
-            buffer = io.BytesIO()
-            decoder = zlib.decompressobj(16 + zlib.MAX_WBITS) if compressed else None
-            total = 0
-
-            def append_chunk(chunk: bytes) -> bool:
-                if decoder is None:
-                    buffer.write(chunk)
-                    return buffer.tell() <= max_bytes
-                # Bound each inflation allocation independently of compression
-                # ratio. Reject concatenated members/trailing bytes and bombs.
-                remaining = chunk
-                while remaining:
-                    decoded = decoder.decompress(remaining, min(65536, max_bytes - buffer.tell() + 1))
-                    buffer.write(decoded)
-                    if buffer.tell() > max_bytes:
-                        return False
-                    if decoder.unused_data:
-                        raise zlib.error("Trailing gzip data")
-                    remaining = decoder.unconsumed_tail
-                return True
-
-            try:
-                start_monotonic = time.monotonic()
-                async with asyncio.timeout(self._BODY_TIMEOUT_SECONDS):
-                    async for chunk in request.stream():
-                        total += len(chunk)
-                        if total > max_bytes:
-                            return too_large()
-                        if decoder is not None:
-                            within_budget = await anyio.to_thread.run_sync(append_chunk, chunk)
-                        else:
-                            within_budget = append_chunk(chunk)
-                        if not within_budget:
-                            return too_large()
-                        now_monotonic = time.monotonic()
-                        chunk_history.append((now_monotonic, len(chunk)))
-                        if min_bps > 0 and total >= warmup and (now_monotonic - start_monotonic) >= window:
-                            cutoff = now_monotonic - window
-                            while chunk_history and chunk_history[0][0] < cutoff:
-                                chunk_history.popleft()
-                            window_bytes = sum(size for _ts, size in chunk_history)
-                            elapsed = now_monotonic - chunk_history[0][0] if chunk_history else 0.0
-                            if elapsed > 0 and window_bytes / elapsed < min_bps:
-                                return JSONResponse(status_code=408, content={"detail": "Request body throughput below configured floor"})
-                if decoder is not None and not decoder.eof:
-                    return JSONResponse(status_code=400, content={"detail": "Incomplete gzip request body"})
-            except TimeoutError:
-                return JSONResponse(status_code=408, content={"detail": "Request body read timed out"})
-            except zlib.error:
-                return JSONResponse(status_code=400, content={"detail": "Invalid gzip request body"})
-
-            body = buffer.getvalue()
-            request._body = body
-            if compressed:
-                # Downstream parsers see the decoded representation.
-                request.scope["headers"] = [
-                    (key, value) for key, value in request.scope["headers"] if key.lower() not in {b"content-encoding", b"content-length"}
-                ] + [(b"content-length", str(len(body)).encode("ascii"))]
-                if hasattr(request, "_headers"):
-                    del request._headers
-
-        return await call_next(request)
-
-
-# ─── structured error envelope ───────────────────────────
-
-# Map HTTP status codes to stable string codes that downstream consumers can
-# pin on without parsing free-form messages. The mapping is intentionally
-# narrow — every API error funnels through one of these buckets, with anything
-# else falling back to ``INTERNAL_ERROR``.
