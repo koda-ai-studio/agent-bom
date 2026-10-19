@@ -39,6 +39,9 @@ _SCAN_PERF_TEMPLATE = {
     "osv_packages_queried": 0,
     "osv_queries_sent": 0,
     "osv_batches": 0,
+    # Batches OSV actually answered; together with cache hits this is the
+    # evidence that live OSV backed a lookup, not merely that one was planned.
+    "osv_batches_answered": 0,
     "osv_lookup_errors": 0,
     "offline_skips": 0,
     "skipped_unresolvable_versions": 0,
@@ -151,6 +154,11 @@ def reset_scan_performance() -> None:
 def _bump_scan_perf(key: str, delta: int = 1) -> None:
     performance = _scan_performance_state()
     performance[key] = int(performance.get(key, 0)) + delta
+
+
+def peek_scan_performance() -> dict[str, int]:
+    """Read this scan's performance counters without resetting them."""
+    return dict(_scan_performance_state())
 
 
 def consume_scan_performance() -> dict[str, int]:

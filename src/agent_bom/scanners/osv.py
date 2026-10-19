@@ -250,6 +250,12 @@ async def _cache_complete_results(
     await asyncio.to_thread(cache.put_many, cache_writes)
 
 
+def _record_batch_answered(bump_scan_perf: Callable[[str, int], None]) -> None:
+    """Count a batch OSV actually answered: the evidence that live data backed the scan."""
+    record_enrichment_source("osv", "success")
+    bump_scan_perf("osv_batches_answered", 1)
+
+
 def _record_unavailable_osv(packages: list[Package], reason: str) -> None:
     """A skipped remote lookup must reach the same verdict gate as a failure."""
     from agent_bom.scanners.state import record_coverage_warning
@@ -455,7 +461,7 @@ async def query_osv_batch_impl(
                 try:
                     _collect_batch_vulns(response.json(), batch_start, len(batch), pkg_index, partial, console)
                     completed_queries.update(range(batch_start, batch_start + len(batch)))
-                    record_enrichment_source("osv", "success")
+                    _record_batch_answered(bump_scan_perf)
                 except (ValueError, KeyError, AttributeError, TypeError) as exc:
                     record_enrichment_source("osv", "failure", error=f"parse error: {type(exc).__name__}")
                     console.print("  [red]✗[/red] OSV returned an invalid or incomplete response")

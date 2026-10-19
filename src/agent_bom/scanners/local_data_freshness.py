@@ -86,6 +86,14 @@ def _lookup_gap(coverage_warnings: list[dict[str, Any]], *, offline: bool) -> bo
     return "offline_ecosystem_gap" in kinds if offline else "remote_lookup_gap" in kinds
 
 
+def _osv_answered() -> bool:
+    """Whether live OSV (or its response cache) actually answered during this scan."""
+    from agent_bom.scanners.state import peek_scan_performance
+
+    performance = peek_scan_performance()
+    return bool(performance.get("osv_batches_answered") or performance.get("osv_cache_hits"))
+
+
 def check_data_evidence(*, offline: bool, coverage_warnings: list[dict[str, Any]]) -> CheckDataEvidence:
     """Classify a finished package lookup as complete or possibly incomplete.
 
@@ -103,10 +111,12 @@ def check_data_evidence(*, offline: bool, coverage_warnings: list[dict[str, Any]
         status, reason = "incomplete", f"{condition} and OSV was not consulted (offline); results may be incomplete."
     elif untrusted and lookup_failed:
         status, reason = "incomplete", f"{condition} and the live OSV lookup failed; results may be incomplete."
+    elif untrusted and not _osv_answered():
+        status, reason = "incomplete", f"{condition} and live OSV did not answer for this package; results may be incomplete."
     elif _lookup_gap(coverage_warnings, offline=offline):
         status, reason = "incomplete", "Advisory lookup coverage was incomplete; results may be incomplete."
     elif untrusted:
-        status, reason = "complete", f"{condition}; live OSV was also queried for this package."
+        status, reason = "complete", f"{condition}; live OSV answered for this package and was merged in."
     else:
         status, reason = "complete", ""
     if untrusted:

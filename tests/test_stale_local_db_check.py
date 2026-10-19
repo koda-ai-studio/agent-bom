@@ -85,7 +85,13 @@ def _no_sockets(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture
 def osv(monkeypatch: pytest.MonkeyPatch) -> AsyncMock:
-    mock = AsyncMock(return_value=LIVE_OSV)
+    async def _answer(_packages):
+        from agent_bom.scanners.state import _bump_scan_perf
+
+        _bump_scan_perf("osv_batches_answered", 1)
+        return LIVE_OSV
+
+    mock = AsyncMock(side_effect=_answer)
     monkeypatch.setattr("agent_bom.scanners.query_osv_batch", mock)
     return mock
 
