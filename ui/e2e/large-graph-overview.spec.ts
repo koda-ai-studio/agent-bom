@@ -644,6 +644,42 @@ test("a lone organization opens to its ranked accounts as the first view", async
   expect(requested.slice(0, 2)).toEqual(["", "org:northstar"]);
 });
 
+for (const theme of ["light", "dark"] as const) test(`scope rows and breadcrumbs carry the recorded provider ${theme}`, async ({ page }, testInfo) => {
+  await page.addInitScript(t => localStorage.setItem("agent-bom-theme", t), theme);
+  await routeLargeGraphPage(page);
+  await page.route("**/v1/graph/rollup?**", (route) => {
+    const node = new URL(route.request().url()).searchParams.get("node");
+    if (!node) return route.fulfill({ json: {
+      scan_id: scanId, tenant_id: "default", created_at: createdAt, mode: "rollup", filters: {},
+      top_level: [{ id: "org:northstar", label: "Northstar org", entity_type: "org", severity: "high",
+        is_container: true, has_children: true, direct_child_count: 30, aggregate: rollupAggregate(90) }],
+      edges: [], summary: { total_nodes: 6000, total_edges: 20000, top_level_count: 1, container_count: 1 },
+      completeness: { status: "complete", returned: 1, total: 1, truncated: false, reasons: [] },
+    } });
+    const children = Array.from({ length: 30 }, (_, index) => ({
+      id: `account:${index}`, label: `account-${index}`, entity_type: "account", severity: "high",
+      is_container: true, has_children: true, direct_child_count: 3, aggregate: rollupAggregate(3),
+      cloud_provider: index % 2 ? "aws" : "gcp", cloud_provider_basis: "declared",
+    }));
+    return route.fulfill({ json: {
+      scan_id: scanId, tenant_id: "default", created_at: createdAt, mode: "drilldown", filters: {},
+      node: { id: node, label: "Northstar org", entity_type: "org", cloud_provider: "", cloud_provider_basis: "" }, children, edges: [],
+      pagination: { offset: 0, limit: 200, returned: 30, total: 30, has_more: false, next_offset: null },
+      summary: { total_nodes: 6000, total_edges: 20000 },
+      completeness: { status: "complete", returned: 30, total: 30, truncated: false, reasons: [] },
+    } });
+  });
+  await page.goto(`/graph?scan=${scanId}`);
+  const summary = page.getByTestId("graph-rollup-decision-surface");
+  await expect(summary).toBeVisible({ timeout: 30_000 });
+  await expect(summary.getByTestId("graph-scope-eyebrow").first()).toContainText(/account · (Google Cloud|AWS)/);
+  await expect(summary.locator('[data-agent-source="gcp"]').first()).toBeVisible();
+  await expect(summary.locator('[data-agent-source="aws"]').first()).toBeVisible();
+  // An org with no recorded provider gets no mark: nothing is guessed from its name.
+  await expect(page.getByRole("navigation", { name: "Investigation scope" }).locator("[data-agent-source]")).toHaveCount(0);
+  await page.screenshot({ path: testInfo.outputPath(`scope-provider-${theme}.png`), animations: "disabled" });
+});
+
 test("a failed scope summary never falls back to the raw estate map on its own", async ({ page }) => {
   await routeLargeGraphPage(page);
   await page.route("**/v1/graph/rollup?**", (route) => route.fulfill({ status: 503, json: { detail: "Graph backend busy" } }));

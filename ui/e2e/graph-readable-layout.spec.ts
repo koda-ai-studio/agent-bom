@@ -244,3 +244,51 @@ test("a correlation opens on a readable neighbourhood, never a lone card", async
   expect(frame.label).toBeGreaterThanOrEqual(12);
   await page.screenshot({ path: info.outputPath("correlation-first-frame.png"), animations: "disabled" });
 });
+
+for (const theme of ["light", "dark"] as const) test(`provider marks read as part of the node ${theme}`, async ({ page }, info) => {
+  const inherited = { cloud_provider_basis: "inherited:hosts", cloud_provider_source: { node_id: "cluster", label: "payments-eks", entity_type: "cluster" } };
+  const worker = { ...node("worker", "container", "ledger-worker"), attributes: inherited, dimensions: { environment: "staging", cloud_provider: "aws" } };
+  const nodes = [aws(node("agent", "account", "prod-workloads")), aws(node("cluster", "cluster", "payments-eks")), worker,
+    aws(node("bucket", "data_store", "customer-pii-bucket"))];
+  await page.addInitScript(t => localStorage.setItem("agent-bom-theme", t), theme);
+  await fixture(page, nodes, [edge("agent", "cluster", "contains"), edge("cluster", "worker", "hosts"), edge("agent", "bucket", "contains")]);
+  await openAgentContext(page, 1440);
+  const marks = page.locator(".react-flow [data-graph-source-badge]");
+  await expect(marks).toHaveCount(4);
+  const measured = await marks.evaluateAll(all => {
+    const luminance = (color: string) => {
+      const [r, g, b] = (color.match(/[\d.]+/g) ?? []).slice(0, 3).map(Number).map(v => v / 255).map(v => v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+      return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+    };
+    const canvas = getComputedStyle(document.querySelector(".react-flow")!).backgroundColor;
+    return all.map(mark => {
+      const style = getComputedStyle(mark);
+      const [hi, lo] = [luminance(style.outlineColor), luminance(canvas)].sort((a, b) => b - a);
+      return { basis: mark.getAttribute("data-provider-basis"), title: mark.getAttribute("title"), outline: style.outlineStyle,
+        glyph: mark.querySelector("img")!.getBoundingClientRect().width, contrast: (hi! + 0.05) / (lo! + 0.05) };
+    });
+  });
+  for (const mark of measured) {
+    expect(mark.glyph, "glyph renders at least 14px").toBeGreaterThanOrEqual(14);
+    expect(mark.contrast, "mark outline contrast against the canvas").toBeGreaterThanOrEqual(3);
+  }
+  expect(measured.filter(mark => mark.basis === "inherited")).toEqual([expect.objectContaining({ outline: "dashed", title: "Source: AWS · inherited from AWS cluster payments-eks" })]);
+  await expect(page.locator('.react-flow [data-node-badge="provider"]')).toHaveCount(0);
+  // The type label and its environment chip share one centre line.
+  const row = page.locator('[data-id="worker"] [data-testid="graph-node-badges"]');
+  const centres = await row.evaluate(el => [...el.children].map(child => { const r = child.getBoundingClientRect(); return r.top + r.height / 2; }));
+  expect(Math.max(...centres) - Math.min(...centres)).toBeLessThanOrEqual(1.5);
+  // Names wrap only between segments, without a lone short tail.
+  const lines = await page.locator('[data-id="bucket"] [data-graph-entity] > p').first().evaluate(label => {
+    const rows = new Map<number, string>();
+    for (const span of label.querySelectorAll(":scope > span")) {
+      if (span.getClientRects().length !== 1) return ["split inside a segment"];
+      const top = Math.round(span.getBoundingClientRect().top);
+      rows.set(top, (rows.get(top) ?? "") + span.textContent);
+    }
+    return [...rows.values()];
+  });
+  expect(lines.join("")).toBe("customer-pii-bucket");
+  if (lines.length > 1) expect(Math.min(...lines.map(l => l.length)) / Math.max(...lines.map(l => l.length))).toBeGreaterThanOrEqual(0.6);
+  await page.screenshot({ path: info.outputPath(`provider-marks-${theme}.png`), animations: "disabled" });
+});

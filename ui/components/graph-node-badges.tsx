@@ -29,7 +29,7 @@ export function NodeBadgeChip({ badge }: { badge: ChipBadge }) {
 export function NodeBadgeRow({ badges, children }: { badges: NodeBadge[]; children: ReactNode }) {
   if (badges.length === 0) return <>{children}</>;
   return (
-    <div className="flex max-w-full flex-wrap items-center justify-center gap-1" data-testid="graph-node-badges">
+    <div className="flex max-w-full flex-wrap items-center justify-center gap-x-1.5 gap-y-1" data-testid="graph-node-badges">
       {children}
       {badges.map((badge) => <NodeBadgeChip key={`${badge.kind}:${badge.value}`} badge={badge} />)}
     </div>
