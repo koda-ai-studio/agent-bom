@@ -149,15 +149,23 @@ def main() -> int:
     )
 
     _require_text(
-        "ui/lib/api.ts",
+        "ui/lib/api-auth.ts",
         [
             'getAuthPolicy: () => get<AuthPolicyResponse>("/v1/auth/policy")',
             'getTenantQuota: () => get<AuthPolicyResponse["tenant_quota_runtime"]>("/v1/auth/quota")',
             'put<AuthPolicyResponse["tenant_quota_runtime"]>("/v1/auth/quota", body)',
             'del("/v1/auth/quota")',
-            'return get<GraphAgentsResponse>(`/v1/graph/agents${qs ? `?${qs}` : ""}`, signal ? { signal } : {})',
-            'return get<FleetResponse>(`/v1/fleet${qs ? `?${qs}` : ""}`)',
         ],
+        failures,
+    )
+    _require_text(
+        "ui/lib/api-graph.ts",
+        ['return get<GraphAgentsResponse>(`/v1/graph/agents${qs ? `?${qs}` : ""}`, signal ? { signal } : {})'],
+        failures,
+    )
+    _require_text(
+        "ui/lib/api-fleet.ts",
+        ['return get<FleetResponse>(`/v1/fleet${qs ? `?${qs}` : ""}`)'],
         failures,
     )
     _require_text(

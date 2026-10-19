@@ -182,7 +182,7 @@ def main_check() -> None:
     )
     _require(status_ref == "#/components/schemas/DemoEstateStatus", "OpenAPI graph-owner status contract is missing")
 
-    api_client = _read("ui/lib/api.ts")
+    api_client = _read("ui/lib/api-posture.ts")
     dashboard = _read("ui/app/demo-estate/page.tsx")
     _require('get<EnterpriseDemoStory>("/v1/demo-estate/story"' in api_client, "UI API client drifted")
     _require('get<DemoEstateStatus>("/v1/demo-estate/status")' in api_client, "UI status client drifted")
