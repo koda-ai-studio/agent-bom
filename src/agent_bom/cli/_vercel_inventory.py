@@ -7,7 +7,14 @@ from uuid import uuid4
 
 import click
 
-from agent_bom.cli._cloud_inventory_io import CollectionScopeMismatchError, _write_report, persist_graph, read_token
+from agent_bom.cli._cloud_inventory_io import (
+    CollectionScopeMismatchError,
+    ConnectorPushError,
+    _write_report,
+    persist_graph,
+    push_report,
+    read_token,
+)
 from agent_bom.cli._tenant import resolve_cli_tenant_id_strict
 from agent_bom.security import sanitize_error
 
@@ -25,11 +32,27 @@ from agent_bom.security import sanitize_error
 )
 @click.option("--graph-db", type=click.Path(dir_okay=False, path_type=Path), help="Dedicated SQLite graph database for this team.")
 @click.option("--tenant", default=None, help="Tenant for graph persistence.")
-def vercel_cmd(team_id: str, token_file: Path, output: Path, graph_db: Path | None, tenant: str | None) -> None:
+@click.option(
+    "--push-url",
+    default=None,
+    metavar="URL",
+    help="Push this team's inventory to a control plane (base URL or /v1/results/push); it joins the current estate graph.",
+)
+@click.option("--push-api-key", default=None, envvar="AGENT_BOM_PUSH_API_KEY", metavar="KEY", help="API key for push authentication.")
+def vercel_cmd(
+    team_id: str,
+    token_file: Path,
+    output: Path,
+    graph_db: Path | None,
+    tenant: str | None,
+    push_url: str | None,
+    push_api_key: str | None,
+) -> None:
     """Read team projects and the last 24 hours of deployments.
 
     No environment values, source contents, deployment writes or runtime scans.
-    Exit 2 preserves partial evidence without replacing a prior graph snapshot.
+    Exit 2 preserves partial evidence without replacing a prior graph snapshot;
+    a partial push is recorded as partial and keeps the team's earlier evidence.
     """
     from agent_bom.cloud.vercel_inventory import collect_report
 
@@ -44,8 +67,12 @@ def vercel_cmd(team_id: str, token_file: Path, output: Path, graph_db: Path | No
         _write_report(output, report)
         if graph_db is not None and report["status"] == "ok":
             persist_graph(report, graph_db, tenant_id, output, scope_entity_types={"account"}, scope_node_ids={"account:vercel:" + team_id})
+        if push_url:
+            push_report(report, push_url, push_api_key, output)
     except CollectionScopeMismatchError as exc:
         raise click.ClickException("Collection scope changed; use a separate graph database") from exc
+    except ConnectorPushError as exc:
+        raise click.ClickException(str(exc)) from exc
     except Exception as exc:
         raise click.ClickException(sanitize_error(exc, generic=True)) from exc
     inventory = report["cloud_inventory"][0]

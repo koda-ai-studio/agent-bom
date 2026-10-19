@@ -172,6 +172,26 @@ class TestSanitizeResults:
         assert agent["mdm_provider"] == "jamf"
         assert agent["tags"] == ["developer-endpoint", "mdm"]
 
+    def test_explicit_source_id_names_the_producer_target(self, monkeypatch):
+        monkeypatch.setenv("AGENT_BOM_PUSH_SOURCE_ID", "device-acme-001")
+        assert sanitize_results({}, source_id="connector:vercel:team_one")["source_id"] == "connector:vercel:team_one"
+        assert sanitize_results({})["source_id"] == "device-acme-001"
+
+    def test_boolean_receipts_and_finding_identity_survive_redaction(self):
+        sanitized = sanitize_results(
+            {
+                "coverage": [{"authenticated": True, "auth_token": "plain-value"}],
+                "findings": [{"finding_group_key": "occurrence:8a8a2c04-2b5e-514a-9f3f-9b570c960acb"}],
+            }
+        )
+        assert sanitized["coverage"][0] == {"authenticated": True, "auth_token": "***REDACTED***"}
+        assert sanitized["findings"][0]["finding_group_key"] == "occurrence:8a8a2c04-2b5e-514a-9f3f-9b570c960acb"
+
+    def test_credential_shaped_finding_identity_is_still_redacted(self):
+        leaked = "occurrence:ghp_" + "A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8"
+        sanitized = sanitize_results({"findings": [{"finding_group_key": leaked}]})
+        assert "ghp_" not in sanitized["findings"][0]["finding_group_key"]
+
 
 # ─── _looks_like_secret ──────────────────────────────────────────────────────
 

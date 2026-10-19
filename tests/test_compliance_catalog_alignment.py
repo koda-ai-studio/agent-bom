@@ -137,6 +137,13 @@ def _emittable_tags() -> dict[str, set[str]]:
     for finding_type, source, cwes, location in itertools.product(FindingType, FindingSource, cwe_variants, (None, "project/.mcp.json")):
         for field, ids in controls_for_finding_shape(finding_type, source=source, cwe_ids=cwes, location=location).items():
             emitted[field].update(ids)
+    # Rule-keyed vendor shapes are only reachable with their rule id.
+    from agent_bom.evidence.vendor_rule_controls import VENDOR_RULE_CONTROLS
+
+    for rule_id in VENDOR_RULE_CONTROLS:
+        shape = controls_for_finding_shape(FindingType.CLOUD_BEST_PRACTICE_FAIL, source=FindingSource.CLOUD_SECURITY, rule_id=rule_id)
+        for field, ids in shape.items():
+            emitted[field].update(ids)
     return emitted
 
 

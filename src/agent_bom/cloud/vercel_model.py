@@ -6,6 +6,7 @@ import re
 from typing import Any
 
 from agent_bom.canonical_ids import canonical_id
+from agent_bom.compliance_hub import apply_hub_classification
 from agent_bom.finding import Asset, Finding, FindingSource, FindingType
 from agent_bom.security import sanitize_text
 
@@ -109,26 +110,28 @@ def evaluate(projects: list[dict[str, Any]], team: str, observed_at: str) -> tup
             continue
         identifier = canonical_id("vercel", team, item["id"], evidence["rule_id"])
         findings.append(
-            Finding(
-                id=identifier,
-                finding_type=FindingType.CLOUD_BEST_PRACTICE_FAIL,
-                source=FindingSource.CLOUD_SECURITY,
-                asset=Asset(
-                    name=item["name"],
-                    asset_type="cloud_resource",
-                    identifier=f"vercel://{team}/projects/{item['id']}",
-                    provider="vercel",
-                    account_ref=team,
-                ),
-                title="Git fork deployment approval is disabled",
-                severity="medium",
-                evidence=evidence,
-                node_id=item["node_id"],
-                finding_node_id="misconfig:vercel:" + identifier,
-                remediation_guidance=(
-                    "Review Git fork protection for this project before allowing deployments from untrusted forks. "
-                    "This configuration observation does not establish exploitation."
-                ),
+            apply_hub_classification(
+                Finding(
+                    id=identifier,
+                    finding_type=FindingType.CLOUD_BEST_PRACTICE_FAIL,
+                    source=FindingSource.CLOUD_SECURITY,
+                    asset=Asset(
+                        name=item["name"],
+                        asset_type="cloud_resource",
+                        identifier=f"vercel://{team}/projects/{item['id']}",
+                        provider="vercel",
+                        account_ref=team,
+                    ),
+                    title="Git fork deployment approval is disabled",
+                    severity="medium",
+                    evidence=evidence,
+                    node_id=item["node_id"],
+                    finding_node_id="misconfig:vercel:" + identifier,
+                    remediation_guidance=(
+                        "Review Git fork protection for this project before allowing deployments from untrusted forks. "
+                        "This configuration observation does not establish exploitation."
+                    ),
+                )
             ).to_dict()
         )
     return checks, findings

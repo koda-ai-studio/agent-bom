@@ -8,6 +8,8 @@ import os
 import tempfile
 from pathlib import Path
 
+from agent_bom.cloud.connector_push import connector_push_payloads
+
 
 class CollectionScopeMismatchError(ValueError):
     """A safe, actionable rejection that never includes tenant or resource IDs."""
@@ -81,3 +83,38 @@ def persist_graph(
         raise
     report["persistence"] = {"graph": "persisted", "tenant_id": tenant, "scan_id": graph.scan_id}
     _write_report(output, report)
+
+
+class ConnectorPushError(RuntimeError):
+    """The control plane did not accept every connector target."""
+
+    def __init__(self) -> None:
+        super().__init__("Push to the control plane failed; the local report records which targets were stored")
+
+
+def push_report(report: dict, push_url: str, api_key: str | None, output: Path) -> None:
+    """Push each explicit connector target to the control plane's result-push path.
+
+    Partial collection is pushed too: its scan run is marked partial, so the
+    control plane keeps that target's earlier evidence and reports partial coverage.
+    """
+    from agent_bom import push
+
+    url = push.normalize_scan_push_url(push_url)
+    receipts = []
+    for payload in connector_push_payloads(report):
+        body = push.push_json(url, payload, api_key, source_id=payload["source_id"])
+        receipts.append(
+            {
+                "source_id": payload["source_id"],
+                "target_scope": payload["target_scope"],
+                "stored": body is not None,
+                "job_id": (body or {}).get("job_id"),
+                "scan_outcome": (body or {}).get("scan_outcome"),
+            }
+        )
+    stored = all(receipt["stored"] for receipt in receipts)
+    report.setdefault("persistence", {})["push"] = {"status": "pushed" if stored else "failed", "receipts": receipts}
+    _write_report(output, report)
+    if not stored:
+        raise ConnectorPushError()
