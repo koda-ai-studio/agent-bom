@@ -36,7 +36,7 @@ from __future__ import annotations
 import logging
 import os
 import time
-from typing import Any, Literal, Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from starlette.responses import Response
@@ -129,7 +129,8 @@ from agent_bom.api.graph_presentation import (
     _serialize_attack_path_batch as _serialize_attack_path_batch,
 )
 from agent_bom.api.graph_query import GraphQueryRequest, _filtered_query_graph, query_payload
-from agent_bom.api.graph_store import containment_drilldown_graph
+from agent_bom.api.graph_rollup_prewarm import load_rollup_source, rollup_cache_key
+from agent_bom.api.graph_store import containment_drilldown_graph as containment_drilldown_graph
 from agent_bom.api.neptune_graph import NeptuneGraphStore
 from agent_bom.api.read_models._base import documented
 from agent_bom.api.read_models.graph import GraphNodeNeighborsResponse, GraphPageResponse, GraphPathsResponse, GraphRollupResponse
@@ -814,21 +815,17 @@ async def get_graph_rollup(
         cache_identity = await _runtime._graph_store_call(snapshot_fingerprint, graph_store, tenant=tenant, scan_id=requested_scan_id)
     cache_key = None
     if cache_identity and cache_identity[1]:
-        cache_key = (
-            id(graph_store),
+        cache_key = rollup_cache_key(
+            graph_store,
             tenant,
             cache_identity,
-            getattr(request.state, "api_key_id", ""),
-            getattr(request.state, "api_key_name", ""),
-            getattr(request.state, "api_key_role", ""),
-            tuple(sorted(getattr(request.state, "api_key_scopes", []) or [])),
-            node,
-            min_severity,
-            exposed,
-            toxic,
-            mode,
-            offset if mode == "rollup" or node else 0,
-            limit if mode == "rollup" or node else 0,
+            node=node,
+            min_severity=min_severity,
+            exposed=exposed,
+            toxic=toxic,
+            mode=mode,
+            offset=offset,
+            limit=limit,
         )
         cached = graph_rollup_cache.get(cache_key)
         if cached is not None:
@@ -837,34 +834,18 @@ async def get_graph_rollup(
 
     node, resolved_from = await _runtime.resolve_node_id(graph_store, tenant, requested_scan_id, node) if node else (node, None)
     try:
-        if node:
-            # A drill-down reads one container's subtree, so that subtree is all
-            # this request fetches. Loading the whole snapshot to return twenty
-            # children made the cost of the answer track estate size rather than
-            # answer size (5k nodes 54ms -> 80k nodes 1169ms, twenty children
-            # either way).
-            graph = await _runtime._graph_store_call(
-                containment_drilldown_graph,
-                graph_store,
-                node_id=node,
-                scan_id=requested_scan_id,
-                tenant_id=tenant,
-            )
-        else:
-            load_kwargs: dict[str, Any] = {
-                "scan_id": requested_scan_id,
-                "tenant_id": tenant,
-            }
-            if mode != "attack_path":
-                load_kwargs["relationship_types"] = _ROLLUP_RELATIONSHIPS
-            # SQLite can avoid hydrating evidence JSON for an aggregate-only
-            # view. Other stores retain the full, equivalent load. Attack-path
-            # mode always needs the complete evidence records.
-            rollup_loader = getattr(graph_store, "load_rollup_graph", None)
-            if mode == "rollup" and callable(rollup_loader):
-                graph = await _runtime._graph_store_call(rollup_loader, scan_id=requested_scan_id, tenant_id=tenant)
-            else:
-                graph = await _runtime._graph_store_call(graph_store.load_graph, **load_kwargs)
+        # A drill-down reads only one container's subtree (its cost tracks the
+        # answer, not the estate); the top level uses the store's aggregate-only
+        # roll-up projection when it has one; attack-path mode needs the full
+        # evidence records.
+        graph = await _runtime._graph_store_call(
+            load_rollup_source,
+            graph_store,
+            tenant_id=tenant,
+            scan_id=requested_scan_id,
+            node=node,
+            mode=mode,
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=sanitize_error(exc)) from exc
 
