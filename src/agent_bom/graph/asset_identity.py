@@ -94,9 +94,14 @@ def _attr(node: UnifiedNode, *keys: str) -> str:
 
 def recorded_dimension(node: UnifiedNode, key: str) -> str:
     """A dimension the source recorded; a provider inherited over an edge never locates identity."""
-    if key == "cloud_provider" and str(node.attributes.get("cloud_provider_basis") or "").startswith("inherited:"):
+    return _text(recorded_dimension_value(node.attributes, key, getattr(node.dimensions, key, "")))
+
+
+def recorded_dimension_value(attributes: Mapping[str, object], key: str, value: object) -> object:
+    """Apply the recorded-dimension boundary to serialized node fields too."""
+    if key == "cloud_provider" and str(attributes.get("cloud_provider_basis") or "").startswith("inherited:"):
         return ""
-    return _text(getattr(node.dimensions, key, ""))
+    return value
 
 
 def _provider(node: UnifiedNode) -> str:

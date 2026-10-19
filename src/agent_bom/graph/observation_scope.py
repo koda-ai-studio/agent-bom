@@ -11,6 +11,8 @@ import re
 from collections.abc import Mapping
 from typing import Any, Literal
 
+from agent_bom.graph.asset_identity import recorded_dimension_value
+
 _SCOPE_FIELDS = ("account_id", "cloud_account_id", "subscription_id", "project_id")
 
 
@@ -28,10 +30,11 @@ def _node_scope(attributes: Any, dimensions: Any) -> tuple[str, ...] | None:
     providers = (attrs.get("cloud_provider"), dims.get("cloud_provider"))
     if any(value is not None and not isinstance(value, str) for value in providers):
         return None
+    providers = (providers[0], recorded_dimension_value(attrs, "cloud_provider", providers[1]))
     provider = providers[0] or providers[1]
     if not isinstance(provider, str) or not provider.strip():
         return None
-    if attrs.get("cloud_provider") and dims.get("cloud_provider") and attrs["cloud_provider"] != dims["cloud_provider"]:
+    if providers[0] and providers[1] and providers[0] != providers[1]:
         return None
     values = []
     for field in _SCOPE_FIELDS:
@@ -83,17 +86,21 @@ def comparable_observation_sql(*, dialect: Literal["sqlite", "postgres"], previo
         return f"COALESCE({value(expression, field)}, '')"
 
     def provider(alias: str) -> str:
-        return (
-            f"COALESCE(NULLIF({value(alias + '.attributes', 'cloud_provider')}, ''), {value(alias + '.dimensions', 'cloud_provider')}, '')"
-        )
+        return f"COALESCE(NULLIF({value(alias + '.attributes', 'cloud_provider')}, ''), {recorded_provider(alias)}, '')"
+
+    def recorded_provider(alias: str) -> str:
+        # Match recorded_dimension_value for both persistence backends. Display
+        # inheritance is not a collector namespace or continuity receipt.
+        basis = text_value(alias + ".attributes", "cloud_provider_basis")
+        return f"CASE WHEN SUBSTR({basis}, 1, 10) = 'inherited:' THEN '' ELSE {value(alias + '.dimensions', 'cloud_provider')} END"
 
     def valid(alias: str) -> str:
         attrs = alias + ".attributes"
         dims = alias + ".dimensions"
         clauses = [
             f"TRIM({provider(alias)}) <> ''",
-            f"({text_value(attrs, 'cloud_provider')} = '' OR {text_value(dims, 'cloud_provider')} = '' "
-            f"OR {text_value(attrs, 'cloud_provider')} = {text_value(dims, 'cloud_provider')})",
+            f"({text_value(attrs, 'cloud_provider')} = '' OR COALESCE({recorded_provider(alias)}, '') = '' "
+            f"OR {text_value(attrs, 'cloud_provider')} = {recorded_provider(alias)})",
         ]
         for expression, field in [(attrs, "cloud_provider"), (dims, "cloud_provider"), *((attrs, key) for key in _SCOPE_FIELDS)]:
             clauses.append(f"COALESCE({kind(expression, field)}, 'null') IN ('null', '{string_kind}')")
