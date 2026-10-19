@@ -3027,7 +3027,7 @@ function GraphPageInner() {
         aria-label="Graph snapshot"
         value={selectedScanId}
         onChange={(event) => setSelectedScanId(event.target.value)}
-        className="graph-page-select max-w-full sm:max-w-64"
+        className="graph-page-select max-w-full sm:max-w-72"
       >
         {selectedScanId && selectedScanId !== currentEstateId && !snapshots.some(item => item.scan_id === selectedScanId) && <option value={selectedScanId}>{selectedScanId}</option>}
         {currentEstateId && !snapshots.some(item => item.scan_id === currentEstateId) && <option value={currentEstateId}>Current tenant estate</option>}
