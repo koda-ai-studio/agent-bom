@@ -17,9 +17,11 @@ import json
 import pytest
 from fastapi.testclient import TestClient
 
+from agent_bom.api import stores
 from agent_bom.api.graph_store import SQLiteGraphStore
+from agent_bom.api.models import JobStatus, ScanJob, ScanRequest
 from agent_bom.api.server import app
-from agent_bom.api.stores import set_graph_store
+from agent_bom.api.store import InMemoryJobStore
 from agent_bom.graph import UnifiedEdge, UnifiedGraph, UnifiedNode
 from agent_bom.graph.types import EntityType, RelationshipType
 
@@ -71,18 +73,37 @@ def _graph() -> UnifiedGraph:
     return graph
 
 
+@pytest.fixture(params=[False, True], ids=["empty_prior_jobs", "retained_prior_jobs"])
+def prior_job_store(request, monkeypatch):
+    """Exercise the graph contract after either empty or populated app state."""
+    jobs = InMemoryJobStore()
+    if request.param:
+        jobs.put(
+            ScanJob(
+                job_id="retained-job",
+                tenant_id="default",
+                request=ScanRequest(),
+                status=JobStatus.DONE,
+                created_at="2026-10-18T00:00:00+00:00",
+                completed_at="2026-10-18T00:00:00+00:00",
+                result={"scan_id": "retained-scan", "agents": [], "findings": []},
+            )
+        )
+    monkeypatch.setattr(stores, "_store", jobs)
+    return jobs
+
+
 @pytest.fixture
-def store(tmp_path, monkeypatch):
+def store(tmp_path, monkeypatch, prior_job_store):
     monkeypatch.setenv("AGENT_BOM_ALLOW_UNAUTHENTICATED_API", "1")
     monkeypatch.delenv("AGENT_BOM_API_KEY", raising=False)
     monkeypatch.delenv("AGENT_BOM_MCP_TENANT_ID", raising=False)
     graph_store = SQLiteGraphStore(str(tmp_path / "graph.db"))
     graph_store.save_graph(_graph())
-    set_graph_store(graph_store)
-    try:
-        yield graph_store
-    finally:
-        set_graph_store(None)  # type: ignore[arg-type]
+    # Current-estate reads resolve the graph and scan-job stores together.
+    monkeypatch.setattr(stores, "_store", InMemoryJobStore())
+    monkeypatch.setattr(stores, "_graph_store", graph_store)
+    yield graph_store
 
 
 def _reach(store: SQLiteGraphStore, node_id: str, direction: str, **kwargs) -> dict:
