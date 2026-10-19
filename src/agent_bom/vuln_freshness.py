@@ -340,7 +340,33 @@ def should_refresh(
     # Missing cache (live mode) or stale local cache → refresh.
     if freshness.mode == "live":
         return True
-    return freshness.stale
+    return local_db_outdated(freshness)
+
+
+def local_db_outdated(freshness: VulnDataFreshness) -> bool:
+    """True when results rest on a local cache that ``db freshness`` warns about.
+
+    The single rule every surface (scanner, CLI ``check``, MCP, REST) uses to
+    decide that local advisories cannot stand alone: online callers re-query
+    OSV, offline callers must report the result as possibly incomplete. It is
+    exactly the condition under which ``agent-bom db freshness`` stops printing
+    a green check — the configured threshold *or* the clear-danger age.
+    """
+    if freshness.mode == "local" or (freshness.mode == "offline" and freshness.sources):
+        return freshness.stale or freshness.danger
+    # No local cache at all: live mode is backed by the network, and offline
+    # with nothing cached is already a hard failure upstream.
+    return False
+
+
+def local_data_age_text(freshness: VulnDataFreshness) -> str:
+    """Plain-text age phrase for warnings, e.g. ``61 days old``."""
+    days = freshness.age_days
+    if days is None:
+        return "of unknown age"
+    if days >= 1:
+        return f"{days} day{'s' if days != 1 else ''} old"
+    return f"{freshness.age_hours} hour{'s' if freshness.age_hours != 1 else ''} old"
 
 
 def freshness_note(freshness: VulnDataFreshness) -> VulnerabilityFreshnessPayload:

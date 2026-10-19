@@ -10,6 +10,8 @@ import re
 from mcp.server.mcpserver.exceptions import ToolError
 
 from agent_bom.core.severity import normalize_severity, severity_at_or_above
+from agent_bom.mcp_tools.check_lookup import scan_checked_package
+from agent_bom.mcp_tools.check_lookup import version_published as _version_published
 from agent_bom.mcp_tools.result_store import ResultStore
 from agent_bom.mcp_tools.scan_response import (
     MAX_PAGE_LIMIT,
@@ -24,6 +26,7 @@ from agent_bom.parsers.sbom_context import imported_cloud_inventory
 from agent_bom.scanners.mcp_audit import attach_passive_mcp_audit
 from agent_bom.scanners.package_check_result import has_lookup_coverage_gap
 from agent_bom.security import sanitize_error
+from agent_bom.vuln_freshness import compute_freshness
 
 logger = logging.getLogger(__name__)
 
@@ -56,40 +59,6 @@ def normalize_check_package_spec(package: str, version: str | None = None) -> tu
             )
         parsed_version = explicit_version
     return name, parsed_version
-
-
-async def _version_published(name: str, version: str, ecosystem: str, client) -> bool:
-    """Return True if an exact package version is published (404 → not published).
-
-    Fails open (returns True) on network/other errors and for ecosystems without
-    a cheap per-version endpoint, so a transient failure never turns a genuine
-    clean result into a false "unknown".
-    """
-    from urllib.parse import quote
-
-    from agent_bom.http_client import request_with_retry
-
-    # Package coordinates are path data, never URL structure. Encoding every
-    # reserved character also makes scoped npm names (``@scope/name``) a
-    # single registry path segment instead of allowing caller-controlled path
-    # separators. The shared request wrapper validates the fixed registry
-    # origin before opening a socket.
-    encoded_name = quote(name, safe="")
-    encoded_version = quote(version, safe="")
-
-    try:
-        if ecosystem == "pypi":
-            url = f"https://pypi.org/pypi/{encoded_name}/{encoded_version}/json"
-        elif ecosystem == "npm":
-            url = f"https://registry.npmjs.org/{encoded_name}/{encoded_version}"
-        else:
-            return True
-        resp = await request_with_retry(client, "GET", url, max_retries=0)
-        if resp is None:
-            return True
-        return resp.status_code == 200
-    except Exception:  # noqa: BLE001 — best-effort existence check; fail open
-        return True
 
 
 async def scan_impl(
@@ -306,8 +275,7 @@ async def _scan_impl_inner(
             await _verify_scanned_packages(agents, scan_warnings)
         if scorecard:
             await _enrich_scanned_packages_with_scorecard(agents)
-        report = AIBOMReport(agents, blast_radii, cloud_inventory_data=imported_cloud_inventory(agents), scan_sources=scan_sources)
-        attach_passive_mcp_audit(report)
+        report = _scan_report(AIBOMReport, agents, blast_radii, scan_sources, offline=offline)
         await _surface_graph_findings(report)
         if package_spec_unresolved:
             # Fail closed for every format: an empty SARIF/CycloneDX/SPDX document reads as an audited clean result.
@@ -329,6 +297,13 @@ async def _scan_impl_inner(
             return incomplete
         logger.exception("MCP tool error")
         raise ToolError(sanitize_error(exc)) from exc
+
+
+def _scan_report(report_cls, agents, blast_radii, scan_sources, *, offline: bool):
+    report = report_cls(agents, blast_radii, cloud_inventory_data=imported_cloud_inventory(agents), scan_sources=scan_sources)
+    report.vuln_data_freshness = compute_freshness(offline=offline).to_dict()
+    attach_passive_mcp_audit(report)
+    return report
 
 
 def _empty_envelope(status: str, *, warnings: list[str], **extra: object) -> dict[str, object]:
@@ -547,14 +522,7 @@ async def check_impl(
     try:
         from agent_bom.models import Package as Pkg
         from agent_bom.parsers.os_parsers import enrich_os_package_context
-        from agent_bom.scanners import (
-            IncompleteScanError,
-            ScanOptions,
-            consume_coverage_warnings,
-            consume_scan_warnings,
-            reset_scan_warnings,
-            scan_packages,
-        )
+        from agent_bom.scanners import IncompleteScanError
         from agent_bom.scanners.package_check_result import PackageCheckResult, serialize_vulnerability
 
         try:
@@ -568,6 +536,7 @@ async def check_impl(
         pkg = Pkg(name=name, version=parsed_version, ecosystem=eco)
         version = pkg.version
         result_warnings: list[str] = []
+        evidence: list = []
 
         def service_result(
             verdict: str,
@@ -590,6 +559,8 @@ async def check_impl(
                 malicious_reason=pkg.malicious_reason,
                 exit_code=0 if verdict == "clean" else 1 if verdict in {"vulnerable", "malicious"} else 2,
                 source_context=source_context or {},
+                vuln_data_freshness=evidence[0].freshness if evidence else None,
+                completeness=evidence[0].completeness() if evidence else None,
             )
             return _truncate_response(json.dumps(result.service_payload(), indent=2, default=str))
 
@@ -635,14 +606,11 @@ async def check_impl(
                     }
                 )
 
-        reset_scan_warnings()
         try:
-            await scan_packages([pkg], options=ScanOptions(offline=offline))
+            coverage_warnings, data_evidence = await scan_checked_package(pkg, offline=offline, warnings=result_warnings)
         except IncompleteScanError as exc:
             return service_result("incomplete", sanitize_error(exc))
-        result_warnings.extend(consume_scan_warnings())
-        coverage_warnings = consume_coverage_warnings()
-        result_warnings.extend(str(warning.get("detail") or "Package advisory coverage is incomplete") for warning in coverage_warnings)
+        evidence.append(data_evidence)
 
         if pkg.is_malicious:
             reason = pkg.malicious_reason or "flagged as malicious by package intelligence"

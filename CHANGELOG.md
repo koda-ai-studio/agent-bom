@@ -11,6 +11,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- `agent-bom check` no longer reports results from an outdated local vulnerability DB as complete. Whenever `agent-bom db freshness` would warn (past the configured max age or the 7-day danger age), online checks also query OSV live and merge by advisory ID and alias. Previously a 7-day danger age above a raised `AGENT_BOM_VULN_DB_MAX_AGE_HOURS` skipped OSV and missed newer CVEs. Offline checks and failed live lookups say plainly that results may be incomplete and how old the local data is, and local hits from outdated data no longer print a check mark. CLI JSON, MCP `check` and `POST /v1/scan/check` add `vuln_data_freshness` and `completeness`, and the MCP `scan` summary now includes `vuln_data_freshness`.
 - Native trace imports expose bounded provider retry timing while retaining the last committed checkpoint on failure.
 - Bulk findings require a JSON boolean for absent-finding reconciliation; invalid CVSS errors omit submitted values.
 - JSON file exports publish through atomic replacement so encoding or write failures preserve an existing report.

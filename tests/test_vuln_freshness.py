@@ -251,3 +251,20 @@ def test_offline_empty_db_signals_first_run_nudge_contract(tmp_path, monkeypatch
 
 if __name__ == "__main__":
     pytest.main([__file__, "-q"])
+
+
+def test_local_db_outdated_matches_db_freshness_warning_states():
+    from agent_bom.vuln_freshness import local_db_outdated
+
+    assert local_db_outdated(VulnDataFreshness(mode="local", sources=["OSV"], stale=True)) is True
+    # Danger age alone (threshold raised above the cache age) still warns in `db freshness`.
+    assert local_db_outdated(VulnDataFreshness(mode="local", sources=["OSV"], stale=False, danger=True)) is True
+    assert local_db_outdated(VulnDataFreshness(mode="offline", sources=["OSV"], stale=True, danger=True)) is True
+    assert local_db_outdated(VulnDataFreshness(mode="local", sources=["OSV"])) is False
+    assert local_db_outdated(VulnDataFreshness(mode="live", sources=["OSV"], stale=True)) is False
+    assert local_db_outdated(VulnDataFreshness(mode="offline", sources=[], stale=True, danger=True)) is False
+    assert local_db_outdated(VulnDataFreshness(mode="bundled-demo", sources=["DEMO"], stale=True)) is False
+
+
+def test_should_refresh_when_only_danger_age_crossed():
+    assert should_refresh(VulnDataFreshness(mode="local", sources=["OSV"], stale=False, danger=True), offline=False) is True

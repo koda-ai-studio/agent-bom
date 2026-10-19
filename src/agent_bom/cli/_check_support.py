@@ -368,6 +368,8 @@ def _check_result_payload(
     fail_on_severity_count: int | None = None,
     lookup_mode: str = "online",
     malicious_reason: str | None = None,
+    vuln_data_freshness: dict | None = None,
+    completeness: dict | None = None,
 ) -> dict:
     """Build machine-readable check output."""
     from agent_bom.scanners.package_check_result import PackageCheckResult, serialize_vulnerability
@@ -384,6 +386,8 @@ def _check_result_payload(
         is_malicious=verdict == "malicious",
         malicious_reason=malicious_reason,
         exit_code=exit_code,
+        vuln_data_freshness=vuln_data_freshness,
+        completeness=completeness,
     )
     return result.cli_payload(
         legacy_verdict=verdict,

@@ -82,9 +82,9 @@ def _select_osv_targets(
     # A covered archive is only authoritative while fresh: online scans keep cached findings as
     # fallback but look for newer advisories even when a stale archive covers the package.
     if not offline and local_db_targets:
-        from agent_bom.vuln_freshness import compute_freshness
+        from agent_bom.vuln_freshness import compute_freshness, local_db_outdated
 
-        if compute_freshness().stale:
+        if local_db_outdated(compute_freshness()):
             force_osv_keys.update(_package_db_key(package) for package in local_db_targets)
     inventory_ecosystems = {eco for package in scannable for eco in _db_ecosystems_for_package(package)}
     covered_ecos = _scanners_patchable("_db_covered_ecosystems")(inventory_ecosystems)

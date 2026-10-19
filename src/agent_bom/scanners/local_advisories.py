@@ -9,6 +9,7 @@ from typing import Any, Optional
 from agent_bom.cpe_match import cpe_vendor_hint as _cpe_vendor_hint
 from agent_bom.malicious import flag_malicious_from_vulns
 from agent_bom.models import Package, Severity, Vulnerability
+from agent_bom.scanners.local_data_freshness import local_hits_line
 from agent_bom.scanners.osv import is_valid_fix_version as _is_valid_fix_version
 from agent_bom.scanners.osv import package_lookup_names as _package_lookup_names
 from agent_bom.scanners.package_matching import _apply_distro_release_ambiguity as _apply_distro_release_ambiguity
@@ -319,13 +320,7 @@ def _scan_local_advisories(scannable: list[Package], scan_options: ScanOptions, 
     local_count += local_db_count
     db_covered.update(local_db_covered)
     if local_count:
-        local_label = "vulnerability found" if local_count == 1 else "vulnerabilities found"
-        source_label = "Demo advisory DB" if scan_options.demo_advisories else "Local DB"
-        if scan_options.offline:
-            mode_note = " (offline mode)"
-        elif scan_options.prefer_local_db:
-            mode_note = " (local advisory cache)"
-        else:
-            mode_note = ""
-        _scanners_patchable("console").print(f"  [green]✓[/green] {source_label}: {local_count} {local_label}{mode_note}")
+        options = scan_options
+        line = local_hits_line(local_count, offline=options.offline, prefer_local_db=options.prefer_local_db, demo=options.demo_advisories)
+        _scanners_patchable("console").print(line)
     return local_count, db_covered, local_db_targets

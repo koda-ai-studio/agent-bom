@@ -81,10 +81,14 @@ class CheckRun:
     matched_pkg: Any = None
     vulns: list[Any] = field(default_factory=list)
     fail_threshold: str | None = None
+    data_evidence: Any = None
 
 
 def _emit(run: CheckRun, *, ecosystems: list[str], verdict: str, message: str, exit_code: int, **extra: Any) -> None:
     """Write the machine-readable verdict for ``--format json|sarif`` or agent mode."""
+    if run.data_evidence is not None:
+        extra.setdefault("vuln_data_freshness", run.data_evidence.freshness)
+        extra.setdefault("completeness", run.data_evidence.completeness())
     _write_check_output(
         run.result_payload(
             name=run.name,
@@ -257,10 +261,19 @@ def _scan(run: CheckRun) -> None:
     run.remote_lookup_gap = not run.offline and any(w.get("kind") == "remote_lookup_gap" for w in coverage_warnings)
     if run.scan_warnings and not run.quiet and not run.structured_output:
         run.console.print(f"  [yellow]⚠[/yellow] Scan completed with {len(run.scan_warnings)} warning(s); results may be incomplete.")
+    _record_data_evidence(run, coverage_warnings)
 
     run.matched_pkg = next((p for p in run.pkgs if p.vulnerabilities), run.pkgs[0])
     run.vulns = run.matched_pkg.vulnerabilities
     run.fail_threshold = run.fail_on_severity.lower() if run.fail_on_severity else None
+
+
+def _record_data_evidence(run: CheckRun, coverage_warnings: list[dict]) -> None:
+    from agent_bom.scanners.local_data_freshness import check_data_evidence
+
+    run.data_evidence = check_data_evidence(offline=run.offline, coverage_warnings=coverage_warnings)
+    if run.data_evidence.outdated and not run.quiet and not run.structured_output:
+        run.console.print(f"  [yellow]⚠ {run.data_evidence.reason}[/yellow]")
 
 
 def _gate_malicious(run: CheckRun) -> None:
@@ -386,10 +399,15 @@ def _report_clean(run: CheckRun) -> None:
                 warnings=run.scan_warnings,
             )
             sys.exit(0)
+        complete = run.data_evidence is None or run.data_evidence.complete
         if run.quiet:
-            click.echo(f"{run.name}@{run.version}: CLEAN")
-        else:
+            click.echo(f"{run.name}@{run.version}: CLEAN" + ("" if complete else " (results may be incomplete)"))
+        elif complete:
             run.console.print(f"  [green]✓ No known vulnerabilities in {run.name}@{run.version}[/green]\n")
+        else:
+            run.console.print(
+                f"  [yellow]⚠ No known vulnerabilities in {run.name}@{run.version}, but results may be incomplete.[/yellow]\n"
+            )
         sys.exit(0)
 
 

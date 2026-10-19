@@ -53,4 +53,8 @@ The canonical command reference lives in
   list with `AGENT_BOM_REGISTRY_MAX_IMAGES` / `AGENT_BOM_REGISTRY_MAX_TAGS_PER_REPO`.
 - `agent-bom db freshness` emits the structured vuln-data freshness indicator
   (sources, age, staleness) — the same snapshot surfaced on every scan and
-  returned by the API and MCP tool.
+  returned by the API and MCP tool. Whenever it does not report the local DB as
+  fresh, `agent-bom check` (CLI, MCP and `POST /v1/scan/check`) also queries OSV
+  live for the checked package and merges by advisory ID and alias. Offline or
+  when that lookup fails, the result carries `completeness.status:
+  "incomplete"` and the age of the local data in `vuln_data_freshness`.
