@@ -2845,7 +2845,7 @@ function GraphPageInner() {
     setRollupMapExpanded(false);
     setRollupStack((current) => {
       if (current.at(-1)?.id === item.id) return current;
-      return [...current, { id: item.id, label: item.label, cloudProvider: item.cloud_provider || undefined }];
+      return [...current, { id: item.id, label: item.label, cloudProvider: item.cloud_provider || undefined, cloudProviderBasis: item.cloud_provider_basis || undefined }];
     });
   }, []);
 

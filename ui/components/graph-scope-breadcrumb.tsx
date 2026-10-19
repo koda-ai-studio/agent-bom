@@ -7,7 +7,7 @@ export function ScopeBreadcrumbChip({ crumb, onClick }: { crumb: ScopeCrumb; onC
   const provider = scopeProvider({ cloud_provider: crumb.cloudProvider });
   return (
     <button type="button" onClick={onClick} className="graph-chip-neutral inline-flex items-center gap-1.5">
-      {provider && <GraphProviderMark source={provider} className="graph-provider-mark-inline h-5 w-5" />}
+      {provider && <GraphProviderMark source={provider} attributes={{ cloud_provider_basis: crumb.cloudProviderBasis }} className="graph-provider-mark-inline h-5 w-5" />}
       {crumb.label}
     </button>
   );

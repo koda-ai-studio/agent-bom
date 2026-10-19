@@ -656,14 +656,19 @@ for (const theme of ["light", "dark"] as const) test(`scope rows and breadcrumbs
       edges: [], summary: { total_nodes: 6000, total_edges: 20000, top_level_count: 1, container_count: 1 },
       completeness: { status: "complete", returned: 1, total: 1, truncated: false, reasons: [] },
     } });
+    const scoped = node.startsWith("account:") || node.startsWith("env:");
+    const inherited = node.startsWith("env:");
+    const childType = inherited ? "container" : scoped ? "environment" : "account";
+    const childPrefix = inherited ? "container" : scoped ? "env" : "account";
     const children = Array.from({ length: 30 }, (_, index) => ({
-      id: `account:${index}`, label: `account-${index}`, entity_type: "account", severity: "high",
+      id: `${childPrefix}:${index}`, label: `${childPrefix}-${index}`, entity_type: childType, severity: "high",
       is_container: true, has_children: true, direct_child_count: 3, aggregate: rollupAggregate(3),
-      cloud_provider: index % 2 ? "aws" : "gcp", cloud_provider_basis: "declared",
+      cloud_provider: scoped ? "gcp" : index % 2 ? "aws" : "gcp", cloud_provider_basis: scoped ? "inherited:contains" : "declared",
     }));
     return route.fulfill({ json: {
       scan_id: scanId, tenant_id: "default", created_at: createdAt, mode: "drilldown", filters: {},
-      node: { id: node, label: "Northstar org", entity_type: "org", cloud_provider: "", cloud_provider_basis: "" }, children, edges: [],
+      node: { id: node, label: scoped ? node.replace(":", "-") : "Northstar org", entity_type: inherited ? "environment" : scoped ? "account" : "org",
+        cloud_provider: scoped ? "gcp" : "", cloud_provider_basis: inherited ? "inherited:contains" : scoped ? "declared" : "" }, children, edges: [],
       pagination: { offset: 0, limit: 200, returned: 30, total: 30, has_more: false, next_offset: null },
       summary: { total_nodes: 6000, total_edges: 20000 },
       completeness: { status: "complete", returned: 30, total: 30, truncated: false, reasons: [] },
@@ -678,6 +683,15 @@ for (const theme of ["light", "dark"] as const) test(`scope rows and breadcrumbs
   // An org with no recorded provider gets no mark: nothing is guessed from its name.
   await expect(page.getByRole("navigation", { name: "Investigation scope" }).locator("[data-agent-source]")).toHaveCount(0);
   await page.screenshot({ path: testInfo.outputPath(`scope-provider-${theme}.png`), animations: "disabled" });
+  await summary.getByRole("button", { name: "Open scope", exact: true }).first().click();
+  const breadcrumbs = page.getByRole("navigation", { name: "Investigation scope" });
+  await expect(breadcrumbs.getByRole("img", { name: "Source: Google Cloud", exact: true })).toBeVisible();
+  await expect(summary.locator('[data-provider-basis="inherited"]').first()).toBeVisible();
+  await summary.getByRole("button", { name: "Open scope", exact: true }).first().click();
+  const inheritedCrumb = breadcrumbs.getByRole("img", { name: "Source: Google Cloud · inherited", exact: true });
+  await expect(inheritedCrumb).toBeVisible();
+  expect(await inheritedCrumb.evaluate(mark => getComputedStyle(mark).outlineStyle)).toBe("dashed");
+  await page.screenshot({ path: testInfo.outputPath(`scope-breadcrumb-provider-${theme}.png`), animations: "disabled" });
 });
 
 test("a failed scope summary never falls back to the raw estate map on its own", async ({ page }) => {

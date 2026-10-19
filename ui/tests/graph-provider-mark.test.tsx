@@ -109,6 +109,14 @@ describe("scope card and breadcrumb", () => {
       { id: "a", label: "Analytics", cloudProvider: "gcp" }, stack[1],
     ]);
   });
+
+  it("preserves inherited provider provenance when a scope becomes a breadcrumb", () => {
+    const named = { id: "env:prod", label: "Production", cloud_provider: "aws", cloud_provider_basis: "inherited:contains" };
+    const crumbs = nameScopeCrumbs([{ id: named.id, label: named.id }], named);
+    render(<ScopeBreadcrumbChip crumb={crumbs[0]!} onClick={() => {}} />);
+    expect(screen.getByRole("img", { name: "Source: AWS · inherited" })).toHaveAttribute("data-provider-basis", "inherited");
+    expect(nameScopeCrumbs(crumbs, named)).toBe(crumbs);
+  });
 });
 
 describe("node chips", () => {
