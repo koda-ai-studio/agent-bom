@@ -216,7 +216,8 @@ it("renders the server's ranking factors when no fix-first card explains the ord
   render(<AttackPathCorrelationProof path={path} />);
   fireEvent.click(screen.getByText("Why this path ranks here"));
   const factors = screen.getByTestId("attack-path-ranking-factors");
-  expect(factors).toHaveTextContent("Tier 3");
+  expect(factors).toHaveTextContent("Basis Reached from an agent or credential");
+  expect(factors).not.toHaveTextContent("Tier 3");
   expect(factors).toHaveTextContent("KEV yes");
   expect(factors).toHaveTextContent("Severity unscored");
   expect(factors).toHaveTextContent("Evidence topology only");

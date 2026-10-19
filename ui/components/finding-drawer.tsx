@@ -9,6 +9,10 @@ import { ExternalLink, FileSearch, Loader2 } from "lucide-react";
 import { severityColor, severityText, type FindingTriageDecision, type FindingTriageItem, type FindingTriageJustification } from "@/lib/api";
 import { useAuthState } from "@/components/auth-provider";
 import { buildFindingInvestigationHref } from "@/lib/finding-investigation-href";
+import { groupFindingControls } from "@/lib/finding-controls";
+import { FindingAffectedAsset } from "@/components/finding-affected-asset";
+import { FindingControlGroups } from "@/components/finding-control-groups";
+import { exposurePriorityLabel } from "@/lib/plain-labels";
 import { remediationHref } from "@/lib/page-links";
 import { buildWhyItMatters } from "@/lib/finding-why-matters";
 import { Drawer } from "@/components/drawer";
@@ -48,6 +52,7 @@ export function FindingDrawer({
   onTriageDecision,
   onClose,
   lens = "ops",
+  graphScanId,
 }: {
   vuln: EnrichedVuln;
   triage: FindingTriageItem | undefined;
@@ -59,6 +64,8 @@ export function FindingDrawer({
   ) => void;
   onClose: () => void;
   lens?: FindingsLens | undefined;
+  /** The snapshot the findings page is pinned to; omitted means the current estate. */
+  graphScanId?: string | undefined;
 }) {
   const { hasCapability } = useAuthState();
   const canManageExceptions = hasCapability("exceptions.manage");
@@ -93,8 +100,8 @@ export function FindingDrawer({
         ariaLabel="Finding detail views"
       />
 
-      {tab === "overview" ? <OverviewTab vuln={vuln} /> : null}
-      {tab === "evidence" ? <EvidenceTab vuln={vuln} /> : null}
+      {tab === "overview" ? <OverviewTab vuln={vuln} graphScanId={graphScanId} /> : null}
+      {tab === "evidence" ? <EvidenceTab vuln={vuln} graphScanId={graphScanId} /> : null}
       {tab === "triage" ? (
         <TriageTab
           vuln={vuln}
@@ -111,7 +118,7 @@ export function FindingDrawer({
 
 // ── Overview ──────────────────────────────────────────────────────────────────
 
-function OverviewTab({ vuln }: { vuln: EnrichedVuln }) {
+function OverviewTab({ vuln, graphScanId }: { vuln: EnrichedVuln; graphScanId?: string | undefined }) {
   const scope = findingWorkloadScope(vuln);
   const summary = vuln.attack_vector_summary ?? vuln.summary ?? vuln.description ?? "No advisory summary available.";
   const fixCandidates = vuln.remediation_items.filter((item) => item.fixed_version || item.command || item.verify_command);
@@ -146,7 +153,7 @@ function OverviewTab({ vuln }: { vuln: EnrichedVuln }) {
               Review remediation
             </Link>
           ) : null}
-          <Link href={buildFindingInvestigationHref(vuln)} data-testid="finding-investigate-estate" className="inline-flex items-center gap-1.5 py-2 text-sm font-medium text-accent-mint hover:underline">
+          <Link href={buildFindingInvestigationHref(vuln, { scanId: graphScanId })} data-testid="finding-investigate-estate" className="inline-flex items-center gap-1.5 py-2 text-sm font-medium text-accent-mint hover:underline">
             Open in investigation <ExternalLink className="h-3.5 w-3.5" />
           </Link>
         </div>
@@ -204,22 +211,12 @@ function Section({
 }
 
 /** Typed estate node → evidence: primary investigation entry from a finding. */
-function EstateNodeSection({ vuln }: { vuln: EnrichedVuln }) {
-  const href = buildFindingInvestigationHref(vuln);
-  const entityType = vuln.entity_type || vuln.asset_type || "asset";
-  const estateLabel = vuln.node_id || vuln.packages[0] || vuln.agents[0] || "estate node";
-  const findingNode = vuln.finding_node_id;
+function EstateNodeSection({ vuln, graphScanId }: { vuln: EnrichedVuln; graphScanId?: string | undefined }) {
+  const href = buildFindingInvestigationHref(vuln, { scanId: graphScanId });
 
   return (
-    <Section title="Estate node" accent>
-      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-        <Chip mono>{entityType}</Chip>
-        {vuln.node_id ? <Chip mono>{vuln.node_id}</Chip> : <Chip>{estateLabel}</Chip>}
-        {findingNode ? <Chip mono>{findingNode}</Chip> : null}
-        {vuln.finding_id ? (
-          <span className="font-mono text-[10px] text-ink-tertiary">finding {vuln.finding_id}</span>
-        ) : null}
-      </div>
+    <Section title="Affected asset" accent>
+      <FindingAffectedAsset vuln={vuln} />
       <div className="mt-3">
         <Link
           href={href}
@@ -236,21 +233,18 @@ function EstateNodeSection({ vuln }: { vuln: EnrichedVuln }) {
 
 // ── Evidence ──────────────────────────────────────────────────────────────────
 
-function EvidenceTab({ vuln }: { vuln: EnrichedVuln }) {
+function EvidenceTab({ vuln, graphScanId }: { vuln: EnrichedVuln; graphScanId?: string | undefined }) {
   const scope = findingWorkloadScope(vuln);
   const references = officialAdvisoryLinks(vuln.references);
-  const whyItMatters = buildWhyItMatters(vuln);
+  const whyItMatters = buildWhyItMatters(vuln, { scanId: graphScanId });
   const cweIds = uniqueStrings(vuln.cwe_ids ?? []);
   const investigationSources = uniqueStrings([...vuln.sources, ...vuln.advisory_sources]);
-  const complianceControls = uniqueStrings([
-    ...(vuln.framework_tags ?? []),
-    ...(vuln.controls ?? []).map(controlLabel),
-  ]);
+  const controlGroups = groupFindingControls(vuln.framework_tags, vuln.controls);
 
   return (
     <div className="space-y-4">
       <FindingReconfirmation finding={vuln} />
-      <EstateNodeSection vuln={vuln} />
+      <EstateNodeSection vuln={vuln} graphScanId={graphScanId} />
       <IntelligencePanel vuln={vuln} />
       <ReachBadges vuln={vuln} />
       <Panel title="Affected scope">
@@ -310,14 +304,9 @@ function EvidenceTab({ vuln }: { vuln: EnrichedVuln }) {
         </div>
       </Panel>
 
-      {complianceControls.length > 0 ? (
+      {controlGroups.length > 0 ? (
         <Panel title="Compliance controls">
-          <details>
-            <summary className="cursor-pointer text-sm text-ink-secondary">View {complianceControls.length} mapped controls</summary>
-            <div className="mt-3 flex flex-wrap gap-1">
-              {complianceControls.map((tag) => <Chip key={tag} mono>{tag}</Chip>)}
-            </div>
-          </details>
+          <FindingControlGroups groups={controlGroups} />
         </Panel>
       ) : null}
 
@@ -477,10 +466,9 @@ function ReachBadges({ vuln }: { vuln: EnrichedVuln }) {
         <span
           data-testid="finding-exposure-priority"
           title="Finding-level priority from severity, exploit signals and exposure. Attack-path reachability is the hop-receipt verdict shown on each path."
-          className="rounded border border-amber-500/30 dark:border-amber-800/60 bg-amber-500/10 dark:bg-amber-950/40 px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-amber-700 dark:text-amber-300"
+          className="rounded border border-amber-500/30 dark:border-amber-800/60 bg-amber-500/10 dark:bg-amber-950/40 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300"
         >
-          Exposure priority {vuln.effective_reach_band}
-          {typeof vuln.effective_reach_score === "number" ? ` (${vuln.effective_reach_score.toFixed(0)})` : ""}
+          {exposurePriorityLabel(vuln.effective_reach_band, vuln.effective_reach_score)}
         </span>
       ) : null}
       {vuln.runtime_evidence?.state && vuln.runtime_evidence.state !== "static" ? (
@@ -574,14 +562,6 @@ function formatDateOnly(value: string): string {
     month: "short",
     day: "numeric",
   });
-}
-
-function controlLabel(control: Record<string, unknown>): string | undefined {
-  for (const key of ["control_id", "id", "name", "title"] as const) {
-    const value = control[key];
-    if (typeof value === "string" && value.trim()) return value.trim();
-  }
-  return undefined;
 }
 
 function formatProvenance(value: EnrichedVuln["provenance"]): string {

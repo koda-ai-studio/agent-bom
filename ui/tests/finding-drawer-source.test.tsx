@@ -115,7 +115,8 @@ it("labels the finding-level reach score as priority, not path reachability", as
   render(<FindingDrawer vuln={{ ...base, effective_reach_band: "red", effective_reach_score: 84 }} triage={undefined} triageBusy={false} onTriageDecision={vi.fn()} onClose={vi.fn()} />);
   await user.click(screen.getByRole("tab", { name: "Evidence" }));
   const badge = screen.getByTestId("finding-exposure-priority");
-  expect(badge).toHaveTextContent("Exposure priority red (84)");
+  expect(badge).toHaveTextContent("High exposure priority · 84/100");
+  expect(badge).not.toHaveTextContent(/red/i);
   expect(badge).toHaveAttribute("title", expect.stringContaining("Attack-path reachability is the hop-receipt verdict"));
   expect(screen.queryByText(/^Reach red/)).not.toBeInTheDocument();
 });
@@ -128,4 +129,29 @@ it("keeps a review-only advisory match unknown despite a legacy green score", as
   expect(screen.getByText("Related runtime activity: observed")).toBeVisible();
   expect(screen.queryByText(/Reach green|Reported reachability is green/i)).not.toBeInTheDocument();
   expect(screen.getByText(/advisory match needs verification/i)).toBeVisible();
+});
+
+it("groups deduplicated controls by framework and links each to its compliance control", async () => {
+  const user = userEvent.setup();
+  render(<FindingDrawer vuln={{ ...base, framework_tags: ["cis:CIS-02.3", "generic:CIS-02.3", "fedramp:FedRAMP-SI-2", "generic:FedRAMP-SI-2"] }} triage={undefined} triageBusy={false} onTriageDecision={vi.fn()} onClose={vi.fn()} />);
+  await user.click(screen.getByRole("tab", { name: "Evidence" }));
+  await user.click(screen.getByText("View 2 mapped controls across 2 frameworks"));
+  const groups = screen.getByTestId("finding-control-groups");
+  expect(groups).toHaveTextContent("CIS Controls v8 · 1");
+  expect(groups).toHaveTextContent("FedRAMP Moderate · 1");
+  expect(screen.getByRole("link", { name: "CIS-02.3" })).toHaveAttribute("href", "/compliance?framework=cis&control=CIS-02.3");
+  expect(screen.getByRole("link", { name: "SI-2" })).toHaveAttribute("href", "/compliance?framework=fedramp&control=SI-2");
+});
+
+it("names the estate asset in words and keeps raw graph ids under technical details", async () => {
+  const user = userEvent.setup();
+  const vuln = { ...base, packages: ["langchain"], current_version: "0.0.150", entity_type: "package", node_id: "package:pypi:langchain@0.0.150:dce85e7272e8", finding_node_id: "vuln:demo-estate:16530e6c", finding_id: "16530e6c" };
+  render(<FindingDrawer vuln={vuln} triage={undefined} triageBusy={false} onTriageDecision={vi.fn()} onClose={vi.fn()} />);
+  await user.click(screen.getByRole("tab", { name: "Evidence" }));
+  expect(screen.getByTestId("finding-estate-asset")).toHaveTextContent("langchain@0.0.150");
+  expect(screen.getByTestId("finding-estate-asset")).toHaveTextContent("Package");
+  expect(screen.getByText(vuln.node_id)).not.toBeVisible();
+  await user.click(screen.getByText("Technical details"));
+  expect(screen.getByText(vuln.node_id)).toBeVisible();
+  expect(screen.getByText(vuln.finding_node_id)).toBeVisible();
 });

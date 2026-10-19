@@ -1,4 +1,5 @@
 import { hopReceiptCoverage } from "@/lib/hop-receipt-coverage";
+import { evidenceTierLabel } from "@/lib/plain-labels";
 import { countLabel } from "@/lib/count-label";
 import type { FixFirstRiskReason, GraphAttackPath } from "@/lib/api-types";
 import type { UnifiedNode } from "@/lib/graph-schema";
@@ -93,7 +94,7 @@ export function AttackPathCorrelationProof({
           <div data-testid="attack-path-ranking-factors" className="mt-2 space-y-2">
             <dl className="flex flex-wrap gap-1.5 text-[15px]">
               {[
-                ["Tier", String(rankingFactors.evidence_tier)],
+                ["Basis", evidenceTierLabel(rankingFactors.evidence_tier)],
                 ["KEV", rankingFactors.is_kev ? "yes" : "no"],
                 ["Severity", rankingFactors.severity_scored ? rankingFactors.severity : "unscored"],
                 ["Evidence", CONFIDENCE_LABELS[rankingFactors.evidence_confidence] ?? rankingFactors.evidence_confidence],

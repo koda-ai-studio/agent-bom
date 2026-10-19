@@ -10,6 +10,7 @@ type ContractEnvelope<T, Rows> = { [K in keyof T as K extends keyof Rows ? never
 
 /** Shared API response and request contracts. */
 
+import type { GraphPathFocus } from "./graph-path-focus";
 import type {
   AttackPath,
   UnifiedEdge,
@@ -390,6 +391,7 @@ export interface UnifiedGraphResponse extends Omit<
   attack_paths: GraphAttackPath[];
   pagination: GraphPagination;
   completeness?: GraphCompleteness | undefined;
+  focus?: GraphPathFocus | undefined;
   count_metadata?: {
     source?: "persisted_graph_paths" | "derived_graph_paths" | string;
     returned?: number;

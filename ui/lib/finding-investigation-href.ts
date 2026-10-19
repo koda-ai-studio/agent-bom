@@ -3,6 +3,11 @@ import type { EnrichedVuln } from "@/lib/findings-view";
 /**
  * Deep-link a finding into security-graph investigation using typed graph FKs
  * when present, falling back to CVE / package / agent query params.
+ *
+ * The link opens the current tenant estate unless the caller is browsing a
+ * pinned snapshot (``options.scanId``). The finding's own source scan travels
+ * as ``finding_scan`` provenance only: pinning a superseded source snapshot
+ * strands the link on a queue that no longer ranks this occurrence.
  */
 export function buildFindingInvestigationHref(
   vuln: Pick<
@@ -12,8 +17,9 @@ export function buildFindingInvestigationHref(
   options?: { scanId?: string | undefined },
 ): string {
   const params = new URLSearchParams({ lens: "attack-path" });
-  const scanId = vuln.scan_id?.trim() || options?.scanId;
-  if (scanId) params.set("scan", scanId);
+  const graphScanId = options?.scanId?.trim();
+  if (graphScanId) params.set("scan", graphScanId);
+  const sourceScanId = vuln.scan_id?.trim() || graphScanId;
 
   const nodeId = vuln.node_id?.trim();
   if (nodeId) params.set("node", nodeId);
@@ -35,7 +41,7 @@ export function buildFindingInvestigationHref(
 
   if (vuln.finding_id) {
     params.set("finding", vuln.finding_id);
-    if (scanId) params.set("finding_scan", scanId);
+    if (sourceScanId) params.set("finding_scan", sourceScanId);
   }
 
   return `/security-graph?${params.toString()}`;
