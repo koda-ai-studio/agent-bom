@@ -438,7 +438,7 @@ export/backup buckets**, **VPC-private access**, and **Postgres RLS** as
 deployment prerequisites before ingesting production findings. Selected fields
 still get app-layer protection (hashed API tokens, HMAC audit chain, signed
 sessions, envelope-encrypted cloud-connection secrets). Full buyer checklist:
-[`docs/ENTERPRISE_DEPLOYMENT.md`](https://github.com/msaad00/agent-bom/blob/main/docs/ENTERPRISE_DEPLOYMENT.md#finding-and-scan-payload-encryption-at-rest-deployment-prerequisite).
+[`docs/DEPLOY_PLATFORM.md`](https://github.com/msaad00/agent-bom/blob/main/docs/DEPLOY_PLATFORM.md#finding-and-scan-payload-encryption-at-rest-deployment-prerequisite).
 
 ## What You Still Own
 

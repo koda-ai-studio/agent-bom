@@ -132,7 +132,7 @@ SOURCE_BUILT: dict[str, str] = {
 # PUBLISHED_VERSION like every copy-paste surface, so at tag vX they still name
 # the previous release (main never points at an unpublished image). Every image
 # in them must therefore honor the named override, which the release-checkout
-# instructions (README, docs/DEPLOY_QUICKSTART.md) set to the tag being run.
+# instructions (README, docs/DEPLOY_PLATFORM.md) set to the tag being run.
 CHECKOUT_OVERRIDE: dict[str, str] = {
     "deploy/docker-compose.pilot.yml": "AGENT_BOM_IMAGE_TAG",
 }

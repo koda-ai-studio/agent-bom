@@ -73,7 +73,7 @@ Hosted source kinds (`scan.*`, `connector.*`, `ingest.*`, `runtime.*`) are defin
 
 ## Related docs
 
-- [PRODUCT_MAP.md](PRODUCT_MAP.md) — lanes and surfaces
+- [DEPLOY_PLATFORM.md](DEPLOY_PLATFORM.md) — lanes and surfaces
 - [FIRST_RUN.md](FIRST_RUN.md) — local first scan
 - [DEPLOY_PLATFORM.md](DEPLOY_PLATFORM.md) — self-host the control plane
 - [MCP_SERVER.md](MCP_SERVER.md) — agent tool intake (`ingest_external_scan`)

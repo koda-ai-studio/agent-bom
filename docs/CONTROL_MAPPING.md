@@ -33,7 +33,7 @@ customer environment.
 
 | Control family | How agent-bom supports it | Evidence |
 |---|---|---|
-| CC6.1 logical access | API keys, OIDC, SAML metadata, trusted proxy mode, route-level RBAC | `src/agent_bom/api/middleware.py`, `src/agent_bom/rbac.py`, `docs/ENTERPRISE.md` |
+| CC6.1 logical access | API keys, OIDC, SAML metadata, trusted proxy mode, route-level RBAC | `src/agent_bom/api/middleware.py`, `src/agent_bom/rbac.py`, `docs/TRUST.md` |
 | CC6.2 least privilege | Admin, analyst, and viewer capabilities are enforced by middleware before route handlers | `src/agent_bom/rbac.py`, `tests/api/test_api_operator_policy.py`, `tests/test_enterprise_gaps.py` |
 | CC6.3 access changes | API key creation, revocation, and rotation are explicit API operations with audit events | `src/agent_bom/api/auth.py`, `src/agent_bom/api/routes/auth.py` |
 | CC6.6 transmission boundaries | TLS terminates at customer ingress; gateway/proxy policy can fail closed for runtime traffic | `deploy/helm/agent-bom/templates/controlplane-ingress.yaml`, `src/agent_bom/gateway_server.py` |
@@ -66,7 +66,7 @@ customer environment.
 | 3 Data protection | Tenant-scoped data model, signed evidence bundles, backup encryption knobs | `docs/DATA_MODEL.md`, `docs/COMPLIANCE_SIGNING.md`, `deploy/helm/agent-bom/values.yaml` |
 | 4 Secure configuration | IaC and cloud benchmark scanning, Kubernetes and Helm guidance | `src/agent_bom/iac`, `src/agent_bom/cloud`, `site-docs/deployment/kubernetes.md` |
 | 5 Account management | API-key expiry, rotation overlap, revocation, and OIDC/SAML integrations | `src/agent_bom/api/auth.py`, `src/agent_bom/api/routes/auth.py` |
-| 6 Access control management | RBAC matrix and middleware-enforced route permissions | `src/agent_bom/rbac.py`, `docs/ENTERPRISE.md` |
+| 6 Access control management | RBAC matrix and middleware-enforced route permissions | `src/agent_bom/rbac.py`, `docs/TRUST.md` |
 | 7 Continuous vulnerability management | Dependency audits, CVE freshness, image rescans, Dependabot | `.github/workflows/cve-freshness.yml`, `.github/workflows/extras-audit.yml` |
 | 8 Audit log management | HMAC chain, export, verification, SIEM push | `src/agent_bom/api/audit_log.py`, `site-docs/deployment/siem-integration.md` |
 | 12 Network infrastructure management | Gateway/proxy egress controls and SSRF hardening | `src/agent_bom/security.py`, `src/agent_bom/gateway_upstreams.py` |

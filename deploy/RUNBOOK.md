@@ -1,7 +1,7 @@
 # agent-bom deployment runbook
 
 Operator runbook for multicloud collectors, cross-cloud federation, and
-post-install onboarding. Complements [`docs/DEPLOY_QUICKSTART.md`](../docs/DEPLOY_QUICKSTART.md).
+post-install onboarding. Complements [`docs/DEPLOY_PLATFORM.md`](../docs/DEPLOY_PLATFORM.md).
 
 ---
 
@@ -131,7 +131,7 @@ cd deploy/terraform/connect-aws && terraform destroy   # per connect module
 
 ## Related
 
-- [`docs/DEPLOY_QUICKSTART.md`](../docs/DEPLOY_QUICKSTART.md)
+- [`docs/DEPLOY_PLATFORM.md`](../docs/DEPLOY_PLATFORM.md)
 - [`docs/DEPLOY_PLATFORM.md`](../docs/DEPLOY_PLATFORM.md)
 - [`deploy/terraform/README.md`](terraform/README.md)
 - [`deploy/helm/agent-bom/examples/README.md`](helm/agent-bom/examples/README.md)

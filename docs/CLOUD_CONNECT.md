@@ -12,6 +12,26 @@ enforcement and export destinations have separate permissions and data boundarie
 
 ---
 
+## Provider setup
+
+| Provider | First command | Grant, evidence and limits |
+|---|---|---|
+| AWS | `agent-bom connect aws --emit --out agent-bom-aws-readonly.json` | [AWS setup](cloud/aws.md) |
+| Azure | `agent-bom connect azure` | [Azure setup](cloud/azure.md) |
+| GCP | `agent-bom connect gcp` | [GCP setup](cloud/gcp.md) |
+| Snowflake | `agent-bom connect snowflake` | [Snowflake setup](cloud/snowflake.md) |
+
+Deploy the grant in the source account, establish a connection, run inventory,
+and inspect the returned source coverage before interpreting findings. See
+[provider coverage](VENDOR_COVERAGE.md) for the generated collector catalog.
+
+## Repository Terraform (optional)
+
+The repository also includes `deploy/terraform/connect-*` grants for
+operator-managed infrastructure workflows. Start with the wheel-safe command
+above; each [provider guide](#provider-setup) describes the optional Terraform
+path and its permissions.
+
 ## Workload identity for stored connections
 
 Azure and GCP connections can use an operator-managed workload binding instead
@@ -74,47 +94,6 @@ SDK references: [Azure workload identity](https://learn.microsoft.com/en-us/pyth
 [Azure managed identity](https://learn.microsoft.com/en-us/python/api/azure-identity/azure.identity.managedidentitycredential),
 [Google identity pools](https://google-auth.readthedocs.io/en/latest/reference/google.auth.identity_pool.html),
 [Google impersonation](https://google-auth.readthedocs.io/en/latest/reference/google.auth.impersonated_credentials.html).
-
-## 1b. Generate the read-only AWS grant
-
-The first path works from the installed wheel and does not require a source
-checkout or Terraform:
-
-```bash
-pip install agent-bom
-agent-bom connect aws --emit --out agent-bom-aws-readonly.json
-```
-
-The command writes a deployable CloudFormation template to the named file and
-prints the next `agent-bom connect aws` command to stderr. Review and deploy the
-template in AWS, then use its role ARN and the generated ExternalId to establish
-the connection. The emitted baseline is read-only and least-privilege; content
-reads remain explicit `--deep-scan` opt-ins.
-
-### Other grant methods (pick what your rights allow)
-
-The **same read-only grant** can be minted three ways. Choose based on who is
-allowed to change IAM / RBAC in your org — not based on what agent-bom prefers.
-
-| Method | When to use | Where |
-|--------|-------------|--------|
-| **Packaged emit (start here)** | You installed agent-bom from PyPI and want a reviewable deploy artifact | `agent-bom connect aws --emit --out agent-bom-aws-readonly.json` |
-| **CloudShell** | No local Terraform; you can open the vendor browser shell | Same recipes, framed for AWS CloudShell / Azure Cloud Shell / Google Cloud Shell / Snowsight |
-| **Repository Terraform (optional)** | Platform/SRE has a source checkout, owns apply rights, and wants Terraform state | `deploy/terraform/connect-*` + Connections wizard **Terraform** tab |
-
-`agent-bom connect <provider>` prints all three. The control-plane Connections
-wizard lets you copy the matching script. Secondary vendors (Databricks,
-CoreWeave, HF, W&B, …) stay under `scripts/provision/` until they join the
-brokered catalog.
-
-With connection flags, `connect` is safe to chain (`agent-bom connect aws &&
-<next step>`): it exits `0` only after the read-only credential actually
-verified, and on failure it exits non-zero and prints the same curated,
-secret-free reason the API and the Connections drawer show — never "see server
-logs". Codes are in
-[`site-docs/reference/exit-codes.md`](../site-docs/reference/exit-codes.md).
-
----
 
 ## 1c. Control-plane Connections wizard (browser onboarding)
 
@@ -262,62 +241,15 @@ carries plaintext secrets in the compose.
 
 ---
 
-## 1. The approach (why it is safe to point at production)
+## Collection and permission boundary
 
-| Principle | What it means here |
-|-----------|--------------------|
-| **Read-only** | Only `List*` / `Describe*` / `Get*` (AWS), `list` / `get` ARM (Azure), Google Cloud list/get permissions (GCP), and `SELECT` on metadata views and inventory `SHOW` commands (Snowflake). No create/update/delete, ever. |
-| **Least privilege** | Read-only managed roles per source (AWS `SecurityAudit`, Azure `Reader`/`Security Reader`, GCP inventory + IAM review + Cloud Asset roles, Snowflake `ABOM_READONLY`). Nothing broader. |
-| **Zero trust / no passwords** | Short-lived tokens, key-pairs, or federated identity only. No long-lived password is ever accepted (Snowflake password auth is deprecated and warns). |
-| **No data exfiltration** | Secret *metadata* is read (a secret exists, when it rotated) but never secret *values*. No object/blob/row data is read. Errors are sanitized before display. |
-| **Customer-owned** | Findings stay in your environment. agent-bom has no phone-home; the discovery envelope on every payload records `ScanMode.CLOUD_READ_ONLY` and the exact permissions used. |
-| **Accurate** | Coverage is provable: a guard test asserts every SDK client used is real; misconfigurations converge into the same findings stream and exit-code gate as vulnerabilities, so nothing is "shown but unenforced". |
-
-All four connectors are **opt-in and default-off**, gated by per-provider env
-flags. With the flags unset, agent-bom does zero cloud or warehouse network I/O.
-
-**One pattern, not four.** The *only* thing that differs per source is the one
-line that mints the read-only role — because each platform's grant primitive is
-different (AWS IAM policy, Azure RBAC role, GCP IAM role binding, Snowflake
-role+grant). Everything else is identical: enable with
-`AGENT_BOM_<PROVIDER>_INVENTORY=1`, authenticate with the provider's own
-identity (never a password handed to agent-bom), get the same graph and findings
-out. This mirrors how connector-based scanners work — a per-provider role
-template, one uniform flow around it.
-
----
-
-## 2. End-to-end: how data flows
-
-```
-  connect            discover               normalize            integrate            enforce
- (read-only      (control-plane          (CloudResource +      (one unified         (findings +
-  credential) ─▶  list/get APIs)   ─▶     identity model)  ─▶   graph: nodes    ─▶   --fail-on-
-                  per provider            + discovery            + edges)             severity gate)
-                                          envelope
-```
-
-1. **Connect** — the connector resolves a credential from the standard chain for
-   that cloud (never from agent-bom config). If no credential resolves, the
-   provider is skipped with a warning; a scan never fails because a cloud is
-   unreachable.
-2. **Discover** — each provider runs a set of read-only discovery functions
-   concurrently. Every function is wrapped so one failing API (or a missing
-   optional SDK) degrades to a warning instead of sinking the scan.
-3. **Normalize** — raw responses become a provider-neutral `CloudResource` /
-   identity model, each stamped with a **discovery envelope**
-   (`ScanMode.CLOUD_READ_ONLY`, `permissions_used`, redaction status).
-4. **Integrate** — the graph builder projects resources, identities, and their
-   relationships into one `UnifiedGraph` (`CONTAINS` hierarchy, `HAS_PERMISSION`
-   for CIEM, `EXPOSED_TO` for network reach, `STORES` for data paths). The same
-   builder fuses CNAPP overlays and attack paths across clouds.
-5. **Enforce** — CIS benchmark failures and graph toxic-combinations are
-   converted to `Finding` objects that flow into `report.to_findings()`, so
-   `--fail-on-severity` can fail a build on a real misconfiguration or exposure,
-   not just draw it on a graph.
-
-This is the same code path for the CLI and the API, so both surfaces produce
-identical results.
+Baseline inventory uses scoped metadata reads. Opt-in content inspection and
+disk side-scans require separate permissions; disk side-scans may create and
+clean up temporary resources. Stored connection secrets are encrypted in the
+configured control plane. External enrichment and exports have their own egress
+boundary. Read [Trust](TRUST.md) and [permissions](PERMISSIONS.md) before enabling
+a collection lane. Missing permissions, partial results and unsupported
+collectors do not establish a clean estate.
 
 ### Authorization evidence completeness
 
@@ -341,339 +273,12 @@ successfully scanned.
 
 ---
 
-## 3. AWS — connect in two steps
+## Provisioning identity controls
 
-**Grant** (read-only, managed): attach the AWS-managed **`SecurityAudit`** policy
-(or `ViewOnlyAccess`) to the principal agent-bom will use. That single policy
-covers every action the scanner needs.
-
-**Authenticate** via the standard boto3 chain — pick one, no secrets in agent-bom:
-- a named profile (`AWS_PROFILE`), or
-- env keys (`AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_SESSION_TOKEN`), or
-- an instance/EKS/ECS role, or SSO.
-
-```bash
-export AGENT_BOM_AWS_INVENTORY=1            # opt-in (per-provider, symmetric)
-export AGENT_BOM_AWS_ORG_INVENTORY=1        # fan out across every member account
-export AWS_PROFILE=abom-readonly            # SecurityAudit-attached profile
-agent-bom agents --preset enterprise --aws --aws-cis-benchmark
-```
-
-**What it reads** (all read-only): S3, EC2 + security groups, IAM
-roles/users/policies and the permission edges between them, RDS, DynamoDB,
-Lambda, EKS, ELB/ALB/NLB, VPCs, KMS, Secrets Manager (metadata only), CloudFront,
-ECR, Redshift, SNS/SQS — plus AWS **Organizations** (OU tree → accounts → SCPs)
-for multi-account estates, and **59 CIS checks**.
-
-**Org scale (cross-account fan-out):** with `AGENT_BOM_AWS_ORG_INVENTORY=1` the
-connector enumerates every member account of the organization, assumes a
-read-only role in each via `sts:AssumeRole` from the management /
-delegated-admin account (keyless, short-lived, ExternalId-capable), and runs the
-inventory + CIS benchmark against each — partitioned in the graph by account
-under the org → OU `CONTAINS` tree so cross-account attack paths correlate. This
-is the AWS analogue of `AGENT_BOM_AZURE_ALL_SUBSCRIPTIONS` and
-`AGENT_BOM_GCP_ALL_PROJECTS`. Partial-permission tolerant: an account that denies
-the role is skipped with a warning, never a hard failure; the report's
-`aws_organization.account_scan` block summarises accounts scanned / skipped /
-errored. A defensive `AGENT_BOM_AWS_MAX_ACCOUNTS` cap (default 200) bounds blast
-radius.
-
-> **Read-only role expectation.** The conventional `OrganizationAccountAccessRole`
-> is full-admin and is *not* used. Deploy a least-privilege read-only role
-> (SecurityAudit / ViewOnlyAccess) named `agent-bom-readonly` to every account —
-> a CloudFormation **StackSet** targeting the org/OUs is the supported pattern.
-> Override the name with `AGENT_BOM_AWS_ORG_ROLE_NAME`, the trust ExternalId with
-> `AGENT_BOM_AWS_ORG_EXTERNAL_ID`. The role's trust policy grants
-> `sts:AssumeRole` only to the management/delegated-admin principal running the
-> scan.
-
-> **Control-plane identity (the *caller*, not the role).** When you onboard a
-> connection through the Connections wizard, the control plane assumes the
-> read-only role for you via `sts:AssumeRole`. That call is made by the control
-> plane's **own** identity — the *caller* — which is separate from the read-only
-> role the connection points at. If the control plane has no base credentials,
-> Test/scan fails with **"Control plane has no AWS credentials to assume the
-> role"** — the connection's role is fine; the caller has no identity. Provide one:
->
-> - **Production:** run the control plane with an **EC2 instance profile** or
->   **IRSA** (EKS) — no static keys. This is the recommended, keyless path.
-> - **Local / dev:** configure standard AWS credentials for the control-plane
->   process (`AWS_PROFILE` or `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY`).
-> - The caller identity also needs **`sts:AssumeRole`** permission on the target
->   role; for a **same-account** role, the base identity needs `sts:AssumeRole`
->   too (cross-account is covered by the role's trust policy + ExternalId).
-
-**Why read-only is enough:** the connector calls only `List*`/`Describe*`/`Get*`
-and `sts:GetCallerIdentity`. The exact action set is declared as permission
-constants in `cloud/aws_inventory.py` (`_AWS_*_PERMISSIONS`) and
-`cloud/aws_organizations.py` (`_AWS_ORG_PERMISSIONS`). Secret *values* are never
-read — only existence and rotation state.
-
-**Secure-by-default provisioning** (`deploy/terraform/connect-aws`): the read-only
-role gets a **unique, non-guessable name** (`abom-readonly-<random hex>`) and an
-**always-enforced, high-entropy `sts:ExternalId`** — generated automatically when
-you don't supply one and surfaced via a *sensitive* `external_id` output. The
-confused-deputy condition can never be silently omitted, and a predictable
-principal name can't be squatted or targeted. Both have override variables for
-operators who need a fixed name or a BYO External ID.
-
-**One SDK, proven current:** AWS support uses a single dependency (`boto3`, the
-`aws` extra). A guard test (`tests/test_aws_boto3_client_coverage.py`) scrapes
-every `.client("…")` the code uses and asserts each is a real service in the
-pinned boto3 — so a typo or too-old pin fails CI, not production.
-
----
-
-## 4. Azure — connect with the credential you already have
-
-**Grant** (read-only, built-in): assign **`Reader`** (and **`Security Reader`**
-for Defender posture) at the subscription, or at the **tenant root management
-group** to cover every subscription at once.
-
-**Authenticate** via `DefaultAzureCredential` — no password, pick one:
-- `az login` (cached CLI token), or
-- a service principal with a **certificate** (not a secret), or
-- a system/user-assigned **managed identity**, or
-- workload identity federation (Kubernetes).
-
-```bash
-export AGENT_BOM_AZURE_INVENTORY=1
-export AGENT_BOM_AZURE_ALL_SUBSCRIPTIONS=1   # fan out across the tenant
-agent-bom agents --preset enterprise --azure
-```
-
-**What it reads:** storage accounts, VMs, AKS, App Services, disks, NSGs,
-managed identities + **RBAC role assignments** (CIEM edges), Key Vaults,
-container registries, Cosmos/SQL/PostgreSQL/MySQL, VNets/public-IPs/load
-balancers/Front Door/API Management, Event Hubs/Service Bus/Redis,
-**management groups** for hierarchy, and **94 CIS checks**.
-
-**Tenant scale (zero trust at scale):** with `AGENT_BOM_AZURE_ALL_SUBSCRIPTIONS=1`
-the connector walks the management-group tree, enumerates every subscription,
-and scans each independently — partitioned in the graph by account so thousands
-of subscriptions stay separable. A defensive `AGENT_BOM_AZURE_MAX_SUBSCRIPTIONS`
-cap (default 500) bounds blast radius.
-
-> **Mass-onboarding grant.** Rather than assigning `Reader` per subscription,
-> assign it **once at a management group** (the tenant root covers everything)
-> so a single assignment covers every subscription under it — the Azure analogue
-> of the AWS Organizations StackSet (§3) and the GCP org/folder binding (§5). The
-> `connect-azure` module does this with `scope_override` set to a management-group
-> ID (`/providers/Microsoft.Management/managementGroups/<id>`); the assignment
-> stays read-only (`Reader` + optional `Security Reader`).
-
-**SDK fragility, handled:** Azure SDKs are per-service distributions, so each is
-imported under `try/except ImportError` and degrades to a warning if absent —
-one missing package never crashes a scan.
-
-**Secure-by-default provisioning** (`deploy/terraform/connect-azure`): the
-optional keyless **federated identity credential** is pinned to an exact
-**issuer + subject + audience** (`api://AzureADTokenExchange`). The plan fails if
-the subject is empty or contains a wildcard, so only one specific external
-workload can exchange a token for the scanner principal — never a wide-open
-trust. The GCP module (`deploy/terraform/connect-gcp`) is locked the same way:
-Workload Identity Federation cannot be enabled without a scoped
-`attribute_condition`, pinned audiences, and a specific `principalSet`, and the
-service account gets a unique, non-guessable name.
-
----
-
-## 5. GCP — connect with read-only inventory and IAM review roles
-
-**Grant** (read-only, predefined): bind the scanner service account to
-**`roles/viewer`** for inventory, **`roles/iam.securityReviewer`** for IAM,
-**`roles/cloudasset.viewer`** for resource-local policies, and
-**`roles/serviceusage.serviceUsageConsumer`** for Cloud Asset API quota attribution.
-Together they provide read-only relationship and policy visibility. For fleet-wide scans, grant the same roles
-at the organization or folder level and enable project fan-out.
-
-**Authenticate** through Application Default Credentials — no password, pick
-one:
-- `gcloud auth application-default login` for an operator-run scan, or
-- service account impersonation (`AGENT_BOM_GCP_IMPERSONATE_SA`), or
-- Workload Identity Federation for CI/Kubernetes without a key file.
-
-```bash
-export AGENT_BOM_GCP_INVENTORY=1
-export AGENT_BOM_GCP_ALL_PROJECTS=1        # fan out across org/folders/projects
-export AGENT_BOM_GCP_IMPERSONATE_SA=agent-bom-readonly@PROJECT_ID.iam.gserviceaccount.com
-agent-bom cloud gcp --project PROJECT_ID --cis
-```
-
-**What it reads:** projects, folders, organization hierarchy, IAM policies and
-service accounts, Cloud Run, Vertex AI, GKE, Compute Engine, Artifact Registry,
-Cloud SQL, Cloud Storage, Pub/Sub, KMS, Secret Manager metadata, VPC/firewall
-posture, logging posture, and CIS checks.
-
-**Org scale:** with `AGENT_BOM_GCP_ALL_PROJECTS=1` the connector discovers the
-organization → folders → projects hierarchy, runs each project scan separately,
-and writes graph nodes under the right org/folder/project parent so exposures
-stay drillable at tenant scale. `AGENT_BOM_GCP_MAX_PROJECTS` bounds the run.
-
-> **Mass-onboarding grant.** Rather than granting the read-only role set per
-> project, bind them **once at the organization or folder** so a single grant
-> covers every project the fan-out reaches — the GCP analogue of the AWS
-> Organizations StackSet (§3) and the Azure management-group scope (§4). The
-> `connect-gcp` module does this with `iam_binding_scope = "organization"` (or
-> `"folder"`); the bindings stay strictly read-only.
-
-**Secure-by-default provisioning** (`deploy/terraform/connect-gcp`): the module
-mints a unique read-only service account and binds only `roles/viewer`,
-`roles/iam.securityReviewer`, `roles/cloudasset.viewer`, and
-`roles/serviceusage.serviceUsageConsumer` — at the project by default, or
-org/folder-wide via `iam_binding_scope` for fleet onboarding. Optional Workload Identity Federation
-is locked to a scoped `attribute_condition`, pinned audiences, and a specific
-`principalSet`; broad wildcard federation is rejected.
-
-**Why read-only is enough:** the connector uses list/get style APIs and IAM
-policy reads. Secret Manager values, object contents, and table rows are not
-read. Missing optional APIs degrade to provider warnings so partial permissions
-are visible without turning one blocked service into a failed estate scan.
-
----
-
-## 6. Snowflake — connect with a key-pair, never a password
-
-**Grant** (read-only role + key-pair user). Run once as `ACCOUNTADMIN`:
-
-```sql
-USE ROLE ACCOUNTADMIN;
-CREATE ROLE IF NOT EXISTS ABOM_READONLY;
-
--- ACCOUNT_USAGE powers inventory + the CIS benchmark
-GRANT IMPORTED PRIVILEGES ON DATABASE SNOWFLAKE TO ROLE ABOM_READONLY;
--- Account usage visibility; object-specific SHOW visibility still follows grants.
-GRANT MONITOR USAGE ON ACCOUNT TO ROLE ABOM_READONLY;
-GRANT USAGE ON WAREHOUSE COMPUTE_WH TO ROLE ABOM_READONLY;   -- swap to your WH
-
--- key-pair scanner user (no password)
-CREATE USER IF NOT EXISTS ABOM_SCANNER
-  DEFAULT_ROLE = ABOM_READONLY
-  DEFAULT_WAREHOUSE = 'COMPUTE_WH'
-  RSA_PUBLIC_KEY = '<PEM public key, no headers>';
-GRANT ROLE ABOM_READONLY TO USER ABOM_SCANNER;
-```
-
-**Why each grant — mapped to what it unlocks:**
-
-| Grant | Unlocks |
-|-------|---------|
-| `IMPORTED PRIVILEGES ON DATABASE SNOWFLAKE` | Shared Snowflake metadata and history, including available `ACCOUNT_USAGE` views. Does not grant access to customer tables or every customer database’s `INFORMATION_SCHEMA`. |
-| `MONITOR USAGE ON ACCOUNT` | Account usage visibility. Does not make every object visible to `SHOW` commands. |
-| `USAGE ON WAREHOUSE` | the compute to run the read-only `SELECT`s |
-
-Validate each enabled collection lane with the scanner role. `SHOW GRANTS` and
-customer `INFORMATION_SCHEMA` views respect the role’s object visibility;
-additional metadata visibility must be scoped to the intended objects. A
-successful connection or empty result does not establish account-wide coverage.
-Do not add `MANAGE GRANTS` to this read-only role: that privilege can change
-access, even though it also expands visibility. See [SHOW GRANTS visibility](https://docs.snowflake.com/en/sql-reference/sql/show-grants#usage-notes)
-and [Information Schema visibility](https://docs.snowflake.com/en/sql-reference/info-schema#general-usage-notes).
-
-`ACCOUNT_USAGE.GRANTS_TO_ROLES` can lag by up to two hours. A collected grant is
-recorded metadata, not a fresh session authorization decision; an empty,
-visibility-limited `SHOW` response cannot by itself prove revocation. Review
-collection warnings and source freshness before using the graph to assess a
-change. See [grant-view limits](https://docs.snowflake.com/en/sql-reference/account-usage/grants_to_roles#usage-notes).
-
-Cortex agent inventory, user-role membership and object grants are separate
-pieces of evidence. They do not establish which session and primary or secondary
-roles an agent used. Access-history collection joins query IDs to recorded
-users and role names, but the current collector does not ingest the agent chain
-in `agents_info` or evaluate all session and data-policy conditions. Confirm
-exact agent attribution with the corresponding runtime records before claiming
-agent-specific read/write access. See [ACCESS_HISTORY fields](https://docs.snowflake.com/en/sql-reference/account-usage/access_history#columns).
-
-**Cortex Agents (optional, per agent).** To model an agent's declared tools,
-execution roles and runtime spans, the scanner role needs, for each agent it
-should cover:
-
-```sql
-GRANT USAGE ON DATABASE <db> TO ROLE ABOM_READONLY;
-GRANT USAGE ON SCHEMA <db>.<schema> TO ROLE ABOM_READONLY;
-GRANT MONITOR ON AGENT <db>.<schema>.<agent> TO ROLE ABOM_READONLY;  -- SHOW/DESCRIBE AGENT, observability events
-GRANT DATABASE ROLE SNOWFLAKE.CORTEX_USER TO ROLE ABOM_READONLY;     -- GET_AI_OBSERVABILITY_EVENTS
-```
-
-| Read | Used for |
-|------|----------|
-| `SHOW AGENTS IN ACCOUNT`, `DESCRIBE AGENT` | the agent specification: only the tools it declares (`tools` / `tool_resources`) and the objects they name are attached to the agent |
-| `SHOW GRANTS ON AGENT` | roles holding `USAGE` or `OWNERSHIP` on the agent |
-| `SNOWFLAKE.LOCAL.GET_AI_OBSERVABILITY_EVENTS(<db>, <schema>, <agent>, 'CORTEX AGENT')` | span metadata aggregated into runtime-observed agent → tool / warehouse / role edges |
-
-Cortex Agents take permissions from the request's Snowflake context, so the
-graph models the roles granted `USAGE` or `OWNERSHIP` on an agent as the roles
-it can execute as; their grants form the agent's blast radius. Callers whose
-primary role inherits one of those roles can reach more than the graph shows.
-`DESCRIBE AGENT` returns no specification for a secure agent unless the owner
-role is active, so such agents show `spec_status: hidden` and no tools. Do not
-grant `READ UNREDACTED AI OBSERVABILITY EVENTS TABLE`: the collector keeps only
-tool names, timings, token counts and a SHA-256 digest of span content. It
-stores no user name or plain hash of one, and never prompts or tool
-inputs/outputs.
-See [DESCRIBE AGENT](https://docs.snowflake.com/en/sql-reference/sql/desc-agent),
-[Cortex Agents access control](https://docs.snowflake.com/en/user-guide/snowflake-cortex/cortex-agents)
-and [GET_AI_OBSERVABILITY_EVENTS](https://docs.snowflake.com/en/sql-reference/functions/get_ai_observability_events-snowflake-local).
-
-**Authenticate** with the matching private key — no password ever:
-
-```bash
-export SNOWFLAKE_ACCOUNT="ORG-ACCOUNT"      # or LOCATOR.region.cloud, e.g. xy12345.ca-central-1.aws
-export SNOWFLAKE_USER="ABOM_SCANNER"
-export SNOWFLAKE_AUTHENTICATOR="snowflake_jwt"
-export SNOWFLAKE_PRIVATE_KEY_PATH="/path/to/abom_key.p8"
-agent-bom agents --snowflake
-```
-
-**Why key-pair over password:** key-pair (RSA JWT) means no shared secret ever
-transits or is stored; the private key stays on the scanner host. Password auth
-is deprecated in the connector and emits a runtime warning. SSO
-(`externalbrowser`) and OAuth are also supported for interactive use.
-
-**What it reads:** the **AI-BOM** (Cortex agents, MCP servers, Snowpark
-packages, UDFs/procedures, notebooks, Streamlit apps); the object + lineage
-graph (tables/views + `OBJECT_DEPENDENCIES`, grants, role memberships); data-exit
-surface (outbound shares, external stages, sensitivity-tagged objects); per-user
-auth posture (MFA / key-pair / password, network policies); login anomalies
-(impossible travel, IP spread, failed-login bursts); warehouses/databases/schemas;
-pipeline objects (tasks/streams/pipes); account integrations; iceberg/external
-tables; and **14 CIS checks**.
-
-**Honest caveats (accuracy):** `ACCOUNT_USAGE` views have ingestion latency
-(minutes to hours), so freshly-created objects and tags may lag one scan.
-Discoveries that need a grant you didn't give degrade to empty rather than error
-— so apply the full grant block above for complete coverage.
-
----
-
-## 7. Security guarantees, restated
-
-- **No writes.** No connector calls a create/update/delete API in any cloud.
-- **No secret contents.** Secret/Key-Vault/Secrets-Manager *metadata* only.
-- **No data movement.** No object, blob, queue, or table-row data leaves your
-  account; agent-bom reads catalog and posture, not payload.
-- **No phone-home.** Results are written where you point them. The discovery
-  envelope on every payload records the read-only scan mode and the exact
-  permissions exercised, so an auditor can verify the blast radius.
-- **Sanitized errors.** Connector exceptions pass through a central sanitizer
-  before they reach logs or output, so a malformed credential can't leak.
-- **Secure-by-default identities.** The Terraform connect modules mint the
-  read-only identity so it is **unique, unguessable, and not exploitable**: a
-  randomized principal name (anti-squatting), a mandatory high-entropy AWS
-  `ExternalId` (confused-deputy defense), and federation that is locked to a
-  specific issuer + subject + audience (no wide-open trust). Overrides exist for
-  operators who need fixed values; only the *defaults* changed, so existing
-  configs that pin a name/External ID still apply unchanged.
-
-> **Threat note (provisioning).** Two classic IAM pitfalls these defaults close:
-> the **confused-deputy** problem — where a third party that learns your role
-> ARN tricks the shared scanner account into assuming it without an ExternalId
-> guard — and **name-squatting / targeting** of a predictable principal name.
-> Wide-open federation (an OIDC trust with no subject/condition) is the cloud
-> equivalent: any token from the issuer could impersonate the read-only
-> identity. The modules now make the secure path the default one.
-
----
+The connect modules use randomized principal names, an AWS ExternalId, and
+issuer/subject/audience constraints for federation. Review the emitted grant
+and the source account's trust policy; these controls do not establish complete
+least privilege or immunity from credential misuse.
 
 ## 7a. Audit-trail behavioral edges — no new role
 
@@ -706,62 +311,6 @@ standard setups, **no new permission**.
 > `deploy/terraform/connect-gcp-sidescan`. Audit-trail does not.
 
 ---
-
-## 7b. Agentless EBS disk side-scan (opt-in, scoped role)
-
-The disk side-scan snapshots a target EBS volume, attaches a temp volume to an
-**in-account collector** instance, mounts it read-only, and returns a
-metadata-only result — package SBOM, matched CVEs, and secret *type/location*
-(never values, never file contents). Snapshot → volume → mount are always torn
-down in a guaranteed cleanup; a pre-run sweep reaps anything a prior crash
-stranded. No disk image or block data leaves the account.
-
-It is OFF unless `AGENT_BOM_SIDESCAN=1`. Run it from the collector (or any host
-with the scoped snapshot role) with:
-
-```bash
-AGENT_BOM_SIDESCAN=1 agent-bom cloud side-scan \
-  --volume-id vol-0abc123 \
-  --collector-instance-id i-0def456 \
-  --availability-zone us-east-1a \
-  --region us-east-1
-```
-
-Use `--instance-id i-...` instead of `--volume-id` to scan every EBS volume
-attached to an instance. `--no-secrets` returns SBOM + CVEs only;
-`--no-sweep-orphans` skips the pre-run stranded-snapshot sweep. With the flag
-unset the command prints how to enable it and exits non-zero — it never starts a
-snapshot implicitly.
-
-Azure Managed Disk and GCP Persistent Disk inventory also emits
-`side_scan_targets` records with provider, target id, location, size, encryption,
-and execution state. Those records are graph-visible workload-disk targets.
-The repository defines a versioned provider-neutral lifecycle/evidence contract
-and concrete Azure Managed Disk and GCP Persistent Disk adapters that accept
-already-authenticated SDK clients. Separate least-privilege Terraform modules
-grant the snapshot/temp-disk/collector lifecycle. Both providers now ship a CLI
-executor — `agent-bom cloud side-scan --provider azure|gcp` drives the same
-snapshot → temp-disk → collector-mount → SBOM/CVE/secret → guaranteed-cleanup
-lifecycle as AWS EBS, resolving scoped snapshot/temp-disk credentials from the provider's
-default chain (never embedded). No live credentialed smoke is claimed for any
-provider yet (`credentialed_smoke=false`). An opt-in scheduler auto-trigger
-re-runs the same executor for each configured target on a cadence — off unless
-both `AGENT_BOM_SIDESCAN_SCHEDULER` (the loop gate) and `AGENT_BOM_SIDESCAN`
-(the executor gate) are set — so a CWPP side-scan keeps evaluating without a
-manual call.
-
-All provider lifecycle implementations must persist explicit
-`disabled`/`denied`/`partial`/`failed`/`scan_complete` state and separate cleanup
-state. A scan is complete only after owned temporary resources are deleted;
-zero findings are scoped to the scanned disk and never assert that a workload is
-clean. Snapshot operations remain opt-in because they are not read-only.
-`side_scan_lifecycle.py` supplies the versioned records, deterministic ownership
-tags, stale-worker protection, and tenant-scoped SQLite or Postgres lifecycle
-persistence (with ephemeral memory only by explicit opt-out). The
-injected-SDK adapters consume that state; the `side-scan --provider azure|gcp`
-CLI executor (`run_provider_side_scan`) drives them, and the opt-in scheduler
-loop (`api/side_scan_scheduler.py`) re-runs configured targets on a cadence
-through the same executor and the same durable lifecycle store.
 
 ## 7c. Runtime/EDR workload evidence (optional, read-only, additive)
 
@@ -891,27 +440,6 @@ package/CVE finding graph.
 
 ---
 
-## 8. Why it scales and stays accurate
-
-- **Scale:** When credentials and org fan-out flags are set, AWS Organizations,
-  Azure management-group fan-out, and GCP org/folder/project fan-out walk the
-  reachable estate; the graph partitions by account, subscription, or project
-  so multi-account/multi-tenant estates stay separable, with explicit caps to
-  bound a run. In-repo CI coverage for org fan-out is mocked/fixture-based;
-  live least-privilege org smoke remains environment-owned and is not claimed
-  as proven here.
-- **Alignment:** every datum a connector collects is wired end-to-end —
-  data model → graph nodes/edges → JSON output → CLI/API → tests — so nothing is
-  "collected but dropped". A guard test keeps the AWS SDK surface honest.
-- **Enforcement:** CIS misconfigurations and graph toxic-combinations become
-  first-class `Finding`s, so `--fail-on-severity` fails a pipeline on a real
-  exposure — posture is enforced, not just visualized.
-
-> Pointing agent-bom at a new cloud is a managed read-only role plus a few lines
-> of env. That is the whole integration surface — by design.
-
----
-
 ## 9. Cloud SDK freshness (a non-blocking coverage signal)
 
 agent-bom reads each estate through the provider's own SDK (boto3, the Azure
@@ -989,12 +517,28 @@ The generated benchmark inventory records the implemented checks. An official
 coverage percentage remains unavailable without a repository-provenanced
 authoritative catalog.
 
-### Incomplete GCP bucket IAM reads
+## Integration surfaces
 
-Run `agent-bom scan --gcp-cis-benchmark --gcp-project PROJECT_ID -f json -o report.json`
-and inspect check `5.1`. A bucket whose IAM policy cannot be read leaves its
-compliance unknown: a transient read failure, disabled API or disabled billing
-cannot produce PASS. The evidence states the inspected/total bucket count and
-separates project-state failures from missing `storage.buckets.getIamPolicy`.
-Restore the indicated API, billing or permission prerequisite, then rescan.
-Known public buckets remain FAIL even when other bucket reads are incomplete.
+
+The marks in the README header identify supported product surfaces. They do
+not all mean the same kind of connector, and they do not imply identical depth.
+This matrix names the shipped role and a direct way to verify it.
+
+| Marks | Role | Shipped capability | First proof |
+|---|---|---|---|
+| Claude, Cursor, GitHub Copilot, Windsurf, Codex CLI, VS Code, Cortex Code | Client discovery | Discover local and project MCP/client configuration, instruction files, servers, tools, packages, and relationships. These are configuration discovery paths, not vendor-account API connections. | `agent-bom where --json`, then `agent-bom scan .` |
+| AWS, Azure, GCP | Read-only cloud connection | Connect with provider-native credentials; inventory cloud and AI assets; run posture, IAM, and benchmark checks with explicit permission gaps. | `agent-bom connect aws --emit --out agent-bom-aws-readonly.json`, deploy it, then connect with its outputs |
+| Kubernetes | Scan and deploy | Scan Kubernetes and Helm configuration, inspect live cluster posture when access is supplied, and deploy the self-hosted control plane with Helm. | `agent-bom iac k8s/`; see [Kubernetes deployment](../site-docs/deployment/kubernetes.md) |
+| Okta | Identity | Use Okta as an OIDC provider and optionally run gated, read-only non-human identity discovery. This is not presented as a full Okta CSPM connector. | `agent-bom identity discover --provider okta --format json` |
+| Snowflake | Data platform | Read-only source and posture evidence, Native App packaging, and selected warehouse-backed product paths. | `agent-bom connect snowflake`; see [cloud connections](cloud/snowflake.md#6-snowflake--connect-with-a-key-pair-never-a-password) |
+| Databricks | Data platform | SDK-backed discovery of clusters, libraries, and model-serving endpoints plus read-only security best-practice checks. | `agent-bom scan --databricks --databricks-security` |
+| Prowler, AWS Security Hub | Report import | Import existing Prowler JSON-OCSF and Security Hub ASFF files as cloud posture and CVE findings with account, region, resource, compliance and tool provenance. File-based: no credentials, no network, no tool execution. | `agent-bom agents --external-scan prowler-output.ocsf.json`; see [scanner importers](IMPORTERS.md) |
+| ClickHouse | Analytics backend | Optional tenant-scoped analytics store for findings, posture history, trends, and runtime events. It is a backend, not a scanned cloud account. | `agent-bom report analytics --clickhouse-url URL` |
+
+Across these surfaces, raw credential values remain in the operator boundary.
+Connections use environment references, provider credential chains, or
+customer-managed secrets; partial permissions remain visible in scan outcomes.
+
+See [product boundaries](PRODUCT_BOUNDARIES.md), [provider setup](#provider-setup),
+and [agentic workflows](../site-docs/reference/agentic-workflows.md) for the
+exact credential, artifact, and next-step contracts.

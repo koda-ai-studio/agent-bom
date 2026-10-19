@@ -328,7 +328,7 @@ def select_targeted_tests(*, changed_files: Iterable[Path], root: Path) -> list[
             normalized.as_posix() == "README.md" or normalized.as_posix().startswith(("docs/", "site-docs/"))
         ):
             selected.update(candidate for candidate in available if candidate.name == "test_docs_front_door.py")
-        if normalized.as_posix() in {"README.md", "docs/FIRST_RUN.md", "docs/PRODUCT_TOUR.md", "docs/registry/PYPI_README.md"}:
+        if normalized.as_posix() in {"README.md", "docs/FIRST_RUN.md", "docs/GALLERY.md", "docs/registry/PYPI_README.md"}:
             selected.update(candidate for candidate in available if candidate.name in PUBLIC_FRONTDOOR_CONTRACTS)
         if normalized.as_posix() in {"README.md", "docs/GALLERY.md"}:
             selected.update(candidate for candidate in available if candidate.name == "test_product_explanations.py")

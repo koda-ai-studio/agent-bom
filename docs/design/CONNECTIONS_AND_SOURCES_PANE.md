@@ -41,7 +41,7 @@ taxonomy in React.
 |---------|--------|
 | Cloud grant + org gate + scheduler / continuous | [`docs/CLOUD_CONNECT.md`](../CLOUD_CONNECT.md) |
 | SIEM push / OCSF wire formats | [`site-docs/deployment/siem-integration.md`](../../site-docs/deployment/siem-integration.md), [`docs/OCSF_BOUNDARY.md`](../OCSF_BOUNDARY.md) |
-| OTEL as operator telemetry + trace ingest | [`docs/PRODUCT_BRIEF.md`](../PRODUCT_BRIEF.md) (Observability and OTEL); site-docs deployment overview |
+| OTEL as operator telemetry + trace ingest | [`docs/ARCHITECTURE.md`](../ARCHITECTURE.md) (Observability and OTEL); site-docs deployment overview |
 | Fleet sync contract | [`docs/SESSION_FLOWS.md`](../SESSION_FLOWS.md) |
 | Posture change event collector (queue → CP) | [`docs/design/EVENT_COLLECTOR_CONTRACT.md`](EVENT_COLLECTOR_CONTRACT.md) |
 | Unified table rules | [`ui/lib/connections-sources.ts`](../../ui/lib/connections-sources.ts) |

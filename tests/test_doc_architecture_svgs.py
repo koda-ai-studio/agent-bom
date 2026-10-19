@@ -27,7 +27,7 @@ IMAGES = ROOT / "docs" / "images"
 
 def _tour_persona_rows() -> list[list[str]]:
     """Return the team/value table without its header or separator."""
-    readme = (ROOT / "docs/PRODUCT_TOUR.md").read_text(encoding="utf-8")
+    readme = (ROOT / "docs/GALLERY.md").read_text(encoding="utf-8")
     section = readme.split("## Built for the teams", 1)[1].split("## Product tour", 1)[0]
     lines = [line for line in section.splitlines() if line.startswith("|")]
     return [[cell.strip().strip("*") for cell in line.strip("|").split("|")] for line in lines[2:]]
@@ -195,10 +195,10 @@ def test_readme_persona_table_covers_each_operating_lane() -> None:
 
 def test_readme_links_end_to_end_workflow_from_product_tour() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    assert "docs/PRODUCT_TOUR.md" in readme
-    workflow = (ROOT / "docs/PRODUCT_TOUR.md").read_text()
+    assert "docs/GALLERY.md" in readme
+    workflow = (ROOT / "docs/GALLERY.md").read_text()
     assert workflow.index("## Built for the teams") < workflow.index("## Product tour")
-    assert "[Evidence workflow](HOW_IT_WORKS.md)" in workflow
+    assert "[Evidence workflow](ARCHITECTURE.md)" in workflow
     assert "[Control-plane architecture](ARCHITECTURE.md)" in workflow
     assert "correlation-graph-live.png" in workflow
     assert "modeled infrastructure" in workflow
@@ -211,7 +211,7 @@ def test_readme_embeds_cli_and_investigation_and_links_workflow_detail() -> None
     assert readme.count('<img src="docs/images/graph-relationship-dark-live.png"') == 1
     for diagram in ("workflow-dark.svg", "architecture-dark.svg", "persona-value-dark.svg"):
         assert diagram not in readme
-    assert "docs/PRODUCT_TOUR.md" in readme
+    assert "docs/GALLERY.md" in readme
     assert "Fictional sample estate" in readme
     assert "not observed at runtime" in readme
 
@@ -224,7 +224,7 @@ def test_persona_table_rows_all_carry_a_concrete_first_action() -> None:
         ("Platform & DevOps", "Run a shared control plane"),
         ("GRC & audit", "Open **Compliance**"),
         ("Security & engineering leaders", "Open **Overview**"),
-        ("AI assistants & automation", "MCP_WORKFLOWS.md"),
+        ("AI assistants & automation", "MCP_SERVER.md"),
     ):
         assert action in rows[role]
 

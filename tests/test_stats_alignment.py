@@ -194,7 +194,7 @@ DOCS_TO_CHECK = [
     ROOT / "README.md",
     ROOT / "docs" / "ARCHITECTURE.md",
     ROOT / "CONTRIBUTING.md",
-    ROOT / "docs" / "DEPLOYMENT.md",
+    ROOT / "docs" / "DEPLOY_PLATFORM.md",
     ROOT / "docs" / "archive" / "AUDIT.md",
 ]
 

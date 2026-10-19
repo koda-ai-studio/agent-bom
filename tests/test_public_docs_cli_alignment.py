@@ -87,7 +87,7 @@ def test_readme_first_scan_output_leads_with_agent_and_mcp_findings() -> None:
 
 
 def test_readme_first_run_explains_blast_radius_and_mcp_evidence() -> None:
-    tour = (ROOT / "docs/PRODUCT_TOUR.md").read_text()
+    tour = (ROOT / "docs/GALLERY.md").read_text()
     normalized = " ".join(tour.lower().split())
     for marker in ("finding", "source receipts", "graph", "modeled data asset", "owners", "fix", "re-scan", "verify"):
         assert marker in normalized
@@ -163,7 +163,7 @@ def test_release_prep_does_not_call_unpublished_version_current() -> None:
 
 def test_readme_distinguishes_graph_relationship_provenance() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    tour = (ROOT / "docs/PRODUCT_TOUR.md").read_text()
+    tour = (ROOT / "docs/GALLERY.md").read_text()
     normalized = " ".join(tour.lower().split())
     assert "Graph views use observed nodes and relationships" not in readme
     for claim in (
@@ -173,8 +173,8 @@ def test_readme_distinguishes_graph_relationship_provenance() -> None:
         "a blocked call does not establish that the underlying package was fixed",
     ):
         assert claim in normalized
-    assert "[Evidence workflow](HOW_IT_WORKS.md)" in tour
-    workflow = " ".join((ROOT / "docs/HOW_IT_WORKS.md").read_text().lower().split())
+    assert "[Evidence workflow](ARCHITECTURE.md)" in tour
+    workflow = " ".join((ROOT / "docs/ARCHITECTURE.md").read_text().lower().split())
     for boundary in (
         "they do not merge permission-bearing runtime occurrences",
         "observed, inferred, or modeled",
@@ -203,7 +203,7 @@ def test_readme_storefront_is_concise_ordered_and_actionable() -> None:
     hero = readme[: positions[0]]
     assert "For AppSec and platform engineers" in hero
     assert "trace the exposure evidence" in hero
-    assert "docs/PRODUCT_TOUR.md" in hero
+    assert "docs/GALLERY.md" in hero
     quick_start = readme.split("## Quick start", 1)[1].split("\n## ", 1)[0]
     assert "pip install agent-bom\nagent-bom scan ." in quick_start
     assert "agent-bom scan --demo --offline" in quick_start
@@ -221,7 +221,7 @@ def test_readme_storefront_is_concise_ordered_and_actionable() -> None:
 
 
 def test_readme_grc_persona_row_links_a_runnable_compliance_workflow() -> None:
-    tour = (ROOT / "docs/PRODUCT_TOUR.md").read_text(encoding="utf-8")
+    tour = (ROOT / "docs/GALLERY.md").read_text(encoding="utf-8")
     row = next(line for line in tour.splitlines() if line.startswith("| **GRC & audit**"))
     assert "Open **Compliance**" in row
     assert "GALLERY.md#scan-a-repository-before-shipping" in row

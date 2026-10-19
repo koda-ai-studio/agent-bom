@@ -20,7 +20,7 @@ Rotation procedures and env var names are public by design. Posture endpoints
 (`GET /v1/auth/secrets/lifecycle`, `GET /v1/auth/secrets/rotation-plan`) are
 admin-authenticated at runtime and return metadata only
 (`secret_values_included=false`). See
-[ENTERPRISE_SECURITY_POSTURE.md](ENTERPRISE_SECURITY_POSTURE.md#secrets-lifecycle).
+[TRUST.md](TRUST.md#secrets-lifecycle).
 
 ## Operator-private (never commit)
 
@@ -59,5 +59,5 @@ Before pushing deploy or ops changes:
 ## Related docs
 
 - [PRODUCT_BOUNDARIES.md](PRODUCT_BOUNDARIES.md) — shipped lanes vs roadmap
-- [ENTERPRISE_SECURITY_POSTURE.md](ENTERPRISE_SECURITY_POSTURE.md) — buyer-facing controls
+- [TRUST.md](TRUST.md) — buyer-facing controls
 - [SECURITY.md](../SECURITY.md) — vulnerability reporting

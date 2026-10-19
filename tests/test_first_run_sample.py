@@ -202,7 +202,7 @@ def test_samples_first_run_cli_accepts_target_alias(tmp_path: Path) -> None:
 
 def test_first_run_guide_is_for_users_and_release_smoke_lives_in_the_runbook() -> None:
     guide = (ROOT / "docs" / "FIRST_RUN.md").read_text(encoding="utf-8")
-    runbook = (ROOT / "docs" / "PUBLISHING.md").read_text(encoding="utf-8")
+    runbook = (ROOT / "docs" / "RELEASE_VERIFICATION.md").read_text(encoding="utf-8")
 
     assert "release_smoke.sh" not in guide
     assert "Release smoke" not in guide

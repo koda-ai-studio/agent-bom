@@ -160,7 +160,7 @@ Security boundaries:
 Relevant docs:
 
 - [Backend Parity](../deployment/backend-parity.md)
-- [Enterprise Deployment](https://github.com/msaad00/agent-bom/blob/main/docs/ENTERPRISE_DEPLOYMENT.md)
+- [Enterprise Deployment](https://github.com/msaad00/agent-bom/blob/main/docs/DEPLOY_PLATFORM.md)
 
 ## Pushed ingest
 

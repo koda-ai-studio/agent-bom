@@ -50,7 +50,7 @@ helm upgrade --install agent-bom deploy/helm/agent-bom \
 References:
 
 - GitHub README: https://github.com/msaad00/agent-bom/blob/main/README.md
-- Product brief: https://github.com/msaad00/agent-bom/blob/main/docs/PRODUCT_BRIEF.md
+- Product brief: https://github.com/msaad00/agent-bom/blob/main/docs/ARCHITECTURE.md
 - Verified metrics: https://github.com/msaad00/agent-bom/blob/main/docs/PRODUCT_METRICS.md
 
 ## Follow one component

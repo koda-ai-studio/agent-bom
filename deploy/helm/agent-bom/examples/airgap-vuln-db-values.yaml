@@ -5,7 +5,7 @@
 # 3. Create a Secret or PVC with dist/airgap/vulns.db on the disconnected cluster
 # 4. helm install/upgrade with -f deploy/helm/agent-bom/examples/airgap-vuln-db-values.yaml
 #
-# See docs/ENTERPRISE_DEPLOYMENT.md and docs/RELEASE_VERIFICATION.md.
+# See docs/DEPLOY_PLATFORM.md and docs/RELEASE_VERIFICATION.md.
 
 controlPlane:
   enabled: true

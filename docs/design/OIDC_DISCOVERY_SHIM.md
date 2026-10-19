@@ -122,5 +122,5 @@ The shim document must include at minimum:
 
 - Parent epic: [#3175](https://github.com/msaad00/agent-bom/issues/3175)
 - Tail issue: [#3609](https://github.com/msaad00/agent-bom/issues/3609)
-- Enterprise deployment: [`ENTERPRISE_DEPLOYMENT.md`](../ENTERPRISE_DEPLOYMENT.md#mcp-oidc-discovery-shim)
+- Enterprise deployment: [`DEPLOY_PLATFORM.md`](../AUTH_SSO.md#mcp-oidc-discovery-shim)
 - Gateway OAuth AS: `src/agent_bom/api/oauth_as.py`

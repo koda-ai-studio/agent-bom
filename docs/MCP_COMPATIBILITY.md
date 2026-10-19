@@ -108,7 +108,7 @@ The registry factory returns the MCP SDK server directly. The legacy Smithery
 Python decorator targets SDK 1 and is no longer installed by `agent-bom[mcp-server]`.
 That install extra remains compatible as an alias for the base installation.
 Hosted registry registration uses the authenticated HTTP endpoint described in
-[Publishing](PUBLISHING.md); no decorator-based session configuration is promised.
+[Publishing](RELEASE_VERIFICATION.md); no decorator-based session configuration is promised.
 
 ## Verification
 

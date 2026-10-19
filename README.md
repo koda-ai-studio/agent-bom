@@ -25,7 +25,7 @@ and prioritize fixes using blast radius and reachability evidence.
   <a href="#quick-start"><b>Quick start</b></a> ·
   <a href="#open-the-sample-graph">Sample graph</a> ·
   <a href="#self-host-in-your-environment">Self-host</a> ·
-  <a href="docs/PRODUCT_TOUR.md">Product tour</a> ·
+  <a href="docs/GALLERY.md">Product tour</a> ·
   <a href="https://koda-ai-studio.github.io/agent-bom/">Docs</a>
 </p>
 
@@ -69,7 +69,7 @@ or modeled, not observed at runtime; path analysis covers the collected snapshot
 
 **From agent to verified fix:** select Document Intake Agent → inspect
 CVE-2023-4863 (high, KEV-listed) and the evidence on each arrow → take the
-proposed [remediation](docs/PRODUCT_TOUR.md#engineers-and-grc-fix-and-verify) →
+proposed [remediation](docs/GALLERY.md#engineers-and-grc-fix-and-verify) →
 [rescan the changed pin](examples/connected-bom/README.md) and compare snapshots.
 The comparison verifies the changed input, not a running deployment.
 
@@ -82,7 +82,7 @@ receipt is open.
 
 *Real parsers, modeled infrastructure; a graph path does not prove exploitation.*
 
-[Explore context, correlation and reachability](docs/PRODUCT_TOUR.md#context-correlation-and-reachability) · [Run the reference lab](examples/reference-evidence-lab/README.md) · [Reproduce these screenshots](docs/PRODUCT_TOUR.md#reproduce-the-readme-screenshots)
+[Explore context, correlation and reachability](docs/GALLERY.md#context-correlation-and-reachability) · [Run the reference lab](examples/reference-evidence-lab/README.md) · [Reproduce these screenshots](docs/GALLERY.md#reproduce-the-readme-screenshots)
 
 <details>
 <summary>Repository and cloud investigations</summary>
@@ -129,7 +129,7 @@ scoped read-only connection, verify access, then start a scan. Use the
 - **Centralize** inventory, graph evidence, remediation and compliance in your own control plane.
 - **Enforce** policy on selected live MCP tool calls through the proxy or gateway.
 
-[Docker pilot guide](docs/DEPLOY_QUICKSTART.md) · [Compose with PostgreSQL](deploy/docker-compose.platform.yml) · [Choose a deployment](site-docs/deployment/overview.md) · [Enterprise controls](docs/ENTERPRISE.md) · [Connect cloud accounts](docs/CLOUD_CONNECT.md)
+[Docker pilot guide](docs/DEPLOY_PLATFORM.md) · [Compose with PostgreSQL](deploy/docker-compose.platform.yml) · [Choose a deployment](site-docs/deployment/overview.md) · [Enterprise controls](docs/TRUST.md) · [Connect cloud accounts](docs/CLOUD_CONNECT.md)
 
 <details>
 <summary>Work with your existing tools</summary>
@@ -141,14 +141,14 @@ proxy and gateway deployments add runtime evidence.
 For coding assistants, run `agent-bom mcp server`.
 Start with eight focused tools in the default profile.
 [Choose an MCP profile](docs/MCP_SERVER.md) for graph, cloud, runtime or audit work.
-[Try three investigations](docs/MCP_WORKFLOWS.md): affected agents, exposure receipts and a before/after scan comparison.
+[Try three investigations](docs/MCP_SERVER.md): affected agents, exposure receipts and a before/after scan comparison.
 [Import existing scanner reports](docs/IMPORTERS.md) without replacing their source evidence.
 
 Prefer an isolated invocation? Use `uvx agent-bom scan .` or check a dependency
 with `uvx agent-bom check requests@2.33.0 --ecosystem pypi`. Add
-[pre-commit and CI setup](docs/DEPLOYMENT.md#pre-commit-hook) for repeated checks.
+[pre-commit and CI setup](docs/FIRST_RUN.md#pre-commit-hook) for repeated checks.
 
-[Proxy, gateway and fleet](site-docs/deployment/proxy-vs-gateway-vs-fleet.md) · [Integration capability matrix](docs/INTEGRATIONS.md) · [MCP client setup](docs/MCP_CLIENT_GUIDES.md) · [Smithery setup and manifest](site-docs/integrations/smithery.md)
+[Proxy, gateway and fleet](site-docs/deployment/proxy-vs-gateway-vs-fleet.md) · [Integration capability matrix](docs/CLOUD_CONNECT.md) · [MCP client setup](docs/MCP_SERVER.md) · [Smithery setup and manifest](site-docs/integrations/smithery.md)
 
 </details>
 

@@ -3,7 +3,7 @@
 **Status:** Superseded
 **Date:** 2025-11
 
-> The API now enforces role-based access control: `admin`, `analyst` and `viewer` roles with a per-action permission matrix in `src/agent_bom/rbac.py`, applied by `src/agent_bom/api/middleware.py` after API-key, OIDC, SAML, SCIM or trusted-proxy authentication, with audit events in `src/agent_bom/api/audit_log.py`. Browser authentication is recorded in [ADR-014](014-ui-auth-model.md); the role matrix is in [`ENTERPRISE.md`](../ENTERPRISE.md#rbac-matrix). The record below is kept for history only.
+> The API now enforces role-based access control: `admin`, `analyst` and `viewer` roles with a per-action permission matrix in `src/agent_bom/rbac.py`, applied by `src/agent_bom/api/middleware.py` after API-key, OIDC, SAML, SCIM or trusted-proxy authentication, with audit events in `src/agent_bom/api/audit_log.py`. Browser authentication is recorded in [ADR-014](014-ui-auth-model.md); the role matrix is in [`TRUST.md`](../AUTH_SSO.md#role-and-operation-policy). The record below is kept for history only.
 
 ## Context
 

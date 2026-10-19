@@ -44,7 +44,7 @@ bucket, and backup policy.
 Job expiration removes the scan results used by findings and posture. An explicit
 shorter TTL is honored; deletion is not evidence that findings were remediated.
 Graph snapshots have an independent retention policy. See the
-[persistent API setup](ENTERPRISE_DEPLOYMENT.md#3-centralized-api-server--fleet-dashboard)
+[persistent API setup](STORAGE_BACKENDS.md#durable-by-default-lifecycle-state)
 for configuration and the storage/quota tradeoff.
 
 ## Tenant Data Export

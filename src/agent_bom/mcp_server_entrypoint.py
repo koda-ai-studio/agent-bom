@@ -10,6 +10,6 @@ def create_smithery_server(factory: Callable[[], Any]) -> Any:
     """Retain the registry factory without the SDK-1-only Smithery decorator.
 
     The stdio entrypoint needs the MCP server itself. Hosted registration uses
-    the authenticated HTTP endpoint documented in docs/PUBLISHING.md.
+    the authenticated HTTP endpoint documented in docs/RELEASE_VERIFICATION.md.
     """
     return factory()

@@ -515,8 +515,8 @@ def test_postgres_init_distinguishes_empty_vs_unset_app_password() -> None:
 
 def test_active_docker_docs_do_not_mount_config_under_root_home() -> None:
     active_docs = [
-        ROOT / "docs" / "DEPLOYMENT.md",
-        ROOT / "docs" / "ENTERPRISE_DEPLOYMENT.md",
+        ROOT / "docs" / "DEPLOY_PLATFORM.md",
+        ROOT / "docs" / "DEPLOY_PLATFORM.md",
         ROOT / "docs" / "MCP_SERVER.md",
         ROOT / "site-docs" / "getting-started" / "install.md",
         ROOT / "site-docs" / "deployment" / "docker.md",

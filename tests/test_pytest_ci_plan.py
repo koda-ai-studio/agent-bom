@@ -620,7 +620,7 @@ def test_non_workflow_changes_do_not_select_product_metrics(tmp_path, source):
     assert select_targeted_tests(changed_files=[Path(source)], root=tmp_path) == []
 
 
-@pytest.mark.parametrize("source", ["README.md", "docs/FIRST_RUN.md", "docs/PRODUCT_TOUR.md"])
+@pytest.mark.parametrize("source", ["README.md", "docs/FIRST_RUN.md", "docs/GALLERY.md"])
 def test_frontdoor_edits_select_distribution_and_operator_contracts(tmp_path: Path, source: str) -> None:
     expected = sorted(
         tmp_path / "tests" / name

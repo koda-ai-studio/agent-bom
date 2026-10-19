@@ -24,7 +24,7 @@ full bounded backlog, or shutdown returns 503.
 
 This page is the canonical runtime surface map. The detail docs:
 
-- [`RUNTIME_MONITORING.md`](RUNTIME_MONITORING.md) — proxy sidecar deployment,
+- [Inline detection and monitoring](#inline-detection-and-monitoring) — proxy deployment,
   detector configuration, enforcement modes, and alert routing
 - [`RUNTIME_PROXY_AUDIT_JSONL.md`](RUNTIME_PROXY_AUDIT_JSONL.md) — the proxy
   audit JSONL record format for SIEM forwarding and release evidence
@@ -221,7 +221,7 @@ Helm/Postgres deployment probe described below.
 |---|---|---|
 | HTTP gateway | `docs/design/MULTI_MCP_GATEWAY.md` | `src/agent_bom/api/policy_store.py`, Helm `gateway:` block |
 | Inter-agent firewall | `docs/AGENT_FIREWALL.md` | `src/agent_bom/firewall.py`, Helm `gateway.firewallPolicyPath` |
-| Proxy / sidecar | `docs/MCP_SECURITY_MODEL.md`, `docs/RUNTIME_MONITORING.md` | `src/agent_bom/proxy.py`, Helm `sidecarInjection:` block |
+| Proxy / sidecar | `docs/MCP_SECURITY_MODEL.md`, `docs/RUNTIME_REFERENCE.md` | `src/agent_bom/proxy.py`, Helm `sidecarInjection:` block |
 | MCP server (agent-bom's tool surface) | `docs/MCP_SERVER.md` | `src/agent_bom/mcp_server.py` |
 | Audit relay | `docs/PROXY_AUDIT_LOG.md` | `/v1/proxy/audit` route |
 
@@ -419,3 +419,322 @@ closed at store initialization. Legacy databases without identity tables receive
 no readiness marker; provision the runtime schema before enabling profiles.
 Application rollback preserves the added column,
 index and identity/revocation data; the downgrade does not delete them.
+
+## Inline detection and monitoring
+
+### Seven Inline Detectors
+
+| Detector | What it catches | Default mode |
+|---|---|---|
+| **Tool drift** | Tools invoked at runtime that were not declared in the `tools/list` response. Indicates a server exposing undeclared capabilities. | Log |
+| **Argument analysis** | Tool call arguments that match blocked regex patterns defined in policy (e.g., path traversal, SQL injection payloads). | Log |
+| **Credential leak** | Arguments containing patterns that look like API keys, tokens, passwords, or connection strings being passed to tools. | Log |
+| **Rate limiting** | Abnormal call frequency for a single tool within a time window — detects runaway loops or abuse. | Log |
+| **Sequence analysis** | Suspicious sequences of tool calls (e.g., `list_files` followed by `read_file` on every file, or `exec` after `write_file`). | Log |
+| **Response inspection** | Cloaking, invisible Unicode, SVG/script payloads, and poisoned response content. | Log |
+| **Vector DB injection** | Retrieved prompt chunks or vector-backed content attempting to coerce downstream tools or agents. | Log |
+
+---
+
+## Log vs Enforce Mode
+
+The proxy supports two operational modes:
+
+### Log mode (default)
+
+Without optional detector enforcement, detector alerts provide a baseline for review. Other configured policy, credential, sandbox and protocol gates still apply. The audit contract describes which calls and outcomes are recorded and which argument fields are redacted; see [proxy audit JSONL](RUNTIME_PROXY_AUDIT_JSONL.md).
+
+```bash
+agent-bom proxy --no-isolate --log audit.jsonl -- npx @mcp/server-filesystem /workspace
+```
+
+Hermetic smoke without npm (uses the bundled JSON-RPC fixture; invoke via
+module name — do not pass an absolute venv `python` path to the proxy):
+
+```bash
+agent-bom proxy --no-isolate --log audit.jsonl -- python3 -m agent_bom.runtime_smoke_mcp
+```
+
+For Claude Desktop, Claude Code, and Cortex JSON configs, you can auto-wrap eligible stdio servers:
+
+```bash
+agent-bom proxy-configure --log-dir ~/.agent-bom/logs --detect-credentials
+```
+
+Add `--apply` to persist the wrapped config entries. Generated configs include
+`--no-isolate` unless you pass `--sandbox-image`; that keeps audit/policy mode
+explicit and avoids implying process containment without an operator-provided
+Docker/Podman runtime image.
+
+If you need cross-agent correlation and the broader 8-detector runtime engine, use `agent-bom runtime protect --shield` alongside or upstream of the proxy pipeline.
+
+## Correlated runtime facts
+
+The gateway can optionally poll the authenticated runtime-facts endpoint for a
+completed graph correlation. Bundles are signed, tenant-bound, expiring, and
+content-bound to the immutable correlation output. The v2 envelope signs an
+`analysis_bounds` block that distinguishes complete evaluation from depth- or
+visited-node-limited evaluation. Bundles are cached as the last valid evidence
+during a transient control-plane outage, but a control-plane integrity response
+for missing, replaced, purged, or manifest-mismatched output revokes the cache.
+File-backed reachability remains supported and graph enforcement remains
+globally off unless selected.
+
+Deploy the runtime-facts publisher and gateway from the same Agent-Bom release.
+The gateway rejects unsupported envelope schemas; in strict `deny` mode, that
+version mismatch fails closed instead of silently falling back to stale or
+unverified graph evidence.
+
+```bash
+agent-bom gateway serve \
+  --graph-reachability-enforcement enforce \
+  --graph-reachability-bundle-url https://agent-bom.internal/v1/graph/correlations/CORRELATION_ID/runtime-facts \
+  --graph-reachability-bundle-tenant TENANT_ID \
+  --graph-reachability-bundle-signing-key-file /run/secrets/runtime-facts-hmac \
+  --graph-reachability-bundle-poll-seconds 30 \
+  --graph-reachability-failure-mode deny
+```
+
+`allow` is the compatibility default when graph evidence is missing or no
+valid cached bundle exists. `deny` is explicit fail-closed behavior for strict
+evidence labs and production environments whose availability design can
+support it. Strict mode also denies when signed analysis is incomplete. An
+expired, invalidly signed, cross-tenant, or content-mismatched bundle is never
+used as fresh verification.
+
+### Enforce mode
+
+Add `--block-undeclared` and/or `--policy policy.json` to actively block tool calls:
+
+```bash
+agent-bom proxy \
+  --no-isolate \
+  --log audit.jsonl \
+  --policy policy.json \
+  --block-undeclared \
+  -- npx @mcp/server-filesystem /workspace
+```
+
+Blocked calls receive a JSON-RPC error response (`code: -32600`) and are recorded in the audit log with `"policy": "blocked"` and the reason.
+
+---
+
+### Webhook Alerts
+
+Use the `agent-bom watch` command alongside the proxy to route alerts to Slack, Teams, or PagerDuty:
+
+```bash
+# In one terminal: run the proxy
+agent-bom proxy --no-isolate --log audit.jsonl -- npx @mcp/server-filesystem /workspace
+
+# In another terminal: watch the audit log and send alerts
+agent-bom watch --webhook https://hooks.slack.com/services/T.../B.../xxx --log alerts.jsonl
+```
+
+---
+
+## Detector Descriptions
+
+### Tool Drift
+
+Compares the set of tools declared in the server's `tools/list` response against actual `tools/call` invocations. If a tool is called that was never declared, the proxy flags it as drift. This catches servers that expose hidden capabilities not visible during initial handshake.
+
+Enable blocking with `--block-undeclared`.
+
+### Argument Analysis
+
+Evaluates tool call arguments against regex patterns defined in a policy file. Common patterns include path traversal (`../../etc/passwd`), SQL injection payloads, and shell metacharacters. Each policy rule specifies an `arg_pattern` map of argument name to regex.
+
+### Credential Leak
+
+Scans tool call arguments for patterns that resemble secrets: API keys (prefixed strings like `sk-`, `ghp_`, `AKIA`), bearer tokens, connection strings with embedded passwords, and base64-encoded credentials. Prevents AI agents from inadvertently passing secrets to MCP tools.
+
+### Rate Limiting
+
+Tracks call frequency per tool within a sliding time window. Detects runaway loops where an AI agent repeatedly calls the same tool (e.g., `exec` or `write_file`) in rapid succession, which may indicate a prompt injection driving automated actions.
+
+### Sequence Analysis
+
+Analyzes the order of tool calls to detect suspicious multi-step patterns. For example: `list_directory` followed by `read_file` on every discovered file (bulk exfiltration), or `write_file` followed by `exec` (code injection + execution).
+
+### Response Inspection
+
+Scans tool responses for cloaking tricks, invisible Unicode, SVG/script payloads, and other content that tries to smuggle instructions back into the agent.
+
+### Vector DB Injection
+
+Detects prompt-coercion or poisoning patterns from retrieval-backed tools and escalates them when the response clearly comes from vector or RAG-like sources.
+
+## Kubernetes Deployment Manifests
+
+Pre-built K8s manifests are available in `deploy/k8s/`:
+
+| Manifest | Purpose |
+|----------|---------|
+| `namespace.yaml` | Creates the `agent-bom` namespace |
+| `rbac.yaml` | ServiceAccount + ClusterRole (pod/namespace read) + ClusterRoleBinding |
+| `cronjob.yaml` | Scheduled vulnerability scan every 6 hours across all namespaces |
+| `daemonset.yaml` | Runtime protection monitor on every node via `agent-bom protect --mode http` |
+| `sidecar-example.yaml` | MCP server + agent-bom proxy sidecar deployment example |
+
+### Quick start
+
+```bash
+kubectl apply -f deploy/k8s/namespace.yaml
+kubectl apply -f deploy/k8s/rbac.yaml
+kubectl apply -f deploy/k8s/cronjob.yaml
+```
+
+To enable runtime monitoring on all nodes:
+
+```bash
+kubectl apply -f deploy/k8s/daemonset.yaml
+```
+
+### Continuous Kubernetes Inventory Reconciliation
+
+For fleet deployments, treat Kubernetes discovery as a repeated reconciliation
+loop rather than a one-off scan. Capture the previous and current inventory
+snapshots, then compare them with:
+
+```bash
+agent-bom fleet reconcile-k8s \
+  --previous /state/previous-inventory.json \
+  --current /state/current-inventory.json \
+  --json
+```
+
+The reconciliation contract emits stable Kubernetes identity keys, added,
+changed, missing, and stale records. The identity key intentionally uses
+tenant, cluster, namespace, workload, agent, server, and surface metadata
+instead of pod UID/name so normal rollout churn does not create duplicate
+assets. CronJobs, selected-node DaemonSets, and future operators can publish
+that JSON alongside `agent-bom inventory --json` to prove whether the inventory
+is current and what changed since the last observation.
+
+---
+
+## Helm Chart
+
+A Helm chart is provided in `deploy/helm/agent-bom/` for customizable deployments:
+
+```bash
+# Install with defaults (scheduled scanner only)
+helm install agent-bom deploy/helm/agent-bom/ -n agent-bom --create-namespace
+
+# Enable runtime monitoring DaemonSet
+helm install agent-bom deploy/helm/agent-bom/ -n agent-bom --create-namespace \
+  --set monitor.enabled=true
+
+# Enable Prometheus scraping for the runtime monitor
+helm install agent-bom deploy/helm/agent-bom/ -n agent-bom --create-namespace \
+  --set monitor.enabled=true \
+  --set monitor.serviceMonitor.enabled=true
+
+# Custom scan schedule (every 2 hours)
+helm install agent-bom deploy/helm/agent-bom/ -n agent-bom --create-namespace \
+  --set scanner.schedule="0 */2 * * *"
+```
+
+### Key values
+
+| Value | Default | Description |
+|-------|---------|-------------|
+| `scanner.enabled` | `true` | Deploy the CronJob scanner |
+| `scanner.schedule` | `0 */6 * * *` | Cron schedule for scans |
+| `scanner.allNamespaces` | `true` | Scan all namespaces |
+| `monitor.enabled` | `false` | Deploy the DaemonSet runtime monitor |
+| `monitor.port` | `8423` | HTTP port for the protect endpoint |
+| `monitor.service.enabled` | `true` | Expose the monitor DaemonSet through a ClusterIP Service when enabled |
+| `monitor.serviceMonitor.enabled` | `false` | Create a Prometheus Operator ServiceMonitor that scrapes `/metrics` |
+| `monitor.ingress.enabled` | `false` | Create an Ingress for the monitor Service when remote access is needed |
+| `networkPolicy.allowDns` | `true` | Allow outbound DNS resolution on TCP/UDP 53 |
+| `networkPolicy.allowWeb` | `true` | Allow outbound TCP web traffic for registry/API access |
+| `networkPolicy.webPorts` | `[80, 443]` | TCP ports permitted when `allowWeb` is enabled |
+| `networkPolicy.additionalEgress` | `[]` | Extra egress rules for stricter or more specialized environments |
+| `pdb.enabled` | `false` | Create a PodDisruptionBudget for the runtime monitor pods |
+| `rbac.create` | `true` | Create the cluster-scoped read RBAC needed for pod and namespace discovery |
+
+When the monitor is enabled, the chart now wires:
+- `livenessProbe` on `/status`
+- `readinessProbe` on `/status`
+- `startupProbe` on `/status`
+- optional Prometheus scraping on `/metrics`
+- optional `Ingress` for the monitor Service
+- optional `PodDisruptionBudget` for voluntary-eviction safety
+
+The chart's default `NetworkPolicy` also avoids unrestricted outbound traffic. By default it permits:
+- DNS resolution on TCP/UDP 53
+- outbound TCP 80/443 for package registries, APIs, and control-plane calls
+
+Use `networkPolicy.additionalEgress` to add tighter environment-specific rules without editing templates.
+
+The chart RBAC is intentionally cluster-scoped today because the monitor and scanner read both pods and namespaces. It is focused cluster-read access rather than a richer workload-specific RBAC partitioning story.
+
+---
+
+## Sidecar Injection
+
+To run the agent-bom proxy as a sidecar alongside your MCP server pod, see `deploy/k8s/sidecar-example.yaml`. The sidecar:
+
+- Intercepts all JSON-RPC traffic between client and server
+- Logs tool calls to `/var/log/agent-bom/audit.jsonl`
+- Detects credential leaks and blocks undeclared tools
+- Exposes Prometheus metrics on port 8422
+
+Apply the example:
+
+```bash
+kubectl apply -f deploy/k8s/sidecar-example.yaml
+```
+
+---
+
+## Prometheus Metrics
+
+The proxy exposes Prometheus-compatible metrics on port 8422 (configurable via `--metrics-port`):
+
+```bash
+agent-bom proxy --no-isolate --metrics-port 8422 --log audit.jsonl -- npx @mcp/server-filesystem /workspace
+```
+
+### Metrics endpoint
+
+`GET http://localhost:8422/metrics` returns:
+
+```
+agent_bom_proxy_tool_calls_total{tool="read_file"} 42
+agent_bom_proxy_blocked_total{reason="policy"} 3
+agent_bom_proxy_uptime_seconds 300.5
+agent_bom_proxy_total_tool_calls 45
+agent_bom_proxy_total_blocked 3
+agent_bom_proxy_latency_ms{quantile="0.5"} 15.0
+agent_bom_proxy_latency_ms{quantile="0.95"} 120.0
+agent_bom_proxy_replay_rejections_total 0
+agent_bom_proxy_messages_total{direction="client_to_server"} 50
+agent_bom_proxy_messages_total{direction="server_to_client"} 48
+```
+
+### Prometheus scrape config
+
+The sidecar example includes Prometheus annotations for auto-discovery:
+
+```yaml
+annotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8422"
+  prometheus.io/path: "/metrics"
+```
+
+To disable metrics, set `--metrics-port 0`.
+
+### Grafana dashboard
+
+A pre-built Grafana dashboard is available at [`deploy/grafana/grafana-agent-bom.json`](../deploy/grafana/grafana-agent-bom.json). Import it into Grafana (Dashboards > Import) to get:
+
+- Severity distribution (donut + trend lines)
+- Top blast radius scores and EPSS probabilities
+- Per-agent vulnerability and credential exposure tables
+- Proxy runtime panels (call rate, block reasons, latency p50/p95, replay rejections)
+
+See [`deploy/grafana/README.md`](../deploy/grafana/README.md) for setup details.

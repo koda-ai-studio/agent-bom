@@ -154,7 +154,7 @@ def test_screenshot_manifest_release_version_is_owned_by_the_release_bump() -> N
 def test_consumer_precommit_revs_are_owned_by_the_published_sweep() -> None:
     cva = _load_script("check_version_alignment.py")
     payload = "  - repo: https://github.com/msaad00/agent-bom\n    rev: v0.101.0\n"
-    for path in ("README.md", "docs/DEPLOYMENT.md", ".pre-commit-hooks.yaml"):
+    for path in ("README.md", "docs/FIRST_RUN.md", ".pre-commit-hooks.yaml"):
         drift = cva.scan_text(path, payload, "0.103.0", published="0.102.0")
         assert len(drift) == 1 and "expected 0.102.0" in drift[0], (path, drift)
 
@@ -170,7 +170,17 @@ def test_released_artifact_commands_are_owned_by_the_published_bump() -> None:
         "docs/RELEASE_VERIFICATION.md",
     ):
         assert rel in managed, rel
-        assert rel not in source_managed, f"{rel} would be rewritten to the unreleased source version"
+        if rel == "docs/RELEASE_VERIFICATION.md":
+            # Publishing and verification now share a page. Source examples
+            # must not rewrite its separately owned published download tag.
+            published_download = "TAG=v0.102.0\n"
+            rewritten = published_download
+            for source_rel, pattern, template in bump.VERSION_LOCATIONS + bump.DOC_TEST_LOCATIONS:
+                if source_rel == rel:
+                    rewritten = pattern.sub(template.format(v="0.103.0"), rewritten)
+            assert rewritten == published_download
+        else:
+            assert rel not in source_managed, f"{rel} would be rewritten to the unreleased source version"
 
 
 def test_prepping_a_release_leaves_copy_paste_surfaces_on_the_published_version(tmp_path, monkeypatch) -> None:
@@ -181,7 +191,7 @@ def test_prepping_a_release_leaves_copy_paste_surfaces_on_the_published_version(
     (tmp_path / "pyproject.toml").write_text('version = "0.105.0"\n')
     docs = tmp_path / "docs"
     docs.mkdir()
-    guide = docs / "START_HERE.md"
+    guide = docs / "FIRST_RUN.md"
     guide.write_text("- uses: msaad00/agent-bom@v0.105.0\n")
     helm = docs / "helm.md"
     helm.write_text("  --version 0.105.0 \\\n")
@@ -216,7 +226,7 @@ def test_prepping_a_release_leaves_copy_paste_surfaces_on_the_published_version(
 def test_public_release_pins_are_owned_by_the_release_bump() -> None:
     bump = _load_script("bump-version.py")
     cases = {
-        "docs/PUBLISHING.md": "  --expected 0.101.0 \\\n",
+        "docs/RELEASE_VERIFICATION.md": "  --expected 0.101.0 \\\n",
     }
     for path, payload in cases.items():
         entries = [(pattern, template) for rel, pattern, template in bump.DOC_TEST_LOCATIONS if rel == path]
@@ -271,9 +281,9 @@ def test_published_version_file_is_semver_and_not_ahead_of_source() -> None:
 def test_action_ref_must_track_published_not_next_version() -> None:
     cva = _load_script("check_version_alignment.py")
     text = "- uses: msaad00/agent-bom@v0.106.0\n"
-    drift = cva.scan_text("docs/START_HERE.md", text, "0.106.0", published="0.105.0")
+    drift = cva.scan_text("docs/FIRST_RUN.md", text, "0.106.0", published="0.105.0")
     assert len(drift) == 1 and "0.105.0" in drift[0]
-    assert cva.scan_text("docs/START_HERE.md", "- uses: msaad00/agent-bom@v0.105.0\n", "0.106.0", published="0.105.0") == []
+    assert cva.scan_text("docs/FIRST_RUN.md", "- uses: msaad00/agent-bom@v0.105.0\n", "0.106.0", published="0.105.0") == []
 
 
 def test_pull_only_image_pin_tracks_published_but_source_built_tracks_next() -> None:
@@ -415,7 +425,7 @@ def test_override_drift_flags_a_hardcoded_pilot_pin(tmp_path, monkeypatch) -> No
 
 def test_release_checkout_docs_set_the_image_tag_for_the_tag_they_clone() -> None:
     published = (ROOT / "PUBLISHED_VERSION").read_text(encoding="utf-8").strip()
-    for rel in ("README.md", "docs/DEPLOY_QUICKSTART.md"):
+    for rel in ("README.md", "docs/DEPLOY_PLATFORM.md"):
         text = (ROOT / rel).read_text(encoding="utf-8")
         branches = set(re.findall(r"--branch v(\d+\.\d+\.\d+)", text))
         tags = set(re.findall(r"AGENT_BOM_IMAGE_TAG=(\d+\.\d+\.\d+)", text))

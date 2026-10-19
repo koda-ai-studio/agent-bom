@@ -95,8 +95,8 @@ def test_social_preview_is_portable_and_evidence_focused() -> None:
 
 def test_readme_links_to_the_detailed_source_tour():
     readme = (ROOT / "README.md").read_text()
-    tour = (ROOT / "docs/PRODUCT_TOUR.md").read_text()
-    assert "docs/PRODUCT_TOUR.md" in readme
+    tour = (ROOT / "docs/GALLERY.md").read_text()
+    assert "docs/GALLERY.md" in readme
     assert "## Product tour" not in readme
     assert "current source" in tour and "release notes" in tour
     for image in ("dashboard-live.png", "correlation-graph-live.png", "graph-relationship-dark-live.png", "remediation-live.png"):
@@ -121,8 +121,8 @@ def test_readme_frontdoor_is_short_and_integration_roles_are_explicit() -> None:
     integrations = readme.split("<summary>Work with your existing tools</summary>", 1)[1].split("\n## ", 1)[0]
     for capability in ("CLI or GitHub Action", "REST API", "MCP", "SARIF", "CycloneDX", "SPDX", "fleet sync", "runtime evidence"):
         assert capability in integrations
-    assert "[Integration capability matrix](docs/INTEGRATIONS.md)" in integrations
-    matrix = (ROOT / "docs/INTEGRATIONS.md").read_text(encoding="utf-8")
+    assert "[Integration capability matrix](docs/CLOUD_CONNECT.md)" in integrations
+    matrix = (ROOT / "docs/CLOUD_CONNECT.md").read_text(encoding="utf-8")
     for role in ("Client discovery", "Read-only cloud connection", "Scan and deploy", "Identity", "Data platform", "Analytics backend"):
         assert role in matrix
     assert "agent-bom scan --databricks --databricks-security" in matrix
@@ -135,6 +135,7 @@ def test_scenarios_separate_reproducible_proof_from_synthetic_layout_fixtures() 
 
     scenario, layouts = gallery.split("## Explore connections and inspect evidence", 1)
     assert scenario.count("<img ") == 1
+    layouts = layouts.split("## Team investigation walkthrough", 1)[0]
     assert layouts.count("<img ") == 5
     assert "labeled synthetic UI fixtures" in layouts
     assert "graph-relationship-dark-live.png" in layouts
@@ -167,7 +168,7 @@ def test_docker_ui_first_run_has_a_result_and_preserves_local_auth_boundary() ->
 
 
 def test_persona_routes_start_with_their_actual_work() -> None:
-    personas = (ROOT / "docs/PRODUCT_TOUR.md").read_text().split("## Built for the teams", 1)[1].split("## Product tour", 1)[0]
+    personas = (ROOT / "docs/GALLERY.md").read_text().split("## Built for the teams", 1)[1].split("## Product tour", 1)[0]
     for marker in (
         "Developers & AI engineers",
         "AppSec & cloud security",
@@ -180,7 +181,7 @@ def test_persona_routes_start_with_their_actual_work() -> None:
     assert "Open **Compliance**" in personas
     assert "Open **Overview**" in personas
     assert "GALLERY.md#scan-a-repository-before-shipping" in personas
-    assert "MCP_WORKFLOWS.md" in personas
+    assert "MCP_SERVER.md" in personas
     assert "caller’s permissions" in personas
 
 
@@ -198,7 +199,6 @@ def test_public_first_run_surfaces_share_one_primary_command() -> None:
 def test_primary_local_control_plane_first_runs_use_one_durable_sqlite_path() -> None:
     for filename, heading in (
         ("docs/registry/PYPI_README.md", "## Recommended starting points"),
-        ("docs/START_HERE.md", "## Platform / SRE"),
         ("docs/FIRST_RUN.md", "## 3. Open the Dashboard"),
     ):
         text = (ROOT / filename).read_text(encoding="utf-8")
@@ -208,7 +208,7 @@ def test_primary_local_control_plane_first_runs_use_one_durable_sqlite_path() ->
     self_host = readme.split("## Self-host", 1)[1].split("\n## ", 1)[0]
     assert "docker compose up -d" in self_host
     assert "retains state in a Docker volume" in self_host
-    assert "docs/DEPLOY_QUICKSTART.md" in self_host
+    assert "docs/DEPLOY_PLATFORM.md" in self_host
 
 
 def test_readme_primary_local_operator_first_runs_grant_scan_role_explicitly() -> None:
