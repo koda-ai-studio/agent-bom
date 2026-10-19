@@ -19959,13 +19959,23 @@ export interface components {
         PostureDimensionsBasis: {
             /**
              * Basis
-             * @constant
+             * @enum {string}
              */
-            basis: "latest_scan";
+            basis: "latest_scan" | "tenant_current_findings";
             /** Completed At */
             completed_at?: string | null;
+            /** Credential Exposed Findings */
+            credential_exposed_findings?: number | null;
+            /** Open Findings */
+            open_findings?: number | null;
+            /** Scan Count */
+            scan_count?: number | null;
             /** Scan Id */
             scan_id?: string | null;
+            /** Scan Ids */
+            scan_ids?: string[] | null;
+            /** Vulnerability Findings */
+            vulnerability_findings?: number | null;
         } & {
             [key: string]: unknown;
         };
