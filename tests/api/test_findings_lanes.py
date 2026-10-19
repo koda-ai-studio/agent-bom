@@ -118,3 +118,10 @@ def test_api_lanes_filter_before_pagination_and_counts_reconcile(monkeypatch, tm
     finally:
         disable_trusted_proxy_env()
         set_job_store(InMemoryJobStore())
+
+
+def test_iac_source_retains_its_graph_collector():
+    from agent_bom.graph.finding_row_projection import _collector
+
+    row = iac_finding_to_finding({"rule_id": "TF-1", "file_path": "main.tf"}).to_dict()
+    assert _collector(row) == ("iac", "static_scan")
