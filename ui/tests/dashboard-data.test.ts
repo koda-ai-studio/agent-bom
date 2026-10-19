@@ -108,6 +108,11 @@ describe("buildTopRiskExposurePath", () => {
     expect(view.href).toBe("/findings?cve=CVE-2026-9001");
   });
 
+  it("drills a risk with a canonical occurrence to that exact occurrence, not the CVE's first row", () => {
+    const view = buildTopRiskExposurePath(makeTopRisk({ canonical_id: "8d96119f-27b7-596e-9e73-a540b6863817" }));
+    expect(view.href).toBe("/findings?finding=8d96119f-27b7-596e-9e73-a540b6863817");
+  });
+
   it("drills a non-CVE id by severity so the target is never empty", () => {
     const view = buildTopRiskExposurePath(
       makeTopRisk({ vulnerability_id: "GHSA-xxxx-yyyy-zzzz", severity: "high" }),

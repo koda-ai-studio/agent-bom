@@ -5,4 +5,8 @@ export interface GraphPathFocus {
   resolved_from: string | null;
   /** False when a read bound cut the search: a miss is then not proof of absence. */
   covers_all_matches: boolean;
+  /** Present when the link carried the occurrence's advisory. */
+  advisory_id?: string | undefined;
+  /** "node_advisory" when paths record the advisory, not the occurrence id, on the occurrence's node. */
+  matched_by?: "occurrence" | "node_advisory" | undefined;
 }

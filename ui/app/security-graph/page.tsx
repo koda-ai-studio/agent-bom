@@ -89,7 +89,7 @@ import {
 } from "@/lib/attack-paths";
 import { FindingInvestigationContext } from "@/components/finding-investigation-context";
 import { buildFindingAssetHref, withFindingContext } from "@/lib/finding-investigation-href";
-import { clientQueueFocus, emptyQueueCopy, focusedPathEmptyState, serverPathFocus } from "@/lib/finding-path-focus";
+import { clientQueueFocus, emptyQueueCopy, focusedPathEmptyState, serverPathFocus, sourceSnapshotFallback } from "@/lib/finding-path-focus";
 import { InvestigationEmptyQueue } from "@/components/investigation-empty-queue";
 import { SecurityGraphInvestigation } from "@/components/security-graph-investigation";
 import { GraphSurface } from "@/app/graph/graph-surface";
@@ -184,6 +184,7 @@ function AttackPathInvestigationContent() {
       agentName: searchParams.get("agent") ?? "",
       nodeId: searchParams.get("node") ?? "",
       findingId: searchParams.get("finding") ?? "",
+      findingScanId: searchParams.get("finding_scan") ?? "",
       traceId: searchParams.get("trace") ?? searchParams.get("runtime_trace_id") ?? "",
     }),
     [searchParams],
@@ -225,6 +226,16 @@ function AttackPathInvestigationContent() {
       setSelectedScanId(scanId);
       const params = new URLSearchParams(searchParams.toString());
       params.set("scan", scanId);
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
+
+  const openSourceSnapshot = useCallback(
+    (scanId: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("scan", scanId);
+      params.set("source_snapshot", "1");
       router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     },
     [pathname, router, searchParams],
@@ -344,9 +355,19 @@ function AttackPathInvestigationContent() {
           scanId: selectedScanId,
           offset: 0,
           limit: ATTACK_PATH_FETCH_PAGE,
-          ...serverPathFocus({ nodeId: focus.nodeId, findingId: focus.findingId }),
+          ...serverPathFocus({ nodeId: focus.nodeId, findingId: focus.findingId, cve: focus.cve }),
         });
         if (cancelled) return;
+        const sourceScan = sourceSnapshotFallback({
+          selectedScanId,
+          findingScanId: focus.findingScanId,
+          focus: graph.focus ?? null,
+          matches: graph.attack_paths?.length ?? 0,
+        });
+        if (sourceScan) {
+          openSourceSnapshot(sourceScan);
+          return;
+        }
         setGraphData(graph);
         setApiError(null);
         setGraphLoadError(null);
@@ -389,7 +410,7 @@ function AttackPathInvestigationContent() {
       pathPageRequest.current?.abort();
       pathPageRequest.current = null;
     };
-  }, [focus.agentName, focus.cve, focus.findingId, focus.nodeId, focus.packageName, selectedScanId]);
+  }, [focus.agentName, focus.cve, focus.findingId, focus.findingScanId, focus.nodeId, focus.packageName, openSourceSnapshot, selectedScanId]);
 
   const selectedSnapshot = useMemo(
     () => snapshots.find((snapshot) => snapshot.scan_id === selectedScanId) ?? null,
@@ -890,6 +911,11 @@ function AttackPathInvestigationContent() {
       {requestedQuestion && <p role="status" className="text-xs text-ink-secondary">Question filters apply to the loaded ranked paths. Load another page to widen this search; an empty page does not establish complete coverage.</p>}
       {requestedSelectedPath && graphData && !allAttackPaths.some(path => attackPathKey(path) === requestedSelectedPath) && <p role="status" className="graph-callout-amber">The shared path is not in this loaded queue page. Load more paths or inspect its retained evidence scope; the currently shown path is a different result.</p>}
 
+      {searchParams.get("source_snapshot") === "1" && focus.scanId ? (
+        <p role="note" aria-label="Source snapshot" className="graph-callout-sky">
+          No path for this finding in the current estate. Showing the snapshot it was found in ({focus.scanId}).
+        </p>
+      ) : null}
       {searchParams.get("related_finding") ? (
         <p role="note" aria-label="Finding association" className="graph-callout-sky">
           Related package and advisory paths. This scope does not establish a link to the selected finding record.

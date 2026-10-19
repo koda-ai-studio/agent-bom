@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { buildFindingInvestigationHref } from "@/lib/finding-investigation-href";
-import { clientQueueFocus, focusedPathEmptyState, serverPathFocus, showAnalysisBannerForEmptyQueue } from "@/lib/finding-path-focus";
+import { clientQueueFocus, focusedPathEmptyState, serverPathFocus, showAnalysisBannerForEmptyQueue, sourceSnapshotFallback } from "@/lib/finding-path-focus";
 
 const finding = {
   id: "CVE-2023-36258",
@@ -34,8 +34,13 @@ describe("server path focus", () => {
   const focus = { scanId: "", cve: "CVE-2023-36258", packageName: "", agentName: "", nodeId: finding.node_id, findingId: finding.finding_id, traceId: "" };
 
   it("asks the server for the occurrence instead of filtering one loaded page", () => {
-    expect(serverPathFocus(focus)).toEqual({ nodeId: finding.node_id, findingId: finding.finding_id });
+    expect(serverPathFocus(focus)).toEqual({ nodeId: finding.node_id, findingId: finding.finding_id, advisoryId: "CVE-2023-36258" });
     expect(serverPathFocus({ ...focus, nodeId: "", findingId: "" })).toEqual({});
+  });
+
+  it("sends the advisory only with the occurrence's own node, never as a free-standing widening", () => {
+    expect(serverPathFocus({ ...focus, nodeId: "" })).toEqual({ findingId: finding.finding_id });
+    expect(serverPathFocus({ ...focus, cve: "" })).toEqual({ nodeId: finding.node_id, findingId: finding.finding_id });
   });
 
   it("does not re-filter a server-focused page with the alias the link carried", () => {
@@ -65,5 +70,21 @@ describe("empty focused queue", () => {
 
   it("leaves unfocused empty states to the page", () => {
     expect(focusedPathEmptyState({ serverFocused: false, coversAllMatches: true, cve: "", currentEstate: true })).toBeNull();
+  });
+});
+
+describe("source snapshot fallback", () => {
+  const miss = { node_id: "pkg:x", finding_id: "f", resolved_from: null, covers_all_matches: true };
+
+  it("retries the finding's own snapshot when the current estate has no path for it", () => {
+    expect(sourceSnapshotFallback({ selectedScanId: "current-estate:abc", findingScanId: "showcase", focus: miss, matches: 0 })).toBe("showcase");
+  });
+
+  it("stays put when paths were found, the read was bounded, or the snapshot is already the source", () => {
+    expect(sourceSnapshotFallback({ selectedScanId: "current-estate:abc", findingScanId: "showcase", focus: miss, matches: 1 })).toBeNull();
+    expect(sourceSnapshotFallback({ selectedScanId: "current-estate:abc", findingScanId: "showcase", focus: { ...miss, covers_all_matches: false }, matches: 0 })).toBeNull();
+    expect(sourceSnapshotFallback({ selectedScanId: "showcase", findingScanId: "showcase", focus: miss, matches: 0 })).toBeNull();
+    expect(sourceSnapshotFallback({ selectedScanId: "current-estate:abc", findingScanId: "", focus: miss, matches: 0 })).toBeNull();
+    expect(sourceSnapshotFallback({ selectedScanId: "current-estate:abc", findingScanId: "showcase", focus: null, matches: 0 })).toBeNull();
   });
 });

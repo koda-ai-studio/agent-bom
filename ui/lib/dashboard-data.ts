@@ -351,7 +351,11 @@ export function buildTopRiskExposurePath(
   if (agent) nodes.push({ type: "agent", label: agent });
   else if (risk.affected_servers?.[0]) nodes.push({ type: "server", label: risk.affected_servers[0] });
 
-  const href = CVE_ID_PATTERN.test(risk.vulnerability_id)
+  // The canonical id names this exact occurrence; a CVE filter would open the
+  // CVE's first row, which may be a different asset than the one ranked here.
+  const href = risk.canonical_id?.trim()
+    ? `/findings?${new URLSearchParams({ finding: risk.canonical_id.trim() })}`
+    : CVE_ID_PATTERN.test(risk.vulnerability_id)
     ? buildFindingsHref({ cve: risk.vulnerability_id })
     : severity && severity !== "unrated"
       ? `/findings?severity=${encodeURIComponent(severity)}`

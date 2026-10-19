@@ -61835,6 +61835,26 @@
               "description": "Only paths carrying this finding occurrence",
               "title": "Finding Id"
             }
+          },
+          {
+            "description": "Advisory of the finding occurrence. When paths record the advisory rather than the occurrence id, the occurrence resolves to paths through its node_id carrying this advisory; ignored without node_id",
+            "in": "query",
+            "name": "advisory_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "pattern": "^[^\\x00]*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Advisory of the finding occurrence. When paths record the advisory rather than the occurrence id, the occurrence resolves to paths through its node_id carrying this advisory; ignored without node_id",
+              "title": "Advisory Id"
+            }
           }
         ],
         "responses": {

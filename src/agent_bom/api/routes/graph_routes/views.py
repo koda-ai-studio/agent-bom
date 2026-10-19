@@ -261,7 +261,13 @@ async def _queue_page(
     """The ranked queue page, or its slice through one node or finding occurrence."""
     if path_focus.active():
         return await focused_queue_page(
-            graph_store, tenant, scan_id, node_id=path_focus.node_id, finding_id=path_focus.finding_id, **page_args
+            graph_store,
+            tenant,
+            scan_id,
+            node_id=path_focus.node_id,
+            finding_id=path_focus.finding_id,
+            advisory_id=path_focus.advisory_id,
+            **page_args,
         )
     return (*await _ranked_queue_page(graph_store, tenant, scan_id, page_args), None)
 

@@ -1,11 +1,35 @@
 import type { AttackPathFocus } from "@/lib/attack-paths";
 import type { GraphAnalysisStatus } from "@/lib/graph-schema";
+import type { GraphPathFocus } from "@/lib/graph-path-focus";
 
-/** The exact occurrence a finding link carries; the server matches it across the whole queue. */
-export function serverPathFocus(focus: { nodeId?: string; findingId?: string }): { nodeId?: string; findingId?: string } {
+/**
+ * The exact occurrence a finding link carries; the server matches it across the whole queue.
+ * Paths record advisories rather than finding-store occurrence ids, so the advisory travels
+ * with the occurrence's own node and resolves only there.
+ */
+export function serverPathFocus(focus: { nodeId?: string; findingId?: string; cve?: string }): {
+  nodeId?: string; findingId?: string; advisoryId?: string;
+} {
   const nodeId = focus.nodeId?.trim();
   const findingId = focus.findingId?.trim();
-  return { ...(nodeId ? { nodeId } : {}), ...(findingId ? { findingId } : {}) };
+  const advisoryId = nodeId && findingId ? focus.cve?.trim() : "";
+  return { ...(nodeId ? { nodeId } : {}), ...(findingId ? { findingId } : {}), ...(advisoryId ? { advisoryId } : {}) };
+}
+
+/**
+ * A finding raised in a historical snapshot may have no path in the current estate.
+ * When the current estate's complete focused search misses, retry the finding's own snapshot.
+ */
+export function sourceSnapshotFallback(input: {
+  selectedScanId: string;
+  findingScanId: string;
+  focus: Pick<GraphPathFocus, "covers_all_matches"> | null;
+  matches: number;
+}): string | null {
+  const source = input.findingScanId.trim();
+  if (!source || !input.focus || !input.focus.covers_all_matches || input.matches > 0) return null;
+  if (source === input.selectedScanId || source.startsWith("current-estate:")) return null;
+  return input.selectedScanId.startsWith("current-estate:") ? source : null;
 }
 
 /**

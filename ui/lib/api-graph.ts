@@ -299,11 +299,14 @@ export const graphApi = {
     /** Server-side focus over the whole ranked queue (a replaced id resolves to its canonical node). */
     nodeId?: string | undefined;
     findingId?: string | undefined;
+    /** Advisory of the focused occurrence; resolves only through its own nodeId. */
+    advisoryId?: string | undefined;
   }, options?: { signal?: AbortSignal }) => {
     const params = new URLSearchParams();
     if (filters?.scanId) params.set("scan_id", filters.scanId);
     if (filters?.nodeId) params.set("node_id", filters.nodeId);
     if (filters?.findingId) params.set("finding_id", filters.findingId);
+    if (filters?.advisoryId) params.set("advisory_id", filters.advisoryId);
     if (filters?.offset != null) params.set("offset", String(filters.offset));
     if (filters?.limit != null) params.set("limit", String(filters.limit));
     if (filters?.snapshotGeneration) params.set("snapshot_generation", filters.snapshotGeneration);

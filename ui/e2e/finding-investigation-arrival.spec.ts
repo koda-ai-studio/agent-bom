@@ -52,10 +52,23 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
   });
 }
 
+test("a current-estate miss retries the finding's own snapshot before declaring absence", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const queries: URL[] = [];
+  await fixture(page, false, queries);
+  await page.goto(href);
+  await expect(page.getByRole("note", { name: "Source snapshot" })).toContainText("showcase");
+  await expect(page.getByText("No attack path reaches this finding in this snapshot")).toBeVisible();
+  expect(queries.map((q) => q.searchParams.get("scan_id"))).toEqual(expect.arrayContaining([estate, "showcase"]));
+  expect(queries[0]!.searchParams.get("advisory_id")).toBe("CVE-2023-36258");
+});
+
 test("a confirmed miss explains itself and offers the package neighbourhood, never a green complete banner", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await fixture(page, false, []);
-  await page.goto(href);
+  const noSource = new URL(href, "http://x");
+  noSource.searchParams.delete("finding_scan");
+  await page.goto(`${noSource.pathname}${noSource.search}`);
   await expect(page.getByText("No attack path reaches this finding in the current estate")).toBeVisible();
   await expect(page.getByText("Path analysis complete")).toHaveCount(0);
   await expect(page.getByText(/first command/i)).toHaveCount(0);
