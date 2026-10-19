@@ -20,7 +20,7 @@ signed release evidence.
 | Surface | Command | Release bar |
 |---|---|---|
 | Exact main CI | `uv run python scripts/check_release_main_ci.py --repo msaad00/agent-bom --sha "$(git rev-parse HEAD)" --branch main --workflow ci.yml` | Candidate equals current `main` and its exact `CI/CD Pipeline` main-push run is completed successfully; pending, canceled, stale, or PR-only runs fail closed. |
-| Version alignment | `uv run python scripts/check_release_consistency.py` | Package, docs, OpenAPI, Docker, Helm, and integration versions agree. |
+| Version alignment | `uv run python scripts/check_release_consistency.py --release` | Package, docs, OpenAPI, Docker, Helm, and integration versions agree, and the committed product screenshots were captured from this source (release-prep `npm run capture:product-proof`). Without `--release` (PR CI) the screenshot digest may be stale. |
 | Evidence matrix | `uv run python scripts/check_release_evidence_matrix.py` | Every published surface retains a named pre- or post-publish verification path. |
 | Product contract | `uv run python scripts/check_product_surface_contract.py` | README/product-surface claims match generated metrics and exposed surfaces. |
 | API schema | `uv run python scripts/generate_v1_schemas.py --check` | Published v1 schemas match the Pydantic models. |
@@ -702,3 +702,20 @@ the catalog. Missing or inconsistent complete evidence counts as drift even when
 all tool names match. If the server card is unavailable or cannot be
 bound to the release, the monitors do not close the drift issue. This is catalog
 evidence; it does not replace an authenticated MCP protocol check.
+
+### Release-prep product screenshots
+
+README and docs screenshots are refreshed once per release, not per PR. In the
+release-prep PR, after every other change for the release has merged:
+
+```bash
+cd ui && npm ci && npm run build && npm run capture:product-proof && cd ..
+uv run python scripts/check_release_consistency.py --release
+git add docs/images
+```
+
+The release workflow runs the same `--release` check and fails if the
+committed captures do not match the tagged source. The tag must equal the
+`main` head, so merge the release-prep PR last. See
+[`CAPTURE.md`](CAPTURE.md#when-to-capture).
+

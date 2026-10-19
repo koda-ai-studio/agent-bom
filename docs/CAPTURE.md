@@ -17,6 +17,29 @@ For release PRs, use the operational checklist in
 [`docs/release/SCREENSHOT_REFRESH_CHECKLIST.md`](release/SCREENSHOT_REFRESH_CHECKLIST.md)
 before replacing any published product image.
 
+## When to capture
+
+Capture once per release, not on every UI change:
+
+- **Curated set.** The harness captures and commits only the images that
+  `README.md`, `docs/` or `site-docs/` embed or link
+  (`scripts/product_proof_curation.py`, mirrored in
+  `ui/scripts/product-proof-curation.mjs`). Embedding a new capture in a doc
+  adds it to the set; removing the last reference means the file must be
+  deleted. Both directions fail `scripts/check_release_consistency.py`.
+- **Pull requests.** CI checks the manifest structure, the curated set and the
+  image files, but tolerates a stale capture-inputs digest, so a UI change does
+  not require a re-capture. Visual evidence for a PR is the Playwright
+  screenshots and report uploaded as the `ui-e2e-visual-evidence-*` workflow
+  artifacts (14-day retention).
+- **Release.** In the release-prep PR, run `npm run capture:product-proof` on
+  the release-candidate commit after every other change has merged, and commit
+  `docs/images`. The release workflow runs
+  `python scripts/check_release_consistency.py --release`, which fails unless
+  the recorded capture inputs and reference-lab binding match the tagged
+  source. Run the same command locally before tagging: the tag must equal the
+  `main` head, so a stale capture means another release-prep PR.
+
 ## Canonical capture environment
 
 1. Use a clean checkout of the intended release commit before tagging.
@@ -43,7 +66,7 @@ before replacing any published product image.
    Kubernetes, MCP, and identity source receipt before opening a browser. A
    stale, hand-edited, or source-divergent artifact stops capture.
 
-3. Inspect all 54 PNGs and the manifest at the final README display size. The
+3. Inspect all 26 PNGs and the manifest at the final README display size. The
    harness stages files and publishes them only after every page passes.
    README desktop captures use 1440×900; mobile captures use 390×844.
    Capture the application viewport directly. Do not crop, edit, or enlarge
@@ -88,29 +111,19 @@ deterministic public screenshot set.
 |---|---|---|---|
 | `dashboard-live.png` | `/?capture=1` (Overview) | Posture grade, unique findings breakdown, scope and freshness; secondary sections collapsed | Compact command-center frame |
 | `dashboard-paths-live.png` | `/?capture=1` (Overview) | Expanded Compliance & frameworks and Findings by security area | Readable framework evidence frame |
-| `cloud-accounts-live.png` | `/connections?capture=1` | Connections header and provider gallery across cloud, code, AI, and data | Onboarding surface |
-| `new-scan-live.png` | `/scan?capture=1` | New Scan modes — connected account, ad-hoc, public repo URL | Scan scope clarity |
 | `mesh-live.png` | `/mesh?capture=1` | Capture-mode scopes developer-copilot + sre-runbook-agent on shared filesystem MCP with path focus off and labeled edges | README mesh proof must differ from lineage: multi-agent shared server, not the same single CVE chain |
-| `gateway-policies-live.png` | `/runtime?tab=gateway&capture=1` | KPI rollup, enforcement posture, and recent tool-call evidence | Proves runtime gateway observability without a live proxy session during capture |
-| `security-graph-live.png` | `/security-graph?lens=attack-path&scan=scan-proof-ai-platform&capture=1` | Capture a prioritized synthetic attack path with graph evidence export and remediation handoff | Keeps the gallery fixture pinned to its own scan instead of inheriting a newer correlation snapshot |
-| `correlation-receipts-live.png` | `/security-graph?lens=attack-path&scan=reference-evidence-correlation-v1&correlation=1&capture=1` | Latest completed correlation selected automatically, leading with affected assets, path priority, real advisory, runtime state, and remediation action; receipt details and custom creation stay collapsed | Outcome proof generated from the reference lab rather than the synthetic graph fixture |
 | `graph-{cloud,repository,environment}-{dark,light}-live.png` | `/graph?lens=estate&rollup=0&capture=1`, then the named scope preset | Eleven or twelve entities from `ui/scripts/product-proof-scope-showcase.mjs`: published advisories, attack paths and severities derived from the fixture's own edges, true header counts, both themes | Fictional estate exercising each shipped preset; the harness checks advisories and path hops before capture; no live-cloud or execution claim |
 | `graph-relationship-{dark,light}-live.png` | `/graph?scan=reference-evidence-correlation-v1&layers=sourceFile,container,package,vulnerability&capture=1` | Five recorded entities: a repository pin, an image SBOM and a modeled workload resolving to `pillow@9.0.0` and KEV-listed CVE-2023-4863, with the advisory receipt open as structured fields | Real-parser correlation evidence in both themes; modeled infrastructure is labeled |
 | `correlation-graph-live.png` | `/graph?scan=reference-evidence-correlation-v1&path=top&capture=1`, with all eight path entity layers | Interactive reference-lab graph with the real advisory, modeled service and data asset, and remediation context | README graph proof; captured from the application, not an illustrated diagram |
 | `correlation-path-live.png` | `/security-graph?lens=attack-path&scan=reference-evidence-correlation-v1&cve=CVE-2023-4863&capture=1` | Confirmed real-advisory path with all eight hops visible, compact exact anchors, freshness, runtime proof, and inspectable per-hop receipts | Primary README path proof; modeled local infrastructure, never customer evidence |
-| `correlation-receipts-light-live.png` | `/security-graph?lens=attack-path&scan=reference-evidence-correlation-v1&correlation=1&capture=1` | Same reference-lab outcome-first decision surface in the light theme | Theme readability contract; not a separate evidence run |
-| `correlation-path-light-live.png` | `/security-graph?lens=attack-path&scan=reference-evidence-correlation-v1&cve=CVE-2023-4863&capture=1` | Same confirmed eight-node reference-lab path in the light theme | Theme readability contract; not a separate evidence run |
-| `correlation-receipts-mobile-live.png` | `/security-graph?lens=attack-path&scan=reference-evidence-correlation-v1&correlation=1&capture=1` | Reference-lab outcome and actions at 390 by 844 without horizontal overflow | Mobile readability contract; not a separate evidence run |
 | `correlation-path-mobile-live.png` | `/security-graph?lens=attack-path&scan=reference-evidence-correlation-v1&cve=CVE-2023-4863&capture=1` | Confirmed reference-lab path as readable sequential hops with inspectable evidence at 390 by 844 without horizontal overflow | Mobile readability contract; not a separate evidence run |
-| `investigation-canvas-current-1512x811.png` | `/security-graph?lens=estate&rollup=1&capture=1` | Observed current-state estate roll-up at 1512x811 | Locks the audited desktop viewport to the canonical graph snapshot and explicit completeness |
-| `investigation-canvas-proposed-1568x780.png` | `/security-graph?lens=estate&rollup=1&scenario=...&state=proposed&capture=1` | Modeled proposed-state comparison at 1568x780 | Keeps scenario evidence visibly distinct from observed or deployed truth |
-| `lineage-graph-live.png` | `/graph?capture=1&scan=scan-proof-ai-platform&path=top&layers=user,serviceAccount,role,agent,server,package,vulnerability` | Highest-risk directed sample path through identity, agent, GitHub MCP, explicit `next@` package, and DEMO-VULN | Keeps the seven-node path, six directed relationship labels, risk, freshness, and remediation action readable without mixing in the 31-node topology; gallery-only synthetic proof |
 | `context-map-live.png` | `/graph?lens=context&scan=scan-proof-ai-platform&capture=1` | developer-copilot scope with expanded package, advisory, tool and credential relationships | Recorded neighborhood with explicit historical scope |
 | `inventory-live.png` | `/inventory?capture=1` | Unified asset-kind roll-up with coverage language and non-empty package, MCP, agent, identity, container, and code cards | The Discover journey must show the cross-source inventory rather than one narrow collector |
-| `fleet-state-live.png` | `/fleet?capture=1` | Expanded quarantined agent row with owner, environment, and enforcement state | Shows environment and lifecycle state as control-plane evidence instead of implying the local scan alone owns review state |
-| `identity-audit-live.png` | `/audit?capture=1` | Identity-resource posture summary with auth, key, and tenant-quota panels | Shows the visible IAM posture frame from the deterministic capture fixture |
-| `dependency-map-live.png` | `/findings?capture=1` | Capture findings queue with seeded package and CVE evidence | Proves package/CVE posture from the same seeded demo estate |
 | `remediation-live.png` | `/remediation` | All frameworks tab | Shows the full prioritized fix list |
+| `dashboard-risks-live.png` | `/?capture=1` (Overview) | Top risks section expanded | Product tour risk frame |
+| `context-map-light-live.png` | `/graph?lens=context&scan=scan-proof-ai-platform&capture=1` | Same context neighborhood in the light theme | Gallery theme pair |
+| `component-{detail,findings,controls}-{dark,light}-live.png` | `/inventory/packages`, `/findings?asset=…`, `/compliance?asset=…` | On-demand component drawer, exact component findings and mapped controls marked not evaluated | Gallery component workflow |
+| `scan-agent-bom-live.png` | `/scan?id=scan-proof-ai-platform&capture=1` | Completed scan with an agent selected for BOM export | Scan evidence journey |
 
 ### Dashboard layout (current)
 
@@ -122,10 +135,6 @@ as two dashboard frames rather than one stitched full-page export:
    Compact Overview — posture grade, unique findings, scope, and freshness
 2. `dashboard-paths-live.png`
    Expanded Compliance & frameworks and Findings by security area
-3. `cloud-accounts-live.png`
-   Connected evidence sources with provider catalog
-4. `new-scan-live.png`
-   New Scan form with scope chips and public repo URL mode
 
 A capture set that misses either frame is incomplete. Re-shoot from the
 packaged UI at the standard viewport; use scrolling and disclosure controls
@@ -141,9 +150,9 @@ dark/light theme copies in the public README or Docker Hub description unless
 the section is specifically proving a theme bug fix. Do not publish a docs-only
 slide or card view in place of the graph screenshot.
 
-Retain `security-graph-live.png`, `lineage-graph-live.png`, and
-`context-map-live.png` as synthetic UI regression captures. The public scenario
-guide selects evidence from the reproducible reference lab instead.
+UI regression coverage lives in the Playwright suites, not in committed
+captures. A synthetic gallery capture is committed only while a doc embeds it.
+The public scenario guide selects evidence from the reproducible reference lab.
 
 For repeatable docs refreshes, use the deterministic Playwright harness from
 the UI package after the graph schema and UI build are current:
@@ -165,7 +174,7 @@ cd ui
 npm run build
 unset CAPTURE_BASE_URL
 npm run capture:product-proof
-# Inspect docs/images/security-graph-live.png (and lineage/mesh if chrome changed).
+# Inspect the refreshed graph captures (correlation, relationship, mesh).
 ```
 
 Do not commit replacement correlation hero views unless the lab generator check,
@@ -179,15 +188,16 @@ disclosure state. Desktop hero captures also enforce readability at README width
 
 The harness rejects `CAPTURE_BASE_URL` and starts the current local standalone
 production build. It routes the committed reference-lab artifact into the two
-correlation views and deterministic scan, fleet, gateway, IAM, environment,
-runtime, and package fixtures into the broader gallery. It fails on stale lab
-hashes, browser/network/API contract errors, or stale screenshot metadata and
-publishes the full set only after every capture succeeds. It is suitable for
+correlation views and deterministic scan, environment, runtime, and package
+fixtures into the broader gallery. It skips any target no doc embeds, fails on
+stale lab hashes, browser/network/API contract errors, stale screenshot
+metadata, or a doc reference it cannot capture, and publishes the curated set
+only after every capture succeeds. It is suitable for
 modeled local product proof, not for claiming buyer or live-cloud evidence.
 
-The capture harness must refresh every asset listed in
-`docs/images/product-screenshots.json`; adding a new manifest entry without a
-matching Playwright capture is a stale-evidence bug. Inspect each generated PNG
+The capture harness refreshes every curated asset and writes exactly those
+entries to `docs/images/product-screenshots.json`; a doc reference without a
+matching Playwright capture stops the run. Inspect each generated PNG
 at README scale before publishing: text must stay inside cards and controls,
 long identifiers must wrap or truncate, graph labels must remain legible, and no
 browser chrome, dev overlay, local path, or stale version stamp may be visible.
@@ -217,8 +227,8 @@ payload to the capture API. Keep the generated inventory, findings,
 relationships, and traversal shape intact, but use generic agent names in the
 visible UI.
 
-For `gateway-policies-live.png`, seed a policy into the capture store before
-capturing the route. Use trusted proxy auth only for the write calls, then
+To exercise the runtime gateway view in that backend smoke, seed a policy
+into the capture store before opening the route. Use trusted proxy auth only for the write calls, then
 restart `agent-bom serve` in local capture mode for the screenshot:
 
 ```bash
@@ -257,10 +267,9 @@ can land.
 
 The README embeds `correlation-graph-live.png` for the investigation graph;
 the scenario guide embeds `correlation-path-live.png` for its evidence drilldown.
-Do not repeat those images across both pages. Broader mesh, lineage, context,
-and synthetic vulnerability captures remain UI regression fixtures. Keep them
-in the generated set, but do not present their synthetic identifiers as real
-advisory or customer evidence. New public scenarios need reproducible source
+Do not repeat those images across both pages. Synthetic gallery captures
+such as mesh and context views must never present their synthetic identifiers
+as real advisory or customer evidence. New public scenarios need reproducible source
 artifacts before they become product proof.
 
 ## CLI recording

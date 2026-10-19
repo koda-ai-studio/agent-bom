@@ -819,6 +819,20 @@ jobs:
           cd ui
           npm run test:e2e
 
+      - name: Upload UI visual evidence
+        # Per-PR visual evidence: the screenshots the Playwright specs record,
+        # plus the HTML report when one is configured. Published product
+        # screenshots in docs/images are refreshed only at release time.
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ui-e2e-visual-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ui/test-results/**/*.png
+            ui/playwright-report/**
+          retention-days: 14
+          if-no-files-found: warn
+
       - name: Retain UI failure diagnostics
         if: ${{ failure() || cancelled() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

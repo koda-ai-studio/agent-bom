@@ -13,6 +13,7 @@ import { assertCaptureSnapshotScope, graphResponseWithPagination } from "./produ
 import { waitForOwnedServer } from "./product-proof-server.mjs";
 import { runGraphQualityCapture } from "./graph-quality-capture.mjs";
 import { captureSourceProvenance } from "./product-proof-provenance.mjs";
+import { curatedCaptureNames } from "./product-proof-curation.mjs";
 import {
   SCOPE_SHOWCASE_PRESETS,
   buildScopeShowcase as buildScopeShowcaseFixture,
@@ -123,6 +124,9 @@ if (baseUrlFromEnv) {
 const PORT = Number(process.env.CAPTURE_PORT || "3137");
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 let captureOutputDir = IMAGE_DIR;
+// Only images the published docs embed are captured and committed.
+const CURATED_CAPTURES = new Set(await curatedCaptureNames(REPO_ROOT));
+const capturedFiles = new Set();
 
 async function screenshotSha256(filePath) {
   const digest = createHash("sha256").update(await fs.readFile(filePath)).digest("hex");
@@ -2431,6 +2435,10 @@ const README_CAPTURE_FILES = new Set([
 ]);
 
 async function capture(page, urlPath, filename, beforeShot, options = {}) {
+  if (!CURATED_CAPTURES.has(filename)) {
+    console.log(`skipped ${filename} (no doc references it)`);
+    return;
+  }
   if (README_CAPTURE_FILES.has(filename)) {
     // Keep the compact README hero and the full-width tour captures deterministic.
     const width = filename.startsWith("context-map-horizontal-") ? 1000 : 1440;
@@ -2861,6 +2869,7 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
       await page.locator(options.readySelector).first().waitFor({ state: "visible", timeout: 30_000 });
     }
     await page.screenshot({ path: path.join(captureOutputDir, filename), fullPage: false, animations: "disabled" });
+    capturedFiles.add(filename);
     console.log(`captured ${filename}`);
   } catch (error) {
     const failureDir = await fs.mkdtemp(path.join(os.tmpdir(), "agent-bom-capture-failure-"));
@@ -3127,8 +3136,13 @@ async function writeScreenshotManifest(outputDir = IMAGE_DIR) {
       presentation: "dark mobile",
     },
   ];
+  const curatedEntries = screenshotEntries.filter((entry) => CURATED_CAPTURES.has(entry.path));
+  const uncaptured = [...CURATED_CAPTURES].filter((name) => !capturedFiles.has(name) || !curatedEntries.some((entry) => entry.path === name));
+  if (uncaptured.length > 0) {
+    throw new Error(`Docs reference product captures this script does not produce: ${uncaptured.join(", ")}`);
+  }
   const screenshots = await Promise.all(
-    screenshotEntries.map(async (entry) => ({
+    curatedEntries.map(async (entry) => ({
       presentation: `${CAPTURE_THEME} desktop`,
       ...entry,
       visible_version: RELEASE_VERSION,

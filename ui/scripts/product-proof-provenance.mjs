@@ -2,10 +2,10 @@
 // hashing logic, used by:
 //   - capture-product-proof.mjs (the real capture run — bundles this digest
 //     with source_commit/source_tree from that run)
-//   - refresh-capture-inputs-digest.mjs (recomputes ONLY the digest, for when
-//     the counted input set changes but no screenshot needs re-capturing)
 //   - scripts/check_release_consistency.py (a byte-for-byte Python mirror of
-//     this same algorithm — keep both in sync on any change here)
+//     this same algorithm — keep both in sync on any change here). Its
+//     --release mode requires the recorded digest to be current, so the only
+//     way to refresh it is a real capture run.
 //
 // Preserve build dependencies and resolved versions; exclude only Node types.
 import { execFile } from "node:child_process";
@@ -32,6 +32,7 @@ export const PRODUCT_SCREENSHOT_INPUTS = [
   "ui/scripts/product-proof-scope-showcase.mjs",
   "ui/scripts/product-proof-server.mjs",
   "ui/scripts/product-proof-provenance.mjs",
+  "ui/scripts/product-proof-curation.mjs",
   "examples/reference-evidence-lab",
   "scripts/generate_reference_evidence_lab.py",
   "src/agent_bom/graph",

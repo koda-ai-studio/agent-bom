@@ -22,7 +22,9 @@ ROOT = Path(__file__).resolve().parents[1]
 _MIRRORED_PATHS = (
     *check_release_consistency.PRODUCT_SCREENSHOT_INPUTS,
     "ui",
-    "docs/images",
+    "README.md",
+    "docs",
+    "site-docs",
 )
 
 
@@ -120,17 +122,12 @@ def test_release_workflow_promotes_candidate_only_in_external_storefront_render(
     assert 'DESCRIPTION=$(jq -Rs . < "$PUBLISHED_README")' in workflow
 
 
-def test_release_manifest_covers_dark_light_and_mobile_product_proof() -> None:
+def test_release_manifest_covers_dark_and_light_product_proof() -> None:
     manifest = json.loads((ROOT / "docs/images/product-screenshots.json").read_text(encoding="utf-8"))
     entries = {entry["path"]: entry for entry in manifest["screenshots"]}
 
     required = {
         "dashboard-live.png": "dark desktop",
-        "dashboard-light-live.png": "light desktop",
-        "dashboard-mobile-live.png": "dark mobile",
-        "security-graph-live.png": "dark desktop",
-        "security-graph-light-live.png": "light desktop",
-        "security-graph-mobile-live.png": "dark mobile",
         "graph-cloud-dark-live.png": "dark desktop",
         "graph-cloud-light-live.png": "light desktop",
         "graph-repository-dark-live.png": "dark desktop",
@@ -139,6 +136,7 @@ def test_release_manifest_covers_dark_light_and_mobile_product_proof() -> None:
         "graph-environment-light-live.png": "light desktop",
         "graph-relationship-dark-live.png": "dark desktop",
         "graph-relationship-light-live.png": "light desktop",
+        "correlation-path-mobile-live.png": "dark mobile",
     }
     for path, presentation in required.items():
         assert path in entries
@@ -166,18 +164,16 @@ def test_release_manifest_carries_reproducible_sanitized_provenance() -> None:
 
     paths = {entry["path"] for entry in manifest["screenshots"]}
     entries = {entry["path"]: entry for entry in manifest["screenshots"]}
-    assert {"agent-lifecycle-live.png", "jobs-pipeline-live.png"} <= paths
-    assert {"correlation-receipts-live.png", "correlation-path-live.png"} <= paths
-    assert {"remediation-live.png", "remediation-light-live.png", "remediation-mobile-live.png"} <= paths
+    assert {"correlation-path-live.png", "correlation-graph-live.png", "remediation-live.png"} <= paths
 
-    lab_digest = (ROOT / "examples/reference-evidence-lab/generated/correlation-proof.sha256").read_text(encoding="utf-8").strip()
     for path in (
-        "correlation-receipts-live.png",
         "correlation-path-live.png",
+        "correlation-path-mobile-live.png",
+        "correlation-graph-live.png",
         "graph-relationship-dark-live.png",
         "graph-relationship-light-live.png",
     ):
-        assert entries[path]["evidence_sha256"] == lab_digest
+        assert re.fullmatch(r"sha256:[0-9a-f]{64}", entries[path]["evidence_sha256"])
         assert entries[path]["correlation_manifest_sha256"].startswith("sha256:")
 
 
@@ -195,8 +191,16 @@ def test_release_manifest_rejects_a_future_visible_version(
     assert "newer than the release" in capsys.readouterr().err
 
 
+def _manifest_with(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, **overrides: object) -> None:
+    manifest = json.loads((ROOT / "docs/images/product-screenshots.json").read_text(encoding="utf-8"))
+    manifest.update(overrides)
+    candidate = tmp_path / "product-screenshots.json"
+    candidate.write_text(json.dumps(manifest), encoding="utf-8")
+    monkeypatch.setattr(check_release_consistency, "PRODUCT_SCREENSHOTS", candidate)
+
+
 @pytest.mark.parametrize("different_owner", [False, True])
-def test_release_manifest_rejects_capture_input_hash_mismatch(
+def test_release_mode_rejects_capture_input_hash_mismatch(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str], different_owner: bool
 ) -> None:
     if different_owner:
@@ -205,15 +209,64 @@ def test_release_manifest_rejects_capture_input_hash_mismatch(
         monkeypatch.setenv("GIT_TEST_ASSUME_DIFFERENT_OWNER", "1")
         monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(tmp_path / "empty-git-config"))
         monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
-    manifest = json.loads((ROOT / "docs/images/product-screenshots.json").read_text(encoding="utf-8"))
-    manifest["capture_inputs_sha256"] = f"sha256:{'0' * 64}"
-    candidate = tmp_path / "product-screenshots.json"
-    candidate.write_text(json.dumps(manifest), encoding="utf-8")
-    monkeypatch.setattr(check_release_consistency, "PRODUCT_SCREENSHOTS", candidate)
+    _manifest_with(tmp_path, monkeypatch, capture_inputs_sha256=f"sha256:{'0' * 64}")
 
     with pytest.raises(SystemExit):
-        check_release_consistency._assert_product_screenshots_current(check_release_consistency._load_version())
+        check_release_consistency._assert_product_screenshots_current(check_release_consistency._load_version(), release=True)
     assert "capture inputs changed" in capsys.readouterr().err
+
+
+def test_pr_mode_tolerates_a_stale_capture_input_digest(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Screenshots refresh at release time; an ordinary UI change must not force a re-capture."""
+    _manifest_with(tmp_path, monkeypatch, capture_inputs_sha256=f"sha256:{'0' * 64}")
+    check_release_consistency._assert_product_screenshots_current(check_release_consistency._load_version())
+
+
+def test_release_mode_rejects_proof_bound_to_a_stale_reference_lab(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    manifest = json.loads((ROOT / "docs/images/product-screenshots.json").read_text(encoding="utf-8"))
+    for entry in manifest["screenshots"]:
+        if "evidence_sha256" in entry:
+            entry["evidence_sha256"] = f"sha256:{'1' * 64}"
+    current = check_release_consistency._compute_product_screenshot_inputs_digest()
+    _manifest_with(tmp_path, monkeypatch, screenshots=manifest["screenshots"], capture_inputs_sha256=current)
+    version = check_release_consistency._load_version()
+
+    check_release_consistency._assert_product_screenshots_current(version)  # PR mode: structure only
+    with pytest.raises(SystemExit):
+        check_release_consistency._assert_product_screenshots_current(version, release=True)
+    assert "not bound to the current reference lab artifact" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("release", [False, True])
+def test_both_modes_reject_a_manifest_that_drifts_from_the_curated_set(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str], release: bool
+) -> None:
+    manifest = json.loads((ROOT / "docs/images/product-screenshots.json").read_text(encoding="utf-8"))
+    _manifest_with(tmp_path, monkeypatch, screenshots=manifest["screenshots"][1:])
+
+    with pytest.raises(SystemExit):
+        check_release_consistency._assert_product_screenshots_current(check_release_consistency._load_version(), release=release)
+    assert "curated docs set" in capsys.readouterr().err
+
+
+def test_release_flag_selects_strict_mode(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[bool] = []
+    monkeypatch.setattr(check_release_consistency, "_check", lambda *, release: seen.append(release) or 0)
+    assert check_release_consistency.main([]) == 0
+    assert check_release_consistency.main(["--release"]) == 0
+    assert seen == [False, True]
+
+
+def test_release_gate_and_post_publish_capture_run_the_strict_mode() -> None:
+    workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+    gate = workflow.split("name: Verify release consistency map", 1)[1].split("- name:", 1)[0]
+    assert "python scripts/check_release_consistency.py --release" in gate
+    pins = workflow.split("npm run capture:product-proof\n", 1)[1]
+    assert pins.splitlines()[1].strip() == "python scripts/check_release_consistency.py --release"
+    ci = (ROOT / ".github/workflows/ci.yml").read_text(encoding="utf-8")
+    assert "check_release_consistency.py --release" not in ci
 
 
 def test_capture_runbook_matches_the_local_authenticated_release_workflow() -> None:
@@ -253,6 +306,20 @@ def test_floating_refresh_preserves_published_storefront_status() -> None:
 # ---------------------------------------------------------------------------
 
 
+@contextlib.contextmanager
+def _mirror_proof_current(mirror: Path) -> Iterator[None]:
+    """Record the mirror's own digest so release mode isolates the mutation under test."""
+    digest = check_release_consistency._compute_product_screenshot_inputs_digest()
+
+    def pin(original: bytes) -> bytes:
+        data = json.loads(original)
+        data["capture_inputs_sha256"] = digest
+        return json.dumps(data).encode("utf-8")
+
+    with _mutate_repo_file(mirror / "docs" / "images" / "product-screenshots.json", pin):
+        yield
+
+
 def test_capture_input_digest_ignores_a_dev_dependency_only_package_json_bump(mirror: Path) -> None:
     package_json = mirror / "ui" / "package.json"
     before = check_release_consistency._compute_product_screenshot_inputs_digest()
@@ -267,8 +334,8 @@ def test_assert_product_screenshots_current_tolerates_a_dev_dependency_only_bump
     """End-to-end repro of PR #5319: a devDependency bump must not fail the gate."""
     package_json = mirror / "ui" / "package.json"
     version = check_release_consistency._load_version()
-    with _mutate_repo_file(package_json, _bump_json_string_field("devDependencies", "@types/node")):
-        check_release_consistency._assert_product_screenshots_current(version)  # must not raise
+    with _mirror_proof_current(mirror), _mutate_repo_file(package_json, _bump_json_string_field("devDependencies", "@types/node")):
+        check_release_consistency._assert_product_screenshots_current(version, release=True)  # must not raise
 
 
 def test_capture_input_digest_still_moves_for_a_direct_dependency_bump(mirror: Path) -> None:
@@ -286,9 +353,9 @@ def test_assert_product_screenshots_current_still_rejects_a_direct_dependency_bu
 ) -> None:
     package_json = mirror / "ui" / "package.json"
     version = check_release_consistency._load_version()
-    with _mutate_repo_file(package_json, _bump_json_string_field("dependencies", "next")):
+    with _mirror_proof_current(mirror), _mutate_repo_file(package_json, _bump_json_string_field("dependencies", "next")):
         with pytest.raises(SystemExit):
-            check_release_consistency._assert_product_screenshots_current(version)
+            check_release_consistency._assert_product_screenshots_current(version, release=True)
     assert "capture inputs changed" in capsys.readouterr().err
 
 
@@ -376,14 +443,6 @@ def test_capture_input_digest_matches_the_javascript_mirror() -> None:
         text=True,
     )
     assert result.stdout.strip() == python_digest
-
-
-def test_release_manifest_capture_inputs_digest_is_current() -> None:
-    """The committed manifest's capture_inputs_sha256 must already reflect the
-    narrowed input scope — regenerated via `npm run capture:inputs-digest`,
-    never hand-edited."""
-    manifest = json.loads((ROOT / "docs/images/product-screenshots.json").read_text(encoding="utf-8"))
-    assert manifest["capture_inputs_sha256"] == check_release_consistency._compute_product_screenshot_inputs_digest()
 
 
 @pytest.mark.parametrize(

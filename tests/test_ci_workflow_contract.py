@@ -895,12 +895,26 @@ def test_postgres_contract_suites_are_arguments_to_one_pytest_invocation() -> No
     assert "tests/test_jobs_dispatch_postgres.py" in arguments
 
 
+def test_ui_e2e_uploads_visual_evidence_on_every_run() -> None:
+    """Per-PR screenshots ship as short-lived artifacts instead of committed PNGs."""
+    steps = _ci()["jobs"]["ui-e2e"]["steps"]
+    upload = next(step for step in steps if step.get("name") == "Upload UI visual evidence")
+    diagnostics = next(step for step in steps if step.get("name") == "Retain UI failure diagnostics")
+    assert upload["uses"] == diagnostics["uses"], "pin the same upload-artifact SHA the repo already uses"
+    assert upload["if"].replace(" ", "") == "${{always()}}"
+    assert steps.index(upload) > next(index for index, step in enumerate(steps) if step.get("name") == "UI E2E")
+    assert set(upload["with"]["path"].splitlines()) == {"ui/test-results/**/*.png", "ui/playwright-report/**"}
+    assert 0 < upload["with"]["retention-days"] <= 14
+    assert "github.run_attempt" in upload["with"]["name"]
+
+
 def test_ui_first_failure_diagnostics_survive_without_retries() -> None:
     job = _ci()["jobs"]["ui-e2e"]
     steps = job["steps"]
     uploads = [step for step in steps if str(step.get("uses", "")).startswith("actions/upload-artifact@")]
-    assert len(uploads) == 1, "Retain first-attempt browser failures before the runner disappears"
-    upload = uploads[0]
+    diagnostics = [step for step in uploads if step.get("name") == "Retain UI failure diagnostics"]
+    assert len(diagnostics) == 1, "Retain first-attempt browser failures before the runner disappears"
+    upload = diagnostics[0]
     assert "failure()" in upload["if"] and "cancelled()" in upload["if"]
     assert steps.index(upload) > next(index for index, step in enumerate(steps) if step.get("name") == "UI E2E")
     assert upload["with"]["retention-days"] <= 3

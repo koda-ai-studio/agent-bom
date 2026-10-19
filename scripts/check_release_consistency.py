@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import ast
 import hashlib
 import json
@@ -15,6 +16,7 @@ from typing import NoReturn
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import check_version_alignment as cva  # noqa: E402
+import product_proof_curation  # noqa: E402
 from check_mcp_registry_identity import check_local_identity  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -43,6 +45,7 @@ PRODUCT_SCREENSHOT_INPUTS = (
     "ui/scripts/product-proof-scope-showcase.mjs",
     "ui/scripts/product-proof-server.mjs",
     "ui/scripts/product-proof-provenance.mjs",
+    "ui/scripts/product-proof-curation.mjs",
     "examples/reference-evidence-lab",
     "scripts/generate_reference_evidence_lab.py",
     "src/agent_bom/graph",
@@ -370,79 +373,95 @@ def _compute_product_screenshot_inputs_digest() -> str:
     return f"sha256:{digest.hexdigest()}"
 
 
-def _assert_product_screenshots_current(expected_version: str) -> None:
+def _load_product_screenshot_manifest() -> dict:
     if not PRODUCT_SCREENSHOTS.exists():
         _fail("docs/images/product-screenshots.json is missing from release surface")
     try:
         manifest = json.loads(PRODUCT_SCREENSHOTS.read_text())
     except json.JSONDecodeError as exc:
         _fail(f"docs/images/product-screenshots.json is invalid JSON: {exc}")
+    screenshots = manifest.get("screenshots")
+    if not isinstance(screenshots, list) or not all(isinstance(entry, dict) for entry in screenshots):
+        _fail("docs/images/product-screenshots.json must contain a list of screenshot objects")
+    return manifest
 
-    if manifest.get("release_version") != expected_version:
-        _fail(f"docs/images/product-screenshots.json has stale release_version: {manifest.get('release_version')!r} != {expected_version}")
 
+def _assert_product_proof_curated(screenshots: list[dict]) -> None:
+    """The committed captures are exactly the images the published docs embed."""
+    dangling = product_proof_curation.dangling_references(ROOT)
+    if dangling:
+        _fail(f"docs reference images that do not exist: {dangling}")
+    orphans = product_proof_curation.orphan_captures(ROOT)
+    if orphans:
+        _fail(f"committed product captures that no doc references (delete them): {orphans}")
+    curated = set(product_proof_curation.curated_capture_names(ROOT))
+    paths = {entry.get("path") for entry in screenshots}
+    if paths != curated:
+        _fail(
+            "docs/images/product-screenshots.json does not match the curated docs set: "
+            f"missing={sorted(curated - paths)}, unreferenced={sorted(str(p) for p in paths - curated)}. "
+            "Run `npm run capture:product-proof` in ui/."
+        )
+
+
+def _assert_screenshot_entry(entry: dict, expected_parts: tuple[int, ...], expected_version: str) -> None:
+    rel_path = entry.get("path")
+    if not isinstance(rel_path, str):
+        _fail("docs/images/product-screenshots.json screenshot entry is missing path")
+    for field in ("page", "scope"):
+        value = entry.get(field)
+        if not isinstance(value, str) or not value:
+            _fail(f"docs/images/{rel_path} manifest entry is missing {field}")
+    if not (ROOT / "docs" / "images" / rel_path).exists():
+        _fail(f"docs/images/product-screenshots.json references missing image: docs/images/{rel_path}")
+    if "evidence_sha256" in entry:
+        manifest_hash = entry.get("correlation_manifest_sha256")
+        if not isinstance(manifest_hash, str) or re.fullmatch(r"sha256:[0-9a-f]{64}", manifest_hash) is None:
+            _fail(f"docs/images/{rel_path} is missing the correlation manifest hash")
+    visible_version = entry.get("visible_version")
+    if not isinstance(visible_version, str) or re.fullmatch(r"\d+\.\d+\.\d+", visible_version) is None:
+        _fail(f"docs/images/{rel_path} manifest visible_version is not semantic version text: {visible_version!r}")
+    # A screenshot is immutable evidence bound by its recorded SHA-256. Its
+    # visible version describes what is actually in those bytes and must not
+    # be rewritten during a later release bump. It may therefore trail the
+    # release that still embeds it, but it can never claim a future version.
+    if tuple(int(part) for part in visible_version.split(".")) > expected_parts:
+        _fail(f"docs/images/{rel_path} manifest visible_version is newer than the release: {visible_version!r} > {expected_version}")
+
+
+def _assert_product_proof_fresh(manifest: dict) -> None:
+    """Release-only: the committed captures were taken from this exact source."""
     source_commit = manifest.get("source_commit")
     if not isinstance(source_commit, str) or re.fullmatch(r"[0-9a-f]{40}", source_commit) is None:
         _fail("docs/images/product-screenshots.json source_commit must be a full lowercase Git SHA")
-    expected_input_digest = _compute_product_screenshot_inputs_digest()
-    if manifest.get("capture_inputs_sha256") != expected_input_digest:
-        _fail("docs/images/product-screenshots.json capture inputs changed after the recorded product proof")
-
-    required = {
-        "dashboard-live.png",
-        "dashboard-paths-live.png",
-        "mesh-live.png",
-        "security-graph-live.png",
-        "correlation-receipts-live.png",
-        "correlation-path-live.png",
-        "lineage-graph-live.png",
-        "dependency-map-live.png",
-        "remediation-live.png",
-    }
-    screenshots = manifest.get("screenshots")
-    if not isinstance(screenshots, list):
-        _fail("docs/images/product-screenshots.json must contain a screenshots list")
-    paths = {entry.get("path") for entry in screenshots if isinstance(entry, dict)}
-    missing = sorted(required - paths)
-    if missing:
-        _fail(f"docs/images/product-screenshots.json is missing screenshot entries: {missing}")
-
+    if manifest.get("capture_inputs_sha256") != _compute_product_screenshot_inputs_digest():
+        _fail(
+            "docs/images/product-screenshots.json capture inputs changed after the recorded product proof; "
+            "run `npm run capture:product-proof` in ui/ on the release-candidate commit"
+        )
     lab_digest = REFERENCE_LAB_DIGEST.read_text(encoding="utf-8").strip()
-    by_path = {entry.get("path"): entry for entry in screenshots if isinstance(entry, dict)}
-    for lab_path in ("correlation-receipts-live.png", "correlation-path-live.png"):
-        entry = by_path[lab_path]
-        if entry.get("evidence_sha256") != lab_digest:
-            _fail(f"docs/images/{lab_path} is not bound to the current reference lab artifact")
-        manifest_hash = entry.get("correlation_manifest_sha256")
-        if not isinstance(manifest_hash, str) or re.fullmatch(r"sha256:[0-9a-f]{64}", manifest_hash) is None:
-            _fail(f"docs/images/{lab_path} is missing the correlation manifest hash")
+    for entry in manifest["screenshots"]:
+        if "evidence_sha256" in entry and entry.get("evidence_sha256") != lab_digest:
+            _fail(f"docs/images/{entry.get('path')} is not bound to the current reference lab artifact")
 
+
+def _assert_product_screenshots_current(expected_version: str, *, release: bool = False) -> None:
+    """Check the product-proof manifest.
+
+    Every mode checks structure and the curated set. Only ``release`` requires
+    the captures to match the current render inputs: screenshots are refreshed
+    once per release, not on every UI change.
+    """
+    manifest = _load_product_screenshot_manifest()
+    if manifest.get("release_version") != expected_version:
+        _fail(f"docs/images/product-screenshots.json has stale release_version: {manifest.get('release_version')!r} != {expected_version}")
+    screenshots = manifest["screenshots"]
+    _assert_product_proof_curated(screenshots)
     expected_parts = tuple(int(part) for part in expected_version.split("."))
     for entry in screenshots:
-        if not isinstance(entry, dict):
-            _fail("docs/images/product-screenshots.json screenshots entries must be objects")
-        rel_path = entry.get("path")
-        if not isinstance(rel_path, str):
-            _fail("docs/images/product-screenshots.json screenshot entry is missing path")
-        page = entry.get("page")
-        if not isinstance(page, str) or not page:
-            _fail(f"docs/images/{rel_path} manifest entry is missing page")
-        scope = entry.get("scope")
-        if not isinstance(scope, str) or not scope:
-            _fail(f"docs/images/{rel_path} manifest entry is missing scope")
-        image = ROOT / "docs" / "images" / rel_path
-        if not image.exists():
-            _fail(f"docs/images/product-screenshots.json references missing image: docs/images/{rel_path}")
-        visible_version = entry.get("visible_version")
-        if not isinstance(visible_version, str) or re.fullmatch(r"\d+\.\d+\.\d+", visible_version) is None:
-            _fail(f"docs/images/{rel_path} manifest visible_version is not semantic version text: {visible_version!r}")
-        # A screenshot is immutable evidence bound by its recorded SHA-256. Its
-        # visible version describes what is actually in those bytes and must not
-        # be rewritten during a later release bump. It may therefore trail the
-        # release that still embeds it, but it can never claim a future version.
-        visible_parts = tuple(int(part) for part in visible_version.split("."))
-        if visible_parts > expected_parts:
-            _fail(f"docs/images/{rel_path} manifest visible_version is newer than the release: {visible_version!r} > {expected_version}")
+        _assert_screenshot_entry(entry, expected_parts, expected_version)
+    if release:
+        _assert_product_proof_fresh(manifest)
 
 
 # Sweep entries whose image pins follow the source/published split owned by
@@ -486,7 +505,18 @@ def _assert_no_unmanaged_version_drift(version: str) -> None:
         )
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--release",
+        action="store_true",
+        help="also require product screenshots captured from the current render inputs (release gate)",
+    )
+    args = parser.parse_args(argv)
+    return _check(release=args.release)
+
+
+def _check(*, release: bool) -> int:
     try:
         registry_manifest = check_local_identity(ROOT)
     except (OSError, ValueError, KeyError, TypeError) as exc:
@@ -547,7 +577,7 @@ def main() -> int:
         _fail("docs/demo.tape must render to docs/images/demo-latest.gif")
     if not DEMO_LATEST.exists():
         _fail("docs/images/demo-latest.gif is missing")
-    _assert_product_screenshots_current(version)
+    _assert_product_screenshots_current(version, release=release)
     stale_path_markers = [
         "npx @mcp/server-filesystem /tmp",
         "npx -y @modelcontextprotocol/server-filesystem /tmp",
@@ -711,7 +741,8 @@ def main() -> int:
             "Run scripts/bump-version.py to refresh both fields together."
         )
 
-    print("README/PyPI/docs release consistency checks passed")
+    mode = "release" if release else "pull-request"
+    print(f"README/PyPI/docs release consistency checks passed ({mode} mode)")
     return 0
 
 

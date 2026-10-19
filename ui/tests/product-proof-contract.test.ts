@@ -14,6 +14,16 @@ describe("product proof capture contract", () => {
     expect(source.indexOf("await waitForOwnedServer(BASE_URL, server)")).toBeLessThan(source.indexOf("browser = await chromium.launch()"));
   });
 
+  it("captures and records only the images the published docs embed", () => {
+    expect(source).toContain('import { curatedCaptureNames } from "./product-proof-curation.mjs"');
+    expect(source).toContain("const CURATED_CAPTURES = new Set(await curatedCaptureNames(REPO_ROOT))");
+    const captureBody = source.slice(source.indexOf("async function capture("));
+    expect(captureBody.indexOf("if (!CURATED_CAPTURES.has(filename))")).toBeLessThan(captureBody.indexOf("page.clock.setFixedTime"));
+    expect(source).toContain("screenshotEntries.filter((entry) => CURATED_CAPTURES.has(entry.path))");
+    expect(source).toContain("Docs reference product captures this script does not produce");
+    expect(provenanceSource).toContain('"ui/scripts/product-proof-curation.mjs"');
+  });
+
   it("scopes capture inputs to paths that can affect a rendered pixel, not the whole ui/ tree", () => {
     // Regression guard for a devDependency-only bump (e.g. @types/node) no
     // longer re-tripping release CI: PRODUCT_SCREENSHOT_INPUTS must be a

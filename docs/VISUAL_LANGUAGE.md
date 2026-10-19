@@ -117,21 +117,19 @@ Current SVG inventory:
 | `blast-radius-{light,dark}.svg` | CVE, package, MCP server, agent, credentials, and tools in one blast-radius path | README "What Is agent-bom", collapsed drilldown |
 | `demo-latest.gif` | Terminal demo (1100×1000; compressed, exact size may change per render) | "Try the demo" |
 
-Current PNG inventory:
+Current PNG inventory: the product captures are exactly the images a doc
+embeds, listed in `docs/images/product-screenshots.json` and refreshed once per
+release (see [`CAPTURE.md`](CAPTURE.md#when-to-capture)). Representative files:
 
-| File | What it shows | Where it lives in the README |
+| File | What it shows | Where it lives |
 |---|---|---|
-| `dashboard-live.png` | Packaged Next.js posture, unique findings, coverage, and operations overview | Product views |
-| `dashboard-paths-live.png` | Packaged Next.js exposure paths, recent scans, and activity | Product views |
-| `mesh-live.png` | Focused agent → MCP server → package → finding path | Product views |
-| `security-graph-live.png` | Fix-first attack-path queue with export controls and remediation handoff | Product views |
-| `lineage-graph-live.png` | Focused filtered attack-path lineage across agent, MCP, package, and finding nodes | Product views |
-| `context-map-live.png` | Focused lateral context map with MCP reachability, shared infrastructure, credentials, tools, and findings | Product views |
-| `inventory-live.png` | Unified cross-source asset inventory with explicit evidence coverage | Product views |
-| `fleet-state-live.png` | Fleet lifecycle review state with owner, environment, trust factors, and quarantine context | Product views |
-| `gateway-policies-live.png` | Runtime gateway posture with enforcement, firewall decisions, policy rules, and bound agents | Product views |
-| `dependency-map-live.png` | Findings queue with seeded package and fictional vulnerability evidence | Product views |
-| `remediation-live.png` | Fix-first remediation surface | Product views |
+| `graph-{environment,relationship,repository,cloud}-{dark,light}-live.png` | Graph scope presets and the reference-lab relationship receipt | README product views |
+| `dashboard-live.png` | Packaged Next.js posture, unique findings, coverage, and operations overview | Product tour, Docker Hub, PyPI |
+| `dashboard-paths-live.png` | Packaged Next.js compliance and security-area breakdown | Product tour, Docker Hub |
+| `mesh-live.png` | Focused agent → MCP server → package → finding path | Docker Hub, deployment overview |
+| `context-map-live.png` | Focused lateral context map with MCP reachability, shared infrastructure, credentials, tools, and findings | Gallery |
+| `inventory-live.png` | Unified cross-source asset inventory with explicit evidence coverage | Product tour |
+| `remediation-live.png` | Fix-first remediation surface | Product tour, deployment overview |
 
 Public README, Docker Hub, and marketplace screenshots should not duplicate the
 same graph in dark and light themes. Use one focused, readable product capture

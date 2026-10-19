@@ -1000,7 +1000,10 @@ jobs:
         run: uv sync --frozen --extra dev
 
       - name: Verify release consistency map
-        run: python scripts/check_release_consistency.py
+        # Strict: the committed product screenshots must have been captured
+        # from this exact tagged source (release-prep PR runs
+        # `npm run capture:product-proof`). PR CI only checks their structure.
+        run: python scripts/check_release_consistency.py --release
 
       - name: Verify release evidence matrix
         run: python scripts/check_release_evidence_matrix.py
@@ -1487,7 +1490,7 @@ jobs:
             npm run build
             npm run capture:product-proof
           )
-          python scripts/check_release_consistency.py
+          python scripts/check_release_consistency.py --release
           git add docs/images
           git commit -S -m "docs(release): refresh product proof for ${TAG} published pins"
           git push --force-with-lease origin "$BRANCH"

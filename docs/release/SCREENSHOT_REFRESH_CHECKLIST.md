@@ -14,26 +14,31 @@ protocol in [`docs/CAPTURE.md`](../CAPTURE.md) into a PR-ready release gate.
 - Keep local workstation discovery, private tenants, and customer data out of
   the capture database.
 
+## When
+
+Refresh once per release, in the release-prep PR, after every other change for
+the release has merged. Ordinary PRs do not re-capture: PR CI tolerates a stale
+capture-inputs digest and attaches Playwright screenshots as workflow artifacts
+instead. The release workflow runs
+`python scripts/check_release_consistency.py --release` and fails unless the
+committed set was captured from the tagged source. The tag must equal the
+`main` head, so merge the release-prep PR last.
+
 ## Capture Set
 
-Refresh all images listed in `docs/images/product-screenshots.json` unless the
-PR clearly explains why an asset is unchanged.
+`npm run capture:product-proof` captures exactly the images that `README.md`,
+`docs/` and `site-docs/` embed, and writes those entries to
+`docs/images/product-screenshots.json`. To add a screenshot, embed it in a doc
+and capture; to retire one, remove its last reference and delete the file.
 
 | Asset | Required proof |
 |---|---|
 | `dashboard-live.png` | Overview top frame with visible version, posture grade, unique findings, scan coverage, and operational lanes. |
 | `dashboard-paths-live.png` | Overview with Compliance & frameworks and Findings by security area expanded. |
 | `mesh-live.png` | Focused active agent → MCP server → package → finding path with title, legend, and no large empty canvas. |
-| `security-graph-live.png` | Prioritized attack path with graph evidence export and remediation handoff. |
-| `lineage-graph-live.png` | Focused filtered attack-path lineage across agent, MCP server, package, and finding nodes. |
 | `context-map-live.png` | Lateral context view with selected agent scope, reachable tools, shared infrastructure, and evidence metadata. |
 | `component-{detail,findings,controls}-{dark,light}-live.png` | On-demand component drawer, exact component/scope navigation, visible source limits, and mapped controls marked not evaluated. |
-| `component-detail-mobile-{dark,light}-live.png` | Full-width mobile drawer with readable identity, severity, findings, close action, and collapsed secondary details. |
 | `inventory-live.png` | Unified asset-kind roll-up with explicit evidence coverage and non-empty discovered asset cards. |
-| `fleet-state-live.png` | Fleet lifecycle review state with owner, environment, trust factors, and quarantine context. |
-| `gateway-policies-live.png` | Runtime gateway posture with enforcement, firewall decisions, policy rules, and bound agents. |
-| `identity-audit-live.png` | Auth, key lifecycle, tenant boundaries, and audit log evidence without overflowing cards. |
-| `dependency-map-live.png` | Findings queue with seeded package and fictional vulnerability evidence. |
 | `remediation-live.png` | Fix-first remediation table with prioritized packages and framework context. |
 
 ## Manifest
@@ -74,7 +79,7 @@ Before opening the PR, inspect every refreshed image:
 Run these checks before pushing:
 
 ```bash
-uv run python scripts/check_release_consistency.py
+uv run python scripts/check_release_consistency.py --release
 git diff --check
 ```
 
