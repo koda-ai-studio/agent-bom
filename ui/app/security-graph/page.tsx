@@ -921,7 +921,7 @@ function AttackPathInvestigationContent() {
           />
           {pinnedNodeId ? (
             <span className="text-xs text-[color:var(--text-tertiary)]">
-              Pinned {pinnedNodeId.slice(0, 12)}…
+              Pinned {graphNodeById.get(pinnedNodeId)?.label || "Selected asset"}
             </span>
           ) : null}
         </div>

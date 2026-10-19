@@ -1,6 +1,7 @@
 """Graph writers queue before opening connections; failed producers roll back."""
 
 from concurrent.futures import ThreadPoolExecutor, TimeoutError
+from pathlib import Path
 from threading import Event
 
 import pytest
@@ -16,7 +17,8 @@ def test_competing_graph_opens_wait_before_schema_initialization(monkeypatch, tm
     original = graph_store._init_db
 
     def initialize(conn, **kwargs):
-        second_init.set()
+        if any(name == "main" and Path(filename) == path for _, name, filename in conn.execute("PRAGMA database_list")):
+            second_init.set()
         return original(conn, **kwargs)
 
     def owner():
@@ -33,6 +35,9 @@ def test_competing_graph_opens_wait_before_schema_initialization(monkeypatch, tm
         first = pool.submit(owner)
         assert entered.wait(5)
         monkeypatch.setattr(graph_store, "_init_db", initialize)
+        # An unrelated background graph can initialize while this path is owned.
+        with graph_store.open_graph_db(tmp_path / "unrelated.db"):
+            pass
         second = pool.submit(contender)
         assert contender_started.wait(5)
         try:

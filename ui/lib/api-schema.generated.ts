@@ -23569,7 +23569,7 @@ export interface components {
             /** Previous Scan Id */
             previous_scan_id: string | null;
             /** Reason */
-            reason: string;
+            reason: string | null;
             /** Status */
             status: string;
             /** Still Open */

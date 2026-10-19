@@ -152,3 +152,56 @@ def test_collect_shared_advisory_uses_bounded_asset_identity_lookups(monkeypatch
     findings = collect_scan_findings(row)
     assert len(findings) == count
     assert reads.call_count <= count * 8
+
+
+def test_remediation_preserves_existing_taxonomy_tags_through_safe_projection():
+    from agent_bom.api.remediation_view import current_remediation_response, remediation_finding_projection
+
+    row = remediation_finding_projection(
+        {
+            "cve_id": "CVE-2023-4863",
+            "package_name": "libwebp",
+            "package_version": "1.2.0",
+            "fixed_version": "1.3.2",
+            "severity": "high",
+            "owasp_tags": ["LLM02", "LLM03"],
+            "atlas_tags": ["AML.T0010"],
+            "framework_tags": ["owasp_llm:LLM02", "soc2:CC6.1"],
+        }
+    )
+    plan = current_remediation_response({"findings": [row], "completeness": {"status": "complete"}}).remediation_plan[0]
+    assert plan["owasp_tags"] == ["LLM02", "LLM03"]
+    assert plan["atlas_tags"] == ["AML.T0010"]
+    assert plan["soc2_tags"] == ["CC6.1"]
+
+
+def test_remediation_taxonomy_does_not_restore_secrets_or_unknown_controls():
+    from agent_bom.api.remediation_view import remediation_finding_projection
+
+    row = remediation_finding_projection(
+        {
+            "framework_tags": ["owasp_llm:LLM02", "owasp_llm:NOT-A-CONTROL", "unknown:CC6.1", "soc2:token=private-value"],
+            "owasp_tags": ["https://private.example/token?secret=value"],
+        }
+    )
+    assert row["owasp_tags"] == ["LLM02"]
+    assert "soc2_tags" not in row
+    assert "private-value" not in str(row)
+    assert "private.example" not in str(row)
+
+
+def test_current_remediation_endpoint_retains_finding_taxonomy(scan_store):  # noqa: F811
+    row = pushed(8, scope="v1:" + "a" * 64)
+    row.result["findings"][0].update(
+        package="libwebp",
+        package_version="1.2.0",
+        fixed_version="1.3.2",
+        owasp_tags=["LLM02"],
+        atlas_tags=["AML.T0010"],
+        framework_tags=["soc2:CC6.1"],
+    )
+    scan_store.put(row)
+    plan = _plan()["remediation_plan"][0]
+    assert plan["owasp_tags"] == ["LLM02"]
+    assert plan["atlas_tags"] == ["AML.T0010"]
+    assert plan["soc2_tags"] == ["CC6.1"]

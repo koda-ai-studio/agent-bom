@@ -168,8 +168,13 @@ def test_demo_estate_bootstrap_seeds_honest_posture_trajectory(
     assert current["timestamp"] == SHOWCASE_CURRENT_CREATED_AT
     assert previous["scan_id"] == SHOWCASE_BASELINE_SCAN_ID
     assert previous["timestamp"] == SHOWCASE_BASELINE_CREATED_AT
-    assert current["posture_score"] > previous["posture_score"]
-    assert current["total_vulns"] < previous["total_vulns"]
+    assert current["posture_score"] == previous["posture_score"]
+    assert current["total_vulns"] == previous["total_vulns"]
+    assert current["comparison"]["status"] == "comparable"
+    assert current["comparison"]["new_findings"] == 0
+    assert current["comparison"]["still_open"] > 0
+    assert current["comparison"]["no_longer_detected"] == 0
+    assert current["verified_remediations"] is None
     # The current point is the headline the posture endpoints serve, not the
     # single scan's scorecard.
     posture = demo_estate_client.get("/v1/posture", headers=VIEWER).json()
