@@ -95,7 +95,10 @@ def test_overview_and_posture_report_the_same_grade_and_score() -> None:
         assert posture[key] == overview["posture"][key], key
     # The scan-time scorecard is still available, explicitly labelled.
     assert posture["scan_scorecard"]["score"] == 95.0
-    assert posture["dimensions"]["vulnerability_posture"]["score"] == 90.0
+    # Dimensions read the tenant's open findings, not the lenient scan-time
+    # breakdown: 3 critical and 2 high occurrences, none fixable.
+    assert posture["dimensions"]["vulnerability_posture"]["score"] == 39.0
+    assert posture["dimensions"]["vulnerability_posture"]["details"] == "5 vulns (3 critical, 2 high), 0 fixable"
 
 
 def test_grade_summary_and_tiles_use_the_issue_counts() -> None:
@@ -118,13 +121,13 @@ def test_grade_summary_and_tiles_use_the_issue_counts() -> None:
     assert overview["finding_counts"]["critical"] == counts["critical"] == 3
 
 
-def test_scan_time_dimensions_name_the_single_scan_they_came_from() -> None:
-    _overview, posture, _counts = _surfaces()
+def test_dimensions_name_the_tenant_basis_they_came_from() -> None:
+    overview, posture, _counts = _surfaces()
 
-    # The headline is tenant-wide; the per-dimension breakdown is one scan's
-    # scorecard and must say so rather than read as the tenant posture.
+    # The headline and the per-dimension breakdown read one basis, and the
+    # breakdown says which scans and how many open findings it covered.
     assert posture["basis"] == "exec_posture"
     basis = posture["dimensions_basis"]
-    assert basis["basis"] == "latest_scan"
-    assert basis["scan_id"] == "posture-one-number-scan"
-    assert basis["completed_at"]
+    assert basis["basis"] == "tenant_current_findings"
+    assert basis["scan_ids"] == ["posture-one-number-scan"]
+    assert basis["open_findings"] == overview["finding_counts"]["total"] == 5

@@ -350,15 +350,19 @@ def _seed_showcase_posture_trends(report: dict[str, Any], *, tenant_id: str) -> 
     """
     from dataclasses import replace
 
+    from agent_bom.api.exec_posture import tenant_headline_posture
     from agent_bom.api.stores import _get_trend_store
     from agent_bom.api.trend_recording import trend_point_from_scan_result
     from agent_bom.posture import _score_to_grade
 
+    # The current point plots the headline /v1/overview and /v1/posture serve,
+    # as live scans do once their job is persisted.
     current = trend_point_from_scan_result(
         report,
         tenant_id=tenant_id,
         scan_id=SHOWCASE_SCAN_ID,
         completed_at=SHOWCASE_CURRENT_CREATED_AT,
+        headline=tenant_headline_posture(tenant_id),
     )
     if current is None:
         return 0

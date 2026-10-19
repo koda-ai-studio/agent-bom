@@ -211,7 +211,7 @@ def _current_narrative_evidence(request: Request) -> dict[str, Any] | None:
 def _posture_scorecard_impl(request: Request) -> dict:
     """Select the latest scan and compose the exec posture over one parse of each job payload."""
     from agent_bom.api.findings_current import latest_current_scan_job
-    from agent_bom.api.posture_scan_snapshot import scan_posture_inputs
+    from agent_bom.api.posture_scan_snapshot import revision_cached, scan_posture_inputs
 
     latest_result = scan_posture_inputs(
         _get_store(),
@@ -251,16 +251,25 @@ def _posture_scorecard_impl(request: Request) -> dict:
 
     scorecard = latest_result.get("posture_scorecard")
     if scorecard:
-        from agent_bom.api.exec_posture import canonical_posture_payload
+        from agent_bom.api.exec_posture import canonical_posture_payload, tenant_posture_dimensions
 
+        tenant = revision_cached(
+            _get_store(), require_request_tenant_id(request), "dimensions", lambda: tenant_posture_dimensions(_tenant_jobs(request))
+        )
+        if tenant is None:
+            return canonical_posture_payload(
+                request,
+                cast(dict, scorecard),
+                dimensions_basis={
+                    "basis": "latest_scan",
+                    "scan_id": latest_result.get("scan_id"),
+                    "completed_at": latest_result.get("completed_at"),
+                },
+            )
         return canonical_posture_payload(
             request,
-            cast(dict, scorecard),
-            dimensions_basis={
-                "basis": "latest_scan",
-                "scan_id": latest_result.get("scan_id"),
-                "completed_at": latest_result.get("completed_at"),
-            },
+            {**cast(dict, scorecard), "dimensions": tenant["dimensions"]},
+            dimensions_basis=tenant["basis"],
         )
 
     return {

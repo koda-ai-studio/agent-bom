@@ -1793,7 +1793,7 @@ def _compose_overview(
             "high": headline_high,
             "critical_high": critical_high,
             "kev": exec_counts["kev"],
-            "credential_exposed": estate["credential_exposed"],
+            "credential_exposed": exec_estate["credential_exposed"],
             "scans": estate["scan_count"],
             "latest_scan_at": estate["latest_scan_at"],
             "hub_findings": hub_findings,

@@ -28,16 +28,14 @@ from __future__ import annotations
 
 import json
 import os
-from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Mapping
 
-from agent_bom.compliance_utils import effective_blast_radius_tags
 from agent_bom.core.severity import severity_policy_rank
-from agent_bom.evidence.posture_dimensions import DimensionScore, assessed_weighted_total, lane_summary, mark_skipped_vulnerability_lane
+from agent_bom.evidence.posture_dimensions import DimensionScore, assessed_weighted_total, lane_summary
+from agent_bom.evidence.posture_inputs import posture_inputs_from_report, score_posture_dimensions
 from agent_bom.evidence.scan_run import vulnerability_coverage_caveat, vulnerability_coverage_incomplete
-from agent_bom.scorecard import summarize_scorecard_coverage
 from agent_bom.vex import active_blast_radii
 
 if TYPE_CHECKING:
@@ -228,234 +226,16 @@ def compute_posture_scorecard(
         **this report** (current scan / selected snapshot), not a frozen demo.
     """
     resolved = policy or load_posture_policy(weights=weights, grade_thresholds=grade_thresholds)
-    w = resolved.weights
-    dimensions: dict[str, DimensionScore] = {}
+    inputs = posture_inputs_from_report(report)
+    dimensions = score_posture_dimensions(inputs, resolved.weights)
+    total_vulns = len(inputs.vulnerabilities)
+    total_cred_servers = inputs.credential_servers
+    total_servers = inputs.total_servers
+    verified_servers = inputs.verified_servers
+    all_packages = inputs.packages
+    retained_vulnerability_occurrences = inputs.retained_vulnerability_occurrences
 
-    # ── 1. Vulnerability Posture ──
-    sev_counts: Counter[str] = Counter()
-    fixable = 0
-    total_vulns = 0
-    retained_vulnerability_occurrences = report.total_vulnerabilities
-    active_findings = active_blast_radii(report.blast_radii)
-
-    for br in active_findings:
-        sev = br.vulnerability.severity.value.upper()
-        sev_counts[sev] += 1
-        total_vulns += 1
-        if br.vulnerability.fixed_version:
-            fixable += 1
-
-    if total_vulns == 0:
-        if retained_vulnerability_occurrences:
-            vuln_score = 0.0
-            vuln_detail = (
-                f"{retained_vulnerability_occurrences} vulnerability occurrence(s) retained from inventory; analysis verdict unavailable"
-            )
-        else:
-            vuln_score = 100.0
-            vuln_detail = "No vulnerabilities found"
-    else:
-        # Weighted penalty: critical=15, high=8, medium=3, low=1
-        penalty = (
-            sev_counts.get("CRITICAL", 0) * 15
-            + sev_counts.get("HIGH", 0) * 8
-            + sev_counts.get("MEDIUM", 0) * 3
-            + sev_counts.get("LOW", 0) * 1
-        )
-        vuln_score = max(0.0, 100.0 - penalty)
-        # Bonus for fixable vulns
-        fix_ratio = fixable / total_vulns if total_vulns > 0 else 0
-        vuln_score = min(100.0, vuln_score + fix_ratio * 10)
-        parts = [f"{sev_counts[s]} {s.lower()}" for s in ("CRITICAL", "HIGH", "MEDIUM", "LOW") if sev_counts.get(s, 0) > 0]
-        vuln_detail = f"{total_vulns} vulns ({', '.join(parts)}), {fixable} fixable"
-
-    dimensions["vulnerability_posture"] = DimensionScore(
-        name="Vulnerability Posture",
-        score=round(vuln_score, 1),
-        weight=float(w["vulnerability_posture"]),
-        details=vuln_detail,
-    )
-
-    # ── 2. Credential Hygiene ──
-    total_cred_servers = 0
-    unique_creds: set[str] = set()
-    for agent in report.agents:
-        for server in agent.mcp_servers:
-            if server.has_credentials:
-                total_cred_servers += 1
-                for cred in server.credential_names:
-                    unique_creds.add(cred)
-
-    if total_cred_servers == 0:
-        cred_score = 100.0
-        cred_detail = "No credential exposure detected"
-    else:
-        # Penalty scales with exposed credential count
-        cred_penalty = min(len(unique_creds) * 8 + total_cred_servers * 3, 100)
-        cred_score = max(0.0, 100.0 - cred_penalty)
-        cred_detail = f"{len(unique_creds)} unique credentials across {total_cred_servers} servers"
-
-    dimensions["credential_hygiene"] = DimensionScore(
-        name="Credential Hygiene",
-        score=round(cred_score, 1),
-        weight=float(w["credential_hygiene"]),
-        details=cred_detail,
-    )
-
-    # ── 3. Supply Chain Quality ──
-    scorecard_scores: list[float] = []
-    all_packages = []
-    for agent in report.agents:
-        for server in agent.mcp_servers:
-            for pkg in server.packages:
-                all_packages.append(pkg)
-                if pkg.scorecard_score is not None:
-                    scorecard_scores.append(pkg.scorecard_score)
-
-    scorecard_stats = summarize_scorecard_coverage(all_packages)
-    transient_scorecard_failures = {
-        pkg.scorecard_lookup_reason
-        for pkg in all_packages
-        if pkg.scorecard_lookup_state == "failed"
-        and pkg.scorecard_lookup_reason in {"scorecard_rate_limited", "scorecard_service_unavailable"}
-    }
-    if scorecard_scores:
-        avg_scorecard = sum(scorecard_scores) / len(scorecard_scores)
-        sc_score = min(100.0, avg_scorecard * 10)  # 0-10 → 0-100
-        sc_detail = (
-            f"Avg OpenSSF Scorecard: {avg_scorecard:.1f}/10 "
-            f"({scorecard_stats.enriched_packages}/{scorecard_stats.eligible_packages} eligible packages enriched)"
-        )
-    elif scorecard_stats.eligible_packages == 0:
-        sc_score = 50.0
-        sc_detail = "No GitHub-backed packages eligible for OpenSSF Scorecard"
-    elif scorecard_stats.failed_packages > 0 and transient_scorecard_failures:
-        sc_score = 100.0
-        sc_detail = (
-            "OpenSSF Scorecard temporarily unavailable upstream; "
-            f"not penalizing posture ({scorecard_stats.enriched_packages}/{scorecard_stats.eligible_packages} eligible packages enriched, "
-            f"{scorecard_stats.failed_packages} transient lookup failures)"
-        )
-    elif scorecard_stats.failed_packages > 0:
-        sc_score = 50.0
-        sc_detail = (
-            "OpenSSF Scorecard coverage pending: "
-            f"{scorecard_stats.enriched_packages}/{scorecard_stats.eligible_packages} eligible packages enriched, "
-            f"{scorecard_stats.failed_packages} lookup failures"
-        )
-    else:
-        sc_score = 50.0
-        sc_detail = (
-            "OpenSSF Scorecard coverage unresolved: "
-            f"{scorecard_stats.unresolved_packages} package(s) lacked resolvable GitHub source metadata"
-        )
-
-    dimensions["supply_chain_quality"] = DimensionScore(
-        name="Supply Chain Quality",
-        score=round(sc_score, 1),
-        weight=float(w["supply_chain_quality"]),
-        details=sc_detail,
-    )
-
-    # ── 4. Compliance Coverage (15%) ──
-    total_tags = 0
-    tagged_findings = 0
-    for br in active_findings:
-        tags = effective_blast_radius_tags(br)
-        total_tags += 1
-        has_tag = bool(
-            tags["owasp_tags"]
-            or tags["atlas_tags"]
-            or tags["nist_ai_rmf_tags"]
-            or tags["owasp_mcp_tags"]
-            or tags["owasp_agentic_tags"]
-            or tags["eu_ai_act_tags"]
-            or tags["nist_csf_tags"]
-            or tags["iso_27001_tags"]
-            or tags["soc2_tags"]
-            or tags["cis_tags"]
-        )
-        if has_tag:
-            tagged_findings += 1
-
-    if total_tags == 0:
-        comp_score = 100.0
-        comp_detail = "No findings to map"
-    else:
-        coverage = tagged_findings / total_tags
-        comp_score = min(100.0, coverage * 100)
-        comp_detail = f"{tagged_findings}/{total_tags} findings mapped to threat frameworks"
-
-    dimensions["compliance_coverage"] = DimensionScore(
-        name="Compliance Coverage",
-        score=round(comp_score, 1),
-        weight=float(w["compliance_coverage"]),
-        details=comp_detail,
-    )
-
-    # ── 5. Active Exploitation (10%) ──
-    from agent_bom.config import EPSS_CRITICAL_THRESHOLD
-
-    kev_ids: set[str] = set()
-    high_epss_ids: set[str] = set()
-    for br in active_findings:
-        vid = br.vulnerability.id
-        if br.vulnerability.is_kev:
-            kev_ids.add(vid)
-        if (br.vulnerability.epss_score or 0) >= EPSS_CRITICAL_THRESHOLD:
-            high_epss_ids.add(vid)
-
-    # Deduplicate: vulns that are both KEV and high-EPSS count once at the higher KEV penalty
-    kev_only = kev_ids - high_epss_ids
-    epss_only = high_epss_ids - kev_ids
-    both = kev_ids & high_epss_ids
-
-    if not kev_ids and not high_epss_ids:
-        exploit_score = 100.0
-        exploit_detail = "No actively exploited vulnerabilities"
-    else:
-        # KEV penalty=25, EPSS-only penalty=10, both=25 (no double-count)
-        exploit_penalty = len(kev_only) * 25 + len(epss_only) * 10 + len(both) * 25
-        exploit_score = max(0.0, 100.0 - exploit_penalty)
-        parts = []
-        if kev_ids:
-            parts.append(f"{len(kev_ids)} CISA KEV")
-        if high_epss_ids:
-            parts.append(f"{len(high_epss_ids)} high-EPSS")
-        exploit_detail = ", ".join(parts)
-
-    dimensions["active_exploitation"] = DimensionScore(
-        name="Active Exploitation",
-        score=round(exploit_score, 1),
-        weight=float(w["active_exploitation"]),
-        details=exploit_detail,
-    )
-
-    # ── 6. Configuration Quality (10%) ──
-    total_servers = sum(len(a.mcp_servers) for a in report.agents)
-    verified_servers = sum(1 for a in report.agents for s in a.mcp_servers if s.registry_verified)
-    servers_with_tools = sum(1 for a in report.agents for s in a.mcp_servers if s.tools)
-
-    if total_servers == 0:
-        config_score = 50.0
-        config_detail = "No servers to evaluate"
-    elif not report.has_mcp_context:
-        config_score = 100.0
-        config_detail = "N/A for scans without MCP server configuration context"
-    else:
-        verified_pct = verified_servers / total_servers
-        tools_pct = servers_with_tools / total_servers
-        config_score = verified_pct * 60 + tools_pct * 40
-        config_detail = f"{verified_servers}/{total_servers} verified, {servers_with_tools}/{total_servers} with tool declarations"
-
-    dimensions["configuration_quality"] = DimensionScore(
-        name="Configuration Quality",
-        score=round(config_score, 1),
-        weight=float(w["configuration_quality"]),
-        details=config_detail,
-    )
-
-    vuln_lane_skipped = mark_skipped_vulnerability_lane(report, dimensions)
+    vuln_lane_skipped = inputs.vulnerability_lane_skipped
     # ── Did-we-scan guard ──
     # A grade requires real evaluated inputs. When a scan examined ZERO gradable
     # artifacts (no packages, no MCP servers, no active findings), every

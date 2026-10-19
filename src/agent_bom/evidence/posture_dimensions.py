@@ -9,9 +9,7 @@ grade is taken over the assessed dimensions only.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Mapping
-
-from agent_bom.evidence.scan_run import effective_scan_run, vulnerability_scan_skipped
+from typing import Mapping
 
 VULNERABILITY_LANE_DIMENSIONS = ("vulnerability_posture", "active_exploitation")
 NOT_ASSESSED_DETAIL = "Not assessed — vulnerability scanning skipped by request"
@@ -38,13 +36,11 @@ class DimensionScore:
         }
 
 
-def mark_skipped_vulnerability_lane(report: Any, dimensions: Mapping[str, DimensionScore]) -> bool:
-    """Mark the vulnerability-lane dimensions not assessed when the lane was skipped."""
-    skipped = vulnerability_scan_skipped(effective_scan_run(report))
-    for key in VULNERABILITY_LANE_DIMENSIONS if skipped else ():
+def mark_vulnerability_lane_not_assessed(dimensions: Mapping[str, DimensionScore]) -> None:
+    """Mark the vulnerability-lane dimensions not assessed: the lane was skipped."""
+    for key in VULNERABILITY_LANE_DIMENSIONS:
         dim = dimensions[key]
         dim.score, dim.details, dim.assessed = 0.0, NOT_ASSESSED_DETAIL, False
-    return skipped
 
 
 def assessed_weighted_total(dimensions: Mapping[str, DimensionScore]) -> float:
@@ -70,5 +66,5 @@ __all__ = [
     "VULNERABILITY_LANE_DIMENSIONS",
     "assessed_weighted_total",
     "lane_summary",
-    "mark_skipped_vulnerability_lane",
+    "mark_vulnerability_lane_not_assessed",
 ]
