@@ -263,13 +263,13 @@ describe("FindingsPage", () => {
     const closeButtons = within(drawer).getAllByRole("button", { name: "Close" });
     fireEvent.click(closeButtons.at(-1)!);
     await waitFor(() => {
-      expect(routerReplace).toHaveBeenLastCalledWith("/findings", { scroll: false });
+      expect(routerReplace).toHaveBeenLastCalledWith("/findings?lane=all", { scroll: false });
     });
 
     fireEvent.click(screen.getAllByRole("button", { name: "Open details for CVE-2026-1234" })[0]!);
     await waitFor(() => {
       expect(routerReplace).toHaveBeenLastCalledWith(
-        "/findings?finding=finding-1",
+        "/findings?lane=all&finding=finding-1",
         { scroll: false },
       );
     });
@@ -584,15 +584,15 @@ describe("FindingsPage", () => {
     expect(screen.getByTestId("findings-chip-triage")).toHaveTextContent("Triage: under investigation");
   });
 
-  it("sends the selected issue class to the paginated findings API", async () => {
+  it("sends the selected lane to the paginated findings API", async () => {
     render(<FindingsPage />);
     expect(await screen.findByText("Findings and supporting evidence")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Misconfigurations" }));
+    fireEvent.click(screen.getByRole("tab", { name: /Cloud config/ }));
 
     await waitFor(() =>
       expect(apiMock.listFindings).toHaveBeenLastCalledWith(
-        expect.objectContaining({ findingClass: "misconfiguration" }),
+        expect.objectContaining({ lane: "cloud" }),
       ),
     );
   });
@@ -912,7 +912,7 @@ describe("FindingsPage", () => {
 
     render(<FindingsPage />);
 
-    expect(await screen.findByText("No findings found")).toBeInTheDocument();
+    expect(await screen.findByText("No findings match the selected filters.")).toBeInTheDocument();
     expect(screen.queryByText("CVE-2026-1234")).not.toBeInTheDocument();
     expect(apiMock.listFindings).toHaveBeenCalledTimes(1);
   });
@@ -1044,5 +1044,48 @@ describe("FindingsPage", () => {
     expect(within(drawer).getByText("IOC observed")).toBeInTheDocument();
     expect(within(drawer).getByText(/not a clean-workload assertion/i)).toBeInTheDocument();
     expect(within(drawer).getByText(/Distinct from proxy\/gateway runtime evidence/i)).toBeInTheDocument();
+  });
+});
+
+describe("Findings lane navigation", () => {
+  it("defaults to vulnerabilities and shows authoritative group counts", async () => {
+    navigationState.query = "";
+    apiMock.listFindingTriage.mockResolvedValue({ triage: [] });
+    apiMock.listFindings.mockResolvedValue({ findings: [canonicalFinding], total: 1, facets: { severity: { critical: 0, high: 1, medium: 0, low: 0, info: 0, unknown: 0 }, lane: { vulnerabilities: 1, cloud: 12, iac: 4, secrets: 2, identity: 3, data: 5, other: 1 } } });
+    render(<FindingsPage />);
+    expect(await screen.findByRole("tab", { name: "Cloud config 12" })).toBeVisible();
+    expect(screen.getByRole("tab", { name: "Vulnerabilities 1" })).toHaveAttribute("aria-selected", "true");
+    expect(apiMock.listFindings).toHaveBeenLastCalledWith(expect.objectContaining({ lane: "vulnerabilities", groupOccurrences: true }));
+    fireEvent.click(screen.getByRole("tab", { name: "IaC 4" }));
+    await waitFor(() => expect(apiMock.listFindings).toHaveBeenLastCalledWith(expect.objectContaining({ lane: "iac", offset: 0 })));
+    expect(screen.queryByText("Agent unavailable")).not.toBeInTheDocument();
+    expect(routerReplace).toHaveBeenLastCalledWith("/findings?lane=iac", { scroll: false });
+  });
+
+  it("qualifies partial counts and preserves an empty lane's navigation", async () => {
+    navigationState.query = "lane=data";
+    apiMock.listFindingTriage.mockResolvedValue({ triage: [] });
+    apiMock.listFindings.mockResolvedValue({ findings: [], total: 0, lane_counts_approximate: true, facets: { severity: { critical: 0, high: 1, medium: 0, low: 0, info: 0, unknown: 0 }, lane: { vulnerabilities: 8, cloud: 4, iac: 0, secrets: 0, identity: 0, data: 0, other: 0 } } });
+    render(<FindingsPage />);
+    expect(await screen.findByRole("tab", { name: "Cloud config ≥4" })).toBeVisible();
+    expect(screen.getByText(/partial; lower bounds/)).toBeVisible();
+    expect(screen.getByText("No findings match this lane and its filters.")).toBeVisible();
+    fireEvent.click(screen.getByRole("tab", { name: "All findings ≥12" }));
+    await waitFor(() => expect(apiMock.listFindings.mock.calls.at(-1)?.[0]).not.toHaveProperty("lane"));
+  });
+});
+
+describe("Cloud check results", () => {
+  it.each([
+    ["CIS_FAIL", "Failed"],
+    ["CIS_ERROR", "Not evaluated"],
+    ["CLOUD_BEST_PRACTICE_FAIL", "Failed"],
+    ["CLOUD_BEST_PRACTICE_ERROR", "Not evaluated"],
+  ])("renders %s independently of severity and title", async (findingType, result) => {
+    navigationState.query = "lane=cloud";
+    apiMock.listFindings.mockResolvedValue({ findings: [{ ...canonicalFinding, finding_type: findingType, title: "Administrative access check", severity: "high" }], total: 1 });
+    render(<FindingsPage />);
+    expect(await screen.findByLabelText(`Check result: ${result}`)).toBeVisible();
+    expect(screen.queryByLabelText("Check result: Passed")).not.toBeInTheDocument();
   });
 });

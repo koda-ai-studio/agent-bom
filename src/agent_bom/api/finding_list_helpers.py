@@ -68,7 +68,7 @@ def _normalize_facet_severity(raw: Any) -> str:
 # Scope keys that live in the finding payload (or are computed from it) and so
 # cannot be expressed as a predicate on the current-state table's materialised
 # columns. Their presence disables the severity aggregate below.
-_FACET_PAYLOAD_SCOPE_KEYS = ("provider", "account_ref", "environment", "domain", "finding_class", "q")
+_FACET_PAYLOAD_SCOPE_KEYS = ("provider", "account_ref", "environment", "domain", "finding_class", "q", "lane")
 
 # Bands whose filter value equals the persisted string exactly, so the store's
 # ``LOWER(severity) = %s`` predicate selects the same rows the Python walk keeps.

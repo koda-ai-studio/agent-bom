@@ -37,6 +37,8 @@ class FindingAsset(ReadModel):
 
 
 class FindingRow(ReadModel):
+    lane: str | None = None
+    severity_source: str | None = None
     id: str
     canonical_id: str | None = None
     cve_id: str | None = None
@@ -103,6 +105,8 @@ class FindingRow(ReadModel):
 
 
 class FindingsResponse(ReadResponse):
+    facets: dict[str, Any] | None = None
+    lane_counts_approximate: bool | None = None
     schema_version: str
     findings: list[FindingRow]
     count: int

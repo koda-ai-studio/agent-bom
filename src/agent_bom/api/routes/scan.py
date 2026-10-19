@@ -55,6 +55,7 @@ from agent_bom.api.finding_grouping import _finding_group_offset as _finding_gro
 from agent_bom.api.finding_grouping import _group_occurrence_rows as _group_occurrence_rows
 from agent_bom.api.finding_grouping import _grouped_severity_counts as _grouped_severity_counts
 from agent_bom.api.finding_grouping import _groups_envelope as _groups_envelope
+from agent_bom.api.finding_grouping import attach_lane_counts, select_group_lane
 from agent_bom.api.finding_list_envelope import HUB_LIST_OFFSET_CEILING as _HUB_LIST_OFFSET_CEILING
 from agent_bom.api.finding_list_envelope import finding_list_envelope
 from agent_bom.api.finding_list_helpers import (  # noqa: F401 - re-exported route-module API
@@ -101,7 +102,7 @@ from agent_bom.api.finding_scope_filters import _finding_list_filters as _findin
 from agent_bom.api.finding_scope_filters import _finding_sort_key as _finding_sort_key
 from agent_bom.api.finding_scope_filters import _row_asset_key as _row_asset_key
 from agent_bom.api.finding_scope_filters import _row_matches_scope as _row_matches_scope
-from agent_bom.api.finding_snapshot_metadata import snapshot_metadata
+from agent_bom.api.finding_snapshot_metadata import snapshot_envelope
 from agent_bom.api.finding_suppression import project_current_suppressions
 from agent_bom.api.finding_view_filters import _FINDINGS_VIEW_FILTER_MAX_ROWS as _FINDINGS_VIEW_FILTER_MAX_ROWS
 from agent_bom.api.finding_view_filters import _copy_first_page_metadata as _copy_first_page_metadata
@@ -1584,21 +1585,21 @@ async def list_findings(
     triage: Literal["not_affected", "affected", "under_investigation", "untriaged"] | None = None,
     include_facets: bool = False,
     include: FindingListInclude = None,
+    lane: Annotated[
+        str | None, Query(max_length=32, description="Finding lane: vulnerabilities, cloud, iac, secrets, identity, data, other")
+    ] = None,
 ) -> dict:
     """List unified findings aggregated from completed scan results.
 
     Dedup/sort and synchronous store reads run in a worker thread (the context,
-    including tenant scope and the ``include`` projection, propagates) so a deep
-    read cannot block the event loop. Adaptive backpressure sheds excess reads
-    under genuine saturation with ``429 + Retry-After`` instead of starving
-    ``/health`` and unrelated routes.
+    including tenant scope and projection, propagates) to avoid blocking the
+    event loop. Adaptive backpressure rejects saturation with 429 + Retry-After.
 
     Rows carry ``framework_tags`` and ``controls_count``; ``?include=controls``
     restores the full per-finding control mappings.
 
     ``offset`` is a compatibility path capped at 10,000: past the ceiling the
-    endpoint returns ``400`` and steers callers to ``cursor``/``next_cursor``,
-    the unbounded-depth contract shared with ``/v1/compliance/hub/findings``.
+    endpoint returns ``400`` and steers callers to ``cursor``/``next_cursor``.
     """
     includes = list_include_or_422(include)
     try:
@@ -1606,7 +1607,7 @@ async def list_findings(
             implementation = _list_finding_groups_impl if group_occurrences else _list_findings_view_impl
             with finding_list_projection(include_controls="controls" in includes):
                 body = await anyio.to_thread.run_sync(
-                    implementation,
+                    partial(implementation, lane=lane),
                     request,
                     q,
                     severity,
@@ -2127,6 +2128,7 @@ def _list_findings_impl(
     sla: str | None = None,
     project_graph_reachability: bool = True,
     redact_page: bool = True,
+    lane: str | None = None,
 ) -> dict:
     """Synchronous body of :func:`list_findings` (runs in a worker thread).
 
@@ -2149,7 +2151,7 @@ def _list_findings_impl(
         window_days=window_days,
     )
     scope_filters = _canonical_scope_filters(
-        provider, account, environment, domain, finding_class, q, kev=kev, framework=framework, control=control, owner=owner, sla=sla
+        provider, account, environment, domain, finding_class, q, kev, framework, control, owner, sla, lane
     )
     query = query._replace(scope_filters=scope_filters)
     store = compliance_hub_store.get_compliance_hub_store()
@@ -2211,6 +2213,7 @@ def _list_findings_view_impl(
     triage: str | None = None,
     project_graph_reachability: bool = True,
     redact_page: bool = True,
+    lane: str | None = None,
 ) -> dict[str, Any]:
     """Apply evidence-backed view filters before pagination.
 
@@ -2220,7 +2223,9 @@ def _list_findings_view_impl(
     the dishonest client-side filtering of an already-selected page.
     """
     query_kw = dict(q=q, severity=severity, scan_id=scan_id, sort=sort, window_days=window_days, finding_class=finding_class, kev=kev)
-    scope_kw = dict(provider=provider, account=account, environment=environment, domain=domain, framework=framework, control=control)
+    scope_kw = dict(
+        provider=provider, account=account, environment=environment, domain=domain, framework=framework, control=control, lane=lane
+    )
     tail_kw = dict(owner=owner, sla=sla, project_graph_reachability=project_graph_reachability, redact_page=redact_page)
     common: dict[str, Any] = {**query_kw, **scope_kw, **tail_kw}
     suppressed_only = status.strip().lower() == "suppressed"
@@ -2287,6 +2292,7 @@ def _list_finding_groups_impl(
     sla: str | None = None,
     reachability: str | None = None,
     triage: str | None = None,
+    lane: str | None = None,
 ) -> dict[str, Any]:
     """Build a bounded server-side issue queue over canonical occurrence rows.
 
@@ -2309,7 +2315,7 @@ def _list_finding_groups_impl(
     rows, first_page, warnings, source_cursor = _collect_group_occurrences(fetch_page)
     all_groups = _group_occurrence_rows(rows)
     normalized_severity = severity.strip().lower() if severity and severity.strip() else None
-    groups = [g for g in all_groups if normalized_severity is None or _normalize_facet_severity(g.get("severity")) == normalized_severity]
+    groups, all_groups, counts_by_lane = select_group_lane(all_groups, normalized_severity, lane)
     truncated = source_cursor is not None
     if truncated:
         warnings.append("Issue grouping stopped after 50,000 occurrence rows; group and occurrence counts are lower bounds.")
@@ -2338,6 +2344,7 @@ def _list_finding_groups_impl(
     _attach_grouping_metadata(
         envelope, first_page=first_page, groups=groups, scanned=len(rows), truncated=truncated, severity_counts=severity_counts
     )
+    attach_lane_counts(envelope, lane, counts_by_lane, truncated, include_facets)
     return envelope
 
 
@@ -2394,13 +2401,12 @@ def current_findings_snapshot(
     triage: str | None = None,
     project_graph_reachability: bool = True,
     row_projection: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
+    lane: str | None = None,
 ) -> dict[str, Any]:
     """Collect the canonical current finding queue for an internal consumer.
 
-    Compliance narratives and other in-process surfaces need the same merged
-    scan-job + current-ingest evidence as ``GET /v1/findings``. The walk uses
-    that endpoint's keyset contract and is explicitly bounded; a bound hit is
-    returned as partial evidence rather than silently called complete.
+    Uses the same merged scan + current-ingest keyset stream as GET /v1/findings.
+    A bound hit is explicit partial evidence, never a complete snapshot.
     """
     rows: list[dict[str, Any]] = []
     cursor: str | None = None
@@ -2434,6 +2440,7 @@ def current_findings_snapshot(
             triage=triage,
             project_graph_reachability=project_graph_reachability or reachability is not None,
             redact_page=row_projection is None,
+            lane=lane,
         )
         if first_metadata is None:
             first_metadata = page.get("count_metadata") if isinstance(page.get("count_metadata"), dict) else {}
@@ -2453,23 +2460,16 @@ def current_findings_snapshot(
         if scan_id
         else _finding_snapshot_jobs(retained_jobs, since=None, require_authoritative_evidence=True)[0]
     )
-    truncated = cursor is not None
-    if truncated:
-        warnings.append(f"Narrative evidence is bounded to {max_findings} current findings; additional rows remain.")
-    return {
-        "schema_version": "finding-snapshot.v1",
-        "tenant_id": tenant_id,
-        "findings": rows,
-        "count": len(rows),
-        "total": first_total,
-        **snapshot_metadata(jobs, rows),
-        "warnings": list(dict.fromkeys(warnings)),
-        "count_metadata": first_metadata or {},
-        "completeness": {
-            "status": "partial" if truncated else "complete",
-            "reason": "snapshot row bound reached" if truncated else "",
-        },
-    }
+    return snapshot_envelope(
+        tenant_id=tenant_id,
+        rows=rows,
+        jobs=jobs,
+        first_total=first_total,
+        first_metadata=first_metadata,
+        cursor=cursor,
+        max_findings=max_findings,
+        warnings=warnings,
+    )
 
 
 @router.post(

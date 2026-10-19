@@ -10,7 +10,7 @@
     }
   },
   "additionalProperties": false,
-  "description": "Request body for ``POST /v1/reports``.",
+  "description": "Public findings report request schema.",
   "properties": {
     "account": {
       "anyOf": [
@@ -74,6 +74,19 @@
     "format": {
       "$ref": "#/$defs/ReportFormat",
       "default": "ndjson"
+    },
+    "lane": {
+      "anyOf": [
+        {
+          "maxLength": 32,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Lane"
     },
     "owner": {
       "anyOf": [

@@ -14244,6 +14244,17 @@
             ],
             "title": "Kev Due Date"
           },
+          "lane": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lane"
+          },
           "last_observed": {
             "anyOf": [
               {
@@ -14493,6 +14504,17 @@
           "severity": {
             "title": "Severity",
             "type": "string"
+          },
+          "severity_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity Source"
           },
           "sla_due_at": {
             "anyOf": [
@@ -14985,6 +15007,18 @@
             ],
             "title": "Cursor"
           },
+          "facets": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Facets"
+          },
           "filters": {
             "additionalProperties": true,
             "title": "Filters",
@@ -15007,6 +15041,17 @@
             },
             "title": "Include",
             "type": "array"
+          },
+          "lane_counts_approximate": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lane Counts Approximate"
           },
           "limit": {
             "title": "Limit",
@@ -34011,7 +34056,7 @@
       },
       "ReportJobRequest": {
         "additionalProperties": false,
-        "description": "Request body for ``POST /v1/reports``.",
+        "description": "Public findings report request schema.",
         "properties": {
           "account": {
             "anyOf": [
@@ -34071,6 +34116,18 @@
           "format": {
             "$ref": "#/components/schemas/ReportFormat",
             "default": "ndjson"
+          },
+          "lane": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lane"
           },
           "owner": {
             "anyOf": [
@@ -34345,6 +34402,17 @@
           "job_id": {
             "title": "Job Id",
             "type": "string"
+          },
+          "lane": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lane"
           },
           "owner": {
             "anyOf": [
@@ -55833,7 +55901,7 @@
     },
     "/v1/findings": {
       "get": {
-        "description": "List unified findings aggregated from completed scan results.\n\nDedup/sort and synchronous store reads run in a worker thread (the context,\nincluding tenant scope and the ``include`` projection, propagates) so a deep\nread cannot block the event loop. Adaptive backpressure sheds excess reads\nunder genuine saturation with ``429 + Retry-After`` instead of starving\n``/health`` and unrelated routes.\n\nRows carry ``framework_tags`` and ``controls_count``; ``?include=controls``\nrestores the full per-finding control mappings.\n\n``offset`` is a compatibility path capped at 10,000: past the ceiling the\nendpoint returns ``400`` and steers callers to ``cursor``/``next_cursor``,\nthe unbounded-depth contract shared with ``/v1/compliance/hub/findings``.",
+        "description": "List unified findings aggregated from completed scan results.\n\nDedup/sort and synchronous store reads run in a worker thread (the context,\nincluding tenant scope and projection, propagates) to avoid blocking the\nevent loop. Adaptive backpressure rejects saturation with 429 + Retry-After.\n\nRows carry ``framework_tags`` and ``controls_count``; ``?include=controls``\nrestores the full per-finding control mappings.\n\n``offset`` is a compatibility path capped at 10,000: past the ceiling the\nendpoint returns ``400`` and steers callers to ``cursor``/``next_cursor``.",
         "operationId": "list_findings_v1_findings_get",
         "parameters": [
           {
@@ -56243,6 +56311,25 @@
               ],
               "description": "Comma-separated opt-ins; `controls` returns full per-finding control mappings",
               "title": "Include"
+            }
+          },
+          {
+            "description": "Finding lane: vulnerabilities, cloud, iac, secrets, identity, data, other",
+            "in": "query",
+            "name": "lane",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Finding lane: vulnerabilities, cloud, iac, secrets, identity, data, other",
+              "title": "Lane"
             }
           }
         ],
@@ -56833,7 +56920,7 @@
     },
     "/v1/findings/triage/vex": {
       "get": {
-        "description": "Export signed OpenVEX for eligible tenant-scoped not_affected triage decisions.",
+        "description": "Export signed OpenVEX for eligible tenant-scoped triage decisions.",
         "operationId": "export_finding_triage_vex_v1_findings_triage_vex_get",
         "parameters": [
           {
@@ -57069,6 +57156,23 @@
                 }
               ],
               "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "lane",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Lane"
             }
           },
           {

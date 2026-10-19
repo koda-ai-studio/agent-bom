@@ -127,6 +127,7 @@ def _write_findings_artifact(job: ReportJob, attempt: str, lost: threading.Event
         job.q,
         owner=job.owner,
         sla=job.sla,
+        lane=job.lane,
     )
 
     path = _artifact_path(job.tenant_id, f"{job.job_id}.{attempt}")

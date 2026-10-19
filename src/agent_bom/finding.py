@@ -14,6 +14,7 @@ from agent_bom.core.exploitability import fused_triage_priority
 from agent_bom.core.packages import synthesize_purl
 from agent_bom.core.severity import severity_basis
 from agent_bom.core.sla import finding_owner, finding_sla_fields
+from agent_bom.evidence.finding_lanes import model_lane_fields
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -72,6 +73,7 @@ class FindingType(str, Enum):
 class FindingSource(str, Enum):
     """Which scanner or subsystem produced this finding."""
 
+    IAC_SCAN = "IAC_SCAN"  # Repository infrastructure templates
     MCP_SCAN = "MCP_SCAN"  # agent discovery + CVE scanner
     CONTAINER = "CONTAINER"  # container image scan (Syft/Grype/Trivy ingestion)
     SBOM = "SBOM"  # SBOM ingest (CycloneDX / SPDX)
@@ -386,6 +388,7 @@ class Finding:
     environment: Optional[str] = None  # prod | staging | dev | ...
 
     # Vendor severity (from source scanner) vs normalised CVSS severity
+    severity_source: Optional[str] = None  # cvss, vendor, benchmark-mapped, rule, or collector label
     vendor_severity: Optional[str] = None  # severity as reported by vendor/scanner
     cvss_severity: Optional[str] = None  # normalised from CVSS base score
 
@@ -751,6 +754,7 @@ class Finding:
             "security_domain": self.security_domain,
             "severity": self.severity,
             "effective_severity": self.effective_severity(),
+            **model_lane_fields(self),
             "vendor_severity": self.vendor_severity,
             "cvss_severity": self.cvss_severity,
             "title": self.title,
@@ -775,8 +779,7 @@ class Finding:
             "malicious_reason": self.malicious_reason,
             "fixed_version": self.fixed_version,
             "remediation_guidance": self.remediation_guidance,
-            # Structured advisory remediation — emitted only when populated so
-            # findings without it keep their existing serialization shape.
+            # Advisory remediation is omitted when absent.
             **({"remediation": self.remediation.to_dict()} if self.remediation is not None else {}),
             "compliance_tags": self.all_compliance_tags(),
             "applicable_frameworks": list(self.applicable_frameworks),
@@ -1286,20 +1289,15 @@ def cloud_cis_check_to_finding(check: dict, provider: str) -> "Finding":
             environment=environment,
         ),
         severity=severity,
+        severity_source="vendor" if is_vendor_best_practice else "benchmark-mapped",
         provider=provider,
         account_ref=account_ref,
         region=region,
         environment=environment,
-        # CIS phrases controls as assertions of the desired state ("No root
-        # account access keys"), which is right for a control name and wrong for
-        # a finding title: the finding exists because the assertion is false.
-        # Titling a critical FAIL with the state it failed to reach put 1,581
-        # findings on screen headlined as though nothing were wrong. "not met"
-        # rather than a negated control name, because every CIS title is an
-        # assertion and mechanical negation is not grammatical across them.
+        # Prefix the outcome: the control title describes the expected state.
         title=(
-            f"{'Databricks best practice' if is_vendor_best_practice else 'CIS'} {check_id} "
-            f"{'not evaluated' if status == 'ERROR' else 'not met'}: {title}"
+            f"{'Unevaluated' if status == 'ERROR' else 'Failed'} "
+            f"{'Databricks best practice' if is_vendor_best_practice else 'CIS'} {check_id} — {title}"
         ),
         description=evidence_text
         or (
@@ -1386,7 +1384,7 @@ def iac_finding_to_finding(iac: dict) -> "Finding":
 
     finding = Finding(
         finding_type=FindingType.CIS_FAIL,
-        source=FindingSource.CLOUD_SECURITY,
+        source=FindingSource.IAC_SCAN,
         asset=Asset(
             name=file_path,
             asset_type="iac_resource",
@@ -1394,6 +1392,7 @@ def iac_finding_to_finding(iac: dict) -> "Finding":
             location=file_path,
         ),
         severity=severity,
+        severity_source="rule",
         title=f"IaC misconfiguration {rule_id}: {title}" if title != rule_id else f"IaC misconfiguration {rule_id}",
         description=message or f"IaC rule {rule_id} failed for {file_path}.",
         remediation_guidance=remediation or None,

@@ -14,6 +14,7 @@ from agent_bom.api.finding_row_shapes import _package_identity, _row_vuln_id
 from agent_bom.api.finding_scope_filters import _finding_identity as _finding_identity
 from agent_bom.api.finding_view_filters import _copy_first_page_metadata as _copy_first_page_metadata
 from agent_bom.canonical_ids import canonical_id
+from agent_bom.evidence.finding_lanes import finding_lane, lane_counts
 
 
 def _finding_group_offset(cursor: str | None, offset: int, sort_key: str) -> int:
@@ -156,10 +157,37 @@ def _finding_group_identity(row: dict[str, Any]) -> tuple[str, str]:
         package, _, ecosystem = _package_identity(row)
         group_key = f"vulnerability:{vulnerability_id}:{ecosystem or 'unknown'}:{package}"
     else:
-        group_key = f"occurrence:{_finding_identity(row)}"
+        evidence = row.get("evidence") or {}
+        control = evidence.get("check_id") if isinstance(evidence, dict) else None
+        if finding_lane(row) == "cloud" and row.get("provider") and control and control != "unknown":
+            group_key = "cloud:" + ":".join(
+                str(value or "unknown")
+                for value in (row.get("provider"), row.get("finding_type"), evidence.get("benchmark_version"), control)
+            )
+        else:
+            group_key = f"occurrence:{_finding_identity(row)}"
     # Persisted metadata is an optimization, not authority. A row can be
     # reclassified/enriched after ingest; stale group metadata must not collapse
     # two distinct advisories. Reuse it only when its semantic key still agrees.
     if supplied_id and supplied_key == group_key:
         return supplied_id, group_key
     return canonical_id("finding-group", group_key), group_key
+
+
+def select_group_lane(all_groups: list[dict[str, Any]], severity: str | None, lane: str | None) -> tuple[list, list, dict]:
+    severity_groups = [g for g in all_groups if severity is None or _normalize_facet_severity(g.get("severity")) == severity]
+    counts = lane_counts(severity_groups)
+    selected = lane.strip().lower() if lane and lane.strip() else None
+
+    def matches(group: dict[str, Any]) -> bool:
+        return selected is None or finding_lane(group) == selected
+
+    return list(filter(matches, severity_groups)), list(filter(matches, all_groups)), counts
+
+
+def attach_lane_counts(envelope: dict, lane: str | None, counts: dict, partial: bool, include: bool) -> None:
+    if lane and lane.strip():
+        envelope["filters"]["lane"] = lane.strip().lower()
+    if include:
+        envelope.setdefault("facets", {})["lane"] = counts
+        envelope["lane_counts_approximate"] = partial

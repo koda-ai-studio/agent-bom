@@ -9789,6 +9789,11 @@ components:
           - type: string
           - type: 'null'
           title: Kev Due Date
+        lane:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Lane
         last_observed:
           anyOf:
           - type: string
@@ -9906,6 +9911,11 @@ components:
         severity:
           title: Severity
           type: string
+        severity_source:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Severity Source
         sla_due_at:
           anyOf:
           - type: string
@@ -10243,6 +10253,12 @@ components:
           - type: string
           - type: 'null'
           title: Cursor
+        facets:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Facets
         filters:
           additionalProperties: true
           title: Filters
@@ -10260,6 +10276,11 @@ components:
             type: string
           title: Include
           type: array
+        lane_counts_approximate:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Lane Counts Approximate
         limit:
           title: Limit
           type: integer
@@ -23139,7 +23160,7 @@ components:
       type: string
     ReportJobRequest:
       additionalProperties: false
-      description: Request body for ``POST /v1/reports``.
+      description: Public findings report request schema.
       properties:
         account:
           anyOf:
@@ -23174,6 +23195,12 @@ components:
         format:
           $ref: '#/components/schemas/ReportFormat'
           default: ndjson
+        lane:
+          anyOf:
+          - maxLength: 32
+            type: string
+          - type: 'null'
+          title: Lane
         owner:
           anyOf:
           - maxLength: 256
@@ -23322,6 +23349,11 @@ components:
         job_id:
           title: Job Id
           type: string
+        lane:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Lane
         owner:
           anyOf:
           - type: string
@@ -37624,13 +37656,9 @@ paths:
 
         Dedup/sort and synchronous store reads run in a worker thread (the context,
 
-        including tenant scope and the ``include`` projection, propagates) so a deep
+        including tenant scope and projection, propagates) to avoid blocking the
 
-        read cannot block the event loop. Adaptive backpressure sheds excess reads
-
-        under genuine saturation with ``429 + Retry-After`` instead of starving
-
-        ``/health`` and unrelated routes.
+        event loop. Adaptive backpressure rejects saturation with 429 + Retry-After.
 
 
         Rows carry ``framework_tags`` and ``controls_count``; ``?include=controls``
@@ -37640,9 +37668,7 @@ paths:
 
         ``offset`` is a compatibility path capped at 10,000: past the ceiling the
 
-        endpoint returns ``400`` and steers callers to ``cursor``/``next_cursor``,
-
-        the unbounded-depth contract shared with ``/v1/compliance/hub/findings``.'
+        endpoint returns ``400`` and steers callers to ``cursor``/``next_cursor``.'
       operationId: list_findings_v1_findings_get
       parameters:
       - in: query
@@ -37891,6 +37917,19 @@ paths:
           description: Comma-separated opt-ins; `controls` returns full per-finding
             control mappings
           title: Include
+      - description: 'Finding lane: vulnerabilities, cloud, iac, secrets, identity,
+          data, other'
+        in: query
+        name: lane
+        required: false
+        schema:
+          anyOf:
+          - maxLength: 32
+            type: string
+          - type: 'null'
+          description: 'Finding lane: vulnerabilities, cloud, iac, secrets, identity,
+            data, other'
+          title: Lane
       responses:
         '200':
           content:
@@ -38299,8 +38338,7 @@ paths:
       - enterprise
   /v1/findings/triage/vex:
     get:
-      description: Export signed OpenVEX for eligible tenant-scoped not_affected triage
-        decisions.
+      description: Export signed OpenVEX for eligible tenant-scoped triage decisions.
       operationId: export_finding_triage_vex_v1_findings_triage_vex_get
       parameters:
       - in: query
@@ -38430,6 +38468,15 @@ paths:
             type: string
           - type: 'null'
           title: Status
+      - in: query
+        name: lane
+        required: false
+        schema:
+          anyOf:
+          - maxLength: 32
+            type: string
+          - type: 'null'
+          title: Lane
       - in: query
         name: finding_class
         required: false

@@ -59,6 +59,7 @@ def finding_from_dict(item: dict) -> Finding | None:
         source=source,
         asset=asset,
         severity=str(item.get("severity", "high")),
+        severity_source=_optional_str(item.get("severity_source")),
         title=str(item.get("title", "")),
         description=str(item.get("description", "")),
         remediation_guidance=item.get("remediation_guidance"),

@@ -176,6 +176,19 @@
       "title": "Job Id",
       "type": "string"
     },
+    "lane": {
+      "anyOf": [
+        {
+          "maxLength": 32,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Lane"
+    },
     "owner": {
       "anyOf": [
         {
