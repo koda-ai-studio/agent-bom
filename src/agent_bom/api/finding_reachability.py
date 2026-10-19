@@ -26,17 +26,6 @@ if TYPE_CHECKING:
 MAX_FINDING_REACHABILITY_PATHS = 1000
 MAX_SNAPSHOT_REACHABILITY_PATHS = 200_000
 
-_REACHABILITY_EVIDENCE_EDGES = frozenset(
-    {
-        RelationshipType.EXPLOITABLE_VIA.value,
-        RelationshipType.EXPOSED_TO.value,
-        RelationshipType.INVOKED.value,
-        RelationshipType.CALLED.value,
-        RelationshipType.USED_CREDENTIAL.value,
-        RelationshipType.ACCESSED.value,
-        RelationshipType.DELEGATED_TO.value,
-    }
-)
 # Trace order says which assets one correlated trace touched in sequence. It is
 # recorded context, never access or exposure evidence, so a route that needs it
 # cannot mark a finding reachable (the same rule attack-path fusion applies).
@@ -88,17 +77,17 @@ def _path_vulnerability_ids(path: AttackPath) -> set[str]:
 
 
 def _path_has_reachability_evidence(path: AttackPath) -> bool:
-    """Return whether a path contains an observed reachability edge.
+    """Return whether a persisted path makes its finding ``graph_reachable``.
 
-    Static inventory edges such as ``uses`` and ``depends_on`` describe useful
-    topology, but they do not prove that an agent can reach a vulnerable
-    component at runtime. Positive reachability requires an explicit exploit,
-    network-exposure, or runtime-execution relationship, and a route that
-    depends on trace order is not one.
+    ``graph_reachable`` means any inbound attack path reaches the finding,
+    including a structural ``depends_on`` chain from a workload. It is not
+    proof of execution: the verdict ladder keeps such a path at ``likely``.
+    A route that depends on trace order is never a path, because trace order
+    records sequence, not access.
     """
 
     relationships = {edge.value if isinstance(edge, RelationshipType) else _text(edge).lower() for edge in path.edges}
-    return not relationships & _TRACE_ORDER_EDGES and bool(relationships & _REACHABILITY_EVIDENCE_EDGES)
+    return bool(relationships) and not relationships & _TRACE_ORDER_EDGES
 
 
 def _row_node_ids(row: Mapping[str, Any]) -> set[str]:
