@@ -161,6 +161,10 @@ def test_demo_estate_bootstrap_seeds_honest_posture_trajectory(
     assert previous["timestamp"] == SHOWCASE_BASELINE_CREATED_AT
     assert current["posture_score"] > previous["posture_score"]
     assert current["total_vulns"] < previous["total_vulns"]
+    # The current point is the headline the posture endpoints serve, not the
+    # single scan's scorecard.
+    posture = demo_estate_client.get("/v1/posture", headers=VIEWER).json()
+    assert (current["posture_grade"], current["posture_score"]) == (posture["grade"], posture["score"])
 
     from agent_bom.demo_estate.bootstrap import _seed_showcase_posture_trends
 
@@ -380,8 +384,11 @@ def test_demo_estate_hero_findings_carry_the_persisted_graph_path(demo_estate_cl
         if row.get("vulnerability_id") == "CVE-2020-14343" and row.get("package_name") == "pyyaml" and row.get("package_version") == "5.3"
     ]
 
-    assert len(hero) > 1, "the bundled inventory did not include estate-scoped pyyaml exposures"
-    for row in hero:
+    on_path = [row for row in hero if (row.get("asset") or {}).get("asset_type") == "mcp_server"]
+    assert len(hero) > len(on_path) >= 1, "the bundled inventory did not include both the hero server and estate-scoped pyyaml exposures"
+    # An estate occurrence is another asset, not a hop on the hand-built path.
+    assert all(row.get("graph_reachable") is not True for row in hero if row not in on_path)
+    for row in on_path:
         assert row.get("graph_reachable") is True
         assert row.get("graph_min_hop_distance") == 3
         assert "agent:cursor" in (row.get("graph_reachable_from_agents") or [])
@@ -408,12 +415,16 @@ def test_demo_estate_hero_findings_carry_the_persisted_graph_path(demo_estate_cl
     assert all("shell-runner-server" in (row.get("affected_servers") or []) for row in graph_hero)
 
 
-def test_demo_estate_graph_evidence_covers_a_meaningful_finding_share(demo_estate_client: TestClient) -> None:
-    """The attack-path demo must cover more than a token handful of CVEs."""
+def test_demo_estate_graph_evidence_covers_every_hand_built_path(demo_estate_client: TestClient) -> None:
+    """Every hand-built path is evidenced on its finding, and no other row borrows one."""
+    from agent_bom.demo_estate.showcase_graph import SHOWCASE_PACKAGES
+
     blast = _demo_report(demo_estate_client).get("blast_radius") or []
     evidenced = [row for row in blast if row.get("graph_reachable") is True]
+    paths = {f"{row.get('package_name')}@{row.get('package_version')}".lower() for row in evidenced}
 
-    assert len(evidenced) >= 100, f"only {len(evidenced)} of {len(blast)} vulnerability rows carry persisted graph evidence"
+    assert paths == set(SHOWCASE_PACKAGES), sorted(paths ^ set(SHOWCASE_PACKAGES))
+    assert all((row.get("asset") or {}).get("asset_type") == "mcp_server" for row in evidenced)
 
 
 def test_demo_estate_posture_findings_resolve_to_inventoried_assets(

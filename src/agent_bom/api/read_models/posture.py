@@ -204,9 +204,14 @@ class PostureDimension(ReadModel):
 class PostureDimensionsBasis(ReadModel):
     """Which evidence the per-dimension breakdown was computed from."""
 
-    basis: Literal["latest_scan"]
+    basis: Literal["latest_scan", "tenant_current_findings"]
     scan_id: str | None = None
     completed_at: str | None = None
+    scan_ids: list[str] | None = None
+    scan_count: int | None = None
+    open_findings: int | None = None
+    vulnerability_findings: int | None = None
+    credential_exposed_findings: int | None = None
 
 
 class ScanScorecard(ReadModel):

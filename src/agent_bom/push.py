@@ -20,11 +20,21 @@ from typing import Any, Literal, overload
 import httpx
 
 from agent_bom.core.settings import env_list, env_str
-from agent_bom.security import sanitize_command_args, sanitize_env_vars, sanitize_security_warnings, sanitize_text, sanitize_url
+from agent_bom.security import (
+    sanitize_command_args,
+    sanitize_env_vars,
+    sanitize_security_warnings,
+    sanitize_sensitive_payload,
+    sanitize_text,
+    sanitize_url,
+)
 
 logger = logging.getLogger(__name__)
 
 _LOCAL_CONTROL_PLANE_HOSTS = frozenset({"localhost", "127.0.0.1", "::1"})
+# Finding identities whose names match the secret heuristic. They take the
+# server's coordinate policy instead, which still redacts credential-shaped values.
+_IDENTITY_KEYS = frozenset({"finding_group_key"})
 
 SCAN_PUSH_PATH = "/v1/results/push"
 
@@ -94,12 +104,13 @@ def generate_source_id() -> str:
     return hashlib.sha256(hostname.encode()).hexdigest()[:12]
 
 
-def sanitize_results(results: dict) -> dict:
+def sanitize_results(results: dict, *, source_id: str | None = None) -> dict:
     """Deep-copy results and strip sensitive data before push.
 
     - Removes config_path from agents
     - Redacts env var patterns in metadata
-    - Adds source_id
+    - Adds source_id: the explicit producer target when given (a connector
+      team or project), otherwise this machine's stable endpoint identity
     """
     # The recursive redactor builds new containers; a preliminary deep copy
     # duplicated the entire report without adding isolation.
@@ -119,7 +130,7 @@ def sanitize_results(results: dict) -> dict:
             agent["tags"] = tags
 
     # Add source identifier
-    sanitized["source_id"] = str(endpoint_identity["source_id"])
+    sanitized["source_id"] = source_id or str(endpoint_identity["source_id"])
     sanitized["idempotency_key"] = str(uuid.uuid4())
 
     return sanitized
@@ -147,7 +158,11 @@ def _redact_nested_secrets(value):
                 redacted[key] = sanitize_env_vars(child)
             elif key_text == "security_warnings" and isinstance(child, list):
                 redacted[key] = sanitize_security_warnings(child)
-            elif _looks_like_secret(key_text) and isinstance(child, (str, int, float, bool)):
+            elif key_text in _IDENTITY_KEYS and isinstance(child, str):
+                redacted[key] = sanitize_sensitive_payload(child, key=key_text)
+            elif _looks_like_secret(key_text) and isinstance(child, (str, int, float)) and not isinstance(child, bool):
+                # A boolean cannot carry a secret value; redacting one corrupts
+                # receipts such as ``authenticated``.
                 redacted[key] = "***REDACTED***"
             else:
                 redacted[key] = _redact_nested_secrets(child)
@@ -196,6 +211,7 @@ async def _push_async(
     base_delay_seconds: float = _DEFAULT_PUSH_BASE_DELAY,
     max_delay_seconds: float = _DEFAULT_PUSH_MAX_DELAY,
     return_body: Literal[False] = False,
+    source_id: str | None = None,
 ) -> bool: ...
 
 
@@ -209,6 +225,7 @@ async def _push_async(
     base_delay_seconds: float = _DEFAULT_PUSH_BASE_DELAY,
     max_delay_seconds: float = _DEFAULT_PUSH_MAX_DELAY,
     return_body: Literal[True],
+    source_id: str | None = None,
 ) -> tuple[bool, dict[str, Any] | None]: ...
 
 
@@ -221,6 +238,7 @@ async def _push_async(
     base_delay_seconds: float = _DEFAULT_PUSH_BASE_DELAY,
     max_delay_seconds: float = _DEFAULT_PUSH_MAX_DELAY,
     return_body: bool = False,
+    source_id: str | None = None,
 ) -> bool | tuple[bool, dict[str, Any] | None]:
     """POST sanitized results to the central dashboard with bounded retries.
 
@@ -233,7 +251,7 @@ async def _push_async(
     from agent_bom.http_client import create_client
     from agent_bom.security import SecurityError
 
-    sanitized = await asyncio.to_thread(sanitize_results, results)
+    sanitized = await asyncio.to_thread(sanitize_results, results, source_id=source_id)
     try:
         _validate_push_destination_url(push_url)
     except SecurityError as exc:
@@ -307,12 +325,7 @@ async def _push_async(
             if attempt < max_attempts:
                 await asyncio.sleep(_push_retry_delay(attempt, base_delay_seconds, max_delay_seconds))
 
-    logger.error(
-        "Push failed after %d attempts (last_status=%s, last_error=%s)",
-        max_attempts,
-        last_status,
-        last_error,
-    )
+    logger.error("Push failed after %d attempts (last_status=%s, last_error=%s)", max_attempts, last_status, last_error)
     if return_body:
         return False, None
     return False
@@ -324,9 +337,9 @@ def push_results(push_url: str, results: dict, api_key: str | None = None) -> bo
     return bool(result)
 
 
-def push_json(push_url: str, results: dict, api_key: str | None = None) -> dict | None:
+def push_json(push_url: str, results: dict, api_key: str | None = None, *, source_id: str | None = None) -> dict | None:
     """POST sanitized JSON and return the parsed response body on success."""
-    pushed = asyncio.run(_push_async(push_url, results, api_key, return_body=True))
+    pushed = asyncio.run(_push_async(push_url, results, api_key, return_body=True, source_id=source_id))
     if not isinstance(pushed, tuple):
         return None
     ok, body = pushed

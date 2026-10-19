@@ -31616,7 +31616,10 @@
         "description": "Which evidence the per-dimension breakdown was computed from.",
         "properties": {
           "basis": {
-            "const": "latest_scan",
+            "enum": [
+              "latest_scan",
+              "tenant_current_findings"
+            ],
             "title": "Basis",
             "type": "string"
           },
@@ -31631,6 +31634,39 @@
             ],
             "title": "Completed At"
           },
+          "credential_exposed_findings": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Credential Exposed Findings"
+          },
+          "open_findings": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Open Findings"
+          },
+          "scan_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Count"
+          },
           "scan_id": {
             "anyOf": [
               {
@@ -31641,6 +31677,31 @@
               }
             ],
             "title": "Scan Id"
+          },
+          "scan_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scan Ids"
+          },
+          "vulnerability_findings": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vulnerability Findings"
           }
         },
         "required": [

@@ -139,7 +139,7 @@ def compute_lane_report(*, vms: int = DEMO_COMPUTE_VMS, decoys: int = DEMO_HOSTN
     findings: list[dict[str, Any]] = [
         {
             "id": f"demo-compute-imds-{index:02d}",
-            "finding_type": "CLOUD_MISCONFIGURATION",
+            "finding_type": "CLOUD_BEST_PRACTICE_FAIL",
             "source": "CLOUD_SECURITY",
             "severity": "medium",
             "title": "Instance metadata service v1 is enabled",
@@ -155,10 +155,10 @@ def compute_lane_report(*, vms: int = DEMO_COMPUTE_VMS, decoys: int = DEMO_HOSTN
     findings.extend(
         {
             "id": f"demo-sensor-host-{index:02d}",
-            "finding_type": "CLOUD_MISCONFIGURATION",
+            "finding_type": "CLOUD_BEST_PRACTICE_FAIL",
             "source": "EXTERNAL",
             "severity": "low",
-            "title": "Unsigned binary executed",
+            "title": "Host permits execution of unsigned binaries",
             "asset": _sensor_host_asset(index),
         }
         for index in range(min(decoys, vms))

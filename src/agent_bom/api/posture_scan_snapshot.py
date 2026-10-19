@@ -25,12 +25,7 @@ def scan_posture_inputs(store: Any, tenant_id: str, load_current: Callable[[], A
     """Keep only summary/scorecard fields; callers never share mutable job objects.
 
     The caller selects authoritative evidence; this cache stores only projections.
-    Legacy stores without revision tokens compute on every call. Durable stores
-    validate the token around reads and reject continuously changing evidence.
-    The short TTL also bounds changes to time-dependent scan eligibility.
     """
-    require_explicit_tenant_id(tenant_id)
-    reader = getattr(store, "overview_evidence_revision", None)
 
     def compute() -> dict | None:
         job = load_current()
@@ -39,19 +34,31 @@ def scan_posture_inputs(store: Any, tenant_id: str, load_current: Callable[[], A
         inputs = {key: job.result.get(key) for key in ("summary", "posture_scorecard")}
         inputs["scan_id"] = job.job_id
         inputs["completed_at"] = job.completed_at
-        return copy.deepcopy(inputs)
+        return inputs
 
+    return revision_cached(store, tenant_id, "latest_scan", compute)
+
+
+def revision_cached(store: Any, tenant_id: str, kind: str, compute: Callable[[], dict | None]) -> dict | None:
+    """A detached, JSON-sized projection of the tenant's jobs, keyed by the durable job revision.
+
+    Legacy stores without revision tokens compute on every call. Durable stores
+    validate the token around reads and reject continuously changing evidence.
+    The short TTL also bounds changes to time-dependent scan eligibility.
+    """
+    require_explicit_tenant_id(tenant_id)
+    reader = getattr(store, "overview_evidence_revision", None)
     if not callable(reader):
-        return compute()
+        return copy.deepcopy(compute())
     for _ in range(3):
         before = str(reader(tenant_id))
-        key = (store, tenant_id, before)
+        key = (store, tenant_id, f"{kind}:{before}")
         with _LOCK:
             hit = _CACHE.get(key)
             if hit is not None and hit[0] > time.monotonic():
                 _CACHE.move_to_end(key)
                 return copy.deepcopy(hit[1])
-        value = compute()
+        value = copy.deepcopy(compute())
         if str(reader(tenant_id)) != before:
             continue
         if len(json.dumps(value).encode()) <= _MAX_BYTES:

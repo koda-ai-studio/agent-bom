@@ -3,8 +3,8 @@
 The overview's configurable exec score (issue-group severity, KEV, credential
 exposure, failing frameworks, floored by the scan-time scorecard) is the
 tenant's posture grade. ``/v1/posture`` returns that same grade, score and
-summary; the scan-time scorecard remains available under ``scan_scorecard``
-with its per-dimension breakdown, so no surface reports a second grade.
+summary; the latest scan's grade remains available under ``scan_scorecard``,
+so no surface reports a second grade.
 """
 
 from __future__ import annotations
@@ -14,6 +14,11 @@ from typing import Any, cast
 
 from fastapi import HTTPException, Request
 
+from agent_bom.api import time_window
+from agent_bom.api.findings_current import current_scan_jobs
+from agent_bom.api.posture_counts_cache import cached_posture_block
+from agent_bom.api.scan_finding_read import current_open_scan_findings
+from agent_bom.api.tenant_posture_dimensions import current_findings_dimensions
 from agent_bom.core.severity import SEVERITY_DISPLAY_BUCKETS
 from agent_bom.exec_score import compute_exec_score
 
@@ -114,8 +119,6 @@ def compound_issue_count(tenant_jobs: list[Any]) -> int:
     correlation that lives in ``blast_radius`` (not a raw severity count).
     Deduped by vulnerability id across scans.
     """
-    from agent_bom.api.findings_current import current_scan_jobs
-
     seen_ids: set[str] = set()
     compound = 0
     for job in current_scan_jobs(
@@ -138,9 +141,18 @@ def compound_issue_count(tenant_jobs: list[Any]) -> int:
     return compound
 
 
+def tenant_posture_dimensions(tenant_jobs: list[Any]) -> dict[str, Any] | None:
+    """Posture dimensions over the overview's basis: current scans, open findings, default window.
+
+    ``None`` when the tenant has no current scan evidence.
+    """
+    since = time_window.window_since_iso(time_window.normalize_window_days(None))
+    evidence = current_scan_jobs(tenant_jobs, since=since, scan_id=None, require_authoritative_evidence=True)
+    return current_findings_dimensions(evidence, current_open_scan_findings(tenant_jobs)) if evidence else None
+
+
 def posture_evidence_blocks(request: Request, tenant_jobs: list[Any]) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
     """Exec severity, compound issues and issue groups for the current evidence fingerprint."""
-    from agent_bom.api.posture_counts_cache import cached_posture_block
     from agent_bom.api.routes import overview
     from agent_bom.api.routes.compliance import _cached_issue_severity_counts
 
@@ -183,10 +195,11 @@ def tenant_headline_posture(tenant_id: str) -> dict[str, Any] | None:
 def canonical_posture_payload(
     request: Request, scorecard: dict[str, Any], *, dimensions_basis: dict[str, Any] | None = None
 ) -> dict[str, Any]:
-    """Tenant-wide headline over the scan scorecard.
+    """Tenant-wide headline over the scorecard's per-dimension breakdown.
 
-    ``dimensions`` stay the latest scan's scorecard; ``dimensions_basis`` names
-    that scan so the breakdown is never read as the tenant-wide headline.
+    ``dimensions_basis`` names what the breakdown was computed from: the
+    tenant's current open findings, or the latest scan when those are
+    unavailable, so the two are never confused.
     """
     from agent_bom.api.routes.overview import _build_overview
 
@@ -213,4 +226,5 @@ __all__ = [
     "precompute_posture_evidence",
     "tenant_exec_posture",
     "tenant_headline_posture",
+    "tenant_posture_dimensions",
 ]

@@ -7,7 +7,14 @@ from uuid import uuid4
 
 import click
 
-from agent_bom.cli._cloud_inventory_io import CollectionScopeMismatchError, _write_report, persist_graph, read_token
+from agent_bom.cli._cloud_inventory_io import (
+    CollectionScopeMismatchError,
+    ConnectorPushError,
+    _write_report,
+    persist_graph,
+    push_report,
+    read_token,
+)
 from agent_bom.cli._tenant import resolve_cli_tenant_id_strict
 from agent_bom.security import sanitize_error
 
@@ -35,12 +42,28 @@ def _persist_report(report: dict, graph_db: Path, tenant_id: str, output: Path) 
 )
 @click.option("--graph-db", type=click.Path(dir_okay=False, path_type=Path), help="Optional dedicated SQLite graph snapshot database.")
 @click.option("--tenant", default=None, help="Tenant for graph persistence; uses the standard CLI tenant resolution.")
-def supabase_cmd(project_refs: tuple[str, ...], token_file: Path, output: Path, graph_db: Path | None, tenant: str | None) -> None:
+@click.option(
+    "--push-url",
+    default=None,
+    metavar="URL",
+    help="Push each project's inventory to a control plane (base URL or /v1/results/push); it joins the current estate graph.",
+)
+@click.option("--push-api-key", default=None, envvar="AGENT_BOM_PUSH_API_KEY", metavar="KEY", help="API key for push authentication.")
+def supabase_cmd(
+    project_refs: tuple[str, ...],
+    token_file: Path,
+    output: Path,
+    graph_db: Path | None,
+    tenant: str | None,
+    push_url: str | None,
+    push_api_key: str | None,
+) -> None:
     """Read scoped Supabase project metadata and native security advisors.
 
     Never resumes projects, queries data, executes advisors or reads API keys.
     Exit 2 retains a partial report but leaves the previous graph snapshot intact.
     Use a dedicated graph database for this scoped inventory, not a fleet scan DB.
+    A push sends one target per project; a partial project keeps its earlier evidence.
     """
     from agent_bom.cloud.supabase_inventory import collect_report
 
@@ -57,8 +80,12 @@ def supabase_cmd(project_refs: tuple[str, ...], token_file: Path, output: Path, 
         _write_report(output, report)
         if graph_db is not None and report["status"] == "ok":
             _persist_report(report, graph_db, tenant_id, output)
+        if push_url:
+            push_report(report, push_url, push_api_key, output)
     except CollectionScopeMismatchError as exc:
         raise click.ClickException("Collection scope changed; use a separate graph database") from exc
+    except ConnectorPushError as exc:
+        raise click.ClickException(str(exc)) from exc
     except Exception as exc:
         raise click.ClickException(sanitize_error(exc, generic=True)) from exc
     click.echo(f"Supabase: {report['status']}; {len(report['cloud_inventory'])} projects; {len(report['findings'])} native findings.")

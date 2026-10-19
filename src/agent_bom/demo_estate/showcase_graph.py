@@ -12,6 +12,12 @@ from agent_bom.api.agent_identity_store import (
     InMemoryAgentIdentityStore,
 )
 from agent_bom.demo_estate.compute_identity_lane import project_compute_lane
+from agent_bom.demo_estate.showcase_findings import (
+    SHOWCASE_DRIFT_INCIDENTS,
+    bind_mcp_auth_findings,
+    demo_mcp_auth_findings,
+    project_mcp_auth_findings,
+)
 from agent_bom.graph.cnapp_overlay import apply_cnapp_overlay
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
@@ -39,8 +45,8 @@ SHOWCASE_BASELINE_SCAN_ID = "showcase-baseline"
 # ``Remediation`` object frozen to its Python repr, and a running demo would have
 # served that snapshot forever. The seven-day gap is the drift lens's window and
 # is preserved on every bump.
-# The September 24 02:00 seed removes package/context-only identity authority.
-_SHOWCASE_CURRENT_TARGET = datetime(2026, 9, 24, 2, 0, 0, tzinfo=timezone.utc)
+# The October 17 02:00 seed draws one finding set shared with the demo scan.
+_SHOWCASE_CURRENT_TARGET = datetime(2026, 10, 17, 2, 0, 0, tzinfo=timezone.utc)
 _SHOWCASE_IMPORT_NOW = datetime.now(timezone.utc)
 # Preserve the deterministic target once it is in the past. Before then, clamp
 # to the current UTC day's start so a release candidate never presents a
@@ -94,6 +100,8 @@ SHOWCASE_PACKAGES: dict[str, tuple[str, str, str, float]] = {
     "express@4.17.1": ("filesystem-server", "CVE-2024-29041", "medium", 6.1),
     "requests@2.28.0": ("vector-db-server", "CVE-2023-32681", "medium", 6.1),
     "jinja2@3.0.0": ("team-chat-server", "CVE-2024-22195", "medium", 5.4),
+    "node-fetch@2.6.1": ("filesystem-server", "CVE-2022-0235", "medium", 6.1),
+    "werkzeug@2.2.2": ("team-chat-server", "CVE-2023-25577", "high", 7.5),
 }
 
 _logger = logging.getLogger(__name__)
@@ -477,6 +485,7 @@ def build_showcase_graph(
             cve,
             severity=sev,
             risk_score=score,
+            vulnerability_id=cve,
             is_kev=cve in kev_cves,
             summary=advisory.summary if advisory else "",
             cvss_score=advisory.cvss_score if advisory else score,
@@ -650,22 +659,12 @@ def build_showcase_graph(
 
     drift = _DriftStore(
         [
-            _DriftIncident(
-                incident_id="drift-001",
-                blueprint_id="Cursor IDE Agent",
-                drift_score=0.78,
-                violation_count=14,
-                top_violations=[{"tool_name": "run_shell"}],
-            ),
-            _DriftIncident(
-                incident_id="drift-002",
-                blueprint_id="Data Pipeline Agent",
-                drift_score=0.41,
-                violation_count=5,
-                top_violations=[{"tool_name": "execute_sql"}],
-            ),
+            _DriftIncident(incident_id=i, blueprint_id=bp, drift_score=score, violation_count=n, top_violations=[{"tool_name": tool}])
+            for i, bp, score, n, tool in SHOWCASE_DRIFT_INCIDENTS
         ]
     )
+    if not is_baseline:
+        project_mcp_auth_findings(g, bind_mcp_auth_findings(demo_mcp_auth_findings(), SHOWCASE_SERVERS))
     return g, store, drift
 
 

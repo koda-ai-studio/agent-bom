@@ -17,6 +17,7 @@ import httpx
 
 from agent_bom.cloud.management_http import read_json
 from agent_bom.cloud.resource_model import supabase_project_node_id as project_node_id
+from agent_bom.compliance_hub import apply_hub_classification
 from agent_bom.finding import Asset, Finding, FindingSource, FindingType, stable_id
 from agent_bom.security import sanitize_text
 
@@ -106,7 +107,7 @@ def _findings(payload: Any, project: dict[str, Any], observed_at: str) -> list[d
             "severity_mapping": "ERROR=high,WARN=medium,INFO=info;otherwise=unknown",
         }
         fid = stable_id("supabase-security-advisors", project["organization_id"], project["ref"], identity_digest)
-        finding = Finding(
+        native = Finding(
             id=fid,
             finding_type=FindingType.CLOUD_BEST_PRACTICE_FAIL,
             source=FindingSource.CLOUD_SECURITY,
@@ -127,7 +128,8 @@ def _findings(payload: Any, project: dict[str, Any], observed_at: str) -> list[d
             remediation_guidance=(
                 "Review this native advisor in the Supabase project Security Advisor; verify configuration before applying a fix."
             ),
-        ).to_dict()
+        )
+        finding = apply_hub_classification(native).to_dict()
         if fid in findings and findings[fid] != finding:
             raise ValueError("Conflicting duplicate Supabase advisor")
         findings[fid] = finding

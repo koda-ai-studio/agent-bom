@@ -601,4 +601,4 @@ Class `finding` · directed · traversable · required evidence `source`, `tier`
 - `server` → `misconfiguration`, `vulnerability`
 - `tool` → `misconfiguration`, `vulnerability`
 
-Emitted by: `graph/blast_projection.py`, `graph/component_paths.py`, `graph/credential_findings.py`, `graph/mcp_audit_projection.py`, `graph/package_projection.py`, `graph/rollup_issues.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
+Emitted by: `graph/blast_projection.py`, `graph/component_paths.py`, `graph/credential_findings.py`, `graph/mcp_audit_projection.py`, `graph/package_projection.py`, `graph/rollup_issues.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_findings.py`, `demo_estate/showcase_graph.py`

@@ -486,10 +486,10 @@ def controls_for_finding_shape(
     """Return ``{tag_field: [control, ...]}`` for a non-advisory finding.
 
     Empty for every finding type this table does not own (CVE findings are
-    tagged from their advisory by the CVE taggers, COMBINATION by ``rule_id``).
+    tagged from their advisory by the CVE taggers, rule-keyed shapes by ``rule_id``).
     """
     from agent_bom.evidence.control_modes import finding_taggable_controls
-    from agent_bom.evidence.toxic_combination_controls import TOXIC_COMBINATION_CONTROLS
+    from agent_bom.evidence.vendor_rule_controls import RULE_KEYED_CONTROLS
     from agent_bom.fedramp import FEDRAMP_MODERATE
 
     tags: dict[str, list[str]] = {}
@@ -516,8 +516,8 @@ def controls_for_finding_shape(
         for field_name, controls in _SECURE_DEVELOPMENT_TAGS.items():
             add(field_name, controls)
         add_cwe_rows(cwe_ids)
-    elif finding_type is FindingType.COMBINATION and rule_id in TOXIC_COMBINATION_CONTROLS:
-        for field_name, controls in TOXIC_COMBINATION_CONTROLS[rule_id].items():
+    elif rule_tags := RULE_KEYED_CONTROLS.get(finding_type.value, {}).get(rule_id or ""):
+        for field_name, controls in rule_tags.items():
             add(field_name, controls)
     else:
         return {}

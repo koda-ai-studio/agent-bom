@@ -14,7 +14,9 @@ from agent_bom.api.pipeline import _now
 from agent_bom.api.store import DEMO_ESTATE_TRIGGERED_BY
 from agent_bom.demo_estate import demo_estate_enabled as demo_estate_enabled
 from agent_bom.demo_estate.boot_seed import serialized_seed
+from agent_bom.demo_estate.showcase_findings import append_showcase_graph_findings, bind_mcp_auth_findings, estate_scan_evidence
 from agent_bom.demo_estate.showcase_graph import (
+    SHOWCASE_AGENTS,
     SHOWCASE_BASELINE_CREATED_AT,
     SHOWCASE_BASELINE_SCAN_ID,
     SHOWCASE_CURRENT_CREATED_AT,
@@ -197,38 +199,6 @@ def _tenant_has_demo_jobs(store: Any, tenant_id: str) -> bool:
     return False
 
 
-def _estate_findings(tenant_id: str) -> list[Any]:
-    """Return the composed estate's findings for the demo scan job.
-
-    Seeded through the SAME ``findings`` list every other generator uses, so the
-    findings list, the severity facets, the exec tiles, SARIF and every export
-    read one derivation. Anything else would let the demo's own surfaces
-    disagree with each other, which is precisely what the estate exists to
-    disprove.
-    """
-    from agent_bom.demo_estate.enterprise_composition import build_demo_estate
-    from agent_bom.demo_estate.enterprise_findings import build_estate_findings
-
-    return list(build_estate_findings(build_demo_estate(tenant_id=tenant_id)))
-
-
-def _estate_blast_radii(tenant_id: str) -> list[Any]:
-    """Return the blast radii behind the estate's CVE findings.
-
-    Not optional, and not a duplicate of the findings above.
-    ``output.finding_views.cve_findings`` resolves the report's CVE array from
-    ``report.blast_radii`` whenever that list is non-empty, and the unified
-    ``findings`` array excludes ``CVE`` by design. An estate that contributed
-    CVE findings but no blast radii therefore had its entire vulnerability lane
-    dropped between the seeder and the API — ``/v1/findings`` reported 1,833 of
-    2,601 seeded rows and no surface said a lane was missing.
-    """
-    from agent_bom.demo_estate.enterprise_composition import build_demo_estate
-    from agent_bom.demo_estate.enterprise_risk import build_vulnerability_blast_radii
-
-    return list(build_vulnerability_blast_radii(build_demo_estate(tenant_id=tenant_id)))
-
-
 def _stamp_showcase_graph_reachability(blast_radii: list[Any], agents: list[Any]) -> None:
     """Join demo vulnerability rows to the exact persisted showcase paths.
 
@@ -283,15 +253,20 @@ def _run_demo_scan_report(*, tenant_id: str) -> dict[str, Any]:
         offline=True,
         demo_advisories=True,
     )
-    # Both halves of the vulnerability lane, or neither surfaces (see
-    # ``_estate_blast_radii``). Stamp the combined list before projecting it to
-    # findings so every API/export surface receives the same graph evidence.
-    blast_radii = [*blast_radii, *_estate_blast_radii(tenant_id)]
+    # Only the demo inventory's own blast radii sit on the hand-built path. An
+    # estate package of the same version is another asset whose graph node has
+    # no edge from that server; stamping it claimed a path the graph never draws
+    # and left the server's nested package rows with no single finding to join.
     _stamp_showcase_graph_reachability(blast_radii, agents)
     findings = [blast_radius_to_finding(br) for br in blast_radii]
+    # Both halves of the vulnerability lane, paired in order (see
+    # ``estate_scan_evidence``).
+    estate_pairs, estate_findings = estate_scan_evidence(tenant_id)
+    blast_radii = [*blast_radii, *(br for br, _ in estate_pairs)]
+    findings.extend(finding for _, finding in estate_pairs)
     findings.extend(blocklist_findings_for_agents(agents))
-    findings.extend(evaluate_mcp_auth_posture(agents))
-    findings.extend(_estate_findings(tenant_id))
+    findings.extend(bind_mcp_auth_findings(evaluate_mcp_auth_posture(agents), SHOWCASE_SERVERS))
+    findings.extend(estate_findings)
     report = to_json(
         AIBOMReport(
             agents=agents,
@@ -300,6 +275,11 @@ def _run_demo_scan_report(*, tenant_id: str) -> dict[str, Any]:
             scan_sources=["demo", "demo-estate"],
             scan_id="showcase",
         )
+    )
+    append_showcase_graph_findings(
+        report,
+        tenant_id=tenant_id,
+        agent_ids_by_label={label: f"agent:{agent_id}" for agent_id, label in SHOWCASE_AGENTS.items()},
     )
 
     report.setdefault("scan_sources", [])
@@ -350,15 +330,19 @@ def _seed_showcase_posture_trends(report: dict[str, Any], *, tenant_id: str) -> 
     """
     from dataclasses import replace
 
+    from agent_bom.api.exec_posture import tenant_headline_posture
     from agent_bom.api.stores import _get_trend_store
     from agent_bom.api.trend_recording import trend_point_from_scan_result
     from agent_bom.posture import _score_to_grade
 
+    # The current point plots the headline /v1/overview and /v1/posture serve,
+    # as live scans do once their job is persisted.
     current = trend_point_from_scan_result(
         report,
         tenant_id=tenant_id,
         scan_id=SHOWCASE_SCAN_ID,
         completed_at=SHOWCASE_CURRENT_CREATED_AT,
+        headline=tenant_headline_posture(tenant_id),
     )
     if current is None:
         return 0

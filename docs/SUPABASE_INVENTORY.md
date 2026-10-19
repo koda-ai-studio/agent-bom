@@ -29,6 +29,33 @@ establish execution, effective permissions, or exploitability. The graph
 contains project assets, configuration and advisor findings, without invented
 MCP tools or agents.
 
+## Send the inventory to a control plane
+
+To see the projects in the graph the API and dashboard serve, add
+`--push-url https://agent-bom.example.com` (a base URL or the full
+`/v1/results/push` endpoint). Set the API key in `AGENT_BOM_PUSH_API_KEY` or
+pass `--push-api-key`. The control-plane tenant comes from that key;
+`--tenant` applies only to `--graph-db`.
+
+Each project is pushed as its own target, source
+`connector:supabase:<project_ref>`, with its own replacement scope. On
+`/v1/graph` the projects, their organization, and advisor findings appear next
+to other scans and connectors in the current estate. A later push for a
+project replaces only that project's evidence. A project whose collection was
+partial is still pushed, marked `partial`: the control plane keeps that
+project's earlier evidence and reports `collection_coverage.status: partial`.
+Receipts for each target are under `persistence.push` in the report. If any
+target is not accepted, the command exits 1 and records
+`persistence.push.status: failed`.
+
+Compliance tags come from exact advisor names only. `rls_disabled_in_public`,
+`policy_exists_rls_disabled`, `sensitive_columns_exposed` and
+`auth_users_exposed` expose data through the project API without row-level
+access enforcement, so they are tagged NIST 800-53 AC-3 and SOC 2 CC6.1.
+ISO 27001 tags follow from the NIST crosswalk. Other advisors, such as mutable
+function search paths or outdated extensions, carry no framework tag because
+no control objective is directly evidenced.
+
 Next, inspect `coverage`, then follow each finding's native advisor rule and
 project reference in Supabase's Security Advisor. Fixes require operator
 review; a later empty response does not automatically resolve prior findings.
@@ -66,5 +93,5 @@ The native advisor endpoint is experimental. See the official
 [project contract](https://supabase.com/docs/reference/api/v1-get-project) and
 [security advisor contract](https://supabase.com/docs/reference/api/v1-get-security-advisors).
 This command does not register a hosted connection or schedule collection in
-the dashboard. API connection onboarding and per-capability UI remain separate
+the dashboard; `--push-url` sends one run's evidence. API connection onboarding and per-capability UI remain separate
 integration work.
