@@ -1,6 +1,8 @@
 "use client";
 
 import { GraphConnectionsList } from "@/components/graph-connections-list";
+import { ScopeBreadcrumbChip } from "@/components/graph-scope-breadcrumb";
+import { nameScopeCrumbs, type ScopeCrumb } from "@/lib/graph-scope-crumbs";
 import { declutterRelationshipLabels, hideRedundantDerivedEdges } from "@/lib/graph-label-declutter";
 import { activateGraphNodeFromKeyboard } from "@/lib/graph-keyboard-selection";
 import { GraphScopeEvidence } from "@/components/graph-scope-evidence";
@@ -628,10 +630,7 @@ export function knownGraphTotal(response: UnifiedGraphResponse): number | null {
  * page would have to thread the LOD band through props or duplicate
  * `<ReactFlow>` ancestry.
  */
-type RollupBreadcrumb = {
-  id: string;
-  label: string;
-};
+type RollupBreadcrumb = ScopeCrumb;
 
 // Keep relationship captions useful on focused graphs without letting a
 // medium-sized topology turn into a wall of overlapping badges. Above this
@@ -1417,7 +1416,7 @@ function GraphPageInner() {
         setRollupView(result);
         // A deep-linked scope only knows its id until the server names it.
         const named = result.node;
-        if (named?.label) setRollupStack(current => current.map(crumb => crumb.id === named.id && crumb.label === crumb.id ? { ...crumb, label: named.label } : crumb));
+        setRollupStack(current => nameScopeCrumbs(current, named));
         setRollupUnavailable(false);
         setRollupError(null);
       })
@@ -2846,7 +2845,7 @@ function GraphPageInner() {
     setRollupMapExpanded(false);
     setRollupStack((current) => {
       if (current.at(-1)?.id === item.id) return current;
-      return [...current, { id: item.id, label: item.label }];
+      return [...current, { id: item.id, label: item.label, cloudProvider: item.cloud_provider || undefined, cloudProviderBasis: item.cloud_provider_basis || undefined }];
     });
   }, []);
 
@@ -3080,7 +3079,7 @@ function GraphPageInner() {
             {!rollupDecisionActive && rollupStack.length === 0 && <button type="button" onClick={returnToSummary} className="graph-page-action">All scopes</button>}
             {rollupStack.length > 0 && <nav aria-label="Investigation scope" className="mt-2 flex flex-wrap items-center gap-2 text-xs">
               <button type="button" onClick={resetRollupToRoot} className="graph-page-action">All scopes</button>
-              {rollupStack.map((crumb, index) => <button key={crumb.id} type="button" onClick={() => navigateRollupBreadcrumb(index)} className="graph-chip-neutral">{crumb.label}</button>)}
+              {rollupStack.map((crumb, index) => <ScopeBreadcrumbChip key={crumb.id} crumb={crumb} onClick={() => navigateRollupBreadcrumb(index)} />)}
             </nav>}
           </div>;
   const graphSearchForm = (

@@ -853,7 +853,10 @@ export interface GraphRollupContainer {
   direct_child_count: number;
   aggregate: GraphRollupAggregate;
   /** Other top-level scopes linked by non-containment edges, counted server-side before any row cap. */
-  connections?: { connected_entry_count: number; relationship_count: number };
+  connections?: { connected_entry_count: number; relationship_count: number };  /** Effective provider: declared on the scope or inherited over a recorded containment/hosting edge. */
+  cloud_provider?: string;
+  /** `declared`, `inherited:<relationship>`, or empty when no provider is recorded. */
+  cloud_provider_basis?: string;
 }
 
 export interface GraphRollupSummary {
@@ -929,6 +932,8 @@ export interface GraphRollupResponse {
     label: string;
     entity_type: string;
     severity: string;
+    cloud_provider?: string;
+    cloud_provider_basis?: string;
   } | null;
   summary: GraphRollupSummary;
   /** Present on drill-down responses. */

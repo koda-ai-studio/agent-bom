@@ -29,6 +29,7 @@ from agent_bom.graph.completeness import graph_completeness
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.path_derivation import _node_type_value
+from agent_bom.graph.provider_inheritance import provider_fields as _provider_fields
 from agent_bom.graph.rollup_edges import combine_reasons as _combine_reasons
 from agent_bom.graph.rollup_edges import cross_container_edge_rows, edge_projection
 from agent_bom.graph.rollup_edges import descendants as _descendants
@@ -223,6 +224,8 @@ class RollupContainer:
     direct_child_count: int
     aggregate: RollupAggregate
     context: dict[str, str] = field(default_factory=dict)
+    cloud_provider: str = ""
+    cloud_provider_basis: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -235,6 +238,8 @@ class RollupContainer:
             "direct_child_count": self.direct_child_count,
             "aggregate": self.aggregate.to_dict(),
             "context": self.context,
+            "cloud_provider": self.cloud_provider,
+            "cloud_provider_basis": self.cloud_provider_basis,
         }
 
 
@@ -257,6 +262,24 @@ def _instance_context(node: UnifiedNode, graph: UnifiedGraph) -> dict[str, str]:
                 context[label] = (linked.label if linked else value)[:512]
                 break
     return context
+
+
+def _entry(
+    node: UnifiedNode, graph: UnifiedGraph, children: dict[str, list[str]], aggregate: RollupAggregate, *, is_container: bool | None = None
+) -> RollupContainer:
+    direct = children.get(node.id, [])
+    return RollupContainer(
+        id=node.id,
+        label=node.label,
+        entity_type=_node_type_value(node),
+        severity=node.severity or "",
+        is_container=_container_for(node, children) if is_container is None else is_container,
+        has_children=bool(direct),
+        direct_child_count=len(direct),
+        aggregate=aggregate,
+        context=_instance_context(node, graph),
+        **_provider_fields(node),
+    )
 
 
 @dataclass(slots=True)
@@ -543,20 +566,7 @@ def rollup_view(
         # filtered out — they carry no risk worth surfacing.
         if filters is not None and filters.active() and agg.descendant_count == 0 and not (filters.matches(node)):
             continue
-        direct = children.get(root_id, [])
-        containers.append(
-            RollupContainer(
-                id=node.id,
-                label=node.label,
-                entity_type=_node_type_value(node),
-                severity=node.severity or "",
-                is_container=True,
-                has_children=bool(direct),
-                direct_child_count=len(direct),
-                aggregate=agg,
-                context=_instance_context(node, graph),
-            )
-        )
+        containers.append(_entry(node, graph, children, agg, is_container=True))
         rolled_up_ids.add(root_id)
         rolled_up_ids.update(descendants)
 
@@ -584,16 +594,8 @@ def rollup_view(
     for nid in shown_orphan_ids:
         node = graph.nodes[nid]
         orphans.append(
-            RollupContainer(
-                id=node.id,
-                label=node.label,
-                entity_type=_node_type_value(node),
-                severity=node.severity or "",
-                is_container=_container_for(node, children),
-                has_children=bool(children.get(nid)),
-                direct_child_count=len(children.get(nid, [])),
-                aggregate=_aggregate(_descendants(nid, children), graph, filters=filters, memberships=memberships, facts=facts),
-                context=_instance_context(node, graph),
+            _entry(
+                node, graph, children, _aggregate(_descendants(nid, children), graph, filters=filters, memberships=memberships, facts=facts)
             )
         )
 
@@ -723,19 +725,7 @@ def drill_down(
         agg = _aggregate(descendants, graph, filters=filters, memberships=memberships, facts=facts)
         if filters is not None and filters.active() and agg.descendant_count == 0 and not filters.matches(child):
             continue
-        child_entries.append(
-            RollupContainer(
-                id=child.id,
-                label=child.label,
-                entity_type=_node_type_value(child),
-                severity=child.severity or "",
-                is_container=_container_for(child, children),
-                has_children=bool(children.get(child_id)),
-                direct_child_count=len(children.get(child_id, [])),
-                aggregate=agg,
-                context=_instance_context(child, graph),
-            )
-        )
+        child_entries.append(_entry(child, graph, children, agg))
 
     child_entries.sort(key=lambda c: (-c.aggregate.worst_severity_rank, -c.aggregate.descendant_count, c.id))
     matching_total = len(child_entries)
@@ -754,6 +744,7 @@ def drill_down(
             "label": parent.label,
             "entity_type": _node_type_value(parent),
             "severity": parent.severity or "",
+            **_provider_fields(parent),
         },
         "filters": _filters_dict(filters),
         "children": page_rows,

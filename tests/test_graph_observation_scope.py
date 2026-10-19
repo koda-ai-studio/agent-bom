@@ -147,6 +147,7 @@ def test_positive_exact_scope_reobservation_keeps_first_observed_time(scope_stor
         "malformed_provider",
         "conflicting_provider",
         "malformed_source",
+        "inherited_provider",
     ],
 )
 def test_missing_or_conflicting_scope_does_not_inherit_timestamps(scope_store, change):
@@ -162,6 +163,9 @@ def test_missing_or_conflicting_scope_does_not_inherit_timestamps(scope_store, c
                 node.attributes["cloud_provider"] = False
             elif change == "conflicting_provider":
                 node.attributes["cloud_provider"] = "different-provider"
+            elif change == "inherited_provider":
+                node.attributes.pop("cloud_provider", None)
+                node.attributes["cloud_provider_basis"] = "inherited:contains"
             elif change == "other_provider" and graph.scan_id == "second":
                 node.attributes["cloud_provider"] = node.dimensions.cloud_provider = "different-provider"
         if change == "other_source" and graph.scan_id == "second":
@@ -174,6 +178,30 @@ def test_missing_or_conflicting_scope_does_not_inherit_timestamps(scope_store, c
     assert all(edge.first_seen == T2 and edge.valid_from == T2 for edge in _load(ctx, "second").edges)
     grants = [edge for edge in _api(ctx, "/v1/graph/edges/active", at=T3) if edge["relationship"] == "has_permission"]
     assert len(grants) == 2
+
+
+@pytest.mark.parametrize("recorded", ["", "aws"])
+def test_inherited_dimension_does_not_change_recorded_observation_scope(recorded):
+    from agent_bom.graph.observation_scope import observation_scope
+
+    attributes = {"account_id": "123456789012", "cloud_provider": recorded}
+    before = observation_scope({"source": "collector"}, attributes, {}, attributes, {})
+    inherited = {**attributes, "cloud_provider_basis": "inherited:hosted_on"}
+    dimensions = {"cloud_provider": "azure"}
+    assert observation_scope({"source": "collector"}, inherited, dimensions, inherited, dimensions) == before
+
+
+def test_recorded_provider_remains_comparable_after_display_inheritance(scope_store):
+    ctx = scope_store
+    for graph in (_graph(ctx, "ACCT1"), _graph(ctx, "ACCT1", scan="second", at=T2)):
+        for node in graph.nodes.values():
+            node.attributes["cloud_provider"] = "snowflake"
+            node.attributes["cloud_provider_basis"] = "inherited:hosted_on"
+            node.dimensions.cloud_provider = "aws" if graph.scan_id == "first" else "azure"
+        ctx.store.save_graph(graph)
+    assert all(edge.first_seen == T1 and edge.valid_from == T1 for edge in _load(ctx, "second").edges)
+    grants = [edge for edge in _api(ctx, "/v1/graph/edges/active", at=T3) if edge["relationship"] == "has_permission"]
+    assert len(grants) == 1 and grants[0]["scan_id"] == "second"
 
 
 def test_source_recorded_expiry_is_preserved_without_extending_new_observation(scope_store):

@@ -5,7 +5,8 @@ import { Handle, Position, useNodeId, useUpdateNodeInternals } from "@xyflow/rea
 import { Bug, FolderGit2, KeyRound, Package, Wrench } from "lucide-react";
 import { graphRepositoryContext } from "@/lib/graph-repository-context";
 
-import { SourceBadge } from "@/components/agent-source-mark";
+import { GraphProviderMark } from "@/components/graph-provider-mark";
+import { SegmentedLabel } from "@/components/graph-segmented-label";
 import { entitySource } from "@/lib/agent-source";
 import { NodeBadgeRow, SeverityRingMark } from "@/components/graph-node-badges";
 import { GraphScopeNode } from "@/components/graph-scope-node";
@@ -14,7 +15,6 @@ import { severityColor } from "@/lib/api";
 import type { ReachBreakdown } from "@/lib/effective-reach";
 import { NODE_COLOR_MAP } from "@/lib/graph-utils";
 import { nodeBadges } from "@/lib/graph-node-badges";
-import { canvasNodeLabel } from "@/lib/graph-occurrence-role";
 import {
   ENTITY_ICONS,
   entityIcon,
@@ -209,12 +209,10 @@ function NodeCard({
         <ContextHandles />
         <Icon aria-hidden="true" style={{ width: "var(--graph-node-icon-size, 32px)", height: "var(--graph-node-icon-size, 32px)" }} className={`h-8 w-8 ${iconClass}`} />
         {/* A small vendor mark on the ring, like a status badge; the entity glyph stays primary. */}
-        {provider && <SourceBadge source={provider} graph className="absolute shadow-sm"
-          style={{ right: "-12%", bottom: "-12%", width: "42%", height: "42%" }} />}
+        {provider && <GraphProviderMark source={provider} attributes={repository ? undefined : data.attributes} className="absolute"
+          style={{ right: "-15%", bottom: "-15%", width: "48%", height: "48%" }} />}
       </div>
-      <p className="mb-1 w-full min-w-0 break-words line-clamp-3 text-lg font-semibold leading-[1.2] text-foreground [overflow-wrap:anywhere]" style={{ fontSize: "var(--graph-node-label-size, 18px)" }}>
-        {canvasNodeLabel(repository?.slug || displayTitle).split(/(?<=[_/@-])/).map((part, index) => <span key={index}>{part}<wbr /></span>)}
-      </p>
+      <SegmentedLabel text={repository?.slug || displayTitle} className="mb-1 w-full min-w-0 line-clamp-3 text-lg font-semibold leading-[1.2] text-foreground" style={{ fontSize: "var(--graph-node-label-size, 18px)" }} />
       {/* The vendor mark already names the provider; a second text chip repeats it. */}
       <NodeBadgeRow badges={provider ? badges.filter((badge) => badge.kind !== "provider") : badges}>
         <span style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} className="text-xs text-ink-secondary">

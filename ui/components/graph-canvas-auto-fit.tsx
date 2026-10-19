@@ -38,7 +38,16 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     if (!frame) return;
     // Clicking a control can scroll the document before its resize is measured.
     // Use a stable document offset so returning to the top does not clip the canvas.
-    const measure = () => setSpaceAbove(Math.max(0, frame.getBoundingClientRect().top + window.scrollY));
+    const measure = () => {
+      const notice = frame.closest("main")?.querySelector<HTMLElement>('[aria-label="Saved snapshot updates"]');
+      const noticeStyle = notice ? getComputedStyle(notice) : null;
+      const noticeSpace = notice
+        ? notice.getBoundingClientRect().height + (parseFloat(noticeStyle!.marginTop) || 0) + (parseFloat(noticeStyle!.marginBottom) || 0)
+        : 0;
+      // A late frame/control resize can arrive after a passive notice appears.
+      // Exclude its space too, so it cannot change height, layout or camera.
+      setSpaceAbove(Math.max(0, frame.getBoundingClientRect().top + window.scrollY - noticeSpace));
+    };
     // Deliberate view controls change usable space. A new-snapshot notice
     // must not move the operator's pinned camera, so do not observe all chrome.
     const observer = new ResizeObserver(measure);

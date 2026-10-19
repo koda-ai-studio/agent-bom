@@ -20,6 +20,34 @@ import { GraphCanvasAutoFit } from "@/components/graph-canvas-auto-fit";
 
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); vi.clearAllMocks(); flow.initialized = true; flow.getNodes.mockReturnValue([{ id: "asset", position: { x: 0, y: 0 }, data: {} }]); flow.getNodesBounds.mockReturnValue({ x: 0, y: 0, width: 800, height: 1000 }); });
 
+it("ignores snapshot notice height when a late resize measures the pinned frame", async () => {
+  vi.useFakeTimers();
+  vi.stubGlobal("requestAnimationFrame", (callback: () => void) => setTimeout(callback, 0));
+  vi.stubGlobal("cancelAnimationFrame", clearTimeout);
+  let measure!: () => void;
+  vi.stubGlobal("ResizeObserver", class { constructor(callback: () => void) { measure = callback; } observe() {} disconnect() {} });
+  vi.stubGlobal("innerHeight", 1000);
+  const main = document.createElement("main");
+  flow.frame = document.createElement("div");
+  flow.frame.setAttribute("data-graph-adaptive-frame", "");
+  const mount = document.createElement("div");
+  main.append(flow.frame, mount);
+  const bounds = vi.spyOn(flow.frame, "getBoundingClientRect").mockReturnValue({ top: 300 } as DOMRect);
+  render(<GraphCanvasAutoFit enabled layoutKey="pinned" inspector preserveViewport={false} onLayoutAspect={vi.fn()} />, { container: mount });
+  await act(() => vi.advanceTimersByTimeAsync(100));
+  const height = flow.frame.style.getPropertyValue("--graph-adaptive-height");
+  const fits = flow.fitView.mock.calls.length;
+  const notice = document.createElement("aside");
+  notice.setAttribute("aria-label", "Saved snapshot updates");
+  notice.style.marginBottom = "12px";
+  vi.spyOn(notice, "getBoundingClientRect").mockReturnValue({ height: 60 } as DOMRect);
+  main.prepend(notice);
+  bounds.mockReturnValue({ top: 372 } as DOMRect);
+  await act(async () => { measure(); await vi.advanceTimersByTimeAsync(100); });
+  expect(flow.frame.style.getPropertyValue("--graph-adaptive-height")).toBe(height);
+  expect(flow.fitView).toHaveBeenCalledTimes(fits);
+});
+
 it("does not replace a manual camera when virtualized nodes reinitialize", async () => {
   vi.useFakeTimers();
   vi.stubGlobal("requestAnimationFrame", (callback: () => void) => setTimeout(callback, 0));

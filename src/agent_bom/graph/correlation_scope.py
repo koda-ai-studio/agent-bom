@@ -6,7 +6,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from datetime import datetime, timezone
 from typing import Any
 
-from agent_bom.graph.asset_identity import IdentityKey, family_of, strong_key_components, strong_keys
+from agent_bom.graph.asset_identity import IdentityKey, family_of, recorded_dimension, strong_key_components, strong_keys
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.types import EntityType
 
@@ -46,7 +46,7 @@ def exact_identity_scope(node: UnifiedNode, *, basis: str, namespace: str, value
         dimensions.append("environment")
     scope = {key: str(node.attributes.get(key) or "").strip() for key in keys if str(node.attributes.get(key) or "").strip()}
     for key in dimensions:
-        value = str(getattr(node.dimensions, key, "") or "").strip()
+        value = recorded_dimension(node, key)
         if value:
             if key in scope and scope[key] != value:
                 scope[f"conflicting_dimension_{key}"] = value
@@ -79,7 +79,7 @@ def container_occurrence(node: UnifiedNode) -> dict[str, object] | None:
         if str(attrs.get(key) or "").strip()
     }
     for key in ("cloud_provider", "environment"):
-        dimension = str(getattr(node.dimensions, key, "") or "").strip()
+        dimension = recorded_dimension(node, key)
         if dimension:
             if key in scope and scope[key] != dimension:
                 scope[f"conflicting_dimension_{key}"] = dimension
