@@ -250,3 +250,90 @@ def test_mcp_scan_report_carries_vuln_data_freshness(monkeypatch, tmp_path):
     assert freshness["mode"] == "offline"
     assert freshness["age_days"] == 61
     assert freshness["stale"] is True
+
+
+# ── Fail closed when freshness cannot be trusted ─────────────────────────────
+
+
+def _newer_schema(path: Path) -> None:
+    import sqlite3
+
+    from agent_bom.db.schema import CODE_SCHEMA_VERSION
+
+    conn = sqlite3.connect(path)
+    conn.execute("UPDATE schema_version SET version = ?", (CODE_SCHEMA_VERSION + 1,))
+    conn.commit()
+    conn.close()
+
+
+def _unreadable_sync_meta(path: Path) -> None:
+    """Keep ``last_synced`` (what the scanner's DB gate reads) but break the freshness read."""
+    import sqlite3
+
+    conn = sqlite3.connect(path)
+    conn.execute("ALTER TABLE sync_meta RENAME COLUMN record_count TO records")
+    conn.commit()
+    conn.close()
+
+
+@pytest.mark.parametrize("synced_days_ago", [0, 61])
+def test_newer_schema_db_forces_live_osv_and_says_why(monkeypatch, tmp_path, osv, synced_days_ago):
+    _use_db(monkeypatch, tmp_path, synced_days_ago=synced_days_ago)
+    _newer_schema(tmp_path / "vulns.db")
+
+    _code, payload = _cli_json()
+
+    assert osv.await_count == 1
+    assert _ids(payload) == {*LOCAL_IDS, *LIVE_ONLY_IDS}
+    assert "newer than this agent-bom" in payload["vuln_data_freshness"]["integrity_issue"]
+    assert payload["completeness"]["status"] == "complete"
+    assert "newer than this agent-bom" in payload["completeness"]["reason"]
+
+
+def test_newer_schema_db_offline_is_incomplete(monkeypatch, tmp_path, osv):
+    _use_db(monkeypatch, tmp_path, synced_days_ago=0)
+    _newer_schema(tmp_path / "vulns.db")
+
+    _code, payload = _cli_json("--offline")
+    _text_code, output = _cli_text("--offline")
+
+    assert osv.await_count == 0
+    assert payload["completeness"]["status"] == "incomplete"
+    assert "newer than this agent-bom" in payload["completeness"]["reason"]
+    assert "✓" not in output
+    assert "newer than this agent-bom" in output
+
+
+def test_unreadable_freshness_metadata_forces_live_osv(monkeypatch, tmp_path, osv):
+    _use_db(monkeypatch, tmp_path, synced_days_ago=0)
+    _unreadable_sync_meta(tmp_path / "vulns.db")
+
+    _code, payload = _cli_json()
+
+    assert osv.await_count == 1
+    assert _ids(payload) == {*LOCAL_IDS, *LIVE_ONLY_IDS}
+    assert payload["vuln_data_freshness"]["mode"] == "local"
+    assert payload["vuln_data_freshness"]["integrity_issue"]
+
+    _offline_code, offline_payload = _cli_json("--offline")
+    assert offline_payload["completeness"]["status"] == "incomplete"
+
+
+def test_freshness_probe_that_raises_fails_closed(monkeypatch, tmp_path, osv):
+    _use_db(monkeypatch, tmp_path, synced_days_ago=0)
+
+    def _boom(**_kwargs):
+        raise RuntimeError("freshness probe exploded")
+
+    monkeypatch.setattr("agent_bom.vuln_freshness.compute_freshness", _boom)
+
+    exit_code, payload = _cli_json()
+    assert exit_code == 1
+    assert osv.await_count == 1
+    assert _ids(payload) == {*LOCAL_IDS, *LIVE_ONLY_IDS}
+    assert payload["vuln_data_freshness"] is None
+    assert payload["completeness"]["status"] == "complete"
+
+    _offline_code, offline_payload = _cli_json("--offline")
+    assert offline_payload["completeness"]["status"] == "incomplete"
+    assert _ids(_mcp(offline=True)) == _ids(offline_payload)

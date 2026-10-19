@@ -81,6 +81,7 @@ class VulnerabilityFreshnessPayload(TypedDict):
     danger: bool
     max_age_hours: int
     osv_response_cache: NotRequired[OSVResponseCachePayload]
+    integrity_issue: NotRequired[str]
 
 
 class CorrelatedFindingPayload(TypedDict):

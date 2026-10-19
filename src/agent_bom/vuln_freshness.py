@@ -19,6 +19,7 @@ Design notes:
 from __future__ import annotations
 
 import os
+import sqlite3
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -109,6 +110,9 @@ class VulnDataFreshness:
     stale: bool = False
     danger: bool = False
     max_age_hours: int = DEFAULT_MAX_AGE_HOURS
+    # Set when the local cache cannot be trusted regardless of its age: its
+    # freshness metadata is unreadable, or a newer agent-bom wrote its schema.
+    integrity_issue: str | None = None
 
     @property
     def age_days(self) -> int | None:
@@ -136,6 +140,8 @@ class VulnDataFreshness:
             "danger": self.danger,
             "max_age_hours": self.max_age_hours,
         }
+        if self.integrity_issue:
+            payload["integrity_issue"] = self.integrity_issue
         if cache_hits:
             payload["osv_response_cache"] = cache
         return payload
@@ -153,13 +159,15 @@ class VulnDataFreshness:
         sources = "+".join(self.sources) if self.sources else "OSV"
         if self.mode == "live":
             return f"Vuln data: {sources} live (no local cache — run `agent-bom db update` for faster offline scans)"
-        if self.mode == "offline" and not self.record_count and self.last_updated is None:
+        if self.mode == "offline" and not self.record_count and self.last_updated is None and not self.integrity_issue:
             return "Vuln data: no local cache (offline — network skipped); run `agent-bom db update` before scanning offline"
         age = _humanize_age(self.age_hours)
         if self.mode == "offline":
             base = f"Vuln data: {sources} local cache, {age} (offline — network skipped)"
         else:
             base = f"Vuln data: {sources} local cache, {age}"
+        if self.integrity_issue:
+            return f"{base} — {self.integrity_issue}; results may miss recent CVEs"
         if self.danger:
             return f"{base} — results may miss recent CVEs; run `agent-bom db update`"
         if self.stale:
@@ -190,28 +198,67 @@ def _humanize_age(age_hours: int | None) -> str:
     return f"updated {age_hours // 24}d ago"
 
 
-def _read_sync_meta(db_path: Path) -> list[tuple[str, str | None, int]]:
-    """Return ``(source, last_synced, record_count)`` rows, or [] on any error.
+def _read_sync_meta(db_path: Path) -> tuple[list[tuple[str, str | None, int]] | None, int | None]:
+    """Return ``(rows, schema_version)`` for the local cache; never raises.
 
-    Opens the cache read-only and never raises — a corrupt or locked DB simply
-    looks like "no cache" to callers.
+    ``rows`` is ``[]`` when there is no usable cache (no file, not a database,
+    no ``sync_meta`` table) — the scanner cannot read local advisories from it
+    either, so the network backs the scan. It is ``None`` when ``sync_meta``
+    exists but cannot be read: local hits may still be served, so the caller
+    must treat the cache as untrusted rather than absent.
     """
-    import sqlite3
-
+    if not db_path.exists():
+        return [], None
     try:
-        if not db_path.exists():
-            return []
         conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
-        try:
-            cols = {row[1] for row in conn.execute("PRAGMA table_info(sync_meta)").fetchall()}
-            if not cols:
-                return []
-            rows = conn.execute("SELECT source, last_synced, record_count FROM sync_meta").fetchall()
-        finally:
-            conn.close()
-    except Exception:
-        return []
-    return [(str(r[0]), r[1], int(r[2] or 0)) for r in rows]
+    except sqlite3.Error:
+        return [], None
+    try:
+        return _query_sync_meta(conn)
+    finally:
+        conn.close()
+
+
+def _query_sync_meta(conn: sqlite3.Connection) -> tuple[list[tuple[str, str | None, int]] | None, int | None]:
+    try:
+        if not conn.execute("PRAGMA table_info(sync_meta)").fetchall():
+            return [], None
+    except sqlite3.Error:
+        return [], None
+    try:
+        rows = [(str(r[0]), r[1], int(r[2] or 0)) for r in conn.execute("SELECT source, last_synced, record_count FROM sync_meta")]
+    except (sqlite3.Error, TypeError, ValueError):
+        return None, None
+    try:
+        version_row = conn.execute("SELECT version FROM schema_version LIMIT 1").fetchone()
+    except sqlite3.Error:
+        version_row = None
+    return rows, int(version_row[0]) if version_row and version_row[0] is not None else None
+
+
+def _schema_issue(schema_version: int | None) -> str | None:
+    from agent_bom.db.schema import CODE_SCHEMA_VERSION
+
+    if schema_version is not None and schema_version > CODE_SCHEMA_VERSION:
+        return f"local vulnerability DB schema v{schema_version} is newer than this agent-bom (v{CODE_SCHEMA_VERSION})"
+    return None
+
+
+def _without_cache(rows: list | None, *, offline: bool, threshold: int) -> VulnDataFreshness:
+    """Snapshot for an absent cache (``[]``) or one whose freshness is unreadable (``None``)."""
+    if rows is None:
+        return VulnDataFreshness(
+            mode="offline" if offline else "local",
+            stale=True,
+            danger=True,
+            max_age_hours=threshold,
+            integrity_issue="local vulnerability DB freshness metadata is unreadable",
+        )
+    # No usable local cache. Offline mode is a danger state — we cannot reach
+    # the live APIs and have nothing cached.
+    if offline:
+        return VulnDataFreshness(mode="offline", sources=[], stale=True, danger=True, max_age_hours=threshold)
+    return VulnDataFreshness(mode="live", sources=list(_LIVE_SOURCES), stale=False, danger=False, max_age_hours=threshold)
 
 
 def compute_freshness(
@@ -240,26 +287,10 @@ def compute_freshness(
         reference = reference.replace(tzinfo=timezone.utc)
     threshold = threshold_hours if threshold_hours is not None else max_age_hours()
 
-    rows = _read_sync_meta(resolved_path)
-
+    rows, schema_version = _read_sync_meta(resolved_path)
     if not rows:
-        # No usable local cache. Offline mode is a danger state — we cannot
-        # reach the live APIs and have nothing cached.
-        if offline:
-            return VulnDataFreshness(
-                mode="offline",
-                sources=[],
-                stale=True,
-                danger=True,
-                max_age_hours=threshold,
-            )
-        return VulnDataFreshness(
-            mode="live",
-            sources=list(_LIVE_SOURCES),
-            stale=False,
-            danger=False,
-            max_age_hours=threshold,
-        )
+        return _without_cache(rows, offline=offline, threshold=threshold)
+    integrity_issue = _schema_issue(schema_version)
 
     # Defer to intel_lookup for the canonical id→label map so freshness labels
     # never drift from the advisory-source catalog.
@@ -299,14 +330,15 @@ def compute_freshness(
             age_hours=None,
             record_count=record_count,
             stale=True,
-            danger=offline,
+            danger=offline or integrity_issue is not None,
             max_age_hours=threshold,
+            integrity_issue=integrity_issue,
         )
 
     age_seconds = max(0.0, (reference - oldest).total_seconds())
     age_hours = int(age_seconds // 3600)
     stale = age_hours >= threshold
-    danger = age_hours >= STALE_DANGER_HOURS or offline and stale
+    danger = age_hours >= STALE_DANGER_HOURS or offline and stale or integrity_issue is not None
 
     return VulnDataFreshness(
         mode="offline" if offline else "local",
@@ -317,6 +349,7 @@ def compute_freshness(
         stale=stale,
         danger=danger,
         max_age_hours=threshold,
+        integrity_issue=integrity_issue,
     )
 
 
@@ -352,7 +385,7 @@ def local_db_outdated(freshness: VulnDataFreshness) -> bool:
     exactly the condition under which ``agent-bom db freshness`` stops printing
     a green check — the configured threshold *or* the clear-danger age.
     """
-    if freshness.mode == "local" or (freshness.mode == "offline" and freshness.sources):
+    if freshness.mode == "local" or (freshness.mode == "offline" and (freshness.sources or freshness.integrity_issue)):
         return freshness.stale or freshness.danger
     # No local cache at all: live mode is backed by the network, and offline
     # with nothing cached is already a hard failure upstream.
