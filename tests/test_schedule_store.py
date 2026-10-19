@@ -1,6 +1,7 @@
 """Tests for schedule store backends and cron scheduler."""
 
 import asyncio
+from contextlib import nullcontext
 from datetime import datetime, timezone
 from threading import Event, Thread
 from unittest.mock import patch
@@ -552,6 +553,15 @@ class TestParseCronNext:
 
 
 class TestSchedulerLoop:
+    @pytest.fixture(autouse=True)
+    def isolate_quota_database(self, monkeypatch):
+        # These tests exercise schedule dispatch and its leader lock. Keep the
+        # independent quota lock local so placeholder Postgres URLs never open
+        # a real quota connection; quota database locking has its own tests.
+        from agent_bom.api import tenant_quota
+
+        monkeypatch.setattr(tenant_quota, "_maybe_postgres_advisory_lock", lambda _tenant_id: nullcontext())
+
     def test_triggers_due_schedule(self):
         """Scheduler loop triggers due scans."""
         from agent_bom.api.scheduler import scheduler_loop
