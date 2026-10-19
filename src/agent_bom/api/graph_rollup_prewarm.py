@@ -16,14 +16,16 @@ still computes its own first view.
 from __future__ import annotations
 
 import logging
-import os
 import threading
 from collections import OrderedDict
-from typing import Any, Callable
+from typing import Any, Callable, Literal
 
 from agent_bom.api import graph_rollup_cache
+from agent_bom.api.graph_commit_hooks import register_commit_hook
 from agent_bom.api.graph_generation import optional_generation, snapshot_fingerprint
 from agent_bom.api.graph_store import containment_drilldown_graph
+from agent_bom.api.tenant_worker import tenant_bound_context
+from agent_bom.core.settings import SettingError, env_bool
 from agent_bom.graph.rollup import ROLLUP_RELATIONSHIPS
 from agent_bom.graph.view_payloads import _graph_rollup_payload
 
@@ -104,7 +106,7 @@ def prewarm_rollup(store: Any, *, tenant_id: str) -> int:
     scan_id = key_identity[0]
     warmed = 0
 
-    def view(graph: Any, *, node: str | None = None, mode: str = "rollup", limit: int) -> dict[str, Any]:
+    def view(graph: Any, *, node: str | None = None, mode: Literal["rollup", "attack_path"] = "rollup", limit: int) -> dict[str, Any]:
         nonlocal warmed
         payload = _graph_rollup_payload(
             graph, node=node, min_severity="", exposed=False, toxic=False, mode=mode, offset=0, limit=limit, graph_store=store
@@ -134,13 +136,14 @@ def prewarm_rollup(store: Any, *, tenant_id: str) -> int:
 
 
 def _enabled() -> bool:
-    return os.environ.get("AGENT_BOM_GRAPH_ROLLUP_PREWARM", "1").strip().lower() not in {"0", "false", "no", "off"}
+    try:
+        return env_bool("AGENT_BOM_GRAPH_ROLLUP_PREWARM", True)
+    except SettingError:
+        return True
 
 
 def _drain() -> None:
     global _WORKER
-    from agent_bom.api.tenant_worker import tenant_bound_context
-
     while True:
         with _LOCK:
             if not _PENDING:
@@ -167,9 +170,21 @@ def schedule_rollup_prewarm(store_factory: Callable[[], Any], *, tenant_id: str)
             _PENDING.popitem(last=False)
         if _WORKER is not None and _WORKER.is_alive():
             return
+        worker = threading.Thread(target=_drain, name="graph-rollup-prewarm", daemon=True)
+        try:
+            worker.start()
+        except RuntimeError:  # the interpreter cannot start a thread (shutdown): skip the warm-up
+            _PENDING.clear()
+            return
         _IDLE.clear()
-        _WORKER = threading.Thread(target=_drain, name="graph-rollup-prewarm", daemon=True)
-        _WORKER.start()
+        _WORKER = worker
+
+
+def _on_commit(store_factory: Callable[[], Any], *, tenant_id: str) -> None:
+    schedule_rollup_prewarm(store_factory, tenant_id=tenant_id)
+
+
+register_commit_hook("graph_rollup_prewarm", _on_commit)
 
 
 def wait_idle(timeout: float) -> bool:

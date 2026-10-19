@@ -131,7 +131,6 @@ def query_payload(
     budget: dict[str, int],
     rel_types: set[RelationshipType] | None,
     snapshot_generation: str | None,
-    budget_applied: dict[str, dict[str, int]] | None = None,
 ) -> dict[str, Any]:
     """Keep traversal limits attached to the projected investigation graph."""
     bounded = truncated or depth_limited
@@ -151,7 +150,8 @@ def query_payload(
         "max_edges": body.max_edges,
         "timeout_ms": body.timeout_ms,
         "budget": budget,
-        "budget_applied": budget_applied or {},
+        # Filled by the route with every limit the deployment budget clamped.
+        "budget_applied": {},
         "truncated": truncated,
         "depth_limited": depth_limited,
         "missing_roots": [],
