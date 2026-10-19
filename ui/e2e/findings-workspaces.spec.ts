@@ -270,7 +270,7 @@ for (const theme of ["light", "dark"] as const) {
     await page.addInitScript((value) => localStorage.setItem("agent-bom-theme", value), theme);
     const title = "Policy document grants unrestricted administrative access to a workload identity across every resource in the account";
     await routeFindings(page, { ...finding, cve_id: "", title, asset: { ...finding.asset, name: "cloud:role:synthetic-account:clinical-analytics-reader-development-workload-identity" } });
-    await page.goto("/findings");
+    await page.goto("/findings?lane=all");
     const action = page.getByRole("button", { name: "Investigate", exact: true });
     await expect(action).toBeVisible();
     expect((await action.boundingBox())!.x + (await action.boundingBox())!.width).toBeLessThanOrEqual(1440);
