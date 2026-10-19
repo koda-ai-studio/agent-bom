@@ -49,7 +49,7 @@ def _br(
 
 def test_catalog_has_every_emittable_control():
     # 9 rule-asserted controls + 16 reached only through NIST's 800-53 crosswalk.
-    assert len(ISO_27001) == 25
+    assert len(ISO_27001) == 27
     assert {"A.5.17", "A.5.16", "A.8.7"} <= set(ISO_27001)
 
 

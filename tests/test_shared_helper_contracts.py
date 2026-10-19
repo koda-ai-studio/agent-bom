@@ -381,3 +381,21 @@ def test_timestamp_strict_identity_contract():
     assert parse_timestamp("2026-10-18T12:00:00Z", require_timezone=True).tzinfo is timezone.utc
     assert parse_timestamp("2026-10-18T12:00:00z").tzinfo is timezone.utc
     assert parse_timestamp(123) is None
+
+
+def test_evidence_bundle_timestamp_keeps_strict_invalid_policy():
+    from datetime import datetime, timezone
+
+    from fastapi import HTTPException
+
+    from agent_bom.api.routes.compliance_routes.bundle import _parse_iso_or_default
+
+    default = datetime(2026, 10, 18, tzinfo=timezone.utc)
+    assert _parse_iso_or_default(None, default) is default
+    assert _parse_iso_or_default("", default) is default
+    with pytest.raises(HTTPException) as exc:
+        _parse_iso_or_default("invalid", default)
+    assert exc.value.status_code == 400
+    parsed = _parse_iso_or_default("2026-10-18T14:00:00+02:00", default)
+    assert parsed == datetime(2026, 10, 18, 12, tzinfo=timezone.utc)
+    assert parsed.tzinfo is timezone.utc
