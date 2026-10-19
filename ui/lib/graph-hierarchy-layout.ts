@@ -110,7 +110,7 @@ export function graphHierarchyLayout(nodes: Node<LineageNodeData>[], edges: Edge
   // stacked findings cannot run into the next entity's glyph.
   // An occurrence chip or identity line adds two scaled metadata rows on top of that.
   const extraCaption = nodes.some(node => node.data.occurrenceRole || node.data.identityContext);
-  const nodeHeight = Math.max(extraCaption ? 360 : 300, options.nodeHeight ?? 0);
+  const nodeHeight = Math.max(extraCaption ? 400 : 300, options.nodeHeight ?? 0);
   const repository = nodes.some(node => graphRepositoryContext(node.data));
   const fanIn = new Map<string, number>(), fanOut = new Map<string, number>();
   for (const edge of rankedEdges) {
