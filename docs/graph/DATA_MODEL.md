@@ -95,7 +95,7 @@ flowchart LR
 | `misconfiguration` | Misconfiguration | Findings | `finding` | 2 / 2003 | yes | 8 (+2 demo) |
 | `model` | Model | Cloud, infrastructure and data | `asset` | 5 / 4001 |  | 3 (+1 demo) |
 | `org` | Organization | Identity and access | `identity` | 3 / 3001 |  | 4 (+2 demo) |
-| `package` | Package | Code and supply chain | `package` | 5 / 4001 |  | 4 (+2 demo) |
+| `package` | Package | Code and supply chain | `package` | 5 / 4001 |  | 5 (+2 demo) |
 | `policy` | Policy | Identity and access | `identity` | 3 / 3001 |  | 3 (+1 demo) |
 | `provider` | Provider | Cloud, infrastructure and data | `infra` | 0 / 0 |  | 3 |
 | `resource` | Resource | Cloud, infrastructure and data | `asset` | 5 / 4001 |  | 3 |
@@ -167,7 +167,7 @@ Consumed by: **FU** Attack-path fusion · **CR** Credential reach · **BR** Depe
 | `used_credential` | `runtime` | runtime | directed | yes | `agent`, `tool`, `tool_call` | `credential`, `credential_ref` | 6 | CR, RT | 2 |
 | `uses` | `dependency` | inventory | directed | yes | `agent` | `server` | 1 | FU, CR, BR | 1 (+1 demo) |
 | `uses_framework` | `dependency` | inventory | directed | yes | `agent` | `framework` | 1 | — | 1 |
-| `vulnerable_to` | `finding` | vulnerability | directed | yes | `agent`, `cloud_resource`, `container`, `credential`, `credential_ref`, `directory` (+4 more) | `misconfiguration`, `vulnerability` | 20 | FU, BR | 5 (+2 demo) |
+| `vulnerable_to` | `finding` | vulnerability | directed | yes | `agent`, `cloud_resource`, `container`, `credential`, `credential_ref`, `directory` (+4 more) | `misconfiguration`, `vulnerability` | 20 | FU, BR | 6 (+2 demo) |
 
 ### Traversal classes
 

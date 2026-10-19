@@ -14,6 +14,7 @@ from typing import Any
 from agent_bom.graph.asset_canonicalize import canonicalize_assets
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.credential_findings import project_credential_findings
+from agent_bom.graph.edge_freshness import stamp_edge_freshness
 from agent_bom.graph.finding_row_projection import project_finding_rows
 from agent_bom.graph.interaction_risk_ids import bind_interaction_risk_agent_ids
 from agent_bom.graph.relationship_contract import audit_graph_contract
@@ -38,6 +39,8 @@ class GraphAnalysisPorts:
 def apply_build_analysis(graph: UnifiedGraph, report_json: dict[str, Any], ports: GraphAnalysisPorts) -> None:
     _identity_analysis(graph, report_json)
     _topology_analysis(graph, report_json, ports)
+    # Path receipts read edge freshness, so stamp it before fusion annotates.
+    _stamp_freshness(graph)
     _risk_analysis(graph, report_json, ports)
     # Assessments must not feed back into the topology analysis that produced them.
     project_credential_findings(graph, report_json.get("findings"))
@@ -45,7 +48,16 @@ def apply_build_analysis(graph: UnifiedGraph, report_json: dict[str, Any], ports
     bind_interaction_risk_agent_ids(graph)
     # Assets a finding row named for the first time join the asset they observe.
     canonicalize_assets(graph)
+    # Edges the assessment projections added after fusion.
+    _stamp_freshness(graph)
     audit_graph_contract(graph)
+
+
+def _stamp_freshness(graph: UnifiedGraph) -> None:
+    try:
+        stamp_edge_freshness(graph)
+    except Exception:  # noqa: BLE001 - missing freshness leaves receipts unknown, never fails the build
+        _logger.warning("edge freshness stamping failed", exc_info=True)
 
 
 def _identity_analysis(graph: UnifiedGraph, report_json: dict[str, Any]) -> None:

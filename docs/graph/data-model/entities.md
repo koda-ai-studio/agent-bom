@@ -205,7 +205,7 @@ Id formats:
 
 ## `package`
 
-Emitted by: `graph/agent_projection.py`, `graph/blast_projection.py`, `graph/dependency_reach.py`, `graph/framework_topology_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
+Emitted by: `graph/agent_projection.py`, `graph/blast_projection.py`, `graph/dependency_reach.py`, `graph/framework_topology_projection.py`, `graph/rollup_issues.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
 
 Id formats:
 

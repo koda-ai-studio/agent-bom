@@ -129,6 +129,8 @@ class UnifiedNode:
     # Dimensions (filterable facets)
     dimensions: NodeDimensions = field(default_factory=NodeDimensions)
     _recorded_canonical_id: str = field(default="", repr=False, compare=False)
+    # Inputs of a stored row's legacy id, hashed only if the id is read.
+    _legacy_identity: tuple[str, ...] = field(default=(), repr=False, compare=False)
 
     def __post_init__(self) -> None:
         et_val = self.entity_type.value if isinstance(self.entity_type, EntityType) else self.entity_type
@@ -181,6 +183,8 @@ class UnifiedNode:
         if isinstance(candidate, str) and candidate.strip():
             return candidate
         entity_type = self.entity_type.value if isinstance(self.entity_type, EntityType) else str(self.entity_type)
+        if not self._recorded_canonical_id and self._legacy_identity:
+            self._recorded_canonical_id = legacy_canonical_id_v2(*self._legacy_identity)
         return self._recorded_canonical_id or canonical_graph_node_id(entity_type, self.id)
 
     def storage_attributes(self) -> dict[str, Any]:
@@ -194,7 +198,9 @@ class UnifiedNode:
         kind = values["entity_type"]
         kind = kind.value if isinstance(kind, EntityType) else str(kind)
         values["attributes"] = attributes
-        values["_recorded_canonical_id"] = recorded or legacy_canonical_id_v2("graph_node", kind, values["id"])
+        values["_recorded_canonical_id"] = recorded
+        if not recorded:
+            values["_legacy_identity"] = ("graph_node", kind, values["id"])
         return cls(**values)
 
     def to_dict(self) -> dict[str, Any]:

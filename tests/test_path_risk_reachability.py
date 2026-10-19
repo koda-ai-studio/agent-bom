@@ -41,7 +41,15 @@ def _graph(*, analysis: GraphAnalysisState | None = GraphAnalysisState.COMPLETE,
                 relationship=rel,
                 source_scan_id=graph.scan_id,
                 provenance={"source": "scanner"},
-                evidence={"freshness": freshness},
+                # The CVE occurrence is reachable, so its advisory hop may complete the path.
+                evidence={
+                    "freshness": freshness,
+                    **(
+                        {"applicability": {"verdict": "likely", "basis": ["package_reachable"]}}
+                        if rel is RelationshipType.VULNERABLE_TO
+                        else {}
+                    ),
+                },
             )
         )
     return graph
@@ -283,6 +291,21 @@ def test_demo_trace_chains_are_unscored_context_ranked_below_scored_findings(see
     # Without the cap the head of the queue no longer ties at one value.
     assert len({item["composite_risk"] for item in top}) > 1
     assert top[0]["is_kev"] is True
+
+
+def test_demo_paths_mix_confirmed_fresh_chains_with_qualified_unknowns(seeded_demo) -> None:
+    _store, paths = seeded_demo
+    confirmed = [path for path in paths if path.reachability == "confirmed"]
+    unknown = [path for path in paths if path.reachability == "unknown"]
+
+    assert confirmed and unknown
+    for path in confirmed:
+        assert RelationshipType.TRACE_STEP.value not in path.edges
+        assert all(receipt["complete"] and receipt["freshness"] == "fresh" for receipt in path.hop_evidence)
+        assert path.reachability_basis
+    assert any("directed_provenance_backed_hops" in path.reachability_basis for path in confirmed)
+    # Every unknown carries the reason it could not be confirmed.
+    assert all(path.reachability_basis for path in unknown)
 
 
 @pytest.mark.asyncio

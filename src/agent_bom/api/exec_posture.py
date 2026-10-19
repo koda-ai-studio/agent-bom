@@ -180,7 +180,14 @@ def tenant_headline_posture(tenant_id: str) -> dict[str, Any] | None:
     return {"grade": posture.get("grade"), "score": posture.get("score")}
 
 
-def canonical_posture_payload(request: Request, scorecard: dict[str, Any]) -> dict[str, Any]:
+def canonical_posture_payload(
+    request: Request, scorecard: dict[str, Any], *, dimensions_basis: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """Tenant-wide headline over the scan scorecard.
+
+    ``dimensions`` stay the latest scan's scorecard; ``dimensions_basis`` names
+    that scan so the breakdown is never read as the tenant-wide headline.
+    """
     from agent_bom.api.routes.overview import _build_overview
 
     exec_posture = _build_overview(request).get("posture") or {}
@@ -190,6 +197,8 @@ def canonical_posture_payload(request: Request, scorecard: dict[str, Any]) -> di
         if key in exec_posture:
             payload[key] = exec_posture[key]
     payload["basis"] = "exec_posture"
+    if dimensions_basis is not None and "dimensions" in scorecard:
+        payload["dimensions_basis"] = dimensions_basis
     payload.setdefault("no_data", False)
     return payload
 

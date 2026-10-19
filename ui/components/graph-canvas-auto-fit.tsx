@@ -54,7 +54,7 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     if (!frameElement) return;
     const nodes = getNodes();
     const frameSize = graphAdaptiveFrame({
-      bounds: getNodesBounds(nodes), width, inspector,
+      bounds: getNodesBounds(nodes), width, inspector, nodeCount: nodes.length,
       availableHeight: windowHeight - spaceAbove - 24,
     });
     onLayoutAspect(frameSize.layoutAspect);
@@ -65,8 +65,12 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     const autoFitKey = JSON.stringify([layoutKey, width, height, anchorId, inspector, windowHeight, spaceAbove, padding]);
     if (lastAutoFitKey.current === autoFitKey) return;
     const anchor = nodes.find(node => node.id === anchorId) ?? nodes[0];
-    const options: FitViewOptions = { padding, duration: 0, minZoom: 0.05, maxZoom: 2,
-      ...(!frameSize.fitAll && anchor ? { nodes: inspector && width >= 640 ? graphInspectorTargets(anchor.id, nodes.map(node => node.id), getEdges()) : [{ id: anchor.id }], minZoom: inspector && width >= 640 ? 0.45 : 0.85, maxZoom: 1.1 } : {}),
+    const options: FitViewOptions = { padding, duration: 0, minZoom: 0.05, maxZoom: 1.25,
+      // Too large to read whole: open on the anchor's neighbourhood, never a lone card.
+      // A phone keeps one readable card (its list view gives the overview).
+      ...(!frameSize.fitAll && anchor ? width >= 640
+        ? { nodes: neighbourhood(anchor.id, nodes.map(node => node.id), getEdges()), minZoom: 0.45, maxZoom: 1.1 }
+        : { nodes: [{ id: anchor.id }], minZoom: 0.85, maxZoom: 1.1 } : {}),
     };
     const fitIds = options.nodes ? new Set(options.nodes.map(node => node.id)) : null;
     // A focused root can resize without changing the whole graph's envelope.
@@ -131,4 +135,18 @@ function GraphNodeNavigator({ nodes, orderedIds }: { nodes: Node[]; orderedIds?:
         onClick={() => void focus(ordered[index + 1]!)}>Next</button>
     </div>
   </div>;
+}
+
+/** The anchor and up to six of its direct neighbours, so the first frame shows context. */
+function neighbourhood(anchorId: string, visibleIds: string[], edges: { source: string; target: string }[]) {
+  const targets = graphInspectorTargets(anchorId, visibleIds, edges);
+  if (targets.length > 1) return targets;
+  const visible = new Set(visibleIds);
+  const ids = new Set([anchorId]);
+  for (const edge of edges) {
+    if (ids.size >= 7) break;
+    const other = edge.source === anchorId ? edge.target : edge.target === anchorId ? edge.source : null;
+    if (other && visible.has(other)) ids.add(other);
+  }
+  return [...ids].map(id => ({ id }));
 }

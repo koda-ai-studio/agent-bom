@@ -228,23 +228,37 @@ def project_blast_radius(graph: UnifiedGraph, blast_data: list[dict[str, Any]], 
                 )
 
 
+# Pairwise edges are a convenience for small groups; the shared server node and
+# each agent's ``uses`` edge already encode membership, so large groups are
+# summarised on the server instead of emitting k*(k-1)/2 agent pairs.
+MAX_PAIRWISE_SHARED_AGENTS = 16
+
+
 def project_shared_servers(graph: UnifiedGraph, indexes: BuildIndexes) -> None:
     for srv_id, agent_ids in indexes.server_to_agents.items():
         unique = sorted(set(agent_ids))
-        if len(unique) >= 2:
-            for i, a1 in enumerate(unique):
-                for a2 in unique[i + 1 :]:
-                    graph.add_edge(
-                        UnifiedEdge(
-                            source=a1,
-                            target=a2,
-                            relationship=RelationshipType.SHARES_SERVER,
-                            direction="bidirectional",
-                            traversable=False,
-                            weight=3.0,
-                            evidence=edge_evidence("blast-radius", "derived", derived_via="shared_server", server=srv_id),
-                        )
+        if len(unique) < 2:
+            continue
+        pairwise = len(unique) <= MAX_PAIRWISE_SHARED_AGENTS
+        server_node = graph.get_node(srv_id)
+        if server_node is not None:
+            server_node.attributes["shared_agent_count"] = len(unique)
+            server_node.attributes["shares_server_pairwise"] = pairwise
+        if not pairwise:
+            continue
+        for i, a1 in enumerate(unique):
+            for a2 in unique[i + 1 :]:
+                graph.add_edge(
+                    UnifiedEdge(
+                        source=a1,
+                        target=a2,
+                        relationship=RelationshipType.SHARES_SERVER,
+                        direction="bidirectional",
+                        traversable=False,
+                        weight=3.0,
+                        evidence=edge_evidence("blast-radius", "derived", derived_via="shared_server", server=srv_id),
                     )
+                )
 
 
 def enrich_blast_radius(graph: UnifiedGraph, blast_data: list[dict[str, Any]]) -> None:

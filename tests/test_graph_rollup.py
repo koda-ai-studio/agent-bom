@@ -209,8 +209,10 @@ def test_rollup_collapses_deep_contains_tree_with_aggregate_counts() -> None:
     assert agg["by_type"]["package"] == 2
     assert agg["by_type"]["server"] == 2
     assert agg["worst_severity"] == "critical"
-    assert agg["severity_counts"]["critical"] == 1
-    assert agg["severity_counts"]["low"] == 1
+    # Rated packages are assets, not findings: their rating reaches worst_severity
+    # while the issue-basis severity_counts stays empty.
+    assert agg["severity_counts"]["critical"] == 0
+    assert agg["issue_count"] == 0
     # Exposure + toxic flags roll up from descendants.
     assert agg["internet_exposed"] is True
     assert agg["toxic_combo"] is True
@@ -245,8 +247,8 @@ def test_large_graph_rolls_up_to_small_top_level() -> None:
     top = view["top_level"][0]
     assert top["id"] == "org:root"
     assert top["aggregate"]["descendant_count"] == len(g.nodes) - 1
-    # 10 accounts * 10 apps = 100 critical packages roll up.
-    assert top["aggregate"]["severity_counts"]["critical"] == 100
+    # The critical packages' rating rolls up to the top-level container.
+    assert top["aggregate"]["worst_severity"] == "critical"
 
 
 def test_drill_down_is_one_level() -> None:
@@ -275,8 +277,7 @@ def test_min_severity_filter_restricts_aggregates() -> None:
     top = view["top_level"][0]
     # Only the one critical package survives a high-severity floor.
     assert top["aggregate"]["descendant_count"] == 1
-    assert top["aggregate"]["severity_counts"]["critical"] == 1
-    assert top["aggregate"]["severity_counts"]["low"] == 0
+    assert top["aggregate"]["worst_severity"] == "critical"
 
 
 def test_exposed_only_filter() -> None:

@@ -8,6 +8,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from agent_bom.evidence.semantics import ExploitabilityDimension
+from agent_bom.graph.applicability import advisory_match_unverified
 from agent_bom.graph.container import AttackPath, UnifiedGraph
 from agent_bom.graph.correlation_scope import CORRELATION_IDENTITY_VERSION
 from agent_bom.graph.edge import UnifiedEdge
@@ -27,6 +28,7 @@ _ANNOTATION_BASIS = frozenset(
     {
         "incomplete_hop_evidence",
         "stale_evidence_allowed",
+        "stale_hop_evidence",
         "directed_provenance_backed_hops",
         "blocked_runtime_hop",
         "failed_runtime_outcome",
@@ -193,12 +195,12 @@ def _hop_receipt(graph: UnifiedGraph, source: str, target: str, relationship: st
     freshness = _freshness(edge)
     authority = authority_evidence(edge.evidence)
     runtime_receipt = _runtime_hop_receipt(edge)
-    # Trace order records which assets one correlated trace touched in
-    # sequence. It is a real receipt, but not an access/exposure hop, so it
-    # can never complete an attack path on its own.
+    # Trace order is a real receipt but not an access/exposure hop; it never completes a path alone.
     trace_order = _relationship(edge) in _TRACE_ORDER_RELATIONSHIPS
-    if trace_order:
-        runtime_receipt["reason_codes"] = [*runtime_receipt["reason_codes"], "trace_order_not_access"]
+    unverified = advisory_match_unverified(_relationship(edge), edge, getattr(graph.nodes.get(target), "attributes", None))
+    flags = {"trace_order_not_access": trace_order, "stale_evidence": freshness == "stale", "applicability_unverified": unverified}
+    gaps = [code for code, present in flags.items() if present]
+    runtime_receipt["reason_codes"] = [*runtime_receipt["reason_codes"], *gaps]
     return {
         "source_node_id": source,
         "target_node_id": target,
@@ -215,6 +217,7 @@ def _hop_receipt(graph: UnifiedGraph, source: str, target: str, relationship: st
         "complete": bool(
             edge.traversable
             and not trace_order
+            and not unverified
             and not runtime_receipts_limited(edge.evidence)
             and edge.direction == "directed"
             and source_ids
@@ -276,12 +279,13 @@ def annotate_attack_path_evidence(path: AttackPath, graph: UnifiedGraph, *, hop_
         basis.extend(runtime_reasons)
     elif not all_complete and path.reachability != "unlikely":
         path.reachability = "unknown"
-        basis.append("incomplete_hop_evidence")
+        basis.extend(["incomplete_hop_evidence", *(["stale_hop_evidence"] if any(r["freshness"] == "stale" for r in receipts) else [])])
     elif stale:
         if path.reachability == "confirmed":
             path.reachability = "likely"
         basis.append("stale_evidence_allowed")
-    elif all_complete and path.reachability in {"unknown", "likely"}:
+    elif all_complete and path.reachability in {"unknown", "likely"} and "structural_topology_only" not in basis:
+        # Current hops prove the topology, not use; a producer's structural-only verdict stands.
         path.reachability = "confirmed"
         basis.append("directed_provenance_backed_hops")
     elif all_complete and path.reachability == "confirmed" and promoted_earlier:
@@ -332,7 +336,8 @@ def _path_completeness(path: AttackPath) -> dict[str, Any]:
     if len(receipts) != expected_hops or any(item.get("truncated") for item in receipts):
         return {"status": "partial", **base, "reasonCodes": ["incomplete_hop_evidence"]}
     if any(str(item.get("freshness") or "unknown") not in {"fresh", "stale_allowed"} for item in receipts):
-        return {"status": "partial", **base, "reasonCodes": ["unknown_evidence_freshness"]}
+        stale = any(item.get("freshness") == "stale" for item in receipts)
+        return {"status": "partial", **base, "reasonCodes": ["stale_hop_evidence" if stale else "unknown_evidence_freshness"]}
     ordered = (
         expected_hops > 0
         and len(path.edges) == expected_hops
@@ -511,12 +516,7 @@ def qualify_exposure_reachability(payload: dict[str, Any]) -> dict[str, Any]:
     return payload
 
 
-__all__ = [
-    "annotate_attack_path_evidence",
-    "exposure_evidence_dimensions",
-    "package_path_covers_rollup",
-    "rank_attack_path",
-]
+__all__ = ["annotate_attack_path_evidence", "exposure_evidence_dimensions", "package_path_covers_rollup", "rank_attack_path"]
 
 
 def with_technique_mappings(paths: list[AttackPath], graph: UnifiedGraph) -> list[AttackPath]:

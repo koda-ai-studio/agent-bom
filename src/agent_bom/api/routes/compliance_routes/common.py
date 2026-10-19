@@ -253,7 +253,15 @@ def _posture_scorecard_impl(request: Request) -> dict:
     if scorecard:
         from agent_bom.api.exec_posture import canonical_posture_payload
 
-        return canonical_posture_payload(request, cast(dict, scorecard))
+        return canonical_posture_payload(
+            request,
+            cast(dict, scorecard),
+            dimensions_basis={
+                "basis": "latest_scan",
+                "scan_id": latest_result.get("scan_id"),
+                "completed_at": latest_result.get("completed_at"),
+            },
+        )
 
     return {
         "grade": "N/A",

@@ -226,12 +226,13 @@ def _content_classification_evidence(node: UnifiedNode) -> dict[str, object]:
     return evidence
 
 
+# Trace order (``TRACE_STEP``) is deliberately absent: the next asset a trace
+# touched is sequence context, not an access grant or an observed access.
 _DATA_ACCESS_RELATIONSHIPS = frozenset(
     {
         RelationshipType.CAN_ACCESS,
         RelationshipType.HAS_PERMISSION,
         RelationshipType.ACCESSED,
-        RelationshipType.TRACE_STEP,
         RelationshipType.STORES,
         RelationshipType.EXPOSED_TO,
     }

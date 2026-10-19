@@ -19953,6 +19953,23 @@ export interface components {
             [key: string]: unknown;
         };
         /**
+         * PostureDimensionsBasis
+         * @description Which evidence the per-dimension breakdown was computed from.
+         */
+        PostureDimensionsBasis: {
+            /**
+             * Basis
+             * @constant
+             */
+            basis: "latest_scan";
+            /** Completed At */
+            completed_at?: string | null;
+            /** Scan Id */
+            scan_id?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
          * PostureResponse
          * @description Graded posture; with ``no_data`` true only grade, score and summary are set.
          */
@@ -19967,6 +19984,7 @@ export interface components {
             dimensions?: {
                 [key: string]: components["schemas"]["PostureDimension"];
             } | null;
+            dimensions_basis?: components["schemas"]["PostureDimensionsBasis"] | null;
             /** Display */
             display?: string | null;
             /** Display Format */

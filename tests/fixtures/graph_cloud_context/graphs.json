@@ -79,6 +79,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
         },
@@ -104,6 +105,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
@@ -130,6 +132,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
         },
@@ -155,6 +158,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
@@ -181,6 +185,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
         },
@@ -206,6 +211,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
@@ -232,6 +238,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
         },
@@ -257,6 +264,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
@@ -283,6 +291,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
         },
@@ -308,6 +317,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
@@ -334,6 +344,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
         },
@@ -359,6 +370,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
@@ -385,6 +397,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
         },
@@ -410,6 +423,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
@@ -436,6 +450,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cnapp-overlay",
           "tier": "modeled_infrastructure"
         },
@@ -463,6 +478,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cnapp-overlay",
           "tier": "modeled_infrastructure"
         },
@@ -490,6 +506,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cnapp-overlay",
           "tier": "modeled_infrastructure"
         },
@@ -517,6 +534,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cnapp-overlay",
           "tier": "modeled_infrastructure"
         },
@@ -544,6 +562,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "reason": "internet_exposed_data_store",
           "source": "cnapp-overlay",
           "tier": "modeled_infrastructure"
@@ -1572,6 +1591,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
         },
@@ -1597,6 +1617,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
@@ -1623,6 +1644,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
         },
@@ -1648,6 +1670,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
@@ -1674,6 +1697,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
         },
@@ -1699,6 +1723,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
@@ -1725,6 +1750,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
         },
@@ -1750,6 +1776,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
@@ -1776,6 +1803,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cnapp-overlay",
           "tier": "modeled_infrastructure"
         },
@@ -1803,6 +1831,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cnapp-overlay",
           "tier": "modeled_infrastructure"
         },
@@ -2513,6 +2542,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "mcp-scan",
           "tier": "static_scan"
         },
@@ -2538,6 +2568,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "provider": "aws",
           "scope_key": "org_id",
           "source": "cloud_origin",
@@ -2565,6 +2596,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "provider": "aws",
           "scope_key": "account_id",
           "source": "cloud_origin",
@@ -2592,6 +2624,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "provider": "aws",
           "scope_key": "org_id",
           "source": "cloud_origin",
@@ -2615,17 +2648,18 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "04fc47f0-2690-598d-b3cb-59ea3a72c935",
+        "canonical_id": "2e42c13f-4e53-54dd-922e-ba4b8384c420",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "provider": "aws",
           "scope_key": "account_id",
           "source": "cloud_origin",
           "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
-        "id": "hosts:account:aws:123456789012:cloud_resource:aws:bedrock:agent:agent-1",
+        "id": "hosts:account:aws:123456789012:cloud_resource:aws:bedrock:agent:123456789012/us-east-1:agent-1",
         "last_seen": "2026-09-30T12:00:00+00:00",
         "provenance": {},
         "relationship": "hosts",
@@ -2633,8 +2667,8 @@
         "source_id": "account:aws:123456789012",
         "source_run_id": "",
         "source_scan_id": "",
-        "target": "cloud_resource:aws:bedrock:agent:agent-1",
-        "target_id": "cloud_resource:aws:bedrock:agent:agent-1",
+        "target": "cloud_resource:aws:bedrock:agent:123456789012/us-east-1:agent-1",
+        "target_id": "cloud_resource:aws:bedrock:agent:123456789012/us-east-1:agent-1",
         "traversable": true,
         "valid_from": "2026-09-30T12:00:00+00:00",
         "valid_to": null,
@@ -2642,17 +2676,18 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "fca4f38e-5653-53ee-8287-54da55da8dfa",
+        "canonical_id": "a5e9ad11-147d-5216-bd67-00e4ed5708bc",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "provider": "aws",
           "scope_key": "account_id",
           "source": "cloud_origin",
           "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
-        "id": "contains:account:aws:123456789012:cloud_resource:aws:bedrock:agent:agent-1",
+        "id": "contains:account:aws:123456789012:cloud_resource:aws:bedrock:agent:123456789012/us-east-1:agent-1",
         "last_seen": "2026-09-30T12:00:00+00:00",
         "provenance": {},
         "relationship": "contains",
@@ -2660,8 +2695,8 @@
         "source_id": "account:aws:123456789012",
         "source_run_id": "",
         "source_scan_id": "",
-        "target": "cloud_resource:aws:bedrock:agent:agent-1",
-        "target_id": "cloud_resource:aws:bedrock:agent:agent-1",
+        "target": "cloud_resource:aws:bedrock:agent:123456789012/us-east-1:agent-1",
+        "target_id": "cloud_resource:aws:bedrock:agent:123456789012/us-east-1:agent-1",
         "traversable": true,
         "valid_from": "2026-09-30T12:00:00+00:00",
         "valid_to": null,
@@ -2669,17 +2704,18 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "f88ca074-6dab-5ef2-af86-d9fe5c07a3fe",
+        "canonical_id": "162c3b06-6668-5b92-a2b4-756f9d3f464d",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "provider": "aws",
           "service": "bedrock",
           "source": "cloud_origin",
           "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
-        "id": "hosts:provider:aws:cloud_resource:aws:bedrock:agent:agent-1",
+        "id": "hosts:provider:aws:cloud_resource:aws:bedrock:agent:123456789012/us-east-1:agent-1",
         "last_seen": "2026-09-30T12:00:00+00:00",
         "provenance": {},
         "relationship": "hosts",
@@ -2687,8 +2723,8 @@
         "source_id": "provider:aws",
         "source_run_id": "",
         "source_scan_id": "",
-        "target": "cloud_resource:aws:bedrock:agent:agent-1",
-        "target_id": "cloud_resource:aws:bedrock:agent:agent-1",
+        "target": "cloud_resource:aws:bedrock:agent:123456789012/us-east-1:agent-1",
+        "target_id": "cloud_resource:aws:bedrock:agent:123456789012/us-east-1:agent-1",
         "traversable": true,
         "valid_from": "2026-09-30T12:00:00+00:00",
         "valid_to": null,
@@ -2696,16 +2732,17 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "0f12c849-7f9f-5358-8bf9-57862392f200",
+        "canonical_id": "cce5f8b0-df66-51cf-9ef4-2fed57e316af",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "resource_id": "agent-1",
           "source": "cloud_origin",
           "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
-        "id": "hosted_on:agent:cloud-assistant:cloud_resource:aws:bedrock:agent:agent-1",
+        "id": "hosted_on:agent:cloud-assistant:cloud_resource:aws:bedrock:agent:123456789012/us-east-1:agent-1",
         "last_seen": "2026-09-30T12:00:00+00:00",
         "provenance": {},
         "relationship": "hosted_on",
@@ -2713,8 +2750,8 @@
         "source_id": "agent:cloud-assistant",
         "source_run_id": "",
         "source_scan_id": "",
-        "target": "cloud_resource:aws:bedrock:agent:agent-1",
-        "target_id": "cloud_resource:aws:bedrock:agent:agent-1",
+        "target": "cloud_resource:aws:bedrock:agent:123456789012/us-east-1:agent-1",
+        "target_id": "cloud_resource:aws:bedrock:agent:123456789012/us-east-1:agent-1",
         "traversable": true,
         "valid_from": "2026-09-30T12:00:00+00:00",
         "valid_to": null,
@@ -2726,6 +2763,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "principal_type": "iam-role",
           "source": "cloud_principal",
           "tier": "modeled_infrastructure"
@@ -2748,16 +2786,17 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "b6410a92-7056-5a8e-a5c4-ab4347fd621d",
+        "canonical_id": "f12ad519-eb77-55e0-bafa-7cb5d1c39b60",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "principal_type": "iam-role",
           "source": "cloud_principal",
           "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
-        "id": "manages:role:aws:role-1:cloud_resource:aws:bedrock:agent:agent-1",
+        "id": "manages:role:aws:role-1:cloud_resource:aws:bedrock:agent:123456789012/us-east-1:agent-1",
         "last_seen": "2026-09-30T12:00:00+00:00",
         "provenance": {},
         "relationship": "manages",
@@ -2765,8 +2804,8 @@
         "source_id": "role:aws:role-1",
         "source_run_id": "",
         "source_scan_id": "",
-        "target": "cloud_resource:aws:bedrock:agent:agent-1",
-        "target_id": "cloud_resource:aws:bedrock:agent:agent-1",
+        "target": "cloud_resource:aws:bedrock:agent:123456789012/us-east-1:agent-1",
+        "target_id": "cloud_resource:aws:bedrock:agent:123456789012/us-east-1:agent-1",
         "traversable": true,
         "valid_from": "2026-09-30T12:00:00+00:00",
         "valid_to": null,
@@ -2774,16 +2813,17 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "71a3d371-8500-54b7-822f-bde04bf1b110",
+        "canonical_id": "5c5f3700-f135-50be-b924-5830260bac5a",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "principal_type": "iam-role",
           "source": "cloud_principal",
           "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
-        "id": "can_access:role:aws:role-1:cloud_resource:aws:bedrock:agent:agent-1",
+        "id": "can_access:role:aws:role-1:cloud_resource:aws:bedrock:agent:123456789012/us-east-1:agent-1",
         "last_seen": "2026-09-30T12:00:00+00:00",
         "provenance": {},
         "relationship": "can_access",
@@ -2791,8 +2831,8 @@
         "source_id": "role:aws:role-1",
         "source_run_id": "",
         "source_scan_id": "",
-        "target": "cloud_resource:aws:bedrock:agent:agent-1",
-        "target_id": "cloud_resource:aws:bedrock:agent:agent-1",
+        "target": "cloud_resource:aws:bedrock:agent:123456789012/us-east-1:agent-1",
+        "target_id": "cloud_resource:aws:bedrock:agent:123456789012/us-east-1:agent-1",
         "traversable": true,
         "valid_from": "2026-09-30T12:00:00+00:00",
         "valid_to": null,
@@ -2804,6 +2844,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "principal_type": "iam-role",
           "source": "cloud_principal",
           "tier": "modeled_infrastructure"
@@ -2830,6 +2871,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "principal_type": "iam-role",
           "source": "cloud_principal_trust",
           "source_field": "",
@@ -2858,10 +2900,11 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "principal_type": "iam-role",
           "source": "cloud_principal",
           "tier": "modeled_infrastructure",
-          "via": "cloud_resource:aws:bedrock:agent:agent-1"
+          "via": "cloud_resource:aws:bedrock:agent:123456789012/us-east-1:agent-1"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
         "id": "manages:role:aws:role-1:agent:cloud-assistant",
@@ -2881,22 +2924,23 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "16f48685-4fb7-5c89-b2bc-50584d411905",
+        "canonical_id": "9bbbafbb-fcc1-515f-a63f-e6f0c1e36317",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
           "access": "direct",
           "derived_via": "direct",
+          "freshness": "fresh",
           "permission_derivation": {
             "basis": "recorded_graph_connections",
             "path_selection": "one_shortest_path_per_grant_and_access",
             "paths": [
               {
                 "access": "direct",
-                "grant_edge_id": "can_access:role:aws:role-1:cloud_resource:aws:bedrock:agent:agent-1",
+                "grant_edge_id": "can_access:role:aws:role-1:cloud_resource:aws:bedrock:agent:123456789012/us-east-1:agent-1",
                 "grant_principal_id": "role:aws:role-1",
                 "source_edge_ids": [
-                  "can_access:role:aws:role-1:cloud_resource:aws:bedrock:agent:agent-1"
+                  "can_access:role:aws:role-1:cloud_resource:aws:bedrock:agent:123456789012/us-east-1:agent-1"
                 ]
               }
             ],
@@ -2907,7 +2951,7 @@
           "tier": "derived"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
-        "id": "has_permission:role:aws:role-1:cloud_resource:aws:bedrock:agent:agent-1",
+        "id": "has_permission:role:aws:role-1:cloud_resource:aws:bedrock:agent:123456789012/us-east-1:agent-1",
         "last_seen": "2026-09-30T12:00:00+00:00",
         "provenance": {
           "source": "effective-permissions"
@@ -2917,8 +2961,8 @@
         "source_id": "role:aws:role-1",
         "source_run_id": "",
         "source_scan_id": "",
-        "target": "cloud_resource:aws:bedrock:agent:agent-1",
-        "target_id": "cloud_resource:aws:bedrock:agent:agent-1",
+        "target": "cloud_resource:aws:bedrock:agent:123456789012/us-east-1:agent-1",
+        "target_id": "cloud_resource:aws:bedrock:agent:123456789012/us-east-1:agent-1",
         "traversable": true,
         "valid_from": "2026-09-30T12:00:00+00:00",
         "valid_to": null,
@@ -3132,6 +3176,12 @@
           "cloud_state": null,
           "cloud_timestamps": null,
           "evidence_tier": "static_scan",
+          "identity": {
+            "aliases": [
+              "cloud_resource:aws:bedrock:agent:agent-1"
+            ],
+            "basis": "cloud_origin_scope"
+          },
           "location": "us-east-1",
           "network": {},
           "resource_id": "agent-1",
@@ -3142,7 +3192,7 @@
             "org_id": "org-1"
           }
         },
-        "canonical_id": "e01ed463-15b3-56b1-aa6f-64c4a8e37e8d",
+        "canonical_id": "5b40eddd-58e5-5930-bc76-9e2a02ec5582",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -3171,7 +3221,7 @@
           "time_basis": "recorded_observation"
         },
         "first_seen": "2026-09-30T12:00:00+00:00",
-        "id": "cloud_resource:aws:bedrock:agent:agent-1",
+        "id": "cloud_resource:aws:bedrock:agent:123456789012/us-east-1:agent-1",
         "label": "agent-1",
         "last_seen": "2026-09-30T12:00:00+00:00",
         "risk_assessment": {
@@ -3697,6 +3747,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
         },
@@ -3722,6 +3773,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
@@ -3748,6 +3800,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
         },
@@ -3773,6 +3826,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
@@ -3799,6 +3853,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
         },
@@ -3824,6 +3879,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
@@ -3850,6 +3906,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
         },
@@ -3875,6 +3932,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "cloud-inventory",
           "tier": "modeled_infrastructure"
@@ -3901,6 +3959,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cnapp-overlay",
           "tier": "modeled_infrastructure"
         },
@@ -4567,6 +4626,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "snowflake-objects",
           "tier": "modeled_infrastructure"
         },
@@ -4592,6 +4652,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "snowflake-objects",
           "tier": "modeled_infrastructure"
@@ -4618,6 +4679,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "snowflake-objects",
           "tier": "modeled_infrastructure"
         },
@@ -4643,6 +4705,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "snowflake-objects",
           "tier": "modeled_infrastructure"
@@ -4669,6 +4732,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "snowflake-services",
           "tier": "modeled_infrastructure"
         },
@@ -4694,6 +4758,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "snowflake-services",
           "tier": "modeled_infrastructure"
@@ -4720,6 +4785,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "snowflake-services",
           "tier": "modeled_infrastructure"
         },
@@ -4745,6 +4811,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "hierarchy": "account_contains_resource",
           "source": "snowflake-services",
           "tier": "modeled_infrastructure"
@@ -4771,6 +4838,7 @@
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
+          "freshness": "fresh",
           "source": "cnapp-overlay",
           "tier": "modeled_infrastructure"
         },

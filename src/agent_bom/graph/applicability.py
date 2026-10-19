@@ -152,3 +152,12 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
     if any(vex):
         attributes["occurrence_vex"] = dict(sorted(Counter(value or "none" for value in vex).items()))
     return attributes
+
+
+def advisory_match_unverified(relationship: str, edge: Any, vulnerability_attributes: dict[str, Any] | None) -> bool:
+    """An advisory match proves the version is affected, not that the code is reachable.
+
+    Such a hop cannot complete an attack path until the occurrence's
+    applicability permits an exploit chain.
+    """
+    return relationship == "vulnerable_to" and not edge_applicability(edge, vulnerability_attributes).permits_exploit_chain

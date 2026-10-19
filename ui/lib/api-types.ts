@@ -850,6 +850,8 @@ export interface GraphRollupContainer {
   has_children: boolean;
   direct_child_count: number;
   aggregate: GraphRollupAggregate;
+  /** Other top-level scopes linked by non-containment edges, counted server-side before any row cap. */
+  connections?: { connected_entry_count: number; relationship_count: number };
 }
 
 export interface GraphRollupSummary {

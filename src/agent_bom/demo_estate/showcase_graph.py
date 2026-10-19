@@ -950,10 +950,13 @@ def _materialize_showcase_attack_paths(graph: UnifiedGraph) -> bool:
     # Hop receipts copy the analyzer status at annotation time, so record it before derivation.
     _record_showcase_attack_path_analysis(graph, count_paths=False)
     try:
+        from agent_bom.graph.edge_freshness import stamp_edge_freshness
         from agent_bom.graph.path_derivation import _derived_attack_paths
         from agent_bom.graph.path_evidence import with_technique_mappings
 
-        # Pre-built estate chains get the same hop receipts as every derived path family.
+        # The seed is this snapshot's collection: stamp edge freshness as the scan build does,
+        # then give pre-built estate chains the same hop receipts as every derived path family.
+        stamp_edge_freshness(graph)
         with_technique_mappings(materialized, graph)
         derived = _derived_attack_paths(graph)
     except Exception:  # noqa: BLE001 — never block the snapshot save on path shaping
@@ -1000,7 +1003,4 @@ def _record_showcase_attack_path_analysis(graph: UnifiedGraph, *, count_paths: b
     # make the claim it has actually earned.
     from agent_bom.graph.analysis import GraphAnalysisState, GraphAnalysisStatus
 
-    graph.analysis_status["attack_path_fusion"] = GraphAnalysisStatus(
-        status=GraphAnalysisState.COMPLETE,
-        observed=observed,
-    )
+    graph.analysis_status["attack_path_fusion"] = GraphAnalysisStatus(status=GraphAnalysisState.COMPLETE, observed=observed)
