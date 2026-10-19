@@ -1,6 +1,6 @@
 """Finding lanes share one server predicate and preserve occurrence evidence."""
 
-from agent_bom.api.finding_grouping import _group_occurrence_rows
+from agent_bom.api.finding_grouping import _group_occurrence_rows, cloud_control_severity_counts, select_group_lane
 from agent_bom.finding import Asset, Finding, FindingSource, FindingType, cloud_cis_check_to_finding, iac_finding_to_finding
 from agent_bom.finding_scope import row_matches_scope
 
@@ -33,7 +33,8 @@ def test_lanes_separate_iac_cloud_and_unknown_without_title_guessing():
 
 def test_cloud_groups_are_control_and_provider_scoped():
     rows = [cloud("role-1"), cloud("role-2"), cloud("role-3", "azure"), cloud("role-4", control="1.5")]
-    groups = _group_occurrence_rows(rows)
+    assert len(_group_occurrence_rows(rows)) == 4
+    groups = _group_occurrence_rows(rows, cloud_controls=True)
     assert len(groups) == 3
     assert groups[0]["occurrence_count"] == 2
     assert {r["asset"]["name"] for r in groups[0]["_occurrence_rows"]} == {"role-1", "role-2"}
@@ -78,7 +79,12 @@ def test_api_lanes_filter_before_pagination_and_counts_reconcile(monkeypatch, tm
         assert page.status_code == 200, page.text
         body = page.json()
         assert body["total"] == 2
-        assert body["facets"]["lane"]["cloud"] == 2
+        assert body["facets"]["lane"]["cloud"] == 3
+        assert body["grouping"]["unit"] == "control_groups"
+        assert body["grouping"]["canonical_issue_total"] == 3
+        all_page = client.get("/v1/findings", params={**query, "lane": "", "limit": 100}, headers=headers).json()
+        assert all_page["total"] == 4
+        assert sum(all_page["facets"]["lane"].values()) == all_page["total"]
         assert body["facets"]["lane"]["iac"] == 1
         assert body["findings"][0]["severity_source"] == "benchmark-mapped"
         assert body["findings"][0]["lane"] == "cloud"
@@ -125,3 +131,19 @@ def test_iac_source_retains_its_graph_collector():
 
     row = iac_finding_to_finding({"rule_id": "TF-1", "file_path": "main.tf"}).to_dict()
     assert _collector(row) == ("iac", "static_scan")
+
+
+def test_cloud_control_group_keeps_worst_severity_and_filtered_occurrences():
+    low, high = cloud("role-low"), cloud("role-high")
+    low["severity"] = "low"
+    facets = cloud_control_severity_counts([low, high])
+    assert facets["high"] == facets["low"] == 1
+    groups = _group_occurrence_rows([low, high])
+    selected, _, counts = select_group_lane(groups, None, "cloud")
+    assert selected[0]["severity"] == "high"
+    assert selected[0]["occurrence_count"] == 2
+    assert counts["cloud"] == 2
+    selected, _, counts = select_group_lane(groups, "low", "cloud")
+    assert selected[0]["severity"] == "low"
+    assert selected[0]["occurrence_count"] == 1
+    assert counts["cloud"] == 1

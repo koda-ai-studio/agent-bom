@@ -55,7 +55,7 @@ from agent_bom.api.finding_grouping import _finding_group_offset as _finding_gro
 from agent_bom.api.finding_grouping import _group_occurrence_rows as _group_occurrence_rows
 from agent_bom.api.finding_grouping import _grouped_severity_counts as _grouped_severity_counts
 from agent_bom.api.finding_grouping import _groups_envelope as _groups_envelope
-from agent_bom.api.finding_grouping import attach_lane_counts, select_group_lane
+from agent_bom.api.finding_grouping import attach_lane_counts, lane_severity_counts, select_group_lane
 from agent_bom.api.finding_list_envelope import HUB_LIST_OFFSET_CEILING as _HUB_LIST_OFFSET_CEILING
 from agent_bom.api.finding_list_envelope import finding_list_envelope
 from agent_bom.api.finding_list_helpers import (  # noqa: F401 - re-exported route-module API
@@ -2340,7 +2340,7 @@ def _list_finding_groups_impl(
         severity=normalized_severity,
         truncated=truncated,
     )
-    severity_counts = _grouped_severity_counts(all_groups) if include_facets else None
+    severity_counts = lane_severity_counts(all_groups, rows, lane) if include_facets else None
     _attach_grouping_metadata(
         envelope, first_page=first_page, groups=groups, scanned=len(rows), truncated=truncated, severity_counts=severity_counts
     )

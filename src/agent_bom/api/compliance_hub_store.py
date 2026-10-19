@@ -417,10 +417,10 @@ def _redact_finding(payload: dict[str, Any]) -> dict[str, Any]:
     # observed agent ids remain durable.
     if not clean.get("graph_reachable_from_agents"):
         clean.pop("graph_reachable_from_agents", None)
-    # Classification is derived deterministically from the stored finding on
-    # every read. Keeping it in each ledger row wastes space and can drift from
-    # the canonical classifier after an upgrade.
+    # Classification and lane are derived on read; persisting them wastes
+    # space and can drift from the canonical classifiers after an upgrade.
     clean.pop("finding_class", None)
+    clean.pop("lane", None)
     # No deadline carries no provenance to preserve; recompute the unavailable
     # response marker on read instead of repeating it in every ledger payload.
     if clean.get("sla_due_at_source") == "unavailable":

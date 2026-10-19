@@ -1074,6 +1074,13 @@ describe("Findings lane navigation", () => {
 });
 
 describe("Cloud check results", () => {
+  it("keeps the controlled tab panel mounted when the API fails", async () => {
+    apiMock.listFindings.mockRejectedValue(new Error("Fixture API unavailable"));
+    render(<FindingsPage />);
+    expect(await screen.findByText("Fixture API unavailable")).toBeVisible();
+    const tab = screen.getByRole("tab", { selected: true });
+    expect(screen.getByRole("tabpanel")).toHaveAttribute("id", tab.getAttribute("aria-controls"));
+  });
   it.each([
     ["CIS_FAIL", "Failed"],
     ["CIS_ERROR", "Not evaluated"],
@@ -1084,6 +1091,8 @@ describe("Cloud check results", () => {
     apiMock.listFindings.mockResolvedValue({ findings: [{ ...canonicalFinding, finding_type: findingType, title: "Administrative access check", severity: "high" }], total: 1 });
     render(<FindingsPage />);
     expect(await screen.findByLabelText(`Check result: ${result}`)).toBeVisible();
+    expect(screen.getByRole("tabpanel")).toHaveAttribute("id", "finding-lane-results");
+    expect(screen.getByText(/1 control group ·/)).toBeVisible();
     expect(screen.queryByLabelText("Check result: Passed")).not.toBeInTheDocument();
   });
 });

@@ -720,7 +720,7 @@ function FindingsPage() {
         lane="command"
         title="Findings"
         scopeChip={false}
-        subtitle={`${findingsTotalLabel}${findingsTotal == null ? "" : (findingsTotal === 1 ? " finding" : " findings")} · ${paramScan ? `Scan ${paramScan.slice(0, 8)} · ` : ""}${findingsWindowLabel}`}
+        subtitle={`${findingsTotalLabel}${findingsTotal == null ? "" : (lane === "cloud" ? (findingsTotal === 1 ? " control group" : " control groups") : (findingsTotal === 1 ? " finding" : " findings"))} · ${paramScan ? `Scan ${paramScan.slice(0, 8)} · ` : ""}${findingsWindowLabel}`}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {vulns.length > 0 ? (
@@ -752,6 +752,7 @@ function FindingsPage() {
         </div>
       )}
 
+      <div id="finding-lane-results" role="tabpanel" aria-labelledby={`finding-lane-${lane}`} className="space-y-4">
       {loading && (
         <PageLoadingState
           title="Loading findings"
@@ -1040,7 +1041,7 @@ function FindingsPage() {
             )}
           </div>
 
-          <div id="finding-lane-results" role="tabpanel" aria-labelledby={`finding-lane-${lane}`}>
+          <div>
           {lane === "all" || lane === "vulnerabilities" ? <FindingsQueueTable
             columnProfile={lane === "vulnerabilities" ? "vulnerabilities" : "all"}
             controlsContainerId="findings-table-controls"
@@ -1061,7 +1062,7 @@ function FindingsPage() {
             totalPages={totalPages}
             totalItems={findingsTotal}
             hasMore={hasMoreFindings}
-            itemLabel={findingsTotalApproximate ? "issues (approx.)" : "issues"}
+            itemLabel={`${lane === "cloud" ? "control groups" : "issues"}${findingsTotalApproximate ? " (approx.)" : ""}`}
             onPrevious={() => setPage((p) => Math.max(1, p - 1))}
             onNext={() => {
               if (nextFindingsCursor) {
@@ -1086,6 +1087,7 @@ function FindingsPage() {
           )}
         </>
       )}
+      </div>
     </div>
   );
 }

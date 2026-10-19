@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 const lanes = ["vulnerabilities", "cloud", "iac", "secrets", "identity", "data", "other"];
 const titles = ["CVE-2026-1234", "Failed CIS 1.4 — Limit administrative access", "Restrict Kubernetes role bindings", "Exposed credential reference", "Unused administrative permissions", "Sensitive customer records", "Prompt policy needs review"];
-const counts = Object.fromEntries(lanes.map((lane, index) => [lane, index + 1]));
+const counts = Object.fromEntries(lanes.map((lane, index) => [lane, lane === "cloud" ? 3 : index + 1]));
 for (const theme of ["light", "dark"] as const) {
   for (const width of [390, 1280, 1440, 1920]) {
     test(`${theme} ${width}: lanes, evidence and responsive layout`, async ({ page }, testInfo) => {
@@ -30,8 +30,9 @@ for (const theme of ["light", "dark"] as const) {
       if (width >= 1280) await expect(page.getByRole("columnheader", { name: "Reach / exploit" })).toBeVisible();
       await page.screenshot({ path: testInfo.outputPath(`vulnerabilities-${theme}-${width}.png`), fullPage: true });
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-      await page.getByRole("tab", { name: "Cloud config 2", exact: true }).click();
+      await page.getByRole("tab", { name: "Cloud config 3", exact: true }).click();
       await expect(page).toHaveURL(/lane=cloud/);
+      await expect(page.getByText(/2 control groups ·/)).toBeVisible();
       await expect(page.getByText(titles[1]!, { exact: true })).toBeVisible();
       await expect(page.getByLabel("Check result: Failed").first()).toBeVisible();
       await expect(page.getByText("Agent unavailable", { exact: true })).toHaveCount(0);

@@ -1665,6 +1665,8 @@ export interface FindingListEnvelope<T> {
     scan_budget: number;
     occurrence_total: number | null;
     occurrence_sample_limit: number;
+    unit?: "control_groups" | undefined;
+    canonical_issue_total?: number | undefined;
   } | undefined;
   count_metadata: {
     definition: string;

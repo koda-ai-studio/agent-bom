@@ -19,16 +19,11 @@ stated the opposite.
 
 The outcome now travels in the title:
 
-    CIS 1.16 not met: No full-admin IAM policies attached
-    CIS 1.16 not evaluated: No full-admin IAM policies attached   (status ERROR)
+    Failed CIS 1.16 — No full-admin IAM policies attached
+    Unevaluated CIS 1.16 — No full-admin IAM policies attached   (status ERROR)
 
-Phrasing it as "not met" rather than negating the control name is deliberate:
-CIS control names are assertions, so "<control> not met" is grammatical for all
-of them, where mechanical negation ("No root account access keys" -> ?) is not.
-
-The control name itself stays intact after the colon and in
-``evidence["control_title"]``, so anything mapping a finding back to its
-benchmark control keeps working.
+The outcome prefix leaves the control name intact in the title and in
+``evidence["control_title"]`` for benchmark mapping.
 """
 
 from __future__ import annotations
