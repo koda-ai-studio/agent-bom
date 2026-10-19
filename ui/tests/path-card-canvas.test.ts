@@ -2,6 +2,7 @@ import type { Edge } from "@xyflow/react";
 import { describe, expect, it } from "vitest";
 
 import {
+  PATH_CARD_CANVAS_CLASS,
   PATH_CARD_CANVAS_MAX_PX,
   PATH_CARD_CANVAS_MIN_PX,
   pathCardCanvasHeight,
@@ -47,5 +48,16 @@ describe("pathCardEdges", () => {
     expect(dashed!.style?.opacity).toBeGreaterThanOrEqual(0.9);
     expect(solid!.style?.strokeDasharray).toBeUndefined();
     expect(pathCardEdges(edges, 1)[0]!.style?.strokeWidth).toBe(2);
+  });
+});
+
+describe("PATH_CARD_CANVAS_CLASS", () => {
+  it("lets only a card's visible content take pointer input", () => {
+    expect(PATH_CARD_CANVAS_CLASS).toContain("[&_[aria-roledescription=node]]:pointer-events-none!");
+    expect(PATH_CARD_CANVAS_CLASS).toContain("[&_[data-graph-entity]>*]:pointer-events-auto!");
+  });
+
+  it("never relies on literal underscores, which Tailwind turns into spaces", () => {
+    for (const variant of PATH_CARD_CANVAS_CLASS.split(" ")) expect(variant.replace(/^\[&_/, "")).not.toMatch(/__/);
   });
 });

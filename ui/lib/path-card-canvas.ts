@@ -49,6 +49,12 @@ export function pathCardNodeStyle(zoom: number): CSSProperties {
  * The header already states severity and the ring marks it on the node, so the
  * finding's severity chip is redundant here; a package's hover-only vulnerability
  * count renders as an unexplained dot at this zoom (the ring tooltip names it).
+ * Only a card's visible glyph and text take pointer input, so the empty width of
+ * a wide card never swallows clicks meant for the relationship beside it.
  */
-export const PATH_CARD_CANVAS_CLASS =
-  "[&_.graph-finding-metadata>span.uppercase]:hidden [&_.react-flow__node-packageNode_.graph-node-context]:hidden";
+export const PATH_CARD_CANVAS_CLASS = [
+  "[&_.graph-finding-metadata>span.uppercase]:hidden",
+  "[&_[class*=packageNode]_.graph-node-context]:hidden",
+  "[&_[aria-roledescription=node]]:pointer-events-none!",
+  "[&_[data-graph-entity]>*]:pointer-events-auto!",
+].join(" ");
