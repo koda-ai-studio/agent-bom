@@ -775,6 +775,22 @@ describe("FindingsPage", () => {
     expect(screen.getByText("Reachable · 2 hops · via developer-copilot")).toBeInTheDocument();
   });
 
+  it("preserves workload-only reach sources in the vulnerabilities lane", async () => {
+    navigationState.query = "lane=vulnerabilities";
+    apiMock.listFindings.mockResolvedValue({ findings: [{ ...canonicalFinding,
+      affected_agents: [],
+      graph_reachable: true,
+      graph_min_hop_distance: 3,
+      graph_reachable_from_agents: [],
+      graph_reachable_from: ["kubernetes:workload:payments/checkout"],
+      graph_reachable_from_count: 1,
+    }], total: 1 });
+    render(<FindingsPage />);
+    expect(await screen.findByText("CVE-2026-1234")).toBeVisible();
+    expect(screen.getByText("Reachable · 3 hops · via checkout")).toBeVisible();
+    expect(apiMock.listFindings).toHaveBeenLastCalledWith(expect.objectContaining({ lane: "vulnerabilities" }));
+  });
+
   it("retains compliance evidence as optional columns in the same queue", async () => {
     navigationState.query = "lane=all&lens=trust";
     apiMock.listFindings.mockResolvedValue({
