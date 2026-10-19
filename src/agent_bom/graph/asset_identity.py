@@ -92,8 +92,15 @@ def _attr(node: UnifiedNode, *keys: str) -> str:
     return ""
 
 
+def recorded_dimension(node: UnifiedNode, key: str) -> str:
+    """A dimension the source recorded; a provider inherited over an edge never locates identity."""
+    if key == "cloud_provider" and str(node.attributes.get("cloud_provider_basis") or "").startswith("inherited:"):
+        return ""
+    return _text(getattr(node.dimensions, key, ""))
+
+
 def _provider(node: UnifiedNode) -> str:
-    return (_attr(node, "cloud_provider", "provider") or _text(node.dimensions.cloud_provider)).casefold()
+    return (_attr(node, "cloud_provider", "provider") or recorded_dimension(node, "cloud_provider")).casefold()
 
 
 def _parse_arn(value: str) -> tuple[str, str, str, str] | None:
