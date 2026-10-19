@@ -985,19 +985,14 @@ test(`a selected queue path missing from the canvas loads its exact graph in ${t
   await expect(canvas.getByText("claude-desktop", { exact: true })).toHaveCount(0);
   if (width < 640) {
     await expect(detail).toContainText("Selected path loaded. Broader context was limited by the graph query budget.");
-    const inViewport = (id: string) => canvas.locator(`.react-flow__node[data-id="${id}"]`).evaluate(element => {
+    // A short path is shown whole on a phone: no stepper, every hop readable inside the canvas.
+    await expect(canvas.getByRole("button", { name: "Next graph node" })).toHaveCount(0);
+    const inCanvas = (id: string) => canvas.locator(`.react-flow__node[data-id="${id}"]`).evaluate(element => {
       const box = element.getBoundingClientRect();
-      return box.width >= 180 && box.left >= 0 && box.right <= innerWidth && box.top >= 0 && box.bottom <= innerHeight;
+      const frame = element.closest(".react-flow")!.getBoundingClientRect();
+      return box.width >= 180 && box.left >= frame.left && box.right <= frame.right && box.top >= frame.top && box.bottom <= frame.bottom;
     });
-    await expect.poll(() => inViewport(source.id)).toBe(true);
-    for (let attempt = 0; attempt < 3; attempt++) {
-      await canvas.getByRole("button", { name: "Next graph node" }).click();
-      await expect(canvas.getByText("Focused view · 2 of 2")).toBeVisible();
-      await expect.poll(() => inViewport(target.id)).toBe(true);
-      await canvas.getByRole("button", { name: "Previous graph node" }).click();
-      await expect(canvas.getByText("Focused view · 1 of 2")).toBeVisible();
-      await expect.poll(() => inViewport(source.id)).toBe(true);
-    }
+    for (const id of [source.id, target.id]) await expect.poll(() => inCanvas(id)).toBe(true);
   }
   // Narrow panels start with readable node focus; the explicit overview still
   // has to frame every hydrated hop without loading unrelated topology.
@@ -1544,12 +1539,8 @@ for (const theme of ["light", "dark"] as const) {
         await expect(detail).toBeVisible();
         await expect(detail.getByRole("heading", { level: 2 })).toContainText("GITHUB PERSONAL ACCESS TOKEN");
         const graph = detail.getByTestId("security-graph-investigation");
-        await expect(graph.getByText(/Focused view · 1 of/)).toBeVisible();
-        await graph.getByRole("button", { name: "Next graph node" }).click();
-        await expect(graph.getByText(/Focused view · 2 of/)).toBeVisible();
-        await expect(graph.getByRole("button", { name: "Previous graph node" })).toBeEnabled();
-        await graph.getByRole("button", { name: "Previous graph node" }).click();
-        await expect(graph.getByText(/Focused view · 1 of/)).toBeVisible();
+        await expect(graph.locator(".react-flow__node")).toHaveCount(3);
+        await expect(graph.getByRole("button", { name: "Next graph node" })).toHaveCount(0);
       } else {
         await openPathQueue(page);
         const [queueBox, detailBox] = await Promise.all([queue.boundingBox(), detail.boundingBox()]);
@@ -1646,6 +1637,37 @@ for (const theme of ["light", "dark"] as const) {
 }
 
 for (const theme of ["light", "dark"] as const) {
+  test(`mobile selected Graph shows a short path whole in one column ${theme}`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.addInitScript(value => localStorage.setItem("agent-bom-theme", value), theme);
+    await routeCockpit(page, undefined, { qualifiedEvidence: true });
+    await page.goto(`/security-graph?lens=attack-path&scan=${scanId}&node=pkg%3Aform-data&cve=CVE-2025-7783&package=form-data`);
+    const detail = page.getByTestId("selected-exposure-path");
+    await detail.getByRole("button", { name: "Graph", exact: true }).click();
+    const canvas = page.getByTestId("security-graph-investigation");
+    await expect(canvas.locator(".react-flow__node")).toHaveCount(4);
+    await expect(canvas.locator(".graph-relationship-label")).toHaveCount(3);
+    await expect(canvas.getByRole("button", { name: "Next graph node" })).toHaveCount(0);
+    await expect(canvas.getByText(/Focused view/)).toHaveCount(0);
+    const band = canvas.getByTestId("security-graph-interaction-band");
+    await expect(band.getByRole("group", { name: "Exposure path view" })).toBeVisible();
+    expect((await band.boundingBox())!.height).toBeLessThan(70);
+    // Every hop, name and relationship chip sits inside the canvas, top to bottom in path order.
+    await expect.poll(() => canvas.evaluate(element => {
+      const frame = element.querySelector(".react-flow")!.getBoundingClientRect();
+      const inside = (box: DOMRect) => box.width === 0 || box.left >= frame.left - 0.5 && box.right <= frame.right + 0.5
+        && box.top >= frame.top - 0.5 && box.bottom <= frame.bottom + 0.5;
+      const parts = [...element.querySelectorAll(".graph-relationship-label, [data-graph-entity] > *")];
+      const glyphs = ["agent:desktop", "server:github", "pkg:form-data", "cve:form-data"].map(id =>
+        element.querySelector(`.react-flow__node[data-id="${id}"] .graph-entity-glyph`)!.getBoundingClientRect());
+      const ordered = glyphs.every((box, index) => index === 0 || box.top > glyphs[index - 1]!.bottom);
+      const aligned = glyphs.every(box => Math.abs(box.left + box.width / 2 - (glyphs[0]!.left + glyphs[0]!.width / 2)) < 4);
+      return parts.every(part => inside(part.getBoundingClientRect())) && ordered && aligned;
+    })).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await canvas.screenshot({ path: testInfo.outputPath(`mobile-column-path-${theme}.png`) });
+  });
+
   test(`mobile selected Graph navigates a long path at readable zoom in ${theme}`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.addInitScript(value => localStorage.setItem("agent-bom-theme", value), theme === "light" ? "dark" : "light");

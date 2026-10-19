@@ -18,7 +18,7 @@ vi.mock("@xyflow/react", () => ({
 }));
 import { GraphCanvasAutoFit } from "@/components/graph-canvas-auto-fit";
 
-afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); vi.clearAllMocks(); flow.initialized = true; flow.getNodes.mockReturnValue([{ id: "asset", position: { x: 0, y: 0 }, data: {} }]); flow.getNodesBounds.mockReturnValue({ x: 0, y: 0, width: 800, height: 1000 }); });
+afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); vi.clearAllMocks(); flow.fitView.mockResolvedValue(true); flow.initialized = true; flow.getNodes.mockReturnValue([{ id: "asset", position: { x: 0, y: 0 }, data: {} }]); flow.getNodesBounds.mockReturnValue({ x: 0, y: 0, width: 800, height: 1000 }); });
 
 it("ignores snapshot notice height when a late resize measures the pinned frame", async () => {
   vi.useFakeTimers();
@@ -175,4 +175,32 @@ it("reclaims canvas space when an expanded investigation removes a control row",
   rendered.rerender(view("complete"));
   await act(() => vi.advanceTimersByTimeAsync(100));
   expect(flow.frame.style.getPropertyValue("--graph-adaptive-height")).toBe("366px");
+});
+
+
+it("does not restart an exhausted settling budget when virtualized measurements toggle", async () => {
+  vi.useFakeTimers();
+  vi.stubGlobal("requestAnimationFrame", (callback: () => void) => setTimeout(callback, 0));
+  vi.stubGlobal("cancelAnimationFrame", clearTimeout);
+  vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
+  flow.frame = document.createElement("div");
+  flow.frame.setAttribute("data-graph-adaptive-frame", "");
+  let height = 1000;
+  flow.getNodesBounds.mockImplementation(() => ({ x: 0, y: 0, width: 800, height }));
+  flow.fitView.mockImplementation(async () => {
+    // Readability-dependent captions can alternate around a zoom threshold.
+    height = height === 1000 ? 1100 : 1000;
+    return true;
+  });
+  const onLayoutAspect = vi.fn();
+  const view = () => <GraphCanvasAutoFit enabled layoutKey="bounded-settling" inspector preserveViewport={false} onLayoutAspect={onLayoutAspect} />;
+  const rendered = render(view());
+  await act(() => vi.advanceTimersByTimeAsync(100));
+  expect(flow.fitView).toHaveBeenCalledTimes(4);
+  flow.initialized = false;
+  rendered.rerender(view());
+  flow.initialized = true;
+  rendered.rerender(view());
+  await act(() => vi.advanceTimersByTimeAsync(100));
+  expect(flow.fitView).toHaveBeenCalledTimes(4);
 });

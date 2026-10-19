@@ -73,10 +73,13 @@ export function GraphLegend({
   items,
   defaultOpen = false,
   embedded = false,
+  footer,
 }: {
   items: LegendItem[];
   defaultOpen?: boolean;
   embedded?: boolean;
+  /** Secondary canvas facts folded into the legend instead of another band. */
+  footer?: React.ReactNode;
 }) {
   // ``defaultOpen`` seeds the initial state only; the toggle then fully controls
   // visibility. (Previously ``visible = open || defaultOpen`` plus an effect that
@@ -103,6 +106,7 @@ export function GraphLegend({
       {visible && (
         <div className={`${embedded ? "relative shadow-none" : "absolute right-0 top-full z-20 mt-2 shadow-2xl shadow-[var(--shadow-color)]"} graph-legend-popover`}>
           <GraphLegendContent items={items} />
+          {footer ? <div className="mt-2 border-t border-outline pt-2">{footer}</div> : null}
         </div>
       )}
     </div>

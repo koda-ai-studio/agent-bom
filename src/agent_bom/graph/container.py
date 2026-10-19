@@ -480,55 +480,16 @@ class UnifiedGraph:
         return [e.source for e in self.reverse_adjacency.get(node_id, [])]
 
     def impact_of(self, node_id: str, max_depth: int = 4) -> dict:
-        """Compute blast radius / impact stats for a node.
+        """Blast radius: who can act on *node_id*, under the stores' reach policy.
 
-        Follows edges IN REVERSE: "what is affected by this node?"
-        Uses reverse_adjacency for directed edges, forward adjacency
-        for bidirectional edges.
-
-        Returns:
-            {
-                "node_id": str,
-                "affected_nodes": [str],
-                "affected_by_type": {"agent": N, "server": N, ...},
-                "affected_count": int,
-                "max_depth_reached": int,
-            }
+        Walks inbound over the dependency, authority, exposure, runtime and
+        derived classes only (see ``graph.reach_view``); a finding root enters
+        through the assets it names. Containment, correlation and sibling
+        findings are never "affected".
         """
-        if node_id not in self.nodes:
-            return {"node_id": node_id, "affected_nodes": [], "affected_by_type": {}, "affected_count": 0, "max_depth_reached": 0}
+        from agent_bom.graph.reach_memory import in_memory_impact
 
-        # BFS in reverse direction
-        visited: set[str] = {node_id}
-        queue: deque[tuple[str, int]] = deque([(node_id, 0)])
-        max_depth_reached = 0
-
-        while queue:
-            current, depth = queue.popleft()
-            if depth >= max_depth:
-                continue
-            # Follow reverse edges (who depends on / points to current?)
-            for edge in self.reverse_adjacency.get(current, []):
-                if edge.source not in visited:
-                    visited.add(edge.source)
-                    queue.append((edge.source, depth + 1))
-                    max_depth_reached = max(max_depth_reached, depth + 1)
-
-        visited.discard(node_id)
-        by_type: dict[str, int] = defaultdict(int)
-        for nid in visited:
-            node = self.nodes.get(nid)
-            if node:
-                et = node.entity_type.value if isinstance(node.entity_type, EntityType) else node.entity_type
-                by_type[et] += 1
-
-        return {
-            "node_id": node_id,
-            "affected_nodes": sorted(visited),
-            "affected_by_type": dict(by_type),
-            "affected_count": len(visited),
-            "max_depth_reached": max_depth_reached,
-        }
+        return in_memory_impact(self, node_id, max_depth)
 
     def search_nodes(self, query: str, limit: int = 50) -> list[UnifiedNode]:
         """Search nodes by label, attributes, or compliance tags.

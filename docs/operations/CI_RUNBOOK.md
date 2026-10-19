@@ -36,7 +36,7 @@ jobs does not establish a green main commit.
 | Full correctness suite, Python 3.11/3.12/3.13/3.14 (3.11 with coverage floor) | no | yes | yes |
 | Graph performance, Output scale performance, Extra-gated SDK smoke | no | yes | yes |
 | Postgres Integration Contract (live RLS, migrations, schema parity) | yes (required through aggregation) | yes | yes |
-| Test (Alpine/musl) | subset on relevant changes; full on dependencies | subset; full on dependency changes | full suite nightly, subset manual |
+| Test (Alpine/musl, shard N) | subset on relevant changes; full in 2 shards on dependencies | subset; full in 2 shards on dependency changes | full in 2 shards nightly, subset manual |
 | Docker (multi-arch) + image scans | no | yes | nightly only |
 | UI E2E and container smoke (Playwright, bundle budget) | when UI inputs or CI setup change | every main push | yes |
 | Dogfood GitHub Action | no | when action inputs change | yes |
@@ -46,6 +46,11 @@ jobs does not establish a green main commit.
 The required `Test (Python 3.13)` context also requires Alpine and UI E2E
 when their path filters select them. Failed classification runs both lanes;
 a missing, failed, or cancelled selected lane fails that context.
+
+Full musl runs partition every test file across two runners, with two workers
+and a 45-minute limit per runner. Targeted musl runs use one runner. Both full
+shards retain the same markers and must pass; a failed shard does not cancel
+its sibling.
 
 Branch protection stays strict (PR branches must be up to date with `main`),
 so the sharded suite always runs on the merge result that lands. If a shard

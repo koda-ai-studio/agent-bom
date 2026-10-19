@@ -12,8 +12,6 @@ import {
   ChevronRight,
   Database,
   KeyRound,
-  List,
-  Network,
   Package,
   Server,
   ShieldAlert,
@@ -40,6 +38,12 @@ import {
 import { ExposurePathNeighborExplorer } from "@/components/exposure-path-neighbor-explorer";
 import { AgentInvestigationQuestions } from "@/components/agent-investigation-questions";
 import { GraphHopEvidenceInspector } from "@/components/graph-hop-evidence-inspector";
+import {
+  PathToolbarLeadProvider,
+  PathViewToggle,
+  usePathToolbarLead,
+  type ExposurePathView,
+} from "@/components/path-view-toolbar";
 
 export interface ExposurePathCommandAction {
   title: string;
@@ -47,53 +51,14 @@ export interface ExposurePathCommandAction {
   href: string;
 }
 
-/**
- * Which single representation of the selected path is shown. The command center
- * used to stack the path DAG, the neighbor list, and a full interactive graph
- * all at once; the toggle collapses that to one view at a time.
- */
-export type ExposurePathView = "path" | "graph" | "list";
+export type { ExposurePathView } from "@/components/path-view-toolbar";
 
-const PATH_VIEW_ITEMS: { key: ExposurePathView; label: string; icon: LucideIcon }[] = [
-  { key: "graph", label: "Graph", icon: Network },
-  { key: "list", label: "Connections", icon: List },
-];
-
-function PathViewToggle({
-  view,
-  onChange,
-}: {
-  view: ExposurePathView;
-  onChange: (next: ExposurePathView) => void;
-}) {
-  return (
-    <div
-      role="group"
-      aria-label="Exposure path view"
-      className="ep-view-toggle"
-    >
-      {PATH_VIEW_ITEMS.map(({ key, label, icon: Icon }) => {
-        const active = view === key;
-        return (
-          <button
-            key={key}
-            type="button"
-            onClick={() => onChange(key)}
-            aria-pressed={active}
-            className={`ep-view-option ${
-              active
-                ? "bg-emerald-600 text-white"
-                : "text-ink-secondary hover:text-foreground"
-            }`}
-          >
-            <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            {label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
+/** One rail width; every evidence card stretches to it (never shrink-to-fit pills). */
+const PATH_EVIDENCE_RAIL_CLASS = [
+  "flex min-w-0 flex-col gap-2",
+  "@min-[50rem]:grid @min-[50rem]:grid-cols-2 @min-[50rem]:items-start",
+  "@min-[70rem]:sticky @min-[70rem]:top-[5.5rem] @min-[70rem]:flex @min-[70rem]:items-stretch @min-[70rem]:max-h-[min(72svh,54rem)] @min-[70rem]:overflow-y-auto @min-[70rem]:overscroll-contain",
+].join(" ");
 
 const ROLE_META: Record<ExposureEntityRole, { label: string; icon: LucideIcon; tint: string }> = {
   agent: { label: "Agent", icon: Bot, tint: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200" },
@@ -183,7 +148,12 @@ export function ExposurePathCommandCenter({
         ? "from-orange-500/70 via-orange-500/15 to-transparent"
         : "from-sky-500/50 via-sky-500/10 to-transparent";
 
+  const toggle = <PathViewToggle view={view === "path" ? "graph" : view} onChange={setView} />;
+  const toolbarLead = usePathToolbarLead(toggle);
+  const graphHostsToggle = toolbarLead.claimed && view !== "list";
+
   return (
+    <PathToolbarLeadProvider value={toolbarLead.value}>
     <div data-testid="selected-exposure-path" className="ep-root">
       <div className={`ep-severity-rail ${severityTone}`} aria-hidden="true" />
       <div className="ep-body">
@@ -234,18 +204,9 @@ export function ExposurePathCommandCenter({
           )}
         </div>
 
-        <div className="ep-inspection-grid">
-        <div className="ep-inspection-main">
-        <div className="ep-view-row">
-          <div className="ep-view-label">
-            {view === "path"
-              ? "Attack path"
-              : view === "graph"
-                ? "Interactive graph"
-                : "Path neighbors"}
-          </div>
-          <PathViewToggle view={view === "path" ? "graph" : view} onChange={setView} />
-        </div>
+        <div className="grid gap-3 @min-[70rem]:grid-cols-[minmax(0,1fr)_20rem] @min-[70rem]:items-start">
+        <div className="min-w-0 space-y-2">
+        {!graphHostsToggle && <div className="flex items-center">{toggle}</div>}
 
         {(view === "path" || view === "graph") && !graphSlot ? (
           <section aria-label="Selected exposure path graph" className="ep-path-frame">
@@ -267,7 +228,7 @@ export function ExposurePathCommandCenter({
         )}
 
         </div>
-        <aside aria-label="Selected path evidence" className="ep-inspection-evidence">
+        <aside aria-label="Selected path evidence" className={PATH_EVIDENCE_RAIL_CLASS}>
         <AgentInvestigationQuestions key={exposurePathKey(path)} path={path} scanId={scanId} onConnections={() => setView("list")} />
         {!techniquesSlot && <details className="rounded-xl border border-[color:var(--border-subtle)] p-3">
           <summary className="cursor-pointer text-[15px] font-medium">Inspect {countLabel(Math.max(0, path.hops.length - 1), "hop receipt")}</summary>
@@ -277,7 +238,7 @@ export function ExposurePathCommandCenter({
 
 
         <details className="ep-details group">
-          <summary className="ep-details-summary">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-3 text-[15px] font-semibold text-[color:var(--foreground)] [&::-webkit-details-marker]:hidden">
             <span>Evidence & relationships</span>
             <ChevronDown className="ep-chevron" />
           </summary>
@@ -350,6 +311,7 @@ export function ExposurePathCommandCenter({
         </div>
       </div>
     </div>
+    </PathToolbarLeadProvider>
   );
 }
 

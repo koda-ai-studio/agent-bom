@@ -399,7 +399,7 @@ def _account_scope(provider: str, index: int) -> str:
 def _build_assets(profile: ScaleProfile, tenant_id: str) -> tuple[EstateAsset, ...]:
     assets: list[EstateAsset] = [
         EstateAsset(
-            asset_id="organization:northstar-health-ai",
+            asset_id="org:enterprise:northstar-health-ai",
             tenant_id=tenant_id,
             provider="enterprise",
             resource_type="organization",

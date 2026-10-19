@@ -244,3 +244,23 @@ def test_consumer_rejects_missing_completeness_instead_of_claiming_coverage(api)
 
     with pytest.raises(ContractError, match="completeness"):
         qualify(Consumer(api, change))
+
+
+def test_consumer_fixture_owns_backpressure_history(request):
+    from agent_bom.backpressure import BackpressureRejectedError, _controller_for, reset_backpressure_for_tests
+
+    reset_backpressure_for_tests()
+    inherited = _controller_for("graph")
+    try:
+        for _ in range(inherited.min_samples):
+            inherited.try_enter()
+            inherited.exit(inherited.p99_threshold_ms + 1)
+        with pytest.raises(BackpressureRejectedError, match="p99_latency_threshold"):
+            inherited.try_enter()
+        fixture = request.getfixturevalue("api")
+        report = qualify(Consumer(fixture), page_size=1, max_pages=3)
+        assert report["status"] == "passed"
+        assert report["nodes"] == 2 and report["relationships"] == 1
+        assert _controller_for("graph").completed > 0
+    finally:
+        reset_backpressure_for_tests()

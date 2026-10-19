@@ -27,4 +27,12 @@ describe("relationship badges", () => {
     expect(container.textContent).toBe("Can Access · modeled");
     expect(qualifiedLabel("depends_on", "Depends On", { evidenceMode: "static" })).toBe("Depends On");
   });
+
+  it("keeps a compact canvas chip on one line and leaves the qualifier to assistive text", () => {
+    const { container } = render(<RelationshipBadge relationship="uses">{qualifiedLabel("uses", "Uses · evidence unspecified", { evidenceMode: "unknown", compactEvidence: true })}</RelationshipBadge>);
+    expect(container.querySelector(".graph-relationship-qualifier")).toBeNull();
+    expect(screen.getByText("Uses")).toBeVisible();
+    expect(container.querySelector(".sr-only")).toHaveTextContent("· evidence unspecified");
+    expect(container.textContent).toBe("Uses · evidence unspecified");
+  });
 });

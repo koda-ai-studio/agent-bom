@@ -33,6 +33,8 @@ def test_graph_startup_retries_real_wal_contention(tmp_path, monkeypatch, api_st
                 raise
 
     def connect(*args, **kwargs):
+        if str(args[0]) != str(path):
+            return real_connect(*args, **kwargs)
         kwargs.update(timeout=0.01, factory=ObservedConnection)
         return real_connect(*args, **kwargs)
 
@@ -69,6 +71,7 @@ def test_graph_startup_closes_connection_on_failure(tmp_path, monkeypatch, api_s
     from agent_bom.storage import sqlite_wal
 
     real_connect = sqlite3.connect
+    path = tmp_path / "graph.db"
     opened = []
 
     class FailedConnection(sqlite3.Connection):
@@ -89,6 +92,8 @@ def test_graph_startup_closes_connection_on_failure(tmp_path, monkeypatch, api_s
             super().close()
 
     def connect(*args, **kwargs):
+        if str(args[0]) != str(path):
+            return real_connect(*args, **kwargs)
         conn = real_connect(*args, **kwargs, factory=FailedConnection)
         opened.append(conn)
         return conn
@@ -96,14 +101,33 @@ def test_graph_startup_closes_connection_on_failure(tmp_path, monkeypatch, api_s
     monkeypatch.setattr(sqlite3, "connect", connect)
     if code == sqlite3.SQLITE_BUSY:
         clock = iter([0.0, 9.0, 10.0])
-        # Replace this helper's clock, not the process-wide time module: graph
-        # admission and pytest may also read monotonic time during this call.
-        monkeypatch.setattr(sqlite_wal, "time", SimpleNamespace(monotonic=lambda: next(clock), sleep=lambda _: None))
+        real_time = sqlite_wal.time
+        owner = threading.get_ident()
+        # Only this test thread consumes the fake deadline; unrelated graph
+        # startup and process-wide timing retain their real clocks.
+        monkeypatch.setattr(
+            sqlite_wal,
+            "time",
+            SimpleNamespace(
+                monotonic=lambda: next(clock) if threading.get_ident() == owner else real_time.monotonic(),
+                sleep=lambda seconds: None if threading.get_ident() == owner else real_time.sleep(seconds),
+            ),
+        )
+
+    def background_graph_startup():
+        with open_graph_db(tmp_path / "unrelated.db") as conn:
+            assert conn.execute("SELECT 1").fetchone()[0] == 1
+
+    # Retained API workers can initialize another database while this fixture
+    # injects an error. That connection must retain real SQLite behavior.
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        pool.submit(background_graph_startup).result(timeout=5)
+
     with pytest.raises(sqlite3.OperationalError, match="injected graph startup failure"):
         if api_store:
-            SQLiteGraphStore(tmp_path / "graph.db")._open_rw_conn()
+            SQLiteGraphStore(path)._open_rw_conn()
         else:
-            with open_graph_db(tmp_path / "graph.db"):
+            with open_graph_db(path):
                 pytest.fail("startup must propagate errors or exhausted contention")
     assert len(opened) == 1
     assert opened[0].attempts == (2 if code == sqlite3.SQLITE_BUSY else 1)

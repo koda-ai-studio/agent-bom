@@ -112,6 +112,15 @@ describe("wrapGraphText", () => {
     expect(lines[0]!.length).toBeGreaterThanOrEqual(5);
     expect(lines.join("")).toContain("a/very-long");
   });
+
+  it("breaks a package label before its version instead of after the @", () => {
+    expect(wrapGraphText("form-data@4.0.0", 12, 2)).toEqual(["form-data", "@4.0.0"]);
+    expect(wrapGraphText("@scope/server-files@0.6.2", 20, 2)).toEqual(["@scope/server-files", "@0.6.2"]);
+  });
+
+  it("keeps a package label on one line when it fits", () => {
+    expect(wrapGraphText("form-data@4.0.0", 16, 2)).toEqual(["form-data@4.0.0"]);
+  });
 });
 
 describe("buildPathGraphLayout auto-fit", () => {

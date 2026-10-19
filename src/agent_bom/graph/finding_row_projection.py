@@ -20,6 +20,7 @@ from agent_bom.compliance_coverage import COMPLIANCE_TAG_FIELDS
 from agent_bom.core.asset_types import entity_type_for_asset_type
 from agent_bom.evidence.finding_node_ids import _dict, _text, finding_row_node_id, stamp_finding_node_ids
 from agent_bom.graph.container import UnifiedGraph
+from agent_bom.graph.container_kind import container_kind_attributes
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.edge_evidence import SOURCE_TIERS, edge_evidence
 from agent_bom.graph.node import UnifiedNode
@@ -145,6 +146,7 @@ def _ensure_asset_node(graph: UnifiedGraph, row: dict[str, Any], entity: EntityT
                     "asset_type": _text(asset.get("asset_type")),
                     "identifier": sanitize_text(identifier, max_len=500),
                     **(_native_keys(row, asset, identifier) if entity == EntityType.CLOUD_RESOURCE else {}),
+                    **(container_kind_attributes(asset) if entity == EntityType.CONTAINER else {}),
                 },
                 data_sources=[collector],
             )

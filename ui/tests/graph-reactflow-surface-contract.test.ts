@@ -27,7 +27,8 @@ describe("interactive React Flow surface contract", () => {
   it("keeps investigation controls interactive without overlaying evidence nodes", () => {
     const content = source("components/security-graph-investigation.tsx");
     expect(content).toContain('data-testid="security-graph-legend-band"');
-    expect(content).toContain('data-testid="security-graph-interaction-band"');
+    expect(content).toContain("<InvestigationToolbar");
+    expect(source("components/investigation-toolbar.tsx")).toContain('data-testid="security-graph-interaction-band"');
     expect(content).not.toContain('className="pointer-events-auto absolute left-3 top-3');
   });
 

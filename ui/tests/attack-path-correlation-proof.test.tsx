@@ -78,7 +78,7 @@ describe("AttackPathCorrelationProof", () => {
     expect(screen.getByText("Hop receipts complete")).toBeInTheDocument();
     expect(screen.getByText("Read from files or configuration")).toBeInTheDocument();
     expect(screen.queryByText("Path verified")).not.toBeInTheDocument();
-    expect(screen.getByText("3/3 directed traversable hops evidenced")).toBeInTheDocument();
+    expect(screen.getByText("3 of 3 hops evidenced as directed and traversable")).toBeInTheDocument();
     expect(screen.getByText(`reference-api@${digest}`)).toBeInTheDocument();
     expect(screen.getByText("pillow@9.0.0")).toBeInTheDocument();
     expect(screen.getByText("CVE-2023-4863")).toBeInTheDocument();
@@ -124,8 +124,9 @@ describe("AttackPathCorrelationProof", () => {
 
     expect(screen.getByText("Hop receipts incomplete")).toBeInTheDocument();
     expect(screen.queryByText("Directed-hop receipt count unavailable")).not.toBeInTheDocument();
-    expect(screen.getByText("0/2 hops fully evidenced · 1 of 2 hop receipts recorded")).toBeInTheDocument();
-    expect(screen.getByText("Gaps: not traversable, freshness not established, path analysis not recorded")).toBeInTheDocument();
+    expect(screen.getByText("0 of 2 hops fully evidenced · 1 with no evidence recorded")).toBeInTheDocument();
+    expect(screen.getByText("Why incomplete: link not confirmed as traversable; evidence age unknown; no record that the full path was analyzed")).toBeInTheDocument();
+    expect(screen.queryByText(/Gaps:/)).not.toBeInTheDocument();
     expect(screen.getByText("Stale allowed")).toHaveClass("text-amber-700");
     expect(screen.queryByText("Path verified")).not.toBeInTheDocument();
   });
@@ -241,7 +242,7 @@ it("keeps the receipt summary consistent with the receipts listed for inspection
   render(<AttackPathCorrelationProof path={path} />);
   expect(screen.getByText("Hop receipts incomplete")).toBeInTheDocument();
   expect(screen.queryByText("Directed-hop receipt count unavailable")).not.toBeInTheDocument();
-  expect(screen.getByText("0/3 hops fully evidenced · 3 of 3 hop receipts recorded")).toBeInTheDocument();
-  expect(screen.getByText("Gaps: receipt marked incomplete, freshness not established, relationship provenance unavailable")).toBeInTheDocument();
+  expect(screen.getByText("0 of 3 hops fully evidenced")).toBeInTheDocument();
+  expect(screen.getByText("Why incomplete: evidence marked incomplete by its source; evidence age unknown; source of the link not recorded")).toBeInTheDocument();
   expect(screen.getByText("Inspect 3 hop receipts")).toBeInTheDocument();
 });

@@ -31,6 +31,8 @@ from dataclasses import dataclass
 
 from agent_bom.canonical_ids import mcp_server_graph_id
 from agent_bom.demo_estate.enterprise import EstateAsset
+from agent_bom.demo_estate.estate_packages import image_package_lineage
+from agent_bom.demo_estate.id_schemes import estate_package_asset_id
 
 # Tag key naming an asset's AI lane; graph projection, surfaces gate and tests read it.
 AI_LANE_TAG = "ai_lane"
@@ -699,15 +701,14 @@ def build_delivery_assets(
                     tags=workload_tags,
                 )
             )
-            catalog = _vulnerable_packages()
+            catalog, lineage_roots = _vulnerable_packages(), dict[str, str]()
             for package_slot in range(packages_per_image):
                 name, version, ecosystem = catalog[(workload_seed + package_slot) % len(catalog)]
                 assets.append(
                     EstateAsset(
-                        # Keyed by the image digest, not the workload name: the
-                        # same service name recurs across clusters, and keying on
-                        # it collapsed four images' package lists into one.
-                        asset_id=f"package:{ecosystem.lower()}:{name}@{version}:{digest[:12]}",
+                        # Keyed by image digest, not workload name: the name recurs
+                        # across clusters and collapsed four images' packages.
+                        asset_id=estate_package_asset_id(ecosystem, name, version, digest),
                         tenant_id=tenant_id,
                         provider=account.provider,
                         resource_type="package",
@@ -725,9 +726,8 @@ def build_delivery_assets(
                             "ecosystem": ecosystem,
                             "package_name": name,
                             "package_version": version,
-                            # Context for the consuming workload's principal.
-                            # A package cannot assume this identity; graph
-                            # authority remains on the declared workload.
+                            **image_package_lineage(ecosystem, name, lineage_roots),
+                            # Workload principal context only: a package cannot assume it.
                             **({"uses_identity": workload_tags["uses_identity"]} if "uses_identity" in workload_tags else {}),
                             "workload": workload_id,
                         },

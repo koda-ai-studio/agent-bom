@@ -85,6 +85,7 @@ def project_server_hosting(graph: UnifiedGraph, server_id: str, server: Mapping[
             attributes={
                 "kubernetes_uid": pod_uid,
                 "kubernetes_kind": "Pod",
+                "container_kind": "workload",
                 "kubernetes_name": pod_name,
                 "namespace": namespace,
                 "cluster": str(metadata.get("k8s_cluster") or ""),

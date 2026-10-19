@@ -29,7 +29,8 @@ export function assignOccurrenceRoles(nodes: Node<LineageNodeData>[]): void {
   }
   for (const group of byName.values()) {
     if (group.length < 2) continue;
-    for (const node of group) node.data.occurrenceRole = containerOccurrenceRole(node.data.dataSources ?? []);
+    // A recorded image/workload kind is already the node's badge; the role chip would repeat it.
+    for (const node of group) node.data.occurrenceRole = node.data.attributes?.container_kind ? undefined : containerOccurrenceRole(node.data.dataSources ?? []);
   }
 }
 

@@ -18,7 +18,7 @@ import {
   type Node,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { ChevronLeft, ChevronRight, Focus, GitBranch, Loader2, SlidersHorizontal } from "lucide-react";
+import { Focus, GitBranch, Loader2 } from "lucide-react";
 
 import { GraphRelationshipDetail } from "@/components/graph-relationship-detail";
 import { GraphEntityDrawer } from "@/components/graph-entity-drawer";
@@ -54,6 +54,11 @@ import { useGraphPresentation } from "@/hooks/use-graph-presentation";
 import { graphTopologyKey, type GraphPresentationScope } from "@/lib/graph-presentation";
 import { useCaptureMode } from "@/lib/use-capture-mode";
 import { useElementWidth } from "@/hooks/use-element-width";
+import { InvestigationToolbar } from "@/components/investigation-toolbar";
+import { PathToolbarLead } from "@/components/path-view-toolbar";
+import { useNarrowViewport } from "@/hooks/use-narrow-viewport";
+import { COLUMN_FIT_OPTIONS, applyColumnPath, columnCanvasHeight, columnFlowEdges, usesColumnPath } from "@/lib/path-card-column";
+import { PATH_CARD_CANVAS_CLASS, pathCardCanvasHeight, pathCardEdges, pathCardNodeStyle } from "@/lib/path-card-canvas";
 import { applySerpentinePath, planSerpentinePath } from "@/lib/path-serpentine-layout";
 import { mergeGraphNeighborExpansions, boundedInvestigationGraph } from "@/lib/graph-neighbor-expansion";
 
@@ -124,6 +129,8 @@ function InvestigationFlow({
   embedded = false,
   controls,
   pathNodeIds,
+  roundedBottom = false,
+  columnLayout = false,
 }: {
   nodes: Node<LineageNodeData>[];
   edges: Edge[];
@@ -143,6 +150,10 @@ function InvestigationFlow({
   embedded?: boolean;
   controls?: React.ReactNode;
   pathNodeIds: string[];
+  /** The embedded card lets toolbar popovers overflow, so the canvas rounds itself. */
+  roundedBottom?: boolean;
+  /** Narrow viewports stack a short path in one column instead of stepping node by node. */
+  columnLayout?: boolean;
 }) {
   const reactFlow = useReactFlow<Node<LineageNodeData>, Edge>();
   const { fitView } = reactFlow;
@@ -150,18 +161,11 @@ function InvestigationFlow({
   const nodesInitialized = useNodesInitialized();
   const canvasWidth = useStore(state => state.width);
   const canvasHeight = useStore(state => state.height);
-  const [compact, setCompact] = useState(false);
+  const compact = useNarrowViewport(embedded);
+  const stepper = compact && !columnLayout;
   const [navigationId, setNavigationId] = useState<string | null>(null);
   const [overview, setOverview] = useState(false);
   const manualViewportScope = useRef<string | null>(null);
-  useEffect(() => {
-    if (!embedded) return;
-    const media = window.matchMedia("(max-width: 639px)");
-    const update = () => setCompact(media.matches);
-    update();
-    media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
-  }, [embedded]);
   const navigationNodes = useMemo(() => {
     const byId = new Map(nodes.map(node => [node.id, node]));
     const ordered = pathNodeIds.map(id => byId.get(id)).filter((node): node is Node<LineageNodeData> => Boolean(node));
@@ -171,14 +175,15 @@ function InvestigationFlow({
   const navigationIndex = Math.max(0, navigationNodes.findIndex(node => node.id === navigationId));
   const navigationNode = navigationNodes[navigationIndex];
   const responsiveScope = useMemo(() => compact
-    ? { ...presentationScope, scope: `${presentationScope.scope}:readable-mobile` }
-    : presentationScope, [compact, presentationScope]);
+    ? { ...presentationScope, scope: `${presentationScope.scope}:${columnLayout ? "column-mobile" : "readable-mobile"}` }
+    : presentationScope, [columnLayout, compact, presentationScope]);
   const fitOptions = useMemo(() => {
+    if (columnLayout) return COLUMN_FIT_OPTIONS;
     const options = graphFitViewOptions(viewportInput);
     // Text and badges grow as the viewport fits; reserve room for that final
     // measured size so the last finding is not clipped below the canvas.
-    return { ...options, padding: Math.max(0.2, options.padding) };
-  }, [viewportInput]);
+    return { ...options, padding: embedded ? 0.12 : Math.max(0.2, options.padding) };
+  }, [columnLayout, embedded, viewportInput]);
   const fitOptionsRef = useRef(fitOptions);
   fitOptionsRef.current = fitOptions;
 
@@ -190,16 +195,16 @@ function InvestigationFlow({
     ownerActive,
     localMode,
   });
-  const presentedEdges = useMemo(
-    () => readableGraphEdges(edges, undefined, {
+  const presentedEdges = useMemo(() => {
+    const readable = readableGraphEdges(edges, undefined, {
       baseOpacity: 1,
       highSignalOpacity: 1,
       zoom: viewport.zoom,
       preserveLabelState: true,
       nodeLabels: graphNodeDisplayLabels(nodes),
-    }),
-    [edges, nodes, viewport.zoom],
-  );
+    });
+    return embedded ? pathCardEdges(readable, viewport.zoom) : readable;
+  }, [edges, embedded, nodes, viewport.zoom]);
   const focusNode = useCallback((id: string) => {
     setNavigationId(id);
     setOverview(false);
@@ -208,11 +213,11 @@ function InvestigationFlow({
   useEffect(() => {
     if (nodes.length === 0 || !nodesInitialized || !canvasWidth || !canvasHeight || presentation.restoredSavedState || manualViewportScope.current === presentation.storageKey) return;
     const raf = requestAnimationFrame(() => {
-      if (compact && navigationNode) focusNode(navigationNode.id);
+      if (stepper && navigationNode) focusNode(navigationNode.id);
       else void fitView(fitOptionsRef.current);
     });
     return () => cancelAnimationFrame(raf);
-  }, [canvasWidth, canvasHeight, compact, fitView, focusNode, navigationNode, nodes, nodesInitialized, presentation.restoredSavedState, presentation.storageKey]);
+  }, [canvasWidth, canvasHeight, stepper, fitView, focusNode, navigationNode, nodes, nodesInitialized, presentation.restoredSavedState, presentation.storageKey]);
   const fitVisible = useCallback(() => {
     manualViewportScope.current = null;
     setOverview(true);
@@ -244,56 +249,39 @@ function InvestigationFlow({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {(embedded || presentation.enabled) && nodes.length > 0 && <div
-        className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-b border-outline bg-surface px-3 py-2"
-        data-testid="security-graph-interaction-band"
-      >
-        {compact ? <>
-          <span className="mr-auto text-xs text-ink-secondary" aria-live="polite"
-            title="The focused viewport shows part of the loaded graph. Navigate between nodes or pan to inspect connections.">
-            {overview ? `Overview · ${nodes.length} nodes` : `Focused view · ${navigationIndex + 1} of ${navigationNodes.length}`}
-          </span>
-          <div className="flex gap-1">
-            <button type="button" aria-label="Previous graph node" disabled={navigationIndex === 0}
-              className="graph-page-action min-h-11 min-w-11 justify-center px-1 disabled:opacity-40"
-              onClick={() => focusNode(navigationNodes[navigationIndex - 1]!.id)}><ChevronLeft className="h-4 w-4" /></button>
-            <button type="button" aria-label="Next graph node" disabled={navigationIndex >= navigationNodes.length - 1}
-              className="graph-page-action min-h-11 min-w-11 justify-center px-1 disabled:opacity-40"
-              onClick={() => focusNode(navigationNodes[navigationIndex + 1]!.id)}><ChevronRight className="h-4 w-4" /></button>
-          </div>
-          <details className="relative">
-            <summary aria-label="Graph options" title="Graph options" className="graph-page-action flex min-h-11 min-w-11 justify-center cursor-pointer list-none items-center [&::-webkit-details-marker]:hidden"><SlidersHorizontal className="h-4 w-4" /><span className="sr-only">Graph options</span></summary>
-            <div className="absolute right-0 top-full z-20 mt-2 flex w-64 max-w-[75vw] flex-wrap gap-2 rounded-xl border border-outline bg-surface p-2 shadow-lg">
-              {controls}
-              {presentation.enabled && layoutControls}
-              <button type="button" className="graph-page-action" onClick={() => navigationNode && focusNode(navigationNode.id)}>Readable view</button>
-            </div>
-          </details>
-        </> : <>
-          {controls}
-          {presentation.enabled && (embedded ? <details className="relative">
-            <summary className="graph-page-action cursor-pointer">Layout</summary>
-            <div className="absolute right-0 top-full z-20 mt-2 rounded-xl border border-outline bg-surface p-2 shadow-lg">{layoutControls}</div>
-          </details> : layoutControls)}
-        </>}
-      </div>}
-      <div className="relative min-h-0 flex-1">
+      {(embedded || presentation.enabled) && nodes.length > 0 && <InvestigationToolbar
+        embedded={embedded}
+        compact={compact}
+        stepper={stepper ? {
+          overview,
+          nodeCount: nodes.length,
+          index: navigationIndex,
+          count: navigationNodes.length,
+          onPrevious: () => focusNode(navigationNodes[navigationIndex - 1]!.id),
+          onNext: () => focusNode(navigationNodes[navigationIndex + 1]!.id),
+          onReadable: () => { if (navigationNode) focusNode(navigationNode.id); },
+        } : null}
+        controls={controls}
+        layoutControls={presentation.enabled ? layoutControls : null}
+      />}
+      <div className={`relative min-h-0 flex-1 ${roundedBottom ? "overflow-hidden rounded-b-2xl" : ""}`}>
         <ReactFlow
-          style={readableGraphNodeStyle(viewport.zoom)}
+          style={embedded ? pathCardNodeStyle(viewport.zoom) : readableGraphNodeStyle(viewport.zoom)}
           key={`${presentation.storageKey}:${presentation.restoredSavedState ? "restored" : "fresh"}`}
           nodes={presentation.nodes}
           edges={presentedEdges}
           nodeTypes={lineageNodeTypes}
           edgeTypes={relationshipEdgeTypes}
-          fitView={!compact && !presentation.hasSavedState && !presentation.restoredSavedState}
+          fitView={!stepper && !presentation.hasSavedState && !presentation.restoredSavedState}
           fitViewOptions={fitOptions}
           minZoom={0.2}
           maxZoom={2.5}
           defaultViewport={presentation.restoredViewport ?? presentation.viewport}
           zoomOnScroll
           zoomOnPinch
-          panOnDrag
-          preventScrolling
+          // A whole stacked path needs no panning; touch drags scroll the page.
+          panOnDrag={!columnLayout}
+          preventScrolling={!columnLayout}
           nodesDraggable={presentation.editing}
           nodesConnectable={false}
           nodesFocusable
@@ -435,16 +423,24 @@ export function SecurityGraphInvestigation({
     const nodes = applySerpentinePath(layout.nodes, hops, plan.columns);
     return nodes === layout.nodes ? null : { plan, nodes };
   }, [attackPath, canvasWidth, embedded, focusMode, layout.nodes]);
-  const canvasNodes = pathLayout?.nodes ?? layout.nodes;
+  // A phone shows a short path whole, one hop per row, instead of stepping through it.
+  const narrow = useNarrowViewport(embedded);
+  const columnNodes = useMemo(() => usesColumnPath({ narrow, focusMode, nodeCount: layout.nodes.length })
+    ? applyColumnPath(layout.nodes, attackPath?.hops ?? []) : layout.nodes, [attackPath, focusMode, layout.nodes, narrow]);
+  const columnLayout = columnNodes !== layout.nodes;
+  const canvasNodes = columnLayout ? columnNodes : pathLayout?.nodes ?? layout.nodes;
+  // A short focused path gets a short canvas; the bounded clamp stays for context views.
+  const canvasHeight = columnLayout ? columnCanvasHeight(columnNodes.length) : pathLayout?.plan.canvasHeight
+    ?? (embedded && focusMode && !loading && layout.nodes.length > 0 ? pathCardCanvasHeight(layout.nodes) : undefined);
   const pathEdges = useMemo(() => focusMode && attackPath ? pathRelationshipIds(layout.edges, attackPath) : new Set<string>(), [focusMode, attackPath, layout.edges]);
-  const displayEdges = useMemo(
-    () => readableGraphEdges(layout.edges.map(edge => ({ ...edge, data: { ...edge.data,
+  const displayEdges = useMemo(() => {
+    const readable = readableGraphEdges(layout.edges.map(edge => ({ ...edge, data: { ...edge.data,
       pathEmphasis: pathEdges.has(edge.id),
       directionEmphasis: pathEdges.has(edge.id) || edge.id === selectedEdge?.id || edge.source === selectedNodeId || edge.target === selectedNodeId,
       quietLabel: edge.data?.quietLabel && edge.id !== selectedEdge?.id && edge.source !== selectedNodeId && edge.target !== selectedNodeId,
-    } })), undefined, { nodeLabels: graphNodeDisplayLabels(layout.nodes) }),
-    [layout.edges, layout.nodes, selectedEdge?.id, selectedNodeId, pathEdges],
-  );
+    } })), undefined, { nodeLabels: graphNodeDisplayLabels(layout.nodes) });
+    return columnLayout ? columnFlowEdges(readable, attackPath?.hops ?? []) : readable;
+  }, [attackPath, columnLayout, layout.edges, layout.nodes, selectedEdge?.id, selectedNodeId, pathEdges]);
   const legendItems = useMemo(
     () => legendItemsForVisibleGraph(layout.nodes, displayEdges),
     [displayEdges, layout.nodes],
@@ -517,6 +513,8 @@ export function SecurityGraphInvestigation({
       && edge.source === selectedEdge.source && edge.target === selectedEdge.target
       && edge.relationship === selectedEdge.data?.relationship) ?? null;
   }, [activeGraph, displayEdges, selectedEdge]);
+
+  const canvasLast = !selectedRelationship && !drawerData;
 
   const selectedNode = useMemo(
     () => layout.nodes.find((node) => node.id === selectedNodeId) ?? null,
@@ -647,13 +645,13 @@ export function SecurityGraphInvestigation({
           <FullscreenButton />
 
     {embedded && rendererDecision.kind === "react-flow" && layout.nodes.length > 0 ? (
-      <div data-testid="security-graph-legend-band"><GraphLegend items={legendItems} /></div>
+      <div data-testid="security-graph-legend-band"><GraphLegend items={legendItems} footer={<GraphScopeEvidence edges={displayEdges} inline />} /></div>
     ) : null}
   </>;
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-outline bg-surface">
-      <GraphScopeEvidence edges={displayEdges} />
+    <section className={`rounded-2xl border border-outline bg-surface ${embedded ? "" : "overflow-hidden"}`}>
+      {!embedded && <GraphScopeEvidence edges={displayEdges} />}
       {!embedded && (<div className="flex flex-wrap items-center justify-between gap-3 border-b border-outline px-4 py-3">
         <div>
           <h2 className="text-sm font-semibold text-foreground">Interactive graph</h2>
@@ -692,7 +690,11 @@ export function SecurityGraphInvestigation({
         </div>
       ) : null}
 
-      {embedded && rendererDecision.kind === "webgl" && <div className="flex flex-wrap items-center justify-end gap-2 border-b border-outline px-3 py-2">{graphControls}</div>}
+      {embedded && rendererDecision.kind === "webgl" && <div role="toolbar" aria-label="Graph controls" className="flex flex-wrap items-center justify-end gap-2 border-b border-outline px-3 py-2">
+        <PathToolbarLead />
+        <GraphScopeEvidence edges={displayEdges} inline />
+        {graphControls}
+      </div>}
 
       {bounded && bounded.omittedNodes > 0 && <div className="flex flex-wrap items-center justify-between gap-2 border-b border-outline px-3 py-2 text-xs" aria-label="Loaded graph context pages">
         <p role="status">{layout.nodes.length} nodes on canvas · {bounded.omittedNodes} loaded context nodes bundled off canvas. Path nodes take priority within the canvas limit. Counts describe loaded evidence.</p>
@@ -704,8 +706,8 @@ export function SecurityGraphInvestigation({
       <div
         ref={canvasRef}
         id="security-graph-investigation-canvas"
-        className={`relative bg-surface-muted ${embedded ? "h-[clamp(24rem,42vh,34rem)]" : "h-[clamp(32rem,56vh,42rem)]"}`}
-        style={pathLayout ? { height: pathLayout.plan.canvasHeight } : undefined}
+        className={`relative bg-surface-muted ${embedded ? `h-[clamp(24rem,42vh,34rem)] ${PATH_CARD_CANVAS_CLASS} ${canvasLast ? "rounded-b-2xl" : ""}` : "h-[clamp(32rem,56vh,42rem)]"}`}
+        style={canvasHeight ? { height: canvasHeight } : undefined}
         data-testid="security-graph-investigation"
         data-path-layout={pathLayout ? `serpentine-${pathLayout.plan.columns}x${pathLayout.plan.rows}` : undefined}
       >
@@ -744,6 +746,8 @@ export function SecurityGraphInvestigation({
               embedded={embedded}
               pathNodeIds={attackPath?.hops ?? []}
               controls={embedded ? graphControls : undefined}
+              columnLayout={columnLayout}
+              roundedBottom={embedded && canvasLast}
             />
           </ReactFlowProvider>
         )}

@@ -442,6 +442,27 @@ These are the shapes we do not model yet. They are documented here so operators 
 
 These gaps are tracked as roadmap work. None of them block the guarantees in §2.
 
+## Node kinds, ids and package lineage
+
+- **One id scheme per kind.** Packages are `pkg:<ecosystem>:<name>@<version>`
+  (an image-scoped occurrence appends `:image:<digest12>`), organizations
+  `org:<provider>:<id>`, configuration findings `misconfig:<source>:<id>` and
+  advisories `vuln:<id>`. A retired spelling is kept in the node's
+  `identity.aliases` and persisted to `graph_node_aliases`, so it still resolves.
+- **Images and workloads.** Both are `container` nodes; `attributes.container_kind`
+  is `image` (registry image, SBOM subject) or `workload` (pod, deployment,
+  task), set only from a recorded resource type or Kubernetes kind. A workload
+  `depends_on` the image it runs and is `hosted_on` the cluster or node its
+  inventory records.
+- **Package dependencies.** `depends_on` package -> package edges join a
+  recorded parent to its child within one inventory, only when the parent names
+  exactly one package in that ecosystem. No transitive closure is stored; the
+  dependency traversal class walks the chain. `is_direct`, `dependency_depth`
+  and `parent_package` are recorded on the package node.
+- **Package CVEs.** A package's CVE is `vulnerable_to` (package -> advisory)
+  plus `affects` (advisory -> package); the roll-up parents the advisory under
+  the package through `vulnerable_to`, not a separate `contains` copy.
+
 ## Correlated runtime identity and path proof
 
 Correlation manifests and edge receipts identify the join contract as

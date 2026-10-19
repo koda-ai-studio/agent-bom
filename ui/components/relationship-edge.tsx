@@ -12,6 +12,7 @@ import { accessEvidenceQualifier } from "@/lib/graph-access-evidence";
 import { scheduleRelationshipLabelLayout } from "@/lib/relationship-label-layout";
 import { relationshipEdgeLabelText } from "@/lib/graph-utils";
 import { relationshipPath } from "@/lib/relationship-routing";
+import { columnEdgePath } from "@/lib/path-card-column";
 
 // Icons supplement the recorded verb; they never replace its meaning or imply
 // that a recorded permission has actually been exercised.
@@ -69,11 +70,16 @@ export function RelationshipIcon({ relationship }: { relationship: string }) {
   return <Icon aria-hidden="true" width="1em" height="1em" strokeWidth={1.8} />;
 }
 
-/** The evidence qualifier reads as a second, quieter line instead of wrapping mid-phrase. */
+/**
+ * The evidence qualifier reads as a second, quieter line instead of wrapping
+ * mid-phrase. Compact canvases keep one-line chips: the edge's dash carries the
+ * tier and the qualifier stays in assistive text, hover and the selected link.
+ */
 export function qualifiedLabel(relationship: string, label: React.ReactNode, data: EdgeProps["data"]): React.ReactNode {
   const qualifier = accessEvidenceQualifier(relationship, data as Parameters<typeof accessEvidenceQualifier>[1]);
   const suffix = ` · ${qualifier}`;
   if (!qualifier || typeof label !== "string" || !label.endsWith(suffix)) return label;
+  if (data?.compactEvidence === true) return <>{label.slice(0, -suffix.length)}<span className="sr-only">{suffix}</span></>;
   return <>{label.slice(0, -suffix.length)}<span className="sr-only"> · </span><span className="graph-relationship-qualifier">{qualifier}</span></>;
 }
 
@@ -98,10 +104,13 @@ export function RelationshipEdge(props: EdgeProps) {
   const nodes = useStore(state => state.nodes);
   const zoom = useStore(state => state.transform[2]);
   const labelRef = useRef<HTMLDivElement>(null);
-  const [path, x, y] = relationshipPath(props, nodes.length <= 80 ? nodes.map(node => ({
-    id: node.id, x: node.position.x, y: node.position.y,
-    width: node.measured?.width ?? 220, height: node.measured?.height ?? 224,
-  })) : []);
+  const columnSource = props.data?.columnFlow === true ? nodes.find(node => node.id === props.source) : undefined;
+  const [path, x, y] = columnSource
+    ? columnEdgePath(props, columnSource.position.y + (columnSource.measured?.height ?? 0) + 6)
+    : relationshipPath(props, nodes.length <= 80 ? nodes.map(node => ({
+      id: node.id, x: node.position.x, y: node.position.y,
+      width: node.measured?.width ?? 220, height: node.measured?.height ?? 224,
+    })) : []);
   useLayoutEffect(() => { scheduleRelationshipLabelLayout(labelRef.current); }, [path, zoom, label, x, y]);
   if (props.data?.isClusterEdge) return <SmoothStepEdge {...props} />;
 

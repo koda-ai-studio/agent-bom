@@ -155,6 +155,8 @@ _SPECS: tuple[RelationshipSpec, ...] = (
         # Image layering, a manifest directory's packages, and service/data lineage
         # (an external table reads the bucket behind it).
         extra=(
+            # A recorded parent package pulls in its child (one edge per pair; no closure).
+            (E.PACKAGE, E.PACKAGE),
             (E.CONTAINER, E.CONTAINER),
             (E.DIRECTORY, E.PACKAGE),
             (E.CLOUD_RESOURCE, E.CLOUD_RESOURCE),

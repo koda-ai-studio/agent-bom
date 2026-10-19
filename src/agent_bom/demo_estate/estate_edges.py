@@ -19,10 +19,16 @@ def add_estate_edge(graph: UnifiedGraph, source: str, target: str, relationship:
 def oriented_topology_edge(
     graph: UnifiedGraph, tag: str, source: str, target: str, relationship: RelationshipType
 ) -> tuple[str, str, RelationshipType]:
-    """Images consume their package contents; a dataset's "reads_data" is lineage the store holds."""
+    """Images consume their package contents; a dataset's "reads_data" is lineage the store holds.
+
+    A container's recorded ``cluster`` is where it runs, the ``HOSTED_ON`` edge
+    the live builder draws for a pod, not mere membership.
+    """
     kind = graph.nodes[source].entity_type
     if tag == "container_image" and kind == EntityType.PACKAGE:
         return target, source, relationship
+    if tag == "cluster" and kind == EntityType.CONTAINER and graph.nodes[target].entity_type == EntityType.CLUSTER:
+        return source, target, RelationshipType.HOSTED_ON
     if tag == "reads_data" and kind == EntityType.DATASET:
         return target, source, RelationshipType.STORES
     return source, target, relationship

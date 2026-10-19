@@ -984,6 +984,7 @@ export const GRAPH_EDGE_KIND_META: Record<GraphEdgeKindKey, GraphEdgeKindMeta> =
       "config_file",
       "source_file",
       "framework",
+      "package",
       "directory",
       "cloud_resource",
       "data_store"
