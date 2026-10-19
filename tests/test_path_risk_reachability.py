@@ -41,7 +41,15 @@ def _graph(*, analysis: GraphAnalysisState | None = GraphAnalysisState.COMPLETE,
                 relationship=rel,
                 source_scan_id=graph.scan_id,
                 provenance={"source": "scanner"},
-                evidence={"freshness": freshness},
+                # The CVE occurrence is reachable, so its advisory hop may complete the path.
+                evidence={
+                    "freshness": freshness,
+                    **(
+                        {"applicability": {"verdict": "likely", "basis": ["package_reachable"]}}
+                        if rel is RelationshipType.VULNERABLE_TO
+                        else {}
+                    ),
+                },
             )
         )
     return graph

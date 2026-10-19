@@ -180,8 +180,12 @@ def _finding_path_graph(applicability: dict[str, object] | None) -> tuple[Unifie
     graph.add_edge(_edge("pkg:p", "vuln:CVE-1", RelationshipType.VULNERABLE_TO, last_seen=_SNAPSHOT, **evidence))
     graph.analysis_status["attack_path_fusion"] = GraphAnalysisStatus(status=GraphAnalysisState.COMPLETE)
     stamp_edge_freshness(graph, window_hours=168)
-    path = AttackPath(source="server:s", target="vuln:CVE-1", hops=["server:s", "pkg:p", "vuln:CVE-1"],
-                      edges=[RelationshipType.DEPENDS_ON.value, RelationshipType.VULNERABLE_TO.value])
+    path = AttackPath(
+        source="server:s",
+        target="vuln:CVE-1",
+        hops=["server:s", "pkg:p", "vuln:CVE-1"],
+        edges=[RelationshipType.DEPENDS_ON.value, RelationshipType.VULNERABLE_TO.value],
+    )
     return graph, path
 
 

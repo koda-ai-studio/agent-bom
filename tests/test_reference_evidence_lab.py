@@ -75,14 +75,16 @@ def test_reference_lab_preserves_source_receipts_and_evidence_boundaries() -> No
     # The modeled identity path plus one card per holder of the image/SBOM CVE
     # occurrence (IaC container, SBOM container, pinned manifest).
     cards = capture["fix_first"]["cards"]
-    # The KEV image/SBOM CVE occurrences rank ahead of the modeled identity path.
-    assert cards[-1]["id"].endswith("->data-store:reference-customer-records")
-    assert sorted(card["id"].split("::")[0] for card in cards[:-1]) == [
+    # The identity path's hops are all freshly recorded, so it is confirmed; the CVE
+    # occurrences lack applicability evidence, so they stay unknown and rank below it.
+    assert cards[0]["id"].endswith("->data-store:reference-customer-records")
+    assert cards[0]["attack_path"]["reachability"] == "confirmed"
+    assert sorted(card["id"].split("::")[0] for card in cards[1:]) == [
         "container:iac:reference-api",
         "container:sbom:reference-api",
         "source:pinned-package",
     ]
-    assert all(card["title"] == "CVE-2023-4863" for card in cards[:-1])
+    assert all(card["title"] == "CVE-2023-4863" and card["attack_path"]["reachability"] == "unknown" for card in cards[1:])
     assert len(capture["snapshots"]) == 6
     assert all(snapshot["snapshot_kind"] == "scan" for snapshot in capture["snapshots"])
 
