@@ -181,7 +181,7 @@ Id formats:
 
 ## `misconfiguration`
 
-Emitted by: `graph/benchmark_projection.py`, `graph/builder.py`, `graph/credential_findings.py`, `graph/finding_projection.py`, `graph/finding_row_projection.py`, `graph/mcp_audit_projection.py`, `graph/supabase_projection.py`, `graph/vercel_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
+Emitted by: `graph/benchmark_projection.py`, `graph/builder.py`, `graph/credential_findings.py`, `graph/finding_projection.py`, `graph/finding_row_projection.py`, `graph/mcp_audit_projection.py`, `graph/supabase_projection.py`, `graph/vercel_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_findings.py`, `demo_estate/showcase_graph.py`
 
 Id formats:
 
