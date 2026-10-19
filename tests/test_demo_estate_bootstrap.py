@@ -48,6 +48,15 @@ def demo_estate_client(monkeypatch: pytest.MonkeyPatch, tmp_path):
     from agent_bom.api.compliance_hub_store import set_compliance_hub_store
     from agent_bom.api.findings_count_cache import reset_findings_count_cache
 
+    # Bootstrap/refresh tests control the seed state explicitly. A periodic
+    # maintenance tick can consume their seed stubs and add another job when
+    # coverage makes a test cross the minute boundary. Exercise maintenance
+    # explicitly below, without a wall-clock writer racing these assertions.
+    async def no_periodic_maintenance() -> None:
+        pass
+
+    monkeypatch.setattr(api_server, "_cleanup_loop", no_periodic_maintenance)
+
     api_server._runtime_api_key_seeded = False
     api_server._shutting_down = False
     original_job_store = api_stores._store
@@ -1441,6 +1450,7 @@ def test_daily_refresh_is_a_no_op_outside_demo_mode(monkeypatch: pytest.MonkeyPa
 
 
 def test_refreshed_demo_graph_gets_matching_scan_evidence(demo_estate_client, monkeypatch):
+    from agent_bom.api.server import _cleanup_tick
     from agent_bom.api.stores import _get_store
     from agent_bom.demo_estate import bootstrap
 
@@ -1454,4 +1464,7 @@ def test_refreshed_demo_graph_gets_matching_scan_evidence(demo_estate_client, mo
     assert len(store.list_all(tenant_id="default")) == len(before) + 1
     monkeypatch.setattr(bootstrap, "seed_showcase_graph_if_empty", lambda *args, **kwargs: False)
     assert bootstrap.maybe_bootstrap_demo_estate(tenant_id="default")["reason"] == "demo_jobs_present"
+    assert len(store.list_all(tenant_id="default")) == len(before) + 1
+    # A real maintenance pass must preserve the already-refreshed evidence.
+    demo_estate_client.portal.call(_cleanup_tick)
     assert len(store.list_all(tenant_id="default")) == len(before) + 1
