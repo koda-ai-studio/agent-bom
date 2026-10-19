@@ -161,6 +161,21 @@ def test_integral_numbers_are_not_rerendered_as_floats() -> None:
     assert instance.model_dump_json(exclude_unset=True) == expected
 
 
+def test_available_trend_comparison_has_no_unavailability_reason() -> None:
+    from agent_bom.api.read_models.posture import TrendComparison
+
+    body = {
+        "status": "available",
+        "reason": None,
+        "previous_scan_id": "previous",
+        "new_findings": 0,
+        "no_longer_detected": 0,
+        "still_open": 15,
+    }
+    result = TrendComparison.model_validate(body, context={read_models.STRICT_CONTRACT: True})
+    assert result.model_dump(mode="json", exclude_unset=True) == body
+
+
 def test_error_codes_in_the_schema_match_the_runtime_mapping() -> None:
     from typing import get_args
 

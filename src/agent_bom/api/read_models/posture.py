@@ -378,7 +378,7 @@ class OverviewResponse(ReadResponse):
 
 class TrendComparison(ReadModel):
     status: str
-    reason: str
+    reason: str | None
     previous_scan_id: str | None
     new_findings: int | None
     no_longer_detected: int | None

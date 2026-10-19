@@ -41838,8 +41838,15 @@
             "title": "Previous Scan Id"
           },
           "reason": {
-            "title": "Reason",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
           },
           "status": {
             "title": "Status",

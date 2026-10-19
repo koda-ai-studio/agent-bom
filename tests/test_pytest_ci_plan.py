@@ -12,6 +12,13 @@ def _write(path: Path, lines: int) -> None:
     path.write_text("x\n" * lines, encoding="utf-8")
 
 
+@pytest.mark.parametrize("source", ["demo_estate/bootstrap.py", "api/read_models/posture.py"])
+def test_seeded_estate_and_read_models_select_live_body_contracts(tmp_path: Path, source: str) -> None:
+    contract = tmp_path / "tests/test_api_read_contracts.py"
+    _write(contract, 1)
+    assert select_targeted_tests(changed_files=[Path("src/agent_bom") / source], root=tmp_path) == [contract]
+
+
 @pytest.mark.parametrize("module", ["server_routes", "server_storage", "server_dashboard", "server_schedules"])
 def test_server_module_edits_select_auth_and_composition_contracts(tmp_path: Path, module: str) -> None:
     expected = sorted(

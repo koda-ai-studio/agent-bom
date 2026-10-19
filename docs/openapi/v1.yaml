@@ -28302,8 +28302,10 @@ components:
           - type: 'null'
           title: Previous Scan Id
         reason:
+          anyOf:
+          - type: string
+          - type: 'null'
           title: Reason
-          type: string
         status:
           title: Status
           type: string
