@@ -72,12 +72,19 @@ def test_legacy_push_discloses_non_replacement_without_inventing_scan_failure():
     assert any(i["code"] == "push_target_unscoped" and not i["affects_coverage"] for i in report["scan_run"]["issues"])
 
 
-def test_push_http_route_preserves_targets_after_readback(scan_store):  # noqa: F811
+def test_push_http_route_preserves_targets_after_readback(scan_store, tmp_path, monkeypatch):  # noqa: F811
     from starlette.testclient import TestClient
 
+    from agent_bom.api import stores
+    from agent_bom.api.graph_store import SQLiteGraphStore
     from agent_bom.api.server import app
     from tests.auth_helpers import proxy_headers
 
+    # This test selects local job stores; give its durable graph projection
+    # the same lifetime instead of inheriting a PostgreSQL singleton whose
+    # pool an earlier TestClient lifespan may already have closed.
+    graph = SQLiteGraphStore(tmp_path / "push-graph.db")
+    monkeypatch.setattr(stores, "_graph_store", graph)
     with TestClient(app) as client:
         client.headers.update(proxy_headers(role="analyst", tenant="history-tenant"))
         for row in (pushed(6, scope="v1:" + "a" * 64), pushed(7, scope="v1:" + "b" * 64), pushed(8, scope="v1:" + "c" * 64, empty=True)):
@@ -85,6 +92,9 @@ def test_push_http_route_preserves_targets_after_readback(scan_store):  # noqa: 
             assert response.status_code == 201, response.text
             assert response.json()["target_scope"] == row.result["target_scope"]
             assert response.json()["replacement_scope_status"] == "identified"
+            stored = scan_store.get(response.json()["job_id"], tenant_id="history-tenant")
+            assert stored.result["graph_persistence"]["status"] == "persisted"
+            assert graph.snapshot_identity(tenant_id="history-tenant", scan_id=stored.result["scan_id"])[1]
         # Read back on the same client: a second app lifespan would close the
         # shared Postgres pool that process-wide stores already hold.
         response = client.get("/v1/findings", params={"origin": "scan", "window_days": 0})
