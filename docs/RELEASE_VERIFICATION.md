@@ -718,4 +718,3 @@ The release workflow runs the same `--release` check and fails if the
 committed captures do not match the tagged source. The tag must equal the
 `main` head, so merge the release-prep PR last. See
 [`CAPTURE.md`](CAPTURE.md#when-to-capture).
-
