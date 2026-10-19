@@ -15,6 +15,8 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Bulk findings require a JSON boolean for absent-finding reconciliation; invalid CVSS errors omit submitted values.
 - JSON file exports publish through atomic replacement so encoding or write failures preserve an existing report.
 - Credential binding projection retains only referenced identity IDs, preserving ambiguous matches without loading the entire store-backed graph into memory.
+- The main CI regression tracker reconciles on cancelled head runs, ignores non-decisive runs, and closes with one comment citing the green run instead of overwriting the failure evidence.
+- Distribution freshness reports provider-side verification gaps in the job summary and no longer opens or reopens the drift issue for them; stale, unreachable and unmonitored surfaces still alert.
 
 ## [0.109.0] - 2026-10-15
 

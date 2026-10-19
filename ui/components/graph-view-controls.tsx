@@ -65,7 +65,7 @@ export function GraphViewControls({ filters, onChange, agentNames, validValues, 
           <span>Depth {filters.maxDepth} · {filters.pageSize} ranked nodes</span>
           </>}
         </div>
-        <button type="button" onClick={onReset} className="graph-chip-neutral" aria-label="Reset view">
+        <button type="button" onClick={onReset} className="graph-chip-neutral text-xs" aria-label="Reset view">
           <RotateCcw className="h-3.5 w-3.5 sm:hidden" aria-hidden="true" />
           <span className="sr-only sm:not-sr-only">Reset view</span>
         </button>

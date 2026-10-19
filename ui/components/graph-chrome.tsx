@@ -114,24 +114,27 @@ export function GraphLegendDock({
   items,
   defaultOpen = false,
   separated = false,
+  popover = false,
 }: {
   items: LegendItem[];
   defaultOpen?: boolean;
   separated?: boolean;
+  /** Open over the canvas from a status-bar button instead of a full-width band. */
+  popover?: boolean;
 }) {
   if (items.length === 0) return null;
   const preview = pickLegendPreview(items, 6);
 
   return (
     <details
-      className={`group graph-legend-dock relative${separated ? " graph-legend-dock-separated" : ""}`}
+      className={`group graph-legend-dock relative${separated ? " graph-legend-dock-separated" : ""}${popover ? " graph-legend-dock-popover" : ""}`}
       {...(defaultOpen ? { open: true } : {})}
     >
       <summary className="graph-legend-dock-summary">
         <span className="graph-legend-dock-label">
           Legend
         </span>
-        <span className="graph-legend-preview max-sm:!hidden">
+        <span className={`graph-legend-preview max-sm:!hidden${popover ? " !hidden" : ""}`}>
           {preview.map((item) => (
             <span
               key={`preview:${item.label}:${item.kind}`}
@@ -146,14 +149,16 @@ export function GraphLegendDock({
             <span className="text-[10px] text-ink-tertiary">+{items.length - preview.length}</span>
           ) : null}
         </span>
+        {popover ? <span aria-hidden="true" className="text-ink-tertiary transition-transform group-open:rotate-180">▾</span> : <>
         <span className="graph-legend-expand group-open:hidden">
           expand
         </span>
         <span className="graph-legend-expand hidden group-open:inline">
           collapse
         </span>
+        </>}
       </summary>
-      <div className="graph-legend-dock-content">
+      <div className={popover ? "graph-legend-dock-content mt-1 max-h-[40vh] overflow-auto rounded-lg border border-outline bg-surface p-3 text-left" : "graph-legend-dock-content"}>
         <p className="mb-2 text-xs text-ink-secondary">Arrows show recorded direction. Colors and solid/dashed lines distinguish relationship types, not confidence or proof of execution.</p>
         <GraphLegendContent items={items} />
       </div>

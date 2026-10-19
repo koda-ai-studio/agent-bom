@@ -140,14 +140,21 @@ jobs:
             const SYNC_GRACE_HOURS = 48;
             const releaseAgeHours = (Date.now() - Date.parse(process.env.RELEASE_PUBLISHED_AT || "")) / 36e5;
             const requiredDrift = (report.surfaces || []).filter((s) => s.required !== false && s.status !== "fresh");
-            const onlySyncLag = requiredDrift.length > 0 && requiredDrift.every((s) => s.status === "stale");
+            // `fresh_degraded` means the channel publishes the expected release but a
+            // provider cannot yet supply machine-readable proof. That is pending external
+            // verification, not repository drift: it is reported in the job summary and
+            // never opens or reopens the tracker. Stale, unreachable and unmonitored
+            // surfaces are real drift and keep alerting.
+            const pendingExternal = requiredDrift.filter((s) => s.status === "fresh_degraded");
+            const realDrift = requiredDrift.filter((s) => s.status !== "fresh_degraded");
+            const onlySyncLag = realDrift.length > 0 && realDrift.every((s) => s.status === "stale");
             const inSyncGrace = onlySyncLag && Number.isFinite(releaseAgeHours) && releaseAgeHours < SYNC_GRACE_HOURS;
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             const driftTitle = "supply-chain-drift: distribution surfaces out of sync";
             const evidenceTitle = "supply-chain-drift: distribution verification incomplete";
-            const onlyPartialEvidence = requiredDrift.length > 0 && requiredDrift.every((s) => s.status === "fresh_degraded");
-            const title = onlyPartialEvidence ? evidenceTitle : driftTitle;
+            const onlyPartialEvidence = pendingExternal.length > 0 && realDrift.length === 0;
+            const title = driftTitle;
             const labels = ["supply-chain-drift", "security-preventive", "automated"];
 
             const emoji = (s) => ({
@@ -162,7 +169,33 @@ jobs:
             const rows = report.surfaces
               .map((s) => `| ${s.surface}${s.required === false ? " (advisory)" : ""} | ${cell(s.version)} | ${cell(s.expected)} | ${emoji(s.status)} | ${cell(s.error || s.degraded_reason)} |`)
               .join("\n");
-            const glamaEvidenceGap = requiredDrift.some((s) => s.surface === "Glama" && s.status === "fresh_degraded");
+            const glamaEvidenceGap = pendingExternal.some((s) => s.surface === "Glama");
+            const names = (list) => list.map((s) => `${s.surface} (${s.status})`).join(", ");
+            const verdict = realDrift.length
+              ? `**Distribution drift detected:** ${names(realDrift)}.`
+              : report.all_required_fresh
+                ? "**All required distribution surfaces are fresh.**"
+                : `**No distribution drift.** External verification pending: ${names(pendingExternal)}.`;
+            await core.summary
+              .addRaw([
+                `## Distribution surface freshness — expected \`${report.expected}\``,
+                "",
+                verdict,
+                "",
+                ...(pendingExternal.length ? [
+                  "### External verification pending",
+                  "",
+                  ...pendingExternal.map((s) => `- ${s.surface}: ${cell(s.degraded_reason || s.error)}`),
+                  "",
+                  "Pending provider verification is reported here and does not open or reopen the drift issue.",
+                  "",
+                ] : []),
+                "| Surface | Published | Expected | Status | Detail |",
+                "|---------|-----------|----------|--------|--------|",
+                rows,
+                "",
+              ].join("\n"))
+              .write();
 
             const body = [
               `## Distribution surface freshness — expected \`${report.expected}\``,
@@ -174,7 +207,7 @@ jobs:
               ...(glamaEvidenceGap ? [
                 "**Next action for Glama verification**",
                 "Re-run Surface Freshness after provider action to check the authenticated Directory API. If it still returns an empty inventory while the public schemas match, resolve the API inventory with Glama support. A repository sync alone does not establish API recovery.",
-                "The recorded reason above distinguishes missing API evidence from a stale version or tool schema. This issue remains open until every required verification passes; unchanged probes do not add comments or update it.",
+                "The recorded reason above distinguishes missing API evidence from a stale version or tool schema. Pending provider verification alone never opens or reopens this issue; it is reported in each Surface Freshness job summary.",
                 "",
               ] : []),
               `Probe evidence: ${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId} (surface-freshness-evidence artifact; retained for 7 days).`,
@@ -185,7 +218,7 @@ jobs:
               "- `stale` — surface version, visible release copy, or indexed tool contract differs; use that provider's supported publish or sync path, then re-run verification.",
               "- `unmonitored (misconfigured)` — a required repo variable is unset, so this surface is NOT being watched. Set the named variable.",
               "- `unreachable` — the surface URL is configured but the probe failed (network / HTTP / parse).",
-              "- `partial evidence` — the visible listing matches, but exact machine-readable verification is unavailable; the issue remains open.",
+              "- `partial evidence` — the visible listing matches, but exact machine-readable verification is pending at the provider; reported in the job summary, never opens this issue on its own.",
               "",
               "Optional overrides (blank/unset repo vars fall back to defaults): `DOCKER_IMAGE` (`ghcr.io/koda-ai-studio/agent-bom`), `GLAMA_LISTING_URL`, `GLAMA_API_URL`, `SMITHERY_SERVER_QUALIFIED_NAME` (`agentbom/agent-bom`).",
               "",
@@ -217,6 +250,17 @@ jobs:
                 await github.rest.issues.update({
                   owner, repo, issue_number: match.number, state: "closed", state_reason: "completed",
                   body: body + "\n\nAll required distribution surfaces are fresh and monitored again; closing. Advisory findings, if any, remain in the table.",
+                });
+              }
+              return;
+            }
+
+            if (onlyPartialEvidence) {
+              // Close a tracker held open only by provider-side evidence gaps, once.
+              if (match?.state === "open") {
+                await github.rest.issues.update({
+                  owner, repo, issue_number: match.number, state: "closed", state_reason: "not_planned",
+                  body: body + "\n\nEvery required channel publishes the expected release; only external provider verification is pending (" + names(pendingExternal) + "). That is not repository drift, so this tracker is closed and the pending status is reported in each Surface Freshness job summary. It reopens automatically on real drift: a stale, unreachable or unmonitored surface.",
                 });
               }
               return;

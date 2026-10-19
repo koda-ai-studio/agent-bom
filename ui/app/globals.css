@@ -621,6 +621,7 @@ body {
 .graph-legend-dock { @apply border-t border-[var(--border-subtle)] pt-2 open:pt-3; }
 .graph-legend-dock-separated { @apply my-1 px-3 py-1.5; }
 .graph-legend-dock-separated[open] { @apply pb-3; }
+.graph-legend-dock-popover, .graph-legend-dock-popover[open] { @apply border-t-0 p-0; }
 .graph-legend-dock-summary { @apply flex min-h-6 cursor-pointer list-none flex-wrap items-center gap-x-4 gap-y-2 text-xs; }
 .graph-legend-dock-summary::-webkit-details-marker { display: none; }
 .graph-legend-dock-label { @apply shrink-0 font-medium text-[var(--text-tertiary)]; }

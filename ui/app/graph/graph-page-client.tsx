@@ -2497,6 +2497,10 @@ function GraphPageInner() {
     rollupActive: rollupNavigationActive,
     graphOnlyFindings,
   });
+  const showViewportScope = !rollupDecisionActive && Boolean(rollupNavigationActive || selectedScenarioId || investigationMode || initialViewportOptions.nodes || displayNodes.length > 6) && graphRenderer.kind === "react-flow";
+  const showScopeEvidence = !rollupNavigationActive && !rollupDecisionActive && displayNodes.length > 0;
+  const showContextControls = Boolean(investigationContext) && graphRenderer.kind === "react-flow";
+  const showLegend = !mobileListActive && !rollupNavigationActive && !rollupDecisionActive && graphRenderer.kind === "react-flow" && displayNodes.length > 0;
 
   // Soft re-frame when drift/evidence lenses engage so ring emphasis stays in view.
   useEffect(() => {
@@ -3023,14 +3027,14 @@ function GraphPageInner() {
         aria-label="Graph snapshot"
         value={selectedScanId}
         onChange={(event) => setSelectedScanId(event.target.value)}
-        className="graph-page-select max-w-full sm:max-w-56"
+        className="graph-page-select max-w-full sm:max-w-72"
       >
         {selectedScanId && selectedScanId !== currentEstateId && !snapshots.some(item => item.scan_id === selectedScanId) && <option value={selectedScanId}>{selectedScanId}</option>}
         {currentEstateId && !snapshots.some(item => item.scan_id === currentEstateId) && <option value={currentEstateId}>Current tenant estate</option>}
         {snapshots.map((snapshot) => (
           <option key={snapshot.scan_id} value={snapshot.scan_id}>
             {snapshot.scan_id.slice(0, 12)} ·{" "}
-            {new Date(snapshot.created_at).toLocaleString()}
+            {new Date(snapshot.created_at).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" })}
           </option>
         ))}
       </select>
@@ -3049,6 +3053,13 @@ function GraphPageInner() {
       /></details>}
     </>
   );
+  const scopeNavigation = scenarioState === "current" && !rollupUnavailable && (rollupView || investigationMode || selectedAttackPath) && <div className="shrink-0">
+            {!rollupDecisionActive && rollupStack.length === 0 && <button type="button" onClick={returnToSummary} className="graph-page-action">All scopes</button>}
+            {rollupStack.length > 0 && <nav aria-label="Investigation scope" className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+              <button type="button" onClick={resetRollupToRoot} className="graph-page-action">All scopes</button>
+              {rollupStack.map((crumb, index) => <button key={crumb.id} type="button" onClick={() => navigateRollupBreadcrumb(index)} className="graph-chip-neutral">{crumb.label}</button>)}
+            </nav>}
+          </div>;
   const graphSearchForm = (
     <form
       onSubmit={(event) => {
@@ -3115,17 +3126,7 @@ function GraphPageInner() {
         </div>
 
         <div className="mt-1 sm:mt-3">
-          <div className="flex flex-wrap items-center gap-2">
-          {scenarioState === "current" && !rollupUnavailable && (rollupView || investigationMode || selectedAttackPath) && <div className="shrink-0">
-            {!rollupDecisionActive && rollupStack.length === 0 && <button type="button" onClick={returnToSummary} className="graph-page-action">All scopes</button>}
-            {rollupStack.length > 0 && <nav aria-label="Investigation scope" className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-              <button type="button" onClick={resetRollupToRoot} className="graph-page-action">All scopes</button>
-              {rollupStack.map((crumb, index) => <button key={crumb.id} type="button" onClick={() => navigateRollupBreadcrumb(index)} className="graph-chip-neutral">{crumb.label}</button>)}
-            </nav>}
-          </div>}
-          {!narrowViewport && snapshotViewControls}
-          {!narrowViewport && graphSearchForm}
-          </div>
+          {narrowViewport && scopeNavigation}
 
           {searchResults.length > 0 && (
             <div className="mt-2 rounded-2xl border border-outline bg-background/90 p-2">
@@ -3195,12 +3196,12 @@ function GraphPageInner() {
 
           <div className="relative mt-1">
           <GraphViewControls
-            actions={narrowViewport ? <details className="relative ml-auto" data-testid="mobile-graph-search">
+            actions={!narrowViewport ? <div className="order-first flex min-w-0 flex-1 flex-wrap items-center gap-2">{scopeNavigation}{snapshotViewControls}{graphSearchForm}</div> : <details className="relative ml-auto" data-testid="mobile-graph-search">
               <summary className="graph-page-action cursor-pointer">Search graph</summary>
               <div className="absolute right-0 top-full z-30 mt-2 w-72 max-w-[calc(100vw-4rem)] rounded-xl border border-outline bg-surface p-3 shadow-lg">
                 {graphSearchForm}
               </div>
-            </details> : undefined}
+            </details>}
             filters={filters}
             onChange={(next) => {
               if (rollupCanvasOwnsPresentation) restoreSummaryOnFilterReset.current = true;
@@ -3763,8 +3764,10 @@ function GraphPageInner() {
               onPage={(offset) => setRollupChildPage({ key: rollupChildPageKey, offset, generation: rollupView?.snapshot_generation })}
             />
           )}
-          {!rollupDecisionActive && (rollupNavigationActive || selectedScenarioId || investigationMode || initialViewportOptions.nodes || displayNodes.length > 6) && graphRenderer.kind === "react-flow" && (
-            <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-xs text-muted-foreground" data-testid="graph-viewport-scope">
+          {/* One status bar: counts, evidence, context and legend, instead of four stacked bands. */}
+          {(showViewportScope || showScopeEvidence || showContextControls || showLegend) && <div data-testid="graph-status-bar" className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-outline px-3 py-1.5">
+          {showViewportScope && (
+            <div className="flex min-w-0 max-w-full flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground" data-testid="graph-viewport-scope">
               <span>{scenarioContextIds ? "Changes and neighbors" : rollupNavigationActive ? (rollupView?.mode === "drilldown" ? `Within ${rollupView.node?.label ?? "selected scope"}` : "Scope overview") : "Graph"} · {displayNodes.length.toLocaleString()} {rollupNavigationActive ? "entities" : "nodes"} · {displayEdges.length.toLocaleString()} {rollupNavigationActive ? `aggregate link${displayEdges.length === 1 ? "" : "s"}` : `relationship${displayEdges.length === 1 ? "" : "s"}`}{scenarioElements.unconnected.length > 0 && ` · ${scenarioElements.unconnected.length} unconnected items`}</span>
               {selectedScenarioId && !attackPathLens && !selectedAttackPath && !investigationMode && <button type="button" onClick={() => setExpandedScenarioId(scenarioExpanded ? null : selectedScenarioId)} className="text-foreground underline underline-offset-4">{scenarioExpanded ? "Focus changes" : "Show full graph"}</button>}
               {showMiniMap && <button type="button" aria-pressed={minimapExpanded} onClick={() => setMinimapExpanded((value) => !value)} className="text-foreground underline underline-offset-4">{minimapExpanded ? "Hide minimap" : "Show minimap"}</button>}
@@ -3774,18 +3777,19 @@ function GraphPageInner() {
           {investigationMode?.truncated && investigationMode.nodeCount < 24 && !loadingGraph && <button type="button" className="graph-page-action min-h-11 sm:min-h-7" onClick={() => void loadRootInvestigation({ rootId: investigationMode.rootId, rootLabel: investigationMode.rootLabel, direction: investigationDirection, nodeLimit: Math.min(24, Math.max(8, investigationMode.nodeCount * 2)) })}>Show more connections</button>}
             </div>
           )}
-          {!rollupNavigationActive && !rollupDecisionActive && displayNodes.length > 0 && <GraphScopeEvidence edges={displayEdges} scope={graphRenderer.kind === "webgl" ? "loaded" : "visible"} />}
-          {investigationContext && graphRenderer.kind === "react-flow" && <GraphInvestigationContextControls
+          {showScopeEvidence && <GraphScopeEvidence edges={displayEdges} scope={graphRenderer.kind === "webgl" ? "loaded" : "visible"} inline />}
+          {showContextControls && investigationContext && <GraphInvestigationContextControls inline
             groups={investigationContext.groups} selected={selectedContextGroup}
             visibleNodes={displayNodes.length} loadedNodes={scenarioElements.nodes.length}
             crossContextEdges={contextElements.crossContextEdges} onSelect={selectContextGroup} />}
+          {showLegend && <div className="ml-auto text-right has-[details[open]]:ml-0 has-[details[open]]:basis-full"><GraphLegendDock items={legendItems} popover /></div>}
+          </div>}
           {narrowViewport && investigationMode && displayNodes.length > 0 && <div role="group" aria-label="Investigation view" className="flex gap-2">
             {(["list", "graph"] as const).map(view => <button key={view} type="button" aria-pressed={mobileGraphView === view} onClick={() => setMobileGraphView(view)}
               className="graph-page-action min-h-11 flex-1 aria-pressed:bg-surface-elevated">{view === "list" ? "List" : "Graph"}</button>)}
           </div>}
           {mobileListActive && <GraphConnectionsList rootId={investigationMode!.rootId} nodes={displayNodes} edges={displayEdges} memberNodes={flowNodeById}
             onSelect={id => { const node = flowNodeById.get(id); if (node) onNodeClick({} as React.MouseEvent, node); }} />}
-          {!mobileListActive && !rollupNavigationActive && !rollupDecisionActive && graphRenderer.kind === "react-flow" && displayNodes.length > 0 && <GraphLegendDock items={legendItems} separated />}
           <div ref={setGraphNavigationMount} className={mobileListActive ? "hidden" : undefined} />
           <div data-graph-adaptive-frame data-graph-annotations={graphLayoutKind === "asset-hierarchy" ? "on-demand" : undefined} className={`${mobileListActive ? "hidden " : ""}relative flex ${selectedAttackPath ? "h-[max(24rem,calc(100dvh-25rem))] sm:h-[clamp(24rem,50dvh,36rem)]" : selectedScenarioId ? "h-[max(24rem,calc(100dvh-25rem))] sm:h-[max(28rem,calc(100dvh-21rem))]" : "h-[var(--graph-adaptive-height,clamp(22rem,60dvh,48rem))]"} shrink-0 overflow-hidden rounded-lg border border-outline bg-surface`}>
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
