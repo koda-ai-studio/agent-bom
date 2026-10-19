@@ -10,13 +10,13 @@ from typing import Any, Callable
 from agent_bom.graph.completeness import graph_completeness
 from agent_bom.mcp_errors import (
     CODE_INTERNAL_UNEXPECTED,
-    CODE_NOT_FOUND_AGENTS,
     CODE_NOT_FOUND_RESOURCE,
     CODE_UNSUPPORTED_QUERY_TYPE,
     CODE_VALIDATION_INVALID_ARGUMENT,
     CODE_VALIDATION_INVALID_VULN_ID,
     mcp_error_json,
 )
+from agent_bom.mcp_tools.context_graph_source import live_context_report, persisted_context_report
 from agent_bom.mcp_tools.finding_graph import exposure_lists, load_snapshot_paths, project_finding, public_graph_block
 from agent_bom.mcp_tools.rest_parity import api_reads
 from agent_bom.mcp_tools.storage import default_graph_store
@@ -209,57 +209,63 @@ async def context_graph_impl(
     config_path: str | None = None,
     source_agent: str | None = None,
     max_depth: int = 4,
+    tenant_id: str = "default",
+    scan_id: str | None = None,
+    live: bool = False,
     _run_scan_pipeline,
     _truncate_response,
 ) -> str:
-    """Implementation of the context_graph tool."""
+    """Implementation of the context_graph tool.
+
+    Reads the tenant's persisted scan snapshot by default; ``live`` (or a
+    ``config_path``) discovers this host's agent configurations instead.
+    """
     try:
-        from agent_bom.context_graph import (
-            NodeKind,
-            build_context_graph,
-            collect_lateral_paths,
-            compute_interaction_risks,
-            to_serializable,
-        )
-        from agent_bom.models import AIBOMReport
-        from agent_bom.output import to_json
-
-        agents, blast_radii, _warnings, scan_sources = await _run_scan_pipeline(config_path)
-        if not agents:
-            return mcp_error_json(CODE_NOT_FOUND_AGENTS, "No agents discovered in the current scan scope.")
-
-        report = AIBOMReport(agents=agents, blast_radii=blast_radii, scan_sources=scan_sources)
-        report_json = to_json(report)
-        graph = build_context_graph(
-            report_json["agents"],
-            report_json.get("blast_radius", []),
-        )
-
-        paths: list = []
-        paths_truncated = False
-        depth = max(1, min(max_depth, 6))
-        if source_agent:
-            node_id = f"agent:{source_agent}"
-            if node_id in graph.nodes:
-                paths, paths_truncated = collect_lateral_paths(graph, [node_id], max_depth=depth)
+        if live or config_path:
+            report = await live_context_report(config_path, _run_scan_pipeline)
         else:
-            source_ids = (nid for nid in sorted(graph.nodes.keys()) if graph.nodes[nid].kind == NodeKind.AGENT)
-            paths, paths_truncated = collect_lateral_paths(graph, source_ids, max_depth=depth)
-
-        risks = compute_interaction_risks(graph)
-        result = to_serializable(graph, paths, risks)
-        result["stats"]["lateral_paths_truncated"] = paths_truncated
-        result["completeness"] = graph_completeness(
-            returned=len(paths),
-            sampled=paths_truncated,
-            reason=("path analysis limit reached; narrow the source or hop depth; results may remain bounded" if paths_truncated else ""),
-        )
+            report = await persisted_context_report(tenant_id, scan_id)
+        if isinstance(report, str):
+            return report
+        result = _context_graph_payload(report.agents, report.blast_radius, source_agent, max_depth)
+        result.update(source=report.source, scope=report.scope)
         from agent_bom.output.interop_security import sanitize_linked_document
 
         return _truncate_response(json.dumps(sanitize_linked_document(result), indent=2, default=str))
     except Exception as exc:
         logger.exception("MCP tool error")
         return mcp_error_json(CODE_INTERNAL_UNEXPECTED, exc)
+
+
+def _context_graph_payload(agents: list[dict], blast_radius: list[dict], source_agent: str | None, max_depth: int) -> dict[str, Any]:
+    from agent_bom.context_graph import (
+        NodeKind,
+        build_context_graph,
+        collect_lateral_paths,
+        compute_interaction_risks,
+        to_serializable,
+    )
+
+    graph = build_context_graph(agents, blast_radius)
+    paths: list = []
+    paths_truncated = False
+    depth = max(1, min(max_depth, 6))
+    if source_agent:
+        node_id = f"agent:{source_agent}"
+        if node_id in graph.nodes:
+            paths, paths_truncated = collect_lateral_paths(graph, [node_id], max_depth=depth)
+    else:
+        source_ids = (nid for nid in sorted(graph.nodes.keys()) if graph.nodes[nid].kind == NodeKind.AGENT)
+        paths, paths_truncated = collect_lateral_paths(graph, source_ids, max_depth=depth)
+
+    result = to_serializable(graph, paths, compute_interaction_risks(graph))
+    result["stats"]["lateral_paths_truncated"] = paths_truncated
+    result["completeness"] = graph_completeness(
+        returned=len(paths),
+        sampled=paths_truncated,
+        reason=("path analysis limit reached; narrow the source or hop depth; results may remain bounded" if paths_truncated else ""),
+    )
+    return result
 
 
 async def analytics_query_impl(

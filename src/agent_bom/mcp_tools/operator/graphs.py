@@ -19,7 +19,7 @@ def register_context_graph(bindings: OperatorToolBindings) -> None:
     async def context_graph(
         config_path: Annotated[
             str | None,
-            Field(description="Path to MCP config directory. Omit to auto-discover."),
+            Field(description="MCP config directory to scan live on this host. Implies live=true."),
         ] = None,
         source_agent: Annotated[
             str | None,
@@ -29,6 +29,12 @@ def register_context_graph(bindings: OperatorToolBindings) -> None:
             int,
             Field(description="Max BFS depth for lateral path discovery (1-6, default 4)."),
         ] = 4,
+        tenant_id: Annotated[str, Field(description="Tenant scope for the persisted snapshot. Defaults to 'default'.")] = "default",
+        scan_id: Annotated[str | None, Field(description="Persisted scan to read. Omit for the tenant's current snapshot.")] = None,
+        live: Annotated[
+            bool,
+            Field(description="Discover this MCP server host's agent configurations instead of reading the persisted snapshot."),
+        ] = False,
     ) -> str:
         """Build an agent context graph with lateral movement analysis.
 
@@ -36,8 +42,14 @@ def register_context_graph(bindings: OperatorToolBindings) -> None:
         and vulnerabilities.  Answers: "If agent X is compromised, what
         else becomes reachable?"
 
+        Reads the tenant's persisted scan snapshot (or ``scan_id``) by
+        default. Live host discovery runs only with ``live=true`` or a
+        ``config_path``; a tenant without a snapshot gets an error, never a
+        silent scan of this host.
+
         Returns:
-            JSON with nodes, edges, lateral_paths, interaction_risks, and stats.
+            JSON with nodes, edges, lateral_paths, interaction_risks, stats,
+            completeness, source (persisted_snapshot | live_discovery) and scope.
         """
         return await bindings.execute_tool_async(
             "context_graph",
@@ -45,6 +57,9 @@ def register_context_graph(bindings: OperatorToolBindings) -> None:
             config_path=config_path,
             source_agent=source_agent,
             max_depth=max_depth,
+            tenant_id=tenant_id,
+            scan_id=scan_id,
+            live=live,
             _run_scan_pipeline=bindings.run_scan_pipeline,
             _truncate_response=bindings.truncate_response,
         )

@@ -27,6 +27,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - MCP `blast_radius` reads its holders from the same graph walk as `GET /v1/graph/impact` (a `holders` block, with per-row servers and agents taken from it) and returns each row's derived `reachability`, so MCP and REST no longer report different holders for one advisory.
 - Findings, the `reachability` filter and facets, attack paths and MCP read one reachability verdict derived from the stamped graph evidence, so a finding reached by a provenance-backed path reads `likely` (never `confirmed` without function-level or runtime evidence) and `?reachability=reachable` returns only `likely`/`confirmed` rows.
 - `GET /v1/findings` cursor pages report the same exact `total` as the first page (`total_kind: exact`) instead of `null`/`unknown`; a cold count cache runs one COUNT, approximate reads still skip it, and scope-filtered walks keep the honest marker.
+- The MCP `context_graph` tool builds from the tenant's persisted scan snapshot (or `scan_id`) by default and labels its `source` and `scope`; live discovery of the MCP host's own agent configurations runs only with `live=true` or a `config_path`.
 - Native trace imports expose bounded provider retry timing while retaining the last committed checkpoint on failure.
 - Bulk findings require a JSON boolean for absent-finding reconciliation; invalid CVSS errors omit submitted values.
 - JSON file exports publish through atomic replacement so encoding or write failures preserve an existing report.
