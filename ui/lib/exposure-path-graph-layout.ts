@@ -315,14 +315,16 @@ export function wrapGraphText(value: string, maxLineLength: number, maxLines: nu
     }
 
     const window = remaining.slice(0, maxLineLength + 1);
-    const breakpoints = [" ", "-", "_", "/", ":", "@", "."].map((character) => window.lastIndexOf(character));
-    const breakpoint = Math.max(...breakpoints);
+    // A package version keeps its "@": break before it, so the name reads whole.
+    const version = window.lastIndexOf("@");
+    const breakpoints = [" ", "-", "_", "/", ":", "."].map((character) => window.lastIndexOf(character) + 1);
+    const breakpoint = version > 4 ? version : Math.max(...breakpoints);
     // Prefer a short whole-word line to splitting an entity name. Graph nodes
     // are labels, not prose; preserving identifiers is more important than
     // making both rows the same visual width.
     // Reject separators near the start (`a/very-long`): a one-character first
     // line is harder to scan than a clean split.
-    const cut = breakpoint > 3 ? breakpoint + 1 : maxLineLength;
+    const cut = breakpoint > 4 ? breakpoint : maxLineLength;
     lines.push(remaining.slice(0, cut).trim());
     remaining = remaining.slice(cut).trim();
   }

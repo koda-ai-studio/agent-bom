@@ -69,11 +69,16 @@ export function RelationshipIcon({ relationship }: { relationship: string }) {
   return <Icon aria-hidden="true" width="1em" height="1em" strokeWidth={1.8} />;
 }
 
-/** The evidence qualifier reads as a second, quieter line instead of wrapping mid-phrase. */
+/**
+ * The evidence qualifier reads as a second, quieter line instead of wrapping
+ * mid-phrase. Compact canvases keep one-line chips: the edge's dash carries the
+ * tier and the qualifier stays in assistive text, hover and the selected link.
+ */
 export function qualifiedLabel(relationship: string, label: React.ReactNode, data: EdgeProps["data"]): React.ReactNode {
   const qualifier = accessEvidenceQualifier(relationship, data as Parameters<typeof accessEvidenceQualifier>[1]);
   const suffix = ` · ${qualifier}`;
   if (!qualifier || typeof label !== "string" || !label.endsWith(suffix)) return label;
+  if (data?.compactEvidence === true) return <>{label.slice(0, -suffix.length)}<span className="sr-only">{suffix}</span></>;
   return <>{label.slice(0, -suffix.length)}<span className="sr-only"> · </span><span className="graph-relationship-qualifier">{qualifier}</span></>;
 }
 

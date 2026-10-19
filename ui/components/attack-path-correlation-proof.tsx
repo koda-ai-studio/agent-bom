@@ -77,7 +77,7 @@ export function AttackPathCorrelationProof({
           <p className="mt-0.5 text-[15px] text-[color:var(--text-tertiary)]">
             {coverage.summary}
           </p>
-          {coverage.complete === null && coverage.gaps.length > 0 && <p className="mt-0.5 text-[15px] text-[color:var(--text-tertiary)]">Gaps: {coverage.gaps.join(", ")}</p>}
+          {coverage.complete === null && coverage.gaps.length > 0 && <p className="mt-0.5 text-[15px] text-[color:var(--text-tertiary)]">Why incomplete: {coverage.gaps.join("; ")}</p>}
         </div>
         <div className="flex flex-wrap gap-1.5">
           {[...kinds].map(([kind, label]) => (
