@@ -257,6 +257,7 @@ class GraphStoreProtocol(Protocol):
         scan_id: str = "",
         node_id: str,
         max_depth: int = 4,
+        direction: str = "reverse",
     ) -> dict[str, Any] | None: ...
 
     def traverse_subgraph(

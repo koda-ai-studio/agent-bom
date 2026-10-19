@@ -18,11 +18,9 @@ from agent_bom.graph import (
     UnifiedGraph,
     UnifiedNode,
 )
-from agent_bom.graph.completeness import (
-    bounded_walk_reason,
-    impact_completeness,
-)
+from agent_bom.graph.completeness import bounded_walk_reason
 from agent_bom.graph.ports import GraphStoreProtocol as GraphStoreProtocol
+from agent_bom.graph.reach_view import impact_payload, reach_walk
 
 
 class SQLiteGraphTraversalMixin(SQLiteSnapshotPathsMixin):
@@ -202,49 +200,39 @@ class SQLiteGraphTraversalMixin(SQLiteSnapshotPathsMixin):
         scan_id: str = "",
         node_id: str,
         max_depth: int = 4,
+        direction: str = "reverse",
     ) -> dict[str, Any] | None:
         conn = self._open_ro_conn()
         if conn is None:
             return None
         try:
-            effective_scan_id, _created_at, visited, depth_by_node, _edges, _parents, _order, truncated, depth_limited = self._walk_graph(
-                conn,
-                tenant_id=tenant_id,
-                scan_id=scan_id,
-                roots=[node_id],
-                direction="reverse",
-                max_depth=max_depth,
-                max_nodes=5000,
-                max_edges=25_000,
-                deadline_monotonic=None,
-                traversable_only=False,
-                relationship_types=None,
-                static_only=False,
-                dynamic_only=False,
-                include_roots=True,
-            )
-            if not effective_scan_id or node_id not in visited:
+            tenant_id = sqlite_graph_store.normalize_graph_tenant_id(tenant_id)
+            effective_scan_id, _created_at = sqlite_graph_store._resolve_snapshot(conn, tenant_id=tenant_id, scan_id=scan_id)
+            if not effective_scan_id:
+                return None
+            roots = self.nodes_by_ids(tenant_id=tenant_id, scan_id=effective_scan_id, node_ids={node_id})
+            if not roots:
                 return None
 
-            affected_nodes = sorted(node for node in visited if node != node_id)
-            affected_node_rows = self.nodes_by_ids(tenant_id=tenant_id, scan_id=effective_scan_id, node_ids=set(affected_nodes))
-            affected_by_type: dict[str, int] = {}
-            for node in affected_node_rows:
-                entity_type = node.entity_type.value if hasattr(node.entity_type, "value") else str(node.entity_type)
-                affected_by_type[entity_type] = affected_by_type.get(entity_type, 0) + 1
+            def walk(**kwargs: Any) -> Any:
+                return self._walk_graph(
+                    conn,
+                    tenant_id=tenant_id,
+                    scan_id=effective_scan_id,
+                    max_nodes=5000,
+                    max_edges=25_000,
+                    deadline_monotonic=None,
+                    traversable_only=False,
+                    static_only=False,
+                    dynamic_only=False,
+                    include_roots=True,
+                    **kwargs,
+                )
 
-            return {
-                "node_id": node_id,
-                "affected_nodes": affected_nodes,
-                "affected_by_type": affected_by_type,
-                "affected_count": len(affected_nodes),
-                "max_depth_reached": max((depth_by_node.get(node, 0) for node in affected_nodes), default=0),
-                "completeness": impact_completeness(
-                    affected_count=len(affected_nodes),
-                    truncated=truncated,
-                    depth_limited=depth_limited,
-                ),
-            }
+            result = reach_walk(walk, root=node_id, root_type=roots[0].entity_type, direction=direction, max_depth=max_depth)
+            if node_id not in result.visited:
+                return None
+            return impact_payload(self, tenant_id=tenant_id, scan_id=effective_scan_id, node_id=node_id, walk=result)
         finally:
             conn.close()
 

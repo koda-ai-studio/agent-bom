@@ -234,6 +234,8 @@ class GraphImpactInterpretation(ReadModel):
     collection_coverage: str
     traversable_only: bool
     max_depth: int
+    traversal_classes: list[str]
+    excluded_traversal_classes: list[str]
 
 
 class GraphImpactResponse(ReadResponse):
