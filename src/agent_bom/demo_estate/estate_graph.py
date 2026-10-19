@@ -36,6 +36,7 @@ from typing import TYPE_CHECKING
 from agent_bom.core.severity import SEVERITY_RISK_SCORE, normalize_severity
 from agent_bom.demo_estate.enterprise import EnterpriseEstate, EstateAsset
 from agent_bom.demo_estate.estate_edges import ESTATE_DATA_SOURCE, add_estate_edge, oriented_topology_edge
+from agent_bom.demo_estate.estate_packages import project_estate_package_lineage
 from agent_bom.demo_estate.id_schemes import retired_estate_asset_ids
 from agent_bom.graph.container import AttackPath, UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
@@ -50,8 +51,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
 
 ESTATE_GRAPH_VERSION = "estate_graph.v3"
 
-# The estate resource type that *is* the organization, lifted out of the
-# account/environment hierarchy because it is the hierarchy's root.
+# The organization resource type: the root of the account/environment hierarchy.
 _ORG_RESOURCE_TYPE = "organization"
 
 # Estate resource type → graph entity type. Deliberately explicit rather than a
@@ -420,13 +420,11 @@ def project_estate_into_graph(
         graph.add_node(_asset_node(asset, estate))
         _edge(env_id, asset.asset_id, RelationshipType.CONTAINS)
 
-    # Topology: the edges the estate's own inventory declares. Containment alone
-    # renders a tree, and a tree cannot express "this AI service assumes that
-    # role and reads that table" — which is the whole reason the AI estate was
-    # generated inside the cloud accounts rather than beside them.
+    # Topology: the edges the estate's inventory declares. Containment alone is a
+    # tree; it cannot say "this AI service assumes that role and reads that table".
+    topology_edges = project_estate_package_lineage(graph, estate.assets)
     assets_by_id = {asset.asset_id: asset for asset in estate.assets}
     known_asset_ids = set(assets_by_id)
-    topology_edges = 0
     exposure_edges = 0
     for asset in estate.assets:
         for tag, relationship in _TOPOLOGY_TAGS:

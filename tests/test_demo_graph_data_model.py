@@ -118,3 +118,32 @@ def test_package_vulnerabilities_still_roll_up_under_their_package(demo_graph: U
     assert len(vulns) > 700
     orphaned = [node_id for node_id in vulns if node_id not in parented]
     assert not orphaned, orphaned[:5]
+
+
+def test_estate_packages_carry_their_recorded_dependency_tree(demo_graph: UnifiedGraph) -> None:
+    estate_packages = [
+        node for node in demo_graph.nodes.values() if node.entity_type == EntityType.PACKAGE and node.attributes.get("estate_id")
+    ]
+    assert len(estate_packages) > 700
+    assert all(isinstance(node.attributes.get("dependency_depth"), int) for node in estate_packages)
+    assert all(isinstance(node.attributes.get("is_direct"), bool) for node in estate_packages)
+
+    edges = [
+        edge
+        for edge in demo_graph.edges
+        if edge.relationship == RelationshipType.DEPENDS_ON
+        and demo_graph.nodes[edge.source].entity_type == EntityType.PACKAGE
+        and demo_graph.nodes[edge.target].entity_type == EntityType.PACKAGE
+    ]
+    versions = Counter((node.attributes["tags"]["container_image"], node.attributes["tags"]["package_name"]) for node in estate_packages)
+    transitive = [node for node in estate_packages if node.attributes["is_direct"] is False]
+    # A parent name with two versions in one image is ambiguous and draws no edge.
+    resolvable = [
+        node for node in transitive if versions[(node.attributes["tags"]["container_image"], node.attributes["parent_package"])] == 1
+    ]
+    assert len(resolvable) > 400 and len(edges) == len(resolvable)
+    for edge in edges:
+        parent, child = demo_graph.nodes[edge.source], demo_graph.nodes[edge.target]
+        assert child.attributes["parent_package"] == parent.attributes["tags"]["package_name"]
+        assert child.attributes["tags"]["container_image"] == parent.attributes["tags"]["container_image"]
+        assert parent.attributes["dependency_depth"] + 1 == child.attributes["dependency_depth"]

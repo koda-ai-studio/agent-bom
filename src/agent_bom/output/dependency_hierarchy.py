@@ -2,50 +2,28 @@
 
 from __future__ import annotations
 
-from collections import defaultdict
 from collections.abc import Callable
 from typing import Any
 
-from agent_bom.core.packages import normalize_package_ecosystem, normalize_package_name
+from agent_bom.core.package_lineage import DependencyRecord, resolve_dependency_edges
 from agent_bom.models import Package
 
 
 def package_dependency_edges(packages: list[Package]) -> tuple[list[tuple[str, str]], set[str]]:
-    """Return canonical parent/child IDs and unresolved transitive IDs.
-
-    Parent names carry no version constraint. Link only one distinct matching
-    identity in the same ecosystem and server; never pick an arbitrary version
-    or borrow a package from another agent/environment. Duplicate observations
-    of the same canonical package are not ambiguous.
-    """
-    candidates: dict[tuple[str, str], set[str]] = defaultdict(set)
-    for package in packages:
-        ecosystem = normalize_package_ecosystem(package.ecosystem)
-        candidates[ecosystem, normalize_package_name(package.name, ecosystem)].add(package.stable_id)
-    edges: set[tuple[str, str]] = set()
-    unresolved: set[str] = set()
-    inventory_ids = {package.stable_id for package in packages}
-    for package in packages:
-        declared = [
-            e.get("parent_stable_ids")
-            for e in package.version_evidence
-            if e.get("type") in {"sbom", "lockfile"} and "parent_stable_ids" in e
+    """Return canonical parent/child IDs and unresolved transitive IDs for model packages."""
+    return resolve_dependency_edges(
+        [
+            DependencyRecord(
+                stable_id=package.stable_id,
+                name=package.name,
+                ecosystem=package.ecosystem,
+                is_direct=bool(package.is_direct),
+                parent_package=package.parent_package,
+                version_evidence=tuple(package.version_evidence),
+            )
+            for package in packages
         ]
-        if declared:
-            parents = {ref for refs in declared if isinstance(refs, list) for ref in refs if isinstance(ref, str)}
-            edges.update((ref, package.stable_id) for ref in parents & inventory_ids if ref != package.stable_id)
-            if parents - inventory_ids or (not parents and not package.is_direct):
-                unresolved.add(package.stable_id)
-            continue
-        if package.is_direct:
-            continue
-        ecosystem = normalize_package_ecosystem(package.ecosystem)
-        parents = candidates.get((ecosystem, normalize_package_name(package.parent_package or "", ecosystem)), set())
-        if len(parents) != 1 or package.stable_id in parents:
-            unresolved.add(package.stable_id)
-        else:
-            edges.add((next(iter(parents)), package.stable_id))
-    return sorted(edges), unresolved
+    )
 
 
 def cyclonedx_compositions(components: list[dict], *, incomplete: bool, unknown: bool = False) -> list[dict]:

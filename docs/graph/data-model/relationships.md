@@ -204,7 +204,7 @@ Emitted by: `graph/runtime_projection.py`
 
 ## `depends_on`
 
-Class `dependency` · directed · traversable · required evidence `source`, `tier` · 10 pairs
+Class `dependency` · directed · traversable · required evidence `source`, `tier` · 11 pairs
 
 - `cloud_resource` → `cloud_resource`
 - `config_file` → `package`
@@ -212,10 +212,11 @@ Class `dependency` · directed · traversable · required evidence `source`, `ti
 - `data_store` → `cloud_resource`, `data_store`
 - `directory` → `package`
 - `framework` → `package`
+- `package` → `package`
 - `server` → `package`
 - `source_file` → `package`
 
-Emitted by: `graph/agent_projection.py`, `graph/builder_snowflake_data_movement.py`, `graph/builder_snowflake_objects.py`, `graph/builder_snowflake_platform.py`, `graph/framework_topology_projection.py`, `graph/repo_structure_overlay.py`; demo fixtures: `demo_estate/showcase_graph.py`
+Emitted by: `graph/agent_projection.py`, `graph/builder_snowflake_data_movement.py`, `graph/builder_snowflake_objects.py`, `graph/builder_snowflake_platform.py`, `graph/framework_topology_projection.py`, `graph/package_dependency_projection.py`, `graph/repo_structure_overlay.py`; demo fixtures: `demo_estate/showcase_graph.py`
 
 ## `exhibits_drift`
 

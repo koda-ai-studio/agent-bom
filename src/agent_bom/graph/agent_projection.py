@@ -23,6 +23,7 @@ from agent_bom.graph.edge_evidence import edge_evidence
 from agent_bom.graph.hosting_projection import project_server_hosting
 from agent_bom.graph.mcp_server_aliases import previous_mcp_server_graph_ids
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
+from agent_bom.graph.package_dependency_projection import project_package_dependencies
 from agent_bom.graph.package_projection import (
     _add_vuln_node,
     _package_evidence,
@@ -326,6 +327,11 @@ def _project_server(graph: UnifiedGraph, agent: AgentScope, srv_dict: Mapping[st
 
 
 def _project_packages(graph: UnifiedGraph, agent: AgentScope, srv_dict: Mapping[str, Any], srv_id: str, indexes: BuildIndexes) -> None:
+    _project_package_nodes(graph, agent, srv_dict, srv_id, indexes)
+    project_package_dependencies(graph, srv_dict.get("packages", []), node_id_for=_package_node_id, data_source=agent.data_source_tag)
+
+
+def _project_package_nodes(graph: UnifiedGraph, agent: AgentScope, srv_dict: Mapping[str, Any], srv_id: str, indexes: BuildIndexes) -> None:
     for pkg_dict in srv_dict.get("packages", []):
         pkg_name = pkg_dict.get("name", "unknown")
         pkg_version = pkg_dict.get("version", "")
