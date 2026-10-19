@@ -9,6 +9,7 @@ import type {
   GraphRollupEdge,
   GraphRollupEdgeCountMetadata,
 } from "@/lib/api-types";
+import { ScopeProviderSuffix } from "@/components/graph-scope-breadcrumb";
 
 export const ROLLUP_DECISION_THRESHOLD = 24;
 const PAGE_SIZE = 12;
@@ -233,8 +234,8 @@ export function GraphRollupDecisionSurface({
                   <p className="break-words text-sm font-semibold text-foreground [overflow-wrap:anywhere]" title={item.label}>
                     {item.label}
                   </p>
-                  <p className="text-[11px] text-ink-secondary">
-                    {item.entity_type.replaceAll("_", " ")}
+                  <p data-testid="graph-scope-eyebrow" className="flex items-center gap-1 text-[11px] text-ink-secondary">
+                    {item.entity_type.replaceAll("_", " ")}<ScopeProviderSuffix item={item} size="h-4 w-4" />
                   </p>
                   {item.context && Object.keys(item.context).length > 0 && (
                     <p className="mt-1 break-words text-xs text-ink-secondary [overflow-wrap:anywhere]">

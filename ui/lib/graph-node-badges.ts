@@ -179,13 +179,13 @@ export function nodeBadges(data: NodeBadgeInput): { badges: NodeBadge[]; ring: S
 
 export const NODE_BADGE_CLASSES: Record<NodeBadgeKind, Record<string, string> & { default: string }> = {
   provider: {
-    default: "border-violet-500/45 bg-violet-500/10 text-violet-800 dark:text-violet-200",
+    default: "border-violet-300 bg-violet-500/10 text-violet-800 dark:border-violet-800 dark:text-violet-200",
   },
   environment: {
     default: "border-outline-strong bg-surface-muted text-ink-secondary",
-    prod: "border-rose-500/50 bg-rose-500/10 text-rose-800 dark:text-rose-200",
-    staging: "border-amber-500/50 bg-amber-500/10 text-amber-800 dark:text-amber-200",
-    dev: "border-sky-500/50 bg-sky-500/10 text-sky-800 dark:text-sky-200",
+    prod: "border-rose-300 bg-rose-500/10 text-rose-800 dark:border-rose-800 dark:text-rose-200",
+    staging: "border-amber-300 bg-amber-500/10 text-amber-800 dark:border-amber-800 dark:text-amber-200",
+    dev: "border-sky-300 bg-sky-500/10 text-sky-800 dark:border-sky-800 dark:text-sky-200",
   },
   ecosystem: {
     default: "border-outline-strong bg-surface-muted text-ink-secondary",

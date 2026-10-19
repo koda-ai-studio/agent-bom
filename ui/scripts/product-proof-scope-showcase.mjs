@@ -167,6 +167,38 @@ export function deriveAttackPaths(nodes, edges, scanId) {
   return paths.sort((left, right) => right.composite_risk - left.composite_risk || left.hops.length - right.hops.length);
 }
 
+// Mirrors graph/provider_inheritance.py: one provider proven by containment or
+// hosting reaches assets that declare none; any conflict leaves it unset.
+const PROVIDER_SCOPES = new Set(["account", "cluster", "environment"]);
+const PROVIDER_HOSTS = new Set(["cloud_resource", "container"]);
+const PROVIDER_INHERITORS = new Set([...PROVIDER_SCOPES, "container", "cloud_resource", "resource", "data_store", "api_gateway",
+  "dataset", "model", "role", "policy", "user", "group", "service_account", "service_principal", "federated_identity"]);
+
+function inheritProvider(nodes, edges) {
+  const byId = new Map(nodes.map((item) => [item.id, item]));
+  const parents = new Map();
+  for (const item of edges) {
+    const upward = item.relationship === "hosted_on" || item.relationship === "part_of";
+    if (!upward && !["contains", "owns", "hosts"].includes(item.relationship)) continue;
+    const [parent, child] = upward ? [byId.get(item.target), byId.get(item.source)] : [byId.get(item.source), byId.get(item.target)];
+    const scoped = parent && (PROVIDER_SCOPES.has(parent.entity_type) || (item.relationship === "hosted_on" && PROVIDER_HOSTS.has(parent.entity_type)));
+    if (scoped && child && PROVIDER_INHERITORS.has(child.entity_type)) parents.set(child.id, [...(parents.get(child.id) ?? []), [parent, item.relationship]]);
+  }
+  const seen = new Map(nodes.map((item) => [item.id, new Set(item.dimensions.cloud_provider ? [item.dimensions.cloud_provider] : [])]));
+  for (let depth = 0; depth < 8; depth += 1) {
+    for (const [child, links] of parents) for (const [parent] of links) for (const provider of seen.get(parent.id)) seen.get(child).add(provider);
+  }
+  for (const [childId, links] of parents) {
+    const child = byId.get(childId);
+    const providers = [...seen.get(childId)];
+    if (child.dimensions.cloud_provider || providers.length !== 1) continue;
+    const [parent, relationship] = links.find(([item]) => seen.get(item.id).size === 1);
+    child.dimensions.cloud_provider = providers[0];
+    child.attributes.cloud_provider_basis = `inherited:${relationship}`;
+    child.attributes.cloud_provider_source = { node_id: parent.id, label: parent.label, entity_type: parent.entity_type };
+  }
+}
+
 /** Highest finding severity reachable from each node over traversable edges. */
 function propagateSeverity(nodes, edges) {
   const byId = new Map(nodes.map((item) => [item.id, item]));
@@ -220,6 +252,7 @@ export function buildScopeShowcase(kind, { node, edge, base, advisory, reference
   const edges = fixture.edges.map(([source, target, relation, extra = {}]) => edge(source, target, relation, 1,
     { evidence_tier: "modeled_infrastructure", modeled: true, source_kind: "synthetic-scope-fixture", ...extra }));
   propagateSeverity(nodes, edges);
+  inheritProvider(nodes, edges);
   const attackPaths = deriveAttackPaths(nodes, edges, base.scan_id);
   const count = (key) => nodes.reduce((acc, item) => ({ ...acc, [item[key]]: (acc[item[key]] ?? 0) + 1 }), {});
   const findings = nodes.filter((item) => FINDING_TYPES.has(item.entity_type));
