@@ -12,6 +12,7 @@ import { accessEvidenceQualifier } from "@/lib/graph-access-evidence";
 import { scheduleRelationshipLabelLayout } from "@/lib/relationship-label-layout";
 import { relationshipEdgeLabelText } from "@/lib/graph-utils";
 import { relationshipPath } from "@/lib/relationship-routing";
+import { columnEdgePath } from "@/lib/path-card-column";
 
 // Icons supplement the recorded verb; they never replace its meaning or imply
 // that a recorded permission has actually been exercised.
@@ -103,10 +104,13 @@ export function RelationshipEdge(props: EdgeProps) {
   const nodes = useStore(state => state.nodes);
   const zoom = useStore(state => state.transform[2]);
   const labelRef = useRef<HTMLDivElement>(null);
-  const [path, x, y] = relationshipPath(props, nodes.length <= 80 ? nodes.map(node => ({
-    id: node.id, x: node.position.x, y: node.position.y,
-    width: node.measured?.width ?? 220, height: node.measured?.height ?? 224,
-  })) : []);
+  const columnSource = props.data?.columnFlow === true ? nodes.find(node => node.id === props.source) : undefined;
+  const [path, x, y] = columnSource
+    ? columnEdgePath(props, columnSource.position.y + (columnSource.measured?.height ?? 0) + 6)
+    : relationshipPath(props, nodes.length <= 80 ? nodes.map(node => ({
+      id: node.id, x: node.position.x, y: node.position.y,
+      width: node.measured?.width ?? 220, height: node.measured?.height ?? 224,
+    })) : []);
   useLayoutEffect(() => { scheduleRelationshipLabelLayout(labelRef.current); }, [path, zoom, label, x, y]);
   if (props.data?.isClusterEdge) return <SmoothStepEdge {...props} />;
 
