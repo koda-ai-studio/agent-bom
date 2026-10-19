@@ -195,7 +195,7 @@ describe("product proof capture contract", () => {
   });
 
   it("asserts the current canonical Findings vocabulary", () => {
-    expect(source).toContain('expectedText: ["Findings", "15 findings", /Detection/i, /Observed/i, /Remediation/i');
+    expect(source).toContain('expectedText: ["Findings", "15 findings", /Reach \\/ exploit/i, /Remediation/i');
     expect(source).toContain('getByRole("heading", { name: "Findings", exact: true })');
     expect(source).toContain('getByRole("row").filter({ hasText: "CVE-2025-29927" })');
     expect(source).not.toContain('expectedText: ["Findings queue"');

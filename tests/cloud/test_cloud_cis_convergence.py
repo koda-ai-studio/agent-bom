@@ -53,10 +53,10 @@ def test_cis_fails_become_findings_across_providers() -> None:
     by_title = {f.title: f for f in cis}
     # The title carries the outcome: a FAIL is not titled with the state the
     # control failed to reach.
-    assert "CIS 1.7 not met: Root used" in by_title
-    assert by_title["CIS 1.7 not met: Root used"].attack_tags == ["T1078"]
-    assert "CIS-1.7" in by_title["CIS 1.7 not met: Root used"].compliance_tags
-    az = by_title["CIS 3.2 not met: Storage open"]
+    assert "Failed CIS 1.7 — Root used" in by_title
+    assert by_title["Failed CIS 1.7 — Root used"].attack_tags == ["T1078"]
+    assert "CIS-1.7" in by_title["Failed CIS 1.7 — Root used"].compliance_tags
+    az = by_title["Failed CIS 3.2 — Storage open"]
     assert az.severity == "critical"
     assert az.asset.identifier == "/sub/x/sa/foo"
 
@@ -145,7 +145,8 @@ def test_databricks_findings_are_vendor_best_practices_and_still_gate(status: st
     finding = r.to_findings()[0]
     assert finding.finding_type.value == expected_type
     assert finding.source.value == "CLOUD_SECURITY"
-    assert finding.title.startswith("Databricks best practice")
+    outcome = "Unevaluated" if status == "ERROR" else "Failed"
+    assert finding.title == f"{outcome} Databricks best practice 1.1 — Admin access"
     assert finding.evidence["benchmark"] == "Databricks Security Best Practices"
     assert not any(tag.startswith("CIS-") for tag in finding.compliance_tags)
     assert "cis" not in finding.applicable_frameworks

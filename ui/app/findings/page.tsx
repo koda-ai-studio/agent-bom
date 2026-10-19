@@ -4,8 +4,6 @@ import { Suspense, useCallback, useEffect, useState, useMemo, useRef } from "rea
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   api,
-  Vulnerability,
-  UnifiedFinding,
   type FindingTriageDecision,
   type FindingTriageItem,
   type FindingTriageJustification,
@@ -13,6 +11,10 @@ import {
 } from "@/lib/api";
 import type { FindingFacets, ScopeCompleteness } from "@/lib/api-types";
 import { ApiOfflineState } from "@/components/api-offline-state";
+import { collectUnifiedFindings } from "@/lib/findings-adapter";
+import { FindingLaneTabs } from "@/components/finding-lane-tabs";
+import { FindingLaneTable, type LaneFinding } from "@/components/finding-lane-table";
+import { initialFindingLane, type FindingLane } from "@/lib/finding-lanes";
 import { FindingDrawer } from "@/components/finding-drawer";
 import { ComponentFindings } from "@/components/inventory/component-findings";
 import { FindingsQueueTable } from "@/components/findings-queue";
@@ -24,7 +26,6 @@ import {
   type EnrichedVuln,
   type SeverityFilter,
   type SortKey,
-  uniqueStrings,
   severityFilterDefinitions,
   serverFindingsSort,
   formatFindingsTotal,
@@ -65,160 +66,6 @@ function downloadJson(data: unknown, filename: string) {
 function triageKey(vulnerabilityId: string, packageName: string) {
   return findingTriageKey(vulnerabilityId, packageName);
 }
-
-function recordString(record: Record<string, unknown>, key: string): string | undefined {
-  const value = record[key];
-  return typeof value === "string" && value.trim() ? value.trim() : undefined;
-}
-
-function recordNumber(record: Record<string, unknown>, key: string): number | undefined {
-  const value = record[key];
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
-}
-
-function recordStrings(record: Record<string, unknown>, key: string): string[] {
-  const value = record[key];
-  if (!Array.isArray(value)) return [];
-  return value.filter((item): item is string => typeof item === "string" && Boolean(item.trim()));
-}
-
-function normalizedSeverity(value: string | undefined): Vulnerability["severity"] {
-  const normalized = (value ?? "").toLowerCase();
-  return normalized === "critical" || normalized === "high" || normalized === "medium" || normalized === "low" || normalized === "none"
-    ? normalized
-    : "none";
-}
-
-
-function collectUnifiedFindings(findings: UnifiedFinding[]): EnrichedVuln[] {
-  return findings.map((finding): EnrichedVuln => {
-    const raw = finding as UnifiedFinding & {
-      framework_tags?: string[];
-      phantom_tools?: string[];
-      runtime_evidence?: EnrichedVuln["runtime_evidence"];
-      workload_runtime_evidence?: EnrichedVuln["workload_runtime_evidence"];
-      effective_reach_band?: string;
-      effective_reach_score?: number;
-      attack_vector_summary?: string;
-    };
-    const assetName =
-      finding.asset?.name?.trim() ||
-      finding.package?.trim() ||
-      finding.package_name?.trim() ||
-      finding.asset?.identifier ||
-      finding.asset?.stable_id ||
-      "Unavailable";
-    const findingLabel = finding.cve_id || finding.title || finding.id;
-    const sourceLabel = uniqueStrings([finding.source, finding.finding_type, ...(finding.scan_sources ?? [])]);
-    const evidence = finding.evidence ?? {};
-    const packageName = finding.package_name?.trim() || finding.package?.trim() || recordString(evidence, "package_name") || assetName;
-    const currentVersion = finding.package_version ?? recordString(evidence, "package_version");
-    const serverAsset = finding.asset?.asset_type === "server" || finding.asset?.asset_type === "mcp_server" || finding.entity_type === "server";
-    const references = uniqueStrings([
-      ...(finding.references ?? []),
-      ...recordStrings(evidence, "references"),
-    ]);
-    const advisorySources = uniqueStrings([
-      ...(finding.advisory_sources ?? []),
-      ...recordStrings(evidence, "advisory_sources"),
-    ]);
-    return {
-      id: findingLabel,
-      finding_id: finding.finding_id ?? finding.id,
-      finding_group_id: finding.finding_group_id,
-      finding_group_key: finding.finding_group_key,
-      node_id: finding.node_id ?? undefined,
-      finding_node_id: finding.finding_node_id ?? undefined,
-      entity_type: finding.entity_type ?? undefined,
-      asset_type: finding.asset?.asset_type ?? undefined,
-      severity: normalizedSeverity(finding.effective_severity ?? finding.severity),
-      summary: raw.attack_vector_summary ?? finding.title ?? finding.description,
-      description: finding.description ?? finding.title,
-      references,
-      advisory_sources: advisorySources,
-      cwe_ids: uniqueStrings(finding.cwe_ids ?? []),
-      aliases: uniqueStrings([
-        ...(finding.aliases ?? []),
-        ...(finding.advisory_aliases ?? []),
-        ...recordStrings(evidence, "advisory_aliases"),
-      ]),
-      cvss_score: finding.cvss_score ?? undefined,
-      cvss_vector: finding.cvss_vector ?? recordString(evidence, "cvss_vector"),
-      cvss_severity: finding.cvss_severity ?? undefined,
-      epss_score: finding.epss_score ?? undefined,
-      epss_percentile: finding.epss_percentile ?? recordNumber(evidence, "epss_percentile"),
-      is_kev: typeof finding.is_kev === "boolean" ? finding.is_kev : undefined,
-      cisa_kev: typeof finding.is_kev === "boolean" ? finding.is_kev : undefined,
-      kev_date_added: finding.kev_date_added ?? recordString(evidence, "kev_date_added"),
-      kev_due_date: finding.kev_due_date ?? recordString(evidence, "kev_due_date"),
-      fixed_version: finding.fixed_version ?? undefined,
-      current_version: currentVersion,
-      published_at: finding.published_at ?? recordString(evidence, "published_at"),
-      modified_at: finding.modified_at ?? recordString(evidence, "modified_at"),
-      severity_source: finding.severity_source ?? recordString(evidence, "severity_source"),
-      confidence: finding.confidence ?? recordNumber(evidence, "confidence"),
-      match_confidence_tier:
-        finding.match_confidence_tier ?? recordString(evidence, "match_confidence_tier"),
-      packages: [packageName],
-      agents: finding.affected_agents ?? [],
-      sources: sourceLabel.length > 0 ? sourceLabel : ["finding"],
-      detection_source: finding.source || undefined,
-      repository_relative_path: recordString(evidence, "repository_relative_path"),
-      affected_servers: uniqueStrings([...(finding.affected_servers ?? []), ...(serverAsset && assetName !== "Unavailable" ? [assetName] : [])]),
-      exposed_credentials: finding.exposed_credentials ?? [],
-      reachable_tools: finding.exposed_tools ?? [],
-      phantom_tools: raw.phantom_tools ?? [],
-      framework_tags: raw.framework_tags ?? finding.compliance_tags ?? [],
-      controls: finding.controls ?? [],
-      attack_vector_summary: raw.attack_vector_summary ?? (finding.network_exploitable ? "Network exploitable" : undefined),
-      impact_category: finding.impact_category ?? finding.finding_type,
-      finding_type: finding.finding_type,
-      finding_class: finding.finding_class,
-      risk_score: finding.risk_score,
-      effective_reach_band: raw.effective_reach_band,
-      effective_reach_score: raw.effective_reach_score,
-      runtime_evidence: raw.runtime_evidence,
-      workload_runtime_evidence: raw.workload_runtime_evidence ?? finding.workload_runtime_evidence,
-      remediation_items: finding.remediation_guidance
-        ? [
-            {
-              package: packageName,
-              ecosystem: finding.asset?.asset_type ?? finding.finding_type ?? "finding",
-              current_version: currentVersion ?? "",
-              fixed_version: finding.fixed_version ?? null,
-              action: "review",
-              command: null,
-              verify_command: null,
-              references: [],
-              risk_narrative: finding.remediation_guidance,
-            },
-          ]
-        : [],
-      graph_reachable: finding.graph_reachable ?? null,
-      graph_min_hop_distance: finding.graph_min_hop_distance ?? null,
-      graph_reachable_from_agents: finding.graph_reachable_from_agents ?? [],
-      lifecycle_status: finding.status ?? undefined,
-      observation_status: finding.observation_status,
-      reconfirmation: finding.reconfirmation,
-      unreconfirmed_occurrence_count: finding.unreconfirmed_occurrence_count,
-      first_seen: finding.first_seen ?? undefined,
-      last_seen: finding.last_seen ?? undefined,
-      resolved_at: finding.resolved_at ?? undefined,
-      reopened_at: finding.reopened_at ?? undefined,
-      scan_count: finding.scan_count,
-      last_observed: finding.last_observed ?? finding.last_seen ?? undefined,
-      occurrence_count: finding.occurrence_count ?? finding.scan_count,
-      occurrences: finding.occurrences,
-      occurrences_truncated: finding.occurrences_truncated,
-      remediation_versions: finding.remediation_versions ?? undefined,
-      provenance: finding.provenance ?? undefined,
-      owner: finding.owner ?? undefined,
-      sla_due_at: finding.sla_due_at ?? undefined,
-      scan_id: finding.scan_id,
-    };
-  });
-}
-
 
 // Security-domain facets (issue #3946). Map 1:1 to the overview coverage lanes
 // so drilling from a coverage lane lands on the matching findings filter.
@@ -274,6 +121,11 @@ function FindingsPage() {
   const paramPage = searchParams.get("page");
   const paramScan = searchParams.get("scan") ?? searchParams.get("scan_id");
   const paramIssueType = searchParams.get("issue");
+  const paramLane = searchParams.get("lane");
+  const hasLegacyScope = ["finding", "cve", "agent", "framework", "domain", "scope", "q"].some((key) => searchParams.has(key));
+  const [lane, setLane] = useState<FindingLane>(() => initialFindingLane(paramLane, paramIssueType, hasLegacyScope));
+  const [laneCountsApproximate, setLaneCountsApproximate] = useState(false);
+  useEffect(() => { setLane(initialFindingLane(paramLane, paramIssueType, hasLegacyScope)); }, [paramLane, paramIssueType, hasLegacyScope]);
   const paramWindow = searchParams.get("window");
   const paramScope = searchParams.get("scope");
   // First-class scope + taxonomy facets (issue #3946), URL-synced.
@@ -291,7 +143,7 @@ function FindingsPage() {
   const paramControl = searchParams.get("control");
 
 
-  const [vulns, setVulns] = useState<EnrichedVuln[]>([]);
+  const [vulns, setVulns] = useState<LaneFinding[]>([]);
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState("");
@@ -330,7 +182,7 @@ function FindingsPage() {
   const [frameworkFilter, setFrameworkFilter] = useState<string>(paramFramework ?? "");
   // A control code is only meaningful alongside a framework; it is cleared with it.
   const [controlFilter, setControlFilter] = useState<string>(paramFramework ? (paramControl ?? "") : "");
-  const [sortKey, setSortKey] = useState<SortKey>("severity");
+  const [sortKey, setSortKey] = useState<SortKey>(paramLane === "all" ? "effective_reach" : "severity");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   // Default read-window (#4009): findings default to the last ~90 days so the
   // count is honestly "last 90d", not "all". ``0`` widens to all history.
@@ -470,6 +322,7 @@ function FindingsPage() {
     // other posture deep links. Preserve it while synchronizing page-local
     // controls so navigation does not silently narrow or rewrite that scope.
     if (paramScope === "all") params.set("scope", "all");
+    params.set("lane", lane);
     if (selectedId) params.set("finding", selectedId);
     if (filter !== "all") params.set("severity", filter);
     if (issueTypeFilter !== "all") params.set("issue", issueTypeFilter);
@@ -492,6 +345,7 @@ function FindingsPage() {
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }, [
     filter,
+    lane,
     issueTypeFilter,
     search,
     domainFilter,
@@ -610,6 +464,7 @@ function FindingsPage() {
         ...(frameworkFilter.trim() ? { framework: frameworkFilter.trim() } : {}),
         ...(frameworkFilter.trim() && controlFilter.trim() ? { control: controlFilter.trim() } : {}),
         ...(issueTypeFilter !== "all" ? { findingClass: issueTypeFilter } : {}),
+        ...(lane !== "all" ? { lane } : {}),
         windowDays,
       });
       downloadJson(exported, `finding-triage-openvex-${new Date().toISOString().slice(0, 10)}.json`);
@@ -629,6 +484,7 @@ function FindingsPage() {
     environmentFilter,
     filter,
     frameworkFilter,
+    lane,
     issueTypeFilter,
     ownerFilter,
     paramScan,
@@ -645,6 +501,7 @@ function FindingsPage() {
   }, [refreshTriage]);
 
   useEffect(() => {
+    let cancelled = false;
     async function loadFindings() {
       setDetailLoading(true);
       setError("");
@@ -666,6 +523,7 @@ function FindingsPage() {
           ...(frameworkFilter.trim() ? { framework: frameworkFilter.trim() } : {}),
           ...(frameworkFilter.trim() && controlFilter.trim() ? { control: controlFilter.trim() } : {}),
           ...(issueTypeFilter !== "all" ? { findingClass: issueTypeFilter } : {}),
+          ...(lane !== "all" ? { lane } : {}),
           sort: serverFindingsSort(sortKey),
           limit: PAGE_SIZE,
           ...(!currentCursor ? { offset: (page - 1) * PAGE_SIZE } : {}),
@@ -675,6 +533,8 @@ function FindingsPage() {
           includeFacets: true,
           windowDays,
         });
+        if (cancelled) return;
+        setLaneCountsApproximate(Boolean(response.lane_counts_approximate));
         setAppliedWindow(response.window ?? null);
         setVulns(collectUnifiedFindings(response.findings));
         setFindingsTotal(typeof response.total === "number" ? response.total : null);
@@ -685,15 +545,16 @@ function FindingsPage() {
         setHasMoreFindings(Boolean(response.has_more || response.next_cursor));
         setNextFindingsCursor(response.next_cursor ?? "");
       } catch (e: unknown) {
+        if (cancelled) return;
         setError(e instanceof Error ? e.message : "Failed to load");
         setErrorKind(_classifyApiErrorKind(e));
       } finally {
-        setLoading(false);
-        setDetailLoading(false);
+        if (!cancelled) { setLoading(false); setDetailLoading(false); }
       }
     }
 
     void loadFindings();
+    return () => { cancelled = true; };
   }, [
     paramScan,
     paramFinding,
@@ -710,6 +571,7 @@ function FindingsPage() {
     triageFilter,
     frameworkFilter,
     controlFilter,
+    lane,
     issueTypeFilter,
     windowDays,
     sortKey,
@@ -740,6 +602,7 @@ function FindingsPage() {
     setNextFindingsCursor("");
   }, [
     filter,
+    lane,
     issueTypeFilter,
     search,
     sortKey,
@@ -848,7 +711,7 @@ function FindingsPage() {
     setWindowDays(90);
   };
 
-  const FILTERS = severityFilterDefinitions(findingFacetsApproximate ? null : findingFacets, findingsFilterTotalLabel);
+  const FILTERS = severityFilterDefinitions(findingFacetsApproximate || !findingFacets?.severity ? null : findingFacets, findingsFilterTotalLabel);
 
   return (
     <div className="space-y-6">
@@ -857,7 +720,7 @@ function FindingsPage() {
         lane="command"
         title="Findings"
         scopeChip={false}
-        subtitle={`${findingsTotalLabel}${findingsTotal == null ? "" : (findingsTotal === 1 ? " finding" : " findings")} · ${paramScan ? `Scan ${paramScan.slice(0, 8)} · ` : ""}${findingsWindowLabel}`}
+        subtitle={`${findingsTotalLabel}${findingsTotal == null ? "" : (lane === "cloud" ? (findingsTotal === 1 ? " control group" : " control groups") : (findingsTotal === 1 ? " finding" : " findings"))} · ${paramScan ? `Scan ${paramScan.slice(0, 8)} · ` : ""}${findingsWindowLabel}`}
         actions={
           <div className="flex flex-wrap items-center gap-2">
             {vulns.length > 0 ? (
@@ -881,12 +744,15 @@ function FindingsPage() {
         }
       />
 
+      <FindingLaneTabs lane={lane} counts={detailLoading ? undefined : findingFacets?.lane} approximate={laneCountsApproximate} onChange={(next) => { setSelectedId(null); setLane(next); setIssueTypeFilter("all"); setPage(1); setPageCursors([""]); setSortKey(next === "all" ? "effective_reach" : "severity"); }} />
+
       {triageError && (
         <div className="rounded-lg border border-amber-500/30 dark:border-amber-900/60 bg-amber-500/10 dark:bg-amber-950/20 px-3 py-2 text-sm text-amber-700 dark:text-amber-200">
           {triageError}
         </div>
       )}
 
+      <div id="finding-lane-results" role="tabpanel" aria-labelledby={`finding-lane-${lane}`} className="space-y-4">
       {loading && (
         <PageLoadingState
           title="Loading findings"
@@ -921,7 +787,7 @@ function FindingsPage() {
         </div>
       )}
 
-      {!loading && !error && vulns.length === 0 && !hasActiveFilters && scopeCompleteness?.status !== "partial" && (
+      {!loading && !error && vulns.length === 0 && lane === "all" && !hasActiveFilters && scopeCompleteness?.status !== "partial" && (
         <PageEmptyState
           title="No findings found"
           detail="Run a scan or connect a cloud account to populate CVE, cloud posture, graph, and remediation evidence."
@@ -937,7 +803,7 @@ function FindingsPage() {
         />
       )}
 
-      {!error && (vulns.length > 0 || hasActiveFilters) && (
+      {!loading && !error && (lane !== "all" || vulns.length > 0 || hasActiveFilters) && (
         <>
           <div className="flex flex-col gap-3">
             {/* Primary toolbar: search + issue type + severity, with
@@ -1118,25 +984,6 @@ function FindingsPage() {
               </div>
 
               <div className="flex flex-wrap items-center gap-1">
-                <span className="mr-1 text-[10px] font-medium uppercase tracking-[0.14em] text-ink-tertiary">Issue type</span>
-                {ISSUE_TYPE_FILTERS.map(({ key, label, hint }) => (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setIssueTypeFilter(key)}
-                    title={hint}
-                    className={`rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
-                      issueTypeFilter === key
-                        ? "border-cyan-700 bg-cyan-500/10 dark:bg-cyan-950/40 text-cyan-700 dark:text-cyan-200"
-                        : "border-outline text-ink-tertiary hover:border-outline-strong hover:text-ink-secondary"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-
-              <div className="flex flex-wrap items-center gap-1">
                 <div className="flex flex-wrap items-center gap-1">
                   <span className="mr-1 text-[10px] font-medium uppercase tracking-[0.14em] text-ink-tertiary">Severity</span>
                   {FILTERS?.map(({ key, label, color }) => (
@@ -1194,7 +1041,9 @@ function FindingsPage() {
             )}
           </div>
 
-          <FindingsQueueTable
+          <div>
+          {lane === "all" || lane === "vulnerabilities" ? <FindingsQueueTable
+            columnProfile={lane === "vulnerabilities" ? "vulnerabilities" : "all"}
             controlsContainerId="findings-table-controls"
             vulns={displayed}
             sortKey={sortKey}
@@ -1205,14 +1054,15 @@ function FindingsPage() {
             selectedId={selectedId}
             onSelect={setSelectedId}
             triageByKey={triageByKey}
-          />
+          /> : <FindingLaneTable lane={lane} findings={displayed} onSelect={setSelectedId} />}
+          </div>
 
           <PaginationBar
             page={page}
             totalPages={totalPages}
             totalItems={findingsTotal}
             hasMore={hasMoreFindings}
-            itemLabel={findingsTotalApproximate ? "issues (approx.)" : "issues"}
+            itemLabel={`${lane === "cloud" ? "control groups" : "issues"}${findingsTotalApproximate ? " (approx.)" : ""}`}
             onPrevious={() => setPage((p) => Math.max(1, p - 1))}
             onNext={() => {
               if (nextFindingsCursor) {
@@ -1237,6 +1087,7 @@ function FindingsPage() {
           )}
         </>
       )}
+      </div>
     </div>
   );
 }

@@ -556,6 +556,7 @@ class ScanSchedulesResponse(RootModel[list[ScanScheduleRow]]):
 
 
 class ReportJobStatusResponse(ReadResponse):
+    lane: str | None = None
     job_id: str
     tenant_id: str
     status: str

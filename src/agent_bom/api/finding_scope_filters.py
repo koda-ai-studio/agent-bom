@@ -81,6 +81,7 @@ def _canonical_scope_filters(
     control: str | None = None,
     owner: str | None = None,
     sla: str | None = None,
+    lane: str | None = None,
 ) -> dict[str, str]:
     """Normalize the optional scope/domain filters into an active-filter map.
 
@@ -121,6 +122,8 @@ def _canonical_scope_filters(
 
         key = domain.strip().lower()
         filters["domain"] = _LEGACY_DOMAIN_ALIASES.get(key, key)
+    if lane and lane.strip():
+        filters["lane"] = lane.strip().lower()
     if finding_class:
         filters["finding_class"] = finding_class
     if kev is not None:
@@ -195,6 +198,7 @@ def _finding_list_filters(
         "severity": severity,
         "kev": scope["kev"] == "true" if "kev" in scope else None,
         **{key: scope.get(scope_key) for key, scope_key in _ECHOED_SCOPE_FILTERS},
+        "lane": scope.get("lane"),
         "finding_class": finding_class,
         "q": _clean(q),
         "framework": _clean(framework),
@@ -203,3 +207,12 @@ def _finding_list_filters(
         "sla": sla,
     }
     return {key: value for key, value in filters.items() if value is not None}
+
+
+def normalize_export_filters(values: dict[str, Any]) -> dict[str, Any]:
+    """Drop absent filters while preserving explicitly false boolean predicates."""
+    return {
+        key: value.strip() if isinstance(value, str) else value
+        for key, value in values.items()
+        if value is not None and not (isinstance(value, str) and not value.strip())
+    }

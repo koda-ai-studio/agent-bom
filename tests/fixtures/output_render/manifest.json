@@ -14,8 +14,8 @@
   "sarif_stdout": "64384810204cefe6432d755dcc4335786e14050e744be2b44e3449abda3e077b"
  },
  "rich": {
-  "html": "9ff99749467b7d6406510c9b2dec9723a435ad70e20bae142ef8e3c9c2302342",
-  "html_offline": "56dc4c0f4f70934fc8836cf465b42140b072d3d99c7a945845c3d63326d386af",
+  "html": "5941f8dd9e91a91d5848fdbfa6049472200b591a4e6d391e98fa162dd47d9aec",
+  "html_offline": "7e66dfeed0a7d0d8941bc81985d3b9a21e4b3a8018bbd8f0e90cca502d5f545a",
   "sarif_exclude_unfixable": "127db529f82a65cfedf122744d1fbdcea8decbdd1ad929b74e4e050df188c6e1",
   "sarif_file": "2ce573ba0317170829eb68a47f249cf578954e8a17ff44a2afd67e040e5e190f",
   "sarif_stdout": "90b46d382daad0f5aab59cd53cdff03b349a6e81a7c9ebf057bf3f02a4b08cc9"

@@ -209,6 +209,9 @@ def _register_findings_query(
 ) -> None:
     @mcp.tool(annotations=read_only, title="Findings Query")
     async def findings_query(
+        lane: Annotated[
+            str | None, Field(max_length=32, description="Finding lane: vulnerabilities, cloud, iac, secrets, identity, data, other.")
+        ] = None,
         q: Annotated[str | None, Field(max_length=256, description="Free-text match on title, advisory or package.")] = None,
         severity: Annotated[str | None, Field(max_length=16, description="Exact severity: critical, high, medium, low.")] = None,
         kev: Annotated[bool | None, Field(description="Only known-exploited findings (true) or only non-KEV (false).")] = None,
@@ -235,6 +238,7 @@ def _register_findings_query(
         return await execute_tool_async(
             "findings_query",
             findings_query_impl,
+            lane=lane,
             q=q,
             severity=severity,
             kev=kev,

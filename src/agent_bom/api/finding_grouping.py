@@ -14,6 +14,8 @@ from agent_bom.api.finding_row_shapes import _package_identity, _row_vuln_id
 from agent_bom.api.finding_scope_filters import _finding_identity as _finding_identity
 from agent_bom.api.finding_view_filters import _copy_first_page_metadata as _copy_first_page_metadata
 from agent_bom.canonical_ids import canonical_id
+from agent_bom.core.severity import severity_rank
+from agent_bom.evidence.finding_lanes import finding_lane, lane_counts
 
 
 def _finding_group_offset(cursor: str | None, offset: int, sort_key: str) -> int:
@@ -54,11 +56,11 @@ def _collect_group_occurrences(
     return rows, first_page, warnings, source_cursor
 
 
-def _group_occurrence_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def _group_occurrence_rows(rows: list[dict[str, Any]], *, cloud_controls: bool = False) -> list[dict[str, Any]]:
     """Fold occurrences onto their canonical issue identity with a bounded sample."""
     grouped: dict[str, dict[str, Any]] = {}
     for row in rows:
-        group_id, group_key = _finding_group_identity(row)
+        group_id, group_key = _finding_group_identity(row, cloud_controls=cloud_controls)
         group = grouped.get(group_id)
         if group is None:
             group = dict(row)
@@ -71,6 +73,23 @@ def _group_occurrence_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 occurrences_truncated=False,
             )
             grouped[group_id] = group
+        if cloud_controls and severity_rank(str(row.get("severity") or "unknown")) > severity_rank(str(group.get("severity") or "unknown")):
+            # Keep group order and aggregate state, but represent the worst
+            # observed severity even when occurrences are sorted by time.
+            aggregate = {
+                key: group[key]
+                for key in (
+                    "finding_group_id",
+                    "finding_group_key",
+                    "occurrence_count",
+                    "unreconfirmed_occurrence_count",
+                    "_occurrence_rows",
+                    "occurrences_truncated",
+                )
+            }
+            group.clear()
+            group.update(row)
+            group.update(aggregate)
         group["occurrence_count"] = int(group["occurrence_count"]) + 1
         if row.get("observation_status") == "unreconfirmed":
             group["unreconfirmed_occurrence_count"] = int(group["unreconfirmed_occurrence_count"]) + 1
@@ -147,7 +166,7 @@ def _groups_envelope(
     )
 
 
-def _finding_group_identity(row: dict[str, Any]) -> tuple[str, str]:
+def _finding_group_identity(row: dict[str, Any], *, cloud_controls: bool = False) -> tuple[str, str]:
     """Return the canonical aggregate identity without changing occurrence IDs."""
     supplied_id = str(row.get("finding_group_id") or "").strip()
     supplied_key = str(row.get("finding_group_key") or "").strip()
@@ -156,10 +175,72 @@ def _finding_group_identity(row: dict[str, Any]) -> tuple[str, str]:
         package, _, ecosystem = _package_identity(row)
         group_key = f"vulnerability:{vulnerability_id}:{ecosystem or 'unknown'}:{package}"
     else:
-        group_key = f"occurrence:{_finding_identity(row)}"
+        evidence = row.get("evidence") or {}
+        control = evidence.get("check_id") if isinstance(evidence, dict) else None
+        if cloud_controls and finding_lane(row) == "cloud" and row.get("provider") and control and control != "unknown":
+            group_key = "cloud:" + ":".join(
+                str(value or "unknown")
+                for value in (row.get("provider"), row.get("finding_type"), evidence.get("benchmark_version"), control)
+            )
+        else:
+            group_key = f"occurrence:{_finding_identity(row)}"
     # Persisted metadata is an optimization, not authority. A row can be
     # reclassified/enriched after ingest; stale group metadata must not collapse
     # two distinct advisories. Reuse it only when its semantic key still agrees.
     if supplied_id and supplied_key == group_key:
         return supplied_id, group_key
     return canonical_id("finding-group", group_key), group_key
+
+
+def select_group_lane(all_groups: list[dict[str, Any]], severity: str | None, lane: str | None) -> tuple[list, list, dict]:
+    severity_groups = [g for g in all_groups if severity is None or _normalize_facet_severity(g.get("severity")) == severity]
+    counts = lane_counts(severity_groups)
+    selected = lane.strip().lower() if lane and lane.strip() else None
+
+    def matches(group: dict[str, Any]) -> bool:
+        return selected is None or finding_lane(group) == selected
+
+    selected_groups = list(filter(matches, all_groups))
+    if selected == "cloud":
+        # Control grouping is a lane presentation, not a new canonical issue
+        # identity. Overview and graph totals retain their occurrence contract.
+        selected_groups = _group_occurrence_rows(
+            [row for group in selected_groups for row in group["_occurrence_rows"]], cloud_controls=True
+        )
+        filtered = _group_occurrence_rows(
+            [row for group in filter(matches, severity_groups) for row in group["_occurrence_rows"]], cloud_controls=True
+        )
+        return filtered, selected_groups, counts
+    filtered = [g for g in selected_groups if severity is None or _normalize_facet_severity(g.get("severity")) == severity]
+    return filtered, selected_groups, counts
+
+
+def attach_lane_counts(envelope: dict, lane: str | None, counts: dict, partial: bool, include: bool) -> None:
+    if lane and lane.strip():
+        envelope["filters"]["lane"] = lane.strip().lower()
+    if lane and lane.strip().lower() == "cloud":
+        envelope["count_metadata"]["definition"] = "Cloud control groups matching the tenant, window, and filters."
+        envelope["count_metadata"]["scope"] = "tenant current-state cloud controls grouped by provider, result type, and benchmark version"
+        envelope["grouping"]["unit"] = "control_groups"
+        envelope["grouping"]["canonical_issue_total"] = counts.get("cloud", 0)
+        if "facet_metadata" in envelope:
+            envelope["facet_metadata"]["severity_basis"] = "cloud control groups"
+    if include:
+        envelope.setdefault("facets", {})["lane"] = counts
+        envelope["lane_counts_approximate"] = partial
+
+
+def cloud_control_severity_counts(rows: list[dict[str, Any]]) -> dict[str, int]:
+    """Count control groups reachable through each self-excluding severity filter."""
+    buckets: dict[str, set[str]] = {key: set() for key in ("critical", "high", "medium", "low", "info", "unknown")}
+    for row in rows:
+        if finding_lane(row) == "cloud":
+            group_id, _ = _finding_group_identity(row, cloud_controls=True)
+            buckets[_normalize_facet_severity(row.get("severity"))].add(group_id)
+    return {key: len(values) for key, values in buckets.items()}
+
+
+def lane_severity_counts(groups: list[dict[str, Any]], rows: list[dict[str, Any]], lane: str | None) -> dict[str, int]:
+    if lane and lane.strip().lower() == "cloud":
+        return cloud_control_severity_counts(rows)
+    return _grouped_severity_counts(groups)

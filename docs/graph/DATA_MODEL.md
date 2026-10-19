@@ -256,6 +256,7 @@ Findings (`agent_bom.finding.Finding`) are linked to graph nodes by `graph/asset
 | `EXTERNAL` | — | — |
 | `FILESYSTEM` | — | — |
 | `GRAPH_ANALYSIS` | — | — |
+| `IAC_SCAN` | — | — |
 | `MCP_SCAN` | `mcp-scan` | `static_scan` |
 | `MODEL_SCAN` | `model-scan` | `static_scan` |
 | `PROMPT_SCAN` | `prompt-scan` | `static_scan` |
@@ -354,4 +355,4 @@ Static-scan results. A kind can still be emitted through a table or a variable t
 - Relationship types with no detected non-demo emitter: `acted_as`, `imports`, `inherits`, `lateral_path`, `remediates`, `shares_cred`, `trace_step`
 - Entity types with no detected non-demo emitter: `cluster`, `credential_ref`, `environment`, `external_import`, `tool_call`
 - Registered collectors never named elsewhere in the source: —
-- Finding sources without a same-named registered collector: `BROWSER_EXT`, `CONTAINER`, `EXTERNAL`, `FILESYSTEM`, `GRAPH_ANALYSIS`, `PROXY`, `SBOM`, `SKILL`
+- Finding sources without a same-named registered collector: `BROWSER_EXT`, `CONTAINER`, `EXTERNAL`, `FILESYSTEM`, `GRAPH_ANALYSIS`, `IAC_SCAN`, `PROXY`, `SBOM`, `SKILL`

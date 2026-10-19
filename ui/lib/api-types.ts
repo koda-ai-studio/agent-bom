@@ -1533,6 +1533,10 @@ export interface FindingOccurrenceSummary {
 }
 
 export interface UnifiedFinding {
+  lane?: string | undefined;
+  provider?: string | undefined;
+  account_ref?: string | undefined;
+  environment?: string | undefined;
   observation_status?: "observed" | "unreconfirmed" | undefined;
   reconfirmation?: FindingReconfirmation | undefined;
   unreconfirmed_occurrence_count?: number | undefined;
@@ -1661,6 +1665,8 @@ export interface FindingListEnvelope<T> {
     scan_budget: number;
     occurrence_total: number | null;
     occurrence_sample_limit: number;
+    unit?: "control_groups" | undefined;
+    canonical_issue_total?: number | undefined;
   } | undefined;
   count_metadata: {
     definition: string;
@@ -1684,6 +1690,7 @@ export interface FindingListEnvelope<T> {
   } | undefined;
   /** Exact only when `facets_approximate` is false. */
   facets?: FindingFacets | undefined;
+  lane_counts_approximate?: boolean;
   facets_approximate?: boolean | undefined;
   facet_metadata?: {
     freshness: {
@@ -1709,6 +1716,7 @@ export interface ScopeCompleteness {
 }
 
 export interface FindingFacets {
+  lane?: Record<string, number>;
   finding_class: Record<"vulnerability" | "misconfiguration" | "secret" | "pii" | "identity" | "unclassified", number>;
   severity: Record<"critical" | "high" | "medium" | "low" | "info" | "unknown", number>;
   status: Record<"open" | "resolved", number>;

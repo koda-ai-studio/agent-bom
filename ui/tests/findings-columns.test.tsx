@@ -4,12 +4,12 @@ import { FindingsQueueTable } from "@/components/findings-queue";
 import type { EnrichedVuln } from "@/lib/findings-view";
 vi.mock("@/components/auth-provider", () => ({ useAuthState: () => ({ hasCapability: () => false }) }));
 const row: EnrichedVuln = {
-  id: "CVE-fixture", severity: "high", summary: "Fixture finding", packages: ["example"], agents: [],
+  id: "CVE-fixture", severity: "high", summary: "Fixture finding", packages: ["example"], current_version: "1.0", agents: [],
   sources: ["SBOM", "CVE"], detection_source: "SBOM", finding_type: "CVE", advisory_sources: ["OSV"],
   affected_servers: [], exposed_credentials: [], reachable_tools: [], references: [], remediation_items: [],
   fixed_version: "2.0", lifecycle_status: "resolved", last_observed: "2026-09-01T00:00:00Z",
 };
-function mount() { return render(<FindingsQueueTable vulns={[row]} sortKey="severity" sortDir="desc" handleSort={vi.fn()} pendingExceptions={new Set()} onMarkFP={vi.fn()} selectedId={null} onSelect={vi.fn()} />); }
+function mount(columnProfile: "all" | "vulnerabilities" = "all") { return render(<FindingsQueueTable columnProfile={columnProfile} vulns={[row]} sortKey="severity" sortDir="desc" handleSort={vi.fn()} pendingExceptions={new Set()} onMarkFP={vi.fn()} selectedId={null} onSelect={vi.fn()} />); }
 beforeEach(() => { localStorage.clear(); });
 it("groups factual detection, optional dates, and unverified remediation without a pretend Finding sort", () => {
   mount();
@@ -72,4 +72,24 @@ it("opens column settings outside the results flow and restores focus on Escape"
   fireEvent.keyDown(document, { key: "Escape" });
   expect(screen.queryByRole("dialog", { name: "Column preferences" })).not.toBeInTheDocument();
   expect(trigger).toHaveFocus();
+});
+
+it("gives vulnerabilities their own evidence columns and scoped saved preferences", () => {
+  const all = mount();
+  fireEvent.click(screen.getByRole("button", { name: "Columns" }));
+  fireEvent.click(screen.getByRole("checkbox", { name: "Observed" }));
+  const savedAll = localStorage.getItem("agent-bom:findings-columns:v1");
+  all.unmount();
+  const view = mount("vulnerabilities");
+  expect(screen.getAllByRole("columnheader").map(cell => cell.textContent)).toEqual(["Finding", "Priority", "Affected asset", "Reach / exploit", "Remediation", "Action"]);
+  expect(screen.getByText("example@1.0")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Columns" }));
+  fireEvent.click(screen.getByRole("checkbox", { name: "Detection" }));
+  view.unmount();
+  mount("vulnerabilities");
+  expect(screen.getByRole("columnheader", { name: "Detection" })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Columns" }));
+  fireEvent.click(screen.getByRole("button", { name: "Reset view" }));
+  expect(screen.queryByRole("columnheader", { name: "Detection" })).not.toBeInTheDocument();
+  expect(localStorage.getItem("agent-bom:findings-columns:v1")).toBe(savedAll);
 });

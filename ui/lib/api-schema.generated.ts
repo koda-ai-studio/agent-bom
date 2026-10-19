@@ -3173,17 +3173,14 @@ export interface paths {
          * @description List unified findings aggregated from completed scan results.
          *
          *     Dedup/sort and synchronous store reads run in a worker thread (the context,
-         *     including tenant scope and the ``include`` projection, propagates) so a deep
-         *     read cannot block the event loop. Adaptive backpressure sheds excess reads
-         *     under genuine saturation with ``429 + Retry-After`` instead of starving
-         *     ``/health`` and unrelated routes.
+         *     including tenant scope and projection, propagates) to avoid blocking the
+         *     event loop. Adaptive backpressure rejects saturation with 429 + Retry-After.
          *
          *     Rows carry ``framework_tags`` and ``controls_count``; ``?include=controls``
          *     restores the full per-finding control mappings.
          *
          *     ``offset`` is a compatibility path capped at 10,000: past the ceiling the
-         *     endpoint returns ``400`` and steers callers to ``cursor``/``next_cursor``,
-         *     the unbounded-depth contract shared with ``/v1/compliance/hub/findings``.
+         *     endpoint returns ``400`` and steers callers to ``cursor``/``next_cursor``.
          */
         get: operations["list_findings_v1_findings_get"];
         put?: never;
@@ -3377,7 +3374,7 @@ export interface paths {
         };
         /**
          * Export Finding Triage Vex
-         * @description Export signed OpenVEX for eligible tenant-scoped not_affected triage decisions.
+         * @description Export signed OpenVEX for eligible tenant-scoped triage decisions.
          */
         get: operations["export_finding_triage_vex_v1_findings_triage_vex_get"];
         put?: never;
@@ -13644,6 +13641,8 @@ export interface components {
             kev_cve_id?: string | null;
             /** Kev Due Date */
             kev_due_date?: string | null;
+            /** Lane */
+            lane?: string | null;
             /** Last Observed */
             last_observed?: string | null;
             /** Last Seen */
@@ -13692,6 +13691,8 @@ export interface components {
             schema_version?: string | null;
             /** Severity */
             severity: string;
+            /** Severity Source */
+            severity_source?: string | null;
             /** Sla Due At */
             sla_due_at?: string | null;
             /** Sla Due At Source */
@@ -13888,6 +13889,10 @@ export interface components {
             count_metadata: components["schemas"]["CountMetadata"];
             /** Cursor */
             cursor: string | null;
+            /** Facets */
+            facets?: {
+                [key: string]: unknown;
+            } | null;
             /** Filters */
             filters: {
                 [key: string]: unknown;
@@ -13898,6 +13903,8 @@ export interface components {
             has_more: boolean;
             /** Include */
             include: string[];
+            /** Lane Counts Approximate */
+            lane_counts_approximate?: boolean | null;
             /** Limit */
             limit: number;
             /** Next Cursor */
@@ -20728,7 +20735,7 @@ export interface components {
         ReportFormat: "ndjson";
         /**
          * ReportJobRequest
-         * @description Request body for ``POST /v1/reports``.
+         * @description Public findings report request schema.
          */
         ReportJobRequest: {
             /** Account */
@@ -20741,6 +20748,8 @@ export interface components {
             finding_class?: ("vulnerability" | "misconfiguration" | "secret" | "pii" | "identity" | "unclassified") | null;
             /** @default ndjson */
             format: components["schemas"]["ReportFormat"];
+            /** Lane */
+            lane?: string | null;
             /** Owner */
             owner?: string | null;
             /** Provider */
@@ -20802,6 +20811,8 @@ export interface components {
             format: string;
             /** Job Id */
             job_id: string;
+            /** Lane */
+            lane?: string | null;
             /** Owner */
             owner: string | null;
             /** Provider */
@@ -31032,6 +31043,8 @@ export interface operations {
                 include_facets?: boolean;
                 /** @description Comma-separated opt-ins; `controls` returns full per-finding control mappings */
                 include?: string | null;
+                /** @description Finding lane: vulnerabilities, cloud, iac, secrets, identity, data, other */
+                lane?: string | null;
             };
             header?: never;
             path?: never;
@@ -31496,6 +31509,7 @@ export interface operations {
                 domain?: string | null;
                 window_days?: number | null;
                 status?: string | null;
+                lane?: string | null;
                 finding_class?: ("vulnerability" | "misconfiguration" | "secret" | "pii" | "identity" | "unclassified") | null;
                 kev?: boolean | null;
                 framework?: string | null;

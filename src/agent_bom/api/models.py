@@ -12,10 +12,12 @@ from agent_bom.ai_schemas import AIFindingAssessment as _CoreAIFindingAssessment
 from agent_bom.ai_schemas import AIProvenance as _CoreAIProvenance
 from agent_bom.api import policy_inputs as _policy_inputs
 from agent_bom.api.push_models import PushEvidencePayload as _PushEvidencePayload
+from agent_bom.api.report_types import ReportFormat as ReportFormat
+from agent_bom.api.report_types import ReportJobRequest as _ReportJobRequest
 from agent_bom.config import API_MAX_BATCH_SCAN_TARGETS
 from agent_bom.evidence.semantics import EvidenceCompletenessLedger as _CoreEvidenceCompletenessLedger
 from agent_bom.evidence.semantics import SecurityDimensions as _CoreSecurityDimensions
-from agent_bom.finding_scope import FindingClass, FindingSeverityFilter, canonical_finding_severity_filter
+from agent_bom.finding_scope import FindingClass
 from agent_bom.identity.join_contract import IdentityResourceJoinContract as _CoreIdentityResourceJoinContract
 
 # ─── Enums ─────────────────────────────────────────────────────────────────
@@ -358,36 +360,8 @@ class ScanJob(BaseModel):
         return sanitized if isinstance(sanitized, list) else []
 
 
-class ReportFormat(str, Enum):
-    """Supported async report artifact formats."""
-
-    NDJSON = "ndjson"
-
-
-class ReportJobRequest(BaseModel):
-    """Request body for ``POST /v1/reports``."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    format: ReportFormat = ReportFormat.NDJSON
-    sort: Literal["effective_reach", "cvss", "severity", "ordinal"] = "effective_reach"
-    severity: FindingSeverityFilter | None = None
-    q: str | None = Field(default=None, max_length=256)
-    scan_id: str | None = Field(default=None, max_length=128)
-    provider: str | None = Field(default=None, max_length=64)
-    account: str | None = Field(default=None, max_length=256)
-    environment: str | None = Field(default=None, max_length=64)
-    domain: str | None = Field(default=None, max_length=32)
-    owner: str | None = Field(default=None, max_length=256)
-    sla: Literal["overdue", "due", "unassigned"] | None = None
-    finding_class: FindingClass | None = None
-    status: Literal["open", "resolved", "all"] = "open"
-    window_days: int | None = Field(default=None, ge=0, le=3650)
-
-    @field_validator("severity", mode="before")
-    @classmethod
-    def _canonicalize_severity(cls, value: object) -> str | None:
-        return canonical_finding_severity_filter(value)
+class ReportJobRequest(_ReportJobRequest):
+    """Public findings report request schema."""
 
 
 class ReportJob(BaseModel):
@@ -407,6 +381,7 @@ class ReportJob(BaseModel):
     domain: str | None = None
     owner: str | None = None
     sla: Literal["overdue", "due", "unassigned"] | None = None
+    lane: str | None = Field(default=None, max_length=32)
     finding_class: FindingClass | None = None
     finding_status: Literal["open", "resolved", "all"] = "open"
     window_days: int | None = None

@@ -62,3 +62,34 @@ def snapshot_metadata(jobs: list[_ScanJobLike], rows: list[dict[str, Any]]) -> d
         "scan_ids": sorted(completed_scan_ids | {str(row.get("scan_id")) for row in rows if row.get("scan_id")}),
         "completed_scan_count": len(jobs),
     }
+
+
+def snapshot_envelope(
+    *,
+    tenant_id: str,
+    rows: list[dict],
+    jobs: list,
+    first_total: int | None,
+    first_metadata: dict | None,
+    cursor: str | None,
+    max_findings: int,
+    warnings: list[str],
+) -> dict:
+    """Label bounded snapshot evidence explicitly for narrative and export consumers."""
+    truncated = cursor is not None
+    if truncated:
+        warnings.append(f"Narrative evidence is bounded to {max_findings} current findings; additional rows remain.")
+    return {
+        "schema_version": "finding-snapshot.v1",
+        "tenant_id": tenant_id,
+        "findings": rows,
+        "count": len(rows),
+        "total": first_total,
+        **snapshot_metadata(jobs, rows),
+        "warnings": list(dict.fromkeys(warnings)),
+        "count_metadata": first_metadata or {},
+        "completeness": {
+            "status": "partial" if truncated else "complete",
+            "reason": "snapshot row bound reached" if truncated else "",
+        },
+    }
