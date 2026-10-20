@@ -34,7 +34,7 @@ from agent_bom.graph.rollup_edges import combine_reasons as _combine_reasons
 from agent_bom.graph.rollup_edges import cross_container_edge_rows, edge_projection
 from agent_bom.graph.rollup_edges import descendants as _descendants
 from agent_bom.graph.rollup_edges import edge_count_metadata as _edge_count_metadata
-from agent_bom.graph.rollup_issues import ISSUE_SEVERITY_BASIS, ISSUE_SEVERITY_DEFINITION, IssueTally, build_issue_index
+from agent_bom.graph.rollup_issues import ISSUE_SEVERITY_BASIS, ISSUE_SEVERITY_DEFINITION, IssueTally, build_finding_index
 from agent_bom.graph.types import EntityType, RelationshipType
 
 # Severity buckets reported in every roll-up histogram, worst → least.
@@ -386,13 +386,13 @@ def containment_descendants(graph: UnifiedGraph, root: str) -> list[str]:
     return _descendants(root, _contains_children(graph))
 
 
-# Per-node roll-up facts: (type, severity bucket, rank, exposed, toxic, issue keys).
-_NodeFact = tuple[str, str, int, bool, bool, tuple[str, ...]]
+# Per-node roll-up facts: (type, severity bucket, rank, exposed, toxic, issue keys, occurrence keys).
+_NodeFact = tuple[str, str, int, bool, bool, tuple[str, ...], tuple[str, ...]]
 
 
 def _node_facts(graph: UnifiedGraph) -> dict[str, _NodeFact]:
     """Derive each node's roll-up facts once; nested scopes revisit a node many times."""
-    issues = build_issue_index(graph)
+    findings = build_finding_index(graph)
     return {
         nid: (
             _node_type_value(node),
@@ -400,7 +400,7 @@ def _node_facts(graph: UnifiedGraph) -> dict[str, _NodeFact]:
             SEVERITY_RANK.get((node.severity or "").lower(), 0),
             _is_exposed(node),
             _is_toxic(node),
-            issues.get(nid, ()),
+            *findings.get(nid, ((), ())),
         )
         for nid, node in graph.nodes.items()
     }
@@ -426,14 +426,14 @@ def _aggregate(
             continue
         if active_filters is not None and not active_filters.matches(node):
             continue
-        entity_type, bucket, rank, exposed, toxic, keys = node_facts[nid]
+        entity_type, bucket, rank, exposed, toxic, keys, occurrence_keys = node_facts[nid]
         agg.descendant_count += 1
         if memberships is not None:
             memberships[nid] += 1
         by_type[entity_type] += 1
         severity_counts[bucket] += 1
         if keys:
-            tally.add(node, keys)
+            tally.add(node, keys, occurrence_keys)
         if rank > agg.worst_severity_rank:
             agg.worst_severity_rank = rank
             agg.worst_severity = bucket
