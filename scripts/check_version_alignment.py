@@ -115,6 +115,18 @@ MANAGED_PATTERNS: tuple[ManagedPattern, ...] = (
         re.compile(r"(Latest release: \*\*v)(\d+\.\d+\.\d+)"),
         "published",
     ),
+    # A Claude Code plugin install resolves the package from PyPI, so both the
+    # manifest version and the uvx pin must name a release that exists there.
+    ManagedPattern(
+        "Claude plugin version",
+        re.compile(r'("name": "agent-bom",\n\s*"version": ")(\d+\.\d+\.\d+)'),
+        "published",
+    ),
+    ManagedPattern(
+        "uvx PyPI pin",
+        re.compile(r'("--from",\s*"agent-bom==)(\d+\.\d+\.\d+)'),
+        "published",
+    ),
 )
 
 # Compose files whose every pinned service builds its image from this tree, so

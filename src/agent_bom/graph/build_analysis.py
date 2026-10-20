@@ -19,6 +19,7 @@ from agent_bom.graph.finding_row_projection import project_finding_rows
 from agent_bom.graph.interaction_risk_ids import bind_interaction_risk_agent_ids
 from agent_bom.graph.provider_inheritance import inherit_cloud_provider
 from agent_bom.graph.relationship_contract import audit_graph_contract
+from agent_bom.graph.storage_integration_correlation import correlate_storage_integrations
 
 _logger = logging.getLogger("agent_bom.graph.builder")
 ReportOverlay = Callable[[UnifiedGraph, Mapping[str, Any]], None]
@@ -77,6 +78,9 @@ def _identity_analysis(graph: UnifiedGraph, report_json: dict[str, Any]) -> None
         apply_cnapp_overlay(graph)
     except Exception:  # noqa: BLE001
         _logger.warning("CNAPP overlay failed", exc_info=True)
+
+    # Pure attribute joins on recorded identifiers; nothing here can fail on partial data.
+    correlate_storage_integrations(graph)
 
     try:
         from agent_bom.graph.effective_permissions import apply_effective_permissions

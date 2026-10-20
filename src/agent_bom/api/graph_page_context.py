@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from agent_bom.api.graph_page_stack import page_agent_stack
 from agent_bom.graph import UnifiedEdge, UnifiedNode
 from agent_bom.graph.rollup import ROLLUP_CONTAINMENT_RELATIONSHIPS
 
@@ -48,6 +49,19 @@ async def containment_ancestors(
         return [], []
     nodes = await call_store(graph_store.nodes_by_ids, scan_id=scan_id, tenant_id=tenant_id, node_ids=ancestor_ids)
     return list(nodes), list(ancestor_edges.values())
+
+
+async def page_context(
+    graph_store: Any, *, scan_id: str, tenant_id: str, page_nodes: list[UnifiedNode], call_store: Any
+) -> tuple[list[UnifiedNode], list[UnifiedEdge], dict[str, Any]]:
+    """Context nodes/edges for a ranked page: the agent stack, then containment above page and stack.
+
+    Returns the context nodes and edges plus the stack's completeness summary.
+    """
+    stack = await page_agent_stack(graph_store, scan_id=scan_id, tenant_id=tenant_id, page_nodes=page_nodes, call_store=call_store)
+    page_ids = {node.id for node in page_nodes} | {node.id for node in stack.nodes}
+    nodes, edges = await containment_ancestors(graph_store, scan_id=scan_id, tenant_id=tenant_id, node_ids=page_ids, call_store=call_store)
+    return [*stack.nodes, *nodes], [*stack.edges, *edges], stack.summary()
 
 
 async def page_attack_context(

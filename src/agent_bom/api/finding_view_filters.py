@@ -7,8 +7,11 @@ from typing import Any, NamedTuple
 
 from agent_bom.api.finding_list_envelope import finding_list_envelope
 from agent_bom.api.finding_row_shapes import _package_base_name, _row_vuln_id
+from agent_bom.core.reachability import reachability_bucket
 
 _FINDINGS_VIEW_FILTER_MAX_ROWS = 50_000
+#: Fields a view adds to each emitted row from the triage store.
+VIEW_TRIAGE_FIELDS: tuple[str, ...] = ("triage_id", "triage_decision", "triage_queue_state")
 
 
 def _finding_triage_state(
@@ -34,13 +37,28 @@ def _finding_triage_state(
     return None
 
 
-def _matches_reachability(reachable: Any, requested: str | None) -> bool:
-    return (
-        requested is None
-        or (requested == "reachable" and reachable is True)
-        or (requested == "unreachable" and reachable is False)
-        or (requested == "unassessed" and reachable is None)
-    )
+def redacts_after_filter(*, redact_page: bool, triage: str | None) -> bool:
+    """Whether a view may filter unredacted rows and redact only the rows it emits.
+
+    Reachability and suppression read fields redaction never rewrites. Triage
+    matches on identifiers redaction may rewrite, so that view redacts first.
+    """
+    return redact_page and triage is None
+
+
+def redact_view_rows(
+    rows: list[dict[str, Any]], redact_page: Callable[[list[dict[str, Any]]], list[dict[str, Any]]]
+) -> list[dict[str, Any]]:
+    """Redact rows a view filtered raw; its triage fields are added after redaction, as on the redact-first path."""
+    redacted = redact_page([{k: v for k, v in row.items() if k not in VIEW_TRIAGE_FIELDS} for row in rows])
+    for out, row in zip(redacted, rows, strict=True):
+        out.update({key: row[key] for key in VIEW_TRIAGE_FIELDS if key in row})
+    return redacted
+
+
+def _matches_reachability(row: dict[str, Any], requested: str | None) -> bool:
+    """Filter on the same derived verdict the row displays."""
+    return requested is None or reachability_bucket(row) == requested
 
 
 def _view_filtered_row(
@@ -60,7 +78,7 @@ def _view_filtered_row(
         row["triage_queue_state"] = triage_state.get("queue_state") if triage_state else None
     decision = triage_state.get("decision") if triage_state else None
     triage_matches = triage is None or decision == triage or (triage == "untriaged" and decision is None)
-    if not (_matches_reachability(row.get("graph_reachable"), reachability) and triage_matches):
+    if not (_matches_reachability(row, reachability) and triage_matches):
         return None
     if suppressed_only and row.get("suppressed") is not True:
         return None
@@ -75,6 +93,11 @@ class _ViewWalk(NamedTuple):
     exhausted: bool
     truncated: bool
     total_matches: int | None = None
+
+
+def redact_emitted_rows(walk: _ViewWalk, redact_page: Callable[[list[dict[str, Any]]], list[dict[str, Any]]]) -> _ViewWalk:
+    """Redact only the rows a raw-filtered walk will emit."""
+    return walk._replace(matches=redact_view_rows(walk.matches, redact_page))
 
 
 def _walk_view_filtered_findings(

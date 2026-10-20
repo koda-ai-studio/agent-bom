@@ -1,0 +1,11 @@
+{
+  "name": "agent-bom",
+  "version": "0.109.0",
+  "displayName": "agent-bom",
+  "description": "Scan MCP servers, agents and packages for CVEs, supply-chain risk and exposed credentials; check a server before you add it; plan fixes. Read-only and local.",
+  "author": { "name": "koda-ai-studio", "url": "https://github.com/koda-ai-studio" },
+  "homepage": "https://github.com/koda-ai-studio/agent-bom",
+  "repository": "https://github.com/koda-ai-studio/agent-bom",
+  "license": "Apache-2.0",
+  "keywords": ["security", "mcp", "sbom", "supply-chain", "cve", "ai-agents"]
+}

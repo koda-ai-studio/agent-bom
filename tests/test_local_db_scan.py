@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -23,6 +22,12 @@ from agent_bom.sbom import parse_cyclonedx
 
 def _make_pkg(name: str = "requests", version: str = "2.28.0", eco: str = "pypi") -> Package:
     return Package(name=name, version=version, ecosystem=eco)
+
+
+def _local_freshness(*, stale: bool):
+    from agent_bom.vuln_freshness import VulnDataFreshness
+
+    return VulnDataFreshness(mode="local", sources=["OSV"], record_count=1, stale=stale)
 
 
 def _make_local_vuln(vuln_id: str = "CVE-2024-1111", severity: str = "high", cvss: float = 7.5):
@@ -316,7 +321,7 @@ def test_scan_packages_skips_osv_for_db_covered_packages():
     db_key = "pypi:requests@2.28.0"
 
     with (
-        patch("agent_bom.vuln_freshness.compute_freshness", return_value=SimpleNamespace(stale=False)),
+        patch("agent_bom.vuln_freshness.compute_freshness", return_value=_local_freshness(stale=False)),
         patch("agent_bom.scanners._scan_packages_local_db", return_value=(1, {db_key})),
         patch("agent_bom.scanners._db_covered_ecosystems", return_value=set()),
         patch("agent_bom.scanners.query_osv_batch") as mock_osv,
@@ -354,7 +359,7 @@ def test_scan_packages_only_skips_exact_db_covered_version():
     newer = _make_pkg("requests", "2.31.0")
 
     with (
-        patch("agent_bom.vuln_freshness.compute_freshness", return_value=SimpleNamespace(stale=False)),
+        patch("agent_bom.vuln_freshness.compute_freshness", return_value=_local_freshness(stale=False)),
         patch("agent_bom.scanners._scan_packages_local_db", return_value=(1, {"pypi:requests@2.28.0"})),
         patch("agent_bom.scanners._db_covered_ecosystems", return_value=set()),
         patch("agent_bom.scanners.query_osv_batch", return_value={}) as mock_osv,
@@ -674,7 +679,7 @@ async def test_stale_local_coverage_does_not_suppress_online_osv(stale, offline,
     with (
         patch("agent_bom.scanners._scan_packages_local_db", return_value=(0, {"pypi:requests@2.28.0"})),
         patch("agent_bom.scanners._db_covered_ecosystems", return_value={"PyPI"}),
-        patch("agent_bom.vuln_freshness.compute_freshness", return_value=SimpleNamespace(stale=stale)),
+        patch("agent_bom.vuln_freshness.compute_freshness", return_value=_local_freshness(stale=stale)),
         patch("agent_bom.scanners.query_osv_batch", new_callable=AsyncMock, return_value={}) as osv,
         patch("agent_bom.scanners.record_scan_warning") as warning,
     ):

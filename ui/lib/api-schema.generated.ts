@@ -16801,7 +16801,7 @@ export interface components {
             /** Collapsed */
             collapsed?: {
                 [key: string]: unknown;
-            } | null;
+            }[] | null;
             completeness: components["schemas"]["GraphCompleteness"];
             /** Created At */
             created_at: string;

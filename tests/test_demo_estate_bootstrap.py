@@ -318,7 +318,7 @@ def test_demo_estate_graph_is_a_rich_multi_agent_estate(demo_estate_client: Test
 
     labels = {n.get("label") for n in nodes}
     # Realistic, distinct agents render.
-    assert {"Cursor IDE Agent", "LangChain Service Agent", "Support Copilot", "Data Pipeline Agent"} <= labels
+    assert {"Cursor IDE Agent", "LangChain Service", "Support Copilot", "Data Pipeline Agent"} <= labels
 
     # Configuration errors must not masquerade as CVEs or invented packages.
     assert "CVE-2024-S3ACL" not in labels
@@ -1175,7 +1175,13 @@ def test_demo_estate_graph_carries_the_projected_estate(demo_estate_client: Test
     assert by_type["environment"] >= 100, by_type
     assert by_type["misconfiguration"] >= 439, by_type
 
-    contains = {(row.get("source"), row.get("target")) for row in payload.get("edges") or [] if row.get("relationship") == "contains"}
+    # Node paging bounds each page's edges; read the parents' recorded edges completely.
+    parents = {"org:enterprise:northstar-health-ai", "account:aws:123456789012", "env:aws:123456789012:production"}
+    contains = {
+        (row.get("source"), row.get("target"))
+        for row in _outgoing_graph_edges(demo_estate_client, payload, parents)
+        if row.get("relationship") == "contains"
+    }
     assert ("org:enterprise:northstar-health-ai", "account:aws:123456789012") in contains
     assert ("account:aws:123456789012", "env:aws:123456789012:production") in contains
     assert (

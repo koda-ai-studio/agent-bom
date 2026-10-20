@@ -68,7 +68,8 @@ DEMO_ADVISORIES: tuple[DemoAdvisory, ...] = (
         "3.1.1",
         "CVE-2022-0235",
         "high",
-        6.1,
+        # GHSA-r683-j2x4-v87g: CVSS:3.0/AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H.
+        8.8,
         "node-fetch leaks Cookie/Authorization headers on cross-origin redirect",
         sample_version="3.1.0",
         cwe="CWE-200",

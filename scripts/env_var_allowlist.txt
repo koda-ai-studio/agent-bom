@@ -527,6 +527,7 @@ AGENT_BOM_VULN_DB_OFFLINE  # airgap toggle that forces existing-cache-only fresh
 AGENT_BOM_VULN_DB_BUNDLE_DIR  # optional override for the air-gap KEV/EPSS sidecar feed directory; defaults to the parent of AGENT_BOM_DB_PATH; read in enrichment.py
 AGENT_BOM_DB_STALE_DAYS  # per-invocation vulnerability DB age gate threshold; re-read in vuln_freshness.py so CLI/tests can change policy without restarting
 AGENT_BOM_REQUIRE_FRESH_DB  # per-invocation opt-in for the stale vulnerability DB policy gate; mirrors --require-fresh-db
+AGENT_BOM_ALLOW_STALE_DB  # per-invocation air-gap opt-out from failing closed on outdated local vuln data; mirrors --allow-stale-db; read in vuln_freshness.py
 AGENT_BOM_IN_CONTAINER  # runtime install-method detection override used only to print the correct container upgrade command
 AGENT_BOM_DOCKER_IMAGE  # runtime container image override used only to print the matching docker pull command
 
@@ -608,3 +609,6 @@ AGENT_BOM_OKTA_CLIENT_ID  # OAuth service-app client ID for DPoP discovery
 AGENT_BOM_OKTA_KEY_ID  # Public signing key ID for Okta private_key_jwt
 AGENT_BOM_OKTA_PRIVATE_KEY_FILE  # Owner-only local RSA PEM path; key stays local
 AGENT_BOM_GRAPH_ROLLUP_PREWARM  # Opt out of background roll-up warm-up after snapshot commits; read at warm time
+AGENT_BOM_FINDING_WALK_CACHE  # Opt out of reusing a findings cursor walk's scan rows across its pages; read per request
+AGENT_BOM_FINDING_REACHABILITY_PREWARM  # Opt out of building the findings reachability index after snapshot commits; read at warm time
+AGENT_BOM_ROUTE_WARMUP  # Opt out of compiling the API route table on a boot thread; read once at startup

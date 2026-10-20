@@ -28,6 +28,7 @@ from agent_bom.demo_estate.showcase_graph import (
     seed_showcase_graph_if_empty,
     seed_showcase_identities,
 )
+from agent_bom.demo_estate.showcase_packages import showcase_package_holders
 from agent_bom.security import sanitize_error
 
 _logger = logging.getLogger(__name__)
@@ -208,30 +209,36 @@ def _stamp_showcase_graph_reachability(blast_radii: list[Any], agents: list[Any]
     """
     agents_by_name = {agent.name: agent for agent in agents}
     servers_by_name = {server.name: server for agent in agents for server in agent.mcp_servers}
+    holders = showcase_package_holders()
 
     for blast_radius in blast_radii:
-        package_key = f"{blast_radius.package.name}@{blast_radius.package.version}".lower()
+        package = blast_radius.package
+        package_key = f"{package.name}@{package.version}".lower()
         path = SHOWCASE_PACKAGES.get(package_key)
         if path is None:
             continue
-        server_name, vulnerability_id, _severity, _score = path
+        _server_name, vulnerability_id, _severity, _score = path
         if blast_radius.vulnerability.id.upper() != vulnerability_id.upper():
             continue
 
-        agent_name = SHOWCASE_SERVERS[server_name][0]
-        agent = agents_by_name.get(agent_name)
-        server = servers_by_name.get(server_name)
-        if agent is None or server is None:
+        # Every server the graph draws holding this package, and the agent using each.
+        drawn: list[tuple[Any, Any]] = []
+        for name in holders.get((package.name, package.version, package.ecosystem), []):
+            agent = agents_by_name.get(SHOWCASE_SERVERS[name][0]) if name in SHOWCASE_SERVERS else None
+            server = servers_by_name.get(name)
+            if agent is not None and server is not None:
+                drawn.append((agent, server))
+        if not drawn:
             continue
-
-        if all(existing.name != agent.name for existing in blast_radius.affected_agents):
-            blast_radius.affected_agents.append(agent)
-        if all(existing.name != server.name for existing in blast_radius.affected_servers):
-            blast_radius.affected_servers.append(server)
+        for agent, server in drawn:
+            if all(existing.name != agent.name for existing in blast_radius.affected_agents):
+                blast_radius.affected_agents.append(agent)
+            if all(existing.name != server.name for existing in blast_radius.affected_servers):
+                blast_radius.affected_servers.append(server)
 
         blast_radius.graph_reachable = True
         blast_radius.graph_min_hop_distance = 3
-        blast_radius.graph_reachable_from_agents = [f"agent:{agent_name}"]
+        blast_radius.graph_reachable_from_agents = sorted({f"agent:{agent.name}" for agent, _server in drawn})
         blast_radius.calculate_risk_score()
 
 

@@ -401,6 +401,16 @@ def enrichment_options(fn):
                 ),
             ),
             click.option(
+                "--allow-stale-db",
+                "allow_stale_db",
+                is_flag=True,
+                envvar="AGENT_BOM_ALLOW_STALE_DB",
+                help=(
+                    "Air-gap opt-out: accept an outdated local vuln DB that OSV did not back as complete, instead of "
+                    "failing closed with an incomplete scan (exit 1). The freshness report is unchanged."
+                ),
+            ),
+            click.option(
                 "--db-source",
                 "db_sources",
                 type=str,

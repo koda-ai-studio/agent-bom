@@ -82,7 +82,7 @@ The demo is intentionally noisy enough to prove value without scanning a
 private repo. Current source output includes these excerpts (installed-release output may differ):
 
 ```text
-  Security posture:   CRIT  7   HIGH  10   MED   8   LOW   26 · all finding categories
+  Security posture:   CRIT  7   HIGH  11   MED   7   LOW   26 · all finding categories
   5 agents · 10 servers · 23 packages
 DISCOVER | Agents
   Agent                Type              Servers    Pkgs    Creds    Vulns

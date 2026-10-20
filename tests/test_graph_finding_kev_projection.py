@@ -57,10 +57,10 @@ def test_estate_projection_carries_kev_for_every_kev_finding(estate_graph_and_fi
     kev_findings = [f for f in findings if f.is_kev]
     assert kev_findings, "the demo estate must carry KEV findings for this check to mean anything"
     for finding in kev_findings:
-        node = graph.nodes[f"vuln:demo-estate:{finding.id}"]
+        node = graph.nodes[finding.finding_node_id]
         assert node.attributes.get("is_kev") is True, finding.id
         assert node.attributes.get("vulnerability_id") == finding.vulnerability_id
         path = AttackPath(source="a", target=node.id, hops=[node.id], edges=[], composite_risk=1.0, summary="")
         assert path_is_kev(path, graph.nodes)
     non_kev = next(f for f in findings if not f.is_kev and f.finding_type.value == "CVE")
-    assert graph.nodes[f"vuln:demo-estate:{non_kev.id}"].attributes.get("is_kev") is False
+    assert graph.nodes[non_kev.finding_node_id].attributes.get("is_kev") is False

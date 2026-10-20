@@ -57,6 +57,7 @@ from agent_bom.api.models import (  # noqa: F401 — legacy model imports
     TracingHealth,
     VersionInfo,
 )
+from agent_bom.api.route_warmup import start_route_warmup
 from agent_bom.api.routes.enterprise_routes._session_helpers import _maybe_attach_dev_session_cookie as _maybe_attach_dev_session_cookie
 from agent_bom.api.scan_snapshot_store import expire_jobs_and_snapshots
 from agent_bom.api.storage.analytics import peek_analytics_store
@@ -166,21 +167,7 @@ async def _prewarm_demo_story() -> None:
         _logger.warning("demo story prewarm skipped", exc_info=False)
 
 
-@asynccontextmanager
-async def _lifespan(app_instance: FastAPI) -> AsyncIterator[None]:
-    """Start background cleanup task on startup, cancel on shutdown."""
-    preflight_storage_backends()
-    _state_home.activate_demo_state_dir()
-    _log_control_plane_auth_posture()
-    _host_guard.log_host_policy()
-    warn_if_ephemeral_hmac_key()
-    _apply_worker_thread_limit()
-    configure_otel_tracing()
-    _preflight_postgres_tenant_isolation()
-    _validate_configured_registries()
-    initialize_storage()
-
-    # ── Rate-limit key rotation status ──
+def _log_rate_limit_key_status() -> None:
     try:
         from agent_bom.api.middleware import get_rate_limit_key_status
 
@@ -200,13 +187,26 @@ async def _lifespan(app_instance: FastAPI) -> AsyncIterator[None]:
                 _rl_status["message"],
             )
         else:
-            _logger.info(
-                "rate_limit_key_rotation status=%s age_days=%s",
-                _rl_status["status"],
-                _rl_status["age_days"],
-            )
+            _logger.info("rate_limit_key_rotation status=%s age_days=%s", _rl_status["status"], _rl_status["age_days"])
     except Exception:
         _logger.debug("rate_limit_key_rotation status check skipped", exc_info=False)
+
+
+@asynccontextmanager
+async def _lifespan(app_instance: FastAPI) -> AsyncIterator[None]:
+    """Start background cleanup task on startup, cancel on shutdown."""
+    preflight_storage_backends()
+    _state_home.activate_demo_state_dir()
+    _log_control_plane_auth_posture()
+    _host_guard.log_host_policy()
+    warn_if_ephemeral_hmac_key()
+    _apply_worker_thread_limit()
+    configure_otel_tracing()
+    _preflight_postgres_tenant_isolation()
+    _validate_configured_registries()
+    initialize_storage()
+    start_route_warmup(app_instance)
+    _log_rate_limit_key_status()
 
     global _cleanup_task
     from agent_bom.api.scan_job_reconciliation import fail_orphaned_active_scan_jobs, reconcile_scan_jobs_active

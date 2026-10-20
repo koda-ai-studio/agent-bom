@@ -184,6 +184,23 @@ def _exit_model_verification(
     help="Exit 1 only when vulnerabilities at this severity or higher are found.",
 )
 @click.option("--nvd-api-key", envvar="NVD_API_KEY", default=None, help="NVD API key for higher rate limits when using --enrich.")
+@click.option(
+    "--allow-stale-db",
+    "allow_stale_db",
+    is_flag=True,
+    envvar="AGENT_BOM_ALLOW_STALE_DB",
+    help=(
+        "Air-gap opt-out: accept an outdated local vuln DB that OSV did not back as complete, instead of "
+        "exiting 2 (incomplete) when nothing is at or above the gate. Results still report completeness."
+    ),
+)
+@click.option(
+    "--require-fresh-db",
+    "require_fresh_db",
+    is_flag=True,
+    envvar="AGENT_BOM_REQUIRE_FRESH_DB",
+    help="Opt-in gate: exit 3 when the local vuln DB is older than AGENT_BOM_DB_STALE_DAYS (default 14).",
+)
 @click.pass_context
 def check(
     ctx: click.Context,
@@ -198,6 +215,8 @@ def check(
     offline: bool,
     fail_on_severity: str | None,
     nvd_api_key: str | None,
+    allow_stale_db: bool,
+    require_fresh_db: bool,
 ):
     """Check a package for known vulnerabilities before installing.
 
@@ -213,8 +232,11 @@ def check(
       0  Clean — no known vulnerabilities
       1  Unsafe — vulnerabilities found, or package flagged as malicious
       2  Incomplete — insufficient context for a trustworthy clean verdict
-         (missing version, OS package metadata, or offline scan of an
-         ecosystem the local DB carries no advisories for)
+         (missing version, OS package metadata, offline scan of an
+         ecosystem the local DB carries no advisories for, or nothing at
+         or above the gate on an outdated local DB that OSV did not back;
+         --allow-stale-db accepts the latter)
+      3  Stale local vuln DB while --require-fresh-db is enabled
 
     \b
     Notes:
@@ -241,6 +263,8 @@ def check(
         offline=offline,
         fail_on_severity=fail_on_severity,
         nvd_api_key=nvd_api_key,
+        allow_stale_db=allow_stale_db,
+        require_fresh_db=require_fresh_db,
     )
 
 

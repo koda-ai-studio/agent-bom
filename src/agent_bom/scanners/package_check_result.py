@@ -31,6 +31,10 @@ class PackageCheckResult:
     malicious_reason: str | None = None
     exit_code: int = 0
     source_context: dict[str, Any] = field(default_factory=dict)
+    # Freshness of the vuln data behind the verdict (scan-report shape) and
+    # whether that data was sufficient; ``None`` when no lookup ran.
+    vuln_data_freshness: dict[str, Any] | None = None
+    completeness: dict[str, str] | None = None
 
     @property
     def canonical_verdict(self) -> str:
@@ -59,6 +63,8 @@ class PackageCheckResult:
             "vulnerability_count": len(self.vulnerabilities),
             "vulnerability_details": list(self.vulnerabilities),
             "scan_warnings": list(self.warnings),
+            "vuln_data_freshness": self.vuln_data_freshness,
+            "completeness": self.completeness,
             **self.source_context,
         }
 

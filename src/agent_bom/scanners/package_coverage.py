@@ -7,10 +7,11 @@ from typing import Any
 from agent_bom.constants import AI_PACKAGES as _AI_FRAMEWORK_PACKAGES
 from agent_bom.malicious import check_dependency_confusion, check_typosquat
 from agent_bom.models import Package
+from agent_bom.scanners.local_data_freshness import local_db_untrusted, record_untrusted_local_data
 from agent_bom.scanners.package_matching import _db_ecosystems_for_package as _db_ecosystems_for_package
 from agent_bom.scanners.package_matching import _emit_scan_warning as _emit_scan_warning
 from agent_bom.scanners.package_matching import _scanners_patchable as _scanners_patchable
-from agent_bom.scanners.scan_options import IncompleteScanError, _logger, _package_db_key
+from agent_bom.scanners.scan_options import IncompleteScanError, ScanOptions, _logger, _package_db_key
 from agent_bom.scanners.state import record_coverage_warning
 
 
@@ -82,9 +83,7 @@ def _select_osv_targets(
     # A covered archive is only authoritative while fresh: online scans keep cached findings as
     # fallback but look for newer advisories even when a stale archive covers the package.
     if not offline and local_db_targets:
-        from agent_bom.vuln_freshness import compute_freshness
-
-        if compute_freshness().stale:
+        if local_db_untrusted():
             force_osv_keys.update(_package_db_key(package) for package in local_db_targets)
     inventory_ecosystems = {eco for package in scannable for eco in _db_ecosystems_for_package(package)}
     covered_ecos = _scanners_patchable("_db_covered_ecosystems")(inventory_ecosystems)
@@ -216,3 +215,26 @@ def _flag_suspicious_packages(scannable: list[Package]) -> None:
             if confusion_warning and not pkg.is_malicious:
                 pkg.is_malicious = True
                 pkg.malicious_reason = confusion_warning
+
+
+async def _query_osv_results(
+    scannable: list[Package], osv_targets: list[Package], covered_ecos: set[str], scan_options: ScanOptions
+) -> dict[str, list[dict]]:
+    scan_offline = scan_options.offline
+    if scan_offline or (scan_options.prefer_local_db and not osv_targets):
+        if scan_offline:
+            _check_offline_coverage(scannable, osv_targets, covered_ecos, scan_options.demo_advisories)
+        results: dict[str, list[dict]] = {}
+    elif scan_options.prefer_local_db and osv_targets:
+        # DB is fresh — only query OSV for packages genuinely missing from DB
+        _logger.debug("Local DB preferred: querying OSV for %d uncovered package(s) only", len(osv_targets))
+        results = await _scanners_patchable("query_osv_batch")(osv_targets)
+    elif osv_targets:
+        results = await _scanners_patchable("query_osv_batch")(osv_targets)
+    else:
+        results = {}
+
+    if not scan_offline and osv_targets:
+        _flag_remote_lookup_gap(osv_targets)
+    record_untrusted_local_data(offline=scan_offline, demo=scan_options.demo_advisories)
+    return results

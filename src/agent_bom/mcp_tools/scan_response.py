@@ -41,6 +41,7 @@ _PASSTHROUGH_KEYS = (
     "policy_results",
     "warnings",
     "coverage_warnings",
+    "vuln_data_freshness",
 )
 
 _FINDING_FIELDS = (

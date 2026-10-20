@@ -36,21 +36,23 @@ from typing import TYPE_CHECKING
 from agent_bom.core.severity import SEVERITY_RISK_SCORE, normalize_severity
 from agent_bom.demo_estate.enterprise import EnterpriseEstate, EstateAsset
 from agent_bom.demo_estate.estate_edges import ESTATE_DATA_SOURCE, add_estate_edge, oriented_topology_edge
+from agent_bom.demo_estate.estate_external_stages import project_external_stages, recorded_identifier_attributes
+from agent_bom.demo_estate.estate_finding_nodes import project_estate_finding
 from agent_bom.demo_estate.estate_packages import project_estate_package_lineage
 from agent_bom.demo_estate.id_schemes import retired_estate_asset_ids
 from agent_bom.graph.container import AttackPath, UnifiedGraph
 from agent_bom.graph.container_kind import container_kind_attributes
 from agent_bom.graph.edge import UnifiedEdge
-from agent_bom.graph.finding_row_projection import finding_signal_attributes
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
 from agent_bom.graph.node_aliases import record_node_aliases
+from agent_bom.graph.storage_integration_correlation import correlate_storage_integrations
 from agent_bom.graph.types import EntityType, RelationshipType
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
     from agent_bom.demo_estate.enterprise_correlation import EnterpriseCorrelation
     from agent_bom.finding import Finding
 
-ESTATE_GRAPH_VERSION = "estate_graph.v3"
+ESTATE_GRAPH_VERSION = "estate_graph.v4"
 
 # The organization resource type: the root of the account/environment hierarchy.
 _ORG_RESOURCE_TYPE = "organization"
@@ -80,6 +82,7 @@ _RESOURCE_ENTITY_TYPES: dict[str, EntityType] = {
     "warehouse": EntityType.CLOUD_RESOURCE,
     "key_vault": EntityType.CLOUD_RESOURCE,
     "cluster": EntityType.CLUSTER,
+    "storage_integration": EntityType.CLOUD_RESOURCE,
     "deployment": EntityType.CONTAINER,
     "container_image": EntityType.CONTAINER,
     # Code / CI.
@@ -162,6 +165,8 @@ _TOPOLOGY_TAGS: tuple[tuple[str, RelationshipType], ...] = (
     ("mcp_server", RelationshipType.PART_OF),
     ("container_image", RelationshipType.DEPENDS_ON),
     ("cluster", RelationshipType.PART_OF),
+    # The workload a server runs in: the runtime dependency paths walk.
+    ("deployment", RelationshipType.HOSTED_ON),
     ("repository", RelationshipType.PART_OF),
 )
 
@@ -281,6 +286,7 @@ def _asset_node(asset: EstateAsset, estate: EnterpriseEstate) -> UnifiedNode:
             "cost_center": asset.cost_center,
             "data_classifications": list(asset.data_classifications),
             "tags": dict(asset.tags),
+            **recorded_identifier_attributes(asset.tags),
             "synthetic": True,
             "fictional": True,
             "estate_id": estate.estate_id,
@@ -295,39 +301,6 @@ def _asset_node(asset: EstateAsset, estate: EnterpriseEstate) -> UnifiedNode:
     )
     record_node_aliases(node, retired_estate_asset_ids(asset.asset_id, asset.resource_type, asset.native_id, asset.tags))
     return node
-
-
-# Finding types that are a VULNERABILITY on the graph rather than a
-# MISCONFIGURATION. The distinction is not cosmetic: ``cnapp_overlay`` builds its
-# set of vulnerable resources from ``VULNERABLE_TO`` edges, and its toxic
-# combination — internet-exposed AND vulnerable — cannot fire for a resource
-# whose CVEs were all projected as misconfigurations. Projecting 768 CVEs under
-# the wrong entity type would have made the estate's exposure story quietly
-# weaker than the evidence it holds.
-_VULNERABILITY_FINDING_TYPES: frozenset[str] = frozenset({"CVE", "MALICIOUS_PACKAGE", "MALICIOUS_MODEL"})
-
-
-def _is_vulnerability(finding: Finding) -> bool:
-    return finding.finding_type.value in _VULNERABILITY_FINDING_TYPES
-
-
-def _finding_node_id(finding: Finding) -> str:
-    prefix = "vuln" if _is_vulnerability(finding) else "misconfig"
-    return f"{prefix}:demo-estate:{finding.id}"
-
-
-def _add_finding_edges(graph: UnifiedGraph, finding_node: str, asset_id: str, *, vulnerability: bool) -> None:
-    """AFFECTS for correlation (fusion, CNAPP overlay) plus exactly one roll-up parent edge.
-
-    Without a parent, findings blow past the 200-orphan cap. A package CVE's
-    parent is the VULNERABLE_TO edge the roll-up already walks as package
-    containment (and ``cnapp_overlay`` reads); a CONTAINS copy stored it twice.
-    """
-    add_estate_edge(graph, finding_node, asset_id, RelationshipType.AFFECTS)
-    if not (vulnerability and graph.nodes[asset_id].entity_type == EntityType.PACKAGE):
-        add_estate_edge(graph, asset_id, finding_node, RelationshipType.CONTAINS)
-    if vulnerability:
-        add_estate_edge(graph, asset_id, finding_node, RelationshipType.VULNERABLE_TO)
 
 
 def project_estate_into_graph(
@@ -425,6 +398,7 @@ def project_estate_into_graph(
     # Topology: the edges the estate's inventory declares. Containment alone is a
     # tree; it cannot say "this AI service assumes that role and reads that table".
     topology_edges = project_estate_package_lineage(graph, estate.assets)
+    topology_edges += project_external_stages(graph, estate.assets)
     assets_by_id = {asset.asset_id: asset for asset in estate.assets}
     known_asset_ids = set(assets_by_id)
     exposure_edges = 0
@@ -490,51 +464,7 @@ def project_estate_into_graph(
         severity = normalize_severity(finding.severity)
         risk = SEVERITY_RISK_SCORE.get(severity, 0.0)
         risk_by_asset[asset_id] = max(risk_by_asset.get(asset_id, 0.0), risk)
-        node_id = _finding_node_id(finding)
-        vulnerability = _is_vulnerability(finding)
-        graph.add_node(
-            UnifiedNode(
-                id=node_id,
-                entity_type=EntityType.VULNERABILITY if vulnerability else EntityType.MISCONFIGURATION,
-                label=finding.title,
-                severity=severity,
-                risk_score=SEVERITY_RISK_SCORE.get(severity, 0.0),
-                attributes={
-                    **(
-                        {
-                            "risk_assessment": {
-                                "status": "assessed",
-                                "basis": "recorded_finding_severity_weight",
-                                "scope": "synthetic_estate_finding",
-                            }
-                        }
-                        if severity in SEVERITY_RISK_SCORE and severity != "unknown"
-                        else {}
-                    ),
-                    "finding_id": finding.id,
-                    "canonical_finding_id": finding.canonical_id,
-                    "finding_type": finding.finding_type.value,
-                    "check_id": str(finding.evidence.get("control_id") or ""),
-                    "cloud_provider": finding.provider or "",
-                    "resource_ids": [asset_id],
-                    # The prose, not the ``Remediation`` dataclass: the store
-                    # persists attributes with ``json.dumps(default=str)``, which
-                    # would freeze the object's ``repr`` as remediation text.
-                    "recommendation": finding.remediation_guidance or "",
-                    "configuration": finding.evidence.get("configuration") or {},
-                    **(finding_signal_attributes(finding) if vulnerability else {}),
-                    "synthetic": True,
-                    "estate_id": estate.estate_id,
-                },
-                compliance_tags=[f"{tag.framework}:{tag.control}" for tag in finding.normalized_controls()],
-                data_sources=[ESTATE_DATA_SOURCE],
-                dimensions=NodeDimensions(
-                    cloud_provider=finding.provider or "",
-                    environment=finding.environment or "",
-                ),
-            )
-        )
-        _add_finding_edges(graph, node_id, asset_id, vulnerability=vulnerability)
+        project_estate_finding(graph, finding, asset_id, severity=severity, estate_id=estate.estate_id)
         finding_count += 1
 
         principal = str(finding.evidence.get("identity_asset_id") or "")
@@ -550,6 +480,8 @@ def project_estate_into_graph(
             identity_edges += 1
 
     chain_edges, paths = _project_incident_chains(graph, correlations, known_assets, risk_by_asset)
+    # Cross-vendor joins come from recorded identifiers, as for a live Snowflake + AWS build.
+    topology_edges += correlate_storage_integrations(graph)
 
     node_count = len(graph.nodes)
     return {

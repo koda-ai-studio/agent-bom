@@ -949,7 +949,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "1d2283ae-1362-5caf-94fc-caad408e7fbd",
+        "canonical_id": "ed8fa3aa-cc5a-5e9d-bbee-afe728762ab2",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -957,191 +957,16 @@
           "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "depends_on:server:shell-runner-server:pkg:pypi:pyyaml@5.3",
+        "id": "depends_on:server:github-server:pkg:npm:axios@1.4.0",
         "last_seen": "2026-10-19T12:00:00+00:00",
         "provenance": {},
         "relationship": "depends_on",
-        "source": "server:shell-runner-server",
-        "source_id": "server:shell-runner-server",
+        "source": "server:github-server",
+        "source_id": "server:github-server",
         "source_run_id": "",
         "source_scan_id": "",
-        "target": "pkg:pypi:pyyaml@5.3",
-        "target_id": "pkg:pypi:pyyaml@5.3",
-        "traversable": true,
-        "valid_from": "2026-10-19T12:00:00+00:00",
-        "valid_to": null,
-        "weight": 1.0
-      },
-      {
-        "activity_id": 1,
-        "canonical_id": "97bbd7f2-adfc-500b-a717-e49ac4bf4469",
-        "confidence": 1.0,
-        "direction": "directed",
-        "evidence": {
-          "source": "demo-showcase",
-          "tier": "static_scan"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "vulnerable_to:pkg:pypi:pyyaml@5.3:vuln:CVE-2020-14343",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "provenance": {},
-        "relationship": "vulnerable_to",
-        "source": "pkg:pypi:pyyaml@5.3",
-        "source_id": "pkg:pypi:pyyaml@5.3",
-        "source_run_id": "",
-        "source_scan_id": "",
-        "target": "vuln:CVE-2020-14343",
-        "target_id": "vuln:CVE-2020-14343",
-        "traversable": true,
-        "valid_from": "2026-10-19T12:00:00+00:00",
-        "valid_to": null,
-        "weight": 1.0
-      },
-      {
-        "activity_id": 1,
-        "canonical_id": "c11c1471-eadf-567f-9f6b-c7de31ebb5a5",
-        "confidence": 1.0,
-        "direction": "directed",
-        "evidence": {
-          "source": "demo-showcase",
-          "tier": "modeled_infrastructure"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "depends_on:server:llm-orchestrator-server:pkg:pypi:langchain@0.0.150",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "provenance": {},
-        "relationship": "depends_on",
-        "source": "server:llm-orchestrator-server",
-        "source_id": "server:llm-orchestrator-server",
-        "source_run_id": "",
-        "source_scan_id": "",
-        "target": "pkg:pypi:langchain@0.0.150",
-        "target_id": "pkg:pypi:langchain@0.0.150",
-        "traversable": true,
-        "valid_from": "2026-10-19T12:00:00+00:00",
-        "valid_to": null,
-        "weight": 1.0
-      },
-      {
-        "activity_id": 1,
-        "canonical_id": "cc777e6b-3608-5c39-be1f-c5e26a798bf1",
-        "confidence": 1.0,
-        "direction": "directed",
-        "evidence": {
-          "source": "demo-showcase",
-          "tier": "static_scan"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "vulnerable_to:pkg:pypi:langchain@0.0.150:vuln:CVE-2023-36258",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "provenance": {},
-        "relationship": "vulnerable_to",
-        "source": "pkg:pypi:langchain@0.0.150",
-        "source_id": "pkg:pypi:langchain@0.0.150",
-        "source_run_id": "",
-        "source_scan_id": "",
-        "target": "vuln:CVE-2023-36258",
-        "target_id": "vuln:CVE-2023-36258",
-        "traversable": true,
-        "valid_from": "2026-10-19T12:00:00+00:00",
-        "valid_to": null,
-        "weight": 1.0
-      },
-      {
-        "activity_id": 1,
-        "canonical_id": "20e8a95d-ae86-51af-9769-9eed5d7d5e1c",
-        "confidence": 1.0,
-        "direction": "directed",
-        "evidence": {
-          "source": "demo-showcase",
-          "tier": "modeled_infrastructure"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "depends_on:server:etl-server:pkg:pypi:pillow@9.0.0",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "provenance": {},
-        "relationship": "depends_on",
-        "source": "server:etl-server",
-        "source_id": "server:etl-server",
-        "source_run_id": "",
-        "source_scan_id": "",
-        "target": "pkg:pypi:pillow@9.0.0",
-        "target_id": "pkg:pypi:pillow@9.0.0",
-        "traversable": true,
-        "valid_from": "2026-10-19T12:00:00+00:00",
-        "valid_to": null,
-        "weight": 1.0
-      },
-      {
-        "activity_id": 1,
-        "canonical_id": "131ed73d-b127-577e-8ba4-13f20631e9f3",
-        "confidence": 1.0,
-        "direction": "directed",
-        "evidence": {
-          "source": "demo-showcase",
-          "tier": "static_scan"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "vulnerable_to:pkg:pypi:pillow@9.0.0:vuln:CVE-2023-4863",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "provenance": {},
-        "relationship": "vulnerable_to",
-        "source": "pkg:pypi:pillow@9.0.0",
-        "source_id": "pkg:pypi:pillow@9.0.0",
-        "source_run_id": "",
-        "source_scan_id": "",
-        "target": "vuln:CVE-2023-4863",
-        "target_id": "vuln:CVE-2023-4863",
-        "traversable": true,
-        "valid_from": "2026-10-19T12:00:00+00:00",
-        "valid_to": null,
-        "weight": 1.0
-      },
-      {
-        "activity_id": 1,
-        "canonical_id": "509b57cc-1056-5f4d-b04b-3d0d9d8b8101",
-        "confidence": 1.0,
-        "direction": "directed",
-        "evidence": {
-          "source": "demo-showcase",
-          "tier": "modeled_infrastructure"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "depends_on:server:helpdesk-server:pkg:npm:jsonwebtoken@8.5.1",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "provenance": {},
-        "relationship": "depends_on",
-        "source": "server:helpdesk-server",
-        "source_id": "server:helpdesk-server",
-        "source_run_id": "",
-        "source_scan_id": "",
-        "target": "pkg:npm:jsonwebtoken@8.5.1",
-        "target_id": "pkg:npm:jsonwebtoken@8.5.1",
-        "traversable": true,
-        "valid_from": "2026-10-19T12:00:00+00:00",
-        "valid_to": null,
-        "weight": 1.0
-      },
-      {
-        "activity_id": 1,
-        "canonical_id": "c268adc2-80b2-52e3-929a-fb9a5313a569",
-        "confidence": 1.0,
-        "direction": "directed",
-        "evidence": {
-          "source": "demo-showcase",
-          "tier": "static_scan"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "vulnerable_to:pkg:npm:jsonwebtoken@8.5.1:vuln:CVE-2022-23539",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "provenance": {},
-        "relationship": "vulnerable_to",
-        "source": "pkg:npm:jsonwebtoken@8.5.1",
-        "source_id": "pkg:npm:jsonwebtoken@8.5.1",
-        "source_run_id": "",
-        "source_scan_id": "",
-        "target": "vuln:CVE-2022-23539",
-        "target_id": "vuln:CVE-2022-23539",
+        "target": "pkg:npm:axios@1.4.0",
+        "target_id": "pkg:npm:axios@1.4.0",
         "traversable": true,
         "valid_from": "2026-10-19T12:00:00+00:00",
         "valid_to": null,
@@ -1199,156 +1024,6 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "eeb93e5c-7d21-5b21-94dc-146dfd8b32bd",
-        "confidence": 1.0,
-        "direction": "directed",
-        "evidence": {
-          "source": "demo-showcase",
-          "tier": "modeled_infrastructure"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "depends_on:server:warehouse-server:pkg:pypi:cryptography@39.0.0",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "provenance": {},
-        "relationship": "depends_on",
-        "source": "server:warehouse-server",
-        "source_id": "server:warehouse-server",
-        "source_run_id": "",
-        "source_scan_id": "",
-        "target": "pkg:pypi:cryptography@39.0.0",
-        "target_id": "pkg:pypi:cryptography@39.0.0",
-        "traversable": true,
-        "valid_from": "2026-10-19T12:00:00+00:00",
-        "valid_to": null,
-        "weight": 1.0
-      },
-      {
-        "activity_id": 1,
-        "canonical_id": "90b67c93-0621-52e0-b107-27aea6b27622",
-        "confidence": 1.0,
-        "direction": "directed",
-        "evidence": {
-          "source": "demo-showcase",
-          "tier": "static_scan"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "vulnerable_to:pkg:pypi:cryptography@39.0.0:vuln:CVE-2023-50782",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "provenance": {},
-        "relationship": "vulnerable_to",
-        "source": "pkg:pypi:cryptography@39.0.0",
-        "source_id": "pkg:pypi:cryptography@39.0.0",
-        "source_run_id": "",
-        "source_scan_id": "",
-        "target": "vuln:CVE-2023-50782",
-        "target_id": "vuln:CVE-2023-50782",
-        "traversable": true,
-        "valid_from": "2026-10-19T12:00:00+00:00",
-        "valid_to": null,
-        "weight": 1.0
-      },
-      {
-        "activity_id": 1,
-        "canonical_id": "355fbdf9-e30e-55de-a1bc-a5b75fa2c63b",
-        "confidence": 1.0,
-        "direction": "directed",
-        "evidence": {
-          "source": "demo-showcase",
-          "tier": "modeled_infrastructure"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "depends_on:server:filesystem-server:pkg:npm:ws@8.5.0",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "provenance": {},
-        "relationship": "depends_on",
-        "source": "server:filesystem-server",
-        "source_id": "server:filesystem-server",
-        "source_run_id": "",
-        "source_scan_id": "",
-        "target": "pkg:npm:ws@8.5.0",
-        "target_id": "pkg:npm:ws@8.5.0",
-        "traversable": true,
-        "valid_from": "2026-10-19T12:00:00+00:00",
-        "valid_to": null,
-        "weight": 1.0
-      },
-      {
-        "activity_id": 1,
-        "canonical_id": "c52dd557-7ee1-552a-b000-884882a5c72e",
-        "confidence": 1.0,
-        "direction": "directed",
-        "evidence": {
-          "source": "demo-showcase",
-          "tier": "static_scan"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "vulnerable_to:pkg:npm:ws@8.5.0:vuln:CVE-2024-37890",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "provenance": {},
-        "relationship": "vulnerable_to",
-        "source": "pkg:npm:ws@8.5.0",
-        "source_id": "pkg:npm:ws@8.5.0",
-        "source_run_id": "",
-        "source_scan_id": "",
-        "target": "vuln:CVE-2024-37890",
-        "target_id": "vuln:CVE-2024-37890",
-        "traversable": true,
-        "valid_from": "2026-10-19T12:00:00+00:00",
-        "valid_to": null,
-        "weight": 1.0
-      },
-      {
-        "activity_id": 1,
-        "canonical_id": "7e4b0004-f904-51d9-b60e-7af20aa57a0c",
-        "confidence": 1.0,
-        "direction": "directed",
-        "evidence": {
-          "source": "demo-showcase",
-          "tier": "modeled_infrastructure"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "depends_on:server:team-chat-server:pkg:pypi:flask@2.2.0",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "provenance": {},
-        "relationship": "depends_on",
-        "source": "server:team-chat-server",
-        "source_id": "server:team-chat-server",
-        "source_run_id": "",
-        "source_scan_id": "",
-        "target": "pkg:pypi:flask@2.2.0",
-        "target_id": "pkg:pypi:flask@2.2.0",
-        "traversable": true,
-        "valid_from": "2026-10-19T12:00:00+00:00",
-        "valid_to": null,
-        "weight": 1.0
-      },
-      {
-        "activity_id": 1,
-        "canonical_id": "030cace3-b4f0-58b0-88aa-a123752b85b7",
-        "confidence": 1.0,
-        "direction": "directed",
-        "evidence": {
-          "source": "demo-showcase",
-          "tier": "static_scan"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "vulnerable_to:pkg:pypi:flask@2.2.0:vuln:CVE-2023-30861",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "provenance": {},
-        "relationship": "vulnerable_to",
-        "source": "pkg:pypi:flask@2.2.0",
-        "source_id": "pkg:pypi:flask@2.2.0",
-        "source_run_id": "",
-        "source_scan_id": "",
-        "target": "vuln:CVE-2023-30861",
-        "target_id": "vuln:CVE-2023-30861",
-        "traversable": true,
-        "valid_from": "2026-10-19T12:00:00+00:00",
-        "valid_to": null,
-        "weight": 1.0
-      },
-      {
-        "activity_id": 1,
         "canonical_id": "c4f105c3-301a-5000-80b7-336bc1126ac9",
         "confidence": 1.0,
         "direction": "directed",
@@ -1399,7 +1074,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "27b47b27-1f2a-57e8-be07-5a90326ab8f9",
+        "canonical_id": "60567a36-01b8-5f16-84db-5ff2ba056d9b",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -1407,16 +1082,16 @@
           "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "depends_on:server:github-server:pkg:npm:lodash@4.17.20",
+        "id": "depends_on:server:vector-db-server:pkg:pypi:cryptography@39.0.0",
         "last_seen": "2026-10-19T12:00:00+00:00",
         "provenance": {},
         "relationship": "depends_on",
-        "source": "server:github-server",
-        "source_id": "server:github-server",
+        "source": "server:vector-db-server",
+        "source_id": "server:vector-db-server",
         "source_run_id": "",
         "source_scan_id": "",
-        "target": "pkg:npm:lodash@4.17.20",
-        "target_id": "pkg:npm:lodash@4.17.20",
+        "target": "pkg:pypi:cryptography@39.0.0",
+        "target_id": "pkg:pypi:cryptography@39.0.0",
         "traversable": true,
         "valid_from": "2026-10-19T12:00:00+00:00",
         "valid_to": null,
@@ -1424,7 +1099,32 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "06619d77-fe00-5b36-b25c-f47e5f1c1e62",
+        "canonical_id": "eeb93e5c-7d21-5b21-94dc-146dfd8b32bd",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "depends_on:server:warehouse-server:pkg:pypi:cryptography@39.0.0",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "depends_on",
+        "source": "server:warehouse-server",
+        "source_id": "server:warehouse-server",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "pkg:pypi:cryptography@39.0.0",
+        "target_id": "pkg:pypi:cryptography@39.0.0",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "90b67c93-0621-52e0-b107-27aea6b27622",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -1432,16 +1132,16 @@
           "tier": "static_scan"
         },
         "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "vulnerable_to:pkg:npm:lodash@4.17.20:vuln:CVE-2021-23337",
+        "id": "vulnerable_to:pkg:pypi:cryptography@39.0.0:vuln:CVE-2023-50782",
         "last_seen": "2026-10-19T12:00:00+00:00",
         "provenance": {},
         "relationship": "vulnerable_to",
-        "source": "pkg:npm:lodash@4.17.20",
-        "source_id": "pkg:npm:lodash@4.17.20",
+        "source": "pkg:pypi:cryptography@39.0.0",
+        "source_id": "pkg:pypi:cryptography@39.0.0",
         "source_run_id": "",
         "source_scan_id": "",
-        "target": "vuln:CVE-2021-23337",
-        "target_id": "vuln:CVE-2021-23337",
+        "target": "vuln:CVE-2023-50782",
+        "target_id": "vuln:CVE-2023-50782",
         "traversable": true,
         "valid_from": "2026-10-19T12:00:00+00:00",
         "valid_to": null,
@@ -1499,7 +1199,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "8d0b53d0-83d8-5691-ae94-844462df2425",
+        "canonical_id": "7e4b0004-f904-51d9-b60e-7af20aa57a0c",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -1507,16 +1207,16 @@
           "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "depends_on:server:vector-db-server:pkg:pypi:requests@2.28.0",
+        "id": "depends_on:server:team-chat-server:pkg:pypi:flask@2.2.0",
         "last_seen": "2026-10-19T12:00:00+00:00",
         "provenance": {},
         "relationship": "depends_on",
-        "source": "server:vector-db-server",
-        "source_id": "server:vector-db-server",
+        "source": "server:team-chat-server",
+        "source_id": "server:team-chat-server",
         "source_run_id": "",
         "source_scan_id": "",
-        "target": "pkg:pypi:requests@2.28.0",
-        "target_id": "pkg:pypi:requests@2.28.0",
+        "target": "pkg:pypi:flask@2.2.0",
+        "target_id": "pkg:pypi:flask@2.2.0",
         "traversable": true,
         "valid_from": "2026-10-19T12:00:00+00:00",
         "valid_to": null,
@@ -1524,7 +1224,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "ca8e696c-f443-5024-8449-98c47353bfcc",
+        "canonical_id": "030cace3-b4f0-58b0-88aa-a123752b85b7",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -1532,16 +1232,41 @@
           "tier": "static_scan"
         },
         "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "vulnerable_to:pkg:pypi:requests@2.28.0:vuln:CVE-2023-32681",
+        "id": "vulnerable_to:pkg:pypi:flask@2.2.0:vuln:CVE-2023-30861",
         "last_seen": "2026-10-19T12:00:00+00:00",
         "provenance": {},
         "relationship": "vulnerable_to",
-        "source": "pkg:pypi:requests@2.28.0",
-        "source_id": "pkg:pypi:requests@2.28.0",
+        "source": "pkg:pypi:flask@2.2.0",
+        "source_id": "pkg:pypi:flask@2.2.0",
         "source_run_id": "",
         "source_scan_id": "",
-        "target": "vuln:CVE-2023-32681",
-        "target_id": "vuln:CVE-2023-32681",
+        "target": "vuln:CVE-2023-30861",
+        "target_id": "vuln:CVE-2023-30861",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "76598b3a-e04e-5287-aca5-3981ddd50621",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "depends_on:server:llm-orchestrator-server:pkg:pypi:jinja2@3.0.0",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "depends_on",
+        "source": "server:llm-orchestrator-server",
+        "source_id": "server:llm-orchestrator-server",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "pkg:pypi:jinja2@3.0.0",
+        "target_id": "pkg:pypi:jinja2@3.0.0",
         "traversable": true,
         "valid_from": "2026-10-19T12:00:00+00:00",
         "valid_to": null,
@@ -1599,6 +1324,181 @@
       },
       {
         "activity_id": 1,
+        "canonical_id": "509b57cc-1056-5f4d-b04b-3d0d9d8b8101",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "depends_on:server:helpdesk-server:pkg:npm:jsonwebtoken@8.5.1",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "depends_on",
+        "source": "server:helpdesk-server",
+        "source_id": "server:helpdesk-server",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "pkg:npm:jsonwebtoken@8.5.1",
+        "target_id": "pkg:npm:jsonwebtoken@8.5.1",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "c268adc2-80b2-52e3-929a-fb9a5313a569",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "static_scan"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "vulnerable_to:pkg:npm:jsonwebtoken@8.5.1:vuln:CVE-2022-23539",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "vulnerable_to",
+        "source": "pkg:npm:jsonwebtoken@8.5.1",
+        "source_id": "pkg:npm:jsonwebtoken@8.5.1",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "vuln:CVE-2022-23539",
+        "target_id": "vuln:CVE-2022-23539",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "c11c1471-eadf-567f-9f6b-c7de31ebb5a5",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "depends_on:server:llm-orchestrator-server:pkg:pypi:langchain@0.0.150",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "depends_on",
+        "source": "server:llm-orchestrator-server",
+        "source_id": "server:llm-orchestrator-server",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "pkg:pypi:langchain@0.0.150",
+        "target_id": "pkg:pypi:langchain@0.0.150",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "cc777e6b-3608-5c39-be1f-c5e26a798bf1",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "static_scan"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "vulnerable_to:pkg:pypi:langchain@0.0.150:vuln:CVE-2023-36258",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "vulnerable_to",
+        "source": "pkg:pypi:langchain@0.0.150",
+        "source_id": "pkg:pypi:langchain@0.0.150",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "vuln:CVE-2023-36258",
+        "target_id": "vuln:CVE-2023-36258",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "27b47b27-1f2a-57e8-be07-5a90326ab8f9",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "depends_on:server:github-server:pkg:npm:lodash@4.17.20",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "depends_on",
+        "source": "server:github-server",
+        "source_id": "server:github-server",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "pkg:npm:lodash@4.17.20",
+        "target_id": "pkg:npm:lodash@4.17.20",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "06619d77-fe00-5b36-b25c-f47e5f1c1e62",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "static_scan"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "vulnerable_to:pkg:npm:lodash@4.17.20:vuln:CVE-2021-23337",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "vulnerable_to",
+        "source": "pkg:npm:lodash@4.17.20",
+        "source_id": "pkg:npm:lodash@4.17.20",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "vuln:CVE-2021-23337",
+        "target_id": "vuln:CVE-2021-23337",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "0cec76a7-1b31-5ce0-b060-d11b05c7182a",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "depends_on:server:email-server:pkg:npm:node-fetch@2.6.1",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "depends_on",
+        "source": "server:email-server",
+        "source_id": "server:email-server",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "pkg:npm:node-fetch@2.6.1",
+        "target_id": "pkg:npm:node-fetch@2.6.1",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
         "canonical_id": "a91c2b40-44f0-5448-9903-9d137a59c074",
         "confidence": 1.0,
         "direction": "directed",
@@ -1642,6 +1542,256 @@
         "source_scan_id": "",
         "target": "vuln:CVE-2022-0235",
         "target_id": "vuln:CVE-2022-0235",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "20e8a95d-ae86-51af-9769-9eed5d7d5e1c",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "depends_on:server:etl-server:pkg:pypi:pillow@9.0.0",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "depends_on",
+        "source": "server:etl-server",
+        "source_id": "server:etl-server",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "pkg:pypi:pillow@9.0.0",
+        "target_id": "pkg:pypi:pillow@9.0.0",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "131ed73d-b127-577e-8ba4-13f20631e9f3",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "static_scan"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "vulnerable_to:pkg:pypi:pillow@9.0.0:vuln:CVE-2023-4863",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "vulnerable_to",
+        "source": "pkg:pypi:pillow@9.0.0",
+        "source_id": "pkg:pypi:pillow@9.0.0",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "vuln:CVE-2023-4863",
+        "target_id": "vuln:CVE-2023-4863",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "1d2283ae-1362-5caf-94fc-caad408e7fbd",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "depends_on:server:shell-runner-server:pkg:pypi:pyyaml@5.3",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "depends_on",
+        "source": "server:shell-runner-server",
+        "source_id": "server:shell-runner-server",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "pkg:pypi:pyyaml@5.3",
+        "target_id": "pkg:pypi:pyyaml@5.3",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "1a73f390-0c5b-5f50-9f63-ee5dc26e24b7",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "depends_on:server:warehouse-server:pkg:pypi:pyyaml@5.3",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "depends_on",
+        "source": "server:warehouse-server",
+        "source_id": "server:warehouse-server",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "pkg:pypi:pyyaml@5.3",
+        "target_id": "pkg:pypi:pyyaml@5.3",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "97bbd7f2-adfc-500b-a717-e49ac4bf4469",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "static_scan"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "vulnerable_to:pkg:pypi:pyyaml@5.3:vuln:CVE-2020-14343",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "vulnerable_to",
+        "source": "pkg:pypi:pyyaml@5.3",
+        "source_id": "pkg:pypi:pyyaml@5.3",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "vuln:CVE-2020-14343",
+        "target_id": "vuln:CVE-2020-14343",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "d3df553f-5123-5459-a511-100d2accc6d0",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "depends_on:server:etl-server:pkg:pypi:requests@2.28.0",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "depends_on",
+        "source": "server:etl-server",
+        "source_id": "server:etl-server",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "pkg:pypi:requests@2.28.0",
+        "target_id": "pkg:pypi:requests@2.28.0",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "85857702-375e-5f09-bfa9-25a0cfbb7115",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "depends_on:server:shell-runner-server:pkg:pypi:requests@2.28.0",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "depends_on",
+        "source": "server:shell-runner-server",
+        "source_id": "server:shell-runner-server",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "pkg:pypi:requests@2.28.0",
+        "target_id": "pkg:pypi:requests@2.28.0",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "8d0b53d0-83d8-5691-ae94-844462df2425",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "depends_on:server:vector-db-server:pkg:pypi:requests@2.28.0",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "depends_on",
+        "source": "server:vector-db-server",
+        "source_id": "server:vector-db-server",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "pkg:pypi:requests@2.28.0",
+        "target_id": "pkg:pypi:requests@2.28.0",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "ca8e696c-f443-5024-8449-98c47353bfcc",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "static_scan"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "vulnerable_to:pkg:pypi:requests@2.28.0:vuln:CVE-2023-32681",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "vulnerable_to",
+        "source": "pkg:pypi:requests@2.28.0",
+        "source_id": "pkg:pypi:requests@2.28.0",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "vuln:CVE-2023-32681",
+        "target_id": "vuln:CVE-2023-32681",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "35e501fc-1e91-5ac5-9936-5b925568d24a",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "depends_on:server:github-server:pkg:npm:semver@7.5.2",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "depends_on",
+        "source": "server:github-server",
+        "source_id": "server:github-server",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "pkg:npm:semver@7.5.2",
+        "target_id": "pkg:npm:semver@7.5.2",
         "traversable": true,
         "valid_from": "2026-10-19T12:00:00+00:00",
         "valid_to": null,
@@ -1699,7 +1849,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "d3df553f-5123-5459-a511-100d2accc6d0",
+        "canonical_id": "355fbdf9-e30e-55de-a1bc-a5b75fa2c63b",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -1707,16 +1857,41 @@
           "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "depends_on:server:etl-server:pkg:pypi:requests@2.28.0",
+        "id": "depends_on:server:filesystem-server:pkg:npm:ws@8.5.0",
         "last_seen": "2026-10-19T12:00:00+00:00",
         "provenance": {},
         "relationship": "depends_on",
-        "source": "server:etl-server",
-        "source_id": "server:etl-server",
+        "source": "server:filesystem-server",
+        "source_id": "server:filesystem-server",
         "source_run_id": "",
         "source_scan_id": "",
-        "target": "pkg:pypi:requests@2.28.0",
-        "target_id": "pkg:pypi:requests@2.28.0",
+        "target": "pkg:npm:ws@8.5.0",
+        "target_id": "pkg:npm:ws@8.5.0",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "c52dd557-7ee1-552a-b000-884882a5c72e",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "static_scan"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "vulnerable_to:pkg:npm:ws@8.5.0:vuln:CVE-2024-37890",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "vulnerable_to",
+        "source": "pkg:npm:ws@8.5.0",
+        "source_id": "pkg:npm:ws@8.5.0",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "vuln:CVE-2024-37890",
+        "target_id": "vuln:CVE-2024-37890",
         "traversable": true,
         "valid_from": "2026-10-19T12:00:00+00:00",
         "valid_to": null,
@@ -3948,7 +4123,7 @@
         },
         "first_seen": "2026-10-19T12:00:00+00:00",
         "id": "agent:langchain-service",
-        "label": "LangChain Service Agent",
+        "label": "LangChain Service",
         "last_seen": "2026-10-19T12:00:00+00:00",
         "risk_assessment": {
           "basis": null,
@@ -5295,346 +5470,6 @@
       },
       {
         "attributes": {
-          "ecosystem": "pypi",
-          "version": "5.3"
-        },
-        "canonical_id": "5322b0b4-8d18-54a5-a7ca-93263d5eaf3f",
-        "category_uid": 5,
-        "class_uid": 4001,
-        "compliance_tags": [],
-        "data_sources": [],
-        "dimensions": {},
-        "entity_type": "package",
-        "evidence_provenance": {
-          "execution": "not_established",
-          "first_seen": "2026-10-19T12:00:00+00:00",
-          "last_seen": "2026-10-19T12:00:00+00:00",
-          "schema_version": "agent-bom.graph-evidence/v1",
-          "source_snapshot_ids": [],
-          "sources": [],
-          "tier": "unspecified",
-          "time_basis": "recorded_observation"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "pkg:pypi:pyyaml@5.3",
-        "label": "pyyaml@5.3",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "risk_assessment": {
-          "basis": null,
-          "scope": null,
-          "status": "not_assessed"
-        },
-        "risk_score": 0.0,
-        "severity": "",
-        "severity_id": 0,
-        "status": "active",
-        "type_uid": 400101
-      },
-      {
-        "attributes": {
-          "cvss_score": 9.8,
-          "cwe_ids": [
-            "CWE-20"
-          ],
-          "fixed_version": "5.4",
-          "graph_reachable": true,
-          "is_kev": false,
-          "reachability": "likely",
-          "reachability_basis": [
-            "graph_path"
-          ],
-          "summary": "PyYAML arbitrary code execution via yaml.full_load on untrusted input",
-          "vulnerability_id": "CVE-2020-14343"
-        },
-        "canonical_id": "c8231d52-9174-56b4-bacc-0cae4dc3bc8e",
-        "category_uid": 2,
-        "class_uid": 2001,
-        "compliance_tags": [],
-        "data_sources": [],
-        "dimensions": {},
-        "entity_type": "vulnerability",
-        "evidence_provenance": {
-          "execution": "not_established",
-          "first_seen": "2026-10-19T12:00:00+00:00",
-          "last_seen": "2026-10-19T12:00:00+00:00",
-          "schema_version": "agent-bom.graph-evidence/v1",
-          "source_snapshot_ids": [],
-          "sources": [],
-          "tier": "unspecified",
-          "time_basis": "recorded_observation"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "vuln:CVE-2020-14343",
-        "label": "CVE-2020-14343",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "risk_assessment": {
-          "basis": null,
-          "scope": null,
-          "status": "not_assessed"
-        },
-        "risk_score": 9.8,
-        "severity": "critical",
-        "severity_id": 5,
-        "status": "active",
-        "type_uid": 200101
-      },
-      {
-        "attributes": {
-          "ecosystem": "pypi",
-          "version": "0.0.150"
-        },
-        "canonical_id": "e406d394-b8de-5bf7-8f88-555c2839a7af",
-        "category_uid": 5,
-        "class_uid": 4001,
-        "compliance_tags": [],
-        "data_sources": [],
-        "dimensions": {},
-        "entity_type": "package",
-        "evidence_provenance": {
-          "execution": "not_established",
-          "first_seen": "2026-10-19T12:00:00+00:00",
-          "last_seen": "2026-10-19T12:00:00+00:00",
-          "schema_version": "agent-bom.graph-evidence/v1",
-          "source_snapshot_ids": [],
-          "sources": [],
-          "tier": "unspecified",
-          "time_basis": "recorded_observation"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "pkg:pypi:langchain@0.0.150",
-        "label": "langchain@0.0.150",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "risk_assessment": {
-          "basis": null,
-          "scope": null,
-          "status": "not_assessed"
-        },
-        "risk_score": 0.0,
-        "severity": "",
-        "severity_id": 0,
-        "status": "active",
-        "type_uid": 400101
-      },
-      {
-        "attributes": {
-          "cvss_score": 9.8,
-          "cwe_ids": [
-            "CWE-94"
-          ],
-          "fixed_version": "0.0.247",
-          "graph_reachable": true,
-          "is_kev": false,
-          "reachability": "likely",
-          "reachability_basis": [
-            "graph_path"
-          ],
-          "summary": "LangChain arbitrary code execution via PALChain prompt-to-Python evaluation",
-          "vulnerability_id": "CVE-2023-36258"
-        },
-        "canonical_id": "f54651d5-1344-56e3-a417-17a4b2cf2e56",
-        "category_uid": 2,
-        "class_uid": 2001,
-        "compliance_tags": [],
-        "data_sources": [],
-        "dimensions": {},
-        "entity_type": "vulnerability",
-        "evidence_provenance": {
-          "execution": "not_established",
-          "first_seen": "2026-10-19T12:00:00+00:00",
-          "last_seen": "2026-10-19T12:00:00+00:00",
-          "schema_version": "agent-bom.graph-evidence/v1",
-          "source_snapshot_ids": [],
-          "sources": [],
-          "tier": "unspecified",
-          "time_basis": "recorded_observation"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "vuln:CVE-2023-36258",
-        "label": "CVE-2023-36258",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "risk_assessment": {
-          "basis": null,
-          "scope": null,
-          "status": "not_assessed"
-        },
-        "risk_score": 9.8,
-        "severity": "critical",
-        "severity_id": 5,
-        "status": "active",
-        "type_uid": 200101
-      },
-      {
-        "attributes": {
-          "ecosystem": "pypi",
-          "version": "9.0.0"
-        },
-        "canonical_id": "4f9384eb-5fb9-5630-9122-3e1eab637509",
-        "category_uid": 5,
-        "class_uid": 4001,
-        "compliance_tags": [],
-        "data_sources": [],
-        "dimensions": {},
-        "entity_type": "package",
-        "evidence_provenance": {
-          "execution": "not_established",
-          "first_seen": "2026-10-19T12:00:00+00:00",
-          "last_seen": "2026-10-19T12:00:00+00:00",
-          "schema_version": "agent-bom.graph-evidence/v1",
-          "source_snapshot_ids": [],
-          "sources": [],
-          "tier": "unspecified",
-          "time_basis": "recorded_observation"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "pkg:pypi:pillow@9.0.0",
-        "label": "pillow@9.0.0",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "risk_assessment": {
-          "basis": null,
-          "scope": null,
-          "status": "not_assessed"
-        },
-        "risk_score": 0.0,
-        "severity": "",
-        "severity_id": 0,
-        "status": "active",
-        "type_uid": 400101
-      },
-      {
-        "attributes": {
-          "cvss_score": 8.8,
-          "cwe_ids": [
-            "CWE-787"
-          ],
-          "fixed_version": "10.0.1",
-          "graph_reachable": true,
-          "is_kev": true,
-          "reachability": "likely",
-          "reachability_basis": [
-            "graph_path"
-          ],
-          "summary": "Pillow bundled libwebp heap buffer overflow \u2014 exploited in the wild (CISA KEV)",
-          "vulnerability_id": "CVE-2023-4863"
-        },
-        "canonical_id": "8ae3bf21-4427-58f5-be91-06d2acbd9383",
-        "category_uid": 2,
-        "class_uid": 2001,
-        "compliance_tags": [],
-        "data_sources": [],
-        "dimensions": {},
-        "entity_type": "vulnerability",
-        "evidence_provenance": {
-          "execution": "not_established",
-          "first_seen": "2026-10-19T12:00:00+00:00",
-          "last_seen": "2026-10-19T12:00:00+00:00",
-          "schema_version": "agent-bom.graph-evidence/v1",
-          "source_snapshot_ids": [],
-          "sources": [],
-          "tier": "unspecified",
-          "time_basis": "recorded_observation"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "vuln:CVE-2023-4863",
-        "label": "CVE-2023-4863",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "risk_assessment": {
-          "basis": null,
-          "scope": null,
-          "status": "not_assessed"
-        },
-        "risk_score": 8.8,
-        "severity": "high",
-        "severity_id": 4,
-        "status": "active",
-        "type_uid": 200101
-      },
-      {
-        "attributes": {
-          "ecosystem": "npm",
-          "version": "8.5.1"
-        },
-        "canonical_id": "ae10799c-5f10-534a-b79c-ed2c82bbbc23",
-        "category_uid": 5,
-        "class_uid": 4001,
-        "compliance_tags": [],
-        "data_sources": [],
-        "dimensions": {},
-        "entity_type": "package",
-        "evidence_provenance": {
-          "execution": "not_established",
-          "first_seen": "2026-10-19T12:00:00+00:00",
-          "last_seen": "2026-10-19T12:00:00+00:00",
-          "schema_version": "agent-bom.graph-evidence/v1",
-          "source_snapshot_ids": [],
-          "sources": [],
-          "tier": "unspecified",
-          "time_basis": "recorded_observation"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "pkg:npm:jsonwebtoken@8.5.1",
-        "label": "jsonwebtoken@8.5.1",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "risk_assessment": {
-          "basis": null,
-          "scope": null,
-          "status": "not_assessed"
-        },
-        "risk_score": 0.0,
-        "severity": "",
-        "severity_id": 0,
-        "status": "active",
-        "type_uid": 400101
-      },
-      {
-        "attributes": {
-          "cvss_score": 8.1,
-          "cwe_ids": [
-            "CWE-327"
-          ],
-          "fixed_version": "9.0.0",
-          "graph_reachable": true,
-          "is_kev": false,
-          "reachability": "likely",
-          "reachability_basis": [
-            "graph_path"
-          ],
-          "summary": "jsonwebtoken unrestricted key type could lead to legacy keys usage",
-          "vulnerability_id": "CVE-2022-23539"
-        },
-        "canonical_id": "9d88e144-799d-53ce-b170-e5ff91a212fd",
-        "category_uid": 2,
-        "class_uid": 2001,
-        "compliance_tags": [],
-        "data_sources": [],
-        "dimensions": {},
-        "entity_type": "vulnerability",
-        "evidence_provenance": {
-          "execution": "not_established",
-          "first_seen": "2026-10-19T12:00:00+00:00",
-          "last_seen": "2026-10-19T12:00:00+00:00",
-          "schema_version": "agent-bom.graph-evidence/v1",
-          "source_snapshot_ids": [],
-          "sources": [],
-          "tier": "unspecified",
-          "time_basis": "recorded_observation"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "vuln:CVE-2022-23539",
-        "label": "CVE-2022-23539",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "risk_assessment": {
-          "basis": null,
-          "scope": null,
-          "status": "not_assessed"
-        },
-        "risk_score": 8.1,
-        "severity": "high",
-        "severity_id": 4,
-        "status": "active",
-        "type_uid": 200101
-      },
-      {
-        "attributes": {
           "ecosystem": "npm",
           "version": "1.4.0"
         },
@@ -5715,261 +5550,6 @@
         "risk_score": 6.5,
         "severity": "medium",
         "severity_id": 3,
-        "status": "active",
-        "type_uid": 200101
-      },
-      {
-        "attributes": {
-          "ecosystem": "pypi",
-          "version": "39.0.0"
-        },
-        "canonical_id": "f6b203e3-f7f5-55df-b667-dfbafefcee15",
-        "category_uid": 5,
-        "class_uid": 4001,
-        "compliance_tags": [],
-        "data_sources": [],
-        "dimensions": {},
-        "entity_type": "package",
-        "evidence_provenance": {
-          "execution": "not_established",
-          "first_seen": "2026-10-19T12:00:00+00:00",
-          "last_seen": "2026-10-19T12:00:00+00:00",
-          "schema_version": "agent-bom.graph-evidence/v1",
-          "source_snapshot_ids": [],
-          "sources": [],
-          "tier": "unspecified",
-          "time_basis": "recorded_observation"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "pkg:pypi:cryptography@39.0.0",
-        "label": "cryptography@39.0.0",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "risk_assessment": {
-          "basis": null,
-          "scope": null,
-          "status": "not_assessed"
-        },
-        "risk_score": 0.0,
-        "severity": "",
-        "severity_id": 0,
-        "status": "active",
-        "type_uid": 400101
-      },
-      {
-        "attributes": {
-          "cvss_score": 7.5,
-          "cwe_ids": [
-            "CWE-208"
-          ],
-          "fixed_version": "42.0.0",
-          "graph_reachable": true,
-          "is_kev": false,
-          "reachability": "likely",
-          "reachability_basis": [
-            "graph_path"
-          ],
-          "summary": "pyca/cryptography Bleichenbacher timing oracle in RSA PKCS#1 v1.5 decryption",
-          "vulnerability_id": "CVE-2023-50782"
-        },
-        "canonical_id": "0ffc5298-d294-5285-9308-4e1d2e949f72",
-        "category_uid": 2,
-        "class_uid": 2001,
-        "compliance_tags": [],
-        "data_sources": [],
-        "dimensions": {},
-        "entity_type": "vulnerability",
-        "evidence_provenance": {
-          "execution": "not_established",
-          "first_seen": "2026-10-19T12:00:00+00:00",
-          "last_seen": "2026-10-19T12:00:00+00:00",
-          "schema_version": "agent-bom.graph-evidence/v1",
-          "source_snapshot_ids": [],
-          "sources": [],
-          "tier": "unspecified",
-          "time_basis": "recorded_observation"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "vuln:CVE-2023-50782",
-        "label": "CVE-2023-50782",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "risk_assessment": {
-          "basis": null,
-          "scope": null,
-          "status": "not_assessed"
-        },
-        "risk_score": 7.5,
-        "severity": "high",
-        "severity_id": 4,
-        "status": "active",
-        "type_uid": 200101
-      },
-      {
-        "attributes": {
-          "ecosystem": "npm",
-          "version": "8.5.0"
-        },
-        "canonical_id": "9bb91589-c11e-5246-8be4-231305ac208e",
-        "category_uid": 5,
-        "class_uid": 4001,
-        "compliance_tags": [],
-        "data_sources": [],
-        "dimensions": {},
-        "entity_type": "package",
-        "evidence_provenance": {
-          "execution": "not_established",
-          "first_seen": "2026-10-19T12:00:00+00:00",
-          "last_seen": "2026-10-19T12:00:00+00:00",
-          "schema_version": "agent-bom.graph-evidence/v1",
-          "source_snapshot_ids": [],
-          "sources": [],
-          "tier": "unspecified",
-          "time_basis": "recorded_observation"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "pkg:npm:ws@8.5.0",
-        "label": "ws@8.5.0",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "risk_assessment": {
-          "basis": null,
-          "scope": null,
-          "status": "not_assessed"
-        },
-        "risk_score": 0.0,
-        "severity": "",
-        "severity_id": 0,
-        "status": "active",
-        "type_uid": 400101
-      },
-      {
-        "attributes": {
-          "cvss_score": 7.5,
-          "cwe_ids": [
-            "CWE-400"
-          ],
-          "fixed_version": "8.17.1",
-          "graph_reachable": true,
-          "is_kev": false,
-          "reachability": "likely",
-          "reachability_basis": [
-            "graph_path"
-          ],
-          "summary": "ws denial of service when handling a request with many HTTP headers",
-          "vulnerability_id": "CVE-2024-37890"
-        },
-        "canonical_id": "9cc31507-4f00-5a3c-8c36-1c6242c5a1ec",
-        "category_uid": 2,
-        "class_uid": 2001,
-        "compliance_tags": [],
-        "data_sources": [],
-        "dimensions": {},
-        "entity_type": "vulnerability",
-        "evidence_provenance": {
-          "execution": "not_established",
-          "first_seen": "2026-10-19T12:00:00+00:00",
-          "last_seen": "2026-10-19T12:00:00+00:00",
-          "schema_version": "agent-bom.graph-evidence/v1",
-          "source_snapshot_ids": [],
-          "sources": [],
-          "tier": "unspecified",
-          "time_basis": "recorded_observation"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "vuln:CVE-2024-37890",
-        "label": "CVE-2024-37890",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "risk_assessment": {
-          "basis": null,
-          "scope": null,
-          "status": "not_assessed"
-        },
-        "risk_score": 7.5,
-        "severity": "high",
-        "severity_id": 4,
-        "status": "active",
-        "type_uid": 200101
-      },
-      {
-        "attributes": {
-          "ecosystem": "pypi",
-          "version": "2.2.0"
-        },
-        "canonical_id": "851cfb6a-b82c-57cb-a5c3-e7f584a994b2",
-        "category_uid": 5,
-        "class_uid": 4001,
-        "compliance_tags": [],
-        "data_sources": [],
-        "dimensions": {},
-        "entity_type": "package",
-        "evidence_provenance": {
-          "execution": "not_established",
-          "first_seen": "2026-10-19T12:00:00+00:00",
-          "last_seen": "2026-10-19T12:00:00+00:00",
-          "schema_version": "agent-bom.graph-evidence/v1",
-          "source_snapshot_ids": [],
-          "sources": [],
-          "tier": "unspecified",
-          "time_basis": "recorded_observation"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "pkg:pypi:flask@2.2.0",
-        "label": "flask@2.2.0",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "risk_assessment": {
-          "basis": null,
-          "scope": null,
-          "status": "not_assessed"
-        },
-        "risk_score": 0.0,
-        "severity": "",
-        "severity_id": 0,
-        "status": "active",
-        "type_uid": 400101
-      },
-      {
-        "attributes": {
-          "cvss_score": 7.5,
-          "cwe_ids": [
-            "CWE-539"
-          ],
-          "fixed_version": "2.3.2",
-          "graph_reachable": true,
-          "is_kev": false,
-          "reachability": "likely",
-          "reachability_basis": [
-            "graph_path"
-          ],
-          "summary": "Flask session cookie disclosed to other clients via a caching proxy",
-          "vulnerability_id": "CVE-2023-30861"
-        },
-        "canonical_id": "4aebf62a-6ee4-5d55-b344-f0590a0cc7e5",
-        "category_uid": 2,
-        "class_uid": 2001,
-        "compliance_tags": [],
-        "data_sources": [],
-        "dimensions": {},
-        "entity_type": "vulnerability",
-        "evidence_provenance": {
-          "execution": "not_established",
-          "first_seen": "2026-10-19T12:00:00+00:00",
-          "last_seen": "2026-10-19T12:00:00+00:00",
-          "schema_version": "agent-bom.graph-evidence/v1",
-          "source_snapshot_ids": [],
-          "sources": [],
-          "tier": "unspecified",
-          "time_basis": "recorded_observation"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "vuln:CVE-2023-30861",
-        "label": "CVE-2023-30861",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "risk_assessment": {
-          "basis": null,
-          "scope": null,
-          "status": "not_assessed"
-        },
-        "risk_score": 7.5,
-        "severity": "high",
-        "severity_id": 4,
         "status": "active",
         "type_uid": 200101
       },
@@ -6060,10 +5640,10 @@
       },
       {
         "attributes": {
-          "ecosystem": "npm",
-          "version": "4.17.20"
+          "ecosystem": "pypi",
+          "version": "39.0.0"
         },
-        "canonical_id": "76f13d5d-b78a-5baa-a14b-963ac16fd3d6",
+        "canonical_id": "f6b203e3-f7f5-55df-b667-dfbafefcee15",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -6081,8 +5661,8 @@
           "time_basis": "recorded_observation"
         },
         "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "pkg:npm:lodash@4.17.20",
-        "label": "lodash@4.17.20",
+        "id": "pkg:pypi:cryptography@39.0.0",
+        "label": "cryptography@39.0.0",
         "last_seen": "2026-10-19T12:00:00+00:00",
         "risk_assessment": {
           "basis": null,
@@ -6097,21 +5677,21 @@
       },
       {
         "attributes": {
-          "cvss_score": 7.2,
+          "cvss_score": 7.5,
           "cwe_ids": [
-            "CWE-77"
+            "CWE-208"
           ],
-          "fixed_version": "4.17.21",
+          "fixed_version": "42.0.0",
           "graph_reachable": true,
           "is_kev": false,
           "reachability": "likely",
           "reachability_basis": [
             "graph_path"
           ],
-          "summary": "lodash command injection via template() with tainted options",
-          "vulnerability_id": "CVE-2021-23337"
+          "summary": "pyca/cryptography Bleichenbacher timing oracle in RSA PKCS#1 v1.5 decryption",
+          "vulnerability_id": "CVE-2023-50782"
         },
-        "canonical_id": "b0f8d1ad-27c7-50b0-8f9c-ef2063baa475",
+        "canonical_id": "0ffc5298-d294-5285-9308-4e1d2e949f72",
         "category_uid": 2,
         "class_uid": 2001,
         "compliance_tags": [],
@@ -6129,15 +5709,15 @@
           "time_basis": "recorded_observation"
         },
         "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "vuln:CVE-2021-23337",
-        "label": "CVE-2021-23337",
+        "id": "vuln:CVE-2023-50782",
+        "label": "CVE-2023-50782",
         "last_seen": "2026-10-19T12:00:00+00:00",
         "risk_assessment": {
           "basis": null,
           "scope": null,
           "status": "not_assessed"
         },
-        "risk_score": 7.2,
+        "risk_score": 7.5,
         "severity": "high",
         "severity_id": 4,
         "status": "active",
@@ -6231,9 +5811,9 @@
       {
         "attributes": {
           "ecosystem": "pypi",
-          "version": "2.28.0"
+          "version": "2.2.0"
         },
-        "canonical_id": "d48c503a-14b9-5f61-a448-231c041d6bb3",
+        "canonical_id": "851cfb6a-b82c-57cb-a5c3-e7f584a994b2",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -6251,8 +5831,8 @@
           "time_basis": "recorded_observation"
         },
         "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "pkg:pypi:requests@2.28.0",
-        "label": "requests@2.28.0",
+        "id": "pkg:pypi:flask@2.2.0",
+        "label": "flask@2.2.0",
         "last_seen": "2026-10-19T12:00:00+00:00",
         "risk_assessment": {
           "basis": null,
@@ -6267,21 +5847,21 @@
       },
       {
         "attributes": {
-          "cvss_score": 6.1,
+          "cvss_score": 7.5,
           "cwe_ids": [
-            "CWE-200"
+            "CWE-539"
           ],
-          "fixed_version": "2.31.0",
+          "fixed_version": "2.3.2",
           "graph_reachable": true,
           "is_kev": false,
           "reachability": "likely",
           "reachability_basis": [
             "graph_path"
           ],
-          "summary": "Requests leaks Proxy-Authorization header to destination on redirect",
-          "vulnerability_id": "CVE-2023-32681"
+          "summary": "Flask session cookie disclosed to other clients via a caching proxy",
+          "vulnerability_id": "CVE-2023-30861"
         },
-        "canonical_id": "517c0090-5388-5fbb-a4bc-85b1cc70fc97",
+        "canonical_id": "4aebf62a-6ee4-5d55-b344-f0590a0cc7e5",
         "category_uid": 2,
         "class_uid": 2001,
         "compliance_tags": [],
@@ -6299,17 +5879,17 @@
           "time_basis": "recorded_observation"
         },
         "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "vuln:CVE-2023-32681",
-        "label": "CVE-2023-32681",
+        "id": "vuln:CVE-2023-30861",
+        "label": "CVE-2023-30861",
         "last_seen": "2026-10-19T12:00:00+00:00",
         "risk_assessment": {
           "basis": null,
           "scope": null,
           "status": "not_assessed"
         },
-        "risk_score": 6.1,
-        "severity": "medium",
-        "severity_id": 3,
+        "risk_score": 7.5,
+        "severity": "high",
+        "severity_id": 4,
         "status": "active",
         "type_uid": 200101
       },
@@ -6401,6 +5981,261 @@
       {
         "attributes": {
           "ecosystem": "npm",
+          "version": "8.5.1"
+        },
+        "canonical_id": "ae10799c-5f10-534a-b79c-ed2c82bbbc23",
+        "category_uid": 5,
+        "class_uid": 4001,
+        "compliance_tags": [],
+        "data_sources": [],
+        "dimensions": {},
+        "entity_type": "package",
+        "evidence_provenance": {
+          "execution": "not_established",
+          "first_seen": "2026-10-19T12:00:00+00:00",
+          "last_seen": "2026-10-19T12:00:00+00:00",
+          "schema_version": "agent-bom.graph-evidence/v1",
+          "source_snapshot_ids": [],
+          "sources": [],
+          "tier": "unspecified",
+          "time_basis": "recorded_observation"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "pkg:npm:jsonwebtoken@8.5.1",
+        "label": "jsonwebtoken@8.5.1",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "risk_assessment": {
+          "basis": null,
+          "scope": null,
+          "status": "not_assessed"
+        },
+        "risk_score": 0.0,
+        "severity": "",
+        "severity_id": 0,
+        "status": "active",
+        "type_uid": 400101
+      },
+      {
+        "attributes": {
+          "cvss_score": 8.1,
+          "cwe_ids": [
+            "CWE-327"
+          ],
+          "fixed_version": "9.0.0",
+          "graph_reachable": true,
+          "is_kev": false,
+          "reachability": "likely",
+          "reachability_basis": [
+            "graph_path"
+          ],
+          "summary": "jsonwebtoken unrestricted key type could lead to legacy keys usage",
+          "vulnerability_id": "CVE-2022-23539"
+        },
+        "canonical_id": "9d88e144-799d-53ce-b170-e5ff91a212fd",
+        "category_uid": 2,
+        "class_uid": 2001,
+        "compliance_tags": [],
+        "data_sources": [],
+        "dimensions": {},
+        "entity_type": "vulnerability",
+        "evidence_provenance": {
+          "execution": "not_established",
+          "first_seen": "2026-10-19T12:00:00+00:00",
+          "last_seen": "2026-10-19T12:00:00+00:00",
+          "schema_version": "agent-bom.graph-evidence/v1",
+          "source_snapshot_ids": [],
+          "sources": [],
+          "tier": "unspecified",
+          "time_basis": "recorded_observation"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "vuln:CVE-2022-23539",
+        "label": "CVE-2022-23539",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "risk_assessment": {
+          "basis": null,
+          "scope": null,
+          "status": "not_assessed"
+        },
+        "risk_score": 8.1,
+        "severity": "high",
+        "severity_id": 4,
+        "status": "active",
+        "type_uid": 200101
+      },
+      {
+        "attributes": {
+          "ecosystem": "pypi",
+          "version": "0.0.150"
+        },
+        "canonical_id": "e406d394-b8de-5bf7-8f88-555c2839a7af",
+        "category_uid": 5,
+        "class_uid": 4001,
+        "compliance_tags": [],
+        "data_sources": [],
+        "dimensions": {},
+        "entity_type": "package",
+        "evidence_provenance": {
+          "execution": "not_established",
+          "first_seen": "2026-10-19T12:00:00+00:00",
+          "last_seen": "2026-10-19T12:00:00+00:00",
+          "schema_version": "agent-bom.graph-evidence/v1",
+          "source_snapshot_ids": [],
+          "sources": [],
+          "tier": "unspecified",
+          "time_basis": "recorded_observation"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "pkg:pypi:langchain@0.0.150",
+        "label": "langchain@0.0.150",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "risk_assessment": {
+          "basis": null,
+          "scope": null,
+          "status": "not_assessed"
+        },
+        "risk_score": 0.0,
+        "severity": "",
+        "severity_id": 0,
+        "status": "active",
+        "type_uid": 400101
+      },
+      {
+        "attributes": {
+          "cvss_score": 9.8,
+          "cwe_ids": [
+            "CWE-94"
+          ],
+          "fixed_version": "0.0.247",
+          "graph_reachable": true,
+          "is_kev": false,
+          "reachability": "likely",
+          "reachability_basis": [
+            "graph_path"
+          ],
+          "summary": "LangChain arbitrary code execution via PALChain prompt-to-Python evaluation",
+          "vulnerability_id": "CVE-2023-36258"
+        },
+        "canonical_id": "f54651d5-1344-56e3-a417-17a4b2cf2e56",
+        "category_uid": 2,
+        "class_uid": 2001,
+        "compliance_tags": [],
+        "data_sources": [],
+        "dimensions": {},
+        "entity_type": "vulnerability",
+        "evidence_provenance": {
+          "execution": "not_established",
+          "first_seen": "2026-10-19T12:00:00+00:00",
+          "last_seen": "2026-10-19T12:00:00+00:00",
+          "schema_version": "agent-bom.graph-evidence/v1",
+          "source_snapshot_ids": [],
+          "sources": [],
+          "tier": "unspecified",
+          "time_basis": "recorded_observation"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "vuln:CVE-2023-36258",
+        "label": "CVE-2023-36258",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "risk_assessment": {
+          "basis": null,
+          "scope": null,
+          "status": "not_assessed"
+        },
+        "risk_score": 9.8,
+        "severity": "critical",
+        "severity_id": 5,
+        "status": "active",
+        "type_uid": 200101
+      },
+      {
+        "attributes": {
+          "ecosystem": "npm",
+          "version": "4.17.20"
+        },
+        "canonical_id": "76f13d5d-b78a-5baa-a14b-963ac16fd3d6",
+        "category_uid": 5,
+        "class_uid": 4001,
+        "compliance_tags": [],
+        "data_sources": [],
+        "dimensions": {},
+        "entity_type": "package",
+        "evidence_provenance": {
+          "execution": "not_established",
+          "first_seen": "2026-10-19T12:00:00+00:00",
+          "last_seen": "2026-10-19T12:00:00+00:00",
+          "schema_version": "agent-bom.graph-evidence/v1",
+          "source_snapshot_ids": [],
+          "sources": [],
+          "tier": "unspecified",
+          "time_basis": "recorded_observation"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "pkg:npm:lodash@4.17.20",
+        "label": "lodash@4.17.20",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "risk_assessment": {
+          "basis": null,
+          "scope": null,
+          "status": "not_assessed"
+        },
+        "risk_score": 0.0,
+        "severity": "",
+        "severity_id": 0,
+        "status": "active",
+        "type_uid": 400101
+      },
+      {
+        "attributes": {
+          "cvss_score": 7.2,
+          "cwe_ids": [
+            "CWE-77"
+          ],
+          "fixed_version": "4.17.21",
+          "graph_reachable": true,
+          "is_kev": false,
+          "reachability": "likely",
+          "reachability_basis": [
+            "graph_path"
+          ],
+          "summary": "lodash command injection via template() with tainted options",
+          "vulnerability_id": "CVE-2021-23337"
+        },
+        "canonical_id": "b0f8d1ad-27c7-50b0-8f9c-ef2063baa475",
+        "category_uid": 2,
+        "class_uid": 2001,
+        "compliance_tags": [],
+        "data_sources": [],
+        "dimensions": {},
+        "entity_type": "vulnerability",
+        "evidence_provenance": {
+          "execution": "not_established",
+          "first_seen": "2026-10-19T12:00:00+00:00",
+          "last_seen": "2026-10-19T12:00:00+00:00",
+          "schema_version": "agent-bom.graph-evidence/v1",
+          "source_snapshot_ids": [],
+          "sources": [],
+          "tier": "unspecified",
+          "time_basis": "recorded_observation"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "vuln:CVE-2021-23337",
+        "label": "CVE-2021-23337",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "risk_assessment": {
+          "basis": null,
+          "scope": null,
+          "status": "not_assessed"
+        },
+        "risk_score": 7.2,
+        "severity": "high",
+        "severity_id": 4,
+        "status": "active",
+        "type_uid": 200101
+      },
+      {
+        "attributes": {
+          "ecosystem": "npm",
           "version": "2.6.1"
         },
         "canonical_id": "a249aeb4-81e8-533a-80a3-d7db40a6dba8",
@@ -6437,7 +6272,7 @@
       },
       {
         "attributes": {
-          "cvss_score": 6.1,
+          "cvss_score": 8.8,
           "cwe_ids": [
             "CWE-200"
           ],
@@ -6477,11 +6312,303 @@
           "scope": null,
           "status": "not_assessed"
         },
+        "risk_score": 8.8,
+        "severity": "high",
+        "severity_id": 4,
+        "status": "active",
+        "type_uid": 200101
+      },
+      {
+        "attributes": {
+          "ecosystem": "pypi",
+          "version": "9.0.0"
+        },
+        "canonical_id": "4f9384eb-5fb9-5630-9122-3e1eab637509",
+        "category_uid": 5,
+        "class_uid": 4001,
+        "compliance_tags": [],
+        "data_sources": [],
+        "dimensions": {},
+        "entity_type": "package",
+        "evidence_provenance": {
+          "execution": "not_established",
+          "first_seen": "2026-10-19T12:00:00+00:00",
+          "last_seen": "2026-10-19T12:00:00+00:00",
+          "schema_version": "agent-bom.graph-evidence/v1",
+          "source_snapshot_ids": [],
+          "sources": [],
+          "tier": "unspecified",
+          "time_basis": "recorded_observation"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "pkg:pypi:pillow@9.0.0",
+        "label": "pillow@9.0.0",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "risk_assessment": {
+          "basis": null,
+          "scope": null,
+          "status": "not_assessed"
+        },
+        "risk_score": 0.0,
+        "severity": "",
+        "severity_id": 0,
+        "status": "active",
+        "type_uid": 400101
+      },
+      {
+        "attributes": {
+          "cvss_score": 8.8,
+          "cwe_ids": [
+            "CWE-787"
+          ],
+          "fixed_version": "10.0.1",
+          "graph_reachable": true,
+          "is_kev": true,
+          "reachability": "likely",
+          "reachability_basis": [
+            "graph_path"
+          ],
+          "summary": "Pillow bundled libwebp heap buffer overflow \u2014 exploited in the wild (CISA KEV)",
+          "vulnerability_id": "CVE-2023-4863"
+        },
+        "canonical_id": "8ae3bf21-4427-58f5-be91-06d2acbd9383",
+        "category_uid": 2,
+        "class_uid": 2001,
+        "compliance_tags": [],
+        "data_sources": [],
+        "dimensions": {},
+        "entity_type": "vulnerability",
+        "evidence_provenance": {
+          "execution": "not_established",
+          "first_seen": "2026-10-19T12:00:00+00:00",
+          "last_seen": "2026-10-19T12:00:00+00:00",
+          "schema_version": "agent-bom.graph-evidence/v1",
+          "source_snapshot_ids": [],
+          "sources": [],
+          "tier": "unspecified",
+          "time_basis": "recorded_observation"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "vuln:CVE-2023-4863",
+        "label": "CVE-2023-4863",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "risk_assessment": {
+          "basis": null,
+          "scope": null,
+          "status": "not_assessed"
+        },
+        "risk_score": 8.8,
+        "severity": "high",
+        "severity_id": 4,
+        "status": "active",
+        "type_uid": 200101
+      },
+      {
+        "attributes": {
+          "ecosystem": "pypi",
+          "version": "5.3"
+        },
+        "canonical_id": "5322b0b4-8d18-54a5-a7ca-93263d5eaf3f",
+        "category_uid": 5,
+        "class_uid": 4001,
+        "compliance_tags": [],
+        "data_sources": [],
+        "dimensions": {},
+        "entity_type": "package",
+        "evidence_provenance": {
+          "execution": "not_established",
+          "first_seen": "2026-10-19T12:00:00+00:00",
+          "last_seen": "2026-10-19T12:00:00+00:00",
+          "schema_version": "agent-bom.graph-evidence/v1",
+          "source_snapshot_ids": [],
+          "sources": [],
+          "tier": "unspecified",
+          "time_basis": "recorded_observation"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "pkg:pypi:pyyaml@5.3",
+        "label": "pyyaml@5.3",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "risk_assessment": {
+          "basis": null,
+          "scope": null,
+          "status": "not_assessed"
+        },
+        "risk_score": 0.0,
+        "severity": "",
+        "severity_id": 0,
+        "status": "active",
+        "type_uid": 400101
+      },
+      {
+        "attributes": {
+          "cvss_score": 9.8,
+          "cwe_ids": [
+            "CWE-20"
+          ],
+          "fixed_version": "5.4",
+          "graph_reachable": true,
+          "is_kev": false,
+          "reachability": "likely",
+          "reachability_basis": [
+            "graph_path"
+          ],
+          "summary": "PyYAML arbitrary code execution via yaml.full_load on untrusted input",
+          "vulnerability_id": "CVE-2020-14343"
+        },
+        "canonical_id": "c8231d52-9174-56b4-bacc-0cae4dc3bc8e",
+        "category_uid": 2,
+        "class_uid": 2001,
+        "compliance_tags": [],
+        "data_sources": [],
+        "dimensions": {},
+        "entity_type": "vulnerability",
+        "evidence_provenance": {
+          "execution": "not_established",
+          "first_seen": "2026-10-19T12:00:00+00:00",
+          "last_seen": "2026-10-19T12:00:00+00:00",
+          "schema_version": "agent-bom.graph-evidence/v1",
+          "source_snapshot_ids": [],
+          "sources": [],
+          "tier": "unspecified",
+          "time_basis": "recorded_observation"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "vuln:CVE-2020-14343",
+        "label": "CVE-2020-14343",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "risk_assessment": {
+          "basis": null,
+          "scope": null,
+          "status": "not_assessed"
+        },
+        "risk_score": 9.8,
+        "severity": "critical",
+        "severity_id": 5,
+        "status": "active",
+        "type_uid": 200101
+      },
+      {
+        "attributes": {
+          "ecosystem": "pypi",
+          "version": "2.28.0"
+        },
+        "canonical_id": "d48c503a-14b9-5f61-a448-231c041d6bb3",
+        "category_uid": 5,
+        "class_uid": 4001,
+        "compliance_tags": [],
+        "data_sources": [],
+        "dimensions": {},
+        "entity_type": "package",
+        "evidence_provenance": {
+          "execution": "not_established",
+          "first_seen": "2026-10-19T12:00:00+00:00",
+          "last_seen": "2026-10-19T12:00:00+00:00",
+          "schema_version": "agent-bom.graph-evidence/v1",
+          "source_snapshot_ids": [],
+          "sources": [],
+          "tier": "unspecified",
+          "time_basis": "recorded_observation"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "pkg:pypi:requests@2.28.0",
+        "label": "requests@2.28.0",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "risk_assessment": {
+          "basis": null,
+          "scope": null,
+          "status": "not_assessed"
+        },
+        "risk_score": 0.0,
+        "severity": "",
+        "severity_id": 0,
+        "status": "active",
+        "type_uid": 400101
+      },
+      {
+        "attributes": {
+          "cvss_score": 6.1,
+          "cwe_ids": [
+            "CWE-200"
+          ],
+          "fixed_version": "2.31.0",
+          "graph_reachable": true,
+          "is_kev": false,
+          "reachability": "likely",
+          "reachability_basis": [
+            "graph_path"
+          ],
+          "summary": "Requests leaks Proxy-Authorization header to destination on redirect",
+          "vulnerability_id": "CVE-2023-32681"
+        },
+        "canonical_id": "517c0090-5388-5fbb-a4bc-85b1cc70fc97",
+        "category_uid": 2,
+        "class_uid": 2001,
+        "compliance_tags": [],
+        "data_sources": [],
+        "dimensions": {},
+        "entity_type": "vulnerability",
+        "evidence_provenance": {
+          "execution": "not_established",
+          "first_seen": "2026-10-19T12:00:00+00:00",
+          "last_seen": "2026-10-19T12:00:00+00:00",
+          "schema_version": "agent-bom.graph-evidence/v1",
+          "source_snapshot_ids": [],
+          "sources": [],
+          "tier": "unspecified",
+          "time_basis": "recorded_observation"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "vuln:CVE-2023-32681",
+        "label": "CVE-2023-32681",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "risk_assessment": {
+          "basis": null,
+          "scope": null,
+          "status": "not_assessed"
+        },
         "risk_score": 6.1,
         "severity": "medium",
         "severity_id": 3,
         "status": "active",
         "type_uid": 200101
+      },
+      {
+        "attributes": {
+          "ecosystem": "npm",
+          "version": "7.5.2"
+        },
+        "canonical_id": "2ec3234c-9eb6-529b-bef1-92cc981972f4",
+        "category_uid": 5,
+        "class_uid": 4001,
+        "compliance_tags": [],
+        "data_sources": [],
+        "dimensions": {},
+        "entity_type": "package",
+        "evidence_provenance": {
+          "execution": "not_established",
+          "first_seen": "2026-10-19T12:00:00+00:00",
+          "last_seen": "2026-10-19T12:00:00+00:00",
+          "schema_version": "agent-bom.graph-evidence/v1",
+          "source_snapshot_ids": [],
+          "sources": [],
+          "tier": "unspecified",
+          "time_basis": "recorded_observation"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "pkg:npm:semver@7.5.2",
+        "label": "semver@7.5.2",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "risk_assessment": {
+          "basis": null,
+          "scope": null,
+          "status": "not_assessed"
+        },
+        "risk_score": 0.0,
+        "severity": "",
+        "severity_id": 0,
+        "status": "active",
+        "type_uid": 400101
       },
       {
         "attributes": {
@@ -6556,6 +6683,91 @@
         "first_seen": "2026-10-19T12:00:00+00:00",
         "id": "vuln:CVE-2023-25577",
         "label": "CVE-2023-25577",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "risk_assessment": {
+          "basis": null,
+          "scope": null,
+          "status": "not_assessed"
+        },
+        "risk_score": 7.5,
+        "severity": "high",
+        "severity_id": 4,
+        "status": "active",
+        "type_uid": 200101
+      },
+      {
+        "attributes": {
+          "ecosystem": "npm",
+          "version": "8.5.0"
+        },
+        "canonical_id": "9bb91589-c11e-5246-8be4-231305ac208e",
+        "category_uid": 5,
+        "class_uid": 4001,
+        "compliance_tags": [],
+        "data_sources": [],
+        "dimensions": {},
+        "entity_type": "package",
+        "evidence_provenance": {
+          "execution": "not_established",
+          "first_seen": "2026-10-19T12:00:00+00:00",
+          "last_seen": "2026-10-19T12:00:00+00:00",
+          "schema_version": "agent-bom.graph-evidence/v1",
+          "source_snapshot_ids": [],
+          "sources": [],
+          "tier": "unspecified",
+          "time_basis": "recorded_observation"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "pkg:npm:ws@8.5.0",
+        "label": "ws@8.5.0",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "risk_assessment": {
+          "basis": null,
+          "scope": null,
+          "status": "not_assessed"
+        },
+        "risk_score": 0.0,
+        "severity": "",
+        "severity_id": 0,
+        "status": "active",
+        "type_uid": 400101
+      },
+      {
+        "attributes": {
+          "cvss_score": 7.5,
+          "cwe_ids": [
+            "CWE-400"
+          ],
+          "fixed_version": "8.17.1",
+          "graph_reachable": true,
+          "is_kev": false,
+          "reachability": "likely",
+          "reachability_basis": [
+            "graph_path"
+          ],
+          "summary": "ws denial of service when handling a request with many HTTP headers",
+          "vulnerability_id": "CVE-2024-37890"
+        },
+        "canonical_id": "9cc31507-4f00-5a3c-8c36-1c6242c5a1ec",
+        "category_uid": 2,
+        "class_uid": 2001,
+        "compliance_tags": [],
+        "data_sources": [],
+        "dimensions": {},
+        "entity_type": "vulnerability",
+        "evidence_provenance": {
+          "execution": "not_established",
+          "first_seen": "2026-10-19T12:00:00+00:00",
+          "last_seen": "2026-10-19T12:00:00+00:00",
+          "schema_version": "agent-bom.graph-evidence/v1",
+          "source_snapshot_ids": [],
+          "sources": [],
+          "tier": "unspecified",
+          "time_basis": "recorded_observation"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "vuln:CVE-2024-37890",
+        "label": "CVE-2024-37890",
         "last_seen": "2026-10-19T12:00:00+00:00",
         "risk_assessment": {
           "basis": null,
@@ -7171,8 +7383,8 @@
           "status": "not_assessed"
         },
         "risk_score": 0.0,
-        "severity": "",
-        "severity_id": 0,
+        "severity": "high",
+        "severity_id": 4,
         "status": "active",
         "type_uid": 200301
       },
@@ -8019,7 +8231,7 @@
       },
       {
         "attributes": {
-          "agent_id": "LangChain Service Agent",
+          "agent_id": "LangChain Service",
           "allowed_tools": [],
           "expires_at": "2027-01-17T12:00:00+00:00",
           "identity_id": "demo-nhi-langchain-service",
@@ -8054,7 +8266,7 @@
         },
         "first_seen": "2026-10-19T12:00:00+00:00",
         "id": "managed_identity:demo-nhi-langchain-service",
-        "label": "LangChain Service Agent",
+        "label": "LangChain Service",
         "last_seen": "2026-10-19T12:00:00+00:00",
         "risk_assessment": {
           "basis": null,
@@ -8262,7 +8474,7 @@
         "managed_identity": 5,
         "misconfiguration": 2,
         "org": 1,
-        "package": 15,
+        "package": 16,
         "policy": 4,
         "role": 3,
         "server": 11,
@@ -8279,7 +8491,7 @@
         "called": 3,
         "can_access": 6,
         "contains": 6,
-        "depends_on": 16,
+        "depends_on": 23,
         "exhibits_drift": 2,
         "exploitable_via": 4,
         "exposed_to": 1,
@@ -8295,12 +8507,12 @@
       },
       "severity_counts": {
         "critical": 2,
-        "high": 9,
-        "medium": 6
+        "high": 11,
+        "medium": 5
       },
-      "total_edges": 142,
-      "total_nodes": 112,
-      "total_nodes_source": 112
+      "total_edges": 149,
+      "total_nodes": 113,
+      "total_nodes_source": 113
     },
     "tenant_id": "tenant-a"
   },
@@ -9254,7 +9466,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "1d2283ae-1362-5caf-94fc-caad408e7fbd",
+        "canonical_id": "ed8fa3aa-cc5a-5e9d-bbee-afe728762ab2",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -9262,191 +9474,16 @@
           "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "depends_on:server:shell-runner-server:pkg:pypi:pyyaml@5.3",
+        "id": "depends_on:server:github-server:pkg:npm:axios@1.4.0",
         "last_seen": "2026-10-19T12:00:00+00:00",
         "provenance": {},
         "relationship": "depends_on",
-        "source": "server:shell-runner-server",
-        "source_id": "server:shell-runner-server",
+        "source": "server:github-server",
+        "source_id": "server:github-server",
         "source_run_id": "",
         "source_scan_id": "",
-        "target": "pkg:pypi:pyyaml@5.3",
-        "target_id": "pkg:pypi:pyyaml@5.3",
-        "traversable": true,
-        "valid_from": "2026-10-19T12:00:00+00:00",
-        "valid_to": null,
-        "weight": 1.0
-      },
-      {
-        "activity_id": 1,
-        "canonical_id": "97bbd7f2-adfc-500b-a717-e49ac4bf4469",
-        "confidence": 1.0,
-        "direction": "directed",
-        "evidence": {
-          "source": "demo-showcase",
-          "tier": "static_scan"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "vulnerable_to:pkg:pypi:pyyaml@5.3:vuln:CVE-2020-14343",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "provenance": {},
-        "relationship": "vulnerable_to",
-        "source": "pkg:pypi:pyyaml@5.3",
-        "source_id": "pkg:pypi:pyyaml@5.3",
-        "source_run_id": "",
-        "source_scan_id": "",
-        "target": "vuln:CVE-2020-14343",
-        "target_id": "vuln:CVE-2020-14343",
-        "traversable": true,
-        "valid_from": "2026-10-19T12:00:00+00:00",
-        "valid_to": null,
-        "weight": 1.0
-      },
-      {
-        "activity_id": 1,
-        "canonical_id": "c11c1471-eadf-567f-9f6b-c7de31ebb5a5",
-        "confidence": 1.0,
-        "direction": "directed",
-        "evidence": {
-          "source": "demo-showcase",
-          "tier": "modeled_infrastructure"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "depends_on:server:llm-orchestrator-server:pkg:pypi:langchain@0.0.150",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "provenance": {},
-        "relationship": "depends_on",
-        "source": "server:llm-orchestrator-server",
-        "source_id": "server:llm-orchestrator-server",
-        "source_run_id": "",
-        "source_scan_id": "",
-        "target": "pkg:pypi:langchain@0.0.150",
-        "target_id": "pkg:pypi:langchain@0.0.150",
-        "traversable": true,
-        "valid_from": "2026-10-19T12:00:00+00:00",
-        "valid_to": null,
-        "weight": 1.0
-      },
-      {
-        "activity_id": 1,
-        "canonical_id": "cc777e6b-3608-5c39-be1f-c5e26a798bf1",
-        "confidence": 1.0,
-        "direction": "directed",
-        "evidence": {
-          "source": "demo-showcase",
-          "tier": "static_scan"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "vulnerable_to:pkg:pypi:langchain@0.0.150:vuln:CVE-2023-36258",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "provenance": {},
-        "relationship": "vulnerable_to",
-        "source": "pkg:pypi:langchain@0.0.150",
-        "source_id": "pkg:pypi:langchain@0.0.150",
-        "source_run_id": "",
-        "source_scan_id": "",
-        "target": "vuln:CVE-2023-36258",
-        "target_id": "vuln:CVE-2023-36258",
-        "traversable": true,
-        "valid_from": "2026-10-19T12:00:00+00:00",
-        "valid_to": null,
-        "weight": 1.0
-      },
-      {
-        "activity_id": 1,
-        "canonical_id": "20e8a95d-ae86-51af-9769-9eed5d7d5e1c",
-        "confidence": 1.0,
-        "direction": "directed",
-        "evidence": {
-          "source": "demo-showcase",
-          "tier": "modeled_infrastructure"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "depends_on:server:etl-server:pkg:pypi:pillow@9.0.0",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "provenance": {},
-        "relationship": "depends_on",
-        "source": "server:etl-server",
-        "source_id": "server:etl-server",
-        "source_run_id": "",
-        "source_scan_id": "",
-        "target": "pkg:pypi:pillow@9.0.0",
-        "target_id": "pkg:pypi:pillow@9.0.0",
-        "traversable": true,
-        "valid_from": "2026-10-19T12:00:00+00:00",
-        "valid_to": null,
-        "weight": 1.0
-      },
-      {
-        "activity_id": 1,
-        "canonical_id": "131ed73d-b127-577e-8ba4-13f20631e9f3",
-        "confidence": 1.0,
-        "direction": "directed",
-        "evidence": {
-          "source": "demo-showcase",
-          "tier": "static_scan"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "vulnerable_to:pkg:pypi:pillow@9.0.0:vuln:CVE-2023-4863",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "provenance": {},
-        "relationship": "vulnerable_to",
-        "source": "pkg:pypi:pillow@9.0.0",
-        "source_id": "pkg:pypi:pillow@9.0.0",
-        "source_run_id": "",
-        "source_scan_id": "",
-        "target": "vuln:CVE-2023-4863",
-        "target_id": "vuln:CVE-2023-4863",
-        "traversable": true,
-        "valid_from": "2026-10-19T12:00:00+00:00",
-        "valid_to": null,
-        "weight": 1.0
-      },
-      {
-        "activity_id": 1,
-        "canonical_id": "509b57cc-1056-5f4d-b04b-3d0d9d8b8101",
-        "confidence": 1.0,
-        "direction": "directed",
-        "evidence": {
-          "source": "demo-showcase",
-          "tier": "modeled_infrastructure"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "depends_on:server:helpdesk-server:pkg:npm:jsonwebtoken@8.5.1",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "provenance": {},
-        "relationship": "depends_on",
-        "source": "server:helpdesk-server",
-        "source_id": "server:helpdesk-server",
-        "source_run_id": "",
-        "source_scan_id": "",
-        "target": "pkg:npm:jsonwebtoken@8.5.1",
-        "target_id": "pkg:npm:jsonwebtoken@8.5.1",
-        "traversable": true,
-        "valid_from": "2026-10-19T12:00:00+00:00",
-        "valid_to": null,
-        "weight": 1.0
-      },
-      {
-        "activity_id": 1,
-        "canonical_id": "c268adc2-80b2-52e3-929a-fb9a5313a569",
-        "confidence": 1.0,
-        "direction": "directed",
-        "evidence": {
-          "source": "demo-showcase",
-          "tier": "static_scan"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "vulnerable_to:pkg:npm:jsonwebtoken@8.5.1:vuln:CVE-2022-23539",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "provenance": {},
-        "relationship": "vulnerable_to",
-        "source": "pkg:npm:jsonwebtoken@8.5.1",
-        "source_id": "pkg:npm:jsonwebtoken@8.5.1",
-        "source_run_id": "",
-        "source_scan_id": "",
-        "target": "vuln:CVE-2022-23539",
-        "target_id": "vuln:CVE-2022-23539",
+        "target": "pkg:npm:axios@1.4.0",
+        "target_id": "pkg:npm:axios@1.4.0",
         "traversable": true,
         "valid_from": "2026-10-19T12:00:00+00:00",
         "valid_to": null,
@@ -9504,156 +9541,6 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "eeb93e5c-7d21-5b21-94dc-146dfd8b32bd",
-        "confidence": 1.0,
-        "direction": "directed",
-        "evidence": {
-          "source": "demo-showcase",
-          "tier": "modeled_infrastructure"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "depends_on:server:warehouse-server:pkg:pypi:cryptography@39.0.0",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "provenance": {},
-        "relationship": "depends_on",
-        "source": "server:warehouse-server",
-        "source_id": "server:warehouse-server",
-        "source_run_id": "",
-        "source_scan_id": "",
-        "target": "pkg:pypi:cryptography@39.0.0",
-        "target_id": "pkg:pypi:cryptography@39.0.0",
-        "traversable": true,
-        "valid_from": "2026-10-19T12:00:00+00:00",
-        "valid_to": null,
-        "weight": 1.0
-      },
-      {
-        "activity_id": 1,
-        "canonical_id": "90b67c93-0621-52e0-b107-27aea6b27622",
-        "confidence": 1.0,
-        "direction": "directed",
-        "evidence": {
-          "source": "demo-showcase",
-          "tier": "static_scan"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "vulnerable_to:pkg:pypi:cryptography@39.0.0:vuln:CVE-2023-50782",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "provenance": {},
-        "relationship": "vulnerable_to",
-        "source": "pkg:pypi:cryptography@39.0.0",
-        "source_id": "pkg:pypi:cryptography@39.0.0",
-        "source_run_id": "",
-        "source_scan_id": "",
-        "target": "vuln:CVE-2023-50782",
-        "target_id": "vuln:CVE-2023-50782",
-        "traversable": true,
-        "valid_from": "2026-10-19T12:00:00+00:00",
-        "valid_to": null,
-        "weight": 1.0
-      },
-      {
-        "activity_id": 1,
-        "canonical_id": "355fbdf9-e30e-55de-a1bc-a5b75fa2c63b",
-        "confidence": 1.0,
-        "direction": "directed",
-        "evidence": {
-          "source": "demo-showcase",
-          "tier": "modeled_infrastructure"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "depends_on:server:filesystem-server:pkg:npm:ws@8.5.0",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "provenance": {},
-        "relationship": "depends_on",
-        "source": "server:filesystem-server",
-        "source_id": "server:filesystem-server",
-        "source_run_id": "",
-        "source_scan_id": "",
-        "target": "pkg:npm:ws@8.5.0",
-        "target_id": "pkg:npm:ws@8.5.0",
-        "traversable": true,
-        "valid_from": "2026-10-19T12:00:00+00:00",
-        "valid_to": null,
-        "weight": 1.0
-      },
-      {
-        "activity_id": 1,
-        "canonical_id": "c52dd557-7ee1-552a-b000-884882a5c72e",
-        "confidence": 1.0,
-        "direction": "directed",
-        "evidence": {
-          "source": "demo-showcase",
-          "tier": "static_scan"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "vulnerable_to:pkg:npm:ws@8.5.0:vuln:CVE-2024-37890",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "provenance": {},
-        "relationship": "vulnerable_to",
-        "source": "pkg:npm:ws@8.5.0",
-        "source_id": "pkg:npm:ws@8.5.0",
-        "source_run_id": "",
-        "source_scan_id": "",
-        "target": "vuln:CVE-2024-37890",
-        "target_id": "vuln:CVE-2024-37890",
-        "traversable": true,
-        "valid_from": "2026-10-19T12:00:00+00:00",
-        "valid_to": null,
-        "weight": 1.0
-      },
-      {
-        "activity_id": 1,
-        "canonical_id": "7e4b0004-f904-51d9-b60e-7af20aa57a0c",
-        "confidence": 1.0,
-        "direction": "directed",
-        "evidence": {
-          "source": "demo-showcase",
-          "tier": "modeled_infrastructure"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "depends_on:server:team-chat-server:pkg:pypi:flask@2.2.0",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "provenance": {},
-        "relationship": "depends_on",
-        "source": "server:team-chat-server",
-        "source_id": "server:team-chat-server",
-        "source_run_id": "",
-        "source_scan_id": "",
-        "target": "pkg:pypi:flask@2.2.0",
-        "target_id": "pkg:pypi:flask@2.2.0",
-        "traversable": true,
-        "valid_from": "2026-10-19T12:00:00+00:00",
-        "valid_to": null,
-        "weight": 1.0
-      },
-      {
-        "activity_id": 1,
-        "canonical_id": "030cace3-b4f0-58b0-88aa-a123752b85b7",
-        "confidence": 1.0,
-        "direction": "directed",
-        "evidence": {
-          "source": "demo-showcase",
-          "tier": "static_scan"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "vulnerable_to:pkg:pypi:flask@2.2.0:vuln:CVE-2023-30861",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "provenance": {},
-        "relationship": "vulnerable_to",
-        "source": "pkg:pypi:flask@2.2.0",
-        "source_id": "pkg:pypi:flask@2.2.0",
-        "source_run_id": "",
-        "source_scan_id": "",
-        "target": "vuln:CVE-2023-30861",
-        "target_id": "vuln:CVE-2023-30861",
-        "traversable": true,
-        "valid_from": "2026-10-19T12:00:00+00:00",
-        "valid_to": null,
-        "weight": 1.0
-      },
-      {
-        "activity_id": 1,
         "canonical_id": "c4f105c3-301a-5000-80b7-336bc1126ac9",
         "confidence": 1.0,
         "direction": "directed",
@@ -9704,7 +9591,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "27b47b27-1f2a-57e8-be07-5a90326ab8f9",
+        "canonical_id": "60567a36-01b8-5f16-84db-5ff2ba056d9b",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -9712,16 +9599,16 @@
           "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "depends_on:server:github-server:pkg:npm:lodash@4.17.20",
+        "id": "depends_on:server:vector-db-server:pkg:pypi:cryptography@39.0.0",
         "last_seen": "2026-10-19T12:00:00+00:00",
         "provenance": {},
         "relationship": "depends_on",
-        "source": "server:github-server",
-        "source_id": "server:github-server",
+        "source": "server:vector-db-server",
+        "source_id": "server:vector-db-server",
         "source_run_id": "",
         "source_scan_id": "",
-        "target": "pkg:npm:lodash@4.17.20",
-        "target_id": "pkg:npm:lodash@4.17.20",
+        "target": "pkg:pypi:cryptography@39.0.0",
+        "target_id": "pkg:pypi:cryptography@39.0.0",
         "traversable": true,
         "valid_from": "2026-10-19T12:00:00+00:00",
         "valid_to": null,
@@ -9729,7 +9616,32 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "06619d77-fe00-5b36-b25c-f47e5f1c1e62",
+        "canonical_id": "eeb93e5c-7d21-5b21-94dc-146dfd8b32bd",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "depends_on:server:warehouse-server:pkg:pypi:cryptography@39.0.0",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "depends_on",
+        "source": "server:warehouse-server",
+        "source_id": "server:warehouse-server",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "pkg:pypi:cryptography@39.0.0",
+        "target_id": "pkg:pypi:cryptography@39.0.0",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "90b67c93-0621-52e0-b107-27aea6b27622",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -9737,16 +9649,16 @@
           "tier": "static_scan"
         },
         "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "vulnerable_to:pkg:npm:lodash@4.17.20:vuln:CVE-2021-23337",
+        "id": "vulnerable_to:pkg:pypi:cryptography@39.0.0:vuln:CVE-2023-50782",
         "last_seen": "2026-10-19T12:00:00+00:00",
         "provenance": {},
         "relationship": "vulnerable_to",
-        "source": "pkg:npm:lodash@4.17.20",
-        "source_id": "pkg:npm:lodash@4.17.20",
+        "source": "pkg:pypi:cryptography@39.0.0",
+        "source_id": "pkg:pypi:cryptography@39.0.0",
         "source_run_id": "",
         "source_scan_id": "",
-        "target": "vuln:CVE-2021-23337",
-        "target_id": "vuln:CVE-2021-23337",
+        "target": "vuln:CVE-2023-50782",
+        "target_id": "vuln:CVE-2023-50782",
         "traversable": true,
         "valid_from": "2026-10-19T12:00:00+00:00",
         "valid_to": null,
@@ -9804,7 +9716,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "8d0b53d0-83d8-5691-ae94-844462df2425",
+        "canonical_id": "7e4b0004-f904-51d9-b60e-7af20aa57a0c",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -9812,16 +9724,16 @@
           "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "depends_on:server:vector-db-server:pkg:pypi:requests@2.28.0",
+        "id": "depends_on:server:team-chat-server:pkg:pypi:flask@2.2.0",
         "last_seen": "2026-10-19T12:00:00+00:00",
         "provenance": {},
         "relationship": "depends_on",
-        "source": "server:vector-db-server",
-        "source_id": "server:vector-db-server",
+        "source": "server:team-chat-server",
+        "source_id": "server:team-chat-server",
         "source_run_id": "",
         "source_scan_id": "",
-        "target": "pkg:pypi:requests@2.28.0",
-        "target_id": "pkg:pypi:requests@2.28.0",
+        "target": "pkg:pypi:flask@2.2.0",
+        "target_id": "pkg:pypi:flask@2.2.0",
         "traversable": true,
         "valid_from": "2026-10-19T12:00:00+00:00",
         "valid_to": null,
@@ -9829,7 +9741,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "ca8e696c-f443-5024-8449-98c47353bfcc",
+        "canonical_id": "030cace3-b4f0-58b0-88aa-a123752b85b7",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -9837,16 +9749,41 @@
           "tier": "static_scan"
         },
         "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "vulnerable_to:pkg:pypi:requests@2.28.0:vuln:CVE-2023-32681",
+        "id": "vulnerable_to:pkg:pypi:flask@2.2.0:vuln:CVE-2023-30861",
         "last_seen": "2026-10-19T12:00:00+00:00",
         "provenance": {},
         "relationship": "vulnerable_to",
-        "source": "pkg:pypi:requests@2.28.0",
-        "source_id": "pkg:pypi:requests@2.28.0",
+        "source": "pkg:pypi:flask@2.2.0",
+        "source_id": "pkg:pypi:flask@2.2.0",
         "source_run_id": "",
         "source_scan_id": "",
-        "target": "vuln:CVE-2023-32681",
-        "target_id": "vuln:CVE-2023-32681",
+        "target": "vuln:CVE-2023-30861",
+        "target_id": "vuln:CVE-2023-30861",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "76598b3a-e04e-5287-aca5-3981ddd50621",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "depends_on:server:llm-orchestrator-server:pkg:pypi:jinja2@3.0.0",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "depends_on",
+        "source": "server:llm-orchestrator-server",
+        "source_id": "server:llm-orchestrator-server",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "pkg:pypi:jinja2@3.0.0",
+        "target_id": "pkg:pypi:jinja2@3.0.0",
         "traversable": true,
         "valid_from": "2026-10-19T12:00:00+00:00",
         "valid_to": null,
@@ -9904,6 +9841,181 @@
       },
       {
         "activity_id": 1,
+        "canonical_id": "509b57cc-1056-5f4d-b04b-3d0d9d8b8101",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "depends_on:server:helpdesk-server:pkg:npm:jsonwebtoken@8.5.1",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "depends_on",
+        "source": "server:helpdesk-server",
+        "source_id": "server:helpdesk-server",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "pkg:npm:jsonwebtoken@8.5.1",
+        "target_id": "pkg:npm:jsonwebtoken@8.5.1",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "c268adc2-80b2-52e3-929a-fb9a5313a569",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "static_scan"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "vulnerable_to:pkg:npm:jsonwebtoken@8.5.1:vuln:CVE-2022-23539",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "vulnerable_to",
+        "source": "pkg:npm:jsonwebtoken@8.5.1",
+        "source_id": "pkg:npm:jsonwebtoken@8.5.1",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "vuln:CVE-2022-23539",
+        "target_id": "vuln:CVE-2022-23539",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "c11c1471-eadf-567f-9f6b-c7de31ebb5a5",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "depends_on:server:llm-orchestrator-server:pkg:pypi:langchain@0.0.150",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "depends_on",
+        "source": "server:llm-orchestrator-server",
+        "source_id": "server:llm-orchestrator-server",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "pkg:pypi:langchain@0.0.150",
+        "target_id": "pkg:pypi:langchain@0.0.150",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "cc777e6b-3608-5c39-be1f-c5e26a798bf1",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "static_scan"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "vulnerable_to:pkg:pypi:langchain@0.0.150:vuln:CVE-2023-36258",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "vulnerable_to",
+        "source": "pkg:pypi:langchain@0.0.150",
+        "source_id": "pkg:pypi:langchain@0.0.150",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "vuln:CVE-2023-36258",
+        "target_id": "vuln:CVE-2023-36258",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "27b47b27-1f2a-57e8-be07-5a90326ab8f9",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "depends_on:server:github-server:pkg:npm:lodash@4.17.20",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "depends_on",
+        "source": "server:github-server",
+        "source_id": "server:github-server",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "pkg:npm:lodash@4.17.20",
+        "target_id": "pkg:npm:lodash@4.17.20",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "06619d77-fe00-5b36-b25c-f47e5f1c1e62",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "static_scan"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "vulnerable_to:pkg:npm:lodash@4.17.20:vuln:CVE-2021-23337",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "vulnerable_to",
+        "source": "pkg:npm:lodash@4.17.20",
+        "source_id": "pkg:npm:lodash@4.17.20",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "vuln:CVE-2021-23337",
+        "target_id": "vuln:CVE-2021-23337",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "0cec76a7-1b31-5ce0-b060-d11b05c7182a",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "depends_on:server:email-server:pkg:npm:node-fetch@2.6.1",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "depends_on",
+        "source": "server:email-server",
+        "source_id": "server:email-server",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "pkg:npm:node-fetch@2.6.1",
+        "target_id": "pkg:npm:node-fetch@2.6.1",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
         "canonical_id": "a91c2b40-44f0-5448-9903-9d137a59c074",
         "confidence": 1.0,
         "direction": "directed",
@@ -9947,6 +10059,256 @@
         "source_scan_id": "",
         "target": "vuln:CVE-2022-0235",
         "target_id": "vuln:CVE-2022-0235",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "20e8a95d-ae86-51af-9769-9eed5d7d5e1c",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "depends_on:server:etl-server:pkg:pypi:pillow@9.0.0",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "depends_on",
+        "source": "server:etl-server",
+        "source_id": "server:etl-server",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "pkg:pypi:pillow@9.0.0",
+        "target_id": "pkg:pypi:pillow@9.0.0",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "131ed73d-b127-577e-8ba4-13f20631e9f3",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "static_scan"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "vulnerable_to:pkg:pypi:pillow@9.0.0:vuln:CVE-2023-4863",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "vulnerable_to",
+        "source": "pkg:pypi:pillow@9.0.0",
+        "source_id": "pkg:pypi:pillow@9.0.0",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "vuln:CVE-2023-4863",
+        "target_id": "vuln:CVE-2023-4863",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "1d2283ae-1362-5caf-94fc-caad408e7fbd",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "depends_on:server:shell-runner-server:pkg:pypi:pyyaml@5.3",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "depends_on",
+        "source": "server:shell-runner-server",
+        "source_id": "server:shell-runner-server",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "pkg:pypi:pyyaml@5.3",
+        "target_id": "pkg:pypi:pyyaml@5.3",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "1a73f390-0c5b-5f50-9f63-ee5dc26e24b7",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "depends_on:server:warehouse-server:pkg:pypi:pyyaml@5.3",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "depends_on",
+        "source": "server:warehouse-server",
+        "source_id": "server:warehouse-server",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "pkg:pypi:pyyaml@5.3",
+        "target_id": "pkg:pypi:pyyaml@5.3",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "97bbd7f2-adfc-500b-a717-e49ac4bf4469",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "static_scan"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "vulnerable_to:pkg:pypi:pyyaml@5.3:vuln:CVE-2020-14343",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "vulnerable_to",
+        "source": "pkg:pypi:pyyaml@5.3",
+        "source_id": "pkg:pypi:pyyaml@5.3",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "vuln:CVE-2020-14343",
+        "target_id": "vuln:CVE-2020-14343",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "d3df553f-5123-5459-a511-100d2accc6d0",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "depends_on:server:etl-server:pkg:pypi:requests@2.28.0",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "depends_on",
+        "source": "server:etl-server",
+        "source_id": "server:etl-server",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "pkg:pypi:requests@2.28.0",
+        "target_id": "pkg:pypi:requests@2.28.0",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "85857702-375e-5f09-bfa9-25a0cfbb7115",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "depends_on:server:shell-runner-server:pkg:pypi:requests@2.28.0",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "depends_on",
+        "source": "server:shell-runner-server",
+        "source_id": "server:shell-runner-server",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "pkg:pypi:requests@2.28.0",
+        "target_id": "pkg:pypi:requests@2.28.0",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "8d0b53d0-83d8-5691-ae94-844462df2425",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "depends_on:server:vector-db-server:pkg:pypi:requests@2.28.0",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "depends_on",
+        "source": "server:vector-db-server",
+        "source_id": "server:vector-db-server",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "pkg:pypi:requests@2.28.0",
+        "target_id": "pkg:pypi:requests@2.28.0",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "ca8e696c-f443-5024-8449-98c47353bfcc",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "static_scan"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "vulnerable_to:pkg:pypi:requests@2.28.0:vuln:CVE-2023-32681",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "vulnerable_to",
+        "source": "pkg:pypi:requests@2.28.0",
+        "source_id": "pkg:pypi:requests@2.28.0",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "vuln:CVE-2023-32681",
+        "target_id": "vuln:CVE-2023-32681",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "35e501fc-1e91-5ac5-9936-5b925568d24a",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "modeled_infrastructure"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "depends_on:server:github-server:pkg:npm:semver@7.5.2",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "depends_on",
+        "source": "server:github-server",
+        "source_id": "server:github-server",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "pkg:npm:semver@7.5.2",
+        "target_id": "pkg:npm:semver@7.5.2",
         "traversable": true,
         "valid_from": "2026-10-19T12:00:00+00:00",
         "valid_to": null,
@@ -10004,7 +10366,7 @@
       },
       {
         "activity_id": 1,
-        "canonical_id": "d3df553f-5123-5459-a511-100d2accc6d0",
+        "canonical_id": "355fbdf9-e30e-55de-a1bc-a5b75fa2c63b",
         "confidence": 1.0,
         "direction": "directed",
         "evidence": {
@@ -10012,16 +10374,41 @@
           "tier": "modeled_infrastructure"
         },
         "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "depends_on:server:etl-server:pkg:pypi:requests@2.28.0",
+        "id": "depends_on:server:filesystem-server:pkg:npm:ws@8.5.0",
         "last_seen": "2026-10-19T12:00:00+00:00",
         "provenance": {},
         "relationship": "depends_on",
-        "source": "server:etl-server",
-        "source_id": "server:etl-server",
+        "source": "server:filesystem-server",
+        "source_id": "server:filesystem-server",
         "source_run_id": "",
         "source_scan_id": "",
-        "target": "pkg:pypi:requests@2.28.0",
-        "target_id": "pkg:pypi:requests@2.28.0",
+        "target": "pkg:npm:ws@8.5.0",
+        "target_id": "pkg:npm:ws@8.5.0",
+        "traversable": true,
+        "valid_from": "2026-10-19T12:00:00+00:00",
+        "valid_to": null,
+        "weight": 1.0
+      },
+      {
+        "activity_id": 1,
+        "canonical_id": "c52dd557-7ee1-552a-b000-884882a5c72e",
+        "confidence": 1.0,
+        "direction": "directed",
+        "evidence": {
+          "source": "demo-showcase",
+          "tier": "static_scan"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "vulnerable_to:pkg:npm:ws@8.5.0:vuln:CVE-2024-37890",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "provenance": {},
+        "relationship": "vulnerable_to",
+        "source": "pkg:npm:ws@8.5.0",
+        "source_id": "pkg:npm:ws@8.5.0",
+        "source_run_id": "",
+        "source_scan_id": "",
+        "target": "vuln:CVE-2024-37890",
+        "target_id": "vuln:CVE-2024-37890",
         "traversable": true,
         "valid_from": "2026-10-19T12:00:00+00:00",
         "valid_to": null,
@@ -12488,7 +12875,7 @@
         },
         "first_seen": "2026-10-19T12:00:00+00:00",
         "id": "agent:langchain-service",
-        "label": "LangChain Service Agent",
+        "label": "LangChain Service",
         "last_seen": "2026-10-19T12:00:00+00:00",
         "risk_assessment": {
           "basis": null,
@@ -13835,346 +14222,6 @@
       },
       {
         "attributes": {
-          "ecosystem": "pypi",
-          "version": "5.3"
-        },
-        "canonical_id": "5322b0b4-8d18-54a5-a7ca-93263d5eaf3f",
-        "category_uid": 5,
-        "class_uid": 4001,
-        "compliance_tags": [],
-        "data_sources": [],
-        "dimensions": {},
-        "entity_type": "package",
-        "evidence_provenance": {
-          "execution": "not_established",
-          "first_seen": "2026-10-19T12:00:00+00:00",
-          "last_seen": "2026-10-19T12:00:00+00:00",
-          "schema_version": "agent-bom.graph-evidence/v1",
-          "source_snapshot_ids": [],
-          "sources": [],
-          "tier": "unspecified",
-          "time_basis": "recorded_observation"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "pkg:pypi:pyyaml@5.3",
-        "label": "pyyaml@5.3",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "risk_assessment": {
-          "basis": null,
-          "scope": null,
-          "status": "not_assessed"
-        },
-        "risk_score": 0.0,
-        "severity": "",
-        "severity_id": 0,
-        "status": "active",
-        "type_uid": 400101
-      },
-      {
-        "attributes": {
-          "cvss_score": 9.8,
-          "cwe_ids": [
-            "CWE-20"
-          ],
-          "fixed_version": "5.4",
-          "graph_reachable": true,
-          "is_kev": false,
-          "reachability": "likely",
-          "reachability_basis": [
-            "graph_path"
-          ],
-          "summary": "PyYAML arbitrary code execution via yaml.full_load on untrusted input",
-          "vulnerability_id": "CVE-2020-14343"
-        },
-        "canonical_id": "c8231d52-9174-56b4-bacc-0cae4dc3bc8e",
-        "category_uid": 2,
-        "class_uid": 2001,
-        "compliance_tags": [],
-        "data_sources": [],
-        "dimensions": {},
-        "entity_type": "vulnerability",
-        "evidence_provenance": {
-          "execution": "not_established",
-          "first_seen": "2026-10-19T12:00:00+00:00",
-          "last_seen": "2026-10-19T12:00:00+00:00",
-          "schema_version": "agent-bom.graph-evidence/v1",
-          "source_snapshot_ids": [],
-          "sources": [],
-          "tier": "unspecified",
-          "time_basis": "recorded_observation"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "vuln:CVE-2020-14343",
-        "label": "CVE-2020-14343",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "risk_assessment": {
-          "basis": null,
-          "scope": null,
-          "status": "not_assessed"
-        },
-        "risk_score": 9.8,
-        "severity": "critical",
-        "severity_id": 5,
-        "status": "active",
-        "type_uid": 200101
-      },
-      {
-        "attributes": {
-          "ecosystem": "pypi",
-          "version": "0.0.150"
-        },
-        "canonical_id": "e406d394-b8de-5bf7-8f88-555c2839a7af",
-        "category_uid": 5,
-        "class_uid": 4001,
-        "compliance_tags": [],
-        "data_sources": [],
-        "dimensions": {},
-        "entity_type": "package",
-        "evidence_provenance": {
-          "execution": "not_established",
-          "first_seen": "2026-10-19T12:00:00+00:00",
-          "last_seen": "2026-10-19T12:00:00+00:00",
-          "schema_version": "agent-bom.graph-evidence/v1",
-          "source_snapshot_ids": [],
-          "sources": [],
-          "tier": "unspecified",
-          "time_basis": "recorded_observation"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "pkg:pypi:langchain@0.0.150",
-        "label": "langchain@0.0.150",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "risk_assessment": {
-          "basis": null,
-          "scope": null,
-          "status": "not_assessed"
-        },
-        "risk_score": 0.0,
-        "severity": "",
-        "severity_id": 0,
-        "status": "active",
-        "type_uid": 400101
-      },
-      {
-        "attributes": {
-          "cvss_score": 9.8,
-          "cwe_ids": [
-            "CWE-94"
-          ],
-          "fixed_version": "0.0.247",
-          "graph_reachable": true,
-          "is_kev": false,
-          "reachability": "likely",
-          "reachability_basis": [
-            "graph_path"
-          ],
-          "summary": "LangChain arbitrary code execution via PALChain prompt-to-Python evaluation",
-          "vulnerability_id": "CVE-2023-36258"
-        },
-        "canonical_id": "f54651d5-1344-56e3-a417-17a4b2cf2e56",
-        "category_uid": 2,
-        "class_uid": 2001,
-        "compliance_tags": [],
-        "data_sources": [],
-        "dimensions": {},
-        "entity_type": "vulnerability",
-        "evidence_provenance": {
-          "execution": "not_established",
-          "first_seen": "2026-10-19T12:00:00+00:00",
-          "last_seen": "2026-10-19T12:00:00+00:00",
-          "schema_version": "agent-bom.graph-evidence/v1",
-          "source_snapshot_ids": [],
-          "sources": [],
-          "tier": "unspecified",
-          "time_basis": "recorded_observation"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "vuln:CVE-2023-36258",
-        "label": "CVE-2023-36258",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "risk_assessment": {
-          "basis": null,
-          "scope": null,
-          "status": "not_assessed"
-        },
-        "risk_score": 9.8,
-        "severity": "critical",
-        "severity_id": 5,
-        "status": "active",
-        "type_uid": 200101
-      },
-      {
-        "attributes": {
-          "ecosystem": "pypi",
-          "version": "9.0.0"
-        },
-        "canonical_id": "4f9384eb-5fb9-5630-9122-3e1eab637509",
-        "category_uid": 5,
-        "class_uid": 4001,
-        "compliance_tags": [],
-        "data_sources": [],
-        "dimensions": {},
-        "entity_type": "package",
-        "evidence_provenance": {
-          "execution": "not_established",
-          "first_seen": "2026-10-19T12:00:00+00:00",
-          "last_seen": "2026-10-19T12:00:00+00:00",
-          "schema_version": "agent-bom.graph-evidence/v1",
-          "source_snapshot_ids": [],
-          "sources": [],
-          "tier": "unspecified",
-          "time_basis": "recorded_observation"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "pkg:pypi:pillow@9.0.0",
-        "label": "pillow@9.0.0",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "risk_assessment": {
-          "basis": null,
-          "scope": null,
-          "status": "not_assessed"
-        },
-        "risk_score": 0.0,
-        "severity": "",
-        "severity_id": 0,
-        "status": "active",
-        "type_uid": 400101
-      },
-      {
-        "attributes": {
-          "cvss_score": 8.8,
-          "cwe_ids": [
-            "CWE-787"
-          ],
-          "fixed_version": "10.0.1",
-          "graph_reachable": true,
-          "is_kev": true,
-          "reachability": "likely",
-          "reachability_basis": [
-            "graph_path"
-          ],
-          "summary": "Pillow bundled libwebp heap buffer overflow \u2014 exploited in the wild (CISA KEV)",
-          "vulnerability_id": "CVE-2023-4863"
-        },
-        "canonical_id": "8ae3bf21-4427-58f5-be91-06d2acbd9383",
-        "category_uid": 2,
-        "class_uid": 2001,
-        "compliance_tags": [],
-        "data_sources": [],
-        "dimensions": {},
-        "entity_type": "vulnerability",
-        "evidence_provenance": {
-          "execution": "not_established",
-          "first_seen": "2026-10-19T12:00:00+00:00",
-          "last_seen": "2026-10-19T12:00:00+00:00",
-          "schema_version": "agent-bom.graph-evidence/v1",
-          "source_snapshot_ids": [],
-          "sources": [],
-          "tier": "unspecified",
-          "time_basis": "recorded_observation"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "vuln:CVE-2023-4863",
-        "label": "CVE-2023-4863",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "risk_assessment": {
-          "basis": null,
-          "scope": null,
-          "status": "not_assessed"
-        },
-        "risk_score": 8.8,
-        "severity": "high",
-        "severity_id": 4,
-        "status": "active",
-        "type_uid": 200101
-      },
-      {
-        "attributes": {
-          "ecosystem": "npm",
-          "version": "8.5.1"
-        },
-        "canonical_id": "ae10799c-5f10-534a-b79c-ed2c82bbbc23",
-        "category_uid": 5,
-        "class_uid": 4001,
-        "compliance_tags": [],
-        "data_sources": [],
-        "dimensions": {},
-        "entity_type": "package",
-        "evidence_provenance": {
-          "execution": "not_established",
-          "first_seen": "2026-10-19T12:00:00+00:00",
-          "last_seen": "2026-10-19T12:00:00+00:00",
-          "schema_version": "agent-bom.graph-evidence/v1",
-          "source_snapshot_ids": [],
-          "sources": [],
-          "tier": "unspecified",
-          "time_basis": "recorded_observation"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "pkg:npm:jsonwebtoken@8.5.1",
-        "label": "jsonwebtoken@8.5.1",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "risk_assessment": {
-          "basis": null,
-          "scope": null,
-          "status": "not_assessed"
-        },
-        "risk_score": 0.0,
-        "severity": "",
-        "severity_id": 0,
-        "status": "active",
-        "type_uid": 400101
-      },
-      {
-        "attributes": {
-          "cvss_score": 8.1,
-          "cwe_ids": [
-            "CWE-327"
-          ],
-          "fixed_version": "9.0.0",
-          "graph_reachable": true,
-          "is_kev": false,
-          "reachability": "likely",
-          "reachability_basis": [
-            "graph_path"
-          ],
-          "summary": "jsonwebtoken unrestricted key type could lead to legacy keys usage",
-          "vulnerability_id": "CVE-2022-23539"
-        },
-        "canonical_id": "9d88e144-799d-53ce-b170-e5ff91a212fd",
-        "category_uid": 2,
-        "class_uid": 2001,
-        "compliance_tags": [],
-        "data_sources": [],
-        "dimensions": {},
-        "entity_type": "vulnerability",
-        "evidence_provenance": {
-          "execution": "not_established",
-          "first_seen": "2026-10-19T12:00:00+00:00",
-          "last_seen": "2026-10-19T12:00:00+00:00",
-          "schema_version": "agent-bom.graph-evidence/v1",
-          "source_snapshot_ids": [],
-          "sources": [],
-          "tier": "unspecified",
-          "time_basis": "recorded_observation"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "vuln:CVE-2022-23539",
-        "label": "CVE-2022-23539",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "risk_assessment": {
-          "basis": null,
-          "scope": null,
-          "status": "not_assessed"
-        },
-        "risk_score": 8.1,
-        "severity": "high",
-        "severity_id": 4,
-        "status": "active",
-        "type_uid": 200101
-      },
-      {
-        "attributes": {
           "ecosystem": "npm",
           "version": "1.4.0"
         },
@@ -14255,261 +14302,6 @@
         "risk_score": 6.5,
         "severity": "medium",
         "severity_id": 3,
-        "status": "active",
-        "type_uid": 200101
-      },
-      {
-        "attributes": {
-          "ecosystem": "pypi",
-          "version": "39.0.0"
-        },
-        "canonical_id": "f6b203e3-f7f5-55df-b667-dfbafefcee15",
-        "category_uid": 5,
-        "class_uid": 4001,
-        "compliance_tags": [],
-        "data_sources": [],
-        "dimensions": {},
-        "entity_type": "package",
-        "evidence_provenance": {
-          "execution": "not_established",
-          "first_seen": "2026-10-19T12:00:00+00:00",
-          "last_seen": "2026-10-19T12:00:00+00:00",
-          "schema_version": "agent-bom.graph-evidence/v1",
-          "source_snapshot_ids": [],
-          "sources": [],
-          "tier": "unspecified",
-          "time_basis": "recorded_observation"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "pkg:pypi:cryptography@39.0.0",
-        "label": "cryptography@39.0.0",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "risk_assessment": {
-          "basis": null,
-          "scope": null,
-          "status": "not_assessed"
-        },
-        "risk_score": 0.0,
-        "severity": "",
-        "severity_id": 0,
-        "status": "active",
-        "type_uid": 400101
-      },
-      {
-        "attributes": {
-          "cvss_score": 7.5,
-          "cwe_ids": [
-            "CWE-208"
-          ],
-          "fixed_version": "42.0.0",
-          "graph_reachable": true,
-          "is_kev": false,
-          "reachability": "likely",
-          "reachability_basis": [
-            "graph_path"
-          ],
-          "summary": "pyca/cryptography Bleichenbacher timing oracle in RSA PKCS#1 v1.5 decryption",
-          "vulnerability_id": "CVE-2023-50782"
-        },
-        "canonical_id": "0ffc5298-d294-5285-9308-4e1d2e949f72",
-        "category_uid": 2,
-        "class_uid": 2001,
-        "compliance_tags": [],
-        "data_sources": [],
-        "dimensions": {},
-        "entity_type": "vulnerability",
-        "evidence_provenance": {
-          "execution": "not_established",
-          "first_seen": "2026-10-19T12:00:00+00:00",
-          "last_seen": "2026-10-19T12:00:00+00:00",
-          "schema_version": "agent-bom.graph-evidence/v1",
-          "source_snapshot_ids": [],
-          "sources": [],
-          "tier": "unspecified",
-          "time_basis": "recorded_observation"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "vuln:CVE-2023-50782",
-        "label": "CVE-2023-50782",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "risk_assessment": {
-          "basis": null,
-          "scope": null,
-          "status": "not_assessed"
-        },
-        "risk_score": 7.5,
-        "severity": "high",
-        "severity_id": 4,
-        "status": "active",
-        "type_uid": 200101
-      },
-      {
-        "attributes": {
-          "ecosystem": "npm",
-          "version": "8.5.0"
-        },
-        "canonical_id": "9bb91589-c11e-5246-8be4-231305ac208e",
-        "category_uid": 5,
-        "class_uid": 4001,
-        "compliance_tags": [],
-        "data_sources": [],
-        "dimensions": {},
-        "entity_type": "package",
-        "evidence_provenance": {
-          "execution": "not_established",
-          "first_seen": "2026-10-19T12:00:00+00:00",
-          "last_seen": "2026-10-19T12:00:00+00:00",
-          "schema_version": "agent-bom.graph-evidence/v1",
-          "source_snapshot_ids": [],
-          "sources": [],
-          "tier": "unspecified",
-          "time_basis": "recorded_observation"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "pkg:npm:ws@8.5.0",
-        "label": "ws@8.5.0",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "risk_assessment": {
-          "basis": null,
-          "scope": null,
-          "status": "not_assessed"
-        },
-        "risk_score": 0.0,
-        "severity": "",
-        "severity_id": 0,
-        "status": "active",
-        "type_uid": 400101
-      },
-      {
-        "attributes": {
-          "cvss_score": 7.5,
-          "cwe_ids": [
-            "CWE-400"
-          ],
-          "fixed_version": "8.17.1",
-          "graph_reachable": true,
-          "is_kev": false,
-          "reachability": "likely",
-          "reachability_basis": [
-            "graph_path"
-          ],
-          "summary": "ws denial of service when handling a request with many HTTP headers",
-          "vulnerability_id": "CVE-2024-37890"
-        },
-        "canonical_id": "9cc31507-4f00-5a3c-8c36-1c6242c5a1ec",
-        "category_uid": 2,
-        "class_uid": 2001,
-        "compliance_tags": [],
-        "data_sources": [],
-        "dimensions": {},
-        "entity_type": "vulnerability",
-        "evidence_provenance": {
-          "execution": "not_established",
-          "first_seen": "2026-10-19T12:00:00+00:00",
-          "last_seen": "2026-10-19T12:00:00+00:00",
-          "schema_version": "agent-bom.graph-evidence/v1",
-          "source_snapshot_ids": [],
-          "sources": [],
-          "tier": "unspecified",
-          "time_basis": "recorded_observation"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "vuln:CVE-2024-37890",
-        "label": "CVE-2024-37890",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "risk_assessment": {
-          "basis": null,
-          "scope": null,
-          "status": "not_assessed"
-        },
-        "risk_score": 7.5,
-        "severity": "high",
-        "severity_id": 4,
-        "status": "active",
-        "type_uid": 200101
-      },
-      {
-        "attributes": {
-          "ecosystem": "pypi",
-          "version": "2.2.0"
-        },
-        "canonical_id": "851cfb6a-b82c-57cb-a5c3-e7f584a994b2",
-        "category_uid": 5,
-        "class_uid": 4001,
-        "compliance_tags": [],
-        "data_sources": [],
-        "dimensions": {},
-        "entity_type": "package",
-        "evidence_provenance": {
-          "execution": "not_established",
-          "first_seen": "2026-10-19T12:00:00+00:00",
-          "last_seen": "2026-10-19T12:00:00+00:00",
-          "schema_version": "agent-bom.graph-evidence/v1",
-          "source_snapshot_ids": [],
-          "sources": [],
-          "tier": "unspecified",
-          "time_basis": "recorded_observation"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "pkg:pypi:flask@2.2.0",
-        "label": "flask@2.2.0",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "risk_assessment": {
-          "basis": null,
-          "scope": null,
-          "status": "not_assessed"
-        },
-        "risk_score": 0.0,
-        "severity": "",
-        "severity_id": 0,
-        "status": "active",
-        "type_uid": 400101
-      },
-      {
-        "attributes": {
-          "cvss_score": 7.5,
-          "cwe_ids": [
-            "CWE-539"
-          ],
-          "fixed_version": "2.3.2",
-          "graph_reachable": true,
-          "is_kev": false,
-          "reachability": "likely",
-          "reachability_basis": [
-            "graph_path"
-          ],
-          "summary": "Flask session cookie disclosed to other clients via a caching proxy",
-          "vulnerability_id": "CVE-2023-30861"
-        },
-        "canonical_id": "4aebf62a-6ee4-5d55-b344-f0590a0cc7e5",
-        "category_uid": 2,
-        "class_uid": 2001,
-        "compliance_tags": [],
-        "data_sources": [],
-        "dimensions": {},
-        "entity_type": "vulnerability",
-        "evidence_provenance": {
-          "execution": "not_established",
-          "first_seen": "2026-10-19T12:00:00+00:00",
-          "last_seen": "2026-10-19T12:00:00+00:00",
-          "schema_version": "agent-bom.graph-evidence/v1",
-          "source_snapshot_ids": [],
-          "sources": [],
-          "tier": "unspecified",
-          "time_basis": "recorded_observation"
-        },
-        "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "vuln:CVE-2023-30861",
-        "label": "CVE-2023-30861",
-        "last_seen": "2026-10-19T12:00:00+00:00",
-        "risk_assessment": {
-          "basis": null,
-          "scope": null,
-          "status": "not_assessed"
-        },
-        "risk_score": 7.5,
-        "severity": "high",
-        "severity_id": 4,
         "status": "active",
         "type_uid": 200101
       },
@@ -14600,10 +14392,10 @@
       },
       {
         "attributes": {
-          "ecosystem": "npm",
-          "version": "4.17.20"
+          "ecosystem": "pypi",
+          "version": "39.0.0"
         },
-        "canonical_id": "76f13d5d-b78a-5baa-a14b-963ac16fd3d6",
+        "canonical_id": "f6b203e3-f7f5-55df-b667-dfbafefcee15",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -14621,8 +14413,8 @@
           "time_basis": "recorded_observation"
         },
         "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "pkg:npm:lodash@4.17.20",
-        "label": "lodash@4.17.20",
+        "id": "pkg:pypi:cryptography@39.0.0",
+        "label": "cryptography@39.0.0",
         "last_seen": "2026-10-19T12:00:00+00:00",
         "risk_assessment": {
           "basis": null,
@@ -14637,21 +14429,21 @@
       },
       {
         "attributes": {
-          "cvss_score": 7.2,
+          "cvss_score": 7.5,
           "cwe_ids": [
-            "CWE-77"
+            "CWE-208"
           ],
-          "fixed_version": "4.17.21",
+          "fixed_version": "42.0.0",
           "graph_reachable": true,
           "is_kev": false,
           "reachability": "likely",
           "reachability_basis": [
             "graph_path"
           ],
-          "summary": "lodash command injection via template() with tainted options",
-          "vulnerability_id": "CVE-2021-23337"
+          "summary": "pyca/cryptography Bleichenbacher timing oracle in RSA PKCS#1 v1.5 decryption",
+          "vulnerability_id": "CVE-2023-50782"
         },
-        "canonical_id": "b0f8d1ad-27c7-50b0-8f9c-ef2063baa475",
+        "canonical_id": "0ffc5298-d294-5285-9308-4e1d2e949f72",
         "category_uid": 2,
         "class_uid": 2001,
         "compliance_tags": [],
@@ -14669,15 +14461,15 @@
           "time_basis": "recorded_observation"
         },
         "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "vuln:CVE-2021-23337",
-        "label": "CVE-2021-23337",
+        "id": "vuln:CVE-2023-50782",
+        "label": "CVE-2023-50782",
         "last_seen": "2026-10-19T12:00:00+00:00",
         "risk_assessment": {
           "basis": null,
           "scope": null,
           "status": "not_assessed"
         },
-        "risk_score": 7.2,
+        "risk_score": 7.5,
         "severity": "high",
         "severity_id": 4,
         "status": "active",
@@ -14771,9 +14563,9 @@
       {
         "attributes": {
           "ecosystem": "pypi",
-          "version": "2.28.0"
+          "version": "2.2.0"
         },
-        "canonical_id": "d48c503a-14b9-5f61-a448-231c041d6bb3",
+        "canonical_id": "851cfb6a-b82c-57cb-a5c3-e7f584a994b2",
         "category_uid": 5,
         "class_uid": 4001,
         "compliance_tags": [],
@@ -14791,8 +14583,8 @@
           "time_basis": "recorded_observation"
         },
         "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "pkg:pypi:requests@2.28.0",
-        "label": "requests@2.28.0",
+        "id": "pkg:pypi:flask@2.2.0",
+        "label": "flask@2.2.0",
         "last_seen": "2026-10-19T12:00:00+00:00",
         "risk_assessment": {
           "basis": null,
@@ -14807,21 +14599,21 @@
       },
       {
         "attributes": {
-          "cvss_score": 6.1,
+          "cvss_score": 7.5,
           "cwe_ids": [
-            "CWE-200"
+            "CWE-539"
           ],
-          "fixed_version": "2.31.0",
+          "fixed_version": "2.3.2",
           "graph_reachable": true,
           "is_kev": false,
           "reachability": "likely",
           "reachability_basis": [
             "graph_path"
           ],
-          "summary": "Requests leaks Proxy-Authorization header to destination on redirect",
-          "vulnerability_id": "CVE-2023-32681"
+          "summary": "Flask session cookie disclosed to other clients via a caching proxy",
+          "vulnerability_id": "CVE-2023-30861"
         },
-        "canonical_id": "517c0090-5388-5fbb-a4bc-85b1cc70fc97",
+        "canonical_id": "4aebf62a-6ee4-5d55-b344-f0590a0cc7e5",
         "category_uid": 2,
         "class_uid": 2001,
         "compliance_tags": [],
@@ -14839,17 +14631,17 @@
           "time_basis": "recorded_observation"
         },
         "first_seen": "2026-10-19T12:00:00+00:00",
-        "id": "vuln:CVE-2023-32681",
-        "label": "CVE-2023-32681",
+        "id": "vuln:CVE-2023-30861",
+        "label": "CVE-2023-30861",
         "last_seen": "2026-10-19T12:00:00+00:00",
         "risk_assessment": {
           "basis": null,
           "scope": null,
           "status": "not_assessed"
         },
-        "risk_score": 6.1,
-        "severity": "medium",
-        "severity_id": 3,
+        "risk_score": 7.5,
+        "severity": "high",
+        "severity_id": 4,
         "status": "active",
         "type_uid": 200101
       },
@@ -14941,6 +14733,261 @@
       {
         "attributes": {
           "ecosystem": "npm",
+          "version": "8.5.1"
+        },
+        "canonical_id": "ae10799c-5f10-534a-b79c-ed2c82bbbc23",
+        "category_uid": 5,
+        "class_uid": 4001,
+        "compliance_tags": [],
+        "data_sources": [],
+        "dimensions": {},
+        "entity_type": "package",
+        "evidence_provenance": {
+          "execution": "not_established",
+          "first_seen": "2026-10-19T12:00:00+00:00",
+          "last_seen": "2026-10-19T12:00:00+00:00",
+          "schema_version": "agent-bom.graph-evidence/v1",
+          "source_snapshot_ids": [],
+          "sources": [],
+          "tier": "unspecified",
+          "time_basis": "recorded_observation"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "pkg:npm:jsonwebtoken@8.5.1",
+        "label": "jsonwebtoken@8.5.1",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "risk_assessment": {
+          "basis": null,
+          "scope": null,
+          "status": "not_assessed"
+        },
+        "risk_score": 0.0,
+        "severity": "",
+        "severity_id": 0,
+        "status": "active",
+        "type_uid": 400101
+      },
+      {
+        "attributes": {
+          "cvss_score": 8.1,
+          "cwe_ids": [
+            "CWE-327"
+          ],
+          "fixed_version": "9.0.0",
+          "graph_reachable": true,
+          "is_kev": false,
+          "reachability": "likely",
+          "reachability_basis": [
+            "graph_path"
+          ],
+          "summary": "jsonwebtoken unrestricted key type could lead to legacy keys usage",
+          "vulnerability_id": "CVE-2022-23539"
+        },
+        "canonical_id": "9d88e144-799d-53ce-b170-e5ff91a212fd",
+        "category_uid": 2,
+        "class_uid": 2001,
+        "compliance_tags": [],
+        "data_sources": [],
+        "dimensions": {},
+        "entity_type": "vulnerability",
+        "evidence_provenance": {
+          "execution": "not_established",
+          "first_seen": "2026-10-19T12:00:00+00:00",
+          "last_seen": "2026-10-19T12:00:00+00:00",
+          "schema_version": "agent-bom.graph-evidence/v1",
+          "source_snapshot_ids": [],
+          "sources": [],
+          "tier": "unspecified",
+          "time_basis": "recorded_observation"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "vuln:CVE-2022-23539",
+        "label": "CVE-2022-23539",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "risk_assessment": {
+          "basis": null,
+          "scope": null,
+          "status": "not_assessed"
+        },
+        "risk_score": 8.1,
+        "severity": "high",
+        "severity_id": 4,
+        "status": "active",
+        "type_uid": 200101
+      },
+      {
+        "attributes": {
+          "ecosystem": "pypi",
+          "version": "0.0.150"
+        },
+        "canonical_id": "e406d394-b8de-5bf7-8f88-555c2839a7af",
+        "category_uid": 5,
+        "class_uid": 4001,
+        "compliance_tags": [],
+        "data_sources": [],
+        "dimensions": {},
+        "entity_type": "package",
+        "evidence_provenance": {
+          "execution": "not_established",
+          "first_seen": "2026-10-19T12:00:00+00:00",
+          "last_seen": "2026-10-19T12:00:00+00:00",
+          "schema_version": "agent-bom.graph-evidence/v1",
+          "source_snapshot_ids": [],
+          "sources": [],
+          "tier": "unspecified",
+          "time_basis": "recorded_observation"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "pkg:pypi:langchain@0.0.150",
+        "label": "langchain@0.0.150",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "risk_assessment": {
+          "basis": null,
+          "scope": null,
+          "status": "not_assessed"
+        },
+        "risk_score": 0.0,
+        "severity": "",
+        "severity_id": 0,
+        "status": "active",
+        "type_uid": 400101
+      },
+      {
+        "attributes": {
+          "cvss_score": 9.8,
+          "cwe_ids": [
+            "CWE-94"
+          ],
+          "fixed_version": "0.0.247",
+          "graph_reachable": true,
+          "is_kev": false,
+          "reachability": "likely",
+          "reachability_basis": [
+            "graph_path"
+          ],
+          "summary": "LangChain arbitrary code execution via PALChain prompt-to-Python evaluation",
+          "vulnerability_id": "CVE-2023-36258"
+        },
+        "canonical_id": "f54651d5-1344-56e3-a417-17a4b2cf2e56",
+        "category_uid": 2,
+        "class_uid": 2001,
+        "compliance_tags": [],
+        "data_sources": [],
+        "dimensions": {},
+        "entity_type": "vulnerability",
+        "evidence_provenance": {
+          "execution": "not_established",
+          "first_seen": "2026-10-19T12:00:00+00:00",
+          "last_seen": "2026-10-19T12:00:00+00:00",
+          "schema_version": "agent-bom.graph-evidence/v1",
+          "source_snapshot_ids": [],
+          "sources": [],
+          "tier": "unspecified",
+          "time_basis": "recorded_observation"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "vuln:CVE-2023-36258",
+        "label": "CVE-2023-36258",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "risk_assessment": {
+          "basis": null,
+          "scope": null,
+          "status": "not_assessed"
+        },
+        "risk_score": 9.8,
+        "severity": "critical",
+        "severity_id": 5,
+        "status": "active",
+        "type_uid": 200101
+      },
+      {
+        "attributes": {
+          "ecosystem": "npm",
+          "version": "4.17.20"
+        },
+        "canonical_id": "76f13d5d-b78a-5baa-a14b-963ac16fd3d6",
+        "category_uid": 5,
+        "class_uid": 4001,
+        "compliance_tags": [],
+        "data_sources": [],
+        "dimensions": {},
+        "entity_type": "package",
+        "evidence_provenance": {
+          "execution": "not_established",
+          "first_seen": "2026-10-19T12:00:00+00:00",
+          "last_seen": "2026-10-19T12:00:00+00:00",
+          "schema_version": "agent-bom.graph-evidence/v1",
+          "source_snapshot_ids": [],
+          "sources": [],
+          "tier": "unspecified",
+          "time_basis": "recorded_observation"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "pkg:npm:lodash@4.17.20",
+        "label": "lodash@4.17.20",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "risk_assessment": {
+          "basis": null,
+          "scope": null,
+          "status": "not_assessed"
+        },
+        "risk_score": 0.0,
+        "severity": "",
+        "severity_id": 0,
+        "status": "active",
+        "type_uid": 400101
+      },
+      {
+        "attributes": {
+          "cvss_score": 7.2,
+          "cwe_ids": [
+            "CWE-77"
+          ],
+          "fixed_version": "4.17.21",
+          "graph_reachable": true,
+          "is_kev": false,
+          "reachability": "likely",
+          "reachability_basis": [
+            "graph_path"
+          ],
+          "summary": "lodash command injection via template() with tainted options",
+          "vulnerability_id": "CVE-2021-23337"
+        },
+        "canonical_id": "b0f8d1ad-27c7-50b0-8f9c-ef2063baa475",
+        "category_uid": 2,
+        "class_uid": 2001,
+        "compliance_tags": [],
+        "data_sources": [],
+        "dimensions": {},
+        "entity_type": "vulnerability",
+        "evidence_provenance": {
+          "execution": "not_established",
+          "first_seen": "2026-10-19T12:00:00+00:00",
+          "last_seen": "2026-10-19T12:00:00+00:00",
+          "schema_version": "agent-bom.graph-evidence/v1",
+          "source_snapshot_ids": [],
+          "sources": [],
+          "tier": "unspecified",
+          "time_basis": "recorded_observation"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "vuln:CVE-2021-23337",
+        "label": "CVE-2021-23337",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "risk_assessment": {
+          "basis": null,
+          "scope": null,
+          "status": "not_assessed"
+        },
+        "risk_score": 7.2,
+        "severity": "high",
+        "severity_id": 4,
+        "status": "active",
+        "type_uid": 200101
+      },
+      {
+        "attributes": {
+          "ecosystem": "npm",
           "version": "2.6.1"
         },
         "canonical_id": "a249aeb4-81e8-533a-80a3-d7db40a6dba8",
@@ -14977,7 +15024,7 @@
       },
       {
         "attributes": {
-          "cvss_score": 6.1,
+          "cvss_score": 8.8,
           "cwe_ids": [
             "CWE-200"
           ],
@@ -15017,11 +15064,303 @@
           "scope": null,
           "status": "not_assessed"
         },
+        "risk_score": 8.8,
+        "severity": "high",
+        "severity_id": 4,
+        "status": "active",
+        "type_uid": 200101
+      },
+      {
+        "attributes": {
+          "ecosystem": "pypi",
+          "version": "9.0.0"
+        },
+        "canonical_id": "4f9384eb-5fb9-5630-9122-3e1eab637509",
+        "category_uid": 5,
+        "class_uid": 4001,
+        "compliance_tags": [],
+        "data_sources": [],
+        "dimensions": {},
+        "entity_type": "package",
+        "evidence_provenance": {
+          "execution": "not_established",
+          "first_seen": "2026-10-19T12:00:00+00:00",
+          "last_seen": "2026-10-19T12:00:00+00:00",
+          "schema_version": "agent-bom.graph-evidence/v1",
+          "source_snapshot_ids": [],
+          "sources": [],
+          "tier": "unspecified",
+          "time_basis": "recorded_observation"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "pkg:pypi:pillow@9.0.0",
+        "label": "pillow@9.0.0",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "risk_assessment": {
+          "basis": null,
+          "scope": null,
+          "status": "not_assessed"
+        },
+        "risk_score": 0.0,
+        "severity": "",
+        "severity_id": 0,
+        "status": "active",
+        "type_uid": 400101
+      },
+      {
+        "attributes": {
+          "cvss_score": 8.8,
+          "cwe_ids": [
+            "CWE-787"
+          ],
+          "fixed_version": "10.0.1",
+          "graph_reachable": true,
+          "is_kev": true,
+          "reachability": "likely",
+          "reachability_basis": [
+            "graph_path"
+          ],
+          "summary": "Pillow bundled libwebp heap buffer overflow \u2014 exploited in the wild (CISA KEV)",
+          "vulnerability_id": "CVE-2023-4863"
+        },
+        "canonical_id": "8ae3bf21-4427-58f5-be91-06d2acbd9383",
+        "category_uid": 2,
+        "class_uid": 2001,
+        "compliance_tags": [],
+        "data_sources": [],
+        "dimensions": {},
+        "entity_type": "vulnerability",
+        "evidence_provenance": {
+          "execution": "not_established",
+          "first_seen": "2026-10-19T12:00:00+00:00",
+          "last_seen": "2026-10-19T12:00:00+00:00",
+          "schema_version": "agent-bom.graph-evidence/v1",
+          "source_snapshot_ids": [],
+          "sources": [],
+          "tier": "unspecified",
+          "time_basis": "recorded_observation"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "vuln:CVE-2023-4863",
+        "label": "CVE-2023-4863",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "risk_assessment": {
+          "basis": null,
+          "scope": null,
+          "status": "not_assessed"
+        },
+        "risk_score": 8.8,
+        "severity": "high",
+        "severity_id": 4,
+        "status": "active",
+        "type_uid": 200101
+      },
+      {
+        "attributes": {
+          "ecosystem": "pypi",
+          "version": "5.3"
+        },
+        "canonical_id": "5322b0b4-8d18-54a5-a7ca-93263d5eaf3f",
+        "category_uid": 5,
+        "class_uid": 4001,
+        "compliance_tags": [],
+        "data_sources": [],
+        "dimensions": {},
+        "entity_type": "package",
+        "evidence_provenance": {
+          "execution": "not_established",
+          "first_seen": "2026-10-19T12:00:00+00:00",
+          "last_seen": "2026-10-19T12:00:00+00:00",
+          "schema_version": "agent-bom.graph-evidence/v1",
+          "source_snapshot_ids": [],
+          "sources": [],
+          "tier": "unspecified",
+          "time_basis": "recorded_observation"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "pkg:pypi:pyyaml@5.3",
+        "label": "pyyaml@5.3",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "risk_assessment": {
+          "basis": null,
+          "scope": null,
+          "status": "not_assessed"
+        },
+        "risk_score": 0.0,
+        "severity": "",
+        "severity_id": 0,
+        "status": "active",
+        "type_uid": 400101
+      },
+      {
+        "attributes": {
+          "cvss_score": 9.8,
+          "cwe_ids": [
+            "CWE-20"
+          ],
+          "fixed_version": "5.4",
+          "graph_reachable": true,
+          "is_kev": false,
+          "reachability": "likely",
+          "reachability_basis": [
+            "graph_path"
+          ],
+          "summary": "PyYAML arbitrary code execution via yaml.full_load on untrusted input",
+          "vulnerability_id": "CVE-2020-14343"
+        },
+        "canonical_id": "c8231d52-9174-56b4-bacc-0cae4dc3bc8e",
+        "category_uid": 2,
+        "class_uid": 2001,
+        "compliance_tags": [],
+        "data_sources": [],
+        "dimensions": {},
+        "entity_type": "vulnerability",
+        "evidence_provenance": {
+          "execution": "not_established",
+          "first_seen": "2026-10-19T12:00:00+00:00",
+          "last_seen": "2026-10-19T12:00:00+00:00",
+          "schema_version": "agent-bom.graph-evidence/v1",
+          "source_snapshot_ids": [],
+          "sources": [],
+          "tier": "unspecified",
+          "time_basis": "recorded_observation"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "vuln:CVE-2020-14343",
+        "label": "CVE-2020-14343",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "risk_assessment": {
+          "basis": null,
+          "scope": null,
+          "status": "not_assessed"
+        },
+        "risk_score": 9.8,
+        "severity": "critical",
+        "severity_id": 5,
+        "status": "active",
+        "type_uid": 200101
+      },
+      {
+        "attributes": {
+          "ecosystem": "pypi",
+          "version": "2.28.0"
+        },
+        "canonical_id": "d48c503a-14b9-5f61-a448-231c041d6bb3",
+        "category_uid": 5,
+        "class_uid": 4001,
+        "compliance_tags": [],
+        "data_sources": [],
+        "dimensions": {},
+        "entity_type": "package",
+        "evidence_provenance": {
+          "execution": "not_established",
+          "first_seen": "2026-10-19T12:00:00+00:00",
+          "last_seen": "2026-10-19T12:00:00+00:00",
+          "schema_version": "agent-bom.graph-evidence/v1",
+          "source_snapshot_ids": [],
+          "sources": [],
+          "tier": "unspecified",
+          "time_basis": "recorded_observation"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "pkg:pypi:requests@2.28.0",
+        "label": "requests@2.28.0",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "risk_assessment": {
+          "basis": null,
+          "scope": null,
+          "status": "not_assessed"
+        },
+        "risk_score": 0.0,
+        "severity": "",
+        "severity_id": 0,
+        "status": "active",
+        "type_uid": 400101
+      },
+      {
+        "attributes": {
+          "cvss_score": 6.1,
+          "cwe_ids": [
+            "CWE-200"
+          ],
+          "fixed_version": "2.31.0",
+          "graph_reachable": true,
+          "is_kev": false,
+          "reachability": "likely",
+          "reachability_basis": [
+            "graph_path"
+          ],
+          "summary": "Requests leaks Proxy-Authorization header to destination on redirect",
+          "vulnerability_id": "CVE-2023-32681"
+        },
+        "canonical_id": "517c0090-5388-5fbb-a4bc-85b1cc70fc97",
+        "category_uid": 2,
+        "class_uid": 2001,
+        "compliance_tags": [],
+        "data_sources": [],
+        "dimensions": {},
+        "entity_type": "vulnerability",
+        "evidence_provenance": {
+          "execution": "not_established",
+          "first_seen": "2026-10-19T12:00:00+00:00",
+          "last_seen": "2026-10-19T12:00:00+00:00",
+          "schema_version": "agent-bom.graph-evidence/v1",
+          "source_snapshot_ids": [],
+          "sources": [],
+          "tier": "unspecified",
+          "time_basis": "recorded_observation"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "vuln:CVE-2023-32681",
+        "label": "CVE-2023-32681",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "risk_assessment": {
+          "basis": null,
+          "scope": null,
+          "status": "not_assessed"
+        },
         "risk_score": 6.1,
         "severity": "medium",
         "severity_id": 3,
         "status": "active",
         "type_uid": 200101
+      },
+      {
+        "attributes": {
+          "ecosystem": "npm",
+          "version": "7.5.2"
+        },
+        "canonical_id": "2ec3234c-9eb6-529b-bef1-92cc981972f4",
+        "category_uid": 5,
+        "class_uid": 4001,
+        "compliance_tags": [],
+        "data_sources": [],
+        "dimensions": {},
+        "entity_type": "package",
+        "evidence_provenance": {
+          "execution": "not_established",
+          "first_seen": "2026-10-19T12:00:00+00:00",
+          "last_seen": "2026-10-19T12:00:00+00:00",
+          "schema_version": "agent-bom.graph-evidence/v1",
+          "source_snapshot_ids": [],
+          "sources": [],
+          "tier": "unspecified",
+          "time_basis": "recorded_observation"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "pkg:npm:semver@7.5.2",
+        "label": "semver@7.5.2",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "risk_assessment": {
+          "basis": null,
+          "scope": null,
+          "status": "not_assessed"
+        },
+        "risk_score": 0.0,
+        "severity": "",
+        "severity_id": 0,
+        "status": "active",
+        "type_uid": 400101
       },
       {
         "attributes": {
@@ -15096,6 +15435,91 @@
         "first_seen": "2026-10-19T12:00:00+00:00",
         "id": "vuln:CVE-2023-25577",
         "label": "CVE-2023-25577",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "risk_assessment": {
+          "basis": null,
+          "scope": null,
+          "status": "not_assessed"
+        },
+        "risk_score": 7.5,
+        "severity": "high",
+        "severity_id": 4,
+        "status": "active",
+        "type_uid": 200101
+      },
+      {
+        "attributes": {
+          "ecosystem": "npm",
+          "version": "8.5.0"
+        },
+        "canonical_id": "9bb91589-c11e-5246-8be4-231305ac208e",
+        "category_uid": 5,
+        "class_uid": 4001,
+        "compliance_tags": [],
+        "data_sources": [],
+        "dimensions": {},
+        "entity_type": "package",
+        "evidence_provenance": {
+          "execution": "not_established",
+          "first_seen": "2026-10-19T12:00:00+00:00",
+          "last_seen": "2026-10-19T12:00:00+00:00",
+          "schema_version": "agent-bom.graph-evidence/v1",
+          "source_snapshot_ids": [],
+          "sources": [],
+          "tier": "unspecified",
+          "time_basis": "recorded_observation"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "pkg:npm:ws@8.5.0",
+        "label": "ws@8.5.0",
+        "last_seen": "2026-10-19T12:00:00+00:00",
+        "risk_assessment": {
+          "basis": null,
+          "scope": null,
+          "status": "not_assessed"
+        },
+        "risk_score": 0.0,
+        "severity": "",
+        "severity_id": 0,
+        "status": "active",
+        "type_uid": 400101
+      },
+      {
+        "attributes": {
+          "cvss_score": 7.5,
+          "cwe_ids": [
+            "CWE-400"
+          ],
+          "fixed_version": "8.17.1",
+          "graph_reachable": true,
+          "is_kev": false,
+          "reachability": "likely",
+          "reachability_basis": [
+            "graph_path"
+          ],
+          "summary": "ws denial of service when handling a request with many HTTP headers",
+          "vulnerability_id": "CVE-2024-37890"
+        },
+        "canonical_id": "9cc31507-4f00-5a3c-8c36-1c6242c5a1ec",
+        "category_uid": 2,
+        "class_uid": 2001,
+        "compliance_tags": [],
+        "data_sources": [],
+        "dimensions": {},
+        "entity_type": "vulnerability",
+        "evidence_provenance": {
+          "execution": "not_established",
+          "first_seen": "2026-10-19T12:00:00+00:00",
+          "last_seen": "2026-10-19T12:00:00+00:00",
+          "schema_version": "agent-bom.graph-evidence/v1",
+          "source_snapshot_ids": [],
+          "sources": [],
+          "tier": "unspecified",
+          "time_basis": "recorded_observation"
+        },
+        "first_seen": "2026-10-19T12:00:00+00:00",
+        "id": "vuln:CVE-2024-37890",
+        "label": "CVE-2024-37890",
         "last_seen": "2026-10-19T12:00:00+00:00",
         "risk_assessment": {
           "basis": null,
@@ -15711,8 +16135,8 @@
           "status": "not_assessed"
         },
         "risk_score": 0.0,
-        "severity": "",
-        "severity_id": 0,
+        "severity": "high",
+        "severity_id": 4,
         "status": "active",
         "type_uid": 200301
       },
@@ -16628,7 +17052,7 @@
       },
       {
         "attributes": {
-          "agent_id": "LangChain Service Agent",
+          "agent_id": "LangChain Service",
           "allowed_tools": [],
           "expires_at": "2027-01-17T12:00:00+00:00",
           "identity_id": "demo-nhi-langchain-service",
@@ -16663,7 +17087,7 @@
         },
         "first_seen": "2026-10-19T12:00:00+00:00",
         "id": "managed_identity:demo-nhi-langchain-service",
-        "label": "LangChain Service Agent",
+        "label": "LangChain Service",
         "last_seen": "2026-10-19T12:00:00+00:00",
         "risk_assessment": {
           "basis": null,
@@ -16871,7 +17295,7 @@
         "managed_identity": 5,
         "misconfiguration": 5,
         "org": 1,
-        "package": 15,
+        "package": 16,
         "policy": 4,
         "role": 3,
         "server": 10,
@@ -16888,7 +17312,7 @@
         "called": 3,
         "can_access": 6,
         "contains": 6,
-        "depends_on": 16,
+        "depends_on": 23,
         "exhibits_drift": 2,
         "exploitable_via": 4,
         "exposed_to": 2,
@@ -16904,12 +17328,12 @@
       },
       "severity_counts": {
         "critical": 2,
-        "high": 12,
-        "medium": 7
+        "high": 14,
+        "medium": 6
       },
-      "total_edges": 148,
-      "total_nodes": 113,
-      "total_nodes_source": 113
+      "total_edges": 155,
+      "total_nodes": 114,
+      "total_nodes_source": 114
     },
     "tenant_id": "tenant-a"
   }

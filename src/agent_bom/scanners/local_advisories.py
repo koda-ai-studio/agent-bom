@@ -9,6 +9,8 @@ from typing import Any, Optional
 from agent_bom.cpe_match import cpe_vendor_hint as _cpe_vendor_hint
 from agent_bom.malicious import flag_malicious_from_vulns
 from agent_bom.models import Package, Severity, Vulnerability
+from agent_bom.scanners.advisory_merge import self_consistent_aliases
+from agent_bom.scanners.local_data_freshness import local_hits_line
 from agent_bom.scanners.osv import is_valid_fix_version as _is_valid_fix_version
 from agent_bom.scanners.osv import package_lookup_names as _package_lookup_names
 from agent_bom.scanners.package_matching import _apply_distro_release_ambiguity as _apply_distro_release_ambiguity
@@ -22,10 +24,10 @@ from agent_bom.vuln_compliance import tag_vulnerability as _tag_vuln
 
 def merge_scanner_vulnerabilities(pkg: Package, new_vulns: list[Vulnerability]) -> list[Vulnerability]:
     """Merge alias clusters once, returning only clusters absent from the package."""
-    from agent_bom.scanners.advisory_merge import advisory_keys, merge_advisory_clusters
+    from agent_bom.scanners.advisory_merge import advisory_keys, fix_fallback_allowed, merge_advisory_clusters
 
     previous_keys = {key for record in pkg.vulnerabilities for key in advisory_keys(record)}
-    pkg.vulnerabilities = merge_advisory_clusters([*pkg.vulnerabilities, *new_vulns])
+    pkg.vulnerabilities = merge_advisory_clusters([*pkg.vulnerabilities, *new_vulns], fix_fallback=fix_fallback_allowed(pkg))
     return [record for record in pkg.vulnerabilities if not advisory_keys(record) & previous_keys]
 
 
@@ -60,7 +62,7 @@ def _local_vuln_to_vulnerability(lv: "Any") -> Vulnerability:
     from agent_bom.advisory_ids import canonical_vulnerability_id, match_confidence_tier
 
     raw_id = lv.id
-    aliases = getattr(lv, "aliases", [])
+    aliases = self_consistent_aliases(raw_id, list(getattr(lv, "aliases", []) or []))
     canonical_id, all_aliases = canonical_vulnerability_id(raw_id, aliases)
 
     if severity == Severity.UNKNOWN:
@@ -319,13 +321,7 @@ def _scan_local_advisories(scannable: list[Package], scan_options: ScanOptions, 
     local_count += local_db_count
     db_covered.update(local_db_covered)
     if local_count:
-        local_label = "vulnerability found" if local_count == 1 else "vulnerabilities found"
-        source_label = "Demo advisory DB" if scan_options.demo_advisories else "Local DB"
-        if scan_options.offline:
-            mode_note = " (offline mode)"
-        elif scan_options.prefer_local_db:
-            mode_note = " (local advisory cache)"
-        else:
-            mode_note = ""
-        _scanners_patchable("console").print(f"  [green]✓[/green] {source_label}: {local_count} {local_label}{mode_note}")
+        options = scan_options
+        line = local_hits_line(local_count, offline=options.offline, prefer_local_db=options.prefer_local_db, demo=options.demo_advisories)
+        _scanners_patchable("console").print(line)
     return local_count, db_covered, local_db_targets

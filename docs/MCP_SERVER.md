@@ -312,12 +312,24 @@ Four more read-only tools answer follow-up questions from the same evidence:
 
 `blast_radius` takes credentials, tools and reachability from those graph
 paths. When the graph cannot be read they are `null` with a `graph.status`
-reason, never an empty list. `compliance` returns the tenant's persisted
+reason, never an empty list. Its `holders` block is the `GET /v1/graph/impact`
+walk for `vuln:<CVE>` (same pinned snapshot, alias resolution and reverse walk:
+`affected_by_type`, `affected_nodes`, `completeness`), and each row's
+`affected_servers` / `affected_agents` are those graph holder ids; when the
+walk is unavailable `holders.status` is `unavailable` and the rows keep the
+finding's recorded lists. Each row carries `reachability`, derived by the same
+verdict function as `/v1/findings` (`likely` for a recorded graph path,
+`confirmed` only with function-level or runtime evidence). `compliance` returns the tenant's persisted
 `/v1/compliance/summary` when completed scans exist (`source:
 "persisted_tenant_compliance"`); pass `framework` and `control` to page the
 driving finding ids. It scans local MCP configurations only with
 `source="local_scan"` or when no persisted evidence exists, and labels that
-result `source: "local_scan"`.
+result `source: "local_scan"`. `context_graph` builds the agent context graph
+from the tenant's persisted scan snapshot (the newest result per target, or one
+`scan_id`) and labels it `source: "persisted_snapshot"` with its `scope`. It
+discovers this MCP server host's agent configurations only with `live=true` or
+a `config_path` (`source: "live_discovery"`); a tenant without a snapshot gets
+a not-found error rather than a silent host scan.
 
 Both tools are read-only decision aids. They do not modify repositories,
 create tickets, deploy workloads, or mutate cloud resources. Use proxy,

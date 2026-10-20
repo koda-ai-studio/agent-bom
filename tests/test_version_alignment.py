@@ -439,3 +439,13 @@ def test_current_owner_action_and_precommit_pins_remain_managed() -> None:
         "repo: https://github.com/koda-ai-studio/agent-bom\n  rev: v0.90.0\n",
     ):
         assert len(cva.scan_text("docs/example.md", text, "0.108.4")) == 1
+
+
+def test_scan_text_flags_stale_claude_plugin_pins() -> None:
+    cva = _load_script("check_version_alignment.py")
+    manifest = '{\n  "name": "agent-bom",\n  "version": "0.90.0",\n'
+    mcp = '"args": ["--from", "agent-bom==0.90.0", "agent-bom", "mcp", "server"]\n'
+    drift = cva.scan_text("integrations/claude-code/.claude-plugin/plugin.json", manifest, "0.97.1")
+    drift += cva.scan_text("integrations/claude-code/.mcp.json", mcp, "0.97.1")
+    assert [line.split(": ")[1].split(" ")[0] for line in drift] == ["Claude", "uvx"]
+    assert cva.scan_text("integrations/claude-code/.mcp.json", mcp.replace("0.90.0", "0.97.1"), "0.97.1") == []

@@ -8,6 +8,7 @@ from typing import Any
 from fastapi import Request
 
 from agent_bom.api import compliance_hub_store, finding_cursor, time_window
+from agent_bom.api import finding_reachability_prewarm as _finding_reachability_prewarm  # noqa: F401 - registers the commit warm-up
 from agent_bom.api.finding_facets import _finding_facets_bounded as _finding_facets_bounded
 from agent_bom.api.finding_grouping import _attach_grouping_metadata as _attach_grouping_metadata
 from agent_bom.api.finding_grouping import _collect_group_occurrences as _collect_group_occurrences
@@ -29,6 +30,7 @@ from agent_bom.api.finding_view_filters import _view_envelope as _view_envelope
 from agent_bom.api.finding_view_filters import _view_filtered_row as _view_filtered_row
 from agent_bom.api.finding_view_filters import _view_filters as _view_filters
 from agent_bom.api.finding_view_filters import _walk_view_filtered_findings as _walk_view_filtered_findings
+from agent_bom.api.finding_view_filters import redact_emitted_rows, redacts_after_filter
 from agent_bom.api.scan_request_context import _logger, _tenant_id
 from agent_bom.api.stores import _get_graph_store
 from agent_bom.security import sanitize_error, sanitize_text
@@ -311,14 +313,16 @@ def _list_findings_view_impl(
             approximate_total=True,
             status=page_status,
             include_facets=False,
-            **common,
+            **{**common, "redact_page": redact_page and not redact_after_filter},
         )
 
+    redact_after_filter = redacts_after_filter(redact_page=redact_page, triage=triage)
     triage_index = build_tenant_triage_state_index(_tenant_id(request)) if triage is not None else None
     row_filter = partial(
         _view_filtered_row, triage_index=triage_index, reachability=reachability, triage=triage, suppressed_only=suppressed_only
     )
     walk = _walk_view_filtered_findings(fetch_page, row_filter, target=limit if cursor else offset + limit, cursor=cursor)
+    walk = redact_emitted_rows(walk, _redact_finding_page) if redact_after_filter else walk
     filters = _view_filters(walk.first_page, suppressed_only=suppressed_only, reachability=reachability, triage=triage)
     return _view_envelope(walk, limit=limit, offset=offset, cursor=cursor, sort=sort, scan_id=scan_id, filters=filters)
 

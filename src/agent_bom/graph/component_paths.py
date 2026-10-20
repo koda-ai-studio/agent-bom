@@ -30,8 +30,15 @@ from agent_bom.graph.relationship_specs import TraversalClass, relationship_spec
 from agent_bom.graph.types import EntityType, RelationshipType
 
 ANALYZER = "component_paths"
-MAX_HOLDER_DEPTH = 5
+# agent -> server -> workload -> image is four holding edges before any package;
+# a recorded tree adds one per level, so eight covers four levels under the image.
+MAX_HOLDER_DEPTH = 8
 MAX_CHAINS_PER_OCCURRENCE = 64
+# Alternate holding chains sampled onto a path; the rest are only counted.
+MAX_ALTERNATE_CHAINS = 5
+# A chain is as strong as its weakest hop.
+_VERDICT_STRENGTH = {"confirmed": 3, "likely": 2, "unknown": 1, "unlikely": 0}
+_TIER_STRENGTH = {"runtime_observed": 4, "recorded": 3, "static_scan": 2, "modeled_infrastructure": 1}
 
 _VULNERABLE_TO = RelationshipType.VULNERABLE_TO.value
 _ENTRY_KINDS = frozenset({EntityType.AGENT.value, EntityType.USER.value, EntityType.SERVICE_ACCOUNT.value})
@@ -90,6 +97,7 @@ class _Counts:
     paths: int = 0
     vex_excluded: int = 0
     unlikely_excluded: int = 0
+    alternate_chains: int = 0
     reasons: set[str] = field(default_factory=set)
 
 
@@ -167,7 +175,7 @@ def derive_component_paths(
     node_risk: Callable[[UnifiedNode], float],
     path_boost: Callable[[list[str]], float],
 ) -> list[AttackPath]:
-    """One path per (entry, ..., holder, finding) chain for every applicable occurrence."""
+    """One path per (entry, finding occurrence); its other holding chains ride on it as evidence."""
     counts = _Counts()
     paths: list[AttackPath] = []
     seen: set[tuple[str, ...]] = set()
@@ -186,6 +194,7 @@ def derive_component_paths(
             chains, limited = holder_chains(graph, holder.id, incoming)
             if limited:
                 counts.reasons.add("holder_chain_budget")
+            by_entry: dict[str, list[tuple[AttackPath, list[UnifiedEdge]]]] = {}
             for chain in chains:
                 hops = ([chain[0].source] if chain else []) + [edge.target for edge in chain] or [holder.id]
                 if len(hops) == 1 and not _standalone(holder):
@@ -202,9 +211,11 @@ def derive_component_paths(
                 if applicability.unlikely:
                     counts.unlikely_excluded += 1
                     continue
-                paths.append(
-                    _component_path(graph, hops, [*chain, finding_edge], finding, applicability, primary, outgoing, node_risk, path_boost)
-                )
+                path_edges = [*chain, finding_edge]
+                path = _component_path(graph, hops, path_edges, finding, applicability, primary, outgoing, node_risk, path_boost)
+                by_entry.setdefault(hops[0], []).append((path, path_edges))
+            for candidates in by_entry.values():
+                paths.append(_best_with_alternates(candidates, counts))
     counts.paths = len(paths)
     graph.analysis_status[ANALYZER] = GraphAnalysisStatus(
         status=GraphAnalysisState.LIMITED if counts.reasons else GraphAnalysisState.COMPLETE,
@@ -215,9 +226,43 @@ def derive_component_paths(
             "paths": counts.paths,
             "vex_excluded": counts.vex_excluded,
             "unlikely_excluded": counts.unlikely_excluded,
+            "alternate_chains": counts.alternate_chains,
         },
     )
     return paths
+
+
+def _chain_tier(edges: list[UnifiedEdge]) -> int:
+    return min((_TIER_STRENGTH.get(str((edge.evidence or {}).get("tier") or ""), 0) for edge in edges), default=0)
+
+
+def _best_with_alternates(candidates: list[tuple[AttackPath, list[UnifiedEdge]]], counts: _Counts) -> AttackPath:
+    """One path per (entry, occurrence): strongest verdict, tier, then fewest hops, then highest risk.
+
+    Verdict comes first so folding chains can never weaken the strongest
+    reaching-path verdict a finding is stamped with. The other holding chains
+    are recorded on it (count plus a bounded sample), never emitted as paths.
+    """
+    ranked = sorted(
+        candidates,
+        key=lambda item: (
+            -_VERDICT_STRENGTH.get(item[0].reachability, 0),
+            -_chain_tier(item[1]),
+            len(item[0].hops),
+            -item[0].composite_risk,
+            item[0].hops,
+        ),
+    )
+    best = ranked[0][0]
+    alternates = [path.hops for path, _edges in ranked[1:]]
+    if alternates:
+        best.analysis = {
+            **best.analysis,
+            "alternate_chain_count": len(alternates),
+            "alternate_chains": [list(hops) for hops in alternates[:MAX_ALTERNATE_CHAINS]],
+        }
+        counts.alternate_chains += len(alternates)
+    return best
 
 
 def _component_path(

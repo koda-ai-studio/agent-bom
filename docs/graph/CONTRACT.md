@@ -462,6 +462,12 @@ These gaps are tracked as roadmap work. None of them block the guarantees in §2
 - **Package CVEs.** A package's CVE is `vulnerable_to` (package -> advisory)
   plus `affects` (advisory -> package); the roll-up parents the advisory under
   the package through `vulnerable_to`, not a separate `contains` copy.
+- **VM CVEs.** A CVE found on a VM is `vulnerable_to` (cloud resource ->
+  advisory); the roll-up parents it under that instance. Its node carries the
+  occurrence's `reachability` / `reachability_basis` and, when the finding has
+  one, `effective_reach_score` / `effective_reach_band`. A path that starts at
+  the finding's own holder is the occurrence itself, so it never makes the
+  finding `graph_reachable` and the holder is never listed as a reach source.
 
 ## Correlated runtime identity and path proof
 
@@ -543,6 +549,19 @@ basis; `likely` for a modeled graph path (`graph_path`, including complete
 otherwise `unknown`. A persisted `confirmed` whose basis lacks a confirming
 entry is read as `likely`. `graph_reachable` still means any inbound attack
 path, and keeps its ranking boost.
+
+Every finding surface reads one derivation,
+`agent_bom.core.reachability.finding_reachability`, over the evidence stamped
+on the row: the findings list and detail, the `reachability` filter and facet
+(`reachable` = `confirmed`/`likely`, `unreachable` = `unlikely`, `unassessed`
+= `unknown` or never assessed), MCP `findings_query` / `blast_radius`, and
+exports. A finding reached only by paths that are themselves `unknown` stays
+`unknown` (`unverified_graph_path`). On attack paths, a `vulnerable_to` hop
+whose occurrence was never assessed records `applicability_unassessed`: it
+does not block a directed, provenance-backed path from `likely`, and the path's
+evidence confidence stays `structural`. A review-only advisory match, an
+`unlikely` occurrence or an excluding VEX statement still records
+`applicability_unverified` and blocks the hop.
 
 ### Inspect recorded authorization
 

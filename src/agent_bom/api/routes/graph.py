@@ -84,7 +84,7 @@ from agent_bom.api.graph_contracts import (
     ScopedGraphResponse as ScopedGraphResponse,
 )
 from agent_bom.api.graph_generation import optional_generation, snapshot_fingerprint, verify_generation
-from agent_bom.api.graph_page_context import containment_ancestors, page_attack_context
+from agent_bom.api.graph_page_context import page_attack_context, page_context
 from agent_bom.api.graph_paging import _coalesce_alias, _enforce_node_offset_cap, _paginate, path_order
 from agent_bom.api.graph_presentation import (
     _finding_ids_for_path as _finding_ids_for_path,
@@ -140,6 +140,7 @@ from agent_bom.api.routes.graph_routes._runtime import _get_graph_store_or_503 a
 from agent_bom.api.routes.graph_routes._runtime import _graph_compute_call as _graph_compute_call
 from agent_bom.api.routes.graph_routes._runtime import _graph_store_call as _graph_store_call
 from agent_bom.api.routes.graph_routes._runtime import _tenant as _tenant
+from agent_bom.api.routes.graph_routes.page_edges import _page_edges
 from agent_bom.api.routes.graph_routes.params import _FILTERED_GRAPH_ATTACK_PATH_LIMIT as _FILTERED_GRAPH_ATTACK_PATH_LIMIT
 from agent_bom.api.routes.graph_routes.params import (
     _GRAPH_QUERY_ABSOLUTE_LIMITS,
@@ -151,7 +152,6 @@ from agent_bom.api.routes.graph_routes.params import (
 )
 from agent_bom.api.routes.graph_routes.params import _raise_mcp_error_as_http as _raise_mcp_error_as_http
 from agent_bom.api.routes.graph_routes.payloads import (
-    _NODE_PAGE_EDGE_LIMIT,
     _encode_node_page,
     _encoded_graph_response,
     _overlay_filter_and_respond,
@@ -352,24 +352,12 @@ async def get_graph(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=sanitize_error(exc)) from exc
     paged_ids = {n.id for n in paged_nodes}
-    paged_edges = await _runtime._graph_store_call(
-        graph_store.edges_for_node_ids,
-        scan_id=effective_scan_id,
-        tenant_id=tenant,
-        node_ids=paged_ids,
-        limit=_NODE_PAGE_EDGE_LIMIT + 1,
-    )
-    edges_truncated = len(paged_edges) > _NODE_PAGE_EDGE_LIMIT
-    paged_edges = paged_edges[:_NODE_PAGE_EDGE_LIMIT]
+    paged_edges, edges_truncated = await _page_edges(graph_store, scan_id=effective_scan_id, tenant=tenant, node_ids=paged_ids)
     source_attack_paths, attack_path_nodes = await page_attack_context(
         graph_store, scan_id=effective_scan_id, tenant_id=tenant, node_ids=paged_ids, call_store=_runtime._graph_store_call
     )
-    ancestor_nodes, ancestor_edges = await containment_ancestors(
-        graph_store,
-        scan_id=effective_scan_id,
-        tenant_id=tenant,
-        node_ids=paged_ids,
-        call_store=_runtime._graph_store_call,
+    ancestor_nodes, ancestor_edges, stack_context = await page_context(
+        graph_store, scan_id=effective_scan_id, tenant_id=tenant, page_nodes=paged_nodes, call_store=_runtime._graph_store_call
     )
     nodes_by_id = {node.id: node for node in [*paged_nodes, *attack_path_nodes, *ancestor_nodes]}
     snapshot_stats = await _runtime._graph_store_call(
@@ -401,6 +389,7 @@ async def get_graph(
         source_attack_paths=source_attack_paths,
         nodes_by_id=nodes_by_id,
         cursor=cursor,
+        stack_context=stack_context,
     )
 
 
@@ -592,11 +581,8 @@ async def query_graph(request: Request, body: GraphQueryRequest) -> dict:
     return {**payload, "budget_applied": budget_applied, "resolved_roots": resolved_roots}
 
 
-router.include_router(reads.node_router)
-
-
 @router.get("/graph/node-neighbors", **documented(GraphNodeNeighborsResponse), tags=["graph"])
-@router.get("/graph/node/{node_id}/neighbors", **documented(GraphNodeNeighborsResponse), tags=["graph"])
+@router.get("/graph/node/{node_id:path}/neighbors", **documented(GraphNodeNeighborsResponse), tags=["graph"])
 async def get_graph_node_neighbors(
     request: Request,
     node_id: GraphIdentifier,
@@ -732,6 +718,9 @@ async def get_graph_node_neighbors(
     }
 
 
+# After the neighbors route: ``/graph/node/{node_id:path}`` would otherwise
+# swallow ``.../neighbors`` because node ids may contain "/".
+router.include_router(reads.node_router)
 router.include_router(reads.history_router)
 router.include_router(schema_routes.router)
 router.include_router(reads.preset_router)

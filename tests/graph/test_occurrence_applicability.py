@@ -77,7 +77,7 @@ def _occurrence_basis(path) -> list[str]:
     return [item for item in path.reachability_basis if item not in _HOP_EVIDENCE_REASONS]
 
 
-_HOP_EVIDENCE_REASONS = {"incomplete_hop_evidence", "directed_provenance_backed_hops", "stale_evidence_allowed"}
+_HOP_EVIDENCE_REASONS = {"incomplete_hop_evidence", "directed_provenance_backed_hops", "stale_evidence_allowed", "applicability_unassessed"}
 
 
 def _paths_to(graph: UnifiedGraph, target: str) -> list:

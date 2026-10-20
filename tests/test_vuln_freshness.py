@@ -251,3 +251,60 @@ def test_offline_empty_db_signals_first_run_nudge_contract(tmp_path, monkeypatch
 
 if __name__ == "__main__":
     pytest.main([__file__, "-q"])
+
+
+def test_local_db_outdated_matches_db_freshness_warning_states():
+    from agent_bom.vuln_freshness import local_db_outdated
+
+    assert local_db_outdated(VulnDataFreshness(mode="local", sources=["OSV"], stale=True)) is True
+    # Danger age alone (threshold raised above the cache age) still warns in `db freshness`.
+    assert local_db_outdated(VulnDataFreshness(mode="local", sources=["OSV"], stale=False, danger=True)) is True
+    assert local_db_outdated(VulnDataFreshness(mode="offline", sources=["OSV"], stale=True, danger=True)) is True
+    assert local_db_outdated(VulnDataFreshness(mode="local", sources=["OSV"])) is False
+    assert local_db_outdated(VulnDataFreshness(mode="live", sources=["OSV"], stale=True)) is False
+    assert local_db_outdated(VulnDataFreshness(mode="offline", sources=[], stale=True, danger=True)) is False
+    assert local_db_outdated(VulnDataFreshness(mode="bundled-demo", sources=["DEMO"], stale=True)) is False
+
+
+def test_should_refresh_when_only_danger_age_crossed():
+    assert should_refresh(VulnDataFreshness(mode="local", sources=["OSV"], stale=False, danger=True), offline=False) is True
+
+
+def test_newer_schema_cache_is_untrusted_even_when_fresh(tmp_path):
+    from agent_bom.db.schema import CODE_SCHEMA_VERSION
+    from agent_bom.vuln_freshness import local_db_outdated
+
+    db = _make_db(tmp_path, synced_at=_NOW - timedelta(hours=1))
+    conn = sqlite3.connect(str(db))
+    conn.execute("CREATE TABLE schema_version (version INTEGER NOT NULL)")
+    conn.execute("INSERT INTO schema_version (version) VALUES (?)", (CODE_SCHEMA_VERSION + 1,))
+    conn.commit()
+    conn.close()
+
+    fresh = compute_freshness(db_path=db, now=_NOW)
+
+    assert fresh.age_hours == 1
+    assert fresh.danger is True
+    assert "newer than this agent-bom" in (fresh.integrity_issue or "")
+    assert fresh.to_dict()["integrity_issue"] == fresh.integrity_issue
+    assert "newer than this agent-bom" in fresh.summary_line()
+    assert local_db_outdated(fresh) is True
+
+
+def test_unreadable_sync_meta_is_untrusted_not_live(tmp_path):
+    from agent_bom.vuln_freshness import local_db_outdated
+
+    db = tmp_path / "vulns.db"
+    conn = sqlite3.connect(str(db))
+    conn.execute("CREATE TABLE sync_meta (source TEXT PRIMARY KEY, last_synced TEXT)")
+    conn.execute("INSERT INTO sync_meta VALUES ('osv', ?)", ((_NOW - timedelta(hours=1)).isoformat(),))
+    conn.commit()
+    conn.close()
+
+    online = compute_freshness(db_path=db, now=_NOW)
+    offline = compute_freshness(db_path=db, now=_NOW, offline=True)
+
+    assert online.mode == "local" and online.integrity_issue
+    assert local_db_outdated(online) is True
+    assert local_db_outdated(offline) is True
+    assert "no local cache" not in offline.summary_line()

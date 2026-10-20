@@ -297,11 +297,11 @@ def test_should_i_deploy_finds_a_candidate_ranked_beyond_the_first_page(showcase
     from agent_bom.mcp_tools.graph import deploy_decision_impl
 
     generation = _rest_queue(showcase, limit=1)["snapshot_generation"]
-    queue = _rest_queue(showcase, offset=600, limit=1, snapshot_generation=generation)
-    deep = queue["attack_paths"][0]
-    first_page_targets = {row["target"] for row in _rest_queue(showcase, limit=100)["attack_paths"]}
-    candidate = deep["target"]
-    assert candidate not in first_page_targets
+    first_page_targets = {row["target"] for row in _rest_queue(showcase, limit=100, snapshot_generation=generation)["attack_paths"]}
+    # The first target the real ranking places only beyond the first page.
+    queue = _rest_queue(showcase, offset=100, limit=1000, snapshot_generation=generation)
+    candidate = next((row["target"] for row in queue["attack_paths"] if row["target"] not in first_page_targets), None)
+    assert candidate is not None, "the showcase queue must rank some target only beyond its first page"
     payload = showcase.mcp(deploy_decision_impl, candidate=candidate)
     assert payload["matchedPathCount"] >= 1
     assert payload["searchedPaths"] == payload["total"] == queue["pagination"]["total"]
@@ -364,6 +364,47 @@ def test_blast_radius_never_reports_unknown_as_empty(demo: _Estate) -> None:
         assert row["exposed_credentials"] is None
         assert row["exposed_tools"] is None
         assert row["graph"]["status"] == "unavailable"
+
+
+def test_blast_radius_holders_match_rest_impact(demo: _Estate) -> None:
+    cve = "CVE-2020-14343"
+    rest = demo.rest("/v1/graph/impact", node=f"vuln:{cve}", max_depth=4)
+    payload = _blast(demo, cve)
+    holders = payload["holders"]
+    assert holders["affected_by_type"] == rest["affected_by_type"]
+    assert holders["affected_nodes"] == rest["affected_nodes"]
+    assert holders["completeness"] == rest["completeness"]
+    by_type = rest["affected_by_type"]
+    for row in payload["blast_radii"]:
+        assert len(row["affected_servers"]) == by_type.get("server", 0)
+        assert len(row["affected_agents"]) == by_type.get("agent", 0)
+
+
+def test_blast_radius_reachability_follows_the_shared_ladder(demo: _Estate) -> None:
+    rows = _blast(demo, "CVE-2020-14343")["blast_radii"]
+    assert rows
+    for row in rows:
+        # A recorded graph path alone is likely, never confirmed.
+        assert row["graph_reachable"] is True
+        assert row["reachability"] == "likely"
+
+
+_IMPACT_NODE_TYPES = ("vulnerability", "package", "server", "agent", "credential")
+
+
+@pytest.mark.parametrize("node_type", _IMPACT_NODE_TYPES)
+def test_mcp_and_rest_read_the_same_impact_holders(demo: _Estate, node_type: str) -> None:
+    from agent_bom.mcp_tools.graph_reach import graph_reach_impl
+
+    nodes = demo.rest("/v1/graph/search", q=":", entity_types=node_type, limit=5)
+    hits = nodes.get("results") or nodes.get("nodes") or []
+    assert hits, f"demo fixture must carry a {node_type} node"
+    node = hits[0]["id"]
+    rest = demo.rest("/v1/graph/impact", node=node, max_depth=4)
+    page = demo.mcp(graph_reach_impl, node_id=node, direction="in", max_depth=4, limit=200)
+    assert page["affected_by_type"] == rest["affected_by_type"]
+    assert page["affected_count"] == rest["affected_count"]
+    assert [item["id"] for item in page["items"]] == rest["affected_nodes"][:200]
 
 
 # ── P0-4: compliance answers from persisted tenant evidence ─────────────────
@@ -472,6 +513,20 @@ def test_findings_query_matches_rest(demo: _Estate) -> None:
     assert [row["id"] for row in page_two["findings"]] == [row["id"] for row in rest_two["findings"]]
 
 
+def test_reachability_filter_matches_the_displayed_verdict(demo: _Estate) -> None:
+    from agent_bom.mcp_tools.findings import findings_query_impl
+
+    rest = demo.rest("/v1/findings", reachability="reachable", limit=200)
+    assert rest["findings"]
+    assert {row.get("reachability") for row in rest["findings"]} <= {"likely", "confirmed"}
+    unassessed = demo.rest("/v1/findings", reachability="unassessed", limit=200)
+    assert {row.get("reachability") for row in unassessed["findings"]} <= {"unknown", None}
+    payload = demo.mcp(findings_query_impl, reachability="reachable", limit=200)
+    assert [(row["id"], row["reachability"]) for row in payload["findings"]] == [
+        (row["id"], row["reachability"]) for row in rest["findings"]
+    ]
+
+
 def test_finding_detail_joins_graph_paths(demo: _Estate) -> None:
     from agent_bom.mcp_tools.findings import finding_detail_impl
 
@@ -486,7 +541,9 @@ def test_finding_detail_joins_graph_paths(demo: _Estate) -> None:
 
 # ── graph_diff: bounded snapshot diff for agents and the dashboard ──────────
 
-_LEGACY_DIFF_BYTES_FLOOR = 5_000_000
+# The full view is capped at FULL_BYTE_CAP plus envelope slack; the test only proves bounding
+# when the unbounded diff it replaces is larger than every bounded view, so the full view must truncate.
+_FULL_VIEW_SLACK = 50_000
 
 
 def test_showcase_graph_diff_payloads_are_bounded(showcase: _Estate) -> None:
@@ -495,7 +552,7 @@ def test_showcase_graph_diff_payloads_are_bounded(showcase: _Estate) -> None:
 
     legacy = showcase.store.diff_snapshots("showcase-baseline", "showcase", tenant_id="default")
     legacy_bytes = len(json.dumps(legacy, separators=(",", ":"), default=str))
-    assert legacy_bytes >= _LEGACY_DIFF_BYTES_FLOOR, "the unbounded diff this view replaces"
+    assert legacy_bytes > FULL_BYTE_CAP + _FULL_VIEW_SLACK, "the unbounded diff must exceed the largest bounded view"
 
     summary_response = showcase.client.get("/v1/graph/diff")
     assert summary_response.status_code == 200
@@ -512,10 +569,12 @@ def test_showcase_graph_diff_payloads_are_bounded(showcase: _Estate) -> None:
 
     detail = showcase.client.get("/v1/graph/diff", params={"view": "detail", "limit": 200})
     assert len(detail.content) <= 80_000 and len(detail.json()["items"]) == 200
+    # Much smaller than what they replace: the summary and a detail page are a few percent of it.
+    assert len(summary_response.content) * 100 <= legacy_bytes and len(detail.content) * 20 <= legacy_bytes
 
     full = showcase.client.get("/v1/graph/diff", params={"view": "full"})
     body = full.json()
-    assert len(full.content) <= FULL_BYTE_CAP + 50_000
+    assert len(full.content) <= FULL_BYTE_CAP + _FULL_VIEW_SLACK
     assert body["truncated"] is True and body["complete"] is False
     assert body["total_changes"] == summary["summary"]["total_changes"] > body["returned_changes"]
     assert len(body["change_kind_index"]["nodes"]) == len(body["nodes_added"]) + len(body["nodes_removed"]) + len(body["nodes_changed"])
@@ -531,7 +590,11 @@ def test_graph_diff_mcp_matches_rest(showcase: _Estate) -> None:
     mcp = showcase.mcp(graph_diff_impl)
     assert mcp["summary"] == rest["summary"] and (mcp["old"], mcp["new"]) == (rest["old"], rest["new"])
 
-    filters = {"change": "added", "entity_type": "vulnerability"}
+    # Page the entity type with the most added nodes, so parity is checked across several cursors.
+    added = {kind: counts["added"] for kind, counts in rest["summary"]["nodes_by_entity_type"].items() if counts.get("added")}
+    entity_type = max(sorted(added), key=lambda kind: added[kind])
+    assert added[entity_type] > 150, added
+    filters = {"change": "added", "entity_type": entity_type}
     seen_mcp: list[str] = []
     seen_rest: list[str] = []
     mcp_cursor = rest_cursor = None
@@ -541,17 +604,24 @@ def test_graph_diff_mcp_matches_rest(showcase: _Estate) -> None:
         if rest_cursor:
             rest_params["cursor"] = rest_cursor
         rest_page = showcase.rest("/v1/graph/diff", **rest_params)
-        assert page["total"] == rest_page["total"] == rest["summary"]["nodes_by_entity_type"]["vulnerability"]["added"]
+        assert page["total"] == rest_page["total"] == added[entity_type]
         assert page["items"] == rest_page["items"]
         seen_mcp.extend(row["id"] for row in page["items"])
         seen_rest.extend(row["id"] for row in rest_page["items"])
         mcp_cursor, rest_cursor = page["pagination"]["next_cursor"], rest_page["pagination"]["next_cursor"]
         assert mcp_cursor == rest_cursor
-    assert seen_mcp == seen_rest and len(seen_mcp) == len(set(seen_mcp)) == 200
+        if not mcp_cursor:
+            break
+    assert seen_mcp == seen_rest and len(seen_mcp) == len(set(seen_mcp)) == min(added[entity_type], 200)
     assert all(
-        row["change"] == "added" and row["entity_type"] == "vulnerability"
+        row["change"] == "added" and row["entity_type"] == entity_type
         for row in showcase.mcp(graph_diff_impl, view="detail", limit=200, **filters)["items"]
     )
+    # One node per advisory: the vulnerability diff lists each advisory once, in both surfaces.
+    vulns = showcase.rest("/v1/graph/diff", view="detail", limit=200, change="added", entity_type="vulnerability")["items"]
+    mcp_vulns = showcase.mcp(graph_diff_impl, view="detail", limit=200, change="added", entity_type="vulnerability")["items"]
+    assert [row["id"] for row in vulns] == [row["id"] for row in mcp_vulns]
+    assert len(vulns) == len({row["id"] for row in vulns})
 
 
 def test_graph_diff_tool_errors_match_rest(demo: _Estate) -> None:

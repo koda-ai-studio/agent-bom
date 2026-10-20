@@ -65,6 +65,8 @@ DB_PATH: Path = _validated_db_path(_RAW_DB_PATH)
 
 # Schema version — bump when DDL changes incompatibly
 _SCHEMA_VERSION = 8
+# Public alias for readers that must detect a DB written by a newer agent-bom.
+CODE_SCHEMA_VERSION = _SCHEMA_VERSION
 
 # Migration scripts: list of (from_version, to_version, sql) tuples.
 # Add a new entry here whenever _SCHEMA_VERSION is bumped.

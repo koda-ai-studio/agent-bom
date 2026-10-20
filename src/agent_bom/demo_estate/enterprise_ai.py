@@ -31,7 +31,7 @@ from dataclasses import dataclass
 
 from agent_bom.canonical_ids import mcp_server_graph_id
 from agent_bom.demo_estate.enterprise import EstateAsset
-from agent_bom.demo_estate.estate_packages import image_package_lineage
+from agent_bom.demo_estate.estate_package_tree import image_package_tree
 from agent_bom.demo_estate.id_schemes import estate_package_asset_id
 
 # Tag key naming an asset's AI lane; graph projection, surfaces gate and tests read it.
@@ -701,9 +701,9 @@ def build_delivery_assets(
                     tags=workload_tags,
                 )
             )
-            catalog, lineage_roots = _vulnerable_packages(), dict[str, str]()
-            for package_slot in range(packages_per_image):
-                name, version, ecosystem = catalog[(workload_seed + package_slot) % len(catalog)]
+            catalog = _vulnerable_packages()
+            picked = [catalog[(workload_seed + slot) % len(catalog)] for slot in range(packages_per_image)]
+            for name, version, ecosystem, lineage in image_package_tree(picked, workload_base=base, seed=workload_seed):
                 assets.append(
                     EstateAsset(
                         # Keyed by image digest, not workload name: the name recurs
@@ -726,7 +726,7 @@ def build_delivery_assets(
                             "ecosystem": ecosystem,
                             "package_name": name,
                             "package_version": version,
-                            **image_package_lineage(ecosystem, name, lineage_roots),
+                            **lineage,
                             # Workload principal context only: a package cannot assume it.
                             **({"uses_identity": workload_tags["uses_identity"]} if "uses_identity" in workload_tags else {}),
                             "workload": workload_id,

@@ -38,7 +38,7 @@ Class `finding` · directed · traversable · required evidence `source`, `tier`
 - `misconfiguration` → `access_policy`, `account`, `agent`, `api_gateway`, `application`, `ci_job`, `cloud_resource`, `cluster`, `config_file`, `container`, `data_store`, `dataset`, `framework`, `model`, `org`, `package`, `role`, `server`, `service_account`, `service_principal`, `source_file`, `tool`
 - `vulnerability` → `config_file`, `container`, `package`, `resource`, `server`, `source_file`
 
-Emitted by: `graph/benchmark_projection.py`, `graph/finding_projection.py`, `graph/organization_findings.py`, `graph/repo_structure_overlay.py`, `graph/supabase_projection.py`, `graph/vercel_projection.py`, `hardware_evidence.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
+Emitted by: `api/graph_page_stack.py`, `graph/benchmark_projection.py`, `graph/finding_projection.py`, `graph/organization_findings.py`, `graph/repo_structure_overlay.py`, `graph/supabase_projection.py`, `graph/vercel_projection.py`, `hardware_evidence.py`; demo fixtures: `demo_estate/estate_finding_nodes.py`, `demo_estate/showcase_graph.py`
 
 ## `assumes`
 
@@ -56,7 +56,7 @@ Class `authority` · directed · traversable · required evidence `source`, `tie
 - `service_principal` → `role`
 - `user` → `role`
 
-Emitted by: `graph/builder_cloud_inventory.py`, `graph/builder_snowflake_cortex.py`, `graph/builder_snowflake_objects.py`, `graph/builder_snowflake_platform.py`, `graph/cloud_compute_projection.py`; demo fixtures: `demo_estate/showcase_graph.py`
+Emitted by: `graph/builder_cloud_inventory.py`, `graph/builder_snowflake_cortex.py`, `graph/builder_snowflake_objects.py`, `graph/builder_snowflake_platform.py`, `graph/cloud_compute_projection.py`, `graph/storage_integration_correlation.py`; demo fixtures: `demo_estate/showcase_graph.py`
 
 ## `attached`
 
@@ -124,7 +124,7 @@ Class `authority` · directed · traversable · required evidence `source`, `tie
 - `tool` → `agent`, `api_gateway`, `cloud_resource`, `cluster`, `config_file`, `container`, `data_store`, `dataset`, `model`, `resource`, `server`
 - `user` → `agent`, `api_gateway`, `cloud_resource`, `cluster`, `config_file`, `container`, `credential`, `data_store`, `dataset`, `model`, `resource`, `server`
 
-Emitted by: `graph/authorization_evidence.py`, `graph/builder.py`, `graph/builder_cloud_lineage.py`, `graph/builder_snowflake_cortex.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
+Emitted by: `graph/authorization_evidence.py`, `graph/builder.py`, `graph/builder_cloud_lineage.py`, `graph/builder_snowflake_cortex.py`, `graph/storage_integration_correlation.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
 
 ## `configures`
 
@@ -164,7 +164,7 @@ Class `structural` · directed · traversable · required evidence `source`, `ti
 - `source_file` → `package`
 - `tool` → `misconfiguration`, `vulnerability`
 
-Emitted by: `graph/agent_projection.py`, `graph/builder_cloud_inventory.py`, `graph/builder_cloud_lineage.py`, `graph/builder_snowflake_platform.py`, `graph/cloud_context.py`, `graph/code_graph_overlay.py`, `graph/organization_aws.py`, `graph/organization_gcp.py`, `graph/repo_structure_overlay.py`, `graph/vercel_projection.py`; demo fixtures: `demo_estate/compute_identity_lane.py`, `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
+Emitted by: `graph/agent_projection.py`, `graph/builder_cloud_inventory.py`, `graph/builder_cloud_lineage.py`, `graph/builder_snowflake_platform.py`, `graph/cloud_context.py`, `graph/code_graph_overlay.py`, `graph/organization_aws.py`, `graph/organization_gcp.py`, `graph/repo_structure_overlay.py`, `graph/vercel_projection.py`; demo fixtures: `demo_estate/compute_identity_lane.py`, `demo_estate/estate_finding_nodes.py`, `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
 
 ## `correlates_with`
 
@@ -216,7 +216,7 @@ Class `dependency` · directed · traversable · required evidence `source`, `ti
 - `server` → `package`
 - `source_file` → `package`
 
-Emitted by: `graph/agent_projection.py`, `graph/builder_snowflake_data_movement.py`, `graph/builder_snowflake_objects.py`, `graph/builder_snowflake_platform.py`, `graph/framework_topology_projection.py`, `graph/package_dependency_projection.py`, `graph/repo_structure_overlay.py`; demo fixtures: `demo_estate/showcase_graph.py`
+Emitted by: `api/graph_page_stack.py`, `graph/agent_projection.py`, `graph/builder_snowflake_data_movement.py`, `graph/builder_snowflake_objects.py`, `graph/builder_snowflake_platform.py`, `graph/framework_topology_projection.py`, `graph/package_dependency_projection.py`, `graph/repo_structure_overlay.py`; demo fixtures: `demo_estate/estate_external_stages.py`, `demo_estate/showcase_packages.py`
 
 ## `exhibits_drift`
 
@@ -577,7 +577,7 @@ Class `dependency` · directed · traversable · required evidence `source`, `ti
 
 - `agent` → `server`
 
-Emitted by: `graph/agent_projection.py`; demo fixtures: `demo_estate/showcase_graph.py`
+Emitted by: `api/graph_page_stack.py`, `graph/agent_projection.py`; demo fixtures: `demo_estate/showcase_graph.py`
 
 ## `uses_framework`
 
@@ -602,4 +602,4 @@ Class `finding` · directed · traversable · required evidence `source`, `tier`
 - `server` → `misconfiguration`, `vulnerability`
 - `tool` → `misconfiguration`, `vulnerability`
 
-Emitted by: `graph/blast_projection.py`, `graph/component_paths.py`, `graph/credential_findings.py`, `graph/mcp_audit_projection.py`, `graph/package_projection.py`, `graph/rollup_issues.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_findings.py`, `demo_estate/showcase_graph.py`
+Emitted by: `api/graph_page_stack.py`, `graph/blast_projection.py`, `graph/component_paths.py`, `graph/credential_findings.py`, `graph/mcp_audit_projection.py`, `graph/package_projection.py`, `graph/rollup_issues.py`; demo fixtures: `demo_estate/estate_finding_nodes.py`, `demo_estate/showcase_findings.py`, `demo_estate/showcase_packages.py`

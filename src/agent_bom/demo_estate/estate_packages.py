@@ -1,7 +1,8 @@
 """The estate's recorded image package tree, projected the way a live scan's is.
 
 Each image's inventory records which packages it declares directly and which
-were pulled in by another package of the same ecosystem. Those recorded
+were pulled in by another package of the same ecosystem
+(:mod:`agent_bom.demo_estate.estate_package_tree`). Those recorded
 fields become ``is_direct``/``dependency_depth``/``parent_package`` on the
 package node and one ``DEPENDS_ON`` edge per parent/child pair, resolved by the
 same rule the live builder uses (:mod:`agent_bom.core.package_lineage`).
@@ -17,18 +18,6 @@ from agent_bom.demo_estate.enterprise import EstateAsset
 from agent_bom.demo_estate.estate_edges import ESTATE_DATA_SOURCE
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.package_dependency_projection import project_package_dependencies
-
-
-def image_package_lineage(ecosystem: str, name: str, roots: dict[str, str]) -> dict[str, str]:
-    """Recorded lineage tags for one package of one image.
-
-    The first package of an ecosystem in an image is its direct dependency;
-    later packages of that ecosystem are recorded as its children.
-    """
-    root = roots.setdefault(ecosystem, name)
-    if root == name:
-        return {"is_direct": "true", "dependency_depth": "0"}
-    return {"is_direct": "false", "dependency_depth": "1", "parent_package": root}
 
 
 def _record(asset: EstateAsset) -> dict[str, Any]:

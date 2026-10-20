@@ -381,6 +381,7 @@ async def test_context_graph_no_agents():
     result = await context_graph_impl(
         config_path=None,
         source_agent=None,
+        live=True,
         _run_scan_pipeline=_pipeline,
         _truncate_response=_trunc,
     )
@@ -398,6 +399,7 @@ async def test_context_graph_pipeline_exception():
     result = await context_graph_impl(
         config_path=None,
         source_agent=None,
+        live=True,
         _run_scan_pipeline=_fail,
         _truncate_response=_trunc,
     )

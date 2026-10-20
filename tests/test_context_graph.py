@@ -1058,7 +1058,9 @@ def test_mcp_payload_preserves_single_source_sampling(monkeypatch):
 
     monkeypatch.setattr(context, "_MAX_PATHS", 2)
     payload = json.loads(
-        asyncio.run(context_graph_impl(source_agent="agent-0", _run_scan_pipeline=pipeline, _truncate_response=lambda value: value))
+        asyncio.run(
+            context_graph_impl(source_agent="agent-0", live=True, _run_scan_pipeline=pipeline, _truncate_response=lambda value: value)
+        )
     )
     assert len(payload["lateral_paths"]) == 2
     assert payload["stats"]["lateral_paths_truncated"] is True

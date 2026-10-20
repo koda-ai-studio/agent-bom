@@ -26,6 +26,7 @@ from agent_bom.cli.agents.scan_pipeline.options import ScanOptions
 from agent_bom.cli.agents.scan_pipeline.runner import run_scan
 from agent_bom.cli.options import scan_options
 from agent_bom.output import to_json
+from agent_bom.vuln_freshness import set_allow_stale_db
 
 __all__ = [
     "_benchmark_scan_issues",
@@ -60,11 +61,17 @@ def scan(**options: Any) -> None:
                 not complete. This is why `scan --demo` exits 1.
       2  Usage error — an option or input is invalid.
       3  Stale vulnerability database while --require-fresh-db is enabled.
+    An outdated local DB that OSV did not back (offline, or OSV did not
+    answer) is an incomplete scan and exits 1; --allow-stale-db accepts it.
     \b
     Full contract: https://koda-ai-studio.github.io/agent-bom/reference/exit-codes/
     """
-
-    run_scan(ScanOptions(**options))
+    scan_options = ScanOptions(**options)
+    set_allow_stale_db(scan_options.allow_stale_db)
+    try:
+        run_scan(scan_options)
+    finally:
+        set_allow_stale_db(False)
 
 
 # Keyword binding stays strict (``ScanOptions`` rejects unknown names); expose

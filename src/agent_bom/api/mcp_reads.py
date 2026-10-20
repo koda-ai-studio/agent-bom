@@ -12,8 +12,13 @@ from typing import Any
 from fastapi import HTTPException
 
 from agent_bom.api.finding_view_filters import _finding_triage_state
+from agent_bom.api.findings_current import current_scan_jobs
 from agent_bom.api.graph_diff_read import graph_diff_read
 from agent_bom.api.graph_estate_changes import graph_estate_changes_read
+from agent_bom.api.mcp_blast_reads import apply_holders as apply_holders
+from agent_bom.api.mcp_blast_reads import blast_holders as blast_holders
+from agent_bom.api.mcp_blast_reads import public_holders as public_holders
+from agent_bom.api.mcp_blast_reads import stamp_rows as stamp_rows
 from agent_bom.api.routes.compliance import get_compliance_by_framework, get_compliance_summary
 from agent_bom.api.routes.enterprise import build_tenant_triage_state_index
 from agent_bom.api.routes.scan import list_findings
@@ -34,6 +39,24 @@ def persisted_finding(tenant_id: str, finding_id: str, scan_id: str | None = Non
     return next((row for row in rows if wanted in {str(row.get(key) or "") for key in ("id", "finding_id", "canonical_id")}), None)
 
 
+def persisted_scan_report(tenant_id: str, scan_id: str | None = None) -> dict[str, Any]:
+    """The agents and blast radius of the tenant's current scan snapshot (or one scan).
+
+    Uses the same newest-per-target selection as ``/v1/findings``, so a rescanned
+    target contributes only its latest result.
+    """
+    jobs = current_scan_jobs(_completed_jobs_for_tenant(tenant_id), since=None, scan_id=scan_id)
+    agents: list[Any] = []
+    blast_radius: list[Any] = []
+    scan_ids: list[str] = []
+    for job in jobs:
+        result = job.result or {}
+        agents.extend(item for item in result.get("agents") or [] if isinstance(item, dict))
+        blast_radius.extend(item for item in result.get("blast_radius") or [] if isinstance(item, dict))
+        scan_ids.append(str(result.get("scan_id") or job.job_id))
+    return {"available": bool(jobs), "agents": agents, "blast_radius": blast_radius, "scan_ids": sorted(set(scan_ids))}
+
+
 def triage_state(tenant_id: str, row: dict[str, Any]) -> dict[str, Any] | None:
     """The newest active triage/VEX decision matching one finding row."""
     return _finding_triage_state(row, build_tenant_triage_state_index(tenant_id))
@@ -48,5 +71,6 @@ __all__ = [
     "has_completed_scans",
     "list_findings",
     "persisted_finding",
+    "persisted_scan_report",
     "triage_state",
 ]

@@ -511,6 +511,11 @@ export interface AttackPathRankingFactors {
   evidence_confidence: AttackPathEvidenceConfidence | string;
   composite_risk: number;
   credential_count: number;
+  /** Tie-breakers after credential_count; read from path evidence, never added to composite_risk. */
+  max_epss?: number;
+  internet_exposed?: boolean;
+  environment_weight?: number;
+  hop_count?: number;
   reasons: string[];
 }
 

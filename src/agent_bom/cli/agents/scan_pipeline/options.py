@@ -238,6 +238,7 @@ class ScanOptions:
     ignore_file: Optional[str] = None
     posture: bool = False
     _iac_only: bool = False
+    allow_stale_db: bool = False
     _image_only: bool = False
     _apply_profile_defaults: bool = True
     k8s_live: bool = False

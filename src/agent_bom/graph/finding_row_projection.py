@@ -18,6 +18,7 @@ from typing import Any
 
 from agent_bom.compliance_coverage import COMPLIANCE_TAG_FIELDS
 from agent_bom.core.asset_types import entity_type_for_asset_type
+from agent_bom.core.reachability import node_reachability
 from agent_bom.evidence.finding_node_ids import _dict, _text, finding_row_node_id, stamp_finding_node_ids
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.container_kind import container_kind_attributes
@@ -219,6 +220,19 @@ def vulnerability_signal_attributes(row: dict[str, Any]) -> dict[str, Any]:
     return attributes
 
 
+def _occurrence_verdict_attributes(row: dict[str, Any]) -> dict[str, Any]:
+    """The row's own reachability verdict and effective reach for its vulnerability node."""
+    reach = node_reachability(row)
+    attributes: dict[str, Any] = {"reachability": reach.verdict.value, "reachability_basis": list(reach.basis)}
+    score = row.get("effective_reach_score")
+    if isinstance(score, (int, float)) and not isinstance(score, bool):
+        attributes["effective_reach_score"] = score
+    band = _text(row.get("effective_reach_band"))
+    if band:
+        attributes["effective_reach_band"] = band
+    return attributes
+
+
 def finding_signal_attributes(finding: Any) -> dict[str, Any]:
     """:func:`vulnerability_signal_attributes` for a ``Finding`` object."""
     return vulnerability_signal_attributes(
@@ -240,6 +254,7 @@ def _new_node(row: dict[str, Any], node_id: str, collector: str) -> UnifiedNode:
     is_vulnerability = node_id.startswith("vuln:")
     if is_vulnerability:
         attributes.update(vulnerability_signal_attributes(row))
+        attributes.update(_occurrence_verdict_attributes(row))
     else:
         vuln_id = _text(row.get("vulnerability_id")) or _text(row.get("cve_id"))
         if vuln_id:

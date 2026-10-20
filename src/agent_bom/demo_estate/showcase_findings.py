@@ -46,7 +46,8 @@ _SHOWCASE_MISCONFIGURATIONS: tuple[tuple[str, str, str, str, str], ...] = (
         "cloud:pii-bucket",
         "customer-pii-prod (S3)",
     ),
-    (showcase_misconfig_id("sg-open"), "Security group sg-prod allows 0.0.0.0/0 on port 22", "", "cloud:bastion", "prod-bastion (EC2)"),
+    # Rated as the showcase's own CIS AWS 4.1 check rates this sg-prod ingress.
+    (showcase_misconfig_id("sg-open"), "Security group sg-prod allows 0.0.0.0/0 on port 22", "high", "cloud:bastion", "prod-bastion (EC2)"),
 )
 
 # (incident id, blueprint / agent label, drift score, violations, violated tool)

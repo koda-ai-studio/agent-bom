@@ -2203,7 +2203,8 @@ class TestGraphStoreBackendSelection:
         assert response.status_code == 200
         helper_calls = [call[0] for call in recording_graph_store.calls]
         assert helper_calls.count("page_nodes") == 1
-        assert helper_calls.count("edges_for_node_ids") == 2  # incident page plus incoming containment
+        # Incident page, one agent-stack level, then incoming containment.
+        assert helper_calls.count("edges_for_node_ids") == 3
         assert helper_calls.count("snapshot_stats") == 1
         assert "load_graph" not in helper_calls
 
@@ -2442,7 +2443,12 @@ class TestGraphStoreBackendSelection:
 
         assert overview.status_code == 200
         overview_body = overview.json()
-        assert len(overview_body["nodes"]) == 200
+        completeness = overview_body["completeness"]
+        assert completeness["ranked"] == 200
+        # Each ranked CVE arrives with the package it lives in (the agent stack).
+        assert len(overview_body["nodes"]) == 200 + completeness["context_nodes"]
+        types = {node["id"]: node["entity_type"] for node in overview_body["nodes"]}
+        assert sum(1 for kind in types.values() if kind == "package") >= 200
         assert overview_body["stats"]["total_edges"] >= 250
         assert len(overview_body["edges"]) >= 200
         assert all(edge["source_id"] and edge["target_id"] for edge in overview_body["edges"])
@@ -2475,8 +2481,15 @@ class TestGraphStoreBackendSelection:
         assert any(call[0] == "delete_preset" for call in recording_graph_store.calls)
 
     def test_scan_pipeline_persists_via_graph_store(self, monkeypatch, recording_graph_store):
+        from agent_bom.api import finding_reachability_prewarm, graph_rollup_prewarm
         from agent_bom.api.pipeline import _persist_graph_snapshot
         from agent_bom.api.postgres_common import _bypass_tenant_rls, _current_tenant, reset_current_tenant, set_current_tenant
+
+        # Reader warm-ups run on their own threads after commit and are outside
+        # this write-path contract; keep them from recording reads mid-assertion.
+        monkeypatch.setenv("AGENT_BOM_GRAPH_ROLLUP_PREWARM", "0")
+        monkeypatch.setenv("AGENT_BOM_FINDING_REACHABILITY_PREWARM", "0")
+        assert graph_rollup_prewarm.wait_idle(30) and finding_reachability_prewarm.wait_idle(30)
 
         persisted = UnifiedGraph(scan_id="job-123", tenant_id="default")
         persisted.add_node(UnifiedNode(id="agent:scan", entity_type=EntityType.AGENT, label="scan-agent"))

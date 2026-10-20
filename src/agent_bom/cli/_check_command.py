@@ -19,33 +19,19 @@ from typing import Any, Optional
 import click
 from rich.console import Console
 
+from agent_bom import vuln_freshness
 from agent_bom.cli._check_support import (
     _check_result_payload,
     _format_vulnerability_count,
     _package_spec_error,
     _parse_package_spec,
     _resolve_check_ecosystems,
+    _vulnerability_row,
     _vulns_at_or_above,
     _write_check_output,
 )
 from agent_bom.cli._common import _sync_runtime_consoles
-
-_SEVERITY_STYLES = {
-    "critical": "red bold",
-    "high": "#e67e22 bold",
-    "medium": "yellow",
-    "low": "dim",
-}
-_IMPACT_STYLES = {
-    "code-execution": "red",
-    "credential-access": "red",
-    "file-access": "#e67e22",
-    "injection": "#e67e22",
-    "ssrf": "#e67e22",
-    "data-leak": "yellow",
-    "availability": "dim",
-    "client-side": "dim",
-}
+from agent_bom.vuln_freshness import db_stale_days_threshold, db_staleness, set_allow_stale_db
 
 
 @dataclass
@@ -63,6 +49,8 @@ class CheckRun:
     offline: bool
     fail_on_severity: str | None
     nvd_api_key: str | None
+    allow_stale_db: bool = False
+    require_fresh_db: bool = False
     agent_mode: bool = False
     structured_output: bool = False
     console: Any = None
@@ -81,10 +69,14 @@ class CheckRun:
     matched_pkg: Any = None
     vulns: list[Any] = field(default_factory=list)
     fail_threshold: str | None = None
+    data_evidence: Any = None
 
 
 def _emit(run: CheckRun, *, ecosystems: list[str], verdict: str, message: str, exit_code: int, **extra: Any) -> None:
     """Write the machine-readable verdict for ``--format json|sarif`` or agent mode."""
+    if run.data_evidence is not None:
+        extra.setdefault("vuln_data_freshness", run.data_evidence.freshness)
+        extra.setdefault("completeness", run.data_evidence.completeness())
     _write_check_output(
         run.result_payload(
             name=run.name,
@@ -257,10 +249,19 @@ def _scan(run: CheckRun) -> None:
     run.remote_lookup_gap = not run.offline and any(w.get("kind") == "remote_lookup_gap" for w in coverage_warnings)
     if run.scan_warnings and not run.quiet and not run.structured_output:
         run.console.print(f"  [yellow]⚠[/yellow] Scan completed with {len(run.scan_warnings)} warning(s); results may be incomplete.")
+    _record_data_evidence(run, coverage_warnings)
 
     run.matched_pkg = next((p for p in run.pkgs if p.vulnerabilities), run.pkgs[0])
     run.vulns = run.matched_pkg.vulnerabilities
     run.fail_threshold = run.fail_on_severity.lower() if run.fail_on_severity else None
+
+
+def _record_data_evidence(run: CheckRun, coverage_warnings: list[dict]) -> None:
+    from agent_bom.scanners.local_data_freshness import check_data_evidence
+
+    run.data_evidence = check_data_evidence(offline=run.offline, coverage_warnings=coverage_warnings)
+    if run.data_evidence.outdated and not run.quiet and not run.structured_output:
+        run.console.print(f"  [yellow]⚠ {run.data_evidence.reason}[/yellow]")
 
 
 def _gate_malicious(run: CheckRun) -> None:
@@ -354,6 +355,54 @@ def _gate_coverage_gap(run: CheckRun) -> None:
         sys.exit(2)
 
 
+def _gate_require_fresh_db(run: CheckRun) -> None:
+    """``--require-fresh-db`` / ``AGENT_BOM_REQUIRE_FRESH_DB``: the same exit-3 policy gate as ``scan``."""
+    if not run.require_fresh_db:
+        return
+    stale, age = db_staleness(vuln_freshness.compute_freshness(offline=run.offline))
+    if not stale:
+        return
+    age_text = f"{age}d old" if age is not None else "missing or undated"
+    message = (
+        f"Local vulnerability DB is stale ({age_text}; threshold {db_stale_days_threshold()}d) and --require-fresh-db "
+        "is set. Run `agent-bom db update`."
+    )
+    if run.structured_output:
+        _emit(run, ecosystems=run.ecosystems or [run.detected_eco], verdict="incomplete", message=message, exit_code=3)
+    elif run.quiet:
+        click.echo(f"{run.name}@{run.version}: stale vulnerability DB (--require-fresh-db)")
+    else:
+        run.console.print(f"  [red]✗ {message}[/red]\n")
+    sys.exit(3)
+
+
+def _gate_incomplete_data(run: CheckRun) -> None:
+    """Nothing at or above the gate on untrusted local data that OSV did not back: exit 2, not a pass."""
+    failing = [] if run.exit_zero else _vulns_at_or_above(run.vulns, run.fail_threshold)
+    if failing or run.data_evidence is None or not run.data_evidence.blocks_clean():
+        return
+    message = run.data_evidence.stale_message()
+    if run.structured_output:
+        _emit(
+            run,
+            ecosystems=run.ecosystems,
+            verdict="incomplete",
+            message=message,
+            exit_code=2,
+            vulnerabilities=run.vulns,
+            warnings=run.scan_warnings,
+            fail_on_severity=run.fail_threshold,
+            fail_on_severity_count=0,
+        )
+    elif run.quiet:
+        click.echo(f"{run.name}@{run.version}: incomplete (outdated local vulnerability data)")
+    else:
+        if run.vulns:
+            _render_vulnerability_table(run)
+        run.console.print(f"  [yellow]⚠ Nothing at or above the gate, but results are incomplete — exiting 2. {message}[/yellow]\n")
+    sys.exit(2)
+
+
 def _gate_os_context(run: CheckRun) -> None:
     if not run.vulns and run.matched_pkg.ecosystem in {"deb", "apk", "rpm"} and not run.os_context_complete:
         message = (
@@ -386,37 +435,16 @@ def _report_clean(run: CheckRun) -> None:
                 warnings=run.scan_warnings,
             )
             sys.exit(0)
+        complete = run.data_evidence is None or run.data_evidence.complete
         if run.quiet:
-            click.echo(f"{run.name}@{run.version}: CLEAN")
-        else:
+            click.echo(f"{run.name}@{run.version}: CLEAN" + ("" if complete else " (results may be incomplete)"))
+        elif complete:
             run.console.print(f"  [green]✓ No known vulnerabilities in {run.name}@{run.version}[/green]\n")
+        else:
+            run.console.print(
+                f"  [yellow]⚠ No known vulnerabilities in {run.name}@{run.version}, but results may be incomplete.[/yellow]\n"
+            )
         sys.exit(0)
-
-
-def _vulnerability_row(v: Any, classify_cwe_impact: Callable[[Any], str]) -> tuple[str, str, str, str, str]:
-    sev = v.severity.value.lower()
-    style = _SEVERITY_STYLES.get(sev, "white")
-    fix_display = f"[green]{v.fixed_version}[/green]" if v.fixed_version else "[dim]no fix[/dim]"
-    # CWE impact category
-    impact = classify_cwe_impact(v.cwe_ids)
-    impact_style = _IMPACT_STYLES.get(impact, "dim")
-    impact_label = impact.replace("-", " ").replace("code execution", "RCE")
-    # KEV badge
-    kev = " [red bold]KEV[/red bold]" if v.is_kev else ""
-    # Concise summary — truncate to keep table compact
-    summary_text = v.summary or ""
-    if not summary_text or summary_text == "No description available":
-        aliases_str = ", ".join(v.aliases[:3]) if v.aliases else ""
-        summary_text = f"[dim]See {aliases_str}[/dim]" if aliases_str else "[dim]—[/dim]"
-    elif len(summary_text) > 50:
-        summary_text = summary_text[:47] + "..."
-    return (
-        f"[{style}]{v.severity.value.upper()}[/{style}]{kev}",
-        v.id,
-        f"[{impact_style}]{impact_label}[/{impact_style}]",
-        fix_display,
-        summary_text,
-    )
 
 
 def _render_vulnerability_table(run: CheckRun) -> None:
@@ -516,12 +544,14 @@ CHECK_STAGES: tuple[Callable[[CheckRun], None], ...] = (
     _reject_invalid_spec,
     _reject_missing_version,
     _build_packages,
+    _gate_require_fresh_db,
     _resolve_latest,
     _scan,
     _gate_malicious,
     _enrich,
     _gate_coverage_gap,
     _gate_os_context,
+    _gate_incomplete_data,
     _report_clean,
     _render_vulnerability_table,
     _verdict_exit_zero,
@@ -532,6 +562,10 @@ CHECK_STAGES: tuple[Callable[[CheckRun], None], ...] = (
 def run_check(ctx: click.Context, **options: Any) -> None:
     """Run ``agent-bom check`` with the click command's keyword options."""
     run = CheckRun(**options)
-    _prepare(ctx, run)
-    for stage in CHECK_STAGES:
-        stage(run)
+    set_allow_stale_db(run.allow_stale_db)
+    try:
+        _prepare(ctx, run)
+        for stage in CHECK_STAGES:
+            stage(run)
+    finally:
+        set_allow_stale_db(False)

@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException, Query, Request
 
 from agent_bom.api.graph_contracts import GraphIdentifier, IncidentEdgePageResponse, PresetCreate
 from agent_bom.api.graph_generation import optional_generation, verify_generation
+from agent_bom.api.graph_impact_read import read_node_impact
 from agent_bom.api.graph_node_alias import resolve_snapshot_node_id
 from agent_bom.api.graph_paging import _enforce_node_offset_cap, _page_meta, page_truncated
 from agent_bom.api.neptune_graph import NeptuneGraphStore
@@ -31,7 +32,6 @@ from agent_bom.api.routes.graph_routes.params import _parse_entity_type_filter
 from agent_bom.api.time_window import MAX_WINDOW_DAYS
 from agent_bom.graph import SEVERITY_RANK
 from agent_bom.graph.completeness import graph_completeness
-from agent_bom.graph.reach_view import reach_interpretation
 from agent_bom.graph.semantic_clusters import SEMANTIC_CLUSTER_KINDS
 from agent_bom.graph.view_payloads import _semantic_cluster_payload
 from agent_bom.security import sanitize_error
@@ -53,32 +53,21 @@ async def get_graph_impact(
     """Compute blast radius of a node — what depends on it?"""
     graph_store = _runtime._get_graph_store_or_503()
     tenant_id = _runtime._tenant(request)
-    identity = await _runtime._graph_store_call(
-        optional_generation, graph_store, tenant=tenant_id, scan_id=scan_id or "", generation=snapshot_generation, offset=0
-    )
-    effective_scan_id = identity[0] if identity else scan_id or ""
-    read_id, resolved_from = await _runtime._graph_store_call(
-        resolve_snapshot_node_id, graph_store, tenant_id=tenant_id, scan_id=effective_scan_id, node_id=node
-    )
     impact = await _runtime._graph_store_call(
-        graph_store.impact_of,
-        scan_id=effective_scan_id,
+        read_node_impact,
+        graph_store,
         tenant_id=tenant_id,
-        node_id=read_id,
+        scan_id=scan_id or "",
+        node_id=node,
         max_depth=max_depth,
+        snapshot_generation=snapshot_generation,
     )
     if impact is None:
         raise HTTPException(status_code=404, detail=f"Node '{node}' not found")
+    identity = impact.pop("_identity")
     if identity:
         await _runtime._graph_store_call(verify_generation, graph_store, tenant=tenant_id, identity=identity, has_rows=True)
-    return {
-        **impact,
-        "scan_id": identity[0] if identity else scan_id or "",
-        "tenant_id": tenant_id,
-        "snapshot_generation": identity[1] if identity else None,
-        "interpretation": reach_interpretation(max_depth=max_depth),
-        "resolved_from": resolved_from,
-    }
+    return {**impact, "scan_id": identity[0] if identity else scan_id or ""}
 
 
 @search_router.get("/graph/search", **documented(GraphSearchResponse), tags=["graph"])
@@ -287,7 +276,7 @@ async def list_graph_agents(
 
 
 @node_router.get("/graph/node-context", **documented(GraphNodeContextResponse), tags=["graph"])
-@node_router.get("/graph/node/{node_id}", **documented(GraphNodeContextResponse), tags=["graph"])
+@node_router.get("/graph/node/{node_id:path}", **documented(GraphNodeContextResponse), tags=["graph"])
 async def get_graph_node(
     request: Request,
     node_id: GraphIdentifier,

@@ -34,7 +34,7 @@ from agent_bom.graph.rollup_edges import combine_reasons as _combine_reasons
 from agent_bom.graph.rollup_edges import cross_container_edge_rows, edge_projection
 from agent_bom.graph.rollup_edges import descendants as _descendants
 from agent_bom.graph.rollup_edges import edge_count_metadata as _edge_count_metadata
-from agent_bom.graph.rollup_issues import ISSUE_SEVERITY_BASIS, ISSUE_SEVERITY_DEFINITION, IssueTally, build_issue_index
+from agent_bom.graph.rollup_issues import ISSUE_SEVERITY_BASIS, ISSUE_SEVERITY_DEFINITION, IssueTally, build_finding_index
 from agent_bom.graph.types import EntityType, RelationshipType
 
 # Severity buckets reported in every roll-up histogram, worst → least.
@@ -59,10 +59,8 @@ _ACCOUNT_RESOURCE_CONTAINMENT_RELS: frozenset[str] = frozenset({RelationshipType
 _ACCOUNT_RESOURCE_CONTAINMENT_SOURCES: frozenset[str] = frozenset({EntityType.ACCOUNT.value})
 _ACCOUNT_RESOURCE_CONTAINMENT_TARGETS: frozenset[str] = frozenset({EntityType.CLOUD_RESOURCE.value})
 
-# The agent stack is the containment of a local/AI estate that has no cloud
-# tree: an agent owns the MCP servers it uses, a server owns its packages, tools
-# and credentials, and a package owns its vulnerabilities. Typed by endpoint so
-# an unrelated USES / DEPENDS_ON edge never becomes a parent link.
+# Agent-stack containment (no cloud tree): agent -> servers -> packages, tools, credentials; a package or
+# VM instance owns its vulnerabilities. Typed by endpoint so an unrelated USES / DEPENDS_ON edge never parents.
 _AGENT_STACK_CONTAINMENT: frozenset[tuple[str, str, str]] = frozenset(
     {
         (RelationshipType.USES.value, EntityType.AGENT.value, EntityType.SERVER.value),
@@ -74,6 +72,7 @@ _AGENT_STACK_CONTAINMENT: frozenset[tuple[str, str, str]] = frozenset(
         (RelationshipType.EXPOSES_CRED.value, EntityType.SERVER.value, EntityType.CREDENTIAL.value),
         (RelationshipType.VULNERABLE_TO.value, EntityType.PACKAGE.value, EntityType.VULNERABILITY.value),
         (RelationshipType.VULNERABLE_TO.value, EntityType.SERVER.value, EntityType.VULNERABILITY.value),
+        (RelationshipType.VULNERABLE_TO.value, EntityType.CLOUD_RESOURCE.value, EntityType.VULNERABILITY.value),
     }
 )
 _AGENT_STACK_RELS: frozenset[str] = frozenset(rel for rel, _source, _target in _AGENT_STACK_CONTAINMENT)
@@ -387,13 +386,13 @@ def containment_descendants(graph: UnifiedGraph, root: str) -> list[str]:
     return _descendants(root, _contains_children(graph))
 
 
-# Per-node roll-up facts: (type, severity bucket, rank, exposed, toxic, issue keys).
-_NodeFact = tuple[str, str, int, bool, bool, tuple[str, ...]]
+# Per-node roll-up facts: (type, severity bucket, rank, exposed, toxic, issue keys, occurrence keys).
+_NodeFact = tuple[str, str, int, bool, bool, tuple[str, ...], tuple[str, ...]]
 
 
 def _node_facts(graph: UnifiedGraph) -> dict[str, _NodeFact]:
     """Derive each node's roll-up facts once; nested scopes revisit a node many times."""
-    issues = build_issue_index(graph)
+    findings = build_finding_index(graph)
     return {
         nid: (
             _node_type_value(node),
@@ -401,7 +400,7 @@ def _node_facts(graph: UnifiedGraph) -> dict[str, _NodeFact]:
             SEVERITY_RANK.get((node.severity or "").lower(), 0),
             _is_exposed(node),
             _is_toxic(node),
-            issues.get(nid, ()),
+            *findings.get(nid, ((), ())),
         )
         for nid, node in graph.nodes.items()
     }
@@ -427,14 +426,14 @@ def _aggregate(
             continue
         if active_filters is not None and not active_filters.matches(node):
             continue
-        entity_type, bucket, rank, exposed, toxic, keys = node_facts[nid]
+        entity_type, bucket, rank, exposed, toxic, keys, occurrence_keys = node_facts[nid]
         agg.descendant_count += 1
         if memberships is not None:
             memberships[nid] += 1
         by_type[entity_type] += 1
         severity_counts[bucket] += 1
         if keys:
-            tally.add(node, keys)
+            tally.add(node, keys, occurrence_keys)
         if rank > agg.worst_severity_rank:
             agg.worst_severity_rank = rank
             agg.worst_severity = bucket
