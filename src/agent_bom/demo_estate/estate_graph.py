@@ -36,7 +36,7 @@ from typing import TYPE_CHECKING
 from agent_bom.core.severity import SEVERITY_RISK_SCORE, normalize_severity
 from agent_bom.demo_estate.enterprise import EnterpriseEstate, EstateAsset
 from agent_bom.demo_estate.estate_edges import ESTATE_DATA_SOURCE, add_estate_edge, oriented_topology_edge
-from agent_bom.demo_estate.estate_external_stages import project_external_stages
+from agent_bom.demo_estate.estate_external_stages import project_external_stages, recorded_identifier_attributes
 from agent_bom.demo_estate.estate_finding_nodes import project_estate_finding
 from agent_bom.demo_estate.estate_packages import project_estate_package_lineage
 from agent_bom.demo_estate.id_schemes import retired_estate_asset_ids
@@ -45,6 +45,7 @@ from agent_bom.graph.container_kind import container_kind_attributes
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.node import NodeDimensions, UnifiedNode
 from agent_bom.graph.node_aliases import record_node_aliases
+from agent_bom.graph.storage_integration_correlation import correlate_storage_integrations
 from agent_bom.graph.types import EntityType, RelationshipType
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
@@ -285,6 +286,7 @@ def _asset_node(asset: EstateAsset, estate: EnterpriseEstate) -> UnifiedNode:
             "cost_center": asset.cost_center,
             "data_classifications": list(asset.data_classifications),
             "tags": dict(asset.tags),
+            **recorded_identifier_attributes(asset.tags),
             "synthetic": True,
             "fictional": True,
             "estate_id": estate.estate_id,
@@ -396,9 +398,7 @@ def project_estate_into_graph(
     # Topology: the edges the estate's inventory declares. Containment alone is a
     # tree; it cannot say "this AI service assumes that role and reads that table".
     topology_edges = project_estate_package_lineage(graph, estate.assets)
-    topology_edges += project_external_stages(
-        graph, estate.assets, {scope: f"account:{provider}:{scope}" for scope, provider in account_providers.items()}
-    )
+    topology_edges += project_external_stages(graph, estate.assets)
     assets_by_id = {asset.asset_id: asset for asset in estate.assets}
     known_asset_ids = set(assets_by_id)
     exposure_edges = 0
@@ -480,6 +480,8 @@ def project_estate_into_graph(
             identity_edges += 1
 
     chain_edges, paths = _project_incident_chains(graph, correlations, known_assets, risk_by_asset)
+    # Cross-vendor joins come from recorded identifiers, as for a live Snowflake + AWS build.
+    topology_edges += correlate_storage_integrations(graph)
 
     node_count = len(graph.nodes)
     return {
