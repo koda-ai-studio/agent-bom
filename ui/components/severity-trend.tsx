@@ -27,7 +27,7 @@ export function SeverityTrend({ points, headline }: { points: SeverityPoint[]; h
   const y = (value: number) => H - (value / max) * (H - 4) - 2;
   const line = (key: "critical" | "high") => trend.points.map((point, index) => `${index ? "L" : "M"}${x(point.time).toFixed(1)} ${y(point[key]).toFixed(1)}`).join(" ");
   return (
-    <figure className="rounded-xl border border-outline p-3">
+    <figure className="min-w-0 rounded-xl border border-outline p-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <figcaption className="text-sm font-medium">Critical and high vulnerability occurrences in this scan scope</figcaption>
         <p className="text-xs text-ink-secondary">
@@ -35,7 +35,7 @@ export function SeverityTrend({ points, headline }: { points: SeverityPoint[]; h
           critical now · {change(trend.criticalDelta)}
         </p>
       </div>
-      <div className="mt-2 grid grid-cols-[auto_1fr] gap-x-2">
+      <div className="mt-2 grid grid-cols-[auto_minmax(0,1fr)] gap-x-2">
         <div className="flex h-28 flex-col justify-between text-right text-xs tabular-nums text-ink-secondary"><span>{max}</span><span>0</span></div>
         <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label={`Critical and high findings across ${trend.points.length} snapshots`}
           className="h-28 w-full border-b border-l border-outline">
@@ -44,7 +44,7 @@ export function SeverityTrend({ points, headline }: { points: SeverityPoint[]; h
           <path d={line("critical")} fill="none" strokeWidth="3" vectorEffect="non-scaling-stroke" className="stroke-red-700 dark:stroke-red-300" />
         </svg>
         <span />
-        <div className="flex justify-between pt-1 text-xs text-ink-secondary">
+        <div className="flex min-w-0 flex-wrap justify-between gap-x-2 pt-1 text-xs text-ink-secondary">
           <span>{new Date(start).toLocaleDateString()}</span>
           <span>{trend.points.length} snapshots</span>
           <span>{new Date(latest.time).toLocaleDateString()}</span>

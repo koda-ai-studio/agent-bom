@@ -48,12 +48,16 @@ export function AgentBlastSummary({ agentName }: { agentName: string }) {
         {rows.slice(0, SHOWN).map((row) => {
           const exposed = row.exposed_credentials?.length ?? 0;
           return (
-            <li key={`${row.vulnerability_id}-${row.package ?? ""}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-xs">
-              <SeverityBadge severity={row.severity} />
-              <Link href={agentBlastPathHref(agentName, row)} className="font-mono font-medium text-accent-mint hover:underline">{row.vulnerability_id}</Link>
-              {row.package ? <span className="font-mono text-ink-secondary">{row.package}</span> : null}
-              <span className={exposed ? "ml-auto text-[color:var(--status-warn)]" : "ml-auto text-ink-tertiary"} title={(row.exposed_credentials ?? []).join(", ") || undefined}>
-                {exposed ? `${plural(exposed, "credential")} exposed` : "No credentials exposed"}
+            <li key={`${row.vulnerability_id}-${row.package ?? ""}`} className="flex flex-col gap-1 px-3 py-2 text-xs sm:flex-row sm:items-center sm:gap-3">
+              <span className="flex min-w-0 shrink-0 items-center gap-2">
+                <SeverityBadge severity={row.severity} />
+                <Link href={agentBlastPathHref(agentName, row)} className="font-mono font-medium text-accent-mint hover:underline">{row.vulnerability_id}</Link>
+              </span>
+              <span className="flex min-w-0 flex-1 items-baseline gap-3">
+                {row.package ? <span className="min-w-0 truncate font-mono text-ink-secondary" title={row.package}>{row.package}</span> : null}
+                <span className={`ml-auto shrink-0 text-right ${exposed ? "text-[color:var(--status-warn)]" : "text-ink-tertiary"}`} title={(row.exposed_credentials ?? []).join(", ") || undefined}>
+                  {exposed ? `${plural(exposed, "credential")} exposed` : "No credentials exposed"}
+                </span>
               </span>
             </li>
           );

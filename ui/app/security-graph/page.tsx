@@ -178,17 +178,16 @@ function AttackPathInvestigationContent() {
       const params = new URLSearchParams(searchParams.toString());
       if (next === "path") params.delete("step");
       else params.set("step", next);
-      params.set("path_view", next === "impact" ? "graph" : "path");
+      // Impact answers in the graph. Other steps answer above the workspace and
+      // keep the current representation: rewriting the view here re-scrolled the
+      // graph over the answer the operator just asked for.
+      if (next === "impact") params.set("path_view", "graph");
       const query = params.toString();
       router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
       setCompletedSteps((current) => ({ ...current, [next]: true }));
-      if (next === "fix") {
-        setPathView("path");
-      } else if (next === "impact") {
+      if (next === "impact") {
         setPathView("graph");
         setInvestigationFocusMode(true);
-      } else {
-        setPathView("path");
       }
     },
     [pathname, router, searchParams],
