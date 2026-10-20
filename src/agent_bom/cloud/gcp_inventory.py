@@ -57,15 +57,14 @@ from .gcp_inv._base import (  # noqa: F401 - facade re-export
     _PRIVILEGE_RANK,
     _PUBLIC_MEMBERS,
     _STAGE_PERMISSIONS,
+    _backend_service_identity,
     _classify_role_privilege,
     _clean_labels,
     _derive_default_project,
     _highest_privilege,
     _leaf,
-    _loc,
     _parse_port,
     _safe_int,
-    _scoped_name,
     _segment,
 )
 from .gcp_inv.compute_storage import (  # noqa: F401 - facade re-export
@@ -541,9 +540,7 @@ def _discover_load_balancers(
                 if not name:
                     continue
                 scheme = str(getattr(backend, "load_balancing_scheme", "") or "").upper()
-                backend_region = _leaf(getattr(backend, "region", ""))
-                backend_path = _scoped_name(project_id, _loc("regions", backend_region) or "global", "backendServices", name)
-                backend_id = str(getattr(backend, "id", "") or "") or backend_path or name
+                backend_id, backend_location = _backend_service_identity(project_id, backend, name)
                 load_balancers.append(
                     {
                         "name": name,
@@ -551,12 +548,11 @@ def _discover_load_balancers(
                         "lb_type": "backend-service",
                         "scheme": scheme,
                         "internet_exposed": "EXTERNAL" in scheme,
-                        "location": backend_region or "global",
+                        "location": backend_location,
                         "account_id": project_id,
                     }
                 )
-                policy_leaf = _leaf(getattr(backend, "security_policy", ""))
-                if policy_leaf:
+                if policy_leaf := _leaf(getattr(backend, "security_policy", "")):
                     backends_by_policy.setdefault(policy_leaf, []).append(backend_id)
     except Exception as exc:  # noqa: BLE001 — one failed backend-services list must not sink the scan
         record_discovery_failure(

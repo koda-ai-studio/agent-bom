@@ -206,6 +206,13 @@ def _scoped_name(project_id: str, *parts: str) -> str:
     return "/".join(["projects", project_id, *(part for part in parts if part)])
 
 
+def _backend_service_identity(project_id: str, backend: Any, name: str) -> tuple[str, str]:
+    """Return a backend service's id (numeric, else its project-scoped path) and its location."""
+    region = _leaf(getattr(backend, "region", ""))
+    path = _scoped_name(project_id, _loc("regions", region) or "global", "backendServices", name)
+    return str(getattr(backend, "id", "") or "") or path or name, region or "global"
+
+
 def _leaf(value: Any) -> str:
     """Return the last path segment of a GCP self-link / type URL, else ''."""
     text = str(value or "").strip()
