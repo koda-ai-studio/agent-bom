@@ -26,7 +26,7 @@ from collections.abc import Iterable, Mapping
 from datetime import datetime, timezone
 from typing import Any
 
-from agent_bom.core.settings import env_raw
+from agent_bom.core.settings import env_flag, env_raw
 from agent_bom.core.timestamps import parse_timestamp
 
 _FLAGS = ("AGENT_BOM_SCAN_SNAPSHOT_READS", "AGENT_BOM_SCAN_SNAPSHOT_FAST_READS")
@@ -45,6 +45,11 @@ def _plain(value: Any) -> Any:
 
 def _digest(value: Any) -> str:
     return hashlib.sha256(json.dumps(value, sort_keys=True, default=_plain, separators=(",", ":")).encode()).hexdigest()
+
+
+def history_ledger_reads_enabled() -> bool:
+    """Whether the fold may read the finding-history ledger (opt-in snapshot reads)."""
+    return any(env_flag(flag) for flag in _FLAGS)
 
 
 def clock_horizon(exceptions: Iterable[Any], now: datetime) -> float | None:
@@ -74,4 +79,4 @@ def scan_row_inputs(
     return fingerprint, clock_horizon(exceptions, now or datetime.now(timezone.utc))
 
 
-__all__ = ["clock_horizon", "scan_row_inputs"]
+__all__ = ["clock_horizon", "history_ledger_reads_enabled", "scan_row_inputs"]

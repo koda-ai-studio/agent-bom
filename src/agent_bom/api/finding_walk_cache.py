@@ -42,7 +42,7 @@ MAX_CACHED_ROWS = 200_000
 _LOCK = threading.Lock()
 # key -> (monotonic expiry, wall-clock horizon or None, rows)
 _CACHE: OrderedDict[tuple[Any, ...], tuple[float, float | None, list[dict[str, Any]]]] = OrderedDict()
-RowInputs = Callable[[], tuple[tuple[Any, ...], float | None]]
+RowInputs = Callable[[], tuple[tuple[Any, ...], float | None] | None]
 
 
 def _wall_clock() -> float:

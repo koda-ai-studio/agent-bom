@@ -11,7 +11,7 @@ from typing import Any
 from agent_bom.api import findings_current, time_window
 from agent_bom.api.finding_history_read import current_findings_with_history
 from agent_bom.api.finding_read_context import read_once
-from agent_bom.api.finding_row_inputs import scan_row_inputs
+from agent_bom.api.finding_row_inputs import history_ledger_reads_enabled, scan_row_inputs
 from agent_bom.api.finding_scope_filters import _row_matches_scope as _row_matches_scope
 from agent_bom.api.finding_walk_cache import reuse_rows
 from agent_bom.api.findings_current import current_scan_jobs
@@ -132,8 +132,14 @@ def _bulk_ingested_findings_for_tenant(tenant_id: str) -> list[dict[str, Any]]:
     return [item for item in get_compliance_hub_store().list(tenant_id) if isinstance(item, dict) and item.get("origin") == "bulk_ingest"]
 
 
-def scan_rows_inputs(tenant_id: str, window_since: str | None, job_store: Any) -> tuple[tuple[str, ...], float | None]:
-    """Fingerprint the fold's non-job inputs; the window enters as the jobs it selects, not the moving cutoff."""
+def scan_rows_inputs(tenant_id: str, window_since: str | None, job_store: Any) -> tuple[tuple[str, ...], float | None] | None:
+    """Fingerprint the fold's non-job inputs; the window enters as the jobs it selects, not the moving cutoff.
+
+    ``None`` (never reuse) while ledger-backed reads are enabled: a history
+    backfill writes the ledger without bumping the job revision.
+    """
+    if history_ledger_reads_enabled():
+        return None
     summaries = job_store.list_summary(tenant_id=tenant_id, status=JobStatus.DONE)
     in_window = [str(row.get("job_id")) for row in summaries if findings_current.job_in_window(SimpleNamespace(**row), window_since)]
     return scan_row_inputs(tenant_id, sources=scan_row_sources(tenant_id), window_job_ids=in_window)

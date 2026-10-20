@@ -37,7 +37,7 @@ def _filter_finding_rows(rows: list[dict[str, Any]], query: _FindingListQuery) -
     return rows
 
 
-def _row_inputs(query: _FindingListQuery, job_store: Any) -> tuple[tuple[str, ...], float | None]:
+def _row_inputs(query: _FindingListQuery, job_store: Any) -> tuple[tuple[str, ...], float | None] | None:
     """Fingerprint the scan half's non-job inputs so a first page can reuse a prior rebuild."""
     return scan_rows_inputs(query.tenant_id, query.window_since, job_store)
 

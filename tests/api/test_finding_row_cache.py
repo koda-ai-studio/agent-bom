@@ -245,3 +245,16 @@ def test_a_triage_write_between_cached_reads_is_served_like_an_uncached_read(
     # Viewers see the assignee redacted; the triage write reached the cached page.
     owners = {row.get("owner") for row in cached_after["findings"] if "CVE-2020-14343" in str(row.get("vulnerability_id"))}
     assert owners == {"o***@e***.test"}
+
+
+@pytest.mark.parametrize("flag", ["AGENT_BOM_SCAN_SNAPSHOT_READS", "AGENT_BOM_SCAN_SNAPSHOT_FAST_READS"])
+def test_history_ledger_reads_are_never_reused_across_requests(revision, monkeypatch: pytest.MonkeyPatch, flag: str) -> None:
+    """A history backfill writes the ledger without bumping the job revision, so ledger-backed folds always recompute."""
+    from agent_bom.api import scan_finding_read
+
+    monkeypatch.setenv(flag, "1")
+    assert scan_finding_read.scan_rows_inputs("t1", None, SimpleNamespace(list_summary=lambda **_: [])) is None
+    loads: list[int] = []
+    for _ in range(2):
+        finding_walk_cache.reuse_rows(("k",), tenant_id="t1", job_store=None, inputs=lambda: None, load=_loader(loads))
+    assert len(loads) == 2
