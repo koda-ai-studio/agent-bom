@@ -13,7 +13,7 @@ export function buildFindingInvestigationHref(
   vuln: Pick<
     EnrichedVuln,
     "id" | "node_id" | "finding_node_id" | "entity_type" | "packages" | "agents" | "finding_id" | "scan_id"
-  > & { graph_reachable_from_agents?: string[] | undefined },
+  > & { graph_reachable_from_agents?: string[] | undefined; graph_reachable?: boolean | null | undefined },
   options?: { scanId?: string | undefined },
 ): string {
   const params = new URLSearchParams({ lens: "attack-path" });
@@ -26,7 +26,8 @@ export function buildFindingInvestigationHref(
   // path: the server resolves the agent node plus the advisory to it.
   const ownNode = vuln.node_id?.trim();
   const reachedByAgent = (vuln.graph_reachable_from_agents ?? []).length > 0;
-  const nodeId = vuln.agents[0] && !reachedByAgent ? `agent:${vuln.agents[0]}` : ownNode;
+  const unreachedCopy = !reachedByAgent && (vuln.graph_reachable === false || /:image:/.test(ownNode ?? ""));
+  const nodeId = vuln.agents[0] && unreachedCopy ? `agent:${vuln.agents[0]}` : ownNode;
   if (nodeId) params.set("node", nodeId);
 
   const findingNode = vuln.finding_node_id?.trim();

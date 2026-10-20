@@ -36,6 +36,13 @@ describe("finding investigation link", () => {
     expect(new URL(buildFindingInvestigationHref(own), "http://localhost").searchParams.get("node")).toBe("pkg:pypi:langchain@0.0.150");
   });
 
+  it("keeps the occurrence's node when its reachability is simply unknown", () => {
+    const unknown = { ...finding, node_id: "pkg:pypi:flask@3.0.0", agents: ["Claude Desktop"] };
+    expect(new URL(buildFindingInvestigationHref(unknown), "http://localhost").searchParams.get("node")).toBe("pkg:pypi:flask@3.0.0");
+    const unreached = { ...unknown, graph_reachable: false };
+    expect(new URL(buildFindingInvestigationHref(unreached), "http://localhost").searchParams.get("node")).toBe("agent:Claude Desktop");
+  });
+
   it("pins a snapshot only when the caller is browsing that snapshot", () => {
     const params = new URL(buildFindingInvestigationHref(finding, { scanId: "scan-selected" }), "http://localhost").searchParams;
     expect(params.get("scan")).toBe("scan-selected");
