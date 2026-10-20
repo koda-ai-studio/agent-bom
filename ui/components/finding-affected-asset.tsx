@@ -1,9 +1,5 @@
+import { findingAssetKind } from "@/lib/finding-exposure";
 import type { EnrichedVuln } from "@/lib/findings-view";
-
-function entityTypeLabel(value: string): string {
-  const words = value.replace(/[_-]+/g, " ").trim();
-  return words ? words[0]!.toUpperCase() + words.slice(1) : "Asset";
-}
 
 /** The affected asset named in words; raw graph and record ids stay under technical details. */
 export function FindingAffectedAsset({ vuln }: { vuln: EnrichedVuln }) {
@@ -21,7 +17,7 @@ export function FindingAffectedAsset({ vuln }: { vuln: EnrichedVuln }) {
     <>
       <p className="mt-2 flex flex-wrap items-baseline gap-2" data-testid="finding-estate-asset">
         <span className="break-all text-sm font-medium text-foreground">{label}</span>
-        <span className="text-xs text-ink-tertiary">{entityTypeLabel(vuln.entity_type || vuln.asset_type || "asset")}</span>
+        <span className="text-xs text-ink-tertiary">{findingAssetKind(vuln)}</span>
       </p>
       {technicalIds.length ? (
         <details className="mt-2 text-xs">
