@@ -30,7 +30,9 @@ from agent_bom.graph.relationship_specs import TraversalClass, relationship_spec
 from agent_bom.graph.types import EntityType, RelationshipType
 
 ANALYZER = "component_paths"
-MAX_HOLDER_DEPTH = 5
+# agent -> server -> workload -> image is four holding edges before any package;
+# a recorded tree adds one per level, so eight covers four levels under the image.
+MAX_HOLDER_DEPTH = 8
 MAX_CHAINS_PER_OCCURRENCE = 64
 
 _VULNERABLE_TO = RelationshipType.VULNERABLE_TO.value
