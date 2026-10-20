@@ -89,15 +89,12 @@ def _current_severity(severity: str, score: Optional[float], vector: Optional[st
 
 
 def _cve_candidates(vuln_id: str, raw_aliases: str, raw_upstream: str = "") -> list[str]:
-    """Return unique CVE identifiers associated with one vulnerability row."""
-    candidates: list[str] = []
-    if vuln_id.startswith("CVE-"):
-        candidates.append(vuln_id)
-    for alias in ((raw_aliases or "") + "," + (raw_upstream or "")).split(","):
-        alias = alias.strip()
-        if alias.startswith("CVE-") and alias not in candidates:
-            candidates.append(alias)
-    return candidates
+    """CVE ids whose EPSS/KEV belong to a row: its own, else one CVE alias (a fused multi-CVE set joins none), plus upstream."""
+    if vuln_id.upper().startswith("CVE-"):
+        return [vuln_id]
+    alias_cves = {alias.strip() for alias in (raw_aliases or "").split(",") if alias.strip().startswith("CVE-")}
+    upstream = [item.strip() for item in (raw_upstream or "").split(",") if item.strip().startswith("CVE-")]
+    return list(dict.fromkeys([*(alias_cves if len(alias_cves) == 1 else ()), *upstream]))
 
 
 def _load_cve_enrichment(
