@@ -30,3 +30,15 @@ def test_bearer_credentials_are_still_redacted(marker):
     for text in (f"Authorization: Bearer {marker}", f"bearer {marker}"):
         assert marker not in str(sanitize_sensitive_payload({"note": text})), text
         assert marker not in sanitize_text(text), text
+
+
+@pytest.mark.parametrize("marker", ["plainmarker", "Plainmarker"])
+def test_a_lowercase_word_that_is_not_bearer_vocabulary_is_still_redacted(marker):
+    for text in (f"Authorization: Bearer {marker}", f"bearer {marker}"):
+        assert marker not in sanitize_text(text), text
+        assert marker not in str(sanitize_sensitive_payload({"note": text})), text
+
+
+@pytest.mark.parametrize("marker", ["authplainmarker", "tokenplainmarker", "access_plainmarker"])
+def test_a_value_that_only_starts_with_bearer_vocabulary_is_still_redacted(marker):
+    assert marker not in sanitize_text(f"bearer {marker}")
