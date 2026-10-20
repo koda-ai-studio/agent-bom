@@ -474,7 +474,6 @@ def seed_showcase_graph_if_empty(
     baseline_analysis_complete = _materialize_showcase_attack_paths(baseline_graph)
     if baseline_analysis_complete:
         _record_showcase_attack_path_analysis(baseline_graph)
-    graph_store.save_graph(baseline_graph)
 
     current_graph, identity_store, drift_store = build_showcase_graph(
         tenant_id=tenant_id,
@@ -496,6 +495,7 @@ def seed_showcase_graph_if_empty(
     if current_analysis_complete:
         _record_showcase_attack_path_analysis(current_graph)
     graph_store.save_graph(current_graph)
+    graph_store.save_graph(baseline_graph)
     return True
 
 

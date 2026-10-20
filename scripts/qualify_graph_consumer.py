@@ -39,13 +39,14 @@ def validate_base_url(value):
 
 
 def ranked_node_count(page, page_size):
-    """Node pages append declared containment context after the ranked slice."""
-    counts = [page["completeness"].get(key) for key in ("ranked", "context_nodes", "returned")]
+    """Node pages append declared containment context, then off-page edge endpoints, after the ranked slice."""
+    completeness = page["completeness"]
+    counts = [completeness.get(key) for key in ("ranked", "context_nodes", "returned")] + [completeness.get("endpoint_nodes", 0)]
     require(all(type(value) is int and value >= 0 for value in counts), "Invalid node-page accounting")
-    ranked, context, returned = counts
-    require(ranked + context == returned == len(page["nodes"]), "Inconsistent node-page accounting")
+    ranked, context, returned, endpoints = counts
+    require(ranked + context + endpoints == returned == len(page["nodes"]), "Inconsistent node-page accounting")
     require(ranked <= page_size, "Server exceeded the requested node-page bound")
-    require(ranked > 0 or context == 0, "Context without a ranked node violates node-page accounting")
+    require(ranked > 0 or context + endpoints == 0, "Context without a ranked node violates node-page accounting")
     return ranked
 
 

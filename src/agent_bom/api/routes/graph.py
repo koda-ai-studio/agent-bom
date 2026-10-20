@@ -261,9 +261,9 @@ async def get_graph(
     Nodes are paginated (offset/limit). ``edges`` carries up to 1,000 edges
     incident to the ranked page, plus containment context. Omitted relationships
     are declared by ``completeness.edges_truncated`` and remain pageable through
-    ``/v1/graph/incident-edges`` at the same revision. Edges may reach nodes
-    outside the page; this is not the subgraph induced by ``nodes``;
-    ``completeness.boundary_edges`` counts the edges that cross the boundary.
+    ``/v1/graph/incident-edges`` at the same revision. Off-page endpoints of the
+    returned edges ride along (``completeness.endpoint_nodes``), so every edge
+    lands on a returned node; ``completeness.boundary_edges`` counts any that do not.
 
     ``stats`` describe the graph this response was computed from, NOT the page:
     ``stats.total_nodes`` is every node that survived loading, and
@@ -360,8 +360,13 @@ async def get_graph(
     source_attack_paths, attack_path_nodes = await page_attack_context(
         graph_store, scan_id=effective_scan_id, tenant_id=tenant, node_ids=paged_ids, call_store=_runtime._graph_store_call
     )
-    ancestor_nodes, ancestor_edges, stack_context = await page_context(
-        graph_store, scan_id=effective_scan_id, tenant_id=tenant, page_nodes=paged_nodes, call_store=_runtime._graph_store_call
+    ancestor_nodes, ancestor_edges, stack_context, endpoint_nodes = await page_context(
+        graph_store,
+        scan_id=effective_scan_id,
+        tenant_id=tenant,
+        page_nodes=paged_nodes,
+        call_store=_runtime._graph_store_call,
+        page_edges=paged_edges,
     )
     nodes_by_id = {node.id: node for node in [*paged_nodes, *attack_path_nodes, *ancestor_nodes]}
     snapshot_stats = await _runtime._graph_store_call(
@@ -395,6 +400,7 @@ async def get_graph(
         cursor=cursor,
         stack_context=stack_context,
         view=view,
+        endpoint_nodes=endpoint_nodes,
     )
 
 

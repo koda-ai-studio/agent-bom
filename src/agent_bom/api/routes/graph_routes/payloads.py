@@ -489,16 +489,15 @@ def _encode_node_page(
     cursor: str | None,
     stack_context: dict[str, Any] | None = None,
     view: GraphView | None = None,
+    endpoint_nodes: list[UnifiedNode] = (),  # type: ignore[assignment]
 ) -> Response:
-    # This branch pages a fully-counted snapshot rather than loading it under a
-    # budget, so the estate total IS the stats total. Emitting the field anyway
-    # keeps one stats shape across both branches — clients never have to know
-    # which path answered them.
+    # This branch pages a fully-counted snapshot, so the estate total IS the stats
+    # total. Emitting the field anyway keeps one stats shape across both branches.
     page_stats = {
         **snapshot_stats,
         "total_nodes_source": max(int(snapshot_stats.get("total_nodes", 0)), total),
     }
-    response_nodes = [*paged_nodes, *ancestor_nodes]
+    response_nodes = [*paged_nodes, *ancestor_nodes, *endpoint_nodes]
     response_node_ids = {node.id for node in response_nodes}
     response_edges = _joined_edges(paged_edges, ancestor_edges)
     page_truncated = _page_truncated(cursor=cursor, next_cursor=next_cursor, offset=offset, returned=len(paged_nodes), total=total)
@@ -532,6 +531,7 @@ def _encode_node_page(
             # and the extra nodes read as a paging bug.
             "ranked": len(paged_nodes),
             "context_nodes": len(ancestor_nodes),
+            "endpoint_nodes": len(endpoint_nodes),  # off-page ends of returned edges
             # The agent stack above the page's findings (package → workload →
             # agent), capped per node; ``omitted_parent_links`` is the cut.
             "stack_context": stack_context or {},

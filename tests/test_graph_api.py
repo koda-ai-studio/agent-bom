@@ -2220,7 +2220,9 @@ class TestGraphStoreBackendSelection:
         assert response.status_code == 200
         body = response.json()
         assert body["scan_id"] == "store-scan"
-        assert len(body["nodes"]) == 1
+        assert body["completeness"]["ranked"] == 1
+        assert {node["id"] for node in body["nodes"]} == {"agent:a", "server:s"}
+        assert body["completeness"]["endpoint_nodes"] == 1
         assert body["edges"][0]["source_id"] == "agent:a"
         assert body["edges"][0]["target_id"] == "server:s"
         assert ("page_nodes", "default", "store-scan", None, 0, None, 0, 1) in recording_graph_store.calls

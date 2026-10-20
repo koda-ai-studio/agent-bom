@@ -72,7 +72,12 @@ def test_high_degree_page_discloses_edge_limit_and_allows_complete_expansion(sto
             response = client.get("/v1/graph", params={"scan_id": "estate", "limit": node_limit})
             assert response.status_code == 200
             body = response.json()
-            assert len(body["nodes"]) == min(node_limit, 1101)
+            # Ranked nodes, plus the off-page endpoints of the returned incident edges.
+            assert body["completeness"]["ranked"] == min(node_limit, 1101)
+            ids = {node["id"] for node in body["nodes"]}
+            assert all(edge["source"] in ids and edge["target"] in ids for edge in body["edges"])
+            counts = body["completeness"]
+            assert len(ids) == counts["ranked"] + counts["context_nodes"] + counts["endpoint_nodes"]
             assert body["pagination"]["has_more"] is (node_limit == 1)
             assert len(body["edges"]) <= 1000
             scope = body["completeness"]
@@ -108,7 +113,11 @@ def test_omitted_incident_edge_does_not_erase_containment_parent(store):
     try:
         with TestClient(app, headers=proxy_headers(tenant="tenant-a")) as client:
             body = client.get("/v1/graph", params={"scan_id": "estate", "limit": 1}).json()
-            assert {node["id"] for node in body["nodes"]} == {"agent:root", "zz-parent"}
+            ids = {node["id"] for node in body["nodes"]}
+            assert {"agent:root", "zz-parent"} <= ids
+            # Every other node is the off-page endpoint of a returned incident edge.
+            assert len(ids) == 2 + body["completeness"]["endpoint_nodes"]
+            assert all(edge["source"] in ids and edge["target"] in ids for edge in body["edges"])
             assert body["completeness"]["edges_truncated"] is True
             assert body["completeness"]["edge_returned"] == 1000
             assert body["completeness"]["context_nodes"] == 1

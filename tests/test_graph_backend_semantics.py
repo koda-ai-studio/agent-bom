@@ -471,24 +471,27 @@ def paged_client(tmp_path: Path) -> Iterator[TestClient]:
         set_graph_store(original)
 
 
-def test_graph_page_counts_the_edges_that_cross_its_boundary(paged_client: TestClient) -> None:
-    """The payload is not induced — so it must say how far past its nodes it reaches.
+def test_graph_page_carries_every_edge_endpoint(paged_client: TestClient) -> None:
+    """Every returned edge has both endpoints in the payload.
 
     Dropping these edges was the wrong fix and was tried first: a page ranked by
     severity puts the findings on it and their assets off it, so an induced page
     hands back unattached dots (and starves the containment-ancestor walk, which
-    finds parents by looking at exactly these edges). The defect was the claim,
-    not the behaviour.
+    finds parents by looking at exactly these edges). Declaring them without the
+    endpoints still left clients drawing edges to nodes they never received, so
+    the page now carries those endpoints as labelled context.
     """
     response = paged_client.get("/v1/graph", params={"limit": 3})
     assert response.status_code == 200
     body = response.json()
     node_ids = {n["id"] for n in body["nodes"]}
-    crossing = [(e["source"], e["target"]) for e in body["edges"] if e["source"] not in node_ids or e["target"] not in node_ids]
-    assert crossing, "fixture no longer produces a boundary-crossing page, so this proves nothing"
-    assert body["completeness"]["boundary_edges"] == len(crossing), (
-        "the response must declare how many of its edges reach past its node list"
-    )
+    assert not [e for e in body["edges"] if e["source"] not in node_ids or e["target"] not in node_ids]
+    completeness = body["completeness"]
+    assert completeness["ranked"] == 3
+    assert completeness["endpoint_nodes"] == 3, "the off-page servers arrive as endpoint context"
+    assert len(body["nodes"]) == completeness["ranked"] + completeness["context_nodes"] + completeness["endpoint_nodes"]
+    assert completeness["boundary_edges"] == 0
+    assert body["pagination"]["total"] == 6
 
 
 def test_a_whole_page_declares_no_boundary_edges(paged_client: TestClient) -> None:
