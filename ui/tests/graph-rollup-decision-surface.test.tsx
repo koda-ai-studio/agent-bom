@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { GraphRollupDecisionSurface } from "@/components/graph-rollup-decision-surface";
@@ -232,12 +232,30 @@ it("distinguishes package instances and exposes canonical IDs with their actions
     label: "pyyaml@5.3", entity_type: "package", has_children: false,
     context: { image: `${name}:1.0`, environment: "production" },
   }));
-  render(<GraphRollupDecisionSurface items={items} edges={[]} onDrill={vi.fn()} onInvestigate={onInspect} />);
-  expect(screen.getByText(/billing:1.0/)).toBeInTheDocument();
-  expect(screen.getByText(/claims:1.0/)).toBeInTheDocument();
-  expect(screen.getByText("pkg:billing")).toBeInTheDocument();
+  const onDrill = vi.fn();
+  render(<GraphRollupDecisionSurface items={items} edges={[]} onDrill={onDrill} onInvestigate={onInspect} />);
+  // Packages read under the image they were found in.
+  const cards = screen.getAllByRole("article");
+  expect(cards.map(card => card.querySelector("p")?.textContent)).toEqual(["billing:1.0", "claims:1.0"]);
+  expect(screen.getByTestId("graph-rollup-image-level")).toHaveTextContent("2 packages grouped under 2 images");
+  fireEvent.click(within(cards[1]!).getByRole("button", { name: /Open scope/ }));
+  expect(onDrill).not.toHaveBeenCalled();
+  expect(screen.getByRole("navigation", { name: "Image level" })).toHaveTextContent("claims:1.0");
+  expect(screen.getByText("pkg:claims")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: /Inspect.*pkg:claims/ }));
   expect(onInspect).toHaveBeenCalledWith(items[1]);
+  fireEvent.click(screen.getByRole("button", { name: /All workloads/ }));
+  expect(screen.getAllByRole("article")).toHaveLength(2);
+});
+
+it("orders scopes by contained critical risk, not size, and starts with the riskiest", () => {
+  const onDrill = vi.fn();
+  const big = item("big", { has_children: true, aggregate: { ...item("x").aggregate, descendant_count: 488, severity_counts: { critical: 3, high: 27 }, exposed_count: 17, internet_exposed: true } });
+  const risky = item("risky", { has_children: true, aggregate: { ...item("x").aggregate, descendant_count: 270, severity_counts: { critical: 17, high: 24 }, exposed_count: 7, internet_exposed: true } });
+  render(<GraphRollupDecisionSurface items={[big, risky]} edges={[]} onDrill={onDrill} onInvestigate={vi.fn()} />);
+  fireEvent.click(screen.getByRole("button", { name: "Start with Scope risky" }));
+  expect(onDrill).toHaveBeenCalledWith(risky);
+  expect(screen.getByRole("button", { name: /^Priority 1$/ })).toBeInTheDocument();
 });
 
 it("starts a scoped investigation from the first ranked returned item", () => {

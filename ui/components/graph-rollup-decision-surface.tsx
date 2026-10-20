@@ -10,6 +10,7 @@ import type {
   GraphRollupEdgeCountMetadata,
 } from "@/lib/api-types";
 import { ScopeProviderSuffix } from "@/components/graph-scope-breadcrumb";
+import { groupRollupByImage, IMAGE_GROUP_PREFIX, priorityScopes, rankScopesByRisk, scopeRiskScore, SCOPE_RISK_WEIGHTS } from "@/lib/graph-rollup-risk";
 
 export const ROLLUP_DECISION_THRESHOLD = 24;
 const PAGE_SIZE = 12;
@@ -24,13 +25,7 @@ function effectiveSeverity(item: GraphRollupContainer): string {
   return (SEVERITY_RANK[own] ?? 0) > (SEVERITY_RANK[contained] ?? 0) ? own : contained;
 }
 
-function isPriority(item: GraphRollupContainer): boolean {
-  return (
-    (SEVERITY_RANK[effectiveSeverity(item)] ?? 0) >= 4 ||
-    item.aggregate.internet_exposed ||
-    item.aggregate.toxic_combo
-  );
-}
+const PRIORITY_RULE = `Scopes scoring at least half the top score at this level. Score = contained critical ×${SCOPE_RISK_WEIGHTS.critical}, known exploited ×${SCOPE_RISK_WEIGHTS.kev}, toxic combinations ×${SCOPE_RISK_WEIGHTS.toxic}, internet-exposed assets ×${SCOPE_RISK_WEIGHTS.exposed}, high ×${SCOPE_RISK_WEIGHTS.high}.`;
 
 function severityTone(severity: string): string {
   switch (severity.toLowerCase()) {
@@ -64,7 +59,7 @@ function relationEvidence(itemId: string, edges: GraphRollupEdge[]): {
 }
 
 export function GraphRollupDecisionSurface({
-  items,
+  items: returnedItems,
   edges,
   completeness,
   edgeCountMetadata,
@@ -80,6 +75,13 @@ export function GraphRollupDecisionSurface({
 }) {
   const [filter, setFilter] = useState<RiskFilter>("priority");
   const [page, setPage] = useState(0);
+  // Packages found in an image read under that image before the package level.
+  const grouped = useMemo(() => groupRollupByImage(returnedItems), [returnedItems]);
+  const [openImage, setOpenImage] = useState<string | null>(null);
+  useEffect(() => setOpenImage(null), [returnedItems]);
+  const imageMembers = openImage ? grouped.images.get(openImage) : undefined;
+  const items = imageMembers ?? grouped.rows;
+  const drill = (item: GraphRollupContainer) => item.id.startsWith(IMAGE_GROUP_PREFIX) && grouped.images.has(item.id) ? setOpenImage(item.id) : onDrill(item);
   const [query, setQuery] = useState("");
   const [entityType, setEntityType] = useState("");
   const types = useMemo(() => {
@@ -99,33 +101,32 @@ export function GraphRollupDecisionSurface({
     }
     return index;
   }, [edges]);
-  const priorityCount = useMemo(() => items.filter(isPriority).length, [items]);
+  const priority = useMemo(() => new Set(priorityScopes(items).map(item => item.id)), [items]);
+  const priorityCount = priority.size;
   const exposedCount = useMemo(
     () => items.filter((item) => item.aggregate.internet_exposed).length,
     [items],
   );
   const filtered = useMemo(() => {
     const search = query.trim().toLowerCase();
-    const ranked = items.filter((item) =>
+    const ranked = rankScopesByRisk(items.filter((item) =>
       (!entityType || item.entity_type === entityType) &&
       (!search || [item.label, item.id, ...Object.values(item.context ?? {})]
         .some((value) => String(value).toLowerCase().includes(search))),
-    ).sort((a, b) =>
-      (SEVERITY_RANK[effectiveSeverity(b)] ?? 0) - (SEVERITY_RANK[effectiveSeverity(a)] ?? 0));
+    ));
     if (filter === "all") return ranked;
     if (filter === "exposed") {
       return ranked.filter((item) => item.aggregate.internet_exposed);
     }
-    const priority = ranked.filter(isPriority);
-    return priorityCount > 0 ? priority : ranked;
-  }, [filter, items, query, entityType, priorityCount]);
+    return priorityCount > 0 ? ranked.filter(item => priority.has(item.id)) : ranked;
+  }, [filter, items, query, entityType, priorityCount, priority]);
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const visible = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
   const compactLayout = visible.length <= 3;
   const cardGridClass = "grid-cols-1 content-start";
   const nodeScopeLabel = completeness?.truncated
-    ? `${items.length.toLocaleString()} returned from a bounded node scope`
-    : `${items.length.toLocaleString()} nodes and scopes`;
+    ? `${returnedItems.length.toLocaleString()} returned from a bounded node scope`
+    : `${returnedItems.length.toLocaleString()} nodes and scopes`;
   const edgeScopeLabel = edgeCountMetadata
     ? edgeCountMetadata.source_truncated
       ? `${edgeCountMetadata.returned.toLocaleString()}${edgeCountMetadata.returned < edgeCountMetadata.source_total ? ` of ${edgeCountMetadata.source_total.toLocaleString()}` : ""} aggregated relationship rows returned from a bounded source graph · estate total unavailable`
@@ -137,6 +138,7 @@ export function GraphRollupDecisionSurface({
   useEffect(() => {
     setPage(0);
   }, [filter, items, query, entityType]);
+  const imageLabel = openImage ? openImage.slice(IMAGE_GROUP_PREFIX.length) : null;
 
   return (
     <section
@@ -151,12 +153,18 @@ export function GraphRollupDecisionSurface({
             <Layers className="h-4 w-4 text-emerald-600 dark:text-emerald-300" />
             Which collected scope needs investigation?
           </p>
-          <p className="mt-1 text-sm text-ink-secondary">Open a scope, then inspect its findings and relationship evidence.</p>
+          {imageLabel ? <nav aria-label="Image level" className="mt-1 flex flex-wrap items-center gap-2 text-sm">
+            <button type="button" onClick={() => setOpenImage(null)} className="graph-page-action inline-flex items-center gap-1"><ChevronLeft className="h-3.5 w-3.5" /> All workloads</button>
+            <span className="break-words text-ink-secondary [overflow-wrap:anywhere]">Packages in image <span className="font-medium text-foreground">{imageLabel}</span></span>
+          </nav> : <p className="mt-1 text-sm text-ink-secondary">Open a scope, then inspect its findings and relationship evidence. Ordered by contained critical, exposure and high risk.</p>}
+          {grouped.images.size > 0 && !imageLabel && <p className="mt-1 text-xs text-ink-secondary" data-testid="graph-rollup-image-level">
+            {returnedItems.length - grouped.rows.length + grouped.images.size} packages grouped under {grouped.images.size} {grouped.images.size === 1 ? "image" : "images"}; image counts sum the returned packages.
+          </p>}
           <p className="mt-1 text-xs text-ink-secondary">
             {nodeScopeLabel} in this evidence scope. Severity does not establish connectivity or assessed risk.
           </p>
           <p
-            className="mt-1 text-[11px] text-ink-tertiary"
+            className="mt-1 text-xs text-ink-tertiary"
             data-testid="graph-rollup-relationship-completeness"
             title={edgeCountMetadata?.reason ? edgeCountMetadata.reason.replaceAll("_", " ") : undefined}
           >
@@ -165,7 +173,7 @@ export function GraphRollupDecisionSurface({
         </div>
         {visible[0] && <button type="button"
           className="graph-page-action min-h-11 max-w-full whitespace-normal text-left [overflow-wrap:anywhere]"
-          onClick={() => visible[0]!.has_children ? onDrill(visible[0]!) : onInvestigate(visible[0]!)}>
+          onClick={() => visible[0]!.has_children ? drill(visible[0]!) : onInvestigate(visible[0]!)}>
           Start with {visible[0].label}
         </button>}
       </div>
@@ -182,6 +190,7 @@ export function GraphRollupDecisionSurface({
             key={value}
             type="button"
             aria-pressed={(filter === "priority" && priorityCount === 0 ? "all" : filter) === value}
+            title={value === "priority" ? PRIORITY_RULE : undefined}
             onClick={() => setFilter(value)}
             className={
               (filter === "priority" && priorityCount === 0 ? "all" : filter) === value
@@ -192,7 +201,7 @@ export function GraphRollupDecisionSurface({
             {label}
           </button>
         ))}
-        <span className="ml-auto text-[11px] text-ink-tertiary">
+        <span className="ml-auto text-xs text-ink-tertiary">
           Page {page + 1} of {pages}
         </span>
       </div>
@@ -234,7 +243,7 @@ export function GraphRollupDecisionSurface({
                   <p className="break-words text-sm font-semibold text-foreground [overflow-wrap:anywhere]" title={item.label}>
                     {item.label}
                   </p>
-                  <p data-testid="graph-scope-eyebrow" className="flex items-center gap-1 text-[11px] text-ink-secondary">
+                  <p data-testid="graph-scope-eyebrow" className="flex items-center gap-1 text-xs text-ink-secondary">
                     {item.entity_type.replaceAll("_", " ")}<ScopeProviderSuffix item={item} size="h-4 w-4" />
                   </p>
                   {item.context && Object.keys(item.context).length > 0 && (
@@ -243,7 +252,7 @@ export function GraphRollupDecisionSurface({
                     </p>
                   )}
                 </div>
-                <span className={`shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold uppercase ${severityTone(severity)}`}>
+                <span className={`shrink-0 rounded-md border px-1.5 py-0.5 text-xs font-semibold uppercase ${severityTone(severity)}`}>
                   {severity === "none" ? "Not rated" : severity}
                 </span>
               </div>
@@ -255,6 +264,9 @@ export function GraphRollupDecisionSurface({
                 {item.has_children && <div>
                   <p className="text-ink-secondary">Contained critical / high <span className="font-semibold tabular-nums text-foreground">{critical} / {high}</span></p>
                 </div>}
+                <p className="tabular-nums text-ink-secondary" title={PRIORITY_RULE} data-testid="graph-scope-priority-score">
+                  {item.aggregate.exposed_count > 0 && <>{item.aggregate.exposed_count} exposed · </>}Priority score <span className="font-semibold text-foreground">{scopeRiskScore(item).toLocaleString()}</span>
+                </p>
                 <div>
                   {/* The server counts linked scopes before any row cap; the in-view count is a fallback. */}
                   {item.connections ? <p className="tabular-nums text-ink-secondary" title={`${item.connections.relationship_count} relationships to other scopes`}>
@@ -268,11 +280,11 @@ export function GraphRollupDecisionSurface({
 
 
               <div className="flex items-center justify-end gap-3 md:min-w-36">
-                {item.has_children && <button type="button" onClick={() => onInvestigate(item)} className="inline-flex min-h-8 items-center gap-1 text-xs font-semibold text-sky-700 hover:text-sky-600 dark:text-sky-300">
+                {item.has_children && !item.id.startsWith(IMAGE_GROUP_PREFIX) && <button type="button" onClick={() => onInvestigate(item)} className="inline-flex min-h-8 items-center gap-1 text-xs font-semibold text-sky-700 hover:text-sky-600 dark:text-sky-300">
                   <GitBranch className="h-3.5 w-3.5" /> Connections
                 </button>}
                 {item.has_children ? (
-                  <button type="button" onClick={() => onDrill(item)} className="inline-flex min-h-8 items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-600 dark:text-emerald-300">
+                  <button type="button" onClick={() => drill(item)} className="inline-flex min-h-8 items-center gap-1 text-xs font-semibold text-emerald-700 hover:text-emerald-600 dark:text-emerald-300">
                     Open scope <ChevronRight className="h-3.5 w-3.5" />
                   </button>
                 ) : (
@@ -301,7 +313,7 @@ export function GraphRollupDecisionSurface({
                 {itemEdges.length > 12 && <button type="button" onClick={() => onInvestigate(item)} className="mt-2 text-sky-700 underline dark:text-sky-300">Inspect connections for {item.label}</button>}
                 {itemEdges.length === 0 && <p>No relationship rows returned for this node. Coverage may be incomplete; filters or pagination can omit connections.</p>}
               </details>
-              {(item.aggregate.toxic_combo || item.aggregate.internet_exposed) && <div className="col-span-2 flex flex-wrap gap-1.5 text-[10px] md:col-span-3">
+              {(item.aggregate.toxic_combo || item.aggregate.internet_exposed) && <div className="col-span-2 flex flex-wrap gap-1.5 text-xs md:col-span-3">
                 {item.aggregate.toxic_combo ? (
                   <span className="rounded border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 text-red-700 dark:text-red-200">{item.has_children ? "Toxic combination in scope" : "Toxic combination"}</span>
                 ) : null}
@@ -315,7 +327,7 @@ export function GraphRollupDecisionSurface({
       </div>
 
       <div className="flex items-center justify-between border-t border-outline px-4 py-2.5">
-        <p className="text-[11px] text-ink-tertiary">
+        <p className="text-xs text-ink-tertiary">
           Showing {visible.length} of {filtered.length} matching nodes and scopes
         </p>
         <div className="flex gap-2">

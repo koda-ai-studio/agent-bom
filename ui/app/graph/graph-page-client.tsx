@@ -214,6 +214,7 @@ import { useGraphEstateChanges } from "@/hooks/use-graph-estate-changes";
 import { useEstateHighlight } from "@/hooks/use-estate-highlight";
 import { snapshotChangesHeadline } from "@/lib/graph-estate-changes";
 import { graphFirstFramePending } from "@/lib/graph-first-frame";
+import { resolveScopeAncestry } from "@/lib/graph-scope-ancestry";
 
 export { DiffPreview } from "@/components/graph-snapshot-diff";
 
@@ -1450,6 +1451,21 @@ function GraphPageInner() {
     rollupChildPage,
     rollupChildPageKey,
   ]);
+
+  // A deep-linked scope arrives as one crumb; resolve its recorded containment
+  // ancestors once so the breadcrumb reads All scopes > org > account > scope.
+  const ancestryResolvedFor = useRef<string | null>(null);
+  const soleScopeId = rollupStack.length === 1 ? rollupStack[0]!.id : null;
+  useEffect(() => {
+    if (!selectedScanId || !soleScopeId || ancestryResolvedFor.current === `${selectedScanId}:${soleScopeId}`) return;
+    ancestryResolvedFor.current = `${selectedScanId}:${soleScopeId}`;
+    let cancelled = false;
+    void resolveScopeAncestry(api.getGraphNode, soleScopeId, selectedScanId).then(ancestors => {
+      if (cancelled || ancestors.length === 0) return;
+      setRollupStack(current => current.length === 1 && current[0]?.id === soleScopeId ? [...ancestors, ...current] : current);
+    });
+    return () => { cancelled = true; };
+  }, [soleScopeId, selectedScanId]);
 
   const rollupDisplayEdges = useMemo(() => mergeReciprocalRollupEdges(rollupView?.edges ?? []), [rollupView?.edges]);
 
