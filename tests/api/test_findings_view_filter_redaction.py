@@ -91,3 +91,38 @@ def test_triage_view_without_triage_entries_redacts_only_emitted_rows(
     first, second = (re.sub(r'"since":"[^"]+"', '"since":""', body.content.decode()) for body in (fast, redact_first))
     assert first == second, next((first[i - 80 : i + 80], second[i - 80 : i + 80]) for i in range(len(first)) if first[i] != second[i])
     assert calls["n"] <= 5, f"redacted {calls['n']} rows to return {len(fast.json()['findings'])}"
+
+
+@pytest.fixture()
+def leftover_triage_entry():
+    """A triage decision another test left in the process-wide exception store."""
+    from agent_bom.api import stores as api_stores
+    from agent_bom.api.exception_store import ExceptionStatus, InMemoryExceptionStore, VulnException
+
+    store = InMemoryExceptionStore()
+    store.put(
+        VulnException(
+            vuln_id="CVE-0000-0001", package_name="leftover", server_name="*", reason="[finding_triage] {}", status=ExceptionStatus.ACTIVE
+        ),
+        tenant_id="default",
+    )
+    original = api_stores._exception_store
+    api_stores._exception_store = store
+    yield
+    api_stores._exception_store = original
+
+
+def test_demo_client_starts_from_an_empty_exception_store(
+    leftover_triage_entry, demo_estate_client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:  # noqa: F811
+    calls = {"n": 0}
+    original = finding_scope.safe_finding_response_payload
+
+    def counting(row):  # type: ignore[no-untyped-def]
+        calls["n"] += 1
+        return original(row)
+
+    monkeypatch.setattr(finding_scope, "safe_finding_response_payload", counting)
+    body = demo_estate_client.get("/v1/findings", headers=VIEWER, params={"triage": "untriaged", "limit": 5})
+    assert body.status_code == 200
+    assert calls["n"] <= 5, f"a leftover triage entry leaked into the demo client: redacted {calls['n']} rows"

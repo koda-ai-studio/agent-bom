@@ -63,6 +63,9 @@ def demo_estate_client(monkeypatch: pytest.MonkeyPatch, tmp_path):
     original_graph_store = api_stores._graph_store
     original_trend_store = api_stores._trend_store
     original_hub_store = hub_store_mod._HUB_STORE
+    # Triage decisions live in the process-wide exception store; one left by another test changes view filtering.
+    original_exception_store = api_stores._exception_store
+    api_stores._exception_store = None
     api_stores._store = None
     api_stores._graph_store = None
     api_stores._trend_store = None
@@ -88,6 +91,7 @@ def demo_estate_client(monkeypatch: pytest.MonkeyPatch, tmp_path):
         api_stores._trend_store = original_trend_store
         set_compliance_hub_store(original_hub_store)
         reset_findings_count_cache()
+        api_stores._exception_store = original_exception_store
         reset_backpressure_for_tests()
         # The proxy alert/metric ring buffers and the firewall decision store are
         # process-global; the demo bootstrap seeds them, so clear them here to
