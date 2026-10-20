@@ -19774,12 +19774,18 @@ export interface components {
             impact_category?: string | null;
             /** Is Kev */
             is_kev?: boolean | null;
+            /** Owner */
+            owner?: string | null;
             /** Package */
             package?: string | null;
             /** Risk Score */
             risk_score?: number | null;
             /** Severity */
             severity: string;
+            /** Sla Due At */
+            sla_due_at?: string | null;
+            /** Sla Due At Source */
+            sla_due_at_source?: string | null;
             /** Vulnerability Id */
             vulnerability_id: string;
         } & {

@@ -3456,6 +3456,9 @@ export interface OverviewTopRisk {
   cvss_score: number | null;
   epss_score: number | null;
   affected_agents: string[];
+  owner?: string | null | undefined;
+  sla_due_at?: string | null | undefined;
+  sla_due_at_source?: string | null | undefined;
 }
 
 /** One weighted input into the configurable exec risk score (#3940). */

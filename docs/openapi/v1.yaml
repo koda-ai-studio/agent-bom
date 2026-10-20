@@ -21239,6 +21239,11 @@ components:
           - type: boolean
           - type: 'null'
           title: Is Kev
+        owner:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Owner
         package:
           anyOf:
           - type: string
@@ -21253,6 +21258,16 @@ components:
         severity:
           title: Severity
           type: string
+        sla_due_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sla Due At
+        sla_due_at_source:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sla Due At Source
         vulnerability_id:
           title: Vulnerability Id
           type: string

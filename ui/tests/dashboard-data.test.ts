@@ -108,6 +108,12 @@ describe("buildTopRiskExposurePath", () => {
     expect(view.href).toBe("/findings?cve=CVE-2026-9001");
   });
 
+  it("carries the occurrence's owner and SLA onto the risk card", () => {
+    const view = buildTopRiskExposurePath(makeTopRisk({ owner: "platform-team", sla_due_at: "2026-10-26T00:00:00Z", sla_due_at_source: "severity-kev/v1" }));
+    expect(view.ownership).toEqual({ owner: "platform-team", sla_due_at: "2026-10-26T00:00:00Z", sla_due_at_source: "severity-kev/v1" });
+    expect(buildTopRiskExposurePath(makeTopRisk()).ownership).toEqual({ owner: null, sla_due_at: null, sla_due_at_source: null });
+  });
+
   it("drills a risk with a canonical occurrence to that exact occurrence, not the CVE's first row", () => {
     const view = buildTopRiskExposurePath(makeTopRisk({ canonical_id: "8d96119f-27b7-596e-9e73-a540b6863817" }));
     expect(view.href).toBe("/findings?finding=8d96119f-27b7-596e-9e73-a540b6863817");

@@ -5,6 +5,7 @@ import { sbomSourceName } from "@/lib/findings-view";
 import { ArrowRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ExposurePathView, ReportEvidenceLink } from "./shared";
+import { RiskOwnershipLine } from "./risk-ownership-line";
 
 export function TopRisksPanel({
   localReport = false,
@@ -112,6 +113,7 @@ export function RiskChainRow({ path, rank, localReport = false }: { path: Exposu
             <p className="mt-1 text-xs text-ink-secondary [overflow-wrap:anywhere] @min-[42rem]:col-start-1">
               {impact ?? "A vulnerable dependency was found. Its effect on this workload needs review."}
             </p>
+            <div className="mt-1.5 @min-[42rem]:col-start-1"><RiskOwnershipLine ownership={path.ownership} /></div>
             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-secondary @min-[42rem]:col-start-2 @min-[42rem]:row-start-1 @min-[42rem]:row-span-2 @min-[42rem]:mt-0">
               <span className={`rounded-md border px-2 py-0.5 font-semibold capitalize ${severityTone}`}>{knownSeverity ? `${knownSeverity} severity` : "Severity unavailable"}</span>
               <span className="inline-flex items-center gap-1 font-medium text-emerald-600 dark:text-emerald-400">Review impact <ArrowRight className="h-3 w-3" aria-hidden="true" /></span>

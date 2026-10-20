@@ -22,6 +22,8 @@ export interface ExposurePathView {
   riskScore: number;
   href: string;
   key: string;
+  /** Owner and remediation SLA of the ranked occurrence, when the risk source reports them. */
+  ownership?: import("@/lib/finding-ownership").OwnershipFields;
 }
 
 export type OverviewComplianceFramework = {

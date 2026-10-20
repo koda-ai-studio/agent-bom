@@ -371,6 +371,7 @@ export function buildTopRiskExposurePath(
     ...(risk.fixed_version ? { fixedVersion: risk.fixed_version } : {}),
     affectedWorkloads: risk.affected_agents ?? [],
     affectedServices: risk.affected_servers ?? [],
+    ownership: { owner: risk.owner ?? null, sla_due_at: risk.sla_due_at ?? null, sla_due_at_source: risk.sla_due_at_source ?? null },
     href,
   };
 }
