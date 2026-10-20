@@ -8,17 +8,18 @@ const flow = vi.hoisted(() => ({
   getEdges: vi.fn(() => []),
   getNodesBounds: vi.fn<(nodes?: Array<{ id: string }>) => { x: number; y: number; width: number; height: number }>(() => ({ x: 0, y: 0, width: 800, height: 1000 })),
   frame: null as HTMLElement | null,
+  zoom: 0.4,
 }));
 vi.mock("@xyflow/react", () => ({
   Panel: () => null,
   useNodesInitialized: () => flow.initialized,
   useReactFlow: () => flow,
   useStore: (select: (state: unknown) => unknown) => select({ width: 900, height: 400, domNode: flow.frame }),
-  getViewportForBounds: () => ({ x: 0, y: 0, zoom: 0.4 }),
+  getViewportForBounds: () => ({ x: 0, y: 0, zoom: flow.zoom }),
 }));
 import { GraphCanvasAutoFit } from "@/components/graph-canvas-auto-fit";
 
-afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); vi.clearAllMocks(); flow.fitView.mockResolvedValue(true); flow.initialized = true; flow.getNodes.mockReturnValue([{ id: "asset", position: { x: 0, y: 0 }, data: {} }]); flow.getNodesBounds.mockReturnValue({ x: 0, y: 0, width: 800, height: 1000 }); });
+afterEach(() => { flow.zoom = 0.4; cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); vi.clearAllMocks(); flow.fitView.mockResolvedValue(true); flow.initialized = true; flow.getNodes.mockReturnValue([{ id: "asset", position: { x: 0, y: 0 }, data: {} }]); flow.getNodesBounds.mockReturnValue({ x: 0, y: 0, width: 800, height: 1000 }); });
 
 it("ignores snapshot notice height when a late resize measures the pinned frame", async () => {
   vi.useFakeTimers();
@@ -195,6 +196,23 @@ it("fits every loaded node on load, never a neighbourhood or a lone card, with a
   expect(options.nodes).toBeUndefined();
   expect(options.maxZoom).toBe(1);
   expect(options.minZoom).toBeLessThanOrEqual(0.1);
+});
+
+it("opens a graph too dense to read whole on the anchor's neighbourhood, never a lone card", async () => {
+  vi.useFakeTimers();
+  vi.stubGlobal("requestAnimationFrame", (callback: () => void) => setTimeout(callback, 0));
+  vi.stubGlobal("cancelAnimationFrame", clearTimeout);
+  vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
+  flow.frame = document.createElement("div");
+  flow.frame.setAttribute("data-graph-adaptive-frame", "");
+  flow.getNodes.mockReturnValue(Array.from({ length: 60 }, (_, index) => ({ id: `n${index}`, position: { x: index * 300, y: 0 }, data: {} })));
+  flow.getEdges.mockReturnValue([{ source: "n0", target: "n1" }, { source: "n0", target: "n2" }] as never);
+  flow.zoom = 0.1;
+  render(<GraphCanvasAutoFit enabled layoutKey="dense" anchorId="n0" inspector={false} preserveViewport={false} onLayoutAspect={vi.fn()} />);
+  await act(() => vi.advanceTimersByTimeAsync(100));
+  const options = flow.fitView.mock.calls[0]![0] as { nodes?: { id: string }[]; maxZoom: number };
+  expect(options.nodes!.map(node => node.id).sort()).toEqual(["n0", "n1", "n2"]);
+  expect(options.maxZoom).toBeLessThanOrEqual(1);
 });
 
 it("refits the whole graph when the data changes", async () => {

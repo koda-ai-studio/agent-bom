@@ -1,5 +1,6 @@
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
 import { readFile } from "node:fs/promises";
+import { openGraphView } from "./fixtures/graph-view";
 
 const scanId = "scan-dense-graph";
 const previousScanId = "scan-dense-graph-prev";
@@ -18,6 +19,7 @@ for (const theme of ["light", "dark"] as const) for (const width of [390, 1440])
       completeness: { complete: false, status: "truncated", truncated: true, sampled: false, returned: 1, total: null, scope: "incident_edge_page", missing_endpoint_count: 0 },
     } }));
     await page.goto(`/graph?scan=${scanId}`);
+      await openGraphView(page);
     await page.getByTestId("rf__node-agent:desktop").click();
     await page.getByText("Location and evidence source", { exact: true }).click();
     await expect(page.getByText("Sources describe recorded observations.", { exact: false })).toBeVisible();
@@ -49,6 +51,7 @@ for (const theme of ["light", "dark"] as const) for (const width of [390, 1440])
     await page.route("**/v1/graph?**", route => route.fulfill({ json: { ...buildDenseGraph(), scan_id: new URL(route.request().url()).searchParams.get("scan_id") || scanId } }));
     await page.clock.install();
     await page.goto(`/graph?lens=lineage&scan=${scanId}&rollup=0`);
+      await openGraphView(page);
     const canvas = page.locator(".react-flow").last();
     await expect(page.getByTestId("rf__node-agent:desktop")).toBeVisible();
     await settledViewportZoom(page);
@@ -582,6 +585,7 @@ for (const width of [1440, 390]) {
       } }));
       await page.setViewportSize({ width, height: 811 });
       await page.goto(`${routePath}?lens=estate&scan=${scanId}&rollup=0`);
+      await openGraphView(page);
       await page.evaluate((value) => document.documentElement.setAttribute("data-theme", value), theme);
       await expect(page.getByRole("button", { name: "Expand 22 findings" })).toBeVisible();
       let lastTransform = "";
@@ -618,30 +622,13 @@ for (const width of [1440, 390]) {
       if (width === 1440) {
         for (const box of boxes) expect(box.bottom).toBeLessThanOrEqual(811);
       } else {
-        // Mobile preserves readable labels by focusing one loaded node at a
-        // time. Prove each exact node can be reached instead of requiring the
-        // whole topology to fit at an unreadable scale.
-        const navigation = page.getByRole("group", { name: "Navigate loaded graph nodes" });
-        const ids = await page.locator(".react-flow__node").evaluateAll(nodes => nodes.map(node => node.getAttribute("data-id")!));
-        await expect(navigation).toBeInViewport();
-        await expect(navigation.getByRole("button", { name: "Previous graph node" })).toBeDisabled();
-        for (const [index, id] of ids.entries()) {
-          if (index > 0) await navigation.getByRole("button", { name: "Next graph node" }).click();
-          await expect(navigation).toContainText(`${index + 1} of ${ids.length}`);
-          await navigation.getByRole("button", { name: /^Center graph node:/ }).click();
-          await expect.poll(async () => page.getByTestId(`rf__node-${id}`).evaluate(element => {
-            const box = element.getBoundingClientRect();
-            const canvas = element.closest(".react-flow")!.getBoundingClientRect();
-            const zoom = new DOMMatrixReadOnly(getComputedStyle(element.closest(".react-flow__viewport")!).transform).a;
-            const label = element.querySelector("p, [data-testid='cluster-pill'] button span")!;
-            return box.left >= canvas.left && box.right <= canvas.right && box.top >= canvas.top &&
-              box.bottom <= Math.min(canvas.bottom, innerHeight) && parseFloat(getComputedStyle(label).fontSize) * zoom >= 12;
-          })).toBe(true);
-        }
-        await expect(navigation.getByRole("button", { name: "Next graph node" })).toBeDisabled();
-        // Return to the package before checking that its inspector survives resize.
-        await navigation.getByRole("button", { name: "Previous graph node" }).click();
-        await expect(navigation).toContainText("2 of 3");
+        // A phone lists every loaded node as a readable path and its Graph view
+        // shows readable context; there is no one-node-at-a-time stepper.
+        await expect(page.getByRole("group", { name: "Navigate loaded graph nodes" })).toHaveCount(0);
+        const view = page.getByRole("group", { name: "Investigation view" });
+        await view.getByRole("button", { name: "Paths", exact: true }).click();
+        for (const label of [sourceLabel, "pillow@9.0.0"]) await expect(page.getByTestId("graph-path-list")).toContainText(label);
+        await view.getByRole("button", { name: "Graph", exact: true }).click();
       }
       const memberLabels = await page.locator(".react-flow__edge-text").evaluateAll((labels) => labels.filter((label) => /×22\b/.test(label.textContent ?? "")).map((label) => {
         const text = label.getBoundingClientRect();
@@ -708,6 +695,7 @@ for (const width of [1440, 390]) {
       await page.goto("/findings");
       await expect.poll(() => new URL(page.url()).pathname).toBe("/findings");
       await page.goBack();
+      await openGraphView(page);
       await expect.poll(() => new URL(page.url()).pathname).toBe(routePath);
       expect(new URL(page.url()).searchParams.get("scan")).toBe(scanId);
       // A saved desktop viewport stays authoritative after mobile navigation.
@@ -727,6 +715,7 @@ for (const theme of ["light", "dark"] as const) {
       await routeGraphPage(page, graph);
       await page.addInitScript((value) => localStorage.setItem("agent-bom-theme", value), theme);
       await page.goto(`/graph?scan=${scanId}&scope=expanded`);
+      await openGraphView(page);
       const flow = page.locator(".react-flow");
       const anchor = page.getByTestId("rf__node-agent:desktop");
       await expect(anchor).toBeVisible();
@@ -752,6 +741,7 @@ for (const theme of ["light", "dark"] as const) {
       await expect(page.getByTestId("graph-viewport-scope")).toContainText(`${graph.nodes.length} nodes · ${graph.edges.length} relationships`);
       const zoom = await settledViewportZoom(page);
       await page.reload();
+      await openGraphView(page);
       await expect.poll(async () => flow.locator(".react-flow__viewport").evaluate((element) => new DOMMatrixReadOnly(getComputedStyle(element).transform).a)).toBeCloseTo(zoom, 2);
       if (width === 1440) {
         await page.getByText("Layout", { exact: true }).click();
@@ -865,6 +855,7 @@ for (const theme of ["light", "dark"] as const) {
       return route.fulfill({ json: { results: [graph.nodes[0]], total: 1, offset: 0, limit: 16 } });
     });
     await page.goto(`/graph?scan=${scanId}&rollup=0`);
+      await openGraphView(page);
     await page.getByRole("button", { name: `Switch to ${theme} theme`, exact: true }).click();
     await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
     const header = page.locator(".graph-page-header");
@@ -885,7 +876,9 @@ for (const theme of ["light", "dark"] as const) {
     await testInfo.attach("mobile-lineage-geometry", { body: JSON.stringify({ headerBox, canvasBox }), contentType: "application/json" });
     await page.screenshot({ path: testInfo.outputPath(`lineage-compact-${theme}.png`) });
     expect(headerBox.height).toBeLessThanOrEqual(240);
-    const navigation = page.getByRole("group", { name: "Navigate loaded graph nodes" });
+    // The Paths/Graph toggle sits above the canvas; there is no node stepper.
+    await expect(page.getByRole("group", { name: "Navigate loaded graph nodes" })).toHaveCount(0);
+    const navigation = page.getByRole("group", { name: "Investigation view" });
     await expect(navigation).toBeInViewport();
     const navigationBox = (await navigation.boundingBox())!;
     expect(navigationBox.y + navigationBox.height).toBeLessThanOrEqual(canvasBox.y);
@@ -938,6 +931,7 @@ for (const theme of ["light", "dark"] as const) {
         } });
       });
       await page.goto(`/graph?scan=${scanId}&rollup=0`);
+      await openGraphView(page);
       await page.locator('.react-flow__node[data-id="agent:one"]').click();
       const drawer = page.getByTestId("graph-entity-drawer");
       await expect(drawer).toBeVisible();

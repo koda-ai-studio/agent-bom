@@ -34,7 +34,9 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
       await page.getByTestId("graph-entity-drawer").getByRole("button", { name: "Close", exact: true }).click();
       await expect(page.getByTestId("graph-connections-list")).toContainText("Developer agent");
       await page.getByRole("group", { name: "Investigation view" }).getByRole("button", { name: "Graph", exact: true }).click();
-      await expect(page.getByRole("group", { name: "Navigate loaded graph nodes" })).toContainText("Developer agent");
+      // The Graph view frames the loaded context; no one-node-at-a-time stepper.
+      await expect(page.locator('.react-flow__node[data-id="agent"]')).toBeVisible();
+      await expect(page.getByRole("group", { name: "Navigate loaded graph nodes" })).toHaveCount(0);
     }
     if (width === 390) await controls.getByLabel("Graph context", { exact: true }).selectOption("identity");
     else await controls.getByRole("button", { name: "Identity and access context", exact: true }).click();

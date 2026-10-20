@@ -821,8 +821,13 @@ for (const theme of ["light", "dark"] as const) {
     await page.goto("/graph");
     await page.getByRole("button", { name: "All scopes", exact: true }).first().click();
     const summary = page.getByTestId("graph-rollup-decision-surface");
+    // Packages read under the image they were found in, one card per image.
+    await expect(summary.getByText("billing:1.0", { exact: true })).toBeVisible();
+    await expect(summary.getByText("claims:1.0", { exact: true })).toBeVisible();
+    await expect(summary.getByTestId("graph-rollup-image-level")).toContainText("2 packages grouped under 2 images");
+    await summary.getByRole("article").filter({ hasText: "billing:1.0" }).getByRole("button", { name: /Open scope/ }).click();
+    await expect(summary.getByRole("navigation", { name: "Image level" })).toContainText("billing:1.0");
     await expect(summary.getByText(/image: billing:1.0/)).toBeVisible();
-    await expect(summary.getByText(/image: claims:1.0/)).toBeVisible();
     await summary.locator("summary", { hasText: "Details" }).first().click();
     await expect(summary.getByText("pkg:42", { exact: true })).toBeVisible();
     await page.screenshot({ path: testInfo.outputPath(`package-context-${theme}.png`) });

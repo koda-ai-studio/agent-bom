@@ -727,7 +727,7 @@ export function useGraphCanvasModel(page: GraphPageData) {
   }, [fitVisible, presentation]);
   // The list hides the canvas, so it was measured at zero size; fit once it is shown.
   useEffect(() => {
-    if (!narrowViewport || mobileGraphView !== "graph") return;
+    if (!narrowViewport || !investigationMode || mobileGraphView !== "graph") return;
     const frame = requestAnimationFrame(() => fitVisible());
     return () => cancelAnimationFrame(frame);
     // Fit on the switch itself, not on every later camera or data change.

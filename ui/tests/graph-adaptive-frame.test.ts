@@ -1,5 +1,10 @@
 import { expect, it } from "vitest";
-import { graphAdaptiveFrame } from "@/lib/graph-adaptive-frame";
+import { graphAdaptiveFrame, legibleFitZoom } from "@/lib/graph-adaptive-frame";
+
+it("asks a phone for a closer legible fit than a desktop", () => {
+  expect(legibleFitZoom(1134)).toBe(0.4);
+  expect(legibleFitZoom(358)).toBe(0.7);
+});
 
 it("sizes by measured shape and available space, without a node-count cutoff", () => {
   const base = { width: 800, availableHeight: 700, inspector: true };
