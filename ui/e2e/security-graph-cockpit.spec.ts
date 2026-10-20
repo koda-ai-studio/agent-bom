@@ -1053,7 +1053,7 @@ test(`large estates lead with non-overlapping clusters in ${theme}`, async ({ pa
   // Aggregated scope navigation must retain the actual relationship edge.
   await expect(page.locator(".react-flow__edge")).toHaveCount(1);
   await expect(page.getByTestId("graph-compression-summary")).toHaveCount(0);
-  await expect(page.getByText(/2 nodes and scopes at this level.*1241 nodes in snapshot/)).toBeVisible();
+  await expect(page.getByText(/2 nodes and scopes at this level.*1,241 nodes in snapshot/)).toBeVisible();
   const cards = page.locator('[data-rollup-container="true"]');
   await expect(cards).toHaveCount(2);
   const [firstBox, secondBox] = await Promise.all([cards.nth(0).boundingBox(), cards.nth(1).boundingBox()]);
