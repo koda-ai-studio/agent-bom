@@ -224,12 +224,26 @@ class ScanRun:
 
 def effective_scan_run(report: Any) -> ScanRun:
     """Return the report's canonical run with legacy coverage gaps folded in."""
+    from agent_bom.evidence.cloud_scan import cloud_scan_scopes
+
     raw = getattr(report, "scan_run", None)
     run = ScanRun(
         outcome=getattr(raw, "outcome", ScanOutcome.COMPLETE),
         issues=list(getattr(raw, "issues", []) or []),
         scopes=list(getattr(raw, "scopes", []) or []),
     )
+    cloud_scopes = cloud_scan_scopes(report)
+    run.set_scopes([*run.scopes, *cloud_scopes])
+    for scope in cloud_scopes:
+        if scope.status is not ScanScopeStatus.COMPLETE:
+            run.add_issue(
+                ScanIssue(
+                    code="cloud_collection_incomplete",
+                    stage="discovery",
+                    source=scope.name,
+                    message="Cloud evidence is incomplete; inspect provider coverage and required read permissions.",
+                )
+            )
     for warning in getattr(report, "coverage_warnings", []) or []:
         if not isinstance(warning, dict):
             continue

@@ -25,6 +25,41 @@ Deploy the grant in the source account, establish a connection, run inventory,
 and inspect the returned source coverage before interpreting findings. See
 [provider coverage](VENDOR_COVERAGE.md) for the generated collector catalog.
 
+## Verify collection before interpreting posture
+
+Run a metadata-only inventory with the existing provider credential, for example:
+
+```bash
+AGENT_BOM_AWS_INVENTORY=1 agent-bom cloud inventory --provider aws --profile scanner -f json > inventory.json
+```
+
+The artifact contains native resource lists under `providers` and execution
+coverage under `scan_run`. Azure and GCP use `--subscription` and `--project`
+with `AGENT_BOM_AZURE_INVENTORY=1` and `AGENT_BOM_GCP_INVENTORY=1`, respectively.
+Keep artifacts private: resource and identity metadata can identify an estate.
+
+Inspect `scan_run.outcome` and its scopes before calling the collection complete.
+The command can exit successfully while some reads were denied. Stored cloud
+connection reports also derive partial coverage from inventory warnings,
+missing permissions, and errored or no-data benchmark checks. Failed controls
+alone do not mean collection failed: a complete read can establish bad posture.
+Collection gaps remain partial even when other accounts in the same run succeed.
+
+Azure's optional Entra directory read includes human users, service principals,
+groups and bounded membership expansion. It requires the separate Microsoft
+Graph token and `AGENT_BOM_ENTRA_DISCOVERY=1`; ARM Reader alone does not enable
+directory collection. User metadata comes from the read-only
+[Microsoft Graph users endpoint](https://learn.microsoft.com/en-us/graph/api/user-list?view=graph-rest-1.0).
+Unavailable pages and pagination limits leave coverage incomplete.
+
+After a stored connection scan, inspect its inventory, findings and graph in the
+same tenant. Full-snapshot reconciliation retains earlier evidence for a partial
+target; a later complete snapshot can remove assets no longer present. This is
+snapshot reconciliation, not a native incremental change feed. Validate updates,
+deletions and reappearance in isolated replays before relying on removal behavior.
+Cross-cloud links require matching identifiers or recorded relationships; having
+three connected clouds does not itself establish communication between them.
+
 ## Repository Terraform (optional)
 
 The repository also includes `deploy/terraform/connect-*` grants for

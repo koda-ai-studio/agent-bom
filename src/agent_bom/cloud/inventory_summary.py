@@ -35,6 +35,8 @@ def _summarize_inventory_payload(provider: str, payload: dict[str, Any]) -> dict
     public_warnings = [f"{warning_count} provider discovery warning(s) — see server logs for detail."] if warning_count else []
     raw_status = str(payload.get("status", "unknown") or "unknown").strip().lower()
     public_status = raw_status if raw_status in _PUBLIC_INVENTORY_STATUSES else "unknown"
+    if public_status == "ok" and (warning_count or payload.get("missing_permissions")):
+        public_status = "partial"
     summary = {
         "provider": provider,
         "status": public_status,

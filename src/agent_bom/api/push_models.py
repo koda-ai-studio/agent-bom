@@ -119,6 +119,7 @@ def normalize_push_coverage(report: dict, *, source_id: str, target_scope: str |
             scan_run=ScanRun(outcome=outcome, issues=issues, scopes=scopes),
             coverage_warnings=supplied_coverage,
             agents=_agent_coverage_views(report.get("agents", [])),
+            **{f"{key}_data": report.get(key) for key in ("cloud_inventory", "cis_benchmark", "azure_cis_benchmark", "gcp_cis_benchmark")},
         )
     )
     report["scan_run"] = {**raw_scan_run, **scan_run.to_dict()}

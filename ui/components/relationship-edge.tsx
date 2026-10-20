@@ -95,12 +95,19 @@ export function RelationshipEdge(props: EdgeProps) {
     wrapper?.addEventListener("blur", blur);
     return () => { wrapper?.removeEventListener("focus", focus); wrapper?.removeEventListener("blur", blur); };
   }, []);
-  const emphasized = hovered || focused || props.selected || props.data?.directionEmphasis === true;
   const relationship = typeof props.data?.relationship === "string" ? props.data.relationship : "";
-  const inspectLabel = hovered || focused || props.selected || props.data?.pathEmphasis === true;
-  const label = props.data?.quietLabel && !inspectLabel ? null
-    : props.label ?? (inspectLabel && relationship ? relationshipEdgeLabelText(relationship, props.data) : null);
   const nodes = useStore(state => state.nodes);
+  const packageFinding = relationship === "vulnerable_to"
+    && nodes.some(node => node.id === props.source && node.data.nodeType === "package")
+    && nodes.some(node => node.id === props.target
+      && (node.data.entityType === "vulnerability" || node.data.nodeType === "vulnerability"));
+  const inspecting = hovered || focused || props.selected;
+  const emphasized = inspecting || packageFinding || props.data?.directionEmphasis === true;
+  // Endpoint types already explain package → CVE; path emphasis alone must not
+  // restore its redundant chip. Explicit inspection still exposes the verb.
+  const inspectLabel = inspecting || (!packageFinding && props.data?.pathEmphasis === true);
+  const label = (packageFinding || props.data?.quietLabel) && !inspectLabel ? null
+    : props.label ?? (inspectLabel && relationship ? relationshipEdgeLabelText(relationship, props.data) : null);
   const zoom = useStore(state => state.transform[2]);
   const labelRef = useRef<HTMLDivElement>(null);
   const columnSource = props.data?.columnFlow === true ? nodes.find(node => node.id === props.source) : undefined;

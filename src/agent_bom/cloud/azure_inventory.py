@@ -93,6 +93,7 @@ from .azure_inv.identity import (  # noqa: F401 - facade re-export
     _ENTRA_MEMBER_TYPE,
     _collect_entra_groups,
     _collect_entra_service_principals,
+    _collect_entra_users,
     _discover_authorization,
     _discover_management_groups,
     _discover_role_assignments,
@@ -190,7 +191,7 @@ def discover_inventory(
         include_network=include_network,
     )
     collected, missing = _run_discovery_tasks(discovery_tasks, credential, resolved_sub, warnings)
-    management_groups, service_principals, entra_groups, entra_ran = _discover_tenant_scope(
+    management_groups, service_principals, entra_groups, entra_users, entra_ran = _discover_tenant_scope(
         credential, include_hierarchy=include_hierarchy, include_identity=include_identity, warnings=warnings, missing=missing
     )
     envelope = _discovery_envelope(
@@ -210,6 +211,7 @@ def discover_inventory(
         management_groups=management_groups,
         service_principals=service_principals,
         entra_groups=entra_groups,
+        entra_users=entra_users,
         envelope=envelope,
         warnings=warnings,
         missing=missing,
@@ -332,8 +334,8 @@ def _run_discovery_tasks(
 
 def _discover_tenant_scope(
     credential: Any, *, include_hierarchy: bool, include_identity: bool, warnings: list[str], missing: list[dict[str, str]]
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]], bool]:
-    """Tenant-scoped stage: ``(management_groups, service_principals, entra_groups, entra_ran)``."""
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]], bool]:
+    """Collect hierarchy and opt-in directory principals once per tenant."""
     # Management groups are tenant-scoped (above the subscription), so they are
     # discovered with a single call rather than the per-subscription thread pool.
     management_groups: list[dict[str, Any]] = []
@@ -347,13 +349,14 @@ def _discover_tenant_scope(
     # the ARM scan above is complete regardless of whether this grant is present.
     service_principals: list[dict[str, Any]] = []
     entra_groups: list[dict[str, Any]] = []
+    entra_users: list[dict[str, Any]] = []
     entra_ran = False
     if include_identity:
         entra_missing: list[dict[str, str]] = []
-        service_principals, entra_groups = _discover_entra_directory(warnings=warnings, missing=entra_missing)
+        service_principals, entra_groups = _discover_entra_directory(warnings=warnings, missing=entra_missing, users=entra_users)
         missing.extend(entra_missing)
-        entra_ran = bool(service_principals or entra_groups or entra_missing)
-    return management_groups, service_principals, entra_groups, entra_ran
+        entra_ran = bool(service_principals or entra_groups or entra_users or entra_missing)
+    return management_groups, service_principals, entra_groups, entra_users, entra_ran
 
 
 def _discovery_envelope(
@@ -403,6 +406,7 @@ def _assemble_inventory(
     management_groups: list[dict[str, Any]],
     service_principals: list[dict[str, Any]],
     entra_groups: list[dict[str, Any]],
+    entra_users: list[dict[str, Any]],
     envelope: DiscoveryEnvelope,
     warnings: list[str],
     missing: list[dict[str, str]],
@@ -438,6 +442,7 @@ def _assemble_inventory(
         **authorization_fields,
         "authorization_evidence": authorization_evidence,
         "service_principals": service_principals,
+        "entra_users": entra_users,
         "entra_groups": entra_groups,
         **{key: collected.get(key, []) for key in _COLLECTED_TAIL_KEYS},
         "managed_disks": managed_disks,
@@ -531,21 +536,6 @@ def discover_all_subscription_inventories(credential: Any = None, *, force: bool
     return payloads
 
 
-# ---------------------------------------------------------------------------
-# Storage accounts (subscription-wide list)
-# ---------------------------------------------------------------------------
-
-
-# ---------------------------------------------------------------------------
-# Virtual machines + network security groups (subscription-wide list)
-# ---------------------------------------------------------------------------
-
-
-# ---------------------------------------------------------------------------
-# Managed identities (subscription-wide list)
-# ---------------------------------------------------------------------------
-
-
 # Microsoft Graph directory-read fan-out caps. A hostile/huge tenant must not be
 # able to make group-membership expansion run unbounded.
 _ENTRA_MAX_GROUPS_EXPANDED = int(os.environ.get("AGENT_BOM_ENTRA_MAX_GROUPS", "500") or "500")
@@ -570,6 +560,7 @@ def _discover_entra_directory(
     force: bool = False,
     warnings: list[str],
     missing: list[dict[str, str]] | None = None,
+    users: list[dict[str, Any]] | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Discover Entra service principals + groups (with members) — opt-in, read-only.
 
@@ -591,6 +582,9 @@ def _discover_entra_directory(
         return [], []
     service_principals = _collect_entra_service_principals(client, warnings=warnings, missing=missing)
     entra_groups = _collect_entra_groups(client, warnings=warnings, missing=missing)
+    if users is not None:
+        users.extend(_collect_entra_users(client, warnings=warnings, missing=missing))
+    warnings.extend(getattr(client, "coverage_warnings", []))
     return service_principals, entra_groups
 
 
@@ -616,26 +610,6 @@ def _entra_directory_client(client: Any, *, force: bool, warnings: list[str]) ->
             warnings.append(f"Could not initialise the Microsoft Graph client for directory discovery: {sanitize_discovery_warning(exc)}")
             return None
     return client
-
-
-# ---------------------------------------------------------------------------
-# Data / secrets / registry (subscription-wide list)
-# ---------------------------------------------------------------------------
-
-
-# ---------------------------------------------------------------------------
-# Network topology (subscription-wide list)
-# ---------------------------------------------------------------------------
-
-
-# ---------------------------------------------------------------------------
-# Messaging / cache / block storage / app service (subscription-wide list)
-# ---------------------------------------------------------------------------
-
-
-# ---------------------------------------------------------------------------
-# Management-group hierarchy (tenant-scoped)
-# ---------------------------------------------------------------------------
 
 
 # ---------------------------------------------------------------------------
