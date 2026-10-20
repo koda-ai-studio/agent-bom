@@ -16,11 +16,13 @@ from typing import Any
 
 from agent_bom import vuln_freshness
 from agent_bom.domain.report_payloads import VulnerabilityFreshnessPayload
+from agent_bom.scanners.state import peek_scan_performance, record_coverage_warning
 from agent_bom.vuln_freshness import VulnDataFreshness, local_data_age_text, local_db_outdated, offline_env
 
 _logger = logging.getLogger(__name__)
 
 _UPDATE_HINT = "Run `agent-bom db update` to refresh it."
+_OPT_OUT_HINT = "Pass --allow-stale-db (or set AGENT_BOM_ALLOW_STALE_DB=1) to accept local data as complete."
 _INTEGRITY_HINT = "Upgrade agent-bom or run `agent-bom db update`."
 
 
@@ -39,6 +41,17 @@ class CheckDataEvidence:
 
     def completeness(self) -> dict[str, str]:
         return {"status": self.status, "reason": self.reason}
+
+    def blocks_clean(self) -> bool:
+        """Whether a result with nothing at or above the gate must fail closed as incomplete.
+
+        True when untrusted local data was not backed by live OSV, unless the
+        operator opted out with ``--allow-stale-db`` / ``AGENT_BOM_ALLOW_STALE_DB``.
+        """
+        return self.outdated and not self.complete and not vuln_freshness.allow_stale_db()
+
+    def stale_message(self) -> str:
+        return f"{self.reason} {_OPT_OUT_HINT}"
 
 
 def _snapshot(offline: bool) -> VulnDataFreshness | None:
@@ -88,8 +101,6 @@ def _lookup_gap(coverage_warnings: list[dict[str, Any]], *, offline: bool) -> bo
 
 def _osv_answered() -> bool:
     """Whether live OSV (or its response cache) actually answered during this scan."""
-    from agent_bom.scanners.state import peek_scan_performance
-
     performance = peek_scan_performance()
     return bool(performance.get("osv_batches_answered") or performance.get("osv_cache_hits"))
 
@@ -124,3 +135,27 @@ def check_data_evidence(*, offline: bool, coverage_warnings: list[dict[str, Any]
         reason = f"{reason} {hint}"
     freshness = snapshot.to_dict() if snapshot is not None else None
     return CheckDataEvidence(freshness=freshness, status=status, reason=reason, outdated=untrusted)
+
+
+def record_untrusted_local_data(*, offline: bool, demo: bool) -> None:
+    """Record a coverage gap when a scan rested on untrusted local data without live OSV.
+
+    ``scan``, the API and MCP fold coverage warnings into an incomplete
+    ``scan_run`` outcome, so this is what makes them fail closed. The
+    ``--allow-stale-db`` / ``AGENT_BOM_ALLOW_STALE_DB`` opt-out suppresses it.
+    """
+    if demo or vuln_freshness.allow_stale_db():
+        return
+    offline = offline or offline_env()
+    snapshot = _snapshot(offline)
+    if not _untrusted(snapshot) or (not offline and _osv_answered()):
+        return
+    consulted = "OSV was not consulted (offline)" if offline else "live OSV did not answer"
+    record_coverage_warning(
+        {
+            "kind": "stale_local_data",
+            "release": "local-vuln-db:untrusted",
+            "ecosystem": "vulnerability-data",
+            "detail": f"{_condition(snapshot)} and {consulted}; results may be incomplete. {_OPT_OUT_HINT}",
+        }
+    )

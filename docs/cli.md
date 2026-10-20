@@ -57,4 +57,9 @@ The canonical command reference lives in
   fresh, `agent-bom check` (CLI, MCP and `POST /v1/scan/check`) also queries OSV
   live for the checked package and merges by advisory ID and alias. Offline or
   when that lookup fails, the result carries `completeness.status:
-  "incomplete"` and the age of the local data in `vuln_data_freshness`.
+  "incomplete"` and the age of the local data in `vuln_data_freshness`, and the
+  run fails closed when nothing is at or above the gate: `check` exits `2`,
+  `scan` exits `1`, and MCP/REST return `status: "incomplete"`. Air-gapped
+  installs that accept old local data pass `--allow-stale-db` (or set
+  `AGENT_BOM_ALLOW_STALE_DB=1`). `check --require-fresh-db` exits `3` like
+  `scan`. See the [exit-code contract](../site-docs/reference/exit-codes.md).

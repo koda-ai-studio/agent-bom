@@ -275,6 +275,11 @@ agent-bom report diff before.json after.json -f json -o diff.json
 agent-bom report pipeline-events scan-job.json -o pipeline-events.jsonl
 agent-bom report query "SELECT severity, COUNT(*) AS count FROM scan_findings GROUP BY severity" --format json
 
+# Outdated local vuln data fails closed (check exits 2, scan exits 1); air-gap opt-out and strict gate
+agent-bom check lodash@4.17.21 -e npm --offline --allow-stale-db   # or AGENT_BOM_ALLOW_STALE_DB=1
+agent-bom check lodash@4.17.21 -e npm --require-fresh-db           # exit 3 on a DB older than AGENT_BOM_DB_STALE_DAYS
+agent-bom scan . --offline --allow-stale-db
+
 # Assistant / automation envelope (bounded summary by default)
 agent-bom agents --agent-mode
 agent-bom agents --agent-mode --agent-mode-full      # inline the complete report

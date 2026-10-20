@@ -16,7 +16,7 @@ automation can distinguish caller mistakes from control-plane outages.
 | `0`   | success             | Command completed; no findings or all findings under the default or configured severity threshold.             | Any subcommand that finished cleanly; `scan --exit-zero` with vulnerability findings only. |
 | `1`   | scan verdict or operational failure | Either (a) a scan gate matched — see "Why `scan` exits 1" below — or (b) a precondition failed: missing config, unreachable backend, missing required env var, dependency not present. | Default critical threshold or `--fail-on-severity` matched, an incomplete scan such as a missing or unreadable offline vulnerability database, `agent-bom scan --demo` (malicious package fails closed), `--clickhouse-url` missing, NVD unreachable, optional dependency not installed, `agent-bom connect <provider>` failing to verify or register. |
 | `2`   | usage or empty      | Invalid arguments, no input to act on, or report contained no rows after filtering.                            | Click `UsageError` (auto), `agent-bom skills audit` with no skill files, empty result rendering, `agent-bom connect` when the control plane rejects the payload (`400`/`422`). |
-| `3`   | policy gate failed  | An opt-in policy gate failed. Currently emitted by `--require-fresh-db` / `AGENT_BOM_REQUIRE_FRESH_DB` when the local vuln DB is stale. Otherwise reserved for future policy gates. | `agent-bom scan --require-fresh-db` against a stale local vuln DB.          |
+| `3`   | policy gate failed  | An opt-in policy gate failed. Currently emitted by `--require-fresh-db` / `AGENT_BOM_REQUIRE_FRESH_DB` when the local vuln DB is stale. Otherwise reserved for future policy gates. | `agent-bom scan --require-fresh-db` or `agent-bom check --require-fresh-db` against a stale local vuln DB. |
 | `4`   | (reserved)          | Reserved for "auth required" / "auth invalid" on commands that talk to an authenticated control plane.        | Not yet emitted.                                                           |
 | `5`   | (reserved)          | Reserved for "remote control-plane error" (5xx response from the API).                                         | Not yet emitted.                                                           |
 | `130` | interrupted         | Process received `SIGINT` (`Ctrl-C`) — POSIX convention, kept for shell idiom compatibility.                  | Long-running `agent-bom proxy` / `agent-bom serve` / `agent-bom agents`.    |
@@ -35,6 +35,7 @@ named on the last line of the output. A scan exits `1` when any of these hold.
 | A policy rule failed | Yes — `--policy`, or `--model-policy-mode enforce` / `--require-model-signatures` / `--block-unsafe-model-formats` (all default off) | Your policy rejected the result. |
 | A known-malicious package was found | **No — fails closed** | A typosquat, dependency-confusion, or known-malicious advisory match. Exiting `0` here would let the package install. |
 | The scan did not complete | **No — fails closed** | A requested collector degraded or failed; `scan_run.issues` in the artifact says which. A partial artifact with zero findings must not read as clean. |
+| Outdated local vulnerability data that OSV did not back | **No — fails closed** (opt out with `--allow-stale-db` / `AGENT_BOM_ALLOW_STALE_DB`) | The local DB is past the age `agent-bom db freshness` warns about (or its freshness can't be trusted), and the scan was offline or live OSV did not answer. `scan_run.issues` carries a `stale_local_data` coverage issue. |
 
 A missing, empty, or unreadable local advisory database during `scan --offline`
 is an incomplete scan, so `scan` writes a partial artifact when an output was
@@ -42,6 +43,29 @@ requested and exits `1`. It is not a usage error (`2`) because the command and
 input were valid. The narrower `check` command retains its established
 precondition contract and exits `2` when its requested offline advisory lookup
 cannot start.
+
+### Outdated local data fails closed
+
+When the local vulnerability DB is past the age `agent-bom db freshness` warns
+about, or its freshness can't be trusted (unreadable metadata, or a schema newer
+than this agent-bom), online runs also query OSV live. If the run is offline or
+OSV did not answer, the result rests on old data only:
+
+| Command | Nothing at or above the gate | Findings at or above the gate |
+| --- | --- | --- |
+| `check` | exits `2` (incomplete), `verdict: "incomplete"` | exits `1`, unchanged |
+| `scan` | exits `1` (incomplete scan, `stale_local_data` issue in `scan_run`) | exits `1`, unchanged |
+| MCP `check` / `POST /v1/scan/check` | `status: "incomplete"` | `status: "vulnerable"`, unchanged |
+| MCP `scan` / API scan jobs | `scan_run` outcome not `complete` | unchanged |
+
+`--exit-zero` does not turn this into a pass. Every surface reports
+`completeness: {status, reason}` and `vuln_data_freshness`. For air-gapped
+operation where old local data is accepted, pass `--allow-stale-db` or set
+`AGENT_BOM_ALLOW_STALE_DB=1`: the result then exits as it would on fresh data,
+but `completeness` still says `incomplete`. `--require-fresh-db` /
+`AGENT_BOM_REQUIRE_FRESH_DB` is the stricter opt-in: it exits `3` on a DB older
+than `AGENT_BOM_DB_STALE_DAYS` (default 14) before any lookup, for `check` and
+`scan` alike, and takes precedence over `--allow-stale-db`.
 
 `scan` defaults to a `critical` vulnerability gate, so a report containing
 critical findings exits non-zero even when no threshold flag was passed. The

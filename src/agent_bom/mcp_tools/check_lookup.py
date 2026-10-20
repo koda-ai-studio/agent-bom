@@ -5,6 +5,20 @@ from __future__ import annotations
 from typing import Any
 
 from agent_bom.scanners.local_data_freshness import CheckDataEvidence, check_data_evidence
+from agent_bom.scanners.package_check_result import has_lookup_coverage_gap
+
+
+def incomplete_lookup_reason(package: str, coverage_warnings: list[dict], evidence: CheckDataEvidence) -> str | None:
+    """Why a zero-finding lookup is not a clean verdict, or None when it is.
+
+    An advisory coverage gap, or untrusted local data that OSV did not back
+    (unless ``--allow-stale-db`` / ``AGENT_BOM_ALLOW_STALE_DB`` accepts it).
+    """
+    if has_lookup_coverage_gap(coverage_warnings):
+        return f"Advisory coverage was incomplete for {package}; a clean verdict cannot be trusted"
+    if evidence.blocks_clean():
+        return evidence.stale_message()
+    return None
 
 
 async def scan_checked_package(pkg: Any, *, offline: bool, warnings: list[str]) -> tuple[list[dict], CheckDataEvidence]:

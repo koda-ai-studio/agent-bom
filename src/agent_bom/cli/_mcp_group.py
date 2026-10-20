@@ -15,6 +15,7 @@ from __future__ import annotations
 import click
 
 from agent_bom.cli._grouped_help import SuggestingGroup
+from agent_bom.vuln_freshness import require_fresh_db_env
 
 
 @click.group("mcp", cls=SuggestingGroup, invoke_without_command=True)
@@ -73,6 +74,9 @@ def mcp_scan_cmd(server_spec: str, ecosystem: str | None, quiet: bool, no_color:
         offline=False,
         fail_on_severity=None,
         nvd_api_key=None,
+        # The callback bypasses click envvars; AGENT_BOM_ALLOW_STALE_DB is read at decision time.
+        allow_stale_db=False,
+        require_fresh_db=require_fresh_db_env(),
     )
 
 

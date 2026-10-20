@@ -78,8 +78,12 @@ def offline_env() -> bool:
     Mirrors the CLI ``--offline`` flag for callers (MCP, server) that have no
     Click context. Any truthy-ish value enables it.
     """
-    raw = os.environ.get("AGENT_BOM_VULN_DB_OFFLINE", "")
-    return raw.strip().lower() in {"1", "true", "yes", "on"}
+    return _env_flag("AGENT_BOM_VULN_DB_OFFLINE")
+
+
+def _env_flag(name: str) -> bool:
+    """Truthy-ish boolean environment flag (``1``/``true``/``yes``/``on``)."""
+    return os.environ.get(name, "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 @dataclass(frozen=True)
@@ -425,8 +429,29 @@ def db_stale_days_threshold() -> int:
 
 def require_fresh_db_env() -> bool:
     """True when ``AGENT_BOM_REQUIRE_FRESH_DB`` opts into the stale-DB gate."""
-    raw = os.environ.get("AGENT_BOM_REQUIRE_FRESH_DB", "")
-    return raw.strip().lower() in {"1", "true", "yes", "on"}
+    return _env_flag("AGENT_BOM_REQUIRE_FRESH_DB")
+
+
+# Set for one CLI invocation by ``--allow-stale-db`` (reset when it ends).
+_allow_stale_db_flag = False
+
+
+def set_allow_stale_db(value: bool) -> None:
+    """Scope the ``--allow-stale-db`` opt-out to the running CLI command."""
+    global _allow_stale_db_flag  # noqa: PLW0603
+    _allow_stale_db_flag = bool(value)
+
+
+def allow_stale_db() -> bool:
+    """True when the operator accepts outdated local vuln data as complete.
+
+    The air-gap opt-out from failing closed: ``--allow-stale-db`` for the
+    running command, or ``AGENT_BOM_ALLOW_STALE_DB`` for any surface (CLI,
+    MCP, API). Results still report ``completeness: incomplete``.
+    """
+    if _allow_stale_db_flag:
+        return True
+    return _env_flag("AGENT_BOM_ALLOW_STALE_DB")
 
 
 def db_staleness(

@@ -53,6 +53,7 @@ from agent_bom.scanners.package_coverage import (
     _detect_coverage_gaps,
     _flag_remote_lookup_gap,
     _flag_suspicious_packages,
+    _query_osv_results,
     _scan_supplemental_advisories,
     _select_osv_targets,
 )
@@ -446,28 +447,6 @@ def apply_framework_tags(br: BlastRadius) -> None:
     br.nist_800_53_tags = tag_nist_800_53(br)
     br.fedramp_tags = tag_fedramp(br)
     br.pci_dss_tags = tag_pci_dss(br)
-
-
-async def _query_osv_results(
-    scannable: list[Package], osv_targets: list[Package], covered_ecos: set[str], scan_options: ScanOptions
-) -> dict[str, list[dict]]:
-    scan_offline = scan_options.offline
-    if scan_offline or (scan_options.prefer_local_db and not osv_targets):
-        if scan_offline:
-            _check_offline_coverage(scannable, osv_targets, covered_ecos, scan_options.demo_advisories)
-        results: dict[str, list[dict]] = {}
-    elif scan_options.prefer_local_db and osv_targets:
-        # DB is fresh — only query OSV for packages genuinely missing from DB
-        _logger.debug("Local DB preferred: querying OSV for %d uncovered package(s) only", len(osv_targets))
-        results = await _scanners_patchable("query_osv_batch")(osv_targets)
-    elif osv_targets:
-        results = await _scanners_patchable("query_osv_batch")(osv_targets)
-    else:
-        results = {}
-
-    if not scan_offline and osv_targets:
-        _flag_remote_lookup_gap(osv_targets)
-    return results
 
 
 def _apply_osv_results(scannable: list[Package], osv_targets: list[Package], results: dict[str, list[dict]]) -> int:

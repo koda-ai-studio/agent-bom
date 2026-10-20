@@ -204,9 +204,15 @@ def test_stale_db_offline_clean_package_has_no_checkmark(monkeypatch, tmp_path, 
 
     result = CliRunner().invoke(main, ["check", "lodash@4.17.21", "--ecosystem", "npm", "--no-color", "--offline"])
 
-    assert result.exit_code == 0, result.output
+    # Fails closed as incomplete (exit 2); --allow-stale-db is the explicit opt-out.
+    assert result.exit_code == 2, result.output
     assert "✓" not in result.output
-    assert "may be incomplete" in result.output
+    assert "incomplete" in result.output
+
+    allowed = CliRunner().invoke(main, ["check", "lodash@4.17.21", "--ecosystem", "npm", "--no-color", "--offline", "--allow-stale-db"])
+    assert allowed.exit_code == 0, allowed.output
+    assert "✓" not in allowed.output
+    assert "may be incomplete" in allowed.output
 
 
 def test_fresh_db_makes_no_network_call(monkeypatch, tmp_path, osv):

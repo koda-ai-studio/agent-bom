@@ -10,7 +10,7 @@ import re
 from mcp.server.mcpserver.exceptions import ToolError
 
 from agent_bom.core.severity import normalize_severity, severity_at_or_above
-from agent_bom.mcp_tools.check_lookup import scan_checked_package
+from agent_bom.mcp_tools.check_lookup import incomplete_lookup_reason, scan_checked_package
 from agent_bom.mcp_tools.check_lookup import version_published as _version_published
 from agent_bom.mcp_tools.result_store import ResultStore
 from agent_bom.mcp_tools.scan_response import (
@@ -24,7 +24,6 @@ from agent_bom.mcp_tools.scan_response import (
 )
 from agent_bom.parsers.sbom_context import imported_cloud_inventory
 from agent_bom.scanners.mcp_audit import attach_passive_mcp_audit
-from agent_bom.scanners.package_check_result import has_lookup_coverage_gap
 from agent_bom.security import sanitize_error
 from agent_bom.vuln_freshness import compute_freshness
 
@@ -619,12 +618,9 @@ async def check_impl(
                 f"MALICIOUS package {name}@{version} — {reason}. Do not install.",
             )
 
-        coverage_gap = has_lookup_coverage_gap(coverage_warnings)
-        if not pkg.vulnerabilities and coverage_gap:
-            return service_result(
-                "incomplete",
-                f"Advisory coverage was incomplete for {name}@{version}; a clean verdict cannot be trusted",
-            )
+        incomplete = None if pkg.vulnerabilities else incomplete_lookup_reason(f"{name}@{version}", coverage_warnings, data_evidence)
+        if incomplete is not None:
+            return service_result("incomplete", incomplete)
 
         if not pkg.vulnerabilities and eco in {"deb", "apk", "rpm"} and not os_context_complete:
             return service_result(

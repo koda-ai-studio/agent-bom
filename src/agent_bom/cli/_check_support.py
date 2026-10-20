@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from hashlib import sha256
 from pathlib import Path
 from typing import Any, Optional
@@ -461,3 +462,47 @@ def _package_spec_error(name: str, ecosystem: str) -> str | None:
     if not name.strip() or any(char in name for char in "\r\n=<>!"):
         return f"Invalid {ecosystem} package name '{name}'. Provide a package name followed by an explicit version."
     return None
+
+
+_SEVERITY_STYLES = {
+    "critical": "red bold",
+    "high": "#e67e22 bold",
+    "medium": "yellow",
+    "low": "dim",
+}
+_IMPACT_STYLES = {
+    "code-execution": "red",
+    "credential-access": "red",
+    "file-access": "#e67e22",
+    "injection": "#e67e22",
+    "ssrf": "#e67e22",
+    "data-leak": "yellow",
+    "availability": "dim",
+    "client-side": "dim",
+}
+
+
+def _vulnerability_row(v: Any, classify_cwe_impact: Callable[[Any], str]) -> tuple[str, str, str, str, str]:
+    sev = v.severity.value.lower()
+    style = _SEVERITY_STYLES.get(sev, "white")
+    fix_display = f"[green]{v.fixed_version}[/green]" if v.fixed_version else "[dim]no fix[/dim]"
+    # CWE impact category
+    impact = classify_cwe_impact(v.cwe_ids)
+    impact_style = _IMPACT_STYLES.get(impact, "dim")
+    impact_label = impact.replace("-", " ").replace("code execution", "RCE")
+    # KEV badge
+    kev = " [red bold]KEV[/red bold]" if v.is_kev else ""
+    # Concise summary — truncate to keep table compact
+    summary_text = v.summary or ""
+    if not summary_text or summary_text == "No description available":
+        aliases_str = ", ".join(v.aliases[:3]) if v.aliases else ""
+        summary_text = f"[dim]See {aliases_str}[/dim]" if aliases_str else "[dim]—[/dim]"
+    elif len(summary_text) > 50:
+        summary_text = summary_text[:47] + "..."
+    return (
+        f"[{style}]{v.severity.value.upper()}[/{style}]{kev}",
+        v.id,
+        f"[{impact_style}]{impact_label}[/{impact_style}]",
+        fix_display,
+        summary_text,
+    )
