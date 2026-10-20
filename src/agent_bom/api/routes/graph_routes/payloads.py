@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any
 
@@ -28,11 +29,18 @@ from agent_bom.graph.snapshot_paths import resolve_snapshot_attack_paths
 logger = logging.getLogger("agent_bom.api.routes.graph")
 
 
+def _encode_fallback(value: Any) -> Any:
+    # Only values json cannot encode natively (sets, enums, datetimes) take the
+    # recursive walk; the rest of the payload is already plain JSON.
+    return jsonable_encoder(value)
+
+
 def _encoded_graph_response(payload: dict[str, Any]) -> Response:
-    """Encode graph JSON off-loop; FastAPI otherwise revisits every nested field."""
+    """Encode graph JSON off-loop with the C encoder; same bytes ``JSONResponse`` renders."""
     if str(payload.get("scan_id", "")).startswith("current-estate:"):
         payload = {**payload, "evidence_scope": "current_estate"}
-    return JSONResponse(content=jsonable_encoder(payload))
+    body = json.dumps(payload, ensure_ascii=False, allow_nan=False, indent=None, separators=(",", ":"), default=_encode_fallback)
+    return Response(content=body.encode("utf-8"), media_type=JSONResponse.media_type)
 
 
 def _sync_attack_path_stats(
