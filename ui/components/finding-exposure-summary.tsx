@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { reachabilityVerdict } from "@/lib/finding-exposure";
+import { reachingEntity } from "@/lib/finding-holder";
 import { findingWorkloadScope, type EnrichedVuln } from "@/lib/findings-view";
 
 const TONE = {
@@ -26,6 +27,8 @@ export function FindingExposureSummary({ vuln, hostServers = [] }: { vuln: Enric
   const reaching = (vuln.graph_reachable_from_agents ?? []).map((id) => id.replace(/^agent:/, ""));
   const agents = scope.agents.length ? scope.agents : reaching;
   const graphServers = scope.servers.length ? [] : hostServers;
+  const reachers = agents.length ? [] : (vuln.graph_reachable_from ?? []).map(reachingEntity).filter((entity) => entity.kind !== "agent");
+  const reacherKind = reachers.every((entity) => entity.kind === reachers[0]?.kind) ? `${reachers[0]?.kind ?? "asset"}s` : "assets";
   const verdict = reachabilityVerdict(vuln);
   return (
     <div className="space-y-3">
@@ -33,11 +36,17 @@ export function FindingExposureSummary({ vuln, hostServers = [] }: { vuln: Enric
         <span className={`inline-flex rounded border px-2 py-0.5 text-xs font-semibold ${TONE[verdict.tone]}`}>{verdict.label}</span>
         <p className="mt-1 text-xs leading-5 text-ink-secondary">{verdict.basis}</p>
       </div>
-      {agents.length || scope.servers.length || graphServers.length ? (
+      {agents.length || scope.servers.length || graphServers.length || reachers.length ? (
         <dl className="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-[auto_1fr]">
           {agents.length ? <>
             <dt className="text-ink-secondary">{scope.agents.length ? "Agents" : "Reaching agents"}</dt>
             <dd className="flex flex-wrap gap-1.5">{agents.map((agent) => <Link key={agent} href={`/agents?${new URLSearchParams({ name: agent })}`} className={chip}>{agent}</Link>)}</dd>
+          </> : null}
+          {reachers.length ? <>
+            <dt className="text-ink-secondary">Reaching {reacherKind}</dt>
+            <dd className="flex flex-wrap gap-1.5">{reachers.map((entity) => (
+              <Link key={entity.id} title={entity.id} href={`/findings?${new URLSearchParams({ q: entity.name })}`} className={chip}>{entity.name}</Link>
+            ))}</dd>
           </> : null}
           {scope.servers.length ? <>
             <dt className="text-ink-secondary">MCP servers</dt>
