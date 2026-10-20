@@ -54,7 +54,7 @@ class CheckDataEvidence:
         return f"{self.reason} {_OPT_OUT_HINT}"
 
 
-def _snapshot(offline: bool) -> VulnDataFreshness | None:
+def freshness_snapshot(offline: bool) -> VulnDataFreshness | None:
     try:
         return vuln_freshness.compute_freshness(offline=offline)
     except Exception as exc:  # noqa: BLE001 — a failed probe must fail closed, not crash the lookup
@@ -68,7 +68,7 @@ def _untrusted(snapshot: VulnDataFreshness | None) -> bool:
 
 def local_db_untrusted(*, offline: bool = False) -> bool:
     """True when local advisories must not stand alone (outdated, or freshness unknown)."""
-    return _untrusted(_snapshot(offline))
+    return _untrusted(freshness_snapshot(offline))
 
 
 def _condition(snapshot: VulnDataFreshness | None) -> str:
@@ -84,7 +84,7 @@ def local_hits_line(count: int, *, offline: bool, prefer_local_db: bool, demo: b
     mode_note = " (offline mode)" if offline else " (local advisory cache)" if prefer_local_db else ""
     if demo:
         return f"  [green]✓[/green] Demo advisory DB: {count} {noun}{mode_note}"
-    snapshot = _snapshot(offline)
+    snapshot = freshness_snapshot(offline)
     if _untrusted(snapshot):
         label = "freshness unknown" if snapshot is None else local_data_age_text(snapshot)
         return f"  [yellow]⚠[/yellow] Local DB ({label}): {count} {noun}{mode_note}"
@@ -114,7 +114,7 @@ def check_data_evidence(*, offline: bool, coverage_warnings: list[dict[str, Any]
     resting on that data, which is reported, never hidden.
     """
     offline = offline or offline_env()
-    snapshot = _snapshot(offline)
+    snapshot = freshness_snapshot(offline)
     untrusted = _untrusted(snapshot)
     condition = _condition(snapshot)
     lookup_failed = any(warning.get("kind") == "remote_lookup_error" for warning in coverage_warnings)
@@ -147,7 +147,7 @@ def record_untrusted_local_data(*, offline: bool, demo: bool) -> None:
     if demo or vuln_freshness.allow_stale_db():
         return
     offline = offline or offline_env()
-    snapshot = _snapshot(offline)
+    snapshot = freshness_snapshot(offline)
     if not _untrusted(snapshot) or (not offline and _osv_answered()):
         return
     consulted = "OSV was not consulted (offline)" if offline else "live OSV did not answer"
