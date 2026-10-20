@@ -127,4 +127,8 @@ export const postureApi = {
    * tamper-evident signature travels in the response headers.
    */
   downloadCompliancePack: () => getBlob("/v1/compliance/report/pack"),
+
+  /** Signed evidence bundle for one framework (GET /v1/compliance/{framework}/report). */
+  getComplianceFrameworkReport: (reportSlug: string) =>
+    get<import("./control-evidence").ComplianceReportBundle>(`/v1/compliance/${encodeURIComponent(reportSlug)}/report`),
 };

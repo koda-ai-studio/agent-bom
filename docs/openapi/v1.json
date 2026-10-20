@@ -61855,6 +61855,46 @@
               "description": "Advisory of the finding occurrence. When paths record the advisory rather than the occurrence id, the occurrence resolves to paths through its node_id carrying this advisory; ignored without node_id",
               "title": "Advisory Id"
             }
+          },
+          {
+            "description": "Compliance framework of ``control``",
+            "in": "query",
+            "name": "framework",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "pattern": "^[A-Za-z0-9_.-]*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Compliance framework of ``control``",
+              "title": "Framework"
+            }
+          },
+          {
+            "description": "Only paths carrying the current finding occurrences mapped to this framework control",
+            "in": "query",
+            "name": "control",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "pattern": "^[^\\x00]*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only paths carrying the current finding occurrences mapped to this framework control",
+              "title": "Control"
+            }
           }
         ],
         "responses": {

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 from typing import Any, Literal, Optional, cast
@@ -31,6 +32,7 @@ from agent_bom.api.read_models.graph import (
 from agent_bom.api.routes.graph_routes import _runtime
 from agent_bom.api.routes.graph_routes._admission import _GraphAdmissionRoute
 from agent_bom.api.routes.graph_routes.consequences import router as consequence_router
+from agent_bom.api.routes.graph_routes.control_focus import control_occurrences
 from agent_bom.api.routes.graph_routes.focus import PathFocusQuery, focused_queue_page
 from agent_bom.api.routes.graph_routes.params import (
     _GOVERNANCE_ATTACK_PATH_LIMIT,
@@ -256,10 +258,16 @@ async def _ranked_queue_page(graph_store: Any, tenant: str, scan_id: str, page_a
 
 
 async def _queue_page(
-    graph_store: Any, tenant: str, scan_id: str, page_args: dict[str, Any], path_focus: PathFocusQuery
+    request: Request, graph_store: Any, tenant: str, scan_id: str, page_args: dict[str, Any], path_focus: PathFocusQuery
 ) -> tuple[Any, int, int, str, dict[str, Any] | None]:
-    """The ranked queue page, or its slice through one node or finding occurrence."""
+    """The ranked queue page, or its slice through one node, finding occurrence or control."""
     if path_focus.active():
+        control = None
+        if path_focus.framework and path_focus.control:
+            occurrences = await asyncio.to_thread(
+                control_occurrences, request, framework=path_focus.framework, control=path_focus.control, scan_id=scan_id
+            )
+            control = (path_focus.framework, path_focus.control, occurrences)
         return await focused_queue_page(
             graph_store,
             tenant,
@@ -267,6 +275,7 @@ async def _queue_page(
             node_id=path_focus.node_id,
             finding_id=path_focus.finding_id,
             advisory_id=path_focus.advisory_id,
+            control=control,
             **page_args,
         )
     return (*await _ranked_queue_page(graph_store, tenant, scan_id, page_args), None)
@@ -332,7 +341,7 @@ async def get_graph_attack_paths(
     )
     page_args = {"offset": offset, "limit": limit, "filters": filters}
     ranked, materialized_paths, derived_paths, path_source, focus = await _queue_page(
-        graph_store, tenant, identity[0], page_args, path_focus
+        request, graph_store, tenant, identity[0], page_args, path_focus
     )
     effective_scan_id = ranked.scan_id
     hop_ids = {hop for path in ranked.paths for hop in path.hops}

@@ -301,12 +301,19 @@ export const graphApi = {
     findingId?: string | undefined;
     /** Advisory of the focused occurrence; resolves only through its own nodeId. */
     advisoryId?: string | undefined;
+    /** Only paths carrying the current findings mapped to this framework control. */
+    framework?: string | undefined;
+    control?: string | undefined;
   }, options?: { signal?: AbortSignal }) => {
     const params = new URLSearchParams();
     if (filters?.scanId) params.set("scan_id", filters.scanId);
     if (filters?.nodeId) params.set("node_id", filters.nodeId);
     if (filters?.findingId) params.set("finding_id", filters.findingId);
     if (filters?.advisoryId) params.set("advisory_id", filters.advisoryId);
+    if (filters?.framework && filters.control) {
+      params.set("framework", filters.framework);
+      params.set("control", filters.control);
+    }
     if (filters?.offset != null) params.set("offset", String(filters.offset));
     if (filters?.limit != null) params.set("limit", String(filters.limit));
     if (filters?.snapshotGeneration) params.set("snapshot_generation", filters.snapshotGeneration);

@@ -271,7 +271,7 @@ describe("CompliancePage (dense restyle)", () => {
       "href", "/remediation?scan=source%2F1",
     );
     expect(within(drawer).getByRole("link", { name: "Evidence in security graph" })).toHaveAttribute(
-      "href", "/security-graph?scan=source%2F1",
+      "href", "/security-graph?lens=attack-path&framework=owasp-llm&control=LLM01&scan=source%2F1",
     );
   });
 

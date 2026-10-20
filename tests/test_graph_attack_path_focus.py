@@ -138,3 +138,58 @@ def test_advisory_never_widens_focus_without_the_occurrence_node(api):  # noqa: 
         "/v1/graph/attack-paths", params=params | {"node_id": "pkg:pypi:langchain@0.0.150"}, headers=headers["tenant-b"]
     ).json()
     assert other_tenant.get("attack_paths", []) == []
+
+
+def _control_snapshot(monkeypatch, rows, *, partial=False):
+    seen: list[dict] = []
+
+    def fake_snapshot(request, **kwargs):
+        seen.append(kwargs)
+        projection = kwargs.get("row_projection") or (lambda row: row)
+        return {"findings": [projection(row) for row in rows], "completeness": {"status": "partial" if partial else "complete"}}
+
+    monkeypatch.setattr("agent_bom.api.routes.scan.current_findings_snapshot", fake_snapshot)
+    return seen
+
+
+def test_control_focus_returns_the_paths_of_its_mapped_occurrences(api, monkeypatch):  # noqa: F811
+    client, store, headers = api
+    store.save_graph(_advisory_graph("tenant-a"))
+    seen = _control_snapshot(
+        monkeypatch,
+        [{"finding_id": "8d96119f", "cve_id": "CVE-2023-36258", "node_id": "pkg:pypi:langchain@0.0.150"}],
+    )
+    body = client.get(
+        "/v1/graph/attack-paths",
+        params={"scan_id": "advisory-scan", "limit": 10, "framework": "cis", "control": "CIS-02.6"},
+        headers=headers["tenant-a"],
+    ).json()
+    # Only the occurrence's own node path; the other asset carrying the same advisory is not this control's evidence.
+    assert [path["source"] for path in body["attack_paths"]] == ["agent:svc"]
+    assert body["focus"]["control"] == "CIS-02.6"
+    assert body["focus"]["framework"] == "cis"
+    assert body["focus"]["control_findings"] == 1
+    assert body["focus"]["covers_all_matches"] is True
+    assert seen[0]["framework"] == "cis" and seen[0]["control"] == "CIS-02.6"
+    assert seen[0]["scan_id"] == "advisory-scan"
+
+
+def test_control_focus_is_honest_about_a_bounded_finding_set(api, monkeypatch):  # noqa: F811
+    client, store, headers = api
+    store.save_graph(_advisory_graph("tenant-a"))
+    _control_snapshot(monkeypatch, [], partial=True)
+    body = client.get(
+        "/v1/graph/attack-paths",
+        params={"scan_id": "advisory-scan", "framework": "cis", "control": "CIS-02.6"},
+        headers=headers["tenant-a"],
+    ).json()
+    assert body["attack_paths"] == []
+    assert body["focus"]["covers_all_matches"] is False
+
+
+def test_control_focus_requires_both_framework_and_control(api, monkeypatch):  # noqa: F811
+    client, store, headers = api
+    store.save_graph(_advisory_graph("tenant-a"))
+    _control_snapshot(monkeypatch, [])
+    response = client.get("/v1/graph/attack-paths", params={"scan_id": "advisory-scan", "control": "CIS-02.6"}, headers=headers["tenant-a"])
+    assert response.status_code == 400

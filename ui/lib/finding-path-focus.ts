@@ -7,13 +7,20 @@ import type { GraphPathFocus } from "@/lib/graph-path-focus";
  * Paths record advisories rather than finding-store occurrence ids, so the advisory travels
  * with the occurrence's own node and resolves only there.
  */
-export function serverPathFocus(focus: { nodeId?: string; findingId?: string; cve?: string }): {
-  nodeId?: string; findingId?: string; advisoryId?: string;
+export function serverPathFocus(focus: { nodeId?: string; findingId?: string; cve?: string; framework?: string; control?: string }): {
+  nodeId?: string; findingId?: string; advisoryId?: string; framework?: string; control?: string;
 } {
   const nodeId = focus.nodeId?.trim();
   const findingId = focus.findingId?.trim();
   const advisoryId = nodeId && findingId ? focus.cve?.trim() : "";
-  return { ...(nodeId ? { nodeId } : {}), ...(findingId ? { findingId } : {}), ...(advisoryId ? { advisoryId } : {}) };
+  const framework = focus.framework?.trim();
+  const control = focus.control?.trim();
+  return {
+    ...(nodeId ? { nodeId } : {}),
+    ...(findingId ? { findingId } : {}),
+    ...(advisoryId ? { advisoryId } : {}),
+    ...(framework && control ? { framework, control } : {}),
+  };
 }
 
 /**

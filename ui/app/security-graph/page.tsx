@@ -185,6 +185,8 @@ function AttackPathInvestigationContent() {
       nodeId: searchParams.get("node") ?? "",
       findingId: searchParams.get("finding") ?? "",
       findingScanId: searchParams.get("finding_scan") ?? "",
+      framework: searchParams.get("framework") ?? "",
+      control: searchParams.get("control") ?? "",
       traceId: searchParams.get("trace") ?? searchParams.get("runtime_trace_id") ?? "",
     }),
     [searchParams],
@@ -271,7 +273,7 @@ function AttackPathInvestigationContent() {
   );
 
   const hasFocusContext = Boolean(
-    focus.cve || focus.packageName || focus.agentName || focus.nodeId || focus.findingId,
+    focus.cve || focus.packageName || focus.agentName || focus.nodeId || focus.findingId || focus.control,
   );
 
   useEffect(() => {
@@ -355,7 +357,7 @@ function AttackPathInvestigationContent() {
           scanId: selectedScanId,
           offset: 0,
           limit: ATTACK_PATH_FETCH_PAGE,
-          ...serverPathFocus({ nodeId: focus.nodeId, findingId: focus.findingId, cve: focus.cve }),
+          ...serverPathFocus({ nodeId: focus.nodeId, findingId: focus.findingId, cve: focus.cve, framework: focus.framework, control: focus.control }),
         });
         if (cancelled) return;
         const sourceScan = sourceSnapshotFallback({
@@ -410,7 +412,7 @@ function AttackPathInvestigationContent() {
       pathPageRequest.current?.abort();
       pathPageRequest.current = null;
     };
-  }, [focus.agentName, focus.cve, focus.findingId, focus.findingScanId, focus.nodeId, focus.packageName, openSourceSnapshot, selectedScanId]);
+  }, [focus.agentName, focus.control, focus.cve, focus.findingId, focus.findingScanId, focus.framework, focus.nodeId, focus.packageName, openSourceSnapshot, selectedScanId]);
 
   const selectedSnapshot = useMemo(
     () => snapshots.find((snapshot) => snapshot.scan_id === selectedScanId) ?? null,
@@ -452,9 +454,10 @@ function AttackPathInvestigationContent() {
     const nodeLabel = focus.nodeId
       ? graphNodeById.get(graphData?.focus?.node_id || focus.nodeId)?.label || focus.packageName || focus.cve || "Selected asset"
       : "";
-    const parts = [...new Set([nodeLabel, focus.cve, focus.packageName, focus.agentName].filter(Boolean))];
+    const controlLabel = focus.framework && focus.control ? `Control ${focus.control} evidence` : "";
+    const parts = [...new Set([controlLabel, nodeLabel, focus.cve, focus.packageName, focus.agentName].filter(Boolean))];
     return parts.length > 0 ? parts.join(" · ") : null;
-  }, [focus.agentName, focus.cve, focus.nodeId, focus.packageName, graphData?.focus?.node_id, graphNodeById]);
+  }, [focus.agentName, focus.control, focus.cve, focus.framework, focus.nodeId, focus.packageName, graphData?.focus?.node_id, graphNodeById]);
 
   const cardByPathKey = useMemo(() => {
     const next = new Map<string, FixFirstPathCard>();

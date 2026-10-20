@@ -9,4 +9,8 @@ export interface GraphPathFocus {
   advisory_id?: string | undefined;
   /** "node_advisory" when paths record the advisory, not the occurrence id, on the occurrence's node. */
   matched_by?: "occurrence" | "node_advisory" | undefined;
+  /** Present when the queue is focused on one compliance control's mapped findings. */
+  framework?: string | undefined;
+  control?: string | undefined;
+  control_findings?: number | undefined;
 }
