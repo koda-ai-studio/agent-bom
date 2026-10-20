@@ -2729,7 +2729,8 @@ async function capture(page, urlPath, filename, beforeShot, options = {}) {
           .filter((label) => label.getBoundingClientRect().width > 0 && (label.textContent ?? "").trim())
           .reduce((total, label) => total + Number(/×(\d+)/.exec(label.textContent ?? "")?.[1] ?? 1), 0));
         if (options.assertQuietGraphLabels && edgeLabelFonts.length) throw new Error(`Overview repeats relationship labels on ${urlPath}`);
-        if ((!onDemandLabels && labelledEdges < graphEdgeCount) || Math.min(...edgeLabelFonts) < options.minGraphEdgeLabelFontPx) {
+        const quietFindingEdges = await page.locator('.react-flow__edge [data-label-disclosure="on-demand"]').count();
+        if ((!onDemandLabels && labelledEdges + quietFindingEdges < graphEdgeCount) || Math.min(...edgeLabelFonts) < options.minGraphEdgeLabelFontPx) {
           throw new Error(
             `Unreadable or missing graph relationship labels on ${urlPath}: ${labelledEdges}/${graphEdgeCount} labelled edges, minimum ${Math.min(...edgeLabelFonts)}px`,
           );

@@ -120,7 +120,7 @@ export function RelationshipEdge(props: EdgeProps) {
   useLayoutEffect(() => { scheduleRelationshipLabelLayout(labelRef.current); }, [path, zoom, label, x, y]);
   if (props.data?.isClusterEdge) return <SmoothStepEdge {...props} />;
 
-  return <g ref={edgeRef} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
+  return <g ref={edgeRef} data-label-disclosure={packageFinding ? "on-demand" : undefined} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
     {typeof props.data?.hoverDescription === "string" && <title>{props.data.hoverDescription}</title>}
     <BaseEdge id={props.id} path={path} style={props.style}
       {...(emphasized && props.markerStart ? { markerStart: props.markerStart } : {})}

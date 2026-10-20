@@ -34,6 +34,7 @@ describe("package to CVE label disclosure", () => {
     const { queryByText, getByTestId } = mount();
     expect(queryByText("Has finding")).not.toBeInTheDocument();
     expect(getByTestId("edge")).toHaveAttribute("marker-end", "url(#target)");
+    expect(getByTestId("edge").parentElement).toHaveAttribute("data-label-disclosure", "on-demand");
   });
 
   it("reveals on hover and keyboard focus, then hides after inspection", () => {
@@ -53,6 +54,7 @@ describe("package to CVE label disclosure", () => {
   it("keeps the arrow outside an emphasized path and reveals the selected link", () => {
     const { getByTestId, queryByText, rerender } = mount({ data: { relationship: "vulnerable_to" } });
     expect(getByTestId("edge")).toHaveAttribute("marker-end", "url(#target)");
+    expect(getByTestId("edge").parentElement).toHaveAttribute("data-label-disclosure", "on-demand");
     expect(queryByText("Has finding")).not.toBeInTheDocument();
     rerender(<svg><RelationshipEdge {...props} selected /></svg>);
     expect(queryByText("Has finding")).toBeVisible();
