@@ -13,6 +13,7 @@ from scripts.pytest_ci_plan import select_targeted_tests
         ("core/security_validation.py", "test_security.py"),
         ("api/identity_models.py", "test_agent_identity_lifecycle.py"),
         ("api/identity_local_store.py", "test_identity_policy_tenant_boundary.py"),
+        ("api/identity_local_store.py", "test_graph_data_model_generator.py"),
         ("cli/_server_posture.py", "test_cli_serve_auth_enforce.py"),
         ("output/json_inventory.py", "test_evidence_portability.py"),
     ],
