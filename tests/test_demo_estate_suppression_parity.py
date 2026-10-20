@@ -218,14 +218,24 @@ def test_rollup_entities_count_their_own_occurrences(demo_estate_client: TestCli
     occurrences = _get(client, "/v1/findings", limit=1)["total"]
     assert summary["finding_occurrence_count"] == occurrences
 
-    cursor = entries["agent:cursor"]["aggregate"]
-    assert cursor["finding_occurrence_count"] == cursor["issue_count"] == 5, cursor
+    production = _get(client, "/v1/graph/rollup", node="env:production", limit=500)
+    cursor = next(child for child in production["children"] if child["id"] == "agent:cursor")["aggregate"]
+    # Its own five package occurrences plus the drift incident it exhibits, never the estate's 257.
+    assert cursor["finding_occurrence_count"] == cursor["issue_count"] == 6, cursor
     # Every occurrence lands in some top-level entry; shared servers are reported, not hidden.
     metadata = view["aggregate_count_metadata"]
     assert metadata["distinct_finding_occurrences"] == occurrences
     assert sum(entry["aggregate"]["finding_occurrence_count"] for entry in entries.values()) == metadata["finding_occurrence_memberships"]
-    orgs = [entry["aggregate"]["finding_occurrence_count"] for entry in entries.values() if entry["entity_type"] == "org"]
-    assert sum(orgs) <= occurrences
+    # Every agent, its drift incidents and the showcase checks belong to the estate's organization. Only the runtime
+    # sensor hosts stay outside it: they name a host by host name alone, an unresolved correlation candidate with no
+    # account to sit under, so they are their own top-level entries.
+    orgs = [entry for entry in entries.values() if entry["entity_type"] == "org"]
+    assert len(orgs) == 1, [entry["id"] for entry in orgs]
+    outside = {nid: entry["aggregate"]["finding_occurrence_count"] for nid, entry in entries.items() if entry["entity_type"] != "org"}
+    holding = {nid: count for nid, count in outside.items() if count}
+    assert all(nid.startswith("cloud_resource:sensor:") for nid in holding), holding
+    assert orgs[0]["aggregate"]["finding_occurrence_count"] + sum(holding.values()) == occurrences
+    assert metadata["occurrences_additive"] is True
 
     assert not [nid for nid in entries if nid.startswith("misconfig:cloud_security:demo-compute-imds-")]
     from agent_bom.api import stores as api_stores
@@ -248,20 +258,41 @@ def test_overview_headline_reads_one_labelled_basis(demo_estate_client: TestClie
     assert headline["critical_high"] == issues["critical"] + issues["high"]
 
 
-def test_mcp_context_graph_says_how_much_of_the_current_estate_it_covers(demo_estate_client: TestClient) -> None:  # noqa: F811
+def _context_graph(**kwargs: object) -> dict:
     from agent_bom.mcp_tools.analysis import context_graph_impl
 
     async def no_local_scan(*_args):  # pragma: no cover - the persisted estate must answer
         raise AssertionError("context_graph fell back to a local scan")
 
-    payload = json.loads(
-        asyncio.run(context_graph_impl(tenant_id=_TENANT, _run_scan_pipeline=no_local_scan, _truncate_response=lambda text: text))
+    return json.loads(
+        asyncio.run(context_graph_impl(tenant_id=_TENANT, _run_scan_pipeline=no_local_scan, _truncate_response=lambda text: text, **kwargs))
     )
-    estate_agents = _get(demo_estate_client, "/v1/posture/counts")["agents"]["total"]
-    coverage = payload["estate_coverage"]
-    assert coverage["current_estate_agents"] == estate_agents
-    assert coverage["agents_in_view"] == payload["stats"]["agent_count"] == sum(node["kind"] == "agent" for node in payload["nodes"])
-    assert coverage["agents_in_view"] < estate_agents
-    assert coverage["covers_current_estate"] is False
-    assert payload["completeness"]["complete"] is False
-    assert payload["completeness"]["total"] == estate_agents
+
+
+def test_mcp_context_graph_pages_the_current_estate_rest_serves(demo_estate_client: TestClient) -> None:  # noqa: F811
+    client = demo_estate_client
+    estate_agents = _get(client, "/v1/posture/counts")["agents"]["total"]
+    seen: list[str] = []
+    generation = _get(client, "/v1/graph", entity_types="agent", limit=1)["snapshot_generation"]
+    for offset in range(0, estate_agents, 40):
+        payload = _context_graph(offset=offset, limit=40)
+        assert payload["source"] == "current_estate_graph"
+        rest = _get(client, "/v1/graph", entity_types="agent", offset=offset, limit=40, snapshot_generation=generation)
+        rest_agents = sorted(node["label"] for node in rest["nodes"] if node["entity_type"] == "agent")
+        agents = sorted(node["label"] for node in payload["nodes"] if node["kind"] == "agent")
+        assert agents == rest_agents, offset
+        coverage = payload["estate_coverage"]
+        assert coverage["current_estate_agents"] == estate_agents == rest["pagination"]["total"]
+        assert coverage["agents_in_view"] == payload["stats"]["agent_count"] == len(agents)
+        last_page = offset + 40 >= estate_agents
+        assert payload["pagination"]["has_more"] is (not last_page)
+        assert payload["completeness"]["complete"] is (last_page and offset == 0), payload["completeness"]
+        seen.extend(agents)
+    assert len(seen) == len(set(seen)) == estate_agents
+
+    # The estate context carries the agents' servers and their advisories, not only the agent nodes.
+    first = _context_graph(offset=0, limit=100)
+    kinds = {node["kind"] for node in first["nodes"]}
+    assert {"agent", "server", "vulnerability"} <= kinds, kinds
+    cursor = next(node for node in first["nodes"] if node["kind"] == "agent" and node["label"] == "Cursor IDE Agent")
+    assert any(edge["source"] == cursor["id"] for edge in first["edges"])

@@ -328,16 +328,18 @@ verdict function as `/v1/findings` (`likely` for a recorded graph path,
 "persisted_tenant_compliance"`); pass `framework` and `control` to page the
 driving finding ids. It scans local MCP configurations only with
 `source="local_scan"` or when no persisted evidence exists, and labels that
-result `source: "local_scan"`. `context_graph` builds the agent context graph
-from the tenant's persisted scan snapshot (the newest result per target, or one
-`scan_id`) and labels it `source: "persisted_snapshot"` with its `scope`. It
+result `source: "local_scan"`. `context_graph` reads one agent page (`offset`, `limit` up to 100) of the
+tenant's current estate graph: the same agents `GET /v1/graph?entity_types=agent`
+pages, with their servers, packages, tools, credential names and the advisories
+those packages hold (`source: "current_estate_graph"`). It reports `pagination`,
+`estate_coverage` (`agents_in_view` against `current_estate_agents`, the
+`/v1/posture/counts` total) and a `completeness` that is `truncated` unless the
+page holds the whole estate; the lateral-path status moves to
+`path_completeness`. With `scan_id`, or when the estate graph holds no agents,
+it reads the persisted scan reports (`source: "persisted_snapshot"`). It
 discovers this MCP server host's agent configurations only with `live=true` or
 a `config_path` (`source: "live_discovery"`); a tenant without a snapshot gets
-a not-found error rather than a silent host scan. Scan reports can hold fewer
-agents than the current estate graph (connector and estate inventory reach only
-the graph): `estate_coverage` then reports `agents_in_view` against
-`current_estate_agents` (the `/v1/posture/counts` total) and `completeness` is
-`truncated`, with the path analysis status kept under `path_completeness`.
+a not-found error rather than a silent host scan.
 
 Both tools are read-only decision aids. They do not modify repositories,
 create tickets, deploy workloads, or mutate cloud resources. Use proxy,

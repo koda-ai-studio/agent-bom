@@ -16809,6 +16809,28 @@
             ],
             "title": "Evaluated Controls"
           },
+          "finding_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finding Count"
+          },
+          "finding_count_basis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finding Count Basis"
+          },
           "framework": {
             "title": "Framework",
             "type": "string"

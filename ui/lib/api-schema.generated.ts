@@ -14555,6 +14555,10 @@ export interface components {
             }[] | null;
             /** Evaluated Controls */
             evaluated_controls?: number | null;
+            /** Finding Count */
+            finding_count?: number | null;
+            /** Finding Count Basis */
+            finding_count_basis?: string | null;
             /** Framework */
             framework: string;
             /** Framework Key */

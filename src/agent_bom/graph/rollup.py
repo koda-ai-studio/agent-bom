@@ -76,6 +76,7 @@ _AGENT_STACK_CONTAINMENT: frozenset[tuple[str, str, str]] = frozenset(
         (RelationshipType.VULNERABLE_TO.value, EntityType.SERVER.value, EntityType.VULNERABILITY.value),
         (RelationshipType.VULNERABLE_TO.value, EntityType.CLOUD_RESOURCE.value, EntityType.VULNERABILITY.value),
         (RelationshipType.VULNERABLE_TO.value, EntityType.CLOUD_RESOURCE.value, EntityType.MISCONFIGURATION.value),
+        (RelationshipType.EXHIBITS_DRIFT.value, EntityType.AGENT.value, EntityType.DRIFT_INCIDENT.value),
     }
 )
 _AGENT_STACK_RELS: frozenset[str] = frozenset(rel for rel, _source, _target in _AGENT_STACK_CONTAINMENT)

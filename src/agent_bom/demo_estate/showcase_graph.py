@@ -177,6 +177,7 @@ def build_showcase_graph(
             risk_score=8.2,
         )
         edge(showcase_misconfig_id("pii-public"), "cloud:pii-bucket", RelationshipType.AFFECTS)
+        edge("cloud:pii-bucket", showcase_misconfig_id("pii-public"), RelationshipType.CONTAINS)
 
     node(
         "cloud:payments-db",
@@ -195,22 +196,20 @@ def build_showcase_graph(
         network_exposure=[{"resource": "prod-bastion", "from_port": 22, "to_port": 22, "protocol": "tcp", "scope": "internet"}],
     )
     edge(showcase_misconfig_id("sg-open"), "cloud:bastion", RelationshipType.AFFECTS)
+    edge("cloud:bastion", showcase_misconfig_id("sg-open"), RelationshipType.CONTAINS)
     record_retired_showcase_ids(g)
 
     node("cloud:logs-bucket", EntityType.CLOUD_RESOURCE, "app-logs (S3)", resource_type="s3")
 
     # Cloud estate hierarchy — org → account → resources for rollup/containment demos.
     node("org:corp", EntityType.ORG, "Corp (root org)")
-    node(
-        "account:aws:123456789012",
-        EntityType.ACCOUNT,
-        "AWS prod (123456789012)",
-        cloud_provider="aws",
-        account_id="123456789012",
-    )
+    node("account:aws:123456789012", EntityType.ACCOUNT, "AWS prod (123456789012)", cloud_provider="aws", account_id="123456789012")
     node("env:production", EntityType.ENVIRONMENT, "production")
     edge("org:corp", "account:aws:123456789012", RelationshipType.CONTAINS)
     edge("account:aws:123456789012", "env:production", RelationshipType.CONTAINS)
+    # The showcase agents run in that production environment: they are part of the estate, not beside it.
+    for aid in SHOWCASE_AGENTS:
+        edge("env:production", f"agent:{aid}", RelationshipType.CONTAINS)
     for cloud_id in (
         "cloud:pii-bucket",
         "cloud:payments-db",

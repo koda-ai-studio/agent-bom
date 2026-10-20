@@ -16,7 +16,12 @@ from agent_bom.mcp_errors import (
     CODE_VALIDATION_INVALID_VULN_ID,
     mcp_error_json,
 )
-from agent_bom.mcp_tools.context_graph_source import estate_coverage, live_context_report, persisted_context_report
+from agent_bom.mcp_tools.context_graph_source import (
+    apply_scope_metadata,
+    estate_context_report,
+    live_context_report,
+    persisted_context_report,
+)
 from agent_bom.mcp_tools.finding_graph import exposure_lists, load_snapshot_paths, project_finding, public_graph_block
 from agent_bom.mcp_tools.findings import RISK_SCALE
 from agent_bom.mcp_tools.rest_parity import api_reads
@@ -218,36 +223,28 @@ async def context_graph_impl(
     tenant_id: str = "default",
     scan_id: str | None = None,
     live: bool = False,
+    offset: int = 0,
+    limit: int = 25,
     _run_scan_pipeline,
     _truncate_response,
 ) -> str:
     """Implementation of the context_graph tool.
 
-    Reads the tenant's persisted scan snapshot by default; ``live`` (or a
-    ``config_path``) discovers this host's agent configurations instead.
+    Reads one agent page (``offset``/``limit``) of the tenant's current estate
+    graph by default, falling back to the persisted scan reports when the
+    estate graph holds no agents; ``scan_id`` reads that scan's report and
+    ``live`` (or a ``config_path``) discovers this host's agent configurations.
     """
     try:
         if live or config_path:
             report = await live_context_report(config_path, _run_scan_pipeline)
         else:
-            report = await persisted_context_report(tenant_id, scan_id)
+            estate = None if scan_id else await estate_context_report(tenant_id, offset=offset, limit=limit)
+            report = estate or await persisted_context_report(tenant_id, scan_id)
         if isinstance(report, str):
             return report
         result = _context_graph_payload(report.agents, report.blast_radius, source_agent, max_depth)
-        result.update(source=report.source, scope=report.scope)
-        coverage = estate_coverage(report, int(result["stats"]["agent_count"]))
-        if coverage is not None:
-            result["estate_coverage"] = coverage
-            if not coverage["covers_current_estate"]:
-                result["path_completeness"] = result["completeness"]
-                result["completeness"] = graph_completeness(
-                    returned=coverage["agents_in_view"],
-                    total=coverage["current_estate_agents"],
-                    truncated=True,
-                    reason=(
-                        "scan reports hold a subset of the current estate's agents; use inventory_summary or exposure_paths for the estate"
-                    ),
-                )
+        apply_scope_metadata(result, report)
         from agent_bom.output.interop_security import sanitize_linked_document
 
         return _truncate_response(json.dumps(sanitize_linked_document(result), indent=2, default=str))

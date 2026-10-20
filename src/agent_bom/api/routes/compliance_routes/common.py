@@ -5,9 +5,11 @@ from __future__ import annotations
 import logging
 from typing import Any, cast
 
+import anyio.to_thread
 from fastapi import Request
 
 from agent_bom.api import time_window
+from agent_bom.api.compliance_hub_store import get_compliance_hub_store as _hub_store
 from agent_bom.api.credential_rotation import build_credential_rotation_governance
 from agent_bom.api.finding_read_context import finding_read_snapshot
 from agent_bom.api.models import JobStatus
@@ -17,6 +19,7 @@ from agent_bom.api.routes.compliance_routes.evidence import (
     _result_evidence_context,
     _result_has_runtime_signals,
 )
+from agent_bom.api.routes.compliance_routes.scoring import _framework_posture
 from agent_bom.api.scan_finding_read import iter_tenant_scan_spine_findings
 from agent_bom.api.stores import (
     _get_credential_ref_store,
@@ -456,3 +459,27 @@ def _native_framework_counts(tenant_id: str) -> tuple[dict[str, int], int]:
         for slug in framework_evidence_slugs(row):
             counts[slug] = counts.get(slug, 0) + 1
     return counts, len(rows)
+
+
+def framework_finding_counts(tenant_id: str) -> dict[str, int]:
+    """Findings per framework on every surface: open scan findings plus hub rows, by control-tag evidence."""
+    native, _total = _native_framework_counts(tenant_id)
+    counter = getattr(_hub_store(), "framework_slug_counts", None)
+    hub = counter(tenant_id) if callable(counter) else {}
+    return {slug: native.get(slug, 0) + hub.get(slug, 0) for slug in {*native, *hub}}
+
+
+async def framework_posture_with_count(
+    request: Request, framework: str, canonical: str, controls: list[dict], *, no_data: bool
+) -> dict[str, Any]:
+    """One framework's posture plus its distinct finding total.
+
+    Per-control ``findings`` overlap (one finding maps to several controls);
+    ``finding_count`` is the ``/v1/findings?framework=`` total.
+    """
+    counts = await anyio.to_thread.run_sync(framework_finding_counts, _tenant_id(request))
+    return {
+        **_framework_posture(framework, controls, no_data=no_data),
+        "finding_count": counts.get(canonical, 0),
+        "finding_count_basis": "control_tag_evidence",
+    }
