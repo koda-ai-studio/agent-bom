@@ -132,7 +132,7 @@ Consumed by: **FU** Attack-path fusion · **CR** Credential reach · **BR** Depe
 | `cross_account_trust` | `authority` | identity | directed | yes | `account`, `federated_identity`, `role`, `service_principal` | `account`, `federated_identity`, `role`, `service_principal` | 16 | — | 2 |
 | `defines` | `structural` | code_topology | directed | yes | `source_file` | `ci_job`, `code_module`, `tool` | 3 | — | 2 |
 | `delegated_to` | `runtime` | runtime | directed | yes | `agent` | `agent` | 1 | RT | 1 |
-| `depends_on` | `dependency` | inventory | directed | yes | `cloud_resource`, `config_file`, `container`, `data_store`, `directory`, `framework` (+3 more) | `cloud_resource`, `container`, `data_store`, `package` | 11 | FU, BR | 8 (+2 demo) |
+| `depends_on` | `dependency` | inventory | directed | yes | `cloud_resource`, `config_file`, `container`, `data_store`, `directory`, `framework` (+3 more) | `cloud_resource`, `container`, `data_store`, `package` | 11 | FU, BR | 9 (+2 demo) |
 | `exhibits_drift` | `governance` | governance | bidirectional | yes | `agent` | `drift_incident` | 1 | — | 1 |
 | `exploitable_via` | `finding` | vulnerability | directed | yes | `misconfiguration`, `vulnerability` | `credential`, `tool` | 4 | FU | 1 (+1 demo) |
 | `exposed_to` | `exposure` | exposure | directed | yes | `agent`, `api_gateway`, `cloud_resource`, `container`, `data_store`, `server` | `account`, `agent`, `cloud_resource`, `data_store`, `resource` | 20 | FU | 5 (+2 demo) |

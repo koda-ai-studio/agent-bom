@@ -216,7 +216,7 @@ Class `dependency` · directed · traversable · required evidence `source`, `ti
 - `server` → `package`
 - `source_file` → `package`
 
-Emitted by: `api/graph_page_stack.py`, `graph/agent_projection.py`, `graph/builder_snowflake_data_movement.py`, `graph/builder_snowflake_objects.py`, `graph/builder_snowflake_platform.py`, `graph/framework_topology_projection.py`, `graph/package_dependency_projection.py`, `graph/repo_structure_overlay.py`; demo fixtures: `demo_estate/estate_external_stages.py`, `demo_estate/showcase_packages.py`
+Emitted by: `api/graph_page_stack.py`, `graph/agent_projection.py`, `graph/builder_snowflake_data_movement.py`, `graph/builder_snowflake_objects.py`, `graph/builder_snowflake_platform.py`, `graph/cross_vendor_paths.py`, `graph/framework_topology_projection.py`, `graph/package_dependency_projection.py`, `graph/repo_structure_overlay.py`; demo fixtures: `demo_estate/estate_external_stages.py`, `demo_estate/showcase_packages.py`
 
 ## `exhibits_drift`
 
