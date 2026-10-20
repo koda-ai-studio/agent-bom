@@ -510,7 +510,8 @@ def sync_get(
 ) -> httpx.Response | None:
     """Convenience: single GET request with retry. Manages its own client."""
     with create_sync_client(timeout=timeout) as client:
-        return sync_request_with_retry(client, "GET", url, headers=headers or {}, params=params or {})
+        # None preserves an embedded provider cursor/filter; {} explicitly clears it.
+        return sync_request_with_retry(client, "GET", url, headers=headers or {}, params=params)
 
 
 def fetch_bytes(url: str, *, timeout: float = 30, headers: dict | None = None) -> bytes:
