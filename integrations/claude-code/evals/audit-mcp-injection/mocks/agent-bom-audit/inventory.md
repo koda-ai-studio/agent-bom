@@ -19,7 +19,11 @@ type: fixed
       {
        "name": "@modelcontextprotocol/server-filesystem",
        "version": "2.0.0",
-       "ecosystem": "npm"
+       "ecosystem": "npm",
+       "pinned": false,
+       "pinned_version": null,
+       "observed_version": "2.0.0",
+       "version_source": "tool_cache"
       }
      ]
     },
@@ -31,7 +35,11 @@ type: fixed
       {
        "name": "mcp-server-postgres",
        "version": "latest",
-       "ecosystem": "pypi"
+       "ecosystem": "pypi",
+       "pinned": false,
+       "pinned_version": null,
+       "observed_version": null,
+       "version_source": "registry_latest"
       }
      ]
     },
@@ -72,8 +80,8 @@ type: fixed
     "agent_type": "custom",
     "type": "custom",
     "status": "configured",
-    "discovered_at": "2026-10-20T13:47:57.141218Z",
-    "last_seen": "2026-10-20T13:47:57.141218Z",
+    "discovered_at": "2026-10-20T14:18:40.935722Z",
+    "last_seen": "2026-10-20T14:18:40.935722Z",
     "config_path": "<path:.mcp.json>",
     "discovery_provenance": {
      "source_type": "local_discovery",
@@ -191,6 +199,7 @@ type: fixed
      "legacy_version_source": "registry_fallback",
      "resolved_from_registry": true,
      "floating_reference": true,
+     "pinned": false,
      "source_precedence": 20
     },
     "discovery_provenance": {
@@ -211,6 +220,7 @@ type: fixed
       "legacy_version_source": "registry_fallback",
       "resolved_from_registry": true,
       "floating_reference": true,
+      "pinned": false,
       "source_precedence": 20
      }
     },
@@ -238,9 +248,10 @@ type: fixed
      "resolved_version": "2.0.0",
      "version_source": "tool_cache",
      "confidence": "high",
-     "version_resolved_at": "2026-10-20T13:47:57.148220+00:00",
+     "version_resolved_at": "2026-10-20T14:18:40.940987+00:00",
      "resolved_from_registry": false,
      "floating_reference": true,
+     "pinned": false,
      "source_precedence": 50,
      "evidence": [
       {
@@ -265,9 +276,10 @@ type: fixed
       "resolved_version": "2.0.0",
       "version_source": "tool_cache",
       "confidence": "high",
-      "version_resolved_at": "2026-10-20T13:47:57.148220+00:00",
+      "version_resolved_at": "2026-10-20T14:18:40.940987+00:00",
       "resolved_from_registry": false,
       "floating_reference": true,
+      "pinned": false,
       "source_precedence": 50,
       "evidence": [
        {

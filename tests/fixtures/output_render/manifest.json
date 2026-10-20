@@ -1,6 +1,6 @@
 {
  "demo": {
-  "html": "042d567a363cb371eb1a23819293ea9f9102ae523ea11eb6560b8d7cbf1eae6c",
+  "html": "b4bc529ef6f848496925f556fd0f1ba6a0bd5c3d9fd5a9e2510a1ba44727d6d9",
   "html_offline": "b528f15880a257d12488afa306e770292d9fe026130824f573be709133c26857",
   "sarif_exclude_unfixable": "c430decead4f4f5a1dac09938ca234f27a2ec9919541201dd2cd039be9983ab1",
   "sarif_file": "e7eb57d1d457fa63513ae43f83df7e2b2d4eab3fba1793fcd1d44fb7f14816f2",
@@ -14,7 +14,7 @@
   "sarif_stdout": "64384810204cefe6432d755dcc4335786e14050e744be2b44e3449abda3e077b"
  },
  "rich": {
-  "html": "5941f8dd9e91a91d5848fdbfa6049472200b591a4e6d391e98fa162dd47d9aec",
+  "html": "f0eb3d5dee2636a3141bd392fd6b05a651331917a18e0fa829ec6ae72d183bad",
   "html_offline": "7e66dfeed0a7d0d8941bc81985d3b9a21e4b3a8018bbd8f0e90cca502d5f545a",
   "sarif_exclude_unfixable": "127db529f82a65cfedf122744d1fbdcea8decbdd1ad929b74e4e050df188c6e1",
   "sarif_file": "2ce573ba0317170829eb68a47f249cf578954e8a17ff44a2afd67e040e5e190f",

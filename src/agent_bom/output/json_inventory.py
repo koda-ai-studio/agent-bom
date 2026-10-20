@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from agent_bom.asset_provenance import (
     agent_discovery_provenance,
     package_discovery_provenance,
@@ -373,4 +375,18 @@ def _build_inventory_snapshot(report: AIBOMReport) -> dict:
         "generated_at": report.generated_at.isoformat(),
         "packages": packages,
         "agents": agents,
+    }
+
+
+def inventory_package_row(pkg: Any) -> dict[str, Any]:
+    """Compact MCP inventory package row; `version` stays for compatibility, pinning is explicit."""
+    provenance = package_version_provenance(pkg)
+    return {
+        "name": pkg.name,
+        "version": pkg.version,
+        "ecosystem": pkg.ecosystem,
+        "pinned": bool(provenance.get("pinned")),
+        "pinned_version": provenance.get("pinned_version"),
+        "observed_version": provenance.get("resolved_version"),
+        "version_source": provenance.get("version_source"),
     }

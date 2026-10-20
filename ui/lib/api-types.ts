@@ -1521,6 +1521,8 @@ export interface VersionProvenance {
   resolved_from_registry?: boolean | undefined;
   floating_reference?: boolean | undefined;
   floating_reference_reason?: string | undefined;
+  pinned?: boolean | undefined;
+  pinned_version?: string | undefined;
   evidence?: Record<string, unknown>[] | undefined;
   version_conflicts?: Record<string, unknown>[] | undefined;
 }
