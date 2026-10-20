@@ -189,6 +189,10 @@ def _normalize_firewall(rule: Any, *, name: str, project_id: str) -> dict[str, A
     return {
         "group_id": name,
         "name": name,
+        # Rule names are unique only per project; the graph scopes identity with
+        # these (``projects/{project}/global/firewalls/{name}``).
+        "firewall_id": str(getattr(rule, "id", "") or ""),
+        "self_link": str(getattr(rule, "self_link", "") or ""),
         "network": _leaf(getattr(rule, "network", "")),
         "direction": str(getattr(rule, "direction", "") or "").upper(),
         "internet_exposed": bool(exposure),

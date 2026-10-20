@@ -5838,6 +5838,7 @@
         "firewalls": [
           {
             "direction": "INGRESS",
+            "firewall_id": "8812345678901234567",
             "group_id": "allow-ssh",
             "internet_exposed": true,
             "name": "allow-ssh",
@@ -5875,6 +5876,7 @@
               }
             ],
             "project_id": "proj-1",
+            "self_link": "https://www.googleapis.com/compute/v1/projects/p/global/firewalls/allow-ssh",
             "source_ranges": [
               "0.0.0.0/0"
             ],
@@ -5887,6 +5889,7 @@
           },
           {
             "direction": "",
+            "firewall_id": "",
             "group_id": "ipv6-all",
             "internet_exposed": true,
             "name": "ipv6-all",
@@ -5900,6 +5903,7 @@
               }
             ],
             "project_id": "proj-1",
+            "self_link": "",
             "source_ranges": [
               "::/0"
             ],
@@ -5908,12 +5912,14 @@
           },
           {
             "direction": "EGRESS",
+            "firewall_id": "",
             "group_id": "egress",
             "internet_exposed": false,
             "name": "egress",
             "network": "default",
             "network_exposure": [],
             "project_id": "proj-1",
+            "self_link": "",
             "source_ranges": [
               "0.0.0.0/0"
             ],
@@ -5922,12 +5928,14 @@
           },
           {
             "direction": "INGRESS",
+            "firewall_id": "",
             "group_id": "deny-only",
             "internet_exposed": false,
             "name": "deny-only",
             "network": "default",
             "network_exposure": [],
             "project_id": "proj-1",
+            "self_link": "",
             "source_ranges": [
               "0.0.0.0/0"
             ],
@@ -5936,12 +5944,14 @@
           },
           {
             "direction": "INGRESS",
+            "firewall_id": "",
             "group_id": "internal",
             "internet_exposed": false,
             "name": "internal",
             "network": "default",
             "network_exposure": [],
             "project_id": "proj-1",
+            "self_link": "",
             "source_ranges": [
               "10.0.0.0/8"
             ],
@@ -7230,6 +7240,7 @@
         "firewalls": [
           {
             "direction": "INGRESS",
+            "firewall_id": "8812345678901234567",
             "group_id": "allow-ssh",
             "internet_exposed": true,
             "name": "allow-ssh",
@@ -7267,6 +7278,7 @@
               }
             ],
             "project_id": "proj-1",
+            "self_link": "https://www.googleapis.com/compute/v1/projects/p/global/firewalls/allow-ssh",
             "source_ranges": [
               "0.0.0.0/0"
             ],
@@ -7279,6 +7291,7 @@
           },
           {
             "direction": "",
+            "firewall_id": "",
             "group_id": "ipv6-all",
             "internet_exposed": true,
             "name": "ipv6-all",
@@ -7292,6 +7305,7 @@
               }
             ],
             "project_id": "proj-1",
+            "self_link": "",
             "source_ranges": [
               "::/0"
             ],
@@ -7300,12 +7314,14 @@
           },
           {
             "direction": "EGRESS",
+            "firewall_id": "",
             "group_id": "egress",
             "internet_exposed": false,
             "name": "egress",
             "network": "default",
             "network_exposure": [],
             "project_id": "proj-1",
+            "self_link": "",
             "source_ranges": [
               "0.0.0.0/0"
             ],
@@ -7314,12 +7330,14 @@
           },
           {
             "direction": "INGRESS",
+            "firewall_id": "",
             "group_id": "deny-only",
             "internet_exposed": false,
             "name": "deny-only",
             "network": "default",
             "network_exposure": [],
             "project_id": "proj-1",
+            "self_link": "",
             "source_ranges": [
               "0.0.0.0/0"
             ],
@@ -7328,12 +7346,14 @@
           },
           {
             "direction": "INGRESS",
+            "firewall_id": "",
             "group_id": "internal",
             "internet_exposed": false,
             "name": "internal",
             "network": "default",
             "network_exposure": [],
             "project_id": "proj-1",
+            "self_link": "",
             "source_ranges": [
               "10.0.0.0/8"
             ],
@@ -8631,6 +8651,7 @@
         "firewalls": [
           {
             "direction": "INGRESS",
+            "firewall_id": "8812345678901234567",
             "group_id": "allow-ssh",
             "internet_exposed": true,
             "name": "allow-ssh",
@@ -8668,6 +8689,7 @@
               }
             ],
             "project_id": "proj-1",
+            "self_link": "https://www.googleapis.com/compute/v1/projects/p/global/firewalls/allow-ssh",
             "source_ranges": [
               "0.0.0.0/0"
             ],
@@ -8680,6 +8702,7 @@
           },
           {
             "direction": "",
+            "firewall_id": "",
             "group_id": "ipv6-all",
             "internet_exposed": true,
             "name": "ipv6-all",
@@ -8693,6 +8716,7 @@
               }
             ],
             "project_id": "proj-1",
+            "self_link": "",
             "source_ranges": [
               "::/0"
             ],
@@ -8701,12 +8725,14 @@
           },
           {
             "direction": "EGRESS",
+            "firewall_id": "",
             "group_id": "egress",
             "internet_exposed": false,
             "name": "egress",
             "network": "default",
             "network_exposure": [],
             "project_id": "proj-1",
+            "self_link": "",
             "source_ranges": [
               "0.0.0.0/0"
             ],
@@ -8715,12 +8741,14 @@
           },
           {
             "direction": "INGRESS",
+            "firewall_id": "",
             "group_id": "deny-only",
             "internet_exposed": false,
             "name": "deny-only",
             "network": "default",
             "network_exposure": [],
             "project_id": "proj-1",
+            "self_link": "",
             "source_ranges": [
               "0.0.0.0/0"
             ],
@@ -8729,12 +8757,14 @@
           },
           {
             "direction": "INGRESS",
+            "firewall_id": "",
             "group_id": "internal",
             "internet_exposed": false,
             "name": "internal",
             "network": "default",
             "network_exposure": [],
             "project_id": "proj-1",
+            "self_link": "",
             "source_ranges": [
               "10.0.0.0/8"
             ],
@@ -9972,6 +10002,7 @@
         "firewalls": [
           {
             "direction": "INGRESS",
+            "firewall_id": "8812345678901234567",
             "group_id": "allow-ssh",
             "internet_exposed": true,
             "name": "allow-ssh",
@@ -10009,6 +10040,7 @@
               }
             ],
             "project_id": "proj-1",
+            "self_link": "https://www.googleapis.com/compute/v1/projects/p/global/firewalls/allow-ssh",
             "source_ranges": [
               "0.0.0.0/0"
             ],
@@ -10021,6 +10053,7 @@
           },
           {
             "direction": "",
+            "firewall_id": "",
             "group_id": "ipv6-all",
             "internet_exposed": true,
             "name": "ipv6-all",
@@ -10034,6 +10067,7 @@
               }
             ],
             "project_id": "proj-1",
+            "self_link": "",
             "source_ranges": [
               "::/0"
             ],
@@ -10042,12 +10076,14 @@
           },
           {
             "direction": "EGRESS",
+            "firewall_id": "",
             "group_id": "egress",
             "internet_exposed": false,
             "name": "egress",
             "network": "default",
             "network_exposure": [],
             "project_id": "proj-1",
+            "self_link": "",
             "source_ranges": [
               "0.0.0.0/0"
             ],
@@ -10056,12 +10092,14 @@
           },
           {
             "direction": "INGRESS",
+            "firewall_id": "",
             "group_id": "deny-only",
             "internet_exposed": false,
             "name": "deny-only",
             "network": "default",
             "network_exposure": [],
             "project_id": "proj-1",
+            "self_link": "",
             "source_ranges": [
               "0.0.0.0/0"
             ],
@@ -10070,12 +10108,14 @@
           },
           {
             "direction": "INGRESS",
+            "firewall_id": "",
             "group_id": "internal",
             "internet_exposed": false,
             "name": "internal",
             "network": "default",
             "network_exposure": [],
             "project_id": "proj-1",
+            "self_link": "",
             "source_ranges": [
               "10.0.0.0/8"
             ],
@@ -12483,6 +12523,7 @@
         "firewalls": [
           {
             "direction": "INGRESS",
+            "firewall_id": "8812345678901234567",
             "group_id": "allow-ssh",
             "internet_exposed": true,
             "name": "allow-ssh",
@@ -12520,6 +12561,7 @@
               }
             ],
             "project_id": "adc-proj",
+            "self_link": "https://www.googleapis.com/compute/v1/projects/p/global/firewalls/allow-ssh",
             "source_ranges": [
               "0.0.0.0/0"
             ],
@@ -12532,6 +12574,7 @@
           },
           {
             "direction": "",
+            "firewall_id": "",
             "group_id": "ipv6-all",
             "internet_exposed": true,
             "name": "ipv6-all",
@@ -12545,6 +12588,7 @@
               }
             ],
             "project_id": "adc-proj",
+            "self_link": "",
             "source_ranges": [
               "::/0"
             ],
@@ -12553,12 +12597,14 @@
           },
           {
             "direction": "EGRESS",
+            "firewall_id": "",
             "group_id": "egress",
             "internet_exposed": false,
             "name": "egress",
             "network": "default",
             "network_exposure": [],
             "project_id": "adc-proj",
+            "self_link": "",
             "source_ranges": [
               "0.0.0.0/0"
             ],
@@ -12567,12 +12613,14 @@
           },
           {
             "direction": "INGRESS",
+            "firewall_id": "",
             "group_id": "deny-only",
             "internet_exposed": false,
             "name": "deny-only",
             "network": "default",
             "network_exposure": [],
             "project_id": "adc-proj",
+            "self_link": "",
             "source_ranges": [
               "0.0.0.0/0"
             ],
@@ -12581,12 +12629,14 @@
           },
           {
             "direction": "INGRESS",
+            "firewall_id": "",
             "group_id": "internal",
             "internet_exposed": false,
             "name": "internal",
             "network": "default",
             "network_exposure": [],
             "project_id": "adc-proj",
+            "self_link": "",
             "source_ranges": [
               "10.0.0.0/8"
             ],
@@ -13597,6 +13647,7 @@
         "firewalls": [
           {
             "direction": "INGRESS",
+            "firewall_id": "8812345678901234567",
             "group_id": "allow-ssh",
             "internet_exposed": true,
             "name": "allow-ssh",
@@ -13634,6 +13685,7 @@
               }
             ],
             "project_id": "env-proj",
+            "self_link": "https://www.googleapis.com/compute/v1/projects/p/global/firewalls/allow-ssh",
             "source_ranges": [
               "0.0.0.0/0"
             ],
@@ -13646,6 +13698,7 @@
           },
           {
             "direction": "",
+            "firewall_id": "",
             "group_id": "ipv6-all",
             "internet_exposed": true,
             "name": "ipv6-all",
@@ -13659,6 +13712,7 @@
               }
             ],
             "project_id": "env-proj",
+            "self_link": "",
             "source_ranges": [
               "::/0"
             ],
@@ -13667,12 +13721,14 @@
           },
           {
             "direction": "EGRESS",
+            "firewall_id": "",
             "group_id": "egress",
             "internet_exposed": false,
             "name": "egress",
             "network": "default",
             "network_exposure": [],
             "project_id": "env-proj",
+            "self_link": "",
             "source_ranges": [
               "0.0.0.0/0"
             ],
@@ -13681,12 +13737,14 @@
           },
           {
             "direction": "INGRESS",
+            "firewall_id": "",
             "group_id": "deny-only",
             "internet_exposed": false,
             "name": "deny-only",
             "network": "default",
             "network_exposure": [],
             "project_id": "env-proj",
+            "self_link": "",
             "source_ranges": [
               "0.0.0.0/0"
             ],
@@ -13695,12 +13753,14 @@
           },
           {
             "direction": "INGRESS",
+            "firewall_id": "",
             "group_id": "internal",
             "internet_exposed": false,
             "name": "internal",
             "network": "default",
             "network_exposure": [],
             "project_id": "env-proj",
+            "self_link": "",
             "source_ranges": [
               "10.0.0.0/8"
             ],
@@ -14753,6 +14813,7 @@
         "firewalls": [
           {
             "direction": "INGRESS",
+            "firewall_id": "8812345678901234567",
             "group_id": "allow-ssh",
             "internet_exposed": true,
             "name": "allow-ssh",
@@ -14790,6 +14851,7 @@
               }
             ],
             "project_id": "proj-1",
+            "self_link": "https://www.googleapis.com/compute/v1/projects/p/global/firewalls/allow-ssh",
             "source_ranges": [
               "0.0.0.0/0"
             ],
@@ -14802,6 +14864,7 @@
           },
           {
             "direction": "",
+            "firewall_id": "",
             "group_id": "ipv6-all",
             "internet_exposed": true,
             "name": "ipv6-all",
@@ -14815,6 +14878,7 @@
               }
             ],
             "project_id": "proj-1",
+            "self_link": "",
             "source_ranges": [
               "::/0"
             ],
@@ -14823,12 +14887,14 @@
           },
           {
             "direction": "EGRESS",
+            "firewall_id": "",
             "group_id": "egress",
             "internet_exposed": false,
             "name": "egress",
             "network": "default",
             "network_exposure": [],
             "project_id": "proj-1",
+            "self_link": "",
             "source_ranges": [
               "0.0.0.0/0"
             ],
@@ -14837,12 +14903,14 @@
           },
           {
             "direction": "INGRESS",
+            "firewall_id": "",
             "group_id": "deny-only",
             "internet_exposed": false,
             "name": "deny-only",
             "network": "default",
             "network_exposure": [],
             "project_id": "proj-1",
+            "self_link": "",
             "source_ranges": [
               "0.0.0.0/0"
             ],
@@ -14851,12 +14919,14 @@
           },
           {
             "direction": "INGRESS",
+            "firewall_id": "",
             "group_id": "internal",
             "internet_exposed": false,
             "name": "internal",
             "network": "default",
             "network_exposure": [],
             "project_id": "proj-1",
+            "self_link": "",
             "source_ranges": [
               "10.0.0.0/8"
             ],
@@ -15867,6 +15937,7 @@
         "firewalls": [
           {
             "direction": "INGRESS",
+            "firewall_id": "8812345678901234567",
             "group_id": "allow-ssh",
             "internet_exposed": true,
             "name": "allow-ssh",
@@ -15904,6 +15975,7 @@
               }
             ],
             "project_id": "proj-1",
+            "self_link": "https://www.googleapis.com/compute/v1/projects/p/global/firewalls/allow-ssh",
             "source_ranges": [
               "0.0.0.0/0"
             ],
@@ -15916,6 +15988,7 @@
           },
           {
             "direction": "",
+            "firewall_id": "",
             "group_id": "ipv6-all",
             "internet_exposed": true,
             "name": "ipv6-all",
@@ -15929,6 +16002,7 @@
               }
             ],
             "project_id": "proj-1",
+            "self_link": "",
             "source_ranges": [
               "::/0"
             ],
@@ -15937,12 +16011,14 @@
           },
           {
             "direction": "EGRESS",
+            "firewall_id": "",
             "group_id": "egress",
             "internet_exposed": false,
             "name": "egress",
             "network": "default",
             "network_exposure": [],
             "project_id": "proj-1",
+            "self_link": "",
             "source_ranges": [
               "0.0.0.0/0"
             ],
@@ -15951,12 +16027,14 @@
           },
           {
             "direction": "INGRESS",
+            "firewall_id": "",
             "group_id": "deny-only",
             "internet_exposed": false,
             "name": "deny-only",
             "network": "default",
             "network_exposure": [],
             "project_id": "proj-1",
+            "self_link": "",
             "source_ranges": [
               "0.0.0.0/0"
             ],
@@ -15965,12 +16043,14 @@
           },
           {
             "direction": "INGRESS",
+            "firewall_id": "",
             "group_id": "internal",
             "internet_exposed": false,
             "name": "internal",
             "network": "default",
             "network_exposure": [],
             "project_id": "proj-1",
+            "self_link": "",
             "source_ranges": [
               "10.0.0.0/8"
             ],
@@ -16925,6 +17005,7 @@
         "firewalls": [
           {
             "direction": "INGRESS",
+            "firewall_id": "8812345678901234567",
             "group_id": "allow-ssh",
             "internet_exposed": true,
             "name": "allow-ssh",
@@ -16962,6 +17043,7 @@
               }
             ],
             "project_id": "proj-1",
+            "self_link": "https://www.googleapis.com/compute/v1/projects/p/global/firewalls/allow-ssh",
             "source_ranges": [
               "0.0.0.0/0"
             ],
@@ -16974,6 +17056,7 @@
           },
           {
             "direction": "",
+            "firewall_id": "",
             "group_id": "ipv6-all",
             "internet_exposed": true,
             "name": "ipv6-all",
@@ -16987,6 +17070,7 @@
               }
             ],
             "project_id": "proj-1",
+            "self_link": "",
             "source_ranges": [
               "::/0"
             ],
@@ -16995,12 +17079,14 @@
           },
           {
             "direction": "EGRESS",
+            "firewall_id": "",
             "group_id": "egress",
             "internet_exposed": false,
             "name": "egress",
             "network": "default",
             "network_exposure": [],
             "project_id": "proj-1",
+            "self_link": "",
             "source_ranges": [
               "0.0.0.0/0"
             ],
@@ -17009,12 +17095,14 @@
           },
           {
             "direction": "INGRESS",
+            "firewall_id": "",
             "group_id": "deny-only",
             "internet_exposed": false,
             "name": "deny-only",
             "network": "default",
             "network_exposure": [],
             "project_id": "proj-1",
+            "self_link": "",
             "source_ranges": [
               "0.0.0.0/0"
             ],
@@ -17023,12 +17111,14 @@
           },
           {
             "direction": "INGRESS",
+            "firewall_id": "",
             "group_id": "internal",
             "internet_exposed": false,
             "name": "internal",
             "network": "default",
             "network_exposure": [],
             "project_id": "proj-1",
+            "self_link": "",
             "source_ranges": [
               "10.0.0.0/8"
             ],
@@ -18075,6 +18165,7 @@
         "firewalls": [
           {
             "direction": "INGRESS",
+            "firewall_id": "8812345678901234567",
             "group_id": "allow-ssh",
             "internet_exposed": true,
             "name": "allow-ssh",
@@ -18112,6 +18203,7 @@
               }
             ],
             "project_id": "proj-1",
+            "self_link": "https://www.googleapis.com/compute/v1/projects/p/global/firewalls/allow-ssh",
             "source_ranges": [
               "0.0.0.0/0"
             ],
@@ -18124,6 +18216,7 @@
           },
           {
             "direction": "",
+            "firewall_id": "",
             "group_id": "ipv6-all",
             "internet_exposed": true,
             "name": "ipv6-all",
@@ -18137,6 +18230,7 @@
               }
             ],
             "project_id": "proj-1",
+            "self_link": "",
             "source_ranges": [
               "::/0"
             ],
@@ -18145,12 +18239,14 @@
           },
           {
             "direction": "EGRESS",
+            "firewall_id": "",
             "group_id": "egress",
             "internet_exposed": false,
             "name": "egress",
             "network": "default",
             "network_exposure": [],
             "project_id": "proj-1",
+            "self_link": "",
             "source_ranges": [
               "0.0.0.0/0"
             ],
@@ -18159,12 +18255,14 @@
           },
           {
             "direction": "INGRESS",
+            "firewall_id": "",
             "group_id": "deny-only",
             "internet_exposed": false,
             "name": "deny-only",
             "network": "default",
             "network_exposure": [],
             "project_id": "proj-1",
+            "self_link": "",
             "source_ranges": [
               "0.0.0.0/0"
             ],
@@ -18173,12 +18271,14 @@
           },
           {
             "direction": "INGRESS",
+            "firewall_id": "",
             "group_id": "internal",
             "internet_exposed": false,
             "name": "internal",
             "network": "default",
             "network_exposure": [],
             "project_id": "proj-1",
+            "self_link": "",
             "source_ranges": [
               "10.0.0.0/8"
             ],

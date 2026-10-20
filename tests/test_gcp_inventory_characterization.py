@@ -179,6 +179,8 @@ def _firewalls() -> list[Any]:
     return [
         _Obj(
             name="allow-ssh",
+            id=8812345678901234567,
+            self_link=f"{CL}/global/firewalls/allow-ssh",
             network=net,
             direction="INGRESS",
             source_ranges=["0.0.0.0/0", ""],

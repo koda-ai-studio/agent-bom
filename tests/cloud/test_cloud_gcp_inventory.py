@@ -816,7 +816,7 @@ def test_graph_emits_inventory_nodes_and_overlays(monkeypatch: pytest.MonkeyPatc
 
     # Compute instance + firewall present.
     inst_id = "cloud_resource:gcp:compute:instance:123"
-    fw_id = "cloud_resource:gcp:compute:firewall:allow-ssh"
+    fw_id = "cloud_resource:gcp:compute:firewall:projects/proj-1/global/firewalls/allow-ssh"
     assert inst_id in nodes
     assert fw_id in nodes
     assert nodes[fw_id].attributes["internet_exposed"] is True
@@ -928,7 +928,7 @@ def test_graph_marks_instance_exposed_with_edge(monkeypatch: pytest.MonkeyPatch)
     from agent_bom.graph.types import RelationshipType
 
     inst_id = "cloud_resource:gcp:compute:instance:123"
-    fw_id = "cloud_resource:gcp:compute:firewall:allow-ssh"
+    fw_id = "cloud_resource:gcp:compute:firewall:projects/proj-1/global/firewalls/allow-ssh"
     assert graph.nodes[inst_id].attributes["internet_exposed"] is True
     exposed_edges = [e for e in graph.edges if e.relationship == RelationshipType.EXPOSED_TO and e.source == fw_id and e.target == inst_id]
     assert len(exposed_edges) == 1

@@ -63,6 +63,7 @@ def project_security_groups(
                     "fw_source_ranges": list(group.get("source_ranges", []) or []),
                     "account_id": account_id,
                     "environment": sg_env,
+                    **_native_scope_attributes(group),
                 },
                 data_sources=data_sources,
                 dimensions=NodeDimensions(cloud_provider=provider, surface="ec2", environment=sg_env),
@@ -70,6 +71,12 @@ def project_security_groups(
         )
         resource_ids.append(node_id)
     return sg_node_by_id
+
+
+def _native_scope_attributes(group: dict[str, Any]) -> dict[str, str]:
+    """Keep the provider-native scope evidence a project-scoped id was derived from."""
+    fields = {"project_id": group.get("project_id"), "self_link": group.get("self_link"), "native_id": group.get("firewall_id")}
+    return {key: cleaned for key, value in fields.items() if (cleaned := _clean_graph_part(value))}
 
 
 def project_instances(
