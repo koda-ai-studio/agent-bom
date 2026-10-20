@@ -66,7 +66,8 @@ changed, including when discovery fails.
 
 The existing `tool_risk_assessment` tool returns an `audit` block and
 `authentication_findings` alongside its live inventory and risk scores.
-Use the audit catalog to access it alongside `prompt_scan`:
+Use the audit catalog to access it alongside `inventory`, `skill_scan`,
+`skill_trust` and `prompt_scan`:
 
 ```bash
 agent-bom mcp server --profile audit
