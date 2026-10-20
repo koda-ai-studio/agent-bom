@@ -8,7 +8,7 @@ from functools import partial
 from typing import Any
 
 from agent_bom.api import compliance_hub_store, finding_cursor, findings_current
-from agent_bom.api.finding_kev_total import exact_kev_total
+from agent_bom.api.finding_kev_total import exact_kev_total, exact_scoped_total
 from agent_bom.api.finding_list_totals import fill_resume_total, resume_page_total
 from agent_bom.api.finding_merge import MergedScanBulkPage as MergedScanBulkPage
 from agent_bom.api.finding_merge import _merged_scan_bulk_page as _merged_scan_bulk_page
@@ -132,13 +132,15 @@ def _scoped_findings_page(
     use_merged: bool,
     scope_metadata: dict[str, Any],
 ) -> _FindingListPage:
-    """Scope filters run inside the store, batched and keyset-paged; ``total`` is approximate except for KEV-only reads."""
+    """Scope filters run inside the store, batched and keyset-paged; first pages count their exact ``total``."""
     scope_kwargs = {"scope": dict(query.scope_filters), "scope_metadata": scope_metadata}
     if use_merged:
         rows, next_cursor = _merged_page(query, scan_findings, bulk_list, **scope_kwargs)
     else:
         rows, _total, next_cursor = _bulk_page(query, bulk_list, include_total=False, **scope_kwargs)
     total = exact_kev_total(query, len(scan_findings), bulk_list, compliance_hub_store.get_compliance_hub_store())
+    if total is None:
+        total = exact_scoped_total(query, len(scan_findings), bulk_list)
     return _FindingListPage(rows=rows, total=total, total_approximate=total is None, next_cursor=next_cursor)
 
 
