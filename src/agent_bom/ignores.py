@@ -44,6 +44,8 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from agent_bom.core.suppression_score import mark_blast_radius_suppressed
+
 if TYPE_CHECKING:
     from agent_bom.models import BlastRadius
 
@@ -330,13 +332,9 @@ def apply_ignores(
                 br.package.version,
                 reason,
             )
-            br.suppressed = True
-            br.suppression_id = canonical_id("ignore", suppressed_by)
-            br.suppression_state = "accepted_risk"
-            br.suppression_reason = str(reason)
-            br.unsuppressed_risk_score = br.risk_score
-            br.risk_score = 0.0
-            br.transitive_risk_score = 0.0
+            mark_blast_radius_suppressed(
+                br, suppression_id=canonical_id("ignore", suppressed_by), state="accepted_risk", reason=str(reason)
+            )
             suppressed += 1
 
     return blast_radii, suppressed

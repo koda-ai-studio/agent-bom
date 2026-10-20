@@ -22,6 +22,7 @@ import logging
 from pathlib import Path
 from typing import Optional
 
+from agent_bom.core.suppression_score import risk_rank_key
 from agent_bom.evidence.scan_run import ScanOutcome, effective_scan_run
 from agent_bom.models import AIBOMReport, BlastRadius, Severity
 from agent_bom.output.finding_views import (
@@ -56,7 +57,7 @@ def _cap_findings(findings: list, limit: int) -> tuple[list, int]:
     """
     if limit < 0 or len(findings) <= limit:
         return findings, 0
-    ranked = sorted(findings, key=lambda f: getattr(f, "risk_score", 0.0) or 0.0, reverse=True)
+    ranked = sorted(findings, key=risk_rank_key)
     return ranked[:limit], len(findings) - limit
 
 

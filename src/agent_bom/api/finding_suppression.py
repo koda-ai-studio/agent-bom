@@ -46,17 +46,18 @@ def project_current_suppressions(rows: list[dict[str, Any]], tenant_id: str) -> 
             or (row.get("risk_score") == 0 and row.get("vex_status") in {"not_affected", "fixed"})
         )
         if historical:
-            # A missing original score is unknown, never a clean zero.
-            row["risk_score"] = row.get("unsuppressed_risk_score") or evidence.get("unsuppressed_risk_score")
+            # A score zeroed under the old contract is restored; a missing original is unknown, never a clean zero.
+            row["risk_score"] = (
+                row.get("unsuppressed_risk_score") or evidence.get("unsuppressed_risk_score") or row.get("risk_score") or None
+            )
         if match is not None or historical:
             row["suppressed"] = match is not None
             row["actionable"] = match is None
             row["suppression_id"] = match.exception_id if match else None
             row["suppression_reason"] = match.reason if match else None
             row["suppression_state"] = "approved" if match else None
-            if match:
-                row["unsuppressed_risk_score"] = row.get("risk_score")
-                row["risk_score"] = 0.0
+            # Suppression keeps the assessed score (agent_bom.core.suppression_score).
+            row["unsuppressed_risk_score"] = row.get("risk_score") if match else None
         if "vex_suppressed" in row:
             row["vex_suppressed"] = False
         projected.append(row)

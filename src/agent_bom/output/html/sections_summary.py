@@ -97,6 +97,7 @@ def _headline_row(finding: "Finding") -> dict[str, object]:
         or ([finding.asset.name] if finding.asset.asset_type == "agent" and finding.asset.name else []),
         "owner": finding.owner,
         "sla_due_at": sla.get("sla_due_at"),
+        "suppressed": bool(finding.suppressed),
     }
 
 

@@ -133,6 +133,8 @@ def _rollup_from_blast_radius(blast_radius: list[dict[str, Any]]) -> dict[str, A
         risk = b.get("risk_score")
         if risk is None:
             risk = (b.get("blast_score") or 0) / 10
+        if b.get("suppressed") is True:
+            continue  # evidence, not an open top risk; its real score stays on the row
         top_risks.append(
             {
                 "vulnerability_id": vid,

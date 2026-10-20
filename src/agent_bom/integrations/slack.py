@@ -8,6 +8,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from agent_bom.core.suppression_score import risk_rank_key
 from agent_bom.http_client import create_client, request_with_retry
 from agent_bom.security import validate_url
 
@@ -172,7 +173,7 @@ def build_summary_message(findings: list[dict]) -> dict:
     ]
 
     # Top 3 highest risk findings
-    top = sorted(findings, key=lambda f: f.get("risk_score") or 0, reverse=True)[:3]
+    top = sorted(findings, key=risk_rank_key)[:3]
     if top:
         top_text = "\n".join(
             f"- `{f.get('package', '?')}` — {f.get('vulnerability_id', '?')} ({_risk_label(f.get('risk_score'))})" for f in top

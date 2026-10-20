@@ -8,6 +8,7 @@ from rich.console import Console
 from rich.panel import Panel
 
 from agent_bom.constants import is_credential_key
+from agent_bom.core.suppression_score import risk_rank_key
 
 
 def render_posture_summary(agents: list[Any], blast_radii: list[Any]) -> None:
@@ -32,7 +33,7 @@ def render_posture_summary(agents: list[Any], blast_radii: list[Any]) -> None:
     credential_names = sorted({cred for br in blast_radii for cred in (br.exposed_credentials or [])})
     tool_names = sorted({tool.name for br in blast_radii for tool in (br.exposed_tools or []) if getattr(tool, "name", None)})
     fixable = sum(1 for br in blast_radii if getattr(br.vulnerability, "fixed_version", None))
-    top_blast_radii = sorted(blast_radii, key=lambda br: br.risk_score or 0.0, reverse=True)
+    top_blast_radii = sorted(blast_radii, key=risk_rank_key)
     top_str = ""
     if top_blast_radii:
         top = top_blast_radii[0]

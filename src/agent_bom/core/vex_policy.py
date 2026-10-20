@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from agent_bom.core.suppression_score import mark_blast_radius_suppressed
+
 VEX_SOURCE_OPERATOR = "operator"
 VEX_SOURCE_DISCOVERED = "discovered"
 _SUPPRESSING_VEX_STATUSES = frozenset({"not_affected", "fixed"})
@@ -61,11 +63,5 @@ def apply_vex_suppression(br) -> bool:
     """Overlay operator-VEX suppression on a blast radius, preserving evidence."""
     if br.suppressed or not is_vex_suppressed(br.vulnerability):
         return False
-    br.suppressed = True
-    br.suppression_id = None
-    br.suppression_state = "vex"
-    br.suppression_reason = vex_suppression_reason(br.vulnerability)
-    br.unsuppressed_risk_score = br.risk_score
-    br.risk_score = 0.0
-    br.transitive_risk_score = 0.0
+    mark_blast_radius_suppressed(br, suppression_id=None, state="vex", reason=vex_suppression_reason(br.vulnerability))
     return True

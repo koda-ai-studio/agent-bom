@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from agent_bom.core.suppression_score import risk_rank_key
 from agent_bom.output.finding_views import (
     package_name,
     severity_value,
@@ -109,7 +110,7 @@ def _chart_data(findings: list["Finding"]) -> str:
             sev_counts[sev] += 1
 
     # Unassessed findings have no score to chart; they are not drawn as zero bars.
-    top10 = sorted((f for f in findings if f.risk_score is not None), key=lambda f: float(f.risk_score or 0.0), reverse=True)[:10]
+    top10 = sorted((f for f in findings if f.risk_score is not None and not f.suppressed), key=risk_rank_key)[:10]
     blast_labels = [f"{(finding.cve_id or finding.title)[:16]}/{package_name(finding)[:14]}" for finding in top10]
     blast_scores = [round(float(finding.risk_score or 0.0), 2) for finding in top10]
     blast_colors = [_SEV_COLOR.get(severity_value(finding), "#6b7280") for finding in top10]

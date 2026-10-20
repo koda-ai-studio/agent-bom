@@ -8,6 +8,7 @@ from agent_bom.core.risk_display import risk_label
 from agent_bom.core.severity import (
     severity_policy_rank,
 )
+from agent_bom.core.suppression_score import risk_rank_key
 from agent_bom.finding import FindingType
 from agent_bom.models import AIBOMReport, BlastRadius
 from agent_bom.output.exposure_path import exposure_path_brief_for_finding
@@ -137,7 +138,7 @@ def _blast_table(
     findings = findings if findings is not None else cve_findings(report, blast_radii)
     if not findings:
         return ""
-    sorted_findings = sorted(findings, key=lambda finding: float(finding.risk_score or 0.0), reverse=True)
+    sorted_findings = sorted(findings, key=risk_rank_key)
     rows = []
     for i, finding in enumerate(sorted_findings, 1):
         color = _SEV_COLOR.get(severity_value(finding), "#6b7280")
@@ -183,11 +184,7 @@ def _exposure_path_section(
     *,
     findings: list["Finding"] | None = None,
 ) -> str:
-    findings = (
-        sorted(findings, key=lambda finding: float(finding.risk_score or 0.0), reverse=True)[:10]
-        if findings is not None
-        else ranked_cve_findings(report, blast_radii)
-    )
+    findings = sorted(findings, key=risk_rank_key)[:10] if findings is not None else ranked_cve_findings(report, blast_radii)
     if not findings:
         return ""
     cards = []
@@ -218,8 +215,7 @@ def _remediation_list(findings: list["Finding"]) -> str:
         return '<p style="color:#4ade80">&#x2705; Nothing to remediate.</p>'
     with_fix = sorted(
         [finding for finding in findings if finding.fixed_version],
-        key=lambda finding: float(finding.risk_score or 0.0),
-        reverse=True,
+        key=risk_rank_key,
     )
     no_fix = [finding for finding in findings if not finding.fixed_version]
     items = []

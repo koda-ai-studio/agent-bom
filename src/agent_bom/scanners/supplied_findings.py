@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from agent_bom.core.suppression_score import risk_rank_key
 from agent_bom.models import Agent, BlastRadius
 
 
@@ -29,6 +30,4 @@ def build_supplied_findings(agents: list[Agent]) -> list[BlastRadius]:
                         finding.affected_servers.append(server)
     for finding in observations.values():
         finding.calculate_risk_score()
-    return sorted(
-        observations.values(), key=lambda finding: (-(finding.risk_score or 0.0), finding.package.stable_id, finding.vulnerability.id)
-    )
+    return sorted(observations.values(), key=lambda finding: (risk_rank_key(finding), finding.package.stable_id, finding.vulnerability.id))

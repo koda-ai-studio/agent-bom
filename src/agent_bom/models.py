@@ -140,14 +140,11 @@ class BlastRadius:
         All weights and thresholds are configurable via ``AGENT_BOM_RISK_*``
         environment variables.  See :mod:`agent_bom.config` for defaults and
         documentation.
+
+        A suppressed finding is scored like any other: suppression is a
+        decision recorded beside the score (``agent_bom.core.suppression_score``),
+        never a score of 0.
         """
-        from agent_bom.vex import is_vex_suppressed
-
-        if self.suppressed or is_vex_suppressed(self.vulnerability):
-            self.risk_score = 0.0
-            self.transitive_risk_score = 0.0
-            return self.risk_score
-
         from agent_bom.config import (
             EPSS_CRITICAL_THRESHOLD,
             RISK_AGENT_CAP,

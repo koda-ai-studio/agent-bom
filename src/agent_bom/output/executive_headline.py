@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from agent_bom.core.severity import severity_band_rank
+from agent_bom.core.suppression_score import is_suppressed
 
 EXECUTIVE_HEADLINE_BOUNDARY = (
     "This summary describes scan evidence; it is not a compliance certification or audit opinion. "
@@ -94,9 +95,10 @@ def build_executive_headline(rows: Iterable[Mapping[str, object]], *, limit: int
 
     Each row may carry ``id``, ``title``, ``severity``, ``risk_score``,
     ``affected_agents``, ``owner`` and ``sla_due_at``; anything missing is
-    reported as missing, never filled in.
+    reported as missing, never filled in. Suppressed rows are left out.
     """
-    risks = [_risk_from_row(row) for row in rows]
+    # A suppressed finding keeps its score as evidence but is no open risk.
+    risks = [_risk_from_row(row) for row in rows if not is_suppressed(row)]
     if not risks:
         return ExecutiveHeadline(
             summary=(

@@ -25,6 +25,7 @@ from agent_bom.cis_controls import tag_blast_radius as tag_cis_controls
 from agent_bom.cmmc import tag_blast_radius as tag_cmmc
 from agent_bom.compliance_utils import apply_effective_blast_radius_tags
 from agent_bom.constants import AI_PACKAGES as _AI_FRAMEWORK_PACKAGES
+from agent_bom.core.suppression_score import risk_rank_key
 from agent_bom.eu_ai_act import tag_blast_radius as tag_eu_ai_act
 from agent_bom.evidence.scan_run import ScanOutcome, effective_scan_run
 from agent_bom.fedramp import tag_blast_radius as tag_fedramp
@@ -793,7 +794,7 @@ async def scan_agents(
             blast_radii.append(br)
 
     # Sort by risk score descending
-    blast_radii.sort(key=lambda br: br.risk_score or 0.0, reverse=True)
+    blast_radii.sort(key=risk_rank_key)
 
     _print_vulnerability_summary(total_vulns, len(blast_radii), agents=agents)
 
@@ -881,7 +882,7 @@ async def scan_agents_with_enrichment(
             apply_effective_blast_radius_tags(br)
 
         # Re-sort by updated risk scores
-        blast_radii.sort(key=lambda br: br.risk_score or 0.0, reverse=True)
+        blast_radii.sort(key=risk_rank_key)
 
     return blast_radii
 

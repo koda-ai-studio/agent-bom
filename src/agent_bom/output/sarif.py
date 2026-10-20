@@ -14,6 +14,7 @@ from agent_bom.asset_provenance import (
     sanitize_discovery_provenance,
 )
 from agent_bom.compliance_coverage import COMPLIANCE_TAG_FIELDS
+from agent_bom.core.suppression_score import risk_rank_key
 from agent_bom.evidence import EvidenceTier, redact_for_persistence
 from agent_bom.evidence.scan_run import ScanOutcome, ScanRun, effective_scan_run
 from agent_bom.exploitability import exploitability_tags, parse_cvss_vector_signals
@@ -680,12 +681,11 @@ def _add_cve_results(
         assessment.finding_id: assessment for assessment in getattr(report, "ai_finding_assessments", []) or []
     }
 
-    # Stable-sort the CVE stream so exposure_path.rank never flips on score ties:
-    # primary key is descending unified risk, tie-broken by finding id. This keeps
-    # rank (and therefore SARIF/JSON bytes) deterministic across identical runs.
+    # Stable-sort so exposure_path.rank never flips on ties: open findings by descending risk, then
+    # suppressed ones, tie-broken by finding id, keeping SARIF/JSON bytes deterministic across runs.
     ordered_cve_findings = sorted(
         apply_workload_runtime_evidence_for_export(cve_findings(report, blast_radii)),
-        key=lambda finding: (-float(finding.risk_score or 0.0), finding.cve_id or finding.id or ""),
+        key=lambda finding: (risk_rank_key(finding), finding.cve_id or finding.id or ""),
     )
     source_index = package_source_index(report)
     for rank, finding in enumerate(ordered_cve_findings, 1):

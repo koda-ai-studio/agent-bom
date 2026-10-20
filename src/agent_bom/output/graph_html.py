@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any
 
+from agent_bom.core.suppression_score import risk_rank_key
 from agent_bom.output.finding_views import package_graph_node_id as _package_node_id
 from agent_bom.output.graph_html_template_body import _GRAPH_HTML_TEMPLATE_BODY
 from agent_bom.output.graph_html_template_head import _GRAPH_HTML_TEMPLATE_HEAD
@@ -22,7 +23,7 @@ def _graph_priority_summary(findings: list["Finding"], *, collapse_cves: bool = 
     from agent_bom.output.finding_views import package_ecosystem, package_name, package_version, severity_value
 
     priorities: list[dict] = []
-    for finding in sorted(findings, key=lambda item: float(item.risk_score or 0.0), reverse=True)[:8]:
+    for finding in sorted(findings, key=risk_rank_key)[:8]:
         is_policy = not finding.cve_id
         vuln_id = finding.cve_id or finding.title
         node_id = f"finding:{finding.id}" if is_policy else f"cve:{vuln_id}"
