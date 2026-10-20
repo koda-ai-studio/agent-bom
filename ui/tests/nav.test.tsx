@@ -462,7 +462,8 @@ describe('Nav', () => {
     const header = document.querySelector('header')!
     const button = within(header).getByRole('button', { name: 'Search pages' })
     expect(button).toHaveClass('lg:hidden')
-    expect(button).toHaveClass('min-h-11')
+    // A pixel touch target stays 44px when the reader enlarges text, so the phone header still fits.
+    expect(button).toHaveClass('min-h-[44px]', 'min-w-[44px]')
     fireEvent.click(button)
     expect(screen.getByRole('dialog', { name: /command palette/i })).toBeInTheDocument()
   })

@@ -869,7 +869,7 @@ export function Nav() {
             onClick={() => setSearchOpen(true)}
             aria-label="Search pages"
             title="Search pages (⌘K)"
-            className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg text-ink-secondary transition-colors hover:bg-surface-elevated hover:text-foreground lg:hidden"
+            className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-lg text-ink-secondary transition-colors hover:bg-surface-elevated hover:text-foreground lg:hidden"
           >
             <Search className="h-5 w-5" />
           </button>
@@ -879,7 +879,7 @@ export function Nav() {
           <button
             ref={mobileMenuButtonRef}
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="shrink-0 rounded-lg p-2 text-ink-secondary transition-colors hover:bg-surface-elevated hover:text-foreground lg:hidden"
+            className="shrink-0 rounded-lg p-[8px] text-ink-secondary transition-colors hover:bg-surface-elevated hover:text-foreground lg:hidden"
             aria-label={mobileOpen ? "Close navigation menu" : "Open navigation menu"}
             aria-expanded={mobileOpen}
             aria-controls="mobile-navigation-dialog"
@@ -994,10 +994,10 @@ function ApiStatus({ collapsed }: { collapsed: boolean }) {
 
   const statusLabel = status === "online" ? `Control plane · v${version}` : status === "offline" ? "Control plane offline" : "Connecting…";
   return (
-    <details className="relative min-w-0 text-xs text-ink-secondary">
-      <summary aria-label={statusLabel} title={statusLabel} className="flex min-w-0 cursor-pointer list-none items-center gap-2 rounded-lg px-2 py-1.5 marker:hidden [&::-webkit-details-marker]:hidden focus-visible:outline-2 focus-visible:outline-emerald-500">
+    <details className="relative shrink-0 text-xs text-ink-secondary sm:min-w-0 sm:shrink">
+      <summary aria-label={statusLabel} title={statusLabel} className="flex min-w-0 cursor-pointer list-none items-center gap-2 rounded-lg px-1 py-1.5 sm:px-2 marker:hidden [&::-webkit-details-marker]:hidden focus-visible:outline-2 focus-visible:outline-emerald-500">
         <span className={`w-1.5 h-1.5 rounded-full ${dotColor} shrink-0`} aria-hidden="true" />
-        <span className="truncate" aria-hidden="true">{statusLabel}</span>
+        <span className="hidden truncate sm:block" aria-hidden="true">{statusLabel}</span>
       </summary>
       <p className="fixed inset-x-3 z-10 mt-2 w-auto max-w-[calc(100vw-2rem)] rounded-lg border border-outline bg-surface p-3 shadow-lg [overflow-wrap:anywhere] sm:absolute sm:left-auto sm:right-0 sm:top-full sm:w-max">{statusLabel}</p>
     </details>

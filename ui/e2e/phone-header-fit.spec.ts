@@ -21,6 +21,7 @@ for (const [name, url, text] of labels) {
       page.getByRole("button", { name: /Switch to .* theme/ }),
       page.locator("header summary[aria-label^='Account menu:']"),
       page.getByRole("button", { name: "Open navigation menu" }),
+      page.locator("header summary[aria-label^='Control plane']"),
     ];
     for (const control of controls) {
       const bounds = await control.boundingBox();
@@ -28,6 +29,8 @@ for (const [name, url, text] of labels) {
       expect(bounds!.x).toBeGreaterThanOrEqual(0);
       expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(390);
     }
+    // Phones show the status dot; the full label stays in the summary's accessible name and its popover.
+    await expect(page.locator("header summary[aria-label^='Control plane'] span:not([class*='rounded-full'])")).toBeHidden();
     const mark = await page.getByRole("link", { name: "agent-bom", exact: true }).boundingBox();
     expect(mark!.width).toBeGreaterThanOrEqual(36);
     await page.getByRole("banner").screenshot({ path: test.info().outputPath(`header-${name.replace(" ", "-")}-390.png`) });
