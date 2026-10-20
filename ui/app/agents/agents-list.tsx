@@ -8,8 +8,10 @@ import { PageEmptyState, PageErrorState, PageLoadingState } from "@/components/s
 import { useDeploymentContext } from "@/hooks/use-deployment-context";
 import { Agent, agentClassCounts, api } from "@/lib/api";
 import { isDeploymentSurfaceAvailable } from "@/lib/deployment-context";
+import { agentDisplayName, entityIdHint } from "@/lib/display-name";
 import { FIRST_SCAN_ACTIONS } from "@/lib/empty-state-actions";
-import { AlertCircle, GitBranch, Key, Network, Package, Search, Server, Shield, X } from "lucide-react";
+import { AlertCircle, GitBranch, Network, Search, Shield, X } from "lucide-react";
+import { ASSET_KINDS } from "@/lib/asset-icon-registry";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AgentDetailDrawer } from "./agent-detail-drawer";
@@ -62,10 +64,10 @@ export function AgentsList() {
       header: "Name",
       cell: (agent) => (
         <div className="min-w-0">
-          <div className="truncate font-medium text-[color:var(--foreground)]">{agent.name}</div>
-          {agent.source ? (
-            <div className="truncate text-xs text-[color:var(--text-tertiary)]">{agent.source}</div>
-          ) : null}
+          <div className="truncate font-medium text-[color:var(--foreground)]">{agentDisplayName(agent.name, agent.enrollment_name)}</div>
+          <div className="truncate text-xs text-[color:var(--text-tertiary)]">
+            {[entityIdHint(agent.name, agentDisplayName(agent.name, agent.enrollment_name)), agent.source].filter(Boolean).join(" · ")}
+          </div>
         </div>
       ),
     },
@@ -116,7 +118,7 @@ export function AgentsList() {
       key: "name",
       header: "Name",
       cell: (agent) => (
-        <span className="font-medium text-[color:var(--text-secondary)]">{agent.name}</span>
+        <span className="font-medium text-[color:var(--text-secondary)]">{agentDisplayName(agent.name, agent.enrollment_name)}</span>
       ),
     },
     {
@@ -206,19 +208,21 @@ export function AgentsList() {
           data-testid="agents-kpis"
           items={[
             {
-              label: scannedEstate ? "Scanned agents" : "On this host",
+              label: scannedEstate ? "Scanned agents" : "Agents on this host",
               value: agents.length,
-              icon: Shield,
-              hint: `${configured.length} configured${installedOnly.length > 0 ? ` · ${installedOnly.length} not` : ""}`,
+              icon: ASSET_KINDS.agent.icon,
+              hint: !scannedEstate && estateAgents !== null
+                ? `${estateAgents.toLocaleString()} in the estate`
+                : `${configured.length} configured${installedOnly.length > 0 ? ` · ${installedOnly.length} not` : ""}`,
             },
-            { label: "MCP servers", value: totalServers, icon: Server, hint: `${remoteServers} remote` },
-            { label: "Packages", value: totalPackages, icon: Package, hint: ecosystemHint },
+            { label: "MCP servers", value: totalServers, icon: ASSET_KINDS.mcp_server.icon, hint: `${remoteServers} remote` },
+            { label: "Packages", value: totalPackages, icon: ASSET_KINDS.package.icon, hint: ecosystemHint },
             {
-              label: "Credentials",
+              label: "Unique credentials",
               value: totalCredentials,
-              icon: Key,
+              icon: ASSET_KINDS.credential.icon,
               accent: "warn",
-              hint: `${serversWithCredentials} servers`,
+              hint: `across ${serversWithCredentials} servers`,
             },
             {
               label: "Blocked / risky",
@@ -280,7 +284,7 @@ export function AgentsList() {
           <PageEmptyState
             title="No agents discovered yet"
             detail="Run discovery against this workspace or load a demo scan to populate configured agents, MCP servers, packages, and credentials."
-            icon={Server}
+            icon={ASSET_KINDS.mcp_server.icon}
             suggestions={[
               "Start with the offline demo if you need a reproducible sample.",
               "Run a local scan from the same environment where MCP clients are configured.",

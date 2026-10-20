@@ -10,17 +10,18 @@ import {
   type IssueType,
   type SeverityBand,
 } from "@/lib/finding-issue-type";
-import { Bug, Fingerprint, Flame, KeyRound, ShieldCheck, SlidersHorizontal, UserRound } from "lucide-react";
+import { CircleHelp, Flame, ShieldCheck, UserRound } from "lucide-react";
+import { ASSET_KINDS } from "@/lib/asset-icon-registry";
 import { type ElementType } from "react";
 import { ReportEvidenceLink, SECTION_TITLE_CLASS } from "./shared";
 
 export const ISSUE_TYPE_GLYPH: Record<IssueType, ElementType> = {
-  vulnerability: Bug,
-  misconfiguration: SlidersHorizontal,
-  secret: KeyRound,
+  vulnerability: ASSET_KINDS.vulnerability.icon,
+  misconfiguration: ASSET_KINDS.misconfiguration.icon,
+  secret: ASSET_KINDS.credential.icon,
   pii: UserRound,
-  identity: Fingerprint,
-  unclassified: Bug,
+  identity: ASSET_KINDS.service_principal.icon,
+  unclassified: CircleHelp,
 };
 
 export const ISSUE_TYPE_BAR: Record<IssueType, string> = {
@@ -59,12 +60,19 @@ export function CategoryChip({
   );
 }
 
+/** KEV is counted in issues, like the tiles; occurrences are named, never a bare second total. */
+export function kevChipTitle(issues: number, occurrences: number | null | undefined): string {
+  const issueText = `${issues.toLocaleString()} known-exploited issue${issues === 1 ? "" : "s"} (CISA KEV)`;
+  return occurrences != null && occurrences !== issues ? `${issueText} · ${occurrences.toLocaleString()} occurrences` : issueText;
+}
+
 export function SeverityIssueStrip({
   localReport = false,
   summaryReady,
   critical,
   high,
   kev,
+  kevOccurrences = null,
   credentials,
   complianceScore,
   severity,
@@ -76,6 +84,7 @@ export function SeverityIssueStrip({
   critical: number;
   high: number;
   kev: number | null;
+  kevOccurrences?: number | null | undefined;
   credentials: number | null;
   complianceScore?: string | undefined;
   severity: SeverityCounts;
@@ -141,14 +150,14 @@ export function SeverityIssueStrip({
                 icon={Flame}
                 label="KEV"
                 value={kev}
-                title="Known-exploited vulnerabilities (CISA KEV)"
+                title={kevChipTitle(kev, kevOccurrences)}
               />
             ) : null}
             {summaryReady && credentials != null ? (
               <CategoryChip
                 localReport={localReport}
                 href={findingsHref({ scope: "all", issue: "secret" })}
-                icon={KeyRound}
+                icon={ASSET_KINDS.credential.icon}
                 label="Secrets"
                 value={credentials}
                 title="Findings that expose credentials or secrets"

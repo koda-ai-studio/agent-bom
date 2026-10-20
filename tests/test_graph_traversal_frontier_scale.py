@@ -58,7 +58,11 @@ _PROGRESS_OPS = 1_000
 # rowid changed which of several equal-length routes is reported. Reachability,
 # path counts and path validity were unchanged and are asserted directly. See
 # TestFrontierQueryIsAnswerIdentical.test_reference_matches_pre_fix_release.
+# It covers the answer only: ``impact_of``'s ``affected_nodes_detail`` (a
+# presentation list derived from ``affected_nodes``) is pinned separately.
 ANSWER_GOLDEN_DIGEST = "6826d89b4c2ac7f86055a66185f4d18eed563b0aebfb1a22c28b4477e1a932c8"
+# SHA-256 of the same matrix with each impact case's ``affected_nodes_detail``.
+FULL_PAYLOAD_GOLDEN_DIGEST = "44106b6b15d9c34298c1c55d259c60b8348e47a4a2a426c71ed0dcba575a73f2"
 
 _DYNAMIC = (RelationshipType.INVOKED, RelationshipType.ACCESSED, RelationshipType.DELEGATED_TO)
 _STATIC = (RelationshipType.USES, RelationshipType.DEPENDS_ON, RelationshipType.CAN_ACCESS)
@@ -487,7 +491,16 @@ class TestFrontierQueryIsAnswerIdentical:
             cases[f"impact|{tenant}"] = tangled_store.impact_of(tenant_id=tenant, scan_id="main", node_id="v5", max_depth=4)
 
         assert len(cases) == 32
-        payload = json.dumps(cases, indent=0, sort_keys=True).encode()
+        full_payload = json.dumps(cases, indent=0, sort_keys=True).encode()
+        assert hashlib.sha256(full_payload).hexdigest() == FULL_PAYLOAD_GOLDEN_DIGEST, (
+            "attack-path or impact output diverged from the pinned payload; the answer digest below says which"
+        )
+        details: dict[str, list[dict[str, Any]]] = {}
+        answer = json.loads(full_payload)
+        for tenant in ("default", "tenant-b"):
+            impact = answer[f"impact|{tenant}"]
+            details[tenant] = impact.pop("affected_nodes_detail")
+        payload = json.dumps(answer, indent=0, sort_keys=True).encode()
         assert hashlib.sha256(payload).hexdigest() == ANSWER_GOLDEN_DIGEST, (
             "attack-path output diverged from the pinned answer. Before re-blessing, check the "
             "invariants below: if they still hold, only the representative route changed; if they "
@@ -502,6 +515,11 @@ class TestFrontierQueryIsAnswerIdentical:
         for edge in _tangled_graph(scan_id="main", tenant_id="default", nodes=120, edges=600, seed=11).edges:
             real_edges.add((edge.source, edge.target))
             real_edges.add((edge.target, edge.source))
+        for tenant, detail in details.items():
+            impact = cases[f"impact|{tenant}"]
+            assert [item["id"] for item in sorted(detail, key=lambda item: item["id"])] == impact["affected_nodes"]
+            assert all(1 <= item["depth"] <= impact["max_depth_reached"] for item in detail)
+            assert [item["depth"] for item in detail] == sorted(item["depth"] for item in detail), "nearest first"
         walked = cases["default|v0|10"]["paths"]
         assert len(walked) == 118
         assert cases["default|v0|10"]["reachable"] == sorted({node for path in walked for node in path[1:]})

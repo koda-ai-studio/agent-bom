@@ -101,8 +101,21 @@ PROFILES = {
         _COMMON_RESOURCES | {"schema://inventory-v1", "bestpractices://mcp-hardening"},
     ),
     "audit": ToolProfile(
-        "Audit MCP descriptors and permission scope; review compliance, policy and audit integrity.",
-        frozenset({"scan", "compliance", "policy_check", "audit_integrity", "tool_risk_assessment", "prompt_scan"}),
+        "Audit MCP descriptors, permission scope, agent inventory and skill or instruction files; "
+        "review compliance, policy and audit integrity.",
+        frozenset(
+            {
+                "scan",
+                "compliance",
+                "policy_check",
+                "audit_integrity",
+                "tool_risk_assessment",
+                "prompt_scan",
+                "inventory",
+                "skill_scan",
+                "skill_trust",
+            }
+        ),
         frozenset({"compliance-report"}),
         _COMMON_RESOURCES | {"policy://template", "compliance://framework-controls"},
     ),

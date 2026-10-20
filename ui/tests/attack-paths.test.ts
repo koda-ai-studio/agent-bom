@@ -287,10 +287,10 @@ describe("attack path helpers", () => {
     ]);
 
     expect(toAttackCardNodes(path, nodes)).toEqual([
-      { type: "cve", label: "CVE-2026-0002", severity: "critical" },
-      { type: "tool", label: "Run Shell", severity: "high" },
-      { type: "agent", label: "Claude Desktop", severity: "high" },
-      { type: "data", label: "Customers Pii", severity: "critical" },
+      { type: "cve", label: "CVE-2026-0002", severity: "critical", entityType: "vulnerability", attributes: expect.any(Object) },
+      { type: "tool", label: "Run Shell", severity: "high", entityType: "tool", attributes: expect.any(Object) },
+      { type: "agent", label: "Claude Desktop", severity: "high", entityType: "agent", attributes: expect.any(Object) },
+      { type: "data", label: "Customers Pii", severity: "critical", entityType: "data_store", attributes: {} },
     ]);
   });
 

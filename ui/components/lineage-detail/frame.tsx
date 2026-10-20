@@ -5,7 +5,8 @@ import { ChevronLeft, ChevronRight, X, FolderGit2 } from "lucide-react";
 import { Drawer } from "@/components/drawer";
 import { AgentSourceMark } from "@/components/agent-source-mark";
 import { entitySource } from "@/lib/agent-source";
-import { containerKindLabel, nodeGlyph } from "@/lib/graph-container-kind";
+import { nodeGlyph } from "@/lib/graph-container-kind";
+import { assetSubtypeLabel } from "@/lib/asset-icon-registry";
 import { graphRepositoryContext } from "@/lib/graph-repository-context";
 import { NODE_LABELS } from "@/lib/entity-labels";
 import { useDrawerWidth } from "@/lib/use-drawer-width";
@@ -83,9 +84,9 @@ function useFrameState(variant: LineageDetailProps["variant"]) {
 
 function DetailHeader({ data, onClose, isDocked, setDockedCollapsed }: Pick<FrameProps, "data" | "onClose"> & Pick<ReturnType<typeof useFrameState>, "isDocked" | "setDockedCollapsed">) {
   const repository = graphRepositoryContext(data);
-  const Icon = repository ? FolderGit2 : nodeGlyph(data.nodeType, data.attributes);
+  const Icon = repository ? FolderGit2 : nodeGlyph(data.nodeType, data.attributes, data.entityType, data.dimensions?.cloud_provider);
   const brand = entitySource(data);
-  const typeLabel = repository ? "Repository" : data.nodeType === "server" ? "MCP Server" : data.nodeType === "sharedServer" ? "Shared MCP Server" : containerKindLabel(data.nodeType, data.attributes) ?? NODE_LABELS[data.nodeType];
+  const typeLabel = repository ? "Repository" : assetSubtypeLabel({ entityType: data.entityType, nodeType: data.nodeType, attributes: data.attributes, provider: data.dimensions?.cloud_provider }) ?? (data.nodeType === "server" ? "MCP Server" : data.nodeType === "sharedServer" ? "Shared MCP Server" : NODE_LABELS[data.nodeType]);
   return (<>
       {/* Header — always visible */}
       <div className="flex shrink-0 items-start justify-between gap-3 px-4 pt-4 pb-3">
@@ -122,9 +123,9 @@ function DetailHeader({ data, onClose, isDocked, setDockedCollapsed }: Pick<Fram
 
 function MobileDetailFrame({ data, onClose, footerSlot, tabBar, activeId, activeContent }: FrameProps) {
   const repository = graphRepositoryContext(data);
-  const Icon = repository ? FolderGit2 : nodeGlyph(data.nodeType, data.attributes);
+  const Icon = repository ? FolderGit2 : nodeGlyph(data.nodeType, data.attributes, data.entityType, data.dimensions?.cloud_provider);
   const brand = entitySource(data);
-  const typeLabel = repository ? "Repository" : data.nodeType === "server" ? "MCP Server" : data.nodeType === "sharedServer" ? "Shared MCP Server" : containerKindLabel(data.nodeType, data.attributes) ?? NODE_LABELS[data.nodeType];
+  const typeLabel = repository ? "Repository" : assetSubtypeLabel({ entityType: data.entityType, nodeType: data.nodeType, attributes: data.attributes, provider: data.dimensions?.cloud_provider }) ?? (data.nodeType === "server" ? "MCP Server" : data.nodeType === "sharedServer" ? "Shared MCP Server" : NODE_LABELS[data.nodeType]);
     return createPortal(
       <div className="fixed inset-0 z-[80]" data-testid="graph-entity-drawer">
         <Drawer open onClose={onClose} title={data.label} backdropLabel="Dismiss graph details"

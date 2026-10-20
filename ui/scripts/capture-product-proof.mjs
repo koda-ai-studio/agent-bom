@@ -181,7 +181,7 @@ function buildGraph() {
     node("provider:aws-prod", "provider", "AWS prod account", "medium", 5.4, { environment: "prod", owner: "cloud-platform" }),
     node("env:prod-ai", "environment", "prod-ai-control-plane", "high", 7.8, { environment: "prod", owner: "ai-platform" }),
     node("cluster:eks-ai", "cluster", "eks-ai-runtime", "high", 7.5, { environment: "prod", owner: "platform-security" }),
-    node("container:agent-gateway", "container", "agent-gateway:0.91.0", "high", 7.6, { image: "agent-bom/gateway:0.91.0" }),
+    node("container:agent-gateway", "container", "agent-gateway:0.91.0", "high", 7.6, { container_kind: "workload", image: "agent-bom/gateway:0.91.0" }),
     node("agent:developer-copilot", "agent", "developer-copilot", "critical", 9.4, { agent_type: "ide", owner: "platform-security", environment: "prod" }),
     node("agent:sre-runbook", "agent", "sre-runbook-agent", "high", 8.6, { agent_type: "runbook", owner: "sre", environment: "prod" }),
     node("agent:finance-rag", "agent", "finance-rag-agent", "high", 8.2, { agent_type: "rag", owner: "finance-data", environment: "prod" }),
@@ -3295,6 +3295,12 @@ async function main() {
       viewportSelectors: ["#demo-estate-watermark", '[data-testid="graph-correlation-decision"]'],
     };
     const prepareCorrelationPath = async (proofPage) => {
+      if (proofPage.viewportSize().width < 768) {
+        // Phones open on the ranked paths list; this proof is the canvas.
+        const views = proofPage.getByRole("group", { name: "Investigation view" });
+        await views.waitFor({ state: "visible" });
+        await views.getByRole("button", { name: "Graph", exact: true }).click();
+      }
       await proofPage.locator(".react-flow__node").first().waitFor({ state: "visible" });
       if (proofPage.viewportSize().width < 768) {
         // Preserve the readable initial anchor. Fitting the entire reference
@@ -3595,7 +3601,7 @@ async function main() {
           await scrollTo(p, 0);
         }, {
           expectedText: ["Has finding", "pillow@9.0.0 is recorded as affected by CVE-2023-4863.", "Bundled advisory database", "Technical details", /Image inventory/i, /^Deployment$/im, "pinned-package.txt", "CVE-2023-4863",
-            "1 high finding · 1 KEV-listed · 1 snapshot path", "Path analysis complete for this snapshot", /Reference evidence lab/i],
+            "1 high finding in view · 1 KEV-listed · 1 attack path in snapshot (deduplicated)", "Path analysis complete for this snapshot", /Reference evidence lab/i],
           expectedApiPaths: ["/v1/graph/snapshots", "/v1/graph"],
           minGraphNodes: 5, maxGraphNodes: 5, minGraphEdges: 4, maxGraphEdges: 4,
           minGraphNodeFontPx: 12, minGraphEdgeLabelFontPx: 12,
@@ -3965,9 +3971,9 @@ async function main() {
 
 function scopeShowcaseHeadline(fixture) {
   const findings = fixture.nodes.filter((item) => ["vulnerability", "misconfiguration"].includes(item.entity_type)), counts = ["critical", "high", "medium", "low"].map((sev) => [sev, findings.filter((item) => item.severity === sev).length]).filter(([, n]) => n > 0);
-  const kev = findings.filter((item) => item.entity_type === "vulnerability" && item.attributes.is_kev === true).length, paths = fixture.attack_paths.length, noun = findings.length === 1 ? "finding" : "findings";
+  const kev = findings.filter((item) => item.entity_type === "vulnerability" && item.attributes.is_kev === true).length, paths = fixture.attack_paths.length, noun = findings.length === 1 ? "finding in view" : "findings in view";
   const sevText = counts.length === 1 && counts[0][1] === findings.length ? `${findings.length} ${counts[0][0]} ${noun}` : `${findings.length} ${noun}: ${counts.map(([sev, n]) => `${n} ${sev}`).join(", ")}`;
-  return `${sevText}${kev ? ` · ${kev} KEV-listed` : ""} · ${paths} ${paths === 1 ? "snapshot path" : "snapshot paths"}`;
+  return `${sevText}${kev ? ` · ${kev} KEV-listed` : ""} · ${paths} ${paths === 1 ? "attack path" : "attack paths"} in snapshot (deduplicated)`;
 }
 
 function checkAdvisoryFixtures() {

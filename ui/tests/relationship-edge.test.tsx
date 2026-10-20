@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
+
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { RelationshipBadge, qualifiedLabel } from "@/components/relationship-edge";
@@ -21,18 +24,20 @@ describe("relationship badges", () => {
     expect(screen.getByText("future relation")).toBeVisible();
   });
 
-  it("puts the evidence qualifier on its own line without changing the accessible text", () => {
+  it("renders every canvas chip on one line and leaves the qualifier to assistive text and hover", () => {
     const { container } = render(<RelationshipBadge relationship="can_access">{qualifiedLabel("can_access", "Can Access · modeled", { evidenceMode: "inferred" })}</RelationshipBadge>);
-    expect(container.querySelector(".graph-relationship-qualifier")).toHaveTextContent("modeled");
+    expect(container.querySelector(".graph-relationship-qualifier")).toBeNull();
+    expect(screen.getByText("Can Access")).toBeVisible();
+    expect(container.querySelector(".sr-only")).toHaveTextContent("· modeled");
     expect(container.textContent).toBe("Can Access · modeled");
     expect(qualifiedLabel("depends_on", "Depends On", { evidenceMode: "static" })).toBe("Depends On");
   });
 
-  it("keeps a compact canvas chip on one line and leaves the qualifier to assistive text", () => {
-    const { container } = render(<RelationshipBadge relationship="uses">{qualifiedLabel("uses", "Uses · evidence unspecified", { evidenceMode: "unknown", compactEvidence: true })}</RelationshipBadge>);
-    expect(container.querySelector(".graph-relationship-qualifier")).toBeNull();
-    expect(screen.getByText("Uses")).toBeVisible();
-    expect(container.querySelector(".sr-only")).toHaveTextContent("· evidence unspecified");
-    expect(container.textContent).toBe("Uses · evidence unspecified");
+  it("styles the canvas chip as one inline line, never a wrapped box", () => {
+    const css = readFileSync(path.resolve(__dirname, "../app/globals.css"), "utf8");
+    const rule = css.match(/\.graph-relationship-label \.relationship-badge \{([^}]*)\}/)?.[1] ?? "";
+    expect(rule).toMatch(/white-space:\s*nowrap/);
+    expect(rule).not.toMatch(/max-width:\s*8em/);
+    expect(css).not.toMatch(/\.graph-relationship-qualifier\s*\{/);
   });
 });

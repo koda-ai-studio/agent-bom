@@ -785,6 +785,9 @@ export interface GraphImpactResponse {
   affected_by_type: Record<string, number>;
   affected_count: number;
   max_depth_reached: number;
+  direction?: "reverse" | "forward" | undefined;
+  /** The nodes behind each count, nearest first (bounded server-side). */
+  affected_nodes_detail?: { id: string; label: string; entity_type: string; depth: number }[] | undefined;
 }
 
 /** Saved tenant graph filter preset from GET/POST /v1/graph/presets */
@@ -840,6 +843,10 @@ export interface GraphRollupAggregate {
   toxic_combo: boolean;
   exposed_count: number;
   toxic_count: number;
+  /** Distinct open issues among descendants (the severity_counts basis). */
+  issue_count?: number | undefined;
+  /** Every place those issues were found. */
+  finding_occurrence_count?: number | undefined;
 }
 
 export interface GraphRollupContainer {
@@ -874,6 +881,9 @@ export interface GraphRollupSummary {
   /** Direct children left after filters; the pageable drill-down total. */
   matching_child_count?: number;
   returned_child_count?: number;
+  /** Estate-wide distinct open issues; equals the overview's issue total. */
+  issue_count?: number;
+  finding_occurrence_count?: number;
 }
 
 /** Offset page over a drill-down's ranked direct children. */
@@ -1097,16 +1107,54 @@ export interface GraphEstateSnapshotRef {
   captured_at: string;
 }
 
-/** One target scope compared with its own previous completed snapshot. */
+/** A changed node named by the diff summary's highlights. */
+export interface GraphEstateHighlightNode {
+  kind: "node" | "edge";
+  change: "added" | "removed" | "changed";
+  id?: string;
+  entity_type?: string;
+  label?: string;
+  severity?: string;
+  source?: string;
+  target?: string;
+  /** Endpoint display names for a highlighted edge, from the snapshot that holds it. */
+  source_label?: string;
+  target_label?: string;
+  relationship?: string;
+}
+
+/** A stored attack path present on one side of the comparison only. */
+export interface GraphEstatePathChange {
+  source: string;
+  target: string;
+  /** Endpoint display names from the snapshot that holds the path; absent on older servers. */
+  source_label?: string;
+  target_label?: string;
+  hops: string[];
+  composite_risk: number;
+  summary: string;
+}
+
+export interface GraphEstateHighlights {
+  new_critical_findings?: { count: number; top: GraphEstateHighlightNode[] };
+  new_credential_reach?: { count: number; top: GraphEstateHighlightNode[] };
+  removed_controls?: { count: number; top: GraphEstateHighlightNode[] };
+  new_attack_paths?: { status: string; count: number; count_is_lower_bound?: boolean; top: GraphEstatePathChange[] };
+  removed_attack_paths?: { status: string; count: number; count_is_lower_bound?: boolean; top: GraphEstatePathChange[] };
+}
+
+/** One target scope compared with its comparable previous snapshot. */
 export interface GraphEstateChangeSource {
   scope_id: string;
   label: string;
   old: GraphEstateSnapshotRef;
   new: GraphEstateSnapshotRef;
+  /** The scope's own earlier scan, or the store's declared earlier snapshot for a scope scanned once. */
+  baseline?: "scope_history" | "snapshot_continuity";
   counts: Record<"nodes" | "edges", GraphDiffChangeCounts>;
   total_changes: number;
   nodes_by_entity_type: Record<string, GraphDiffChangeCounts>;
-  highlights: Record<string, unknown>;
+  highlights: GraphEstateHighlights;
   skipped_snapshots: number;
 }
 
@@ -1224,6 +1272,8 @@ export interface IssueSeverityCounts {
   low: number;
   unrated: number;
   total: number;
+  /** Known-exploited issues, on the same issue-group unit as the severity counts. */
+  kev?: number | undefined;
   approximate: boolean;
   basis: "issue_groups";
   window?: unknown;
@@ -1471,6 +1521,8 @@ export interface VersionProvenance {
   resolved_from_registry?: boolean | undefined;
   floating_reference?: boolean | undefined;
   floating_reference_reason?: string | undefined;
+  pinned?: boolean | undefined;
+  pinned_version?: string | undefined;
   evidence?: Record<string, unknown>[] | undefined;
   version_conflicts?: Record<string, unknown>[] | undefined;
 }
@@ -3453,6 +3505,9 @@ export interface OverviewTopRisk {
   cvss_score: number | null;
   epss_score: number | null;
   affected_agents: string[];
+  owner?: string | null | undefined;
+  sla_due_at?: string | null | undefined;
+  sla_due_at_source?: string | null | undefined;
 }
 
 /** One weighted input into the configurable exec risk score (#3940). */

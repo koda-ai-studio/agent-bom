@@ -671,3 +671,18 @@ def test_summary_omits_only_a_label_repeated_by_its_endpoints():
     assert path["label"] == "Finding via Agent"
     path["label"] = "Distinct recorded context"
     assert summary_path(path)["label"] == path["label"]
+
+
+def test_finding_detail_exploit_story_is_the_rest_story(demo: _Estate) -> None:
+    from agent_bom.mcp_tools.findings import finding_detail_impl
+    from agent_bom.mcp_tools.storage import default_graph_store
+
+    row = demo.rest("/v1/findings", q="CVE-2023-4863", limit=1)["findings"][0]
+    # The MCP server resolves the same current-estate store the REST routes read.
+    story = demo.mcp(finding_detail_impl, finding_id=row["id"], _get_graph_store=default_graph_store)["exploit_story"]
+    rest = demo.rest("/v1/graph/exploit-story", finding_id=row["id"])
+    assert story.pop("status") == "evaluated"
+    assert story == rest
+    assert rest["scope"] == "occurrence"
+    assert rest["narrative"]["text"].startswith("CVE-2023-4863")
+    assert rest["at_risk"]["total"] >= 1

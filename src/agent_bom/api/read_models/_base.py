@@ -101,6 +101,8 @@ class IssueCounts(ReadModel):
     low: int
     unrated: int
     total: int
+    # Known-exploited issues on the same issue-group unit as the severity counts.
+    kev: int | None = None
     window: CountWindow | None = None
 
 

@@ -14,6 +14,7 @@ from __future__ import annotations
 import re
 
 from agent_bom.parsers.skill_audit_types import SkillFinding
+from agent_bom.parsers.skill_grants import capability_findings
 from agent_bom.parsers.skills import SkillMetadata
 
 # ── Metadata quality checks ──────────────────────────────────────────────────
@@ -25,15 +26,6 @@ _RUNTIME_DEP_PATTERNS: dict[str, list[str]] = {
     "kubectl": [r"\bkubectl\b", r"\bk8s\b", r"\bkubernetes\b"],
     "terraform": [r"\bterraform\b", r"\btf\b"],
     "helm": [r"\bhelm\b"],
-}
-
-_REQUIRED_CAPABILITY_KEYS = {
-    "read_findings",
-    "read_inventory",
-    "read_audit_log",
-    "write_findings",
-    "outbound_http",
-    "shell_exec",
 }
 
 
@@ -89,50 +81,7 @@ def _check_metadata_quality(
         )
 
     # ── Explicit skill capability boundary ───────────────────────────
-    raw_frontmatter = meta.raw_frontmatter or ""
-    has_capabilities = bool(re.search(r"^\s*(?:skill_)?capabilities:\s*$", raw_frontmatter, re.MULTILINE))
-    if not has_capabilities:
-        findings.append(
-            SkillFinding(
-                severity="low",
-                category="missing_capability_declaration",
-                title="No explicit skill capability declaration",
-                detail=(
-                    f"Skill '{meta.name or 'unknown'}' in {source_file} does not declare "
-                    "an explicit capability map. Sandboxed runtimes and Snowflake Native "
-                    "App deployments need declared read, write, network, and shell "
-                    "boundaries before a skill can be safely invoked."
-                ),
-                source_file=source_file,
-                recommendation=(
-                    "Add a 'capabilities' or 'skill_capabilities' frontmatter block "
-                    "covering read_findings, read_inventory, read_audit_log, "
-                    "write_findings, outbound_http, and shell_exec."
-                ),
-                context="metadata",
-            )
-        )
-    else:
-        missing_keys = sorted(key for key in _REQUIRED_CAPABILITY_KEYS if not re.search(rf"^\s*{key}\s*:", raw_frontmatter, re.MULTILINE))
-        if missing_keys:
-            findings.append(
-                SkillFinding(
-                    severity="low",
-                    category="incomplete_capability_declaration",
-                    title="Incomplete skill capability declaration",
-                    detail=(
-                        f"Skill '{meta.name or 'unknown'}' in {source_file} declares "
-                        "skill capabilities but omits: "
-                        f"{', '.join(missing_keys)}. Missing keys make sandbox and "
-                        "customer-controlled runtime policy generation ambiguous."
-                    ),
-                    source_file=source_file,
-                    recommendation=(
-                        "Declare every required capability key explicitly and use false instead of omitting a denied capability."
-                    ),
-                    context="metadata",
-                )
-            )
+    findings.extend(capability_findings(meta, source_file))
 
     # ── Undeclared runtime dependencies ───────────────────────────────
     all_text = " ".join(raw_content.values()).lower()

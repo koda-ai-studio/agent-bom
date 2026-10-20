@@ -17,6 +17,7 @@ from agent_bom.api import stores as api_stores
 from agent_bom.api.graph_store import SQLiteGraphStore
 from agent_bom.api.read_models import STRICT_CONTRACT
 from agent_bom.api.read_models import graph as graph_models
+from agent_bom.api.read_models.exploit_story import GraphExploitStoryResponse
 from agent_bom.api.server import app
 from agent_bom.api.stores import set_graph_store
 from agent_bom.graph import AttackPath, EntityType, RelationshipType, UnifiedEdge, UnifiedGraph, UnifiedNode
@@ -31,6 +32,7 @@ GRAPH_TYPED_READS: dict[str, type[BaseModel]] = {
     "/v1/graph/edges/active": graph_models.GraphActiveEdgesResponse,
     "/v1/graph/edges/changes": graph_models.GraphEdgeChangesResponse,
     "/v1/graph/evidence-manifest": graph_models.GraphEvidenceManifestResponse,
+    "/v1/graph/exploit-story": GraphExploitStoryResponse,
     "/v1/graph/exposure-paths": graph_models.GraphExposurePathsResponse,
     "/v1/graph/governance": graph_models.GraphGovernanceResponse,
     "/v1/graph/history": graph_models.GraphHistoryResponse,
@@ -133,6 +135,7 @@ LIVE_REQUESTS: dict[str, str] = {
     "/v1/graph/edges/active": "/v1/graph/edges/active?at=2999-01-01T00:00:00Z",
     "/v1/graph/edges/changes": "/v1/graph/edges/changes?old=contract-s1&new=contract-s2",
     "/v1/graph/evidence-manifest": "/v1/graph/evidence-manifest",
+    "/v1/graph/exploit-story": "/v1/graph/exploit-story?node=vuln:CVE-2024-1&package=pkg:npm:x",
     "/v1/graph/exposure-paths": "/v1/graph/exposure-paths",
     "/v1/graph/governance": "/v1/graph/governance",
     "/v1/graph/history": "/v1/graph/history",

@@ -8,14 +8,16 @@ import { graphRepositoryContext } from "@/lib/graph-repository-context";
 import { GraphProviderMark } from "@/components/graph-provider-mark";
 import { SegmentedLabel } from "@/components/graph-segmented-label";
 import { entitySource } from "@/lib/agent-source";
-import { NodeBadgeRow, SeverityRingMark } from "@/components/graph-node-badges";
+import { FindingSignalDot, NodeBadgeRow } from "@/components/graph-node-badges";
+import { assetKindLabel } from "@/lib/asset-icon-registry";
+import { findingSeverity, graphNodeTooltip } from "@/lib/graph-node-tooltip";
+import { showsEnvironmentChip, showsProviderMark, type ScopeContext } from "@/lib/graph-scope-context";
 import { GraphScopeNode } from "@/components/graph-scope-node";
 import type { GraphRollupContainer, GraphCompleteness } from "@/lib/api-types";
-import { severityColor } from "@/lib/api";
 import type { ReachBreakdown } from "@/lib/effective-reach";
 import { NODE_COLOR_MAP } from "@/lib/graph-utils";
-import { nodeBadges } from "@/lib/graph-node-badges";
-import { CONTAINER_KIND_LABELS, containerKind, nodeGlyph } from "@/lib/graph-container-kind";
+import { SEVERITY_RING_CLASSES, findingRingSeverity, nodeBadges } from "@/lib/graph-node-badges";
+import { nodeGlyph } from "@/lib/graph-container-kind";
 import {
   ENTITY_ICONS,
   entityIcon,
@@ -106,6 +108,8 @@ export type LineageNodeData = {
   evidenceCaptureReplay?: boolean | undefined;
   evidenceNotAfter?: string | undefined;
   renderBand?: "detail" | "summary" | "cluster" | undefined;
+  /** What the node's parent scope already shows; set by the flow builder. */
+  scopeContext?: ScopeContext | undefined;
 };
 
 type CardProps = {
@@ -187,38 +191,39 @@ function NodeCard({
     return () => { observer.disconnect(); cancelAnimationFrame(frame); };
   }, [nodeId, updateNodeInternals]);
   const repository = graphRepositoryContext(data);
-  const Icon = repository ? FolderGit2 : nodeGlyph(data.nodeType, data.attributes);
-  const kind = containerKind(data.nodeType, data.attributes);
-  const provider = repository?.source ?? entitySource(data);
+  const Icon = repository ? FolderGit2 : nodeGlyph(data.nodeType, data.attributes, data.entityType, data.dimensions?.cloud_provider);
+  const provider = repository?.source ?? (showsProviderMark(data) ? entitySource(data) : null);
+  const severity = findingSeverity(data);
   const displayTitle = typeof data.attributes?.display_title === "string" && data.attributes.display_title.trim() ? data.attributes.display_title : data.label;
   const isRollupContainer = data.attributes?.rollup_is_container === true;
-  const { badges, ring } = nodeBadges(data);
-  const environmentRaw = badges.find((badge) => badge.kind === "environment")?.raw;
+  const { badges: allBadges, ring } = nodeBadges(data);
+  const badges = allBadges.filter((badge) => badge.kind !== "provider" && (badge.kind !== "environment" || showsEnvironmentChip(data)));
+  const environmentRaw = allBadges.find((badge) => badge.kind === "environment")?.raw;
   const shownSubtitle = typeof subtitle === "string" && environmentRaw && subtitle.trim().toLowerCase() === environmentRaw.toLowerCase()
     ? undefined : subtitle;
   return (
-    <div title={data.label} data-graph-entity="true" data-rollup-container={isRollupContainer ? "true" : undefined}
+    <div title={graphNodeTooltip(data)} data-graph-entity="true" data-rollup-container={isRollupContainer ? "true" : undefined}
       style={{ width: "var(--graph-node-card-width, 220px)" }}
       className={`flex w-[220px] flex-col items-center text-center transition-opacity ${data.dimmed ? "opacity-25" : ""}`}>
-      <div ref={glyphRef} style={{ width: "var(--graph-node-glyph-size, 72px)", height: "var(--graph-node-glyph-size, 72px)" }} className={`graph-entity-glyph relative mb-3 flex h-[72px] w-[72px] items-center justify-center rounded-full border-2 shadow-sm ${
+      <div ref={glyphRef} data-severity-ring={severity} style={{ width: "var(--graph-node-glyph-size, 72px)", height: "var(--graph-node-glyph-size, 72px)" }} className={`graph-entity-glyph relative mb-3 flex h-[72px] w-[72px] items-center justify-center rounded-full border-2 shadow-sm ${
         isRollupContainer ? "border-outline-strong bg-surface-elevated" : `${borderClass} ${bgClass}`
       } ${data.highlighted ? `ring-2 ${ring ? "ring-offset-[10px]" : "ring-offset-4"} ring-offset-[var(--surface)] ${ringClass}` : ""}`}>
-        {ring && !isRollupContainer && <SeverityRingMark ring={ring} />}
+        {ring && !isRollupContainer && <FindingSignalDot ring={ring} />}
+        {severity && <span className="sr-only" data-finding-severity={severity}>{`${severity} severity`}</span>}
         <Handle type="target" position={data.reverseFlow ? Position.Right : Position.Left}
           className={`!h-1 !w-1 !border-0 !bg-transparent ${target ? "" : "!opacity-0"}`} />
         <Handle type="source" position={data.reverseFlow ? Position.Left : Position.Right}
           className={`!h-1 !w-1 !border-0 !bg-transparent ${source ? "" : "!opacity-0"}`} />
         <ContextHandles />
         <Icon aria-hidden="true" style={{ width: "var(--graph-node-icon-size, 32px)", height: "var(--graph-node-icon-size, 32px)" }} className={`h-8 w-8 ${iconClass}`} />
-        {/* A small vendor mark on the ring, like a status badge; the entity glyph stays primary. */}
-        {provider && <GraphProviderMark source={provider} attributes={repository ? undefined : data.attributes} className="absolute"
-          style={{ right: "-15%", bottom: "-15%", width: "48%", height: "48%" }} />}
+        {/* A small vendor mark centred on the ring at 4:30, like a status badge; shown once per scope. */}
+        {provider && <GraphProviderMark source={provider} attributes={repository ? undefined : data.attributes} className="graph-provider-mark-node absolute" />}
       </div>
       <SegmentedLabel text={repository?.slug || displayTitle} className="mb-1 w-full min-w-0 line-clamp-3 text-lg font-semibold leading-[1.2] text-foreground" style={{ fontSize: "var(--graph-node-label-size, 18px)" }} />
-      {/* The vendor mark already names the provider; a second text chip repeats it. */}
-      <NodeBadgeRow badges={provider ? badges.filter((badge) => badge.kind !== "provider") : badges}>
+      {/* The vendor mark names the provider; a second text chip would repeat it. */}
+      <NodeBadgeRow badges={badges}>
         <span style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} className="text-xs text-ink-secondary">
-          {repository ? "Repository" : data.entityType === "application" ? "Application" : kind ? CONTAINER_KIND_LABELS[kind] : NODE_TYPE_BADGES[data.nodeType]}
+          {repository ? "Repository" : assetKindLabel({ entityType: data.entityType, nodeType: data.nodeType, attributes: data.attributes, provider: data.dimensions?.cloud_provider })}
         </span>
         {data.occurrenceRole && <span style={{ fontSize: "var(--graph-node-meta-size, 10px)" }} data-testid="graph-occurrence-role" className="rounded border border-outline-strong px-1 text-[10px] font-medium uppercase tracking-wide text-ink-secondary">{data.occurrenceRole}</span>}
       </NodeBadgeRow>
@@ -244,48 +249,6 @@ function graphCountDescription(data: LineageNodeData): string {
   const limits = Object.entries(data.countHopLimits ?? {}).map(([key, depth]) => `${labels[key as keyof typeof labels]}: ${depth} hop${depth === 1 ? "" : "s"}`).join("; ");
   return `${limits.charAt(0).toUpperCase()}${limits.slice(1)}. Distinct entities linked in the loaded graph; these bounded counts are not inventory totals or proof of access.`;
 }
-
-const NODE_TYPE_BADGES: Record<LineageNodeType, string> = {
-  provider: "Provider",
-  agent: "Agent",
-  server: "Server",
-  package: "Package",
-  vulnerability: "CVE",
-  misconfiguration: "Finding",
-  credential: "Cred ref",
-  tool: "Tool",
-  model: "Model",
-  framework: "Framework",
-  dataset: "Dataset",
-  container: "Container",
-  cloudResource: "Cloud",
-  org: "Org",
-  account: "Account",
-  user: "User",
-  group: "Group",
-  role: "Role",
-  policy: "Policy",
-  serviceAccount: "Service",
-  servicePrincipal: "Principal",
-  federatedIdentity: "Federated",
-  environment: "Env",
-  fleet: "Fleet",
-  cluster: "Cluster",
-  sharedServer: "Shared",
-  managedIdentity: "Identity",
-  accessGrant: "Grant",
-  accessPolicy: "Policy",
-  driftIncident: "Drift",
-  dataStore: "Data",
-  directory: "Folder",
-  sourceFile: "Source",
-  configFile: "Config file",
-  codeModule: "Module",
-  ciJob: "CI job",
-  apiGateway: "Gateway",
-  toolCall: "Tool call",
-  blueprint: "Blueprint",
-};
 
 function AgentNode({ data }: { data: LineageNodeData }) {
   const notConfigured = data.agentStatus === "installed-not-configured";
@@ -521,16 +484,9 @@ function PackageNode({ data }: { data: LineageNodeData }) {
   return (
     <NodeCard
       data={data}
-      borderClass={
-        hasVulns
-          ? "border-red-400 dark:border-red-600/60"
-          : "border-outline"
-      }
-      bgClass={
-        hasVulns
-          ? "bg-red-50 dark:bg-red-950/40"
-          : "bg-surface"
-      }
+      // The full ring belongs to findings; linked vulnerabilities show as the dot and the count below.
+      borderClass="border-outline"
+      bgClass="bg-surface"
       ringClass="ring-[var(--border-strong)]"
       iconClass="text-ink-tertiary"
       subtitle={
@@ -550,88 +506,34 @@ function PackageNode({ data }: { data: LineageNodeData }) {
   );
 }
 
-function FindingNode({
-  data,
-  accentClass,
-  borderClass,
-  bgClass,
-}: {
-  data: LineageNodeData;
-  accentClass: string;
-  borderClass: string;
-  bgClass: string;
-}) {
+/** A finding's ring is its one severity indicator (shared ring tokens); KEV is a separate fact. */
+const UNRATED_RING = "border-outline-strong border-dashed";
+
+function FindingNode({ data, accentClass }: { data: LineageNodeData; accentClass: string }) {
+  const severity = findingRingSeverity(data);
   return (
     <NodeCard
       data={data}
-      borderClass={borderClass}
-      bgClass={bgClass}
+      borderClass={severity ? SEVERITY_RING_CLASSES[severity] : UNRATED_RING}
+      bgClass="bg-surface"
       ringClass="ring-white/50"
       iconClass={accentClass}
       source={false}
-      footer={
-        <div className="graph-finding-metadata flex flex-wrap justify-center gap-1 mt-1 [&>span]:text-[length:var(--graph-node-meta-size,12px)]">
-          {data.severity && (
-            <span
-              className={`text-[10px] px-1.5 py-0.5 rounded border font-mono uppercase ${severityColor(data.severity)}`}
-            >
-              {data.severity}
-            </span>
-          )}
-          {typeof data.cvssScore === "number" &&
-          Number.isFinite(data.cvssScore) ? (
-            <span className="text-[10px] text-ink-secondary">
-              CVSS {data.cvssScore.toFixed(1)}
-            </span>
-          ) : null}
-          {data.isKev && (
-            <span className="text-[10px] px-1.5 py-0.5 rounded bg-red-900 text-red-300 border border-red-700 font-mono">
-              KEV
-            </span>
-          )}
+      footer={data.isKev ? (
+        <div className="graph-finding-metadata mt-1 flex justify-center">
+          <span title="Listed in the CISA Known Exploited Vulnerabilities catalog" style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} className="rounded border border-red-700 bg-red-900 px-1.5 py-0.5 font-mono text-xs text-red-300">KEV</span>
         </div>
-      }
+      ) : undefined}
     />
   );
 }
 
 function VulnNode({ data }: { data: LineageNodeData }) {
-  const sev = data.severity ?? "medium";
-  const borderClass =
-    sev === "critical"
-      ? "border-red-500"
-      : sev === "high"
-        ? "border-orange-500"
-        : sev === "medium"
-          ? "border-yellow-500"
-          : "border-blue-500";
-  const bgClass =
-    sev === "critical"
-      ? "bg-red-100 dark:bg-red-950/80"
-      : sev === "high"
-        ? "bg-orange-100 dark:bg-orange-950/80"
-        : sev === "medium"
-          ? "bg-yellow-100 dark:bg-yellow-950/80"
-          : "bg-blue-100 dark:bg-blue-950/80";
-  return (
-    <FindingNode
-      data={data}
-      accentClass="text-red-700 dark:text-red-300"
-      borderClass={borderClass}
-      bgClass={bgClass}
-    />
-  );
+  return <FindingNode data={data} accentClass="text-red-700 dark:text-red-300" />;
 }
 
 function MisconfigNode({ data }: { data: LineageNodeData }) {
-  return (
-    <FindingNode
-      data={data}
-      accentClass="text-orange-600 dark:text-orange-300"
-      borderClass="border-orange-500"
-      bgClass="bg-orange-100 dark:bg-orange-950/75"
-    />
-  );
+  return <FindingNode data={data} accentClass="text-orange-600 dark:text-orange-300" />;
 }
 
 function CredentialNode({ data }: { data: LineageNodeData }) {

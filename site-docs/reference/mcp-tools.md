@@ -141,7 +141,7 @@ findings_query(severity="critical", kev=True, limit=25)
 ```
 
 ### finding_detail
-One finding with the graph paths that carry it, its reachers, and its triage/VEX state.
+One finding with the graph paths that carry it, its reachers, its exploit story (what it puts at risk and how, from recorded fields; same payload as `GET /v1/graph/exploit-story`), and its triage/VEX state.
 ```
 finding_detail(finding_id="<id from findings_query>")
 ```

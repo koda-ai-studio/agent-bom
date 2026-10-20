@@ -112,6 +112,7 @@ _VERSION_PROVENANCE_STRING_FIELDS = (
     "observed_at",
     "version_resolved_at",
     "legacy_version_source",
+    "pinned_version",
 )
 _VERSION_EVIDENCE_STRING_FIELDS = (
     "type",
@@ -329,6 +330,12 @@ def package_version_provenance(package: Any, inherited: dict[str, Any] | None = 
         if result["confidence"] == "exact":
             result["confidence"] = "low"
 
+    # `pinned_version` is what the source fixes; a floating reference has none,
+    # and its `resolved_version` is only the version observed this time.
+    result["pinned"] = bool(resolved_version) and not result.get("floating_reference", False)
+    if result["pinned"]:
+        result["pinned_version"] = resolved_version
+
     evidence = _sanitize_version_evidence_list(
         explicit.get("evidence") or _field(package, "version_evidence") or _occurrence_version_evidence(package)
     )
@@ -396,7 +403,7 @@ def _sanitize_version_provenance(value: dict[str, Any]) -> dict[str, Any]:
     result["version_source"] = normalize_package_version_source(result.get("version_source") or value.get("version_source"))
     result["confidence"] = normalize_package_version_confidence(result.get("confidence"), version_source=result["version_source"])
 
-    for field_name in ("resolved_from_registry", "floating_reference"):
+    for field_name in ("resolved_from_registry", "floating_reference", "pinned"):
         if value.get(field_name) is not None:
             result[field_name] = bool(value.get(field_name))
 

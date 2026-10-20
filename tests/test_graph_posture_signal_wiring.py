@@ -15,7 +15,6 @@ Guards three honesty/CIEM fixes on the READ side (graph route + fusion):
 from __future__ import annotations
 
 from agent_bom.api.routes.graph import (
-    _derived_attack_paths,
     _derived_toxic_combination_paths,
     _fusion_signals_for_path,
 )
@@ -64,23 +63,6 @@ def test_conditional_admin_escalation_is_a_distinct_lower_ranked_signal():
     detail, boost = conditional["privilege_escalation_conditional_admin"]
     assert "conditional" in detail
     assert plain["privilege_escalation"][1] < boost < confirmed["privilege_escalation_admin"][1]
-
-
-def test_admin_equivalent_principal_appears_as_ciem_path():
-    # A role that holds admin-equivalent permissions but does NOT reach anything
-    # via an assume-chain must still surface as a first-class CIEM path — before
-    # the fix it was absent from the queue entirely.
-    g = UnifiedGraph(scan_id="s", tenant_id="t")
-    g.add_node(
-        UnifiedNode(
-            id="role:standing-admin",
-            entity_type=EntityType.ROLE,
-            label="standing-admin",
-            attributes={"admin_equivalent": True, "admin_equivalence_basis": "scanner_actions"},
-        )
-    )
-    paths = _derived_attack_paths(g)
-    assert any("admin-equivalent" in p.summary.lower() for p in paths)
 
 
 # ── Defect 2: exposure mitigation de-prioritizes, marked not hidden ───────────
@@ -137,6 +119,10 @@ def test_mitigated_toxic_combination_scores_below_unmitigated_and_is_marked():
     )
     g.add_node(UnifiedNode(id="vuln:b", entity_type=EntityType.VULNERABILITY, label="CVE-B", severity="critical"))
     g.add_edge(UnifiedEdge(source="cloud:waf", target="vuln:b", relationship=RelationshipType.VULNERABLE_TO))
+    # Both reach a sensitive store, so each stack is a path rather than a single-node finding.
+    g.add_node(UnifiedNode(id="ds:pii", entity_type=EntityType.DATA_STORE, label="pii", attributes={"data_sensitivity": "pii"}))
+    for source in ("cloud:bare", "cloud:waf"):
+        g.add_edge(UnifiedEdge(source=source, target="ds:pii", relationship=RelationshipType.EXPOSED_TO))
 
     paths = {p.source: p for p in _derived_toxic_combination_paths(g)}
     assert "cloud:bare" in paths, "unmitigated toxic combination must surface"

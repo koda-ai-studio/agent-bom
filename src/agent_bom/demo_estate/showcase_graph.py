@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
@@ -40,6 +41,7 @@ from agent_bom.demo_estate.showcase_identities import build_demo_identity_store 
 from agent_bom.demo_estate.showcase_identities import demo_identity_records as demo_identity_records
 from agent_bom.demo_estate.showcase_identities import seed_showcase_identities as seed_showcase_identities
 from agent_bom.demo_estate.showcase_packages import seed_showcase_packages
+from agent_bom.graph.asset_entity import link_report_findings_to_graph
 from agent_bom.graph.cnapp_overlay import apply_cnapp_overlay
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
@@ -405,6 +407,7 @@ def seed_showcase_graph_if_empty(
     *,
     tenant_id: str = SHOWCASE_TENANT,
     force: bool = False,
+    scan_report: Callable[[], dict[str, Any]] | None = None,
 ) -> bool:
     """Persist baseline + current showcase snapshots, stale-aware (issue #3964).
 
@@ -448,7 +451,6 @@ def seed_showcase_graph_if_empty(
     # keep their fixed, older timestamps. The newest-wins read path therefore
     # still defaults to the operator's scan; only a caller that asks for the
     # showcase scan id by name is served the estate.
-
     # One shared, enriched identity estate feeds both snapshots so the persisted
     # MANAGED_IDENTITY node ids match the live identity store the API re-projects.
     identity_records = build_demo_identity_store(tenant_id)
@@ -489,7 +491,7 @@ def seed_showcase_graph_if_empty(
     )
     finalize_showcase_snapshot(current_graph, profile="current")
     _annotate_demo_identity_risk(current_graph)
-    project_estate_onto_showcase(current_graph, tenant_id=tenant_id, profile="current")
+    project_estate_onto_showcase(current_graph, tenant_id=tenant_id, profile="current", scan_report=scan_report)
     current_analysis_complete = _materialize_showcase_attack_paths(current_graph)
     if current_analysis_complete:
         _record_showcase_attack_path_analysis(current_graph)
@@ -497,11 +499,28 @@ def seed_showcase_graph_if_empty(
     return True
 
 
+def _link_scan_report(graph: UnifiedGraph, scan_report: Callable[[], dict[str, Any]] | None) -> None:
+    """Link the curated scan's findings onto the snapshot as a scan's persist path does.
+
+    Each advisory then names the finding behind every occurrence. Best-effort:
+    a failed curated scan leaves the seed as it was and never blocks it.
+    """
+    if scan_report is None:
+        return
+    try:
+        report = scan_report()
+    except Exception:  # broad-except: seed steps are isolated; the scan step reports its own failure
+        _logger.warning("demo estate scan report unavailable for graph finding links", exc_info=True)
+        return
+    link_report_findings_to_graph(report, graph)
+
+
 def project_estate_onto_showcase(
     graph: UnifiedGraph,
     *,
     tenant_id: str = SHOWCASE_TENANT,
     profile: ShowcaseProfile = "current",
+    scan_report: Callable[[], dict[str, Any]] | None = None,
 ) -> dict[str, object]:
     """Extend a showcase snapshot with the enterprise estate.
 
@@ -539,6 +558,7 @@ def project_estate_onto_showcase(
     )
     _ensure_showcase_edge(graph, estate_org_node_id(estate), SHOWCASE_ORG_ID, RelationshipType.CONTAINS)
     project_compute_lane(graph, tenant_id=tenant_id, evidence=not is_baseline, org_node_id=estate_org_node_id(estate))
+    _link_scan_report(graph, scan_report)
     return summary
 
 
@@ -564,7 +584,7 @@ def _materialize_showcase_attack_paths(graph: UnifiedGraph) -> bool:
     _record_showcase_attack_path_analysis(graph, count_paths=False)
     try:
         from agent_bom.graph.edge_freshness import stamp_edge_freshness
-        from agent_bom.graph.path_derivation import _derived_attack_paths
+        from agent_bom.graph.path_derivation import _derived_attack_paths, leads_somewhere
         from agent_bom.graph.path_evidence import with_technique_mappings
 
         # The seed is this snapshot's collection: stamp edge freshness as the scan build does,
@@ -596,7 +616,8 @@ def _materialize_showcase_attack_paths(graph: UnifiedGraph) -> bool:
         reverse=True,
     )
     for path in ranked:
-        unique_paths.setdefault(path_identity(path), path)
+        if leads_somewhere(path):
+            unique_paths.setdefault(path_identity(path), path)
     graph.attack_paths = list(unique_paths.values())
 
     return True

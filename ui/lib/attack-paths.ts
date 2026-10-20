@@ -1,3 +1,4 @@
+import { assetKindLabel, assetSubtypeLabel } from "@/lib/asset-icon-registry";
 import { EntityType, RelationshipType, type AttackPath, type UnifiedNode } from "./graph-schema";
 import type { GraphAttackPath, UnifiedGraphResponse } from "./api-types";
 import {
@@ -18,6 +19,9 @@ export type AttackPathCardNode = {
   type: "cve" | "package" | "server" | "agent" | "credential" | "tool" | "data" | "identity" | "entity";
   label: string;
   severity?: string | undefined;
+  /** Recorded entity type and attributes so the card shows the canonical asset glyph. */
+  entityType?: string | undefined;
+  attributes?: Record<string, unknown> | undefined;
 };
 
 export interface RankedAttackPathRow<C> {
@@ -49,6 +53,8 @@ export type GraphInvestigationRequest = {
   rootId: string;
   rootLabel?: string | undefined;
   direction?: "forward" | "reverse" | "both";
+  /** Traversal depth the lineage view expands to (URL `depth`). */
+  depth?: number | undefined;
 };
 
 export type AttackPathAction = {
@@ -226,6 +232,8 @@ export function toAttackCardNodes(path: AttackPath, nodeById: Map<string, Unifie
       type: mapAttackPathChainType(entityType),
       label: formatExposureEntityTitle(node.label, exposureRoleForEntityType(entityType), node.attributes ?? {}),
       severity: node.severity,
+      entityType,
+      attributes: node.attributes ?? {},
     });
   }
   return nodes;
@@ -317,11 +325,11 @@ function exposureRefFromUnifiedNode(node: UnifiedNode): ExposureEntityRef {
   if (node.entity_type === EntityType.CI_JOB) kindLabel = "CI job";
   if (node.entity_type === EntityType.CONTAINER) {
     const [title, digest] = node.label.split("@", 2);
+    kindLabel = assetKindLabel({ entityType: node.entity_type, attributes });
     display = {
       title: title || node.label,
-      subtitle: digest ? `Digest ${digest}` : "Container image",
+      subtitle: digest ? `Digest ${digest}` : kindLabel === "Workload" ? "Running workload" : kindLabel === "Image" ? "Container image" : "Container",
     };
-    kindLabel = "Container";
   } else if (node.entity_type === EntityType.DATA_STORE || node.entity_type === EntityType.DATASET) {
     const sensitivity = typeof attributes.data_sensitivity === "string"
       ? attributes.data_sensitivity.trim().replaceAll("_", " ")
@@ -332,8 +340,8 @@ function exposureRefFromUnifiedNode(node: UnifiedNode): ExposureEntityRef {
     };
     kindLabel = "Data asset";
   } else if (node.entity_type === EntityType.CLOUD_RESOURCE || node.entity_type === EntityType.RESOURCE) {
-    display = { title: node.label, subtitle: "Cloud resource" };
-    kindLabel = "Cloud resource";
+    kindLabel = assetSubtypeLabel({ entityType: node.entity_type, attributes }) ?? "Cloud resource";
+    display = { title: node.label, subtitle: kindLabel };
   } else if (
     node.entity_type === EntityType.SERVICE_ACCOUNT ||
     node.entity_type === EntityType.SERVICE_PRINCIPAL ||
@@ -563,6 +571,7 @@ export function buildGraphInvestigationHref(
   params.set("investigate", "1");
   params.set("root", request.rootId);
   if (request.direction) params.set("direction", request.direction);
+  if (request.depth) params.set("depth", String(request.depth));
   if (request.rootLabel && request.rootLabel !== request.rootId) {
     params.set("q", request.rootLabel);
   }

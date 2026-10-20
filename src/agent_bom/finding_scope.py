@@ -480,7 +480,7 @@ def finding_class_for_row(row: Mapping[str, object]) -> FindingClass:
         return "secret"
     if finding_type in _IDENTITY_TYPES:
         return "identity"
-    if finding_type in _MISCONFIGURATION_TYPES or source in {"CLOUD_CIS", "CLOUD_SECURITY"}:
+    if finding_type in _MISCONFIGURATION_TYPES or (finding_type != "CVE" and source in {"CLOUD_CIS", "CLOUD_SECURITY"}):
         return "misconfiguration"
     if finding_type in _VULNERABILITY_TYPES or source == "SAST" or identifier.startswith(("CVE-", "GHSA-")):
         return "vulnerability"

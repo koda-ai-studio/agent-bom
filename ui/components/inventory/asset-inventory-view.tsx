@@ -14,6 +14,7 @@ import { PageEmptyState, PageLoadingState } from "@/components/states/page-state
 import { AssetDetail } from "@/components/inventory/asset-detail";
 import { useInventorySelection } from "@/lib/inventory-selection";
 import { useInventory } from "@/lib/inventory-context";
+import { assetIcon, assetKindLabel } from "@/lib/asset-icon-registry";
 import {
   ASSET_KIND_BY_ID,
   summarizeRows,
@@ -185,7 +186,6 @@ export function AssetInventoryView({
         {selected ? (
           <AssetDetail
             row={selected}
-            config={config}
             detail={details[selected.id]}
             loading={detailLoadingId === selected.id}
             error={detailError}
@@ -228,10 +228,9 @@ function FindingsCell({ row }: { row: AssetRow }) {
 
 function buildColumns(kind: AssetKindId): DataTableColumn<AssetRow>[] {
   const config = ASSET_KIND_BY_ID[kind];
-  const secondaryFor = (row: AssetRow): string | undefined => {
+  const secondaryFor = (row: AssetRow, kindLabel: string): string | undefined => {
     if (kind === "packages") return [row.ecosystem, row.version].filter(Boolean).join(" · ") || undefined;
-    if (kind === "cloud") return [row.provider, row.environment].filter(Boolean).join(" · ") || undefined;
-    return row.entityType;
+    return [kindLabel, row.provider, row.environment].filter(Boolean).join(" · ") || undefined;
   };
 
   return [
@@ -240,13 +239,18 @@ function buildColumns(kind: AssetKindId): DataTableColumn<AssetRow>[] {
       header: config.primaryColumn,
       sortable: false,
       cell: (row) => {
-        const secondary = secondaryFor(row);
+        const asset = { entityType: row.entityType, attributes: row.attributes };
+        const Icon = assetIcon(asset);
+        const secondary = secondaryFor(row, assetKindLabel(asset));
         return (
-          <div className="min-w-0">
-            <div className="break-words [overflow-wrap:anywhere] font-medium text-[color:var(--foreground)]">{row.label}</div>
-            {secondary ? (
-              <div className="break-words [overflow-wrap:anywhere] text-[11px] text-[color:var(--text-tertiary)]">{secondary}</div>
-            ) : null}
+          <div className="flex min-w-0 items-start gap-2">
+            <Icon aria-hidden="true" data-asset-glyph="true" className="mt-0.5 h-4 w-4 shrink-0 text-[color:var(--text-secondary)]" />
+            <div className="min-w-0">
+              <div className="break-words [overflow-wrap:anywhere] font-medium text-[color:var(--foreground)]">{row.label}</div>
+              {secondary ? (
+                <div className="break-words [overflow-wrap:anywhere] text-[11px] text-[color:var(--text-tertiary)]">{secondary}</div>
+              ) : null}
+            </div>
           </div>
         );
       },

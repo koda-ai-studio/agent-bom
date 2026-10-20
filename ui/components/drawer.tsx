@@ -179,6 +179,11 @@ export function Drawer({
       cancelAnimationFrame(focusRaf);
       document.removeEventListener("keydown", onKey);
       previouslyFocused?.focus?.();
+      // The commit that closes the drawer can re-render the trigger's surroundings and drop focus to the body.
+      requestAnimationFrame(() => {
+        const active = document.activeElement;
+        if ((!active || active === document.body) && previouslyFocused?.isConnected) previouslyFocused.focus?.();
+      });
     };
   }, [open]);
 

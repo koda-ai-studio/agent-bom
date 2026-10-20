@@ -90,3 +90,50 @@ def test_rebuild_requested_while_iterating_the_same_generation_is_a_conflict_not
     assert getattr(first, "id", first) == "package-a" or "package-a" in str(first)
     assert list(nodes) == []
     assert store.latest_snapshot_id(tenant_id=TENANT) != old
+
+
+def _pause_exclusive_for(store: CurrentGraphStore, thread_name: str) -> tuple[threading.Event, threading.Event]:
+    """Hold *thread_name* at the resolve lock after it has read the evidence fingerprint."""
+    paused, resume = threading.Event(), threading.Event()
+    exclusive = store._lock.exclusive
+
+    def gated():
+        if threading.current_thread().name == thread_name and not paused.is_set():
+            paused.set()
+            assert resume.wait(10), "test never resumed the stale resolver"
+        return exclusive()
+
+    store._lock.exclusive = gated  # type: ignore[method-assign]
+    return paused, resume
+
+
+@pytest.fixture(params=["memory-jobs", "sqlite-jobs"])
+def revisioned_estate(request, estate, tmp_path):
+    if request.param == "memory-jobs":
+        return estate
+    from agent_bom.api.store import SQLiteJobStore
+
+    # Durable job stores expose a mutation revision; the stale resolver used to
+    # fail its own read with a 409 there instead of retiring the newer generation.
+    return SQLiteJobStore(str(tmp_path / "jobs.db")), estate[1]
+
+
+def test_a_resolver_that_read_older_evidence_never_retires_the_newer_generation(revisioned_estate):
+    estate = revisioned_estate
+    record(estate, 8, "repo-a", "package-a")
+    store = CurrentGraphStore(estate[1], estate[0])
+    paused, resume = _pause_exclusive_for(store, "stale-resolver")
+    stale: list[str] = []
+    resolver = threading.Thread(target=lambda: stale.append(store._resolve_current_id(TENANT)), name="stale-resolver")
+    resolver.start()
+    assert paused.wait(5)
+    # New evidence lands and a reader resolves it while the first resolver is still waiting.
+    record(estate, 9, "repo-b", "package-b")
+    fresh = store._resolve_current_id(TENANT)
+    resume.set()
+    resolver.join(5)
+    assert not resolver.is_alive()
+
+    assert store._projection_store.snapshot_identity(tenant_id=TENANT, scan_id=fresh)[1], "newer generation was retired"
+    assert stale == [fresh]
+    assert set(store.load_graph(tenant_id=TENANT).nodes) == {"package-a", "package-b"}

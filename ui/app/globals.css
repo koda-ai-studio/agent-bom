@@ -85,6 +85,11 @@
   --severity-low-bg: rgba(107, 163, 255, 0.15);
   --severity-low-border: rgba(107, 163, 255, 0.48);
   --severity-none: #8b93a7;
+  /* Graph severity rings: the severity hues at full strength, >=3:1 on the canvas and >=18deg apart (tests/severity-ring-tokens). */
+  --severity-ring-critical: #ff5c6c;
+  --severity-ring-high: #ff8a3d;
+  --severity-ring-medium: #facc15;
+  --severity-ring-low: #6ba3ff;
 
   /* Status — success / warn / danger */
   --status-success: #34d399;
@@ -174,6 +179,11 @@
   --severity-low-bg: rgba(37, 99, 235, 0.1);
   --severity-low-border: rgba(37, 99, 235, 0.38);
   --severity-none: #64748b;
+  /* Graph severity rings: the severity hues at full strength, >=3:1 on the canvas and >=18deg apart (tests/severity-ring-tokens). */
+  --severity-ring-critical: #d21f3c;
+  --severity-ring-high: #ea580c;
+  --severity-ring-medium: #a17a00;
+  --severity-ring-low: #2563eb;
 
   --status-success: #047857;
   --status-success-bg: rgba(5, 150, 105, 0.1);
@@ -322,23 +332,13 @@ body {
   font-weight: 500;
   padding: 0.2em 0.4em;
   width: max-content;
-  max-width: 8em;
-  white-space: normal;
-  text-align: center;
-  overflow-wrap: normal;
+  white-space: nowrap;
 }
 
 .graph-relationship-label .relationship-badge svg {
   display: block;
   flex-shrink: 0;
   opacity: 0.75;
-}
-
-.graph-relationship-qualifier {
-  display: block;
-  font-size: 0.8em;
-  font-weight: 400;
-  color: var(--text-secondary);
 }
 
 /* Keep secondary node metadata available without crowding the default canvas. */
@@ -955,6 +955,13 @@ main > div {
   outline: 1.5px solid var(--border-strong); outline-offset: -3.5px;
 }
 .graph-provider-mark[data-provider-basis="inherited"] { outline-style: dashed; }
+/* On a node glyph: ~44% of the disc, centred on the ring at 4:30 so it reads as a badge, not a second glyph.
+   The size keeps the vendor logo at 18px or more on a fitted canvas and clear of the entity icon. */
+.graph-provider-mark-node { right: -13%; bottom: -13%; width: 44%; height: 44%; min-width: 22px; min-height: 22px; box-shadow: 0 1px 2px rgb(0 0 0 / 0.18); }
+.graph-provider-mark-node .graph-provider-mark-glyph { width: 78%; height: 78%; }
+.graph-provider-mark-node .graph-provider-mark-glyph-aws { width: 88%; height: 88%; }
+/* Linked-findings dot on an asset glyph, at 1:30 opposite the vendor badge; the full ring belongs to findings. */
+.graph-finding-signal { right: 2%; top: 2%; width: 24%; height: 24%; min-width: 12px; min-height: 12px; border: 2px solid var(--graph-canvas); }
 /* Inline marks sit on chips and cards, not the canvas: no cut-out ring. */
 .graph-provider-mark-inline { border-width: 0; outline-width: 1px; outline-offset: -1px; }
 .graph-provider-mark-inline .graph-provider-mark-glyph { width: 74%; height: 74%; }

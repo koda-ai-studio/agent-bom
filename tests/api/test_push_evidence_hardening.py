@@ -117,7 +117,7 @@ def test_push_ignores_producer_grade_and_counts_versions_without_double_counting
     scorecard = report["posture_scorecard"]
     assert (scorecard["grade"], scorecard["score"]) != ("A", 100)
     assert report["posture_grade"] == scorecard["grade"]
-    assert "1 vulns (1 critical)" in scorecard["dimensions"]["vulnerability_posture"]["details"]
+    assert "1 vulnerability occurrence (1 critical)" in scorecard["dimensions"]["vulnerability_posture"]["details"]
 
 
 def test_push_failure_keeps_attempt_but_no_false_commit_receipt(durable_push, monkeypatch):

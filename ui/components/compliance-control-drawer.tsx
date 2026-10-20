@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Package, Server } from "lucide-react";
 
 import { DetailTabs } from "@/components/detail-tabs";
 import { Drawer } from "@/components/drawer";
@@ -13,7 +12,10 @@ import {
   isControlUnscored,
 } from "@/components/compliance-status";
 import type { ComplianceControl } from "@/lib/api";
-import { findingsHref, remediationHref, securityGraphHref } from "@/lib/page-links";
+import { findingsHref, remediationHref } from "@/lib/page-links";
+import { controlGraphHref } from "@/lib/control-evidence";
+import { ControlAffectedAssets } from "@/components/control-affected-assets";
+import { ControlEvidenceExport } from "@/components/control-evidence-export";
 
 export function ComplianceControlDrawer({
   control,
@@ -121,51 +123,7 @@ export function ComplianceControlDrawer({
       ) : null}
 
       {tab === "evidence" ? (
-        <div>
-        {control.affected_packages.length > 0 ? (
-          <div className="mb-4">
-            <div className="mb-2 flex items-center gap-1.5 text-xs text-[color:var(--text-tertiary)]">
-              <Package className="h-3.5 w-3.5" />
-              Affected packages
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {control.affected_packages.map((pkg) => (
-                <span
-                  key={pkg}
-                  className="rounded bg-[color:var(--surface-muted)] px-2 py-0.5 font-mono text-xs text-[color:var(--text-secondary)]"
-                >
-                  {pkg}
-                </span>
-              ))}
-            </div>
-          </div>
-        ) : null}
-
-        {control.affected_agents.length > 0 ? (
-          <div className="mb-4">
-            <div className="mb-2 flex items-center gap-1.5 text-xs text-[color:var(--text-tertiary)]">
-              <Server className="h-3.5 w-3.5" />
-              Affected agents
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {control.affected_agents.map((agent) => (
-                <span
-                  key={agent}
-                  className="rounded bg-[color:var(--surface-muted)] px-2 py-0.5 text-xs text-[color:var(--text-secondary)]"
-                >
-                  {agent}
-                </span>
-              ))}
-            </div>
-          </div>
-        ) : null}
-
-        {control.affected_packages.length === 0 && control.affected_agents.length === 0 ? (
-          <p className="text-sm text-[color:var(--text-secondary)]">
-            No affected package or agent identities were reported for this control.
-          </p>
-        ) : null}
-        </div>
+        <ControlAffectedAssets packages={control.affected_packages} agents={control.affected_agents} />
       ) : null}
 
       {tab === "actions" ? (
@@ -177,11 +135,7 @@ export function ComplianceControlDrawer({
             View findings
           </Link>
           <Link
-            href={securityGraphHref({
-              scan: scanId,
-              packageName: control.affected_packages[0],
-              agent: control.affected_agents[0],
-            })}
+            href={controlGraphHref({ frameworkId, control: control.code, scanId })}
             className="rounded-lg border border-sky-700/40 bg-sky-500/10 px-3 py-1.5 text-xs font-medium text-sky-800 dark:text-sky-200 transition hover:border-sky-600"
           >
             Evidence in security graph
@@ -192,6 +146,7 @@ export function ComplianceControlDrawer({
           >
             Browse remediation
           </Link>
+          <ControlEvidenceExport frameworkId={frameworkId} controlCode={control.code} />
         </div>
       ) : null}
     </Drawer>

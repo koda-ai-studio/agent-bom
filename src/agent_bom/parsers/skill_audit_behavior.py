@@ -8,6 +8,7 @@ import re
 from typing import Any, NamedTuple
 
 from agent_bom.ast.source_reader import parse_python_source
+from agent_bom.parsers.skill_audit_prose import prohibition_governs
 from agent_bom.parsers.skill_audit_types import SkillFinding
 
 logger = logging.getLogger(__name__)
@@ -648,9 +649,7 @@ def _is_prohibition_context(content: str, match_start: int, match_end: int) -> b
     block_start, block_end = _span_text(lines, start_line, end_line)
     if _AGENT_IMPERATIVE_RE.search(content[block_start:block_end]):
         return False
-    lo = max(block_start, match_start - _PROHIBITION_PROXIMITY)
-    hi = min(block_end, match_end + _PROHIBITION_PROXIMITY)
-    return bool(_PROHIBITION_CUE_RE.search(content[lo:hi]))
+    return prohibition_governs(content, match_start, match_end, (block_start, block_end), _PROHIBITION_CUE_RE, _PROHIBITION_PROXIMITY)
 
 
 def _first_actionable_match(pattern: re.Pattern, content: str) -> tuple[re.Match | None, bool]:
@@ -1214,6 +1213,7 @@ _BEHAVIOR_FAMILIES: dict[str, str] = {
     "remote_code_execution": "code_execution",
     "excessive_permissions": "data_access",
     "persistence_mechanism": "persistence",
+    "broad_tool_grant": "code_execution",
     "missing_capability_declaration": "data_access",
     "incomplete_capability_declaration": "data_access",
 }

@@ -20,6 +20,7 @@ class CurrentRemediationResponse(BaseModel):
     source_findings: int
     truncated: bool
     warnings: list[str]
+    window: dict[str, Any] | None = None
 
 
 def remediation_finding_projection(row: dict[str, Any]) -> dict[str, Any]:
@@ -152,7 +153,7 @@ def _package_finding(row: dict[str, Any]) -> Finding | None:
     return finding
 
 
-def current_remediation_response(snapshot: dict[str, Any]) -> CurrentRemediationResponse:
+def current_remediation_response(snapshot: dict[str, Any], window: dict[str, Any] | None = None) -> CurrentRemediationResponse:
     rows = snapshot.get("findings", [])
     findings = [finding for row in rows if isinstance(row, dict) and (finding := _package_finding(row)) is not None]
     return CurrentRemediationResponse(
@@ -160,4 +161,5 @@ def current_remediation_response(snapshot: dict[str, Any]) -> CurrentRemediation
         source_findings=len(rows),
         truncated=snapshot.get("completeness", {}).get("status") != "complete",
         warnings=_strings(snapshot.get("warnings")),
+        window=window,
     )

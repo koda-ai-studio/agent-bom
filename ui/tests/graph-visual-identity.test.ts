@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Box, Boxes, Container, Earth, Layers, Network, Rocket, Ship, Webhook } from "lucide-react";
+import { Box, Boxes, CircleDashed, Container, Earth, Layers, Network, Rocket, Ship, Webhook } from "lucide-react";
 
 import { ENTITY_ICONS, entityIcon, type LineageNodeType } from "@/lib/entity-icons";
 import { NODE_TYPE_LEGEND_ORDER, legendItemForNodeType } from "@/lib/graph-utils";
@@ -18,7 +18,8 @@ describe("graph entity visual identity", () => {
 
   it("keeps the unknown-type fallback distinct from every mapped type", () => {
     expect(Object.values(ENTITY_ICONS)).not.toContain(Box);
-    expect(entityIcon("not-a-type")).toBe(Box);
+    expect(Object.values(ENTITY_ICONS)).not.toContain(CircleDashed);
+    expect(entityIcon("not-a-type")).toBe(CircleDashed);
   });
 
   it("uses glyphs that read instantly for containers, environments and API gateways", () => {

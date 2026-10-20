@@ -247,6 +247,9 @@ def _finding_top_risk(row: dict[str, Any]) -> dict[str, Any]:
         "affected_agents": list(row.get("affected_agents") or []),
         "impact_category": row.get("impact_category"),
         "fixed_version": row.get("fixed_version"),
+        "owner": row.get("owner") or None,
+        "sla_due_at": row.get("sla_due_at") or None,
+        "sla_due_at_source": row.get("sla_due_at_source") or None,
     }
 
 

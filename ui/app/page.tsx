@@ -374,7 +374,8 @@ export default function Dashboard() {
   const highCount = canonicalSeverity.high;
   const displayedKevCount = importedReport
     ? kevCount
-    : (overview?.finding_counts?.kev ?? counts?.kev ?? overview?.headline.kev ?? 0);
+    : (counts?.issues?.kev ?? overview?.finding_counts?.kev ?? counts?.kev ?? overview?.headline.kev ?? 0);
+  const displayedKevOccurrences = importedReport ? null : (overview?.finding_counts?.kev ?? counts?.kev ?? null);
   const displayedCredentialExposure = importedReport
     ? credentialExposureCount
     : (overview?.headline.credential_exposed ?? 0);
@@ -475,6 +476,7 @@ export default function Dashboard() {
         critical={criticalCount}
         high={highCount}
         kev={summaryReady ? displayedKevCount : null}
+        kevOccurrences={summaryReady ? displayedKevOccurrences : null}
         credentials={summaryReady ? displayedCredentialExposure : null}
         agents={displayedAgentCount}
         scans={importedReport ? 1 : overviewSnapshot ? overviewSnapshot.headline.scans : summaryReady ? (counts?.scan_count ?? effectiveRecentJobs.length) : null}

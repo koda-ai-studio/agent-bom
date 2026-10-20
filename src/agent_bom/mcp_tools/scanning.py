@@ -23,9 +23,9 @@ from agent_bom.mcp_tools.scan_response import (
     section_page,
 )
 from agent_bom.parsers.sbom_context import imported_cloud_inventory
+from agent_bom.scanners.local_data_freshness import freshness_snapshot
 from agent_bom.scanners.mcp_audit import attach_passive_mcp_audit
 from agent_bom.security import sanitize_error
-from agent_bom.vuln_freshness import compute_freshness
 
 logger = logging.getLogger(__name__)
 
@@ -300,7 +300,8 @@ async def _scan_impl_inner(
 
 def _scan_report(report_cls, agents, blast_radii, scan_sources, *, offline: bool):
     report = report_cls(agents, blast_radii, cloud_inventory_data=imported_cloud_inventory(agents), scan_sources=scan_sources)
-    report.vuln_data_freshness = compute_freshness(offline=offline).to_dict()
+    freshness = freshness_snapshot(offline)
+    report.vuln_data_freshness = freshness.to_dict() if freshness is not None else None
     attach_passive_mcp_audit(report)
     return report
 

@@ -565,7 +565,7 @@ export function Nav() {
         }`}
       >
         {!isCollapsed && (
-          <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-tertiary">
+          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-tertiary">
             Navigate
           </span>
         )}
@@ -588,7 +588,7 @@ export function Nav() {
           >
             <Search className="w-3.5 h-3.5" />
             <span>Search pages...</span>
-            <kbd className="ml-auto text-[10px] font-mono bg-surface-elevated border border-outline rounded px-1.5 py-0.5 text-ink-secondary">⌘K</kbd>
+            <kbd className="ml-auto text-xs font-mono bg-surface-elevated border border-outline rounded px-1.5 py-0.5 text-ink-secondary">⌘K</kbd>
           </button>
         </div>
       )}
@@ -628,7 +628,7 @@ export function Nav() {
               {!isCollapsed && (
                 <>
                   <div className="min-w-0 flex-1 text-left">
-                    <span className="block uppercase tracking-wider text-[10px] font-semibold">
+                    <span className="block uppercase tracking-wider text-xs font-semibold">
                       {group.label}
                     </span>
                   </div>
@@ -704,7 +704,7 @@ export function Nav() {
 
                         {/* Capable-but-unconnected hint */}
                         {needsSetup && (
-                          <span className="ml-auto rounded-full border border-outline bg-surface-elevated px-1.5 py-0 text-[9px] font-medium uppercase tracking-[0.12em] leading-4 text-ink-tertiary">
+                          <span className="ml-auto rounded-full border border-outline bg-surface-elevated px-1.5 py-0 text-xs font-medium uppercase tracking-[0.12em] leading-4 text-ink-tertiary">
                             Set up
                           </span>
                         )}
@@ -722,14 +722,14 @@ export function Nav() {
                           >
                             <span
                               aria-hidden="true"
-                              className="text-[9px] font-mono font-bold text-[color:var(--severity-critical)] bg-[color:var(--severity-critical-bg)] border border-[color:var(--severity-critical-border)] dark:text-red-400 dark:bg-red-950/60 dark:border-red-800/40 rounded-full px-1.5 py-0 leading-4"
+                              className="text-xs font-mono font-bold text-[color:var(--severity-critical)] bg-[color:var(--severity-critical-bg)] border border-[color:var(--severity-critical-border)] dark:text-red-400 dark:bg-red-950/60 dark:border-red-800/40 rounded-full px-1.5 py-0 leading-4"
                             >
                               {openIssues.critical}
                             </span>
                             {openIssues.high > 0 && (
                               <span
                                 aria-hidden="true"
-                                className="text-[9px] font-mono font-bold text-[color:var(--severity-high)] bg-[color:var(--severity-high-bg)] border border-[color:var(--severity-high-border)] dark:text-orange-400 dark:bg-orange-950/60 dark:border-orange-800/40 rounded-full px-1.5 py-0 leading-4"
+                                className="text-xs font-mono font-bold text-[color:var(--severity-high)] bg-[color:var(--severity-high-bg)] border border-[color:var(--severity-high-border)] dark:text-orange-400 dark:bg-orange-950/60 dark:border-orange-800/40 rounded-full px-1.5 py-0 leading-4"
                               >
                                 {openIssues.high}
                               </span>
@@ -741,7 +741,7 @@ export function Nav() {
                   })}
                   {group.hiddenLinks.length > 0 && (
                     <details className="mt-2 rounded-lg border border-outline bg-surface px-3 py-2">
-                      <summary className="cursor-pointer list-none text-[11px] font-medium uppercase tracking-[0.2em] text-ink-tertiary">
+                      <summary className="cursor-pointer list-none text-xs font-medium uppercase tracking-[0.2em] text-ink-tertiary">
                         Unused in {deploymentModeLabel(counts?.deployment_mode)} ({group.hiddenLinks.length})
                       </summary>
                       <div className="mt-2 space-y-0.5">
@@ -777,7 +777,7 @@ export function Nav() {
                         <GroupIcon className={`h-[18px] w-[18px] ${navGroupIconClass(group.label, hasActiveChild)}`} />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-foreground">
+                        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-foreground">
                           {group.label}
                         </p>
                       </div>
@@ -810,7 +810,7 @@ export function Nav() {
                       })}
                     </div>
                     {group.hiddenLinks.length > 0 && (
-                      <p className="mt-2 rounded-lg border border-outline bg-surface-muted px-2.5 py-1.5 text-[11px] text-ink-tertiary">
+                      <p className="mt-2 rounded-lg border border-outline bg-surface-muted px-2.5 py-1.5 text-xs text-ink-tertiary">
                         {group.hiddenLinks.length} page{group.hiddenLinks.length === 1 ? "" : "s"} hidden for{" "}
                         {deploymentModeLabel(counts?.deployment_mode)} mode.
                       </p>
@@ -834,8 +834,8 @@ export function Nav() {
   return (
     <>
       {/* Product chrome — Snowflake-style top bar with canonical agent-bom lockup */}
-      <header className="fixed inset-x-0 top-0 z-[60] flex h-16 items-center gap-3 border-b border-outline bg-surface/95 px-4 backdrop-blur-sm">
-        <Link href="/" aria-label="agent-bom" className="group flex min-w-0 items-center transition-opacity hover:opacity-90">
+      <header className="fixed inset-x-0 top-0 z-[60] flex h-16 items-center gap-2 border-b border-outline bg-surface/95 px-3 backdrop-blur-sm sm:gap-3 sm:px-4">
+        <Link href="/" aria-label="agent-bom" className="group flex min-w-[36px] items-center transition-opacity hover:opacity-90">
           <BrandLogo
             showWordmark={!collapsed}
             markClassName="h-9 w-9"
@@ -845,14 +845,14 @@ export function Nav() {
         </Link>
         {counts?.deployment_mode && (
           <span
-            className="hidden rounded-full border border-outline bg-surface-elevated px-2.5 py-0.5 text-[10px] font-mono uppercase tracking-[0.16em] text-ink-tertiary sm:inline-flex"
+            className="hidden rounded-full border border-outline bg-surface-elevated px-2.5 py-0.5 text-xs font-mono uppercase tracking-[0.12em] text-ink-secondary sm:inline-flex"
             title={`${deploymentModeLabel(counts.deployment_mode)} evidence — observed source receipts; this label does not configure storage or enforcement`}
           >
             {deploymentModeLabel(counts.deployment_mode)}
           </span>
         )}
         <DemoEstateLabel scanSources={counts?.scan_sources} />
-        <div className="ml-auto flex min-w-0 items-center gap-2">
+        <div className="ml-auto flex min-w-0 items-center gap-0.5 sm:gap-2">
           <button
             onClick={() => setSearchOpen(true)}
             className="hidden items-center gap-2 rounded-lg border border-outline bg-surface-muted px-3 py-1.5 text-xs text-ink-secondary transition-colors hover:border-outline-strong hover:text-foreground lg:flex"
@@ -860,9 +860,18 @@ export function Nav() {
           >
             <Search className="h-3.5 w-3.5" />
             <span>Search</span>
-            <kbd className="ml-1 rounded border border-outline bg-surface-elevated px-1.5 py-0.5 font-mono text-[10px] text-ink-secondary">
+            <kbd className="ml-1 rounded border border-outline bg-surface-elevated px-1.5 py-0.5 font-mono text-xs text-ink-secondary">
               ⌘K
             </kbd>
+          </button>
+          <button
+            type="button"
+            onClick={() => setSearchOpen(true)}
+            aria-label="Search pages"
+            title="Search pages (⌘K)"
+            className="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-lg text-ink-secondary transition-colors hover:bg-surface-elevated hover:text-foreground lg:hidden"
+          >
+            <Search className="h-5 w-5" />
           </button>
           <ThemeToggle compact className="shrink-0" />
           <ApiStatus collapsed={false} />
@@ -870,7 +879,7 @@ export function Nav() {
           <button
             ref={mobileMenuButtonRef}
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="shrink-0 rounded-lg p-2 text-ink-secondary transition-colors hover:bg-surface-elevated hover:text-foreground lg:hidden"
+            className="shrink-0 rounded-lg p-[8px] text-ink-secondary transition-colors hover:bg-surface-elevated hover:text-foreground lg:hidden"
             aria-label={mobileOpen ? "Close navigation menu" : "Open navigation menu"}
             aria-expanded={mobileOpen}
             aria-controls="mobile-navigation-dialog"
@@ -984,11 +993,13 @@ function ApiStatus({ collapsed }: { collapsed: boolean }) {
   }
 
   const statusLabel = status === "online" ? `Control plane · v${version}` : status === "offline" ? "Control plane offline" : "Connecting…";
+  const phoneLabel = status === "online" ? `v${version}` : status === "offline" ? "Offline" : "Connecting…";
   return (
     <details className="relative min-w-0 text-xs text-ink-secondary">
-      <summary aria-label={statusLabel} title={statusLabel} className="flex min-w-0 cursor-pointer list-none items-center gap-2 rounded-lg px-2 py-1.5 marker:hidden [&::-webkit-details-marker]:hidden focus-visible:outline-2 focus-visible:outline-emerald-500">
+      <summary aria-label={statusLabel} title={statusLabel} className="flex min-w-0 cursor-pointer list-none items-center gap-2 overflow-hidden rounded-lg px-1 py-1.5 sm:px-2 marker:hidden [&::-webkit-details-marker]:hidden focus-visible:outline-2 focus-visible:outline-emerald-500">
         <span className={`w-1.5 h-1.5 rounded-full ${dotColor} shrink-0`} aria-hidden="true" />
-        <span className="truncate" aria-hidden="true">{statusLabel}</span>
+        <span className="shrink-0 sm:hidden" aria-hidden="true">{phoneLabel}</span>
+        <span className="hidden truncate sm:block" aria-hidden="true">{statusLabel}</span>
       </summary>
       <p className="fixed inset-x-3 z-10 mt-2 w-auto max-w-[calc(100vw-2rem)] rounded-lg border border-outline bg-surface p-3 shadow-lg [overflow-wrap:anywhere] sm:absolute sm:left-auto sm:right-0 sm:top-full sm:w-max">{statusLabel}</p>
     </details>

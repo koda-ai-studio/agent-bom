@@ -8,6 +8,7 @@ from typing import Annotated, Any, cast
 from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import PlainTextResponse
 
+from agent_bom.api import time_window
 from agent_bom.api.finding_snapshot_read import current_findings_snapshot
 from agent_bom.api.models import JobStatus
 from agent_bom.api.read_models import documented
@@ -177,11 +178,12 @@ async def get_current_remediation(request: Request) -> CurrentRemediationRespons
         current_findings_snapshot,
         request,
         max_findings=10_000,
-        window_days=0,
+        window_days=None,
         project_graph_reachability=False,
         row_projection=remediation_finding_projection,
     )
-    return current_remediation_response(snapshot)
+    window = time_window.window_metadata(time_window.normalize_window_days(None))
+    return current_remediation_response(snapshot, window)
 
 
 @router.get("/scan/{job_id}/remediation", tags=["scan"])

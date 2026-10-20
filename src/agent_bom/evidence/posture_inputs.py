@@ -120,7 +120,8 @@ def _vulnerability_dimension(inputs: PostureInputs, weight: float) -> DimensionS
         vuln_score = max(0.0, 100.0 - penalty)
         vuln_score = min(100.0, vuln_score + fixable / total_vulns * 10)
         parts = [f"{sev_counts[s]} {s.lower()}" for s in ("CRITICAL", "HIGH", "MEDIUM", "LOW") if sev_counts.get(s, 0) > 0]
-        vuln_detail = f"{total_vulns} vulns ({', '.join(parts)}), {fixable} fixable"
+        unit = "vulnerability occurrence" if total_vulns == 1 else "vulnerability occurrences"
+        vuln_detail = f"{total_vulns} {unit} ({', '.join(parts)}), {fixable} fixable"
     return DimensionScore(name="Vulnerability Posture", score=round(vuln_score, 1), weight=weight, details=vuln_detail)
 
 

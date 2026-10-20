@@ -57,7 +57,7 @@ def test_cli_uses_focused_default():
 
 
 @pytest.mark.parametrize(
-    "profile, count", [("scan", 8), ("graph", 15), ("cloud", 6), ("runtime", 7), ("audit", 6), ("guided", 29), ("full", 94)]
+    "profile, count", [("scan", 8), ("graph", 15), ("cloud", 6), ("runtime", 7), ("audit", 9), ("guided", 29), ("full", 94)]
 )
 def test_live_card_and_health_match_active_surface(profile, count):
     from starlette.testclient import TestClient
@@ -240,3 +240,21 @@ def test_audit_profile_exposes_descriptor_and_prompt_checks():
     from agent_bom.mcp_tools.profiles import get_profile
 
     assert {"tool_risk_assessment", "prompt_scan"} <= get_profile("audit").tools
+
+
+def test_audit_profile_covers_estate_inventory_and_skill_review_read_only():
+    from agent_bom.mcp_server import create_mcp_server
+    from agent_bom.mcp_tools.profiles import get_profile
+
+    plugin_tools = {"scan", "tool_risk_assessment", "inventory", "skill_scan", "skill_trust", "prompt_scan"}
+    assert plugin_tools <= get_profile("audit").tools
+
+    tools = {t.name: t for t in asyncio.run(create_mcp_server(profile="audit").list_tools())}
+    assert plugin_tools <= set(tools)
+    for name in plugin_tools - {"tool_risk_assessment"}:
+        annotations = tools[name].annotations
+        assert annotations.read_only_hint is True, name
+        assert annotations.destructive_hint is False, name
+    # Live introspection can launch stdio commands, so it is never advertised as read-only.
+    assert tools["tool_risk_assessment"].annotations.read_only_hint is False
+    assert tools["tool_risk_assessment"].annotations.destructive_hint is True

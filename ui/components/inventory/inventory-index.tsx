@@ -13,7 +13,7 @@ import { AssetDetail } from "@/components/inventory/asset-detail";
 import { PageEmptyState, PageLoadingState } from "@/components/states/page-state";
 import { useInventorySelection } from "@/lib/inventory-selection";
 import { useInventory } from "@/lib/inventory-context";
-import { ASSET_KINDS, ASSET_KIND_BY_ID, type AssetRow } from "@/lib/inventory";
+import { ASSET_KINDS, type AssetRow } from "@/lib/inventory";
 
 export function InventoryIndex() {
   const { model, summary, filters, loading, error, errorKind, reload,
@@ -152,7 +152,7 @@ export function InventoryIndex() {
           selectedKey={selected?.id} maxHeight="32rem" onRowClick={row => { select(row.id); }} />
         <Drawer open={selected !== null} onClose={() => select(null)} title="Asset details" ariaLabel="Asset details" size="xl" resizable={false}>
         {selected && model ? <>
-          <AssetDetail row={selected} config={ASSET_KIND_BY_ID[selected.kind]} detail={details[selected.id]}
+          <AssetDetail row={selected} detail={details[selected.id]}
             loading={detailLoadingId === selected.id} error={detailError} scanId={model.scanId} />
         </> : null}
         </Drawer>

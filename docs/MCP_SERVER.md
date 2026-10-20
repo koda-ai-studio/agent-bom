@@ -308,7 +308,9 @@ Four more read-only tools answer follow-up questions from the same evidence:
 - `findings_query` is `GET /v1/findings` (filters, sort, cursor, totals) with a
   compact row projection; `risk_score` is 0-10 and `effective_reach_score` 0-100.
 - `finding_detail(finding_id)` returns the finding, the graph paths that carry
-  it, who reaches it, and its triage/VEX state.
+  it, who reaches it, its `exploit_story` (the `GET /v1/graph/exploit-story`
+  payload: what the package puts at risk and how, from recorded fields) and its
+  triage/VEX state.
 
 `blast_radius` takes credentials, tools and reachability from those graph
 paths. When the graph cannot be read they are `null` with a `graph.status`
@@ -589,10 +591,10 @@ expose different profiles; connect only the entries needed for the task.
 | Profile | Tools | Use it for | Workflow prompts |
 |---|---:|---|---|
 | `scan` (default) | 8 | Package/project scan, exposure and fix planning | quick-audit, pre-install-check, remediation-plan |
-| `graph` | 14 | Inventory rollup, asset drill-down and scoped correlation | Use inventory_summary → inventory_list → inventory_asset, then inspect paths |
+| `graph` | 15 | Inventory rollup, asset drill-down and scoped correlation | Use inventory_summary → inventory_list → inventory_asset, then inspect paths |
 | `cloud` | 6 | Inventory, connection scope and CIS posture | cloud-connection-review |
 | `runtime` | 7 | Gateway policy, alerts and incident evidence | incident-triage, gateway-fleet-live-demo |
-| `audit` | 6 | Scan, descriptor and permission checks, prompt inspection, framework mapping, policy and audit integrity | compliance-report |
+| `audit` | 9 | Scan, agent inventory, descriptor and permission checks, skill/instruction and prompt inspection, framework mapping, policy and audit integrity | compliance-report |
 
 For component inspection, call `inventory_asset` with the asset's exact graph
 ID and the `scan_id` returned by inventory. The artifact contains attributes,

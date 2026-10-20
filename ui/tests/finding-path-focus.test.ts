@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { buildFindingInvestigationHref } from "@/lib/finding-investigation-href";
-import { clientQueueFocus, focusedPathEmptyState, serverPathFocus, showAnalysisBannerForEmptyQueue } from "@/lib/finding-path-focus";
+import { clientQueueFocus, focusedPathEmptyState, serverPathFocus, showAnalysisBannerForEmptyQueue, sourceSnapshotFallback } from "@/lib/finding-path-focus";
 
 const finding = {
   id: "CVE-2023-36258",
@@ -23,6 +23,26 @@ describe("finding investigation link", () => {
     expect(params.get("finding")).toBe(finding.finding_id);
   });
 
+  it("prefers the agent-reachable occurrence over an image occurrence with no agent", () => {
+    const grouped = { ...finding, node_id: "pkg:pypi:pillow@9.0.0:image:abc", agents: ["data-pipeline"], graph_reachable_from_agents: [] };
+    const params = new URL(buildFindingInvestigationHref(grouped), "http://localhost").searchParams;
+    expect(params.get("node")).toBe("agent:data-pipeline");
+    expect(params.get("cve")).toBe("CVE-2023-36258");
+    expect(params.get("finding")).toBe(finding.finding_id);
+  });
+
+  it("keeps the occurrence's own node when that occurrence is already agent-reachable", () => {
+    const own = { ...finding, node_id: "pkg:pypi:langchain@0.0.150", agents: ["langchain-service"], graph_reachable_from_agents: ["agent:langchain-service"] };
+    expect(new URL(buildFindingInvestigationHref(own), "http://localhost").searchParams.get("node")).toBe("pkg:pypi:langchain@0.0.150");
+  });
+
+  it("keeps the occurrence's node when its reachability is simply unknown", () => {
+    const unknown = { ...finding, node_id: "pkg:pypi:flask@3.0.0", agents: ["Claude Desktop"] };
+    expect(new URL(buildFindingInvestigationHref(unknown), "http://localhost").searchParams.get("node")).toBe("pkg:pypi:flask@3.0.0");
+    const unreached = { ...unknown, graph_reachable: false };
+    expect(new URL(buildFindingInvestigationHref(unreached), "http://localhost").searchParams.get("node")).toBe("agent:Claude Desktop");
+  });
+
   it("pins a snapshot only when the caller is browsing that snapshot", () => {
     const params = new URL(buildFindingInvestigationHref(finding, { scanId: "scan-selected" }), "http://localhost").searchParams;
     expect(params.get("scan")).toBe("scan-selected");
@@ -34,8 +54,13 @@ describe("server path focus", () => {
   const focus = { scanId: "", cve: "CVE-2023-36258", packageName: "", agentName: "", nodeId: finding.node_id, findingId: finding.finding_id, traceId: "" };
 
   it("asks the server for the occurrence instead of filtering one loaded page", () => {
-    expect(serverPathFocus(focus)).toEqual({ nodeId: finding.node_id, findingId: finding.finding_id });
+    expect(serverPathFocus(focus)).toEqual({ nodeId: finding.node_id, findingId: finding.finding_id, advisoryId: "CVE-2023-36258" });
     expect(serverPathFocus({ ...focus, nodeId: "", findingId: "" })).toEqual({});
+  });
+
+  it("sends the advisory only with the occurrence's own node, never as a free-standing widening", () => {
+    expect(serverPathFocus({ ...focus, nodeId: "" })).toEqual({ findingId: finding.finding_id });
+    expect(serverPathFocus({ ...focus, cve: "" })).toEqual({ nodeId: finding.node_id, findingId: finding.finding_id });
   });
 
   it("does not re-filter a server-focused page with the alias the link carried", () => {
@@ -65,5 +90,21 @@ describe("empty focused queue", () => {
 
   it("leaves unfocused empty states to the page", () => {
     expect(focusedPathEmptyState({ serverFocused: false, coversAllMatches: true, cve: "", currentEstate: true })).toBeNull();
+  });
+});
+
+describe("source snapshot fallback", () => {
+  const miss = { node_id: "pkg:x", finding_id: "f", resolved_from: null, covers_all_matches: true };
+
+  it("retries the finding's own snapshot when the current estate has no path for it", () => {
+    expect(sourceSnapshotFallback({ selectedScanId: "current-estate:abc", findingScanId: "showcase", focus: miss, matches: 0 })).toBe("showcase");
+  });
+
+  it("stays put when paths were found, the read was bounded, or the snapshot is already the source", () => {
+    expect(sourceSnapshotFallback({ selectedScanId: "current-estate:abc", findingScanId: "showcase", focus: miss, matches: 1 })).toBeNull();
+    expect(sourceSnapshotFallback({ selectedScanId: "current-estate:abc", findingScanId: "showcase", focus: { ...miss, covers_all_matches: false }, matches: 0 })).toBeNull();
+    expect(sourceSnapshotFallback({ selectedScanId: "showcase", findingScanId: "showcase", focus: miss, matches: 0 })).toBeNull();
+    expect(sourceSnapshotFallback({ selectedScanId: "current-estate:abc", findingScanId: "", focus: miss, matches: 0 })).toBeNull();
+    expect(sourceSnapshotFallback({ selectedScanId: "current-estate:abc", findingScanId: "showcase", focus: null, matches: 0 })).toBeNull();
   });
 });

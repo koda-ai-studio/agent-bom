@@ -21,6 +21,7 @@ from agent_bom.core.reachability import (
     stamp_finding_reachability,
 )
 from agent_bom.evidence.finding_reach_sources import stamp_reach_sources
+from agent_bom.graph.reach_view import TRACE_ORDER_RELATIONSHIP_TYPES
 from agent_bom.graph.types import RelationshipType
 
 if TYPE_CHECKING:
@@ -36,7 +37,7 @@ MAX_SNAPSHOT_REACHABILITY_PATHS = 200_000
 # Trace order says which assets one correlated trace touched in sequence. It is
 # recorded context, never access or exposure evidence, so a route that needs it
 # cannot mark a finding reachable (the same rule attack-path fusion applies).
-_TRACE_ORDER_EDGES = frozenset({RelationshipType.TRACE_STEP.value})
+_TRACE_ORDER_EDGES = frozenset(rel.value for rel in TRACE_ORDER_RELATIONSHIP_TYPES)
 
 
 @dataclass(frozen=True, slots=True)

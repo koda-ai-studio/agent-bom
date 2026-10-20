@@ -1611,7 +1611,7 @@ class _RecordingGraphStore:
         )
         return paths, reachable, self.graph.completeness.truncated, walked.completeness.depth_limited
 
-    def impact_of(self, *, tenant_id: str = "", scan_id: str = "", node_id: str, max_depth: int = 4):
+    def impact_of(self, *, tenant_id: str = "", scan_id: str = "", node_id: str, max_depth: int = 4, direction: str = "reverse"):
         self.calls.append(("impact_of", tenant_id, scan_id, node_id, max_depth))
         if not self.graph.has_node(node_id):
             return None
@@ -2224,6 +2224,21 @@ class TestGraphStoreBackendSelection:
         assert body["edges"][0]["source_id"] == "agent:a"
         assert body["edges"][0]["target_id"] == "server:s"
         assert ("page_nodes", "default", "store-scan", None, 0, None, 0, 1) in recording_graph_store.calls
+
+    def test_graph_stats_label_severity_counts_as_graph_nodes_on_both_read_branches(self, recording_graph_store):
+        """``stats.severity_counts`` counts finding-bearing graph nodes, not issues; say so on every branch."""
+        recording_graph_store.graph = UnifiedGraph(scan_id="store-scan", tenant_id="default")
+        recording_graph_store.graph.add_node(UnifiedNode(id="agent:a", entity_type=EntityType.AGENT, label="agent-a"))
+        recording_graph_store.graph.add_node(UnifiedNode(id="server:s", entity_type=EntityType.SERVER, label="server-s"))
+        recording_graph_store.graph.add_edge(UnifiedEdge(source="agent:a", target="server:s", relationship=RelationshipType.USES))
+        client = TestClient(app)
+
+        paged = client.get("/v1/graph", params={"scan": "store-scan", "limit": 1})
+        investigated = client.get("/v1/graph", params={"scan": "store-scan", "relationships": "uses"})
+
+        for response in (paged, investigated):
+            assert response.status_code == 200, response.text
+            assert response.json()["stats"]["severity_basis"] == "graph_nodes"
 
     def test_graph_overview_rejects_unknown_entity_type(self, recording_graph_store):
         client = TestClient(app)

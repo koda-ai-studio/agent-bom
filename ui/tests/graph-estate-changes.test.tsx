@@ -178,6 +178,75 @@ describe("GraphChangesPanel", () => {
   });
 });
 
+describe("GraphChangesPanel exposures", () => {
+  const baselineSource = {
+    scope_id: "eeee", label: "local-agents", old: { scan_id: "showcase-baseline", job_id: "", captured_at: "2026-10-10T02:00:00+00:00" },
+    new: ref("showcase", "2026-10-17T02:00:00+00:00"), baseline: "snapshot_continuity" as const,
+    counts: { nodes: counts(2727, 15), edges: counts(14371, 4) }, total_changes: 17129, nodes_by_entity_type: {}, skipped_snapshots: 0,
+    highlights: {
+      new_critical_findings: { count: 426, top: [
+        { kind: "node" as const, change: "added" as const, id: "misconfig:a", label: "SSH open to the internet", severity: "critical", entity_type: "misconfiguration" },
+      ] },
+      removed_controls: { count: 1, top: [{ kind: "node" as const, change: "removed" as const, id: "control:mfa", label: "MFA policy", entity_type: "control" }] },
+      new_attack_paths: { status: "complete", count: 3, top: [{ source: "agent:x", target: "vuln:y", hops: ["agent:x", "server:z", "vuln:y"], composite_risk: 82.5, summary: "Agent reaches critical CVE" }] },
+      removed_attack_paths: { status: "complete", count: 1, top: [{ source: "agent:x", target: "vuln:old", hops: ["agent:x", "vuln:old"], composite_risk: 40, summary: "" }] },
+    },
+  };
+  const changes = response({ sources: [baselineSource], new_sources: [], completeness_reasons: ["snapshot_baseline"],
+    totals: { nodes: counts(2727, 15), edges: counts(14371, 4), changed_sources: 1, unchanged_sources: 0, new_sources: 0 } });
+
+  it("names the comparable baseline instead of reporting a first observation", () => {
+    render(<GraphChangesPanel open changes={changes} loading={false} error={null} highlighting={false} highlightLoading={false}
+      selectedPair={null} onClose={() => {}} onHighlight={() => {}} onOpenDiff={() => {}} diffDetails={null} />);
+    expect(screen.queryByTestId("graph-changes-first-observation")).toBeNull();
+    const row = screen.getByTestId("graph-changes-source");
+    expect(row).toHaveTextContent("Compared with earlier snapshot showcase-baseline");
+    expect(screen.getByTestId("graph-changes-completeness")).toHaveTextContent("scanned once");
+    expect(screen.getByRole("button", { name: "Highlight changes" })).toBeEnabled();
+  });
+
+  it("lists new and removed exposure and drills into it", () => {
+    const onInvestigateNode = vi.fn();
+    const onInvestigatePath = vi.fn();
+    render(<GraphChangesPanel open changes={changes} loading={false} error={null} highlighting={false} highlightLoading={false}
+      selectedPair={null} onClose={() => {}} onHighlight={() => {}} onOpenDiff={() => {}} diffDetails={null}
+      onInvestigateNode={onInvestigateNode} onInvestigatePath={onInvestigatePath} />);
+    const exposure = screen.getByTestId("graph-changes-exposure");
+    expect(exposure).toHaveTextContent("New critical findings · 426");
+    expect(exposure).toHaveTextContent("New attack paths · 3");
+    expect(exposure).toHaveTextContent("Removed attack paths · 1");
+    expect(exposure).toHaveTextContent("Removed controls · 1");
+    fireEvent.click(within(exposure).getByRole("button", { name: /investigate SSH open to the internet/i }));
+    expect(onInvestigateNode).toHaveBeenCalledWith("misconfig:a", "SSH open to the internet");
+    fireEvent.click(within(exposure).getByRole("button", { name: /investigate path agent:x → vuln:y/i }));
+    expect(onInvestigatePath).toHaveBeenCalledWith(baselineSource.highlights.new_attack_paths.top[0]);
+    expect(within(exposure).queryByRole("button", { name: /investigate path agent:x → vuln:old/i })).toBeNull();
+  });
+
+  it("names path and reach endpoints by display name with the raw id as a tooltip", () => {
+    const named = response({ ...changes, sources: [{ ...baselineSource, highlights: {
+      new_attack_paths: { status: "complete", count: 1, top: [{ source: "user:bob", target: "cloud:bastion", source_label: "bob@contractor", target_label: "prod-bastion (EC2)", hops: ["user:bob", "cloud:bastion"], composite_risk: 100, summary: "" }] },
+      new_credential_reach: { count: 1, top: [{ kind: "edge" as const, change: "added" as const, id: "srv|cred|exposes_cred", source: "srv:billing", target: "cred:k", source_label: "Billing server", target_label: "Stripe key", relationship: "exposes_cred" }] },
+    } }] });
+    render(<GraphChangesPanel open changes={named} loading={false} error={null} highlighting={false} highlightLoading={false}
+      selectedPair={null} onClose={() => {}} onHighlight={() => {}} onOpenDiff={() => {}} diffDetails={null} onInvestigatePath={() => {}} />);
+    const exposure = screen.getByTestId("graph-changes-exposure");
+    expect(exposure).toHaveTextContent("bob@contractor → prod-bastion (EC2) · 1 hop");
+    expect(exposure).toHaveTextContent("Billing server → Stripe key");
+    expect(exposure).not.toHaveTextContent("user:bob");
+    expect(within(exposure).getByText("bob@contractor")).toHaveAttribute("title", "user:bob");
+    expect(within(exposure).getByText("prod-bastion (EC2)")).toHaveAttribute("title", "cloud:bastion");
+    expect(within(exposure).getByText("Stripe key")).toHaveAttribute("title", "cred:k");
+    expect(within(exposure).getByRole("button", { name: "Investigate path bob@contractor → prod-bastion (EC2)" })).toBeInTheDocument();
+  });
+
+  it("falls back to the raw id when the API names no endpoint", () => {
+    render(<GraphChangesPanel open changes={changes} loading={false} error={null} highlighting={false} highlightLoading={false}
+      selectedPair={null} onClose={() => {}} onHighlight={() => {}} onOpenDiff={() => {}} diffDetails={null} />);
+    expect(screen.getByTestId("graph-changes-exposure")).toHaveTextContent("agent:x → vuln:y");
+  });
+});
+
 describe("GraphSnapshotDiff", () => {
   it("shows exact counts and only the non-empty change lists", () => {
     const diff = { nodes_added: [{ id: "n1", label: "requests" }], nodes_removed: [], nodes_changed: [], edges_added: [], edges_removed: [] } as unknown as GraphDiffResponse;

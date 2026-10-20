@@ -144,7 +144,11 @@ class GraphEstateChangesPagination(ReadModel):
 class GraphEstateChangesResponse(ReadResponse):
     """``GET /v1/graph/changes``: each target scope's current snapshot against its own previous snapshot.
 
-    ``sources`` are scopes with a previous snapshot; ``new_sources`` are first
+    ``sources`` are scopes with a comparable previous snapshot: the scope's own
+    earlier scan (``baseline: scope_history``) or, for a scope scanned once, the
+    store's earlier same-kind snapshot that no other scope owns
+    (``baseline: snapshot_continuity``). Each changed source carries added and
+    removed stored attack paths in ``highlights``. ``new_sources`` are first
     observations and are never counted as additions. ``totals`` cover the
     returned page of scopes; ``completeness`` says whether more scopes exist.
     """
@@ -263,12 +267,16 @@ class GraphImpactInterpretation(ReadModel):
     max_depth: int
     traversal_classes: list[str]
     excluded_traversal_classes: list[str]
+    # Relationships inside a walked class that are still never reach (trace order).
+    excluded_relationships: list[str]
 
 
 class GraphImpactResponse(ReadResponse):
     node_id: str
     affected_nodes: list[str]
     affected_by_type: dict[str, int]
+    affected_nodes_detail: list[Row] | None = None
+    direction: str | None = None
     affected_count: int
     max_depth_reached: int
     completeness: Row

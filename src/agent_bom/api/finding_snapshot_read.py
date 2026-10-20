@@ -39,6 +39,7 @@ def issue_severity_counts(request: Request) -> dict[str, Any]:
     counts: dict[str, Any] = {key: int(severity.get(key) or 0) for key in ("critical", "high", "medium", "low")}
     counts["unrated"] = int(severity.get("info") or 0) + int(severity.get("unknown") or 0)
     counts["total"] = int(page.get("total") or 0)
+    counts["kev"] = int((page.get("grouping") or {}).get("kev_issue_total") or 0)
     counts["approximate"] = bool(page.get("total_approximate"))
     counts["window"] = page.get("window")
     counts["basis"] = "issue_groups"

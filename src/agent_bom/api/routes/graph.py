@@ -269,6 +269,8 @@ async def get_graph(
     budget applied. The two are equal on an unbounded load. Read
     ``completeness`` for whether the load was bounded and why —
     ``completeness.total`` always reconciles with ``stats.total_nodes_source``.
+    ``stats.severity_counts`` counts finding-bearing graph nodes
+    (``stats.severity_basis: "graph_nodes"``), not issues or occurrences.
     """
     from agent_bom.graph import SEVERITY_RANK
 

@@ -38,7 +38,7 @@ exports[`lineage inspector rendering before extraction > preserves the blueprint
 
 exports[`lineage inspector rendering before extraction > preserves the ciJob overview DOM 1`] = `"84a9847bd795184db5b6b7e317ea21a2b38582fa89ddbda3032d3df657e9664f"`;
 
-exports[`lineage inspector rendering before extraction > preserves the cloudResource overview DOM 1`] = `"8686367685ad2b2d5e1e2a8b13ec80cf3181c57cc1c47e718cd473dbdf0c52d8"`;
+exports[`lineage inspector rendering before extraction > preserves the cloudResource overview DOM 1`] = `"22446a06acd961bd910d51fd00196b1e6292bceb71a19f8f7e2d1f0f778d8b11"`;
 
 exports[`lineage inspector rendering before extraction > preserves the cluster overview DOM 1`] = `"5b304d59646560b795b2c7e64c21318b6d687d262b391198adac5fb4287ce5ee"`;
 
@@ -52,7 +52,7 @@ exports[`lineage inspector rendering before extraction > preserves the credentia
 
 exports[`lineage inspector rendering before extraction > preserves the dataStore overview DOM 1`] = `"57df62980d69565767de314d8fc3e97ad20ac9ded480a9b28fbb5ef1e9503975"`;
 
-exports[`lineage inspector rendering before extraction > preserves the dataset overview DOM 1`] = `"1def0b39143e5efd4186d0302ed373f10056d5f5c8459fe7520bace72749a30a"`;
+exports[`lineage inspector rendering before extraction > preserves the dataset overview DOM 1`] = `"4bfecfd9f09f4b6627978af159968c4a3bd9ce1a7596c7773ebbc034bfa91212"`;
 
 exports[`lineage inspector rendering before extraction > preserves the directory overview DOM 1`] = `"d7569903e7ece93c9b10cbbf661630d9c789a35e1f3f14462826117218e8a5bd"`;
 

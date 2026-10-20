@@ -12,7 +12,7 @@ import type { CacheOptions } from "./api-cache";
 // prefixes so a write to /v1/scan/{id} flushes /v1/scan and any nested
 // children without each call site having to remember.
 
-import { ApiNetworkError, classifyApiResponse } from "./api-errors";
+import { ApiNetworkError, ApiServerError, classifyApiResponse } from "./api-errors";
 
 // Cache keys and invalidation prefixes must share this format.
 const getCacheKey = (path: string) => `GET ${path}`;
@@ -79,17 +79,47 @@ export function _sessionChange(request: () => Promise<void>): Promise<void> {
   return request().finally(_clearCache);
 }
 
+/** Pause before the single retry of an idempotent read, with jitter so tabs do not stampede. */
+export const TRANSIENT_RETRY_DELAY_MS = 250;
+
+/**
+ * A failure the next attempt can plausibly avoid: a dropped connection
+ * (ECONNRESET surfaces as a fetch TypeError), or a 500/502/503/504 that a
+ * proxy or gateway produced without an API body. Aborts, timeouts and
+ * API-reported errors (a JSON body) are answers, not transport failures.
+ */
+export function isTransientReadFailure(error: unknown): boolean {
+  if (error instanceof ApiNetworkError) {
+    const cause = (error as { cause?: unknown }).cause;
+    const name = cause instanceof Error || cause instanceof DOMException ? cause.name : "";
+    return name !== "AbortError" && name !== "TimeoutError";
+  }
+  if (!(error instanceof ApiServerError)) return false;
+  const apiAnswered = error.body !== undefined && typeof error.body !== "string";
+  return [500, 502, 503, 504].includes(error.status) && !apiAnswered;
+}
+
 export async function get<T>(path: string, options: GetOptions = {}): Promise<T> {
   const { timeoutMs, signal, ...cacheOptions } = options;
   const key = getCacheKey(path);
+  const attempt = async () => {
+    const res = await _doFetch(path, {
+      credentials: "include",
+      headers: getSessionAuthHeaders(),
+      signal: signal ? AbortSignal.any([signal, withTimeout(timeoutMs ?? FETCH_TIMEOUT_MS)]) : withTimeout(timeoutMs ?? FETCH_TIMEOUT_MS),
+    }, "GET");
+    return res.json() as Promise<T>;
+  };
   const fetcher = async () => {
-      const res = await _doFetch(path, {
-        credentials: "include",
-        headers: getSessionAuthHeaders(),
-        signal: signal ? AbortSignal.any([signal, withTimeout(timeoutMs ?? FETCH_TIMEOUT_MS)]) : withTimeout(timeoutMs ?? FETCH_TIMEOUT_MS),
-      }, "GET");
-      return res.json() as Promise<T>;
-    };
+    try {
+      return await attempt();
+    } catch (error) {
+      if (signal?.aborted || !isTransientReadFailure(error)) throw error;
+      await new Promise(resolve => setTimeout(resolve, TRANSIENT_RETRY_DELAY_MS * (1 + Math.random())));
+      if (signal?.aborted) throw error;
+      return attempt();
+    }
+  };
   // A caller-owned cancellation must never abort another subscriber.
   return signal ? fetcher() : cachedGet<T>(key, fetcher, cacheOptions);
 }

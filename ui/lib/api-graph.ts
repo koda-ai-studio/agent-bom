@@ -299,11 +299,21 @@ export const graphApi = {
     /** Server-side focus over the whole ranked queue (a replaced id resolves to its canonical node). */
     nodeId?: string | undefined;
     findingId?: string | undefined;
+    /** Advisory of the focused occurrence; resolves only through its own nodeId. */
+    advisoryId?: string | undefined;
+    /** Only paths carrying the current findings mapped to this framework control. */
+    framework?: string | undefined;
+    control?: string | undefined;
   }, options?: { signal?: AbortSignal }) => {
     const params = new URLSearchParams();
     if (filters?.scanId) params.set("scan_id", filters.scanId);
     if (filters?.nodeId) params.set("node_id", filters.nodeId);
     if (filters?.findingId) params.set("finding_id", filters.findingId);
+    if (filters?.advisoryId) params.set("advisory_id", filters.advisoryId);
+    if (filters?.framework && filters.control) {
+      params.set("framework", filters.framework);
+      params.set("control", filters.control);
+    }
     if (filters?.offset != null) params.set("offset", String(filters.offset));
     if (filters?.limit != null) params.set("limit", String(filters.limit));
     if (filters?.snapshotGeneration) params.set("snapshot_generation", filters.snapshotGeneration);
@@ -449,11 +459,15 @@ export const graphApi = {
 
 
   /** Compute the blast radius (reverse-BFS impact) of a node */
-  getGraphImpact: (nodeId: string, scanId?: string, maxDepth?: number, options?: { signal?: AbortSignal }) => {
+  getGraphImpact: (
+    nodeId: string, scanId?: string, maxDepth?: number, options?: { signal?: AbortSignal },
+    direction: "reverse" | "forward" = "reverse",
+  ) => {
     const params = new URLSearchParams();
     params.set("node", nodeId);
     if (scanId) params.set("scan_id", scanId);
     if (maxDepth != null) params.set("max_depth", String(maxDepth));
+    if (direction !== "reverse") params.set("direction", direction);
     return get<GraphImpactResponse>(`/v1/graph/impact?${params.toString()}`, options);
   },
 

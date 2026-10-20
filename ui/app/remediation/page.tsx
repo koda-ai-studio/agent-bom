@@ -25,6 +25,8 @@ import {
 } from "lucide-react";
 import { severityRank } from "@/lib/severity";
 import { RiskCampaignCommandCenter } from "@/components/risk-campaign-command-center";
+import { RemediationCardList } from "@/components/remediation-mobile-cards";
+import { useNarrowViewport } from "@/hooks/use-narrow-viewport";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -365,6 +367,8 @@ function RemediationPage() {
   const [error, setError] = useState("");
   const [warnings, setWarnings] = useState<string[]>([]);
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>("all");
+  // A phone reads stacked cards; the nine-column table needs a desktop width.
+  const narrow = useNarrowViewport();
   const [frameworkFilter, setFrameworkFilter] =
     useState<FrameworkFilter>("all");
   const [fixableOnly, setFixableOnly] = useState(false);
@@ -376,16 +380,20 @@ function RemediationPage() {
     Record<string, TicketLink>
   >({});
 
+  const [windowLabel, setWindowLabel] = useState<string | null>(null);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
       setWarnings([]);
       if (scanParam) {
+        setWindowLabel(null);
         setItems(await api.getRemediation(scanParam));
       } else {
         const current = await api.getCurrentRemediation();
         setItems(current.remediation_plan);
+        setWindowLabel(current.window?.label ?? null);
         setWarnings([
           ...(current.truncated ? ["This plan covers a limited set of current findings. Review Findings for the remaining evidence."] : []),
           ...current.warnings,
@@ -551,7 +559,7 @@ function RemediationPage() {
             Package remediation plan
           </h1>
           <p className="text-ink-secondary text-sm mt-1">
-            {items.length} packages prioritized by reach, severity, and available fixes
+            {items.length} packages prioritized by reach, severity, and available fixes{windowLabel ? ` · ${windowLabel}` : ""}
           </p>
           {mappings.packages > 0 && (
             <p className="text-ink-tertiary text-xs mt-1">
@@ -681,7 +689,8 @@ function RemediationPage() {
             </p>
           </div>
 
-          {/* Table */}
+          {narrow && paged.length > 0 ? <RemediationCardList items={paged}
+            ticketFor={item => ticketsByFinding[findingKey(item)]} onCreateTicket={setTicketItem} /> :
           <div className="border border-outline rounded-xl overflow-hidden overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-surface border-b border-outline">
@@ -744,7 +753,7 @@ function RemediationPage() {
                 No items match your filters.
               </div>
             )}
-          </div>
+          </div>}
 
           <PaginationBar
             page={page}

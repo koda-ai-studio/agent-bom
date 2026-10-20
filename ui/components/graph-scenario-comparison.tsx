@@ -19,6 +19,7 @@ import {
   type GraphScenarioViewState,
 } from "@/lib/graph-scenario";
 import { GRAPH_EDGE_KINDS, GRAPH_NODE_KINDS } from "@/lib/graph-schema";
+import { snapshotLabel } from "@/lib/snapshot-label";
 
 type DraftChangeKind = GraphScenarioChange["kind"];
 
@@ -371,7 +372,7 @@ export function GraphScenarioAuthoring({
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" className="graph-page-action" onClick={() => setChanges((current) => [...current, blankDraftChange(Math.max(0, ...current.map((item) => item.localId)) + 1)])}>Add typed change</button>
           <button type="button" disabled={!complete || saving} className="graph-page-action disabled:cursor-not-allowed disabled:opacity-50" onClick={() => void save()}>{saving ? "Saving…" : scenario ? "Save new revision" : "Create scenario"}</button>
-          <span className="text-[10px] text-ink-tertiary">Pinned to {scenario?.base_scan_id.slice(0, 12) ?? scanId.slice(0, 12)} · proposed, never live evidence</span>
+          <span className="text-[10px] text-ink-tertiary" title={scenario?.base_scan_id ?? scanId}>Pinned to {snapshotLabel(scenario?.base_scan_id ?? scanId)} · proposed, never live evidence</span>
         </div>
         {saveError && <div role="alert" className="graph-callout-amber">{saveError}</div>}
       </div>
@@ -443,7 +444,7 @@ export function GraphScenarioComparisonPanel({
           </h2>
           {scenario.description && <p className="mt-2 text-sm leading-relaxed text-ink-secondary">{scenario.description}</p>}
           <p className="mt-0.5 text-xs text-ink-tertiary">
-            Pinned to observed snapshot {scenario.base_scan_id.slice(0, 12)}
+            Pinned to observed snapshot <span title={scenario.base_scan_id}>{snapshotLabel(scenario.base_scan_id)}</span>
             {comparison?.stale || comparison?.base_status === "stale"
               ? " · retained historical base"
               : ""}

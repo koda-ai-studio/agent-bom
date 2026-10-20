@@ -23,7 +23,7 @@ from agent_bom.core.severity import SEVERITY_DISPLAY_BUCKETS
 from agent_bom.exec_score import compute_exec_score
 
 _logger = logging.getLogger(__name__)
-_ISSUE_COUNT_KEYS = ("critical", "high", "medium", "low", "unrated", "total", "approximate", "basis")
+_ISSUE_COUNT_KEYS = ("critical", "high", "medium", "low", "unrated", "total", "kev", "approximate", "basis")
 
 _EXEC_FIELDS = (
     "grade",
@@ -64,6 +64,13 @@ def issue_counts_payload(issue_counts: dict[str, Any] | None) -> dict[str, Any] 
     return {key: issue_counts.get(key) for key in _ISSUE_COUNT_KEYS} if issue_counts is not None else None
 
 
+def _kev_driver(estate: dict[str, Any], hub_kev: int, issue_severity: dict[str, Any] | None) -> int:
+    """KEV on the same unit as the severity buckets beside it in the summary."""
+    if issue_severity is not None and "kev" in issue_severity:
+        return int(issue_severity.get("kev") or 0)
+    return int(estate.get("kev", 0) or 0) + int(hub_kev or 0)
+
+
 def tenant_exec_posture(
     tenant_id: str,
     scan_posture: dict[str, Any],
@@ -98,7 +105,7 @@ def tenant_exec_posture(
         compliance_failing = len(set(scan_frameworks) | set(hub_failing_frameworks or set()))
     score = compute_exec_score(
         severity=issue_severity_buckets(issue_severity) or occurrence_severity,
-        kev=int(estate.get("kev", 0) or 0) + int(hub_kev or 0),
+        kev=_kev_driver(estate, hub_kev, issue_severity),
         exposure=int(estate.get("credential_exposed", 0) or 0),
         # Failing frameworks accumulated in the estate rollup (#3962): a
         # framework with a critical/high finding fails; no second evaluation.

@@ -753,7 +753,7 @@ def inventory_impl(
         from agent_bom.canonical_ids import CANONICAL_ID_SCHEMA_VERSION
         from agent_bom.discovery import discover_all
         from agent_bom.models import AIBOMReport
-        from agent_bom.output.json_fmt import _build_ai_bom_entities_snapshot
+        from agent_bom.output.json_inventory import _build_ai_bom_entities_snapshot, inventory_package_row
         from agent_bom.parsers import extract_packages
 
         def _inventory_payload(agents: list[Any], legacy_agents: list[dict[str, Any]], *, status: str | None = None) -> dict[str, Any]:
@@ -791,7 +791,7 @@ def inventory_impl(
                         "name": s.name,
                         "command": s.command,
                         "transport": s.transport.value,
-                        "packages": [{"name": p.name, "version": p.version, "ecosystem": p.ecosystem} for p in s.packages],
+                        "packages": [inventory_package_row(p) for p in s.packages],
                     }
                 )
             result.append(

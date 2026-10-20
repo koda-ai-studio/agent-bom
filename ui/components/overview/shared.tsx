@@ -22,6 +22,8 @@ export interface ExposurePathView {
   riskScore: number;
   href: string;
   key: string;
+  /** Owner and remediation SLA of the ranked occurrence, when the risk source reports them. */
+  ownership?: import("@/lib/finding-ownership").OwnershipFields;
 }
 
 export type OverviewComplianceFramework = {
@@ -81,6 +83,8 @@ export interface OverviewCockpitProps {
   critical: number;
   high: number;
   kev: number | null;
+  /** KEV finding occurrences; `kev` is on the issue unit of the tiles. */
+  kevOccurrences?: number | null | undefined;
   credentials: number | null;
   agents: number | null;
   scans: number | null;

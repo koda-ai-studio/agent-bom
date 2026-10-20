@@ -361,6 +361,9 @@ class OverviewTopRisk(ReadModel):
     canonical_id: str | None = None
     affected_agents: list[str] | None = None
     affected_servers: list[str] | None = None
+    owner: str | None = None
+    sla_due_at: str | None = None
+    sla_due_at_source: str | None = None
 
 
 class OverviewResponse(ReadResponse):

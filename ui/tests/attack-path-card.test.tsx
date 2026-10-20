@@ -175,4 +175,16 @@ describe('AttackPathCard', () => {
     expect(labelEl).toHaveAttribute('title', longLabel)
     expect(labelEl.className).not.toContain('truncate')
   })
+
+  it('draws each hop with its canonical asset glyph, never the finding shield for a plain entity', () => {
+    const { container } = render(<AttackPathCard riskScore={7} nodes={[
+      { type: 'entity' as const, label: 'customer-pii-bucket', entityType: 'data_store', attributes: { resource_type: 's3' } },
+      { type: 'entity' as const, label: 'payments-eks', entityType: 'cluster' },
+      { type: 'entity' as const, label: 'unrecorded' },
+    ]} />)
+    const glyphs = [...container.querySelectorAll('svg.lucide')].map((svg) => svg.getAttribute('class'))
+    expect(glyphs.some((name) => name?.includes('lucide-archive'))).toBe(true)
+    expect(glyphs.some((name) => name?.includes('lucide-ship-wheel'))).toBe(true)
+    expect(glyphs.some((name) => name?.includes('lucide-shield-alert'))).toBe(false)
+  })
 })

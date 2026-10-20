@@ -19,4 +19,30 @@ describe("SegmentedLabel", () => {
   it("still breaks after separators", () => {
     expect(segments("prod_data/bucket")).toEqual(["prod_", "data/", "bucket"]);
   });
+
+  it("keeps a CVE id as one unbreakable segment", () => {
+    expect(segments("CVE-2023-25577")).toEqual(["CVE-2023-25577"]);
+  });
+
+  it("keeps a GHSA id whole while still breaking the surrounding name", () => {
+    expect(segments("pillow_GHSA-j7hp-h8jx-5ppr")).toEqual(["pillow_", "GHSA-j7hp-h8jx-5ppr"]);
+  });
+
+  it("keeps an advisory id whole when it is followed by more text", () => {
+    expect(segments("PYSEC-2023-12-pillow")).toEqual(["PYSEC-2023-12", "-", "pillow"]);
+  });
+
+  it("marks an advisory id no-wrap, ellipsized, with the full id as its tooltip", () => {
+    const { container } = render(<SegmentedLabel text="CVE-2023-25577" />);
+    const span = container.querySelector("p > span");
+    expect(span?.className).toContain("whitespace-nowrap");
+    expect(span?.className).toContain("text-ellipsis");
+    expect(span?.getAttribute("title")).toBe("CVE-2023-25577");
+    expect(container.querySelectorAll("wbr")).toHaveLength(0);
+  });
+
+  it("leaves ordinary segments without a no-wrap class", () => {
+    const { container } = render(<SegmentedLabel text="form-data" />);
+    for (const span of Array.from(container.querySelectorAll("p > span"))) expect(span.className).not.toContain("whitespace-nowrap");
+  });
 });

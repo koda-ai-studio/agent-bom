@@ -20,7 +20,7 @@ export function pathCardCanvasHeight(nodes: ReadonlyArray<{ position: { y: numbe
 }
 
 /**
- * One-line chips and strokes of a constant on-screen weight. Flow-unit strokes
+ * Strokes of a constant on-screen weight. Flow-unit strokes
  * thin out as a short path is fitted wide, turning tier dashes into faint dots.
  */
 export function pathCardEdges(edges: Edge[], zoom: number): Edge[] {
@@ -29,7 +29,6 @@ export function pathCardEdges(edges: Edge[], zoom: number): Edge[] {
     const dashed = Boolean(edge.style?.strokeDasharray);
     return {
       ...edge,
-      data: { ...edge.data, compactEvidence: true },
       style: {
         ...edge.style,
         strokeWidth: 2 * scale,

@@ -73,9 +73,9 @@ def _group_occurrence_rows(rows: list[dict[str, Any]], *, cloud_controls: bool =
                 occurrences_truncated=False,
             )
             grouped[group_id] = group
-        if cloud_controls and severity_rank(str(row.get("severity") or "unknown")) > severity_rank(str(group.get("severity") or "unknown")):
-            # Keep group order and aggregate state, but represent the worst
-            # observed severity even when occurrences are sorted by time.
+        if severity_rank(str(row.get("severity") or "unknown")) > severity_rank(str(group.get("severity") or "unknown")):
+            # An issue is as severe as its worst open occurrence. Taking the
+            # first row instead made the issue histogram depend on list sort.
             aggregate = {
                 key: group[key]
                 for key in (
@@ -91,6 +91,12 @@ def _group_occurrence_rows(rows: list[dict[str, Any]], *, cloud_controls: bool =
             group.update(row)
             group.update(aggregate)
         group["occurrence_count"] = int(group["occurrence_count"]) + 1
+        # The representative may be an image occurrence with no agent; the issue
+        # still affects every agent and server its other occurrences name.
+        for scope_key in ("affected_agents", "affected_servers"):
+            merged = [str(value) for value in (group.get(scope_key) or []) if value]
+            merged.extend(str(value) for value in (row.get(scope_key) or []) if value and str(value) not in merged)
+            group[scope_key] = merged
         if row.get("observation_status") == "unreconfirmed":
             group["unreconfirmed_occurrence_count"] = int(group["unreconfirmed_occurrence_count"]) + 1
         occurrences = group["_occurrence_rows"]
@@ -122,12 +128,13 @@ def _attach_grouping_metadata(
         "scanned_occurrences": scanned,
         "scan_budget": _FINDING_GROUP_MAX_OCCURRENCES,
         "occurrence_total": sum(int(group.get("occurrence_count") or 0) for group in groups),
+        "kev_issue_total": sum(1 for group in groups if group.get("is_kev") or group.get("cisa_kev")),
         "occurrence_sample_limit": _FINDING_GROUP_OCCURRENCE_SAMPLE,
     }
     _copy_first_page_metadata(envelope, first_page, ("facets", "facets_approximate", "facet_metadata", "scope_completeness"))
     if first_page and severity_counts is not None:
         envelope.setdefault("facets", {})["severity"] = severity_counts
-        envelope["facet_metadata"]["severity_basis"] = "canonical issue groups"
+        envelope.setdefault("facet_metadata", {})["severity_basis"] = "canonical issue groups"
 
 
 def _groups_envelope(

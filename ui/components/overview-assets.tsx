@@ -1,18 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { Bot, Server, Wrench, Package, Database, UserRound, Cloud, FileCode } from "lucide-react";
+import { ASSET_KINDS } from "@/lib/asset-icon-registry";
 import type { InventorySummaryResponse } from "@/lib/api";
 
 const TYPES = [
-  { type: "agent", label: "Agents", icon: Bot },
-  { type: "server", label: "Servers", icon: Server },
-  { type: "tool", label: "Tools", icon: Wrench },
-  { type: "package", label: "Packages", icon: Package },
-  { type: "data_store", label: "Data stores", icon: Database },
-  { type: "user,service_account,service_principal,managed_identity,federated_identity", label: "Principals", icon: UserRound },
-  { type: "cloud_resource", label: "Cloud resources", icon: Cloud },
-  { type: "application", label: "Applications", icon: FileCode },
+  { type: "agent", label: "Agents", icon: ASSET_KINDS.agent.icon },
+  { type: "server", label: "Servers", icon: ASSET_KINDS.mcp_server.icon },
+  { type: "tool", label: "Tools", icon: ASSET_KINDS.tool.icon },
+  { type: "package", label: "Packages", icon: ASSET_KINDS.package.icon },
+  { type: "data_store", label: "Data stores", icon: ASSET_KINDS.database.icon },
+  { type: "user,service_account,service_principal,managed_identity,federated_identity", label: "Principals", icon: ASSET_KINDS.user.icon },
+  { type: "cloud_resource", label: "Cloud resources", icon: ASSET_KINDS.cloud_resource.icon },
+  { type: "application", label: "Applications", icon: ASSET_KINDS.application.icon },
 ] as const;
 
 export function OverviewAssets({ summary, loading, unavailable, unavailableHref = "/inventory" }: {

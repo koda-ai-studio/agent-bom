@@ -39,6 +39,9 @@ def _encoded_graph_response(payload: dict[str, Any]) -> Response:
     """Encode graph JSON off-loop with the C encoder; same bytes ``JSONResponse`` renders."""
     if str(payload.get("scan_id", "")).startswith("current-estate:"):
         payload = {**payload, "evidence_scope": "current_estate"}
+    if isinstance(stats := payload.get("stats"), dict) and "severity_counts" in stats:
+        # Node severities, not issue or occurrence counts; the label keeps clients from reading them as either.
+        payload = {**payload, "stats": {"severity_basis": "graph_nodes", **stats}}
     body = json.dumps(payload, ensure_ascii=False, allow_nan=False, indent=None, separators=(",", ":"), default=_encode_fallback)
     return Response(content=body.encode("utf-8"), media_type=JSONResponse.media_type)
 

@@ -169,7 +169,7 @@
      },
      {
       "name": "agent-bom:discovery-provenance:version-provenance",
-      "value": "{\"confidence\":\"exact\",\"declared_name\":\"@modelcontextprotocol/server-filesystem\",\"declared_version\":\"0.6.2\",\"evidence\":[{\"parser\":\"npx\",\"source_file\":\"<path:.mcp.json>\",\"type\":\"command_pin\"}],\"resolved_from_registry\":false,\"resolved_version\":\"0.6.2\",\"source_precedence\":30,\"version_source\":\"command_pin\"}"
+      "value": "{\"confidence\":\"exact\",\"declared_name\":\"@modelcontextprotocol/server-filesystem\",\"declared_version\":\"0.6.2\",\"evidence\":[{\"parser\":\"npx\",\"source_file\":\"<path:.mcp.json>\",\"type\":\"command_pin\"}],\"pinned\":true,\"pinned_version\":\"0.6.2\",\"resolved_from_registry\":false,\"resolved_version\":\"0.6.2\",\"source_precedence\":30,\"version_source\":\"command_pin\"}"
      },
      {
       "name": "agent-bom:discovery-provenance:version-source",
@@ -246,7 +246,7 @@
      },
      {
       "name": "agent-bom:discovery-provenance:version-provenance",
-      "value": "{\"confidence\":\"unknown\",\"declared_name\":\"jinja2\",\"evidence\":[{\"line\":2,\"source_file\":\"<path:requirements.txt>\",\"type\":\"manifest\"}],\"legacy_version_source\":\"detected\",\"resolved_from_registry\":false,\"resolved_version\":\"2.10\",\"source_precedence\":0,\"version_source\":\"unknown\"}"
+      "value": "{\"confidence\":\"unknown\",\"declared_name\":\"jinja2\",\"evidence\":[{\"line\":2,\"source_file\":\"<path:requirements.txt>\",\"type\":\"manifest\"}],\"legacy_version_source\":\"detected\",\"pinned\":true,\"pinned_version\":\"2.10\",\"resolved_from_registry\":false,\"resolved_version\":\"2.10\",\"source_precedence\":0,\"version_source\":\"unknown\"}"
      },
      {
       "name": "agent-bom:discovery-provenance:version-source",
@@ -323,7 +323,7 @@
      },
      {
       "name": "agent-bom:discovery-provenance:version-provenance",
-      "value": "{\"confidence\":\"exact\",\"declared_name\":\"lodash\",\"declared_version\":\"4.17.4\",\"evidence\":[{\"line\":1,\"source_file\":\"<path:package.json>\",\"type\":\"manifest\"}],\"legacy_version_source\":\"manifest\",\"resolved_from_registry\":false,\"resolved_version\":\"4.17.4\",\"source_precedence\":30,\"version_source\":\"command_pin\"}"
+      "value": "{\"confidence\":\"exact\",\"declared_name\":\"lodash\",\"declared_version\":\"4.17.4\",\"evidence\":[{\"line\":1,\"source_file\":\"<path:package.json>\",\"type\":\"manifest\"}],\"legacy_version_source\":\"manifest\",\"pinned\":true,\"pinned_version\":\"4.17.4\",\"resolved_from_registry\":false,\"resolved_version\":\"4.17.4\",\"source_precedence\":30,\"version_source\":\"command_pin\"}"
      },
      {
       "name": "agent-bom:discovery-provenance:version-source",
@@ -400,7 +400,7 @@
      },
      {
       "name": "agent-bom:discovery-provenance:version-provenance",
-      "value": "{\"confidence\":\"exact\",\"declared_name\":\"minimist\",\"declared_version\":\"1.2.0\",\"legacy_version_source\":\"manifest\",\"resolved_from_registry\":false,\"resolved_version\":\"1.2.0\",\"source_precedence\":30,\"version_source\":\"command_pin\"}"
+      "value": "{\"confidence\":\"exact\",\"declared_name\":\"minimist\",\"declared_version\":\"1.2.0\",\"legacy_version_source\":\"manifest\",\"pinned\":true,\"pinned_version\":\"1.2.0\",\"resolved_from_registry\":false,\"resolved_version\":\"1.2.0\",\"source_precedence\":30,\"version_source\":\"command_pin\"}"
      },
      {
       "name": "agent-bom:discovery-provenance:version-source",
@@ -477,7 +477,7 @@
      },
      {
       "name": "agent-bom:discovery-provenance:version-provenance",
-      "value": "{\"confidence\":\"unknown\",\"declared_name\":\"requests\",\"evidence\":[{\"line\":1,\"source_file\":\"<path:requirements.txt>\",\"type\":\"manifest\"}],\"legacy_version_source\":\"detected\",\"resolved_from_registry\":false,\"resolved_version\":\"2.19.0\",\"source_precedence\":0,\"version_source\":\"unknown\"}"
+      "value": "{\"confidence\":\"unknown\",\"declared_name\":\"requests\",\"evidence\":[{\"line\":1,\"source_file\":\"<path:requirements.txt>\",\"type\":\"manifest\"}],\"legacy_version_source\":\"detected\",\"pinned\":true,\"pinned_version\":\"2.19.0\",\"resolved_from_registry\":false,\"resolved_version\":\"2.19.0\",\"source_precedence\":0,\"version_source\":\"unknown\"}"
      },
      {
       "name": "agent-bom:discovery-provenance:version-source",

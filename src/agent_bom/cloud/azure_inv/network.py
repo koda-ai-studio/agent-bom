@@ -42,7 +42,9 @@ def _discover_nsgs(
 def _normalize_nsg(nsg: Any, *, nsg_id: str, name: str, subscription_id: str) -> dict[str, Any]:
     exposure = _nsg_internet_exposure(nsg)
     return {
-        "group_id": nsg_id or name,
+        # NSG names are unique only per resource group; without an ARM id the
+        # subscription is the narrowest scope the list call still tells us.
+        "group_id": nsg_id or (f"subscriptions/{subscription_id}/networkSecurityGroups/{name}" if subscription_id else name),
         "name": name,
         "location": str(getattr(nsg, "location", "") or ""),
         "resource_group": _resource_group_from_id(nsg_id),

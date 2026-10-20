@@ -97,6 +97,12 @@ _ESSENTIAL_ATTRIBUTE_KEYS = frozenset(
     {
         "account_id",
         "arn",
+        "asset_type",
+        "cloud_service",
+        "container_kind",
+        "kubernetes_kind",
+        "resource_type",
+        "service",
         "cloud_provider",
         "cluster",
         "ecosystem",

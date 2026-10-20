@@ -183,3 +183,53 @@ def test_reach_always_returns_total_even_when_the_walk_is_bounded(store, directi
     # Unknown, not missing: a bounded walk cannot know the full reach.
     assert "total" in page["completeness"] and page["completeness"]["total"] is None
     assert page["completeness"]["lower_bound"] == 1
+
+
+_TRACED = [f"server:traced-{index}" for index in range(5)]
+
+
+@pytest.fixture
+def traced_store(tmp_path, monkeypatch, prior_job_store):
+    """One server whose trace touched five others next: sequence context, never access."""
+    monkeypatch.setenv("AGENT_BOM_ALLOW_UNAUTHENTICATED_API", "1")
+    monkeypatch.delenv("AGENT_BOM_API_KEY", raising=False)
+    monkeypatch.delenv("AGENT_BOM_MCP_TENANT_ID", raising=False)
+    graph = _graph()
+    for node_id in _TRACED:
+        graph.add_node(UnifiedNode(id=node_id, entity_type=E.SERVER, label=node_id))
+        graph.add_edge(UnifiedEdge(source="server:s", target=node_id, relationship=R.TRACE_STEP))
+    graph_store = SQLiteGraphStore(str(tmp_path / "graph.db"))
+    graph_store.save_graph(graph)
+    monkeypatch.setattr(stores, "_store", InMemoryJobStore())
+    monkeypatch.setattr(stores, "_graph_store", graph_store)
+    yield graph_store
+
+
+def test_trace_order_is_not_reach_in_the_shared_policy() -> None:
+    from agent_bom.graph import exploit_story
+    from agent_bom.graph.reach_view import REACH_RELATIONSHIP_TYPES, TRACE_ORDER_RELATIONSHIP_TYPES
+
+    assert R.TRACE_STEP in TRACE_ORDER_RELATIONSHIP_TYPES
+    assert not TRACE_ORDER_RELATIONSHIP_TYPES & REACH_RELATIONSHIP_TYPES
+    # The exploit story walks the shared policy itself, not a private copy of it.
+    assert not hasattr(exploit_story, "STORY_REACH_RELATIONSHIP_TYPES")
+
+
+@pytest.mark.parametrize("node_id", ["server:s", "agent:x"])
+def test_forward_impact_does_not_fan_out_over_trace_order(traced_store, node_id: str) -> None:
+    rest = TestClient(app).get("/v1/graph/impact", params={"node": node_id, "direction": "forward"}).json()
+    mcp = _reach(traced_store, node_id, "out")
+
+    assert not set(_TRACED) & set(rest["affected_nodes"])
+    assert [item["id"] for item in mcp["items"]] == rest["affected_nodes"]
+    assert mcp["total"] == rest["affected_count"]
+    assert rest["interpretation"]["excluded_relationships"] == ["trace_step"]
+    assert mcp["interpretation"]["excluded_relationships"] == ["trace_step"]
+
+
+def test_reverse_impact_of_a_traced_server_is_not_the_trace_predecessor(traced_store) -> None:
+    rest = TestClient(app).get("/v1/graph/impact", params={"node": _TRACED[0]}).json()
+    mcp = _reach(traced_store, _TRACED[0], "in")
+
+    assert rest["affected_nodes"] == []
+    assert [item["id"] for item in mcp["items"]] == rest["affected_nodes"]

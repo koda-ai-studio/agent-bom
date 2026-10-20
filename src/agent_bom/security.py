@@ -113,12 +113,11 @@ _VALUE_CREDENTIAL_PATTERNS = [
     re.compile(r"(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{30,}"),  # GitHub tokens
     re.compile(r"(?:glpat|glcbt|gldt|glrt|glptt|glagent)-[A-Za-z0-9_-]{20,}"),  # GitLab tokens
     re.compile(r"(?:AKIA|ASIA)[A-Z0-9]{16}"),  # AWS access key IDs
-    # Any PEM private-key label, not an enumerated few: `OPENSSH` (ssh-keygen's
-    # default since OpenSSH 7.8), `ENCRYPTED` and `PGP … BLOCK` were all missing,
-    # so those keys reached reports verbatim. Requiring the literal `PRIVATE KEY`
-    # keeps public material (`-----BEGIN CERTIFICATE-----`, `PUBLIC KEY`) out.
+    # Any PEM private-key label (`OPENSSH`, `ENCRYPTED`, `PGP … BLOCK` once leaked verbatim). Requiring
+    # the literal `PRIVATE KEY` keeps public material (`-----BEGIN CERTIFICATE-----`, `PUBLIC KEY`) out.
     re.compile(r"-----BEGIN [A-Z0-9 ]*PRIVATE KEY(?: BLOCK)?-----"),  # Private keys
-    re.compile(r"(?i:\bbearer[ \t]+)[A-Za-z0-9._~+/-]+=*"),  # RFC 6750 bearer credentials
+    # RFC 6750 bearer values; only the scheme's own vocabulary ("bearer token") is prose.
+    re.compile(r"(?i:\bbearer[ \t]+)(?!(?i:tokens?|auth(?:entication|orization)?|schemes?|credentials?)(?![\w.~+/=-]))[\w.~+/-]+=*"),
     re.compile(r"(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]*\.eyJ[A-Za-z0-9_-]*(?:\.[A-Za-z0-9_-]*)?"),  # JWTs, including short claims
     re.compile(r"xox[bpsar]-[A-Za-z0-9-]{10,}"),  # Slack tokens
 ]

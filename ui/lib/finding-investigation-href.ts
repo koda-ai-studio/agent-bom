@@ -13,7 +13,7 @@ export function buildFindingInvestigationHref(
   vuln: Pick<
     EnrichedVuln,
     "id" | "node_id" | "finding_node_id" | "entity_type" | "packages" | "agents" | "finding_id" | "scan_id"
-  >,
+  > & { graph_reachable_from_agents?: string[] | undefined; graph_reachable?: boolean | null | undefined },
   options?: { scanId?: string | undefined },
 ): string {
   const params = new URLSearchParams({ lens: "attack-path" });
@@ -21,7 +21,13 @@ export function buildFindingInvestigationHref(
   if (graphScanId) params.set("scan", graphScanId);
   const sourceScanId = vuln.scan_id?.trim() || graphScanId;
 
-  const nodeId = vuln.node_id?.trim();
+  // An issue group can be represented by an occurrence no agent reaches (an
+  // image copy) while its other occurrences run in agents. Prefer the agent's
+  // path: the server resolves the agent node plus the advisory to it.
+  const ownNode = vuln.node_id?.trim();
+  const reachedByAgent = (vuln.graph_reachable_from_agents ?? []).length > 0;
+  const unreachedCopy = !reachedByAgent && (vuln.graph_reachable === false || /:image:/.test(ownNode ?? ""));
+  const nodeId = vuln.agents[0] && unreachedCopy ? `agent:${vuln.agents[0]}` : ownNode;
   if (nodeId) params.set("node", nodeId);
 
   const findingNode = vuln.finding_node_id?.trim();

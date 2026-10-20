@@ -6,6 +6,7 @@ semantics. They do not query providers or establish effective authorization.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from typing import Any
 
@@ -346,6 +347,44 @@ def _normalize_azure_inventory(inventory: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+_GCP_FIREWALL_PATH = re.compile(r"(?:^|/)projects/(?P<project>[^/]+)/global/firewalls/(?P<name>[^/]+)$")
+
+
+def _gcp_firewall_identity(firewall: dict[str, Any], inventory_project: str) -> tuple[str, str]:
+    """Return ``(project_id, group_id)`` with the rule's project-scoped resource name.
+
+    Firewall rule names are unique only within a project, so a bare name would
+    merge same-named rules from different projects into one graph node. The
+    scoped form is the rule's relative resource name
+    ``projects/{project}/global/firewalls/{name}`` (the path inside its
+    ``selfLink``), derivable from records collected before ``selfLink`` was kept.
+    """
+    raw_id = _clean_graph_part(firewall.get("group_id"))
+    name = _clean_graph_part(firewall.get("name")) or raw_id
+    for candidate in (raw_id, _clean_graph_part(firewall.get("self_link"))):
+        match = _GCP_FIREWALL_PATH.search(candidate)
+        if match:
+            return match.group("project"), f"projects/{match.group('project')}/global/firewalls/{match.group('name')}"
+    project_id = _clean_graph_part(firewall.get("project_id")) or inventory_project
+    if not project_id or not name:
+        return project_id, raw_id
+    return project_id, f"projects/{project_id}/global/firewalls/{name}"
+
+
+_LEGACY_GCP_NAT_ID = re.compile(r"^(?P<router>[^/]+)/(?P<nat>[^/]+)$")
+
+
+def _gcp_scoped_nat(nat: dict[str, Any], inventory_project: str) -> dict[str, Any]:
+    """Scope a pre-path ``{router}/{nat}`` id by project + region (router names repeat across both)."""
+    match = _LEGACY_GCP_NAT_ID.match(_clean_graph_part(nat.get("id")))
+    project_id = _clean_graph_part(nat.get("account_id")) or _clean_graph_part(nat.get("project_id")) or inventory_project
+    if not match or not project_id:
+        return nat
+    region = _clean_graph_part(nat.get("location"))
+    parts = ["projects", project_id, *(["regions", region] if region else []), "routers", match.group("router"), "nats", match.group("nat")]
+    return {**nat, "id": "/".join(parts)}
+
+
 def _normalize_gcp_inventory(inventory: dict[str, Any]) -> dict[str, Any]:
     """Translate a GCP inventory payload into the canonical builder shape."""
     buckets: list[dict[str, Any]] = []
@@ -354,16 +393,28 @@ def _normalize_gcp_inventory(inventory: dict[str, Any]) -> dict[str, Any]:
             continue
         # "bucket" is already a CNAPP data-store keyword; keep gcs service tag.
         buckets.append({**bucket, "_service": "gcs", "_kind": "gcs-bucket", "_label": "gcs bucket"})
+    inventory_project = _clean_graph_part(inventory.get("project_id")) or _clean_graph_part(inventory.get("account_id"))
     groups: list[dict[str, Any]] = []
     for firewall in inventory.get("firewalls", []) or []:
         if not isinstance(firewall, dict):
             continue
-        groups.append({**firewall, "_service": "compute", "_kind": "gcp-firewall", "_resource_type": "firewall"})
+        project_id, group_id = _gcp_firewall_identity(firewall, inventory_project)
+        groups.append(
+            {
+                **firewall,
+                "group_id": group_id,
+                "project_id": project_id,
+                "_service": "compute",
+                "_kind": "gcp-firewall",
+                "_resource_type": "firewall",
+            }
+        )
     instances: list[dict[str, Any]] = []
     for instance in inventory.get("instances", []) or []:
         if not isinstance(instance, dict):
             continue
         instances.append({**instance, "_service": "compute", "_kind": "gce-instance", "_label": "gce"})
+    nat_gateways = [_gcp_scoped_nat(nat, inventory_project) for nat in inventory.get("nat_gateways", []) or [] if isinstance(nat, dict)]
     principals = [p for p in inventory.get("service_accounts", []) or [] if isinstance(p, dict)]
     identity_groups = [g for g in inventory.get("groups", []) or [] if isinstance(g, dict)]
     return {
@@ -371,6 +422,7 @@ def _normalize_gcp_inventory(inventory: dict[str, Any]) -> dict[str, Any]:
         "buckets": buckets,
         "security_groups": groups,
         "instances": instances,
+        "nat_gateways": nat_gateways,
         "roles": [],
         "users": principals,
         "groups": identity_groups,

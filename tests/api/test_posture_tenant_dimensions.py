@@ -156,7 +156,7 @@ def test_dimensions_reflect_the_union_of_current_open_findings(demo_report: dict
     # cloud scan's critical.
     demo_vulns = demo_report["posture_scorecard"]["dimensions"]["vulnerability_posture"]["details"]
     demo_total = int(demo_vulns.split(" ", 1)[0])
-    assert dimensions["vulnerability_posture"]["details"].startswith(f"{demo_total + 1} vulns (3 critical")
+    assert dimensions["vulnerability_posture"]["details"].startswith(f"{demo_total + 1} vulnerability occurrences (3 critical")
     assert basis["vulnerability_findings"] == demo_total + 1
 
     # Open-finding basis agrees with the overview's occurrence histogram.

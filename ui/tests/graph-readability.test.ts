@@ -29,6 +29,15 @@ it("keeps a high-degree parent quiet without losing relationships or direction m
   expect(result.every(e => !e.label && !e.data?.directionEmphasis)).toBe(true);
   expect(result.every(e => e.markerEnd && e.source === "parent")).toBe(true);
 });
+it("keeps names and metadata at 12px or more when the whole default graph is fitted", async () => {
+  const { readableGraphNodeStyle } = await import("@/lib/graph-node-dimensions");
+  for (const zoom of [0.4, 0.45, 0.6, 1]) {
+    const style = readableGraphNodeStyle(zoom) as Record<string, string>;
+    expect(Number.parseFloat(style["--graph-node-label-size"]!) * zoom).toBeGreaterThanOrEqual(12);
+    expect(Number.parseFloat(style["--graph-node-meta-size"]!) * zoom).toBeGreaterThanOrEqual(12);
+  }
+});
+
 it("keeps evidence metadata legible at the bounded repository overview zoom", async () => {
   const { readableGraphNodeStyle } = await import("@/lib/graph-node-dimensions");
   const style = readableGraphNodeStyle(0.49) as Record<string, string>;

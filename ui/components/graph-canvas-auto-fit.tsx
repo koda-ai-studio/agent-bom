@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Panel, useNodesInitialized, useReactFlow, useStore, type Node, type FitViewOptions } from "@xyflow/react";
+import { GRAPH_FIT_MAX_ZOOM, graphAdaptiveFrame, legibleFitZoom } from "@/lib/graph-adaptive-frame";
 import { graphInspectorTargets } from "@/lib/graph-inspector-framing";
-import { graphAdaptiveFrame } from "@/lib/graph-adaptive-frame";
 
 /** Fit measured compact contexts after a docked inspector changes canvas width.
  * Only geometry changes trigger a fit; hover and evidence updates do not. */
@@ -73,17 +73,18 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     // Only a new layout/frame may replace that deliberate camera position.
     const autoFitKey = JSON.stringify([layoutKey, width, height, anchorId, inspector, windowHeight, spaceAbove, padding]);
     if (lastAutoFitKey.current === autoFitKey) return;
+    // Frame every loaded node whenever captions stay legible at that fit; a
+    // capped zoom keeps small graphs from opening as two giant cards. A graph
+    // too dense to read whole opens on the anchor's neighbourhood, never a
+    // lone card. The zoom controls sit bottom-left.
     const anchor = nodes.find(node => node.id === anchorId) ?? nodes[0];
-    // The zoom controls sit at the bottom-left; keep fitted cards out from under them.
-    const options: FitViewOptions = { padding: { top: padding, right: padding, bottom: padding, left: "72px" }, duration: 0, minZoom: 0.05, maxZoom: 1.25,
-      // Too large to read whole: open on the anchor's neighbourhood, never a lone card.
-      // A phone keeps one readable card (its list view gives the overview).
-      ...(!frameSize.fitAll && anchor ? width >= 640
-        ? { nodes: neighbourhood(anchor.id, nodes.map(node => node.id), getEdges()), minZoom: 0.45, maxZoom: 1.1 }
-        : { nodes: [{ id: anchor.id }], minZoom: 0.85, maxZoom: 1.1 } : {}),
-    };
-    const fitIds = options.nodes ? new Set(options.nodes.map(node => node.id)) : null;
-    // A focused root can resize without changing the whole graph's envelope.
+    // A phone's overview is its Paths list; its Graph view keeps a dense graph's
+    // anchor at full-card zoom, since summary pills below zoom 1 are unreadable there.
+    const phone = width < 640;
+    const focus = !frameSize.fitAll && anchor ? (phone ? [{ id: anchor.id }] : neighbourhood(anchor.id, nodes.map(node => node.id), getEdges())) : null;
+    const options: FitViewOptions = { padding: { top: padding, right: padding, bottom: padding, left: phone ? padding : "72px" }, duration: 0, minZoom: 0.05, maxZoom: GRAPH_FIT_MAX_ZOOM,
+      ...(focus ? phone ? { nodes: focus, minZoom: 0.85, maxZoom: 1.1 } : { nodes: focus, minZoom: legibleFitZoom(width) } : {}) };
+    const fitIds = focus ? new Set(focus.map(node => node.id)) : null;
     // Convergence must measure exactly the nodes passed to fitView.
     const fittedBounds = () => getNodesBounds(fitIds ? getNodes().filter(node => fitIds.has(node.id)) : getNodes());
     let cancelled = false;
@@ -110,7 +111,8 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     frames.push(requestAnimationFrame(() => settle(0)));
     return () => { cancelled = true; frames.forEach(cancelAnimationFrame); };
   }, [padding, enabled, initialized, width, height, layoutKey, anchorId, inspector, preserveViewport, windowHeight, spaceAbove, canvas, fitView, getNodes, getNodesBounds, getEdges, onLayoutAspect]);
-  if (!initialized || width >= 640 || width <= 0) return null;
+  // The stepper walks an ordered path on a phone; a plain graph is shown whole.
+  if (!initialized || width >= 640 || width <= 0 || !navigationIds?.length) return null;
   const navigator = <GraphNodeNavigator nodes={getNodes()} orderedIds={navigationIds} />;
   return navigationMount ? createPortal(navigator, navigationMount) : <Panel position="top-center">{navigator}</Panel>;
 }
@@ -150,7 +152,7 @@ function GraphNodeNavigator({ nodes, orderedIds }: { nodes: Node[]; orderedIds?:
   </div>;
 }
 
-/** The anchor and up to six of its direct neighbours, so the first frame shows context. */
+/** The anchor and up to six of its direct neighbours, so a dense graph still opens on context. */
 function neighbourhood(anchorId: string, visibleIds: string[], edges: { source: string; target: string }[]) {
   const targets = graphInspectorTargets(anchorId, visibleIds, edges);
   if (targets.length > 1) return targets;

@@ -22,7 +22,9 @@ describe("scoped overview history", () => {
   it("shows unavailable comparisons rather than zero for legacy points", async () => {
     getTrends.mockResolvedValue({data_points: [{timestamp: "2026-09-24T12:00:00Z", scan_id: "legacy"}], count: 1});
     render(<OverviewHistory />); await userEvent.click(screen.getByText("Changes over time"));
-    expect(await screen.findByText("Comparison metadata unavailable")).toBeVisible();
+    expect(await screen.findByText("Not comparable: no comparison recorded")).toBeVisible();
+    expect(screen.getByText("No dated snapshots in this window.")).toBeVisible();
+    await userEvent.click(screen.getByRole("button", {name: "Finding changes"}));
     expect(screen.getAllByText("No supported observations in this window.")).toHaveLength(2);
     await userEvent.click(screen.getByRole("button", {name: "Age & freshness"}));
     expect(screen.getAllByText("No supported observations in this window.")).toHaveLength(2);

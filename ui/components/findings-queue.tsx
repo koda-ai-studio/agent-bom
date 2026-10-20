@@ -1,5 +1,7 @@
 "use client";
 
+import { packageVersionLabel } from "@/lib/package-version-label";
+
 import { ChevronDown, ChevronRight, ChevronUp, ExternalLink } from "lucide-react";
 import { createPortal } from "react-dom";
 import { Fragment, useLayoutEffect, useState, type ReactNode } from "react";
@@ -121,10 +123,6 @@ function renderPercentValue(value: number | undefined, missingLabel: string) {
   );
 }
 
-function packageVersionLabel(vuln: EnrichedVuln): string {
-  const name = vuln.packages[0] ?? "";
-  return vuln.current_version ? `${name}@${vuln.current_version}` : name;
-}
 
 export function FindingsQueueTable({
   vulns,

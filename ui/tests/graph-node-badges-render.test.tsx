@@ -47,7 +47,7 @@ describe("graph node badges on the canvas and in the legend", () => {
     const nodes = [{ id: "p", data: pkg }, { id: "c", data: cluster }];
     render(<GraphLegend embedded items={legendItemsForVisibleGraph(nodes, [])} />);
     expect(screen.getByText("Node badges")).toBeInTheDocument();
-    for (const label of ["AWS provider", "Production environment", "npm ecosystem", "Critical severity ring"]) {
+    for (const label of ["AWS provider", "Production environment", "npm ecosystem", "Linked critical findings"]) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
     const legendChips = [...document.querySelectorAll("[data-node-badge]")].map((chip) => chip.outerHTML.replace(/ (title|aria-label)="[^"]*"/g, ""));

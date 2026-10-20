@@ -131,7 +131,12 @@ const BUDGETS = {
   // Estate changes, entity search, and finding journeys measure 4033.8 KiB
   // on Linux CI and macOS. Allow 22.2 KiB of bounded feature headroom;
   // shared-runtime and largest-chunk limits stay fixed.
-  totalClientJsBytes: 4_153_344,
+  // The persona-journey work (exploit story, canonical asset icon registry,
+  // owner/SLA top risks, control evidence, impact direction, phone layouts)
+  // measures 4208.4 KiB on Linux CI and macOS versus 4054.5 KiB on main, with
+  // no new dependency. Keep 19.6 KiB of bounded headroom at 4228 KiB;
+  // shared-runtime and largest-chunk limits stay fixed.
+  totalClientJsBytes: 4_329_472,
   largestChunkBytes: 950_000,
   sharedAppBytes: 450_000,
 };

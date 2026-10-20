@@ -8,6 +8,8 @@ export interface AgentSource {
   darkMark?: boolean;
   /** Black-ink artwork that must be lightened on a dark surface. */
   mono?: boolean;
+  /** The official mark is not legible at graph badge size (~14px); badges show the monogram. */
+  badgeMonogram?: boolean;
 }
 
 type SourceInput = {
@@ -18,7 +20,7 @@ type SourceInput = {
 };
 
 const BRANDS: Record<string, AgentSource> = {
-  okta: { id: "okta", label: "Okta", src: "/logos/okta.svg", monogram: "Ok", accent: "#70809c", mono: true },
+  okta: { id: "okta", label: "Okta", src: "/logos/okta.svg", monogram: "Ok", accent: "#70809c", mono: true, badgeMonogram: true },
   databricks: { id: "databricks", label: "Databricks", src: "/logos/databricks.svg", monogram: "Da", accent: "#70809c", mono: true },
   kubernetes: { id: "kubernetes", label: "Kubernetes", src: "/logos/kubernetes.svg", monogram: "Ku", accent: "#70809c", mono: true },
   clickhouse: { id: "clickhouse", label: "ClickHouse", src: "/logos/clickhouse.svg", monogram: "Cl", accent: "#70809c", mono: true },
@@ -57,6 +59,12 @@ const MONOGRAMS: Record<string, [string, string, string]> = {
   void: ["Void", "V", "#708c85"], aide: ["Aide", "Ai", "#688fc0"],
   trae: ["Trae", "Tr", "#52977e"], pieces: ["Pieces", "P", "#6f8eab"],
   "mcp-cli": ["MCP CLI", "MCP", "#7b8495"],
+  // Platform vendors without a bundled official mark get a neutral monogram.
+  cloudflare: ["Cloudflare", "CF", "#70809c"], vercel: ["Vercel", "Ve", "#70809c"],
+  supabase: ["Supabase", "Sb", "#70809c"], langfuse: ["Langfuse", "Lf", "#70809c"],
+  langsmith: ["LangSmith", "LS", "#70809c"], modal: ["Modal", "Mo", "#70809c"],
+  fireworks: ["Fireworks AI", "Fw", "#70809c"], nebius: ["Nebius", "Nb", "#70809c"],
+  coreweave: ["CoreWeave", "CW", "#70809c"], nvidia: ["NVIDIA", "NV", "#70809c"],
 };
 
 function lookup(value: unknown): AgentSource | null {

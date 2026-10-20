@@ -1,31 +1,11 @@
 import type { ExposureEntityRole } from "@/lib/exposure-path";
-import {
-  formatInventoryAgentLabel,
-  topologyAgentTypeLabel,
-} from "@/lib/agent-topology-graph";
-
-const SERVER_VENDOR_LABELS: Record<string, string> = {
-  github: "GitHub",
-  gitlab: "GitLab",
-  slack: "Slack",
-  jira: "Jira",
-  postgres: "PostgreSQL",
-  snowflake: "Snowflake",
-  kubernetes: "Kubernetes",
-  docker: "Docker",
-  aws: "AWS",
-  azure: "Azure",
-  gcp: "Google Cloud",
-};
+import { topologyAgentTypeLabel } from "@/lib/agent-topology-graph";
+import { agentDisplayName, serverDisplayName } from "@/lib/display-name";
 
 export type EntityDisplayParts = {
   title: string;
   subtitle?: string | undefined;
 };
-
-function normalizeKey(value: string): string {
-  return value.trim().toLowerCase();
-}
 
 function titleCaseWords(value: string): string {
   return value
@@ -57,20 +37,15 @@ export function formatExposureEntityDisplay(
       const agentType =
         typeof attributes.agent_type === "string" ? attributes.agent_type : undefined;
       return {
-        title: formatInventoryAgentLabel(trimmed),
+        title: agentDisplayName(trimmed, typeof attributes.display_name === "string" ? attributes.display_name : null),
         subtitle: agentType ? topologyAgentTypeLabel(agentType) : "AI agent runtime",
       };
     }
     case "server": {
-      const key = normalizeKey(trimmed);
-      const vendor = SERVER_VENDOR_LABELS[key];
-      const alreadyNamesServerKind = /\b(?:mcp|server|service|connector)\b/i.test(trimmed);
       const transport =
         typeof attributes.transport === "string" ? attributes.transport : undefined;
       return {
-        title: vendor
-          ? `${vendor} connector`
-          : `${titleCaseWords(trimmed)}${alreadyNamesServerKind ? "" : " service"}`,
+        title: serverDisplayName(trimmed, typeof attributes.display_name === "string" ? attributes.display_name : null),
         subtitle: attributes.protocol === "mcp" || attributes.server_type === "mcp" || attributes.is_mcp === true
           ? (transport ? `${transport} MCP server` : "MCP server")
           : (transport ? `${transport} server` : "Server"),

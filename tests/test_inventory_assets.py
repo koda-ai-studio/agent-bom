@@ -65,7 +65,15 @@ def _seed_graph(store: SQLiteGraphStore, *, tenant_id: str = "default", scan_id:
         )
     )
     g.add_node(
-        _node("data_store:s3", EntityType.DATA_STORE, "s3-bucket", environment="staging", provider="aws", data_sources=["cloud:aws"])
+        _node(
+            "data_store:s3",
+            EntityType.DATA_STORE,
+            "s3-bucket",
+            environment="staging",
+            provider="aws",
+            data_sources=["cloud:aws"],
+            attributes={"resource_type": "s3", "service": "S3", "bucket_policy_json": "{}"},
+        )
     )
     g.add_node(_node("account:aws", EntityType.ACCOUNT, "aws-acct-123", provider="aws", data_sources=["cloud:aws"]))
     # ── Snowflake ──
@@ -268,6 +276,14 @@ def test_explicit_scan_is_resolved_once_and_tenant_scoped(tmp_path):
             assert hidden.json()["error"][key] == missing.json()["error"][key]
     finally:
         set_graph_store(original)
+
+
+def test_list_keeps_the_subtype_fields_that_name_an_asset_kind(inventory_store):
+    """The UI icon registry needs the recorded vendor subtype; other attributes stay trimmed."""
+    client = TestClient(app)
+    body = client.get("/v1/inventory/assets?limit=100").json()
+    row = next(r for r in body["assets"] if r["id"] == "data_store:s3")
+    assert row["attributes"] == {"resource_type": "s3", "service": "S3"}
 
 
 def test_list_type_filter(inventory_store):

@@ -12,6 +12,9 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - **Outdated local vulnerability data now fails closed.** Applies when nothing is at or above the gate, the local DB is past the age `agent-bom db freshness` warns about (or its freshness can't be trusted), and the run was offline or live OSV did not answer. `check` then exits `2` (incomplete), `scan` exits `1` with a `stale_local_data` issue in `scan_run`, and MCP `check` / `POST /v1/scan/check` return `status: "incomplete"`. Real findings keep their exit codes, and `--exit-zero` does not turn this into a pass. Air-gapped installs that accept old local data pass `--allow-stale-db` or set `AGENT_BOM_ALLOW_STALE_DB=1`. `check` now honours `--require-fresh-db` / `AGENT_BOM_REQUIRE_FRESH_DB` (exit `3`) like `scan`.
+### Added
+
+- Exploit story for a CVE occurrence: `GET /v1/graph/exploit-story` and the MCP `finding_detail` `exploit_story` block say what the vulnerable package puts at risk (agents, MCP servers, tools, credential names, data stores, cloud resources and identities, each with its hop-by-hop path and evidence tier) and how it could be exploited (decoded CVSS 3.x/4.0 vector, CWE attacker capability, KEV, EPSS, reachability, fix), with a narrative built only from recorded fields. The finding drawer and the investigation path show it, and the path canvas can draw the at-risk hops past the package.
 
 ### Fixed
 
@@ -28,6 +31,9 @@ Versions follow [Semantic Versioning](https://semver.org/).
 - Findings, the `reachability` filter and facets, attack paths and MCP read one reachability verdict derived from the stamped graph evidence, so a finding reached by a provenance-backed path reads `likely` (never `confirmed` without function-level or runtime evidence) and `?reachability=reachable` returns only `likely`/`confirmed` rows.
 - `GET /v1/findings` cursor pages report the same exact `total` as the first page (`total_kind: exact`) instead of `null`/`unknown`; a cold count cache runs one COUNT, approximate reads still skip it, and scope-filtered walks keep the honest marker.
 - The MCP `context_graph` tool builds from the tenant's persisted scan snapshot (or `scan_id`) by default and labels its `source` and `scope`; live discovery of the MCP host's own agent configurations runs only with `live=true` or a `config_path`.
+- One count per metric across pages. An issue's severity is now its worst open occurrence, so the findings page (sorted by reach) and the overview no longer disagree by one high or medium issue. An explicit `CVE` finding reported by a cloud source is classified as a vulnerability, so the overview's open-CVE tile matches the posture dimension. KEV is counted in issues beside the issue tiles and in the exec summary (`issues.kev`; occurrences remain in `finding_counts.kev`). Remediation reads the findings default window and returns it as `window`.
+- Units and scopes are named wherever two numbers could be read as one: overview security areas say "occurrences", the agents page says "Agents on this host" with the estate count beside it and counts unique credentials, the posture dimension says "vulnerability occurrences", the compliance page counts control frameworks and risk mappings with the overview's definition, and the NIST SP 800-53 panel leads with the framework list's pass/fail and labels the catalog rescoring as a separate basis.
+- Agent and server names come from one resolver: a recorded display name, otherwise one canonical formatting of the identifier; exposure paths no longer append "service" or "connector".
 - Native trace imports expose bounded provider retry timing while retaining the last committed checkpoint on failure.
 - Bulk findings require a JSON boolean for absent-finding reconciliation; invalid CVSS errors omit submitted values.
 - JSON file exports publish through atomic replacement so encoding or write failures preserve an existing report.

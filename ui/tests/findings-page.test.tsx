@@ -1097,6 +1097,22 @@ describe("Cloud check results", () => {
     const tab = screen.getByRole("tab", { selected: true });
     expect(screen.getByRole("tabpanel")).toHaveAttribute("id", tab.getAttribute("aria-controls"));
   });
+  it("offers a soft inline retry for a dropped connection instead of the API-offline page", async () => {
+    const { ApiNetworkError } = await import("@/lib/api-errors");
+    apiMock.listFindings
+      .mockRejectedValueOnce(new ApiNetworkError("Network request failed: read ECONNRESET", { url: "/v1/findings", method: "GET", cause: new TypeError("fetch failed") }))
+      .mockResolvedValue({ findings: [canonicalFinding], total: 1 });
+    render(<FindingsPage />);
+    const notice = await screen.findByTestId("findings-read-retry");
+    expect(notice).toHaveTextContent("interrupted");
+    expect(screen.queryByText("Findings need the agent-bom API")).toBeNull();
+    expect(screen.queryByText("No findings found")).toBeNull();
+    fireEvent.click(within(notice).getByRole("button", { name: "Retry" }));
+    await waitFor(() => expect(screen.queryByTestId("findings-read-retry")).toBeNull());
+    expect(apiMock.listFindings).toHaveBeenCalledTimes(2);
+    expect(await screen.findByText(/1 finding/)).toBeInTheDocument();
+    expect(screen.queryByText("Findings need the agent-bom API")).toBeNull();
+  });
   it.each([
     ["CIS_FAIL", "Failed"],
     ["CIS_ERROR", "Not evaluated"],

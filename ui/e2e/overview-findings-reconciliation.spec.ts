@@ -612,6 +612,7 @@ for (const theme of ["light", "dark"] as const) {
       expect(historyRequests).toBe(0);
       await page.getByText("Changes over time", {exact: true}).click();
       await expect(page.getByRole("region", {name: "History values"})).toBeVisible();
+      await page.getByRole("button", {name: "Finding changes"}).click();
       await expect(page.getByRole("img", {name: /^Newly detected findings/})).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       await page.getByText("Changes over time", {exact: true}).locator("..").screenshot({path: testInfo.outputPath(`history-${theme}-${width}.png`)});

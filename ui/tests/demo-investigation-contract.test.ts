@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const page = readFileSync(join(process.cwd(), "app/security-graph/page.tsx"), "utf8");
+const scanEvidence = readFileSync(join(process.cwd(), "components/investigation-scan-evidence.tsx"), "utf8");
 
 describe("investigation demo hierarchy", () => {
   it("puts the ranked decision workspace before secondary evidence controls", () => {
@@ -15,10 +16,11 @@ describe("investigation demo hierarchy", () => {
 
   it("describes snapshots as supporting evidence instead of the page identity", () => {
     expect(page).toContain("InvestigationTools");
-    expect(page).toContain("Current scan evidence");
-    expect(page).toContain("Manage snapshots");
-    expect(page).not.toContain(">Snapshot</p>");
-    expect(page).not.toContain("Large estate ·");
+    expect(page).toContain("<InvestigationScanEvidence");
+    expect(scanEvidence).toContain("Current scan evidence");
+    expect(scanEvidence).toContain("Manage snapshots");
+    expect(page + scanEvidence).not.toContain(">Snapshot</p>");
+    expect(page + scanEvidence).not.toContain("Large estate ·");
   });
 
   it("does not make the ranked path queue wait for fix-first enrichment", () => {

@@ -264,6 +264,44 @@ def test_mcp_scan_report_carries_vuln_data_freshness(monkeypatch, tmp_path):
     assert freshness["stale"] is True
 
 
+def _mcp_scan_payload() -> dict:
+    from agent_bom.mcp_server_scan import _package_spec_agent
+    from agent_bom.mcp_tools.scanning import scan_impl
+    from agent_bom.parsers import extract_packages
+
+    async def _pipeline(*_args, **_kwargs):
+        agent, _warnings = _package_spec_agent("lodash@4.17.20", ecosystem="npm")
+        for server in agent.mcp_servers:
+            server.packages = server.packages or extract_packages(server)
+        return [agent], [], [], ["mcp_package"]
+
+    return json.loads(
+        asyncio.run(
+            scan_impl(package="lodash@4.17.20", ecosystem="npm", offline=True, _run_scan_pipeline=_pipeline, _truncate_response=lambda r: r)
+        )
+    )
+
+
+def test_mcp_scan_reads_freshness_through_the_module_at_call_time(monkeypatch, tmp_path):
+    import agent_bom.mcp_tools.scanning  # noqa: F401 - imported before the patch, as in a long-lived server
+
+    _use_db(monkeypatch, tmp_path, synced_days_ago=0)
+    monkeypatch.setattr("agent_bom.vuln_freshness.compute_freshness", lambda **_kwargs: None)
+
+    assert _mcp_scan_payload().get("vuln_data_freshness") is None
+
+
+def test_mcp_scan_survives_a_freshness_probe_that_raises(monkeypatch, tmp_path):
+    _use_db(monkeypatch, tmp_path, synced_days_ago=0)
+
+    def _boom(**_kwargs):
+        raise RuntimeError("freshness probe exploded")
+
+    monkeypatch.setattr("agent_bom.vuln_freshness.compute_freshness", _boom)
+
+    assert _mcp_scan_payload().get("vuln_data_freshness") is None
+
+
 # ── Fail closed when freshness cannot be trusted ─────────────────────────────
 
 

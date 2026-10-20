@@ -27,6 +27,8 @@
         "resolved_from_registry": { "type": "boolean" },
         "floating_reference": { "type": "boolean" },
         "floating_reference_reason": { "type": "string" },
+        "pinned": { "type": "boolean" },
+        "pinned_version": { "type": "string" },
         "evidence": {
           "type": "array",
           "items": {

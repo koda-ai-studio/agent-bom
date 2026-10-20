@@ -15,6 +15,7 @@ from agent_bom.graph.attack_path_fusion import has_sensitive_data_label
 from agent_bom.graph.component_paths import derive_component_paths, occurrence_applicability
 from agent_bom.graph.container import AttackPath, UnifiedGraph
 from agent_bom.graph.credential_findings import credential_finding_paths
+from agent_bom.graph.cross_vendor_paths import cross_vendor_storage_paths
 from agent_bom.graph.edge_lookup import _build_edge_lookup as _build_edge_lookup
 from agent_bom.graph.edge_lookup import _edge_relationships_for_hops as _edge_relationships_for_hops
 from agent_bom.graph.edge_lookup import _EdgeLookup as _EdgeLookup
@@ -186,6 +187,15 @@ _DANGEROUS_TOOL_KEYWORDS = ("shell", "exec", "run", "command", "subprocess", "fi
 _MAX_GOVERNANCE_PATHS = 200
 
 
+def leads_somewhere(path: AttackPath) -> bool:
+    """A path crosses at least one hop to a different node.
+
+    A single-node risk (an admin-equivalent role, a resource with stacked toxic
+    factors and nothing it reaches) is a finding on that node, never a path.
+    """
+    return path.source != path.target and len(path.hops) >= 2
+
+
 def _is_dangerous_tool(label: str) -> bool:
     low = label.lower()
     return any(keyword in low for keyword in _DANGEROUS_TOOL_KEYWORDS)
@@ -325,26 +335,6 @@ def _derived_governance_attack_paths(graph: UnifiedGraph) -> list[AttackPath]:
                             f"{node.label} drifted to using tool {tool.label} outside its declared blueprint.",
                         )
 
-    # Admin-equivalent identity: a principal that holds admin-equivalent
-    # permissions is a standing CIEM risk on its own — no assume-chain, finding,
-    # or dangerous-tool anchor required — so surface it as a first-class path so
-    # it appears/ranks in the queue rather than sitting inert on the node. The
-    # admin-equivalence basis (policy_evaluation / scanner_actions / heuristic)
-    # is carried into the summary as provenance.
-    for node in graph.nodes.values():
-        if not node.attributes.get("admin_equivalent"):
-            continue
-        basis = node.attributes.get("admin_equivalence_basis")
-        basis_detail = f" (basis: {basis})" if basis else ""
-        emit(
-            "admin_equivalent",
-            node.id,
-            node.id,
-            [node.id],
-            [],
-            60.0,
-            f"{node.label} holds admin-equivalent permissions{basis_detail} — a standing privilege-escalation risk.",
-        )
     return paths
 
 
@@ -431,11 +421,9 @@ def _derived_toxic_combination_paths(graph: UnifiedGraph) -> list[AttackPath]:
             factors.append("sensitive data" + (f" ({'/'.join(regs)})" if regs else ""))
         if node.id in admin_reachable:
             factors.append("admin-privilege reachable")
-        if len(factors) < 2:
+        # Under two factors is no combination; reaching no store, the stack stays a finding on the node.
+        if len(factors) < 2 or not sens_ids:
             continue
-        target = sens_ids[0] if sens_ids else node.id
-        hops = [node.id, target] if target != node.id else [node.id]
-        edges = ["exposed_to"] if target != node.id else []
         base = _toxic_band(len(factors))
         if exposure_mitigated:
             # Below the unmitigated toxic band — the WAF fronts the exposure — but
@@ -447,9 +435,9 @@ def _derived_toxic_combination_paths(graph: UnifiedGraph) -> list[AttackPath]:
         paths.append(
             AttackPath(
                 source=node.id,
-                target=target,
-                hops=hops,
-                edges=edges,
+                target=sens_ids[0],
+                hops=[node.id, sens_ids[0]],
+                edges=["exposed_to"],
                 composite_risk=round(min(100.0, base), 2),
                 summary=f"{prefix}: {node.label} stacks {len(factors)} toxic factors — " + ", ".join(factors) + ".",
                 vuln_ids=[],
@@ -482,7 +470,17 @@ def _derived_attack_paths(graph: UnifiedGraph, *, kinds: dict[int, str] | None =
     effective-permission chains, credential-owner paths and agent/server/component/
     finding chains, ranked and unique per chain (equivalent persisted rows win).
     """
-    governance_paths = _derived_governance_attack_paths(graph) + _derived_toxic_combination_paths(graph)
+    incoming: dict[str, list] = {}
+    outgoing: dict[str, list] = {}
+    for edge in graph.edges:
+        incoming.setdefault(edge.target, []).append(edge)
+        outgoing.setdefault(edge.source, []).append(edge)
+    signal_cache: dict[str, list[tuple[str, str, str, float]]] = {}
+    governance_paths = [
+        *_derived_governance_attack_paths(graph),
+        *_derived_toxic_combination_paths(graph),
+        *cross_vendor_storage_paths(graph, incoming=incoming, path_boost=lambda hops: _cached_path_boost(graph, hops, signal_cache)),
+    ]
     for path in governance_paths:
         if path.reachability == "unknown":
             path.reachability = "likely"
@@ -514,13 +512,6 @@ def _derived_attack_paths(graph: UnifiedGraph, *, kinds: dict[int, str] | None =
                         path.summary = f"Unverified structural candidate. {path.summary}".strip()
             materialized.append(path)
 
-    incoming: dict[str, list] = {}
-    outgoing: dict[str, list] = {}
-    for edge in graph.edges:
-        incoming.setdefault(edge.target, []).append(edge)
-        outgoing.setdefault(edge.source, []).append(edge)
-
-    signal_cache: dict[str, list[tuple[str, str, str, float]]] = {}
     paths = derive_component_paths(
         graph,
         incoming=incoming,
@@ -543,4 +534,4 @@ def _derived_attack_paths(graph: UnifiedGraph, *, kinds: dict[int, str] | None =
             combined.append(derived_path)
             existing_keys.add(derived_path_key)
     tag_path_kinds(kinds, fusion=materialized, governance=governance_paths, credential=credential_paths)
-    return _with_technique_mappings(rank_unique_paths(combined), graph)
+    return _with_technique_mappings(rank_unique_paths([path for path in combined if leads_somewhere(path)]), graph)
