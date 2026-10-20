@@ -91,6 +91,12 @@ def _group_occurrence_rows(rows: list[dict[str, Any]], *, cloud_controls: bool =
             group.update(row)
             group.update(aggregate)
         group["occurrence_count"] = int(group["occurrence_count"]) + 1
+        # The representative may be an image occurrence with no agent; the issue
+        # still affects every agent and server its other occurrences name.
+        for scope_key in ("affected_agents", "affected_servers"):
+            merged = [str(value) for value in (group.get(scope_key) or []) if value]
+            merged.extend(str(value) for value in (row.get(scope_key) or []) if value and str(value) not in merged)
+            group[scope_key] = merged
         if row.get("observation_status") == "unreconfirmed":
             group["unreconfirmed_occurrence_count"] = int(group["unreconfirmed_occurrence_count"]) + 1
         occurrences = group["_occurrence_rows"]
