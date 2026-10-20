@@ -1175,7 +1175,13 @@ def test_demo_estate_graph_carries_the_projected_estate(demo_estate_client: Test
     assert by_type["environment"] >= 100, by_type
     assert by_type["misconfiguration"] >= 439, by_type
 
-    contains = {(row.get("source"), row.get("target")) for row in payload.get("edges") or [] if row.get("relationship") == "contains"}
+    # Node paging bounds each page's edges; read the parents' recorded edges completely.
+    parents = {"org:enterprise:northstar-health-ai", "account:aws:123456789012", "env:aws:123456789012:production"}
+    contains = {
+        (row.get("source"), row.get("target"))
+        for row in _outgoing_graph_edges(demo_estate_client, payload, parents)
+        if row.get("relationship") == "contains"
+    }
     assert ("org:enterprise:northstar-health-ai", "account:aws:123456789012") in contains
     assert ("account:aws:123456789012", "env:aws:123456789012:production") in contains
     assert (
