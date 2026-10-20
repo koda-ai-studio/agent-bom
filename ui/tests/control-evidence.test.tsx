@@ -57,7 +57,10 @@ describe("control drawer", () => {
   it("links affected assets to their own pages", () => {
     render(<ComplianceControlDrawer control={control} frameworkId="nist-800-53" frameworkLabel="NIST" onClose={() => {}} />);
     fireEvent.click(screen.getByRole("tab", { name: "Evidence" }));
-    expect(screen.getByRole("link", { name: "claude-desktop" })).toHaveAttribute("href", "/agents?name=claude-desktop");
+    const agent = screen.getByRole("link", { name: "Claude Desktop" });
+    expect(agent).toHaveAttribute("href", "/agents?name=claude-desktop");
+    expect(agent).toHaveAttribute("title", "claude-desktop");
+    expect(screen.getByRole("link", { name: "Cursor" })).toHaveAttribute("href", "/agents?name=cursor");
     expect(screen.getByRole("link", { name: "requests@2.0.0" })).toHaveAttribute("href", "/findings?q=requests%402.0.0");
   });
 
