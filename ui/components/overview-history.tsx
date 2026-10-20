@@ -4,6 +4,16 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import type { TrendPointResponse } from "@/lib/api-types";
+import { SeverityTrend } from "@/components/severity-trend";
+
+const REASONS: Record<string, string> = { missing_comparison_metadata: "scan scope not recorded", no_previous_scan: "first scan in this scope" };
+
+/** Why two snapshots cannot be diffed, in words; never a raw reason code. */
+export function comparisonLabel(comparison: TrendPointResponse["comparison"]): string {
+  if (comparison?.status === "comparable") return "Comparable";
+  const reason = comparison?.reason;
+  return `Not comparable: ${reason ? REASONS[reason] ?? reason.replaceAll("_", " ") : "no comparison recorded"}`;
+}
 
 const number = (value: number | null | undefined) => value == null ? "Unavailable" : value.toLocaleString(undefined, { maximumFractionDigits: 1 });
 
@@ -34,7 +44,7 @@ function HistoryPlot({ points, field, label }: {
 
 export function OverviewHistory() {
   const [open, setOpen] = useState(false);
-  const [view, setView] = useState<"changes" | "age">("changes");
+  const [view, setView] = useState<"severity" | "changes" | "age">("severity");
   const [days, setDays] = useState(30);
   const [points, setPoints] = useState<TrendPointResponse[]>([]);
   const [scope, setScope] = useState("");
@@ -74,10 +84,11 @@ export function OverviewHistory() {
       {status === "loading" ? <p role="status">Loading history…</p> : status === "error" ? <div className="flex flex-wrap items-center gap-3"><p role="status">History unavailable.</p><button type="button" onClick={() => setRetry(value => value + 1)} className="rounded-lg border border-outline px-3 py-2 text-sm">Retry history</button></div> : selected.length === 0 ? <p role="status">No recorded history in this window.</p> : <>
         <p className="[overflow-wrap:anywhere] text-sm text-ink-secondary">{scope ? `Scope: ${scope}` : "History scope unavailable"} · {selected.length} observations · Up to 365 retained points requested</p>
         <div role="group" aria-label="History charts" className="flex flex-wrap gap-2 text-sm">
+          <button aria-pressed={view === "severity"} onClick={() => setView("severity")} className="rounded-lg border border-outline px-3 py-2 aria-pressed:bg-surface-elevated">Severity over time</button>
           <button aria-pressed={view === "changes"} onClick={() => setView("changes")} className="rounded-lg border border-outline px-3 py-2 aria-pressed:bg-surface-elevated">Finding changes</button>
           <button aria-pressed={view === "age"} onClick={() => setView("age")} className="rounded-lg border border-outline px-3 py-2 aria-pressed:bg-surface-elevated">Age & freshness</button>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
+        {view === "severity" ? <SeverityTrend points={selected} /> : <div className="grid gap-3 sm:grid-cols-2">
           {view === "changes" ? <>
           <HistoryPlot points={selected} field="new_findings" label="Newly detected findings" />
           <HistoryPlot points={selected} field="no_longer_detected" label="No longer detected" />
@@ -85,7 +96,7 @@ export function OverviewHistory() {
           <HistoryPlot points={selected} field="open_finding_age_days" label="Median open-finding age (days)" />
           <HistoryPlot points={selected} field="evidence_age_days" label="Median evidence age at scan (days)" />
           </>}
-        </div>
+        </div>}
         <p className="text-xs text-ink-secondary">Age and freshness use recorded timestamps and available samples. Missing timestamps are unavailable. Older observations without comparable scope cannot establish change.</p>
         <div className="overflow-x-auto" tabIndex={0} role="region" aria-label="History values">
           <table className="w-full text-left text-sm"><caption className="sr-only">Recorded history and comparison evidence</caption><thead><tr>{["Completed", "New", "Still open", "No longer detected", "Median open age (days)", "Median evidence age (days)", "Comparison"].map(title => <th key={title} scope="col" className="p-2">{title}</th>)}</tr></thead>
@@ -93,7 +104,7 @@ export function OverviewHistory() {
             <td className="p-2 whitespace-nowrap">{point.scan_id ? <Link className="underline" href={`/findings?${new URLSearchParams({scan_id: point.scan_id})}`}>{new Date(point.timestamp).toLocaleString()}</Link> : new Date(point.timestamp).toLocaleString()}</td>
             <td className="p-2">{number(point.comparison?.new_findings)}</td><td className="p-2">{number(point.comparison?.still_open)}</td><td className="p-2">{number(point.comparison?.no_longer_detected)}</td>
             <td className="p-2">{number(point.open_finding_age_days)} · {point.age_sample_count ?? 0} samples</td><td className="p-2">{number(point.evidence_age_days)} · {point.evidence_sample_count ?? 0} samples</td>
-            <td className="p-2">{point.comparison?.status === "comparable" ? "Comparable" : point.comparison?.reason?.replaceAll("_", " ") ?? "Comparison metadata unavailable"}</td>
+            <td className="p-2">{comparisonLabel(point.comparison)}</td>
           </tr>)}</tbody></table>
         </div>
         {selected.length > 30 && <div className="flex gap-4 text-sm"><button disabled={page === 0} onClick={() => setPage(page - 1)}>Previous</button><span>Page {page + 1} of {Math.ceil(selected.length / 30)}</span><button disabled={(page + 1) * 30 >= selected.length} onClick={() => setPage(page + 1)}>Next</button></div>}
