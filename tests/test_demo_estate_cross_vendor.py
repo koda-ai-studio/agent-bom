@@ -141,3 +141,16 @@ def test_no_same_environment_bucket_links_nothing_and_says_why() -> None:
     stage = recorded["snowflake:stage:SF:s1"]
     assert "storage_integration" not in stage.tags
     assert stage.tags["integration_unlinked_reason"] == "no_same_environment_s3_bucket"
+
+
+def test_the_cross_vendor_chain_is_served_as_an_attack_path(estate, graph) -> None:
+    from agent_bom.graph.path_derivation import _derived_attack_paths
+
+    served = {tuple(path.hops): path for path in _derived_attack_paths(graph)}
+    for integration in _integrations(estate):
+        role, bucket, stage, table = _recorded(estate, integration)
+        path = served[(table.asset_id, stage.asset_id, integration.asset_id, bucket.asset_id)]
+        assert path.edges == ["depends_on", "depends_on", "can_access"]
+        assert role.display_name in path.summary
+        assert path.reachability != "confirmed"
+        assert "recorded_identifier_match" in path.reachability_basis

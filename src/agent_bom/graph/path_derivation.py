@@ -15,6 +15,7 @@ from agent_bom.graph.attack_path_fusion import has_sensitive_data_label
 from agent_bom.graph.component_paths import derive_component_paths, occurrence_applicability
 from agent_bom.graph.container import AttackPath, UnifiedGraph
 from agent_bom.graph.credential_findings import credential_finding_paths
+from agent_bom.graph.cross_vendor_paths import cross_vendor_storage_paths
 from agent_bom.graph.edge_lookup import _build_edge_lookup as _build_edge_lookup
 from agent_bom.graph.edge_lookup import _edge_relationships_for_hops as _edge_relationships_for_hops
 from agent_bom.graph.edge_lookup import _EdgeLookup as _EdgeLookup
@@ -469,7 +470,12 @@ def _derived_attack_paths(graph: UnifiedGraph, *, kinds: dict[int, str] | None =
     effective-permission chains, credential-owner paths and agent/server/component/
     finding chains, ranked and unique per chain (equivalent persisted rows win).
     """
-    governance_paths = _derived_governance_attack_paths(graph) + _derived_toxic_combination_paths(graph)
+    signal_cache: dict[str, list[tuple[str, str, str, float]]] = {}
+    governance_paths = [
+        *_derived_governance_attack_paths(graph),
+        *_derived_toxic_combination_paths(graph),
+        *cross_vendor_storage_paths(graph, path_boost=lambda hops: _cached_path_boost(graph, hops, signal_cache)),
+    ]
     for path in governance_paths:
         if path.reachability == "unknown":
             path.reachability = "likely"
@@ -507,7 +513,6 @@ def _derived_attack_paths(graph: UnifiedGraph, *, kinds: dict[int, str] | None =
         incoming.setdefault(edge.target, []).append(edge)
         outgoing.setdefault(edge.source, []).append(edge)
 
-    signal_cache: dict[str, list[tuple[str, str, str, float]]] = {}
     paths = derive_component_paths(
         graph,
         incoming=incoming,
