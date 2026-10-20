@@ -190,7 +190,7 @@ def _graph_with_tool() -> UnifiedGraph:
     return graph
 
 
-def test_overlay_projects_entra_nhis_as_managed_identity_nodes_with_tool_scope():
+def test_overlay_projects_entra_nhis_with_scope_metadata_without_tool_access():
     client = _FakeGraphClient(
         service_principals=[_service_principal("SP1", "app-1", "billing-svc")],
         applications=[_application("OBJ1", "app-1", "billing-svc", scope_id="read_file")],
@@ -207,7 +207,8 @@ def test_overlay_projects_entra_nhis_as_managed_identity_nodes_with_tool_scope()
     assert mi_nodes[0].attributes["provider"] == "entra"
 
     scoped = [(e.source, e.target) for e in graph.edges if e.relationship == RelationshipType.SCOPED_TO]
-    assert (mi_nodes[0].id, "tool:srv:read_file") in scoped
+    assert scoped == []
+    assert "read_file" in mi_nodes[0].attributes["scopes"]
 
 
 # ── Report serialization + builder wiring ────────────────────────────────────
@@ -243,7 +244,8 @@ def test_apply_nhi_overlay_from_report_emits_managed_identity_nodes():
     assert len(mi_nodes) == 1
     assert mi_nodes[0].attributes["provider"] == "entra"
     scoped = [(e.source, e.target) for e in graph.edges if e.relationship == RelationshipType.SCOPED_TO]
-    assert (mi_nodes[0].id, "tool:srv:read_file") in scoped
+    assert scoped == []
+    assert "read_file" in mi_nodes[0].attributes["scopes"]
 
 
 def test_builder_wiring_emits_managed_identity_from_discovery_report():
