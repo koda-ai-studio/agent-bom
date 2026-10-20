@@ -16889,6 +16889,8 @@ export interface components {
             };
             /** Tenant Id */
             tenant_id: string;
+            /** View */
+            view?: "canvas" | null;
         } & {
             [key: string]: unknown;
         };
@@ -33726,6 +33728,8 @@ export interface operations {
                 offset?: number;
                 /** @description Max nodes to return */
                 limit?: number;
+                /** @description ``canvas`` returns the graph page's projection: the same response without node and edge fields the page never reads before a selection (OCSF ids, canonical ids, provenance blocks, bulky attributes) and without the source_id/target_id edge aliases. Omit for the full projection. */
+                view?: "canvas" | null;
             };
             header?: never;
             path?: never;

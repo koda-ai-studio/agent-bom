@@ -12,6 +12,7 @@ from starlette.responses import JSONResponse, Response
 from agent_bom.api.graph_paging import _page_meta, _paginate
 from agent_bom.api.graph_paging import page_truncated as _page_truncated
 from agent_bom.api.graph_presentation import _fix_first_card_for_path, _path_matches_focus, _path_semantic_key, _serialize_attack_path_batch
+from agent_bom.api.routes.graph_routes.canvas_view import GraphView, canvas_projection
 from agent_bom.api.routes.graph_routes.params import (
     _FILTERED_GRAPH_ATTACK_PATH_LIMIT,
     _GRAPH_QUERY_ABSOLUTE_LIMITS,
@@ -35,8 +36,10 @@ def _encode_fallback(value: Any) -> Any:
     return jsonable_encoder(value)
 
 
-def _encoded_graph_response(payload: dict[str, Any]) -> Response:
+def _encoded_graph_response(payload: dict[str, Any], view: GraphView | None = None) -> Response:
     """Encode graph JSON off-loop with the C encoder; same bytes ``JSONResponse`` renders."""
+    if view == "canvas":
+        payload = canvas_projection(payload)
     if str(payload.get("scan_id", "")).startswith("current-estate:"):
         payload = {**payload, "evidence_scope": "current_estate"}
     if isinstance(stats := payload.get("stats"), dict) and "severity_counts" in stats:
@@ -485,6 +488,7 @@ def _encode_node_page(
     nodes_by_id: dict[str, UnifiedNode],
     cursor: str | None,
     stack_context: dict[str, Any] | None = None,
+    view: GraphView | None = None,
 ) -> Response:
     # This branch pages a fully-counted snapshot rather than loading it under a
     # budget, so the estate total IS the stats total. Emitting the field anyway
@@ -542,4 +546,4 @@ def _encode_node_page(
         },
     }
 
-    return _encoded_graph_response(payload)
+    return _encoded_graph_response(payload, view)

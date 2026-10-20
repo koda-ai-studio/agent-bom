@@ -463,6 +463,7 @@ export function useGraphPageData() {
         // Larger selections are opt-in; preserve the server completeness fields.
         offset: 0,
         limit: graphFetchLimit,
+        view: "canvas",
       })
       .then((result) => {
         if (cancelled) return;

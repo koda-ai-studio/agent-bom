@@ -172,9 +172,12 @@ export const graphApi = {
     limit?: number | undefined;
     snapshotGeneration?: string | undefined;
     cursor?: string | undefined;
+    /** `canvas`: the graph page's projection; selection refetches the full node. */
+    view?: "canvas" | undefined;
   }) => {
     const params = new URLSearchParams();
     if (filters?.scanId) params.set("scan_id", filters.scanId);
+    if (filters?.view) params.set("view", filters.view);
     if (filters?.entityTypes && filters.entityTypes.length > 0) {
       params.set("entity_types", filters.entityTypes.join(","));
     }

@@ -140,6 +140,7 @@ from agent_bom.api.routes.graph_routes._runtime import _get_graph_store_or_503 a
 from agent_bom.api.routes.graph_routes._runtime import _graph_compute_call as _graph_compute_call
 from agent_bom.api.routes.graph_routes._runtime import _graph_store_call as _graph_store_call
 from agent_bom.api.routes.graph_routes._runtime import _tenant as _tenant
+from agent_bom.api.routes.graph_routes.canvas_view import CANVAS_VIEW_DESCRIPTION, GraphView
 from agent_bom.api.routes.graph_routes.page_edges import _page_edges
 from agent_bom.api.routes.graph_routes.params import _FILTERED_GRAPH_ATTACK_PATH_LIMIT as _FILTERED_GRAPH_ATTACK_PATH_LIMIT
 from agent_bom.api.routes.graph_routes.params import (
@@ -253,6 +254,7 @@ async def get_graph(
     cursor: Optional[str] = Query(None, description="Opaque cursor for keyset node pagination"),
     offset: int = Query(0, ge=0, description="Pagination offset for nodes"),
     limit: int = Query(500, ge=1, le=5000, description="Max nodes to return"),
+    view: GraphView | None = Query(None, description=CANVAS_VIEW_DESCRIPTION),
 ) -> Response:
     """Load the unified graph with filters and pagination.
 
@@ -338,7 +340,7 @@ async def get_graph(
                 verify_generation, graph_store, tenant=tenant, identity=identity, has_rows=bool(payload.get("nodes"))
             )
             payload["snapshot_generation"] = identity[1]
-        return await _runtime._graph_compute_call(_encoded_graph_response, payload)
+        return await _runtime._graph_compute_call(_encoded_graph_response, payload, view)
 
     try:
         effective_scan_id, created_at, paged_nodes, total, next_cursor = await _runtime._graph_store_call(
@@ -392,6 +394,7 @@ async def get_graph(
         nodes_by_id=nodes_by_id,
         cursor=cursor,
         stack_context=stack_context,
+        view=view,
     )
 
 

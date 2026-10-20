@@ -15611,6 +15611,12 @@ components:
         tenant_id:
           title: Tenant Id
           type: string
+        view:
+          anyOf:
+          - const: canvas
+            type: string
+          - type: 'null'
+          title: View
       required:
       - scan_id
       - tenant_id
@@ -41795,6 +41801,23 @@ paths:
           minimum: 1
           title: Limit
           type: integer
+      - description: '``canvas`` returns the graph page''s projection: the same response
+          without node and edge fields the page never reads before a selection (OCSF
+          ids, canonical ids, provenance blocks, bulky attributes) and without the
+          source_id/target_id edge aliases. Omit for the full projection.'
+        in: query
+        name: view
+        required: false
+        schema:
+          anyOf:
+          - const: canvas
+            type: string
+          - type: 'null'
+          description: '``canvas`` returns the graph page''s projection: the same
+            response without node and edge fields the page never reads before a selection
+            (OCSF ids, canonical ids, provenance blocks, bulky attributes) and without
+            the source_id/target_id edge aliases. Omit for the full projection.'
+          title: View
       responses:
         '200':
           content:

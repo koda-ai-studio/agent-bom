@@ -329,16 +329,16 @@ export interface UnifiedNode {
   entity_type: EntityType | string;
   label: string;
 
-  // OCSF classification
-  category_uid: number;
-  class_uid: number;
-  type_uid: number;
+  // OCSF classification (absent from `/v1/graph?view=canvas`)
+  category_uid?: number;
+  class_uid?: number;
+  type_uid?: number;
 
   // State
   status: NodeStatus | string;
   risk_score: number;
   severity: string;
-  severity_id: number;
+  severity_id?: number;
 
   // Temporal
   first_seen: string;
@@ -374,8 +374,8 @@ export interface UnifiedEdge {
   evidence: Record<string, unknown>;
   source_scan_id?: string | null | undefined;
 
-  // OCSF
-  activity_id: number;
+  // OCSF (absent from `/v1/graph?view=canvas`)
+  activity_id?: number;
 }
 
 /**

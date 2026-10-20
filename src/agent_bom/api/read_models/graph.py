@@ -7,7 +7,7 @@ open objects because they follow the canonical ``UnifiedNode.to_dict`` /
 
 from __future__ import annotations
 
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, RootModel, WithJsonSchema
 
@@ -65,6 +65,7 @@ class GraphPageResponse(ReadResponse):
     completeness: GraphCompleteness
     attack_path_pagination: GraphBoundedPage | None = None
     evidence_scope: str | None = None
+    view: Literal["canvas"] | None = None
 
 
 class GraphAgentsResponse(ReadResponse):
