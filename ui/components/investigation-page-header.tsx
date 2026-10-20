@@ -5,8 +5,10 @@ import type { ReactNode } from "react";
  * lifecycle steps, and a collapsed menu for secondary controls. Content —
  * the ranked paths — stays the hero instead of sitting under stacked bands.
  */
-export function InvestigationPageHeader({ focus, context, steps, menu }: {
+export function InvestigationPageHeader({ focus, context, steps, menu, pinned = null }: {
   focus: string;
+  /** Display name of the node pinned in the path graph. */
+  pinned?: string | null;
   context?: ReactNode;
   steps?: ReactNode;
   menu?: ReactNode;
@@ -19,6 +21,7 @@ export function InvestigationPageHeader({ focus, context, steps, menu }: {
           <p className="min-w-0 truncate text-sm text-ink-secondary" title={focus}>{focus}</p>
         </div>
         {steps ? <div className="min-w-0 max-w-full [&_nav]:max-w-full [&_nav]:overflow-x-auto [&_ol]:flex-nowrap [&_li]:shrink-0">{steps}</div> : null}
+        {pinned ? <span className="text-xs text-[color:var(--text-tertiary)]">Pinned {pinned}</span> : null}
         {menu}
       </div>
       {context}

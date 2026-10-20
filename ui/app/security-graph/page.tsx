@@ -136,7 +136,7 @@ function AttackPathInvestigationContent() {
   }, [pathname, searchParams]);
   const [investigationFilters, setInvestigationFilters] =
     useState<InvestigationPresetFilters>(EMPTY_INVESTIGATION_FILTERS);
-  const [, setPinnedNodeId] = useState<string | null>(null);
+  const [pinnedNodeId, setPinnedNodeId] = useState<string | null>(null);
   const [completedSteps, setCompletedSteps] = useState<Partial<Record<InvestigationStep, boolean>>>(
     {},
   );
@@ -754,6 +754,7 @@ function AttackPathInvestigationContent() {
       <InvestigationPageHeader
         focus={focusLabel || (selectedScanId?.startsWith("current-estate:") ? "Current tenant estate" : "Selected scan snapshot")}
         context={<FindingInvestigationContext compact />}
+        pinned={pinnedNodeId ? graphNodeById.get(pinnedNodeId)?.label || "Selected asset" : null}
         steps={!captureMode ? (
           <InvestigationLifecycleStrip step={investigationStep} onStepChange={setInvestigationStep} completed={completedSteps}
             path={selectedAttackPath} nodeById={graphNodeById} scanId={selectedScanId} />
