@@ -215,6 +215,7 @@ import { useEstateHighlight } from "@/hooks/use-estate-highlight";
 import { snapshotChangesHeadline } from "@/lib/graph-estate-changes";
 import { graphFirstFramePending } from "@/lib/graph-first-frame";
 import { snapshotLabel } from "@/lib/snapshot-label";
+import { estateIssueLine } from "@/lib/graph-issue-labels";
 import { resolveScopeAncestry } from "@/lib/graph-scope-ancestry";
 
 export { DiffPreview } from "@/components/graph-snapshot-diff";
@@ -1467,6 +1468,16 @@ function GraphPageInner() {
     });
     return () => { cancelled = true; };
   }, [soleScopeId, selectedScanId]);
+
+  // The root roll-up carries the estate's issue basis; drill-downs do not.
+  const [estateIssues, setEstateIssues] = useState<{ scanId: string; issue_count?: number | undefined; finding_occurrence_count?: number | undefined } | null>(null);
+  useEffect(() => {
+    const summary = rollupView?.summary;
+    if (rollupView && typeof summary?.issue_count === "number") {
+      setEstateIssues({ scanId: rollupView.scan_id, issue_count: summary.issue_count, finding_occurrence_count: summary.finding_occurrence_count });
+    }
+  }, [rollupView]);
+  const estateIssueSummary = estateIssues?.scanId && rollupView && estateIssues.scanId !== rollupView.scan_id ? null : estateIssues;
 
   const rollupDisplayEdges = useMemo(() => mergeReciprocalRollupEdges(rollupView?.edges ?? []), [rollupView?.edges]);
 
@@ -3370,6 +3381,7 @@ function GraphPageInner() {
               <RollupNavigationPanel
                 summary={rollupView}
                 estateNodeCount={estateNodeCount}
+                estateIssues={estateIssueLine(estateIssueSummary)}
                 breadcrumbs={rollupStack}
                 loading={loadingRollup}
                 error={rollupError}
@@ -3832,6 +3844,7 @@ function GraphPageInner() {
               edgeCountMetadata={rollupView?.edge_count_metadata}
               onDrill={drillIntoRollup}
               onInvestigate={investigateRollup}
+              estateIssueCount={estateIssueSummary?.issue_count}
             />
           ) : displayNodes.length === 0 && scenarioElements.unconnected.length > 0 ? (
             <div className="flex h-full items-center justify-center p-6 text-sm text-ink-secondary">No connected nodes in this proposal view. Select an unconnected item to inspect its details.</div>
@@ -4068,6 +4081,7 @@ function GraphPageInner() {
 function RollupNavigationPanel({
   summary,
   estateNodeCount,
+  estateIssues,
   breadcrumbs,
   loading,
   error,
@@ -4083,6 +4097,7 @@ function RollupNavigationPanel({
 }: {
   summary: GraphRollupResponse | null;
   estateNodeCount: number;
+  estateIssues: string | null;
   breadcrumbs: RollupBreadcrumb[];
   loading: boolean;
   error: string | null;
@@ -4112,7 +4127,7 @@ function RollupNavigationPanel({
             </p>
             <p className="mt-1 text-sm font-medium text-emerald-950 dark:text-emerald-50">
               {active
-                ? `${visibleCount} nodes and scopes at this level · ${estateNodeCount} nodes in snapshot`
+                ? `${visibleCount.toLocaleString()} nodes and scopes at this level · ${estateNodeCount.toLocaleString()} nodes in snapshot${estateIssues ? ` · ${estateIssues}` : ""}`
                 : error
                   ? "Could not load this scope"
                 : unavailable

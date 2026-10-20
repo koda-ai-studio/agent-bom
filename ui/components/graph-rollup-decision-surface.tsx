@@ -10,6 +10,7 @@ import type {
   GraphRollupEdgeCountMetadata,
 } from "@/lib/api-types";
 import { ScopeProviderSuffix } from "@/components/graph-scope-breadcrumb";
+import { scopeIssueLine } from "@/lib/graph-issue-labels";
 import { groupRollupByImage, IMAGE_GROUP_PREFIX, priorityScopes, rankScopesByRisk, scopeRiskScore, SCOPE_RISK_WEIGHTS } from "@/lib/graph-rollup-risk";
 
 export const ROLLUP_DECISION_THRESHOLD = 24;
@@ -65,7 +66,10 @@ export function GraphRollupDecisionSurface({
   edgeCountMetadata,
   onDrill,
   onInvestigate,
+  estateIssueCount,
 }: {
+  /** Estate-wide issue total, so a scope reads as "N of TOTAL issues". */
+  estateIssueCount?: number | undefined;
   items: GraphRollupContainer[];
   edges: GraphRollupEdge[];
   completeness?: GraphCompleteness | undefined;
@@ -257,13 +261,14 @@ export function GraphRollupDecisionSurface({
                 </span>
               </div>
 
-              <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs md:w-44">
+              <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-xs md:w-60">
                 {item.has_children && <div>
-                  <p className="text-ink-secondary">Contains <span className="font-semibold tabular-nums text-foreground">{item.aggregate.descendant_count} nodes</span>{item.direct_child_count > 0 && <> · {item.direct_child_count} direct</>}</p>
+                  <p className="text-ink-secondary">Contains <span className="font-semibold tabular-nums text-foreground">{item.aggregate.descendant_count.toLocaleString()} nodes</span>{item.direct_child_count > 0 && <> · {item.direct_child_count} direct</>}</p>
                 </div>}
                 {item.has_children && <div>
-                  <p className="text-ink-secondary">Contained critical / high <span className="font-semibold tabular-nums text-foreground">{critical} / {high}</span></p>
+                  <p className="text-ink-secondary">Contained critical / high <span className="font-semibold tabular-nums text-foreground">{critical.toLocaleString()} / {high.toLocaleString()}</span></p>
                 </div>}
+                {item.has_children && scopeIssueLine(item, estateIssueCount) && <p className="tabular-nums text-ink-secondary" data-testid="graph-scope-issues">{scopeIssueLine(item, estateIssueCount)}</p>}
                 <p className="tabular-nums text-ink-secondary" title={PRIORITY_RULE} data-testid="graph-scope-priority-score">
                   {item.aggregate.exposed_count > 0 && <>{item.aggregate.exposed_count} exposed · </>}Priority score <span className="font-semibold text-foreground">{scopeRiskScore(item).toLocaleString()}</span>
                 </p>

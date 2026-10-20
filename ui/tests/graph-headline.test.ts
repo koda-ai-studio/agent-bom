@@ -39,7 +39,7 @@ describe("graph headline counts", () => {
     expect(flow.summary.findingSeverity).toMatchObject({ critical: 0, high: 1 });
     expect(flow.summary.critical).toBe(0);
     expect(flow.summary.kevListed).toBe(1);
-    expect(formatGraphHeadline(flow.summary, 1)).toBe("1 high finding · 1 KEV-listed · 1 snapshot path");
+    expect(formatGraphHeadline(flow.summary, 1)).toBe("1 high finding in view · 1 KEV-listed · 1 attack path in snapshot (deduplicated)");
   });
 
   it("breaks mixed severities out separately from KEV status", () => {
@@ -50,17 +50,17 @@ describe("graph headline counts", () => {
       node("misconfig", EntityType.MISCONFIGURATION, "medium"),
     ]), createFocusedGraphFilters());
     expect(formatGraphHeadline(flow.summary, 3)).toBe(
-      "3 findings: 1 critical, 1 high, 1 medium · 1 KEV-listed · 3 snapshot paths",
+      "3 findings in view: 1 critical, 1 high, 1 medium · 1 KEV-listed · 3 attack paths in snapshot (deduplicated)",
     );
   });
 
   it("states zero findings without inventing a severity", () => {
     expect(formatGraphHeadline({ findings: 0, findingSeverity: { critical: 0, high: 0, medium: 0, low: 0, unrated: 0 }, kevListed: 0 }, 0))
-      .toBe("0 findings · 0 snapshot paths");
+      .toBe("0 findings in view · 0 attack paths in snapshot (deduplicated)");
   });
 
   it("names unrated findings rather than folding them into a severity", () => {
     expect(formatGraphHeadline({ findings: 2, findingSeverity: { critical: 0, high: 1, medium: 0, low: 0, unrated: 1 }, kevListed: 0 }, 1))
-      .toBe("2 findings: 1 high, 1 unrated · 1 snapshot path");
+      .toBe("2 findings in view: 1 high, 1 unrated · 1 attack path in snapshot (deduplicated)");
   });
 });

@@ -843,6 +843,10 @@ export interface GraphRollupAggregate {
   toxic_combo: boolean;
   exposed_count: number;
   toxic_count: number;
+  /** Distinct open issues among descendants (the severity_counts basis). */
+  issue_count?: number | undefined;
+  /** Every place those issues were found. */
+  finding_occurrence_count?: number | undefined;
 }
 
 export interface GraphRollupContainer {
@@ -877,6 +881,9 @@ export interface GraphRollupSummary {
   /** Direct children left after filters; the pageable drill-down total. */
   matching_child_count?: number;
   returned_child_count?: number;
+  /** Estate-wide distinct open issues; equals the overview's issue total. */
+  issue_count?: number;
+  finding_occurrence_count?: number;
 }
 
 /** Offset page over a drill-down's ranked direct children. */
