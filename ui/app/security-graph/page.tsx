@@ -1,6 +1,6 @@
 "use client";
 
-import { GraphPathImpact } from "@/components/graph-path-impact";
+import { InvestigationLifecycle } from "@/components/investigation-lifecycle";
 import { AdvisoryFreshness } from "@/components/advisory-freshness";
 
 import { investigationHref, investigationView } from "@/lib/investigation-url";
@@ -51,11 +51,7 @@ import {
   type InvestigationPresetFilters,
 } from "@/components/graph-preset-controls";
 import { InvestigationFilterChips } from "@/components/investigation-filter-chips";
-import {
-  InvestigationStepStrip,
-  parseInvestigationStep,
-  type InvestigationStep,
-} from "@/components/investigation-step-strip";
+import { parseInvestigationStep, type InvestigationStep } from "@/components/investigation-step-strip";
 import {
   api,
   formatDate,
@@ -69,7 +65,6 @@ import {
 } from "@/lib/api";
 import {
   attackPathKey,
-  attackPathFindingHref,
   attackPathRoleChain,
   buildFindingsHref,
   buildGraphInvestigationHref,
@@ -233,16 +228,6 @@ function AttackPathInvestigationContent() {
     [pathname, router, searchParams],
   );
 
-  const openSourceSnapshot = useCallback(
-    (scanId: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      params.set("scan", scanId);
-      params.set("source_snapshot", "1");
-      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-    },
-    [pathname, router, searchParams],
-  );
-
   const openCorrelationPath = useCallback(
     (scanId: string) => {
       setSelectedScanId(scanId);
@@ -367,7 +352,11 @@ function AttackPathInvestigationContent() {
           matches: graph.attack_paths?.length ?? 0,
         });
         if (sourceScan) {
-          openSourceSnapshot(sourceScan);
+          // Read the live URL here: depending on searchParams would reload paths on every step change.
+          const params = new URLSearchParams(window.location.search);
+          params.set("scan", sourceScan);
+          params.set("source_snapshot", "1");
+          router.replace(`${window.location.pathname}?${params.toString()}`, { scroll: false });
           return;
         }
         setGraphData(graph);
@@ -412,7 +401,7 @@ function AttackPathInvestigationContent() {
       pathPageRequest.current?.abort();
       pathPageRequest.current = null;
     };
-  }, [focus.agentName, focus.control, focus.cve, focus.findingId, focus.findingScanId, focus.framework, focus.nodeId, focus.packageName, openSourceSnapshot, selectedScanId]);
+  }, [focus.agentName, focus.control, focus.cve, focus.findingId, focus.findingScanId, focus.framework, focus.nodeId, focus.packageName, router, selectedScanId]);
 
   const selectedSnapshot = useMemo(
     () => snapshots.find((snapshot) => snapshot.scan_id === selectedScanId) ?? null,
@@ -713,12 +702,6 @@ function AttackPathInvestigationContent() {
       ? { ...action, href: buildCorrelationRemediationHref(action.href, selectedScanId, finding, packageNode?.label) }
       : action);
   }, [graphNodeById, selectedAttackPath, selectedFixFirstCard, selectedScanId]);
-  const selectedFindingHref = selectedAttackPath
-    ? attackPathFindingHref(selectedAttackPath, graphNodeById, selectedScanId || undefined)
-    : buildFindingsHref({ scanId: selectedScanId || undefined });
-  const impactRoot = selectedAttackPath?.hops.map(id => graphNodeById.get(id))
-    .find(node => node?.entity_type === "vulnerability" || node?.entity_type === "misconfiguration")
-    ?? (selectedAttackPath ? graphNodeById.get(selectedAttackPath.target) : undefined);
   const correlationOutcome = useMemo<GraphCorrelationOutcome | null>(() => {
     if (
       !selectedAttackPath ||
@@ -937,29 +920,18 @@ function AttackPathInvestigationContent() {
           stacked eight such bands above the graph, pushing the ranked paths —
           the reason the page exists — below the fold. */}
       {!captureMode ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 [&_nav]:relative [&_nav]:max-w-full [&_nav]:overflow-x-auto [&_ol]:flex-nowrap [&_li]:shrink-0">
-          <InvestigationStepStrip
-            step={investigationStep}
-            onStepChange={setInvestigationStep}
-            completed={completedSteps}
-            stepHrefs={{
-              owner: selectedFindingHref,
-              fix: selectedFindingHref,
-              verify: `/remediation${selectedScanId && !selectedScanId.startsWith("current-estate:") ? `?scan=${encodeURIComponent(selectedScanId)}` : ""}#verification`,
-            }}
-          />
-          {pinnedNodeId ? (
-            <span className="text-xs text-[color:var(--text-tertiary)]">
-              Pinned {graphNodeById.get(pinnedNodeId)?.label || "Selected asset"}
-            </span>
-          ) : null}
-        </div>
+        <InvestigationLifecycle
+          step={investigationStep}
+          onStepChange={setInvestigationStep}
+          completed={completedSteps}
+          path={selectedAttackPath}
+          nodeById={graphNodeById}
+          scanId={selectedScanId}
+          tenantId={graphData?.tenant_id}
+          snapshotGeneration={graphData?.snapshot_generation}
+          pinnedNodeId={pinnedNodeId}
+        />
       ) : null}
-
-      {investigationStep === "impact" && impactRoot && selectedScanId && graphData && <GraphPathImpact
-        key={JSON.stringify([selectedScanId, impactRoot.id, graphData.snapshot_generation])}
-        nodeId={impactRoot.id} label={impactRoot.label} scanId={selectedScanId}
-        tenantId={graphData.tenant_id} snapshotGeneration={graphData.snapshot_generation} />}
       {showCorrelationOverview ? (
         <GraphCorrelationWorkflow snapshots={snapshots} initialRun={latestCorrelationRun} outcome={correlationOutcome} onOpenSnapshot={openCorrelationPath} />
       ) : null}
