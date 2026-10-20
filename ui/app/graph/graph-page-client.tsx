@@ -11,8 +11,7 @@ import { GraphInvestigationContextControls } from "@/components/graph-investigat
 import { graphInvestigationContext, selectInvestigationContext, investigationRankEdges, restoreInvestigationEdges } from "@/lib/graph-investigation-context";
 import { GraphCanvasAutoFit } from "@/components/graph-canvas-auto-fit";
 import { GraphSnapshotReceipt } from "@/components/graph-snapshot-receipt";
-import { mergeGraphNodeDetail } from "@/lib/graph-entity-detail";
-import { nodeRiskAssessment, nodeRiskLabel } from "@/lib/node-risk-assessment";
+import { nodeRiskLabel } from "@/lib/node-risk-assessment";
 import { GraphHopEvidenceInspector } from "@/components/graph-hop-evidence-inspector";
 import { relationshipEdgeTypes } from "@/components/relationship-edge";
 import { GraphRollupChildPager } from "@/components/graph-rollup-child-pager";
@@ -34,7 +33,7 @@ import {
   type Node,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { AlertTriangle, Layers, Loader2, ShieldAlert } from "lucide-react";
+import { AlertTriangle, Loader2, ShieldAlert } from "lucide-react";
 
 import { AttackPathCard } from "@/components/attack-path-card";
 import { AttackPathTechniqueChain } from "@/components/attack-path-technique-chain";
@@ -99,7 +98,6 @@ import {
   isClusterPillNode,
 } from "@/lib/sibling-aggregator";
 import {
-  RelationshipType,
   type UnifiedNode,
 } from "@/lib/graph-schema";
 import { resolveSnapshotAttackPathCount } from "@/lib/graph-snapshot-metrics";
@@ -153,7 +151,6 @@ import {
   type GraphEdgeChangesResponse,
   type GraphHistorySnapshot,
   type GraphNodeDetailResponse,
-  type GraphQueryResponse,
   type GraphSnapshot,
   type GraphScenario,
   type GraphScenarioComparisonResponse,
@@ -217,8 +214,22 @@ import { graphFirstFramePending } from "@/lib/graph-first-frame";
 import { snapshotLabel } from "@/lib/snapshot-label";
 import { estateIssueLine } from "@/lib/graph-issue-labels";
 import { resolveScopeAncestry } from "@/lib/graph-scope-ancestry";
+import { GraphPulseStyles as PulseStyles } from "@/components/graph-pulse-styles";
+import { PathStat, PathTagList } from "@/components/graph-path-stats";
+import { RollupNavigationPanel } from "@/components/graph-rollup-navigation-panel";
+import {
+  buildFallbackNodeData,
+  emptyGraphResponse,
+  getLocalNeighborhoodIds,
+  graphErrorState,
+  mergeNodeDetail,
+  queryResponseToGraphResponse,
+  RELATIONSHIP_SCOPE_MAP,
+  type InvestigationMode,
+} from "@/lib/graph-page-data";
 
 export { DiffPreview } from "@/components/graph-snapshot-diff";
+export { knownGraphTotal, queryResponseToGraphResponse } from "@/lib/graph-page-data";
 
 // Start with a small ranked selection. The API also returns supporting ancestors;
 // this request limit is not a promise about returned or rendered node counts.
@@ -267,374 +278,6 @@ const SigmaGraphOverview = dynamic(
   },
 );
 
-function PulseStyles() {
-  return (
-    <style jsx global>{`
-      .node-critical-pulse .graph-entity-glyph,
-      .node-critical-pulse > div:not([data-graph-entity]) {
-        box-shadow: 0 0 6px rgba(239, 68, 68, 0.28);
-      }
-
-      /* Focus-mode (#2257). Hovering or pinning a node fires CSS classes
-         on the React Flow node wrapper so non-connected nodes fade out
-         and focused cards get a crisp outline following their shape. The transition is
-         short enough to feel responsive but long enough to read as a
-         deliberate dim, not a flicker. */
-      .lineage-node-dim {
-        opacity: 0.15;
-        transition: opacity 0.2s ease;
-      }
-      .lineage-node-focus {
-        z-index: 5;
-      }
-      .lineage-node-focus .graph-entity-glyph,
-      .lineage-node-focus > div:not([data-graph-entity]) {
-        outline: 2px solid var(--accent);
-        outline-offset: 3px;
-      }
-
-      /* Sibling-aggregation cluster pill pulses subtly to suggest
-         "click me to expand". Honors prefers-reduced-motion. */
-      @keyframes cluster-pill-pulse {
-        0%,
-        100% {
-          box-shadow: 0 0 6px rgba(56, 189, 248, 0.35);
-        }
-        50% {
-          box-shadow: 0 0 14px rgba(56, 189, 248, 0.65);
-        }
-      }
-      .cluster-pill-pulse {
-        animation: none;
-        box-shadow: 0 0 8px rgba(56, 189, 248, 0.32);
-      }
-      @media (prefers-reduced-motion: reduce) {
-        .cluster-pill-pulse {
-          animation: none;
-          box-shadow: 0 0 8px rgba(56, 189, 248, 0.45);
-        }
-      }
-    `}</style>
-  );
-}
-
-const FOCUS_NEIGHBORHOOD_DEPTH = 2;
-const FOCUS_NEIGHBORHOOD_NODE_LIMIT = 80;
-
-function getLocalNeighborhoodIds(
-  nodeId: string,
-  edges: Edge[],
-  maxDepth = FOCUS_NEIGHBORHOOD_DEPTH,
-  maxNodes = FOCUS_NEIGHBORHOOD_NODE_LIMIT,
-): Set<string> {
-  const adjacency = new Map<string, Set<string>>();
-  for (const edge of edges) {
-    addNeighbor(adjacency, edge.source, edge.target);
-    addNeighbor(adjacency, edge.target, edge.source);
-  }
-
-  const visited = new Set<string>([nodeId]);
-  const queue = [{ id: nodeId, depth: 0 }];
-  while (queue.length > 0) {
-    const current = queue.shift()!;
-    if (current.depth >= maxDepth) continue;
-    for (const neighbor of adjacency.get(current.id) ?? []) {
-      if (visited.has(neighbor)) continue;
-      visited.add(neighbor);
-      if (visited.size >= maxNodes) return visited;
-      queue.push({ id: neighbor, depth: current.depth + 1 });
-    }
-  }
-
-  return visited;
-}
-
-function addNeighbor(
-  map: Map<string, Set<string>>,
-  source: string,
-  target: string,
-): void {
-  const existing = map.get(source);
-  if (existing) {
-    existing.add(target);
-  } else {
-    map.set(source, new Set([target]));
-  }
-}
-
-const RELATIONSHIP_SCOPE_MAP: Record<
-  FilterState["relationshipScope"],
-  RelationshipType[] | undefined
-> = {
-  all: undefined,
-  inventory: [
-    RelationshipType.HOSTS,
-    RelationshipType.HOSTED_ON,
-    RelationshipType.USES,
-    RelationshipType.DEPENDS_ON,
-    RelationshipType.PROVIDES_TOOL,
-    RelationshipType.EXPOSES_CRED,
-    RelationshipType.REACHES_TOOL,
-    RelationshipType.SERVES_MODEL,
-    RelationshipType.USES_FRAMEWORK,
-    RelationshipType.CONTAINS,
-  ],
-  attack: [
-    RelationshipType.AFFECTS,
-    RelationshipType.VULNERABLE_TO,
-    RelationshipType.EXPLOITABLE_VIA,
-    RelationshipType.REMEDIATES,
-    RelationshipType.TRIGGERS,
-    RelationshipType.SHARES_SERVER,
-    RelationshipType.SHARES_CRED,
-    RelationshipType.LATERAL_PATH,
-    RelationshipType.EXPLOITABLE_VIA,
-    RelationshipType.EXPOSED_TO,
-    RelationshipType.HAS_PERMISSION,
-  ],
-  runtime: [
-    RelationshipType.INVOKED,
-    RelationshipType.ACCESSED,
-    RelationshipType.TRACE_STEP,
-    RelationshipType.CALLED,
-    RelationshipType.USED_CREDENTIAL,
-    RelationshipType.DELEGATED_TO,
-  ],
-  governance: [
-    RelationshipType.MANAGES,
-    RelationshipType.OWNS,
-    RelationshipType.PART_OF,
-    RelationshipType.MEMBER_OF,
-    RelationshipType.AUTHENTICATES_AS,
-    RelationshipType.SCOPED_TO,
-    RelationshipType.GOVERNS,
-    RelationshipType.EXHIBITS_DRIFT,
-    RelationshipType.ASSUMES,
-    RelationshipType.TRUSTS,
-    RelationshipType.ATTACHED,
-    RelationshipType.INHERITS,
-    RelationshipType.CAN_ACCESS,
-    RelationshipType.CROSS_ACCOUNT_TRUST,
-    RelationshipType.STORES,
-    RelationshipType.HAS_PERMISSION,
-  ],
-};
-
-function emptyGraphResponse(scanId: string): UnifiedGraphResponse {
-  return {
-    scan_id: scanId,
-    tenant_id: "",
-    created_at: "",
-    nodes: [],
-    edges: [],
-    attack_paths: [],
-    interaction_risks: [],
-    stats: {
-      total_nodes: 0,
-      total_edges: 0,
-      node_types: {},
-      severity_counts: {},
-      relationship_types: {},
-      attack_path_count: 0,
-      interaction_risk_count: 0,
-      max_attack_path_risk: 0,
-      highest_interaction_risk: 0,
-      analysis_status: {},
-    },
-    pagination: {
-      total: 0,
-      offset: 0,
-      limit: 0,
-      has_more: false,
-    },
-  };
-}
-
-function lineageTypeForEntity(entityType: string): LineageNodeType {
-  return lineageNodeTypeForEntity(entityType) ?? "server";
-}
-
-function stringAttribute(
-  attributes: Record<string, unknown> | undefined,
-  key: string,
-): string | undefined {
-  const value = attributes?.[key];
-  return typeof value === "string" ? value : undefined;
-}
-
-function versionProvenanceAttribute(
-  attributes: Record<string, unknown> | undefined,
-  key: string,
-): string | undefined {
-  const value = attributes?.version_provenance;
-  if (!value || typeof value !== "object" || Array.isArray(value))
-    return undefined;
-  const nested = (value as Record<string, unknown>)[key];
-  return typeof nested === "string" ? nested : undefined;
-}
-
-function buildFallbackNodeData(node: UnifiedNode): LineageNodeData {
-  const attributes = { ...(node.attributes ?? {}), node_id: node.id };
-  return {
-    label: node.label,
-    nodeType: lineageTypeForEntity(String(node.entity_type)),
-    entityType: String(node.entity_type),
-    status: String(node.status ?? ""),
-    riskScore: node.risk_score,
-    riskAssessment: nodeRiskAssessment(node.risk_assessment),
-    severity: node.severity,
-    firstSeen: node.first_seen,
-    lastSeen: node.last_seen,
-    dataSources: node.data_sources ?? [],
-    complianceTags: node.compliance_tags ?? [],
-    attributes,
-    description:
-      stringAttribute(attributes, "description") ||
-      stringAttribute(attributes, "recommendation") ||
-      stringAttribute(attributes, "framework") ||
-      stringAttribute(attributes, "source"),
-    version:
-      stringAttribute(attributes, "version") ||
-      stringAttribute(attributes, "hash"),
-    ecosystem: stringAttribute(attributes, "ecosystem"),
-    versionSource:
-      versionProvenanceAttribute(attributes, "version_source") ||
-      stringAttribute(attributes, "version_source"),
-    versionConfidence:
-      versionProvenanceAttribute(attributes, "confidence") ||
-      stringAttribute(attributes, "version_confidence"),
-    command:
-      stringAttribute(attributes, "command") ||
-      stringAttribute(attributes, "transport") ||
-      stringAttribute(attributes, "url"),
-    agentType: stringAttribute(attributes, "agent_type"),
-    agentStatus: stringAttribute(attributes, "status"),
-  };
-}
-
-function mergeNodeDetail(
-  base: LineageNodeData,
-  detail: GraphNodeDetailResponse,
-): LineageNodeData {
-  const fallback = buildFallbackNodeData({ ...detail.node, attributes: { ...base.attributes, ...detail.node.attributes } });
-  const merged = mergeGraphNodeDetail(base, detail);
-  for (const key of ["description", "version", "ecosystem", "versionSource", "versionConfidence", "command", "agentType", "agentStatus"] as const) {
-    merged[key] = base[key] || fallback[key];
-  }
-  return merged;
-}
-
-
-function graphErrorState(message: string): {
-  title: string;
-  detail: string;
-  suggestions: string[];
-} {
-  const lowered = message.toLowerCase();
-  if (
-    lowered.includes("budget") ||
-    lowered.includes("limit") ||
-    lowered.includes("too large")
-  ) {
-    return {
-      title: "Graph query budget reached",
-      detail: message,
-      suggestions: [
-        "Reduce depth or page size before retrying.",
-        "Switch back to Relevant paths for operator triage.",
-        "Narrow the graph by agent, severity, or relationship scope.",
-      ],
-    };
-  }
-  if (lowered.includes("timeout") || lowered.includes("timed out")) {
-    return {
-      title: "Graph query timed out",
-      detail: message,
-      suggestions: [
-        "Retry with a smaller page size.",
-        "Reduce max depth for the current graph window.",
-        "Use search or selectors before expanding topology.",
-      ],
-    };
-  }
-  if (
-    lowered.includes("permission") ||
-    lowered.includes("tenant") ||
-    lowered.includes("forbidden") ||
-    lowered.includes("unauthorized")
-  ) {
-    return {
-      title: "Graph is unavailable for this tenant or session",
-      detail: message,
-      suggestions: [
-        "Confirm the selected tenant has access to this snapshot.",
-        "Refresh the session before retrying.",
-        "Use a snapshot generated by the current tenant.",
-      ],
-    };
-  }
-  return {
-    title: "Graph query failed",
-    detail: message,
-    suggestions: [
-      "Retry the request.",
-      "Reduce the graph scope if the snapshot is large.",
-      "Check API logs for the rejected query.",
-    ],
-  };
-}
-
-type InvestigationMode = {
-  rootId: string;
-  rootLabel: string;
-  truncated: boolean;
-  nodeCount: number;
-  edgeCount: number;
-};
-
-export function queryResponseToGraphResponse(
-  response: GraphQueryResponse,
-): UnifiedGraphResponse {
-  const completeness = response.completeness ?? {
-    status: response.truncated ? "truncated" : "complete",
-    complete: !response.truncated,
-    sampled: false,
-    truncated: response.truncated,
-    returned: response.nodes.length,
-    ...(response.truncated ? { reason: "traversal_budget" } : { total: response.nodes.length }),
-  };
-  return {
-    scan_id: response.scan_id,
-    tenant_id: response.tenant_id,
-    created_at: response.created_at,
-    nodes: response.nodes,
-    edges: response.edges,
-    attack_paths: response.attack_paths,
-    interaction_risks: response.interaction_risks,
-    stats: response.stats,
-    completeness,
-    pagination: {
-      total: completeness.total ?? response.nodes.length,
-      offset: 0,
-      limit: response.nodes.length,
-      has_more: response.truncated,
-    },
-  };
-}
-
-/** Return only an exhaustive total; truncated traversals intentionally have none. */
-export function knownGraphTotal(response: UnifiedGraphResponse): number | null {
-  if (response.completeness) return response.completeness.total ?? null;
-  return response.pagination.total;
-}
-
-/**
- * Wrapper — supplies the xyflow store at the page root so `useLodBand`
- * (#2257) can read `viewport.zoom` from anywhere inside the page, not
- * just from a child of `<ReactFlow>`. Without the explicit provider the
- * page would have to thread the LOD band through props or duplicate
- * `<ReactFlow>` ancestry.
- */
 type RollupBreadcrumb = ScopeCrumb;
 
 // Keep relationship captions useful on focused graphs without letting a
@@ -4078,181 +3721,3 @@ function GraphPageInner() {
   );
 }
 
-function RollupNavigationPanel({
-  summary,
-  estateNodeCount,
-  estateIssues,
-  breadcrumbs,
-  loading,
-  error,
-  unavailable,
-  active,
-  decisionAvailable,
-  decisionActive,
-  onDismiss,
-  onReset,
-  onBreadcrumb,
-  onDecisionMode,
-  onRetry,
-}: {
-  summary: GraphRollupResponse | null;
-  estateNodeCount: number;
-  estateIssues: string | null;
-  breadcrumbs: RollupBreadcrumb[];
-  loading: boolean;
-  error: string | null;
-  unavailable: boolean;
-  active: boolean;
-  decisionAvailable: boolean;
-  decisionActive: boolean;
-  onDismiss: () => void;
-  onReset: () => void;
-  onBreadcrumb: (index: number) => void;
-  onDecisionMode: () => void;
-  onRetry: () => void;
-}) {
-  const visibleCount =
-    summary?.mode === "drilldown"
-      ? (summary.children?.length ?? 0)
-      : (summary?.top_level?.length ?? 0);
-
-  return (
-    <div className="mt-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-xs text-emerald-900 dark:text-emerald-100">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex items-start gap-2">
-          <Layers className="mt-0.5 h-4 w-4 text-emerald-700 dark:text-emerald-300" />
-          <div>
-            <p className="text-[10px] uppercase tracking-[0.24em] text-emerald-700 dark:text-emerald-300">
-              Scope navigation
-            </p>
-            <p className="mt-1 text-sm font-medium text-emerald-950 dark:text-emerald-50">
-              {active
-                ? `${visibleCount.toLocaleString()} nodes and scopes at this level · ${estateNodeCount.toLocaleString()} nodes in snapshot${estateIssues ? ` · ${estateIssues}` : ""}`
-                : error
-                  ? "Could not load this scope"
-                : unavailable
-                  ? `Roll-up unavailable · ${estateNodeCount} nodes in snapshot`
-                : `Loading CONTAINS roll-up · ${estateNodeCount} nodes in snapshot`}
-            </p>
-            {/* The rule is stated once, inline. It was a third line of prose on
-                every render, above a canvas that had no room to spare. */}
-            {error && (
-              <p className="mt-1 text-[11px] text-amber-800 dark:text-amber-200">{error}</p>
-            )}
-            {unavailable && (
-              <p className="mt-1 text-[11px] text-emerald-800 dark:text-emerald-200/80">
-                No containment scope is available; showing the real topology.
-              </p>
-            )}
-            {loading && (
-              <p className="mt-1 flex items-center gap-1 text-[11px] text-emerald-800 dark:text-emerald-200">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                Collapsing containment hierarchy
-              </p>
-            )}
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {error ? <button type="button" onClick={onRetry} className="graph-chip-emerald">Retry scope</button> : null}
-          {decisionAvailable && !decisionActive ? (
-            <button type="button" onClick={onDecisionMode} className="graph-chip-emerald">
-              Risk rollup
-            </button>
-          ) : null}
-          <button
-            type="button"
-            onClick={onDismiss}
-            className="graph-chip-emerald"
-          >
-            Open node view
-          </button>
-        </div>
-      </div>
-
-      {breadcrumbs.length > 0 && (
-        <nav
-          aria-label="Roll-up breadcrumb"
-          className="mt-3 flex flex-wrap items-center gap-1 text-[11px] text-emerald-900 dark:text-emerald-100"
-        >
-          <button
-            type="button"
-            onClick={onReset}
-            className="rounded border border-emerald-500/30 bg-emerald-50 px-2 py-0.5 text-emerald-900 transition hover:border-emerald-500 dark:bg-emerald-950/50 dark:text-emerald-100"
-          >
-            Estate root
-          </button>
-          {breadcrumbs.map((crumb, index) => (
-            <span key={crumb.id} className="flex items-center gap-1">
-              <span className="text-emerald-400/70">/</span>
-              <button
-                type="button"
-                onClick={() => onBreadcrumb(index)}
-                className="graph-chip-emerald-truncate"
-              >
-                {crumb.label}
-              </button>
-            </span>
-          ))}
-        </nav>
-      )}
-    </div>
-  );
-}
-
-function PathStat({
-  label,
-  value,
-  tone = "zinc",
-}: {
-  label: string;
-  value: string;
-  tone?: "zinc" | "red" | "amber" | "blue";
-}) {
-  const toneClass =
-    tone === "red"
-      ? "border-red-500/20 bg-red-500/10 text-red-700 dark:text-red-200"
-      : tone === "amber"
-        ? "border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-200"
-        : tone === "blue"
-          ? "border-sky-500/20 bg-sky-500/10 text-sky-700 dark:text-sky-200"
-          : "border-outline bg-surface/80 text-ink-secondary";
-
-  return (
-    <div className={`rounded-xl border px-3 py-2 ${toneClass}`}>
-      <p className="text-[10px] uppercase tracking-[0.18em] text-ink-tertiary">
-        {label}
-      </p>
-      <p className="mt-1 font-mono text-sm text-foreground">{value}</p>
-    </div>
-  );
-}
-
-function PathTagList({
-  label,
-  tags,
-  wide = false,
-}: {
-  label: string;
-  tags: string[];
-  wide?: boolean;
-}) {
-  return (
-    <div
-      className={`rounded-xl border border-outline bg-surface/70 p-3 ${wide ? "lg:col-span-4" : ""}`}
-    >
-      <p className="text-[10px] uppercase tracking-[0.18em] text-ink-tertiary">
-        {label}
-      </p>
-      <div className="mt-2 flex flex-wrap gap-1.5">
-        {tags.map((tag) => (
-          <span
-            key={`${label}-${tag}`}
-            className="graph-chip-elevated"
-          >
-            {tag}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
-}
