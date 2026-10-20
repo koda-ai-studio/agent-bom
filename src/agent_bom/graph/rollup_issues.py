@@ -5,7 +5,7 @@ the overview and the grouped findings list: only finding nodes count (an agent,
 server or package carries a rolled-up risk rating, which would restate the
 findings beneath it), VEX-suppressed findings are excluded, and occurrences of
 one advisory on one package collapse to a single issue. Every other finding is
-its own issue, keyed by its occurrence.
+its own issue, keyed by its occurrence (each recorded finding on a shared node).
 
 The index is built once per roll-up so each scope's aggregate is a set union
 over its descendants, not a second graph walk.
@@ -55,10 +55,16 @@ def _vulnerability_id(node: UnifiedNode) -> str:
     return str(value).strip().lower() if value else ""
 
 
-def _occurrence_key(node: UnifiedNode) -> str:
+def _occurrence_keys(node: UnifiedNode) -> tuple[str, ...]:
+    """One issue per recorded occurrence: a node several assets share counts each finding on it."""
     attrs = node.attributes or {}
+    by_asset = attrs.get("finding_ids_by_asset")
+    if isinstance(by_asset, dict):
+        recorded = sorted({f for ids in by_asset.values() if isinstance(ids, list) for f in ids if isinstance(f, str) and f.strip()})
+        if recorded:
+            return tuple(f"occurrence:{fid}" for fid in recorded)
     finding_id = attrs.get("finding_id") or attrs.get("canonical_finding_id")
-    return f"occurrence:{finding_id}" if isinstance(finding_id, str) and finding_id.strip() else f"occurrence:{node.id}"
+    return (f"occurrence:{finding_id}" if isinstance(finding_id, str) and finding_id.strip() else f"occurrence:{node.id}",)
 
 
 def build_issue_index(graph: UnifiedGraph) -> dict[str, tuple[str, ...]]:
@@ -79,7 +85,7 @@ def build_issue_index(graph: UnifiedGraph) -> dict[str, tuple[str, ...]]:
             continue
         vulnerability_id = _vulnerability_id(node)
         if not vulnerability_id:
-            index[node_id] = (_occurrence_key(node),)
+            index[node_id] = _occurrence_keys(node)
             continue
         packages = set()
         for parent_id in package_parents.get(node_id, ()):
