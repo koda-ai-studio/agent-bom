@@ -19,8 +19,8 @@ async def _page_edges(graph_store: Any, *, scan_id: str, tenant: str, node_ids: 
     )
     truncated = len(edges) > _NODE_PAGE_EDGE_LIMIT
     edges = edges[:_NODE_PAGE_EDGE_LIMIT]
-    # The store bounds each endpoint walk, so a hub can lose every edge even when the page is not truncated.
-    anchors = await _anchor_edgeless_nodes(graph_store, scan_id=scan_id, tenant=tenant, node_ids=node_ids, edges=edges)
+    # A truncated page can sort every edge of a hub past the budget; anchor what it left edgeless.
+    anchors = await _anchor_edgeless_nodes(graph_store, scan_id=scan_id, tenant=tenant, node_ids=node_ids, edges=edges) if truncated else []
     if anchors:
         edges = _covering_selection([*edges, *anchors], node_ids)
     return edges, truncated
@@ -70,7 +70,9 @@ async def _anchor_edgeless_nodes(graph_store: Any, *, scan_id: str, tenant: str,
             if endpoint in orphans and endpoint not in anchors:
                 anchors[endpoint] = edge
                 break
-    for node_id in sorted(orphans - set(anchors))[:_EDGELESS_ANCHOR_LIMIT]:
+    # Only a full batch can have crowded a node out; an edgeless node in a short batch has no edges.
+    remaining = sorted(orphans - set(anchors)) if len(batch) >= _ANCHOR_BATCH_EDGES_PER_NODE * len(orphans) else []
+    for node_id in remaining[:_EDGELESS_ANCHOR_LIMIT]:
         found = await _runtime._graph_store_call(
             graph_store.edges_for_node_ids, scan_id=scan_id, tenant_id=tenant, node_ids={node_id}, limit=1
         )
