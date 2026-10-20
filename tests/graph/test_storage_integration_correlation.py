@@ -136,3 +136,36 @@ def test_an_identifier_two_nodes_claim_joins_nothing() -> None:
     )
     assert correlate_storage_integrations(graph) == 1
     assert not [e for e in graph.edges if e.relationship is RelationshipType.CAN_ACCESS]
+
+
+def _correlation_peak_bytes(node_count: int) -> int:
+    import tracemalloc
+
+    from agent_bom.graph.store_backed import open_store_backed_unified_graph
+
+    with open_store_backed_unified_graph(scan_id="stream", tenant_id="t", backend="sqlite", capacity=128, page_size=64) as graph:
+        for index in range(node_count):
+            graph.add_node(
+                UnifiedNode(
+                    id=f"cloud_resource:filler:{index}",
+                    entity_type=EntityType.CLOUD_RESOURCE,
+                    label=f"filler-{index}",
+                    attributes={"region": "us-east-1", "notes": "x" * 200},
+                )
+            )
+        graph.flush()
+        tracemalloc.start()
+        try:
+            correlate_storage_integrations(graph)
+            return tracemalloc.get_traced_memory()[1]
+        finally:
+            tracemalloc.stop()
+
+
+def test_correlation_streams_a_store_backed_graph_instead_of_loading_every_node() -> None:
+    """The store-backed build keeps nodes in its workspace; the correlator must not pull them all into RAM."""
+    small, large = _correlation_peak_bytes(500), _correlation_peak_bytes(4000)
+    # Holding every node grows with the graph (8x nodes, ~8x peak); a streaming
+    # pass holds at most the node cache and one page, so past the cache size its
+    # peak stays flat.
+    assert large < small * 2, (small, large)

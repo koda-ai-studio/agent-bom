@@ -69,15 +69,28 @@ def _trust_basis(integration: dict[str, Any], role: UnifiedNode) -> list[str] | 
     return basis
 
 
-def _index(nodes: Iterable[UnifiedNode], prefix: str, kind: EntityType | None = None) -> dict[str, UnifiedNode]:
+def _unambiguous(claims: dict[str, list[UnifiedNode]]) -> dict[str, UnifiedNode]:
     """Recorded ARN -> the one node that records it; an ARN two nodes claim is ambiguous and dropped."""
-    claims: dict[str, list[UnifiedNode]] = {}
-    for node in nodes:
-        if kind is not None and node.entity_type != kind:
-            continue
-        for arn in _recorded_arns(node, prefix):
-            claims.setdefault(arn, []).append(node)
     return {arn: owners[0] for arn, owners in claims.items() if len(owners) == 1}
+
+
+def _claim(claims: dict[str, list[UnifiedNode]], node: UnifiedNode, prefix: str) -> None:
+    for arn in _recorded_arns(node, prefix):
+        claims.setdefault(arn, []).append(node)
+
+
+def _collect(nodes: Iterable[UnifiedNode]) -> tuple[list[UnifiedNode], dict[str, UnifiedNode], dict[str, UnifiedNode]]:
+    """One streaming pass: keep only integrations and ARN-bearing roles and buckets, never every node."""
+    integrations: list[UnifiedNode] = []
+    role_claims: dict[str, list[UnifiedNode]] = {}
+    bucket_claims: dict[str, list[UnifiedNode]] = {}
+    for node in nodes:
+        if str((node.attributes or {}).get("storage_aws_role_arn") or "").startswith(_ROLE_ARN_PREFIX):
+            integrations.append(node)
+        if node.entity_type == EntityType.ROLE:
+            _claim(role_claims, node, _ROLE_ARN_PREFIX)
+        _claim(bucket_claims, node, _S3_ARN_PREFIX)
+    return integrations, _unambiguous(role_claims), _unambiguous(bucket_claims)
 
 
 def _add(graph: UnifiedGraph, source: UnifiedNode, target: UnifiedNode, relationship: RelationshipType, evidence: dict[str, Any]) -> bool:
@@ -97,12 +110,9 @@ def _add(graph: UnifiedGraph, source: UnifiedNode, target: UnifiedNode, relation
 
 def correlate_storage_integrations(graph: UnifiedGraph) -> int:
     """Draw recorded-identifier joins for every storage integration; returns the edges it holds."""
-    nodes = list(graph.nodes.values())
-    integrations = [node for node in nodes if str((node.attributes or {}).get("storage_aws_role_arn") or "").startswith(_ROLE_ARN_PREFIX)]
+    integrations, roles, buckets = _collect(graph.nodes.values())
     if not integrations:
         return 0
-    roles = _index(nodes, _ROLE_ARN_PREFIX, EntityType.ROLE)
-    buckets = _index(nodes, _S3_ARN_PREFIX)
     drawn = 0
     for integration in integrations:
         attrs = integration.attributes
