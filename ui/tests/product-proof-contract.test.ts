@@ -5,7 +5,8 @@ import { describe, expect, it } from "vitest";
 const source = fs.readFileSync(path.join(process.cwd(), "scripts", "capture-product-proof.mjs"), "utf8");
 const provenanceSource = fs.readFileSync(path.join(process.cwd(), "scripts", "product-proof-provenance.mjs"), "utf8");
 const findingsQueue = fs.readFileSync(path.join(process.cwd(), "components", "findings-queue.tsx"), "utf8");
-const graphPage = fs.readFileSync(path.join(process.cwd(), "app", "graph", "graph-page-client.tsx"), "utf8");
+const graphPage = ["app/graph/graph-page-client.tsx", "hooks/use-graph-page-data.tsx", "hooks/use-graph-canvas-model.tsx", "hooks/use-graph-page-actions.tsx", "components/graph-page-view.tsx", "lib/graph-display-elements.ts"]
+  .map(file => fs.readFileSync(path.join(process.cwd(), file), "utf8")).join("\n");
 const exposurePath = fs.readFileSync(path.join(process.cwd(), "components", "exposure-path-command-center.tsx"), "utf8");
 
 describe("product proof capture contract", () => {
@@ -174,8 +175,8 @@ describe("product proof capture contract", () => {
     expect(source).toContain('minGraphEdgeLabelFontPx: 12');
     expect(source).toContain("node.offsetWidth");
     expect(graphPage).toContain('renderBand: "detail"');
-    expect(graphPage).toContain("serpentinePositions(ordered, 4, { column: 460, row: 220 })");
-    expect(graphPage).toContain("Math.max(12, Math.min(20, 13 / Math.max(graphViewport.zoom, 0.2)))");
+    expect(graphPage).toContain("serpentinePositions([...(pathOrder?.keys() ?? [])], 4, { column: 460, row: 220 })");
+    expect(graphPage).toContain("Math.max(12, Math.min(20, 13 / Math.max(zoom, 0.2)))");
     expect(source).toContain('minGraphWidthFillRatio: 0.65');
     expect(source).toContain('assertEdgeLabelsClearOfNodes: true');
     expect(source).toContain('/Focused attack path/i');

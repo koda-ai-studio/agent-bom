@@ -38,11 +38,14 @@ describe("idempotent GET retry", () => {
   it("never retries an API-reported 500, a client error, a caller abort, or a write", async () => {
     const fetchMock = vi.fn()
       .mockResolvedValueOnce(json({ detail: "boom" }, 500))
-      .mockResolvedValueOnce(json({ detail: "bad" }, 422));
+      .mockResolvedValueOnce(json({ detail: "bad" }, 422))
+      .mockResolvedValueOnce(json({ detail: "503 Service Unavailable" }, 503));
     vi.stubGlobal("fetch", fetchMock);
     await expect(get("/v1/a")).rejects.toBeInstanceOf(ApiServerError);
     await expect(get("/v1/b")).rejects.toBeInstanceOf(ApiValidationError);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    // The API itself said it is unavailable: an answer, not a dropped connection.
+    await expect(get("/v1/auth/me")).rejects.toBeInstanceOf(ApiServerError);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
 
     const controller = new AbortController();
     controller.abort();

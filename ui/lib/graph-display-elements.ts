@@ -50,7 +50,8 @@ export function focusDisplayNodes({ nodes, band, blastRadius, pathNodeIds, pathO
     return nodes.filter(node => pathNodeIds.has(node.id)).map(node => {
       const slot = slots.get(node.id) ?? { x: 0, y: 0, reverse: false };
       const placed = emphasize({ ...node, position: { x: slot.x, y: slot.y } }, true, true, "detail");
-      return { ...placed, data: { ...placed.data, reverseFlow: slot.reverse } };
+      // A focused path always renders full cards, whatever the zoom band.
+      return { ...placed, data: { ...placed.data, renderBand: "detail", reverseFlow: slot.reverse } };
     });
   }
   if (reachability) return nodes.map(node => emphasize(node, node.id === reachability.rootId, reachability.nodeIds.has(node.id), band));

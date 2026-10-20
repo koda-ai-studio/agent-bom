@@ -84,9 +84,9 @@ export const TRANSIENT_RETRY_DELAY_MS = 250;
 
 /**
  * A failure the next attempt can plausibly avoid: a dropped connection
- * (ECONNRESET surfaces as a fetch TypeError), a gateway status, or a 500 the
- * dev proxy produced without an API body. Aborts, timeouts and API-reported
- * errors are answers, not transport failures.
+ * (ECONNRESET surfaces as a fetch TypeError), or a 500/502/503/504 that a
+ * proxy or gateway produced without an API body. Aborts, timeouts and
+ * API-reported errors (a JSON body) are answers, not transport failures.
  */
 export function isTransientReadFailure(error: unknown): boolean {
   if (error instanceof ApiNetworkError) {
@@ -95,8 +95,8 @@ export function isTransientReadFailure(error: unknown): boolean {
     return name !== "AbortError" && name !== "TimeoutError";
   }
   if (!(error instanceof ApiServerError)) return false;
-  if ([502, 503, 504].includes(error.status)) return true;
-  return error.status === 500 && (error.body === undefined || typeof error.body === "string");
+  const apiAnswered = error.body !== undefined && typeof error.body !== "string";
+  return [500, 502, 503, 504].includes(error.status) && !apiAnswered;
 }
 
 export async function get<T>(path: string, options: GetOptions = {}): Promise<T> {
