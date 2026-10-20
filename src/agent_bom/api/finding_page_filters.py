@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
+from functools import partial
 from typing import Any
 
 from agent_bom.api import compliance_hub_store, finding_cursor, findings_current
@@ -16,9 +17,11 @@ from agent_bom.api.finding_page_query import _FindingListPage, _FindingListQuery
 from agent_bom.api.finding_read_context import read_once
 from agent_bom.api.finding_scope_filters import _finding_sort_key as _finding_sort_key
 from agent_bom.api.finding_scope_filters import _row_matches_scope as _row_matches_scope
+from agent_bom.api.finding_walk_cache import walk_rows as _walk_scan_rows
 from agent_bom.api.scan_finding_read import _bulk_ingested_findings_for_tenant as _bulk_ingested_findings_for_tenant
 from agent_bom.api.scan_finding_read import _completed_jobs_for_tenant as _completed_jobs_for_tenant
 from agent_bom.api.scan_finding_read import _current_scan_rows as _current_scan_rows
+from agent_bom.api.stores import _get_store
 
 
 def _filter_finding_rows(rows: list[dict[str, Any]], query: _FindingListQuery) -> list[dict[str, Any]]:
@@ -57,7 +60,10 @@ def _scan_half_rows(query: _FindingListQuery, store: Any, warnings: list[str]) -
     # fold, filter and sort the scan half once per read instead of once per page.
     # Callers only index into or copy the returned list.
     key = [query.tenant_id, query.window_since, query.scan_id, query.severity, query.status_key, query.sort_key]
-    return read_once(("scan_half_rows", json.dumps([*key, sorted(query.scope_filters.items())])), load)
+    walk_key = (query.window_days, *key[2:], json.dumps(sorted(query.scope_filters.items())))
+    continuation = query.merged_cursor is not None
+    walk = partial(_walk_scan_rows, walk_key, tenant_id=query.tenant_id, hub=store, job_store=_get_store(), continuation=continuation)
+    return read_once(("scan_half_rows", json.dumps([*key, sorted(query.scope_filters.items())])), lambda: walk(load=load))
 
 
 def _merged_page_next_cursor(query: _FindingListQuery, page: MergedScanBulkPage) -> str | None:
