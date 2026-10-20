@@ -6,7 +6,7 @@ const source = (path: string) => readFileSync(join(process.cwd(), path), "utf8")
 
 describe("interactive React Flow surface contract", () => {
   it.each([
-    "app/graph/graph-page-client.tsx",
+    "components/graph-page-view.tsx",
     "components/security-graph-investigation.tsx",
   ])("keeps evidence topology immutable in %s", (path) => {
     expect(source(path)).toContain("deleteKeyCode={null}");
@@ -56,7 +56,7 @@ describe("interactive React Flow surface contract", () => {
   });
 
   it.each([
-    "app/graph/graph-page-client.tsx",
+    "hooks/use-graph-canvas-model.tsx",
   ])("does not treat transient auth loading as logout in %s", (path) => {
     const content = source(path);
     expect(content).toContain("ownerActive: Boolean(session)");
@@ -84,7 +84,7 @@ describe("interactive React Flow surface contract", () => {
   });
 
   it.each([
-    "app/graph/graph-page-client.tsx",
+    "hooks/use-graph-canvas-model.tsx",
   ])("enables persistence only for an explicit no-auth local session in %s", (path) => {
     expect(source(path)).toContain('localMode: session?.recommended_ui_mode === "no_auth"');
   });

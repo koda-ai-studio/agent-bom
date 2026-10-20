@@ -8,6 +8,15 @@ import { lineageNodeTypeForEntity } from "@/lib/graph-entity-mapping";
 import { RelationshipType, type UnifiedNode } from "@/lib/graph-schema";
 import { nodeRiskAssessment } from "@/lib/node-risk-assessment";
 
+import { LARGE_GRAPH_OVERVIEW_MAX_RENDERED_NODES } from "@/lib/large-graph-overview";
+
+// Start with a small ranked selection. The API also returns supporting ancestors;
+// this request limit is not a promise about returned or rendered node counts.
+// Full-estate search and scope summaries remain independent of this selection.
+export function graphFetchLimitForSnapshot(scanId: string, expandedScanId: string | null): number {
+  return scanId && scanId === expandedScanId ? LARGE_GRAPH_OVERVIEW_MAX_RENDERED_NODES : 50;
+}
+
 const FOCUS_NEIGHBORHOOD_DEPTH = 2;
 const FOCUS_NEIGHBORHOOD_NODE_LIMIT = 80;
 

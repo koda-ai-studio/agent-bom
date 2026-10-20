@@ -23,7 +23,8 @@ describe("graph containment boundary", () => {
   });
 
   it("cannot resolve a containment subject by a mutable display name", () => {
-    const source = readFileSync("app/graph/graph-page-client.tsx", "utf8");
+    const source = ["app/graph/graph-page-client.tsx", "hooks/use-graph-page-data.tsx", "hooks/use-graph-canvas-model.tsx", "hooks/use-graph-page-actions.tsx", "components/graph-page-view.tsx"]
+      .map(path => readFileSync(path, "utf8")).join("\n");
     expect(source.includes("quarantineAgentByLabel")).toBe(false);
     expect(source.includes("api.quarantineFleetAgent")).toBe(false);
   });
