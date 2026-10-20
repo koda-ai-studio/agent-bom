@@ -14,6 +14,7 @@ from __future__ import annotations
 import re
 
 from agent_bom.parsers.skill_audit_types import SkillFinding
+from agent_bom.parsers.skill_grants import capability_findings
 from agent_bom.parsers.skills import SkillMetadata
 
 # ── Metadata quality checks ──────────────────────────────────────────────────
@@ -25,15 +26,6 @@ _RUNTIME_DEP_PATTERNS: dict[str, list[str]] = {
     "kubectl": [r"\bkubectl\b", r"\bk8s\b", r"\bkubernetes\b"],
     "terraform": [r"\bterraform\b", r"\btf\b"],
     "helm": [r"\bhelm\b"],
-}
-
-_REQUIRED_CAPABILITY_KEYS = {
-    "read_findings",
-    "read_inventory",
-    "read_audit_log",
-    "write_findings",
-    "outbound_http",
-    "shell_exec",
 }
 
 
@@ -89,52 +81,7 @@ def _check_metadata_quality(
         )
 
     # ── Explicit skill capability boundary ───────────────────────────
-    raw_frontmatter = meta.raw_frontmatter or ""
-    has_capabilities = bool(re.search(r"^\s*(?:skill_)?capabilities:\s*$", raw_frontmatter, re.MULTILINE))
-    if meta.allowed_tools is not None and not has_capabilities:
-        findings.extend(_check_tool_grants(meta, source_file))
-    elif not has_capabilities:
-        findings.append(
-            SkillFinding(
-                severity="low",
-                category="missing_capability_declaration",
-                title="No explicit skill capability declaration",
-                detail=(
-                    f"Skill '{meta.name or 'unknown'}' in {source_file} does not declare "
-                    "an explicit capability map. Sandboxed runtimes and Snowflake Native "
-                    "App deployments need declared read, write, network, and shell "
-                    "boundaries before a skill can be safely invoked."
-                ),
-                source_file=source_file,
-                recommendation=(
-                    "Add a 'capabilities' or 'skill_capabilities' frontmatter block "
-                    "covering read_findings, read_inventory, read_audit_log, "
-                    "write_findings, outbound_http, and shell_exec."
-                ),
-                context="metadata",
-            )
-        )
-    else:
-        missing_keys = sorted(key for key in _REQUIRED_CAPABILITY_KEYS if not re.search(rf"^\s*{key}\s*:", raw_frontmatter, re.MULTILINE))
-        if missing_keys:
-            findings.append(
-                SkillFinding(
-                    severity="low",
-                    category="incomplete_capability_declaration",
-                    title="Incomplete skill capability declaration",
-                    detail=(
-                        f"Skill '{meta.name or 'unknown'}' in {source_file} declares "
-                        "skill capabilities but omits: "
-                        f"{', '.join(missing_keys)}. Missing keys make sandbox and "
-                        "customer-controlled runtime policy generation ambiguous."
-                    ),
-                    source_file=source_file,
-                    recommendation=(
-                        "Declare every required capability key explicitly and use false instead of omitting a denied capability."
-                    ),
-                    context="metadata",
-                )
-            )
+    findings.extend(capability_findings(meta, source_file))
 
     # ── Undeclared runtime dependencies ───────────────────────────────
     all_text = " ".join(raw_content.values()).lower()
@@ -247,52 +194,3 @@ def _check_metadata_quality(
         )
 
     return findings
-
-
-_SHELL_TOOLS = {"bash", "powershell"}
-_WRITE_TOOLS = {"write", "edit", "multiedit", "notebookedit"}
-_UNSCOPED_ARGS = {None, "", "*", ":*"}
-
-
-def _grant_parts(grant: str) -> tuple[str, str | None]:
-    name, _, rest = grant.partition("(")
-    return name.strip().lower(), (rest[:-1].strip() if rest.endswith(")") else None)
-
-
-def _check_tool_grants(meta: SkillMetadata, source_file: str) -> list[SkillFinding]:
-    """Flag unrestricted Claude Code ``allowed-tools`` grants.
-
-    A declared grant list is the skill's capability boundary. Unscoped shell is
-    medium on its own and high with an unscoped network fetch (a direct
-    execute-and-egress path); unscoped fetch plus file writes is medium.
-    """
-    grants = meta.allowed_tools or []
-    shell = [g for g in grants if _grant_parts(g)[0] in _SHELL_TOOLS and _grant_parts(g)[1] in _UNSCOPED_ARGS]
-    fetch = [g for g in grants if _grant_parts(g)[0] == "webfetch" and _grant_parts(g)[1] in _UNSCOPED_ARGS]
-    write = [g for g in grants if _grant_parts(g)[0] in _WRITE_TOOLS and _grant_parts(g)[1] in _UNSCOPED_ARGS]
-    if shell and fetch:
-        severity, risk = "high", "run any shell command and fetch arbitrary URLs"
-    elif shell:
-        severity, risk = "medium", "run any shell command"
-    elif fetch and write:
-        severity, risk = "medium", "fetch arbitrary URLs and write files"
-    else:
-        return []
-    evidence = ", ".join(shell + fetch + write)
-    return [
-        SkillFinding(
-            severity=severity,
-            category="broad_tool_grant",
-            title="Broad tool grant in allowed-tools",
-            detail=(
-                f"Skill '{meta.name or 'unknown'}' in {source_file} declares allowed-tools "
-                f"[{evidence}], which lets it {risk} without a per-call permission prompt."
-            ),
-            source_file=source_file,
-            recommendation=(
-                "Scope each grant to the commands and domains the skill needs, for example "
-                "Bash(git diff:*) or WebFetch(domain:docs.example.com), and drop unused tools."
-            ),
-            context="metadata",
-        )
-    ]

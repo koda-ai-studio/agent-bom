@@ -770,7 +770,6 @@ _HIGH_RISK_FINDING_CATEGORIES = {
 }
 
 _REVIEW_ONLY_FINDING_CATEGORIES = {
-    "broad_tool_grant",
     "missing_capability_declaration",
     "undeclared_dependency",
     "undocumented_network",
@@ -820,8 +819,6 @@ def _compute_review_verdict(
     if content_verdict == Verdict.MALICIOUS or _escalating_categories(findings, _HIGH_RISK_FINDING_CATEGORIES):
         return ReviewVerdict.HIGH_RISK
     if any(f.severity == "medium" and _is_behavioral_content_finding(f.category) for f in findings):
-        return ReviewVerdict.REVIEW
-    if any(f.category == "broad_tool_grant" for f in findings):
         return ReviewVerdict.REVIEW
     if (
         content_verdict == Verdict.SUSPICIOUS

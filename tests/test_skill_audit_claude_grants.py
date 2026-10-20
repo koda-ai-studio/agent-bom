@@ -50,7 +50,7 @@ def test_skill_without_any_declaration_still_warns(tmp_path):
         ("allowed-tools: Bash(*), Read\n", "medium", "Bash(*)"),
         ("allowed-tools:\n  - Read\n  - Bash(:*)\n", "medium", "Bash(:*)"),
         ("allowed-tools: Read, WebFetch, Write\n", "medium", "WebFetch"),
-        ("allowed-tools: Bash(*), Write, WebFetch\n", "high", "Bash(*)"),
+        ("allowed-tools: Bash(*), Write, WebFetch\n", "medium", "execute-and-egress"),
     ],
 )
 def test_broad_grants_are_flagged_with_evidence(tmp_path, grant, severity, evidence):
