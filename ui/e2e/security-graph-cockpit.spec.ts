@@ -680,9 +680,9 @@ async function expectCockpitVisible(page: Page) {
   ).toBeVisible();
   // Progressive disclosure summary — avoid /Evidence/ which also matches "Evidence drawer".
   await expect(page.getByText("Evidence & relationships")).toBeVisible();
-  await expect(page.getByText("Path priority", { exact: true }).first()).toBeHidden();
+  await expect(page.locator(".ep-header-details").first().getByText("Path priority", { exact: true })).toBeHidden();
   await page.locator(".ep-header-summary").click();
-  await expect(page.getByText("Path priority", { exact: true }).first()).toBeVisible();
+  await expect(page.locator(".ep-header-details").first().getByText("Path priority", { exact: true })).toBeVisible();
   await expect(page.getByText("Path span", { exact: true }).first()).toBeVisible();
 }
 

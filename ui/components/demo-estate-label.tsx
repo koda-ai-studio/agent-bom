@@ -36,14 +36,14 @@ export function DemoEstateLabel({ scanSources }: { scanSources?: string[] | unde
     >
       {referenceEvidenceLab
         ? <>
-          <FlaskConical aria-hidden="true" className="h-4 w-4 shrink-0 @min-[4.5em]:hidden" />
+          <FlaskConical aria-hidden="true" size={16} style={{ width: 16, height: 16 }} className="shrink-0 @min-[4.5em]:hidden" />
           <span className="hidden @min-[4.5em]:inline @min-[10.5em]:hidden">Lab</span>
           <span className="hidden @min-[10.5em]:inline @min-[20em]:hidden">Reference lab</span>
           <span className="hidden @min-[20em]:inline @min-[35em]:hidden">Reference lab — modeled local</span>
           <span className="hidden @min-[35em]:inline">Reference evidence lab — modeled local infrastructure</span>
         </>
         : <>
-          <FlaskConical aria-hidden="true" className="h-4 w-4 shrink-0 @min-[4.5em]:hidden" />
+          <FlaskConical aria-hidden="true" size={16} style={{ width: 16, height: 16 }} className="shrink-0 @min-[4.5em]:hidden" />
           <span className="hidden @min-[4.5em]:inline @min-[7.5em]:hidden">Demo</span>
           <span className="hidden @min-[7.5em]:inline @min-[22em]:hidden">Demo data</span>
           <span className="hidden @min-[22em]:inline">Demo data — sample environment</span>
