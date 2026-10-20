@@ -7,6 +7,7 @@ import { InvestigationNotices } from "@/components/investigation-notices";
 import { InvestigationScanEvidence } from "@/components/investigation-scan-evidence";
 import { InvestigationLoadError } from "@/components/investigation-load-error";
 import { InvestigationFilteredEmpty } from "@/components/investigation-filtered-empty";
+import { PathReachSummary } from "@/components/path-reach-summary";
 
 import { investigationHref, investigationView } from "@/lib/investigation-url";
 import { selectAttackPathQueue } from "@/lib/attack-path-queue";
@@ -909,6 +910,7 @@ function AttackPathInvestigationContent() {
                           onStepHint={handleStepHint}
                         />
                       ) : null}
+                      <PathReachSummary path={selectedAttackPath} scanId={selectedScanId} />
                     </div>
                   ) : null
                 }
