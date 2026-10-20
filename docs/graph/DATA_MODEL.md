@@ -99,7 +99,7 @@ flowchart LR
 | `policy` | Policy | Identity and access | `identity` | 3 / 3001 |  | 5 (+1 demo) |
 | `provider` | Provider | Cloud, infrastructure and data | `infra` | 0 / 0 |  | 3 |
 | `resource` | Resource | Cloud, infrastructure and data | `asset` | 5 / 4001 |  | 3 |
-| `role` | Role | Identity and access | `identity` | 3 / 3001 |  | 7 (+2 demo) |
+| `role` | Role | Identity and access | `identity` | 3 / 3001 |  | 8 (+2 demo) |
 | `server` | MCP Server | AI and agents | `mcp_server` | 5 / 4001 |  | 3 (+2 demo) |
 | `service_account` | Service Account | Identity and access | `identity` | 3 / 3001 |  | 3 (+1 demo) |
 | `service_principal` | Service Principal | Identity and access | `identity` | 3 / 3001 |  | 3 (+1 demo) |
@@ -120,12 +120,12 @@ Consumed by: **FU** Attack-path fusion · **CR** Credential reach · **BR** Depe
 | `accessed` | `runtime` | runtime | directed | yes | `agent`, `federated_identity`, `role`, `service_account`, `service_principal`, `tool` (+2 more) | `cloud_resource`, `credential`, `credential_ref`, `data_store`, `dataset`, `resource` | 34 | FU, RT | 4 |
 | `acted_as` | `runtime` | runtime | directed | yes | `federated_identity`, `service_account`, `service_principal`, `user` | `agent` | 4 | RT | 0 |
 | `affects` | `finding` | vulnerability | directed | yes | `misconfiguration`, `vulnerability` | `access_policy`, `account`, `agent`, `api_gateway`, `application`, `ci_job` (+17 more) | 28 | BR | 7 (+2 demo) |
-| `assumes` | `authority` | identity | directed | yes | `agent`, `cloud_resource`, `cluster`, `container`, `federated_identity`, `model` (+5 more) | `managed_identity`, `role`, `service_account`, `service_principal` | 29 | FU, LT | 5 (+2 demo) |
+| `assumes` | `authority` | identity | directed | yes | `agent`, `cloud_resource`, `cluster`, `container`, `federated_identity`, `model` (+5 more) | `managed_identity`, `role`, `service_account`, `service_principal` | 29 | FU, LT | 6 (+1 demo) |
 | `attached` | `authority` | identity | directed | yes | `group`, `managed_identity`, `role`, `service_account`, `service_principal`, `user` | `access_grant`, `policy` | 12 | — | 3 (+1 demo) |
 | `authenticates_as` | `authority` | governance | directed | yes | `agent`, `credential` | `managed_identity`, `role`, `service_account`, `service_principal` | 7 | FU | 2 |
 | `belongs_to` | `structural` | aspm | directed | yes | `cloud_resource`, `container`, `credential`, `misconfiguration`, `package`, `server` (+1 more) | `application` | 7 | — | 1 |
 | `called` | `runtime` | runtime | directed | yes | `agent`, `tool_call` | `server`, `tool` | 4 | CR, RT | 2 (+1 demo) |
-| `can_access` | `authority` | identity | directed | yes | `account`, `agent`, `application`, `cloud_resource`, `cluster`, `container` (+10 more) | `agent`, `api_gateway`, `cloud_resource`, `cluster`, `config_file`, `container` (+10 more) | 183 | FU, LT, MT | 4 (+3 demo) |
+| `can_access` | `authority` | identity | directed | yes | `account`, `agent`, `application`, `cloud_resource`, `cluster`, `container` (+10 more) | `agent`, `api_gateway`, `cloud_resource`, `cluster`, `config_file`, `container` (+10 more) | 183 | FU, LT, MT | 5 (+2 demo) |
 | `configures` | `structural` | code_topology | directed | yes | `config_file` | `agent`, `ci_job`, `server`, `tool` | 4 | — | 1 |
 | `contains` | `structural` | inventory | directed | yes | `access_policy`, `account`, `agent`, `api_gateway`, `application`, `ci_job` (+19 more) | `access_policy`, `account`, `agent`, `api_gateway`, `application`, `ci_job` (+21 more) | 93 | FU, BR | 10 (+4 demo) |
 | `correlates_with` | `correlation` | correlation | bidirectional | no | `agent`, `server` | `agent`, `server` | 4 | — | 1 |
@@ -163,7 +163,7 @@ Consumed by: **FU** Attack-path fusion · **CR** Credential reach · **BR** Depe
 | `stores` | `structural` | exposure | directed | yes | `cloud_resource`, `data_store`, `resource`, `server` | `data_store`, `dataset` | 8 | FU | 1 |
 | `trace_step` | `runtime` | runtime | directed | yes | `access_policy`, `agent`, `api_gateway`, `application`, `ci_job`, `cloud_resource` (+14 more) | `access_policy`, `agent`, `api_gateway`, `application`, `ci_job`, `cloud_resource` (+14 more) | 400 | — | 0 (+1 demo) |
 | `triggers` | `finding` | vulnerability | directed | yes | `vulnerability` | `misconfiguration` | 1 | — | 1 |
-| `trusts` | `authority` | identity | directed | yes | `account`, `role` | `account`, `federated_identity`, `group`, `role`, `service_account`, `service_principal` (+1 more) | 14 | — | 2 (+1 demo) |
+| `trusts` | `authority` | identity | directed | yes | `account`, `role` | `account`, `federated_identity`, `group`, `role`, `service_account`, `service_principal` (+1 more) | 14 | — | 2 |
 | `used_credential` | `runtime` | runtime | directed | yes | `agent`, `tool`, `tool_call` | `credential`, `credential_ref` | 6 | CR, RT | 2 |
 | `uses` | `dependency` | inventory | directed | yes | `agent` | `server` | 1 | FU, CR, BR | 1 (+1 demo) |
 | `uses_framework` | `dependency` | inventory | directed | yes | `agent` | `framework` | 1 | — | 1 |

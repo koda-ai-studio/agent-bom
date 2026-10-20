@@ -56,7 +56,7 @@ Class `authority` · directed · traversable · required evidence `source`, `tie
 - `service_principal` → `role`
 - `user` → `role`
 
-Emitted by: `graph/builder_cloud_inventory.py`, `graph/builder_snowflake_cortex.py`, `graph/builder_snowflake_objects.py`, `graph/builder_snowflake_platform.py`, `graph/cloud_compute_projection.py`; demo fixtures: `demo_estate/estate_external_stages.py`, `demo_estate/showcase_graph.py`
+Emitted by: `graph/builder_cloud_inventory.py`, `graph/builder_snowflake_cortex.py`, `graph/builder_snowflake_objects.py`, `graph/builder_snowflake_platform.py`, `graph/cloud_compute_projection.py`, `graph/storage_integration_correlation.py`; demo fixtures: `demo_estate/showcase_graph.py`
 
 ## `attached`
 
@@ -124,7 +124,7 @@ Class `authority` · directed · traversable · required evidence `source`, `tie
 - `tool` → `agent`, `api_gateway`, `cloud_resource`, `cluster`, `config_file`, `container`, `data_store`, `dataset`, `model`, `resource`, `server`
 - `user` → `agent`, `api_gateway`, `cloud_resource`, `cluster`, `config_file`, `container`, `credential`, `data_store`, `dataset`, `model`, `resource`, `server`
 
-Emitted by: `graph/authorization_evidence.py`, `graph/builder.py`, `graph/builder_cloud_lineage.py`, `graph/builder_snowflake_cortex.py`; demo fixtures: `demo_estate/estate_external_stages.py`, `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
+Emitted by: `graph/authorization_evidence.py`, `graph/builder.py`, `graph/builder_cloud_lineage.py`, `graph/builder_snowflake_cortex.py`, `graph/storage_integration_correlation.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
 
 ## `configures`
 
@@ -559,7 +559,7 @@ Class `authority` · directed · traversable · required evidence `source`, `tie
 - `account` → `account`, `federated_identity`, `group`, `role`, `service_account`, `service_principal`, `user`
 - `role` → `account`, `federated_identity`, `group`, `role`, `service_account`, `service_principal`, `user`
 
-Emitted by: `graph/builder.py`, `graph/builder_cloud_lineage.py`; demo fixtures: `demo_estate/estate_external_stages.py`
+Emitted by: `graph/builder.py`, `graph/builder_cloud_lineage.py`
 
 ## `used_credential`
 
