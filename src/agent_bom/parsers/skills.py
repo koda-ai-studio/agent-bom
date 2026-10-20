@@ -19,6 +19,8 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import yaml
+
 from agent_bom.models import MCPServer, Package, TransportType
 from agent_bom.parsers.npm_semver import npm_exact_version
 from agent_bom.traversal import iter_discovery_files
@@ -154,6 +156,8 @@ class SkillMetadata:
     install_methods: list[str] = field(default_factory=list)  # e.g. ["uv", "pip", "pipx"]
     os_support: list[str] = field(default_factory=list)
     raw_frontmatter: str = ""
+    # Claude Code ``allowed-tools`` grants; None when the key is absent.
+    allowed_tools: list[str] | None = None
 
 
 def _parse_frontmatter(content: str) -> SkillMetadata | None:
@@ -209,7 +213,29 @@ def _parse_frontmatter(content: str) -> SkillMetadata | None:
     if os_section:
         meta.os_support = _YAML_LIST_ITEM_RE.findall(os_section.group(1))
 
+    meta.allowed_tools = _parse_allowed_tools(raw)
     return meta
+
+
+_TOOL_GRANT_RE = re.compile(r"[A-Za-z_][\w.-]*(?:\([^)]*\))?")
+_ALLOWED_TOOLS_KEYS = ("allowed-tools", "allowed_tools")
+
+
+def _parse_allowed_tools(raw: str) -> list[str] | None:
+    """Return Claude Code ``allowed-tools`` grants in string or list form."""
+    try:
+        data = yaml.safe_load(raw)
+    except yaml.YAMLError:
+        data = None
+    if isinstance(data, dict):
+        key = next((k for k in _ALLOWED_TOOLS_KEYS if k in data), None)
+        if key is None:
+            return None
+        value = data[key]
+        items = value if isinstance(value, list) else [value] if value is not None else []
+        return [grant for item in items for grant in _TOOL_GRANT_RE.findall(str(item))]
+    line = re.search(r"^allowed[-_]tools:[ \t]*(.*)$", raw, re.MULTILINE)
+    return _TOOL_GRANT_RE.findall(line.group(1)) if line else None
 
 
 # ─── Data structure ──────────────────────────────────────────────────────────

@@ -1214,6 +1214,7 @@ _BEHAVIOR_FAMILIES: dict[str, str] = {
     "remote_code_execution": "code_execution",
     "excessive_permissions": "data_access",
     "persistence_mechanism": "persistence",
+    "broad_tool_grant": "code_execution",
     "missing_capability_declaration": "data_access",
     "incomplete_capability_declaration": "data_access",
 }
