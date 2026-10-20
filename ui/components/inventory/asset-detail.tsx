@@ -6,8 +6,9 @@ import { Bug, ExternalLink, FileCheck, Network, Share2 } from "lucide-react";
 
 import { SeverityBadge } from "@/components/severity-badge";
 import { ICON_SIZE } from "@/lib/icon-sizes";
+import { assetIcon, assetKindLabel } from "@/lib/asset-icon-registry";
 import type { InventoryAssetDetailResponse } from "@/lib/api";
-import type { AssetKindConfig, AssetRow } from "@/lib/inventory";
+import type { AssetRow } from "@/lib/inventory";
 import {
   complianceHref,
   findingsHref,
@@ -49,21 +50,20 @@ function readableAttributes(attributes: Record<string, unknown>): [string, strin
 
 export function AssetDetail({
   row,
-  config,
   detail,
   loading = false,
   error = "",
   scanId,
 }: {
   row: AssetRow;
-  config: AssetKindConfig;
   detail?: InventoryAssetDetailResponse | undefined;
   loading?: boolean | undefined;
   error?: string | undefined;
   scanId?: string | undefined;
 }) {
-  const Icon = config.icon;
   const attributes = detail?.asset.attributes ?? row.attributes;
+  const Icon = assetIcon({ entityType: row.entityType, attributes });
+  const kindLabel = assetKindLabel({ entityType: row.entityType, attributes });
   const attrRows = readableAttributes(attributes);
   const relationships = detail
     ? [...new Map([...detail.edges_in, ...detail.edges_out].map((edge) => [
@@ -82,7 +82,7 @@ export function AssetDetail({
         </span>
         <div className="min-w-0">
           <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[color:var(--text-tertiary)]">
-            {config.singular}
+            {kindLabel}
           </p>
           <h2 className="mt-0.5 break-words [overflow-wrap:anywhere] text-lg font-semibold text-[color:var(--foreground)]">
             {row.label}

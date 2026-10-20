@@ -94,6 +94,8 @@ const PROVIDERS: Record<string, { value: string; label: string }> = {
   langsmith: { value: "langsmith", label: "LangSmith" },
   clickhouse: { value: "clickhouse", label: "ClickHouse" },
   github: { value: "github", label: "GitHub" },
+  cloudflare: { value: "cloudflare", label: "Cloudflare" },
+  fireworks: { value: "fireworks", label: "Fireworks AI" },
 
   aws: { value: "aws", label: "AWS" },
   azure: { value: "azure", label: "Azure" },

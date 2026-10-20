@@ -130,7 +130,7 @@ it("distinguishes security findings from config files and preserves the canonica
   const { container } = render(<ReactFlowProvider><Renderer data={{ label: "Workflow publishes with a long-lived registry token", nodeType: "misconfiguration", severity: "high", attributes: { display_title: "Long-lived registry token" } }} /></ReactFlowProvider>);
   expect(screen.getByText("Finding", { exact: true })).toBeVisible();
   expect(container.querySelector('[data-graph-entity] > p')).toHaveTextContent("Long-lived registry token");
-  expect(screen.getByTitle("Workflow publishes with a long-lived registry token")).toBeVisible();
+  expect(screen.getByTitle("Workflow publishes with a long-lived registry token · High severity")).toBeVisible();
 });
 
 it("uses explicit provider metadata on infrastructure while keeping its entity glyph", () => {

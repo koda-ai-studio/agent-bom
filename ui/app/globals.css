@@ -955,6 +955,10 @@ main > div {
   outline: 1.5px solid var(--border-strong); outline-offset: -3.5px;
 }
 .graph-provider-mark[data-provider-basis="inherited"] { outline-style: dashed; }
+/* On a node glyph: ~38% of the disc, centred on the ring at 4:30 so it reads as a badge, not a second glyph. */
+.graph-provider-mark-node { right: -4%; bottom: -4%; width: 38%; height: 38%; min-width: 22px; min-height: 22px; box-shadow: 0 1px 2px rgb(0 0 0 / 0.18); }
+.graph-provider-mark-node .graph-provider-mark-glyph { width: 78%; height: 78%; }
+.graph-provider-mark-node .graph-provider-mark-glyph-aws { width: 88%; height: 88%; }
 /* Inline marks sit on chips and cards, not the canvas: no cut-out ring. */
 .graph-provider-mark-inline { border-width: 0; outline-width: 1px; outline-offset: -1px; }
 .graph-provider-mark-inline .graph-provider-mark-glyph { width: 74%; height: 74%; }

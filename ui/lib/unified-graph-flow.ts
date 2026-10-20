@@ -30,6 +30,7 @@ import { displayContextDescription } from "@/lib/context-graph";
 import { FLOW_NODE_TYPES, lineageNodeTypeForEntity } from "@/lib/graph-entity-mapping";
 import { assignCollisionScopes, assignOccurrenceRoles } from "@/lib/graph-occurrence-role";
 import { CONSEQUENTIAL_RELATIONSHIPS, isObservedAccess } from "@/lib/graph-access-evidence";
+import { assignScopeContext } from "@/lib/graph-scope-context";
 import {
   EntityType,
   type UnifiedEdge,
@@ -250,6 +251,7 @@ export function buildUnifiedFlowGraph(
   );
   assignOccurrenceRoles(prunedNodes);
   assignCollisionScopes(prunedNodes);
+  assignScopeContext(prunedNodes, graph.edges.filter((edge) => visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target)));
   const summary = buildSummary(prunedNodes, graph);
   const legend = legendForNodeTypes(visibleNodeTypes);
 

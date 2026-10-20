@@ -1,14 +1,6 @@
 import { nodeRiskAssessment, type NodeRiskAssessment } from "@/lib/node-risk-assessment";
-import {
-  Package,
-  Server,
-  Bot,
-  Cloud,
-  KeyRound,
-  Container,
-  FileCode,
-  type LucideIcon,
-} from "lucide-react";
+import type { EntityIcon } from "@/lib/asset-icon-registry";
+import { ASSET_KINDS as ICON_KINDS } from "@/lib/asset-icon-registry";
 
 import type {
   GraphCompleteness,
@@ -58,7 +50,7 @@ export interface AssetKindConfig {
    * the platform can and cannot see for this asset type.
    */
   coverageNote: string;
-  icon: LucideIcon;
+  icon: EntityIcon;
 }
 
 /**
@@ -78,7 +70,7 @@ export const ASSET_KINDS: readonly AssetKindConfig[] = [
     primaryColumn: "Package",
     coverageNote:
       "Sourced from SBOM/SCA discovery. Versions and ecosystems come from lockfiles, manifests, and image layers.",
-    icon: Package,
+    icon: ICON_KINDS.package.icon,
   },
   {
     id: "servers",
@@ -91,7 +83,7 @@ export const ASSET_KINDS: readonly AssetKindConfig[] = [
     primaryColumn: "Server",
     coverageNote:
       "Sourced from local discovery, runtime observation, and gateway registration. Reference-only catalog servers live under MCP Catalog.",
-    icon: Server,
+    icon: ICON_KINDS.mcp_server.icon,
   },
   {
     id: "agents",
@@ -104,7 +96,7 @@ export const ASSET_KINDS: readonly AssetKindConfig[] = [
     primaryColumn: "Agent",
     coverageNote:
       "Sourced from local agent configs, the fleet control plane, and runtime traces. See Agent BOM for the full manifest view.",
-    icon: Bot,
+    icon: ICON_KINDS.agent.icon,
   },
   {
     id: "cloud",
@@ -128,7 +120,7 @@ export const ASSET_KINDS: readonly AssetKindConfig[] = [
     primaryColumn: "Resource",
     coverageNote:
       "Read-only cloud inventory. Coverage depends on which accounts are connected and which inventory scopes are enabled per provider.",
-    icon: Cloud,
+    icon: ICON_KINDS.cloud_resource.icon,
   },
   {
     id: "identities",
@@ -155,7 +147,7 @@ export const ASSET_KINDS: readonly AssetKindConfig[] = [
     primaryColumn: "Identity",
     coverageNote:
       "Credential references never include secret values. NHI coverage depends on connected identity providers (Okta, Entra) and cloud accounts.",
-    icon: KeyRound,
+    icon: ICON_KINDS.credential.icon,
   },
   {
     id: "containers",
@@ -168,7 +160,7 @@ export const ASSET_KINDS: readonly AssetKindConfig[] = [
     primaryColumn: "Image",
     coverageNote:
       "Sourced from image scans. Coverage is limited to images that have been scanned or observed running.",
-    icon: Container,
+    icon: ICON_KINDS.image.icon,
   },
   {
     id: "code",
@@ -190,7 +182,7 @@ export const ASSET_KINDS: readonly AssetKindConfig[] = [
     primaryColumn: "Asset",
     coverageNote:
       "Sourced from repository and project scans. Depth depends on which repos were scanned and whether SAST/IaC analysis ran.",
-    icon: FileCode,
+    icon: ICON_KINDS.source_file.icon,
   },
 ];
 

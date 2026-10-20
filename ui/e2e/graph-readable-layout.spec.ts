@@ -249,12 +249,15 @@ for (const theme of ["light", "dark"] as const) test(`provider marks read as par
   const inherited = { cloud_provider_basis: "inherited:hosts", cloud_provider_source: { node_id: "cluster", label: "payments-eks", entity_type: "cluster" } };
   const worker = { ...node("worker", "container", "ledger-worker"), attributes: inherited, dimensions: { environment: "staging", cloud_provider: "aws" } };
   const nodes = [aws(node("agent", "account", "prod-workloads")), aws(node("cluster", "cluster", "payments-eks")), worker,
-    aws(node("bucket", "data_store", "customer-pii-bucket"))];
+    aws(node("bucket", "data_store", "customer-pii-bucket")),
+    { ...node("warehouse", "cloud_resource", "analytics-wh"), attributes: { resource_type: "warehouse" }, dimensions: { environment: "prod", cloud_provider: "snowflake" } }];
   await page.addInitScript(t => localStorage.setItem("agent-bom-theme", t), theme);
-  await fixture(page, nodes, [edge("agent", "cluster", "contains"), edge("cluster", "worker", "hosts"), edge("agent", "bucket", "contains")]);
+  await fixture(page, nodes, [edge("agent", "cluster", "contains"), edge("cluster", "worker", "hosts"), edge("agent", "bucket", "contains"),
+    edge("worker", "warehouse", "can_access")]);
   await openAgentContext(page, 1440);
   const marks = page.locator(".react-flow [data-graph-source-badge]");
-  await expect(marks).toHaveCount(4);
+  // One mark per scope: the AWS account root and the cross-vendor Snowflake hop; children that match their scope stay unmarked.
+  await expect(marks).toHaveCount(2);
   const measured = await marks.evaluateAll(all => {
     const luminance = (color: string) => {
       const [r, g, b] = (color.match(/[\d.]+/g) ?? []).slice(0, 3).map(Number).map(v => v / 255).map(v => v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
@@ -272,7 +275,8 @@ for (const theme of ["light", "dark"] as const) test(`provider marks read as par
     expect(mark.glyph, "glyph renders at least 14px").toBeGreaterThanOrEqual(14);
     expect(mark.contrast, "mark outline contrast against the canvas").toBeGreaterThanOrEqual(3);
   }
-  expect(measured.filter(mark => mark.basis === "inherited")).toEqual([expect.objectContaining({ outline: "dashed", title: "Source: AWS · inherited from AWS cluster payments-eks" })]);
+  expect(measured.map(mark => mark.title).sort()).toEqual(["Source: AWS", "Source: Snowflake"]);
+  await expect(page.locator('[data-id="worker"] [data-graph-source-badge]')).toHaveCount(0);
   await expect(page.locator('.react-flow [data-node-badge="provider"]')).toHaveCount(0);
   // The type label and its environment chip share one centre line.
   const row = page.locator('[data-id="worker"] [data-testid="graph-node-badges"]');

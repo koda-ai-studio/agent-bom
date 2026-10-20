@@ -1,14 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import type { LucideIcon } from "lucide-react";
-import { ArrowRight, Bot, Bug, ChevronRight, Database, Fingerprint, KeyRound, Package, Server, ShieldAlert, Wrench } from "lucide-react";
-
-interface AttackPathNode {
-  type: "cve" | "package" | "server" | "agent" | "credential" | "tool" | "data" | "identity" | "entity";
-  label: string;
-  severity?: string | undefined;
-}
+import { ArrowRight, ChevronRight } from "lucide-react";
+import { ASSET_KINDS, assetIcon, type AssetKind } from "@/lib/asset-icon-registry";
+import type { AttackPathCardNode as AttackPathNode } from "@/lib/attack-paths";
 
 interface AttackPathCardProps {
   nodes: AttackPathNode[];
@@ -20,20 +15,16 @@ interface AttackPathCardProps {
   showRiskBadge?: boolean | undefined;
 }
 
-const NODE_META: Record<AttackPathNode["type"], { icon: LucideIcon; tint: string; ring: string }> = {
-  cve: { icon: Bug, tint: "text-red-700 dark:text-red-300 bg-red-500/12", ring: "border-red-500/25" },
-  package: { icon: Package, tint: "text-amber-700 dark:text-amber-300 bg-amber-500/12", ring: "border-amber-500/25" },
-  server: { icon: Server, tint: "text-sky-700 dark:text-sky-300 bg-sky-500/12", ring: "border-sky-500/25" },
-  agent: { icon: Bot, tint: "text-emerald-700 dark:text-emerald-300 bg-emerald-500/12", ring: "border-emerald-500/25" },
-  credential: { icon: KeyRound, tint: "text-fuchsia-700 dark:text-fuchsia-300 bg-fuchsia-500/12", ring: "border-fuchsia-500/25" },
-  tool: { icon: Wrench, tint: "text-purple-700 dark:text-purple-300 bg-purple-500/12", ring: "border-purple-500/25" },
-  data: { icon: Database, tint: "text-cyan-700 dark:text-cyan-300 bg-cyan-500/12", ring: "border-cyan-500/25" },
-  identity: { icon: Fingerprint, tint: "text-indigo-700 dark:text-indigo-300 bg-indigo-500/12", ring: "border-indigo-500/25" },
-  entity: {
-    icon: ShieldAlert,
-    tint: "text-ink-secondary bg-surface-elevated",
-    ring: "border-outline",
-  },
+const NODE_META: Record<AttackPathNode["type"], { kind: AssetKind; tint: string; ring: string }> = {
+  cve: { kind: "vulnerability", tint: "text-red-700 dark:text-red-300 bg-red-500/12", ring: "border-red-500/25" },
+  package: { kind: "package", tint: "text-amber-700 dark:text-amber-300 bg-amber-500/12", ring: "border-amber-500/25" },
+  server: { kind: "mcp_server", tint: "text-sky-700 dark:text-sky-300 bg-sky-500/12", ring: "border-sky-500/25" },
+  agent: { kind: "agent", tint: "text-emerald-700 dark:text-emerald-300 bg-emerald-500/12", ring: "border-emerald-500/25" },
+  credential: { kind: "credential", tint: "text-fuchsia-700 dark:text-fuchsia-300 bg-fuchsia-500/12", ring: "border-fuchsia-500/25" },
+  tool: { kind: "tool", tint: "text-purple-700 dark:text-purple-300 bg-purple-500/12", ring: "border-purple-500/25" },
+  data: { kind: "database", tint: "text-cyan-700 dark:text-cyan-300 bg-cyan-500/12", ring: "border-cyan-500/25" },
+  identity: { kind: "service_principal", tint: "text-indigo-700 dark:text-indigo-300 bg-indigo-500/12", ring: "border-indigo-500/25" },
+  entity: { kind: "unknown", tint: "text-ink-secondary bg-surface-elevated", ring: "border-outline" },
 };
 
 export function AttackPathCard({
@@ -75,7 +66,7 @@ export function AttackPathCard({
         )}
         {nodes.map((node, i) => {
           const meta = NODE_META[node.type];
-          const Icon = meta.icon;
+          const Icon = node.entityType ? assetIcon({ entityType: node.entityType, attributes: node.attributes }) : ASSET_KINDS[meta.kind].icon;
           const severityRing =
             node.severity === "critical"
               ? "border-red-500/30"
@@ -91,7 +82,7 @@ export function AttackPathCard({
                 </div>
               )}
               <div className={`flex items-center gap-2 rounded-xl border px-2.5 py-1.5 ${severityRing} ${meta.tint}`}>
-                <Icon className="h-3.5 w-3.5 shrink-0" />
+                <Icon aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
                 <div className="min-w-0">
                   <p
                     title={node.label}

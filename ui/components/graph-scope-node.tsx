@@ -1,7 +1,8 @@
 "use client";
 
 import { Handle, Position } from "@xyflow/react";
-import { ChevronRight, Layers, TriangleAlert, Bug } from "lucide-react";
+import { ChevronRight } from "lucide-react";
+import { assetIcon } from "@/lib/asset-icon-registry";
 import { rollupDisplaySeverity } from "@/lib/graph-rollup-view";
 import { severityChipClass } from "@/lib/severity";
 import type { GraphRollupContainer } from "@/lib/api-types";
@@ -21,7 +22,7 @@ export function GraphScopeNode({ item, dimmed, highlighted, compact, identityCon
   const scope = item.is_container || item.has_children;
   const severity = rollupDisplaySeverity(item);
   const finding = ["misconfiguration", "vulnerability"].includes(item.entity_type);
-  const Icon = item.entity_type === "vulnerability" ? Bug : finding ? TriangleAlert : Layers;
+  const Icon = assetIcon({ entityType: item.entity_type });
   const provider = scopeProvider(item);
   return <div data-graph-entity="true" data-rollup-container={scope ? "true" : undefined} className={`relative w-[280px] rounded-xl border bg-surface-elevated text-left shadow-sm ${finding ? "border-orange-500/60" : highlighted ? "border-cyan-500" : "border-outline-strong"} ${dimmed ? "opacity-30" : ""}`}>
     {[Position.Left, Position.Right, Position.Top, Position.Bottom].flatMap(position => (["source", "target"] as const).map(type =>
