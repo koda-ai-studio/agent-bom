@@ -3013,7 +3013,7 @@
      },
      "vulnerability_posture": {
       "assessed": true,
-      "details": "1 vulns (1 high), 0 fixable",
+      "details": "1 vulnerability occurrences (1 high), 0 fixable",
       "name": "Vulnerability Posture",
       "score": 92.0,
       "weight": 0.3,
@@ -5759,7 +5759,7 @@
      },
      "vulnerability_posture": {
       "assessed": true,
-      "details": "1 vulns (1 high), 0 fixable",
+      "details": "1 vulnerability occurrences (1 high), 0 fixable",
       "name": "Vulnerability Posture",
       "score": 92.0,
       "weight": 0.3,
@@ -12458,7 +12458,7 @@
      },
      "vulnerability_posture": {
       "assessed": true,
-      "details": "1 vulns (1 high), 0 fixable",
+      "details": "1 vulnerability occurrences (1 high), 0 fixable",
       "name": "Vulnerability Posture",
       "score": 92.0,
       "weight": 0.3,
@@ -15066,7 +15066,7 @@
      },
      "vulnerability_posture": {
       "assessed": true,
-      "details": "1 vulns (1 high), 0 fixable",
+      "details": "1 vulnerability occurrences (1 high), 0 fixable",
       "name": "Vulnerability Posture",
       "score": 92.0,
       "weight": 0.3,
@@ -19604,7 +19604,7 @@
      },
      "vulnerability_posture": {
       "assessed": true,
-      "details": "1 vulns (1 high), 0 fixable",
+      "details": "1 vulnerability occurrences (1 high), 0 fixable",
       "name": "Vulnerability Posture",
       "score": 92.0,
       "weight": 0.3,
