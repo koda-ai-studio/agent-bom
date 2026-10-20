@@ -26,6 +26,7 @@ from agent_bom.demo_estate.showcase_constants import SHOWCASE_SERVERS as SHOWCAS
 from agent_bom.demo_estate.showcase_constants import SHOWCASE_SOURCE as SHOWCASE_SOURCE
 from agent_bom.demo_estate.showcase_constants import SHOWCASE_TENANT as SHOWCASE_TENANT
 from agent_bom.demo_estate.showcase_constants import ShowcaseProfile as ShowcaseProfile
+from agent_bom.demo_estate.showcase_credentials import seed_showcase_credentials
 from agent_bom.demo_estate.showcase_findings import (
     SHOWCASE_DRIFT_INCIDENTS,
     bind_mcp_auth_findings,
@@ -114,20 +115,7 @@ def build_showcase_graph(
     # Real CVEs on real package@versions, under every server the demo inventory records.
     seed_showcase_packages(node, edge, SHOWCASE_PACKAGES)
 
-    # Credential-backed env on servers — lights up credential-exposure edges.
-    creds = {
-        "cred:aws-secret": ("AWS_SECRET_ACCESS_KEY", "shell-runner-server"),
-        "cred:openai-key": ("OPENAI_API_KEY", "llm-orchestrator-server"),
-        "cred:db-url": ("DATABASE_URL", "vector-db-server"),
-        "cred:jwt-secret": ("JWT_SECRET", "helpdesk-server"),
-        "cred:snowflake-pw": ("SNOWFLAKE_PASSWORD", "warehouse-server"),
-        "cred:gcs-key": ("GCS_SERVICE_ACCOUNT_KEY", "etl-server"),
-        "cred:github-token": ("GITHUB_TOKEN", "github-server"),
-        "cred:slack-token": ("SLACK_BOT_TOKEN", "team-chat-server"),
-    }
-    for cid, (label, sid) in creds.items():
-        node(cid, EntityType.CREDENTIAL, label)
-        edge(f"server:{sid}", cid, RelationshipType.EXPOSES_CRED)
+    seed_showcase_credentials(node, edge)
 
     # Hero blast-radius chain: the PyYAML RCE on shell-runner-server reaches an
     # AWS credential AND the run_shell tool → potential RCE. This is the top

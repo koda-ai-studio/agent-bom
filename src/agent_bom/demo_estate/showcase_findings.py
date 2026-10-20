@@ -52,8 +52,8 @@ _SHOWCASE_MISCONFIGURATIONS: tuple[tuple[str, str, str, str, str], ...] = (
 
 # (incident id, blueprint / agent label, drift score, violations, violated tool)
 SHOWCASE_DRIFT_INCIDENTS: tuple[tuple[str, str, float, int, str], ...] = (
-    ("drift-001", "Cursor IDE Agent", 0.78, 14, "run_shell"),
-    ("drift-002", "Data Pipeline Agent", 0.41, 5, "execute_sql"),
+    ("drift-001", "Cursor", 0.78, 14, "run_shell"),
+    ("drift-002", "Data Pipeline", 0.41, 5, "execute_sql"),
 )
 
 

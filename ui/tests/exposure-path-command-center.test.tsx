@@ -96,7 +96,7 @@ const longPath: ExposurePath = {
   ...basePath,
   id: "path-long",
   hops: [
-    { id: "agent:cursor", label: "Cursor IDE Agent", role: "agent" },
+    { id: "agent:cursor", label: "Cursor", role: "agent" },
     { id: "server:shell-runner", label: "shell-runner-server", role: "server" },
     { id: "pkg:pyyaml", label: "pyyaml@5.3", role: "package" },
     { id: "vuln:CVE-2020-14343", label: "CVE-2020-14343", role: "finding" },
@@ -162,7 +162,7 @@ describe("ExposurePathCommandCenter", () => {
     expect(screen.getByRole("heading", { level: 2 })).toBeVisible();
     expect(screen.queryByTestId("exposure-path-hop-title")).not.toBeInTheDocument();
     expect(screen.queryByText("What is exposed")).not.toBeInTheDocument();
-    expect(screen.getByText(/Path context & evidence/)).toHaveTextContent(/· 1 agent$/);
+    expect(screen.getByText(/Path context & evidence/)).toHaveTextContent(/· 1 agent on this path$/);
     expect(screen.getByText("Evidence & relationships")).toBeInTheDocument();
     expect(screen.queryByText("Evidence drawer")).not.toBeVisible();
     expect(screen.getByText("Validate the lead finding")).toBeInTheDocument();
@@ -277,7 +277,7 @@ describe("ExposurePathCommandCenter", () => {
     render(<ExposurePathCommandCenter path={longPath} />);
 
     const orderedPath = screen.getByTestId("exposure-path-sequence");
-    expect(within(orderedPath).getByText("Cursor IDE Agent")).toBeInTheDocument();
+    expect(within(orderedPath).getByText("Cursor")).toBeInTheDocument();
     expect(within(orderedPath).getByText("run_shell")).toBeInTheDocument();
     expect(within(orderedPath).getByText("exec_command")).toBeInTheDocument();
     expect(within(orderedPath).getByText("DATABASE_URL")).toBeInTheDocument();
@@ -292,7 +292,7 @@ describe("ExposurePathCommandCenter", () => {
     render(<ExposurePathCommandCenter path={referencePath} />);
 
     const board = screen.getByRole("img", { name: /Selected exposure path graph for/ });
-    expect(within(board).getByText("Agent: Cursor IDE Agent")).toBeInTheDocument();
+    expect(within(board).getByText("Agent: Cursor")).toBeInTheDocument();
     expect(within(board).getByText("Credential: SNOWFLAKE_PASSWORD")).toBeInTheDocument();
     expect(within(board).queryByText(/hops hidden/)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Show all 8 hops/ })).not.toBeInTheDocument();
@@ -303,7 +303,7 @@ describe("ExposurePathCommandCenter", () => {
     expect(mobileSequence.parentElement).toHaveClass("sm:hidden");
     expect(within(mobileSequence).getByText("1. Agent")).toBeInTheDocument();
     expect(within(mobileSequence).getByText("8. Credential")).toBeInTheDocument();
-    expect(within(mobileSequence).getByText("Cursor IDE Agent")).toBeInTheDocument();
+    expect(within(mobileSequence).getByText("Cursor")).toBeInTheDocument();
     expect(within(mobileSequence).getByText("SNOWFLAKE_PASSWORD")).toBeInTheDocument();
   });
 

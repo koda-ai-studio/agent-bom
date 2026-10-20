@@ -42,7 +42,7 @@ describe("graph entity drawer tabs", () => {
     expect(openScope).toHaveBeenCalledTimes(1);
   });
   it("does not send an already inspected entity to a duplicate lineage canvas", () => {
-    render(<GraphEntityDrawer data={{ label: "Cursor IDE Agent", nodeType: "agent", attributes: { node_id: "agent:cursor" } } as LineageNodeData} scanId="scan-one" onClose={noop} enrich={false} />);
+    render(<GraphEntityDrawer data={{ label: "Cursor", nodeType: "agent", attributes: { node_id: "agent:cursor" } } as LineageNodeData} scanId="scan-one" onClose={noop} enrich={false} />);
     expect(screen.queryByRole("link", { name: "Inspect in lineage" })).not.toBeInTheDocument();
   });
   it("retains loaded finding evidence when a later canvas response refreshes the same node", async () => {

@@ -296,5 +296,5 @@ def test_mcp_context_graph_pages_the_current_estate_rest_serves(demo_estate_clie
     first = _context_graph(offset=0, limit=100)
     kinds = {node["kind"] for node in first["nodes"]}
     assert {"agent", "server", "vulnerability"} <= kinds, kinds
-    cursor = next(node for node in first["nodes"] if node["kind"] == "agent" and node["label"] == "Cursor IDE Agent")
+    cursor = next(node for node in first["nodes"] if node["kind"] == "agent" and node["label"] == "Cursor")
     assert any(edge["source"] == cursor["id"] for edge in first["edges"])

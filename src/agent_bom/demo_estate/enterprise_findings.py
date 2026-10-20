@@ -84,11 +84,11 @@ _UNEVALUABLE_SHARE = 7
 # accountable owner on ``EstateAsset``; copying the latter into Finding.owner
 # would conflate service ownership with the person/team assigned remediation.
 _TRIAGE_OWNER_BY_DOMAIN: dict[str, str] = {
-    "cspm": "cloud-security@example.invalid",
-    "vuln": "vulnerability-management@example.invalid",
-    "aspm": "application-security@example.invalid",
-    "dspm": "data-security@example.invalid",
-    "aispm": "ai-security@example.invalid",
+    "cspm": "Cloud Security team",
+    "vuln": "Vulnerability Management team",
+    "aspm": "Application Security team",
+    "dspm": "Data Security team",
+    "aispm": "AI Security team",
 }
 
 

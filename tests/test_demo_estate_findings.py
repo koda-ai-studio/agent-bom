@@ -103,11 +103,11 @@ def test_demo_findings_are_routed_to_explicit_triage_teams(estate, findings):
     synthetic workflow policy instead of copying one identity into the other.
     """
     expected_owners = {
-        "cloud-security@example.invalid",
-        "vulnerability-management@example.invalid",
-        "application-security@example.invalid",
-        "data-security@example.invalid",
-        "ai-security@example.invalid",
+        "Cloud Security team",
+        "Vulnerability Management team",
+        "Application Security team",
+        "Data Security team",
+        "AI Security team",
     }
     current_snapshot = next(snapshot for snapshot in estate.snapshots if snapshot.stage.value == "current")
 

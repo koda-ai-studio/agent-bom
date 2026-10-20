@@ -245,6 +245,7 @@ def _stamp_showcase_graph_reachability(blast_radii: list[Any], agents: list[Any]
 
 def _run_demo_scan_report(*, tenant_id: str) -> dict[str, Any]:
     from agent_bom.demo import DEMO_INVENTORY
+    from agent_bom.demo_estate.showcase_owners import assign_showcase_owners
     from agent_bom.finding import blast_radius_to_finding
     from agent_bom.inventory import build_agents_from_inventory
     from agent_bom.mcp_auth_posture import evaluate_mcp_auth_posture
@@ -267,6 +268,10 @@ def _run_demo_scan_report(*, tenant_id: str) -> dict[str, Any]:
     # and left the server's nested package rows with no single finding to join.
     _stamp_showcase_graph_reachability(blast_radii, agents)
     findings = [blast_radius_to_finding(br) for br in blast_radii]
+    agent_by_finding = {
+        id(finding): (br.affected_agents[0].name if br.affected_agents else None) for br, finding in zip(blast_radii, findings, strict=True)
+    }
+    assign_showcase_owners(findings, agent_of=lambda finding: agent_by_finding.get(id(finding)))
     # Both halves of the vulnerability lane, paired in order (see
     # ``estate_scan_evidence``).
     estate_pairs, estate_findings = estate_scan_evidence(tenant_id)
