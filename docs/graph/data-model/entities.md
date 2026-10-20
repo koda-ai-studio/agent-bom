@@ -15,7 +15,7 @@ Emitted by: `graph/governance_overlay.py`; demo fixtures: `demo_estate/estate_gr
 
 ## `account`
 
-Emitted by: `graph/benchmark_projection.py`, `graph/builder.py`, `graph/builder_cloud_inventory.py`, `graph/builder_cloud_lineage.py`, `graph/builder_snowflake_data_movement.py`, `graph/builder_snowflake_governance.py`, `graph/builder_snowflake_lane.py`, `graph/builder_snowflake_objects.py`, `graph/builder_snowflake_platform.py`, `graph/cloud_audit_projection.py`, `graph/cloud_context.py`, `graph/cloud_rbac.py`, `graph/nhi_overlay.py`, `graph/supabase_projection.py`, `graph/vercel_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
+Emitted by: `graph/benchmark_projection.py`, `graph/builder.py`, `graph/builder_cloud_inventory.py`, `graph/builder_cloud_lineage.py`, `graph/builder_snowflake_data_movement.py`, `graph/builder_snowflake_governance.py`, `graph/builder_snowflake_lane.py`, `graph/builder_snowflake_objects.py`, `graph/builder_snowflake_platform.py`, `graph/cloud_audit_projection.py`, `graph/cloud_context.py`, `graph/cloud_rbac.py`, `graph/nhi_overlay.py`, `graph/organization_aws.py`, `graph/organization_gcp.py`, `graph/supabase_projection.py`, `graph/vercel_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
 
 Id formats:
 
@@ -47,7 +47,7 @@ Emitted by: `graph/ci_graph_overlay.py`; demo fixtures: `demo_estate/estate_grap
 
 ## `cloud_resource`
 
-Emitted by: `api/cloud_scan_results.py`, `graph/benchmark_projection.py`, `graph/builder.py`, `graph/builder_cloud_lineage.py`, `graph/builder_network_inventory.py`, `graph/builder_snowflake_data_movement.py`, `graph/builder_snowflake_platform.py`, `graph/cloud_audit_projection.py`, `graph/cloud_compute_projection.py`, `graph/cloud_rbac.py`, `graph/cloud_service_projection.py`, `graph/cloud_storage_projection.py`, `graph/finding_projection.py`, `graph/hosting_projection.py`, `graph/resource_aliases.py`, `graph/supabase_projection.py`, `graph/vercel_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
+Emitted by: `api/cloud_scan_results.py`, `graph/benchmark_projection.py`, `graph/builder_cloud_lineage.py`, `graph/builder_network_inventory.py`, `graph/builder_snowflake_data_movement.py`, `graph/builder_snowflake_platform.py`, `graph/cloud_audit_projection.py`, `graph/cloud_compute_projection.py`, `graph/cloud_rbac.py`, `graph/cloud_service_projection.py`, `graph/cloud_storage_projection.py`, `graph/finding_projection.py`, `graph/hosting_projection.py`, `graph/normalized_resource_projection.py`, `graph/resource_aliases.py`, `graph/supabase_projection.py`, `graph/vercel_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
 
 Id formats:
 
@@ -181,7 +181,7 @@ Id formats:
 
 ## `misconfiguration`
 
-Emitted by: `graph/benchmark_projection.py`, `graph/builder.py`, `graph/credential_findings.py`, `graph/finding_projection.py`, `graph/finding_row_projection.py`, `graph/mcp_audit_projection.py`, `graph/supabase_projection.py`, `graph/vercel_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_findings.py`, `demo_estate/showcase_graph.py`
+Emitted by: `graph/benchmark_projection.py`, `graph/credential_findings.py`, `graph/finding_projection.py`, `graph/finding_row_projection.py`, `graph/mcp_audit_projection.py`, `graph/organization_findings.py`, `graph/supabase_projection.py`, `graph/vercel_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_findings.py`, `demo_estate/showcase_graph.py`
 
 Id formats:
 
@@ -197,7 +197,7 @@ Emitted by: `graph/finding_row_projection.py`, `graph/framework_topology_project
 
 ## `org`
 
-Emitted by: `graph/builder.py`, `graph/builder_cloud_inventory.py`, `graph/builder_cloud_lineage.py`, `graph/builder_snowflake_platform.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
+Emitted by: `graph/builder_cloud_inventory.py`, `graph/builder_cloud_lineage.py`, `graph/builder_snowflake_platform.py`, `graph/organization_aws.py`, `graph/organization_findings.py`, `graph/organization_gcp.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
 
 Id formats:
 
@@ -213,7 +213,7 @@ Id formats:
 
 ## `policy`
 
-Emitted by: `graph/builder.py`, `graph/builder_cloud_lineage.py`, `graph/cloud_context.py`; demo fixtures: `demo_estate/showcase_graph.py`
+Emitted by: `graph/builder.py`, `graph/builder_cloud_lineage.py`, `graph/cloud_context.py`, `graph/organization_aws.py`, `graph/organization_gcp.py`; demo fixtures: `demo_estate/showcase_graph.py`
 
 Id formats:
 
@@ -250,7 +250,7 @@ Id formats:
 
 ## `service_account`
 
-Emitted by: `graph/authorization_evidence.py`, `graph/builder.py`, `graph/cloud_context.py`; demo fixtures: `demo_estate/estate_graph.py`
+Emitted by: `graph/authorization_evidence.py`, `graph/cloud_context.py`, `graph/organization_gcp.py`; demo fixtures: `demo_estate/estate_graph.py`
 
 ## `service_principal`
 
@@ -279,7 +279,7 @@ Emitted by: —; demo fixtures: `demo_estate/showcase_graph.py`
 
 ## `user`
 
-Emitted by: `graph/authorization_evidence.py`, `graph/builder.py`, `graph/builder_snowflake_governance.py`, `graph/builder_snowflake_objects.py`, `graph/cloud_audit_projection.py`, `graph/cloud_context.py`, `graph/cloud_rbac.py`; demo fixtures: `demo_estate/showcase_graph.py`
+Emitted by: `graph/authorization_evidence.py`, `graph/builder_snowflake_governance.py`, `graph/builder_snowflake_objects.py`, `graph/cloud_audit_projection.py`, `graph/cloud_context.py`, `graph/cloud_rbac.py`, `graph/organization_gcp.py`; demo fixtures: `demo_estate/showcase_graph.py`
 
 Id formats:
 

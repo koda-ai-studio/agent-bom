@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from agent_bom.api.agent_identity_store import AgentIdentity, AgentJITGrant, InMemoryAgentIdentityStore
+from agent_bom.api import agent_identity_store
 from agent_bom.demo_estate.showcase_constants import SHOWCASE_TENANT
 from agent_bom.graph.container import UnifiedGraph
 
@@ -82,7 +82,9 @@ def _demo_identity_id(slug: str) -> str:
     return f"demo-nhi-{slug}"
 
 
-def demo_identity_records(tenant_id: str = SHOWCASE_TENANT) -> tuple[list[AgentIdentity], list[AgentJITGrant]]:
+def demo_identity_records(
+    tenant_id: str = SHOWCASE_TENANT,
+) -> tuple[list[agent_identity_store.AgentIdentity], list[agent_identity_store.AgentJITGrant]]:
     """Return the deterministic enriched demo identities + JIT grants.
 
     Single source of truth shared by the persisted graph seed and the live
@@ -92,7 +94,7 @@ def demo_identity_records(tenant_id: str = SHOWCASE_TENANT) -> tuple[list[AgentI
     issued_at = (now - timedelta(days=120)).isoformat()
     expires_at = (now + timedelta(days=90)).isoformat()
 
-    identities: list[AgentIdentity] = []
+    identities: list[agent_identity_store.AgentIdentity] = []
     by_slug: dict[str, str] = {}
     for spec in _DEMO_IDENTITIES:
         slug = str(spec["slug"])
@@ -101,7 +103,7 @@ def demo_identity_records(tenant_id: str = SHOWCASE_TENANT) -> tuple[list[AgentI
         last_used_days = spec.get("last_used_days")
         last_used_at = "" if last_used_days is None else (now - timedelta(days=int(last_used_days))).isoformat()
         identities.append(
-            AgentIdentity(
+            agent_identity_store.AgentIdentity(
                 identity_id=identity_id,
                 agent_id=str(spec["agent_label"]),
                 tenant_id=tenant_id,
@@ -119,7 +121,7 @@ def demo_identity_records(tenant_id: str = SHOWCASE_TENANT) -> tuple[list[AgentI
             )
         )
 
-    grants: list[AgentJITGrant] = []
+    grants: list[agent_identity_store.AgentJITGrant] = []
     approved_at = (now - timedelta(hours=2)).isoformat()
     grant_expiry = (now + timedelta(hours=1)).isoformat()
     for slug, tool_name in _DEMO_JIT_GRANTS:
@@ -127,7 +129,7 @@ def demo_identity_records(tenant_id: str = SHOWCASE_TENANT) -> tuple[list[AgentI
         if not grant_identity_id:
             continue
         grants.append(
-            AgentJITGrant(
+            agent_identity_store.AgentJITGrant(
                 grant_id=f"demo-jit-{slug}-{tool_name}",
                 identity_id=grant_identity_id,
                 agent_id=next(str(s["agent_label"]) for s in _DEMO_IDENTITIES if s["slug"] == slug),
@@ -146,9 +148,9 @@ def demo_identity_records(tenant_id: str = SHOWCASE_TENANT) -> tuple[list[AgentI
     return identities, grants
 
 
-def build_demo_identity_store(tenant_id: str = SHOWCASE_TENANT) -> InMemoryAgentIdentityStore:
+def build_demo_identity_store(tenant_id: str = SHOWCASE_TENANT) -> agent_identity_store.InMemoryAgentIdentityStore:
     """A throwaway identity store pre-loaded with the demo NHI estate."""
-    store = InMemoryAgentIdentityStore()
+    store = agent_identity_store.InMemoryAgentIdentityStore()
     identities, grants = demo_identity_records(tenant_id)
     for identity in identities:
         store.put(identity)
@@ -164,9 +166,7 @@ def seed_showcase_identities(tenant_id: str = SHOWCASE_TENANT) -> dict[str, Any]
     tile and the ``/v1/*/nhi/governance`` posture survive a restart even when the
     graph snapshot already exists. Only ever runs under demo-estate mode.
     """
-    from agent_bom.api.agent_identity_store import get_agent_identity_store
-
-    store = get_agent_identity_store()
+    store = agent_identity_store.get_agent_identity_store()
     existing = {i.identity_id for i in store.list(tenant_id, include_inactive=True, limit=1000)}
     if any(iid.startswith("demo-nhi-") for iid in existing):
         return {"seeded": False, "reason": "identities_present", "count": len(existing)}
