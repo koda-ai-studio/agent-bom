@@ -30,7 +30,7 @@ export function GraphImpactGroups({ impact, scanId }: { impact: GraphImpactRespo
         <ul aria-label={`${prettifyReachabilityType(open)} nodes`} className="max-h-60 divide-y divide-outline overflow-y-auto rounded-lg border border-outline bg-surface">
           {nodes.map((node: Detail) => (
             <li key={node.id} className="flex items-center justify-between gap-3 px-3 py-2 text-xs">
-              <Link className="min-w-0 truncate font-medium text-accent-mint hover:underline" title={node.id}
+              <Link prefetch={false} className="min-w-0 truncate font-medium text-accent-mint hover:underline" title={node.id}
                 href={buildGraphInvestigationHref({ rootId: node.id, rootLabel: node.label, scanId, direction: "both" })}>
                 {node.label}
               </Link>

@@ -20,7 +20,7 @@ export function InvestigationPageHeader({ focus, context, steps, menu, pinned = 
           <h1 className="shrink-0 text-xl font-semibold tracking-tight text-foreground">Investigation</h1>
           <p className="min-w-0 truncate text-sm text-ink-secondary" title={focus}>{focus}</p>
         </div>
-        {steps ? <div className="min-w-0 max-w-full [&_nav]:max-w-full [&_nav]:overflow-x-auto [&_ol]:flex-nowrap [&_li]:shrink-0">{steps}</div> : null}
+        {steps ? <div className="relative min-w-0 max-w-full basis-full overflow-x-auto sm:basis-auto [&_ol]:flex-nowrap [&_li]:shrink-0">{steps}</div> : null}
         {pinned ? <span className="text-xs text-[color:var(--text-tertiary)]">Pinned {pinned}</span> : null}
         {menu}
       </div>

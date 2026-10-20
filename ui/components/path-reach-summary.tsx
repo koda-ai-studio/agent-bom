@@ -22,7 +22,7 @@ export function PathReachSummary({ path, scanId }: { path: AttackPath; scanId: s
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="font-medium text-foreground">Reached from this path <span className="font-normal text-ink-secondary">· {plural(credentials.length, "credential")} · {plural(tools.length, "tool")}</span></p>
         {server ? (
-          <Link className="text-xs font-medium text-accent-mint hover:underline"
+          <Link prefetch={false} className="text-xs font-medium text-accent-mint hover:underline"
             href={buildGraphInvestigationHref({ rootId: server, scanId: scanId || undefined, direction: "forward", depth: 2 })}>
             Show what the server reaches
           </Link>
