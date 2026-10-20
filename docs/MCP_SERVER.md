@@ -330,8 +330,10 @@ driving finding ids. It scans local MCP configurations only with
 `source="local_scan"` or when no persisted evidence exists, and labels that
 result `source: "local_scan"`. `context_graph` reads one agent page (`offset`, `limit` up to 100) of the
 tenant's current estate graph: the same agents `GET /v1/graph?entity_types=agent`
-pages, with their servers, packages, tools, credential names and the advisories
-those packages hold (`source: "current_estate_graph"`). It reports `pagination`,
+pages, with their servers, packages (transitive `depends_on` to the same holder
+depth component paths use; a deeper chain marks the page incomplete), tools,
+credential names and the advisories those packages hold
+(`source: "current_estate_graph"`). It reports `pagination`,
 `estate_coverage` (`agents_in_view` against `current_estate_agents`, the
 `/v1/posture/counts` total) and a `completeness` that is `truncated` unless the
 page holds the whole estate; the lateral-path status moves to

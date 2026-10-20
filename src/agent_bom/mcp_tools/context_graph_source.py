@@ -94,7 +94,7 @@ def apply_scope_metadata(result: dict[str, Any], report: ContextReport) -> None:
         return
     result["estate_coverage"] = coverage
     page = report.page or {}
-    hop_cut = bool(page.get("hop_truncated"))
+    hop_cut = bool(page.get("hop_truncated") or page.get("depth_limited"))
     if report.page is not None:
         offset, returned = int(page["offset"]), coverage["agents_in_view"]
         has_more = offset + returned < coverage["current_estate_agents"]
@@ -114,7 +114,9 @@ def apply_scope_metadata(result: dict[str, Any], report: ContextReport) -> None:
         total=coverage["current_estate_agents"],
         truncated=True,
         reason=(
-            "context hop limit reached; narrow the page"
+            "dependency depth limit reached; deeper transitive packages are not in this context"
+            if page.get("depth_limited") and coverage["covers_current_estate"]
+            else "context hop limit reached; narrow the page"
             if hop_cut and coverage["covers_current_estate"]
             else "one agent page of the current estate; page with offset/limit"
             if report.source == ESTATE

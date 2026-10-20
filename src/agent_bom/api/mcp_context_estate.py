@@ -5,7 +5,9 @@ The page is the same agent page ``GET /v1/graph?entity_types=agent`` serves
 agents. Each agent's servers (``uses``), their packages (``depends_on``),
 tools (``provides_tool``), credential names (``exposes_cred``) and the
 advisories those packages hold (``vulnerable_to``) are read with bounded
-per-hop edge reads; a hop that reaches its bound marks the page incomplete.
+per-hop edge reads. Transitive ``depends_on`` is followed to the holder depth
+component paths use; a hop that reaches its bound, or a dependency chain
+deeper than that depth, marks the page incomplete.
 """
 
 from __future__ import annotations
@@ -13,6 +15,7 @@ from __future__ import annotations
 from typing import Any
 
 from agent_bom.api.stores import _get_graph_store
+from agent_bom.graph.component_paths import MAX_HOLDER_DEPTH
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.path_derivation import _node_type_value
 
@@ -31,6 +34,42 @@ def _hop(store: Any, read: dict[str, str], sources: set[str], relationships: set
     edges = store.edges_for_node_ids(**read, node_ids=sources, direction="out", relationships=relationships, limit=HOP_EDGE_LIMIT)
     edges = [edge for edge in edges if edge.source in sources and _rel(edge) in relationships]
     return edges, len(edges) >= HOP_EDGE_LIMIT
+
+
+def _dependency_closure(store: Any, read: dict[str, str], direct: set[str]) -> tuple[dict[str, list[str]], set[str], bool, bool]:
+    """``depends_on`` children up to the graph's holder depth; ``(children, packages, depth_limited, edge_cut)``.
+
+    A direct dependency is depth 1, so the walk reads ``MAX_HOLDER_DEPTH - 1``
+    further levels, the depth component paths hold an occurrence through.
+    """
+    children: dict[str, list[str]] = {}
+    seen, frontier, cut = set(direct), set(direct), False
+    for _level in range(MAX_HOLDER_DEPTH - 1):
+        edges, hop_cut = _hop(store, read, frontier, {"depends_on"})
+        cut = cut or hop_cut
+        following = set()
+        for edge in edges:
+            children.setdefault(edge.source, []).append(edge.target)
+            if edge.target not in seen:
+                following.add(edge.target)
+        seen |= following
+        frontier = following
+        if not frontier:
+            break
+    depth_limited = bool(frontier) and bool(_hop(store, read, frontier, {"depends_on"})[0])
+    return children, seen, depth_limited, cut
+
+
+def _reachable(children: dict[str, list[str]], roots: list[str]) -> list[str]:
+    order, seen, stack = [], set(), list(reversed(roots))
+    while stack:
+        current = stack.pop()
+        if current in seen:
+            continue
+        seen.add(current)
+        order.append(current)
+        stack.extend(reversed(children.get(current, [])))
+    return order
 
 
 def _package_entry(node: UnifiedNode) -> dict[str, Any]:
@@ -59,9 +98,10 @@ def estate_context_page(tenant_id: str, *, offset: int = 0, limit: int = 25) -> 
     uses, cut_uses = _hop(store, read, agent_ids, {"uses"})
     server_ids = {edge.target for edge in uses}
     server_edges, cut_servers = _hop(store, read, server_ids, {"depends_on", "provides_tool", "exposes_cred"})
-    package_ids = {edge.target for edge in server_edges if _rel(edge) == "depends_on"}
+    direct = {edge.target for edge in server_edges if _rel(edge) == "depends_on"}
+    children, package_ids, depth_limited, cut_deps = _dependency_closure(store, read, direct)
     vuln_edges, cut_vulns = _hop(store, read, package_ids, {"vulnerable_to"})
-    wanted = server_ids | {edge.target for edge in server_edges} | {edge.target for edge in vuln_edges}
+    wanted = server_ids | package_ids | {edge.target for edge in server_edges} | {edge.target for edge in vuln_edges}
     nodes = {node.id: node for node in store.nodes_by_ids(**read, node_ids=wanted)} if wanted else {}
 
     servers_of, server_targets, vulns_of = _by_source(uses), _by_source(server_edges), _by_source(vuln_edges)
@@ -74,7 +114,8 @@ def estate_context_page(tenant_id: str, *, offset: int = 0, limit: int = 25) -> 
             if server is None or _node_type_value(server) != "server":
                 continue
             linked = [nodes[target] for target in server_targets.get(server_id, []) if target in nodes]
-            packages = [node for node in linked if _node_type_value(node) == "package"]
+            reachable = _reachable(children, [node.id for node in linked if _node_type_value(node) == "package"])
+            packages = [nodes[pid] for pid in reachable if pid in nodes and _node_type_value(nodes[pid]) == "package"]
             servers.append(
                 {
                     "name": server.label,
@@ -113,7 +154,8 @@ def estate_context_page(tenant_id: str, *, offset: int = 0, limit: int = 25) -> 
         "total": int(total),
         "offset": offset,
         "limit": limit,
-        "hop_truncated": cut_uses or cut_servers or cut_vulns,
+        "hop_truncated": cut_uses or cut_servers or cut_vulns or cut_deps,
+        "depth_limited": depth_limited,
     }
 
 

@@ -202,3 +202,52 @@ async def test_the_estate_graph_is_the_default_source(store, graph_store) -> Non
     assert payload["pagination"]["has_more"] is False
     assert payload["completeness"]["complete"] is True
     assert "estate-b" not in json.dumps(payload)
+
+
+def _seed_dependency_chain(graph_store, *, length: int) -> None:
+    from agent_bom.graph import UnifiedEdge, UnifiedGraph, UnifiedNode
+    from agent_bom.graph.types import EntityType, RelationshipType
+
+    graph = UnifiedGraph(scan_id="estate-chain", tenant_id="default")
+    graph.add_node(UnifiedNode(id="agent:chain", entity_type=EntityType.AGENT, label="chain-agent"))
+    graph.add_node(UnifiedNode(id="server:chain", entity_type=EntityType.SERVER, label="chain-server"))
+    graph.add_edge(UnifiedEdge(source="agent:chain", target="server:chain", relationship=RelationshipType.USES))
+    previous = "server:chain"
+    for index in range(length):
+        package = f"pkg:npm:dep{index}@1.0.0"
+        graph.add_node(
+            UnifiedNode(
+                id=package, entity_type=EntityType.PACKAGE, label=f"dep{index}@1.0.0", attributes={"version": "1.0.0", "ecosystem": "npm"}
+            )
+        )
+        graph.add_edge(UnifiedEdge(source=previous, target=package, relationship=RelationshipType.DEPENDS_ON))
+        previous = package
+    graph.add_node(
+        UnifiedNode(
+            id="vuln:CVE-2026-0001",
+            entity_type=EntityType.VULNERABILITY,
+            label="CVE-2026-0001",
+            severity="high",
+            attributes={"vulnerability_id": "CVE-2026-0001"},
+        )
+    )
+    graph.add_edge(UnifiedEdge(source=previous, target="vuln:CVE-2026-0001", relationship=RelationshipType.VULNERABLE_TO))
+    graph_store.save_graph(graph)
+
+
+@pytest.mark.asyncio
+async def test_transitive_dependencies_reach_their_advisories_within_the_holder_depth(store, graph_store) -> None:
+    from agent_bom.graph.component_paths import MAX_HOLDER_DEPTH
+
+    _seed_dependency_chain(graph_store, length=3)
+    payload = await _call(tenant_id="default")
+    assert payload["source"] == "current_estate_graph"
+    labels = {node["label"] for node in payload["nodes"] if node["kind"] == "vulnerability"}
+    assert labels == {"CVE-2026-0001"}, payload["nodes"]
+    assert payload["completeness"]["complete"] is True
+
+    _seed_dependency_chain(graph_store, length=MAX_HOLDER_DEPTH + 2)
+    deep = await _call(tenant_id="default")
+    assert not [node for node in deep["nodes"] if node["kind"] == "vulnerability"]
+    assert deep["completeness"]["complete"] is False
+    assert "depth" in deep["completeness"]["reason"]
