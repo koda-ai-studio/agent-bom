@@ -276,7 +276,7 @@ async def list_graph_agents(
 
 
 @node_router.get("/graph/node-context", **documented(GraphNodeContextResponse), tags=["graph"])
-@node_router.get("/graph/node/{node_id}", **documented(GraphNodeContextResponse), tags=["graph"])
+@node_router.get("/graph/node/{node_id:path}", **documented(GraphNodeContextResponse), tags=["graph"])
 async def get_graph_node(
     request: Request,
     node_id: GraphIdentifier,

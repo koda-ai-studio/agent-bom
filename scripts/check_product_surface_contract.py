@@ -135,7 +135,7 @@ def main() -> int:
         [
             ("GET", "/v1/graph/agents"),
             ("GET", "/v1/graph/search"),
-            ("GET", "/v1/graph/node/{node_id}"),
+            ("GET", "/v1/graph/node/{node_id:path}"),
         ],
         failures,
     )

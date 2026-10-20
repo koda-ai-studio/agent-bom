@@ -592,11 +592,8 @@ async def query_graph(request: Request, body: GraphQueryRequest) -> dict:
     return {**payload, "budget_applied": budget_applied, "resolved_roots": resolved_roots}
 
 
-router.include_router(reads.node_router)
-
-
 @router.get("/graph/node-neighbors", **documented(GraphNodeNeighborsResponse), tags=["graph"])
-@router.get("/graph/node/{node_id}/neighbors", **documented(GraphNodeNeighborsResponse), tags=["graph"])
+@router.get("/graph/node/{node_id:path}/neighbors", **documented(GraphNodeNeighborsResponse), tags=["graph"])
 async def get_graph_node_neighbors(
     request: Request,
     node_id: GraphIdentifier,
@@ -732,6 +729,9 @@ async def get_graph_node_neighbors(
     }
 
 
+# After the neighbors route: ``/graph/node/{node_id:path}`` would otherwise
+# swallow ``.../neighbors`` because node ids may contain "/".
+router.include_router(reads.node_router)
 router.include_router(reads.history_router)
 router.include_router(schema_routes.router)
 router.include_router(reads.preset_router)
