@@ -52,6 +52,7 @@ dependencies = [
     # SDK 2 provides stateless 2026 MCP and legacy protocol negotiation.
     "mcp>=2.3,<3",
     # Transitive dep pins — fix known CVEs flagged by OpenSSF/OSV
+    "certifi>=2026.10.19",  # GHSA-6q48-6c7w-9gw2 (compromised emSign intermediate CA keys)
     "jinja2>=3.1.6",  # GHSA-cpwx-vrp4-4pq7, GHSA-gmj6-6f8f-6699 (sandbox breakout)
     "werkzeug>=3.1.9",  # GHSA-g6x2-hccm-hh4m, GHSA-29vq-49wr-vm6x, GHSA-2g68-c3qc-8985, GHSA-87hc-h4r5-73f7, GHSA-f9vj-2wh5-fj8j, GHSA-hgf8-39gv-g3f2, GHSA-hrfv-mqp8-q5rw, GHSA-px8h-6qxv-m22q, GHSA-q34m-jh98-gwm2, GHSA-xg9f-g7g7-2323
     "flask>=3.1.3",  # GHSA-68rp-wp8r-4726, GHSA-m2qf-hxjv-5gpq (Vary: Cookie session exposure; transitive via mlflow)
@@ -195,7 +196,7 @@ visual = [
     # Visual-leak detection on MCP screenshot/image tool responses.
     # Opt-in because OCR is CPU-heavy — pilots without screen-capture MCPs
     # don't pay for pytesseract at runtime. See issue #1568.
-    "Pillow>=10.0",
+    "Pillow>=13.0.0",  # Decoder memory-safety fixes released in 13.0.0.
     "pytesseract>=0.3.10",
 ]
 # MCP ships in the base install; retain the extra for install-command compatibility.
