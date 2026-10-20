@@ -420,14 +420,9 @@ def _derived_toxic_combination_paths(graph: UnifiedGraph) -> list[AttackPath]:
             factors.append("sensitive data" + (f" ({'/'.join(regs)})" if regs else ""))
         if node.id in admin_reachable:
             factors.append("admin-privilege reachable")
-        if len(factors) < 2:
+        # Under two factors is no combination; reaching no store, the stack stays a finding on the node.
+        if len(factors) < 2 or not sens_ids:
             continue
-        if not sens_ids:
-            # Nothing reached: the stacked factors stay a toxic-combination finding on the node.
-            continue
-        target = sens_ids[0]
-        hops = [node.id, target]
-        edges = ["exposed_to"]
         base = _toxic_band(len(factors))
         if exposure_mitigated:
             # Below the unmitigated toxic band — the WAF fronts the exposure — but
@@ -439,9 +434,9 @@ def _derived_toxic_combination_paths(graph: UnifiedGraph) -> list[AttackPath]:
         paths.append(
             AttackPath(
                 source=node.id,
-                target=target,
-                hops=hops,
-                edges=edges,
+                target=sens_ids[0],
+                hops=[node.id, sens_ids[0]],
+                edges=["exposed_to"],
                 composite_risk=round(min(100.0, base), 2),
                 summary=f"{prefix}: {node.label} stacks {len(factors)} toxic factors — " + ", ".join(factors) + ".",
                 vuln_ids=[],
