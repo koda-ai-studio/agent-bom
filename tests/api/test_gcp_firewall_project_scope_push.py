@@ -49,7 +49,13 @@ def _push(client, source_id: str, inventories: list[dict]) -> None:
 
 
 def _current_graph(client) -> dict:
-    response = client.get("/v1/graph", params={"limit": 5000}, headers=proxy_headers(role="viewer", tenant=TENANT))
+    # /v1/graph answers 409 "restart the query" when another resolve retires the
+    # generation mid-read; that is its documented client contract, so restart it
+    # (bounded) instead of treating the race as a missing-node failure.
+    for _ in range(3):
+        response = client.get("/v1/graph", params={"limit": 5000}, headers=proxy_headers(role="viewer", tenant=TENANT))
+        if not (response.status_code == 409 and "restart the query" in response.text):
+            break
     assert response.status_code == 200, response.text
     return response.json()
 
@@ -85,3 +91,4 @@ def test_separate_project_pushes_keep_both_firewalls(client, reverse: bool) -> N
     for inventory in inventories:
         _push(client, f"gcp-{inventory['project_id']}", [inventory])
     _assert_both_projects_survive(_current_graph(client))
+
