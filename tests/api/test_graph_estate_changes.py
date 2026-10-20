@@ -178,6 +178,8 @@ def test_mcp_estate_mode_matches_rest(estate, monkeypatch):
     assert mcp["tool"] == "graph_diff" and mcp["source"] == "v1_graph_changes"
     for key in ("sources", "new_sources", "totals", "pagination", "completeness"):
         assert mcp[key] == rest[key]
+    # Per-change attribution reaches agents with the same semantics as the dashboard.
+    assert all("changes_by_source" in source and source["changes_by_source"]["unit"] == "nodes" for source in mcp["sources"])
 
 
 def save_snapshot(estate, scan_id, created_at, nodes, *, paths=()):

@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from agent_bom.mcp_tools.catalog import registered_mcp_tool_decorator_names as registered_mcp_tool_decorator_names
+from agent_bom.mcp_tools.graph_tool_cards import GRAPH_AGENT_TOOL_CARDS
 from agent_bom.mcp_tools.metadata_routes import attach_metadata_routes as attach_metadata_routes
 from agent_bom.mcp_tools.tool_capabilities import _TOOL_CAPABILITY_CLASSES as _TOOL_CAPABILITY_CLASSES
 
@@ -80,35 +81,7 @@ _SERVER_CARD_TOOLS = [
         "description": "Read correlation state, source receipts, freshness, conflicts, output snapshot, and analysis bounds",
         "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True},
     },
-    {
-        "name": "should_i_deploy",
-        "description": (
-            "Pre-deployment gate: resolves a candidate (package, CVE, resource, or graph node) against the"
-            " every ranked path of the latest security-graph snapshot by exact identifier and returns allow/warn/block from"
-            " the matched paths' risk and KEV exposure, or not_found when no path names the candidate"
-        ),
-        "annotations": {"readOnlyHint": True},
-    },
-    {
-        "name": "graph_reach",
-        "description": "Page what can reach a graph node (or what it reaches) over recorded edges, with walk completeness",
-        "annotations": {"readOnlyHint": True},
-    },
-    {
-        "name": "graph_diff",
-        "description": "What changed between two graph snapshots: summary counts and highlights, or filtered cursor-paged change rows",
-        "annotations": {"readOnlyHint": True},
-    },
-    {
-        "name": "findings_query",
-        "description": "Query tenant findings with the /v1/findings filters, sort and cursor in a compact projection",
-        "annotations": {"readOnlyHint": True},
-    },
-    {
-        "name": "finding_detail",
-        "description": "One finding with the graph paths that carry it, who reaches it, and its triage/VEX state",
-        "annotations": {"readOnlyHint": True},
-    },
+    *GRAPH_AGENT_TOOL_CARDS,
     {
         "name": "policy_check",
         "description": (

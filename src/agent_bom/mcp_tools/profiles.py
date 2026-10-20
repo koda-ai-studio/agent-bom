@@ -71,6 +71,7 @@ PROFILES = {
                 "inventory_asset",
                 "context_graph",
                 "exposure_paths",
+                "cross_vendor_paths",
                 "should_i_deploy",
                 "graph_reach",
                 "graph_diff",

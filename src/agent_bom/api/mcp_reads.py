@@ -22,6 +22,7 @@ from agent_bom.api.mcp_context_estate import estate_context_page as estate_conte
 from agent_bom.api.routes.compliance import get_compliance_by_framework, get_compliance_summary
 from agent_bom.api.routes.compliance_routes.common import estate_agent_count
 from agent_bom.api.routes.enterprise import build_tenant_triage_state_index
+from agent_bom.api.routes.graph_routes.vendor_paths import get_cross_vendor_attack_paths as get_cross_vendor_attack_paths
 from agent_bom.api.routes.scan import list_findings
 from agent_bom.api.scan_finding_read import _bulk_ingested_findings_for_tenant, _completed_jobs_for_tenant, iter_tenant_scan_spine_findings
 from agent_bom.finding_scope import safe_finding_response_payload
