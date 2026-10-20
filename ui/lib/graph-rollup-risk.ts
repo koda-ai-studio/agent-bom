@@ -81,7 +81,7 @@ export function groupRollupByImage(items: GraphRollupContainer[]): { rows: Graph
     if (emitted.has(id)) continue;
     emitted.add(id);
     const members = images.get(id)!;
-    const { image: _image, ...context } = item.context ?? {};
+    const context = Object.fromEntries(Object.entries(item.context ?? {}).filter(([key]) => key !== "image")) as NonNullable<GraphRollupContainer["context"]>;
     rows.push({
       id, label: image, entity_type: "image", severity: "", is_container: true, has_children: true,
       direct_child_count: members.length, aggregate: sumAggregates(members), context,
