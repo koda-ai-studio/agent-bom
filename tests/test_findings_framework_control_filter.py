@@ -272,3 +272,10 @@ def test_route_no_framework_filter_is_backward_compatible() -> None:
     assert resp.status_code == 200
     # Four scan findings plus the one bulk-ingested row.
     assert len(resp.json()["findings"]) == 5
+
+
+def test_route_control_without_framework_is_rejected_not_ignored() -> None:
+    _seed()
+    resp = TestClient(app).get("/v1/findings?control=ZZZ-999", headers=_AUTH)
+    assert resp.status_code == 422
+    assert "framework" in resp.text

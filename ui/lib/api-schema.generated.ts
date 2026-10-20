@@ -33847,7 +33847,7 @@ export interface operations {
                 node_id?: string | null;
                 /** @description Only paths carrying this finding occurrence */
                 finding_id?: string | null;
-                /** @description Advisory of the finding occurrence. When paths record the advisory rather than the occurrence id, the occurrence resolves to paths through its node_id carrying this advisory; ignored without node_id */
+                /** @description Only paths carrying this advisory. With finding_id it qualifies the occurrence instead: when paths record the advisory rather than the occurrence id, the occurrence resolves to paths through its node_id carrying it */
                 advisory_id?: string | null;
                 /** @description Compliance framework of ``control`` */
                 framework?: string | null;

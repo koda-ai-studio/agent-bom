@@ -48,6 +48,13 @@ def list_include_or_422(value: str | None) -> tuple[str, ...]:
         raise HTTPException(status_code=422, detail=sanitize_error(exc)) from None
 
 
+def list_query_or_422(include: str | None, *, framework: str | None, control: str | None) -> tuple[str, ...]:
+    """Validated ``include`` values; a control code without its framework is a 422, never a silently ignored filter."""
+    if control and control.strip() and not (framework and framework.strip()):
+        raise HTTPException(status_code=422, detail="control requires framework (e.g. framework=soc2&control=CC6.1).")
+    return list_include_or_422(include)
+
+
 @contextmanager
 def finding_list_projection(*, include_controls: bool) -> Iterator[None]:
     token = _include_controls.set(include_controls)
