@@ -37,10 +37,6 @@ describe("pathCardEdges", () => {
     { id: "depends", source: "b", target: "c", data: { relationship: "depends_on" }, style: { strokeWidth: 1.5, opacity: 1 } },
   ];
 
-  it("marks every edge for a single-line evidence chip", () => {
-    for (const edge of pathCardEdges(edges, 0.5)) expect(edge.data?.compactEvidence).toBe(true);
-  });
-
   it("keeps strokes and dashes a constant, legible screen size at any zoom", () => {
     const [dashed, solid] = pathCardEdges(edges, 0.5);
     expect(dashed!.style?.strokeWidth).toBe(4);

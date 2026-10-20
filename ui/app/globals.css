@@ -332,23 +332,13 @@ body {
   font-weight: 500;
   padding: 0.2em 0.4em;
   width: max-content;
-  max-width: 8em;
-  white-space: normal;
-  text-align: center;
-  overflow-wrap: normal;
+  white-space: nowrap;
 }
 
 .graph-relationship-label .relationship-badge svg {
   display: block;
   flex-shrink: 0;
   opacity: 0.75;
-}
-
-.graph-relationship-qualifier {
-  display: block;
-  font-size: 0.8em;
-  font-weight: 400;
-  color: var(--text-secondary);
 }
 
 /* Keep secondary node metadata available without crowding the default canvas. */

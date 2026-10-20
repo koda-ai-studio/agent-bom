@@ -71,16 +71,15 @@ export function RelationshipIcon({ relationship }: { relationship: string }) {
 }
 
 /**
- * The evidence qualifier reads as a second, quieter line instead of wrapping
- * mid-phrase. Compact canvases keep one-line chips: the edge's dash carries the
- * tier and the qualifier stays in assistive text, hover and the selected link.
+ * Every canvas chip is one inline line centred on its edge. The edge's dash
+ * carries the evidence tier; the qualifier stays in assistive text, the edge's
+ * hover description and the selected link.
  */
 export function qualifiedLabel(relationship: string, label: React.ReactNode, data: EdgeProps["data"]): React.ReactNode {
   const qualifier = accessEvidenceQualifier(relationship, data as Parameters<typeof accessEvidenceQualifier>[1]);
   const suffix = ` · ${qualifier}`;
   if (!qualifier || typeof label !== "string" || !label.endsWith(suffix)) return label;
-  if (data?.compactEvidence === true) return <>{label.slice(0, -suffix.length)}<span className="sr-only">{suffix}</span></>;
-  return <>{label.slice(0, -suffix.length)}<span className="sr-only"> · </span><span className="graph-relationship-qualifier">{qualifier}</span></>;
+  return <>{label.slice(0, -suffix.length)}<span className="sr-only">{suffix}</span></>;
 }
 
 export function RelationshipEdge(props: EdgeProps) {

@@ -1038,18 +1038,15 @@ for (const theme of ["light", "dark"] as const) {
     await expect(page.locator(".graph-relationship-label").filter({ hasText: "Invoked · observed" })).toBeVisible();
     const metrics = await page.locator(".graph-relationship-label .relationship-badge").evaluateAll(labels => labels.map(label => {
       const text = label.querySelector("span")!;
-      const qualifier = text.querySelector<HTMLElement>(".graph-relationship-qualifier");
+      const hidden = text.querySelector<HTMLElement>(".sr-only");
       const zoom = new DOMMatrixReadOnly(getComputedStyle(label.closest(".react-flow__edgelabel-renderer")!).transform).a;
-      const lineHeight = (element: Element) => parseFloat(getComputedStyle(element).lineHeight) * zoom;
-      const qualifierHeight = qualifier?.getBoundingClientRect().height ?? 0;
-      return { verb: qualifier ? text.textContent!.replace(qualifier.textContent ?? "", "").replace(/ · $/, "") : text.textContent,
-        wrap: getComputedStyle(label).overflowWrap,
-        lines: (text.getBoundingClientRect().height - qualifierHeight) / lineHeight(text),
-        qualifierLines: qualifier ? qualifierHeight / lineHeight(qualifier) : 0 };
+      const lineHeight = parseFloat(getComputedStyle(text).lineHeight) * zoom;
+      return { verb: text.textContent!.replace(hidden?.textContent ?? "", ""),
+        lines: text.getBoundingClientRect().height / lineHeight };
     }));
     expect(metrics.some(metric => metric.verb === "Invoked")).toBe(true);
-    // The evidence qualifier sits on its own quieter line; the verb and the qualifier are each held to their own budget.
-    expect(metrics.every(metric => metric.wrap !== "anywhere" && metric.lines <= 2.1 && metric.qualifierLines <= 1.1)).toBe(true);
+    // Every chip is one inline line; the evidence tier is in assistive text and the edge's hover.
+    expect(metrics.every(metric => metric.lines <= 1.1)).toBe(true);
     await page.screenshot({ path: testInfo.outputPath(`expanded-reference-${theme}.png`), fullPage: true });
   });
 }
