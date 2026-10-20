@@ -47,6 +47,7 @@ import operator
 import re
 from pathlib import Path
 
+from agent_bom.core.risk_display import assessed_risk_score
 from agent_bom.core.severity import SEVERITY_POLICY_ORDER as SEVERITY_ORDER
 
 RISK_LEVEL_ORDER = {"high": 3, "medium": 2, "low": 1}
@@ -130,7 +131,7 @@ _EXPRESSION_FIELD_GETTERS = {
     "scorecard_score": lambda b: b.package.scorecard_score if b.package.scorecard_score is not None else 0.0,
     "is_malicious": lambda b: getattr(b.package, "is_malicious", False),
     # Blast radius and graph fields
-    "risk_score": lambda b: b.risk_score,
+    "risk_score": lambda b: assessed_risk_score(b),
     "agent_count": lambda b: len(b.affected_agents),
     "server_count": lambda b: len(b.affected_servers),
     "tool_count": lambda b: len(b.exposed_tools),

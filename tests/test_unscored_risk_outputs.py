@@ -86,13 +86,15 @@ def test_text_outputs_render_unscored_risk_without_a_zero_score(render):
         assert 'blast_radius_score{vuln_id="CVE-2022-0235"' not in text
 
 
-def test_policy_risk_gate_neither_crashes_nor_treats_unassessed_as_zero():
+def test_policy_risk_gate_scores_an_unassessed_blast_radius_instead_of_skipping_it():
     from agent_bom.policy import evaluate_expression
 
-    br = _unscored()
-    assert evaluate_expression("risk_score >= 7", br) is False
-    assert evaluate_expression("risk_score < 1", br) is False
-    assert evaluate_expression("severity >= HIGH", br) is True
+    score = _unscored().calculate_risk_score()
+    assert score > 0
+    for threshold in (score - 0.5, score + 0.5):
+        assert evaluate_expression(f"risk_score >= {threshold}", _unscored()) is (score >= threshold)
+        assert evaluate_expression(f"not risk_score >= {threshold}", _unscored()) is (score < threshold)
+    assert evaluate_expression("severity >= HIGH", _unscored()) is True
 
 
 def test_html_cells_say_not_assessed_instead_of_zero():
