@@ -391,7 +391,7 @@ class GraphRollupResponse(ReadResponse):
     path_nodes: list[Row] | None = None
     path_edges: list[Row] | None = None
     resolved_from: str | None = None
-    collapsed: Row | None = None
+    collapsed: list[Row] | None = None
 
 
 class GraphSchemaResponse(ReadResponse):

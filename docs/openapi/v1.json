@@ -22503,8 +22503,11 @@
           "collapsed": {
             "anyOf": [
               {
-                "additionalProperties": true,
-                "type": "object"
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
               },
               {
                 "type": "null"
