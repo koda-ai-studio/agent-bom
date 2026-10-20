@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react";
 import { GraphEmptyState } from "@/components/graph-state-panels";
 import { formatDate, type FixFirstGraphViewResponse, type GraphSnapshot, type PostureResponse } from "@/lib/api";
 import type { investigationEstateMode } from "@/lib/investigation-estate-mode";
+import { snapshotLabel } from "@/lib/snapshot-label";
 import { tonedChipClass } from "@/lib/toned-chip";
 
 /** The selected scan's evidence summary and the snapshot chooser. */
@@ -69,6 +70,7 @@ export function InvestigationScanEvidence({
                     <button
                       key={snapshot.scan_id}
                       type="button"
+                      title={snapshot.scan_id}
                       onClick={() => onSelect(snapshot.scan_id)}
                       className={`rounded-xl border px-3 py-2 text-left text-xs transition ${
                         selected
@@ -76,7 +78,7 @@ export function InvestigationScanEvidence({
                           : "border-[color:var(--border-subtle)] bg-[color:var(--surface-elevated)] text-[color:var(--text-secondary)] hover:border-[color:var(--border-strong)] hover:text-[color:var(--foreground)]"
                       }`}
                     >
-                      <span className="block font-mono">{snapshot.scan_id.slice(0, 8)}…</span>
+                      <span className="block font-mono">{snapshotLabel(snapshot.scan_id)}</span>
                       <span className="mt-1 block text-[11px] opacity-80">{snapshot.node_count} nodes</span>
                     </button>
                   );

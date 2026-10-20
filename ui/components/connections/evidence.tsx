@@ -1,6 +1,7 @@
 "use client";
 
 import { EvidenceFields } from "@/components/evidence-fields";
+import { snapshotLabel } from "@/lib/snapshot-label";
 
 import { evidenceLinks } from "@/components/connections/display";
 import {
@@ -88,7 +89,7 @@ export function ScanHandoffLinks({ scanId }: { scanId: string }) {
           <FileSearch className="h-4 w-4 text-emerald-400" />
           Last scan handoff
         </p>
-        <span className="font-mono text-[10px] text-ink-tertiary">scan {scanId.slice(0, 8)}</span>
+        <span className="font-mono text-[10px] text-ink-tertiary" title={scanId}>scan {snapshotLabel(scanId)}</span>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
         {evidenceLinks(scanId).map(({ label, href, icon }) => (
