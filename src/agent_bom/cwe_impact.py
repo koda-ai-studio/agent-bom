@@ -143,6 +143,107 @@ CWE_IMPACT_CATEGORIES: dict[str, str] = {
 }
 
 
+# ── CWE → attacker capability ───────────────────────────────────────────────
+#
+# What an attacker gains by exploiting the weakness, finer than the impact
+# category above. Used to describe an exploit in words; it never widens
+# credential or tool reach. Sources: MITRE CWE definitions. Broad CWEs that do
+# not establish an effect (CWE-20 and similar) stay unmapped.
+
+CWE_ATTACKER_CAPABILITIES: dict[str, str] = {
+    "CWE-77": "rce",
+    "CWE-78": "rce",
+    "CWE-98": "rce",
+    "CWE-434": "rce",
+    "CWE-94": "code_injection",
+    "CWE-95": "code_injection",
+    "CWE-96": "code_injection",
+    "CWE-913": "code_injection",
+    "CWE-917": "code_injection",
+    "CWE-1336": "code_injection",
+    "CWE-1321": "prototype_pollution",
+    "CWE-22": "path_traversal",
+    "CWE-23": "path_traversal",
+    "CWE-35": "path_traversal",
+    "CWE-36": "path_traversal",
+    "CWE-73": "path_traversal",
+    "CWE-918": "ssrf",
+    "CWE-502": "deserialization",
+    "CWE-287": "auth_bypass",
+    "CWE-288": "auth_bypass",
+    "CWE-290": "auth_bypass",
+    "CWE-294": "auth_bypass",
+    "CWE-306": "auth_bypass",
+    "CWE-347": "auth_bypass",
+    "CWE-639": "auth_bypass",
+    "CWE-862": "auth_bypass",
+    "CWE-863": "auth_bypass",
+    "CWE-1390": "auth_bypass",
+    "CWE-250": "privilege_escalation",
+    "CWE-266": "privilege_escalation",
+    "CWE-269": "privilege_escalation",
+    "CWE-274": "privilege_escalation",
+    "CWE-648": "privilege_escalation",
+    "CWE-400": "dos",
+    "CWE-404": "dos",
+    "CWE-407": "dos",
+    "CWE-409": "dos",
+    "CWE-674": "dos",
+    "CWE-770": "dos",
+    "CWE-834": "dos",
+    "CWE-835": "dos",
+    "CWE-1333": "dos",
+    "CWE-200": "info_disclosure",
+    "CWE-201": "info_disclosure",
+    "CWE-209": "info_disclosure",
+    "CWE-215": "info_disclosure",
+    "CWE-312": "info_disclosure",
+    "CWE-319": "info_disclosure",
+    "CWE-359": "info_disclosure",
+    "CWE-532": "info_disclosure",
+    "CWE-538": "info_disclosure",
+    "CWE-79": "xss",
+    "CWE-80": "xss",
+    "CWE-83": "xss",
+    "CWE-87": "xss",
+}
+
+ATTACKER_CAPABILITY_LABELS: dict[str, str] = {
+    "rce": "remote code execution",
+    "code_injection": "code injection",
+    "prototype_pollution": "prototype pollution",
+    "path_traversal": "path traversal",
+    "ssrf": "server-side request forgery",
+    "deserialization": "unsafe deserialization",
+    "auth_bypass": "authentication or authorization bypass",
+    "privilege_escalation": "privilege escalation",
+    "dos": "denial of service",
+    "info_disclosure": "information disclosure",
+    "xss": "cross-site scripting",
+}
+
+
+def _normalized_cwe(value: object) -> str:
+    text = str(value or "").strip().upper()
+    if text.isdigit():
+        return f"CWE-{text}"
+    return text
+
+
+def attacker_capabilities(cwe_ids: list[str] | None) -> list[dict[str, str]]:
+    """The attacker capability each recorded CWE establishes, in record order, deduplicated."""
+    result: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for raw in cwe_ids or []:
+        cwe = _normalized_cwe(raw)
+        capability = CWE_ATTACKER_CAPABILITIES.get(cwe)
+        if capability is None or cwe in seen:
+            continue
+        seen.add(cwe)
+        result.append({"cwe": cwe, "capability": capability, "label": ATTACKER_CAPABILITY_LABELS[capability]})
+    return result
+
+
 def classify_cwe_impact(cwe_ids: list[str]) -> str:
     """Classify the worst-case impact category from a list of CWE IDs.
 

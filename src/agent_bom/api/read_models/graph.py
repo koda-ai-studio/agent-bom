@@ -269,6 +269,8 @@ class GraphImpactResponse(ReadResponse):
     node_id: str
     affected_nodes: list[str]
     affected_by_type: dict[str, int]
+    affected_nodes_detail: list[Row] | None = None
+    direction: str | None = None
     affected_count: int
     max_depth_reached: int
     completeness: Row

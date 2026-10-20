@@ -12,6 +12,7 @@ import { buildFindingInvestigationHref } from "@/lib/finding-investigation-href"
 import { groupFindingControls } from "@/lib/finding-controls";
 import { FindingAffectedAsset } from "@/components/finding-affected-asset";
 import { FindingExposureSummary } from "@/components/finding-exposure-summary";
+import { FindingExploitStory } from "@/components/finding-exploit-story";
 import { findingAssetKind } from "@/lib/finding-exposure";
 import { FindingControlGroups } from "@/components/finding-control-groups";
 import { exposurePriorityLabel } from "@/lib/plain-labels";
@@ -166,6 +167,7 @@ function OverviewTab({ vuln, graphScanId }: { vuln: EnrichedVuln; graphScanId?: 
         <FindingExposureSummary vuln={vuln} />
         {impact.length ? <p className="mt-2 text-xs text-ink-secondary">{impact.join(" · ")}</p> : null}
         {scope.sbomSources.map((source) => <p key={source} className="mt-1 break-words text-xs text-ink-secondary">SBOM source: {sbomSourceName(source)}</p>)}
+        <FindingExploitStory vuln={vuln} graphScanId={graphScanId} />
       </Section>
 
       {fixCandidates.length > 0 ? (

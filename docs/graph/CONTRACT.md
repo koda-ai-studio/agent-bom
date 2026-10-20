@@ -597,6 +597,31 @@ snapshot from source edges to populate the new projection. No database migration
 is required. Older readers ignore the optional object; retained snapshots remain
 available for rollback.
 
+### Exploit story for a CVE occurrence
+
+`GET /v1/graph/exploit-story?finding_id=<id>` (or `?node=vuln:<id>&package=<package node>`)
+answers what a vulnerable package puts at risk and how it could be exploited,
+from recorded evidence only. The MCP `finding_detail` tool returns the same
+payload under `exploit_story`.
+
+- `how` holds only recorded advisory fields: the CVSS 3.x or 4.0 vector decoded
+  into words (attack vector, complexity, requirements, privileges, user
+  interaction, scope, impact), CWE ids mapped to an attacker capability
+  (`agent_bom.cwe_impact.CWE_ATTACKER_CAPABILITIES`), KEV, EPSS, the
+  reachability verdict from `core/reachability`, and the fixed version.
+- `at_risk` walks dependency edges in reverse from the package to the servers,
+  containers and agents that load or use it, then the shared reach policy
+  forward from the loaders (trace order excluded, as for finding
+  reachability). Items are grouped as agents, MCP servers, tools, credentials,
+  data stores, cloud resources and identities; each carries its hop-by-hop
+  path with every hop's evidence tier, and credentials carry names only.
+  The walk is bounded (`max_depth`, node budgets, 50 listed items per group)
+  and reports `completeness`.
+- `narrative` is assembled clause by clause; each clause lists the payload
+  fields it reads in `fields`, and a missing field drops its clause. The
+  `basis` says whether the hops behind it were observed or modeled. A story
+  shows what an attacker could reach, not that exploitation happened.
+
 ### Inspect a selected path's evidence
 
 Use `agent-bom graph-paths exposure --api-url "$AGENT_BOM_API_URL" --format json`

@@ -4493,6 +4493,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/graph/exploit-story": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Graph Exploit Story
+         * @description The exploit story: recorded attack preconditions and capability, then what the package's hosts reach.
+         *
+         *     Every narrative clause cites the recorded field it rests on; a missing field
+         *     drops its clause. Reach is recorded topology, not proof of exploitation.
+         */
+        get: operations["get_graph_exploit_story_v1_graph_exploit_story_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/graph/exposure-paths": {
         parameters: {
             query?: never;
@@ -13317,6 +13340,210 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** ExploitStoryAsset */
+        ExploitStoryAsset: {
+            /** Entity Type */
+            entity_type: string;
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ExploitStoryAtRisk */
+        ExploitStoryAtRisk: {
+            /** By Kind */
+            by_kind: {
+                [key: string]: number;
+            };
+            /** Completeness */
+            completeness: {
+                [key: string]: unknown;
+            };
+            /** Groups */
+            groups: components["schemas"]["ExploitStoryGroup"][];
+            /** Listed Complete */
+            listed_complete: boolean;
+            /** Total */
+            total: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ExploitStoryCapability */
+        ExploitStoryCapability: {
+            /** Capability */
+            capability: string;
+            /** Cwe */
+            cwe: string;
+            /** Label */
+            label: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ExploitStoryClause */
+        ExploitStoryClause: {
+            /** Fields */
+            fields: string[];
+            /** Text */
+            text: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ExploitStoryCvss */
+        ExploitStoryCvss: {
+            /** Attack Complexity */
+            attack_complexity: string;
+            /** Attack Requirements */
+            attack_requirements?: string | null;
+            /** Attack Vector */
+            attack_vector: string;
+            /** Impact */
+            impact: {
+                [key: string]: string;
+            };
+            /** Privileges Required */
+            privileges_required: string;
+            /** Scope */
+            scope?: string | null;
+            /** Score */
+            score?: number | null;
+            /** Subsequent Impact */
+            subsequent_impact?: {
+                [key: string]: string;
+            } | null;
+            /** User Interaction */
+            user_interaction: string;
+            /** Vector */
+            vector: string;
+            /** Version */
+            version: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ExploitStoryEpss */
+        ExploitStoryEpss: {
+            /** Percentile */
+            percentile?: number | null;
+            /** Score */
+            score: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ExploitStoryFix */
+        ExploitStoryFix: {
+            /** Available */
+            available: boolean | null;
+            /** Fixed Version */
+            fixed_version: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ExploitStoryGroup */
+        ExploitStoryGroup: {
+            /** Count */
+            count: number;
+            /** Items */
+            items: components["schemas"]["ExploitStoryItem"][];
+            /** Kind */
+            kind: string;
+            /** Label */
+            label: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ExploitStoryHop */
+        ExploitStoryHop: {
+            /** Evidence Tier */
+            evidence_tier: string;
+            /** Observed */
+            observed: boolean;
+            /** Relationship */
+            relationship: string;
+            /** Source */
+            source: string;
+            /** Target */
+            target: string;
+            /**
+             * Traversed
+             * @enum {string}
+             */
+            traversed: "forward" | "reverse";
+        } & {
+            [key: string]: unknown;
+        };
+        /** ExploitStoryHow */
+        ExploitStoryHow: {
+            /** Capabilities */
+            capabilities: components["schemas"]["ExploitStoryCapability"][];
+            cvss: components["schemas"]["ExploitStoryCvss"] | null;
+            /** Cwe Ids */
+            cwe_ids: string[];
+            epss: components["schemas"]["ExploitStoryEpss"] | null;
+            fix: components["schemas"]["ExploitStoryFix"];
+            kev: components["schemas"]["ExploitStoryKev"];
+            reachability: components["schemas"]["ExploitStoryReachability"];
+        } & {
+            [key: string]: unknown;
+        };
+        /** ExploitStoryItem */
+        ExploitStoryItem: {
+            /**
+             * Basis
+             * @enum {string}
+             */
+            basis: "observed" | "modeled";
+            /** Capabilities */
+            capabilities?: string[] | null;
+            /** Depth */
+            depth: number;
+            /** Entity Type */
+            entity_type: string;
+            /** Id */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Label */
+            label: string;
+            /** Path */
+            path: components["schemas"]["ExploitStoryHop"][];
+            /** Path Nodes */
+            path_nodes: string[];
+            /** Sensitivity */
+            sensitivity?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ExploitStoryKev */
+        ExploitStoryKev: {
+            /** Listed */
+            listed: boolean | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ExploitStoryNarrative */
+        ExploitStoryNarrative: {
+            /** Basis */
+            basis: ("observed" | "modeled" | "mixed") | null;
+            /** Clauses */
+            clauses: components["schemas"]["ExploitStoryClause"][];
+            /** Text */
+            text: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** ExploitStoryReachability */
+        ExploitStoryReachability: {
+            /** Basis */
+            basis: string[];
+            /**
+             * Verdict
+             * @enum {string}
+             */
+            verdict: "confirmed" | "likely" | "unknown" | "unlikely";
+        } & {
+            [key: string]: unknown;
+        };
         /** ExportDestinationCreate */
         ExportDestinationCreate: {
             /**
@@ -16251,6 +16478,44 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** GraphExploitStoryResponse */
+        GraphExploitStoryResponse: {
+            /** Advisory Id */
+            advisory_id: string;
+            /** Affected Assets */
+            affected_assets: components["schemas"]["ExploitStoryAsset"][];
+            at_risk: components["schemas"]["ExploitStoryAtRisk"];
+            /** Hosts */
+            hosts: components["schemas"]["ExploitStoryAsset"][];
+            how: components["schemas"]["ExploitStoryHow"];
+            /** Interpretation */
+            interpretation: {
+                [key: string]: unknown;
+            };
+            narrative: components["schemas"]["ExploitStoryNarrative"];
+            package: components["schemas"]["ExploitStoryAsset"] | null;
+            /** Resolved From */
+            resolved_from?: string | null;
+            /** Scan Id */
+            scan_id: string;
+            /** Schema Version */
+            schema_version: string;
+            /**
+             * Scope
+             * @enum {string}
+             */
+            scope: "occurrence" | "advisory";
+            /** Scope Note */
+            scope_note?: string | null;
+            /** Snapshot Generation */
+            snapshot_generation: string | null;
+            /** Tenant Id */
+            tenant_id: string;
+            /** Vulnerability Node Id */
+            vulnerability_node_id: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** GraphExposurePathsResponse */
         GraphExposurePathsResponse: {
             /** Collection Coverage */
@@ -16419,10 +16684,16 @@ export interface components {
             affected_count: number;
             /** Affected Nodes */
             affected_nodes: string[];
+            /** Affected Nodes Detail */
+            affected_nodes_detail?: {
+                [key: string]: unknown;
+            }[] | null;
             /** Completeness */
             completeness: {
                 [key: string]: unknown;
             };
+            /** Direction */
+            direction?: string | null;
             interpretation: components["schemas"]["GraphImpactInterpretation"];
             /** Max Depth Reached */
             max_depth_reached: number;
@@ -34502,6 +34773,55 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GraphEvidenceManifestResponse"];
+                };
+            };
+            /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE) */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    get_graph_exploit_story_v1_graph_exploit_story_get: {
+        parameters: {
+            query?: {
+                /** @description Advisory node (vuln:...) to tell the story of */
+                node?: string | null;
+                /** @description Affected package node; scopes the story to that occurrence */
+                package?: string | null;
+                /** @description Finding occurrence id; supplies the advisory, its package and its fields */
+                finding_id?: string | null;
+                /** @description Graph scan id; defaults to the latest snapshot */
+                scan_id?: string | null;
+                /** @description Hops per leg of the at-risk walk */
+                max_depth?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GraphExploitStoryResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */

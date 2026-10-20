@@ -270,7 +270,7 @@ def _register_finding_detail(
         tenant_id: Annotated[str, _TENANT] = "default",
         scan_id: Annotated[str | None, _SCAN] = None,
     ) -> str:
-        """Return one finding with the graph paths that carry it, who reaches it, and its triage/VEX state."""
+        """Return one finding with its graph paths, who reaches it, its exploit story and its triage/VEX state."""
         return await execute_tool_async(
             "finding_detail",
             finding_detail_impl,

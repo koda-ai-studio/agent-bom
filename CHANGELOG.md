@@ -12,6 +12,9 @@ Versions follow [Semantic Versioning](https://semver.org/).
 ### Changed
 
 - **Outdated local vulnerability data now fails closed.** Applies when nothing is at or above the gate, the local DB is past the age `agent-bom db freshness` warns about (or its freshness can't be trusted), and the run was offline or live OSV did not answer. `check` then exits `2` (incomplete), `scan` exits `1` with a `stale_local_data` issue in `scan_run`, and MCP `check` / `POST /v1/scan/check` return `status: "incomplete"`. Real findings keep their exit codes, and `--exit-zero` does not turn this into a pass. Air-gapped installs that accept old local data pass `--allow-stale-db` or set `AGENT_BOM_ALLOW_STALE_DB=1`. `check` now honours `--require-fresh-db` / `AGENT_BOM_REQUIRE_FRESH_DB` (exit `3`) like `scan`.
+### Added
+
+- Exploit story for a CVE occurrence: `GET /v1/graph/exploit-story` and the MCP `finding_detail` `exploit_story` block say what the vulnerable package puts at risk (agents, MCP servers, tools, credential names, data stores, cloud resources and identities, each with its hop-by-hop path and evidence tier) and how it could be exploited (decoded CVSS 3.x/4.0 vector, CWE attacker capability, KEV, EPSS, reachability, fix), with a narrative built only from recorded fields. The finding drawer and the investigation path show it, and the path canvas can draw the at-risk hops past the package.
 
 ### Fixed
 

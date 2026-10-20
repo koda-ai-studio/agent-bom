@@ -9134,6 +9134,390 @@ components:
       - enabled
       title: ExperimentalFeatureHealth
       type: object
+    ExploitStoryAsset:
+      additionalProperties: true
+      properties:
+        entity_type:
+          title: Entity Type
+          type: string
+        id:
+          title: Id
+          type: string
+        label:
+          title: Label
+          type: string
+      required:
+      - id
+      - label
+      - entity_type
+      title: ExploitStoryAsset
+      type: object
+    ExploitStoryAtRisk:
+      additionalProperties: true
+      properties:
+        by_kind:
+          additionalProperties:
+            type: integer
+          title: By Kind
+          type: object
+        completeness:
+          additionalProperties: true
+          title: Completeness
+          type: object
+        groups:
+          items:
+            $ref: '#/components/schemas/ExploitStoryGroup'
+          title: Groups
+          type: array
+        listed_complete:
+          title: Listed Complete
+          type: boolean
+        total:
+          title: Total
+          type: integer
+      required:
+      - groups
+      - by_kind
+      - total
+      - listed_complete
+      - completeness
+      title: ExploitStoryAtRisk
+      type: object
+    ExploitStoryCapability:
+      additionalProperties: true
+      properties:
+        capability:
+          title: Capability
+          type: string
+        cwe:
+          title: Cwe
+          type: string
+        label:
+          title: Label
+          type: string
+      required:
+      - cwe
+      - capability
+      - label
+      title: ExploitStoryCapability
+      type: object
+    ExploitStoryClause:
+      additionalProperties: true
+      properties:
+        fields:
+          items:
+            type: string
+          title: Fields
+          type: array
+        text:
+          title: Text
+          type: string
+      required:
+      - text
+      - fields
+      title: ExploitStoryClause
+      type: object
+    ExploitStoryCvss:
+      additionalProperties: true
+      properties:
+        attack_complexity:
+          title: Attack Complexity
+          type: string
+        attack_requirements:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Attack Requirements
+        attack_vector:
+          title: Attack Vector
+          type: string
+        impact:
+          additionalProperties:
+            type: string
+          title: Impact
+          type: object
+        privileges_required:
+          title: Privileges Required
+          type: string
+        scope:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Scope
+        score:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Score
+        subsequent_impact:
+          anyOf:
+          - additionalProperties:
+              type: string
+            type: object
+          - type: 'null'
+          title: Subsequent Impact
+        user_interaction:
+          title: User Interaction
+          type: string
+        vector:
+          title: Vector
+          type: string
+        version:
+          title: Version
+          type: string
+      required:
+      - version
+      - vector
+      - attack_vector
+      - attack_complexity
+      - privileges_required
+      - user_interaction
+      - impact
+      title: ExploitStoryCvss
+      type: object
+    ExploitStoryEpss:
+      additionalProperties: true
+      properties:
+        percentile:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Percentile
+        score:
+          title: Score
+          type: number
+      required:
+      - score
+      title: ExploitStoryEpss
+      type: object
+    ExploitStoryFix:
+      additionalProperties: true
+      properties:
+        available:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Available
+        fixed_version:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Fixed Version
+      required:
+      - available
+      - fixed_version
+      title: ExploitStoryFix
+      type: object
+    ExploitStoryGroup:
+      additionalProperties: true
+      properties:
+        count:
+          title: Count
+          type: integer
+        items:
+          items:
+            $ref: '#/components/schemas/ExploitStoryItem'
+          title: Items
+          type: array
+        kind:
+          title: Kind
+          type: string
+        label:
+          title: Label
+          type: string
+      required:
+      - kind
+      - label
+      - count
+      - items
+      title: ExploitStoryGroup
+      type: object
+    ExploitStoryHop:
+      additionalProperties: true
+      properties:
+        evidence_tier:
+          title: Evidence Tier
+          type: string
+        observed:
+          title: Observed
+          type: boolean
+        relationship:
+          title: Relationship
+          type: string
+        source:
+          title: Source
+          type: string
+        target:
+          title: Target
+          type: string
+        traversed:
+          enum:
+          - forward
+          - reverse
+          title: Traversed
+          type: string
+      required:
+      - source
+      - target
+      - relationship
+      - traversed
+      - evidence_tier
+      - observed
+      title: ExploitStoryHop
+      type: object
+    ExploitStoryHow:
+      additionalProperties: true
+      properties:
+        capabilities:
+          items:
+            $ref: '#/components/schemas/ExploitStoryCapability'
+          title: Capabilities
+          type: array
+        cvss:
+          anyOf:
+          - $ref: '#/components/schemas/ExploitStoryCvss'
+          - type: 'null'
+        cwe_ids:
+          items:
+            type: string
+          title: Cwe Ids
+          type: array
+        epss:
+          anyOf:
+          - $ref: '#/components/schemas/ExploitStoryEpss'
+          - type: 'null'
+        fix:
+          $ref: '#/components/schemas/ExploitStoryFix'
+        kev:
+          $ref: '#/components/schemas/ExploitStoryKev'
+        reachability:
+          $ref: '#/components/schemas/ExploitStoryReachability'
+      required:
+      - cvss
+      - cwe_ids
+      - capabilities
+      - kev
+      - epss
+      - reachability
+      - fix
+      title: ExploitStoryHow
+      type: object
+    ExploitStoryItem:
+      additionalProperties: true
+      properties:
+        basis:
+          enum:
+          - observed
+          - modeled
+          title: Basis
+          type: string
+        capabilities:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Capabilities
+        depth:
+          title: Depth
+          type: integer
+        entity_type:
+          title: Entity Type
+          type: string
+        id:
+          title: Id
+          type: string
+        kind:
+          title: Kind
+          type: string
+        label:
+          title: Label
+          type: string
+        path:
+          items:
+            $ref: '#/components/schemas/ExploitStoryHop'
+          title: Path
+          type: array
+        path_nodes:
+          items:
+            type: string
+          title: Path Nodes
+          type: array
+        sensitivity:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Sensitivity
+      required:
+      - id
+      - label
+      - entity_type
+      - kind
+      - depth
+      - basis
+      - path
+      - path_nodes
+      title: ExploitStoryItem
+      type: object
+    ExploitStoryKev:
+      additionalProperties: true
+      properties:
+        listed:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Listed
+      required:
+      - listed
+      title: ExploitStoryKev
+      type: object
+    ExploitStoryNarrative:
+      additionalProperties: true
+      properties:
+        basis:
+          anyOf:
+          - enum:
+            - observed
+            - modeled
+            - mixed
+            type: string
+          - type: 'null'
+          title: Basis
+        clauses:
+          items:
+            $ref: '#/components/schemas/ExploitStoryClause'
+          title: Clauses
+          type: array
+        text:
+          title: Text
+          type: string
+      required:
+      - text
+      - clauses
+      - basis
+      title: ExploitStoryNarrative
+      type: object
+    ExploitStoryReachability:
+      additionalProperties: true
+      properties:
+        basis:
+          items:
+            type: string
+          title: Basis
+          type: array
+        verdict:
+          enum:
+          - confirmed
+          - likely
+          - unknown
+          - unlikely
+          title: Verdict
+          type: string
+      required:
+      - verdict
+      - basis
+      title: ExploitStoryReachability
+      type: object
     ExportDestinationCreate:
       additionalProperties: false
       properties:
@@ -14483,6 +14867,86 @@ components:
       - scan_id
       title: GraphEvidenceManifestResponse
       type: object
+    GraphExploitStoryResponse:
+      additionalProperties: true
+      properties:
+        advisory_id:
+          title: Advisory Id
+          type: string
+        affected_assets:
+          items:
+            $ref: '#/components/schemas/ExploitStoryAsset'
+          title: Affected Assets
+          type: array
+        at_risk:
+          $ref: '#/components/schemas/ExploitStoryAtRisk'
+        hosts:
+          items:
+            $ref: '#/components/schemas/ExploitStoryAsset'
+          title: Hosts
+          type: array
+        how:
+          $ref: '#/components/schemas/ExploitStoryHow'
+        interpretation:
+          additionalProperties: true
+          title: Interpretation
+          type: object
+        narrative:
+          $ref: '#/components/schemas/ExploitStoryNarrative'
+        package:
+          anyOf:
+          - $ref: '#/components/schemas/ExploitStoryAsset'
+          - type: 'null'
+        resolved_from:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Resolved From
+        scan_id:
+          title: Scan Id
+          type: string
+        schema_version:
+          title: Schema Version
+          type: string
+        scope:
+          enum:
+          - occurrence
+          - advisory
+          title: Scope
+          type: string
+        scope_note:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Scope Note
+        snapshot_generation:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Snapshot Generation
+        tenant_id:
+          title: Tenant Id
+          type: string
+        vulnerability_node_id:
+          title: Vulnerability Node Id
+          type: string
+      required:
+      - schema_version
+      - advisory_id
+      - vulnerability_node_id
+      - scope
+      - package
+      - affected_assets
+      - hosts
+      - how
+      - at_risk
+      - narrative
+      - interpretation
+      - tenant_id
+      - scan_id
+      - snapshot_generation
+      title: GraphExploitStoryResponse
+      type: object
     GraphExposurePathsResponse:
       additionalProperties: true
       properties:
@@ -14785,10 +15249,23 @@ components:
             type: string
           title: Affected Nodes
           type: array
+        affected_nodes_detail:
+          anyOf:
+          - items:
+              additionalProperties: true
+              type: object
+            type: array
+          - type: 'null'
+          title: Affected Nodes Detail
         completeness:
           additionalProperties: true
           title: Completeness
           type: object
+        direction:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Direction
         interpretation:
           $ref: '#/components/schemas/GraphImpactInterpretation'
         max_depth_reached:
@@ -43122,6 +43599,103 @@ paths:
                 $ref: '#/components/schemas/ErrorEnvelope'
           description: Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE)
       summary: Get Graph Evidence Manifest
+      tags:
+      - graph
+  /v1/graph/exploit-story:
+    get:
+      description: 'The exploit story: recorded attack preconditions and capability,
+        then what the package''s hosts reach.
+
+
+        Every narrative clause cites the recorded field it rests on; a missing field
+
+        drops its clause. Reach is recorded topology, not proof of exploitation.'
+      operationId: get_graph_exploit_story_v1_graph_exploit_story_get
+      parameters:
+      - description: Advisory node (vuln:...) to tell the story of
+        in: query
+        name: node
+        required: false
+        schema:
+          anyOf:
+          - maxLength: 512
+            pattern: ^[^\x00]*$
+            type: string
+          - type: 'null'
+          description: Advisory node (vuln:...) to tell the story of
+          title: Node
+      - description: Affected package node; scopes the story to that occurrence
+        in: query
+        name: package
+        required: false
+        schema:
+          anyOf:
+          - maxLength: 512
+            pattern: ^[^\x00]*$
+            type: string
+          - type: 'null'
+          description: Affected package node; scopes the story to that occurrence
+          title: Package
+      - description: Finding occurrence id; supplies the advisory, its package and
+          its fields
+        in: query
+        name: finding_id
+        required: false
+        schema:
+          anyOf:
+          - maxLength: 512
+            pattern: ^[^\x00]*$
+            type: string
+          - type: 'null'
+          description: Finding occurrence id; supplies the advisory, its package and
+            its fields
+          title: Finding Id
+      - description: Graph scan id; defaults to the latest snapshot
+        in: query
+        name: scan_id
+        required: false
+        schema:
+          anyOf:
+          - maxLength: 512
+            pattern: ^[^\x00]*$
+            type: string
+          - type: 'null'
+          description: Graph scan id; defaults to the latest snapshot
+          title: Scan Id
+      - description: Hops per leg of the at-risk walk
+        in: query
+        name: max_depth
+        required: false
+        schema:
+          default: 3
+          description: Hops per leg of the at-risk walk
+          maximum: 6
+          minimum: 1
+          title: Max Depth
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GraphExploitStoryResponse'
+          description: Successful Response
+        4XX:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: 'Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED,
+            403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413
+            PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429
+            RATE_LIMITED'
+        5XX:
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+          description: Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE)
+      summary: Get Graph Exploit Story
       tags:
       - graph
   /v1/graph/exposure-paths:

@@ -308,7 +308,9 @@ Four more read-only tools answer follow-up questions from the same evidence:
 - `findings_query` is `GET /v1/findings` (filters, sort, cursor, totals) with a
   compact row projection; `risk_score` is 0-10 and `effective_reach_score` 0-100.
 - `finding_detail(finding_id)` returns the finding, the graph paths that carry
-  it, who reaches it, and its triage/VEX state.
+  it, who reaches it, its `exploit_story` (the `GET /v1/graph/exploit-story`
+  payload: what the package puts at risk and how, from recorded fields) and its
+  triage/VEX state.
 
 `blast_radius` takes credentials, tools and reachability from those graph
 paths. When the graph cannot be read they are `null` with a `graph.status`

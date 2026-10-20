@@ -14,6 +14,7 @@ from typing import Any
 
 from agent_bom.mcp_errors import CODE_NOT_FOUND_RESOURCE, CODE_VALIDATION_INVALID_ARGUMENT, CODE_VALIDATION_MISSING_REQUIRED, mcp_error_json
 from agent_bom.mcp_tenant import resolve_mcp_tool_tenant_id
+from agent_bom.mcp_tools.exploit_story import finding_exploit_story
 from agent_bom.mcp_tools.exposure_queue import hydrate, project_paths, summary_path
 from agent_bom.mcp_tools.finding_graph import load_snapshot_paths, project_finding, public_graph_block
 from agent_bom.mcp_tools.rest_parity import api_reads, api_unavailable, call_route
@@ -168,7 +169,7 @@ async def finding_detail_impl(
     _get_graph_store: Callable[[], Any] | None = None,
     _truncate_response: Callable[[str], str] | None = None,
 ) -> str:
-    """One finding row plus the graph paths that carry it and its triage state."""
+    """One finding row plus the graph paths that carry it, its exploit story and its triage state."""
     if not finding_id.strip():
         return mcp_error_json(CODE_VALIDATION_MISSING_REQUIRED, "finding_id is required", details={"argument": "finding_id"})
     if len(finding_id) > 256 or "\x00" in finding_id:
@@ -189,6 +190,7 @@ async def finding_detail_impl(
         await _graph_paths(graph, snapshot, tenant_id=tenant_id, path_limit=path_limit, store=get_store()) if graph.get("matched") else []
     )
     triage = await asyncio.to_thread(_triage_block, reads, tenant_id, row)
+    story = await finding_exploit_story(row, tenant_id=tenant_id, get_store=get_store)
     return _encode(
         {
             "schema_version": "v1",
@@ -198,6 +200,7 @@ async def finding_detail_impl(
             "finding": row,
             "graph": {**public_graph_block(graph), "paths": paths},
             "triage": triage,
+            "exploit_story": story,
         },
         _truncate_response,
     )

@@ -29,7 +29,7 @@ import { lineageNodeTypes, type LineageNodeData } from "@/components/lineage-nod
 import { SigmaGraphOverview } from "@/components/sigma-graph-overview";
 import { api } from "@/lib/api";
 import type { GraphNodeNeighborsResponse } from "@/lib/api-types";
-import type { AttackPath, UnifiedGraphData } from "@/lib/graph-schema";
+import type { AttackPath, UnifiedEdge, UnifiedGraphData, UnifiedNode } from "@/lib/graph-schema";
 import {
   BACKGROUND_COLOR,
   BACKGROUND_GAP,
@@ -61,6 +61,7 @@ import { COLUMN_FIT_OPTIONS, applyColumnPath, columnCanvasHeight, columnFlowEdge
 import { PATH_CARD_CANVAS_CLASS, pathCardCanvasHeight, pathCardEdges, pathCardNodeStyle } from "@/lib/path-card-canvas";
 import { applySerpentinePath, planSerpentinePath } from "@/lib/path-serpentine-layout";
 import { mergeGraphNeighborExpansions, boundedInvestigationGraph } from "@/lib/graph-neighbor-expansion";
+import { withRiskContext } from "@/lib/exploit-story-canvas";
 
 const INVESTIGATION_LAYERS = {
   provider: false,
@@ -337,6 +338,7 @@ export function SecurityGraphInvestigation({
   onPinnedNodeChange,
   onStepHint,
   embedded = false,
+  riskContext = null,
 }: {
   graph: UnifiedGraphData | null;
   attackPath: AttackPath | null;
@@ -350,6 +352,8 @@ export function SecurityGraphInvestigation({
   onStepHint?: ((step: "expand" | "impact" | "fix") => void) | undefined;
   /** The parent already supplies the selected path title and receipt assessment. */
   embedded?: boolean;
+  /** Recorded at-risk hops past the path (exploit story) to draw beside it. */
+  riskContext?: { nodes: UnifiedNode[]; edges: UnifiedEdge[] } | null | undefined;
 }) {
   const captureMode = useCaptureMode();
   const { session, loading: authLoading } = useAuthState();
@@ -379,8 +383,8 @@ export function SecurityGraphInvestigation({
       ? buildFocusedGraphData(graph, attackPath)
       : graph;
     if (!base) return null;
-    return mergeGraphNeighborExpansions(base, Object.values(neighborExpansions));
-  }, [attackPath, focusMode, graph, neighborExpansions]);
+    return mergeGraphNeighborExpansions(withRiskContext(base, riskContext), Object.values(neighborExpansions));
+  }, [attackPath, focusMode, graph, neighborExpansions, riskContext]);
 
   useEffect(() => {
     setNeighborExpansions({});

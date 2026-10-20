@@ -8,6 +8,8 @@ import { InvestigationScanEvidence } from "@/components/investigation-scan-evide
 import { InvestigationLoadError } from "@/components/investigation-load-error";
 import { InvestigationFilteredEmpty } from "@/components/investigation-filtered-empty";
 import { PathReachSummary } from "@/components/path-reach-summary";
+import { PathExploitStory } from "@/components/path-exploit-story";
+import { usePathExploitStory } from "@/hooks/use-path-exploit-story";
 
 import { investigationHref, investigationView } from "@/lib/investigation-url";
 import { selectAttackPathQueue } from "@/lib/attack-path-queue";
@@ -648,6 +650,7 @@ function AttackPathInvestigationContent() {
     scanId: selectedScanId,
     enabled: pathView === "graph",
   });
+  const pathStory = usePathExploitStory({ path: selectedAttackPath, scanId: selectedScanId });
   const selectedExposurePath = useMemo(
     () => {
       if (!selectedAttackPath) return null;
@@ -909,9 +912,10 @@ function AttackPathInvestigationContent() {
                           scanId={selectedScanId || undefined}
                           onPinnedNodeChange={setPinnedNodeId}
                           onStepHint={handleStepHint}
+                          riskContext={pathStory.riskContext}
                         />
                       ) : null}
-                      <PathReachSummary path={selectedAttackPath} scanId={selectedScanId} />
+                      {pathStory.state.status === "absent" ? <PathReachSummary path={selectedAttackPath} scanId={selectedScanId} /> : <PathExploitStory story={pathStory} />}
                     </div>
                   ) : null
                 }
