@@ -549,6 +549,8 @@ export interface GraphStats {
   total_edges: number;
   node_types: Record<string, number>;
   severity_counts: Record<string, number>;
+  /** What `severity_counts` counts: finding-bearing graph nodes, not issues or occurrences. */
+  severity_basis?: "graph_nodes";
   relationship_types: Record<string, number>;
   attack_path_count: number;
   interaction_risk_count: number;
