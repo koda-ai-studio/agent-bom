@@ -14,6 +14,8 @@ from typing import Any
 
 from fastapi import Request
 
+from agent_bom.api.routes import scan as scan_routes
+
 CONTROL_FOCUS_MAX_FINDINGS = 5_000
 
 
@@ -49,10 +51,8 @@ def _project(row: dict[str, Any]) -> dict[str, Any]:
 
 def control_occurrences(request: Request, *, framework: str, control: str, scan_id: str | None) -> ControlOccurrences:
     """The tenant's current finding occurrences mapped to ``framework``/``control``."""
-    from agent_bom.api.routes.scan import current_findings_snapshot
-
     finding_scan = None if not scan_id or scan_id.startswith("current-estate:") else scan_id
-    snapshot = current_findings_snapshot(
+    snapshot = scan_routes.current_findings_snapshot(
         request,
         max_findings=CONTROL_FOCUS_MAX_FINDINGS,
         framework=framework,
