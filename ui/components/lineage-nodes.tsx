@@ -521,7 +521,7 @@ function FindingNode({ data, accentClass }: { data: LineageNodeData; accentClass
       source={false}
       footer={data.isKev ? (
         <div className="graph-finding-metadata mt-1 flex justify-center">
-          <span title="Listed in the CISA Known Exploited Vulnerabilities catalog" className="rounded border border-red-700 bg-red-900 px-1.5 py-0.5 font-mono text-[10px] text-red-300">KEV</span>
+          <span title="Listed in the CISA Known Exploited Vulnerabilities catalog" style={{ fontSize: "var(--graph-node-meta-size, 12px)" }} className="rounded border border-red-700 bg-red-900 px-1.5 py-0.5 font-mono text-xs text-red-300">KEV</span>
         </div>
       ) : undefined}
     />

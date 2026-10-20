@@ -41,6 +41,13 @@ describe("finding nodes on the canvas", () => {
     const root = renderNode("vulnNode", { label: "CVE-2023-4863", nodeType: "vulnerability", severity: "critical", isKev: true });
     expect(visibleText(root)).toContain("KEV");
   });
+
+  it("sizes the KEV marker with the zoom-compensated metadata size", () => {
+    const root = renderNode("vulnNode", { label: "CVE-2023-4863", nodeType: "vulnerability", severity: "critical", isKev: true });
+    const kev = root.querySelector<HTMLElement>(".graph-finding-metadata > span");
+    expect(kev?.textContent).toBe("KEV");
+    expect(kev?.style.fontSize).toBe("var(--graph-node-meta-size, 12px)");
+  });
 });
 
 describe("assets with linked findings", () => {
