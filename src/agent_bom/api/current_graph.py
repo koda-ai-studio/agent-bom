@@ -16,6 +16,7 @@ import json
 import os
 import sqlite3
 import threading
+import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from functools import lru_cache, wraps
@@ -26,6 +27,7 @@ from typing import Any
 from starlette.exceptions import HTTPException
 
 from agent_bom import __version__
+from agent_bom.api.file_lock import exclusive_file_lock
 from agent_bom.api.finding_read_context import read_once
 from agent_bom.api.findings_current import _finding_snapshot_jobs, scan_collection_incomplete_reasons, scan_evidence_authority_key
 from agent_bom.api.graph_store import SQLiteGraphStore
@@ -197,8 +199,7 @@ class CurrentGraphStore:
         self._lock = _ProjectionLock()
         self._coverage: dict[str, dict[str, Any]] = {}
         self._cache: dict[str, tuple[str, tuple[tuple[str, str], ...], str]] = {}
-        # Bumped under the exclusive lock whenever a tenant's generation is promoted.
-        self._promotions: dict[str, int] = {}
+        self._held_promotion_locks = threading.local()
 
     def __getattr__(self, name: str) -> Any:
         method = getattr(self._graph_store, name)
@@ -306,10 +307,46 @@ class CurrentGraphStore:
             evidence_revision = _digest([job.model_dump(mode="json") for job in jobs])
         return summaries, evidence_revision, jobs, _digest([summaries, evidence_revision])
 
+    def _promotion_paths(self, tenant: str) -> tuple[str, str]:
+        stem = f"{self._cache_path}.{_digest(tenant)[:16]}"
+        return f"{stem}.lock", f"{stem}.epoch"
+
+    @contextmanager
+    def _promotion_lock(self, tenant: str) -> Iterator[None]:
+        # A nested resolve on this thread already holds the lock; a second
+        # descriptor on the same file would block on its own flock.
+        path = self._promotion_paths(tenant)[0]
+        held = self._held_promotion_locks.__dict__.setdefault("paths", set())
+        if path in held:
+            yield
+            return
+        with exclusive_file_lock(path):
+            held.add(path)
+            try:
+                yield
+            finally:
+                held.discard(path)
+
+    def _promotion_epoch(self, tenant: str) -> str:
+        """The tenant's promotion stamp, shared by every worker using this projection cache."""
+        try:
+            return Path(self._promotion_paths(tenant)[1]).read_text(encoding="utf-8")
+        except FileNotFoundError:
+            return ""
+
+    def _stamp_promotion(self, tenant: str) -> None:
+        # Written under the promotion file lock; os.replace keeps lock-free reads whole.
+        target = self._promotion_paths(tenant)[1]
+        staging = f"{target}.{os.getpid()}.{threading.get_ident()}"
+        with open(staging, "w", encoding="utf-8") as handle:
+            handle.write(f"{os.getpid()}:{time.time_ns()}:{os.urandom(8).hex()}")
+        os.replace(staging, target)
+
     def _resolve_current_id(self, tenant: str) -> str:
-        # Read the promotion epoch before the evidence: a promotion after this
-        # point means the evidence below may be older than the live generation.
-        epoch = self._promotions.get(tenant, 0)
+        # Read the promotion stamp before the evidence: a promotion after this
+        # point, by this or any other worker, means the evidence below may be
+        # older than the live generation.
+        epoch = self._promotion_epoch(tenant)
         summaries, evidence_revision, jobs, fingerprint = self._evidence_state(tenant, request_scoped=True)
         if not summaries and self._graph_store.snapshot_identity(tenant_id=tenant, for_paging=True)[0]:
             return ""  # Legacy graph-only stores retain their explicit latest view.
@@ -317,13 +354,15 @@ class CurrentGraphStore:
         with self._lock.shared():
             if live := self._cached_live_id(tenant, fingerprint):
                 return live
-        with self._lock.exclusive():
+        # The thread lock orders this process; the file lock orders every worker
+        # sharing the projection cache across resolve -> promote -> retire.
+        with self._lock.exclusive(), self._promotion_lock(tenant):
             if live := self._cached_live_id(tenant, fingerprint):
                 return live
             # Another resolver promoted a generation after this one read its
             # evidence; building from that older read would retire the newer
             # generation under its active readers, so re-read under the lock.
-            if self._promotions.get(tenant, 0) != epoch:
+            if self._promotion_epoch(tenant) != epoch:
                 fresh = self._evidence_state(tenant, request_scoped=False)
                 if fresh[3] != fingerprint:
                     summaries, evidence_revision, jobs, fingerprint = fresh
@@ -358,7 +397,7 @@ class CurrentGraphStore:
                 else "Recorded inventory does not establish source collection or assessment coverage.",
             }
             self._cache[tenant] = fingerprint, revisions, identity
-            self._promotions[tenant] = self._promotions.get(tenant, 0) + 1
+            self._stamp_promotion(tenant)
             return identity
 
     def _reusable(self, tenant: str, identity: str) -> bool:

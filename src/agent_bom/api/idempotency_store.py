@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import errno
 import hashlib
 import json
 import os
@@ -14,36 +13,8 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Iterator, Protocol, TypeVar
 
-if os.name == "nt":  # pragma: no cover - exercised on Windows CI
-    import msvcrt
-
-    def _lock_file_descriptor(fd: int) -> None:
-        if os.fstat(fd).st_size == 0:
-            os.write(fd, b"\0")
-        while True:
-            os.lseek(fd, 0, os.SEEK_SET)
-            try:
-                msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)  # type: ignore[attr-defined]
-                return
-            except OSError as exc:
-                if exc.errno not in {errno.EACCES, errno.EAGAIN, errno.EDEADLK}:
-                    raise
-                threading.Event().wait(0.05)
-
-    def _unlock_file_descriptor(fd: int) -> None:
-        os.lseek(fd, 0, os.SEEK_SET)
-        msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)  # type: ignore[attr-defined]
-
-else:
-    import fcntl
-
-    def _lock_file_descriptor(fd: int) -> None:
-        fcntl.flock(fd, fcntl.LOCK_EX)
-
-    def _unlock_file_descriptor(fd: int) -> None:
-        fcntl.flock(fd, fcntl.LOCK_UN)
-
-
+from agent_bom.api.file_lock import lock_file_descriptor as _lock_file_descriptor
+from agent_bom.api.file_lock import unlock_file_descriptor as _unlock_file_descriptor
 from agent_bom.api.postgres_common import (
     ConnectionPool,
     _ensure_tenant_rls,
