@@ -241,3 +241,31 @@ def test_source_lists_new_and_removed_attack_paths(estate):
     removed = row["highlights"]["removed_attack_paths"]
     assert added["count"] == 1 and added["top"][0]["hops"] == ["asrv", "a2"]
     assert removed["count"] == 1 and removed["top"][0]["hops"] == ["asrv", "a1"]
+
+
+def test_highlighted_paths_and_reach_carry_node_display_names(estate):
+    """The changes panel names endpoints, never raw ids; each side is named from its own snapshot."""
+    jobs, graph_store = estate
+    baseline = UnifiedGraph(scan_id="baseline", tenant_id=TENANT, created_at="2026-07-01T00:00:00+00:00")
+    baseline.add_node(UnifiedNode(id="asrv", entity_type=EntityType.SERVER, label="Billing server"))
+    baseline.add_node(UnifiedNode(id="a1", entity_type=EntityType.PACKAGE, label="Old package"))
+    baseline.attack_paths.append(AttackPath(source="asrv", target="a1", hops=["asrv", "a1"], composite_risk=7.0))
+    graph_store.save_graph(baseline)
+    scan = job(8, tenant=TENANT, target="repo-a", findings=[])
+    scan.result.update(scan_id=scan.job_id, scan_run={"outcome": "complete"})
+    graph = UnifiedGraph(scan_id=scan.job_id, tenant_id=TENANT, created_at=scan.completed_at)
+    graph.add_node(UnifiedNode(id="asrv", entity_type=EntityType.SERVER, label="Billing server"))
+    graph.add_node(UnifiedNode(id="cred:k", entity_type=EntityType.CREDENTIAL, label="Stripe key"))
+    graph.add_node(UnifiedNode(id="a2", entity_type=EntityType.PACKAGE, label="New package"))
+    graph.add_edge(UnifiedEdge(source="asrv", target="cred:k", relationship=RelationshipType.EXPOSES_CRED))
+    graph.attack_paths.append(AttackPath(source="asrv", target="a2", hops=["asrv", "a2"], composite_risk=9.0))
+    graph_store.save_graph(graph)
+    jobs.put(scan)
+    with client() as http:
+        row = by_label(http.get("/v1/graph/changes").json())["repo-a"]
+    added = row["highlights"]["new_attack_paths"]["top"][0]
+    removed = row["highlights"]["removed_attack_paths"]["top"][0]
+    reach = row["highlights"]["new_credential_reach"]["top"][0]
+    assert (added["source_label"], added["target_label"]) == ("Billing server", "New package")
+    assert (removed["source_label"], removed["target_label"]) == ("Billing server", "Old package")
+    assert (reach["source_label"], reach["target_label"]) == ("Billing server", "Stripe key")

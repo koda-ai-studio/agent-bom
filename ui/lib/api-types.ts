@@ -1117,6 +1117,9 @@ export interface GraphEstateHighlightNode {
   severity?: string;
   source?: string;
   target?: string;
+  /** Endpoint display names for a highlighted edge, from the snapshot that holds it. */
+  source_label?: string;
+  target_label?: string;
   relationship?: string;
 }
 
@@ -1124,6 +1127,9 @@ export interface GraphEstateHighlightNode {
 export interface GraphEstatePathChange {
   source: string;
   target: string;
+  /** Endpoint display names from the snapshot that holds the path; absent on older servers. */
+  source_label?: string;
+  target_label?: string;
   hops: string[];
   composite_risk: number;
   summary: string;

@@ -222,6 +222,29 @@ describe("GraphChangesPanel exposures", () => {
     expect(onInvestigatePath).toHaveBeenCalledWith(baselineSource.highlights.new_attack_paths.top[0]);
     expect(within(exposure).queryByRole("button", { name: /investigate path agent:x → vuln:old/i })).toBeNull();
   });
+
+  it("names path and reach endpoints by display name with the raw id as a tooltip", () => {
+    const named = response({ ...changes, sources: [{ ...baselineSource, highlights: {
+      new_attack_paths: { status: "complete", count: 1, top: [{ source: "user:bob", target: "cloud:bastion", source_label: "bob@contractor", target_label: "prod-bastion (EC2)", hops: ["user:bob", "cloud:bastion"], composite_risk: 100, summary: "" }] },
+      new_credential_reach: { count: 1, top: [{ kind: "edge" as const, change: "added" as const, id: "srv|cred|exposes_cred", source: "srv:billing", target: "cred:k", source_label: "Billing server", target_label: "Stripe key", relationship: "exposes_cred" }] },
+    } }] });
+    render(<GraphChangesPanel open changes={named} loading={false} error={null} highlighting={false} highlightLoading={false}
+      selectedPair={null} onClose={() => {}} onHighlight={() => {}} onOpenDiff={() => {}} diffDetails={null} onInvestigatePath={() => {}} />);
+    const exposure = screen.getByTestId("graph-changes-exposure");
+    expect(exposure).toHaveTextContent("bob@contractor → prod-bastion (EC2) · 1 hop");
+    expect(exposure).toHaveTextContent("Billing server → Stripe key");
+    expect(exposure).not.toHaveTextContent("user:bob");
+    expect(within(exposure).getByText("bob@contractor")).toHaveAttribute("title", "user:bob");
+    expect(within(exposure).getByText("prod-bastion (EC2)")).toHaveAttribute("title", "cloud:bastion");
+    expect(within(exposure).getByText("Stripe key")).toHaveAttribute("title", "cred:k");
+    expect(within(exposure).getByRole("button", { name: "Investigate path bob@contractor → prod-bastion (EC2)" })).toBeInTheDocument();
+  });
+
+  it("falls back to the raw id when the API names no endpoint", () => {
+    render(<GraphChangesPanel open changes={changes} loading={false} error={null} highlighting={false} highlightLoading={false}
+      selectedPair={null} onClose={() => {}} onHighlight={() => {}} onOpenDiff={() => {}} diffDetails={null} />);
+    expect(screen.getByTestId("graph-changes-exposure")).toHaveTextContent("agent:x → vuln:y");
+  });
 });
 
 describe("GraphSnapshotDiff", () => {

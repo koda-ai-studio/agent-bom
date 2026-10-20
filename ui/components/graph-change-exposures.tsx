@@ -9,7 +9,21 @@ type Handlers = {
   onInvestigatePath?: ((path: GraphEstatePathChange) => void) | undefined;
 };
 
-const pathLabel = (path: GraphEstatePathChange) => `${path.source} → ${path.target}`;
+type Endpoints = { source?: string | undefined; target?: string | undefined; source_label?: string | undefined; target_label?: string | undefined };
+
+const endName = (label: string | undefined, id: string | undefined) => label?.trim() || id || "unnamed";
+const pathLabel = (path: Endpoints) => `${endName(path.source_label, path.source)} → ${endName(path.target_label, path.target)}`;
+
+/** Both endpoints by display name; the raw id is each name's tooltip. */
+function EndpointNames({ path }: { path: Endpoints }) {
+  return (
+    <>
+      <span title={path.source}>{endName(path.source_label, path.source)}</span>
+      {" → "}
+      <span title={path.target}>{endName(path.target_label, path.target)}</span>
+    </>
+  );
+}
 
 function Group({ title, count, lowerBound, tone, children }: {
   title: string; count: number; lowerBound?: boolean | undefined; tone: "added" | "removed"; children: React.ReactNode;
@@ -41,7 +55,7 @@ function PathRow({ path, drill, onInvestigatePath }: { path: GraphEstatePathChan
   return (
     <li className="flex items-start justify-between gap-2 text-xs text-ink-secondary">
       <span className="min-w-0 break-words [overflow-wrap:anywhere]">
-        <span className="font-mono">{pathLabel(path)}</span>
+        <span className="font-medium text-foreground"><EndpointNames path={path} /></span>
         <span className="text-ink-tertiary"> · {path.hops.length - 1} {path.hops.length === 2 ? "hop" : "hops"} · risk {path.composite_risk.toFixed(1)}</span>
       </span>
       {drill && onInvestigatePath && (
@@ -70,8 +84,11 @@ export function GraphChangeExposures({ highlights, onInvestigateNode, onInvestig
         {added.top.slice(0, PREVIEW).map(path => <PathRow key={path.hops.join(">")} path={path} drill onInvestigatePath={onInvestigatePath} />)}
       </Group>}
       {reach && reach.count > 0 && <Group title="New credential reach" count={reach.count} tone="added">
-        {reach.top.slice(0, PREVIEW).map(edge => <NodeRow key={`${edge.source}>${edge.target}`} drill={false}
-          node={{ ...edge, label: `${edge.source} → ${edge.target}` }} />)}
+        {reach.top.slice(0, PREVIEW).map(edge => (
+          <li key={`${edge.source}>${edge.target}`} className="min-w-0 break-words text-xs text-ink-secondary [overflow-wrap:anywhere]">
+            <EndpointNames path={edge} />
+          </li>
+        ))}
       </Group>}
       {removed && removed.count > 0 && <Group title="Removed attack paths" count={removed.count} lowerBound={removed.count_is_lower_bound} tone="removed">
         {removed.top.slice(0, PREVIEW).map(path => <PathRow key={path.hops.join(">")} path={path} drill={false} />)}

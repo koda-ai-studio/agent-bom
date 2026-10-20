@@ -151,6 +151,21 @@ def _path_changes(store: Any, tenant: str, old_id: str, new_id: str) -> dict[str
     }
 
 
+def _label_endpoints(store: Any, tenant: str, old_id: str, new_id: str, highlights: dict[str, Any]) -> None:
+    """Name each highlighted path or reach edge's endpoints from the snapshot that holds it."""
+    sides = {new_id: [("new_attack_paths", "top"), ("new_credential_reach", "top")], old_id: [("removed_attack_paths", "top")]}
+    for scan_id, groups in sides.items():
+        rows = [row for key, field in groups for row in (highlights.get(key) or {}).get(field) or []]
+        ids = {str(row.get(end) or "") for row in rows for end in ("source", "target")} - {""}
+        if not ids:
+            continue
+        labels = {node.id: node.label for node in store.nodes_by_ids(tenant_id=tenant, scan_id=scan_id, node_ids=ids)}
+        for row in rows:
+            for end in ("source", "target"):
+                node_id = str(row.get(end) or "")
+                row[f"{end}_label"] = labels.get(node_id) or node_id
+
+
 def scope_label(job: Any) -> str:
     """A human scope name (source / provider / account / target), never the opaque scope hash."""
     parts: list[str] = []
@@ -217,6 +232,7 @@ def _page_payload(store: Any, tenant: str, page: list[_Scope]) -> tuple[list[dic
         summary = diff_summary(rows)
         if summary["total_changes"]:
             summary["highlights"].update(_path_changes(store, tenant, old_id, new_id))
+            _label_endpoints(store, tenant, old_id, new_id, summary["highlights"])
         for kind in ("nodes", "edges"):
             for change, count in summary["totals"][kind].items():
                 totals[kind][change] += count
