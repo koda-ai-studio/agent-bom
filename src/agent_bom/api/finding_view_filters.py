@@ -37,13 +37,15 @@ def _finding_triage_state(
     return None
 
 
-def redacts_after_filter(*, redact_page: bool, triage: str | None) -> bool:
+def redacts_after_filter(*, redact_page: bool, triage: str | None, triage_index: Any = None) -> bool:
     """Whether a view may filter unredacted rows and redact only the rows it emits.
 
     Reachability and suppression read fields redaction never rewrites. Triage
-    matches on identifiers redaction may rewrite, so that view redacts first.
+    matches on identifiers redaction may rewrite, so that view redacts first,
+    unless the tenant has no active triage entry: then every decision is None
+    whatever redaction would rewrite.
     """
-    return redact_page and triage is None
+    return redact_page and (triage is None or not triage_index)
 
 
 def redact_view_rows(

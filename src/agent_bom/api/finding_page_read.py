@@ -316,8 +316,8 @@ def _list_findings_view_impl(
             **{**common, "redact_page": redact_page and not redact_after_filter},
         )
 
-    redact_after_filter = redacts_after_filter(redact_page=redact_page, triage=triage)
     triage_index = build_tenant_triage_state_index(_tenant_id(request)) if triage is not None else None
+    redact_after_filter = redacts_after_filter(redact_page=redact_page, triage=triage, triage_index=triage_index)
     row_filter = partial(
         _view_filtered_row, triage_index=triage_index, reachability=reachability, triage=triage, suppressed_only=suppressed_only
     )
