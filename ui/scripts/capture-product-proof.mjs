@@ -3295,6 +3295,12 @@ async function main() {
       viewportSelectors: ["#demo-estate-watermark", '[data-testid="graph-correlation-decision"]'],
     };
     const prepareCorrelationPath = async (proofPage) => {
+      if (proofPage.viewportSize().width < 768) {
+        // Phones open on the ranked paths list; this proof is the canvas.
+        const views = proofPage.getByRole("group", { name: "Investigation view" });
+        await views.waitFor({ state: "visible" });
+        await views.getByRole("button", { name: "Graph", exact: true }).click();
+      }
       await proofPage.locator(".react-flow__node").first().waitFor({ state: "visible" });
       if (proofPage.viewportSize().width < 768) {
         // Preserve the readable initial anchor. Fitting the entire reference
