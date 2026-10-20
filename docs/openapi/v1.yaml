@@ -21447,6 +21447,13 @@ components:
     OverviewHeadline:
       additionalProperties: true
       properties:
+        basis:
+          default: issue_groups
+          enum:
+          - issue_groups
+          - occurrences
+          title: Basis
+          type: string
         credential_exposed:
           title: Credential Exposed
           type: integer

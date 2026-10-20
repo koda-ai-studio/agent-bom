@@ -21,9 +21,11 @@ from collections import OrderedDict
 from typing import Any, Callable, Literal
 
 from agent_bom.api import graph_rollup_cache
+from agent_bom.api.finding_suppression import suppression_revision
 from agent_bom.api.graph_commit_hooks import register_commit_hook
 from agent_bom.api.graph_generation import optional_generation, snapshot_fingerprint
 from agent_bom.api.graph_store import containment_drilldown_graph
+from agent_bom.api.scan_finding_read import suppressed_finding_ids
 from agent_bom.api.tenant_worker import tenant_bound_context
 from agent_bom.core.settings import SettingError, env_bool
 from agent_bom.graph.rollup import ROLLUP_RELATIONSHIPS
@@ -60,12 +62,15 @@ def rollup_cache_key(
     mode: str = "rollup",
     offset: int = 0,
     limit: int = 0,
+    suppressions: str = "",
 ) -> tuple[Any, ...]:
     """The roll-up cache key, shared by the route and the warm-up.
 
     The payload depends on the tenant, the snapshot generation and the view
     parameters only — never on which principal asked — so the key carries no
     principal; keying by API key made every caller pay the cold read again.
+    ``suppressions`` is the tenant's suppression revision: an approval or
+    revoke changes the counts without a new snapshot.
     """
     paged = mode == "rollup" or bool(node)
     # The route's store is a per-request current-estate wrapper; its backing
@@ -81,6 +86,7 @@ def rollup_cache_key(
         mode,
         offset if paged else 0,
         limit if paged else 0,
+        suppressions,
     )
 
 
@@ -105,15 +111,26 @@ def prewarm_rollup(store: Any, *, tenant_id: str) -> int:
         return 0
     scan_id = key_identity[0]
     warmed = 0
+    suppressions = suppression_revision(tenant_id)
+    suppressed = suppressed_finding_ids(tenant_id)
 
     def view(graph: Any, *, node: str | None = None, mode: Literal["rollup", "attack_path"] = "rollup", limit: int) -> dict[str, Any]:
         nonlocal warmed
         payload = _graph_rollup_payload(
-            graph, node=node, min_severity="", exposed=False, toxic=False, mode=mode, offset=0, limit=limit, graph_store=store
+            graph,
+            node=node,
+            min_severity="",
+            exposed=False,
+            toxic=False,
+            mode=mode,
+            offset=0,
+            limit=limit,
+            graph_store=store,
+            suppressed_finding_ids=suppressed,
         )
         if identity is not None:
             payload["snapshot_generation"] = identity[1]
-        key = rollup_cache_key(store, tenant_id, key_identity, node=node, mode=mode, limit=limit)
+        key = rollup_cache_key(store, tenant_id, key_identity, node=node, mode=mode, limit=limit, suppressions=suppressions)
         graph_rollup_cache.put(key, payload, ttl=PREWARM_TTL_SECONDS)
         warmed += 1
         return payload

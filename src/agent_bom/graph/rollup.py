@@ -21,6 +21,7 @@ from __future__ import annotations
 from collections import Counter, defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from functools import partial
 from typing import Any, Optional
 
 from agent_bom.cloud.normalization import coerce_truthy
@@ -30,11 +31,12 @@ from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.node import UnifiedNode
 from agent_bom.graph.path_derivation import _node_type_value
 from agent_bom.graph.provider_inheritance import provider_fields as _provider_fields
+from agent_bom.graph.rollup_aggregate import RollupAggregate, _histogram, aggregate_count_metadata
 from agent_bom.graph.rollup_edges import combine_reasons as _combine_reasons
 from agent_bom.graph.rollup_edges import cross_container_edge_rows, edge_projection
 from agent_bom.graph.rollup_edges import descendants as _descendants
 from agent_bom.graph.rollup_edges import edge_count_metadata as _edge_count_metadata
-from agent_bom.graph.rollup_issues import ISSUE_SEVERITY_BASIS, ISSUE_SEVERITY_DEFINITION, IssueTally, build_finding_index
+from agent_bom.graph.rollup_issues import ISSUE_SEVERITY_BASIS, FindingFacts, IssueTally, build_finding_index
 from agent_bom.graph.types import EntityType, RelationshipType
 
 # Severity buckets reported in every roll-up histogram, worst → least.
@@ -73,6 +75,7 @@ _AGENT_STACK_CONTAINMENT: frozenset[tuple[str, str, str]] = frozenset(
         (RelationshipType.VULNERABLE_TO.value, EntityType.PACKAGE.value, EntityType.VULNERABILITY.value),
         (RelationshipType.VULNERABLE_TO.value, EntityType.SERVER.value, EntityType.VULNERABILITY.value),
         (RelationshipType.VULNERABLE_TO.value, EntityType.CLOUD_RESOURCE.value, EntityType.VULNERABILITY.value),
+        (RelationshipType.VULNERABLE_TO.value, EntityType.CLOUD_RESOURCE.value, EntityType.MISCONFIGURATION.value),
     }
 )
 _AGENT_STACK_RELS: frozenset[str] = frozenset(rel for rel, _source, _target in _AGENT_STACK_CONTAINMENT)
@@ -164,45 +167,6 @@ def _is_exposed(node: UnifiedNode) -> bool:
 def _is_toxic(node: UnifiedNode) -> bool:
     attrs = node.attributes or {}
     return bool(attrs) and any(coerce_truthy(attrs[key]) for key in _TOXIC_ATTRS if key in attrs)
-
-
-@dataclass(slots=True)
-class RollupAggregate:
-    """Aggregate risk facts rolled up from a container's descendants."""
-
-    descendant_count: int = 0
-    by_type: dict[str, int] = field(default_factory=dict)
-    # Distinct open finding issues (the overview's basis), not rated nodes.
-    severity_counts: dict[str, int] = field(default_factory=dict)
-    # Every descendant node's own rating, rated assets included.
-    node_severity_counts: dict[str, int] = field(default_factory=dict)
-    issue_count: int = 0
-    finding_occurrence_count: int = 0
-    worst_severity: str = "none"
-    worst_severity_rank: int = 0
-    internet_exposed: bool = False
-    toxic_combo: bool = False
-    exposed_count: int = 0
-    toxic_count: int = 0
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "descendant_count": self.descendant_count,
-            "by_type": dict(sorted(self.by_type.items())),
-            "severity_counts": _histogram(self.severity_counts),
-            "issue_count": self.issue_count,
-            "finding_occurrence_count": self.finding_occurrence_count,
-            "worst_severity": self.worst_severity,
-            "worst_severity_rank": self.worst_severity_rank,
-            "internet_exposed": self.internet_exposed,
-            "toxic_combo": self.toxic_combo,
-            "exposed_count": self.exposed_count,
-            "toxic_count": self.toxic_count,
-        }
-
-
-def _histogram(counts: dict[str, int]) -> dict[str, int]:
-    return {sev: counts.get(sev, 0) for sev in _SEVERITY_ORDER}
 
 
 def _issue_histogram(tally: IssueTally) -> dict[str, int]:
@@ -386,13 +350,17 @@ def containment_descendants(graph: UnifiedGraph, root: str) -> list[str]:
     return _descendants(root, _contains_children(graph))
 
 
-# Per-node roll-up facts: (type, severity bucket, rank, exposed, toxic, issue keys, occurrence keys).
-_NodeFact = tuple[str, str, int, bool, bool, tuple[str, ...], tuple[str, ...]]
+# Per-node roll-up facts: (type, severity bucket, rank, exposed, toxic, open-finding keys or None).
+_NodeFact = tuple[str, str, int, bool, bool, Optional[FindingFacts]]
 
 
-def _node_facts(graph: UnifiedGraph) -> dict[str, _NodeFact]:
-    """Derive each node's roll-up facts once; nested scopes revisit a node many times."""
-    findings = build_finding_index(graph)
+def _node_facts(graph: UnifiedGraph, suppressed: frozenset[str] = frozenset()) -> dict[str, _NodeFact]:
+    """Derive each node's roll-up facts once; nested scopes revisit a node many times.
+
+    ``suppressed`` (the roll-up's ``suppressed_finding_ids``) names occurrences an
+    approved exception suppresses now; they count as no open finding in any scope.
+    """
+    findings = build_finding_index(graph, suppressed)
     return {
         nid: (
             _node_type_value(node),
@@ -400,7 +368,7 @@ def _node_facts(graph: UnifiedGraph) -> dict[str, _NodeFact]:
             SEVERITY_RANK.get((node.severity or "").lower(), 0),
             _is_exposed(node),
             _is_toxic(node),
-            *findings.get(nid, ((), ())),
+            findings.get(nid),
         )
         for nid, node in graph.nodes.items()
     }
@@ -413,8 +381,12 @@ def _aggregate(
     filters: Optional[RollupFilters] = None,
     memberships: Optional[Counter[str]] = None,
     facts: Optional[dict[str, _NodeFact]] = None,
+    scope_root: Optional[str] = None,
+    occurrence_memberships: Optional[Counter[str]] = None,
 ) -> RollupAggregate:
+    """Aggregate ``descendant_ids``; under ``scope_root`` a shared finding counts only its in-scope holders."""
     agg = RollupAggregate()
+    scope = None if scope_root is None else {scope_root, *descendant_ids}
     severity_counts: dict[str, int] = defaultdict(int)
     by_type: dict[str, int] = defaultdict(int)
     tally = IssueTally()
@@ -426,14 +398,15 @@ def _aggregate(
             continue
         if active_filters is not None and not active_filters.matches(node):
             continue
-        entity_type, bucket, rank, exposed, toxic, keys, occurrence_keys = node_facts[nid]
+        entity_type, bucket, rank, exposed, toxic, finding = node_facts[nid]
         agg.descendant_count += 1
         if memberships is not None:
             memberships[nid] += 1
         by_type[entity_type] += 1
         severity_counts[bucket] += 1
-        if keys:
-            tally.add(node, keys, occurrence_keys)
+        issues, occurrences = finding.scoped(scope) if finding is not None else ((), ())
+        if occurrences:
+            tally.add(node, issues, occurrences)
         if rank > agg.worst_severity_rank:
             agg.worst_severity_rank = rank
             agg.worst_severity = bucket
@@ -443,37 +416,22 @@ def _aggregate(
         if toxic:
             agg.toxic_combo = True
             agg.toxic_count += 1
+    root = graph.nodes.get(scope_root) if scope_root is not None else None
+    root_finding = node_facts[root.id][5] if root is not None and root.id in node_facts else None
+    if root is not None and root_finding is not None and (active_filters is None or active_filters.matches(root)):
+        # A finding shown as its own entry (an orphan check, a drilled-into
+        # occurrence) is one of the scope's open findings, not a descendant.
+        root_issues, root_occurrences = root_finding.scoped(scope)
+        if root_occurrences:
+            tally.add(root, root_issues, root_occurrences)
     agg.by_type = dict(by_type)
     agg.node_severity_counts = dict(severity_counts)
     agg.severity_counts = _issue_histogram(tally)
     agg.issue_count = tally.issue_count
     agg.finding_occurrence_count = tally.occurrences
+    if occurrence_memberships is not None:
+        occurrence_memberships.update(tally.occurrence_keys())
     return agg
-
-
-def _aggregate_count_metadata(graph: UnifiedGraph, memberships: Counter[str]) -> dict[str, Any]:
-    """Reconcile the returned entries' aggregates without assuming disjoint scopes.
-
-    Each aggregate counts a descendant once within that entry. A DAG can put
-    the same descendant in several entries; summing them counts memberships,
-    not unique assets. Collect during the existing aggregation walk so this
-    does not introduce a second traversal or return unbounded member IDs.
-    """
-    membership_count = sum(memberships.values())
-    distinct_count = len(memberships)
-    return {
-        "basis": "returned_entry_descendants",
-        "definition": "Filtered descendants of returned entries, excluding each entry itself; not an estate total.",
-        "distinct_descendants": distinct_count,
-        "descendant_memberships": membership_count,
-        "shared_descendants": sum(count > 1 for count in memberships.values()),
-        "extra_memberships": membership_count - distinct_count,
-        "additive": membership_count == distinct_count,
-        "severity_basis": ISSUE_SEVERITY_BASIS,
-        "severity_definition": ISSUE_SEVERITY_DEFINITION,
-        "source_truncated": graph.completeness.truncated,
-        "reason": graph.completeness.reason if graph.completeness.truncated else "",
-    }
 
 
 def _container_for(node: UnifiedNode, child_map: dict[str, list[str]]) -> bool:
@@ -532,6 +490,7 @@ def rollup_view(
     filters: Optional[RollupFilters] = None,
     offset: int = 0,
     limit: Optional[int] = None,
+    suppressed_finding_ids: frozenset[str] = frozenset(),
 ) -> dict[str, Any]:
     """Collapse the graph along CONTAINS into a small top-level container view.
 
@@ -550,17 +509,19 @@ def rollup_view(
     children = _contains_children(graph, flags)
     parents = _contains_parents(children)
     root_ids = _roots(graph, children, parents)
-    facts = _node_facts(graph)
+    facts = _node_facts(graph, suppressed_finding_ids)
 
     containers: list[RollupContainer] = []
     memberships: Counter[str] = Counter()
+    occurrences: Counter[str] = Counter()
+    scoped = partial(_aggregate, graph=graph, filters=filters, memberships=memberships, facts=facts, occurrence_memberships=occurrences)
     rolled_up_ids: set[str] = set()
     for root_id in root_ids:
         node = graph.nodes.get(root_id)
         if node is None:
             continue
         descendants = _descendants(root_id, children)
-        agg = _aggregate(descendants, graph, filters=filters, memberships=memberships, facts=facts)
+        agg = scoped(descendants, scope_root=root_id)
         # When filters are active, drop containers whose descendants were all
         # filtered out — they carry no risk worth surfacing.
         if filters is not None and filters.active() and agg.descendant_count == 0 and not (filters.matches(node)):
@@ -592,11 +553,7 @@ def rollup_view(
     orphans: list[RollupContainer] = []
     for nid in shown_orphan_ids:
         node = graph.nodes[nid]
-        orphans.append(
-            _entry(
-                node, graph, children, _aggregate(_descendants(nid, children), graph, filters=filters, memberships=memberships, facts=facts)
-            )
-        )
+        orphans.append(_entry(node, graph, children, scoped(_descendants(nid, children), scope_root=nid)))
 
     top_level = containers + orphans
     top_level.sort(
@@ -632,7 +589,7 @@ def rollup_view(
         # excluded: it is the nesting the roll-up already expresses.
         "edges": relationship_edges,
         "edge_count_metadata": edge_count_metadata,
-        "aggregate_count_metadata": _aggregate_count_metadata(graph, memberships),
+        "aggregate_count_metadata": aggregate_count_metadata(graph, memberships, occurrences),
         "orphan_summary": orphan_summary,
         "summary": {
             "total_nodes": len(graph.nodes),
@@ -676,6 +633,7 @@ def drill_down(
     filters: Optional[RollupFilters] = None,
     offset: int = 0,
     limit: Optional[int] = None,
+    suppressed_finding_ids: frozenset[str] = frozenset(),
 ) -> dict[str, Any]:
     """Return one level of direct CONTAINS children of *node_id*.
 
@@ -697,7 +655,7 @@ def drill_down(
             "children": [],
             "edges": [],
             "edge_count_metadata": _edge_count_metadata(graph, returned=0, source_total=0),
-            "aggregate_count_metadata": _aggregate_count_metadata(graph, Counter()),
+            "aggregate_count_metadata": aggregate_count_metadata(graph, Counter()),
             "summary": {"direct_child_count": 0, "returned_child_count": 0},
             "pagination": _page_meta(offset=offset, limit=limit, returned=0, total=0),
             # "Not in this graph" over a bounded snapshot may only mean "never
@@ -713,15 +671,14 @@ def drill_down(
     children = _contains_children(graph, flags := _containment_flags(graph))
     direct = children.get(node_id, [])
     parent = graph.nodes[node_id]
-    facts = _node_facts(graph)
     child_entries: list[RollupContainer] = []
     memberships: Counter[str] = Counter()
+    scoped = partial(_aggregate, graph=graph, filters=filters, memberships=memberships, facts=_node_facts(graph, suppressed_finding_ids))
     for child_id in direct:
         child = graph.nodes.get(child_id)
         if child is None:
             continue
-        descendants = _descendants(child_id, children)
-        agg = _aggregate(descendants, graph, filters=filters, memberships=memberships, facts=facts)
+        agg = scoped(_descendants(child_id, children), scope_root=child_id)
         if filters is not None and filters.active() and agg.descendant_count == 0 and not filters.matches(child):
             continue
         child_entries.append(_entry(child, graph, children, agg))
@@ -752,7 +709,7 @@ def drill_down(
         # other constantly.
         "edges": relationship_edges,
         "edge_count_metadata": edge_count_metadata,
-        "aggregate_count_metadata": _aggregate_count_metadata(graph, memberships),
+        "aggregate_count_metadata": aggregate_count_metadata(graph, memberships),
         "summary": {
             "direct_child_count": len(direct),
             "matching_child_count": matching_total,

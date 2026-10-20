@@ -316,10 +316,12 @@ Four more read-only tools answer follow-up questions from the same evidence:
 paths. When the graph cannot be read they are `null` with a `graph.status`
 reason, never an empty list. Its `holders` block is the `GET /v1/graph/impact`
 walk for `vuln:<CVE>` (same pinned snapshot, alias resolution and reverse walk:
-`affected_by_type`, `affected_nodes`, `completeness`), and each row's
-`affected_servers` / `affected_agents` are those graph holder ids; when the
-walk is unavailable `holders.status` is `unavailable` and the rows keep the
-finding's recorded lists. Each row carries `reachability`, derived by the same
+`affected_by_type`, `affected_nodes`, `completeness`) for the whole advisory,
+while each row's `affected_servers` / `affected_agents` are its own
+occurrence's, exactly as `/v1/findings` returns them. Rows are the open
+occurrences only: `count` matches the open `/v1/findings` rows for the CVE and
+`suppressed_count` names the occurrences an approved exception suppresses.
+`risk_score` is 0-10 and `effective_reach_score` 0-100 (`risk_scale`). Each row carries `reachability`, derived by the same
 verdict function as `/v1/findings` (`likely` for a recorded graph path,
 `confirmed` only with function-level or runtime evidence). `compliance` returns the tenant's persisted
 `/v1/compliance/summary` when completed scans exist (`source:
@@ -331,7 +333,11 @@ from the tenant's persisted scan snapshot (the newest result per target, or one
 `scan_id`) and labels it `source: "persisted_snapshot"` with its `scope`. It
 discovers this MCP server host's agent configurations only with `live=true` or
 a `config_path` (`source: "live_discovery"`); a tenant without a snapshot gets
-a not-found error rather than a silent host scan.
+a not-found error rather than a silent host scan. Scan reports can hold fewer
+agents than the current estate graph (connector and estate inventory reach only
+the graph): `estate_coverage` then reports `agents_in_view` against
+`current_estate_agents` (the `/v1/posture/counts` total) and `completeness` is
+`truncated`, with the path analysis status kept under `path_completeness`.
 
 Both tools are read-only decision aids. They do not modify repositories,
 create tickets, deploy workloads, or mutate cloud resources. Use proxy,

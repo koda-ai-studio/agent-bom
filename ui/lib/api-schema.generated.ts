@@ -19918,6 +19918,12 @@ export interface components {
         };
         /** OverviewHeadline */
         OverviewHeadline: {
+            /**
+             * Basis
+             * @default issue_groups
+             * @enum {string}
+             */
+            basis: "issue_groups" | "occurrences";
             /** Credential Exposed */
             credential_exposed: number;
             /** Critical */

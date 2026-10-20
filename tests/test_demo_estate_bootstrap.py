@@ -683,7 +683,10 @@ def test_demo_estate_exec_severity_counts_reconcile_across_surfaces(
     assert counts["issues"]["high"] == headline["high"], (counts, headline)
     assert counts["critical"] == overview["finding_counts"]["critical"], (counts, overview["finding_counts"])
     assert overview["posture"]["severity_basis"] == "issue_groups"
-    assert counts["kev"] == headline["kev"], (counts, headline)
+    # The headline is one unit: KEV beside critical/high counts issues too.
+    assert headline["basis"] == "issue_groups"
+    assert counts["issues"]["kev"] == headline["kev"], (counts, headline)
+    assert counts["kev"] == overview["finding_counts"]["kev"] >= headline["kev"]
     # The demo estate carries the non-CVE critical/high that blast_radius missed.
     assert counts["critical"] >= 3 and counts["high"] >= 12, counts
 

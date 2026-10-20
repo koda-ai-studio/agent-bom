@@ -25,6 +25,7 @@ class ContextReport:
     blast_radius: list[dict[str, Any]]
     source: str
     scope: dict[str, Any]
+    estate_agents: int | None = None
 
 
 async def persisted_context_report(tenant_id: str, scan_id: str | None) -> ContextReport | str:
@@ -44,7 +45,26 @@ async def persisted_context_report(tenant_id: str, scan_id: str | None) -> Conte
     if not report["agents"]:
         return mcp_error_json(CODE_NOT_FOUND_AGENTS, "The persisted snapshot holds no agents.", details={"tenant_id": tenant_id})
     scope = {"tenant_id": tenant_id, "scan_id": scan_id, "scan_ids": report["scan_ids"]}
-    return ContextReport(report["agents"], report["blast_radius"], PERSISTED, scope)
+    estate_agents = None if scan_id else await asyncio.to_thread(reads.current_estate_agent_total, tenant_id)
+    return ContextReport(report["agents"], report["blast_radius"], PERSISTED, scope, estate_agents)
+
+
+def estate_coverage(report: ContextReport, agents_in_view: int) -> dict[str, Any] | None:
+    """How much of the tenant's current estate graph the persisted scan reports hold.
+
+    The context graph is built from scan reports' agents; connector and
+    estate inventory reach only the estate graph. When the reports hold fewer
+    agents than the estate, the view is a subset and says so.
+    """
+    if report.source != PERSISTED or report.estate_agents is None:
+        return None
+    return {
+        "agents_in_view": agents_in_view,
+        "current_estate_agents": report.estate_agents,
+        "covers_current_estate": agents_in_view >= report.estate_agents,
+        "basis": "persisted scan reports vs the current estate graph (the /v1/posture/counts agents total)",
+        "estate_tools": ["inventory_summary", "exposure_paths", "blast_radius"],
+    }
 
 
 async def live_context_report(config_path: str | None, run_scan_pipeline: Any) -> ContextReport | str:

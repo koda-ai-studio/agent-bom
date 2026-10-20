@@ -16,8 +16,9 @@ from agent_bom.mcp_errors import (
     CODE_VALIDATION_INVALID_VULN_ID,
     mcp_error_json,
 )
-from agent_bom.mcp_tools.context_graph_source import live_context_report, persisted_context_report
+from agent_bom.mcp_tools.context_graph_source import estate_coverage, live_context_report, persisted_context_report
 from agent_bom.mcp_tools.finding_graph import exposure_lists, load_snapshot_paths, project_finding, public_graph_block
+from agent_bom.mcp_tools.findings import RISK_SCALE
 from agent_bom.mcp_tools.rest_parity import api_reads
 from agent_bom.mcp_tools.storage import default_graph_store
 
@@ -123,8 +124,10 @@ async def _persisted_blast_radius(
     store_factory = get_store or default_graph_store
     reads = api_reads()  # persisted evidence implies the API extra is installed
     holders = await asyncio.to_thread(reads.blast_holders, store_factory, tenant_id=tenant_id, scan_id=scan_id, cve_id=validated_cve)
-    results = await _with_graph_exposure(persisted_matches, validated_cve, tenant_id=tenant_id, scan_id=scan_id, get_store=get_store)
-    reads.apply_holders(results, holders)
+    # Suppressed occurrences are evidence, not open blast radius: the same rule
+    # ``/v1/findings`` applies, so the open count matches the REST list.
+    open_matches = [row for row in persisted_matches if row.get("suppressed") is not True]
+    results = await _with_graph_exposure(open_matches, validated_cve, tenant_id=tenant_id, scan_id=scan_id, get_store=get_store)
     return json.dumps(
         {
             "cve_id": validated_cve,
@@ -132,6 +135,8 @@ async def _persisted_blast_radius(
             "source": persisted.get("source", "persisted_scan_findings"),
             "scope": persisted.get("scope", {"tenant_id": tenant_id, "scan_id": scan_id}),
             "count": len(results),
+            "suppressed_count": len(persisted_matches) - len(open_matches),
+            "count_basis": "open_occurrences",
             "completeness": persisted.get("completeness", {"status": "complete", "reason": ""}),
             "holders": reads.public_holders(holders),
             "blast_radii": results,
@@ -159,7 +164,7 @@ async def _with_graph_exposure(
         result["exposed_credentials"] = credentials
         result["exposed_tools"] = tools
         result["graph"] = public_graph_block(graph)
-        result["risk_scale"] = {"risk_score": "0-10", "graph.max_path_risk": "0-100"}
+        result["risk_scale"] = {**RISK_SCALE, "graph.max_path_risk": "0-100"}
         results.append(result)
     return results
 
@@ -181,7 +186,8 @@ def _finding_blast_radius(row: dict[str, Any], fallback_cve: str) -> dict[str, A
         "cve_id": row.get("cve_id") or row.get("vulnerability_id") or fallback_cve,
         "severity": row.get("effective_severity") or row.get("severity") or "unknown",
         "cvss_score": row.get("cvss_score"),
-        "risk_score": row.get("risk_score") or row.get("effective_reach_score") or 0,
+        "risk_score": row.get("risk_score") or 0,
+        "effective_reach_score": row.get("effective_reach_score"),
         "package": package,
         "ecosystem": row.get("ecosystem"),
         "affected_servers": string_list(row.get("affected_servers")),
@@ -229,6 +235,19 @@ async def context_graph_impl(
             return report
         result = _context_graph_payload(report.agents, report.blast_radius, source_agent, max_depth)
         result.update(source=report.source, scope=report.scope)
+        coverage = estate_coverage(report, int(result["stats"]["agent_count"]))
+        if coverage is not None:
+            result["estate_coverage"] = coverage
+            if not coverage["covers_current_estate"]:
+                result["path_completeness"] = result["completeness"]
+                result["completeness"] = graph_completeness(
+                    returned=coverage["agents_in_view"],
+                    total=coverage["current_estate_agents"],
+                    truncated=True,
+                    reason=(
+                        "scan reports hold a subset of the current estate's agents; use inventory_summary or exposure_paths for the estate"
+                    ),
+                )
         from agent_bom.output.interop_security import sanitize_linked_document
 
         return _truncate_response(json.dumps(sanitize_linked_document(result), indent=2, default=str))

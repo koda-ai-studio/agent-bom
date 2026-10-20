@@ -47,6 +47,11 @@ def _digest(value: Any) -> str:
     return hashlib.sha256(json.dumps(value, sort_keys=True, default=_plain, separators=(",", ":")).encode()).hexdigest()
 
 
+def digest_exceptions(exceptions: Iterable[Any]) -> str:
+    """The digest the row fingerprint keys a tenant's exception records on."""
+    return _digest([_plain(exception) for exception in exceptions])
+
+
 def history_ledger_reads_enabled() -> bool:
     """Whether the fold may read the finding-history ledger (opt-in snapshot reads)."""
     return any(env_flag(flag) for flag in _FLAGS)
@@ -70,7 +75,7 @@ def scan_row_inputs(
     exceptions = list(sources.get("exceptions") or [])
     fingerprint = (
         tenant_id,
-        _digest([_plain(exception) for exception in exceptions]),
+        digest_exceptions(exceptions),
         _digest(sources.get("runtime_events")),
         _digest(sources.get("workload_runtime")),
         _digest(sorted(window_job_ids)),
@@ -79,4 +84,4 @@ def scan_row_inputs(
     return fingerprint, clock_horizon(exceptions, now or datetime.now(timezone.utc))
 
 
-__all__ = ["clock_horizon", "history_ledger_reads_enabled", "scan_row_inputs"]
+__all__ = ["clock_horizon", "digest_exceptions", "history_ledger_reads_enabled", "scan_row_inputs"]

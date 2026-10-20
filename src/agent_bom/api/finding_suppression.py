@@ -1,7 +1,9 @@
 """Current approval overlays; persisted scan flags are historical evidence only."""
 
+import hashlib
 from typing import Any
 
+from agent_bom.api.finding_row_inputs import digest_exceptions
 from agent_bom.api.stores import _get_exception_store
 from agent_bom.api.suppression_approval import suppression_active
 
@@ -59,3 +61,15 @@ def project_current_suppressions(rows: list[dict[str, Any]], tenant_id: str) -> 
             row["vex_suppressed"] = False
         projected.append(row)
     return projected
+
+
+def suppression_revision(tenant_id: str) -> str:
+    """Digest of the tenant's exceptions and which of them suppress now.
+
+    The one suppression input every count surface keys its cache on: the same
+    exception records the row fingerprint digests, plus the active set, so an
+    approval taking effect or lapsing changes it without a store write.
+    """
+    exceptions = list(_get_exception_store().list_all(tenant_id=tenant_id))
+    active = "|".join(sorted(str(exc.exception_id) for exc in exceptions if suppression_active(exc)))
+    return hashlib.sha256(f"{digest_exceptions(exceptions)}|{active}".encode()).hexdigest()

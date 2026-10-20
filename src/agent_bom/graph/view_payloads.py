@@ -49,6 +49,7 @@ def _graph_rollup_payload(
     offset: int = 0,
     limit: int | None = None,
     graph_store: Any = None,
+    suppressed_finding_ids: frozenset[str] = frozenset(),
 ) -> dict[str, Any]:
     filters = RollupFilters(
         min_severity=min_severity,
@@ -56,7 +57,7 @@ def _graph_rollup_payload(
         toxic_only=toxic,
     )
     if node:
-        return drill_down(graph, node, filters=filters, offset=offset, limit=limit)
+        return drill_down(graph, node, filters=filters, offset=offset, limit=limit, suppressed_finding_ids=suppressed_finding_ids)
     if mode == "attack_path":
         return attack_path_view(graph, resolve_snapshot_attack_paths(graph, graph_store), filters=filters)
-    return rollup_view(graph, filters=filters, offset=offset, limit=limit)
+    return rollup_view(graph, filters=filters, offset=offset, limit=limit, suppressed_finding_ids=suppressed_finding_ids)

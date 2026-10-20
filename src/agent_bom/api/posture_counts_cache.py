@@ -2,7 +2,8 @@
 
 ``/v1/posture/counts`` and ``/v1/overview`` both read the open issue-group
 counts; this cache lets them reuse one grouped walk while the tenant's jobs,
-job-store revision and hub evidence revision are unchanged. The TTL bounds
+job-store revision, hub evidence revision and suppression revision are
+unchanged. The TTL bounds
 staleness from inputs the fingerprint does not cover. Concurrent readers of one
 fingerprint wait for a single computation (in-process only; each worker keeps
 its own cache).
@@ -27,6 +28,7 @@ from typing import Any
 
 from starlette.requests import Request
 
+from agent_bom.api.finding_suppression import suppression_revision
 from agent_bom.api.tenant_worker import run_tenant_bound
 from agent_bom.config import _bool
 
@@ -51,6 +53,7 @@ def issue_counts_fingerprint(tenant_id: str, tenant_jobs: list[Any]) -> str:
         hub_revision = "unknown"
     digest = hashlib.sha256(hub_revision.encode())
     digest.update(f"|jobs:{_job_store_revision(tenant_id)}".encode())
+    digest.update(f"|suppressions:{suppression_revision(tenant_id)}".encode())
     for job in tenant_jobs:
         digest.update(f"|{job.job_id}:{job.status}:{getattr(job, 'completed_at', '')}".encode())
     return digest.hexdigest()

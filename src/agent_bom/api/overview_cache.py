@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
+from agent_bom.api.finding_suppression import suppression_revision
 from agent_bom.core.settings import env_raw
 
 _OVERVIEW_CACHE_TTL_SECONDS_DEFAULT = 15.0
@@ -112,7 +113,9 @@ def _overview_fingerprint(
     folds in the hub severity histogram (a cheap indexed GROUP BY) so findings
     ingested via ``POST /v1/findings/bulk`` — which never touch a scan job —
     still invalidate the cache. Neither input pays the O(estate) rollup cost, so
-    the headline can never go stale relative to the reconciled spine.
+    the headline can never go stale relative to the reconciled spine. The
+    tenant's suppression revision covers approvals and revokes, which change
+    counts without touching a job or the hub.
     """
     parts = []
     for job in jobs:
@@ -132,7 +135,7 @@ def _overview_fingerprint(
         )
     parts.sort()
     hub_part = "|".join(f"{k}={int(hub_severity.get(k, 0) or 0)}" for k in sorted(hub_severity))
-    framework_part = "|".join(sorted(hub_failing_frameworks or set()))
+    framework_part = "|".join(sorted(hub_failing_frameworks or set())) + "\x1d" + suppression_revision(tenant_id)
     digest = hashlib.sha256(
         (tenant_id + "\x1f" + "\x1e".join(parts) + "\x1d" + hub_part + "\x1d" + framework_part + "\x1d" + str(hub_evidence_version)).encode(
             "utf-8"

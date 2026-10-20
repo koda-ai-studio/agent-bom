@@ -382,6 +382,8 @@ export interface GraphHistoryResponse {
 
 export interface GraphAttackPath extends AttackPath {
   exposure_path?: ExposurePath | undefined;
+  /** Every finding occurrence the path ends on is suppressed by an approved exception: evidence, not an open path. */
+  suppressed?: boolean | undefined;
 }
 
 export interface UnifiedGraphResponse extends Omit<
@@ -401,6 +403,12 @@ export interface UnifiedGraphResponse extends Omit<
     derived_paths?: number;
     returned_rows?: number;
     scope?: string;
+    /** Paths in the matching queue whose every occurrence is suppressed; null when not enumerated (focused reads). */
+    suppressed_paths?: number | null;
+    /** total minus suppressed_paths: the open paths. */
+    open_paths?: number | null;
+    suppression_basis?: "approved_exception";
+    suppression_complete?: boolean;
     [key: string]: unknown;
   } | undefined;
 }
@@ -961,6 +969,10 @@ export interface GraphRollupAggregateCountMetadata {
   extra_memberships: number;
   /** True only for the returned entries over the loaded source, not the whole estate. */
   additive: boolean;
+  /** Distinct finding occurrences across every evaluated entry; entries sharing a server each count its occurrences. */
+  distinct_finding_occurrences?: number;
+  finding_occurrence_memberships?: number;
+  occurrences_additive?: boolean;
   source_truncated: boolean;
   reason: string;
 }
@@ -3587,6 +3599,8 @@ export interface OverviewResponse {
   tenant_id: string;
   posture: OverviewPosture;
   headline: {
+    /** The one unit every headline count uses; occurrences stay in finding_counts. */
+    basis?: "issue_groups" | "occurrences";
     critical: number;
     high: number;
     critical_high: number;

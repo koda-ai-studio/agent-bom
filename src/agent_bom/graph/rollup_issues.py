@@ -19,6 +19,8 @@ over its descendants, not a second graph walk.
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Container
+from dataclasses import dataclass, field
 
 from agent_bom.core.packages import canonical_package_identity
 from agent_bom.core.severity import SEVERITY_RANK
@@ -61,15 +63,16 @@ def _vulnerability_id(node: UnifiedNode) -> str:
 
 
 def _occurrence_keys(node: UnifiedNode) -> tuple[str, ...]:
-    """One issue per recorded occurrence: a node several assets share counts each finding on it."""
+    """The node's own occurrence when no asset records one: its finding id, else the node."""
     attrs = node.attributes or {}
-    by_asset = attrs.get("finding_ids_by_asset")
-    if isinstance(by_asset, dict):
-        recorded = sorted({f for ids in by_asset.values() if isinstance(ids, list) for f in ids if isinstance(f, str) and f.strip()})
-        if recorded:
-            return tuple(f"occurrence:{fid}" for fid in recorded)
     finding_id = attrs.get("finding_id") or attrs.get("canonical_finding_id")
     return (f"occurrence:{finding_id}" if isinstance(finding_id, str) and finding_id.strip() else f"occurrence:{node.id}",)
+
+
+def _own_finding_id(node: UnifiedNode) -> str:
+    attrs = node.attributes or {}
+    value = attrs.get("finding_id") or attrs.get("canonical_finding_id")
+    return value.strip() if isinstance(value, str) else ""
 
 
 def _package_parents(graph: UnifiedGraph) -> dict[str, set[str]]:
@@ -84,51 +87,147 @@ def _package_parents(graph: UnifiedGraph) -> dict[str, set[str]]:
     return parents
 
 
-def _issue_keys(graph: UnifiedGraph, node_id: str, node: UnifiedNode, holders: set[str], package_keys: dict[str, str]) -> tuple[str, ...]:
-    vulnerability_id = _vulnerability_id(node)
-    if not vulnerability_id:
-        return _occurrence_keys(node)
-    packages = set()
-    for parent_id in holders:
-        key = package_keys.get(parent_id)
-        if key is None:
-            key = package_keys[parent_id] = _package_identity(graph.nodes[parent_id])
-        packages.add(key)
-    if not packages:
-        evidence_package = str((node.attributes or {}).get("package_name") or "").strip().lower()
-        packages.add(f"unknown:{evidence_package}")
-    return tuple(sorted(f"vulnerability:{vulnerability_id}:{package}" for package in packages))
-
-
-def _holder_occurrence_keys(node_id: str, node: UnifiedNode, holders: set[str]) -> tuple[str, ...]:
-    """Recorded finding ids, plus each package holder the graph models without a recorded one."""
+def _recorded_by_asset(node: UnifiedNode) -> dict[str, list[str]]:
     by_asset = (node.attributes or {}).get("finding_ids_by_asset")
-    by_asset = by_asset if isinstance(by_asset, dict) else {}
+    if not isinstance(by_asset, dict):
+        return {}
     recorded = {
-        f"occurrence:{fid}" for ids in by_asset.values() if isinstance(ids, list) for fid in ids if isinstance(fid, str) and fid.strip()
+        str(asset): sorted({fid for fid in ids if isinstance(fid, str) and fid.strip()})
+        for asset, ids in by_asset.items()
+        if isinstance(ids, list)
     }
-    unrecorded = {f"occurrence:{node_id}<-{holder}" for holder in holders if holder not in by_asset}
-    return tuple(sorted(recorded | unrecorded)) or _occurrence_keys(node)
+    return {asset: ids for asset, ids in recorded.items() if ids}
 
 
-def build_finding_index(graph: UnifiedGraph) -> dict[str, tuple[tuple[str, ...], tuple[str, ...]]]:
-    """Map each open finding node to its (issue keys, occurrence keys)."""
+_Keys = tuple[tuple[str, ...], tuple[str, ...]]
+
+
+@dataclass(frozen=True, slots=True)
+class FindingFacts:
+    """One open finding node's issue and occurrence keys, whole and per holding asset.
+
+    ``by_holder`` maps each holder with an open occurrence to its keys;
+    ``holders`` also names holders whose every occurrence is suppressed. With
+    no holders the node counts whole wherever it is contained.
+    """
+
+    issues: tuple[str, ...]
+    occurrences: tuple[str, ...]
+    by_holder: dict[str, _Keys] = field(default_factory=dict)
+    holders: frozenset[str] = frozenset()
+
+    def scoped(self, scope: Container[str] | None) -> _Keys:
+        """The keys the holders inside ``scope`` contribute; the whole node for the estate."""
+        if scope is None or not self.holders:
+            return self.issues, self.occurrences
+        if not any(holder in scope for holder in self.holders):
+            # Contained through an asset that records none of its occurrences.
+            return self.issues, self.occurrences
+        held = [keys for holder, keys in self.by_holder.items() if holder in scope]
+        return (
+            tuple(sorted({key for issues, _ in held for key in issues})),
+            tuple(sorted({key for _, occurrences in held for key in occurrences})),
+        )
+
+
+def _whole(by_holder: dict[str, _Keys]) -> _Keys:
+    return (
+        tuple(sorted({key for issues, _ in by_holder.values() for key in issues})),
+        tuple(sorted({key for _, occurrences in by_holder.values() for key in occurrences})),
+    )
+
+
+def _vulnerability_facts(
+    graph: UnifiedGraph,
+    node: UnifiedNode,
+    vulnerability_id: str,
+    parents: set[str],
+    suppressed: frozenset[str],
+    package_keys: dict[str, str],
+) -> FindingFacts | None:
+    recorded = _recorded_by_asset(node)
+
+    def package_key(holder: str) -> str | None:
+        holder_node = graph.nodes.get(holder)
+        if holder not in parents and (holder_node is None or _node_type_value(holder_node) != _PACKAGE):
+            return None
+        if holder not in package_keys:
+            package_keys[holder] = _package_identity(holder_node) if holder_node is not None else f"unknown:{holder}"
+        return package_keys[holder]
+
+    holders = sorted(set(recorded) | parents)
+    keyed = {holder: package_key(holder) for holder in holders}
+    fallback_package = str((node.attributes or {}).get("package_name") or "").strip().lower()
+    fallback = (f"vulnerability:{vulnerability_id}:unknown:{fallback_package}",)
+    any_package = any(keyed.values())
+    by_holder: dict[str, _Keys] = {}
+    for holder in holders:
+        ids = recorded.get(holder)
+        if ids is not None:
+            open_ids = [fid for fid in ids if fid not in suppressed]
+            if not open_ids:
+                continue
+            occurrences = tuple(f"occurrence:{fid}" for fid in open_ids)
+        else:
+            occurrences = (f"occurrence:{node.id}<-{holder}",)
+        package = keyed[holder]
+        issues = (f"vulnerability:{vulnerability_id}:{package}",) if package else (() if any_package else fallback)
+        by_holder[holder] = (issues, occurrences)
+    if holders:
+        if not by_holder:
+            return None
+        whole_issues, whole_occurrences = _whole(by_holder)
+        return FindingFacts(whole_issues or fallback, whole_occurrences, by_holder, frozenset(holders))
+    if _own_finding_id(node) in suppressed:
+        return None
+    return FindingFacts(fallback, _occurrence_keys(node))
+
+
+def _other_facts(node: UnifiedNode, suppressed: frozenset[str]) -> FindingFacts | None:
+    """Every other finding is its own issue per recorded occurrence."""
+    recorded = _recorded_by_asset(node)
+    if not recorded:
+        if _own_finding_id(node) in suppressed:
+            return None
+        keys = _occurrence_keys(node)
+        return FindingFacts(keys, keys)
+    by_holder: dict[str, _Keys] = {}
+    for holder, ids in recorded.items():
+        keys = tuple(f"occurrence:{fid}" for fid in ids if fid not in suppressed)
+        if keys:
+            by_holder[holder] = (keys, keys)
+    if not by_holder:
+        return None
+    issues, occurrences = _whole(by_holder)
+    return FindingFacts(issues, occurrences, by_holder, frozenset(recorded))
+
+
+def build_finding_index(graph: UnifiedGraph, suppressed: frozenset[str] = frozenset()) -> dict[str, FindingFacts]:
+    """Map each open finding node to its issue and occurrence keys, whole and per holder.
+
+    ``suppressed`` names finding occurrences an approved exception suppresses:
+    they are not open, so they contribute no occurrence, and a node whose every
+    occurrence is suppressed is no open finding at all.
+    """
     package_parents = _package_parents(graph)
-    index: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {}
+    index: dict[str, FindingFacts] = {}
     package_keys: dict[str, str] = {}
     for node_id, node in graph.nodes.items():
         if not counts_as_finding_node(node):
             continue
-        holders = package_parents.get(node_id, set())
-        issues = _issue_keys(graph, node_id, node, holders, package_keys)
-        occurrences = _holder_occurrence_keys(node_id, node, holders) if _vulnerability_id(node) else _occurrence_keys(node)
-        index[node_id] = (issues, occurrences)
+        vulnerability_id = _vulnerability_id(node)
+        if vulnerability_id:
+            facts = _vulnerability_facts(graph, node, vulnerability_id, package_parents.get(node_id, set()), suppressed, package_keys)
+        else:
+            facts = _other_facts(node, suppressed)
+        if facts is not None:
+            index[node_id] = facts
     return index
 
 
 def build_issue_index(graph: UnifiedGraph) -> dict[str, tuple[str, ...]]:
     """Map each open finding node to the issue key(s) it contributes."""
-    return {node_id: issues for node_id, (issues, _occurrences) in build_finding_index(graph).items()}
+    return {node_id: facts.issues for node_id, facts in build_finding_index(graph).items()}
 
 
 class IssueTally:
@@ -148,6 +247,9 @@ class IssueTally:
             current = self._issues.get(key)
             if current is None or rank > SEVERITY_RANK.get(current, 0):
                 self._issues[key] = severity
+
+    def occurrence_keys(self) -> frozenset[str]:
+        return frozenset(self._occurrences)
 
     @property
     def occurrences(self) -> int:

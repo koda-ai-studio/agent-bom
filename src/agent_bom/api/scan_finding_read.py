@@ -18,7 +18,8 @@ from agent_bom.api.findings_current import current_scan_jobs
 from agent_bom.api.models import JobStatus, ScanJob
 from agent_bom.api.scan_finding_projection import _iter_scan_findings as _iter_scan_findings
 from agent_bom.api.scan_finding_projection import scan_row_sources
-from agent_bom.api.stores import _get_store
+from agent_bom.api.stores import _get_exception_store, _get_store
+from agent_bom.api.suppression_approval import suppression_active
 
 
 def _completed_jobs_for_tenant(tenant_id: str) -> list[ScanJob]:
@@ -197,3 +198,17 @@ def current_open_scan_findings(jobs: list[Any]) -> list[dict[str, Any]]:
         ]
 
     return read_once(("current_open_rows", json.dumps([tenant_id, since, job_keys])), load)
+
+
+def suppressed_finding_ids(tenant_id: str) -> frozenset[str]:
+    """Finding occurrences an approved exception suppresses now, read from the rows ``/v1/findings`` serves.
+
+    The graph keeps occurrences by finding id; overlaying this set is how a
+    graph read applies the one suppression source without a second matcher.
+    """
+    if not any(suppression_active(exc) for exc in _get_exception_store().list_all(tenant_id=tenant_id)):
+        return frozenset()
+    rows = iter_tenant_scan_spine_findings(tenant_id, status="all", sanitize=False)
+    return frozenset(
+        str(value) for row in rows if row.get("suppressed") is True for value in (row.get("id"), row.get("finding_id")) if value
+    )

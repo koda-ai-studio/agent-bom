@@ -319,6 +319,7 @@ class OverviewFindingCounts(ReadModel):
 
 
 class OverviewHeadline(ReadModel):
+    basis: Literal["issue_groups", "occurrences"] = "issue_groups"
     credential_exposed: int
     critical: int
     critical_high: int

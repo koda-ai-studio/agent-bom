@@ -129,7 +129,7 @@ from agent_bom.api.graph_presentation import (
     _serialize_attack_path_batch as _serialize_attack_path_batch,
 )
 from agent_bom.api.graph_query import GraphQueryRequest, _filtered_query_graph, query_payload
-from agent_bom.api.graph_rollup_prewarm import load_rollup_source, rollup_cache_key
+from agent_bom.api.graph_rollup_prewarm import rollup_cache_key
 from agent_bom.api.graph_store import containment_drilldown_graph as containment_drilldown_graph
 from agent_bom.api.neptune_graph import NeptuneGraphStore
 from agent_bom.api.read_models._base import documented
@@ -160,6 +160,7 @@ from agent_bom.api.routes.graph_routes.payloads import (
 from agent_bom.api.routes.graph_routes.payloads import _filtered_graph_response as _filtered_graph_response
 from agent_bom.api.routes.graph_routes.payloads import _fix_first_graph_view_payload as _fix_first_graph_view_payload
 from agent_bom.api.routes.graph_routes.payloads import _governance_graph_payload as _governance_graph_payload
+from agent_bom.api.routes.graph_routes.rollup_inputs import rollup_source, rollup_suppressions
 from agent_bom.api.routes.graph_routes.schema_routes import _RESERVED_GRAPH_EDGE_KINDS as _RESERVED_GRAPH_EDGE_KINDS
 from agent_bom.api.routes.graph_routes.schema_routes import _RESERVED_GRAPH_NODE_KINDS as _RESERVED_GRAPH_NODE_KINDS
 from agent_bom.api.stores import _get_graph_store as _get_graph_store
@@ -804,6 +805,7 @@ async def get_graph_rollup(
     cache_identity = identity
     if identity is None and not offset:
         cache_identity = await _runtime._graph_store_call(snapshot_fingerprint, graph_store, tenant=tenant, scan_id=requested_scan_id)
+    suppressions = await rollup_suppressions(tenant)
     cache_key = None
     if cache_identity and cache_identity[1]:
         cache_key = rollup_cache_key(
@@ -817,6 +819,7 @@ async def get_graph_rollup(
             mode=mode,
             offset=offset,
             limit=limit,
+            suppressions=suppressions,
         )
         cached = graph_rollup_cache.get(cache_key)
         if cached is not None:
@@ -824,22 +827,7 @@ async def get_graph_rollup(
         requested_scan_id = cache_identity[0]
 
     node, resolved_from = await _runtime.resolve_node_id(graph_store, tenant, requested_scan_id, node) if node else (node, None)
-    try:
-        # A drill-down reads only one container's subtree (its cost tracks the
-        # answer, not the estate); the top level uses the store's aggregate-only
-        # roll-up projection when it has one; attack-path mode needs the full
-        # evidence records.
-        graph = await _runtime._graph_store_call(
-            load_rollup_source,
-            graph_store,
-            tenant_id=tenant,
-            scan_id=requested_scan_id,
-            node=node,
-            mode=mode,
-        )
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=sanitize_error(exc)) from exc
-
+    graph, suppressed = await rollup_source(graph_store, tenant, requested_scan_id, node, mode)
     try:
         payload = await _runtime._graph_compute_call(
             _graph_rollup_payload,
@@ -852,6 +840,7 @@ async def get_graph_rollup(
             offset=offset,
             limit=limit,
             graph_store=graph_store,
+            suppressed_finding_ids=suppressed,
         )
         if identity is not None:
             await _runtime._graph_store_call(verify_generation, graph_store, tenant=tenant, identity=identity, has_rows=bool(graph.nodes))

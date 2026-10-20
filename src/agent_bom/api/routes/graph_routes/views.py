@@ -9,6 +9,7 @@ from typing import Any, Literal, Optional, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
+from agent_bom.api import attack_path_suppression as suppression
 from agent_bom.api.graph_compromise import GraphCompromiseRequest, GraphCompromiseResponse, assess_snapshot
 from agent_bom.api.graph_contracts import (
     _ATTACK_PATHS_OPENAPI_RESPONSE,
@@ -46,11 +47,13 @@ from agent_bom.api.routes.graph_routes.payloads import (
     _scoped_graph_response,
     _serialize_attack_path_queue,
 )
+from agent_bom.api.scan_finding_read import suppressed_finding_ids
 from agent_bom.cloud.runtime_graph_evidence import _enrich_loaded_graph_runtime_evidence
 from agent_bom.config import GRAPH_INVESTIGATION_NODE_BUDGET
 from agent_bom.graph.completeness import graph_completeness
 from agent_bom.graph.diff_view import decode_cursor, encode_cursor
 from agent_bom.graph.scope import GraphScopeKind
+from agent_bom.mcp_tools.exposure_queue import whole_queue
 
 compromise_router = APIRouter(route_class=_GraphAdmissionRoute)
 compromise_router.include_router(consequence_router)
@@ -302,6 +305,25 @@ def _attack_path_page_cursors(scope: str, generation: str, offset: int, ranked: 
     return {"cursor": cursor or "", "next_cursor": encode_cursor(scope, generation, next_offset) if has_more else "", "has_more": has_more}
 
 
+async def _apply_path_suppression(
+    payload: dict[str, Any], graph_store: Any, tenant: str, identity: tuple[str, str], filters: Any, ranked: Any, *, focused: bool
+) -> None:
+    """Mark paths whose every occurrence is suppressed and count open vs suppressed over the matching queue."""
+    suppressed = await _runtime._graph_store_call(suppressed_finding_ids, tenant)
+    suppression.mark_suppressed_paths(payload["attack_paths"], suppressed)
+    count, complete = None, False
+    if suppressed and not focused:
+        key = suppression.count_cache_key(tenant, ranked.scan_id, identity[1], filters.active(), suppressed)
+        cached = suppression.cached_count(key)
+        if cached is None:
+            whole = await whole_queue(graph_store, tenant, ranked.scan_id, filters)
+            cached = (suppression.count_suppressed(whole.ranked.paths, suppressed), whole.covers_all_matches)
+            if identity[1]:
+                suppression.remember_count(key, cached)
+        count, complete = cached
+    payload["count_metadata"].update(suppression.suppression_count_metadata(count, suppressed, total=ranked.total, complete=complete))
+
+
 @investigation_router.get("/graph/attack-paths", tags=["graph"], responses={200: _ATTACK_PATHS_OPENAPI_RESPONSE})
 async def get_graph_attack_paths(
     request: Request,
@@ -368,6 +390,7 @@ async def get_graph_attack_paths(
         filters=active_filters,
     )
 
+    await _apply_path_suppression(payload, graph_store, tenant, identity, filters, ranked, focused=focus is not None)
     await _runtime._graph_store_call(verify_generation, graph_store, tenant=tenant, identity=identity, has_rows=bool(nodes or ranked.paths))
     payload["snapshot_generation"] = identity[1]
     payload["pagination"].update(_attack_path_page_cursors(scope, identity[1], offset, ranked, cursor))

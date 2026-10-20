@@ -1,8 +1,10 @@
 """``blast_radius`` holders and verdicts from the same reads REST serves.
 
-Holders come from the ``/v1/graph/impact`` walk (:mod:`agent_bom.api.graph_impact_read`)
-and each row's ``reachability`` from the findings projection, so MCP and the
-dashboard never disagree about who holds an advisory or how reachable it is.
+The advisory-wide holders come from the ``/v1/graph/impact`` walk
+(:mod:`agent_bom.api.graph_impact_read`) and are reported once, beside the rows;
+each row keeps its own occurrence's servers and agents and its ``reachability``
+from the findings projection, so MCP and the dashboard never disagree about who
+holds an advisory, who holds one occurrence, or how reachable it is.
 """
 
 from __future__ import annotations
@@ -45,16 +47,6 @@ def stamp_rows(rows: list[dict[str, Any]], snapshot: dict[str, Any]) -> list[dic
     stamped = [dict(row) for row in rows]
     project_attack_path_reachability(stamped, snapshot.get("paths") or [] if snapshot.get("available") else [])
     return stamped
-
-
-def apply_holders(results: list[dict[str, Any]], holders: dict[str, Any] | None) -> None:
-    """Replace per-row server/agent lists with the graph holders when the walk answered."""
-    if holders is None:
-        return
-    by_type = holders["holders_by_type"]
-    for result in results:
-        result["affected_servers"] = list(by_type.get("server", []))
-        result["affected_agents"] = list(by_type.get("agent", []))
 
 
 def public_holders(holders: dict[str, Any] | None) -> dict[str, Any]:
