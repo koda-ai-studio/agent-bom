@@ -12330,6 +12330,14 @@
             "title": "Schema Version",
             "type": "string"
           },
+          "source_scan_ids": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Scan Ids",
+            "type": "array"
+          },
           "tenant_id": {
             "title": "Tenant Id",
             "type": "string"
@@ -55334,7 +55342,7 @@
         "operationId": "get_estate_correlations_v1_estate_correlations_get",
         "parameters": [
           {
-            "description": "Scan job ID; latest completed scan if omitted",
+            "description": "Scan job ID or graph snapshot ID. Omitted (or current-estate): the current estate, the union of every target's current completed scan; source_scan_ids lists them.",
             "in": "query",
             "name": "scan_id",
             "required": false,
@@ -55347,7 +55355,7 @@
                   "type": "null"
                 }
               ],
-              "description": "Scan job ID; latest completed scan if omitted",
+              "description": "Scan job ID or graph snapshot ID. Omitted (or current-estate): the current estate, the union of every target's current completed scan; source_scan_ids lists them.",
               "title": "Scan Id"
             }
           },
@@ -62090,7 +62098,7 @@
     },
     "/v1/graph": {
       "get": {
-        "description": "Load the unified graph with filters and pagination.\n\nNodes are paginated (offset/limit). ``edges`` carries up to 1,000 edges\nincident to the ranked page, plus containment context. Omitted relationships\nare declared by ``completeness.edges_truncated`` and remain pageable through\n``/v1/graph/incident-edges`` at the same revision. Edges may reach nodes\noutside the page; this is not the subgraph induced by ``nodes``;\n``completeness.boundary_edges`` counts the edges that cross the boundary.\n\n``stats`` describe the graph this response was computed from, NOT the page:\n``stats.total_nodes`` is every node that survived loading, and\n``stats.total_nodes_source`` is the estate total before any load-time node\nbudget applied. The two are equal on an unbounded load. Read\n``completeness`` for whether the load was bounded and why \u2014\n``completeness.total`` always reconciles with ``stats.total_nodes_source``.\n``stats.severity_counts`` counts finding-bearing graph nodes\n(``stats.severity_basis: \"graph_nodes\"``), not issues or occurrences.",
+        "description": "Load the unified graph with filters and pagination.\n\nNodes are paginated (offset/limit). ``edges`` carries up to 1,000 edges\nincident to the ranked page, plus containment context. Omitted relationships\nare declared by ``completeness.edges_truncated`` and remain pageable through\n``/v1/graph/incident-edges`` at the same revision. Off-page endpoints of the\nreturned edges ride along (``completeness.endpoint_nodes``), so every edge\nlands on a returned node; ``completeness.boundary_edges`` counts any that do not.\n\n``stats`` describe the graph this response was computed from, NOT the page:\n``stats.total_nodes`` is every node that survived loading, and\n``stats.total_nodes_source`` is the estate total before any load-time node\nbudget applied. The two are equal on an unbounded load. Read\n``completeness`` for whether the load was bounded and why \u2014\n``completeness.total`` always reconciles with ``stats.total_nodes_source``.\n``stats.severity_counts`` counts finding-bearing graph nodes\n(``stats.severity_basis: \"graph_nodes\"``), not issues or occurrences.",
         "operationId": "get_graph_v1_graph_get",
         "parameters": [
           {

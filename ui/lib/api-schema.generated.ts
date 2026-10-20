@@ -4188,9 +4188,9 @@ export interface paths {
          *     Nodes are paginated (offset/limit). ``edges`` carries up to 1,000 edges
          *     incident to the ranked page, plus containment context. Omitted relationships
          *     are declared by ``completeness.edges_truncated`` and remain pageable through
-         *     ``/v1/graph/incident-edges`` at the same revision. Edges may reach nodes
-         *     outside the page; this is not the subgraph induced by ``nodes``;
-         *     ``completeness.boundary_edges`` counts the edges that cross the boundary.
+         *     ``/v1/graph/incident-edges`` at the same revision. Off-page endpoints of the
+         *     returned edges ride along (``completeness.endpoint_nodes``), so every edge
+         *     lands on a returned node; ``completeness.boundary_edges`` counts any that do not.
          *
          *     ``stats`` describe the graph this response was computed from, NOT the page:
          *     ``stats.total_nodes`` is every node that survived loading, and
@@ -12963,6 +12963,11 @@ export interface components {
             scan_id: string | null;
             /** Schema Version */
             schema_version: string;
+            /**
+             * Source Scan Ids
+             * @default []
+             */
+            source_scan_ids: string[];
             /** Tenant Id */
             tenant_id: string;
         } & {
@@ -30563,7 +30568,7 @@ export interface operations {
     get_estate_correlations_v1_estate_correlations_get: {
         parameters: {
             query?: {
-                /** @description Scan job ID; latest completed scan if omitted */
+                /** @description Scan job ID or graph snapshot ID. Omitted (or current-estate): the current estate, the union of every target's current completed scan; source_scan_ids lists them. */
                 scan_id?: string | null;
             };
             header?: {

@@ -357,6 +357,7 @@ class EstateCorrelationsResponse(ReadResponse):
     schema_version: str
     tenant_id: str
     scan_id: str | None
+    source_scan_ids: list[str] = []
     count: int
     high_confidence_count: int
     low_confidence_count: int
