@@ -6,6 +6,10 @@ import { describe, expect, it } from "vitest";
 const GUARDED_GRAPH_SURFACES = [
   "components/graph-chrome.tsx",
   "components/lineage-filter.tsx",
+  "components/graph-operator-tools.tsx",
+  "components/graph-attack-path-queue.tsx",
+  "components/graph-path-list.tsx",
+  "components/graph-change-exposures.tsx",
 ] as const;
 
 const DARK_ONLY_SURFACE_CLASS =
@@ -43,7 +47,7 @@ describe("light theme token guard", () => {
     expect(header).not.toMatch(/rgba\(24,24,27|rgba\(9,9,11/);
 
     const graphPage = readFileSync(
-      path.join(UI_ROOT, "app/graph/graph-page-client.tsx"),
+      path.join(UI_ROOT, "components/graph-rollup-navigation-panel.tsx"),
       "utf8",
     );
     expect(graphPage).toContain(

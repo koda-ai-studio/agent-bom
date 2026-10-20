@@ -35,8 +35,6 @@ import {
 import "@xyflow/react/dist/style.css";
 import { AlertTriangle, Loader2, ShieldAlert } from "lucide-react";
 
-import { AttackPathCard } from "@/components/attack-path-card";
-import { AttackPathTechniqueChain } from "@/components/attack-path-technique-chain";
 import { GraphEvidenceSummary } from "@/components/graph-evidence-summary";
 import { formatGraphHeadline } from "@/lib/graph-headline";
 import { GraphAnalysisStatusBanner } from "@/components/graph-analysis-status";
@@ -88,7 +86,6 @@ import {
   type LineageNodeType,
 } from "@/components/lineage-nodes";
 import { useGraphLayout } from "@/lib/use-graph-layout";
-import { serpentinePositions } from "@/lib/path-serpentine-layout";
 import { COMPACT_GRAPH_MIN_ZOOM, compactInvestigationLayout, readableGraphNodeStyle, readableLineageDagreLr } from "@/lib/graph-node-dimensions";
 import { effectiveLodBandForGraph, useLodBand } from "@/lib/lod-renderer";
 import {
@@ -110,7 +107,6 @@ import {
   decodeGraphInvestigationParams,
   mergeGraphQueueContext,
   initialInvestigationDirection,
-  toAttackCardNodes,
   type GraphInvestigationRequest,
 } from "@/lib/attack-paths";
 import {
@@ -118,9 +114,6 @@ import {
   BACKGROUND_GAP,
   buildDriftIndex, diffChangeCounts,
   driftAttributeSummaries,
-  changeKindForEdge,
-  changeKindForNode,
-  CHANGE_KIND_META,
   CONTROLS_CLASS,
   countVisiblePathHops,
   graphNodeDisplayLabels,
@@ -130,7 +123,6 @@ import {
   MINIMAP_MASK,
   minimapNodeColor,
   readableGraphEdges,
-  type ChangeKind,
 } from "@/lib/graph-utils";
 import {
   graphFitViewOptions,
@@ -184,10 +176,7 @@ import { graphResponseIsTruncated } from "@/lib/graph-truncation";
 import {
   applyFilters,
   decodeFiltersFromParams,
-  driftFilterPasses,
   encodeFiltersToParams,
-  evidenceLensPasses,
-  isCriticalChange,
   type DriftLensFilter,
   type EvidenceLensFilter,
 } from "@/lib/filter-algebra";
@@ -214,9 +203,11 @@ import { graphFirstFramePending } from "@/lib/graph-first-frame";
 import { snapshotLabel } from "@/lib/snapshot-label";
 import { estateIssueLine } from "@/lib/graph-issue-labels";
 import { resolveScopeAncestry } from "@/lib/graph-scope-ancestry";
+import { driftDisplayEdges, driftTally, emphasizedDisplayEdges, evidenceTally, focusDisplayNodes, lensDisplayNodes } from "@/lib/graph-display-elements";
 import { GraphPulseStyles as PulseStyles } from "@/components/graph-pulse-styles";
-import { PathStat, PathTagList } from "@/components/graph-path-stats";
 import { RollupNavigationPanel } from "@/components/graph-rollup-navigation-panel";
+import { GraphOperatorTools } from "@/components/graph-operator-tools";
+import { GraphAttackPathQueue } from "@/components/graph-attack-path-queue";
 import {
   buildFallbackNodeData,
   emptyGraphResponse,
@@ -238,30 +229,6 @@ export function graphFetchLimitForSnapshot(scanId: string, expandedScanId: strin
   return scanId && scanId === expandedScanId ? LARGE_GRAPH_OVERVIEW_MAX_RENDERED_NODES : 50;
 }
 
-const GraphDriftLegend = dynamic(
-  () =>
-    import("@/components/graph-lens-legends").then(
-      (mod) => mod.GraphDriftLegend,
-    ),
-  { ssr: false },
-);
-
-const GraphEvidenceLegend = dynamic(
-  () =>
-    import("@/components/graph-lens-legends").then(
-      (mod) => mod.GraphEvidenceLegend,
-    ),
-  { ssr: false },
-);
-
-const GraphEdgeChangesPanel = dynamic(
-  () =>
-    import("@/components/graph-edge-changes-panel").then(
-      (mod) => mod.GraphEdgeChangesPanel,
-    ),
-  { ssr: false },
-);
-
 const SigmaGraphOverview = dynamic(
   () =>
     import("@/components/sigma-graph-overview").then(
@@ -280,11 +247,6 @@ const SigmaGraphOverview = dynamic(
 
 type RollupBreadcrumb = ScopeCrumb;
 
-// Keep relationship captions useful on focused graphs without letting a
-// medium-sized topology turn into a wall of overlapping badges. Above this
-// count labels follow the selected neighborhood; the relationship inspector
-// and legend remain available for the full evidence.
-const GRAPH_EDGE_LABEL_BUDGET = 24;
 
 export default function GraphPageClient() {
   return (
@@ -1610,30 +1572,7 @@ function GraphPageInner() {
     [selectedAttackPath],
   );
 
-  /**
-   * Compose the existing className (e.g. `node-critical-pulse`) with the
-   * focus-mode classes the issue spec asked for. We keep the data-driven
-   * `dimmed`/`highlighted` flags too — node renderers were already wired
-   * to those — so dimming works in unit tests that read `data.dimmed`
-   * directly.
-   */
-  const composeFocusClass = (
-    base: string | undefined,
-    focused: boolean,
-    dimmed: boolean,
-  ): string =>
-    [
-      base,
-      focused ? "lineage-node-focus" : "",
-      dimmed ? "lineage-node-dim" : "",
-    ]
-      .filter(Boolean)
-      .join(" ") || "";
-
-  // Levels-of-detail (#2257). Hook reads `viewport.zoom` from the
-  // xyflow store provided by the wrapping `<ReactFlowProvider>` and
-  // returns "cluster" | "summary" | "detail". The chosen render band
-  // keeps dense graphs readable without changing node positions or data.
+  // Levels of detail: the zoom band keeps dense graphs readable without moving nodes.
   const lodBand = useLodBand();
   const effectiveLodBand = compactInvestigationTopology || compactGroupedTopology || (scenarioContextIds && scenarioContextIds.size <= 8) ? "detail" : effectiveLodBandForGraph(lodBand, {
     sourceNodeCount: flow.nodes.length,
@@ -1641,344 +1580,36 @@ function GraphPageInner() {
     clusterCount: aggregated.clusters.size,
     rollupActive: rollupNavigationActive,
   });
+  const baseDisplayNodes = useMemo(() => focusDisplayNodes({
+    nodes: canvasLayoutNodes, band: effectiveLodBand, blastRadius, pathNodeIds: attackPathNodeIds, pathOrder: attackPathNodeOrder,
+    reachability: reachabilitySummary, neighborhood: localNeighborhoodIds, focusId: activeFocusId,
+  }), [canvasLayoutNodes, localNeighborhoodIds, attackPathNodeIds, attackPathNodeOrder, reachabilitySummary, blastRadius, activeFocusId, effectiveLodBand]);
 
-  const baseDisplayNodes = useMemo<Node<LineageNodeData>[]>(() => {
-    if (blastRadius) {
-      return canvasLayoutNodes.map((node) => {
-        const inBlast = blastRadius.nodeIds.has(node.id);
-        const isRoot = node.id === blastRadius.rootId;
-        return {
-          ...node,
-          className: composeFocusClass(node.className, isRoot, !inBlast),
-          data: {
-            ...node.data,
-            renderBand: effectiveLodBand,
-            dimmed: !inBlast,
-            highlighted: inBlast,
-          },
-        };
-      });
-    }
-    if (attackPathNodeIds) {
-      const ordered = [...(attackPathNodeOrder?.keys() ?? [])];
-      const attackPathSlots = serpentinePositions(ordered, 4, { column: 460, row: 220 });
-      return canvasLayoutNodes
-        .filter((node) => attackPathNodeIds.has(node.id))
-        .map((node) => {
-          const inPath = attackPathNodeIds.has(node.id);
-          const slot = attackPathSlots.get(node.id) ?? { x: 0, y: 0, reverse: false };
-          return {
-            ...node,
-            position: { x: slot.x, y: slot.y },
-            className: composeFocusClass(node.className, inPath, !inPath),
-            data: {
-              ...node.data,
-              renderBand: "detail",
-              reverseFlow: slot.reverse,
-              dimmed: !inPath,
-              highlighted: inPath,
-            },
-          };
-        });
-    }
-    if (reachabilitySummary) {
-      return canvasLayoutNodes.map((node) => {
-        const inReach = reachabilitySummary.nodeIds.has(node.id);
-        const isRoot = node.id === reachabilitySummary.rootId;
-        return {
-          ...node,
-          className: composeFocusClass(node.className, isRoot, !inReach),
-          data: {
-            ...node.data,
-            renderBand: effectiveLodBand,
-            dimmed: !inReach,
-            highlighted: inReach,
-          },
-        };
-      });
-    }
-    if (!localNeighborhoodIds) {
-      return canvasLayoutNodes.map((node) => ({
-        ...node,
-        data: {
-          ...node.data,
-          renderBand: effectiveLodBand,
-        },
-      }));
-    }
-    return canvasLayoutNodes.map((node) => {
-      const isFocused = node.id === activeFocusId;
-      const isConnected = localNeighborhoodIds.has(node.id);
-      const dimmed = !isConnected && node.type !== "clusterPillNode";
-      return {
-        ...node,
-        className: composeFocusClass(node.className, isFocused, dimmed),
-        data: {
-          ...node.data,
-          renderBand: effectiveLodBand,
-          dimmed,
-          highlighted: isConnected,
-        },
-      };
-    });
-  }, [
-    canvasLayoutNodes,
-    localNeighborhoodIds,
-    attackPathNodeIds,
-    attackPathNodeOrder,
-    reachabilitySummary,
-    blastRadius,
-    activeFocusId,
-    effectiveLodBand,
-  ]);
-
-  // Drift lens (#3192) — classify the currently-rendered snapshot against the
-  // previous one using the diff index the server tags. The lens is inert unless
-  // a diff exists AND the operator armed it, so the default view never changes.
-  // Estate highlights merge per-source diffs; an explicit snapshot pair always wins.
+  // Drift lens: inert unless a diff exists and the operator armed it. Estate
+  // highlights merge per-source diffs; an explicit snapshot pair always wins.
   const lensDiff = graphDiff ?? (diffPair ? null : highlight.diff);
   const [driftIndex, diffCounts] = useMemo(() => [buildDriftIndex(lensDiff), diffChangeCounts(graphDiff)] as const, [lensDiff, graphDiff]);
-  const driftAttributeSummaryList = useMemo(
-    () => driftAttributeSummaries(driftIndex),
-    [driftIndex],
-  );
-  const driftLensEngaged =
-    driftLensActive && Boolean(lensDiff) && driftIndex.hasChanges;
-
-  // Keep the lens honest: a snapshot with no older baseline (or no changes)
-  // disarms the lens and resets the focus chip so it can never linger as a
-  // stale overlay on the default view.
+  const driftAttributeSummaryList = useMemo(() => driftAttributeSummaries(driftIndex), [driftIndex]);
+  const driftLensEngaged = driftLensActive && Boolean(lensDiff) && driftIndex.hasChanges;
+  // A snapshot with no older baseline disarms the lens so it never lingers as a stale overlay.
   useEffect(() => {
     if (!lensDiff) {
       setDriftLensActive(false);
       setDriftFilter("all");
     }
   }, [lensDiff]);
-
-
-  const displayNodes = useMemo<Node<LineageNodeData>[]>(() => {
-    let nodes = baseDisplayNodes;
-    if (driftLensEngaged) {
-      nodes = nodes.map((node) => {
-        const kind = changeKindForNode(node.id, driftIndex);
-        const critical = isCriticalChange(kind, node.data.severity);
-        const passes = driftFilterPasses(kind, driftFilter, critical);
-        const ringClass =
-          driftFilter === "critical" && critical
-            ? "drift-ring-critical"
-            : CHANGE_KIND_META[kind].ringClass;
-        const className = [node.className, ringClass].filter(Boolean).join(" ");
-        const dimmed = Boolean(node.data.dimmed) || !passes;
-        return {
-          ...node,
-          className,
-          data: { ...node.data, dimmed },
-        };
-      });
-    }
-    if (evidenceLensActive) {
-      nodes = nodes.map((node) => {
-        const passes = evidenceLensPasses(
-          node.data.runtimeEvidenceTier,
-          evidenceFilter,
-        );
-        return {
-          ...node,
-          data: {
-            ...node.data,
-            dimmed: Boolean(node.data.dimmed) || !passes,
-          },
-        };
-      });
-    }
-    // Group pills are navigation controls, not evidence-bearing assets. Keep
-    // their expand action legible without implying that members pass a lens.
-    return nodes.map((node) => node.type === "clusterPillNode" ? {
-      ...node,
-      className: (node.className ?? "").replace(/\blineage-node-dim\b/g, ""),
-      data: { ...node.data, dimmed: false },
-    } : node);
-  }, [
-    baseDisplayNodes,
-    driftIndex,
-    driftLensEngaged,
-    driftFilter,
-    evidenceLensActive,
-    evidenceFilter,
-  ]);
-
-  // Live change-kind tallies over the rendered graph — `unchanged` is derived
-  // here (the diff index only carries actively-changed ids) so the legend and
-  // chips reflect exactly what the operator sees on the canvas.
-  const drift = useMemo<{
-    counts: Record<ChangeKind, number>;
-    critical: number;
-  }>(() => {
-    const counts: Record<ChangeKind, number> = {
-      new: 0,
-      changed: 0,
-      removed: driftIndex.counts.removed,
-      unchanged: 0,
-    };
-    let critical = 0;
-    for (const node of baseDisplayNodes) {
-      const kind = changeKindForNode(node.id, driftIndex);
-      if (kind === "new" || kind === "changed" || kind === "unchanged") {
-        counts[kind] += 1;
-      }
-      if (isCriticalChange(kind, node.data.severity)) critical += 1;
-    }
-    return { counts, critical };
-  }, [baseDisplayNodes, driftIndex]);
-
-  const evidenceCounts = useMemo<
-    Record<EvidenceLensFilter, number>
-  >(() => {
-    const counts: Record<EvidenceLensFilter, number> = {
-      all: baseDisplayNodes.length,
-      runtime_observed: 0,
-      runtime_blocked: 0,
-      static_scan: 0,
-    };
-    for (const node of baseDisplayNodes) {
-      const tier = node.data.runtimeEvidenceTier ?? "static_scan";
-      if (tier === "runtime_observed") counts.runtime_observed += 1;
-      else if (tier === "runtime_blocked") counts.runtime_blocked += 1;
-      else counts.static_scan += 1;
-    }
-    return counts;
-  }, [baseDisplayNodes]);
-
+  const displayNodes = useMemo(() => lensDisplayNodes({
+    nodes: baseDisplayNodes, driftEngaged: driftLensEngaged, driftIndex, driftFilter, evidenceActive: evidenceLensActive, evidenceFilter,
+  }), [baseDisplayNodes, driftIndex, driftLensEngaged, driftFilter, evidenceLensActive, evidenceFilter]);
+  const drift = useMemo(() => driftTally(baseDisplayNodes, driftIndex), [baseDisplayNodes, driftIndex]);
+  const evidenceCounts = useMemo(() => evidenceTally(baseDisplayNodes), [baseDisplayNodes]);
   const compressedGroupCount = aggregatedClusterNodes.length;
   const renderedNodeCount = displayNodes.length;
 
-  const baseDisplayEdges = useMemo(() => {
-    const readableEdges = readableGraphEdges(layoutEdges, localNeighborhoodIds, {
-      baseOpacity: 1,
-      highSignalOpacity: 1,
-      inactiveOpacity: 0.06,
-      captureMode,
-      zoom: graphViewport.zoom,
-      nodeLabels: graphNodeDisplayLabels(displayNodes),
-      // Past this many edges the captions overlap into noise, so they follow
-      // the selection instead of blanketing the canvas. A capture keeps them.
-      maxLabeledEdges: captureMode ? Number.POSITIVE_INFINITY : GRAPH_EDGE_LABEL_BUDGET,
-    });
-    if (attackPathEdgeIds) {
-      return readableEdges
-        .filter((edge) =>
-          attackPathEdgeIds.has(edge.id),
-        )
-        .map((edge): Edge => {
-          const inPath = attackPathEdgeIds.has(edge.id);
-          return {
-            ...edge,
-            labelShowBg: true,
-            labelBgPadding: [8, 4],
-            labelBgBorderRadius: 6,
-            labelBgStyle: {
-              fill: "var(--surface)",
-              fillOpacity: 1,
-            },
-            labelStyle: {
-              fill: "var(--foreground)",
-              fontSize: Math.max(12, Math.min(20, 13 / Math.max(graphViewport.zoom, 0.2))),
-              fontWeight: 650,
-            },
-            data: { ...edge.data, directionEmphasis: inPath, pathEmphasis: inPath },
-            animated: captureMode ? false : Boolean(inPath || edge.animated),
-            style: {
-              ...edge.style,
-              opacity: inPath ? 1 : 0.08,
-              strokeWidth: inPath
-                ? Math.max(
-                    typeof edge.style?.strokeWidth === "number"
-                      ? edge.style.strokeWidth
-                      : 2,
-                    3.2,
-                  )
-                : 1,
-              filter: undefined,
-            },
-          };
-        });
-    }
-    if (blastRadius) {
-      return readableEdges.map((edge): Edge => {
-        const inBlast =
-          blastRadius.nodeIds.has(edge.source) &&
-          blastRadius.nodeIds.has(edge.target);
-        return {
-          ...edge,
-          data: { ...edge.data, directionEmphasis: inBlast },
-          animated: captureMode ? false : Boolean(inBlast || edge.animated),
-          style: {
-            ...edge.style,
-            opacity: inBlast ? 0.95 : 0.06,
-            strokeWidth: inBlast
-              ? Math.max(
-                  typeof edge.style?.strokeWidth === "number"
-                    ? edge.style.strokeWidth
-                    : 2,
-                  3,
-                )
-              : 1,
-            ...(inBlast
-              ? { filter: "drop-shadow(0 0 6px rgba(139,92,246,0.55))" }
-              : {}),
-          },
-        };
-      });
-    }
-    if (reachabilitySummary) {
-      return readableEdges.map((edge): Edge => {
-        const inReach =
-          reachabilitySummary.edgeKeys.has(`${edge.source}=>${edge.target}`) ||
-          reachabilitySummary.edgeKeys.has(`${edge.target}=>${edge.source}`);
-        return {
-          ...edge,
-          data: { ...edge.data, directionEmphasis: inReach },
-          animated: captureMode ? false : Boolean(inReach || edge.animated),
-          style: {
-            ...edge.style,
-            opacity: inReach ? 0.95 : 0.07,
-            strokeWidth: inReach
-              ? Math.max(
-                  typeof edge.style?.strokeWidth === "number"
-                    ? edge.style.strokeWidth
-                    : 2,
-                  3,
-                )
-              : 1,
-            ...(inReach
-              ? { filter: "drop-shadow(0 0 6px rgba(244,63,94,0.5))" }
-              : {}),
-          },
-        };
-      });
-    }
-    return readableEdges.map((edge) => ({
-      ...edge,
-      // ReactFlow measures label backgrounds when label content changes.
-      // A stable group font prevents Fit/zoom from outgrowing that background.
-      ...(edge.data?.isClusterEdge
-        ? { labelStyle: { ...edge.labelStyle, fontSize: 18 } }
-        : {}),
-      // Unselected links retain their relationship labels and evidence while
-      // using one legible theme-aware stroke. Focus restores semantic emphasis.
-      ...(!localNeighborhoodIds || localNeighborhoodIds.size > 13 ? { style: { ...edge.style, stroke: "var(--text-tertiary)" } } : {}),
-    }));
-  }, [
-    layoutEdges,
-    localNeighborhoodIds,
-    attackPathEdgeIds,
-    reachabilitySummary,
-    blastRadius,
-    captureMode,
-    graphViewport.zoom,
-    displayNodes,
-  ]);
-
+  const baseDisplayEdges = useMemo(() => emphasizedDisplayEdges({
+    edges: layoutEdges, nodes: displayNodes, neighborhood: localNeighborhoodIds, pathEdgeIds: attackPathEdgeIds,
+    blastRadius, reachability: reachabilitySummary, captureMode, zoom: graphViewport.zoom,
+  }), [layoutEdges, localNeighborhoodIds, attackPathEdgeIds, reachabilitySummary, blastRadius, captureMode, graphViewport.zoom, displayNodes]);
   const accessibleBaseDisplayEdges = useMemo(
     () => declutterRelationshipLabels(readableGraphEdges(baseDisplayEdges.map(edge => ({ ...edge, selected: selectedRelationship?.scanId === selectedScanId && selectedRelationship.id === edge.id,
       // A phone shows a relationship's caption only on selection; the list view names every one.
@@ -1991,44 +1622,7 @@ function GraphPageInner() {
     })),
     [baseDisplayEdges, captureMode, displayNodes, graphViewport.zoom, selectedRelationship, selectedScanId, narrowViewport],
   );
-
-  // Drift lens edge emphasis — new/changed edges adopt their change-kind colour
-  // so the lens reads as one system with the node rings. Inert (identity) when
-  // the lens is disengaged.
-  const displayEdges = useMemo(() => {
-    if (!driftLensEngaged) return accessibleBaseDisplayEdges;
-    return accessibleBaseDisplayEdges.map((edge): Edge => {
-      const relationship =
-        typeof edge.data?.relationship === "string"
-          ? edge.data.relationship
-          : "";
-      const kind = changeKindForEdge(
-        edge.source,
-        edge.target,
-        relationship,
-        driftIndex,
-      );
-      if (kind === "unchanged") return edge;
-      const meta = CHANGE_KIND_META[kind];
-      const currentOpacity =
-        typeof edge.style?.opacity === "number" ? edge.style.opacity : 0.4;
-      const currentWidth =
-        typeof edge.style?.strokeWidth === "number"
-          ? edge.style.strokeWidth
-          : 1.4;
-      return {
-        ...edge,
-        style: {
-          ...edge.style,
-          stroke: meta.color,
-          opacity: Math.max(currentOpacity, 0.85),
-          strokeWidth: Math.max(currentWidth, 2.2),
-          transition:
-            "stroke 0.2s ease, opacity 0.2s ease, stroke-width 0.2s ease",
-        },
-      };
-    });
-  }, [accessibleBaseDisplayEdges, driftLensEngaged, driftIndex]);
+  const displayEdges = useMemo(() => driftDisplayEdges(accessibleBaseDisplayEdges, driftLensEngaged, driftIndex), [accessibleBaseDisplayEdges, driftLensEngaged, driftIndex]);
 
   const legendItems = useMemo(
     () => legendItemsForVisibleGraph(displayNodes, displayEdges),
@@ -3091,218 +2685,15 @@ function GraphPageInner() {
           <div className="space-y-3 border-t border-outline/80 p-3">
 
 
-        <section aria-labelledby="graph-operator-tools" className="rounded-xl border border-outline bg-background/70">
-          <h3 id="graph-operator-tools" className="px-3 py-2 text-xs font-medium text-ink-secondary">
-            Evidence, drift, and operator tools
-          </h3>
-          <div className="space-y-3 border-t border-outline/80 px-3 py-3">
-        {lensDiff && (
-          <details className="rounded-2xl border border-outline bg-background/70 p-3">
-            <summary className="cursor-pointer list-none text-xs font-medium text-ink-secondary [&::-webkit-details-marker]:hidden">
-              Snapshot drift lens · {drift.critical} critical changes
-            </summary>
-            <div className="mt-3">
-              <GraphDriftLegend
-                active={driftLensActive}
-                onToggleActive={(next) => {
-                  setDriftLensActive(next);
-                  if (!next) setDriftFilter("all");
-                }}
-                filter={driftFilter}
-                onFilterChange={setDriftFilter}
-                counts={drift.counts}
-                criticalCount={drift.critical}
-                comparedLabel={diffPair ? snapshotLabel(diffPair.oldScanId) : undefined}
-                attributeSummaries={driftAttributeSummaryList}
-              />
-            </div>
-          </details>
-        )}
+        <GraphOperatorTools drift={lensDiff ? drift : null} driftActive={driftLensActive} driftFilter={driftFilter} comparedLabel={diffPair ? snapshotLabel(diffPair.oldScanId) : undefined}
+          driftAttributeSummaries={driftAttributeSummaryList} showEdgeChanges={Boolean(driftLensActive && graphDiff)} edgeChanges={edgeChanges} edgeChangesLoading={loadingEdgeChanges} edgeChangesError={edgeChangesError}
+          onDriftActive={next => { setDriftLensActive(next); if (!next) setDriftFilter("all"); }} onDriftFilter={setDriftFilter}
+          evidenceActive={evidenceLensActive} evidenceFilter={evidenceFilter} evidenceCounts={evidenceCounts}
+          onEvidenceActive={next => { setEvidenceLensActive(next); if (!next) setEvidenceFilter("all"); }} onEvidenceFilter={setEvidenceFilter} />
 
-        {driftLensActive && graphDiff ? (
-          <GraphEdgeChangesPanel
-            changes={edgeChanges}
-            loading={loadingEdgeChanges}
-            error={edgeChangesError}
-            comparedLabel={diffPair ? snapshotLabel(diffPair.oldScanId) : undefined}
-          />
-        ) : null}
-
-        <details className="rounded-2xl border border-outline bg-background/70 p-3">
-          <summary className="cursor-pointer list-none text-xs font-medium text-ink-secondary [&::-webkit-details-marker]:hidden">
-            Evidence lens · {evidenceCounts.all} nodes
-          </summary>
-          <div className="mt-3">
-            <GraphEvidenceLegend
-              active={evidenceLensActive}
-              onToggleActive={(next) => {
-                setEvidenceLensActive(next);
-                if (!next) setEvidenceFilter("all");
-              }}
-              filter={evidenceFilter}
-              onFilterChange={setEvidenceFilter}
-              counts={evidenceCounts}
-            />
-          </div>
-        </details>
-
-        <details className="rounded-2xl border border-outline bg-background/70 p-3 text-xs text-ink-secondary group">
-          <summary className="flex items-center justify-between cursor-pointer list-none [&::-webkit-details-marker]:hidden">
-            <span className="font-medium text-foreground">
-              How to read this graph
-            </span>
-            <span className="text-[10px] uppercase tracking-[0.18em] text-ink-tertiary group-open:hidden">
-              show
-            </span>
-            <span className="text-[10px] uppercase tracking-[0.18em] text-ink-tertiary hidden group-open:inline">
-              hide
-            </span>
-          </summary>
-          <ul className="mt-2 space-y-1.5">
-            <li>Snapshot counts cover persisted assets; displayed counts cover this view.</li>
-            <li>Select an asset for evidence. Faded assets are outside its context.</li>
-            <li>Arrows show recorded direction, not proven access or exploitation.</li>
-          </ul>
-        </details>
-          </div>
-        </section>
-
-        {attackPaths.length > 0 && (
-          <details className="mt-3 rounded-2xl border border-outline bg-background/60 p-3 group">
-            <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.24em] text-orange-400">
-                  Attack paths
-                </p>
-                <p className="mt-1 text-xs text-ink-tertiary">
-                  {attackPaths.length} ranked path
-                  {attackPaths.length === 1 ? "" : "s"} available for focused
-                  investigation.
-                </p>
-              </div>
-              <span className="text-[10px] uppercase tracking-[0.18em] text-ink-tertiary group-open:hidden">
-                show queue
-              </span>
-              <span className="hidden text-[10px] uppercase tracking-[0.18em] text-ink-tertiary group-open:inline">
-                hide queue
-              </span>
-            </summary>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <p className="mt-3 text-xs text-ink-tertiary">
-                  Focus the current graph on a precomputed exploit chain in this
-                  filtered snapshot page.
-                </p>
-              </div>
-              {selectedAttackPath && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedAttackPathKey(null);
-                  }}
-                  className="graph-page-secondary-action"
-                >
-                  Clear path focus
-                </button>
-              )}
-            </div>
-
-            <div className="mt-3 flex gap-3 overflow-x-auto pb-1">
-              {attackPaths.map((path) => {
-                const key = attackPathKey(path);
-                const pathNodes = toAttackCardNodes(path, graphNodeById);
-                if (pathNodes.length === 0) return null;
-                const isActive = effectiveSelectedAttackPathKey === key;
-                return (
-                  <div
-                    key={key}
-                    className={`min-w-0 sm:min-w-[360px] rounded-2xl transition ${isActive ? "ring-2 ring-orange-400/70 ring-offset-2 ring-offset-[var(--background)]" : ""}`}
-                  >
-                    <AttackPathCard
-                      nodes={pathNodes}
-                      riskScore={path.composite_risk}
-                      captureMode={captureMode}
-                      onClick={() => {
-                        setReachabilitySummary(null);
-                        setReachabilityError(null);
-                        const clearing = effectiveSelectedAttackPathKey === key;
-                        setSelectedAttackPathKey(clearing ? null : key);
-                      }}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-
-            {selectedAttackPath && (
-              <div className="mt-3 grid gap-2 lg:grid-cols-4">
-                <PathStat
-                  label="Composite risk"
-                  value={selectedAttackPath.composite_risk.toFixed(1)}
-                  tone="red"
-                />
-                <PathStat
-                  label="Hop count"
-                  value={
-                    selectedVisibleHopCount === selectedEvidenceHopCount
-                      ? `${selectedEvidenceHopCount} evidence`
-                      : `${selectedEvidenceHopCount} evidence · ${selectedVisibleHopCount} visible`
-                  }
-                />
-                <PathStat
-                  label="Credential exposure"
-                  value={
-                    selectedAttackPath.credential_exposure.length > 0
-                      ? selectedAttackPath.credential_exposure.length.toString()
-                      : "none"
-                  }
-                  tone={
-                    selectedAttackPath.credential_exposure.length > 0
-                      ? "amber"
-                      : "zinc"
-                  }
-                />
-                <PathStat
-                  label="Tool exposure"
-                  value={
-                    selectedAttackPath.tool_exposure.length > 0
-                      ? selectedAttackPath.tool_exposure.length.toString()
-                      : "none"
-                  }
-                  tone={
-                    selectedAttackPath.tool_exposure.length > 0
-                      ? "blue"
-                      : "zinc"
-                  }
-                />
-                <PathTagList
-                  label="Summary"
-                  tags={[selectedAttackPath.summary || "No summary provided"]}
-                  wide
-                />
-                <AttackPathTechniqueChain path={selectedAttackPath} />
-                {selectedAttackPath.vuln_ids.length > 0 && (
-                  <PathTagList
-                    label="Findings"
-                    tags={selectedAttackPath.vuln_ids}
-                  />
-                )}
-                {selectedAttackPath.credential_exposure.length > 0 && (
-                  <PathTagList
-                    label="Credentials"
-                    tags={selectedAttackPath.credential_exposure}
-                  />
-                )}
-                {selectedAttackPath.tool_exposure.length > 0 && (
-                  <PathTagList
-                    label="Tools"
-                    tags={selectedAttackPath.tool_exposure}
-                  />
-                )}
-              </div>
-            )}
-          </details>
-        )}
+        <GraphAttackPathQueue paths={attackPaths} selected={selectedAttackPath} selectedKey={effectiveSelectedAttackPathKey} nodeById={graphNodeById}
+          captureMode={captureMode} visibleHopCount={selectedVisibleHopCount} evidenceHopCount={selectedEvidenceHopCount}
+          onSelect={key => { setReachabilitySummary(null); setReachabilityError(null); setSelectedAttackPathKey(key); }} />
           </div>
         </details>
           </GraphViewControls>
