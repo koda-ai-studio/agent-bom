@@ -565,7 +565,7 @@ export function Nav() {
         }`}
       >
         {!isCollapsed && (
-          <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-tertiary">
+          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-tertiary">
             Navigate
           </span>
         )}
@@ -588,7 +588,7 @@ export function Nav() {
           >
             <Search className="w-3.5 h-3.5" />
             <span>Search pages...</span>
-            <kbd className="ml-auto text-[10px] font-mono bg-surface-elevated border border-outline rounded px-1.5 py-0.5 text-ink-secondary">⌘K</kbd>
+            <kbd className="ml-auto text-xs font-mono bg-surface-elevated border border-outline rounded px-1.5 py-0.5 text-ink-secondary">⌘K</kbd>
           </button>
         </div>
       )}
@@ -628,7 +628,7 @@ export function Nav() {
               {!isCollapsed && (
                 <>
                   <div className="min-w-0 flex-1 text-left">
-                    <span className="block uppercase tracking-wider text-[10px] font-semibold">
+                    <span className="block uppercase tracking-wider text-xs font-semibold">
                       {group.label}
                     </span>
                   </div>
@@ -704,7 +704,7 @@ export function Nav() {
 
                         {/* Capable-but-unconnected hint */}
                         {needsSetup && (
-                          <span className="ml-auto rounded-full border border-outline bg-surface-elevated px-1.5 py-0 text-[9px] font-medium uppercase tracking-[0.12em] leading-4 text-ink-tertiary">
+                          <span className="ml-auto rounded-full border border-outline bg-surface-elevated px-1.5 py-0 text-xs font-medium uppercase tracking-[0.12em] leading-4 text-ink-tertiary">
                             Set up
                           </span>
                         )}
@@ -722,14 +722,14 @@ export function Nav() {
                           >
                             <span
                               aria-hidden="true"
-                              className="text-[9px] font-mono font-bold text-[color:var(--severity-critical)] bg-[color:var(--severity-critical-bg)] border border-[color:var(--severity-critical-border)] dark:text-red-400 dark:bg-red-950/60 dark:border-red-800/40 rounded-full px-1.5 py-0 leading-4"
+                              className="text-xs font-mono font-bold text-[color:var(--severity-critical)] bg-[color:var(--severity-critical-bg)] border border-[color:var(--severity-critical-border)] dark:text-red-400 dark:bg-red-950/60 dark:border-red-800/40 rounded-full px-1.5 py-0 leading-4"
                             >
                               {openIssues.critical}
                             </span>
                             {openIssues.high > 0 && (
                               <span
                                 aria-hidden="true"
-                                className="text-[9px] font-mono font-bold text-[color:var(--severity-high)] bg-[color:var(--severity-high-bg)] border border-[color:var(--severity-high-border)] dark:text-orange-400 dark:bg-orange-950/60 dark:border-orange-800/40 rounded-full px-1.5 py-0 leading-4"
+                                className="text-xs font-mono font-bold text-[color:var(--severity-high)] bg-[color:var(--severity-high-bg)] border border-[color:var(--severity-high-border)] dark:text-orange-400 dark:bg-orange-950/60 dark:border-orange-800/40 rounded-full px-1.5 py-0 leading-4"
                               >
                                 {openIssues.high}
                               </span>
@@ -741,7 +741,7 @@ export function Nav() {
                   })}
                   {group.hiddenLinks.length > 0 && (
                     <details className="mt-2 rounded-lg border border-outline bg-surface px-3 py-2">
-                      <summary className="cursor-pointer list-none text-[11px] font-medium uppercase tracking-[0.2em] text-ink-tertiary">
+                      <summary className="cursor-pointer list-none text-xs font-medium uppercase tracking-[0.2em] text-ink-tertiary">
                         Unused in {deploymentModeLabel(counts?.deployment_mode)} ({group.hiddenLinks.length})
                       </summary>
                       <div className="mt-2 space-y-0.5">
@@ -777,7 +777,7 @@ export function Nav() {
                         <GroupIcon className={`h-[18px] w-[18px] ${navGroupIconClass(group.label, hasActiveChild)}`} />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-foreground">
+                        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-foreground">
                           {group.label}
                         </p>
                       </div>
@@ -810,7 +810,7 @@ export function Nav() {
                       })}
                     </div>
                     {group.hiddenLinks.length > 0 && (
-                      <p className="mt-2 rounded-lg border border-outline bg-surface-muted px-2.5 py-1.5 text-[11px] text-ink-tertiary">
+                      <p className="mt-2 rounded-lg border border-outline bg-surface-muted px-2.5 py-1.5 text-xs text-ink-tertiary">
                         {group.hiddenLinks.length} page{group.hiddenLinks.length === 1 ? "" : "s"} hidden for{" "}
                         {deploymentModeLabel(counts?.deployment_mode)} mode.
                       </p>
@@ -845,7 +845,7 @@ export function Nav() {
         </Link>
         {counts?.deployment_mode && (
           <span
-            className="hidden rounded-full border border-outline bg-surface-elevated px-2.5 py-0.5 text-[10px] font-mono uppercase tracking-[0.16em] text-ink-tertiary sm:inline-flex"
+            className="hidden rounded-full border border-outline bg-surface-elevated px-2.5 py-0.5 text-xs font-mono uppercase tracking-[0.12em] text-ink-secondary sm:inline-flex"
             title={`${deploymentModeLabel(counts.deployment_mode)} evidence — observed source receipts; this label does not configure storage or enforcement`}
           >
             {deploymentModeLabel(counts.deployment_mode)}
@@ -860,9 +860,18 @@ export function Nav() {
           >
             <Search className="h-3.5 w-3.5" />
             <span>Search</span>
-            <kbd className="ml-1 rounded border border-outline bg-surface-elevated px-1.5 py-0.5 font-mono text-[10px] text-ink-secondary">
+            <kbd className="ml-1 rounded border border-outline bg-surface-elevated px-1.5 py-0.5 font-mono text-xs text-ink-secondary">
               ⌘K
             </kbd>
+          </button>
+          <button
+            type="button"
+            onClick={() => setSearchOpen(true)}
+            aria-label="Search pages"
+            title="Search pages (⌘K)"
+            className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg text-ink-secondary transition-colors hover:bg-surface-elevated hover:text-foreground lg:hidden"
+          >
+            <Search className="h-5 w-5" />
           </button>
           <ThemeToggle compact className="shrink-0" />
           <ApiStatus collapsed={false} />

@@ -26,7 +26,7 @@ export function DemoEstateLabel({ scanSources }: { scanSources?: string[] | unde
         referenceEvidenceLab
           ? "max-w-[min(32rem,calc(100vw-1.5rem))]"
           : "max-w-[min(18rem,calc(100vw-1.5rem))]"
-      } text-[10px] sm:text-[11px]`}
+      } text-xs`}
       aria-label={referenceEvidenceLab
         ? "Open the reference evidence lab modeled local infrastructure"
         : "Open the synthetic enterprise demo story"}

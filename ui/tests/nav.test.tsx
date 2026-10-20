@@ -457,6 +457,22 @@ describe('Nav', () => {
     }
   })
 
+  it('gives phones a header search button that opens the command palette', () => {
+    renderNav()
+    const header = document.querySelector('header')!
+    const button = within(header).getByRole('button', { name: 'Search pages' })
+    expect(button).toHaveClass('lg:hidden')
+    expect(button).toHaveClass('min-h-11')
+    fireEvent.click(button)
+    expect(screen.getByRole('dialog', { name: /command palette/i })).toBeInTheDocument()
+  })
+
+  it('keeps header chrome text at 12px or larger', () => {
+    renderNav()
+    const header = document.querySelector('header')!
+    expect(header.querySelectorAll('[class*="text-[10px]"], [class*="text-[11px]"]')).toHaveLength(0)
+  })
+
   it('surfaces curated workflow links in the command palette', () => {
     renderNav()
     fireEvent.keyDown(window, { key: 'k', metaKey: true })
