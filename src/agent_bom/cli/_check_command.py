@@ -19,6 +19,7 @@ from typing import Any, Optional
 import click
 from rich.console import Console
 
+from agent_bom import vuln_freshness
 from agent_bom.cli._check_support import (
     _check_result_payload,
     _format_vulnerability_count,
@@ -30,7 +31,7 @@ from agent_bom.cli._check_support import (
     _write_check_output,
 )
 from agent_bom.cli._common import _sync_runtime_consoles
-from agent_bom.vuln_freshness import compute_freshness, db_stale_days_threshold, db_staleness, set_allow_stale_db
+from agent_bom.vuln_freshness import db_stale_days_threshold, db_staleness, set_allow_stale_db
 
 
 @dataclass
@@ -358,7 +359,7 @@ def _gate_require_fresh_db(run: CheckRun) -> None:
     """``--require-fresh-db`` / ``AGENT_BOM_REQUIRE_FRESH_DB``: the same exit-3 policy gate as ``scan``."""
     if not run.require_fresh_db:
         return
-    stale, age = db_staleness(compute_freshness(offline=run.offline))
+    stale, age = db_staleness(vuln_freshness.compute_freshness(offline=run.offline))
     if not stale:
         return
     age_text = f"{age}d old" if age is not None else "missing or undated"
