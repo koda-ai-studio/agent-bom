@@ -216,9 +216,7 @@ def test_repeated_first_pages_fold_once_and_match_uncached_reads(demo_estate_cli
     for params in _PAGES:
         before = len(folds)
         repeated.append(_page(demo_estate_client, params))
-        # The unfiltered grouped landing also folds through the export lane counter, which this cache does not cover.
-        if "reachability" in params or "triage" in params or "control" in params:
-            assert len(folds) == before, f"{params} rebuilt the scan rows"
+        assert len(folds) == before, f"{params} rebuilt the scan rows"
 
     assert first == uncached
     assert repeated == uncached

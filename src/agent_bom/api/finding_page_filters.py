@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 from collections.abc import Callable
 from functools import partial
-from types import SimpleNamespace
 from typing import Any
 
 from agent_bom.api import compliance_hub_store, finding_cursor, findings_current
@@ -16,15 +15,13 @@ from agent_bom.api.finding_merge import _merged_scan_bulk_page as _merged_scan_b
 from agent_bom.api.finding_merge import _resolve_bulk_findings_total as _resolve_bulk_findings_total
 from agent_bom.api.finding_page_query import _FindingListPage, _FindingListQuery
 from agent_bom.api.finding_read_context import read_once
-from agent_bom.api.finding_row_inputs import scan_row_inputs
 from agent_bom.api.finding_scope_filters import _finding_sort_key as _finding_sort_key
 from agent_bom.api.finding_scope_filters import _row_matches_scope as _row_matches_scope
 from agent_bom.api.finding_walk_cache import walk_rows as _walk_scan_rows
-from agent_bom.api.models import JobStatus
-from agent_bom.api.scan_finding_projection import scan_row_sources
 from agent_bom.api.scan_finding_read import _bulk_ingested_findings_for_tenant as _bulk_ingested_findings_for_tenant
 from agent_bom.api.scan_finding_read import _completed_jobs_for_tenant as _completed_jobs_for_tenant
 from agent_bom.api.scan_finding_read import _current_scan_rows as _current_scan_rows
+from agent_bom.api.scan_finding_read import scan_rows_inputs
 from agent_bom.api.stores import _get_store
 
 
@@ -42,9 +39,7 @@ def _filter_finding_rows(rows: list[dict[str, Any]], query: _FindingListQuery) -
 
 def _row_inputs(query: _FindingListQuery, job_store: Any) -> tuple[tuple[str, ...], float | None]:
     """Fingerprint the scan half's non-job inputs so a first page can reuse a prior rebuild."""
-    summaries = job_store.list_summary(tenant_id=query.tenant_id, status=JobStatus.DONE)
-    in_window = [str(row.get("job_id")) for row in summaries if findings_current.job_in_window(SimpleNamespace(**row), query.window_since)]
-    return scan_row_inputs(query.tenant_id, sources=scan_row_sources(query.tenant_id), window_job_ids=in_window)
+    return scan_rows_inputs(query.tenant_id, query.window_since, job_store)
 
 
 def _scan_half_rows(query: _FindingListQuery, store: Any, warnings: list[str]) -> list[dict[str, Any]]:

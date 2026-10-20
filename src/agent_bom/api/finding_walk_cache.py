@@ -36,7 +36,7 @@ from agent_bom.core.settings import SettingError, env_bool
 logger = logging.getLogger(__name__)
 
 WALK_TTL_SECONDS = 120.0
-MAX_WALKS = 8
+MAX_WALKS = 16
 MAX_CACHED_ROWS = 200_000
 
 _LOCK = threading.Lock()
@@ -134,4 +134,35 @@ def walk_rows(
     return rows
 
 
-__all__ = ["MAX_CACHED_ROWS", "MAX_WALKS", "WALK_TTL_SECONDS", "RowInputs", "cached_row_count", "clear", "walk_rows"]
+def reuse_rows(
+    key: tuple[Any, ...],
+    *,
+    tenant_id: str,
+    job_store: Any,
+    inputs: RowInputs,
+    load: Callable[[], list[dict[str, Any]]],
+) -> list[dict[str, Any]]:
+    """Rows ``load`` builds, reused across reads while the job revision and ``inputs`` match.
+
+    For row sets that any first page may read (the folded scan rows); callers
+    must only index into or copy them.
+    """
+    if not _enabled():
+        return load()
+    try:
+        revision = _revision(tenant_id, None, job_store)
+        fingerprint = inputs() if revision is not None else None
+    except Exception:  # broad-except: optional cache-key read on any store backend; failure only disables reuse.
+        logger.debug("finding row inputs unavailable; recomputing", exc_info=False)
+        fingerprint = None
+    if fingerprint is None:
+        return load()
+    full_key = (tenant_id, *key, revision, fingerprint[0])
+    if (rows := _cached(full_key)) is not None:
+        return rows
+    rows = load()
+    _store(full_key, rows, fingerprint[1])
+    return rows
+
+
+__all__ = ["MAX_CACHED_ROWS", "MAX_WALKS", "WALK_TTL_SECONDS", "RowInputs", "cached_row_count", "clear", "reuse_rows", "walk_rows"]
