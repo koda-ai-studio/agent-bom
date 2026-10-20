@@ -156,7 +156,7 @@ Consumed by: **FU** Attack-path fusion · **CR** Credential reach · **BR** Depe
 | `reaches_tool` | `authority` | inventory | directed | yes | `agent`, `credential` | `tool` | 2 | FU, CR | 2 (+1 demo) |
 | `remediates` | `finding` | vulnerability | directed | no | `package` | `misconfiguration`, `vulnerability` | 2 | — | 0 |
 | `runs` | `structural` | code_topology | directed | yes | `ci_job` | `agent`, `server`, `tool` | 3 | — | 1 |
-| `scoped_to` | `governance` | governance | directed | yes | `access_grant`, `drift_incident`, `managed_identity` | `tool` | 3 | FU | 2 |
+| `scoped_to` | `governance` | governance | directed | yes | `access_grant`, `drift_incident`, `managed_identity` | `tool` | 3 | FU | 1 |
 | `serves_model` | `dependency` | inventory | directed | yes | `agent`, `container`, `framework`, `server` | `model` | 4 | — | 2 |
 | `shares_cred` | `correlation` | lateral_movement | bidirectional | no | `agent` | `agent` | 1 | — | 0 |
 | `shares_server` | `correlation` | lateral_movement | bidirectional | no | `agent` | `agent` | 1 | — | 1 |

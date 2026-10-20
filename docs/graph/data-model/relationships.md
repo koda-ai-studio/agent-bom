@@ -477,7 +477,7 @@ Class `governance` · directed · traversable · required evidence `source`, `ti
 - `drift_incident` → `tool`
 - `managed_identity` → `tool`
 
-Emitted by: `graph/governance_overlay.py`, `graph/nhi_overlay.py`
+Emitted by: `graph/governance_overlay.py`
 
 ## `serves_model`
 

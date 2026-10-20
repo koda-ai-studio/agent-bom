@@ -1,24 +1,20 @@
 """Project discovered non-human identities (NHIs) into the unified graph.
 
-The ``agent_bom.identity`` connectors enumerate *existing* machine identities
-(IdP service accounts, API tokens) that agent-bom did not issue. This overlay
-emits each one as a ``managed_identity`` node — the same entity type used by the
-governance overlay for agent-bom-issued identities — so the
-effective-permissions engine and governance traversal treat discovered and
-issued identities uniformly:
+The ``agent_bom.identity`` connectors enumerate existing machine identities
+(IdP service accounts, API tokens) that agent-bom did not issue. Discovered
+NHIs retain their provider, scoped identity and scope metadata; verified Okta
+organization membership is projected as a relationship.
 
-    agent → managed_identity → tool → vulnerable package
-
-Discovered NHIs carry a ``discovered`` marker and the source provider so they
-are distinguishable from issued identities. Nodes are keyed on the provider +
-identity id; re-running discovery is idempotent. Matching to existing tool nodes
-is by label; an unmatched scope is still recorded on the node attributes so it
-stays visible without an edge.
+Scope strings alone do not identify a tool or prove a grant to it. This overlay
+therefore fails closed for tool-access relationships: it never derives a
+``scoped_to`` edge from a scope name, even if it matches a tool label or ID.
+Independent authorization overlays remain responsible for evidenced grants.
+Re-running discovery is idempotent within a snapshot; updated observations are
+projected into a new snapshot without rewriting historical evidence.
 """
 
 from __future__ import annotations
 
-from collections import defaultdict
 from collections.abc import Iterable, Mapping
 from typing import Any
 
@@ -30,14 +26,6 @@ from agent_bom.graph.types import EntityType, NodeStatus, RelationshipType
 from agent_bom.identity.okta_nhi import DiscoveredNonHumanIdentity
 
 _OVERLAY_SOURCE = "nhi-discovery"
-
-
-def _tool_label_index(graph: UnifiedGraph) -> dict[str, list[str]]:
-    index: dict[str, list[str]] = defaultdict(list)
-    for node in graph.nodes.values():
-        if node.entity_type == EntityType.TOOL:
-            index[node.label.strip().lower()].append(node.id)
-    return index
 
 
 def _org_membership(graph: UnifiedGraph, identity: DiscoveredNonHumanIdentity, nid: str) -> tuple[int, int]:
@@ -72,12 +60,11 @@ def apply_nhi_overlay(
     graph: UnifiedGraph,
     identities: Iterable[DiscoveredNonHumanIdentity],
 ) -> dict[str, int]:
-    """Add discovered NHIs as ``managed_identity`` nodes (+ tool scope) in place.
+    """Add discovered NHIs as ``managed_identity`` nodes and organization membership in place.
 
     Returns a count of added nodes and edges. Idempotent: an identity whose node
     already exists is skipped. Never raises — a malformed identity is ignored.
     """
-    tools_by_label = _tool_label_index(graph)
     added_nodes = 0
     added_edges = 0
 
@@ -121,22 +108,6 @@ def apply_nhi_overlay(
             added_nodes += org_nodes
             added_edges += org_edges
 
-            for scope in identity.scopes:
-                scope_name = scope.strip().lower()
-                if not scope_name or scope_name == "*":
-                    continue
-                for tool_id in tools_by_label.get(scope_name, []):
-                    graph.add_edge(
-                        UnifiedEdge(
-                            source=nid,
-                            target=tool_id,
-                            relationship=RelationshipType.SCOPED_TO,
-                            weight=3.0,
-                            provenance={"source": _OVERLAY_SOURCE},
-                            evidence={"kind": "discovered_nhi_scope", "provider": identity.provider},
-                        )
-                    )
-                    added_edges += 1
         except Exception:  # noqa: BLE001 — never raise into the builder
             continue
 
