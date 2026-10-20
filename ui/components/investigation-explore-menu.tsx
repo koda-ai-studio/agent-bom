@@ -23,11 +23,11 @@ export function InvestigationExploreMenu({ question, onQuestion, onBlastRadius, 
   fullGraphHref: string;
 }) {
   return (
-    <details className="investigation-navigation group relative">
+    <details className="investigation-navigation group sm:relative">
       <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 rounded-lg border border-outline bg-surface px-3 py-1.5 text-xs font-medium text-foreground hover:bg-surface-muted [&::-webkit-details-marker]:hidden">
         Explore &amp; evidence <ChevronDown className="h-3.5 w-3.5 transition group-open:rotate-180" aria-hidden="true" />
       </summary>
-      <div className="absolute right-0 z-30 mt-2 w-[min(36rem,calc(100vw-2rem))] space-y-3 rounded-xl border border-outline bg-surface p-3 shadow-lg">
+      <div data-testid="investigation-explore-panel" className="absolute inset-x-0 top-full z-30 mt-2 space-y-3 rounded-xl border border-outline bg-surface p-3 shadow-lg sm:inset-x-auto sm:right-0 sm:top-auto sm:w-[min(36rem,calc(100vw-2rem))]">
         <p className="text-xs text-ink-tertiary">Scope, views and exports</p>
         <div role="group" aria-label="Investigation starting questions" className="flex flex-wrap gap-2">
           <button type="button" className="sg-action" aria-pressed={!question} onClick={() => onQuestion(null)}>All ranked paths</button>

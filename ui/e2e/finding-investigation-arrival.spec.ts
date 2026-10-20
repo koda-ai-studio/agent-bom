@@ -52,6 +52,28 @@ for (const theme of ["light", "dark"]) for (const width of [1440, 390]) {
   });
 }
 
+for (const theme of ["light", "dark"]) {
+  test(`investigation header menu and steps stay inside a 390px viewport ${theme}`, async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.addInitScript((t) => localStorage.setItem("agent-bom-theme", t), theme);
+    await fixture(page, true, []);
+    await page.goto(href);
+    await expect(page.getByRole("heading", { name: "Investigation" })).toBeVisible();
+    const steps = page.getByTestId("investigation-step-strip");
+    for (const name of [/Path/, /Impact/, /Owner/, /Fix/, /Verify/]) {
+      const box = await steps.getByRole("link", { name }).or(steps.getByRole("button", { name })).first().boundingBox();
+      expect(box && box.x >= 0 && box.x + box.width <= 390).toBe(true);
+    }
+    await page.getByText("Explore & evidence").click();
+    const menu = page.getByTestId("investigation-explore-panel");
+    await expect(menu).toBeVisible();
+    const box = (await menu.boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(390);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
+}
+
 test("a current-estate miss retries the finding's own snapshot before declaring absence", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   const queries: URL[] = [];
