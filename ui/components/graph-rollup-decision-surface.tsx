@@ -234,6 +234,8 @@ export function GraphRollupDecisionSurface({
         {visible.map((item) => {
           const itemEdges = incident.get(item.id) ?? [];
           const relation = relationEvidence(item.id, itemEdges);
+          // An image group is a reading level over returned packages; it has no edges of its own.
+          const imageGroup = item.id.startsWith(IMAGE_GROUP_PREFIX) && grouped.images.has(item.id);
           const severity = effectiveSeverity(item);
           const critical = item.aggregate.severity_counts.critical ?? 0;
           const high = item.aggregate.severity_counts.high ?? 0;
@@ -272,14 +274,14 @@ export function GraphRollupDecisionSurface({
                 <p className="tabular-nums text-ink-secondary" title={PRIORITY_RULE} data-testid="graph-scope-priority-score">
                   {item.aggregate.exposed_count > 0 && <>{item.aggregate.exposed_count} exposed · </>}Priority score <span className="font-semibold text-foreground">{scopeRiskScore(item).toLocaleString()}</span>
                 </p>
-                <div>
+                {!imageGroup && <div>
                   {/* The server counts linked scopes before any row cap; the in-view count is a fallback. */}
                   {item.connections ? <p className="tabular-nums text-ink-secondary" title={`${item.connections.relationship_count} relationships to other scopes`}>
                     Linked to {item.connections.connected_entry_count} other {item.connections.connected_entry_count === 1 ? "scope" : "scopes"}
                   </p> : <p className="tabular-nums text-ink-secondary" title={`${relation.relationships} aggregated relationship evidence records`}>
                     {relation.containers} connected {relation.containers === 1 ? "node" : "nodes"} in this view
                   </p>}
-                </div>
+                </div>}
               </div>
 
 
@@ -298,7 +300,7 @@ export function GraphRollupDecisionSurface({
                   </button>
                 )}
               </div>
-              <details className="col-span-2 text-xs text-ink-secondary md:col-span-3">
+              {!imageGroup && <details className="col-span-2 text-xs text-ink-secondary md:col-span-3">
                 <summary className="w-fit cursor-pointer py-1">Details · {itemEdges.length} relationship {itemEdges.length === 1 ? "row" : "rows"}</summary>
                 <p className="mt-2 text-ink-tertiary">Node ID <code className="break-all select-all">{item.id}</code></p>
                 <p className="my-2 text-ink-tertiary">Returned relationships only. These do not establish runtime execution or authorized access.</p>
@@ -317,7 +319,7 @@ export function GraphRollupDecisionSurface({
                 {itemEdges.length > 12 && <p className="mt-2">Showing 12 of {itemEdges.length} rows.</p>}
                 {itemEdges.length > 12 && <button type="button" onClick={() => onInvestigate(item)} className="mt-2 text-sky-700 underline dark:text-sky-300">Inspect connections for {item.label}</button>}
                 {itemEdges.length === 0 && <p>No relationship rows returned for this node. Coverage may be incomplete; filters or pagination can omit connections.</p>}
-              </details>
+              </details>}
               {(item.aggregate.toxic_combo || item.aggregate.internet_exposed) && <div className="col-span-2 flex flex-wrap gap-1.5 text-xs md:col-span-3">
                 {item.aggregate.toxic_combo ? (
                   <span className="rounded border border-red-500/30 bg-red-500/10 px-1.5 py-0.5 text-red-700 dark:text-red-200">{item.has_children ? "Toxic combination in scope" : "Toxic combination"}</span>
