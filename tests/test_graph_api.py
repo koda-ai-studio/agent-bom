@@ -2203,7 +2203,8 @@ class TestGraphStoreBackendSelection:
         assert response.status_code == 200
         helper_calls = [call[0] for call in recording_graph_store.calls]
         assert helper_calls.count("page_nodes") == 1
-        assert helper_calls.count("edges_for_node_ids") == 2  # incident page plus incoming containment
+        # Incident page, one agent-stack level, then incoming containment.
+        assert helper_calls.count("edges_for_node_ids") == 3
         assert helper_calls.count("snapshot_stats") == 1
         assert "load_graph" not in helper_calls
 
@@ -2442,7 +2443,12 @@ class TestGraphStoreBackendSelection:
 
         assert overview.status_code == 200
         overview_body = overview.json()
-        assert len(overview_body["nodes"]) == 200
+        completeness = overview_body["completeness"]
+        assert completeness["ranked"] == 200
+        # Each ranked CVE arrives with the package it lives in (the agent stack).
+        assert len(overview_body["nodes"]) == 200 + completeness["context_nodes"]
+        types = {node["id"]: node["entity_type"] for node in overview_body["nodes"]}
+        assert sum(1 for kind in types.values() if kind == "package") >= 200
         assert overview_body["stats"]["total_edges"] >= 250
         assert len(overview_body["edges"]) >= 200
         assert all(edge["source_id"] and edge["target_id"] for edge in overview_body["edges"])

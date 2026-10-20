@@ -84,7 +84,7 @@ from agent_bom.api.graph_contracts import (
     ScopedGraphResponse as ScopedGraphResponse,
 )
 from agent_bom.api.graph_generation import optional_generation, snapshot_fingerprint, verify_generation
-from agent_bom.api.graph_page_context import containment_ancestors, page_attack_context
+from agent_bom.api.graph_page_context import page_attack_context, page_context
 from agent_bom.api.graph_paging import _coalesce_alias, _enforce_node_offset_cap, _paginate, path_order
 from agent_bom.api.graph_presentation import (
     _finding_ids_for_path as _finding_ids_for_path,
@@ -364,12 +364,8 @@ async def get_graph(
     source_attack_paths, attack_path_nodes = await page_attack_context(
         graph_store, scan_id=effective_scan_id, tenant_id=tenant, node_ids=paged_ids, call_store=_runtime._graph_store_call
     )
-    ancestor_nodes, ancestor_edges = await containment_ancestors(
-        graph_store,
-        scan_id=effective_scan_id,
-        tenant_id=tenant,
-        node_ids=paged_ids,
-        call_store=_runtime._graph_store_call,
+    ancestor_nodes, ancestor_edges, stack_context = await page_context(
+        graph_store, scan_id=effective_scan_id, tenant_id=tenant, page_nodes=paged_nodes, call_store=_runtime._graph_store_call
     )
     nodes_by_id = {node.id: node for node in [*paged_nodes, *attack_path_nodes, *ancestor_nodes]}
     snapshot_stats = await _runtime._graph_store_call(
@@ -401,6 +397,7 @@ async def get_graph(
         source_attack_paths=source_attack_paths,
         nodes_by_id=nodes_by_id,
         cursor=cursor,
+        stack_context=stack_context,
     )
 
 

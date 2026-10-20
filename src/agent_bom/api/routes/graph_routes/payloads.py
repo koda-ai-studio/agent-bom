@@ -473,6 +473,7 @@ def _encode_node_page(
     source_attack_paths: list[AttackPath],
     nodes_by_id: dict[str, UnifiedNode],
     cursor: str | None,
+    stack_context: dict[str, Any] | None = None,
 ) -> Response:
     # This branch pages a fully-counted snapshot rather than loading it under a
     # budget, so the estate total IS the stats total. Emitting the field anyway
@@ -516,6 +517,9 @@ def _encode_node_page(
             # and the extra nodes read as a paging bug.
             "ranked": len(paged_nodes),
             "context_nodes": len(ancestor_nodes),
+            # The agent stack above the page's findings (package → workload →
+            # agent), capped per node; ``omitted_parent_links`` is the cut.
+            "stack_context": stack_context or {},
             "edges_truncated": edges_truncated,
             "edge_limit": _NODE_PAGE_EDGE_LIMIT,
             "edge_returned": len(paged_edges),
