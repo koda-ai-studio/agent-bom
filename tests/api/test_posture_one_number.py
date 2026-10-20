@@ -98,7 +98,7 @@ def test_overview_and_posture_report_the_same_grade_and_score() -> None:
     # Dimensions read the tenant's open findings, not the lenient scan-time
     # breakdown: 3 critical and 2 high occurrences, none fixable.
     assert posture["dimensions"]["vulnerability_posture"]["score"] == 39.0
-    assert posture["dimensions"]["vulnerability_posture"]["details"] == "5 vulns (3 critical, 2 high), 0 fixable"
+    assert posture["dimensions"]["vulnerability_posture"]["details"] == "5 vulnerability occurrences (3 critical, 2 high), 0 fixable"
 
 
 def test_grade_summary_and_tiles_use_the_issue_counts() -> None:

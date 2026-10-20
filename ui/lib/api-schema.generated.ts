@@ -12011,6 +12011,10 @@ export interface components {
             truncated: boolean;
             /** Warnings */
             warnings: string[];
+            /** Window */
+            window?: {
+                [key: string]: unknown;
+            } | null;
         };
         /** DataSourceRow */
         DataSourceRow: {
@@ -18285,6 +18289,8 @@ export interface components {
             critical: number;
             /** High */
             high: number;
+            /** Kev */
+            kev?: number | null;
             /** Low */
             low: number;
             /** Medium */

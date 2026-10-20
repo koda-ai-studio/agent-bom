@@ -9922,6 +9922,18 @@
             },
             "title": "Warnings",
             "type": "array"
+          },
+          "window": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window"
           }
         },
         "required": [
@@ -26552,6 +26564,17 @@
           "high": {
             "title": "High",
             "type": "integer"
+          },
+          "kev": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kev"
           },
           "low": {
             "title": "Low",

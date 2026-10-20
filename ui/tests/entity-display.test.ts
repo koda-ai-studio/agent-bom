@@ -12,11 +12,11 @@ describe("entity-display", () => {
       subtitle: "Claude Desktop",
     });
     expect(formatExposureEntityDisplay("github", "server", { transport: "stdio", protocol: "mcp" })).toEqual({
-      title: "GitHub connector",
+      title: "GitHub",
       subtitle: "stdio MCP server",
     });
     expect(formatExposureEntityDisplay("github-enterprise MCP", "server", { transport: "sse", protocol: "mcp" })).toEqual({
-      title: "Github Enterprise MCP",
+      title: "github-enterprise MCP",
       subtitle: "sse MCP server",
     });
   });
@@ -36,7 +36,7 @@ describe("entity-display", () => {
         { label: "form-data@4.0.0", role: "package" },
         { label: "CVE-2025-7783", role: "finding" },
       ]),
-    ).toBe("Claude Desktop → GitHub connector → form-data → CVE-2025-7783");
+    ).toBe("Claude Desktop → GitHub → form-data → CVE-2025-7783");
   });
 });
 

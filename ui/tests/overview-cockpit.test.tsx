@@ -338,7 +338,7 @@ describe("OverviewCockpit", () => {
     // The magnitude must carry its unit. A bare number under a heading called
     // CSPM reads as assets, accounts or data stores depending on the reader —
     // all wrong. These are findings, which is what the severity chips sum to.
-    expect(screen.getByText("Findings may appear in multiple areas.")).toBeInTheDocument();
+    expect(screen.getByText("Counts are finding occurrences, not issues; one may appear in several areas.")).toBeInTheDocument();
     const coverageHelp = screen.getByRole("button", { name: "About assessment coverage" });
     expect(coverageHelp).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
@@ -451,7 +451,7 @@ describe("OverviewCockpit", () => {
       { id: "atlas", label: "MITRE ATLAS", kind: "applicability", applicable: 3, pass: 0, fail: 0, warn: 0, total: 10 },
     ] }} />);
     const context = screen.getByTestId("overview-compliance-pass-context");
-    expect(context).toHaveTextContent("9% pass rate · 86 of 412 controls assessed (21%) · 1 of 3 frameworks evaluated");
+    expect(context).toHaveTextContent("9% pass rate · 86 of 412 controls assessed (21%) · 1 of 3 control frameworks evaluated");
     expect(context).toBeVisible();
   });
 

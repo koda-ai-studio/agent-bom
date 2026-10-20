@@ -269,6 +269,8 @@ export const findingsApi = {
     source_findings: number;
     truncated: boolean;
     warnings: string[];
+    /** The findings read window this plan was built from (same default as /findings). */
+    window?: { days: number; label: string; applied: boolean } | null | undefined;
   }>("/v1/findings/remediation"),
 
   /** Remediation plan for a completed scan.

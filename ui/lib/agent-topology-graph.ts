@@ -1,6 +1,7 @@
 import type { Edge, Node } from "@xyflow/react";
 
 import type { Agent } from "@/lib/api";
+import { agentDisplayName, formatEntityId } from "@/lib/display-name";
 import { credentialEnvKeys } from "@/lib/credential-key";
 
 export const MAX_TOPOLOGY_AGENTS = 75;
@@ -37,17 +38,12 @@ export function topologyAgentTypeLabel(agentType: string): string {
 }
 
 export function topologyAgentDisplayName(agent: Agent): string {
-  const enrollment = typeof agent.enrollment_name === "string" ? agent.enrollment_name.trim() : "";
-  if (enrollment) return enrollment;
-  return formatInventoryAgentLabel(agent.name);
+  return agentDisplayName(agent.name, typeof agent.enrollment_name === "string" ? agent.enrollment_name : null);
 }
 
 /** Humanize slug identifiers only; a name with spaces is already a display name. */
 export function formatInventoryAgentLabel(name: string): string {
-  if (/\s/.test(name.trim())) return name.trim();
-  return name
-    .replace(/[-_]/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
+  return formatEntityId(name);
 }
 
 export function serverVulnerabilityCount(server: MCPServer): number {

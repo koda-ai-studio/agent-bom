@@ -6812,6 +6812,12 @@ components:
             type: string
           title: Warnings
           type: array
+        window:
+          anyOf:
+          - additionalProperties: true
+            type: object
+          - type: 'null'
+          title: Window
       required:
       - remediation_plan
       - source_findings
@@ -18215,6 +18221,11 @@ components:
         high:
           title: High
           type: integer
+        kev:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Kev
         low:
           title: Low
           type: integer

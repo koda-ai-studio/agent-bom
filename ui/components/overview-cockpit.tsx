@@ -34,6 +34,7 @@ export function OverviewCockpit({
   critical,
   high,
   kev,
+  kevOccurrences = null,
   credentials,
   agents,
   scans,
@@ -100,6 +101,7 @@ export function OverviewCockpit({
                 critical={critical}
                 high={high}
                 kev={kev}
+                kevOccurrences={kevOccurrences}
                 credentials={credentials}
                 complianceScore={complianceScore}
                 severity={severity}

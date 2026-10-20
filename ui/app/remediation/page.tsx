@@ -376,16 +376,20 @@ function RemediationPage() {
     Record<string, TicketLink>
   >({});
 
+  const [windowLabel, setWindowLabel] = useState<string | null>(null);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
       setWarnings([]);
       if (scanParam) {
+        setWindowLabel(null);
         setItems(await api.getRemediation(scanParam));
       } else {
         const current = await api.getCurrentRemediation();
         setItems(current.remediation_plan);
+        setWindowLabel(current.window?.label ?? null);
         setWarnings([
           ...(current.truncated ? ["This plan covers a limited set of current findings. Review Findings for the remaining evidence."] : []),
           ...current.warnings,
@@ -551,7 +555,7 @@ function RemediationPage() {
             Package remediation plan
           </h1>
           <p className="text-ink-secondary text-sm mt-1">
-            {items.length} packages prioritized by reach, severity, and available fixes
+            {items.length} packages prioritized by reach, severity, and available fixes{windowLabel ? ` · ${windowLabel}` : ""}
           </p>
           {mappings.packages > 0 && (
             <p className="text-ink-tertiary text-xs mt-1">

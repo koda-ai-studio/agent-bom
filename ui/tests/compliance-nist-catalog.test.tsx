@@ -100,6 +100,15 @@ describe("ComplianceNistCatalog", () => {
     expect(within(panel).getByText(/1 of 7 evaluated controls passing/i)).toBeInTheDocument();
   });
 
+  it("leads with the framework list's pass/fail numbers and labels the catalog basis", async () => {
+    getNist.mockResolvedValue(scenarioDrill());
+    render(<ComplianceNistCatalog mapped={{ pass: 2, warn: 0, fail: 20 }} />);
+    const panel = await screen.findByTestId("nist-catalog-panel");
+    expect(within(panel).getByTestId("nist-mapped-summary")).toHaveTextContent("Framework list: 2/22 evaluated controls pass · 20 failed");
+    expect(within(panel).getByText(/catalog check scoring, a separate basis/i)).toBeInTheDocument();
+    expect(within(panel).getByLabelText("Catalog check scoring")).toBeInTheDocument();
+  });
+
   it("drills to the engineer view: family rollup + evidencing checks + ISO-by-id", async () => {
     getNist.mockResolvedValue(scenarioDrill());
     render(<ComplianceNistCatalog />);

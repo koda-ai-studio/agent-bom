@@ -6,6 +6,7 @@ import { Layers, Loader2, ShieldAlert } from "lucide-react";
 import { api } from "@/lib/api";
 import type { NistCatalogControl, NistCatalogDrill } from "@/lib/api";
 import { userFacingApiErrorMessage } from "@/lib/api-errors";
+import type { ComplianceFrameworkSummary } from "@/lib/compliance-frameworks";
 import { Collapsible } from "@/components/collapsible";
 import { isNotEvaluated, postureLabel, StatusIcon, statusColor } from "@/components/compliance-status";
 
@@ -75,7 +76,17 @@ function ControlStatusBadge({ status }: { status: string }) {
  * leads with a family rollup and lists evaluated controls only until the reader
  * opts into the full catalog — never a mile-long not_evaluated tower.
  */
-export function ComplianceNistCatalog() {
+type MappedNistSummary = Pick<ComplianceFrameworkSummary, "pass" | "warn" | "fail">;
+
+/** The framework list's row for NIST 800-53, so the panel leads with the same numbers. */
+function mappedNistLine(mapped: MappedNistSummary): string {
+  const evaluated = mapped.pass + mapped.warn + mapped.fail;
+  const failed = mapped.fail > 0 ? ` · ${mapped.fail.toLocaleString()} failed` : "";
+  const review = mapped.warn > 0 ? ` · ${mapped.warn.toLocaleString()} need review` : "";
+  return `${mapped.pass.toLocaleString()}/${evaluated.toLocaleString()} evaluated controls pass${failed}${review}`;
+}
+
+export function ComplianceNistCatalog({ mapped = null }: { mapped?: MappedNistSummary | null }) {
   const [drill, setDrill] = useState<NistCatalogDrill | null>(null);
   const [fullControls, setFullControls] = useState<NistCatalogControl[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -171,8 +182,13 @@ export function ComplianceNistCatalog() {
               Vendor-asserted
             </span>
           </div>
+          {mapped ? (
+            <p className="mt-1 text-sm text-[color:var(--foreground)]" data-testid="nist-mapped-summary">
+              Framework list: {mappedNistLine(mapped)}
+            </p>
+          ) : null}
           <p className="mt-1 text-xs text-[color:var(--text-tertiary)]">
-            Full catalog scored independently over evidenced checks —{" "}
+            Catalog check scoring, a separate basis —{" "}
             {noData ? (
               "no NIST-mapped evidence yet; connect a cloud account or run a scan to evaluate controls."
             ) : (
@@ -202,6 +218,7 @@ export function ComplianceNistCatalog() {
       <div
         className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8"
         data-testid="nist-catalog-buckets"
+        aria-label="Catalog check scoring"
       >
         <BucketTile label="Score" value={noData ? "—" : `${s.score}%`} />
         <BucketTile label="Coverage" value={`${s.coverage_pct}%`} />

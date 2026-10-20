@@ -59,12 +59,19 @@ export function CategoryChip({
   );
 }
 
+/** KEV is counted in issues, like the tiles; occurrences are named, never a bare second total. */
+export function kevChipTitle(issues: number, occurrences: number | null | undefined): string {
+  const issueText = `${issues.toLocaleString()} known-exploited issue${issues === 1 ? "" : "s"} (CISA KEV)`;
+  return occurrences != null && occurrences !== issues ? `${issueText} · ${occurrences.toLocaleString()} occurrences` : issueText;
+}
+
 export function SeverityIssueStrip({
   localReport = false,
   summaryReady,
   critical,
   high,
   kev,
+  kevOccurrences = null,
   credentials,
   complianceScore,
   severity,
@@ -76,6 +83,7 @@ export function SeverityIssueStrip({
   critical: number;
   high: number;
   kev: number | null;
+  kevOccurrences?: number | null | undefined;
   credentials: number | null;
   complianceScore?: string | undefined;
   severity: SeverityCounts;
@@ -141,7 +149,7 @@ export function SeverityIssueStrip({
                 icon={Flame}
                 label="KEV"
                 value={kev}
-                title="Known-exploited vulnerabilities (CISA KEV)"
+                title={kevChipTitle(kev, kevOccurrences)}
               />
             ) : null}
             {summaryReady && credentials != null ? (

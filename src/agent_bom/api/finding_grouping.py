@@ -73,9 +73,9 @@ def _group_occurrence_rows(rows: list[dict[str, Any]], *, cloud_controls: bool =
                 occurrences_truncated=False,
             )
             grouped[group_id] = group
-        if cloud_controls and severity_rank(str(row.get("severity") or "unknown")) > severity_rank(str(group.get("severity") or "unknown")):
-            # Keep group order and aggregate state, but represent the worst
-            # observed severity even when occurrences are sorted by time.
+        if severity_rank(str(row.get("severity") or "unknown")) > severity_rank(str(group.get("severity") or "unknown")):
+            # An issue is as severe as its worst open occurrence. Taking the
+            # first row instead made the issue histogram depend on list sort.
             aggregate = {
                 key: group[key]
                 for key in (
@@ -128,6 +128,7 @@ def _attach_grouping_metadata(
         "scanned_occurrences": scanned,
         "scan_budget": _FINDING_GROUP_MAX_OCCURRENCES,
         "occurrence_total": sum(int(group.get("occurrence_count") or 0) for group in groups),
+        "kev_issue_total": sum(1 for group in groups if group.get("is_kev") or group.get("cisa_kev")),
         "occurrence_sample_limit": _FINDING_GROUP_OCCURRENCE_SAMPLE,
     }
     _copy_first_page_metadata(envelope, first_page, ("facets", "facets_approximate", "facet_metadata", "scope_completeness"))

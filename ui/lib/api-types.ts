@@ -1227,6 +1227,8 @@ export interface IssueSeverityCounts {
   low: number;
   unrated: number;
   total: number;
+  /** Known-exploited issues, on the same issue-group unit as the severity counts. */
+  kev?: number | undefined;
   approximate: boolean;
   basis: "issue_groups";
   window?: unknown;

@@ -806,7 +806,7 @@ class TestIsVexSuppressed:
         assert len(policy_result["violations"]) == 1
 
         scorecard = compute_posture_scorecard(report)
-        assert scorecard.dimensions["vulnerability_posture"].details == "2 vulns (1 critical, 1 low), 0 fixable"
+        assert scorecard.dimensions["vulnerability_posture"].details == "2 vulnerability occurrences (1 critical, 1 low), 0 fixable"
 
     def test_json_preserves_vex_without_suppressing_risk(self):
         from agent_bom.output import to_json

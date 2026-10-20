@@ -33,6 +33,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { findingsHref } from "@/lib/page-links";
+import { frameworkCoverageCounts, riskMappingsLabel } from "@/lib/framework-coverage";
 import { ComponentCompliance } from "@/components/inventory/component-compliance";
 import { ComplianceControlDrawer } from "@/components/compliance-control-drawer";
 import {
@@ -396,7 +397,7 @@ function CompliancePageContent() {
   // Technique catalogs have no pass/fail to add, and the independently scored
   // NIST catalog rescores evidence these rows already counted.
   const { pass: totalPass, warn: totalWarn, fail: totalFail } = complianceScoredTotals(frameworks);
-  const evaluatedFrameworks = frameworks.filter((f) => !f.disabled).length;
+  const frameworkCoverage = frameworkCoverageCounts(frameworks);
   const overallNotEvaluated = isNotEvaluated(data.overall_status);
 
   const kpis: StatStripItem[] = [
@@ -413,9 +414,9 @@ function CompliancePageContent() {
         : `${postureLabel(data.overall_status)} · ${data.evaluated_controls} of ${data.total_controls} controls evaluated`,
     },
     {
-      label: "Frameworks",
-      value: evaluatedFrameworks,
-      hint: `${frameworks.length} tracked`,
+      label: "Control frameworks",
+      value: frameworkCoverage.controlFrameworks,
+      hint: `${frameworkCoverage.evaluatedControlFrameworks} evaluated · ${riskMappingsLabel(frameworkCoverage.riskMappings)}`,
     },
     {
       label: "Passing",
@@ -783,7 +784,7 @@ function CompliancePageContent() {
             data-testid="compliance-split"
           />
 
-          <ComplianceNistCatalog />
+          <ComplianceNistCatalog mapped={frameworks.find((framework) => framework.id === "nist-800-53") ?? null} />
 
           {(hubPosture && hubPosture.totals.combined > 0) || mitreCatalog || atlasCatalog ? (
             <Collapsible title="Operator & catalog context" defaultOpen={false}>

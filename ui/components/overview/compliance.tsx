@@ -3,6 +3,7 @@
 import { Collapsible } from "@/components/collapsible";
 import { isNotEvaluated } from "@/components/compliance-status";
 import { FrameworkIcon } from "@/components/framework-icon";
+import { controlFrameworksLabel, formatFrameworkCoverage, frameworkCoverageCounts } from "@/lib/framework-coverage";
 import { CircleCheck, CircleX, SearchCheck } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -71,7 +72,7 @@ export function ComplianceSnapshotPanel({
             <p data-testid="overview-compliance-pass-context">
               <span className="font-medium text-foreground">{Math.round(compliance.overallScore)}% pass rate</span>
               {assessmentCoverage != null ? ` · ${compliance.evaluatedControls} of ${compliance.totalControls} controls assessed (${assessmentCoverage}%)` : ""}
-              {` · ${scored.length - unassessed} of ${scored.length} framework${scored.length === 1 ? "" : "s"} evaluated`}
+              {` · ${scored.length - unassessed} of ${controlFrameworksLabel(scored.length)} evaluated`}
             </p>
           </div>
 
@@ -96,7 +97,7 @@ export function ComplianceSnapshotPanel({
       {!loading && hasScanEvidence && scored.length > 0 ? (
         <div className="mt-3 border-t border-outline pt-3">
           {evidenceReady ? <p className="mb-2 text-xs text-ink-secondary">{attention} framework{attention === 1 ? " needs" : "s need"} attention{unassessed > 0 ? ` · ${unassessed} not evaluated` : ""}</p> : null}
-          <Collapsible bare title="Control frameworks" subtitle={`${scored.length} frameworks · ordered by failing and warning checks`} defaultOpen data-testid="overview-evaluated-frameworks">
+          <Collapsible bare title="Control frameworks" subtitle={`${formatFrameworkCoverage(frameworkCoverageCounts(allFrameworks))} · ordered by failing and warning checks`} defaultOpen data-testid="overview-evaluated-frameworks">
             <div role="region" aria-label="Control framework list" tabIndex={showAllFrameworks ? 0 : undefined}
               className="max-h-[min(50vh,22rem)] overflow-y-auto overscroll-contain rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-500">
               <FrameworkCards frameworks={showAllFrameworks ? scored : scored.slice(0, 4)} />

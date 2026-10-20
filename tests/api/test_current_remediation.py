@@ -205,3 +205,14 @@ def test_current_remediation_endpoint_retains_finding_taxonomy(scan_store):  # n
     assert plan["owasp_tags"] == ["LLM02"]
     assert plan["atlas_tags"] == ["AML.T0010"]
     assert plan["soc2_tags"] == ["CC6.1"]
+
+
+def test_remediation_reads_the_findings_default_window_and_says_so(scan_store):  # noqa: F811
+    """Remediation's package count shares the findings page's read window."""
+    from agent_bom.api import time_window
+
+    scan_store.put(pushed(8, scope="v1:" + "a" * 64))
+    body = _plan()
+    expected = time_window.window_metadata(time_window.normalize_window_days(None))
+    assert body["window"]["days"] == expected["days"]
+    assert body["window"]["applied"] is True

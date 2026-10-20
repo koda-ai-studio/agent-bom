@@ -205,6 +205,29 @@ set**, so `domain=aspm` returns SAST + secrets + repo dependencies + IaC and
 `domain=vuln` returns every CVE. `GET /v1/overview` returns a `coverage` array
 of the five overlapping lanes.
 
+### Count units and scopes
+
+Every surface reads one source per metric. When two numbers for the same thing
+differ, it is because they differ in unit or scope, and the surface names it.
+
+| Metric | Unit | Source | Read by |
+|---|---|---|---|
+| Critical / high / medium / low | **issues** — open issue groups in the default read window | `issues` on `GET /v1/posture/counts` (`issue_severity_counts`) | overview tiles, nav badges, findings page (every sort), graph roll-up summary, `/v1/posture` summary |
+| An issue's severity | worst open occurrence in the group | `finding_grouping._group_occurrence_rows` | same as above; independent of list sort |
+| KEV | **issues** (`issues.kev`); occurrences stay in `finding_counts.kev` | same grouping pass | overview KEV chip (issues, occurrences in its title), exec score and summary |
+| Severity occurrences | **occurrences** — finding rows | `finding_counts` on `/v1/overview` | labelled "occurrences" wherever shown, e.g. "1,957 issues · 2,725 occurrences" |
+| Graph severity | **graph finding nodes** (`severity_basis: "graph_nodes"`); one node per advisory makes this the issue count | `risk_summary` on `/v1/graph/snapshots`, `stats.severity_counts` on `/v1/graph` | labelled as issues where shown, with occurrences beside it |
+| Security areas | **occurrences**, overlapping lenses | `coverage` on `/v1/overview` | overview "Findings by security area" |
+| Open CVE findings | **occurrences** carrying a CVE id | `domains.vuln` on `/v1/overview` | overview Vuln / SCA; equals `dimensions_basis.vulnerability_findings` on `/v1/posture` when every vulnerability carries a CVE (the posture dimension also counts GHSA-only advisories) |
+| Remediation | **packages** with a fixable CVE, default read window | `GET /v1/findings/remediation` (`window` in the body) | remediation page |
+| Frameworks covered | **control frameworks** (scored pass/fail) + **risk mappings** (applicability), enabled for the scan context | `ui/lib/framework-coverage.ts` over `/v1/compliance` | overview and compliance |
+| NIST SP 800-53 | the framework list row (`summary.nist_800_53_*`) leads; the full-catalog check scoring is a labelled second basis | `/v1/compliance`, `/v1/compliance/nist-800-53` | compliance list and NIST panel |
+| Agents | **this host** (`/v1/agents`, `scope`) vs **estate** (`agents.total` on `/v1/posture/counts`) | — | agents page shows both, each named |
+| Credentials | **unique credential names** | posture `credential_hygiene`; `uniqueCredentialNames` on the agents page | posture, agents page |
+
+`tests/test_demo_estate_one_count_source.py` asserts these on the demo estate,
+and `ui/e2e/count-consistency-live.spec.ts` reads them off the pages.
+
 ---
 
 ## 3. Graph taxonomy (`src/agent_bom/graph/types.py`)

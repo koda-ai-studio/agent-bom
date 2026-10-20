@@ -195,7 +195,7 @@ describe("AgentsPage agent population", () => {
     const kpis = within(await screen.findByTestId("agents-kpis"));
     expect(subtitle()).toHaveTextContent("with their MCP servers on this API host. Estate agents: 43 Open agent inventory");
     expect(within(subtitle()).getByRole("link", { name: "Open agent inventory" })).toHaveAttribute("href", "/inventory?type=agent");
-    expect(kpis.getByText("On this host")).toBeInTheDocument();
+    expect(kpis.getByText("Agents on this host")).toBeInTheDocument();
     expect(kpis.queryByText("Agents")).not.toBeInTheDocument();
   });
 
@@ -232,7 +232,7 @@ describe("AgentsPage agent population", () => {
 
     const kpis = within(await screen.findByTestId("agents-kpis"));
     expect(kpis.getByText("Scanned agents")).toBeInTheDocument();
-    expect(kpis.queryByText("On this host")).not.toBeInTheDocument();
+    expect(kpis.queryByText("Agents on this host")).not.toBeInTheDocument();
     expect(subtitle()).not.toHaveTextContent("on this API host");
     // Manifest directories and the AI-inventory wrapper are not MCP servers.
     const mcpServersCell = kpis.getByText("MCP servers").parentElement!.parentElement!;
@@ -243,7 +243,7 @@ describe("AgentsPage agent population", () => {
     render(<AgentsPage />);
 
     const kpis = within(await screen.findByTestId("agents-kpis"));
-    expect(kpis.getByText("On this host")).toBeInTheDocument();
+    expect(kpis.getByText("Agents on this host")).toBeInTheDocument();
     expect(subtitle()).not.toHaveTextContent("Estate agents");
     expect(screen.queryByRole("link", { name: "Open agent inventory" })).not.toBeInTheDocument();
   });

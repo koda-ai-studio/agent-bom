@@ -9,6 +9,18 @@ export function isMcpServer(server: Agent["mcp_servers"][number]): boolean {
   return (server.surface ?? "mcp-server") === "mcp-server";
 }
 
+/** Distinct credential names across servers: the unit the posture dimension counts. */
+export function uniqueCredentialNames(agents: Agent[]): Set<string> {
+  const names = new Set<string>();
+  for (const agent of agents) {
+    for (const server of agent.mcp_servers) {
+      for (const key of credentialEnvKeys(server.env)) names.add(key);
+      for (const key of server.credential_env_vars ?? []) names.add(key);
+    }
+  }
+  return names;
+}
+
 export function useAgentStats(agents: Agent[]) {
   const configured = agents.filter(isConfigured);
   const notConfigured = agents.filter((a) => !isConfigured(a));
@@ -17,17 +29,7 @@ export function useAgentStats(agents: Agent[]) {
     (s, a) => s + a.mcp_servers.reduce((ss, srv) => ss + srv.packages.length, 0),
     0
   );
-  const totalCredentials = agents.reduce(
-    (s, a) =>
-      s +
-      a.mcp_servers.reduce(
-        (ss, srv) =>
-          ss +
-          credentialEnvKeys(srv.env).length,
-        0
-      ),
-    0
-  );
+  const totalCredentials = uniqueCredentialNames(agents).size;
 
   // ecosystem breakdown
   const ecosystems: Record<string, number> = {};

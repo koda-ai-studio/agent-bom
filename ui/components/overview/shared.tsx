@@ -83,6 +83,8 @@ export interface OverviewCockpitProps {
   critical: number;
   high: number;
   kev: number | null;
+  /** KEV finding occurrences; `kev` is on the issue unit of the tiles. */
+  kevOccurrences?: number | null | undefined;
   credentials: number | null;
   agents: number | null;
   scans: number | null;
