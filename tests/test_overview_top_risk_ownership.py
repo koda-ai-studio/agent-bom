@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from agent_bom.api.read_models.posture import OverviewTopRisk
 from agent_bom.api.overview_rollup import _finding_top_risk
+from agent_bom.api.read_models.posture import OverviewTopRisk
 
 
 def _row(**extra):
