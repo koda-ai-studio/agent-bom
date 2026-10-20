@@ -42,6 +42,9 @@ def persistence(monkeypatch):
     factory = record("store", store)
     monkeypatch.setattr(pipeline, "_get_graph_store", factory)
     monkeypatch.setenv("AGENT_BOM_GRAPH_STORE_BACKED_BUILD", "off")
+    # Reader warm-ups run after commit on their own threads; this pins the write path only.
+    monkeypatch.setenv("AGENT_BOM_GRAPH_ROLLUP_PREWARM", "0")
+    monkeypatch.setenv("AGENT_BOM_FINDING_REACHABILITY_PREWARM", "0")
     monkeypatch.setenv("AGENT_BOM_GRAPH_BUILD_WORKSPACE", "off")
     monkeypatch.setattr("agent_bom.api.cost_store.get_cost_store", lambda: object())
     cost = record("cost", [{"cost_usd": 2}])

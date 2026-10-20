@@ -609,4 +609,5 @@ AGENT_BOM_OKTA_CLIENT_ID  # OAuth service-app client ID for DPoP discovery
 AGENT_BOM_OKTA_KEY_ID  # Public signing key ID for Okta private_key_jwt
 AGENT_BOM_OKTA_PRIVATE_KEY_FILE  # Owner-only local RSA PEM path; key stays local
 AGENT_BOM_GRAPH_ROLLUP_PREWARM  # Opt out of background roll-up warm-up after snapshot commits; read at warm time
+AGENT_BOM_FINDING_REACHABILITY_PREWARM  # Opt out of building the findings reachability index after snapshot commits; read at warm time
 AGENT_BOM_ROUTE_WARMUP  # Opt out of compiling the API route table on a boot thread; read once at startup

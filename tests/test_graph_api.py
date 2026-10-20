@@ -2481,8 +2481,15 @@ class TestGraphStoreBackendSelection:
         assert any(call[0] == "delete_preset" for call in recording_graph_store.calls)
 
     def test_scan_pipeline_persists_via_graph_store(self, monkeypatch, recording_graph_store):
+        from agent_bom.api import finding_reachability_prewarm, graph_rollup_prewarm
         from agent_bom.api.pipeline import _persist_graph_snapshot
         from agent_bom.api.postgres_common import _bypass_tenant_rls, _current_tenant, reset_current_tenant, set_current_tenant
+
+        # Reader warm-ups run on their own threads after commit and are outside
+        # this write-path contract; keep them from recording reads mid-assertion.
+        monkeypatch.setenv("AGENT_BOM_GRAPH_ROLLUP_PREWARM", "0")
+        monkeypatch.setenv("AGENT_BOM_FINDING_REACHABILITY_PREWARM", "0")
+        assert graph_rollup_prewarm.wait_idle(30) and finding_reachability_prewarm.wait_idle(30)
 
         persisted = UnifiedGraph(scan_id="job-123", tenant_id="default")
         persisted.add_node(UnifiedNode(id="agent:scan", entity_type=EntityType.AGENT, label="scan-agent"))
