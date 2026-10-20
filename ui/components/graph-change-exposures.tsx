@@ -42,7 +42,7 @@ function PathRow({ path, drill, onInvestigatePath }: { path: GraphEstatePathChan
     <li className="flex items-start justify-between gap-2 text-xs text-ink-secondary">
       <span className="min-w-0 break-words [overflow-wrap:anywhere]">
         <span className="font-mono">{pathLabel(path)}</span>
-        <span className="text-ink-tertiary"> · {path.hops.length - 1} hops · risk {path.composite_risk.toFixed(1)}</span>
+        <span className="text-ink-tertiary"> · {path.hops.length - 1} {path.hops.length === 2 ? "hop" : "hops"} · risk {path.composite_risk.toFixed(1)}</span>
       </span>
       {drill && onInvestigatePath && (
         <button type="button" aria-label={`Investigate path ${pathLabel(path)}`} onClick={() => onInvestigatePath(path)}
