@@ -60,6 +60,7 @@ _READS = frozenset(
         "impact_of",
         "traverse_subgraph",
         "attack_paths_for_sources",
+        "longest_path_to",
         "attack_paths",
         "incident_edges_page",
         "node_context",

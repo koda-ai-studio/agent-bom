@@ -315,6 +315,24 @@ class SQLiteGraphTraversalMixin(SQLiteSnapshotPathsMixin):
         finally:
             conn.close()
 
+    def longest_path_to(self, *, tenant_id: str = "", scan_id: str = "", node_id: str) -> int:
+        """Edges on the longest materialized attack path ending at *node_id*; 0 when none does."""
+        tenant_id = sqlite_graph_store.normalize_graph_tenant_id(tenant_id)
+        conn = self._open_ro_conn()
+        if conn is None:
+            return 0
+        try:
+            effective_scan_id, _created_at = sqlite_graph_store._resolve_snapshot(conn, tenant_id=tenant_id, scan_id=scan_id)
+            if not effective_scan_id:
+                return 0
+            row = conn.execute(
+                "SELECT MAX(json_array_length(path_nodes)) FROM attack_paths WHERE tenant_id = ? AND scan_id = ? AND target_node = ?",
+                (tenant_id, effective_scan_id, node_id),
+            ).fetchone()
+            return max(int(row[0] or 0) - 1, 0) if row else 0
+        finally:
+            conn.close()
+
     def attack_paths_for_sources(
         self,
         *,

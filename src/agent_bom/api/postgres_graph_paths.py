@@ -116,6 +116,20 @@ class PostgresGraphPathsMixin(PostgresGraphTraversalMixin):
         paths = [path_from_json(item[0]) for item in rows]
         return StoredQueuePage(effective_scan_id, str(row[0] or ""), paths, int(total), int(snapshot_total))
 
+    def longest_path_to(self, *, tenant_id: str = "", scan_id: str = "", node_id: str) -> int:
+        """Edges on the longest materialized attack path ending at *node_id*; 0 when none does."""
+        tenant_id = normalize_graph_tenant_id(tenant_id)
+        effective_scan_id = scan_id or self.latest_snapshot_id(tenant_id=tenant_id)
+        if not effective_scan_id:
+            return 0
+        with _tenant_connection(self._pool) as conn:
+            row = conn.execute(
+                "SELECT MAX(json_array_length(path_nodes::json)) FROM attack_paths "
+                "WHERE tenant_id = %s AND scan_id = %s AND target_node = %s",
+                (tenant_id, effective_scan_id, node_id),
+            ).fetchone()
+        return max(int(row[0] or 0) - 1, 0) if row else 0
+
     def attack_paths_for_sources(
         self,
         *,

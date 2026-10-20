@@ -50,7 +50,15 @@ async def get_graph_impact(
     node: str = Query(..., description="Node ID to compute impact for"),
     scan_id: Optional[str] = Query(None, description="Scan ID"),
     snapshot_generation: Optional[str] = Query(None, max_length=128),
-    max_depth: int = Query(4, ge=1, le=10, description="Maximum traversal depth"),
+    max_depth: Optional[int] = Query(
+        None,
+        ge=1,
+        le=10,
+        description=(
+            "Maximum traversal depth. Omitted: the longest materialized attack path ending at the node "
+            "(at least 4, at most 10); the applied depth and its basis are returned as max_depth and depth_basis."
+        ),
+    ),
     direction: Literal["reverse", "forward"] = Query(
         "reverse", description="reverse: what depends on the node (upstream); forward: what the node can reach (downstream)"
     ),

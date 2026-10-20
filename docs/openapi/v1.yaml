@@ -15281,6 +15281,15 @@ components:
           additionalProperties: true
           title: Completeness
           type: object
+        depth_basis:
+          anyOf:
+          - enum:
+            - requested
+            - default
+            - longest_materialized_path
+            type: string
+          - type: 'null'
+          title: Depth Basis
         direction:
           anyOf:
           - type: string
@@ -15288,6 +15297,12 @@ components:
           title: Direction
         interpretation:
           $ref: '#/components/schemas/GraphImpactInterpretation'
+        max_depth:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          description: Depth the walk was bounded to.
+          title: Max Depth
         max_depth_reached:
           title: Max Depth Reached
           type: integer
@@ -43990,17 +44005,22 @@ paths:
             type: string
           - type: 'null'
           title: Snapshot Generation
-      - description: Maximum traversal depth
+      - description: 'Maximum traversal depth. Omitted: the longest materialized attack
+          path ending at the node (at least 4, at most 10); the applied depth and
+          its basis are returned as max_depth and depth_basis.'
         in: query
         name: max_depth
         required: false
         schema:
-          default: 4
-          description: Maximum traversal depth
-          maximum: 10
-          minimum: 1
+          anyOf:
+          - maximum: 10
+            minimum: 1
+            type: integer
+          - type: 'null'
+          description: 'Maximum traversal depth. Omitted: the longest materialized
+            attack path ending at the node (at least 4, at most 10); the applied depth
+            and its basis are returned as max_depth and depth_basis.'
           title: Max Depth
-          type: integer
       - description: 'reverse: what depends on the node (upstream); forward: what
           the node can reach (downstream)'
         in: query

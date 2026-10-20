@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, RootModel, WithJsonSchema
+from pydantic import BaseModel, Field, RootModel, WithJsonSchema
 
 from agent_bom.api.read_models._base import ReadModel, ReadResponse
 
@@ -280,6 +280,8 @@ class GraphImpactResponse(ReadResponse):
     direction: str | None = None
     affected_count: int
     max_depth_reached: int
+    max_depth: int | None = Field(default=None, description="Depth the walk was bounded to.")
+    depth_basis: Literal["requested", "default", "longest_materialized_path"] | None = None
     completeness: Row
     scan_id: str
     tenant_id: str

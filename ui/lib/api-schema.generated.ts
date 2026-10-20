@@ -16704,9 +16704,16 @@ export interface components {
             completeness: {
                 [key: string]: unknown;
             };
+            /** Depth Basis */
+            depth_basis?: ("requested" | "default" | "longest_materialized_path") | null;
             /** Direction */
             direction?: string | null;
             interpretation: components["schemas"]["GraphImpactInterpretation"];
+            /**
+             * Max Depth
+             * @description Depth the walk was bounded to.
+             */
+            max_depth?: number | null;
             /** Max Depth Reached */
             max_depth_reached: number;
             /** Node Id */
@@ -35007,8 +35014,8 @@ export interface operations {
                 /** @description Scan ID */
                 scan_id?: string | null;
                 snapshot_generation?: string | null;
-                /** @description Maximum traversal depth */
-                max_depth?: number;
+                /** @description Maximum traversal depth. Omitted: the longest materialized attack path ending at the node (at least 4, at most 10); the applied depth and its basis are returned as max_depth and depth_basis. */
+                max_depth?: number | null;
                 /** @description reverse: what depends on the node (upstream); forward: what the node can reach (downstream) */
                 direction?: "reverse" | "forward";
             };
