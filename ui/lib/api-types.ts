@@ -1467,6 +1467,8 @@ export interface Agent {
   canonical_id?: string;
   stable_id?: string;
   name: string;
+  /** The one resolved name the API serves for this agent (recorded name, else the formatted id). */
+  display_name?: string | undefined;
   agent_type: string;
   /** Display class from the API: "client" | "background" | "synthetic" (additive). */
   agent_class?: string | undefined;

@@ -76,6 +76,7 @@ class InventoryAssetRow(ReadModel):
     compliance_tags: list[str]
     ecosystem: str
     version: str
+    display_name: str | None = None  # agent rows only: the one name every surface shows
     finding_summary: InventoryFindingSummary | None = None
     relationship_count: int | None = None
 

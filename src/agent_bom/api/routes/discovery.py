@@ -30,6 +30,7 @@ from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.asset_provenance import agent_discovery_provenance, package_discovery_provenance, package_version_provenance
 from agent_bom.backpressure import BackpressureRejectedError, adaptive_backpressure
 from agent_bom.core.severity import normalize_severity
+from agent_bom.display_names import agent_payload_display_name
 from agent_bom.inventory import build_agents_from_inventory
 from agent_bom.mcp_blocklist import sanitize_security_intelligence_entry
 from agent_bom.security import (
@@ -99,7 +100,12 @@ def _host_agents_for_tenant(tenant_id: str) -> list[Any] | None:
 
 
 def _scanned_estate_agents(tenant_id: str) -> list[dict[str, Any]]:
-    return deepcopy(_agent_evidence(tenant_id).estate_agents)
+    return [_named(agent) for agent in deepcopy(_agent_evidence(tenant_id).estate_agents)]
+
+
+def _named(agent: dict[str, Any]) -> dict[str, Any]:
+    agent["display_name"] = agent_payload_display_name(agent)
+    return agent
 
 
 def _merge_strings(*values: list[str]) -> list[str]:
@@ -156,6 +162,19 @@ def _agent_count_by_class(agents: Iterable[Agent]) -> dict[str, int]:
     return counts
 
 
+def _auth_mode(server: Any) -> str:
+    """Declared auth mode, else the mode the server's config evidences."""
+    declared = getattr(server, "auth_mode", None)
+    if declared is not None:
+        return str(declared)
+    server_url = getattr(server, "url", None)
+    if getattr(server, "credential_names", None):
+        return "env-credentials"
+    if server_url and "@" in server_url:
+        return "url-embedded-credentials"
+    return "network-no-auth-observed" if server_url else "local-stdio"
+
+
 def _serialize_agent(
     agent: Agent,
     *,
@@ -165,6 +184,7 @@ def _serialize_agent(
     observation_index: dict[str, MCPObservation] | None = None,
 ) -> dict:
     payload = asdict(agent)
+    payload["display_name"] = agent_payload_display_name(payload)
     payload["canonical_id"] = agent.canonical_id
     payload["stable_id"] = agent.stable_id
     # Display-only class (AI client/host vs background/framework agent). Additive field; never renames agent_type or any existing key.
@@ -178,16 +198,7 @@ def _serialize_agent(
         server_payload = asdict(server)
         credential_names = list(getattr(server, "credential_names", []) or [])
         server_url = getattr(server, "url", None)
-        auth_mode = getattr(server, "auth_mode", None)
-        if auth_mode is None:
-            if credential_names:
-                auth_mode = "env-credentials"
-            elif server_url and "@" in server_url:
-                auth_mode = "url-embedded-credentials"
-            elif server_url:
-                auth_mode = "network-no-auth-observed"
-            else:
-                auth_mode = "local-stdio"
+        auth_mode = _auth_mode(server)
         has_credentials = getattr(server, "has_credentials", None)
         if has_credentials is None:
             has_credentials = bool(credential_names)
@@ -337,16 +348,7 @@ def _overlay_agent_observations(
             observed_via.append("gateway_discovery")
             observed_scopes.append("gateway")
         credential_names = list(getattr(server, "credential_names", []) or [])
-        auth_mode = getattr(server, "auth_mode", None)
-        if auth_mode is None:
-            if credential_names:
-                auth_mode = "env-credentials"
-            elif server_url and "@" in server_url:
-                auth_mode = "url-embedded-credentials"
-            elif server_url:
-                auth_mode = "network-no-auth-observed"
-            else:
-                auth_mode = "local-stdio"
+        auth_mode = _auth_mode(server)
         observation_id, legacy_observation_id = _observation_ids(agent, server, fleet_agent)
         candidate = MCPObservation(
             tenant_id=tenant_id,
@@ -677,7 +679,7 @@ def _estate_agent_detail(request: Request, agent_name: str) -> dict:
             raise HTTPException(status_code=409, detail="Ambiguous agent label; select its canonical ID")
     if not matches:
         raise HTTPException(status_code=404, detail="Agent not found")
-    agent = deepcopy(matches[0])
+    agent = _named(deepcopy(matches[0]))
     canonical_id = agent_identity_key(agent) or ""
 
     servers = [server for server in agent.get("mcp_servers") or [] if isinstance(server, dict)]

@@ -20,6 +20,7 @@ import asyncio
 from typing import Any, Awaitable, Callable, Optional
 
 from agent_bom.api.graph_store import MAX_NODE_PAGE_OFFSET
+from agent_bom.display_names import agent_display_name
 from agent_bom.graph import SEVERITY_RANK, EntityType
 from agent_bom.graph.completeness import graph_completeness
 from agent_bom.graph.ocsf import FINDING_ENTITY_TYPES
@@ -209,7 +210,7 @@ def _entity_value(node: Any) -> str:
 def asset_row(node: Any) -> dict[str, Any]:
     """Project a graph node into the stable inventory row shape."""
     sources = list(node.data_sources or [])
-    return {
+    row = {
         "id": node.id,
         "type": _entity_value(node),
         "name": node.label,
@@ -228,6 +229,9 @@ def asset_row(node: Any) -> dict[str, Any]:
         "ecosystem": str(node.dimensions.ecosystem or node.attributes.get("ecosystem") or ""),
         "version": str(node.attributes.get("version") or node.attributes.get("package_version") or ""),
     }
+    if row["type"] == "agent":
+        row["display_name"] = agent_display_name(str(node.label or ""), (node.attributes or {}).get("display_name"))
+    return row
 
 
 # ═══════════════════════════════════════════════════════════════════════════

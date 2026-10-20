@@ -1,0 +1,17 @@
+{
+  "description": "One agent display-name rule shared by the API (agent_bom.display_names) and the UI (ui/lib/display-name.ts). A recorded name wins; otherwise the identifier is formatted.",
+  "cases": [
+    {"id": "langchain-service", "recorded": null, "expected": "LangChain Service"},
+    {"id": "claude_desktop", "recorded": null, "expected": "Claude Desktop"},
+    {"id": "aws-s3-rag-llm-api", "recorded": null, "expected": "AWS S3 RAG LLM API"},
+    {"id": "openai--github__mcp", "recorded": null, "expected": "OpenAI GitHub MCP"},
+    {"id": "cursor", "recorded": null, "expected": "Cursor"},
+    {"id": "Support Copilot", "recorded": null, "expected": "Support Copilot"},
+    {"id": "  data-pipeline  ", "recorded": null, "expected": "Data Pipeline"},
+    {"id": "project:sampleapp", "recorded": null, "expected": "Project:sampleapp"},
+    {"id": "data-pipeline", "recorded": "  Nightly ETL  ", "expected": "Nightly ETL"},
+    {"id": "data-pipeline", "recorded": "   ", "expected": "Data Pipeline"},
+    {"id": "", "recorded": null, "expected": "Unknown agent"},
+    {"id": "--", "recorded": "", "expected": "Unknown agent"}
+  ]
+}

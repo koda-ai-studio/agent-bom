@@ -4256,6 +4256,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/graph/attack-paths/cross-vendor": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Cross Vendor Attack Paths
+         * @description Attack paths whose source and target nodes are recorded in different vendors.
+         *
+         *     Vendors come from each endpoint's recorded ``cloud_provider``; agent-runtime
+         *     surfaces (MCP, local) are not vendors and middle hops never qualify a path. Order is the global queue order.
+         *     ``vendor_facets`` counts every cross-vendor path per pair, whatever pair
+         *     is selected, so the chips beside the queue stay comparable.
+         */
+        get: operations["get_cross_vendor_attack_paths_v1_graph_attack_paths_cross_vendor_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/graph/changes": {
         parameters: {
             query?: never;
@@ -12319,6 +12344,8 @@ export interface components {
                 [key: string]: unknown;
             } | null;
             discovery_provenance: components["schemas"]["DiscoveryProvenance"] | null;
+            /** Display Name */
+            display_name: string;
             /** Last Seen */
             last_seen: string | null;
             /** Mcp Servers */
@@ -16237,6 +16264,55 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /**
+         * GraphCrossVendorPathsResponse
+         * @description The attack-path queue page restricted to paths whose source and target nodes are in different vendors.
+         */
+        GraphCrossVendorPathsResponse: {
+            /** Attack Paths */
+            attack_paths: {
+                [key: string]: unknown;
+            }[];
+            /** Completeness */
+            completeness?: {
+                [key: string]: unknown;
+            } | null;
+            /** Count Metadata */
+            count_metadata?: {
+                [key: string]: unknown;
+            } | null;
+            /** Created At */
+            created_at?: string | null;
+            /** Edges */
+            edges: {
+                [key: string]: unknown;
+            }[];
+            /** Interaction Risks */
+            interaction_risks: {
+                [key: string]: unknown;
+            }[];
+            /** Nodes */
+            nodes: {
+                [key: string]: unknown;
+            }[];
+            /** Pagination */
+            pagination: {
+                [key: string]: unknown;
+            };
+            /** Scan Id */
+            scan_id: string;
+            /** Snapshot Generation */
+            snapshot_generation?: string | null;
+            /** Stats */
+            stats: {
+                [key: string]: unknown;
+            };
+            /** Tenant Id */
+            tenant_id: string;
+            vendor_facets: components["schemas"]["GraphVendorFacets"];
+        } & {
+            [key: string]: unknown;
+        };
         /** GraphDeployDecisionRequest */
         GraphDeployDecisionRequest: {
             /**
@@ -16432,7 +16508,9 @@ export interface components {
          *     earlier scan (``baseline: scope_history``) or, for a scope scanned once, the
          *     store's earlier same-kind snapshot that no other scope owns
          *     (``baseline: snapshot_continuity``). Each changed source carries added and
-         *     removed stored attack paths in ``highlights``. ``new_sources`` are first
+         *     removed stored attack paths in ``highlights`` and ``changes_by_source``:
+         *     changed nodes per vendor and account the collector recorded on each node,
+         *     since one scan can collect many vendors. ``new_sources`` are first
          *     observations and are never counted as additions. ``totals`` cover the
          *     returned page of scopes; ``completeness`` says whether more scopes exist.
          */
@@ -17425,6 +17503,42 @@ export interface components {
         GraphSnapshotsResponse: {
             [key: string]: unknown;
         }[];
+        /**
+         * GraphVendorFacets
+         * @description Cross-vendor path counts per (source vendor, target vendor) over the whole snapshot queue.
+         */
+        GraphVendorFacets: {
+            /** Covers All Paths */
+            covers_all_paths: boolean;
+            /** Cross Vendor Paths */
+            cross_vendor_paths: number;
+            /** Pairs */
+            pairs: components["schemas"]["GraphVendorPair"][];
+            /** Selected */
+            selected?: {
+                [key: string]: string;
+            } | null;
+            /** Snapshot Paths */
+            snapshot_paths: number;
+            /**
+             * Unit
+             * @constant
+             */
+            unit: "paths";
+        } & {
+            [key: string]: unknown;
+        };
+        /** GraphVendorPair */
+        GraphVendorPair: {
+            /** Paths */
+            paths: number;
+            /** Source Vendor */
+            source_vendor: string;
+            /** Target Vendor */
+            target_vendor: string;
+        } & {
+            [key: string]: unknown;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -17992,6 +18106,8 @@ export interface components {
             };
             /** Compliance Tags */
             compliance_tags: string[];
+            /** Display Name */
+            display_name?: string | null;
             /** Ecosystem */
             ecosystem: string;
             /** Environment */
@@ -34258,6 +34374,57 @@ export interface operations {
                     } & {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server error envelope (INTERNAL_ERROR, SERVICE_UNAVAILABLE) */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    get_cross_vendor_attack_paths_v1_graph_attack_paths_cross_vendor_get: {
+        parameters: {
+            query?: {
+                /** @description Scan ID */
+                scan_id?: string | null;
+                /** @description Generation from the first page; required for continuation */
+                snapshot_generation?: string | null;
+                /** @description Pagination offset */
+                offset?: number;
+                /** @description Max attack paths */
+                limit?: number;
+                /** @description Only paths whose source node is in this vendor */
+                source_vendor?: string | null;
+                /** @description Only paths whose target node is in this vendor */
+                target_vendor?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GraphCrossVendorPathsResponse"];
                 };
             };
             /** @description Client error envelope. Codes: 400 BAD_REQUEST, 401 AUTH_FAILED, 403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 PAYLOAD_TOO_LARGE, 415 UNSUPPORTED_MEDIA_TYPE, 422 VALIDATION_ERROR, 429 RATE_LIMITED */

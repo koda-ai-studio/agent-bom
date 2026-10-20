@@ -108,6 +108,8 @@ class DiscoveryProvenance(ReadModel):
 
 class DiscoveredAgent(ReadModel):
     name: str
+    # The one resolved name every surface shows (recorded name, else the formatted id).
+    display_name: str
     agent_type: str
     agent_class: str
     canonical_id: str

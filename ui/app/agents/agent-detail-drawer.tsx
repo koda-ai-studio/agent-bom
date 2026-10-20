@@ -5,7 +5,7 @@ import { StatStrip } from "@/components/stat-strip";
 import { Agent } from "@/lib/api";
 import { ArrowRight, GitBranch, Key, Link2, Package, Server, Shield, TerminalSquare, Wrench } from "lucide-react";
 import Link from "next/link";
-import { agentDisplayName } from "@/lib/display-name";
+import { agentRecordDisplayName, entityIdHint } from "@/lib/display-name";
 import { AgentBlastSummary } from "./agent-blast-summary";
 import {
   agentCredentialCount,
@@ -36,11 +36,11 @@ export function AgentDetailDrawer({
       open={open}
       onClose={onClose}
       eyebrow={agent.agent_type}
-      title={agentDisplayName(agent.name)}
-      subtitle={[agentDisplayName(agent.name) !== agent.name ? agent.name : null, agent.source ?? agent.config_path].filter(Boolean).join(" · ")}
+      title={agentRecordDisplayName(agent)}
+      subtitle={[entityIdHint(agent.name, agentRecordDisplayName(agent)), agent.source ?? agent.config_path].filter(Boolean).join(" · ")}
       headerAside={<ConfiguredPill />}
       size="2xl"
-      ariaLabel={`Agent ${agentDisplayName(agent.name)}`}
+      ariaLabel={`Agent ${agentRecordDisplayName(agent)}`}
       footer={
         <div className="flex flex-wrap gap-2">
           <Link
