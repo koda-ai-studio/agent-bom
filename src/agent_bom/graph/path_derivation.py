@@ -470,11 +470,16 @@ def _derived_attack_paths(graph: UnifiedGraph, *, kinds: dict[int, str] | None =
     effective-permission chains, credential-owner paths and agent/server/component/
     finding chains, ranked and unique per chain (equivalent persisted rows win).
     """
+    incoming: dict[str, list] = {}
+    outgoing: dict[str, list] = {}
+    for edge in graph.edges:
+        incoming.setdefault(edge.target, []).append(edge)
+        outgoing.setdefault(edge.source, []).append(edge)
     signal_cache: dict[str, list[tuple[str, str, str, float]]] = {}
     governance_paths = [
         *_derived_governance_attack_paths(graph),
         *_derived_toxic_combination_paths(graph),
-        *cross_vendor_storage_paths(graph, path_boost=lambda hops: _cached_path_boost(graph, hops, signal_cache)),
+        *cross_vendor_storage_paths(graph, incoming=incoming, path_boost=lambda hops: _cached_path_boost(graph, hops, signal_cache)),
     ]
     for path in governance_paths:
         if path.reachability == "unknown":
@@ -506,12 +511,6 @@ def _derived_attack_paths(graph: UnifiedGraph, *, kinds: dict[int, str] | None =
                     if "unverified" not in path.summary.lower():
                         path.summary = f"Unverified structural candidate. {path.summary}".strip()
             materialized.append(path)
-
-    incoming: dict[str, list] = {}
-    outgoing: dict[str, list] = {}
-    for edge in graph.edges:
-        incoming.setdefault(edge.target, []).append(edge)
-        outgoing.setdefault(edge.source, []).append(edge)
 
     paths = derive_component_paths(
         graph,

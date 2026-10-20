@@ -76,21 +76,33 @@ def _summary(graph: UnifiedGraph, hops: list[str], role_label: str, location: st
     )
 
 
-def cross_vendor_storage_paths(graph: UnifiedGraph, *, path_boost: Callable[[list[str]], float] | None = None) -> list[AttackPath]:
-    """Snowflake-object → AWS bucket paths, one per dependent chain and allowed bucket."""
+def cross_vendor_storage_paths(
+    graph: UnifiedGraph,
+    *,
+    incoming: dict[str, list[UnifiedEdge]] | None = None,
+    path_boost: Callable[[list[str]], float] | None = None,
+) -> list[AttackPath]:
+    """Snowflake-object → AWS bucket paths, one per dependent chain and allowed bucket.
+
+    ``incoming`` is the caller's target → edges index when it already holds one.
+    """
     assumes: dict[tuple[str, str], UnifiedEdge] = {}
     access: list[UnifiedEdge] = []
-    incoming: dict[str, list[UnifiedEdge]] = {}
     for edge in graph.edges:
-        rel = _rel(edge)
-        if rel == _DEPENDS_ON:
-            incoming.setdefault(edge.target, []).append(edge)
-        elif not _from_correlator(edge):
+        if not _from_correlator(edge):
             continue
-        elif rel == RelationshipType.ASSUMES.value:
+        rel = _rel(edge)
+        if rel == RelationshipType.ASSUMES.value:
             assumes[(edge.source, edge.target)] = edge
         elif rel == RelationshipType.CAN_ACCESS.value:
             access.append(edge)
+    if not access:
+        return []
+    if incoming is None:
+        incoming = {}
+        for edge in graph.edges:
+            if _rel(edge) == _DEPENDS_ON:
+                incoming.setdefault(edge.target, []).append(edge)
 
     paths: list[AttackPath] = []
     for edge in sorted(access, key=lambda item: (item.source, item.target)):
