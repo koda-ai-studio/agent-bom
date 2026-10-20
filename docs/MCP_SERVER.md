@@ -312,7 +312,14 @@ Four more read-only tools answer follow-up questions from the same evidence:
 
 `blast_radius` takes credentials, tools and reachability from those graph
 paths. When the graph cannot be read they are `null` with a `graph.status`
-reason, never an empty list. `compliance` returns the tenant's persisted
+reason, never an empty list. Its `holders` block is the `GET /v1/graph/impact`
+walk for `vuln:<CVE>` (same pinned snapshot, alias resolution and reverse walk:
+`affected_by_type`, `affected_nodes`, `completeness`), and each row's
+`affected_servers` / `affected_agents` are those graph holder ids; when the
+walk is unavailable `holders.status` is `unavailable` and the rows keep the
+finding's recorded lists. Each row carries `reachability`, derived by the same
+verdict function as `/v1/findings` (`likely` for a recorded graph path,
+`confirmed` only with function-level or runtime evidence). `compliance` returns the tenant's persisted
 `/v1/compliance/summary` when completed scans exist (`source:
 "persisted_tenant_compliance"`); pass `framework` and `control` to page the
 driving finding ids. It scans local MCP configurations only with

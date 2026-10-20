@@ -366,6 +366,47 @@ def test_blast_radius_never_reports_unknown_as_empty(demo: _Estate) -> None:
         assert row["graph"]["status"] == "unavailable"
 
 
+def test_blast_radius_holders_match_rest_impact(demo: _Estate) -> None:
+    cve = "CVE-2020-14343"
+    rest = demo.rest("/v1/graph/impact", node=f"vuln:{cve}", max_depth=4)
+    payload = _blast(demo, cve)
+    holders = payload["holders"]
+    assert holders["affected_by_type"] == rest["affected_by_type"]
+    assert holders["affected_nodes"] == rest["affected_nodes"]
+    assert holders["completeness"] == rest["completeness"]
+    by_type = rest["affected_by_type"]
+    for row in payload["blast_radii"]:
+        assert len(row["affected_servers"]) == by_type.get("server", 0)
+        assert len(row["affected_agents"]) == by_type.get("agent", 0)
+
+
+def test_blast_radius_reachability_follows_the_shared_ladder(demo: _Estate) -> None:
+    rows = _blast(demo, "CVE-2020-14343")["blast_radii"]
+    assert rows
+    for row in rows:
+        # A recorded graph path alone is likely, never confirmed.
+        assert row["graph_reachable"] is True
+        assert row["reachability"] == "likely"
+
+
+_IMPACT_NODE_TYPES = ("vulnerability", "package", "server", "agent", "credential")
+
+
+@pytest.mark.parametrize("node_type", _IMPACT_NODE_TYPES)
+def test_mcp_and_rest_read_the_same_impact_holders(demo: _Estate, node_type: str) -> None:
+    from agent_bom.mcp_tools.graph_reach import graph_reach_impl
+
+    nodes = demo.rest("/v1/graph/search", q=":", entity_types=node_type, limit=5)
+    hits = nodes.get("results") or nodes.get("nodes") or []
+    assert hits, f"demo fixture must carry a {node_type} node"
+    node = hits[0]["id"]
+    rest = demo.rest("/v1/graph/impact", node=node, max_depth=4)
+    page = demo.mcp(graph_reach_impl, node_id=node, direction="in", max_depth=4, limit=200)
+    assert page["affected_by_type"] == rest["affected_by_type"]
+    assert page["affected_count"] == rest["affected_count"]
+    assert [item["id"] for item in page["items"]] == rest["affected_nodes"][:200]
+
+
 # ── P0-4: compliance answers from persisted tenant evidence ─────────────────
 
 

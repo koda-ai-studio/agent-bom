@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from typing import Any, Callable
@@ -17,6 +18,7 @@ from agent_bom.mcp_errors import (
     mcp_error_json,
 )
 from agent_bom.mcp_tools.finding_graph import exposure_lists, load_snapshot_paths, project_finding, public_graph_block
+from agent_bom.mcp_tools.rest_parity import api_reads
 from agent_bom.mcp_tools.storage import default_graph_store
 
 logger = logging.getLogger(__name__)
@@ -118,7 +120,11 @@ async def _persisted_blast_radius(
                 "completeness": persisted.get("completeness"),
             },
         )
+    store_factory = get_store or default_graph_store
+    reads = api_reads()  # persisted evidence implies the API extra is installed
+    holders = await asyncio.to_thread(reads.blast_holders, store_factory, tenant_id=tenant_id, scan_id=scan_id, cve_id=validated_cve)
     results = await _with_graph_exposure(persisted_matches, validated_cve, tenant_id=tenant_id, scan_id=scan_id, get_store=get_store)
+    reads.apply_holders(results, holders)
     return json.dumps(
         {
             "cve_id": validated_cve,
@@ -127,6 +133,7 @@ async def _persisted_blast_radius(
             "scope": persisted.get("scope", {"tenant_id": tenant_id, "scan_id": scan_id}),
             "count": len(results),
             "completeness": persisted.get("completeness", {"status": "complete", "reason": ""}),
+            "holders": reads.public_holders(holders),
             "blast_radii": results,
         },
         separators=(",", ":"),
@@ -145,13 +152,12 @@ async def _with_graph_exposure(
     """Fill exposure from the graph paths carrying each finding, never from a redacted field."""
     snapshot = await load_snapshot_paths(tenant_id=tenant_id, scan_id=scan_id, get_store=get_store or default_graph_store)
     results = []
-    for row in rows:
+    for row in api_reads().stamp_rows(rows, snapshot):
         result = _finding_blast_radius(row, fallback_cve)
         graph = project_finding(row, snapshot)
         credentials, tools = exposure_lists(graph)
         result["exposed_credentials"] = credentials
         result["exposed_tools"] = tools
-        result["graph_reachable"] = graph.get("graph_reachable")
         result["graph"] = public_graph_block(graph)
         result["risk_scale"] = {"risk_score": "0-10", "graph.max_path_risk": "0-100"}
         results.append(result)
@@ -184,6 +190,7 @@ def _finding_blast_radius(row: dict[str, Any], fallback_cve: str) -> dict[str, A
         "exposed_tools": string_list(exposed_tools),
         "fixed_version": row.get("fixed_version"),
         "graph_reachable": row.get("graph_reachable"),
+        "reachability": row.get("reachability"),
         "graph_min_hop_distance": row.get("graph_min_hop_distance"),
         "graph_reachable_from": string_list(row.get("graph_reachable_from")),
         "owner": row.get("owner"),
