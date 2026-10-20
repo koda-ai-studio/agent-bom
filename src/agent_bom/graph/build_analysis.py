@@ -79,6 +79,13 @@ def _identity_analysis(graph: UnifiedGraph, report_json: dict[str, Any]) -> None
         _logger.warning("CNAPP overlay failed", exc_info=True)
 
     try:
+        from agent_bom.graph.storage_integration_correlation import correlate_storage_integrations
+
+        correlate_storage_integrations(graph)
+    except Exception:  # noqa: BLE001
+        _logger.warning("storage-integration correlation failed", exc_info=True)
+
+    try:
         from agent_bom.graph.effective_permissions import apply_effective_permissions
 
         apply_effective_permissions(graph)
