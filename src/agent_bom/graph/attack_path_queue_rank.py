@@ -18,9 +18,11 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
+from agent_bom.cloud.normalization import coerce_truthy
 from agent_bom.core.severity import SEVERITY_THRESHOLD_LABELS, severity_rank
 from agent_bom.graph.container import AttackPath
 from agent_bom.graph.path_evidence import finding_severity_for_path
+from agent_bom.graph.path_ranking import environment_weight
 
 _FINDING_TYPES = frozenset({"vulnerability", "misconfiguration"})
 _CREDENTIAL_TYPES = frozenset({"credential", "credential_ref"})
@@ -71,6 +73,37 @@ def path_is_kev(path: AttackPath, nodes_by_id: Mapping[str, Any]) -> bool:
     return False
 
 
+def _hop_nodes(path: AttackPath, nodes_by_id: Mapping[str, Any]) -> list[Any]:
+    return [node for node in (nodes_by_id.get(hop) for hop in path.hops) if node is not None]
+
+
+def path_max_epss(path: AttackPath, nodes_by_id: Mapping[str, Any]) -> float:
+    """Highest EPSS probability among the path's finding hops; 0.0 when none is recorded."""
+    best = 0.0
+    for node in _hop_nodes(path, nodes_by_id):
+        if _entity_type(node) not in _FINDING_TYPES:
+            continue
+        try:
+            best = max(best, float((getattr(node, "attributes", None) or {}).get("epss_score") or 0.0))
+        except (TypeError, ValueError):
+            continue
+    return best
+
+
+def path_internet_exposed(path: AttackPath, nodes_by_id: Mapping[str, Any]) -> bool:
+    """Whether any hop is recorded as internet-exposed or publicly accessible."""
+    for node in _hop_nodes(path, nodes_by_id):
+        attrs = getattr(node, "attributes", None) or {}
+        if coerce_truthy(attrs.get("internet_exposed")) or coerce_truthy(attrs.get("publicly_accessible")):
+            return True
+    return False
+
+
+def path_environment_weight(path: AttackPath, nodes_by_id: Mapping[str, Any]) -> float:
+    """Most critical environment the path touches (production / tier-0 weigh most)."""
+    return max((environment_weight(node) for node in _hop_nodes(path, nodes_by_id)), default=1.0)
+
+
 def path_severity(path: AttackPath, nodes_by_id: Mapping[str, Any]) -> str:
     """Worst finding severity among the path's own hop nodes, else ``unknown``."""
     return finding_severity_for_path(path, nodes_by_id)
@@ -118,6 +151,12 @@ RANKING_ORDER: tuple[str, ...] = (
     "evidence_confidence",
     "composite_risk",
     "credential_count",
+    # Tie-breakers for paths equal on everything above. They read evidence
+    # already on the path and never feed back into ``composite_risk``.
+    "max_epss",
+    "internet_exposed",
+    "environment_weight",
+    "hop_count",
 )
 
 
@@ -151,6 +190,10 @@ def attack_path_rank_key(path: AttackPath, nodes_by_id: Mapping[str, Any]) -> tu
         -_CONFIDENCE_RANK[path_evidence_confidence(path)],
         -float(path.composite_risk or 0.0),
         -len(path.credential_exposure),
+        -path_max_epss(path, nodes_by_id),
+        -int(path_internet_exposed(path, nodes_by_id)),
+        -path_environment_weight(path, nodes_by_id),
+        len(path.hops),
         path.source,
         path.target,
         tuple(path.hops),
@@ -191,11 +234,10 @@ def rank_attack_paths(
 
 
 def ranking_node_ids(paths: list[AttackPath]) -> set[str]:
-    """Node ids whose type/severity the ranking reads: sources, plus every hop of finding-bearing paths."""
+    """Node ids the ranking reads: every hop, since exposure and environment come from any of them."""
     ids = {path.source for path in paths}
     for path in paths:
-        if path.vuln_ids or path.finding_ids or len(path.hops) > 2:
-            ids.update(path.hops)
+        ids.update(path.hops)
     return ids
 
 
@@ -207,12 +249,16 @@ def path_ranking_factors(path: AttackPath, nodes_by_id: Mapping[str, Any]) -> di
     scored = severity != "unknown"
     confidence = path_evidence_confidence(path)
     risk = float(path.composite_risk or 0.0)
+    epss = path_max_epss(path, nodes_by_id)
+    exposed = path_internet_exposed(path, nodes_by_id)
+    env_weight = path_environment_weight(path, nodes_by_id)
     reasons = [f"Evidence tier {tier}: {_TIER_LABELS[tier]}."]
     if kev:
         reasons.append("A finding on the path is in the CISA Known Exploited Vulnerabilities catalog.")
     reasons.append(f"Worst finding severity on the path: {severity}." if scored else "No scored finding on the path (unscored).")
     reasons.append(_CONFIDENCE_REASONS[confidence])
     reasons.append(f"Composite risk {risk:g}/100 orders paths that tie on the factors above.")
+    reasons.append(_tie_break_reason(epss, exposed, env_weight, len(path.hops)))
     return {
         "order": list(RANKING_ORDER),
         "evidence_tier": tier,
@@ -222,8 +268,20 @@ def path_ranking_factors(path: AttackPath, nodes_by_id: Mapping[str, Any]) -> di
         "evidence_confidence": confidence,
         "composite_risk": risk,
         "credential_count": len(path.credential_exposure),
+        "max_epss": epss,
+        "internet_exposed": exposed,
+        "environment_weight": env_weight,
+        "hop_count": len(path.hops),
         "reasons": reasons,
     }
+
+
+def _tie_break_reason(epss: float, exposed: bool, env_weight: float, hops: int) -> str:
+    parts = [f"EPSS {epss:.2f}" if epss else "no EPSS recorded"]
+    parts.append("touches an internet-exposed asset" if exposed else "no internet-exposed asset")
+    parts.append(f"environment weight {env_weight:g}")
+    parts.append(f"{hops} hops (shorter first)")
+    return "Remaining ties break on: " + ", ".join(parts) + "."
 
 
 def path_rank_fields(path: AttackPath, nodes_by_id: Mapping[str, Any]) -> dict[str, Any]:
