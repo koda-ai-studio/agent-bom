@@ -545,6 +545,7 @@ class HubTotals(ReadModel):
 
 
 class HubPostureResponse(ReadResponse):
+    framework_count_basis: Literal["control_tag_evidence"] = "control_tag_evidence"
     framework_counts: HubFrameworkCounts
     hub_severity_breakdown: dict[str, int]
     totals: HubTotals

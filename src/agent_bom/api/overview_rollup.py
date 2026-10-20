@@ -272,10 +272,12 @@ def _fold_findings(
     overlap, the sum of lane counts is not the total; the histogram is the
     single source of truth for the headline. Returns
     ``(added, kev, credential_exposed)`` for this batch. A finding whose severity
-    is critical/high marks each of its ``applicable_frameworks`` as failing
-    (feeds the exec grade's compliance driver, #3962).
+    is critical/high marks each framework it is control evidence for as failing
+    (the ``/v1/findings?framework=`` definition; feeds the exec grade's
+    compliance driver, #3962).
     """
-    from agent_bom.compliance_coverage import normalize_framework_slug, scored_framework_slugs
+    from agent_bom.compliance_coverage import scored_framework_slugs
+    from agent_bom.framework_evidence import framework_evidence_slugs
 
     added = 0
     kev = 0
@@ -301,10 +303,7 @@ def _fold_findings(
         if row.get("exposed_credentials"):
             credential_exposed += 1
         if bucket in ("critical", "high"):
-            for slug in row.get("applicable_frameworks") or []:
-                canonical = normalize_framework_slug(str(slug)) if slug else ""
-                if canonical in scored_slugs:
-                    failing_frameworks.add(canonical)
+            failing_frameworks.update(slug for slug in framework_evidence_slugs(row) if slug in scored_slugs)
         top_risks.append(_finding_top_risk(row))
     return added, kev, credential_exposed
 

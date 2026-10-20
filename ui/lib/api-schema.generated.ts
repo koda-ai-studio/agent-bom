@@ -17517,6 +17517,12 @@ export interface components {
         };
         /** HubPostureResponse */
         HubPostureResponse: {
+            /**
+             * Framework Count Basis
+             * @default control_tag_evidence
+             * @constant
+             */
+            framework_count_basis: "control_tag_evidence";
             framework_counts: components["schemas"]["HubFrameworkCounts"];
             /** Hub Severity Breakdown */
             hub_severity_breakdown: {

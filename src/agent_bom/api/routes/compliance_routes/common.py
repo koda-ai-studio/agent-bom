@@ -7,6 +7,7 @@ from typing import Any, cast
 
 from fastapi import Request
 
+from agent_bom.api import time_window
 from agent_bom.api.credential_rotation import build_credential_rotation_governance
 from agent_bom.api.finding_read_context import finding_read_snapshot
 from agent_bom.api.models import JobStatus
@@ -16,6 +17,7 @@ from agent_bom.api.routes.compliance_routes.evidence import (
     _result_evidence_context,
     _result_has_runtime_signals,
 )
+from agent_bom.api.scan_finding_read import iter_tenant_scan_spine_findings
 from agent_bom.api.stores import (
     _get_credential_ref_store,
     _get_fleet_store,
@@ -27,6 +29,7 @@ from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.demo_estate.boot_seed import DEMO_SEEDING_SUMMARY as _DEMO_SEEDING_SUMMARY
 from agent_bom.demo_estate.boot_seed import demo_estate_seeding
 from agent_bom.evidence import EvidenceTier, redact_for_persistence
+from agent_bom.framework_evidence import framework_evidence_slugs
 from agent_bom.security import sanitize_text
 
 _logger = logging.getLogger(__name__)
@@ -397,7 +400,7 @@ def _native_hub_findings(request: Request) -> list[dict[str, Any]]:
 def _get_hub_posture_impl(request: Request) -> dict:
     """Synchronous body of :func:`get_hub_posture` (runs in a worker thread)."""
     from agent_bom.api.compliance_hub_store import get_compliance_hub_store
-    from agent_bom.compliance_coverage import TAG_MAPPED_FRAMEWORKS, normalize_framework_slug
+    from agent_bom.compliance_coverage import normalize_framework_slug
 
     tenant_id = _tenant_id(request)
     store = get_compliance_hub_store()
@@ -419,27 +422,7 @@ def _get_hub_posture_impl(request: Request) -> dict:
                 canonical = normalize_framework_slug(str(slug))
                 hub_framework_counts[canonical] = hub_framework_counts.get(canonical, 0) + 1
 
-    # Native sources: count blast radii from completed scan jobs as a
-    # proxy for "native finding count per framework" using their tag fields.
-    # Driven by TAG_MAPPED_FRAMEWORKS so all 15 frameworks (owasp-llm, owasp-mcp,
-    # owasp-agentic, atlas, attack, nist, nist-csf, nist-800-53, fedramp,
-    # eu-ai-act, iso-27001, soc2, cis, cmmc, pci-dss) aggregate consistently.
-    # Slug→field
-    # is NOT a pure replace (e.g. nist → nist_ai_rmf_tags), so we read the
-    # canonical mapping straight off the metadata.
-    slug_to_tag_field: tuple[tuple[str, str], ...] = tuple((metadata.slug, metadata.tag_field) for metadata in TAG_MAPPED_FRAMEWORKS)
-
-    native_framework_counts: dict[str, int] = {}
-    native_total = 0
-    for job in _tenant_jobs(request):
-        if job.status != JobStatus.DONE or not job.result:
-            continue
-        for br in job.result.get("blast_radius", []) or []:
-            native_total += 1
-            for slug, field in slug_to_tag_field:
-                if br.get(field):
-                    native_framework_counts[slug] = native_framework_counts.get(slug, 0) + 1
-
+    native_framework_counts, native_total = _native_framework_counts(tenant_id)
     combined: dict[str, int] = {}
     for slug, count in native_framework_counts.items():
         combined[slug] = combined.get(slug, 0) + count
@@ -458,4 +441,18 @@ def _get_hub_posture_impl(request: Request) -> dict:
             "combined": dict(sorted(combined.items())),
         },
         "hub_severity_breakdown": hub_severity_counts,
+        # The /v1/findings?framework= drill-through definition; hub rows are bulk-ingested, so their
+        # declared applicable_frameworks are part of it.
+        "framework_count_basis": "control_tag_evidence",
     }
+
+
+def _native_framework_counts(tenant_id: str) -> tuple[dict[str, int], int]:
+    """Open scan findings in the default window per framework, by the drill-through's evidence definition."""
+    since = time_window.window_since_iso(time_window.normalize_window_days(None))
+    rows = iter_tenant_scan_spine_findings(tenant_id, since=since, status="open", sanitize=False)
+    counts: dict[str, int] = {}
+    for row in rows:
+        for slug in framework_evidence_slugs(row):
+            counts[slug] = counts.get(slug, 0) + 1
+    return counts, len(rows)

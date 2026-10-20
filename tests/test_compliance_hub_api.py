@@ -483,27 +483,32 @@ def test_hub_posture_native_counts_aggregate_all_15_frameworks():
     TAG_MAPPED_FRAMEWORKS, not just an inline subset. Previously the
     aggregator silently dropped nist-800-53, fedramp, cmmc, and pci-dss.
     """
+    from datetime import datetime, timezone
+
     from agent_bom.api.server import ScanJob, ScanRequest, set_job_store
     from agent_bom.api.store import InMemoryJobStore
     from agent_bom.api.stores import _get_store
-    from agent_bom.compliance_coverage import TAG_MAPPED_FRAMEWORKS
+    from agent_bom.compliance_coverage import TAG_MAPPED_FRAMEWORKS, scoring_catalog
 
     set_job_store(InMemoryJobStore())
 
-    # Build a single blast-radius row that has *every* tag field populated,
-    # so a correctly wired aggregator must report a count for every slug.
-    blast_row: dict[str, object] = {"package": "demo", "version": "1.0.0"}
+    # Build a single blast-radius row that carries a scored control in *every*
+    # tag field, so a correctly wired aggregator must report every slug.
+    # Counts use the drill-through definition: a code the framework's scoring
+    # catalog resolves, on an open finding inside the default window.
+    blast_row: dict[str, object] = {"package": "demo", "version": "1.0.0", "vulnerability_id": "CVE-2024-0001", "severity": "high"}
     for metadata in TAG_MAPPED_FRAMEWORKS:
-        blast_row[metadata.tag_field] = ["TAG-1"]
+        blast_row[metadata.tag_field] = [next(iter(scoring_catalog(metadata)))]
+    now = datetime.now(timezone.utc).isoformat()
 
     job = ScanJob(
         job_id="posture-regression-job",
         tenant_id="tenant-alpha",
-        created_at="2026-05-02T10:00:00Z",
+        created_at=now,
         request=ScanRequest(),
     )
     job.status = JobStatus.DONE
-    job.completed_at = "2026-05-02T10:01:00Z"
+    job.completed_at = now
     job.result = {"agents": [], "blast_radius": [blast_row], "threat_framework_summary": {}}
     _get_store().put(job)
 

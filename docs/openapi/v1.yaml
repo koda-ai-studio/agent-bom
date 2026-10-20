@@ -16759,6 +16759,11 @@ components:
     HubPostureResponse:
       additionalProperties: true
       properties:
+        framework_count_basis:
+          const: control_tag_evidence
+          default: control_tag_evidence
+          title: Framework Count Basis
+          type: string
         framework_counts:
           $ref: '#/components/schemas/HubFrameworkCounts'
         hub_severity_breakdown:
