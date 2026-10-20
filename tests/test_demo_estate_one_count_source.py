@@ -40,6 +40,7 @@ def _surfaces(client: TestClient) -> dict[str, dict]:
         "remediation": _get(client, "/v1/findings/remediation"),
         "agents": _get(client, "/v1/agents"),
         "snapshots": {"rows": _get(client, "/v1/graph/snapshots")},
+        "graph": _get(client, "/v1/graph", limit=1),
         **{f"findings:{sort}": _grouped_findings(client, sort) for sort in _FINDINGS_SORTS},
     }
 
@@ -97,14 +98,20 @@ def _check_remediation_reads_the_findings_window(surfaces: dict[str, dict]) -> N
 
 
 def _check_graph_snapshot_severity_names_its_unit(surfaces: dict[str, dict]) -> None:
-    """Graph node counts are issues once each advisory is one node, occurrences before; always labelled."""
+    """Snapshot severity counts finding nodes: a third unit, labelled, and equal to the graph's own tally.
+
+    One node holds every occurrence of an advisory or benchmark check, so the
+    node count is neither the issue count (an advisory on two packages is two
+    issues) nor the occurrence count; it must never be passed off as either.
+    """
     issues, occurrences = surfaces["overview"]["issue_counts"], surfaces["overview"]["finding_counts"]
     rows = [row for row in surfaces["snapshots"]["rows"] if isinstance(row, dict) and row.get("risk_summary")]
     assert rows
     latest = rows[0]
     assert latest["severity_basis"] == "graph_nodes"
-    graph_bands = _bands(latest["risk_summary"])
-    assert graph_bands in (_bands(issues), _bands(occurrences)), (graph_bands, _bands(issues), _bands(occurrences))
+    assert latest["risk_summary"] == surfaces["graph"]["stats"]["severity_counts"]
+    node_total = sum(latest["risk_summary"].values())
+    assert node_total <= issues["total"] <= occurrences["total"], (node_total, issues["total"], occurrences["total"])
 
 
 def _check_agent_counts_carry_their_scope(surfaces: dict[str, dict]) -> None:
