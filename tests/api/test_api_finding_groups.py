@@ -159,6 +159,38 @@ def test_findings_group_view_facets_count_issue_groups_not_occurrences() -> None
     assert critical["facets"]["severity"] == grouped["facets"]["severity"]
 
 
+def test_findings_group_view_with_facets_answers_under_a_reachability_filter() -> None:
+    """The Findings page sends grouping, facets and a reachability filter together.
+
+    The reachability view walks the store without facets, so the grouped
+    envelope must label its group-derived severity histogram without assuming a
+    first-page facet block exists.
+    """
+    tenant = "finding-group-facets-reachability"
+    set_job_store(InMemoryJobStore())
+    job = ScanJob(job_id="scan-group-facets-reach", tenant_id=tenant, created_at="2026-08-20T12:00:00Z", request=ScanRequest())
+    job.status = JobStatus.DONE
+    job.completed_at = "2026-08-20T12:01:00Z"
+    job.result = {
+        "findings": [
+            _finding("pkg:pypi/requests@2.0.0?image=api", severity="high"),
+            {**_finding("pkg:pypi/requests@2.0.0?image=batch", severity="critical"), "cve_id": "CVE-2026-2000"},
+        ]
+    }
+    _get_store().put(job)
+    response = TestClient(app).get(
+        "/v1/findings?group_occurrences=true&include_facets=true&reachability=unassessed&limit=10&window_days=0",
+        headers=proxy_headers(role="analyst", tenant=tenant),
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["total"] == 2
+    assert body["facets"]["severity"]["critical"] == 1
+    assert body["facets"]["severity"]["high"] == 1
+    assert body["facet_metadata"]["severity_basis"] == "canonical issue groups"
+
+
 def test_grouping_projects_graph_reachability_once_after_the_occurrence_walk(monkeypatch) -> None:
     """Internal grouping pages must not re-join the same persisted graph.
 

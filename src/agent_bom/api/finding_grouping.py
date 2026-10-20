@@ -134,7 +134,7 @@ def _attach_grouping_metadata(
     _copy_first_page_metadata(envelope, first_page, ("facets", "facets_approximate", "facet_metadata", "scope_completeness"))
     if first_page and severity_counts is not None:
         envelope.setdefault("facets", {})["severity"] = severity_counts
-        envelope["facet_metadata"]["severity_basis"] = "canonical issue groups"
+        envelope.setdefault("facet_metadata", {})["severity_basis"] = "canonical issue groups"
 
 
 def _groups_envelope(
