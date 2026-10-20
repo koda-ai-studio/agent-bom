@@ -143,7 +143,8 @@ def _iter_scan_findings(job: ScanJob) -> list[dict[str, Any]]:
         workload_runtime_index = None
 
     def _attach_reach(row: dict[str, Any]) -> dict[str, Any]:
-        row.setdefault("framework_tags", compliance_tags_from_finding_row(row))
+        if "framework_tags" not in row:
+            row["framework_tags"] = compliance_tags_from_finding_row(row)
         # Scan completion is authoritative observation time for scan-spine rows.
         # Do not infer first-seen history from the currently retained job set.
         observed_at = getattr(job, "completed_at", None) or getattr(job, "created_at", None)

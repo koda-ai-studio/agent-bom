@@ -172,3 +172,40 @@ def test_runtime_join_loads_once_per_tenant_per_read_context(monkeypatch):
     with finding_read_scope():
         scan._iter_scan_findings(jobs[0])
     assert loaded == ["a", "b", "a"]
+
+
+def test_scan_rows_keep_their_framework_tags_without_recomputing_them(monkeypatch):
+    """A row that already carries ``framework_tags`` must not rebuild them on every read."""
+    from agent_bom.api import scan_finding_projection as scan
+    from agent_bom.api.finding_read_context import finding_read_scope
+    from agent_bom.api.models import ScanJob, ScanRequest
+    from agent_bom.cloud import runtime_workload_evidence
+
+    calls: list[object] = []
+    monkeypatch.setattr(scan, "_effective_reach_lookup", lambda job: {})
+    monkeypatch.setattr(
+        scan,
+        "collect_scan_findings",
+        lambda job, attach: [attach({"id": "f1", "framework_tags": ["owasp_llm:LLM05"]}), attach({"id": "f2", "owasp_tags": ["LLM01"]})],
+    )
+    monkeypatch.setattr(scan, "build_tenant_runtime_evidence_index", lambda tenant: RuntimeEvidenceIndex())
+    monkeypatch.setattr(
+        runtime_workload_evidence.RuntimeWorkloadEvidenceIndex,
+        "from_store",
+        lambda *a: runtime_workload_evidence.RuntimeWorkloadEvidenceIndex(),
+    )
+    monkeypatch.setattr("agent_bom.api.routes.enterprise.build_tenant_triage_owner_index", lambda tenant: {})
+    monkeypatch.setattr(scan, "project_current_suppressions", lambda rows, tenant: rows)
+
+    def counted(row):
+        calls.append(row.get("id"))
+        return compliance_tags_from_finding_row(row)
+
+    monkeypatch.setattr(scan, "compliance_tags_from_finding_row", counted)
+    job = ScanJob(job_id="job-tags", tenant_id="a", request=ScanRequest(), created_at="2026-10-06T00:00:00Z")
+    with finding_read_scope():
+        rows = {row["id"]: row for row in scan._iter_scan_findings(job)}
+
+    assert calls == ["f2"]
+    assert rows["f1"]["framework_tags"] == ["owasp_llm:LLM05"]
+    assert rows["f2"]["framework_tags"] == ["owasp_llm:LLM01"]
