@@ -205,7 +205,7 @@ Id formats:
 
 ## `package`
 
-Emitted by: `graph/agent_projection.py`, `graph/blast_projection.py`, `graph/dependency_reach.py`, `graph/framework_topology_projection.py`, `graph/rollup_issues.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
+Emitted by: `graph/agent_projection.py`, `graph/blast_projection.py`, `graph/dependency_reach.py`, `graph/framework_topology_projection.py`, `graph/rollup_issues.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_packages.py`
 
 Id formats:
 
@@ -287,7 +287,7 @@ Id formats:
 
 ## `vulnerability`
 
-Emitted by: `graph/blast_projection.py`, `graph/builder_overlays.py`, `graph/dependency_reach.py`, `graph/finding_row_projection.py`, `graph/package_projection.py`, `hardware_evidence.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
+Emitted by: `graph/blast_projection.py`, `graph/builder_overlays.py`, `graph/dependency_reach.py`, `graph/finding_row_projection.py`, `graph/package_projection.py`, `hardware_evidence.py`; demo fixtures: `demo_estate/estate_vulnerabilities.py`, `demo_estate/showcase_packages.py`
 
 Id formats:
 
