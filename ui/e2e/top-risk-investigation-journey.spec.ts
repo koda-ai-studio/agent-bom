@@ -27,6 +27,7 @@ const row = {
   node_id: packageNode, finding_node_id: `vuln:${advisory}`, entity_type: "package", scan_id: "snapshot-a",
   package: "orchestrator-lib@1.0.0", package_version: "1.0.0", ecosystem: "pypi", fixed_version: "1.0.1",
   affected_agents: ["planner-agent"], affected_servers: ["orchestrator-server"], status: "open", lane: "vulnerabilities",
+  graph_reachable: true, graph_reachable_from_agents: ["agent:planner"], graph_min_hop_distance: 2,
   asset: { name: "orchestrator-server", asset_type: "mcp_server", stable_id: "asset-1", canonical_id: "asset-1" },
 };
 

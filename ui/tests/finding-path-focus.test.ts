@@ -23,6 +23,19 @@ describe("finding investigation link", () => {
     expect(params.get("finding")).toBe(finding.finding_id);
   });
 
+  it("prefers the agent-reachable occurrence over an image occurrence with no agent", () => {
+    const grouped = { ...finding, node_id: "pkg:pypi:pillow@9.0.0:image:abc", agents: ["data-pipeline"], graph_reachable_from_agents: [] };
+    const params = new URL(buildFindingInvestigationHref(grouped), "http://localhost").searchParams;
+    expect(params.get("node")).toBe("agent:data-pipeline");
+    expect(params.get("cve")).toBe("CVE-2023-36258");
+    expect(params.get("finding")).toBe(finding.finding_id);
+  });
+
+  it("keeps the occurrence's own node when that occurrence is already agent-reachable", () => {
+    const own = { ...finding, node_id: "pkg:pypi:langchain@0.0.150", agents: ["langchain-service"], graph_reachable_from_agents: ["agent:langchain-service"] };
+    expect(new URL(buildFindingInvestigationHref(own), "http://localhost").searchParams.get("node")).toBe("pkg:pypi:langchain@0.0.150");
+  });
+
   it("pins a snapshot only when the caller is browsing that snapshot", () => {
     const params = new URL(buildFindingInvestigationHref(finding, { scanId: "scan-selected" }), "http://localhost").searchParams;
     expect(params.get("scan")).toBe("scan-selected");
