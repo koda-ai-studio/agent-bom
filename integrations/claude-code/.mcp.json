@@ -3,6 +3,10 @@
     "agent-bom": {
       "command": "uvx",
       "args": ["--from", "agent-bom==0.109.0", "agent-bom", "mcp", "server"]
+    },
+    "agent-bom-audit": {
+      "command": "uvx",
+      "args": ["--from", "agent-bom==0.109.0", "agent-bom", "mcp", "server", "--profile", "audit"]
     }
   }
 }
