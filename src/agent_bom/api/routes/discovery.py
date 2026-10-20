@@ -19,7 +19,8 @@ from typing import TYPE_CHECKING, Any
 import anyio.to_thread
 from fastapi import APIRouter, HTTPException, Query, Request
 
-from agent_bom.api.agent_findings import current_agent_blast_rows, estate_reach_names
+from agent_bom.api.agent_evidence import AgentEvidence, agent_evidence, clear_agent_evidence_cache, job_revision
+from agent_bom.api.agent_findings import agent_scoped_blast_rows, estate_reach_names
 from agent_bom.api.mcp_observation_store import MCPObservation, agent_observation_id, merge_observations
 from agent_bom.api.models import JobStatus
 from agent_bom.api.read_models import AgentsResponse, DiscoveryProvidersResponse, documented
@@ -46,11 +47,13 @@ if TYPE_CHECKING:
 router = APIRouter()
 _logger = logging.getLogger(__name__)
 _AGENTS_RESPONSE_CACHE_TTL_SECONDS = 30.0
-_agents_response_cache: dict[str, tuple[float, dict[str, Any]]] = {}
+# tenant -> (completed-at monotonic stamp, job revision at build start, response)
+_agents_response_cache: dict[str, tuple[float, str | None, dict[str, Any]]] = {}
 
 
 def _clear_agents_response_cache_for_tests() -> None:
     _agents_response_cache.clear()
+    clear_agent_evidence_cache()
 
 
 def _tenant_id(request: Request) -> str:
@@ -96,10 +99,7 @@ def _host_agents_for_tenant(tenant_id: str) -> list[Any] | None:
 
 
 def _scanned_estate_agents(tenant_id: str) -> list[dict[str, Any]]:
-    from agent_bom.api.estate_agents import scanned_estate_agents
-
-    jobs = [job for job in _get_store().list_all(tenant_id=tenant_id) if job.status == JobStatus.DONE and job.result]
-    return scanned_estate_agents(jobs)
+    return deepcopy(_agent_evidence(tenant_id).estate_agents)
 
 
 def _merge_strings(*values: list[str]) -> list[str]:
@@ -129,87 +129,8 @@ def _merge_security_intelligence(*values: list[dict[str, object]]) -> list[dict[
     return merged
 
 
-def _completed_jobs(tenant_id: str) -> list[Any]:
-    return [job for job in _get_store().list_all(tenant_id=tenant_id) if job.status == JobStatus.DONE and job.result]
-
-
-def _iter_report_servers(report: dict[str, Any]) -> list[tuple[str, str, dict[str, Any]]]:
-    rows: list[tuple[str, str, dict[str, Any]]] = []
-    for agent in report.get("agents", []):
-        agent_id = str(agent.get("canonical_id") or agent.get("stable_id") or agent.get("id") or "")
-        agent_name = str(agent.get("name") or agent.get("agent_name") or "").strip()
-        for server in agent.get("mcp_servers", []) or []:
-            if isinstance(server, dict):
-                rows.append((agent_id, agent_name, server))
-        # Back-compat for older pushed reports and gateway discovery seed data.
-        for server in agent.get("servers", []) or []:
-            if isinstance(server, dict):
-                rows.append((agent_id, agent_name, server))
-    return rows
-
-
-def _build_scan_history_index(tenant_id: str) -> dict[tuple[str, str], dict[str, Any]]:
-    index: dict[tuple[str, str], dict[str, Any]] = {}
-    for job in _completed_jobs(tenant_id):
-        report = job.result or {}
-        for report_agent_id, _label, report_server in _iter_report_servers(report):
-            server_id = str(report_server.get("canonical_id") or report_server.get("stable_id") or report_server.get("id") or "")
-            if not report_agent_id or not server_id:
-                continue
-            key = (report_agent_id, server_id)
-            record = index.setdefault(
-                key,
-                {
-                    "scan_sources": set(),
-                    "first_seen": "",
-                    "last_seen": "",
-                },
-            )
-            for source in report.get("scan_sources", []) or []:
-                if source:
-                    record["scan_sources"].add(str(source))
-            created_at = str(job.created_at or "")
-            completed_at = str(job.completed_at or created_at)
-            if created_at and (not record["first_seen"] or created_at < record["first_seen"]):
-                record["first_seen"] = created_at
-            if completed_at and completed_at > record["last_seen"]:
-                record["last_seen"] = completed_at
-
-    return {
-        key: {
-            "present": True,
-            "scan_sources": sorted(value["scan_sources"]),
-            "first_seen": value["first_seen"] or None,
-            "last_seen": value["last_seen"] or None,
-        }
-        for key, value in index.items()
-    }
-
-
-def _build_gateway_index(tenant_id: str) -> dict[tuple[str, str], dict[str, Any]]:
-    index: dict[tuple[str, str], dict[str, Any]] = {}
-    for job in _completed_jobs(tenant_id):
-        for agent_id, agent_name, report_server in _iter_report_servers(job.result or {}):
-            server_id = str(report_server.get("canonical_id") or report_server.get("stable_id") or report_server.get("id") or "")
-            server_url = str(report_server.get("url") or "").strip()
-            if not agent_id or not server_id or not server_url.startswith(("http://", "https://")):
-                continue
-            record = index.setdefault(
-                (agent_id, server_id),
-                {
-                    "gateway_registered": True,
-                    "source_agents": set(),
-                },
-            )
-            if agent_name:
-                record["source_agents"].add(agent_name)
-    return {
-        key: {
-            "gateway_registered": value["gateway_registered"],
-            "source_agents": sorted(value["source_agents"]),
-        }
-        for key, value in index.items()
-    }
+def _agent_evidence(tenant_id: str) -> AgentEvidence:
+    return agent_evidence(_get_store(), tenant_id)
 
 
 def _observation_ids(agent: Any, server: Any, fleet_agent: dict[str, Any] | None = None) -> tuple[str, None]:
@@ -336,8 +257,8 @@ def _serialize_agent(
             last_seen = stored_observation.last_seen or (fleet_agent.get("last_discovery") if fleet_agent else scan_history["last_seen"])
             last_synced = stored_observation.last_synced or (fleet_agent.get("updated_at") if fleet_agent else None)
         else:
-            scan_sources = scan_history["scan_sources"]
-            source_agents = gateway_state["source_agents"]
+            scan_sources = list(scan_history["scan_sources"])
+            source_agents = list(gateway_state["source_agents"])
             configured_locally = True
             fleet_present = fleet_agent is not None
             gateway_registered = gateway_state["gateway_registered"]
@@ -452,8 +373,8 @@ def _overlay_agent_observations(
             ],
             observed_via=observed_via,
             observed_scopes=observed_scopes,
-            scan_sources=scan_history["scan_sources"],
-            source_agents=gateway_state["source_agents"],
+            scan_sources=list(scan_history["scan_sources"]),
+            source_agents=list(gateway_state["source_agents"]),
             configured_locally=True,
             fleet_present=fleet_agent is not None,
             gateway_registered=gateway_state["gateway_registered"],
@@ -501,8 +422,9 @@ def _build_agents_response(tenant_id: str) -> dict[str, Any]:
         for server in agent.mcp_servers:
             if not server.packages:
                 server.packages = extract_packages(server)
-    scan_history_index = _build_scan_history_index(tenant_id)
-    gateway_index = _build_gateway_index(tenant_id)
+    evidence = _agent_evidence(tenant_id)
+    scan_history_index = evidence.scan_history
+    gateway_index = evidence.gateway
     # Only unique canonical identities bind discovery to fleet state. Names
     # remain labels, including for legacy rows lacking identity evidence.
     fleet_index = _fleet_identity_index(tenant_id)
@@ -535,6 +457,24 @@ def _build_agents_response(tenant_id: str) -> dict[str, Any]:
     }
 
 
+def _cached_agents_response(tenant_id: str) -> dict[str, Any] | None:
+    """A cached response while the TTL holds and no scan has landed since its build."""
+    cached = _agents_response_cache.get(tenant_id)
+    if cached is None or time.monotonic() - cached[0] > _AGENTS_RESPONSE_CACHE_TTL_SECONDS:
+        return None
+    if cached[1] != job_revision(_get_store(), tenant_id):
+        return None
+    return deepcopy(cached[2])
+
+
+def _build_and_cache_agents_response(tenant_id: str) -> dict[str, Any]:
+    revision = job_revision(_get_store(), tenant_id)
+    response = _build_agents_response(tenant_id)
+    # Stamp when the build finishes: a build longer than the TTL is still served.
+    _agents_response_cache[tenant_id] = (time.monotonic(), revision, deepcopy(response))
+    return response
+
+
 @router.get("/agents", **documented(AgentsResponse), tags=["discovery"])
 async def list_agents(
     request: Request,
@@ -545,15 +485,12 @@ async def list_agents(
     """
     try:
         tenant_id = _tenant_id(request)
-        now = time.monotonic()
-        cached = _agents_response_cache.get(tenant_id)
-        if not refresh and cached is not None and now - cached[0] <= _AGENTS_RESPONSE_CACHE_TTL_SECONDS:
-            return deepcopy(cached[1])
-
+        if not refresh:
+            cached = await anyio.to_thread.run_sync(_cached_agents_response, tenant_id)
+            if cached is not None:
+                return cached
         async with adaptive_backpressure("discovery"):
-            response = await anyio.to_thread.run_sync(_build_agents_response, tenant_id)
-        _agents_response_cache[tenant_id] = (now, deepcopy(response))
-        return response
+            return await anyio.to_thread.run_sync(_build_and_cache_agents_response, tenant_id)
     except BackpressureRejectedError as exc:
         raise HTTPException(status_code=429, detail=exc.to_dict(), headers={"Retry-After": str(exc.retry_after_seconds)}) from exc
     except Exception as exc:  # noqa: BLE001
@@ -607,8 +544,9 @@ def _get_agent_mesh_impl(request: Request) -> dict:
             if not server.packages:
                 server.packages = extract_packages(server)
 
-    scan_history_index = _build_scan_history_index(tenant_id)
-    gateway_index = _build_gateway_index(tenant_id)
+    evidence = _agent_evidence(tenant_id)
+    scan_history_index = evidence.scan_history
+    gateway_index = evidence.gateway
     fleet_index = _fleet_identity_index(tenant_id)
     observation_index = _live_observation_index(tenant_id, agents, fleet_index, scan_history_index, gateway_index)
     agents_data = [
@@ -675,12 +613,16 @@ def _get_agent_detail_impl(request: Request, agent_name: str) -> dict:
     for s in agent.mcp_servers:
         all_credentials.extend(s.credential_names)
 
-    agent_blast = current_agent_blast_rows(
-        _get_store().list_all(tenant_id=_tenant_id(request)),
-        agent_id=agent.canonical_id,
-        credential_names=set(all_credentials),
-        tool_names={tool.name for s in agent.mcp_servers for tool in s.tools},
-        server_names={s.name for s in agent.mcp_servers},
+    tenant_id = _tenant_id(request)
+    evidence = _agent_evidence(tenant_id)
+    agent_blast = deepcopy(
+        agent_scoped_blast_rows(
+            evidence.blast_rows(agent.canonical_id),
+            agent_id=agent.canonical_id,
+            credential_names=set(all_credentials),
+            tool_names={tool.name for s in agent.mcp_servers for tool in s.tools},
+            server_names={s.name for s in agent.mcp_servers},
+        )
     )
 
     # Every blast radius lands in exactly one bucket. Advisories with no CVSS
@@ -692,11 +634,10 @@ def _get_agent_detail_impl(request: Request, agent_name: str) -> dict:
         sev = normalize_severity(br.get("severity"))
         severity_counts[sev if sev in severity_counts else "unrated"] += 1
 
-    tenant_id = _tenant_id(request)
     fleet_index = _fleet_identity_index(tenant_id)
     fleet_agent = fleet_index.get(agent.canonical_id)
-    scan_history_index = _build_scan_history_index(tenant_id)
-    gateway_index = _build_gateway_index(tenant_id)
+    scan_history_index = evidence.scan_history
+    gateway_index = evidence.gateway
     observation_index = _live_observation_index(tenant_id, [agent], fleet_index, scan_history_index, gateway_index)
 
     return {
@@ -726,7 +667,8 @@ def _estate_agent_detail(request: Request, agent_name: str) -> dict:
     from agent_bom.api.estate_agents import agent_identity_key
 
     tenant_id = _tenant_id(request)
-    estate = _scanned_estate_agents(tenant_id)
+    evidence = _agent_evidence(tenant_id)
+    estate = evidence.estate_agents
     matches = [agent for agent in estate if agent_identity_key(agent) == agent_name]
     if not matches:
         matches = [agent for agent in estate if agent.get("name") == agent_name]
@@ -735,7 +677,7 @@ def _estate_agent_detail(request: Request, agent_name: str) -> dict:
             raise HTTPException(status_code=409, detail="Ambiguous agent label; select its canonical ID")
     if not matches:
         raise HTTPException(status_code=404, detail="Agent not found")
-    agent = matches[0]
+    agent = deepcopy(matches[0])
     canonical_id = agent_identity_key(agent) or ""
 
     servers = [server for server in agent.get("mcp_servers") or [] if isinstance(server, dict)]
@@ -744,9 +686,8 @@ def _estate_agent_detail(request: Request, agent_name: str) -> dict:
         for name in server.get("credential_env_vars") or []:
             if isinstance(name, str) and name not in credentials:
                 credentials.append(name)
-    agent_blast = current_agent_blast_rows(
-        _get_store().list_all(tenant_id=tenant_id), agent_id=canonical_id, **estate_reach_names(servers, credentials)
-    )
+    reach = estate_reach_names(servers, credentials)
+    agent_blast = deepcopy(agent_scoped_blast_rows(evidence.blast_rows(canonical_id), agent_id=canonical_id, **reach))
     severity_counts = {"critical": 0, "high": 0, "medium": 0, "low": 0, "unrated": 0}
     for br in agent_blast:
         sev = normalize_severity(br.get("severity"))

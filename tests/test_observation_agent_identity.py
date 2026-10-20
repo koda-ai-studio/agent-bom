@@ -117,14 +117,22 @@ def test_agent_detail_rejects_ambiguous_label_and_accepts_exact_id(monkeypatch):
 def test_scan_history_does_not_correlate_by_agent_or_server_label(monkeypatch):
     from types import SimpleNamespace
 
-    from agent_bom.api.routes.discovery import _build_scan_history_index
+    from agent_bom.api.agent_evidence import build_agent_evidence
+    from agent_bom.api.models import JobStatus
 
-    job = SimpleNamespace(result={"agents": [{"name": "same", "mcp_servers": [{"name": "tools"}]}]}, created_at="", completed_at="")
-    monkeypatch.setattr("agent_bom.api.routes.discovery._completed_jobs", lambda tenant: [job])
-    assert _build_scan_history_index("default") == {}
+    job = SimpleNamespace(
+        job_id="job-1",
+        status=JobStatus.DONE,
+        child_job_ids=[],
+        request=None,
+        result={"agents": [{"name": "same", "mcp_servers": [{"name": "tools"}]}]},
+        created_at="",
+        completed_at="",
+    )
+    assert build_agent_evidence([job]).scan_history == {}
     job.result["agents"][0]["canonical_id"] = "agent-1"
     job.result["agents"][0]["mcp_servers"][0]["canonical_id"] = "server-1"
-    assert set(_build_scan_history_index("default")) == {("agent-1", "server-1")}
+    assert set(build_agent_evidence([job]).scan_history) == {("agent-1", "server-1")}
 
 
 def test_sync_rejects_name_only_and_cross_source_rebinding_before_writes(monkeypatch):

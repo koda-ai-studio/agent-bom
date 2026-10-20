@@ -132,7 +132,8 @@ async def test_api_reset_discards_previous_agents_response(monkeypatch) -> None:
     tenant = "cache-isolation"
     old = {"agents": [{"canonical_id": "previous-app-agent"}], "count": 1}
     current = {"agents": [{"canonical_id": "current-app-agent"}], "count": 1}
-    discovery._agents_response_cache[tenant] = (time.monotonic(), old)
+    revision = discovery.job_revision(discovery._get_store(), tenant)
+    discovery._agents_response_cache[tenant] = (time.monotonic(), revision, old)
     monkeypatch.setattr(discovery, "_tenant_id", lambda request: tenant)
     monkeypatch.setattr(discovery, "_build_agents_response", lambda tenant_id: current)
 

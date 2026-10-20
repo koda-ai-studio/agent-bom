@@ -14,7 +14,6 @@ import json
 from collections.abc import Iterable
 from typing import Any
 
-from agent_bom.api.findings_current import current_scan_jobs
 from agent_bom.core.severity import normalize_severity, severity_rank
 
 _OWN_CREDENTIAL_FIELDS = ("exposed_credentials", "all_server_credentials", "transitive_credentials")
@@ -112,30 +111,4 @@ def estate_reach_names(servers: list[dict[str, Any]], credentials: list[str]) ->
     }
 
 
-def current_agent_blast_rows(
-    jobs: Iterable[Any],
-    *,
-    agent_id: str,
-    credential_names: set[str],
-    tool_names: set[str],
-    server_names: set[str],
-) -> list[dict[str, Any]]:
-    """Fold the agent's rows from the current (newest-per-scope) scan snapshots.
-
-    Superseded rescans of the same scope are excluded by the same selection the
-    findings list and executive counts use, so history never inflates the view.
-    """
-    rows: list[dict[str, Any]] = []
-    for job in current_scan_jobs(jobs, since=None, scan_id=None):
-        result = getattr(job, "result", None) or {}
-        rows.extend(row for row in result.get("blast_radius", []) or [] if isinstance(row, dict))
-    return agent_scoped_blast_rows(
-        rows,
-        agent_id=agent_id,
-        credential_names=credential_names,
-        tool_names=tool_names,
-        server_names=server_names,
-    )
-
-
-__all__ = ["agent_scoped_blast_rows", "current_agent_blast_rows", "estate_reach_names", "row_reaches_agent"]
+__all__ = ["agent_scoped_blast_rows", "estate_reach_names", "row_reaches_agent"]
