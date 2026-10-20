@@ -20,6 +20,7 @@ import {
   Wrench,
 } from "lucide-react";
 import Link from "next/link";
+import { agentBlastPathHref } from "@/lib/agent-links";
 import { useEffect, useState } from "react";
 import { safeCommandLine, safeDisplayText, safeDisplayUrl, safeReferenceHref, StatCard } from "./agent-display";
 
@@ -106,7 +107,7 @@ export function AgentDetail({ agentName }: { agentName: string }) {
               </div>
             </div>
             <Link
-              href={`/agents?name=${encodeURIComponent(agentName)}&view=lifecycle`}
+              href={`/agents?name=${encodeURIComponent(agent.name || agentName)}&view=lifecycle`}
               className="agents-scan-action"
             >
               <GitBranch className="w-4 h-4" />
@@ -469,7 +470,9 @@ export function AgentDetail({ agentName }: { agentName: string }) {
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <SeverityBadge severity={br.severity} />
-                      <span className="font-mono font-medium">{br.vulnerability_id}</span>
+                      <Link href={agentBlastPathHref(agent.name || agentName, br)} className="font-mono font-medium text-accent-mint hover:underline" title="Open this agent's attack path for the advisory">
+                        {br.vulnerability_id}
+                      </Link>
                     </div>
                     <div className="flex items-center gap-2 text-xs text-[color:var(--text-tertiary)]">
                       {br.cvss_score && <span>CVSS {br.cvss_score}</span>}

@@ -6,6 +6,7 @@ import { lifecycleInventoryView, type LifecycleView } from "@/lib/agent-lifecycl
 import { type AgentLifecycleResponse, api } from "@/lib/api";
 import { ArrowLeft, Download, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { agentLineageHref, lifecycleAgentLabel } from "@/lib/agent-links";
 import { useEffect, useState } from "react";
 
 
@@ -20,7 +21,7 @@ export function LifecycleFlow({ data, agentName }: { data: AgentLifecycleRespons
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `${agentName}-lifecycle.json`;
+    link.download = `${lifecycleAgentLabel(data.graph, agentName)}-lifecycle.json`;
     link.click();
     URL.revokeObjectURL(url);
   };
@@ -29,7 +30,7 @@ export function LifecycleFlow({ data, agentName }: { data: AgentLifecycleRespons
       <div className="min-w-0">
         <Link href="/agents" className="agents-back-link"><ArrowLeft className="h-4 w-4" /> Agents</Link>
         <h1 className="mt-2 text-lg font-semibold">Configured inventory</h1>
-        <p className="mb-1 break-words text-sm font-medium">{agentName}</p>
+        <p className="mb-1 break-words text-sm font-medium">{lifecycleAgentLabel(data.graph, agentName)}</p>
         <p className="max-w-xl text-sm text-muted">Explore packages, tools, credentials and advisories for this agent. These relationships do not prove execution or effective access.</p>
       </div>
       <button onClick={handleExport} className="agents-flow-export"><Download className="h-4 w-4" /> Export</button>
@@ -51,7 +52,7 @@ export function LifecycleFlow({ data, agentName }: { data: AgentLifecycleRespons
     </div>
     {visible && <p className="text-xs text-muted" role="status">Showing {visible.nodes.length} of {data.graph!.nodes.length} loaded entities. Choose a view and server to inspect their recorded relationships; export includes the complete inventory.</p>}
     {visible ? <SecurityGraphInvestigation key={`${view}:${selectedServer}`} graph={visible} attackPath={null} focusMode={false}
-      onFocusModeChange={() => {}} fullGraphHref="/graph" embedded /> :
+      onFocusModeChange={() => {}} fullGraphHref={agentLineageHref(data.graph, agentName)} embedded /> :
       <PageEmptyState title="Lifecycle evidence unavailable" detail="Refresh this view against a server that provides the shared inventory graph." />}
   </div>;
 }
