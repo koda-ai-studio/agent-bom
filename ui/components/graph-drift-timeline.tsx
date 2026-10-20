@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import type { GraphHistorySnapshot } from "@/lib/api";
+import { snapshotLabel } from "@/lib/snapshot-label";
 
 export type DriftScrubberPair = {
   oldScanId: string;
@@ -87,10 +88,10 @@ export function GraphDriftTimeline({
       className="space-y-2 rounded-xl border border-orange-500/25 bg-orange-500/5 p-3"
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-orange-800 dark:text-orange-200">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-orange-800 dark:text-orange-200">
           Drift timeline
         </p>
-        <p className="text-[11px] text-ink-tertiary">
+        <p className="text-xs text-ink-tertiary">
           Threshold = what changed between adjacent snapshots
         </p>
       </div>
@@ -103,6 +104,7 @@ export function GraphDriftTimeline({
           return (
             <button
               key={`${pair.oldScanId}->${pair.newScanId}`}
+              title={`${pair.newScanId} vs ${pair.oldScanId}`}
               type="button"
               onClick={() =>
                 onSelect({ oldScanId: pair.oldScanId, newScanId: pair.newScanId })
@@ -113,25 +115,25 @@ export function GraphDriftTimeline({
                   : "border-outline bg-surface hover:border-orange-400/40"
               }`}
             >
-              <div className="font-mono text-[11px] text-foreground">
-                {pair.newScanId.slice(0, 8)}…
+              <div className="font-mono text-xs text-foreground">
+                {snapshotLabel(pair.newScanId, 20)}
               </div>
               <div className="mt-1 flex flex-wrap items-center gap-1">
                 {critical ? (
-                  <span className="rounded border border-red-500/40 bg-red-500/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-red-700 dark:text-red-200">
+                  <span className="rounded border border-red-500/40 bg-red-500/15 px-1.5 py-0.5 text-xs font-semibold uppercase tracking-[0.12em] text-red-700 dark:text-red-200">
                     Critical
                   </span>
                 ) : (
-                  <span className="rounded border border-outline px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-ink-tertiary">
+                  <span className="rounded border border-outline px-1.5 py-0.5 text-xs font-semibold uppercase tracking-[0.12em] text-ink-tertiary">
                     Changed
                   </span>
                 )}
-                <span className="font-mono text-[10px] text-ink-secondary">
+                <span className="font-mono text-xs text-ink-secondary">
                   {total} Δ
                 </span>
               </div>
-              <div className="mt-1 text-[10px] text-ink-tertiary">
-                vs {pair.oldScanId.slice(0, 8)}…
+              <div className="mt-1 text-xs text-ink-tertiary">
+                vs {snapshotLabel(pair.oldScanId, 20)}
               </div>
             </button>
           );

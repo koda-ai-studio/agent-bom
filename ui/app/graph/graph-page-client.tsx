@@ -214,6 +214,7 @@ import { useGraphEstateChanges } from "@/hooks/use-graph-estate-changes";
 import { useEstateHighlight } from "@/hooks/use-estate-highlight";
 import { snapshotChangesHeadline } from "@/lib/graph-estate-changes";
 import { graphFirstFramePending } from "@/lib/graph-first-frame";
+import { snapshotLabel } from "@/lib/snapshot-label";
 import { resolveScopeAncestry } from "@/lib/graph-scope-ancestry";
 
 export { DiffPreview } from "@/components/graph-snapshot-diff";
@@ -3092,8 +3093,8 @@ function GraphPageInner() {
         {selectedScanId && selectedScanId !== currentEstateId && !snapshots.some(item => item.scan_id === selectedScanId) && <option value={selectedScanId}>{selectedScanId}</option>}
         {currentEstateId && !snapshots.some(item => item.scan_id === currentEstateId) && <option value={currentEstateId}>Current tenant estate</option>}
         {snapshots.map((snapshot) => (
-          <option key={snapshot.scan_id} value={snapshot.scan_id}>
-            {snapshot.scan_id.slice(0, 12)} ·{" "}
+          <option key={snapshot.scan_id} value={snapshot.scan_id} title={snapshot.scan_id}>
+            {snapshotLabel(snapshot.scan_id)} ·{" "}
             {new Date(snapshot.created_at).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" })}
           </option>
         ))}
@@ -3456,7 +3457,7 @@ function GraphPageInner() {
                 onFilterChange={setDriftFilter}
                 counts={drift.counts}
                 criticalCount={drift.critical}
-                comparedLabel={diffPair?.oldScanId.slice(0, 12)}
+                comparedLabel={diffPair ? snapshotLabel(diffPair.oldScanId) : undefined}
                 attributeSummaries={driftAttributeSummaryList}
               />
             </div>
@@ -3468,7 +3469,7 @@ function GraphPageInner() {
             changes={edgeChanges}
             loading={loadingEdgeChanges}
             error={edgeChangesError}
-            comparedLabel={diffPair?.oldScanId.slice(0, 12)}
+            comparedLabel={diffPair ? snapshotLabel(diffPair.oldScanId) : undefined}
           />
         ) : null}
 
