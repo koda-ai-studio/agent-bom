@@ -21,6 +21,7 @@ import { FindingsQueueTable } from "@/components/findings-queue";
 import { PaginationBar } from "@/components/pagination-bar";
 import { PageEmptyState, PageLoadingState } from "@/components/states/page-state";
 import { ApiAuthError, ApiForbiddenError } from "@/lib/api-errors";
+import { isTransientReadFailure } from "@/lib/api-transport";
 import { FIRST_SCAN_ACTIONS } from "@/lib/empty-state-actions";
 import {
   type EnrichedVuln,
@@ -150,6 +151,11 @@ function FindingsPage() {
   // Per #2199 splash-kind sweep: track auth/forbidden/network so the splash
   // matches the actual cause instead of always reading as a connect failure.
   const [errorKind, setErrorKind] = useState<"network" | "auth" | "forbidden">("network");
+  // A first dropped read is an interruption, not an offline API: offer a
+  // retry in place. A second consecutive failure shows the full state.
+  const [softRetry, setSoftRetry] = useState(false);
+  const [readAttempt, setReadAttempt] = useState(0);
+  const consecutiveReadFailures = useRef(0);
   const [filter, setFilter] = useState<SeverityFilter>(
     paramSeverity && ["critical", "high", "medium", "low", "info", "unrated"].includes(paramSeverity)
       ? (paramSeverity as SeverityFilter)
@@ -544,8 +550,12 @@ function FindingsPage() {
         setScopeCompleteness(response.scope_completeness ?? null);
         setHasMoreFindings(Boolean(response.has_more || response.next_cursor));
         setNextFindingsCursor(response.next_cursor ?? "");
+        consecutiveReadFailures.current = 0;
+        setSoftRetry(false);
       } catch (e: unknown) {
         if (cancelled) return;
+        consecutiveReadFailures.current += 1;
+        setSoftRetry(isTransientReadFailure(e) && consecutiveReadFailures.current === 1);
         setError(e instanceof Error ? e.message : "Failed to load");
         setErrorKind(_classifyApiErrorKind(e));
       } finally {
@@ -576,6 +586,7 @@ function FindingsPage() {
     windowDays,
     sortKey,
     pageCursors,
+    readAttempt,
   ]);
 
   function handleSort(field: SortKey) {
@@ -766,7 +777,17 @@ function FindingsPage() {
           detail="Applying server-backed filters and loading the next evidence page."
         />
       )}
-      {!loading && error && (
+      {!loading && error && softRetry && (
+        <div role="status" data-testid="findings-read-retry"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-100">
+          <span>The findings read was interrupted before it finished. Nothing was concluded about your findings.</span>
+          <button type="button" onClick={() => setReadAttempt(value => value + 1)} disabled={detailLoading}
+            className="min-h-11 rounded-md border border-outline bg-surface px-3 text-sm font-medium text-foreground hover:bg-surface-elevated disabled:opacity-50">
+            {detailLoading ? "Retrying…" : "Retry"}
+          </button>
+        </div>
+      )}
+      {!loading && error && !softRetry && (
         <ApiOfflineState
           title={errorKind === "network" ? "Findings need the agent-bom API" : undefined}
           detail={error}
