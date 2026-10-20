@@ -307,9 +307,21 @@ export const graphApi = {
     /** Only paths carrying the current findings mapped to this framework control. */
     framework?: string | undefined;
     control?: string | undefined;
+    /** Only paths whose source and target nodes are in different vendors (GET /v1/graph/attack-paths/cross-vendor). */
+    crossVendor?: boolean | undefined;
+    sourceVendor?: string | undefined;
+    targetVendor?: string | undefined;
   }, options?: { signal?: AbortSignal }) => {
     const params = new URLSearchParams();
     if (filters?.scanId) params.set("scan_id", filters.scanId);
+    if (filters?.crossVendor) {
+      if (filters.sourceVendor) params.set("source_vendor", filters.sourceVendor);
+      if (filters.targetVendor) params.set("target_vendor", filters.targetVendor);
+      if (filters.offset != null) params.set("offset", String(filters.offset));
+      if (filters.limit != null) params.set("limit", String(filters.limit));
+      if (filters.snapshotGeneration) params.set("snapshot_generation", filters.snapshotGeneration);
+      return get<UnifiedGraphResponse>(`/v1/graph/attack-paths/cross-vendor?${params.toString()}`, options);
+    }
     if (filters?.nodeId) params.set("node_id", filters.nodeId);
     if (filters?.findingId) params.set("finding_id", filters.findingId);
     if (filters?.advisoryId) params.set("advisory_id", filters.advisoryId);

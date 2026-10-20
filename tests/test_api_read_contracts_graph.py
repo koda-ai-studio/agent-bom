@@ -18,6 +18,7 @@ from agent_bom.api.graph_store import SQLiteGraphStore
 from agent_bom.api.read_models import STRICT_CONTRACT
 from agent_bom.api.read_models import graph as graph_models
 from agent_bom.api.read_models.exploit_story import GraphExploitStoryResponse
+from agent_bom.api.read_models.graph_vendor_paths import GraphCrossVendorPathsResponse
 from agent_bom.api.server import app
 from agent_bom.api.stores import set_graph_store
 from agent_bom.graph import AttackPath, EntityType, RelationshipType, UnifiedEdge, UnifiedGraph, UnifiedNode
@@ -25,6 +26,7 @@ from agent_bom.graph import AttackPath, EntityType, RelationshipType, UnifiedEdg
 GRAPH_TYPED_READS: dict[str, type[BaseModel]] = {
     "/v1/graph": graph_models.GraphPageResponse,
     "/v1/graph/agents": graph_models.GraphAgentsResponse,
+    "/v1/graph/attack-paths/cross-vendor": GraphCrossVendorPathsResponse,
     "/v1/graph/changes": graph_models.GraphEstateChangesResponse,
     "/v1/graph/clusters": graph_models.GraphClustersResponse,
     "/v1/graph/compliance": graph_models.GraphComplianceResponse,

@@ -386,6 +386,15 @@ export interface GraphAttackPath extends AttackPath {
   suppressed?: boolean | undefined;
 }
 
+export interface GraphVendorFacets {
+  unit: "paths";
+  snapshot_paths: number;
+  cross_vendor_paths: number;
+  pairs: Array<{ source_vendor: string; target_vendor: string; paths: number }>;
+  selected: { source_vendor?: string; target_vendor?: string } | null;
+  covers_all_paths: boolean;
+}
+
 export interface UnifiedGraphResponse extends Omit<
   UnifiedGraphData,
   "attack_paths"
@@ -394,6 +403,8 @@ export interface UnifiedGraphResponse extends Omit<
   pagination: GraphPagination;
   completeness?: GraphCompleteness | undefined;
   focus?: GraphPathFocus | undefined;
+  /** Present on the cross-vendor queue: path counts per (source vendor, target vendor) over the whole snapshot. */
+  vendor_facets?: GraphVendorFacets | undefined;
   count_metadata?: {
     source?: "persisted_graph_paths" | "derived_graph_paths" | string;
     returned?: number;
@@ -1147,6 +1158,13 @@ export interface GraphEstatePathChange {
   summary: string;
 }
 
+export interface GraphChangeAttribution {
+  unit: "nodes";
+  sources: Array<{ vendor: string; account: string } & GraphDiffChangeCounts>;
+  omitted_sources: number;
+  unattributed: GraphDiffChangeCounts;
+}
+
 export interface GraphEstateHighlights {
   new_critical_findings?: { count: number; top: GraphEstateHighlightNode[] };
   new_credential_reach?: { count: number; top: GraphEstateHighlightNode[] };
@@ -1166,6 +1184,8 @@ export interface GraphEstateChangeSource {
   counts: Record<"nodes" | "edges", GraphDiffChangeCounts>;
   total_changes: number;
   nodes_by_entity_type: Record<string, GraphDiffChangeCounts>;
+  /** Changed nodes per vendor and account recorded on each node; absent on older servers. */
+  changes_by_source?: GraphChangeAttribution | undefined;
   highlights: GraphEstateHighlights;
   skipped_snapshots: number;
 }

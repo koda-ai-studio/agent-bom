@@ -43,6 +43,8 @@ import {
   type InvestigationPresetFilters,
 } from "@/components/graph-preset-controls";
 import { InvestigationFilterChips } from "@/components/investigation-filter-chips";
+import { PathVendorScopeChips } from "@/components/path-vendor-scope-chips";
+import { CROSS_VENDOR_PARAM, crossVendorRequest, crossVendorScopeLabel, parseCrossVendor } from "@/lib/path-vendor-scope";
 import { parseInvestigationStep, type InvestigationStep } from "@/components/investigation-step-strip";
 import {
   api,
@@ -156,6 +158,7 @@ function AttackPathInvestigationContent() {
       framework: searchParams.get("framework") ?? "",
       control: searchParams.get("control") ?? "",
       traceId: searchParams.get("trace") ?? searchParams.get("runtime_trace_id") ?? "",
+      crossVendor: parseCrossVendor(searchParams.get(CROSS_VENDOR_PARAM)),
     }),
     [searchParams],
   );
@@ -316,6 +319,7 @@ function AttackPathInvestigationContent() {
           offset: 0,
           limit: ATTACK_PATH_FETCH_PAGE,
           ...serverPathFocus({ nodeId: focus.nodeId, findingId: focus.findingId, cve: focus.cve, framework: focus.framework, control: focus.control }),
+          ...crossVendorRequest(focus.crossVendor),
         });
         if (cancelled) return;
         const sourceScan = sourceSnapshotFallback({
@@ -374,7 +378,7 @@ function AttackPathInvestigationContent() {
       pathPageRequest.current?.abort();
       pathPageRequest.current = null;
     };
-  }, [focus.agentName, focus.control, focus.cve, focus.findingId, focus.findingScanId, focus.framework, focus.nodeId, focus.packageName, router, selectedScanId]);
+  }, [focus.agentName, focus.control, focus.crossVendor, focus.cve, focus.findingId, focus.findingScanId, focus.framework, focus.nodeId, focus.packageName, router, selectedScanId]);
 
   const selectedSnapshot = useMemo(
     () => snapshots.find((snapshot) => snapshot.scan_id === selectedScanId) ?? null,
@@ -417,9 +421,9 @@ function AttackPathInvestigationContent() {
       ? graphNodeById.get(graphData?.focus?.node_id || focus.nodeId)?.label || focus.packageName || focus.cve || "Selected asset"
       : "";
     const controlLabel = focus.framework && focus.control ? `Control ${focus.control} evidence` : "";
-    const parts = [...new Set([controlLabel, nodeLabel, focus.cve, focus.packageName, focus.agentName].filter(Boolean))];
+    const parts = [...new Set([crossVendorScopeLabel(focus.crossVendor), controlLabel, nodeLabel, focus.cve, focus.packageName, focus.agentName].filter(Boolean))];
     return parts.length > 0 ? parts.join(" · ") : null;
-  }, [focus.agentName, focus.control, focus.cve, focus.framework, focus.nodeId, focus.packageName, graphData?.focus?.node_id, graphNodeById]);
+  }, [focus.agentName, focus.control, focus.crossVendor, focus.cve, focus.framework, focus.nodeId, focus.packageName, graphData?.focus?.node_id, graphNodeById]);
 
   const cardByPathKey = useMemo(() => {
     const next = new Map<string, FixFirstPathCard>();
@@ -519,6 +523,7 @@ function AttackPathInvestigationContent() {
         snapshotGeneration: graphData.snapshot_generation,
         limit: ATTACK_PATH_FETCH_PAGE,
         ...serverPathFocus(focus),
+        ...crossVendorRequest(focus.crossVendor),
       }, { signal: controller.signal });
       if (controller.signal.aborted) return;
       // Validate before scheduling a state update; preserve loaded evidence on mismatch.
@@ -700,7 +705,7 @@ function AttackPathInvestigationContent() {
   useEffect(() => {
     setFocusApplied(false);
     setVisibleAttackPathCount(ATTACK_PATH_QUEUE_PAGE_SIZE);
-  }, [focus.agentName, focus.cve, focus.findingId, focus.nodeId, focus.packageName, selectedScanId]);
+  }, [focus.agentName, focus.crossVendor, focus.cve, focus.findingId, focus.nodeId, focus.packageName, selectedScanId]);
 
   useEffect(() => {
     setPinnedNodeId(focus.nodeId || null);
@@ -847,6 +852,8 @@ function AttackPathInvestigationContent() {
           subtitle={`${pathQueueCounts.queueRows} from the path queue. ${pathQueueCounts.snapshotTotal} snapshot paths. ${pathQueueCounts.materializedPaths} materialized · ${pathQueueCounts.derivedPaths} derived. ${
             graphData?.count_metadata?.source === "derived_graph_paths" ? "Ranked from bounded graph traversal." : "Ranked from persisted scan paths."
           }`}
+          queueInitiallyOpen={Boolean(focus.crossVendor)} scope={<PathVendorScopeChips scanId={selectedScanId} value={focus.crossVendor}
+            onChange={scope => router.replace(investigationHref(pathname, searchParams.toString(), { [CROSS_VENDOR_PARAM]: scope || null, selected_path: null }), { scroll: false })} />}
           filters={
             <>
               <InvestigationFilterChips

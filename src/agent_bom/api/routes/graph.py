@@ -134,7 +134,7 @@ from agent_bom.api.graph_store import containment_drilldown_graph as containment
 from agent_bom.api.neptune_graph import NeptuneGraphStore
 from agent_bom.api.read_models._base import documented
 from agent_bom.api.read_models.graph import GraphNodeNeighborsResponse, GraphPageResponse, GraphPathsResponse, GraphRollupResponse
-from agent_bom.api.routes.graph_routes import _runtime, reads, schema_routes, views
+from agent_bom.api.routes.graph_routes import _runtime, reads, schema_routes, vendor_paths, views
 from agent_bom.api.routes.graph_routes._admission import _GraphAdmissionRoute
 from agent_bom.api.routes.graph_routes._runtime import _get_graph_store_or_503 as _get_graph_store_or_503
 from agent_bom.api.routes.graph_routes._runtime import _graph_compute_call as _graph_compute_call
@@ -405,6 +405,7 @@ async def get_graph(
     )
 
 
+router.include_router(vendor_paths.router)
 router.include_router(views.investigation_router)
 
 
