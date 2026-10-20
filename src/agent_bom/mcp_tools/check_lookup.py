@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 from urllib.parse import quote
 
-from agent_bom.http_client import request_with_retry
+from agent_bom import http_client
 from agent_bom.scanners.local_data_freshness import CheckDataEvidence, check_data_evidence
 from agent_bom.scanners.package_check_result import has_lookup_coverage_gap
 
@@ -61,7 +61,7 @@ async def version_published(name: str, version: str, ecosystem: str, client) -> 
             url = f"https://registry.npmjs.org/{encoded_name}/{encoded_version}"
         else:
             return True
-        resp = await request_with_retry(client, "GET", url, max_retries=0)
+        resp = await http_client.request_with_retry(client, "GET", url, max_retries=0)
         if resp is None:
             return True
         return resp.status_code == 200
