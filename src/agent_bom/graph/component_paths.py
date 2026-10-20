@@ -37,6 +37,7 @@ MAX_CHAINS_PER_OCCURRENCE = 64
 # Alternate holding chains sampled onto a path; the rest are only counted.
 MAX_ALTERNATE_CHAINS = 5
 # A chain is as strong as its weakest hop.
+_VERDICT_STRENGTH = {"confirmed": 3, "likely": 2, "unknown": 1, "unlikely": 0}
 _TIER_STRENGTH = {"runtime_observed": 4, "recorded": 3, "static_scan": 2, "modeled_infrastructure": 1}
 
 _VULNERABLE_TO = RelationshipType.VULNERABLE_TO.value
@@ -236,12 +237,22 @@ def _chain_tier(edges: list[UnifiedEdge]) -> int:
 
 
 def _best_with_alternates(candidates: list[tuple[AttackPath, list[UnifiedEdge]]], counts: _Counts) -> AttackPath:
-    """One path per (entry, occurrence): strongest tier, then fewest hops, then highest risk.
+    """One path per (entry, occurrence): strongest verdict, tier, then fewest hops, then highest risk.
 
-    The other holding chains are recorded on it (count plus a bounded sample),
-    never emitted as paths of their own.
+    Verdict comes first so folding chains can never weaken the strongest
+    reaching-path verdict a finding is stamped with. The other holding chains
+    are recorded on it (count plus a bounded sample), never emitted as paths.
     """
-    ranked = sorted(candidates, key=lambda item: (-_chain_tier(item[1]), len(item[0].hops), -item[0].composite_risk, item[0].hops))
+    ranked = sorted(
+        candidates,
+        key=lambda item: (
+            -_VERDICT_STRENGTH.get(item[0].reachability, 0),
+            -_chain_tier(item[1]),
+            len(item[0].hops),
+            -item[0].composite_risk,
+            item[0].hops,
+        ),
+    )
     best = ranked[0][0]
     alternates = [path.hops for path, _edges in ranked[1:]]
     if alternates:
