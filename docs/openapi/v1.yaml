@@ -4206,6 +4206,9 @@ components:
         findings:
           title: Findings
           type: integer
+        issue_count:
+          title: Issue Count
+          type: integer
         name:
           title: Name
           type: string
@@ -4225,6 +4228,7 @@ components:
       - name
       - status
       - findings
+      - issue_count
       - evaluation_mode
       - evidence_reason
       - affected_agents

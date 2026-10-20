@@ -10665,6 +10665,8 @@ export interface components {
             evidence_reason: string;
             /** Findings */
             findings: number;
+            /** Issue Count */
+            issue_count: number;
             /** Name */
             name: string;
             severity_breakdown: components["schemas"]["ControlSeverityBreakdown"];

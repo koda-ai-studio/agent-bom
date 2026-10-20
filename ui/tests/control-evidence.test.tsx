@@ -54,6 +54,21 @@ describe("control evidence links", () => {
 });
 
 describe("control drawer", () => {
+  it("labels occurrences and issues as separate units", () => {
+    render(<ComplianceControlDrawer control={{ ...control, findings: 556, issue_count: 41 }} frameworkId="nist-800-53" frameworkLabel="NIST" onClose={() => {}} />);
+    expect(screen.getByText("556 finding occurrences · 41 issues mapped to this control.")).toBeInTheDocument();
+  });
+
+  it("uses singular units for one occurrence and one issue", () => {
+    render(<ComplianceControlDrawer control={{ ...control, findings: 1, issue_count: 1 }} frameworkId="nist-800-53" frameworkLabel="NIST" onClose={() => {}} />);
+    expect(screen.getByText("1 finding occurrence · 1 issue mapped to this control.")).toBeInTheDocument();
+  });
+
+  it("falls back to the occurrence unit alone for older API payloads", () => {
+    render(<ComplianceControlDrawer control={{ ...control, findings: 3 }} frameworkId="nist-800-53" frameworkLabel="NIST" onClose={() => {}} />);
+    expect(screen.getByText("3 finding occurrences mapped to this control.")).toBeInTheDocument();
+  });
+
   it("links affected assets to their own pages", () => {
     render(<ComplianceControlDrawer control={control} frameworkId="nist-800-53" frameworkLabel="NIST" onClose={() => {}} />);
     fireEvent.click(screen.getByRole("tab", { name: "Overview" }));

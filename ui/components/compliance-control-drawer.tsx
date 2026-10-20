@@ -18,6 +18,17 @@ import { ControlAffectedAssets } from "@/components/control-affected-assets";
 import { ControlEvidencePanel } from "@/components/control-evidence-panel";
 import { ControlEvidenceExport } from "@/components/control-evidence-export";
 
+function plural(count: number, unit: string): string {
+  return `${count} ${unit}${count === 1 ? "" : "s"}`;
+}
+
+/** ``findings`` counts mapped occurrences; ``issue_count`` the issue groups "View findings" lists. */
+export function controlFindingUnits(control: Pick<ComplianceControl, "findings" | "issue_count">): string {
+  const occurrences = plural(control.findings, "finding occurrence");
+  const issues = typeof control.issue_count === "number" ? ` · ${plural(control.issue_count, "issue")}` : "";
+  return `${occurrences}${issues} mapped to this control.`;
+}
+
 export function ComplianceControlDrawer({
   control,
   frameworkId,
@@ -64,7 +75,7 @@ export function ComplianceControlDrawer({
       ariaLabel={`Control details for ${control.code}`}
       eyebrow={frameworkLabel}
       title={<span><span className="font-mono">{control.code}</span> · {name}</span>}
-      subtitle={`${control.findings} finding${control.findings === 1 ? "" : "s"} mapped to this control.`}
+      subtitle={controlFindingUnits(control)}
       headerAside={statusPill}
     >
       <DetailTabs

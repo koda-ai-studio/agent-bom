@@ -439,7 +439,8 @@ class ComplianceControl(ReadModel):
     control_id: str
     name: str
     status: str
-    findings: int
+    findings: int  # mapped finding occurrences
+    issue_count: int  # distinct issue groups those occurrences collapse to
     evaluation_mode: str
     evidence_reason: str
     affected_agents: list[str]

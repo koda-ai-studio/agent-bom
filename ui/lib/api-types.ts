@@ -2811,7 +2811,10 @@ export type ComplianceNarrativeResponse = ApiSchemas["ComplianceNarrativeRespons
 export interface ComplianceControl {
   code: string;
   name: string;
+  /** Mapped finding occurrences (one advisory on N assets counts N). */
   findings: number;
+  /** Distinct issue groups those occurrences collapse to — what the findings view lists. */
+  issue_count?: number | undefined;
   // Additional unscored states are normalized by compliance-status helpers at
   // render boundaries; the legacy matrix row contract remains scored-only.
   status: "pass" | "warning" | "fail";

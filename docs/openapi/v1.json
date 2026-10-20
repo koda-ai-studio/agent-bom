@@ -6053,6 +6053,10 @@
             "title": "Findings",
             "type": "integer"
           },
+          "issue_count": {
+            "title": "Issue Count",
+            "type": "integer"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -6078,6 +6082,7 @@
           "name",
           "status",
           "findings",
+          "issue_count",
           "evaluation_mode",
           "evidence_reason",
           "affected_agents",
