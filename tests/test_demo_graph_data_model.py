@@ -110,12 +110,15 @@ def test_package_vulnerabilities_still_roll_up_under_their_package(demo_graph: U
 
     children = _contains_children(demo_graph)
     parented = {child for kids in children.values() for child in kids}
-    vulns = {
-        edge.target
+    occurrences = [
+        edge
         for edge in demo_graph.edges
         if edge.relationship == RelationshipType.VULNERABLE_TO and demo_graph.nodes[edge.source].entity_type == EntityType.PACKAGE
-    }
-    assert len(vulns) > 700
+    ]
+    # One node per advisory; each package occurrence is its own edge.
+    assert len(occurrences) > 700
+    vulns = {edge.target for edge in occurrences}
+    assert 10 < len(vulns) < len(occurrences)
     orphaned = [node_id for node_id in vulns if node_id not in parented]
     assert not orphaned, orphaned[:5]
 

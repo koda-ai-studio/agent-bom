@@ -39,6 +39,7 @@ from agent_bom.demo_estate.showcase_identities import _demo_identity_id as _demo
 from agent_bom.demo_estate.showcase_identities import build_demo_identity_store as build_demo_identity_store
 from agent_bom.demo_estate.showcase_identities import demo_identity_records as demo_identity_records
 from agent_bom.demo_estate.showcase_identities import seed_showcase_identities as seed_showcase_identities
+from agent_bom.demo_estate.showcase_packages import seed_showcase_packages
 from agent_bom.graph.cnapp_overlay import apply_cnapp_overlay
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
@@ -108,39 +109,8 @@ def build_showcase_graph(
             node(tid, EntityType.TOOL, tname)
             edge(f"server:{sid}", tid, RelationshipType.PROVIDES_TOOL)
 
-    # Real CVEs on real package@versions — mirrors the demo advisory catalog.
-    from agent_bom.demo_advisories import DEMO_ADVISORIES
-    from agent_bom.package_utils import canonical_package_key
-
-    advisory_by_id = {advisory.vuln_id: advisory for advisory in DEMO_ADVISORIES}
-    kev_cves = {"CVE-2023-4863"}
-    for purl, (sid, cve, sev, score) in SHOWCASE_PACKAGES.items():
-        advisory = advisory_by_id[cve]
-        package_name, package_version = purl.rsplit("@", 1)
-        pid = f"pkg:{canonical_package_key(package_name, package_version, advisory.ecosystem)}"
-        node(pid, EntityType.PACKAGE, purl, ecosystem=advisory.ecosystem, version=package_version)
-        edge(f"server:{sid}", pid, RelationshipType.DEPENDS_ON)
-        vid = f"vuln:{cve}"
-        node(
-            vid,
-            EntityType.VULNERABILITY,
-            cve,
-            severity=sev,
-            risk_score=score,
-            vulnerability_id=cve,
-            is_kev=cve in kev_cves,
-            summary=advisory.summary if advisory else "",
-            cvss_score=advisory.cvss_score if advisory else score,
-            fixed_version=advisory.fixed if advisory else "",
-            cwe_ids=[advisory.cwe] if advisory and advisory.cwe else [],
-            reachability="likely",
-            reachability_basis=["graph_path"],
-            graph_reachable=True,
-        )
-        edge(pid, vid, RelationshipType.VULNERABLE_TO)
-
-    # The ETL workload also uses the published Requests release in DEMO_INVENTORY.
-    edge("server:etl-server", "pkg:pypi:requests@2.28.0", RelationshipType.DEPENDS_ON)
+    # Real CVEs on real package@versions, under every server the demo inventory records.
+    seed_showcase_packages(node, edge, SHOWCASE_PACKAGES)
 
     # Credential-backed env on servers — lights up credential-exposure edges.
     creds = {
@@ -219,6 +189,7 @@ def build_showcase_graph(
         showcase_misconfig_id("sg-open"),
         EntityType.MISCONFIGURATION,
         "Security group sg-prod allows 0.0.0.0/0 on port 22",
+        severity="high",
         network_exposure=[{"resource": "prod-bastion", "from_port": 22, "to_port": 22, "protocol": "tcp", "scope": "internet"}],
     )
     edge(showcase_misconfig_id("sg-open"), "cloud:bastion", RelationshipType.AFFECTS)
@@ -608,9 +579,12 @@ def _materialize_showcase_attack_paths(graph: UnifiedGraph) -> bool:
         return False
 
     # The route deriver merges materialized and governance paths. Persistence
-    # keys by source/target, so mirror the served cardinality before writing and
-    # keep the highest-ranked representation of each endpoint pair.
-    unique_paths: dict[tuple[str, str], Any] = {}
+    # keys a path by its chain (``path_identity``): keep the highest-ranked
+    # representation of each chain. Keying by endpoints instead collapsed two
+    # occurrences of one advisory reached from one entry onto a single path.
+    from agent_bom.graph.snapshot_paths import path_identity
+
+    unique_paths: dict[str, Any] = {}
     ranked = sorted(
         [*materialized, *derived],
         key=lambda path: (
@@ -622,7 +596,7 @@ def _materialize_showcase_attack_paths(graph: UnifiedGraph) -> bool:
         reverse=True,
     )
     for path in ranked:
-        unique_paths.setdefault((path.source, path.target), path)
+        unique_paths.setdefault(path_identity(path), path)
     graph.attack_paths = list(unique_paths.values())
 
     return True
@@ -631,12 +605,14 @@ def _materialize_showcase_attack_paths(graph: UnifiedGraph) -> bool:
 def _record_showcase_attack_path_analysis(graph: UnifiedGraph, *, count_paths: bool = True) -> None:
     """Record the showcase path analysis as complete (``count_paths=False`` before derivation)."""
 
-    # Persistence keys paths by source/target within a scan, so duplicate
-    # in-memory variants collapse to one served path. Report the persisted
-    # cardinality instead of the pre-upsert list length.
+    # Persistence keys paths by chain within a scan, so duplicate in-memory
+    # variants collapse to one served path. Report the persisted cardinality
+    # instead of the pre-upsert list length.
     observed: dict[str, int] = {}
     if count_paths:
-        observed["paths"] = len({(path.source, path.target) for path in graph.attack_paths})
+        from agent_bom.graph.snapshot_paths import path_identity
+
+        observed["paths"] = len({path_identity(path) for path in graph.attack_paths})
 
     # Record that the run completed. Without this the snapshot reads
     # ``not_recorded`` and the graph header says "Analysis status unavailable"

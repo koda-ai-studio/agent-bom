@@ -140,6 +140,7 @@ from agent_bom.api.routes.graph_routes._runtime import _get_graph_store_or_503 a
 from agent_bom.api.routes.graph_routes._runtime import _graph_compute_call as _graph_compute_call
 from agent_bom.api.routes.graph_routes._runtime import _graph_store_call as _graph_store_call
 from agent_bom.api.routes.graph_routes._runtime import _tenant as _tenant
+from agent_bom.api.routes.graph_routes.page_edges import _page_edges
 from agent_bom.api.routes.graph_routes.params import _FILTERED_GRAPH_ATTACK_PATH_LIMIT as _FILTERED_GRAPH_ATTACK_PATH_LIMIT
 from agent_bom.api.routes.graph_routes.params import (
     _GRAPH_QUERY_ABSOLUTE_LIMITS,
@@ -151,7 +152,6 @@ from agent_bom.api.routes.graph_routes.params import (
 )
 from agent_bom.api.routes.graph_routes.params import _raise_mcp_error_as_http as _raise_mcp_error_as_http
 from agent_bom.api.routes.graph_routes.payloads import (
-    _NODE_PAGE_EDGE_LIMIT,
     _encode_node_page,
     _encoded_graph_response,
     _overlay_filter_and_respond,
@@ -352,15 +352,7 @@ async def get_graph(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=sanitize_error(exc)) from exc
     paged_ids = {n.id for n in paged_nodes}
-    paged_edges = await _runtime._graph_store_call(
-        graph_store.edges_for_node_ids,
-        scan_id=effective_scan_id,
-        tenant_id=tenant,
-        node_ids=paged_ids,
-        limit=_NODE_PAGE_EDGE_LIMIT + 1,
-    )
-    edges_truncated = len(paged_edges) > _NODE_PAGE_EDGE_LIMIT
-    paged_edges = paged_edges[:_NODE_PAGE_EDGE_LIMIT]
+    paged_edges, edges_truncated = await _page_edges(graph_store, scan_id=effective_scan_id, tenant=tenant, node_ids=paged_ids)
     source_attack_paths, attack_path_nodes = await page_attack_context(
         graph_store, scan_id=effective_scan_id, tenant_id=tenant, node_ids=paged_ids, call_store=_runtime._graph_store_call
     )
