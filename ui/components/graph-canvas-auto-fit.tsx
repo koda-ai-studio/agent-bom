@@ -3,8 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Panel, useNodesInitialized, useReactFlow, useStore, type Node, type FitViewOptions } from "@xyflow/react";
-import { graphInspectorTargets } from "@/lib/graph-inspector-framing";
-import { graphAdaptiveFrame } from "@/lib/graph-adaptive-frame";
+import { GRAPH_FIT_MAX_ZOOM, graphAdaptiveFrame } from "@/lib/graph-adaptive-frame";
 
 /** Fit measured compact contexts after a docked inspector changes canvas width.
  * Only geometry changes trigger a fit; hover and evidence updates do not. */
@@ -23,7 +22,7 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
   const width = useStore(state => state.width);
   const height = useStore(state => state.height);
   const canvas = useStore(state => state.domNode);
-  const { fitView, getNodes, getNodesBounds, getEdges } = useReactFlow();
+  const { fitView, getNodes, getNodesBounds } = useReactFlow();
   const [windowHeight, setWindowHeight] = useState(0);
   const [spaceAbove, setSpaceAbove] = useState(0);
   const lastAutoFitKey = useRef<string | null>(null);
@@ -73,19 +72,11 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     // Only a new layout/frame may replace that deliberate camera position.
     const autoFitKey = JSON.stringify([layoutKey, width, height, anchorId, inspector, windowHeight, spaceAbove, padding]);
     if (lastAutoFitKey.current === autoFitKey) return;
-    const anchor = nodes.find(node => node.id === anchorId) ?? nodes[0];
-    // The zoom controls sit at the bottom-left; keep fitted cards out from under them.
-    const options: FitViewOptions = { padding: { top: padding, right: padding, bottom: padding, left: "72px" }, duration: 0, minZoom: 0.05, maxZoom: 1.25,
-      // Too large to read whole: open on the anchor's neighbourhood, never a lone card.
-      // A phone keeps one readable card (its list view gives the overview).
-      ...(!frameSize.fitAll && anchor ? width >= 640
-        ? { nodes: neighbourhood(anchor.id, nodes.map(node => node.id), getEdges()), minZoom: 0.45, maxZoom: 1.1 }
-        : { nodes: [{ id: anchor.id }], minZoom: 0.85, maxZoom: 1.1 } : {}),
-    };
-    const fitIds = options.nodes ? new Set(options.nodes.map(node => node.id)) : null;
-    // A focused root can resize without changing the whole graph's envelope.
-    // Convergence must measure exactly the nodes passed to fitView.
-    const fittedBounds = () => getNodesBounds(fitIds ? getNodes().filter(node => fitIds.has(node.id)) : getNodes());
+    // Every loaded node is framed: a partial first frame reads as a clipped or
+    // missing graph. Card text scales against zoom, so a capped zoom keeps small
+    // graphs from opening as two giant cards. The controls sit bottom-left.
+    const options: FitViewOptions = { padding: { top: padding, right: padding, bottom: padding, left: width >= 640 ? "72px" : padding }, duration: 0, minZoom: 0.05, maxZoom: GRAPH_FIT_MAX_ZOOM };
+    const fittedBounds = () => getNodesBounds(getNodes());
     let cancelled = false;
     const frames: number[] = [];
     const settle = (pass: number) => {
@@ -109,8 +100,9 @@ export function GraphCanvasAutoFit({ enabled, layoutKey, anchorId, inspector, pr
     };
     frames.push(requestAnimationFrame(() => settle(0)));
     return () => { cancelled = true; frames.forEach(cancelAnimationFrame); };
-  }, [padding, enabled, initialized, width, height, layoutKey, anchorId, inspector, preserveViewport, windowHeight, spaceAbove, canvas, fitView, getNodes, getNodesBounds, getEdges, onLayoutAspect]);
-  if (!initialized || width >= 640 || width <= 0) return null;
+  }, [padding, enabled, initialized, width, height, layoutKey, anchorId, inspector, preserveViewport, windowHeight, spaceAbove, canvas, fitView, getNodes, getNodesBounds, onLayoutAspect]);
+  // The stepper walks an ordered path on a phone; a plain graph is shown whole.
+  if (!initialized || width >= 640 || width <= 0 || !navigationIds?.length) return null;
   const navigator = <GraphNodeNavigator nodes={getNodes()} orderedIds={navigationIds} />;
   return navigationMount ? createPortal(navigator, navigationMount) : <Panel position="top-center">{navigator}</Panel>;
 }
@@ -148,18 +140,4 @@ function GraphNodeNavigator({ nodes, orderedIds }: { nodes: Node[]; orderedIds?:
         onClick={() => void focus(ordered[index + 1]!)}>Next</button>
     </div>
   </div>;
-}
-
-/** The anchor and up to six of its direct neighbours, so the first frame shows context. */
-function neighbourhood(anchorId: string, visibleIds: string[], edges: { source: string; target: string }[]) {
-  const targets = graphInspectorTargets(anchorId, visibleIds, edges);
-  if (targets.length > 1) return targets;
-  const visible = new Set(visibleIds);
-  const ids = new Set([anchorId]);
-  for (const edge of edges) {
-    if (ids.size >= 7) break;
-    const other = edge.source === anchorId ? edge.target : edge.target === anchorId ? edge.source : null;
-    if (other && visible.has(other)) ids.add(other);
-  }
-  return [...ids].map(id => ({ id }));
 }

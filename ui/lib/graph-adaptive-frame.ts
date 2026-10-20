@@ -1,5 +1,8 @@
 import { getViewportForBounds, type Rect } from "@xyflow/react";
 
+/** Largest camera zoom for an automatic fit; card text already scales against zoom. */
+export const GRAPH_FIT_MAX_ZOOM = 1;
+
 /** Geometry, not node count, determines the useful canvas and initial camera. */
 export function graphAdaptiveFrame({ bounds, width, availableHeight, inspector, nodeCount = Number.POSITIVE_INFINITY }: {
   bounds: Rect;
@@ -11,7 +14,7 @@ export function graphAdaptiveFrame({ bounds, width, availableHeight, inspector, 
 }) {
   const ceiling = Math.max(240, availableHeight);
   const floor = Math.min(ceiling, inspector ? 432 : 320);
-  const readableScale = Math.min(1.25, width / Math.max(1, bounds.width));
+  const readableScale = Math.min(GRAPH_FIT_MAX_ZOOM, width / Math.max(1, bounds.width));
   const height = Math.round(Math.min(ceiling, Math.max(floor, bounds.height * readableScale + 64)));
   const viewport = getViewportForBounds(bounds, width, height, 0.05, 2, 0.08);
   // Below this scale full cards become hard to read. Start at a neighborhood;

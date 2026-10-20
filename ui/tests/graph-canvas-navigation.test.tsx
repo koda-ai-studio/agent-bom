@@ -19,10 +19,16 @@ vi.mock("@xyflow/react", async (original) => ({
   Panel: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 const props = { enabled: false, layoutKey: "nodes", inspector: false, preserveViewport: false, onLayoutAspect: vi.fn() };
+const path = ["agent:a", "tool:b", "data:c"];
 beforeEach(() => { fixture.width = 390; fixture.fitView.mockClear(); });
 
-it("navigates mobile graph nodes by exact ID when labels repeat", async () => {
+it("shows a plain mobile graph whole, without a one-node-at-a-time stepper", () => {
   render(<GraphCanvasAutoFit {...props} />);
+  expect(screen.queryByRole("button", { name: "Next graph node" })).not.toBeInTheDocument();
+});
+
+it("navigates mobile path nodes by exact ID when labels repeat", async () => {
+  render(<GraphCanvasAutoFit {...props} navigationIds={path} />);
   expect(screen.getByRole("button", { name: "Previous graph node" })).toBeDisabled();
   fireEvent.click(screen.getByRole("button", { name: "Next graph node" }));
   await waitFor(() => expect(fixture.fitView).toHaveBeenCalledWith(expect.objectContaining({ nodes: [{ id: "tool:b" }] })));
@@ -42,7 +48,7 @@ it("includes the visible target label in its accessible name after navigation", 
 
 it("keeps desktop graph controls uncluttered", () => {
   fixture.width = 1200;
-  render(<GraphCanvasAutoFit {...props} />);
+  render(<GraphCanvasAutoFit {...props} navigationIds={path} />);
   expect(screen.queryByRole("button", { name: "Next graph node" })).not.toBeInTheDocument();
 });
 
@@ -56,7 +62,7 @@ it("follows ordered path nodes while omitting absent and repeated IDs", async ()
 
 it("does not advance the target when the camera cannot fit it", async () => {
   fixture.fitView.mockResolvedValueOnce(false);
-  render(<GraphCanvasAutoFit {...props} />);
+  render(<GraphCanvasAutoFit {...props} navigationIds={path} />);
   fireEvent.click(screen.getByRole("button", { name: "Next graph node" }));
   await waitFor(() => expect(fixture.fitView).toHaveBeenCalledTimes(1));
   expect(screen.getByText(/1 of 3/)).toBeInTheDocument();
@@ -65,7 +71,7 @@ it("does not advance the target when the camera cannot fit it", async () => {
 it("places navigation outside the canvas so controls cannot cover graph nodes", () => {
   const mount = document.createElement("div");
   document.body.append(mount);
-  const result = render(<GraphCanvasAutoFit {...props} navigationMount={mount} />);
+  const result = render(<GraphCanvasAutoFit {...props} navigationIds={path} navigationMount={mount} />);
   expect(mount.querySelector('[aria-label="Navigate loaded graph nodes"]')).not.toBeNull();
   expect(result.container.querySelector('[aria-label="Navigate loaded graph nodes"]')).toBeNull();
   result.unmount();

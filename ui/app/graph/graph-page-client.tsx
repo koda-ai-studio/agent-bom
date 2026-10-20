@@ -212,6 +212,7 @@ import { GraphSnapshotDiff } from "@/components/graph-snapshot-diff";
 import { useGraphEstateChanges } from "@/hooks/use-graph-estate-changes";
 import { useEstateHighlight } from "@/hooks/use-estate-highlight";
 import { snapshotChangesHeadline } from "@/lib/graph-estate-changes";
+import { graphFirstFramePending } from "@/lib/graph-first-frame";
 
 export { DiffPreview } from "@/components/graph-snapshot-diff";
 
@@ -698,6 +699,8 @@ function GraphPageInner() {
   const [attackPathQueue, setAttackPathQueue] = useState<UnifiedGraphResponse | null>(
     null,
   );
+  // The scan whose queue request has settled (loaded or failed).
+  const [attackPathQueueScanId, setAttackPathQueueScanId] = useState<string | null>(null);
   const [loadingSnapshots, setLoadingSnapshots] = useState(true);
   const [loadingGraph, setLoadingGraph] = useState(false);
   const [loadingDiff, setLoadingDiff] = useState(false);
@@ -1122,6 +1125,9 @@ function GraphPageInner() {
       })
       .catch(() => {
         if (!cancelled) setAttackPathQueue(null);
+      })
+      .finally(() => {
+        if (!cancelled) setAttackPathQueueScanId(selectedScanId);
       });
     return () => {
       cancelled = true;
@@ -1532,8 +1538,20 @@ function GraphPageInner() {
     returnedPaths: flow.summary?.attackPaths ?? 0,
   });
 
+  const queueSettled = attackPathQueueScanId === selectedScanId;
+  const awaitingAutoFocus = !initializedFocus && !seededFromUrlRef.current && !investigationMode &&
+    !requestedInvestigationRef.current && !rollupCanvasOwnsPresentation && !createCanvasLensGraphFilters(canvasLens, canvasAgent);
+  const firstFramePending = graphFirstFramePending({
+    awaitingAutoFocus, graphLoaded: Boolean(graphData), queueSettled, agentCount: flow.agentNames.length,
+  });
+
   useEffect(() => {
-    if (initializedFocus || flow.agentNames.length === 0) return;
+    if (initializedFocus) return;
+    if (flow.agentNames.length === 0) {
+      // Nothing to focus: release the first frame instead of waiting forever.
+      if (graphData && queueSettled) setInitializedFocus(true);
+      return;
+    }
     if (createCanvasLensGraphFilters(canvasLens, canvasAgent)) {
       // Canonical Canvas lenses are estate projections. Auto-picking the first
       // agent would silently collapse them into a single-agent investigation.
@@ -1548,7 +1566,7 @@ function GraphPageInner() {
     }
     setFilters(createFocusedGraphFilters(flow.agentNames[0]));
     setInitializedFocus(true);
-  }, [canvasAgent, canvasLens, flow.agentNames, initializedFocus]);
+  }, [canvasAgent, canvasLens, flow.agentNames, initializedFocus, graphData, queueSettled]);
 
   // Push the current filter state into the URL (replace, not push) so a
   // copied address bar reproduces the view but back/forward isn't spammed.
@@ -3013,7 +3031,7 @@ function GraphPageInner() {
 
   const snapshotViewControls = (
     <>
-      {!investigationMode && flow.summary && (
+      {!investigationMode && !firstFramePending && flow.summary && (
         <div
           data-testid="graph-headline-metrics"
           className="rounded-xl border border-outline bg-surface/80 px-3 py-1.5 text-xs text-ink-secondary"
@@ -3696,7 +3714,7 @@ function GraphPageInner() {
             />
           )}
           {/* One status bar: counts, evidence, context and legend, instead of four stacked bands. */}
-          {(showViewportScope || showChangesEntry || showScopeEvidence || showContextControls || showLegend) && <div data-testid="graph-status-bar" className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-outline px-3 py-1.5">
+          {!firstFramePending && (showViewportScope || showChangesEntry || showScopeEvidence || showContextControls || showLegend) && <div data-testid="graph-status-bar" className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-outline px-3 py-1.5">
           {showViewportScope && (
             <div className="flex min-w-0 max-w-full flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground" data-testid="graph-viewport-scope">
               <span>{scenarioContextIds ? "Changes and neighbors" : rollupNavigationActive ? (rollupView?.mode === "drilldown" ? `Within ${rollupView.node?.label ?? "selected scope"}` : "Scope overview") : "Graph"} · {displayNodes.length.toLocaleString()} {rollupNavigationActive ? "entities" : "nodes"} · {displayEdges.length.toLocaleString()} {rollupNavigationActive ? `aggregate link${displayEdges.length === 1 ? "" : "s"}` : `relationship${displayEdges.length === 1 ? "" : "s"}`}{scenarioElements.unconnected.length > 0 && ` · ${scenarioElements.unconnected.length} unconnected items`}</span>
@@ -3758,7 +3776,7 @@ function GraphPageInner() {
               <button type="button" className="graph-chip-neutral" onClick={retryGraph}>Retry graph</button>
             </div>
           )}
-          {(loadingGraph || loadingBlast) && !graphData ? (
+          {((loadingGraph || loadingBlast) && !graphData) || firstFramePending ? (
             <GraphPanelSkeleton
               title="Loading graph window"
               detail={`Fetching the selected snapshot with the ${graphScopeLabelForFilters(filters).toLowerCase()} scope and active layer filters.`}
