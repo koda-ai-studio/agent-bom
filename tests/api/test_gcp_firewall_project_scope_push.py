@@ -49,13 +49,7 @@ def _push(client, source_id: str, inventories: list[dict]) -> None:
 
 
 def _current_graph(client) -> dict:
-    # /v1/graph answers 409 "restart the query" when another resolve retires the
-    # generation mid-read; that is its documented client contract, so restart it
-    # (bounded) instead of treating the race as a missing-node failure.
-    for _ in range(3):
-        response = client.get("/v1/graph", params={"limit": 5000}, headers=proxy_headers(role="viewer", tenant=TENANT))
-        if not (response.status_code == 409 and "restart the query" in response.text):
-            break
+    response = client.get("/v1/graph", params={"limit": 5000}, headers=proxy_headers(role="viewer", tenant=TENANT))
     assert response.status_code == 200, response.text
     return response.json()
 

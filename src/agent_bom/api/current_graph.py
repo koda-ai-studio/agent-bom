@@ -197,6 +197,8 @@ class CurrentGraphStore:
         self._lock = _ProjectionLock()
         self._coverage: dict[str, dict[str, Any]] = {}
         self._cache: dict[str, tuple[str, tuple[tuple[str, str], ...], str]] = {}
+        # Bumped under the exclusive lock whenever a tenant's generation is promoted.
+        self._promotions: dict[str, int] = {}
 
     def __getattr__(self, name: str) -> Any:
         method = getattr(self._graph_store, name)
@@ -285,12 +287,11 @@ class CurrentGraphStore:
                 return cached[2]
         return ""
 
-    def _resolve_current_id(self, tenant: str) -> str:
+    def _evidence_state(self, tenant: str, *, request_scoped: bool) -> tuple[list[dict[str, Any]], Any, list[Any] | None, str]:
+        """Return ``(summaries, evidence_revision, jobs, fingerprint)`` for the tenant's current evidence."""
         # Summary reads do not deserialize retained report blobs on warm pages.
         summaries = self._job_store.list_summary(tenant_id=tenant, status=JobStatus.DONE)
         summaries = sorted((row for row in summaries if not row.get("child_job_ids")), key=lambda row: row["job_id"])
-        if not summaries and self._graph_store.snapshot_identity(tenant_id=tenant, for_paging=True)[0]:
-            return ""  # Legacy graph-only stores retain their explicit latest view.
         revision_reader = getattr(self._job_store, "overview_evidence_revision", None)
         jobs = None
         if callable(revision_reader):
@@ -298,18 +299,36 @@ class CurrentGraphStore:
         else:
             # Backends without a durable revision must fingerprint the evidence,
             # including authority changes that preserve the original timestamps.
-            jobs = read_once(
-                ("jobs", tenant),
-                lambda: [job for job in self._job_store.list_all(tenant_id=tenant) if job.status == JobStatus.DONE and job.result],
-            )
+            def load() -> list[Any]:
+                return [job for job in self._job_store.list_all(tenant_id=tenant) if job.status == JobStatus.DONE and job.result]
+
+            jobs = read_once(("jobs", tenant), load) if request_scoped else load()
             evidence_revision = _digest([job.model_dump(mode="json") for job in jobs])
-        fingerprint = _digest([summaries, evidence_revision])
+        return summaries, evidence_revision, jobs, _digest([summaries, evidence_revision])
+
+    def _resolve_current_id(self, tenant: str) -> str:
+        # Read the promotion epoch before the evidence: a promotion after this
+        # point means the evidence below may be older than the live generation.
+        epoch = self._promotions.get(tenant, 0)
+        summaries, evidence_revision, jobs, fingerprint = self._evidence_state(tenant, request_scoped=True)
+        if not summaries and self._graph_store.snapshot_identity(tenant_id=tenant, for_paging=True)[0]:
+            return ""  # Legacy graph-only stores retain their explicit latest view.
+        revision_reader = getattr(self._job_store, "overview_evidence_revision", None)
         with self._lock.shared():
             if live := self._cached_live_id(tenant, fingerprint):
                 return live
         with self._lock.exclusive():
             if live := self._cached_live_id(tenant, fingerprint):
                 return live
+            # Another resolver promoted a generation after this one read its
+            # evidence; building from that older read would retire the newer
+            # generation under its active readers, so re-read under the lock.
+            if self._promotions.get(tenant, 0) != epoch:
+                fresh = self._evidence_state(tenant, request_scoped=False)
+                if fresh[3] != fingerprint:
+                    summaries, evidence_revision, jobs, fingerprint = fresh
+                    if live := self._cached_live_id(tenant, fingerprint):
+                        return live
             cached = self._cache.get(tenant)
             if jobs is None:
                 jobs = [self._job_store.get(row["job_id"], tenant_id=tenant) for row in summaries]
@@ -339,6 +358,7 @@ class CurrentGraphStore:
                 else "Recorded inventory does not establish source collection or assessment coverage.",
             }
             self._cache[tenant] = fingerprint, revisions, identity
+            self._promotions[tenant] = self._promotions.get(tenant, 0) + 1
             return identity
 
     def _reusable(self, tenant: str, identity: str) -> bool:
