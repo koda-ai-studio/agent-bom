@@ -70,13 +70,14 @@ def _trust_basis(integration: dict[str, Any], role: UnifiedNode) -> list[str] | 
 
 
 def _index(nodes: Iterable[UnifiedNode], prefix: str, kind: EntityType | None = None) -> dict[str, UnifiedNode]:
-    index: dict[str, UnifiedNode] = {}
+    """Recorded ARN -> the one node that records it; an ARN two nodes claim is ambiguous and dropped."""
+    claims: dict[str, list[UnifiedNode]] = {}
     for node in nodes:
         if kind is not None and node.entity_type != kind:
             continue
         for arn in _recorded_arns(node, prefix):
-            index.setdefault(arn, node)
-    return index
+            claims.setdefault(arn, []).append(node)
+    return {arn: owners[0] for arn, owners in claims.items() if len(owners) == 1}
 
 
 def _add(graph: UnifiedGraph, source: UnifiedNode, target: UnifiedNode, relationship: RelationshipType, evidence: dict[str, Any]) -> bool:

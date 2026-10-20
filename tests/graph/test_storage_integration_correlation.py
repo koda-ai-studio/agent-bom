@@ -122,3 +122,17 @@ def test_the_graph_builder_runs_the_correlation() -> None:
     _identity_analysis(graph, {})
     sources = {e.evidence.get("source") for e in graph.edges if e.relationship is RelationshipType.ASSUMES}
     assert sources == {"storage-integration-correlation"}
+
+
+def test_an_identifier_two_nodes_claim_joins_nothing() -> None:
+    graph = _graph()
+    graph.add_node(
+        UnifiedNode(
+            id="cloud_resource:aws:s3:bucket:claims-exports-dup",
+            entity_type=EntityType.CLOUD_RESOURCE,
+            label="dup",
+            attributes={"cloud_provider": "aws", "arn": "arn:aws:s3:::claims-exports"},
+        )
+    )
+    assert correlate_storage_integrations(graph) == 1
+    assert not [e for e in graph.edges if e.relationship is RelationshipType.CAN_ACCESS]
