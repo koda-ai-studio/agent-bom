@@ -24,14 +24,20 @@ from agent_bom.graph.analysis import (
     analysis_status_map_from_dict,
     analysis_status_map_to_dict,
 )
-from agent_bom.graph.attack_path_queue_rank import attack_path_rank_key, path_has_credential, path_severity, source_entity_type
+from agent_bom.graph.attack_path_queue_rank import (
+    attack_path_rank_key,
+    path_has_credential,
+    path_hop_count,
+    path_severity,
+    source_entity_type,
+)
 from agent_bom.graph.container import AttackPath, UnifiedGraph
 from agent_bom.graph.path_derivation import _derived_attack_paths
 
 logger = logging.getLogger(__name__)
 
 # Bump whenever derived paths, their order/fields, or the stored queue rank/facets can change for the same snapshot.
-DERIVATION_VERSION = 5
+DERIVATION_VERSION = 6
 PATHS_ANALYSIS_KEY = "paths"
 
 SNAPSHOT_PATH_COLUMNS = (
@@ -188,7 +194,7 @@ def snapshot_path_rows(rows: Iterable[SnapshotPath], *, tenant: str, scan: str, 
             row.rank_index,
             row.path.source,
             row.path.target,
-            len(row.path.hops),
+            path_hop_count(row.path),
             row.path.composite_risk,
             row.queue_rank,
             row.severity_rank,

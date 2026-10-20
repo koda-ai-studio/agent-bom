@@ -411,7 +411,7 @@ def _attack_path_rows(attack_paths: Iterable[Any], *, scan: str, tenant: str, no
         yield (
             ap.source,
             ap.target,
-            len(ap.hops),
+            max(len(ap.hops) - 1, 0),
             ap.composite_risk,
             ap.summary,
             json.dumps(ap.hops),
