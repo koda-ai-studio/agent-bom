@@ -25,6 +25,8 @@ import {
 } from "lucide-react";
 import { severityRank } from "@/lib/severity";
 import { RiskCampaignCommandCenter } from "@/components/risk-campaign-command-center";
+import { RemediationCardList } from "@/components/remediation-mobile-cards";
+import { useNarrowViewport } from "@/hooks/use-narrow-viewport";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -365,6 +367,8 @@ function RemediationPage() {
   const [error, setError] = useState("");
   const [warnings, setWarnings] = useState<string[]>([]);
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>("all");
+  // A phone reads stacked cards; the nine-column table needs a desktop width.
+  const narrow = useNarrowViewport();
   const [frameworkFilter, setFrameworkFilter] =
     useState<FrameworkFilter>("all");
   const [fixableOnly, setFixableOnly] = useState(false);
@@ -685,7 +689,8 @@ function RemediationPage() {
             </p>
           </div>
 
-          {/* Table */}
+          {narrow && paged.length > 0 ? <RemediationCardList items={paged}
+            ticketFor={item => ticketsByFinding[findingKey(item)]} onCreateTicket={setTicketItem} /> :
           <div className="border border-outline rounded-xl overflow-hidden overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-surface border-b border-outline">
@@ -748,7 +753,7 @@ function RemediationPage() {
                 No items match your filters.
               </div>
             )}
-          </div>
+          </div>}
 
           <PaginationBar
             page={page}
