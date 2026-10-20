@@ -464,7 +464,7 @@ def export_finding_triage_vex(
 ) -> dict:
     """Export signed OpenVEX for eligible tenant-scoped triage decisions."""
     from agent_bom.api.compliance_signing import describe_signer_disclosure, sign_compliance_bundle
-    from agent_bom.api.routes.scan import current_findings_snapshot
+    from agent_bom.api.finding_snapshot_read import current_findings_snapshot
     from agent_bom.vex import VexDocument, VexJustification, VexStatement, VexStatus, export_openvex
 
     tenant_id = require_request_tenant_id(request)

@@ -23,7 +23,7 @@ def _enqueue_scheduled_scan(
     source_id = str(scan_config.get("source_id") or "").strip()
     raw_source_ids = scan_config.get("source_ids")
 
-    from agent_bom.api.routes.scan import enqueue_scan_job
+    from agent_bom.api.scan_job_submission import enqueue_scan_job
 
     if raw_source_ids is not None:
         return _enqueue_source_cohort(scan_config, raw_source_ids, source_id, resolved_tenant_id, schedule_id, scheduled_for)
@@ -56,7 +56,8 @@ def _enqueue_source_cohort(
     schedule_id: str | None,
     scheduled_for: str | None,
 ) -> str:
-    from agent_bom.api.routes.scan import correlation_cohort_id, enqueue_correlation_cohort
+    from agent_bom.api.routes.scan import correlation_cohort_id
+    from agent_bom.api.scan_cohort_submission import enqueue_correlation_cohort
 
     if source_id or not isinstance(raw_source_ids, list):
         raise RuntimeError("Scheduled correlation cohort requires an exact source_ids list without source_id")
@@ -129,8 +130,8 @@ def _enqueue_source_cohort(
 
 
 def _enqueue_source(source_id: str, resolved_tenant_id: str, schedule_id: str | None) -> str:
-    from agent_bom.api.routes.scan import enqueue_scan_job
     from agent_bom.api.routes.sources import _request_for_source, _validate_credential_ref_for_tenant
+    from agent_bom.api.scan_job_submission import enqueue_scan_job
     from agent_bom.api.tenant_quota import (
         enforce_active_scan_quota,
         enforce_retained_jobs_quota,

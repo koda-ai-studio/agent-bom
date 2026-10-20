@@ -201,7 +201,7 @@ def _project_finding_owners_and_suppressions(findings: list[dict[str, Any]], ten
     # Built once per tenant and matched per row; rows with no triage assignee keep
     # whatever owner the scan spine already set (an explicit None when unassigned,
     # rendered "Unassigned" only in the CLI/UI).
-    from agent_bom.api.routes.enterprise import build_tenant_triage_owner_index, triage_owner_for
+    from agent_bom.api.routes.enterprise_routes.findings import build_tenant_triage_owner_index, triage_owner_for
 
     owner_index = build_tenant_triage_owner_index(tenant_id)
     for row in findings:

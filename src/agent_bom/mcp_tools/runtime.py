@@ -205,7 +205,7 @@ async def anomaly_scan_impl(
 ) -> str:
     """Implementation of the anomaly_scan tool: cost + behavior anomalies."""
     try:
-        from agent_bom.api.routes.observability import get_anomalies
+        from agent_bom.api.routes.observability_finops import get_anomalies
 
         payload = await _call_route(get_anomalies, _request_for_tenant(tenant_id), z_threshold=z_threshold)
         return _truncate_response(json.dumps(payload, indent=2, default=str))
@@ -222,7 +222,7 @@ async def cost_report_impl(
 ) -> str:
     """Implementation of the cost_report tool: tenant LLM spend + budget posture."""
     try:
-        from agent_bom.api.routes.observability import get_llm_costs
+        from agent_bom.api.routes.observability_finops import get_llm_costs
 
         payload = await get_llm_costs(cast(Any, _request_for_tenant(tenant_id)), agent=agent.strip() or None)
         return _truncate_response(json.dumps(payload, indent=2, default=str))

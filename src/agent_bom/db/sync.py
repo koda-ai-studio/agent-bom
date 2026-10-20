@@ -18,341 +18,51 @@ Usage:
     agent-bom db update --source epss
     agent-bom db update --source kev
     agent-bom db update --source ghsa
-    agent-bom db update --source nvd
-"""
+    agent-bom db update --source nvd"""
 
 from __future__ import annotations
 
-import csv
-import io
-import json
-import logging
-import re
 import sqlite3
 import zipfile
 from datetime import datetime, timedelta, timezone
+from importlib import import_module
 from pathlib import Path
 from typing import Any, Callable, Optional
-from urllib.parse import quote, urljoin, urlparse
 
-from agent_bom.db.sync_parsing import (
-    _CVSS_SEVERITY as _CVSS_SEVERITY,
+from agent_bom.db.sync_common import (
+    _BATCH_SIZE,
+    _GHSA_REST_URL,
+    _NVD_API_URL,
+    _OSV_ALL_ZIP_URL,
+    GHSA_ECOSYSTEMS,
+    OSV_APPLICATION_ECOSYSTEMS,
+    _canonical_osv_ecosystem,
+    _ingest_osv_file,
+    _logger,
+    _normalize_ghsa_db_ecosystem,
+    _normalize_sync_cvss_score,
+    _nvd_api_timestamp,
+    _nvd_cve_candidates,
+    _osv_bulk_url,
+    _read_sync_metadata,
+    _update_sync_meta,
+    _upsert_cpe_matches,
+    _upsert_nvd_enrichment_row,
+    _validate_sync_url,
 )
-from agent_bom.db.sync_parsing import (
-    _cpe_version_bound as _cpe_version_bound,
-)
-from agent_bom.db.sync_parsing import (
-    _cvss_to_severity as _cvss_to_severity,
-)
-from agent_bom.db.sync_parsing import (
-    _extract_nvd_cpe_matches as _extract_nvd_cpe_matches,
-)
-from agent_bom.db.sync_parsing import (
-    _extract_nvd_cve_fields as _extract_nvd_cve_fields,
-)
-from agent_bom.db.sync_parsing import (
-    _is_commit_bound as _is_commit_bound,
-)
-from agent_bom.db.sync_parsing import (
-    _parse_alpine_secfix_tokens as _parse_alpine_secfix_tokens,
-)
-from agent_bom.db.sync_parsing import (
-    _parse_debian_tracker_release_entry as _parse_debian_tracker_release_entry,
-)
-from agent_bom.db.sync_parsing import (
-    _parse_ghsa_version_range as _parse_ghsa_version_range,
-)
-from agent_bom.db.sync_parsing import (
-    _parse_osv_entry as _parse_osv_entry,
-)
-from agent_bom.db.sync_parsing import (
-    _window_coverage as _window_coverage,
-)
-from agent_bom.package_utils import ALPINE_SECDB_BRANCHES as _ALPINE_SECDB_BRANCHES
-from agent_bom.scanners.risk import parse_cvss_vector
-
-_logger = logging.getLogger(__name__)
-
-
-def _validate_sync_url(url: str, param_name: str = "url") -> None:
-    """Reject non-HTTPS URLs for sync sources.
-
-    All sync sources must use HTTPS.  Accepting ``file://`` or ``http://``
-    custom URLs would allow an attacker who controls the environment to point
-    the syncer at a malicious local file or a plaintext server.
-
-    Raises ``ValueError`` with a descriptive message on invalid URLs.
-    """
-    if not url.startswith("https://"):
-        raise ValueError(
-            f"{param_name} must use https:// — got {url!r}. Only HTTPS URLs are accepted for vulnerability database sync sources."
-        )
-
-
-# Source URLs — all public, no auth required
-_OSV_ALL_ZIP_URL = "https://osv-vulnerabilities.storage.googleapis.com/all.zip"
-OSV_APPLICATION_ECOSYSTEMS = (
-    "PyPI",
-    "npm",
-    "Go",
-    "Maven",
-    "crates.io",
-    "NuGet",
-    "RubyGems",
-    "Packagist",
-)
-_EPSS_CSV_URL = "https://epss.empiricalsecurity.com/epss_scores-current.csv.gz"
-_EPSS_REDIRECT_HOSTS = {"epss.cyentia.com", "epss.empiricalsecurity.com"}
-_KEV_JSON_URL = "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
-_GHSA_REST_URL = "https://api.github.com/advisories"
-_NVD_API_URL = "https://services.nvd.nist.gov/rest/json/cves/2.0"
-_ALPINE_SECDB_BASE_URL = "https://secdb.alpinelinux.org"
-_ALPINE_SECDB_REPOS = ("main", "community")
-
-
-def _canonical_osv_ecosystem(ecosystem: str) -> str:
-    by_lower = {item.lower(): item for item in OSV_APPLICATION_ECOSYSTEMS}
-    canonical = by_lower.get(ecosystem.strip().lower())
-    if canonical is None:
-        supported = ", ".join(OSV_APPLICATION_ECOSYSTEMS)
-        raise ValueError(f"unsupported OSV ecosystem {ecosystem!r}; supported OSV ecosystems: {supported}")
-    return canonical
-
-
-def _osv_bulk_url(ecosystem: str) -> str:
-    """Return the official bulk archive URL for one allowlisted ecosystem."""
-    canonical = _canonical_osv_ecosystem(ecosystem)
-    return f"https://osv-vulnerabilities.storage.googleapis.com/{quote(canonical, safe='.')}/all.zip"
-
-
-# Debian Security Tracker — authoritative per-release vulnerability status with
-# backported fix versions. OSV drops releases once they go end-of-life, so its
-# bulk export carries no ``debian:10`` (buster) rows and misses the +debNuX
-# backports that distro maintainers actually shipped. The tracker is the correct
-# source: it records, per source package and per release, whether a CVE is
-# resolved (with the exact backported fix), open (no-dsa / won't-fix / EOL), or
-# undetermined.
-#
-# Two feeds, identical JSON shape, parsed by the same ingestor:
-#   * the main tracker covers the currently-supported releases (bullseye..forky)
-#   * the Extended LTS tracker (run by the Debian LTS maintainers) retains the
-#     end-of-life releases — buster (debian:10) and its backported fixes — that
-#     the main feed has pruned.
-_DEBIAN_TRACKER_JSON_URL = "https://security-tracker.debian.org/tracker/data/json"
-_DEBIAN_ELTS_TRACKER_JSON_URL = "https://deb.freexian.com/extended-lts/tracker/data/json"
-
-# Debian release codename -> numeric release for the ``debian:<n>`` ecosystem
-# key used by the image/filesystem matchers. Only the releases agent-bom scans
-# against (debian:10..debian:14) are ingested; rolling suites (sid/experimental)
-# and pre-buster EOL releases are skipped so the DB stays bounded.
-_DEBIAN_CODENAME_TO_RELEASE = {
-    "buster": "10",
-    "bullseye": "11",
-    "bookworm": "12",
-    "trixie": "13",
-    "forky": "14",
-}
-
-# AI/ML package names — kept for reference/priority tracking, NOT used as a filter.
-# As of v0.71.0, GHSA ingestion fetches ALL advisories across supported ecosystems.
-_AI_ML_PACKAGES = frozenset(
-    [
-        "torch",
-        "torchvision",
-        "torchaudio",
-        "transformers",
-        "langchain",
-        "langchain-core",
-        "openai",
-        "anthropic",
-        "llama-index",
-        "llamaindex",
-        "fastapi",
-        "uvicorn",
-        "numpy",
-        "scipy",
-        "pandas",
-        "scikit-learn",
-        "tensorflow",
-        "keras",
-        "jax",
-        "jaxlib",
-        "vllm",
-        "ray",
-        "mlflow",
-        "wandb",
-        "boto3",
-        "azure-ai",
-        "google-cloud",
-        "huggingface-hub",
-        "diffusers",
-        "sentence-transformers",
-        "pydantic",
-        "httpx",
-        "requests",
-        "aiohttp",
-        "cryptography",
-        "pillow",
-        "opencv-python",
-        "mcp",
-        "claude-code",
-        "crewai",
-        "autogen",
-        "semantic-kernel",
-        "haystack",
-        "langflow",
-        "flowise",
-        "instructor",
-        "dspy",
-        "pydantic-ai",
-        "litellm",
-        "agno",
-        "smolagents",
-        "phidata",
-        "agentops",
-    ]
-)
-
-# Supported GHSA ecosystems — maps to GitHub API ecosystem parameter values
-GHSA_ECOSYSTEMS = (
-    "pip",
-    "npm",
-    "go",
-    "maven",
-    "nuget",
-    "rubygems",
-    "rust",
-    "composer",
-    "swift",
-    "pub",
-    "erlang",
-    "actions",
-)
-
-_GHSA_API_TO_DB_ECOSYSTEM = {
-    "actions": "actions",
-    "composer": "packagist",
-    "erlang": "hex",
-    "go": "go",
-    "maven": "maven",
-    "npm": "npm",
-    "nuget": "nuget",
-    "pip": "pypi",
-    "pub": "pub",
-    "rubygems": "rubygems",
-    "rust": "crates.io",
-    "swift": "swifturl",
-}
-
-
-def _normalize_ghsa_db_ecosystem(ecosystem: str) -> str:
-    """Map GitHub advisory ecosystem names to local DB/scanner ecosystem keys."""
-    eco = (ecosystem or "").strip().lower()
-    return _GHSA_API_TO_DB_ECOSYSTEM.get(eco, eco)
-
-
-# Batch insert size for performance
-_BATCH_SIZE = 500
-_CVE_ID_RE = re.compile(r"^CVE-\d{4}-\d{4,}$", re.IGNORECASE)
-_DEBIAN_CVE_ID_RE = re.compile(r"^DEBIAN-(CVE-\d{4}-\d{4,})$", re.IGNORECASE)
-
-
-def _nvd_cve_candidates(vuln_id: str, raw_aliases: str = "") -> list[str]:
-    """Return canonical CVE IDs that NVD can resolve for a local DB row."""
-
-    candidates: list[str] = []
-
-    def add(value: Any) -> None:
-        candidate = str(value or "").strip().upper()
-        debian_match = _DEBIAN_CVE_ID_RE.match(candidate)
-        if debian_match:
-            candidate = debian_match.group(1)
-        if _CVE_ID_RE.match(candidate) and candidate not in candidates:
-            candidates.append(candidate)
-
-    add(vuln_id)
-    for alias in (raw_aliases or "").split(","):
-        add(alias)
-    return candidates
-
-
-def _normalize_sync_cvss_score(value: Any) -> Optional[float]:
-    """Extract a 0-10 CVSS score from numeric fields or vector strings."""
-    if value is None:
-        return None
-    if isinstance(value, (int, float)):
-        score = float(value)
-        return score if 0.0 <= score <= 10.0 else None
-    if isinstance(value, str):
-        try:
-            score = float(value)
-            return score if 0.0 <= score <= 10.0 else None
-        except ValueError:
-            return parse_cvss_vector(value)
-    if isinstance(value, dict):
-        for key in ("score", "baseScore", "base_score", "cvss", "vector", "vectorString"):
-            nested_score = _normalize_sync_cvss_score(value.get(key))
-            if nested_score is not None:
-                return nested_score
-    if isinstance(value, list):
-        scores = [_normalize_sync_cvss_score(item) for item in value]
-        valid_scores = [score for score in scores if score is not None]
-        if valid_scores:
-            return max(valid_scores)
-    return None
-
-
-def _now_utc() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
-def _ingest_osv_file(conn: sqlite3.Connection, content: bytes, filename: str) -> int:
-    """Parse a single OSV JSON file (one advisory per file) and upsert into DB."""
-    try:
-        data = json.loads(content)
-    except json.JSONDecodeError:
-        _logger.debug("Skipping invalid JSON: %s", filename)
-        return 0
-
-    # OSV keeps withdrawn records in its feed so downstream databases can
-    # retract advisories they ingested before the withdrawal. Merely skipping
-    # the new payload leaves the stale vulnerability and package ranges active
-    # forever. Remove the exact advisory ID before returning; affected rows are
-    # deleted explicitly as well as by the schema's cascade so this helper stays
-    # correct for callers using an externally-created SQLite connection.
-    vuln_id = data.get("id", "")
-    if vuln_id and data.get("withdrawn"):
-        conn.execute("DELETE FROM affected WHERE vuln_id = ?", (vuln_id,))
-        conn.execute("DELETE FROM vulns WHERE id = ?", (vuln_id,))
-        return 0
-
-    parsed = _parse_osv_entry(data)
-    if parsed is None:
-        return 0
-
-    vuln_row, affected_rows = parsed
-
-    conn.execute(
-        """
-        INSERT OR REPLACE INTO vulns
-            (id, summary, severity, cvss_score, cvss_vector, fixed_version, cwe_ids, aliases, upstream_ids, published, modified, source)
-        VALUES
-            (:id, :summary, :severity, :cvss_score, :cvss_vector, :fixed_version, :cwe_ids, :aliases,
-             :upstream_ids, :published, :modified, :source)
-        """,
-        vuln_row,
-    )
-    for aff in affected_rows:
-        conn.execute(
-            """
-            INSERT OR REPLACE INTO affected
-                (vuln_id, ecosystem, package_name, introduced, fixed, last_affected, limit_version)
-            VALUES
-                (:vuln_id, :ecosystem, :package_name, :introduced, :fixed, :last_affected, :limit_version)
-            """,
-            aff,
-        )
-    return 1
+from agent_bom.db.sync_distributions import sync_alpine_secdb, sync_debian_tracker
+from agent_bom.db.sync_exploit_feeds import sync_epss, sync_kev
+from agent_bom.db.sync_parsing import _CVSS_SEVERITY as _CVSS_SEVERITY
+from agent_bom.db.sync_parsing import _cpe_version_bound as _cpe_version_bound
+from agent_bom.db.sync_parsing import _cvss_to_severity as _cvss_to_severity
+from agent_bom.db.sync_parsing import _extract_nvd_cpe_matches as _extract_nvd_cpe_matches
+from agent_bom.db.sync_parsing import _extract_nvd_cve_fields as _extract_nvd_cve_fields
+from agent_bom.db.sync_parsing import _is_commit_bound as _is_commit_bound
+from agent_bom.db.sync_parsing import _parse_alpine_secfix_tokens as _parse_alpine_secfix_tokens
+from agent_bom.db.sync_parsing import _parse_debian_tracker_release_entry as _parse_debian_tracker_release_entry
+from agent_bom.db.sync_parsing import _parse_ghsa_version_range as _parse_ghsa_version_range
+from agent_bom.db.sync_parsing import _parse_osv_entry as _parse_osv_entry
+from agent_bom.db.sync_parsing import _window_coverage as _window_coverage
 
 
 def sync_osv(
@@ -437,487 +147,6 @@ def sync_osv(
             }
     _update_sync_meta(conn, "osv", count, metadata)
     _logger.info("OSV sync complete: %d advisories ingested", count)
-    return count
-
-
-def _iter_alpine_secfix_ids(secfixes: object) -> dict[str, list[str]]:
-    """Return {fixed_version: [vuln_ids...]} for one Alpine secdb package."""
-    if not isinstance(secfixes, dict):
-        return {}
-
-    parsed: dict[str, list[str]] = {}
-    for fixed_version, raw_ids in secfixes.items():
-        if not isinstance(fixed_version, str):
-            continue
-        vuln_ids: list[str] = []
-        if isinstance(raw_ids, list):
-            for item in raw_ids:
-                vuln_ids.extend(_parse_alpine_secfix_tokens(item))
-        if vuln_ids:
-            parsed[fixed_version] = vuln_ids
-    return parsed
-
-
-def _upsert_alpine_vuln_stub(
-    conn: sqlite3.Connection,
-    vuln_id: str,
-    package_name: str,
-    fixed_version: str,
-) -> None:
-    """Insert a minimal vulnerability row unless a richer row already exists."""
-    conn.execute(
-        """
-        INSERT OR IGNORE INTO vulns
-            (id, summary, severity, cvss_score, cvss_vector, fixed_version, published, modified, source, cwe_ids, aliases)
-        VALUES
-            (?, ?, 'unknown', NULL, NULL, ?, '', '', 'alpine-secdb', '', '')
-        """,
-        (
-            vuln_id,
-            f"Alpine Linux secdb advisory for {package_name}",
-            fixed_version,
-        ),
-    )
-    conn.execute(
-        """
-        UPDATE vulns
-        SET fixed_version = CASE
-            WHEN fixed_version IS NULL OR fixed_version = '' THEN ?
-            ELSE fixed_version
-        END
-        WHERE id = ?
-        """,
-        (fixed_version, vuln_id),
-    )
-
-
-def _ingest_alpine_secdb_payload(
-    conn: sqlite3.Connection,
-    payload: dict,
-    *,
-    distro_version: str,
-    repository: str,
-) -> int:
-    """Ingest one Alpine secdb JSON document into the local DB.
-
-    Returns the number of affected package/version mappings processed.
-    """
-    from agent_bom.package_utils import normalize_package_name
-
-    ecosystem = f"alpine:{distro_version}".lower()
-    processed = 0
-
-    for package_entry in payload.get("packages", []):
-        if not isinstance(package_entry, dict):
-            continue
-        pkg = package_entry.get("pkg", {})
-        if not isinstance(pkg, dict):
-            continue
-        package_name = pkg.get("name", "")
-        if not isinstance(package_name, str) or not package_name:
-            continue
-
-        normalized_name = normalize_package_name(package_name, "apk")
-        secfixes = _iter_alpine_secfix_ids(pkg.get("secfixes"))
-        for fixed_version, vuln_ids in secfixes.items():
-            for vuln_id in vuln_ids:
-                _upsert_alpine_vuln_stub(conn, vuln_id, normalized_name, fixed_version)
-                conn.execute(
-                    """
-                    INSERT OR REPLACE INTO affected
-                        (vuln_id, ecosystem, package_name, introduced, fixed, last_affected)
-                    VALUES
-                        (?, ?, ?, '0', ?, '')
-                    """,
-                    (vuln_id, ecosystem, normalized_name, fixed_version),
-                )
-                processed += 1
-
-    _logger.debug(
-        "Ingested %d Alpine secdb mappings for %s/%s",
-        processed,
-        distro_version,
-        repository,
-    )
-    return processed
-
-
-def sync_alpine_secdb(
-    conn: sqlite3.Connection,
-    *,
-    base_url: Optional[str] = None,
-    branches: tuple[str, ...] = _ALPINE_SECDB_BRANCHES,
-    repositories: tuple[str, ...] = _ALPINE_SECDB_REPOS,
-) -> int:
-    """Download and ingest Alpine Linux secdb feeds.
-
-    Alpine secdb carries package-level fix metadata for apk packages and is often
-    fresher than OSV for distro-specific Alpine advisories.
-    """
-    from agent_bom.http_client import fetch_json
-
-    root = (base_url or _ALPINE_SECDB_BASE_URL).rstrip("/")
-    _validate_sync_url(root, "alpine secdb base url")
-
-    count = 0
-    for branch in branches:
-        for repository in repositories:
-            url = f"{root}/{branch}/{repository}.json"
-            _validate_sync_url(url, "alpine secdb url")
-            _logger.info("Downloading Alpine secdb from %s …", url)
-            data = fetch_json(url, timeout=30)
-            if not isinstance(data, dict):
-                raise ValueError(f"Unexpected Alpine secdb payload type for {url}: {type(data)!r}")
-            count += _ingest_alpine_secdb_payload(
-                conn,
-                data,
-                distro_version=branch,
-                repository=repository,
-            )
-            conn.commit()
-
-    _update_sync_meta(conn, "alpine", count)
-    _logger.info("Alpine secdb sync complete: %d package advisory mappings ingested", count)
-    return count
-
-
-def _upsert_debian_tracker_vuln_stub(
-    conn: sqlite3.Connection,
-    vuln_id: str,
-    cve_id: str,
-    summary: str,
-    source: str,
-) -> None:
-    """Insert a minimal vuln row, preserving any richer existing record.
-
-    The tracker shares OSV's ``DEBIAN-CVE-*`` identifier scheme, so when OSV has
-    already ingested the same advisory (supported releases) ``INSERT OR IGNORE``
-    keeps OSV's severity/CVSS. For EOL releases OSV has nothing, so this seeds a
-    stub whose CVE alias lets EPSS/KEV/NVD enrichment fill severity later.
-    """
-    conn.execute(
-        """
-        INSERT OR IGNORE INTO vulns
-            (id, summary, severity, cvss_score, cvss_vector, fixed_version, published, modified, source, cwe_ids, aliases)
-        VALUES
-            (?, ?, 'unknown', NULL, NULL, NULL, '', '', ?, '', ?)
-        """,
-        (vuln_id, summary or f"Debian security tracker advisory for {cve_id}", source, cve_id),
-    )
-    # Backfill alias/summary on a pre-existing stub that lacked them; never
-    # overwrite data already present (keeps OSV/NVD enrichment intact).
-    conn.execute(
-        """
-        UPDATE vulns
-        SET aliases = CASE WHEN aliases IS NULL OR aliases = '' THEN ? ELSE aliases END,
-            summary = CASE WHEN summary IS NULL OR summary = '' THEN ? ELSE summary END
-        WHERE id = ?
-        """,
-        (cve_id, summary or f"Debian security tracker advisory for {cve_id}", vuln_id),
-    )
-
-
-def _ingest_debian_tracker_payload(
-    conn: sqlite3.Connection,
-    payload: dict,
-    *,
-    source: str,
-) -> int:
-    """Ingest one Debian tracker JSON document (``{src_pkg: {cve: {...}}}``).
-
-    Rows are keyed by Debian *source* package name (matching OSV's Debian data
-    and how image/filesystem scans resolve binary→source). Returns the number of
-    per-release advisory mappings written.
-    """
-    from agent_bom.package_utils import normalize_package_name
-
-    processed = 0
-    pending = 0
-    for src_pkg, cves in payload.items():
-        if not isinstance(src_pkg, str) or not src_pkg or not isinstance(cves, dict):
-            continue
-        norm_src = normalize_package_name(src_pkg, "deb")
-        for cve_id, info in cves.items():
-            if not isinstance(cve_id, str) or not cve_id.upper().startswith("CVE-") or not isinstance(info, dict):
-                continue
-            releases = info.get("releases")
-            if not isinstance(releases, dict):
-                continue
-            canonical_cve = cve_id.upper()
-            vuln_id = f"DEBIAN-{canonical_cve}"
-            summary = str(info.get("description") or "")[:500]
-            stub_written = False
-
-            for codename, rel_entry in releases.items():
-                release = _DEBIAN_CODENAME_TO_RELEASE.get(str(codename).strip().lower())
-                if release is None:
-                    continue
-                parsed = _parse_debian_tracker_release_entry(rel_entry)
-                if parsed is None:
-                    continue
-                status, fixed = parsed
-
-                if not stub_written:
-                    _upsert_debian_tracker_vuln_stub(conn, vuln_id, canonical_cve, summary, source)
-                    stub_written = True
-
-                ecosystem = f"debian:{release}"
-                if status == "resolved":
-                    # The tracker's backported fix is authoritative for Debian —
-                    # overwrite any sparser OSV row for the same release.
-                    conn.execute(
-                        """
-                        INSERT OR REPLACE INTO affected
-                            (vuln_id, ecosystem, package_name, introduced, fixed, last_affected)
-                        VALUES (?, ?, ?, '0', ?, '')
-                        """,
-                        (vuln_id, ecosystem, norm_src, fixed),
-                    )
-                else:  # open — affected, no fix for this release
-                    # Never clobber an existing (OSV) fixed row with "no fix".
-                    conn.execute(
-                        """
-                        INSERT OR IGNORE INTO affected
-                            (vuln_id, ecosystem, package_name, introduced, fixed, last_affected)
-                        VALUES (?, ?, ?, '0', '', '')
-                        """,
-                        (vuln_id, ecosystem, norm_src),
-                    )
-                processed += 1
-                pending += 1
-                if pending >= _BATCH_SIZE:
-                    conn.commit()
-                    pending = 0
-
-    conn.commit()
-    _logger.debug("Ingested %d Debian tracker mappings from %s", processed, source)
-    return processed
-
-
-def sync_debian_tracker(
-    conn: sqlite3.Connection,
-    *,
-    url: Optional[str] = None,
-    elts_url: Optional[str] = None,
-    include_elts: bool = True,
-) -> int:
-    """Download and ingest the Debian Security Tracker feed(s).
-
-    Ingests the main tracker (supported releases) and, by default, the Extended
-    LTS tracker (end-of-life releases such as buster/Debian 10). The ELTS feed is
-    best-effort: a failure there degrades only EOL coverage and never aborts the
-    sync. Returns the total number of per-release advisory mappings ingested.
-    """
-    from agent_bom.http_client import fetch_bytes
-
-    feeds: list[tuple[str, str]] = [(url or _DEBIAN_TRACKER_JSON_URL, "debian-tracker")]
-    if include_elts:
-        feeds.append((elts_url or _DEBIAN_ELTS_TRACKER_JSON_URL, "debian-elts-tracker"))
-
-    total = 0
-    for feed_url, feed_source in feeds:
-        _validate_sync_url(feed_url, "debian tracker url")
-        best_effort = feed_source == "debian-elts-tracker"
-        _logger.info("Downloading Debian security tracker from %s …", feed_url)
-        try:
-            raw = fetch_bytes(feed_url, timeout=120)
-            payload = json.loads(raw)
-        except Exception as exc:
-            if best_effort:
-                _logger.warning("Debian ELTS tracker unavailable (EOL coverage degraded): %s", exc)
-                continue
-            _logger.error("Failed to download Debian security tracker: %s", exc)
-            raise
-        if not isinstance(payload, dict):
-            if best_effort:
-                _logger.warning("Debian ELTS tracker returned unexpected payload type: %s", type(payload).__name__)
-                continue
-            raise ValueError(f"Unexpected Debian tracker payload type for {feed_url}: {type(payload)!r}")
-        total += _ingest_debian_tracker_payload(conn, payload, source=feed_source)
-
-    _update_sync_meta(
-        conn,
-        "debian",
-        total,
-        {
-            "releases": sorted(set(_DEBIAN_CODENAME_TO_RELEASE.values())),
-            "feeds": [name for _u, name in feeds],
-            "coverage": "per_release_status_with_backported_fixes",
-        },
-    )
-    _logger.info("Debian security tracker sync complete: %d release advisory mappings ingested", total)
-    return total
-
-
-# ---------------------------------------------------------------------------
-# EPSS ingestion
-# ---------------------------------------------------------------------------
-
-
-def _resolve_epss_redirect(current_url: str, location: str) -> str:
-    """Resolve an EPSS redirect without allowing arbitrary host pivots."""
-    next_url = urljoin(current_url, location)
-    _validate_sync_url(next_url, "epss redirect url")
-    current_host = (urlparse(current_url).hostname or "").lower()
-    next_host = (urlparse(next_url).hostname or "").lower()
-    allowed_hosts = set(_EPSS_REDIRECT_HOSTS)
-    if current_host:
-        allowed_hosts.add(current_host)
-    if next_host not in allowed_hosts:
-        raise ValueError(f"epss redirect url host is not allowed: {next_host!r}")
-    return next_url
-
-
-def _fetch_epss_csv_bytes(src: str) -> bytes:
-    """Fetch EPSS CSV bytes, following only expected HTTPS EPSS redirects."""
-    from agent_bom.http_client import create_sync_client, sync_request_with_retry
-
-    current_url = src
-    with create_sync_client(timeout=30) as client:
-        for _ in range(4):
-            response = sync_request_with_retry(client, "GET", current_url)
-            if response is None:
-                raise ConnectionError(f"Failed to fetch EPSS data from {current_url!r} after retries")
-            if response.status_code in {301, 302, 303, 307, 308}:
-                location = response.headers.get("location")
-                if not location:
-                    response.raise_for_status()
-                current_url = _resolve_epss_redirect(current_url, location)
-                continue
-            response.raise_for_status()
-            return response.content
-    raise RuntimeError("EPSS download exceeded redirect limit")
-
-
-def sync_epss(conn: sqlite3.Connection, url: Optional[str] = None) -> int:
-    """Download and ingest the FIRST EPSS scores CSV.
-
-    Returns the number of CVE scores upserted.
-    """
-    import gzip
-
-    src = url or _EPSS_CSV_URL
-    _validate_sync_url(src, "epss url")
-    _logger.info("Downloading EPSS scores from %s …", src)
-
-    try:
-        raw = _fetch_epss_csv_bytes(src)
-    except Exception as exc:
-        _logger.error("Failed to download EPSS data: %s", exc)
-        raise
-
-    # EPSS export is gzip-compressed CSV
-    try:
-        content = gzip.decompress(raw).decode("utf-8")
-    except Exception:
-        content = raw.decode("utf-8")
-
-    now = _now_utc()
-    count = 0
-    batch: list[tuple] = []
-
-    # EPSS CSV may have comment lines (starting with #) before the header.
-    # Strip them so csv.DictReader sees "cve,epss,percentile" as the header.
-    lines = content.splitlines(keepends=True)
-    clean_content = "".join(line for line in lines if not line.startswith("#"))
-    reader = csv.DictReader(io.StringIO(clean_content))
-    for row in reader:
-        cve_id = row.get("cve", "").strip()
-        prob_str = row.get("epss", "").strip()
-        pct_str = row.get("percentile", "").strip()
-        if not cve_id or not prob_str:
-            continue
-        try:
-            prob = float(prob_str)
-            pct = float(pct_str) if pct_str else None
-        except ValueError:
-            continue
-        batch.append((cve_id, prob, pct, now))
-        if len(batch) >= _BATCH_SIZE:
-            conn.executemany(
-                "INSERT OR REPLACE INTO epss_scores(cve_id, probability, percentile, updated_at) VALUES (?,?,?,?)",
-                batch,
-            )
-            conn.commit()
-            count += len(batch)
-            batch = []
-
-    if batch:
-        conn.executemany(
-            "INSERT OR REPLACE INTO epss_scores(cve_id, probability, percentile, updated_at) VALUES (?,?,?,?)",
-            batch,
-        )
-        conn.commit()
-        count += len(batch)
-
-    _update_sync_meta(conn, "epss", count)
-    _logger.info("EPSS sync complete: %d scores ingested", count)
-    return count
-
-
-# ---------------------------------------------------------------------------
-# KEV ingestion
-# ---------------------------------------------------------------------------
-
-
-def sync_kev(conn: sqlite3.Connection, url: Optional[str] = None) -> int:
-    """Download and ingest the CISA KEV catalog JSON.
-
-    Returns the number of KEV entries upserted.
-    """
-    from agent_bom.http_client import fetch_json
-
-    src = url or _KEV_JSON_URL
-    _validate_sync_url(src, "kev url")
-    _logger.info("Downloading CISA KEV catalog from %s …", src)
-
-    try:
-        data = fetch_json(src, timeout=30)
-    except Exception as exc:
-        _logger.error("Failed to download KEV catalog: %s", exc)
-        raise
-
-    if not isinstance(data, dict):
-        # A wrong-shape payload (array/string) would raise AttributeError on
-        # .get and abort the whole sequential sync_db — guard it like the
-        # Alpine/Debian ingest paths do.
-        _logger.warning("KEV catalog returned unexpected payload type: %s", type(data).__name__)
-        return 0
-
-    count = 0
-    batch: list[tuple] = []
-    for entry in data.get("vulnerabilities", []):
-        cve_id = entry.get("cveID", "").strip()
-        if not cve_id:
-            continue
-        batch.append(
-            (
-                cve_id,
-                entry.get("dateAdded", ""),
-                entry.get("dueDate", ""),
-                entry.get("product", ""),
-                entry.get("vendorProject", ""),
-            )
-        )
-        if len(batch) >= _BATCH_SIZE:
-            conn.executemany(
-                "INSERT OR REPLACE INTO kev_entries(cve_id, date_added, due_date, product, vendor_project) VALUES (?,?,?,?,?)",
-                batch,
-            )
-            conn.commit()
-            count += len(batch)
-            batch = []
-
-    if batch:
-        conn.executemany(
-            "INSERT OR REPLACE INTO kev_entries(cve_id, date_added, due_date, product, vendor_project) VALUES (?,?,?,?,?)",
-            batch,
-        )
-        conn.commit()
-        count += len(batch)
-
-    _update_sync_meta(conn, "kev", count)
-    _logger.info("KEV sync complete: %d entries ingested", count)
     return count
 
 
@@ -1171,87 +400,6 @@ def sync_ghsa(
         eco_summary or "none",
     )
     return count
-
-
-# ---------------------------------------------------------------------------
-# NVD CVSS enrichment
-# ---------------------------------------------------------------------------
-
-
-def _read_sync_metadata(conn: sqlite3.Connection, source: str) -> dict[str, Any]:
-    """Return parsed sync metadata for one source, or an empty dict."""
-    if not _sync_meta_has_metadata_column(conn):
-        return {}
-    row = conn.execute("SELECT metadata_json FROM sync_meta WHERE source = ?", (source,)).fetchone()
-    if not row or not row[0]:
-        return {}
-    try:
-        payload = json.loads(row[0])
-    except json.JSONDecodeError:
-        return {}
-    return payload if isinstance(payload, dict) else {}
-
-
-def _nvd_api_timestamp(value: datetime) -> str:
-    return value.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000")
-
-
-def _upsert_cpe_matches(conn: sqlite3.Connection, cve_id: str, rows: list[dict[str, Any]]) -> int:
-    """Replace the stored CPE applicability rows for one CVE."""
-    conn.execute("DELETE FROM cpe_matches WHERE cve_id = ?", (cve_id,))
-    if not rows:
-        return 0
-    conn.executemany(
-        """
-        INSERT OR IGNORE INTO cpe_matches
-            (cve_id, criteria, vendor, product, version, version_start, version_start_op, version_end, version_end_op)
-        VALUES (:cve_id, :criteria, :vendor, :product, :version, :version_start, :version_start_op, :version_end, :version_end_op)
-        """,
-        [{"cve_id": cve_id, **r} for r in rows],
-    )
-    return len(rows)
-
-
-def _upsert_nvd_enrichment_row(conn: sqlite3.Connection, cve_id: str, fields: dict[str, Any]) -> bool:
-    """Insert or update one CVE row from parsed NVD fields.
-
-    Returns ``True`` only when this call adds a *new* CVE row (the INSERT
-    actually inserted). Refreshing an already-present row still runs the UPDATE
-    but returns ``False`` so callers can count genuinely-new work. The
-    incremental sync relies on this to make forward progress across capped
-    runs: a re-run pages past the already-synced head (which no longer counts
-    toward the cap) and reaches the unsynced tail instead of re-saturating the
-    cap on the same head forever.
-    """
-    if not fields.get("cvss_score") and not fields.get("cwe_ids"):
-        return False
-
-    summary = fields.get("summary") or f"NVD entry for {cve_id}"
-    cur = conn.execute(
-        """
-        INSERT OR IGNORE INTO vulns
-            (id, summary, severity, cvss_score, cvss_vector, fixed_version, published, modified, source, cwe_ids, aliases)
-        VALUES (?, ?, 'unknown', NULL, NULL, NULL, '', '', 'nvd', '', '')
-        """,
-        (cve_id, summary),
-    )
-    inserted = cur.rowcount == 1
-
-    merged_cwes = ",".join(sorted(fields.get("cwe_ids") or [])) or None
-    if fields.get("cvss_score") is not None:
-        if merged_cwes:
-            conn.execute(
-                "UPDATE vulns SET cvss_score=?, cvss_vector=?, severity=?, summary=?, cwe_ids=? WHERE id=?",
-                (fields["cvss_score"], fields.get("cvss_vector"), fields.get("severity"), summary, merged_cwes, cve_id),
-            )
-        else:
-            conn.execute(
-                "UPDATE vulns SET cvss_score=?, cvss_vector=?, severity=?, summary=? WHERE id=?",
-                (fields["cvss_score"], fields.get("cvss_vector"), fields.get("severity"), summary, cve_id),
-            )
-    elif merged_cwes:
-        conn.execute("UPDATE vulns SET summary=?, cwe_ids=? WHERE id=?", (summary, merged_cwes, cve_id))
-    return inserted
 
 
 def sync_nvd_incremental(
@@ -1596,30 +744,6 @@ def sync_nvd(
     return enriched
 
 
-# ---------------------------------------------------------------------------
-# Sync dispatcher
-# ---------------------------------------------------------------------------
-
-
-def _sync_meta_has_metadata_column(conn: sqlite3.Connection) -> bool:
-    return any(row[1] == "metadata_json" for row in conn.execute("PRAGMA table_info(sync_meta)").fetchall())
-
-
-def _update_sync_meta(conn: sqlite3.Connection, source: str, count: int, metadata: dict[str, Any] | None = None) -> None:
-    metadata_json = json.dumps(metadata or {}, sort_keys=True, separators=(",", ":"))
-    if _sync_meta_has_metadata_column(conn):
-        conn.execute(
-            "INSERT OR REPLACE INTO sync_meta(source, last_synced, record_count, metadata_json) VALUES (?, ?, ?, ?)",
-            (source, _now_utc(), count, metadata_json),
-        )
-    else:
-        conn.execute(
-            "INSERT OR REPLACE INTO sync_meta(source, last_synced, record_count) VALUES (?, ?, ?)",
-            (source, _now_utc(), count),
-        )
-    conn.commit()
-
-
 def sync_db(
     path: Optional[Path] = None,
     sources: Optional[list[str]] = None,
@@ -1771,3 +895,37 @@ def sync_db(
         conn.close()
 
     return results
+
+
+_EXPORTS = {
+    "_EPSS_CSV_URL": "agent_bom.db.sync_common",
+    "_EPSS_REDIRECT_HOSTS": "agent_bom.db.sync_common",
+    "_KEV_JSON_URL": "agent_bom.db.sync_common",
+    "_ALPINE_SECDB_BASE_URL": "agent_bom.db.sync_common",
+    "_ALPINE_SECDB_REPOS": "agent_bom.db.sync_common",
+    "_DEBIAN_TRACKER_JSON_URL": "agent_bom.db.sync_common",
+    "_DEBIAN_ELTS_TRACKER_JSON_URL": "agent_bom.db.sync_common",
+    "_DEBIAN_CODENAME_TO_RELEASE": "agent_bom.db.sync_common",
+    "_AI_ML_PACKAGES": "agent_bom.db.sync_common",
+    "_GHSA_API_TO_DB_ECOSYSTEM": "agent_bom.db.sync_common",
+    "_CVE_ID_RE": "agent_bom.db.sync_common",
+    "_DEBIAN_CVE_ID_RE": "agent_bom.db.sync_common",
+    "_now_utc": "agent_bom.db.sync_common",
+    "_iter_alpine_secfix_ids": "agent_bom.db.sync_distributions",
+    "_upsert_alpine_vuln_stub": "agent_bom.db.sync_distributions",
+    "_ingest_alpine_secdb_payload": "agent_bom.db.sync_distributions",
+    "_upsert_debian_tracker_vuln_stub": "agent_bom.db.sync_distributions",
+    "_ingest_debian_tracker_payload": "agent_bom.db.sync_distributions",
+    "_resolve_epss_redirect": "agent_bom.db.sync_exploit_feeds",
+    "_fetch_epss_csv_bytes": "agent_bom.db.sync_exploit_feeds",
+    "_sync_meta_has_metadata_column": "agent_bom.db.sync_common",
+}
+
+
+def __getattr__(name: str) -> Any:
+    module = _EXPORTS.get(name)
+    if module is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    value = getattr(import_module(module), name)
+    globals()[name] = value
+    return value

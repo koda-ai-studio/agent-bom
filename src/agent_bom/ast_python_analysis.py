@@ -1,101 +1,44 @@
-"""Python AST extraction and taint/call-graph helpers for agent-bom."""
+"""Python call graph and bounded taint analysis."""
 
 from __future__ import annotations
 
 import ast
 import os
-import re
 from collections.abc import Callable
-from dataclasses import dataclass
-from pathlib import Path
+from importlib import import_module
 from typing import Any
 
-from agent_bom.ast.python_structure import (
-    _NON_PROMPT_KEYS as _NON_PROMPT_KEYS,
+from agent_bom.ast.python_file_analysis import _analyze_file as _analyze_file
+from agent_bom.ast.python_semantics import (
+    _DANGEROUS_CALLS,
+    _DYNAMIC_CODE_CALLS,
+    _application_entrypoint_matches,
+    _branch_definitely_exits,
+    _expr_contains_validation_hint,
+    _is_command_execution_call_name,
+    _is_guarded_call,
+    _is_http_client_call_name,
+    _is_llm_call_name,
+    _is_path_access_call_name,
+    _is_request_data_attribute,
+    _is_sanitizer_call_name,
+    _is_shell_execution_call,
+    _is_sql_call_name,
+    _is_untrusted_source_call,
+    _is_xss_sink_call_name,
+    _names_in_expr,
+    _request_global_is_framework_source,
+    _returns_boolean_constant,
+    _route_tainted_params,
+    _target_names,
+    _validation_source_names_from_expr,
 )
-from agent_bom.ast.python_structure import (
-    _PROMPT_KWARG_NAMES as _PROMPT_KWARG_NAMES,
-)
-from agent_bom.ast.python_structure import (
-    _PROMPT_UNTRUSTED_INPUT_RE as _PROMPT_UNTRUSTED_INPUT_RE,
-)
-from agent_bom.ast.python_structure import (
-    _PROMPT_VAR_NAMES as _PROMPT_VAR_NAMES,
-)
-from agent_bom.ast.python_structure import (
-    _annotation_to_str as _annotation_to_str,
-)
-from agent_bom.ast.python_structure import (
-    _build_function_cfg_edges as _build_function_cfg_edges,
-)
-from agent_bom.ast.python_structure import (
-    _call_name as _call_name,
-)
-from agent_bom.ast.python_structure import (
-    _cfg_node_id as _cfg_node_id,
-)
-from agent_bom.ast.python_structure import (
-    _collect_python_import_aliases as _collect_python_import_aliases,
-)
-from agent_bom.ast.python_structure import (
-    _expr_contains_untrusted_prompt_input as _expr_contains_untrusted_prompt_input,
-)
-from agent_bom.ast.python_structure import (
-    _expr_name as _expr_name,
-)
-from agent_bom.ast.python_structure import (
-    _extract_params as _extract_params,
-)
-from agent_bom.ast.python_structure import (
-    _extract_python_prompts as _extract_python_prompts,
-)
-from agent_bom.ast.python_structure import (
-    _extract_string_value as _extract_string_value,
-)
-from agent_bom.ast.python_structure import (
-    _first_stmt_cfg_node_id as _first_stmt_cfg_node_id,
-)
-from agent_bom.ast.python_structure import (
-    _get_return_annotation as _get_return_annotation,
-)
-from agent_bom.ast.python_structure import (
-    _package_name_for_module as _package_name_for_module,
-)
-from agent_bom.ast.python_structure import (
-    _prompt_from_value as _prompt_from_value,
-)
-from agent_bom.ast.python_structure import (
-    _resolve_imported_module as _resolve_imported_module,
-)
-from agent_bom.ast.python_structure import (
-    _stmt_cfg_node_id as _stmt_cfg_node_id,
-)
-from agent_bom.ast.source_reader import parse_python_source, read_source_for_analysis
-from agent_bom.ast.sql_safety import FunctionSqlScope, ModuleSqlFacts
-from agent_bom.ast.sql_safety import expr_uses_dynamic_string as _expr_uses_dynamic_string
-from agent_bom.ast_models import (
-    ApplicationEntrypoint,
-    CallEdge,
-    DependencySymbolReach,
-    DetectedGuardrail,
-    ExtractedPrompt,
-    FlowFinding,
-    ToolSignature,
-    _FunctionAnalysis,
-    _PythonToolRegistration,
-)
-from agent_bom.ast_signal_utils import _GUARDRAIL_CALL_PATTERNS
-from agent_bom.ast_signal_utils import is_agent_tool_decorator as _is_agent_tool_decorator
-from agent_bom.traversal import VENDOR_SKIP_DIRS
+from agent_bom.ast.python_semantics import _SKIP_DIRS as _SKIP_DIRS
+from agent_bom.ast.python_semantics import _SKIP_FILE_PATTERNS as _SKIP_FILE_PATTERNS
+from agent_bom.ast.python_structure import _call_name as _call_name
+from agent_bom.ast_models import ApplicationEntrypoint, CallEdge, DependencySymbolReach, FlowFinding, _FunctionAnalysis
 
 
-# Bounded depth for inter-procedural taint propagation. The taint analyzer
-# already follows tainted parameters across helper-call boundaries with
-# per-callsite parameter mapping; this cap pins the "bounded" claim with
-# a concrete number so operators understand exactly how many hops the
-# analyzer commits to following before it stops. Defaults to 4 — three
-# helper hops past the tool entrypoint plus the entrypoint itself —
-# which matches the depth the prior PR (#1488) committed to in writing.
 def _max_taint_depth() -> int:
     raw = os.environ.get("AGENT_BOM_TAINT_MAX_DEPTH", "").strip()
     if not raw:
@@ -108,1156 +51,6 @@ def _max_taint_depth() -> int:
     # explodes the visit-set and produces near-duplicate findings; going
     # below 2 disables the inter-procedural pass entirely.
     return max(2, min(value, 8))
-
-
-# ── Guardrail patterns ───────────────────────────────────────────────────────
-
-# Import patterns that indicate guardrail usage
-_GUARDRAIL_IMPORTS = {
-    "guardrails": ("Guardrails AI", "content_filter"),
-    "nemoguardrails": ("NeMo Guardrails", "content_filter"),
-    "llm_guard": ("LLM Guard", "input_validator"),
-    "rebuff": ("Rebuff", "input_validator"),
-    "lakera": ("Lakera Guard", "input_validator"),
-    "presidio_analyzer": ("Presidio", "pii_filter"),
-    "presidio_anonymizer": ("Presidio Anonymizer", "pii_filter"),
-    "langchain.callbacks": ("LangChain Callbacks", "output_validator"),
-    "anthropic.types": ("Anthropic Safety", "content_filter"),
-}
-
-# Import roots that identify the Python agent/runtime framework. The result
-# model exposed ``frameworks_detected`` but this pass previously never appended
-# to it, so Python-only projects reported no framework.
-_FRAMEWORK_IMPORTS: dict[str, str] = {
-    "langchain": "LangChain",
-    "langchain_core": "LangChain",
-    "langchain_community": "LangChain",
-    "langgraph": "LangGraph",
-    "crewai": "CrewAI",
-    "autogen": "AutoGen",
-    "mcp": "MCP",
-    "modelcontextprotocol": "MCP",
-    "llama_index": "LlamaIndex",
-    "semantic_kernel": "Semantic Kernel",
-}
-
-
-def _import_matches_module(module: str, target: str) -> bool:
-    """True when *module* is *target* or a submodule of it.
-
-    Whole dotted modules only. A substring test used to accept
-    ``nemoguardrails`` for the ``guardrails`` entry — NVIDIA's documented
-    ``from nemoguardrails import LLMRails`` then produced two guardrails, the
-    extra one credited to the wrong vendor — and accepted any project-local
-    module whose name merely contained a vendor's, such as
-    ``app.guardrails_config``.
-    """
-    return module == target or module.startswith(f"{target}.")
-
-
-_DYNAMIC_CODE_CALLS = {"eval", "exec", "compile", "__import__"}
-_SENSITIVE_CREDENTIAL_PATH_FRAGMENTS = (
-    "/.aws/credentials",
-    "/.aws/config",
-    "/.config/gcloud/application_default_credentials.json",
-    "/.docker/config.json",
-    "/.kube/config",
-    "/.ssh/id_",
-)
-_SUBPROCESS_CALLS = {
-    "os.system",
-    "os.popen",
-    "subprocess.run",
-    "subprocess.call",
-    "subprocess.Popen",
-    "subprocess.check_call",
-    "subprocess.check_output",
-}
-_FILE_MUTATION_CALLS = {
-    "open",
-    "Path.write_text",
-    "Path.write_bytes",
-    "Path.touch",
-    "Path.unlink",
-    "Path.rename",
-    "Path.replace",
-}
-_PATH_ACCESS_CALLS = {
-    "open",
-    "Path.open",
-    "Path.read_text",
-    "Path.read_bytes",
-    "Path.write_text",
-    "Path.write_bytes",
-    "send_file",
-    "send_from_directory",
-}
-_HTTP_CLIENT_CALLS = {
-    "requests.get",
-    "requests.post",
-    "requests.put",
-    "requests.delete",
-    "requests.request",
-    "httpx.get",
-    "httpx.post",
-    "httpx.put",
-    "httpx.delete",
-    "httpx.request",
-    "urllib.request.urlopen",
-    "aiohttp.ClientSession.get",
-    "aiohttp.ClientSession.post",
-    "aiohttp.ClientSession.request",
-}
-_SQL_CALLS = {"execute", "executemany", "cursor.execute", "cursor.executemany"}
-_UNSAFE_DESERIALIZATION_CALLS = {
-    "pickle.load",
-    "pickle.loads",
-    "yaml.load",
-    "yaml.unsafe_load",
-    "marshal.loads",
-    "dill.loads",
-    "jsonpickle.decode",
-}
-_XSS_CALLS = {"render_template_string", "Markup", "markupsafe.Markup"}
-_LLM_CALL_SUBSTRINGS = (
-    "chat.completions.create",
-    "responses.create",
-    "messages.create",
-    "completions.create",
-    "generate_content",
-    "generatecontent",
-    "ollama.chat",
-    "ollama.generate",
-)
-_UNTRUSTED_SOURCE_CALLS = {
-    "input",
-    "request.get_json",
-    "request.args.get",
-    "request.form.get",
-    "request.values.get",
-    "request.headers.get",
-    "sys.argv",
-}
-_REQUEST_GLOBAL_MODULES = frozenset({"flask", "quart"})
-_REQUEST_DATA_ATTRIBUTES = frozenset({"args", "form", "json", "values", "headers", "cookies", "data", "files", "view_args"})
-_INJECTED_DEPENDENCY_CALLS = frozenset({"Depends", "Security"})
-_SANITIZER_CALLS = {
-    "html.escape",
-    "markupsafe.escape",
-    "shlex.quote",
-    "urllib.parse.quote",
-    "secure_filename",
-    "werkzeug.utils.secure_filename",
-    "safe_join",
-    "werkzeug.utils.safe_join",
-    "os.path.basename",
-}
-
-# ── Skip directories ─────────────────────────────────────────────────────────
-
-_SKIP_DIRS = VENDOR_SKIP_DIRS | frozenset(
-    {
-        "env",
-        ".env",
-        "tests",
-        "test",
-        "testing",
-        "fixtures",
-        "fuzz",
-        "vendor",
-    }
-)
-
-# Files that contain pattern definitions or test data — skip to avoid FP
-_SKIP_FILE_PATTERNS = frozenset(
-    {
-        "patterns.py",
-        "conftest.py",
-        "test_",
-        "_test.py",
-        "fixture",
-        "mock",
-        "fake",
-        "sample",
-    }
-)
-
-_MAX_FILE_SIZE = 512 * 1024  # 512KB
-_MAX_FILES = 5_000  # Prioritize entrypoints; report a coverage warning when this budget is exhausted.
-_VALIDATION_HINTS = (
-    "allow",
-    "approve",
-    "auth",
-    "check",
-    "confirm",
-    "guard",
-    "permit",
-    "safe",
-    "sanitize",
-    "validate",
-    "verify",
-)
-_DANGEROUS_CALLS = _DYNAMIC_CODE_CALLS | _SUBPROCESS_CALLS | _FILE_MUTATION_CALLS
-_JS_TS_UNTRUSTED_DATA_RE = re.compile(
-    r"\b(?:user[A-Z_]\w*|user\w*|input|payload|req(?:uest)?\.(?:body|query|params)|ctx\.(?:body|query|params)|process\.env)\b",
-    re.IGNORECASE,
-)
-
-
-def _keyword_value(call: ast.Call, name: str) -> ast.expr | None:
-    for keyword in call.keywords:
-        if keyword.arg == name:
-            return keyword.value
-    return None
-
-
-_FRAMEWORK_TOOL_ROOTS: dict[str, str] = {
-    "langchain": "LangChain",
-    "langchain_core": "LangChain",
-    "langchain_community": "LangChain",
-    "langgraph": "LangGraph",
-    "crewai": "CrewAI",
-    "llama_index": "LlamaIndex",
-    "autogen": "AutoGen",
-    "autogen_agentchat": "AutoGen",
-    "pydantic_ai": "Pydantic AI",
-    "semantic_kernel": "Semantic Kernel",
-}
-_FRAMEWORK_AGENT_CONSTRUCTORS = frozenset(
-    {
-        "Agent",
-        "AgentExecutor",
-        "Crew",
-        "create_react_agent",
-        "create_openai_functions_agent",
-        "initialize_agent",
-    }
-)
-_FRAMEWORK_TOOL_CONSTRUCTORS = frozenset({"Tool", "StructuredTool", "FunctionTool", "DynamicTool", "ToolWrapper", "tool"})
-_FRAMEWORK_TOOL_HANDLER_KEYWORDS = ("func", "coroutine", "function", "callback", "handler")
-
-
-def _framework_for_imported_call(
-    call: ast.Call,
-    imported_modules: dict[str, str],
-    imported_functions: dict[str, tuple[str, str]],
-) -> str:
-    """Resolve a constructor's framework from explicit import evidence."""
-    call_name = _call_name(call.func)
-    head = call_name.split(".", 1)[0]
-    imported = imported_functions.get(head)
-    module_name = imported[0] if imported else imported_modules.get(head, "")
-    root = module_name.split(".", 1)[0]
-    return _FRAMEWORK_TOOL_ROOTS.get(root, "")
-
-
-def _canonical_imported_call_name(
-    call: ast.Call,
-    imported_functions: dict[str, tuple[str, str]],
-) -> str:
-    """Return a call name with a directly imported alias resolved."""
-    call_name = _call_name(call.func)
-    head, separator, tail = call_name.partition(".")
-    imported = imported_functions.get(head)
-    if imported is None:
-        return call_name
-    symbol = imported[1]
-    return f"{symbol}.{tail}" if separator and tail else symbol
-
-
-def _module_assignments(tree: ast.Module) -> dict[str, ast.expr]:
-    assignments: dict[str, ast.expr] = {}
-    for statement in tree.body:
-        if isinstance(statement, ast.Assign):
-            for target in statement.targets:
-                if isinstance(target, ast.Name):
-                    assignments[target.id] = statement.value
-        elif isinstance(statement, ast.AnnAssign) and isinstance(statement.target, ast.Name) and statement.value is not None:
-            assignments[statement.target.id] = statement.value
-    return assignments
-
-
-def _resolve_framework_tool_exprs(
-    node: ast.expr | None,
-    assignments: dict[str, ast.expr],
-    *,
-    depth: int = 0,
-) -> list[tuple[str, ast.Call]]:
-    """Resolve a static tools collection to constructor calls and bindings."""
-    if node is None or depth > 6:
-        return []
-    if isinstance(node, ast.Name):
-        assigned = assignments.get(node.id)
-        if assigned is None:
-            return []
-        if isinstance(assigned, ast.Call):
-            return [(node.id, assigned)]
-        return _resolve_framework_tool_exprs(assigned, assignments, depth=depth + 1)
-    if isinstance(node, (ast.List, ast.Tuple, ast.Set)):
-        resolved: list[tuple[str, ast.Call]] = []
-        for item in node.elts:
-            resolved.extend(_resolve_framework_tool_exprs(item, assignments, depth=depth + 1))
-        return resolved
-    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
-        return [
-            *_resolve_framework_tool_exprs(node.left, assignments, depth=depth + 1),
-            *_resolve_framework_tool_exprs(node.right, assignments, depth=depth + 1),
-        ]
-    if isinstance(node, ast.Call):
-        return [("inline", node)]
-    return []
-
-
-def _framework_tool_from_call(
-    binding: str,
-    call: ast.Call,
-    *,
-    framework: str,
-    agent_constructor: str,
-    index: int,
-    imported_modules: dict[str, str],
-    imported_functions: dict[str, tuple[str, str]],
-    function_names: set[str],
-) -> _PythonToolRegistration | None:
-    call_name = _canonical_imported_call_name(call, imported_functions)
-    short_name = call_name.rsplit(".", 1)[-1]
-    constructor_name = short_name
-    handler_node: ast.expr | None = None
-
-    if short_name == "from_function":
-        owner = call_name.rsplit(".", 1)[0].rsplit(".", 1)[-1]
-        if owner not in _FRAMEWORK_TOOL_CONSTRUCTORS:
-            return None
-        constructor_name = f"{owner}.from_function"
-        if call.args:
-            handler_node = call.args[0]
-    elif short_name in _FRAMEWORK_TOOL_CONSTRUCTORS:
-        for keyword_name in _FRAMEWORK_TOOL_HANDLER_KEYWORDS:
-            handler_node = _keyword_value(call, keyword_name)
-            if handler_node is not None:
-                break
-        if handler_node is None and short_name == "Tool" and len(call.args) >= 2:
-            handler_node = call.args[1]
-    else:
-        return None
-
-    constructor_framework = _framework_for_imported_call(call, imported_modules, imported_functions)
-    if not constructor_framework:
-        # ``StructuredTool.from_function`` resolves through the imported owner,
-        # not the terminal method name.
-        owner = call_name.split(".", 1)[0]
-        imported = imported_functions.get(owner)
-        module_name = imported[0] if imported else imported_modules.get(owner, "")
-        constructor_framework = _FRAMEWORK_TOOL_ROOTS.get(module_name.split(".", 1)[0], "")
-    if not constructor_framework or not isinstance(handler_node, ast.Name) or handler_node.id not in function_names:
-        return None
-
-    tool_name = ""
-    name_node = _keyword_value(call, "name")
-    if name_node is not None:
-        tool_name = _extract_string_value(name_node) or ""
-    if not tool_name and call.args and isinstance(call.args[0], ast.Constant) and isinstance(call.args[0].value, str):
-        tool_name = call.args[0].value
-    if not tool_name:
-        tool_name = handler_node.id
-    tool_name = tool_name.strip()
-    if not tool_name:
-        return None
-
-    provenance = f"python:{framework}:{agent_constructor}.tools[{index}]:{binding}->{constructor_name}(func={handler_node.id})"
-    return _PythonToolRegistration(
-        tool_name=tool_name,
-        handler_name=handler_node.id,
-        framework=framework,
-        provenance=provenance,
-    )
-
-
-def _collect_framework_tool_registrations(
-    tree: ast.Module,
-    imported_modules: dict[str, str],
-    imported_functions: dict[str, tuple[str, str]],
-) -> list[_PythonToolRegistration]:
-    """Collect only tools statically wired to a recognized framework agent."""
-    assignments = _module_assignments(tree)
-    function_names = {node.name for node in tree.body if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))}
-    registrations: list[_PythonToolRegistration] = []
-    seen: set[tuple[str, str, str]] = set()
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.Call):
-            continue
-        agent_constructor = _canonical_imported_call_name(node, imported_functions).rsplit(".", 1)[-1]
-        if agent_constructor not in _FRAMEWORK_AGENT_CONSTRUCTORS:
-            continue
-        framework = _framework_for_imported_call(node, imported_modules, imported_functions)
-        if not framework:
-            continue
-        tools_node = _keyword_value(node, "tools")
-        # LangChain's constructors have different positional signatures:
-        # initialize_agent(tools, llm), the create_* helpers (llm, tools, ...).
-        tools_position = {"initialize_agent": 0, "create_react_agent": 1, "create_openai_functions_agent": 1}.get(agent_constructor)
-        if tools_node is None and tools_position is not None and len(node.args) > tools_position:
-            tools_node = node.args[tools_position]
-        for index, (binding, tool_call) in enumerate(_resolve_framework_tool_exprs(tools_node, assignments)):
-            registration = _framework_tool_from_call(
-                binding,
-                tool_call,
-                framework=framework,
-                agent_constructor=agent_constructor,
-                index=index,
-                imported_modules=imported_modules,
-                imported_functions=imported_functions,
-                function_names=function_names,
-            )
-            if registration is None:
-                continue
-            key = (registration.tool_name, registration.handler_name, registration.provenance)
-            if key not in seen:
-                seen.add(key)
-                registrations.append(registration)
-    return registrations
-
-
-def _call_references_sensitive_credential_path(call: ast.Call) -> bool:
-    """Return whether a call contains a known credential-file path literal.
-
-    Only literals are inspected and no path value is copied into a finding, so
-    dynamic paths are not guessed and credential-bearing locations stay out of
-    machine output.
-    """
-    for node in ast.walk(call):
-        if not isinstance(node, ast.Constant) or not isinstance(node.value, str):
-            continue
-        normalized = node.value.strip().lower().replace("\\", "/")
-        if any(fragment in normalized for fragment in _SENSITIVE_CREDENTIAL_PATH_FRAGMENTS):
-            return True
-    return False
-
-
-def _is_privilege_escalation_call_name(call_name: str) -> bool:
-    normalized = call_name.strip().lower()
-    return normalized == "assume_role" or normalized.endswith(".assume_role")
-
-
-def _module_name_for_rel_path(rel_path: str) -> str:
-    path = Path(rel_path)
-    parts = list(path.with_suffix("").parts)
-    if parts and parts[-1] == "__init__":
-        parts = parts[:-1]
-    return ".".join(parts)
-
-
-def _open_mode_is_mutating(call: ast.Call) -> bool:
-    """Return True when open(...) uses a mutating mode."""
-    if len(call.args) >= 2 and isinstance(call.args[1], ast.Constant) and isinstance(call.args[1].value, str):
-        return any(flag in call.args[1].value for flag in ("w", "a", "+"))
-    for keyword in call.keywords:
-        if keyword.arg == "mode" and isinstance(keyword.value, ast.Constant) and isinstance(keyword.value.value, str):
-            return any(flag in keyword.value.value for flag in ("w", "a", "+"))
-    return False
-
-
-def _build_parent_map(tree: ast.AST) -> dict[ast.AST, ast.AST]:
-    """Return a child→parent map for AST nodes."""
-    parent_map: dict[ast.AST, ast.AST] = {}
-    for parent in ast.walk(tree):
-        for child in ast.iter_child_nodes(parent):
-            parent_map[child] = parent
-    return parent_map
-
-
-def _expr_contains_validation_hint(node: ast.AST) -> bool:
-    """Return True when an expression contains validation/authorization hints."""
-
-    def is_literal_allowlist(expr: ast.AST) -> bool:
-        if isinstance(expr, (ast.Set, ast.List, ast.Tuple)):
-            return bool(expr.elts) and all(isinstance(elt, ast.Constant) for elt in expr.elts)
-        return False
-
-    for child in ast.walk(node):
-        if isinstance(child, ast.Name) and any(hint in child.id.lower() for hint in _VALIDATION_HINTS):
-            return True
-        if isinstance(child, ast.Attribute) and any(hint in child.attr.lower() for hint in _VALIDATION_HINTS):
-            return True
-        if isinstance(child, ast.Compare):
-            if any(isinstance(op, ast.In) for op in child.ops) and any(
-                is_literal_allowlist(expr) for expr in [child.left, *child.comparators]
-            ):
-                return True
-        if isinstance(child, ast.Call):
-            call_name = _call_name(child.func).lower()
-            if any(hint in call_name for hint in _VALIDATION_HINTS):
-                return True
-            if call_name in {"re.fullmatch", "re.match"} or call_name.endswith((".fullmatch", ".match")):
-                return True
-    return False
-
-
-def _validation_source_names_from_expr(expr: ast.AST | None) -> set[str]:
-    """Return identifiers directly constrained by a validation expression."""
-    if expr is None:
-        return set()
-    if isinstance(expr, ast.Call):
-        names: set[str] = set()
-        if isinstance(expr.func, ast.Attribute):
-            names.update(_names_in_expr(expr.func.value))
-        for arg in expr.args:
-            names.update(_names_in_expr(arg))
-        for keyword in expr.keywords:
-            names.update(_names_in_expr(keyword.value))
-        return names
-    return _names_in_expr(expr)
-
-
-def _returns_boolean_constant(statements: list[ast.stmt], value: bool) -> bool:
-    return any(
-        isinstance(statement, ast.Return) and isinstance(statement.value, ast.Constant) and statement.value.value is value
-        for statement in statements
-    )
-
-
-def _branch_definitely_exits(statements: list[ast.stmt]) -> bool:
-    """Return True when a branch definitely stops control flow."""
-    if not statements:
-        return False
-    last_statement = statements[-1]
-    if isinstance(last_statement, (ast.Return, ast.Raise)):
-        return True
-    if isinstance(last_statement, ast.If):
-        return _branch_definitely_exits(last_statement.body) and _branch_definitely_exits(last_statement.orelse)
-    return False
-
-
-def _is_guarded_call(node: ast.AST, parent_map: dict[ast.AST, ast.AST]) -> bool:
-    """Return True when a dangerous call sits behind a validation-oriented branch."""
-    current = parent_map.get(node)
-    while current is not None and not isinstance(current, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Module)):
-        if isinstance(current, ast.If) and _expr_contains_validation_hint(current.test):
-            return True
-        if isinstance(current, ast.Assert) and _expr_contains_validation_hint(current.test):
-            return True
-        current = parent_map.get(current)
-    return False
-
-
-def _target_names(node: ast.AST) -> set[str]:
-    """Extract assigned identifier names from a target expression."""
-    if isinstance(node, ast.Name):
-        return {node.id}
-    if isinstance(node, (ast.Tuple, ast.List)):
-        names: set[str] = set()
-        for child in node.elts:
-            names.update(_target_names(child))
-        return names
-    return set()
-
-
-def _names_in_expr(node: ast.AST | None) -> set[str]:
-    """Collect identifier names used by an expression."""
-    if node is None:
-        return set()
-    return {child.id for child in ast.walk(node) if isinstance(child, ast.Name)}
-
-
-def _is_llm_call_name(call_name: str) -> bool:
-    lower_name = call_name.lower()
-    if any(fragment in lower_name for fragment in _LLM_CALL_SUBSTRINGS):
-        return True
-    if lower_name.endswith((".invoke", ".ainvoke", ".predict", ".apredict")) and any(
-        hint in lower_name for hint in ("llm", "model", "chain", "agent")
-    ):
-        return True
-    return False
-
-
-def _is_sql_call_name(call_name: str) -> bool:
-    lower_name = call_name.lower()
-    return lower_name in _SQL_CALLS or lower_name.endswith(".execute") or lower_name.endswith(".executemany")
-
-
-def _is_http_client_call_name(call_name: str) -> bool:
-    lower_name = call_name.lower()
-    return lower_name in _HTTP_CLIENT_CALLS
-
-
-def _is_path_access_call_name(call_name: str) -> bool:
-    lower_name = call_name.lower()
-    if lower_name in {name.lower() for name in _PATH_ACCESS_CALLS}:
-        return True
-    return lower_name.endswith((".read_text", ".read_bytes", ".write_text", ".write_bytes", ".open"))
-
-
-def _is_unsafe_deserialization_call_name(call_name: str) -> bool:
-    lower_name = call_name.lower()
-    return lower_name in {name.lower() for name in _UNSAFE_DESERIALIZATION_CALLS}
-
-
-def _uses_safe_yaml_loader(call: ast.Call) -> bool:
-    call_name = _call_name(call.func).lower()
-    if call_name != "yaml.load":
-        return False
-    safe_loader_names = {
-        "yaml.safeloader",
-        "safeloader",
-        "yaml.csafeloader",
-        "csafeloader",
-    }
-    for keyword in call.keywords:
-        if keyword.arg != "Loader":
-            continue
-        if _expr_name(keyword.value).lower() in safe_loader_names:
-            return True
-    if len(call.args) >= 2 and _expr_name(call.args[1]).lower() in safe_loader_names:
-        return True
-    return False
-
-
-def _call_keyword_bool(call: ast.Call, name: str) -> bool:
-    for keyword in call.keywords:
-        if keyword.arg == name and isinstance(keyword.value, ast.Constant) and isinstance(keyword.value.value, bool):
-            return keyword.value.value
-    return False
-
-
-def _call_argument_expr(call: ast.Call, *, primary_arg_names: set[str] | None = None) -> ast.AST | None:
-    if call.args:
-        return call.args[0]
-    if primary_arg_names:
-        for keyword in call.keywords:
-            if keyword.arg in primary_arg_names:
-                return keyword.value
-    return None
-
-
-def _is_command_execution_call_name(call_name: str) -> bool:
-    lower_name = call_name.lower()
-    return lower_name in {name.lower() for name in _SUBPROCESS_CALLS}
-
-
-def _is_shell_execution_call(call_name: str, call: ast.Call) -> bool:
-    lower_name = call_name.lower()
-    if lower_name in {"os.system", "os.popen"}:
-        return True
-    return _call_keyword_bool(call, "shell")
-
-
-def _expr_is_dynamic_or_tracked(expr: ast.AST | None, tracked_names: set[str]) -> bool:
-    if _expr_uses_dynamic_string(expr):
-        return True
-    return isinstance(expr, ast.Name) and expr.id in tracked_names
-
-
-def _is_xss_sink_call_name(call_name: str) -> bool:
-    lower_name = call_name.lower()
-    return lower_name in {name.lower() for name in _XSS_CALLS}
-
-
-def _is_untrusted_source_call(call_name: str) -> bool:
-    lower_name = call_name.lower()
-    return lower_name in _UNTRUSTED_SOURCE_CALLS or lower_name.endswith(".get_json")
-
-
-def _request_global_is_framework_source(func: _FunctionAnalysis) -> bool:
-    module, name = func.imported_functions.get("request", ("", ""))
-    if name != "request" or module.split(".", 1)[0] not in _REQUEST_GLOBAL_MODULES or func.node is None:
-        return False
-    for node in ast.walk(func.node):
-        if isinstance(node, ast.Assign):
-            if any("request" in _target_names(target) for target in node.targets):
-                return False
-        elif isinstance(node, (ast.AnnAssign, ast.AugAssign, ast.For, ast.AsyncFor, ast.NamedExpr)):
-            if "request" in _target_names(node.target):
-                return False
-    return "request" not in func.param_names
-
-
-def _is_request_data_attribute(expr: ast.Attribute) -> bool:
-    return isinstance(expr.value, ast.Name) and expr.value.id == "request" and expr.attr in _REQUEST_DATA_ATTRIBUTES
-
-
-def _route_tainted_params(func: _FunctionAnalysis) -> set[str]:
-    """Route handler parameters bound from the request, excluding injected dependencies."""
-    if func.node is None:
-        return set()
-    args = func.node.args
-    positional = [*args.posonlyargs, *args.args]
-    defaulted = positional[len(positional) - len(args.defaults) :]
-    defaults: dict[str, ast.expr] = dict(zip([arg.arg for arg in defaulted], args.defaults, strict=True))
-    for arg, default in zip(args.kwonlyargs, args.kw_defaults, strict=True):
-        if default is not None:
-            defaults[arg.arg] = default
-    tainted: set[str] = set()
-    for arg in [*positional, *args.kwonlyargs]:
-        if arg.arg in {"self", "cls"}:
-            continue
-        default = defaults.get(arg.arg)
-        if isinstance(default, ast.Call) and _call_name(default.func).rsplit(".", 1)[-1] in _INJECTED_DEPENDENCY_CALLS:
-            continue
-        tainted.add(arg.arg)
-    return tainted
-
-
-def _application_entrypoint_matches(
-    functions: list[_FunctionAnalysis],
-    application_entrypoints: list[ApplicationEntrypoint] | None,
-    *,
-    kinds: frozenset[str] | None = None,
-) -> list[tuple[int, ApplicationEntrypoint, _FunctionAnalysis]]:
-    matches: list[tuple[int, ApplicationEntrypoint, _FunctionAnalysis]] = []
-    for index, entry in enumerate(application_entrypoints or []):
-        if kinds is not None and entry.kind not in kinds:
-            continue
-        handler = entry.handler.rsplit(".", 1)[-1]
-        candidates = [func for func in functions if func.simple_name == handler and func.file_path == entry.file_path]
-        if len(candidates) == 1:
-            matches.append((index, entry, candidates[0]))
-    return matches
-
-
-def _is_sanitizer_call_name(call_name: str) -> bool:
-    lower_name = call_name.lower()
-    # Security-sensitive APIs whose names happen to contain a validation hint
-    # (notably ``subprocess.check_output``) are sinks, never sanitizers.
-    if lower_name in {name.lower() for name in _DANGEROUS_CALLS}:
-        return False
-    if lower_name in _SANITIZER_CALLS:
-        return True
-    return any(hint in lower_name for hint in _VALIDATION_HINTS)
-
-
-@dataclass(frozen=True)
-class _PythonFileContext:
-    """Per-file facts every function in a Python file is analyzed against."""
-
-    rel_path: str
-    parent_map: dict[ast.AST, ast.AST]
-    current_module: str
-    imported_modules: dict[str, str]
-    imported_functions: dict[str, tuple[str, str]]
-    registrations_by_handler: dict[str, _PythonToolRegistration]
-    low_level_tools: list[tuple[str, int]]
-    sql: ModuleSqlFacts
-
-
-def _import_frameworks_and_guardrails(tree: ast.Module, rel_path: str) -> tuple[list[str], list[DetectedGuardrail]]:
-    """Detect agent frameworks and guardrail libraries from import statements."""
-    frameworks: list[str] = []
-    guardrails: list[DetectedGuardrail] = []
-    for node in ast.walk(tree):
-        if not isinstance(node, (ast.Import, ast.ImportFrom)):
-            continue
-        # ``import a, b`` binds every alias; keeping only the last one made
-        # detection depend on where the guardrail sat in the list.
-        modules = [alias.name for alias in node.names] if isinstance(node, ast.Import) else [node.module or ""]
-        for module in modules:
-            for framework_module, framework_name in _FRAMEWORK_IMPORTS.items():
-                if _import_matches_module(module, framework_module) and framework_name not in frameworks:
-                    frameworks.append(framework_name)
-            for guard_module, (name, gtype) in _GUARDRAIL_IMPORTS.items():
-                if _import_matches_module(module, guard_module):
-                    guardrails.append(
-                        DetectedGuardrail(
-                            name=name,
-                            guardrail_type=gtype,
-                            file_path=rel_path,
-                            line_number=node.lineno,
-                            framework=name,
-                            description=f"Imported from {module}",
-                        )
-                    )
-    return frameworks, guardrails
-
-
-def _low_level_tool_signatures(tree: ast.Module, rel_path: str) -> tuple[list[tuple[str, int]], list[ToolSignature]]:
-    """Tools a low-level ``Server`` declares in its ListTools handler."""
-    low_level_tools: list[tuple[str, int]] = []
-    if _source_imports_mcp_module(tree) and _has_list_tools_handler(tree):
-        low_level_tools = _list_tools_declarations(tree)
-    signatures = [
-        ToolSignature(
-            name=tool_name,
-            parameters=[],
-            return_type="unknown",
-            description="Python MCP low-level ListTools declaration",
-            file_path=rel_path,
-            line_number=tool_line,
-            decorators=["tools/list"],
-            is_async=False,
-        )
-        for tool_name, tool_line in low_level_tools
-    ]
-    return low_level_tools, signatures
-
-
-def _decorator_tool_flags(node: ast.FunctionDef | ast.AsyncFunctionDef) -> tuple[list[str], bool, bool]:
-    """Return ``(decorator names, is decorated tool, is MCP dispatch handler)``."""
-    decorators: list[str] = []
-    is_decorated_tool = False
-    is_dispatch_handler = False
-    for dec in node.decorator_list:
-        dec_name = _get_decorator_name(dec)
-        if dec_name:
-            decorators.append(dec_name)
-            if _is_agent_tool_decorator(dec_name):
-                is_decorated_tool = True
-            if dec_name.rsplit(".", 1)[-1] in _MCP_DISPATCH_SEGMENTS:
-                is_dispatch_handler = True
-    return decorators, is_decorated_tool, is_dispatch_handler
-
-
-def _python_tool_signature(
-    node: ast.FunctionDef | ast.AsyncFunctionDef,
-    ctx: _PythonFileContext,
-    decorators: list[str],
-    registration: _PythonToolRegistration | None,
-    entrypoint_name: str,
-) -> ToolSignature:
-    docstring = ast.get_docstring(node) or ""
-    return ToolSignature(
-        name=entrypoint_name,
-        parameters=_extract_params(node),
-        return_type=_get_return_annotation(node),
-        description=docstring[:300],
-        file_path=ctx.rel_path,
-        line_number=node.lineno,
-        decorators=decorators,
-        is_async=isinstance(node, ast.AsyncFunctionDef),
-        handler=node.name if registration else "",
-        registration_kind="framework_tool" if registration else "",
-        framework=registration.framework if registration else "",
-        provenance=registration.provenance if registration else "",
-    )
-
-
-def _python_function_analysis(
-    node: ast.FunctionDef | ast.AsyncFunctionDef,
-    ctx: _PythonFileContext,
-) -> tuple[ToolSignature | None, _FunctionAnalysis, list[FlowFinding]]:
-    """Analyze one function: its tool signature, call/CFG facts and local sink findings."""
-    decorators, is_decorated_tool, is_dispatch_handler = _decorator_tool_flags(node)
-    registration = ctx.registrations_by_handler.get(node.name)
-    # ``@server.call_tool()`` dispatches to every tool; it is not itself
-    # one. Suppressing its signature only once the real names are known
-    # means a server whose names are built dynamically keeps the signal
-    # it has today rather than going silent.
-    is_tool_signature = registration is not None or (is_decorated_tool and not (is_dispatch_handler and ctx.low_level_tools))
-    entrypoint_name = registration.tool_name if registration else node.name
-    signature = _python_tool_signature(node, ctx, decorators, registration, entrypoint_name) if is_tool_signature else None
-    func_info = _FunctionAnalysis(
-        qualified_name=f"{ctx.rel_path}:{node.name}",
-        simple_name=node.name,
-        file_path=ctx.rel_path,
-        line_number=node.lineno,
-        is_tool=is_decorated_tool or registration is not None,
-        module_name=ctx.current_module,
-        param_names=[arg.arg for arg in node.args.args if arg.arg != "self"],
-        node=node,
-        parent_map=ctx.parent_map,
-        cfg_edges=_build_function_cfg_edges(node, ctx.rel_path),
-        imported_modules=dict(ctx.imported_modules),
-        imported_functions=dict(ctx.imported_functions),
-        entrypoint_name=entrypoint_name,
-        entrypoint_kind="framework_tool" if registration else "mcp_tool",
-        entrypoint_framework=registration.framework if registration else "",
-        entrypoint_provenance=registration.provenance if registration else "",
-    )
-    return signature, func_info, _function_call_findings(node, func_info, ctx)
-
-
-def _dynamic_string_names(node: ast.FunctionDef | ast.AsyncFunctionDef) -> set[str]:
-    """Names assigned a dynamically built string anywhere in the function."""
-    names: set[str] = set()
-    for inner_stmt in ast.walk(node):
-        if isinstance(inner_stmt, ast.Assign) and _expr_uses_dynamic_string(inner_stmt.value):
-            for target in inner_stmt.targets:
-                names.update(_target_names(target))
-        elif isinstance(inner_stmt, ast.AnnAssign) and _expr_uses_dynamic_string(inner_stmt.value):
-            names.update(_target_names(inner_stmt.target))
-    return names
-
-
-_LOCAL_SINK_TITLES = {
-    "unguarded_tool_sink": "Tool entrypoint reaches dangerous sink without validation",
-    "credential_file_access": "Tool entrypoint reads a credential file",
-    "privilege_escalation": "Tool entrypoint can assume another identity",
-    "unsafe_deserialization": "Unsafe deserialization primitive detected",
-    "command_string_construction": "Shell command is built through string interpolation",
-    "ssrf_url_construction": "Outbound URL is built through string interpolation",
-    "sql_string_construction": "SQL query is built through string interpolation",
-}
-
-
-def _function_call_findings(
-    node: ast.FunctionDef | ast.AsyncFunctionDef,
-    func_info: _FunctionAnalysis,
-    ctx: _PythonFileContext,
-) -> list[FlowFinding]:
-    """Record every call in the function and the local sink findings each one raises."""
-    dynamic_string_names = _dynamic_string_names(node)
-    sql_scope = ctx.sql.for_function(node)
-    entrypoint = func_info.entrypoint_name
-    findings: list[FlowFinding] = []
-    for inner in ast.walk(node):
-        if not isinstance(inner, ast.Call):
-            continue
-        call_name = _call_name(inner.func)
-        line_number = getattr(inner, "lineno", node.lineno)
-        if call_name:
-            func_info.called_names.append((call_name, line_number))
-        matches = _tool_call_matches(inner, call_name, line_number, func_info, ctx)
-        matches.extend(_string_construction_matches(inner, call_name, ctx.rel_path, dynamic_string_names, sql_scope))
-        findings.extend(
-            FlowFinding(
-                category=category,
-                title=_LOCAL_SINK_TITLES[category],
-                detail=detail,
-                file_path=ctx.rel_path,
-                line_number=line_number,
-                entrypoint=entrypoint,
-                sink=call_name,
-                call_path=[entrypoint, call_name],
-            )
-            for category, detail in matches
-        )
-    return findings
-
-
-def _tool_call_matches(
-    inner: ast.Call,
-    call_name: str,
-    line_number: int,
-    func_info: _FunctionAnalysis,
-    ctx: _PythonFileContext,
-) -> list[tuple[str, str]]:
-    """Dangerous-call bookkeeping plus the sinks only a tool entrypoint reports."""
-    tool = f"Tool `{func_info.entrypoint_name}` in {ctx.rel_path}"
-    matches: list[tuple[str, str]] = []
-    is_file_mutation = call_name in _FILE_MUTATION_CALLS and (call_name != "open" or _open_mode_is_mutating(inner))
-    if call_name in _DYNAMIC_CODE_CALLS or call_name in _SUBPROCESS_CALLS or is_file_mutation:
-        guarded = _is_guarded_call(inner, ctx.parent_map)
-        func_info.dangerous_calls.append((call_name, line_number, guarded))
-        if func_info.is_tool and not guarded:
-            detail = f"{tool} calls `{call_name}` without an obvious validation or authorization branch."
-            matches.append(("unguarded_tool_sink", detail))
-    if not func_info.is_tool or not call_name:
-        return matches
-    if _is_path_access_call_name(call_name) and _call_references_sensitive_credential_path(inner):
-        matches.append(("credential_file_access", f"{tool} reads a known credential-file location."))
-    if _is_privilege_escalation_call_name(call_name):
-        matches.append(("privilege_escalation", f"{tool} calls an identity-assumption API."))
-    return matches
-
-
-def _string_construction_matches(
-    inner: ast.Call,
-    call_name: str,
-    rel_path: str,
-    dynamic_string_names: set[str],
-    sql_scope: FunctionSqlScope,
-) -> list[tuple[str, str]]:
-    """Unsafe deserialization and string-built command, URL and SQL sinks in any function."""
-    matches: list[tuple[str, str]] = []
-    if _is_unsafe_deserialization_call_name(call_name) and not _uses_safe_yaml_loader(inner):
-        detail = f"{rel_path} calls `{call_name}` which can deserialize attacker-controlled content without a safe loader."
-        matches.append(("unsafe_deserialization", detail))
-    built = f"{rel_path} builds"
-    if _is_command_execution_call_name(call_name) and _is_shell_execution_call(call_name, inner):
-        command_expr = _call_argument_expr(inner, primary_arg_names={"args", "command"})
-        if _expr_is_dynamic_or_tracked(command_expr, dynamic_string_names):
-            detail = f"{built} a shell command dynamically before calling `{call_name}`, which is a common command injection pattern."
-            matches.append(("command_string_construction", detail))
-    if _is_http_client_call_name(call_name):
-        url_expr = _call_argument_expr(inner, primary_arg_names={"url", "uri", "endpoint"})
-        if _expr_is_dynamic_or_tracked(url_expr, dynamic_string_names):
-            detail = f"{built} an outbound URL dynamically before calling `{call_name}`, which is a common SSRF pattern."
-            matches.append(("ssrf_url_construction", detail))
-    if _is_sql_call_name(call_name) and sql_scope.query_is_unsafe(inner):
-        detail = f"{built} a SQL query dynamically before calling `{call_name}`, which is a common SQL injection pattern."
-        matches.append(("sql_string_construction", detail))
-    return matches
-
-
-def _regex_guardrails(source: str, rel_path: str, guardrails: list[DetectedGuardrail]) -> list[DetectedGuardrail]:
-    """Guardrail calls found by the source regex fallback, skipping lines imports already reported."""
-    found: list[DetectedGuardrail] = []
-    for match in _GUARDRAIL_CALL_PATTERNS.finditer(source):
-        line_num = source[: match.start()].count("\n") + 1
-        guard_name = match.group(0)
-        if not any(g.line_number == line_num for g in [*guardrails, *found]):
-            found.append(
-                DetectedGuardrail(
-                    name=guard_name,
-                    guardrail_type="content_filter",
-                    file_path=rel_path,
-                    line_number=line_num,
-                    framework="generic",
-                    description=f"Function/method call: {guard_name}",
-                )
-            )
-    return found
-
-
-def _analyze_file(
-    file_path: Path,
-    rel_path: str,
-) -> tuple[
-    list[ExtractedPrompt],
-    list[DetectedGuardrail],
-    list[ToolSignature],
-    list[str],
-    list[_FunctionAnalysis],
-    list[FlowFinding],
-]:
-    """Analyze a single Python file with full AST parsing."""
-    source = read_source_for_analysis(file_path, rel_path, scanner="ast-python", max_size=_MAX_FILE_SIZE)
-    if source is None:
-        return [], [], [], [], [], []
-
-    try:
-        tree = parse_python_source(source, filename=str(file_path))
-    except SyntaxError:
-        return [], [], [], [], [], []
-
-    current_module = _module_name_for_rel_path(rel_path)
-    imported_modules, imported_functions = _collect_python_import_aliases(
-        tree,
-        current_module=current_module,
-        rel_path=rel_path,
-    )
-    registrations = _collect_framework_tool_registrations(tree, imported_modules, imported_functions)
-    frameworks, guardrails = _import_frameworks_and_guardrails(tree, rel_path)
-    prompts = _extract_python_prompts(tree, rel_path)
-    low_level_tools, tools = _low_level_tool_signatures(tree, rel_path)
-    ctx = _PythonFileContext(
-        rel_path=rel_path,
-        parent_map=_build_parent_map(tree),
-        current_module=current_module,
-        imported_modules=imported_modules,
-        imported_functions=imported_functions,
-        registrations_by_handler={registration.handler_name: registration for registration in registrations},
-        low_level_tools=low_level_tools,
-        sql=ModuleSqlFacts.from_source(tree, source),
-    )
-
-    function_analyses: list[_FunctionAnalysis] = []
-    flow_findings: list[FlowFinding] = []
-    for node in ast.walk(tree):
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            signature, func_info, function_findings = _python_function_analysis(node, ctx)
-            if signature is not None:
-                tools.append(signature)
-            function_analyses.append(func_info)
-            flow_findings.extend(function_findings)
-
-    guardrails.extend(_regex_guardrails(source, rel_path, guardrails))
-    return prompts, guardrails, tools, frameworks, function_analyses, flow_findings
-
-
-# Servers built on the low-level ``Server`` class declare their tools in a
-# ListTools handler rather than one ``@mcp.tool()`` per function, so no decorator
-# on any function carries a tool name. The JS/TS analyzer reads the same shape
-# from ``setRequestHandler(ListToolsRequestSchema, ...)`` and Swift from
-# ``withMethodHandler(ListTools.self)``; this is the Python equivalent.
-#
-# ``list_tools`` and ``call_tool`` are protocol dispatch handlers, not tool
-# markers, so neither name is trusted on its own -- the file must also import an
-# MCP module, the same discriminator the Go analyzer applies to ``NewTool`` and
-# Swift to ``Tool(name:)``. That keeps an ordinary ``@registry.list_tools``
-# method on a plugin registry out.
-_MCP_ROOT_MODULES = frozenset({"mcp", "modelcontextprotocol"})
-_MCP_LIST_TOOLS_SEGMENT = "list_tools"
-_MCP_LIST_TOOLS_KEYWORD = "on_list_tools"
-# ``@server.call_tool()`` reaches the tool-decorator predicate through the
-# ``*_tool`` suffix, which named the dispatcher itself as a tool called
-# "call_tool". It stays a tool entrypoint for sink analysis; it just must not be
-# emitted as a tool name once the real names are known.
-_MCP_DISPATCH_SEGMENTS = frozenset({_MCP_LIST_TOOLS_SEGMENT, "call_tool"})
-
-
-def _imported_module_names(tree: ast.Module) -> list[str]:
-    names: list[str] = []
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Import):
-            names.extend(alias.name for alias in node.names)
-        elif isinstance(node, ast.ImportFrom):
-            names.append(node.module or "")
-    return names
-
-
-def _source_imports_mcp_module(tree: ast.Module) -> bool:
-    """Return whether the file imports an MCP SDK module.
-
-    Whole dotted segments only, so ``mcp.server.lowlevel`` and
-    ``modelcontextprotocol.server`` resolve while a project-local
-    ``mcp_client_utils`` or ``mcpherson.tools`` does not.
-    """
-    for module in _imported_module_names(tree):
-        if any(segment.lower() in _MCP_ROOT_MODULES for segment in module.split(".") if segment):
-            return True
-    return False
-
-
-def _decorator_last_segment(node: ast.expr) -> str:
-    """Last dotted segment of a decorator, unwrapping the applied form ``@x.y()``."""
-    return (_get_decorator_name(node) or "").rsplit(".", 1)[-1]
-
-
-def _has_list_tools_handler(tree: ast.Module) -> bool:
-    """Return whether the file wires a low-level ListTools handler.
-
-    Both SDK generations count: v1 registers the handler with a
-    ``@server.list_tools()`` decorator (bare or applied), v2 passes it to the
-    ``Server`` constructor as ``on_list_tools=``.
-    """
-    for node in ast.walk(tree):
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            if any(_decorator_last_segment(dec) == _MCP_LIST_TOOLS_SEGMENT for dec in node.decorator_list):
-                return True
-        elif isinstance(node, ast.Call):
-            if any(kw.arg == _MCP_LIST_TOOLS_KEYWORD for kw in node.keywords):
-                return True
-    return False
-
-
-def _list_tools_declarations(tree: ast.Module) -> list[tuple[str, int]]:
-    """Return ``(tool_name, line_number)`` for every ``types.Tool(name="…")``."""
-    declarations: list[tuple[str, int]] = []
-    seen: set[tuple[str, int]] = set()
-    for node in ast.walk(tree):
-        if not isinstance(node, ast.Call) or _call_name(node.func).rsplit(".", 1)[-1] != "Tool":
-            continue
-        for keyword in node.keywords:
-            # A non-literal name cannot be resolved statically; guessing one
-            # would put a fabricated tool in the inventory.
-            if keyword.arg != "name" or not isinstance(keyword.value, ast.Constant):
-                continue
-            name = keyword.value.value
-            if not isinstance(name, str) or not name.strip():
-                continue
-            entry = (name.strip(), node.lineno)
-            if entry in seen:
-                continue
-            seen.add(entry)
-            declarations.append(entry)
-    return declarations
-
-
-def _get_decorator_name(node: ast.expr) -> str | None:
-    """Extract decorator name from AST node."""
-    if isinstance(node, ast.Name):
-        return node.id
-    if isinstance(node, ast.Attribute):
-        parts = []
-        current: ast.expr = node
-        while isinstance(current, ast.Attribute):
-            parts.append(current.attr)
-            current = current.value
-        if isinstance(current, ast.Name):
-            parts.append(current.id)
-        return ".".join(reversed(parts))
-    if isinstance(node, ast.Call):
-        return _get_decorator_name(node.func)
-    return None
 
 
 def _build_flow_finding(
@@ -1365,7 +158,10 @@ _TAINT_SINK_TITLES = {
     "tainted_llm_prompt": "Untrusted data reaches an LLM invocation",
 }
 
+
 _TaintResult = tuple[bool, list[FlowFinding]]
+
+
 _StatementResult = tuple[list[FlowFinding], bool]
 
 
@@ -2108,3 +904,83 @@ def _build_call_graph(functions: list[_FunctionAnalysis]) -> tuple[list[CallEdge
                 queue.append((callee.qualified_name, path + [callee.simple_name]))
 
     return edges, findings
+
+
+_EXPORTS = {
+    "_GUARDRAIL_IMPORTS": "agent_bom.ast.python_semantics",
+    "_FRAMEWORK_IMPORTS": "agent_bom.ast.python_semantics",
+    "_import_matches_module": "agent_bom.ast.python_semantics",
+    "_SENSITIVE_CREDENTIAL_PATH_FRAGMENTS": "agent_bom.ast.python_semantics",
+    "_SUBPROCESS_CALLS": "agent_bom.ast.python_semantics",
+    "_FILE_MUTATION_CALLS": "agent_bom.ast.python_semantics",
+    "_PATH_ACCESS_CALLS": "agent_bom.ast.python_semantics",
+    "_HTTP_CLIENT_CALLS": "agent_bom.ast.python_semantics",
+    "_SQL_CALLS": "agent_bom.ast.python_semantics",
+    "_UNSAFE_DESERIALIZATION_CALLS": "agent_bom.ast.python_semantics",
+    "_XSS_CALLS": "agent_bom.ast.python_semantics",
+    "_LLM_CALL_SUBSTRINGS": "agent_bom.ast.python_semantics",
+    "_UNTRUSTED_SOURCE_CALLS": "agent_bom.ast.python_semantics",
+    "_REQUEST_GLOBAL_MODULES": "agent_bom.ast.python_semantics",
+    "_REQUEST_DATA_ATTRIBUTES": "agent_bom.ast.python_semantics",
+    "_INJECTED_DEPENDENCY_CALLS": "agent_bom.ast.python_semantics",
+    "_SANITIZER_CALLS": "agent_bom.ast.python_semantics",
+    "_SKIP_DIRS": "agent_bom.ast.python_semantics",
+    "_SKIP_FILE_PATTERNS": "agent_bom.ast.python_semantics",
+    "_MAX_FILE_SIZE": "agent_bom.ast.python_semantics",
+    "_MAX_FILES": "agent_bom.ast.python_semantics",
+    "_VALIDATION_HINTS": "agent_bom.ast.python_semantics",
+    "_JS_TS_UNTRUSTED_DATA_RE": "agent_bom.ast.python_semantics",
+    "_keyword_value": "agent_bom.ast.python_semantics",
+    "_FRAMEWORK_TOOL_ROOTS": "agent_bom.ast.python_semantics",
+    "_FRAMEWORK_AGENT_CONSTRUCTORS": "agent_bom.ast.python_semantics",
+    "_FRAMEWORK_TOOL_CONSTRUCTORS": "agent_bom.ast.python_semantics",
+    "_FRAMEWORK_TOOL_HANDLER_KEYWORDS": "agent_bom.ast.python_semantics",
+    "_framework_for_imported_call": "agent_bom.ast.python_tools",
+    "_canonical_imported_call_name": "agent_bom.ast.python_tools",
+    "_module_assignments": "agent_bom.ast.python_tools",
+    "_resolve_framework_tool_exprs": "agent_bom.ast.python_tools",
+    "_framework_tool_from_call": "agent_bom.ast.python_tools",
+    "_collect_framework_tool_registrations": "agent_bom.ast.python_tools",
+    "_call_references_sensitive_credential_path": "agent_bom.ast.python_semantics",
+    "_is_privilege_escalation_call_name": "agent_bom.ast.python_semantics",
+    "_module_name_for_rel_path": "agent_bom.ast.python_semantics",
+    "_open_mode_is_mutating": "agent_bom.ast.python_semantics",
+    "_build_parent_map": "agent_bom.ast.python_semantics",
+    "_is_unsafe_deserialization_call_name": "agent_bom.ast.python_semantics",
+    "_uses_safe_yaml_loader": "agent_bom.ast.python_semantics",
+    "_call_keyword_bool": "agent_bom.ast.python_semantics",
+    "_call_argument_expr": "agent_bom.ast.python_semantics",
+    "_expr_is_dynamic_or_tracked": "agent_bom.ast.python_semantics",
+    "_PythonFileContext": "agent_bom.ast.python_file_analysis",
+    "_import_frameworks_and_guardrails": "agent_bom.ast.python_file_analysis",
+    "_low_level_tool_signatures": "agent_bom.ast.python_file_analysis",
+    "_decorator_tool_flags": "agent_bom.ast.python_file_analysis",
+    "_python_tool_signature": "agent_bom.ast.python_file_analysis",
+    "_python_function_analysis": "agent_bom.ast.python_file_analysis",
+    "_dynamic_string_names": "agent_bom.ast.python_file_analysis",
+    "_LOCAL_SINK_TITLES": "agent_bom.ast.python_file_analysis",
+    "_function_call_findings": "agent_bom.ast.python_file_analysis",
+    "_tool_call_matches": "agent_bom.ast.python_file_analysis",
+    "_string_construction_matches": "agent_bom.ast.python_file_analysis",
+    "_regex_guardrails": "agent_bom.ast.python_file_analysis",
+    "_analyze_file": "agent_bom.ast.python_file_analysis",
+    "_MCP_ROOT_MODULES": "agent_bom.ast.python_tools",
+    "_MCP_LIST_TOOLS_SEGMENT": "agent_bom.ast.python_tools",
+    "_MCP_LIST_TOOLS_KEYWORD": "agent_bom.ast.python_tools",
+    "_MCP_DISPATCH_SEGMENTS": "agent_bom.ast.python_tools",
+    "_imported_module_names": "agent_bom.ast.python_tools",
+    "_source_imports_mcp_module": "agent_bom.ast.python_tools",
+    "_decorator_last_segment": "agent_bom.ast.python_tools",
+    "_has_list_tools_handler": "agent_bom.ast.python_tools",
+    "_list_tools_declarations": "agent_bom.ast.python_tools",
+    "_get_decorator_name": "agent_bom.ast.python_tools",
+}
+
+
+def __getattr__(name: str) -> Any:
+    module = _EXPORTS.get(name)
+    if module is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    value = getattr(import_module(module), name)
+    globals()[name] = value
+    return value

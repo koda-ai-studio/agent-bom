@@ -19,21 +19,28 @@ unauthenticated cloud scan and an under-privileged role is rejected with 403.
 
 Responses are additive: where the underlying scan carries a read-only discovery
 envelope (``permissions_used`` / discovery scope), it is surfaced under
-``audit_metadata`` so auditors can verify the read-only scope used.
-"""
+``audit_metadata`` so auditors can verify the read-only scope used."""
 
 from __future__ import annotations
 
-import logging
-import os
 import re
+from importlib import import_module
 from typing import Any, Literal, cast
-from urllib.parse import urlencode
 
 import anyio
 import anyio.to_thread
 from fastapi import APIRouter, HTTPException, Query, Request
 
+from agent_bom.api.cloud_inventory_read import _INVENTORY_PROVIDERS, _build_inventory_payload
+from agent_bom.api.cloud_response_helpers import _cloud_cis_timeout_seconds, _cloud_inventory_timeout_seconds, _logger, _tenant
+from agent_bom.api.cloud_scan_results import (
+    _run_cis_benchmark,
+    _run_provider_side_scan_sync,
+    _runtime_cohort_graph,
+    _runtime_cohort_response,
+    _side_scan_result_summary,
+)
+from agent_bom.api.cloud_summary_read import _account_findings_href, _compliance_for_account, _split_account_ref
 from agent_bom.api.correlation_cohort_ingest import (
     CorrelationCohortIngestError,
     cohort_evidence_created_at,
@@ -52,7 +59,6 @@ from agent_bom.api.models import RuntimeEvidenceIngestRequest, ScanJob, SideScan
 from agent_bom.api.read_models import documented
 from agent_bom.api.read_models import runtime_estate_a as rt
 from agent_bom.api.stores import _get_graph_store, _get_idempotency_store, _get_store
-from agent_bom.api.tenancy import require_request_tenant_id
 from agent_bom.backpressure import (
     BackpressureRejectedError,
     ProviderExecutionCapacityError,
@@ -60,287 +66,41 @@ from agent_bom.backpressure import (
     adaptive_backpressure,
     run_provider_call,
 )
-from agent_bom.canonical_ids import canonical_id
-from agent_bom.cloud.ambient_credentials import (
-    PROFILE_REJECTED_NOTE,
-    ambient_cis_enabled,
-    configured_aws_profile,
-    disabled_payload,
-)
-from agent_bom.cloud.runtime_workload_evidence import (
-    RuntimeWorkloadSignal,
-    SourceAuthenticationError,
-    get_runtime_source_registry,
-    ingest_runtime_signals,
-)
+from agent_bom.cloud.ambient_credentials import PROFILE_REJECTED_NOTE, ambient_cis_enabled, configured_aws_profile, disabled_payload
+from agent_bom.cloud.runtime_workload_evidence import SourceAuthenticationError, get_runtime_source_registry, ingest_runtime_signals
 from agent_bom.cloud.runtime_workload_evidence_store import get_runtime_workload_evidence_store
-from agent_bom.config import CLOUD_CIS_TIMEOUT_SECONDS, CLOUD_DISCOVERY_TIMEOUT
-from agent_bom.graph.container import UnifiedGraph
-from agent_bom.graph.node import NodeDimensions, UnifiedNode
-from agent_bom.graph.types import EntityType
 from agent_bom.rbac import require_authenticated_permission
 from agent_bom.redaction.log_values import sanitize_log_value
-from agent_bom.security import sanitize_log_label, sanitize_sensitive_payload, sanitize_text
+from agent_bom.security import sanitize_log_label, sanitize_text
 
 router = APIRouter(tags=["cloud"])
-_logger = logging.getLogger(__name__)
 
-# Reuse the same RBAC gate the sibling scan/identity routes use. Cloud scanning is
-# a scan-class action, so it maps to the "scan" permission ({admin, analyst}).
+
 _SCAN_DEP = require_authenticated_permission("scan")
-# Spending the control plane's own ambient cloud identity is an operator action,
-# not a tenant one, so it does not share the analyst-level scan dependency.
+
+
 _CIS_DEP = require_authenticated_permission("cloud_ambient")
-# The per-account drill summary is a read-only aggregation over already-ingested
-# evidence — it never triggers a provider scan — so it maps to the "read" gate
-# (all authenticated roles), like /v1/overview.
+
+
 _READ_DEP = require_authenticated_permission("read")
 
-# Bound the per-account read so one account view can never walk an unbounded
-# number of rows on a huge tenant. Mirrors the intent of the findings-list
-# backpressure guard; a sargable account-scoped GROUP BY in the hub store is a
-# follow-up for million-row tenants (see PR notes).
+
 _ACCOUNT_SUMMARY_MAX_ROWS = 50_000
 
-# Asset-type buckets used to derive an honest identity/role count from the
-# account's finding assets (deeper IAM/grant enumeration is a follow-up).
+
 _IDENTITY_ASSET_TYPES = frozenset({"user", "service_account", "identity", "iam_user", "principal", "machine_identity", "nhi"})
+
+
 _ROLE_ASSET_TYPES = frozenset({"role", "iam_role", "cloud_role"})
 
-# Provider -> the result keys (new + legacy) that carry a stored CIS benchmark
-# side block. Matches the mapping the graph builder reads (#3946).
-_CIS_SECTIONS: tuple[tuple[str, tuple[str, ...]], ...] = (
-    ("aws", ("cis_benchmark", "cis_benchmark_data")),
-    ("azure", ("azure_cis_benchmark", "azure_cis_benchmark_data")),
-    ("gcp", ("gcp_cis_benchmark", "gcp_cis_benchmark_data")),
-    ("snowflake", ("snowflake_cis_benchmark", "snowflake_cis_benchmark_data")),
-    # Databricks has no official CIS benchmark: prefer the canonical
-    # ``databricks_security`` key, then the deprecated CIS-named aliases.
-    ("databricks", ("databricks_security", "databricks_cis_benchmark", "databricks_cis_benchmark_data")),
-)
 
-_INVENTORY_PROVIDERS = ("aws", "azure", "gcp", "snowflake")
 _CIS_PROVIDERS = ("aws", "azure", "gcp", "snowflake", "databricks")
+
+
 _REGION_RE = re.compile(r"[a-z]{2}(-gov)?-[a-z]+-\d{1,2}")
+
+
 _PROFILE_RE = re.compile(r"[a-zA-Z0-9._-]{1,100}")
-# Audit-field allowlists. IAM action identifiers (AWS ``svc:Action``, GCP
-# ``svc.resource.verb``, Azure ``Provider/type/op``), discovery scopes (account
-# IDs, regions, project IDs, ARNs), and the discovery-mode/redaction enums are
-# all structured tokens with no whitespace or punctuation that could carry a
-# stack trace or CRLF. Matching against these patterns is the sanitizer barrier
-# that keeps any exception-derived text in a provider payload out of the REST
-# response, independent of where the value originated.
-_PERMISSION_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:/*-]{0,200}")
-_SCOPE_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:/*-]{0,300}")
-_AUDIT_ENUM_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,40}")
-
-
-def _clean_tokens(values: Any, pattern: re.Pattern[str], *, cap: int = 500) -> list[str]:
-    """Keep only well-formed, structured tokens — the sanitizer barrier.
-
-    Each value is coerced, stripped, and admitted only if it fully matches the
-    allowlist ``pattern``. Anything carrying whitespace, control characters, or
-    free-form prose (i.e. an exception/stack fragment) is dropped, so no
-    exception-derived text can reach the response even if it appears in a
-    provider payload field.
-    """
-    cleaned: list[str] = []
-    for value in values or []:
-        token = str(value).strip()
-        if token and pattern.fullmatch(token):
-            cleaned.append(token)
-        if len(cleaned) >= cap:
-            break
-    return cleaned
-
-
-def _cloud_cis_timeout_seconds() -> float:
-    return CLOUD_CIS_TIMEOUT_SECONDS
-
-
-def _cloud_inventory_timeout_seconds() -> float:
-    return max(float(CLOUD_DISCOVERY_TIMEOUT), 1.0)
-
-
-def _tenant(request: Request) -> str:
-    return require_request_tenant_id(request)
-
-
-def _redact_summary(summary: dict[str, Any]) -> dict[str, Any]:
-    """Strip exception-derived free-form warnings from the external REST response.
-
-    Provider discovery warnings are built from caught exceptions
-    (``sanitize_discovery_warning(exc)``), so surfacing them verbatim over REST
-    risks exposing backend detail. Keep the ``warnings`` key (REST/MCP shape
-    parity) but replace its value with a count-derived, exception-free notice;
-    the full warnings remain available via the CLI/MCP surfaces and the server log.
-    """
-    safe = dict(summary)
-    count = len(safe.get("warnings") or [])
-    safe["warnings"] = [f"{count} provider discovery warning(s) — run via CLI/MCP or see server logs for detail."] if count else []
-    return safe
-
-
-def _audit_metadata(payloads: list[dict[str, Any]]) -> dict[str, Any]:
-    """Roll the per-provider read-only discovery envelopes into one audit block.
-
-    Surfaces ``permissions_used`` and the discovery scope so an auditor can verify
-    the read-only IAM footprint the scan actually used. Additive — the underlying
-    payloads are untouched.
-    """
-    permissions: list[str] = []
-    scopes: list[str] = []
-    redaction: list[str] = []
-    scan_modes: list[str] = []
-    for payload in payloads:
-        envelope = payload.get("discovery_envelope")
-        if not isinstance(envelope, dict):
-            continue
-        permissions.extend(_clean_tokens(envelope.get("permissions_used"), _PERMISSION_RE))
-        scopes.extend(_clean_tokens(envelope.get("discovery_scope"), _SCOPE_RE))
-        redaction.extend(_clean_tokens([envelope.get("redaction_status")], _AUDIT_ENUM_RE))
-        scan_modes.extend(_clean_tokens([envelope.get("scan_mode")], _AUDIT_ENUM_RE))
-    return {
-        "read_only": True,
-        "writes_performed": False,
-        "scan_modes": sorted(set(scan_modes)),
-        "permissions_used": sorted(set(permissions)),
-        "discovery_scope": sorted(set(scopes)),
-        "redaction_status": sorted(set(redaction)),
-        "note": (
-            "agent-bom cloud scanning is read-only and agentless. permissions_used lists the exact "
-            "read-only IAM actions exercised; no resource is mutated and no secret value is returned."
-        ),
-    }
-
-
-def _snowflake_inventory() -> tuple[dict[str, Any], dict[str, Any]]:
-    """Project Snowflake estate discovery into the canonical inventory summary.
-
-    Snowflake discovery returns a list of AI resources (Cortex agents / search
-    services, native MCP servers, notebooks, Streamlit apps, Snowpark package
-    environments) rather than the infra buckets/instances/roles/users the other
-    providers enumerate. To keep one consistent schema across providers, the
-    discovered resources are projected onto the identical summary fields the
-    aws/azure/gcp path emits (``_summarize_inventory_payload``): their count is
-    surfaced as ``resource_count`` while the infra ``node_summary`` keys stay
-    zero (Snowflake exposes none of those node types) and ``identity_count`` is
-    zero (IAM/role enumeration is a separate governance discovery, not part of
-    the inventory sweep).
-
-    Graceful degradation mirrors the CIS branch: a disabled inventory gate, an
-    absent ``snowflake-connector-python``, or missing account credentials yields
-    a clear non-``ok`` status with zero resources — never a raise, never a 500.
-
-    Returns ``(summary, raw_payload)`` where ``raw_payload`` carries the
-    ``discovery_envelope`` the shared ``_audit_metadata`` roll-up consumes.
-    """
-    from agent_bom.cloud import CloudDiscoveryError, snowflake
-
-    node_summary = {"buckets": 0, "instances": 0, "security_groups": 0, "roles": 0, "users": 0}
-
-    def _summary(status: str, account: str | None, resource_count: int, warning_count: int) -> dict[str, Any]:
-        return {
-            "provider": "snowflake",
-            "status": status,
-            "account": account,
-            "region": "",
-            "resource_count": resource_count,
-            "identity_count": 0,
-            "node_summary": dict(node_summary),
-            "warnings": (
-                [f"{warning_count} provider discovery warning(s) — run via CLI/MCP or see server logs for detail."] if warning_count else []
-            ),
-        }
-
-    if not snowflake.inventory_enabled():
-        # Opt-in per provider; symmetric with the aws/azure/gcp disabled path.
-        return _summary("disabled", None, 0, 0), {"status": "disabled", "discovery_envelope": None}
-
-    try:
-        agents, sf_warnings = snowflake.discover()
-    except CloudDiscoveryError:
-        # Connector absent — degrade to a clear "not configured" summary (HTTP
-        # 200), never a 500. Log a canonical literal only (no user string / no
-        # exception text) to avoid log injection + detail exposure.
-        _logger.warning("Snowflake inventory unavailable for %s", "snowflake")
-        return _summary("no_credentials", None, 0, 0), {"status": "no_credentials", "discovery_envelope": None}
-
-    account = os.environ.get("SNOWFLAKE_ACCOUNT", "").strip() or None
-    if agents:
-        status = "ok"
-    elif not account:
-        status = "no_credentials"  # enabled but not configured (no account/creds)
-    elif sf_warnings:
-        status = "partial"  # configured, but discovery could not complete cleanly
-    else:
-        status = "ok"
-
-    # Every agent carries the same run-level discovery envelope; surface the
-    # first for the read-only audit roll-up (permissions_used / scope).
-    envelope = None
-    for agent in agents:
-        candidate = getattr(agent, "discovery_envelope", None)
-        if isinstance(candidate, dict):
-            envelope = candidate
-            break
-
-    summary = _summary(status, account, len(agents), len(sf_warnings))
-    raw_payload = {"status": status, "account_id": account, "discovery_envelope": envelope, "warnings": sf_warnings}
-    return summary, raw_payload
-
-
-def _build_inventory_payload(tenant_id: str, selected: list[str], scoped_region: str | None) -> dict[str, Any]:
-    """Synchronous estate inventory body — runs off the event loop in a worker thread.
-
-    Calls the same ``discover_inventory`` functions the CLI/MCP use and reduces
-    each provider payload to the identical non-secret count shape. Kept as a
-    module-level function (not a closure) so the offload seam is spy-able and the
-    payload construction is unit-testable.
-    """
-    from agent_bom.cloud import aws_inventory, azure_inventory, gcp_inventory
-    from agent_bom.mcp_tools.posture import _summarize_inventory_payload
-
-    raw_payloads: list[dict[str, Any]] = []
-    summaries: list[dict[str, Any]] = []
-    if "aws" in selected:
-        payload = aws_inventory.discover_inventory(region=scoped_region)
-        raw_payloads.append(payload)
-        summaries.append(_summarize_inventory_payload("aws", payload))
-    if "azure" in selected:
-        payload = azure_inventory.discover_inventory()
-        raw_payloads.append(payload)
-        summaries.append(_summarize_inventory_payload("azure", payload))
-    if "gcp" in selected:
-        payload = gcp_inventory.discover_inventory()
-        raw_payloads.append(payload)
-        summaries.append(_summarize_inventory_payload("gcp", payload))
-    if "snowflake" in selected:
-        # Snowflake discovery returns AI resources (Agents), not the infra
-        # payload the other providers emit, so it is projected onto the same
-        # canonical summary fields here rather than through
-        # _summarize_inventory_payload. Graceful when the gate/creds are absent.
-        sf_summary, sf_payload = _snowflake_inventory()
-        raw_payloads.append(sf_payload)
-        summaries.append(sf_summary)
-
-    any_enabled = any(s["status"] != "disabled" for s in summaries)
-    return {
-        "schema_version": "cloud.inventory.summary.v1",
-        "tenant_id": tenant_id,
-        "status": "ok" if any_enabled else "disabled",
-        "total_resources": sum(s["resource_count"] for s in summaries),
-        "total_identities": sum(s["identity_count"] for s in summaries),
-        "providers": [_redact_summary(s) for s in summaries],
-        "audit_metadata": _audit_metadata(raw_payloads),
-        "note": (
-            "Estate-wide inventory is opt-in per provider via AGENT_BOM_CLOUD_INVENTORY / "
-            "AGENT_BOM_AZURE_INVENTORY / AGENT_BOM_GCP_INVENTORY / AGENT_BOM_SNOWFLAKE_INVENTORY. "
-            "Reference-only counts; no resource secrets are returned. For Snowflake, resource_count "
-            "reflects discovered AI resources (Cortex agents, MCP servers, notebooks); the infra "
-            "node_summary keys stay zero."
-        ),
-    }
 
 
 @router.get("/cloud/{provider}/inventory", **documented(rt.CloudInventorySummaryResponse))
@@ -423,93 +183,6 @@ async def cloud_inventory(
         # message so no exception/stack detail is exposed over REST.
         _logger.error("Cloud inventory failed")
         raise HTTPException(status_code=500, detail="Cloud inventory failed; see server logs.") from exc
-
-
-def _run_cis_benchmark(
-    tenant_id: str,
-    requested: str,
-    check_list: list[str] | None,
-    region_arg: str | None,
-    profile_arg: str | None,
-    subscription_id: str,
-    project_id: str,
-) -> dict[str, Any]:
-    """Synchronous CIS benchmark body — runs off the event loop in a worker thread.
-
-    Calls the same provider ``run_benchmark`` functions the CLI/MCP use and
-    returns the report's canonical ``to_dict()`` shape unchanged. A missing SDK /
-    credentials degrades to the HTTP-200 ``unavailable`` envelope exactly as
-    before. Kept module-level so the offload seam is spy-able and testable.
-    """
-    from agent_bom.cloud import CloudDiscoveryError
-
-    report: Any
-    try:
-        if requested == "aws":
-            if region_arg:
-                from agent_bom.cloud.aws_cis_benchmark import run_benchmark
-
-                report = run_benchmark(region=region_arg, profile=profile_arg, checks=check_list)
-            else:
-                from agent_bom.cloud.aws_cis_benchmark import run_benchmark_all_regions
-
-                report = run_benchmark_all_regions(region=region_arg, profile=profile_arg, checks=check_list)
-        elif requested == "azure":
-            from agent_bom.cloud.azure_cis_benchmark import run_benchmark as run_azure_cis
-
-            report = run_azure_cis(subscription_id=subscription_id.strip() or None, checks=check_list)
-        elif requested == "snowflake":
-            from agent_bom.cloud.snowflake_cis_benchmark import run_benchmark as run_snowflake_cis
-
-            # Snowflake uses the same account credentials as CLI/MCP.
-            report = run_snowflake_cis(checks=check_list)
-        elif requested == "databricks":
-            from agent_bom.cloud.databricks_security import run_security_checks
-
-            report = run_security_checks(checks=check_list)
-        else:  # gcp
-            from agent_bom.cloud.gcp_cis_benchmark import run_benchmark as run_gcp_cis
-
-            report = run_gcp_cis(project_id=project_id.strip() or None, checks=check_list)
-    except CloudDiscoveryError:
-        # Provider SDK absent / credentials unavailable degrades to a clear
-        # error envelope (HTTP 200) — exactly as the MCP cis_benchmark tool
-        # does — never a 500. Keeps REST / MCP shape parity for the no-SDK path.
-        # Log only a canonical allowlisted provider label — a literal chosen by
-        # comparison, never the user string or the exception (avoids log injection
-        # + exception-detail exposure; CR/LF strip alone isn't a recognized barrier).
-        if requested == "aws":
-            provider_label = "aws"
-        elif requested == "azure":
-            provider_label = "azure"
-        elif requested == "gcp":
-            provider_label = "gcp"
-        elif requested == "snowflake":
-            provider_label = "snowflake"
-        elif requested == "databricks":
-            provider_label = "databricks"
-        else:
-            provider_label = "unknown"
-        _logger.warning("Cloud CIS benchmark unavailable for %s", provider_label)
-        return {
-            "error": "Provider SDK or credentials unavailable for this benchmark.",
-            "provider": requested,
-            "tenant_id": tenant_id,
-            "status": "unavailable",
-        }
-
-    sanitized_result = sanitize_sensitive_payload(report.to_dict())
-    if not isinstance(sanitized_result, dict):  # pragma: no cover - report contracts return mappings
-        raise TypeError("Provider benchmark report must be a mapping")
-    result = cast(dict[str, Any], sanitized_result)
-    result.setdefault("tenant_id", tenant_id)
-    result["audit_metadata"] = {
-        "read_only": True,
-        "writes_performed": False,
-        "provider": requested,
-        "note": "Benchmark checks are read-only; evaluate provider posture without mutating resources.",
-    }
-    return result
 
 
 @router.get("/cloud/{provider}/cis-benchmark", **documented(rt.CloudCisBenchmarkResponse))
@@ -611,139 +284,6 @@ async def cloud_cis_benchmark(
         # Full diagnostics to the server log only; client gets a generic message.
         _logger.error("Cloud CIS benchmark failed")
         raise HTTPException(status_code=500, detail="Cloud CIS benchmark failed; see server logs.") from exc
-
-
-# ---------------------------------------------------------------------------
-# Per-account drill summary (issue #3931)
-#
-# "Show me this cloud account end-to-end" — a single read-only aggregation over
-# already-ingested findings + stored CIS benchmark blocks, scoped to one
-# provider+account. It composes the exact rollup + scope filters #3946 shipped
-# (never re-implements counting) and never triggers a live provider scan.
-# ---------------------------------------------------------------------------
-
-
-def _split_account_ref(raw: str | None) -> tuple[str, str, str]:
-    """Return ``(canonical_ref, provider, bare_account)`` for a path param.
-
-    Canonicalized (trimmed, provider lowercased) so ``AWS:1234`` and ``aws:1234``
-    collapse. A value with no ``<provider>:<account>`` shape yields an empty
-    provider/account so the endpoint returns an honest empty summary rather than
-    raising — the same never-raise contract the #3946 scope filters hold.
-    """
-    text = (raw or "").strip()
-    provider, sep, account = text.partition(":")
-    provider = provider.strip().lower()
-    account = account.strip()
-    if not sep or not provider or not account:
-        return "", "", ""
-    return f"{provider}:{account}", provider, account
-
-
-def _account_findings_href(account_ref: str, provider: str, *, domain: str | None = None) -> str:
-    """Build a /findings deep-link pre-filtered to this account (and domain)."""
-    params: dict[str, str] = {}
-    if provider:
-        params["provider"] = provider
-    if account_ref:
-        params["account"] = account_ref
-    if domain:
-        params["domain"] = domain
-    query = urlencode(params)
-    return f"/findings?{query}" if query else "/findings"
-
-
-def _cis_block_account_id(data: dict[str, Any]) -> str:
-    """Pull the account/subscription/project id out of a stored CIS block."""
-    for key in ("account_id", "subscription_id", "aws_account_id", "project_id"):
-        value = str(data.get(key) or "").strip()
-        if value:
-            return value
-    return ""
-
-
-def _cis_counts(data: dict[str, Any]) -> tuple[int, int]:
-    """Return ``(passed, failed)`` for a CIS block, computing from checks if absent."""
-    passed = data.get("passed")
-    failed = data.get("failed")
-    if isinstance(passed, int) and isinstance(failed, int):
-        return passed, failed
-    p = f = 0
-    for check in data.get("checks", []) or []:
-        if not isinstance(check, dict):
-            continue
-        status = str(check.get("status", "")).upper()
-        if status == "PASS":
-            p += 1
-        elif status == "FAIL":
-            f += 1
-    return p, f
-
-
-def _compliance_for_account(jobs_newest_first: list[Any], provider: str, wanted_ref: str) -> dict[str, Any]:
-    """Aggregate stored CIS pass-rate for the account (newest run per provider).
-
-    Only blocks whose normalized account matches ``wanted_ref`` are counted; a
-    block with no resolvable account id is admitted only when its provider equals
-    the requested account's provider (the view is provider-scoped anyway), so a
-    different account's run can never leak into this account's pass-rate. Honest
-    empty (``pass_rate: null``) when no benchmark run exists for the account.
-    """
-    from agent_bom.finding_scope import normalize_account_ref
-
-    benchmarks: list[dict[str, Any]] = []
-    seen: set[str] = set()
-    total_passed = total_failed = 0
-
-    for job in jobs_newest_first:
-        result = cast(dict[str, Any], getattr(job, "result", None) or {})
-        for prov, keys in _CIS_SECTIONS:
-            if provider and prov != provider:
-                continue
-            data: dict[str, Any] | None = None
-            for key in keys:
-                candidate = result.get(key)
-                if isinstance(candidate, dict) and candidate:
-                    data = candidate
-                    break
-            if data is None:
-                continue
-            block_provider = str(data.get("provider") or data.get("cloud_provider") or prov).strip().lower() or prov
-            account_id = _cis_block_account_id(data)
-            block_ref = normalize_account_ref(block_provider, account_id) if account_id else ""
-            if block_ref:
-                if block_ref.lower() != wanted_ref:
-                    continue
-            elif not provider or block_provider != provider:
-                # No account id and no confident provider match — skip to stay honest.
-                continue
-            marker = f"{block_provider}:{block_ref or account_id or 'provider-scope'}"
-            if marker in seen:
-                continue  # newest run already recorded for this provider/account
-            seen.add(marker)
-            passed, failed = _cis_counts(data)
-            evaluated = passed + failed
-            total_passed += passed
-            total_failed += failed
-            benchmarks.append(
-                {
-                    "provider": block_provider,
-                    "benchmark": str(data.get("benchmark") or "CIS"),
-                    "passed": passed,
-                    "failed": failed,
-                    "evaluated": evaluated,
-                    "pass_rate": round(passed / evaluated * 100, 1) if evaluated else None,
-                }
-            )
-
-    evaluated = total_passed + total_failed
-    return {
-        "evaluated": evaluated,
-        "passed": total_passed,
-        "failed": total_failed,
-        "pass_rate": round(total_passed / evaluated * 100, 1) if evaluated else None,
-        "benchmarks": benchmarks,
-    }
 
 
 def _build_account_summary(tenant_id: str, raw_account_ref: str) -> dict[str, Any]:
@@ -1147,102 +687,6 @@ async def cloud_runtime_evidence_ingest(
         raise HTTPException(status_code=500, detail="Runtime evidence ingest failed; see server logs.") from exc
 
 
-def _runtime_cohort_graph(*, scan_id: str, tenant_id: str, created_at: str, signals: list[RuntimeWorkloadSignal]) -> UnifiedGraph:
-    """Project accepted runtime observations into an exact-identity snapshot."""
-
-    graph = UnifiedGraph(scan_id=scan_id, tenant_id=tenant_id, created_at=created_at)
-    for signal in signals:
-        stable_id = canonical_id("cloud_resource", signal.provider, signal.account_id, signal.workload_ref)
-        graph.add_node(
-            UnifiedNode(
-                id=f"cloud_resource:runtime:{stable_id}",
-                entity_type=EntityType.CLOUD_RESOURCE,
-                label=signal.workload_ref,
-                risk_score=float({"critical": 100, "high": 80, "medium": 50, "low": 20}.get(signal.severity, 0)),
-                severity=signal.severity,
-                first_seen=signal.observed_at,
-                last_seen=signal.observed_at,
-                attributes={
-                    "canonical_id": stable_id,
-                    "resource_id": signal.workload_ref,
-                    "resource_type": "workload_disk",
-                    "cloud_provider": signal.provider,
-                    "cloud_account_id": signal.account_id,
-                    "account_id": signal.account_id,
-                    "runtime_id": signal.workload_id,
-                    "runtime_observed": True,
-                    "runtime_evidence": signal.to_dict(),
-                },
-                data_sources=[f"runtime:{signal.source_id}"],
-                dimensions=NodeDimensions(cloud_provider=signal.provider, surface="runtime"),
-            )
-        )
-    return graph
-
-
-def _runtime_cohort_response(child: ScanJob) -> dict[str, Any]:
-    result = child.result if isinstance(child.result, dict) else {}
-    summary = result.get("runtime_evidence_ingest")
-    response = dict(summary) if isinstance(summary, dict) else {}
-    response.update(
-        {
-            "job_id": child.job_id,
-            "correlation_cohort_id": child.correlation_cohort_id or "",
-            "cohort_manifest_hash": child.correlation_cohort_manifest_hash or "",
-            "status": "stored",
-        }
-    )
-    return response
-
-
-# ── CWPP side-scan execution (#4158 Wave 2) ─────────────────────────────────
-# Expose the shipped cross-cloud (Azure/GCP) ``run_provider_side_scan`` executor
-# over REST so it is no longer CLI-only. Trigger is admin-gated (it spends the
-# in-account collector's ambient cloud identity, like the CIS ambient path);
-# status reads map to the shared "read" gate. Every heavy provider/SDK call runs
-# off the event loop in a worker thread under backpressure. Results are read back
-# from the SAME selected durable lifecycle store the CLI and scheduler use, so a
-# scan triggered over REST is visible to every surface. AWS EBS keeps its own CLI
-# entrypoint (it does not persist to this lifecycle store).
-
-_SIDESCAN_PROVIDERS = ("azure", "gcp")
-
-
-def _run_provider_side_scan_sync(**kwargs: Any) -> list[Any]:
-    """Drive one Azure/GCP side-scan to completion on a fresh loop in a worker thread.
-
-    Kept module-level so the offload seam is spy-able/patch-able in tests and so
-    the coroutine never touches the request event loop. ``run_provider_side_scan``
-    attempts teardown of owned temporary resources and records incomplete cleanup.
-    """
-    import asyncio
-
-    from agent_bom.cloud.side_scan_targets import run_provider_side_scan
-
-    return asyncio.run(run_provider_side_scan(**kwargs))
-
-
-def _side_scan_result_summary(results: list[Any]) -> dict[str, Any]:
-    """Metadata-only run summary (never raw block data, file contents, or values)."""
-    if not results:
-        return {}
-    res = results[0]
-    counts = getattr(res, "recorded_counts", None) or {}
-    return {
-        "target_id": getattr(res, "target_id", ""),
-        "snapshot_id": getattr(res, "snapshot_id", None),
-        "scan_disk_id": getattr(res, "scan_disk_id", None),
-        "package_count": counts.get("package_count", len(getattr(res, "packages", []) or [])),
-        "vulnerability_count": counts.get("vulnerability_count", int(getattr(res, "vulnerability_count", 0) or 0)),
-        "secret_count": counts.get("secret_count", len(getattr(res, "secrets", []) or [])),
-        "config_finding_count": counts.get("config_finding_count", len(getattr(res, "config_findings", []) or [])),
-        "ioc_finding_count": counts.get("ioc_finding_count", len(getattr(res, "ioc_findings", []) or [])),
-        "cleaned_up": bool(getattr(res, "cleaned_up", False)),
-        "replayed": bool(getattr(res, "replayed", False)),
-        "warnings": [str(w) for w in (getattr(res, "warnings", []) or [])],
-    }
-
-
 @router.post("/cloud/side-scan", tags=["cloud"])
 async def cloud_side_scan_trigger(
     request: Request,
@@ -1480,3 +924,27 @@ async def cloud_side_scan_status(
     if payload is None:
         raise HTTPException(status_code=404, detail="Side-scan execution not found.")
     return payload
+
+
+_EXPORTS = {
+    "_snowflake_inventory": "agent_bom.api.cloud_inventory_read",
+    "_CIS_SECTIONS": "agent_bom.api.cloud_summary_read",
+    "_cis_block_account_id": "agent_bom.api.cloud_summary_read",
+    "_cis_counts": "agent_bom.api.cloud_summary_read",
+    "_SIDESCAN_PROVIDERS": "agent_bom.api.cloud_scan_results",
+    "_PERMISSION_RE": "agent_bom.api.cloud_response_helpers",
+    "_SCOPE_RE": "agent_bom.api.cloud_response_helpers",
+    "_AUDIT_ENUM_RE": "agent_bom.api.cloud_response_helpers",
+    "_clean_tokens": "agent_bom.api.cloud_response_helpers",
+    "_redact_summary": "agent_bom.api.cloud_response_helpers",
+    "_audit_metadata": "agent_bom.api.cloud_response_helpers",
+}
+
+
+def __getattr__(name: str) -> Any:
+    module = _EXPORTS.get(name)
+    if module is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    value = getattr(import_module(module), name)
+    globals()[name] = value
+    return value

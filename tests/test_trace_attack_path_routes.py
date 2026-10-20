@@ -134,7 +134,7 @@ def test_pull_connector_rejects_ssrf_host_with_400() -> None:
 
 
 def test_trace_explorer_filters_are_validated_and_tenant_scoped(monkeypatch, tmp_path):
-    from agent_bom.api.routes import observability
+    from agent_bom.api import observability_trace_read as observability
     from agent_bom.api.runtime_event_store import RuntimeObservationRecord, SQLiteRuntimeEventStore
 
     store = SQLiteRuntimeEventStore(str(tmp_path / "traces.db"))

@@ -5,8 +5,10 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 import pytest
+from starlette.requests import Request
 from starlette.testclient import TestClient
 
+from agent_bom.api import overview_cache
 from agent_bom.api.server import JobStatus, _get_store, app, configure_api
 from agent_bom.api.store import InMemoryJobStore
 from tests._clock_helpers import recent
@@ -361,7 +363,7 @@ def test_overview_top_risks_use_current_open_bulk_window_only(
     set_compliance_hub_store(store)
     monkeypatch.setattr(overview, "_tenant_id", lambda request: "default")
     try:
-        ids = {row["vulnerability_id"] for row in overview._hub_top_risks(object())}
+        ids = {row["vulnerability_id"] for row in overview._hub_top_risks(Request({"type": "http", "state": {"tenant_id": "default"}}))}
     finally:
         set_compliance_hub_store(None)
 
@@ -1555,7 +1557,7 @@ def test_revision_aggregate_survives_response_expiry_without_retaining_reports(t
     persisted = SQLiteJobStore(str(tmp_path / "jobs.db"))
     persisted.put(_get_store().list_all(tenant_id="default")[0])
     set_job_store(persisted)
-    monkeypatch.setattr(overview, "_overview_cache_ttl", lambda: 0)
+    monkeypatch.setattr(overview_cache, "_overview_cache_ttl", lambda: 0)
     live = {"active_surfaces": 0}
     monkeypatch.setattr(overview, "_runtime_snapshot", lambda *args: dict(live))
     client = TestClient(app)
@@ -1586,13 +1588,13 @@ def test_scan_aggregate_cache_enforces_budget_expiry_and_tenant_keys(monkeypatch
     from agent_bom.api.routes import overview
 
     overview._reset_overview_cache()
-    monkeypatch.setattr(overview, "_SCAN_AGGREGATE_MAX_BYTES", 100)
+    monkeypatch.setattr(overview_cache, "_SCAN_AGGREGATE_MAX_BYTES", 100)
     overview._scan_aggregate_put("tenant-a|revision-1|hub-1|90", {"count": 1}, [])
     assert overview._scan_aggregate_get("tenant-b|revision-1|hub-1|90") is None
     overview._scan_aggregate_put("large", {"payload": "x" * 101}, [])
     assert overview._scan_aggregate_get("large") is None
     assert sum(entry[2] for entry in overview._scan_aggregate_cache.values()) <= 100
-    monkeypatch.setattr(overview.time, "monotonic", lambda: float("inf"))
+    monkeypatch.setattr(overview_cache.time, "monotonic", lambda: float("inf"))
     assert overview._scan_aggregate_get("tenant-a|revision-1|hub-1|90") is None
     overview._reset_overview_cache()
 
@@ -1614,8 +1616,8 @@ def test_scan_aggregate_expires_at_next_window_boundary(monkeypatch):
             return now if tz is None else now.astimezone(tz)
 
     clock = [100.0]
-    monkeypatch.setattr(overview, "datetime", FixedDatetime)
-    monkeypatch.setattr(overview.time, "monotonic", lambda: clock[0])
+    monkeypatch.setattr(overview_cache, "datetime", FixedDatetime)
+    monkeypatch.setattr(overview_cache.time, "monotonic", lambda: clock[0])
     job = SimpleNamespace(completed_at=(now - timedelta(days=90) + timedelta(seconds=2)).isoformat())
     overview._scan_aggregate_put("boundary", {"count": 1}, [job])
     assert overview._scan_aggregate_cache["boundary"][0] == 102.0

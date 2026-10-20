@@ -42,7 +42,7 @@
         "id": "deep_inventory",
         "source": {
           "method": "ast",
-          "path": "src/agent_bom/api/routes/cloud.py",
+          "path": "src/agent_bom/api/cloud_inventory_read.py",
           "symbol": "_INVENTORY_PROVIDERS"
         },
         "title": "Deep inventory"
@@ -170,7 +170,7 @@
             "display": "✓",
             "source": {
               "method": "ast",
-              "path": "src/agent_bom/api/routes/cloud.py",
+              "path": "src/agent_bom/api/cloud_inventory_read.py",
               "symbol": "_INVENTORY_PROVIDERS"
             },
             "value": true
@@ -284,7 +284,7 @@
             "display": "✓",
             "source": {
               "method": "ast",
-              "path": "src/agent_bom/api/routes/cloud.py",
+              "path": "src/agent_bom/api/cloud_inventory_read.py",
               "symbol": "_INVENTORY_PROVIDERS"
             },
             "value": true
@@ -391,7 +391,7 @@
             "display": "—",
             "source": {
               "method": "ast",
-              "path": "src/agent_bom/api/routes/cloud.py",
+              "path": "src/agent_bom/api/cloud_inventory_read.py",
               "symbol": "_INVENTORY_PROVIDERS"
             },
             "value": false
@@ -495,7 +495,7 @@
             "display": "—",
             "source": {
               "method": "ast",
-              "path": "src/agent_bom/api/routes/cloud.py",
+              "path": "src/agent_bom/api/cloud_inventory_read.py",
               "symbol": "_INVENTORY_PROVIDERS"
             },
             "value": false
@@ -601,7 +601,7 @@
             "display": "—",
             "source": {
               "method": "ast",
-              "path": "src/agent_bom/api/routes/cloud.py",
+              "path": "src/agent_bom/api/cloud_inventory_read.py",
               "symbol": "_INVENTORY_PROVIDERS"
             },
             "value": false
@@ -710,7 +710,7 @@
             "display": "—",
             "source": {
               "method": "ast",
-              "path": "src/agent_bom/api/routes/cloud.py",
+              "path": "src/agent_bom/api/cloud_inventory_read.py",
               "symbol": "_INVENTORY_PROVIDERS"
             },
             "value": false
@@ -821,7 +821,7 @@
             "display": "✓",
             "source": {
               "method": "ast",
-              "path": "src/agent_bom/api/routes/cloud.py",
+              "path": "src/agent_bom/api/cloud_inventory_read.py",
               "symbol": "_INVENTORY_PROVIDERS"
             },
             "value": true
@@ -928,7 +928,7 @@
             "display": "—",
             "source": {
               "method": "ast",
-              "path": "src/agent_bom/api/routes/cloud.py",
+              "path": "src/agent_bom/api/cloud_inventory_read.py",
               "symbol": "_INVENTORY_PROVIDERS"
             },
             "value": false
@@ -1037,7 +1037,7 @@
             "display": "—",
             "source": {
               "method": "ast",
-              "path": "src/agent_bom/api/routes/cloud.py",
+              "path": "src/agent_bom/api/cloud_inventory_read.py",
               "symbol": "_INVENTORY_PROVIDERS"
             },
             "value": false
@@ -1141,7 +1141,7 @@
             "display": "—",
             "source": {
               "method": "ast",
-              "path": "src/agent_bom/api/routes/cloud.py",
+              "path": "src/agent_bom/api/cloud_inventory_read.py",
               "symbol": "_INVENTORY_PROVIDERS"
             },
             "value": false
@@ -1245,7 +1245,7 @@
             "display": "—",
             "source": {
               "method": "ast",
-              "path": "src/agent_bom/api/routes/cloud.py",
+              "path": "src/agent_bom/api/cloud_inventory_read.py",
               "symbol": "_INVENTORY_PROVIDERS"
             },
             "value": false
@@ -1349,7 +1349,7 @@
             "display": "—",
             "source": {
               "method": "ast",
-              "path": "src/agent_bom/api/routes/cloud.py",
+              "path": "src/agent_bom/api/cloud_inventory_read.py",
               "symbol": "_INVENTORY_PROVIDERS"
             },
             "value": false
@@ -1453,7 +1453,7 @@
             "display": "—",
             "source": {
               "method": "ast",
-              "path": "src/agent_bom/api/routes/cloud.py",
+              "path": "src/agent_bom/api/cloud_inventory_read.py",
               "symbol": "_INVENTORY_PROVIDERS"
             },
             "value": false
@@ -1557,7 +1557,7 @@
             "display": "—",
             "source": {
               "method": "ast",
-              "path": "src/agent_bom/api/routes/cloud.py",
+              "path": "src/agent_bom/api/cloud_inventory_read.py",
               "symbol": "_INVENTORY_PROVIDERS"
             },
             "value": false
@@ -1661,7 +1661,7 @@
             "display": "—",
             "source": {
               "method": "ast",
-              "path": "src/agent_bom/api/routes/cloud.py",
+              "path": "src/agent_bom/api/cloud_inventory_read.py",
               "symbol": "_INVENTORY_PROVIDERS"
             },
             "value": false
@@ -1770,7 +1770,7 @@
             "display": "✓",
             "source": {
               "method": "ast",
-              "path": "src/agent_bom/api/routes/cloud.py",
+              "path": "src/agent_bom/api/cloud_inventory_read.py",
               "symbol": "_INVENTORY_PROVIDERS"
             },
             "value": true
@@ -1874,7 +1874,7 @@
             "display": "—",
             "source": {
               "method": "ast",
-              "path": "src/agent_bom/api/routes/cloud.py",
+              "path": "src/agent_bom/api/cloud_inventory_read.py",
               "symbol": "_INVENTORY_PROVIDERS"
             },
             "value": false
@@ -1978,7 +1978,7 @@
             "display": "—",
             "source": {
               "method": "ast",
-              "path": "src/agent_bom/api/routes/cloud.py",
+              "path": "src/agent_bom/api/cloud_inventory_read.py",
               "symbol": "_INVENTORY_PROVIDERS"
             },
             "value": false
@@ -2110,7 +2110,7 @@
           "name": "deep_inventory_api",
           "source": {
             "method": "ast",
-            "path": "src/agent_bom/api/routes/cloud.py",
+            "path": "src/agent_bom/api/cloud_inventory_read.py",
             "symbol": "_INVENTORY_PROVIDERS"
           }
         },
@@ -2178,7 +2178,7 @@
           "name": "side_scan_api",
           "source": {
             "method": "ast",
-            "path": "src/agent_bom/api/routes/cloud.py",
+            "path": "src/agent_bom/api/cloud_scan_results.py",
             "symbol": "_SIDESCAN_PROVIDERS"
           }
         }
@@ -2636,12 +2636,12 @@
       "sources": [
         {
           "method": "ast",
-          "path": "src/agent_bom/models.py",
+          "path": "src/agent_bom/domain/inventory_types.py",
           "symbol": "AgentType"
         },
         {
           "method": "ast",
-          "path": "src/agent_bom/discovery/__init__.py",
+          "path": "src/agent_bom/discovery/platform_config.py",
           "symbol": "CONFIG_LOCATIONS"
         },
         {

@@ -151,6 +151,7 @@ def test_api_pipeline_ai_enrichment_inherits_env_and_serializes_typed_provenance
     monkeypatch.setattr("agent_bom.discovery.discover_all", lambda *args, **kwargs: [agent])
     monkeypatch.setattr("agent_bom.scanners.scan_agents_sync", lambda *args, **kwargs: [blast_radius])
     monkeypatch.setattr("agent_bom.ai_enrich._resolve_ai_provider", lambda model="ollama/fake": resolution)
+    monkeypatch.setattr("agent_bom.ai_components.provider_discovery._resolve_ai_provider", lambda model="ollama/fake": resolution)
     monkeypatch.setattr("agent_bom.ai_enrich._call_llm", fake_provider)
 
     _run_scan_sync(job)

@@ -28,8 +28,8 @@ def _authority():
 
 @pytest.mark.parametrize("tenant", ["tenant-a", None, "", " \t "])
 def test_connection_scan_rejects_missing_tenant_and_drops_bypass(monkeypatch, maintenance_context, tenant):
+    from agent_bom.api import connection_scan_worker as cloud_connections
     from agent_bom.api import connection_scheduler
-    from agent_bom.api.routes import cloud_connections
 
     seen = []
 

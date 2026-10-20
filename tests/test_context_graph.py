@@ -637,7 +637,7 @@ class TestAPIContextGraph:
         """GET /v1/scan/{id}/context-graph computes graph payloads off the event loop."""
         import asyncio
 
-        from agent_bom.api.routes import scan as scan_routes
+        from agent_bom.api.routes import scan_exports as scan_routes
         from agent_bom.api.server import _get_store, app, configure_api
 
         api_key = "context-graph-offload-test-key"

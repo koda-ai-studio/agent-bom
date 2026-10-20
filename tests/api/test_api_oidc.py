@@ -672,7 +672,7 @@ async def test_observability_metrics_are_tenant_scoped_when_tenant_present():
             ]
 
     request = SimpleNamespace(state=SimpleNamespace(tenant_id="tenant-alpha"))
-    with patch("agent_bom.api.routes.observability._get_fleet_store", return_value=_FleetStore()):
+    with patch("agent_bom.api.observability_costs._get_fleet_store", return_value=_FleetStore()):
         response = await observability_routes._render_prometheus_metrics(request)
     body = response.body.decode("utf-8")
     assert "agent_bom_fleet_total 2" in body
@@ -687,7 +687,7 @@ async def test_observability_metrics_do_not_aggregate_fleet_without_tenant_conte
         def list_by_tenant(self, tenant_id: str):
             raise AssertionError("list_by_tenant should not be called without tenant context")
 
-    with patch("agent_bom.api.routes.observability._get_fleet_store", return_value=_FleetStore()):
+    with patch("agent_bom.api.observability_costs._get_fleet_store", return_value=_FleetStore()):
         response = await observability_routes._render_prometheus_metrics()
     body = response.body.decode("utf-8")
     assert "agent_bom_fleet_total 0" in body

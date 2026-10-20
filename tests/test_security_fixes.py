@@ -142,7 +142,7 @@ async def test_send_webhook_rejects_private_url():
     from agent_bom.proxy import _send_webhook
 
     # Should silently return (log warning) without making HTTP request
-    with patch("agent_bom.proxy.logger") as mock_logger:
+    with patch("agent_bom.runtime.proxy_setup.logger") as mock_logger:
         await _send_webhook("https://192.168.1.1/hook", {"test": True})
         mock_logger.warning.assert_called_once()
         assert "rejected" in mock_logger.warning.call_args[0][0].lower()
@@ -153,7 +153,7 @@ async def test_send_webhook_rejects_http():
     """_send_webhook should reject non-HTTPS URLs."""
     from agent_bom.proxy import _send_webhook
 
-    with patch("agent_bom.proxy.logger") as mock_logger:
+    with patch("agent_bom.runtime.proxy_setup.logger") as mock_logger:
         await _send_webhook("http://example.com/hook", {"test": True})
         mock_logger.warning.assert_called_once()
 

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -1057,12 +1057,12 @@ class TestSnowflakeExceptionStore:
 
 class TestServerLifespanAutoDetect:
     @patch("agent_bom.api.snowflake_store._sf_connect")
-    def test_snowflake_takes_priority(self, mock_sf_connect, monkeypatch):
+    def test_snowflake_takes_priority(self, mock_sf_connect, monkeypatch, tmp_path):
         """When SNOWFLAKE_ACCOUNT is set, Snowflake stores are used over SQLite."""
         monkeypatch.setenv("SNOWFLAKE_ACCOUNT", "test_acct")
         monkeypatch.setenv("SNOWFLAKE_USER", "test_user")
         monkeypatch.setenv("SNOWFLAKE_PRIVATE_KEY_PATH", "/keys/rsa.p8")
-        monkeypatch.setenv("AGENT_BOM_DB", "/tmp/should_not_use.db")
+        monkeypatch.setenv("AGENT_BOM_DB", str(tmp_path / "companion.db"))
         monkeypatch.setenv("AGENT_BOM_POSTGRES_URL", "postgresql://should-not-use.example/agent_bom")
         monkeypatch.delenv("SNOWFLAKE_PASSWORD", raising=False)
 
@@ -1071,11 +1071,17 @@ class TestServerLifespanAutoDetect:
         import agent_bom.api.server as srv
         import agent_bom.api.stores as st
         from agent_bom.api.report_job_store import InMemoryReportJobStore
+        from agent_bom.api.skills_scan_store import InMemorySkillsScanStore
 
-        # Report queues have their own durable backend selection. Keep this
-        # Snowflake scan-store test isolated from the deliberately fake DSN.
+        # Companion stores have independent backend selection. This startup
+        # test checks Snowflake stores, not periodic campaign reconciliation.
         report_store = InMemoryReportJobStore()
         monkeypatch.setattr("agent_bom.api.report_job_store.get_report_job_store", lambda: report_store)
+        skills_store = InMemorySkillsScanStore()
+        monkeypatch.setattr("agent_bom.api.skills_scan_store.get_skills_scan_store", lambda: skills_store)
+        monkeypatch.setattr(srv, "_cleanup_loop", AsyncMock())
+        postgres_pool = MagicMock(side_effect=AssertionError("Snowflake fixture attempted a real Postgres connection"))
+        monkeypatch.setattr("agent_bom.api.postgres_common._get_pool", postgres_pool)
 
         # Reset global stores
         st._store = None
@@ -1108,6 +1114,7 @@ class TestServerLifespanAutoDetect:
         assert isinstance(st._policy_store, SnowflakePolicyStore)
         assert isinstance(st._schedule_store, SnowflakeScheduleStore)
         assert isinstance(st._exception_store, SnowflakeExceptionStore)
+        postgres_pool.assert_not_called()
 
         # Cleanup
         st._store = None

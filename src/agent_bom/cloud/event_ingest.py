@@ -296,7 +296,7 @@ def _default_persist(record: CloudConnectionRecord, tenant_id: str, report: Any)
     Imported lazily so this module (and its unit tests) do not pull the API route
     layer at import time — mirrors the connection scheduler's lazy route import.
     """
-    from agent_bom.api.routes.cloud_connections import _persist_connection_report
+    from agent_bom.api.connection_scan_reports import _persist_connection_report
 
     return _persist_connection_report(record, tenant_id, report)
 

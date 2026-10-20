@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from agent_bom.api import scan_cohort_submission, scan_job_dispatch
 from agent_bom.api.auto_correlation import AutoCorrelationPolicy, reconcile_auto_correlations_once
 from agent_bom.api.graph_store import SQLiteGraphStore
 from agent_bom.api.models import JobStatus, ScanRequest
@@ -47,7 +48,7 @@ def test_durable_cohort_replay_preserves_exact_membership_and_policy(tmp_path: P
     set_job_store(jobs)
     set_graph_store(SQLiteGraphStore(graph_path))
     dispatched: list[str] = []
-    monkeypatch.setattr(scan_routes, "dispatch_scan_job", lambda job: dispatched.append(job.job_id))
+    monkeypatch.setattr(scan_cohort_submission, "dispatch_scan_job", lambda job: dispatched.append(job.job_id))
     cohort_id = scan_routes.correlation_cohort_id(tenant_id="tenant-a", idempotency_key="run-42")
 
     first = scan_routes.enqueue_correlation_cohort(
@@ -100,7 +101,7 @@ def test_cohort_creation_publishes_no_durable_or_hot_cache_rows_when_atomic_writ
     jobs = FailAtomicPutStore(tmp_path / "jobs.db")
     set_job_store(jobs)
     set_graph_store(SQLiteGraphStore(tmp_path / "graph.db"))
-    monkeypatch.setattr(scan_routes, "dispatch_scan_job", lambda job: None)
+    monkeypatch.setattr(scan_cohort_submission, "dispatch_scan_job", lambda job: None)
     cohort_id = scan_routes.correlation_cohort_id(tenant_id="tenant-a", idempotency_key="atomic-run")
 
     with pytest.raises(RuntimeError, match="database password"):
@@ -152,7 +153,7 @@ def test_durable_cohort_replay_repairs_a_missing_child_after_interrupted_legacy_
     set_job_store(jobs)
     set_graph_store(SQLiteGraphStore(tmp_path / "graph.db"))
     dispatched: list[str] = []
-    monkeypatch.setattr(scan_routes, "dispatch_scan_job", lambda job: dispatched.append(job.job_id))
+    monkeypatch.setattr(scan_cohort_submission, "dispatch_scan_job", lambda job: dispatched.append(job.job_id))
     cohort_id = scan_routes.correlation_cohort_id(tenant_id="tenant-a", idempotency_key="run-42")
     parent = scan_routes.enqueue_correlation_cohort(
         tenant_id="tenant-a",
@@ -192,7 +193,7 @@ def test_two_replicas_dispatch_only_the_winning_cohort_child_repair(tmp_path: Pa
     set_job_store(jobs)
     set_graph_store(SQLiteGraphStore(tmp_path / "graph.db"))
     dispatched: list[str] = []
-    monkeypatch.setattr(scan_routes, "submit_scan_job", lambda job: dispatched.append(job.job_id))
+    monkeypatch.setattr(scan_job_dispatch, "submit_scan_job", lambda job: dispatched.append(job.job_id))
     cohort_id = scan_routes.correlation_cohort_id(tenant_id="tenant-a", idempotency_key="repair-race")
     parent = scan_routes.enqueue_correlation_cohort(
         tenant_id="tenant-a",
@@ -250,7 +251,7 @@ def test_cohort_retry_recovers_mid_dispatch_crash_without_duplicate_handoff(
             raise RuntimeError("injected handoff interruption")
         submitted.append(job.job_id)
 
-    monkeypatch.setattr(scan_routes, "submit_scan_job", _submit)
+    monkeypatch.setattr(scan_job_dispatch, "submit_scan_job", _submit)
     kwargs = {
         "tenant_id": "tenant-a",
         "triggered_by": "api-test",
@@ -279,7 +280,7 @@ def test_cohort_rejects_duplicates_incomplete_members_and_id_reuse(tmp_path: Pat
     jobs = SQLiteJobStore(tmp_path / "jobs.db")
     set_job_store(jobs)
     set_graph_store(SQLiteGraphStore(tmp_path / "graph.db"))
-    monkeypatch.setattr(scan_routes, "dispatch_scan_job", lambda job: None)
+    monkeypatch.setattr(scan_cohort_submission, "dispatch_scan_job", lambda job: None)
     cohort_id = scan_routes.correlation_cohort_id(tenant_id="tenant-a", idempotency_key="run-42")
 
     with pytest.raises(ValueError, match="distinct source ids"):
@@ -331,7 +332,7 @@ def test_unsupported_store_records_terminal_cohort_skip(tmp_path: Path, monkeypa
     jobs = InMemoryJobStore()
     set_job_store(jobs)
     set_graph_store(SQLiteGraphStore(tmp_path / "graph.db"))
-    monkeypatch.setattr(scan_routes, "dispatch_scan_job", lambda job: None)
+    monkeypatch.setattr(scan_cohort_submission, "dispatch_scan_job", lambda job: None)
     cohort_id = scan_routes.correlation_cohort_id(tenant_id="tenant-a", idempotency_key="run-42")
 
     parent = scan_routes.enqueue_correlation_cohort(
@@ -354,7 +355,7 @@ async def test_cohort_freshness_policy_is_preserved_through_scheduler_reconcilia
     graph_store = SQLiteGraphStore(tmp_path / "graph.db")
     set_job_store(jobs)
     set_graph_store(graph_store)
-    monkeypatch.setattr(scan_routes, "dispatch_scan_job", lambda job: None)
+    monkeypatch.setattr(scan_cohort_submission, "dispatch_scan_job", lambda job: None)
     cohort_id = scan_routes.correlation_cohort_id(tenant_id="tenant-a", idempotency_key="stale-run")
     parent = scan_routes.enqueue_correlation_cohort(
         tenant_id="tenant-a",

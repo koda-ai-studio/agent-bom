@@ -162,7 +162,7 @@ def wired_client(tmp_path, monkeypatch):
         graph.attack_paths = _derived_attack_paths(graph)
         graph_store.save_graph(graph)
 
-    monkeypatch.setattr("agent_bom.api.routes.scan.submit_scan_job", _complete_synchronously)
+    monkeypatch.setattr("agent_bom.api.scan_job_dispatch.submit_scan_job", _complete_synchronously)
 
     try:
         yield TestClient(app, raise_server_exceptions=False)
@@ -307,7 +307,7 @@ def test_findings_read_survives_unavailable_graph_backend(wired_client, monkeypa
         def attack_paths(self, **_kwargs):
             raise NotImplementedError("graph backend unavailable at secret://internal-host")
 
-    monkeypatch.setattr("agent_bom.api.routes.scan._get_graph_store", lambda: UnavailableGraphStore())
+    monkeypatch.setattr("agent_bom.api.finding_page_read._get_graph_store", lambda: UnavailableGraphStore())
 
     create = wired_client.post("/v1/scan", json={})
     assert create.status_code == 202
@@ -331,7 +331,7 @@ def test_findings_read_sheds_with_429_when_backpressure_opens(wired_client, monk
     """
     import time
 
-    from agent_bom.api.routes import scan as scan_routes
+    from agent_bom.api import finding_page_read
     from agent_bom.backpressure import reset_backpressure_for_tests
 
     monkeypatch.setenv("AGENT_BOM_BACKPRESSURE_FINDINGS_P99_MS", "1")
@@ -339,22 +339,28 @@ def test_findings_read_sheds_with_429_when_backpressure_opens(wired_client, monk
     monkeypatch.setenv("AGENT_BOM_BACKPRESSURE_FINDINGS_COOLDOWN_SECONDS", "30")
     reset_backpressure_for_tests()
 
-    original_impl = scan_routes._list_findings_impl
+    original_impl = finding_page_read._list_findings_impl
+
+    calls = 0
 
     def _slow_impl(*args, **kwargs):
+        nonlocal calls
+        calls += 1
         time.sleep(0.01)
         return original_impl(*args, **kwargs)
 
-    monkeypatch.setattr(scan_routes, "_list_findings_impl", _slow_impl)
+    monkeypatch.setattr(finding_page_read, "_list_findings_impl", _slow_impl)
 
     try:
         # First read completes and records a latency above the 1ms ceiling,
         # tripping the p99 cooldown; the next read must shed.
         warm = wired_client.get("/v1/findings")
         assert warm.status_code == 200
+        assert calls == 1
 
         shed = wired_client.get("/v1/findings")
         assert shed.status_code == 429
+        assert calls == 1
         body = shed.json()["detail"]
         assert body["path"] == "findings"
         assert body["reason"] == "p99_latency_threshold"

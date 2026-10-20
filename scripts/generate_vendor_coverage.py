@@ -141,6 +141,8 @@ _P_CONN = f"{PKG}/api/connection_store.py"
 _P_SCHED = f"{PKG}/api/connection_scheduler.py"
 _P_CLOUD = f"{PKG}/cloud/__init__.py"
 _P_ROUTES = f"{PKG}/api/routes/cloud.py"
+_P_INVENTORY = f"{PKG}/api/cloud_inventory_read.py"
+_P_SCAN_RESULTS = f"{PKG}/api/cloud_scan_results.py"
 _P_BENCH_JSON = f"{PKG}/cloud/benchmark_inventory.json"
 _P_BENCH_PROV = f"{PKG}/cloud/benchmark_provenance.py"
 _P_AUTHZ = f"{PKG}/cloud/authorization_evidence.py"
@@ -192,7 +194,7 @@ def build_cloud_matrix() -> dict[str, Any]:
     api_src = _src(_P_CONN, "SUPPORTED_PROVIDERS")
     sched_src = _src(_P_SCHED, "_SCHEDULABLE_PROVIDERS")
     disc_src = _src(_P_CLOUD, "_PROVIDERS")
-    inv_src = _src(_P_ROUTES, "_INVENTORY_PROVIDERS")
+    inv_src = _src(_P_INVENTORY, "_INVENTORY_PROVIDERS")
     runtime_src = _src(_P_RUNTIME, "_VALID_PROVIDERS")
 
     membership = [
@@ -200,7 +202,7 @@ def build_cloud_matrix() -> dict[str, Any]:
         _membership_lane("api_connection", "API connection", _strings(_P_CONN, "SUPPORTED_PROVIDERS"), api_src),
         _membership_lane("scheduled", "Scheduled scans", _strings(_P_SCHED, "_SCHEDULABLE_PROVIDERS"), sched_src),
         _membership_lane("ai_discovery", "AI/agent discovery", _dict_keys(_P_CLOUD, "_PROVIDERS"), disc_src),
-        _membership_lane("deep_inventory", "Deep inventory", _strings(_P_ROUTES, "_INVENTORY_PROVIDERS"), inv_src),
+        _membership_lane("deep_inventory", "Deep inventory", _strings(_P_INVENTORY, "_INVENTORY_PROVIDERS"), inv_src),
     ]
 
     # CIS / benchmark posture.
@@ -405,8 +407,8 @@ def _iac_rule_families() -> dict[str, int]:
 
 
 def _agent_clients() -> dict[str, Any]:
-    models = f"{PKG}/models.py"
-    disc = f"{PKG}/discovery/__init__.py"
+    models = f"{PKG}/domain/inventory_types.py"
+    disc = f"{PKG}/discovery/platform_config.py"
     members: dict[str, str] = {}
     for node in _module(models).body:
         if isinstance(node, ast.ClassDef) and node.name == "AgentType":
@@ -498,8 +500,8 @@ def build_integrations() -> list[dict[str, Any]]:
         "Agent / MCP clients",
         [{"agent_type": c, "support_level": level} for level, values in clients.items() for c in values],
         [
-            _src(f"{PKG}/models.py", "AgentType"),
-            _src(f"{PKG}/discovery/__init__.py", "CONFIG_LOCATIONS"),
+            _src(f"{PKG}/domain/inventory_types.py", "AgentType"),
+            _src(f"{PKG}/discovery/platform_config.py", "CONFIG_LOCATIONS"),
             _src(f"{PKG}/discovery/coverage.py", "supported_clients", "logic-mirrored"),
         ],
         "support_level follows discovery/coverage.py: config_paths when CONFIG_LOCATIONS lists a path for any platform; "
@@ -518,12 +520,12 @@ def build_disagreements() -> list[dict[str, Any]]:
         "api_connection": (_strings(_P_CONN, "SUPPORTED_PROVIDERS"), _src(_P_CONN, "SUPPORTED_PROVIDERS")),
         "scheduler": (_strings(_P_SCHED, "_SCHEDULABLE_PROVIDERS"), _src(_P_SCHED, "_SCHEDULABLE_PROVIDERS")),
         "scan_scopes": (_strings(_P_SCOPES, "CLOUD_PROVIDERS"), _src(_P_SCOPES, "CLOUD_PROVIDERS")),
-        "deep_inventory_api": (_strings(_P_ROUTES, "_INVENTORY_PROVIDERS"), _src(_P_ROUTES, "_INVENTORY_PROVIDERS")),
+        "deep_inventory_api": (_strings(_P_INVENTORY, "_INVENTORY_PROVIDERS"), _src(_P_INVENTORY, "_INVENTORY_PROVIDERS")),
         "cis_api": (_strings(_P_ROUTES, "_CIS_PROVIDERS"), _src(_P_ROUTES, "_CIS_PROVIDERS")),
         "benchmark_inventory": (bench_json, _src(_P_BENCH_JSON, "providers", "json")),
         "benchmark_provenance": (sorted(_benchmark_provenance()), _src(_P_BENCH_PROV, "BENCHMARK_PROVENANCE")),
         "side_scan_capabilities": (sorted(_side_scan_capabilities()), _src(_P_SIDESCAN, "side_scan_provider_capabilities")),
-        "side_scan_api": (_strings(_P_ROUTES, "_SIDESCAN_PROVIDERS"), _src(_P_ROUTES, "_SIDESCAN_PROVIDERS")),
+        "side_scan_api": (_strings(_P_SCAN_RESULTS, "_SIDESCAN_PROVIDERS"), _src(_P_SCAN_RESULTS, "_SIDESCAN_PROVIDERS")),
         "discovery_registry": (_dict_keys(_P_CLOUD, "_PROVIDERS"), _src(_P_CLOUD, "_PROVIDERS")),
     }
     groups = [

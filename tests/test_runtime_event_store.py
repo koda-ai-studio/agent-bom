@@ -166,7 +166,7 @@ async def test_ocsf_idless_event_dedups_across_retries():
         def record_events(self, events, *, tenant_id: str = "default"):
             return None
 
-    with patch("agent_bom.api.routes.observability._get_analytics_store", return_value=_Analytics()):
+    with patch("agent_bom.api.observability_events._get_analytics_store", return_value=_Analytics()):
         await observability_routes.ingest_ocsf(req, payload)
         await observability_routes.ingest_ocsf(req, payload)
 
@@ -194,7 +194,7 @@ async def test_ocsf_ingest_surfaces_product_attribution_in_sources():
         def record_events(self, events, *, tenant_id: str = "default"):
             return None
 
-    with patch("agent_bom.api.routes.observability._get_analytics_store", return_value=_Analytics()):
+    with patch("agent_bom.api.observability_events._get_analytics_store", return_value=_Analytics()):
         response = await observability_routes.ingest_ocsf(req, payload)
 
     assert response["sources"] == ["datadog"]

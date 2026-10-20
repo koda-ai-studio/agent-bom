@@ -7,17 +7,16 @@ Endpoints:
     GET       /v1/shield/status      shield threat assessment
     POST      /v1/shield/unblock     deactivate kill-switch
     WebSocket /ws/proxy/metrics      live metrics stream (1 Hz)
-    WebSocket /ws/proxy/alerts       live alert stream
-"""
+    WebSocket /ws/proxy/alerts       live alert stream"""
 
 from __future__ import annotations
 
 import logging
 import time
-from collections import Counter, OrderedDict, deque
+from collections import OrderedDict, deque
 from datetime import datetime, timezone
 from functools import partial
-from pathlib import Path as _Path
+from importlib import import_module
 from threading import Lock
 from typing import Any, cast
 
@@ -34,7 +33,9 @@ from agent_bom.api.gateway_activity_store import (
 )
 from agent_bom.api.idempotency_store import IdempotencyConflictError, idempotency_request_fingerprint
 from agent_bom.api.models import ProxyAuditIngestRequest
+from agent_bom.api.proxy_log_read import _MAX_EVIDENCE_LOG_LINES, _get_configured_log_path, _read_alerts_from_log, _read_metrics_from_log
 from agent_bom.api.proxy_provenance import GatewaySubmissionProvenance, canonicalize_proxy_submission
+from agent_bom.api.proxy_runtime_projection import _alert_visible_to_tenant, _build_runtime_production_index, _summarize_proxy_alerts
 from agent_bom.api.read_models import ProxyAlertsResponse, ProxyStatusResponse, documented
 from agent_bom.api.read_models import runtime_estate_b as rt
 from agent_bom.api.shield_registry import _MAX_SHIELD_SESSIONS, _get_engine, _shield_engines, _shield_engines_lock, _shield_key
@@ -46,34 +47,34 @@ from agent_bom.security import sanitize_error, sanitize_sensitive_payload
 
 router = APIRouter(dependencies=[Depends(demo_daily_evidence_dependency)])
 
-_logger = logging.getLogger(__name__)
+
+_logger = logging.getLogger("agent_bom.api.routes.proxy")
+
+
 ws_router = APIRouter()
 
-# ── In-process ring buffer for proxy alerts/metrics ──────────────────────────
-#
-# This ring remains a compatibility projection for legacy proxy alerts and
-# WebSocket hints. Canonical standalone-gateway decisions are acknowledged only
-# after the durable gateway activity ledger commits them; feed cursor reads do
-# not depend on this process-local deque.
-#
-# _proxy_alerts is a bounded deque (O(1) append/pop from both ends).
-# _proxy_alerts_total is a monotonic counter that never decrements —
-# WebSocket clients track their position by this counter, not by deque
-# index, so they correctly detect new alerts even when old ones are
-# evicted from the ring.
 
 _proxy_alerts: deque[dict] = deque(maxlen=1000)
+
+
 _proxy_alerts_total: int = 0
+
+
 _proxy_metrics: dict | None = None
+
+
 _proxy_metrics_by_tenant: dict[str, dict] = {}
 
-# dedupe inbound proxy alerts by event_id over a 24h
-# window so a hostile or buggy proxy cannot replay credential-leak alerts and
-# inflate detector tallies. Per-(tenant_id, event_id) entries expire after
-# AUDIT_DEDUPE_WINDOW_SECONDS.
+
 AUDIT_DEDUPE_WINDOW_SECONDS = 24 * 60 * 60
+
+
 AUDIT_DEDUPE_MAX_ENTRIES = 50_000
+
+
 _audit_dedupe: "OrderedDict[tuple[str, str], float]" = OrderedDict()
+
+
 _audit_dedupe_lock = Lock()
 
 
@@ -165,17 +166,6 @@ def push_proxy_metrics(metrics: dict, *, submission_provenance: GatewaySubmissio
 def _request_tenant_id(request: Request) -> str:
     """Return the authenticated tenant for HTTP proxy endpoints."""
     return require_request_tenant_id(request)
-
-
-def _alert_visible_to_tenant(alert: dict, tenant_id: str) -> bool:
-    """Scope process-wide proxy alerts to the authenticated tenant.
-
-    Historical single-user/local records may not have a tenant tag. Keep those
-    visible only to the default tenant so they do not leak into authenticated
-    customer tenants on shared deployments.
-    """
-    alert_tenant = str(alert.get("tenant_id") or "default")
-    return alert_tenant == tenant_id
 
 
 _CANONICAL_GATEWAY_EVENT_TYPES = GATEWAY_CANONICAL_EVENT_TYPES
@@ -522,84 +512,6 @@ async def ingest_proxy_audit(request: Request, body: ProxyAuditIngestRequest) ->
     return response
 
 
-def _get_configured_log_path() -> _Path | None:
-    """Return the server-configured audit log path, if set.
-
-    The path is set via the AGENT_BOM_LOG environment variable (server-side
-    config only — never from user input).  Returns None when the env var is
-    unset or the file doesn't exist.
-    """
-    import os
-
-    log_env = os.environ.get("AGENT_BOM_LOG")
-    if not log_env:
-        return None
-    path = _Path(log_env).resolve()
-    if not path.is_file() or path.suffix != ".jsonl":
-        return None
-    return path
-
-
-# How much of the JSONL audit log a caller reads. The two callers have
-# genuinely different jobs, so one shared cap cannot serve both:
-#
-# * evidence readers (finding runtime evidence, the runtime production index,
-#   the showcase gateway, ``/v1/proxy/alerts``, and the compliance ``has_proxy``
-#   summary) need the complete bounded evidence set, and none of them carries a
-#   "partial" signal — quietly handing them 1,000 records understated every one.
-# * the gateway activity feed renders one bounded page from a degraded fallback
-#   and never wants more.
-_MAX_EVIDENCE_LOG_LINES = 50_000
-_MAX_FEED_LOG_LINES = 1_000
-_LOG_TAIL_BLOCK_BYTES = 64 * 1024
-
-
-def _read_newest_log_lines(path: _Path, *, limit: int) -> list[bytes]:
-    """Read at most the newest ``limit`` JSONL lines without scanning the file."""
-
-    if limit < 1:
-        return []
-    with open(path, "rb") as handle:
-        handle.seek(0, 2)
-        position = handle.tell()
-        chunks: list[bytes] = []
-        newline_count = 0
-        while position > 0 and newline_count <= limit:
-            block_size = min(_LOG_TAIL_BLOCK_BYTES, position)
-            position -= block_size
-            handle.seek(position)
-            chunk = handle.read(block_size)
-            chunks.append(chunk)
-            newline_count += chunk.count(b"\n")
-    data = b"".join(reversed(chunks))
-    return data.splitlines()[-limit:]
-
-
-def _read_alerts_from_log(path: _Path, *, limit: int = _MAX_EVIDENCE_LOG_LINES) -> list[dict]:
-    """Read the newest ``limit`` runtime alerts from a JSONL audit log."""
-    import json as _json
-
-    alerts: list[dict] = []
-    try:
-        for raw_line in _read_newest_log_lines(path, limit=limit):
-            line = raw_line.strip()
-            if not line:
-                continue
-            try:
-                record = _json.loads(line)
-                if record.get("type") == "runtime_alert":
-                    sanitized = sanitize_sensitive_payload(record)
-                    if isinstance(sanitized, dict):
-                        safe = redact_for_persistence(sanitized, EvidenceTier.SAFE_TO_STORE)
-                        if isinstance(safe, dict):
-                            alerts.append(safe)
-            except (UnicodeDecodeError, ValueError, KeyError):
-                continue
-    except OSError:
-        pass
-    return alerts
-
-
 def _load_proxy_alerts(tenant_id: str = "default", *, limit: int | None = None) -> list[dict]:
     """Return in-memory alerts, or fall back to the configured audit log.
 
@@ -613,178 +525,6 @@ def _load_proxy_alerts(tenant_id: str = "default", *, limit: int | None = None) 
     else:
         alerts = list(_proxy_alerts)
     return [alert for alert in alerts if _alert_visible_to_tenant(alert, tenant_id)]
-
-
-def _summarize_proxy_alerts(alerts: list[dict]) -> dict:
-    """Build a compact summary for proxy status and alert APIs."""
-    severity_counts: Counter[str] = Counter()
-    detector_counts: Counter[str] = Counter()
-    blocked_alerts = 0
-    recent_alerts: list[dict] = []
-
-    for alert in sorted(alerts, key=lambda item: str(item.get("ts", "")), reverse=True):
-        severity = str(alert.get("severity", "unknown")).lower()
-        detector = str(alert.get("detector", "unknown"))
-        severity_counts[severity] += 1
-        detector_counts[detector] += 1
-        details = alert.get("details", {})
-        if isinstance(details, dict) and details.get("action") == "blocked":
-            blocked_alerts += 1
-        if len(recent_alerts) < 5:
-            recent_alerts.append(
-                {
-                    "ts": alert.get("ts", ""),
-                    "detector": detector,
-                    "severity": severity,
-                    "message": alert.get("message", ""),
-                }
-            )
-
-    return {
-        "total_alerts": len(alerts),
-        "blocked_alerts": blocked_alerts,
-        "alerts_by_severity": dict(sorted(severity_counts.items())),
-        "alerts_by_detector": dict(sorted(detector_counts.items())),
-        "latest_alert_at": recent_alerts[0]["ts"] if recent_alerts else "",
-        "recent_alerts": recent_alerts,
-    }
-
-
-def _safe_int(value: object, default: int = 0) -> int:
-    if isinstance(value, bool):
-        return int(value)
-    if isinstance(value, int | float | str):
-        try:
-            return int(value)
-        except ValueError:
-            return default
-    return default
-
-
-def _safe_float(value: object, default: float = 0.0) -> float:
-    if isinstance(value, bool):
-        return float(value)
-    if isinstance(value, int | float | str):
-        try:
-            return float(value)
-        except ValueError:
-            return default
-    return default
-
-
-def _numeric_mapping(value: object) -> dict[str, int]:
-    if not isinstance(value, dict):
-        return {}
-    result: dict[str, int] = {}
-    for raw_key, raw_count in value.items():
-        key = str(raw_key or "unknown")
-        result[key] = max(0, _safe_int(raw_count))
-    return dict(sorted(result.items()))
-
-
-def _top_items(counts: Counter[str] | dict[str, int], *, limit: int = 10) -> list[dict[str, object]]:
-    if isinstance(counts, Counter):
-        items = counts.most_common(limit)
-    else:
-        items = sorted(counts.items(), key=lambda item: (-item[1], item[0]))[:limit]
-    return [{"name": name, "count": count} for name, count in items]
-
-
-def _timestamp_value(value: object) -> float:
-    if isinstance(value, int | float):
-        return float(value)
-    if not isinstance(value, str) or not value:
-        return 0.0
-    try:
-        return datetime.fromisoformat(value.replace("Z", "+00:00")).timestamp()
-    except ValueError:
-        return 0.0
-
-
-def _latest_timestamp(values: list[object]) -> str:
-    candidates = [value for value in values if value]
-    if not candidates:
-        return ""
-    latest = max(candidates, key=_timestamp_value)
-    return str(latest)
-
-
-def _runtime_retention_posture() -> dict[str, object]:
-    return {
-        "default_mode": "redacted",
-        "modes": {
-            "audit_full": "Operator-controlled local JSONL or downstream SIEM retention; not returned by the production index.",
-            "redacted": "Safe-to-store runtime alerts after secret sanitization and evidence-tier redaction.",
-            "metadata_only": (
-                "Counts, tool names, detector names, source IDs, and trace/session references without raw arguments or payloads."
-            ),
-            "no_persist": "Raw prompts, raw tool arguments, raw responses, credential values, and unredacted screenshots.",
-        },
-        "event_classes": {
-            "proxy_alerts": "redacted",
-            "runtime_analytics_events": "metadata_only",
-            "production_index": "metadata_only",
-            "control_plane_audit_summary": "metadata_only",
-            "raw_tool_arguments": "no_persist",
-            "raw_tool_responses": "no_persist",
-        },
-        "guarantees": [
-            "tenant-scoped HTTP reads",
-            "secret values sanitized before persistence",
-            "raw arguments excluded from production-index responses",
-            "runtime events correlate by source_id, session_id, request_id, and trace_id when present",
-        ],
-    }
-
-
-def _classify_authorization_event(alert: dict) -> str:
-    action = str(alert.get("action") or alert.get("event_type") or alert.get("type") or "").lower()
-    detector = str(alert.get("detector") or "").lower()
-    effective = str(alert.get("effective_decision") or alert.get("decision") or "").lower()
-    message = str(alert.get("message") or "").lower()
-    haystack = " ".join((action, detector, effective, message))
-    if "approval_required" in haystack or "approval required" in haystack or effective == "warn":
-        return "approval_required"
-    if "data_filter" in haystack or "data filter" in haystack or "redact" in haystack or "mask" in haystack:
-        return "data_filter_applied"
-    if "block" in haystack or "deny" in haystack or effective == "deny":
-        return "blocked"
-    if "allow" in haystack or "authorized" in haystack or effective == "allow":
-        return "authorized"
-    return "observed"
-
-
-def _authorization_trace(*, allowed_tool_calls: int, blocked_tool_calls: int, alerts: list[dict]) -> dict[str, object]:
-    """Return accountable runtime authorization counts without raw arguments."""
-    from agent_bom.api.proxy_provenance import projected_producer_assurance
-
-    trace_counts: Counter[str] = Counter()
-    recent: list[dict[str, object]] = []
-    for alert in sorted(alerts, key=lambda item: str(item.get("ts") or item.get("timestamp") or ""), reverse=True):
-        trace_class = _classify_authorization_event(alert)
-        if trace_class != "observed":
-            trace_counts[trace_class] += 1
-        if len(recent) < 10:
-            recent.append(
-                {
-                    "ts": alert.get("ts") or alert.get("timestamp") or alert.get("event_timestamp") or "",
-                    "trace_class": trace_class,
-                    "producer_assurance": projected_producer_assurance(alert),
-                    "source_id": alert.get("source_id") or "unknown",
-                    "session_id": alert.get("session_id") or "unknown",
-                    "tool_name": alert.get("tool_name") or alert.get("tool") or "",
-                    "decision": alert.get("effective_decision") or alert.get("decision") or "",
-                    "detector": alert.get("detector") or "",
-                }
-            )
-    return {
-        "authorized": max(0, allowed_tool_calls + trace_counts["authorized"]),
-        "blocked": max(0, blocked_tool_calls + trace_counts["blocked"]),
-        "data_filter_applied": trace_counts["data_filter_applied"],
-        "approval_required": trace_counts["approval_required"],
-        "recent": recent,
-        "retention": "metadata_only",
-    }
 
 
 def _runtime_metrics_for_tenant(tenant_id: str) -> dict | None:
@@ -802,114 +542,6 @@ def _runtime_metrics_for_tenant(tenant_id: str) -> dict | None:
             if metrics is not None:
                 metrics = dict(metrics)
     return metrics
-
-
-def _build_runtime_production_index(tenant_id: str, metrics: dict | None, alerts: list[dict]) -> dict[str, object]:
-    from agent_bom.api.proxy_provenance import producer_assurance_counts, producer_assurance_rollup
-
-    metrics = dict(metrics or {})
-    assurance_counts = producer_assurance_counts(alerts + ([metrics] if metrics else []))
-    alert_summary = _summarize_proxy_alerts(alerts)
-    calls_by_tool = _numeric_mapping(metrics.get("calls_by_tool"))
-    blocked_by_reason = _numeric_mapping(metrics.get("blocked_by_reason"))
-    total_tool_calls = max(_safe_int(metrics.get("total_tool_calls")), sum(calls_by_tool.values()))
-    total_blocked = max(
-        _safe_int(metrics.get("total_blocked")),
-        sum(blocked_by_reason.values()),
-        _safe_int(alert_summary["blocked_alerts"]),
-    )
-    allowed_tool_calls = max(0, total_tool_calls - total_blocked)
-
-    source_counts: Counter[str] = Counter()
-    session_counts: Counter[str] = Counter()
-    gateway_action_counts: Counter[str] = Counter()
-    for alert in alerts:
-        source_id = str(alert.get("source_id") or "unknown")
-        session_id = str(alert.get("session_id") or "unknown")
-        action = str(alert.get("action") or alert.get("event_type") or alert.get("type") or "runtime_alert")
-        source_counts[source_id] += 1
-        session_counts[session_id] += 1
-        if action.startswith("gateway."):
-            gateway_action_counts[action] += 1
-
-    if metrics.get("source_id"):
-        source_counts[str(metrics["source_id"])] += 0
-    if metrics.get("session_id"):
-        session_counts[str(metrics["session_id"])] += 0
-
-    latest_alert_at = _latest_timestamp([alert.get("ts") or alert.get("timestamp") or alert.get("event_timestamp") for alert in alerts])
-    metrics_received_at = str(metrics.get("received_at") or metrics.get("ts") or "")
-    block_rate = (total_blocked / total_tool_calls) if total_tool_calls else 0.0
-    latency = metrics.get("latency") if isinstance(metrics.get("latency"), dict) else {}
-
-    return {
-        "schema_version": "runtime.production_index.v1",
-        "producer_assurance": producer_assurance_rollup(assurance_counts),
-        "producer_assurance_counts": assurance_counts,
-        "producer_assurance_count_basis": "submissions",
-        "evidence_basis": "submitted_runtime_activity",
-        "tenant_id": tenant_id,
-        "generated_at": datetime.now(timezone.utc).isoformat(),
-        "status": "ok" if metrics or alerts else "no_runtime_activity",
-        "traffic": {
-            "total_tool_calls": total_tool_calls,
-            "allowed_tool_calls": allowed_tool_calls,
-            "blocked_tool_calls": total_blocked,
-            "block_rate": round(block_rate, 4),
-            "calls_by_tool": calls_by_tool,
-            "top_tools": _top_items(calls_by_tool),
-            "blocked_by_reason": blocked_by_reason,
-            "uptime_seconds": _safe_float(metrics.get("uptime_seconds")),
-            "latency_p95_ms": _safe_float(latency.get("p95_ms")) if latency else None,
-        },
-        "policy_decisions": {
-            "allowed": allowed_tool_calls,
-            "blocked": total_blocked,
-            "gateway_actions": dict(sorted(gateway_action_counts.items())),
-        },
-        "authorization_trace": _authorization_trace(
-            allowed_tool_calls=allowed_tool_calls,
-            blocked_tool_calls=total_blocked,
-            alerts=alerts,
-        ),
-        "alerts": {key: value for key, value in alert_summary.items() if key != "recent_alerts"},
-        "active_sources": _top_items(source_counts),
-        "active_sessions": _top_items(session_counts),
-        "freshness": {
-            "has_metrics": bool(metrics),
-            "has_alerts": bool(alerts),
-            "metrics_received_at": metrics_received_at,
-            "latest_alert_at": latest_alert_at,
-        },
-        "retention_posture": _runtime_retention_posture(),
-    }
-
-
-def _read_metrics_from_log(path: _Path, tenant_id: str = "default") -> dict | None:
-    """Read the last proxy_summary record from a JSONL audit log."""
-    import json as _json
-
-    last_summary = None
-    try:
-        with open(path) as f:
-            for i, raw_line in enumerate(f):
-                if i >= _MAX_EVIDENCE_LOG_LINES:
-                    break
-                line = raw_line.strip()
-                if not line:
-                    continue
-                try:
-                    record = _json.loads(line)
-                    if record.get("type") == "proxy_summary" and _alert_visible_to_tenant(record, tenant_id):
-                        last_summary = record
-                except (ValueError, KeyError):
-                    continue
-    except OSError:
-        pass
-    return last_summary
-
-
-# ── HTTP endpoints ───────────────────────────────────────────────────────────
 
 
 @router.get("/proxy/status", **documented(ProxyStatusResponse), tags=["proxy"])
@@ -1017,9 +649,6 @@ def proxy_alerts(
             "limit": limit,
         },
     }
-
-
-# ── WebSocket endpoints ─────────────────────────────────────────────────────
 
 
 @ws_router.websocket("/ws/proxy/metrics")
@@ -1145,9 +774,6 @@ async def ws_proxy_alerts(websocket: WebSocket) -> None:
         pass
     except Exception:  # noqa: BLE001
         pass
-
-
-# ── Shield / Deep Defense endpoints ──────────────────────────────────────────
 
 
 @router.post("/shield/start", tags=["shield"])
@@ -1317,3 +943,28 @@ def _audit_break_glass(
         )
     except Exception:  # noqa: BLE001
         pass  # audit log failure must not block emergency override
+
+
+_EXPORTS = {
+    "_MAX_FEED_LOG_LINES": "agent_bom.api.proxy_log_read",
+    "_LOG_TAIL_BLOCK_BYTES": "agent_bom.api.proxy_log_read",
+    "_read_newest_log_lines": "agent_bom.api.proxy_log_read",
+    "_safe_int": "agent_bom.api.proxy_runtime_projection",
+    "_safe_float": "agent_bom.api.proxy_runtime_projection",
+    "_numeric_mapping": "agent_bom.api.proxy_runtime_projection",
+    "_top_items": "agent_bom.api.proxy_runtime_projection",
+    "_timestamp_value": "agent_bom.api.proxy_runtime_projection",
+    "_latest_timestamp": "agent_bom.api.proxy_runtime_projection",
+    "_runtime_retention_posture": "agent_bom.api.proxy_runtime_projection",
+    "_classify_authorization_event": "agent_bom.api.proxy_runtime_projection",
+    "_authorization_trace": "agent_bom.api.proxy_runtime_projection",
+}
+
+
+def __getattr__(name: str) -> Any:
+    module = _EXPORTS.get(name)
+    if module is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    value = getattr(import_module(module), name)
+    globals()[name] = value
+    return value

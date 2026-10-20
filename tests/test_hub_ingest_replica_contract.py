@@ -182,7 +182,7 @@ def test_legacy_ordinal_repair_preserves_payloads_pointers_and_restart(tmp_path)
 def test_legacy_migration_failure_rolls_back_schema_and_ordinals(tmp_path, monkeypatch):
     import sqlite3
 
-    from agent_bom.api import compliance_hub_store as module
+    from agent_bom.api.storage import hub_schema as module
 
     path = tmp_path / "rollback.db"
     _legacy_database(path)
@@ -232,7 +232,7 @@ def test_clear_waits_for_atomic_writer_and_preserves_next_ordinal(tmp_path, monk
     from concurrent.futures import ThreadPoolExecutor
     from threading import Event
 
-    from agent_bom.api import compliance_hub_store as module
+    from agent_bom.api.storage import hub_sqlite as module
 
     path = str(tmp_path / "clear-race.db")
     SQLiteComplianceHubStore(path)._conn.close()

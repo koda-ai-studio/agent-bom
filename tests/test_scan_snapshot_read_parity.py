@@ -143,7 +143,7 @@ def test_snapshot_reads_preserve_http_findings_and_export_contracts(snapshots, m
 
 
 def test_owner_and_suppression_are_projected_after_snapshot_verification(snapshots, monkeypatch):
-    from agent_bom.api.routes import enterprise
+    from agent_bom.api.routes.enterprise_routes import findings as enterprise
 
     row = job(9)
     put(snapshots, row)

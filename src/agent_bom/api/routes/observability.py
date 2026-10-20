@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 import uuid
 from collections import defaultdict
-from datetime import datetime, timezone
+from importlib import import_module
 from typing import Annotated, Any, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -33,446 +32,78 @@ from agent_bom.api.idempotency_store import (
 )
 from agent_bom.api.managed_trace_pull import managed_trace_pull
 from agent_bom.api.models import JobStatus, PushPayload, ScanJob, ScanRequest
-from agent_bom.api.ocsf_fields import _ocsf_finding_message, _resource_name
+from agent_bom.api.observability_costs import _render_prometheus_metrics
+from agent_bom.api.observability_events import (
+    _dep,
+    _extract_ocsf_events,
+    _finish_ocsf_ingest,
+    _logger,
+    _normalize_ocsf_event,
+    _now,
+    _persist_runtime_observations,
+    _tenant_id,
+)
+from agent_bom.api.observability_push_receipts import (
+    _cohort_push_response,
+    _graph_snapshot_exists,
+    _prepare_push_endpoint,
+    _pushed_job_has_persisted_graph,
+    _pushed_job_receipt,
+    _record_push_trend,
+    _release_cohort_push_claim,
+    _release_push_idempotency_claim,
+    _wait_for_cohort_child,
+    _wait_for_pushed_job,
+)
+from agent_bom.api.observability_trace_read import (
+    _blast_radius_views_for_tenant,
+    _build_trace_explorer_payload_sync,
+    _ingest_traces_sync,
+    _nhi_by_credential_for_tenant,
+    _screen_content_enabled,
+    _screen_trace_content_events,
+    _trace_explorer_payload_for_tenant,
+)
 from agent_bom.api.pipeline import _persist_graph_snapshot
 from agent_bom.api.push_evidence import audit_push_admission
 from agent_bom.api.push_evidence import normalize_pushed_report as _normalize_pushed_report
 from agent_bom.api.read_models import documented, observability
-from agent_bom.api.runtime_event_store import (
-    RuntimeObservationRecord,
-    get_runtime_event_store,
-    sanitize_runtime_metadata,
-)
-from agent_bom.api.storage.runtime_records import RuntimeMetadataCache
-from agent_bom.api.stores import (
-    _get_analytics_store,
-    _get_fleet_store,
-    _get_graph_store,
-    _get_idempotency_store,
-    _get_store,
-)
-from agent_bom.api.tenancy import require_request_tenant_id
+from agent_bom.api.routes.observability_finops import router as finops_router
+from agent_bom.api.runtime_event_store import get_runtime_event_store
+from agent_bom.api.stores import _get_graph_store, _get_idempotency_store, _get_store
 from agent_bom.api.tenant_quota import enforce_retained_jobs_quota, tenant_quota_guard
 from agent_bom.api.trace_collection.routes import router as trace_collection_router
-from agent_bom.api.trace_collection.trace_evidence import record_otlp_evidence, vulnerable_inventory
 from agent_bom.api.trace_connection_broker import public_connections, pull_credentials
-from agent_bom.api.trace_explorer_read import assemble_trace_explorer
-from agent_bom.api.trend_comparison import push_scope_id
-from agent_bom.api.trend_recording import record_scan_trend_best_effort
-from agent_bom.canonical_ids import canonical_id
 from agent_bom.config import API_MAX_OCSF_INGEST_EVENTS
-from agent_bom.core.experimental import disabled_message, is_enabled
-from agent_bom.core.severity import ocsf_to_severity
 from agent_bom.rbac import require_authenticated_permission
 from agent_bom.security import sanitize_error, sanitize_text
 
-#: Offsets past this are rejected (422); larger values overflow the store's 64-bit OFFSET.
 _MAX_RUNTIME_OFFSET = 1_000_000_000
 
+
 router = APIRouter(dependencies=[Depends(demo_daily_evidence_dependency)])
+
+
 router.include_router(
     trace_collection_router,
     dependencies=[cast(Any, require_authenticated_permission("runtime_ingest")), require_experimental("traces")],
 )
+
+
 infra_router = APIRouter()
-_logger = logging.getLogger(__name__)
+
+
 _RUNTIME_READ: dict[str, Any] = {"tags": ["runtime", "observability"], "dependencies": [require_authenticated_permission("read")]}
-_FINOPS_READ: dict[str, Any] = {"tags": ["observability", "finops"], "dependencies": [require_authenticated_permission("read")]}
+
+
 _CONNECTOR_READ: dict[str, Any] = {
     "tags": ["observability", "connectors"],
     "dependencies": [require_authenticated_permission("read"), require_experimental("traces")],
 }
 
 
-def _dep(permission: str) -> Any:
-    return cast(Any, require_authenticated_permission(permission))
-
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
-def _tenant_id(request: Request) -> str:
-    return require_request_tenant_id(request)
-
-
 def _triggered_by(request: Request) -> str:
     return getattr(request.state, "api_key_name", "") or getattr(request.state, "auth_method", "") or "push"
-
-
-def _extract_ocsf_events(body: dict | list[dict]) -> list[dict]:
-    if isinstance(body, list):
-        events = body
-    elif isinstance(body, dict):
-        if isinstance(body.get("events"), list):
-            events = body["events"]
-        elif "class_uid" in body or "class_name" in body:
-            events = [body]
-        else:
-            raise ValueError("OCSF ingest expects a single event, a list of events, or an object with an 'events' array")
-    else:
-        raise ValueError("OCSF ingest payload must be an object or array")
-
-    normalized_events = [event for event in events if isinstance(event, dict)]
-    if len(normalized_events) != len(events):
-        raise ValueError("OCSF ingest events must be JSON objects")
-    return normalized_events
-
-
-def _slug(value: str) -> str:
-    return "_".join(part for part in value.lower().replace("/", " ").replace("-", " ").split() if part)
-
-
-def _ocsf_timestamp(value: object) -> str:
-    if isinstance(value, (int, float)):
-        seconds = float(value)
-        if seconds > 1_000_000_000_000:
-            seconds /= 1000.0
-        return datetime.fromtimestamp(seconds, tz=timezone.utc).isoformat()
-    if isinstance(value, str) and value.strip().isdigit():
-        return _ocsf_timestamp(int(value.strip()))
-    if isinstance(value, str) and value.strip():
-        return value.strip()
-    return _now()
-
-
-def _ocsf_finding_detector(event: dict) -> str:
-    finding_info = event.get("finding_info")
-    if isinstance(finding_info, dict):
-        analytic = finding_info.get("analytic")
-        if isinstance(analytic, dict):
-            for key in ("uid", "name", "type"):
-                candidate = str(analytic.get(key, "")).strip()
-                if candidate:
-                    return candidate
-        types = finding_info.get("types")
-        if isinstance(types, list):
-            for item in types:
-                candidate = str(item).strip()
-                if candidate:
-                    return candidate
-        if uid := str(finding_info.get("uid", "")).strip():
-            return uid
-    return _slug(str(event.get("class_name", "ocsf_event")).strip() or "ocsf_event")
-
-
-def _normalize_ocsf_event(event: dict, *, tenant_id: str) -> dict:
-    class_name = str(event.get("class_name", "")).strip() or "OCSF Event"
-    class_uid = event.get("class_uid")
-    class_slug = _slug(class_name) or "ocsf_event"
-    source_meta = event.get("metadata")
-    metadata_uid = ""
-    source_id = ""
-    if isinstance(source_meta, dict):
-        product = source_meta.get("product")
-        if isinstance(product, dict):
-            source_id = str(product.get("name", "")).strip()
-            if not source_id:
-                source_id = str(product.get("vendor_name", "")).strip()
-        if not source_id:
-            source_id = str(source_meta.get("log_name", "")).strip()
-        metadata_uid = str(source_meta.get("uid", "")).strip()
-    event_id = ""
-    finding_info = event.get("finding_info")
-    if isinstance(finding_info, dict):
-        event_id = str(finding_info.get("uid", "")).strip()
-    if not event_id:
-        event_id = metadata_uid
-    severity = str(event.get("severity", "")).strip().lower()
-    if not severity:
-        try:
-            severity = ocsf_to_severity(int(event.get("severity_id", 0)))
-        except Exception:
-            severity = "unknown"
-    event_timestamp = _ocsf_timestamp(event.get("time") or event.get("start_time") or event.get("event_time"))
-    detector = _ocsf_finding_detector(event)
-    tool_name = _resource_name(event)
-    message = _ocsf_finding_message(event)
-    if not event_id:
-        # Deterministic content-derived ID so retries of an id-less OCSF event
-        # collapse on the runtime observation PK (tenant_id, observation_id)
-        # instead of leaking a fresh uuid4 per ingest (audit item J).
-        event_id = canonical_id(
-            "ocsf_event",
-            tenant_id,
-            source_id,
-            event_timestamp,
-            class_uid,
-            class_name,
-            detector,
-            tool_name,
-            message,
-        )
-    normalized = {
-        "event_id": event_id,
-        "event_timestamp": event_timestamp,
-        "tenant_id": tenant_id,
-        "event_type": f"ocsf_{class_slug}",
-        "detector": detector,
-        "severity": severity or "unknown",
-        "tool_name": tool_name,
-        "message": message,
-        "agent_name": "",
-        "session_id": "",
-        "trace_id": "",
-        "request_id": "",
-        "source_id": source_id,
-        "ocsf_class_uid": class_uid,
-        "ocsf_class_name": class_name,
-    }
-    observables = event.get("observables")
-    if isinstance(observables, list):
-        for observable in observables:
-            if isinstance(observable, dict):
-                trace_id = str(observable.get("trace_id", "")).strip()
-                if trace_id:
-                    normalized["trace_id"] = trace_id
-                    break
-    return normalized
-
-
-def _bounded(value: object, *, max_len: int = 200, _cache: RuntimeMetadataCache | None = None) -> str:
-    return _cache.bounded(value, max_len=max_len) if _cache is not None else sanitize_text(value, max_len=max_len)
-
-
-def _event_session_id(payload: dict[str, Any], *, _cache: RuntimeMetadataCache | None = None) -> str:
-    for key in ("session_id", "trace_id", "request_id"):
-        value = str(payload.get(key) or "").strip()
-        if value:
-            return _bounded(value, _cache=_cache)
-    return f"runtime-{uuid.uuid4()}"
-
-
-def _runtime_observation_from_event(
-    event: dict[str, Any], *, tenant_id: str, source: str = "api", _cache: RuntimeMetadataCache | None = None
-) -> RuntimeObservationRecord:
-    observed_at = str(event.get("event_timestamp") or event.get("observed_at") or event.get("timestamp") or _now())
-    event_id = str(event.get("event_id") or event.get("observation_id") or "").strip()
-    if not event_id:
-        # Deterministic content-derived ID so a retried id-less runtime event
-        # dedups on the observation PK instead of leaking uuid4 (audit item J).
-        event_id = canonical_id(
-            "runtime_event",
-            tenant_id,
-            event.get("source_id") or event.get("source") or source,
-            event.get("session_id") or event.get("trace_id") or event.get("request_id") or "",
-            observed_at,
-            event.get("event_type") or event.get("type") or "runtime_event",
-            event.get("tool_name") or event.get("tool") or "",
-            event.get("message") or event.get("reason") or event.get("decision") or "",
-        )
-    summary = {key: event[key] for key in ("message", "reason", "decision", "risk", "policy", "blocked") if key in event}
-    metadata_source = event.get("metadata") if isinstance(event.get("metadata"), dict) else event
-    return RuntimeObservationRecord(
-        tenant_id=tenant_id,
-        observation_id=_bounded(event_id, _cache=_cache),
-        session_id=_event_session_id(event, _cache=_cache),
-        observed_at=_bounded(observed_at, max_len=80, _cache=_cache),
-        source=_bounded(event.get("source_id") or event.get("source") or source, max_len=120, _cache=_cache),
-        surface=_bounded(event.get("surface") or "runtime", max_len=80, _cache=_cache),
-        event_type=_bounded(event.get("event_type") or event.get("type") or "runtime_event", max_len=120, _cache=_cache),
-        severity=_bounded(str(event.get("severity") or "unknown").lower(), max_len=40, _cache=_cache),
-        verdict=_bounded(
-            event.get("verdict") or event.get("action_taken") or event.get("decision") or "observed", max_len=80, _cache=_cache
-        ),
-        tool_name=_bounded(event.get("tool_name") or event.get("tool") or "", max_len=200, _cache=_cache),
-        agent_name=_bounded(event.get("agent_name") or event.get("agent_id") or "", max_len=200, _cache=_cache),
-        trace_id=_bounded(event.get("trace_id") or "", max_len=200, _cache=_cache),
-        span_id=_bounded(event.get("span_id") or "", max_len=200, _cache=_cache),
-        request_id=_bounded(event.get("request_id") or "", max_len=200, _cache=_cache),
-        summary=sanitize_runtime_metadata(summary, _cache=_cache),
-        metadata=sanitize_runtime_metadata(metadata_source, _cache=_cache),
-    )
-
-
-def _persist_runtime_observations(events: list[dict[str, Any]], *, tenant_id: str, source: str = "api") -> int:
-    if not events:
-        return 0
-    store = get_runtime_event_store()
-    cache = RuntimeMetadataCache()
-    records = [_runtime_observation_from_event(event, tenant_id=tenant_id, source=source, _cache=cache) for event in events]
-    persisted = store.put_observations_batch(records)
-    # Opt-in runtime emitter plugins receive a redacted routing envelope per
-    # persisted observation (off by default; see plugin_activation). Never lets
-    # a third-party emitter failure affect the persisted ingest result.
-    from agent_bom.plugin_activation import fan_out_runtime_event, runtime_emitter_activation_enabled
-
-    if runtime_emitter_activation_enabled():
-        for record in records:
-            fan_out_runtime_event(record)
-    return persisted
-
-
-def _finish_ocsf_ingest(normalized_events: list[dict[str, Any]], *, tenant_id: str) -> None:
-    try:
-        if normalized_events:
-            _get_analytics_store().record_events(normalized_events, tenant_id=tenant_id)
-    except Exception as exc:  # noqa: BLE001
-        _logger.warning("OCSF analytics ingest skipped: %s", sanitize_text(exc))
-    _persist_runtime_observations(normalized_events, tenant_id=tenant_id, source="ocsf")
-
-
-# OTel attribute keys carrying the chargeback/showback allocation (#2925).
-# ``agent.cost_center`` / ``gen_ai.cost_center`` name the budget unit; any
-# ``allocation.tag.<name>`` attribute becomes a freeform showback tag.
-_COST_CENTER_KEYS = ("agent.cost_center", "gen_ai.cost_center", "cost_center")
-_ALLOCATION_TAG_PREFIX = "allocation.tag."
-_MAX_ALLOCATION_TAGS = 16
-
-
-def _attr_str(attr_value: Any) -> str:
-    if not isinstance(attr_value, dict):
-        return ""
-    return str(attr_value.get("stringValue") or attr_value.get("intValue") or attr_value.get("doubleValue") or "").strip()
-
-
-def _allocation_for_spans(body: dict) -> dict[str, tuple[str, dict[str, str]]]:
-    """Map ``trace_id:span_id`` -> (cost_center, allocation_tags) from OTLP attrs.
-
-    Span-level attributes win over resource-level ones, so a per-call override
-    beats a service-wide default. Tolerant of any non-OTLP shape (returns {}).
-    """
-    out: dict[str, tuple[str, dict[str, str]]] = {}
-    try:
-        resource_spans = body.get("resourceSpans") if isinstance(body, dict) else None
-        if not isinstance(resource_spans, list):
-            return out
-        for rs in resource_spans:
-            res_cc, res_tags = _read_allocation_attrs(rs.get("resource", {}).get("attributes", []) if isinstance(rs, dict) else [])
-            for ss in rs.get("scopeSpans", []) if isinstance(rs, dict) else []:
-                for span in ss.get("spans", []) if isinstance(ss, dict) else []:
-                    if not isinstance(span, dict):
-                        continue
-                    span_cc, span_tags = _read_allocation_attrs(span.get("attributes", []))
-                    merged_tags = {**res_tags, **span_tags}
-                    cost_center = span_cc or res_cc
-                    call_id = f"{span.get('traceId', '')}:{span.get('spanId', '')}"
-                    out[call_id] = (cost_center, merged_tags)
-    except Exception:  # noqa: BLE001
-        return {}
-    return out
-
-
-def _read_allocation_attrs(attributes: Any) -> tuple[str, dict[str, str]]:
-    cost_center = ""
-    tags: dict[str, str] = {}
-    if not isinstance(attributes, list):
-        return cost_center, tags
-    for attr in attributes:
-        if not isinstance(attr, dict):
-            continue
-        key = str(attr.get("key", "")).strip()
-        value = _attr_str(attr.get("value", {}))
-        if not key or not value:
-            continue
-        if key in _COST_CENTER_KEYS and not cost_center:
-            cost_center = _bounded(value, max_len=120)
-        elif key.startswith(_ALLOCATION_TAG_PREFIX) and len(tags) < _MAX_ALLOCATION_TAGS:
-            tag_name = _bounded(key[len(_ALLOCATION_TAG_PREFIX) :], max_len=60)
-            if tag_name:
-                tags[tag_name] = _bounded(value, max_len=120)
-    return cost_center, tags
-
-
-def _persist_llm_costs(body: dict, *, tenant_id: str) -> dict[str, Any]:
-    """Price GenAI spans in an OTLP payload and persist per-call cost records.
-
-    Token counts come from OTel GenAI semantic conventions; cost is the open
-    price model in agent_bom.cost_model. Chargeback allocation (cost_center +
-    allocation tags) is read from span/resource attributes. Failures never
-    block trace ingest.
-    """
-    try:
-        from agent_bom.api.cost_store import LLMCostRecord, get_cost_store
-        from agent_bom.cost_model import compute_cost_usd, is_priced
-        from agent_bom.otel_ingest import parse_ml_api_spans
-
-        calls = parse_ml_api_spans(body)
-    except Exception:  # noqa: BLE001
-        _logger.warning("LLM cost ingest skipped", exc_info=False)
-        return {"calls": 0, "cost_usd": 0.0}
-
-    allocation = _allocation_for_spans(body)
-    store = get_cost_store()
-    total = 0.0
-    observed = _now()
-    for call in calls:
-        cost = compute_cost_usd(call.provider, call.model_name, call.input_tokens, call.output_tokens)
-        total += cost
-        agent = _bounded(getattr(call, "agent", "") or "", max_len=120)
-        call_id = f"{call.trace_id}:{call.span_id}"
-        cost_center, allocation_tags = allocation.get(call_id, ("", {}))
-        store.record_cost(
-            LLMCostRecord(
-                tenant_id=tenant_id,
-                call_id=call_id,
-                agent=agent,
-                session_id=call.trace_id,
-                provider=_bounded(call.provider, max_len=60),
-                model=_bounded(call.model_name, max_len=120),
-                input_tokens=max(0, int(call.input_tokens)),
-                output_tokens=max(0, int(call.output_tokens)),
-                cost_usd=cost,
-                priced=is_priced(call.provider, call.model_name),
-                observed_at=observed,
-                cost_center=cost_center,
-                allocation_tags=allocation_tags,
-            )
-        )
-    return {"calls": len(calls), "cost_usd": round(total, 6)}
-
-
-def _screen_content_enabled(explicit: bool | None) -> bool:
-    """Resolve whether opt-in trace-content screening runs for this request.
-
-    Off by default and preserves the metadata-only privacy posture: content is
-    only screened when the request explicitly opts in, or the deployment set the
-    ``AGENT_BOM_TRACE_CONTENT_SCREENING`` default.
-    """
-    if explicit is not None:
-        return bool(explicit)
-    from agent_bom.config import trace_content_screening_enabled
-
-    return trace_content_screening_enabled()
-
-
-def _screen_trace_content_events(body: dict, *, tenant_id: str) -> list[dict[str, Any]]:
-    """Run Shield over trace content (opt-in) and return redacted finding events.
-
-    Raw content is screened in-memory and never stored — only the redacted
-    detector/severity/summary per span is returned/persisted.
-    """
-    from agent_bom.trace_content import screen_trace_content
-
-    try:
-        findings = screen_trace_content(body)
-    except Exception:  # noqa: BLE001 — screening never blocks metadata ingest
-        _logger.warning("Trace content screening skipped", exc_info=False)
-        return []
-    events: list[dict[str, Any]] = []
-    for finding in findings:
-        events.append(
-            {
-                "event_id": f"{finding.trace_id}:{finding.span_id}:{finding.detector}",
-                "event_timestamp": _now(),
-                "event_type": "trace_content_finding",
-                "detector": f"shield_{finding.detector}",
-                "severity": finding.severity,
-                "tool_name": finding.tool_name,
-                "message": finding.message,
-                "session_id": finding.trace_id,
-                "trace_id": finding.trace_id,
-                "span_id": finding.span_id,
-                "source_id": "otel_content",
-            }
-        )
-    if events:
-        try:
-            _get_analytics_store().record_events(events, tenant_id=tenant_id)
-        except Exception:  # noqa: BLE001
-            _logger.warning("Trace content analytics sync skipped", exc_info=False)
-        _persist_runtime_observations(events, tenant_id=tenant_id, source="otel_content")
-    return events
 
 
 @router.post("/traces", tags=["observability"])
@@ -492,148 +123,6 @@ async def ingest_traces(request: Request, body: dict, screen_content: bool | Non
     except Exception as exc:  # noqa: BLE001
         _logger.error("Request failed")
         raise HTTPException(status_code=500, detail=sanitize_error(exc)) from exc
-
-
-def _ingest_traces_sync(body: dict, tenant_id: str, screen: bool) -> dict:
-    from agent_bom.otel_ingest import flag_vulnerable_tool_calls, parse_otel_traces
-
-    # GenAI cost spans are independent of tool-call traces — price them first
-    # so spend is captured even for payloads with no adk.tool.* spans.
-    llm_cost = _persist_llm_costs(body, tenant_id=tenant_id)
-
-    # Opt-in, privacy-safe content screening (off by default).
-    content_findings: list[dict[str, Any]] = []
-    if screen:
-        content_findings = _screen_trace_content_events(body, tenant_id=tenant_id)
-
-    traces = parse_otel_traces(body)
-    flagged = flag_vulnerable_tool_calls(traces, *vulnerable_inventory(_get_store().list_all(tenant_id=tenant_id))) if traces else []
-    evidence: Any = (
-        record_otlp_evidence(body, tenant_id=tenant_id, flagged=flagged, content_findings=content_findings, sink=ingest_runtime_findings)
-        if is_enabled("traces")
-        else {"recorded": False, "reason": disabled_message("traces")}
-    )
-    if not traces:
-        return {
-            "traces": 0,
-            "flagged": [],
-            "llm_calls": llm_cost["calls"],
-            "llm_cost_usd": llm_cost["cost_usd"],
-            "content_findings": content_findings,
-            "content_screened": screen,
-            "normalized": evidence,
-            "message": "No tool call traces found",
-        }
-
-    return {
-        "traces": len(traces),
-        "persisted_events": 0,
-        "llm_calls": llm_cost["calls"],
-        "llm_cost_usd": llm_cost["cost_usd"],
-        "content_findings": content_findings,
-        "content_screened": screen,
-        "normalized": evidence,
-        "flagged": [
-            {
-                "tool_name": f.trace.tool_name,
-                "server": f.server or f.trace.server_name,
-                "package_name": f.package_name or f.trace.package_name,
-                "cve_ids": f.matched_cves,
-                "correlation_basis": f.correlation_basis,
-                "reason": f.reason,
-                "severity": f.severity,
-                "span_id": f.trace.span_id,
-            }
-            for f in flagged
-        ],
-    }
-
-
-# ─── Per-span attack-path correlation (#3898) ─────────────────────────────
-#
-# Return name-based scan-path candidates for each span, retaining trace/span
-# identity. The candidates do not prove an inventory join or execution and are
-# never persisted as graph edges or findings.
-
-
-def _blast_radius_views_for_tenant(tenant_id: str) -> list[Any]:
-    """Adapt persisted scan blast-radius dicts into objects the correlation reads."""
-    from types import SimpleNamespace
-
-    views: list[Any] = []
-    for job in _get_store().list_all(tenant_id=tenant_id):
-        if job.status != JobStatus.DONE or not job.result:
-            continue
-        for br in job.result.get("blast_radius", []) or []:
-            if not isinstance(br, dict):
-                continue
-            pkg_spec = str(br.get("package", "") or "")
-            pkg_name = pkg_spec.split("@", 1)[0] if pkg_spec else ""
-            servers = [s if isinstance(s, str) else str(s.get("name", "")) for s in br.get("affected_servers", []) or []]
-            agents = [a if isinstance(a, str) else str(a.get("name", "")) for a in br.get("affected_agents", []) or []]
-            tools = [t if isinstance(t, str) else str(t.get("name", "")) for t in br.get("exposed_tools", []) or []]
-            vuln = SimpleNamespace(
-                id=str(br.get("vulnerability_id", "") or ""),
-                severity=str(br.get("severity", "unknown") or "unknown"),
-                cvss_score=br.get("cvss_score"),
-                epss_score=br.get("epss_score"),
-                is_kev=bool(br.get("is_kev", False)),
-            )
-            views.append(
-                SimpleNamespace(
-                    vulnerability=vuln,
-                    package=SimpleNamespace(name=pkg_name),
-                    affected_servers=servers,
-                    affected_agents=agents,
-                    exposed_tools=tools,
-                    exposed_credentials=[str(c) for c in br.get("exposed_credentials", []) or []],
-                    risk_score=float(br.get("risk_score", 0.0) or 0.0),
-                )
-            )
-    return views
-
-
-def _nhi_by_credential_for_tenant(tenant_id: str) -> dict[str, list[dict[str, Any]]]:
-    """Best-effort map of exposed credential name -> the NHIs that hold it.
-
-    Reads the tenant's unified graph: for each managed-identity node, the
-    credential nodes it reaches (1-2 hops) index that identity. Never raises —
-    returns an empty map when no graph/identity data is available.
-    """
-    out: dict[str, list[dict[str, Any]]] = {}
-    try:
-        from agent_bom.api.stores import _get_graph_store
-        from agent_bom.graph.nhi_governance import evaluate_identity_governance
-        from agent_bom.graph.types import EntityType
-
-        graph = _get_graph_store().load_graph(tenant_id=tenant_id)
-        identities = [n for n in graph.nodes.values() if n.entity_type == EntityType.MANAGED_IDENTITY]
-        if not identities:
-            return out
-        verdicts = {v.node_id: v.to_dict() for v in evaluate_identity_governance(graph)}
-        for node in identities[:5000]:
-            verdict = verdicts.get(node.id, {"node_id": node.id, "name": str(node.attributes.get("name") or node.id)})
-            # Walk up to 2 hops for reachable credential nodes.
-            frontier = [node.id]
-            seen: set[str] = set()
-            for _hop in range(2):
-                next_frontier: list[str] = []
-                for nid in frontier:
-                    for edge in graph.edges_from(nid):
-                        target = graph.nodes.get(edge.target)
-                        if target is None or edge.target in seen:
-                            continue
-                        seen.add(edge.target)
-                        if target.entity_type == EntityType.CREDENTIAL:
-                            cred_name = str(target.attributes.get("name") or target.attributes.get("env_var") or target.id)
-                            out.setdefault(cred_name.lower(), []).append(verdict)
-                        else:
-                            next_frontier.append(edge.target)
-                frontier = next_frontier
-    except Exception:  # noqa: BLE001
-        _logger.warning("NHI credential resolution skipped", exc_info=False)
-        return out
-    return out
 
 
 @router.post("/traces/attack-paths", tags=["observability"], dependencies=[_dep("read"), require_experimental("traces")])
@@ -749,11 +238,6 @@ def pull_trace_connector(request: Request, provider: str, body: dict) -> dict[st
     }
 
 
-# Extra (non-declared) keys that still mark a payload as a real pushed report.
-# ``PushPayload`` is ``extra="allow"`` so the full scan report rides through, but
-# that also let arbitrary junk validate into an empty ScanJob. A genuine push
-# always sets at least one declared field (source_id/agents/blast_radii/…) or
-# carries one of these canonical report keys.
 _RECOGNIZED_PUSH_EXTRA_KEYS = frozenset(
     {
         "blast_radius",
@@ -768,28 +252,6 @@ _RECOGNIZED_PUSH_EXTRA_KEYS = frozenset(
         "observed_at",
     }
 )
-
-
-def _prepare_push_endpoint(body: PushPayload, job: ScanJob, job_result: dict, tenant_id: str) -> tuple:
-    fleet_store = _get_fleet_store()
-    previous_endpoint = None
-    endpoint = None
-    if body.source_id and body.endpoint_inventory:
-        from agent_bom.api.fleet_store import endpoint_inventory_evidence, endpoint_summary_from_inventory
-
-        previous_endpoint = fleet_store.get_endpoint(body.source_id, tenant_id=tenant_id)
-        endpoint = endpoint_summary_from_inventory(
-            endpoint_id=body.source_id,
-            tenant_id=tenant_id,
-            inventory=body.endpoint_inventory,
-            scan_id=str(job_result.get("scan_id") or job.job_id),
-            observed_at=str(job_result.get("observed_at") or job_result.get("scan_timestamp") or job.created_at),
-        )
-        # Store and graph only the bounded evidence summary. Raw process,
-        # application, service, listener, container, and image rows remain
-        # on the source endpoint and never enter the control-plane job.
-        job_result["endpoint_inventory"] = endpoint_inventory_evidence(endpoint)
-    return fleet_store, previous_endpoint, endpoint
 
 
 @router.post("/results/push", tags=["push"], status_code=201)
@@ -1172,172 +634,6 @@ async def receive_push(request: Request, body: PushPayload) -> dict:
     return _pushed_job_receipt(job)
 
 
-def _graph_snapshot_exists(tenant_id: str, scan_id: str) -> bool:
-    """Return whether a snapshot for ``scan_id`` is already persisted.
-
-    Fails safe: when the backend cannot answer, report ``True`` so a later
-    rollback leaves the snapshot alone rather than risk deleting data this
-    push did not write.
-    """
-    try:
-        _resolved, generation = _get_graph_store().snapshot_identity(tenant_id=tenant_id, scan_id=scan_id)
-    except Exception as exc:  # noqa: BLE001 — unknown must never authorize a delete
-        _logger.warning("Graph snapshot pre-check unavailable: %s", sanitize_text(sanitize_error(exc, generic=True)))
-        return True
-    return bool(generation)
-
-
-def _release_push_idempotency_claim(
-    store: Any,
-    *,
-    tenant_id: str,
-    source_id: str,
-    idempotency_key: str,
-    request_hash: str,
-    owner_token: str = "",
-) -> None:
-    try:
-        store.release(
-            "/v1/results/push",
-            tenant_id,
-            source_id,
-            idempotency_key,
-            request_hash=request_hash,
-            owner_token=owner_token,
-        )
-    except Exception as exc:  # noqa: BLE001
-        _logger.error("Push idempotency rollback failed: %s", sanitize_text(sanitize_error(exc, generic=True)))
-
-
-def _record_push_trend(job: ScanJob, job_result: dict, body: PushPayload) -> None:
-    """Record the posture trend point once the pushed job is durable (best effort)."""
-    record_scan_trend_best_effort(
-        job_result,
-        tenant_id=job.tenant_id,
-        scan_id=job.job_id,
-        completed_at=job.completed_at,
-        scope_id=push_scope_id(body.source_id, body.target_scope),
-        headline_posture=True,
-    )
-
-
-def _pushed_job_receipt(job: ScanJob) -> dict[str, Any]:
-    result = job.result if isinstance(job.result, dict) else {}
-    raw_scan_run = result.get("scan_run")
-    scan_run: dict[str, Any] = raw_scan_run if isinstance(raw_scan_run, dict) else {}
-    return {
-        "job_id": job.job_id,
-        "source_id": job.source_id or "",
-        "status": "stored",
-        "scan_outcome": str(scan_run.get("outcome") or "failed"),
-        "target_scope": result.get("target_scope"),
-        "replacement_scope_status": result.get("replacement_scope_status", "unscoped"),
-    }
-
-
-def _pushed_job_has_persisted_graph(job: ScanJob) -> bool:
-    """Return whether the durable job records a completed graph projection."""
-
-    result = job.result if isinstance(job.result, dict) else {}
-    graph_persistence = result.get("graph_persistence")
-    return isinstance(graph_persistence, dict) and graph_persistence.get("status") == "persisted"
-
-
-async def _wait_for_pushed_job(
-    job_id: str,
-    *,
-    tenant_id: str,
-    idempotency_source: str,
-    idempotency_key: str,
-    request_hash: str,
-) -> ScanJob | None:
-    """Bounded wait for the reservation owner to finish the durable commit."""
-    if not job_id:
-        return None
-    for _attempt in range(100):
-        receipt = await asyncio.to_thread(
-            _get_idempotency_store().get,
-            "/v1/results/push",
-            tenant_id,
-            idempotency_source,
-            idempotency_key,
-            request_hash=request_hash,
-        )
-        job = await asyncio.to_thread(_get_store().get, job_id, tenant_id)
-        if job is not None and receipt is not None and receipt.get("committed") is True:
-            # The owner publishes this receipt only after its held-claim action
-            # commits every durable projection. The receipt is therefore the
-            # cross-replica completion fence; requiring an additional mutable
-            # marker here can incorrectly reject a successfully committed
-            # request when a backend does not project that marker into the job.
-            return cast(ScanJob, job)
-        await asyncio.sleep(0.01)
-    return None
-
-
-async def _wait_for_cohort_child(
-    child_id: str,
-    *,
-    tenant_id: str,
-    source_id: str,
-    request_hash: str,
-) -> tuple[ScanJob, ScanJob] | None:
-    """Wait briefly for the distributed cohort-child reservation owner."""
-
-    for _attempt in range(100):
-        receipt = await asyncio.to_thread(
-            _get_idempotency_store().get,
-            "/v1/results/push/cohort",
-            tenant_id,
-            source_id,
-            child_id,
-            request_hash=request_hash,
-        )
-        child = await asyncio.to_thread(_get_store().get, child_id, tenant_id)
-        if child is not None and child.status is JobStatus.DONE:
-            replay = prior_or_conflict(child, request_hash=request_hash)
-            if replay is None:
-                raise CorrelationCohortIngestError("invalid_receipt")
-            parent = await asyncio.to_thread(_get_store().get, replay.parent_job_id or "", tenant_id)
-            if parent is None:
-                raise CorrelationCohortIngestError("invalid_receipt")
-            if receipt is not None and receipt.get("committed") is True:
-                return replay, parent
-        await asyncio.sleep(0.01)
-    return None
-
-
-def _release_cohort_push_claim(*, tenant_id: str, source_id: str, child_id: str, request_hash: str, owner_token: str = "") -> None:
-    try:
-        _get_idempotency_store().release(
-            "/v1/results/push/cohort",
-            tenant_id,
-            source_id,
-            child_id,
-            request_hash=request_hash,
-            owner_token=owner_token,
-        )
-    except Exception as exc:  # noqa: BLE001
-        _logger.error("Cohort push idempotency rollback failed: %s", sanitize_text(sanitize_error(exc, generic=True)))
-
-
-def _cohort_push_response(child: ScanJob, parent: ScanJob) -> dict[str, Any]:
-    result = child.result if isinstance(child.result, dict) else {}
-    raw_scan_run = result.get("scan_run")
-    scan_run: dict[str, Any] = raw_scan_run if isinstance(raw_scan_run, dict) else {}
-    auto_correlation = (parent.result or {}).get("auto_correlation") if isinstance(parent.result, dict) else None
-    return {
-        "job_id": child.job_id,
-        "source_id": child.source_id or "",
-        "status": "stored",
-        "scan_outcome": str(scan_run.get("outcome") or "complete"),
-        "correlation_cohort_id": child.correlation_cohort_id or "",
-        "cohort_manifest_hash": child.correlation_cohort_manifest_hash or "",
-        "parent_job_id": parent.job_id,
-        "auto_correlation": auto_correlation if isinstance(auto_correlation, dict) else None,
-    }
-
-
 @router.post("/ocsf/ingest", tags=["observability"], status_code=202)
 async def ingest_ocsf(request: Request, body: dict | list[dict]) -> dict:
     """Ingest OCSF events and normalize them onto the canonical runtime-event path."""
@@ -1495,44 +791,6 @@ async def trace_explorer(
         agent_name=agent_name,
         connection_id=connection_id,
     )
-
-
-def _build_trace_explorer_payload_sync(
-    tenant_id: str, *, limit: int = 100, scan_id: str | None = None, offset: int = 0, **filters: Any
-) -> dict[str, object]:
-    """Assemble trace evidence off the event loop, bounded by the request limit."""
-    from agent_bom.api import cost_store, scan_finding_projection, scan_finding_read
-    from agent_bom.api.routes import gateway_feed
-    from agent_bom.api.stores import _get_graph_store
-
-    feed = gateway_feed.build_gateway_feed(
-        tenant_id=tenant_id,
-        alerts=gateway_feed._load_tenant_alerts(tenant_id),
-        llm_records=list(cost_store.get_cost_store().list_records(tenant_id, limit=limit)),
-        limit=limit,
-    )
-    findings = (
-        finding
-        for job in scan_finding_read._completed_jobs_for_tenant(tenant_id)
-        for finding in scan_finding_projection._iter_scan_findings(job)
-    )
-    return assemble_trace_explorer(
-        get_runtime_event_store(),
-        tenant_id,
-        limit=limit,
-        scan_id=scan_id,
-        feed=feed,
-        finding_rows=findings,
-        graph_store=_get_graph_store() if scan_id else None,
-        offset=offset,
-        **filters,
-    )
-
-
-async def _trace_explorer_payload_for_tenant(tenant_id: str, *, limit: int = 100) -> dict[str, object]:
-    """Shared trace explorer builder for runtime surfaces (offloaded off-loop)."""
-    bounded_limit = max(1, min(limit, 200))
-    return await asyncio.to_thread(_build_trace_explorer_payload_sync, tenant_id, limit=bounded_limit)
 
 
 @router.get("/runtime/approval-queue", **documented(observability.RuntimeApprovalQueueResponse), **_RUNTIME_READ)
@@ -1694,246 +952,40 @@ def ingest_ui_error(request: Request, body: dict) -> dict:
     return {"ok": True}
 
 
-async def _render_prometheus_metrics(request: Request | None = None) -> Response:
-    """Prometheus scrape endpoint — exposes control-plane and pilot metrics.
-
-    Catalog lives in docs/OBSERVABILITY_METRICS.md — keep that doc in sync
-    when adding or renaming series here.
-    """
-    from starlette.responses import Response
-
-    try:
-        from agent_bom.api.metrics import render_prometheus_lines
-        from agent_bom.api.oidc import oidc_decode_failure_count
-
-        store = _get_fleet_store()
-        tenant_id = getattr(getattr(request, "state", None), "tenant_id", "").strip() if request is not None else ""
-        # /metrics may be scraped without a tenant-bound auth context. Avoid
-        # aggregating fleet gauges across every tenant in that case.
-        agents = store.list_by_tenant(tenant_id) if tenant_id else []
-        lines = [
-            "# HELP agent_bom_fleet_total Total agents in fleet",
-            "# TYPE agent_bom_fleet_total gauge",
-            f"agent_bom_fleet_total {len(agents)}",
-            "# HELP agent_bom_fleet_quarantined Quarantined agents",
-            "# TYPE agent_bom_fleet_quarantined gauge",
-            f"agent_bom_fleet_quarantined {sum(1 for a in agents if getattr(a, 'lifecycle_state', '') == 'quarantined')}",
-            "# HELP agent_bom_oidc_decode_failures_total Failed OIDC decode or verification attempts",
-            "# TYPE agent_bom_oidc_decode_failures_total counter",
-            f"agent_bom_oidc_decode_failures_total {oidc_decode_failure_count()}",
-        ]
-        lines.extend(render_prometheus_lines())
-        return Response("\n".join(lines) + "\n", media_type="text/plain; version=0.0.4; charset=utf-8")
-    except Exception:  # noqa: BLE001
-        return Response("# No metrics available\n", media_type="text/plain; version=0.0.4; charset=utf-8")
-
-
 @infra_router.get("/metrics", tags=["observability"], dependencies=[_dep("read")])
 async def prometheus_metrics(request: Request) -> Response:
     return await _render_prometheus_metrics(request)
 
 
-@router.get("/observability/costs", **documented(observability.ObservabilityCostsResponse), **_FINOPS_READ)
-async def get_llm_costs(
-    request: Request,
-    agent: str | None = None,
-    cost_center: str | None = None,
-    tag: str | None = None,
-    limit: Annotated[int, Query(ge=1, le=10000)] = 1000,
-) -> dict[str, object]:
-    """Per-agent / per-model / per-provider / per-cost-center LLM spend.
+router.include_router(finops_router)
 
-    Spend is derived from token counts on ingested OTel GenAI spans priced via
-    the open cost model (agent_bom.cost_model). Includes budget posture and the
-    chargeback/showback rollup ``by_cost_center`` (#2925). Pass ``cost_center``
-    to scope the report (and budget) to one allocation unit, or ``tag`` to add a
-    ``by_tag`` showback slice for a freeform allocation tag.
-    """
-    tenant_id = _tenant_id(request)
-    bounded_limit = max(1, min(limit, 10000))
-    # The fetch (up to 10k records) plus the summarize / owner-report / budget /
-    # forecast CPU work is all synchronous; offload it in one hop so a large cost
-    # ledger can never block the event loop.
-    return await asyncio.to_thread(
-        _build_llm_costs_report_sync,
-        tenant_id,
-        agent=agent,
-        cost_center=cost_center,
-        tag=tag,
-        limit=bounded_limit,
-    )
+_EXPORTS = {
+    "_bounded": "agent_bom.api.observability_events",
+    "_build_llm_costs_report_sync": "agent_bom.api.observability_costs",
+    "_slug": "agent_bom.api.observability_events",
+    "_ocsf_timestamp": "agent_bom.api.observability_events",
+    "_ocsf_finding_detector": "agent_bom.api.observability_events",
+    "_event_session_id": "agent_bom.api.observability_events",
+    "_runtime_observation_from_event": "agent_bom.api.observability_events",
+    "_COST_CENTER_KEYS": "agent_bom.api.observability_costs",
+    "_ALLOCATION_TAG_PREFIX": "agent_bom.api.observability_costs",
+    "_MAX_ALLOCATION_TAGS": "agent_bom.api.observability_costs",
+    "_attr_str": "agent_bom.api.observability_costs",
+    "_allocation_for_spans": "agent_bom.api.observability_costs",
+    "_read_allocation_attrs": "agent_bom.api.observability_costs",
+    "_persist_llm_costs": "agent_bom.api.observability_costs",
+    "get_llm_cost_budget": "agent_bom.api.routes.observability_finops",
+    "get_anomalies": "agent_bom.api.routes.observability_finops",
+    "get_llm_cost_forecast": "agent_bom.api.routes.observability_finops",
+    "set_llm_cost_budget": "agent_bom.api.routes.observability_finops",
+    "get_llm_costs": "agent_bom.api.routes.observability_finops",
+}
 
 
-def _build_llm_costs_report_sync(
-    tenant_id: str,
-    *,
-    agent: str | None,
-    cost_center: str | None,
-    tag: str | None,
-    limit: int,
-) -> dict[str, object]:
-    """Fetch + compute the LLM cost report off the event loop."""
-    from agent_bom.api.cost_forecast import forecast_spend
-    from agent_bom.api.cost_owner import owner_cost_report
-    from agent_bom.api.cost_store import budget_status, get_cost_store, summarize, summarize_by_tag
-
-    store = get_cost_store()
-    records = store.list_records(tenant_id, limit=limit, agent=agent, cost_center=cost_center)
-    report = summarize(records)
-    totals = store.report_totals(tenant_id, agent=agent, cost_center=cost_center)
-    report.update(totals)
-    complete = len(records) == totals["total_calls"]
-    report["history"] = {"limit": limit, "returned_calls": len(records), "complete": complete}
-    report["scope"] = {"agent": agent, "cost_center": cost_center}
-    # Owner-attributed rollup (#3909): spend grouped by the accountable owner
-    # recorded on the blueprint governing each agent. Spend from an ungoverned
-    # agent rolls up under "unattributed" so nothing is silently dropped.
-    report["by_owner"] = owner_cost_report(store, tenant_id, records)["by_owner"]
-    if tag:
-        report["tag_rollup"] = summarize_by_tag(records, _bounded(tag, max_len=60))
-    if cost_center:
-        spend = store.total_spend_by_cost_center(tenant_id, cost_center)
-        budget = store.get_budget(tenant_id, "", cost_center=cost_center)
-    else:
-        spend = store.total_spend(tenant_id, agent=agent)
-        budget = store.get_budget(tenant_id, agent or "")
-        if budget is None and agent:
-            budget = store.get_budget(tenant_id, "")
-            spend = store.total_spend(tenant_id)
-    report["budget"] = budget_status(spend, budget)
-    # Forward-looking companion to the point-in-time budget posture: burn rate +
-    # projected runway derived from the same records. Reference only.
-    from agent_bom.api.cost_forecast import unavailable_forecast
-
-    if not complete:
-        report["forecast"] = unavailable_forecast("incomplete_history", totals["total_cost_usd"], budget)
-    elif budget is not None and (budget.agent != (agent or "") or budget.cost_center != (cost_center or "")):
-        report["forecast"] = unavailable_forecast("budget_scope_mismatch", totals["total_cost_usd"], budget)
-    else:
-        report["forecast"] = forecast_spend(records, budget=budget)
-    report["schema_version"] = "observability.costs.v1"
-    report["tenant_id"] = tenant_id
-    report["price_model_captured"] = __import__("agent_bom.cost_model", fromlist=["PRICE_TABLE_CAPTURED"]).PRICE_TABLE_CAPTURED
-    return report
-
-
-@router.get("/observability/costs/budget", **documented(observability.ObservabilityCostBudgetResponse), **_FINOPS_READ)
-def get_llm_cost_budget(request: Request, agent: str = "", cost_center: str = "", owner: str = "", workflow: str = "") -> dict[str, object]:
-    """Return the configured spend budget and current utilization.
-
-    Pass ``cost_center`` to read a chargeback budget scoped to one allocation
-    unit (#2925), or ``owner`` (optionally with ``workflow``) to read an
-    accountable-owner budget (#3909), instead of the per-agent / tenant-wide cap.
-    """
-    from agent_bom.api.cost_store import budget_status, get_cost_store
-
-    tenant_id = _tenant_id(request)
-    store = get_cost_store()
-    if owner:
-        from agent_bom.api.cost_owner import agent_owner_index, owner_spend
-
-        budget = store.get_budget(tenant_id, "", owner=owner, workflow=workflow)
-        spend = owner_spend(store, agent_owner_index(tenant_id), tenant_id, owner, workflow)
-    elif cost_center:
-        budget = store.get_budget(tenant_id, "", cost_center=cost_center)
-        spend = store.total_spend_by_cost_center(tenant_id, cost_center)
-    else:
-        budget = store.get_budget(tenant_id, agent)
-        spend = store.total_spend(tenant_id, agent=agent or None)
-    return {"schema_version": "observability.costs.v1", "tenant_id": tenant_id, **budget_status(spend, budget)}
-
-
-@router.put("/observability/costs/budget", tags=["observability", "finops"], dependencies=[_dep("config")])
-def set_llm_cost_budget(request: Request, body: dict) -> dict[str, object]:
-    """Set a USD spend cap. Body: {limit_usd, agent?, cost_center?, owner?, workflow?, mode?}.
-
-    A ``cost_center`` scopes the cap to one chargeback unit (#2925); ``agent``
-    scopes it to one agent; ``owner`` scopes it to an accountable human/team as
-    recorded on the governing blueprint (#3909), optionally narrowed to one
-    governing blueprint via ``workflow``; none set means tenant-wide. ``agent`` /
-    ``cost_center`` / ``owner`` are mutually exclusive, and ``workflow`` requires
-    ``owner``.
-    """
-    from agent_bom.api.cost_owner import owner_spend as _owner_spend
-    from agent_bom.api.cost_store import CostBudget, budget_status, get_cost_store
-
-    tenant_id = _tenant_id(request)
-    raw_limit = body.get("limit_usd")
-    if raw_limit is None:
-        raise HTTPException(status_code=400, detail="'limit_usd' is required and must be a number")
-    try:
-        limit_usd = float(raw_limit)
-    except (TypeError, ValueError) as exc:
-        raise HTTPException(status_code=400, detail="'limit_usd' is required and must be a number") from exc
-    if limit_usd < 0:
-        raise HTTPException(status_code=400, detail="'limit_usd' must be non-negative")
-    agent = _bounded(str(body.get("agent", "") or ""), max_len=120)
-    cost_center = _bounded(str(body.get("cost_center", "") or ""), max_len=120)
-    owner = _bounded(str(body.get("owner", "") or ""), max_len=200)
-    workflow = _bounded(str(body.get("workflow", "") or ""), max_len=120)
-    if sum(1 for scope in (agent, cost_center, owner) if scope) > 1:
-        raise HTTPException(status_code=400, detail="'agent', 'cost_center' and 'owner' budgets are mutually exclusive")
-    if workflow and not owner:
-        raise HTTPException(status_code=400, detail="'workflow' requires an 'owner' scope")
-    mode = str(body.get("mode", "report") or "report").strip().lower()
-    if mode not in ("report", "enforce"):
-        raise HTTPException(status_code=400, detail="'mode' must be 'report' or 'enforce'")
-    store = get_cost_store()
-    store.set_budget(
-        CostBudget(
-            tenant_id=tenant_id,
-            agent=agent,
-            limit_usd=limit_usd,
-            updated_at=_now(),
-            mode=mode,
-            cost_center=cost_center,
-            owner=owner,
-            workflow=workflow,
-        )
-    )
-    if owner:
-        from agent_bom.api.cost_owner import agent_owner_index
-
-        spend = _owner_spend(store, agent_owner_index(tenant_id), tenant_id, owner, workflow)
-        stored = store.get_budget(tenant_id, "", owner=owner, workflow=workflow)
-    elif cost_center:
-        spend = store.total_spend_by_cost_center(tenant_id, cost_center)
-        stored = store.get_budget(tenant_id, "", cost_center=cost_center)
-    else:
-        spend = store.total_spend(tenant_id, agent=agent or None)
-        stored = store.get_budget(tenant_id, agent)
-    return {
-        "schema_version": "observability.costs.v1",
-        "tenant_id": tenant_id,
-        "updated": True,
-        **budget_status(spend, stored),
-    }
-
-
-@router.get("/observability/costs/forecast", **documented(observability.ObservabilityCostForecastResponse), **_FINOPS_READ)
-async def get_llm_cost_forecast(
-    request: Request, agent: str | None = None, limit: Annotated[int, Query(ge=1, le=10000)] = 10000
-) -> dict[str, object]:
-    """Project LLM spend burn rate and budget runway for the active tenant.
-
-    Derives a recent burn rate (trailing 24h / 7d) from ``observed_at`` on
-    persisted cost records and extrapolates to the configured budget — returning
-    projected period spend, days of runway, and an exhaustion date. Reference
-    only: a forecast never blocks a call (enforcement stays in the relay) and
-    returns a clear ``status`` with null projections on sparse/empty history.
-    """
-    from agent_bom.api.cost_forecast import forecast_for_tenant
-
-    bounded_limit = max(1, min(limit, 10000))
-    scoped_agent = _bounded(agent, max_len=120) if agent else None
-    return await asyncio.to_thread(forecast_for_tenant, _tenant_id(request), agent=scoped_agent, limit=bounded_limit)
-
-
-@router.get("/observability/anomalies", **documented(observability.ObservabilityAnomaliesResponse), **_FINOPS_READ)
-def get_anomalies(request: Request, z_threshold: float = 3.0) -> dict[str, object]:
-    """Detect cost and behavior anomalies (per-agent spend + per-session call-rate
-    z-scores) for the active tenant. Proactive surfacing of runaway agents."""
-    from agent_bom.api.anomaly import scan_anomalies
-
-    bounded = max(1.0, min(z_threshold, 10.0))
-    return scan_anomalies(_tenant_id(request), z_threshold=bounded)
+def __getattr__(name: str) -> Any:
+    module = _EXPORTS.get(name)
+    if module is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    value = getattr(import_module(module), name)
+    globals()[name] = value
+    return value

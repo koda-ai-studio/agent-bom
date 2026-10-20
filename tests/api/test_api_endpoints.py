@@ -43,7 +43,7 @@ def _mock_scan_pipeline(monkeypatch):
     discover_all() scanning the local machine. Replace submission with a no-op
     so these tests only exercise HTTP routing, not the full pipeline.
     """
-    monkeypatch.setattr("agent_bom.api.routes.scan.submit_scan_job", lambda job: None)
+    monkeypatch.setattr("agent_bom.api.scan_job_dispatch.submit_scan_job", lambda job: None)
 
 
 # ---------------------------------------------------------------------------
@@ -64,7 +64,7 @@ def test_scan_host_discovery_requires_deployment_opt_in(monkeypatch, local_scans
     monkeypatch.setenv("AGENT_BOM_API_LOCAL_PATH_SCANS", local_scans)
     monkeypatch.delenv("AGENT_BOM_API_HOST_DISCOVERY_TENANT", raising=False)
     queued = []
-    monkeypatch.setattr("agent_bom.api.routes.scan.submit_scan_job", queued.append)
+    monkeypatch.setattr("agent_bom.api.scan_job_dispatch.submit_scan_job", queued.append)
     client, store = _fresh_client()
 
     response = client.post("/v1/scan", json={"discover_host": True})
@@ -78,7 +78,7 @@ def test_scan_host_discovery_accepts_only_the_bound_authenticated_tenant(monkeyp
     monkeypatch.setenv("AGENT_BOM_API_LOCAL_PATH_SCANS", "enabled")
     monkeypatch.setenv("AGENT_BOM_API_HOST_DISCOVERY_TENANT", "default")
     queued = []
-    monkeypatch.setattr("agent_bom.api.routes.scan.submit_scan_job", queued.append)
+    monkeypatch.setattr("agent_bom.api.scan_job_dispatch.submit_scan_job", queued.append)
     client, _store = _fresh_client()
 
     response = client.post("/v1/scan", json={"discover_host": True})

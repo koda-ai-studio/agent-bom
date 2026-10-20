@@ -841,7 +841,7 @@ def test_api_create_defaults_scan_mode_full_and_auto_scan_on_create_true(
 ) -> None:
     # Omit auto_scan_on_create so the API default (true) applies. The request
     # reserves a durable job but never runs the provider broker inline.
-    monkeypatch.setattr("agent_bom.api.routes.scan.dispatch_scan_job", lambda job: None)
+    monkeypatch.setattr("agent_bom.api.scan_job_dispatch.dispatch_scan_job", lambda job: None)
     client = TestClient(_app())
     body = _create_body()
     del body["auto_scan_on_create"]
@@ -853,7 +853,7 @@ def test_api_create_defaults_scan_mode_full_and_auto_scan_on_create_true(
 
 
 def test_api_create_accepts_continuous_scan_mode(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("agent_bom.api.routes.scan.dispatch_scan_job", lambda job: None)
+    monkeypatch.setattr("agent_bom.api.scan_job_dispatch.dispatch_scan_job", lambda job: None)
     client = TestClient(_app())
     body = _create_body()
     body["scan_mode"] = "continuous"
@@ -877,7 +877,7 @@ def test_api_create_rejects_invalid_scan_mode() -> None:
 def test_api_create_persists_auto_scan_on_create_false(monkeypatch: pytest.MonkeyPatch) -> None:
     scanned: list[str] = []
     monkeypatch.setattr(
-        "agent_bom.api.routes.cloud_connections._run_connection_scan",
+        "agent_bom.api.connection_scan_worker._run_connection_scan",
         lambda record, tenant_id: scanned.append(record.id) or {"scan_id": "should-not-run"},
     )
     client = TestClient(_app())
@@ -892,7 +892,7 @@ def test_api_create_persists_auto_scan_on_create_false(monkeypatch: pytest.Monke
 
 def test_api_create_auto_scan_on_create_true_dispatches_durable_job(monkeypatch: pytest.MonkeyPatch) -> None:
     dispatched: list[Any] = []
-    monkeypatch.setattr("agent_bom.api.routes.scan.dispatch_scan_job", dispatched.append)
+    monkeypatch.setattr("agent_bom.api.scan_job_dispatch.dispatch_scan_job", dispatched.append)
     client = TestClient(_app())
     body = _create_body()
     body["auto_scan_on_create"] = True
@@ -907,7 +907,7 @@ def test_api_create_auto_scan_on_create_true_dispatches_durable_job(monkeypatch:
 def test_api_create_auto_scan_on_create_false_does_not_invoke_scan(monkeypatch: pytest.MonkeyPatch) -> None:
     scanned: list[str] = []
     monkeypatch.setattr(
-        "agent_bom.api.routes.cloud_connections._run_connection_scan",
+        "agent_bom.api.connection_scan_worker._run_connection_scan",
         lambda record, tenant_id: scanned.append(record.id) or {"scan_id": "x"},
     )
     client = TestClient(_app())
@@ -925,7 +925,7 @@ def test_api_create_auto_scan_failure_marks_error_connection_still_exists(
     def _boom(job: Any) -> None:
         raise RuntimeError("dispatch credential super-secret-dispatch-token")
 
-    monkeypatch.setattr("agent_bom.api.routes.scan.dispatch_scan_job", _boom)
+    monkeypatch.setattr("agent_bom.api.scan_job_dispatch.dispatch_scan_job", _boom)
     client = TestClient(_app())
     body = _create_body()
     body["auto_scan_on_create"] = True
@@ -1415,9 +1415,9 @@ def _wait_for_scan_job(client: TestClient, job_id: str, *, tenant: str = "tenant
 
 def test_manual_connection_scan_enqueues_without_running_broker_inline(monkeypatch: pytest.MonkeyPatch) -> None:
     """The request returns an accepted durable job before provider I/O runs."""
+    from agent_bom.api import scan_job_dispatch, scan_job_submission
     from agent_bom.api.models import ScanJob, ScanRequest
     from agent_bom.api.routes import cloud_connections as routes
-    from agent_bom.api.routes import scan as scan_routes
 
     cid = _seed_connection("tenant-alpha")
     captured: dict[str, Any] = {}
@@ -1436,8 +1436,8 @@ def test_manual_connection_scan_enqueues_without_running_broker_inline(monkeypat
     def _must_not_run(*args: Any, **kwargs: Any) -> dict[str, Any]:
         pytest.fail("the HTTP request must not run the connection broker inline")
 
-    monkeypatch.setattr(scan_routes, "enqueue_scan_job", _fake_enqueue)
-    monkeypatch.setattr(scan_routes, "dispatch_scan_job", lambda job: None)
+    monkeypatch.setattr(scan_job_submission, "enqueue_scan_job", _fake_enqueue)
+    monkeypatch.setattr(scan_job_dispatch, "dispatch_scan_job", lambda job: None)
     monkeypatch.setattr(routes, "_run_connection_scan", _must_not_run)
 
     response = TestClient(_app()).post(
@@ -1461,8 +1461,8 @@ def test_manual_connection_scan_enqueues_without_running_broker_inline(monkeypat
 
 def test_manual_connection_scan_idempotency_key_replays_accepted_job(monkeypatch: pytest.MonkeyPatch) -> None:
     """A network retry returns the first durable job instead of duplicating work."""
+    from agent_bom.api import scan_job_dispatch
     from agent_bom.api.idempotency_store import InMemoryIdempotencyStore
-    from agent_bom.api.routes import scan as scan_routes
     from agent_bom.api.store import InMemoryJobStore
     from agent_bom.api.stores import _get_store, set_idempotency_store, set_job_store
 
@@ -1470,7 +1470,7 @@ def test_manual_connection_scan_idempotency_key_replays_accepted_job(monkeypatch
     job_store = InMemoryJobStore()
     set_job_store(job_store)
     set_idempotency_store(InMemoryIdempotencyStore())
-    monkeypatch.setattr(scan_routes, "submit_scan_job", lambda job: None)
+    monkeypatch.setattr(scan_job_dispatch, "submit_scan_job", lambda job: None)
     try:
         cid = _seed_connection("tenant-alpha")
         client = TestClient(_app())
@@ -1492,7 +1492,7 @@ def test_manual_connection_scan_idempotency_key_replays_accepted_job(monkeypatch
 
 def test_manual_connection_scan_dispatch_failure_is_terminal_and_sanitized(monkeypatch: pytest.MonkeyPatch) -> None:
     """A failed handoff never leaves an ambiguous pending job or leaks text."""
-    from agent_bom.api.routes import scan as scan_routes
+    from agent_bom.api import scan_job_dispatch
     from agent_bom.api.store import InMemoryJobStore
     from agent_bom.api.stores import _get_store, set_job_store
 
@@ -1503,7 +1503,7 @@ def test_manual_connection_scan_dispatch_failure_is_terminal_and_sanitized(monke
     def _fail_dispatch(job: Any) -> None:
         raise RuntimeError("dispatch credential super-secret-dispatch-token")
 
-    monkeypatch.setattr(scan_routes, "submit_scan_job", _fail_dispatch)
+    monkeypatch.setattr(scan_job_dispatch, "submit_scan_job", _fail_dispatch)
     try:
         cid = _seed_connection("tenant-alpha")
         response = TestClient(_app()).post(

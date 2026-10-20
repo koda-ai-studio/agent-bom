@@ -12,7 +12,8 @@ from collections.abc import Sequence
 from datetime import datetime, timezone
 from typing import Any
 
-from agent_bom.api.compliance_hub_store import _cvss_value, _severity_rank, compute_effective_reach_score
+from agent_bom.api.finding_rank import compute_effective_reach_score
+from agent_bom.api.storage.hub_filters import _cvss_value, _severity_rank
 from agent_bom.canonical_ids import canonical_finding_id, canonical_id
 
 FindingLifecycleMetrics = dict[str, Any]

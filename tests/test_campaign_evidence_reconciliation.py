@@ -263,8 +263,9 @@ def test_startup_requires_campaign_checkpoint_migration(monkeypatch):
 def _paged_source(monkeypatch, pages):
     from types import SimpleNamespace
 
+    from agent_bom.api import finding_page_read as scan
     from agent_bom.api.campaign_store import InMemoryCampaignStore, set_campaign_store
-    from agent_bom.api.routes import campaigns, scan
+    from agent_bom.api.routes import campaigns
 
     store = InMemoryCampaignStore()
     set_campaign_store(store)
@@ -298,8 +299,9 @@ def test_merged_resume_pages_without_a_recount_still_complete(monkeypatch):
 
 
 def test_one_campaign_walk_reuses_retained_scan_work_across_pages(monkeypatch):
+    from agent_bom.api import finding_page_read as scan
     from agent_bom.api.finding_read_context import read_once
-    from agent_bom.api.routes import campaigns, scan
+    from agent_bom.api.routes import campaigns
 
     loads = []
     pages = {

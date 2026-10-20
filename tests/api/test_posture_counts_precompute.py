@@ -88,8 +88,8 @@ class _ComputeProbe:
 
     def __init__(self, monkeypatch: pytest.MonkeyPatch) -> None:
         from agent_bom.api import exec_posture
+        from agent_bom.api import finding_snapshot_read as scan_routes
         from agent_bom.api.routes import overview as overview_routes
-        from agent_bom.api.routes import scan as scan_routes
 
         self.calls: dict[str, list[str]] = {"issues": [], "exec": [], "compound": []}
         real_issues = scan_routes.issue_severity_counts

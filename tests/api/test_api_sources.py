@@ -147,7 +147,7 @@ def test_source_cohort_run_is_exact_tenant_bound_and_idempotent(
     source_client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr("agent_bom.api.routes.scan.dispatch_scan_job", lambda job: None)
+    monkeypatch.setattr("agent_bom.api.scan_cohort_submission.dispatch_scan_job", lambda job: None)
     source_ids: list[str] = []
     for payload in (
         {
@@ -235,7 +235,7 @@ def test_source_cohort_same_key_dispatches_each_child_once(
 
     monkeypatch.setattr(idempotency, "get", _racing_get)
     dispatched: list[str] = []
-    monkeypatch.setattr("agent_bom.api.routes.scan.dispatch_scan_job", lambda job: dispatched.append(job.job_id))
+    monkeypatch.setattr("agent_bom.api.scan_cohort_submission.dispatch_scan_job", lambda job: dispatched.append(job.job_id))
     headers = {**ANALYST_HEADERS, "Idempotency-Key": "concurrent-deploy"}
     payload = {"source_ids": list(reversed(source_ids)), "max_age_hours": 24}
 
@@ -290,7 +290,7 @@ def test_source_cohort_reconciles_durable_parent_after_receipt_failure(
     idempotency = _FailCommittedReceiptOnce()
     _stores.set_idempotency_store(idempotency)
     dispatched: list[str] = []
-    monkeypatch.setattr("agent_bom.api.routes.scan.submit_scan_job", lambda job: dispatched.append(job.job_id))
+    monkeypatch.setattr("agent_bom.api.scan_job_dispatch.submit_scan_job", lambda job: dispatched.append(job.job_id))
     headers = {**ANALYST_HEADERS, "Idempotency-Key": "durable-before-receipt"}
     payload = {"source_ids": source_ids, "max_age_hours": 24}
 
@@ -341,7 +341,7 @@ def test_source_cohort_stops_heartbeat_when_post_enqueue_projection_raises(
 
     monkeypatch.setattr(source_routes, "IdempotencyReservationHeartbeat", _TrackingHeartbeat)
     monkeypatch.setattr(source_routes, "_update_cohort_sources", lambda **_kwargs: (_ for _ in ()).throw(RuntimeError("injected")))
-    monkeypatch.setattr("agent_bom.api.routes.scan.dispatch_scan_job", lambda _job: None)
+    monkeypatch.setattr("agent_bom.api.scan_cohort_submission.dispatch_scan_job", lambda _job: None)
 
     response = source_client.post(
         "/v1/sources/run-cohort",
@@ -383,7 +383,7 @@ def test_source_cohort_reclaims_expired_claim_before_any_dispatch(
     idempotency._records[key].created_at = (datetime.now(timezone.utc) - timedelta(seconds=31)).isoformat()  # type: ignore[attr-defined]  # noqa: SLF001
     monkeypatch.setenv("AGENT_BOM_IDEMPOTENCY_RESERVATION_LEASE_SECONDS", "30")
     dispatched: list[str] = []
-    monkeypatch.setattr("agent_bom.api.routes.scan.dispatch_scan_job", lambda job: dispatched.append(job.job_id))
+    monkeypatch.setattr("agent_bom.api.scan_cohort_submission.dispatch_scan_job", lambda job: dispatched.append(job.job_id))
 
     response = source_client.post(
         "/v1/sources/run-cohort",
@@ -400,7 +400,7 @@ def test_source_cohort_run_rejects_duplicate_or_multi_target_members(
     source_client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr("agent_bom.api.routes.scan.dispatch_scan_job", lambda job: None)
+    monkeypatch.setattr("agent_bom.api.scan_cohort_submission.dispatch_scan_job", lambda job: None)
     repo = source_client.post(
         "/v1/sources",
         headers=ANALYST_HEADERS,
@@ -574,7 +574,7 @@ def test_generic_schedule_rechecks_host_permission_before_queue(monkeypatch):
         queued.append(kwargs)
         return SimpleNamespace(job_id="unexpected")
 
-    monkeypatch.setattr("agent_bom.api.routes.scan.enqueue_scan_job", fake_enqueue)
+    monkeypatch.setattr("agent_bom.api.scan_job_submission.enqueue_scan_job", fake_enqueue)
     with pytest.raises(SecurityError, match="not enabled"):
         _enqueue_scheduled_scan({"discover_host": True}, tenant_id="tenant-alpha")
     assert queued == []

@@ -53,6 +53,7 @@ class TestValidateRegions:
 
 class TestAwsScanFansOutOnAllRegions:
     def _patch_common(self, monkeypatch: pytest.MonkeyPatch, calls: dict[str, Any]) -> None:
+        from agent_bom.api import connection_scan_aws
         from agent_bom.cloud import aws_inventory, connection_broker
 
         class _Sess:
@@ -108,7 +109,7 @@ class TestAwsScanFansOutOnAllRegions:
             _cis_multi,
         )
         monkeypatch.setattr(
-            routes,
+            connection_scan_aws,
             "_persist_connection_report",
             lambda record, tenant_id, report, *, queued_job=None: "scan-123",
         )

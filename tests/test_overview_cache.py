@@ -10,6 +10,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
+from starlette.requests import Request
 
 from agent_bom.api.routes import overview
 
@@ -91,7 +92,7 @@ def test_hub_ingest_invalidates_cache(monkeypatch):
         return {"hub_critical": hub_severity.get("critical", 0)}
 
     monkeypatch.setattr(overview, "_compose_overview", _fake_compose)
-    req = object()
+    req = Request({"type": "http", "state": {"tenant_id": "acme"}})
 
     overview._build_overview(req)
     assert calls["n"] == 1
@@ -106,7 +107,7 @@ def test_hub_ingest_invalidates_cache(monkeypatch):
 
 def test_second_read_within_ttl_skips_fold(monkeypatch):
     calls = _install(monkeypatch, [_job("j1")])
-    req = object()
+    req = Request({"type": "http", "state": {"tenant_id": "acme"}})
 
     first = overview._build_overview(req)
     second = overview._build_overview(req)
@@ -118,7 +119,7 @@ def test_second_read_within_ttl_skips_fold(monkeypatch):
 def test_new_scan_invalidates_cache(monkeypatch):
     jobs = [_job("j1")]
     calls = _install(monkeypatch, jobs)
-    req = object()
+    req = Request({"type": "http", "state": {"tenant_id": "acme"}})
 
     overview._build_overview(req)
     assert calls["n"] == 1
@@ -134,7 +135,7 @@ def test_new_scan_invalidates_cache(monkeypatch):
 def test_status_transition_invalidates_cache(monkeypatch):
     job = _job("j1", status="running", completed_at="")
     calls = _install(monkeypatch, [job])
-    req = object()
+    req = Request({"type": "http", "state": {"tenant_id": "acme"}})
 
     overview._build_overview(req)
     assert calls["n"] == 1
@@ -149,7 +150,7 @@ def test_status_transition_invalidates_cache(monkeypatch):
 def test_same_job_metadata_with_new_canonical_evidence_invalidates_cache(monkeypatch):
     job = _job("j1")
     calls = _install(monkeypatch, [job])
-    req = object()
+    req = Request({"type": "http", "state": {"tenant_id": "acme"}})
 
     overview._build_overview(req)
     assert calls["n"] == 1
@@ -165,7 +166,7 @@ def test_same_job_metadata_with_new_canonical_evidence_invalidates_cache(monkeyp
 def test_ttl_zero_disables_cache(monkeypatch):
     monkeypatch.setenv("AGENT_BOM_OVERVIEW_CACHE_TTL_SECONDS", "0")
     calls = _install(monkeypatch, [_job("j1")])
-    req = object()
+    req = Request({"type": "http", "state": {"tenant_id": "acme"}})
 
     overview._build_overview(req)
     overview._build_overview(req)

@@ -660,7 +660,9 @@ def test_auth_secret_rotation_plan_is_non_secret_and_actionable(monkeypatch: pyt
 
 def test_auth_secret_rotation_plan_supports_vault_adapter(monkeypatch: pytest.MonkeyPatch) -> None:
     _clear_rate_limit_env(monkeypatch)
+    monkeypatch.setattr(app, "middleware_stack", None)
     monkeypatch.setattr("agent_bom.api.middleware.clustered_control_plane_required", lambda: False)
+    monkeypatch.setattr("agent_bom.api.middleware_limits.clustered_control_plane_required", lambda: False)
     monkeypatch.setenv("AGENT_BOM_BROWSER_SESSION_SIGNING_KEY", "browser-secret")
     monkeypatch.setenv("AGENT_BOM_CONTROL_PLANE_REPLICAS", "2")
     monkeypatch.setenv("AGENT_BOM_SECRET_PROVIDER", "hashicorp_vault")
@@ -678,7 +680,9 @@ def test_auth_secret_rotation_plan_supports_vault_adapter(monkeypatch: pytest.Mo
 
 def test_auth_secret_rotation_plan_supports_kubernetes_secret_adapter(monkeypatch: pytest.MonkeyPatch) -> None:
     _clear_rate_limit_env(monkeypatch)
+    monkeypatch.setattr(app, "middleware_stack", None)
     monkeypatch.setattr("agent_bom.api.middleware.clustered_control_plane_required", lambda: False)
+    monkeypatch.setattr("agent_bom.api.middleware_limits.clustered_control_plane_required", lambda: False)
     monkeypatch.setenv("AGENT_BOM_CONTROL_PLANE_REPLICAS", "2")
     monkeypatch.setenv("AGENT_BOM_SECRET_PROVIDER", "kubernetes_secret")
 

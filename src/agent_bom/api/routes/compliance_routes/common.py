@@ -199,7 +199,7 @@ def _derive_deployment_context(request: Request, jobs: list[Any]) -> dict[str, A
 
 def _current_narrative_evidence(request: Request) -> dict[str, Any] | None:
     """Return the same persisted current finding snapshot the queue exposes."""
-    from agent_bom.api.routes.scan import current_findings_snapshot
+    from agent_bom.api.finding_snapshot_read import current_findings_snapshot
 
     snapshot = current_findings_snapshot(request)
     if not snapshot["findings"] and not snapshot["completed_scan_count"]:
@@ -286,7 +286,7 @@ _cached_posture_block = cached_posture_block
 
 
 def _cached_issue_severity_counts(request: Request, tenant_jobs: list[Any]) -> dict[str, Any]:
-    from agent_bom.api.routes.scan import issue_severity_counts
+    from agent_bom.api.finding_snapshot_read import issue_severity_counts
 
     return _cached_posture_block(request, tenant_jobs, "issues", lambda: issue_severity_counts(request))
 

@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+from agent_bom.api import finding_page_read as scan_routes
 from agent_bom.api.routes import enterprise
-from agent_bom.api.routes import scan as scan_routes
 
 
 def _request() -> SimpleNamespace:

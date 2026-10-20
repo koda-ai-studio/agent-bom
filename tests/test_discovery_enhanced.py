@@ -278,7 +278,7 @@ def test_detect_skips_already_discovered(monkeypatch):
 
 def test_detect_no_binaries(monkeypatch):
     """detect_installed_agents returns empty when no agent binaries are on PATH."""
-    import agent_bom.discovery as disc
+    import agent_bom.discovery.platform_config as disc
     from agent_bom.discovery import detect_installed_agents
 
     monkeypatch.setattr(disc, "_find_binary", lambda _: None)
@@ -543,7 +543,7 @@ def test_find_binary_in_local_bin(monkeypatch, tmp_path):
     import os
     import shutil
 
-    import agent_bom.discovery as disc
+    import agent_bom.discovery.platform_config as disc
 
     monkeypatch.setattr(shutil, "which", lambda _: None)
     # Create a fake binary in a temp dir that simulates ~/.local/bin
@@ -572,7 +572,7 @@ def test_detect_installed_via_signal_file(monkeypatch, tmp_path):
 
     monkeypatch.setattr(shutil, "which", lambda _: None)
     # Make _find_binary always return None
-    import agent_bom.discovery as disc
+    import agent_bom.discovery.platform_config as disc
 
     monkeypatch.setattr(disc, "_find_binary", lambda _: None)
 

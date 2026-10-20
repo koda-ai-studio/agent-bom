@@ -18,6 +18,7 @@ from __future__ import annotations
 import asyncio
 import threading
 import time
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -212,7 +213,7 @@ def test_overview_concurrent_misses_share_one_fold(monkeypatch) -> None:
 
     def _reader(index: int) -> None:
         try:
-            results[index] = overview._build_overview(object())
+            results[index] = overview._build_overview(SimpleNamespace(state=SimpleNamespace(tenant_id="acme")))
         except BaseException as exc:  # noqa: BLE001 — surfaced by the assertion below
             errors.append(exc)
 
@@ -258,9 +259,12 @@ def test_overview_singleflight_follower_recomputes_when_leader_fails(monkeypatch
     monkeypatch.setattr(overview, "_compose_overview", _flaky_compose)
 
     with pytest.raises(RuntimeError):
-        overview._build_overview(object())
+        overview._build_overview(SimpleNamespace(state=SimpleNamespace(tenant_id="acme")))
     # The in-flight slot must be released so the next reader is not stranded.
-    assert overview._build_overview(object()) == {"schema_version": "overview.v1", "tenant_id": "acme"}
+    assert overview._build_overview(SimpleNamespace(state=SimpleNamespace(tenant_id="acme"))) == {
+        "schema_version": "overview.v1",
+        "tenant_id": "acme",
+    }
     overview._reset_overview_cache()
 
 

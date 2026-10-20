@@ -314,7 +314,7 @@ def _campaign_source_revision(request: Request) -> tuple[str, int]:
 @finding_read_snapshot
 def _load_findings(request: Request, *, deadline_seconds: float = 10.0) -> dict[str, Any]:
     """Walk one read context's cursor; never treat a bounded, unstable or fenced-out walk as complete."""
-    from agent_bom.api.routes.scan import _list_findings_impl
+    from agent_bom.api.finding_page_read import _list_findings_impl
 
     source_revision = _campaign_source_revision(request)
     evidence_revision = get_campaign_store().evidence_state.revision(_tenant(request))

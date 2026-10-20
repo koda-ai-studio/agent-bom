@@ -521,7 +521,7 @@ def test_endpoint_returns_generic_invalid_scan_path(tmp_path, monkeypatch):
 @pytest.mark.anyio
 async def test_ai_scan_work_is_offloaded_from_the_event_loop(monkeypatch):
     """Dedicated scans must execute blocking parser work in the worker pool."""
-    from agent_bom.api.routes import scan as scan_routes
+    from agent_bom.api import ai_scan_runtime as scan_routes
 
     calls: list[object] = []
 
@@ -545,7 +545,7 @@ async def test_ai_scan_sheds_work_with_retry_after_under_saturation(monkeypatch)
     from fastapi import HTTPException
 
     from agent_bom.api import ai_scan_runtime
-    from agent_bom.api.routes import scan as scan_routes
+    from agent_bom.api import ai_scan_runtime as scan_routes
     from agent_bom.backpressure import BackpressureRejectedError
 
     @asynccontextmanager

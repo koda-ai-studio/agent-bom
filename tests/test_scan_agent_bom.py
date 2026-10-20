@@ -115,6 +115,7 @@ def test_cli_reads_scan_without_discovery(monkeypatch, tmp_path):
 
 @pytest.fixture
 def api_client(monkeypatch):
+    from agent_bom.api import scan_request_context
     from agent_bom.api.models import JobStatus, ScanJob, ScanRequest
     from agent_bom.api.routes import scan as routes
     from agent_bom.rbac import Role
@@ -141,8 +142,8 @@ def api_client(monkeypatch):
         store.put(
             ScanJob(job_id=job_id, tenant_id=tenant, status=status, request=ScanRequest(), created_at="2026-09-26T12:00:00Z", result=scan())
         )
-    monkeypatch.setattr(routes, "_get_store", lambda: store)
-    monkeypatch.setattr(routes, "_jobs_get", lambda job_id, **kwargs: None)
+    monkeypatch.setattr(scan_request_context, "_get_store", lambda: store)
+    monkeypatch.setattr(scan_request_context, "_jobs_get", lambda job_id, **kwargs: None)
     monkeypatch.setattr(
         "agent_bom.api.auth_runtime_state.get_auth_runtime_status", lambda: {"auth_required": True, "unauthenticated_allowed": False}
     )

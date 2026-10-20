@@ -645,9 +645,10 @@ from agent_bom.api.agent_identity_store import register_local_identity_verifier 
 register_local_identity_verifier()
 
 # Re-export proxy, connectors and scan helpers for backward compatibility
+from agent_bom.api.ai_scan_runtime import _dataclass_to_dict  # noqa: E402, F401
 from agent_bom.api.routes.connectors import _load_registry  # noqa: E402, F401
 from agent_bom.api.routes.proxy import push_proxy_alert, push_proxy_metrics  # noqa: E402, F401
-from agent_bom.api.routes.scan import _dataclass_to_dict, _sanitize_api_path  # noqa: E402, F401
+from agent_bom.api.scan_path_jail import _sanitize_api_path  # noqa: E402, F401
 
 _cleanup_task: asyncio.Task | None = None
 _scheduler_task: asyncio.Task | None = None

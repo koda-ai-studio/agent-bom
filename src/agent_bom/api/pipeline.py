@@ -383,10 +383,7 @@ def _dispatch_connection_scan(ctx: ScanContext) -> bool:
     # tenant-scoped encrypted connection rather than local path targets.
     # Dispatch before the generic discovery pipeline so the API request never
     # performs provider I/O inline and worker reclaims keep the same job id.
-    from agent_bom.api.routes.cloud_connections import (
-        execute_queued_connection_scan,
-        is_queued_connection_scan,
-    )
+    from agent_bom.api.connection_scan_worker import execute_queued_connection_scan, is_queued_connection_scan
 
     if not is_queued_connection_scan(ctx.job):
         return False

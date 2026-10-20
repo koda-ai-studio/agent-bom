@@ -118,9 +118,8 @@ def test_tenant_worker_uses_rls_inside_maintenance_dispatch(report_stores):
 def test_connection_scheduler_callback_uses_real_tenant_rls(report_stores, monkeypatch):
     from types import SimpleNamespace
 
-    from agent_bom.api import connection_scheduler
+    from agent_bom.api import connection_scan_worker, connection_scheduler
     from agent_bom.api.postgres_common import _tenant_connection, bypass_tenant_rls, is_tenant_rls_bypassed
-    from agent_bom.api.routes import cloud_connections
 
     first, second, tenant = report_stores
     job = new_job(tenant)
@@ -134,7 +133,7 @@ def test_connection_scheduler_callback_uses_real_tenant_rls(report_stores, monke
             observed.append(conn.execute("SELECT job_id FROM report_jobs WHERE job_id = %s", (job.job_id,)).fetchall())
         return SimpleNamespace(job_id="queued")
 
-    monkeypatch.setattr(cloud_connections, "queue_connection_scan_record", queue)
+    monkeypatch.setattr(connection_scan_worker, "queue_connection_scan_record", queue)
     monkeypatch.setattr(connection_scheduler, "_persist_scan_outcome", lambda *a, **kw: True)
     with bypass_tenant_rls(audit=False, warn=False):
         for owner in (tenant, "foreign-" + tenant):

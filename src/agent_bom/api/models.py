@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from enum import Enum
-from typing import Annotated, Any, Literal
+from importlib import import_module
+from typing import TYPE_CHECKING, Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, computed_field, field_serializer, field_validator, model_validator
 
@@ -402,204 +403,6 @@ class ReportJob(BaseModel):
 # ─── Meta Models ───────────────────────────────────────────────────────────
 
 
-class VersionInfo(BaseModel):
-    version: str
-    api_version: str = "v1"
-    python_package: str = "agent-bom"
-
-
-class TracingHealth(BaseModel):
-    w3c_trace_context: bool = True
-    w3c_tracestate: bool = True
-    w3c_baggage: bool = True
-    otlp_export: str = "disabled"
-    otlp_endpoint_configured: bool = False
-    otlp_headers_configured: bool = False
-    # Audit-event OTLP *log* export (governance chain → OTLP logs), distinct from
-    # the trace-span export above.
-    otlp_logs_export: str = "disabled"
-    otlp_logs_endpoint_configured: bool = False
-    otlp_logs_headers_configured: bool = False
-
-
-class AnalyticsHealth(BaseModel):
-    backend: str = "disabled"
-    enabled: bool = False
-    buffered: bool = False
-    clickhouse_url_configured: bool = False
-    flush_interval_seconds: float | None = None
-    max_batch: int | None = None
-    queue_capacity: int | None = None
-    queue_depth: int | None = None
-    dropped_count: int | None = None
-
-
-class PostgresPortabilityHealth(BaseModel):
-    """Non-secret, operator-declared PostgreSQL compatibility posture."""
-
-    provider: str
-    declared_hint: str
-    contract: str = "postgresql"
-    evidence: str = "provider_unverified"
-    next_action: str | None = "agent-bom doctor"
-
-
-class StorageHealth(BaseModel):
-    control_plane_backend: str = "inmemory"
-    job_store: str = "inmemory"
-    fleet_store: str = "inmemory"
-    policy_store: str = "inmemory"
-    source_store: str = "inmemory"
-    credential_ref_store: str = "inmemory"
-    schedule_store: str = "inmemory"
-    exception_store: str = "inmemory"
-    trend_store: str = "inmemory"
-    graph_store: str = "inmemory"
-    key_store: str = "inmemory"
-    audit_log: str = "inmemory"
-    postgres: PostgresPortabilityHealth | None = None
-
-
-class EntitlementHealth(BaseModel):
-    status: str = "missing"
-    lane: str = "oss"
-    support_tier: str = "community"
-    enabled_feature_count: int = 0
-    metadata_only: bool = True
-    current_oss_paths_gated: bool = False
-
-
-class PublicHealthResponse(BaseModel):
-    """Non-sensitive liveness and UI bootstrap posture."""
-
-    status: str = "ok"
-    version: str
-    auth_required: bool = True
-    auth_configured: bool = False
-    configured_auth_modes: list[str] = Field(default_factory=list)
-    unauthenticated_allowed: bool = False
-
-
-class HealthResponse(BaseModel):
-    status: str = "ok"
-    version: str
-    auth_required: bool = True
-    auth_configured: bool = False
-    configured_auth_modes: list[str] = Field(default_factory=list)
-    unauthenticated_allowed: bool = False
-    # Read-only packaging honesty: recurring connection intervals only fire when
-    # AGENT_BOM_CONNECTIONS_SCHEDULER (or Helm controlPlane.connectionsScheduler)
-    # is enabled. Default false so self-hosted installs do not silently claim cadence.
-    connections_scheduler_enabled: bool = False
-    tracing: TracingHealth
-    analytics: AnalyticsHealth
-    storage: StorageHealth
-    entitlements: EntitlementHealth = Field(default_factory=EntitlementHealth)
-
-
-class ComplianceEvidenceItem(BaseModel):
-    finding_id: str
-    control_tag: str
-    vulnerability_id: str | None = None
-    package: str | None = None
-    severity: str | None = None
-    scan_id: str | None = None
-    scan_input: dict[str, Any] = Field(default_factory=dict)
-    scanner_version: str | None = None
-    scan_started_at: str | None = None
-    scan_completed_at: str | None = None
-    policy_decisions: list[dict[str, Any]] = Field(default_factory=list)
-    provenance: dict[str, Any] = Field(default_factory=dict)
-    fixed_version: str | None = None
-    agents_at_risk: list[str] = Field(default_factory=list)
-
-
-class ComplianceReportControl(BaseModel):
-    control_id: str | None = None
-    control_name: str | None = None
-    status: str = "unknown"
-    source_status: str | None = None
-    evidence_state: str = "not_evaluated"
-    finding_count: int = 0
-    evidence: list[ComplianceEvidenceItem] = Field(default_factory=list)
-
-
-class ComplianceReportScope(BaseModel):
-    since: str
-    until: str
-    control_count: int = 0
-    finding_count: int = 0
-    audit_event_count: int = 0
-    # True when the audit window held more entries than the export cap; the
-    # bundle then carries a partial (most-recent) set, not the full window.
-    audit_events_truncated: bool = False
-    audit_event_limit: int = 0
-    completed_scan_count: int = 0
-
-
-class ComplianceReportSummary(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-
-    passed: int = Field(alias="pass")
-    warning: int = 0
-    fail: int = 0
-    incomplete: int = 0
-    not_evaluated: int = 0
-    score: float = 100.0
-
-
-class ComplianceAuditIntegrity(BaseModel):
-    verified: int = 0
-    tampered: int = 0
-    checked: int = 0
-    # True when the checked set is a truncated (partial) view of the window.
-    truncated: bool = False
-
-
-class ComplianceThreatModel(BaseModel):
-    integrity: str
-    confidentiality: str
-    replay: str
-    non_repudiation: str
-
-
-class ComplianceSignatureDisclosure(BaseModel):
-    """Whether the bundle's own signature can be verified, and by whom."""
-
-    # False when the deployment signs with a per-process HMAC key: the bundle
-    # is stamped HMAC-SHA256 but no verifier — not even the issuer after a
-    # restart — holds the key.
-    signature_verifiable: bool
-    persists_across_restart: bool
-    # verifiable_public_key | verifiable_shared_secret | unverifiable_ephemeral_key
-    verification_status: str
-    verification_guidance: str
-    # Operator action that makes evidence verifiable; null when it already is.
-    remediation: str | None = None
-
-
-class ComplianceReportBundle(BaseModel):
-    schema_version: str = "v1"
-    framework: str
-    framework_key: str
-    framework_label: str
-    tenant_id: str
-    generated_at: str
-    expires_at: str
-    nonce: str
-    scope: ComplianceReportScope
-    summary: ComplianceReportSummary
-    controls: list[ComplianceReportControl] = Field(default_factory=list)
-    audit_events: list[dict[str, Any]] = Field(default_factory=list)
-    audit_log_integrity: ComplianceAuditIntegrity
-    signature_algorithm: str
-    # Inside the signed envelope: whether the signature is checkable at all.
-    # A default deployment signs with a per-process HMAC key, so the algorithm
-    # name alone overstates what the bundle proves.
-    signature_disclosure: ComplianceSignatureDisclosure
-    threat_model: ComplianceThreatModel
-
-
 # ─── Fleet Models ──────────────────────────────────────────────────────────
 
 
@@ -805,195 +608,6 @@ class ScheduleCreate(BaseModel):
     scan_config: dict[str, Any] = Field(default_factory=dict)
     enabled: bool = True
     tenant_id: str = "default"
-
-
-class SourceKind(str, Enum):
-    SCAN_REPO = "scan.repo"
-    SCAN_IMAGE = "scan.image"
-    SCAN_IAC = "scan.iac"
-    SCAN_CLOUD = "scan.cloud"
-    SCAN_MCP_CONFIG = "scan.mcp_config"
-    CONNECTOR_CLOUD_READ_ONLY = "connector.cloud_read_only"
-    CONNECTOR_REGISTRY = "connector.registry"
-    CONNECTOR_WAREHOUSE = "connector.warehouse"
-    INGEST_FLEET_SYNC = "ingest.fleet_sync"
-    INGEST_TRACE_PUSH = "ingest.trace_push"
-    INGEST_RESULT_PUSH = "ingest.result_push"
-    INGEST_ARTIFACT_IMPORT = "ingest.artifact_import"
-    RUNTIME_PROXY = "runtime.proxy"
-    RUNTIME_GATEWAY = "runtime.gateway"
-
-
-class SourceStatus(str, Enum):
-    CONFIGURED = "configured"
-    HEALTHY = "healthy"
-    DEGRADED = "degraded"
-    DISABLED = "disabled"
-
-
-class SourceCredentialMode(str, Enum):
-    """How a source's credential metadata is represented.
-
-    Older clients used ``credential_ref`` as the mode spelling. Normalize it
-    to the canonical reference mode so it cannot bypass the reference-presence
-    and execution checks in the source routes.
-    """
-
-    NONE = "none"
-    REFERENCE = "reference"
-
-    @classmethod
-    def _missing_(cls, value: object) -> "SourceCredentialMode | None":
-        if not isinstance(value, str):
-            return None
-        normalized = value.strip().lower().replace("-", "_")
-        if normalized in {"credential_ref", cls.REFERENCE.value}:
-            return cls.REFERENCE
-        if normalized == cls.NONE.value:
-            return cls.NONE
-        return None
-
-
-class CredentialRefStatus(str, Enum):
-    CONFIGURED = "configured"
-    HEALTHY = "healthy"
-    DEGRADED = "degraded"
-    DISABLED = "disabled"
-    RETIRED = "retired"
-
-
-class CredentialRefRecord(BaseModel):
-    credential_ref_id: str
-    tenant_id: str = "default"
-    display_name: str
-    provider: str
-    mode: str = "external_ref"
-    external_ref: str | None
-    description: str = ""
-    owner: str = ""
-    scopes: list[str] = Field(default_factory=list)
-    credential_class: str = "generic"
-    last_rotated_at: str | None = None
-    expires_at: str | None = None
-    rotation_interval_days: int | None = Field(default=None, ge=1)
-    max_age_days: int | None = Field(default=None, ge=1)
-    expiry_warning_days: int | None = Field(default=None, ge=1)
-    enabled: bool = True
-    status: CredentialRefStatus = CredentialRefStatus.CONFIGURED
-    last_validated_at: str | None = None
-    last_validation_status: str | None = None
-    last_validation_message: str | None = None
-    created_at: str = ""
-    updated_at: str = ""
-
-
-class CredentialRefCreate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    display_name: str
-    provider: str
-    mode: str = "external_ref"
-    external_ref: str
-    description: str = ""
-    owner: str = ""
-    scopes: list[str] = Field(default_factory=list)
-    credential_class: str = "generic"
-    last_rotated_at: str | None = None
-    expires_at: str | None = None
-    rotation_interval_days: int | None = Field(default=None, ge=1)
-    max_age_days: int | None = Field(default=None, ge=1)
-    expiry_warning_days: int | None = Field(default=None, ge=1)
-    enabled: bool = True
-    tenant_id: str = "default"
-
-
-class CredentialRefUpdate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    display_name: str | None = None
-    provider: str | None = None
-    mode: str | None = None
-    external_ref: str | None = None
-    description: str | None = None
-    owner: str | None = None
-    scopes: list[str] | None = None
-    credential_class: str | None = None
-    last_rotated_at: str | None = None
-    expires_at: str | None = None
-    rotation_interval_days: int | None = Field(default=None, ge=1)
-    max_age_days: int | None = Field(default=None, ge=1)
-    expiry_warning_days: int | None = Field(default=None, ge=1)
-    enabled: bool | None = None
-    status: CredentialRefStatus | None = None
-
-
-class SourceRecord(BaseModel):
-    source_id: str
-    tenant_id: str = "default"
-    display_name: str
-    kind: SourceKind
-    description: str = ""
-    owner: str = ""
-    connector_name: str | None = None
-    credential_mode: SourceCredentialMode = SourceCredentialMode.NONE
-    credential_ref: str | None = None
-    enabled: bool = True
-    status: SourceStatus = SourceStatus.CONFIGURED
-    config: dict[str, Any] = Field(default_factory=dict)
-    last_tested_at: str | None = None
-    last_test_status: str | None = None
-    last_test_message: str | None = None
-    last_run_at: str | None = None
-    last_run_status: str | None = None
-    last_job_id: str | None = None
-    created_at: str = ""
-    updated_at: str = ""
-
-
-class SourceCreate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    display_name: str
-    kind: SourceKind
-    description: str = ""
-    owner: str = ""
-    connector_name: str | None = None
-    credential_mode: SourceCredentialMode = SourceCredentialMode.NONE
-    credential_ref: str | None = None
-    enabled: bool = True
-    config: dict[str, Any] = Field(default_factory=dict)
-    tenant_id: str = "default"
-
-
-class SourceUpdate(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    display_name: str | None = None
-    description: str | None = None
-    owner: str | None = None
-    connector_name: str | None = None
-    credential_mode: SourceCredentialMode | None = None
-    credential_ref: str | None = None
-    enabled: bool | None = None
-    status: SourceStatus | None = None
-    config: dict[str, Any] | None = None
-
-
-class SourceCohortRunRequest(BaseModel):
-    """Exact registered sources to scan and correlate as one immutable cohort."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    source_ids: list[str] = Field(min_length=2, max_length=32)
-    max_age_hours: int = Field(default=168, ge=1, le=8760)
-
-    @field_validator("source_ids")
-    @classmethod
-    def normalize_source_ids(cls, values: list[str]) -> list[str]:
-        normalized = sorted(value.strip() for value in values)
-        if any(not value for value in normalized):
-            raise ValueError("source_ids cannot contain empty values")
-        if len(set(normalized)) != len(normalized):
-            raise ValueError("source_ids must be distinct")
-        return normalized
 
 
 class SourceCohortRunResponse(BaseModel):
@@ -1305,3 +919,77 @@ class AgentBomManifestResponse(BaseModel):
     agents: list[dict[str, Any]]
     mcp_servers: list[AgentBomManifestServerResponse]
     summary: dict[str, int]
+
+
+if TYPE_CHECKING:
+    from agent_bom.api.compliance_models import ComplianceAuditIntegrity as ComplianceAuditIntegrity
+    from agent_bom.api.compliance_models import ComplianceEvidenceItem as ComplianceEvidenceItem
+    from agent_bom.api.compliance_models import ComplianceReportBundle as ComplianceReportBundle
+    from agent_bom.api.compliance_models import ComplianceReportControl as ComplianceReportControl
+    from agent_bom.api.compliance_models import ComplianceReportScope as ComplianceReportScope
+    from agent_bom.api.compliance_models import ComplianceReportSummary as ComplianceReportSummary
+    from agent_bom.api.compliance_models import ComplianceSignatureDisclosure as ComplianceSignatureDisclosure
+    from agent_bom.api.compliance_models import ComplianceThreatModel as ComplianceThreatModel
+    from agent_bom.api.health_models import AnalyticsHealth as AnalyticsHealth
+    from agent_bom.api.health_models import EntitlementHealth as EntitlementHealth
+    from agent_bom.api.health_models import HealthResponse as HealthResponse
+    from agent_bom.api.health_models import PostgresPortabilityHealth as PostgresPortabilityHealth
+    from agent_bom.api.health_models import PublicHealthResponse as PublicHealthResponse
+    from agent_bom.api.health_models import StorageHealth as StorageHealth
+    from agent_bom.api.health_models import TracingHealth as TracingHealth
+    from agent_bom.api.health_models import VersionInfo as VersionInfo
+    from agent_bom.api.source_models import CredentialRefCreate as CredentialRefCreate
+    from agent_bom.api.source_models import CredentialRefRecord as CredentialRefRecord
+    from agent_bom.api.source_models import CredentialRefStatus as CredentialRefStatus
+    from agent_bom.api.source_models import CredentialRefUpdate as CredentialRefUpdate
+    from agent_bom.api.source_models import SourceCohortRunRequest as SourceCohortRunRequest
+    from agent_bom.api.source_models import SourceCreate as SourceCreate
+    from agent_bom.api.source_models import SourceCredentialMode as SourceCredentialMode
+    from agent_bom.api.source_models import SourceKind as SourceKind
+    from agent_bom.api.source_models import SourceRecord as SourceRecord
+    from agent_bom.api.source_models import SourceStatus as SourceStatus
+    from agent_bom.api.source_models import SourceUpdate as SourceUpdate
+
+
+_MODEL_EXPORTS = {
+    "SourceKind": "agent_bom.api.source_models",
+    "SourceStatus": "agent_bom.api.source_models",
+    "SourceCredentialMode": "agent_bom.api.source_models",
+    "CredentialRefStatus": "agent_bom.api.source_models",
+    "CredentialRefRecord": "agent_bom.api.source_models",
+    "CredentialRefCreate": "agent_bom.api.source_models",
+    "CredentialRefUpdate": "agent_bom.api.source_models",
+    "SourceRecord": "agent_bom.api.source_models",
+    "SourceCreate": "agent_bom.api.source_models",
+    "SourceUpdate": "agent_bom.api.source_models",
+    "SourceCohortRunRequest": "agent_bom.api.source_models",
+    "VersionInfo": "agent_bom.api.health_models",
+    "TracingHealth": "agent_bom.api.health_models",
+    "AnalyticsHealth": "agent_bom.api.health_models",
+    "PostgresPortabilityHealth": "agent_bom.api.health_models",
+    "StorageHealth": "agent_bom.api.health_models",
+    "EntitlementHealth": "agent_bom.api.health_models",
+    "PublicHealthResponse": "agent_bom.api.health_models",
+    "HealthResponse": "agent_bom.api.health_models",
+    "ComplianceEvidenceItem": "agent_bom.api.compliance_models",
+    "ComplianceReportControl": "agent_bom.api.compliance_models",
+    "ComplianceReportScope": "agent_bom.api.compliance_models",
+    "ComplianceReportSummary": "agent_bom.api.compliance_models",
+    "ComplianceAuditIntegrity": "agent_bom.api.compliance_models",
+    "ComplianceThreatModel": "agent_bom.api.compliance_models",
+    "ComplianceSignatureDisclosure": "agent_bom.api.compliance_models",
+    "ComplianceReportBundle": "agent_bom.api.compliance_models",
+}
+
+
+def __getattr__(name: str) -> Any:
+    module_name = _MODEL_EXPORTS.get(name)
+    if module_name is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    value = getattr(import_module(module_name), name)
+    globals()[name] = value
+    return value
+
+
+def __dir__() -> list[str]:
+    return sorted(set(globals()) | _MODEL_EXPORTS.keys())

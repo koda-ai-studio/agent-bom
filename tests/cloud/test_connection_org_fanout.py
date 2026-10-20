@@ -159,7 +159,7 @@ def test_aws_org_connection_scan_calls_discover_all_with_session(monkeypatch: py
     ]
     seen: dict[str, Any] = {}
 
-    monkeypatch.setattr(routes, "_persist_connection_report", lambda *a, **k: "scan-org-1")
+    monkeypatch.setattr("agent_bom.api.connection_scan_aws._persist_connection_report", lambda *a, **k: "scan-org-1")
     monkeypatch.setattr(
         "agent_bom.cloud.connection_broker.broker_session",
         lambda rec, **kw: brokered,
@@ -212,7 +212,7 @@ def test_aws_account_connection_scan_skips_org_fanout(monkeypatch: pytest.Monkey
     brokered = MagicMock(name="brokered-session")
     called_fanout = {"n": 0}
 
-    monkeypatch.setattr(routes, "_persist_connection_report", lambda *a, **k: "scan-acct-1")
+    monkeypatch.setattr("agent_bom.api.connection_scan_aws._persist_connection_report", lambda *a, **k: "scan-acct-1")
     monkeypatch.setattr(
         "agent_bom.cloud.connection_broker.broker_session",
         lambda rec, **kw: brokered,

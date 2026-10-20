@@ -137,7 +137,7 @@ def test_explicit_local_analyst_role_can_submit_a_scan(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setenv("AGENT_BOM_NO_AUTH_ROLE", "analyst")
-    monkeypatch.setattr("agent_bom.api.routes.scan.submit_scan_job", lambda _job: None)
+    monkeypatch.setattr("agent_bom.api.scan_job_dispatch.submit_scan_job", lambda _job: None)
 
     response = pure_no_auth_client.post("/v1/scan", json={"dry_run": True})
 
