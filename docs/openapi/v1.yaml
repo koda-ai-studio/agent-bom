@@ -15218,6 +15218,11 @@ components:
         collection_coverage:
           title: Collection Coverage
           type: string
+        excluded_relationships:
+          items:
+            type: string
+          title: Excluded Relationships
+          type: array
         excluded_traversal_classes:
           items:
             type: string
@@ -15245,6 +15250,7 @@ components:
       - max_depth
       - traversal_classes
       - excluded_traversal_classes
+      - excluded_relationships
       title: GraphImpactInterpretation
       type: object
     GraphImpactResponse:

@@ -16669,6 +16669,8 @@ export interface components {
             basis: string;
             /** Collection Coverage */
             collection_coverage: string;
+            /** Excluded Relationships */
+            excluded_relationships: string[];
             /** Excluded Traversal Classes */
             excluded_traversal_classes: string[];
             /** Execution */

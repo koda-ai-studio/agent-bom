@@ -32,8 +32,14 @@ REACH_TRAVERSAL_CLASSES: tuple[TraversalClass, ...] = (
 EXCLUDED_REACH_TRAVERSAL_CLASSES: tuple[TraversalClass, ...] = tuple(
     sorted((cls for cls in TraversalClass if cls not in REACH_TRAVERSAL_CLASSES), key=lambda cls: cls.value)
 )
+# Trace order names the asset one correlated trace touched next. It is sequence
+# context, never access or exposure evidence, and walking it fans one image out
+# to every server its traces touched. The one exception to the reach classes.
+TRACE_ORDER_RELATIONSHIP_TYPES: frozenset[RelationshipType] = frozenset({RelationshipType.TRACE_STEP})
 REACH_RELATIONSHIP_TYPES: frozenset[RelationshipType] = frozenset(
-    rel for rel, spec in RELATIONSHIP_SPECS.items() if spec.traversal_class in REACH_TRAVERSAL_CLASSES
+    rel
+    for rel, spec in RELATIONSHIP_SPECS.items()
+    if spec.traversal_class in REACH_TRAVERSAL_CLASSES and rel not in TRACE_ORDER_RELATIONSHIP_TYPES
 )
 # The finding edges that name an affected asset, in either orientation.
 FINDING_ENTRY_RELATIONSHIP_TYPES: frozenset[RelationshipType] = frozenset({RelationshipType.VULNERABLE_TO, RelationshipType.AFFECTS})
@@ -128,6 +134,7 @@ def reach_interpretation(*, max_depth: int, direction: str = "in") -> dict[str, 
         "max_depth": max_depth,
         "traversal_classes": [cls.value for cls in REACH_TRAVERSAL_CLASSES],
         "excluded_traversal_classes": [cls.value for cls in EXCLUDED_REACH_TRAVERSAL_CLASSES],
+        "excluded_relationships": sorted(rel.value for rel in TRACE_ORDER_RELATIONSHIP_TYPES),
     }
 
 
@@ -136,6 +143,7 @@ __all__ = [
     "FINDING_ENTRY_RELATIONSHIP_TYPES",
     "REACH_RELATIONSHIP_TYPES",
     "REACH_TRAVERSAL_CLASSES",
+    "TRACE_ORDER_RELATIONSHIP_TYPES",
     "ReachWalk",
     "impact_payload",
     "reach_interpretation",

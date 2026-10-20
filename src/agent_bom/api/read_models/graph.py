@@ -267,6 +267,8 @@ class GraphImpactInterpretation(ReadModel):
     max_depth: int
     traversal_classes: list[str]
     excluded_traversal_classes: list[str]
+    # Relationships inside a walked class that are still never reach (trace order).
+    excluded_relationships: list[str]
 
 
 class GraphImpactResponse(ReadResponse):

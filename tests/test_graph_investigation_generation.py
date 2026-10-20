@@ -55,6 +55,7 @@ def test_impact_declares_recorded_topology_boundary(api):  # noqa: F811
         "max_depth": 4,
         "traversal_classes": ["authority", "dependency", "derived", "exposure", "runtime"],
         "excluded_traversal_classes": ["correlation", "finding", "governance", "structural"],
+        "excluded_relationships": ["trace_step"],
     }
     assert impact["affected_count"] == 1
 

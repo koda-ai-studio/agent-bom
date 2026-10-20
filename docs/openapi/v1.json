@@ -22228,6 +22228,13 @@
             "title": "Collection Coverage",
             "type": "string"
           },
+          "excluded_relationships": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Excluded Relationships",
+            "type": "array"
+          },
           "excluded_traversal_classes": {
             "items": {
               "type": "string"
@@ -22262,7 +22269,8 @@
           "traversable_only",
           "max_depth",
           "traversal_classes",
-          "excluded_traversal_classes"
+          "excluded_traversal_classes",
+          "excluded_relationships"
         ],
         "title": "GraphImpactInterpretation",
         "type": "object"
