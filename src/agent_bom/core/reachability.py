@@ -8,6 +8,7 @@ silently disagree.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -136,3 +137,96 @@ def node_reachability(attributes: dict[str, object] | None) -> ReachabilityAsses
         symbol_reachability=str(attrs.get("symbol_reachability") or "") or None,
         dependency_reachable=dependency_value if isinstance(dependency_value, bool) else None,
     )
+
+
+# Internal keys the findings projection stamps from the reaching attack paths.
+GRAPH_PATH_VERDICT_KEY = "graph_path_reachability"
+GRAPH_PATH_BASIS_KEY = "graph_path_reachability_basis"
+_BUCKETS = {
+    ReachabilityVerdict.CONFIRMED: "reachable",
+    ReachabilityVerdict.LIKELY: "reachable",
+    ReachabilityVerdict.UNLIKELY: "unreachable",
+}
+
+
+def _row_field(row: Mapping[str, object], evidence: Mapping[str, object], key: str) -> object:
+    value = row.get(key)
+    return value if value is not None else evidence.get(key)
+
+
+def _optional_bool(value: object) -> bool | None:
+    return value if isinstance(value, bool) else None
+
+
+def _exposed(row: Mapping[str, object], evidence: Mapping[str, object], listed_key: str, count_key: str) -> bool:
+    counted = evidence.get(count_key)
+    return bool(row.get(listed_key)) or (isinstance(counted, int) and not isinstance(counted, bool) and counted > 0)
+
+
+def _persisted_verdict(value: object) -> ReachabilityAssessment | None:
+    text = str(value or "").strip().lower()
+    if text not in {item.value for item in ReachabilityVerdict}:
+        return None
+    # A bare persisted label carries no confirming basis.
+    verdict = ReachabilityVerdict.LIKELY if text == ReachabilityVerdict.CONFIRMED else ReachabilityVerdict(text)
+    return ReachabilityAssessment(verdict, ("persisted_verdict",))
+
+
+def finding_reachability(row: Mapping[str, object]) -> ReachabilityAssessment | None:
+    """The one verdict for a finding row, from the evidence stamped on it.
+
+    Every finding surface (list, detail, filter, facets, MCP, exports) reads
+    this. ``graph_reachable`` means any inbound path; a reaching path counts as
+    ``graph_path`` evidence (``likely``) unless every reaching path is itself
+    unverified. Only function-level or runtime-observed evidence confirms.
+    Returns ``None`` for a row that was never assessed.
+    """
+
+    raw_evidence = row.get("evidence")
+    evidence: Mapping[str, object] = raw_evidence if isinstance(raw_evidence, Mapping) else {}
+    graph = _optional_bool(_row_field(row, evidence, "graph_reachable"))
+    symbol = _row_field(row, evidence, "symbol_reachability")
+    dependency = _optional_bool(_row_field(row, evidence, "dependency_reachable"))
+    path_verdict = str(row.get(GRAPH_PATH_VERDICT_KEY) or "").strip().lower()
+    if graph is None and not symbol and dependency is None and not path_verdict:
+        return _persisted_verdict(row.get("reachability"))
+    unverified_path = graph is True and path_verdict in {ReachabilityVerdict.UNKNOWN, ReachabilityVerdict.UNLIKELY}
+    assessment = assess_reachability(
+        graph_reachable=None if unverified_path else graph,
+        symbol_reachability=str(symbol) if symbol else None,
+        dependency_reachable=dependency,
+        direct_dependency=_optional_bool(evidence.get("package_is_direct")),
+        affected_agents=bool(row.get("affected_agents") or row.get("graph_reachable_from_agents")),
+        exposed_credentials=_exposed(row, evidence, "exposed_credentials", "exposed_credential_count"),
+        exposed_tools=_exposed(row, evidence, "exposed_tools", "exposed_tool_count"),
+        declaration_only=evidence.get("package_reachability_evidence") == "declaration_only",
+        match_confidence_tier=str(_row_field(row, evidence, "match_confidence_tier") or "") or None,
+    )
+    return _with_path_verdict(assessment, path_verdict, row.get(GRAPH_PATH_BASIS_KEY), unverified=unverified_path)
+
+
+def _with_path_verdict(
+    assessment: ReachabilityAssessment, path_verdict: str, raw_basis: object, *, unverified: bool
+) -> ReachabilityAssessment:
+    if unverified and assessment.verdict == ReachabilityVerdict.UNKNOWN:
+        return ReachabilityAssessment(assessment.verdict, (*assessment.basis, "unverified_graph_path"))
+    path_basis = tuple(str(item) for item in raw_basis) if isinstance(raw_basis, list | tuple) else ()
+    confirming = tuple(item for item in path_basis if item in CONFIRMING_BASIS)
+    if path_verdict == ReachabilityVerdict.CONFIRMED and confirming and assessment.verdict == ReachabilityVerdict.LIKELY:
+        return ReachabilityAssessment(ReachabilityVerdict.CONFIRMED, (*confirming, *assessment.basis))
+    return assessment
+
+
+def reachability_bucket(row: Mapping[str, object]) -> str:
+    """``reachable`` / ``unreachable`` / ``unassessed`` for the findings filter and facets."""
+
+    assessment = finding_reachability(row)
+    return _BUCKETS.get(assessment.verdict, "unassessed") if assessment is not None else "unassessed"
+
+
+def stamp_finding_reachability(row: dict[str, object]) -> None:
+    """Write the derived verdict onto a row; never-assessed rows are left alone."""
+
+    assessment = finding_reachability(row)
+    if assessment is not None:
+        row["reachability"] = assessment.verdict.value

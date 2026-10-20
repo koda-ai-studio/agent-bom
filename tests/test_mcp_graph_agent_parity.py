@@ -472,6 +472,20 @@ def test_findings_query_matches_rest(demo: _Estate) -> None:
     assert [row["id"] for row in page_two["findings"]] == [row["id"] for row in rest_two["findings"]]
 
 
+def test_reachability_filter_matches_the_displayed_verdict(demo: _Estate) -> None:
+    from agent_bom.mcp_tools.findings import findings_query_impl
+
+    rest = demo.rest("/v1/findings", reachability="reachable", limit=200)
+    assert rest["findings"]
+    assert {row.get("reachability") for row in rest["findings"]} <= {"likely", "confirmed"}
+    unassessed = demo.rest("/v1/findings", reachability="unassessed", limit=200)
+    assert {row.get("reachability") for row in unassessed["findings"]} <= {"unknown", None}
+    payload = demo.mcp(findings_query_impl, reachability="reachable", limit=200)
+    assert [(row["id"], row["reachability"]) for row in payload["findings"]] == [
+        (row["id"], row["reachability"]) for row in rest["findings"]
+    ]
+
+
 def test_finding_detail_joins_graph_paths(demo: _Estate) -> None:
     from agent_bom.mcp_tools.findings import finding_detail_impl
 

@@ -155,9 +155,35 @@ def aggregate_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def advisory_match_unverified(relationship: str, edge: Any, vulnerability_attributes: dict[str, Any] | None) -> bool:
-    """An advisory match proves the version is affected, not that the code is reachable.
+    """Whether evidence rules this occurrence out of completing a path.
 
-    Such a hop cannot complete an attack path until the occurrence's
-    applicability permits an exploit chain.
+    A review-only advisory match, an ``unlikely`` verdict or an excluding VEX
+    statement blocks the hop. An occurrence that was simply never assessed does
+    not: the provenance-backed path is itself ``graph_path`` evidence, which the
+    verdict ladder caps at ``likely`` (see :func:`advisory_match_unassessed`).
     """
-    return relationship == "vulnerable_to" and not edge_applicability(edge, vulnerability_attributes).permits_exploit_chain
+    if relationship != "vulnerable_to":
+        return False
+    applicability = edge_applicability(edge, vulnerability_attributes)
+    return applicability.unlikely or applicability.vex_excluded or "unverified_advisory_match" in applicability.basis
+
+
+def advisory_match_unassessed(relationship: str, edge: Any, vulnerability_attributes: dict[str, Any] | None) -> bool:
+    """An advisory hop whose occurrence has no reachability evidence of its own."""
+    if relationship != "vulnerable_to":
+        return False
+    applicability = edge_applicability(edge, vulnerability_attributes)
+    return not applicability.permits_exploit_chain and not advisory_match_unverified(relationship, edge, vulnerability_attributes)
+
+
+def advisory_hop_flags(relationship: str, edge: Any, vulnerability_attributes: dict[str, Any] | None) -> dict[str, bool]:
+    """Hop reason flags for an advisory match: blocking ``unverified`` vs informational ``unassessed``."""
+    return {
+        "applicability_unverified": advisory_match_unverified(relationship, edge, vulnerability_attributes),
+        "applicability_unassessed": advisory_match_unassessed(relationship, edge, vulnerability_attributes),
+    }
+
+
+def unassessed_basis(receipts: list[dict[str, Any]]) -> list[str]:
+    """Path basis noting that an advisory hop's occurrence was never assessed."""
+    return ["applicability_unassessed"] if any("applicability_unassessed" in item["reason_codes"] for item in receipts) else []

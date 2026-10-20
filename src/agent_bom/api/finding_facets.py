@@ -15,8 +15,10 @@ from agent_bom.api.finding_list_helpers import (
     _freshness_bucket,
     _normalize_facet_severity,
 )
+from agent_bom.api.finding_reachability import iter_projected_rows
 from agent_bom.api.finding_scope_filters import _row_matches_scope as _row_matches_scope
 from agent_bom.api.finding_view_filters import _finding_triage_state as _finding_triage_state
+from agent_bom.core.reachability import reachability_bucket
 from agent_bom.finding_scope import FINDING_CLASSES, SECURITY_DOMAINS, finding_class_for_row, lenses_for_row
 
 _FACET_SCAN_BUDGET = 50_000
@@ -132,9 +134,14 @@ class _FacetScopes(NamedTuple):
         return cls(full=full, finding_class=class_scope, domain=domain_scope, base=base)
 
 
+def _facet_graph_store() -> Any:
+    from agent_bom.api.stores import _get_graph_store
+
+    return _get_graph_store()
+
+
 def _facet_reachability_bucket(row: Mapping[str, Any]) -> str:
-    reachable = row.get("graph_reachable")
-    return "reachable" if reachable is True else "unreachable" if reachable is False else "unassessed"
+    return reachability_bucket(row)
 
 
 def _facet_exploit_bucket(row: Mapping[str, Any]) -> str:
@@ -320,6 +327,7 @@ def _finding_facets_bounded(
         status="all",
         sanitize=False,
     )
+    rows = iter_projected_rows(rows, graph_store=_facet_graph_store(), tenant_id=tenant_id, scan_id=scan_id)
     count_row = partial(
         _count_facet_row,
         counts=counts,

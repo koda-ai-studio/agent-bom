@@ -35,6 +35,7 @@ _SUMMARY_FIELDS = (
     "graph_reachable",
     "graph_reachable_from",
     "graph_reachable_from_count",
+    "reachability",
     "status",
     "lifecycle_status",
     "finding_node_id",

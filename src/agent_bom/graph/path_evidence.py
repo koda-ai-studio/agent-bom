@@ -9,7 +9,7 @@ from pydantic import ValidationError
 
 from agent_bom.core.reachability import CONFIRMING_BASIS
 from agent_bom.evidence.semantics import ExploitabilityDimension
-from agent_bom.graph.applicability import advisory_match_unverified
+from agent_bom.graph.applicability import advisory_hop_flags, unassessed_basis
 from agent_bom.graph.container import AttackPath, UnifiedGraph
 from agent_bom.graph.correlation_scope import CORRELATION_IDENTITY_VERSION
 from agent_bom.graph.edge import UnifiedEdge
@@ -31,6 +31,7 @@ _ANNOTATION_BASIS = frozenset(
         "stale_evidence_allowed",
         "stale_hop_evidence",
         "directed_provenance_backed_hops",
+        "applicability_unassessed",
         "blocked_runtime_hop",
         "failed_runtime_outcome",
         "correlation_recomputation_required",
@@ -198,8 +199,8 @@ def _hop_receipt(graph: UnifiedGraph, source: str, target: str, relationship: st
     runtime_receipt = _runtime_hop_receipt(edge)
     # Trace order is a real receipt but not an access/exposure hop; it never completes a path alone.
     trace_order = _relationship(edge) in _TRACE_ORDER_RELATIONSHIPS
-    unverified = advisory_match_unverified(_relationship(edge), edge, getattr(graph.nodes.get(target), "attributes", None))
-    flags = {"trace_order_not_access": trace_order, "stale_evidence": freshness == "stale", "applicability_unverified": unverified}
+    advisory = advisory_hop_flags(_relationship(edge), edge, getattr(graph.nodes.get(target), "attributes", None))
+    flags = {"trace_order_not_access": trace_order, "stale_evidence": freshness == "stale", **advisory}
     gaps = [code for code, present in flags.items() if present]
     runtime_receipt["reason_codes"] = [*runtime_receipt["reason_codes"], *gaps]
     return {
@@ -218,7 +219,7 @@ def _hop_receipt(graph: UnifiedGraph, source: str, target: str, relationship: st
         "complete": bool(
             edge.traversable
             and not trace_order
-            and not unverified
+            and not advisory["applicability_unverified"]
             and not runtime_receipts_limited(edge.evidence)
             and edge.direction == "directed"
             and source_ids
@@ -255,8 +256,7 @@ def annotate_attack_path_evidence(path: AttackPath, graph: UnifiedGraph, *, hop_
     basis = [item for item in path.reachability_basis if item not in _ANNOTATION_BASIS]
     if any(receipt.get("correlation_identity_status") == "recomputation_required" for receipt in receipts):
         basis.append("correlation_recomputation_required")
-    if analysis_reason is not None:
-        basis.append(analysis_reason)
+    basis.extend([*([analysis_reason] if analysis_reason else []), *unassessed_basis(receipts)])
     path.hop_evidence = receipts
     path.analysis = analysis
 

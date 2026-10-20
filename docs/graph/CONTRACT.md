@@ -544,6 +544,19 @@ otherwise `unknown`. A persisted `confirmed` whose basis lacks a confirming
 entry is read as `likely`. `graph_reachable` still means any inbound attack
 path, and keeps its ranking boost.
 
+Every finding surface reads one derivation,
+`agent_bom.core.reachability.finding_reachability`, over the evidence stamped
+on the row: the findings list and detail, the `reachability` filter and facet
+(`reachable` = `confirmed`/`likely`, `unreachable` = `unlikely`, `unassessed`
+= `unknown` or never assessed), MCP `findings_query` / `blast_radius`, and
+exports. A finding reached only by paths that are themselves `unknown` stays
+`unknown` (`unverified_graph_path`). On attack paths, a `vulnerable_to` hop
+whose occurrence was never assessed records `applicability_unassessed`: it
+does not block a directed, provenance-backed path from `likely`, and the path's
+evidence confidence stays `structural`. A review-only advisory match, an
+`unlikely` occurrence or an excluding VEX statement still records
+`applicability_unverified` and blocks the hop.
+
 ### Inspect recorded authorization
 
 In a selected hop, open **Recorded authority** to inspect an evaluator's action,

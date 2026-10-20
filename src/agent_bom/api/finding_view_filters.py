@@ -7,6 +7,7 @@ from typing import Any, NamedTuple
 
 from agent_bom.api.finding_list_envelope import finding_list_envelope
 from agent_bom.api.finding_row_shapes import _package_base_name, _row_vuln_id
+from agent_bom.core.reachability import reachability_bucket
 
 _FINDINGS_VIEW_FILTER_MAX_ROWS = 50_000
 
@@ -34,13 +35,9 @@ def _finding_triage_state(
     return None
 
 
-def _matches_reachability(reachable: Any, requested: str | None) -> bool:
-    return (
-        requested is None
-        or (requested == "reachable" and reachable is True)
-        or (requested == "unreachable" and reachable is False)
-        or (requested == "unassessed" and reachable is None)
-    )
+def _matches_reachability(row: dict[str, Any], requested: str | None) -> bool:
+    """Filter on the same derived verdict the row displays."""
+    return requested is None or reachability_bucket(row) == requested
 
 
 def _view_filtered_row(
@@ -60,7 +57,7 @@ def _view_filtered_row(
         row["triage_queue_state"] = triage_state.get("queue_state") if triage_state else None
     decision = triage_state.get("decision") if triage_state else None
     triage_matches = triage is None or decision == triage or (triage == "untriaged" and decision is None)
-    if not (_matches_reachability(row.get("graph_reachable"), reachability) and triage_matches):
+    if not (_matches_reachability(row, reachability) and triage_matches):
         return None
     if suppressed_only and row.get("suppressed") is not True:
         return None

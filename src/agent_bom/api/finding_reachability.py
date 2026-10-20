@@ -12,8 +12,14 @@ from __future__ import annotations
 import threading
 from collections import OrderedDict
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Iterable, Mapping
+from typing import TYPE_CHECKING, Any, Iterable, Iterator, Mapping
 
+from agent_bom.core.reachability import (
+    CONFIRMING_BASIS,
+    GRAPH_PATH_BASIS_KEY,
+    GRAPH_PATH_VERDICT_KEY,
+    stamp_finding_reachability,
+)
 from agent_bom.evidence.finding_reach_sources import stamp_reach_sources
 from agent_bom.graph.types import RelationshipType
 
@@ -39,11 +45,30 @@ class FindingReachabilityProjection:
     truncated: bool
 
 
+_PATH_VERDICT_STRENGTH = {"confirmed": 3, "likely": 2, "unknown": 1, "unlikely": 0}
+
+
 @dataclass(slots=True)
 class _ReachabilityEvidence:
     min_hops: int
     agents: set[str]
     sources: set[str]
+    path_verdict: str = "unlikely"
+    path_basis: tuple[str, ...] = ()
+
+    def add_path_verdict(self, path: AttackPath) -> None:
+        verdict = _path_verdict(path)
+        if _PATH_VERDICT_STRENGTH[verdict] > _PATH_VERDICT_STRENGTH[self.path_verdict]:
+            self.path_verdict, self.path_basis = verdict, tuple(str(item) for item in path.reachability_basis)
+
+
+def _path_verdict(path: AttackPath) -> str:
+    """A reaching path's own verdict; a confirmed label without a confirming basis is likely."""
+    verdict = _text(path.reachability).lower() or "unknown"
+    verdict = verdict if verdict in _PATH_VERDICT_STRENGTH else "unknown"
+    if verdict == "confirmed" and not CONFIRMING_BASIS.intersection(path.reachability_basis):
+        return "likely"
+    return verdict
 
 
 def _text(value: object) -> str:
@@ -170,7 +195,10 @@ def project_persisted_graph_reachability(
         row.setdefault("graph_min_hop_distance", None)
         row.setdefault("graph_reachable_from_agents", [])
         row.update(graph_reachable_from=[], graph_reachable_from_count=None)  # server-stamped only
+        row.pop(GRAPH_PATH_VERDICT_KEY, None)
+        row.pop(GRAPH_PATH_BASIS_KEY, None)
     if not projected or not any(_row_vulnerability_ids(row) or _row_finding_ids(row) for row in projected):
+        _derive_verdicts(projected)
         return FindingReachabilityProjection(projected, truncated=False)
 
     index = _snapshot_index(graph_store, tenant_id=tenant_id, scan_id=scan_id or "", path_limit=path_limit)
@@ -192,6 +220,41 @@ class _PathIndex:
 _INDEX_CACHE: OrderedDict[tuple[str, str, str, int, int], _PathIndex] = OrderedDict()
 _INDEX_CACHE_LOCK = threading.Lock()
 _INDEX_CACHE_MAX = 16
+
+
+def iter_projected_rows(
+    rows: Iterable[dict[str, Any]],
+    *,
+    graph_store: GraphStoreProtocol | None,
+    tenant_id: str,
+    scan_id: str | None,
+    batch_size: int = MAX_FINDING_REACHABILITY_PATHS,
+) -> Iterator[dict[str, Any]]:
+    """Stream rows with the same path evidence the findings list stamps.
+
+    The snapshot index is cached per generation, so each batch only pays the
+    per-row join. Without a graph store rows still get their derived verdict.
+    """
+    batch: list[dict[str, Any]] = []
+    for row in rows:
+        batch.append(row)
+        if len(batch) >= batch_size:
+            yield from _project_batch(batch, graph_store=graph_store, tenant_id=tenant_id, scan_id=scan_id)
+            batch = []
+    if batch:
+        yield from _project_batch(batch, graph_store=graph_store, tenant_id=tenant_id, scan_id=scan_id)
+
+
+def _project_batch(
+    rows: list[dict[str, Any]], *, graph_store: GraphStoreProtocol | None, tenant_id: str, scan_id: str | None
+) -> list[dict[str, Any]]:
+    if graph_store is not None:
+        try:
+            return project_persisted_graph_reachability(rows, graph_store=graph_store, tenant_id=tenant_id, scan_id=scan_id).rows
+        except (AttributeError, NotImplementedError, OSError, LookupError, RuntimeError, ValueError):
+            pass  # optional evidence: counts fall back to the persisted claim
+    _derive_verdicts(rows)
+    return rows
 
 
 def clear_reachability_index_cache() -> None:
@@ -279,6 +342,7 @@ def _row_evidence(row: dict[str, Any], path_index: _PathIndex) -> _ReachabilityE
         evidence.min_hops = min(evidence.min_hops, distance)
         evidence.agents.update(_reaching_agents(path))
         evidence.sources.add(path.source)
+        evidence.add_path_verdict(path)
     return evidence
 
 
@@ -294,6 +358,8 @@ def _apply_evidence(row: dict[str, Any], evidence: _ReachabilityEvidence) -> Non
     if isinstance(prior_agents, list):
         evidence.agents.update(_text(value) for value in prior_agents if _text(value))
     row["graph_reachable_from_agents"] = sorted(evidence.agents)
+    row[GRAPH_PATH_VERDICT_KEY] = evidence.path_verdict
+    row[GRAPH_PATH_BASIS_KEY] = list(evidence.path_basis)
     stamp_reach_sources(row, evidence.sources)
 
 
@@ -307,4 +373,11 @@ def _stamp_rows(rows: list[dict[str, Any]], path_index: _PathIndex, *, scan_id: 
         if evidence is not None:
             _apply_evidence(row, evidence)
             stamped += 1
+    _derive_verdicts(rows)
     return stamped
+
+
+def _derive_verdicts(rows: list[dict[str, Any]]) -> None:
+    """Re-derive every row's displayed verdict from the evidence now stamped on it."""
+    for row in rows:
+        stamp_finding_reachability(row)

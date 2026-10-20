@@ -189,13 +189,28 @@ def _finding_path_graph(applicability: dict[str, object] | None) -> tuple[Unifie
     return graph, path
 
 
-def test_fresh_advisory_match_without_applicability_does_not_confirm_the_path() -> None:
-    # A fresh package -> CVE match proves the version is affected, not that the code is reachable.
+def test_fresh_advisory_match_without_applicability_is_a_likely_structural_path() -> None:
+    # A provenance-backed path to the CVE is graph_path evidence (likely), never
+    # confirmation; the unassessed occurrence keeps its evidence confidence structural.
+    from agent_bom.graph.attack_path_queue_rank import path_evidence_confidence
+
     graph, path = _finding_path_graph(None)
 
     annotate_attack_path_evidence(path, graph)
 
-    assert path.reachability != "confirmed"
+    assert path.reachability == "likely"
+    assert path.hop_evidence[1]["complete"] is True
+    assert "applicability_unassessed" in path.hop_evidence[1]["reason_codes"]
+    assert "applicability_unassessed" in path.reachability_basis
+    assert path_evidence_confidence(path) == "structural"
+
+
+def test_unverified_advisory_match_still_blocks_the_path() -> None:
+    graph, path = _finding_path_graph({"verdict": "unknown", "basis": ["unverified_advisory_match"]})
+
+    annotate_attack_path_evidence(path, graph)
+
+    assert path.reachability == "unknown"
     assert "applicability_unverified" in path.hop_evidence[1]["reason_codes"]
 
 
