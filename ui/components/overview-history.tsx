@@ -42,7 +42,7 @@ function HistoryPlot({ points, field, label }: {
   </figure>;
 }
 
-export function OverviewHistory() {
+export function OverviewHistory({ headline = null }: { headline?: { critical: number; high: number } | null } = {}) {
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<"severity" | "changes" | "age">("severity");
   const [days, setDays] = useState(30);
@@ -88,7 +88,7 @@ export function OverviewHistory() {
           <button aria-pressed={view === "changes"} onClick={() => setView("changes")} className="rounded-lg border border-outline px-3 py-2 aria-pressed:bg-surface-elevated">Finding changes</button>
           <button aria-pressed={view === "age"} onClick={() => setView("age")} className="rounded-lg border border-outline px-3 py-2 aria-pressed:bg-surface-elevated">Age & freshness</button>
         </div>
-        {view === "severity" ? <SeverityTrend points={selected} /> : <div className="grid gap-3 sm:grid-cols-2">
+        {view === "severity" ? <SeverityTrend points={selected} headline={headline} /> : <div className="grid gap-3 sm:grid-cols-2">
           {view === "changes" ? <>
           <HistoryPlot points={selected} field="new_findings" label="Newly detected findings" />
           <HistoryPlot points={selected} field="no_longer_detected" label="No longer detected" />

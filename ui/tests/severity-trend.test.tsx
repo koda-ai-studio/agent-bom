@@ -36,3 +36,21 @@ describe("severity trend panel", () => {
     expect(screen.queryByText(/missing comparison metadata/i)).toBeNull();
   });
 });
+
+describe("trend basis versus the posture headline", () => {
+  const points = [
+    { timestamp: "2026-10-11T22:00:00Z", critical: 103, high: 449 },
+    { timestamp: "2026-10-18T22:00:00Z", critical: 103, high: 449 },
+  ];
+
+  it("names its unit and states the headline's different basis beside it", () => {
+    render(<SeverityTrend points={points} headline={{ critical: 332, high: 817 }} />);
+    expect(screen.getByText("Critical and high vulnerability occurrences in this scan scope")).toBeVisible();
+    expect(screen.getByText(/posture headline counts 332 critical and 817 high open issues across every surface/)).toBeVisible();
+  });
+
+  it("says nothing extra when the headline reads the same numbers", () => {
+    render(<SeverityTrend points={points} headline={{ critical: 103, high: 449 }} />);
+    expect(screen.queryByText(/posture headline counts/)).toBeNull();
+  });
+});

@@ -102,6 +102,8 @@ export interface OverviewCockpitProps {
   coverage?: OverviewCoverageLane[] | null | undefined;
   topPath: ExposurePathView | null;
   exposurePaths: ExposurePathView[];
+  /** Set when exposurePaths come from the Investigation queue, in its order. */
+  riskRanking?: { source: "queue"; total: number } | undefined;
   signals: {
     tools: number | null;
     packages: number | null;

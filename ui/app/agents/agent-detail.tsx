@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { agentBlastPathHref } from "@/lib/agent-links";
+import { agentDisplayName } from "@/lib/display-name";
 import { useEffect, useState } from "react";
 import { safeCommandLine, safeDisplayText, safeDisplayUrl, safeReferenceHref, StatCard } from "./agent-display";
 
@@ -93,7 +94,7 @@ export function AgentDetail({ agentName }: { agentName: string }) {
             <div>
               <h1 className="text-2xl font-bold flex items-center gap-3">
                 <ShieldAlert className="w-6 h-6 text-emerald-400" />
-                {agent.name}
+                {agentDisplayName(agent.name)}
               </h1>
               <div className="flex items-center gap-3 mt-1 text-sm text-[color:var(--text-tertiary)]">
                 <span className="bg-[color:var(--surface-elevated)] px-2 py-0.5 rounded text-xs">
@@ -149,7 +150,7 @@ export function AgentDetail({ agentName }: { agentName: string }) {
           <p className="text-[11px] font-mono uppercase tracking-[0.2em] text-emerald-400">Inventory-first view</p>
           <p className="mt-1 text-sm leading-6 text-[color:var(--text-secondary)]">
             This detail page is valuable before runtime proxy rollout. It shows the configured MCP surface area for
-            <span className="mx-1 font-semibold text-[color:var(--foreground)]">{agent.name}</span>
+            <span className="mx-1 font-semibold text-[color:var(--foreground)]">{agentDisplayName(agent.name)}</span>
             using discovery and scan data alone: server transport, exposed tools, env-backed credentials, and attached package risk.
           </p>
         </div>

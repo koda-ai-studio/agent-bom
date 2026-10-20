@@ -1,5 +1,6 @@
 "use client";
 
+import { useQueueTopRisks } from "@/hooks/use-queue-top-risks";
 import { AdvisoryFreshness } from "@/components/advisory-freshness";
 
 import { LocalReportEvidence } from "@/components/local-report-evidence";
@@ -343,6 +344,8 @@ export default function Dashboard() {
     [allBlast, overview, importedReport],
   );
 
+  const queueRisks = useQueueTopRisks(Boolean(overview) && !importedReport, overview?.top_risks);
+
   // Total packages scanned across all jobs
   const totalPackages = useMemo(() => {
     const pkgs = new Set<string>();
@@ -488,7 +491,8 @@ export default function Dashboard() {
         domains={importedReport ? null : overview?.domains ?? null}
         coverage={importedReport ? null : overview?.coverage ?? null}
         topPath={overview?.finding_counts && !importedReport ? null : topExposurePath}
-        exposurePaths={exposurePaths}
+        exposurePaths={queueRisks?.paths ?? exposurePaths}
+        riskRanking={queueRisks ? { source: "queue", total: queueRisks.total } : undefined}
         signals={{
           tools: summaryReady ? displayedReachableTools : null,
           packages: summaryReady ? displayedPackages : null,
@@ -498,7 +502,7 @@ export default function Dashboard() {
         compliance={importedReport ? null : complianceSnapshot}
         services={importedReport ? null : counts?.services ?? null}
       />
-      {!importedReport && <OverviewHistory />}
+      {!importedReport && <OverviewHistory headline={overview ? { critical: canonicalSeverity.critical, high: canonicalSeverity.high } : null} />}
 
       {!importedReport && <details className="rounded-lg border border-outline px-4 py-3"><summary className="cursor-pointer text-sm font-medium">Recent scans & activity</summary>
       <div className="mt-3 grid grid-cols-1 gap-6 lg:grid-cols-3">

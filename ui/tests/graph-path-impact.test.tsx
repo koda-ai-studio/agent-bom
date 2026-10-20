@@ -81,3 +81,12 @@ it("toggles to downstream — what this can reach — at the same depth", async 
   const explore = screen.getByRole("link", { name: "Explore downstream relationships" });
   expect(new URL(explore.getAttribute("href")!, "http://x").searchParams.get("direction")).toBe("forward");
 });
+
+it("answers the AppSec question for a finding root: what this finding exposes, selected by default", async () => {
+  vi.spyOn(api, "getGraphImpact").mockResolvedValue({ ...result, completeness: { complete: true } } as typeof result);
+  render(<GraphPathImpact {...props} findingRoot />);
+  expect(await screen.findByText(/3 assets exposed to this finding/)).toBeVisible();
+  expect(screen.getByRole("radio", { name: "Exposed · what runs or reaches this finding" })).toHaveAttribute("aria-checked", "true");
+  expect(screen.getByRole("radio", { name: "Linked · records this finding points to" })).toHaveAttribute("aria-checked", "false");
+  expect(screen.queryByText(/upstream/i)).toBeNull();
+});

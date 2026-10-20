@@ -764,7 +764,7 @@ function AttackPathInvestigationContent() {
         pinned={pinnedNodeId ? graphNodeById.get(pinnedNodeId)?.label || "Selected asset" : null}
         steps={!captureMode ? (
           <InvestigationLifecycleStrip step={investigationStep} onStepChange={setInvestigationStep} completed={completedSteps}
-            path={selectedAttackPath} nodeById={graphNodeById} scanId={selectedScanId} />
+            scanId={selectedScanId} />
         ) : null}
         menu={
           <InvestigationExploreMenu

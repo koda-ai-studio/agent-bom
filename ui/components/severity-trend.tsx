@@ -9,7 +9,7 @@ function change(delta: number): string {
 }
 
 /** Critical and high findings over the recorded snapshots; honest about a one-snapshot history. */
-export function SeverityTrend({ points }: { points: SeverityPoint[] }) {
+export function SeverityTrend({ points, headline }: { points: SeverityPoint[]; headline?: { critical: number; high: number } | null | undefined }) {
   const trend = severityTrend(points);
   if (trend.status === "none") return <p className="text-sm text-ink-secondary">No dated snapshots in this window.</p>;
   const latest = trend.points.at(-1)!;
@@ -29,7 +29,7 @@ export function SeverityTrend({ points }: { points: SeverityPoint[] }) {
   return (
     <figure className="rounded-xl border border-outline p-3">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <figcaption className="text-sm font-medium">Critical and high findings</figcaption>
+        <figcaption className="text-sm font-medium">Critical and high vulnerability occurrences in this scan scope</figcaption>
         <p className="text-xs text-ink-secondary">
           <span className="mr-1 text-lg font-semibold text-red-700 dark:text-red-300">{latest.critical}</span>
           critical now · {change(trend.criticalDelta)}
@@ -55,6 +55,11 @@ export function SeverityTrend({ points }: { points: SeverityPoint[] }) {
         <span><span className="mr-1 inline-block h-0.5 w-4 bg-orange-600 align-middle dark:bg-orange-300" />High · {latest.high} now, {change(trend.highDelta)}</span>
         <span>KEV counts are not recorded per snapshot, so KEV has no trend yet.</span>
       </p>
+      {headline && (headline.critical !== latest.critical || headline.high !== latest.high) ? (
+        <p className="mt-2 rounded-md border border-outline bg-surface-muted px-2 py-1.5 text-xs text-ink-secondary">
+          Different basis: this chart counts vulnerability occurrences recorded by this scan scope ({latest.critical.toLocaleString()} critical). The posture headline counts {headline.critical.toLocaleString()} critical and {headline.high.toLocaleString()} high open issues across every surface, so the two are not expected to match.
+        </p>
+      ) : null}
     </figure>
   );
 }

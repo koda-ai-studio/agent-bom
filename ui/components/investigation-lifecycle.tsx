@@ -2,8 +2,8 @@
 
 import { GraphPathImpact } from "@/components/graph-path-impact";
 import { InvestigationStepStrip, type InvestigationStep } from "@/components/investigation-step-strip";
+import { PathFixPanel } from "@/components/path-fix-panel";
 import { PathOwnerPanel } from "@/components/path-owner-panel";
-import { packageRemediationHref } from "@/lib/investigation-step-links";
 import type { AttackPath, UnifiedNode } from "@/lib/graph-schema";
 
 function pathNodes(path: AttackPath | null, nodeById: Map<string, UnifiedNode>) {
@@ -11,25 +11,22 @@ function pathNodes(path: AttackPath | null, nodeById: Map<string, UnifiedNode>) 
 }
 
 /**
- * Path → Impact → Owner → Fix → Verify. Owner and Impact answer in place;
- * Fix and Verify continue on remediation, scoped to the path's package.
+ * Path → Impact → Owner → Fix → Verify. Impact, Owner and Fix answer in place
+ * (Fix links out to the package's remediation queue); Verify continues there.
  */
-export function InvestigationLifecycleStrip({ step, onStepChange, completed, path, nodeById, scanId }: {
+export function InvestigationLifecycleStrip({ step, onStepChange, completed, scanId }: {
   step: InvestigationStep;
   onStepChange: (next: InvestigationStep) => void;
   completed: Partial<Record<InvestigationStep, boolean>>;
-  path: AttackPath | null;
-  nodeById: Map<string, UnifiedNode>;
   scanId: string;
 }) {
-  const packageNode = pathNodes(path, nodeById).find((node) => node.entity_type === "package");
   const historical = scanId && !scanId.startsWith("current-estate:") ? `?scan=${encodeURIComponent(scanId)}` : "";
   return (
     <InvestigationStepStrip
       step={step}
       onStepChange={onStepChange}
       completed={completed}
-      stepHrefs={{ fix: packageRemediationHref(packageNode?.label, scanId), verify: `/remediation${historical}#verification` }}
+      stepHrefs={{ verify: `/remediation${historical}#verification` }}
     />
   );
 }
@@ -54,11 +51,15 @@ export function InvestigationLifecyclePanel({ step, path, nodeById, scanId, tena
         key={JSON.stringify([scanId, impactRoot.id, snapshotGeneration])}
         nodeId={impactRoot.id} label={impactRoot.label} scanId={scanId}
         tenantId={tenantId} snapshotGeneration={snapshotGeneration}
+        findingRoot={impactRoot.entity_type === "vulnerability" || impactRoot.entity_type === "misconfiguration"}
       />
     );
   }
   if (step === "owner" && path && cve) {
     return <PathOwnerPanel cve={cve} hops={path.hops} packageLabel={packageNode?.label} scanId={scanId} />;
+  }
+  if (step === "fix" && path) {
+    return <PathFixPanel path={path} nodes={nodes} scanId={scanId} />;
   }
   if (step === "owner" && path) {
     return <p role="status" className="rounded-xl border border-outline bg-surface p-4 text-sm text-ink-secondary">This path carries no advisory, so no finding owner or SLA applies.</p>;
