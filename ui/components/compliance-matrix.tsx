@@ -167,7 +167,7 @@ const columns = [
       // cell hides that the API sent something this table does not model.
       const label = labels[status] ?? status.replace(/_/g, " ") ?? "Unknown";
       const style = styles[status] ?? styles.not_evaluated;
-      return <span className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${style}`}>{label}</span>;
+      return <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${style}`}>{label}</span>;
     },
     filterFn: "equals",
   }),
@@ -366,7 +366,7 @@ export function ComplianceMatrix({
                   return s ? [...without, { id: "status", value: s }] : without;
                 });
               }}
-              className={`px-2.5 py-1 rounded-lg text-[10px] font-medium border transition-colors ${
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ${
                 activeStatus === s
                   ? "bg-emerald-600 text-white border-emerald-600"
                   : "bg-[color:var(--surface)] text-[color:var(--text-secondary)] border-[color:var(--border-subtle)] hover:border-[color:var(--border-strong)]"
@@ -410,7 +410,7 @@ export function ComplianceMatrix({
                   {hg.headers?.map((header) => (
                     <th
                       key={header.id}
-                      className="text-left px-3 py-2.5 text-[10px] font-medium text-[color:var(--text-tertiary)] uppercase tracking-wider whitespace-nowrap"
+                      className="text-left px-3 py-2.5 text-xs font-medium text-[color:var(--text-tertiary)] uppercase tracking-wider whitespace-nowrap"
                     >
                       {header.isPlaceholder ? null : (
                         <button

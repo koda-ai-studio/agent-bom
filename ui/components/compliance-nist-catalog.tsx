@@ -52,7 +52,7 @@ function BucketTile({
   return (
     <div className="rounded-lg border border-[color:var(--border-subtle)] bg-[color:var(--surface-muted)] px-3 py-2">
       <div className={`text-lg font-semibold tabular-nums ${color}`}>{value}</div>
-      <div className="text-[11px] uppercase tracking-wide text-[color:var(--text-tertiary)]">{label}</div>
+      <div className="text-xs uppercase tracking-wide text-[color:var(--text-tertiary)]">{label}</div>
     </div>
   );
 }
@@ -178,7 +178,7 @@ export function ComplianceNistCatalog({ mapped = null }: { mapped?: MappedNistSu
           <div className="flex flex-wrap items-center gap-2">
             <Layers className="h-4 w-4 text-[color:var(--accent)]" />
             <h3 className="text-sm font-semibold text-[color:var(--foreground)]">{drill.framework_label}</h3>
-            <span className="rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--surface-muted)] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[color:var(--text-tertiary)]">
+            <span className="rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--surface-muted)] px-2 py-0.5 text-xs font-medium uppercase tracking-wide text-[color:var(--text-tertiary)]">
               Vendor-asserted
             </span>
           </div>
@@ -202,13 +202,13 @@ export function ComplianceNistCatalog({ mapped = null }: { mapped?: MappedNistSu
               its count to the page total produces a number larger than the
               headline with nothing to explain the gap. It is the same CVE and
               CIS evidence, scored a second way. */}
-          <p className="mt-1 text-[11px] text-[color:var(--text-tertiary)]">
+          <p className="mt-1 text-xs text-[color:var(--text-tertiary)]">
             An alternate view of the evidence above, not additional controls — these
             controls are rescored from the same findings, so they are excluded from
             the page total and from the overall score.
           </p>
         </div>
-        <div className="flex items-center gap-1.5 self-start whitespace-nowrap">
+        <div className="flex items-center gap-1.5 self-start">
           <StatusIcon status={drill.status} className="h-4 w-4" />
           <span className={`text-sm font-semibold ${statusColor(drill.status)}`}>{postureLabel(drill.status)}</span>
         </div>
@@ -282,7 +282,7 @@ export function ComplianceNistCatalog({ mapped = null }: { mapped?: MappedNistSu
               <button
                 type="button"
                 onClick={() => setFamilyFilter(null)}
-                className="mt-1 text-[11px] font-medium text-[color:var(--accent)] hover:underline"
+                className="mt-1 text-xs font-medium text-[color:var(--accent)] hover:underline"
               >
                 Clear {familyFilter} filter
               </button>
@@ -318,7 +318,7 @@ export function ComplianceNistCatalog({ mapped = null }: { mapped?: MappedNistSu
             >
               {loadingFull ? "Loading full catalog…" : showFullCatalog ? "Evaluated only" : "Show full catalog"}
             </button>
-            <span className="text-[11px] text-[color:var(--text-tertiary)]">
+            <span className="text-xs text-[color:var(--text-tertiary)]">
               {visibleControls.length} shown
               {showFullCatalog ? ` of ${s.catalog_size.toLocaleString()}` : ` of ${s.evaluated.toLocaleString()} evaluated`}
             </span>
@@ -341,7 +341,7 @@ export function ComplianceNistCatalog({ mapped = null }: { mapped?: MappedNistSu
                     <td className="px-2 py-1.5">
                       <div className="font-mono font-medium text-[color:var(--foreground)]">{c.control_id}</div>
                       {c.title ? (
-                        <div className="text-[11px] text-[color:var(--text-tertiary)]">{c.title}</div>
+                        <div className="text-xs text-[color:var(--text-tertiary)]">{c.title}</div>
                       ) : null}
                     </td>
                     <td className="px-2 py-1.5 whitespace-nowrap">
@@ -353,7 +353,7 @@ export function ComplianceNistCatalog({ mapped = null }: { mapped?: MappedNistSu
                           {c.evidencing_checks.map((ck) => (
                             <span
                               key={ck}
-                              className="rounded border border-[color:var(--border-subtle)] bg-[color:var(--surface-muted)] px-1.5 py-0.5 font-mono text-[10px] text-[color:var(--text-secondary)]"
+                              className="rounded border border-[color:var(--border-subtle)] bg-[color:var(--surface-muted)] px-1.5 py-0.5 font-mono text-xs text-[color:var(--text-secondary)]"
                             >
                               {ck}
                             </span>
@@ -369,7 +369,7 @@ export function ComplianceNistCatalog({ mapped = null }: { mapped?: MappedNistSu
                           {c.iso_27001_derived.map((iso) => (
                             <span
                               key={iso}
-                              className="rounded border border-[color:var(--border-subtle)] px-1.5 py-0.5 font-mono text-[10px] text-[color:var(--text-tertiary)]"
+                              className="rounded border border-[color:var(--border-subtle)] px-1.5 py-0.5 font-mono text-xs text-[color:var(--text-tertiary)]"
                             >
                               {iso}
                             </span>
@@ -397,7 +397,7 @@ export function ComplianceNistCatalog({ mapped = null }: { mapped?: MappedNistSu
             className="rounded-lg border border-[color:var(--border-subtle)] bg-[color:var(--surface-muted)] p-3"
             data-testid="nist-catalog-iso"
           >
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-[color:var(--text-tertiary)]">
+            <div className="text-xs font-semibold uppercase tracking-wide text-[color:var(--text-tertiary)]">
               ISO/IEC 27001 (derived by id from crosswalk)
             </div>
             {isoControls.length ? (
@@ -405,18 +405,18 @@ export function ComplianceNistCatalog({ mapped = null }: { mapped?: MappedNistSu
                 {isoControls.map((iso) => (
                   <span
                     key={iso}
-                    className="rounded border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-1.5 py-0.5 font-mono text-[10px] text-[color:var(--text-secondary)]"
+                    className="rounded border border-[color:var(--border-subtle)] bg-[color:var(--surface)] px-1.5 py-0.5 font-mono text-xs text-[color:var(--text-secondary)]"
                   >
                     {iso}
                   </span>
                 ))}
               </div>
             ) : (
-              <p className="mt-1 text-[11px] text-[color:var(--text-tertiary)]">
+              <p className="mt-1 text-xs text-[color:var(--text-tertiary)]">
                 No ISO Annex A controls implicated (no failing NIST controls).
               </p>
             )}
-            <p className="mt-2 text-[10px] leading-relaxed text-[color:var(--text-tertiary)]">{drill.iso_27001_derived.note}</p>
+            <p className="mt-2 text-xs leading-relaxed text-[color:var(--text-tertiary)]">{drill.iso_27001_derived.note}</p>
           </div>
         </div>
       </Collapsible>

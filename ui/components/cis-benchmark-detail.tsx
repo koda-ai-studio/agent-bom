@@ -17,6 +17,7 @@ import {
 import { api } from "@/lib/api";
 import type { CISBenchmarkCheck } from "@/lib/api";
 import { userFacingApiErrorMessage } from "@/lib/api-errors";
+import { CisCheckResources } from "@/components/cis-check-resources";
 
 // Clouds the backend `build_cis_benchmark_check_rows` can emit, in the order
 // we want them surfaced. The selector only shows clouds actually present in
@@ -121,7 +122,7 @@ function CopyableFixCli({ check }: { check: CISBenchmarkCheck }) {
         <span>Fix (CLI)</span>
         {check.requires_human_review ? (
           <span
-            className="inline-flex items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300"
+            className="inline-flex items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300"
             data-testid="human-review-badge"
           >
             <ShieldAlert className="h-3 w-3" />
@@ -157,7 +158,7 @@ function CopyableFixCli({ check }: { check: CISBenchmarkCheck }) {
         </button>
       </div>
       {copied && check.requires_human_review ? (
-        <div className="text-[11px] text-amber-400" role="status">
+        <div className="text-xs text-amber-400" role="status">
           Copied — review carefully before running; this change can affect production.
         </div>
       ) : null}
@@ -166,12 +167,14 @@ function CopyableFixCli({ check }: { check: CISBenchmarkCheck }) {
 }
 
 function CheckCard({ check }: { check: CISBenchmarkCheck }) {
-  const [open, setOpen] = useState(check.status === "fail" || check.status === "error");
+  // One status per check: the human-review flag qualifies a fix, so it shows only where a fix applies.
+  const failing = check.status === "fail" || check.status === "error";
+  const [open, setOpen] = useState(failing);
   const badge = statusBadge(check.status);
   const docs = check.remediation?.docs;
 
   return (
-    <div className="rounded-xl border border-[color:var(--border-subtle)] bg-[color:var(--surface-muted)]">
+    <div data-testid="cis-check" className="rounded-xl border border-[color:var(--border-subtle)] bg-[color:var(--surface-muted)]">
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
@@ -183,26 +186,20 @@ function CheckCard({ check }: { check: CISBenchmarkCheck }) {
             <span className="text-sm font-medium text-[color:var(--foreground)]">{check.title}</span>
           </div>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-            <span className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-[11px] font-medium ${badge.className}`}>
+            <span data-testid="cis-check-status" className={`inline-flex items-center gap-1 rounded border px-1.5 py-0.5 text-xs font-medium ${badge.className}`}>
               <badge.Icon className="h-3 w-3" />
               {badge.label}
             </span>
-            <span className={`rounded border px-1.5 py-0.5 text-[11px] font-medium capitalize ${severityClass(check.severity)}`}>
+            <span className={`rounded border px-1.5 py-0.5 text-xs font-medium capitalize ${severityClass(check.severity)}`}>
               {check.severity}
             </span>
-            <span className="rounded border border-[color:var(--border-strong)] bg-[color:var(--surface-muted)]/40 px-1.5 py-0.5 text-[11px] font-medium text-[color:var(--text-secondary)]">
+            <span className="rounded border border-[color:var(--border-strong)] bg-[color:var(--surface-muted)]/40 px-1.5 py-0.5 text-xs font-medium text-[color:var(--text-secondary)]">
               {priorityLabel(check.priority)}
             </span>
-            {check.requires_human_review ? (
-              <span className="inline-flex items-center gap-1 rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300">
-                <ShieldAlert className="h-3 w-3" />
-                Review
-              </span>
-            ) : null}
             {check.guardrails.map((g) => (
               <span
                 key={g}
-                className="rounded border border-cyan-500/30 bg-cyan-500/10 px-1.5 py-0.5 text-[11px] font-medium text-cyan-700 dark:text-cyan-300"
+                className="rounded border border-cyan-500/30 bg-cyan-500/10 px-1.5 py-0.5 text-xs font-medium text-cyan-700 dark:text-cyan-300"
               >
                 {g}
               </span>
@@ -214,7 +211,14 @@ function CheckCard({ check }: { check: CISBenchmarkCheck }) {
       {open ? (
         <div className="space-y-3 border-t border-[color:var(--border-subtle)] px-4 py-3">
           {check.evidence ? <p className="text-xs text-[color:var(--text-secondary)]">{check.evidence}</p> : null}
+          {failing ? <CisCheckResources checkId={check.check_id} resourceIds={check.resource_ids} /> : null}
           <CopyableFixCli check={check} />
+          {failing && check.requires_human_review && !check.fix_cli ? (
+            <p className="inline-flex items-center gap-1 text-xs text-amber-700 dark:text-amber-300">
+              <ShieldAlert className="h-3.5 w-3.5" />
+              Fix requires human review before applying
+            </p>
+          ) : null}
           {check.fix_console ? (
             <div className="text-xs text-[color:var(--text-secondary)]">
               <span className="text-[color:var(--text-tertiary)]">Console path: </span>
@@ -253,7 +257,7 @@ function FilterPills<T extends string | number>({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-1.5">
-      <span className="text-[11px] uppercase tracking-wider text-[color:var(--text-tertiary)]">{label}</span>
+      <span className="text-xs uppercase tracking-wider text-[color:var(--text-tertiary)]">{label}</span>
       {options.map((option) => (
         <button
           key={String(option)}

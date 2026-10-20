@@ -44,3 +44,29 @@ export function controlEvidenceExcerpt(bundle: ComplianceReportBundle, controlCo
     control,
   };
 }
+
+/** The `<framework>:<control>` tag a finding carries for this control, exactly as stamped. */
+export function controlTagFor(tags: readonly string[] | null | undefined, control: string): string | null {
+  return (tags ?? []).find((tag) => tag.slice(tag.lastIndexOf(":") + 1) === control) ?? null;
+}
+
+/** Why a control-filtered path supports the control: the finding it ends on carries the control's tag. */
+export function pathSupportReason(
+  path: { vuln_ids?: readonly string[] | undefined; finding_ids?: readonly string[] | undefined; target?: string | undefined },
+  control: string,
+  tag: string | null,
+): string {
+  const advisory = path.vuln_ids?.[0];
+  const subject = advisory ? advisory : `finding ${path.finding_ids?.[0] ?? path.target ?? "on this path"}`;
+  return tag ? `Ends on ${subject}, which carries ${tag}` : `Ends on ${subject}, which is mapped to ${control}`;
+}
+
+const ACRONYMS = new Set(["mcp", "s3", "iam", "vm", "gke", "eks", "aks", "rds", "sql", "api", "ai", "llm"]);
+
+/** `mcp_server` → `MCP server`: the recorded asset type, readable. */
+export function assetTypeLabel(value: string | null | undefined): string | null {
+  const words = (value ?? "").trim().split(/[_\s-]+/).filter(Boolean);
+  if (!words.length) return null;
+  const label = words.map((word) => (ACRONYMS.has(word.toLowerCase()) ? word.toUpperCase() : word.toLowerCase())).join(" ");
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}

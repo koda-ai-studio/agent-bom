@@ -1741,6 +1741,8 @@ export interface UnifiedFinding {
   risk_score?: number | null | undefined;
   impact_category?: string | null | undefined;
   affected_servers?: string[] | undefined;
+  /** `<framework>:<control>` tags stamped on the finding; the basis of every compliance count. */
+  framework_tags?: string[] | undefined;
   affected_agents?: string[] | undefined;
   exposed_credentials?: string[] | undefined;
   exposed_tools?: string[] | undefined;

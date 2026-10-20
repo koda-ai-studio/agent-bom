@@ -43,6 +43,7 @@ import {
   isNotEvaluated,
   postureLabel,
   statusColor,
+  findingCountColor,
   StatusIcon,
 } from "@/components/compliance-status";
 import { ComplianceHeatmap } from "@/components/compliance-heatmap";
@@ -304,6 +305,16 @@ function CompliancePageContent() {
     [detailSections, selectedFrameworkId],
   );
 
+  // A category that hides the open framework replaces the pane with that category's first failing framework.
+  const selectCategory = (value: CategoryFilter) => {
+    setCategoryFilter(value);
+    const inCategory = frameworks.filter((f) => value === "all" || categoryFor(f.id) === value);
+    if (inCategory.some((f) => f.id === (selectedFrameworkId || selectedSection?.id))) return;
+    const next = inCategory.find((f) => !f.disabled && f.fail > 0) ?? inCategory.find((f) => !f.disabled);
+    setSelectedFrameworkId(next?.id ?? "");
+    setSelectedControl(null);
+  };
+
   const sectionCatalog = selectedSection?.catalog;
 
   const visibleControls = useMemo(() => {
@@ -443,7 +454,7 @@ function CompliancePageContent() {
           <FrameworkIcon frameworkId={f.id} size={18} />
           <div className="min-w-0">
             <div className="truncate font-medium text-[color:var(--foreground)]">{f.shortLabel}</div>
-            <div className="truncate text-[11px] text-[color:var(--text-tertiary)]">{f.label}</div>
+            <div className="text-xs leading-tight text-[color:var(--text-tertiary)]">{f.label}</div>
           </div>
         </div>
       ),
@@ -453,14 +464,14 @@ function CompliancePageContent() {
       header: "Assessment",
       cell: (f) =>
         f.disabled ? (
-          <span className="text-[11px] text-[color:var(--text-tertiary)]">
+          <span className="text-xs text-[color:var(--text-tertiary)]">
             {f.disabledReason ?? "Not evaluated"}
           </span>
         ) : f.kind === "applicability" ? (
           // A technique catalog reports which techniques the evidence puts in
           // play. Rendering that as a pass/fail bar would claim the estate
           // passed the ones nothing matched.
-          <span className="text-[11px] text-[color:var(--text-tertiary)]">
+          <span className="text-xs text-[color:var(--text-tertiary)]">
             {f.applicable ?? 0} of {f.total} applicable
           </span>
         ) : f.pass + f.warn + f.fail === 0 ? (
@@ -502,7 +513,7 @@ function CompliancePageContent() {
           <button
             key={value}
             type="button"
-            onClick={() => setCategoryFilter(value)}
+            onClick={() => selectCategory(value)}
             className={`rounded-md px-2.5 py-1 text-xs font-medium capitalize transition-colors ${
               categoryFilter === value
                 ? "bg-[color:var(--surface-elevated)] text-[color:var(--foreground)]"
@@ -539,7 +550,7 @@ function CompliancePageContent() {
       cell: (c) => (
         <div className="min-w-0">
           <div className="font-mono text-xs font-medium text-[color:var(--foreground)]">{c.code}</div>
-          <div className="truncate text-[11px] text-[color:var(--text-tertiary)]">
+          <div className="truncate text-xs text-[color:var(--text-tertiary)]">
             {sectionCatalog?.[c.code] ?? c.name}
           </div>
         </div>
@@ -564,7 +575,7 @@ function CompliancePageContent() {
             </span>
             {reason ? (
               <span
-                className="mt-0.5 block truncate text-[10px] text-[color:var(--text-tertiary)]"
+                className="mt-0.5 block truncate text-xs text-[color:var(--text-tertiary)]"
                 title={reason}
                 data-testid="control-evidence-reason"
               >
@@ -588,8 +599,8 @@ function CompliancePageContent() {
           <Link
             href={findingsHref({ framework: selectedSection?.id, control: c.code, scan: scanParam })}
             onClick={(e) => e.stopPropagation()}
-            aria-label={`View ${c.findings} findings for ${c.code}`}
-            className="font-semibold text-[color:var(--accent)] underline-offset-2 hover:underline focus-visible:underline focus-visible:outline-none"
+            aria-label={`View ${c.findings} finding${c.findings === 1 ? "" : "s"} for ${c.code}`}
+            className={`font-semibold underline-offset-2 hover:underline focus-visible:underline focus-visible:outline-none ${findingCountColor(c.status)}`}
           >
             {c.findings}
           </Link>
@@ -685,7 +696,7 @@ function CompliancePageContent() {
       {/* ── Trust center header ─────────────────────────────────────────── */}
       <div className="flex flex-col gap-3 rounded-2xl border border-[color:var(--border-subtle)] bg-[color:var(--surface)] p-4 elev-1 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[color:var(--text-tertiary)]">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--text-tertiary)]">
             Trust center
           </p>
           <h1 className={`text-xl font-bold ${statusColor(data.overall_status)}`}>
@@ -736,7 +747,7 @@ function CompliancePageContent() {
       ) : null}
 
       {/* ── View Toggle ────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-1 rounded-lg border border-[color:var(--border-subtle)] bg-[color:var(--surface-muted)] p-0.5 self-start w-fit">
+      <div className="flex max-w-full flex-wrap items-center gap-1 rounded-lg border border-[color:var(--border-subtle)] bg-[color:var(--surface-muted)] p-0.5 self-start w-fit">
         {(
           [
             { key: "detail", label: "Detail", icon: List },

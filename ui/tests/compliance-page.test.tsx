@@ -275,6 +275,29 @@ describe("CompliancePage (dense restyle)", () => {
     );
   });
 
+  it("replaces the detail pane when a category filter hides the selected framework", async () => {
+    render(<CompliancePage />);
+    await screen.findByText("Prompt Injection");
+    fireEvent.click(screen.getByRole("button", { name: "cloud" }));
+    await waitFor(() => expect(screen.queryByText("Prompt Injection")).toBeNull());
+    const table = screen.getByTestId("compliance-frameworks-table");
+    const selected = table.querySelector('[data-selected="true"]');
+    expect(selected).not.toBeNull();
+    expect(selected).toHaveTextContent(/CIS|CMMC/);
+    expect(screen.queryByRole("heading", { name: "OWASP LLM Top 10" })).toBeNull();
+  });
+
+  it("colours a findings count by the control's status, never green on a failing control", async () => {
+    render(<CompliancePage />);
+    await screen.findByText("Prompt Injection");
+    const failing = screen.getByRole("link", { name: /4 findings for LLM01/i });
+    expect(failing.className).toMatch(/text-red-/);
+    expect(failing.className).not.toMatch(/accent|emerald|green/);
+    fireEvent.click(within(screen.getByTestId("compliance-frameworks-table")).getByText("MCP"));
+    const warning = await screen.findByRole("link", { name: /1 finding for MCP01/i });
+    expect(warning.className).toMatch(/text-amber-/);
+  });
+
   it("keeps a zero findings count non-interactive", async () => {
     render(<CompliancePage />);
     await screen.findByTestId("compliance-kpi-strip");
@@ -329,16 +352,17 @@ describe("CompliancePage (dense restyle)", () => {
       name: "Control detail views",
     });
     expect(within(tabs).getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
-      "Overview",
       "Evidence",
+      "Overview",
       "Actions",
     ]);
-    expect(within(tabs).getByRole("tab", { name: "Overview" })).toHaveAttribute(
+    // A control with mapped findings opens on its evidence.
+    expect(within(tabs).getByRole("tab", { name: "Evidence" })).toHaveAttribute(
       "aria-selected",
       "true",
     );
 
-    fireEvent.click(within(tabs).getByRole("tab", { name: "Evidence" }));
+    fireEvent.click(within(tabs).getByRole("tab", { name: "Overview" }));
     expect(within(drawer).getByText(/no affected package or agent identities/i)).toBeInTheDocument();
 
     fireEvent.click(within(tabs).getByRole("tab", { name: "Actions" }));

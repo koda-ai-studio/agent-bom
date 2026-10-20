@@ -56,7 +56,7 @@ describe("control evidence links", () => {
 describe("control drawer", () => {
   it("links affected assets to their own pages", () => {
     render(<ComplianceControlDrawer control={control} frameworkId="nist-800-53" frameworkLabel="NIST" onClose={() => {}} />);
-    fireEvent.click(screen.getByRole("tab", { name: "Evidence" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Overview" }));
     const agent = screen.getByRole("link", { name: "Claude Desktop" });
     expect(agent).toHaveAttribute("href", "/agents?name=claude-desktop");
     expect(agent).toHaveAttribute("title", "claude-desktop");
