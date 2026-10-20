@@ -7,6 +7,7 @@ import os
 import threading
 import uuid
 from datetime import datetime, timezone
+from functools import cache, partial
 from typing import Any
 
 from agent_bom.api.models import JobStatus, ScanJob, ScanRequest
@@ -420,9 +421,9 @@ def maybe_bootstrap_demo_estate(*, tenant_id: str = SHOWCASE_TENANT) -> dict[str
     # current demo seed is a no-op, and a stale demo seed is refreshed (see
     # seed_showcase_graph_if_empty). Any failure must NOT block the findings/scan
     # or identity seeding below — those keep posture + NHI non-empty on start.
-    graph_seeded = False
+    graph_seeded, demo_report = False, cache(partial(_run_demo_scan_report, tenant_id=tenant_id))  # one scan: graph links + job
     try:
-        graph_seeded = seed_showcase_graph_if_empty(graph_store, tenant_id=tenant_id, force=force)
+        graph_seeded = seed_showcase_graph_if_empty(graph_store, tenant_id=tenant_id, force=force, scan_report=demo_report)
     except Exception:
         _logger.warning("demo estate graph seeding failed", exc_info=True)
         summary["graph_error"] = True
@@ -515,7 +516,7 @@ def maybe_bootstrap_demo_estate(*, tenant_id: str = SHOWCASE_TENANT) -> dict[str
         return _remember_bootstrap_status(tenant_id, summary)
 
     try:
-        report = _run_demo_scan_report(tenant_id=tenant_id)
+        report = demo_report()
         finding_count = len(report.get("findings") or report.get("vulnerabilities") or [])
         if finding_count < 1:
             raise RuntimeError("demo estate scan produced zero findings")
