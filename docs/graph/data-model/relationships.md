@@ -38,7 +38,7 @@ Class `finding` · directed · traversable · required evidence `source`, `tier`
 - `misconfiguration` → `access_policy`, `account`, `agent`, `api_gateway`, `application`, `ci_job`, `cloud_resource`, `cluster`, `config_file`, `container`, `data_store`, `dataset`, `framework`, `model`, `org`, `package`, `role`, `server`, `service_account`, `service_principal`, `source_file`, `tool`
 - `vulnerability` → `config_file`, `container`, `package`, `resource`, `server`, `source_file`
 
-Emitted by: `graph/benchmark_projection.py`, `graph/finding_projection.py`, `graph/organization_findings.py`, `graph/repo_structure_overlay.py`, `graph/supabase_projection.py`, `graph/vercel_projection.py`, `hardware_evidence.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/estate_vulnerabilities.py`, `demo_estate/showcase_graph.py`
+Emitted by: `graph/benchmark_projection.py`, `graph/finding_projection.py`, `graph/organization_findings.py`, `graph/repo_structure_overlay.py`, `graph/supabase_projection.py`, `graph/vercel_projection.py`, `hardware_evidence.py`; demo fixtures: `demo_estate/estate_finding_nodes.py`, `demo_estate/showcase_graph.py`
 
 ## `assumes`
 
@@ -164,7 +164,7 @@ Class `structural` · directed · traversable · required evidence `source`, `ti
 - `source_file` → `package`
 - `tool` → `misconfiguration`, `vulnerability`
 
-Emitted by: `graph/agent_projection.py`, `graph/builder_cloud_inventory.py`, `graph/builder_cloud_lineage.py`, `graph/builder_snowflake_platform.py`, `graph/cloud_context.py`, `graph/code_graph_overlay.py`, `graph/organization_aws.py`, `graph/organization_gcp.py`, `graph/repo_structure_overlay.py`, `graph/vercel_projection.py`; demo fixtures: `demo_estate/compute_identity_lane.py`, `demo_estate/estate_graph.py`, `demo_estate/estate_vulnerabilities.py`, `demo_estate/showcase_graph.py`
+Emitted by: `graph/agent_projection.py`, `graph/builder_cloud_inventory.py`, `graph/builder_cloud_lineage.py`, `graph/builder_snowflake_platform.py`, `graph/cloud_context.py`, `graph/code_graph_overlay.py`, `graph/organization_aws.py`, `graph/organization_gcp.py`, `graph/repo_structure_overlay.py`, `graph/vercel_projection.py`; demo fixtures: `demo_estate/compute_identity_lane.py`, `demo_estate/estate_finding_nodes.py`, `demo_estate/estate_graph.py`, `demo_estate/showcase_graph.py`
 
 ## `correlates_with`
 
@@ -602,4 +602,4 @@ Class `finding` · directed · traversable · required evidence `source`, `tier`
 - `server` → `misconfiguration`, `vulnerability`
 - `tool` → `misconfiguration`, `vulnerability`
 
-Emitted by: `graph/blast_projection.py`, `graph/component_paths.py`, `graph/credential_findings.py`, `graph/mcp_audit_projection.py`, `graph/package_projection.py`, `graph/rollup_issues.py`; demo fixtures: `demo_estate/estate_vulnerabilities.py`, `demo_estate/showcase_findings.py`, `demo_estate/showcase_packages.py`
+Emitted by: `graph/blast_projection.py`, `graph/component_paths.py`, `graph/credential_findings.py`, `graph/mcp_audit_projection.py`, `graph/package_projection.py`, `graph/rollup_issues.py`; demo fixtures: `demo_estate/estate_finding_nodes.py`, `demo_estate/showcase_findings.py`, `demo_estate/showcase_packages.py`

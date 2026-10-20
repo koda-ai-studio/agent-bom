@@ -181,7 +181,7 @@ Id formats:
 
 ## `misconfiguration`
 
-Emitted by: `graph/benchmark_projection.py`, `graph/credential_findings.py`, `graph/finding_projection.py`, `graph/finding_row_projection.py`, `graph/mcp_audit_projection.py`, `graph/organization_findings.py`, `graph/supabase_projection.py`, `graph/vercel_projection.py`; demo fixtures: `demo_estate/estate_graph.py`, `demo_estate/showcase_findings.py`, `demo_estate/showcase_graph.py`
+Emitted by: `graph/benchmark_projection.py`, `graph/credential_findings.py`, `graph/finding_projection.py`, `graph/finding_row_projection.py`, `graph/mcp_audit_projection.py`, `graph/organization_findings.py`, `graph/supabase_projection.py`, `graph/vercel_projection.py`; demo fixtures: `demo_estate/estate_finding_nodes.py`, `demo_estate/showcase_findings.py`, `demo_estate/showcase_graph.py`
 
 Id formats:
 
@@ -287,7 +287,7 @@ Id formats:
 
 ## `vulnerability`
 
-Emitted by: `graph/blast_projection.py`, `graph/builder_overlays.py`, `graph/dependency_reach.py`, `graph/finding_row_projection.py`, `graph/package_projection.py`, `hardware_evidence.py`; demo fixtures: `demo_estate/estate_vulnerabilities.py`, `demo_estate/showcase_packages.py`
+Emitted by: `graph/blast_projection.py`, `graph/builder_overlays.py`, `graph/dependency_reach.py`, `graph/finding_row_projection.py`, `graph/package_projection.py`, `hardware_evidence.py`; demo fixtures: `demo_estate/estate_finding_nodes.py`, `demo_estate/showcase_packages.py`
 
 Id formats:
 
