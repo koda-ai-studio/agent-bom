@@ -5,8 +5,9 @@ from __future__ import annotations
 from typing import Any
 
 from agent_bom.mcp_tools.catalog import registered_mcp_tool_decorator_names as registered_mcp_tool_decorator_names
-from agent_bom.mcp_tools.graph_tool_cards import GRAPH_AGENT_TOOL_CARDS
 from agent_bom.mcp_tools.metadata_routes import attach_metadata_routes as attach_metadata_routes
+from agent_bom.mcp_tools.server_payloads import build_health_payload as build_health_payload
+from agent_bom.mcp_tools.server_payloads import build_root_metadata as build_root_metadata
 from agent_bom.mcp_tools.tool_capabilities import _TOOL_CAPABILITY_CLASSES as _TOOL_CAPABILITY_CLASSES
 
 # Immutable release metadata: older releases without this field expose the full catalog.
@@ -81,7 +82,40 @@ _SERVER_CARD_TOOLS = [
         "description": "Read correlation state, source receipts, freshness, conflicts, output snapshot, and analysis bounds",
         "annotations": {"readOnlyHint": True, "destructiveHint": False, "idempotentHint": True},
     },
-    *GRAPH_AGENT_TOOL_CARDS,
+    {
+        "name": "should_i_deploy",
+        "description": (
+            "Pre-deployment gate: resolves a candidate (package, CVE, resource, or graph node) against the"
+            " every ranked path of the latest security-graph snapshot by exact identifier and returns allow/warn/block from"
+            " the matched paths' risk and KEV exposure, or not_found when no path names the candidate"
+        ),
+        "annotations": {"readOnlyHint": True},
+    },
+    {
+        "name": "cross_vendor_paths",
+        "description": "Attack paths whose source and target nodes are in different recorded vendors, with path counts per vendor pair",
+        "annotations": {"readOnlyHint": True},
+    },
+    {
+        "name": "graph_reach",
+        "description": "Page what can reach a graph node (or what it reaches) over recorded edges, with walk completeness",
+        "annotations": {"readOnlyHint": True},
+    },
+    {
+        "name": "graph_diff",
+        "description": "What changed between two graph snapshots: summary counts and highlights, or filtered cursor-paged change rows",
+        "annotations": {"readOnlyHint": True},
+    },
+    {
+        "name": "findings_query",
+        "description": "Query tenant findings with the /v1/findings filters, sort and cursor in a compact projection",
+        "annotations": {"readOnlyHint": True},
+    },
+    {
+        "name": "finding_detail",
+        "description": "One finding with the graph paths that carry it, who reaches it, and its triage/VEX state",
+        "annotations": {"readOnlyHint": True},
+    },
     {
         "name": "policy_check",
         "description": (
@@ -577,33 +611,3 @@ def build_server_card(*, auth_required: bool = False, profile: str = "full", oau
         "schemes": (["oauth2"] if oauth else ["bearer"]) if auth_required else [],
     }
     return card
-
-
-def build_root_metadata(*, auth_required: bool) -> dict[str, Any]:
-    from agent_bom import __version__
-
-    return {
-        "name": "agent-bom",
-        "version": __version__,
-        "description": ("Security scanner and graph for AI supply chain and infrastructure — agents, MCP, runtime, and blast radius."),
-        "homepage": "https://github.com/msaad00/agent-bom",
-        "source": "https://github.com/msaad00/agent-bom",
-        "license": "Apache-2.0",
-        "pypi": "https://pypi.org/project/agent-bom/",
-        "documentation": "https://github.com/msaad00/agent-bom#readme",
-        "server_card": "/.well-known/mcp/server-card.json",
-        "auth_required": auth_required,
-    }
-
-
-def build_health_payload(*, auth_required: bool, tool_metrics_summary: dict[str, Any]) -> dict[str, Any]:
-    from agent_bom import __version__
-
-    return {
-        "status": "healthy",
-        "name": "agent-bom",
-        "version": __version__,
-        "auth_required": auth_required,
-        "tool_count": tool_metrics_summary["tool_count"],
-        "mcp_metrics": tool_metrics_summary,
-    }
