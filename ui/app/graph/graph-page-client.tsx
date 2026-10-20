@@ -1,6 +1,7 @@
 "use client";
 
 import { GraphConnectionsList } from "@/components/graph-connections-list";
+import { GraphPathList } from "@/components/graph-path-list";
 import { ScopeBreadcrumbChip } from "@/components/graph-scope-breadcrumb";
 import { nameScopeCrumbs, type ScopeCrumb } from "@/lib/graph-scope-crumbs";
 import { declutterRelationshipLabels, hideRedundantDerivedEdges } from "@/lib/graph-label-declutter";
@@ -1770,8 +1771,6 @@ function GraphPageInner() {
   const compactMobileTopology = narrowViewport && !selectedAttackPath &&
     !rollupNavigationActive && compactGroupedTopology;
   const graphLayoutKind = compactMobileTopology && !investigationMode ? "dagre" : selectedAttackPath || selectedScenarioId || rollupNavigationActive || investigationMode ? "dagre-lr" : "asset-hierarchy";
-  // A phone reads a root investigation as a list first; the canvas is one tap away.
-  const mobileListActive = Boolean(narrowViewport && investigationMode) && mobileGraphView === "list";
   // "Show more" reads against the root's recorded degree, when the detail read was complete.
   const rootConnections = useMemo(() => {
     const detail = selectedNodeDetail?.response;
@@ -2503,7 +2502,7 @@ function GraphPageInner() {
   }, [fitVisible, presentation]);
   // The list hides the canvas, so it was measured at zero size; fit once it is shown.
   useEffect(() => {
-    if (!narrowViewport || !investigationMode || mobileGraphView !== "graph") return;
+    if (!narrowViewport || mobileGraphView !== "graph") return;
     const frame = requestAnimationFrame(() => fitVisible());
     return () => cancelAnimationFrame(frame);
     // Fit on the switch itself, not on every later camera or data change.
@@ -2539,7 +2538,12 @@ function GraphPageInner() {
   const showViewportScope = !rollupDecisionActive && Boolean(rollupNavigationActive || selectedScenarioId || investigationMode || initialViewportOptions.nodes || displayNodes.length > 6) && graphRenderer.kind === "react-flow";
   const showScopeEvidence = !rollupNavigationActive && !rollupDecisionActive && displayNodes.length > 0;
   const showContextControls = Boolean(investigationContext) && graphRenderer.kind === "react-flow";
-  const showChangesEntry = Boolean(selectedScanId) && !mobileListActive && !selectedScenarioId;
+  // A phone reads the loaded graph as a list first (paths, or a root's connections);
+  // the fitted canvas is one tap away. A focused attack path has its own column.
+  const mobileListAvailable = narrowViewport && displayNodes.length > 0 && graphRenderer.kind === "react-flow" && !graphOnlyFindings &&
+    !selectedAttackPath && !selectedScenarioId && !rollupNavigationActive && !rollupDecisionActive && !firstFramePending;
+  const mobileListActive = mobileListAvailable && mobileGraphView === "list";
+  const showChangesEntry = Boolean(selectedScanId) && !selectedScenarioId;
   const showLegend = !mobileListActive && !rollupNavigationActive && !rollupDecisionActive && graphRenderer.kind === "react-flow" && displayNodes.length > 0;
 
   // Soft re-frame when drift/evidence lenses engage so ring emphasis stays in view.
@@ -3745,7 +3749,7 @@ function GraphPageInner() {
             highlightAvailable={!viewingCurrentEstate && Boolean(graphDiff) && driftIndex.hasChanges}
             selectedPair={viewingCurrentEstate ? driftScrubberPair : null}
             diffDetails={<GraphSnapshotDiff diff={graphDiff} counts={diffCounts} loading={loadingDiff} error={diffError} showCounts={!viewingCurrentEstate} />}
-            onClose={() => setChangesOpen(false)} onHighlight={() => void highlight.highlight()}
+            onClose={() => setChangesOpen(false)} onHighlight={() => { setMobileGraphView("graph"); void highlight.highlight(); }}
             onOpenDiff={pair => { highlight.openPair(pair); setComparisonRequested(true); }}
             onInvestigateNode={(rootId, rootLabel) => { setChangesOpen(false); void loadRootInvestigation({ rootId, rootLabel }); }}
             onInvestigatePath={path => {
@@ -3754,12 +3758,15 @@ function GraphPageInner() {
               if (attackPaths.some(item => attackPathKey(item) === key)) setSelectedAttackPathKey(key);
               else void loadRootInvestigation({ rootId: path.target, rootLabel: path.target });
             }} />
-          {narrowViewport && investigationMode && displayNodes.length > 0 && <div role="group" aria-label="Investigation view" className="flex gap-2">
+          {mobileListAvailable && <div role="group" aria-label="Investigation view" className="flex gap-2">
             {(["list", "graph"] as const).map(view => <button key={view} type="button" aria-pressed={mobileGraphView === view} onClick={() => setMobileGraphView(view)}
-              className="graph-page-action min-h-11 flex-1 aria-pressed:bg-surface-elevated">{view === "list" ? "List" : "Graph"}</button>)}
+              className="graph-page-action min-h-11 flex-1 aria-pressed:bg-surface-elevated">{view === "list" ? (investigationMode ? "List" : "Paths") : "Graph"}</button>)}
           </div>}
-          {mobileListActive && <GraphConnectionsList rootId={investigationMode!.rootId} nodes={displayNodes} edges={displayEdges} memberNodes={flowNodeById}
-            onSelect={id => { const node = flowNodeById.get(id); if (node) onNodeClick({} as React.MouseEvent, node); }} />}
+          {mobileListActive && (investigationMode
+            ? <GraphConnectionsList rootId={investigationMode.rootId} nodes={displayNodes} edges={displayEdges} memberNodes={flowNodeById}
+              onSelect={id => { const node = flowNodeById.get(id); if (node) onNodeClick({} as React.MouseEvent, node); }} />
+            : <GraphPathList nodes={displayNodes} edges={displayEdges}
+              onSelect={id => { const node = flowNodeById.get(id) ?? displayNodes.find(item => item.id === id); if (node) onNodeClick({} as React.MouseEvent, node); }} />)}
           <div ref={setGraphNavigationMount} className={mobileListActive ? "hidden" : undefined} />
           <div data-graph-adaptive-frame data-graph-annotations={graphLayoutKind === "asset-hierarchy" ? "on-demand" : undefined} className={`${mobileListActive ? "hidden " : ""}relative flex ${selectedAttackPath ? "h-[max(24rem,calc(100dvh-25rem))] sm:h-[clamp(24rem,50dvh,36rem)]" : selectedScenarioId ? "h-[max(24rem,calc(100dvh-25rem))] sm:h-[max(28rem,calc(100dvh-21rem))]" : "h-[var(--graph-adaptive-height,clamp(22rem,60dvh,48rem))]"} shrink-0 overflow-hidden rounded-lg border border-outline bg-surface`}>
           <div className="flex min-h-0 min-w-0 flex-1 flex-col">
