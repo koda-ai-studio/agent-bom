@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import quote
 
+from agent_bom.http_client import request_with_retry
 from agent_bom.scanners.local_data_freshness import CheckDataEvidence, check_data_evidence
 from agent_bom.scanners.package_check_result import has_lookup_coverage_gap
 
@@ -43,9 +45,6 @@ async def version_published(name: str, version: str, ecosystem: str, client) -> 
     a cheap per-version endpoint, so a transient failure never turns a genuine
     clean result into a false "unknown".
     """
-    from urllib.parse import quote
-
-    from agent_bom.http_client import request_with_retry
 
     # Package coordinates are path data, never URL structure. Encoding every
     # reserved character also makes scoped npm names (``@scope/name``) a

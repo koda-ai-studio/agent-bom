@@ -75,16 +75,22 @@ def test_reference_lab_preserves_source_receipts_and_evidence_boundaries() -> No
     # The modeled identity path plus one card per holder of the image/SBOM CVE
     # occurrence (IaC container, SBOM container, pinned manifest).
     cards = capture["fix_first"]["cards"]
-    # The identity path's hops are all freshly recorded, so it is likely (a modeled path, not
-    # runtime proof); the CVE occurrences lack applicability evidence, so they stay unknown below it.
-    assert cards[0]["id"].endswith("->data-store:reference-customer-records")
-    assert cards[0]["attack_path"]["reachability"] == "likely"
-    assert sorted(card["id"].split("::")[0] for card in cards[1:]) == [
+    # Every card is a recorded graph path, so each is likely: never confirmed without
+    # function-level or runtime evidence. An occurrence whose applicability was never
+    # assessed does not block its path. Cards rank by risk, so the KEV-listed critical
+    # CVE occurrences come before the modeled identity path to customer records.
+    identity_cards = [card for card in cards if card["id"].endswith("->data-store:reference-customer-records")]
+    cve_cards = [card for card in cards if card["title"] == "CVE-2023-4863"]
+    assert len(identity_cards) == 1 and len(cve_cards) == len(cards) - 1
+    assert sorted(card["id"].split("::")[0] for card in cve_cards) == [
         "container:iac:reference-api",
         "container:sbom:reference-api",
         "source:pinned-package",
     ]
-    assert all(card["title"] == "CVE-2023-4863" and card["attack_path"]["reachability"] == "unknown" for card in cards[1:])
+    assert all(card["attack_path"]["reachability"] == "likely" for card in cards)
+    risks = [card["attack_path"]["composite_risk"] for card in cards]
+    assert risks == sorted(risks, reverse=True)
+    assert cards.index(identity_cards[0]) == len(cards) - 1
     assert len(capture["snapshots"]) == 6
     assert all(snapshot["snapshot_kind"] == "scan" for snapshot in capture["snapshots"])
 
