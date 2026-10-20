@@ -13,7 +13,7 @@ from collections.abc import Callable
 from typing import Any
 
 from agent_bom.demo import DEMO_INVENTORY
-from agent_bom.demo_advisories import DEMO_ADVISORIES
+from agent_bom.demo_advisories import DEMO_ADVISORIES, demo_advisory_window
 from agent_bom.graph.types import EntityType, RelationshipType
 from agent_bom.package_utils import canonical_package_key
 
@@ -45,14 +45,21 @@ def seed_showcase_packages(node: NodeFn, edge: EdgeFn, packages: dict[str, tuple
             edge(f"server:{server}", package_id, RelationshipType.DEPENDS_ON)
         recorded = packages.get(f"{name}@{version}")
         if recorded is not None:
-            _seed_vulnerability(node, edge, package_id, recorded, advisory_by_id)
+            _seed_vulnerability(node, edge, package_id, recorded, advisory_by_id, (name, version, ecosystem))
 
 
 def _seed_vulnerability(
-    node: NodeFn, edge: EdgeFn, package_id: str, recorded: tuple[str, str, str, float], advisory_by_id: dict[str, Any]
+    node: NodeFn,
+    edge: EdgeFn,
+    package_id: str,
+    recorded: tuple[str, str, str, float],
+    advisory_by_id: dict[str, Any],
+    installed: tuple[str, str, str],
 ) -> None:
     _server, cve, severity, score = recorded
-    advisory = advisory_by_id[cve]
+    # An advisory fixing several release lines has one row per line; the node
+    # carries the fix of the line the showcase package is installed on.
+    advisory = demo_advisory_window(cve, *installed) or advisory_by_id[cve]
     vuln_id = f"vuln:{cve}"
     node(
         vuln_id,

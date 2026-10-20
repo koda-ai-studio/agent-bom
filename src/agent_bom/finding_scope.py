@@ -27,7 +27,7 @@ from typing import TYPE_CHECKING, Any, Literal, Optional
 from agent_bom.evidence.asset_display import iac_source_label
 from agent_bom.evidence.finding_lanes import finding_lane, lane_response_fields
 from agent_bom.evidence.finding_reach_sources import safe_reach_sources
-from agent_bom.evidence.finding_response_fields import restore_atlas_receipts, restored_public_fields
+from agent_bom.evidence.finding_response_fields import restore_atlas_receipts, restored_public_fields, safe_lineage_fields
 from agent_bom.evidence.finding_status import public_finding_status
 
 if TYPE_CHECKING:  # pragma: no cover - typing only
@@ -684,7 +684,7 @@ def safe_finding_response_payload(row: Mapping[str, Any]) -> dict[str, Any]:
     if isinstance(ordinal, int) and not isinstance(ordinal, bool) and 0 <= ordinal <= 2**63 - 1:
         payload["bulk_ordinal"] = ordinal
 
-    payload.update(public_finding_status(row))
+    payload.update({**public_finding_status(row), **safe_lineage_fields(row)})
 
     for key, max_len in (
         ("source", 64),

@@ -13856,6 +13856,8 @@ export interface components {
             cvss_vector?: string | null;
             /** Cvss Version */
             cvss_version?: string | null;
+            /** Dependency Depth */
+            dependency_depth?: number | null;
             /** Ecosystem */
             ecosystem?: string | null;
             effective_reach?: components["schemas"]["EffectiveReach"] | null;
@@ -13865,6 +13867,8 @@ export interface components {
             effective_reach_score?: number | null;
             /** Entity Type */
             entity_type?: string | null;
+            /** Epss Cve Id */
+            epss_cve_id?: string | null;
             /** Epss Score */
             epss_score?: number | null;
             /** Evidence */
@@ -13897,6 +13901,10 @@ export interface components {
             graph_reachable_from_count?: number | null;
             /** Id */
             id: string;
+            /** Introduced Via */
+            introduced_via?: string | null;
+            /** Is Direct */
+            is_direct?: boolean | null;
             /** Is Kev */
             is_kev?: boolean | null;
             /** Kev Cve Id */

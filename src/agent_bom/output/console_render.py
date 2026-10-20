@@ -256,7 +256,7 @@ def print_blast_radius(report: AIBOMReport, fixable_only: bool = False) -> None:
         threats_display = "\n".join(threat_lines) if threat_lines else "—"
 
         table.add_row(
-            f"[{sev_style}]{finding.risk_score:.1f}[/{sev_style}]",
+            f"[{sev_style}]{'—' if finding.risk_score is None else format(finding.risk_score, '.1f')}[/{sev_style}]",
             vuln_display,
             _finding_sev_badge(finding),
             epss_display,
@@ -311,7 +311,7 @@ def print_attack_flow_tree(report: AIBOMReport) -> None:
         Severity.LOW: "dim",
     }
 
-    for finding in sorted(all_cve, key=lambda item: item.risk_score, reverse=True)[:15]:
+    for finding in sorted(all_cve, key=lambda item: item.risk_score or 0.0, reverse=True)[:15]:
         sev = finding_severity(finding)
         sev_style = severity_styles.get(sev, "white")
         vuln_id = finding.cve_id or finding.id

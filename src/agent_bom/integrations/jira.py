@@ -25,6 +25,11 @@ _SEVERITY_PRIORITY: dict[str, str] = {
 }
 
 
+def _risk_text(score: object) -> str:
+    """An unassessed finding reads "not assessed", never 0/10."""
+    return f"{float(score):.1f}/10" if isinstance(score, (int, float)) and not isinstance(score, bool) else "not assessed"
+
+
 async def create_jira_ticket(
     jira_url: str,
     email: str,
@@ -49,16 +54,16 @@ async def create_jira_ticket(
     vuln_id = finding.get("vulnerability_id", "Unknown")
     severity = finding.get("severity", "medium")
     package = finding.get("package", "unknown")
-    risk_score = finding.get("risk_score", 0)
+    risk_text = _risk_text(finding.get("risk_score"))
     fix_version = finding.get("fixed_version")
 
-    summary = f"[agent-bom] {vuln_id} in {package} (risk {risk_score:.1f}/10)"
+    summary = f"[agent-bom] {vuln_id} in {package} (risk {risk_text})"
 
     description_parts = [
         f"*Vulnerability:* {vuln_id}",
         f"*Package:* {package}",
         f"*Severity:* {severity}",
-        f"*Risk Score:* {risk_score}/10",
+        f"*Risk Score:* {risk_text}",
         f"*Affected Agents:* {', '.join(finding.get('affected_agents', []))}",
         f"*Affected Servers:* {', '.join(finding.get('affected_servers', []))}",
         f"*Exposed Credentials:* {', '.join(finding.get('exposed_credentials', []))}",

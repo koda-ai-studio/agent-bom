@@ -6276,7 +6276,7 @@
           "cwe_ids": [
             "CWE-200"
           ],
-          "fixed_version": "3.1.1",
+          "fixed_version": "2.6.7",
           "graph_reachable": true,
           "is_kev": false,
           "reachability": "likely",
@@ -15028,7 +15028,7 @@
           "cwe_ids": [
             "CWE-200"
           ],
-          "fixed_version": "3.1.1",
+          "fixed_version": "2.6.7",
           "graph_reachable": true,
           "is_kev": false,
           "reachability": "likely",

@@ -37,6 +37,26 @@ def _legacy(value: object) -> object:
     return _LEGACY_VALUES.get(value, value) if isinstance(value, str) else value
 
 
+def _optional_float(value: object) -> float | None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return None
+    return float(value)
+
+
+def _restore_vulnerability_fields(finding: Finding, item: dict) -> None:
+    """Restore the advisory facts a CVE row carries; dropping them read as "no fix, no EPSS"."""
+    finding.cvss_score = _optional_float(item.get("cvss_score"))
+    finding.epss_score = _optional_float(item.get("epss_score"))
+    finding.is_kev = bool(item.get("is_kev"))
+    finding.fixed_version = _optional_str(item.get("fixed_version"))
+    finding.reachability = _optional_str(item.get("reachability"))
+    reachable = item.get("graph_reachable")
+    finding.graph_reachable = reachable if isinstance(reachable, bool) else None
+    cwes = item.get("cwe_ids")
+    if isinstance(cwes, (list, tuple)):
+        finding.cwe_ids = [str(cwe) for cwe in cwes if cwe]
+
+
 def finding_from_dict(item: dict) -> Finding | None:
     """Rehydrate a Finding dict, preserving graph investigation FKs when present."""
     asset_data = item.get("asset") or {}
@@ -64,7 +84,7 @@ def finding_from_dict(item: dict) -> Finding | None:
         description=str(item.get("description", "")),
         remediation_guidance=item.get("remediation_guidance"),
         evidence=item.get("evidence", {}) or {},
-        risk_score=float(item.get("risk_score", 0.0) or 0.0),
+        risk_score=_optional_float(item.get("risk_score")),
         is_actionable=item.get("is_actionable"),
         impact_category=item.get("impact_category"),
         id=str(item.get("id", "")),
@@ -81,6 +101,7 @@ def finding_from_dict(item: dict) -> Finding | None:
         values = item.get(tag_field)
         if isinstance(values, (list, tuple)):
             setattr(finding, tag_field, [str(value) for value in values if value])
+    _restore_vulnerability_fields(finding, item)
     applicable = item.get("applicable_frameworks")
     if isinstance(applicable, (list, tuple)):
         finding.applicable_frameworks = [str(slug) for slug in applicable if slug]

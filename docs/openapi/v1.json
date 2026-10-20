@@ -14597,6 +14597,17 @@
             ],
             "title": "Cvss Version"
           },
+          "dependency_depth": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dependency Depth"
+          },
           "ecosystem": {
             "anyOf": [
               {
@@ -14653,6 +14664,17 @@
               }
             ],
             "title": "Entity Type"
+          },
+          "epss_cve_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Epss Cve Id"
           },
           "epss_score": {
             "anyOf": [
@@ -14824,6 +14846,28 @@
           "id": {
             "title": "Id",
             "type": "string"
+          },
+          "introduced_via": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Introduced Via"
+          },
+          "is_direct": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Direct"
           },
           "is_kev": {
             "anyOf": [

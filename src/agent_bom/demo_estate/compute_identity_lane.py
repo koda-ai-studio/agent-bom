@@ -19,12 +19,14 @@ from __future__ import annotations
 
 from typing import Any
 
+from agent_bom.demo_advisories import DEMO_EPSS_SOURCE, DEMO_HOST_ADVISORIES, DemoAdvisory, demo_epss
 from agent_bom.graph.asset_canonicalize import ANALYZER
 from agent_bom.graph.builder import build_unified_graph_from_report
 from agent_bom.graph.container import UnifiedGraph
 from agent_bom.graph.edge import UnifiedEdge
 from agent_bom.graph.edge_evidence import fixture_edge_evidence
 from agent_bom.graph.types import RelationshipType
+from agent_bom.models import BlastRadius, Package, Severity, Vulnerability
 
 DEMO_COMPUTE_ACCOUNT = "210987654321"
 DEMO_COMPUTE_REGION = "us-east-1"
@@ -63,15 +65,67 @@ def _sensor_host_asset(index: int) -> dict[str, Any]:
     }
 
 
+def _host_risk_score(advisory: DemoAdvisory, on_agent_path: bool) -> float:
+    """Score the occurrence with the same scorer every package CVE goes through."""
+    blast_radius = BlastRadius(
+        vulnerability=Vulnerability(
+            id=advisory.vuln_id,
+            summary=advisory.summary,
+            severity=Severity(advisory.severity),
+            cvss_score=advisory.cvss_score,
+            is_kev=advisory.is_kev,
+            epss_score=demo_epss(advisory),
+        ),
+        package=Package(name=advisory.package, version=advisory.sample_version, ecosystem=advisory.ecosystem),
+        affected_servers=[],
+        affected_agents=[],
+        exposed_credentials=[],
+        exposed_tools=[],
+        graph_reachable=True if on_agent_path else None,
+    )
+    return round(blast_radius.calculate_risk_score(), 2)
+
+
 def _vm_cve(index: int) -> dict[str, Any]:
-    """An OS-package CVE an agentless scanner reported on a lane VM."""
+    """An OS-package CVE an agentless scanner reported on a lane VM.
+
+    VM 0 schedules the in-cluster MCP server's pod, so its CVE sits on a modeled
+    agent → server → pod → VM path (``likely``, structural only). VM 1 has no
+    such path and no other reachability evidence, so its verdict is ``unknown``.
+    """
+    advisory = DEMO_HOST_ADVISORIES[index % len(DEMO_HOST_ADVISORIES)]
+    installed = advisory.sample_version
+    on_agent_path = index == 0
     return {
+        "risk_score": _host_risk_score(advisory, on_agent_path),
         "id": f"demo-compute-cve-{index:02d}",
         "finding_type": "CVE",
-        "cve_id": ("CVE-2024-6387", "CVE-2023-38408")[index % 2],
+        "cve_id": advisory.vuln_id,
         "source": "CLOUD_SECURITY",
-        "severity": "high",
-        "title": ("OpenSSH signal handler race", "OpenSSH ssh-agent PKCS#11 remote code execution")[index % 2],
+        "severity": advisory.severity,
+        "cvss_score": advisory.cvss_score,
+        "cwe_ids": [advisory.cwe],
+        "title": f"{advisory.vuln_id}: {advisory.package}@{installed}",
+        "description": advisory.summary,
+        "fixed_version": advisory.fixed,
+        "remediation_guidance": f"Upgrade {advisory.package} to {advisory.fixed}.",
+        "epss_score": demo_epss(advisory),
+        "is_kev": advisory.is_kev,
+        "reachability": "likely" if on_agent_path else "unknown",
+        "graph_reachable": True if on_agent_path else None,
+        "evidence": {
+            "package_name": advisory.package,
+            "package_version": installed,
+            "ecosystem": advisory.ecosystem,
+            "configuration": {
+                "setting": f"{advisory.package} package version",
+                "observed": f"{advisory.package}@{installed}",
+                "expected": f"{advisory.package}>={advisory.fixed}",
+            },
+            "advisory_source": advisory.source,
+            "epss_source": DEMO_EPSS_SOURCE,
+            "reachability_basis": ["graph_path"] if on_agent_path else ["insufficient_evidence"],
+        },
         "asset": {"name": f"compute-{index:02d}", "asset_type": "cloud_resource", "identifier": demo_compute_arn(index), "provider": "aws"},
     }
 

@@ -183,11 +183,11 @@ def to_prometheus(
 
     if per_finding:
         header("blast_radius_score", "Blast radius risk score per vulnerability (0-10 scale)")
-        for finding in per_finding:
+        for finding in (item for item in per_finding if item.risk_score is not None):
             lines.append(
                 _metric(
                     "blast_radius_score",
-                    round(finding.risk_score, 3),
+                    round(finding.risk_score or 0.0, 3),
                     ("vuln_id", finding.cve_id or finding.id),
                     ("package", package_name(finding)),
                     ("version", package_version(finding)),

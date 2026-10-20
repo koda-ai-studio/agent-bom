@@ -22,12 +22,17 @@ _SEVERITY_EMOJI: dict[str, str] = {
 }
 
 
+def _risk_label(score: object) -> str:
+    return f"risk {float(score):.1f}" if isinstance(score, (int, float)) and not isinstance(score, bool) else "risk not assessed"
+
+
 def _build_slack_blocks(finding: dict) -> list[dict[str, Any]]:
     """Build Slack Block Kit blocks from a blast radius finding."""
     vuln_id = finding.get("vulnerability_id", "Unknown")
     severity = finding.get("severity", "medium")
     package = finding.get("package", "unknown")
-    risk_score = finding.get("risk_score", 0)
+    risk_score = finding.get("risk_score")
+    risk_text = f"{risk_score}/10" if isinstance(risk_score, (int, float)) else "Not assessed"
     emoji = _SEVERITY_EMOJI.get(severity, ":question:")
 
     blocks: list[dict[str, Any]] = [
@@ -41,7 +46,7 @@ def _build_slack_blocks(finding: dict) -> list[dict[str, Any]]:
                 {"type": "mrkdwn", "text": f"*Vulnerability:*\n{vuln_id}"},
                 {"type": "mrkdwn", "text": f"*Package:*\n{package}"},
                 {"type": "mrkdwn", "text": f"*Severity:*\n{severity.upper()}"},
-                {"type": "mrkdwn", "text": f"*Risk Score:*\n{risk_score}/10"},
+                {"type": "mrkdwn", "text": f"*Risk Score:*\n{risk_text}"},
             ],
         },
     ]
@@ -167,10 +172,10 @@ def build_summary_message(findings: list[dict]) -> dict:
     ]
 
     # Top 3 highest risk findings
-    top = sorted(findings, key=lambda f: f.get("risk_score", 0), reverse=True)[:3]
+    top = sorted(findings, key=lambda f: f.get("risk_score") or 0, reverse=True)[:3]
     if top:
         top_text = "\n".join(
-            f"- `{f.get('package', '?')}` — {f.get('vulnerability_id', '?')} (risk {f.get('risk_score', 0):.1f})" for f in top
+            f"- `{f.get('package', '?')}` — {f.get('vulnerability_id', '?')} ({_risk_label(f.get('risk_score'))})" for f in top
         )
         blocks.append(
             {

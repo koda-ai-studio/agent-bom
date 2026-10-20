@@ -34,7 +34,11 @@ export interface EnrichedVuln extends Vulnerability {
   advisory_sources: string[];
   attack_vector_summary?: string | undefined;
   impact_category?: string | undefined;
+  /** Undefined when not assessed; never coerced to 0. */
   risk_score?: number | undefined;
+  is_direct?: boolean | undefined;
+  dependency_depth?: number | undefined;
+  introduced_via?: string | undefined;
   remediation_items: RemediationSummary[];
   graph_reachable?: boolean | null | undefined;
   graph_min_hop_distance?: number | null | undefined;

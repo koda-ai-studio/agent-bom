@@ -1705,7 +1705,8 @@ export interface UnifiedFinding {
   controls?: Array<Record<string, unknown>> | undefined;
   controls_count?: number | undefined;
   evidence?: Record<string, unknown> | undefined;
-  risk_score?: number | undefined;
+  /** `null` when no scorer assessed the finding — render "Not assessed", never 0. */
+  risk_score?: number | null | undefined;
   impact_category?: string | null | undefined;
   affected_servers?: string[] | undefined;
   affected_agents?: string[] | undefined;
@@ -1717,6 +1718,11 @@ export interface UnifiedFinding {
   graph_reachable_from_agents?: string[] | undefined;
   graph_reachable_from?: string[] | undefined;
   graph_reachable_from_count?: number | null | undefined;
+  /** Dependency lineage of a package-backed finding (absent otherwise). */
+  is_direct?: boolean | null | undefined;
+  dependency_depth?: number | null | undefined;
+  /** Parent package the vulnerable dependency was pulled in through. */
+  introduced_via?: string | null | undefined;
   scan_id?: string | undefined;
   scan_sources?: string[] | undefined;
   status?: string | undefined;

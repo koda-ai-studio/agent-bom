@@ -21,7 +21,7 @@ NON_RANKING_MAPS = {
     "core/exploitability.py": "[('critical', 40), ('high', 30), ('low', 8), ('medium', 18), ('none', 0), ('unknown', 0)]",
     "graph/toxic_findings.py": "[('critical', 9.5), ('high', 7.5), ('info', 1.0), ('low', 3.0), ('medium', 5.0)]",
     "runtime/protection.py": "[('critical', 4.0), ('high', 2.5), ('info', 0.0), ('low', 0.3), ('medium', 1.0)]",
-    "demo_estate/enterprise_risk.py": "[('critical', 0.55), ('high', 0.28), ('low', 0.02), ('medium', 0.09)]",
+    "demo_advisories.py": "[('critical', 0.55), ('high', 0.28), ('low', 0.02), ('medium', 0.09)]",
     "api/risk_campaigns.py": "[('critical', 9.0), ('high', 7.0), ('info', 0.5), ('low', 1.5), ('medium', 4.0)]",
     "domain/skill_findings.py": "[('critical', 9.0), ('high', 7.5), ('low', 2.5), ('medium', 5.0)]",
     "api/cloud_scan_results.py": "[('critical', 100), ('high', 80), ('low', 20), ('medium', 50)]",

@@ -76,6 +76,9 @@ class FindingRow(ReadModel):
     graph_min_hop_distance: int | None = None
     graph_reachable_from_agents: list[str] | None = None
     graph_reachable_from: list[str] | None = None
+    is_direct: bool | None = None
+    dependency_depth: int | None = None
+    introduced_via: str | None = None
     graph_reachable_from_count: int | None = None
     affected_agents: list[str] | None = None
     affected_servers: list[str] | None = None
@@ -95,6 +98,7 @@ class FindingRow(ReadModel):
     finding_node_id: str | None = None
     framework_tags: list[str] | None = None
     kev_cve_id: str | None = None
+    epss_cve_id: str | None = None
     match_confidence_tier: str | None = None
     node_id: str | None = None
     package: str | None = None
